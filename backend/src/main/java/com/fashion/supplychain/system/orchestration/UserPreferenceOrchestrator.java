@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -74,12 +75,36 @@ public class UserPreferenceOrchestrator {
             existing.setBizType(StringUtils.hasText(request.getBizType()) ? request.getBizType() : "common");
             existing.setPageKey(request.getPageKey());
             existing.setPreferenceType(request.getPreferenceType());
+            existing.setPreferenceValue(request.getPreferenceValue());
             existing.setCreateTime(now);
+            existing.setUpdateTime(now);
+            try {
+                userPreferenceService.save(existing);
+            } catch (DuplicateKeyException e) {
+                // 并发保存（列设置勾选会批量触发 PUT）撞唯一键 uk_user_pref，
+                // 说明已有记录刚被其他请求插入，改为按唯一键更新，避免 409
+                UserPreference row = userPreferenceService.getOne(
+                        new LambdaQueryWrapper<UserPreference>()
+                                .eq(UserPreference::getTenantId, tenantId)
+                                .eq(UserPreference::getUserId, userId)
+                                .eq(UserPreference::getPageKey, request.getPageKey())
+                                .eq(UserPreference::getPreferenceType, request.getPreferenceType())
+                                .last("LIMIT 1")
+                );
+                if (row == null) {
+                    throw e;
+                }
+                row.setPreferenceValue(request.getPreferenceValue());
+                row.setUpdateTime(now);
+                userPreferenceService.updateById(row);
+                return row;
+            }
+        } else {
+            existing.setPreferenceValue(request.getPreferenceValue());
+            existing.setUpdateTime(now);
+            userPreferenceService.updateById(existing);
         }
-        existing.setPreferenceValue(request.getPreferenceValue());
-        existing.setUpdateTime(now);
 
-        userPreferenceService.saveOrUpdate(existing);
         log.info("[UserPreference] 保存偏好 tenantId={} userId={} page={} type={}",
                 tenantId, userId, request.getPageKey(), request.getPreferenceType());
         return existing;

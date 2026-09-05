@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useUserPreference } from '@/hooks/useUserPreference';
 
 /**
@@ -43,6 +43,12 @@ export function useColumnSettings({
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(defaultVisible);
   const [columnOrder, setColumnOrder] = useState<string[]>(() => allColumns.map(c => c.key));
   const [loaded, setLoaded] = useState(false);
+
+  // 用 ref 跟踪最新值，供持久化回调读取，避免 state updater 内做副作用（StrictMode 会双重调用）
+  const visibleRef = useRef<Record<string, boolean>>(defaultVisible);
+  const orderRef = useRef<string[]>(allColumns.map(c => c.key));
+  useEffect(() => { visibleRef.current = visibleColumns; }, [visibleColumns]);
+  useEffect(() => { orderRef.current = columnOrder; }, [columnOrder]);
 
   // 初始化：从后端拉取偏好（失败回退 localStorage）
   useEffect(() => {
@@ -109,25 +115,25 @@ export function useColumnSettings({
   }, [pageKey]);
 
   const setVisible = useCallback((key: string, visible: boolean) => {
-    setVisibleColumns(prev => {
-      const next = { ...prev, [key]: visible };
-      // 异步持久化
-      if (enableRemote) {
-        save({ bizType, pageKey, preferenceType: 'visible_columns', preferenceValue: next });
-      }
-      const localKey = `${LOCAL_STORAGE_PREFIX}${pageKey}`;
-      try {
-        const saved = localStorage.getItem(localKey);
-        const parsed = saved ? JSON.parse(saved) : {};
-        localStorage.setItem(localKey, JSON.stringify({ ...parsed, visible: next }));
-      } catch {
-        // 忽略
-      }
-      return next;
-    });
+    const next = { ...visibleRef.current, [key]: visible };
+    visibleRef.current = next;
+    setVisibleColumns(next);
+    // 异步持久化（在 updater 外，避免 StrictMode 双重调用导致重复请求）
+    if (enableRemote) {
+      save({ bizType, pageKey, preferenceType: 'visible_columns', preferenceValue: next });
+    }
+    const localKey = `${LOCAL_STORAGE_PREFIX}${pageKey}`;
+    try {
+      const saved = localStorage.getItem(localKey);
+      const parsed = saved ? JSON.parse(saved) : {};
+      localStorage.setItem(localKey, JSON.stringify({ ...parsed, visible: next }));
+    } catch {
+      // 忽略
+    }
   }, [bizType, pageKey, enableRemote, save]);
 
   const setOrder = useCallback((order: string[]) => {
+    orderRef.current = order;
     setColumnOrder(order);
     if (enableRemote) {
       save({ bizType, pageKey, preferenceType: 'column_order', preferenceValue: order });
@@ -143,6 +149,8 @@ export function useColumnSettings({
   }, [bizType, pageKey, enableRemote, save]);
 
   const reset = useCallback(() => {
+    visibleRef.current = defaultVisible;
+    orderRef.current = allColumns.map(c => c.key);
     setVisibleColumns(defaultVisible);
     setColumnOrder(allColumns.map(c => c.key));
     if (enableRemote) {

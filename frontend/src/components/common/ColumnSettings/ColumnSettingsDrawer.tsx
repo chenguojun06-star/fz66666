@@ -75,7 +75,12 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
         value={columnOptions.filter((c) => visibleColumns[c.key] !== false).map((c) => c.key)}
         onChange={(checkedKeys) => {
           const set = new Set(checkedKeys as string[]);
-          columnOptions.forEach((c) => onToggle(c.key, set.has(c.key)));
+          // 只触发实际变更的列，避免一次勾选对全部列发起批量保存请求（撞唯一键 409）
+          columnOptions.forEach((c) => {
+            const current = visibleColumns[c.key] !== false;
+            const next = set.has(c.key);
+            if (current !== next) onToggle(c.key, next);
+          });
         }}
         style={{ width: '100%' }}
       >
