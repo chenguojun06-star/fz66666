@@ -149,6 +149,9 @@
             <view class="act-btn" catchtap="onCopyOrderNo" data-order-no="{{item.orderNo}}">复制单号</view>
           </view>
 
+          <!-- D-302：尺寸表（有款式资料才显示，展开即懒加载） -->
+          <size-table wx:if="{{item.styleId}}" style-id="{{item.styleId}}" />
+
           <!-- 菲号明细 -->
           <view class="detail-head">
             <text class="detail-title">菲号明细</text>

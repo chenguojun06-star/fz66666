@@ -179,7 +179,6 @@ public class ProductionOrderQueryService {
                 .like("style_no", qp.keyword)
                 .or()
                 .like("factory_name", qp.keyword))
-                .eq(StringUtils.hasText(qp.status), "status", qp.status)
                 .eq(StringUtils.hasText(qp.urgencyLevel), "urgency_level", qp.urgencyLevel)
                 .eq(StringUtils.hasText(qp.plateType), "plate_type", qp.plateType)
                 .eq(StringUtils.hasText(qp.orgUnitId), "org_unit_id", qp.orgUnitId)
@@ -199,6 +198,19 @@ public class ProductionOrderQueryService {
 
         if ("true".equalsIgnoreCase(qp.excludeTerminal) && !StringUtils.hasText(qp.status)) {
             wrapper.notIn("status", OrderStatusConstants.TERMINAL_STATUSES);
+        }
+        // D-302：「生产中」语义口径修复——手机/PC筛选"生产中"传 status=production，
+        // 原实现 eq 精确匹配单值，而 /stats 的 activeOrders=全部非终态（not_started/pending/
+        // cutting/sewing...十余种），出现"统计6列表2"的口径分裂。现与统计同口径：production/
+        // in_production/active 一律按非终态过滤；其余状态值保持精确匹配。
+        if (StringUtils.hasText(qp.status)) {
+            if ("production".equalsIgnoreCase(qp.status.trim())
+                    || "in_production".equalsIgnoreCase(qp.status.trim())
+                    || "active".equalsIgnoreCase(qp.status.trim())) {
+                wrapper.notIn("status", OrderStatusConstants.TERMINAL_STATUSES);
+            } else {
+                wrapper.eq("status", qp.status.trim());
+            }
         }
         if ("true".equalsIgnoreCase(qp.delayedOnly)) {
             wrapper.isNotNull("planned_end_date")

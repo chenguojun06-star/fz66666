@@ -1,13 +1,21 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-05（D-300 外发扫码闭环+费用报销找回+财务权限全覆盖，待推送）
+> 最后更新：2026-09-06（D-302 筛选口径bug+尺寸表组件，待推送）
 
 ---
 
 ## 最近变更（Latest Changes）
 
-### 2026-09-05 D-300 外发扫码闭环+费用报销入口找回+财务权限全覆盖 ✅代码完成待推送
+### 2026-09-06 D-302 生产管理"筛选6列表2"口径bug + 生产管理/外发管理加尺寸表 ✅代码完成待推送
+
+- [x] 口径bug根因：列表 status=production 后端 eq 精确匹配单值，而 /stats activeOrders=全部非终态十余种状态 → "统计6列表2"。修 queryPage：production/in_production/active 一律 notIn 终态集合（与统计同口径）；其余状态仍精确匹配。PC/手机两端数字与列表同时对齐
+- [x] 尺寸表抽成共享组件 components/size-table（property styleId，observer 懒加载+实例级缓存，D-185/D-252 同款透视算法），接入三处：生产管理订单卡展开区、外发管理列表卡展开区、发货详情页订单信息卡下
+- [x] 外发管理详情此前无尺寸表（dashboard/order-detail 有但外发厂日常走 shipment-detail）；无款式资料/无尺寸数据整块不渲染
+- [x] H5 镜像同步；后端编译过
+- [x] 验收（后端部署后）：生产管理点"生产中"应显示6个订单卡；生产管理/外发管理订单卡展开见尺寸表；外发发货详情见尺寸表
+
+### 2026-09-05 D-301 费用与借支合并一页 ✅已推送19f8303ae
 
 - [x] 外发扫码空根因：①生产扫码 factory_id 取登录账号，外发厂工人账号多未绑 factory → 写 NULL，externalOnly(isNotNull) 永远查不到；②delegate_target_* 三字段全后端无写入点（委托工厂列恒'-'）
 - [x] 写入端兜底：ProductionScanExecutor 上下文无工厂时回填订单承做工厂 + delegate三件套；查询端 externalOnly 改 inSql factory_type='OUTSOURCE'（防内部厂混入）

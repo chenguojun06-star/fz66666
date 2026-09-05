@@ -1,0 +1,19 @@
+<!-- D-302 共享尺寸表：行=部位 / 列=尺码，横滚；无数据整块不渲染 -->
+<view class="size-table-card" wx:if="{{spec}}">
+  <view class="size-table-hd">
+    <text class="size-table-title">尺寸表</text>
+    <text class="size-table-count">{{spec.rows.length}} 个部位 × {{spec.sizeCols.length}} 个尺码</text>
+  </view>
+  <scroll-view scroll-x class="size-table-scroll" enhanced show-scrollbar="{{false}}">
+    <view class="size-table">
+      <view class="st-row st-row--head">
+        <text class="st-cell st-cell--part">部位</text>
+        <text class="st-cell st-cell--head" wx:for="{{spec.sizeCols}}" wx:key="*this">{{item}}</text>
+      </view>
+      <view class="st-row" wx:for="{{spec.rows}}" wx:for-item="row" wx:key="part">
+        <text class="st-cell st-cell--part">{{row.part}}</text>
+        <text class="st-cell" wx:for="{{row.values}}" wx:for-item="val" wx:key="*this">{{val}}</text>
+      </view>
+    </view>
+  </scroll-view>
+</view>

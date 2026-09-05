@@ -14,6 +14,9 @@
     </view>
   </view>
 
+  <!-- D-302：尺寸表（有款式资料才显示） -->
+  <size-table wx:if="{{order && order.styleId}}" style-id="{{order.styleId}}" />
+
   <!-- Tab 切换 -->
   <view class="tab-bar">
     <view class="tab-item {{activeTab===0?'tab-active':''}}" data-tab="0" bindtap="onSwitchTab">发货</view>

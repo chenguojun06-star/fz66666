@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "发货管理",
-  "usingComponents": {}
+  "usingComponents": {
+    "size-table": "/components/size-table/index"
+  }
 }

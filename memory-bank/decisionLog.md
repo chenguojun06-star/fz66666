@@ -1,7 +1,16 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-05（新增 D-300 外发扫码闭环+费用报销找回+财务权限全覆盖）
+> 最后更新：2026-09-06（新增 D-302 筛选口径bug+共享尺寸表组件）
+
+---
+
+## D-302：生产管理"筛选6列表2"口径bug + 生产管理/外发管理加尺寸表（2026-09-06）
+
+**①口径分裂根因**：手机生产管理页签"生产中 6"来自 /stats 的 activeOrders=`status NOT IN (completed,cancelled,scrapped,archived,closed)`（十余种非终态：not_started/pending/cutting/sewing/ironing/warehousing...）；列表走 /list `status=production`，queryPage 原 `eq(status)` **精确匹配单值** → 只剩字面 status='production' 的 2 条。D-196"数字列表同源"同家族。
+修复（后端 ProductionOrderQueryService）：status ∈ {production, in_production, active} 一律 `notIn(TERMINAL_STATUSES)` 与统计同口径；其余状态值保持精确匹配。PC 端生产列表同样受益（同接口）。
+
+**②尺寸表欠账**：D-252 只做了 dashboard/order-detail（且注释称"生产管理/外发管理详情共用"，但外发厂日常走 factory/shipment-detail，根本没有）。抽共享组件 `components/size-table`（property styleId + observer 懒加载 + 实例级缓存，透视算法 D-185/D-252 同款），接入三处：生产管理订单卡展开区、外发管理列表卡展开区、发货详情订单信息卡下。无款式资料/无尺寸数据整块不渲染。
 
 ---
 
