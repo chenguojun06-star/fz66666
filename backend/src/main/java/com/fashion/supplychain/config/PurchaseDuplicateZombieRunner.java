@@ -43,8 +43,11 @@ public class PurchaseDuplicateZombieRunner implements ApplicationRunner {
     }
 
     private void closeDuplicates() {
-        // 同物料+同色+同规格、无订单/样衣锚点、未领取、待采购的行，
-        // 若存在更新时间更晚且已进入领取/到货/完成任一环节的他单 → 重复需求，自动取消留痕
+        // 规则（D-307+二轮扩展）：
+        // A) 无款关联（指令/购物车来源）：同物料+同色+同规格存在更晚完成的他单 → 重复，关；
+        // B) 样衣采购（同 pattern_production_id 内）：同物料+同规格存在更晚完成的他单 → 重复，关
+        //    （实锤：同一张样衣采购单里同物料被多次生成，1条完成其余永久待领取）；
+        // 有 order_id（大货订单）锚点的行不碰——大货数量大，重复可能是真实分批采购。
         String sql = "UPDATE t_material_purchase mp "
                 + "JOIN t_material_purchase done ON "
                 + "  done.tenant_id = mp.tenant_id "
@@ -61,9 +64,12 @@ public class PurchaseDuplicateZombieRunner implements ApplicationRunner {
                 + "WHERE mp.status = 'pending' "
                 + "  AND mp.delete_flag = 0 "
                 + "  AND COALESCE(mp.receiver_id,'') = '' "
+                + "  AND COALESCE(mp.return_confirmed,0) = 0 "
                 + "  AND COALESCE(mp.order_id,'') = '' "
-                + "  AND COALESCE(mp.pattern_production_id,'') = '' "
-                + "  AND COALESCE(mp.return_confirmed,0) = 0";
+                + "  AND ( "
+                + "    COALESCE(mp.pattern_production_id,'') = '' "
+                + "    OR done.pattern_production_id = mp.pattern_production_id "
+                + "  )";
         try {
             int rows = jdbcTemplate.update(sql);
             log.info("[PurchaseDuplicateZombie] 重复需求僵尸采购单自动关闭: {} 行", rows);
