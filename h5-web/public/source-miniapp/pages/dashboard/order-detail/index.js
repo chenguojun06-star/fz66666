@@ -15,6 +15,8 @@
  *   orderNo  - 订单号（备用）
  */
 const production = require('../../../utils/api-modules/production');
+// D-303：尺寸表 listSizes / fallbackToDetail 走全局 api（此前 _loadSizeSpec/fallbackToDetail 引用 api 但未导入，点击尺寸表即抛 api is not defined）
+const api = require('../../../utils/api.js');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { parseProductionOrderLines, sortSizeNames } = require('../../../utils/orderParser');
