@@ -57,6 +57,8 @@ public class PurchaseCartServiceImpl extends ServiceImpl<PurchaseCartMapper, Pur
     public PurchaseCart getCartWithItems(Long tenantId, String userId) {
         PurchaseCart cart = getOrCreateCart(tenantId, userId);
         List<PurchaseCartItem> items = purchaseCartItemMapper.selectByCartId(cart.getId(), tenantId);
+        // 读取自愈：历史草稿（样衣BOM入口此前未存图片）按 SAMPLE 来源回查款式封面，列表/预览即时显示款式图
+        purchaseCartOrchestrator.enrichItemsStyleLink(tenantId, items);
         cart.setItems(items);
         return cart;
     }

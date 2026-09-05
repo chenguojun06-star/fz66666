@@ -7,6 +7,7 @@
                specifications, unit, quantity, supplier_id, supplier_name, unit_price,
                total_amount, source_type, source_id, source_no, source_quantity, color,
                fabric_composition, fabric_width, fabric_weight, merge_group_id, remark,
+               style_id, style_no, style_image_url, loss_rate,
                sort_order, delete_flag, created_time, updated_time
         FROM t_purchase_cart_item
         WHERE cart_id = #{cartId}

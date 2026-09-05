@@ -13,6 +13,8 @@ import com.fashion.supplychain.production.mapper.PurchaseCartItemMapper;
 import com.fashion.supplychain.production.mapper.PurchaseCartMapper;
 import com.fashion.supplychain.production.service.PurchaseCartService;
 import com.fashion.supplychain.production.helper.PurchaseCartLogAppendHelper;
+import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.mapper.StyleInfoMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +52,9 @@ public class PurchaseCartOrchestrator {
 
     @Autowired
     private PurchaseCartLogAppendHelper logAppendHelper;
+
+    @Autowired
+    private StyleInfoMapper styleInfoMapper;
     
     @Transactional(rollbackFor = Exception.class)
     public AddItemResultDto addItem(Long tenantId, String userId, AddCartItemRequest request) {
@@ -86,6 +91,8 @@ public class PurchaseCartOrchestrator {
             if (target.getUnitPrice() != null) {
                 target.setTotalAmount(target.getUnitPrice().multiply(newQty));
             }
+            // 补齐款式图片链路（样衣BOM等入口可能未带图片，用请求内的 style 信息回填）
+            enrichStyleLink(tenantId, target, request);
             purchaseCartItemMapper.updateById(target);
             log.info("自动合并物料: id={}, materialCode={}, quantity={}", 
                     target.getId(), request.getMaterialCode(), newQty);
@@ -143,6 +150,9 @@ public class PurchaseCartOrchestrator {
         newItem.setStyleNo(request.getStyleNo());
         newItem.setStyleImageUrl(request.getStyleImageUrl());
         newItem.setDeleteFlag(0);
+        // 补齐款式图片链路：样衣BOM等入口只带 sourceType=SAMPLE + sourceId=styleId 未带图片，
+        // 此处按 style 回查款式封面，打通购物车图片展示
+        enrichStyleLink(tenantId, newItem, request);
 
         log.info("插入购物车物料: cartId={}, materialCode={}", cart.getId(), request.getMaterialCode());
         purchaseCartItemMapper.insert(newItem);
@@ -623,6 +633,71 @@ public class PurchaseCartOrchestrator {
             .filter(Objects::nonNull)
             .reduce(BigDecimal.ZERO, BigDecimal::add));
         purchaseCartMapper.updateById(cart);
+    }
+
+    /**
+     * 补齐购物车明细的款式图片链路（写入路径）：样衣开发BOM等入口只传 sourceType=SAMPLE + sourceId=styleId
+     * 未带图片时，按 styleId（SAMPLE 入口的 sourceId 即 styleId）回查款式封面，
+     * 回填 styleId/styleNo/styleImageUrl，保证购物车列表能展示款式图。
+     */
+    private void enrichStyleLink(Long tenantId, PurchaseCartItem item, AddCartItemRequest request) {
+        if (item.getStyleImageUrl() != null && !item.getStyleImageUrl().isEmpty()) {
+            return;
+        }
+        String styleId = StringUtils.hasText(request.getStyleId()) ? request.getStyleId() : null;
+        if (!StringUtils.hasText(styleId)
+                && StringUtils.hasText(request.getSourceId())
+                && "SAMPLE".equalsIgnoreCase(request.getSourceType())) {
+            styleId = request.getSourceId();
+        }
+        fillStyleFromId(tenantId, item, styleId);
+    }
+
+    /**
+     * 购物车读取自愈（读取路径）：历史草稿（样衣BOM入口此前未存图片）读取时按
+     * SAMPLE 来源的 sourceId 回查款式封面，仅内存填充不落库，保证列表/预览即时显示款式图。
+     */
+    public void enrichItemsStyleLink(Long tenantId, List<PurchaseCartItem> items) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        for (PurchaseCartItem item : items) {
+            if (item.getStyleImageUrl() != null && !item.getStyleImageUrl().isEmpty()) {
+                continue;
+            }
+            String styleId = item.getStyleId();
+            if (!StringUtils.hasText(styleId)
+                    && "SAMPLE".equalsIgnoreCase(item.getSourceType())
+                    && StringUtils.hasText(item.getSourceId())) {
+                styleId = item.getSourceId();
+            }
+            fillStyleFromId(tenantId, item, styleId);
+        }
+    }
+
+    /**
+     * 按 styleId 回查款式封面并回填明细（tenantId 隔离，P0 #4；仅缺图片时查询）
+     */
+    private void fillStyleFromId(Long tenantId, PurchaseCartItem item, String styleId) {
+        if (!StringUtils.hasText(styleId)) {
+            return;
+        }
+        StyleInfo style = styleInfoMapper.selectOne(new LambdaQueryWrapper<StyleInfo>()
+                .eq(StyleInfo::getId, styleId)
+                .eq(StyleInfo::getTenantId, tenantId)
+                .last("LIMIT 1"));
+        if (style == null) {
+            return;
+        }
+        if (!StringUtils.hasText(item.getStyleId())) {
+            item.setStyleId(String.valueOf(style.getId()));
+        }
+        if (!StringUtils.hasText(item.getStyleNo())) {
+            item.setStyleNo(style.getStyleNo());
+        }
+        if (!StringUtils.hasText(item.getStyleImageUrl())) {
+            item.setStyleImageUrl(style.getCover());
+        }
     }
     
     private String buildSourcesJson(List<CartPreviewDto.SourceItemDto> sources) {

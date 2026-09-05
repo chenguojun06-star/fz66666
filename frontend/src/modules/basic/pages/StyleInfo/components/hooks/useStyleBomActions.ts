@@ -255,6 +255,8 @@ const useStyleBomActions = ({
         sourceId: String(styleId || '').trim() || undefined,
         sourceNo: String(currentStyleNo || '').trim() || undefined,
         sourceQuantity: Number(item.devUsageAmount ?? item.usageAmount) || 0,
+        styleId: String(styleId || '').trim() || undefined,
+        styleNo: String(currentStyleNo || '').trim() || undefined,
         color: String(item.color || '').trim() || undefined,
         fabricComposition: String(item.fabricComposition || '').trim() || undefined,
         fabricWidth: String(item.fabricWidth || '').trim() || undefined,

@@ -4782,3 +4782,17 @@ function toArray(res) {
 - 异步分支提前 return 但没重置 loading → tab 永久"加载中"。所有提前 return 必须显式结束 loading。
 - `wx.downloadFile` 访问 `/api/file/tenant-download/**` 必须带 token，
   用 `utils/fileUrl.js getAuthedImageUrl()` 拼 `?token=`。
+
+## 2026-09-05 D-294 尺寸表智能导入"静默丢光"修复（用户反馈纸样开发尺寸表空白/导入无变化）✅代码完成
+
+**反馈**：纸样开发页尺寸表显示 S/S/M/M/L/L/XL/XL 列但"暂无数据"；导入尺寸模板后提示成功但数据仍空白；与实际样衣码数对不上。
+
+**根因 1（列头"被简化/重复"观感）**：尺寸列来自款式基础码数 `sizeColorConfig.sizes`（StyleInfoTabs 传 linkedSizes=matrixSizes），8 个码带型体后缀（如 S(155/80A)、S(160/84A)），列头按 D-252 用 `shortSizeLabel` 只显示字母简称 → 显示成 S/S/M/M/L/L/XL/XL。非 bug，是设计（悬浮可见完整名）；小程序样衣详情页不简称（_pivotSizeTable 用完整码名），两端口径不同导致"不匹配"观感。
+
+**根因 2（表格空白）**：表格行来自 `t_style_size`，该款式无任何部位数据行。
+
+**根因 3（导入无变化 = 真 bug）**：`TemplateStyleOrchestrator#applySizeTemplate` merge 分支——目标款无部位数据时，模板每行都走"部位不存在"分支，用 `canonicalSizeKeys`（款式 sizeColorConfig 码数语义键）过滤，**模板码语义键不在集合内就整行静默丢弃（foreignSizeRows++）**。模板是简单码 S/M/L/XL（键=S），款式配置是带型体码 S(155/80A)（键=S|155-80）时，模板所有行全被丢弃 → "导入成功"但表仍空白。
+
+**决策**：merge 分支加 `hasExistingData` 判定——目标款**完全无尺寸行时跳过 canonical 过滤，整表按模板写入**；仅当目标款已有尺寸结构才用规范码数过滤（保留 D-264 防"拖入多余码列"）。改 `TemplateStyleOrchestrator.java` 1 处，mvn compile 通过。
+
+**下一步**：用户线上用「覆盖导入」可立即绕过（覆盖分支本就不做码数过滤）；修复需重新部署后端后生效。注意：若模板为简单码而款式配置为带型体 8 码，导入后 PC 会并列多出简单码列，建议同时把款式基础码数配置改成与实际样衣一致的码。
