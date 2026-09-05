@@ -93,9 +93,14 @@ Page({
     filteredItems: [],
   },
 
-  onLoad() {
+  onLoad(options) {
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+    // D-306：支持 ?keyword= 预置搜索（小云待办兜底跳转带款号直达，不再让用户进列表再找）
+    const kw = decodeURIComponent((options && options.keyword) || '').trim();
+    if (kw) {
+      this.setData({ keyword: kw }, () => { this._applyFilter(); });
+    }
     this.loadData();
   },
 

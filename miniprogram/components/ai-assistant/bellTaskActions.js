@@ -7,6 +7,8 @@ const { safeNavigate } = require('../../utils/uiHelper');
 
 /**
  * 处理裁剪任务 - 跳转裁剪任务页
+ * D-306：有 orderNo/orderId 即带参直达（bundle-detail 实际按 orderNo 加载，taskId 非必需）——
+ * 原实现要求 taskId&&orderNo 才带参，缺 taskId 时落到无参页显示订单列表，用户还要再找一遍
  * @param {Object} task - 任务对象
  * @returns {void}
  */
@@ -15,8 +17,8 @@ function handleCuttingTask(task) {
   const taskId = task.id || task.taskId || '';
   const orderId = task.orderId || task.productionOrderId || '';
 
-  if (taskId && orderNo) {
-    const url = `/pages/cutting/bundle-detail/index?taskId=${taskId}&orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`;
+  if (orderNo || orderId) {
+    const url = `/pages/cutting/bundle-detail/index?taskId=${encodeURIComponent(taskId)}&orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`;
     safeNavigate({ url }, 'navigateTo').catch(() => {});
   } else {
     safeNavigate({ url: '/pages/cutting/bundle-detail/index' }, 'navigateTo').catch(() => {});
@@ -43,8 +45,9 @@ function handleProcurementTask(task) {
     const url = `/pages/procurement/task-detail/index?patternProductionId=${encodeURIComponent(patternProductionId)}&styleNo=${encodeURIComponent(styleNo)}&sourceType=${encodeURIComponent(sourceType)}`;
     safeNavigate({ url }, 'navigateTo').catch(() => {});
   } else {
-    // 没有订单号也没有样衣ID，跳到采购任务列表
-    safeNavigate({ url: '/pages/procurement/task-list/index' }, 'navigateTo').catch(() => {});
+    // D-306：无单号也无样衣ID的样衣任务，带款号作关键词直达列表并预置搜索，不让用户进列表再手打
+    const kw = encodeURIComponent(styleNo || task.materialName || task.materialCode || '');
+    safeNavigate({ url: '/pages/procurement/task-list/index' + (kw ? '?keyword=' + kw : '') }, 'navigateTo').catch(() => {});
   }
 }
 
@@ -229,10 +232,11 @@ function handleReminderTask(task) {
     return;
   }
 
-  // 裁剪提醒 → 跳转裁剪任务列表页
+  // 裁剪提醒 → 与裁剪任务同逻辑直达（有 orderNo 即带参，不再落无参订单列表）
   if (type === '裁剪') {
-    safeNavigate({ url: '/pages/cutting/bundle-detail/index' }, 'navigateTo').catch(() => {});
-    return;}
+    handleCuttingTask(task);
+    return;
+  }
 
   // 其他提醒类型 → 直接跳转扫码页，扫码页 onShow 自动读取 pending_order_hint
   try {
