@@ -337,6 +337,28 @@ Page({
     return { sizeCols: sizeCols, rows: rows };
   },
 
+  /** D-303：快捷按钮「尺寸表」——滚动锚定到尺寸表区块；无款式资料时直接提示 */
+  onJumpSizeSpec: function () {
+    const order = this.data.order || {};
+    const styleId = order.styleId || order.style_id;
+    if (!styleId) {
+      wx.showToast({ title: '该订单未关联款式资料，无尺寸表', icon: 'none' });
+      return;
+    }
+    if (!this.data.sizeSpec && !this.data.sizeSpecHint) {
+      // 数据还没加载完（首次进入快速点击），补拉一次
+      this._loadSizeSpec(order);
+    }
+    const self = this;
+    wx.nextTick(function () {
+      wx.pageScrollTo({
+        selector: '#sizeSpecSection',
+        duration: 300,
+        fail: function () { /* 区块尚未渲染时忽略 */ },
+      });
+    });
+  },
+
   onPullDownRefresh: function () {
     // 用 .finally 在接口返回后立即停止下拉刷新动画（避免 3.5s 卡顿）
     this._loadFlow().finally(function () {
