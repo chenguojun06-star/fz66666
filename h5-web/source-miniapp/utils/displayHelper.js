@@ -125,6 +125,27 @@ const QUALITY_STATUS_COLOR = {
   checking: STATUS_COLOR_PROCESSING,
 };
 
+/* ============== 外发发货单状态映射（收货状态） ============== */
+// D-242：此前小程序复用「采购状态」映射显示发货单状态，
+// 导致 received 显示成「已领取」、pending 显示成「待领取」，语义完全对不上。
+// 这里独立成一套，与 PC 端 FACTORY_SHIPMENT_STATUS_MAP 对齐。
+
+const FACTORY_SHIPMENT_STATUS_LABEL = {
+  pending: '待收货',
+  partial: '部分收货',
+  received: '已收货',
+  quality_checked: '已质检',
+  partially_returned: '部分退回返修',
+};
+
+const FACTORY_SHIPMENT_STATUS_COLOR = {
+  pending: STATUS_COLOR_WARNING,
+  partial: STATUS_COLOR_WARNING,
+  received: STATUS_COLOR_PROCESSING,
+  quality_checked: STATUS_COLOR_CYAN,
+  partially_returned: STATUS_COLOR_ERROR,
+};
+
 /* ============== 采购状态映射 ============== */
 
 const PURCHASE_STATUS_LABEL = {
@@ -277,6 +298,7 @@ const DEFECT_CATEGORY_LABEL = {
 
 /* ============== 款式类别（CATEGORY）映射 ============== */
 
+// 全量枚举对齐 PC 端 frontend/src/utils/styleCategory.ts（品类含款式维度，如 SHIRT=衬衫）
 const CATEGORY_LABEL = {
   WOMAN: '女装',
   WOMEN: '女装',
@@ -285,10 +307,37 @@ const CATEGORY_LABEL = {
   KID: '童装',
   KIDS: '童装',
   WCMAN: '女童装',
+  MCMAN: '男童装',
   UNISEX: '男女同款',
   SPORT: '运动装',
+  UNDERWEAR: '内衣',
   OUTDOOR: '户外装',
+  T_SHIRT: 'T恤',
+  SHIRT: '衬衫',
+  HOODIE: '卫衣',
+  SWEATER: '毛衣',
+  JACKET: '夹克',
+  COAT: '大衣',
+  TRENCH_COAT: '风衣',
+  DOWN_JACKET: '羽绒服',
+  PADDED_JACKET: '棉服',
+  SUIT: '西装',
+  VEST: '马甲',
+  DRESS: '连衣裙',
+  JUPE: '半身裙',
+  SHORTS: '短裤',
+  TROUSERS: '长裤',
+  JEANS: '牛仔裤',
+  CASUAL_PANTS: '休闲裤',
+  SWEATPANTS: '运动裤',
+  BASE_SHIRT: '打底衫',
+  BASE_PANTS: '打底裤',
+  YOGA_WEAR: '瑜伽服',
+  SUN_PROTECTION: '防晒服',
+  LOUNGEWEAR: '家居服',
   HOME: '家居服',
+  SWIMWEAR: '泳装',
+  WORKWEAR: '工作服',
 };
 
 /* ============== 季节（SEASON）映射 ============== */
@@ -671,6 +720,12 @@ function displayPurchaseStatus(status) {
   return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
 }
 
+function displayFactoryShipmentStatus(status) {
+  if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
+  const found = findStatus(status, FACTORY_SHIPMENT_STATUS_LABEL, FACTORY_SHIPMENT_STATUS_COLOR);
+  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+}
+
 function displayReturnStatus(status) {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
   const found = findStatus(status, RETURN_STATUS_LABEL, RETURN_STATUS_COLOR);
@@ -749,6 +804,9 @@ module.exports = {
   displayPurchaseStatus,
   displayPurchaseStatusText: (s) => displayPurchaseStatus(s).text,
   displayPurchaseStatusColor: (s) => displayPurchaseStatus(s).color,
+  displayFactoryShipmentStatus,
+  displayFactoryShipmentStatusText: (s) => displayFactoryShipmentStatus(s).text,
+  displayFactoryShipmentStatusColor: (s) => displayFactoryShipmentStatus(s).color,
   displayReturnStatus,
   displayReturnStatusText: (s) => displayReturnStatus(s).text,
   displayReturnStatusColor: (s) => displayReturnStatus(s).color,

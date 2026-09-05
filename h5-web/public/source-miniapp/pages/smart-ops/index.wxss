@@ -21,7 +21,7 @@
   box-shadow: var(--shadow-md);
 }
 .hero-main { text-align: left; }
-.hero-label { font-size: 14px; color: rgba(255,255,255,0.5); }
+.hero-label { font-size: var(--font-size-md); color: rgba(255,255,255,0.5); }
 .hero-num-row { display: flex; align-items: baseline; justify-content: flex-start; gap: 4px; margin-top: 4px; }
 .hero-num { font-size: 40px; font-weight: 800; color: var(--color-text-white, #fff); line-height: 1; font-variant-numeric: tabular-nums; }
 .hero-unit { font-size: var(--font-size-md); color: rgba(255,255,255,0.5); }
@@ -108,7 +108,7 @@
 
 /* ===== Hero stat simplified (number top, label bottom) ===== */
 .hero-stat-num-lg {
-  font-size: 20px;
+  font-size: var(--font-size-2xl);
   font-weight: 700;
   color: var(--color-text-white, #fff);
   display: block;
@@ -149,7 +149,7 @@
   margin-top: 4px;
 }
 .quick-stat-num {
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;

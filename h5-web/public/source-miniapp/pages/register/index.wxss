@@ -81,7 +81,7 @@ page {
 
 .scan-btn {
   width: 32px;
-  height: 32px;
+  height: var(--btn-height-sm);
   display: flex;
   align-items: center;
   justify-content: center;

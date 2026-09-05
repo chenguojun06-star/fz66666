@@ -76,7 +76,7 @@
         <view class="card-body">
           <!-- 封面图 56x56（设计稿：每张卡片左侧有款式图） -->
           <view class="card-cover" wx:if="{{item.displayCover}}">
-            <image class="cover-img" src="{{item.displayCover}}" mode="aspectFill" />
+            <image class="cover-img" src="{{item.displayCover}}" mode="aspectFit" />
           </view>
           <view class="card-cover card-cover-empty" wx:else>
             <view class="cover-placeholder"><view class="line-icon icon-camera"></view></view>

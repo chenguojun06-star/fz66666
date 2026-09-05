@@ -47,7 +47,7 @@
 }
 .scan-btn-icon-svg {
   width: 28px;
-  height: 28px;
+  height: var(--btn-height-xs);
   display: flex;
   align-items: center;
   justify-content: center;

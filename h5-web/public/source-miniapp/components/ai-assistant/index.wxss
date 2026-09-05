@@ -8,7 +8,7 @@
 .ai-trigger-btn {
   position: fixed;
   width: 50px;
-  height: 50px;
+  height: var(--btn-height-lg);
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: 50%;
@@ -314,7 +314,7 @@
 
 .send-btn-mini {
   width: 44px;
-  height: 44px;
+  height: var(--btn-height-md);
   display: flex;
   align-items: center;
   justify-content: center;

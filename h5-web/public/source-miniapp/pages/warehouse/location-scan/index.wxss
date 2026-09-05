@@ -55,8 +55,8 @@
 }
 .manual-btn {
   flex-shrink: 0;
-  height: 40px;
-  line-height: 40px;
+  height: var(--btn-height-md);
+  line-height: var(--btn-height-md);
   padding: 0 20px;
   font-size: var(--font-size-sm);
   color: #fff;
@@ -83,8 +83,8 @@
   gap: 12px;
 }
 .retry-btn {
-  height: 36px;
-  line-height: 36px;
+  height: var(--btn-height-sm);
+  line-height: var(--btn-height-sm);
   padding: 0 20px;
   font-size: var(--font-size-sm);
   color: #fff;
@@ -124,7 +124,7 @@
 }
 
 .location-code {
-  font-size: 30px;
+  font-size: var(--font-size-5xl);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   line-height: 1.2;
@@ -237,7 +237,7 @@
 }
 
 .style-no {
-  font-size: 15px;
+  font-size: var(--font-size-md-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
@@ -275,7 +275,7 @@
 }
 
 .item-qty .qty {
-  font-size: 20px;
+  font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;

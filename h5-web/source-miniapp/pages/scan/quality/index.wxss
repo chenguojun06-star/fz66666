@@ -164,7 +164,7 @@
 
 .insight-action {
   width: 100%;
-  height: 40px;
+  height: var(--btn-height-md);
   margin-top: var(--spacing-sm);
   display: flex;
   align-items: center;

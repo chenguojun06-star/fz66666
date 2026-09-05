@@ -131,7 +131,7 @@
   border: 1px solid var(--color-primary);
   border-radius: var(--radius-sm);
   padding: 0 10px;
-  height: 28px;
+  height: var(--btn-height-xs);
   display: inline-flex;
   align-items: center;
   justify-content: center;

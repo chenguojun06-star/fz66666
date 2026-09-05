@@ -1,5 +1,9 @@
 const api = require('../../../utils/api');
 
+// 与后端 ProductionConstants 对齐：
+// FIXED_PRODUCTION_NODES（6阶段）用于归类识别存量数据；
+// 工序配置只允许 4 个核心生产工序——采购是供应链模块、入库是仓储模块，
+// 二者已独立出去（数据驱动，不靠扫码卡；后端 NON_GATE_STAGES 会清空其子工序）
 const STAGE_MAP = [
   { id: 'procurement', name: '采购' },
   { id: 'cutting', name: '裁剪' },
@@ -8,6 +12,9 @@ const STAGE_MAP = [
   { id: 'tailProcess', name: '尾部' },
   { id: 'warehousing', name: '入库' },
 ];
+
+// 可配置/可展示的工序分组（4核心工序）
+const EDITABLE_STAGE_IDS = ['cutting', 'secondaryProcess', 'carSewing', 'tailProcess'];
 
 const STAGE_NAME_TO_ID = {};
 STAGE_MAP.forEach(function (s) { STAGE_NAME_TO_ID[s.name] = s.id; });
@@ -51,11 +58,47 @@ Page({
     this.setData({ orderId: orderId, orderNo: orderNo });
     if (orderId) {
       this._loadOrderAndProcesses(orderId);
+    } else if (orderNo) {
+      // D-234：扫码入口可能只带 orderNo，先按单号查订单再加载工序
+      this._loadOrderByOrderNo(orderNo);
     } else {
       this.setData({ loading: false });
-      wx.showToast({ title: '缺少订单ID', icon: 'none' });
+      wx.showToast({ title: '缺少订单信息', icon: 'none' });
     }
     this._loadDictData();
+  },
+
+  // D-234：扫码入口只带 orderNo 时，先按单号查询订单详情
+  _loadOrderByOrderNo: function (orderNo) {
+    const that = this;
+    that.setData({ loading: true });
+    api.production.orderDetail(orderNo).then(function (res) {
+      let order = null;
+      if (res) {
+        if (res.records && res.records.length) {
+          order = res.records[0];
+        } else if (Array.isArray(res) && res.length) {
+          order = res[0];
+        } else if (res.id) {
+          order = res;
+        }
+      }
+      if (!order || !order.id) {
+        that.setData({ loading: false });
+        wx.showToast({ title: '未找到订单：' + orderNo, icon: 'none' });
+        return;
+      }
+      that.setData({
+        orderId: order.id,
+        orderNo: order.orderNo || orderNo,
+        styleNo: order.styleNo || order.styleNumber || '',
+      });
+      that._loadOrderAndProcesses(order.id);
+    }).catch(function (err) {
+      console.error('[process-edit] 按单号加载订单失败:', err);
+      that.setData({ loading: false });
+      wx.showToast({ title: '加载失败', icon: 'none' });
+    });
   },
 
   _loadDictData: function () {
@@ -176,11 +219,15 @@ Page({
       stageMap[stageId].totalPrice += Number(p.price || 0);
     });
 
-    const stages = STAGE_MAP.map(function (s) {
-      var st = stageMap[s.id];
-      st.totalPrice = st.totalPrice.toFixed(2);
-      return st;
-    });
+    // 只渲染/编辑 4 个核心生产工序；采购/入库已独立为供应链/仓储模块，
+    // 存量残留工序不再展示，保存时随全量替换从订单工序中移除（与后端口径一致）
+    const stages = STAGE_MAP
+      .filter(function (s) { return EDITABLE_STAGE_IDS.indexOf(s.id) !== -1; })
+      .map(function (s) {
+        var st = stageMap[s.id];
+        st.totalPrice = st.totalPrice.toFixed(2);
+        return st;
+      });
     this._recalcTotals(stages);
     this.setData({ stages: stages });
   },

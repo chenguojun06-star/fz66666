@@ -11,22 +11,31 @@
     {
       "root": "pages/register",
       "name": "pkg-register",
-      "pages": ["index"]
+      "pages": [
+        "index"
+      ]
     },
     {
       "root": "pages/scan/history",
       "name": "pkg-scan-history",
-      "pages": ["index"]
+      "pages": [
+        "index"
+      ]
     },
     {
       "root": "pages/payroll",
       "name": "pkg-payroll",
-      "pages": ["payroll", "feedback/index"]
+      "pages": [
+        "payroll",
+        "feedback/index"
+      ]
     },
     {
       "root": "pages/admin/user-approval",
       "name": "pkg-admin-approval",
-      "pages": ["index"]
+      "pages": [
+        "index"
+      ]
     },
     {
       "root": "pages/warehouse",
@@ -43,102 +52,157 @@
     {
       "root": "pages/privacy",
       "name": "pkg-privacy",
-      "pages": ["index", "service/index"]
+      "pages": [
+        "index",
+        "service/index"
+      ]
     },
     {
       "root": "pages/admin/misc",
       "name": "pkg-admin-misc",
-      "pages": ["change-password/index", "feedback/index", "invite/index", "about/index", "edit-profile/index"]
+      "pages": [
+        "change-password/index",
+        "feedback/index",
+        "invite/index",
+        "about/index",
+        "edit-profile/index"
+      ]
     },
     {
       "root": "pages/work/bundle-split",
       "name": "pkg-bundle-split",
-      "pages": ["index"]
+      "pages": [
+        "index"
+      ]
     },
     {
       "root": "pages/cutting",
       "name": "pkg-cutting",
-      "pages": ["bundle-detail/index"]
+      "pages": [
+        "bundle-detail/index"
+      ]
     },
     {
       "root": "pages/procurement",
       "name": "pkg-procurement",
-      "pages": ["task-list/index", "task-detail/index"]
+      "pages": [
+        "task-list/index",
+        "task-detail/index"
+      ]
     },
     {
       "root": "pages/scan/pattern",
       "name": "pkg-scan-pattern",
-      "pages": ["index"]
+      "pages": [
+        "index"
+      ]
     },
     {
       "root": "pages/scan/rescan",
       "name": "pkg-scan-rescan",
-      "pages": ["index"]
+      "pages": [
+        "index"
+      ]
     },
     {
       "root": "pages/scan/scan-result",
       "name": "pkg-scan-result",
-      "pages": ["index"]
+      "pages": [
+        "index"
+      ]
     },
     {
       "root": "pages/scan/confirm",
       "name": "pkg-scan-confirm",
-      "pages": ["index"]
+      "pages": [
+        "index"
+      ]
     },
     {
       "root": "pages/scan/quality",
       "name": "pkg-scan-quality",
-      "pages": ["index"]
+      "pages": [
+        "index"
+      ]
     },
     {
       "root": "pages/quality-detail",
       "name": "pkg-quality-detail",
-      "pages": ["index"]
+      "pages": [
+        "index"
+      ]
     },
     {
-        "root": "pages/dashboard",
+      "root": "pages/dashboard",
       "name": "pkg-dashboard",
-      "pages": ["index", "process-edit/index", "order-detail/index", "process-template/index"]
-      },
+      "pages": [
+        "index",
+        "process-edit/index",
+        "order-detail/index",
+        "process-template/index"
+      ]
+    },
     {
       "root": "pages/smart-ops",
       "name": "pkg-smart-ops",
-      "pages": ["index"]
+      "pages": [
+        "index"
+      ]
     },
     {
       "root": "pages/order",
       "name": "pkg-order",
-      "pages": ["create/index", "create/form/index", "remark/index", "no-data-create/index"]
+      "pages": [
+        "create/index",
+        "create/form/index",
+        "remark/index",
+        "no-data-create/index"
+      ]
     },
     {
       "root": "pages/more-apps",
       "name": "pkg-more-apps",
-      "pages": ["index"]
+      "pages": [
+        "index"
+      ]
     },
     {
       "root": "pages/advance",
       "name": "pkg-advance",
-      "pages": ["list/index"]
+      "pages": [
+        "list/index"
+      ]
     },
     {
       "root": "pages/factory",
       "name": "pkg-factory",
-      "pages": ["shipment/index", "shipment-detail/index"]
+      "pages": [
+        "shipment/index",
+        "shipment-detail/index"
+      ]
     },
     {
       "root": "pages/basic",
       "name": "pkg-basic",
-      "pages": ["unit-price/index"]
+      "pages": [
+        "unit-price/index"
+      ]
     },
     {
       "root": "pages/finance",
       "name": "pkg-finance",
-      "pages": ["payment/index"]
+      "pages": [
+        "payment/index"
+      ]
     },
     {
       "root": "pages/sample-development",
       "name": "pkg-sample-dev",
-      "pages": ["index/index", "detail/index", "stage-detail/index"]
+      "pages": [
+        "index/index",
+        "detail/index",
+        "stage-detail/index"
+      ]
     },
     {
       "root": "pages/sales",
@@ -151,19 +215,70 @@
     {
       "root": "pages/return",
       "name": "pkg-return",
-      "pages": ["list/index", "detail/index"]
+      "pages": [
+        "list/index",
+        "detail/index"
+      ]
     },
     {
       "root": "pages/attendance",
       "name": "pkg-attendance",
-      "pages": ["detail/index"]
+      "pages": [
+        "detail/index"
+      ]
     }
   ],
   "preloadRule": {
-    "pages/home/index":  { "network": "wifi", "packages": ["pkg-warehouse", "pkg-register", "pkg-bundle-split", "pkg-dashboard", "pkg-smart-ops", "pkg-more-apps", "pkg-cutting", "pkg-procurement", "pkg-finance", "pkg-advance", "pkg-factory", "pkg-sample-dev", "pkg-sales", "pkg-return", "pkg-attendance"] },
-    "pages/defect/index":  { "network": "wifi", "packages": ["pkg-bundle-split", "pkg-cutting", "pkg-procurement"] },
-    "pages/scan/index":  { "network": "wifi", "packages": ["pkg-scan-history", "pkg-scan-pattern", "pkg-scan-rescan", "pkg-scan-result", "pkg-scan-confirm", "pkg-scan-quality"] },
-    "pages/admin/index": { "network": "wifi", "packages": ["pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-misc", "pkg-advance", "pkg-finance"] }
+    "pages/home/index": {
+      "network": "wifi",
+      "packages": [
+        "pkg-warehouse",
+        "pkg-register",
+        "pkg-bundle-split",
+        "pkg-dashboard",
+        "pkg-smart-ops",
+        "pkg-more-apps",
+        "pkg-cutting",
+        "pkg-procurement",
+        "pkg-finance",
+        "pkg-advance",
+        "pkg-factory",
+        "pkg-sample-dev",
+        "pkg-sales",
+        "pkg-return",
+        "pkg-attendance"
+      ]
+    },
+    "pages/defect/index": {
+      "network": "wifi",
+      "packages": [
+        "pkg-bundle-split",
+        "pkg-cutting",
+        "pkg-procurement"
+      ]
+    },
+    "pages/scan/index": {
+      "network": "wifi",
+      "packages": [
+        "pkg-scan-history",
+        "pkg-scan-pattern",
+        "pkg-scan-rescan",
+        "pkg-scan-result",
+        "pkg-scan-confirm",
+        "pkg-scan-quality"
+      ]
+    },
+    "pages/admin/index": {
+      "network": "wifi",
+      "packages": [
+        "pkg-admin-approval",
+        "pkg-payroll",
+        "pkg-privacy",
+        "pkg-admin-misc",
+        "pkg-advance",
+        "pkg-finance"
+      ]
+    }
   },
   "tabBar": {
     "color": "#8e8e93",

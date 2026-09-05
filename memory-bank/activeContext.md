@@ -1,12 +1,21 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-03（D-283 工序单价租户级总开关，已改完待推送）
+> 最后更新：2026-09-04（D-293 质检详情页缺陷类别英文显示 + 次品拍照无反应修复）
 
 ---
 
 ## 最近变更（Latest Changes）
 
+### 2026-09-04 D-292 无资料下单 serial 400 根治 + 款式图上传链路加固 ✅代码完成，待真机验收
+
+- [x] 现象：小程序无资料下单进表单页即报 `GET /api/system/serial/generate?ruleCode=CUTTING_TASK_NO 400`；用户反馈"点击图片还是不能上传"
+- [x] 根因1（400）：后端 `SerialOrchestrator.generate` 只支持 STYLE_NO/ORDER_NO，小程序无资料下单传 CUTTING_TASK_NO 直接 400，一直靠前端 catch 兜底出 CUT+时间戳
+- [x] 修复1：`form/index.js _genOrderNo` 无资料下单改为本地生成 `CUT+yyyyMMddHHmmssSSS`（与后端 CuttingOrderFactory 兜底格式一致），不再调 serial 接口；有资料下单仍走 ORDER_NO
+- [x] 根因2（图片丢失风险）：建单成功后固定 1.5s navigateBack，网络稍慢时页面销毁会中断 wx.uploadFile → 款式图实际没传上
+- [x] 修复2：提交成功后 `Promise.race([持久化图片, 8s超时])` 完成再返回；`_persistCoverImage` 增加成功日志便于验收
+- [x] 四副本（miniprogram + h5-web ×3）js/wxml/wxss MD5 一致，node --check 全过（同步了此前未同步的 ➕ 上传大按钮改版）
+- [ ] 待用户：devtools 清缓存重新编译（热重载可能残留旧绑定）→ 无资料下单 → 点 ➕ 选图 → 提交 → 订单列表/详情看图；console 应出现「[无资料下单] 点击款式图上传」「款式图已保存到订单」
 ### 2026-09-03 D-263 工艺单AI识别结果夹带HTML标签/行号痕迹 → 识别前后统一清洗 ✅代码完成，待推送部署
 
 - [x] 根因：工艺单常以 HTML 源码形态截图上传，视觉模型把 `<div>/<span style=...>/<h3>` 标签和源码行号（"2 供应链..."）当正文识别出来；后端 recognizeRequirementDoc 原样透传 rawText，前端 OCR 弹窗纯文本预览直接暴露
@@ -5314,3 +5323,19 @@ node --check 四副本全过；WXML 标签栈扫描四副本 OK；WXML 表达式
 WXML 表达式方法调用扫描 0；残留引用扫描仅剩注释。
 
 **下一步**：真机验收——①附件/备注只显示一份 ②无资料下单入口直达表单、选图可选、下单成功后订单详情能看到款式图。
+
+## 2026-09-04 D-293 质检详情页缺陷类别显示英文 + 次品拍照无反应（用户真机反馈）✅代码完成
+
+**反馈**：质检选缺陷类别"看着是中文，选择后就全变英文"；次品拍照"点了没反应，拍照/传图都不行"。
+
+**根因 1（英文）**：`pages/quality-detail/index`（质检详情页内联质检表单 + 批量不合格表单）——picker 下拉用 `defectCategoryOptions` 的 `range-key="label"` 显示中文，但选中后 WXML 直接渲染 `qcSheetData.defectCategory`（英文枚举值 appearance_integrity 等），导致选完变英文。PC 端 ScanQualityPage.jsx 的 select 显示 `<option>` 文本（中文），无此问题。
+
+**修复 1**：change handler 同时存 `defectCategoryLabel`（中文），WXML 改为渲染 label；单选框 + 批量框 + `_syncQcSheetFromSelection` + batchUnqualData 重置全部补 label 字段。
+
+**根因 2（拍照无反应）**：质检详情页此前未挂 `privacy-dialog` 组件/监听（`wx.onNeedPrivacyAuthorization` 触发后无人消费 resolve，选图被隐私授权卡死静默无响应），且 `onQcImageAdd` 无 fail 分支、还把本地 tempFilePath 直接当图片 URL 存。
+
+**修复 2**：index.json 注册 privacy-dialog 组件；wxml 末尾挂 `<privacy-dialog id="privacyDialog" />`；onLoad/onUnload 注册/注销 `showPrivacyDialog` 监听（与 scan/quality 一致）；`onQcImageAdd` 按全站选图入口标准重写——调用前清残留 toast/loading、chooseMedia 失败弹权限引导（含 openSetting）、成功走 `api.common.uploadImage` + `getAuthedImageUrl`（不再存本地临时路径）。
+
+**验证**：`npm run sync:miniapp` 三副本（miniprogram + h5-web/source-miniapp + h5-web/public/source-miniapp）一致；node --check 通过。
+**已知**：同步时把先前未同步的小程序提交一并带到了 h5-web 镜像（order/create/form 等），属正常镜像跟踪。
+**下一步**：真机验收——①质检详情页选缺陷类别显示中文 ②拍照/相册可正常拉起并上传 ③提交质检后照片正常展示。

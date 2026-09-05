@@ -67,7 +67,7 @@ function _createNewGroup(groupKey, record) {
     // 图片
     coverImage: getAuthedImageUrl(record.coverImage || record.styleImage || ''),
     styleImage: getAuthedImageUrl(record.styleImage || record.coverImage || ''),
-    deliveryDateStr: '',
+    deliveryDateStr: record.deliveryDateStr || '',
     remainDaysText: '',
     remainDaysClass: '',
     orderQuantity: 0,

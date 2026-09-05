@@ -28,7 +28,7 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
   margin-bottom: 12px;
   display: flex;
@@ -389,7 +389,7 @@
   flex: 1;
   margin: 0;
   padding: 0;
-  height: 48px;
+  height: var(--btn-height-lg);
   font-size: var(--font-size-md-lg);
   font-weight: var(--font-weight-semibold);
   border-radius: var(--radius-md);

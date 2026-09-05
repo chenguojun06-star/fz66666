@@ -310,7 +310,7 @@
         <view class="task-card task-type-quality" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{qualityTasks}}" wx:key="orderId" catchtap="handleQualityTask" data-item="{{item}}">
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
-            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFill" />
+            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
             <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
@@ -342,7 +342,7 @@
         <view class="task-card task-type-cutting" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{cuttingTasks}}" wx:key="orderId" catchtap="handleCuttingTask" data-item="{{item}}">
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
-            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFill" />
+            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
             <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
@@ -372,7 +372,7 @@
         <view class="task-card task-type-purchase" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{purchaseTasks}}" wx:key="id" catchtap="handlePurchaseTask" data-item="{{item}}">
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
-            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFill" />
+            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
             <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
@@ -406,7 +406,7 @@
         <view class="task-card task-type-repair" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{repairTasks}}" wx:key="id" catchtap="handleRepairTask" data-item="{{item}}">
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
-            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFill" />
+            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
             <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
@@ -437,7 +437,7 @@
         <view class="task-card task-type-overdue" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{overdueOrders}}" wx:key="id" catchtap="handleOverdueOrder" data-item="{{item}}">
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
-            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFill" />
+            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
             <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">

@@ -40,30 +40,30 @@ page {
 }
 
 .style-picker-value {
-  font-size: 15px;
+  font-size: var(--font-size-md-lg);
   font-weight: 600;
   color: var(--color-text-primary);
 }
 
 .style-picker-placeholder {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-tertiary);
 }
 
 .style-picker-name {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   margin-top: 2px;
 }
 
 .style-picker-arrow {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-tertiary);
   flex-shrink: 0;
 }
 
 .scope-tag {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   padding: 3px 8px;
   border-radius: var(--radius-xl);
   flex-shrink: 0;
@@ -103,7 +103,7 @@ page {
 }
 
 .summary-value {
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--color-text-primary);
   line-height: 1.2;
@@ -115,7 +115,7 @@ page {
 
 .summary-label {
   margin-top: 4px;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
 }
 
@@ -127,7 +127,7 @@ page {
 }
 
 .toggle-text {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-secondary);
 }
 
@@ -154,7 +154,7 @@ page {
 
 .loading-text {
   margin-top: 12px;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
 
@@ -171,13 +171,13 @@ page {
 
 .empty-text {
   margin-top: 12px;
-  font-size: 15px;
+  font-size: var(--font-size-md-lg);
   color: var(--color-text-secondary);
 }
 
 .empty-sub {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
 }
 
@@ -216,7 +216,7 @@ page {
   border-radius: var(--radius-sm);
   background: var(--color-primary);
   color: #fff;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -235,13 +235,13 @@ page {
 }
 
 .step-name {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 500;
   color: var(--color-text-primary);
 }
 
 .step-badge {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   padding: 1px 6px;
   border-radius: var(--radius-xs);
   background: rgba(24, 144, 255, 0.1);
@@ -256,7 +256,7 @@ page {
 }
 
 .meta-text {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
 }
 
@@ -265,7 +265,7 @@ page {
 }
 
 .stage-tag {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   padding: 2px 6px;
   border-radius: var(--radius-xs);
   background: var(--color-bg-muted);
@@ -280,13 +280,13 @@ page {
 }
 
 .price-value {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--color-error);
 }
 
 .price-tip {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary);
   margin-top: 2px;
 }
@@ -313,13 +313,13 @@ page {
 }
 
 .stage-name {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-text-primary);
 }
 
 .stage-subtotal {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-error);
   font-weight: 600;
 }
@@ -344,12 +344,12 @@ page {
 }
 
 .step-row-name {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-primary);
 }
 
 .step-row-price {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-error);
 }
@@ -372,7 +372,7 @@ page {
 }
 
 .modal-title {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-text-primary);
 }
@@ -386,7 +386,7 @@ page {
 }
 
 .modal-close-text {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: var(--color-text-tertiary);
 }
 
@@ -401,7 +401,7 @@ page {
   background: var(--color-bg-muted);
   border-radius: var(--radius-sm);
   padding: 0 12px;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   box-sizing: border-box;
 }
@@ -417,7 +417,7 @@ page {
 }
 
 .style-empty-text {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
 
@@ -434,14 +434,14 @@ page {
 }
 
 .style-option-no {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 500;
   color: var(--color-text-primary);
   flex-shrink: 0;
 }
 
 .style-option-name {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;

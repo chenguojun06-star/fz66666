@@ -30,12 +30,12 @@ const COLOR_TO_TAG_CLASS = {
 
 function receiveStatusText(s) {
   if (!s) return '';
-  return displayHelper.displayPurchaseStatusText(s);
+  return displayHelper.displayFactoryShipmentStatusText(s);
 }
 
 function receiveStatusCls(s) {
   if (!s) return 'tag-gray';
-  const color = displayHelper.displayPurchaseStatusColor(s);
+  const color = displayHelper.displayFactoryShipmentStatusColor(s);
   return COLOR_TO_TAG_CLASS[color] || 'tag-gray';
 }
 
@@ -197,11 +197,23 @@ Page({
       // 重新计算发货明细的已发数
       if (that.data.order) that._buildShipDetails(that.data.order, list);
       // 收货确认 Tab：待收货列表
-      var pending = enriched.filter(function (s) { return s.receiveStatus === 'pending'; });
+      // D-242：partial（已部分收货）也要出现在列表里，否则剩余数量永远收不了
+      var pending = enriched.filter(function (s) {
+        return s.receiveStatus === 'pending' || s.receiveStatus === 'partial';
+      });
       var receiveForms = {};
       pending.forEach(function (s) {
         receiveForms[s.id] = (s.details || []).map(function (d) {
-          return { color: d.color || '', sizeName: d.sizeName || '', quantity: d.quantity || 0, receivedQuantity: d.quantity || 0 };
+          var shipped = d.quantity || 0;
+          var already = d.receivedQuantity || 0;
+          return {
+            color: d.color || '',
+            sizeName: d.sizeName || '',
+            quantity: shipped,
+            alreadyReceived: already,
+            // 默认填「剩余待收」，分批收货时不会默认就超收
+            receivedQuantity: Math.max(0, shipped - already),
+          };
         });
       });
       that.setData({ shipmentRecords: enriched, pendingShipments: pending, receiveForms: receiveForms, recordsLoading: false });
@@ -322,7 +334,11 @@ Page({
     var forms = this.data.receiveForms;
     var rows = forms[shipmentId];
     if (!rows || !rows[idx]) return;
-    rows[idx].receivedQuantity = Math.max(0, Math.min(val, rows[idx].quantity || 0));
+    // D-242：上限改为「该明细剩余待收」，与累计收货口径一致
+    var shipped = rows[idx].quantity || 0;
+    var already = rows[idx].alreadyReceived || 0;
+    var maxQty = Math.max(0, shipped - already);
+    rows[idx].receivedQuantity = Math.max(0, Math.min(val, maxQty));
     this.setData({ receiveForms: forms });
   },
 

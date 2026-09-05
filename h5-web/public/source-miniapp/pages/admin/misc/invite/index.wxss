@@ -28,7 +28,7 @@
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 12px;
+  padding: 14px;
   box-sizing: border-box;
 }
 
@@ -234,7 +234,7 @@
 /* Share Button */
 .share-btn {
   margin: 0 0 16px;
-  height: 48px;
+  height: var(--btn-height-lg);
   background: var(--color-primary);
   color: var(--color-text-white);
   font-size: var(--font-size-md-lg);
@@ -254,7 +254,7 @@
 }
 
 .share-btn-icon {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   line-height: 1;
 }
 

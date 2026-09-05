@@ -1,6 +1,5 @@
 {
   "navigationBarTitleText": "扫码",
-  "enablePullDownRefresh": true,
   "usingComponents": {
     "privacy-dialog": "/components/privacy-dialog/index"
   }

@@ -175,9 +175,11 @@ async function loadProcurementTasks() {
     const groupMap = {};
     const order = [];
     mapped.forEach(item => {
+      // D-162：样衣采购行常无 orderNo/patternProductionId，补 styleNo 兜底——
+      // 原来同款的里料/主面料/口袋布各成一条，密密麻麻
       const groupKey = item.patternProductionId
         ? 'sample::' + item.patternProductionId
-        : 'order::' + (item.orderNo || item.id || 'unknown');
+        : 'order::' + (item.orderNo || item.styleNo || item.id || 'unknown');
 
       if (!groupMap[groupKey]) {
         groupMap[groupKey] = {
@@ -197,7 +199,9 @@ async function loadProcurementTasks() {
       groupMap[groupKey].items.push(item);
       // 取最新的领取时间
       if (item.receivedTime) {
-        const t = new Date(item.receivedTime).getTime();
+        // iOS 不支持 "yyyy-MM-dd HH:mm:ss" 空格格式，需替换为 T 兼容 ISO 8601
+        const normalizedTime = typeof item.receivedTime === 'string' ? item.receivedTime.replace(' ', 'T') : item.receivedTime;
+        const t = new Date(normalizedTime).getTime();
         if (!isNaN(t) && (!groupMap[groupKey]._latestReceivedTime || t > groupMap[groupKey]._latestReceivedTime)) {
           groupMap[groupKey]._latestReceivedTime = t;
         }

@@ -9,7 +9,7 @@
       <text class="form-label">已选图片({{images.length}}/5)</text>
       <view class="photo-grid">
         <view wx:for="{{images}}" wx:key="*this" class="photo-item">
-          <image-preview class="photo-img" src="{{item}}" mode="aspectFill" data-url="{{item}}" bindtap="onPreviewImage" />
+          <image-preview class="photo-img" src="{{item}}" mode="aspectFit" data-url="{{item}}" bindtap="onPreviewImage" />
           <view class="photo-del icon-multiply-sm" data-index="{{index}}" catchtap="onDeleteImage"></view>
         </view>
       </view>
@@ -39,7 +39,7 @@
         <view class="remark-images" wx:if="{{item.imageList.length > 0}}">
           <view class="photo-grid">
             <view wx:for="{{item.imageList}}" wx:for-item="imgUrl" wx:key="*this" class="photo-item">
-              <image-preview class="photo-img" src="{{imgUrl}}" mode="aspectFill"
+              <image-preview class="photo-img" src="{{imgUrl}}" mode="aspectFit"
                      data-url="{{imgUrl}}" data-urls="{{item.imageList}}"
                      bindtap="onPreviewRemarkImage" />
             </view>

@@ -32,7 +32,7 @@ page {
 .filter-picker-text {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -40,7 +40,7 @@ page {
 }
 
 .filter-picker-arrow {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary);
   flex-shrink: 0;
 }
@@ -50,7 +50,7 @@ page {
 }
 
 .total-text {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
 }
 
@@ -77,7 +77,7 @@ page {
 
 .loading-text {
   margin-top: 12px;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
 
@@ -94,13 +94,13 @@ page {
 
 .empty-text {
   margin-top: 12px;
-  font-size: 15px;
+  font-size: var(--font-size-md-lg);
   color: var(--color-text-secondary);
 }
 
 .empty-sub {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
 }
 
@@ -144,7 +144,7 @@ page {
 }
 
 .item-image-text {
-  font-size: 22px;
+  font-size: var(--font-size-3xl);
   font-weight: 700;
   color: #fff;
 }
@@ -162,7 +162,7 @@ page {
 }
 
 .item-type-badge {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   padding: 2px 6px;
   border-radius: var(--radius-xs);
   line-height: 1.4;
@@ -170,13 +170,13 @@ page {
 }
 
 .item-code {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   font-family: monospace;
 }
 
 .item-status {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   padding: 2px 6px;
   border-radius: var(--radius-xs);
 }
@@ -189,7 +189,7 @@ page {
 .item-name {
   display: block;
   margin-top: 4px;
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 500;
   color: var(--color-text-primary);
   overflow: hidden;
@@ -205,18 +205,18 @@ page {
 }
 
 .meta-text {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
 }
 
 .meta-price {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-error);
   font-weight: 600;
 }
 
 .meta-supplier {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-secondary);
 }
 
@@ -226,7 +226,7 @@ page {
 }
 
 .arrow-text {
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   color: var(--color-text-quaternary);
 }
 
@@ -237,7 +237,7 @@ page {
 }
 
 .load-more-text {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-quaternary);
 }
 
@@ -259,7 +259,7 @@ page {
 }
 
 .modal-title {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-text-primary);
 }
@@ -273,7 +273,7 @@ page {
 }
 
 .modal-close-text {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: var(--color-text-tertiary);
 }
 
@@ -324,13 +324,13 @@ page {
 }
 
 .detail-type-badge {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   padding: 2px 6px;
   border-radius: var(--radius-xs);
 }
 
 .detail-status {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   padding: 2px 6px;
   border-radius: var(--radius-xs);
 }
@@ -343,7 +343,7 @@ page {
 .detail-name {
   display: block;
   margin-top: 6px;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-text-primary);
 }
@@ -351,7 +351,7 @@ page {
 .detail-code {
   display: block;
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   font-family: monospace;
 }
@@ -361,7 +361,7 @@ page {
 }
 
 .detail-section-title {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-secondary);
   margin-bottom: 10px;
@@ -383,14 +383,14 @@ page {
 }
 
 .grid-label {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
   display: block;
   margin-bottom: 2px;
 }
 
 .grid-value {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   word-break: break-all;
 }
@@ -412,7 +412,7 @@ page {
 }
 
 .remark-text {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   line-height: 1.6;
 }
@@ -423,6 +423,6 @@ page {
 }
 
 .footer-text {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-quaternary);
 }

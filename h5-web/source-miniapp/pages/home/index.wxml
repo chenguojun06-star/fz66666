@@ -31,22 +31,27 @@
         <text class="attendance-title">考勤打卡</text>
         <text class="attendance-status {{attendanceStatusClass}}">{{attendanceStatusText}}</text>
       </view>
-      <view class="attendance-time-inline">
-        <text class="attendance-time-key">上班</text>
-        <text class="attendance-time-val">{{attendanceClockInText}}</text>
-        <text class="attendance-time-sep">·</text>
-        <text class="attendance-time-key">下班</text>
-        <text class="attendance-time-val">{{attendanceClockOutText}}</text>
-        <text class="attendance-time-sep">·</text>
-        <text class="attendance-time-key">本月</text>
-        <text class="attendance-time-val">{{monthlyHoursText}}h/{{monthlyDaysText}}天</text>
-      </view>
       <view class="attendance-detail-link" hover-class="attendance-detail-link-hover" hover-stay-time="100" bindtap="onViewAttendance">
         <text class="attendance-detail-link-text">明细</text>
         <text class="attendance-detail-link-arrow">›</text>
       </view>
     </view>
-    <!-- 第2行：打卡按钮 -->
+    <!-- 三格时间区：上班/下班/本月 -->
+    <view class="attendance-stats">
+      <view class="attendance-stat-cell">
+        <text class="attendance-stat-key">上班</text>
+        <text class="attendance-stat-val">{{attendanceClockInText}}</text>
+      </view>
+      <view class="attendance-stat-cell">
+        <text class="attendance-stat-key">下班</text>
+        <text class="attendance-stat-val">{{attendanceClockOutText}}</text>
+      </view>
+      <view class="attendance-stat-cell">
+        <text class="attendance-stat-key">本月</text>
+        <text class="attendance-stat-val">{{monthlyHoursText}}h/{{monthlyDaysText}}天</text>
+      </view>
+    </view>
+    <!-- 打卡按钮 -->
     <view class="attendance-actions">
       <view class="attendance-btn {{clockInBtnActive ? 'attendance-btn--active' : 'attendance-btn--idle'}}" hover-class="attendance-btn-hover" hover-stay-time="100" bindtap="onClockIn">
         <text class="attendance-btn-text">上班打卡</text>
@@ -57,29 +62,32 @@
     </view>
   </view>
 
-  <!-- 应用网格（按4大分类分组） -->
+  <!-- 应用网格（按6大分类分组：开发/生产/仓库/财务/个人/其他）；≤2个应用的小类目两两并排一行 -->
   <view class="menu-section">
-    <view class="menu-group" wx:for="{{menuGroups}}" wx:key="group">
-      <view class="menu-group-title">
-        <text>{{item.group}}</text>
-        <text class="menu-group-count">{{item.items.length}}个</text>
-      </view>
-      <view class="menu-grid">
-        <view
-          class="menu-item"
-          wx:for="{{item.items}}"
-          wx:for-item="app"
-          wx:key="id"
-          bindtap="onMenuTap"
-          data-route="{{app.route}}"
-          data-id="{{app.id}}"
-          hover-class="menu-item-hover"
-          hover-stay-time="100"
-        >
-          <view class="menu-icon-circle {{app.circleClass}}">
-            <view class="line-icon line-icon--lg {{app.iconClass}}"></view>
+    <view class="menu-row {{row.layout === 'pair' ? 'menu-row--pair' : ''}}"
+          wx:for="{{menuRows}}" wx:for-item="row" wx:key="key">
+      <view class="menu-group" wx:for="{{row.groups}}" wx:for-item="item" wx:key="group">
+        <view class="menu-group-title">
+          <text>{{item.group}}</text>
+          <text class="menu-group-count">{{item.items.length}}个</text>
+        </view>
+        <view class="menu-grid {{row.layout === 'pair' ? 'menu-grid--half' : ''}}">
+          <view
+            class="menu-item"
+            wx:for="{{item.items}}"
+            wx:for-item="app"
+            wx:key="id"
+            bindtap="onMenuTap"
+            data-route="{{app.route}}"
+            data-id="{{app.id}}"
+            hover-class="menu-item-hover"
+            hover-stay-time="100"
+          >
+            <view class="menu-icon-circle {{app.circleClass}}">
+              <view class="line-icon line-icon--lg {{app.iconClass}}"></view>
+            </view>
+            <text class="menu-name">{{app.name}}</text>
           </view>
-          <text class="menu-name">{{app.name}}</text>
         </view>
       </view>
     </view>

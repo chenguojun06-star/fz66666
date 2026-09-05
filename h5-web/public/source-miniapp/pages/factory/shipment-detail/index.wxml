@@ -3,7 +3,7 @@
   <!-- 订单信息区 -->
   <view class="order-card" wx:if="{{order}}">
     <view class="oi-cover" catchtap="onCoverPreview" data-url="{{order.styleCoverUrl}}">
-      <image wx:if="{{order.styleCoverUrl}}" class="oi-pic" src="{{order.styleCoverUrl}}" mode="aspectFill" lazy-load />
+      <image wx:if="{{order.styleCoverUrl}}" class="oi-pic" src="{{order.styleCoverUrl}}" mode="aspectFit" lazy-load />
       <view wx:else class="oi-cover-ph"><view class="line-icon line-icon--xl icon-package"></view></view>
     </view>
     <view class="oi-main">
@@ -136,7 +136,7 @@
         <!-- 操作按钮 -->
         <view class="record-actions">
           <view wx:if="{{item.receiveStatus==='pending' && isFactory}}" class="record-btn record-btn--danger" data-id="{{item.id}}" catchtap="onDeleteShipment">删除</view>
-          <view wx:if="{{item.receiveStatus==='pending' && isTenantAdmin}}" class="record-btn record-btn--primary" data-id="{{item.id}}" catchtap="onGoReceiveTab">收货确认</view>
+          <view wx:if="{{(item.receiveStatus==='pending' || item.receiveStatus==='partial') && isTenantAdmin}}" class="record-btn record-btn--primary" data-id="{{item.id}}" catchtap="onGoReceiveTab">{{item.receiveStatus==='partial' ? '继续收货' : '收货确认'}}</view>
         </view>
       </view>
     </view>

@@ -26,7 +26,7 @@
 }
 
 .month-arrow-text {
-  font-size: 22px;
+  font-size: var(--font-size-3xl);
   color: var(--color-text-secondary);
   line-height: 1;
 }
@@ -72,7 +72,7 @@
 }
 
 .summary-num {
-  font-size: 22px;
+  font-size: var(--font-size-3xl);
   font-weight: 600;
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
@@ -292,7 +292,7 @@
 .legend-dot--NO_RECORD      { background: var(--color-border); }
 
 .legend-text {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary);
 }
 
@@ -354,7 +354,7 @@
 }
 
 .record-status {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   padding: 2px 8px;
   border-radius: var(--radius-full);
   font-weight: 500;
@@ -386,7 +386,7 @@
 }
 
 .record-time-label {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary);
 }
 
@@ -419,7 +419,7 @@
 }
 
 .record-duration-unit {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-primary);
 }
 
@@ -449,7 +449,7 @@
 }
 
 .record-production-label {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary);
 }
 
@@ -566,7 +566,7 @@
 }
 
 .record-source-text {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary);
   font-style: italic;
 }
@@ -624,7 +624,7 @@
 }
 
 .toolbar-employee-arrow {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-tertiary);
   line-height: 1;
   flex-shrink: 0;
@@ -708,7 +708,7 @@
 }
 
 .modal-close-text {
-  font-size: 22px;
+  font-size: var(--font-size-3xl);
   color: var(--color-text-tertiary);
   line-height: 1;
 }
@@ -772,7 +772,7 @@
 }
 
 .form-tip-text {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
   line-height: 1.5;
 }
@@ -786,7 +786,7 @@
 
 .modal-btn {
   flex: 1;
-  height: 40px;
+  height: var(--btn-height-md);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -890,7 +890,7 @@
 }
 
 .admin-stat-label {
-  font-size: 10px;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary);
 }
 
@@ -1037,7 +1037,7 @@
 }
 
 .employee-picker-item-check {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: var(--color-primary);
   font-weight: 600;
   flex-shrink: 0;

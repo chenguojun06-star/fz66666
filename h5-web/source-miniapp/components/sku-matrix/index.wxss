@@ -1,8 +1,27 @@
-.sku-matrix { margin-top: 10rpx; width: 100%; }
-.sku-matrix-row { display: flex; flex-direction: row; align-items: center; }
-.sku-matrix-header { margin-bottom: 4rpx; }
-.sku-cell { flex: 1; text-align: center; font-size: var(--font-size-sm); color: var(--color-text-secondary); min-width: 0; }
-.sku-col-label { text-align: left; color: var(--color-text-primary); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); flex: 1.2; }
+/* 紧凑模式：横向可滚动表格 — 列不压缩（flex 不收缩），码数少时均分铺满，多时横滑不重叠 */
+.sku-scroll { width: 100%; -webkit-overflow-scrolling: touch; }
+.sku-matrix { margin-top: 12rpx; display: flex; flex-direction: column; min-width: 100%; }
+.sku-matrix-row { display: flex; align-items: center; }
+.sku-matrix-row + .sku-matrix-row { border-top: 1rpx solid var(--color-border); }
+.sku-matrix-header { background: var(--color-bg-page); border-radius: var(--radius-xs); }
+.sku-cell {
+  flex: 1 0 auto;
+  min-width: 88rpx;
+  padding: 12rpx 12rpx;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.sku-col-label {
+  flex: 0 0 auto;
+  min-width: 104rpx;
+  text-align: left;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+.sku-cell--num { color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
 
 .matrix-scroll { width: 100%; -webkit-overflow-scrolling: touch; }
 .matrix-table { display: flex; flex-direction: column; min-width: 100%; }

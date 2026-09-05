@@ -8,6 +8,7 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 const SKUProcessor = require('../processors/SKUProcessor');
 const { PATTERN_STATUS_MAP } = require('../../../shared/enumLabels');
+const { displayCategory } = require('../../../utils/displayHelper');
 
 // ---- 常量（样板操作类型定义） ----
 const OPERATION_LABELS = {
@@ -45,15 +46,6 @@ const SOURCE_LABELS = {
   CUSTOMER: '客供',
   LICENSED: '授权款',
 };
-const CATEGORY_LABELS = {
-  WOMAN: '女装',
-  MAN: '男装',
-  KIDS: '童装',
-  SPORT: '运动',
-  OUTDOOR: '户外',
-  HOME: '家居',
-};
-
 function normalizePositiveInt(value, fallback) {
   const num = parseInt(value, 10);
   if (!Number.isFinite(num) || num <= 0) return fallback;
@@ -151,7 +143,7 @@ Page({
         category: patternDetail.category || data.category || '',
         customer: patternDetail.customer || data.customer || '',
         source: patternDetail.developmentSourceType || data.developmentSourceType || '',
-        categoryLabel: CATEGORY_LABELS[patternDetail.category || data.category || ''] || patternDetail.category || data.category || '',
+        categoryLabel: displayCategory(patternDetail.category || data.category || '') || patternDetail.category || data.category || '',
         sourceLabel: SOURCE_LABELS[patternDetail.developmentSourceType || data.developmentSourceType || ''] || patternDetail.developmentSourceType || data.developmentSourceType || '',
         submitLabel: submitLabel,
         remark: '',

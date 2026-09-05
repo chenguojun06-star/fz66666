@@ -49,7 +49,7 @@
   height: 24px;
 }
 .status-card-title {
-  font-size: 20px;
+  font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
@@ -195,7 +195,7 @@
   margin-bottom: 4px;
 }
 .cell-title {
-  font-size: 15px;
+  font-size: var(--font-size-md-lg);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
 }
@@ -257,7 +257,7 @@
 }
 .cell-action {
   width: 32px;
-  height: 32px;
+  height: var(--btn-height-sm);
   padding: 4px;
   border-radius: var(--radius-sm);
   text-align: center;

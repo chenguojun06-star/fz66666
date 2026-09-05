@@ -30,7 +30,7 @@ page {
 
 .loading-text {
   margin-top: 12px;
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-tertiary);
 }
 
@@ -66,14 +66,14 @@ page {
 
 .app-name {
   margin-top: 12px;
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   font-weight: 600;
   color: var(--color-text-primary);
 }
 
 .app-slogan {
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
 
@@ -92,7 +92,7 @@ page {
 }
 
 .info-title {
-  font-size: 15px;
+  font-size: var(--font-size-md-lg);
   font-weight: 600;
   color: var(--color-text-primary);
   margin-bottom: 12px;
@@ -112,13 +112,13 @@ page {
 }
 
 .info-label {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-secondary);
   flex-shrink: 0;
 }
 
 .info-value {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-primary);
   text-align: right;
   word-break: break-all;
@@ -145,7 +145,7 @@ page {
 }
 
 .progress-text {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
@@ -170,7 +170,7 @@ page {
 }
 
 .action-btn-text {
-  font-size: 15px;
+  font-size: var(--font-size-md-lg);
   color: var(--color-primary);
   font-weight: 500;
 }
@@ -184,12 +184,12 @@ page {
 }
 
 .copyright-text {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
 
 .copyright-sub {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-quaternary);
   margin-top: 4px;
 }
