@@ -518,3 +518,13 @@
   font-size: var(--font-size-2xs, 10px);
   color: var(--color-text-tertiary, #999);
 }
+
+/* D-304：度量方式列 */
+.ss-cell--measure {
+  min-width: 220rpx;
+  max-width: 320rpx;
+  text-align: left;
+  color: var(--color-text-secondary, #6b7280);
+  white-space: normal;
+  word-break: break-all;
+}

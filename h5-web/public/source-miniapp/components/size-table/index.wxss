@@ -58,3 +58,13 @@
   font-weight: 600;
   color: var(--color-text-secondary, #6b7280);
 }
+
+/* D-304：度量方式列 */
+.st-cell--measure {
+  min-width: 220rpx;
+  max-width: 320rpx;
+  text-align: left;
+  color: var(--color-text-secondary, #6b7280);
+  white-space: normal;
+  word-break: break-all;
+}

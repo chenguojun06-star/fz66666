@@ -20,6 +20,8 @@ const api = require('../../../utils/api.js');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { parseProductionOrderLines, sortSizeNames } = require('../../../utils/orderParser');
+// D-304：尺寸表透视/码数排序统一走共享工具（数字码从小到大 + 度量方式列）
+const { buildSizeSpec } = require('../../../utils/sizeTableHelper.js');
 const { getUserInfo } = require('../../../utils/storage');
 const { eventBus, Events } = require('../../../utils/eventBus');
 // 订单生命周期操作（scrap/complete/close）仅主管以上可见，与后端 ProductionOrderOperationController @PreAuthorize 一致
@@ -280,64 +282,20 @@ Page({
     if (this._sizeSpecLoadedFor === styleId && (this.data.sizeSpec || this.data.sizeSpecHint)) return;
     this._sizeSpecLoadedFor = styleId;
     const self = this;
-    api.style.listSizes({ styleId: styleId }).then(function (res) {
-      const list = (res && res.data) || res || [];
-      const spec = self._buildSizeSpec(Array.isArray(list) ? list : (list.records || []));
-      self.setData({
-        sizeSpec: spec,
-        sizeSpecHint: spec ? '' : '该款式档案尚未录入尺寸表数据，可在 PC 端款式详情「尺寸表」中维护',
-      });
-    }).catch(function (err) {
+      api.style.listSizes({ styleId: styleId }).then(function (res) {
+        const list = (res && res.data) || res || [];
+        const spec = buildSizeSpec(Array.isArray(list) ? list : (list.records || []));
+        self.setData({
+          sizeSpec: spec,
+          sizeSpecHint: spec ? '' : '该款式档案尚未录入尺寸表数据，可在 PC 端款式详情「尺寸表」中维护',
+        });
+      }).catch(function (err) {
       console.warn('[order-detail] 加载尺寸表失败:', err);
       self.setData({ sizeSpec: null, sizeSpecHint: '尺寸表加载失败，下拉刷新重试' });
     });
   },
 
-  /**
-   * 尺寸表透视（与 scan-result D-185 同款算法）：
-   * 行=部位、列=尺码，尺码按标准码序（XXS→5XL→F）排序。
-   * 订单详情是多彩多码，无"当前码数"概念，不做列高亮。
-   */
-  _buildSizeSpec: function (rawList) {
-    if (!Array.isArray(rawList) || rawList.length === 0) return null;
-    const sizeSeen = {};
-    const sizeCols = [];
-    rawList.forEach(function (it) {
-      const sz = (it && (it.sizeName || it.baseSize)) || '';
-      if (sz && !sizeSeen[sz]) { sizeSeen[sz] = true; sizeCols.push(sz); }
-    });
-    if (sizeCols.length === 0) return null;
-    const sizeOrder = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '3XL', '4XL', '5XL', 'F', 'OS'];
-    sizeCols.sort(function (a, b) {
-      const ia = sizeOrder.indexOf(String(a).toUpperCase());
-      const ib = sizeOrder.indexOf(String(b).toUpperCase());
-      if (ia >= 0 && ib >= 0) return ia - ib;
-      if (ia >= 0) return -1;
-      if (ib >= 0) return 1;
-      return String(a).localeCompare(String(b));
-    });
-    const partSeen = {};
-    const parts = [];
-    rawList.forEach(function (it) {
-      const p = (it && (it.partName || it.part)) || '';
-      if (p && !partSeen[p]) { partSeen[p] = true; parts.push(p); }
-    });
-    const valueMap = {};
-    rawList.forEach(function (it) {
-      const p = (it && (it.partName || it.part)) || '';
-      const sz = (it && (it.sizeName || it.baseSize)) || '';
-      if (p && sz) {
-        valueMap[p + '|' + sz] = it.standardValue != null ? it.standardValue : (it.value != null ? it.value : '-');
-      }
-    });
-    const rows = parts.map(function (p) {
-      return {
-        part: p,
-        values: sizeCols.map(function (sz) { return valueMap[p + '|' + sz] || '-'; }),
-      };
-    });
-    return { sizeCols: sizeCols, rows: rows };
-  },
+  /* 尺寸表透视已抽至 utils/sizeTableHelper.js（D-304，扫码页/共享组件同源） */
 
   /** D-303：快捷按钮「尺寸表」——滚动锚定到尺寸表区块；无款式资料时直接提示 */
   onJumpSizeSpec: function () {

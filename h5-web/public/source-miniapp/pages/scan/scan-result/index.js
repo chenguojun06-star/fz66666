@@ -1,4 +1,6 @@
 const api = require('../../../utils/api');
+// D-304：尺寸表透视/码数排序统一走共享工具（数字码从小到大 + 度量方式列）
+const { buildSizeSpec } = require('../../../utils/sizeTableHelper.js');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('../handlers/helpers/ScanModeResolver');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
@@ -302,7 +304,7 @@ Page({
       try {
         const sizeRes = await api.style.listSizes({ styleId: styleId });
         const sizeList = (sizeRes && sizeRes.data) || sizeRes || [];
-        const sizeSpec = this._buildSizeSpec(Array.isArray(sizeList) ? sizeList : (sizeList.records || []), this.data.detail.size);
+        const sizeSpec = buildSizeSpec(Array.isArray(sizeList) ? sizeList : (sizeList.records || []), this.data.detail.size);
         if (sizeSpec) this.setData({ sizeSpec: sizeSpec });
       } catch (szErr) {
         console.warn('[scan-result] 加载尺寸表失败:', szErr);
@@ -338,47 +340,7 @@ Page({
   },
 
   // D-185：尺寸表透视——行=部位、列=尺码，当前码数列高亮
-  _buildSizeSpec(rawList, currentSize) {
-    if (!Array.isArray(rawList) || rawList.length === 0) return null;
-    const sizeSeen = {};
-    const sizeCols = [];
-    rawList.forEach(function (it) {
-      const sz = (it && (it.sizeName || it.baseSize)) || '';
-      if (sz && !sizeSeen[sz]) { sizeSeen[sz] = true; sizeCols.push(sz); }
-    });
-    if (sizeCols.length === 0) return null;
-    const sizeOrder = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '3XL', '4XL', '5XL', 'F', 'OS'];
-    sizeCols.sort(function (a, b) {
-      const ia = sizeOrder.indexOf(String(a).toUpperCase());
-      const ib = sizeOrder.indexOf(String(b).toUpperCase());
-      if (ia >= 0 && ib >= 0) return ia - ib;
-      if (ia >= 0) return -1;
-      if (ib >= 0) return 1;
-      return String(a).localeCompare(String(b));
-    });
-    const partSeen = {};
-    const parts = [];
-    rawList.forEach(function (it) {
-      const p = (it && (it.partName || it.part)) || '';
-      if (p && !partSeen[p]) { partSeen[p] = true; parts.push(p); }
-    });
-    const valueMap = {};
-    rawList.forEach(function (it) {
-      const p = (it && (it.partName || it.part)) || '';
-      const sz = (it && (it.sizeName || it.baseSize)) || '';
-      if (p && sz) {
-        valueMap[p + '|' + sz] = it.standardValue != null ? it.standardValue : (it.value != null ? it.value : '-');
-      }
-    });
-    const rows = parts.map(function (p) {
-      return {
-        part: p,
-        values: sizeCols.map(function (sz) { return valueMap[p + '|' + sz] || '-'; }),
-      };
-    });
-    const currentIdx = currentSize ? sizeCols.indexOf(currentSize) : -1;
-    return { sizeCols: sizeCols, rows: rows, currentIdx: currentIdx };
-  },
+  /* _buildSizeSpec 已抽至 utils/sizeTableHelper.js（D-304，order-detail/共享组件同源） */
 
   _difficultySeverity(score) {
     const s = parseInt(score, 10);

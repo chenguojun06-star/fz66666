@@ -118,6 +118,7 @@
       <view class="size-spec-table">
         <view class="ss-row ss-row--head">
           <text class="ss-cell ss-cell--part">部位</text>
+          <text class="ss-cell ss-cell--measure">度量方式</text>
           <text
             wx:for="{{sizeSpec.sizeCols}}"
             wx:for-index="colIdx"
@@ -127,6 +128,7 @@
         </view>
         <view class="ss-row" wx:for="{{sizeSpec.rows}}" wx:for-item="row" wx:key="part">
           <text class="ss-cell ss-cell--part">{{row.part}}</text>
+          <text class="ss-cell ss-cell--measure">{{row.measureMethod || '-'}}</text>
           <text
             wx:for="{{row.values}}"
             wx:for-item="val"
