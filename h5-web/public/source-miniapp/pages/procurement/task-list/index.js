@@ -212,7 +212,8 @@ Page({
       filtered = filtered.filter(item =>
         (item.styleNo && item.styleNo.toLowerCase().includes(kw)) ||
         (item.orderNo && item.orderNo.toLowerCase().includes(kw)) ||
-        (item.styleName && item.styleName.toLowerCase().includes(kw))
+        (item.styleName && item.styleName.toLowerCase().includes(kw)) ||
+        (item.titleText && item.titleText.toLowerCase().includes(kw))
       );
     }
 
@@ -230,12 +231,15 @@ Page({
   },
 
   onViewDetail(e) {
-    const { orderNo, styleNo, patternProductionId, sourceType } = e.currentTarget.dataset;
-    // 优先用 orderNo（大货），其次用 patternProductionId（样衣采购）
-    if (!orderNo && !patternProductionId) return;
+    const { orderNo, styleNo, patternProductionId, sourceType, materialCode } = e.currentTarget.dataset;
+    // 优先用 orderNo（大货），其次 patternProductionId（样衣采购），
+    // 无款无单的（如物料仓储下发的采购指令）按 materialCode 进详情
+    if (!orderNo && !patternProductionId && !materialCode) return;
     const params = orderNo
       ? 'orderNo=' + encodeURIComponent(orderNo)
-      : 'patternProductionId=' + encodeURIComponent(patternProductionId);
+      : patternProductionId
+        ? 'patternProductionId=' + encodeURIComponent(patternProductionId)
+        : 'materialCode=' + encodeURIComponent(materialCode);
     safeNavigate({
       url: '/pages/procurement/task-detail/index?' + params +
         '&styleNo=' + encodeURIComponent(styleNo || '') +
@@ -397,6 +401,12 @@ Page({
     const isTerminal = displayStatus === 'cancelled' || displayStatus === 'completed';
     const pendingItems = isTerminal ? [] : items.filter(it => it.displayStatus === 'pending');
 
+    // 无款号的任务卡（如物料仓储下发的采购指令）标题兜底到物料名，副标题带物料编码，让用户知道这是什么
+    const firstItem = items[0] || {};
+    const titleText = group.styleNo || firstItem.materialName || '物料采购';
+    const subtitleText = group.styleName
+      || (!group.styleNo && firstItem.materialCode ? firstItem.materialCode + (firstItem.color ? ' · ' + firstItem.color : '') : '');
+
     return {
       groupKey: group.groupKey,
       orderNo: group.orderNo,
@@ -405,6 +415,9 @@ Page({
       styleNo: group.styleNo,
       styleName: group.styleName,
       styleCoverUrl: group.styleCoverUrl,
+      materialCode: firstItem.materialCode || '',
+      titleText,
+      subtitleText,
       displayStatus,
       statusLabel: statusConfig.label,
       statusTagClass: statusConfig.tagClass,
@@ -522,8 +535,12 @@ Page({
   },
 
   _formatQuantity(qty, unit) {
-    const q = Number(qty || 0);
-    const u = unit || '';
+    let q = Number(qty || 0);
+    if (!isFinite(q)) q = 0;
+    // 浮点求和会带出 2.679999... 这类噪声，统一保留两位以内并去尾零
+    q = Math.round(q * 100) / 100;
+    // 后端缺单位时落库为 '-'，不能当单位展示
+    const u = unit && unit !== '-' ? unit : '';
     return u ? q + u : String(q);
   },
 });

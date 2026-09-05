@@ -136,8 +136,8 @@ const HangtagCertPanel: React.FC<Props> = ({
               <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 4 }}>字号</span>
               <InputNumber
                 size="small"
-                min={0.8}
-                max={1.6}
+                min={0.5}
+                max={2}
                 step={0.05}
                 value={hangCert.fontScale}
                 onChange={(v) => setHangCert({ ...hangCert, fontScale: Number(v) || 1 })}

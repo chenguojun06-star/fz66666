@@ -285,7 +285,7 @@ const pageMetaMap: Record<string, PageMeta> = {
     ],
   },
   [paths.materialInventory]: {
-    label: '物料出入库',
+    label: '物料仓储',
     suggestions: [
       '🧵 面料库存情况',
       '📦 辅料库存预警',
@@ -532,7 +532,7 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(ShoppingCartOutlined),
     items: [
       { label: '物料采购', path: paths.materialPurchase, icon: React.createElement(ShoppingCartOutlined) },
-      { label: '物料出入库', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
+      { label: '物料仓储', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
       { label: '物料资料', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
     ],
   },

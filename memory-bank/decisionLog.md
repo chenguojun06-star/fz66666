@@ -1,7 +1,21 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-03（新增 D-289 拖动不再改写进度节点）
+> 最后更新：2026-09-05（新增 D-295 采购跨节点同步购物车 + 五连修）
+
+---
+
+## D-295：采购跨节点同步 + 采购指令弹窗默认列表 + 小云协议泄漏 + 标签字号 + 物料仓储改名（2026-09-05）
+
+用户报五个问题：①"物料出入库"改名"物料仓储"；②下发采购指令弹窗选择物料必须搜索才出结果（要默认列出物料新增里的物料）；③合格证标签字号被限制 0.80 下限；④小云助手回答里滚出 `<tool_think>/<tool_call>` 英文协议原文；⑤（最严重）购物车面料在样衣节点已被采购完，其它节点不知道，会重复采购同款面料，且购物车/采购任务里"不知道是什么款、没有详情页"。
+
+**决策与实现**：
+1. **跨节点同步挂钩 `savePurchaseAndUpdateOrder`**：新增 `PurchaseCartSyncHelper.reconcileCartOnPurchase`，任何节点（样衣/大货/指令/OpenAPI/补料）生成采购单落库后，自动清除购物车中同需求条目。匹配规则：materialCode 必须相等；有款关联（styleId/styleNo）只清同款；无款关联只清无款条目；有颜色要求条目颜色相等或为空。异常只记日志绝不阻断采购主流程。购物车结算 confirm 自身的删除保持不变（幂等）。
+2. **confirm() 部分结算越界 bug**：原实现 `preview(tenantId,userId)` 按整个购物车分组，传 itemIds 部分结算时会把未勾选物料也生成采购单。拆出 `previewOfItems(items)`，confirm 只按 itemsToProcess 分组。
+3. **未知款号卡片**：根因=采购指令等链路生成的采购单无 orderId/patternProductionId/styleNo。任务卡标题兜底物料名+物料编码副标题；详情入口补 materialCode 模式（后端列表本就支持 materialCode 过滤）；数量格式化修浮点噪声（2.679999→2.68）与单位 '-' 不再当单位显示。
+4. **小云协议泄漏**：模型偶发把内部工具协议原样写进回答，前端原样显示。三端剥离：PC `xiaoyunChatAdapter.stripToolProtocolText`（流式 answer_chunk + 错误兜底 + displayText 共用）、小程序 ai-assistant `stripToolProtocol`（parseAiCards 入口+流式显示），未闭合开标签从开标签起截断，剥离后为空给兜底文案。H5 镜像同步。
+5. **标签字号**：合格证两处（CertificateTab/HangtagCertPanel）min 0.8→0.5、max 1.6→2.0，打印模板是纯乘法无 clamp，UI 放开即生效。
+6. **改名**：物料出入库→物料仓储（routeConfig/i18n/权限标签/教程/租户模块配置/页内标题，共6文件；小程序无此文案）。
 
 ---
 

@@ -37,6 +37,22 @@ function safeParseJson(raw: string, _label: string): unknown[] {
   }
 }
 
+/** 剔除模型泄漏的内部工具协议原文（<tool_think>/<tool_call> 等），流式与最终展示共用 */
+export function stripToolProtocolText(raw: string): string {
+  let text = String(raw || '')
+    .replace(/<tool_think>[\s\S]*?<\/tool_think>/gi, '')
+    .replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '')
+    .replace(/<tool_name>[\s\S]*?<\/tool_name>/gi, '')
+    .replace(/<param>[\s\S]*?<\/param>/gi, '')
+    .replace(/<\/?(?:tool_think|tool_call|tool_name|tool_result|param|params|invoke)>/gi, '');
+  // 流式中途的未闭合协议开标签：从开标签起整段截断，避免协议原文滚出
+  const unclosed = text.match(/<tool_(?:think|call)[\s>]/i);
+  if (unclosed && unclosed.index !== undefined) {
+    text = text.substring(0, unclosed.index);
+  }
+  return text;
+}
+
 function validateInsightCard(item: unknown): XiaoyunInsightCardData | null {
   if (!item || typeof item !== 'object') return null;
   const card = item as Record<string, unknown>;
@@ -163,7 +179,9 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
     } catch (e) { console.error('[xiaoyunChatAdapter] REPORT_PREVIEW JSON解析失败:', e); }
   }
 
-  const displayText = rawText
+  const protocolText = stripToolProtocolText(rawText);
+
+  const displayText = protocolText
     .replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '')
     .replace(/【CHART】[\s\S]*?【\/CHART】/g, '')
     .replace(/【ACTIONS】[\s\S]*?【\/ACTIONS】/g, '')

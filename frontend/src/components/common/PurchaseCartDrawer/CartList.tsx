@@ -116,8 +116,13 @@ export const CartList: React.FC<CartListProps> = ({
               {item.specifications ? ` · ${item.specifications}` : ''}
             </span>
             {item.styleNo && (
-              <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
-                款号: {item.styleNo}
+              <span style={{ fontSize: 12, color: 'var(--color-primary)', cursor: 'pointer' }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.open(`/production/material/${encodeURIComponent(item.styleNo)}`, '_blank');
+                }}>
+                款号: {item.styleNo}（点击查看详情）
               </span>
             )}
           </div>

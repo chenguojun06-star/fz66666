@@ -61,13 +61,13 @@ const InstructionModal: React.FC<InstructionModalProps> = ({
           >
             <Select
               showSearch
-              placeholder="输入物料名称或编码搜索数据库"
+              placeholder="默认列出物料资料库，可输入名称或编码筛选"
               loading={dbSearchLoading}
               options={dbMaterialOptions}
               onChange={handleMaterialSelect}
               onSearch={searchMaterialFromDatabase}
               filterOption={false}
-              notFoundContent={dbSearchLoading ? '搜索中...' : '请输入物料名称或编码搜索'}
+              notFoundContent={dbSearchLoading ? '加载中...' : '物料资料库暂无物料'}
             />
           </Form.Item>
         )}

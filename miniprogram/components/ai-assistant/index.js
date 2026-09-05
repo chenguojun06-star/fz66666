@@ -48,7 +48,24 @@ function describeTool(name) {
   return TOOL_NAMES[name] || (name || '').replace(/^tool_/, '').replace(/_/g, '');
 }
 
+// 模型偶尔把内部工具协议(<tool_think>/<tool_call>等XML)原样写进回答，展示前一律剔除
+function stripToolProtocol(text) {
+  var out = String(text || '')
+    .replace(/<tool_think>[\s\S]*?<\/tool_think>/gi, '')
+    .replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '')
+    .replace(/<tool_name>[\s\S]*?<\/tool_name>/gi, '')
+    .replace(/<param>[\s\S]*?<\/param>/gi, '')
+    .replace(/<\/?(?:tool_think|tool_call|tool_name|tool_result|param|params|invoke)>/gi, '');
+  // 流式中途的未闭合协议开标签：从开标签起整段截断
+  var unclosed = out.match(/<tool_(?:think|call)[\s>]/i);
+  if (unclosed && unclosed.index != null) {
+    out = out.substring(0, unclosed.index);
+  }
+  return out;
+}
+
 function parseAiCards(text) {
+  text = stripToolProtocol(text);
   let actions = [];
   let insightCards = [];
   let clarificationHints = [];
@@ -673,13 +690,13 @@ Component({
               const chunk = String(event.data.chunk || '');
               if (chunk) {
                 accumulatedText += chunk;
-                self.setData({ streamingText: accumulatedText });
+                self.setData({ streamingText: stripToolProtocol(accumulatedText) });
               }
             } else if (event.type === 'answer') {
               const content = String(event.data.content || '');
               if (content) {
                 accumulatedText = content;
-                self.setData({ streamingText: accumulatedText });
+                self.setData({ streamingText: stripToolProtocol(accumulatedText) });
               }
               if (event.data.commandId) {
                 self._latestCommandId = String(event.data.commandId);
@@ -699,6 +716,7 @@ Component({
           function () {
             self._streamTask = null;
             const parsed = parseAiCards(accumulatedText || '抱歉，我现在无法回答这个问题。');
+            if (!parsed.text) parsed.text = '抱歉，我暂时没查到结果，请换个问法或稍后再试。';
             let recommendPills = [];
             if (parsed.text.includes('【推荐追问】：')) {
               const parts = parsed.text.split('【推荐追问】：');
@@ -744,7 +762,7 @@ Component({
             console.warn('[XiaoYun] SSE failed, fallback to sync:', err);
             self._streamTask = null;
             if (streamStarted && accumulatedText) {
-              const streamFallbackMsg = { id: aiMsgId, role: 'ai', content: accumulatedText };
+              const streamFallbackMsg = { id: aiMsgId, role: 'ai', content: stripToolProtocol(accumulatedText) || '抱歉，我暂时没查到结果，请换个问法或稍后再试。' };
               self._setMessages([].concat(self.data.messages, [streamFallbackMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
               self._saveChatHistory();
@@ -780,6 +798,7 @@ Component({
               if (!aiResponse) aiResponse = '抱歉，我现在无法回答这个问题。';
 
               const parsed = parseAiCards(aiResponse);
+              if (!parsed.text) parsed.text = '抱歉，我暂时没查到结果，请换个问法或稍后再试。';
               let recommendPills = syncSuggestions.length > 0 ? syncSuggestions : [];
               if (parsed.text.includes('【推荐追问】：')) {
                 const parts = parsed.text.split('【推荐追问】：');

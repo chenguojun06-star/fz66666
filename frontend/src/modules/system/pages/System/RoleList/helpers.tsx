@@ -27,7 +27,7 @@ export const MODULE_SECTIONS = [
   ]},
   { title: '物料管理', items: [
     { label: '物料采购', code: permissionCodes.materialPurchase },
-    { label: '物料出入库', code: permissionCodes.materialInventory },
+    { label: '物料仓储', code: permissionCodes.materialInventory },
     { label: '物料资料', code: permissionCodes.materialDatabase },
   ]},
   { title: '生产管理', items: [

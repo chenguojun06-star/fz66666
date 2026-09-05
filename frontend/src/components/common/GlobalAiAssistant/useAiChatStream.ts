@@ -1,7 +1,7 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-import { normalizeXiaoyunChatPayload } from '@/services/intelligence/xiaoyunChatAdapter';
+import { normalizeXiaoyunChatPayload, stripToolProtocolText } from '@/services/intelligence/xiaoyunChatAdapter';
 import { createXiaoyunHandler } from '@/services/intelligence/xiaoyunUnifiedHandler';
 import type { XiaoyunMood } from '@/services/intelligence/xiaoyunUnifiedHandler';
 import type { HyperAdvisorResponse } from '@/services/intelligence/intelligenceApi';
@@ -253,7 +253,7 @@ export function useAiChatStream(config: StreamConfig) {
         return;
       }
       if (streamStarted) {
-        setTextMessage(aiMsgId, accumulatedText || '网络中断，请重试 🌧️');
+        setTextMessage(aiMsgId, stripToolProtocolText(accumulatedText) || '网络中断，请重试 🌧️');
         finishTyping();
         return;
       }
@@ -298,7 +298,7 @@ export function useAiChatStream(config: StreamConfig) {
           const chunk = String(event.data.chunk || '');
           if (chunk) {
             accumulatedText += chunk;
-            setTextMessage(aiMsgId, accumulatedText);
+            setTextMessage(aiMsgId, stripToolProtocolText(accumulatedText));
           }
           break;
         }

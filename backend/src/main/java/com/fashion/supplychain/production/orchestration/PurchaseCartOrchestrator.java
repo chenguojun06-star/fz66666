@@ -368,8 +368,15 @@ public class PurchaseCartOrchestrator {
     
     public CartPreviewDto preview(Long tenantId, String userId) {
         PurchaseCart cart = purchaseCartService.getCartWithItems(tenantId, userId);
-        List<PurchaseCartItem> items = cart.getItems();
-        
+        return previewOfItems(cart.getItems());
+    }
+
+    /**
+     * 对给定条目集合做分组预览。
+     * confirm() 部分结算时必须传 itemsToProcess（曾经误用整个购物车预览，
+     * 导致未勾选的物料也被生成采购单），此处拆出复用。
+     */
+    public CartPreviewDto previewOfItems(List<PurchaseCartItem> items) {
         Map<String, List<PurchaseCartItem>> groups = items.stream()
             .collect(Collectors.groupingBy(item -> 
                 item.getMaterialCode() + "|" + 
@@ -463,8 +470,8 @@ public class PurchaseCartOrchestrator {
             itemsToProcess = allItems;
         }
         
-        // 分组预览
-        CartPreviewDto preview = preview(tenantId, userId);
+        // 分组预览（仅针对本次要结算的条目，避免部分结算时把未勾选物料也生成采购单）
+        CartPreviewDto preview = previewOfItems(itemsToProcess);
         
         List<String> purchaseIds = new ArrayList<>();
         List<String> purchaseNos = new ArrayList<>();

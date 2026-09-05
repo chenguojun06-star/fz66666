@@ -16,7 +16,7 @@ export const MODULE_SECTIONS = [
   ]},
   { key: 'procurement', title: '物料管理', paths: [
     { path: '/production/material', label: '物料采购' },
-    { path: '/warehouse/material', label: '物料出入库' },
+    { path: '/warehouse/material', label: '物料仓储' },
     { path: '/warehouse/material-database', label: '物料新增' },
   ]},
   { key: 'production', title: '生产管理', paths: [

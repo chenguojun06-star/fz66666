@@ -44,6 +44,9 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     @Autowired
     private com.fashion.supplychain.production.helper.MaterialPurchaseLogAppendHelper logAppendHelper;
 
+    @Autowired
+    private com.fashion.supplychain.production.helper.PurchaseCartSyncHelper purchaseCartSyncHelper;
+
     @Override
     public boolean deleteByOrderId(String orderId) {
         if (!StringUtils.hasText(orderId)) {
@@ -164,6 +167,9 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         boolean saved = this.save(materialPurchase);
 
         if (saved) {
+            // D-296 跨节点同步：任一节点生成采购单后，清掉购物车同需求（同物料+同款+同色）条目，
+            // 防止样衣/大货/指令等不同入口已采购后购物车仍挂着被重复下单（购物车结算自身条目已在 confirm 内删除，此处幂等）
+            purchaseCartSyncHelper.reconcileCartOnPurchase(materialPurchase);
             int currentArrived = materialPurchase.getArrivedQuantity() == null ? 0
                     : materialPurchase.getArrivedQuantity();
             if (currentArrived > 0 && !isOrderDrivenPurchase(materialPurchase)) {

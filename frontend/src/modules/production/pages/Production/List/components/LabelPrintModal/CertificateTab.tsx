@@ -98,7 +98,7 @@ export default function CertificateTab({
             />
             <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8 }}>字号缩放</span>
             <InputNumber
-              size="small" min={0.8} max={1.6} step={0.05}
+              size="small" min={0.5} max={2} step={0.05}
               value={certSections.fontScale}
               onChange={v => setCertSections({ ...certSections, fontScale: Number(v) || 1 })}
               style={{ width: 76 }}

@@ -21,10 +21,37 @@ export function useInstructionManager({ alertList, user }: UseInstructionManager
   const [receiverOptions, setReceiverOptions] = useState<Array<{ label: string; value: string; name: string; roleName?: string }>>([]);
   const [instructionForm] = Form.useForm();
 
+  const buildMaterialOptions = (records: any[]) =>
+    records.map((m: any) => {
+      const isAlert = alertList.some((a) => a.materialCode === m.materialCode);
+      const labelBase = `${m.materialName || ''}（${m.materialCode || ''}）`;
+      return {
+        label: isAlert ? `${labelBase} 库存不足` : labelBase,
+        value: m.materialCode,
+        dbRecord: m,
+      };
+    });
+
+  // 打开弹窗/清空搜索词时默认列出物料资料库（不再强制输入关键字才出结果）
+  const loadDefaultMaterialOptions = async () => {
+    setDbSearchLoading(true);
+    try {
+      const res = await api.get('/material/database/list', {
+        params: { page: 1, pageSize: 50 },
+      });
+      const records: any[] = res?.data?.records || [];
+      setDbMaterialOptions(buildMaterialOptions(records));
+    } catch {
+      setDbMaterialOptions([]);
+    } finally {
+      setDbSearchLoading(false);
+    }
+  };
+
   const searchMaterialFromDatabase = (keyword: string) => {
     if (dbSearchTimerRef.current) clearTimeout(dbSearchTimerRef.current);
     if (!keyword || keyword.length < 1) {
-      setDbMaterialOptions([]);
+      dbSearchTimerRef.current = setTimeout(loadDefaultMaterialOptions, 0);
       return;
     }
     dbSearchTimerRef.current = setTimeout(async () => {
@@ -34,16 +61,7 @@ export function useInstructionManager({ alertList, user }: UseInstructionManager
           params: { keyword, pageSize: 20 },
         });
         const records: any[] = res?.data?.records || [];
-        const opts = records.map((m: any) => {
-          const isAlert = alertList.some((a) => a.materialCode === m.materialCode);
-          const labelBase = `${m.materialName || ''}（${m.materialCode || ''}）`;
-          return {
-            label: isAlert ? `${labelBase} 库存不足` : labelBase,
-            value: m.materialCode,
-            dbRecord: m,
-          };
-        });
-        setDbMaterialOptions(opts);
+        setDbMaterialOptions(buildMaterialOptions(records));
       } catch {
         setDbMaterialOptions([]);
       } finally {
@@ -134,6 +152,7 @@ export function useInstructionManager({ alertList, user }: UseInstructionManager
     }
     setInstructionVisible(true);
     loadReceivers();
+    loadDefaultMaterialOptions();
   };
 
   const openInstructionEmpty = () => {
@@ -158,6 +177,7 @@ export function useInstructionManager({ alertList, user }: UseInstructionManager
     }
     setInstructionVisible(true);
     loadReceivers();
+    loadDefaultMaterialOptions();
   };
 
   const handleMaterialSelect = async (value: string) => {
