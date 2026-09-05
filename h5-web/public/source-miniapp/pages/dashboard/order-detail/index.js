@@ -189,8 +189,9 @@ Page({
     progressPct: 0,
     specSummary: { colorText: '', sizeText: '', sizeList: [], qtyText: '', hasSpec: false },
 
-    // 尺寸表（只读查看，D-252）：{sizeCols, rows}，无款式资料/无尺寸数据时为 null 不显示
+    // 尺寸表（只读查看，D-252）：{sizeCols, rows}；D-303 加 sizeSpecHint 三态提示（无款式/未录数据/加载失败）
     sizeSpec: null,
+    sizeSpecHint: '',
 
     // 工序阶段
     stages: [],
@@ -263,22 +264,30 @@ Page({
   /**
    * 加载款式尺寸表。
    * render 会被多次触发（onShow / 扫码事件刷新），同一 styleId 只拉一次接口。
-   * 无款式资料（无资料下单）或无 styleId 时不加载，区块不显示。
+   * D-303：三态显示——有数据渲染表格；订单未关联款式或款式未录尺寸表时给提示行，
+   * 不再静默隐藏（用户曾以为详情页没做尺寸表）。
    */
   _loadSizeSpec: function (order) {
     if (!order) return;
     const styleId = order.styleId || order.style_id;
-    if (!styleId) return;
-    if (this._sizeSpecLoadedFor === styleId && this.data.sizeSpec) return;
+    if (!styleId) {
+      // 无资料下单：订单未关联款式档案
+      this.setData({ sizeSpec: null, sizeSpecHint: '该订单未关联款式资料（无资料下单），无尺寸表' });
+      return;
+    }
+    if (this._sizeSpecLoadedFor === styleId && (this.data.sizeSpec || this.data.sizeSpecHint)) return;
     this._sizeSpecLoadedFor = styleId;
     const self = this;
     api.style.listSizes({ styleId: styleId }).then(function (res) {
       const list = (res && res.data) || res || [];
       const spec = self._buildSizeSpec(Array.isArray(list) ? list : (list.records || []));
-      self.setData({ sizeSpec: spec });
+      self.setData({
+        sizeSpec: spec,
+        sizeSpecHint: spec ? '' : '该款式档案尚未录入尺寸表数据，可在 PC 端款式详情「尺寸表」中维护',
+      });
     }).catch(function (err) {
       console.warn('[order-detail] 加载尺寸表失败:', err);
-      self.setData({ sizeSpec: null });
+      self.setData({ sizeSpec: null, sizeSpecHint: '尺寸表加载失败，下拉刷新重试' });
     });
   },
 

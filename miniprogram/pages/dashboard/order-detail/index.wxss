@@ -1153,3 +1153,12 @@
   font-weight: 600;
   color: var(--color-text-secondary, #6b7280);
 }
+
+/* D-303：尺寸表缺数据提示行 */
+.size-spec-hint {
+  padding: 16rpx 0 4rpx;
+}
+.size-spec-hint text {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-tertiary, #9ca3af);
+}
