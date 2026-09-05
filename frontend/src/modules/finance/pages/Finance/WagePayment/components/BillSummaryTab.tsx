@@ -128,13 +128,14 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
       title: '账单编号', dataIndex: 'billNo', key: 'billNo', width: 180,
       render: (v: string) => <span style={{ fontFamily: 'monospace' }}>{v}</span>,
     },
-    {
+    // 类型列：应收/应付页签已按 billType 锁定，重复显示反而添乱，锁定时隐藏
+    ...(!defaultBillType ? [{
       title: '类型', dataIndex: 'billType', key: 'billType', width: 80,
       render: (v: string) => {
         const m = BILL_TYPE_MAP[v];
         return m ? <Tag color={m.color}>{m.text}</Tag> : '未知';
       },
-    },
+    }] : []),
     {
       title: '分类', dataIndex: 'billCategory', key: 'billCategory', width: 90,
       render: (v: string) => {
@@ -219,8 +220,9 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
         {!defaultBillType && (
           <Select style={{ width: 100 }} options={BILL_TYPE_OPTIONS} value={query.billType || ''} onChange={v => updateQuery({ billType: v || undefined })} />
         )}
-        <Select style={{ width: 100 }} options={BILL_CATEGORY_OPTIONS} value={query.billCategory || ''} onChange={v => updateQuery({ billCategory: v || undefined })} />
-        <Select style={{ width: 100 }} options={BILL_STATUS_OPTIONS} value={query.status || ''} onChange={v => updateQuery({ status: v || undefined })} />
+        {/* 分类/状态筛选（带占位说明，不再是无标签裸下拉） */}
+        <Select style={{ width: 120 }} placeholder="账单分类" allowClear options={BILL_CATEGORY_OPTIONS} value={query.billCategory || undefined} onChange={v => updateQuery({ billCategory: v || undefined })} />
+        <Select style={{ width: 110 }} placeholder="状态" allowClear options={BILL_STATUS_OPTIONS} value={query.status || undefined} onChange={v => updateQuery({ status: v || undefined })} />
         {/* 结算月选择器 */}
         <DatePicker.MonthPicker
           style={{ width: 120 }}
@@ -271,7 +273,7 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
         dataSource={bills}
         rowKey="id"
         loading={loading}
-        emptyDescription="暂无工资数据"
+        emptyDescription="暂无账单"
         scroll={{ x: 1600 }}
        
         rowSelection={{

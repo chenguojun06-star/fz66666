@@ -62,12 +62,13 @@ const PendingTabContent: React.FC<PendingTabContentProps> = ({
             <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
               共 {statusFilteredPayables.length} 笔
             </span>
-            {BIZ_TYPE_OPTIONS.filter(o => o.value).map(opt => (
+            {/* 全部 + 业务类型切换（选中类型后可点"全部"回到全量） */}
+            {BIZ_TYPE_OPTIONS.map(opt => (
               <Button
-                key={opt.value}
-                size="small"
-                ghost={payableBizType !== opt.value}
+                key={opt.value || 'all'}
+                size="middle"
                 type={payableBizType === opt.value ? 'primary' : 'default'}
+                ghost={payableBizType === opt.value && !!opt.value}
                 onClick={() => { setPayableBizType(opt.value); setSelectedPayableKeys([]); }}
               >
                 {opt.label}
@@ -112,7 +113,7 @@ const PendingTabContent: React.FC<PendingTabContentProps> = ({
                 { title: '应付金额', dataIndex: 'amount' },
                 { title: '已付金额', dataIndex: 'paidAmount' },
                 { title: '创建时间', dataIndex: 'createTime' }
-              ], '待收付款明细');
+              ], '待付款明细');
             }}>
               导出
             </Button>
@@ -128,7 +129,7 @@ const PendingTabContent: React.FC<PendingTabContentProps> = ({
         loading={payablesLoading}
         scroll={{ x: 1200 }}
         pagination={{ defaultPageSize: readPageSize(20), showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
-        locale={{ emptyText: <Empty description="暂无记录" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+        locale={{ emptyText: <Empty description="暂无待付款：工资结算、外发结算、对账、报销确认后会出现在这里" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
         rowSelection={{
           selectedRowKeys: selectedPayableKeys,
           onChange: (keys) => setSelectedPayableKeys(keys),

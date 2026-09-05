@@ -160,7 +160,7 @@ const PaymentCenterPage: React.FC = () => {
                 收付款中心
               </h2>
               <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
-                统一处理所有付款：工资结算、外发结算、物料对账、费用报销
+                打款在「待付款」完成，自动留痕到「付款记录」；应收/应付账单是各模块推来的账单池，确认后进入待付款
               </span>
             </div>
             <Button type="primary" ghost icon={<DollarOutlined />} onClick={handleOpenPayModal}>
@@ -214,7 +214,7 @@ const PaymentCenterPage: React.FC = () => {
                 key: 'records',
                 label: (
                   <span>
-                    <CheckCircleOutlined /> 收支记录
+                    <CheckCircleOutlined /> 付款记录
                   </span>
                 ),
                 children: (
@@ -234,7 +234,7 @@ const PaymentCenterPage: React.FC = () => {
                 key: 'receivable',
                 label: (
                   <span>
-                    <FileTextOutlined /> 应收账单
+                    <FileTextOutlined /> 应收账单（别人欠我的）
                   </span>
                 ),
                 children: <BillSummaryTab defaultBillType="RECEIVABLE" />,
@@ -243,7 +243,7 @@ const PaymentCenterPage: React.FC = () => {
                 key: 'payable',
                 label: (
                   <span>
-                    <FileTextOutlined /> 应付账单
+                    <FileTextOutlined /> 应付账单（我欠别人的）
                   </span>
                 ),
                 children: <BillSummaryTab defaultBillType="PAYABLE" />,

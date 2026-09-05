@@ -7,7 +7,6 @@ import { readPageSize } from '@/utils/pageSizeStore';
 import ResizableTable from '@/components/common/ResizableTable';
 import {
   PAYMENT_METHOD_OPTIONS,
-  PAYMENT_STATUS_MAP,
   BIZ_TYPE_OPTIONS,
 } from '@/services/finance/wagePaymentApi';
 import { exportToExcelFile } from '../helpers';
@@ -74,13 +73,7 @@ const RecordsTabContent: React.FC<RecordsTabContentProps> = ({
                 ))}
               </Select>
             </Form.Item>
-            <Form.Item name="status">
-              <Select placeholder="状态" allowClear style={{ width: 120 }}>
-                {Object.entries(PAYMENT_STATUS_MAP).map(([k, v]) => (
-                  <Select.Option key={k} value={k}>{v.text}</Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
+            {/* 状态筛选：上方状态页签已覆盖（全部/处理中/已成功/失败取消），不再重复放下拉 */}
             <Form.Item name="paymentMethod">
               <Select placeholder="支付方式" allowClear style={{ width: 130 }}>
                 {PAYMENT_METHOD_OPTIONS.map(o => (
@@ -118,7 +111,7 @@ const RecordsTabContent: React.FC<RecordsTabContentProps> = ({
                     { title: '业务单号', dataIndex: 'bizNo' },
                     { title: '操作人', dataIndex: 'operatorName' },
                     { title: '创建时间', dataIndex: 'createTime' }
-                  ], '收支记录明细');
+                  ], '付款记录明细');
                 }}
               >
                 导出
@@ -136,7 +129,7 @@ const RecordsTabContent: React.FC<RecordsTabContentProps> = ({
         loading={paymentsLoading}
         scroll={{ x: 1400 }}
         pagination={{ defaultPageSize: readPageSize(20), showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
-        locale={{ emptyText: <Empty description="暂无记录" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+        locale={{ emptyText: <Empty description="暂无付款记录：在「待付款」里打款后会在这里留痕" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
       />
     </>
   );
