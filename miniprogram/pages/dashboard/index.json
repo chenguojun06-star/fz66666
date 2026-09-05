@@ -2,7 +2,6 @@
   "navigationBarTitleText": "生产管理",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "sticky-search-bar": "/components/sticky-search-bar/index",
-    "size-table": "/components/size-table/index"
+    "sticky-search-bar": "/components/sticky-search-bar/index"
   }
 }

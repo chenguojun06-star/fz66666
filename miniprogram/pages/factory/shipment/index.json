@@ -3,7 +3,6 @@
   "enablePullDownRefresh": true,
   "backgroundTextStyle": "dark",
   "usingComponents": {
-    "sticky-search-bar": "/components/sticky-search-bar/index",
-    "size-table": "/components/size-table/index"
+    "sticky-search-bar": "/components/sticky-search-bar/index"
   }
 }
