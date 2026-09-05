@@ -1,5 +1,5 @@
 var api = require('../../../utils/api');
-var { toast, safeNavigate } = require('../../../utils/uiHelper');
+var { safeNavigate } = require('../../../utils/uiHelper');
 var { isAdminOrSupervisor, isFactoryOwner } = require('../../../utils/permission');
 var { getAuthedImageUrl } = require('../../../utils/fileUrl');
 

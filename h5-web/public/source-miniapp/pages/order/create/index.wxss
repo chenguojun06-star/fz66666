@@ -510,7 +510,7 @@ page { background-color: var(--color-bg-page); }
 .next-btn::after {
   border: none;
 }
-/* ══ 无资料下单：空白表单入口（D-291 补回直达按钮） ══ */
+/* ══ 无资料下单：空白表单入口（D-291 补回直达按钮，蓝色镂空对齐项目规范） ══ */
 .no-data-start {
   width: 100%;
   max-width: 400px;
@@ -520,9 +520,10 @@ page { background-color: var(--color-bg-page); }
   gap: 12px;
   padding: 16px;
   margin-bottom: 16px;
-  background: var(--color-primary-gradient, var(--color-primary));
+  background: var(--color-bg-card);
+  border: 1.5px solid var(--color-primary);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
 }
 .no-data-start--pressed {
   opacity: 0.9;
@@ -533,12 +534,12 @@ page { background-color: var(--color-bg-page); }
   height: 40px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--color-primary-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: var(--font-size-xl);
-  color: #fff;
+  color: var(--color-primary);
 }
 .no-data-start-body {
   flex: 1;
@@ -549,16 +550,16 @@ page { background-color: var(--color-bg-page); }
 .no-data-start-t {
   font-size: var(--font-size-md-lg);
   font-weight: var(--font-weight-semibold);
-  color: #fff;
+  color: var(--color-primary);
   margin-bottom: 4px;
 }
 .no-data-start-d {
   font-size: var(--font-size-2xs);
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--color-text-secondary);
   line-height: 1.4;
 }
 .no-data-start-arrow {
   flex-shrink: 0;
   font-size: var(--font-size-xl);
-  color: #fff;
+  color: var(--color-primary);
 }

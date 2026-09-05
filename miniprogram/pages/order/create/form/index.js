@@ -32,12 +32,20 @@ Page({
    */
   onPickNoDataCover: function () {
     const self = this;
+    // ★ 关键：调用 chooseMedia 前强制清除所有残留 toast/loading。
+    //   灰度基础库下，残留的原生提示条会压住相册选择器，导致 chooseMedia/chooseImage
+    //   静默无响应（订单备注/扫码质检无此问题，正是因为调用前没有残留 toast）。
+    if (wx.hideToast) wx.hideToast();
+    if (wx.hideLoading) wx.hideLoading();
+    console.log('[无资料下单] 点击款式图上传, chooseMedia=', !!wx.chooseMedia);
     const onPicked = function (tempPath) {
       if (!tempPath) return;
+      console.log('[无资料下单] 已选图片:', tempPath);
       self.setData({ coverImage: tempPath });
     };
     const onFail = function (err) {
       const msg = (err && err.errMsg) || '';
+      console.log('[无资料下单] chooseMedia失败:', msg);
       if (msg.indexOf('cancel') !== -1) return;
       if (msg.indexOf('auth') !== -1 || msg.indexOf('deny') !== -1 || msg.indexOf('permission') !== -1) {
         wx.showModal({
@@ -51,6 +59,8 @@ Page({
         });
         return;
       }
+      // 真机可见：给出具体失败原因，便于定位
+      wx.showToast({ title: '选择图片失败：' + (msg || '未知原因'), icon: 'none', duration: 3000 });
       // 其他失败：降级 wx.chooseImage 再试一次（真机调试模式等兼容场景）
       if (wx.chooseImage) {
         wx.chooseImage({
@@ -68,20 +78,23 @@ Page({
         });
         return;
       }
-      wx.showToast({ title: '选择图片失败', icon: 'none' });
     };
 
+    // ★ 与全站其他 7 处选图入口保持一致：直接调 chooseMedia，不做超时降级。
+    //   超时降级会在用户正慢慢翻相册时（>2.5s）误触发，又弹一次选择器/错误提示，
+    //   造成"相册能弹却提示基础库异常"的误报。仅在 chooseMedia 明确 fail 时才降级。
     if (wx.chooseMedia) {
       wx.chooseMedia({
         count: 1,
         mediaType: ['image'],
         sourceType: ['album', 'camera'],
-        sizeType: ['compressed'],
         success: function (res) {
           const files = (res && res.tempFiles) || [];
           onPicked(files[0] && files[0].tempFilePath);
         },
-        fail: onFail,
+        fail: function (err) {
+          onFail(err);
+        },
       });
     } else {
       onFail({ errMsg: 'chooseMedia not supported' });
@@ -171,6 +184,11 @@ Page({
     if (!isNoData && colors.length && sizes.length) { this._rebuildLines(); }
     // 初始化 chips 选中态（无资料下单时 options 为空，也要保证字段就绪）
     this._syncChips();
+
+    // 注意：这里不能再弹 toast 做"进入无资料下单"的版本确认——
+    // 灰度基础库下 toast 未消失时调 chooseMedia 会压住相册选择器（曾复现），
+    // 用户看到提示后立刻点 ➕ 上传会静默失败。版本确认已由截图里
+    // 「上传款式图」大按钮 + CUT 前缀单号承担，无需 toast。
 
     this._genOrderNo();
 
@@ -336,8 +354,9 @@ Page({
     api.system.getDictList('category').then(function (res) {
       const data = Array.isArray(res) ? res : (res && res.records ? res.records : []);
       self.setData({ categoryOptions: data });
-      // 有资料下单时品类已由款式带入，不覆盖
-      if (data.length && !self.data.productCategory) {
+      // 有资料下单：款式未带品类时兜底字典第一项；
+      // 无资料下单：保持「选填」，不默认选中（避免默认变成字典首项「毛衣」）
+      if (!self.data.isNoData && data.length && !self.data.productCategory) {
         self.setData({ productCategory: data[0].dictLabel || data[0].label || '' });
       }
     }).catch(function () {});
@@ -367,26 +386,32 @@ Page({
     const self = this;
     const isNoData = this.data.isNoData;
 
-    // 无资料下单使用 CUT 前缀，有资料下单使用 ORDER_NO
-    const serialType = isNoData ? 'CUTTING_TASK_NO' : 'ORDER_NO';
+    // 无资料下单：本地生成 CUT 前缀单号（毫秒级时间戳），不再调 serial 接口——
+    // 后端 SerialOrchestrator 只支持 STYLE_NO / ORDER_NO，传 CUTTING_TASK_NO 会 400；
+    // 且格式与后端 CuttingOrderFactory 的兜底格式（CUT+yyyyMMddHHmmssSSS）一致
+    if (isNoData) {
+      self.setData({ orderNo: 'CUT' + this._ts() });
+      return;
+    }
 
-    api.serial.generate(serialType).then(function (no) {
+    api.serial.generate('ORDER_NO').then(function (no) {
       self.setData({ orderNo: String(no || '') });
     }).catch(function () {
       // 如果API失败，使用时间戳生成订单号
-      const d = new Date();
-      const ts = d.getFullYear()
-        + String(d.getMonth() + 1).padStart(2, '0')
-        + String(d.getDate()).padStart(2, '0')
-        + String(d.getHours()).padStart(2, '0')
-        + String(d.getMinutes()).padStart(2, '0')
-        + String(d.getSeconds()).padStart(2, '0')
-        + String(d.getMilliseconds()).padStart(3, '0');
-
-      // 无资料下单使用 CUT 前缀，有资料下单使用 PO 前缀
-      const prefix = isNoData ? 'CUT' : 'PO';
-      self.setData({ orderNo: prefix + ts });
+      self.setData({ orderNo: 'PO' + self._ts() });
     });
+  },
+
+  /** 本地时间戳单号后缀：yyyyMMddHHmmssSSS（毫秒级） */
+  _ts: function () {
+    const d = new Date();
+    return d.getFullYear()
+      + String(d.getMonth() + 1).padStart(2, '0')
+      + String(d.getDate()).padStart(2, '0')
+      + String(d.getHours()).padStart(2, '0')
+      + String(d.getMinutes()).padStart(2, '0')
+      + String(d.getSeconds()).padStart(2, '0')
+      + String(d.getMilliseconds()).padStart(3, '0');
   },
 
   /* ═══ 字段 bind ═══ */
@@ -753,9 +778,15 @@ Page({
     api.production.createOrder(payload).then(function () {
       self.setData({ submitting: false });
       wx.showToast({ title: '下单成功', icon: 'success' });
-      // 图片在订单创建成功后再保存：图片是附属信息，失败不应拖累下单主流程
-      self._persistCoverImage(d.orderNo);
-      setTimeout(function () { wx.navigateBack(); }, 1500);
+      // ★ 图片是建单后才上传的（wxfile 临时文件 → /api/common/upload → t_order_image），
+      //   必须等上传完成再返回列表——原 1.5s 定时返回会在网络稍慢时销毁页面、
+      //   中断 wx.uploadFile，导致用户上传的款式图丢失（"看起来传了其实没传上"）。
+      //   8s 超时兜底：上传卡死也不让用户困在本页。
+      const persistDone = self._persistCoverImage(d.orderNo) || Promise.resolve(null);
+      const guard = new Promise(function (resolve) { setTimeout(resolve, 8000); });
+      Promise.race([Promise.resolve(persistDone).catch(function () {}), guard]).then(function () {
+        setTimeout(function () { wx.navigateBack(); }, 800);
+      });
     }).catch(function (err) {
       self.setData({ submitting: false });
       wx.showToast({ title: (err && err.message) || '下单失败', icon: 'none', duration: 3000 });
@@ -786,7 +817,10 @@ Page({
 
     uploadTask.then(function (url) {
       if (!url) return null;
-      return api.production.addOrderImage(orderNo, url, url);
+      return api.production.addOrderImage(orderNo, url, url).then(function () {
+        console.log('[无资料下单] 款式图已保存到订单:', orderNo, url);
+        return null;
+      });
     }).catch(function () {
       wx.showToast({ title: '订单已创建，款式图保存失败，可在订单详情补传', icon: 'none', duration: 3000 });
       return null;
