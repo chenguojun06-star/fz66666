@@ -604,9 +604,8 @@ export const menuConfig: MenuSection[] = [
       // ========== 收付款 ==========
       { label: '付款计划', path: paths.financePaymentSchedule, icon: React.createElement(ClockCircleOutlined) },
       { label: '收付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
-      // ========== 报销与借支（D-300 找回：此前裁掉独立入口后财税工具未承接，用户找不到） ==========
-      { label: '费用报销', path: paths.expenseReimbursement, icon: React.createElement(DollarOutlined) },
-      { label: '员工借支', path: paths.employeeAdvance, icon: React.createElement(DollarOutlined) },
+      // ========== 报销与借支（D-301 合并一页：两页签按权限显隐，旧路径直达定位对应页签） ==========
+      { label: '费用与借支', path: paths.expenseReimbursement, icon: React.createElement(DollarOutlined) },
       // ========== 财税工具（统一入口：发票台账/应付/税率/数据导出） ==========
       { label: '财税工具', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
     ],

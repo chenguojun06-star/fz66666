@@ -45,7 +45,7 @@ export const MODULE_SECTIONS = [
     { path: '/finance/material-reconciliation', label: '物料对账' },
     { path: '/finance/payroll-operator-summary', label: '工资结算' },
     { path: '/finance/center', label: '外发结算' },
-    { path: '/finance/expense-reimbursement', label: '费用报销' },
+    { path: '/finance/expense-reimbursement', label: '费用与借支' },
     { path: '/finance/wage-payment', label: '收付款中心' },
     { path: '/finance/ec-revenue', label: 'EC销售收入' },
     { path: '/finance/tax-export', label: '财税导出' },

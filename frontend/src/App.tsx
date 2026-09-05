@@ -19,7 +19,7 @@ import { PurchaseCartProvider, usePurchaseCartContext } from './context/Purchase
 import { PurchaseCartDrawer } from './components/common/PurchaseCartDrawer';
 
 import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement, MaintenanceCenter } from './modules/basic';
-import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, EmployeeAdvance, WagePayment, EcSalesRevenue, TaxExport, FinanceDashboard, PaymentSchedule, DailyFlow } from './modules/finance';
+import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, EmployeeAdvance, ExpenseAdvanceCenter, WagePayment, EcSalesRevenue, TaxExport, FinanceDashboard, PaymentSchedule, DailyFlow } from './modules/finance';
 import { CrmDashboard, ReceivableList as CrmReceivableList } from './modules/crm';
 import { SelectionCenter } from './modules/selection';
 import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap } from './modules/warehouse';
@@ -228,8 +228,8 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.materialReconciliation} element={<RouteErrorBoundary pageName="物料对账"><Suspense fallback={routeFallback}><MaterialReconciliation /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.payrollOperatorSummary} element={<RouteErrorBoundary pageName="工资汇总"><Suspense fallback={routeFallback}><PayrollOperatorSummary /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.financeCenter} element={<RouteErrorBoundary pageName="外发结算"><Suspense fallback={routeFallback}><FinanceCenter /></Suspense></RouteErrorBoundary>} />
-          <Route path={paths.expenseReimbursement} element={<RouteErrorBoundary pageName="报销管理"><Suspense fallback={routeFallback}><ExpenseReimbursement /></Suspense></RouteErrorBoundary>} />
-          <Route path={paths.employeeAdvance} element={<RouteErrorBoundary pageName="员工借支"><Suspense fallback={routeFallback}><EmployeeAdvance /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.expenseReimbursement} element={<RouteErrorBoundary pageName="费用与借支"><Suspense fallback={routeFallback}><ExpenseAdvanceCenter initialTab="expense" /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.employeeAdvance} element={<RouteErrorBoundary pageName="费用与借支"><Suspense fallback={routeFallback}><ExpenseAdvanceCenter initialTab="advance" /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.wagePayment} element={<RouteErrorBoundary pageName="收付款中心"><Suspense fallback={routeFallback}><WagePayment /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.ecSalesRevenue} element={<RouteErrorBoundary pageName="电商销售"><Suspense fallback={routeFallback}><EcSalesRevenue /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.financeTaxExport} element={<RouteErrorBoundary pageName="财税工具"><Suspense fallback={routeFallback}><TaxExport /></Suspense></RouteErrorBoundary>} />

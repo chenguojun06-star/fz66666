@@ -99,7 +99,7 @@ export const LOCALES = {
         "materialReconciliation": "物料对账",
         "payrollOperatorSummary": "工资结算",
         "financeCenter": "外发结算",
-        "expenseReimbursement": "费用报销",
+        "expenseReimbursement": "费用与借支",
         "wagePayment": "收付款中心",
         "profile": "个人中心",
         "user": "人员管理",

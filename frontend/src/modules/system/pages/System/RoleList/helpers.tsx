@@ -56,8 +56,9 @@ export const MODULE_SECTIONS = [
     { label: '工资结算', code: permissionCodes.payrollSummary },
     { label: '物料对账', code: permissionCodes.materialRecon },
     { label: '收付款中心（含付款计划）', code: permissionCodes.wagePayment },
-    { label: '员工借支', code: permissionCodes.employeeAdvance },
-    { label: '费用报销', code: permissionCodes.expenseReimbursement },
+    // D-301 费用与借支合并一页：两个页签分别按这两个码显隐，勾哪个看哪个页签
+    { label: '费用与借支-员工借支页签', code: permissionCodes.employeeAdvance },
+    { label: '费用与借支-费用报销页签', code: permissionCodes.expenseReimbursement },
     { label: '财税工具（含EC销售收入）', code: permissionCodes.financeTaxExport },
   ]},
   { title: '系统设置', items: [

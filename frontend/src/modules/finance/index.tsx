@@ -7,6 +7,7 @@ export const DailyFlow = React.lazy(() => import('./pages/Finance/DailyFlow'));
 export const FinanceCenter = React.lazy(() => import('./pages/FinanceCenter'));
 export const ExpenseReimbursement = React.lazy(() => import('./pages/Finance/ExpenseReimbursement'));
 export const EmployeeAdvance = React.lazy(() => import('./pages/Finance/EmployeeAdvance'));
+export const ExpenseAdvanceCenter = React.lazy(() => import('./pages/Finance/ExpenseAdvanceCenter'));
 export const WagePayment = React.lazy(() => import('./pages/Finance/WagePayment'));
 export const EcSalesRevenue = React.lazy(() => import('./pages/EcSalesRevenue'));
 export const TaxExport = React.lazy(() => import('./pages/TaxExport'));
