@@ -15,6 +15,8 @@ public class CartPreviewDto {
         private String materialCode;
         private String materialName;
         private String specifications;
+        /** 颜色：同面料不同颜色是不同采购需求，分组键含颜色，落库到采购单 */
+        private String color;
         private String supplierId;
         private String supplierName;
         private BigDecimal totalQuantity;

@@ -67,9 +67,18 @@ public class PurchaseCartOrchestrator {
         LambdaQueryWrapper<PurchaseCartItem> exactWrapper = new LambdaQueryWrapper<>();
         exactWrapper.eq(PurchaseCartItem::getCartId, cart.getId())
                .eq(PurchaseCartItem::getMaterialCode, request.getMaterialCode())
-               .eq(request.getSpecifications() != null, 
+               .eq(request.getSpecifications() != null,
                    PurchaseCartItem::getSpecifications, request.getSpecifications())
-               .eq(request.getSupplierId() != null, 
+               // D-296：同面料不同颜色是不同需求，幂等合并必须同色（空色与 NULL 互相匹配）
+               .and(w -> {
+                   String reqColor = request.getColor() == null ? "" : request.getColor();
+                   if (reqColor.isEmpty()) {
+                       w.isNull(PurchaseCartItem::getColor).or().eq(PurchaseCartItem::getColor, "");
+                   } else {
+                       w.eq(PurchaseCartItem::getColor, reqColor);
+                   }
+               })
+               .eq(request.getSupplierId() != null,
                    PurchaseCartItem::getSupplierId, request.getSupplierId())
                .eq(PurchaseCartItem::getDeleteFlag, 0);
         // 幂等替换配套：带来源的请求只与同来源（sourceType+sourceId）草稿自动合并，
@@ -300,7 +309,15 @@ public class PurchaseCartOrchestrator {
                 throw new BusinessException("无权操作此物料");
             }
         }
-        
+
+        // D-296：只有"面料完全相同"（同编码+同规格+同颜色）才允许合并，异色拒绝
+        String key0 = mergeIdentityKey(items.get(0));
+        for (PurchaseCartItem item : items) {
+            if (!mergeIdentityKey(item).equals(key0)) {
+                throw new BusinessException("物料颜色/规格不一致，不能合并（同面料不同颜色是不同需求）");
+            }
+        }
+
         PurchaseCartItem target = items.get(0);
         
         BigDecimal totalQty = request.getTargetQuantity() != null ? 
@@ -375,12 +392,14 @@ public class PurchaseCartOrchestrator {
      * 对给定条目集合做分组预览。
      * confirm() 部分结算时必须传 itemsToProcess（曾经误用整个购物车预览，
      * 导致未勾选的物料也被生成采购单），此处拆出复用。
+     * D-296：分组键含颜色——同面料不同颜色是不同需求，绝不合并（用户拍板）。
      */
     public CartPreviewDto previewOfItems(List<PurchaseCartItem> items) {
         Map<String, List<PurchaseCartItem>> groups = items.stream()
-            .collect(Collectors.groupingBy(item -> 
-                item.getMaterialCode() + "|" + 
+            .collect(Collectors.groupingBy(item ->
+                item.getMaterialCode() + "|" +
                 (item.getSpecifications() != null ? item.getSpecifications() : "") + "|" +
+                (item.getColor() != null ? item.getColor() : "") + "|" +
                 (item.getSupplierId() != null ? item.getSupplierId() : "")
             ));
         
@@ -397,6 +416,7 @@ public class PurchaseCartOrchestrator {
             group.setMaterialCode(first.getMaterialCode());
             group.setMaterialName(first.getMaterialName());
             group.setSpecifications(first.getSpecifications());
+            group.setColor(first.getColor());
             group.setSupplierId(first.getSupplierId());
             group.setSupplierName(first.getSupplierName());
             group.setUnitPrice(first.getUnitPrice());
@@ -481,6 +501,8 @@ public class PurchaseCartOrchestrator {
             purchase.setMaterialCode(group.getMaterialCode());
             purchase.setMaterialName(group.getMaterialName());
             purchase.setSpecifications(group.getSpecifications());
+            // 同面料不同颜色是不同需求：颜色随分组贯通到采购单（D-296）
+            purchase.setColor(group.getColor());
             purchase.setSupplierId(group.getSupplierId());
             purchase.setSupplierName(group.getSupplierName());
             purchase.setUnitPrice(group.getUnitPrice());
@@ -568,8 +590,9 @@ public class PurchaseCartOrchestrator {
         
         Map<String, List<PurchaseCartItem>> groups = items.stream()
             .collect(Collectors.groupingBy(item ->
-                item.getMaterialCode() + "|" + 
-                (item.getSpecifications() != null ? item.getSpecifications() : "")
+                item.getMaterialCode() + "|" +
+                (item.getSpecifications() != null ? item.getSpecifications() : "") + "|" +
+                (item.getColor() != null ? item.getColor() : "")
             ));
         
         List<MergeSuggestionDto> suggestions = new ArrayList<>();
@@ -608,6 +631,12 @@ public class PurchaseCartOrchestrator {
         return suggestions;
     }
     
+    private String mergeIdentityKey(PurchaseCartItem item) {
+        return item.getMaterialCode() + "|" +
+                (item.getSpecifications() != null ? item.getSpecifications() : "") + "|" +
+                (item.getColor() != null ? item.getColor() : "");
+    }
+
     private MergeSuggestionDto buildMergeSuggestion(List<PurchaseCartItem> existItems, AddCartItemRequest request) {
         MergeSuggestionDto suggestion = new MergeSuggestionDto();
         suggestion.setMaterialCode(request.getMaterialCode());

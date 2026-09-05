@@ -16,6 +16,14 @@ interface PreviewRow extends PurchaseGroup {
   groupLabel: string;
 }
 
+// 来源类型 → 中文标签：合并采购单里明确区分样衣/大货各自贡献（D-296）
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  ORDER: '大货',
+  SAMPLE: '样衣',
+  BATCH: '批量',
+  PURCHASE_TASK: '采购任务',
+};
+
 export const CartPreviewDrawer: React.FC<CartPreviewDrawerProps> = ({
   open,
   data,
@@ -77,6 +85,9 @@ export const CartPreviewDrawer: React.FC<CartPreviewDrawerProps> = ({
           {row.specifications && (
             <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{row.specifications}</span>
           )}
+          {row.color && (
+            <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>颜色: {row.color}</span>
+          )}
         </div>
       ),
     },
@@ -113,7 +124,8 @@ export const CartPreviewDrawer: React.FC<CartPreviewDrawerProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {row.sourceItems.map((s, i) => (
               <span key={i} style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                {s.sourceNo || '-'} <span style={{ color: 'var(--color-text-tertiary)' }}>×{s.quantity}</span>
+                [{SOURCE_TYPE_LABELS[String(s.sourceType || '').toUpperCase()] || '来源'}] {s.sourceNo || '-'}{' '}
+                <span style={{ color: 'var(--color-text-tertiary)' }}>×{s.quantity}</span>
               </span>
             ))}
           </div>

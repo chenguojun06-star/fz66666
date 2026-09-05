@@ -112,6 +112,7 @@ export interface PurchaseGroup {
   materialCode: string;
   materialName: string;
   specifications?: string;
+  color?: string;
   supplierId?: string;
   supplierName?: string;
   totalQuantity: number;
