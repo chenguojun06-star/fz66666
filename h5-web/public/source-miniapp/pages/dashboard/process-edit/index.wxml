@@ -1,4 +1,12 @@
 <!-- 工序编辑 · 与PC端逻辑一致 -->
+<!-- D-305：金额统一两位小数(wxs) / 合计常驻 / 行右侧价格列对齐+操作钮热区加大 / 序号去底色降噪 -->
+<wxs module="fmt">
+  module.exports.money = function (v) {
+    var n = Number(v || 0);
+    if (isNaN(n)) n = 0;
+    return n.toFixed(2);
+  };
+</wxs>
 <view class="page">
   <!-- 订单信息条：一行搞定 -->
   <view class="order-info-bar" wx:if="{{orderNo}}">
@@ -28,7 +36,7 @@
         </view>
         <view class="stage-total" wx:if="{{item.processes.length > 0}}">
           <text class="stage-total-label">小计</text>
-          <text class="stage-total-price">¥{{item.totalPrice}}</text>
+          <text class="stage-total-price">¥{{fmt.money(item.totalPrice)}}</text>
         </view>
         <view class="stage-add-icon" wx:if="{{editable}}" catchtap="onAddProcess" data-stage-id="{{item.id}}" data-stage-name="{{item.name}}">
           <view class="line-icon icon-plus-sm"></view>
@@ -38,9 +46,9 @@
       <!-- 工序行 -->
       <view class="process-item {{processEditId === child.id ? 'process-item--editing' : ''}}"
             wx:for="{{item.processes}}" wx:for-item="child" wx:key="id">
-        <!-- 展示模式 -->
+        <!-- 展示模式（D-305：整行点击即编辑，不必精准点铅笔；删除/铅笔 catchtap 阻断冒泡） -->
         <block wx:if="{{processEditId !== child.id}}">
-          <view class="process-row">
+          <view class="process-row" bindtap="{{editable ? 'onEditProcess' : ''}}" data-id="{{child.id}}" data-stage-id="{{item.id}}">
             <!-- D-184：两行结构——名称行 + 属性行，价格独立右对齐，不再全部挤一行 -->
             <view class="process-main">
               <view class="process-name-line">
@@ -54,8 +62,8 @@
                 <text class="process-meta-text" wx:if="{{child.standardTime}}">{{child.standardTime}}s</text>
               </view>
             </view>
-            <text class="price-value" wx:if="{{child.price}}">¥{{child.price}}</text>
-            <text class="price-value price-value--empty" wx:else>未定价</text>
+            <text class="price-value">¥{{fmt.money(child.price)}}</text>
+            <text class="price-value price-value--empty" wx:if="{{!child.price}}">未定价</text>
             <view class="process-actions" wx:if="{{editable}}">
               <view class="pact-btn pact-btn--edit" catchtap="onEditProcess" data-id="{{child.id}}" data-stage-id="{{item.id}}">
                 <view class="line-icon icon-edit"></view>
@@ -109,13 +117,13 @@
     </view>
   </block>
 
-  <!-- 底部操作栏 -->
-  <view class="bottom-bar" wx:if="{{!loading && editable && hasChanges}}">
+  <!-- 底部操作栏（D-305：合计工价常驻可见；有改动才出现重置/保存） -->
+  <view class="bottom-bar" wx:if="{{!loading && editable}}">
     <view class="bottom-bar-info">
       <text class="bbi-text">共 {{totalCount}} 道 · 合计 ¥{{totalPrice}}</text>
       <text class="bbi-modified" wx:if="{{modifiedCount > 0}}"> · 已修改 {{modifiedCount}}</text>
     </view>
-    <view class="bottom-bar-actions">
+    <view class="bottom-bar-actions" wx:if="{{hasChanges}}">
       <view class="bba-btn bba-btn--reset" bindtap="onResetChanges">重置</view>
       <view class="bba-btn bba-btn--save" bindtap="onSaveAll">保存全部</view>
     </view>
