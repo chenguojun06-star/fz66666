@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
 import { useDelayedStageBreakdown } from '@/modules/dashboard/components/DelayedStageBreakdown/useDelayedStageBreakdown';
@@ -16,11 +16,13 @@ import { useStyleListPage } from './hooks/useStyleListPage';
 
 import StyleFilterPanel from './components/StyleFilterPanel';
 import StyleStatsCard from './components/StyleStatsCard';
+import StyleListView, { STYLE_LIST_COLUMNS, STYLE_LIST_DEFAULT_VISIBLE } from './components/StyleListView';
 import StyleTableView from './components/StyleTableView';
 import StyleCardView from './components/StyleCardView';
 import StyleStatCardsSection from './components/StyleStatCardsSection';
 import StyleFilterBarExtra from './components/StyleFilterBarExtra';
 import StyleModals from './components/StyleModals';
+import { useColumnSettings, ColumnSettingsDrawer } from '@/components/common/ColumnSettings';
 
 import '../StyleInfo/styles.css';
 
@@ -122,6 +124,14 @@ const StyleInfoListPage: React.FC = () => {
       getStyleDomKey,
     });
 
+  const styleColumnSettings = useColumnSettings({
+    pageKey: 'style-list-table',
+    bizType: 'style',
+    allColumns: STYLE_LIST_COLUMNS,
+    defaultVisible: STYLE_LIST_DEFAULT_VISIBLE,
+  });
+  const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
+
   return (
     <>
       <PageLayout
@@ -172,12 +182,30 @@ const StyleInfoListPage: React.FC = () => {
                 onRefresh={() => fetchList()}
                 onNavigateNew={() => navigate('/style-info/new')}
                 onNavigateFieldConfig={() => navigate('/system/field-config?bizType=style')}
+                openColumnSettings={() => setColumnSettingsOpen(true)}
               />
             }
           />
         }
       >
-        {viewMode === 'smart' ? (
+        {viewMode === 'list' ? (
+          <StyleListView
+            data={displayData}
+            stockStateMap={stockStateMap}
+            loading={loading}
+            total={displayTotal}
+            pageSize={queryParams.pageSize}
+            currentPage={queryParams.page}
+            onPageChange={handlePageChange}
+            onScrap={handleScrap}
+            onUnscrap={handleUnscrap}
+            onPrint={handlePrintClick}
+            onMaintenance={openMaintenance}
+            onRefresh={() => fetchList()}
+            customFields={customFields}
+            orderedColumns={styleColumnSettings.orderedVisibleColumns}
+          />
+        ) : viewMode === 'smart' ? (
           <StyleTableView
             data={displayData}
             stockStateMap={stockStateMap}
@@ -239,6 +267,14 @@ const StyleInfoListPage: React.FC = () => {
         setStatsRangeType={setStatsRangeType}
         setDateRange={setDateRange}
         loadDevelopmentStats={loadDevelopmentStats}
+      />
+      <ColumnSettingsDrawer
+        open={columnSettingsOpen}
+        onClose={() => setColumnSettingsOpen(false)}
+        columnOptions={styleColumnSettings.columnOptions}
+        visibleColumns={styleColumnSettings.visibleColumns}
+        onToggle={(key, visible) => styleColumnSettings.setVisible(key, visible)}
+        onReset={styleColumnSettings.reset}
       />
     </>
   );

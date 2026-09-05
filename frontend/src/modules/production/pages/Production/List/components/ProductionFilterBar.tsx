@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Select, Popover, Checkbox, Segmented } from 'antd';
+import { Button, Select, Segmented } from 'antd';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, RadarChartOutlined } from '@ant-design/icons';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import ExportButton from '@/components/common/ExportButton';
@@ -47,6 +47,7 @@ interface ProductionFilterBarProps {
   viewMode: string;
   setViewMode: (mode: string) => void;
   factoryTypeOptions: Array<{ label: string; value: string }>;
+  openColumnSettings: () => void;
 }
 
 const CustomerFilterSelect: React.FC<{
@@ -74,8 +75,7 @@ const CustomerFilterSelect: React.FC<{
 function buildFilterBar(props: ProductionFilterBarProps) {
   const {
     queryParams, setQueryParams, dateRange, setDateRange, fetchProductionList,
-    visibleColumns, toggleColumnVisible, resetColumnSettings, columnOptions,
-    viewMode, setViewMode, factoryTypeOptions,
+    viewMode, setViewMode, factoryTypeOptions, openColumnSettings,
   } = props;
 
   return {
@@ -138,37 +138,7 @@ function buildFilterBar(props: ProductionFilterBarProps) {
     filterRight: (
       <>
         <Button onClick={() => void fetchProductionList()}>刷新</Button>
-        <Popover
-          trigger="click"
-          placement="bottomRight"
-          overlayStyle={{ padding: 0 }}
-          styles={{ container: { maxHeight: '70vh', overflowY: 'auto', minWidth: 200, padding: 0 } }}
-          content={(
-            <div>
-              <div style={{ fontWeight: 600, color: 'var(--neutral-text-secondary)', padding: '8px 16px 4px' }}>选择要显示的列</div>
-              <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '4px 0' }} />
-              {columnOptions.map(opt => (
-                <div key={opt.key} style={{ padding: '4px 16px' }}>
-                  <Checkbox
-                    checked={visibleColumns[opt.key] === true}
-                    onChange={() => toggleColumnVisible(opt.key)}
-                  >
-                    {opt.label}
-                  </Checkbox>
-                </div>
-              ))}
-              <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '4px 0' }} />
-              <div
-                style={{ color: 'var(--primary-color)', textAlign: 'center', cursor: 'pointer', padding: '6px 16px' }}
-                onClick={() => resetColumnSettings()}
-              >
-                重置为默认
-              </div>
-            </div>
-          )}
-        >
-          <Button icon={<SettingOutlined />}>列设置</Button>
-        </Popover>
+        <Button icon={<SettingOutlined />} onClick={openColumnSettings}>列设置</Button>
         <Segmented
           value={viewMode}
           onChange={(v) => setViewMode(v as 'list' | 'card' | 'smart')}

@@ -41,6 +41,7 @@ import { paths } from '@/routeConfig';
 import { usePatrolTitleTags } from './hooks/usePatrolTitleTags.tsx';
 import { useTableColumns } from './hooks/useTableColumns';
 import CooperationContractModal from '@/modules/basic/pages/OrderManagement/components/CooperationContractModal';
+import { ColumnSettingsDrawer } from '@/components/common/ColumnSettings';
 
 const ProductionList: React.FC = () => {
   const { message } = App.useApp();
@@ -67,6 +68,7 @@ const ProductionList: React.FC = () => {
   const labelPrint = useLabelPrint();
   const listData = useProductionListData();
   const columnSettings = useColumnSettings();
+  const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
   const { globalStats } = useProductionStats(listData.queryParams);
   const { fields: fieldConfigs } = useFieldConfig({ bizType: 'production', platform: 'pc' });
   const customFields = useMemo(() => fieldConfigs.filter(f => f.isSystem === 0), [fieldConfigs]);
@@ -151,6 +153,7 @@ const ProductionList: React.FC = () => {
     visibleColumns: columnSettings.visibleColumns, toggleColumnVisible: columnSettings.toggleColumnVisible,
     resetColumnSettings: columnSettings.resetColumnSettings, columnOptions: columnSettings.columnOptions,
     viewMode: listData.viewMode, setViewMode: listData.setViewMode, factoryTypeOptions,
+    openColumnSettings: () => setColumnSettingsOpen(true),
   };
 
   return (
@@ -338,6 +341,17 @@ const ProductionList: React.FC = () => {
         open={!!contractOrder}
         onClose={() => setContractOrder(null)}
         order={contractOrder as unknown as Record<string, any>}
+      />
+      <ColumnSettingsDrawer
+        open={columnSettingsOpen}
+        onClose={() => setColumnSettingsOpen(false)}
+        columnOptions={columnSettings.columnOptions}
+        visibleColumns={columnSettings.visibleColumns}
+        onToggle={(key, visible) => {
+          const current = columnSettings.visibleColumns[key] !== false;
+          if (current !== visible) columnSettings.toggleColumnVisible(key);
+        }}
+        onReset={columnSettings.resetColumnSettings}
       />
 </>
   );

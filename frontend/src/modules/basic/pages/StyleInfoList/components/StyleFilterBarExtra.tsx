@@ -1,9 +1,10 @@
 import React from 'react';
-import { Button } from 'antd';
+import { Button, Segmented } from 'antd';
 import {
   ArrowUpOutlined,
   ArrowDownOutlined,
   AppstoreOutlined,
+  UnorderedListOutlined,
   RadarChartOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
@@ -19,6 +20,7 @@ interface StyleFilterBarExtraProps {
   onRefresh: () => void;
   onNavigateNew: () => void;
   onNavigateFieldConfig: () => void;
+  openColumnSettings: () => void;
 }
 
 const StyleFilterBarExtra: React.FC<StyleFilterBarExtraProps> = ({
@@ -31,6 +33,7 @@ const StyleFilterBarExtra: React.FC<StyleFilterBarExtraProps> = ({
   onRefresh,
   onNavigateNew,
   onNavigateFieldConfig,
+  openColumnSettings,
 }) => {
   return (
     <>
@@ -42,15 +45,20 @@ const StyleFilterBarExtra: React.FC<StyleFilterBarExtraProps> = ({
         onClick={() => setDateSortAsc((v) => !v)}
         title={dateSortAsc ? '按时间升序' : '按时间降序'}
       />
-      <Button
-        icon={viewMode === 'smart' ? <AppstoreOutlined /> : <RadarChartOutlined />}
-        onClick={() => {
-          const next = viewMode === 'smart' ? 'card' : 'smart';
-          setViewMode(next);
+      <Segmented
+        value={viewMode}
+        onChange={(v) => {
+          setViewMode(v as StyleViewMode);
           setQueryParams((prev: any) => ({ ...prev, page: 1 }));
         }}
-      >
-        {viewMode === 'smart' ? '卡片视图' : '智能视图'}
+        options={[
+          { value: 'list', icon: <UnorderedListOutlined />, title: '表格视图' },
+          { value: 'card', icon: <AppstoreOutlined />, title: '卡片视图' },
+          { value: 'smart', icon: <RadarChartOutlined />, title: '智能视图' },
+        ]}
+      />
+      <Button icon={<SettingOutlined />} onClick={openColumnSettings}>
+        列设置
       </Button>
       <Button type="primary" onClick={onNavigateNew}>
         新建

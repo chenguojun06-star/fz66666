@@ -1,13 +1,13 @@
 import { useState } from 'react';
 
-export type StyleViewMode = 'smart' | 'card';
+export type StyleViewMode = 'list' | 'smart' | 'card';
 
 const STYLE_VIEW_MODE_STORAGE_KEY = 'style_info_list_view_mode';
 const LEGACY_STYLE_VIEW_MODE_KEY = 'viewMode_styleInfoList';
 
 const readInitialStyleViewMode = (): StyleViewMode => {
   const saved = String(localStorage.getItem(STYLE_VIEW_MODE_STORAGE_KEY) || '').trim();
-  if (saved === 'smart' || saved === 'card') {
+  if (saved === 'list' || saved === 'smart' || saved === 'card') {
     return saved;
   }
 
