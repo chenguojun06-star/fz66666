@@ -454,6 +454,32 @@
         </view>
       </view>
 
+      <!-- D-309：外发发货/收货通知 -->
+      <view class="task-section" wx:if="{{shipmentNotices && shipmentNotices.length > 0}}">
+        <view class="section-header">
+          <view class="section-header-left">
+            <view class="line-icon line-icon--sm icon-package"></view>
+            <text class="section-name">发货/收货</text>
+          </view>
+          <view class="section-count-badge">{{shipmentNotices.length}}</view>
+        </view>
+        <view class="task-card" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{shipmentNotices}}" wx:key="id" catchtap="handleShipmentTask" data-item="{{item}}">
+          <view class="task-accent-bar"></view>
+          <view class="task-card-main">
+            <view class="task-card-info">
+              <view class="task-order-row">
+                <text class="task-order-no">{{item.orderNo}}</text>
+                <text class="task-style-tag">{{item.role === 'factory' ? '已确认收货' : '待收货确认'}}</text>
+              </view>
+              <text class="task-name">{{item.desc}}</text>
+            </view>
+            <view class="task-action-col">
+              <button class="task-action-btn default-btn" size="mini" catchtap="handleShipmentTask" data-item="{{item}}">查看</button>
+            </view>
+          </view>
+        </view>
+      </view>
+
       <view class="task-section" wx:if="{{pendingUsers && pendingUsers.length > 0}}">
         <view class="section-header pending-header">
           <view class="section-header-left">

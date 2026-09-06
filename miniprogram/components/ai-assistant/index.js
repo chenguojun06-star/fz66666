@@ -624,6 +624,7 @@ Component({
     handleWarehouseTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleProcurementTask(t); },
     handlePurchaseTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleProcurementTask(t); },
     handleRepairTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleRepairTask(t); },
+    handleShipmentTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleShipmentTask(t); },
     handleOverdueOrder(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleOverdueOrder(t); },
     onApproveUser(e) { bellTaskActions.onApproveUser(this, e); },
     onApproveRegistration(e) { bellTaskActions.onApproveRegistration(this, e); },

@@ -16,7 +16,8 @@ export type SmartFeatureKey =
   | 'print.codeType'
   | 'outstock.allowPriceAdjust'
   | 'outstock.priceAdjustRequireReason'
-  | 'display.process.unitPrice.visible';
+  | 'display.process.unitPrice.visible'
+  | 'factory.ship.self.enabled';
 
 export type SmartFeatureFlags = Record<SmartFeatureKey, boolean>;
 
@@ -38,6 +39,8 @@ const defaultFlags: SmartFeatureFlags = {
   'outstock.priceAdjustRequireReason': false,
   // 工序单价显示为业务默认开启（隐藏属例外，由管理员主动关闭）
   'display.process.unitPrice.visible': true,
+  // D-309：允许外发工厂自主发货，业务默认开启（限制属例外，由租户主动关闭）
+  'factory.ship.self.enabled': true,
 };
 
 const storageKey = 'smart-feature-flags';

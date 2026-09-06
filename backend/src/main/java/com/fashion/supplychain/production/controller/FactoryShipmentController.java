@@ -59,9 +59,18 @@ public class FactoryShipmentController {
         return factoryShipmentOrchestrator.receive(id, receivedQuantity, receivedDetails);
     }
 
+    /**
+     * D-309 发货/收货通知（小云待办数据源）：
+     * - 租户侧：receiveStatus=pending（工厂已发货待本厂收货确认）；管理员/租户主看全部，跟单员只看自己跟单的订单；
+     * - 工厂账号：近 7 天被确认收货的发货单（回执通知"已收货"）。
+     */
+    @GetMapping("/notifications")
+    public Result<?> notifications() {
+        return Result.success(factoryShipmentOrchestrator.shipmentNotifications());
+    }
+
     /** 发货单列表 */
-    @PostMapping("/list")
-    public Result<IPage<FactoryShipment>> list(@RequestBody Map<String, Object> params) {
+    @PostMapping("/list")    public Result<IPage<FactoryShipment>> list(@RequestBody Map<String, Object> params) {
         List<String> factoryOrderIds = DataPermissionHelper.getFactoryOrderIds(productionOrderService);
         if (factoryOrderIds != null && factoryOrderIds.isEmpty()) {
             return Result.success(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>());

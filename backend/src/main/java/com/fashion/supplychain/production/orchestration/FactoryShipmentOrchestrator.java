@@ -57,6 +57,75 @@ public class FactoryShipmentOrchestrator {
     @Autowired(required = false)
     private BillAggregationOrchestrator billAggregationOrchestrator;
 
+    @Autowired
+    private com.fashion.supplychain.system.mapper.TenantSmartFeatureMapper tenantSmartFeatureMapper;
+
+    // ===== 发货/收货通知（D-309 小云待办数据源） =====
+
+    /**
+     * 通知口径：
+     * - 工厂账号：本厂近 7 天被确认收货（received/partial）的发货单 → 回执通知；
+     * - 租户侧：receiveStatus=pending（工厂已发货待收货确认）；管理员/租户主看全部，
+     *   跟单员只看 merchandiser 等于自己姓名的订单（无跟单人的订单仅管理员/租户主可见）。
+     */
+    public Map<String, Object> shipmentNotifications() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        Long tenantId = UserContext.tenantId();
+        String ctxFactoryId = UserContext.factoryId();
+
+        if (StringUtils.hasText(ctxFactoryId)) {
+            // 工厂账号：近 7 天收货确认回执
+            LocalDateTime since = LocalDateTime.now().minusDays(7);
+            List<FactoryShipment> receipts = factoryShipmentService.lambdaQuery()
+                    .eq(FactoryShipment::getTenantId, tenantId)
+                    .eq(FactoryShipment::getFactoryId, ctxFactoryId)
+                    .in(FactoryShipment::getReceiveStatus, "received", "partial")
+                    .ge(FactoryShipment::getReceiveTime, since)
+                    .orderByDesc(FactoryShipment::getReceiveTime)
+                    .last("LIMIT 20")
+                    .list();
+            result.put("type", "factory");
+            result.put("receipts", receipts);
+            return result;
+        }
+
+        // 租户侧：待收货确认
+        List<FactoryShipment> pending = factoryShipmentService.lambdaQuery()
+                .eq(FactoryShipment::getTenantId, tenantId)
+                .eq(FactoryShipment::getReceiveStatus, "pending")
+                .orderByDesc(FactoryShipment::getShipTime)
+                .last("LIMIT 50")
+                .list();
+
+        // 跟单口径：管理员/租户主全见；跟单员仅看自己跟单的订单
+        boolean isTenantAdmin = Boolean.TRUE.equals(UserContext.get() != null ? UserContext.get().isTenantOwner() : false)
+                || "all".equalsIgnoreCase(UserContext.getDataScope());
+        String myName = UserContext.get() != null ? UserContext.get().getUsername() : null;
+        if (!isTenantAdmin && pending != null && !pending.isEmpty()) {
+            Set<String> orderIds = new LinkedHashSet<>();
+            for (FactoryShipment fs : pending) {
+                if (StringUtils.hasText(fs.getOrderId())) orderIds.add(fs.getOrderId());
+            }
+            Set<String> myOrderIds = new HashSet<>();
+            if (!orderIds.isEmpty()) {
+                List<ProductionOrder> orders = productionOrderService.listByIds(orderIds);
+                for (ProductionOrder o : orders) {
+                    if (o != null && StringUtils.hasText(o.getMerchandiser())
+                            && o.getMerchandiser().trim().equals(myName == null ? "" : myName.trim())) {
+                        myOrderIds.add(o.getId());
+                    }
+                }
+            }
+            pending = pending.stream()
+                    .filter(fs -> myOrderIds.contains(fs.getOrderId()))
+                    .collect(Collectors.toList());
+        }
+        result.put("type", "tenant");
+        result.put("pendingReceipts", pending);
+        result.put("pendingReceiptCount", pending == null ? 0 : pending.size());
+        return result;
+    }
+
     // ===== 发货 =====
 
     /**
@@ -65,6 +134,19 @@ public class FactoryShipmentOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Result<FactoryShipment> ship(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
+        // D-309：租户级「允许外发工厂自主发货」开关——关闭时工厂账号发起发货直接拒绝（无记录=默认允许）
+        String ctxFactoryIdForFlag = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryIdForFlag)) {
+            com.fashion.supplychain.system.entity.TenantSmartFeature selfShipFlag =
+                tenantSmartFeatureMapper.selectOne(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.fashion.supplychain.system.entity.TenantSmartFeature>()
+                        .eq(com.fashion.supplychain.system.entity.TenantSmartFeature::getTenantId, UserContext.tenantId())
+                        .eq(com.fashion.supplychain.system.entity.TenantSmartFeature::getFeatureKey, "factory.ship.self.enabled")
+                        .last("LIMIT 1"));
+            if (selfShipFlag != null && Boolean.FALSE.equals(selfShipFlag.getEnabled())) {
+                return Result.fail("租户已限制外发工厂自主发货，请等待本厂安排发货或联系管理方");
+            }
+        }
         String orderId = (String) params.get("orderId");
         if (!StringUtils.hasText(orderId)) {
             return Result.fail("缺少 orderId");

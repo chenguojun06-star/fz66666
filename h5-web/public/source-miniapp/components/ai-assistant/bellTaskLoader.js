@@ -411,7 +411,7 @@ async function loadAllTasks(ctx) {
     const isSuperAdmin = isAdmin && !canManageRegistrations;
     ctx.setData({ isAdmin, isTenantOwner: canManageRegistrations });
 
-    const [cutting, procurement, quality, repair, timeouts, pending, tenantRegistrations, overdueOrders] = await Promise.all([
+    const [cutting, procurement, quality, repair, timeouts, pending, tenantRegistrations, overdueOrders, shipments] = await Promise.all([
       loadCuttingTasks(),
       isAdmin ? loadProcurementTasks() : Promise.resolve([]),
       loadQualityTasks(),
@@ -420,6 +420,7 @@ async function loadAllTasks(ctx) {
       isSuperAdmin ? loadPendingUsers() : Promise.resolve([]),
       canManageRegistrations ? loadTenantPendingRegistrations() : Promise.resolve([]),
       isAdmin ? loadOverdueOrders() : Promise.resolve([]),
+      loadShipmentNotifications(),
     ]);
 
     const urgentEvents = [];
@@ -436,7 +437,8 @@ async function loadAllTasks(ctx) {
       timeouts.length +
       pending.length +
       tenantRegistrations.length +
-      overdueOrders.length;
+      overdueOrders.length +
+      shipments.length;
 
     ctx.setData({
       urgentEvents,
@@ -449,6 +451,7 @@ async function loadAllTasks(ctx) {
       pendingRegistrations: tenantRegistrations,
       overdueOrders,
       overdueSummary,
+      shipmentNotices: shipments, // D-309 外发发货/收货通知
       totalCount,
       hasAnyTask: totalCount > 0,
       loading: false,
@@ -459,6 +462,46 @@ async function loadAllTasks(ctx) {
   }
 }
 
+/**
+ * D-309：加载外发发货/收货通知
+ * - 租户侧：工厂已发货待收货确认（跟单人/管理员口径由后端过滤）
+ * - 工厂账号：近7天收货确认回执
+ */
+async function loadShipmentNotifications() {
+  try {
+    const res = await api.production.shipmentNotifications();
+    const data = res || {};
+    if (data.type === 'factory') {
+      return (data.receipts || []).map(item => ({
+        id: item.id,
+        type: 'shipment',
+        role: 'factory',
+        orderNo: item.orderNo || '',
+        orderId: item.orderId || '',
+        factoryName: item.factoryName || '',
+        quantity: item.shipQuantity || item.receivedQuantity || '',
+        receiveTimeText: formatTimeAgo(item.receiveTime),
+        title: '发货已确认收货',
+        desc: (item.orderNo || '') + ' 已被本厂确认收货',
+      }));
+    }
+    return (data.pendingReceipts || []).map(item => ({
+      id: item.id,
+      type: 'shipment',
+      role: 'tenant',
+      orderNo: item.orderNo || '',
+      orderId: item.orderId || '',
+      factoryName: item.factoryName || '',
+      quantity: item.shipQuantity || '',
+      shipTimeText: formatTimeAgo(item.shipTime),
+      title: '外发发货待收货确认',
+      desc: (item.factoryName || '外发工厂') + ' 已发货，请确认收货',
+    }));
+  } catch (err) {
+    console.error('加载发货/收货通知失败:', err);
+    return [];
+  }
+}
 module.exports = {
   formatTimeAgo,
   checkIsAdmin,
@@ -471,5 +514,7 @@ module.exports = {
   loadTimeoutReminders,
   loadPendingUsers,
   loadTenantPendingRegistrations,
+  loadShipmentNotifications,
   loadAllTasks,
 };
+

@@ -24,6 +24,8 @@ const DEFAULT_FLAGS: SmartFeatureFlags = {
   'outstock.allowPriceAdjust': false,
   'outstock.priceAdjustRequireReason': false,
   'display.process.unitPrice.visible': true,
+  // D-309：允许外发工厂自主发货，业务默认开启
+  'factory.ship.self.enabled': true,
 };
 
 interface SmartFeatureState {

@@ -203,6 +203,10 @@ const production = {
   myProcurementTasks(includeCompleted = true) {
     return ok('/api/production/purchase/list', 'GET', { myTasks: 'true', includeCompleted: includeCompleted ? 'true' : 'false' });
   },
+  // D-309：外发发货/收货通知（租户=待收货确认；工厂=收货回执）
+  shipmentNotifications() {
+    return ok('/api/production/factory-shipment/notifications', 'GET', {});
+  },
   confirmReturnPurchase(payload) {
     return ok('/api/production/purchase/return-confirm', 'POST', payload || {});
   },

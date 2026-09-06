@@ -276,6 +276,24 @@ function handleOverdueOrder(task) {
 }
 
 /**
+ * D-309 处理外发发货/收货通知 - 直达发货详情（收货确认/发货记录页签）
+ * @param {Object} task - 通知对象
+ * @returns {void}
+ */
+function handleShipmentTask(task) {
+  const orderId = task.orderId || '';
+  const orderNo = task.orderNo || '';
+  if (!orderId && !orderNo) {
+    safeNavigate({ url: '/pages/factory/shipment/index' }, 'navigateTo').catch(() => {});
+    return;
+  }
+  const params = [];
+  if (orderId) params.push('orderId=' + encodeURIComponent(orderId));
+  if (orderNo) params.push('orderNo=' + encodeURIComponent(orderNo));
+  safeNavigate({ url: '/pages/factory/shipment-detail/index?' + params.join('&') + '&tab=records' }, 'navigateTo').catch(() => {});
+}
+
+/**
  * 统一任务点击路由
  * @param {Object} ctx - Component 实例
  * @param {Object} e - 事件对象
@@ -314,6 +332,9 @@ function onTaskClick(ctx, e) {
       break;
     case 'overdue':
       handleOverdueOrder(task);
+      break;
+    case 'shipment':
+      handleShipmentTask(task);
       break;
     case 'repair':
       handleRepairTask(task);
