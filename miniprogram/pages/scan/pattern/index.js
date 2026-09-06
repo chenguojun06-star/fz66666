@@ -900,6 +900,9 @@ Page({
           remark: remark || '',
         };
 
+        // 多色样衣：非SKU明细路径也要透传颜色，后端按颜色独立累计报工（D-311）
+        if (d.color) scanData.color = d.color;
+
         if (d.warehouseCode) scanData.warehouse = d.warehouseCode;
         if (this.data.warehouseAreaId) scanData.warehouseAreaId = this.data.warehouseAreaId;
         if (this.data.warehouseLocationCode) scanData.warehouseLocationCode = this.data.warehouseLocationCode;
