@@ -355,6 +355,7 @@
                 <text class="blh-cell blh-cell--code">二维码</text>
                 <text class="blh-cell blh-cell--color">颜色</text>
                 <text class="blh-cell blh-cell--size">尺码</text>
+                <text class="blh-cell blh-cell--layer">层数</text>
                 <text class="blh-cell blh-cell--qty">数量</text>
               </view>
               <view class="bundle-list-body">
@@ -371,6 +372,7 @@
                   </view>
                   <text class="blc-cell blc-cell--color">{{item.color || '-'}}</text>
                   <text class="blc-cell blc-cell--size">{{item.size || '-'}}</text>
+                  <text class="blc-cell blc-cell--layer">{{item.layerCount > 0 ? item.layerCount : '-'}}</text>
                   <text class="blc-cell blc-cell--qty">{{item.quantity || 0}}</text>
                 </view>
               </view>
@@ -657,6 +659,7 @@
             <view class="bpol-line">款号：{{item.styleNo || orderInfo.styleNo || '-'}}</view>
             <view class="bpol-line">颜色：{{item.color || '-'}}</view>
             <view class="bpol-line">码数：{{item.size || '-'}}</view>
+            <view class="bpol-line">层数：{{item.layerCount > 0 ? item.layerCount : '-'}}</view>
             <view class="bpol-line">数量：{{item.quantity || 0}}</view>
             <view class="bpol-line bpol-line--bold">扎号：{{item.bundleLabel || item.bundleNo || '-'}}</view>
           </view>

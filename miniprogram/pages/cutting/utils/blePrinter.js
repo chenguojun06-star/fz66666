@@ -199,6 +199,7 @@ function buildOneLabel(bundle, orderNo, orderInfo, qrSize) {
   parts.push(printPair('款号', bundle.styleNo || (orderInfo && orderInfo.styleNo) || '-'));
   parts.push(printPair('颜色', bundle.color || '-'));
   parts.push(printPair('码数', bundle.size || '-'));
+  parts.push(printPair('层数', bundle.layerCount > 0 ? String(bundle.layerCount) : '-'));
   parts.push(printPair('数量', String(bundle.quantity || 0)));
 
   // 走纸 + 切纸（最后一张裁切）

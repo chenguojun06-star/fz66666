@@ -292,6 +292,10 @@
               <text class="cut-detail-label">尺码</text>
               <text class="cut-detail-value">{{item.size}}</text>
             </view>
+            <view class="cut-detail-cell" wx:if="{{item.layerCount > 0}}">
+              <text class="cut-detail-label">层数</text>
+              <text class="cut-detail-value">{{item.layerCount}}</text>
+            </view>
           </view>
           <view class="cut-receiver" wx:if="{{item.receiverName}}">
             <text class="cut-receiver-text">裁剪人：{{item.receiverName}}</text>

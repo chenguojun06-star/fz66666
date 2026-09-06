@@ -8,6 +8,7 @@ function buildTableRows(sortedBundles: PrintPageData['sortedBundles']): string {
       <td style="text-align: center;">${bundle.size || '-'}</td>
       <td style="text-align: center;">${bundle.bundleNo || '-'}</td>
       <td style="text-align: center;">${bundle.color || '-'}</td>
+      <td style="text-align: center;">${Number(bundle.layerCount) > 0 ? bundle.layerCount : '-'}</td>
       <td style="text-align: center;">${bundle.quantity || 0}</td>
     </tr>
   `).join('');
@@ -119,11 +120,12 @@ function buildSinglePageHtml(pageData: PrintPageData, companyName: string): stri
       <table class="detail-table">
         <thead>
           <tr>
-            <th style="width: 20%;">款号</th>
-            <th style="width: 15%;">码数</th>
-            <th style="width: 20%;">菲号</th>
-            <th style="width: 25%;">颜色</th>
-            <th style="width: 20%;">数量</th>
+            <th style="width: 18%;">款号</th>
+            <th style="width: 14%;">码数</th>
+            <th style="width: 18%;">菲号</th>
+            <th style="width: 22%;">颜色</th>
+            <th style="width: 12%;">层数</th>
+            <th style="width: 16%;">数量</th>
           </tr>
         </thead>
         <tbody>
@@ -131,7 +133,7 @@ function buildSinglePageHtml(pageData: PrintPageData, companyName: string): stri
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="4" style="text-align: right;">合计：</td>
+            <td colspan="5" style="text-align: right;">合计：</td>
             <td style="text-align: center;">${totalQuantity}</td>
           </tr>
         </tfoot>

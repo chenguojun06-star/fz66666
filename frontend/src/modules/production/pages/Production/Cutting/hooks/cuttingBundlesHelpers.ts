@@ -10,6 +10,7 @@ export interface CuttingBundleRow {
   skuNo?: string;
   color: string;
   size: string;
+  layerCount?: number; // 面料层数
   quantity: number;
   bundleNo?: number;
   bundleLabel?: string;

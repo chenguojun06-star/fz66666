@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AutoComplete, Button, Dropdown, InputNumber, Popconfirm, Space, Tag, Typography } from 'antd';
-import CircleIconButton from '@/components/common/CircleIconButton';
+import { DeleteOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
 
@@ -8,6 +8,7 @@ export interface FreeBundleRow {
   key: string;
   color: string;
   size: string;
+  layerCount: number;
   quantity: number;
 }
 
@@ -15,7 +16,7 @@ interface CuttingFreeBundlePanelProps {
   entryOrderLines: Array<{ color: string; size: string; quantity: number; skuNo?: string }>;
   generating: boolean;
   disabled: boolean;
-  onConfirm: (rows: Array<{ skuNo: string; color: string; size: string; quantity: number }>) => void;
+  onConfirm: (rows: Array<{ skuNo: string; color: string; size: string; layerCount: number; quantity: number }>) => void;
   onClear: () => void;
 }
 
@@ -33,14 +34,15 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
   onClear,
 }) => {
   const [rows, setRows] = useState<FreeBundleRow[]>([]);
+  const panelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     uid = 0;
     setRows([]);
   }, [entryOrderLines]);
 
-  const colorSet = [...new Set(entryOrderLines.map((l) => l.color))].filter(Boolean);
-  const sizeSet = [...new Set(entryOrderLines.map((l) => l.size))].filter(Boolean);
+  const colorSet = useMemo(() => [...new Set(entryOrderLines.map((l) => l.color))].filter(Boolean), [entryOrderLines]);
+  const sizeSet = useMemo(() => [...new Set(entryOrderLines.map((l) => l.size))].filter(Boolean), [entryOrderLines]);
 
   const colorOptions = colorSet.map((c) => ({ label: c, value: c }));
   const sizeOptions = sizeSet.map((s) => ({ label: s, value: s }));
@@ -66,6 +68,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
       key: nextKey(),
       color: defaultColor,
       size: defaultSize,
+      layerCount: 0,
       quantity: 0,
     }));
     setRows((prev) => [...prev, ...newRows]);
@@ -107,10 +110,29 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
         skuNo: '',
         color: r.color.trim(),
         size: r.size.trim(),
+        layerCount: Math.max(0, Number(r.layerCount) || 0),
         quantity: Number(r.quantity) || 0,
       }));
     onConfirm(out);
   };
+
+  // 快捷键：Ctrl/Cmd+Enter 加 1 行，Ctrl/Cmd+Shift+Enter 加 5 行（仅面板内生效）
+  const addRowsRef = useRef(addRows);
+  addRowsRef.current = addRows;
+  const disabledRef = useRef(disabled);
+  disabledRef.current = disabled;
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key !== 'Enter') return;
+      if (disabledRef.current) return;
+      const target = e.target as Node | null;
+      if (panelRef.current && target && !panelRef.current.contains(target)) return;
+      e.preventDefault();
+      addRowsRef.current(e.shiftKey ? 5 : 1);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   if (!entryOrderLines?.length) {
     return (
@@ -121,24 +143,32 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
   }
 
   return (
-    <div style={{ padding: '0 0 8px' }}>
-      <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text type="secondary">自由添加菲号行，下单数量仅作提醒不限制输入</Text>
+    <div ref={panelRef} style={{ padding: '0 0 8px' }}>
+      <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <Text type="secondary">
+          自由添加菲号行，颜色/尺码按下单选择，下单数量仅作提醒不限制输入
+          <Text style={{ marginLeft: 8, fontSize: 12 }} type="secondary">
+            （快捷键 Ctrl/⌘+Enter 加 1 行 · Ctrl/⌘+Shift+Enter 加 5 行）
+          </Text>
+        </Text>
         <Dropdown
           menu={{
             items: addRowMenuItems,
             onClick: ({ key }) => addRows(Number(key)),
           }}
-          trigger={['hover']}
+          trigger={['click']}
           disabled={disabled}
         >
-          <CircleIconButton type="add" size={24} title="添加行" disabled={disabled} />
+          <Button icon={<PlusOutlined />} disabled={disabled}>
+            添加行
+            <DownOutlined style={{ fontSize: 10, marginLeft: 2 }} />
+          </Button>
         </Dropdown>
       </div>
 
       {rows.length === 0 && (
         <div style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-tertiary)', background: 'var(--color-bg-container)', borderRadius: 6, marginBottom: 12 }}>
-          暂无数据，点击「添加行」开始编辑
+          暂无数据，点击「添加行」（或按 Ctrl/⌘+Enter）开始编辑
         </div>
       )}
 
@@ -150,9 +180,10 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                 <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, width: 30 }}>#</th>
                 <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>颜色</th>
                 <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>尺码</th>
+                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>面料层数</th>
                 <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600, width: 80 }}>下单数</th>
                 <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>数量</th>
-                <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600, width: 60 }}>操作</th>
+                <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600, width: 90 }}>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -166,26 +197,36 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                     <td style={{ padding: '6px 12px', color: 'var(--color-text-tertiary)' }}>{idx + 1}</td>
                     <td style={{ padding: '6px 12px' }}>
                       <AutoComplete
-                       
                         value={row.color || undefined}
                         options={colorOptions}
                         disabled={disabled}
-                        placeholder="输入或选择"
-                        style={{ width: 100 }}
+                        placeholder="按下单颜色选择"
+                        style={{ width: 120 }}
                         onChange={(v) => updateRow(row.key, 'color', v)}
                         allowClear
                       />
                     </td>
                     <td style={{ padding: '6px 12px' }}>
                       <AutoComplete
-                       
                         value={row.size || undefined}
                         options={sizeOptions}
                         disabled={disabled}
-                        placeholder="输入或选择"
-                        style={{ width: 80 }}
+                        placeholder="按下单尺码选择"
+                        style={{ width: 100 }}
                         onChange={(v) => updateRow(row.key, 'size', v)}
                         allowClear
+                      />
+                    </td>
+                    <td style={{ padding: '6px 12px' }}>
+                      <InputNumber
+                        min={0}
+                        max={9999}
+                        precision={0}
+                        value={row.layerCount || undefined}
+                        disabled={disabled}
+                        placeholder="层数"
+                        style={{ width: 80 }}
+                        onChange={(v) => updateRow(row.key, 'layerCount', v ?? 0)}
                       />
                     </td>
                     <td style={{ padding: '6px 12px', textAlign: 'center' }}>
@@ -196,7 +237,6 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                     <td style={{ padding: '6px 12px' }}>
                       <Space size={4}>
                         <InputNumber
-                         
                           min={0}
                           max={9999}
                           precision={0}
@@ -213,7 +253,9 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                     </td>
                     <td style={{ padding: '6px 12px', textAlign: 'center' }}>
                       <Popconfirm title="确定删除此行吗？" onConfirm={() => deleteRow(row.key)} okText="确定" cancelText="取消">
-                        <CircleIconButton type="remove" size={22} title="删除此行" disabled={disabled} />
+                        <Button type="text" danger size="small" icon={<DeleteOutlined />} disabled={disabled}>
+                          删除
+                        </Button>
                       </Popconfirm>
                     </td>
                   </tr>

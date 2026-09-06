@@ -89,6 +89,7 @@ export function useCuttingBundles({
       .map((x) => ({
         color: String(x.color || '').trim(),
         size: String(x.size || '').trim(),
+        layerCount: Number(x.layerCount || 0) || 0,
         quantity: Number(x.quantity || 0) || 0,
       }))
       .filter(item => item.quantity > 0);
@@ -117,6 +118,7 @@ export function useCuttingBundles({
             bundles: validItems.map(item => ({
               color: item.color,
               size: item.size,
+              layerCount: item.layerCount || null,
               quantity: item.quantity,
             })),
           };

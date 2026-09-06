@@ -136,6 +136,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
             <div>款号：${String(b.styleNo || '').trim() || '-'}</div>
             <div>颜色：${String(b.color || '').trim() || '-'}</div>
             <div>码数：${String(b.size || '').trim() || '-'}</div>
+            <div>层数：${Number(b.layerCount) > 0 ? b.layerCount : '-'}</div>
             <div>数量：${Number(b.quantity || 0)}</div>
             <div>扎号：${String(b.bundleLabel || '').trim() || Number(b.bundleNo || 0) || '-'}</div>
           </div>
