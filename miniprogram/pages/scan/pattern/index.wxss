@@ -486,6 +486,30 @@
   margin-left: 12rpx;
 }
 
+/* D-312：多色样衣颜色选择 */
+.color-options {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+.color-chip {
+  padding: 10rpx 24rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid var(--color-border);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-card);
+}
+.color-chip--active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+.color-chip-hover {
+  opacity: 0.7;
+}
+
 /* --- 备注 --- */
 .remark-row {
   margin-bottom: 8rpx;

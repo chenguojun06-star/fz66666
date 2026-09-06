@@ -208,6 +208,14 @@ Page({
         matrixUpdate['detail.sizeText'] = matrixItems.map(function(i) { return i.size; }).join(' / ');
         matrixUpdate['detail.quantityText'] = matrixItems.map(function(i) { return String(i.quantity); }).join(' / ');
         matrixUpdate['detail.totalQuantity'] = grandTotal;
+        // D-312：多色样衣可选颜色——领取/报工表单按颜色区分，单色样衣自动隐藏
+        matrixUpdate['detail.colorOptions'] = uniqueColors;
+        if (uniqueColors.length > 0) {
+          const curColor = this.data.detail.color || '';
+          if (uniqueColors.indexOf(curColor) === -1) {
+            matrixUpdate['detail.color'] = uniqueColors[0];
+          }
+        }
       }
 
       this.setData(matrixUpdate);
@@ -304,6 +312,13 @@ Page({
     }
   },
 
+  onColorChipTap(e) {
+    const color = e.currentTarget.dataset.color;
+    if (!color) return;
+    this.setData({ 'detail.color': color });
+    this._refreshQtyHint();
+  },
+
   /**
    * MES 报工模型：领取工序（行内按钮）
    * D-173：点「领取」进入领取表单（录入本次计划制作数量），填完再提交；
@@ -319,8 +334,13 @@ Page({
       return;
     }
     if (proc.status === 'CLAIMED' && !proc.claimedByMe) {
-      toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取生产中');
-      return;
+      // D-312：多色样衣他人已领某色，仍可进入领取表单选择其他颜色（单色时后端兜底拦截）
+      const colorOpts = this.data.detail.colorOptions || [];
+      if (colorOpts.length <= 1) {
+        toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取生产中');
+        return;
+      }
+      toast.info('该工序已有他人领取，请选择其他颜色领取');
     }
     if (proc.status === 'CLAIMED' && proc.claimedByMe) {
       toast.info('你已领取该工序，请完成报工');
@@ -356,8 +376,13 @@ Page({
       return;
     }
     if (proc.status === 'CLAIMED' && !proc.claimedByMe) {
-      toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取生产中，不能报工');
-      return;
+      // D-312：多色样衣他人已领某色，报工时可选择自己领取的其他颜色（后端按色绑定领取人兜底）
+      const colorOpts = this.data.detail.colorOptions || [];
+      if (colorOpts.length <= 1) {
+        toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取生产中，不能报工');
+        return;
+      }
+      toast.info('该工序已有他人领取，请选择自己领取的颜色报工');
     }
     if (proc.status === 'PENDING' && !proc.isWarehouse && !proc.isReview) {
       toast.warning('请先领取工序【' + proc.processName + '】，领取后才能报工');
@@ -401,12 +426,16 @@ Page({
     });
   },
 
-  /** D-164：当前操作剩余可报数量 = 任务数量 - 已报累计（任务数量未知时不限） */
   /** D-164：数量提示（已报/任务/可报） */
   _refreshQtyHint() {
     const d = this.data.detail || {};
     const taskQty = Number(d.taskQuantity) || 0;
     if (taskQty <= 0) { this.setData({ qtyHint: '' }); return; }
+    // D-312：多色样衣按颜色独立报工，后端按色校验；前端无每色已报数据，不显示汇总提示避免误导
+    if (d.colorOptions && d.colorOptions.length > 1) {
+      this.setData({ qtyHint: '' });
+      return;
+    }
     const remain = this._remainingQty();
     const proc = this.data.selectedProcess;
     const procName = proc ? (proc.processName || '') : (d.processName || '');

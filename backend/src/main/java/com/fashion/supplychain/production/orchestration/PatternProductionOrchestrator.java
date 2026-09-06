@@ -639,6 +639,15 @@ public class PatternProductionOrchestrator {
         // 多人分批扫码报工时，累计到达任务数量后不允许再报（撤销扫码会释放额度）
         Integer scanQty = quantity == null ? 0 : Math.max(0, quantity);
         Integer taskQty = pattern.getQuantity();
+        String reqColor = color == null ? "" : color.trim();
+        // D-312：多色样衣按颜色取任务量——读款式 sizeColorConfig 矩阵该颜色全码数量求和，
+        // 使「白2+黑1」各自按 2/1 独立累计（原实现只取样板总数量，多色多量仍误拦）
+        if (taskQty != null && taskQty > 0 && StringUtils.hasText(reqColor)) {
+            Integer colorQty = resolveColorTaskQty(pattern.getStyleId(), reqColor);
+            if (colorQty != null && colorQty > 0) {
+                taskQty = colorQty;
+            }
+        }
         if (scanQty > 0 && !"REVIEW".equalsIgnoreCase(operationType.trim())
                 && taskQty != null && taskQty > 0) {
             String opKey = operationType.trim().toUpperCase();
@@ -646,7 +655,6 @@ public class PatternProductionOrchestrator {
             String procKey = StringUtils.hasText(processName) ? processName.trim() : opKey;
             // D-311：多色样衣钥匙加颜色——同工序不同颜色各自独立计算任务量
             // （样板记录单色定义，但允许多色补样扫码；原实现不分颜色，白色报1件后黑色必被误拦）
-            String reqColor = color == null ? "" : color.trim();
             List<PatternScanRecord> priorRecords = patternScanRecordService.lambdaQuery()
                     .eq(PatternScanRecord::getPatternProductionId, pattern.getId())
                     .eq(PatternScanRecord::getDeleteFlag, 0)
@@ -691,24 +699,36 @@ public class PatternProductionOrchestrator {
             }
         }
 
-        // MES 报工模型：领取工序（CLAIM）校验——工序须存在配置、未完成、未被他人领取
+        String operatorId = UserContext.userId();
+        String operatorName = UserContext.username();
+        updatePatternQuantityIfNeeded(pattern, quantity, operatorName);
+
+        // 优先使用前端传入的颜色/尺码，为空时 fallback 到样板单的值（提前计算：领取校验与报工绑定均按颜色区分）
+        String effectiveColor = StringUtils.hasText(color) ? color : pattern.getColor();
+        String effectiveSize = StringUtils.hasText(size) ? size : pattern.getSize();
+
+        // MES 报工模型：领取工序（CLAIM）校验——工序须存在配置、未完成、未被他人领取（D-312 按工序+颜色）
         boolean isClaimOperation = "CLAIM".equalsIgnoreCase(operationType.trim());
         if (isClaimOperation) {
-            PatternScanRecord selfClaim = validateProcessClaim(pattern, processName);
-            // D-167 幂等短路：本人已领取过该工序时直接返回既有记录，不再写重复 CLAIM（防连点产生垃圾记录）
+            PatternScanRecord selfClaim = validateProcessClaim(pattern, processName, effectiveColor);
+            // D-167 幂等短路：本人已领取过该工序该颜色时直接返回既有记录，不再写重复 CLAIM（防连点产生垃圾记录）
             if (selfClaim != null) {
                 return buildSubmitScanResult(selfClaim, patternId, pattern, operationType, UserContext.username(),
                         warehouseCode, selfClaim.getUnitPrice());
             }
         }
 
-        String operatorId = UserContext.userId();
-        String operatorName = UserContext.username();
-        updatePatternQuantityIfNeeded(pattern, quantity, operatorName);
-
-        // 优先使用前端传入的颜色/尺码，为空时 fallback 到样板单的值
-        String effectiveColor = StringUtils.hasText(color) ? color : pattern.getColor();
-        String effectiveSize = StringUtils.hasText(size) ? size : pattern.getSize();
+        // D-312：报工绑定领取人——该工序该颜色已被他人领取（未完成）时，非领取人不可报工；
+        // 未领取直接报工仍放行（兼容直报流程），仅阻止「顶替他人已领的颜色」
+        if (!isClaimOperation && !"RECEIVE".equalsIgnoreCase(operationType.trim())
+                && StringUtils.hasText(processName) && StringUtils.hasText(effectiveColor)) {
+            PatternScanRecord activeClaim = findClaimByProcessAndColor(pattern.getId(), processName.trim(), effectiveColor.trim());
+            if (activeClaim != null && StringUtils.hasText(activeClaim.getOperatorId())
+                    && !activeClaim.getOperatorId().equals(operatorId)) {
+                throw new IllegalArgumentException("工序【" + processName.trim() + "】颜色【" + effectiveColor.trim()
+                        + "】已由 " + activeClaim.getOperatorName() + " 领取制作中，不能报工，请先领取该颜色工序");
+            }
+        }
 
         // P1 修复（工资链路断点4）：unitPrice 为空时兜底查 StyleProcess.price
         // 避免 workflowAction "complete" 路径传 null unitPrice 导致工资为 0
@@ -756,13 +776,16 @@ public class PatternProductionOrchestrator {
      * 0. 工序必须在款式工序配置内（防止领取不存在的工序导致工序列表状态无法联动）
      * 1. 工序名必填（领取必须指明哪道工序）
      * 2. 工序未完成（存在非 CLAIM 的完成记录则拒绝）
-     * 3. 工序未被他人领取（存在他人的 CLAIM 记录且未完成则拒绝；本人重复领取幂等放行）
+     * 3. 同色工序未被他人领取（存在他人同色的 CLAIM 记录且未完成则拒绝；本人重复领取幂等放行）
+     * D-312：多色样衣按工序+颜色领取——A 领白色后 B 仍可领黑色，同色只能一人领取
      */
-    private PatternScanRecord validateProcessClaim(PatternProduction pattern, String processName) {
+    private PatternScanRecord validateProcessClaim(PatternProduction pattern, String processName, String color) {
         if (!StringUtils.hasText(processName)) {
             throw new IllegalArgumentException("领取工序时工序名（processName）不能为空");
         }
         String target = processName.trim();
+        // 未传颜色时回退样板单颜色（单色样衣兼容旧流程）
+        String claimColor = StringUtils.hasText(color) ? color.trim() : pattern.getColor() == null ? "" : pattern.getColor().trim();
 
         // 0. 工序必须在该款式的工序配置内
         Long styleIdLong;
@@ -800,6 +823,11 @@ public class PatternProductionOrchestrator {
             if (!sameProcess) {
                 continue;
             }
+            // D-312：同色才算占用——不同颜色（多色样衣）互不冲突
+            String recordColor = r.getColor() == null ? "" : r.getColor().trim();
+            if (!recordColor.equals(claimColor)) {
+                continue;
+            }
             if ("CLAIM".equalsIgnoreCase(opType)) {
                 if (latestClaim == null
                         || (r.getScanTime() != null && (latestClaim.getScanTime() == null
@@ -807,19 +835,120 @@ public class PatternProductionOrchestrator {
                     latestClaim = r;
                 }
             } else {
-                // 非 CLAIM 的匹配记录 = 该工序已完成报工
-                throw new IllegalArgumentException("工序【" + target + "】已完成报工，无需领取");
+                // 非 CLAIM 的匹配记录 = 该工序该颜色已完成报工
+                throw new IllegalArgumentException("工序【" + target + "】颜色【" + claimColor + "】已完成报工，无需领取");
             }
         }
 
         if (latestClaim != null) {
             if (StringUtils.hasText(latestClaim.getOperatorId())
                     && !latestClaim.getOperatorId().equals(currentUserId)) {
-                throw new IllegalArgumentException("工序【" + target + "】已由 " + latestClaim.getOperatorName() + " 领取制作中");
+                throw new IllegalArgumentException("工序【" + target + "】颜色【" + claimColor + "】已由 "
+                        + latestClaim.getOperatorName() + " 领取制作中");
             }
             return latestClaim;
         }
         return null;
+    }
+
+    /**
+     * D-312：按工序+颜色查找活跃领取记录（CLAIM 且该色未完成）：取最新一条。
+     * 供报工绑定校验使用——同色被他人领取后禁止顶替报工。
+     */
+    private PatternScanRecord findClaimByProcessAndColor(String patternProductionId, String processName, String color) {
+        if (!StringUtils.hasText(processName)) {
+            return null;
+        }
+        List<PatternScanRecord> records = patternScanRecordService.lambdaQuery()
+                .eq(PatternScanRecord::getPatternProductionId, patternProductionId)
+                .eq(PatternScanRecord::getDeleteFlag, 0)
+                .list();
+        if (records == null || records.isEmpty()) {
+            return null;
+        }
+        String target = processName.toLowerCase();
+        String claimColor = color == null ? "" : color;
+        PatternScanRecord latest = null;
+        for (PatternScanRecord r : records) {
+            if (!"CLAIM".equalsIgnoreCase(r.getOperationType() == null ? "" : r.getOperationType().trim())) {
+                continue;
+            }
+            String recordProcess = r.getProcessName() == null ? "" : r.getProcessName().trim();
+            if (!recordProcess.toLowerCase().equals(target)) {
+                continue;
+            }
+            String recordColor = r.getColor() == null ? "" : r.getColor().trim();
+            if (!recordColor.equals(claimColor)) {
+                continue;
+            }
+            // 该色已有完成记录（COMPLETE/非CLAIM报工）则不再视为活跃
+            boolean completed = records.stream().anyMatch(other ->
+                    !"CLAIM".equalsIgnoreCase(other.getOperationType() == null ? "" : other.getOperationType().trim())
+                            && (other.getProcessName() == null ? "" : other.getProcessName().trim()).toLowerCase().equals(target)
+                            && (other.getColor() == null ? "" : other.getColor().trim()).equals(claimColor));
+            if (completed) {
+                return null;
+            }
+            if (latest == null || (r.getScanTime() != null && (latest.getScanTime() == null
+                    || r.getScanTime().isAfter(latest.getScanTime())))) {
+                latest = r;
+            }
+        }
+        return latest;
+    }
+
+    /**
+     * D-312：按颜色解析样板任务量——读款式 sizeColorConfig 矩阵（matrixRows[color→quantities]）取该颜色全码数量之和。
+     * 无矩阵/无该色/解析失败返回 null（调用方回退样板总数量）。
+     */
+    private Integer resolveColorTaskQty(String styleId, String color) {
+        if (!StringUtils.hasText(styleId) || !StringUtils.hasText(color)) {
+            return null;
+        }
+        try {
+            com.fashion.supplychain.style.entity.StyleInfo style = styleInfoService.getById(styleId);
+            if (style == null || !StringUtils.hasText(style.getSizeColorConfig())) {
+                return null;
+            }
+            Map<String, Object> configMap = objectMapper.readValue(style.getSizeColorConfig(),
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+            Object rowsObj = configMap.get("matrixRows");
+            if (!(rowsObj instanceof List) || ((List<?>) rowsObj).isEmpty()) {
+                return null;
+            }
+            String target = color.trim();
+            int total = 0;
+            boolean found = false;
+            for (Object rowObj : (List<?>) rowsObj) {
+                if (!(rowObj instanceof Map)) {
+                    continue;
+                }
+                Map<?, ?> row = (Map<?, ?>) rowObj;
+                Object rowColor = row.get("color");
+                if (rowColor == null || !target.equals(String.valueOf(rowColor).trim())) {
+                    continue;
+                }
+                found = true;
+                Object qtys = row.get("quantities");
+                if (qtys instanceof List) {
+                    for (Object q : (List<?>) qtys) {
+                        if (q instanceof Number) {
+                            total += ((Number) q).intValue();
+                        } else if (q != null) {
+                            try {
+                                total += Integer.parseInt(String.valueOf(q).trim());
+                            } catch (Exception ignore) {
+                                // 非数字格子跳过
+                            }
+                        }
+                    }
+                }
+            }
+            return found ? total : null;
+        } catch (Exception e) {
+            log.warn("[D-312] 按颜色解析任务量失败: styleId={}, color={}", styleId, color, e);
+            return null;
+        }
     }
 
     private PatternProduction loadPatternForScan(String patternId) {

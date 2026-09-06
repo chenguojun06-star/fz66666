@@ -195,6 +195,21 @@
       </view>
     </view>
 
+    <!-- D-312：多色样衣选颜色（领取/报工通用；单色样衣自动隐藏） -->
+    <view wx:if="{{detail.colorOptions && detail.colorOptions.length > 1 && (claimMode || !skuList || skuList.length === 0)}}" class="input-row color-row">
+      <text class="input-label">颜色</text>
+      <view class="color-options">
+        <view
+          wx:for="{{detail.colorOptions}}"
+          wx:key="*this"
+          class="color-chip {{detail.color === item ? 'color-chip--active' : ''}}"
+          bindtap="onColorChipTap"
+          data-color="{{item}}"
+          hover-class="color-chip-hover"
+        >{{item}}</view>
+      </view>
+    </view>
+
     <!-- 数量输入（完成/返修操作时隐藏；领取时强制单数量输入；无 skuList 时显示） -->
     <view wx:if="{{(claimMode || !skuList || skuList.length === 0) && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="input-row">
       <text class="input-label">{{claimMode ? '计划制作数量' : '数量'}}</text>
