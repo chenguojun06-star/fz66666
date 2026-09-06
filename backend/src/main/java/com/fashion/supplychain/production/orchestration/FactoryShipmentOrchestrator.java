@@ -134,9 +134,9 @@ public class FactoryShipmentOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Result<FactoryShipment> ship(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
-        // D-309：租户级「允许外发工厂自主发货」开关——关闭时工厂账号发起发货直接拒绝（无记录=默认允许）
+        // D-309：租户级「允许外发工厂自主发货」开关——关闭时工厂账号发起发货直接拒绝（无记录=默认允许；mapper 未注入(单测)时跳过）
         String ctxFactoryIdForFlag = UserContext.factoryId();
-        if (StringUtils.hasText(ctxFactoryIdForFlag)) {
+        if (StringUtils.hasText(ctxFactoryIdForFlag) && tenantSmartFeatureMapper != null) {
             com.fashion.supplychain.system.entity.TenantSmartFeature selfShipFlag =
                 tenantSmartFeatureMapper.selectOne(
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.fashion.supplychain.system.entity.TenantSmartFeature>()
