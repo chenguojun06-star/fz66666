@@ -495,8 +495,47 @@ public class PurchaseCartOrchestrator {
         
         List<String> purchaseIds = new ArrayList<>();
         List<String> purchaseNos = new ArrayList<>();
-        
+        int mergedCount = 0;
+
         for (CartPreviewDto.PurchaseGroupDto group : preview.getPurchaseGroups()) {
+            // D-308：同款同物料重复添加不限制、数量自动累计——同租户+同物料+同色+同规格+同样衣锚点
+            // 已存在"待领取"采购单时，本次数量直接累加到那张单，不再新建（杜绝重复单三端挂待领取）
+            MaterialPurchase existingPending = materialPurchaseMapper.selectOne(
+                new LambdaQueryWrapper<MaterialPurchase>()
+                    .eq(MaterialPurchase::getTenantId, tenantId)
+                    .eq(MaterialPurchase::getMaterialCode, group.getMaterialCode())
+                    .apply("COALESCE(color,'') = COALESCE({0}, '')", group.getColor() == null ? "" : group.getColor())
+                    .apply("COALESCE(specifications,'') = COALESCE({0}, '')", group.getSpecifications() == null ? "" : group.getSpecifications())
+                    .apply("COALESCE(pattern_production_id,'') = COALESCE({0}, '')",
+                        group.getSourceItems() != null && !group.getSourceItems().isEmpty() && "sample".equalsIgnoreCase(group.getSourceItems().get(0).getSourceType())
+                            ? group.getSourceItems().get(0).getSourceNo() : "")
+                    .in(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING, "waiting_procurement")
+                    .apply("COALESCE(receiver_id,'') = ''")
+                    .eq(MaterialPurchase::getDeleteFlag, 0)
+                    .orderByDesc(MaterialPurchase::getCreateTime)
+                    .last("LIMIT 1"));
+
+            if (existingPending != null) {
+                BigDecimal newQty = (existingPending.getPurchaseQuantity() == null ? BigDecimal.ZERO : existingPending.getPurchaseQuantity())
+                        .add(group.getTotalQuantity() == null ? BigDecimal.ZERO : group.getTotalQuantity());
+                existingPending.setPurchaseQuantity(newQty);
+                if (group.getUnitPrice() != null && group.getUnitPrice().compareTo(BigDecimal.ZERO) > 0) {
+                    existingPending.setUnitPrice(group.getUnitPrice());
+                }
+                existingPending.setTotalAmount((existingPending.getUnitPrice() == null ? BigDecimal.ZERO : existingPending.getUnitPrice()).multiply(newQty));
+                existingPending.setUpdateTime(java.time.LocalDateTime.now());
+                existingPending.setRemark(org.springframework.util.StringUtils.hasText(existingPending.getRemark())
+                    ? existingPending.getRemark() : "购物车补加累计");
+                boolean updated = materialPurchaseOrchestrator.updateAndSync(existingPending);
+                if (!updated) {
+                    throw new BusinessException("累计到已有采购单失败: " + existingPending.getPurchaseNo());
+                }
+                purchaseIds.add(existingPending.getId());
+                purchaseNos.add(existingPending.getPurchaseNo());
+                mergedCount++;
+                continue;
+            }
+
             MaterialPurchase purchase = new MaterialPurchase();
             purchase.setMaterialCode(group.getMaterialCode());
             purchase.setMaterialName(group.getMaterialName());
@@ -562,6 +601,7 @@ public class PurchaseCartOrchestrator {
         ConfirmResultDto result = new ConfirmResultDto();
         result.setPurchaseIds(purchaseIds);
         result.setPurchaseNos(purchaseNos);
+        result.setMergedCount(mergedCount);
 
         logAppendHelper.appendConfirm(cart.getId(), preview.getPurchaseGroups().size());
         

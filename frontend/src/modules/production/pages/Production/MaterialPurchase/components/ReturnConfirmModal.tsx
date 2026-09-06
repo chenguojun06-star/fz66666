@@ -250,7 +250,8 @@ const ReturnConfirmModal: React.FC<ReturnConfirmModalProps> = ({
                   width: 180,
                   align: 'right' as const,
                   render: (_, record) => {
-                    const max = record.arrivedQuantity > 0 ? record.arrivedQuantity : record.purchaseQuantity;
+                    // D-308：回料默认=采购数（用户可改实际回货数），上限=采购数（原实现到货数优先）
+                    const max = record.purchaseQuantity || record.arrivedQuantity;
                     return (
                       <Form.Item
                         name={['items', record.index, 'returnQuantity']}

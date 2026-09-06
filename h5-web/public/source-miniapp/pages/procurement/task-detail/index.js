@@ -307,7 +307,8 @@ Page({
   onReturnConfirm(e) {
     const { id, name, arrived, purchase, unit } = e.currentTarget.dataset;
     if (!id) return;
-    const defaultQty = String((Number(arrived) > 0 ? Number(arrived) : Number(purchase)) || 0);
+    // D-308：回料默认=采购数（用户可改实际回货数；原实现到货数优先，与"默认填采购数"口径不符）
+    const defaultQty = String(Number(purchase) || Number(arrived) || 0);
     this.setData({
       showReturnConfirmModal: true,
       returnConfirmItem: { id, name, unit: unit || '' },
