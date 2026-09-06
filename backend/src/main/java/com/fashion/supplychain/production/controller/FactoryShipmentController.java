@@ -69,6 +69,18 @@ public class FactoryShipmentController {
         return Result.success(factoryShipmentOrchestrator.shipmentNotifications());
     }
 
+    /**
+     * D-310 订单级发货限制切换（仅租户管理方）：
+     * locked=1 禁止该外发订单发货（订单异常锁定），locked=0 恢复。工厂账号不可调用。
+     */
+    @PutMapping("/{orderId}/ship-lock")
+    public Result<Boolean> setShipLock(@PathVariable("orderId") String orderId,
+                                       @RequestBody Map<String, Object> body) {
+        boolean locked = body.get("locked") instanceof Boolean ? (Boolean) body.get("locked")
+                : "1".equals(String.valueOf(body.get("locked")));
+        return Result.success(factoryShipmentOrchestrator.setShipLock(orderId, locked));
+    }
+
     /** 发货单列表 */
     @PostMapping("/list")    public Result<IPage<FactoryShipment>> list(@RequestBody Map<String, Object> params) {
         List<String> factoryOrderIds = DataPermissionHelper.getFactoryOrderIds(productionOrderService);

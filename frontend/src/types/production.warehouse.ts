@@ -84,6 +84,8 @@ export interface FactoryShipment {
   orderNo: string;
   styleNo: string;
   styleName?: string;
+  /** D-310：款式图（后端 enrich 回填） */
+  styleImage?: string;
   factoryId?: string;
   factoryName?: string;
   shipQuantity: number;

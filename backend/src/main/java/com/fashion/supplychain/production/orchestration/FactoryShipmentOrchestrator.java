@@ -57,10 +57,40 @@ public class FactoryShipmentOrchestrator {
     @Autowired(required = false)
     private BillAggregationOrchestrator billAggregationOrchestrator;
 
-    @Autowired
-    private com.fashion.supplychain.system.mapper.TenantSmartFeatureMapper tenantSmartFeatureMapper;
-
     // ===== 发货/收货通知（D-309 小云待办数据源） =====
+
+    /**
+     * D-310 订单级发货限制切换：仅租户管理方（租户主/dataScope=all）可操作；工厂账号拒绝。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean setShipLock(String orderId, boolean locked) {
+        if (!StringUtils.hasText(orderId)) {
+            throw new IllegalArgumentException("缺少订单 ID");
+        }
+        if (StringUtils.hasText(UserContext.factoryId())) {
+            throw new org.springframework.security.access.AccessDeniedException("外发工厂账号不可操作发货限制");
+        }
+        com.fashion.supplychain.common.UserContext ctx = UserContext.get();
+        boolean isTenantAdmin = UserContext.isTenantOwner()
+                || "all".equalsIgnoreCase(UserContext.getDataScope());
+        if (!isTenantAdmin) {
+            throw new org.springframework.security.access.AccessDeniedException("仅租户管理方可操作发货限制");
+        }
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, orderId.trim())
+                .eq(ProductionOrder::getTenantId, UserContext.tenantId())
+                .one();
+        if (order == null) {
+            throw new IllegalArgumentException("订单不存在");
+        }
+        boolean ok = productionOrderService.lambdaUpdate()
+                .eq(ProductionOrder::getId, order.getId())
+                .set(ProductionOrder::getFactoryShipLocked, locked ? 1 : 0)
+                .update();
+        log.info("[ShipmentLock] 订单 {} 发货限制切换为 {}: 操作人={}", order.getOrderNo(), locked, ctx == null ? "" : ctx.getUsername());
+        return ok;
+    }
+
 
     /**
      * 通知口径：
@@ -134,19 +164,6 @@ public class FactoryShipmentOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Result<FactoryShipment> ship(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
-        // D-309：租户级「允许外发工厂自主发货」开关——关闭时工厂账号发起发货直接拒绝（无记录=默认允许；mapper 未注入(单测)时跳过）
-        String ctxFactoryIdForFlag = UserContext.factoryId();
-        if (StringUtils.hasText(ctxFactoryIdForFlag) && tenantSmartFeatureMapper != null) {
-            com.fashion.supplychain.system.entity.TenantSmartFeature selfShipFlag =
-                tenantSmartFeatureMapper.selectOne(
-                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.fashion.supplychain.system.entity.TenantSmartFeature>()
-                        .eq(com.fashion.supplychain.system.entity.TenantSmartFeature::getTenantId, UserContext.tenantId())
-                        .eq(com.fashion.supplychain.system.entity.TenantSmartFeature::getFeatureKey, "factory.ship.self.enabled")
-                        .last("LIMIT 1"));
-            if (selfShipFlag != null && Boolean.FALSE.equals(selfShipFlag.getEnabled())) {
-                return Result.fail("租户已限制外发工厂自主发货，请等待本厂安排发货或联系管理方");
-            }
-        }
         String orderId = (String) params.get("orderId");
         if (!StringUtils.hasText(orderId)) {
             return Result.fail("缺少 orderId");
@@ -166,6 +183,15 @@ public class FactoryShipmentOrchestrator {
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId) && !ctxFactoryId.equals(order.getFactoryId())) {
             return Result.fail("无权操作其他工厂的订单");
+        }
+        // D-310：订单级发货限制——订单异常时管理方在订单上单独锁定，工厂/本厂都无法发货
+        if (order.getFactoryShipLocked() != null && order.getFactoryShipLocked() == 1) {
+            return Result.fail("该订单已限制外发工厂发货（订单异常锁定），请联系本厂管理解除");
+        }
+        // D-310：终态订单不能再发货（已完成/已关单/已取消/已报废/已归档）
+        if (com.fashion.supplychain.common.constant.OrderStatusConstants.isTerminal(order.getStatus())) {
+            return Result.fail("订单已" + com.fashion.supplychain.common.constant.OrderStatusConstants.toChinese(order.getStatus())
+                    + "，不能再发货");
         }
 
         @SuppressWarnings("unchecked")
@@ -236,6 +262,22 @@ public class FactoryShipmentOrchestrator {
                 .one();
         if (fs == null) {
             return Result.fail("发货单不存在");
+        }
+        // D-310：终态/锁定订单不能再收货确认
+        if (StringUtils.hasText(fs.getOrderId())) {
+            ProductionOrder receiveOrder = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getId, fs.getOrderId())
+                    .eq(ProductionOrder::getTenantId, tenantId)
+                    .one();
+            if (receiveOrder != null) {
+                if (receiveOrder.getFactoryShipLocked() != null && receiveOrder.getFactoryShipLocked() == 1) {
+                    return Result.fail("该订单已限制外发发货（订单异常锁定），收货确认暂缓，请联系本厂管理解除");
+                }
+                if (com.fashion.supplychain.common.constant.OrderStatusConstants.isTerminal(receiveOrder.getStatus())) {
+                    return Result.fail("订单已" + com.fashion.supplychain.common.constant.OrderStatusConstants.toChinese(receiveOrder.getStatus())
+                            + "，不能再收货确认");
+                }
+            }
         }
         // D-242：支持分批（部分）收货。
         // 旧逻辑无论收到多少都一把置为 received，导致「发 100 只到 60」时剩余 40 件

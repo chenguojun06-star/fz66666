@@ -7,6 +7,7 @@ const { isFactoryOwner, getUserInfo } = require('../../../utils/storage');
 const { transformOrderData } = require('../utils/orderTransform');
 const { buildProcessNodesWithRates, calcOrderProgress } = require('../utils/progressNodes');
 const displayHelper = require('../../../utils/displayHelper');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 /**
  * displayHelper 颜色常量 → 小程序 tag-* 颜色类映射
@@ -57,7 +58,6 @@ Page({
   data: {
     activeTab: 0,
     isFactory: false,
-    selfShipDisabled: false,
     isTenantAdmin: false,
     activeFilter: 'all',
     filterStats: { all: 0, production: 0, completed: 0, overdue: 0, warning: 0 },
@@ -82,22 +82,10 @@ Page({
     const userInfo = getUserInfo();
     this.setData({ isFactory: factory, isTenantAdmin: admin, activeTab: 0, priceVisible: getTenantPriceVisible() });
     this.loadTenantPriceFlag();
-    this.loadSelfShipFlag();
     // 工厂账号必须绑定 factoryId，否则后端无法做数据隔离，可能看到全租户数据
     if (factory && !(userInfo && userInfo.factoryId)) {
       toast.info('当前工厂账号未绑定工厂，请联系管理员处理');
     }
-  },
-
-  /* ======== D-309：租户级「允许外发工厂自主发货」开关（关闭时工厂账号隐藏发货按钮） ======== */
-  loadSelfShipFlag: function () {
-    const self = this;
-    api.system.getSmartFeatureFlags().then((flags) => {
-      const raw = flags && flags['factory.ship.self.enabled'];
-      // 无记录=默认允许
-      const allowed = raw === undefined || raw === null ? true : !!raw;
-      self.setData({ selfShipDisabled: !allowed });
-    }).catch(() => { /* 拉取失败默认允许，不阻断页面 */ });
   },
 
   /**
@@ -345,6 +333,8 @@ Page({
       const enriched = records.map(function (r) {
         r.statusText = receiveStatusText(r.receiveStatus);
         r.statusCls = receiveStatusCls(r.receiveStatus);
+        // D-310：款式图（后端 enrich styleImage），经鉴权 URL 展示
+        if (r.styleImage) r.styleImageUrl = getAuthedImageUrl(r.styleImage);
         return r;
       });
       that.setData({

@@ -70,10 +70,6 @@ const SMART_FEATURE_LABELS: Record<SmartFeatureKey, { title: string; desc: strin
     title: '工序单价显示',
     desc: '控制生产管理/外发管理等公共页面工序进度中的单价是否对全员显示（时间显示不受影响）。',
   },
-  'factory.ship.self.enabled': {
-    title: '允许外发工厂自主发货',
-    desc: '关闭后外发工厂账号无法在手机/PC端发起发货（按钮隐藏+后端拦截），发货统一由本厂操作。',
-  },
 };
 
 export const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
@@ -93,7 +89,6 @@ export const SMART_FEATURE_KEYS: SmartFeatureKey[] = [
   'outstock.allowPriceAdjust',
   'outstock.priceAdjustRequireReason',
   'display.process.unitPrice.visible',
-  'factory.ship.self.enabled',
 ];
 
 /** 后端动作类开关（backend.action.*）：控制智能化功能是否自动执行，默认全部关闭 */

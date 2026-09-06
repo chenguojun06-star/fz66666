@@ -172,6 +172,7 @@ public final class DbColumnDefinitions {
         add("t_production_order", "progress_workflow_json", "LONGTEXT DEFAULT NULL COMMENT '生产进度工作流JSON'");
         add("t_production_order", "progress_workflow_locked", "INT NOT NULL DEFAULT 0 COMMENT '进度流程是否锁定'");
         add("t_production_order", "progress_workflow_locked_at", "DATETIME DEFAULT NULL COMMENT '锁定时间'");
+        add("t_production_order", "factory_ship_locked", "INT NOT NULL DEFAULT 0 COMMENT '限制外发工厂自主发货(1=禁止,订单异常锁定)'");
         add("t_production_order", "progress_workflow_locked_by", "VARCHAR(64) DEFAULT NULL COMMENT '锁定人ID'");
         add("t_production_order", "progress_workflow_locked_by_name", "VARCHAR(100) DEFAULT NULL COMMENT '锁定人姓名'");
         add("t_production_order", "skc", "VARCHAR(64) DEFAULT NULL COMMENT 'SKC统一编号'");

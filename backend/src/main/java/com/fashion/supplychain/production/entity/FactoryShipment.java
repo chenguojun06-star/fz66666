@@ -16,6 +16,9 @@ public class FactoryShipment {
     private String orderNo;
     private String styleNo;
     private String styleName;
+    /** D-310：款式图（列表展示用，enrich 回填，非表字段） */
+    @TableField(exist = false)
+    private String styleImage;
     private String factoryId;
     private String factoryName;
     private Integer shipQuantity;

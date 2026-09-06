@@ -10,6 +10,7 @@ import { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import { productionOrderApi, type ProductionOrderListParams } from '@/services/production/productionApi';
 import { savePageSize, readPageSize } from '@/utils/pageSizeStore';
 import { isOrderTerminal } from '@/utils/api';
+import api from '@/utils/api';
 import { useDebouncedValue } from '@/hooks/usePerformance';
 import { useModal } from '@/hooks';
 import { useFieldConfig } from '@/hooks/useFieldConfig';
@@ -208,6 +209,18 @@ const ExternalFactory: React.FC = () => {
     fetchFactoryStats();
   }, [fetchOrders, fetchFactoryStats]);
 
+  // D-310：订单级发货限制切换（订单异常时禁止外发工厂发货）
+  const handleToggleShipLock = useCallback(async (record: ProductionOrder) => {
+    const locked = (record as any).factoryShipLocked === 1;
+    try {
+      await api.put(`/production/factory-shipment/${record.id}/ship-lock`, { locked: !locked });
+      message.success(locked ? '已恢复外发工厂发货' : '已限制该订单发货（订单异常锁定）');
+      handleRefresh();
+    } catch {
+      // 错误由全局拦截器提示
+    }
+  }, [message, handleRefresh]);
+
   // ===== 以下能力对齐「生产管理」：阶段点击详情、工序、打印、编辑、关单/报废、备注、分享、子工序 =====
   const quickEditModal = useModal<ProductionOrder>();
   const printModal = useModal<ProductionOrder>();
@@ -316,6 +329,7 @@ const ExternalFactory: React.FC = () => {
                       onOpenRemark={handleSmartOpenRemark}
                       handlePrintLabel={labelPrint.handlePrintLabel}
                       canManageOrderLifecycle={canManageOrderLifecycle}
+                      handleToggleShipLock={handleToggleShipLock}
                       isSupervisorOrAbove={isSupervisorOrAbove}
                       openSubProcessRemap={subProcessRemap.openSubProcessRemap}
                       isFactoryAccount={isFactoryAccount}

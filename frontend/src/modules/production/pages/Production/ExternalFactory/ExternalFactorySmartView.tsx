@@ -89,6 +89,7 @@ interface Props {
   onOpenRemark?: (record: ProductionOrder) => void;
   handlePrintLabel?: (record: ProductionOrder) => void;
   canManageOrderLifecycle?: boolean;
+  handleToggleShipLock?: (record: ProductionOrder) => void;
   isSupervisorOrAbove?: boolean;
   openSubProcessRemap?: (record: ProductionOrder) => void;
   isFactoryAccount?: boolean;
@@ -109,6 +110,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
   setPrintModalVisible, setPrintingRecord,
   quickEditModal, handleShareOrder, onOpenRemark, handlePrintLabel,
   canManageOrderLifecycle, isSupervisorOrAbove,
+  handleToggleShipLock,
   openSubProcessRemap, isFactoryAccount,
   openNodeDetail,
 }) => {
@@ -154,6 +156,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
         onOpenRemark={onOpenRemark}
         handlePrintLabel={handlePrintLabel}
         canManageOrderLifecycle={canManageOrderLifecycle}
+        handleToggleShipLock={handleToggleShipLock}
         isSupervisorOrAbove={isSupervisorOrAbove}
         openSubProcessRemap={openSubProcessRemap}
         isFactoryAccount={isFactoryAccount}
@@ -164,6 +167,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
     openProcessDetail, syncProcessFromTemplate, setPrintModalVisible,
     setPrintingRecord, quickEditModal, handleShareOrder, onOpenRemark,
     handlePrintLabel, canManageOrderLifecycle, isSupervisorOrAbove,
+    handleToggleShipLock,
     openSubProcessRemap, isFactoryAccount, openNodeDetail]);
 
   if (loading) return <div style={{ padding: 24 }}><Skeleton active paragraph={{ rows: 6 }} /></div>;

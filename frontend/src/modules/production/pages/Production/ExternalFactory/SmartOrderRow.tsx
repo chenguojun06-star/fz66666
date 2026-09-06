@@ -37,6 +37,7 @@ interface SmartOrderRowProps {
   onOpenRemark?: (record: ProductionOrder) => void;
   handlePrintLabel?: (record: ProductionOrder) => void;
   canManageOrderLifecycle?: boolean;
+  handleToggleShipLock?: (record: ProductionOrder) => void;
   isSupervisorOrAbove?: boolean;
   openSubProcessRemap?: (record: ProductionOrder) => void;
   isFactoryAccount?: boolean;
@@ -58,6 +59,7 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
   setPrintModalVisible, setPrintingRecord,
   quickEditModal, handleShareOrder, onOpenRemark, handlePrintLabel,
   canManageOrderLifecycle, isSupervisorOrAbove,
+  handleToggleShipLock,
   openSubProcessRemap, isFactoryAccount,
   openNodeDetail,
 }) => {
@@ -268,6 +270,16 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
               onQuickEdit: quickEditModal ? (r) => quickEditModal.open(r) : undefined,
               handleCloseOrder, handleScrapOrder, handleShareOrder, onOpenRemark,
             }),
+            // D-310：订单级发货限制——订单异常时禁止外发工厂发货，管理方可一键切换
+            ...(handleToggleShipLock && canManageOrderLifecycle && !isFactoryAccount && !completed ? [{
+              key: 'shipLock',
+              label: record.factoryShipLocked === 1 ? '恢复发货' : '限制发货',
+              title: record.factoryShipLocked === 1
+                ? '恢复外发工厂对该订单的发货'
+                : '订单异常锁定：禁止外发工厂发货（收货确认同步暂缓）',
+              danger: record.factoryShipLocked !== 1,
+              onClick: () => handleToggleShipLock(record),
+            }] : []),
             ...(isFactoryAccount ? [{
               key: 'orderFlow',
               label: '全流程',

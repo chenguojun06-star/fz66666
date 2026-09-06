@@ -261,6 +261,9 @@ public class ProductionOrder {
      */
     private String status;
 
+    /** D-310：限制外发工厂自主发货（1=禁止；订单异常时由管理方在订单上单独锁定） */
+    private Integer factoryShipLocked;
+
     /**
      * 紧急程度(urgent:急单, normal:普通，默认普通)
      */

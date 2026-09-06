@@ -143,7 +143,8 @@
             <view class="act-btn act-btn--primary" catchtap="onGoOrderProcurement" data-index="{{index}}">采购</view>
             <view class="act-btn act-btn--primary" catchtap="onGoOrderCutting" data-index="{{index}}">裁剪</view>
             <view class="act-btn act-btn--primary" catchtap="onGoOrderProcessEdit" data-index="{{index}}">工序</view>
-            <view class="act-btn act-btn--warn" catchtap="onOpenShip" data-index="{{index}}" wx:if="{{(isFactory || isTenantAdmin) && !(isFactory && selfShipDisabled)}}">发货</view>
+            <!-- D-310：订单级发货限制/终态订单不显示发货按钮 -->
+            <view class="act-btn act-btn--warn" catchtap="onOpenShip" data-index="{{index}}" wx:if="{{(isFactory || isTenantAdmin) && !item.isClosed && !item.factoryShipLocked}}">发货</view>
             <view class="act-btn act-btn--remark" catchtap="onViewShipment" data-index="{{index}}">发货记录</view>
             <view class="act-btn act-btn--remark" catchtap="onOpenRemark" data-index="{{index}}">备注</view>
             <view class="act-btn" catchtap="onCopyOrderNo" data-order-no="{{item.orderNo}}">复制单号</view>
@@ -250,12 +251,20 @@
     </view>
     <view wx:for="{{shipments}}" wx:key="id" class="shipment-card" data-index="{{index}}" bindtap="onTapShipment">
       <view class="shipment-top">
-        <text class="shipment-no">{{item.orderNo || item.shipmentNo || ''}}</text>
-        <text class="shipment-status {{item.statusCls}}">{{item.statusText}}</text>
-      </view>
-      <view class="shipment-info">
-        <text>发货: {{item.totalQuantity || 0}}件</text>
-        <text>{{item.shipDate || item.createdAt || ''}}</text>
+        <view class="shipment-cover" wx:if="{{item.styleImageUrl}}">
+          <image class="shipment-cover-img" src="{{item.styleImageUrl}}" mode="aspectFit" lazy-load />
+        </view>
+        <view class="shipment-main">
+          <view class="shipment-top">
+            <text class="shipment-no">{{item.orderNo || item.shipmentNo || ''}}</text>
+            <text class="shipment-status {{item.statusCls}}">{{item.statusText}}</text>
+          </view>
+          <view class="shipment-info">
+            <text>{{item.styleNo || ''}}</text>
+            <text>发货: {{item.totalQuantity || 0}}件</text>
+            <text>{{item.shipDate || item.createdAt || ''}}</text>
+          </view>
+        </view>
       </view>
     </view>
     <view class="load-tip" wx:if="{{shipmentLoading}}">加载中…</view>

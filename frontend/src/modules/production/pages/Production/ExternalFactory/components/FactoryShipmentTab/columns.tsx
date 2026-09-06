@@ -1,5 +1,5 @@
 import React from 'react';
-import { Popconfirm, Tag } from 'antd';
+import { Image, Popconfirm, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { FactoryShipment } from '@/types/production';
 import RowActions from '@/components/common/RowActions';
@@ -14,6 +14,14 @@ import type { ColumnHandlers } from './types';
 export function buildColumns(handlers: ColumnHandlers): ColumnsType<FactoryShipment> {
   const { onReceiveClick, onDelete, isFactoryAccount } = handlers;
   return [
+    {
+      title: '款式图',
+      dataIndex: 'styleImage',
+      key: 'styleImage',
+      width: 64,
+      render: (v: string | undefined) =>
+        v ? <Image src={v} width={40} height={40} style={{ borderRadius: 4, objectFit: 'cover' }} /> : <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>,
+    },
     { title: '发货单号', dataIndex: 'shipmentNo', key: 'shipmentNo', width: 160 },
     { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 150 },
     { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 130 },
