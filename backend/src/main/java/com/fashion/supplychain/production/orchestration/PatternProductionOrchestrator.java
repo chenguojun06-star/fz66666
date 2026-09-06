@@ -644,6 +644,9 @@ public class PatternProductionOrchestrator {
             String opKey = operationType.trim().toUpperCase();
             // D-164：钥匙口径=有工序名按工序名（阶段预算），无工序名按操作类型——与小程序汇总一致
             String procKey = StringUtils.hasText(processName) ? processName.trim() : opKey;
+            // D-311：多色样衣钥匙加颜色——同工序不同颜色各自独立计算任务量
+            // （样板记录单色定义，但允许多色补样扫码；原实现不分颜色，白色报1件后黑色必被误拦）
+            String reqColor = color == null ? "" : color.trim();
             List<PatternScanRecord> priorRecords = patternScanRecordService.lambdaQuery()
                     .eq(PatternScanRecord::getPatternProductionId, pattern.getId())
                     .eq(PatternScanRecord::getDeleteFlag, 0)
@@ -659,7 +662,8 @@ public class PatternProductionOrchestrator {
                         String rProc = StringUtils.hasText(r.getProcessName()) ? r.getProcessName().trim() : "";
                         String rKey = StringUtils.hasText(rProc) ? rProc
                                 : (r.getOperationType() == null ? "" : r.getOperationType().trim().toUpperCase());
-                        return rKey.equals(procKey);
+                        String rColor = r.getColor() == null ? "" : r.getColor().trim();
+                        return rKey.equals(procKey) && rColor.equals(reqColor);
                     })
                     .filter(r -> !StringUtils.hasText(r.getRemark()) || !r.getRemark().contains("撤销"))
                     .filter(r -> r.getQuantity() != null)
@@ -667,8 +671,8 @@ public class PatternProductionOrchestrator {
                     .sum();
             if (summed + scanQty > taskQty) {
                 int remaining = Math.max(0, taskQty - summed);
-                throw new IllegalArgumentException("累计报工超限：该工序已报 " + summed + " 件，任务数量 "
-                        + taskQty + " 件，本次最多可报 " + remaining + " 件");
+                throw new IllegalArgumentException("累计报工超限：" + (StringUtils.hasText(reqColor) ? reqColor + " " : "")
+                        + "该工序已报 " + summed + " 件，该颜色任务数量 " + taskQty + " 件，本次最多可报 " + remaining + " 件");
             }
         }
 
