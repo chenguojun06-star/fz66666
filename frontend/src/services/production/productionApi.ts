@@ -71,6 +71,9 @@ export const productionOrderApi = {
   // 节点操作记录 API
   getNodeOperations: (id: string) => api.get<{ code: number; data: string }>(`/production/order/node-operations/${encodeURIComponent(id)}`),
   saveNodeOperations: (id: string, nodeOperations: string) => api.post<{ code: number; message: string }>('/production/order/node-operations', { id, nodeOperations }),
+  /** 菲号批量委派（裁剪后节点 → 外发工厂/人员） */
+  bundleDelegate: (payload: Record<string, unknown>) =>
+    api.post<{ code: number; message: string; data?: { delegatedCount?: number } }>('/production/order/bundle-delegate', payload),
   stats: (params?: Partial<ProductionOrderListParams>) => api.get<{ code: number; data: ProductionOrderStats }>('/production/order/stats', { params }),
   // 工厂产能雷达
   getFactoryCapacity: () => api.get<{ code: number; data: FactoryCapacityItem[] }>('/production/order/factory-capacity'),

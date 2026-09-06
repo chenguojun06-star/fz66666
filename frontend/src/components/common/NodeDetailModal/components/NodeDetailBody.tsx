@@ -16,6 +16,8 @@ import type {
   ProcessPriceItem,
   OperatorSummary,
   Factory,
+  BundleRecord,
+  BundleDelegatePayload,
 } from '../types';
 
 interface NodeDetailBodyProps {
@@ -50,6 +52,10 @@ interface NodeDetailBodyProps {
   factoryType?: string;
   activeTab: string;
   setActiveTab: (key: string) => void;
+  /** 菲号列表 + 该节点已扫码菲号（工序委派批量委派用） */
+  bundles?: BundleRecord[];
+  scannedBundleIds?: Set<string>;
+  onBundleDelegate?: (payload: BundleDelegatePayload) => Promise<void> | void;
   updateNodeData: (field: keyof NodeOperationData, value: string | number | undefined) => void;
   handleFactoryChange: (factoryId: string | undefined) => void;
   handleSave: () => Promise<void>;
@@ -89,6 +95,9 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
   factoryType,
   activeTab,
   setActiveTab,
+  bundles,
+  scannedBundleIds,
+  onBundleDelegate,
   updateNodeData,
   handleFactoryChange,
   handleSave,
@@ -192,6 +201,9 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
                         orderNo={orderNo ?? ''}
                         unitPrice={unitPrice}
                         cuttingSizeItems={cuttingSizeItems}
+                        bundles={bundles}
+                        scannedBundleIds={scannedBundleIds}
+                        onBundleDelegate={onBundleDelegate}
                         updateNodeData={updateNodeData}
                         handleFactoryChange={handleFactoryChange}
                         handleSave={handleSave}

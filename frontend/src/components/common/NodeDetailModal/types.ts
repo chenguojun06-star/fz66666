@@ -10,7 +10,7 @@ export type NodeType = 'procurement' | 'cutting' | 'sewing' | 'ironing' | 'quali
 export interface HistoryItem {
   time: string;
   operatorName: string;
-  action: string; // 'create' | 'update' | 'clear'
+  action: string; // 'create' | 'update' | 'clear' | 'bundle_delegate'
   changes?: string; // 修改内容描述
 }
 
@@ -56,6 +56,22 @@ export interface BundleRecord {
   status?: string;
   completed?: boolean;
   completedQty?: number;
+  /** 当前委派工厂（外发） */
+  factoryId?: string;
+  factoryName?: string;
+  /** 当前委派人员 */
+  assigneeId?: string;
+  assigneeName?: string;
+}
+
+/** 菲号批量委派请求 */
+export interface BundleDelegatePayload {
+  delegateType: 'factory' | 'person';
+  factoryId?: string;
+  factoryName?: string;
+  assigneeId?: string;
+  assigneeName?: string;
+  bundleIds: string[];
 }
 
 /** 操作员汇总 */

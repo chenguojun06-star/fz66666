@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fashion.supplychain.production.controller.ProductionOrderNodeController;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.UrgeRecord;
 import com.fashion.supplychain.intelligence.orchestration.OrderDecisionCaptureOrchestrator;
@@ -104,6 +105,15 @@ public class ProductionOrderOrchestrator {
 
     @Autowired
     private com.fashion.supplychain.style.service.ProductSkuService productSkuService;
+
+    @Autowired
+    private com.fashion.supplychain.production.service.CuttingBundleService cuttingBundleService;
+
+    @Autowired
+    private com.fashion.supplychain.production.service.ScanRecordService scanRecordService;
+
+    @Autowired
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     // ---------- updateBasicInfo 相关常量 ----------
 
@@ -1202,6 +1212,132 @@ public class ProductionOrderOrchestrator {
         }
         order.setNodeOperations(nodeOperations);
         return productionOrderService.updateById(order);
+    }
+
+    /**
+     * 菲号批量委派（工厂/人员）。
+     * 工厂委派写 cutting_bundle.factory_id（外发隔离链路直接生效），人员委派写 assignee_id/assignee_name；
+     * 工厂/人员互斥，委派后清空对方字段。已完成菲号或该节点已扫码的菲号不可委派（双路径防御）。
+     * 委派历史追加到 nodeOperations JSON，写入失败不阻断主流程。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public int saveBundleDelegation(ProductionOrderNodeController.BundleDelegateRequest req) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+
+        // 1. 订单归属校验（多租户）
+        ProductionOrder order = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getId, req.getId())
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .one();
+        if (order == null) {
+            throw new IllegalArgumentException("订单不存在");
+        }
+
+        // 2. 委派目标校验
+        boolean toFactory = "factory".equals(req.getDelegateType());
+        if (toFactory && !StringUtils.hasText(req.getFactoryId())) {
+            throw new IllegalArgumentException("请选择委派工厂");
+        }
+        if (!toFactory && !StringUtils.hasText(req.getAssigneeId())) {
+            throw new IllegalArgumentException("请选择委派人员");
+        }
+
+        // 3. 菲号归属校验（去重后数量必须一致，防跨订单/跨租户）
+        java.util.List<String> bundleIds = new java.util.ArrayList<>(new java.util.LinkedHashSet<>(req.getBundleIds()));
+        if (bundleIds.isEmpty()) {
+            throw new IllegalArgumentException("请选择要委派的菲号");
+        }
+        java.util.List<com.fashion.supplychain.production.entity.CuttingBundle> bundles = cuttingBundleService.lambdaQuery()
+                .in(com.fashion.supplychain.production.entity.CuttingBundle::getId, bundleIds)
+                .eq(com.fashion.supplychain.production.entity.CuttingBundle::getTenantId, tenantId)
+                .eq(com.fashion.supplychain.production.entity.CuttingBundle::getProductionOrderId, order.getId())
+                .list();
+        if (bundles.size() != bundleIds.size()) {
+            throw new IllegalArgumentException("包含不属于该订单的菲号");
+        }
+
+        // 4. 双路径防御：已完成菲号 / 该节点已扫码的菲号不可委派
+        for (com.fashion.supplychain.production.entity.CuttingBundle b : bundles) {
+            String st = b.getStatus() == null ? "" : b.getStatus().trim().toLowerCase();
+            if ("completed".equals(st) || "qualified".equals(st)) {
+                throw new IllegalArgumentException("菲号 " + b.getBundleNo() + " 已完成，不可委派");
+            }
+        }
+        java.util.Set<String> scannedForNode = new java.util.HashSet<>();
+        if (StringUtils.hasText(req.getNodeName())) {
+            java.util.List<com.fashion.supplychain.production.entity.ScanRecord> nodeScans = scanRecordService
+                    .listByCondition(order.getId(), null, null, "success", null);
+            for (com.fashion.supplychain.production.entity.ScanRecord r : nodeScans) {
+                String stage = r.getProgressStage();
+                String pn = r.getProcessName();
+                boolean matched = (stage != null && stage.equals(req.getNodeName()))
+                        || (pn != null && pn.equals(req.getNodeName()));
+                if (matched && r.getCuttingBundleId() != null) {
+                    scannedForNode.add(r.getCuttingBundleId());
+                }
+            }
+        }
+        for (com.fashion.supplychain.production.entity.CuttingBundle b : bundles) {
+            if (scannedForNode.contains(b.getId())) {
+                throw new IllegalArgumentException("菲号 " + b.getBundleNo() + " 已完成当前工序，不可委派");
+            }
+        }
+
+        // 5. 更新菲号（工厂/人员互斥）
+        for (com.fashion.supplychain.production.entity.CuttingBundle b : bundles) {
+            if (toFactory) {
+                b.setFactoryId(req.getFactoryId());
+                b.setFactoryName(req.getFactoryName());
+                b.setAssigneeId(null);
+                b.setAssigneeName(null);
+            } else {
+                b.setAssigneeId(req.getAssigneeId());
+                b.setAssigneeName(req.getAssigneeName());
+                b.setFactoryId(null);
+                b.setFactoryName(null);
+            }
+        }
+        cuttingBundleService.updateBatchById(bundles);
+
+        // 6. 委派历史追加到 nodeOperations JSON（与前端 HistoryItem 结构一致）
+        appendBundleDelegateHistory(order, req, bundles.size());
+
+        return bundles.size();
+    }
+
+    private void appendBundleDelegateHistory(ProductionOrder order,
+            ProductionOrderNodeController.BundleDelegateRequest req, int count) {
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(
+                    order.getNodeOperations() == null ? "{}" : order.getNodeOperations());
+            com.fasterxml.jackson.databind.JsonNode node = root.has(req.getNodeTypeKey())
+                    ? root.get(req.getNodeTypeKey())
+                    : objectMapper.createObjectNode();
+            String target = "factory".equals(req.getDelegateType())
+                    ? "工厂：" + (StringUtils.hasText(req.getFactoryName()) ? req.getFactoryName() : req.getFactoryId())
+                    : "人员：" + (StringUtils.hasText(req.getAssigneeName()) ? req.getAssigneeName() : req.getAssigneeId());
+            String changes = "批量委派 " + count + " 个菲号 → " + target;
+            com.fasterxml.jackson.databind.node.ObjectNode history = objectMapper.createObjectNode();
+            history.put("time", java.time.OffsetDateTime.now().toString());
+            history.put("operatorName", StringUtils.hasText(UserContext.username()) ? UserContext.username() : "未知");
+            history.put("action", "bundle_delegate");
+            history.put("changes", changes);
+            com.fasterxml.jackson.databind.node.ArrayNode arr = node.has("history") && node.get("history").isArray()
+                    ? (com.fasterxml.jackson.databind.node.ArrayNode) node.get("history")
+                    : objectMapper.createArrayNode();
+            arr.add(history);
+            while (arr.size() > 20) {
+                arr.remove(0);
+            }
+            ((com.fasterxml.jackson.databind.node.ObjectNode) node).set("history", arr);
+            ((com.fasterxml.jackson.databind.node.ObjectNode) root).set(req.getNodeTypeKey(), node);
+            order.setNodeOperations(objectMapper.writeValueAsString(root));
+            productionOrderService.updateById(order);
+        } catch (Exception e) {
+            log.warn("[BundleDelegate] 委派历史写入失败(不阻断主流程): {}", e.getMessage());
+        }
     }
 
     /**

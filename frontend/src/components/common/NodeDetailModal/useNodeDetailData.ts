@@ -252,6 +252,7 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
     filteredScanRecords, operatorSummary, cuttingSizeItems,
     childProcessNames, _cuttingTotalQty,
     handleUndoSuccess, handleRepairTracking,
+    refreshBundles: loadBundles, reloadNodeOperations: loadNodeOperations,
     normalizeText, _formatHistoryTime, _formatScanDetail,
   };
 }

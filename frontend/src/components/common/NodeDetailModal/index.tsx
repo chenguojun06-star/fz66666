@@ -7,7 +7,7 @@ import { useNodeDetailData } from './useNodeDetailData';
 import { formatProcessDisplayName } from '@/utils/productionStage';
 import NodeDetailBody from './components/NodeDetailBody';
 import NodeDetailFooter from './components/NodeDetailFooter';
-import type { NodeType, HistoryItem, NodeOperationData, NodeDetailModalProps } from './types';
+import type { NodeType, HistoryItem, NodeOperationData, NodeDetailModalProps, BundleDelegatePayload } from './types';
 
 const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   visible,
@@ -41,6 +41,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     orderSummary, processTrackingRecords,
     trackingLoading, repairLoading, loadWarnings, prediction, predicting,
     operatorSummary, cuttingSizeItems,
+    bundles, filteredScanRecords, refreshBundles, reloadNodeOperations,
     handleUndoSuccess, handleRepairTracking,
   } = useNodeDetailData({
     visible, orderId, orderNo, nodeType, nodeName, nodeStats,
@@ -61,6 +62,37 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   const disableEdit = isHighProgress && !adminUnlocked;
   const nodeTypeKey = nodeType as NodeType;
   const currentNodeData = nodeOperations[nodeTypeKey] || {};
+
+  // 该节点已扫码的菲号ID集合（已做过的菲号不可再批量委派）
+  const scannedBundleIds = useMemo(
+    () => new Set(filteredScanRecords.filter((r) => r.cuttingBundleId).map((r) => String(r.cuttingBundleId))),
+    [filteredScanRecords]
+  );
+
+  const handleBundleDelegate = async (payload: BundleDelegatePayload) => {
+    if (!orderId) return;
+    setSaving(true);
+    try {
+      const res = await productionOrderApi.bundleDelegate({
+        id: orderId,
+        nodeTypeKey,
+        nodeName,
+        ...payload,
+      });
+      if (res.code === 200) {
+        message.success(`委派成功，共 ${res.data?.delegatedCount ?? payload.bundleIds.length} 扎`);
+        await Promise.all([refreshBundles(), reloadNodeOperations()]);
+        onSaved?.();
+      } else {
+        message.error(res.message || '委派失败');
+      }
+    } catch (err) {
+      message.error('委派失败');
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const matchedProcess = useMemo(() => {
     const byName = (p: any, target: string) => {
@@ -292,6 +324,9 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       processTrackingRecords={processTrackingRecords}
       trackingLoading={trackingLoading}
       repairLoading={repairLoading}
+      bundles={bundles}
+      scannedBundleIds={scannedBundleIds}
+      onBundleDelegate={handleBundleDelegate}
       sourceType={sourceType}
       patternId={patternId}
       factoryType={factoryType}

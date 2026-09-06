@@ -53,6 +53,12 @@ public class CuttingBundle {
 
     private String size;
 
+    /**
+     * 面料层数（手工编菲/一键生成时按下单颜色与尺码录入）
+     */
+    @TableField("layer_count")
+    private Integer layerCount;
+
     private Integer bundleNo;
 
     private String bundleLabel;
@@ -91,6 +97,24 @@ public class CuttingBundle {
      * 工厂ID（支持菲号级工厂隔离，转单时更新）
      */
     private String factoryId;
+
+    /**
+     * 委派工厂名称（工序委派冗余展示，委派时写入）
+     */
+    @TableField("factory_name")
+    private String factoryName;
+
+    /**
+     * 委派人员ID（工序委派-人员）
+     */
+    @TableField("assignee_id")
+    private String assigneeId;
+
+    /**
+     * 委派人员姓名（工序委派-人员）
+     */
+    @TableField("assignee_name")
+    private String assigneeName;
 
     private Boolean scanBlocked;
 

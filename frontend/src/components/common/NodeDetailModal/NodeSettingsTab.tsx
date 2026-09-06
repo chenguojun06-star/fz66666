@@ -2,7 +2,8 @@ import React from 'react';
 import { Alert, Button, Input, InputNumber, Select } from 'antd';
 import dayjs from 'dayjs';
 import { formatProcessDisplayName } from '@/utils/productionStage';
-import type { NodeOperationData } from './types';
+import BundleDelegatePanel from './BundleDelegatePanel';
+import type { BundleDelegatePayload, BundleRecord, NodeOperationData } from './types';
 
 const formatDelegationTime = (value?: string) => (value ? dayjs(value).format('MM/DD') : '-');
 
@@ -21,6 +22,11 @@ interface NodeSettingsTabProps {
   orderNo: string;
   unitPrice?: number;
   cuttingSizeItems: Array<{ size: string; quantity: number }>;
+  /** 菲号列表（裁剪后节点展示批量委派） */
+  bundles?: BundleRecord[];
+  /** 该节点已扫码的菲号ID集合（已完成不可再委派） */
+  scannedBundleIds?: Set<string>;
+  onBundleDelegate?: (payload: BundleDelegatePayload) => Promise<void> | void;
   updateNodeData: (field: keyof NodeOperationData, value: string | number | undefined) => void;
   handleFactoryChange: (factoryId: string | undefined) => void;
   handleSave: () => void;
@@ -30,7 +36,8 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
   nodeName, nodeStats, delegateProcessCode, processList,
   currentNodeData, matchedProcess, disableEdit, saving,
   factories, users, orderSummary, orderNo, unitPrice,
-  cuttingSizeItems, updateNodeData, handleFactoryChange, handleSave,
+  cuttingSizeItems, bundles, scannedBundleIds, onBundleDelegate,
+  updateNodeData, handleFactoryChange, handleSave,
 }) => {
   const fixedProcessName = String(
     currentNodeData.delegateProcessName || (matchedProcess as any)?.name || (matchedProcess as any)?.processName || nodeName || ''
@@ -219,6 +226,18 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
           保存
         </Button>
       </div>
+
+      {bundles && bundles.length > 0 && (
+        <BundleDelegatePanel
+          bundles={bundles}
+          scannedBundleIds={scannedBundleIds || new Set<string>()}
+          factories={factories}
+          users={users}
+          disableEdit={disableEdit}
+          saving={saving}
+          onBundleDelegate={onBundleDelegate || (() => {})}
+        />
+      )}
 
       <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--color-text-secondary)', marginBottom: 4 }}>委派历史</div>
       {currentNodeData.history && currentNodeData.history.length > 0 ? (

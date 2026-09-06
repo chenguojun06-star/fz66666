@@ -97,7 +97,10 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                         CuttingBundle::getOperatorId,
                         CuttingBundle::getOperatorName,
                         CuttingBundle::getCreateTime,
-                        CuttingBundle::getFactoryId
+                        CuttingBundle::getFactoryId,
+                        CuttingBundle::getFactoryName,
+                        CuttingBundle::getAssigneeId,
+                        CuttingBundle::getAssigneeName
                 )
                 .eq(StringUtils.hasText(orderNo), CuttingBundle::getProductionOrderNo, orderNo)
                 .eq(StringUtils.hasText(styleNo), CuttingBundle::getStyleNo, styleNo)
@@ -284,6 +287,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
             bundle.setStyleNo(order.getStyleNo());
             bundle.setColor(color);
             bundle.setSize(size);
+            bundle.setLayerCount(parseLayerCount(item));
             bundle.setQuantity(quantity);
             bundle.setBundleNo(idx);
             bundle.setBedNo(nextBedNo);
@@ -315,6 +319,22 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
             }
         }
         return null;
+    }
+
+    /**
+     * 解析面料层数（可选字段）：非法值/缺失时返回 null，前端展示为 "-"
+     */
+    private Integer parseLayerCount(Map<String, Object> item) {
+        Object layerObj = item.get("layerCount");
+        if (layerObj == null) {
+            return null;
+        }
+        try {
+            int layer = Integer.parseInt(layerObj.toString().trim());
+            return layer > 0 ? layer : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private void updateOrderAfterBundleGenerate(ProductionOrder order, int totalBundleCount) {
