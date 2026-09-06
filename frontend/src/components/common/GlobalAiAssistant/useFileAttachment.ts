@@ -23,8 +23,7 @@ export function useFileAttachment(options: UseFileAttachmentOptions) {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  const handleFileSelect = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const attachFile = useCallback((file: File) => {
     if (!file) return;
     const validation = validateFile(file);
     if (!validation.valid) {
@@ -42,9 +41,13 @@ export function useFileAttachment(options: UseFileAttachmentOptions) {
     } else {
       setPreviewImage(null);
     }
-
-    e.target.value = '';
   }, []);
+
+  const handleFileSelect = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) attachFile(file);
+    e.target.value = '';
+  }, [attachFile]);
 
   const handleCancelPreview = useCallback(() => {
     setAttachedFile(null);
@@ -160,6 +163,7 @@ export function useFileAttachment(options: UseFileAttachmentOptions) {
     previewImage,
     setPreviewImage,
     handleFileSelect,
+    handleAttachFile: attachFile,
     handleCancelPreview,
     handleSendWithAttachment,
   };

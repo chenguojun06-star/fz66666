@@ -16,6 +16,7 @@ import emojiStyles from './EmojiPicker.module.css';
 interface ChatInputAreaProps {
   fileInputRef: React.RefObject<HTMLInputElement>;
   handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleAttachFile: (file: File) => void;
   previewImage: string | null;
   attachedFile: File | null;
   setAttachedFile: React.Dispatch<React.SetStateAction<File | null>>;
@@ -42,6 +43,7 @@ interface ChatInputAreaProps {
 const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   fileInputRef,
   handleFileSelect,
+  handleAttachFile,
   previewImage,
   attachedFile,
   setAttachedFile,
@@ -65,7 +67,21 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   sendWithContext,
 }) => {
   return (
-    <div className={styles.inputArea}>
+    <div
+      className={styles.inputArea}
+      tabIndex={0}
+      style={{ outline: 'none' }}
+      onDragOver={(e) => { e.preventDefault(); }}
+      onDrop={(e) => {
+        e.preventDefault();
+        const f = e.dataTransfer.files?.[0];
+        if (f) handleAttachFile(f);
+      }}
+      onPaste={(e) => {
+        const f = e.clipboardData.files?.[0];
+        if (f) { e.preventDefault(); handleAttachFile(f); }
+      }}
+    >
       <input ref={fileInputRef} type="file" style={{ display: 'none' }} accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,.gif,.pdf,.webp,.bmp" onChange={handleFileSelect} />
 
       {/* 图片预览区域 */}

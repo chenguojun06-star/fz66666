@@ -63,7 +63,12 @@ export const PatternEditorForm: React.FC<PatternEditorFormProps> = ({ form }) =>
             const f = e.dataTransfer.files?.[0];
             if (f) form.setFieldValue('patternFile', [{ uid: '-1', name: f.name, originFileObj: f }]);
           }}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+          onPaste={(e) => {
+            const f = e.clipboardData.files?.[0];
+            if (f) { e.preventDefault(); form.setFieldValue('patternFile', [{ uid: '-1', name: f.name, originFileObj: f }]); }
+          }}
+          tabIndex={0}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, outline: 'none' }}
         >
           <Button onClick={() => fileInputRef.current?.click()}>选择纸样文件</Button>
           {form.getFieldValue('patternFile')?.[0] && (

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { App, Image, Spin, Tooltip } from 'antd';
 import {
   DeleteOutlined, EyeOutlined, LeftOutlined, PictureOutlined, PlusOutlined,
@@ -37,6 +37,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
   } = useCoverImageUpload(props);
   const { enabled, isNewMode = false, coverUrl } = props;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
 
@@ -76,6 +77,43 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
 
   const canAdd = displayImages.length < MAX_IMAGES && (enabled || isNewMode);
 
+  // 粘贴兜底：页面任意位置（焦点不在输入框/编辑器/图片区）直接 Ctrl+V 图片 → 上传到款式图。
+  // 根因：onPaste 只在目标元素聚焦时触发，页面打开后焦点默认在 body，
+  // 用户"复制图片直接粘贴"时事件根本到不了图片区（表现为点击没反应）。
+  const uploadFilesRef = useRef(uploadFiles);
+  uploadFilesRef.current = uploadFiles;
+  useEffect(() => {
+    if (!canAdd) return;
+    const handler = (e: ClipboardEvent) => {
+      const el = containerRef.current;
+      if (!el || !el.offsetParent) return; // 组件处于隐藏 Tab 时（offsetParent=null）不兜底
+      // 命令面板(Ctrl+K 以图搜款)或 antd Modal 打开时不兜底，避免抢事件造成误上传
+      if (document.querySelector('.cp-modal')) return;
+      if (Array.from(document.querySelectorAll('.ant-modal-wrap')).some((m) => (m as HTMLElement).offsetParent !== null)) return;
+      const ae = document.activeElement;
+      if (ae) {
+        if (el.contains(ae)) return; // 焦点在图片区，走局部 onPaste，避免重复上传
+        const tag = ae.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (ae as HTMLElement).isContentEditable) return; // 输入类元素正常粘贴文本
+      }
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const files: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          const f = items[i].getAsFile();
+          if (f) files.push(f);
+        }
+      }
+      if (files.length > 0) {
+        e.preventDefault();
+        uploadFilesRef.current(files);
+      }
+    };
+    document.addEventListener('paste', handler);
+    return () => document.removeEventListener('paste', handler);
+  }, [canAdd]);
+
   const previewSrcs = useMemo(
     () => displayImages.map((img) => img.fileUrl).filter(Boolean),
     [displayImages]
@@ -88,6 +126,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
 
   return (
     <div
+      ref={containerRef}
       style={{ width: '100%', outline: 'none' }}
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDrop}

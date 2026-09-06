@@ -232,7 +232,14 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
         width="40vw"
       >
         <Spin spinning={ocrLoading} tip="正在识别，请稍候...">
-          <div style={{ padding: '16px 0', outline: 'none' }}>
+          <div
+            style={{ padding: '16px 0', outline: 'none' }}
+            tabIndex={0}
+            onPaste={(e) => {
+              const f = e.clipboardData.files?.[0];
+              if (f && f.type.startsWith('image/')) { e.preventDefault(); setOcrFile(f); }
+            }}
+          >
             <Upload.Dragger
               accept="image/*"
               maxCount={1}

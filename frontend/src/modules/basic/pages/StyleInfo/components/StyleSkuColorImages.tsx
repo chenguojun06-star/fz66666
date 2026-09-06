@@ -264,21 +264,36 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
       width: 160,
       render: (_: unknown, record: ColorImage) => (
         <Space size={4}>
-          <Upload
-            accept="image/*"
-            showUploadList={false}
-            beforeUpload={(file) => {
-              handleUpload(file, record.color);
-              return false;
+          <div
+            tabIndex={0}
+            style={{ outline: 'none', display: 'inline-flex' }}
+            onDragOver={(e) => { e.preventDefault(); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              const f = e.dataTransfer.files?.[0];
+              if (f) void handleUpload(f, record.color);
             }}
-            disabled={uploadingColor === record.color}
+            onPaste={(e) => {
+              const f = e.clipboardData.files?.[0];
+              if (f) { e.preventDefault(); void handleUpload(f, record.color); }
+            }}
           >
-            <Tooltip title={record.imageUrl ? '更换该颜色的图片' : '为该颜色上传图片'}>
-              <Button size="small" icon={<UploadOutlined />} loading={uploadingColor === record.color}>
-                {record.imageUrl ? '更换' : '上传'}
-              </Button>
-            </Tooltip>
-          </Upload>
+            <Upload
+              accept="image/*"
+              showUploadList={false}
+              beforeUpload={(file) => {
+                handleUpload(file, record.color);
+                return false;
+              }}
+              disabled={uploadingColor === record.color}
+            >
+              <Tooltip title={record.imageUrl ? '更换该颜色的图片' : '为该颜色上传图片'}>
+                <Button size="small" icon={<UploadOutlined />} loading={uploadingColor === record.color}>
+                  {record.imageUrl ? '更换' : '上传'}
+                </Button>
+              </Tooltip>
+            </Upload>
+          </div>
           {record.imageUrl && (
             <Tooltip title="移除该颜色的图片">
               <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.color)} />
@@ -300,18 +315,33 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
           <Tag>{stats.total} 个颜色</Tag>
         </Space>
         <Space size={6}>
-          <Upload
-            accept="image/*"
-            showUploadList={false}
-            beforeUpload={handleBatchUpload}
-            disabled={selectedRowKeys.length === 0 || saving}
+          <div
+            tabIndex={0}
+            style={{ outline: 'none', display: 'inline-flex' }}
+            onDragOver={(e) => { e.preventDefault(); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              const f = e.dataTransfer.files?.[0];
+              if (f) void handleBatchUpload(f);
+            }}
+            onPaste={(e) => {
+              const f = e.clipboardData.files?.[0];
+              if (f) { e.preventDefault(); void handleBatchUpload(f); }
+            }}
           >
-            <Tooltip title="先勾选左侧颜色行，可将同一张图片批量应用到这些颜色">
-              <Button icon={<UploadOutlined />} disabled={selectedRowKeys.length === 0}>
-                批量应用图片到勾选 ({selectedRowKeys.length})
-              </Button>
-            </Tooltip>
-          </Upload>
+            <Upload
+              accept="image/*"
+              showUploadList={false}
+              beforeUpload={handleBatchUpload}
+              disabled={selectedRowKeys.length === 0 || saving}
+            >
+              <Tooltip title="先勾选左侧颜色行，可将同一张图片批量应用到这些颜色">
+                <Button icon={<UploadOutlined />} disabled={selectedRowKeys.length === 0}>
+                  批量应用图片到勾选 ({selectedRowKeys.length})
+                </Button>
+              </Tooltip>
+            </Upload>
+          </div>
           <Button icon={<SyncOutlined />} onClick={fetchColorImages} loading={loading}>
             刷新
           </Button>

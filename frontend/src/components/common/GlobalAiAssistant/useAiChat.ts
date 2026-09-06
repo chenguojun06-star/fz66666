@@ -191,6 +191,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     previewImage,
     setPreviewImage,
     handleFileSelect,
+    handleAttachFile,
     handleCancelPreview,
     handleSendWithAttachment,
   } = useFileAttachment({
@@ -266,6 +267,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     handleSend,
     handleSendWithAttachment,
     handleFileSelect,
+    handleAttachFile,
     handleVoiceInput,
     handleDownloadReport,
     handleActualDownload,

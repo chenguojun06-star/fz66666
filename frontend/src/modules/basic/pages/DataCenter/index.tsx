@@ -25,12 +25,17 @@ const PatternFilePicker: React.FC<{
   const current = value?.[0];
   return (
     <div
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, outline: 'none' }}
+      tabIndex={0}
       onDragOver={(e) => { e.preventDefault(); }}
       onDrop={(e) => {
         e.preventDefault();
         const f = e.dataTransfer.files?.[0];
         if (f) onChange?.(f);
+      }}
+      onPaste={(e) => {
+        const f = e.clipboardData.files?.[0];
+        if (f) { e.preventDefault(); onChange?.(f); }
       }}
     >
       <input

@@ -84,6 +84,7 @@ const GlobalAiAssistant: React.FC = () => {
       handleSend,
       handleSendWithAttachment,
       handleFileSelect,
+      handleAttachFile,
       handleVoiceInput,
       handleDownloadReport,
       handleActualDownload,
@@ -283,6 +284,7 @@ const GlobalAiAssistant: React.FC = () => {
                   <ChatInputArea
                     fileInputRef={fileInputRef}
                     handleFileSelect={handleFileSelect}
+                    handleAttachFile={handleAttachFile}
                     previewImage={previewImage}
                     attachedFile={attachedFile}
                     setAttachedFile={setAttachedFile}

@@ -5,7 +5,6 @@ import {
 import {
   CameraOutlined, UploadOutlined, ScanOutlined, EditOutlined,
 } from '@ant-design/icons';
-import type { UploadProps } from 'antd/es/upload/interface';
 import ResizableModal from '@/components/common/ResizableModal';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -81,12 +80,12 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
   }, []);
 
   /** 相机/文件选择 */
-  const onFilePick: UploadProps['beforeUpload'] = (file) => {
-    setImageFile(file as File);
+  const onFilePick = (file: File) => {
+    setImageFile(file);
     setResult(null);
     setImageUrl('');
     // 本地预览 URL
-    const previewUrl = URL.createObjectURL(file as File);
+    const previewUrl = URL.createObjectURL(file);
     setImageUrl(previewUrl);
     return false; // 阻止 antd 默认上传
   };
@@ -274,7 +273,20 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
                   未选择图片
                 </div>
               )}
-              <div style={{ marginTop: 12 }}>
+              <div
+                style={{ marginTop: 12 }}
+                tabIndex={0}
+                onDragOver={(e) => { e.preventDefault(); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const f = e.dataTransfer.files?.[0];
+                  if (f) onFilePick(f as File);
+                }}
+                onPaste={(e) => {
+                  const f = e.clipboardData.files?.[0];
+                  if (f) { e.preventDefault(); onFilePick(f as File); }
+                }}
+              >
                 <Upload
                   accept="image/*"
                   showUploadList={false}

@@ -44,7 +44,8 @@ export const ProcessImageCell: React.FC<{ record: any; readOnly?: boolean }> = (
   }, [doUpload]);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', justifyContent: 'center', minHeight: 24 }}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', justifyContent: 'center', minHeight: 24, outline: 'none' }}
+      tabIndex={0}
       onClick={(e) => e.stopPropagation()}
       onDragOver={(e) => { e.preventDefault(); }}
       onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) handleFileSelect(e.dataTransfer.files); }}
@@ -176,7 +177,8 @@ export const NewRowImageUpload: React.FC<{
   }, [doUpload]);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', justifyContent: 'center', minHeight: 24 }}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', justifyContent: 'center', minHeight: 24, outline: 'none' }}
+      tabIndex={0}
       onClick={(e) => e.stopPropagation()}
       onDragOver={(e) => { e.preventDefault(); }}
       onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) handleFileSelect(e.dataTransfer.files); }}
