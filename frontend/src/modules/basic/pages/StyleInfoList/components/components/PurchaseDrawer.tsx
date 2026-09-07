@@ -34,7 +34,7 @@ const PurchaseDrawer: React.FC<PurchaseDrawerProps> = ({
       onClose={onClose}
       size="large"
       mask={false}
-      styles={{ wrapper: { width: '50vw' }, body: { padding: 0 } }}
+      styles={{ wrapper: { width: '80%' }, body: { padding: 0 } }}
       // 渲染到 document.body，避免被外层 StyleStageDrawer 的堆叠上下文困住
       getContainer={() => document.body}
       // 提高层级，确保覆盖在 StyleStageDrawer 之上（默认 1000）

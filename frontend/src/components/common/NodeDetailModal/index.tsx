@@ -354,7 +354,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         title={title}
         open={visible}
         onClose={onClose}
-        width="85vw"
+        width="80%"
         footer={footer}
         styles={{ body: { padding: 16 } }}
       >
@@ -368,7 +368,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       title={title}
       open={visible}
       onClose={onClose}
-      width="85vw"
+      width="80%"
       footer={footer}
       styles={{ body: { padding: 16 } }}
     >

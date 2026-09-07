@@ -11,7 +11,7 @@
  *   open={open}
  *   onClose={onClose}
  *   title="工序详情"
- *   width="85vw"
+ *   width="80%"
  *   footer={<><Button onClick={onClose}>取消</Button><Button type="primary">保存</Button></>}
  * >
  *   ...内容
@@ -26,7 +26,7 @@ export interface SideDrawerProps {
   open: boolean;
   onClose: () => void;
   title?: React.ReactNode;
-  /** 抽屉宽度，默认 640px；详情类可传 '85vw' 等 */
+  /** 抽屉宽度，默认屏宽 80%；列设置等轻量抽屉可传 480 等 */
   width?: number | string;
   /** 底部操作区（一般为按钮组），不传则不渲染底部条 */
   footer?: React.ReactNode;

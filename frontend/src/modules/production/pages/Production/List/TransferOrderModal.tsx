@@ -90,7 +90,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
       onClose={closeTransferModal}
       placement="right"
       size="large"
-      styles={{ wrapper: { width: '85vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
+      styles={{ wrapper: { width: '80%' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
       footer={
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <Button onClick={closeTransferModal}>取消</Button>

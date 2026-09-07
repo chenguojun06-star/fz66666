@@ -300,7 +300,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
       open={open}
       onClose={handleClose}
       size="large"
-      styles={{ wrapper: { width: '85%' } }}
+      styles={{ wrapper: { width: '80%' } }}
       destroyOnHidden
       extra={
         <Space>

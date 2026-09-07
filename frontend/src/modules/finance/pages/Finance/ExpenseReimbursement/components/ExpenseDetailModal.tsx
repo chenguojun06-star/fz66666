@@ -92,7 +92,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
       open={open}
       title={`报销单详情 — ${record.reimbursementNo || ''}`}
       onClose={onClose}
-      styles={{ body: { padding: 0 }, wrapper: { width: '85vw' } }}
+      styles={{ body: { padding: 0 }, wrapper: { width: '80%' } }}
     >
       <div style={{ display: 'flex', gap: 0, height: 'calc(100vh - 120px)' }}>
         {/* 左侧：凭证图片 */}

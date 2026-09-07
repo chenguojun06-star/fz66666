@@ -15,7 +15,7 @@ const InspectDrawer: React.FC<InspectDrawerProps> = ({ visible, orderId, onClose
       open={visible}
       onClose={onClose}
       size="large"
-      styles={{ wrapper: { width: '90%' }, body: { padding: 16 } }}
+      styles={{ wrapper: { width: '80%' }, body: { padding: 16 } }}
     >
       {visible && (
         <InspectionDetail

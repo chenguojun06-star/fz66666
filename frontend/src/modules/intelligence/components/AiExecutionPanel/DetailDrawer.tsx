@@ -29,7 +29,7 @@ export default function DetailDrawer({
       placement="right"
       onClose={onClose}
       open={open}
-      size={500}
+      styles={{ wrapper: { width: '80%' } }}
     >
       {selectedCommand && (
         <div style={{ paddingTop: '16px' }}>
@@ -39,10 +39,6 @@ export default function DetailDrawer({
             <div className="detail-row">
               <span className="label">命令ID:</span>
               <span>{selectedCommand.commandId}</span>
-            </div>
-            <div className="detail-row">
-              <span className="label">命令类型:</span>
-              <Tag color="blue">{selectedCommand.action}</Tag>
             </div>
             <div className="detail-row">
               <span className="label">目标:</span>

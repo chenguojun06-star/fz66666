@@ -1,13 +1,40 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-06（D-302 筛选口径bug+尺寸表组件，待推送）
+> 最后更新：2026-09-07（弹窗内部信息重复核查与去重）
 
 ---
 
 ## 最近变更（Latest Changes）
 
-### 2026-09-06 D-302 生产管理"筛选6列表2"口径bug + 生产管理/外发管理加尺寸表 ✅代码完成待推送
+### 2026-09-07 弹窗内部信息重复核查与去重 ✅代码完成待推送
+
+- [x] 全量核查四大模块（样衣/款式、生产、仓库、订单/财务/通用）弹窗内部信息重复，修复 3 处：
+- [x] StyleCostDetailDrawer（款式成本明细）：顶部汇总卡片与底部汇总完全重复 → 删除底部汇总卡，"共 N 款/N 件"合并进 Divider 标题
+- [x] OutboundModal/BatchTable（物料出库批次明细）：表头统计行（可用/出库合计）与表尾 summary 重复 → 删除表尾 summary
+- [x] AiExecutionPanel/DetailDrawer（AI 命令详情）：标题已含命令类型，命令信息区"命令类型"行重复 → 删除该行
+- [x] 核查确认无重复（信息分区用途不同，设计合理）：StyleStageDrawer 样衣生产/审核入库、SampleProcessList 色码上下文、MaterialInfoCard+批次颜色列（批次隔离）、MaterialScanOperationModal、PurchaseDetailView、OrderCreateModal、StylePrintModal 打印区块、PurchaseCartDrawer/CartPreview、SmartReceiveModal、AI 执行轨迹、成品出库抽屉、智能领取
+- [x] 验证：前端 npx tsc --noEmit 0 错误
+
+### 2026-09-07 侧滑弹窗统一 80% + 布局梳理 ✅代码完成待推送
+
+- [x] 全项目 50 处 Drawer/SideDrawer 侧滑弹窗宽度统一为 80%（styles.wrapper.width 或 width 属性），排除 ColumnSettingsDrawer（列设置 480px 小抽屉）
+- [x] 覆盖：成品/物料/库位/电商订单详情、扫码出入库、购物车/采购预览、采购单、领料/质检入库/转单、工序编辑、无资料下单/下单、样衣生产/开发/采购/成本明细、打印预览、AI 执行轨迹、工序单价配置、维护面板、工厂发货、报销单详情等
+- [x] SideDrawer 公共组件默认宽度 640 → '80%'（防新调用方漏传）；JSDoc 同步
+- [x] 移动端例外保留：下单/采购单 isMobile 仍 96vw（小屏全宽合理）
+- [x] 修复 StyleCostDetailDrawer 误加重复 styles（原本已是 80%）
+- [x] 抽查样衣生产/样衣开发/成本明细抽屉：布局干净、无重复信息（上轮已去重色码任务/精简信息）
+- [x] 验证：前端 npx tsc --noEmit 0 错误
+
+### 2026-09-07 批量问题优化六阶段（备注日志分离/手工编菲/采购全链路/订单管理/尺码排序/打印表高度）✅代码完成待推送
+
+- [x] **Phase1 操作日志与备注分离（P0）**：OperationLogAppendUtil 改造为直写 t_operation_log（不再拼 remark）；清理 12+ 调用点（ActionExecutorTool/MaterialPurchasePickingHelper/PatternProductionOrchestrator/OrderFactoryTransferOrchestrator/ProcessPriceAdjustmentOrchestrator/ProductionOrderOrchestrator 等）；新增 scripts/cleanup-remark-logs.py 幂等历史清洗（表级正则/备份/干跑模式）
+- [x] **Phase2 手工编菲优化**：面料层数=数量单输入（删独立 layerCount 输入）；码数汇总匹配（下单/已填/剩余实时提示+超下单提醒）；Ctrl/⌘+Enter 加1行、Ctrl/⌘+Shift+Enter 加5行快捷键；快速分扎工具；提交自动按 颜色顺序→尺码升序 排序
+- [x] **Phase3 采购全链路**：新增 PurchasePrintModal 专业采购单打印（订单号/款式图/颜色尺码矩阵/物料明细表/合计）；状态中文化（getStatusConfig 映射）；样衣采购无订单降级（"样衣采购"标题+来源说明，不再报"订单不存在"）；样衣出库领取链路；全采购页面动作统一（入库/领取/直接使用）
+- [x] **Phase4 订单管理**：恢复打印生产单入口（useOrderColumns 打印下拉三分支：订单/生产/标签，StylePrintModal 支持 initialLabelMode）；排行榜窗口收敛（OrderRankingDashboard.css 减 padding/字号/高度）；数据分析 tab 升级为智能数据分析（OrderAnalyticsController+Orchestrator+VO：总览/30天趋势/工厂时效排行/次品率排行/毛利估算，ECharts）；无资料下单颜色/码数加快捷齿轮（AttributeGroupLibraryModal 成组选择）
+- [x] **Phase5 菲号尺码排序（全系统）**：compareSizeAsc（前端 utils/api/size + 后端 ProductionOrderUtils）统一排序；覆盖自由编菲提交/一键生成/后端 CuttingBundleServiceImpl 生成路径；颜色按下单出现顺序、尺码 XS→S→M→L→XL 升序
+- [x] **Phase6 打印表高度+界面收尾**：裁剪菲号明细表 disableFillScrollY 自然平铺（不再限高内部滚动）；验证前端 tsc 0 错误 + 后端 mvn compile BUILD SUCCESS
+- [x] 验收（部署后）：手工编菲只填数量即出菲号且小码在前；采购单可打印专业表单；样衣采购不再报订单不存在；备注列无系统日志；订单管理可打印生产单；排行榜窗口正常大小
 
 - [x] 口径bug根因：列表 status=production 后端 eq 精确匹配单值，而 /stats activeOrders=全部非终态十余种状态 → "统计6列表2"。修 queryPage：production/in_production/active 一律 notIn 终态集合（与统计同口径）；其余状态仍精确匹配。PC/手机两端数字与列表同时对齐
 - [x] 尺寸表抽成共享组件 components/size-table（property styleId，observer 懒加载+实例级缓存，D-185/D-252 同款透视算法），接入三处：生产管理订单卡展开区、外发管理列表卡展开区、发货详情页订单信息卡下

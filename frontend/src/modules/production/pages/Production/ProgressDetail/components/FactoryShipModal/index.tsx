@@ -65,7 +65,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
     <SideDrawer
       open={open}
       title={`工厂发货 — ${orderNo ?? ''}`}
-      width="85vw"
+      width="80%"
       onClose={onCancel}
       footer={
         <>

@@ -72,7 +72,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
       open={outboundModal.visible}
       onClose={handleClose}
       size="large"
-      styles={{ wrapper: { width: '60vw' } }}
+      styles={{ wrapper: { width: '80%' } }}
       destroyOnHidden
       extra={
         <Space>

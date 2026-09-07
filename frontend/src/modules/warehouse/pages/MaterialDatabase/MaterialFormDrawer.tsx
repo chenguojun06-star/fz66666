@@ -64,7 +64,7 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
       title={currentMaterial?.id ? '编辑物料信息' : (currentMaterial ? '复制物料信息' : '新增物料信息')}
       open={visible}
       onClose={closeDialog}
-      width="85%"
+      width="80%"
       bodyStyle={{ padding: 16 }}
       footer={[
         <Button key="cancel" onClick={closeDialog}>取消</Button>,

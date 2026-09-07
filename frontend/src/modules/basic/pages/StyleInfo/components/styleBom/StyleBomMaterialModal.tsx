@@ -54,7 +54,7 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
     open={open}
     onClose={onClose}
     placement="right"
-    styles={{ wrapper: { width: '60vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
+    styles={{ wrapper: { width: '80%' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
     destroyOnHidden
   >
     <Tabs

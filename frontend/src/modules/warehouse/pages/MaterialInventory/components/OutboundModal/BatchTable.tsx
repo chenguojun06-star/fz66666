@@ -158,24 +158,6 @@ const BatchTable: React.FC<BatchTableProps> = ({
         dataSource={batchDetails}
         rowKey="batchNo"
         pagination={false}
-        summary={() => (
-          <ResizableTable.Summary fixed>
-            <ResizableTable.Summary.Row>
-              <ResizableTable.Summary.Cell key="label" index={0} colSpan={4} align="right">
-                <strong>合计</strong>
-              </ResizableTable.Summary.Cell>
-              <ResizableTable.Summary.Cell key="available" index={1} align="center">
-                <strong style={{ color: 'var(--color-success)' }}>{totalAvailable}</strong>
-              </ResizableTable.Summary.Cell>
-              <ResizableTable.Summary.Cell key="locked" index={2} />
-              <ResizableTable.Summary.Cell key="outbound" index={3} align="center">
-                <strong style={{ color: 'var(--color-primary)', fontSize: "var(--font-size-md)" }}>
-                  {totalOutbound} {unit}
-                </strong>
-              </ResizableTable.Summary.Cell>
-            </ResizableTable.Summary.Row>
-          </ResizableTable.Summary>
-        )}
       />
     </div>
   );

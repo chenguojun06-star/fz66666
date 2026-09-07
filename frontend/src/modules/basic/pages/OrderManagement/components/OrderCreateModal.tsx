@@ -83,7 +83,7 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
       onClose={onClose}
       size="large"
       placement="right"
-      styles={{ wrapper: { width: isMobile ? '96vw' : '85vw' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
+      styles={{ wrapper: { width: isMobile ? '96vw' : '80%' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
       footer={
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <Button onClick={onClose} disabled={submitLoading}>关闭</Button>

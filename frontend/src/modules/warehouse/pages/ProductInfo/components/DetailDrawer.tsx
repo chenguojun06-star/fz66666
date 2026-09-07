@@ -40,7 +40,7 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
       title={d ? `${d.styleNo} — ${d.styleName}` : '成品详情'}
       open={open}
       onClose={onClose}
-      size="large"
+      styles={{ wrapper: { width: '80%' } }}
       loading={drawerLoading}
       extra={
         d ? (

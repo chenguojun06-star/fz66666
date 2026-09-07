@@ -312,7 +312,7 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
         </div>
       </Card>
 
-      <Divider style={{ margin: '12px 0' }}>款式明细列表</Divider>
+      <Divider style={{ margin: '12px 0' }}>款式明细列表{styleDetails.length > 0 ? `（共 ${styleDetails.length} 款，${summaryData.patternCount} 件样衣）` : ''}</Divider>
 
       {/* 明细表格 */}
       <Table<StyleCostDetail>
@@ -330,37 +330,6 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
         scroll={{ x: 800 }}
         locale={{ emptyText: '暂无成本明细数据' }}
       />
-
-      {/* 底部汇总 */}
-      {styleDetails.length > 0 && (
-        <Card size="small" style={{ marginTop: 16, background: 'var(--color-bg-container)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text type="secondary">
-              共 {styleDetails.length} 款，{summaryData.patternCount} 件样衣
-            </Text>
-            <div style={{ display: 'flex', gap: 24 }}>
-              <Text>
-                <Text type="secondary">面辅料: </Text>
-                <Text strong>{formatMoney(summaryData.materialCost)}</Text>
-              </Text>
-              <Text>
-                <Text type="secondary">工序: </Text>
-                <Text strong>{formatMoney(summaryData.processCost)}</Text>
-              </Text>
-              <Text>
-                <Text type="secondary">二次工艺: </Text>
-                <Text strong>{formatMoney(summaryData.secondaryProcessCost)}</Text>
-              </Text>
-              <Text>
-                <Text type="secondary">合计: </Text>
-                <Text strong style={{ color: 'var(--primary-color)', fontSize: 16 }}>
-                  {formatMoney(summaryData.totalCost)}
-                </Text>
-              </Text>
-            </div>
-          </div>
-        </Card>
-      )}
       </Spin>
     </Drawer>
   );

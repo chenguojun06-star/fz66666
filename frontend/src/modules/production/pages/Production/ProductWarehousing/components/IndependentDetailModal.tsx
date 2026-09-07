@@ -84,7 +84,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
       onClose={onClose}
       placement="right"
       size="large"
-      styles={{ wrapper: { width: '88vw' }, body: { padding: 0, height: 'calc(100vh - 110px)' } }}
+      styles={{ wrapper: { width: '80%' }, body: { padding: 0, height: 'calc(100vh - 110px)' } }}
       destroyOnHidden
     >
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

@@ -93,7 +93,7 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
       open={open}
       onClose={onClose}
       size="large"
-      styles={{ wrapper: { width: '85%' } }}
+      styles={{ wrapper: { width: '80%' } }}
       destroyOnHidden
       extra={
         <Space>

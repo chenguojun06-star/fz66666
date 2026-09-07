@@ -36,7 +36,7 @@ const StyleProcurementDrawer: React.FC<StyleProcurementDrawerProps> = ({
       onClose={handleClose}
       size="large"
       mask={false}
-      styles={{ wrapper: { width: '85%' }, body: { padding: 0 } }}
+      styles={{ wrapper: { width: '80%' }, body: { padding: 0 } }}
       destroyOnHidden
     >
       {record && styleNo && (

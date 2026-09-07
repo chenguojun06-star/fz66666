@@ -138,7 +138,7 @@ export const CartPreviewDrawer: React.FC<CartPreviewDrawerProps> = ({
     <Drawer
       title="采购预览"
       placement="right"
-      size="large"
+      styles={{ wrapper: { width: '80%' } }}
       open={open}
       onClose={onClose}
       maskClosable={false}
