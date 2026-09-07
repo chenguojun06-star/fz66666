@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Button, Modal, Space, Tag, Typography } from 'antd';
+import { Button, Tag, Typography } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import { parseProductionOrderLines, sortSizeNames, toNumberSafe } from '@/utils/api';
@@ -159,10 +159,10 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
     </tfoot>
   </table>
   <table class="foot">
-    <tr><td>采购单数：${purchaseList.length} 个　·　采购总量：${totalPurchase}　·　到货总量：${totalArrived}　·　合计金额：${money(totalAmount)}</td></tr>
+    <tr><td>采购单数：${purchaseList.length} 个 · 采购总量：${totalPurchase} · 到货总量：${totalArrived} · 合计金额：${money(totalAmount)}</td></tr>
     <tr><td>备注：该采购单由系统根据物料清单自动生成，供应商与单价以实际协商为准。</td></tr>
   </table>
-  <script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script>
+  <script>window.onload=function(){setTimeout(function(){window.print()},300)}</script>
 </body></html>`;
   };
 
@@ -288,7 +288,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
         </table>
 
         <Text type="secondary" style={{ display: 'block', marginTop: 10, fontSize: 12 }}>
-          采购单数：{purchaseList.length} 个　·　采购总量：{totalPurchase}　·　到货总量：{totalArrived}　·　合计金额：{money(totalAmount)}
+          采购单数：{purchaseList.length} 个 · 采购总量：{totalPurchase} · 到货总量：{totalArrived} · 合计金额：{money(totalAmount)}
         </Text>
       </div>
     </ResizableModal>
