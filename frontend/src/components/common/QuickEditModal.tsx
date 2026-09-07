@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Form, Input, Select, Tag } from 'antd';
 import SmallModal from './SmallModal';
 import { UnifiedDatePicker, dayjs } from './UnifiedDatePicker';
+import { splitRemarkAndLogs } from '@/utils/remarkLogs';
 import type { FormInstance } from 'antd/es/form';
 
 interface QuickEditModalProps {
@@ -21,8 +22,6 @@ interface QuickEditModalProps {
   formRef?: React.MutableRefObject<FormInstance | undefined>;
 }
 
-const AI_INSPECTION_REGEX = /^\[AI巡检\]/;
-
 const QuickEditModal: React.FC<QuickEditModalProps> = ({
   visible,
   loading,
@@ -37,20 +36,10 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
 
   React.useImperativeHandle(formRef, () => form, [form]);
 
-  const { aiRemarks, userRemarks } = useMemo(() => {
-    const raw = initialValues?.remarks || initialValues?.remark || '';
-    const lines = raw.split('\n');
-    const aiLines: string[] = [];
-    const userLines: string[] = [];
-    for (const line of lines) {
-      if (AI_INSPECTION_REGEX.test(line)) {
-        aiLines.push(line);
-      } else if (line.trim()) {
-        userLines.push(line);
-      }
-    }
-    return { aiRemarks: aiLines, userRemarks: userLines.join('\n') };
-  }, [initialValues?.remarks, initialValues?.remark]);
+  const { systemLogs, aiLogs, text: userRemarks } = useMemo(
+    () => splitRemarkAndLogs(initialValues?.remarks || initialValues?.remark || ''),
+    [initialValues?.remarks, initialValues?.remark]
+  );
 
   // destroyOnHidden=true 时每次打开都会重新挂载，必须显式依赖 initialValues 确保表单值同步更新
   React.useEffect(() => {
@@ -67,8 +56,9 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
     try {
       const values = await form.validateFields();
       const newUserRemark = values.remarks?.trim() || '';
-      const combined = aiRemarks.length > 0
-        ? aiRemarks.join('\n') + (newUserRemark ? '\n' + newUserRemark : '')
+      // 仅保留人工备注 + AI 巡检行；系统操作日志不写回 remarks 列（数据日志走 t_operation_log）
+      const combined = aiLogs.length > 0
+        ? aiLogs.join('\n') + (newUserRemark ? '\n' + newUserRemark : '')
         : newUserRemark;
       await onSave({
         ...values,
@@ -116,7 +106,29 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
         <Form.Item label="预计出货日期" name="expectedShipDate" rules={[{ required: true, message: '请选择预计出货日期' }]}>
           <UnifiedDatePicker showTime style={{ width: '100%' }} />
         </Form.Item>
-        {aiRemarks.length > 0 && (
+        {systemLogs.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 6, fontSize: 14, color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
+              操作记录（数据日志，不可编辑）
+            </div>
+            <div style={{
+              background: 'var(--color-bg-layout, var(--color-bg-subtle))',
+              borderRadius: 6,
+              padding: '8px 12px',
+              maxHeight: 120,
+              overflowY: 'auto',
+              fontSize: 12,
+              lineHeight: '20px',
+              color: 'var(--color-text-secondary, var(--color-gray-dark))',
+              fontFamily: 'var(--font-family-mono, monospace)',
+            }}>
+              {systemLogs.map((line, i) => (
+                <div key={i}>{line.replace(/^\s*\[[^\]]*\]\s*/, '')}</div>
+              ))}
+            </div>
+          </div>
+        )}
+        {aiLogs.length > 0 && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ marginBottom: 6, fontSize: 14, color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
               AI巡检记录（不可编辑）
@@ -131,8 +143,8 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
               lineHeight: '20px',
               color: 'var(--color-text-secondary, var(--color-gray-dark))',
             }}>
-              {aiRemarks.map((line, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: i < aiRemarks.length - 1 ? 4 : 0 }}>
+              {aiLogs.map((line, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: i < aiLogs.length - 1 ? 4 : 0 }}>
                   <Tag color="orange" style={{ margin: 0, fontSize: 14, lineHeight: '18px', padding: '0 4px', flexShrink: 0 }}>AI</Tag>
                   <span>{line.replace(/^\[AI巡检\]\s*/, '')}</span>
                 </div>

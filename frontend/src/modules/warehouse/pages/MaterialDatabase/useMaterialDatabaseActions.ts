@@ -5,6 +5,7 @@ import { MaterialDatabase } from '@/types/production';
 import api, { unwrapApiData } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getBaseMaterialType, getMaterialCodePrefix } from '@/utils/materialType';
+import { cleanRemark } from '@/utils/remarkLogs';
 import { useModal, useRequest } from '@/hooks';
 
 const toLocalDateTimeInputValue = (): string => {
@@ -76,7 +77,7 @@ export function useMaterialDatabaseActions(deps: {
   const openDialog = useCallback((dialogMode: 'create' | 'edit' | 'copy', record?: MaterialDatabase) => {
     if ((dialogMode === 'edit' || dialogMode === 'copy') && record) {
       open(dialogMode === 'copy' ? undefined as any : record);
-      const formValues: Record<string, unknown> = { ...record, materialType: getBaseMaterialType(record.materialType || 'accessory') };
+      const formValues: Record<string, unknown> = { ...record, remark: cleanRemark(record.remark), materialType: getBaseMaterialType(record.materialType || 'accessory') };
       if (dialogMode === 'copy') { delete formValues.id; delete formValues.status; delete formValues.createTime; delete formValues.completedTime; delete formValues.updateTime; formValues.status = 'pending'; }
       form.setFieldsValue(formValues);
       if (dialogMode === 'copy') fetchMaterialCode(getBaseMaterialType(record.materialType || 'accessory'));

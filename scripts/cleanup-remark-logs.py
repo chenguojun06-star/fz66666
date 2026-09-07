@@ -134,7 +134,12 @@ def main():
                     for l in log_lines:
                         m = ACTION_RE.match(l)
                         operator = m.group(1) if m else None
+                        # 截断防 Data too long for column 'operator_name'
+                        if operator:
+                            operator = operator.strip()[:50]
                         action = (m.group(2) or "").strip() if m else None
+                        if action:
+                            action = action[:100]
                         tenant_id = None
                         if has_tenant:
                             tr = query(cur, f"SELECT tenant_id FROM `{table}` WHERE id=%s", (rid,))
