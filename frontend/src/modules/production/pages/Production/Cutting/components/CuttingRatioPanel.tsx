@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Form, InputNumber, Space, Tag, Typography } from 'antd';
+import { Button, Form, InputNumber, Space, Tag, Tooltip, Typography } from 'antd';
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -215,7 +216,6 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
               min={1}
               max={9999}
               precision={0}
-             
               value={lastQty}
               controls={false}
               disabled={disabled}
@@ -244,7 +244,11 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       {entryOrderLines?.length > 0 && (
       <>
       <Space align="center" wrap style={{ marginBottom: 16 }}>
-        <Text strong>每扎件数：</Text>
+        <Text strong style={{ fontSize: 15 }}>一键生成</Text>
+        <Tooltip title="按订单颜色/尺码自动分扎：每扎件数决定扎数，损耗加放按百分比增加裁剪数量">
+          <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
+        </Tooltip>
+        <Text strong style={{ fontSize: 15, marginLeft: 8 }}>每扎件数：</Text>
         <InputNumber
           min={1}
           max={9999}
@@ -256,7 +260,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
           style={{ width: 90 }}
         />
         <Text type="secondary">件/扎</Text>
-        <Text strong style={{ marginLeft: 12 }}>损耗加放：</Text>
+        <Text strong style={{ fontSize: 15, marginLeft: 12 }}>损耗加放：</Text>
         <InputNumber
           min={0}
           max={30}
@@ -273,10 +277,12 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         dataSource={tableRows}
         columns={columns}
         pagination={false}
-       
         bordered
+        // 与菲号明细表一致：禁用限高填充，表格按内容自然撑开平铺，不内部滚动
+        disableFillScrollY
+        size="middle"
         scroll={{ x: 'max-content' }}
-        style={{ marginBottom: 12 }}
+        style={{ marginBottom: 12, fontSize: 15 }}
         locale={{ emptyText: '暂无尺码数据，请先选择裁剪任务' }}
       />
 

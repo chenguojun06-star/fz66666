@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AutoComplete, Button, Checkbox, Dropdown, InputNumber, Popconfirm, Space, Tag, Typography } from 'antd';
-import { DeleteOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
+import { AutoComplete, Button, Checkbox, Dropdown, InputNumber, Popconfirm, Space, Tag, Tooltip, Typography } from 'antd';
+import { DeleteOutlined, DownOutlined, PlusOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { compareSizeAsc } from '@/utils/api/size';
 
 const { Text } = Typography;
@@ -221,12 +221,12 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
     <div ref={panelRef} style={{ padding: '0 0 8px' }}>
       {/* 顶栏说明 + 添加行 */}
       <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-        <Text type="secondary">
-          自由添加菲号行，颜色/尺码按下单选择；数量即面料层数，下单数量仅作提醒不限制输入
-          <Text style={{ marginLeft: 8, fontSize: 12 }} type="secondary">
-            （快捷键 Ctrl/⌘+Enter 加 1 行 · Ctrl/⌘+Shift+Enter 加 5 行）
-          </Text>
-        </Text>
+        <Space size={8}>
+          <Text strong style={{ fontSize: 15 }}>自由编菲</Text>
+          <Tooltip title="自由添加菲号行，颜色/尺码按下单选择；数量即面料层数，下单数量仅作提醒不限制输入。快捷键：Ctrl/⌘+Enter 加 1 行 · Ctrl/⌘+Shift+Enter 加 5 行">
+            <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
+          </Tooltip>
+        </Space>
         <Dropdown
           menu={{
             items: addRowMenuItems,
@@ -250,7 +250,12 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
           background: 'var(--color-bg-container)', border: '1px solid var(--color-border-light)',
         }}
       >
-        <Text strong style={{ fontSize: 13 }}>快捷分扎</Text>
+        <Space size={8}>
+          <Text strong style={{ fontSize: 15 }}>快捷分扎</Text>
+          <Tooltip title="按「颜色 + 尺码 + 每扎件数 × 扎数」一次追加多行，减少逐行添加">
+            <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
+          </Tooltip>
+        </Space>
         <AutoComplete
           value={quickColor || undefined}
           options={colorOptions}
@@ -298,7 +303,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
 
       {rows.length > 0 && (
         <div style={{ overflowX: 'auto', marginBottom: 12 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15 }}>
             <thead>
               <tr style={{ background: 'var(--color-bg-container)', borderBottom: '2px solid var(--color-border-light)' }}>
                 <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600, width: 36 }}>
@@ -391,14 +396,14 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
       {/* 码数汇总匹配：下单数 / 已填 / 剩余 */}
       {summaryRows.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <Text strong style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>
-            码数汇总匹配
-            <Text style={{ fontSize: 12, fontWeight: 400 }} type="secondary">
-              —— 各码已填数量与下单数量对比，超出会标红提醒
-            </Text>
-          </Text>
+          <Space size={8} style={{ marginBottom: 6 }}>
+            <Text strong style={{ fontSize: 14 }}>码数汇总匹配</Text>
+            <Tooltip title="各码已填数量与下单数量对比：未填/未满/已满/超出，超出标红提醒">
+              <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
+            </Tooltip>
+          </Space>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15 }}>
               <thead>
                 <tr style={{ background: 'var(--color-bg-container)', borderBottom: '1px solid var(--color-border-light)' }}>
                   <th style={{ padding: '6px 12px', textAlign: 'left', fontWeight: 600, width: 120 }}>颜色</th>

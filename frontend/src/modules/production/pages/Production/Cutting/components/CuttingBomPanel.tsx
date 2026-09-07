@@ -121,6 +121,8 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
           rowKey={(r: CuttingBomRow) => r.id || `${r.materialCode}-${r.materialName}`}
           pagination={false}
           emptyDescription="暂无物料数据"
+          // 与菲号明细表一致：禁用限高填充，表格按内容自然撑开平铺
+          disableFillScrollY
           scroll={{ x: 'max-content' }}
         />
       )}
