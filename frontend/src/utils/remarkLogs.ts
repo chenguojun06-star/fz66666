@@ -22,13 +22,14 @@ export interface SplitRemarkResult {
   text: string;
 }
 
-/** 按行拆分备注：系统日志 / AI巡检 / 人工备注 */
+/** 按行拆分备注：系统日志 / AI巡检 / 人工备注（非字符串入参兜底为空） */
 export function splitRemarkAndLogs(remark?: string | null): SplitRemarkResult {
-  const raw = (remark || '').split('\n');
+  const raw = (typeof remark === 'string' ? remark : '') || '';
+  const lines = raw.split('\n');
   const systemLogs: string[] = [];
   const aiLogs: string[] = [];
   const userLines: string[] = [];
-  for (const line of raw) {
+  for (const line of lines) {
     if (SYSTEM_LOG_LINE_RE.test(line)) {
       systemLogs.push(line);
     } else if (AI_PATROL_LINE_RE.test(line)) {
@@ -40,11 +41,11 @@ export function splitRemarkAndLogs(remark?: string | null): SplitRemarkResult {
   return { systemLogs, aiLogs, text: userLines.join('\n') };
 }
 
-/** 过滤后的备注（仅人工备注 + AI巡检行，不含系统日志）——用于回填输入框与保存写回 */
+/**
+ * 过滤后的备注：仅保留人工备注（不含系统日志/AI 巡检行）。
+ * 系统日志与巡检记录走 t_operation_log/巡检归档，备注列只存员工主动输入。
+ */
 export function cleanRemark(remark?: string | null): string {
-  const { aiLogs, text } = splitRemarkAndLogs(remark);
-  const parts: string[] = [];
-  if (text.trim()) parts.push(text.trim());
-  if (aiLogs.length) parts.push(aiLogs.join('\n'));
-  return parts.join('\n');
+  const { text } = splitRemarkAndLogs(remark);
+  return text.trim();
 }

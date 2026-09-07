@@ -56,13 +56,11 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
     try {
       const values = await form.validateFields();
       const newUserRemark = values.remarks?.trim() || '';
-      // 仅保留人工备注 + AI 巡检行；系统操作日志不写回 remarks 列（数据日志走 t_operation_log）
-      const combined = aiLogs.length > 0
-        ? aiLogs.join('\n') + (newUserRemark ? '\n' + newUserRemark : '')
-        : newUserRemark;
+      // remarks 只保留人工备注：系统日志/AI 巡检行仅只读展示，不写回 remarks 列
+      // （否则 20+ 行巡检记录随人工备注一起提交会超长导致保存失败，且污染备注列）
       await onSave({
         ...values,
-        remarks: combined,
+        remarks: newUserRemark,
         expectedShipDate: values.expectedShipDate ? dayjs(values.expectedShipDate).format('YYYY-MM-DD HH:mm') : null,
         urgencyLevel: values.urgencyLevel || 'normal',
       }, form);

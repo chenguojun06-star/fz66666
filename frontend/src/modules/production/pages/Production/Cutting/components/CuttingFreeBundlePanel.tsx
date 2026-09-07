@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AutoComplete, Button, Dropdown, InputNumber, Popconfirm, Space, Tag, Typography } from 'antd';
+import { AutoComplete, Button, Checkbox, Dropdown, InputNumber, Popconfirm, Space, Tag, Typography } from 'antd';
 import { DeleteOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
 import { compareSizeAsc } from '@/utils/api/size';
 
@@ -35,6 +35,8 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
   onClear,
 }) => {
   const [rows, setRows] = useState<FreeBundleRow[]>([]);
+  // 批量勾选删除的选中行 key
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   // 快捷分扎输入
   const [quickColor, setQuickColor] = useState('');
   const [quickSize, setQuickSize] = useState('');
@@ -45,6 +47,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
   useEffect(() => {
     uid = 0;
     setRows([]);
+    setSelectedKeys([]);
     setQuickColor('');
     setQuickSize('');
     setPerBundleQty(null);
@@ -96,6 +99,21 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
 
   const deleteRow = (key: string) => {
     setRows((prev) => prev.filter((r) => r.key !== key));
+    setSelectedKeys((prev) => prev.filter((k) => k !== key));
+  };
+
+  // 批量删除选中行
+  const deleteSelected = () => {
+    if (!selectedKeys.length) return;
+    const keys = new Set(selectedKeys);
+    setRows((prev) => prev.filter((r) => !keys.has(r.key)));
+    setSelectedKeys([]);
+  };
+
+  // 全选 / 取消全选
+  const allChecked = rows.length > 0 && selectedKeys.length === rows.length;
+  const toggleAll = () => {
+    setSelectedKeys(allChecked ? [] : rows.map((r) => r.key));
   };
 
   const totalQty = rows.reduce((s, r) => s + (Number(r.quantity) || 0), 0);
@@ -283,6 +301,9 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ background: 'var(--color-bg-container)', borderBottom: '2px solid var(--color-border-light)' }}>
+                <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600, width: 36 }}>
+                  <Checkbox checked={allChecked} indeterminate={selectedKeys.length > 0 && !allChecked} disabled={disabled || rows.length === 0} onChange={toggleAll} />
+                </th>
                 <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, width: 30 }}>#</th>
                 <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>颜色</th>
                 <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>尺码</th>
@@ -299,6 +320,16 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                 const overOrder = orderQty > 0 && filledQty > orderQty;
                 return (
                   <tr key={row.key} style={{ borderBottom: '1px solid var(--color-border-light)', background: overOrder ? 'var(--color-error-bg, #fff1f0)' : undefined }}>
+                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                      <Checkbox
+                        checked={selectedKeys.includes(row.key)}
+                        disabled={disabled}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setSelectedKeys((prev) => checked ? [...prev, row.key] : prev.filter((k) => k !== row.key));
+                        }}
+                      />
+                    </td>
                     <td style={{ padding: '6px 12px', color: 'var(--color-text-tertiary)' }}>{idx + 1}</td>
                     <td style={{ padding: '6px 12px' }}>
                       <AutoComplete
@@ -409,6 +440,22 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
         <Space wrap style={{ marginBottom: 12 }}>
           <Tag color="blue">共 {rows.length} 行</Tag>
           <Tag color="green">总数量：{totalQty} 件</Tag>
+          <Popconfirm
+            title={`确定删除选中的 ${selectedKeys.length} 行吗？`}
+            onConfirm={deleteSelected}
+            okText="确定"
+            cancelText="取消"
+            disabled={selectedKeys.length === 0 || disabled}
+          >
+            <Button
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              disabled={selectedKeys.length === 0 || disabled}
+            >
+              删除选中{selectedKeys.length > 0 ? ` (${selectedKeys.length})` : ''}
+            </Button>
+          </Popconfirm>
         </Space>
       )}
 
