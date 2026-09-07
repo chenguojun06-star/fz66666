@@ -4,8 +4,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { CheckCircleOutlined, ClockCircleOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
-import StyleQuotePopover from '@/modules/basic/pages/OrderManagement/StyleQuotePopover';
-import { STAGE_COLORS, parseSizeDisplay, type SubProcessRow } from './SampleProcessList.helpers';
+import { STAGE_COLORS, type SubProcessRow } from './SampleProcessList.helpers';
 
 // 列定义：从 SampleProcessList.tsx 拆分而来
 // 保持原字段名、宽度、渲染逻辑不变
@@ -44,57 +43,6 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
             ? <PlayCircleOutlined style={{ color: STAGE_COLORS[activeTab] || 'var(--color-info)', fontSize: 12, marginRight: 4 }} />
             : <ClockCircleOutlined style={{ color: 'var(--color-text-quaternary)', fontSize: 12, marginRight: 4 }} />;
         return <span>{icon}{val}</span>;
-      },
-    },
-    {
-      title: '款号',
-      dataIndex: 'styleNo',
-      key: 'styleNo',
-      width: 85,
-      render: (val: string) => val || '-',
-    },
-    {
-      title: '颜色',
-      dataIndex: 'color',
-      key: 'color',
-      width: 65,
-      render: (val: string) => val ? <Tag color="blue" style={{ fontSize: 11 }}>{val}</Tag> : '-',
-    },
-    {
-      title: '码数',
-      dataIndex: 'size',
-      key: 'size',
-      width: 60,
-      render: (val: string) => <span style={{ fontSize: 12 }}>{parseSizeDisplay(val)}</span>,
-    },
-    {
-      // 商品编码（D-216 起统一无分隔直拼：款号+颜色+尺码，与商品编码管理 SkuTable 同规则）
-      title: '商品编码',
-      key: 'sku',
-      width: 150,
-      render: (_: unknown, record: SubProcessRow) => {
-        const colorText = record.color || '-';
-        const sizeText = parseSizeDisplay(record.size);
-        const skuText = record.styleNo
-          ? `${record.styleNo}${record.color || ''}${sizeText}`
-          : `${colorText}/${sizeText}`;
-        return (
-          <StyleQuotePopover styleNo={record.styleNo}>
-            <span
-              style={{
-                fontSize: 12,
-                cursor: 'pointer',
-                color: 'var(--color-primary)',
-                textDecoration: 'underline dotted',
-                textDecorationColor: 'var(--color-border-antd)',
-                textUnderlineOffset: 3,
-              }}
-              title="悬停查看报价参考"
-            >
-              {skuText}
-            </span>
-          </StyleQuotePopover>
-        );
       },
     },
     {

@@ -114,6 +114,7 @@ export default function SampleProcessList({
         <span>款号: <strong style={{ color: 'var(--color-text-primary)' }}>{styleNo || '-'}</strong></span>
         <span>颜色: <strong style={{ color: 'var(--color-text-primary)' }}>{color || '-'}</strong></span>
         <span>尺码: <strong style={{ color: 'var(--color-text-primary)' }}>{parseSizeDisplay(size)}</strong></span>
+        <span>数量: <strong style={{ color: 'var(--color-text-primary)' }}>{quantity != null ? quantity : '-'}</strong></span>
       </div>
 
       <StageTabs stages={stages} activeTab={activeTab} onTabChange={setActiveTab} />
@@ -148,7 +149,7 @@ export default function SampleProcessList({
           size="small"
           loading={loading}
           pagination={false}
-          scroll={{ x: 830 }}
+          scroll={{ x: 700 }}
           style={{ fontSize: 13 }}
         />
       ) : null}

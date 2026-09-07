@@ -132,6 +132,8 @@ public class PatternEnrichmentHelper {
         // 展示层用款式主色 / 色码矩阵第一色补全，避免前端显示"-"
         String fallbackStyleColor = null;
         String firstMatrixColor = null;
+        // 色码矩阵颜色数：多色矩阵下无法判断空色记录归属哪个色码，禁止兜底填充
+        int matrixColorCount = 0;
 
         if (StringUtils.hasText(styleIdStr)) {
             try {
@@ -234,6 +236,7 @@ public class PatternEnrichmentHelper {
                                 if (matrixColors.size() == 1) {
                                     firstMatrixColor = matrixColors.iterator().next();
                                 }
+                                matrixColorCount = matrixColors.size();
                             }
                             // Pass raw sizeColorConfig for JS fallback parsing
                             map.put("sizeColorConfig", sizeColorConfig);
@@ -265,12 +268,15 @@ public class PatternEnrichmentHelper {
         map.put("customer", customer);
         map.put("developmentSourceType", developmentSourceType);
 
-        // ★ 颜色兜底：记录 color 为空（或占位"-"）时用款式主色 / 唯一矩阵色补全
-        // 仅影响展示，不回写数据库；下次款式保存时 syncPatternProductionInfo 会真正修复
+        // ★ 颜色兜底：记录 color 为空（或占位"-"）时补全展示值，仅影响显示不回写库
+        // 多色矩阵下无法判断空色记录归属哪个色码：禁止用款式主色填充，否则同款多条色码记录会全部显示成同一颜色（"重复色码"错觉）
+        // 单色/无色矩阵时可安全使用款式主色 / 唯一矩阵色兜底
         Object recordColorObj = map.get("color");
         String recordColor = recordColorObj == null ? "" : String.valueOf(recordColorObj).trim();
         if (recordColor.isEmpty() || "-".equals(recordColor)) {
-            if (fallbackStyleColor != null) {
+            if (matrixColorCount > 1) {
+                map.remove("color");
+            } else if (fallbackStyleColor != null) {
                 map.put("color", fallbackStyleColor);
             } else if (firstMatrixColor != null) {
                 map.put("color", firstMatrixColor);

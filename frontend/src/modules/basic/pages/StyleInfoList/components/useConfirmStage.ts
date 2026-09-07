@@ -5,7 +5,7 @@ import { StyleInfo } from '@/types/style';
 import api from '@/utils/api';
 import {
   SmartStage, StyleRecord,
-  isScrappedStyle, isPassedReviewStatus, getReviewStatusLabel,
+  isScrappedStyle, isPassedReviewStatus,
   formatNodeTime, isRiskReviewStatus, formatStageTimeRange, buildSmartStages,
 } from './styleTableViewUtils';
 
@@ -44,8 +44,6 @@ export default function useConfirmStage({ selectedStage, setSelectedStage, messa
       ? String((selectedStage.record as StyleRecord).latestPatternStatus || '').trim().toUpperCase() === 'COMPLETED'
       : false
   ), [selectedStage]);
-
-  const confirmReviewStatusLabel = useMemo(() => getReviewStatusLabel(confirmReviewStatus), [confirmReviewStatus]);
 
   const confirmReviewerLabel = useMemo(() => {
     if (!selectedStage || selectedStage.stage.key !== 'confirm') return '-';
@@ -156,7 +154,6 @@ export default function useConfirmStage({ selectedStage, setSelectedStage, messa
     confirmReviewStatus,
     isConfirmReviewPassed,
     isConfirmInboundCompleted,
-    confirmReviewStatusLabel,
     confirmReviewerLabel,
     confirmReviewTimeLabel,
     confirmInboundTimeLabel,

@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleInfo } from '@/types/style';
 import api from '@/utils/api';
 import {
-  SmartStage, PatternProductionSnapshot, StyleRecord, SAMPLE_PARENT_STAGES,
-  isScrappedStyle, isSampleSnapshotFullyCompleted, getSampleNodeProgress,
+  SmartStage, PatternProductionSnapshot, StyleRecord,
+  isScrappedStyle, isSampleSnapshotFullyCompleted,
   formatStageTimeRange, normalizePatternProductionSnapshot, isScrappedPatternSnapshot,
   clampPercent, formatNodeTime,
 } from './styleTableViewUtils';
@@ -85,30 +85,6 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
     if (!sampleSnapshot?.receiver) return '-';
     return sampleSnapshot.receiver;
   }, [sampleSnapshot]);
-
-  const sampleStageProgressItems = useMemo(() => {
-    if (!sampleSnapshot) return [];
-    const status = String(sampleSnapshot.status || '').trim().toUpperCase();
-    const completed = isSampleSnapshotFullyCompleted(sampleSnapshot);
-    const received = ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED'].includes(status)
-      || Boolean(sampleSnapshot.receiver)
-      || sampleSnapshot.receiveTime !== '待领取';
-    return SAMPLE_PARENT_STAGES.map((item) => ({
-      key: item.key,
-      label: item.label,
-      percent: completed
-        ? 100
-        : item.key === 'procurement'
-          ? sampleSnapshot.procurementProgress
-          : received
-            ? getSampleNodeProgress(sampleSnapshot, item.key)
-            : 0,
-    }));
-  }, [sampleSnapshot]);
-
-  const shouldShowSampleStageProgress = useMemo(() => (
-    sampleStageProgressItems.some((item) => item.percent > 0) || isSampleSnapshotReceived || isSampleSnapshotCompleted || Boolean(sampleSnapshot?.productionOrderId)
-  ), [isSampleSnapshotCompleted, isSampleSnapshotReceived, sampleStageProgressItems, sampleSnapshot?.productionOrderId]);
 
   const sampleStageSummary = useMemo(() => {
     if (!selectedStage || selectedStage.stage.key !== 'sample') return null;
@@ -232,8 +208,6 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
     sampleReceiveTimeLabel,
     sampleCompletedRangeLabel,
     sampleReceiverLabel,
-    sampleStageProgressItems,
-    shouldShowSampleStageProgress,
     sampleStageSummary,
     reloadSampleStage,
     handleSaveSampleProgress,

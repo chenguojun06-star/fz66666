@@ -46,6 +46,21 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
 
   // D-115：手动完成/撤回/指派后联动刷新扫码记录表（原仅 patternId 变化才重拉，新记录不出现/被撤记录仍显示）
   const [scanRefreshTick, setScanRefreshTick] = React.useState(0);
+
+  // 色码任务下拉文案：多任务下若存在 颜色+码数 完全相同的任务（如历史数据缺色），追加样衣单号区分，
+  // 避免出现两条一模一样的选择项让用户误以为是"重复数据"
+  const sampleTaskLabels = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const snap of sample.sampleSnapshotList) {
+      const combo = `${snap.color || '未配色'}|${snap.size || '未配码'}`;
+      counts.set(combo, (counts.get(combo) || 0) + 1);
+    }
+    return sample.sampleSnapshotList.map((snap) => {
+      const combo = `${snap.color || '未配色'}|${snap.size || '未配码'}`;
+      const duplicated = (counts.get(combo) || 0) > 1;
+      return `${snap.color || '未配色'} · ${snap.size || '未配码'}${snap.quantity != null ? `（${snap.quantity} 件）` : ''}${duplicated ? ` · 单号 ${snap.id}` : ''}`;
+    });
+  }, [sample.sampleSnapshotList]);
   const refreshDrawerData = () => {
     sampleProcessProgress.refresh();
     // 重拉样衣生产快照（领取人/状态/领取时间）
@@ -240,7 +255,7 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                       <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: 'var(--color-text-primary)' }}>
                         色码任务
                         <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--color-text-tertiary)', marginLeft: 8 }}>
-                          共 {sample.sampleSnapshotList.length} 条色码生产任务 · 每条独立进度 / 独立二维码 / 独立扫码记录
+                          共 {sample.sampleSnapshotList.length} 条
                         </span>
                       </div>
                       <Select
@@ -250,7 +265,7 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                         onChange={sample.setActiveSampleIndex}
                         options={sample.sampleSnapshotList.map((snap, idx) => ({
                           value: idx,
-                          label: `${snap.color || '未配色'} · ${snap.size || '未配码'}${snap.quantity != null ? `（${snap.quantity} 件）` : ''}`,
+                          label: sampleTaskLabels[idx],
                         }))}
                       />
                     </div>
@@ -271,22 +286,6 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                       <span>完成时间</span>
                       <strong>{sample.sampleCompletedTimeLabel}</strong>
                     </div>
-                    <div className="style-smart-stage-modal__fact">
-                      <span>颜色</span>
-                      <strong>
-                        {(sample.sampleSnapshot?.color || sample.sampleSnapshot?.colors?.[0])
-                          ? <Tag color="blue">{sample.sampleSnapshot?.color || sample.sampleSnapshot?.colors?.[0]}</Tag>
-                          : '-'}
-                      </strong>
-                    </div>
-                    <div className="style-smart-stage-modal__fact">
-                      <span>码数</span>
-                      <strong>{sample.sampleSnapshot?.size || '-'}</strong>
-                    </div>
-                    <div className="style-smart-stage-modal__fact">
-                      <span>数量</span>
-                      <strong>{sample.sampleSnapshot?.quantity != null ? sample.sampleSnapshot.quantity : '-'}</strong>
-                    </div>
                   </div>
                   <div style={{ marginTop: 12, padding: '10px 0', borderTop: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', gap: 14 }}>
                     <QRCode
@@ -299,23 +298,6 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                       <div>样衣单号: {sample.sampleSnapshot.id}</div>
                     </div>
                   </div>
-
-                  {sample.shouldShowSampleStageProgress ? (
-                    <div style={{ marginTop: '16px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 500 }}>样衣生产进度</span>
-                        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-primary)' }}>
-                          {Math.round(sample.sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sample.sampleStageProgressItems.length)}%
-                        </span>
-                      </div>
-                      <Progress
-                        percent={Math.round(sample.sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sample.sampleStageProgressItems.length)}
-                        showInfo={false}
-                        size={8}
-                        strokeColor={sample.sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sample.sampleStageProgressItems.length >= 100 ? 'var(--color-success)' : 'var(--color-primary)'}
-                      />
-                    </div>
-                  ) : null}
 
                   {/* 子工序表格 - 与大货一致的表格展示 */}
                   <div style={{ marginTop: 16 }}>
@@ -352,10 +334,6 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
             <div className="style-smart-stage-modal__panel">
               <div className="style-smart-stage-modal__panel-title">审核 / 入库信息</div>
               <div className="style-smart-stage-modal__facts">
-                <div className="style-smart-stage-modal__fact">
-                  <span>审核状态</span>
-                  <strong>{confirm.confirmReviewStatusLabel}</strong>
-                </div>
                 <div className="style-smart-stage-modal__fact">
                   <span>审核人</span>
                   <strong
