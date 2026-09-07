@@ -262,7 +262,7 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
       size="large"
       open={visible}
       onClose={onClose}
-      styles={{ wrapper: { width: '80%' }, body: { padding: '16px 20px' } }}
+      styles={{ wrapper: { width: '85%' }, body: { padding: '16px 20px' } }}
     >
       <Spin spinning={loading}>
       {/* 顶部汇总卡片 */}

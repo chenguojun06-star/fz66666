@@ -85,7 +85,7 @@ const _FinishedInventory: React.FC = () => {
             open={outboundModal.visible}
             onClose={outboundModal.close}
             size="large"
-            styles={{ wrapper: { width: '80%' } }}
+            styles={{ wrapper: { width: '85%' } }}
             destroyOnHidden
             extra={
               <Space>
@@ -171,7 +171,7 @@ const _FinishedInventory: React.FC = () => {
             open={inboundHistoryModal.visible}
             onClose={inboundHistoryModal.close}
             size="large"
-            styles={{ wrapper: { width: '80%' } }}
+            styles={{ wrapper: { width: '85%' } }}
             destroyOnHidden
           >
             {inboundHistoryModal.data && (

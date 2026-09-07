@@ -67,7 +67,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
       <SideDrawer
         title={editingRow?.templateName || '编辑模板'}
         open={editOpen}
-        width="80%"
+        width="85%"
         onClose={() => {
           setEditOpen(false);
           setEditingRow(null);

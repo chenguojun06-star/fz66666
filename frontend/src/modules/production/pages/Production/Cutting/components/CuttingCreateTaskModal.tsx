@@ -39,7 +39,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
       title="无资料下单"
       size="large"
       placement="right"
-      styles={{ wrapper: { width: '80%' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
+      styles={{ wrapper: { width: '85%' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
       onClose={() => createTask.setCreateTaskOpen(false)}
       footer={
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>

@@ -76,7 +76,7 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
       title={selectedStage ? `${selectedStage.record.styleNo} · ${selectedStage.stage.label}` : ''}
       onClose={handleClose}
       size="large"
-      styles={{ wrapper: { width: '80%' }, body: { padding: 16 } }}
+      styles={{ wrapper: { width: '85%' }, body: { padding: 16 } }}
       footer={
         <Button key="close" onClick={handleClose}>
           关闭

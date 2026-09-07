@@ -29,7 +29,7 @@ export default function DetailDrawer({
       placement="right"
       onClose={onClose}
       open={open}
-      styles={{ wrapper: { width: '80%' } }}
+      styles={{ wrapper: { width: '85%' } }}
     >
       {selectedCommand && (
         <div style={{ paddingTop: '16px' }}>

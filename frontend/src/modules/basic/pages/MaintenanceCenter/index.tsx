@@ -342,7 +342,7 @@ const MaintenanceCenter: React.FC = () => {
         open={!!panelType}
         onClose={handlePanelClose}
         title={panelType ? `${panelTitleMap[panelType]} — ${activeStyleNo}` : ''}
-        width="80%"
+        width="85%"
         destroyOnHidden
       >
         {panelType === 'pattern' && <PatternPanel key={activeStyleNo} styleNo={activeStyleNo} onSaved={handlePanelSaved} />}

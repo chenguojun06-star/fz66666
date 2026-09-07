@@ -327,7 +327,7 @@ const AiAgentTraceCenter: React.FC = () => {
       </PageLayout>
 
       <Drawer
-        styles={{ wrapper: { width: '80%' } }}
+        styles={{ wrapper: { width: '85%' } }}
         open={detailOpen}
         title="AI 执行轨迹详情"
         onClose={() => {

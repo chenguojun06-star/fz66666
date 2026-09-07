@@ -11,7 +11,7 @@
  *   open={open}
  *   onClose={onClose}
  *   title="工序详情"
- *   width="80%"
+ *   width="85%"
  *   footer={<><Button onClick={onClose}>取消</Button><Button type="primary">保存</Button></>}
  * >
  *   ...内容

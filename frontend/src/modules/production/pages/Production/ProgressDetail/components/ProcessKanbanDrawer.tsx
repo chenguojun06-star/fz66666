@@ -42,7 +42,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
           {orderNo && <Tag color="blue" style={{ fontSize: 14 }}>{orderNo}</Tag>}
         </Space>
       }
-      placement="right" size={Math.round(window.innerWidth * 0.8)} open={visible} onClose={onClose}
+      placement="right" size={Math.round(window.innerWidth * 0.85)} open={visible} onClose={onClose}
       styles={{ body: { padding: '16px 20px' } }}
       extra={
         <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading}>刷新</Button>

@@ -22,7 +22,7 @@ const StyleDevDrawer: React.FC<StyleDevDrawerProps> = ({
       onClose={onClose}
       size="large"
       mask={false}
-      styles={{ wrapper: { width: '80%' }, body: { padding: 0 } }}
+      styles={{ wrapper: { width: '85%' }, body: { padding: 0 } }}
       destroyOnHidden
     >
       {record && (

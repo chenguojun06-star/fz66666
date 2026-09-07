@@ -52,7 +52,7 @@ const InboundDrawer: React.FC<InboundDrawerProps> = ({
         inboundForm.resetFields();
       }}
       size="large"
-      styles={{ wrapper: { width: '80%' } }}
+      styles={{ wrapper: { width: '85%' } }}
       destroyOnHidden
       extra={
         <Space>

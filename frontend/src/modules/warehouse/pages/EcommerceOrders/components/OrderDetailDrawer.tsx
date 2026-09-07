@@ -15,7 +15,7 @@ interface Props {
 
 const OrderDetailDrawer: React.FC<Props> = ({ open, detail, onClose }) => {
   return (
-    <Drawer open={open} onClose={onClose} title="订单详情" styles={{ wrapper: { width: '80%' } }}>
+    <Drawer open={open} onClose={onClose} title="订单详情" styles={{ wrapper: { width: '85%' } }}>
       {detail && (
         <>
           <Descriptions column={2} bordered>

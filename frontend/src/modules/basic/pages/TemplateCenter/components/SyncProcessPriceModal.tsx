@@ -227,7 +227,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
       title="工序单价配置"
       open={open}
       onClose={handleCancel}
-      width="80%"
+      width="85%"
     >
       {renderStyleSelector()}
       {renderToolbar()}

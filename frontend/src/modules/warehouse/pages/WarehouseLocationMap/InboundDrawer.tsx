@@ -35,7 +35,7 @@ const InboundDrawer: React.FC<Props> = ({
       open={open}
       onClose={onClose}
       title={`入库 - 库位 ${selectedLocation?.locationCode || ''}`}
-      styles={{ wrapper: { width: '80%', zIndex: 2000 } }}
+      styles={{ wrapper: { width: '85%', zIndex: 2000 } }}
       destroyOnHidden
       extra={
         <Button type="primary" onClick={onConfirm} loading={loading}>

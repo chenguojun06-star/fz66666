@@ -45,7 +45,7 @@ const LocationDetailDrawer: React.FC<Props> = ({
       onClose={onClose}
       title={selectedLocation ? `库位 ${selectedLocation.locationCode} - 库存详情` : '库存详情'}
       size="large"
-      styles={{ wrapper: { width: '80%' } }}
+      styles={{ wrapper: { width: '85%' } }}
       destroyOnHidden
     >
       {selectedLocation && (

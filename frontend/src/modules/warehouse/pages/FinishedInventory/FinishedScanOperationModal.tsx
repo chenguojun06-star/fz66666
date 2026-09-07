@@ -91,7 +91,7 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
       open={open}
       onClose={onClose}
       size="large"
-      styles={{ wrapper: { width: '80%' } }}
+      styles={{ wrapper: { width: '85%' } }}
       destroyOnHidden
       extra={
         <Space>

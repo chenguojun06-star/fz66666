@@ -50,7 +50,7 @@ export const PurchaseCartDrawer: React.FC<PurchaseCartDrawerProps> = ({
         placement="right"
         styles={{
           body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
-          wrapper: { width: '80%' },
+          wrapper: { width: '85%' },
         }}
         open={open}
         onClose={onClose}

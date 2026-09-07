@@ -206,7 +206,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
             open={showWarehousingModal}
             onClose={() => setShowWarehousingModal(false)}
             size="large"
-            styles={{ wrapper: { width: '80%' }, body: { padding: 16 } }}
+            styles={{ wrapper: { width: '85%' }, body: { padding: 16 } }}
           >
             <WarehousingActionPanel
               qcRecords={qcRecords}

@@ -105,28 +105,6 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
     if (dialogMode === 'view') {
       return [
         <Button
-          key="receiveAll"
-          disabled={!detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING) || detailPurchases.some(p => Number(p?.returnConfirmed || 0) === 1)}
-          loading={submitLoading}
-          onClick={onReceiveAll}
-        >
-          采购全部
-        </Button>,
-        <Button
-          key="returnAll"
-          disabled={!detailPurchases.some((p) => {
-            const status = normalizeStatus(p.status);
-            return (status === MATERIAL_PURCHASE_STATUS.RECEIVED
-              || status === MATERIAL_PURCHASE_STATUS.PARTIAL
-              || status === MATERIAL_PURCHASE_STATUS.COMPLETED)
-              && Number(p?.returnConfirmed || 0) !== 1;
-          })}
-          loading={submitLoading}
-          onClick={onBatchReturn}
-        >
-          回料确认
-        </Button>,
-        <Button
           key="confirmComplete"
           disabled={!detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM) || detailPurchases.some(p => Number(p?.returnConfirmed || 0) === 1)}
           loading={confirmCompleteSubmitting}
@@ -196,7 +174,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
       onClose={onCancel}
       placement="right"
       styles={{
-        wrapper: { width: isMobile ? '96vw' : '80%' },
+        wrapper: { width: isMobile ? '96vw' : '85%' },
         body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
         footer: { padding: '12px 16px' },
       }}

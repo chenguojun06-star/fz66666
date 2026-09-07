@@ -51,7 +51,7 @@ const SmartSourcingDrawer: React.FC<SmartSourcingDrawerProps> = ({
       title="智能采购推荐"
       open={open}
       onClose={onClose}
-      width={typeof window !== 'undefined' ? Math.round(window.innerWidth * 0.8) : '80%'}  // D-209：加宽到屏宽80%，表格列不挤
+      width={typeof window !== 'undefined' ? Math.round(window.innerWidth * 0.85) : '85%'}  // D-209：加宽到屏宽85%，表格列不挤
       destroyOnClose
       bodyStyle={{ padding: 0 }}
     >

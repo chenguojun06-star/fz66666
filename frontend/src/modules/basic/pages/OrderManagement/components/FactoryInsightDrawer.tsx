@@ -186,7 +186,7 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
       title={<span style={{ fontSize: 15, fontWeight: 600 }}>{factoryName} — 工厂全动态详情</span>}
       open={open}
       onClose={onClose}
-      styles={{ wrapper: { width: '80%' } }}
+      styles={{ wrapper: { width: '85%' } }}
       destroyOnClose
       extra={
         <Button size="small" type="default" icon={<ReloadOutlined />} onClick={loadAll} loading={loading} style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}>

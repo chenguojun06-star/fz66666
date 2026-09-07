@@ -192,7 +192,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
       onClose={onClose}
       placement="right"
       size="large"
-      styles={{ wrapper: { width: '80%' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
+      styles={{ wrapper: { width: '85%' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
       destroyOnHidden
       // 关闭遮罩层，与同级 Drawer（StyleStageDrawer/StyleDevDrawer/PurchaseDrawer 等）保持一致。
       // 历史踩坑：

@@ -71,7 +71,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       onClose={onClose}
       placement="right"
       styles={{
-        wrapper: { width: '80%' },
+        wrapper: { width: '85%' },
         body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
       }}
       maskClosable={false}

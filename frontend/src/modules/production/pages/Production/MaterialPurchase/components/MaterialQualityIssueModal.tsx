@@ -158,7 +158,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
         open={open}
         onClose={onClose}
         placement="right"
-        styles={{ wrapper: { width: '80%' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
+        styles={{ wrapper: { width: '85%' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
         destroyOnHidden
       >
         <div style={{ marginTop: 16, display: 'grid', gap: 16 }}>
