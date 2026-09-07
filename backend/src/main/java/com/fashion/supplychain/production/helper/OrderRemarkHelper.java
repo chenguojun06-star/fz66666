@@ -1,24 +1,26 @@
 package com.fashion.supplychain.production.helper;
 
+import com.fashion.supplychain.common.OperationLogAppendUtil;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.system.entity.OrderRemark;
 import com.fashion.supplychain.system.service.OrderRemarkService;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+/**
+ * 订单操作记录 Helper
+ *
+ * <p>系统操作日志不再写入 ProductionOrder.remarks（备注仅保留人工备注），
+ * 统一写入 t_operation_log（模块=生产订单）+ t_order_remark（订单操作时间线，结构化展示用）。
+ */
 @Component
 @Slf4j
 public class OrderRemarkHelper {
-
-    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final int MAX_LENGTH = 4000;
-    private static final int MAX_ENTRIES = 10;
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -31,37 +33,21 @@ public class OrderRemarkHelper {
             return;
         }
         String operatorName = getOperatorName();
-        String now = LocalDateTime.now().format(FMT);
-        // 格式统一为：[yyyy-MM-dd HH:mm:ss] 操作人 动作：详情
-        // 与 OperationLogAppendUtil.buildLogEntry 保持一致,确保 OrderRemarkController.parseInlineRemarks 能正确解析
-        StringBuilder line = new StringBuilder();
-        line.append("[").append(now).append("] ");
-        line.append(operatorName).append(" ").append(action);
-        if (StringUtils.hasText(detail)) {
-            line.append("：").append(detail);
-        }
-        String newRemark = line.toString();
+        String newRemark = OperationLogAppendUtil.buildLogEntry(action, detail);
         ProductionOrder fresh = productionOrderService.getById(order.getId());
         if (fresh == null) {
             return;
         }
-        String existing = fresh.getRemarks();
-        String merged;
-        if (!StringUtils.hasText(existing)) {
-            merged = newRemark;
-        } else {
-            merged = existing + "\n" + newRemark;
-        }
-        if (merged.length() > MAX_LENGTH) {
-            merged = truncate(merged);
-        }
-        fresh.setRemarks(merged);
-        productionOrderService.updateById(fresh);
+        String orderNo = fresh.getOrderNo();
 
+        // 1) 统一写入 t_operation_log（数据操作日志，多租户隔离）
+        OperationLogAppendUtil.writeLog("生产订单", action, detail, fresh.getId(), orderNo);
+
+        // 2) 结构化订单操作时间线（独立表，非 remarks 列）
         try {
             OrderRemark record = new OrderRemark();
             record.setTargetType("order");
-            record.setTargetNo(fresh.getOrderNo());
+            record.setTargetNo(orderNo);
             record.setAuthorName(operatorName);
             record.setAuthorRole(action);
             record.setContent(newRemark);
@@ -74,28 +60,6 @@ public class OrderRemarkHelper {
         } catch (Exception e) {
             log.debug("OrderRemark同步失败: orderId={}", order.getId());
         }
-    }
-
-    private String truncate(String remarks) {
-        if (remarks == null || remarks.length() <= MAX_LENGTH) {
-            return remarks;
-        }
-        String[] lines = remarks.split("\n");
-        if (lines.length <= MAX_ENTRIES) {
-            return remarks.substring(0, MAX_LENGTH);
-        }
-        StringBuilder sb = new StringBuilder();
-        for (int i = lines.length - MAX_ENTRIES; i < lines.length; i++) {
-            if (sb.length() > 0) {
-                sb.append("\n");
-            }
-            sb.append(lines[i]);
-        }
-        String result = sb.toString();
-        if (result.length() > MAX_LENGTH) {
-            result = result.substring(0, MAX_LENGTH);
-        }
-        return result;
     }
 
     private String getOperatorName() {

@@ -1159,31 +1159,9 @@ public class PatternProductionOrchestrator {
                     .format(java.time.LocalDateTime.now());
             String newEntry = "[" + now + "] " + (operatorName != null ? operatorName : "-") + " " + actionLabel + "：" + detail;
 
-            // 重新查询最新数据再追加（避免覆盖并发写入）
-            PatternProduction fresh = patternProductionService.getById(pattern.getId());
-            if (fresh == null) return;
-            String existing = fresh.getRemarks();
-            String merged;
-            if (existing == null || existing.trim().isEmpty()) {
-                merged = newEntry;
-            } else {
-                merged = existing + "\n" + newEntry;
-            }
-            // 限制最大长度 4000 字符，保留最近 20 条
-            if (merged.length() > 4000) {
-                String[] lines = merged.split("\n");
-                int keep = Math.min(lines.length, 20);
-                StringBuilder sb = new StringBuilder();
-                for (int i = lines.length - keep; i < lines.length; i++) {
-                    if (sb.length() > 0) sb.append("\n");
-                    sb.append(lines[i]);
-                }
-                merged = sb.toString();
-            }
-            fresh.setRemarks(merged);
-            patternProductionService.updateById(fresh);
-            // 同步到内存对象，供后续逻辑使用
-            pattern.setRemarks(merged);
+            // 操作日志统一写入 t_operation_log，不污染备注（P0：备注仅保留人工备注）
+            com.fashion.supplychain.common.OperationLogAppendUtil.writeLog(
+                    "样衣生产", actionLabel, detail.toString(), pattern.getId(), pattern.getStyleNo());
 
             // === 双写 t_order_remark 表 ===
             // 与 OrderRemarkHelper.append 双写策略一致，让 PC 端 RemarkTimelineModal
@@ -1193,11 +1171,11 @@ public class PatternProductionOrchestrator {
                     com.fashion.supplychain.system.entity.OrderRemark record =
                             new com.fashion.supplychain.system.entity.OrderRemark();
                     record.setTargetType("pattern");
-                    record.setTargetNo(String.valueOf(fresh.getId()));
+                    record.setTargetNo(String.valueOf(pattern.getId()));
                     record.setAuthorName(operatorName != null ? operatorName : "-");
                     record.setAuthorRole(actionLabel);
                     record.setContent(newEntry);
-                    record.setTenantId(fresh.getTenantId());
+                    record.setTenantId(pattern.getTenantId());
                     record.setCreateTime(LocalDateTime.now());
                     record.setDeleteFlag(0);
                     orderRemarkService.save(record);
@@ -1247,31 +1225,9 @@ public class PatternProductionOrchestrator {
             }
             String newEntry = line.toString();
 
-            // 重新查询最新数据再追加（避免覆盖并发写入）
-            PatternProduction fresh = patternProductionService.getById(pattern.getId());
-            if (fresh == null) return;
-            String existing = fresh.getRemarks();
-            String merged;
-            if (existing == null || existing.trim().isEmpty()) {
-                merged = newEntry;
-            } else {
-                merged = existing + "\n" + newEntry;
-            }
-            // 限制最大长度 4000 字符，保留最近 20 条
-            if (merged.length() > 4000) {
-                String[] lines = merged.split("\n");
-                int keep = Math.min(lines.length, 20);
-                StringBuilder sb = new StringBuilder();
-                for (int i = lines.length - keep; i < lines.length; i++) {
-                    if (sb.length() > 0) sb.append("\n");
-                    sb.append(lines[i]);
-                }
-                merged = sb.toString();
-            }
-            fresh.setRemarks(merged);
-            patternProductionService.updateById(fresh);
-            // 同步到内存对象，供后续逻辑使用
-            pattern.setRemarks(merged);
+            // 操作日志统一写入 t_operation_log，不污染备注（P0：备注仅保留人工备注）
+            com.fashion.supplychain.common.OperationLogAppendUtil.writeLog(
+                    "样衣生产", action, detail, pattern.getId(), pattern.getStyleNo());
 
             // === 双写 t_order_remark 表 ===
             try {
@@ -1279,11 +1235,11 @@ public class PatternProductionOrchestrator {
                     com.fashion.supplychain.system.entity.OrderRemark record =
                             new com.fashion.supplychain.system.entity.OrderRemark();
                     record.setTargetType("pattern");
-                    record.setTargetNo(String.valueOf(fresh.getId()));
+                    record.setTargetNo(String.valueOf(pattern.getId()));
                     record.setAuthorName(operatorName);
                     record.setAuthorRole(action);
                     record.setContent(newEntry);
-                    record.setTenantId(fresh.getTenantId());
+                    record.setTenantId(pattern.getTenantId());
                     record.setCreateTime(LocalDateTime.now());
                     record.setDeleteFlag(0);
                     orderRemarkService.save(record);

@@ -1048,10 +1048,13 @@ public class ProductionOrderOrchestrator {
     }
 
     private void appendRemark(ProductionOrder order, String remark) {
-        String existing = order.getRemarks();
-        String timestamp = LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-        String entry = String.format("[%s] %s", timestamp, remark);
-        order.setRemarks(existing != null && !existing.isEmpty() ? existing + "\n" + entry : entry);
+        // 操作日志统一写入 t_operation_log，不污染备注（P0：备注仅保留人工备注）
+        try {
+            com.fashion.supplychain.common.OperationLogAppendUtil.writeLog(
+                    "生产订单", "修改订单", remark, order.getId(), order.getOrderNo());
+        } catch (Exception e) {
+            log.warn("[appendRemark] 写操作日志失败（不阻断）: orderId={}, err={}", order.getId(), e.getMessage());
+        }
     }
 
     private int syncDownstream(ProductionOrder order, String field, String newValue) {

@@ -293,8 +293,11 @@ public class ActionExecutorTool extends AbstractAgentTool {
         // AI 自动延期 3 天，作为安全缓冲
         java.time.LocalDateTime newDate = order.getExpectedShipDate() != null ? order.getExpectedShipDate().plusDays(3) : java.time.LocalDateTime.now().plusDays(3);
         order.setExpectedShipDate(newDate);
-        order.setRemarks((order.getRemarks() == null ? "" : order.getRemarks() + "\n") + "[AI自动延期] 由于产能或物料风险，自动延期至 " + newDate);
         productionOrderService.saveOrUpdateOrder(order);
+
+        // 操作日志统一写入 t_operation_log，不污染备注（AI 自动操作也属于数据操作日志）
+        com.fashion.supplychain.common.OperationLogAppendUtil.writeLog(
+                "生产订单", "AI自动延期", "AI助手自动延期交货日期至 " + newDate, order.getId(), orderNo);
 
         logAction("production", "extend_delivery", "ProductionOrder", order.getId(), orderNo, "AI助手自动延期交货日期");
 

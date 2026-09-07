@@ -8,8 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -43,25 +41,9 @@ public class PurchaseCartLogAppendHelper extends AbstractOperationLogAppendHelpe
     @Override
     public void appendOperation(String cartId, String action, String detail) {
         if (cartId == null) return;
-        PurchaseCart cart = purchaseCartService.getById(cartId);
-        if (cart == null) return;
-        String remark = cart.getRemark();
-        String newRemark = buildRemark(remark, action, detail);
-        cart.setRemark(newRemark);
-        purchaseCartService.updateById(cart);
-    }
-
-    private String buildRemark(String existing, String action, String detail) {
-        StringBuilder sb = new StringBuilder();
-        if (existing != null && !existing.isEmpty()) {
-            sb.append(existing).append("\n");
-        }
-        sb.append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")))
-          .append(" [").append(action).append("]");
-        if (detail != null) {
-            sb.append("：").append(detail);
-        }
-        return sb.toString();
+        // 操作日志统一写入 t_operation_log，不污染备注（P0：备注仅保留人工备注）
+        com.fashion.supplychain.common.OperationLogAppendUtil.writeLog(
+                "采购车", action, detail, cartId, null);
     }
 
     public void appendAddItem(String cartId, String materialName) {

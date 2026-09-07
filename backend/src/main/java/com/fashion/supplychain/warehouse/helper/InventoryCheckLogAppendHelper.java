@@ -7,8 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -42,25 +40,9 @@ public class InventoryCheckLogAppendHelper extends AbstractOperationLogAppendHel
     @Override
     public void appendOperation(String itemId, String action, String detail) {
         if (itemId == null) return;
-        InventoryCheckItem item = inventoryCheckItemService.getById(itemId);
-        if (item == null) return;
-        String remark = item.getRemark();
-        String newRemark = buildRemark(remark, action, detail);
-        item.setRemark(newRemark);
-        inventoryCheckItemService.updateById(item);
-    }
-
-    private String buildRemark(String existing, String action, String detail) {
-        StringBuilder sb = new StringBuilder();
-        if (existing != null && !existing.isEmpty()) {
-            sb.append(existing).append("\n");
-        }
-        sb.append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")))
-          .append(" [").append(action).append("]");
-        if (detail != null) {
-            sb.append("：").append(detail);
-        }
-        return sb.toString();
+        // 操作日志统一写入 t_operation_log，不污染备注（P0：备注仅保留人工备注）
+        com.fashion.supplychain.common.OperationLogAppendUtil.writeLog(
+                "盘点明细", action, detail, itemId, null);
     }
 
     public void appendCreate(String itemId) {

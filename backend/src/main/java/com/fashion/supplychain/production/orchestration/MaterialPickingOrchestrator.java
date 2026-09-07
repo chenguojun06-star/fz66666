@@ -110,8 +110,9 @@ public class MaterialPickingOrchestrator {
         // P0-2 修复：picking 改为逻辑删除（status=cancelled），与 cancelPicking 保持一致，
         // 保留审计痕迹，避免统计/历史查询丢失记录
         picking.setStatus("cancelled");
-        picking.setRemark("【取消待出库】操作人: " + UserContext.username()
-                + " | 原备注: " + (picking.getRemark() != null ? picking.getRemark() : ""));
+        // 操作日志统一写入 t_operation_log，备注保持人工备注不变（P0：备注与操作日志分离）
+        com.fashion.supplychain.common.OperationLogAppendUtil.writeLog(
+                "领料出库", "取消待出库", "取消待出库领料单", picking.getId(), picking.getPickingNo());
         picking.setUpdateTime(java.time.LocalDateTime.now());
         materialPickingService.updateById(picking);
         log.info("[Picking] 取消待出库领料单（逻辑删除）: pickingNo={}", picking.getPickingNo());

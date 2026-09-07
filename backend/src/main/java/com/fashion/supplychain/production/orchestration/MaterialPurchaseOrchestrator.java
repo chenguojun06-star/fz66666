@@ -917,10 +917,10 @@ public class MaterialPurchaseOrchestrator {
             if (StringUtils.hasText(expressCompany)) deliveryInfo.append(" 快递:").append(expressCompany);
             if (StringUtils.hasText(trackingNo)) deliveryInfo.append(" 单号:").append(trackingNo);
             if (StringUtils.hasText(remark)) deliveryInfo.append(" ").append(remark);
-            String existingRemark = purchase.getRemark() != null ? purchase.getRemark() : "";
-            purchase.setRemark(existingRemark.isEmpty()
-                    ? deliveryInfo.toString()
-                    : existingRemark + "\n" + deliveryInfo);
+            // 操作日志统一写入 t_operation_log，不污染备注（P0：备注仅保留人工备注）
+            com.fashion.supplychain.common.OperationLogAppendUtil.writeLog(
+                    "物料采购", "供应商发货", deliveryInfo.toString(), purchase.getId(),
+                    purchase.getMaterialName());
             changed = true;
         }
 

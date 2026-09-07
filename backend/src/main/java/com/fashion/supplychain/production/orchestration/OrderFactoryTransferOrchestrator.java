@@ -494,8 +494,13 @@ public class OrderFactoryTransferOrchestrator {
     }
 
     private void appendRemark(ProductionOrder order, String msg) {
-        String old = order.getRemarks() == null ? "" : order.getRemarks();
-        order.setRemarks(old.isBlank() ? msg : old + "\n" + msg);
+        // 操作日志统一写入 t_operation_log，不污染备注（P0：备注仅保留人工备注）
+        try {
+            com.fashion.supplychain.common.OperationLogAppendUtil.writeLog(
+                    "生产订单", "订单转厂", msg, order.getId(), order.getOrderNo());
+        } catch (Exception e) {
+            log.warn("[appendRemark] 写操作日志失败（不阻断）: orderId={}, err={}", order.getId(), e.getMessage());
+        }
     }
 
     private void transferScanRecords(String orderId, String newFactoryId, Long tenantId) {

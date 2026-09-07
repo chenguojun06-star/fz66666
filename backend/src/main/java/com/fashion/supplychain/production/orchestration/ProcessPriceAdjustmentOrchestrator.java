@@ -231,13 +231,12 @@ public class ProcessPriceAdjustmentOrchestrator {
     }
 
     private void appendOrderRemark(ProductionOrder order, String text) {
-        String existing = order.getRemarks() != null ? order.getRemarks() : "";
-        String newRemarks = existing.isEmpty() ? text : existing + "\n" + text;
-        // 防止备注字段过长
-        if (newRemarks.length() > 2000) {
-            newRemarks = newRemarks.substring(newRemarks.length() - 2000);
+        // 操作日志统一写入 t_operation_log，不污染备注（P0：备注仅保留人工备注）
+        try {
+            com.fashion.supplychain.common.OperationLogAppendUtil.writeLog(
+                    "生产订单", "工序单价调整", text, order.getId(), order.getOrderNo());
+        } catch (Exception e) {
+            log.warn("[appendOrderRemark] 写操作日志失败（不阻断）: orderId={}, err={}", order.getId(), e.getMessage());
         }
-        order.setRemarks(newRemarks);
-        productionOrderService.updateById(order);
     }
 }

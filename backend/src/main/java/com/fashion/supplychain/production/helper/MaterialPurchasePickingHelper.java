@@ -800,7 +800,9 @@ public class MaterialPurchasePickingHelper {
         restoreStockForItems(items, wasCompleted);
 
         picking.setStatus(MaterialConstants.STATUS_CANCELLED);
-        picking.setRemark("【撤销】" + reason + " | 操作人: " + UserContext.username() + " | 原备注: " + (picking.getRemark() != null ? picking.getRemark() : ""));
+        // 操作日志统一写入 t_operation_log，备注保持人工备注不变（P0：备注与操作日志分离）
+        com.fashion.supplychain.common.OperationLogAppendUtil.writeLog(
+                "领料出库", "撤销出库", "原因：" + reason, picking.getId(), picking.getPickingNo());
         picking.setUpdateTime(LocalDateTime.now());
         materialPickingService.updateById(picking);
 
