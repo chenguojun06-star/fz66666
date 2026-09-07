@@ -86,12 +86,17 @@ export function useCuttingBundles({
 
     const sourceRows = overrideRows && overrideRows.length > 0 ? overrideRows : bundlesInput;
     const validItems = sourceRows
-      .map((x) => ({
-        color: String(x.color || '').trim(),
-        size: String(x.size || '').trim(),
-        layerCount: Number(x.layerCount || 0) || 0,
-        quantity: Number(x.quantity || 0) || 0,
-      }))
+      .map((x) => {
+        const quantity = Number(x.quantity || 0) || 0;
+        // 面料层数默认等于数量（手工编菲/一键生成统一口径）
+        const layerCount = (Number(x.layerCount || 0) || 0) || quantity;
+        return {
+          color: String(x.color || '').trim(),
+          size: String(x.size || '').trim(),
+          layerCount,
+          quantity,
+        };
+      })
       .filter(item => item.quantity > 0);
     if (!validItems.length) {
       message.error('请至少录入一行有效的颜色/尺码/数量');
@@ -102,6 +107,17 @@ export function useCuttingBundles({
       message.error('颜色/尺码不能为空');
       return;
     }
+
+    // 菲号生成顺序统一：颜色按下单出现顺序 → 尺码从小到大（P0：避免乱序绑错菲号）
+    const colorOrder = new Map<string, number>();
+    validItems.forEach((x) => {
+      if (!colorOrder.has(x.color)) colorOrder.set(x.color, colorOrder.size);
+    });
+    validItems.sort((a, b) => {
+      const ci = (colorOrder.get(a.color) ?? 999) - (colorOrder.get(b.color) ?? 999);
+      if (ci !== 0) return ci;
+      return compareSizeAsc(a.size, b.size);
+    });
 
     setGenerateLoading(true);
     modal.confirm({

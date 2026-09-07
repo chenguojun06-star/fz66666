@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Button, Card, Empty, InputNumber, Select, Space } from 'antd';
+import { Button, Card, Empty, InputNumber, Select, Space, Tooltip } from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
+import AttributeGroupLibraryModal from '@/components/common/AttributeGroupLibraryModal';
 import type { CuttingCreateTaskState } from '../hooks';
 
 interface Props {
@@ -19,6 +21,21 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [quickFillQty, setQuickFillQty] = useState(1);
+  // 基础属性库——颜色/码数成组选择（与正常下单同组件）
+  const [attrLibOpen, setAttrLibOpen] = useState(false);
+  const [attrLibTarget, setAttrLibTarget] = useState<'color' | 'size'>('size');
+
+  const handleApplyAttrGroup = (groupKey: string, values: string[], mode: 'replace' | 'append') => {
+    const incoming = values.map((v) => String(v || '').trim()).filter(Boolean);
+    if (!incoming.length) return;
+    if (groupKey === 'color') {
+      const base = mode === 'replace' ? [] : selectedColors;
+      syncSelection(Array.from(new Set([...base, ...incoming])), selectedSizes);
+    } else {
+      const base = mode === 'replace' ? [] : selectedSizes;
+      syncSelection(selectedColors, Array.from(new Set([...base, ...incoming])));
+    }
+  };
 
   const totalQuantity = useMemo(
     () => lines.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0),
@@ -102,6 +119,14 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
           options={colorOptions}
           onChange={(values) => syncSelection(values as string[], selectedSizes)}
           maxTagCount="responsive"
+          suffix={(
+            <Tooltip title="基础属性库——成组选择颜色">
+              <SettingOutlined
+                style={{ color: 'rgba(0,0,0,0.45)', cursor: 'pointer' }}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAttrLibTarget('color'); setAttrLibOpen(true); }}
+              />
+            </Tooltip>
+          )}
         />
         <Select
           mode="tags"
@@ -110,8 +135,21 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
           options={sizeOptions}
           onChange={(values) => syncSelection(selectedColors, values as string[])}
           maxTagCount="responsive"
+          suffix={(
+            <Tooltip title="基础属性库——成组选择码数">
+              <SettingOutlined
+                style={{ color: 'rgba(0,0,0,0.45)', cursor: 'pointer' }}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAttrLibTarget('size'); setAttrLibOpen(true); }}
+              />
+            </Tooltip>
+          )}
         />
       </div>
+      <AttributeGroupLibraryModal
+        open={attrLibOpen}
+        onClose={() => setAttrLibOpen(false)}
+        onApply={handleApplyAttrGroup}
+      />
 
       <Space size={8} style={{ marginBottom: 12 }} wrap>
         <Button onClick={() => syncSelection([], [])}>清空</Button>

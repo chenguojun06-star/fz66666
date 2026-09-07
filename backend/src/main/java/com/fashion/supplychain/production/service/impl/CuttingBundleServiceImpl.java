@@ -23,6 +23,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
+import com.fashion.supplychain.production.util.ProductionOrderUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -265,7 +266,28 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         List<CuttingBundle> result = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
         int idx = bundleIndex;
+
+        // 菲号生成顺序统一：颜色按下单出现顺序 → 尺码从小到大（P0：小码先得小扎号，避免乱序绑错菲号）
+        Map<String, Integer> colorOrder = new HashMap<>();
         for (Map<String, Object> item : bundles) {
+            Object c = item.get("color");
+            String color = c == null ? null : c.toString().trim();
+            if (StringUtils.hasText(color) && !colorOrder.containsKey(color)) {
+                colorOrder.put(color, colorOrder.size());
+            }
+        }
+        List<Map<String, Object>> sortedBundles = new ArrayList<>(bundles);
+        sortedBundles.sort((a, b) -> {
+            String ca = a.get("color") == null ? "" : a.get("color").toString().trim();
+            String cb = b.get("color") == null ? "" : b.get("color").toString().trim();
+            int ci = (colorOrder.getOrDefault(ca, 999)) - (colorOrder.getOrDefault(cb, 999));
+            if (ci != 0) return ci;
+            String sa = a.get("size") == null ? "" : a.get("size").toString();
+            String sb = b.get("size") == null ? "" : b.get("size").toString();
+            return ProductionOrderUtils.compareSizeAsc(sa, sb);
+        });
+
+        for (Map<String, Object> item : sortedBundles) {
             String color = item.get("color") == null ? null : item.get("color").toString();
             String size = item.get("size") == null ? null : item.get("size").toString();
             if (color != null) color = color.trim();
