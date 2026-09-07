@@ -12,12 +12,15 @@ interface BundleDelegatePanelProps {
   onBundleDelegate: (payload: BundleDelegatePayload) => Promise<void> | void;
 }
 
+// 菲号状态中文映射（created=已生成未扫码；pending=分扎转移待接收；scrapped=已报废）
 const BUNDLE_STATUS_LABEL: Record<string, string> = {
-  pending: '待生产',
+  created: '待生产',
+  pending: '待接收',
   completed: '已完成',
   qualified: '已合格',
   unqualified: '待返修',
   repaired_waiting_qc: '待复检',
+  scrapped: '已报废',
 };
 
 const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
@@ -124,7 +127,7 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ color: 'var(--color-text-primary)', fontSize: 'var(--font-size-sm)' }}>
                     菲号 {b.bundleNo ?? '-'}
-                    <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 6 }}>{b.qrCode || ''}</span>
+                    {/* 二维码内容（含 PO/款号/SIG 签名等）对用户无阅读价值，不再整串展示 */}
                   </div>
                   <div style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
                     {b.color || '-'} / {b.size || '-'} / {b.quantity ?? 0} 件

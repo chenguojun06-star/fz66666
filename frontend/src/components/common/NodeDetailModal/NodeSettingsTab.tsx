@@ -49,6 +49,12 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
     return Number(unitPrice) || 0;
   })();
   const orderInfoLine = `${orderSummary.orderNo || orderNo || '-'}  款号：${orderSummary.styleNo || '-'}  数量：${orderSummary.orderQuantity || 0} 件`;
+  // 有菲号时：工厂/人员委派统一走下方「菲号批量委派」面板，顶部网格不再重复显示
+  // 委派类型/执行工厂/委派人员三列（无菲号的订单保留节点级委派入口）
+  const hasBundles = Array.isArray(bundles) && bundles.length > 0;
+  const gridCols = hasBundles
+    ? ['生产节点', '当前状态', '工序编号', '工序名称', '数量', '委派单价', '委派时间', '操作']
+    : ['生产节点', '当前状态', '工序编号', '工序名称', '数量', '委派类型', '执行工厂', '委派人员', '委派单价', '委派时间', '操作'];
 
   return (
     <div style={{ padding: '4px 0', minHeight: 400 }}>
@@ -115,17 +121,9 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
         width: '100%',
         overflow: 'hidden',
       }}>
-        <div>生产节点</div>
-        <div>当前状态</div>
-        <div>工序编号</div>
-        <div>工序名称</div>
-        <div>数量</div>
-        <div>委派类型</div>
-        <div>执行工厂</div>
-        <div>委派人员</div>
-        <div>委派单价</div>
-        <div>委派时间</div>
-        <div>操作</div>
+        {gridCols.map((col) => (
+          <div key={col}>{col}</div>
+        ))}
       </div>
       <div style={{
         display: 'grid',
@@ -167,54 +165,58 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
           disabled={disableEdit}
           style={{ width: '100%', minWidth: 0 }}
         />
-        <Select
-          value={currentNodeData.delegateType || 'factory'}
-          onChange={(v) => {
-            updateNodeData('delegateType', v);
-            if (v === 'factory') {
-              updateNodeData('assigneeId', undefined);
-              updateNodeData('assignee', undefined);
-            } else {
-              updateNodeData('delegateFactoryId', undefined);
-              updateNodeData('delegateFactoryName', undefined);
-            }
-          }}
-          options={[
-            { value: 'factory', label: '工厂' },
-            { value: 'person', label: '人员' },
-          ]}
-          disabled={disableEdit}
-          style={{ width: '100%', minWidth: 0 }}
-        />
-        <Select
-          allowClear
-          showSearch
-          placeholder="选择工厂"
-          value={currentNodeData.delegateFactoryId}
-          onChange={handleFactoryChange}
-          filterOption={(input, option) =>
-            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-          }
-          options={factories?.map(f => ({ value: f.id, label: f.factoryName })) || []}
-          disabled={disableEdit || currentNodeData.delegateType === 'person'}
-          style={{ width: '100%', minWidth: 0 }}
-        />
-        <Select
-          allowClear
-          showSearch
-          placeholder="选择人员"
-          value={currentNodeData.assigneeId}
-          onChange={(v, option) => {
-            updateNodeData('assigneeId', v);
-            updateNodeData('assignee', (option as any)?.label || v);
-          }}
-          filterOption={(input, option) =>
-            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-          }
-          options={users.map(u => ({ value: u.id, label: u.name || u.username }))}
-          disabled={disableEdit || currentNodeData.delegateType === 'factory'}
-          style={{ width: '100%', minWidth: 0 }}
-        />
+        {!hasBundles && (
+          <>
+            <Select
+              value={currentNodeData.delegateType || 'factory'}
+              onChange={(v) => {
+                updateNodeData('delegateType', v);
+                if (v === 'factory') {
+                  updateNodeData('assigneeId', undefined);
+                  updateNodeData('assignee', undefined);
+                } else {
+                  updateNodeData('delegateFactoryId', undefined);
+                  updateNodeData('delegateFactoryName', undefined);
+                }
+              }}
+              options={[
+                { value: 'factory', label: '工厂' },
+                { value: 'person', label: '人员' },
+              ]}
+              disabled={disableEdit}
+              style={{ width: '100%', minWidth: 0 }}
+            />
+            <Select
+              allowClear
+              showSearch
+              placeholder="选择工厂"
+              value={currentNodeData.delegateFactoryId}
+              onChange={handleFactoryChange}
+              filterOption={(input, option) =>
+                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+              options={factories?.map(f => ({ value: f.id, label: f.factoryName })) || []}
+              disabled={disableEdit || currentNodeData.delegateType === 'person'}
+              style={{ width: '100%', minWidth: 0 }}
+            />
+            <Select
+              allowClear
+              showSearch
+              placeholder="选择人员"
+              value={currentNodeData.assigneeId}
+              onChange={(v, option) => {
+                updateNodeData('assigneeId', v);
+                updateNodeData('assignee', (option as any)?.label || v);
+              }}
+              filterOption={(input, option) =>
+                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+              options={users.map(u => ({ value: u.id, label: u.name || u.username }))}
+              disabled={disableEdit || currentNodeData.delegateType === 'factory'}
+              style={{ width: '100%', minWidth: 0 }}
+            />
+          </>
+        )}
         <Input
           prefix="¥"
           value={Number.isFinite(fixedUnitPrice) ? fixedUnitPrice.toFixed(2) : '0.00'}
