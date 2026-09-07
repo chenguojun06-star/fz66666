@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Space } from 'antd';
-import { StyleCoverThumb, StyleAttachmentsButton, PatternSupplementButton } from '@/components/StyleAssets';
+import { StyleCoverThumb, PatternManageDrawer } from '@/components/StyleAssets';
 import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import RowActions from '@/components/common/RowActions';
@@ -159,10 +159,7 @@ export function useTaskColumns({
       key: 'attachments',
       width: 130,
       render: (_: any, record: CuttingTask) => (
-        <Space size={4}>
-          <StyleAttachmentsButton styleId={record.styleId} styleNo={record.styleNo} onlyActive />
-          <PatternSupplementButton styleId={record.styleId} styleNo={record.styleNo} />
-        </Space>
+        <PatternManageDrawer styleId={record.styleId} styleNo={record.styleNo} />
       ),
     },
     {
