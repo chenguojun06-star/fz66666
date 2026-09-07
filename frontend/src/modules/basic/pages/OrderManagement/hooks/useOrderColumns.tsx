@@ -12,13 +12,15 @@ interface UseOrderColumnsParams {
   openCreate: (style: StyleInfo) => void;
   setPrintModalVisible: (v: boolean) => void;
   setPrintingRecord: (r: StyleInfo) => void;
+  /** 打印模式：order=下单单 / production=生产单 / label=标签 */
+  setPrintingMode: (m: 'order' | 'production' | 'label') => void;
   setRemarkStyleNo: (v: string) => void;
   setRemarkModalOpen: (v: boolean) => void;
   /** 款式停用/启用（带确认弹窗） */
   handleToggleStatus: (record: StyleInfo) => void;
 }
 
-export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen, handleToggleStatus }: UseOrderColumnsParams) {
+export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingRecord, setPrintingMode, setRemarkStyleNo, setRemarkModalOpen, handleToggleStatus }: UseOrderColumnsParams) {
   const { extColumns } = useExtColumns<StyleInfo>({ bizType: 'style', platform: 'pc' });
 
   const baseColumns = useMemo(() => [
@@ -143,10 +145,35 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
               key: 'print',
               label: '打印',
               title: '打印',
-              onClick: () => {
-                setPrintingRecord(record);
-                setPrintModalVisible(true);
-              },
+              children: [
+                {
+                  key: 'print-order',
+                  label: '打印下单单',
+                  onClick: () => {
+                    setPrintingRecord(record);
+                    setPrintingMode('order');
+                    setPrintModalVisible(true);
+                  },
+                },
+                {
+                  key: 'print-production',
+                  label: '打印生产单',
+                  onClick: () => {
+                    setPrintingRecord(record);
+                    setPrintingMode('production');
+                    setPrintModalVisible(true);
+                  },
+                },
+                {
+                  key: 'print-label',
+                  label: '打印标签',
+                  onClick: () => {
+                    setPrintingRecord(record);
+                    setPrintingMode('label');
+                    setPrintModalVisible(true);
+                  },
+                },
+              ],
             },
             {
               key: 'remark',
@@ -176,7 +203,7 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
         />
       )
     }
-  ], [openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen, handleToggleStatus]);
+  ], [openCreate, setPrintModalVisible, setPrintingRecord, setPrintingMode, setRemarkStyleNo, setRemarkModalOpen, handleToggleStatus]);
 
   const columns = useMemo(() => {
     const actionColIndex = baseColumns.findIndex(c => c.key === 'action');

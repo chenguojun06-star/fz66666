@@ -31,7 +31,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   visible, onClose, styleId, orderId, orderNo,
   styleNo = '', styleName = '', cover, color, quantity,
   category, season, mode = 'sample', patternProductionId: propPatternId, extraInfo = {}, sizeDetails = [],
-  sizes: _propSizes, sizeColorConfig,
+  sizes: _propSizes, sizeColorConfig, initialLabelMode = false,
 }) => {
   // 注：_propSizes 当前未在本组件使用，保留以维持 props 接口稳定
   void _propSizes;
@@ -41,7 +41,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     styleNo, styleName, cover, color, quantity,
     category, season, mode,
     patternProductionId: propPatternId,
-    extraInfo, sizeDetails, sizeColorConfig,
+    extraInfo, sizeDetails, sizeColorConfig, initialLabelMode,
   });
   const {
     options, setOptions,
@@ -71,7 +71,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       onClose={onClose}
       placement="right"
       styles={{
-        wrapper: { width: Math.min(1600, Math.round(typeof window !== 'undefined' ? window.innerWidth * 0.85 : 1600)) },
+        wrapper: { width: '80%' },
         body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
       }}
       maskClosable={false}

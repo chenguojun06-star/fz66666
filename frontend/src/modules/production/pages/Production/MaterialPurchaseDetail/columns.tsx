@@ -231,7 +231,7 @@ export interface ViewColumnsDeps {
 
 export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPurchase> {
   const {
-    colWidth, editing, sampleMode, locked, stockMap,
+    colWidth, editing, locked, stockMap,
     handleStartEdit, handleDelete,
     openReceive, openInbound,
     handleReturnConfirm, handleReturnReset, handleCancelReceive,
@@ -314,12 +314,12 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
               ...(!isPending && !isCompleted && !isCancelled && !isReturnConfirmed ? [{ key: 'cancel-receive', label: '撤回采购', title: '撤回已领取的采购，恢复为待处理', onClick: () => handleCancelReceive(record), danger: true }] : []),
               // D-117：已取消的采购不可再登记品质异常（终态行按钮置灰）
               { key: 'quality-issue', label: '品质异常', title: isCancelled ? '该采购已取消，不可登记品质异常' : '登记物料品质问题', disabled: isCancelled, onClick: () => { setQualityIssueRecord(record); setQualityIssueVisible(true); } },
-              // D-272：「出库领取」只在仓库真有库存（做过入库）时显示。
+              // D-272+：大货/样衣采购统一支持「出库领取」——只要仓库有库存（做过入库）就显示。
               // 直采直用（登记到货但从未入库）的采购不走仓库流程，
               // 显示按钮只会让用户误点 → 后端 calcAvailableStock=0 → 400 仓库库存不足。
-              // 样衣模式同理隐藏。
+              // （2026-09-07：按用户要求放开样衣采购，样衣同样支持入库→出库领取全链路）
               ...(() => {
-                if (sampleMode || !(isReturnConfirmed || isCompleted)) return [];
+                if (!(isReturnConfirmed || isCompleted)) return [];
                 const stockQty = stockMap?.[String(record.id)];
                 if (stockQty == null || Number(stockQty) <= 0) return [];
                 const pickQty = Math.min(Number(stockQty), Number(record.arrivedQuantity || record.purchaseQuantity || 0));

@@ -1,255 +1,378 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { Card, Statistic, Row, Col } from 'antd';
-import { ShoppingCartOutlined, AppstoreOutlined, UserOutlined, DollarOutlined } from '@ant-design/icons';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import { Card, Col, Empty, Row, Statistic, Tag, Tooltip } from 'antd';
+import {
+  AppstoreOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  DollarOutlined,
+  FileTextOutlined,
+  FundOutlined,
+  PercentageOutlined,
+  ShoppingCartOutlined,
+} from '@ant-design/icons';
 import api from '@/utils/api';
-import { StyleInfo, StyleQueryParams } from '@/types/style';
-
-import ResizableTable from '@/components/common/ResizableTable';
-import StandardSearchBar from '@/components/common/StandardSearchBar';
-import StandardPagination from '@/components/common/StandardPagination';
-import StandardToolbar from '@/components/common/StandardToolbar';
-import { StyleCoverThumb } from '@/components/StyleAssets';
-import { DEFAULT_PAGE_SIZE_OPTIONS, readPageSize, savePageSize } from '@/utils/pageSizeStore';
-import { toCategoryCn } from '@/utils/styleCategory';
 import dayjs from 'dayjs';
+import ResizableTable from '@/components/common/ResizableTable';
 
+const ReactECharts = lazy(() => import('echarts-for-react'));
+
+/* ───────────── 类型定义 ───────────── */
+interface Overview {
+  orderCount: number;
+  totalQuantity: number;
+  totalAmount: number;
+  inProductionCount: number;
+  completedCount: number;
+  overdueCount: number;
+  avgCompletionDays: number;
+  avgDefectRate: number;
+}
+interface TrendItem { date: string; orderCount: number; quantity: number; }
+interface FactoryRankItem { factoryName: string; completedOrders: number; avgCompletionDays: number; onTimeRate: number; }
+interface DefectRankItem { styleNo: string; styleName: string; total: number; failCount: number; defectRate: number; }
+interface Margin { salesAmount: number; materialCost: number; grossProfit: number; grossMarginRate: number; hasCostData: boolean; }
+interface AnalyticsData {
+  overview: Overview;
+  trend: TrendItem[];
+  factoryRanking: FactoryRankItem[];
+  defectRanking: DefectRankItem[];
+  margin: Margin;
+}
+
+const fmtMoney = (v: number) => `¥${(Number(v) || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/** 工具说明（标题 + 问号 Tooltip，减少视觉负担） */
+const Hint: React.FC<{ text: string }> = ({ text }) => (
+  <Tooltip title={text}>
+    <span style={{ color: 'var(--color-text-tertiary)', cursor: 'help', marginLeft: 4, fontWeight: 400 }}>?</span>
+  </Tooltip>
+);
+
+/**
+ * 订单智能数据分析（D-xxx 重构）
+ * 覆盖：总览指标 / 近30天下单趋势 / 工厂时效排行 / 次品率排行 / 毛利估算
+ * 数据来源：后端 /api/order-analytics/overview（只读聚合，多租户隔离）
+ */
 const OrderAnalysisTab: React.FC = () => {
-  const [queryParams, setQueryParams] = useState<StyleQueryParams>({
-    page: 1,
-    pageSize: readPageSize(20),
-    onlyCompleted: true,
-    pushedToOrderOnly: true,
-    keyword: '',
-  });
-  const [styles, setStyles] = useState<StyleInfo[]>([]);
-  const [total, setTotal] = useState(0);
+  const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<{ code: number; data: { records: StyleInfo[]; total: number } }>(
-        '/style/info/list',
-        { params: queryParams },
-      );
-      if (res.code === 200) {
-        setStyles(res.data?.records || []);
-        setTotal(res.data?.total || 0);
-      }
+      const res = await api.get<{ code: number; data: AnalyticsData }>('/order-analytics/overview', {
+        params: { days: 365 },
+      });
+      if (res.code === 200) setData(res.data);
     } finally {
       setLoading(false);
     }
-  }, [queryParams]);
+  }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // 统计汇总
-  const totalOrderCount = styles.reduce((s, r) => s + (r.orderCount || 0), 0);
-  const totalOrderQty = styles.reduce((s, r) => s + (r.totalOrderQuantity || 0), 0);
-  const orderedStyleCount = styles.filter(r => (r.orderCount || 0) > 0).length;
-  const totalOrderAmount = styles.reduce((s, r) => s + (r.price || 0) * (r.totalOrderQuantity || 0), 0);
+  // 近30天下单趋势（缺日补零）
+  const filledTrend = useMemo(() => {
+    const map = new Map((data?.trend || []).map((t) => [t.date, t]));
+    const out: TrendItem[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = dayjs().subtract(i, 'day').format('YYYY-MM-DD');
+      out.push(map.get(d) || { date: d, orderCount: 0, quantity: 0 });
+    }
+    return out;
+  }, [data?.trend]);
 
-  const columns = [
-    {
-      title: '图片',
-      dataIndex: 'cover',
-      key: 'cover',
-      width: 72,
-      render: (_: unknown, record: StyleInfo) => (
-        <StyleCoverThumb styleId={(record as any).id} styleNo={record.styleNo} src={(record as any).cover || null} />
-      ),
+  const trendOption = useMemo(() => ({
+    tooltip: {
+      trigger: 'axis',
+      confine: true,
+      backgroundColor: 'var(--color-bg-base)',
+      borderColor: 'var(--color-border)',
+      textStyle: { color: 'var(--color-text-primary)' },
     },
+    legend: { data: ['下单数', '下单件数'], top: 5, textStyle: { fontSize: 13, color: '#6b7280' } },
+    grid: { left: '2%', right: '3%', bottom: '2%', top: 38, containLabel: true },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: filledTrend.map((t) => t.date.slice(5)),
+      axisLine: { lineStyle: { color: '#e5e7eb' } },
+      axisLabel: { color: '#9ca3af', fontSize: 11, interval: 4 },
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: '#9ca3af', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#f0f0f0' } },
+    },
+    series: [
+      {
+        name: '下单数',
+        type: 'line',
+        smooth: true,
+        data: filledTrend.map((t) => t.orderCount),
+        lineStyle: { width: 2, color: '#1677ff' },
+        itemStyle: { color: '#1677ff' },
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(22, 119, 255, 0.18)' },
+              { offset: 1, color: 'rgba(22, 119, 255, 0.02)' },
+            ],
+          },
+        },
+      },
+      {
+        name: '下单件数',
+        type: 'bar',
+        barMaxWidth: 14,
+        data: filledTrend.map((t) => t.quantity),
+        itemStyle: { color: '#91caff', borderRadius: [2, 2, 0, 0] },
+      },
+    ],
+  }), [filledTrend]);
+
+  const factoryOption = useMemo(() => {
+    const list = data?.factoryRanking || [];
+    return {
+      tooltip: {
+        trigger: 'axis',
+        confine: true,
+        backgroundColor: 'var(--color-bg-base)',
+        borderColor: 'var(--color-border)',
+        textStyle: { color: 'var(--color-text-primary)' },
+        formatter: (params: any) => {
+          const p = params?.[0];
+          if (!p) return '';
+          const item = list[p.dataIndex];
+          if (!item) return '';
+          const onTime = item.onTimeRate >= 0 ? `${item.onTimeRate.toFixed(1)}%` : '暂无数据';
+          return `<div style="padding:4px 0;font-weight:600">${item.factoryName}</div>
+            <div>完成订单：${item.completedOrders} 单</div>
+            <div>平均完工：${item.avgCompletionDays >= 0 ? `${item.avgCompletionDays.toFixed(1)} 天` : '暂无数据'}</div>
+            <div>准时交付率：${onTime}</div>`;
+        },
+      },
+      grid: { left: '2%', right: '3%', bottom: '2%', top: 20, containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: list.map((f) => f.factoryName),
+        axisLine: { lineStyle: { color: '#e5e7eb' } },
+        axisLabel: { color: '#6b7280', fontSize: 11, interval: 0, rotate: 30 },
+      },
+      yAxis: {
+        type: 'value',
+        name: '天',
+        nameTextStyle: { color: '#9ca3af' },
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: '#9ca3af', fontSize: 11 },
+        splitLine: { lineStyle: { color: '#f0f0f0' } },
+      },
+      series: [{
+        name: '平均完工天数',
+        type: 'bar',
+        barMaxWidth: 28,
+        data: list.map((f) => f.avgCompletionDays >= 0 ? f.avgCompletionDays : 0),
+        itemStyle: { color: '#52c41a', borderRadius: [3, 3, 0, 0] },
+        label: { show: true, position: 'top', fontSize: 11, color: '#52c41a', formatter: (p: any) => (list[p.dataIndex].avgCompletionDays >= 0 ? list[p.dataIndex].avgCompletionDays.toFixed(1) : '-') },
+      }],
+    };
+  }, [data?.factoryRanking]);
+
+  const defectColumns = [
     { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 140, ellipsis: true },
-    { title: '款名', dataIndex: 'styleName', key: 'styleName', width: 140, ellipsis: true },
+    { title: '款名', dataIndex: 'styleName', key: 'styleName', width: 140, ellipsis: true, render: (v: string) => v || '-' },
+    { title: '质检数', dataIndex: 'total', key: 'total', width: 80, align: 'right' as const, render: (v: number) => v || 0 },
+    { title: '次品数', dataIndex: 'failCount', key: 'failCount', width: 80, align: 'right' as const, render: (v: number) => v || 0 },
     {
-      title: '品类',
-      dataIndex: 'category',
-      key: 'category',
-      width: 100,
-      render: (v: string) => toCategoryCn(v) || '未知',
-    },
-    {
-      title: '单价',
-      dataIndex: 'price',
-      key: 'price',
+      title: '次品率',
+      dataIndex: 'defectRate',
+      key: 'defectRate',
       width: 100,
       align: 'right' as const,
-      render: (v: number) => (v != null && v > 0) ? `¥${v}` : '-',
-    },
-    {
-      title: '下单次数',
-      dataIndex: 'orderCount',
-      key: 'orderCount',
-      width: 100,
-      align: 'right' as const,
-      sorter: (a: StyleInfo, b: StyleInfo) => (a.orderCount || 0) - (b.orderCount || 0),
-      defaultSortOrder: 'descend' as const,
-      render: (v: number) => v || 0,
-    },
-    {
-      title: '下单总数量',
-      dataIndex: 'totalOrderQuantity',
-      key: 'totalOrderQuantity',
-      width: 110,
-      align: 'right' as const,
-      sorter: (a: StyleInfo, b: StyleInfo) => (a.totalOrderQuantity || 0) - (b.totalOrderQuantity || 0),
-      render: (v: number) => v || 0,
-    },
-    {
-      title: '入库总数',
-      dataIndex: 'totalWarehousedQuantity',
-      key: 'totalWarehousedQuantity',
-      width: 100,
-      align: 'right' as const,
-      sorter: (a: StyleInfo, b: StyleInfo) => (a.totalWarehousedQuantity || 0) - (b.totalWarehousedQuantity || 0),
-      render: (v: number) => v || 0,
-    },
-    {
-      title: '下单总金额',
-      key: 'totalOrderAmount',
-      width: 120,
-      align: 'right' as const,
-      sorter: (a: StyleInfo, b: StyleInfo) =>
-        (a.price || 0) * (a.totalOrderQuantity || 0) - (b.price || 0) * (b.totalOrderQuantity || 0),
-      render: (_: unknown, r: StyleInfo) => {
-        const amt = (r.price || 0) * (r.totalOrderQuantity || 0);
-        return amt > 0 ? `¥${amt.toFixed(2)}` : '-';
+      render: (v: number) => {
+        const rate = Number(v) || 0;
+        const color = rate > 15 ? 'red' : rate > 5 ? 'orange' : 'green';
+        return <Tag color={color}>{rate.toFixed(1)}%</Tag>;
       },
-    },
-    {
-      title: '报废数量',
-      dataIndex: 'scrapQuantity',
-      key: 'scrapQuantity',
-      width: 100,
-      align: 'right' as const,
-      sorter: (a: StyleInfo, b: StyleInfo) => (a.scrapQuantity || 0) - (b.scrapQuantity || 0),
-      render: (v: number) => v || 0,
-    },
-    {
-      title: '报废金额',
-      key: 'scrapAmount',
-      width: 120,
-      align: 'right' as const,
-      sorter: (a: StyleInfo, b: StyleInfo) =>
-        (a.price || 0) * (a.scrapQuantity || 0) - (b.price || 0) * (b.scrapQuantity || 0),
-      render: (_: unknown, r: StyleInfo) => {
-        const amt = (r.price || 0) * (r.scrapQuantity || 0);
-        return amt > 0 ? `¥${amt.toFixed(2)}` : '-';
-      },
-    },
-    {
-      title: '首次下单',
-      dataIndex: 'firstOrderTime',
-      key: 'firstOrderTime',
-      width: 160,
-      render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD') : '-',
-    },
-    {
-      title: '最近下单',
-      dataIndex: 'latestOrderTime',
-      key: 'latestOrderTime',
-      width: 160,
-      sorter: (a: StyleInfo, b: StyleInfo) => {
-        const ta = a.latestOrderTime ? dayjs(a.latestOrderTime).valueOf() : 0;
-        const tb = b.latestOrderTime ? dayjs(b.latestOrderTime).valueOf() : 0;
-        return ta - tb;
-      },
-      render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD') : '-',
-    },
-    {
-      title: '最近下单人',
-      dataIndex: 'latestOrderCreator',
-      key: 'latestOrderCreator',
-      width: 120,
-      ellipsis: true,
-      render: (v: string) => v || '-',
     },
   ];
 
+  const overview = data?.overview;
+  const margin = data?.margin;
+
   return (
     <div>
-      {/* 汇总统计 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
-          <Card>
+      {/* ① 总览指标 */}
+      <Row gutter={12} style={{ marginBottom: 12 }}>
+        <Col xs={12} sm={12} md={6}>
+          <Card size="small">
             <Statistic
-              title="本页下单总次数"
-              value={totalOrderCount}
-              prefix={<ShoppingCartOutlined />}
-              suffix="次"
+              title={<>订单总数<Hint text="统计窗口内全部生产订单（近365天）" /></>}
+              value={overview?.orderCount || 0}
+              prefix={<FileTextOutlined style={{ color: 'var(--color-primary)' }} />}
+              suffix="单"
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col xs={12} sm={12} md={6}>
+          <Card size="small">
             <Statistic
-              title="本页下单总件数"
-              value={totalOrderQty}
-              prefix={<AppstoreOutlined />}
+              title={<>下单总件数<Hint text="统计窗口内全部订单的下单数量合计" /></>}
+              value={overview?.totalQuantity || 0}
+              prefix={<AppstoreOutlined style={{ color: '#1677ff' }} />}
               suffix="件"
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col xs={12} sm={12} md={6}>
+          <Card size="small">
             <Statistic
-              title="本页下单总金额"
-              value={totalOrderAmount}
+              title={<>销售额估算<Hint text="按 下单数量 × 下单单价 估算，仅作经营参考" /></>}
+              value={overview?.totalAmount || 0}
               precision={2}
-              prefix={<DollarOutlined />}
+              prefix={<DollarOutlined style={{ color: '#52c41a' }} />}
               suffix="元"
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col xs={12} sm={12} md={6}>
+          <Card size="small">
             <Statistic
-              title="本页已下单款式数"
-              value={orderedStyleCount}
-              prefix={<UserOutlined />}
-              suffix="款"
+              title={<>平均完工天数<Hint text="已完成订单从下单到实际完成的天数均值" /></>}
+              value={overview?.avgCompletionDays != null && overview.avgCompletionDays >= 0 ? overview.avgCompletionDays : '-'}
+              precision={overview?.avgCompletionDays != null && overview.avgCompletionDays >= 0 ? 1 : 0}
+              prefix={<ClockCircleOutlined style={{ color: '#fa8c16' }} />}
+              suffix={overview?.avgCompletionDays != null && overview.avgCompletionDays >= 0 ? '天' : ''}
             />
           </Card>
         </Col>
       </Row>
 
-      {/* 搜索 + 表格 */}
-      <Card className="filter-card mb-sm">
-        <StandardToolbar
-          left={
-            <StandardSearchBar
-              searchValue={String(queryParams.keyword || '')}
-              onSearchChange={(value) =>
-                setQueryParams((prev) => ({ ...prev, page: 1, keyword: value }))
-              }
-              searchPlaceholder="搜索款号/款名"
+      {/* ② 状态分布 */}
+      <Row gutter={12} style={{ marginBottom: 12 }}>
+        <Col xs={12} sm={8} md={6}>
+          <Card size="small">
+            <Statistic
+              title={<>在产订单<Hint text="状态为 待生产 / 生产中 的订单" /></>}
+              value={overview?.inProductionCount || 0}
+              prefix={<FundOutlined style={{ color: '#1677ff' }} />}
+              suffix="单"
             />
-          }
-        />
-      </Card>
+          </Card>
+        </Col>
+        <Col xs={12} sm={8} md={6}>
+          <Card size="small">
+            <Statistic
+              title={<>已完成<Hint text="状态为 已完成 的订单" /></>}
+              value={overview?.completedCount || 0}
+              prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+              suffix="单"
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={8} md={6}>
+          <Card size="small">
+            <Statistic
+              title={<>已逾期<Hint text="计划完成日期已过且未完成的订单" /></>}
+              value={overview?.overdueCount || 0}
+              valueStyle={overview?.overdueCount ? { color: 'var(--color-error)' } : undefined}
+              prefix={<ShoppingCartOutlined style={{ color: overview?.overdueCount ? 'var(--color-error)' : '#999' }} />}
+              suffix="单"
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={8} md={6}>
+          <Card size="small">
+            <Statistic
+              title={<>平均次品率<Hint text="质检扫码记录中 次品数 / 质检数（近365天）" /></>}
+              value={overview?.avgDefectRate != null && overview.avgDefectRate >= 0 ? overview.avgDefectRate : '-'}
+              precision={overview?.avgDefectRate != null && overview.avgDefectRate >= 0 ? 1 : 0}
+              valueStyle={overview?.avgDefectRate != null && overview.avgDefectRate > 15 ? { color: 'var(--color-error)' } : undefined}
+              prefix={<PercentageOutlined style={{ color: overview?.avgDefectRate != null && overview.avgDefectRate > 15 ? 'var(--color-error)' : '#999' }} />}
+              suffix={overview?.avgDefectRate != null && overview.avgDefectRate >= 0 ? '%' : ''}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-      <ResizableTable
-        rowKey={(r) => (r as StyleInfo).styleNo}
-        loading={loading}
-        emptyDescription="暂无款式数据"
-        dataSource={styles}
-        columns={columns as any}
-        stickyHeader
-        scroll={{ x: 'max-content' }}
-        size="middle"
-        pagination={false}
-      />
+      {/* ③ 趋势 + 工厂时效 */}
+      <Row gutter={12} style={{ marginBottom: 12 }}>
+        <Col xs={24} lg={14}>
+          <Card size="small" title={<>近30天下单趋势<Hint text="每日新增订单数与下单件数" /></>}>
+            {filledTrend.length ? (
+              <Suspense fallback={<div style={{ padding: 80, textAlign: 'center', color: 'var(--color-text-tertiary)' }}>加载图表中...</div>}>
+                <ReactECharts option={trendOption} style={{ height: 260 }} notMerge />
+              </Suspense>
+            ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />}
+          </Card>
+        </Col>
+        <Col xs={24} lg={10}>
+          <Card size="small" title={<>工厂时效排行<Hint text="按平均完工天数排序，越快越靠前（近365天已完成订单）" /></>}>
+            {(data?.factoryRanking || []).length ? (
+              <Suspense fallback={<div style={{ padding: 80, textAlign: 'center', color: 'var(--color-text-tertiary)' }}>加载图表中...</div>}>
+                <ReactECharts option={factoryOption} style={{ height: 260 }} notMerge />
+              </Suspense>
+            ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无完成订单数据" />}
+          </Card>
+        </Col>
+      </Row>
 
-      <StandardPagination
-        current={queryParams.page}
-        pageSize={queryParams.pageSize}
-        total={total}
-        pageSizeOptions={[...DEFAULT_PAGE_SIZE_OPTIONS]}
-        onChange={(page, pageSize) => {
-          if (pageSize !== queryParams.pageSize) savePageSize(pageSize);
-          setQueryParams((prev) => ({ ...prev, page, pageSize }));
-        }}
-      />
+      {/* ④ 次品率 + 毛利估算 */}
+      <Row gutter={12}>
+        <Col xs={24} lg={14}>
+          <Card size="small" title={<>次品率排行<Hint text="按质检扫码的次品数降序，红=次品率>15%，橙=>5%，绿=正常" /></>}>
+            <ResizableTable
+              rowKey="styleNo"
+              loading={loading}
+              emptyDescription="暂无质检记录"
+              dataSource={data?.defectRanking || []}
+              columns={defectColumns as any}
+              size="middle"
+              pagination={false}
+              scroll={{ x: 'max-content' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} lg={10}>
+          <Card size="small" title={<>毛利估算<Hint text="销售额估算 - 总成本（优先订单总成本，兜底物料成本）。采购成本不完整时仅作参考" /></>}>
+            {margin && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>销售额估算</span>
+                  <span style={{ fontWeight: 600 }}>{fmtMoney(margin.salesAmount)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>物料成本</span>
+                  <span style={{ fontWeight: 600 }}>{fmtMoney(margin.materialCost)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, borderTop: '1px dashed var(--color-border-light)', paddingTop: 10 }}>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>毛利估算</span>
+                  <span style={{ fontWeight: 700, color: margin.grossProfit >= 0 ? '#52c41a' : 'var(--color-error)' }}>
+                    {fmtMoney(margin.grossProfit)}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>毛利率估算</span>
+                  <span style={{ fontWeight: 700 }}>
+                    {margin.hasCostData && margin.grossMarginRate >= 0
+                      ? `${margin.grossMarginRate.toFixed(1)}%`
+                      : <span style={{ color: 'var(--color-text-tertiary)' }}>暂无成本数据</span>}
+                  </span>
+                </div>
+                {!margin.hasCostData && (
+                  <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', background: 'var(--color-bg-container)', borderRadius: 6, padding: '6px 10px' }}>
+                    采购成本数据不完整，毛利仅按已录入的物料成本估算，实际需结合人工核算。
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 };

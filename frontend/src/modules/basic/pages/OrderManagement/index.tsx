@@ -80,6 +80,7 @@ const OrderManagement: React.FC = () => {
 
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [printingRecord, setPrintingRecord] = useState<StyleInfo | null>(null);
+  const [printingMode, setPrintingMode] = useState<'order' | 'production' | 'label'>('order');
   const [remarkModalOpen, setRemarkModalOpen] = useState(false);
   const [remarkStyleNo, setRemarkStyleNo] = useState('');
 
@@ -262,7 +263,7 @@ const OrderManagement: React.FC = () => {
     });
   };
 
-  const columns = useOrderColumns({ openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen, handleToggleStatus });
+  const columns = useOrderColumns({ openCreate, setPrintModalVisible, setPrintingRecord, setPrintingMode, setRemarkStyleNo, setRemarkModalOpen, handleToggleStatus });
 
   // ===== 统计卡片配置 =====
   const { cards, hints, onClearHints } = useStatCardsConfig({
@@ -361,6 +362,7 @@ const OrderManagement: React.FC = () => {
         setPrintModalVisible={setPrintModalVisible}
         printingRecord={printingRecord}
         setPrintingRecord={setPrintingRecord}
+        printingMode={printingMode}
         cuttingCreateTask={cuttingCreateTask}
       />
     </>

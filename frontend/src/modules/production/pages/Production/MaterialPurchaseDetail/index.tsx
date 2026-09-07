@@ -17,6 +17,7 @@ import { buildEditColumns, buildViewColumns } from './columns';
 import MaterialSelectModal from './components/MaterialSelectModal';
 import BatchPurchaseModal, { type BatchPurchaseItem } from './components/BatchPurchaseModal';
 import SizeUsageSummaryPanel from './components/SizeUsageSummaryPanel';
+import PurchasePrintModal from './components/PurchasePrintModal';
 import { ReceiveModal, InboundModal, ReturnConfirmModal } from './components/PurchaseActionModals';
 import { filterPendingPurchases, filterReturnablePurchases, filterAwaitingConfirmPurchases } from './hooks/utils';
 import { isPurchaseRowComplete } from './hooks/types';
@@ -71,6 +72,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
   const [docRecognizeOpen, setDocRecognizeOpen] = useState(false);
   const [docListOpen, setDocListOpen] = useState(false);
   const [batchPurchaseLoading, setBatchPurchaseLoading] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
 
   // D-272：仓库库存映射——「出库领取」只在仓库真有库存（做过入库）时显示。
   // 直采直用（登记到货但未入库）的采购不该出现该按钮，误点必报"仓库库存不足"。
@@ -190,15 +192,17 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
       {loading ? (
         <SkeletonLoader type="table" rows={6} />
       ) : !order ? (
-        <Card style={{ marginBottom: 16 }}>
-          {!sampleMode && (
-            <Alert title="订单不存在或已删除" description={`款号: ${styleNo || '未知'}。该款号的订单可能已被删除。`} type="warning" showIcon />
-          )}
-          {purchaseList.length > 0 && (
-            <div style={{ marginTop: sampleMode ? 0 : 12, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+        <Card title={purchaseList.length > 0 ? '样衣采购' : '采购明细'} style={{ marginBottom: 16 }}>
+          {purchaseList.length === 0 ? (
+            !sampleMode ? (
+              <Alert title="订单不存在或已删除" description={`款号: ${styleNo || '未知'}。该款号的订单可能已被删除。`} type="warning" showIcon />
+            ) : null
+          ) : (
+            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
               <div><strong>款号：</strong>{styleNo || '-'}</div>
               <div><strong>采购单数：</strong>{purchaseList.length} 个</div>
               <div style={{ marginTop: 4 }}><strong>物料到货率：</strong><Tag color={materialArrivalRate >= 100 ? 'green' : materialArrivalRate >= 50 ? 'orange' : 'red'}>{materialArrivalRate}%</Tag></div>
+              <div style={{ marginTop: 4 }}><strong>来源：</strong>样衣采购（未关联生产订单，按款号维护物料清单与采购）</div>
             </div>
           )}
         </Card>
@@ -306,14 +310,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
             </Dropdown>
             <Dropdown menu={{
               items: [
-                { key: 'print', label: '打印采购单', icon: <PrinterOutlined />, onClick: () => {
-                  const w = window.open('', '_blank');
-                  if (!w) return;
-                  const rows = purchaseList.map((p) => `<tr><td>${getMaterialTypeLabel(p.materialType)}</td><td>${p.materialName || ''}</td><td>${p.purchaseQuantity || ''}</td><td>${p.arrivedQuantity || ''}</td><td>${p.supplierName || ''}</td><td>${p.status || ''}</td></tr>`).join('');
-                  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>采购单 ${styleNo}</title><style>body{font-family:sans-serif;padding:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid var(--color-zinc-300);padding:6px 8px}</style></head><body><h2>采购单 - ${styleNo}</h2><table><tr><th>物料类型</th><th>物料名称</th><th>采购数量</th><th>到货数量</th><th>供应商</th><th>状态</th></tr>${rows}</table></body></html>`);
-                  w.document.close();
-                  w.print();
-                }},
+                { key: 'print', label: '打印采购单', icon: <PrinterOutlined />, onClick: () => setPrintOpen(true) },
                 { key: 'download', label: '下载采购单', icon: <DownloadOutlined />, onClick: handleExport },
               ],
             }}>
@@ -456,6 +453,19 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         submitting={batchPurchaseLoading}
         onCancel={() => setBatchPurchaseOpen(false)}
         onConfirm={onBatchPurchaseConfirm}
+      />
+
+      <PurchasePrintModal
+        open={printOpen}
+        onClose={() => setPrintOpen(false)}
+        order={order}
+        purchaseList={purchaseList}
+        orderNo={headerOrderNo}
+        styleNo={headerStyleNo}
+        styleName={headerStyleName}
+        styleCover={headerStyleCover}
+        color={headerColor}
+        materialArrivalRate={materialArrivalRate}
       />
     </div>
   );

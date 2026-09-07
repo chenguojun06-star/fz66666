@@ -15,6 +15,8 @@ interface OrderManagementModalsProps extends OrderCreateModalProps {
   setPrintModalVisible: (v: boolean) => void;
   printingRecord: StyleInfo | null;
   setPrintingRecord: (r: StyleInfo | null) => void;
+  /** 打印模式：order=下单单 / production=生产单 / label=标签 */
+  printingMode: 'order' | 'production' | 'label';
   cuttingCreateTask: CuttingCreateTaskState;
 }
 
@@ -26,6 +28,7 @@ const OrderManagementModals: React.FC<OrderManagementModalsProps> = ({
   setPrintModalVisible,
   printingRecord,
   setPrintingRecord,
+  printingMode,
   cuttingCreateTask,
   ...orderCreateModalProps
 }) => {
@@ -48,11 +51,20 @@ const OrderManagementModals: React.FC<OrderManagementModalsProps> = ({
         styleName={printingRecord?.styleName}
         cover={printingRecord?.cover}
         color={printingRecord?.color}
-        quantity={printingRecord?.sampleQuantity}
+        quantity={printingRecord?.totalOrderQuantity ?? printingRecord?.sampleQuantity}
         category={printingRecord?.category}
         season={printingRecord?.season}
-        mode="order"
-        extraInfo={{
+        mode={printingMode === 'label' ? 'order' : printingMode}
+        orderNo={printingRecord?.latestOrderNo}
+        initialLabelMode={printingMode === 'label'}
+        extraInfo={printingMode === 'production' ? {
+          '订单号': printingRecord?.latestOrderNo,
+          '订单数量': printingRecord?.totalOrderQuantity,
+          '下单人': printingRecord?.latestOrderCreator,
+          '最近下单': printingRecord?.latestOrderTime,
+          '交板日期': printingRecord?.deliveryDate,
+          '设计师': printingRecord?.designer || printingRecord?.sampleNo,
+        } : {
           '交板日期': printingRecord?.deliveryDate,
           // 设计师：D-058 起为独立字段 designer，旧数据兜底 sampleNo
           '设计师': printingRecord?.designer || printingRecord?.sampleNo,

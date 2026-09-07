@@ -44,6 +44,7 @@ export type UseStylePrintDataParams = Required<
     | 'sizeDetails'
     | 'patternProductionId'
     | 'sizeColorConfig'
+    | 'initialLabelMode'
   >;
 
 export function useStylePrintData(params: UseStylePrintDataParams) {
@@ -51,7 +52,7 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
     visible, styleId, orderId, orderNo,
     styleNo, styleName, cover, color, quantity,
     mode, patternProductionId: propPatternId, extraInfo = {},
-    sizeDetails = [], sizeColorConfig,
+    sizeDetails = [], sizeColorConfig, initialLabelMode = false,
   } = params;
 
   const { user } = useUser();
@@ -65,7 +66,7 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
   const [loading, setLoading] = useState(false);
   const [resolvedCover, setResolvedCover] = useState<string | null>(cover || null);
   const [data, setData] = useState<PrintData>({ sizes: [], bom: [], process: [], attachments: [], productionSheet: null });
-  const [labelPrintMode, setLabelPrintMode] = useState(false);
+  const [labelPrintMode, setLabelPrintMode] = useState<boolean>(!!initialLabelMode);
   const [labelSize, setLabelSize] = useState<LabelSize>('40x70');
   const [labelCount, setLabelCount] = useState(1);
   const [labelPrinting, setLabelPrinting] = useState(false);
@@ -100,7 +101,7 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
   // ───── 副作用：打开时加载所有数据 ─────
   useEffect(() => {
     if (!visible || !styleId) return;
-    setLabelPrintMode(false);
+    setLabelPrintMode(!!initialLabelMode);
     setAutoPatternId(null);
     // 样衣模式下自动查询样衣生产记录ID（用于二维码扫码识别）
     // ★ 修复（与 useSampleStage.ts 同根因）：
@@ -191,7 +192,7 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
       finally { setLoading(false); }
     };
     loadData();
-  }, [visible, styleId, mode, propPatternId, styleNo, cover, orderId, user]);
+  }, [visible, styleId, mode, propPatternId, styleNo, cover, orderId, user, initialLabelMode]);
 
   // ───── 副作用：异步生成主二维码 PNG dataURL ─────
   useEffect(() => {

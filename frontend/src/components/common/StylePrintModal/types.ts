@@ -77,6 +77,8 @@ export interface StylePrintModalProps {
   sizes?: string;
   /** 颜色×码数×数量配置 JSON（来自开发详情，权威数据源） */
   sizeColorConfig?: string;
+  /** 打开时直接进入标签打印模式（订单管理「打印标签」入口） */
+  initialLabelMode?: boolean;
 }
 
 // 打印数据类型
