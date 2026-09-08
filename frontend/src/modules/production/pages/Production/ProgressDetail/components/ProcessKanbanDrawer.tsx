@@ -14,6 +14,7 @@ import KanbanBoard from './KanbanBoard';
 import QcTabContent from './QcTabContent';
 import QcRecordForm from './QcRecordForm';
 import BatchQcForm from './BatchQcForm';
+import OrderOperationLogSection from './OrderOperationLogSection';
 
 const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
   visible, onClose, orderId, orderNo, styleNo: _styleNo,
@@ -122,6 +123,8 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
             },
           ]} />
         )}
+
+      {orderNo && <OrderOperationLogSection orderNo={orderNo} />}
       </Spin>
     </Drawer>
   );

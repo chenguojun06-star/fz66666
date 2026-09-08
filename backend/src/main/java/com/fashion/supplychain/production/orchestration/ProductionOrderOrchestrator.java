@@ -12,6 +12,7 @@ import com.fashion.supplychain.production.service.UrgeRecordService;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.helper.OrderListCacheHelper;
 import com.fashion.supplychain.production.helper.ProductionOrderLogAppendHelper;
+import com.fashion.supplychain.production.helper.OrderLogHelper;
 import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.system.entity.OperationLog;
@@ -175,6 +176,9 @@ public class ProductionOrderOrchestrator {
 
     @Autowired
     private ProductionOrderLogAppendHelper logAppendHelper;
+
+    @Autowired(required = false)
+    private OrderLogHelper orderLogHelper;
 
     // ======================= 查询类方法 =======================
 
@@ -573,6 +577,10 @@ public class ProductionOrderOrchestrator {
             }
         } catch (Exception e) {
             log.warn("记录订单关闭操作日志失败: orderId={}", id, e);
+        }
+        // 写订单操作记录（t_order_operation_log）：关单
+        if (orderLogHelper != null && result != null) {
+            orderLogHelper.writeOrderLog(result.getOrderNo(), null, "关单", remark);
         }
         // 写订单备注时间线：关闭订单
         if (result != null) {
