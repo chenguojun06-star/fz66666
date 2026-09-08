@@ -124,7 +124,6 @@ async function loadCuttingTasks() {
       // 需经 getAuthedImageUrl 处理：相对路径拼接 + token 鉴权
       coverImage: getAuthedImageUrl(item.coverImage || item.styleImage || item.styleCover || ''),
       // 无封面时占位显示款号首字，避免与下方款号行重复
-      coverText: String(item.styleNo || item.orderNo || '').charAt(0),
       receivedTimeText: formatTimeAgo(item.receivedTime),
     }));
   } catch (err) {
@@ -230,7 +229,6 @@ async function loadProcurementTasks() {
         sourceType: g.sourceType,
         coverImage: g.coverImage,
         // 无封面时占位显示款号首字，避免与下方款号行重复
-        coverText: String(g.styleNo || g.orderNo || '').charAt(0),
         // 来源标记（样衣采购行显示"样衣"，大货不显示——分组名"待采购"已表达状态）
         sourceLabel: g.sourceType === 'sample' ? '样衣' : '',
         // 展示用字段
@@ -278,7 +276,6 @@ async function loadQualityTasks() {
       // 需经 getAuthedImageUrl 处理：相对路径拼接 + token 鉴权
       coverImage: getAuthedImageUrl(item.coverImage || item.styleImage || item.styleCover || ''),
       // 无封面时占位显示款号首字，避免与下方款号行重复
-      coverText: String(item.styleNo || item.orderNo || '').charAt(0),
       receivedTimeText: formatTimeAgo(item.scanTime || item.createdAt),
     }));
   } catch (err) {
@@ -309,7 +306,6 @@ async function loadRepairTasks() {
       // 保留款式图字段，需经 getAuthedImageUrl 处理：相对路径拼接 + token 鉴权
       coverImage: getAuthedImageUrl(item.coverImage || item.styleImage || item.styleCover || ''),
       // 无封面时占位显示款号首字，避免与下方款号行重复
-      coverText: String(item.styleNo || item.orderNo || '').charAt(0),
     }));
   } catch (err) {
     console.error('[loadRepairTasks] 加载失败:', err);

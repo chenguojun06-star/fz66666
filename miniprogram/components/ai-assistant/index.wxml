@@ -308,7 +308,7 @@
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
-            <view wx:else class="task-cover-placeholder">{{item.coverText}}</view>
+            <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
                 <text class="task-order-no">{{item.orderNo}}</text>
@@ -338,7 +338,7 @@
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
-            <view wx:else class="task-cover-placeholder">{{item.coverText}}</view>
+            <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
                 <text class="task-order-no">{{item.orderNo}}</text>
@@ -370,7 +370,7 @@
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
-            <view wx:else class="task-cover-placeholder">{{item.coverText}}</view>
+            <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
                 <text class="task-order-no">{{item.orderNo}}</text>
@@ -401,7 +401,7 @@
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
-            <view wx:else class="task-cover-placeholder">{{item.coverText}}</view>
+            <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
                 <text class="task-order-no">{{item.styleNo || item.orderNo || item.purchaseNo}}</text>
@@ -435,7 +435,7 @@
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
-            <view wx:else class="task-cover-placeholder">{{item.coverText}}</view>
+            <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
                 <text class="task-order-no">{{item.orderNo}}</text>
