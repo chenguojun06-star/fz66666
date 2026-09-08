@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Button, Dropdown, Drawer } from 'antd';
+import { Button, Dropdown, Drawer, Space } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
@@ -101,9 +101,10 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
     return Array.from(colors);
   }, [detailOrderLines]);
 
-  const getFooter = () => {
-    if (dialogMode === 'view') {
-      return [
+  // 详情模式：确认完成 / 采购单生成 / 关闭 移入弹窗顶部（header extra），不再占用底部 footer
+  const getViewHeader = () => {
+    return (
+      <Space wrap>
         <Button
           key="confirmComplete"
           disabled={!detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM) || detailPurchases.some(p => Number(p?.returnConfirmed || 0) === 1)}
@@ -111,7 +112,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           onClick={onConfirmComplete}
         >
           确认完成
-        </Button>,
+        </Button>
         <Dropdown
           key="sheet"
           trigger={['click']}
@@ -133,11 +134,18 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           <Button disabled={detailLoading || !detailPurchases.length || detailPurchases.some(p => Number(p?.returnConfirmed || 0) === 1)}>
             采购单生成
           </Button>
-        </Dropdown>,
+        </Dropdown>
         <Button key="close" type="primary" onClick={onCancel}>
           关闭
         </Button>
-      ];
+      </Space>
+    );
+  };
+
+  const getFooter = () => {
+    // 详情模式按钮已上移，底部 footer 不再渲染
+    if (dialogMode === 'view') {
+      return null;
     }
 
     if (dialogMode === 'preview') {
@@ -173,6 +181,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
       open={visible}
       onClose={onCancel}
       placement="right"
+      extra={dialogMode === 'view' ? getViewHeader() : undefined}
       styles={{
         wrapper: { width: isMobile ? '96vw' : '85%' },
         body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
