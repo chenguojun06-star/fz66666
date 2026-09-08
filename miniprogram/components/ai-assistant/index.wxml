@@ -51,13 +51,13 @@
         </view>
       </view>
     </view>
-    <!-- P1-3: 小云主动洞察（Redis 未读，巡检写入的 delay_risk/combo_risk） -->
-    <view class="proactive-insights" wx:if="{{proactiveInsights.length > 0 && messages.length <= 1 && !isLoading}}">
+    <!-- P1-3: 小云主动洞察 + 实时提醒（合并为一块"提醒"，避免顶部两个相似区块堆叠） -->
+    <view class="proactive-insights" wx:if="{{(proactiveInsights.length > 0 || dynamicSuggestions.length > 0) && messages.length <= 1 && !isLoading}}">
       <view class="proactive-insights-label">
-        <view class="line-icon line-icon--sm icon-bell"></view><text>小云主动洞察</text>
-        <view class="proactive-insights-badge">{{proactiveInsights.length}}</view>
+        <view class="line-icon line-icon--sm icon-bell"></view><text>提醒</text>
+        <view class="proactive-insights-badge">{{proactiveInsights.length + dynamicSuggestions.length}}</view>
       </view>
-      <view class="proactive-insights-list">
+      <view class="proactive-insights-list" wx:if="{{proactiveInsights.length > 0}}">
         <view class="proactive-insight-card proactive-severity-{{item.severity || 'low'}}" wx:for="{{proactiveInsights}}" wx:key="id">
           <view class="proactive-insight-body">
             <text class="proactive-insight-title">{{item.title}}</text>
@@ -68,11 +68,7 @@
           </view>
         </view>
       </view>
-    </view>
-    <!-- 角色默认建议 -->
-    <view class="dynamic-suggestions" wx:if="{{dynamicSuggestions.length > 0 && messages.length <= 1 && !isLoading}}">
-      <view class="dynamic-suggestions-label"><view class="line-icon line-icon--sm icon-bell"></view><text>实时提醒</text></view>
-      <view class="dynamic-suggestions-list">
+      <view class="dynamic-suggestions-list" wx:if="{{dynamicSuggestions.length > 0}}">
         <view class="dynamic-suggestion-chip" hover-class="dynamic-suggestion-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="{{item.question}}" wx:for="{{dynamicSuggestions}}" wx:key="label">
           <text>{{item.label}}</text>
         </view>
@@ -299,6 +295,37 @@
         <view class="empty-text">太棒了！所有任务都处理完了</view>
       </view>
 
+      <!-- 生产作业：裁剪 → 质检 → 返修 → 采购 -->
+      <view class="task-section" wx:if="{{cuttingTasks && cuttingTasks.length > 0}}">
+        <view class="section-header cutting-header">
+          <view class="section-header-left">
+            <view class="line-icon line-icon--sm icon-cutting"></view>
+            <text class="section-name">待裁剪</text>
+          </view>
+          <view class="section-count-badge cutting-badge">{{cuttingTasks.length}}</view>
+        </view>
+        <view class="task-card task-type-cutting" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{cuttingTasks}}" wx:key="orderId" catchtap="handleCuttingTask" data-item="{{item}}">
+          <view class="task-accent-bar"></view>
+          <view class="task-card-main">
+            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
+            <view wx:else class="task-cover-placeholder">{{item.coverText}}</view>
+            <view class="task-card-info">
+              <view class="task-order-row">
+                <text class="task-order-no">{{item.orderNo}}</text>
+                <text class="task-style-tag cutting-tag">{{item.styleNo}}</text>
+              </view>
+              <view class="task-chips">
+                <view class="task-chip">排单 {{item.orderQuantity || 0}}件</view>
+              </view>
+            </view>
+            <view class="task-action-col">
+              <view class="task-dismiss-inline" catchtap="dismissTask" data-type="cutting" data-id="{{item.orderId}}">×</view>
+              <button class="task-action-btn cutting-btn" size="mini" catchtap="handleCuttingTask" data-item="{{item}}">去裁剪</button>
+            </view>
+          </view>
+        </view>
+      </view>
+
       <view class="task-section" wx:if="{{qualityTasks && qualityTasks.length > 0}}">
         <view class="section-header quality-header">
           <view class="section-header-left">
@@ -311,7 +338,7 @@
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
-            <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
+            <view wx:else class="task-cover-placeholder">{{item.coverText}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
                 <text class="task-order-no">{{item.orderNo}}</text>
@@ -331,70 +358,6 @@
         </view>
       </view>
 
-      <view class="task-section" wx:if="{{cuttingTasks && cuttingTasks.length > 0}}">
-        <view class="section-header cutting-header">
-          <view class="section-header-left">
-            <view class="line-icon line-icon--sm icon-cutting"></view>
-            <text class="section-name">待裁剪</text>
-          </view>
-          <view class="section-count-badge cutting-badge">{{cuttingTasks.length}}</view>
-        </view>
-        <view class="task-card task-type-cutting" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{cuttingTasks}}" wx:key="orderId" catchtap="handleCuttingTask" data-item="{{item}}">
-          <view class="task-accent-bar"></view>
-          <view class="task-card-main">
-            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
-            <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
-            <view class="task-card-info">
-              <view class="task-order-row">
-                <text class="task-order-no">{{item.orderNo}}</text>
-                <text class="task-style-tag cutting-tag">{{item.styleNo}}</text>
-              </view>
-              <view class="task-chips">
-                <view class="task-chip">排单 {{item.orderQuantity || 0}}件</view>
-              </view>
-            </view>
-            <view class="task-action-col">
-              <view class="task-dismiss-inline" catchtap="dismissTask" data-type="cutting" data-id="{{item.orderId}}">×</view>
-              <button class="task-action-btn cutting-btn" size="mini" catchtap="handleCuttingTask" data-item="{{item}}">去裁剪</button>
-            </view>
-          </view>
-        </view>
-      </view>
-
-      <view class="task-section" wx:if="{{purchaseTasks && purchaseTasks.length > 0}}">
-        <view class="section-header purchase-header">
-          <view class="section-header-left">
-            <view class="line-icon line-icon--sm icon-cart"></view>
-            <text class="section-name">待采购</text>
-          </view>
-          <view class="section-count-badge purchase-badge">{{purchaseTasks.length}}</view>
-        </view>
-        <view class="task-card task-type-purchase" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{purchaseTasks}}" wx:key="id" catchtap="handlePurchaseTask" data-item="{{item}}">
-          <view class="task-accent-bar"></view>
-          <view class="task-card-main">
-            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
-            <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
-            <view class="task-card-info">
-              <view class="task-order-row">
-                <text class="task-order-no">{{item.styleNo || item.orderNo || item.purchaseNo}}</text>
-                <text class="task-style-tag purchase-tag">待处理</text>
-              </view>
-              <text class="task-name">{{item.materialName}}</text>
-              <view class="task-chips">
-                <view class="task-chip" wx:if="{{item.materialCount > 1}}">{{item.materialCount}}项物料</view>
-                <view class="task-chip">{{item.quantityText}}</view>
-                <view class="task-chip" wx:if="{{item.arrivalText}}">到货 {{item.arrivalText}}</view>
-                <view class="task-chip time-chip" wx:if="{{item.receivedTimeText}}">{{item.receivedTimeText}}</view>
-              </view>
-            </view>
-            <view class="task-action-col">
-              <view class="task-dismiss-inline" catchtap="dismissTask" data-type="purchase" data-id="{{item.id}}">×</view>
-              <button class="task-action-btn default-btn" size="mini" catchtap="handlePurchaseTask" data-item="{{item}}">查看</button>
-            </view>
-          </view>
-        </view>
-      </view>
-
       <view class="task-section" wx:if="{{repairTasks && repairTasks.length > 0}}">
         <view class="section-header repair-header">
           <view class="section-header-left">
@@ -407,7 +370,7 @@
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
-            <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
+            <view wx:else class="task-cover-placeholder">{{item.coverText}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
                 <text class="task-order-no">{{item.orderNo}}</text>
@@ -426,6 +389,40 @@
         </view>
       </view>
 
+      <view class="task-section" wx:if="{{purchaseTasks && purchaseTasks.length > 0}}">
+        <view class="section-header purchase-header">
+          <view class="section-header-left">
+            <view class="line-icon line-icon--sm icon-cart"></view>
+            <text class="section-name">待采购</text>
+          </view>
+          <view class="section-count-badge purchase-badge">{{purchaseTasks.length}}</view>
+        </view>
+        <view class="task-card task-type-purchase" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{purchaseTasks}}" wx:key="id" catchtap="handlePurchaseTask" data-item="{{item}}">
+          <view class="task-accent-bar"></view>
+          <view class="task-card-main">
+            <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
+            <view wx:else class="task-cover-placeholder">{{item.coverText}}</view>
+            <view class="task-card-info">
+              <view class="task-order-row">
+                <text class="task-order-no">{{item.styleNo || item.orderNo || item.purchaseNo}}</text>
+                <text class="task-style-tag purchase-tag" wx:if="{{item.sourceLabel}}">{{item.sourceLabel}}</text>
+              </view>
+              <text class="task-name">{{item.materialName}}</text>
+              <view class="task-chips">
+                <view class="task-chip" wx:if="{{!item.arrivalText}}">{{item.quantityText}}</view>
+                <view class="task-chip" wx:if="{{item.arrivalText}}">到货 {{item.arrivalText}}</view>
+                <view class="task-chip time-chip" wx:if="{{item.receivedTimeText}}">{{item.receivedTimeText}}</view>
+              </view>
+            </view>
+            <view class="task-action-col">
+              <view class="task-dismiss-inline" catchtap="dismissTask" data-type="purchase" data-id="{{item.id}}">×</view>
+              <button class="task-action-btn default-btn" size="mini" catchtap="handlePurchaseTask" data-item="{{item}}">查看</button>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 订单外发：延期订单 → 发货/收货 -->
       <view class="task-section" wx:if="{{overdueOrders && overdueOrders.length > 0}}">
         <view class="section-header overdue-header">
           <view class="section-header-left">
@@ -438,11 +435,11 @@
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <image wx:if="{{item.coverImage}}" class="task-cover-img" src="{{item.coverImage}}" mode="aspectFit" />
-            <view wx:else class="task-cover-placeholder">{{item.styleNo}}</view>
+            <view wx:else class="task-cover-placeholder">{{item.coverText}}</view>
             <view class="task-card-info">
               <view class="task-order-row">
                 <text class="task-order-no">{{item.orderNo}}</text>
-                <text class="task-style-tag overdue-tag">逾期</text>
+                <text class="task-style-tag overdue-tag">{{item.overdueText}}</text>
               </view>
               <text class="task-name">{{item.styleName || item.styleNo || ''}}</text>
             </view>
@@ -456,12 +453,12 @@
 
       <!-- D-309：外发发货/收货通知 -->
       <view class="task-section" wx:if="{{shipmentNotices && shipmentNotices.length > 0}}">
-        <view class="section-header">
+        <view class="section-header shipment-header">
           <view class="section-header-left">
             <view class="line-icon line-icon--sm icon-package"></view>
             <text class="section-name">发货/收货</text>
           </view>
-          <view class="section-count-badge">{{shipmentNotices.length}}</view>
+          <view class="section-count-badge shipment-badge">{{shipmentNotices.length}}</view>
         </view>
         <view class="task-card" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{shipmentNotices}}" wx:key="id" catchtap="handleShipmentTask" data-item="{{item}}">
           <view class="task-accent-bar"></view>
@@ -469,9 +466,9 @@
             <view class="task-card-info">
               <view class="task-order-row">
                 <text class="task-order-no">{{item.orderNo}}</text>
-                <text class="task-style-tag">{{item.role === 'factory' ? '已确认收货' : '待收货确认'}}</text>
+                <text class="task-style-tag">{{item.role === 'factory' ? '已收货' : '待收货确认'}}</text>
               </view>
-              <text class="task-name">{{item.desc}}</text>
+              <text class="task-name" wx:if="{{item.desc}}">{{item.desc}}</text>
             </view>
             <view class="task-action-col">
               <button class="task-action-btn default-btn" size="mini" catchtap="handleShipmentTask" data-item="{{item}}">查看</button>
@@ -480,6 +477,7 @@
         </view>
       </view>
 
+      <!-- 行政审批 -->
       <view class="task-section" wx:if="{{pendingUsers && pendingUsers.length > 0}}">
         <view class="section-header pending-header">
           <view class="section-header-left">
@@ -538,13 +536,14 @@
 
       <!-- 超时提醒 -->
       <view class="task-section" wx:if="{{timeoutReminders.length > 0}}">
-        <view class="task-section-header">
-          <view class="line-icon icon-clock"></view>
-          <text class="section-title">超时提醒</text>
-          <text class="section-badge">({{timeoutReminders.length}})</text>
+        <view class="section-header timeout-header">
+          <view class="section-header-left">
+            <view class="line-icon line-icon--sm icon-clock"></view>
+            <text class="section-name">超时提醒</text>
+          </view>
+          <view class="section-count-badge timeout-badge">{{timeoutReminders.length}}</view>
         </view>
         <view class="task-card task-type-timeout" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{timeoutReminders}}" wx:key="id" catchtap="handleReminderTask" data-item="{{item}}">
-          <view class="task-dismiss" catchtap="dismissTask" data-type="timeout" data-id="{{item.id}}">×</view>
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">
@@ -552,9 +551,10 @@
                 <text class="task-order-no">{{item.orderNo || item.title}}</text>
                 <text class="task-style-tag timeout-tag">{{item.type || '超时'}}</text>
               </view>
-              <text class="task-name">{{item.message || item.description || ''}}</text>
+              <text class="task-name" wx:if="{{item.message || item.description}}">{{item.message || item.description}}</text>
             </view>
             <view class="task-action-col">
+              <view class="task-dismiss-inline" catchtap="dismissTask" data-type="timeout" data-id="{{item.id}}">×</view>
               <button class="task-action-btn default-btn" size="mini" catchtap="handleReminderTask" data-item="{{item}}">处理</button>
             </view>
           </view>

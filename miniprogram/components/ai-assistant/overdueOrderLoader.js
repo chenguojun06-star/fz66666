@@ -124,6 +124,8 @@ async function loadOverdueOrders() {
           timeText: formatTimeAgo(item.createdAt || item.createTime),
           // 款式图：后端订单列表通常已带 styleCover/coverImage，经 getAuthedImageUrl 鉴权处理
           coverImage: getAuthedImageUrl(item.coverImage || item.styleImage || item.styleCover || ''),
+          // 无封面时占位显示款号首字，避免与下方款号行重复
+          coverText: String(item.styleNo || item.orderNo || '').charAt(0),
           // 计算完成进度
           completionRate: item.orderQuantity > 0
             ? Math.round((item.completedQuantity / item.orderQuantity) * 100)

@@ -403,27 +403,6 @@
 /* ──── Task sections ──── */
 .task-section { margin-bottom: 12px; }
 
-.task-section-header {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 7px 10px;
-  border-radius: var(--radius-md);
-  margin-bottom: 8px;
-  border: 1px solid var(--color-border);
-  background: var(--color-warning-bg);
-  border-color: var(--color-warning-border);
-}
-.section-title {
-  font-size: var(--font-size-md);
-  font-weight: 700;
-  color: var(--color-text-primary);
-}
-.section-badge {
-  font-size: var(--font-size-xxs);
-  color: var(--color-text-disabled);
-}
-
 /* Section header pill */
 .section-header {
   display: flex;
@@ -440,6 +419,8 @@
 .repair-header   { background: var(--color-danger-bg); border-color: var(--color-danger-border); }
 .overdue-header  { background: var(--color-danger-bg); border-color: var(--color-danger-border); }
 .pending-header  { background: var(--color-success-bg); border-color: var(--color-success-border); }
+.shipment-header { background: var(--color-info-bg); border-color: var(--color-info-border); }
+.timeout-header  { background: var(--color-warning-bg); border-color: var(--color-warning-border); }
 
 .section-header-left { display: flex; align-items: center; gap: 5px; }
 .section-name { font-size: var(--font-size-md); font-weight: 700; color: var(--color-text-primary); }
@@ -463,6 +444,8 @@
 .repair-badge   { background: var(--color-danger); }
 .overdue-badge  { background: var(--color-danger); }
 .pending-badge  { background: var(--color-success); }
+.shipment-badge { background: var(--color-primary); }
+.timeout-badge  { background: var(--color-warning); }
 
 /* Task card — left accent bar + two-column layout */
 .task-card {
@@ -660,20 +643,12 @@
   background: var(--color-info-bg);
 }
 
-.dynamic-suggestions {
-  padding: 8px 12px 0;
-}
-.dynamic-suggestions-label {
-  font-size: var(--font-size-xxs);
-  color: var(--color-danger);
-  margin-bottom: 6px;
-  font-weight: 600;
-}
 .dynamic-suggestions-list {
   display: flex;
   flex-direction: row;
   gap: 8px;
   flex-wrap: wrap;
+  margin-top: 8px;
 }
 .dynamic-suggestion-chip {
   background: var(--color-danger-bg);

@@ -123,6 +123,8 @@ async function loadCuttingTasks() {
       // 保留款式图字段（后端 CuttingTaskOrchestrator.getMyTasks 已注入 styleCover）
       // 需经 getAuthedImageUrl 处理：相对路径拼接 + token 鉴权
       coverImage: getAuthedImageUrl(item.coverImage || item.styleImage || item.styleCover || ''),
+      // 无封面时占位显示款号首字，避免与下方款号行重复
+      coverText: String(item.styleNo || item.orderNo || '').charAt(0),
       receivedTimeText: formatTimeAgo(item.receivedTime),
     }));
   } catch (err) {
@@ -227,6 +229,10 @@ async function loadProcurementTasks() {
         patternProductionId: g.patternProductionId,
         sourceType: g.sourceType,
         coverImage: g.coverImage,
+        // 无封面时占位显示款号首字，避免与下方款号行重复
+        coverText: String(g.styleNo || g.orderNo || '').charAt(0),
+        // 来源标记（样衣采购行显示"样衣"，大货不显示——分组名"待采购"已表达状态）
+        sourceLabel: g.sourceType === 'sample' ? '样衣' : '',
         // 展示用字段
         materialCount,
         purchaseQuantity: totalQuantity,
@@ -271,6 +277,8 @@ async function loadQualityTasks() {
       // 保留款式图字段（后端 ScanRecordController.my-quality-tasks 已注入 coverImage/styleImage）
       // 需经 getAuthedImageUrl 处理：相对路径拼接 + token 鉴权
       coverImage: getAuthedImageUrl(item.coverImage || item.styleImage || item.styleCover || ''),
+      // 无封面时占位显示款号首字，避免与下方款号行重复
+      coverText: String(item.styleNo || item.orderNo || '').charAt(0),
       receivedTimeText: formatTimeAgo(item.scanTime || item.createdAt),
     }));
   } catch (err) {
@@ -300,6 +308,8 @@ async function loadRepairTasks() {
       defectCategory: item.defectCategory || '',
       // 保留款式图字段，需经 getAuthedImageUrl 处理：相对路径拼接 + token 鉴权
       coverImage: getAuthedImageUrl(item.coverImage || item.styleImage || item.styleCover || ''),
+      // 无封面时占位显示款号首字，避免与下方款号行重复
+      coverText: String(item.styleNo || item.orderNo || '').charAt(0),
     }));
   } catch (err) {
     console.error('[loadRepairTasks] 加载失败:', err);
@@ -482,7 +492,8 @@ async function loadShipmentNotifications() {
         quantity: item.shipQuantity || item.receivedQuantity || '',
         receiveTimeText: formatTimeAgo(item.receiveTime),
         title: '发货已确认收货',
-        desc: (item.orderNo || '') + ' 已被本厂确认收货',
+        // 状态已由右侧标签"已收货"表达，desc 只放工厂名，避免重复描述
+        desc: item.factoryName || '',
       }));
     }
     return (data.pendingReceipts || []).map(item => ({
@@ -495,7 +506,8 @@ async function loadShipmentNotifications() {
       quantity: item.shipQuantity || '',
       shipTimeText: formatTimeAgo(item.shipTime),
       title: '外发发货待收货确认',
-      desc: (item.factoryName || '外发工厂') + ' 已发货，请确认收货',
+      // 状态已由右侧标签"待收货确认"表达，desc 只放工厂名，避免重复描述
+      desc: item.factoryName || '外发工厂',
     }));
   } catch (err) {
     console.error('加载发货/收货通知失败:', err);
