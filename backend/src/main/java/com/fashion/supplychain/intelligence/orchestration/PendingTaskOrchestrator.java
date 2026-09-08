@@ -12,6 +12,8 @@ import com.fashion.supplychain.finance.orchestration.MaterialReconciliationOrche
 import com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrator;
 import com.fashion.supplychain.intelligence.dto.PendingTaskDTO;
 import com.fashion.supplychain.intelligence.dto.PendingTaskSummaryDTO;
+import com.fashion.supplychain.production.entity.FactoryShipment;
+import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.ProductionExceptionReport;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
@@ -19,9 +21,13 @@ import com.fashion.supplychain.production.helper.MaterialPurchaseQueryHelper;
 import com.fashion.supplychain.production.helper.ScanRecordQueryHelper;
 import com.fashion.supplychain.production.orchestration.CuttingTaskOrchestrator;
 import com.fashion.supplychain.production.orchestration.ProductWarehousingOrchestrator;
+import com.fashion.supplychain.production.service.FactoryShipmentService;
+import com.fashion.supplychain.production.service.MaterialPickingService;
 import com.fashion.supplychain.production.service.ProductionExceptionReportService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
+import com.fashion.supplychain.stock.entity.SampleLoan;
+import com.fashion.supplychain.stock.mapper.SampleLoanMapper;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.system.entity.User;
@@ -50,7 +56,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PendingTaskOrchestrator {
 
-    private static final int MAX_PER_CATEGORY = 10;
+    // 每类任务最多采集条数。此前为 10，导致个人领取超过 10 条时后面的任务在待办列表「消失」；
+    // 提升到 100 保证常规场景不漏，仍有上限防止老板视角下全量扫描过载。
+    private static final int MAX_PER_CATEGORY = 100;
     private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
     private static final Map<String, String[]> CATEGORY_META = new LinkedHashMap<>();
@@ -65,6 +73,9 @@ public class PendingTaskOrchestrator {
         CATEGORY_META.put("PAYROLL_SETTLEMENT",new String[]{"工资结算",   "💰"});
         CATEGORY_META.put("MATERIAL_RECON",    new String[]{"物料对账",   "📋"});
         CATEGORY_META.put("EXPENSE_REIMBURSE", new String[]{"费用报销",   "🧾"});
+        CATEGORY_META.put("SHIPMENT",          new String[]{"外发收货",   "🚚"});
+        CATEGORY_META.put("SAMPLE_LOAN",       new String[]{"样衣借还",   "📤"});
+        CATEGORY_META.put("MATERIAL_PICKING",  new String[]{"领料出库",   "🧰"});
     }
 
     @Autowired private CuttingTaskOrchestrator cuttingTaskOrchestrator;
@@ -80,6 +91,9 @@ public class PendingTaskOrchestrator {
     @Autowired private MaterialReconciliationOrchestrator materialReconciliationOrchestrator;
     @Autowired private ExpenseReimbursementService expenseReimbursementService;
     @Autowired private UserService userService;
+    @Autowired private FactoryShipmentService factoryShipmentService;
+    @Autowired private MaterialPickingService materialPickingService;
+    @Autowired private SampleLoanMapper sampleLoanMapper;
 
     public List<PendingTaskDTO> getMyPendingTasks() {
         List<PendingTaskDTO> all = new ArrayList<>();
@@ -93,6 +107,9 @@ public class PendingTaskOrchestrator {
         collectSafely("payroll", this::collectPayrollSettlementTasks, all);
         collectSafely("materialRecon", this::collectMaterialReconciliationTasks, all);
         collectSafely("expenseReimburse", this::collectExpenseReimbursementTasks, all);
+        collectSafely("shipment", this::collectShipmentTasks, all);
+        collectSafely("sampleLoan", this::collectSampleLoanTasks, all);
+        collectSafely("materialPicking", this::collectMaterialPickingTasks, all);
         // 按领取人过滤：租户老板看全部，其他人只看自己负责的
         all = filterByResponsiblePerson(all);
         // 全局去重：防止不同 collector 因条件交叉产生重复 id（保留首次出现的那条）
@@ -412,6 +429,15 @@ public class PendingTaskOrchestrator {
         }).collect(Collectors.toList());
     }
 
+    /** 进行中样衣扫描上限（环节展开前的样衣件数防御上限，环节任务数按人过滤后自然收敛） */
+    private static final int STYLES_SCAN_LIMIT = 200;
+
+    /**
+     * 样衣开发待办：按「环节」维度生成任务。
+     * 一件样衣有 7 个可独立领取的环节（纸样/物料清单/尺寸表/工序单价/工艺说明/二次工艺/码数单价），
+     * 每个环节只要「有人领取(assignee非空) 且 未完成(completedTime为空)」就生成一条待办，
+     * 领取人点开即可直达对应 tab 继续做——而不是整条样衣只算一条、且只认纸样/制单两个领取人。
+     */
     private List<PendingTaskDTO> collectStyleDevelopmentTasks() {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
@@ -429,7 +455,7 @@ public class PendingTaskOrchestrator {
             if (page != null && page.getRecords() != null) {
                 styles.addAll(page.getRecords());
             }
-            if (styles.size() >= MAX_PER_CATEGORY) break;
+            if (styles.size() >= STYLES_SCAN_LIMIT) break;
         }
         // 按 ID 去重：防止同一款式因 progressNode 条件交叉在多次查询中重复出现
         Set<Long> seenIds = new LinkedHashSet<>();
@@ -442,45 +468,56 @@ public class PendingTaskOrchestrator {
                             && !pn.equals("样衣完成") && !pn.equals("纸样完成");
                 })
                 .collect(Collectors.toList());
-        return uniqueStyles.stream().limit(MAX_PER_CATEGORY).map(s -> {
-            PendingTaskDTO dto = new PendingTaskDTO();
-            dto.setId("STY_" + s.getId());
-            dto.setTaskType("STYLE_DEVELOPMENT");
-            dto.setModule("style");
-            dto.setTitle("样衣开发 " + safe(s.getStyleNo()));
-            String node = s.getProgressNode() != null ? s.getProgressNode() : "进行中";
-            dto.setDescription(safe(s.getStyleName()) + " " + node);
-            dto.setOrderNo("");
-            dto.setStyleNo(s.getStyleNo());
-            // D-114：深链直达样衣详情页（/style-info/:id）
-            dto.setDeepLinkPath("/style-info/" + s.getId());
-            dto.setPriority("medium");
-            dto.setCreatedAt(null);
-            dto.setTaskStatus("pending");
-            dto.setAssigneeRole("样衣开发");
-            // 数量：样板数
-            dto.setQuantity(s.getSampleQuantity());
-            // 交板日期作为截止时间
-            if (s.getDeliveryDate() != null) {
-                dto.setEndTime(s.getDeliveryDate().toString());
-            }
-            // 当前阶段的领取人 + 开始时间（按 progressNode 匹配对应字段）
-            if ("纸样开发中".equals(node)) {
-                dto.setAssigneeName(s.getPatternAssignee());
-                if (s.getPatternStartTime() != null) dto.setStartTime(s.getPatternStartTime().toString());
-            } else if ("样衣制作中".equals(node)) {
-                dto.setAssigneeName(s.getProductionAssignee());
-                if (s.getProductionStartTime() != null) dto.setStartTime(s.getProductionStartTime().toString());
-            } else {
-                // 未开始：默认展示纸样阶段领取人；若未设置再回退到样衣领取人
-                dto.setAssigneeName(StringUtils.hasText(s.getPatternAssignee())
-                        ? s.getPatternAssignee() : s.getProductionAssignee());
-                // 未开始阶段没有流程开始时间，以创建时间作为开始时间展示
-                if (s.getCreateTime() != null) dto.setStartTime(s.getCreateTime().toString());
-            }
-            fillCategoryMeta(dto);
-            return dto;
-        }).collect(Collectors.toList());
+
+        // 按环节展开成独立任务
+        List<PendingTaskDTO> result = new ArrayList<>();
+        for (StyleInfo s : uniqueStyles) {
+            // 尺寸表模块位于「纸样开发」tab 内，码数单价位于「工序单价」tab 内
+            addStyleStageTask(result, s, "pattern",    "纸样开发", s.getPatternAssignee(),    s.getPatternCompletedTime(),    s.getPatternStartTime(),    "pattern");
+            addStyleStageTask(result, s, "bom",        "物料清单", s.getBomAssignee(),        s.getBomCompletedTime(),        s.getBomStartTime(),        "bom");
+            addStyleStageTask(result, s, "size",       "尺寸表",   s.getSizeAssignee(),       s.getSizeCompletedTime(),       s.getSizeStartTime(),       "pattern");
+            addStyleStageTask(result, s, "process",    "工序单价", s.getProcessAssignee(),    s.getProcessCompletedTime(),    s.getProcessStartTime(),    "process");
+            addStyleStageTask(result, s, "production", "工艺说明", s.getProductionAssignee(), s.getProductionCompletedTime(), s.getProductionStartTime(), "production");
+            addStyleStageTask(result, s, "secondary",  "二次工艺", s.getSecondaryAssignee(),  s.getSecondaryCompletedTime(),  s.getSecondaryStartTime(),  "secondary");
+            addStyleStageTask(result, s, "sizePrice",  "码数单价", s.getSizePriceAssignee(),  s.getSizePriceCompletedTime(),  s.getSizePriceStartTime(),  "process");
+        }
+        return result;
+    }
+
+    /**
+     * 为某样衣的单个环节生成一条待办任务（该环节已被领取且未完成时才生成）。
+     * id 带环节后缀保证同一样衣的不同环节互不冲突，去重逻辑不会误并。
+     */
+    private void addStyleStageTask(List<PendingTaskDTO> result, StyleInfo s, String stageKey, String stageLabel,
+                                   String assignee, LocalDateTime completedTime, LocalDateTime startTime, String tabKey) {
+        // 未领取（无领取人）或已完成（completedTime 已填）的环节不进待办
+        if (!StringUtils.hasText(assignee) || completedTime != null) {
+            return;
+        }
+        PendingTaskDTO dto = new PendingTaskDTO();
+        dto.setId("STY_" + s.getId() + "_" + stageKey);
+        dto.setTaskType("STYLE_DEVELOPMENT");
+        dto.setModule("style");
+        dto.setTitle(stageLabel + " " + safe(s.getStyleNo()));
+        dto.setDescription(safe(s.getStyleName()) + " " + stageLabel + "未完成");
+        dto.setOrderNo("");
+        dto.setStyleNo(s.getStyleNo());
+        // 深链直达样衣详情页对应环节 tab（?tab= 定位到纸样/物料清单/工序单价等）
+        dto.setDeepLinkPath("/style-info/" + s.getId() + "?tab=" + tabKey);
+        dto.setPriority("medium");
+        dto.setCreatedAt(null);
+        dto.setTaskStatus("pending");
+        dto.setAssigneeName(assignee);
+        dto.setAssigneeRole(stageLabel);
+        dto.setQuantity(s.getSampleQuantity());
+        if (s.getDeliveryDate() != null) {
+            dto.setEndTime(s.getDeliveryDate().toString());
+        }
+        if (startTime != null) {
+            dto.setStartTime(startTime.toString());
+        }
+        fillCategoryMeta(dto);
+        result.add(dto);
     }
 
     private List<PendingTaskDTO> collectPayrollSettlementTasks() {
@@ -577,6 +614,133 @@ public class PendingTaskOrchestrator {
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 外发收货待确认：工厂已发货（receiveStatus=pending）待租户侧确认收货。
+     * 负责人=跟单员（与逾期/异常订单同口径，订单 merchandiser 字段）。
+     */
+    private List<PendingTaskDTO> collectShipmentTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<FactoryShipment> pending = factoryShipmentService.lambdaQuery()
+                .eq(FactoryShipment::getTenantId, tenantId)
+                .eq(FactoryShipment::getReceiveStatus, "pending")
+                .orderByDesc(FactoryShipment::getShipTime)
+                .last("LIMIT " + MAX_PER_CATEGORY)
+                .list();
+        if (pending.isEmpty()) return List.of();
+        List<String> orderIds = pending.stream()
+                .map(FactoryShipment::getOrderId)
+                .filter(StringUtils::hasText)
+                .distinct().collect(Collectors.toList());
+        Map<String, ProductionOrder> orderMap = batchLoadOrdersById(tenantId, orderIds);
+        return pending.stream().map(fs -> {
+            PendingTaskDTO dto = new PendingTaskDTO();
+            dto.setId("SHP_" + fs.getId());
+            dto.setTaskType("SHIPMENT");
+            dto.setModule("production");
+            dto.setTitle("外发待收货 " + safe(fs.getOrderNo()));
+            int shipped = fs.getShipQuantity() != null ? fs.getShipQuantity() : 0;
+            int received = fs.getReceivedQuantity() != null ? fs.getReceivedQuantity() : 0;
+            dto.setDescription(safe(fs.getStyleNo()) + " 已发" + shipped + "件 已收" + received + "件");
+            dto.setOrderNo(fs.getOrderNo());
+            dto.setStyleNo(fs.getStyleNo());
+            dto.setDeepLinkPath("/production/external-factory");
+            dto.setPriority("medium");
+            dto.setCreatedAt(fs.getShipTime());
+            dto.setTaskStatus("pending");
+            dto.setAssigneeRole("跟单员");
+            ProductionOrder order = fs.getOrderId() != null ? orderMap.get(fs.getOrderId()) : null;
+            if (order != null && StringUtils.hasText(order.getMerchandiser())) {
+                dto.setAssigneeName(order.getMerchandiser());
+            } else {
+                String ownerName = resolveTenantOwnerName(tenantId);
+                if (StringUtils.hasText(ownerName)) {
+                    dto.setAssigneeName(ownerName);
+                    dto.setAssigneeRole("租户老板");
+                }
+            }
+            fillCategoryMeta(dto);
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * 样衣借还：status=borrowed 且仍有未还数量的借出记录，负责人=借用人（borrowerId 精确匹配）。
+     */
+    private List<PendingTaskDTO> collectSampleLoanTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<SampleLoan> loans = sampleLoanMapper.selectList(new LambdaQueryWrapper<SampleLoan>()
+                .eq(SampleLoan::getTenantId, tenantId)
+                .eq(SampleLoan::getDeleteFlag, 0)
+                .eq(SampleLoan::getStatus, "borrowed")
+                .gt(SampleLoan::getRemainingQuantity, 0)
+                .orderByAsc(SampleLoan::getExpectedReturnDate)
+                .last("LIMIT " + MAX_PER_CATEGORY));
+        if (loans == null || loans.isEmpty()) return List.of();
+        LocalDateTime now = LocalDateTime.now();
+        return loans.stream().map(l -> {
+            PendingTaskDTO dto = new PendingTaskDTO();
+            dto.setId("LOAN_" + l.getId());
+            dto.setTaskType("SAMPLE_LOAN");
+            dto.setModule("warehouse");
+            dto.setTitle("样衣借出待归还 " + safe(l.getBorrower()));
+            dto.setDescription("借" + (l.getQuantity() != null ? l.getQuantity() : 0)
+                    + "件 未还" + (l.getRemainingQuantity() != null ? l.getRemainingQuantity() : 0) + "件");
+            dto.setOrderNo("");
+            dto.setStyleNo("");
+            dto.setDeepLinkPath("/warehouse/sample");
+            // 逾期未还（预计归还时间早于当前）升级为 high，否则 medium
+            boolean overdue = l.getExpectedReturnDate() != null && l.getExpectedReturnDate().isBefore(now);
+            dto.setPriority(overdue ? "high" : "medium");
+            dto.setCreatedAt(l.getLoanDate());
+            if (l.getExpectedReturnDate() != null) {
+                dto.setEndTime(l.getExpectedReturnDate().toString());
+            }
+            dto.setTaskStatus("pending");
+            dto.setAssigneeId(l.getBorrowerId());
+            dto.setAssigneeName(l.getBorrower());
+            dto.setAssigneeRole("借用人");
+            fillCategoryMeta(dto);
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * 领料出库：status=pending 的待出库领料单，负责人=领料人（pickerId 精确匹配）。
+     */
+    private List<PendingTaskDTO> collectMaterialPickingTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<MaterialPicking> pickings = materialPickingService.lambdaQuery()
+                .eq(MaterialPicking::getTenantId, tenantId)
+                .eq(MaterialPicking::getDeleteFlag, 0)
+                .eq(MaterialPicking::getStatus, "pending")
+                .orderByAsc(MaterialPicking::getCreateTime)
+                .last("LIMIT " + MAX_PER_CATEGORY)
+                .list();
+        if (pickings == null || pickings.isEmpty()) return List.of();
+        return pickings.stream().map(p -> {
+            PendingTaskDTO dto = new PendingTaskDTO();
+            dto.setId("PK_" + p.getId());
+            dto.setTaskType("MATERIAL_PICKING");
+            dto.setModule("production");
+            dto.setTitle("领料待出库 " + safe(p.getPickingNo()));
+            dto.setDescription(safe(p.getOrderNo()) + " " + safe(p.getStyleNo()) + " 待出库");
+            dto.setOrderNo(p.getOrderNo());
+            dto.setStyleNo(p.getStyleNo());
+            dto.setDeepLinkPath("/production/picking");
+            dto.setPriority("medium");
+            dto.setCreatedAt(p.getCreateTime());
+            dto.setTaskStatus("pending");
+            dto.setAssigneeId(p.getPickerId());
+            dto.setAssigneeName(p.getPickerName());
+            dto.setAssigneeRole("领料员");
+            fillCategoryMeta(dto);
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
     static void fillCategoryMeta(PendingTaskDTO dto) {
         String[] meta = CATEGORY_META.get(dto.getTaskType());
         if (meta != null) {
@@ -662,7 +826,8 @@ public class PendingTaskOrchestrator {
                 return isFinance;
             }
             if ("OVERDUE_ORDER".equals(taskType)
-                    || "EXCEPTION_REPORT".equals(taskType)) {
+                    || "EXCEPTION_REPORT".equals(taskType)
+                    || "SHIPMENT".equals(taskType)) {
                 return isProductionOrMerchandiser;
             }
             if ("REPAIR".equals(taskType)) {
@@ -691,6 +856,19 @@ public class PendingTaskOrchestrator {
                 .list()
                 .stream()
                 .collect(Collectors.toMap(ProductionOrder::getOrderNo, o -> o, (a, b) -> a));
+    }
+
+    private Map<String, ProductionOrder> batchLoadOrdersById(Long tenantId, List<String> orderIds) {
+        if (orderIds == null || orderIds.isEmpty()) return Map.of();
+        return productionOrderService.lambdaQuery()
+                .select(ProductionOrder::getId, ProductionOrder::getMerchandiser,
+                        ProductionOrder::getFactoryName, ProductionOrder::getStyleNo)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .in(ProductionOrder::getId, orderIds)
+                .list()
+                .stream()
+                .collect(Collectors.toMap(ProductionOrder::getId, o -> o, (a, b) -> a));
     }
 
     private String resolveTenantOwnerName(Long tenantId) {

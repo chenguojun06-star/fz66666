@@ -3021,3 +3021,11 @@ D-065 修复后领取成功，但 /picking/list 500。根因：43192e735 给 Mat
 - [x] form 页新增款式图选填上传（chooseMedia 优先+chooseImage 降级+权限引导），不传图可下单
 - [x] 四副本 8 文件同步（md5 唯一值=1）+ node --check + 12 份 WXML 标签栈 + 表达式扫描 0
 - [ ] 真机验收：附件/备注单份展示；无资料下单直达表单、图可选、下单后订单详情可见款式图
+
+### 2026-09-07 D-313 小云待办覆盖领取类任务全量（待推送）
+- [x] 采集上限每类 10→100（原个人领取>10 条后面任务消失）
+- [x] 样衣开发按 7 环节展开任务化：pattern/bom/size/process/production/secondary/sizePrice，口径=领取人非空 && 未完成；新增 addStyleStageTask + STY_{id}_{stage} 深链 /style-info/{id}?tab=xxx
+- [x] 样衣详情 ?tab= 深链断链修复（URL tab 映射到 bomAreaTabKey，尺寸表→pattern、码数单价→process）
+- [x] 新增外发收货 SHIPMENT / 样衣借还 SAMPLE_LOAN（assigneeId=borrowerId）/ 领料出库 MATERIAL_PICKING（assigneeId=pickerId）三类 collector
+- [x] mvn compile EXIT=0 + tsc 0 错误
+- [ ] 遗留待拍板：merchandiser/xxxAssignee 仅存姓名无用户ID，需补 xxxAssigneeId 落库根治

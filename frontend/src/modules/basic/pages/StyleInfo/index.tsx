@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Alert, App, Button, Card, Form } from 'antd';
 import api from '@/utils/api';
 import PageLayout from '@/components/common/PageLayout';
@@ -49,6 +49,31 @@ const StyleInfoDetailPage: React.FC = () => {
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
   const [bomAreaTabKey, setBomAreaTabKey] = useState('basic');
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+
+  // URL ?tab= 定位到对应环节 tab：小云待办/外部跳转带 tab 参数时，让内容区直接落在目标 tab。
+  // 此前 tab 参数只被 useStyleDetail 解析成数字 key 但该值未被消费，StyleInfoTabs 实际用 bomAreaTabKey（字符串 key），
+  // 导致深链 ?tab=pattern 只打开详情页却停在「基础信息」。这里把 URL tab 映射到 bomAreaTabKey。
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const tab = (searchParams.get('tab') || '').toLowerCase();
+    if (!tab) return;
+    // 尺寸表模块在「纸样开发」tab 内；码数单价在「工序单价」tab 内
+    const tabKeyMap: Record<string, string> = {
+      bom: 'bom',
+      pattern: 'pattern',
+      size: 'pattern',
+      process: 'process',
+      production: 'production',
+      secondary: 'secondary',
+      quotation: 'quotation',
+      attachment: 'attachment',
+      file: 'attachment',
+      files: 'attachment',
+      washlabel: 'washlabel',
+    };
+    const target = tabKeyMap[tab];
+    if (target) setBomAreaTabKey(target);
+  }, [searchParams]);
   const basicInfoFormRef = useRef<StyleBasicInfoFormRef | null>(null);
 
   const { fields: fieldConfigs } = useFieldConfig({ bizType: 'style', platform: 'pc' });

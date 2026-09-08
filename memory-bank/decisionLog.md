@@ -1,7 +1,22 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-07（新增 D-304 侧滑弹窗统一宽度）
+> 最后更新：2026-09-07（新增 D-313 小云待办覆盖领取类任务全量）
+
+---
+
+## D-313：小云待办覆盖领取类任务全量——样衣7环节任务化 + 外发收货/样衣借还/领料出库采集 + 深链直达（2026-09-07）
+
+用户原话定规格："要是谁领取、没有完成的，才会显示这个任务；点击直达这个可以继续做这个任务；不管是工序、还是别的纸样、还是别的尺寸表" —— 小云任务列表必须是「我领取了 + 没做完」的个人工作台，覆盖所有环节的领取任务，点击卡片直达该环节继续操作。
+
+**决策**：
+1. **采集上限 10→100**：此前 `MAX_PER_CATEGORY=10`，个人领取超过 10 条时后面的任务在待办列表「消失」。提升到 100 保证常规场景不漏，仍保留上限防止老板视角全量扫描过载。
+2. **样衣开发按 7 环节展开任务化**：原实现只看整体 progressNode 粗粒度采集、只认 patternAssignee/productionAssignee，导致 size/bom/process/secondary/sizePrice 五环节的领取任务全部不可见。改为对 `pattern/bom/size/process/production/secondary/sizePrice` 逐一生成任务，口径 = `assignee 有值 && completedTime == null`（谁领取、没做完才显示）。
+3. **tab 深链修复（真实 bug）**：`?tab=` 参数只被 useStyleDetail 解析成数字 key 且未被消费，真正渲染的 StyleInfoTabs 用 bomAreaTabKey（字符串 key），深链 `?tab=pattern` 只打开详情页却停在「基础信息」。加 useSearchParams + effect 把 URL tab 映射到 bomAreaTabKey（尺寸表→pattern tab、码数单价→process tab）。
+4. **新增三类 collector**：外发收货（receiveStatus=pending，负责人取订单跟单员否则租户老板）、样衣借还（status=borrowed 且 remainingQuantity>0，setAssigneeId=borrowerId 精确匹配，逾期未还升 high）、领料出库（status=pending，setAssigneeId=pickerId 精确匹配）。
+5. **已知遗留（需拍板）**：返修/逾期/异常/外发收货 + 样衣 7 环节负责人仍是**名字字符串匹配**，因 `ProductionOrder.merchandiser`、`StyleInfo.xxxAssignee` 只存姓名无用户 ID；根治需给表补 `xxxAssigneeId` 领取时落库（跨表迁移）。
+
+**理由**：小云待办的定位是「个人领取任务的聚合工作台」，此前按整体进度粗采 + 每类截断 10 条 + 名字模糊匹配，三处都造成"领取了但小云里看不到"的假阴性。
 
 ---
 

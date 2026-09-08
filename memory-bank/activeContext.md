@@ -1,11 +1,42 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-07（弹窗内部信息重复核查与去重）
+> 最后更新：2026-09-07（D-313 小云待办覆盖领取类任务全量）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-07 D-313 小云待办覆盖领取类任务全量（待推送）
+
+- [x] 采集上限每类 10→100：个人领取超过 10 条时后面的任务在待办列表「消失」的假阴性根治
+- [x] 样衣开发按 7 环节展开（pattern/bom/size/process/production/secondary/sizePrice）：口径=领取人非空 && 未完成才显示，新增 addStyleStageTask helper + STY_{id}_{stage} 任务ID + 深链 /style-info/{id}?tab=xxx
+- [x] 真实 bug 修复：样衣详情 ?tab= 深链断链——URL 参数只被 useStyleDetail 解析成数字 key 未消费，StyleInfoTabs 实际用 bomAreaTabKey 字符串 key；加 useSearchParams + effect 映射（尺寸表→pattern、码数单价→process）
+- [x] 新增三类 collector：SHIPMENT 外发收货（receiveStatus=pending）/ SAMPLE_LOAN 样衣借还（borrowed 且剩余>0，assigneeId=borrowerId 精确匹配，逾期升high）/ MATERIAL_PICKING 领料出库（pending，assigneeId=pickerId 精确匹配）
+- [x] 验证：mvn -o compile EXIT=0 + tsc --noEmit 0 错误
+- [ ] 遗留待拍板：ProductionOrder.merchandiser 与 StyleInfo.xxxAssignee 只存姓名无用户ID → 名字字符串匹配兜底；根治需补 xxxAssigneeId 落库（跨表迁移）
+
+### 2026-09-07 备注保存超长失败修复 + 自由编菲批量删除 ✅已推送 3a7b68a9c
+
+- [x] 根因（用户报"好几页面备注输入框不能正常备注"）：QuickEditModal 保存时把 20+ 行 AI 巡检记录随人工备注一起提交 remarks → 超长 → 后端保存失败；QuickEditModal 是订单/裁剪/采购/进度多页面共用组件，全部受影响
+- [x] 修复：QuickEditModal 系统日志与 AI 巡检行仅只读展示（操作记录/AI巡检区），保存只提交人工备注；cleanRemark 统一只保留人工备注；splitRemarkAndLogs 非字符串入参兜底防崩溃
+- [x] 数据库核实：t_remark_cleanup_backup 备份确认此前清洗仅删系统日志行、无人工备注丢失
+- [x] 自由编菲：新增复选框列（表头全选/单选）+「删除选中 (N)」批量删除，避免点错逐行删
+- [x] 验证：tsc 0 错误 + ESLint 0 error + safe-push 10 项全过
+
+### 2026-09-07 备注输入框剥离系统日志 + 存量清洗 ✅已推送 e26eb4f6e
+
+- [x] 根因：QuickEditModal（编辑备注和预计出货）把 orders remarks 里的 [时间戳] 系统日志行全部回填进备注输入框；物料资料库编辑（useMaterialDatabaseActions.openDialog）直接 setFieldsValue({...record}) 也回填日志
+- [x] 前端防御：新增 utils/remarkLogs.ts（splitRemarkAndLogs/cleanRemark）；QuickEditModal 系统日志行剥离到只读「操作记录」区、不进输入框、保存不写回 remarks；物料编辑回填 cleanRemark 过滤
+- [x] 存量清洗：执行 cleanup-remark-logs.py，迁移 t_production_order 10 条 + t_pattern_production 1 条共 24 条日志行到 t_operation_log（备份表可回滚），再次预览 0 残留
+- [x] 脚本修复：operator/action 截断防「Data too long for column 'operator_name'」
+- [x] 验证：tsc 0 错误 + ESLint 0 error + safe-push 10 项全过
+
+### 2026-09-07 侧滑弹窗统一 85% + 采购单详情批量动作去重 ✅已推送 1e388b339
+
+- [x] 物料采购单详情 Drawer：底部 footer「采购全部/回料确认」与顶部「批量操作」下拉重复 → 删除底部重复按钮，批量动作统一保留在顶部；footer 仅留 确认完成/采购单生成/关闭
+- [x] 全部业务侧滑弹窗宽度 80% 统一为 85%（48 处字符串 + 3 处 `window.innerWidth * 0.8` 计算式 + 2 处三元表达式）；列设置小抽屉 480px 与移动端 96vw 保持不变
+- [x] 验证：前端 tsc 0 错误 + ESLint 0 error；safe-push 10 项全过
 
 ### 2026-09-07 弹窗内部信息重复核查与去重 ✅代码完成待推送
 
