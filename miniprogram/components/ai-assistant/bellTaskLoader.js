@@ -400,7 +400,84 @@ async function loadTenantPendingRegistrations() {
 }
 
 /**
- * 加载所有待处理任务（组合调用）
+ * 统一待办分类的期望展示顺序（与 PC 统一面板的 14 类一致，保证界面稳定不跳变）
+ */
+const BUSINESS_ORDER = [
+  'CUTTING_TASK', 'QUALITY_INSPECT', 'REPAIR', 'MATERIAL_PURCHASE',
+  'OVERDUE_ORDER', 'EXCEPTION_REPORT', 'STYLE_DEVELOPMENT',
+  'PAYROLL_SETTLEMENT', 'MATERIAL_RECON', 'EXPENSE_REIMBURSE',
+  'SHIPMENT', 'SAMPLE_LOAN', 'MATERIAL_PICKING', 'COLLAB_TASK',
+];
+
+/**
+ * 归一化单条统一待办为手机端卡片所需字段。
+ * 只读展示，不做任何写操作；后端已按租户+角色过滤，这里只做字段补齐与展示口径统一。
+ * @param {Object} t - 后端 PendingTaskDTO（getMyPendingTasks 返回项）
+ * @returns {Object} 卡片数据
+ */
+function normalizeBusinessTask(t) {
+  const pri = String(t.priority || 'medium').toLowerCase();
+  const priText = pri === 'high' ? '高' : (pri === 'low' ? '低' : '中');
+  const priCls = pri === 'high' ? 'var(--color-danger)' : (pri === 'low' ? 'var(--color-text-disabled)' : 'var(--color-primary)');
+  const id = t.id || [t.taskType, t.orderNo, t.styleNo].filter(Boolean).join('_') || ('task_' + Math.random().toString(36).slice(2, 8));
+  const role = t.assigneeRole || '';
+  const assignee = t.assigneeName || '';
+  // 第三行：蓝字 meta，说明「这是什么类型的待办 · 谁负责 · 何时产生」，不再是一堆灰色小字让人看不清
+  const roleText = role ? (assignee ? (role + ' · ' + assignee) : role) : assignee;
+  const metaParts = [(t.categoryLabel || ''), roleText].filter(Boolean);
+  const timeText = formatTimeAgo(t.createdAt);
+  if (timeText) metaParts.push(timeText);
+  return {
+    id: id,
+    taskType: t.taskType || 'OTHER',
+    title: t.title || t.description || t.categoryLabel || '',
+    description: t.description || '',
+    orderNo: t.orderNo || '',
+    styleNo: t.styleNo || '',
+    priority: pri,
+    priorityText: priText,
+    priorityCls: priCls,
+    categoryLabel: t.categoryLabel || '',
+    categoryIcon: t.categoryIcon || '',
+    assigneeRole: role,
+    assigneeName: assignee,
+    deepLinkPath: t.deepLinkPath || '',
+    createdAt: t.createdAt || '',
+    timeText: timeText,
+    metaText: metaParts.join(' · '),
+  };
+}
+
+/**
+ * 从统一接口加载全部业务待办，按分类分组成 sections（布局清晰，不"一锅粥"）
+ * @returns {Promise<Array>} 分类 sections：{taskType,label,icon,count,items}
+ */
+async function loadBusinessTasks() {
+  const res = await api.intelligence.getMyPendingTasks();
+  const list = Array.isArray(res)
+    ? res
+    : (Array.isArray(res && res.list) ? res.list : (Array.isArray(res && res.records) ? res.records : []));
+  const groupMap = {};
+  const seen = {};
+  list.forEach(function (t) {
+    const type = t.taskType || 'OTHER';
+    if (!groupMap[type]) {
+      groupMap[type] = { taskType: type, icon: t.categoryIcon || '', items: [] };
+      seen[type] = true;
+    }
+    groupMap[type].items.push(normalizeBusinessTask(t));
+  });
+  // 首条 label（分类中文名）逐条补一下更稳的空值兜底
+  Object.keys(groupMap).forEach(function (type) {
+    const s = groupMap[type];
+    s.label = s.items[0].categoryLabel || type;
+    s.count = s.items.length;
+  });
+  return BUSINESS_ORDER.filter(function (type) { return groupMap[type]; }).map(function (type) { return groupMap[type]; });
+}
+
+/**
+ * 加载所有待处理任务（统一接口 + 系统级审批/超时分区）
  * @param {Object} ctx - Component 实例
  * @returns {Promise<void>} 加载完成后更新组件数据
  */
@@ -412,52 +489,32 @@ async function loadAllTasks(ctx) {
   ctx.setData({ loading: true });
 
   try {
-    const isAdmin = checkIsAdmin();
     const canManageRegistrations = checkCanManageRegistrations();
-    const isSuperAdmin = isAdmin && !canManageRegistrations;
-    ctx.setData({ isAdmin, isTenantOwner: canManageRegistrations });
+    const isSuperAdmin = checkIsAdmin() && !canManageRegistrations;
+    ctx.setData({ isAdmin: checkIsAdmin(), isTenantOwner: canManageRegistrations });
 
-    const [cutting, procurement, quality, repair, timeouts, pending, tenantRegistrations, overdueOrders, shipments] = await Promise.all([
-      loadCuttingTasks(),
-      isAdmin ? loadProcurementTasks() : Promise.resolve([]),
-      loadQualityTasks(),
-      loadRepairTasks(),
-      isAdmin ? loadTimeoutReminders() : Promise.resolve([]),
+    // 业务待办走统一接口（与 PC 同口径）；系统级审批/超时提醒仍走各自独立 API（它们不在统一 39 条内）
+    const [businessSections, timeouts, pending, tenantRegistrations] = await Promise.all([
+      loadBusinessTasks(),
+      loadTimeoutReminders(),
       isSuperAdmin ? loadPendingUsers() : Promise.resolve([]),
       canManageRegistrations ? loadTenantPendingRegistrations() : Promise.resolve([]),
-      isAdmin ? loadOverdueOrders() : Promise.resolve([]),
-      loadShipmentNotifications(),
     ]);
 
-    const urgentEvents = [];
-
-    // 归纳延期订单统计
-    const overdueSummary = summarizeOverdueOrders(overdueOrders);
-
-    const totalCount =
-      urgentEvents.length +
-      cutting.length +
-      procurement.length +
-      quality.length +
-      repair.length +
-      timeouts.length +
-      pending.length +
-      tenantRegistrations.length +
-      overdueOrders.length +
-      shipments.length;
+    const businessCount = businessSections.reduce(function (s, sec) { return s + sec.count; }, 0);
+    const totalCount = businessCount + timeouts.length + pending.length + tenantRegistrations.length;
 
     ctx.setData({
-      urgentEvents,
-      cuttingTasks: cutting,
-      procurementTasks: procurement,
-      qualityTasks: quality,
-      repairTasks: repair,       // 次品待返修列表
+      businessSections: businessSections,
+      cuttingTasks: [],
+      procurementTasks: [],
+      qualityTasks: [],
+      repairTasks: [],
+      overdueOrders: [],
+      shipmentNotices: [],
       timeoutReminders: timeouts,
       pendingUsers: pending,
       pendingRegistrations: tenantRegistrations,
-      overdueOrders,
-      overdueSummary,
-      shipmentNotices: shipments, // D-309 外发发货/收货通知
       totalCount,
       hasAnyTask: totalCount > 0,
       loading: false,

@@ -1,0 +1,51 @@
+<view class="page">
+  <block wx:if="{{hasTask && task}}">
+    <!-- 顶部：分类 + 优先级 -->
+    <view class="hero">
+      <view class="hero-row">
+        <text class="hero-category">{{task.categoryLabel || '业务待办'}}</text>
+        <text class="hero-priority" wx:if="{{task.priorityText}}">{{task.priorityText}}</text>
+      </view>
+      <text class="hero-title">{{task.title}}</text>
+      <text class="hero-desc" wx:if="{{task.description}}">{{task.description}}</text>
+    </view>
+
+    <!-- 详情信息卡：只读，布局为两列明细 -->
+    <view class="info-card">
+      <view class="info-row" wx:if="{{task.orderNo}}">
+        <text class="info-label">订单号</text>
+        <text class="info-value">{{task.orderNo}}</text>
+      </view>
+      <view class="info-row" wx:if="{{task.styleNo}}">
+        <text class="info-label">款号</text>
+        <text class="info-value">{{task.styleNo}}</text>
+      </view>
+      <view class="info-row" wx:if="{{task.assigneeRole}}">
+        <text class="info-label">负责角色</text>
+        <text class="info-value">{{task.assigneeRole}}{{task.assigneeName ? ' · ' + task.assigneeName : ''}}</text>
+      </view>
+      <view class="info-row" wx:if="{{task.deepLinkPath}}">
+        <text class="info-label">PC 入口</text>
+        <text class="info-value pc-path">{{task.deepLinkPath}}</text>
+      </view>
+      <view class="info-row" wx:if="{{task.timeText}}">
+        <text class="info-label">产生时间</text>
+        <text class="info-value">{{task.timeText}}</text>
+      </view>
+    </view>
+
+    <!-- 处理入口 / 提示 -->
+    <view class="action-area" wx:if="{{handleText}}">
+      <button class="action-btn" hover-class="action-btn-hover" hover-stay-time="100" catchtap="onHandle">{{handleText}}</button>
+      <text class="action-tip">此待办为只读展示，具体处理请跳转到对应业务页</text>
+    </view>
+    <view class="action-area" wx:elif="{{noRouteHint}}">
+      <view class="no-route-tip">该协作任务暂不支持手机端处理，请到小云 PC 端完成</view>
+    </view>
+  </block>
+
+  <view class="empty" wx:else>
+    <text class="empty-text">待办数据缺失或已失效</text>
+    <button class="back-btn" size="mini" bindtap="goBack">返回</button>
+  </view>
+</view>

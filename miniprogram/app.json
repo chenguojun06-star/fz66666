@@ -226,6 +226,13 @@
       "pages": [
         "detail/index"
       ]
+    },
+    {
+      "root": "pages/todo-detail",
+      "name": "pkg-todo-detail",
+      "pages": [
+        "index"
+      ]
     }
   ],
   "preloadRule": {

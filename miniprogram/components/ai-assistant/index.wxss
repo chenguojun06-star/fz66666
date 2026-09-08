@@ -446,6 +446,22 @@
 .pending-badge  { background: var(--color-success); }
 .shipment-badge { background: var(--color-primary); }
 .timeout-badge  { background: var(--color-warning); }
+.business-badge { background: var(--color-primary); }
+
+/* 统一业务待办卡片（由统一接口渲染，第三行 meta 蓝字，清晰可读） */
+.task-type-business .task-accent-bar { background: var(--color-primary); }
+.biz-title { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.task-priority-tag { font-size: var(--font-size-xxs); font-weight: 700; flex-shrink: 0; }
+.task-meta {
+  display: block;
+  font-size: var(--font-size-xxs);
+  color: var(--color-primary);
+  line-height: var(--line-height-normal);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* Task card — left accent bar + two-column layout */
 .task-card {

@@ -294,6 +294,68 @@ function handleShipmentTask(task) {
 }
 
 /**
+ * 处理样衣开发任务 - 跳转样衣开发首页（列表态，便于继续处理）
+ * 注：统一接口下样衣待办按「环节」展开，暂无数值 styleId 可拼详情页，先落列表页
+ * @param {Object} _task - 任务对象
+ * @returns {void}
+ */
+function handleStyleDevTask(_task) { // eslint-disable-line no-unused-vars
+  safeNavigate({ url: '/pages/sample-development/index/index' }, 'navigateTo').catch(() => {});
+}
+
+/**
+ * 缺口类型（手机端无独立业务处理页）→ 进入统一待办详情页（只读展示真实数据，布局清晰）
+ * 待办数据先写入本地 storage（URL 长度有限，不拼进 query），详情页 onLoad 读取
+ * @param {Object} task - 统一待办任务
+ * @returns {void}
+ */
+function openUnifiedDetail(task) {
+  try {
+    wx.setStorageSync('pending_unified_task', JSON.stringify(task));
+  } catch (e) {
+    console.error('存储统一待办失败', e);
+  }
+  safeNavigate({ url: '/pages/todo-detail/index' }, 'navigateTo').catch(() => {});
+}
+
+/**
+ * 统一业务待办点击路由：按 taskType 分发到对应落地页。
+ * - 已有业务页的类型 → 复用既有处理逻辑
+ * - 手机端无独立页的缺口类型 → 进统一待办详情页（只读展示，不自造写操作，避免数据异常）
+ * @param {Object} task - 统一待办任务（bellTaskLoader.normalizeBusinessTask 产物）
+ * @returns {void}
+ */
+function handleBusinessTask(task) {
+  if (!task) return;
+  switch (task.taskType) {
+    case 'CUTTING_TASK': handleCuttingTask(task); break;
+    case 'QUALITY_INSPECT': handleQualityTask(task); break;
+    case 'REPAIR': handleRepairTask(task); break;
+    case 'MATERIAL_PURCHASE': handleProcurementTask(task); break;
+    case 'OVERDUE_ORDER':
+      // 统一接口逾期项 id 带 "OVD_" 前缀，不能当真实 orderId 用；订单详情按 orderNo 直达
+      if (task.orderNo) {
+        safeNavigate({ url: '/pages/dashboard/order-detail/index?orderNo=' + encodeURIComponent(task.orderNo) }, 'navigateTo').catch(() => {});
+      } else {
+        handleOverdueOrder(task);
+      }
+      break;
+    case 'SHIPMENT': handleShipmentTask(task); break;
+    case 'STYLE_DEVELOPMENT': handleStyleDevTask(task); break;
+    // 缺口类型：统一待办详情页承载
+    case 'PAYROLL_SETTLEMENT':
+    case 'MATERIAL_RECON':
+    case 'EXPENSE_REIMBURSE':
+    case 'COLLAB_TASK':
+    case 'EXCEPTION_REPORT':
+    case 'SAMPLE_LOAN':
+    case 'MATERIAL_PICKING':
+    default:
+      openUnifiedDetail(task); break;
+  }
+}
+
+/**
  * 统一任务点击路由
  * @param {Object} ctx - Component 实例
  * @param {Object} e - 事件对象
@@ -350,6 +412,8 @@ module.exports = {
   handleQualityTask,
   handleRepairTask,
   handleApprovalTask,
+  handleStyleDevTask,
+  handleBusinessTask,
   onApproveUser,
   onApproveRegistration,
   handleReminderTask,

@@ -200,6 +200,7 @@ Component({
     scrollTo: '',
     currentTab: 'chat',
     totalTasks: 0,
+    businessSections: [],
     qualityTasks: [], cuttingTasks: [],
     purchaseTasks: [], repairTasks: [], overdueOrders: [],
     overdueSummary: null, pendingUsers: [], pendingRegistrations: [],
@@ -536,14 +537,25 @@ Component({
     // 缓存链路与网络链路共用，保证两条路径的 dismissed 过滤逻辑完全一致。
     _applyTasksData(newData) {
       const dismissed = this._getDismissedKeys();
-      const q = (newData.qualityTasks || []).filter(function(t) { return dismissed.indexOf('quality:' + t.orderId) === -1; });
-      const c = (newData.cuttingTasks || []).filter(function(t) { return dismissed.indexOf('cutting:' + t.orderId) === -1; });
-      const p = (newData.procurementTasks || []).filter(function(t) { return dismissed.indexOf('purchase:' + t.id) === -1; });
-      const r = (newData.repairTasks || []).filter(function(t) { return dismissed.indexOf('repair:' + t.id) === -1; });
-      const o = (newData.overdueOrders || []).filter(function(t) { return dismissed.indexOf('overdue:' + t.id) === -1; });
-      const tm = (newData.timeoutReminders || []).filter(function(t) { return dismissed.indexOf('timeout:' + t.id) === -1; });
-      const total = q.length + c.length + p.length + r.length + o.length + tm.length + (newData.pendingUsers || []).length + (newData.pendingRegistrations || []).length;
+      // 统一业务待办：按分类分组渲染，本地仅做「今日已忽略」过滤（只读展示，不动后端数据）
+      const businessSections = (newData.businessSections || []).map(function (sec) {
+        const items = (sec.items || []).filter(function (t) {
+          return dismissed.indexOf(sec.taskType + ':' + t.id) === -1;
+        });
+        return { taskType: sec.taskType, label: sec.label, icon: sec.icon || '', count: items.length, items: items };
+      }).filter(function (sec) { return sec.count > 0; });
+
+      const tm = (newData.timeoutReminders || []).filter(function (t) { return dismissed.indexOf('timeout:' + t.id) === -1; });
+      const q = (newData.qualityTasks || []).filter(function (t) { return dismissed.indexOf('quality:' + t.orderId) === -1; });
+      const c = (newData.cuttingTasks || []).filter(function (t) { return dismissed.indexOf('cutting:' + t.orderId) === -1; });
+      const p = (newData.procurementTasks || []).filter(function (t) { return dismissed.indexOf('purchase:' + t.id) === -1; });
+      const r = (newData.repairTasks || []).filter(function (t) { return dismissed.indexOf('repair:' + t.id) === -1; });
+      const o = (newData.overdueOrders || []).filter(function (t) { return dismissed.indexOf('overdue:' + t.id) === -1; });
+      const businessCount = businessSections.reduce(function (s, sec) { return s + sec.count; }, 0);
+      const total = businessCount + tm.length + q.length + c.length + p.length + r.length + o.length +
+        (newData.pendingUsers || []).length + (newData.pendingRegistrations || []).length;
       this.setData({
+        businessSections: businessSections,
         qualityTasks: q,
         cuttingTasks: c,
         purchaseTasks: p,
@@ -564,7 +576,7 @@ Component({
     // 改为首次加载后写入缓存，5 分钟内打开直接读缓存渲染。
     _loadTasksFromCache() {
       try {
-        const cached = wx.getStorageSync('ai_tasks_cache');
+        const cached = wx.getStorageSync('ai_tasks_cache_v2');
         if (cached && cached.ts && (Date.now() - cached.ts < this._suggestionCacheTTL)) {
           this._applyTasksData(cached.data || {});
           return true;
@@ -584,7 +596,7 @@ Component({
           setData: (newData) => {
             if (newData.totalCount !== undefined) {
               self._applyTasksData(newData);
-              try { wx.setStorageSync('ai_tasks_cache', { ts: Date.now(), data: newData }); } catch (_e) { /* 写入失败忽略 */ }
+              try { wx.setStorageSync('ai_tasks_cache_v2', { ts: Date.now(), data: newData }); } catch (_e) { /* 写入失败忽略 */ }
             }
           },
         };
@@ -620,6 +632,7 @@ Component({
     },
 
     handleQualityTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleQualityTask(t); },
+    handleBusinessTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleBusinessTask(t); },
     handleCuttingTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleCuttingTask(t); },
     handleWarehouseTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleProcurementTask(t); },
     handlePurchaseTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleProcurementTask(t); },

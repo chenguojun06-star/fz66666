@@ -125,6 +125,10 @@ const intelligence = {
   getMyPendingTaskSummary() {
     return ok('/api/intelligence/pending-tasks/summary', 'GET', {});
   },
+  // 统一待办全量列表（后端 PendingTaskOrchestrator 按租户+角色过滤后返回，与 PC 统一面板同口径）
+  getMyPendingTasks() {
+    return ok('/api/intelligence/pending-tasks/my', 'GET', {});
+  },
   // P1-3: 小云主动洞察（Redis 未读列表 + 标记已读）
   getProactiveInsights() {
     return ok('/api/intelligence/insights', 'GET', {});
