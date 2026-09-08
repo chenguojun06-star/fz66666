@@ -79,6 +79,9 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
       || Boolean(selectedStage.record.sampleReviewComment);
   }, [selectedStage, confirm.confirmReviewerLabel, confirm.confirmReviewTimeLabel, confirm.confirmInboundTimeLabel]);
 
+  // 样衣生产阶段事实区：空值(-/待领取/待启动)不重复展示，顶部摘要已说明当前状态
+  const isSampleFactEmpty = (v?: string) => !v || ['-', '待领取', '待启动'].includes(String(v || '').trim());
+
   return (
     <Drawer
       open={Boolean(selectedStage)}
@@ -280,21 +283,27 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                     </div>
                   ) : null}
                   <div className="style-smart-stage-modal__facts">
-                    <div className="style-smart-stage-modal__fact">
-                      <span>领取人</span>
-                      <strong
-                        style={{ cursor: sample.sampleReceiverLabel !== '-' ? 'pointer' : 'default', color: sample.sampleReceiverLabel !== '-' ? 'var(--color-primary)' : undefined, textDecoration: sample.sampleReceiverLabel !== '-' ? 'underline' : undefined }}
-                        onClick={() => sample.sampleReceiverLabel !== '-' && setRemarkTarget({ open: true, styleNo: selectedStage?.record?.styleNo || '', defaultRole: '领取人 — ' + sample.sampleReceiverLabel })}
-                      >{sample.sampleReceiverLabel}</strong>
-                    </div>
-                    <div className="style-smart-stage-modal__fact">
-                      <span>领取时间</span>
-                      <strong>{sample.sampleReceiveTimeLabel}</strong>
-                    </div>
-                    <div className="style-smart-stage-modal__fact">
-                      <span>完成时间</span>
-                      <strong>{sample.sampleCompletedTimeLabel}</strong>
-                    </div>
+                    {!isSampleFactEmpty(sample.sampleReceiverLabel) && (
+                      <div className="style-smart-stage-modal__fact">
+                        <span>领取人</span>
+                        <strong
+                          style={{ cursor: 'pointer', color: 'var(--color-primary)', textDecoration: 'underline' }}
+                          onClick={() => setRemarkTarget({ open: true, styleNo: selectedStage?.record?.styleNo || '', defaultRole: '领取人 — ' + sample.sampleReceiverLabel })}
+                        >{sample.sampleReceiverLabel}</strong>
+                      </div>
+                    )}
+                    {!isSampleFactEmpty(sample.sampleReceiveTimeLabel) && (
+                      <div className="style-smart-stage-modal__fact">
+                        <span>领取时间</span>
+                        <strong>{sample.sampleReceiveTimeLabel}</strong>
+                      </div>
+                    )}
+                    {!isSampleFactEmpty(sample.sampleCompletedTimeLabel) && (
+                      <div className="style-smart-stage-modal__fact">
+                        <span>完成时间</span>
+                        <strong>{sample.sampleCompletedTimeLabel}</strong>
+                      </div>
+                    )}
                   </div>
                   <div style={{ marginTop: 12, padding: '10px 0', borderTop: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', gap: 14 }}>
                     <QRCode

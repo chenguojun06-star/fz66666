@@ -184,7 +184,9 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
     <div style={{ padding: embedded ? 0 : (isMobile ? 12 : 24) }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <Space>
-          <Button onClick={() => embedded && onClose ? onClose() : navigate(-1)}>返回</Button>
+          {!embedded && (
+            <Button onClick={() => navigate(-1)}>返回</Button>
+          )}
           <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 20 }}>{sampleMode ? '采购管理' : '订单物料采购明细'}</h2>
         </Space>
       </div>
@@ -336,9 +338,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                 >
                   编辑面辅料
                 </Button>
-                {sampleBomLocked ? (
-                  <Tag color="success">物料清单已完成 · 已锁定</Tag>
-                ) : hasReturnConfirmedRow ? (
+                {hasReturnConfirmedRow ? (
                   <Tag color="success">已回料确认 · 编辑已锁定</Tag>
                 ) : bomIncomplete ? (
                   <Tag icon={<ExclamationCircleOutlined />} color="warning">
