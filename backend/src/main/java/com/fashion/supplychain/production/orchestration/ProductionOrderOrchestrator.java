@@ -458,6 +458,7 @@ public class ProductionOrderOrchestrator {
             result = distributedLockService.executeWithLock("order:scrap:" + id, 10, java.util.concurrent.TimeUnit.SECONDS,
                     () -> lifecycleHelper.scrapOrder(id, remark));
         }
+        if (result) writeOrderOperationLog(id, "报废", remark);
         evictCacheAfterCommit(id);
         return result;
     }
@@ -526,6 +527,7 @@ public class ProductionOrderOrchestrator {
         boolean result = financeOrchestrationService.completeProduction(id, tolerancePercent);
         if (result) {
             logAppendHelper.appendComplete(id);
+            writeOrderOperationLog(id, "完成生产", tolerancePercent != null ? tolerancePercent.toPlainString() : null);
         }
         evictCacheAfterCommit(id);
         return result;
@@ -617,6 +619,21 @@ public class ProductionOrderOrchestrator {
             );
         }
         return result;
+    }
+
+    /**
+     * 写订单操作记录（t_order_operation_log）：按 orderId 解析 orderNo 后写入
+     */
+    private void writeOrderOperationLog(String orderId, String action, String remark) {
+        if (orderLogHelper == null || !StringUtils.hasText(orderId)) return;
+        try {
+            ProductionOrder o = productionOrderService.getById(orderId);
+            if (o != null) {
+                orderLogHelper.writeOrderLog(o.getOrderNo(), null, action, remark);
+            }
+        } catch (Exception e) {
+            log.warn("[OrderLog] 写订单操作记录失败: orderId={}, action={}, err={}", orderId, action, e.getMessage());
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
