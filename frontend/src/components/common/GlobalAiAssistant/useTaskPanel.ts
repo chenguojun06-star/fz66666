@@ -44,27 +44,23 @@ export function useTaskPanel({
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [taskSaving, setTaskSaving] = useState(false);
 
-  const openTaskPanel = useCallback(() => {
-    setIsTaskPanelOpen(true);
-    setIsOpen(false);
-    refreshPendingTasks();
-  }, [refreshPendingTasks, setIsOpen]);
-
-  const closeTaskPanel = useCallback(() => {
-    setIsTaskPanelOpen(false);
-  }, []);
-
-  const backToChat = useCallback(() => {
-    setIsTaskPanelOpen(false);
-    setIsOpen(true);
-    setPanelView('chat');
-  }, [setIsOpen]);
-
   const switchToTasks = useCallback(() => {
     setPanelView('tasks');
     fetchTasks();
     startPolling();
   }, [fetchTasks, startPolling]);
+
+  const openTaskPanel = useCallback(() => {
+    // D-315：统一待办面板——铃铛/浮标角标/智能气泡入口全部打开聊天面板的「待办任务」视图，
+    // 不再挂独立的 TaskAggregationPanel，避免同一批待办在两套界面割裂展示
+    setIsOpen(true);
+    switchToTasks();
+    refreshPendingTasks();
+  }, [switchToTasks, refreshPendingTasks, setIsOpen]);
+
+  const closeTaskPanel = useCallback(() => {
+    setIsTaskPanelOpen(false);
+  }, []);
 
   const switchToChat = useCallback(() => {
     setPanelView('chat');
@@ -128,7 +124,6 @@ export function useTaskPanel({
     taskStats,
     openTaskPanel,
     closeTaskPanel,
-    backToChat,
     switchToTasks,
     switchToChat,
     handleTaskCreate,

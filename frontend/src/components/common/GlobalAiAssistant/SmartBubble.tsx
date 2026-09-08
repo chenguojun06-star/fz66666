@@ -159,7 +159,7 @@ const SmartBubble: React.FC<SmartBubbleProps> = ({ onOpenTaskPanel, triggerEdge 
           <div className={styles.bubbleCategoryRow}>
             {Object.values(summary.categoryCounts || {}).slice(0, 5).map(cat => (
               <span key={cat.taskType} className={styles.bubbleCategoryTag}>
-                {cat.icon} {cat.label} {cat.count}
+                {cat.label} {cat.count}
               </span>
             ))}
           </div>

@@ -114,6 +114,9 @@ public class PendingTaskOrchestrator {
         collectSafely("sampleLoan", this::collectSampleLoanTasks, all);
         collectSafely("materialPicking", this::collectMaterialPickingTasks, all);
         collectSafely("collabTask", this::collectCollaborationTasks, all);
+        // 补全领取人ID：返修/逾期/异常/外发/样衣环节等只落库了名字（订单 merchandiser、样衣各环节 assignee 均为名字字段），
+        // 按名字批量解析租户内用户ID 回填 assigneeId，让 filterByResponsiblePerson 优先走 ID 精确匹配，名字匹配只做兜底
+        resolveAssigneeIdsByName(all);
         // 按领取人过滤：租户老板看全部，其他人只看自己负责的
         all = filterByResponsiblePerson(all);
         // 全局去重：防止不同 collector 因条件交叉产生重复 id（保留首次出现的那条）
@@ -867,8 +870,49 @@ public class PendingTaskOrchestrator {
         return 0;
     }
 
-    private List<PendingTaskDTO> filterByResponsiblePerson(List<PendingTaskDTO> tasks) {
-        if (UserContext.isTenantOwner() || UserContext.isTopAdmin()) {
+    /**
+     * 按领取人名字批量解析租户内用户ID，回填缺 assigneeId 的任务（返回任务/逾期/异常/外发/样衣环节等
+     * 数据源只存了名字）。匹配优先级：用户实名 name → 登录名 username。解析不到的保持原样，
+     * 由 filterByResponsiblePerson 的名字匹配/角色匹配兜底，保证不漏不错。
+     */
+    private void resolveAssigneeIdsByName(List<PendingTaskDTO> tasks) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null || tasks == null || tasks.isEmpty()) return;
+        Map<String, String> nameToId = new HashMap<>();
+        Map<String, String> usernameToId = new HashMap<>();
+        Set<String> missingNames = new LinkedHashSet<>();
+        for (PendingTaskDTO t : tasks) {
+            if (!StringUtils.hasText(t.getAssigneeId()) && StringUtils.hasText(t.getAssigneeName())) {
+                missingNames.add(t.getAssigneeName());
+            }
+        }
+        if (missingNames.isEmpty()) return;
+        try {
+            List<User> users = userService.lambdaQuery()
+                    .eq(User::getTenantId, tenantId)
+                    .eq(User::getStatus, "active")
+                    .and(q -> q.in(User::getName, missingNames).or().in(User::getUsername, missingNames))
+                    .select(User::getId, User::getName, User::getUsername)
+                    .list();
+            for (User u : users) {
+                if (u.getId() == null) continue;
+                String uid = String.valueOf(u.getId());
+                if (StringUtils.hasText(u.getName())) nameToId.put(u.getName(), uid);
+                if (StringUtils.hasText(u.getUsername())) usernameToId.put(u.getUsername(), uid);
+            }
+            for (PendingTaskDTO t : tasks) {
+                if (!StringUtils.hasText(t.getAssigneeId()) && StringUtils.hasText(t.getAssigneeName())) {
+                    String uid = nameToId.get(t.getAssigneeName());
+                    if (uid == null) uid = usernameToId.get(t.getAssigneeName());
+                    if (uid != null) t.setAssigneeId(uid);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[PendingTask] 按名字解析领取人ID失败: {}", e.getMessage());
+        }
+    }
+
+    private List<PendingTaskDTO> filterByResponsiblePerson(List<PendingTaskDTO> tasks) {        if (UserContext.isTenantOwner() || UserContext.isTopAdmin()) {
             return tasks;
         }
         String currentUserId = UserContext.userId();

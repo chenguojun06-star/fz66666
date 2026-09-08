@@ -18,7 +18,6 @@ import { useTaskPanel } from './useTaskPanel';
 import { usePanelActions } from './usePanelActions';
 import { useTriggerDrag } from './useTriggerDrag';
 import SmartBubble from './SmartBubble';
-import TaskAggregationPanel from './TaskAggregationPanel';
 import TaskListView from './TaskListView';
 import TaskFormModal from './TaskFormModal';
 import PanelHeader from './PanelHeader';
@@ -129,7 +128,7 @@ const GlobalAiAssistant: React.FC = () => {
     panelView,
     showTaskForm, setShowTaskForm, editingTask, setEditingTask, taskSaving,
     myTasks, tasksLoading, taskStats,
-    openTaskPanel, closeTaskPanel, backToChat,
+    openTaskPanel,
     switchToTasks, switchToChat,
     handleTaskCreate, handleTaskEdit, handleTaskSave,
     handleTaskDelete, handleTaskClaim, handleTaskComplete,
@@ -215,19 +214,6 @@ const GlobalAiAssistant: React.FC = () => {
         onOpenTaskPanel={openTaskPanel}
         triggerEdge={triggerPos.edge}
       />
-
-      {/* 待办聚合面板 */}
-      {isTaskPanelOpen && (
-        <div className={styles.chatPanel} style={panelStyle}>
-          <TaskAggregationPanel
-            tasks={pendingItems}
-            onClose={closeTaskPanel}
-            onNavigate={onSafeNavigate}
-            onBackToChat={backToChat}
-            onOpenTaskCenter={() => { setIsTaskPanelOpen(false); setIsOpen(true); switchToTasks(); }}
-          />
-        </div>
-      )}
 
       {isOpen && !isTaskPanelOpen && (
         <div className={styles.chatPanel} style={panelStyle}>

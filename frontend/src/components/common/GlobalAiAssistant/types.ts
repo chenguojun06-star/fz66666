@@ -197,6 +197,11 @@ export interface TaskItem {
   endTime?: string;
   createdAt: string;
   updatedAt: string;
+  // 系统待办分类信息（透传自 PendingTaskDTO，统一面板按业务分类分组展示）
+  categoryLabel?: string;
+  categoryIcon?: string;
+  quantity?: number;
+  assigneeRole?: string;
   // 订单关联和监控新增字段
   orderLinkStatus?: 'NOT_LINKED' | 'LINKED' | 'ORDER_NOT_FOUND';
   progressChangeMonitorEnabled?: boolean;

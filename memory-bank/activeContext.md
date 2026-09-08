@@ -1,17 +1,22 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-07（D-314 小云个人创建任务追踪）
+> 最后更新：2026-09-08（D-315 PC统一待办面板 / D-316 手机端待办九区梳理，已推送）
 
 ---
 
 ## 最近变更（Latest Changes）
 
-### 2026-09-07 D-314 小云个人创建任务可追踪（待推送）
+### 2026-09-08 D-315 PC端小云统一待办面板 + D-316 手机端待办九区梳理（已推送，待部署回归）
 
-- [x] 根因：t_collaboration_task 无创建人字段；createTask 取 userId/username 未落库；getMyTasks 对 MANUAL 全放行无"我创建的"视图；全域待办未采集协作任务
-- [x] Flyway V202609070001：加 creator_id/creator_name + idx_collab_creator；createTask 落库创建人
-- [x] my-tasks 新增 scope=created/mine 追踪视图（scope 模式全量含已完成，默认行为不变）
+- [x] D-315 PC端：两套面板合并——删 TaskAggregationPanel（639行），TaskListView 升级统一面板（13业务分类chips+分组渲染+紧急筛选+状态/归属筛选+卡片去重）；铃铛/浮标角标/智能气泡入口统一走 openTaskPanel=setIsOpen+switchToTasks
+- [x] D-315 后端：resolveAssigneeIdsByName 在 filterByResponsiblePerson 前按名字批量回填 assigneeId（name→username 两级，`.and(q->q.in(name).or().in(username))` 括号写法），免跨表迁移根治人名匹配
+- [x] D-315 去 emoji：前端 CATEGORY_META 改纯 label、chips/组头/meta 行全文字（"订单 ORD123/款号 A001/截止 09-20"），SmartBubble/PendingItemsSection 同步；后端 icons 保留
+- [x] D-316 手机端：九区排序（生产作业→订单外发→行政审批→提醒）+ 占位首字 coverText/sourceLabel/overdueText/到货合并去重 + 超时提醒统一头部与×位 + 聊天顶部提醒区合并
+- [x] 验证：mvn compile EXIT=0 + tsc 0 错误
+- [ ] 待部署回归：PC统一面板分类分组与入口、手机端九区
+
+### 2026-09-07 D-314 小云个人创建任务可追踪（待推送）
 - [x] PendingTaskOrchestrator 新增 collectCollaborationTasks：我创建/我领取+未完成并入全域待办，深链 xiaoyun://tasks（前端 TaskAggregationPanel 识别协议打开任务面板）
 - [x] TaskListView 新增「全部/我创建的/我领取的」筛选 + 卡片创建人徽标；TaskItem 补 creatorName/creatorId
 - [x] 验证：mvn compile EXIT=0 + tsc 0 错误

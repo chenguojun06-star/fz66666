@@ -1,7 +1,34 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-07（新增 D-314 小云个人创建任务追踪）
+> 最后更新：2026-09-08（新增 D-315 PC统一待办面板 / D-316 手机端待办九区梳理）
+
+---
+
+## D-315：PC端小云待办两套面板合并统一 + 领取人ID运行时补全（2026-09-08）
+
+用户澄清优化重点一直在 PC 端（手机端那次改动保留不再动），并明确要求"待办任务全部要分类不要一锅粥"+ 合并遗留的两套面板（TaskAggregationPanel 系统待办 与 TaskListView 协作任务）。
+
+**决策**：
+1. **两套面板合并为唯一统一待办面板**：删除 TaskAggregationPanel.tsx/.module.css（639行）。TaskListView 升级——顶部分类筛选（全部/紧急/13个业务分类，前端 CATEGORY_META 与后端 PendingTaskOrchestrator.CATEGORY_META 完全一致），列表按业务分类分组渲染（CATEGORY_ORDER=生产作业→样衣→订单外发→财务→仓储），个人任务归"我的任务"组放最后；状态+归属筛选合并一行；保留搜索/系统任务"打开"直达/个人任务领取完成编辑。入口统一：铃铛/浮标角标/智能气泡"查看全部"/xiaoyun://tasks 深链全部走 openTaskPanel=setIsOpen(true)+switchToTasks()+refreshPendingTasks()。
+2. **卡片去重**：分组头已含分类→删 moduleTag/sysTag；title 已含 orderNo 时 meta 不再重复显示；数量/领取人/截止合并进 meta 行（flex-wrap）。
+3. **领取人ID运行时补全（免跨表迁移）**：返修/逾期/异常/外发（订单 merchandiser 名字）+样衣7环节（style_info assignee 名字字段）只存了人名。新增 resolveAssigneeIdsByName()：filterByResponsiblePerson 前按名字批量查 User 回填 assigneeId（name→username 两级匹配，`.and(q -> q.in(name).or().in(username))` 括号写法），解析不到由名字/角色匹配兜底。
+4. **emoji 全清**（用户"你加了这么多emoji图标吗"）：分类chips/组头/卡片meta行的所有 emoji 改纯文字标签（"裁剪任务 (3)"/"订单 ORD123"/"截止 09-20"）；SmartBubble 分类角标与 PendingItemsSection 前置图标同步去；后端 CATEGORY_META icons 保留（其他客户端可能用）。
+
+**理由**：用户要求"任务全部要分类不要一锅粥+界面干净工整不要花里胡哨装饰"；assigneeId 运行时解析是免跨表迁移的低风险根治，名字匹配只做兜底。
+
+---
+
+## D-316：手机端小云待办任务九区梳理（2026-09-08）
+
+用户原话"小云里面的任务全部要分类不要一锅粥到一起…顶部主要信息下面又重复显示一份一样"——本轮针对手机端（小程序 ai-assistant 铃铛面板）。
+
+**决策**：
+1. **九区按业务逻辑排序**：生产作业（裁剪→质检→返修→采购）→ 订单外发（延期订单→发货/收货）→ 行政审批（待审批用户→待审批注册）→ 提醒（超时提醒）。
+2. **卡片去重**：无封面占位重复款号→改首字（coverText）；采购卡"待处理"标签与分组名重复→改"样衣"来源标记；"N项物料"名称与标签重复→只留一处；数量与到货数重复→有到货时只显示"到货 12/50"；延期卡"逾期"标签→"超期N天"（overdueText）；发货通知描述与状态标签重复→只放工厂名。
+3. **样式统一**：超时提醒区块改用与其他八区一致的头部+角标结构（删 task-section-header/section-title/section-badge 死样式），关闭×按钮全部统一到操作列；发货/收货补统一彩色头部；聊天页顶部"小云主动洞察"+"实时提醒"两个相似提醒区合并为一块"提醒"。
+
+**理由**：用户"干净整洁工工整整、主次分明、不要花里胡哨"的界面标准（见 [[fashion66666-ui-principles]]）。
 
 ---
 

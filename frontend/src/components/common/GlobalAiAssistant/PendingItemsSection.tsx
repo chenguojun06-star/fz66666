@@ -35,7 +35,6 @@ const PendingItemsSection: React.FC<PendingItemsSectionProps> = ({
           <div key={item.id || item.orderNo} className={msgStyles.pendingItem} style={{position:'relative'}}
             onClick={() => onNavigate(navPath)}
           >
-            <span>{item.categoryIcon || '⚠️'}</span>
             <span style={{flex:1}}>
               {isPendingTask
                 ? `${item.title}${item.description ? ' — ' + item.description : ''}`
