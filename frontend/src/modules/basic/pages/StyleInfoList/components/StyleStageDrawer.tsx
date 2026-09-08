@@ -70,6 +70,15 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
     onRefresh();
   };
 
+  // 审核/入库阶段是否有真实数据：全空(未开始)时顶部摘要已说明"尚未进入"，则不再重复渲染信息面板
+  const confirmHasData = React.useMemo(() => {
+    if (selectedStage?.stage.key !== 'confirm') return false;
+    return confirm.confirmReviewerLabel !== '-'
+      || confirm.confirmReviewTimeLabel !== '待领取'
+      || confirm.confirmInboundTimeLabel !== '待领取'
+      || Boolean(selectedStage.record.sampleReviewComment);
+  }, [selectedStage, confirm.confirmReviewerLabel, confirm.confirmReviewTimeLabel, confirm.confirmInboundTimeLabel]);
+
   return (
     <Drawer
       open={Boolean(selectedStage)}
@@ -330,25 +339,31 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
               )}
             </div>
           ) : null}
-          {selectedStage.stage.key === 'confirm' ? (
+          {selectedStage.stage.key === 'confirm' && confirmHasData ? (
             <div className="style-smart-stage-modal__panel">
               <div className="style-smart-stage-modal__panel-title">审核 / 入库信息</div>
               <div className="style-smart-stage-modal__facts">
-                <div className="style-smart-stage-modal__fact">
-                  <span>审核人</span>
-                  <strong
-                    style={{ cursor: confirm.confirmReviewerLabel !== '-' ? 'pointer' : 'default', color: confirm.confirmReviewerLabel !== '-' ? 'var(--color-primary)' : undefined, textDecoration: confirm.confirmReviewerLabel !== '-' ? 'underline' : undefined }}
-                    onClick={() => confirm.confirmReviewerLabel !== '-' && setRemarkTarget({ open: true, styleNo: selectedStage?.record?.styleNo || '', defaultRole: '审核人 — ' + confirm.confirmReviewerLabel })}
-                  >{confirm.confirmReviewerLabel}</strong>
-                </div>
-                <div className="style-smart-stage-modal__fact">
-                  <span>审核时间</span>
-                  <strong>{confirm.confirmReviewTimeLabel}</strong>
-                </div>
-                <div className="style-smart-stage-modal__fact">
-                  <span>入库时间</span>
-                  <strong>{confirm.confirmInboundTimeLabel}</strong>
-                </div>
+                {confirm.confirmReviewerLabel !== '-' ? (
+                  <div className="style-smart-stage-modal__fact">
+                    <span>审核人</span>
+                    <strong
+                      style={{ cursor: 'pointer', color: 'var(--color-primary)', textDecoration: 'underline' }}
+                      onClick={() => setRemarkTarget({ open: true, styleNo: selectedStage?.record?.styleNo || '', defaultRole: '审核人 — ' + confirm.confirmReviewerLabel })}
+                    >{confirm.confirmReviewerLabel}</strong>
+                  </div>
+                ) : null}
+                {confirm.confirmReviewTimeLabel !== '待领取' ? (
+                  <div className="style-smart-stage-modal__fact">
+                    <span>审核时间</span>
+                    <strong>{confirm.confirmReviewTimeLabel}</strong>
+                  </div>
+                ) : null}
+                {confirm.confirmInboundTimeLabel !== '待领取' ? (
+                  <div className="style-smart-stage-modal__fact">
+                    <span>入库时间</span>
+                    <strong>{confirm.confirmInboundTimeLabel}</strong>
+                  </div>
+                ) : null}
               </div>
               {(selectedStage.record.sampleReviewComment || selectedStage.stage.details.length > 0) ? (
                 <div className="style-smart-stage-modal__details style-smart-stage-modal__details--compact">
