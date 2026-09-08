@@ -11,6 +11,7 @@ import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.FactoryShipmentService;
 import com.fashion.supplychain.production.service.FactoryShipmentDetailService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.helper.OrderLogHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -51,6 +52,8 @@ public class FactoryShipmentOrchestrator {
     private CuttingBundleService cuttingBundleService;
     @Autowired
     private ProductionOrderService productionOrderService;
+    @Autowired(required = false)
+    private OrderLogHelper orderLogHelper;
     @Autowired
     private FactoryShipmentDetailService factoryShipmentDetailService;
 
@@ -237,6 +240,11 @@ public class FactoryShipmentOrchestrator {
         factoryShipmentService.save(fs);
         factoryShipmentDetailService.saveDetails(fs.getId(), details, UserContext.tenantId());
 
+        // 写订单操作记录：外发发货
+        if (orderLogHelper != null && StringUtils.hasText(order.getOrderNo())) {
+            orderLogHelper.writeOrderLog(order.getOrderNo(), null, "外发发货", fs.getShipmentNo());
+        }
+
         log.info("[FactoryShipment] 发货 shipmentNo={} orderId={} qty={} lines={} factory={}",
                 fs.getShipmentNo(), orderId, shipQuantity, details.size(), order.getFactoryName());
         return Result.success(fs);
@@ -324,6 +332,11 @@ public class FactoryShipmentOrchestrator {
         }
 
         revertBundleFactoryIdOnReceive(fs.getOrderId());
+
+        // 写订单操作记录：外发收货
+        if (orderLogHelper != null && StringUtils.hasText(fs.getOrderNo())) {
+            orderLogHelper.writeOrderLog(fs.getOrderNo(), null, "外发收货", "到货 " + totalReceived + "/" + shipQty + " 件");
+        }
 
         log.info("[FactoryShipment] 收货确认 shipmentId={} orderId={} shipQty={} 本次={} 累计={} status={} detailLines={}",
                 shipmentId, fs.getOrderId(), fs.getShipQuantity(), actualQty, totalReceived,

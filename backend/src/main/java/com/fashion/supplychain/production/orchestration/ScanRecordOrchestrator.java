@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.helper.OrderLogHelper;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.util.NumberUtils;
 import com.fashion.supplychain.common.util.QrCodeSigner;
@@ -55,6 +56,7 @@ public class ScanRecordOrchestrator {
     @Autowired private ScanRecordService scanRecordService;
     @Autowired private PatternScanRecordService patternScanRecordService;
     @Autowired private ProductionOrderService productionOrderService;
+    @Autowired private OrderLogHelper orderLogHelper;
     @Autowired private CuttingBundleService cuttingBundleService;
     @Autowired private ProductWarehousingService productWarehousingService;
     @Autowired private DuplicateScanPreventer duplicateScanPreventer;
@@ -225,6 +227,13 @@ public class ScanRecordOrchestrator {
                 String bundleNo = TextUtils.safeText(result.get("bundleNo"));
                 String undoType = TextUtils.safeText(result.get("undoType"));
                 logAppendHelper.appendUndo(orderId, scanType, bundleNo, undoType);
+                // 写订单操作记录：撤回扫码
+                if (orderLogHelper != null && orderId != null && !orderId.trim().isEmpty()) {
+                    try {
+                        ProductionOrder o = productionOrderService.getById(orderId);
+                        if (o != null) orderLogHelper.writeOrderLog(o.getOrderNo(), null, "撤回扫码", undoType);
+                    } catch (Exception ignore) { /* 不阻断主流程 */ }
+                }
             }
         } catch (Exception e) {
             log.debug("[ScanLog] 撤回日志记录失败（不阻断）: {}", e.getMessage());

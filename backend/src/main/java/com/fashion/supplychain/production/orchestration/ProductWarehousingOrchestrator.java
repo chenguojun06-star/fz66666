@@ -13,6 +13,7 @@ import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.OrderRemarkHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingPostActionHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingQueryHelper;
+import com.fashion.supplychain.production.helper.OrderLogHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingPendingHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingRepairHelper;
 import com.fashion.supplychain.production.helper.ProductWarehousingRollbackHelper;
@@ -47,6 +48,9 @@ public class ProductWarehousingOrchestrator {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired(required = false)
+    private OrderLogHelper orderLogHelper;
 
     @Autowired
     private CuttingBundleService cuttingBundleService;
@@ -202,6 +206,13 @@ public class ProductWarehousingOrchestrator {
         logAppendHelper.appendSingleWarehousing(orderId,
                 productWarehousing.getQualifiedQuantity() != null ? productWarehousing.getQualifiedQuantity() : 0,
                 productWarehousing.getUnqualifiedQuantity() != null ? productWarehousing.getUnqualifiedQuantity() : 0);
+
+        // 写订单操作记录：质检入库
+        if (orderLogHelper != null && order != null && StringUtils.hasText(order.getOrderNo())) {
+            try {
+                orderLogHelper.writeOrderLog(order.getOrderNo(), null, "质检入库", null);
+            } catch (Exception ignore) { /* 不阻断主流程 */ }
+        }
 
         return true;
     }
