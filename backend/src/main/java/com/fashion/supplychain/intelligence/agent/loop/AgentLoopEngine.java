@@ -284,11 +284,38 @@ public class AgentLoopEngine {
                 return runToolExecutionPhase(ctx, cb, iter, assistantMessage, result);
             }
         }
+
+        // ★ 数据问题强制查库：业务数据查询第一轮若模型未调任何工具，注入强制指令再推一轮，
+        // 严禁编造单号/日期/数量/百分比；只推一次，避免死循环与无谓延迟。
+        if ((result.getToolCalls() == null || result.getToolCalls().isEmpty())
+                && shouldNudgeToolCall(ctx, iter)) {
+            ctx.getMessages().add(AiMessage.system(
+                    "[系统强制要求] 用户在询问业务实时数据（订单/裁剪/延期/逾期/库存/工资/进度等），"
+                    + "但你刚才没有调用任何查询工具就直接回答了。请立即调用可用的查询工具获取真实数据后再组织回答；"
+                    + "严禁编造任何具体单号、日期、数量、百分比。若工具查不到相关数据，请如实告知“未查询到相关数据”，不要虚构。"));
+            cb.onThinking(iter, "检测到需要实时数据，正在调用查询工具…");
+            return null; // 继续下一轮，让模型真正调工具
+        }
+
         // P0-4: span final_answer
         try (LangfuseSpanHelper.SpanScope finalScope = langfuseSpanHelper == null
                 ? LangfuseSpanHelper.SpanScope.NOOP : langfuseSpanHelper.startSpan("final_answer")) {
             return handleFinalAnswer(ctx, result.getContent(), cb);
         }
+    }
+
+    /**
+     * 判断是否需要在第一轮强制模型调用工具查询真实数据。
+     *
+     * <p>仅当：第一轮 && 非问候 && 有可用工具 && 命中业务数据关键词。
+     * 最多推一次，避免死循环与无谓延迟。
+     */
+    private boolean shouldNudgeToolCall(AgentLoopContext ctx, int iter) {
+        if (iter != 1) return false;
+        String msg = ctx.getUserMessage();
+        if (msg == null || XiaoyunPatterns.isGreeting(msg)) return false;
+        if (ctx.getVisibleApiTools() == null || ctx.getVisibleApiTools().isEmpty()) return false;
+        return XiaoyunPatterns.isBusinessKeyword(msg);
     }
 
     private IntelligenceInferenceResult performInference(AgentLoopContext ctx, AgentLoopCallback cb, int iter) {
@@ -858,6 +885,14 @@ public class AgentLoopEngine {
             if (toolCount == 0) {
                 if (XiaoyunPatterns.isGreeting(ctx.getUserMessage())) {
                     return content;
+                }
+                // 业务数据问题却零工具调用：内容大概率是编造的具体单号/日期/数量/百分比，
+                // 把提示从底部小字升级为顶部醒目警告，避免用户误信。
+                if (XiaoyunPatterns.isBusinessKeyword(ctx.getUserMessage())) {
+                    return "⚠️ **本次回答未查询系统实时数据，内容为模型推测**——其中的具体单号、日期、数量、百分比"
+                            + "均不可作为依据。\n如需准确数据，请告诉我具体订单号/款号/时间范围，我会实时查询。\n\n---\n\n"
+                            + content
+                            + "\n\n---\n> 💡 提示：以上回答基于模型推理，未查询实时数据。";
                 }
                 content += "\n\n---\n> 💡 提示：以上回答基于模型推理，未查询实时数据。如需准确数据请明确说明。";
                 return content;
