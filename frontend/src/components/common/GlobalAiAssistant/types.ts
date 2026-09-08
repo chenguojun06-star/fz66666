@@ -187,6 +187,8 @@ export interface TaskItem {
   status: TaskStatus;
   assigneeId?: string;
   assigneeName?: string;
+  creatorId?: string;
+  creatorName?: string;
   orderNo?: string;
   styleNo?: string;
   deepLinkPath?: string;

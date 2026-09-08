@@ -45,6 +45,16 @@ public class CollaborationTask {
 
     private String assigneeName;
 
+    /**
+     * 创建人用户ID（个人创建的任务可追踪：谁创建的）
+     */
+    private Long creatorId;
+
+    /**
+     * 创建人登录名（与 assigneeName 区分：assigneeName 是领取人，creatorName 是创建人）
+     */
+    private String creatorName;
+
     private String acceptanceCriteria;
 
     private LocalDateTime escalatedAt;

@@ -28,6 +28,7 @@
 .createBtn:hover { background: var(--xiaoyun-primary-hover); }
 
 .filterRow { padding: 8px 16px 0; display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+.filterRow + .filterRow { padding-top: 6px; }
 
 .filterChip {
   height: 28px; padding: 0 10px; border-radius: 14px;

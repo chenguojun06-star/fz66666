@@ -3029,3 +3029,11 @@ D-065 修复后领取成功，但 /picking/list 500。根因：43192e735 给 Mat
 - [x] 新增外发收货 SHIPMENT / 样衣借还 SAMPLE_LOAN（assigneeId=borrowerId）/ 领料出库 MATERIAL_PICKING（assigneeId=pickerId）三类 collector
 - [x] mvn compile EXIT=0 + tsc 0 错误
 - [ ] 遗留待拍板：merchandiser/xxxAssignee 仅存姓名无用户ID，需补 xxxAssigneeId 落库根治
+
+### 2026-09-07 D-314 小云个人创建任务可追踪（待推送）
+- [x] 根因：t_collaboration_task 无创建人字段；createTask 取 userId/username 未落库；getMyTasks 对 MANUAL 全放行无"我创建的"视图；全域待办未采集协作任务
+- [x] Flyway V202609070001：加 creator_id/creator_name + idx_collab_creator；createTask 落库创建人
+- [x] my-tasks 新增 scope=created/mine 追踪视图（scope 模式全量含已完成，默认行为不变）
+- [x] PendingTaskOrchestrator 新增 collectCollaborationTasks：我创建/我领取+未完成并入全域待办，深链 xiaoyun://tasks（前端 TaskAggregationPanel 识别协议打开任务面板）
+- [x] TaskListView 新增「全部/我创建的/我领取的」筛选 + 卡片创建人徽标；TaskItem 补 creatorName/creatorId
+- [x] 验证：mvn compile EXIT=0 + tsc 0 错误

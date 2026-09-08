@@ -1,7 +1,21 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-07（新增 D-313 小云待办覆盖领取类任务全量）
+> 最后更新：2026-09-07（新增 D-314 小云个人创建任务追踪）
+
+---
+
+## D-314：小云个人创建任务可追踪——创建人落库 + scope 追踪视图 + 并入全域待办（2026-09-07）
+
+用户问"小云里面任务创建 是不是可以追踪 就是一些个人创建的"。调查结论：**此前完全不可追踪**——`t_collaboration_task` 无创建人字段，`createTask` 取到 userId/username 但只存局部变量未落库；`getMyTasks` 对所有 MANUAL 任务全放行（谁创建的都可见），没有"我创建的"视图；小云全域待办聚合也没采集协作任务。
+
+**决策**：
+1. **创建人落库**：`t_collaboration_task` 加 `creator_id`（BIGINT）+ `creator_name`（VARCHAR，存登录名 username）+ `idx_collab_creator(tenant_id, creator_id)` 索引（Flyway 幂等加列）；`createTask` 把 UserContext 的 userId/username 写入。存量数据无法追溯创建人（此前未存），保持 NULL 兼容。
+2. **scope 追踪视图**：`GET /intelligence/task-center/my-tasks` 新增 `scope` 参数——`created`=只看我创建的（creatorId 精确匹配，退化 creatorName 匹配）、`mine`=只看我领取的（assigneeName 匹配）、默认=既有行为（我领取的 + 全部手动任务）。scope 模式下全量拉取（含已完成历史，排除 CANCELLED），使"我创建的"能追踪到已完成任务；默认模式维持 findActiveByTenant 只返回活跃任务不改变既有行为。
+3. **并入全域待办**：`PendingTaskOrchestrator` 新增 `collectCollaborationTasks`——把「我创建且未完成」+「我领取且未完成」的协作任务并入小云待办聚合，taskType=COLLAB_TASK，深链 `xiaoyun://tasks?taskId=N`；前端 `TaskAggregationPanel` 识别 `xiaoyun://` 协议后打开小云协作任务面板（不走路由白名单），定位到对应任务；filterByResponsiblePerson 对 COLLAB_TASK 直接放行（collector 内已按人过滤）。
+4. **前端追踪展示**：`TaskListView` 顶部新增「全部 / 我创建的 / 我领取的」scope 筛选行（按 currentUsername 匹配 creatorName/assigneeName，前端本地过滤）+ 卡片 meta 行显示"✍️ 创建:xxx"；TaskItem 类型补 creatorName/creatorId。
+
+**理由**：用户核心诉求是"个人创建的任务可以被追踪"，三处缺口（不落库/无视图/不入聚合）都要补齐才能形成闭环；scope 参数向后兼容（不传 scope 行为不变），前端本地过滤避免引入额外请求往返。
 
 ---
 

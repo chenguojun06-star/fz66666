@@ -110,9 +110,10 @@ public class IntelligenceTaskCenterController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String priority,
             @RequestParam(required = false) String module,
+            @RequestParam(required = false) String scope,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "50") int size) {
-        return Result.success(taskCenterOrchestrator.getMyTasks(status, priority, module, page, size));
+        return Result.success(taskCenterOrchestrator.getMyTasks(status, priority, module, scope, page, size));
     }
 
     @GetMapping("/task-stats")

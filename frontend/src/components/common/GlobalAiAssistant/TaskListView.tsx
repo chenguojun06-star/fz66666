@@ -24,6 +24,7 @@ const MODULE_LABELS: Record<string, string> = {
 interface Props {
   tasks: TaskItem[];
   loading: boolean;
+  currentUsername?: string;
   onClaim: (id: string) => void;
   onComplete: (id: string) => void;
   onEdit: (task: TaskItem) => void;
@@ -31,12 +32,28 @@ interface Props {
   onNavigate: (path: string) => void;
 }
 
-const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, onEdit, onCreate, onNavigate }) => {
+const SCOPE_TABS = [
+  { key: 'all', label: '全部' },
+  { key: 'created', label: '我创建的' },
+  { key: 'mine', label: '我领取的' },
+];
+
+const TaskListView: React.FC<Props> = ({ tasks, loading, currentUsername, onClaim, onComplete, onEdit, onCreate, onNavigate }) => {
   const [statusTab, setStatusTab] = useState('all');
+  const [scopeTab, setScopeTab] = useState('all');
   const [search, setSearch] = useState('');
 
+  // 归属筛选：全部 / 我创建的（creatorName 等于当前用户名）/ 我领取的（assigneeName 等于当前用户名）
+  const scopedTasks = useMemo(() => {
+    if (scopeTab === 'all' || !currentUsername) return tasks;
+    const me = currentUsername;
+    if (scopeTab === 'created') return tasks.filter(t => t.creatorName === me);
+    if (scopeTab === 'mine') return tasks.filter(t => t.assigneeName === me);
+    return tasks;
+  }, [tasks, scopeTab, currentUsername]);
+
   const filtered = useMemo(() => {
-    let result = tasks;
+    let result = scopedTasks;
     if (statusTab !== 'all') result = result.filter(t => t.status === statusTab);
     if (search.trim()) {
       const kw = search.trim().toLowerCase();
@@ -47,13 +64,22 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, on
       );
     }
     return result;
-  }, [tasks, statusTab, search]);
+  }, [scopedTasks, statusTab, search]);
 
   const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: tasks.length };
-    for (const t of tasks) counts[t.status] = (counts[t.status] || 0) + 1;
+    const counts: Record<string, number> = { all: scopedTasks.length };
+    for (const t of scopedTasks) counts[t.status] = (counts[t.status] || 0) + 1;
     return counts;
-  }, [tasks]);
+  }, [scopedTasks]);
+
+  const scopeCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: tasks.length, created: 0, mine: 0 };
+    for (const t of tasks) {
+      if (currentUsername && t.creatorName === currentUsername) counts.created++;
+      if (currentUsername && t.assigneeName === currentUsername) counts.mine++;
+    }
+    return counts;
+  }, [tasks, currentUsername]);
 
   const handleCardClick = (task: TaskItem) => {
     if (task.source === 'system' && task.deepLinkPath) {
@@ -89,6 +115,16 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, on
           <input className={styles.searchInput} placeholder="搜索任务/订单号/款号..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <button className={styles.createBtn} onClick={onCreate}><PlusOutlined />新建任务</button>
+      </div>
+
+      <div className={styles.filterRow}>
+        {SCOPE_TABS.map(tab => (
+          <button key={tab.key}
+            className={`${styles.filterChip} ${scopeTab === tab.key ? styles.filterChipActive : ''}`}
+            onClick={() => setScopeTab(tab.key)}>
+            {tab.label} ({scopeCounts[tab.key] || 0})
+          </button>
+        ))}
       </div>
 
       <div className={styles.filterRow}>
@@ -134,6 +170,7 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, onClaim, onComplete, on
                     <span>🔔 提醒: {task.reminderCount}次</span>
                   )}
                   {task.assigneeName && <span>👤 {task.assigneeName}</span>}
+                  {task.creatorName && <span>✍️ 创建:{task.creatorName}</span>}
                   {task.endTime && <span>📅 {task.endTime.slice(0, 10)}</span>}
                 </div>
                 <div className={styles.taskActions} onClick={e => e.stopPropagation()}>

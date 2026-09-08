@@ -224,6 +224,7 @@ const GlobalAiAssistant: React.FC = () => {
             onClose={closeTaskPanel}
             onNavigate={onSafeNavigate}
             onBackToChat={backToChat}
+            onOpenTaskCenter={() => { setIsTaskPanelOpen(false); setIsOpen(true); switchToTasks(); }}
           />
         </div>
       )}
@@ -313,6 +314,7 @@ const GlobalAiAssistant: React.FC = () => {
               {panelView === 'tasks' && (
                 <TaskListView
                   tasks={myTasks} loading={tasksLoading}
+                  currentUsername={user?.username || user?.name}
                   onClaim={handleTaskClaim} onComplete={handleTaskComplete}
                   onEdit={handleTaskEdit} onCreate={handleTaskCreate}
                   onNavigate={onSafeNavigate}

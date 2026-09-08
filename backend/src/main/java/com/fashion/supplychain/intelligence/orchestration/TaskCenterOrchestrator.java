@@ -93,6 +93,8 @@ public class TaskCenterOrchestrator {
         detail.put("currentStage", task.getCurrentStage());
         detail.put("nextStep", task.getNextStep());
         detail.put("assigneeName", task.getAssigneeName());
+        detail.put("creatorName", task.getCreatorName());
+        detail.put("creatorId", task.getCreatorId() != null ? String.valueOf(task.getCreatorId()) : null);
         detail.put("acceptanceCriteria", task.getAcceptanceCriteria());
         detail.put("sourceType", task.getSourceType());
         detail.put("sourceInstruction", task.getSourceInstruction());
@@ -212,6 +214,17 @@ public class TaskCenterOrchestrator {
         task.setOrderLinkStatus(TaskOrderMonitorOrchestrator.OrderLinkStatus.NOT_LINKED);
         task.setProgressChangeMonitorEnabled(true);
         task.setReminderCount(0);
+        // D-314：个人创建的任务落库创建人（此前 userId/username 只取未存，导致无法追踪"谁创建的任务"）
+        if (StringUtils.hasText(username)) {
+            task.setCreatorName(username);
+        }
+        if (userId != null) {
+            try {
+                task.setCreatorId(Long.valueOf(userId));
+            } catch (NumberFormatException e) {
+                log.warn("[TaskCenter] 创建人ID解析失败: {}", userId);
+            }
+        }
 
         if (StringUtils.hasText(orderNo)) {
             task.setOrderNo(orderNo);
@@ -330,18 +343,40 @@ public class TaskCenterOrchestrator {
         return result;
     }
 
-    public Map<String, Object> getMyTasks(String status, String priority, String module, int page, int size) {
+    public Map<String, Object> getMyTasks(String status, String priority, String module, String scope, int page, int size) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String username = StringUtils.hasText(UserContext.username()) ? UserContext.username() : null;
 
-        List<CollaborationTask> all = collaborationTaskMapper.findActiveByTenant(tenantId, 200);
+        // scope 模式（created/mine）为追踪视图：需包含已完成历史任务，故全量拉取（排除已取消）；
+        // 默认（无 scope）沿用 findActiveByTenant 只返回活跃任务（PENDING/ACCEPTED/IN_PROGRESS/ESCALATED）
+        List<CollaborationTask> all;
+        if ("created".equalsIgnoreCase(scope) || "mine".equalsIgnoreCase(scope)) {
+            all = collaborationTaskMapper.selectList(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CollaborationTask>()
+                    .eq(CollaborationTask::getTenantId, tenantId)
+                    .ne(CollaborationTask::getTaskStatus, "CANCELLED")
+                    .last("LIMIT 500"));
+        } else {
+            all = collaborationTaskMapper.findActiveByTenant(tenantId, 200);
+        }
         List<CollaborationTask> filtered = new ArrayList<>();
 
         for (CollaborationTask t : all) {
             boolean isMine = username != null && username.equals(t.getAssigneeName());
             boolean isManual = CollaborationTask.SourceType.MANUAL.name().equals(t.getSourceType());
-            if (!isMine && !isManual) continue;
+            // scope=created：只看我创建的（个人创建的任务追踪）
+            if ("created".equalsIgnoreCase(scope)) {
+                boolean isCreatedByMe = t.getCreatorId() != null
+                        ? Objects.equals(String.valueOf(t.getCreatorId()), UserContext.userId())
+                        : (StringUtils.hasText(t.getCreatorName()) && t.getCreatorName().equals(username));
+                if (!isCreatedByMe) continue;
+            } else if ("mine".equalsIgnoreCase(scope)) {
+                // scope=mine：只看我领取的
+                if (!isMine) continue;
+            } else {
+                // 默认：我领取的 + 全部手动创建任务（既有行为）
+                if (!isMine && !isManual) continue;
+            }
             if ("CANCELLED".equals(t.getTaskStatus())) continue;
             filtered.add(t);
         }
@@ -433,6 +468,8 @@ public class TaskCenterOrchestrator {
             v.put("priority", t.getPriority() != null ? t.getPriority().toLowerCase() : "medium");
             v.put("status", t.getTaskStatus() != null ? t.getTaskStatus().toLowerCase() : "pending");
             v.put("assigneeName", t.getAssigneeName());
+            v.put("creatorName", t.getCreatorName());
+            v.put("creatorId", t.getCreatorId() != null ? String.valueOf(t.getCreatorId()) : null);
             v.put("orderNo", t.getOrderNo());
             v.put("styleNo", "");
             v.put("deepLinkPath", "");

@@ -12,6 +12,7 @@ import com.fashion.supplychain.finance.orchestration.MaterialReconciliationOrche
 import com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrator;
 import com.fashion.supplychain.intelligence.dto.PendingTaskDTO;
 import com.fashion.supplychain.intelligence.dto.PendingTaskSummaryDTO;
+import com.fashion.supplychain.intelligence.entity.CollaborationTask;
 import com.fashion.supplychain.production.entity.FactoryShipment;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.ProductionExceptionReport;
@@ -76,6 +77,7 @@ public class PendingTaskOrchestrator {
         CATEGORY_META.put("SHIPMENT",          new String[]{"外发收货",   "🚚"});
         CATEGORY_META.put("SAMPLE_LOAN",       new String[]{"样衣借还",   "📤"});
         CATEGORY_META.put("MATERIAL_PICKING",  new String[]{"领料出库",   "🧰"});
+        CATEGORY_META.put("COLLAB_TASK",       new String[]{"协作任务",   "🤝"});
     }
 
     @Autowired private CuttingTaskOrchestrator cuttingTaskOrchestrator;
@@ -94,6 +96,7 @@ public class PendingTaskOrchestrator {
     @Autowired private FactoryShipmentService factoryShipmentService;
     @Autowired private MaterialPickingService materialPickingService;
     @Autowired private SampleLoanMapper sampleLoanMapper;
+    @Autowired private com.fashion.supplychain.intelligence.mapper.CollaborationTaskMapper collaborationTaskMapper;
 
     public List<PendingTaskDTO> getMyPendingTasks() {
         List<PendingTaskDTO> all = new ArrayList<>();
@@ -110,6 +113,7 @@ public class PendingTaskOrchestrator {
         collectSafely("shipment", this::collectShipmentTasks, all);
         collectSafely("sampleLoan", this::collectSampleLoanTasks, all);
         collectSafely("materialPicking", this::collectMaterialPickingTasks, all);
+        collectSafely("collabTask", this::collectCollaborationTasks, all);
         // 按领取人过滤：租户老板看全部，其他人只看自己负责的
         all = filterByResponsiblePerson(all);
         // 全局去重：防止不同 collector 因条件交叉产生重复 id（保留首次出现的那条）
@@ -741,6 +745,75 @@ public class PendingTaskOrchestrator {
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 协作任务（小云个人创建/领取）：把「我创建且未完成」+「我领取且未完成」的协作任务并入全域待办。
+     * 创建人字段（creatorName/creatorId）D-314 起在 createTask 时落库，存量任务无创建人则按领取人兜底。
+     * 深链用 xiaoyun://tasks 协议，前端 TaskAggregationPanel 识别后打开小云协作任务面板并定位到该任务。
+     */
+    private List<PendingTaskDTO> collectCollaborationTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        String currentUserId = UserContext.userId();
+        String username = UserContext.username();
+        List<CollaborationTask> tasks = collaborationTaskMapper.findActiveByTenant(tenantId, MAX_PER_CATEGORY);
+        if (tasks == null || tasks.isEmpty()) return List.of();
+        LocalDateTime now = LocalDateTime.now();
+        List<PendingTaskDTO> result = new ArrayList<>();
+        for (CollaborationTask t : tasks) {
+            // 只看未完成的任务（findActiveByTenant 已排除 COMPLETED/CANCELLED，这里防御再滤一遍终态）
+            if (t.getTaskStatus() == null
+                    || "COMPLETED".equals(t.getTaskStatus())
+                    || "CANCELLED".equals(t.getTaskStatus())) {
+                continue;
+            }
+            // 归属判定：我创建的 或 我领取的（优先按 ID 精确匹配，退化到名字匹配）
+            boolean createdByMe = (t.getCreatorId() != null && currentUserId != null
+                    && String.valueOf(t.getCreatorId()).equals(currentUserId))
+                    || (t.getCreatorId() == null && StringUtils.hasText(t.getCreatorName())
+                    && t.getCreatorName().equals(username));
+            boolean assignedToMe = StringUtils.hasText(t.getAssigneeName())
+                    && t.getAssigneeName().equals(username);
+            if (!createdByMe && !assignedToMe) continue;
+
+            PendingTaskDTO dto = new PendingTaskDTO();
+            dto.setId("COLLAB_" + t.getId());
+            dto.setTaskType("COLLAB_TASK");
+            dto.setModule("system");
+            dto.setTitle(safe(t.getInstruction()));
+            String desc = safe(t.getSourceInstruction());
+            if (StringUtils.hasText(t.getTargetRole())) {
+                desc += " · " + t.getTargetRole();
+            }
+            dto.setDescription(desc);
+            dto.setOrderNo(safe(t.getOrderNo()));
+            dto.setStyleNo(safe(t.getStyleNo()));
+            // 深链打开小云协作任务面板（前端识别 xiaoyun:// 协议）
+            dto.setDeepLinkPath("xiaoyun://tasks?taskId=" + t.getId());
+            dto.setPriority("CRITICAL".equals(t.getPriority()) || "HIGH".equals(t.getPriority()) ? "high"
+                    : "LOW".equals(t.getPriority()) ? "low" : "medium");
+            dto.setCreatedAt(t.getCreatedAt());
+            if (t.getDueAt() != null) {
+                dto.setEndTime(t.getDueAt().toString());
+            }
+            dto.setTaskStatus("pending");
+            if (StringUtils.hasText(t.getAssigneeName())) {
+                dto.setAssigneeName(t.getAssigneeName());
+                dto.setAssigneeRole("领取人");
+            }
+            if (createdByMe && StringUtils.hasText(t.getCreatorName())) {
+                dto.setAssigneeName(t.getCreatorName());
+                dto.setAssigneeRole("我创建");
+            }
+            // 逾期（dueAt 已过且未完成）升级为 high
+            if (t.getDueAt() != null && t.getDueAt().isBefore(now)) {
+                dto.setPriority("high");
+            }
+            fillCategoryMeta(dto);
+            result.add(dto);
+        }
+        return result;
+    }
+
     static void fillCategoryMeta(PendingTaskDTO dto) {
         String[] meta = CATEGORY_META.get(dto.getTaskType());
         if (meta != null) {
@@ -835,6 +908,10 @@ public class PendingTaskOrchestrator {
             }
             if ("STYLE_DEVELOPMENT".equals(taskType)) {
                 return isProductionOrMerchandiser || isFactoryUser;
+            }
+            // COLLAB_TASK 在 collector 内已按"我创建/我领取"过滤，直接放行
+            if ("COLLAB_TASK".equals(taskType)) {
+                return true;
             }
             return false;
         }).collect(Collectors.toList());

@@ -10,6 +10,8 @@ interface TaskAggregationPanelProps {
   onClose: () => void;
   onNavigate: (path: string) => void;
   onBackToChat?: () => void;
+  /** 协作任务深链回调：pending 卡片 deepLinkPath 为 xiaoyun://tasks 时打开协作任务面板 */
+  onOpenTaskCenter?: () => void;
 }
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
@@ -26,7 +28,7 @@ const MODULE_LABELS: Record<string, string> = {
   system: '系统',
 };
 
-const TaskAggregationPanel: React.FC<TaskAggregationPanelProps> = ({ tasks, onClose, onNavigate, onBackToChat }) => {
+const TaskAggregationPanel: React.FC<TaskAggregationPanelProps> = ({ tasks, onClose, onNavigate, onBackToChat, onOpenTaskCenter }) => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchKeyword, setSearchKeyword] = useState('');
   const debouncedSearchKeyword = useDebouncedValue(searchKeyword, 200);
@@ -89,6 +91,11 @@ const TaskAggregationPanel: React.FC<TaskAggregationPanelProps> = ({ tasks, onCl
   }, [filteredTasks]);
 
   const handleTaskClick = useCallback((task: PendingTaskDTO) => {
+    // 协作任务深链：打开小云协作任务面板（个人创建/领取的任务在此领取、完成、编辑）
+    if (task.deepLinkPath && task.deepLinkPath.startsWith('xiaoyun://')) {
+      onOpenTaskCenter?.();
+      return;
+    }
     let path = task.deepLinkPath || '/production';
     const params: string[] = [];
     if (task.orderNo) params.push(`orderNo=${encodeURIComponent(task.orderNo)}`);
@@ -97,7 +104,7 @@ const TaskAggregationPanel: React.FC<TaskAggregationPanelProps> = ({ tasks, onCl
       path += (path.includes('?') ? '&' : '?') + params.join('&');
     }
     onNavigate(path);
-  }, [onNavigate]);
+  }, [onNavigate, onOpenTaskCenter]);
 
   const highCount = tasks.filter(t => t.priority === 'high').length;
 
