@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import { Button, Tag, Typography } from 'antd';
+import { Button, Space, Tag, Typography } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
-import ResizableModal from '@/components/common/ResizableModal';
+import SideDrawer from '@/components/common/SideDrawer';
 import { parseProductionOrderLines, sortSizeNames, toNumberSafe } from '@/utils/api';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { getStatusConfig } from '../../MaterialPurchase/utils';
@@ -52,8 +52,10 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
     return { colors, sizes, cell };
   }, [order]);
 
-  const totalPurchase = purchaseList.reduce((s, p) => s + (Number(p.purchaseQuantity) || 0), 0);
-  const totalArrived = purchaseList.reduce((s, p) => s + (Number(p.arrivedQuantity) || 0), 0);
+  // 数量做小数归一：0.9+0.88 这类样衣数量在 JS 浮点下会产生 2.6799999... 长尾巴，统一保留2位小数
+  const num = (v: unknown, d = 2) => { const n = Number(v); return Number.isFinite(n) ? Number(n.toFixed(d)) : 0; };
+  const totalPurchase = num(purchaseList.reduce((s, p) => s + (Number(p.purchaseQuantity) || 0), 0));
+  const totalArrived = num(purchaseList.reduce((s, p) => s + (Number(p.arrivedQuantity) || 0), 0));
   const totalAmount = purchaseList.reduce((s, p) => s + (Number(p.purchaseQuantity || 0) * Number(p.unitPrice || 0)), 0);
   const suppliers = Array.from(new Set(purchaseList.map((p) => String(p.supplierName || '').trim()).filter(Boolean))).join('、');
   const createDate = purchaseList.find((p) => p.createTime)?.createTime || '';
@@ -174,19 +176,20 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
   };
 
   return (
-    <ResizableModal
+    <SideDrawer
       open={open}
+      onClose={onClose}
       title="打印采购单"
       width={960}
-      centered
-      onCancel={onClose}
-      footer={[
-        <Button key="cancel" onClick={onClose}>关闭</Button>,
-        <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={handlePrint} disabled={!purchaseList.length}>
-          打印采购单
-        </Button>,
-      ]}
-      initialHeight={typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.85) : 700}
+      footer={(
+        <Space wrap>
+          <Button onClick={onClose}>关闭</Button>
+          <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrint} disabled={!purchaseList.length}>
+            打印采购单
+          </Button>
+        </Space>
+      )}
+      styles={{ body: { padding: 16, overflowY: 'auto' } }}
     >
       {/* 屏幕预览：与打印内容一致的工整布局 */}
       <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, padding: '16px 20px' }}>
@@ -291,7 +294,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
           采购单数：{purchaseList.length} 个 · 采购总量：{totalPurchase} · 到货总量：{totalArrived} · 合计金额：{money(totalAmount)}
         </Text>
       </div>
-    </ResizableModal>
+    </SideDrawer>
   );
 };
 

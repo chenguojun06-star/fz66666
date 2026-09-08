@@ -41,6 +41,8 @@ export function usePurchaseDetailData(
   const [order, setOrder] = useState<ProductionOrder | null>(null);
   const [purchaseList, setPurchaseList] = useState<MaterialPurchase[]>([]);
   const [sampleBomCompletedTime, setSampleBomCompletedTime] = useState('');
+  // 样衣采购场景：订单为空，抬头(款名/图片/颜色)由款式信息回填，避免打印/显示为"-"
+  const [sampleStyle, setSampleStyle] = useState<{ styleName?: string; styleCover?: string | null; color?: string }>({});
 
   const colorList = useMemo(() => {
     const raw = order?.color || '';
@@ -167,6 +169,11 @@ export function usePurchaseDetailData(
           );
           if (styleRes?.code === 200) {
             setSampleBomCompletedTime(String((styleRes.data as any)?.bomCompletedTime || ''));
+            setSampleStyle({
+              styleName: String((styleRes.data as any)?.styleName || ''),
+              styleCover: ((styleRes.data as any)?.styleCover || null) as string | null,
+              color: String((styleRes.data as any)?.color || ''),
+            });
           } else {
             setSampleBomCompletedTime('');
           }
@@ -199,10 +206,10 @@ export function usePurchaseDetailData(
 
   const headerOrderNo = order?.orderNo || orderNoParam || '';
   const headerStyleNo = order?.styleNo || styleNoParam || '';
-  const headerStyleName = order?.styleName || '';
+  const headerStyleName = order?.styleName || sampleStyle.styleName || '';
   const headerStyleId = order?.styleId;
-  const headerStyleCover = order?.styleCover || null;
-  const headerColor = order?.color || '';
+  const headerStyleCover = order?.styleCover || sampleStyle.styleCover || null;
+  const headerColor = order?.color || sampleStyle.color || '';
 
   return {
     loading,
