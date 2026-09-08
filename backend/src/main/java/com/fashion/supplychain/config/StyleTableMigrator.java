@@ -167,6 +167,20 @@ public class StyleTableMigrator {
                 "INDEX idx_action (action)" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模板操作日志表'";
 
+        String createOrderOperationLogTable = "CREATE TABLE IF NOT EXISTS t_order_operation_log (" +
+                "id VARCHAR(36) PRIMARY KEY COMMENT '操作日志ID'," +
+                "order_id BIGINT COMMENT '订单ID'," +
+                "order_no VARCHAR(50) COMMENT '订单号'," +
+                "action VARCHAR(64) NOT NULL COMMENT '操作动作'," +
+                "operator VARCHAR(50) COMMENT '操作人'," +
+                "remark VARCHAR(512) COMMENT '详情'," +
+                "tenant_id BIGINT NULL COMMENT '租户ID'," +
+                "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
+                "INDEX idx_order_no (order_no)," +
+                "INDEX idx_order_id (order_id)," +
+                "INDEX idx_tenant_time (tenant_id, create_time)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='大货订单操作日志表'";
+
         try {
             jdbc.execute(createStyleInfoTable);
             jdbc.execute(createStyleBomTable);
@@ -176,6 +190,7 @@ public class StyleTableMigrator {
             jdbc.execute(createStyleAttachmentTable);
             jdbc.execute(createStyleOperationLogTable);
             jdbc.execute(createTemplateOperationLogTable);
+            jdbc.execute(createOrderOperationLogTable);
             log.info("Style tables and operation log tables checked/created.");
         } catch (Exception e) {
             log.warn("Failed to create style tables: {}", e.getMessage());
