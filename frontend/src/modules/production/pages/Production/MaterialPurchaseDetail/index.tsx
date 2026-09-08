@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Card, Tag, Space, Alert, Row, Col, Dropdown, App } from 'antd';
+import { Button, Card, Tag, Space, Alert, Row, Col, Dropdown, App, Tooltip } from 'antd';
 import { PlusOutlined, PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined, FileImageOutlined, DownOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import SkeletonLoader from '@/components/common/SkeletonLoader';
@@ -192,20 +192,30 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
       {loading ? (
         <SkeletonLoader type="table" rows={6} />
       ) : !order ? (
-        <Card title={purchaseList.length > 0 ? '样衣采购' : '采购明细'} style={{ marginBottom: 16 }}>
-          {purchaseList.length === 0 ? (
-            !sampleMode ? (
-              <Alert title="订单不存在或已删除" description={`款号: ${styleNo || '未知'}。该款号的订单可能已被删除。`} type="warning" showIcon />
-            ) : null
-          ) : (
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
-              <div><strong>款号：</strong>{styleNo || '-'}</div>
-              <div><strong>采购单数：</strong>{purchaseList.length} 个</div>
-              <div style={{ marginTop: 4 }}><strong>物料到货率：</strong><Tag color={materialArrivalRate >= 100 ? 'green' : materialArrivalRate >= 50 ? 'orange' : 'red'}>{materialArrivalRate}%</Tag></div>
-              <div style={{ marginTop: 4 }}><strong>来源：</strong>样衣采购（未关联生产订单，按款号维护物料清单与采购）</div>
-            </div>
-          )}
-        </Card>
+        <>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
+            marginBottom: 16, padding: '10px 14px',
+            border: '1px solid var(--color-border)', borderRadius: 12,
+            fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)',
+          }}>
+            <span><strong style={{ color: 'var(--color-text-primary)' }}>款号：</strong>{styleNo || '-'}</span>
+            <span><strong style={{ color: 'var(--color-text-primary)' }}>采购单数：</strong>{purchaseList.length} 个</span>
+            <span><strong style={{ color: 'var(--color-text-primary)' }}>到货率：</strong>
+              <Tag color={materialArrivalRate >= 100 ? 'green' : materialArrivalRate >= 50 ? 'orange' : 'red'}>{materialArrivalRate}%</Tag>
+            </span>
+            {sampleMode && sampleBomLocked && (
+              <Tooltip
+                title={`物料清单已完成${sampleBomCompletedTime ? `（${sampleBomCompletedTime}）` : ''}，采购数据已锁定。如需修改物料（编辑/删除/新增），请先到样衣详情 → 物料清单点击「退回」，退回后此处自动解锁。收货、回料确认等采购执行操作不受影响。`}
+              >
+                <ExclamationCircleOutlined style={{ color: 'var(--color-success)', fontSize: 16, cursor: 'pointer' }} />
+              </Tooltip>
+            )}
+          </div>
+          {purchaseList.length === 0 && !sampleMode ? (
+            <Alert title="订单不存在或已删除" description={`款号: ${styleNo || '未知'}。该款号的订单可能已被删除。`} type="warning" showIcon style={{ marginBottom: 16 }} />
+          ) : null}
+        </>
       ) : (
         <Card style={{ marginBottom: 16 }}>
           <ProductionOrderHeader order={order} orderNo={headerOrderNo} styleNo={headerStyleNo} styleName={headerStyleName} styleId={headerStyleId} styleCover={headerStyleCover} color={headerColor} coverSize={160} />
@@ -229,20 +239,6 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
           </Row>
         </Card>
       )}
-
-      {sampleMode && sampleBomLocked ? (
-        <Alert
-          type="success"
-          showIcon
-          title={
-            <span>
-              物料清单已完成{sampleBomCompletedTime ? `（${sampleBomCompletedTime}）` : ''}，采购数据已锁定。
-            </span>
-          }
-          description="如需修改物料（编辑/删除/新增），请先到样衣详情 → 物料清单点击「退回」，退回后此处自动解锁。收货、回料确认等采购执行操作不受影响。"
-          style={{ marginBottom: 16 }}
-        />
-      ) : null}
 
       {missingColors.length > 0 && (
         <Alert
