@@ -342,15 +342,32 @@ function handleBusinessTask(task) {
       break;
     case 'SHIPMENT': handleShipmentTask(task); break;
     case 'STYLE_DEVELOPMENT': handleStyleDevTask(task); break;
-    // 缺口类型：统一待办详情页承载
+    // 缺口类型：点击直达最近真实业务页（与 PC 一致，不中转包装页）
+    // 只读展示逻辑已由后端按租户+角色过滤，这里仅做页面直达
     case 'PAYROLL_SETTLEMENT':
+      safeNavigate({ url: '/pages/payroll/payroll' }, 'navigateTo').catch(() => {});
+      break;
     case 'MATERIAL_RECON':
     case 'EXPENSE_REIMBURSE':
-    case 'COLLAB_TASK':
+      safeNavigate({ url: '/pages/finance/payment/index' }, 'navigateTo').catch(() => {});
+      break;
     case 'EXCEPTION_REPORT':
+      // 订单级异常 → 订单详情页（按 orderNo/orderId 直达）
+      if (task.orderNo) {
+        safeNavigate({ url: '/pages/dashboard/order-detail/index?orderNo=' + encodeURIComponent(task.orderNo) }, 'navigateTo').catch(() => {});
+      } else {
+        safeNavigate({ url: '/pages/smart-ops/index' }, 'navigateTo').catch(() => {});
+      }
+      break;
     case 'SAMPLE_LOAN':
+      safeNavigate({ url: '/pages/warehouse/sample/scan-action/index' }, 'navigateTo').catch(() => {});
+      break;
     case 'MATERIAL_PICKING':
+      safeNavigate({ url: '/pages/warehouse/material/scan/index' }, 'navigateTo').catch(() => {});
+      break;
+    case 'COLLAB_TASK':
     default:
+      // 协作任务手机端无独立处理页，落到统一待办详情页提示
       openUnifiedDetail(task); break;
   }
 }
