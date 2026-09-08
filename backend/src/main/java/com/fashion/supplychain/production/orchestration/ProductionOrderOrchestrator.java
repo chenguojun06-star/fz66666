@@ -909,6 +909,16 @@ public class ProductionOrderOrchestrator {
 
         if (success) {
             evictCacheAfterCommit(id);
+            // 写订单操作记录：快速编辑/改交期
+            if (orderLogHelper != null) {
+                java.util.ArrayList<String> changed = new java.util.ArrayList<>();
+                if (payload.containsKey("expectedShipDate")) changed.add("改交期");
+                if (payload.containsKey("urgencyLevel")) changed.add("紧急程度");
+                if (payload.containsKey("progressWorkflowJson")) changed.add("工序");
+                if (payload.containsKey("remarks")) changed.add("备注");
+                if (changed.isEmpty()) changed.add("快速编辑");
+                orderLogHelper.writeOrderLog(order.getOrderNo(), null, String.join("+", changed), null);
+            }
         }
         return success;
     }
