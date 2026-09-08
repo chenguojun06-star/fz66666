@@ -86,6 +86,13 @@ public class QdrantService {
     @Value("${intelligence.qdrant.enabled:false}")
     private boolean qdrantEnabled;
 
+    /** 启动探测通过后为 true；一旦探测/Qdrant 不可用则置 false，短路后续所有调用（避免反复连不上+白调付费 embedding） */
+    private volatile boolean qdrantReady = true;
+
+    private boolean qdrantActive() {
+        return qdrantEnabled && qdrantReady;
+    }
+
     @Value("${intelligence.qdrant.timeout-seconds:10}")
     private int qdrantTimeoutSeconds;
 
@@ -194,8 +201,23 @@ public class QdrantService {
                     log.info("[Qdrant] 集合 {} 维度校验通过 dim={}", collectionName, storedDim);
                 }
             }
+        } catch (org.springframework.web.client.HttpStatusCodeException httpEx) {
+            if (httpEx.getStatusCode().value() == 404) {
+                // 集合尚未创建（首次使用场景），属正常状态，保持启用；首次 upsert 时会自动创建
+                log.debug("[Qdrant] 集合 {} 尚未创建，跳过启动维度校验（首次使用时自动创建）", collectionName);
+            } else {
+                qdrantReady = false;
+                log.warn("[Qdrant] 启动探测失败（url={}）: {} — 本实例已自动禁用向量记忆，相关检索降级为空结果；"
+                        + "如需启用请启动 Qdrant 服务或在环境变量配置 QDRANT_URL/QDRANT_ENABLED",
+                        qdrantUrl, httpEx.getMessage());
+            }
         } catch (Exception e) {
-            log.debug("[Qdrant] 启动维度校验跳过（Qdrant不可用）: {}", e.getMessage());
+            // 启动探测失败（如云端容器无 Qdrant）：本实例直接短路，避免每次 AI 查询都
+            // 先调付费 embedding 再连接失败的浪费，同时停止 Connection refused 刷屏
+            qdrantReady = false;
+            log.warn("[Qdrant] 启动探测失败（url={}）: {} — 本实例已自动禁用向量记忆，相关检索降级为空结果；"
+                    + "如需启用请启动 Qdrant 服务或在环境变量配置 QDRANT_URL/QDRANT_ENABLED",
+                    qdrantUrl, e.getMessage());
         }
     }
 
@@ -214,7 +236,7 @@ public class QdrantService {
      */
     public boolean upsertVector(String pointId, Long tenantId, String content,
             java.util.Map<String, Object> payload) {
-        if (!qdrantEnabled) return false;
+        if (!qdrantActive()) return false;
         if (tenantId == null) {
             log.warn("[Qdrant] upsert拒绝：tenantId为null，禁止写入孤儿向量 pointId={}", pointId);
             return false;
@@ -263,7 +285,7 @@ public class QdrantService {
      * @return 匹配点的 pointId 列表（按相似度降序）
      */
     public List<ScoredPoint> search(Long tenantId, String queryText, int topK) {
-        if (!qdrantEnabled) return Collections.emptyList();
+        if (!qdrantActive()) return Collections.emptyList();
         List<ScoredPoint> results = new ArrayList<>();
         try {
             float[] vector = computeEmbedding(queryText);
@@ -348,7 +370,7 @@ public class QdrantService {
      * @return 匹配点列表（按综合分数降序）
      */
     public List<ScoredPoint> hybridSearch(Long tenantId, String queryText, int topK) {
-        if (!qdrantEnabled) return new ArrayList<>();
+        if (!qdrantActive()) return new ArrayList<>();
         if (tenantId == null) {
             log.warn("[Qdrant] hybridSearch拒绝: tenantId为null，跳过搜索以防止跨租户数据泄漏");
             return new ArrayList<>();
@@ -558,7 +580,7 @@ public class QdrantService {
     private static final long HEALTH_CHECK_CACHE_MS = 30_000L;
 
     public boolean isAvailable() {
-        if (!qdrantEnabled) return false;
+        if (!qdrantActive()) return false;
         long now = System.currentTimeMillis();
         long last = lastHealthCheckTime.get();
         if (now - last < HEALTH_CHECK_CACHE_MS) {
@@ -583,7 +605,7 @@ public class QdrantService {
      * @return true=新建了集合；false=集合已存在或 Qdrant 不可用
      */
     public boolean ensureCollection() {
-        if (!qdrantEnabled) return false;
+        if (!qdrantActive()) return false;
         try {
             restTemplate.getForEntity(
                     qdrantUrl + "/collections/" + collectionName, String.class);
@@ -854,7 +876,7 @@ public class QdrantService {
      * 4. 伪向量（哈希）— 最低质量，仅兜底
      */
     public float[] computeMultimodalEmbedding(String imageUrl) {
-        if (!qdrantEnabled) return null;
+        if (!qdrantActive()) return null;
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new IllegalArgumentException("imageUrl 不能为空");
         }
@@ -1008,7 +1030,7 @@ public class QdrantService {
      * 搜索视觉相似的历史款式（仅在 style_images 集合中检索）。
      */
     public List<SimilarStyle> searchSimilarStyleImages(float[] embedding, int topK, Long tenantId) {
-        if (!qdrantEnabled) return Collections.emptyList();
+        if (!qdrantActive()) return Collections.emptyList();
         List<SimilarStyle> results = new ArrayList<>();
         try {
             ObjectNode body = objectMapper.createObjectNode();
@@ -1134,7 +1156,7 @@ public class QdrantService {
      * @return true=新建了 collection；false=已存在或 Qdrant 不可用
      */
     public synchronized boolean ensureArchivalCollection(Long tenantId) {
-        if (!qdrantEnabled) return false;
+        if (!qdrantActive()) return false;
         if (tenantId == null) return false;
         if (archivalCollectionsVerified.contains(tenantId)) return false;
 
@@ -1190,7 +1212,7 @@ public class QdrantService {
     public boolean upsertArchivalTiered(Long tenantId, String originalId, String memoryType,
                                          String summary, String keyEntities, String createTime,
                                          com.fashion.supplychain.intelligence.entity.ArchivalTier tier) {
-        if (!qdrantEnabled) return false;
+        if (!qdrantActive()) return false;
         if (tenantId == null || originalId == null) return false;
         if (summary == null || summary.isBlank()) return false;
 
@@ -1265,7 +1287,7 @@ public class QdrantService {
      */
     public List<ScoredPoint> searchArchival(Long tenantId, String queryText, int topK,
                                              String startTimeIso, String endTimeIso) {
-        if (!qdrantEnabled) return List.of();
+        if (!qdrantActive()) return List.of();
         if (tenantId == null || queryText == null || queryText.isBlank()) return List.of();
         if (topK <= 0 || topK > 50) topK = 5;
 
@@ -1335,7 +1357,7 @@ public class QdrantService {
     public List<ScoredPoint> searchArchivalTiered(Long tenantId, String queryText, int topK,
                                                    String startTimeIso, String endTimeIso,
                                                    java.util.List<com.fashion.supplychain.intelligence.entity.ArchivalTier> tierFilter) {
-        if (!qdrantEnabled) return List.of();
+        if (!qdrantActive()) return List.of();
         if (tenantId == null || queryText == null || queryText.isBlank()) return List.of();
         if (topK <= 0 || topK > 50) topK = 5;
 
@@ -1417,7 +1439,7 @@ public class QdrantService {
     public List<ScoredPoint> searchArchivalSmart(Long tenantId, String queryText, int topK,
                                                   String startTimeIso, String endTimeIso,
                                                   boolean includeCold) {
-        if (!qdrantEnabled) return List.of();
+        if (!qdrantActive()) return List.of();
         if (tenantId == null || queryText == null || queryText.isBlank()) return List.of();
         if (topK <= 0 || topK > 50) topK = 5;
 
@@ -1459,7 +1481,7 @@ public class QdrantService {
      */
     public java.util.Map<String, Long> countArchivalByTier(Long tenantId) {
         java.util.Map<String, Long> result = new java.util.LinkedHashMap<>();
-        if (!qdrantEnabled) return result;
+        if (!qdrantActive()) return result;
         if (tenantId == null) return result;
 
         ensureArchivalCollection(tenantId);
@@ -1503,7 +1525,7 @@ public class QdrantService {
      * @return true=成功；false=失败或 Qdrant 不可用
      */
     public boolean deleteArchivalCollection(Long tenantId) {
-        if (!qdrantEnabled) return false;
+        if (!qdrantActive()) return false;
         if (tenantId == null) return false;
         try {
             restTemplate.delete(qdrantUrl + "/collections/" + archivalCollectionName(tenantId));
