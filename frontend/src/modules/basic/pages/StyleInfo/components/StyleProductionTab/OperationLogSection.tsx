@@ -26,6 +26,7 @@ const BIZ_TAG: Record<string, { color: string; text: string }> = {
 const OperationLogSection: React.FC<{ styleId?: string | number; styleNo?: string }> = ({ styleId, styleNo }) => {
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<StyleOperationLogItem[]>([]);
+  const [showAll, setShowAll] = useState(false);
 
   const load = useCallback(async () => {
     if (!styleId && !styleNo) return;
@@ -34,7 +35,7 @@ const OperationLogSection: React.FC<{ styleId?: string | number; styleNo?: strin
       const params = styleId ? { styleId: String(styleId) } : { styleNo };
       const res: any = await api.get('/style/operation-log/list', { params });
       if (res.code === 200) {
-        setLogs(Array.isArray(res.data) ? res.data.slice(0, 30) : []);
+        setLogs(Array.isArray(res.data) ? res.data : []);
       }
     } catch {
       // 操作记录加载失败不打扰主流程
@@ -46,6 +47,8 @@ const OperationLogSection: React.FC<{ styleId?: string | number; styleNo?: strin
   useEffect(() => {
     load();
   }, [load]);
+
+  const visibleLogs = showAll ? logs : logs.slice(0, 20);
 
   return (
     <div style={{ background: '#fff', borderRadius: 8, padding: '16px 24px', marginBottom: 16, border: '1px solid #f0f0f0' }}>
@@ -61,7 +64,7 @@ const OperationLogSection: React.FC<{ styleId?: string | number; styleNo?: strin
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无操作记录" style={{ margin: '8px 0' }} />
         ) : (
           <div style={{ maxHeight: 280, overflowY: 'auto' }}>
-            {logs.map((item, idx) => {
+            {visibleLogs.map((item, idx) => {
               const tag = BIZ_TAG[item.bizType ?? ''] ?? { color: 'default', text: item.bizType || '日志' };
               return (
                 <div
@@ -78,6 +81,13 @@ const OperationLogSection: React.FC<{ styleId?: string | number; styleNo?: strin
                 </div>
               );
             })}
+          </div>
+        )}
+        {logs.length > 20 && (
+          <div style={{ textAlign: 'center', marginTop: 6 }}>
+            <a style={{ fontSize: 12 }} onClick={() => setShowAll((v) => !v)}>
+              {showAll ? `收起，仅显示 20 条` : `查看全部（共 ${logs.length} 条）`}
+            </a>
           </div>
         )}
       </Spin>
