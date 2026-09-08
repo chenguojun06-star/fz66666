@@ -334,6 +334,7 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                       receiver={sample.sampleReceiverLabel !== '-' ? sample.sampleReceiverLabel : ''}
                       receiveTime={sample.sampleReceiveTimeLabel !== '待启动' ? sample.sampleReceiveTimeLabel : ''}
                       patternProductionId={sample.sampleSnapshot?.id}
+                      completed={sample.isSampleSnapshotCompleted}
                       onCompleteProcess={sampleProcessProgress.completeProcess}
                       onRefresh={refreshDrawerData}
                     />

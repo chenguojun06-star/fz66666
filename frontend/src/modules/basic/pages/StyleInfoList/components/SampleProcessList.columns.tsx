@@ -13,6 +13,10 @@ export interface BuildColumnsParams {
   activeTab: string;
   currentStageKey?: string;
   actioningKey: string;
+  /** 整件样衣生产是否已完成：完成后工序行操作置灰，禁止撤回/改派 */
+  completed?: boolean;
+  /** 是否为管理账号：撤回按钮仅管理可见 */
+  canManage?: boolean;
   onAssign: (row: SubProcessRow) => void;
   onPurchaseClick: () => void;
   onManualComplete: (row: SubProcessRow) => void;
@@ -24,6 +28,8 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
     activeTab,
     currentStageKey,
     actioningKey,
+    completed,
+    canManage,
     onAssign,
     onPurchaseClick,
     onManualComplete,
@@ -97,6 +103,8 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
         actions.push({
           key: 'assign',
           label: '指派',
+          // 整件样衣已完成或该工序已完成后不可再改派 → 置灰
+          disabled: !!completed || record.status === 'completed',
           onClick: () => onAssign(record),
         });
         if (currentStageKey === 'procurement' && record.status !== 'completed') {
@@ -113,15 +121,17 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
             key: 'complete',
             label: acting ? '完成中...' : '手动完成',
             primary: currentStageKey !== 'procurement',
-            disabled: acting,
+            disabled: acting || !!completed,
             onClick: () => onManualComplete(record),
           });
         }
-        if (record.status === 'completed') {
+        // 撤回仅管理员可见；整件样衣已完成则置灰，避免误撤已闭环工序
+        if (canManage && record.status === 'completed') {
           actions.push({
             key: 'undo',
             label: '撤回',
             danger: true,
+            disabled: !!completed,
             onClick: () => onUndo(record),
           });
         }

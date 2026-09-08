@@ -7,6 +7,7 @@ import useSampleProcessListData from './useSampleProcessListData';
 import StageTabs from './components/StageTabs';
 import AssigneeModal from './components/AssigneeModal';
 import PurchaseDrawer from './components/PurchaseDrawer';
+import { useUser, isAdmin } from '@/utils/AuthContext';
 
 // 行业标准：采购/入库不属于生产工序，已从工序列表中移除
 // 生产工序只含4个阶段：裁剪 → 二次工艺 → 车缝 → 尾部
@@ -26,6 +27,8 @@ interface SampleProcessListProps {
   patternProductionId?: string;
   onCompleteProcess?: (processCode: string) => Promise<void>;
   onRefresh?: () => void;
+  /** 整件样衣生产是否已完成：完成后工序行操作置灰、撤回仅管理且禁用 */
+  completed?: boolean;
 }
 
 export default function SampleProcessList({
@@ -34,7 +37,12 @@ export default function SampleProcessList({
   receiver = '', receiveTime = '',
   patternProductionId,
   onCompleteProcess, onRefresh,
+  completed,
 }: SampleProcessListProps) {
+  // 撤回等敏感操作仅管理账号可见
+  const { user } = useUser();
+  const canManage = isAdmin(user);
+
   const data = useSampleProcessListData({
     stages,
     needsConfig,
@@ -76,12 +84,14 @@ export default function SampleProcessList({
       activeTab,
       currentStageKey: currentStage?.key,
       actioningKey,
+      completed,
+      canManage,
       onAssign: handleAssign,
       onPurchaseClick: handlePurchaseClick,
       onManualComplete: handleManualComplete,
       onUndo: handleUndo,
     }),
-    [activeTab, currentStage, actioningKey, handleAssign, handlePurchaseClick, handleManualComplete, handleUndo],
+    [activeTab, currentStage, actioningKey, completed, handleAssign, handlePurchaseClick, handleManualComplete, handleUndo],
   );
 
   // 生产工序进度计算（采购/入库已从工序列表移除，stages 只含4个生产工序）
