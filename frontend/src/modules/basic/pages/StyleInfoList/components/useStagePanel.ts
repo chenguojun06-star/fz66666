@@ -106,7 +106,13 @@ export default function useStagePanel({
       // 因为 receiveTime 由首次扫码自动填充，可能为 null 但 status 已是 IN_PROGRESS
       const sampleStatus = String(sampleHook.sampleSnapshot?.status || '').trim().toUpperCase();
       const isSampleInProgress = sampleStatus === 'IN_PROGRESS' || sampleStatus === 'REWORK';
-      if (isSampleInProgress && !sampleStageCompleted && !selectedStage.record.sampleCompletedTime) {
+      // D-修复：状态已到 PRODUCTION_COMPLETED 但"内部完全完成校验"未过时会陷入
+      //「工序全完成却仍显示进行中、且无按钮可点」的僵局（入库也识别不到色码配置）。
+      // 放宽条件：只要尚未被判定为完成、又无完成时间，就始终给出「标记完成」按钮。
+      const needsCompleteAction = !sampleHook.isSampleSnapshotCompleted
+        && !selectedStage.record.sampleCompletedTime
+        && (isSampleInProgress || sampleStatus === 'PRODUCTION_COMPLETED');
+      if (needsCompleteAction) {
         actions.push({
           key: 'complete-sample', label: '标记完成', type: 'primary',
           onClick: () => {
