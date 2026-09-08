@@ -131,7 +131,9 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
               </div>
             </div>
           )}
-          <div className="style-smart-stage-modal__insight">{panel.selectedStageInsightText}</div>
+          <div className="style-smart-stage-modal__insight" style={selectedStage.stage.key === 'sample' || selectedStage.stage.key === 'confirm' ? { display: 'none' } : undefined}>
+            {panel.selectedStageInsightText}
+          </div>
           <div className="style-smart-stage-modal__actions">
             {panel.selectedStageActions.map((action) => (
               <Button
