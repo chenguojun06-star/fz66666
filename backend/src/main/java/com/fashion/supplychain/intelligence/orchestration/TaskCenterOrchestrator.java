@@ -4,6 +4,8 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.entity.CollaborationTask;
 import com.fashion.supplychain.intelligence.mapper.CollaborationTaskMapper;
+import com.fashion.supplychain.system.entity.User;
+import com.fashion.supplychain.system.service.UserService;
 import java.time.LocalDateTime;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ public class TaskCenterOrchestrator {
 
     private final CollaborationTaskMapper collaborationTaskMapper;
     private final TaskOrderMonitorOrchestrator taskOrderMonitorOrchestrator;
+    private final UserService userService;
 
     public Map<String, Object> getDashboard() {
         TenantAssert.assertTenantContext();
@@ -347,6 +350,10 @@ public class TaskCenterOrchestrator {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String username = StringUtils.hasText(UserContext.username()) ? UserContext.username() : null;
+        // 当前用户的可识别名集合：登录名 + 实名/显示名。
+        // 任务里 assigneeName/creatorName 有的存登录名、有的存显示名（历史/按人派发票据），统一纳入匹配，
+        // 避免"我创建的/我领取的"因名字对不上而显示 0。
+        Set<String> myNames = resolveCurrentUserNames(tenantId, username);
 
         // scope 模式（created/mine）为追踪视图：需包含已完成历史任务，故全量拉取（排除已取消）；
         // 默认（无 scope）沿用 findActiveByTenant 只返回活跃任务（PENDING/ACCEPTED/IN_PROGRESS/ESCALATED）
@@ -362,13 +369,13 @@ public class TaskCenterOrchestrator {
         List<CollaborationTask> filtered = new ArrayList<>();
 
         for (CollaborationTask t : all) {
-            boolean isMine = username != null && username.equals(t.getAssigneeName());
+            boolean isMine = StringUtils.hasText(t.getAssigneeName()) && myNames.contains(t.getAssigneeName());
             boolean isManual = CollaborationTask.SourceType.MANUAL.name().equals(t.getSourceType());
             // scope=created：只看我创建的（个人创建的任务追踪）
             if ("created".equalsIgnoreCase(scope)) {
                 boolean isCreatedByMe = t.getCreatorId() != null
                         ? Objects.equals(String.valueOf(t.getCreatorId()), UserContext.userId())
-                        : (StringUtils.hasText(t.getCreatorName()) && t.getCreatorName().equals(username));
+                        : (StringUtils.hasText(t.getCreatorName()) && myNames.contains(t.getCreatorName()));
                 if (!isCreatedByMe) continue;
             } else if ("mine".equalsIgnoreCase(scope)) {
                 // scope=mine：只看我领取的
@@ -416,8 +423,32 @@ public class TaskCenterOrchestrator {
         return result;
     }
 
+    /**
+     * 解析当前用户的可识别名集合（登录名 + 实名/显示名）。
+     * 任务里的 assigneeName/creatorName 可能存登录名或显示名，统一纳入匹配，
+     * 确保"我创建的/我领取的/被指派给我的任务"都能正确命中。
+     */
+    private Set<String> resolveCurrentUserNames(Long tenantId, String username) {
+        Set<String> names = new LinkedHashSet<>();
+        if (StringUtils.hasText(username)) names.add(username);
+        if (tenantId == null || !StringUtils.hasText(username)) return names;
+        try {
+            User me = userService.lambdaQuery()
+                    .eq(User::getTenantId, tenantId)
+                    .eq(User::getUsername, username)
+                    .eq(User::getStatus, "active")
+                    .select(User::getName)
+                    .last("LIMIT 1").one();
+            if (me != null && StringUtils.hasText(me.getName())) {
+                names.add(me.getName());
+            }
+        } catch (Exception e) {
+            log.warn("[TaskCenter] 解析当前用户显示名失败: {}", e.getMessage());
+        }
+        return names;
+    }
+
     public Map<String, Object> getTaskStats() {
-        // P0 修复：
         // 1. 原 findActiveByTenant 已过滤 COMPLETED，导致 completed 永远为 0 → 改用 countByTenantAndStatus 独立查询
         // 2. 与 getDashboard 的状态分类对齐：inProgress = IN_PROGRESS + ACCEPTED，total 含 escalated
         TenantAssert.assertTenantContext();
