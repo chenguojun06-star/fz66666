@@ -17,6 +17,9 @@ interface ProductionSmartViewProps {
   quickEditModal: { open: (data: ProductionOrder) => void };
   handleShareOrder: (record: ProductionOrder) => void;
   handlePrintLabel: (record: ProductionOrder) => void;
+  setPrintingRecord?: (r: ProductionOrder | null) => void;
+  setPrintModalVisible?: (v: boolean) => void;
+  onOpenContract?: (record: ProductionOrder) => void;
   canManageOrderLifecycle: boolean;
   isSupervisorOrAbove: boolean;
   openSubProcessRemap: (record: ProductionOrder) => void;
@@ -41,6 +44,9 @@ const ProductionSmartView: React.FC<ProductionSmartViewProps> = ({
   quickEditModal,
   handleShareOrder,
   handlePrintLabel,
+  setPrintingRecord,
+  setPrintModalVisible,
+  onOpenContract,
   canManageOrderLifecycle,
   isSupervisorOrAbove,
   openSubProcessRemap,
@@ -69,6 +75,9 @@ const ProductionSmartView: React.FC<ProductionSmartViewProps> = ({
         quickEditModal={quickEditModal}
         handleShareOrder={handleShareOrder}
         handlePrintLabel={handlePrintLabel}
+        setPrintingRecord={setPrintingRecord}
+        setPrintModalVisible={setPrintModalVisible}
+        onOpenContract={onOpenContract}
         canManageOrderLifecycle={canManageOrderLifecycle}
         isSupervisorOrAbove={isSupervisorOrAbove}
         openSubProcessRemap={openSubProcessRemap}

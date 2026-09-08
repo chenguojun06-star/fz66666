@@ -98,6 +98,9 @@ const ProductionContentView: React.FC<ProductionContentViewProps> = ({
         quickEditModal={quickEditModal}
         handleShareOrder={handleShareOrder}
         handlePrintLabel={handlePrintLabel}
+        setPrintingRecord={(r) => r ? printModal.open(r) : undefined}
+        setPrintModalVisible={() => undefined}
+        onOpenContract={onOpenContract}
         canManageOrderLifecycle={canManageOrderLifecycle}
         isSupervisorOrAbove={isSupervisorOrAbove}
         openSubProcessRemap={openSubProcessRemap}

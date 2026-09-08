@@ -36,6 +36,7 @@ interface SmartOrderRowProps {
   handleShareOrder?: (record: ProductionOrder) => void;
   onOpenRemark?: (record: ProductionOrder) => void;
   handlePrintLabel?: (record: ProductionOrder) => void;
+  onOpenContract?: (record: ProductionOrder) => void;
   canManageOrderLifecycle?: boolean;
   handleToggleShipLock?: (record: ProductionOrder) => void;
   isSupervisorOrAbove?: boolean;
@@ -57,7 +58,7 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
   handleCloseOrder, handleScrapOrder,
   openProcessDetail, syncProcessFromTemplate,
   setPrintModalVisible, setPrintingRecord,
-  quickEditModal, handleShareOrder, onOpenRemark, handlePrintLabel,
+  quickEditModal, handleShareOrder, onOpenRemark, handlePrintLabel, onOpenContract,
   canManageOrderLifecycle, isSupervisorOrAbove,
   handleToggleShipLock,
   openSubProcessRemap, isFactoryAccount,
@@ -241,6 +242,11 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
               label: '打印标签',
               title: '打印洗水唛 / 吊牌',
               onClick: () => handlePrintLabel(record),
+            }] : []),
+            ...(onOpenContract ? [{
+              key: 'contract',
+              label: '合作合同',
+              onClick: () => onOpenContract(record),
             }] : []),
             ...(!isFactoryAccount && openProcessDetail ? [{
               key: 'process',

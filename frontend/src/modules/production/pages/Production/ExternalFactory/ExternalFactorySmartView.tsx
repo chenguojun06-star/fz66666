@@ -88,6 +88,7 @@ interface Props {
   handleShareOrder?: (record: ProductionOrder) => void;
   onOpenRemark?: (record: ProductionOrder) => void;
   handlePrintLabel?: (record: ProductionOrder) => void;
+  onOpenContract?: (record: ProductionOrder) => void;
   canManageOrderLifecycle?: boolean;
   handleToggleShipLock?: (record: ProductionOrder) => void;
   isSupervisorOrAbove?: boolean;
@@ -108,7 +109,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
   handleCloseOrder, handleScrapOrder,
   openProcessDetail, syncProcessFromTemplate,
   setPrintModalVisible, setPrintingRecord,
-  quickEditModal, handleShareOrder, onOpenRemark, handlePrintLabel,
+  quickEditModal, handleShareOrder, onOpenRemark, handlePrintLabel, onOpenContract,
   canManageOrderLifecycle, isSupervisorOrAbove,
   handleToggleShipLock,
   openSubProcessRemap, isFactoryAccount,
@@ -155,6 +156,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
         handleShareOrder={handleShareOrder}
         onOpenRemark={onOpenRemark}
         handlePrintLabel={handlePrintLabel}
+        onOpenContract={onOpenContract}
         canManageOrderLifecycle={canManageOrderLifecycle}
         handleToggleShipLock={handleToggleShipLock}
         isSupervisorOrAbove={isSupervisorOrAbove}
