@@ -124,14 +124,14 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
           paddingBottom: 8,
           marginBottom: 8,
           borderBottom: '1px solid var(--color-border)',
-          fontSize: 'var(--font-size-xs)',
+          fontSize: 'var(--font-size-sm)',
           color: 'var(--color-text-secondary)',
         }}>
           {nodeInfo}
         </div>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-        <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>菲号委派</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontWeight: 600, fontSize: 'var(--font-size-subtitle)', color: 'var(--color-text-primary)' }}>菲号委派</span>
         <Checkbox
           checked={allSelected}
           indeterminate={selectedIds.length > 0 && !allSelected}
@@ -140,9 +140,9 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
         >
           全选可选菲号
         </Checkbox>
-        <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
-          已选 <strong style={{ color: 'var(--color-primary)' }}>{selectedIds.length}</strong> 扎 ·{' '}
-          <strong style={{ color: 'var(--color-primary)' }}>{selectedQuantity}</strong> 件 / 可选 {selectableBundles.length} 扎
+        <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
+          已选 <strong style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-subtitle)' }}>{selectedIds.length}</strong> 扎 ·{' '}
+          <strong style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-subtitle)' }}>{selectedQuantity}</strong> 件 / 可选 {selectableBundles.length} 扎
         </span>
       </div>
 
@@ -151,8 +151,8 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
           maxHeight: 300,
           overflow: 'auto',
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-          gap: 8,
+          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+          gap: 10,
           padding: 4,
         }}
       >
@@ -173,8 +173,8 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
                 style={{
                   display: 'flex',
                   alignItems: 'flex-start',
-                  gap: 6,
-                  padding: '6px 8px',
+                  gap: 8,
+                  padding: '8px 10px',
                   border: `1px solid ${checked ? 'var(--color-primary)' : 'var(--color-border)'}`,
                   background: checked ? 'var(--status-processing-bg)' : 'var(--color-bg-base)',
                   borderRadius: 8,
@@ -190,22 +190,22 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
                   onClick={(e) => e.stopPropagation()}
                 />
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ color: 'var(--color-text-primary)', fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>
+                  <div style={{ color: 'var(--color-text-primary)', fontSize: 'var(--font-size-subtitle)', fontWeight: 600 }}>
                     菲号 {b.bundleNo ?? '-'}
                   </div>
-                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
+                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', marginTop: 2 }}>
                     {b.color || '-'} / {b.size || '-'}
                   </div>
-                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
+                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
                     {b.quantity ?? 0} 件 · {BUNDLE_STATUS_LABEL[b.status ?? ''] ?? b.status ?? '-'}
                   </div>
                   {currentDelegate && currentDelegate !== '-' && (
-                    <div style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-xs)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       委派：{currentDelegate}
                     </div>
                   )}
                   {delegateProcessText && (
-                    <div style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-xs)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       工序：{delegateProcessText}
                     </div>
                   )}
@@ -216,80 +216,90 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
         )}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-        <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-xs)', flexShrink: 0 }}>外发工序</span>
-        <Select
-          mode="multiple"
-          allowClear
-          showSearch
-          placeholder="不选 = 整扎外发；可多选子工序"
-          value={processNames}
-          onChange={setProcessNames}
-          options={processSelectOptions}
-          filterOption={(input, option) => String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
-          disabled={disableEdit}
-          style={{ minWidth: 320, maxWidth: 560, flex: 1 }}
-        />
-      </div>
-      {selectedProcessPrices.length > 0 && (
-        <div style={{ marginTop: 6, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
-          逐工序单价：
-          {selectedProcessPrices.map((p, idx) => (
-            <span key={p.name}>
-              {idx > 0 ? ' · ' : ''}
-              {p.name}
-              <strong style={{ color: 'var(--color-primary)', marginLeft: 4 }}>
-                {p.price > 0 ? `¥${p.price.toFixed(2)}/件` : '待定价'}
-              </strong>
-            </span>
-          ))}
+      <div style={{
+        marginTop: 12,
+        padding: '10px 12px',
+        background: 'var(--color-bg-page)',
+        border: '1px solid var(--color-border-light)',
+        borderRadius: 8,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', flexShrink: 0 }}>外发工序</span>
+          <Select
+            mode="multiple"
+            allowClear
+            showSearch
+            placeholder="不选 = 整扎外发；可多选子工序"
+            value={processNames}
+            onChange={setProcessNames}
+            options={processSelectOptions}
+            filterOption={(input, option) => String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
+            disabled={disableEdit}
+            style={{ minWidth: 320, maxWidth: 560, flex: 1, fontSize: 'var(--font-size-base)' }}
+          />
         </div>
-      )}
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-        <Select
-          value={delegateType}
-          onChange={(v) => { setDelegateType(v); setFactoryId(undefined); setAssigneeId(undefined); }}
-          options={[
-            { value: 'factory', label: '委派工厂' },
-            { value: 'person', label: '委派人员' },
-          ]}
-          disabled={disableEdit}
-          style={{ width: 110 }}
-        />
-        {delegateType === 'factory' ? (
-          <Select
-            allowClear
-            showSearch
-            placeholder="选择外发工厂"
-            value={factoryId}
-            onChange={setFactoryId}
-            filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
-            options={factories.map((f) => ({ value: f.id, label: f.factoryName }))}
-            disabled={disableEdit}
-            style={{ minWidth: 180 }}
-          />
-        ) : (
-          <Select
-            allowClear
-            showSearch
-            placeholder="选择人员"
-            value={assigneeId}
-            onChange={setAssigneeId}
-            filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
-            options={users.map((u) => ({ value: u.id, label: u.name || u.username }))}
-            disabled={disableEdit}
-            style={{ minWidth: 180 }}
-          />
+        {selectedProcessPrices.length > 0 && (
+          <div style={{ marginTop: 6, fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+            逐工序单价：
+            {selectedProcessPrices.map((p, idx) => (
+              <span key={p.name}>
+                {idx > 0 ? ' · ' : ''}
+                {p.name}
+                <strong style={{ color: 'var(--color-primary)', marginLeft: 4 }}>
+                  {p.price > 0 ? `¥${p.price.toFixed(2)}/件` : '待定价'}
+                </strong>
+              </span>
+            ))}
+          </div>
         )}
-        <Button
-          type="primary"
-          loading={saving}
-          disabled={disableEdit || !targetReady || selectedIds.length === 0}
-          onClick={handleSubmit}
-        >
-          保存委派（{selectedIds.length} 扎）
-        </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+          <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', flexShrink: 0 }}>
+            {delegateType === 'factory' ? '执行工厂' : '委派人员'}
+          </span>
+          <Select
+            value={delegateType}
+            onChange={(v) => { setDelegateType(v); setFactoryId(undefined); setAssigneeId(undefined); }}
+            options={[
+              { value: 'factory', label: '委派工厂' },
+              { value: 'person', label: '委派人员' },
+            ]}
+            disabled={disableEdit}
+            style={{ width: 130, fontSize: 'var(--font-size-base)' }}
+          />
+          {delegateType === 'factory' ? (
+            <Select
+              allowClear
+              showSearch
+              placeholder="选择外发工厂"
+              value={factoryId}
+              onChange={setFactoryId}
+              filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
+              options={factories.map((f) => ({ value: f.id, label: f.factoryName }))}
+              disabled={disableEdit}
+              style={{ width: 260, fontSize: 'var(--font-size-base)' }}
+            />
+          ) : (
+            <Select
+              allowClear
+              showSearch
+              placeholder="选择人员"
+              value={assigneeId}
+              onChange={setAssigneeId}
+              filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
+              options={users.map((u) => ({ value: u.id, label: u.name || u.username }))}
+              disabled={disableEdit}
+              style={{ width: 260, fontSize: 'var(--font-size-base)' }}
+            />
+          )}
+          <Button
+            type="primary"
+            loading={saving}
+            disabled={disableEdit || !targetReady || selectedIds.length === 0}
+            onClick={handleSubmit}
+          >
+            保存委派（{selectedIds.length} 扎）
+          </Button>
+        </div>
       </div>
     </div>
   );

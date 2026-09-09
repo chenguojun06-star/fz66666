@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { App } from 'antd';
 import api, { type ApiResult } from '@/utils/api';
+import { useUser } from '@/utils/AuthContext';
+import tenantService from '@/services/tenantService';
 import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
 import { getProductionProcessTracking } from '@/utils/api/production';
 import type { NodeType, NodeOperations, Factory, ScanRecord, BundleRecord, OperatorSummary, NodeStats } from './types';
@@ -32,6 +34,7 @@ interface UseNodeDetailDataParams {
 export function useNodeDetailData(params: UseNodeDetailDataParams) {
   const { visible, orderId, orderNo, nodeType, nodeName, nodeStats, isPatternProduction = false, processList, onSaved } = params;
   const { message } = App.useApp();
+  const { isSuperAdmin } = useUser();
 
   const nodeTypeKey = nodeType as NodeType;
 
@@ -70,17 +73,25 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
 
   const loadUsers = useCallback(async () => {
     try {
-      const res = await api.get<{ code: number; data: { records: { id: string; name: string; username: string }[] } }>('/system/user/list', {
-        params: { page: 1, pageSize: 500, status: 'enabled' }
-      });
-      if (res.data?.records) {
-        setUsers(res.data.records);
+      // D-331：委派人员候选=本租户人员。坑有两处——
+      // ① User.status 落库值是 'active'（传 'enabled' 等值过滤必空）；② /system/user/list 仅主管及以上可拉（PII 保护），
+      //    普通账号改走租户子账号接口，与通用 StaffSelect 同一双路径范式。
+      const res = isSuperAdmin
+        ? await api.get<{ code: number; data: { records: Array<{ id: number | string; name?: string; username?: string }> } }>('/system/user/list', {
+            params: { page: 1, pageSize: 500, status: 'active' },
+          })
+        : await tenantService.listSubAccounts({ page: 1, pageSize: 500 });
+      const records = (res.data as { records?: Array<{ id: number | string; name?: string; username?: string }> })?.records;
+      if (records) {
+        setUsers(records
+          .filter((u) => u && u.id != null)
+          .map((u) => ({ id: String(u.id), name: u.name || u.username || '', username: u.username || '' })));
       }
     } catch (err) {
       console.error('加载用户列表失败', err);
-      addLoadWarning('用户列表加载失败');
+      addLoadWarning('人员列表加载失败');
     }
-  }, [addLoadWarning]);
+  }, [isSuperAdmin, addLoadWarning]);
 
   const loadNodeOperations = useCallback(async () => {
     if (!orderId) return;

@@ -203,9 +203,9 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
                   </div>
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                    gap: 8,
-                    padding: 8,
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                    gap: 10,
+                    padding: 10,
                   }}>
                     {g.records.map((r) => {
                       const isPendingQc = !r.qualityStatus;
@@ -219,8 +219,8 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
                         <div
                           key={r.id}
                           style={{
-                            display: 'flex', alignItems: 'flex-start', gap: 6,
-                            padding: '6px 8px',
+                            display: 'flex', alignItems: 'flex-start', gap: 8,
+                            padding: '8px 10px',
                             border: `1px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border)'}`,
                             borderRadius: 8,
                             background: isSelected ? 'var(--status-processing-bg)'
@@ -236,13 +236,13 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
                           )}
 
                           <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                            <div style={{ fontSize: 'var(--font-size-subtitle)', fontWeight: 600, color: 'var(--color-text-primary)' }}>
                               #{r.bundleNo}
                             </div>
-                            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+                            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
                               {r.color || '-'} / {r.size || '-'}
                             </div>
-                            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+                            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
                               {r.quantity}件{r.unitPrice ? ` × ¥${r.unitPrice}` : ''}{r.operatorName ? ` | ${r.operatorName}` : ''}
                             </div>
                             {isObsolete && <Tag color="default" style={{ marginTop: 4 }}>已废弃</Tag>}

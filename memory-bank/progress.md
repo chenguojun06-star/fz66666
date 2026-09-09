@@ -1,9 +1,15 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-09-08（D-315 PC统一待办面板 / D-316 手机端待办九区梳理，已推送）
+> 最后更新：2026-09-10（D-331 委派人员空列表根修 + 委派/质检卡片工整化，已推送待回归）
 
 ## 已完成
+
+### 2026-09-10 D-331 委派"选择人员"空列表根修 + 委派/质检卡片工整化 ✅（build 通过，已推送）
+
+- [x] 修复 useNodeDetailData.loadUsers：status 'enabled'→'active' + 非超管走 tenantService.listSubAccounts（PII 权限双路径，照 StaffSelect 范式）
+- [x] BundleDelegatePanel：卡片 160→180px/字号加大一档，底部"外发工序+委派目标+保存"收进浅底操作条，选择器定宽 130/260
+- [x] QcTabContent：卡片与委派卡同尺寸放大；多选批量质检/单选质检逻辑不变（并行提交 ad7fdd7da 已落卡片网格）
 
 ### 2026-09-08 D-315 PC端小云统一待办面板 + D-316 手机端待办九区梳理 ✅（tsc 0错 + mvn BUILD SUCCESS，已推送 待部署回归）
 

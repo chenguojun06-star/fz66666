@@ -1,7 +1,15 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-09（新增 D-330b 云库缺列补齐 quotation_unit_price——数据分析500紧急修复）
+> 最后更新：2026-09-10（新增 D-331 菲号委派/质检卡片加大与"选择人员"空列表根修）
+
+---
+
+## D-331：委派"选择人员"空列表根修 + 委派/质检卡片工整化（2026-09-10）
+
+用户报工序委派"选择人员"下拉恒"暂无数据"。根因两处叠加：① `useNodeDetailData.loadUsers` 传 `status: 'enabled'`，但 t_user.status 落库值全是 `'active'`（注册审批/Excel导入/组织创建统一 setStatus("active")），等值过滤必空——与 D-324"聚合列逐列对实体核对"同族的**参数口径错**；② `GET /system/user/list` 有 PII 保护仅主管及以上可拉（UserListController.getUserList 开头 AccessDeniedException），普通账号即使参数对了也会 403。修法照通用 `StaffSelect` 既有双路径范式：超管走 /system/user/list（status='active'），非超管走 `tenantService.listSubAccounts`（POST /system/tenant/sub/list）。教训：**拉人员的接口选型先看 StaffSelect，别再裸调 /system/user/list**；status 参数值必须对齐落库字面量。
+
+同批 UI：BundleDelegatePanel 与 QcTabContent 菲号卡片统一放大一档（卡 160→180px、标题 12→14、正文 11→12、内边距+1档），委派面板底部"外发工序+执行工厂/委派人员+保存"收进一个浅底圆角操作条，类型/目标选择器定宽 130/260 工整化；质检看板多选（勾选+批量合格/不合格）与单选（卡内质检/复检按钮）能力保持不变。质检看板卡片网格本身由并行提交 ad7fdd7da 已落地，用户截图旧布局为云端部署窗口期旧构建。
 
 ---
 
