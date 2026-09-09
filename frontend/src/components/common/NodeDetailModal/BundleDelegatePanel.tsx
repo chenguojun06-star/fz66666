@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Button, Checkbox, Select } from 'antd';
 import type { BundleRecord, BundleDelegatePayload } from './types';
 
@@ -37,13 +37,13 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
     return map;
   }, [factories]);
 
-  const isBlocked = (b: BundleRecord) =>
+  const isBlocked = useCallback((b: BundleRecord) =>
     b.completed === true
     || b.status === 'completed'
     || b.status === 'qualified'
-    || scannedBundleIds.has(b.id);
+    || scannedBundleIds.has(b.id), [scannedBundleIds]);
 
-  const selectableBundles = useMemo(() => bundles.filter((b) => !isBlocked(b)), [bundles, scannedBundleIds]);
+  const selectableBundles = useMemo(() => bundles.filter((b) => !isBlocked(b)), [bundles, isBlocked]);
 
   const allSelected = selectableBundles.length > 0 && selectedIds.length === selectableBundles.length;
 

@@ -1,11 +1,24 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-09（D-324 商品下单数据分析全0修复+延期口径对齐，已推送）
+> 最后更新：2026-09-09（委派闭环根治：菲号级工厂守卫失效修复，Playwright 双账号实测，待推送）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-09 委派闭环根治：菲号级工厂守卫失效（getByQrCode 漏选 factoryId）+ 顶部手工补录关闭（Playwright 双账号实测）
+
+- [x] **根因（既有 bug，非本次引入）**：`CuttingBundleServiceImpl.getByQrCode/getByBundleNo` 的 `.select(...)` 白名单**不含 factoryId/factoryName** → `ctx.bundle.getFactoryId()` 恒为 null → 执行器 `ScanExecutorSupport.validateBundleFactoryAccess` 与 Orchestrator `validateBundleBelonging` 全部提前 return → **菲号委派外发后内部仍可扫码，导致与外发工厂重复计件**
+- [x] 修复1：`getByQrCode`（主查询 + `|SIG-` 兜底）、`getByBundleNo` 补选 `factoryId/factoryName`
+- [x] 修复2：`ScanRecordOrchestrator.validateBundleBelonging` 对内部账号（factoryId 为空）也拦截；`executeProductionScan` 新增菲号级校验（此前只有质检/入库有）
+- [x] 修复3：`validateOrderBelonging` 增加 `CuttingBundle` 参数，支持「部分转单」——订单仍是内部单，但该菲号已委派给当前外发账号 → 放行（否则外发工厂扫不了自己承做的菲号）
+- [x] 修复4（前端）：`NodeSettingsTab` 有菲号时禁用顶部「数量 + 保存」并加 Tooltip，堵住手工补录旁路
+- [x] **端到端实测**（Playwright + 真实 Docker 栈）：外发账号 `factory_meimei` 扫委派给自己的菲号 → 200 操作成功；内部账号 `lilb` 扫同一菲号 → 403「该菲号已委派外发工厂，内部不可扫码，请由外发工厂操作」✅
+- 验证：后端 mvn compile 通过、前端 tsc 0 error、eslint 0 error
+- 数据还原：PO20260401001 status→completed、菲号 12 factory_id/factory_name→NULL、E2E 扫码记录已删
+- 备注：`isAdminRole` 用中文角色名匹配（ADMIN/manager/supervisor/主管/管理员），`lilb`「全能管理」不命中故走守卫；「生产主管」会旁路
+- **遗留（本次未改，待评估）**：同一 select 白名单还漏 `scanBlocked`、`splitProcessOrder` → `validateBundleNotBlocked` / `validateSplitGuard` 同样恒提前返回
 
 ### 2026-09-09 打印菲号/裁剪单抽屉化 + 打印人修复 + 工序委派菲号卡片化（Playwright 实测）
 

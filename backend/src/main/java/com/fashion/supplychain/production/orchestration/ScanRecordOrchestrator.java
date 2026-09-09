@@ -284,7 +284,7 @@ public class ScanRecordOrchestrator {
         final ProductionOrder finalOrder = order;
         // 菲号级工厂隔离校验（支持部分转单）
         validateBundleBelonging(bundle, ctx);
-        validateOrderBelonging(finalOrder, ctx);
+        validateOrderBelonging(finalOrder, ctx, bundle);
         return qualityScanExecutor.execute(params, requestId, operatorId, operatorName, finalOrder,
                 (unused) -> resolveColor(params, bundle, finalOrder), (unused) -> resolveSize(params, bundle, finalOrder));
     }
@@ -315,7 +315,7 @@ public class ScanRecordOrchestrator {
         UserContext ctx = UserContext.get();
         if ("ucode".equals(scanMode)) {
             ProductionOrder order = resolveOrder(orderId, orderNo);
-            validateOrderBelonging(order, ctx);
+            validateOrderBelonging(order, ctx, null);
             return warehouseScanExecutor.executeUCode(params, requestId, operatorId, operatorName, order);
         }
         final CuttingBundle bundle = hasText(scanCode) ? cuttingBundleService.getByQrCode(scanCode) : null;
@@ -325,7 +325,7 @@ public class ScanRecordOrchestrator {
         final ProductionOrder finalOrder = order;
         // 菲号级工厂隔离校验（支持部分转单）
         validateBundleBelonging(bundle, ctx);
-        validateOrderBelonging(finalOrder, ctx);
+        validateOrderBelonging(finalOrder, ctx, bundle);
         return warehouseScanExecutor.execute(params, requestId, operatorId, operatorName, finalOrder,
                 (unused) -> resolveColor(params, bundle, finalOrder), (unused) -> resolveSize(params, bundle, finalOrder));
     }
@@ -350,7 +350,10 @@ public class ScanRecordOrchestrator {
 
         ProductionOrder order = resolveOrder(orderId, orderNo);
         if (order == null && hasText(scanCode)) order = resolveOrder(null, scanCode);
-        validateOrderBelonging(order, ctx);
+        // 菲号级工厂隔离校验（与质检/入库同口径，支持部分转单：菲号委派后内部不可扫、外发工厂可扫）
+        final CuttingBundle scanBundle = hasText(scanCode) ? cuttingBundleService.getByQrCode(scanCode) : null;
+        validateBundleBelonging(scanBundle, ctx);
+        validateOrderBelonging(order, ctx, scanBundle);
         final ProductionOrder resolvedOrder = order;
         return productionScanExecutor.execute(params, requestId, operatorId, operatorName, scanType,
                 quantity != null ? quantity : NumberUtils.toInt(params.get("quantity")), autoProcess,
@@ -425,7 +428,7 @@ public class ScanRecordOrchestrator {
                 .eq(ProductionOrder::getOrderNo, on).eq(ProductionOrder::getDeleteFlag, 0).last("limit 1"));
     }
 
-    private void validateOrderBelonging(ProductionOrder order, UserContext ctx) {
+    private void validateOrderBelonging(ProductionOrder order, UserContext ctx, CuttingBundle bundle) {
         if (order == null || ctx == null) return;
         if (isAdminRole(ctx)) return;
         String userFactoryId = ctx.getFactoryId();
@@ -433,6 +436,15 @@ public class ScanRecordOrchestrator {
         String orderFactoryType = order.getFactoryType();
         boolean isInternalUser = !StringUtils.hasText(userFactoryId);
         boolean isExternalOrder = "EXTERNAL".equalsIgnoreCase(orderFactoryType);
+
+        // ★ 部分转单闭环：订单仍为内部订单，但该菲号已委派给当前外发工厂账号 → 放行，
+        // 否则外发工厂无法扫码自己承做的菲号（订单级校验会误拦）
+        if (!isInternalUser && !isExternalOrder && bundle != null
+                && StringUtils.hasText(bundle.getFactoryId())
+                && userFactoryId.equals(bundle.getFactoryId())) {
+            return;
+        }
+
         if (isInternalUser && !isExternalOrder) return;
         if (isInternalUser && isExternalOrder) throw new AccessDeniedException("内部员工无法扫码外发订单，请确认订单归属");
         if (!isInternalUser && isExternalOrder) {
@@ -449,16 +461,19 @@ public class ScanRecordOrchestrator {
     private void validateBundleBelonging(CuttingBundle bundle, UserContext ctx) {
         if (bundle == null || ctx == null) return;
         if (isAdminRole(ctx)) return;
-        String userFactoryId = ctx.getFactoryId();
-        // 内部用户不做菲号级校验
-        if (!StringUtils.hasText(userFactoryId)) return;
-
         String bundleFactoryId = bundle.getFactoryId();
-        // 菲号有 factoryId 且与当前用户工厂不匹配 → 拒绝
-        if (StringUtils.hasText(bundleFactoryId) && !bundleFactoryId.equals(userFactoryId)) {
+        // 菲号未委派外发 → 不限制
+        if (!StringUtils.hasText(bundleFactoryId)) return;
+
+        String userFactoryId = ctx.getFactoryId();
+        // 菲号已委派外发：内部账号（factoryId 为空）一律拒绝，避免与外发工厂重复计件
+        if (!StringUtils.hasText(userFactoryId)) {
+            throw new AccessDeniedException("该菲号已委派外发工厂，内部不可扫码，请由外发工厂操作");
+        }
+        // 外发账号：必须是委派的那个工厂
+        if (!bundleFactoryId.equals(userFactoryId)) {
             throw new AccessDeniedException("该菲号不属于当前工厂，请确认订单归属");
         }
-        // 菲号没有 factoryId（旧数据）， fallback 到订单级校验
     }
 
     private boolean isAdminRole(UserContext ctx) {

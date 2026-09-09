@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Button, Input, InputNumber, Select } from 'antd';
+import { Alert, Button, Input, InputNumber, Select, Tooltip } from 'antd';
 import dayjs from 'dayjs';
 import { formatProcessDisplayName } from '@/utils/productionStage';
 import BundleDelegatePanel from './BundleDelegatePanel';
@@ -157,12 +157,12 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
           style={{ width: '100%', minWidth: 0 }}
         />
         <InputNumber
-          placeholder="数量"
+          placeholder={hasBundles ? '按菲号扫码' : '数量'}
           min={0}
           precision={0}
           value={typeof currentNodeData.assigneeQuantity === 'number' ? currentNodeData.assigneeQuantity : undefined}
           onChange={(v) => updateNodeData('assigneeQuantity', v ?? undefined)}
-          disabled={disableEdit}
+          disabled={disableEdit || hasBundles}
           style={{ width: '100%', minWidth: 0 }}
         />
         {!hasBundles && (
@@ -224,9 +224,17 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
           style={{ width: '100%', minWidth: 0 }}
         />
         <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{formatDelegationTime(currentNodeData.updatedAt)}</div>
-        <Button type="primary" loading={saving} onClick={handleSave} disabled={disableEdit}>
-          保存
-        </Button>
+        {hasBundles ? (
+          <Tooltip title="该订单已按菲号管理：请在下方「菲号委派」中勾选菲号操作，顶部手工补录已关闭，避免与外发工厂重复计件">
+            <Button disabled style={{ width: '100%' }}>
+              保存
+            </Button>
+          </Tooltip>
+        ) : (
+          <Button type="primary" loading={saving} onClick={handleSave} disabled={disableEdit}>
+            保存
+          </Button>
+        )}
       </div>
 
       {bundles && bundles.length > 0 && (
