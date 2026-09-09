@@ -426,6 +426,8 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                                 CuttingBundle::getOperatorName,
                                 CuttingBundle::getFactoryId,
                                 CuttingBundle::getFactoryName,
+                                CuttingBundle::getScanBlocked,
+                                CuttingBundle::getSplitProcessOrder,
                                 CuttingBundle::getCreateTime)
                         .eq(CuttingBundle::getQrCode, qrCode)
                         .last("limit 1"));
@@ -450,6 +452,8 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                                     CuttingBundle::getOperatorName,
                                     CuttingBundle::getFactoryId,
                                     CuttingBundle::getFactoryName,
+                                    CuttingBundle::getScanBlocked,
+                                    CuttingBundle::getSplitProcessOrder,
                                     CuttingBundle::getCreateTime)
                             .eq(CuttingBundle::getQrCode, withoutSig)
                             .last("limit 1"));
@@ -479,6 +483,8 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                         CuttingBundle::getOperatorName,
                         CuttingBundle::getFactoryId,
                         CuttingBundle::getFactoryName,
+                        CuttingBundle::getScanBlocked,
+                        CuttingBundle::getSplitProcessOrder,
                         CuttingBundle::getCreateTime)
                 .eq(CuttingBundle::getProductionOrderNo, on)
                 .eq(CuttingBundle::getBundleNo, bn)

@@ -1,11 +1,24 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-09（工序委派两处入口合并为一个卡片，Playwright 实测，待推送）
+> 最后更新：2026-09-09（补全菲号级守卫：阻止扫码 + 拆菲范围，Playwright 实测，待推送）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-09 补全菲号级守卫：阻止扫码 + 拆菲范围（Playwright 实测）
+
+- [x] **根因（与上一条同类）**：`getByQrCode`/`getByBundleNo` 的 select 白名单还漏 `scanBlocked`、`splitProcessOrder` → `ScanExecutorSupport.validateBundleNotBlocked`（生产/质检/入库三个执行器都调用）与 `ProductionScanExecutor.validateSplitGuard` 恒提前 return，形同虚设
+- [x] 补选字段后守卫立即生效，实测三项：
+  - **阻止扫码**：`scan_blocked=1` → 400「该菲号已被阻止扫码，无法继续生产。请在工序看板中解除阻止后重试」
+  - **拆菲当次工序**：`split_parent` + 当前工序 tracking 置 `split_archived` → 扫该工序 400「该菲号在「整件」工序已拆分，请扫描子菲号」
+  - **拆菲后续工序**：同一父菲号扫「烫画」→ 200 操作成功（父菲号在后续工序仍活跃）
+- [x] **语义确认**（与用户口径一致）：`persistTrackingAndScans` 只归档 `processOrder <= 当前工序` 的跟踪（`order > currentOrder` 直接 continue），`archiveSourceBundle` 不改 `status` → **只拆解这次工序，后续工序继续扫主菲号**
+- [x] **边界确认**：拆菲入口 H5 `BundleSplitPage` 的 `HIDDEN_STAGES = ['裁剪','采购','质检入库','质检','入库']` 已排除质检/入库，拆菲只会发生在生产工序 → 守卫只需在生产执行器，无遗漏
+- [x] **手机端链路确认**：发起 `/split-transfer/request` → 待我确认 `/split-transfer/pending-for-me` → 对方接受 `/split-transfer/confirm`（另有 `/split-transfer` 直接拆、`/split-rollback` 撤回）
+- 注意：真实客户端发送的 `processName` 是**裸工序名**（如 `整件`），`02 整件` 只是 label；守卫按裸名比对才有效
+- 验证：mvn compile 通过；测试数据全部还原（订单状态/菲号字段/tracking 状态/扫码记录）
 
 ### 2026-09-09 工序委派「两处入口」合并为一个卡片（Playwright 实测）
 
