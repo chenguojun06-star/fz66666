@@ -324,6 +324,14 @@
   margin-bottom: 8px;
   font-size: 14px;
 }
+.adviceSummaryText {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin-bottom: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .adviceSummary {
   cursor: pointer;
   font-size: 14px;

@@ -230,16 +230,21 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           {msg.traceableAdvice && (
             <div className={msgStyles.traceableAdvice}>
               <div className={msgStyles.adviceTitle}>{msg.traceableAdvice.title}</div>
-              <div style={{ marginBottom: 12 }}>
-                <details className={msgStyles.adviceSummary}>
-                  <summary style={{ outline: 'none', userSelect: 'none' }}>🔍 查看评估依据</summary>
-                  <ul className={msgStyles.adviceDetails}>
-                    {msg.traceableAdvice.reasoningChain?.map((reason, idx) => (
-                      <li key={idx} className={msgStyles.reasoningItem}>{reason}</li>
-                    ))}
-                  </ul>
-                </details>
-              </div>
+              {msg.traceableAdvice.summary && (
+                <div className={msgStyles.adviceSummaryText}>{msg.traceableAdvice.summary}</div>
+              )}
+              {!!msg.traceableAdvice.reasoningChain?.length && (
+                <div style={{ marginBottom: 12 }}>
+                  <details className={msgStyles.adviceSummary}>
+                    <summary style={{ outline: 'none', userSelect: 'none' }}>🔍 查看评估依据</summary>
+                    <ul className={msgStyles.adviceDetails}>
+                      {msg.traceableAdvice.reasoningChain.map((reason, idx) => (
+                        <li key={idx} className={msgStyles.reasoningItem}>{reason}</li>
+                      ))}
+                    </ul>
+                  </details>
+                </div>
+              )}
               {msg.traceableAdvice.proposedActions && msg.traceableAdvice.proposedActions.length > 0 && (
                 <div className={msgStyles.adviceActions}>
                   {msg.traceableAdvice.proposedActions.map((action, idx) => (

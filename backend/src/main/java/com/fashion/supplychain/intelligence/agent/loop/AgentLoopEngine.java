@@ -727,8 +727,10 @@ public class AgentLoopEngine {
 
     /**
      * 可追溯建议卡片推送：当回答由真实工具证据支撑且内容较充实时，
-     * 经订单进度 WebSocket 通道向租户推送 ai:traceable_advice 事件，
-     * 前端渲染"查看评估依据"卡片（Human-in-the-loop，AI 不直接改数据）。
+     * 经订单进度 WebSocket 通道向租户推送 ai:traceable_advice 事件。
+     *
+     * <p>面向用户的原则：卡片只呈现"什么问题、结论是什么"的大白话，
+     * 不暴露工具名/数据血缘等内部机制（用户不需要知道调用了什么）。
      * 任何异常都不阻断主流程。
      */
     private void pushTraceableAdviceIfApplicable(AgentLoopContext ctx, String content) {
@@ -740,29 +742,33 @@ public class AgentLoopEngine {
             Long tenantId = ctx.getTenantId();
             if (tenantId == null) return;
 
-            // 数据血缘（评估依据）：最多取 6 条工具结果摘要
-            java.util.List<String> chain = new java.util.ArrayList<>();
-            int shown = 0;
-            for (AiAgentToolExecHelper.ToolExecRecord rec : records) {
-                if (shown >= 6) break;
-                String evidence = rec.evidence;
-                if (evidence == null || evidence.isBlank()) continue;
-                if (evidence.length() > 120) evidence = evidence.substring(0, 120) + "…";
-                chain.add(mapToolDisplayName(rec.toolName) + "：" + evidence);
-                shown++;
-            }
-            if (chain.isEmpty()) return;
-
             java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>();
             payload.put("traceId", ctx.getCommandId());
-            payload.put("title", "小云智能建议");
-            payload.put("summary", content.length() > 200 ? content.substring(0, 200) + "…" : content);
-            payload.put("reasoningChain", chain);
+            payload.put("title", buildPlainAdviceTitle(content));
+            payload.put("summary", content.length() > 300 ? content.substring(0, 300) + "…" : content);
+            // 技术内幕（工具名/数据血缘）不下发：reasoningChain/proposedActions 留空，前端不再渲染评估依据
+            payload.put("reasoningChain", java.util.List.of());
             payload.put("proposedActions", java.util.List.of());
             orderProgressWebSocketServer.broadcastAiEvent(tenantId, "ai:traceable_advice", payload);
         } catch (Exception e) {
             log.debug("[AgentLoop] 建议卡片推送失败（不阻断）: {}", e.getMessage());
         }
+    }
+
+    /** 取回答首行作为卡片标题，去掉问候语等开场白，保证用户直接看到问题结论。 */
+    private String buildPlainAdviceTitle(String content) {
+        String firstLine = content;
+        int nl = content.indexOf('\n');
+        if (nl > 0) {
+            firstLine = content.substring(0, nl);
+        }
+        String title = firstLine
+                .replaceAll("^(李老板|老板|您好|你好|好的|收到|好的，|收到，)[，,、:：\\s]*", "")
+                .trim();
+        if (title.length() > 50) {
+            title = title.substring(0, 50) + "…";
+        }
+        return title.isBlank() ? "小云智能建议" : title;
     }
 
     /**

@@ -147,9 +147,6 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
         <button type="button" className={styles.uploadBtn} title="上传文件" onClick={() => fileInputRef.current?.click()} disabled={isTyping || uploadingFile}>
           <PaperClipOutlined />
         </button>
-        <button type="button" className={`${styles.uploadBtn} ${styles.traceBtn}`} title="查看AI记录" onClick={() => openTraceCenter()} disabled={isTyping || uploadingFile}>
-          AI记录
-        </button>
         <div className={emojiStyles.emojiWrapper} ref={emojiPanelRef}>
           <button type="button" className={`${styles.uploadBtn} ${showEmojiPicker ? emojiStyles.emojiActive : ''}`} title="表情" onClick={() => setShowEmojiPicker(v => !v)}>
             <SmileOutlined />
