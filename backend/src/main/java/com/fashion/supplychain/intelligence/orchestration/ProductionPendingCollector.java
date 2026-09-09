@@ -77,9 +77,12 @@ public class ProductionPendingCollector {
             dto.setOrderNo(r.getOrderNo());
             dto.setStyleNo(r.getStyleNo());
             // D-114：深链直达质检详情页
+            // D-326：orderId 缺失时兜底带 orderNo 的订单流程页，而不是裸路径渲染空白
             dto.setDeepLinkPath(StringUtils.hasText(r.getOrderId())
                     ? "/production/warehousing/inspect/" + PendingTaskOrchestrator.pathSegment(r.getOrderId())
-                    : "/production/order-flow");
+                    : StringUtils.hasText(r.getOrderNo())
+                            ? "/production/order-flow?orderNo=" + PendingTaskOrchestrator.pathSegment(r.getOrderNo())
+                            : "/production/order-flow");
             dto.setPriority("medium");
             dto.setCreatedAt(r.getScanTime());
             dto.setTaskStatus("pending");

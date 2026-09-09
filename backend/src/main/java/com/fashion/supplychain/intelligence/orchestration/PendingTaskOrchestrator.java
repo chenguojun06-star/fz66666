@@ -252,9 +252,12 @@ public class PendingTaskOrchestrator {
             dto.setOrderNo(r.getOrderNo());
             dto.setStyleNo(r.getStyleNo());
             // D-114：深链直达质检详情页（inspect/:orderId）
+            // D-326：orderId 缺失时兜底带 orderNo 的订单流程页，而不是裸路径渲染空白
             dto.setDeepLinkPath(StringUtils.hasText(r.getOrderId())
                     ? "/production/warehousing/inspect/" + pathSegment(r.getOrderId())
-                    : "/production/order-flow");
+                    : StringUtils.hasText(r.getOrderNo())
+                            ? "/production/order-flow?orderNo=" + pathSegment(r.getOrderNo())
+                            : "/production/order-flow");
             dto.setPriority("medium");
             dto.setCreatedAt(r.getScanTime());
             dto.setTaskStatus("pending");
@@ -371,7 +374,10 @@ public class PendingTaskOrchestrator {
             dto.setOrderNo(o.getOrderNo());
             dto.setStyleNo(o.getStyleNo());
             // D-114：深链直达订单流程页（order-flow 消费 orderNo 参数，原只跳 /production 根路由）
-            dto.setDeepLinkPath("/production/order-flow");
+            // D-326：必须带 orderNo，否则 order-flow 两参皆空渲染整页空白（"缺少订单ID"）
+            dto.setDeepLinkPath(StringUtils.hasText(o.getOrderNo())
+                    ? "/production/order-flow?orderNo=" + pathSegment(o.getOrderNo())
+                    : "/production/order-flow");
             dto.setPriority("high");
             dto.setCreatedAt(o.getPlannedEndDate());
             dto.setTaskStatus("pending");
@@ -416,7 +422,10 @@ public class PendingTaskOrchestrator {
             dto.setDescription(safe(r.getExceptionType()) + " " + safe(r.getDescription()));
             dto.setOrderNo(r.getOrderNo());
             // D-114：深链直达订单流程页（原只跳 /production 根路由）
-            dto.setDeepLinkPath("/production/order-flow");
+            // D-326：同逾期单，必须带 orderNo 否则 order-flow 渲染整页空白
+            dto.setDeepLinkPath(StringUtils.hasText(r.getOrderNo())
+                    ? "/production/order-flow?orderNo=" + pathSegment(r.getOrderNo())
+                    : "/production/order-flow");
             dto.setPriority("high");
             dto.setCreatedAt(r.getCreateTime());
             dto.setTaskStatus("pending");
