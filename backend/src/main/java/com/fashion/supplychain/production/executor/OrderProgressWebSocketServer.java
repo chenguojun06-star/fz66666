@@ -153,46 +153,6 @@ public class OrderProgressWebSocketServer {
         return sessions != null ? sessions.size() : 0;
     }
 
-    /**
-     * 广播 AI 智能事件（如 ai:traceable_advice 建议卡片）到租户全部在线连接。
-     *
-     * <p>消息结构为 {type, payload, timestamp}；前端 useWebSocket 对 "ai:" 前缀
-     * 类型单独路由到对应订阅者（区别于订单进度消息）。
-     */
-    public void broadcastAiEvent(Long tenantId, String type, Map<String, Object> payload) {
-        CopyOnWriteArraySet<Session> sessions = tenantSessions.get(tenantId);
-        if (sessions == null || sessions.isEmpty()) {
-            log.debug("[WS] 无在线连接: tenantId={}, type={}", tenantId, type);
-            return;
-        }
-        try {
-            ObjectMapper objectMapper = SpringContextHolder.getBean(ObjectMapper.class);
-            Map<String, Object> envelope = new java.util.LinkedHashMap<>();
-            envelope.put("type", type);
-            envelope.put("payload", payload);
-            envelope.put("timestamp", System.currentTimeMillis());
-            String json = objectMapper.writeValueAsString(envelope);
-            int successCount = 0;
-            int failCount = 0;
-            for (Session session : sessions) {
-                if (session.isOpen()) {
-                    try {
-                        session.getBasicRemote().sendText(json);
-                        successCount++;
-                    } catch (IOException e) {
-                        failCount++;
-                        log.warn("[WS] AI事件发送失败: sessionId={}, type={}, error={}",
-                                session.getId(), type, e.getMessage());
-                    }
-                }
-            }
-            log.info("[WS] AI事件发送: tenantId={}, type={}, 成功={}, 失败={}",
-                    tenantId, type, successCount, failCount);
-        } catch (Exception e) {
-            log.error("[WS] 构建AI事件消息失败: tenantId={}, type={}", tenantId, type, e);
-        }
-    }
-
     @Data
     public static class ProgressMessage {
         private String orderId;

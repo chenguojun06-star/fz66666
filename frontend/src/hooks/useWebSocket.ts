@@ -171,24 +171,6 @@ export function useWebSocket(options: UseWebSocketOptions) {
           return;
         }
 
-        // AI 智能事件（ai: 前缀）：如 ai:traceable_advice 建议卡片，按 type 路由到对应订阅者。
-        // 进度类消息不带 type 字段，不受影响，仍走下方原有 progress 处理。
-        if (parsed && typeof parsed.type === 'string' && parsed.type.startsWith('ai:')) {
-          const aiMsg: WsMessage = {
-            type: parsed.type,
-            payload: (parsed.payload && typeof parsed.payload === 'object' ? parsed.payload : {}) as Record<string, unknown>,
-          };
-          handlersRef.current.get(parsed.type)?.forEach(handler => {
-            try {
-              handler(aiMsg);
-            } catch (e) {
-              console.error('[WS] AI消息处理失败:', e);
-            }
-          });
-          window.dispatchEvent(new CustomEvent(parsed.type, { detail: aiMsg.payload }));
-          return;
-        }
-
         const data = parsed as ProgressMessage;
         progressHandlersRef.current.forEach(handler => {
           try {

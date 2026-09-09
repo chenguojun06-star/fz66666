@@ -96,9 +96,6 @@ public class AgentLoopEngine {
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.SharedAgentMemoryService> sharedAgentMemoryProvider;
     // P0-3修复：注入 SkillTreeOrchestrator，使 extractAndStore 不再是孤儿方法
     @Autowired private org.springframework.beans.factory.ObjectProvider<SkillTreeOrchestrator> skillTreeOrchestratorProvider;
-    // 可追溯建议卡片：经订单进度 WebSocket 通道向租户推送 ai:traceable_advice 事件
-    @Autowired(required = false)
-    private com.fashion.supplychain.production.executor.OrderProgressWebSocketServer orderProgressWebSocketServer;
 
     /** P0-3: 工具结果共享记忆开关，默认 true */
     @Value("${xiaoyun.agent.shared-memory.enabled:true}")
@@ -696,8 +693,6 @@ public class AgentLoopEngine {
         // ★ 立即发送回答并关闭SSE，用户几乎零等待
         aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), fastContent, null,
                 System.currentTimeMillis() - ctx.getRequestStartAt());
-        // 可追溯建议卡片：有工具证据的长回答，经 WS 推 ai:traceable_advice（失败不阻断主流程）
-        pushTraceableAdviceIfApplicable(ctx, fastContent);
         cb.onAnswer(fastContent, ctx.getCommandId());
         cb.onToolExecRecords(ctx.getAllExecRecords());
 
@@ -723,52 +718,6 @@ public class AgentLoopEngine {
         });
 
         return fastContent;
-    }
-
-    /**
-     * 可追溯建议卡片推送：当回答由真实工具证据支撑且内容较充实时，
-     * 经订单进度 WebSocket 通道向租户推送 ai:traceable_advice 事件。
-     *
-     * <p>面向用户的原则：卡片只呈现"什么问题、结论是什么"的大白话，
-     * 不暴露工具名/数据血缘等内部机制（用户不需要知道调用了什么）。
-     * 任何异常都不阻断主流程。
-     */
-    private void pushTraceableAdviceIfApplicable(AgentLoopContext ctx, String content) {
-        try {
-            if (orderProgressWebSocketServer == null) return;
-            java.util.List<AiAgentToolExecHelper.ToolExecRecord> records = ctx.getAllExecRecords();
-            if (records == null || records.isEmpty()) return;
-            if (content == null || content.length() < 300) return;
-            Long tenantId = ctx.getTenantId();
-            if (tenantId == null) return;
-
-            java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>();
-            payload.put("traceId", ctx.getCommandId());
-            payload.put("title", buildPlainAdviceTitle(content));
-            payload.put("summary", content.length() > 300 ? content.substring(0, 300) + "…" : content);
-            // 技术内幕（工具名/数据血缘）不下发：reasoningChain/proposedActions 留空，前端不再渲染评估依据
-            payload.put("reasoningChain", java.util.List.of());
-            payload.put("proposedActions", java.util.List.of());
-            orderProgressWebSocketServer.broadcastAiEvent(tenantId, "ai:traceable_advice", payload);
-        } catch (Exception e) {
-            log.debug("[AgentLoop] 建议卡片推送失败（不阻断）: {}", e.getMessage());
-        }
-    }
-
-    /** 取回答首行作为卡片标题，去掉问候语等开场白，保证用户直接看到问题结论。 */
-    private String buildPlainAdviceTitle(String content) {
-        String firstLine = content;
-        int nl = content.indexOf('\n');
-        if (nl > 0) {
-            firstLine = content.substring(0, nl);
-        }
-        String title = firstLine
-                .replaceAll("^(李老板|老板|您好|你好|好的|收到|好的，|收到，)[，,、:：\\s]*", "")
-                .trim();
-        if (title.length() > 50) {
-            title = title.substring(0, 50) + "…";
-        }
-        return title.isBlank() ? "小云智能建议" : title;
     }
 
     /**
