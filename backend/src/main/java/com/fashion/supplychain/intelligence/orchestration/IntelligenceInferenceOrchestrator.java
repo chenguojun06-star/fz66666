@@ -979,6 +979,9 @@ public class IntelligenceInferenceOrchestrator {
         if (!usage.isMissingNode()) {
             result.setPromptTokens(usage.path("prompt_tokens").asInt(0));
             result.setCompletionTokens(usage.path("completion_tokens").asInt(0));
+            // DeepSeek 上下文硬盘缓存命中/未命中 token 数：用于观测缓存命中率（成本与首字延迟的关键指标）
+            result.setPromptCacheHitTokens(usage.path("prompt_cache_hit_tokens").asInt(0));
+            result.setPromptCacheMissTokens(usage.path("prompt_cache_miss_tokens").asInt(0));
         }
         if (message.has("tool_calls")) {
             List<AiToolCall> toolCalls = MAPPER.convertValue(message.path("tool_calls"), new TypeReference<List<AiToolCall>>(){});

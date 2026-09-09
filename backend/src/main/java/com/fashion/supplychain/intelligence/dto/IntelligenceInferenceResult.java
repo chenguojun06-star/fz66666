@@ -26,6 +26,8 @@ public class IntelligenceInferenceResult {
     private int toolCallCount;
     private int promptTokens;
     private int completionTokens;
+    private int promptCacheHitTokens;
+    private int promptCacheMissTokens;
     private List<AiToolCall> toolCalls;
     private String reasoningContent;
 }

@@ -35,6 +35,11 @@ public class IntelligenceObservabilityOrchestrator {
 
     private static final int LATENCY_WARN_THRESHOLD_MS = 30_000;
 
+    // DeepSeek 上下文缓存命中率观测（内存累计，无需改表；重启后从零累计）
+    private final java.util.concurrent.atomic.AtomicLong cacheHitTokens = new java.util.concurrent.atomic.AtomicLong();
+    private final java.util.concurrent.atomic.AtomicLong cacheMissTokens = new java.util.concurrent.atomic.AtomicLong();
+    private final java.util.concurrent.atomic.AtomicLong cacheObservedRequests = new java.util.concurrent.atomic.AtomicLong();
+
     @Autowired
     private IntelligenceMetricsMapper metricsMapper;
 
@@ -67,6 +72,13 @@ public class IntelligenceObservabilityOrchestrator {
             log.warn("[AI_OBSERVABILITY] 度量持久化失败（不影响业务）: {}", e.getMessage());
         }
 
+        // 累计 DeepSeek 上下文缓存命中/未命中 token（仅在模型实际返回了缓存字段时累计）
+        if (result.getPromptCacheHitTokens() > 0 || result.getPromptCacheMissTokens() > 0) {
+            cacheHitTokens.addAndGet(result.getPromptCacheHitTokens());
+            cacheMissTokens.addAndGet(result.getPromptCacheMissTokens());
+            cacheObservedRequests.incrementAndGet();
+        }
+
         if (result.getLatencyMs() > LATENCY_WARN_THRESHOLD_MS) {
             log.warn("[AI_ANOMALY] 高延迟告警 scene={} latencyMs={} model={} traceId={}",
                     scene, result.getLatencyMs(), result.getModel(), result.getTraceId());
@@ -78,7 +90,7 @@ public class IntelligenceObservabilityOrchestrator {
         String promptNote = capturePrompts
                 ? String.format("promptChars=%d,responseChars=%d", result.getPromptChars(), result.getResponseChars())
                 : "promptChars=masked,responseChars=masked";
-        log.info("[AI_OBSERVABILITY] traceId={} provider={} scene={} tenantId={} userId={} success={} fallback={} latencyMs={} model={} toolCalls={} promptTokens={} completionTokens={} status={} {} error={} traceUrl={}",
+        log.info("[AI_OBSERVABILITY] traceId={} provider={} scene={} tenantId={} userId={} success={} fallback={} latencyMs={} model={} toolCalls={} promptTokens={} completionTokens={} cacheHit={} cacheMiss={} status={} {} error={} traceUrl={}",
                 result.getTraceId(),
                 result.getProvider(),
                 scene,
@@ -91,6 +103,8 @@ public class IntelligenceObservabilityOrchestrator {
                 result.getToolCallCount(),
                 result.getPromptTokens(),
                 result.getCompletionTokens(),
+                result.getPromptCacheHitTokens(),
+                result.getPromptCacheMissTokens(),
                 resolveStatus(),
                 promptNote,
                 result.getErrorMessage(),
@@ -193,7 +207,25 @@ public class IntelligenceObservabilityOrchestrator {
             health.put("status", "query_error");
             health.put("alerts", java.util.Collections.singletonList("健康指标查询异常: " + e.getMessage()));
         }
+        // DeepSeek 上下文缓存命中率（内存累计，独立于 DB 查询）
+        if (cacheObservedRequests.get() > 0) {
+            health.put("cacheHitRate", String.format("%.1f%%", getCacheHitRate() * 100));
+            health.put("cacheHitTokens", cacheHitTokens.get());
+            health.put("cacheMissTokens", cacheMissTokens.get());
+            health.put("cacheObservedRequests", cacheObservedRequests.get());
+        }
         return health;
+    }
+
+    /**
+     * DeepSeek 上下文硬盘缓存命中率 = 命中 token / (命中 + 未命中) token。
+     * 命中率越高，成本越低、首字延迟越低。重启后累计清零。
+     */
+    public double getCacheHitRate() {
+        long hit = cacheHitTokens.get();
+        long miss = cacheMissTokens.get();
+        long total = hit + miss;
+        return total > 0 ? (double) hit / total : 0.0;
     }
 
     private boolean shouldRecord() {
