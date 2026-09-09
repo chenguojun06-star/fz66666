@@ -1,7 +1,17 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-09（新增 D-330 毛利估算根修——下单从未落库销售单价，销售额口径用户拍板"报价优先锁定价兜底"）
+> 最后更新：2026-09-09（新增 D-330b 云库缺列补齐 quotation_unit_price——数据分析500紧急修复）
+
+---
+
+## D-330b：云库缺列补齐 — quotation_unit_price 从未有迁移（2026-09-09）
+
+D-330 上线后数据分析立刻 500：`Unknown column 'quotation_unit_price' in 'field list'`。排查：实体 ProductionOrder 有 quotationUnitPrice 字段、掩码名单也有它，但**翻遍 590 个迁移没有一条给 t_production_order 加过这列**（只有 t_order_learning 表有同名列）——本地/云上都没有，D-330 SQL 一引用就炸。这就是"实体有字段≠表有列"的 schema 漂移家族第三现（前两轮 V202705031800/V20270620001 是 AI 三表）。
+
+**决策**：新增 V202709090200 幂等迁移（INFORMATION_SCHEMA.COLUMNS + PREPARE/EXECUTE，与 V202708130001 同模式）补 quotation_unit_price DECIMAL(12,4)；顺带保险补齐 factory_unit_price/material_cost 两列（V202708130001 已覆盖，个别环境没跑全时兜底）。AgentCheckpoint 报错不需处理——entity 的 action/toolName/iteration 等全是 `@TableField(exist=false)` API 层字段不参与 INSERT，12:05 日志是 V202709090100 同步前的旧实例噪音。
+
+**教训**：**引用任何实体的字段进聚合 SQL 前，除了逐列对 @TableField 核对（D-324），还要逐列 grep 迁移目录确认"这列到底有没有被任何迁移创建过"**；本地库可能靠历史手工 ALTER 活着而迁移里没有，云上一跑 Flyway 就现原形。
 
 ---
 
