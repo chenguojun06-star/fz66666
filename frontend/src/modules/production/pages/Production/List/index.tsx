@@ -361,14 +361,6 @@ const ProductionList: React.FC = () => {
         groups={columnSettings.columnGroups}
         presets={columnSettings.columnPresets}
         onApplyPreset={columnSettings.applyPresetValues}
-        extraFooterLink={
-          <a
-            onClick={() => navigate(`${paths.fieldConfig}?bizType=order`)}
-            style={{ fontSize: 12 }}
-          >
-            管理自定义字段
-          </a>
-        }
       />
 </>
   );

@@ -1,7 +1,25 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-09（新增 D-324c 订单分析500二次修复 Before start of result set；D-325 物料采购+裁剪管理接入显示字段）
+> 最后更新：2026-09-09（新增 D-326 小云任务深链缺 orderNo 致订单详情页全空；D-325b 自定义字段入口暂时下架）
+
+---
+
+## D-326：小云任务深链缺 orderNo → 订单详情页整页空白（2026-09-09）
+
+用户从小云待办"逾期订单"卡点「打开」，落到订单详情页（order-flow）全空：基本信息全"-"、0 图、无阶段数据，顶部警"缺少订单ID"。
+
+**根因**：PendingTaskOrchestrator 逾期单/异常上报两 collector `setDeepLinkPath("/production/order-flow")` **裸路径不带参**——行注释写着"order-flow 消费 orderNo 参数"（D-114）但实现从未拼上；order-flow 前端要求 orderId 或 orderNo 至少一个非空，两空即整页空白。质检 collector 的 orderId 缺失兜底分支同样是裸路径（两个类各一处）。
+
+**决策**：四处统一补 `?orderNo=pathSegment(orderNo)`（URL 编码复用现有 helper）；兜底链=有 orderId 走质检详情 → 无 orderId 有 orderNo 走 order-flow 带参 → 全无才裸路径。**教训：深链是两端的契约，注释声称的参数拼接必须落实，"看起来会带参"的注释不可信**。
+
+---
+
+## D-325b：显示字段抽屉"管理自定义字段"入口暂时下架（2026-09-09）
+
+用户拍板：自定义字段功能暂时不做（"就是列表字段这些"），入口先隐藏，后续研究好再说。
+
+**决策**：摘除 OrderManagement / StyleInfoList / Production List 三处显示字段抽屉底部的"管理自定义字段"extraFooterLink（ColumnSettingsDrawer 该 prop 本就可选）；ext_ 自定义字段若已有配置仍照常参与显隐勾选（属"列表字段"范畴不动）。系统设置→字段配置页保留（管理员入口未动），后续恢复只需把 extraFooterLink 加回。
 
 ---
 

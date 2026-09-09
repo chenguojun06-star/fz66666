@@ -55,9 +55,6 @@ const OrderManagement: React.FC = () => {
     () => orderFieldConfigs.filter(f => f.isSystem === 0),
     [orderFieldConfigs]
   );
-  const goToStyleFieldConfig = () => {
-    navigate(`${paths.fieldConfig}?bizType=order`);
-  };
 
   // ===== D-323 显示字段：系统预设全部字段，用户只挑显隐；方案跟随账号 =====
   const ORDER_LIST_COLUMNS = useMemo(() => [
@@ -364,11 +361,6 @@ const OrderManagement: React.FC = () => {
         groups={orderColumnGroups}
         presets={orderColumnPresets}
         onApplyPreset={orderColumnSettings.applyValues}
-        extraFooterLink={
-          <a onClick={goToStyleFieldConfig} style={{ fontSize: 12 }}>
-            管理自定义字段
-          </a>
-        }
       />
 
       <OrderManagementModals

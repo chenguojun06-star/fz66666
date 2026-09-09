@@ -305,11 +305,6 @@ const StyleInfoListPage: React.FC = () => {
         groups={styleColumnGroups}
         presets={styleColumnPresets}
         onApplyPreset={styleColumnSettings.applyValues}
-        extraFooterLink={
-          <a onClick={() => navigate('/system/field-config?bizType=style')} style={{ fontSize: 12 }}>
-            管理自定义字段
-          </a>
-        }
       />
     </>
   );
