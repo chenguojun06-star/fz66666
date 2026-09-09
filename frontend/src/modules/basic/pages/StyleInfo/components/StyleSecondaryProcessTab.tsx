@@ -16,6 +16,8 @@ interface Props {
   sampleQuantity?: number;
   onRefresh?: () => void;
   simpleView?: boolean;
+  /** 表格宽度自适应容器（不横向滚动），订单详情页只读嵌入时使用 */
+  fitWidth?: boolean;
 }
 
 const StyleSecondaryProcessTab: React.FC<Props> = ({
@@ -28,6 +30,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
   sampleQuantity = 0,
   onRefresh,
   simpleView = false,
+  fitWidth = false,
 }) => {
   const {
     dataSource, loading, editingKey, editingExtraValues, setEditingExtraValues,
@@ -112,7 +115,8 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
           loading={loading}
           emptyDescription="暂无数据"
           pagination={false}
-          scroll={{ x: 1540 }}
+          tableLayout={fitWidth ? 'auto' : undefined}
+          scroll={fitWidth ? {} : { x: 1540 }}
           size="middle"
         />
       </Form>

@@ -180,7 +180,7 @@ const FlowStepRenderer: React.FC<Props> = ({
                   key: 'style-secondary',
                   label: '二次工艺详情',
                   children: data?.order?.styleId
-                    ? <StyleSecondaryProcessTab styleId={data.order.styleId} readOnly={!editing} simpleView={true} />
+                    ? <StyleSecondaryProcessTab styleId={data.order.styleId} readOnly={!editing} simpleView={true} fitWidth />
                     : <SecondaryAlert title="暂无二次工艺信息" description="此订单未关联款号，无法显示二次工艺详情" type="info" showIcon />,
                 },
               ]

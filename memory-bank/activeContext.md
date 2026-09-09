@@ -7,6 +7,16 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-09-09 订单详情页全 Tab 实机回归 + 收尾（Playwright 实测，待推送）
+
+- [x] **实机验证**：本地 Docker(MySQL 3308/Redis) + 后端 8088 + 前端，Playwright 登录 lilb/东方制衣厂 实测 8 个 Tab
+- [x] 资料详情子页签内容可见（innerPaneH=118，非 0）；8 个 Tab 全部有内容
+- [x] 横向滚动：概览/下单明细/裁剪/工序 sw==cw；二次工艺表 sw 1600→1277 已消除
+- [x] 二次工艺消除横滚：新增 `fitWidth` prop → `tableLayout="auto"` + `scroll={{}}`（fixed 布局下列宽和 > 容器仍会撑开，必须用 auto 让浏览器压缩列宽；序号列硬编码 fixed:left 会让 ResizableTable 自动补 x:'max-content'）
+- [x] 码数矩阵 S→M→L→XL 升序（实测）
+- [x] 图片再缩：180→150；分区内边距 16/20→12/16，标题下间距 12→8（信息卡 565→529，表格区 203→239）
+- 坑：Vite 对外置盘（/Volumes/macoo2）文件监听失效，改完不生效，需重启 dev server 才能验证
+
 ### 2026-09-09 紧急修复：订单详情页「资料详情」整块空白（CSS 选择器事故）
 
 - [x] 根因：上一版 Tab 填充用了**后代选择器** `.order-flow-tabs-card .ant-tabs-content-holder{flex:1 1 0}`，连带命中「资料详情」内嵌的子 Tabs（大货纸样/尺寸表/工艺说明/二次工艺），flex-basis:0 在非定高父容器中把子页签高度塌成 0 → 整块空白

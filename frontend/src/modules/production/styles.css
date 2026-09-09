@@ -1130,7 +1130,7 @@
 
 /* ── 订单详情页（OrderFlow）：上 / 中 / 下 分区布局 ── */
 .order-flow-detail-block {
-  padding: var(--spacing-md) var(--spacing-lg);
+  padding: var(--spacing-base) var(--spacing-md);
 }
 
 .order-flow-detail-block + .order-flow-detail-block {
@@ -1164,7 +1164,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-base);
+  margin-bottom: var(--spacing-sm);
 }
 
 .order-flow-detail-section-title__text {
