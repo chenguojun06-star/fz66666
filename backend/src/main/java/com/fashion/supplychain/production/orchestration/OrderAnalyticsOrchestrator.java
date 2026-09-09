@@ -210,7 +210,7 @@ public class OrderAnalyticsOrchestrator {
         String in = String.join(",", java.util.Collections.nCopies(styleNos.size(), "?"));
         Object[] args = java.util.stream.Stream.concat(
                 java.util.stream.Stream.of(tenantId), styleNos.stream()).toArray();
-        Map<String, String> nameMap = new java.util.HashMap<>();
+        java.util.Map<String, String> nameMap = new java.util.HashMap<>();
         try {
             jdbcTemplate.query(
                     "SELECT style_no, style_name FROM t_style_info WHERE tenant_id = ? AND delete_flag = 0 AND style_no IN (" + in + ")",
