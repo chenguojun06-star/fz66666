@@ -7,6 +7,14 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-09-09 工序弹窗残留「字段配置」改造为通用「显示字段」抽屉（Playwright 实测）
+
+- [x] 根因：ProcessTrackingTable（节点详情弹窗→工序跟踪 tab）仍留着旧的 `<a>` 跳转 `paths.fieldConfig?bizType=scan`，未跟随 D-322/D-323 全站统一
+- [x] 改造：接入 `useColumnSettings` + `ColumnSettingsDrawer`（pageKey=process-tracking-list），11 列分 3 组（基本信息/扫码信息/单价结算）+ 精简/标准预设，用户只挑显隐；删除旧跳转链接
+- [x] 实机验证（Playwright 登录 lilb）：弹窗内 `字段配置` 已消失、`显示字段` 抽屉正常打开（已选 11/11、分组+预设渲染正常）
+- 说明：节点详情弹窗实际是 Drawer（不是 Modal），验证时按 `.ant-drawer` 定位
+- 验证：tsc 0 error + eslint 0 error + vite build 成功
+
 ### 2026-09-09 订单详情页全 Tab 实机回归 + 收尾（Playwright 实测，待推送）
 
 - [x] **实机验证**：本地 Docker(MySQL 3308/Redis) + 后端 8088 + 前端，Playwright 登录 lilb/东方制衣厂 实测 8 个 Tab

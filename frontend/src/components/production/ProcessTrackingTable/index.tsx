@@ -10,6 +10,35 @@ import type { ProcessTrackingTableProps, ProcessTrackingRecord } from './process
 import { useProcessTrackingActions } from './useProcessTrackingActions';
 import { useProcessTrackingColumns } from './useProcessTrackingColumns';
 import { useExtColumns } from '@/hooks/useExtColumns';
+import { useColumnSettings, ColumnSettingsDrawer } from '@/components/common/ColumnSettings';
+
+// D-325 显示字段：字段全由系统预设，用户只挑显隐（与全站各列表页同一套）
+const PROCESS_TRACKING_COLUMNS = [
+  { key: 'bundleNo', label: '菲号' },
+  { key: 'processName', label: '工序' },
+  { key: 'color', label: '颜色' },
+  { key: 'size', label: '尺码' },
+  { key: 'quantity', label: '数量' },
+  { key: 'unitPrice', label: '单价' },
+  { key: 'scanStatus', label: '扫码状态' },
+  { key: 'scanTime', label: '扫码时间' },
+  { key: 'operatorName', label: '操作人' },
+  { key: 'settlementAmount', label: '结算金额' },
+  { key: 'isSettled', label: '结算状态' },
+];
+const PROCESS_TRACKING_COLUMN_GROUPS = [
+  { title: '基本信息', keys: ['bundleNo', 'processName', 'color', 'size', 'quantity'] },
+  { title: '扫码信息', keys: ['scanStatus', 'scanTime', 'operatorName'] },
+  { title: '单价/结算', keys: ['unitPrice', 'settlementAmount', 'isSettled'] },
+];
+const PROCESS_TRACKING_DEFAULT_VISIBLE = Object.fromEntries(PROCESS_TRACKING_COLUMNS.map((c) => [c.key, true]));
+const PROCESS_TRACKING_COLUMN_PRESETS = [
+  {
+    key: 'simple', label: '精简',
+    values: { bundleNo: true, processName: true, size: true, quantity: true, scanStatus: true, isSettled: true },
+  },
+  { key: 'standard', label: '标准', values: PROCESS_TRACKING_DEFAULT_VISIBLE },
+];
 
 const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
   records,
@@ -29,6 +58,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
   const [actioningRecordId, setActioningRecordId] = useState<string>('');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [batchCompleting, setBatchCompleting] = useState(false);
+  const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
 
   const { _isAdmin, handleUndo, handleManualComplete, handleBatchComplete } = useProcessTrackingActions(
     orderId, orderNo, nodeType, processType, onUndoSuccess,
@@ -77,7 +107,19 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
 
   const { extColumns } = useExtColumns<ProcessTrackingRecord>({ bizType: 'scan' });
 
-  const columns = useMemo(() => [...baseColumns, ...extColumns], [baseColumns, extColumns]);
+  const columnSettings = useColumnSettings({
+    pageKey: 'process-tracking-list',
+    bizType: 'scan',
+    allColumns: PROCESS_TRACKING_COLUMNS,
+    defaultVisible: PROCESS_TRACKING_DEFAULT_VISIBLE,
+  });
+
+  const visibleBaseColumns = useMemo(
+    () => baseColumns.filter((c: any) => columnSettings.visibleColumns[c.key] !== false),
+    [baseColumns, columnSettings.visibleColumns],
+  );
+
+  const columns = useMemo(() => [...visibleBaseColumns, ...extColumns], [visibleBaseColumns, extColumns]);
 
   const completableCount = useMemo(() => {
     return flatData.filter(r => canManualCompleteTracking(r, orderStatus, orderNo, orderId)).length;
@@ -104,6 +146,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
   }, [flatData, selectedRowKeys, handleBatchComplete, orderStatus]);
 
   return (
+    <>
     <div style={{ fontSize: 14 }}>
       <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -168,12 +211,15 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
           <span style={{ fontSize: 14, color: 'var(--color-success)' }}>
             金额: <strong>{`¥${stats.totalAmount.toFixed(2)}`}</strong>
           </span>
-          <a
-            onClick={() => navigate(`${paths.fieldConfig}?bizType=scan`)}
-            style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+          <Button
+            type="link"
+            size="small"
+            icon={<SettingOutlined />}
+            onClick={() => setColumnSettingsOpen(true)}
+            style={{ padding: 0, fontSize: 13 }}
           >
-            <SettingOutlined /> 字段配置
-          </a>
+            显示字段
+          </Button>
         </Space>
       </div>
 
@@ -196,6 +242,20 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
         }}
       />
     </div>
+
+    <ColumnSettingsDrawer
+      open={columnSettingsOpen}
+      onClose={() => setColumnSettingsOpen(false)}
+      columnOptions={PROCESS_TRACKING_COLUMNS}
+      visibleColumns={columnSettings.visibleColumns}
+      onToggle={columnSettings.setVisible}
+      onReset={columnSettings.reset}
+      title="显示字段"
+      groups={PROCESS_TRACKING_COLUMN_GROUPS}
+      presets={PROCESS_TRACKING_COLUMN_PRESETS}
+      onApplyPreset={columnSettings.applyValues}
+    />
+    </>
   );
 };
 
