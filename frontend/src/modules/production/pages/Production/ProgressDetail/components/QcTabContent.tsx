@@ -201,7 +201,12 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
                       </Checkbox>
                     )}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                    gap: 8,
+                    padding: 8,
+                  }}>
                     {g.records.map((r) => {
                       const isPendingQc = !r.qualityStatus;
                       const isUnqualified = r.qualityStatus === 'unqualified';
@@ -214,29 +219,35 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
                         <div
                           key={r.id}
                           style={{
-                            display: 'flex', alignItems: 'center', gap: 12,
-                            padding: '10px 14px',
-                            borderBottom: '1px solid var(--color-bg-subtle)',
-                            background: isSelected ? 'var(--status-processing-bg)' : isUnqualified ? 'var(--status-success-bg)' : isLocked ? 'var(--color-bg-container)' : 'var(--color-bg-base)',
+                            display: 'flex', alignItems: 'flex-start', gap: 6,
+                            padding: '6px 8px',
+                            border: `1px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                            borderRadius: 8,
+                            background: isSelected ? 'var(--status-processing-bg)'
+                              : isUnqualified ? 'var(--status-success-bg)'
+                              : isLocked ? 'var(--color-bg-container)'
+                              : 'var(--color-bg-base)',
                             opacity: isObsolete ? 0.55 : 1,
+                            minWidth: 0,
                           }}
                         >
                           {isPendingQc && qcFilter === 'pending' && (
-                            <Checkbox checked={isSelected} onChange={() => toggleSelect(r.id)} />
+                            <Checkbox checked={isSelected} onChange={() => toggleSelect(r.id)} style={{ marginTop: 2 }} />
                           )}
 
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                              <span style={{ fontWeight: 700, fontSize: 14 }}>#{r.bundleNo}</span>
-                              {r.color && <Tag>{r.color}</Tag>}
-                              {r.size && <Tag>{r.size}</Tag>}
-                              {isObsolete && <Tag color="default">已废弃</Tag>}
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                              #{r.bundleNo}
                             </div>
-                            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+                            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+                              {r.color || '-'} / {r.size || '-'}
+                            </div>
+                            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
                               {r.quantity}件{r.unitPrice ? ` × ¥${r.unitPrice}` : ''}{r.operatorName ? ` | ${r.operatorName}` : ''}
                             </div>
+                            {isObsolete && <Tag color="default" style={{ marginTop: 4 }}>已废弃</Tag>}
                             {isUnqualified && (
-                              <div style={{ marginTop: 3, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                              <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                                 <Tag color="error">次品{r.defectQuantity || 0}件</Tag>
                                 {r.defectCategory && <Tag>{DEFECT_CATEGORIES.find(d => d.value === r.defectCategory)?.label || r.defectCategory}</Tag>}
                                 {r.defectProblems && r.defectProblems.length > 0 && r.defectProblems.map((p, i) => (
@@ -246,43 +257,43 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
                                 {r.repairStatus === 'pending' && <Tag color="warning">待返修</Tag>}
                                 {r.repairStatus === 'repairing' && <Tag color="processing">返修中</Tag>}
                                 {r.repairStatus === 'repair_done' && <Tag color="cyan">待复检</Tag>}
-                                {r.qualityOperatorName && <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>质检: {r.qualityOperatorName}</span>}
+                                {r.qualityOperatorName && <Tag>质检: {r.qualityOperatorName}</Tag>}
                               </div>
                             )}
-                          </div>
 
-                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                            {isPendingQc && (
-                              <Button type="primary" icon={<SafetyCertificateOutlined />} onClick={() => handleQualityInspect(r)}>
-                                质检
-                              </Button>
-                            )}
-                            {isUnqualified && !isLocked && (
-                              <Tooltip title="锁定后下游扫码被阻止">
-                                <Button danger icon={<LockOutlined />} onClick={() => handleLock(r)}>锁定</Button>
-                              </Tooltip>
-                            )}
-                            {isUnqualified && (r.repairStatus === 'pending' || !r.repairStatus) && (
-                              <Button icon={<ToolOutlined />} onClick={() => handleRepairComplete(r)}>返修完成</Button>
-                            )}
-                            {isRepairDone && (
-                              <Button type="primary" icon={<SafetyCertificateOutlined />} onClick={() => handleQualityInspect(r)}>
-                                复检
-                              </Button>
-                            )}
-                            {isRepairDone && isLocked && (
-                              <Tooltip title="复检合格后自动解锁，也可手动解锁验收">
-                                <Button icon={<UnlockOutlined />} onClick={() => handleUnlock(r)}>
-                                  手动解锁
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+                              {isPendingQc && (
+                                <Button block type="primary" icon={<SafetyCertificateOutlined />} onClick={() => handleQualityInspect(r)}>
+                                  质检
                                 </Button>
-                              </Tooltip>
-                            )}
-                            {isLocked && !isRepairDone && (
-                              <Tag icon={<LockOutlined />} color="error">已锁定</Tag>
-                            )}
-                            {r.qualityStatus === 'qualified' && (
-                              <Tag icon={<CheckCircleOutlined />} color="success">合格</Tag>
-                            )}
+                              )}
+                              {isUnqualified && !isLocked && (
+                                <Tooltip title="锁定后下游扫码被阻止">
+                                  <Button block danger icon={<LockOutlined />} onClick={() => handleLock(r)}>锁定</Button>
+                                </Tooltip>
+                              )}
+                              {isUnqualified && (r.repairStatus === 'pending' || !r.repairStatus) && (
+                                <Button block icon={<ToolOutlined />} onClick={() => handleRepairComplete(r)}>返修完成</Button>
+                              )}
+                              {isRepairDone && (
+                                <Button block type="primary" icon={<SafetyCertificateOutlined />} onClick={() => handleQualityInspect(r)}>
+                                  复检
+                                </Button>
+                              )}
+                              {isRepairDone && isLocked && (
+                                <Tooltip title="复检合格后自动解锁，也可手动解锁验收">
+                                  <Button block icon={<UnlockOutlined />} onClick={() => handleUnlock(r)}>
+                                    手动解锁
+                                  </Button>
+                                </Tooltip>
+                              )}
+                              {isLocked && !isRepairDone && (
+                                <Tag icon={<LockOutlined />} color="error">已锁定</Tag>
+                              )}
+                              {r.qualityStatus === 'qualified' && (
+                                <Tag icon={<CheckCircleOutlined />} color="success">合格</Tag>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
