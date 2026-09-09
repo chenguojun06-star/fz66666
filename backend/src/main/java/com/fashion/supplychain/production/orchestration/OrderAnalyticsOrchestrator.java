@@ -88,13 +88,17 @@ public class OrderAnalyticsOrchestrator {
         Object[] args = StringUtils.hasText(factoryId)
                 ? new Object[]{tenantId, factoryId, since}
                 : new Object[]{tenantId, since};
+        // 聚合 SQL(COUNT/SUM) 恒返回 1 行，但 ResultSetExtractor 拿到的 ResultSet 游标在首行之前，
+        // 必须先 rs.next() 定位到行再读列，否则抛 "Before start of result set"（D-324c 500 根因）。
         jdbcTemplate.query(sql, rs -> {
-            o.setOrderCount(rs.getLong("orderCount"));
-            o.setTotalQuantity(rs.getLong("totalQuantity"));
-            o.setTotalAmount(round2(rs.getDouble("totalAmount")));
-            o.setInProductionCount(rs.getLong("inProductionCount"));
-            o.setCompletedCount(rs.getLong("completedCount"));
-            o.setOverdueCount(rs.getLong("overdueCount"));
+            if (rs.next()) {
+                o.setOrderCount(rs.getLong("orderCount"));
+                o.setTotalQuantity(rs.getLong("totalQuantity"));
+                o.setTotalAmount(round2(rs.getDouble("totalAmount")));
+                o.setInProductionCount(rs.getLong("inProductionCount"));
+                o.setCompletedCount(rs.getLong("completedCount"));
+                o.setOverdueCount(rs.getLong("overdueCount"));
+            }
             return null;
         }, args);
         o.setAvgCompletionDays(round1(queryAvgCompletionDays(tenantId, factoryId, since)));
@@ -120,6 +124,8 @@ public class OrderAnalyticsOrchestrator {
                         "FROM t_scan_record WHERE tenant_id = ? AND scan_type = 'quality' AND scan_time >= ?" +
                         factoryFilter(factoryId),
                 rs -> {
+                    // 同 buildOverview：聚合恒 1 行，ResultSetExtractor 需先 next() 再读列
+                    if (!rs.next()) return -1.0;
                     long total = rs.getLong("total");
                     long fail = rs.getLong("failCount");
                     return total > 0 ? fail * 100.0 / total : -1;
@@ -215,7 +221,10 @@ public class OrderAnalyticsOrchestrator {
             jdbcTemplate.query(
                     "SELECT style_no, style_name FROM t_style_info WHERE tenant_id = ? AND delete_flag = 0 AND style_no IN (" + in + ")",
                     rs -> {
-                        nameMap.put(rs.getString("style_no"), rs.getString("style_name"));
+                        // 多行结果：while 遍历，ResultSetExtractor 不会自动 next()
+                        while (rs.next()) {
+                            nameMap.put(rs.getString("style_no"), rs.getString("style_name"));
+                        }
                         return null;
                     }, args);
         } catch (Exception e) {
@@ -238,15 +247,18 @@ public class OrderAnalyticsOrchestrator {
                         "FROM t_production_order WHERE tenant_id = ? AND delete_flag = 0" +
                         factoryFilter(factoryId) + " AND create_time >= ?",
                 rs -> {
-                    double sales = rs.getDouble("salesAmount");
-                    double totalCost = rs.getDouble("totalCost");
-                    double materialCost = rs.getDouble("materialCost");
-                    double cost = totalCost > 0 ? totalCost : materialCost;
-                    m.setSalesAmount(round2(sales));
-                    m.setMaterialCost(round2(materialCost));
-                    m.setGrossProfit(round2(sales - cost));
-                    m.setHasCostData(cost > 0);
-                    m.setGrossMarginRate(cost > 0 && sales > 0 ? round2((sales - cost) * 100.0 / sales) : -1);
+                    // 同 buildOverview：聚合恒 1 行，ResultSetExtractor 需先 next() 再读列
+                    if (rs.next()) {
+                        double sales = rs.getDouble("salesAmount");
+                        double totalCost = rs.getDouble("totalCost");
+                        double materialCost = rs.getDouble("materialCost");
+                        double cost = totalCost > 0 ? totalCost : materialCost;
+                        m.setSalesAmount(round2(sales));
+                        m.setMaterialCost(round2(materialCost));
+                        m.setGrossProfit(round2(sales - cost));
+                        m.setHasCostData(cost > 0);
+                        m.setGrossMarginRate(cost > 0 && sales > 0 ? round2((sales - cost) * 100.0 / sales) : -1);
+                    }
                     return null;
                 }, StringUtils.hasText(factoryId)
                         ? new Object[]{tenantId, factoryId, since}
