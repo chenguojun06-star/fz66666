@@ -78,9 +78,9 @@ const OrderListContent: React.FC<Props> = ({
               {onNoDataOrder && (
                 <Button icon={<PlusOutlined />} onClick={onNoDataOrder}>无资料下单</Button>
               )}
-              <a onClick={onOpenColumnSettings} style={{ fontSize: 13 }}>
-                <SettingOutlined /> 显示字段
-              </a>
+              <Button icon={<SettingOutlined />} onClick={onOpenColumnSettings}>
+                显示字段
+              </Button>
               <Button
                 icon={viewMode === 'table' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
                 onClick={() => {

@@ -301,12 +301,9 @@ const ExternalScanContent: React.FC = () => {
             重置
           </Button>
         </Space>
-        <a
-          onClick={() => setScanColumnSettingsOpen(true)}
-          style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
-        >
-          <SettingOutlined /> 显示字段
-        </a>
+        <Button icon={<SettingOutlined />} onClick={() => setScanColumnSettingsOpen(true)}>
+          显示字段
+        </Button>
       </div>
 
       <ResizableTable<ScanRecordRow>

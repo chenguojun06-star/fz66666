@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { App } from 'antd';
+import { App, Button } from 'antd';
 import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
 import { useSubProcessRemap } from './hooks/useSubProcessRemap';
@@ -189,12 +189,9 @@ const ProductionList: React.FC = () => {
         filterRight={
           <>
             {ProductionFilterBar(filterBarProps).filterRight}
-            <a
-              onClick={() => setColumnSettingsOpen(true)}
-              style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-            >
-              <SettingOutlined /> 显示字段
-            </a>
+            <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsOpen(true)}>
+              显示字段
+            </Button>
           </>
         }
       >

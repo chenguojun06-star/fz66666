@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Tag, Tooltip } from 'antd';
+import { Button, Tag, Tooltip } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { useColumnSettings, ColumnSettingsModal } from '@/components/common/ColumnSettings';
@@ -205,9 +205,9 @@ function SchemaTable<T extends object>(props: SchemaTableProps<T>) {
 
   const settingsTrigger = (
     <Tooltip title="选择要显示的列">
-      <a onClick={() => setSettingsOpen(true)} style={{ fontSize: 13 }}>
-        <SettingOutlined /> 显示字段
-      </a>
+      <Button icon={<SettingOutlined />} onClick={() => setSettingsOpen(true)}>
+        显示字段
+      </Button>
     </Tooltip>
   );
 
