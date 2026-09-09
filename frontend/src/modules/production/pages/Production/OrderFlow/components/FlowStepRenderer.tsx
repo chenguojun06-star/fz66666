@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { App, Button, Card, Space, Tabs, Tooltip } from 'antd';
-import { CheckOutlined, CloseOutlined, EditOutlined } from '@ant-design/icons';
+import { App, Card, Tabs } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import StylePatternSimpleTab from './StylePatternSimpleTab';
 import StyleSecondaryProcessTab from '@/modules/basic/pages/StyleInfo/components/StyleSecondaryProcessTab';
@@ -29,9 +28,6 @@ interface Props {
   styleProcessDescriptionMap: Map<string, string>;
   secondaryProcessDescriptionMap: Map<string, string>;
   editing: boolean;
-  onStartEdit: () => void;
-  onFinishEdit: () => void;
-  onCancelEdit: () => void;
   onRefresh?: () => void;
 }
 
@@ -39,7 +35,7 @@ const FlowStepRenderer: React.FC<Props> = ({
   loading, data, isFactoryUser,
   enrichedStages, stageColumns, orderLines, orderLineColumns,
   cuttingSizeItems, cuttingBundles, cuttingTasks, styleProcessDescriptionMap, secondaryProcessDescriptionMap,
-  editing, onStartEdit, onFinishEdit, onCancelEdit,
+  editing,
   onRefresh,
 }) => {
   const { message } = App.useApp();
@@ -96,22 +92,6 @@ const FlowStepRenderer: React.FC<Props> = ({
       className="order-flow-tabs-card"
       style={{ marginTop: 8 }}
       loading={loading}
-      extra={
-        <Space>
-          {editing ? (
-            <>
-              <Tooltip title="完成编辑并记录备注">
-                <Button type="primary" size="small" icon={<CheckOutlined />} onClick={onFinishEdit}>
-                  完成编辑
-                </Button>
-              </Tooltip>
-              <Button size="small" icon={<CloseOutlined />} onClick={onCancelEdit}>取消</Button>
-            </>
-          ) : (
-            <Button size="small" icon={<EditOutlined />} onClick={onStartEdit}>编辑</Button>
-          )}
-        </Space>
-      }
     >
       <Tabs
         items={[

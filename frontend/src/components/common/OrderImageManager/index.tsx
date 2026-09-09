@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Button, Empty, Popconfirm, Spin } from 'antd';
+import { App, Button, Empty, Popconfirm, Spin, Tooltip } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { HistoryOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { orderImageApi } from '@/services/system/remarkApi';
@@ -159,13 +159,15 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontWeight: 500 }}>
+        <span style={{ fontWeight: 500, fontSize: 13 }}>
           订单图片
-          <span style={{ marginLeft: 8, color: 'var(--color-text-tertiary)', fontWeight: 400, fontSize: 12 }}>
-            共 {totalCount} 张
-            {coverUrl ? '（含封面）' : ''}
-            {styleImages.length > 0 ? `（含款式图 ${styleImages.length} 张）` : ''}
-          </span>
+          <Tooltip
+            title={`共 ${totalCount} 张${coverUrl ? '（含封面）' : ''}${styleImages.length > 0 ? `（含款式图 ${styleImages.length} 张）` : ''}`}
+          >
+            <span style={{ marginLeft: 6, color: 'var(--color-text-tertiary)', fontWeight: 400, fontSize: 12, cursor: 'default' }}>
+              {totalCount} 张
+            </span>
+          </Tooltip>
         </span>
         {editable && (
           <Button size="small" icon={<HistoryOutlined />} onClick={handleViewHistory}>

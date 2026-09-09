@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Button, Space, Tag, Tooltip } from 'antd';
+import { Alert, Button, Space, Tooltip } from 'antd';
 import { EditOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -38,8 +38,6 @@ const OrderFlow: React.FC = () => {
           title="订单详情页"
           titleExtra={
             <Space wrap>
-              {query.orderNo ? <Tag>订单号：{query.orderNo}</Tag> : null}
-              {query.styleNo ? <Tag>款号：{query.styleNo}</Tag> : null}
               {editing ? (
                 <>
                   <Tooltip title="完成编辑并刷新数据">
@@ -100,9 +98,6 @@ const OrderFlow: React.FC = () => {
             styleProcessDescriptionMap={styleProcessDescriptionMap}
             secondaryProcessDescriptionMap={secondaryProcessDescriptionMap ?? new Map<string, string>()}
             editing={editing}
-            onStartEdit={handleStartEdit}
-            onFinishEdit={handleFinishEdit}
-            onCancelEdit={handleCancelEdit}
             onRefresh={fetchFlow}
           />
         </PageLayout>

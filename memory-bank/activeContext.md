@@ -7,6 +7,14 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-09-09 订单详情页（OrderFlow）重复内容清理（待推送）
+
+- [x] 删除 FlowStepRenderer 卡片右上角与页面标题栏完全重复的"编辑/完成编辑/取消"按钮组，并清理连带未使用的 props（onStartEdit/onFinishEdit/onCancelEdit）与 import（Button/Space/Tooltip/icons）
+- [x] 删除 index.tsx 标题栏与"基本信息"表格重复的"订单号/款号"Tag（数据仍完整保留在基本信息区，款号仍可编辑）
+- [x] OrderImageManager 图片标题长文案"共 N 张（含封面）（含款式图 M 张）"精简为"N 张"，明细收进 Tooltip
+- 核实结论：基本信息/颜色尺码/生产统计/计划与时间四个分区标题互不重复；概览(stage 表)与操作记录(时间线)内容不同，无需合并
+- 验证：npx tsc --noEmit 0 error + eslint 三文件 0 warning
+
 ### 2026-09-09 D-324 商品下单"数据分析全0"修复（已推送，待部署回归）
 
 - [x] 根因：工厂账号(factoryId非空)被整体返回空VO + SQL异常被try-catch吞成假0 + 前端无catch静默渲染
