@@ -1,11 +1,18 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-09（D-320 小云逾期问答"待查"根治四连，已推送）
+> 最后更新：2026-09-09（D-321 卡片码数重叠修复 + 采购完成物料去向闭环，已推送）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-09 D-321 卡片码数表头重叠修复 + 采购完成物料去向闭环（已推送，待部署回归）
+
+- [x] 码数卡片：OrderColorSizeMatrix 重构单网格+表头短码（XS(155/80A)→XS+tooltip）+列不压穿（minmax(min-content,cap)）+极端多码横滑；生产/外发/分享/订单头全生效，不加高卡片
+- [x] 采购闭环：confirmComplete 加 movementAction（inbound/direct_use，不传走原行为向后兼容小程序）+@Transactional；inboundOnComplete 按剩余可入库量封顶防重复累加；direct_use 记 OUTBOUND 采购直用流水（PURCHASE_DIRECT_USE）库存不动台账留痕
+- [x] 前端：ConfirmCompleteModal 三选一（入库/直接使用/暂不登记）内嵌确认完成流程，操作列零新增按钮；流水统一进物料仓储页 MaterialPickupRecord 列表
+- 注意：并行会话 DagExecutionEngine/SwarmExecutionEngine WIP 仍未提交，继续排除
 
 ### 2026-09-09 D-320 小云逾期问答"待查"根治四连（已推送，待部署回归）
 

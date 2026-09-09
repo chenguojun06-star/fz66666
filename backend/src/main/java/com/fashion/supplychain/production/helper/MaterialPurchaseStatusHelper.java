@@ -27,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Component
@@ -52,6 +53,10 @@ public class MaterialPurchaseStatusHelper {
 
 
     private final com.fashion.supplychain.production.service.SysNoticeService sysNoticeService;
+
+    private final com.fashion.supplychain.production.orchestration.MaterialInboundOrchestrator materialInboundOrchestrator;
+
+    private final com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrator materialPickupOrchestrator;
 
     private final com.fashion.supplychain.production.service.MaterialStockService materialStockService;
 
@@ -631,6 +636,8 @@ public class MaterialPurchaseStatusHelper {
      * 幂等语义：已是 completed 的直接返回成功（重复点击/网关超时重试不报错）
      * @param body { purchaseId }
      */
+    // D-321b: 加事务——movementAction（入库/直用）失败时连同完成状态一起回滚，杜绝"完成了但没登记"的半截状态
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> confirmComplete(Map<String, Object> body) {
         String purchaseId = ParamUtils.toTrimmedString(body == null ? null : body.get("purchaseId"));
 
@@ -705,7 +712,103 @@ public class MaterialPurchaseStatusHelper {
             log.warn("[采购确认完成] 生成物料对账失败（不阻断，可用补生成兜底）: purchaseId={}, error={}",
                     purchaseId, e.getMessage());
         }
+
+        // D-321b: 物料去向选择——入库到仓库 / 直接使用，均写入物料仓储出入库流水；
+        // 不传 movementAction 时维持原行为（仅完成，向后兼容小程序等旧调用方）。
+        String movementAction = ParamUtils.toTrimmedString(body == null ? null : body.get("movementAction"));
+        if (StringUtils.hasText(movementAction)) {
+            applyMovementAction(fetchUpdatedWithFallback(purchaseId,
+                    () -> queryPurchaseSafeFields(purchaseId)), movementAction, body, result);
+        }
         return result;
+    }
+
+    /**
+     * D-321b: 确认完成后的物料去向落账。
+     * inbound: 登记入库单+库存+流水（复用 MaterialInboundOrchestrator，自动按剩余可入库量封顶）；
+     * direct_use: 不经过仓库，记一条 OUTBOUND 采购直用流水（库存不动，台账留痕）。
+     */
+    private void applyMovementAction(MaterialPurchase purchase, String movementAction,
+                                     Map<String, Object> body, Map<String, Object> result) {
+        if (purchase == null) {
+            throw new IllegalStateException("采购单查询失败，无法登记物料去向");
+        }
+        java.math.BigDecimal requested = parseMovementQuantity(body);
+        String operatorId = UserContext.userId();
+        String operatorName = UserContext.username();
+
+        if ("inbound".equals(movementAction)) {
+            String warehouseLocation = ParamUtils.toTrimmedString(body.get("warehouseLocation"));
+            Map<String, Object> inboundResult = materialInboundOrchestrator.inboundOnComplete(
+                    purchase,
+                    requested == null ? null : requested.intValue(),
+                    warehouseLocation, operatorId, operatorName, "采购确认完成时登记入库");
+            result.put("movementAction", "inbound");
+            result.put("inbound", inboundResult);
+            return;
+        }
+        if (!"direct_use".equals(movementAction)) {
+            throw new IllegalArgumentException("不支持的物料去向: " + movementAction);
+        }
+
+        java.math.BigDecimal quantity = requested != null ? requested : purchase.getPurchaseQuantity();
+        if (quantity == null || quantity.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("直用数量必须大于0");
+        }
+        Map<String, Object> movement = new java.util.LinkedHashMap<>();
+        movement.put("pickupType", "INTERNAL");
+        movement.put("movementType", "OUTBOUND");
+        movement.put("sourceType", "PURCHASE_DIRECT_USE");
+        movement.put("usageType", resolveUsageTypeForMovement(purchase));
+        movement.put("sourceRecordId", purchase.getId());
+        movement.put("sourceDocumentNo", purchase.getPurchaseNo());
+        movement.put("orderNo", purchase.getOrderNo());
+        movement.put("styleNo", purchase.getStyleNo());
+        movement.put("materialId", purchase.getMaterialId());
+        movement.put("materialCode", purchase.getMaterialCode());
+        movement.put("materialName", purchase.getMaterialName());
+        movement.put("materialType", purchase.getMaterialType());
+        movement.put("color", purchase.getColor());
+        movement.put("specification", purchase.getSpecifications());
+        movement.put("fabricComposition", purchase.getFabricComposition());
+        movement.put("quantity", quantity);
+        movement.put("unit", purchase.getUnit());
+        movement.put("unitPrice", purchase.getUnitPrice());
+        movement.put("warehouseLocation", "采购直用");
+        movement.put("auditStatus", "APPROVED");
+        movement.put("financeStatus", "SETTLED");
+        movement.put("remark", "采购完成直拨使用，未入库存");
+        String rid = ParamUtils.toTrimmedString(body.get("receiverId"));
+        String rname = ParamUtils.toTrimmedString(body.get("receiverName"));
+        if (StringUtils.hasText(rid)) movement.put("receiverId", rid);
+        if (StringUtils.hasText(rname)) movement.put("receiverName", rname);
+        com.fashion.supplychain.warehouse.entity.MaterialPickupRecord record = materialPickupOrchestrator.create(movement);
+        log.info("[采购直用] purchaseId={}, pickupNo={}, quantity={}, receiver={}",
+                purchase.getId(), record.getPickupNo(), quantity, record.getReceiverName());
+        result.put("movementAction", "direct_use");
+        result.put("pickupNo", record.getPickupNo());
+    }
+
+    /** 直用/入库数量（可选，非法或非正值返回 null 走默认口径） */
+    private java.math.BigDecimal parseMovementQuantity(Map<String, Object> body) {
+        if (body == null || body.get("movementQuantity") == null) return null;
+        try {
+            java.math.BigDecimal q = new java.math.BigDecimal(String.valueOf(body.get("movementQuantity")));
+            return q.compareTo(java.math.BigDecimal.ZERO) > 0 ? q : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /** 与 MaterialInboundOrchestrator.resolveUsageType 同口径：样衣SAMPLE/备料STOCK/大货BULK */
+    private String resolveUsageTypeForMovement(MaterialPurchase purchase) {
+        if (purchase == null || !StringUtils.hasText(purchase.getSourceType())) {
+            return "STOCK";
+        }
+        String sourceType = purchase.getSourceType().trim().toLowerCase();
+        if ("sample".equals(sourceType)) return "SAMPLE";
+        if ("stock".equals(sourceType)) return "STOCK";
+        return "BULK";
     }
 
     /**

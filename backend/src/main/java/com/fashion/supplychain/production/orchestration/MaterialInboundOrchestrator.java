@@ -334,6 +334,95 @@ public class MaterialInboundOrchestrator {
                 .last("LIMIT 5000"));
     }
 
+    /**
+     * D-321b: 采购确认完成时的入库登记 — 打通新采购流（购物车/智能采购）的出入库闭环。
+     *
+     * <p>与 {@link #confirmArrivalAndInbound} 的区别：
+     * <ul>
+     *   <li>不改采购单状态/到货量（confirmComplete 已把状态置 completed、到货量已兜底）</li>
+     *   <li>按"采购量 - 已入库量"自动封顶，避免旧流部分到货已入库场景重复累加库存</li>
+     * </ul>
+     *
+     * @param purchase          采购单（需含 id/tenantId/物料字段）
+     * @param requestedQuantity 申请入库数量（null/非法时按剩余可入库量全额）
+     * @param warehouseLocation 仓位（空用"默认仓"）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> inboundOnComplete(MaterialPurchase purchase,
+                                                 Integer requestedQuantity,
+                                                 String warehouseLocation,
+                                                 String operatorId,
+                                                 String operatorName,
+                                                 String remark) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        if (purchase == null || purchase.getId() == null) {
+            throw new RuntimeException("采购单不存在");
+        }
+        int purchaseQty = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity().intValue();
+        int alreadyInbound = sumInboundQuantity(purchase.getId(), tenantId);
+        int remaining = purchaseQty - alreadyInbound;
+        Map<String, Object> result = new HashMap<>();
+        if (remaining <= 0) {
+            result.put("skipped", true);
+            result.put("reason", "该采购单已全额入库，无需重复登记");
+            return result;
+        }
+        int quantity = (requestedQuantity == null || requestedQuantity <= 0) ? remaining : Math.min(requestedQuantity, remaining);
+
+        MaterialInbound inbound = new MaterialInbound();
+        inbound.setPurchaseId(purchase.getId());
+        inbound.setMaterialCode(purchase.getMaterialCode());
+        inbound.setMaterialName(purchase.getMaterialName());
+        inbound.setMaterialType(purchase.getMaterialType());
+        inbound.setColor(purchase.getColor());
+        inbound.setSize(purchase.getSize());
+        inbound.setInboundQuantity(quantity);
+        inbound.setWarehouseLocation(warehouseLocation != null && !warehouseLocation.trim().isEmpty() ? warehouseLocation : "默认仓");
+        inbound.setSupplierName(purchase.getSupplierName());
+        inbound.setOperatorId(operatorId);
+        inbound.setOperatorName(operatorName);
+        inbound.setInboundTime(LocalDateTime.now());
+        inbound.setRemark(remark);
+        String inboundNo = materialInboundService.generateInboundNo();
+        inbound.setInboundNo(inboundNo);
+        materialInboundService.save(inbound);
+
+        logAppendHelper.appendInbound(inbound.getId(), quantity);
+        logAppendHelper.appendOperation(purchase.getId(), "物料入库",
+                "入库单号：" + inboundNo + "，数量：" + quantity + "（确认完成时登记）");
+
+        materialStockService.increaseStock(purchase, quantity, inbound.getWarehouseLocation());
+
+        try {
+            materialReconciliationSyncOrchestrator.syncFromInbound(inbound, purchase);
+        } catch (Exception e) {
+            log.warn("[确认完成入库] 同步物料对账失败（不阻断）: inboundNo={}, error={}", inboundNo, e.getMessage());
+        }
+        syncInboundTraceRecord(inbound, purchase, "PURCHASE_INBOUND");
+
+        result.put("skipped", false);
+        result.put("inboundNo", inboundNo);
+        result.put("inboundId", inbound.getId());
+        result.put("quantity", quantity);
+        result.put("alreadyInbound", alreadyInbound);
+        result.put("message", "入库成功，已记入物料仓储出入库流水");
+        log.info("[确认完成入库] purchaseId={}, inboundNo={}, quantity={}", purchase.getId(), inboundNo, quantity);
+        return result;
+    }
+
+    /** 已入库总量（旧流到货登记/完成时登记都写 MaterialInbound，按它去重；排除软删） */
+    private int sumInboundQuantity(String purchaseId, Long tenantId) {
+        List<MaterialInbound> records = materialInboundService.listByPurchaseId(purchaseId);
+        if (records == null || records.isEmpty()) return 0;
+        return records.stream()
+                .filter(r -> r != null
+                        && (r.getDeleteFlag() == null || r.getDeleteFlag() == 0)
+                        && tenantId != null && tenantId.equals(r.getTenantId()))
+                .mapToInt(r -> r.getInboundQuantity() != null ? r.getInboundQuantity() : 0)
+                .sum();
+    }
+
     private void syncInboundTraceRecord(MaterialInbound inbound, MaterialPurchase purchase, String sourceType) {
         if (inbound == null || !StringUtils.hasText(inbound.getInboundNo())) {
             return;

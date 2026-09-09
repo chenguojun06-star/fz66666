@@ -129,10 +129,14 @@ export function usePurchaseActions({
     openReturnConfirm,
   });
 
-  // 确认完成（批量）
+  // 确认完成（批量）+ 物料去向选择
   const {
     confirmComplete,
     confirmCompleteSubmitting,
+    confirmCompleteModalOpen,
+    closeConfirmCompleteModal,
+    submitConfirmComplete,
+    confirmCompleteTargets,
   } = usePurchaseConfirmCompleteActions({
     message,
     detailPurchases,
@@ -163,6 +167,7 @@ export function usePurchaseActions({
     openQuickEditSafe, handleQuickEditSave,
     handleExport,
     confirmComplete, confirmCompleteSubmitting,
+    confirmCompleteModalOpen, closeConfirmCompleteModal, submitConfirmComplete, confirmCompleteTargets,
     isSamplePurchaseView, normalizeStatus,
   };
 }

@@ -74,6 +74,7 @@ const MaterialPurchase: React.FC = () => {
     openQuickEditSafe, handleQuickEditSave,
     isSamplePurchaseView,
     confirmComplete, confirmCompleteSubmitting,
+    confirmCompleteModalOpen, closeConfirmCompleteModal, submitConfirmComplete, confirmCompleteTargets,
   } = useMaterialPurchase();
 
   const { batchAddItems } = usePurchaseCartActions();
@@ -303,6 +304,10 @@ const MaterialPurchase: React.FC = () => {
         handleBatchReturn={handleBatchReturn}
         confirmComplete={confirmComplete}
         confirmCompleteSubmitting={confirmCompleteSubmitting}
+        confirmCompleteModalOpen={confirmCompleteModalOpen}
+        closeConfirmCompleteModal={closeConfirmCompleteModal}
+        submitConfirmComplete={submitConfirmComplete}
+        confirmCompleteTargets={confirmCompleteTargets}
         isSamplePurchaseView={isSamplePurchaseView}
         openPurchaseSheet={openPurchaseSheet}
         downloadPurchaseSheet={downloadPurchaseSheet}

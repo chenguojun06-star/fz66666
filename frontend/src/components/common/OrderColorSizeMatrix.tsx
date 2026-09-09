@@ -53,11 +53,9 @@ const wrapStyle: React.CSSProperties = {
   minWidth: 0,
 };
 
-const rowBaseStyle: React.CSSProperties = {
-  display: 'grid',
-  alignItems: 'center',
-  minWidth: 0,
-};
+/** D-321: 码数表头短码展示——"XS(155/80A)"→"XS"，完整规格悬停 tooltip；
+ *  全长标签直接进表头会把 1fr 列压穿、nowrap 文字互相叠画（D-167 同款重叠炸弹） */
+export const shortSizeLabel = (size: string) => size.replace(/\([^)]*\)/g, '').trim() || size;
 
 const splitFallbackSizes = (value?: string) => splitStyleOptions(value);
 
@@ -175,38 +173,41 @@ export const createOrderColorSizeMatrixInfoItems = ({
     ...(valueStyle || {}),
   };
 
-  const gridTemplateColumns = `auto repeat(${model.sizes.length}, minmax(${Math.max(columnMinWidth, 28)}px, 1fr))`;
+  const sizeColCap = Math.max(34, columnMinWidth);
+  const gridTemplateColumns = `auto repeat(${model.sizes.length}, minmax(min-content, ${sizeColCap}px))`;
 
   return [
     {
       fullRow: true,
       value: (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns,
-          columnGap: gap,
-          rowGap: 2,
-          alignItems: 'center',
-          minWidth: 0,
-        }}>
-          <span style={leadLabelStyle}>码数</span>
-          {model.sizes.map((size) => (
-            <span key={`matrix-size-${size}`} style={headerCellStyle}>{size}</span>
-          ))}
-          {model.rows.map((row) => (
-            <React.Fragment key={`matrix-row-${row.label}`}>
-              <span style={leadLabelStyle}>{row.label}</span>
-              {model.sizes.map((size) => (
-                <span key={`matrix-${row.label}-${size}`} style={qtyCellStyle}>
-                  {row.quantityMap.get(size) || 0}
-                </span>
-              ))}
-            </React.Fragment>
-          ))}
-          <span style={leadLabelStyle}>{totalLabel}</span>
-          <span style={{ ...totalValueStyle, gridColumn: `span ${model.sizes.length}` }}>
-            {model.total}{totalSuffix}
-          </span>
+        <div style={{ overflowX: 'auto', minWidth: 0 }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns,
+            columnGap: gap,
+            rowGap: 2,
+            alignItems: 'center',
+            minWidth: 'max-content',
+          }}>
+            <span style={leadLabelStyle}>码数</span>
+            {model.sizes.map((size) => (
+              <span key={`matrix-size-${size}`} style={headerCellStyle} title={size}>{shortSizeLabel(size)}</span>
+            ))}
+            {model.rows.map((row) => (
+              <React.Fragment key={`matrix-row-${row.label}`}>
+                <span style={leadLabelStyle}>{row.label}</span>
+                {model.sizes.map((size) => (
+                  <span key={`matrix-${row.label}-${size}`} style={qtyCellStyle}>
+                    {row.quantityMap.get(size) || 0}
+                  </span>
+                ))}
+              </React.Fragment>
+            ))}
+            <span style={leadLabelStyle}>{totalLabel}</span>
+            <span style={{ ...totalValueStyle, gridColumn: `span ${model.sizes.length}` }}>
+              {model.total}{totalSuffix}
+            </span>
+          </div>
         </div>
       ),
     },
@@ -267,7 +268,10 @@ const OrderColorSizeMatrix: React.FC<OrderColorSizeMatrixProps> = ({
     return <>-</>;
   }
   const leadTrack = typeof leadWidth === 'number' ? `${leadWidth}px` : (String(leadWidth || '').trim() || 'max-content');
-  const gridTemplateColumns = `${leadTrack} repeat(${model.sizes.length}, minmax(${columnMinWidth}px, 1fr))`;
+  // D-321: 单网格保证表头/数量/商品编码各行列宽严格对齐；minmax(min-content, cap)——
+  // 短码封顶cap均分卡片宽度，长标签(如无法缩写的"155/80A")按内容宽不让列压穿（min>max时CSS取min）
+  const sizeColCap = Math.max(34, columnMinWidth);
+  const gridTemplateColumns = `${leadTrack} repeat(${model.sizes.length}, minmax(min-content, ${sizeColCap}px))`;
   const leadStyle: React.CSSProperties = {
     color: 'var(--neutral-text-light, var(--color-text-muted))',
     fontSize,
@@ -283,72 +287,75 @@ const OrderColorSizeMatrix: React.FC<OrderColorSizeMatrixProps> = ({
     fontWeight: 600,
     whiteSpace: 'nowrap',
   };
-  const totalStyle: React.CSSProperties = {
-    alignSelf: 'flex-end',
+  const headerCellStyle: React.CSSProperties = {
+    textAlign: 'center',
     fontSize,
-    color: 'var(--neutral-text, var(--color-gray-800))',
-    fontWeight: 700,
+    fontWeight: 600,
+    color: 'var(--color-text-primary)',
+    whiteSpace: 'nowrap',
   };
 
   return (
-    <div style={wrapStyle}>
-      {/* D-138 尺码表头行：与样衣开发布局对齐——先看列是哪个码，再看数量 */}
-      <div style={{ ...rowBaseStyle, gridTemplateColumns, gap }}>
+    <div style={{ ...wrapStyle, overflowX: 'auto' }}>
+      {/* D-321: minWidth max-content——列永不压缩，超宽时外层横滑（D-199/D-202 scroll-x 范式） */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns,
+        columnGap: gap,
+        rowGap: 2,
+        alignItems: 'center',
+        minWidth: 'max-content',
+      }}>
+        {/* D-138 尺码表头行：短码+悬停完整规格——先看列是哪个码，再看数量 */}
         <span style={{ ...leadStyle, color: 'var(--neutral-text-light, var(--color-text-muted))' }}>颜色</span>
         {model.sizes.map((size) => (
-          <span
-            key={`head-${size}`}
-            style={{
-              textAlign: 'center',
-              fontSize,
-              fontWeight: 600,
-              color: 'var(--color-text-primary)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {size}
+          <span key={`head-${size}`} style={headerCellStyle} title={size}>
+            {shortSizeLabel(size)}
           </span>
         ))}
+        {model.rows.map((row) => (
+          <React.Fragment key={`row-${row.label}`}>
+            <span style={leadStyle}>{row.label}</span>
+            {model.sizes.map((size) => {
+              const qty = row.quantityMap.get(size) || 0;
+              return (
+                <span key={`${row.label}-${size}`} style={qtyCellStyle}>
+                  {qty > 0 ? qty : ''}
+                </span>
+              );
+            })}
+          </React.Fragment>
+        ))}
+        {/* D-138 商品编码行：样衣开发同款——每颜色一行，格内展示对应尺码的商品编码 */}
+        {model.hasSku && model.rows.map((row) => (
+          <React.Fragment key={`sku-${row.label}`}>
+            <span style={{ ...leadStyle, fontSize: Math.max(10, fontSize - 1), color: 'var(--color-text-tertiary)' }}>商品编码</span>
+            {model.sizes.map((size) => {
+              const sku = row.skuMap.get(size) || '';
+              return (
+                <span
+                  key={`sku-${row.label}-${size}`}
+                  title={sku}
+                  style={{
+                    textAlign: 'center',
+                    fontSize: Math.max(10, fontSize - 1),
+                    color: 'var(--color-text-tertiary)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {sku}
+                </span>
+              );
+            })}
+          </React.Fragment>
+        ))}
+        <span style={{ ...leadStyle, alignSelf: 'flex-end', overflow: 'visible', color: 'var(--neutral-text, var(--color-gray-800))', fontWeight: 700 }}>{totalLabel}</span>
+        <span style={{ ...headerCellStyle, fontWeight: 700, gridColumn: `2 / ${model.sizes.length + 2}`, textAlign: 'left' }}>
+          {totalLabel === '总数' ? '' : `${totalLabel}：`}{model.total}{totalSuffix}
+        </span>
       </div>
-      {model.rows.map((row) => (
-        <div key={row.label} style={{ ...rowBaseStyle, gridTemplateColumns, gap }}>
-          <span style={leadStyle}>{row.label}</span>
-          {model.sizes.map((size) => {
-            const qty = row.quantityMap.get(size) || 0;
-            return (
-              <span key={`${row.label}-${size}`} style={qtyCellStyle}>
-                {qty > 0 ? qty : ''}
-              </span>
-            );
-          })}
-        </div>
-      ))}
-      {/* D-138 商品编码行：样衣开发同款——每颜色一行，格内展示对应尺码的商品编码 */}
-      {model.hasSku && model.rows.map((row) => (
-        <div key={`sku-${row.label}`} style={{ ...rowBaseStyle, gridTemplateColumns, gap }}>
-          <span style={{ ...leadStyle, fontSize: Math.max(10, fontSize - 1), color: 'var(--color-text-tertiary)' }}>商品编码</span>
-          {model.sizes.map((size) => {
-            const sku = row.skuMap.get(size) || '';
-            return (
-              <span
-                key={`sku-${row.label}-${size}`}
-                title={sku}
-                style={{
-                  textAlign: 'center',
-                  fontSize: Math.max(10, fontSize - 1),
-                  color: 'var(--color-text-tertiary)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {sku}
-              </span>
-            );
-          })}
-        </div>
-      ))}
-      <div style={totalStyle}>{totalLabel}：{model.total}{totalSuffix}</div>
     </div>
   );
 };

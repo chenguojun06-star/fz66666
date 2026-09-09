@@ -1,7 +1,22 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-09（新增 D-320 小云逾期问答"待查"根治四连）
+> 最后更新：2026-09-09（新增 D-321 卡片码数表头重叠修复 + 采购完成物料去向闭环）
+
+---
+
+## D-321：卡片码数表头重叠修复 + 采购完成物料去向闭环（2026-09-09）
+
+两件事：①生产订单卡片码数表头"XS(155/80A)M(165/80A)…"整排叠画溢出卡片（1fr列被压缩+nowrap文字互相绘制，D-167 同款炸弹）；②采购完成（confirmComplete，新购物车/智能采购流）不入库不记流水（D-273 注释实锤），用户要求采购完成时可选入库或直接使用，且所有动作在物料仓储留出入库流水，操作列不许堆按钮。
+
+**决策**：
+1. **码数表头短码化**（OrderColorSizeMatrix 共享组件，生产/外发/分享/订单头全生效）：表头只显示短码（"XS(155/80A)"→"XS"，strip 括号），完整规格悬停 title tooltip；组件重构为**单网格**（表头/数量/商品编码各行列宽严格对齐，原多div网格在 min-content 下会错位）；列 `minmax(min-content, max(34px, columnMinWidth))`——短码封顶均分、长标签按内容宽不压穿（min>max 时 CSS 取 min）；外层 overflowX auto + 内层 minWidth max-content，极端多码横滑不重叠（D-199/D-202 scroll-x 范式）。**不加高卡片**——短码后 6-7 码完全放得下。
+2. **采购完成物料去向**：后端 confirmComplete 加可选 `movementAction`（inbound=入库/direct_use=直用），**不传走原行为**（小程序 production.js 也调此接口，向后兼容）；整个方法加 @Transactional（去向登记失败连同完成状态回滚，杜绝半截状态）。
+   - inbound → MaterialInboundOrchestrator 新方法 `inboundOnComplete`：建入库单+increaseStock+对账同步+pickup INBOUND 流水，**按"采购量-已入库量(MaterialInbound求和,排除软删)"封顶**，防止旧流已到货入库场景重复累加；不改状态/到货量。
+   - direct_use → 写一条 OUTBOUND 流水（MaterialPickupOrchestrator.create，sourceType=PURCHASE_DIRECT_USE，usageType 按 sourceType SAMPLE/STOCK/BULK，audit/finance APPROVED/SETTLED），库存不动、台账留痕。
+3. **不堆按钮**：选择动作内嵌进既有"确认完成"流程——点击后弹 ConfirmCompleteModal（三选一 Radio：入库到仓库/直接使用/暂不登记+条件输入仓位/领用人/数量），操作列零新增按钮；批量时按各单采购量全额登记（提示文案说明）。
+
+**理由**：出入库流水统一走 MaterialPickupRecord（物料仓储页已展示 INBOUND/OUTBOUND+审核结算），零新表；弹窗内选择是"大动作先预览"规范的落地。
 
 ---
 

@@ -9,6 +9,8 @@ import OrderPickerModal from './components/OrderPickerModal';
 import WarehousePickModal from './components/WarehousePickModal';
 import ReturnConfirmModal from './components/ReturnConfirmModal';
 import ReturnResetModal from './components/ReturnResetModal';
+import ConfirmCompleteModal from './components/ConfirmCompleteModal';
+import type { ConfirmCompleteOptions } from './hooks/usePurchaseConfirmCompleteActions';
 import type { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 import type { ProductionOrder } from '@/types/production';
 
@@ -68,6 +70,10 @@ interface PurchaseModalsProps {
   handleBatchReturn: () => void;
   confirmComplete: () => void;
   confirmCompleteSubmitting: boolean;
+  confirmCompleteModalOpen: boolean;
+  closeConfirmCompleteModal: () => void;
+  submitConfirmComplete: (options: ConfirmCompleteOptions) => void;
+  confirmCompleteTargets: MaterialPurchaseType[];
   isSamplePurchaseView: boolean;
   openPurchaseSheet: (autoPrint: boolean) => void;
   downloadPurchaseSheet: () => void;
@@ -124,6 +130,7 @@ const PurchaseModals: React.FC<PurchaseModalsProps> = (props) => {
     receivePurchaseTask, confirmReturnPurchaseTask, openReturnReset,
     handleQualityIssue, handleReceiveAll, handleBatchReturn,
     confirmComplete, confirmCompleteSubmitting, isSamplePurchaseView,
+    confirmCompleteModalOpen, closeConfirmCompleteModal, submitConfirmComplete, confirmCompleteTargets,
     openPurchaseSheet, downloadPurchaseSheet, handleSubmit, handleSavePreview,
     isOrderFrozenForRecord, handleWarehousePickFromDetail, handleRefreshAll,
     warehousePickModalOpen, warehousePickTarget, warehousePickQty, setWarehousePickModalOpen,
@@ -192,6 +199,14 @@ const PurchaseModals: React.FC<PurchaseModalsProps> = (props) => {
         isOrderFrozenForRecord={isOrderFrozenForRecord}
         onWarehousePick={handleWarehousePickFromDetail}
         onRefresh={handleRefreshAll}
+      />
+
+      <ConfirmCompleteModal
+        visible={confirmCompleteModalOpen}
+        targets={confirmCompleteTargets}
+        submitting={confirmCompleteSubmitting}
+        onCancel={closeConfirmCompleteModal}
+        onConfirm={submitConfirmComplete}
       />
 
       <WarehousePickModal
