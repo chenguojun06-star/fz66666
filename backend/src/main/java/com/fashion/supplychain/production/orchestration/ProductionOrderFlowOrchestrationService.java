@@ -379,8 +379,8 @@ public class ProductionOrderFlowOrchestrationService {
         try {
             return cuttingBundleMapper.selectList(new LambdaQueryWrapper<CuttingBundle>()
                     .eq(CuttingBundle::getProductionOrderId, oid)
-                    .orderByAsc(CuttingBundle::getBundleNo)
-                    .orderByAsc(CuttingBundle::getCreateTime));
+                    // 扎号按数值排（varchar 列直接排序会变成 1,10,11,...,2,3），同一扎内再按创建时间
+                    .last("ORDER BY CAST(bundle_no AS UNSIGNED) ASC, create_time ASC"));
         } catch (Exception e) {
             log.warn("[OrderFlow] 查询CuttingBundle失败: orderId={}, err={}", oid, e.getMessage());
             return new ArrayList<>();

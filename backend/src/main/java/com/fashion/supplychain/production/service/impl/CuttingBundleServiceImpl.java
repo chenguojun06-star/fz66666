@@ -108,7 +108,9 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                 .eq(StringUtils.hasText(color), CuttingBundle::getColor, color)
                 .eq(StringUtils.hasText(size), CuttingBundle::getSize, size)
                 .eq(StringUtils.hasText(status), CuttingBundle::getStatus, status)
-                .orderByAsc(CuttingBundle::getBundleNo);
+                // 扎号列在库中是 varchar，直接 ORDER BY 会按字符串排（1,10,11,...,2,3）；
+                // 必须 CAST 成数值，扎号才是 1,2,3,...,10,11 的自然顺序
+                .last("ORDER BY CAST(bundle_no AS UNSIGNED) ASC");
 
         if ("all".equals(splitStatus)) {
             // 管理员视图：不做过滤
@@ -211,8 +213,8 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                 new LambdaQueryWrapper<CuttingBundle>()
                         .select(CuttingBundle::getBundleNo)
                         .eq(CuttingBundle::getProductionOrderId, orderId)
-                        .orderByDesc(CuttingBundle::getBundleNo)
-                        .last("LIMIT 1"));
+                        // 同样按数值取最大扎号，否则 varchar 排序下 9 会被当成最大，导致新扎号与既有号段重复
+                        .last("ORDER BY CAST(bundle_no AS UNSIGNED) DESC LIMIT 1"));
         if (lastBundleNo != null && lastBundleNo.getBundleNo() != null && lastBundleNo.getBundleNo() > 0) {
             return lastBundleNo.getBundleNo() + 1;
         }
@@ -505,8 +507,9 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         if (StringUtils.hasText(oid)) {
             wrapper.eq(CuttingBundle::getProductionOrderId, oid);
         }
-        wrapper.orderByAsc(CuttingBundle::getBundleNo);
         wrapper.ne(CuttingBundle::getSplitStatus, "split_parent");
+        // 数值序排扎号（varchar 列直接排序会变成 1,10,11,...,2,3）
+        wrapper.last("ORDER BY CAST(bundle_no AS UNSIGNED) ASC");
 
         List<CuttingBundle> bundles = this.list(wrapper);
 

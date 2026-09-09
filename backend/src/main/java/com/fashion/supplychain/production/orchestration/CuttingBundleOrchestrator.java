@@ -133,7 +133,8 @@ public class CuttingBundleOrchestrator {
                 // null-safe：历史数据 split_status 可能为 NULL，需包含；仅排除拆分父菲号
                 .and(w -> w.isNull(CuttingBundle::getSplitStatus)
                         .or().ne(CuttingBundle::getSplitStatus, "split_parent"))
-                .orderByAsc(CuttingBundle::getBundleNo);
+                // 扎号按数值排（varchar 列直接排序会变成 1,10,11,...,2,3）
+                .last("ORDER BY CAST(bundle_no AS UNSIGNED) ASC");
         // 工厂账号隔离：只能查看本工厂的菲号
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId)) {

@@ -7,6 +7,13 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-09-09 P0 裁剪扎号列表按字符串排序（1,10,11,…,2,3）修复
+
+- [x] 根因：`t_cutting_bundle.bundle_no` 在库中是 **varchar(100)**，`ORDER BY bundle_no` 按字符串排 → 列表出现 1,10,11,12,13,14,15,2,3；`resolveNextBundleIndex` 取字符串最大值也会拿到 "9" → 追加生成时扎号与既有号段冲突
+- [x] 修复（查询层，不动表结构/数据）：5 处 `bundle_no` 排序统一改为 `ORDER BY CAST(bundle_no AS UNSIGNED)`——列表、下一扎号、颜色尺码汇总、订单流转裁剪明细、Orchestrator 查询
+- [x] 端到端实测：追加生成 6 个菲号后 `GET /api/production/cutting/list` 返回 `bundleNo=[1..11]` 数值序 ✅，且新一批乱序输入仍排成 XS→S→M→L→XL ✅
+- 说明：选查询层 CAST 而非改列类型，避免云端非数字脏数据导致 ALTER 失败引发启动事故
+
 ### 2026-09-09 P0 裁剪菲号乱序根治：后端 compareSizeAsc 不认复合码（jshell 实测）
 
 - [x] 根因：`ProductionOrderUtils.parseSizeKey` 只认纯字母码（`switch(s)` 精确匹配 XS/S/M/L/XL + `^X{0,4}S$` 正则），而实际尺码是 `XS(155/80A)` / `L(165/92)` 这类**复合码** → 全部落 `default -> 0` → `compareSizeAsc` 恒返回 0 → `buildBundleList` 的排序形同未执行（稳定排序保留入参顺序），菲号按来源顺序乱排（L,M,S,S,S,XL,XS,XS,XS）
