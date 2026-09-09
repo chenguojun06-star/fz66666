@@ -10,6 +10,8 @@ interface BundleDelegatePanelProps {
   disableEdit: boolean;
   saving: boolean;
   onBundleDelegate: (payload: BundleDelegatePayload) => Promise<void> | void;
+  /** 节点只读信息（节点/状态/工序/单价），与菲号委派同卡片展示，避免顶部表格重复 */
+  nodeInfo?: React.ReactNode;
 }
 
 // 菲号状态中文映射（created=已生成未扫码；pending=分扎转移待接收；scrapped=已报废）
@@ -24,7 +26,7 @@ const BUNDLE_STATUS_LABEL: Record<string, string> = {
 };
 
 const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
-  bundles, scannedBundleIds, factories, users, disableEdit, saving, onBundleDelegate,
+  bundles, scannedBundleIds, factories, users, disableEdit, saving, onBundleDelegate, nodeInfo,
 }) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [delegateType, setDelegateType] = useState<'factory' | 'person'>('factory');
@@ -90,6 +92,21 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
       marginTop: 10,
       background: 'var(--color-bg-base)',
     }}>
+      {nodeInfo && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
+          paddingBottom: 8,
+          marginBottom: 8,
+          borderBottom: '1px solid var(--color-border)',
+          fontSize: 'var(--font-size-xs)',
+          color: 'var(--color-text-secondary)',
+        }}>
+          {nodeInfo}
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
         <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>菲号委派</span>
         <Checkbox

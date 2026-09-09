@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Button, Input, InputNumber, Select, Tooltip } from 'antd';
+import { Alert, Button, Input, InputNumber, Select } from 'antd';
 import dayjs from 'dayjs';
 import { formatProcessDisplayName } from '@/utils/productionStage';
 import BundleDelegatePanel from './BundleDelegatePanel';
@@ -49,19 +49,22 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
     return Number(unitPrice) || 0;
   })();
   const orderInfoLine = `${orderSummary.orderNo || orderNo || '-'}  款号：${orderSummary.styleNo || '-'}  数量：${orderSummary.orderQuantity || 0} 件`;
-  // 有菲号时：工厂/人员委派统一走下方「菲号批量委派」面板，顶部网格不再重复显示
-  // 委派类型/执行工厂/委派人员三列（无菲号的订单保留节点级委派入口）
+  // 有菲号时：节点级委派入口整体收起，节点信息并入下方「菲号委派」卡片，避免同一套逻辑出现两个入口
   const hasBundles = Array.isArray(bundles) && bundles.length > 0;
-  const gridCols = hasBundles
-    ? ['生产节点', '当前状态', '工序编号', '工序名称', '数量', '委派单价', '委派时间', '操作']
-    : ['生产节点', '当前状态', '工序编号', '工序名称', '数量', '委派类型', '执行工厂', '委派人员', '委派单价', '委派时间', '操作'];
+  const nodeStatusText = typeof nodeStats?.percent === 'number'
+    ? (nodeStats.percent >= 100 ? '完成' : `${Math.round(nodeStats.percent)}%`)
+    : '-';
+  const processDisplay = formatProcessDisplayName(delegateProcessCode, fixedProcessName) || '-';
+  const gridCols = ['生产节点', '当前状态', '工序编号', '工序名称', '数量', '委派类型', '执行工厂', '委派人员', '委派单价', '委派时间', '操作'];
 
   return (
     <div style={{ padding: '4px 0', minHeight: 400 }}>
       <Alert
         type="info"
         showIcon
-        title="可以为不同的生产节点指定执行工厂"
+        title={hasBundles
+          ? '该订单已按菲号管理：勾选菲号 → 选择执行工厂 → 保存委派（内部不再重复计件）'
+          : '可以为不同的生产节点指定执行工厂'}
         style={{ marginBottom: 10 }}
       />
       <div style={{
@@ -107,66 +110,83 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
         </div>
       )}
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
-        gap: 8,
-        padding: '6px 8px',
-        background: 'var(--color-bg-base)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 12,
-        fontSize: "var(--font-size-xs)",
-        color: 'var(--color-text-secondary)',
-        fontWeight: 600,
-        width: '100%',
-        overflow: 'hidden',
-      }}>
-        {gridCols.map((col) => (
-          <div key={col}>{col}</div>
-        ))}
-      </div>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
-        gap: 8,
-        padding: '8px',
-        border: '1px solid var(--color-border)',
-        borderTop: 'none',
-        borderRadius: '0 0 6px 6px',
-        alignItems: 'center',
-        marginBottom: 10,
-        width: '100%',
-        overflow: 'hidden',
-      }}>
-        <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', minWidth: 0 }}>{nodeName || '-'}</div>
-        <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>
-          {typeof nodeStats?.percent === 'number'
-            ? (nodeStats.percent >= 100 ? '完成' : `${Math.round(nodeStats.percent)}%`)
-            : '-'}
-        </div>
-        <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{delegateProcessCode || '-'}</div>
-        <Select
-          value={fixedProcessName || undefined}
-          placeholder="选择工序"
-          options={processList.map((p) => {
-            const name = String((p as any)?.name || '').trim();
-            const code = String((p as any)?.processCode || (p as any)?.code || (p as any)?.id || '').trim();
-            return { value: name, label: formatProcessDisplayName(code, name) };
-          }).filter((o) => o.value)}
-          disabled
-          style={{ width: '100%', minWidth: 0 }}
+      {hasBundles ? (
+        <BundleDelegatePanel
+          bundles={bundles || []}
+          scannedBundleIds={scannedBundleIds || new Set<string>()}
+          factories={factories}
+          users={users}
+          disableEdit={disableEdit}
+          saving={saving}
+          onBundleDelegate={onBundleDelegate || (() => {})}
+          nodeInfo={
+            <>
+              <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{nodeName || '-'}</span>
+              <span>当前 {nodeStatusText}</span>
+              <span>工序 {processDisplay}</span>
+              <span>
+                委派单价 <strong style={{ color: 'var(--color-text-primary)' }}>¥{Number.isFinite(fixedUnitPrice) ? fixedUnitPrice.toFixed(2) : '0.00'}</strong>/件
+              </span>
+              <span>上次委派 {formatDelegationTime(currentNodeData.updatedAt)}</span>
+            </>
+          }
         />
-        <InputNumber
-          placeholder={hasBundles ? '按菲号扫码' : '数量'}
-          min={0}
-          precision={0}
-          value={typeof currentNodeData.assigneeQuantity === 'number' ? currentNodeData.assigneeQuantity : undefined}
-          onChange={(v) => updateNodeData('assigneeQuantity', v ?? undefined)}
-          disabled={disableEdit || hasBundles}
-          style={{ width: '100%', minWidth: 0 }}
-        />
-        {!hasBundles && (
-          <>
+      ) : (
+        <>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
+            gap: 8,
+            padding: '6px 8px',
+            background: 'var(--color-bg-base)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 12,
+            fontSize: "var(--font-size-xs)",
+            color: 'var(--color-text-secondary)',
+            fontWeight: 600,
+            width: '100%',
+            overflow: 'hidden',
+          }}>
+            {gridCols.map((col) => (
+              <div key={col}>{col}</div>
+            ))}
+          </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
+            gap: 8,
+            padding: '8px',
+            border: '1px solid var(--color-border)',
+            borderTop: 'none',
+            borderRadius: '0 0 6px 6px',
+            alignItems: 'center',
+            marginBottom: 10,
+            width: '100%',
+            overflow: 'hidden',
+          }}>
+            <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', minWidth: 0 }}>{nodeName || '-'}</div>
+            <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{nodeStatusText}</div>
+            <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{delegateProcessCode || '-'}</div>
+            <Select
+              value={fixedProcessName || undefined}
+              placeholder="选择工序"
+              options={processList.map((p) => {
+                const name = String((p as any)?.name || '').trim();
+                const code = String((p as any)?.processCode || (p as any)?.code || (p as any)?.id || '').trim();
+                return { value: name, label: formatProcessDisplayName(code, name) };
+              }).filter((o) => o.value)}
+              disabled
+              style={{ width: '100%', minWidth: 0 }}
+            />
+            <InputNumber
+              placeholder="数量"
+              min={0}
+              precision={0}
+              value={typeof currentNodeData.assigneeQuantity === 'number' ? currentNodeData.assigneeQuantity : undefined}
+              onChange={(v) => updateNodeData('assigneeQuantity', v ?? undefined)}
+              disabled={disableEdit}
+              style={{ width: '100%', minWidth: 0 }}
+            />
             <Select
               value={currentNodeData.delegateType || 'factory'}
               onChange={(v) => {
@@ -215,38 +235,18 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
               disabled={disableEdit || currentNodeData.delegateType === 'factory'}
               style={{ width: '100%', minWidth: 0 }}
             />
-          </>
-        )}
-        <Input
-          prefix="¥"
-          value={Number.isFinite(fixedUnitPrice) ? fixedUnitPrice.toFixed(2) : '0.00'}
-          disabled
-          style={{ width: '100%', minWidth: 0 }}
-        />
-        <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{formatDelegationTime(currentNodeData.updatedAt)}</div>
-        {hasBundles ? (
-          <Tooltip title="该订单已按菲号管理：请在下方「菲号委派」中勾选菲号操作，顶部手工补录已关闭，避免与外发工厂重复计件">
-            <Button disabled style={{ width: '100%' }}>
+            <Input
+              prefix="¥"
+              value={Number.isFinite(fixedUnitPrice) ? fixedUnitPrice.toFixed(2) : '0.00'}
+              disabled
+              style={{ width: '100%', minWidth: 0 }}
+            />
+            <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{formatDelegationTime(currentNodeData.updatedAt)}</div>
+            <Button type="primary" loading={saving} onClick={handleSave} disabled={disableEdit}>
               保存
             </Button>
-          </Tooltip>
-        ) : (
-          <Button type="primary" loading={saving} onClick={handleSave} disabled={disableEdit}>
-            保存
-          </Button>
-        )}
-      </div>
-
-      {bundles && bundles.length > 0 && (
-        <BundleDelegatePanel
-          bundles={bundles}
-          scannedBundleIds={scannedBundleIds || new Set<string>()}
-          factories={factories}
-          users={users}
-          disableEdit={disableEdit}
-          saving={saving}
-          onBundleDelegate={onBundleDelegate || (() => {})}
-        />
+          </div>
+        </>
       )}
 
       <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--color-text-secondary)', marginBottom: 4 }}>委派历史</div>
