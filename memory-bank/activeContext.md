@@ -7,7 +7,14 @@
 
 ## 最近变更（Latest Changes）
 
-### 2026-09-09 订单详情页：图片缩小 + 码数全系统升序 + Tab 表格铺满/去横滚（待推送）
+### 2026-09-09 紧急修复：订单详情页「资料详情」整块空白（CSS 选择器事故）
+
+- [x] 根因：上一版 Tab 填充用了**后代选择器** `.order-flow-tabs-card .ant-tabs-content-holder{flex:1 1 0}`，连带命中「资料详情」内嵌的子 Tabs（大货纸样/尺寸表/工艺说明/二次工艺），flex-basis:0 在非定高父容器中把子页签高度塌成 0 → 整块空白
+- [x] 修复：全部改为**直接子选择器** `> .ant-card-body > .ant-tabs > ...`，并删除 `.ant-tabs-content/.ant-tabs-tabpane{height:100%}` 连带规则
+- [x] 教训：全局/局部 flex 填充样式必须用子选择器限定层级，禁止用后代选择器命中可嵌套组件（Tabs/Collapse/Dropdown）
+- 验证：vite build 成功；本地后端未启动，需前端硬刷新回归「资料详情」四个子页签
+
+### 2026-09-09 订单详情页：图片缩小 + 码数全系统升序 + Tab 表格铺满/去横滚（已推送 96917a325）
 
 - [x] **码数排序全系统统一**：OrderColorSizeMatrix.createSizeOrder 改用权威 `sortSizeNames`（此前用后端插入顺序，矩阵出现 XS/M/L/XL/S 乱序）；OrderFlow 下单明细(computeOrderLines)、裁剪明细(computeCuttingSizeItems)、面辅料"尺码用量"map、NodeDetailModal.computeCuttingSizeItems 全部按颜色+码数升序
 - [x] **图片缩小**：OrderImageManager 新增 `imageHeight` prop（默认 280），订单详情传 180；头部图片列宽 260→200px
