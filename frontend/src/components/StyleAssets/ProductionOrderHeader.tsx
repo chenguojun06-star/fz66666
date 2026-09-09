@@ -1,6 +1,6 @@
 import React from 'react';
 import { Row, Col } from 'antd';
-import { parseProductionOrderLines, sortSizeNames, toNumberSafe, ProductionOrderLine } from '@/utils/api';
+import { parseProductionOrderLines, sortSizeNames, toNumberSafe, compareSizeAsc, ProductionOrderLine } from '@/utils/api';
 import type { CardSizeQuantityItem } from '@/utils/cardSizeQuantity';
 import OrderInfoGrid from '@/components/common/OrderInfoGrid';
 import { createOrderColorSizeMatrixInfoItems } from '@/components/common/OrderColorSizeMatrix';
@@ -118,18 +118,31 @@ const ProductionOrderHeader: React.FC<{
     }, [totalQuantity, computedSizeItems, order]);
 
     const matrixItems = React.useMemo<CardSizeQuantityItem[]>(() => {
+      // D-328：码数矩阵统一从小到大排（左→右），不信任入参顺序——上游没排也兜底
+      const withColorIndex = (items: CardSizeQuantityItem[]) => {
+        const colorIndex = new Map<string, number>();
+        items.forEach((it) => {
+          const c = String(it.color ?? '');
+          if (!colorIndex.has(c)) colorIndex.set(c, colorIndex.size);
+        });
+        return [...items].sort((a, b) => {
+          const ci = (colorIndex.get(String(a.color ?? '')) ?? 0) - (colorIndex.get(String(b.color ?? '')) ?? 0);
+          if (ci !== 0) return ci;
+          return compareSizeAsc(String(a.size ?? ''), String(b.size ?? ''));
+        });
+      };
       if (normalizedOrderLines.length) {
-        return normalizedOrderLines.map((line) => ({
+        return withColorIndex(normalizedOrderLines.map((line) => ({
           color: String(line?.color || '').trim(),
           size: String(line?.size || '').trim(),
           quantity: toNumberSafe(line?.quantity),
-        }));
+        })));
       }
-      return computedSizeItems.map((item) => ({
+      return withColorIndex(computedSizeItems.map((item) => ({
         color: resolvedColor,
         size: String(item?.size || '').trim(),
         quantity: toNumberSafe(item?.quantity),
-      }));
+      })));
     }, [computedSizeItems, normalizedOrderLines, resolvedColor]);
 
     const cuttingMatrixItems = React.useMemo<CardSizeQuantityItem[]>(

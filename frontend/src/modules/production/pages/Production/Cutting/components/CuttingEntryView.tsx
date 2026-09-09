@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Form, Segmented, Space, Tag } from 'antd';
+import { Button, Form, Space, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
 import ResizableTable from '@/components/common/ResizableTable';
@@ -141,16 +141,28 @@ const CuttingEntryView: React.FC<CuttingEntryViewProps> = ({
               onSetMaterialModalOpen={bom.setMaterialModalOpen}
             />
 
-            <div style={{ marginBottom: 12 }}>
-              <Segmented
-                options={[
-                  { label: '一键生成', value: 'auto' },
-                  { label: '自由编菲', value: 'free' },
-                ]}
-                value={bundleMode}
-                onChange={(val) => setBundleMode(val as 'auto' | 'free')}
-                disabled={bundles.importLocked}
-              />
+            <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+              {([
+                { value: 'auto', label: '一键生成' },
+                { value: 'free', label: '自由编菲' },
+              ] as const).map((opt) => (
+                <Button
+                  key={opt.value}
+                  type="link"
+                  size="small"
+                  disabled={bundles.importLocked}
+                  onClick={() => setBundleMode(opt.value)}
+                  style={{
+                    padding: '0 4px',
+                    height: 'auto',
+                    fontWeight: bundleMode === opt.value ? 600 : 400,
+                    textDecoration: bundleMode === opt.value ? 'underline' : 'none',
+                    textUnderlineOffset: 3,
+                  }}
+                >
+                  {opt.label}
+                </Button>
+              ))}
             </div>
 
             {bundleMode === 'auto' ? (

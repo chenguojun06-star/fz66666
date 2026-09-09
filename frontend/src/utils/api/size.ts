@@ -19,13 +19,28 @@ export const compareSizeAsc = (a: unknown, b: unknown) => {
     if (/^\d+(\.\d+)?$/.test(raw)) return { rank: 0, num: Number(raw), raw };
     const mNumXL = raw.match(/^(\d+)XL$/);
     if (mNumXL) return { rank: 70 + (Number(mNumXL[1]) - 1) * 10, num: 0, raw };
-    const mXS = raw.match(/^(X{0,4})S$/);
-    if (mXS) return { rank: 40 - (mXS[1]?.length || 0) * 10, num: 0, raw };
-    if (raw === 'S') return { rank: 40, num: 0, raw };
-    if (raw === 'M') return { rank: 50, num: 0, raw };
-    const mXL = raw.match(/^(X{1,4})L$/);
-    if (mXL) return { rank: 60 + (mXL[1]?.length || 0) * 10, num: 0, raw };
-    if (raw === 'L') return { rank: 60, num: 0, raw };
+    // D-328 复合码支持："L(165/92)"/"XS（155/80A）" 取括号前字母码排序，身高/体重作次级；
+    // "165/92A"/"160/84" 型身高码按数值升序。此前复合码全部落 rank 5000 后按字母序
+    // 排成 L,M,S,XL,XS（XL<XS），是裁剪明细/菲号乱序的根因。
+    let core = raw;
+    let sub = 0;
+    const paren = raw.match(
+      /^([A-Z]{0,4})\s*[（(]\s*(\d{1,3}(?:\.\d+)?)\s*[/／]\s*(\d{1,3}(?:\.\d+)?)\s*[A-Z]?\s*[）)]?$/,
+    );
+    if (paren) {
+      core = paren[1];
+      sub = Number(paren[2]) * 1000 + Number(paren[3]);
+    } else {
+      const slash = raw.match(/^(\d{1,3}(?:\.\d+)?)\s*[/／]\s*(\d{1,3}(?:\.\d+)?)\s*[A-Z]?$/);
+      if (slash) return { rank: 1, num: Number(slash[1]) * 1000 + Number(slash[2]), raw };
+    }
+    const mXS = core.match(/^(X{0,4})S$/);
+    if (mXS) return { rank: 40 - (mXS[1]?.length || 0) * 10, num: sub, raw };
+    if (core === 'S') return { rank: 40, num: sub, raw };
+    if (core === 'M') return { rank: 50, num: sub, raw };
+    const mXL = core.match(/^(X{1,4})L$/);
+    if (mXL) return { rank: 60 + (mXL[1]?.length || 0) * 10, num: sub, raw };
+    if (core === 'L') return { rank: 60, num: sub, raw };
     if (raw === 'XL') return { rank: 70, num: 0, raw };
     if (raw === 'XXL') return { rank: 80, num: 0, raw };
     if (raw === 'XXXL') return { rank: 90, num: 0, raw };
