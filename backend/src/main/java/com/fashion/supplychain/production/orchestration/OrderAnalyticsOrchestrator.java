@@ -171,10 +171,10 @@ public class OrderAnalyticsOrchestrator {
         return list.size() > 20 ? new ArrayList<>(list.subList(0, 20)) : list;
     }
 
-    /** ④ 次品率排行：按款号聚合质检扫码 */
+    /** ④ 次品率排行：按款号聚合质检扫码（t_scan_record 无 style_name 列，款名由 t_style_info 补全） */
     private List<OrderAnalyticsVO.DefectRankItem> buildDefectRanking(Long tenantId, String factoryId, LocalDateTime since) {
         List<OrderAnalyticsVO.DefectRankItem> list = jdbcTemplate.query(
-                "SELECT style_no, MAX(style_name) AS style_name, COUNT(*) AS total, " +
+                "SELECT style_no, COUNT(*) AS total, " +
                         "COALESCE(SUM(CASE WHEN " + QUALITY_FAIL + " THEN 1 ELSE 0 END),0) AS failCount " +
                         "FROM t_scan_record WHERE tenant_id = ? AND scan_type = 'quality' " +
                         "AND style_no IS NOT NULL AND style_no <> '' AND scan_time >= ?" +
@@ -185,7 +185,6 @@ public class OrderAnalyticsOrchestrator {
                     long total = rs.getLong("total");
                     long fail = rs.getLong("failCount");
                     item.setStyleNo(rs.getString("style_no"));
-                    item.setStyleName(rs.getString("style_name"));
                     item.setTotal(total);
                     item.setFailCount(fail);
                     item.setDefectRate(total > 0 ? round2(fail * 100.0 / total) : 0);
@@ -194,7 +193,39 @@ public class OrderAnalyticsOrchestrator {
                         ? new Object[]{tenantId, since, factoryId}
                         : new Object[]{tenantId, since});
         list.sort(Comparator.comparingLong(OrderAnalyticsVO.DefectRankItem::getFailCount).reversed());
-        return list.size() > 20 ? new ArrayList<>(list.subList(0, 20)) : list;
+        List<OrderAnalyticsVO.DefectRankItem> top = list.size() > 20 ? new ArrayList<>(list.subList(0, 20)) : list;
+        enrichDefectStyleNames(tenantId, top);
+        return top;
+    }
+
+    /** 按款号批量补款式名（扫码表不存款名，直接查 t_style_info） */
+    private void enrichDefectStyleNames(Long tenantId, List<OrderAnalyticsVO.DefectRankItem> items) {
+        if (items == null || items.isEmpty()) return;
+        List<String> styleNos = items.stream()
+                .map(OrderAnalyticsVO.DefectRankItem::getStyleNo)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+        if (styleNos.isEmpty()) return;
+        String in = String.join(",", java.util.Collections.nCopies(styleNos.size(), "?"));
+        Object[] args = java.util.stream.Stream.concat(
+                java.util.stream.Stream.of(tenantId), styleNos.stream()).toArray();
+        Map<String, String> nameMap = new java.util.HashMap<>();
+        try {
+            jdbcTemplate.query(
+                    "SELECT style_no, style_name FROM t_style_info WHERE tenant_id = ? AND delete_flag = 0 AND style_no IN (" + in + ")",
+                    rs -> {
+                        nameMap.put(rs.getString("style_no"), rs.getString("style_name"));
+                        return null;
+                    }, args);
+        } catch (Exception e) {
+            log.warn("[订单分析] 次品率排行款名补全失败（不影响排行）: {}", e.getMessage());
+            return;
+        }
+        items.forEach(item -> {
+            String name = nameMap.get(item.getStyleNo());
+            if (name != null) item.setStyleName(name);
+        });
     }
 
     /** ⑤ 毛利估算：销售额 - 总成本（优先 total_cost，兜底 material_cost） */
