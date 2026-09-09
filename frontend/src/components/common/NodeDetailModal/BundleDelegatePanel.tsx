@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Button, Checkbox, Select } from 'antd';
-import type { BundleRecord, BundleDelegatePayload } from './types';
+import { formatProcessDisplayName } from '@/utils/productionStage';
+import type { BundleRecord, BundleDelegatePayload, ProcessPriceItem } from './types';
 
 interface BundleDelegatePanelProps {
   bundles: BundleRecord[];
@@ -12,6 +13,8 @@ interface BundleDelegatePanelProps {
   onBundleDelegate: (payload: BundleDelegatePayload) => Promise<void> | void;
   /** 节点只读信息（节点/状态/工序/单价），与菲号委派同卡片展示，避免顶部表格重复 */
   nodeInfo?: React.ReactNode;
+  /** 该节点下的子工序（含单价），用于多选外发工序 */
+  processOptions?: ProcessPriceItem[];
 }
 
 // 菲号状态中文映射（created=已生成未扫码；pending=分扎转移待接收；scrapped=已报废）
@@ -26,12 +29,30 @@ const BUNDLE_STATUS_LABEL: Record<string, string> = {
 };
 
 const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
-  bundles, scannedBundleIds, factories, users, disableEdit, saving, onBundleDelegate, nodeInfo,
+  bundles, scannedBundleIds, factories, users, disableEdit, saving, onBundleDelegate, nodeInfo, processOptions,
 }) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [delegateType, setDelegateType] = useState<'factory' | 'person'>('factory');
   const [factoryId, setFactoryId] = useState<string | undefined>();
   const [assigneeId, setAssigneeId] = useState<string | undefined>();
+  const [processNames, setProcessNames] = useState<string[]>([]);
+
+  // 子工序选项：label 带单价，便于逐工序核对（不选 = 整扎外发）
+  const processSelectOptions = useMemo(() => (processOptions || []).map((p) => {
+    const name = String(p.processName || p.name || '').trim();
+    const code = String(p.processCode || p.code || p.id || '').trim();
+    const price = Number(p.unitPrice || 0);
+    return {
+      value: name,
+      label: `${formatProcessDisplayName(code, name)}${price > 0 ? ` · ¥${price.toFixed(2)}/件` : ' · 待定价'}`,
+    };
+  }).filter((o) => o.value), [processOptions]);
+
+  const selectedProcessPrices = useMemo(() => processNames.map((name) => {
+    const hit = (processOptions || []).find((p) => String(p.processName || p.name || '').trim() === name);
+    const price = Number(hit?.unitPrice || 0);
+    return { name, price };
+  }), [processNames, processOptions]);
 
   const factoryNameById = useMemo(() => {
     const map: Record<string, string> = {};
@@ -78,10 +99,12 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
       assigneeId: delegateType === 'person' ? assigneeId : undefined,
       assigneeName: delegateType === 'person' ? (selectedUser?.name || selectedUser?.username) : undefined,
       bundleIds: selectedIds,
+      processNames: processNames.length > 0 ? processNames : undefined,
     });
     setSelectedIds([]);
     setFactoryId(undefined);
     setAssigneeId(undefined);
+    setProcessNames([]);
   };
 
   return (
@@ -142,6 +165,7 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
             const blocked = isBlocked(b);
             const checked = selectedIds.includes(b.id);
             const currentDelegate = b.assigneeName || (b.factoryId ? factoryNameById[b.factoryId] : undefined) || b.factoryName || '';
+            const delegateProcessText = String(b.delegateProcesses || '').trim().split(',').map((s) => s.trim()).filter(Boolean).join('、');
             return (
               <div
                 key={b.id}
@@ -180,12 +204,47 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
                       委派：{currentDelegate}
                     </div>
                   )}
+                  {delegateProcessText && (
+                    <div style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-xs)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      工序：{delegateProcessText}
+                    </div>
+                  )}
                 </div>
               </div>
             );
           })
         )}
       </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+        <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-xs)', flexShrink: 0 }}>外发工序</span>
+        <Select
+          mode="multiple"
+          allowClear
+          showSearch
+          placeholder="不选 = 整扎外发；可多选子工序"
+          value={processNames}
+          onChange={setProcessNames}
+          options={processSelectOptions}
+          filterOption={(input, option) => String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
+          disabled={disableEdit}
+          style={{ minWidth: 320, maxWidth: 560, flex: 1 }}
+        />
+      </div>
+      {selectedProcessPrices.length > 0 && (
+        <div style={{ marginTop: 6, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+          逐工序单价：
+          {selectedProcessPrices.map((p, idx) => (
+            <span key={p.name}>
+              {idx > 0 ? ' · ' : ''}
+              {p.name}
+              <strong style={{ color: 'var(--color-primary)', marginLeft: 4 }}>
+                {p.price > 0 ? `¥${p.price.toFixed(2)}/件` : '待定价'}
+              </strong>
+            </span>
+          ))}
+        </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
         <Select

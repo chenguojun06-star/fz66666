@@ -62,6 +62,8 @@ export interface BundleRecord {
   /** 当前委派人员 */
   assigneeId?: string;
   assigneeName?: string;
+  /** 外发工序名（逗号分隔）；为空 = 整扎外发 */
+  delegateProcesses?: string;
 }
 
 /** 菲号批量委派请求 */
@@ -72,6 +74,8 @@ export interface BundleDelegatePayload {
   assigneeId?: string;
   assigneeName?: string;
   bundleIds: string[];
+  /** 外发工序名（可多选）；为空 = 整扎外发 */
+  processNames?: string[];
 }
 
 /** 操作员汇总 */

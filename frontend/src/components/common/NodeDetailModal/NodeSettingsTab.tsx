@@ -119,6 +119,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
           disableEdit={disableEdit}
           saving={saving}
           onBundleDelegate={onBundleDelegate || (() => {})}
+          processOptions={processList}
           nodeInfo={
             <>
               <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{nodeName || '-'}</span>

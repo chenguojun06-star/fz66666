@@ -1,11 +1,31 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-09（工序跟进页 404 + 同步任务误停 双修复，Playwright 实测，待推送）
+> 最后更新：2026-09-09（菲号委派支持多子工序 + 按工序精细隔离，Playwright 实测，待推送）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-09 菲号委派支持多子工序 + 按工序精细隔离（Flyway + 双向守卫，Playwright 实测）
+
+- [x] **需求**：父节点下有多个子工序时，一次勾选多个子工序委派给外发工厂；委派后**按工序精细隔离**（内部只能扫未委派工序、外发只能扫委派工序）；逐工序列出单价
+- [x] **迁移**：`V202709090300__add_delegate_processes_to_cutting_bundle.sql`（INFORMATION_SCHEMA 幂等写法）新增 `delegate_processes VARCHAR(500)`，逗号分隔工序名；为空 = 整扎外发（兼容历史数据）
+- [x] **后端**：
+  - Entity + `getByQrCode`/`getByBundleNo`/`queryPage` 的 select 补 `delegateProcesses`
+  - `bundle-delegate` 接收 `processNames[]`，归一化（去空/去重/保序、截断 500）后写入每个菲号；委派历史带「（工序：X,Y）」
+  - 守卫改为**双向按工序判断**：`ScanRecordOrchestrator.validateBundleBelonging(bundle,ctx,process)` + `ScanExecutorSupport.validateBundleFactoryAccess(bundle,stage,process)`
+    - 内部扫已委派工序 → 403；扫未委派工序 → 放行
+    - 外发扫已委派且本厂承做 → 放行；扫未委派工序 → 403
+  - 工序名取 `processName` 优先、`progressStage` 兜底；无法识别时按「已委派」保守处理（优先防重复计件）
+- [x] **前端**：委派面板新增「外发工序」多选（选项 label 带单价，如 `04 整烫剪线包装 · ¥1.00/件`），选中后逐工序列出单价；菲号卡片显示「工序：X、Y」
+- [x] **实测（Playwright + 真实接口）**：
+  - 委派 `processNames=['整件']` → DB `delegate_processes='整件'` ✅
+  - 内部扫「整件」→ 403「该菲号「整件」工序已委派外发工厂，内部不可扫码」；内部扫「绣花」→ 200 ✅
+  - 外发扫「整件」→ 200；外发扫「绣花」→ 403「该菲号「绣花」工序未委派给本厂」✅
+  - UI：多选下拉选项带单价；卡片显示「工序：上袖埋夹、下脚卷边」✅
+- 验证：mvn compile / tsc / eslint 全绿；测试数据全部还原（订单状态、node_operations 委派历史、菲号字段、扫码记录）
+- 坑：委派 API 的 `nodeName` 若命中该菲号已有扫码记录的 `progressStage/processName`，会被「已完成当前工序，不可委派」拦截；E2E 需用不冲突的节点名
 
 ### 2026-09-09 工序跟进页「看板（工序质检）」404 + 同步任务误停 双修复（Playwright 实测）
 

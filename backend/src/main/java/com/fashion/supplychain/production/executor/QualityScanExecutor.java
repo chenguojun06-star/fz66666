@@ -117,7 +117,7 @@ public class QualityScanExecutor {
             throw new IllegalStateException("未匹配到菲号");
         }
 
-        executorSupport.validateBundleFactoryAccess(bundle, "质检");
+        executorSupport.validateBundleFactoryAccess(bundle, "质检", executorSupport.resolveScanProcess(params));
 
         executorSupport.validateBundleNotBlocked(bundle, "质检");
 

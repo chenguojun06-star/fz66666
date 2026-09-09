@@ -111,6 +111,9 @@ public class ProductionOrderNodeController {
 
         private String assigneeName;
 
+        /** 外发工序名（可多选）；为空 = 整扎外发（兼容历史行为） */
+        private java.util.List<String> processNames;
+
         @jakarta.validation.constraints.NotEmpty(message = "请选择要委派的菲号")
         @jakarta.validation.constraints.Size(min = 1, max = 200, message = "单次委派菲号数量需在1-200之间")
         private java.util.List<String> bundleIds;
@@ -131,6 +134,8 @@ public class ProductionOrderNodeController {
         public void setAssigneeId(String assigneeId) { this.assigneeId = assigneeId; }
         public String getAssigneeName() { return assigneeName; }
         public void setAssigneeName(String assigneeName) { this.assigneeName = assigneeName; }
+        public java.util.List<String> getProcessNames() { return processNames; }
+        public void setProcessNames(java.util.List<String> processNames) { this.processNames = processNames; }
         public java.util.List<String> getBundleIds() { return bundleIds; }
         public void setBundleIds(java.util.List<String> bundleIds) { this.bundleIds = bundleIds; }
     }

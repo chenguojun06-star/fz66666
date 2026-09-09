@@ -101,7 +101,8 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                         CuttingBundle::getFactoryId,
                         CuttingBundle::getFactoryName,
                         CuttingBundle::getAssigneeId,
-                        CuttingBundle::getAssigneeName
+                        CuttingBundle::getAssigneeName,
+                        CuttingBundle::getDelegateProcesses
                 )
                 .eq(StringUtils.hasText(orderNo), CuttingBundle::getProductionOrderNo, orderNo)
                 .eq(StringUtils.hasText(styleNo), CuttingBundle::getStyleNo, styleNo)
@@ -426,6 +427,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                                 CuttingBundle::getOperatorName,
                                 CuttingBundle::getFactoryId,
                                 CuttingBundle::getFactoryName,
+                                CuttingBundle::getDelegateProcesses,
                                 CuttingBundle::getScanBlocked,
                                 CuttingBundle::getSplitProcessOrder,
                                 CuttingBundle::getCreateTime)
@@ -452,6 +454,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                                     CuttingBundle::getOperatorName,
                                     CuttingBundle::getFactoryId,
                                     CuttingBundle::getFactoryName,
+                                    CuttingBundle::getDelegateProcesses,
                                     CuttingBundle::getScanBlocked,
                                     CuttingBundle::getSplitProcessOrder,
                                     CuttingBundle::getCreateTime)
@@ -483,6 +486,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
                         CuttingBundle::getOperatorName,
                         CuttingBundle::getFactoryId,
                         CuttingBundle::getFactoryName,
+                        CuttingBundle::getDelegateProcesses,
                         CuttingBundle::getScanBlocked,
                         CuttingBundle::getSplitProcessOrder,
                         CuttingBundle::getCreateTime)

@@ -54,16 +54,60 @@ public class ScanExecutorSupport {
 
     // ======================== 验证类 ========================
 
-    public void validateBundleFactoryAccess(CuttingBundle bundle, String stageName) {
+    /**
+     * 菲号级工厂隔离（按工序精细隔离）。
+     * <p>delegateProcesses 为空 = 整扎外发（兼容历史数据）；否则只隔离被委派的工序：
+     * 已委派工序内部不可扫、承做工厂可扫；未委派工序内部可扫、外发工厂不可扫。
+     */
+    public void validateBundleFactoryAccess(CuttingBundle bundle, String stageName, String scannedProcess) {
         if (bundle == null) return;
         String bundleFactoryId = bundle.getFactoryId();
         if (!StringUtils.hasText(bundleFactoryId)) return;
         String workerFactoryId = UserContext.factoryId();
-        if (!bundleFactoryId.equals(workerFactoryId)) {
-            log.warn("[工厂隔离-{}] 扫码被拒绝: bundleId={}, bundleFactory={}, workerFactory={}",
-                    stageName, bundle.getId(), bundleFactoryId, workerFactoryId);
-            throw new BusinessException("该菲号已转派至外发工厂，您无权" + stageName + "扫码");
+        boolean internal = !StringUtils.hasText(workerFactoryId);
+        boolean delegated = isProcessDelegated(bundle, scannedProcess);
+        String processLabel = StringUtils.hasText(scannedProcess) ? "「" + scannedProcess + "」工序" : "";
+
+        // 内部扫未委派工序 → 放行；承做工厂扫自己承做的委派工序 → 放行
+        if (internal && !delegated) return;
+        if (!internal && delegated && bundleFactoryId.equals(workerFactoryId)) return;
+
+        log.warn("[工厂隔离-{}] 扫码被拒绝: bundleId={}, bundleFactory={}, workerFactory={}, process={}, delegated={}",
+                stageName, bundle.getId(), bundleFactoryId, workerFactoryId, scannedProcess, delegated);
+        if (internal) {
+            throw new BusinessException("该菲号" + processLabel + "已委派外发工厂，您无权" + stageName + "扫码");
         }
+        if (!bundleFactoryId.equals(workerFactoryId)) {
+            throw new BusinessException("该菲号已转派至其他外发工厂，您无权" + stageName + "扫码");
+        }
+        throw new BusinessException("该菲号" + processLabel + "未委派给本厂，请由本厂内部扫码");
+    }
+
+    /**
+     * 判断某工序是否已委派外发。delegateProcesses 为空 = 整扎外发，全部工序视为已委派；
+     * 无法识别工序（scannedProcess 为空）时按已委派处理（保守，优先防止重复计件）。
+     */
+    public boolean isProcessDelegated(CuttingBundle bundle, String scannedProcess) {
+        String csv = bundle.getDelegateProcesses();
+        if (!StringUtils.hasText(csv)) return true;
+        if (!StringUtils.hasText(scannedProcess)) return true;
+        String target = scannedProcess.trim();
+        for (String p : csv.split(",")) {
+            if (p != null && p.trim().equals(target)) return true;
+        }
+        return false;
+    }
+
+    /** 从扫码参数提取本次工序名（子工序优先，兜底父节点） */
+    public String resolveScanProcess(Map<String, Object> params) {
+        if (params == null) return null;
+        Object p = params.get("processName");
+        String v = p == null ? null : String.valueOf(p).trim();
+        if (!StringUtils.hasText(v)) {
+            Object s = params.get("progressStage");
+            v = s == null ? null : String.valueOf(s).trim();
+        }
+        return StringUtils.hasText(v) ? v : null;
     }
 
     public void validateBundleNotBlocked(CuttingBundle bundle, String stageName) {

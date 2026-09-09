@@ -206,7 +206,7 @@ public class ProductionScanExecutor {
         if (OrderStatusConstants.isTerminal(orderStatus)) throw new IllegalStateException("订单已终态(" + orderStatus + ")，无法继续扫码");
         if (quantity <= 0) throw new IllegalArgumentException("扫码数量必须大于0");
 
-        executorSupport.validateBundleFactoryAccess(ctx.bundle, "生产");
+        executorSupport.validateBundleFactoryAccess(ctx.bundle, "生产", executorSupport.resolveScanProcess(params));
         return ctx;
     }
 

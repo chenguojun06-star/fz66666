@@ -1323,7 +1323,10 @@ public class ProductionOrderOrchestrator {
             }
         }
 
-        // 5. 更新菲号（工厂/人员互斥）
+        // 5. 归一化外发工序（去重去空、逗号拼接；为空 = 整扎外发，兼容历史行为）
+        String delegateProcesses = normalizeDelegateProcesses(req.getProcessNames());
+
+        // 6. 更新菲号（工厂/人员互斥 + 外发工序）
         for (com.fashion.supplychain.production.entity.CuttingBundle b : bundles) {
             if (toFactory) {
                 b.setFactoryId(req.getFactoryId());
@@ -1336,17 +1339,35 @@ public class ProductionOrderOrchestrator {
                 b.setFactoryId(null);
                 b.setFactoryName(null);
             }
+            b.setDelegateProcesses(delegateProcesses);
         }
         cuttingBundleService.updateBatchById(bundles);
 
-        // 6. 委派历史追加到 nodeOperations JSON（与前端 HistoryItem 结构一致）
-        appendBundleDelegateHistory(order, req, bundles.size());
+        // 7. 委派历史追加到 nodeOperations JSON（与前端 HistoryItem 结构一致）
+        appendBundleDelegateHistory(order, req, bundles.size(), delegateProcesses);
 
         return bundles.size();
     }
 
+    /**
+     * 归一化外发工序名列表：去空、去重、保序，逗号拼接并截断到列长度上限。
+     * 返回 null 表示整扎外发（不限制工序）。
+     */
+    private String normalizeDelegateProcesses(java.util.List<String> processNames) {
+        if (processNames == null || processNames.isEmpty()) return null;
+        java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<>();
+        for (String p : processNames) {
+            if (p == null) continue;
+            String v = p.trim();
+            if (!v.isEmpty()) set.add(v);
+        }
+        if (set.isEmpty()) return null;
+        String csv = String.join(",", set);
+        return csv.length() > 500 ? csv.substring(0, 500) : csv;
+    }
+
     private void appendBundleDelegateHistory(ProductionOrder order,
-            ProductionOrderNodeController.BundleDelegateRequest req, int count) {
+            ProductionOrderNodeController.BundleDelegateRequest req, int count, String delegateProcesses) {
         try {
             com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(
                     order.getNodeOperations() == null ? "{}" : order.getNodeOperations());
@@ -1356,7 +1377,8 @@ public class ProductionOrderOrchestrator {
             String target = "factory".equals(req.getDelegateType())
                     ? "工厂：" + (StringUtils.hasText(req.getFactoryName()) ? req.getFactoryName() : req.getFactoryId())
                     : "人员：" + (StringUtils.hasText(req.getAssigneeName()) ? req.getAssigneeName() : req.getAssigneeId());
-            String changes = "批量委派 " + count + " 个菲号 → " + target;
+            String changes = "批量委派 " + count + " 个菲号 → " + target
+                    + (StringUtils.hasText(delegateProcesses) ? "（工序：" + delegateProcesses + "）" : "");
             com.fasterxml.jackson.databind.node.ObjectNode history = objectMapper.createObjectNode();
             history.put("time", java.time.OffsetDateTime.now().toString());
             history.put("operatorName", StringUtils.hasText(UserContext.username()) ? UserContext.username() : "未知");

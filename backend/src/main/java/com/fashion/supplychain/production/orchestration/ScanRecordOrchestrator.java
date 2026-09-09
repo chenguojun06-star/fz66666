@@ -283,7 +283,7 @@ public class ScanRecordOrchestrator {
         if (order == null && !hasText(orderId) && !hasText(orderNo) && hasText(scanCode)) order = resolveOrder(null, scanCode);
         final ProductionOrder finalOrder = order;
         // 菲号级工厂隔离校验（支持部分转单）
-        validateBundleBelonging(bundle, ctx);
+        validateBundleBelonging(bundle, ctx, resolveScanProcess(params));
         validateOrderBelonging(finalOrder, ctx, bundle);
         return qualityScanExecutor.execute(params, requestId, operatorId, operatorName, finalOrder,
                 (unused) -> resolveColor(params, bundle, finalOrder), (unused) -> resolveSize(params, bundle, finalOrder));
@@ -324,7 +324,7 @@ public class ScanRecordOrchestrator {
         if (order == null && !hasText(orderId) && !hasText(orderNo) && hasText(scanCode)) order = resolveOrder(null, scanCode);
         final ProductionOrder finalOrder = order;
         // 菲号级工厂隔离校验（支持部分转单）
-        validateBundleBelonging(bundle, ctx);
+        validateBundleBelonging(bundle, ctx, resolveScanProcess(params));
         validateOrderBelonging(finalOrder, ctx, bundle);
         return warehouseScanExecutor.execute(params, requestId, operatorId, operatorName, finalOrder,
                 (unused) -> resolveColor(params, bundle, finalOrder), (unused) -> resolveSize(params, bundle, finalOrder));
@@ -352,7 +352,7 @@ public class ScanRecordOrchestrator {
         if (order == null && hasText(scanCode)) order = resolveOrder(null, scanCode);
         // 菲号级工厂隔离校验（与质检/入库同口径，支持部分转单：菲号委派后内部不可扫、外发工厂可扫）
         final CuttingBundle scanBundle = hasText(scanCode) ? cuttingBundleService.getByQrCode(scanCode) : null;
-        validateBundleBelonging(scanBundle, ctx);
+        validateBundleBelonging(scanBundle, ctx, resolveScanProcess(params));
         validateOrderBelonging(order, ctx, scanBundle);
         final ProductionOrder resolvedOrder = order;
         return productionScanExecutor.execute(params, requestId, operatorId, operatorName, scanType,
@@ -458,7 +458,16 @@ public class ScanRecordOrchestrator {
      * 校验菲号是否属于当前工厂（支持菲号级工厂隔离）
      * 部分转单场景：订单可能属于内部工厂，但部分菲号转给了外部工厂
      */
-    private void validateBundleBelonging(CuttingBundle bundle, UserContext ctx) {
+    /**
+     * 菲号级工厂隔离（按工序精细隔离）：
+     * <ul>
+     *   <li>菲号未委派外发 → 不限制</li>
+     *   <li>已委派工序：内部账号禁止扫（避免与外发工厂重复计件），仅承做工厂可扫</li>
+     *   <li>未委派工序：内部账号可扫，外发工厂禁止扫</li>
+     *   <li>delegateProcesses 为空 = 整扎外发（兼容历史数据），所有工序都算已委派</li>
+     * </ul>
+     */
+    private void validateBundleBelonging(CuttingBundle bundle, UserContext ctx, String scannedProcess) {
         if (bundle == null || ctx == null) return;
         if (isAdminRole(ctx)) return;
         String bundleFactoryId = bundle.getFactoryId();
@@ -466,14 +475,45 @@ public class ScanRecordOrchestrator {
         if (!StringUtils.hasText(bundleFactoryId)) return;
 
         String userFactoryId = ctx.getFactoryId();
-        // 菲号已委派外发：内部账号（factoryId 为空）一律拒绝，避免与外发工厂重复计件
-        if (!StringUtils.hasText(userFactoryId)) {
-            throw new AccessDeniedException("该菲号已委派外发工厂，内部不可扫码，请由外发工厂操作");
+        boolean isInternalUser = !StringUtils.hasText(userFactoryId);
+        boolean delegated = isProcessDelegated(bundle, scannedProcess);
+        String processLabel = StringUtils.hasText(scannedProcess) ? "「" + scannedProcess + "」工序" : "";
+
+        if (isInternalUser) {
+            if (delegated) {
+                throw new AccessDeniedException("该菲号" + processLabel + "已委派外发工厂，内部不可扫码，请由外发工厂操作");
+            }
+            return;
         }
-        // 外发账号：必须是委派的那个工厂
+        // 外发账号：必须是承做的那个工厂，且只能扫委派给本厂的工序
         if (!bundleFactoryId.equals(userFactoryId)) {
             throw new AccessDeniedException("该菲号不属于当前工厂，请确认订单归属");
         }
+        if (!delegated) {
+            throw new AccessDeniedException("该菲号" + processLabel + "未委派给本厂，请由本厂内部扫码");
+        }
+    }
+
+    /**
+     * 判断某工序是否已委派外发。delegateProcesses 为空 = 整扎外发，全部工序视为已委派；
+     * 无法识别工序（scannedProcess 为空）时按已委派处理（保守，优先防止重复计件）。
+     */
+    private boolean isProcessDelegated(CuttingBundle bundle, String scannedProcess) {
+        String csv = bundle.getDelegateProcesses();
+        if (!StringUtils.hasText(csv)) return true;
+        if (!StringUtils.hasText(scannedProcess)) return true;
+        String target = scannedProcess.trim();
+        for (String p : csv.split(",")) {
+            if (p != null && p.trim().equals(target)) return true;
+        }
+        return false;
+    }
+
+    /** 取本次扫码的工序名（子工序优先，兜底父节点） */
+    private String resolveScanProcess(Map<String, Object> params) {
+        String p = TextUtils.safeText(params.get("processName"));
+        if (!StringUtils.hasText(p)) p = TextUtils.safeText(params.get("progressStage"));
+        return p;
     }
 
     private boolean isAdminRole(UserContext ctx) {

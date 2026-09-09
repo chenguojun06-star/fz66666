@@ -116,6 +116,13 @@ public class CuttingBundle {
     @TableField("assignee_name")
     private String assigneeName;
 
+    /**
+     * 外发工序名（逗号分隔，如 "剪线,整烫"）；为空 = 整扎外发（兼容历史数据）
+     * 按工序精细隔离：仅勾选的工序允许外发工厂扫码，未勾选工序仍由内部扫
+     */
+    @TableField("delegate_processes")
+    private String delegateProcesses;
+
     private Boolean scanBlocked;
 
     // ==================== 操作人字段（自动填充）====================

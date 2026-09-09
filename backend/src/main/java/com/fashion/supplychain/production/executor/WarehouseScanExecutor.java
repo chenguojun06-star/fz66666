@@ -138,7 +138,7 @@ public class WarehouseScanExecutor {
             throw new IllegalStateException("未匹配到菲号");
         }
 
-        executorSupport.validateBundleFactoryAccess(bundle, "入库");
+        executorSupport.validateBundleFactoryAccess(bundle, "入库", executorSupport.resolveScanProcess(params));
 
         executorSupport.validateBundleNotBlocked(bundle, "入库");
 
