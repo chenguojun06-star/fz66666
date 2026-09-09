@@ -191,6 +191,19 @@ public class ProductionOrderUtils {
     private static int parseSizeKey(String size) {
         String s = size.trim().toUpperCase(Locale.ROOT);
 
+        // 复合码修复：形如 "XS(155/80A)" / "L(165/92)" / "S（160/84）" 的尺码，
+        // 必须先取括号前的字母码参与排序。否则 XS/S/M/L/XL 全部命中 default=0，
+        // compareSizeAsc 恒返回 0，菲号生成顺序形同未排序（裁剪纸样菲号乱序）。
+        int parenEn = s.indexOf('(');
+        int parenCn = s.indexOf('（');
+        int cut = parenEn < 0 ? parenCn : (parenCn < 0 ? parenEn : Math.min(parenEn, parenCn));
+        if (cut > 0) {
+            s = s.substring(0, cut).trim();
+        }
+        if (s.isEmpty()) {
+            return 0;
+        }
+
         // 纯数字尺码 (如 28, 29, 30)
         if (PATTERN_NUMERIC_SIZE.matcher(s).matches()) {
             try {

@@ -7,6 +7,14 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-09-09 P0 裁剪菲号乱序根治：后端 compareSizeAsc 不认复合码（jshell 实测）
+
+- [x] 根因：`ProductionOrderUtils.parseSizeKey` 只认纯字母码（`switch(s)` 精确匹配 XS/S/M/L/XL + `^X{0,4}S$` 正则），而实际尺码是 `XS(155/80A)` / `L(165/92)` 这类**复合码** → 全部落 `default -> 0` → `compareSizeAsc` 恒返回 0 → `buildBundleList` 的排序形同未执行（稳定排序保留入参顺序），菲号按来源顺序乱排（L,M,S,S,S,XL,XS,XS,XS）
+- [x] 修复：`parseSizeKey` 先剥离括号（半角/全角）取括号前字母码再排序
+- [x] jshell 实测：`[L(165/92),M(165/88A),S×3,XL(170/96),XS×3]` 排序后 = `XS×3 → S×3 → M → L → XL` ✅
+- 影响面：`buildBundleList`（PC/小程序/样衣所有生成路径最终都走后端排序）+ `OrderShareHelper`
+- 说明：已生成的历史菲号不会自动重排（扎号被扫码记录引用），需删除后重新分菲；新生成即刻生效
+
 ### 2026-09-09 工序弹窗残留「字段配置」改造为通用「显示字段」抽屉（Playwright 实测）
 
 - [x] 根因：ProcessTrackingTable（节点详情弹窗→工序跟踪 tab）仍留着旧的 `<a>` 跳转 `paths.fieldConfig?bizType=scan`，未跟随 D-322/D-323 全站统一
