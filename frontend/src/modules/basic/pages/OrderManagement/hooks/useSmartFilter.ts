@@ -10,10 +10,15 @@ import type { SmartFilterType } from '../helpers';
 export function useSmartFilter(styles: StyleInfo[]) {
   const [smartFilter, setSmartFilter] = useState<SmartFilterType>('all');
 
+  // D-324: 与后端 /style/info/stats 口径对齐——已完成款式不算延期
+  // （此前卡片"已延期0"而智能提示"已延期16"，同一页面两个数）
+  const isCompletedStyle = (s: StyleInfo) =>
+    String(s.sampleStatus || '').trim().toLowerCase() === 'completed';
+
   // 已延期款式（基于交板日期 deliveryDate）
   const overdueStyles = useMemo(() => {
     return styles.filter((s) => {
-      if (!s.deliveryDate) return false;
+      if (!s.deliveryDate || isCompletedStyle(s)) return false;
       return dayjs(s.deliveryDate).endOf('day').isBefore(dayjs());
     });
   }, [styles]);
@@ -21,7 +26,7 @@ export function useSmartFilter(styles: StyleInfo[]) {
   // 临近交期款式（3 天内）
   const warningStyles = useMemo(() => {
     return styles.filter((s) => {
-      if (!s.deliveryDate) return false;
+      if (!s.deliveryDate || isCompletedStyle(s)) return false;
       const d = dayjs(s.deliveryDate).endOf('day');
       return d.isAfter(dayjs()) && d.isBefore(dayjs().add(3, 'day'));
     });

@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
-import { Card, Col, Empty, Row, Statistic, Tag, Tooltip } from 'antd';
+import { Button, Card, Col, Empty, Row, Statistic, Tag, Tooltip } from 'antd';
 import {
   AppstoreOutlined,
   CheckCircleOutlined,
@@ -56,14 +56,23 @@ const Hint: React.FC<{ text: string }> = ({ text }) => (
 const OrderAnalysisTab: React.FC = () => {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await api.get<{ code: number; data: AnalyticsData }>('/order-analytics/overview', {
+      const res = await api.get<{ code: number; data: AnalyticsData; message?: string }>('/order-analytics/overview', {
         params: { days: 365 },
       });
-      if (res.code === 200) setData(res.data);
+      if (res.code === 200 && res.data) {
+        setData(res.data);
+      } else {
+        // D-324: 失败必须可见——不再静默渲染一屏假 0 让用户以为数据没连接
+        setError(res.message || '数据分析加载失败');
+      }
+    } catch (e: any) {
+      setError(e?.message || '数据分析加载失败，请稍后重试');
     } finally {
       setLoading(false);
     }
@@ -203,6 +212,21 @@ const OrderAnalysisTab: React.FC = () => {
 
   const overview = data?.overview;
   const margin = data?.margin;
+
+  if (error) {
+    return (
+      <Card size="small">
+        <Empty
+          description={`数据分析加载失败：${error}`}
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+        >
+          <Button type="primary" onClick={() => void fetchData()} loading={loading}>
+            重试
+          </Button>
+        </Empty>
+      </Card>
+    );
+  }
 
   return (
     <div>
