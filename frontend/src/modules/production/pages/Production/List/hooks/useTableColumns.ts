@@ -19,12 +19,27 @@ export function useTableColumns(params: UseTableColumnsParams) {
     [allColumns, visibleColumns]
   );
 
-  const { extColumns } = useExtColumns({ bizType: 'production', platform: 'pc' });
+  const { extColumns, fieldConfigs } = useExtColumns({ bizType: 'production', platform: 'pc' });
 
-  const columns = useMemo(
-    () => [...filteredColumns, ...extColumns],
-    [filteredColumns, extColumns]
+  // D-322: 自定义字段同样受列显隐管控（key = ext_<fieldKey>），不再无条件追加
+  const visibleExtColumns = useMemo(
+    () => extColumns.filter((col: any) => visibleColumns[col.key as string] !== false),
+    [extColumns, visibleColumns]
   );
 
-  return { columns };
+  const columns = useMemo(
+    () => [...filteredColumns, ...visibleExtColumns],
+    [filteredColumns, visibleExtColumns]
+  );
+
+  /** 自定义字段清单（供列设置抽屉渲染勾选项；默认显示） */
+  const extColumnOptions = useMemo(
+    () => (fieldConfigs || [])
+      .filter((f: any) => f.isSystem === 0 && f.enabled !== 0)
+      .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      .map((f: any) => ({ key: `ext_${f.fieldKey}`, label: f.label })),
+    [fieldConfigs]
+  );
+
+  return { columns, extColumnOptions };
 }

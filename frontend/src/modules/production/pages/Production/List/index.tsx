@@ -100,7 +100,7 @@ const ProductionList: React.FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listData.productionList.length]);
 
-  const { columns } = useTableColumns({
+  const { columns, extColumnOptions } = useTableColumns({
     sortField: listData.sortField, sortOrder: listData.sortOrder, handleSort: listData.handleSort,
     handleCloseOrder: productionActions.handleCloseOrder, handleScrapOrder: productionActions.handleScrapOrder,
     handleCopyOrder: productionActions.handleCopyOrder, navigate, openProcessDetail: processDetail.openProcessDetail,
@@ -153,8 +153,13 @@ const ProductionList: React.FC = () => {
     visibleColumns: columnSettings.visibleColumns, toggleColumnVisible: columnSettings.toggleColumnVisible,
     resetColumnSettings: columnSettings.resetColumnSettings, columnOptions: columnSettings.columnOptions,
     viewMode: listData.viewMode, setViewMode: listData.setViewMode, factoryTypeOptions,
-    openColumnSettings: () => setColumnSettingsOpen(true),
   };
+
+  // D-322: 系统字段 + 自定义字段统一进"显示字段"抽屉，全部预设好，用户只挑显隐
+  const mergedColumnOptions = useMemo(
+    () => [...columnSettings.columnOptions, ...extColumnOptions],
+    [columnSettings.columnOptions, extColumnOptions],
+  );
 
   return (
     <>
@@ -185,10 +190,10 @@ const ProductionList: React.FC = () => {
           <>
             {ProductionFilterBar(filterBarProps).filterRight}
             <a
-              onClick={() => navigate(`${paths.fieldConfig}?bizType=production`)}
+              onClick={() => setColumnSettingsOpen(true)}
               style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4 }}
             >
-              <SettingOutlined /> 字段配置
+              <SettingOutlined /> 显示字段
             </a>
           </>
         }
@@ -345,13 +350,25 @@ const ProductionList: React.FC = () => {
       <ColumnSettingsDrawer
         open={columnSettingsOpen}
         onClose={() => setColumnSettingsOpen(false)}
-        columnOptions={columnSettings.columnOptions}
+        columnOptions={mergedColumnOptions}
         visibleColumns={columnSettings.visibleColumns}
         onToggle={(key, visible) => {
           const current = columnSettings.visibleColumns[key] !== false;
           if (current !== visible) columnSettings.toggleColumnVisible(key);
         }}
         onReset={columnSettings.resetColumnSettings}
+        title="显示字段"
+        groups={columnSettings.columnGroups}
+        presets={columnSettings.columnPresets}
+        onApplyPreset={columnSettings.applyPresetValues}
+        extraFooterLink={
+          <a
+            onClick={() => navigate(`${paths.fieldConfig}?bizType=order`)}
+            style={{ fontSize: 12 }}
+          >
+            管理自定义字段
+          </a>
+        }
       />
 </>
   );

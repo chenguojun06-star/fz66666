@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Select, Segmented } from 'antd';
-import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, RadarChartOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, UnorderedListOutlined, RadarChartOutlined } from '@ant-design/icons';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import ExportButton from '@/components/common/ExportButton';
 import { useCustomerOptions } from '@/hooks/useCustomerOptions';
@@ -47,7 +47,6 @@ interface ProductionFilterBarProps {
   viewMode: string;
   setViewMode: (mode: string) => void;
   factoryTypeOptions: Array<{ label: string; value: string }>;
-  openColumnSettings: () => void;
 }
 
 const CustomerFilterSelect: React.FC<{
@@ -75,7 +74,7 @@ const CustomerFilterSelect: React.FC<{
 function buildFilterBar(props: ProductionFilterBarProps) {
   const {
     queryParams, setQueryParams, dateRange, setDateRange, fetchProductionList,
-    viewMode, setViewMode, factoryTypeOptions, openColumnSettings,
+    viewMode, setViewMode, factoryTypeOptions,
   } = props;
 
   return {
@@ -138,7 +137,6 @@ function buildFilterBar(props: ProductionFilterBarProps) {
     filterRight: (
       <>
         <Button onClick={() => void fetchProductionList()}>刷新</Button>
-        <Button icon={<SettingOutlined />} onClick={openColumnSettings}>列设置</Button>
         <Segmented
           value={viewMode}
           onChange={(v) => setViewMode(v as 'list' | 'card' | 'smart')}
