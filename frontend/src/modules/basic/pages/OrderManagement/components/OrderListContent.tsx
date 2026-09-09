@@ -28,13 +28,13 @@ interface Props {
   openCreate: (style: StyleInfo) => void;
   fetchStyles: () => void;
   onNoDataOrder?: () => void;
-  onGoToFieldConfig: () => void;
+  onOpenColumnSettings: () => void;
 }
 
 const OrderListContent: React.FC<Props> = ({
   viewMode, setViewMode, queryParams, setQueryParams,
   styles, total, loading, columns, cardColumns, openCreate, fetchStyles, onNoDataOrder,
-  onGoToFieldConfig,
+  onOpenColumnSettings,
 }) => {
   return (
     <>
@@ -78,8 +78,8 @@ const OrderListContent: React.FC<Props> = ({
               {onNoDataOrder && (
                 <Button icon={<PlusOutlined />} onClick={onNoDataOrder}>无资料下单</Button>
               )}
-              <a onClick={onGoToFieldConfig} style={{ fontSize: 13 }}>
-                <SettingOutlined /> 字段配置
+              <a onClick={onOpenColumnSettings} style={{ fontSize: 13 }}>
+                <SettingOutlined /> 显示字段
               </a>
               <Button
                 icon={viewMode === 'table' ? <AppstoreOutlined /> : <UnorderedListOutlined />}

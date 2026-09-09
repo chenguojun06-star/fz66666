@@ -132,6 +132,33 @@ const StyleInfoListPage: React.FC = () => {
   });
   const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
 
+  // D-323: 自定义字段统一纳入显隐管控（key = ext_<fieldKey>），过滤后再下发各视图
+  const visibleCustomFields = useMemo(
+    () => customFields.filter((f) => styleColumnSettings.visibleColumns[`ext_${f.fieldKey}`] !== false),
+    [customFields, styleColumnSettings.visibleColumns],
+  );
+  const styleExtColumnOptions = useMemo(
+    () => customFields.map((f) => ({ key: `ext_${f.fieldKey}`, label: f.label })),
+    [customFields],
+  );
+  const styleMergedColumnOptions = useMemo(
+    () => [...STYLE_LIST_COLUMNS, ...styleExtColumnOptions],
+    [styleExtColumnOptions],
+  );
+  const styleColumnGroups = useMemo(() => [
+    { title: '基本信息', keys: ['cover', 'styleNo', 'styleName', 'category', 'color', 'size', 'developmentSourceType'] },
+    { title: '数量与交期', keys: ['sampleQuantity', 'deliveryDate', 'totalOrderQuantity', 'stockQuantity', 'createTime'] },
+    { title: '开发进度', keys: ['progressNode', 'procurementProgress', 'patternCompletedTime', 'sampleCompletedTime'] },
+  ], []);
+  const styleColumnPresets = useMemo(() => [
+    {
+      key: 'simple', label: '精简',
+      values: { cover: true, styleNo: true, styleName: true, color: true, size: true, progressNode: true, deliveryDate: true },
+    },
+    { key: 'standard', label: '标准', values: STYLE_LIST_DEFAULT_VISIBLE },
+    { key: 'full', label: '完整', values: Object.fromEntries(STYLE_LIST_COLUMNS.map((c) => [c.key, true])) },
+  ], []);
+
   return (
     <>
       <PageLayout
@@ -181,7 +208,6 @@ const StyleInfoListPage: React.FC = () => {
                 setQueryParams={setQueryParams}
                 onRefresh={() => fetchList()}
                 onNavigateNew={() => navigate('/style-info/new')}
-                onNavigateFieldConfig={() => navigate('/system/field-config?bizType=style')}
                 openColumnSettings={() => setColumnSettingsOpen(true)}
               />
             }
@@ -202,7 +228,7 @@ const StyleInfoListPage: React.FC = () => {
             onPrint={handlePrintClick}
             onMaintenance={openMaintenance}
             onRefresh={() => fetchList()}
-            customFields={customFields}
+            customFields={visibleCustomFields}
             orderedColumns={styleColumnSettings.orderedVisibleColumns}
           />
         ) : viewMode === 'smart' ? (
@@ -222,7 +248,7 @@ const StyleInfoListPage: React.FC = () => {
             onRefresh={() => fetchList()}
             focusedStyleId={focusedStyleId}
             dateSortAsc={dateSortAsc}
-            customFields={customFields}
+            customFields={visibleCustomFields}
           />
         ) : (
           <StyleCardView
@@ -239,7 +265,7 @@ const StyleInfoListPage: React.FC = () => {
             onMaintenance={openMaintenance}
             onRefresh={() => fetchList()}
             focusedStyleId={focusedStyleId}
-            customFields={customFields}
+            customFields={visibleCustomFields}
           />
         )}
       </PageLayout>
@@ -271,10 +297,19 @@ const StyleInfoListPage: React.FC = () => {
       <ColumnSettingsDrawer
         open={columnSettingsOpen}
         onClose={() => setColumnSettingsOpen(false)}
-        columnOptions={styleColumnSettings.columnOptions}
+        columnOptions={styleMergedColumnOptions}
         visibleColumns={styleColumnSettings.visibleColumns}
         onToggle={(key, visible) => styleColumnSettings.setVisible(key, visible)}
         onReset={styleColumnSettings.reset}
+        title="显示字段"
+        groups={styleColumnGroups}
+        presets={styleColumnPresets}
+        onApplyPreset={styleColumnSettings.applyValues}
+        extraFooterLink={
+          <a onClick={() => navigate('/system/field-config?bizType=style')} style={{ fontSize: 12 }}>
+            管理自定义字段
+          </a>
+        }
       />
     </>
   );

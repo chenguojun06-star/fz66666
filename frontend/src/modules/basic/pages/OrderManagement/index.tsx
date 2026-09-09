@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import { useFieldConfig } from '@/hooks/useFieldConfig';
+import { useColumnSettings, ColumnSettingsDrawer } from '@/components/common/ColumnSettings';
 import { readPageSize } from '@/utils/pageSizeStore';
 import api from '@/utils/api';
 import { CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
@@ -55,8 +56,48 @@ const OrderManagement: React.FC = () => {
     [orderFieldConfigs]
   );
   const goToStyleFieldConfig = () => {
-    navigate(`${paths.fieldConfig}?bizType=style`);
+    navigate(`${paths.fieldConfig}?bizType=order`);
   };
+
+  // ===== D-323 显示字段：系统预设全部字段，用户只挑显隐；方案跟随账号 =====
+  const ORDER_LIST_COLUMNS = useMemo(() => [
+    { key: 'cover', label: '图片' },
+    { key: 'styleNo', label: '款号' },
+    { key: 'skc', label: 'SKC' },
+    { key: 'styleName', label: '款名' },
+    { key: 'category', label: '品类' },
+    { key: 'season', label: '季节' },
+    { key: 'fabricComposition', label: '面料成分' },
+    { key: 'developmentSourceType', label: '来源' },
+    { key: 'statusTag', label: '状态' },
+    { key: 'orderCount', label: '下单次数' },
+    { key: 'latestOrderTime', label: '最近下单' },
+    { key: 'latestOrderCreator', label: '下单人' },
+    { key: 'hasOrder', label: '是否下单' },
+    { key: 'attachments', label: '附件' },
+  ], []);
+  const orderColumnSettings = useColumnSettings({
+    pageKey: 'customer-order-list',
+    bizType: 'order',
+    allColumns: ORDER_LIST_COLUMNS,
+    defaultVisible: Object.fromEntries(ORDER_LIST_COLUMNS.map((c) => [c.key, true])),
+  });
+  const [orderColumnSettingsOpen, setOrderColumnSettingsOpen] = useState(false);
+  const orderMergedColumnOptions = useMemo(
+    () => [...ORDER_LIST_COLUMNS, ...orderCustomFields.map((f) => ({ key: `ext_${f.fieldKey}`, label: f.label }))],
+    [ORDER_LIST_COLUMNS, orderCustomFields],
+  );
+  const orderColumnGroups = useMemo(() => [
+    { title: '基本信息', keys: ['cover', 'styleNo', 'skc', 'styleName', 'category', 'season', 'fabricComposition', 'developmentSourceType', 'attachments'] },
+    { title: '下单情况', keys: ['statusTag', 'orderCount', 'latestOrderTime', 'latestOrderCreator', 'hasOrder'] },
+  ], []);
+  const orderColumnPresets = useMemo(() => [
+    {
+      key: 'simple', label: '精简',
+      values: { cover: true, styleNo: true, styleName: true, statusTag: true, orderCount: true, latestOrderTime: true },
+    },
+    { key: 'standard', label: '标准', values: Object.fromEntries(ORDER_LIST_COLUMNS.map((c) => [c.key, true])) },
+  ], []);
 
   const cuttingCreateTask = useCuttingCreateTask({ message, navigate, fetchTasks: async () => {} });
 
@@ -303,14 +344,32 @@ const OrderManagement: React.FC = () => {
           styles={displayStyles}
           total={total}
           loading={loading}
-          columns={columns as any}
+          columns={columns.filter((c: any) => c.key === 'action' || orderColumnSettings.visibleColumns[c.key] !== false) as any}
           cardColumns={cardColumns}
           openCreate={openCreate}
           fetchStyles={fetchStyles}
           onNoDataOrder={cuttingCreateTask.openCreateTask}
-          onGoToFieldConfig={goToStyleFieldConfig}
+          onOpenColumnSettings={() => setOrderColumnSettingsOpen(true)}
         />
       </PageLayout>
+
+      <ColumnSettingsDrawer
+        open={orderColumnSettingsOpen}
+        onClose={() => setOrderColumnSettingsOpen(false)}
+        columnOptions={orderMergedColumnOptions}
+        visibleColumns={orderColumnSettings.visibleColumns}
+        onToggle={(key, visible) => orderColumnSettings.setVisible(key, visible)}
+        onReset={orderColumnSettings.reset}
+        title="显示字段"
+        groups={orderColumnGroups}
+        presets={orderColumnPresets}
+        onApplyPreset={orderColumnSettings.applyValues}
+        extraFooterLink={
+          <a onClick={goToStyleFieldConfig} style={{ fontSize: 12 }}>
+            管理自定义字段
+          </a>
+        }
+      />
 
       <OrderManagementModals
         visible={visible}

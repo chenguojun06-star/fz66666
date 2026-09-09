@@ -206,7 +206,7 @@ function SchemaTable<T extends object>(props: SchemaTableProps<T>) {
   const settingsTrigger = (
     <Tooltip title="选择要显示的列">
       <a onClick={() => setSettingsOpen(true)} style={{ fontSize: 13 }}>
-        <SettingOutlined /> 列设置
+        <SettingOutlined /> 显示字段
       </a>
     </Tooltip>
   );

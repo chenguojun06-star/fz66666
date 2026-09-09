@@ -13,14 +13,13 @@ interface CustomerFilterBarProps {
   fieldConfigs: FieldConfigItem[];
   customers: Customer[];
   total: number;
-  onGoToFieldConfig: () => void;
   onCreate: () => void;
 }
 
 const CustomerFilterBar: React.FC<CustomerFilterBarProps> = ({
   queryParams, setQueryParams, setKeywordInput,
   fieldConfigs, customers, total,
-  onGoToFieldConfig, onCreate,
+  onCreate,
 }) => {
   return (
     <Card className="filter-card mb-sm">
@@ -67,9 +66,6 @@ const CustomerFilterBar: React.FC<CustomerFilterBarProps> = ({
           </Button>
         </Space>
         <Space>
-          <a onClick={onGoToFieldConfig} style={{ fontSize: 13 }}>
-            <SettingOutlined /> 字段配置
-          </a>
           <SchemaPrint
             mode="list"
             fields={fieldConfigs}

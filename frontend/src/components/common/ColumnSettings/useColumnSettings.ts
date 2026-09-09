@@ -114,11 +114,7 @@ export function useColumnSettings({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageKey]);
 
-  const setVisible = useCallback((key: string, visible: boolean) => {
-    const next = { ...visibleRef.current, [key]: visible };
-    visibleRef.current = next;
-    setVisibleColumns(next);
-    // 异步持久化（在 updater 外，避免 StrictMode 双重调用导致重复请求）
+  const persistVisible = useCallback((next: Record<string, boolean>) => {
     if (enableRemote) {
       save({ bizType, pageKey, preferenceType: 'visible_columns', preferenceValue: next });
     }
@@ -131,6 +127,22 @@ export function useColumnSettings({
       // 忽略
     }
   }, [bizType, pageKey, enableRemote, save]);
+
+  const setVisible = useCallback((key: string, visible: boolean) => {
+    const next = { ...visibleRef.current, [key]: visible };
+    visibleRef.current = next;
+    setVisibleColumns(next);
+    // 异步持久化（在 updater 外，避免 StrictMode 双重调用导致重复请求）
+    persistVisible(next);
+  }, [persistVisible]);
+
+  /** D-323: 整套套用（一键预设方案）——批量替换显隐，只发一次持久化 */
+  const applyValues = useCallback((values: Record<string, boolean>) => {
+    const next = { ...values };
+    visibleRef.current = next;
+    setVisibleColumns(next);
+    persistVisible(next);
+  }, [persistVisible]);
 
   const setOrder = useCallback((order: string[]) => {
     orderRef.current = order;
@@ -172,6 +184,7 @@ export function useColumnSettings({
     visibleColumns,
     columnOrder,
     setVisible,
+    applyValues,
     setOrder,
     reset,
     columnOptions: allColumns,

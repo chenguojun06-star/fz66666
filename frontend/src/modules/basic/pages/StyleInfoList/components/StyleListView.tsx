@@ -22,7 +22,7 @@ import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
  * 样衣开发"表格"视图（参考订单管理页 ProductionTableView）。
  * - ResizableTable：列宽记忆 + 序号列 + 前端导出（ExcelJS，选择导出列）
  * - 列显隐/列顺序由父级 useColumnSettings 管理（列设置侧滑弹窗在父级渲染）
- * - 自定义字段列（字段配置 isSystem=0）始终追加显示
+ * - 自定义字段列（字段配置 isSystem=0）受「显示字段」显隐管控
  */
 
 /** 样衣表格可配置的系统列（列设置选项） */

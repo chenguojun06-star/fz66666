@@ -19,7 +19,6 @@ interface StyleFilterBarExtraProps {
   setQueryParams: React.Dispatch<React.SetStateAction<any>>;
   onRefresh: () => void;
   onNavigateNew: () => void;
-  onNavigateFieldConfig: () => void;
   openColumnSettings: () => void;
 }
 
@@ -32,7 +31,6 @@ const StyleFilterBarExtra: React.FC<StyleFilterBarExtraProps> = ({
   setQueryParams,
   onRefresh,
   onNavigateNew,
-  onNavigateFieldConfig,
   openColumnSettings,
 }) => {
   return (
@@ -58,19 +56,10 @@ const StyleFilterBarExtra: React.FC<StyleFilterBarExtraProps> = ({
         ]}
       />
       <Button icon={<SettingOutlined />} onClick={openColumnSettings}>
-        列设置
+        显示字段
       </Button>
       <Button type="primary" onClick={onNavigateNew}>
         新建
-      </Button>
-      <Button
-        type="link"
-        size="small"
-        icon={<SettingOutlined />}
-        onClick={onNavigateFieldConfig}
-        title="配置本页显示哪些字段、字段顺序、字段标签"
-      >
-        字段配置
       </Button>
     </>
   );

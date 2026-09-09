@@ -138,10 +138,6 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
     });
   };
 
-  const goToFieldConfig = () => {
-    navigate(`${paths.fieldConfig}?bizType=customer`);
-  };
-
   return (
     <>
       <CustomerFilterBar
@@ -151,7 +147,6 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
         fieldConfigs={fieldConfigs}
         customers={customers}
         total={total}
-        onGoToFieldConfig={goToFieldConfig}
         onCreate={() => openDialog('create')}
       />
       <CustomerTable

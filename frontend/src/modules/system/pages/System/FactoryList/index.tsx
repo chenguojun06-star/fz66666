@@ -50,7 +50,6 @@ const FactoryList: React.FC = () => {
     openDialog, closeDialog,
     handleRemarkConfirm,
     handleSave,
-    goToFieldConfig,
   } = useFactoryListData();
 
   // D-243：一键修复 —— 按各供应商当前的内外标签刷新其名下订单的 factory_type
@@ -199,10 +198,7 @@ const FactoryList: React.FC = () => {
                     }
                     right={
                       <Space size={8}>
-                        <a onClick={goToFieldConfig} style={{ fontSize: 13 }}>
-                          <SettingOutlined /> 字段配置
-                        </a>
-                        <SchemaPrint
+                          <SchemaPrint
                           mode="list"
                           fields={fieldConfigs}
                           data={factoryList as unknown as Record<string, unknown>[]}

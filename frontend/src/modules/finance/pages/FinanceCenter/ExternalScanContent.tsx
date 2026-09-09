@@ -10,6 +10,7 @@ import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { useExtColumns } from '@/hooks/useExtColumns';
+import { useColumnSettings, ColumnSettingsDrawer } from '@/components/common/ColumnSettings';
 import { paths } from '@/routeConfig';
 
 const { RangePicker } = DatePicker;
@@ -57,7 +58,51 @@ const ExternalScanContent: React.FC = () => {
   });
   const [pendingFilters, setPendingFilters] = useState<FilterState>({ ...filters });
 
-  const { extColumns } = useExtColumns<ScanRecordRow>({ bizType: 'scan' });
+  const { extColumns, fieldConfigs } = useExtColumns<ScanRecordRow>({ bizType: 'scan' });
+
+  // D-323 显示字段：字段全由系统预设，用户只挑显隐；方案跟随账号
+  const SCAN_LIST_COLUMNS = useMemo(() => [
+    { key: 'delegateTargetName', label: '委托工厂' },
+    { key: 'operatorName', label: '操作员' },
+    { key: 'processName', label: '工序' },
+    { key: 'orderNo', label: '订单号' },
+    { key: 'styleNo', label: '款号' },
+    { key: 'color', label: '颜色' },
+    { key: 'size', label: '尺码' },
+    { key: 'quantity', label: '数量' },
+    { key: 'processUnitPrice', label: '单价' },
+    { key: 'scanCost', label: '金额' },
+    { key: 'scanTime', label: '扫码时间' },
+    { key: 'scanResult', label: '结果' },
+  ], []);
+  const scanColumnSettings = useColumnSettings({
+    pageKey: 'external-scan-list',
+    bizType: 'scan',
+    allColumns: SCAN_LIST_COLUMNS,
+    defaultVisible: Object.fromEntries(SCAN_LIST_COLUMNS.map((c) => [c.key, true])),
+  });
+  const [scanColumnSettingsOpen, setScanColumnSettingsOpen] = useState(false);
+  const scanExtColumnOptions = useMemo(
+    () => (fieldConfigs || [])
+      .filter((f: any) => f.isSystem === 0 && f.enabled !== 0)
+      .map((f: any) => ({ key: `ext_${f.fieldKey}`, label: f.label })),
+    [fieldConfigs],
+  );
+  const scanMergedColumnOptions = useMemo(
+    () => [...SCAN_LIST_COLUMNS, ...scanExtColumnOptions],
+    [SCAN_LIST_COLUMNS, scanExtColumnOptions],
+  );
+  const scanColumnGroups = useMemo(() => [
+    { title: '扫码信息', keys: ['delegateTargetName', 'operatorName', 'processName', 'quantity', 'processUnitPrice', 'scanCost', 'scanTime', 'scanResult'] },
+    { title: '关联单据', keys: ['orderNo', 'styleNo', 'color', 'size'] },
+  ], []);
+  const scanColumnPresets = useMemo(() => [
+    {
+      key: 'simple', label: '精简',
+      values: { delegateTargetName: true, operatorName: true, processName: true, quantity: true, scanTime: true },
+    },
+    { key: 'standard', label: '标准', values: Object.fromEntries(SCAN_LIST_COLUMNS.map((c) => [c.key, true])) },
+  ], []);
 
   const fetchData = useCallback(async (currentPage: number, currentPageSize: number, f: FilterState) => {
     setLoading(true);
@@ -202,6 +247,12 @@ const ExternalScanContent: React.FC = () => {
     ...extColumns,
   ], [extColumns]);
 
+  // D-323: 按显隐方案过滤（基础列+自定义列统一管控）
+  const visibleColumns = useMemo<ColumnsType<ScanRecordRow>>(
+    () => columns.filter((col: any) => scanColumnSettings.visibleColumns[col.key as string] !== false),
+    [columns, scanColumnSettings.visibleColumns],
+  );
+
   return (
     <Card styles={{ body: { padding: '16px 20px' } }}>
       {/* 搜索栏 */}
@@ -251,15 +302,15 @@ const ExternalScanContent: React.FC = () => {
           </Button>
         </Space>
         <a
-          onClick={() => navigate(`${paths.fieldConfig}?bizType=scan`)}
+          onClick={() => setScanColumnSettingsOpen(true)}
           style={{ fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
         >
-          <SettingOutlined /> 字段配置
+          <SettingOutlined /> 显示字段
         </a>
       </div>
 
       <ResizableTable<ScanRecordRow>
-        columns={columns}
+        columns={visibleColumns}
         dataSource={data}
         rowKey="id"
         loading={loading}

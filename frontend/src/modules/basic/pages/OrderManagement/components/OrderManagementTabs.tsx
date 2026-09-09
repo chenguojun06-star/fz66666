@@ -20,7 +20,7 @@ interface OrderManagementTabsProps {
   openCreate: (style?: StyleInfo) => void;
   fetchStyles: () => void;
   onNoDataOrder: () => void;
-  onGoToFieldConfig: () => void;
+  onOpenColumnSettings: () => void;
 }
 
 const OrderManagementTabs: React.FC<OrderManagementTabsProps> = ({
@@ -36,7 +36,7 @@ const OrderManagementTabs: React.FC<OrderManagementTabsProps> = ({
   openCreate,
   fetchStyles,
   onNoDataOrder,
-  onGoToFieldConfig,
+  onOpenColumnSettings,
 }) => {
   return (
     <Tabs defaultActiveKey="list" items={[
@@ -59,7 +59,7 @@ const OrderManagementTabs: React.FC<OrderManagementTabsProps> = ({
               openCreate={openCreate}
               fetchStyles={fetchStyles}
               onNoDataOrder={onNoDataOrder}
-              onGoToFieldConfig={onGoToFieldConfig}
+              onOpenColumnSettings={onOpenColumnSettings}
             />
           </>
         ),

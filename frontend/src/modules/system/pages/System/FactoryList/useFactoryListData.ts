@@ -84,10 +84,6 @@ export function useFactoryListData() {
     () => fieldConfigs.filter(f => f.isSystem === 0),
     [fieldConfigs]
   );
-  const goToFieldConfig = () => {
-    navigate(`${paths.fieldConfig}?bizType=supplier`);
-  };
-
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [accountFactory, setAccountFactory] = useState<{ id: string; name: string }>({ id: '', name: '' });
   const [supplierUserModalOpen, setSupplierUserModalOpen] = useState(false);
@@ -336,7 +332,7 @@ export function useFactoryListData() {
     submitLoading,
     logLoading, logRecords, logTitle,
     departmentOptions, userOptions,
-    extColumns, fieldConfigs, customFields, goToFieldConfig,
+    extColumns, fieldConfigs, customFields,
     setLogRecords,
     accountModalOpen, setAccountModalOpen, accountFactory,
     supplierUserModalOpen, setSupplierUserModalOpen, supplierUserFactory,
