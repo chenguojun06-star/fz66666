@@ -1,11 +1,20 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-09（工序委派面板可读性优化：裁剪数量配色，Playwright 实测，待推送）
+> 最后更新：2026-09-09（工序跟进页 404 + 同步任务误停 双修复，Playwright 实测，待推送）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-09 工序跟进页「看板（工序质检）」404 + 同步任务误停 双修复（Playwright 实测）
+
+- [x] **404 根因**：`OrderOperationLogSection` 调用 `api.get('/api/order/operation-log/list')`，而 axios 客户端 `baseURL` 已经是 `/api`（`core.ts:37/39`）→ 实际请求 `/api/api/order/operation-log/list` → 404。其余同类调用（`/system/operation-log/list`）都没带 `/api` 前缀
+- [x] 修复：改为 `/order/operation-log/list`；顺手把该组件硬编码颜色（`#fff`/`#f0f0f0`/`#8c8c8c`）换成 Design Token
+- [x] **同步任务误停根因**：`useOrderSync` 的 `fetchFn` 是副作用型（内部各自 setState），却 `return null`；`syncManager` 把 `null` 视为「本次拉取无效」（`syncManager.ts:187-195`），连续 3 次 → `progress-detail-order` 任务被自动停止
+- [x] 修复：正常/跳过路径返回 `{ ok: true }` / `{ skipped: true }`，只有真异常才返回 `null` 交给失败闸门
+- [x] 实测（Playwright）：点「看板」打开工序质检看板 → 失败请求 0 条（修复前 `404 GET /api/api/order/operation-log/list` ×2）；控制台不再出现「返回空数据」告警
+- 验证：tsc 0 error、eslint 0 error
 
 ### 2026-09-09 工序委派面板可读性优化：裁剪数量配色（Playwright 实测）
 

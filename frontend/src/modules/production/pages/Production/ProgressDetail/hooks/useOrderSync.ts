@@ -41,7 +41,10 @@ export const useOrderSync = ({
   useEffect(() => { fetchScanHistoryRef.current = fetchScanHistory; }, [fetchScanHistory]);
 
   const fetchFn = useCallback(async () => {
-    if (syncingRef.current || orderSyncingRef.current) return null;
+    // 本函数是「副作用型」同步：内部各自 setState，无返回值语义。
+    // 同步管理器把 return null 视为「本次拉取无效」，连续 3 次会停掉任务，
+    // 所以正常/跳过路径都必须返回非空对象，只有真异常才返回 null 交给失败闸门。
+    if (syncingRef.current || orderSyncingRef.current) return { skipped: true };
     syncingRef.current = true;
     try {
       await fetchOrdersRef.current({ silent: true });
@@ -52,11 +55,12 @@ export const useOrderSync = ({
           await fetchScanHistoryRef.current(updated, { silent: true });
         }
       }
+      return { ok: true };
     } catch {
+      return null;
     } finally {
       syncingRef.current = false;
     }
-    return null;
   }, [setActiveOrder, activeOrderRef, orderSyncingRef]);
 
   // 兜底轮询 1 分钟（主链路为 WebSocket order:progress:changed 实时推送；此前 5 分钟轮询导致进度球长时间不更新）

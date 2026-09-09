@@ -27,7 +27,7 @@ const OrderOperationLogSection: React.FC<{ orderNo?: string; orderId?: number | 
       const params: Record<string, string> = {};
       if (orderNo) params.orderNo = String(orderNo);
       else if (orderId != null) params.orderId = String(orderId);
-      const res: any = await api.get('/api/order/operation-log/list', { params });
+      const res: any = await api.get('/order/operation-log/list', { params });
       if (res.code === 200) {
         setLogs(Array.isArray(res.data) ? res.data : []);
       }
@@ -43,7 +43,7 @@ const OrderOperationLogSection: React.FC<{ orderNo?: string; orderId?: number | 
   const visibleLogs = showAll ? logs : logs.slice(0, 20);
 
   return (
-    <div style={{ background: '#fff', borderRadius: 8, padding: '16px 20px', marginBottom: 16, border: '1px solid #f0f0f0' }}>
+    <div style={{ background: 'var(--color-bg-base)', borderRadius: 8, padding: '16px 20px', marginBottom: 16, border: '1px solid var(--color-border-light)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <Typography.Title level={5} style={{ margin: 0 }}>操作记录</Typography.Title>
         <a style={{ marginLeft: 'auto', fontSize: 12 }} onClick={load}>刷新</a>
@@ -56,10 +56,10 @@ const OrderOperationLogSection: React.FC<{ orderNo?: string; orderId?: number | 
             {visibleLogs.map((item, idx) => (
               <div
                 key={item.id ?? idx}
-                style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 0', borderBottom: '1px dashed #f0f0f0', fontSize: 13 }}
+                style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 0', borderBottom: '1px dashed var(--color-border-light)', fontSize: 13 }}
               >
                 <Tag color="blue" style={{ marginInlineEnd: 0, flexShrink: 0 }}>订单</Tag>
-                <span style={{ color: '#8c8c8c', flexShrink: 0, fontSize: 12, lineHeight: '22px' }}>{item.createTime ?? '-'}</span>
+                <span style={{ color: 'var(--color-text-tertiary)', flexShrink: 0, fontSize: 12, lineHeight: '22px' }}>{item.createTime ?? '-'}</span>
                 <span style={{ fontWeight: 500, flexShrink: 0, lineHeight: '22px' }}>{item.operator ?? '-'}</span>
                 <span style={{ lineHeight: '22px', wordBreak: 'break-all' }}>
                   {item.action}
