@@ -12,6 +12,8 @@
 - [x] 根因：`ProductionOrderUtils.parseSizeKey` 只认纯字母码（`switch(s)` 精确匹配 XS/S/M/L/XL + `^X{0,4}S$` 正则），而实际尺码是 `XS(155/80A)` / `L(165/92)` 这类**复合码** → 全部落 `default -> 0` → `compareSizeAsc` 恒返回 0 → `buildBundleList` 的排序形同未执行（稳定排序保留入参顺序），菲号按来源顺序乱排（L,M,S,S,S,XL,XS,XS,XS）
 - [x] 修复：`parseSizeKey` 先剥离括号（半角/全角）取括号前字母码再排序
 - [x] jshell 实测：`[L(165/92),M(165/88A),S×3,XL(170/96),XS×3]` 排序后 = `XS×3 → S×3 → M → L → XL` ✅
+- [x] **端到端实测**（本地后端重启后调真实接口）：`POST /api/production/cutting/receive` 传入乱序 `L,M,S,XL,XS` → 落库 `bundle_no` 1=XS / 2=S / 3=M / 4=L / 5=XL ✅
+- [x] 已推送并部署（CI run 34354812623 success）；用户 21:09 复测失败是因为当时部署还在跑（云端仍是旧比较器，旧逻辑退化为字母序 L,M,S,XL,XS）
 - 影响面：`buildBundleList`（PC/小程序/样衣所有生成路径最终都走后端排序）+ `OrderShareHelper`
 - 说明：已生成的历史菲号不会自动重排（扎号被扫码记录引用），需删除后重新分菲；新生成即刻生效
 
