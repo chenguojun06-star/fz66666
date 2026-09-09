@@ -7,13 +7,15 @@
 
 ## 最近变更（Latest Changes）
 
-### 2026-09-09 订单详情页（OrderFlow）重复内容清理（待推送）
+### 2026-09-09 订单详情页（OrderFlow）布局重排 + 去重（已推送 63334e2a6）
 
-- [x] 删除 FlowStepRenderer 卡片右上角与页面标题栏完全重复的"编辑/完成编辑/取消"按钮组，并清理连带未使用的 props（onStartEdit/onFinishEdit/onCancelEdit）与 import（Button/Space/Tooltip/icons）
+- [x] 信息卡片由"四列挤一行"改为**上/中/下三段式**（段间分隔线 + 主色竖条小标题）：① 图片+基本信息 ② 颜色/尺码/商品编码 ③ 生产统计+计划与时间
+- [x] 基本信息/生产统计/计划与时间改双列 Descriptions，卡片内边距 var(--spacing-md/lg)，992px 断点单列回退
+- [x] 删除 FlowStepRenderer 卡片右上角与页面标题栏完全重复的"编辑/完成编辑/取消"按钮组，并清理连带未使用的 props（onStartEdit/onFinishEdit/onCancelEdit）与 import
 - [x] 删除 index.tsx 标题栏与"基本信息"表格重复的"订单号/款号"Tag（数据仍完整保留在基本信息区，款号仍可编辑）
 - [x] OrderImageManager 图片标题长文案"共 N 张（含封面）（含款式图 M 张）"精简为"N 张"，明细收进 Tooltip
 - 核实结论：基本信息/颜色尺码/生产统计/计划与时间四个分区标题互不重复；概览(stage 表)与操作记录(时间线)内容不同，无需合并
-- 验证：npx tsc --noEmit 0 error + eslint 三文件 0 warning
+- 验证：npx tsc --noEmit 0 error + eslint 0 error + vite build 成功；pre-push safe-push 3/3 通过
 
 ### 2026-09-09 D-324 商品下单"数据分析全0"修复（已推送，待部署回归）
 
