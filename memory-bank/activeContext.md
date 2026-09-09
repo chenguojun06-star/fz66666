@@ -1,11 +1,19 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-08（D-315 PC统一待办面板 / D-316 手机端待办九区梳理，已推送）
+> 最后更新：2026-09-09（D-320 小云逾期问答"待查"根治四连，已推送）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-09 D-320 小云逾期问答"待查"根治四连（已推送，待部署回归）
+
+- [x] P0 摘要改造：ContextEngineeringService 阈值 2000→6000 字 + JSON 按记录保留摘要（"单号|款号|进度|交期"一行一条，数组≤20条/总80行）；AgentLoopEngine.processToolResults 阈值内原文直喂不再经 evidence 截断
+- [x] P1 收工守卫：AgentLoopEngine 新增 shouldNudgeDetailAnswer——回答含"待查/请提供订单号"且有工具返回记录数据时强制再推一轮（每请求一次）；堵住 D-312"调了一个汇总工具就收工"盲区
+- [x] P1 当前环节：resolveBulkCurrentStage 开放 public；系统概要逾期/高风险清单、NL逾期明细、逾期卡片数据全加 currentStage；OverdueFactoryCardWidget 订单行渲染环节标签
+- [x] 砍白烧：HyperAdvisorOrchestrator 移除 LLM 推理（前端只消费结构化字段），analysis 改确定性风险摘要
+- 注意：并行会话有 DagExecutionEngine/SwarmExecutionEngine 未提交 WIP（120s超时改常量），本批未收编，提交时已排除
 
 ### 2026-09-08 D-315 PC端小云统一待办面板 + D-316 手机端待办九区梳理（已推送，待部署回归）
 

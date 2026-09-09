@@ -5,7 +5,6 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.HyperAdvisorResponse;
 import com.fashion.supplychain.intelligence.dto.HyperAdvisorResponse.RiskIndicator;
 import com.fashion.supplychain.intelligence.dto.HyperAdvisorResponse.SimulationResult;
-import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -17,14 +16,13 @@ import org.springframework.context.annotation.Lazy;
 /**
  * 超级 AI 业务顾问 — 中枢编排器
  *
- * <p>串联 5 个独立子编排器，按固定管线执行：
+ * <p>管线（D-320 简化）：
  * <pre>
- *   1. 加载会话历史 (AdvisorSessionOrchestrator)
- *   2. 注入用户画像 (AdvisorProfileOrchestrator)
- *   3. LLM 推理 + 多轮澄清检测 (IntelligenceInferenceOrchestrator)
- *   4. 风险量化 (AdvisorRiskOrchestrator)
- *   5. 数字孪生模拟 — 仅当用户明确请求时 (AdvisorSimulationOrchestrator)
- *   6. 异步回写会话 + 画像更新
+ *   1. 风险量化 — 直接查库（AdvisorRiskOrchestrator），数字不经过 LLM
+ *   2. 数字孪生模拟 — 仅当用户明确请求时（AdvisorSimulationOrchestrator）
+ *   3. analysis 文本 = 基于量化结果的确定性摘要（前端只消费结构化字段，
+ *      原先的 LLM 推理结论从不展示，属于纯 token 成本，已移除）
+ *   4. 异步回写会话 + 画像更新
  * </pre>
  */
 @Service
@@ -36,16 +34,7 @@ public class HyperAdvisorOrchestrator {
     @Autowired private AdvisorProfileOrchestrator profileOrchestrator;
     @Autowired private AdvisorRiskOrchestrator riskOrchestrator;
     @Autowired private AdvisorSimulationOrchestrator simulationOrchestrator;
-    @Autowired private IntelligenceInferenceOrchestrator inferenceOrchestrator;
-    @Autowired private LangfuseTraceOrchestrator langfuseTraceOrchestrator;
     @Autowired private AiAgentTraceOrchestrator traceOrchestrator;
-
-    private static final String SYSTEM_PROMPT_TEMPLATE = """
-            你是服装供应链高级 AI 顾问。
-            %s
-            %s
-            请根据用户问题给出专业建议。如果问题模糊或缺少关键信息（如款号、工厂名、时间范围），请先提出 1-2 个澄清问题，并在回答开头标注 [需要澄清]。
-            回答要求：简洁、专业、可操作。不要编造数据，未知的直接说明。""";
 
     /**
      * 主入口 — 处理一次用户提问
@@ -67,46 +56,21 @@ public class HyperAdvisorOrchestrator {
         HyperAdvisorResponse resp = new HyperAdvisorResponse();
         resp.setSessionId(sessionId);
 
-        String historyContext = sessionOrchestrator.loadSessionContext(tenantId, sessionId);
-        String profileContext = profileOrchestrator.buildProfilePrompt(tenantId, userId);
-
-        String systemPrompt = String.format(SYSTEM_PROMPT_TEMPLATE, historyContext, profileContext);
-        IntelligenceInferenceResult llmResult;
+        List<RiskIndicator> risks = List.of();
         try {
-            llmResult = inferenceOrchestrator.chat("hyper_advisor", systemPrompt, userMessage);
-            if (commandId != null) {
-                try {
-                    traceOrchestrator.recordStep(commandId, "llm-inference", userMessage,
-                            llmResult.getContent(), llmResult.getLatencyMs(), llmResult.isSuccess());
-                } catch (Exception e) { log.debug("[HyperAdvisor] trace recordStep 失败: {}", e.getMessage()); }
-            }
-        } catch (Exception e) {
-            log.error("[HyperAdvisor] LLM调用失败: {}", e.getMessage());
-            resp.setAnalysis("AI 推理服务暂时不可用，请稍后重试");
-            if (commandId != null) {
-                try {
-                    traceOrchestrator.finishRequest(commandId, null, e.getMessage(), System.currentTimeMillis() - startTime);
-                } catch (Exception ex) { log.debug("[HyperAdvisor] trace finishRequest 失败: {}", ex.getMessage()); }
-            }
-            return resp;
-        }
-        resp.setTraceId(llmResult.getTraceId());
-
-        String analysis = llmResult.isSuccess() ? llmResult.getContent() : "AI 未能成功生成回答";
-        resp.setAnalysis(analysis);
-        resp.setNeedsClarification(analysis.contains("[需要澄清]"));
-
-        try {
-            List<RiskIndicator> risks = riskOrchestrator.quantifyRisks();
+            risks = riskOrchestrator.quantifyRisks();
             resp.setRiskIndicators(risks);
         } catch (Exception e) {
             log.warn("[HyperAdvisor] 风险量化失败: {}", e.getMessage());
         }
 
         attachSimulationIfRequested(userMessage, resp);
-        resp.setProfileHint(profileContext.isEmpty() ? null : "已加载个性化画像");
+
+        String analysis = buildRiskBrief(risks, resp.getSimulation());
+        resp.setAnalysis(analysis);
+        resp.setNeedsClarification(false);
+        resp.setProfileHint(null);
         persistAsync(tenantId, userId, sessionId, userMessage, analysis);
-        pushTraceAsync(tenantId, userId, llmResult);
 
         if (commandId != null) {
             try {
@@ -115,6 +79,27 @@ public class HyperAdvisorOrchestrator {
         }
 
         return resp;
+    }
+
+    /** 基于量化风险的确定性摘要，替代原先白烧 token 的 LLM 推理结论 */
+    private String buildRiskBrief(List<RiskIndicator> risks, HyperAdvisorResponse.SimulationResult simulation) {
+        StringBuilder sb = new StringBuilder("已按当前数据库量化业务风险：");
+        if (risks.isEmpty()) {
+            sb.append("\n• 暂无风险指标数据");
+        } else {
+            for (RiskIndicator r : risks) {
+                sb.append("\n• ").append(r.getName()).append("：").append(r.getDescription())
+                        .append("（风险度").append(Math.round(r.getProbability() * 100))
+                        .append("%，等级").append(r.getLevel()).append("）");
+            }
+        }
+        if (simulation != null) {
+            sb.append("\n\n模拟（").append(simulation.getScenarioDescription()).append("）");
+            if (simulation.getRecommendation() != null && !simulation.getRecommendation().isBlank()) {
+                sb.append("\n建议：").append(simulation.getRecommendation());
+            }
+        }
+        return sb.toString();
     }
 
     private void attachSimulationIfRequested(String userMessage, HyperAdvisorResponse resp) {
@@ -144,14 +129,6 @@ public class HyperAdvisorOrchestrator {
                     "提问:" + truncate(userMessage, 60));
         } catch (Exception e) {
             log.warn("[HyperAdvisor] 异步持久化失败: {}", e.getMessage());
-        }
-    }
-
-    private void pushTraceAsync(Long tenantId, String userId, IntelligenceInferenceResult result) {
-        try {
-            langfuseTraceOrchestrator.pushTrace("hyper_advisor", tenantId, userId, result);
-        } catch (Exception e) {
-            log.debug("[HyperAdvisor] Trace推送跳过: {}", e.getMessage());
         }
     }
 

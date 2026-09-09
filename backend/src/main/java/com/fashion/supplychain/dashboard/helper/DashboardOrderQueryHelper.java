@@ -424,9 +424,11 @@ public class DashboardOrderQueryHelper {
     }
 
     /**
-     * 根据订单状态推断当前所在环节
+     * 根据订单状态推断当前所在环节。
+     * D-320: 开放为 public，供小云AI工具（系统概要/NL逾期查询）复用，
+     * 让"卡在哪个阶段"能直接从工具结果里读出来。
      */
-    private String resolveBulkCurrentStage(ProductionOrder order) {
+    public String resolveBulkCurrentStage(ProductionOrder order) {
         int progress = order.getProductionProgress() == null ? 0 : order.getProductionProgress();
         int materialRate = order.getMaterialArrivalRate() == null ? 0 : order.getMaterialArrivalRate();
         boolean procurementDone = materialRate >= 100

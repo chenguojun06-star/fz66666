@@ -1,7 +1,21 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-08（新增 D-315 PC统一待办面板 / D-316 手机端待办九区梳理）
+> 最后更新：2026-09-09（新增 D-320 小云逾期问答"待查"根治四连）
+
+---
+
+## D-320：小云逾期问答"待查"根治四连 — 工具结果按记录保留 + 收工守卫 + 当前环节 + 砍白烧LLM（2026-09-09）
+
+用户问逾期订单，小云正文回答全是"待查"占位表+反问"请提供订单号"，但旁边的逾期总览卡却有完整明细。排查结论：主回答走 agent 循环，系统概要工具明明查到了完整明细，但结果 JSON 超 2000 字被 ContextEngineeringService.summarizeToolResult 压成"前5单号+前8裸数字+前300字符"，字段对应关系全断；旁边的卡片是前端答完后另拉 /dashboard/overdue-factory-stats 与 /hyper-advisor/ask 补挂的，模型看不到——观感就成了"它明明知道却装傻"。
+
+**决策**：
+1. **摘要按记录保留**（ContextEngineeringService）：阈值 2000→6000 字（缓存命中下 token 成本低）；超限时优先 JSON 结构化摘要——对象数组按记录一行一条"单号 xx | 款号 yy | 进度 0% | 交期 …"（每数组最多20条/总80行预算），非 JSON 才退回正则摘要。AgentLoopEngine.processToolResults 同步改为：阈值内原文直喂（不再经 evidence 二次格式化），超限走新摘要。
+2. **收工守卫**（AgentLoopEngine）：最终回答命中"待查/需要进一步确认/请提供订单号"等收工话术、且本轮有工具成功返回记录型数据时，注入强制指令再推一轮让它基于已查明细作答（每请求最多一次，留一轮余量防顶格）。堵住 D-312 只管"零工具调用"的盲区——"调了一个汇总工具就收工"现在也拦。
+3. **补当前环节字段**：DashboardOrderQueryHelper.resolveBulkCurrentStage 开放 public（进度+面料到位率推断 采购/裁剪/车缝/尾部/二次工艺/入库），SystemOverviewTool 逾期+高风险清单、NlQueryDataHandlers 逾期明细（JSON+文本行）、DashboardStatsHelper 逾期卡数据全部加 currentStage；前端 OverdueFactoryCardWidget 订单行渲染环节标签——"在哪个阶段都不知道"从根上补齐。
+4. **砍白烧 LLM**（HyperAdvisorOrchestrator）：前端只消费 riskIndicators/simulation/needsClarification，analysis 的 LLM 推理从不展示。移除推理调用，analysis 改为基于量化风险的确定性摘要；不加载会话历史/画像进 prompt，Langfuse 推理埋点一并移除。
+
+**理由**：模型在证据被摘要砍断时拒绝编造是对的（D-312 生效），错在管道；修管道+补字段+加守卫三管齐下，HyperAdvisor 每次 LLM 调用是纯浪费直接砍。
 
 ---
 

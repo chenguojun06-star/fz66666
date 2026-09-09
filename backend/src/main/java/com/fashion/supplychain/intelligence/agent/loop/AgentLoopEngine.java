@@ -18,6 +18,7 @@ import com.fashion.supplychain.intelligence.helper.AiAgentEvidenceHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
 import com.fashion.supplychain.intelligence.helper.LangfuseSpanHelper;
 import com.fashion.supplychain.intelligence.helper.XiaoyunPatterns;
+import java.util.regex.Pattern;
 import com.fashion.supplychain.intelligence.gateway.AiInferenceGateway;
 import com.fashion.supplychain.intelligence.orchestration.AiCriticOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.AiAgentTraceOrchestrator;
@@ -297,11 +298,46 @@ public class AgentLoopEngine {
             return null; // 继续下一轮，让模型真正调工具
         }
 
+        // ★ D-320 收工守卫：工具已查到真实数据，模型却以"待查/请提供订单号"收工 →
+        // 注入强制指令再推一轮，让它基于已查到的明细作答。只推一次，避免死循环。
+        if (shouldNudgeDetailAnswer(ctx, result.getContent())) {
+            ctx.getMessages().add(AiMessage.system(
+                    "[系统强制要求] 查询工具已经返回了真实业务数据（见上方工具结果），不允许回答“待查”"
+                            + "或让用户提供订单号/款号。请直接基于工具结果中的真实明细作答："
+                            + "逐单列出订单号、进度、数量、交期等关键字段；"
+                            + "若个别字段确实不在工具结果里，先给出现有明细，再注明该字段暂无数据，严禁编造。"));
+            cb.onThinking(iter, "已查到数据，正在整理明细…");
+            return null; // 继续下一轮，让模型基于明细重新作答
+        }
+
         // P0-4: span final_answer
         try (LangfuseSpanHelper.SpanScope finalScope = langfuseSpanHelper == null
                 ? LangfuseSpanHelper.SpanScope.NOOP : langfuseSpanHelper.startSpan("final_answer")) {
             return handleFinalAnswer(ctx, result.getContent(), cb);
         }
+    }
+
+    /** 命中即视为"有数据却推给用户"的收工话术 */
+    private static final Pattern SURRENDER_ANSWER_PATTERN = Pattern.compile(
+            "待查|需要进一步确认|请提供订单号|请提供具体订单|请先提供|请您提供|需要您提供|无法确定具体");
+
+    /**
+     * D-320: 判断是否需要"有数据必须作答"的强制再推一轮。
+     * 仅当：本轮未推过 && 回答含收工话术 && 本轮至少有一个工具成功返回了记录型数据
+     * && 还留有一轮余量（避免顶到最大轮数把守卫消息当最终答案）。
+     */
+    private boolean shouldNudgeDetailAnswer(AgentLoopContext ctx, String content) {
+        if (ctx.isDetailNudgeApplied()) return false;
+        if (content == null || content.isBlank()) return false;
+        if (!SURRENDER_ANSWER_PATTERN.matcher(content).find()) return false;
+        if (ctx.getCurrentIteration() >= ctx.getMaxIterations() - 1) return false;
+        boolean hasRecordData = ctx.getAllExecRecords().stream().anyMatch(r ->
+                r.rawResult != null && !r.rawResult.startsWith("{\"error")
+                        && (r.rawResult.contains("orderNo") || r.rawResult.contains("\"orders\"")
+                                || r.rawResult.contains("\"items\"")));
+        if (!hasRecordData) return false;
+        ctx.markDetailNudgeApplied();
+        return true;
     }
 
     /**
@@ -616,12 +652,19 @@ public class AgentLoopEngine {
             evidenceHelper.captureReportPreviewCard(rec.toolName, rec.rawResult, ctx.getReportPreviewCards());
             xiaoyunInsightCardOrchestrator.collectFromToolResult(rec.toolName, rec.rawResult, ctx.getXiaoyunInsightCards());
 
-            String summarizedEvidence = rec.evidence;
-            if (contextEngineeringService != null && rec.rawResult != null && rec.rawResult.length() > 2000) {
-                summarizedEvidence = contextEngineeringService.summarizeToolResult(
+            String toolContent;
+            if (rec.rawResult == null || rec.rawResult.isBlank()) {
+                toolContent = rec.evidence;
+            } else if (contextEngineeringService != null
+                    && rec.rawResult.length() > contextEngineeringService.getMaxToolResultChars()) {
+                // D-320: 超阈值走"按记录保留"摘要，订单号|进度|数量|交期的对应关系不再被砍断
+                toolContent = contextEngineeringService.summarizeToolResult(
                         rec.toolName, rec.rawResult, ctx.getUserMessage());
+            } else {
+                // D-320: 阈值内的结果原文直喂，不再经 evidence 二次格式化截断
+                toolContent = rec.rawResult;
             }
-            ctx.getMessages().add(AiMessage.tool(summarizedEvidence, rec.toolCallId, rec.toolName));
+            ctx.getMessages().add(AiMessage.tool(toolContent, rec.toolCallId, rec.toolName));
         }
     }
 

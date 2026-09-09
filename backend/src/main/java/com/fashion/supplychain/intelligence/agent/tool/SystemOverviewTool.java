@@ -41,6 +41,9 @@ public class SystemOverviewTool extends AbstractAgentTool {
     @Autowired
     private MaterialStockService materialStockService;
 
+    @Autowired
+    private com.fashion.supplychain.dashboard.helper.DashboardOrderQueryHelper dashboardOrderQueryHelper;
+
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private static final java.util.Set<String> TERMINAL_STATUSES = java.util.Set.of("completed", "cancelled", "scrapped", "archived", "closed");
@@ -188,6 +191,7 @@ public class SystemOverviewTool extends AbstractAgentTool {
             dto.put("deadline", shipDate != null ? shipDate.toString() : "未设置");
             dto.put("expectedShipDate", o.getExpectedShipDate() != null
                     ? o.getExpectedShipDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) : "-");
+            dto.put("currentStage", dashboardOrderQueryHelper.resolveBulkCurrentStage(o));
             if (shipDate != null) {
                 long overdueDays = java.time.temporal.ChronoUnit.DAYS.between(shipDate, java.time.LocalDate.now());
                 dto.put("overdueDays", overdueDays > 0 ? overdueDays : 0);
@@ -225,6 +229,7 @@ public class SystemOverviewTool extends AbstractAgentTool {
             dto.put("completedQuantity", o.getCompletedQuantity());
             dto.put("progress", (o.getProductionProgress() != null ? o.getProductionProgress() : 0) + "%");
             dto.put("deadline", o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().toString() : "未设置");
+            dto.put("currentStage", dashboardOrderQueryHelper.resolveBulkCurrentStage(o));
             highRiskList.add(dto);
         }
         risk.put("highRiskOrders", highRiskList);

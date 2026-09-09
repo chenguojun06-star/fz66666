@@ -1,5 +1,7 @@
 package com.fashion.supplychain.intelligence.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import lombok.extern.slf4j.Slf4j;
@@ -8,7 +10,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
 
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 @Slf4j
@@ -16,7 +21,9 @@ import java.util.regex.Pattern;
 @Lazy
 public class ContextEngineeringService {
 
-    @Value("${xiaoyun.context.max-tool-result-chars:2000}")
+    private static final ObjectMapper JSON = new ObjectMapper();
+
+    @Value("${xiaoyun.context.max-tool-result-chars:6000}")
     private int maxToolResultChars;
 
     @Value("${xiaoyun.context.max-messages:30}")
@@ -30,6 +37,10 @@ public class ContextEngineeringService {
     private static final Pattern STATUS_PATTERN = Pattern.compile("(已完成|进行中|未开始|已逾期|已入库|待审批|已关闭|已报废|已取消)");
     private static final Pattern DATE_PATTERN = Pattern.compile("\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}");
 
+    public int getMaxToolResultChars() {
+        return maxToolResultChars;
+    }
+
     public String summarizeToolResult(String toolName, String rawResult, String originalInput) {
         if (rawResult == null || rawResult.isBlank()) {
             return "工具 " + toolName + " 未返回数据";
@@ -39,6 +50,151 @@ public class ContextEngineeringService {
             return rawResult;
         }
 
+        // D-320: 优先按"记录保留"做结构化摘要（订单号|款号|进度|数量|交期一行一条），
+        // 避免明细数组被"前300字符"砍头后模型只看到汇总数、答不出具体单号进度。
+        try {
+            JsonNode root = JSON.readTree(rawResult);
+            return summarizeStructured(toolName, root, rawResult.length());
+        } catch (Exception e) {
+            log.debug("[ContextEngineering] 非JSON工具结果，退回正则摘要: tool={}", toolName);
+        }
+        return summarizeByRegex(toolName, rawResult);
+    }
+
+    /** 单数组最多保留的记录条数 */
+    private static final int SUMMARY_MAX_RECORDS_PER_ARRAY = 20;
+    /** 摘要总行数预算，超出即截断 */
+    private static final int SUMMARY_MAX_LINES = 80;
+
+    private String summarizeStructured(String toolName, JsonNode root, int rawLen) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("【").append(toolName).append(" 查询结果】原文").append(rawLen)
+                .append("字符，以下为保留记录明细的结构化摘要：\n");
+        int[] lineBudget = {SUMMARY_MAX_LINES};
+        appendNodeSummary(sb, root, 0, lineBudget);
+        return sb.toString();
+    }
+
+    private void appendNodeSummary(StringBuilder sb, JsonNode node, int depth, int[] lineBudget) {
+        if (lineBudget[0] <= 0) {
+            sb.append("…其余内容省略\n");
+            return;
+        }
+        if (node.isObject()) {
+            Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
+            while (fields.hasNext() && lineBudget[0] > 0) {
+                Map.Entry<String, JsonNode> entry = fields.next();
+                JsonNode value = entry.getValue();
+                if (value.isValueNode()) {
+                    String text = scalarText(value);
+                    if (!text.isEmpty()) {
+                        sb.append(fieldLabel(entry.getKey())).append(": ").append(text).append("\n");
+                        lineBudget[0]--;
+                    }
+                } else if (value.isArray() && value.size() > 0) {
+                    appendArraySummary(sb, entry.getKey(), value, lineBudget);
+                } else if (value.isObject() && depth < 2) {
+                    sb.append("\n■ ").append(fieldLabel(entry.getKey())).append("\n");
+                    appendNodeSummary(sb, value, depth + 1, lineBudget);
+                } else if (value.isObject()) {
+                    sb.append(fieldLabel(entry.getKey())).append(": (对象，").append(value.size()).append("个字段)\n");
+                    lineBudget[0]--;
+                }
+            }
+        } else if (node.isArray()) {
+            appendArraySummary(sb, "明细", node, lineBudget);
+        }
+    }
+
+    private void appendArraySummary(StringBuilder sb, String name, JsonNode arr, int[] lineBudget) {
+        sb.append("\n【").append(fieldLabel(name)).append("】共").append(arr.size()).append("条\n");
+        int limit = Math.min(arr.size(), SUMMARY_MAX_RECORDS_PER_ARRAY);
+        for (int i = 0; i < limit && lineBudget[0] > 0; i++) {
+            JsonNode item = arr.get(i);
+            if (item.isObject()) {
+                sb.append("- ").append(recordLine(item)).append("\n");
+            } else if (item.isValueNode()) {
+                sb.append("- ").append(scalarText(item)).append("\n");
+            } else if (!item.isNull()) {
+                sb.append("- (复杂对象)\n");
+            }
+            lineBudget[0]--;
+        }
+        if (arr.size() > limit) {
+            sb.append("…其余").append(arr.size() - limit).append("条省略\n");
+        }
+    }
+
+    /** 记录字段展示优先序：订单身份字段在前，金额/杂项在后 */
+    private static final List<String> RECORD_FIELD_ORDER = List.of(
+            "orderNo", "styleNo", "styleName", "factoryName", "currentStage", "stage", "status",
+            "progress", "overdueDays", "orderQuantity", "completedQuantity", "quantity",
+            "deadline", "plannedEndDate", "expectedShipDate", "name", "title");
+
+    private static final Map<String, String> FIELD_LABELS = Map.ofEntries(
+            Map.entry("orderNo", "单号"), Map.entry("styleNo", "款号"), Map.entry("styleName", "款名"),
+            Map.entry("factoryName", "工厂"), Map.entry("factory", "工厂"), Map.entry("status", "状态"),
+            Map.entry("progress", "进度"), Map.entry("orderQuantity", "下单数"),
+            Map.entry("completedQuantity", "完成数"), Map.entry("quantity", "数量"),
+            Map.entry("overdueDays", "逾期天"), Map.entry("deadline", "交期"),
+            Map.entry("plannedEndDate", "交期"), Map.entry("expectedShipDate", "发货日"),
+            Map.entry("currentStage", "环节"), Map.entry("stage", "环节"),
+            Map.entry("name", "名称"), Map.entry("title", "标题"), Map.entry("count", "条数"));
+
+    /** 把一条记录压成 "单号 xx | 款号 yy | 进度 0% | 交期 …" 一行，保住字段与值的对应关系 */
+    private String recordLine(JsonNode item) {
+        LinkedHashMap<String, String> parts = new LinkedHashMap<>();
+        for (String key : RECORD_FIELD_ORDER) {
+            JsonNode v = item.get(key);
+            if (v != null && v.isValueNode() && !v.isNull()) {
+                String text = formatField(key, v);
+                if (!text.isEmpty()) parts.put(key, text);
+            }
+        }
+        int extras = 0;
+        Iterator<Map.Entry<String, JsonNode>> fields = item.fields();
+        while (fields.hasNext() && extras < 6) {
+            Map.Entry<String, JsonNode> entry = fields.next();
+            if (parts.containsKey(entry.getKey())) continue;
+            JsonNode v = entry.getValue();
+            if (v != null && v.isValueNode() && !v.isNull()) {
+                String text = scalarText(v);
+                if (!text.isEmpty() && text.length() <= 30) {
+                    parts.put(entry.getKey(), fieldLabel(entry.getKey()) + " " + text);
+                    extras++;
+                }
+            }
+        }
+        return String.join(" | ", parts.values());
+    }
+
+    private String formatField(String key, JsonNode value) {
+        String label = FIELD_LABELS.getOrDefault(key, key);
+        String text = scalarText(value);
+        if (text.isEmpty()) return "";
+        return switch (key) {
+            case "progress" -> label + " " + text + "%";
+            case "overdueDays" -> label + " " + text + "天";
+            default -> label + " " + text;
+        };
+    }
+
+    private String scalarText(JsonNode value) {
+        String text = value.isTextual() ? value.asText() : value.asText();
+        return truncate(text.trim(), 60);
+    }
+
+    private String fieldLabel(String key) {
+        return FIELD_LABELS.getOrDefault(key, key);
+    }
+
+    private static String truncate(String text, int maxLength) {
+        if (text == null) return "";
+        return text.length() <= maxLength ? text : text.substring(0, Math.max(0, maxLength - 1)) + "…";
+    }
+
+    /** 非JSON结果的兜底摘要：正则抽取订单号/状态/日期/数字 */
+    private String summarizeByRegex(String toolName, String rawResult) {
         StringBuilder summary = new StringBuilder();
         summary.append("【").append(toolName).append(" 查询结果摘要】\n");
 

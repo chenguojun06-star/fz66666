@@ -8,6 +8,7 @@ export interface OverdueFactoryOrder {
   overdueDays: number;
   quantity: number;
   plannedEndDate?: string;
+  currentStage?: string;
 }
 
 export interface OverdueFactoryGroup {
@@ -139,6 +140,7 @@ const OverdueFactoryCardWidget: React.FC<{
                     {order.orderNo}
                   </span>
                   {order.styleNo && <span className={styles.overdueOrderStyle}>{order.styleNo}</span>}
+                  {order.currentStage && <span className={styles.overdueOrderStage}>{order.currentStage}</span>}
                 </div>
                 <div className={styles.overdueOrderRight}>
                   <span className={`${styles.overdueOrderProgress} ${order.progress < 50 ? styles.overdueOrderDanger : ''}`}>

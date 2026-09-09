@@ -41,6 +41,7 @@ public class NlQueryDataHandlers {
     @Autowired private NlQuerySmartHandlers smartHandlers;
     @Autowired private MaterialShortageOrchestrator materialShortageOrchestrator;
     @Autowired private com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator receivableOrchestrator;
+    @Autowired private com.fashion.supplychain.dashboard.helper.DashboardOrderQueryHelper dashboardOrderQueryHelper;
 
     static final Pattern ORDER_NO_PATTERN = Pattern.compile("PO\\d{8,}");
     /** 款号关键词匹配：如 ABC2025-001 / S202501 / SF-123 / KF001 等 */
@@ -214,6 +215,7 @@ public class NlQueryDataHandlers {
                     item.put("overdueDays", o.getPlannedEndDate() != null ? (int) ChronoUnit.DAYS.between(o.getPlannedEndDate(), now) : 0);
                     item.put("quantity", o.getOrderQuantity() != null ? o.getOrderQuantity() : 0);
                     item.put("plannedEndDate", o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().toString() : null);
+                    item.put("currentStage", dashboardOrderQueryHelper.resolveBulkCurrentStage(o));
                     return item;
                 }).collect(Collectors.toList());
 
@@ -269,8 +271,9 @@ public class NlQueryDataHandlers {
                 int qty = (int) o.getOrDefault("quantity", 0);
                 String factory = String.valueOf(o.getOrDefault("factoryName", "未指定"));
                 String plannedDate = String.valueOf(o.getOrDefault("plannedEndDate", "?"));
-                sb.append(String.format("  %d. %s | %s | 进度%d%% | 逾期%d天 | %d件 | 交期%s\n",
-                        i + 1, orderNo, factory, progress, overdueDays, qty, plannedDate));
+                String stage = String.valueOf(o.getOrDefault("currentStage", ""));
+                sb.append(String.format("  %d. %s | %s | 进度%d%% | 逾期%d天 | %d件 | 交期%s | 当前环节%s\n",
+                        i + 1, orderNo, factory, progress, overdueDays, qty, plannedDate, stage.isEmpty() ? "未知" : stage));
             }
             if (flatOverdueList.size() > showLimit) {
                 sb.append(String.format("  ... 还有 %d 个延期订单，可在订单列表中查看完整数据", flatOverdueList.size() - showLimit));

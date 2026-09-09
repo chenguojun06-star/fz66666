@@ -216,6 +216,16 @@
   color: var(--color-text-tertiary);
 }
 
+.overdueOrderStage {
+  font-size: 12px;
+  line-height: 18px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--color-warning, #d46b08)1f;
+  color: var(--color-warning, #d46b08);
+  white-space: nowrap;
+}
+
 .overdueOrderRight {
   display: flex;
   align-items: center;

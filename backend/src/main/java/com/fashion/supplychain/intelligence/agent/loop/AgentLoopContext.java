@@ -135,6 +135,14 @@ public class AgentLoopContext {
     @Builder.Default
     private int replanCount = 0;
 
+    /** D-320: 本轮请求是否已推过"有数据必须作答"的强制指令（每次请求最多一次） */
+    @Builder.Default
+    private boolean detailNudgeApplied = false;
+
+    public void markDetailNudgeApplied() {
+        this.detailNudgeApplied = true;
+    }
+
     /** 是否处于 Plan-and-Execute 模式 */
     public boolean isPlanAndExecuteMode() {
         return currentPlan != null && currentPlan.getSteps() != null && !currentPlan.getSteps().isEmpty();

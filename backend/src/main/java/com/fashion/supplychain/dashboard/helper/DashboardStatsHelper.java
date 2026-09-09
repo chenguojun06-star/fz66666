@@ -24,11 +24,14 @@ public class DashboardStatsHelper {
 
     private final DashboardQueryService dashboardQueryService;
     private final ScanRecordService scanRecordService;
+    private final DashboardOrderQueryHelper dashboardOrderQueryHelper;
 
     public DashboardStatsHelper(DashboardQueryService dashboardQueryService,
-                                ScanRecordService scanRecordService) {
+                                ScanRecordService scanRecordService,
+                                DashboardOrderQueryHelper dashboardOrderQueryHelper) {
         this.dashboardQueryService = dashboardQueryService;
         this.scanRecordService = scanRecordService;
+        this.dashboardOrderQueryHelper = dashboardOrderQueryHelper;
     }
 
     public Map<String, Object> computeOverdueFactoryStats() {
@@ -96,6 +99,7 @@ public class DashboardStatsHelper {
             item.put("overdueDays", Math.max(0, days));
             item.put("quantity", qty);
             item.put("plannedEndDate", o.getPlannedEndDate() != null ? o.getPlannedEndDate().toLocalDate().toString() : null);
+            item.put("currentStage", dashboardOrderQueryHelper.resolveBulkCurrentStage(o));
             orderItems.add(item);
         }
 
