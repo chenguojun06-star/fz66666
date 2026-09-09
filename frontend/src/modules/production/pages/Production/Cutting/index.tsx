@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { App, Button, Space } from 'antd';
+import { App, Button, Empty, Space, Spin } from 'antd';
 
 import PageLayout from '@/components/common/PageLayout';
 import api from '@/utils/api';
@@ -37,6 +37,8 @@ const CuttingManagement: React.FC = () => {
   const [cuttingSheetPrintOpen, setCuttingSheetPrintOpen] = useState(false);
   const [remarkOpen, setRemarkOpen] = useState(false);
   const [remarkOrderNo, setRemarkOrderNo] = useState('');
+  // 明细页任务解析中（用于区分「加载中」与「任务已不存在」，避免白屏）
+  const [taskResolving, setTaskResolving] = useState(false);
 
   const tasks = useCuttingTasks({ message, isEntryPage });
 
@@ -114,15 +116,20 @@ const CuttingManagement: React.FC = () => {
   useEffect(() => {
     if (!routeOrderNo) return;
     (async () => {
-      const task = await resolveTaskByOrderNo(routeOrderNo);
-      if (!task) {
-        message.warning('未找到对应的裁剪任务');
-        return;
+      setTaskResolving(true);
+      try {
+        const task = await resolveTaskByOrderNo(routeOrderNo);
+        if (!task) {
+          message.warning('未找到对应的裁剪任务');
+          return;
+        }
+        setActiveTask(task);
+        setOrderId(String(task.productionOrderId || '').trim());
+        bundles.setImportLocked(false);
+        bundles.setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
+      } finally {
+        setTaskResolving(false);
       }
-      setActiveTask(task);
-      setOrderId(String(task.productionOrderId || '').trim());
-      bundles.setImportLocked(false);
-      bundles.setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeOrderNo, user?.id, user?.name]);
@@ -155,7 +162,10 @@ const CuttingManagement: React.FC = () => {
   const handleRollbackActive = (task: CuttingTask) => {
     tasks.handleRollbackTask(task, () => {
       if (activeTask?.id === task.id) {
-        resetActiveTask();
+        // 必须 clearRoute=true：退回后清空 activeTask 同时回到列表路由，
+        // 否则 URL 仍停在 /task/:orderNo（isEntryPage 仍为 true）+ activeTask 为 null
+        // → 两个渲染分支都不命中，页面白屏
+        resetActiveTask(true);
       }
     });
   };
@@ -212,6 +222,16 @@ const CuttingManagement: React.FC = () => {
               onCreateTask={createTask.openCreateTask}
             />
           )}
+
+          {isEntryPage && !activeTask ? (
+            taskResolving ? (
+              <div style={{ padding: 64, textAlign: 'center' }}><Spin /></div>
+            ) : (
+              <Empty description="未找到裁剪任务（可能已被退回或删除）" style={{ padding: 48 }}>
+                <Button type="primary" onClick={() => resetActiveTask(true)}>返回裁剪管理</Button>
+              </Empty>
+            )
+          ) : null}
 
           {isEntryPage && activeTask ? (
             <CuttingEntryView

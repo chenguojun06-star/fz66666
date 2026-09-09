@@ -7,6 +7,14 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-09-09 裁剪明细页「退回」后白屏修复（Playwright 实测）
+
+- [x] 根因：CuttingEntryView 的「退回」→ `handleRollbackActive` 回调里调 `resetActiveTask()`（**未传 clearRoute**）→ activeTask 清空但 URL 仍停在 `/production/cutting/task/:orderNo`，`isEntryPage` 仍为 true → 两个渲染分支都不命中 → 白屏
+- [x] 修复：回调改 `resetActiveTask(true)`，退回后同步回到列表路由
+- [x] 兜底：新增 `taskResolving` 状态 + `isEntryPage && !activeTask` 分支——解析中显示 Spin，解析完仍无任务显示「未找到裁剪任务」+ 返回按钮，杜绝白屏
+- [x] 实测：明细页点返回 → URL 变 `/production/cutting`、列表 24 条正常渲染；不存在订单的明细页显示空状态而非白屏
+- 说明：本地该订单已有扫码记录，「退回」按钮被禁用，故用同一函数 `resetActiveTask(true)` 的「返回」按钮验证跳转路径
+
 ### 2026-09-09 P0 裁剪扎号列表按字符串排序（1,10,11,…,2,3）修复
 
 - [x] 根因：`t_cutting_bundle.bundle_no` 在库中是 **varchar(100)**，`ORDER BY bundle_no` 按字符串排 → 列表出现 1,10,11,12,13,14,15,2,3；`resolveNextBundleIndex` 取字符串最大值也会拿到 "9" → 追加生成时扎号与既有号段冲突
