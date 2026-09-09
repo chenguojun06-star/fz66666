@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.agent.dag;
 import com.fashion.supplychain.intelligence.agent.sse.SseEmitterHelper;
 import com.fashion.supplychain.intelligence.agent.sse.SseEvent;
 import com.fashion.supplychain.intelligence.dto.AgentState;
+import com.fashion.supplychain.intelligence.config.IntelligenceTimingConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -88,7 +89,8 @@ public class DagExecutionEngine {
             }
 
             try {
-                CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get(120, TimeUnit.SECONDS);
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get(
+                        IntelligenceTimingConstants.DAG_EXECUTION_TIMEOUT_SEC, IntelligenceTimingConstants.DAG_EXECUTION_TIMEOUT_UNIT);
             } catch (TimeoutException e) {
                 log.error("[DAG] 图 {} 层执行超时", graphId);
                 break;
@@ -157,7 +159,8 @@ public class DagExecutionEngine {
             }
 
             try {
-                CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get(120, TimeUnit.SECONDS);
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get(
+                        IntelligenceTimingConstants.DAG_EXECUTION_TIMEOUT_SEC, IntelligenceTimingConstants.DAG_EXECUTION_TIMEOUT_UNIT);
             } catch (Exception e) {
                 log.error("[DAG] 流式执行层异常: {}", e.getMessage());
                 break;

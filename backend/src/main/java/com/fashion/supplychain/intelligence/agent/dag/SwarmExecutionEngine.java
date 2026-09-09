@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.dag;
 
 import com.fashion.supplychain.intelligence.dto.AgentState;
+import com.fashion.supplychain.intelligence.config.IntelligenceTimingConstants;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -99,7 +100,8 @@ public class SwarmExecutionEngine {
         }
 
         try {
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get(120, TimeUnit.SECONDS);
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get(
+                    IntelligenceTimingConstants.DAG_EXECUTION_TIMEOUT_SEC, IntelligenceTimingConstants.DAG_EXECUTION_TIMEOUT_UNIT);
         } catch (Exception e) {
             log.error("[Swarm:Mesh] 执行异常: {}", e.getMessage());
         }
@@ -211,7 +213,8 @@ public class SwarmExecutionEngine {
         }
 
         try {
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get(120, TimeUnit.SECONDS);
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).get(
+                    IntelligenceTimingConstants.DAG_EXECUTION_TIMEOUT_SEC, IntelligenceTimingConstants.DAG_EXECUTION_TIMEOUT_UNIT);
         } catch (Exception e) {
             log.error("[Swarm:Star] 外围执行异常: {}", e.getMessage());
         }

@@ -4,6 +4,7 @@ import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.intelligence.service.SelfEvolutionEngine;
 import com.fashion.supplychain.intelligence.service.SelfEvolutionEngine.EvolutionProposal;
+import com.fashion.supplychain.intelligence.config.IntelligenceTimingConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -71,7 +72,7 @@ public class GitHubResearchJob {
                         }
                     }
                 }
-                TimeUnit.SECONDS.sleep(3);
+                TimeUnit.SECONDS.sleep(IntelligenceTimingConstants.GITHUB_RESEARCH_DELAY_SEC);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
