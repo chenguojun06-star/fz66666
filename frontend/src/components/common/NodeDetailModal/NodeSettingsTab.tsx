@@ -68,43 +68,43 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
         style={{ marginBottom: 10 }}
       />
       <div style={{
-        padding: '8px 10px',
+        padding: '8px 12px',
         border: '1px solid var(--color-border)',
         borderRadius: 12,
-        marginBottom: 6,
+        marginBottom: 8,
         fontSize: "var(--font-size-xs)",
         color: 'var(--color-text-secondary)'
       }}>
-        订单：{orderInfoLine}
+        订单：<span style={{ color: 'var(--color-text-primary)' }}>{orderInfoLine}</span>
       </div>
 
       {cuttingSizeItems.length > 0 && (
         <div style={{
-          padding: '8px 10px',
-          border: '1px solid var(--status-success-border)',
-          background: 'rgba(34, 197, 94, 0.15)',
+          padding: '8px 12px',
+          border: '1px solid var(--color-border)',
+          background: 'var(--color-bg-container)',
           borderRadius: 12,
-          marginBottom: 6,
+          marginBottom: 8,
           fontSize: "var(--font-size-sm)",
           display: 'flex',
           alignItems: 'center',
           gap: 8,
           flexWrap: 'wrap'
         }}>
-          <span style={{ color: 'var(--color-gray-700)', fontWeight: 600 }}>裁剪数量：</span>
+          <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>裁剪数量：</span>
           {cuttingSizeItems.map(item => (
             <span key={item.size} style={{
-              color: 'var(--color-success)',
+              color: 'var(--color-primary)',
               fontWeight: 600,
               padding: '2px 8px',
               background: 'var(--color-bg-base)',
               borderRadius: 4,
-              border: '1px solid var(--status-success-border)'
+              border: '1px solid var(--color-border)'
             }}>
               {item.size}: {item.quantity}
             </span>
           ))}
-          <span style={{ color: 'var(--color-success)', fontWeight: 700, marginLeft: 4 }}>
+          <span style={{ color: 'var(--color-primary)', fontWeight: 700, marginLeft: 4 }}>
             总计: {cuttingSizeItems.reduce((sum, item) => sum + item.quantity, 0)}
           </span>
         </div>
