@@ -2,7 +2,7 @@ import React from 'react';
 import { Button, InputNumber, Segmented } from 'antd';
 import { ThunderboltOutlined } from '@ant-design/icons';
 import { QRCodeCanvas } from 'qrcode.react';
-import ResizableModal from '@/components/common/ResizableModal';
+import SideDrawer from '@/components/common/SideDrawer';
 import type { CuttingPrintState } from '../hooks';
 import type { CuttingBundleRow } from '../hooks';
 
@@ -23,24 +23,24 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
   const totalQty = print.printBundles.reduce((s, b) => s + Number(b.quantity || 0), 0);
 
   return (
-    <ResizableModal
+    <SideDrawer
       open={print.printPreviewOpen}
+      onClose={() => print.setPrintPreviewOpen(false)}
       title={`批量打印（${totalBundles}张）`}
       width={modalWidth}
-      centered
-      onCancel={() => print.setPrintPreviewOpen(false)}
-      footer={[
-        <Button key="clear" onClick={bundles.clearBundleSelection} disabled={!bundles.selectedBundles.length}>
-          清除勾选
-        </Button>,
-        <Button key="cancel" onClick={() => print.setPrintPreviewOpen(false)}>
-          关闭
-        </Button>,
-        <Button key="print" type="primary" onClick={print.triggerPrint} disabled={!print.printBundles.length}>
-          下载/打印
-        </Button>,
-      ]}
-      initialHeight={typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.85) : 700}
+      footer={
+        <>
+          <Button key="clear" onClick={bundles.clearBundleSelection} disabled={!bundles.selectedBundles.length}>
+            清除勾选
+          </Button>
+          <Button key="cancel" onClick={() => print.setPrintPreviewOpen(false)}>
+            关闭
+          </Button>
+          <Button key="print" type="primary" onClick={print.triggerPrint} disabled={!print.printBundles.length}>
+            下载/打印
+          </Button>
+        </>
+      }
     >
       {/* 纸张配置 */}
       <div
@@ -234,7 +234,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
           );
         })}
       </div>
-    </ResizableModal>
+    </SideDrawer>
   );
 };
 

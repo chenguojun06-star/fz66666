@@ -47,6 +47,14 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
 
   const allSelected = selectableBundles.length > 0 && selectedIds.length === selectableBundles.length;
 
+  // 已勾选菲号的合计件数（顶部实时显示，勾多少显示多少件）
+  const selectedQuantity = useMemo(
+    () => bundles
+      .filter((b) => selectedIds.includes(b.id))
+      .reduce((sum, b) => sum + Number(b.quantity || 0), 0),
+    [bundles, selectedIds],
+  );
+
   const handleToggleAll = (checked: boolean) => {
     setSelectedIds(checked ? selectableBundles.map((b) => b.id) : []);
   };
@@ -93,51 +101,68 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
           全选可选菲号
         </Checkbox>
         <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
-          已选 {selectedIds.length} / 可选 {selectableBundles.length} 扎
+          已选 <strong style={{ color: 'var(--color-primary)' }}>{selectedIds.length}</strong> 扎 ·{' '}
+          <strong style={{ color: 'var(--color-primary)' }}>{selectedQuantity}</strong> 件 / 可选 {selectableBundles.length} 扎
         </span>
       </div>
 
-      <div style={{ maxHeight: 280, overflow: 'auto', border: '1px solid var(--color-border)', borderRadius: 8 }}>
+      <div
+        style={{
+          maxHeight: 300,
+          overflow: 'auto',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+          gap: 8,
+          padding: 4,
+        }}
+      >
         {bundles.length === 0 ? (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary)', gridColumn: '1 / -1' }}>
             暂无菲号数据
           </div>
         ) : (
           bundles.map((b) => {
             const blocked = isBlocked(b);
-            const currentDelegate = b.assigneeName || (b.factoryId ? factoryNameById[b.factoryId] : undefined) || b.factoryName || '-';
+            const checked = selectedIds.includes(b.id);
+            const currentDelegate = b.assigneeName || (b.factoryId ? factoryNameById[b.factoryId] : undefined) || b.factoryName || '';
             return (
               <div
                 key={b.id}
+                onClick={() => { if (!disableEdit && !blocked) handleToggleOne(b.id, !checked); }}
                 style={{
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
+                  alignItems: 'flex-start',
+                  gap: 6,
                   padding: '6px 8px',
-                  borderBottom: '1px solid var(--color-border)',
-                  opacity: blocked ? 0.5 : 1,
-                  background: blocked ? 'var(--color-fill-secondary, #f5f5f5)' : undefined,
+                  border: `1px solid ${checked ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                  background: checked ? 'var(--status-processing-bg)' : 'var(--color-bg-base)',
+                  borderRadius: 8,
+                  opacity: blocked ? 0.55 : 1,
+                  cursor: disableEdit || blocked ? 'not-allowed' : 'pointer',
+                  minWidth: 0,
                 }}
               >
                 <Checkbox
-                  checked={selectedIds.includes(b.id)}
+                  checked={checked}
                   disabled={disableEdit || blocked}
                   onChange={(e) => handleToggleOne(b.id, e.target.checked)}
+                  onClick={(e) => e.stopPropagation()}
                 />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ color: 'var(--color-text-primary)', fontSize: 'var(--font-size-sm)' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ color: 'var(--color-text-primary)', fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>
                     菲号 {b.bundleNo ?? '-'}
-                    {/* 二维码内容（含 PO/款号/SIG 签名等）对用户无阅读价值，不再整串展示 */}
                   </div>
                   <div style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
-                    {b.color || '-'} / {b.size || '-'} / {b.quantity ?? 0} 件
+                    {b.color || '-'} / {b.size || '-'}
                   </div>
-                </div>
-                <div style={{ width: 64, textAlign: 'right', color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
-                  {BUNDLE_STATUS_LABEL[b.status ?? ''] ?? b.status ?? '-'}
-                </div>
-                <div style={{ width: 90, textAlign: 'right', color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
-                  {currentDelegate}
+                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
+                    {b.quantity ?? 0} 件 · {BUNDLE_STATUS_LABEL[b.status ?? ''] ?? b.status ?? '-'}
+                  </div>
+                  {currentDelegate && currentDelegate !== '-' && (
+                    <div style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-xs)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      委派：{currentDelegate}
+                    </div>
+                  )}
                 </div>
               </div>
             );

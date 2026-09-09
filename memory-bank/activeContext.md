@@ -7,6 +7,14 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-09-09 打印菲号/裁剪单抽屉化 + 打印人修复 + 工序委派菲号卡片化（Playwright 实测）
+
+- [x] **两个打印弹窗统一改侧滑抽屉**：CuttingPrintPreviewModal（打印菲号）、CuttingSheetPrintModal（打印裁剪单）由 ResizableModal → SideDrawer；实测 drawerCount=1、modalCount=0
+- [x] **裁剪单打印人一直为「-」根治**：`CuttingSheetPrintModal` 组件**没有把 `printerName` 传给 `useCuttingSheetPrint`**（hook 里解构了但组件漏传）→ 永远走 `|| '-'`。已补传；CuttingModals 取值加 `username` 兜底。实测打印 HTML footer = `打印人：李老板  2026-09-09 22:31:08`（打印人与时间同行）
+- [x] **工序委派菲号改卡片网格**：BundleDelegatePanel 由「一行一个」改为 `repeat(auto-fill, minmax(160px,1fr))` 多列卡片（每行 7 个），卡片含 菲号/颜色/尺码/数量·状态/委派，点卡片即勾选；顶部实时显示「已选 N 扎 · M 件 / 可选 X 扎」
+- 验证：tsc 0 error、eslint 0 error、vite build 成功；本地实测截图确认三处
+- 备注：本地调试时临时把 PO20260401002 状态改为 production 以打开节点详情（已还原 completed）
+
 ### 2026-09-09 裁剪明细页「退回」后白屏修复（Playwright 实测）
 
 - [x] 根因：CuttingEntryView 的「退回」→ `handleRollbackActive` 回调里调 `resetActiveTask()`（**未传 clearRoute**）→ activeTask 清空但 URL 仍停在 `/production/cutting/task/:orderNo`，`isEntryPage` 仍为 true → 两个渲染分支都不命中 → 白屏

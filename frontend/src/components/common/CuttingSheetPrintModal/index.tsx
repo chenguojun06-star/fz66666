@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import { Button, Space, Radio } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
+import SideDrawer from '@/components/common/SideDrawer';
 
 import type { CuttingSheetPrintModalProps } from './types';
 import { useCuttingSheetPrint } from './useCuttingSheetPrint';
@@ -17,20 +17,22 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
   styleImageUrl,
   companyName,
   cuttingTask,
+  printerName,
 }) => {
   const { orientation, setOrientation, printLoading, handlePrint } = useCuttingSheetPrint({
     bundles,
     styleImageUrl,
     companyName,
     cuttingTask,
+    printerName,
     onCancel,
   });
 
   return (
-    <ResizableModal
+    <SideDrawer
       title="打印裁剪单"
       open={open}
-      onCancel={onCancel}
+      onClose={onCancel}
       width="40vw"
       footer={
         <Space>
@@ -71,7 +73,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
           </div>
         </div>
       </div>
-    </ResizableModal>
+    </SideDrawer>
   );
 };
 
