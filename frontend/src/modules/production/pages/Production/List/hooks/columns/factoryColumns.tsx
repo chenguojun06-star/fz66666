@@ -6,7 +6,7 @@ import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import { ORDER_BIZ_TYPE_MAP } from '@/constants/statusMaps';
 import { safeString } from '../../utils';
 import { displayAmount } from '@/utils/display';
-import { renderMerchandiserCell } from '../riskBadgeRenderers';
+import { renderMerchandiserCell, CELL_CHIP_STYLE } from '../riskBadgeRenderers';
 import type { UseProductionColumnsProps } from './types';
 
 export function buildFactoryColumns({
@@ -25,14 +25,17 @@ export function buildFactoryColumns({
         return (
           <Space size={4} style={{ flexWrap: 'nowrap' }}>
             <FactoryTypeTag factoryType={factoryType} />
-            <SupplierNameTooltip
-              name={v}
-              contactPerson={record.factoryContactPerson}
-              contactPhone={record.factoryContactPhone}
-              label="工厂"
-              style={{ cursor: 'pointer' }}
-              onClick={(e) => { e.stopPropagation(); onOpenRemark?.(record, '生产方 — ' + (v || '')); }}
-            />
+            {/* D-327：工厂名加胶囊外框，不再跟前面的类型标签形成"一裸一框"的落差 */}
+            <span style={{ ...CELL_CHIP_STYLE, cursor: 'pointer' }}>
+              <SupplierNameTooltip
+                name={v}
+                contactPerson={record.factoryContactPerson}
+                contactPhone={record.factoryContactPhone}
+                label="工厂"
+                style={{ cursor: 'pointer' }}
+                onClick={(e) => { e.stopPropagation(); onOpenRemark?.(record, '生产方 — ' + (v || '')); }}
+              />
+            </span>
             {bizType && (
               <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知'}</Tag>
             )}

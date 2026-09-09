@@ -10,7 +10,26 @@ import { getStageBudgetHoursValue } from '@/utils/progressTimeBudget';
 import { getProcessesByNodeFromOrder } from '../../ProgressDetail/utils';
 import { isSecondaryProcessSubNode } from '../../ProgressDetail/utils/stageMapping';
 
-export const PROGRESS_CELL_BASE: React.CSSProperties = { padding: '4px', transition: 'background 0.2s' };
+// D-327：工序进度单元加外圈——标签+进度条+预算文字收进一个带边框圆角的容器，
+// 不再是散在单元格里的一堆裸文字
+export const PROGRESS_CELL_BASE: React.CSSProperties = {
+  padding: '4px 6px',
+  border: '1px solid var(--color-border)',
+  borderRadius: 6,
+  background: 'var(--color-bg-container)',
+  transition: 'background 0.2s',
+};
+/** 单元格内小段文字的胶囊外框（状态/交期、生产方等），与 Tag 观感一致 */
+export const CELL_CHIP_STYLE: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '0 6px',
+  borderRadius: 4,
+  border: '1px solid var(--color-border)',
+  background: 'var(--color-bg-container)',
+  fontSize: 12,
+  lineHeight: '18px',
+};
 export const COUNT_TEXT_STYLE: React.CSSProperties = { fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' };
 
 export function hasSecondaryProcessForOrder(record: ProductionOrder): boolean {
@@ -100,7 +119,7 @@ export function renderStageProgressCell(
         }
       }}
       onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-container)'; }}
     >
       {ctx.renderCompletionTimeTag(record, nodeName, percent)}
       <div style={COUNT_TEXT_STYLE}>{completed}/{total}</div>

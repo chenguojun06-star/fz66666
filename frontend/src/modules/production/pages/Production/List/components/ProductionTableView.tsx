@@ -46,7 +46,9 @@ const ProductionTableView: React.FC<ProductionTableViewProps> = ({
       dataSource={dataSource}
       rowKey="id"
       loading={loading}
-      scroll={{ x: 3500 }}
+      // D-327：写死 3500px + tableLayout:fixed 会把 3500px 均摊到可见列，列全被拉宽一大圈；
+      // max-content = 各列按定义宽度收紧，与其他列表页一致
+      scroll={{ x: 'max-content' }}
       rowClassName={(record: ProductionOrder) =>
         getOrderDomKey(record) === focusedOrderId ? 'smart-order-focus-row' : ''
       }

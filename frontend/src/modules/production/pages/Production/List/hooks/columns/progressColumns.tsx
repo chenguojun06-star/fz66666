@@ -7,6 +7,7 @@ import { isDirectCuttingOrder, isOrderFrozenByStatus } from '@/utils/api';
 import {
   hasSecondaryProcessForOrder,
   renderStageProgressCell,
+  PROGRESS_CELL_BASE,
 } from '../riskBadgeRenderers';
 import type { StageProgressContext } from '../riskBadgeRenderers';
 import type { UseProductionColumnsProps } from './types';
@@ -42,7 +43,7 @@ export function buildProgressColumns({
         if (directCutting) {
           return (
             <div
-              style={{ cursor: 'default', padding: '4px', opacity: 0.8 }}
+              style={{ ...PROGRESS_CELL_BASE, cursor: 'default', opacity: 0.8 }}
               onClick={(e) => { e.stopPropagation(); }}
             >
               <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
@@ -59,7 +60,7 @@ export function buildProgressColumns({
         const procurePercent = (rate || 0) > 0 ? 100 : 0;
         return (
           <div
-            style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: isCompletedOrClosed ? 0.75 : (frozen ? 0.6 : 1) }}
+            style={{ ...PROGRESS_CELL_BASE, cursor: frozen ? 'default' : 'pointer', opacity: isCompletedOrClosed ? 0.75 : (frozen ? 0.6 : 1) }}
             onClick={(e) => {
               e.stopPropagation();
               if (frozen) return;
@@ -70,8 +71,8 @@ export function buildProgressColumns({
                 openProcessDetail(record, 'procurement');
               }
             }}
-            onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-container)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
+            onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-bg-container)'; }}
           >
             {renderCompletionTimeTag(record, '采购', rate || 0)}
             <LiquidProgressBar percent={procurePercent} width="100%" height={16} status={colorStatus} />
@@ -104,7 +105,7 @@ export function buildProgressColumns({
       render: (rate: number, record: ProductionOrder) => {
         if (!hasSecondaryProcessForOrder(record)) {
           return (
-            <div style={{ padding: '4px', textAlign: 'center' }}>
+            <div style={{ ...PROGRESS_CELL_BASE, textAlign: 'center' }}>
               <span style={{ fontSize: '11px', color: 'var(--color-text-tertiary)', opacity: 0.7 }}>无二次工艺</span>
             </div>
           );
