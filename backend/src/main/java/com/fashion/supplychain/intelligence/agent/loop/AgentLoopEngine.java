@@ -96,6 +96,9 @@ public class AgentLoopEngine {
     @Autowired private org.springframework.beans.factory.ObjectProvider<com.fashion.supplychain.intelligence.service.SharedAgentMemoryService> sharedAgentMemoryProvider;
     // P0-3修复：注入 SkillTreeOrchestrator，使 extractAndStore 不再是孤儿方法
     @Autowired private org.springframework.beans.factory.ObjectProvider<SkillTreeOrchestrator> skillTreeOrchestratorProvider;
+    // 可追溯建议卡片：经订单进度 WebSocket 通道向租户推送 ai:traceable_advice 事件
+    @Autowired(required = false)
+    private com.fashion.supplychain.production.executor.OrderProgressWebSocketServer orderProgressWebSocketServer;
 
     /** P0-3: 工具结果共享记忆开关，默认 true */
     @Value("${xiaoyun.agent.shared-memory.enabled:true}")
@@ -693,6 +696,8 @@ public class AgentLoopEngine {
         // ★ 立即发送回答并关闭SSE，用户几乎零等待
         aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), fastContent, null,
                 System.currentTimeMillis() - ctx.getRequestStartAt());
+        // 可追溯建议卡片：有工具证据的长回答，经 WS 推 ai:traceable_advice（失败不阻断主流程）
+        pushTraceableAdviceIfApplicable(ctx, fastContent);
         cb.onAnswer(fastContent, ctx.getCommandId());
         cb.onToolExecRecords(ctx.getAllExecRecords());
 
@@ -718,6 +723,46 @@ public class AgentLoopEngine {
         });
 
         return fastContent;
+    }
+
+    /**
+     * 可追溯建议卡片推送：当回答由真实工具证据支撑且内容较充实时，
+     * 经订单进度 WebSocket 通道向租户推送 ai:traceable_advice 事件，
+     * 前端渲染"查看评估依据"卡片（Human-in-the-loop，AI 不直接改数据）。
+     * 任何异常都不阻断主流程。
+     */
+    private void pushTraceableAdviceIfApplicable(AgentLoopContext ctx, String content) {
+        try {
+            if (orderProgressWebSocketServer == null) return;
+            java.util.List<AiAgentToolExecHelper.ToolExecRecord> records = ctx.getAllExecRecords();
+            if (records == null || records.isEmpty()) return;
+            if (content == null || content.length() < 300) return;
+            Long tenantId = ctx.getTenantId();
+            if (tenantId == null) return;
+
+            // 数据血缘（评估依据）：最多取 6 条工具结果摘要
+            java.util.List<String> chain = new java.util.ArrayList<>();
+            int shown = 0;
+            for (AiAgentToolExecHelper.ToolExecRecord rec : records) {
+                if (shown >= 6) break;
+                String evidence = rec.evidence;
+                if (evidence == null || evidence.isBlank()) continue;
+                if (evidence.length() > 120) evidence = evidence.substring(0, 120) + "…";
+                chain.add(mapToolDisplayName(rec.toolName) + "：" + evidence);
+                shown++;
+            }
+            if (chain.isEmpty()) return;
+
+            java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>();
+            payload.put("traceId", ctx.getCommandId());
+            payload.put("title", "小云智能建议");
+            payload.put("summary", content.length() > 200 ? content.substring(0, 200) + "…" : content);
+            payload.put("reasoningChain", chain);
+            payload.put("proposedActions", java.util.List.of());
+            orderProgressWebSocketServer.broadcastAiEvent(tenantId, "ai:traceable_advice", payload);
+        } catch (Exception e) {
+            log.debug("[AgentLoop] 建议卡片推送失败（不阻断）: {}", e.getMessage());
+        }
     }
 
     /**
