@@ -30,7 +30,7 @@ interface Overview {
 interface TrendItem { date: string; orderCount: number; quantity: number; }
 interface FactoryRankItem { factoryName: string; completedOrders: number; avgCompletionDays: number; onTimeRate: number; }
 interface DefectRankItem { styleNo: string; styleName: string; total: number; failCount: number; defectRate: number; }
-interface Margin { salesAmount: number; materialCost: number; grossProfit: number; grossMarginRate: number; hasCostData: boolean; }
+interface Margin { salesAmount: number; processingCost: number; materialCost: number; grossProfit: number; grossMarginRate: number; hasCostData: boolean; }
 interface AnalyticsData {
   overview: Overview;
   trend: TrendItem[];
@@ -362,15 +362,28 @@ const OrderAnalysisTab: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} lg={10}>
-          <Card size="small" title={<>毛利估算<Hint text="销售额估算 - 总成本（优先订单总成本，兜底物料成本）。采购成本不完整时仅作参考" /></>}>
+          <Card size="small" title={<>毛利估算<Hint text="销售额按 报价单价→下单锁定单价 依次兜底估算；成本 = 加工单价×数量 + 物料成本（内部工厂领料审核后自动累计）。估算值仅供参考" /></>}>
             {margin && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                  <span style={{ color: 'var(--color-text-secondary)' }}>销售额估算</span>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>
+                    销售额估算
+                    <Hint text="按 报价单价 优先、无报价用 下单锁定单价 兜底 × 下单数量" />
+                  </span>
                   <span style={{ fontWeight: 600 }}>{fmtMoney(margin.salesAmount)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                  <span style={{ color: 'var(--color-text-secondary)' }}>物料成本</span>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>
+                    加工成本
+                    <Hint text="加工单价 × 下单数量" />
+                  </span>
+                  <span style={{ fontWeight: 600 }}>{fmtMoney(margin.processingCost)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>
+                    物料成本
+                    <Hint text="内部工厂物料领取审核结算后自动累计到订单" />
+                  </span>
                   <span style={{ fontWeight: 600 }}>{fmtMoney(margin.materialCost)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, borderTop: '1px dashed var(--color-border-light)', paddingTop: 10 }}>
@@ -389,7 +402,7 @@ const OrderAnalysisTab: React.FC = () => {
                 </div>
                 {!margin.hasCostData && (
                   <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', background: 'var(--color-bg-container)', borderRadius: 6, padding: '6px 10px' }}>
-                    采购成本数据不完整，毛利仅按已录入的物料成本估算，实际需结合人工核算。
+                    订单未录加工单价、也没有物料成本汇总记录，暂无法估算毛利；内部工厂走完物料领取审核后会自动累计成本。
                   </div>
                 )}
               </div>

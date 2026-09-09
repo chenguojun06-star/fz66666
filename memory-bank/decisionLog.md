@@ -1,7 +1,20 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-09（新增 D-329 合作合同打印修复——签订日期英文GMT串+甲方改租户公司名）
+> 最后更新：2026-09-09（新增 D-330 毛利估算根修——下单从未落库销售单价，销售额口径用户拍板"报价优先锁定价兜底"）
+
+---
+
+## D-330：毛利估算全 0 根修 — 销售单价从未落库 + 口径拍板（2026-09-09）
+
+用户反馈数据分析毛利区全 ¥0。核实结论：**不是单纯没录数据，是写入侧缺环**——下单 payload 只把"下单锁定单价"写进 `factory_unit_price`（加工结算价）和 orderDetails JSON 快照，**顶层 order_unit_price（销售单价）从未写过**，销售额=Σ(数量×order_unit_price) 恒 0；物料成本只有内部工厂领料审核结算才汇总，未走流程即空。列表页单价是 OrderPriceFillHelper 展示层现算的，不落库——"列表有数、分析全 0"。
+
+**决策（口径用户拍板：报价优先，锁定价兜底）**：
+1. 销售单价表达式 `COALESCE(NULLIF(order_unit_price,0), NULLIF(quotation_unit_price,0), NULLIF(factory_unit_price,0), 0)` 收口为常量 SALES_UNIT_PRICE，buildOverview.totalAmount 与 buildMargin.salesAmount 共用；NULLIF 让 0 价也参与兜底。
+2. 成本改现算：`SUM(数量×factory_unit_price)` 加工成本 + `SUM(material_cost)` 物料成本，弃 total_cost（仅在领料汇总时产生且会与现算加工费重复计）。
+3. VO Margin 加 processingCost，前端毛利卡拆"销售额/加工成本/物料成本/毛利/毛利率"五行，Hint 标明口径；无成本提示语改为引导走领料审核。
+
+**理由**：订单创建时只采集了一个价格（锁定单价），销售价本就没有独立采集入口——读侧兜底是唯一能让存量单立刻有数的方案；口径已用户拍板。教训：**新单据字段上线时核对"顶层列 vs JSON 快照"，只写快照等于没写；展示层现算值与落库值必须在分析口径文档里写清哪个是准的**。
 
 ---
 

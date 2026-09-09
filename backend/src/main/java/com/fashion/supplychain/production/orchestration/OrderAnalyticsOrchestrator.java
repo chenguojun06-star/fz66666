@@ -33,6 +33,14 @@ public class OrderAnalyticsOrchestrator {
 
     private static final String QUALITY_FAIL = "scan_result IN ('failure','fail')";
 
+    /**
+     * D-330 销售单价口径（用户拍板）：销售单价 → 报价单价 → 下单锁定单价 依次兜底。
+     * 下单流程历史上只落加工单价(factory_unit_price)与 JSON 快照，order_unit_price 长期为空，
+     * 销售额按此表达式才有数。NULLIF(x,0) 让 0 价也视同未填参与兜底。
+     */
+    private static final String SALES_UNIT_PRICE =
+            "COALESCE(NULLIF(order_unit_price,0), NULLIF(quotation_unit_price,0), NULLIF(factory_unit_price,0), 0)";
+
     public OrderAnalyticsVO getAnalytics(int days) {
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) {
@@ -78,7 +86,7 @@ public class OrderAnalyticsOrchestrator {
         OrderAnalyticsVO.Overview o = new OrderAnalyticsVO.Overview();
         String sql = "SELECT COUNT(*) AS orderCount, " +
                 "COALESCE(SUM(order_quantity),0) AS totalQuantity, " +
-                "COALESCE(SUM(order_quantity * COALESCE(order_unit_price,0)),0) AS totalAmount, " +
+                "COALESCE(SUM(order_quantity * " + SALES_UNIT_PRICE + "),0) AS totalAmount, " +
                 "COALESCE(SUM(CASE WHEN status IN ('pending','production') THEN 1 ELSE 0 END),0) AS inProductionCount, " +
                 "COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END),0) AS completedCount, " +
                 "COALESCE(SUM(CASE WHEN planned_end_date IS NOT NULL AND planned_end_date < NOW() " +
@@ -237,23 +245,24 @@ public class OrderAnalyticsOrchestrator {
         });
     }
 
-    /** ⑤ 毛利估算：销售额 - 总成本（优先 total_cost，兜底 material_cost） */
+    /** ⑤ 毛利估算：销售额（报价→锁定价兜底） - 加工成本（现算） - 物料成本（领料审核累计） */
     private OrderAnalyticsVO.Margin buildMargin(Long tenantId, String factoryId, LocalDateTime since) {
         OrderAnalyticsVO.Margin m = new OrderAnalyticsVO.Margin();
         jdbcTemplate.query(
-                "SELECT COALESCE(SUM(order_quantity * COALESCE(order_unit_price,0)),0) AS salesAmount, " +
-                        "COALESCE(SUM(COALESCE(material_cost,0)),0) AS materialCost, " +
-                        "COALESCE(SUM(COALESCE(total_cost,0)),0) AS totalCost " +
+                "SELECT COALESCE(SUM(order_quantity * " + SALES_UNIT_PRICE + "),0) AS salesAmount, " +
+                        "COALESCE(SUM(order_quantity * COALESCE(factory_unit_price,0)),0) AS processingCost, " +
+                        "COALESCE(SUM(COALESCE(material_cost,0)),0) AS materialCost " +
                         "FROM t_production_order WHERE tenant_id = ? AND delete_flag = 0" +
                         factoryFilter(factoryId) + " AND create_time >= ?",
                 rs -> {
                     // 同 buildOverview：聚合恒 1 行，ResultSetExtractor 需先 next() 再读列
                     if (rs.next()) {
                         double sales = rs.getDouble("salesAmount");
-                        double totalCost = rs.getDouble("totalCost");
+                        double processingCost = rs.getDouble("processingCost");
                         double materialCost = rs.getDouble("materialCost");
-                        double cost = totalCost > 0 ? totalCost : materialCost;
+                        double cost = processingCost + materialCost;
                         m.setSalesAmount(round2(sales));
+                        m.setProcessingCost(round2(processingCost));
                         m.setMaterialCost(round2(materialCost));
                         m.setGrossProfit(round2(sales - cost));
                         m.setHasCostData(cost > 0);

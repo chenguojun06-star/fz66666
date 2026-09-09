@@ -97,11 +97,13 @@ public class OrderAnalyticsVO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Margin {
-        /** 销售金额估算 */
+        /** 销售金额估算（D-330：报价单价→下单锁定单价 兜底） */
         private double salesAmount;
-        /** 物料成本合计（面辅料采购成本） */
+        /** 加工成本 = 下单数量 × 加工单价（现算） */
+        private double processingCost;
+        /** 物料成本合计（内部工厂领料审核后自动汇总） */
         private double materialCost;
-        /** 毛利估算 = 销售金额 - 总成本（优先 total_cost，兜底 material_cost） */
+        /** 毛利估算 = 销售金额 - 加工成本 - 物料成本 */
         private double grossProfit;
         /** 毛利率估算 %（-1=无成本数据） */
         private double grossMarginRate;
