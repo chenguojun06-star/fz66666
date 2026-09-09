@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Button, DatePicker, Divider, Form, Input, Modal, Space, Typography } from 'antd';
 import { PrinterOutlined, RedoOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useUser } from '@/utils/AuthContext';
 
 /**
  * D-212：合作合同模块（下单管理）
@@ -28,22 +29,29 @@ const DEFAULT_CLAUSES = `一、产品质量：乙方按甲方提供的样衣、�
 const CooperationContractModal: React.FC<CooperationContractModalProps> = ({ open, onClose, order }) => {
   const [form] = Form.useForm();
   const [clauses, setClauses] = useState(DEFAULT_CLAUSES);
+  const user = useUser();
+  // D-329：甲方（订购方）默认租户公司名，订单客户名只是兜底——合同是租户对外签的
+  const tenantName = String((user as any)?.tenantName || '').trim();
 
   const defaults = useMemo(() => {
     const qty = Number(order?.orderQuantity || order?.totalQuantity || 0);
     const price = Number(order?.unitPrice || 0);
+    const rawDelivery = order?.plannedEndDate || order?.deliveryDate || '';
     return {
       contractNo: `HT-${String(order?.orderNo || '').replace(/^PO/i, '') || dayjs().format('YYYYMMDDHHmm')}`,
-      partyA: String(order?.customerName || ''),
+      partyA: tenantName || String(order?.customerName || ''),
       partyB: String(order?.factoryName || ''),
       signDate: dayjs(),
       styleName: String(order?.styleName || order?.styleNo || ''),
       quantity: qty > 0 ? String(qty) : '',
       unitPrice: price > 0 ? price.toFixed(2) : '',
       total: qty > 0 && price > 0 ? (qty * price).toFixed(2) : '',
-      delivery: order?.plannedEndDate || order?.deliveryDate || '',
+      // 交货日期只保留日期段，合同上不带时分秒
+      delivery: rawDelivery && dayjs(rawDelivery as any).isValid()
+        ? dayjs(rawDelivery as any).format('YYYY-MM-DD')
+        : String(rawDelivery || ''),
     };
-  }, [order]);
+  }, [order, tenantName]);
 
   useEffect(() => {
     if (open) {
@@ -55,6 +63,16 @@ const CooperationContractModal: React.FC<CooperationContractModalProps> = ({ ope
   const handlePrint = () => {
     const v = form.getFieldsValue();
     const esc = (t: any) => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    // D-329：日期必须格式化为中文/短横线，dayjs 对象直接 String() 会输出英文 GMT 串
+    const signDateText = v.signDate && dayjs(v.signDate as any).isValid()
+      ? dayjs(v.signDate as any).format('YYYY年MM月DD日')
+      : '';
+    const deliveryText = v.delivery && dayjs(v.delivery as any).isValid()
+      ? dayjs(v.delivery as any).format('YYYY-MM-DD')
+      : esc(v.delivery || '');
+    const companyHeader = tenantName
+      ? `<div style="text-align:center;font-size:15px;font-weight:700;letter-spacing:2px;margin-bottom:6px;">${esc(tenantName)}</div>`
+      : '';
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>合作合同 ${esc(v.contractNo)}</title>
 <style>
   body { font-family: 'SimSun','Songti SC',serif; font-size: 14px; line-height: 1.9; color:#000; margin: 0; padding: 48px 56px; }
@@ -66,13 +84,14 @@ const CooperationContractModal: React.FC<CooperationContractModalProps> = ({ ope
   .sign { display: flex; justify-content: space-between; margin-top: 48px; font-size: 13px; }
   @media print { body { padding: 24px 32px; } }
 </style></head><body>
+${companyHeader}
 <h1>服装购销加工合同</h1>
 <div class="no">合同编号：${esc(v.contractNo)}</div>
 <table class="info">
   <tr><td style="width:50%">甲方（订购方）：${esc(v.partyA)}</td><td>乙方（加工方）：${esc(v.partyB)}</td></tr>
-  <tr><td>款号 / 款名：${esc(order?.styleNo || '')} ${esc(v.styleName)}</td><td>签订日期：${esc(v.signDate)}</td></tr>
+  <tr><td>款号 / 款名：${esc(order?.styleNo || '')} ${esc(v.styleName)}</td><td>签订日期：${esc(signDateText)}</td></tr>
   <tr><td>数量：${esc(v.quantity)} 件</td><td>单价：¥${esc(v.unitPrice)} 元/件</td></tr>
-  <tr><td>合同总金额：¥${esc(v.total)} 元</td><td>交货日期：${esc(v.delivery)}</td></tr>
+  <tr><td>合同总金额：¥${esc(v.total)} 元</td><td>交货日期：${esc(deliveryText)}</td></tr>
 </table>
 <div class="clauses">经甲乙双方友好协商，就服装加工购销事宜达成如下协议：
 ${esc(clauses)}</div>
