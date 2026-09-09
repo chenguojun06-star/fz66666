@@ -44,7 +44,6 @@ export const CuttingBundlesContent: React.FC<CuttingBundlesContentProps> = ({
               { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (v: any) => <DisplayStatusTag status={v} variant="task" /> },
             ]}
             pagination={false}
-            scroll={{ x: 670 }}
           />
         </Card>
       )}
@@ -96,7 +95,6 @@ export const CuttingBundlesContent: React.FC<CuttingBundlesContentProps> = ({
           },
         ]}
         pagination={false}
-        scroll={{ x: 1020 }}
       />
     </div>
   );
@@ -121,7 +119,6 @@ export const CuttingSizeItemsContent: React.FC<CuttingSizeItemsContentProps> = (
     dataSource={cuttingSizeItems}
     rowKey={(r: any) => `${r.color || ''}-${r.size}`}
     pagination={false}
-    scroll={{ x: 360 }}
     emptyDescription="暂无裁剪明细"
   />
 );

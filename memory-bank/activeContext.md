@@ -7,6 +7,15 @@
 
 ## 最近变更（Latest Changes）
 
+### 2026-09-09 订单详情页：图片缩小 + 码数全系统升序 + Tab 表格铺满/去横滚（待推送）
+
+- [x] **码数排序全系统统一**：OrderColorSizeMatrix.createSizeOrder 改用权威 `sortSizeNames`（此前用后端插入顺序，矩阵出现 XS/M/L/XL/S 乱序）；OrderFlow 下单明细(computeOrderLines)、裁剪明细(computeCuttingSizeItems)、面辅料"尺码用量"map、NodeDetailModal.computeCuttingSizeItems 全部按颜色+码数升序
+- [x] **图片缩小**：OrderImageManager 新增 `imageHeight` prop（默认 280），订单详情传 180；头部图片列宽 260→200px
+- [x] **Tab 表格铺满、页面不再整体滚动**：`.page-layout-body > .order-flow-tabs-card` 及 card-body/tabs/content-holder 全链路 flex 撑满剩余高度，表格 fillScrollY 正常测算，底部留白由表格区域铺满
+- [x] **去掉强制横向滚动**：OrderFlow 各 Tab 表格移除 `scroll={{ x: ... }}`（概览/下单明细/裁剪/面辅料/工序），改由 tableLayout fixed 自适应容器宽度
+- 验证：npx tsc --noEmit 0 error + eslint 0 error + vite build 成功
+- 注意：本地后端/MySQL 未启动，未做实时页面渲染验证，需前端硬刷新回归
+
 ### 2026-09-09 订单详情页（OrderFlow）布局重排 + 去重（已推送 63334e2a6）
 
 - [x] 信息卡片由"四列挤一行"改为**上/中/下三段式**（段间分隔线 + 主色竖条小标题）：① 图片+基本信息 ② 颜色/尺码/商品编码 ③ 生产统计+计划与时间

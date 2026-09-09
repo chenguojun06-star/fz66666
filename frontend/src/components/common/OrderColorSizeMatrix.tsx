@@ -2,6 +2,7 @@ import React from 'react';
 import type { OrderInfoGridItem } from '@/components/common/OrderInfoGrid';
 import type { CardSizeQuantityItem } from '@/utils/cardSizeQuantity';
 import { splitStyleOptions } from '@/utils/styleOptions';
+import { sortSizeNames } from '@/utils/api/size';
 
 interface OrderColorSizeMatrixProps {
   items: CardSizeQuantityItem[];
@@ -67,7 +68,8 @@ const createSizeOrder = (items: CardSizeQuantityItem[], fallbackSizes: string[])
     seen.add(size);
     ordered.push(size);
   });
-  return ordered;
+  // 全系统统一：码数按从小到大排序（XS→S→M→L→XL→…），不再依赖后端返回顺序
+  return sortSizeNames(ordered);
 };
 
 export const buildOrderColorSizeMatrixModel = ({

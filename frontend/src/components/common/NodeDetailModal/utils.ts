@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import { matchRecordToStage } from '@/utils/productionStage';
 import { getMaterialTypeCategory } from '@/utils/materialType';
+import { sortSizeNames } from '@/utils/api/size';
 import type { ScanRecord, BundleRecord, OperatorSummary } from './types';
 import type { MaterialPurchase, ProductionOrder } from '@/types/production';
 
@@ -91,7 +92,8 @@ export function computeCuttingSizeItems(bundles: BundleRecord[]): { size: string
     }
   });
 
-  return sizes
+  // 全系统统一：码数从小到大排序
+  return sortSizeNames(sizes)
     .map(size => ({ size, quantity: sizeMap[size] }))
     .filter(item => item.quantity > 0);
 }

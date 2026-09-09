@@ -105,7 +105,6 @@ const WorkflowTabContent: React.FC<WorkflowTabContentProps> = ({
           ]}
           pagination={false}
           bordered
-          scroll={{ x: 'max-content' }}
         />
       </>
     );

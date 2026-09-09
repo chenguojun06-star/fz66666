@@ -17,9 +17,11 @@ interface OrderImageManagerProps {
   coverUrl?: string | null;
   styleId?: string | number;
   styleNo?: string;
+  /** 图片轮播最大高度，默认 280 */
+  imageHeight?: number;
 }
 
-const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable = true, coverUrl, styleId, styleNo }) => {
+const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable = true, coverUrl, styleId, styleNo, imageHeight = 280 }) => {
   const { message } = App.useApp();
   const [images, setImages] = useState<OrderImage[]>([]);
   const [styleImages, setStyleImages] = useState<string[]>([]);
@@ -187,7 +189,7 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
                 key: item.isCover ? `cover-${idx}` : item.isStyle ? `style-${idx}-${item.url}` : `order-${item.id}`,
                 badge: item.isCover ? '封面' : undefined,
               }))}
-              imageHeight={280}
+              imageHeight={imageHeight}
               onIndexChange={setCurrentIdx}
               overlay={editable && currentOrderImg ? (
                 <div style={{

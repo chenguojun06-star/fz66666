@@ -2,6 +2,7 @@ import React from 'react';
 import { Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { parseProductionOrderLines, toNumberSafe } from '@/utils/api';
+import { compareSizeAsc } from '@/utils/api/size';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
 import type { CuttingBundle, ProductionOrder } from '@/types/production';
@@ -176,7 +177,14 @@ export const computeOrderLines = (
   const priceSource: 'order' | 'quotation' | 'none' =
     lockedUnitPrice > 0 ? 'order' : (styleQuotationTotalPrice > 0 ? 'quotation' : 'none');
 
-  return lines.map(line => {
+  // 全系统统一：先按颜色，再按码数从小到大（XS→S→M→L→XL→…）排序
+  const sortedLines = [...lines].sort((a, b) => {
+    const colorCmp = String(a.color || '').localeCompare(String(b.color || ''), 'zh-Hans-CN');
+    if (colorCmp !== 0) return colorCmp;
+    return compareSizeAsc(a.size, b.size);
+  });
+
+  return sortedLines.map(line => {
     const matchedBundles = cuttingBundles.filter(b =>
       b.color === line.color && b.size === line.size
     );
@@ -277,5 +285,10 @@ export const computeCuttingSizeItems = (bundles: CuttingBundle[]) => {
       else { map.set(key, { color: color || undefined, size, quantity: qty }); }
     }
   });
-  return Array.from(map.values());
+  // 全系统统一：先按颜色，再按码数从小到大排序
+  return Array.from(map.values()).sort((a, b) => {
+    const colorCmp = String(a.color || '').localeCompare(String(b.color || ''), 'zh-Hans-CN');
+    if (colorCmp !== 0) return colorCmp;
+    return compareSizeAsc(a.size, b.size);
+  });
 };

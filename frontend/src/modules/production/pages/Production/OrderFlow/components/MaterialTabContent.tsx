@@ -4,6 +4,7 @@ import { PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import ResizableTable from '@/components/common/ResizableTable';
 import { getMaterialTypeLabel } from '@/utils/materialType';
+import { compareSizeAsc } from '@/utils/api/size';
 import { displayAmount } from '@/utils/display';
 import { MATERIAL_PURCHASE_STATUS_MAP } from '@/constants/statusMaps';
 import { getBomColumns } from '../helpers/bomColumns';
@@ -103,7 +104,7 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
                 if (record.sizeUsageMap) {
                   try {
                     const map: Record<string, string> = JSON.parse(record.sizeUsageMap);
-                    const entries = Object.entries(map);
+                    const entries = Object.entries(map).sort(([a], [b]) => compareSizeAsc(a, b));
                     if (entries.length > 0) {
                       return (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
@@ -177,7 +178,6 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
           ]}
           pagination={false}
           bordered
-          scroll={{ x: 'max-content' }}
         />
 
         <SmartPurchasePreviewModal
@@ -215,7 +215,6 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
           emptyDescription="暂无物料"
           pagination={false}
           bordered
-          scroll={{ x: 'max-content' }}
         />
 
         <SmartPurchasePreviewModal

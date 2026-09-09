@@ -68,7 +68,7 @@ const OrderBasicInfoCard: React.FC<Props> = ({
         <div className="order-flow-detail-head">
           <div className="order-flow-detail-head__media">
             <OrderImageManager orderNo={orderNoForImage} editable={editing} coverUrl={coverUrl}
-              styleId={(order as any)?.styleId} styleNo={(order as any)?.styleNo} />
+              styleId={(order as any)?.styleId} styleNo={(order as any)?.styleNo} imageHeight={180} />
           </div>
 
           <div className="order-flow-detail-head__info">

@@ -106,7 +106,6 @@ const FlowStepRenderer: React.FC<Props> = ({
                 dataSource={enrichedStages}
                 rowKey={(r: any) => r.processName}
                 pagination={false}
-                scroll={{ x: 980 }}
                 emptyDescription="暂无阶段数据"
               />
             ),
@@ -121,7 +120,6 @@ const FlowStepRenderer: React.FC<Props> = ({
                 dataSource={orderLines}
                 rowKey={(r: any) => String((r as any)?.skuNo || `${r.color}-${r.size}`)}
                 pagination={false}
-                scroll={{ x: 1060 }}
                 emptyDescription="暂无下单明细"
               />
             ),
