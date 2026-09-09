@@ -1,7 +1,25 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-09（新增 D-324 商品下单数据分析全0修复+延期口径对齐）
+> 最后更新：2026-09-09（新增 D-324c 订单分析500二次修复 Before start of result set；D-325 物料采购+裁剪管理接入显示字段）
+
+---
+
+## D-324c：订单分析 500 二次修复 — JDBC "Before start of result set"（2026-09-09）
+
+D-324b 上线后线上仍 500：`GET /api/order-analytics/overview` 报"数据访问失败（Before start of result set）"。
+
+**根因**：D-324 重写 OrderAnalyticsOrchestrator 时，4 处聚合查询把**单参 lambda** 传给 `jdbcTemplate.query(sql, rs -> {...}, args)`——这匹配的是 `ResultSetExtractor` 重载（两参才是 RowMapper 自动逐行 next()），其收到的 ResultSet 游标在首行**之前**，直接 `rs.getLong(...)` 必抛 "Before start of result set"。buildOverview/queryAvgDefectRate/buildMargin 未捕获直接 500（首炸=总览），enrichDefectStyleNames 被 try-catch 吞掉仅表现为次品率排行款名补全静默失效。
+
+**决策**：四处统一补 `rs.next()`（单行聚合用 if、多行补款名用 while）；教训沉淀——**JdbcTemplate 单参 lambda = ResultSetExtractor，必须自己 next()；聚合列逐列核对之外还要核对回调形态**。
+
+---
+
+## D-325：物料采购 + 裁剪管理接入通用"显示字段"（2026-09-09）
+
+用户点名两页补齐全站统一的显示字段（D-323 延续）。
+
+**决策**：物料采购（MaterialTable，pageKey=material-purchase-list，5 分组 32 字段+精简/标准预设，表格右上按钮）与裁剪管理（CuttingTaskListView，pageKey=cutting-task-list，3 分组 15 字段+精简/标准预设，工具条按钮）均接通用 useColumnSettings+ColumnSettingsDrawer，操作列常显，方案云端跟随账号。零后端改动。
 
 ---
 

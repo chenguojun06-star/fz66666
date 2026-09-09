@@ -1,11 +1,44 @@
-import React from 'react';
-import { Button, Card, Select } from 'antd';
+import React, { useMemo, useState } from 'react';
+import { Button, Card, Select, Space } from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
 import PageStatCards from '@/components/common/PageStatCards';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import StickyFilterBar from '@/components/common/StickyFilterBar';
+import { useColumnSettings, ColumnSettingsDrawer } from '@/components/common/ColumnSettings';
 import type { CuttingTask } from '@/types/production';
+
+// D-325 显示字段：字段全由系统预设，用户只挑显隐；方案跟随账号（与全站各列表页同一套）
+const CUTTING_TASK_COLUMNS = [
+  { key: 'cover', label: '图片' },
+  { key: 'productionOrderNo', label: '订单号' },
+  { key: 'styleNo', label: '款号' },
+  { key: 'styleName', label: '款名' },
+  { key: 'factoryName', label: '生产方' },
+  { key: 'orderCreatorName', label: '下单人' },
+  { key: 'orderTime', label: '下单时间' },
+  { key: 'orderQuantity', label: '数量' },
+  { key: 'cuttingQuantity', label: '裁剪数' },
+  { key: 'cuttingBundleCount', label: '扎数' },
+  { key: 'receiverName', label: '裁剪员' },
+  { key: 'receivedTime', label: '领取时间' },
+  { key: 'bundledTime', label: '完成时间' },
+  { key: 'remarks', label: '备注' },
+  { key: 'attachments', label: '纸样' },
+];
+const CUTTING_COLUMN_GROUPS = [
+  { title: '订单/款式', keys: ['cover', 'productionOrderNo', 'styleNo', 'styleName', 'factoryName', 'orderCreatorName'] },
+  { title: '裁剪进度', keys: ['orderTime', 'orderQuantity', 'cuttingQuantity', 'cuttingBundleCount', 'receiverName', 'receivedTime', 'bundledTime'] },
+  { title: '备注/附件', keys: ['remarks', 'attachments'] },
+];
+const CUTTING_COLUMN_PRESETS = [
+  {
+    key: 'simple', label: '精简',
+    values: { cover: true, productionOrderNo: true, styleNo: true, orderQuantity: true, cuttingQuantity: true, bundledTime: true },
+  },
+  { key: 'standard', label: '标准', values: Object.fromEntries(CUTTING_TASK_COLUMNS.map((c) => [c.key, true])) },
+];
 
 interface CuttingTaskListViewProps {
   tasks: {
@@ -42,6 +75,19 @@ interface CuttingTaskListViewProps {
 }
 
 const CuttingTaskListView: React.FC<CuttingTaskListViewProps> = ({ tasks, taskColumns, onCreateTask }) => {
+  const cuttingColumnSettings = useColumnSettings({
+    pageKey: 'cutting-task-list',
+    bizType: 'cutting',
+    allColumns: CUTTING_TASK_COLUMNS,
+    defaultVisible: Object.fromEntries(CUTTING_TASK_COLUMNS.map((c) => [c.key, true])),
+  });
+  const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
+  // 操作列常显，其余按显示字段方案过滤
+  const visibleTaskColumns = useMemo(
+    () => taskColumns.filter((c: any) => c.key === 'action' || cuttingColumnSettings.visibleColumns[c.key] !== false),
+    [taskColumns, cuttingColumnSettings.visibleColumns],
+  );
+
   return (
     <Card className="mb-sm">
       <PageStatCards
@@ -126,9 +172,14 @@ const CuttingTaskListView: React.FC<CuttingTaskListViewProps> = ({ tasks, taskCo
           </div>
         )}
         right={(
-          <Button type="primary" onClick={onCreateTask}>
-            无资料下单
-          </Button>
+          <Space>
+            <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsOpen(true)}>
+              显示字段
+            </Button>
+            <Button type="primary" onClick={onCreateTask}>
+              无资料下单
+            </Button>
+          </Space>
         )}
       />
       </StickyFilterBar>
@@ -137,7 +188,7 @@ const CuttingTaskListView: React.FC<CuttingTaskListViewProps> = ({ tasks, taskCo
         stickyHeader
         storageKey="cutting-task-table-v2"
         scroll={{ x: 'max-content' }}
-        columns={taskColumns}
+        columns={visibleTaskColumns}
         dataSource={tasks.sortedTaskList}
         rowKey={(row) => row.id || row.productionOrderId}
         loading={tasks.taskLoading}
@@ -151,6 +202,19 @@ const CuttingTaskListView: React.FC<CuttingTaskListViewProps> = ({ tasks, taskCo
           pageSizeOptions: ['10', '20', '50', '100', '200'],
           onChange: (page, pageSize) => tasks.setTaskQuery(prev => ({ ...prev, page, pageSize })),
         }}
+      />
+
+      <ColumnSettingsDrawer
+        open={columnSettingsOpen}
+        onClose={() => setColumnSettingsOpen(false)}
+        columnOptions={CUTTING_TASK_COLUMNS}
+        visibleColumns={cuttingColumnSettings.visibleColumns}
+        onToggle={cuttingColumnSettings.setVisible}
+        onReset={cuttingColumnSettings.reset}
+        title="显示字段"
+        groups={CUTTING_COLUMN_GROUPS}
+        presets={CUTTING_COLUMN_PRESETS}
+        onApplyPreset={cuttingColumnSettings.applyValues}
       />
     </Card>
   );
