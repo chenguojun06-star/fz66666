@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Input, Pagination, Radio, Space, Table, Typography } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { Button, Input, Pagination, Radio, Space, Table, Typography, message, Tag } from 'antd';
+import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import SideDrawer from '@/components/common/SideDrawer';
 import StyleCoverThumb from '@/components/StyleAssets/StyleCoverThumb';
@@ -76,6 +76,9 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
   const [templates, setTemplates] = useState<TemplateBrief[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateBrief | null>(null);
+  // D-343 与资料维护模板库互通：存当前款为模板走同一 create-from-style 接口
+  const [currentStyleNo, setCurrentStyleNo] = useState('');
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   // ── 明细行 ──
   const [rows, setRows] = useState<T[]>([]);
@@ -107,6 +110,24 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
     }
   }, [currentStyleId]);
 
+  // 存当前款为通用模板（与资料维护模板库同一接口，自动互通）
+  const handleSaveCurrentAsTemplate = async () => {
+    if (!currentStyleNo) { message.warning('未获取到当前款号，暂不能存为模板'); return; }
+    setSavingTemplate(true);
+    try {
+      const res = await api.post<{ code: number; message?: string }>('/template-library/create-from-style', {
+        sourceStyleNo: currentStyleNo,
+        templateTypes: ['process'],
+      });
+      if (res.code !== 200) { message.error(String(res.message || '存为模板失败')); return; }
+      message.success('已存为通用模板（与资料维护模板库互通）');
+      await fetchTemplates();
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '存为模板失败');
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
   const fetchTemplates = useCallback(async () => {
     setTemplatesLoading(true);
     try {
@@ -164,6 +185,13 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
       setRows([]);
       setSelectedRowKeys([]);
       void fetchTemplates();
+      // 取当前款款号（存为模板时作 sourceStyleNo，与资料维护互通）
+      void (async () => {
+        try {
+          const res = await api.get<{ code: number; data: { styleNo?: string } }>(`/style/info/${currentStyleId}`);
+          if (res.code === 200) setCurrentStyleNo(String(res.data?.styleNo || ''));
+        } catch { /* 忽略 */ }
+      })();
       void fetchStyles(1, '', '');
     }
   }, [open, fetchTemplates, fetchStyles]);
@@ -247,6 +275,18 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
               { value: 'template', label: '通用模板' },
             ]}
           />
+          {sourceMode === 'template' && (
+            <Button
+              size="small"
+              icon={<PlusOutlined />}
+              loading={savingTemplate}
+              disabled={!currentStyleNo}
+              onClick={() => void handleSaveCurrentAsTemplate()}
+              style={{ marginTop: 8 }}
+            >
+              存当前款为模板
+            </Button>
+          )}
           {sourceMode === 'style' && (
             <>
               <Space direction="vertical" size={6} style={{ width: '100%', marginBottom: 8 }}>
@@ -300,12 +340,17 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
           )}
           {sourceMode === 'template' && (
             <div style={listStyle}>
-              {templates.map((t) => (
+              {[...templates].sort((a, b) => (a.sourceStyleNo ? 1 : 0) - (b.sourceStyleNo ? 1 : 0)).map((t) => (
                 <div key={String(t.id)} onClick={() => handlePickTemplate(t)} style={itemStyle(Boolean(selectedTemplate && String(selectedTemplate.id) === String(t.id)))}>
                   <div style={{ fontWeight: 500, fontSize: 13 }}>{t.templateName || '-'}</div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {t.sourceStyleNo ? `来源款 ${t.sourceStyleNo}` : '未关联来源款'}
-                  </Text>
+                  <Space size={4} wrap>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {t.sourceStyleNo ? `来源款 ${t.sourceStyleNo}` : '未关联来源款'}
+                    </Text>
+                    {t.sourceStyleNo
+                      ? <Tag style={{ marginInlineEnd: 0, fontSize: 11 }}>款式沉淀</Tag>
+                      : <Tag color="blue" style={{ marginInlineEnd: 0, fontSize: 11 }}>通用</Tag>}
+                  </Space>
                 </div>
               ))}
               {!templates.length && !templatesLoading && (
