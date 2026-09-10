@@ -65,7 +65,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           </div>
           <div style={{ flex: 1 }}>
         <Space wrap>
-          <span>款号</span>
+          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>款号</span>
           <AutoComplete
             value={createTask.createStyleNo}
             style={{ width: 260 }}
@@ -82,21 +82,21 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
             allowClear
             onClear={() => createTask.handleStyleNoChange('')}
           />
-          <span>下单日期</span>
+          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>下单日期</span>
           <UnifiedDatePicker
             value={createTask.createOrderDate ? dayjs(createTask.createOrderDate, 'YYYY-MM-DD') : null}
             style={{ width: 160 }}
             placeholder="请选择下单日期"
             onChange={(value) => createTask.setCreateOrderDate(Array.isArray(value) ? '' : (value ? value.format('YYYY-MM-DD') : ''))}
           />
-          <span>订单交期</span>
+          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>订单交期</span>
           <UnifiedDatePicker
             value={createTask.createDeliveryDate ? dayjs(createTask.createDeliveryDate, 'YYYY-MM-DD') : null}
             style={{ width: 160 }}
             placeholder="请选择订单交期"
             onChange={(value) => createTask.setCreateDeliveryDate(Array.isArray(value) ? '' : (value ? value.format('YYYY-MM-DD') : ''))}
           />
-          <span>生产方</span>
+          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>生产方</span>
           <Segmented
             value={createTask.createFactoryMode}
             options={[
@@ -151,14 +151,14 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           />
         </Space>
         <Space wrap style={{ marginTop: 8 }}>
-          <span>客户</span>
+          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>客户</span>
           <CustomerSelect
             value={createTask.createCustomerName}
             onChange={(value) => createTask.setCreateCustomerName(value)}
             style={{ width: 260 }}
             placeholder="选择或输入客户名称"
           />
-          <span>品类</span>
+          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>品类</span>
           <Select
             value={createTask.createCategory || undefined}
             onChange={(v) => createTask.setCreateCategory(v || '')}
@@ -169,7 +169,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
             style={{ width: 200 }}
             options={createTask.categoryOptions}
           />
-          <span>急单</span>
+          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>急单</span>
           <Select
             value={createTask.createUrgencyLevel}
             onChange={(v) => createTask.setCreateUrgencyLevel(v)}
@@ -179,7 +179,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
               { label: '急单', value: 'urgent' },
             ]}
           />
-          <span>下单员</span>
+          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>下单员</span>
           <Select
             value={createTask.createOrderPlacer || undefined}
             onChange={(v) => createTask.setCreateOrderPlacer(v || '')}
@@ -190,7 +190,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
             style={{ width: 160 }}
             options={createTask.tenantUsers.map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
           />
-          <span>跟单员</span>
+          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>跟单员</span>
           <Select
             value={createTask.createMerchandiser || undefined}
             onChange={(v) => createTask.setCreateMerchandiser(v || '')}
