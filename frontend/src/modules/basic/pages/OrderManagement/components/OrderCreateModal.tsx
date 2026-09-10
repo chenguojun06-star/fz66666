@@ -92,7 +92,9 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
         </div>
       }
     >
-      <Form form={form} layout="vertical" style={{ minWidth: 0, width: '100%' }}>
+      {/* D-357 标签排版对齐无资料下单：13px 灰字、行高 20、紧跟输入框 */}
+      <style>{`.order-create-form .ant-form-item-label > label { font-size: 13px; color: rgba(0,0,0,0.65); line-height: 20px; height: auto; } .order-create-form .ant-form-item-label { padding-bottom: 4px; } .order-create-form .ant-form-item { margin-bottom: 0; }`}</style>
+      <Form form={form} layout="vertical" className="order-create-form" style={{ minWidth: 0, width: '100%' }}>
         <div
           style={isMobile
             ? { display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0, width: '100%', maxWidth: '100%' }
