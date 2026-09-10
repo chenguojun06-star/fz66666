@@ -22,11 +22,15 @@ import { DownOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/ico
  *   去物料明细    = 跳 /production/material/:styleNo
  *
  * 布局标准：
- *   阅读态（有采购记录）: [批量领取(primary)] [回料确认] [确认完成] [编辑物料] [更多▾] [去物料明细]
+ *   阅读态（有采购记录）: [批量领取▾(悬停:批量领取/批量回料确认/确认完成)] [编辑物料] [更多▾] [去物料明细]
  *   BOM 上下文          : [生成采购▾(primary)] [检查库存(样衣)] + 状态Tag
  *   列表页动作区        : [新增采购(primary)] [智能采购推荐] [更多▾]
  *   编辑态              : [添加物料] [保存(primary)] [取消]
  *   —— 每个区域只允许一个 primary；阅读态=批量领取/生成采购/新增采购，编辑态=保存。
+ *
+ * 状态机口径（D-360b 收紧）：
+ *   PENDING(未领取) 只能「领取」；「登记到货/追加到货」仅 RECEIVED/PARTIAL 可用；
+ *   「品质异常/回料确认」仅领取后（RECEIVED/PARTIAL/COMPLETED）可用。
  */
 
 export const PURCHASE_ACTION_LABELS = {
@@ -59,11 +63,14 @@ export interface PurchaseActionButtonState {
 }
 
 interface PurchaseActionBarProps {
-  /** 批量领取（从库存领取全部可领取行；原「采购全部」「批量采购」统一到这） */
+  /**
+   * 批量领取（主按钮直点即执行；原「采购全部」「批量采购」统一到这）。
+   * 批量领取/回料确认/确认完成三个批量动作集成进同一个悬停下拉（D-360b）。
+   */
   receive?: PurchaseActionButtonState;
-  /** 批量回料确认 */
+  /** 批量回料确认（收进主按钮下拉） */
   batchReturn?: PurchaseActionButtonState;
-  /** 确认回料完成 */
+  /** 确认回料完成（收进主按钮下拉） */
   confirmComplete?: PurchaseActionButtonState;
   /** 进入编辑态 */
   edit?: PurchaseActionButtonState;
@@ -76,7 +83,10 @@ interface PurchaseActionBarProps {
   size?: 'small' | 'middle';
 }
 
-/** 阅读态标准操作条：批量领取 / 回料确认 / 确认完成 / 编辑物料 / 更多▾ / 跳转 */
+/**
+ * 阅读态标准操作条：[批量领取▾(悬停出菜单:批量领取/批量回料确认/确认完成)] [编辑物料] [更多▾] [跳转→]
+ * 主按钮直接点击=批量领取；鼠标悬停出现全部批量动作菜单，点菜单项执行对应动作。
+ */
 export const PurchaseActionBar: React.FC<PurchaseActionBarProps> = ({
   receive,
   batchReturn,
@@ -86,68 +96,56 @@ export const PurchaseActionBar: React.FC<PurchaseActionBarProps> = ({
   moreItems,
   linkAction,
   size = 'small',
-}) => (
-  <Space wrap size={8}>
-    {receive && (
-      <Button
-        type="primary"
-        size={size}
-        disabled={receive.disabled}
-        loading={receive.loading}
-        title={receive.title}
-        onClick={receive.onClick}
-      >
-        {PURCHASE_ACTION_LABELS.batchReceive}
-      </Button>
-    )}
-    {batchReturn && (
-      <Button
-        size={size}
-        disabled={batchReturn.disabled}
-        loading={batchReturn.loading}
-        title={batchReturn.title}
-        onClick={batchReturn.onClick}
-      >
-        {PURCHASE_ACTION_LABELS.batchReturn}
-      </Button>
-    )}
-    {confirmComplete && (
-      <Button
-        size={size}
-        disabled={confirmComplete.disabled}
-        loading={confirmComplete.loading}
-        title={confirmComplete.title}
-        onClick={confirmComplete.onClick}
-      >
-        {PURCHASE_ACTION_LABELS.confirmComplete}
-      </Button>
-    )}
-    {edit && (
-      <Button
-        size={size}
-        disabled={edit.disabled}
-        loading={edit.loading}
-        title={edit.title}
-        onClick={edit.onClick}
-      >
-        {PURCHASE_ACTION_LABELS.editMaterial}
-      </Button>
-    )}
-    {extraTags}
-    {moreItems && moreItems.length > 0 && (
-      <Dropdown menu={{ items: moreItems }} trigger={['hover']}>
-        <Button size={size}>
-          {PURCHASE_ACTION_LABELS.more} <DownOutlined />
+}) => {
+  const batchMenuItems: MenuProps['items'] = [
+    ...(receive ? [{ key: 'receive', label: PURCHASE_ACTION_LABELS.batchReceive, disabled: receive.disabled || receive.loading, onClick: receive.onClick }] : []),
+    ...(batchReturn ? [{ key: 'batch-return', label: PURCHASE_ACTION_LABELS.batchReturn, disabled: batchReturn.disabled || batchReturn.loading, onClick: batchReturn.onClick }] : []),
+    ...(confirmComplete ? [{ key: 'confirm-complete', label: PURCHASE_ACTION_LABELS.confirmComplete, disabled: confirmComplete.disabled || confirmComplete.loading, onClick: confirmComplete.onClick }] : []),
+  ];
+
+  return (
+    <Space wrap size={8}>
+      {batchMenuItems.length > 0 && receive && (
+        <Dropdown menu={{ items: batchMenuItems }} trigger={['hover']}>
+          <Button
+            type="primary"
+            size={size}
+            disabled={receive.disabled}
+            loading={receive.loading}
+            title={receive.title}
+            onClick={receive.onClick}
+          >
+            {PURCHASE_ACTION_LABELS.batchReceive} <DownOutlined />
+          </Button>
+        </Dropdown>
+      )}
+      {edit && (
+        <Button
+          size={size}
+          disabled={edit.disabled}
+          loading={edit.loading}
+          title={edit.title}
+          onClick={edit.onClick}
+        >
+          {PURCHASE_ACTION_LABELS.editMaterial}
         </Button>
-      </Dropdown>
-    )}
-    {linkAction && (
-      <Button type="link" size={size} style={{ padding: 0 }} onClick={linkAction.onClick}>
-        {linkAction.label} →
-      </Button>
-    )}
-  </Space>
-);
+      )}
+      {extraTags}
+      {moreItems && moreItems.length > 0 && (
+        <Dropdown menu={{ items: moreItems }} trigger={['hover']}>
+          <Button size={size}>
+            {PURCHASE_ACTION_LABELS.more} <DownOutlined />
+          </Button>
+        </Dropdown>
+      )}
+      {linkAction && (
+        <Button type="link" size={size} style={{ padding: 0 }} onClick={linkAction.onClick}>
+          {linkAction.label} →
+        </Button>
+      )}
+    </Space>
+  );
+};
 
 interface PurchaseEditActionsProps {
   onAdd?: () => void;

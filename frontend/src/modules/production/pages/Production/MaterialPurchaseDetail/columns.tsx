@@ -273,7 +273,7 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
       },
     },
     {
-      title: '操作', key: 'action', width: 260, fixed: 'right' as const,
+      title: '操作', key: 'action', width: 120, fixed: 'right' as const,
       render: (_: unknown, record: MaterialPurchase) => {
         const status = String(record.status || '').toLowerCase();
         const isPending = status === MATERIAL_PURCHASE_STATUS.PENDING;
@@ -293,7 +293,6 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
 
         return (
           <RowActions
-            maxInline={2}
             actions={[
               ...(editing ? [] : [
                 { key: 'edit', label: '编辑', title: rowEditLockTitle || '编辑采购信息', onClick: () => handleStartEdit(), disabled: isCancelled || rowEditLocked },
@@ -307,13 +306,16 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
                 const rowTitle = isReturnConfirmed ? '已回料确认，如需重做请先退回' : (rowMissing.length > 0 ? `该行缺少：${rowMissing.join('、')}，请先编辑补全` : (isPending ? '领取采购并登记到货数量' : '登记追加到货数量'));
                 return [{ key: 'receive', label: isPending ? (rowMissing.length > 0 ? `领取（缺${rowMissing.join('、')}）` : '领取并到货') : '追加到货', title: rowTitle, onClick: () => openReceive(record), primary: isPending, disabled: rowDisabled }];
               })() : []),
-              ...(isPending ? [{ key: 'inbound', label: '登记到货', title: '直接登记到货数量', onClick: () => openInbound(record) }] : []),
+              // D-360b 状态机收紧：未领取(PENDING)不允许登记到货——先「领取并到货」，追加到货在领取后进行
+              ...((isReceived || isPartial) && !isReturnConfirmed ? [{ key: 'inbound', label: '追加到货', title: '登记追加到货数量并入库', onClick: () => openInbound(record) }] : []),
               // D-122：已回料确认的行置灰（与批量操作/列表页/大货 Drawer 同一判定），如需重做先点「退回」
               ...(!isPending && !isCancelled ? [{ key: 'return-confirm', label: '回料确认', title: isReturnConfirmed ? '已回料确认，如需重做请先退回' : '确认物料已回料到仓库', disabled: isReturnConfirmed, onClick: () => handleReturnConfirm(record) }] : []),
               ...(isReturnConfirmed ? [{ key: 'return-reset', label: '退回', title: '退回已确认的回料', onClick: () => handleReturnReset(record), danger: true }] : []),
               ...(!isPending && !isCompleted && !isCancelled && !isReturnConfirmed ? [{ key: 'cancel-receive', label: '撤回领取', title: '撤回已领取的采购，恢复为待处理', onClick: () => handleCancelReceive(record), danger: true }] : []),
-              // D-117：已取消的采购不可再登记品质异常（终态行按钮置灰）
-              { key: 'quality-issue', label: '品质异常', title: isCancelled ? '该采购已取消，不可登记品质异常' : '登记物料品质问题', disabled: isCancelled, onClick: () => { setQualityIssueRecord(record); setQualityIssueVisible(true); } },
+              // D-360b 状态机收紧：品质异常仅在领取后（已领取/部分到货/已完成）可登记
+              ...((isReceived || isPartial || isCompleted) && !isReturnConfirmed ? [
+                { key: 'quality-issue', label: '品质异常', title: '登记物料品质问题', onClick: () => { setQualityIssueRecord(record); setQualityIssueVisible(true); } },
+              ] : []),
               // D-272+：大货/样衣采购统一支持「出库领取」——只要仓库有库存（做过入库）就显示。
               // 直采直用（登记到货但从未入库）的采购不走仓库流程，
               // 显示按钮只会让用户误点 → 后端 calcAvailableStock=0 → 400 仓库库存不足。

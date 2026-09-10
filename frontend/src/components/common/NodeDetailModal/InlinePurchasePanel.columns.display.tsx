@@ -1,7 +1,8 @@
 import React from 'react';
-import { Button, Popconfirm, Space, Tag } from 'antd';
+import { Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
+import RowActions, { type RowAction } from '@/components/common/RowActions';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { formatMoney } from '@/utils/format';
@@ -83,7 +84,11 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
       render: (v: unknown, r: MaterialPurchase) => {
         const qty = Number(v ?? 0);
         const purchased = Number(r.purchaseQuantity ?? 0);
-        const canReceive = purchased > qty;
+        // D-360b 状态机收紧：仅已领取（已领取/部分到货）且未回料确认的行可点击追加到货
+        const st = normalizeStatus(r.status);
+        const canReceive = purchased > qty
+          && (st === MATERIAL_PURCHASE_STATUS.RECEIVED || st === MATERIAL_PURCHASE_STATUS.PARTIAL)
+          && Number(r?.returnConfirmed || 0) !== 1;
         return (
           <span
             style={{
@@ -91,7 +96,7 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
               cursor: canReceive ? 'pointer' : undefined,
               textDecoration: canReceive ? 'underline' : undefined,
             }}
-            title={canReceive ? '点击到货入库' : undefined}
+            title={canReceive ? '点击追加到货' : undefined}
             onClick={() => { if (canReceive) handleReceive(r); }}
           >
             {formatMaterialQuantity(v)}
@@ -197,92 +202,63 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
     {
       title: '操作',
       key: 'action',
-      width: 220,
+      width: 120,
       render: (_: unknown, record: MaterialPurchase) => {
         const status = normalizeStatus(record.status);
         const stock = stockMap[String(record.id)];
         const hasStock = stock != null && stock > 0;
         const isWarehousePending = status === MATERIAL_PURCHASE_STATUS.WAREHOUSE_PENDING;
+        const isPending = status === MATERIAL_PURCHASE_STATUS.PENDING;
+        const isReceived = status === MATERIAL_PURCHASE_STATUS.RECEIVED;
+        const isPartial = status === MATERIAL_PURCHASE_STATUS.PARTIAL;
+        const isCompleted = status === MATERIAL_PURCHASE_STATUS.COMPLETED;
+        const isCancelled = status === MATERIAL_PURCHASE_STATUS.CANCELLED;
+        const isReturnConfirmed = Number(record?.returnConfirmed || 0) === 1;
         // 行级完整性：只禁用本体信息缺失的行（供应商缺失不禁用）
         const rowMissing = getPurchaseMissingFields(record);
-        return (
-          <Space size={4}>
-            {isWarehousePending ? (
-              <Tag color="blue">待仓库出库</Tag>
-            ) : (
-              <Button
-                type="link"
-                size="small"
-                disabled={status !== MATERIAL_PURCHASE_STATUS.PENDING || (rowMissing.length > 0 && !hasStock)}
-                onClick={() => {
-                  if (hasStock) {
-                    const safeStock = Number.isFinite(stock) ? Math.floor(stock as number) : 0;
-                    const remaining = Math.max(0, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
-                    const requiredQty = remaining > 0
-                      ? Math.floor(remaining)
-                      : (Number.isFinite(Number(record.purchaseQuantity)) && Number(record.purchaseQuantity) > 0
-                          ? Math.floor(Number(record.purchaseQuantity))
-                          : safeStock);
-                    const pickQty = Math.min(safeStock, requiredQty);
-                    if (pickQty > 0) {
-                      handleWarehousePick(record, pickQty);
-                    }
-                  } else {
-                    handleReceive(record);
-                  }
-                }}
-              >
-                {hasStock ? '出库领取' : (rowMissing.length > 0 ? `领取（缺${rowMissing.join('、')}）` : '领取')}
-              </Button>
-            )}
-            {/* 到货入库按钮：将物料入库到仓库库存 */}
-            {status === MATERIAL_PURCHASE_STATUS.PENDING && (
-              <Button
-                type="link"
-                size="small"
-                onClick={() => handleInbound(record)}
-              >
-                登记到货
-              </Button>
-            )}
-            <Button
-              type="link"
-              size="small"
-              disabled={!(status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED)}
-              onClick={() => handleQualityIssue(record)}
-            >
-              品质异常
-            </Button>
-            <Button
-              type="link"
-              size="small"
-              disabled={!(status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED)}
-              onClick={() => handleConfirmReturn(record)}
-            >
-              {Number(record?.returnConfirmed || 0) === 1 ? '追加回料' : '回料确认'}
-            </Button>
-            {(Number(record?.returnConfirmed || 0) === 1 || status === MATERIAL_PURCHASE_STATUS.COMPLETED) && (
-              <Button
-                type="link"
-                size="small"
-                onClick={() => handleReturnReset(record)}
-              >
-                退回
-              </Button>
-            )}
-            {status !== MATERIAL_PURCHASE_STATUS.PENDING && status !== MATERIAL_PURCHASE_STATUS.COMPLETED && status !== MATERIAL_PURCHASE_STATUS.CANCELLED && Number(record?.returnConfirmed || 0) !== 1 && (
-              <Popconfirm title="确定撤回领取吗？" onConfirm={() => handleCancelReceive(record)} okText="确定" cancelText="取消">
-                <Button
-                  type="link"
-                  size="small"
-                  danger
-                >
-                  撤回领取
-                </Button>
-              </Popconfirm>
-            )}
-          </Space>
-        );
+        const isPostReceive = isReceived || isPartial || isCompleted;
+
+        const actions: RowAction[] = [
+          ...(isWarehousePending ? [{ key: 'warehouse-pending', label: '待仓库出库', title: '等待仓库出库', disabled: true } as RowAction] : []),
+          ...(!isWarehousePending && isPending ? [{
+            key: 'receive',
+            label: hasStock ? '出库领取' : (rowMissing.length > 0 ? `领取（缺${rowMissing.join('、')}）` : '领取'),
+            title: hasStock ? '从仓库库存出库领取' : (rowMissing.length > 0 ? `该行缺少：${rowMissing.join('、')}，请先编辑补全` : '领取并登记到货数量'),
+            disabled: rowMissing.length > 0 && !hasStock,
+            primary: true,
+            onClick: () => {
+              if (hasStock) {
+                const safeStock = Number.isFinite(stock) ? Math.floor(stock as number) : 0;
+                const remaining = Math.max(0, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
+                const requiredQty = remaining > 0
+                  ? Math.floor(remaining)
+                  : (Number.isFinite(Number(record.purchaseQuantity)) && Number(record.purchaseQuantity) > 0
+                      ? Math.floor(Number(record.purchaseQuantity))
+                      : safeStock);
+                const pickQty = Math.min(safeStock, requiredQty);
+                if (pickQty > 0) {
+                  handleWarehousePick(record, pickQty);
+                }
+              } else {
+                handleReceive(record);
+              }
+            },
+          }] : []),
+          // D-360b 状态机收紧：登记(追加)到货仅在领取后可用，未领取不允许到货登记
+          ...((isReceived || isPartial) && !isReturnConfirmed ? [{ key: 'inbound', label: '追加到货', title: '登记追加到货数量并入库', onClick: () => handleInbound(record) }] : []),
+          ...(!isPending && !isCancelled ? [{
+            key: 'return-confirm',
+            label: isReturnConfirmed ? '追加回料' : '回料确认',
+            title: isReturnConfirmed ? '已回料确认，可追加回料' : '确认物料已回料到仓库',
+            disabled: !isPostReceive,
+            onClick: () => handleConfirmReturn(record),
+          }] : []),
+          ...(isReturnConfirmed ? [{ key: 'return-reset', label: '退回', title: '退回已确认的回料', danger: true, onClick: () => handleReturnReset(record) }] : []),
+          ...(!isPending && !isCompleted && !isCancelled && !isReturnConfirmed ? [{ key: 'cancel-receive', label: '撤回领取', title: '撤回已领取的采购，恢复为待处理', danger: true, onClick: () => handleCancelReceive(record) }] : []),
+          // D-360b 状态机收紧：品质异常仅在领取后可登记
+          ...(isPostReceive && !isReturnConfirmed ? [{ key: 'quality-issue', label: '品质异常', title: '登记物料品质问题', onClick: () => handleQualityIssue(record) }] : []),
+        ];
+        return <RowActions actions={actions} />;
       },
     },
   ];
