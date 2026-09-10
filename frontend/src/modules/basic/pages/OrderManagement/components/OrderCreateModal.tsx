@@ -120,7 +120,7 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
               paddingLeft: isMobile ? 0 : 20,
             }}
           >
-            <Row gutter={16} style={{ marginBottom: 12 }}>
+            <Row gutter={[16, 12]}>
               <Col xs={24} sm={12}>
                 <div style={{ marginBottom: 4, fontWeight: 600 }}>订单号 <span style={{ color: 'var(--color-danger)' }}>*</span></div>
                 <Form.Item name="orderNo" rules={[{ required: true, message: '请输入订单号' }]} style={{ marginBottom: 0 }}>
@@ -143,7 +143,7 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
               </Col>
             </Row>
 
-            <Row gutter={12} style={{ marginBottom: 12 }}>
+            <Row gutter={[16, 12]}>
               <Col xs={24} sm={8}>
                 <InlineField label={<>下单时间 <span style={{ color: 'var(--color-danger)' }}>*</span></>}>
                   <Form.Item name="plannedStartDate" rules={[{ required: true, message: '请选择下单时间' }]} style={{ marginBottom: 0 }}>
@@ -185,7 +185,7 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
               </Col>
             </Row>
 
-            <Row gutter={12} style={{ marginBottom: 12 }}>
+            <Row gutter={[16, 12]}>
               <Col xs={24} sm={8}>
                 <InlineField label="客户">
                   <Form.Item name="company" style={{ marginBottom: 0 }}>
@@ -223,7 +223,7 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
                 </InlineField>
               </Col>
             </Row>
-            <Row gutter={12} style={{ marginBottom: 12 }}>
+            <Row gutter={[16, 12]}>
               <Col xs={24} sm={8}>
                 <InlineField label="下单类型">
                   <Form.Item name="orderBizType" style={{ marginBottom: 0 }}>
