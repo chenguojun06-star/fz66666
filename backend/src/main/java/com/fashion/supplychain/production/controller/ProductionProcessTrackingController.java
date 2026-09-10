@@ -23,10 +23,20 @@ public class ProductionProcessTrackingController {
     @Autowired
     private ProductionProcessTrackingOrchestrator trackingOrchestrator;
 
+    // D-359 操作人统一显示姓名（历史链路写入的是登录账号，读取时统一解析）
+    @Autowired
+    private com.fashion.supplychain.common.UserNameResolver userNameResolver;
+
     @Operation(summary = "查询订单的工序跟踪记录", description = "PC端弹窗显示，含SKU、颜色、工序、扫码状态")
     @GetMapping("/order/{productionOrderId}")
     public Result<List<ProductionProcessTracking>> getByOrderId(@PathVariable String productionOrderId) {
         List<ProductionProcessTracking> records = trackingOrchestrator.getTrackingRecords(productionOrderId);
+        // D-359 operatorId 优先、账号兜底 → 统一解析为姓名，新老数据同时生效
+        userNameResolver.normalizeOperatorNames(
+                records,
+                ProductionProcessTracking::getOperatorId,
+                ProductionProcessTracking::getOperatorName,
+                ProductionProcessTracking::setOperatorName);
         return Result.success(records);
     }
 
