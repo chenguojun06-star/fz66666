@@ -131,7 +131,8 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
             ],
           }}
         >
-          <Button disabled={detailLoading || !detailPurchases.length || detailPurchases.some(p => Number(p?.returnConfirmed || 0) === 1)}>
+          {/* D-333：打印/下载是只读操作，回料确认后仍应可用——只在没有采购数据时禁用 */}
+          <Button disabled={detailLoading || !detailPurchases.length}>
             采购单生成
           </Button>
         </Dropdown>
@@ -213,6 +214,8 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
             onQualityIssue={onQualityIssue}
             onReceiveAll={onReceiveAll}
             onBatchReturn={onBatchReturn}
+            onConfirmComplete={onConfirmComplete}
+            confirmCompleteSubmitting={confirmCompleteSubmitting}
             isSamplePurchase={isSamplePurchase}
             isOrderFrozenForRecord={isOrderFrozenForRecord}
             onWarehousePick={onWarehousePick}

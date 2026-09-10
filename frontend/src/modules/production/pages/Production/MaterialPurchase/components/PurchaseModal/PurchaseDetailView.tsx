@@ -71,8 +71,8 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   isOrderFrozenForRecord,
   onWarehousePick,
   onCancelReceive,
-  onConfirmComplete: _onConfirmComplete,
-  confirmCompleteSubmitting: _confirmCompleteSubmitting,
+  onConfirmComplete,
+  confirmCompleteSubmitting,
   onRefresh,
 }) => {
   const data = usePurchaseDetailData({
@@ -105,6 +105,8 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
       || status === MATERIAL_PURCHASE_STATUS.PARTIAL
       || status === MATERIAL_PURCHASE_STATUS.COMPLETED);
   });
+  // D-333：批量"确认回料完成"与样衣侧（MaterialPurchaseDetail）同口径——存在待确认行即可用
+  const hasAwaitingConfirm = detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
   const hasReturnConfirmed = detailPurchases.some(p => Number(p?.returnConfirmed || 0) === 1);
 
   const returnablePurchases = detailPurchases.filter((p) => {
@@ -181,10 +183,16 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                         disabled: detailFrozen || !hasReceiveStatusForBatch,
                         onClick: onBatchReturn,
                       },
+                      {
+                        key: 'confirm-complete',
+                        label: confirmCompleteSubmitting ? '确认回料完成（处理中…）' : (hasAwaitingConfirm ? '确认回料完成' : '确认回料完成（无待完成项）'),
+                        disabled: confirmCompleteSubmitting || !hasAwaitingConfirm,
+                        onClick: onConfirmComplete,
+                      },
                     ],
                   }}
                 >
-                  <Button disabled={detailFrozen || (!hasPendingForReceiveAll && !hasReceiveStatusForBatch)}>
+                  <Button disabled={detailFrozen || (!hasPendingForReceiveAll && !hasReceiveStatusForBatch && !hasAwaitingConfirm)}>
                     批量操作 <DownOutlined />
                   </Button>
                 </Dropdown>
