@@ -3,7 +3,7 @@ import { Button, Input, Space, Select, App, Popover, Dropdown, Tag, Tooltip } fr
 import { SettingOutlined } from '@ant-design/icons';
 import TabToolbar from '@/components/common/TabToolbar';
 import AttributeGroupLibraryModal from '@/components/common/AttributeGroupLibraryModal';
-import { LoadingOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
+import { CopyOutlined, LoadingOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
 import { toNumberSafe, sortSizeNames } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import StyleStageControlBar from './StyleStageControlBar';
@@ -12,6 +12,7 @@ import { StyleProcessTabProps, StyleProcessWithSizePrice, STAGE_ORDER, computeSo
 import { useStyleProcessData } from './hooks/useStyleProcessData';
 import { useStyleProcessActions } from './hooks/useStyleProcessActions';
 import { useStyleProcessAi } from './hooks/useStyleProcessAi';
+import CopyStyleProcessDrawer from './styleProcess/CopyStyleProcessDrawer';
 
 const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
   styleId, readOnly, hidePrice = false,
@@ -23,6 +24,8 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
   const [deletedIds, setDeletedIds] = useState<Array<string | number>>([]);
   const snapshotRef = useRef<StyleProcessWithSizePrice[] | null>(null);
   const [processTemplateKey, setProcessTemplateKey] = useState<string | undefined>(undefined);
+  const [copyProcessOpen, setCopyProcessOpen] = useState(false);
+
   // D-264：导入方式（覆盖/追加）收进"导入模板"下拉按钮，不再单独占一个选择器
   // D-210：基础属性库——码数成组选择（与样衣开发/价格模板同组件）
   const [attrLibOpen, setAttrLibOpen] = useState(false);
@@ -68,6 +71,39 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
       editHintTimersRef.current.push(t);
     }
   }, [readOnly, editMode, processStartTime, data, message]);
+  // D-339 拷贝其他款工序：勾选行追加为新行（编码=现有最大编码+1 顺延，sortOrder 接尾），内容不做控制
+  const importCopiedProcessRows = useCallback((rows: StyleProcessWithSizePrice[]) => {
+    if (!rows?.length) return;
+    if (!processStartTime) { message.warning('请先点击上方「开始工序单价」按钮再进行编辑'); return; }
+    setData((prev) => {
+      const next = [...prev];
+      let maxSort = next.length ? Math.max(...next.map((d) => toNumberSafe(d.sortOrder))) : 0;
+      let maxCode = next.reduce((acc, d) => {
+        const m = String(d.processCode || '').match(/\d+/);
+        return Math.max(acc, m ? Number(m[0]) : 0);
+      }, 0);
+      rows.forEach((r) => {
+        maxCode += 1;
+        maxSort += 1;
+        let autoCode = String(maxCode).padStart(2, '0');
+        while (next.some((d) => String(d.processCode || '').trim() === autoCode)) {
+          maxCode += 1;
+          autoCode = String(maxCode).padStart(2, '0');
+        }
+        next.push({
+          ...r,
+          id: -Date.now() - Math.floor(Math.random() * 10000) - next.length,
+          styleId,
+          processCode: autoCode,
+          sortOrder: maxSort,
+        } as StyleProcessWithSizePrice);
+      });
+      return next;
+    });
+    if (!editMode) enterEdit();
+    message.success(`已拷贝 ${rows.length} 道工序，编码自动顺延，请检查后保存`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [processStartTime, setData, styleId, editMode, enterEdit, message]);
 
   const { saving, exitEdit, handleAdd, handleRemoveSize, updateSizePrice, applyProcessTemplate, handleDelete, updateField, saveAll } = useStyleProcessActions({ styleId, readOnly: readOnly ?? false, processStartTime, data, setData, sizes, setSizes, fetchProcess, editMode, setEditMode, deletedIds, setDeletedIds, snapshotRef, onRefresh: onRefresh ?? (() => {}), enterEdit });
 
@@ -166,26 +202,13 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
         }
         center={
           <>
-          <Select allowClear style={{ width: 180 }} placeholder="导入工艺模板" value={processTemplateKey} onChange={(v) => setProcessTemplateKey(v)}
-            options={processTemplates.map((t) => ({ value: String(t.id || ''), label: t.sourceStyleNo ? `${t.templateName}（${t.sourceStyleNo}）` : t.templateName }))}
-            disabled={Boolean(readOnly) || loading || saving || templateLoading}
-          />
-          {/* D-264：覆盖/追加本就是一个动作的两个选项，收进"导入模板"下拉（悬停出现，点击即导入） */}
-          <Dropdown
-            disabled={Boolean(readOnly) || loading || saving || templateLoading || !processStartTime}
-            menu={{
-              items: [
-                { key: 'overwrite', label: '覆盖现有（先清空本款工序再导入）' },
-                { key: 'append', label: '追加新增（保留现有，只补没有的）' },
-              ],
-              onClick: ({ key }) => {
-                if (!processTemplateKey) { message.error('请选择模板'); return; }
-                applyProcessTemplate(processTemplateKey, key as 'overwrite' | 'append');
-              },
-            }}
+          <Button
+            icon={<CopyOutlined />}
+            disabled={Boolean(readOnly) || !processStartTime || loading || saving}
+            onClick={() => setCopyProcessOpen(true)}
           >
-            <Button disabled={Boolean(readOnly) || loading || saving || templateLoading || !processStartTime}>导入模板 <DownOutlined /></Button>
-          </Dropdown>
+            拷贝其他款工序
+          </Button>
           <Popover trigger="click" placement="bottomRight" open={aiOpen} onOpenChange={(v) => { if (!aiLoading) setAiOpen(v); }}
             content={
               <div style={{ width: 260 }}>
@@ -253,6 +276,15 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
         }
       >
       </TabToolbar>
+      <CopyStyleProcessDrawer
+        open={copyProcessOpen}
+        onClose={() => setCopyProcessOpen(false)}
+        currentStyleId={styleId}
+        onConfirm={async (rows) => {
+          importCopiedProcessRows(rows as StyleProcessWithSizePrice[]);
+          setCopyProcessOpen(false);
+        }}
+      />
       <AttributeGroupLibraryModal
         open={attrLibOpen}
         onClose={() => setAttrLibOpen(false)}
