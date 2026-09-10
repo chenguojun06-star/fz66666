@@ -1,7 +1,23 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-10（新增 D-360 采购动作全量统一：五入口一套词汇/布局/逻辑，PurchaseActionBar 共享组件收口）
+> 最后更新：2026-09-10（新增 D-361 AI 全站统一 deepseek-v4-flash 多模态单模型；D-360 采购动作全量统一）
+
+---
+
+## D-361：AI 全站统一 deepseek-v4-flash 多模态单模型（2026-09-10）
+
+用户拍板"所有 AI 全部接入 deepseek-flash，不要别的"，并指出该模型本身多模态（图片识别不必再单独配视觉模型）。
+
+**下线清单**：agnes/agnes2 视觉兜底（含 VisionModelConfig 兜底链）、qwen-plus 文本兜底、deepseek-v4-pro reasoning 档、deepseek-v4-flash-vision-exp 视觉专用变体、GLM 三档模型分级（economy glm-4-flash / standard glm-4 / premium glm-4-plus）。Agnes embedding 端点、AGNES_API_KEY 环境变量一并移除。
+
+**关键发现（真凶）**：cloudbaserc.json 云端环境变量把 `AI_MODEL_VISION` 钉死在 `agnes-2.5-flash`——即 D-238 记录的频繁 401 熔断模型，线上图片识别（款式档案/BOM识别/单据识别/难度评估/以图搜款）一直被它劫持，代码里的 vision-exp 默认值从未生效。
+
+**统一后**：唯一模型 `deepseek-v4-flash`（多模态文本+图片）；模型分级（fast/reasoning/vision/default、ModelTier 三档）机制保留但全部指向同一模型，分级只剩 max-tokens 差异；embedding 走 DeepSeek `/v1/embeddings`（text-embedding-v2，非生成模型无多模态替代，保留）；401 熔断器、关键词兜底、VISION_MODEL_N 扩展位保留。
+
+**多模态优化**：Qdrant 图片向量链重写为「主模型视觉描述 + DeepSeek Embedding → URL 文本 Embedding → 伪向量」——旧链路视觉描述步骤要求 AGNES key（线上必然失败），新链路一个 key 全通，以图搜款/相似款检索质量实际提升；健康检查 agnes 组件改 vision 组件；诊断接口/成本表/工具报错文案同步。
+
+**理由**：五套模型三套 key 的维护成本高于单一模型溢价；401 熔断家族问题（D-238/D-261）根源是多供应商 key 管理，归一后自然消失；多模态单模型让"图片理解"与"对话"共享上下文缓存（D-318 缓存观测直接受益）。
 
 ---
 

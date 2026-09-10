@@ -35,7 +35,7 @@ import org.springframework.context.annotation.Lazy;
  * <p>通过 Qdrant REST API v1.x 实现向量存储与相似检索。
  * 每个租户使用同一个 collection，通过 tenant_id payload 过滤隔离。
  *
- * <p>向量生成优先级：① Agnes 视觉分析 + Agnes/DeepSeek Embedding（图片→文字描述→向量，推荐）
+ * <p>向量生成优先级：① 主模型(deepseek-v4-flash 多模态)视觉分析 + DeepSeek Embedding（图片→文字描述→向量，推荐）
  *                   ② DeepSeek Embedding API（text-embedding-v2，用图片URL文本生成向量）
  *                   ③ 关键词哈希伪向量（pseudoEmbedding，128维，无需 API Key）
  *
@@ -47,9 +47,6 @@ import org.springframework.context.annotation.Lazy;
  *     collection: fashion_memory
  *     vector-size: 1024
  * ai:
- *   agnes:
- *     api-key: ${AGNES_API_KEY:}   # Agnes AI 视觉+Embedding
- *     model: agnes-2.5-flash
  *   deepseek:
  *     api-key: sk-xxx
  *     embedding-model: text-embedding-v2
@@ -103,15 +100,6 @@ public class QdrantService {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Value("${ai.agnes.api-key:}")
-    private String agnesApiKey;
-
-    @Value("${ai.agnes.api-url:https://apihub.agnes-ai.com/v1/chat/completions}")
-    private String agnesApiUrl;
-
-    @Value("${ai.agnes.model:agnes-2.5-flash}")
-    private String agnesModel;
-
     @Autowired
     private com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator inferenceOrchestrator;
 
@@ -121,7 +109,6 @@ public class QdrantService {
     private static final long EMBEDDING_CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(30);
     private static final int EMBEDDING_CACHE_MAX = 500;
     private static final String PROVIDER_DEEPSEEK = "deepseek";
-    private static final String PROVIDER_AGNES = "agnes";
 
     private final AtomicBoolean collectionVerified = new AtomicBoolean(false);
     private final AtomicBoolean styleImageCollectionVerified = new AtomicBoolean(false);
@@ -703,7 +690,7 @@ public class QdrantService {
     }
 
     /**
-     * 生成语义向量：优先 Voyage AI → DeepSeek → 伪向量（逐级降级）。
+     * 生成语义向量：DeepSeek Embedding → 伪向量（降级）。
      * F5: 空文本返回 null（零向量的余弦相似度未定义，会产生无意义匹配结果）。
      * @return 向量数组；null 表示输入为空无法生成有效向量
      */
@@ -716,18 +703,6 @@ public class QdrantService {
         EmbeddingCacheEntry cached = embeddingCache.get(cacheKey);
         if (cached != null && !cached.isExpired()) {
             return cached.vector;
-        }
-        if (PROVIDER_AGNES.equals(activeProvider)) {
-            try {
-                float[] vector = tryAgnesEmbedding(text);
-                if (vector != null) {
-                    embeddingCache.put(cacheKey, new EmbeddingCacheEntry(vector));
-                    evictCacheIfNeeded();
-                    return vector;
-                }
-            } catch (Exception e) {
-                log.warn("[Agnes] Embedding 调用失败，降级到 DeepSeek: {}", e.getMessage());
-            }
         }
         if (PROVIDER_DEEPSEEK.equals(activeProvider)) {
             try {
@@ -743,16 +718,11 @@ public class QdrantService {
     }
 
     private String resolveActiveProvider() {
-        if (agnesApiKey != null && !agnesApiKey.isEmpty()) {
-            log.debug("[Qdrant] Embedding provider=AGNES (key长度={})", agnesApiKey.length());
-            return PROVIDER_AGNES;
-        }
         if (deepseekApiKey != null && !deepseekApiKey.isEmpty()) {
             log.debug("[Qdrant] Embedding provider=DEEPSEEK (key长度={})", deepseekApiKey.length());
             return PROVIDER_DEEPSEEK;
         }
-        log.warn("[Qdrant] Embedding provider=PSEUDO (agnesApiKey={}, deepseekApiKey={})",
-                agnesApiKey == null ? "null" : (agnesApiKey.isEmpty() ? "empty" : "set"),
+        log.warn("[Qdrant] Embedding provider=PSEUDO (deepseekApiKey={})",
                 deepseekApiKey == null ? "null" : (deepseekApiKey.isEmpty() ? "empty" : "set"));
         return "pseudo";
     }
@@ -799,24 +769,19 @@ public class QdrantService {
         throw new RuntimeException("Embedding API returned unexpected response");
     }
 
-    /** 获取当前使用的向量维度（agnes/deepseek 均为 1024 维，伪向量 128 维） */
+    /** 获取当前使用的向量维度（DeepSeek 为 1024 维，伪向量 128 维） */
     private int getVectorDim() {
-        boolean hasRealKey = (agnesApiKey != null && !agnesApiKey.isEmpty())
-                || (deepseekApiKey != null && !deepseekApiKey.isEmpty());
+        boolean hasRealKey = deepseekApiKey != null && !deepseekApiKey.isEmpty();
         return hasRealKey ? VECTOR_DIM_REAL : VECTOR_DIM_PSEUDO;
     }
 
     /**
-     * 公开诊断方法 — 返回 Agnes/DeepSeek 配置状态，用于 /visual/diag 端点排查问题
+     * 公开诊断方法 — 返回 DeepSeek 向量配置状态，用于 /visual/diag 端点排查问题
      */
     public Map<String, Object> getVectorDimInfo() {
         Map<String, Object> info = new java.util.LinkedHashMap<>();
-        boolean hasAgnes = agnesApiKey != null && !agnesApiKey.isEmpty();
         boolean hasDeepSeek = deepseekApiKey != null && !deepseekApiKey.isEmpty();
         boolean hasInferenceOrch = inferenceOrchestrator != null;
-        info.put("hasAgnesKey", hasAgnes);
-        info.put("agnesModel", agnesModel);
-        info.put("agnesApiUrl", agnesApiUrl);
         info.put("hasDeepSeekKey", hasDeepSeek);
         info.put("deepseekBaseUrl", deepseekBaseUrl);
         info.put("deepseekEmbeddingModel", embeddingModel);
@@ -824,8 +789,8 @@ public class QdrantService {
         info.put("currentVectorDim", getVectorDim());
         info.put("realVectorDim", VECTOR_DIM_REAL);
         info.put("pseudoVectorDim", VECTOR_DIM_PSEUDO);
-        if (hasAgnes && hasInferenceOrch) {
-            info.put("recommendedMode", "agnes_vision_and_embedding (最佳质量)");
+        if (hasDeepSeek && hasInferenceOrch) {
+            info.put("recommendedMode", "vision_describe_and_embedding (最佳质量)");
         } else if (hasDeepSeek) {
             info.put("recommendedMode", "deepseek_text_embedding (基础质量)");
         } else {
@@ -869,11 +834,10 @@ public class QdrantService {
     /**
      * 对款式封面图生成语义向量，用于以图搜款和难度评估。
      *
-     * <p>向量生成优先级（尽量只用 AGNES_API_KEY 一个 Key）：
-     * 1. Agnes 视觉分析 + Agnes Embedding（图片→描述→向量，只需 AGNES_API_KEY）
-     * 2. Agnes 视觉分析 + DeepSeek Embedding（图片→描述→向量，需两个 Key）
-     * 3. DeepSeek 纯文本 Embedding（用图片 URL 文本生成向量，质量一般）
-     * 4. 伪向量（哈希）— 最低质量，仅兜底
+     * <p>向量生成优先级（D-361：全站统一 deepseek-v4-flash 多模态，只需 DEEPSEEK_API_KEY）：
+     * 1. 主模型视觉分析 + DeepSeek Embedding（图片→描述→向量，质量最佳）
+     * 2. DeepSeek 纯文本 Embedding（用图片 URL 文本生成向量，质量一般）
+     * 3. 伪向量（哈希）— 最低质量，仅兜底
      */
     public float[] computeMultimodalEmbedding(String imageUrl) {
         if (!qdrantActive()) return null;
@@ -881,50 +845,38 @@ public class QdrantService {
             throw new IllegalArgumentException("imageUrl 不能为空");
         }
 
-        // ========== 运行时诊断：打印当前配置状态 ==========
-        boolean hasAgnesKey = agnesApiKey != null && !agnesApiKey.isEmpty();
         boolean hasDeepSeekKey = deepseekApiKey != null && !deepseekApiKey.isEmpty();
         boolean hasInferenceOrch = inferenceOrchestrator != null;
-        log.info("[Qdrant] 向量生成启动 imageUrlLen={} hasAgnesKey={} hasDeepSeekKey={} hasInferenceOrch={}",
-                imageUrl.length(), hasAgnesKey, hasDeepSeekKey, hasInferenceOrch);
+        log.info("[Qdrant] 向量生成启动 imageUrlLen={} hasDeepSeekKey={} hasInferenceOrch={}",
+                imageUrl.length(), hasDeepSeekKey, hasInferenceOrch);
 
-        // ========== 第 1 级：Agnes 视觉分析 → 文字描述 → Embedding 向量 ==========
-        if (hasAgnesKey && hasInferenceOrch) {
+        // ========== 第 1 级：主模型（多模态）视觉分析 → 文字描述 → DeepSeek Embedding ==========
+        if (hasInferenceOrch) {
             try {
-                log.info("[Qdrant] 尝试方案1: Agnes视觉描述 + Agnes Embedding (模型={})", agnesModel);
-                String visualDescription = describeImageWithAgnes(imageUrl);
+                log.info("[Qdrant] 尝试方案1: 主模型视觉描述 + DeepSeek Embedding");
+                String visualDescription = describeImageWithVision(imageUrl);
                 if (visualDescription != null && !visualDescription.isBlank()) {
-                    log.info("[Qdrant] Agnes视觉描述成功 descLen={}", visualDescription.length());
-                    // 方案1a: 尝试用 Agnes Embedding
-                    float[] vec = tryAgnesEmbedding(visualDescription);
-                    if (vec != null) {
-                        log.info("[Qdrant] ✓ 方案1成功 Agnes视觉+Agnes Embedding 维度={}", vec.length);
-                        return vec;
-                    }
-                    // 方案1b: Agnes Embedding 不支持，降级到 DeepSeek Embedding
+                    log.info("[Qdrant] 视觉描述成功 descLen={}", visualDescription.length());
                     if (hasDeepSeekKey) {
-                        vec = callEmbeddingApi(visualDescription);
-                        log.info("[Qdrant] ✓ 方案2成功 Agnes视觉+DeepSeek Embedding 维度={}", vec.length);
+                        float[] vec = callEmbeddingApi(visualDescription);
+                        log.info("[Qdrant] ✓ 方案1成功 视觉描述+DeepSeek Embedding 维度={}", vec.length);
                         return vec;
                     }
-                    // 方案1c: 只有 Agnes Key，用 Agnes Embedding 重试一次（兜底特殊路径）
-                    log.warn("[Qdrant] 已获取视觉描述但无可用 Embedding endpoint，继续降级");
+                    log.warn("[Qdrant] 已获取视觉描述但未配置 DeepSeek Key，无法生成向量");
                 } else {
-                    log.warn("[Qdrant] Agnes视觉描述返回空");
+                    log.warn("[Qdrant] 视觉描述返回空");
                 }
             } catch (Exception e) {
-                log.warn("[Qdrant] Agnes视觉+Embedding 失败: {}", e.getMessage());
+                log.warn("[Qdrant] 视觉描述+Embedding 失败: {}", e.getMessage());
             }
-        } else {
-            log.warn("[Qdrant] 跳过 Agnes 链路: hasAgnesKey={} hasInferenceOrch={}", hasAgnesKey, hasInferenceOrch);
         }
 
         // ========== 第 2 级：DeepSeek 纯文本 Embedding（用图片 URL 文本生成向量） ==========
         if (hasDeepSeekKey) {
-            log.info("[Qdrant] 尝试方案3: DeepSeek 文本 Embedding（用 imageUrl 文本）");
+            log.info("[Qdrant] 尝试方案2: DeepSeek 文本 Embedding（用 imageUrl 文本）");
             try {
                 float[] vec = callEmbeddingApi(imageUrl);
-                log.info("[Qdrant] ✓ 方案3成功 DeepSeek 文本 Embedding 维度={}", vec.length);
+                log.info("[Qdrant] ✓ 方案2成功 DeepSeek 文本 Embedding 维度={}", vec.length);
                 return vec;
             } catch (Exception e) {
                 log.warn("[Qdrant] DeepSeek Embedding 失败: {}", e.getMessage());
@@ -933,57 +885,17 @@ public class QdrantService {
 
         // ========== 第 3 级：伪向量兜底 ==========
         log.warn("[Qdrant] Embedding 降级为伪向量（搜索质量降低但不影响功能）" +
-                "当前配置: hasAgnesKey={} hasDeepSeekKey={}。" +
-                "如需高质量向量搜索：1)确认 Agnes /embeddings 端点可用；" +
-                "2)或配置支持 Embedding 的 API（如智谱GLM/通义千问）",
-                hasAgnesKey, hasDeepSeekKey);
+                "当前配置: hasDeepSeekKey={}。" +
+                "如需高质量向量搜索：请配置 DEEPSEEK_API_KEY（Embedding 与视觉描述共用）",
+                hasDeepSeekKey);
         return pseudoEmbedding(imageUrl);
     }
 
     /**
-     * 尝试调用 Agnes 的 /v1/embeddings 端点。
-     * Agnes 声称 OpenAI 兼容，如果支持 embeddings 端点，则只需一个 API Key。
-     * 如果不支持，返回 null，由调用方降级到 DeepSeek。
+     * 用主模型（多模态）对图片生成文字描述，用于后续 Embedding。
+     * 这比直接用图片 URL 做 Embedding 质量高得多，因为模型能理解图片内容。
      */
-    private float[] tryAgnesEmbedding(String text) {
-        try {
-            String agnesBaseUrl = agnesApiUrl.replace("/chat/completions", "");
-            String url = agnesBaseUrl + "/embeddings";
-            ObjectNode body = objectMapper.createObjectNode();
-            body.put("model", agnesModel);
-            body.put("input", text);
-            body.put("encoding_format", "float");
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(agnesApiKey);
-            HttpEntity<String> entity = new HttpEntity<>(body.toString(), headers);
-
-            ResponseEntity<String> resp = restTemplate.postForEntity(url, entity, String.class);
-            if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
-                JsonNode root = objectMapper.readTree(resp.getBody());
-                JsonNode embedding = root.path("data").path(0).path("embedding");
-                if (embedding.isArray() && embedding.size() > 0) {
-                    float[] vec = new float[embedding.size()];
-                    for (int i = 0; i < embedding.size(); i++) {
-                        vec[i] = (float) embedding.get(i).asDouble();
-                    }
-                    log.info("[Qdrant] Agnes Embedding 端点可用！维度={}", vec.length);
-                    return vec;
-                }
-            }
-            log.debug("[Qdrant] Agnes Embedding 端点不可用，降级到 DeepSeek");
-        } catch (Exception e) {
-            log.debug("[Qdrant] Agnes Embedding 端点不可用: {}", e.getMessage());
-        }
-        return null;
-    }
-
-    /**
-     * 用 Agnes 视觉模型对图片生成文字描述，用于后续 Embedding。
-     * 这比直接用图片 URL 做 Embedding 质量高得多，因为 Agnes 能理解图片内容。
-     */
-    private String describeImageWithAgnes(String imageUrl) {
+    private String describeImageWithVision(String imageUrl) {
         try {
             String desc = inferenceOrchestrator.chatWithVision(imageUrl,
                     "请用50字以内简洁描述这件服装的款式特征（领型、袖型、版型、面料质感、装饰工艺），"
@@ -992,7 +904,7 @@ public class QdrantService {
                 return desc.length() > 200 ? desc.substring(0, 200) : desc;
             }
         } catch (Exception e) {
-            log.debug("[Qdrant] Agnes 视觉描述失败: {}", e.getMessage());
+            log.debug("[Qdrant] 视觉描述失败: {}", e.getMessage());
         }
         return null;
     }

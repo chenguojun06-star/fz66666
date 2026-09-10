@@ -15,7 +15,7 @@ import java.util.UUID;
 
 /**
  * 工艺单图片AI识别编排器
- * 上传图片到COS → 调用Agnes视觉模型识别文字 → 返回生产要求文本
+ * 上传图片到COS → 调用视觉模型(deepseek-v4-flash 多模态)识别文字 → 返回生产要求文本
  */
 @Service
 @Slf4j
@@ -34,7 +34,7 @@ public class StyleDocOcrOrchestrator {
         Long tenantId = UserContext.tenantId();
 
         if (!inferenceOrchestrator.isVisionEnabled()) {
-            throw new IllegalStateException("AI视觉识别未启用，请联系管理员配置Agnes视觉模型");
+            throw new IllegalStateException("AI视觉识别未启用，请联系管理员配置 DEEPSEEK_API_KEY（视觉识别与主模型共用）");
         }
 
         String imageUrl = uploadFileToCos(tenantId, file);
@@ -132,7 +132,7 @@ public class StyleDocOcrOrchestrator {
         Long tenantId = UserContext.tenantId();
 
         if (!inferenceOrchestrator.isVisionEnabled()) {
-            throw new IllegalStateException("AI视觉识别未启用，请联系管理员配置Agnes视觉模型");
+            throw new IllegalStateException("AI视觉识别未启用，请联系管理员配置 DEEPSEEK_API_KEY（视觉识别与主模型共用）");
         }
 
         String imageUrl = uploadFileToCos(tenantId, file);
@@ -295,7 +295,7 @@ public class StyleDocOcrOrchestrator {
         Long tenantId = UserContext.tenantId();
 
         if (!inferenceOrchestrator.isVisionEnabled()) {
-            throw new IllegalStateException("AI视觉识别未启用，请联系管理员配置Agnes视觉模型");
+            throw new IllegalStateException("AI视觉识别未启用，请联系管理员配置 DEEPSEEK_API_KEY（视觉识别与主模型共用）");
         }
 
         String imageUrl = uploadFileToCos(tenantId, file);

@@ -86,7 +86,7 @@ public class VisionAnalyzeTool extends AbstractAgentTool {
         }
 
         if (!visionAnalysisService.isAvailable()) {
-            return errorJson("视觉AI未配置（请检查 agnes API 配置）");
+            return errorJson("视觉AI未配置（请检查视觉模型 ai.vision 配置，D-361 起与主模型统一）");
         }
 
         // 检查图片URL格式

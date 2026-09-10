@@ -66,7 +66,7 @@ public class VisionDefectDetectTool extends AbstractAgentTool {
         String contextHint = optionalString(args, "contextHint");
 
         if (!visionAnalysisService.isAvailable()) {
-            return errorJson("视觉AI未配置（AGNES_API_KEY未设置）");
+            return errorJson("视觉AI未配置（DEEPSEEK_API_KEY未设置，视觉识别与主模型共用）");
         }
 
         log.info("[VisionDefectDetect] 开始缺陷检测 imageUrl={}", imageUrl);

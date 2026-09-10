@@ -89,7 +89,7 @@ public class MaterialPurchaseDocOrchestrator {
                 log.info("[PurchaseDocRecognize] Vision识别完成, 结果长度={}", aiRaw.length());
             } else {
                 // 降级：文本模式（LLM 无法真正看图，识别效果有限）
-                log.warn("[PurchaseDocRecognize] Agnes Vision 未配置，降级文本模式（建议配置 AGNES_API_KEY 和视觉模型）");
+                log.warn("[PurchaseDocRecognize] 视觉模型未配置，降级文本模式（建议配置 DEEPSEEK_API_KEY）");
                 var inferResult = inferenceOrchestrator.chat(
                         "purchase-doc-recognize", buildSystemPrompt(), buildUserMessage(imageUrl, orderNo));
                 aiRaw = inferResult.isSuccess() ? inferResult.getContent() : "";

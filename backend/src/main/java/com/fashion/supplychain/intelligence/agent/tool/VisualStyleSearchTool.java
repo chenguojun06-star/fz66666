@@ -43,7 +43,7 @@ public class VisualStyleSearchTool extends AbstractAgentTool {
     @Override
     public AiTool getToolDefinition() {
         Map<String, Object> properties = new LinkedHashMap<>();
-        properties.put("imageUrl", stringProp("服装图片的公网URL地址（必须是Agnes视觉模型可访问的URL）"));
+        properties.put("imageUrl", stringProp("服装图片的公网URL地址（必须是视觉模型可访问的公网URL）"));
         properties.put("topK", intProp("返回最相似的前N个款式，默认5，最大10"));
         return buildToolDef(
                 "以图搜款：根据服装图片搜索系统中视觉相似的历史款式。当用户上传服装图片、询问相似款式、" +

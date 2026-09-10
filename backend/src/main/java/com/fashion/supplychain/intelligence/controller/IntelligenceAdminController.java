@@ -83,7 +83,7 @@ public class IntelligenceAdminController {
 
     /**
      * AI 组件健康状态（红绿灯）。
-     * 返回 DeepSeek/Qdrant/Agnes/LiteLLM/Langfuse 各组件的连通性状态，
+     * 返回 DeepSeek/Qdrant/视觉模型/LiteLLM/Langfuse 各组件的连通性状态，
      * 供前端 AI 驾驶舱展示红绿灯。
      */
     @GetMapping("/ai-health")

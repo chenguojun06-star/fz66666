@@ -39,12 +39,12 @@ public class IntelligenceAiAdvisorController {
     @Value("${app.upload.max-size:5242880}")
     private long uploadMaxSize;
 
-    // 诊断用：Agnes/DeepSeek 配置读取
-    @Value("${ai.agnes.api-key:}")
-    private String agnesApiKey;
+    // 诊断用：视觉模型/DeepSeek 配置读取（D-361：视觉与主模型统一）
+    @Value("${ai.vision.api-key:}")
+    private String visionApiKey;
 
-    @Value("${ai.agnes.model:agnes-2.5-flash}")
-    private String agnesModel;
+    @Value("${ai.vision.model:deepseek-v4-flash}")
+    private String visionModelName;
 
     @Value("${ai.deepseek.api-key:}")
     private String deepseekApiKey;
@@ -348,11 +348,11 @@ public class IntelligenceAiAdvisorController {
         } catch (Exception e) {
             log.warn("[以图搜款] 获取租户上下文失败: {}", e.getMessage());
         }
-        log.info("[以图搜款] 请求 tenantId={} imageUrlLen={} 算法=Agnes识别+MySQL关键词搜索",
+        log.info("[以图搜款] 请求 tenantId={} imageUrlLen={} 算法=视觉模型识别+MySQL关键词搜索",
                 tenantId, imageUrl.length());
 
         try {
-            // Agnes 识别图片 → 提取关键词 → MySQL 关键词搜索
+            // 视觉模型识别图片 → 提取关键词 → MySQL 关键词搜索
             Map<String, Object> result = visualAIOrchestrator.searchSimilarStylesByImage(imageUrl, topK);
             if (result != null && Boolean.FALSE.equals(result.get("success"))) {
                 String err = (String) result.getOrDefault("error", "未知错误");
@@ -405,7 +405,7 @@ public class IntelligenceAiAdvisorController {
     }
 
     /**
-     * 运行时诊断端点 — 排查 Agnes/DeepSeek 配置是否正确注入
+     * 运行时诊断端点 — 排查 视觉模型/DeepSeek 配置是否正确注入
      * 浏览器访问: GET /api/intelligence/visual/diag
      */
     @GetMapping("/visual/diag")
@@ -430,16 +430,16 @@ public class IntelligenceAiAdvisorController {
         diag.put("visualAIOrchReady", visualAIOrchestrator != null);
 
         // Spring 环境变量原始值探测
-        diag.put("agnesKeyConfigured",
-                org.springframework.util.StringUtils.hasText(agnesApiKey) && !agnesApiKey.trim().isEmpty());
+        diag.put("visionKeyConfigured",
+                org.springframework.util.StringUtils.hasText(visionApiKey) && !visionApiKey.trim().isEmpty());
         diag.put("deepseekKeyConfigured",
                 org.springframework.util.StringUtils.hasText(deepseekApiKey) && !deepseekApiKey.trim().isEmpty());
 
-        diag.put("agnesModel", agnesModel);
+        diag.put("visionModel", visionModelName);
         diag.put("deepseekModel", deepseekModel);
 
         diag.put("hint",
-                "如果 agnesKeyConfigured=false，请在微信云部署→环境变量中添加 AGNES_API_KEY=你的key");
+                "D-361 全站统一 deepseek-v4-flash：如果 deepseekKeyConfigured=false，请在微信云部署→环境变量中添加 DEEPSEEK_API_KEY=你的key");
         return Result.success(diag);
     }
 
@@ -523,7 +523,7 @@ public class IntelligenceAiAdvisorController {
         return Result.success(null);
     }
 
-    /** v2: AI 模型自检测试点 — 快速测试各模型（Agnes/DeepSeek）连通性 */
+    /** v2: AI 模型自检测试点 — 快速测试模型（DeepSeek）连通性 */
     @GetMapping("/model-diagnostics")
     @PreAuthorize("isAuthenticated()")
     public Result<java.util.Map<String, Object>> runModelDiagnostics() {
@@ -531,8 +531,8 @@ public class IntelligenceAiAdvisorController {
 
         // 检查配置（不暴露具体 key，只告知是否已配置）
         java.util.Map<String, Object> configStatus = new java.util.LinkedHashMap<>();
-        configStatus.put("agnes_configured", agnesApiKey != null && !agnesApiKey.isBlank() && !agnesApiKey.startsWith("${"));
-        configStatus.put("agnes_model", agnesModel);
+        configStatus.put("vision_configured", visionApiKey != null && !visionApiKey.isBlank() && !visionApiKey.startsWith("${"));
+        configStatus.put("vision_model", visionModelName);
         configStatus.put("deepseek_configured", deepseekApiKey != null && !deepseekApiKey.isBlank() && !deepseekApiKey.startsWith("${"));
         configStatus.put("deepseek_model", deepseekModel);
         result.put("configStatus", configStatus);

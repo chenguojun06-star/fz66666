@@ -257,7 +257,7 @@ public class VisualAIOrchestrator {
     }
 
     /**
-     * 以图搜款（不依赖向量数据库）：Agnes 识别图片 → 生成文字描述 → MySQL 关键词搜索
+     * 以图搜款（不依赖向量数据库）：视觉模型识别图片 → 生成文字描述 → MySQL 关键词搜索
      * 之前依赖 Qdrant，现在直接用文字搜索，效果可控且零运维
      */
     public Map<String, Object> searchSimilarStylesByImage(String imageUrl, int topK) {
@@ -266,7 +266,7 @@ public class VisualAIOrchestrator {
             return Map.of("success", false, "error", "tenantId 为空", "styles", new ArrayList<Map<String, Object>>());
         }
         try {
-            // 1. Agnes 识别图片 → 得到款式特征文字描述
+            // 1. 视觉模型识别图片 → 得到款式特征文字描述
             VisionAnalysisService.StyleFieldParseResult fields = visionAnalysisService.parseStyleFields(imageUrl);
             if (fields == null || !fields.isAvailable()) {
                 return Map.of("success", false, "error", "图片识别失败", "styles", new ArrayList<Map<String, Object>>());

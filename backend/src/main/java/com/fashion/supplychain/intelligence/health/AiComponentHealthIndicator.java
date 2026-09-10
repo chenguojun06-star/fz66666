@@ -29,7 +29,7 @@ import java.util.Map;
  * <ul>
  *   <li>DeepSeek：HTTP GET {base-url}/v1/models（Authorization: Bearer {key}），2xx 视为 UP</li>
  *   <li>Qdrant：复用 {@link QdrantService#isAvailable()}（GET /healthz）</li>
- *   <li>Agnes：HTTP GET {base-url}/v1/models（与 DeepSeek 类似的 OpenAI 兼容接口）</li>
+ *   <li>视觉模型：HTTP GET {base-url}/v1/models（D-361 与主模型统一 deepseek-v4-flash）</li>
  *   <li>LiteLLM：复用 {@link LiteLLMAdminOrchestrator#ping()}（GET /health）</li>
  *   <li>Langfuse：配置完整性检查（endpoint + publicKey + secretKey 非空且 endpoint 可达）</li>
  * </ul>
@@ -76,12 +76,12 @@ public class AiComponentHealthIndicator implements HealthIndicator {
     @Value("${ai.deepseek.api-url:https://api.deepseek.com/v1/chat/completions}")
     private String deepseekApiUrl;
 
-    // ── Agnes ──
-    @Value("${ai.agnes.api-key:}")
-    private String agnesApiKey;
+    // ── 视觉模型（D-361：与主模型统一 deepseek-v4-flash 多模态）──
+    @Value("${ai.vision.api-key:}")
+    private String visionApiKey;
 
-    @Value("${ai.agnes.api-url:https://apihub.agnes-ai.com/v1/chat/completions}")
-    private String agnesApiUrl;
+    @Value("${ai.vision.api-url:https://api.deepseek.com/v1/chat/completions}")
+    private String visionApiUrl;
 
     // ── Langfuse ──
     @Value("${ai.observability.endpoint:}")
@@ -129,10 +129,10 @@ public class AiComponentHealthIndicator implements HealthIndicator {
         components.put("qdrant", qdrant.toMap());
         if (!qdrant.up) allUp = false;
 
-        // 3. Agnes
-        HealthResult agnes = checkAgnes();
-        components.put("agnes", agnes.toMap());
-        if (!agnes.up) allUp = false;
+        // 3. 视觉模型（deepseek 多模态）
+        HealthResult vision = checkVision();
+        components.put("vision", vision.toMap());
+        if (!vision.up) allUp = false;
 
         // 4. LiteLLM
         HealthResult litellm = checkLiteLLM();
@@ -213,17 +213,17 @@ public class AiComponentHealthIndicator implements HealthIndicator {
         }
     }
 
-    /** Agnes：GET {base}/v1/models 检查视觉模型 API Key 有效性 */
-    private HealthResult checkAgnes() {
-        if (isBlank(agnesApiKey)) {
+    /** 视觉模型：GET {base}/v1/models 检查视觉模型 API Key 有效性 */
+    private HealthResult checkVision() {
+        if (isBlank(visionApiKey)) {
             return HealthResult.unknown("api-key 未配置");
         }
-        String baseUrl = extractBaseUrl(agnesApiUrl);
+        String baseUrl = extractBaseUrl(visionApiUrl);
         String probeUrl = baseUrl + "/v1/models";
         try {
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create(probeUrl))
-                    .header("Authorization", "Bearer " + agnesApiKey)
+                    .header("Authorization", "Bearer " + visionApiKey)
                     .timeout(Duration.ofSeconds(PROBE_TIMEOUT_SECONDS))
                     .GET()
                     .build();

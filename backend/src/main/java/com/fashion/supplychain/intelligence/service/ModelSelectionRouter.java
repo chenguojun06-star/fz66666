@@ -18,11 +18,11 @@ import java.util.Map;
  * <p>问题：所有 AI 任务用同一模型，简单查询浪费成本，复杂排产又可能能力不足。
  * <p>方案：根据任务复杂度路由到不同模型分级。
  *
- * <p>三级模型：
+ * <p>三级分级（D-361：全站统一 deepseek-v4-flash 单模型，分级仅决定 max-tokens 预算）：
  * <ul>
- *   <li>{@link ModelTier#ECONOMY} — 经济型：简单查询（如"今天多少款"）→ GLM-Flash</li>
- *   <li>{@link ModelTier#STANDARD} — 标准型：普通对话（如"这个款号进度"）→ GLM-4</li>
- *   <li>{@link ModelTier#PREMIUM} — 旗舰型：复杂排产/多域分析（如"排产优化建议"）→ GLM-4-Plus</li>
+ *   <li>{@link ModelTier#ECONOMY} — 简单查询（如"今天多少款"）→ 1024 tokens</li>
+ *   <li>{@link ModelTier#STANDARD} — 普通对话（如"这个款号进度"）→ 2048 tokens</li>
+ *   <li>{@link ModelTier#PREMIUM} — 复杂排产/多域分析（如"排产优化建议"）→ 4096 tokens</li>
  * </ul>
  *
  * <p>复杂度评估四维度（取最高级别）：
@@ -58,17 +58,17 @@ public class ModelSelectionRouter {
     @Value("${xiaoyun.model-selection.enabled:true}")
     private boolean enabled;
 
-    @Value("${xiaoyun.model-selection.economy.model-id:glm-4-flash}")
+    @Value("${xiaoyun.model-selection.economy.model-id:deepseek-v4-flash}")
     private String economyModelId;
     @Value("${xiaoyun.model-selection.economy.max-tokens:1024}")
     private int economyMaxTokens;
 
-    @Value("${xiaoyun.model-selection.standard.model-id:glm-4}")
+    @Value("${xiaoyun.model-selection.standard.model-id:deepseek-v4-flash}")
     private String standardModelId;
     @Value("${xiaoyun.model-selection.standard.max-tokens:2048}")
     private int standardMaxTokens;
 
-    @Value("${xiaoyun.model-selection.premium.model-id:glm-4-plus}")
+    @Value("${xiaoyun.model-selection.premium.model-id:deepseek-v4-flash}")
     private String premiumModelId;
     @Value("${xiaoyun.model-selection.premium.max-tokens:4096}")
     private int premiumMaxTokens;

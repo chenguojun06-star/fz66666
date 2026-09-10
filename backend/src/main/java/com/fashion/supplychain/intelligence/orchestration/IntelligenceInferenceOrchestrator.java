@@ -67,21 +67,13 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.deepseek.api-url:https://api.deepseek.com/v1/chat/completions}") private String directApiUrl;
     @Value("${ai.deepseek.model:deepseek-v4-flash}") private String directModel;
     @Value("${ai.deepseek.timeout-seconds:90}") private int directTimeoutSeconds;
-    @Value("${ai.agnes.api-key:}") private String agnesApiKey;
-    @Value("${ai.agnes.api-url:https://apihub.agnes-ai.com/v1/chat/completions}") private String agnesApiUrl;
-    @Value("${ai.agnes.model:agnes-2.5-flash}") private String agnesModel;
-    @Value("${ai.agnes.timeout-seconds:60}") private int agnesTimeoutSeconds;
-    @Value("${ai.agnes2.api-key:}") private String agnes2ApiKey;
-    @Value("${ai.agnes2.api-url:https://apihub.agnes-ai.com/v1/chat/completions}") private String agnes2ApiUrl;
-    @Value("${ai.agnes2.model:agnes-2.5-flash}") private String agnes2Model;
-    @Value("${ai.agnes2.timeout-seconds:60}") private int agnes2TimeoutSeconds;
     @Value("${app.public-base-url:}") private String appPublicBaseUrl;
     @Value("${ai.vision-models.strategy:failover}") private String visionModelStrategy;
 
-    // ===== D-238：统一视觉模型（主视觉模型，替代频繁 401 熔断的 agnes）=====
+    // ===== D-361：全站统一单模型 deepseek-v4-flash（多模态），视觉共用主模型 =====
     @Value("${ai.vision.api-key:}") private String visionApiKey;
     @Value("${ai.vision.api-url:https://api.deepseek.com/v1/chat/completions}") private String visionApiUrl;
-    @Value("${ai.vision.model:deepseek-v4-flash-vision-exp}") private String visionModelName;
+    @Value("${ai.vision.model:deepseek-v4-flash}") private String visionModelName;
     @Value("${ai.vision.timeout-seconds:60}") private int visionTimeoutSeconds;
 
     private List<VisionModelConfig> visionModels = new ArrayList<>();
@@ -100,10 +92,6 @@ public class IntelligenceInferenceOrchestrator {
     private final ConcurrentHashMap<String, AtomicLong> authCircuitOpenSince = new ConcurrentHashMap<>();
     @Value("${ai.gateway.litellm.api-key:}") private String litellmApiKey;
     @Value("${ai.gateway.litellm.timeout-seconds:30}") private int gatewayTimeoutSeconds;
-    @Value("${ai.fallback.qwen.api-key:}") private String qwenApiKey;
-    @Value("${ai.fallback.qwen.api-url:https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}") private String qwenApiUrl;
-    @Value("${ai.fallback.qwen.model:qwen-plus}") private String qwenModel;
-    @Value("${ai.fallback.qwen.timeout-seconds:30}") private int qwenTimeoutSeconds;
     @Value("${ai.fallback.keyword-enabled:true}") private boolean keywordFallbackEnabled;
     // 视觉模型请求参数（识别/质检类任务要稳，不要创意）
     @Value("${ai.vision.max-tokens:2048}") private int visionMaxTokens;
@@ -129,31 +117,21 @@ public class IntelligenceInferenceOrchestrator {
     private void initVisionModels() {
         visionModels.clear();
 
-        // 0. D-238：统一视觉模型（deepseek-v4-flash-vision-exp）作为首选。
-        //    原实现把 agnes 排在最前，而 agnes 频繁 401 鉴权失败并触发 30 分钟熔断，
-        //    熔断期内后续请求全部被跳过，导致视觉功能整体不可用。
-        //    现在主模型排在首位，agnes / agnes2 仅作为旧配置兜底排在后面。
+        // D-361：主模型 deepseek-v4-flash 本身多模态，视觉首选就是它；
+        // VISION_MODEL_{N}_* 环境变量仍可追加任意备用视觉模型（兜底/多活）。
         if (hasText(visionApiKey)) {
             visionModels.add(new VisionModelConfig("vision", visionApiKey, visionApiUrl, visionModelName, visionTimeoutSeconds));
         }
 
-        // 1. 向后兼容：旧的 agnes 和 agnes2 配置（仅作兜底）
-        if (hasText(agnesApiKey)) {
-            visionModels.add(new VisionModelConfig("agnes", agnesApiKey, agnesApiUrl, agnesModel, agnesTimeoutSeconds));
-        }
-        if (hasText(agnes2ApiKey)) {
-            visionModels.add(new VisionModelConfig("agnes2", agnes2ApiKey, agnes2ApiUrl, agnes2Model, agnes2TimeoutSeconds));
-        }
-
-        // 2. 新的通用配置：VISION_MODEL_1_API_KEY, VISION_MODEL_2_API_KEY...
+        // 通用备用配置：VISION_MODEL_1_API_KEY, VISION_MODEL_2_API_KEY...
         // 优先读环境变量，回退到系统属性（兼容测试 System.setProperty）
         for (int i = 1; i <= 20; i++) {
             String apiKey = resolveEnvOrProp("VISION_MODEL_" + i + "_API_KEY");
             if (hasText(apiKey)) {
                 String apiUrl = resolveEnvOrProp("VISION_MODEL_" + i + "_API_URL");
-                apiUrl = apiUrl != null ? apiUrl : "https://apihub.agnes-ai.com/v1/chat/completions";
+                apiUrl = apiUrl != null ? apiUrl : "https://api.deepseek.com/v1/chat/completions";
                 String model = resolveEnvOrProp("VISION_MODEL_" + i + "_MODEL");
-                model = model != null ? model : "agnes-2.5-flash";
+                model = model != null ? model : "deepseek-v4-flash";
                 String timeoutStr = resolveEnvOrProp("VISION_MODEL_" + i + "_TIMEOUT_SECONDS");
                 int timeout = timeoutStr != null ? Integer.parseInt(timeoutStr) : 60;
                 visionModels.add(new VisionModelConfig("vision-model-" + i, apiKey, apiUrl, model, timeout));
@@ -199,15 +177,6 @@ public class IntelligenceInferenceOrchestrator {
             result = invokeDirect(scene, messages, tools, traceId);
         }
 
-        if (!result.isSuccess() && hasText(qwenApiKey)) {
-            log.info("[IntelligenceInference] 主模型失败，尝试Qwen备用模型 scene={}", scene);
-            IntelligenceInferenceResult qwenResult = invokeQwen(scene, messages, tools, traceId);
-            if (qwenResult.isSuccess()) {
-                qwenResult.setFallbackUsed(true);
-                result = qwenResult;
-            }
-        }
-
         if (!result.isSuccess() && keywordFallbackEnabled) {
             log.info("[IntelligenceInference] 所有模型失败，启用关键词兜底 scene={}", scene);
             result = invokeKeywordFallback(scene, messages, traceId, start);
@@ -219,9 +188,7 @@ public class IntelligenceInferenceOrchestrator {
 
     public boolean isAnyModelEnabled() {
         return intelligenceModelGatewayOrchestrator.isGatewayReady()
-                || hasText(directApiKey)
-                || hasText(agnesApiKey)
-                || hasText(agnes2ApiKey);
+                || hasText(directApiKey);
     }
 
     public boolean isVisionModelEnabled() {
@@ -281,8 +248,8 @@ public class IntelligenceInferenceOrchestrator {
     public boolean isVisionEnabled() {
         if (!visionModels.isEmpty()) return true;
         // 兜底：@PostConstruct 未触发（如单元测试手动 setField）时，直接检查字段
-        // D-238：主视觉模型（ai.vision.api-key）也算已启用
-        if (hasText(visionApiKey) || hasText(agnesApiKey) || hasText(agnes2ApiKey)) return true;
+        // 主视觉模型（ai.vision.api-key）也算已启用
+        if (hasText(visionApiKey)) return true;
         log.warn("[Vision] 未配置任何视觉模型");
         return false;
     }
@@ -319,7 +286,7 @@ public class IntelligenceInferenceOrchestrator {
 
         if (visionModels.isEmpty()) {
             log.warn("[Vision] 没有可用的视觉模型");
-            lastVisionError.set("未配置任何视觉模型（检查 ai.vision.api-key / VISION_MODEL_N_API_KEY / AGNES_API_KEY）");
+            lastVisionError.set("未配置任何视觉模型（检查 ai.vision.api-key，默认复用 DEEPSEEK_API_KEY）");
             return null;
         }
 
@@ -474,7 +441,7 @@ public class IntelligenceInferenceOrchestrator {
                 if (code == 401) {
                     int fails = recordAuthFailure(model.name);
                     if (fails >= AUTH_FAIL_THRESHOLD) {
-                        log.error("[Vision] 模型 {} 连续 {} 次 401 鉴权失败，已熔断 {} 分钟。请检查 API Key 配置（主视觉模型: VISION_API_KEY / 兜底: AGNES_API_KEY、AGNES2_API_KEY）",
+                        log.error("[Vision] 模型 {} 连续 {} 次 401 鉴权失败，已熔断 {} 分钟。请检查 API Key 配置（视觉模型默认复用 DEEPSEEK_API_KEY）",
                                 model.name, fails, AUTH_CIRCUIT_RESET_MS / 60000);
                     } else {
                         log.warn("[Vision] 模型 {} 401 鉴权失败（{}/{}），请检查 API Key", model.name, fails, AUTH_FAIL_THRESHOLD);
@@ -768,11 +735,6 @@ public class IntelligenceInferenceOrchestrator {
         return invokeOpenAiCompatible(scene, "direct", directApiUrl, directApiKey, directModel, messages, tools, directTimeoutSeconds, traceId);
     }
 
-    private IntelligenceInferenceResult invokeQwen(String scene, List<AiMessage> messages,
-            List<AiTool> tools, String traceId) {
-        return invokeOpenAiCompatible(scene, "qwen-fallback", qwenApiUrl, qwenApiKey, qwenModel, messages, tools, qwenTimeoutSeconds, traceId);
-    }
-
     private IntelligenceInferenceResult invokeKeywordFallback(String scene, List<AiMessage> messages,
             String traceId, long start) {
         IntelligenceInferenceResult result = new IntelligenceInferenceResult();
@@ -1012,7 +974,7 @@ public class IntelligenceInferenceOrchestrator {
 
     /**
      * 规范化 imageUrl：相对路径 → 完整 HTTP URL
-     * Agnes/视觉模型要求 image_url 必须以 http:// https:// 或 data: 开头
+     * 视觉模型要求 image_url 必须以 http:// https:// 或 data: 开头
      * 前端在云托管环境传的是相对路径如 /api/file/xxx?token=yyy，需要拼接公网域名
      */
     private String resolveImageUrl(String imageUrl) {
