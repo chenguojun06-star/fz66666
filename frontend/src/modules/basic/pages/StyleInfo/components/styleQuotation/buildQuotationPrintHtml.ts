@@ -101,7 +101,7 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
             const price = (Number(item.price) || 0) * rate;
             return `<tr>
         <td class="c">${idx + 1}</td>
-        <td>${esc(item.progressStage || item.processName)}</td>
+        <td>${esc(item.processName || item.progressStage)}${item.progressStage && item.processName ? ` <span style="color:#888;font-size:${FS_SMALL - 1}px">(${esc(item.progressStage)})</span>` : ''}</td>
         <td class="c">${rate.toFixed(1)}</td>
         <td class="r b">${formatMoney(price)}</td>
       </tr>`;
@@ -127,6 +127,14 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
           .join('')
       : '';
 
+  // D-345 版面自适应：内容越多字号/行距/内边距越小，避免挤爆换页后行列错位
+  const totalRows = bomList.length + processList.length + secondaryProcessList.length;
+  const dense = totalRows > 24 ? 3 : totalRows > 12 ? 2 : totalRows > 6 ? 1 : 0;
+  const FS = [12.5, 11.5, 10.5, 9.5][dense];       // 正文字号 px
+  const FS_SMALL = [11, 10, 9.5, 8.5][dense];      // 表内字号 px
+  const CELL_PAD = ['5px 8px', '4px 6px', '3px 5px', '2px 4px'][dense];
+  const ROW_LH = [1.6, 1.5, 1.4, 1.3][dense];
+
   const now = new Date();
   const printDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
     now.getDate(),
@@ -138,34 +146,40 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
   <meta charset="UTF-8">
   <title>报价单 - ${esc(styleNo || '')}</title>
   <style>
-    @page { size: A4; margin: 12mm; }
+    @page { size: A4; margin: 10mm; }
     * { box-sizing: border-box; }
-    body { font-family: "Microsoft YaHei", "PingFang SC", "SimSun", sans-serif; font-size: 12px; color: #1a1a1a; background: #fff; line-height: 1.6; margin: 0; padding: 16px; }
-    .title { text-align: center; font-size: 24px; font-weight: 700; letter-spacing: 6px; margin: 4px 0 2px; color: #1a1a1a; }
-    .subtitle { text-align: center; font-size: 12px; color: #666; margin-bottom: 14px; }
-    .info-bar { display: flex; justify-content: space-between; padding: 8px 4px; border-top: 2px solid #1a1a1a; border-bottom: 1px solid #999; margin-bottom: 16px; font-size: 12px; }
-    .info-item { color: #333; }
+    body { font-family: "Microsoft YaHei", "PingFang SC", "SimSun", sans-serif; font-size: ${FS}px; color: #1a1a1a; background: #fff; line-height: ${ROW_LH}; margin: 0; padding: 12px; }
+    .title { text-align: center; font-size: 22px; font-weight: 700; letter-spacing: 6px; margin: 2px 0 2px; color: #1a1a1a; }
+    .subtitle { text-align: center; font-size: ${FS_SMALL}px; color: #999; letter-spacing: 2px; margin-bottom: 10px; }
+    /* 信息栏：两列网格，左右各一列，天然对齐不散 */
+    .info-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; padding: 6px 2px; border-top: 2px solid #1a1a1a; border-bottom: 1px solid #bbb; margin-bottom: 12px; font-size: ${FS}px; }
+    .info-item { color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .info-item b { font-weight: 700; }
-    .section { margin-bottom: 18px; page-break-inside: avoid; }
-    .section-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; color: #1a1a1a; }
-    table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
-    th, td { border: 1px solid #333; padding: 5px 8px; vertical-align: middle; word-break: break-all; }
-    th { background: #f0f0f0; font-weight: 700; text-align: center; }
+    .section { margin-bottom: 14px; }
+    .section-title { font-size: ${FS}px; font-weight: 700; margin: 0 0 5px; padding-left: 8px; border-left: 3px solid #1a1a1a; color: #1a1a1a; }
+    /* 所有表格统一铺满同一左右边界 + 固定列宽，保证各区块列线上下对齐 */
+    table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: ${FS_SMALL}px; }
+    th, td { border: 1px solid #333; padding: ${CELL_PAD}; vertical-align: middle; }
+    th { background: #f0f0f0; font-weight: 700; text-align: center; white-space: nowrap; }
+    td { word-break: normal; overflow-wrap: anywhere; }
     .c { text-align: center; }
-    .r { text-align: right; }
+    .r { text-align: right; white-space: nowrap; }
+    .nw { white-space: nowrap; }
     .b { font-weight: 700; }
+    tbody tr { page-break-inside: avoid; }
     .totals-row td { background: #f7f7f7; font-weight: 700; }
-    .summary-table { width: 60%; margin: 0 auto; }
-    .summary-table td { padding: 6px 10px; }
-    .summary-table .label { font-weight: 600; width: 40%; }
-    .summary-table .highlight td { background: #fdf6ec; font-size: 13px; }
-    .summary-table .highlight .value { color: #c2410c; font-size: 15px; }
-    .footer { margin-top: 28px; text-align: center; font-size: 10.5px; color: #888; padding-top: 12px; border-top: 1px solid #ccc; }
+    /* 成本汇总：与上方表格同宽同列线（标签列 75% / 数值列 25%） */
+    .summary-table td { padding: ${CELL_PAD}; }
+    .summary-table .label { font-weight: 600; }
+    .summary-table .highlight td { background: #fdf6ec; }
+    .summary-table .highlight .value { color: #c2410c; font-size: ${FS + 2}px; font-weight: 700; }
+    .footer { margin-top: 18px; text-align: center; font-size: ${FS_SMALL}px; color: #888; padding-top: 8px; border-top: 1px solid #ccc; }
     .print-btn-bar { position: fixed; top: 10px; right: 10px; z-index: 999; }
     .print-btn { padding: 8px 18px; background: #1a1a1a; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
     @media print {
       .print-btn-bar { display: none; }
       body { padding: 0; }
+      .section { page-break-inside: auto; }
     }
   </style>
 </head>
@@ -187,19 +201,24 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
   <div class="section">
     <div class="section-title">一、物料明细</div>
     <table>
+      <colgroup>
+        <col style="width:5%"><col style="width:8%"><col style="width:13%"><col style="width:19%">
+        <col style="width:10%"><col style="width:5%"><col style="width:8%"><col style="width:9%">
+        <col style="width:7%"><col style="width:8%"><col style="width:8%">
+      </colgroup>
       <thead>
         <tr>
-          <th style="width:36px">序号</th>
-          <th style="width:64px">物料类型</th>
-          <th style="width:100px">物料编码</th>
+          <th>序号</th>
+          <th>物料类型</th>
+          <th>物料编码</th>
           <th>物料名称</th>
-          <th style="width:80px">规格/幅宽</th>
-          <th style="width:44px">单位</th>
-          <th style="width:60px">用量</th>
-          <th style="width:76px">开发采购用量</th>
-          <th style="width:60px">损耗率%</th>
-          <th style="width:70px">单价</th>
-          <th style="width:80px">总价</th>
+          <th>规格/幅宽</th>
+          <th>单位</th>
+          <th>用量</th>
+          <th>开发用量</th>
+          <th>损耗率%</th>
+          <th>单价</th>
+          <th>总价</th>
         </tr>
       </thead>
       <tbody>
@@ -211,13 +230,16 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
   ${processList.length > 0 ? `
   <div class="section">
     <div class="section-title">二、工序明细</div>
-    <table style="width:70%">
+    <table>
+      <colgroup>
+        <col style="width:8%"><col style="width:52%"><col style="width:18%"><col style="width:22%">
+      </colgroup>
       <thead>
         <tr>
-          <th style="width:48px">序号</th>
-          <th>进度阶段</th>
-          <th style="width:90px">倍率</th>
-          <th style="width:100px">工序合计</th>
+          <th>序号</th>
+          <th>工序</th>
+          <th>倍率</th>
+          <th>工序合计</th>
         </tr>
       </thead>
       <tbody>
@@ -229,12 +251,15 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
   ${secondaryProcessList.length > 0 ? `
   <div class="section">
     <div class="section-title">三、二次工艺</div>
-    <table style="width:60%">
+    <table>
+      <colgroup>
+        <col style="width:8%"><col style="width:70%"><col style="width:22%">
+      </colgroup>
       <thead>
         <tr>
-          <th style="width:48px">序号</th>
+          <th>序号</th>
           <th>工艺名称</th>
-          <th style="width:110px">单价</th>
+          <th>单价</th>
         </tr>
       </thead>
       <tbody>
@@ -246,6 +271,7 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
   <div class="section">
     <div class="section-title">四、成本核算汇总</div>
     <table class="summary-table">
+      <colgroup><col style="width:75%"><col style="width:25%"></colgroup>
       <tbody>
         <tr><td class="label">物料成本</td><td class="r b">${formatMoney(materialCost)}</td></tr>
         <tr><td class="label">工序小计</td><td class="r b">${formatMoney(processCost)}</td></tr>
