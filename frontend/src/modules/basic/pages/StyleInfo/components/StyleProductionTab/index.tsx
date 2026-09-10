@@ -93,6 +93,7 @@ const StyleProductionTab: React.FC<StyleProductionTabProps> = (props) => {
       />
 
       <ProductionRequirementsSection
+        currentStyleId={styleId}
         productionReqLocked={productionReqLocked}
         productionReqSaving={productionReqSaving}
         allRequirements={allRequirements}

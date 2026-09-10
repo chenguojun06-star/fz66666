@@ -6,9 +6,12 @@ import {
   OrderedListOutlined, PictureOutlined, RedoOutlined, StrikethroughOutlined,
   TableOutlined, UnderlineOutlined, UndoOutlined, UnorderedListOutlined, DownOutlined } from '@ant-design/icons';
 import { plainTextToSheetHtml, isSheetRichHtml } from '@/utils/sheetRichText';
+import CopyCraftNotesDrawer from './CopyCraftNotesDrawer';
+import { CopyOutlined } from '@ant-design/icons';
 import { message as warnMessage } from '@/utils/antdStatic';
 
 interface Props {
+  currentStyleId?: string | number;
   productionReqLocked: boolean;
   productionReqSaving: boolean;
   /** 工艺说明内容（老数据纯文本 / 新数据轻量 HTML，含内嵌制单图片） */
@@ -32,6 +35,7 @@ interface Props {
  * 内容仍为轻量 HTML 存 style.description，下游只读展示（SheetRichViewer）与打印同源。
  */
 const ProductionRequirementsSection: React.FC<Props> = ({
+  currentStyleId,
   productionReqLocked,
   productionReqSaving,
   allRequirements,
@@ -53,6 +57,7 @@ const ProductionRequirementsSection: React.FC<Props> = ({
   const [tableRows, setTableRows] = useState<number>(3);
   const [tableCols, setTableCols] = useState<number>(3);
   const [tableOpen, setTableOpen] = useState(false);
+  const [copyCraftOpen, setCopyCraftOpen] = useState(false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const canEdit = !productionReqLocked;
 
@@ -201,6 +206,17 @@ const ProductionRequirementsSection: React.FC<Props> = ({
       background: 'var(--color-bg-card, #fff)',
       ...editorWrapStyle,
     }}>
+      <CopyCraftNotesDrawer
+        open={copyCraftOpen}
+        onClose={() => setCopyCraftOpen(false)}
+        currentStyleId={currentStyleId ?? ''}
+        submitting={productionReqSaving}
+        onConfirm={async (html) => {
+          onContentChange(html);
+          onProductionReqSave();
+          setCopyCraftOpen(false);
+        }}
+      />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{
@@ -213,6 +229,15 @@ const ProductionRequirementsSection: React.FC<Props> = ({
           {sheetUploading && <span style={{ fontSize: 12, color: 'var(--color-primary)' }}>图片上传中…</span>}
         </div>
         <Space size={8} wrap>
+          {!productionReqLocked && (
+            <Button
+              icon={<CopyOutlined />}
+              disabled={productionReqSaving}
+              onClick={() => setCopyCraftOpen(true)}
+            >
+              拷贝其他款工艺说明
+            </Button>
+          )}
           {!productionReqLocked && (
             <Button type="primary" loading={productionReqSaving} onClick={onProductionReqSave}>
               保存工艺说明
