@@ -33,6 +33,18 @@ import lombok.extern.slf4j.Slf4j;
 @PreAuthorize("isAuthenticated()")
 public class ScanRecordController {
 
+    // D-359 操作人统一显示姓名（历史链路写入的是登录账号，读取时统一解析）
+    @Autowired
+    private com.fashion.supplychain.common.UserNameResolver userNameResolver;
+
+    private void normalizeOperatorNames(java.util.List<com.fashion.supplychain.production.entity.ScanRecord> rows) {
+        userNameResolver.normalizeOperatorNames(
+                rows,
+                com.fashion.supplychain.production.entity.ScanRecord::getOperatorId,
+                com.fashion.supplychain.production.entity.ScanRecord::getOperatorName,
+                com.fashion.supplychain.production.entity.ScanRecord::setOperatorName);
+    }
+
     @Autowired
     private ScanRecordOrchestrator scanRecordOrchestrator;
 
@@ -216,12 +228,20 @@ public class ScanRecordController {
             String bundleNo = params.containsKey("bundleNo") ? params.get("bundleNo").toString() : null;
             String workerName = params.containsKey("workerName") ? params.get("workerName").toString() : null;
             String operatorName = params.containsKey("operatorName") ? params.get("operatorName").toString() : null;
-            return Result.success(scanRecordOrchestrator.getMyHistory(
-                page, pageSize, scanType, startTime, endTime, orderNo, bundleNo, workerName, operatorName));
+            Object history = scanRecordOrchestrator.getMyHistory(
+                page, pageSize, scanType, startTime, endTime, orderNo, bundleNo, workerName, operatorName);
+            if (history instanceof com.baomidou.mybatisplus.core.metadata.IPage<?> ip) {
+                @SuppressWarnings("unchecked")
+                java.util.List<com.fashion.supplychain.production.entity.ScanRecord> recs =
+                        (java.util.List<com.fashion.supplychain.production.entity.ScanRecord>) ip.getRecords();
+                normalizeOperatorNames(recs);
+            }
+            return Result.success(history);
         }
 
         // 默认分页查询
         IPage<ScanRecord> pageResult = scanRecordOrchestrator.list(params);
+        normalizeOperatorNames(pageResult.getRecords());
         if (SensitiveDataMaskHelper.shouldMaskPrice() && pageResult.getRecords() != null) {
             pageResult.getRecords().forEach(r -> r.setUnitPrice(null));
         }
