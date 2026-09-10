@@ -32,6 +32,12 @@ public class OrderOverviewDto {
     /** 充足种数（净需求 <= 0 的物料数） */
     private int sufficientCount;
 
+    /** D-331：纯库存就覆盖需求的物料种数（无采购在跑） */
+    private Integer stockCoveredCount;
+
+    /** D-331：库存不够但靠在途采购覆盖的物料种数（有采购在跑，到货即齐） */
+    private Integer inTransitCoveredCount;
+
     /** 缺料预计金额 = Σ(净需求 × BOM单价) */
     private BigDecimal shortageAmount;
 

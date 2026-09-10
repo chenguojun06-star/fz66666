@@ -79,6 +79,10 @@ export interface OrderOverviewDto {
   shortageCount?: number;
   /** 充足种类数 */
   sufficientCount?: number;
+  /** D-331：纯库存就覆盖的物料种数（无采购在跑） */
+  stockCoveredCount?: number;
+  /** D-331：库存不够但靠在途采购覆盖的种数（有采购在跑，到货即齐） */
+  inTransitCoveredCount?: number;
   /** 缺料采购金额预估（元） */
   shortageAmount?: number;
   /** BOM总金额参考（元） */

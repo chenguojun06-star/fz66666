@@ -423,7 +423,16 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
               {(ov.shortageCount ?? 0) > 0 && (
                 <Tag color="red" style={{ fontSize: 10 }}>缺{ov.shortageCount}种</Tag>
               )}
-              {(ov.sufficientCount ?? 0) > 0 && (
+              {(ov.inTransitCoveredCount ?? 0) > 0 && (
+                <Tooltip title="这些物料当前库存不够，但已有采购在途，到货后即齐料（可点「展开明细」看每个物料的在途数量）">
+                  <Tag color="blue" style={{ fontSize: 10 }}>在途补{ov.inTransitCoveredCount}种</Tag>
+                </Tooltip>
+              )}
+              {(ov.stockCoveredCount ?? 0) > 0 && (
+                <Tag color="green" style={{ fontSize: 10 }}>库存够{ov.stockCoveredCount}种</Tag>
+              )}
+              {/* 兼容旧缓存（无覆盖数拆分字段时） */}
+              {(ov.stockCoveredCount == null && ov.inTransitCoveredCount == null && (ov.sufficientCount ?? 0) > 0) && (
                 <Tag color="green" style={{ fontSize: 10 }}>齐{ov.sufficientCount}种</Tag>
               )}
               {(ov.shortageAmount ?? 0) > 0 && (
@@ -705,14 +714,14 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
       <Alert
         type="info"
         showIcon
-        message="性能保护说明"
+        message="智能采购推荐是怎么运作的"
         description={
-          <ul style={{ paddingLeft: 18, margin: 0, fontSize: 12, lineHeight: 1.8 }}>
-            <li>首屏只查订单列表（1次SQL），不做净需求计算</li>
-            <li>当前页订单（≤20）自动批量算缺料概览（后端5次批量SQL，非逐单循环）</li>
-            <li>概览结果缓存2小时；「展开明细」懒加载并走同一份缓存</li>
-            <li>批量推送购物车单次 ≤20 单（后端硬校验），超限请分批</li>
-          </ul>
+          <div style={{ fontSize: 12, lineHeight: 1.9 }}>
+            <div>系统按每个订单的<b>物料清单</b>，用「订单需求数量 − 当前库存 − 在途采购」算出每种物料还缺多少。</div>
+            <div><b>有缺料</b>的订单：勾选后点「一键推送缺料到购物车」，缺什么补什么，数量和推荐供应商都算好了。</div>
+            <div><b>已齐料</b>的订单默认隐藏（上面的开关可打开查看）；其中「在途补N种」表示库存虽不够但采购已在路上，到货即齐，<b>不要重复下单</b>。</div>
+            <div>想看每个物料的库存/在途/缺口数字，点行上的「展开明细」；库存和在途会随采购到货、领料自动更新。</div>
+          </div>
         }
       />
     </div>

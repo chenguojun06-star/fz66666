@@ -967,6 +967,8 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
             int validBomCount = 0;
             int shortage = 0;
             int sufficient = 0;
+            int stockCovered = 0;
+            int inTransitCovered = 0;
             int fabricShort = 0;
             BigDecimal shortageAmt = BigDecimal.ZERO;
             BigDecimal totalBomAmt = BigDecimal.ZERO;
@@ -1015,6 +1017,13 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
                     }
                 } else {
                     sufficient++;
+                    // D-331：齐料也要说清"怎么齐的"——纯库存够 vs 靠在途采购到货
+                    if (inTransit.compareTo(BigDecimal.ZERO) > 0
+                            && demand.compareTo(BigDecimal.valueOf(stock)) > 0) {
+                        inTransitCovered++;
+                    } else {
+                        stockCovered++;
+                    }
                 }
             }
 
@@ -1024,8 +1033,14 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
                 criticalPath = "该订单无BOM，请先维护物料清单";
                 hints.add(SourcingHint.builder().type("warn").message("该款未维护BOM，无法计算净需求").build());
             } else if (shortage == 0) {
-                criticalPath = "物料全部充足（" + sufficient + "种）";
-                hints.add(SourcingHint.builder().type("success").message("库存+在途≥需求，无需采购").build());
+                if (inTransitCovered > 0) {
+                    criticalPath = String.format("物料充足（%d种库存够，%d种靠在途采购到货）", stockCovered, inTransitCovered);
+                    hints.add(SourcingHint.builder().type("success")
+                            .message(String.format("其中%d种靠在途采购覆盖，到货后即齐料，无需重复下单", inTransitCovered)).build());
+                } else {
+                    criticalPath = "物料全部充足（" + sufficient + "种）";
+                    hints.add(SourcingHint.builder().type("success").message("库存≥需求，无需采购").build());
+                }
             } else {
                 int accShort = shortage - fabricShort;
                 if (fabricShort > 0) {
@@ -1047,6 +1062,8 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
                     .bomItemsCount(validBomCount)
                     .shortageCount(shortage)
                     .sufficientCount(sufficient)
+                    .stockCoveredCount(stockCovered)
+                    .inTransitCoveredCount(inTransitCovered)
                     .shortageAmount(shortageAmt.setScale(2, RoundingMode.HALF_UP))
                     .totalBomAmount(totalBomAmt.setScale(2, RoundingMode.HALF_UP))
                     .criticalMaterials(criticalMaterials)
@@ -1068,6 +1085,8 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
         int bomCount = detail.size();
         int shortage = 0;
         int sufficient = 0;
+        int stockCovered = 0;
+        int inTransitCovered = 0;
         BigDecimal shortageAmt = BigDecimal.ZERO;
         BigDecimal totalBomAmt = BigDecimal.ZERO;
         List<String> critical = new ArrayList<>();
@@ -1089,23 +1108,40 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
                 }
             } else {
                 sufficient++;
+                // D-331：与 computeOrderOverviews 同口径——齐料区分"库存够"和"靠在途"
+                int stock = toDecimal(d.get("availableStock")).intValue();
+                BigDecimal inTransit = toDecimal(d.get("inTransit"));
+                if (inTransit.compareTo(BigDecimal.ZERO) > 0
+                        && demand.compareTo(BigDecimal.valueOf(stock)) > 0) {
+                    inTransitCovered++;
+                } else {
+                    stockCovered++;
+                }
             }
         }
         String path;
         if (bomCount == 0) path = "该订单无BOM，请先维护物料清单";
-        else if (shortage == 0) path = "物料全部充足（" + sufficient + "种）";
-        else path = String.format("共缺料%d种（%d种充足）", shortage, sufficient);
+        else if (shortage == 0) {
+            path = inTransitCovered > 0
+                    ? String.format("物料充足（%d种库存够，%d种靠在途采购到货）", stockCovered, inTransitCovered)
+                    : "物料全部充足（" + sufficient + "种）";
+        } else path = String.format("共缺料%d种（%d种充足）", shortage, sufficient);
         if (shortage > 0) {
             hints.add(SourcingHint.builder().type("info")
                     .message(String.format("预计采购金额约 ¥%,.2f（按 BOM 单价预估）", shortageAmt)).build());
+        } else if (bomCount > 0 && inTransitCovered > 0) {
+            hints.add(SourcingHint.builder().type("success")
+                    .message(String.format("其中%d种靠在途采购覆盖，到货后即齐料，无需重复下单", inTransitCovered)).build());
         } else if (bomCount > 0) {
-            hints.add(SourcingHint.builder().type("success").message("库存+在途≥需求，无需采购").build());
+            hints.add(SourcingHint.builder().type("success").message("库存≥需求，无需采购").build());
         }
         return OrderOverviewDto.builder()
                 .orderNo(orderNo)
                 .bomItemsCount(bomCount)
                 .shortageCount(shortage)
                 .sufficientCount(sufficient)
+                .stockCoveredCount(stockCovered)
+                .inTransitCoveredCount(inTransitCovered)
                 .shortageAmount(shortageAmt.setScale(2, RoundingMode.HALF_UP))
                 .totalBomAmount(totalBomAmt.setScale(2, RoundingMode.HALF_UP))
                 .criticalMaterials(critical)
