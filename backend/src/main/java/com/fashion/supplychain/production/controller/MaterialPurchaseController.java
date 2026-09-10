@@ -40,9 +40,19 @@ public class MaterialPurchaseController {
      * 图片URL实时刷新签名，确保历史单据图片永久可查看
      */
     @GetMapping("/docs")
-    public Result<java.util.List<PurchaseOrderDoc>> listDocs(@RequestParam String orderNo) {
+    public Result<java.util.List<PurchaseOrderDoc>> listDocs(
+            @RequestParam(value = "orderNo", required = false) String orderNo,
+            @RequestParam(value = "styleNo", required = false) String styleNo) {
         Long tenantId = UserContext.tenantId();
-        List<PurchaseOrderDoc> docs = purchaseOrderDocService.listByOrderNo(tenantId, orderNo);
+        // D-360d：大货按订单号，样衣采购无订单号按款号归属查询
+        java.util.List<PurchaseOrderDoc> docs;
+        if (orderNo != null && !orderNo.isBlank()) {
+            docs = purchaseOrderDocService.listByOrderNo(tenantId, orderNo);
+        } else if (styleNo != null && !styleNo.isBlank()) {
+            docs = purchaseOrderDocService.listByStyleNo(tenantId, styleNo);
+        } else {
+            return Result.fail("orderNo 与 styleNo 至少传一个");
+        }
         for (PurchaseOrderDoc doc : docs) {
             doc.setImageUrl(purchaseDocOrchestrator.resolveDocImageUrl(tenantId, doc.getImageUrl()));
         }
@@ -342,7 +352,8 @@ public class MaterialPurchaseController {
     @PostMapping(value = "/recognize-doc", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<?> recognizeDoc(
             @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "orderNo", required = false) String orderNo) {
+            @RequestParam(value = "orderNo", required = false) String orderNo,
+            @RequestParam(value = "styleNo", required = false) String styleNo) {
         if (file == null || file.isEmpty()) {
             return Result.fail("请上传有效的图片文件");
         }
@@ -350,7 +361,7 @@ public class MaterialPurchaseController {
         if (file.getSize() > maxBytes) {
             return Result.fail("文件大小不能超过 10MB");
         }
-        return Result.success(purchaseDocOrchestrator.recognizeDoc(file, orderNo));
+        return Result.success(purchaseDocOrchestrator.recognizeDoc(file, orderNo, styleNo));
     }
 
     @PostMapping("/replay-doc")

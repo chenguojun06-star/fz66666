@@ -61,7 +61,7 @@ public class MaterialPurchaseDocOrchestrator {
      * @param orderNo 订单编号（用于匹配采购条目，可空）
      * @return 识别结果 Map，包含 items、rawText、imageUrl、matchCount
      */
-    public Map<String, Object> recognizeDoc(MultipartFile file, String orderNo) {
+    public Map<String, Object> recognizeDoc(MultipartFile file, String orderNo, String styleNo) {
         Long tenantId = UserContext.tenantId();
 
         // 1. 上传文件到 COS（返回持久化对象键，DB 存键而非临时签名URL）
@@ -115,6 +115,7 @@ public class MaterialPurchaseDocOrchestrator {
             PurchaseOrderDoc doc = new PurchaseOrderDoc();
             doc.setTenantId(tenantId);
             doc.setOrderNo(orderNo != null ? orderNo : "");
+            doc.setStyleNo(styleNo != null ? styleNo : "");
             doc.setImageUrl(cosKey);
             doc.setRawText(aiRaw != null && aiRaw.length() > 2000
                     ? aiRaw.substring(0, 2000) : aiRaw);

@@ -22,4 +22,16 @@ public class PurchaseOrderDocService extends ServiceImpl<PurchaseOrderDocMapper,
           .orderByDesc("create_time");
         return list(qw);
     }
+
+    /**
+     * 查询指定款号的单据列表（样衣采购无订单号，按款号归属；D-360d）
+     */
+    public List<PurchaseOrderDoc> listByStyleNo(Long tenantId, String styleNo) {
+        QueryWrapper<PurchaseOrderDoc> qw = new QueryWrapper<>();
+        qw.eq("tenant_id", tenantId)
+          .eq("style_no", styleNo)
+          .eq("delete_flag", 0)
+          .orderByDesc("create_time");
+        return list(qw);
+    }
 }

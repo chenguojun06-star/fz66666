@@ -31,11 +31,13 @@ interface RecognizeResult {
 interface Props {
   open: boolean;
   orderNo?: string;
+  /** 样衣采购无订单号，按款号归属单据（D-360d） */
+  styleNo?: string;
   onCancel: () => void;
   onSuccess: () => void;
 }
 
-const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, onSuccess }) => {
+const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, styleNo, onCancel, onSuccess }) => {
   const { message } = App.useApp();
   const [file, setFile] = useState<File | null>(null);
   const [recognizing, setRecognizing] = useState(false);
@@ -60,6 +62,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, o
       const fd = new FormData();
       fd.append('file', file);
       if (orderNo) fd.append('orderNo', orderNo);
+      if (!orderNo && styleNo) fd.append('styleNo', styleNo);
       const res = await api.post<{ code: number; message?: string; data: RecognizeResult }>(
         '/production/purchase/recognize-doc',
         fd,
@@ -83,7 +86,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, o
     } finally {
       setRecognizing(false);
     }
-  }, [file, orderNo, message]);
+  }, [file, orderNo, styleNo, message]);
 
   const handleApply = useCallback(async () => {
     if (!result) return;
@@ -102,7 +105,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, o
           {
             purchaseId: item.purchaseId,
             arrivedQuantity: qty,
-            remark: `AI识别单据自动填写（${orderNo || '未知订单'}）`,
+            remark: `AI识别单据自动填写（${orderNo || styleNo || ''}）`,
           },
         );
         if (res.code === 200) successCount++;

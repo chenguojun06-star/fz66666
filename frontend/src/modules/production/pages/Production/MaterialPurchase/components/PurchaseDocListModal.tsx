@@ -19,22 +19,27 @@ interface PurchaseOrderDoc {
 interface Props {
   open: boolean;
   orderNo?: string;
+  /** 样衣采购无订单号，按款号查询单据（D-360d） */
+  styleNo?: string;
   onCancel: () => void;
 }
 
 /** 采购单据存档：展示该订单所有上传的采购单/送货单图片（含AI识别摘要） */
-const PurchaseDocListModal: React.FC<Props> = ({ open, orderNo, onCancel }) => {
+const PurchaseDocListModal: React.FC<Props> = ({ open, orderNo, styleNo, onCancel }) => {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [docs, setDocs] = useState<PurchaseOrderDoc[]>([]);
 
   const loadDocs = useCallback(async () => {
-    if (!orderNo) return;
+    const ownerOrderNo = String(orderNo || '').trim();
+    const ownerStyleNo = String(styleNo || '').trim();
+    if (!ownerOrderNo && !ownerStyleNo) return;
     setLoading(true);
     try {
+      // D-360d：大货按订单号，样衣采购无订单号按款号归属查询
       const res = await api.get<{ code: number; data: PurchaseOrderDoc[] }>(
         '/production/purchase/docs',
-        { params: { orderNo } },
+        { params: ownerOrderNo ? { orderNo: ownerOrderNo } : { styleNo: ownerStyleNo } },
       );
       if (res?.code === 200) {
         setDocs(res.data || []);
@@ -44,13 +49,13 @@ const PurchaseDocListModal: React.FC<Props> = ({ open, orderNo, onCancel }) => {
     } finally {
       setLoading(false);
     }
-  }, [orderNo, message]);
+  }, [orderNo, styleNo, message]);
 
   useEffect(() => {
-    if (open && orderNo) {
+    if (open && (orderNo || styleNo)) {
       loadDocs();
     }
-  }, [open, orderNo, loadDocs]);
+  }, [open, orderNo, styleNo, loadDocs]);
 
   return (
     <ResizableModal

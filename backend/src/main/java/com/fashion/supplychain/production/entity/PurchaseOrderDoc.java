@@ -23,6 +23,9 @@ public class PurchaseOrderDoc {
 
     private String orderNo;
 
+    /** 款号（样衣采购无订单号时的单据归属，D-360d） */
+    private String styleNo;
+
     private String imageUrl;
 
     private String rawText;

@@ -76,11 +76,17 @@ export const usePurchaseDetailData = ({
   } = useMaterialSearch({ editableData, setEditableData });
 
   const loadDocs = useCallback(async () => {
-    if (!currentPurchase?.orderNo) return;
+    // D-360d：大货按订单号，样衣采购（无订单号）按款号归属查询
+    const ownerOrderNo = String(currentPurchase?.orderNo || '').trim();
+    const ownerStyleNo = String(currentPurchase?.styleNo || '').trim();
+    if (!ownerOrderNo && !ownerStyleNo) return;
     setDocsLoading(true);
     try {
+      const query = ownerOrderNo
+        ? `orderNo=${encodeURIComponent(ownerOrderNo)}`
+        : `styleNo=${encodeURIComponent(ownerStyleNo)}`;
       const res = await api.get<PurchaseDocRecord[]>(
-        `/production/purchase/docs?orderNo=${encodeURIComponent(currentPurchase.orderNo)}`
+        `/production/purchase/docs?${query}`
       );
       setDocList(Array.isArray(res) ? res : []);
     } catch (_e) {
@@ -88,7 +94,7 @@ export const usePurchaseDetailData = ({
     } finally {
       setDocsLoading(false);
     }
-  }, [currentPurchase?.orderNo]);
+  }, [currentPurchase?.orderNo, currentPurchase?.styleNo]);
 
   useEffect(() => {
     loadDocs();

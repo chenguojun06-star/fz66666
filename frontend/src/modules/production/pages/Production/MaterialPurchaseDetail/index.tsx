@@ -317,7 +317,8 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                     <Button size="small" icon={<UploadOutlined />} onClick={() => setDocRecognizeOpen(true)}>
                       上传采购单
                     </Button>
-                    {orderNo ? (
+                    {/* D-360d：样衣采购无订单号，按款号归属也能查看单据 */}
+                    {(orderNo || headerStyleNo) ? (
                       <Button size="small" icon={<FileImageOutlined />} onClick={() => setDocListOpen(true)}>
                         采购单据
                       </Button>
@@ -412,6 +413,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
       <PurchaseDocRecognizeModal
         open={docRecognizeOpen}
         orderNo={orderNo || undefined}
+        styleNo={orderNo ? undefined : (headerStyleNo || undefined)}
         onCancel={() => setDocRecognizeOpen(false)}
         onSuccess={async () => {
           setDocRecognizeOpen(false);
@@ -422,6 +424,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
       <PurchaseDocListModal
         open={docListOpen}
         orderNo={orderNo || undefined}
+        styleNo={orderNo ? undefined : (headerStyleNo || undefined)}
         onCancel={() => setDocListOpen(false)}
       />
 
