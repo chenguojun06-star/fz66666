@@ -499,7 +499,7 @@
 }
 
 .layout-sidebar-submenu-popup.ant-menu-submenu-popup .ant-menu {
-  background: var(--sidebar-bg);
+  background: var(--sidebar-bg, #ffffff);
   border: 1px solid var(--sidebar-item-border-hover);
   border-radius: 14px;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.22);
@@ -508,7 +508,7 @@
 
 .layout-sidebar-submenu-popup.ant-menu-submenu-popup .ant-menu-item,
 .layout-sidebar-submenu-popup.ant-menu-submenu-popup .ant-menu-submenu-title {
-  color: var(--sidebar-text);
+  color: var(--sidebar-text, #1f2937);
   border-radius: 10px;
   margin: 2px 0;
 }
@@ -524,7 +524,7 @@
 .layout-sidebar-submenu-popup.ant-menu-submenu-popup .ant-menu-item-active,
 .layout-sidebar-submenu-popup.ant-menu-submenu-popup .ant-menu-item-selected {
   background: transparent;
-  color: var(--sidebar-text-strong);
+  color: var(--sidebar-text-strong, #111827);
 }
 
 .ant-tooltip.ant-menu-inline-collapsed-tooltip .ant-tooltip-inner {
