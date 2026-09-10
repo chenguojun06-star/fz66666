@@ -62,6 +62,7 @@ const StyleBomTab: React.FC<Props> = ({
     locked,
     editingKey,
     tableEditable,
+    currentStyleNo,
     checkingStock,
     form,
     data,
@@ -89,8 +90,10 @@ const StyleBomTab: React.FC<Props> = ({
     saveAll,
     handleAddRows,
     handleGeneratePurchase,
+    generatePurchaseConfirmed,
     handleCheckStock,
     handleAddCartWithCallback,
+    handleAddShortageToCart,
     handleBomRecognized,
     purchaseStatus,
     columns,
@@ -129,10 +132,12 @@ const StyleBomTab: React.FC<Props> = ({
         templateLoading={templateLoading}
         editingKey={editingKey}
         styleId={styleId}
+        styleNo={currentStyleNo}
         purchaseStatus={purchaseStatus}
         onBomRecognized={handleBomRecognized}
         onCheckStock={handleCheckStock}
-        onGeneratePurchase={handleGeneratePurchase}
+        onGenerateConfirmed={generatePurchaseConfirmed}
+        onShortageCart={handleAddShortageToCart}
         onAddToPurchaseCart={handleAddCartWithCallback}
         onToggleEdit={() => {
           if (tableEditable) {

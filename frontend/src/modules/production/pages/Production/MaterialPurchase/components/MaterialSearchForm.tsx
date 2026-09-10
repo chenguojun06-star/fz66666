@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Card, Select, Segmented, Space } from 'antd';
+import { Card, Select, Segmented } from 'antd';
 
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { MaterialQueryParams } from '@/types/production';
@@ -35,8 +35,6 @@ interface MaterialSearchFormProps {
   setQueryParams: React.Dispatch<React.SetStateAction<MaterialQueryParams>>;
   onSearch: () => void;
   onReset: () => void;
-  onExport: () => void;
-  onAdd: () => void;
   loading?: boolean;
   hasData?: boolean;
 }
@@ -45,10 +43,6 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
   queryParams,
   setQueryParams,
   onSearch,
-  onExport,
-  onAdd,
-  loading = false,
-  hasData = false,
 }) => {
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
 
@@ -117,17 +111,6 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
             }}
           />
         </div>
-        <Space wrap>
-          <Button
-            onClick={onExport}
-            disabled={loading || !hasData}
-          >
-            导出
-          </Button>
-          <Button type="primary" onClick={onAdd}>
-            新增采购单
-          </Button>
-        </Space>
       </div>
     </Card>
   );

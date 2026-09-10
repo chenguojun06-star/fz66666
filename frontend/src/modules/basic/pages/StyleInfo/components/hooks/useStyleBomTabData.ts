@@ -97,6 +97,10 @@ export interface UseStyleBomTabDataResult {
   appendCopiedBomRows: (rows: StyleBom[]) => Promise<void>;
   // actions
   handleGeneratePurchase: () => Promise<void> | void;
+  /** D-360 缺料分析弹窗内的「生成全部」（免二次确认，保留重新生成警示） */
+  generatePurchaseConfirmed: () => Promise<void> | void;
+  /** D-360 缺料分析弹窗内的「仅缺料加入采购车」 */
+  handleAddShortageToCart: (shortageRows: any[]) => Promise<void>;
   handleCheckStock: () => Promise<void> | void;
   // 样衣采购生成状态（已生成→按钮变"重新生成"，防止重复生成）
   purchaseStatus: import('./useStyleBomActions').SamplePurchaseStatus;
@@ -105,6 +109,8 @@ export interface UseStyleBomTabDataResult {
   handleDelete: (id: string | number) => Promise<void>;
   handleAddToPurchaseCart: () => Promise<void> | void;
   handleAddCartWithCallback: () => Promise<void>;
+  /** 当前款号（生成采购弹窗标题用） */
+  currentStyleNo: string;
   handleBomRecognized: (items: BomRecognizedItem[]) => void;
   // columns
   columns: ReturnType<typeof useBomColumns>;
@@ -265,10 +271,12 @@ export const useStyleBomTabData = ({
 
   const {
     handleGeneratePurchase,
+    generatePurchaseConfirmed,
     handleCheckStock,
     buildPickupRecord,
     handleDelete,
     handleAddToPurchaseCart,
+    handleAddShortageToCart,
     purchaseStatus,
     fetchPurchaseStatus,
   } = useStyleBomActions({
@@ -384,6 +392,7 @@ export const useStyleBomTabData = ({
     isSupervisorOrAbove,
     editingKey,
     tableEditable,
+    currentStyleNo,
     bomTemplateId,
     checkingStock,
     form,
@@ -416,10 +425,12 @@ export const useStyleBomTabData = ({
     handleAddRows,
     applyBomTemplate,
     handleGeneratePurchase,
+    generatePurchaseConfirmed,
     handleCheckStock,
     buildPickupRecord,
     handleDelete,
     handleAddToPurchaseCart,
+    handleAddShortageToCart,
     handleAddCartWithCallback,
     handleBomRecognized,
     purchaseStatus,

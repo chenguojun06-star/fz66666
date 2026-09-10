@@ -126,9 +126,9 @@ export function usePurchaseDetailActions(params: PurchaseDetailActionsParams): P
       } catch { /* continue */ }
     }
     if (successCount > 0) {
-      message.success(`批量采购完成（${successCount}/${pending.length} 项）`);
+      message.success(`批量领取完成（${successCount}/${pending.length} 项）`);
     } else {
-      message.error('批量采购全部失败');
+      message.error('批量领取全部失败');
     }
     await loadData();
   };

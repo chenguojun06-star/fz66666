@@ -84,59 +84,71 @@ const useStyleBomActions = ({
     }
   }, []);
 
-  const handleGeneratePurchase = useCallback(async () => {
-    if (!data.length) {
-      message.error('请先配置物料清单');
-      return;
-    }
-
+  const doGenerate = useCallback(async (force: boolean) => {
     const sid = Number(styleId);
     if (!Number.isFinite(sid) || sid <= 0) {
       message.error('无效的款式ID');
       return;
     }
 
-    const doGenerate = async (force: boolean) => {
-      setLoading(true);
-      try {
-        const result = await api.post<{ code: number; message: string; data: number }>('/style/bom/generate-purchase', {
-          styleId: sid,
-          force,
-        });
-        if (result.code === 200) {
-          const count = Number(result.data) || 0;
-          message.success(`成功生成 ${count} 条物料采购记录`);
-          // 立即联动：按钮状态更新 + 通知采购列表等页面实时刷新（无需手动刷新）
-          void fetchPurchaseStatus();
-          try {
-            window.dispatchEvent(new Event('data:changed'));
-          } catch {
-            // 事件派发失败不影响业务
-          }
-          return;
+    setLoading(true);
+    try {
+      const result = await api.post<{ code: number; message: string; data: number }>('/style/bom/generate-purchase', {
+        styleId: sid,
+        force,
+      });
+      if (result.code === 200) {
+        const count = Number(result.data) || 0;
+        message.success(`成功生成 ${count} 条物料采购记录`);
+        // 立即联动：按钮状态更新 + 通知采购列表等页面实时刷新（无需手动刷新）
+        void fetchPurchaseStatus();
+        try {
+          window.dispatchEvent(new Event('data:changed'));
+        } catch {
+          // 事件派发失败不影响业务
         }
-
-        const errorMessage = String(result.message || '生成失败');
-        if (errorMessage.includes('已生成过') && !force) {
-          confirmAction('已存在样衣采购记录', '该款式已生成过样衣采购记录。是否删除旧的【待采购】记录并重新生成？（已领取/已完成的记录不会被删除）', () => doGenerate(true), { okText: '重新生成', danger: true });
-          return;
-        }
-
-        message.error(errorMessage);
-      } catch (error: unknown) {
-        message.error(`生成失败：${error instanceof Error ? error.message : '请求失败'}`);
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
 
+      const errorMessage = String(result.message || '生成失败');
+      if (errorMessage.includes('已生成过') && !force) {
+        confirmAction('已存在样衣采购记录', '该款式已生成过样衣采购记录。是否删除旧的【待采购】记录并重新生成？（已领取/已完成的记录不会被删除）', () => doGenerate(true), { okText: '重新生成', danger: true });
+        return;
+      }
+
+      message.error(errorMessage);
+    } catch (error: unknown) {
+      message.error(`生成失败：${error instanceof Error ? error.message : '请求失败'}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [message, setLoading, styleId, fetchPurchaseStatus]);
+
+  /** 工具条入口：生成前先确认（含已生成的重新生成警示） */
+  const handleGeneratePurchase = useCallback(async () => {
+    if (!data.length) {
+      message.error('请先配置物料清单');
+      return;
+    }
     if (purchaseStatus.generated) {
       confirmAction('重新生成采购单', `该款式已生成过 ${purchaseStatus.count} 条样衣采购记录（待采购 ${purchaseStatus.pendingCount} 条）。\n\n重新生成将删除旧的【待采购】记录后重建；已领取/已完成的记录不会被删除。`, () => doGenerate(true), { okText: '重新生成', danger: true });
       return;
     }
-
     confirmAction('确认生成采购单', `将根据当前物料清单（${data.length}个物料）及款式颜色数量生成采购记录。\n\n提示：建议先「检查库存」——库存充足的物料可在表格内直接领取，无需采购。`, () => doGenerate(false));
-  }, [data, message, setLoading, styleId, purchaseStatus, fetchPurchaseStatus]);
+  }, [data, message, purchaseStatus, doGenerate]);
+
+  /**
+   * 缺料分析弹窗内的「生成全部」：弹窗本身已是确认步骤，
+   * 仅保留"已生成过→确认重新生成"的防误触分支。
+   */
+  const generatePurchaseConfirmed = useCallback(async () => {
+    if (purchaseStatus.generated) {
+      confirmAction('重新生成采购单', `该款式已生成过 ${purchaseStatus.count} 条样衣采购记录（待采购 ${purchaseStatus.pendingCount} 条）。\n\n重新生成将删除旧的【待采购】记录后重建；已领取/已完成的记录不会被删除。`, () => doGenerate(true), { okText: '重新生成', danger: true });
+      return;
+    }
+    await doGenerate(false);
+  }, [message, purchaseStatus, doGenerate]);
+
 
   const handleCheckStock = useCallback(async () => {
     const sid = Number(styleId);
@@ -230,39 +242,42 @@ const useStyleBomActions = ({
     }
   }, [debugValue, fetchBom, form, isTempId, locked, message, setData, sortBomRows, tableEditable]);
 
+  /** BOM 行 → 购物车条目映射（全部入车与仅缺料入车共用） */
+  const buildCartItems = useCallback((rows: StyleBom[]) => rows
+    .filter((item) => {
+      const qty = Number(item.devUsageAmount ?? item.usageAmount);
+      return qty > 0 && String(item.materialCode || '').trim();
+    })
+    .map((item) => ({
+      materialCode: String(item.materialCode || '').trim(),
+      materialName: String(item.materialName || '').trim(),
+      materialType: (String(item.materialType || '').toUpperCase() as any) || 'ACCESSORY',
+      specifications: String(item.specification || item.specifications || '').trim() || undefined,
+      unit: String(item.unit || '').trim() || '-',
+      quantity: Number(item.devUsageAmount ?? item.usageAmount) || 0,
+      supplierId: String(item.supplierId || '').trim() || undefined,
+      supplierName: String(item.supplier || item.supplierName || '').trim() || undefined,
+      unitPrice: Number(item.unitPrice) || undefined,
+      sourceType: 'SAMPLE' as const,
+      sourceId: String(styleId || '').trim() || undefined,
+      sourceNo: String(currentStyleNo || '').trim() || undefined,
+      sourceQuantity: Number(item.devUsageAmount ?? item.usageAmount) || 0,
+      styleId: String(styleId || '').trim() || undefined,
+      styleNo: String(currentStyleNo || '').trim() || undefined,
+      color: String(item.color || '').trim() || undefined,
+      fabricComposition: String(item.fabricComposition || '').trim() || undefined,
+      fabricWidth: String(item.fabricWidth || '').trim() || undefined,
+      fabricWeight: String(item.fabricWeight || '').trim() || undefined,
+      remark: `来自BOM：${currentStyleNo || ''}`,
+    })), [currentStyleNo, styleId]);
+
   const handleAddToPurchaseCart = useCallback(async () => {
     if (!data.length) {
       message.error('请先配置物料清单');
       return;
     }
 
-    const itemsToAdd = data
-      .filter((item) => {
-        const qty = Number(item.devUsageAmount ?? item.usageAmount);
-        return qty > 0 && String(item.materialCode || '').trim();
-      })
-      .map((item) => ({
-        materialCode: String(item.materialCode || '').trim(),
-        materialName: String(item.materialName || '').trim(),
-        materialType: (String(item.materialType || '').toUpperCase() as any) || 'ACCESSORY',
-        specifications: String(item.specification || item.specifications || '').trim() || undefined,
-        unit: String(item.unit || '').trim() || '-',
-        quantity: Number(item.devUsageAmount ?? item.usageAmount) || 0,
-        supplierId: String(item.supplierId || '').trim() || undefined,
-        supplierName: String(item.supplier || item.supplierName || '').trim() || undefined,
-        unitPrice: Number(item.unitPrice) || undefined,
-        sourceType: 'SAMPLE' as const,
-        sourceId: String(styleId || '').trim() || undefined,
-        sourceNo: String(currentStyleNo || '').trim() || undefined,
-        sourceQuantity: Number(item.devUsageAmount ?? item.usageAmount) || 0,
-        styleId: String(styleId || '').trim() || undefined,
-        styleNo: String(currentStyleNo || '').trim() || undefined,
-        color: String(item.color || '').trim() || undefined,
-        fabricComposition: String(item.fabricComposition || '').trim() || undefined,
-        fabricWidth: String(item.fabricWidth || '').trim() || undefined,
-        fabricWeight: String(item.fabricWeight || '').trim() || undefined,
-        remark: `来自BOM：${currentStyleNo || ''}`,
-      }));
+    const itemsToAdd = buildCartItems(data);
 
     if (!itemsToAdd.length) {
       message.error('没有有效的物料数据');
@@ -279,14 +294,44 @@ const useStyleBomActions = ({
     } catch (error: unknown) {
       message.error(`添加失败：${error instanceof Error ? error.message : '请求失败'}`);
     }
-  }, [batchAddItems, data, message, currentStyleNo, styleId]);
+  }, [batchAddItems, data, message, buildCartItems]);
+
+  /**
+   * 缺料分析弹窗「仅缺料加入采购车」：只入缺料行（库存不足/无库存且用量、编码有效）。
+   * @param shortageRows 分析弹窗带回的缺料行（含 materialCode）
+   */
+  const handleAddShortageToCart = useCallback(async (shortageRows: any[]) => {
+    const shortageCodes = new Set((shortageRows || []).map((r) => String(r.materialCode || '').trim()).filter(Boolean));
+    const rowsToAdd = data.filter((item) => shortageCodes.has(String(item.materialCode || '').trim()));
+    if (!rowsToAdd.length) {
+      message.warning('没有可加入采购车的缺料物料');
+      return;
+    }
+    const itemsToAdd = buildCartItems(rowsToAdd);
+    if (!itemsToAdd.length) {
+      message.error('缺料物料缺少用量或物料编码，请先补全物料清单');
+      return;
+    }
+    try {
+      const result = await batchAddItems(itemsToAdd);
+      if (result) {
+        const success = Number(result.successCount || 0);
+        const merged = Number(result.mergedCount || 0);
+        message.success(`已将 ${success} 项缺料物料加入采购车（${merged} 个已合并）`);
+      }
+    } catch (error: unknown) {
+      message.error(`添加失败：${error instanceof Error ? error.message : '请求失败'}`);
+    }
+  }, [batchAddItems, data, message, buildCartItems]);
 
   return {
     handleGeneratePurchase,
+    generatePurchaseConfirmed,
     handleCheckStock,
     buildPickupRecord,
     handleDelete,
     handleAddToPurchaseCart,
+    handleAddShortageToCart,
     purchaseStatus,
     fetchPurchaseStatus,
   };

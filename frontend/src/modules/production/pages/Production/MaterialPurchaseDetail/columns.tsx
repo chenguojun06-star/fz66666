@@ -311,7 +311,7 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
               // D-122：已回料确认的行置灰（与批量操作/列表页/大货 Drawer 同一判定），如需重做先点「退回」
               ...(!isPending && !isCancelled ? [{ key: 'return-confirm', label: '回料确认', title: isReturnConfirmed ? '已回料确认，如需重做请先退回' : '确认物料已回料到仓库', disabled: isReturnConfirmed, onClick: () => handleReturnConfirm(record) }] : []),
               ...(isReturnConfirmed ? [{ key: 'return-reset', label: '退回', title: '退回已确认的回料', onClick: () => handleReturnReset(record), danger: true }] : []),
-              ...(!isPending && !isCompleted && !isCancelled && !isReturnConfirmed ? [{ key: 'cancel-receive', label: '撤回采购', title: '撤回已领取的采购，恢复为待处理', onClick: () => handleCancelReceive(record), danger: true }] : []),
+              ...(!isPending && !isCompleted && !isCancelled && !isReturnConfirmed ? [{ key: 'cancel-receive', label: '撤回领取', title: '撤回已领取的采购，恢复为待处理', onClick: () => handleCancelReceive(record), danger: true }] : []),
               // D-117：已取消的采购不可再登记品质异常（终态行按钮置灰）
               { key: 'quality-issue', label: '品质异常', title: isCancelled ? '该采购已取消，不可登记品质异常' : '登记物料品质问题', disabled: isCancelled, onClick: () => { setQualityIssueRecord(record); setQualityIssueVisible(true); } },
               // D-272+：大货/样衣采购统一支持「出库领取」——只要仓库有库存（做过入库）就显示。

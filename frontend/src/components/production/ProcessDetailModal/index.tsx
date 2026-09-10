@@ -60,7 +60,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
               icon={<ShoppingCartOutlined />}
               onClick={() => navigate(`/production/material?orderNo=${encodeURIComponent(record?.orderNo || '')}`)}
             >
-               前往物料采购
+               去采购管理
             </Button>
           )}
           {processType === 'cutting' && (

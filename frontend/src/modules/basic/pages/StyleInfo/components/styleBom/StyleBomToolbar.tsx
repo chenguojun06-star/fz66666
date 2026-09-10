@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Button, Dropdown, Select, Space, Spin, Tag, Tooltip, Upload, message } from 'antd';
-import { CopyOutlined, DownOutlined, ReloadOutlined, RobotOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { Button, Dropdown, Select, Space, Spin, Tag, Upload, message } from 'antd';
+import { CopyOutlined, DownOutlined, RobotOutlined } from '@ant-design/icons';
 import StyleBomAddRowsDropdown from './StyleBomAddRowsDropdown';
 import api from '@/utils/api';
 import ResizableModal from '@/components/common/ResizableModal';
 import type { SamplePurchaseStatus } from '../hooks/useStyleBomActions';
 import TabToolbar from '@/components/common/TabToolbar';
+import SmartPurchasePreviewModal from '@/modules/production/pages/Production/OrderFlow/components/SmartPurchasePreviewModal';
 
 interface AiBomRecognizedItem {
   id: string;
@@ -30,12 +31,16 @@ interface StyleBomToolbarProps {
   templateLoading: boolean;
   editingKey: string;
   onCheckStock: () => void;
-  onGeneratePurchase: () => void;
+  /** 缺料分析弹窗内的「生成全部」（免二次确认，保留重新生成警示） */
+  onGenerateConfirmed: () => void;
+  /** 缺料分析弹窗内的「仅缺料加入采购车」 */
+  onShortageCart: (shortageRows: any[]) => void;
   onAddToPurchaseCart: () => void;
   onToggleEdit: () => void;
   onCancelEdit: () => void;
   onAddRows: (count: number) => void;
   styleId: string | number;
+  styleNo?: string;
   purchaseStatus?: SamplePurchaseStatus;
   onBomRecognized: (items: AiBomRecognizedItem[]) => void;
   onOpenCopyBom: () => void;
@@ -50,12 +55,14 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
   templateLoading,
   editingKey,
   onCheckStock,
-  onGeneratePurchase,
+  onGenerateConfirmed,
+  onShortageCart,
   onAddToPurchaseCart,
   onToggleEdit,
   onCancelEdit,
   onAddRows,
   styleId,
+  styleNo,
   purchaseStatus,
   onBomRecognized,
   onOpenCopyBom,
@@ -64,6 +71,8 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
   const [ocrModalOpen, setOcrModalOpen] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrFile, setOcrFile] = useState<any>(null);
+  // D-360 统一「生成采购」缺料分析弹窗（样衣模式）
+  const [analysisOpen, setAnalysisOpen] = useState(false);
 
   const handleOcrRecognize = async () => {
     if (!ocrFile) {
@@ -131,17 +140,17 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
           disabled={locked || !dataLength || loading}
           menu={{
             items: [
-              { key: 'generate', label: purchaseStatus?.generated ? '重新生成采购单（覆盖待采购记录）' : '生成采购单' },
-              { key: 'cart', label: '加入采购车（可合并下单）' },
+              { key: 'analyze', label: '缺料分析生成（推荐）' },
+              { key: 'cart', label: '加入采购车（全部物料）' },
             ],
             onClick: ({ key }) => {
-              if (key === 'generate') onGeneratePurchase();
+              if (key === 'analyze') setAnalysisOpen(true);
               else onAddToPurchaseCart();
             },
           }}
         >
           <Button type="primary" loading={loading}>
-            采购 <DownOutlined />
+            生成采购 <DownOutlined />
           </Button>
         </Dropdown>
         {purchaseStatus?.generated ? (
@@ -189,6 +198,17 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
       }
     >
     </TabToolbar>
+
+      {/* D-360 统一缺料分析弹窗：样衣模式（check-stock 分析 → 生成全部 / 仅缺料加入采购车） */}
+      <SmartPurchasePreviewModal
+        open={analysisOpen}
+        styleId={styleId}
+        styleNo={styleNo}
+        generating={loading}
+        onClose={() => setAnalysisOpen(false)}
+        onGenerateAll={() => onGenerateConfirmed()}
+        onGenerateShortage={(_reason, shortageRows) => onShortageCart(shortageRows || [])}
+      />
 
       <ResizableModal
         title="AI识别物料清单"

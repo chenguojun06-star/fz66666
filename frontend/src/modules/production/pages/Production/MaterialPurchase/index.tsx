@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Card, Form, message, Tabs, Button, Table, Tag, Tooltip, Space, Alert, Statistic } from 'antd';
-import { RobotOutlined } from '@ant-design/icons';
+import { Card, Form, message, Tabs, Button, Table, Tag, Tooltip, Space, Alert, Statistic, Dropdown } from 'antd';
+import { RobotOutlined, PlusOutlined, DownOutlined, ExportOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -207,7 +207,11 @@ const MaterialPurchase: React.FC = () => {
                       activeKey={activeStatFilter}
                       cards={statCards}
                       extraRight={
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <Space wrap size={8}>
+                          {/* D-360 统一动作区：新增采购(primary) / 智能采购推荐 / 更多▾(导出) */}
+                          <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => { setOrderPickerContext('add'); setOrderPickerOpen(true); }}>
+                            新增采购
+                          </Button>
                           <Button
                             icon={<RobotOutlined />}
                             size="small"
@@ -216,7 +220,19 @@ const MaterialPurchase: React.FC = () => {
                           >
                             智能采购推荐
                           </Button>
-                        </div>
+                          <Dropdown
+                            trigger={['hover']}
+                            menu={{
+                              items: [
+                                { key: 'export', label: '导出', icon: <ExportOutlined />, onClick: handleExport, disabled: loading || !purchaseList?.length },
+                              ],
+                            }}
+                          >
+                            <Button size="small">
+                              更多 <DownOutlined />
+                            </Button>
+                          </Dropdown>
+                        </Space>
                       }
                     />
 
@@ -225,8 +241,6 @@ const MaterialPurchase: React.FC = () => {
                       setQueryParams={setQueryParams}
                       onSearch={fetchMaterialPurchaseList}
                       onReset={handleSearchReset}
-                      onExport={handleExport}
-                      onAdd={() => { setOrderPickerContext('add'); setOrderPickerOpen(true); }}
                       loading={loading}
                       hasData={purchaseList && purchaseList.length > 0}
                     />

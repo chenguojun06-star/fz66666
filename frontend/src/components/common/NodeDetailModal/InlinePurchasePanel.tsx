@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react';
 import { Alert, Button, Card, Collapse, Form, Input, InputNumber, Space, Spin, Tag } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { buildColorSummary, getOrderQtyTotal } from '@/modules/production/pages/Production/MaterialPurchase/utils';
+import { PurchaseActionBar, PurchaseEditActions, PURCHASE_ACTION_LABELS } from '@/components/common/purchase/PurchaseActionBar';
 import type { MaterialPurchase } from '@/types/production';
 import { InlinePurchasePanelProps, normalizeStatus } from './InlinePurchasePanel.helpers';
 import { isPurchaseRowComplete } from './utils';
@@ -148,79 +148,55 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
         title={`需要采购的面辅料（${displayData.length}项）`}
         loading={loading}
         extra={
-          <Space>
-            {!editing && (
-              <>
-                <Button
-                  type="primary"
-                  size="small"
-                  disabled={actionLoading || !purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING && isPurchaseRowComplete(p))}
-                  loading={actionLoading}
-                  onClick={handleReceiveAll}
-                >
-                  采购全部
-                </Button>
-                {bomIncomplete && (
-                  <Tag color="warning" style={{ marginLeft: 4 }}>
-                    {(() => {
-                      const noSupplier = purchases.filter(p => isPurchaseRowComplete(p) && !String(p.supplierName || '').trim());
-                      const criticalMissing = purchases.filter(p => !isPurchaseRowComplete(p));
-                      if (criticalMissing.length > 0) {
-                        return `${criticalMissing.length} 项缺物料编码/名称/单位，无法采购`;
-                      }
-                      return noSupplier.length > 0 ? `${noSupplier.length} 项未填供应商，可采购建议补全` : '请先编辑物料信息';
-                    })()}
-                  </Tag>
-                )}
-                <Button
-                  size="small"
-                  disabled={!purchases.some(p => {
+          editing ? (
+            <PurchaseEditActions
+              onAdd={handleAddRow}
+              onSave={handleSaveAll}
+              saving={saving}
+              onCancel={handleCancelEdit}
+            />
+          ) : (
+            <Space wrap size={8}>
+              <PurchaseActionBar
+                receive={{
+                  disabled: actionLoading || !purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING && isPurchaseRowComplete(p)),
+                  loading: actionLoading,
+                  onClick: handleReceiveAll,
+                }}
+                batchReturn={{
+                  disabled: !purchases.some(p => {
                     const s = normalizeStatus(p.status);
                     return (s === MATERIAL_PURCHASE_STATUS.RECEIVED || s === MATERIAL_PURCHASE_STATUS.PARTIAL || s === MATERIAL_PURCHASE_STATUS.COMPLETED)
                       && Number(p?.returnConfirmed || 0) !== 1;
-                  })}
-                  loading={actionLoading}
-                  onClick={handleBatchReturn}
-                >
-                  回料确认
-                </Button>
-                <Button
-                  size="small"
-                  disabled={!purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM)}
-                  loading={confirmCompleteLoading}
-                  onClick={handleConfirmComplete}
-                >
-                  确认完成
-                </Button>
-                <Button
-                  size="small"
-                  type="primary"
-                  onClick={handleStartEdit}
-                >
-                  编辑物料
-                </Button>
-              </>
-            )}
-            {editing && (
-              <>
-                <Button type="dashed" icon={<PlusOutlined />} onClick={handleAddRow} size="small">
-                  添加物料
-                </Button>
-                <Button type="primary" loading={saving} onClick={handleSaveAll} size="small">
-                  保存
-                </Button>
-                <Button onClick={handleCancelEdit} size="small">
-                  取消
-                </Button>
-              </>
-            )}
-            <Button
-              size="small"
-              onClick={() => navigate(`/production/material/${encodeURIComponent(String(order?.styleNo || firstPurchase?.styleNo || ''))}?orderNo=${encodeURIComponent(String(orderNo || ''))}`)}
-            >
-              前往物料采购 →
-            </Button>
-          </Space>
+                  }),
+                  loading: actionLoading,
+                  onClick: handleBatchReturn,
+                }}
+                confirmComplete={{
+                  disabled: !purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM),
+                  loading: confirmCompleteLoading,
+                  onClick: handleConfirmComplete,
+                }}
+                edit={{ onClick: handleStartEdit }}
+                linkAction={{
+                  label: PURCHASE_ACTION_LABELS.goMaterialDetail,
+                  onClick: () => navigate(`/production/material/${encodeURIComponent(String(order?.styleNo || firstPurchase?.styleNo || ''))}?orderNo=${encodeURIComponent(String(orderNo || ''))}`),
+                }}
+              />
+              {bomIncomplete && (
+                <Tag color="warning" style={{ marginLeft: 0 }}>
+                  {(() => {
+                    const noSupplier = purchases.filter(p => isPurchaseRowComplete(p) && !String(p.supplierName || '').trim());
+                    const criticalMissing = purchases.filter(p => !isPurchaseRowComplete(p));
+                    if (criticalMissing.length > 0) {
+                      return `${criticalMissing.length} 项缺物料编码/名称/单位，无法领取`;
+                    }
+                    return noSupplier.length > 0 ? `${noSupplier.length} 项未填供应商，可领取建议补全` : '请先编辑物料信息';
+                  })()}
+                </Tag>
+              )}
+            </Space>
+          )
         }
       >
         {editing ? (
@@ -282,7 +258,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
       />
 
       <ResizableModal
-        title="确认到货"
+        title="领取到货"
         open={receiveModalVisible}
         onCancel={() => setReceiveModalVisible(false)}
         onOk={doReceive}

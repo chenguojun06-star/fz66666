@@ -30,7 +30,7 @@ interface BatchPurchaseModalProps {
 }
 
 /**
- * 批量采购确认弹窗（样衣采购管理 / 大货物料采购共用）。
+ * 批量领取确认弹窗（样衣采购管理 / 大货物料采购共用）。
  *
  * 修复点（D-104）：
  * - 信息补全：物料编码、规格、颜色、单价、供应商全部展示（旧弹窗仅"物料名 · 颜色"，颜色为空显示"-"）
@@ -38,7 +38,7 @@ interface BatchPurchaseModalProps {
  */
 const BatchPurchaseModal: React.FC<BatchPurchaseModalProps> = ({
   open,
-  title = '批量采购',
+  title = '批量领取',
   items,
   submitting = false,
   onCancel,
@@ -107,7 +107,7 @@ const BatchPurchaseModal: React.FC<BatchPurchaseModalProps> = ({
       render: (v: number, r: BatchPurchaseItem) => <span>{formatMaterialQuantity(v)}{r.unit ? ` ${r.unit}` : ''}</span>,
     },
     {
-      title: '采购数量',
+      title: '领取数量',
       dataIndex: 'purchaseQty',
       width: 140,
       render: (_: unknown, r: BatchPurchaseItem) => (
@@ -115,11 +115,11 @@ const BatchPurchaseModal: React.FC<BatchPurchaseModalProps> = ({
           noStyle
           name={['batchQty', r.id]}
           initialValue={Number(r.requiredQty) || 0}
-          rules={[{ required: true, message: '请输入采购数量' }]}
+          rules={[{ required: true, message: '请输入领取数量' }]}
         >
           <InputNumber
             id={`batch-purchase-qty-${r.id}`}
-            aria-label={`${r.materialName || r.materialCode} 采购数量`}
+            aria-label={`${r.materialName || r.materialCode} 领取数量`}
             style={{ width: '100%' }}
             min={0}
             precision={2}
@@ -144,7 +144,7 @@ const BatchPurchaseModal: React.FC<BatchPurchaseModalProps> = ({
         await onConfirm(quantities);
       }}
       onCancel={onCancel}
-      okText="确认批量采购"
+      okText="确认批量领取"
       cancelText="取消"
     >
       <Form component={false}>

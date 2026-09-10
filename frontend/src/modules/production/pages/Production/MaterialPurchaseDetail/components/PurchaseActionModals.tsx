@@ -18,7 +18,7 @@ export interface ReceiveModalProps {
 
 export const ReceiveModal: React.FC<ReceiveModalProps> = ({ visible, record, form, loading, onOk, onCancel }) => (
   <ResizableModal
-    title={record && String(record.status || '').toLowerCase() === MATERIAL_PURCHASE_STATUS.PENDING ? '采购/到货' : '追加到货'}
+    title={record && String(record.status || '').toLowerCase() === MATERIAL_PURCHASE_STATUS.PENDING ? '领取到货' : '追加到货'}
     open={visible}
     onOk={onOk}
     onCancel={onCancel}

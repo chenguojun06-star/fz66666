@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, Button, Space, Tag } from 'antd';
-import { PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { PlusOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import ResizableTable from '@/components/common/ResizableTable';
 import { getMaterialTypeLabel } from '@/utils/materialType';
@@ -9,6 +9,7 @@ import { displayAmount } from '@/utils/display';
 import { MATERIAL_PURCHASE_STATUS_MAP } from '@/constants/statusMaps';
 import { getBomColumns } from '../helpers/bomColumns';
 import SmartPurchasePreviewModal from './SmartPurchasePreviewModal';
+import { PurchaseGenerateDropdown, PURCHASE_ACTION_LABELS } from '@/components/common/purchase/PurchaseActionBar';
 
 interface MaterialTabContentProps {
   orderId: string;
@@ -29,12 +30,12 @@ interface MaterialTabContentProps {
  * 面辅料 Tab 内容。
  *
  * 优先级：
- * 1. materialPurchases 非空 → 显示采购明细 + 「生成采购」「录入采购」按钮
+ * 1. materialPurchases 非空 → 显示采购明细 + 「生成采购」「去采购管理」按钮
  * 2. bomList 非空 → 显示物料清单 + 「生成采购」按钮
  * 3. 都为空 → Alert 提示
  *
- * 「生成采购」先弹出缺料分析（净需求 = 用量×订单数量×(1+损耗) − 可用库存 − 在途），
- * 用户看清缺什么再选择「生成全部」或「仅缺料加入采购车」，原因改为选填。
+ * D-360 统一动作条：「生成采购」先弹缺料分析（净需求 = 用量×订单数量×(1+损耗) − 可用库存 − 在途），
+ * 用户看清缺什么再选择「生成全部」或「仅缺料生成采购」；跳转统一叫「去采购管理」。
  */
 const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
   orderId,
@@ -53,11 +54,9 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
   const openPurchasePreview = () => setPreviewOpen(true);
 
   const goToPurchaseEntry = () => {
-    void recordAction('录入采购', '订单流程快捷入口');
-    const url = orderId
-      ? `/production/material-purchase?orderId=${orderId}&orderNo=${encodeURIComponent(orderNo)}`
-      : '/production/material-purchase';
-    navigate(url);
+    void recordAction('去采购管理', '订单流程快捷入口');
+    // D-360 修复：实际注册路由是 /production/material（原 /production/material-purchase 未注册是死链）
+    navigate(`/production/material?orderNo=${encodeURIComponent(orderNo || '')}`);
   };
 
   if (materialPurchases.length > 0) {
@@ -66,20 +65,14 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
         <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end' }}>
           <Space>
             {bomList.length > 0 && (
-              <Button
-                icon={<ThunderboltOutlined />}
-                loading={generating}
-                onClick={openPurchasePreview}
-              >
-                生成采购
-              </Button>
+              <PurchaseGenerateDropdown onAnalyze={openPurchasePreview} generating={generating} />
             )}
             <Button
-              type="primary"
+              type={bomList.length > 0 ? 'default' : 'primary'}
               icon={<PlusOutlined />}
               onClick={goToPurchaseEntry}
             >
-              录入采购
+              {PURCHASE_ACTION_LABELS.goPurchaseCenter}
             </Button>
           </Space>
         </div>
@@ -196,14 +189,7 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
     return (
       <>
         <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end' }}>
-          <Button
-            type="primary"
-            icon={<ThunderboltOutlined />}
-            loading={generating}
-            onClick={openPurchasePreview}
-          >
-            生成采购
-          </Button>
+          <PurchaseGenerateDropdown onAnalyze={openPurchasePreview} generating={generating} />
         </div>
         <ResizableTable
           storageKey="order-flow-bom"

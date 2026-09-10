@@ -269,7 +269,7 @@ export const buildStatusActionColumns = (params: UseMaterialColumnsParams): Colu
               },
               ...(canCancelReceive ? [{
                 key: 'cancel-receive',
-                label: '撤回采购',
+                label: '撤回领取',
                 title: '撤回已领取的采购，恢复为待处理',
                 danger: true as const,
                 onClick: () => setCancelTarget(record),

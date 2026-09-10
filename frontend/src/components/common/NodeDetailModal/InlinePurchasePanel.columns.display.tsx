@@ -232,7 +232,7 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
                   }
                 }}
               >
-                {hasStock ? '出库领取' : (rowMissing.length > 0 ? `采购（缺${rowMissing.join('、')}）` : '采购')}
+                {hasStock ? '出库领取' : (rowMissing.length > 0 ? `领取（缺${rowMissing.join('、')}）` : '领取')}
               </Button>
             )}
             {/* 到货入库按钮：将物料入库到仓库库存 */}
@@ -242,7 +242,7 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
                 size="small"
                 onClick={() => handleInbound(record)}
               >
-                到货入库
+                登记到货
               </Button>
             )}
             <Button
@@ -271,13 +271,13 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
               </Button>
             )}
             {status !== MATERIAL_PURCHASE_STATUS.PENDING && status !== MATERIAL_PURCHASE_STATUS.COMPLETED && status !== MATERIAL_PURCHASE_STATUS.CANCELLED && Number(record?.returnConfirmed || 0) !== 1 && (
-              <Popconfirm title="确定取消领取吗？" onConfirm={() => handleCancelReceive(record)} okText="确定" cancelText="取消">
+              <Popconfirm title="确定撤回领取吗？" onConfirm={() => handleCancelReceive(record)} okText="确定" cancelText="取消">
                 <Button
                   type="link"
                   size="small"
                   danger
                 >
-                  取消领取
+                  撤回领取
                 </Button>
               </Popconfirm>
             )}

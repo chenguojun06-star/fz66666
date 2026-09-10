@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Card, Tag, Space, Alert, Row, Col, Dropdown, App, Tooltip } from 'antd';
-import { PlusOutlined, PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined, FileImageOutlined, DownOutlined } from '@ant-design/icons';
+import { Button, Card, Tag, Space, Alert, Row, Col, App, Tooltip } from 'antd';
+import { PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined, FileImageOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import SkeletonLoader from '@/components/common/SkeletonLoader';
 import api from '@/utils/api';
 import { buildStockMap } from '@/components/common/NodeDetailModal/utils';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
+import { PurchaseActionBar, PurchaseEditActions } from '@/components/common/purchase/PurchaseActionBar';
 import MaterialQualityIssueModal from '../MaterialPurchase/components/MaterialQualityIssueModal';
 import PurchaseDocRecognizeModal from '../MaterialPurchase/components/PurchaseDocRecognizeModal';
 import PurchaseDocListModal from '../MaterialPurchase/components/PurchaseDocListModal';
@@ -251,7 +252,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
             <span>
               订单包含 <strong>{colorList.length}</strong> 种颜色（{colorList.join('、')}），
               但以下颜色缺少采购物料记录：<strong style={{ color: 'var(--color-error)' }}>{missingColors.join('、')}</strong>。
-              请点击「编辑面辅料」为每个颜色分别添加面料信息。
+              请点击「编辑物料」为每个颜色分别添加面料信息。
             </span>
           }
           style={{ marginBottom: 16 }}
@@ -267,87 +268,59 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         loading={loading}
         styles={{ body: { padding: '0 16px 16px' } }}
         extra={
-          <Space wrap>
-            <Button icon={<UploadOutlined />} onClick={() => setDocRecognizeOpen(true)} size="small">
-              上传采购单
-            </Button>
-            {orderNo ? (
-              <Button icon={<FileImageOutlined />} onClick={() => setDocListOpen(true)} size="small">
-                采购单据
-              </Button>
-            ) : null}
-            {/* D-118：三个批量动作集成到一个悬停下拉（原三按钮并排占宽且视觉嘈杂）；antd Dropdown 默认 hover 触发 */}
-            <Dropdown
-              trigger={['hover']}
-              menu={{
-                items: [
-                  {
-                    key: 'batch-purchase',
-                    label: batchPurchaseLoading ? '批量采购（处理中…）' : (batchPurchaseDisabled ? '批量采购（无可采购项）' : '批量采购'),
-                    disabled: batchPurchaseDisabled || batchPurchaseLoading,
-                    onClick: onBatchPurchase,
-                  },
-                  {
-                    key: 'batch-return',
-                    label: batchReturnLoading ? '批量回料确认（处理中…）' : (hasReturnable ? '批量回料确认' : '批量回料确认（无可确认项）'),
-                    disabled: batchReturnLoading || !hasReturnable,
-                    onClick: onBatchReturnConfirm,
-                  },
-                  {
-                    key: 'confirm-complete',
-                    label: confirmCompleteSubmitting ? '确认回料完成（处理中…）' : (hasAwaitingConfirm ? '确认回料完成' : '确认回料完成（无待完成项）'),
-                    disabled: confirmCompleteSubmitting || !hasAwaitingConfirm,
-                    onClick: handleConfirmComplete,
-                  },
-                ],
-              }}
-            >
-              <Button size="small">
-                批量操作 <DownOutlined />
-              </Button>
-            </Dropdown>
-            <Dropdown menu={{
-              items: [
-                { key: 'print', label: '打印采购单', icon: <PrinterOutlined />, onClick: () => setPrintOpen(true) },
-                { key: 'download', label: '下载采购单', icon: <DownloadOutlined />, onClick: handleExport },
-              ],
-            }}>
-              <Button size="small">采购单生成</Button>
-            </Dropdown>
-            <Button icon={<ExportOutlined />} onClick={onExport} loading={exportLoading} size="small">导出</Button>
-            {editing ? (
-              <>
-                <Button type="dashed" icon={<PlusOutlined />} onClick={handleAddRow} size="small">
-                  添加物料
-                </Button>
-                <Button loading={saving} onClick={handleSaveAll} size="small">
-                  保存
-                </Button>
-                <Button onClick={handleCancelEdit} size="small">
-                  取消
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  icon={<PlusOutlined />}
-                  onClick={handleStartEdit}
-                  size="small"
-                  disabled={toolbarEditLocked}
-                  title={toolbarEditLockTitle}
-                >
-                  编辑面辅料
-                </Button>
-                {hasReturnConfirmedRow ? (
-                  <Tag color="success">已回料确认 · 编辑已锁定</Tag>
-                ) : bomIncomplete ? (
-                  <Tag icon={<ExclamationCircleOutlined />} color="warning">
-                    {isMultiColor ? '部分物料信息不全（缺供应商可采购，缺编码/名称/单位需补全）' : '部分物料信息不全：缺供应商仍可采购，缺编码/名称/单位的行需补全'}
-                  </Tag>
-                ) : null}
-              </>
-            )}
-          </Space>
+          editing ? (
+            <PurchaseEditActions
+              onAdd={handleAddRow}
+              onSave={handleSaveAll}
+              saving={saving}
+              onCancel={handleCancelEdit}
+            />
+          ) : (
+            <Space wrap size={8}>
+              <PurchaseActionBar
+                receive={{
+                  disabled: batchPurchaseDisabled || batchPurchaseLoading,
+                  loading: batchPurchaseLoading,
+                  title: batchPurchaseDisabled ? '无可领取项' : '打开可编辑确认弹窗，逐行核对数量后领取',
+                  onClick: onBatchPurchase,
+                }}
+                batchReturn={{
+                  disabled: batchReturnLoading || !hasReturnable,
+                  loading: batchReturnLoading,
+                  title: hasReturnable ? undefined : '无可确认项',
+                  onClick: onBatchReturnConfirm,
+                }}
+                confirmComplete={{
+                  disabled: confirmCompleteSubmitting || !hasAwaitingConfirm,
+                  loading: confirmCompleteSubmitting,
+                  title: hasAwaitingConfirm ? undefined : '无待完成项',
+                  onClick: handleConfirmComplete,
+                }}
+                edit={{
+                  disabled: toolbarEditLocked,
+                  title: toolbarEditLockTitle,
+                  onClick: handleStartEdit,
+                }}
+                extraTags={
+                  hasReturnConfirmedRow ? (
+                    <Tag color="success">已回料确认 · 编辑已锁定</Tag>
+                  ) : bomIncomplete ? (
+                    <Tag icon={<ExclamationCircleOutlined />} color="warning">
+                      {isMultiColor ? '部分物料信息不全（缺供应商可领取，缺编码/名称/单位需补全）' : '部分物料信息不全：缺供应商仍可领取，缺编码/名称/单位的行需补全'}
+                    </Tag>
+                  ) : null
+                }
+                moreItems={[
+                  { key: 'doc-recognize', label: '上传采购单', icon: <UploadOutlined />, onClick: () => setDocRecognizeOpen(true) },
+                  ...(orderNo ? [{ key: 'doc-list', label: '采购单据', icon: <FileImageOutlined />, onClick: () => setDocListOpen(true) }] : []),
+                  { key: 'print', label: '打印采购单', icon: <PrinterOutlined />, onClick: () => setPrintOpen(true) },
+                  { key: 'download', label: '下载采购单', icon: <DownloadOutlined />, onClick: handleExport },
+                  { type: 'divider' as const },
+                  { key: 'export', label: '导出', icon: <ExportOutlined />, onClick: onExport },
+                ]}
+              />
+            </Space>
+          )
         }
       >
         {displayData.length === 0 && !editing ? (
@@ -360,13 +333,13 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                 ? '请先在样衣详情页配置物料清单，配置后打开采购管理将自动同步物料数据。'
                 : isMultiColor
                   ? `订单包含 ${colorList.length} 种颜色（${colorList.join('、')}），需要为每种颜色分别创建对应的面辅料记录。`
-                  : `请为订单创建面辅料信息（物料编码、名称、单位、供应商等），完善后才可进行采购。`
+                  : `请为订单编辑物料信息（物料编码、名称、单位、供应商等），完善后才可进行采购。`
               }
               style={{ maxWidth: 600, margin: '0 auto', textAlign: 'left' }}
               action={
                 !sampleMode ? (
                   <Button size="small" onClick={handleStartEdit}>
-                    创建面辅料
+                    编辑物料
                   </Button>
                 ) : undefined
               }
