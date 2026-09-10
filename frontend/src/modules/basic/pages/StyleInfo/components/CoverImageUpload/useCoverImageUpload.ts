@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App } from 'antd';
 import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
+import { clearApiCache } from '@/utils/api/core';
 import { getFullAuthedFileUrl, isSameFileUrl } from '@/utils/fileUrl';
 import { isFailedParseText } from '../StyleBasicInfoForm/styleFeature';
 import { setStyleCoverOverride } from '@/components/StyleAssets';
 import { styleSearchByImage, styleParseFromImage, type StyleFieldParseResult } from '@/services/intelligence/intelligenceApi';
 import type { CoverImageUploadProps, DisplayImage } from './types';
+
+/**
+ * D-349 图片变更后的全局通知：清接口 GET 缓存（30s 内存缓存）+ 广播 data:changed，
+ * 否则其他页面/已挂载列表仍显示旧封面（"删了图/换了主图，别处还是老图片"）。
+ */
+const notifyStyleMediaChanged = () => {
+  try { clearApiCache(); } catch { /* 忽略 */ }
+  try { window.dispatchEvent(new Event('data:changed')); } catch { /* 忽略 */ }
+};
 
 /**
  * 封面图片上传组件业务逻辑 Hook
@@ -129,6 +139,7 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
         if (styleNo) formData.append('styleNo', styleNo);
         const uploadRes = await api.post<ApiResult<{ fileUrl?: string }>>('/style/attachment/upload', formData, { timeout: 60000 });
         if (isApiSuccess(uploadRes) && uploadRes?.data?.fileUrl) {
+          notifyStyleMediaChanged();
           imgUrl = getFullAuthedFileUrl(uploadRes.data.fileUrl);
         } else {
           return null;
@@ -173,6 +184,7 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
         if (styleNo) formData.append('styleNo', styleNo);
         const uploadRes = await api.post<ApiResult<{ fileUrl?: string }>>('/style/attachment/upload', formData, { timeout: 60000 });
         if (isApiSuccess(uploadRes) && uploadRes?.data?.fileUrl) {
+          notifyStyleMediaChanged();
           imgUrl = getFullAuthedFileUrl(uploadRes.data.fileUrl);
         } else {
           message.error('图片上传失败，无法进行以图搜款');
@@ -319,6 +331,7 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
           const res = await api.delete<ApiResult<boolean>>(`/style/attachment/${attachmentId}`);
           if (isApiSuccess(res) && res?.data === true) {
             message.success('删除成功');
+            notifyStyleMediaChanged();
             const deletedUrl = String(displayImages.find((item) => String(item?.id) === String(attachmentId))?.fileUrl || '');
             if (!deletedUrl || deletedUrl === currentImage?.fileUrl) {
               const nextCover = displayImages.find((item) => String(item?.id) !== String(attachmentId) && !(item as { isCoverFallback?: boolean })?.isCoverFallback)?.fileUrl || null;
@@ -352,6 +365,7 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
     try {
       const res = await api.post<ApiResult<boolean>>(`/style/attachment/${img.id}/set-cover`);
       if (isApiSuccess(res)) {
+        notifyStyleMediaChanged();
         // 展示列表已把 fileUrl 换成带 token 的地址，回写 cover 必须用附件裸 URL，
         // 否则带 token 的链接会被存进款式数据，过期后 401
         const rawUrl = String(images.find((item) => String(item?.id) === String(img.id))?.fileUrl || img.fileUrl || '');
