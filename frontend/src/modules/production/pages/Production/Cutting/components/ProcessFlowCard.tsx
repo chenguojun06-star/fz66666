@@ -1,11 +1,12 @@
-import React, { useMemo } from 'react';
-import { Button, Card, Dropdown, InputNumber, Select, Space, Tag, Tooltip } from 'antd';
-import { DeleteOutlined, DownOutlined, ImportOutlined, PlusOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import React, { useMemo, useState } from 'react';
+import { App, Button, Card, Dropdown, InputNumber, Select, Space, Tag, Tooltip } from 'antd';
+import { CopyOutlined, DeleteOutlined, DownOutlined, PlusOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import CopyStyleProcessDrawer from '@/modules/basic/pages/StyleInfo/components/styleProcess/CopyStyleProcessDrawer';
+import type { StyleProcess } from '@/types/style';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { STAGE_ACCENT, STAGE_ACCENT_LIGHT } from '@/utils/stageStyles';
 import { CUTTING_STAGE_ORDER, computeStageSortedAndSpan } from '@/utils/productionStage';
 import type { CuttingCreateTaskState } from '../hooks';
-import { useTemplateImport } from './useTemplateImport';
 import { cardStyle } from './helpers';
 
 interface Props {
@@ -14,8 +15,37 @@ interface Props {
 }
 
 const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoOptions }) => {
+  const { message } = App.useApp();
   const { sorted, spanMap } = computeStageSortedAndSpan(createTask.createProcessNodes, CUTTING_STAGE_ORDER);
-  const template = useTemplateImport(createTask);
+  // D-352 工序导入统一为"拷贝其他款工序"侧滑抽屉（全站最后一处老式模板导入下线）
+  const [copyOpen, setCopyOpen] = useState(false);
+  const currentStyleId = useMemo(
+    () => createTask.createStyleOptions.find((x) => x.styleNo === createTask.createStyleNo)?.id ?? '',
+    [createTask.createStyleOptions, createTask.createStyleNo],
+  );
+
+  /** 勾选工序 → 追加为本地工序行（编号接续、内容不做控制），与样衣侧拷贝工序同口径 */
+  const handleCopyProcesses = (rows: StyleProcess[]) => {
+    if (!rows?.length) return;
+    createTask.setCreateProcessNodes((prev) => {
+      const start = prev.length;
+      const nodes = rows
+        .map((r, i) => ({
+          id: String(start + i + 1).padStart(2, '0'),
+          name: String(r.processName || '').trim(),
+          progressStage: String(r.progressStage || '').trim() || '裁剪',
+          unitPrice: Number(r.price) || 0,
+          machineType: String(r.machineType || '').trim(),
+          difficulty: String(r.difficulty || '').trim(),
+          standardTime: Number(r.standardTime) || 0,
+          sizePrices: {},
+        }))
+        .filter((n) => n.name);
+      return [...prev, ...nodes];
+    });
+    message.success(`已追加 ${rows.length} 道工序（可继续调整单价与分组）`);
+    setCopyOpen(false);
+  };
 
   const _stageSummary = useMemo(() => {
     const stages: Record<string, { count: number; total: number }> = {};
@@ -71,29 +101,11 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
       }
       extra={
         <Space size={8}>
-          <Select
-            showSearch
-
-            style={{ width: 180 }}
-            placeholder="选择款号导入模板"
-            value={template.templateStyleNo || undefined}
-            onSearch={(v) => debouncedFetchStyleInfoOptions(v)}
-            onChange={(v) => template.setTemplateStyleNo(v)}
-            filterOption={false}
-            loading={createTask.createStyleLoading}
-            options={createTask.createStyleOptions.map((s) => ({ label: `${s.styleNo}${s.styleName ? ` - ${s.styleName}` : ''}`, value: s.styleNo }))}
-            allowClear
-          />
           <Button
-
-            type="primary"
-            ghost
-            icon={<ImportOutlined />}
-            loading={template.templateLoading}
-            disabled={!template.templateStyleNo.trim()}
-            onClick={template.handleImportTemplate}
+            icon={<CopyOutlined />}
+            onClick={() => setCopyOpen(true)}
           >
-            模板导入
+            拷贝其他款工序
           </Button>
           <Dropdown
             menu={{
@@ -109,6 +121,13 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
       }
       style={{ marginBottom: 12 }}
     >
+
+      <CopyStyleProcessDrawer
+        open={copyOpen}
+        onClose={() => setCopyOpen(false)}
+        currentStyleId={currentStyleId}
+        onConfirm={async (rows) => { handleCopyProcesses(rows); }}
+      />
       <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={cardStyle}>
           <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>工序单价（总计）</span>
