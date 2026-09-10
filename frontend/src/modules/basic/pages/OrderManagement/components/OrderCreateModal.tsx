@@ -1,4 +1,15 @@
 import React from 'react';
+
+/** D-351 统一分区标题（与样衣开发详情页信息分区同一视觉：左色条 + 标题） */
+const FormSectionTitle: React.FC<{ title: string; hint?: string }> = ({ title, hint }) => (
+  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '2px 0 6px' }}>
+    <span style={{
+      fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)',
+      paddingLeft: 8, borderLeft: '3px solid var(--color-primary)', lineHeight: '16px',
+    }}>{title}</span>
+    {hint ? <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{hint}</span> : null}
+  </div>
+);
 import { Button, Col, Drawer, Form, FormInstance, Input, Row, Select, Space, Tag, Tooltip } from 'antd';
 import dayjs from 'dayjs';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
@@ -121,6 +132,11 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
             }}
           >
             <Row gutter={[16, 12]}>
+              <Col span={24}>
+                <FormSectionTitle title="基本信息" hint="款式/订单号/品类" />
+              </Col>
+            </Row>
+            <Row gutter={[16, 12]}>
               <Col xs={24} sm={12}>
                 <div style={{ marginBottom: 4, fontWeight: 600 }}>订单号 <span style={{ color: 'var(--color-danger)' }}>*</span></div>
                 <Form.Item name="orderNo" rules={[{ required: true, message: '请输入订单号' }]} style={{ marginBottom: 0 }}>
@@ -143,6 +159,11 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
               </Col>
             </Row>
 
+            <Row gutter={[16, 12]}>
+              <Col span={24}>
+                <FormSectionTitle title="时间与计划" hint="下单日期 / 交期 / 急单" />
+              </Col>
+            </Row>
             <Row gutter={[16, 12]}>
               <Col xs={24} sm={8}>
                 <InlineField label={<>下单时间 <span style={{ color: 'var(--color-danger)' }}>*</span></>}>
@@ -186,6 +207,11 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
             </Row>
 
             <Row gutter={[16, 12]}>
+              <Col span={24}>
+                <FormSectionTitle title="客户与分类" />
+              </Col>
+            </Row>
+            <Row gutter={[16, 12]}>
               <Col xs={24} sm={8}>
                 <InlineField label="客户">
                   <Form.Item name="company" style={{ marginBottom: 0 }}>
@@ -221,6 +247,11 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
                     <Select placeholder="不填自动判断" allowClear options={[{ label: '首单', value: 'FIRST' }, { label: '翻单', value: 'REORDER' }]} />
                   </Form.Item>
                 </InlineField>
+              </Col>
+            </Row>
+            <Row gutter={[16, 12]}>
+              <Col span={24}>
+                <FormSectionTitle title="人员与备注" />
               </Col>
             </Row>
             <Row gutter={[16, 12]}>
