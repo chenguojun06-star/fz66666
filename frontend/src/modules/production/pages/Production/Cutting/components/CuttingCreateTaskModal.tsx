@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
-import { AutoComplete, Button, Card, Drawer, Input, Select, Segmented, Space } from 'antd';
+import { AutoComplete, Button, Card, Col, Drawer, Input, Row, Select, Segmented } from 'antd';
 import { RightOutlined } from '@ant-design/icons';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { UnifiedDatePicker, dayjs } from '@/components/common/UnifiedDatePicker';
@@ -13,6 +13,14 @@ import FactoryInsightDrawer from '@/modules/basic/pages/OrderManagement/componen
 interface Props {
   createTask: CuttingCreateTaskState;
 }
+
+/** D-354 竖排字段包装：文字在上、输入框在下，与正常下单（OrderCreateModal）同一套观感 */
+const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+    <span style={{ fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px' }}>{label}</span>
+    {children}
+  </div>
+);
 
 const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
   const styleSearchTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -63,172 +71,202 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
               borderRadius={6}
             />
           </div>
-          <div style={{ flex: 1 }}>
-        <Space wrap>
-          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>款号</span>
-          <AutoComplete
-            value={createTask.createStyleNo}
-            style={{ width: 220 }}
-            placeholder="输入或选择已维护工价的款号"
-            options={createTask.createStyleOptions.map((x) => ({
-              value: x.styleNo,
-              label: x.styleName ? `${x.styleNo}（${x.styleName}）` : x.styleNo,
-            }))}
-            onSearch={(v) => debouncedFetchStyleInfoOptions(v)}
-            onChange={(v) => createTask.handleStyleNoChange(v)}
-            onSelect={(v) => createTask.handleStyleNoSelect(String(v || ''))}
-            onBlur={createTask.handleStyleNoBlur}
-            filterOption={false}
-            allowClear
-            onClear={() => createTask.handleStyleNoChange('')}
-          />
-          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>下单日期</span>
-          <UnifiedDatePicker
-            value={createTask.createOrderDate ? dayjs(createTask.createOrderDate, 'YYYY-MM-DD') : null}
-            style={{ width: 220 }}
-            placeholder="请选择下单日期"
-            onChange={(value) => createTask.setCreateOrderDate(Array.isArray(value) ? '' : (value ? value.format('YYYY-MM-DD') : ''))}
-          />
-          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>订单交期</span>
-          <UnifiedDatePicker
-            value={createTask.createDeliveryDate ? dayjs(createTask.createDeliveryDate, 'YYYY-MM-DD') : null}
-            style={{ width: 220 }}
-            placeholder="请选择订单交期"
-            onChange={(value) => createTask.setCreateDeliveryDate(Array.isArray(value) ? '' : (value ? value.format('YYYY-MM-DD') : ''))}
-          />
-          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>生产方</span>
-          <Segmented
-            value={createTask.createFactoryMode}
-            options={[
-              { label: '内部工厂', value: 'INTERNAL' },
-              { label: '外发加工', value: 'EXTERNAL' },
-            ]}
-            style={{ width: 220 }}
-            onChange={(value) => {
-              const nextMode = value as 'INTERNAL' | 'EXTERNAL';
-              createTask.setCreateFactoryMode(nextMode);
-              createTask.setCreateOrgUnitId('');
-              createTask.setCreateFactoryId('');
-              if (nextMode === 'INTERNAL') {
-                createTask.fetchInternalUnitOptions();
-              } else {
-                createTask.fetchFactoryOptions('', nextMode);
-              }
-            }}
-          />
-          <Select
-            value={createTask.createFactoryMode === 'INTERNAL'
-              ? (createTask.createOrgUnitId || undefined)
-              : (createTask.createFactoryId || undefined)}
-            style={{ width: 220 }}
-            placeholder={createTask.createFactoryMode === 'INTERNAL' ? '请选择内部生产组/车间' : '请选择外发工厂'}
-            showSearch
-            allowClear
-            loading={createTask.createFactoryLoading}
-            filterOption={createTask.createFactoryMode === 'INTERNAL'}
-            optionFilterProp="label"
-            onSearch={(value) => {
-              if (createTask.createFactoryMode === 'EXTERNAL') {
-                createTask.fetchFactoryOptions(value, createTask.createFactoryMode);
-              }
-            }}
-            onChange={(value) => {
-              if (createTask.createFactoryMode === 'INTERNAL') {
-                createTask.setCreateOrgUnitId(String(value || ''));
-              } else {
-                createTask.setCreateFactoryId(String(value || ''));
-              }
-            }}
-            options={createTask.createFactoryMode === 'INTERNAL'
-              ? createTask.createInternalUnitOptions.map((unit) => ({
-                  value: String(unit.id || '').trim(),
-                  label: String(unit.pathNames || unit.unitName || unit.nodeName || '').trim(),
-                }))
-              : createTask.createFactoryOptions.map((factory) => ({
-                  value: String(factory.id || '').trim(),
-                  label: `${factory.factoryName}${factory.factoryType === 'INTERNAL' ? '（本厂）' : '（外发）'}`,
-                }))}
-          />
-        </Space>
-        <Space wrap style={{ marginTop: 8 }}>
-          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>客户</span>
-          <CustomerSelect
-            value={createTask.createCustomerName}
-            onChange={(value) => createTask.setCreateCustomerName(value)}
-            style={{ width: 220 }}
-            placeholder="选择或输入客户名称"
-          />
-          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>品类</span>
-          <Select
-            value={createTask.createCategory || undefined}
-            onChange={(v) => createTask.setCreateCategory(v || '')}
-            placeholder="选择或搜索品类"
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            style={{ width: 200 }}
-            options={createTask.categoryOptions}
-          />
-          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>急单</span>
-          <Select
-            value={createTask.createUrgencyLevel}
-            onChange={(v) => createTask.setCreateUrgencyLevel(v)}
-            style={{ width: 220 }}
-            options={[
-              { label: '普通', value: 'normal' },
-              { label: '急单', value: 'urgent' },
-            ]}
-          />
-          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>下单员</span>
-          <Select
-            value={createTask.createOrderPlacer || undefined}
-            onChange={(v) => createTask.setCreateOrderPlacer(v || '')}
-            placeholder="默认当前用户"
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            style={{ width: 220 }}
-            options={createTask.tenantUsers.map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
-          />
-          <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>跟单员</span>
-          <Select
-            value={createTask.createMerchandiser || undefined}
-            onChange={(v) => createTask.setCreateMerchandiser(v || '')}
-            placeholder="选择跟单员"
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            style={{ width: 220 }}
-            options={createTask.tenantUsers.map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
-          />
-        </Space>
-        <div style={{ marginTop: 8 }}>
-          <span style={{ color: 'rgba(0,0,0,0.65)', fontSize: 14 }}>备注</span>
-          <Input.TextArea
-            value={createTask.createRemarks}
-            onChange={(e) => createTask.setCreateRemarks(e.target.value)}
-            placeholder="输入订单备注（下单后可在订单备注时间线查看）"
-            rows={3}
-            maxLength={500}
-            showCount
-            style={{ marginTop: 4 }}
-          />
-        </div>
-        {createTask.selectedFactoryStat && <FactoryCapacityCard stat={createTask.selectedFactoryStat} />}
-        {createTask.selectedFactoryStat && createTask.selectedFactoryStat.factoryName && (
-          <div style={{ marginTop: 6, textAlign: 'right' }}>
-            <Button
-              size="small"
-              type="default"
-              onClick={() => setInsightOpen(true)}
-              style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)', fontSize: 12 }}
-              icon={<RightOutlined />}
-              iconPosition="end"
-            >
-              查看工厂全动态详情
-            </Button>
-          </div>
-        )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Row gutter={[16, 12]}>
+              <Col xs={24} sm={12}>
+                <Field label="款号">
+                  <AutoComplete
+                    value={createTask.createStyleNo}
+                    style={{ width: '100%' }}
+                    placeholder="输入或选择已维护工价的款号"
+                    options={createTask.createStyleOptions.map((x) => ({
+                      value: x.styleNo,
+                      label: x.styleName ? `${x.styleNo}（${x.styleName}）` : x.styleNo,
+                    }))}
+                    onSearch={(v) => debouncedFetchStyleInfoOptions(v)}
+                    onChange={(v) => createTask.handleStyleNoChange(v)}
+                    onSelect={(v) => createTask.handleStyleNoSelect(String(v || ''))}
+                    onBlur={createTask.handleStyleNoBlur}
+                    filterOption={false}
+                    allowClear
+                    onClear={() => createTask.handleStyleNoChange('')}
+                  />
+                </Field>
+              </Col>
+              <Col xs={24} sm={6}>
+                <Field label="下单日期">
+                  <UnifiedDatePicker
+                    value={createTask.createOrderDate ? dayjs(createTask.createOrderDate, 'YYYY-MM-DD') : null}
+                    style={{ width: '100%' }}
+                    placeholder="请选择下单日期"
+                    onChange={(value) => createTask.setCreateOrderDate(Array.isArray(value) ? '' : (value ? value.format('YYYY-MM-DD') : ''))}
+                  />
+                </Field>
+              </Col>
+              <Col xs={24} sm={6}>
+                <Field label="订单交期">
+                  <UnifiedDatePicker
+                    value={createTask.createDeliveryDate ? dayjs(createTask.createDeliveryDate, 'YYYY-MM-DD') : null}
+                    style={{ width: '100%' }}
+                    placeholder="请选择订单交期"
+                    onChange={(value) => createTask.setCreateDeliveryDate(Array.isArray(value) ? '' : (value ? value.format('YYYY-MM-DD') : ''))}
+                  />
+                </Field>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Field label="生产方">
+                  <Segmented
+                    value={createTask.createFactoryMode}
+                    options={[
+                      { label: '内部工厂', value: 'INTERNAL' },
+                      { label: '外发加工', value: 'EXTERNAL' },
+                    ]}
+                    style={{ width: '100%' }}
+                    onChange={(value) => {
+                      const nextMode = value as 'INTERNAL' | 'EXTERNAL';
+                      createTask.setCreateFactoryMode(nextMode);
+                      createTask.setCreateOrgUnitId('');
+                      createTask.setCreateFactoryId('');
+                      if (nextMode === 'INTERNAL') {
+                        createTask.fetchInternalUnitOptions();
+                      } else {
+                        createTask.fetchFactoryOptions('', nextMode);
+                      }
+                    }}
+                  />
+                </Field>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Field label={createTask.createFactoryMode === 'INTERNAL' ? '生产组/车间' : '外发工厂'}>
+                  <Select
+                    value={createTask.createFactoryMode === 'INTERNAL'
+                      ? (createTask.createOrgUnitId || undefined)
+                      : (createTask.createFactoryId || undefined)}
+                    style={{ width: '100%' }}
+                    placeholder={createTask.createFactoryMode === 'INTERNAL' ? '请选择内部生产组/车间' : '请选择外发工厂'}
+                    showSearch
+                    allowClear
+                    loading={createTask.createFactoryLoading}
+                    filterOption={createTask.createFactoryMode === 'INTERNAL'}
+                    optionFilterProp="label"
+                    onSearch={(value) => {
+                      if (createTask.createFactoryMode === 'EXTERNAL') {
+                        createTask.fetchFactoryOptions(value, createTask.createFactoryMode);
+                      }
+                    }}
+                    onChange={(value) => {
+                      if (createTask.createFactoryMode === 'INTERNAL') {
+                        createTask.setCreateOrgUnitId(String(value || ''));
+                      } else {
+                        createTask.setCreateFactoryId(String(value || ''));
+                      }
+                    }}
+                    options={createTask.createFactoryMode === 'INTERNAL'
+                      ? createTask.createInternalUnitOptions.map((unit) => ({
+                          value: String(unit.id || '').trim(),
+                          label: String(unit.pathNames || unit.unitName || unit.nodeName || '').trim(),
+                        }))
+                      : createTask.createFactoryOptions.map((factory) => ({
+                          value: String(factory.id || '').trim(),
+                          label: `${factory.factoryName}${factory.factoryType === 'INTERNAL' ? '（本厂）' : '（外发）'}`,
+                        }))}
+                  />
+                </Field>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Field label="客户">
+                  <CustomerSelect
+                    value={createTask.createCustomerName}
+                    onChange={(value) => createTask.setCreateCustomerName(value)}
+                    style={{ width: '100%' }}
+                    placeholder="选择或输入客户名称"
+                  />
+                </Field>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Field label="品类">
+                  <Select
+                    value={createTask.createCategory || undefined}
+                    onChange={(v) => createTask.setCreateCategory(v || '')}
+                    placeholder="选择或搜索品类"
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ width: '100%' }}
+                    options={createTask.categoryOptions}
+                  />
+                </Field>
+              </Col>
+              <Col xs={24} sm={6}>
+                <Field label="急单">
+                  <Select
+                    value={createTask.createUrgencyLevel}
+                    onChange={(v) => createTask.setCreateUrgencyLevel(v)}
+                    style={{ width: '100%' }}
+                    options={[
+                      { label: '普通', value: 'normal' },
+                      { label: '急单', value: 'urgent' },
+                    ]}
+                  />
+                </Field>
+              </Col>
+              <Col xs={24} sm={6}>
+                <Field label="下单员">
+                  <Select
+                    value={createTask.createOrderPlacer || undefined}
+                    onChange={(v) => createTask.setCreateOrderPlacer(v || '')}
+                    placeholder="默认当前用户"
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ width: '100%' }}
+                    options={createTask.tenantUsers.map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
+                  />
+                </Field>
+              </Col>
+              <Col xs={24} sm={6}>
+                <Field label="跟单员">
+                  <Select
+                    value={createTask.createMerchandiser || undefined}
+                    onChange={(v) => createTask.setCreateMerchandiser(v || '')}
+                    placeholder="选择跟单员"
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ width: '100%' }}
+                    options={createTask.tenantUsers.map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
+                  />
+                </Field>
+              </Col>
+              <Col xs={24}>
+                <Field label="备注">
+                  <Input.TextArea
+                    value={createTask.createRemarks}
+                    onChange={(e) => createTask.setCreateRemarks(e.target.value)}
+                    placeholder="输入订单备注（下单后可在订单备注时间线查看）"
+                    rows={3}
+                    maxLength={500}
+                    showCount
+                  />
+                </Field>
+              </Col>
+            </Row>
+
+            {createTask.selectedFactoryStat && <FactoryCapacityCard stat={createTask.selectedFactoryStat} />}
+            {createTask.selectedFactoryStat && createTask.selectedFactoryStat.factoryName && (
+              <div style={{ marginTop: 6, textAlign: 'right' }}>
+                <Button
+                  size="small"
+                  type="default"
+                  onClick={() => setInsightOpen(true)}
+                  style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)', fontSize: 12 }}
+                  icon={<RightOutlined />}
+                  iconPosition="end"
+                >
+                  查看工厂全动态详情
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </Card>
