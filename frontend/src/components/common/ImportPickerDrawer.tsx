@@ -195,7 +195,7 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
   };
 
   const listStyle: React.CSSProperties = {
-    maxHeight: 'calc(100vh - 320px)', overflowY: 'auto',
+    flex: 1, minHeight: 0, overflowY: 'auto',
     border: '1px solid var(--color-border)', borderRadius: 6,
   };
   const itemStyle = (active: boolean): React.CSSProperties => ({
@@ -209,6 +209,7 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
       open={open}
       onClose={onClose}
       width="88%"
+      styles={{ body: { overflow: "hidden", display: "flex", flexDirection: "column" } }}
       title={title}
       footer={
         <Space>
@@ -223,9 +224,9 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
         </Space>
       }
     >
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+      <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', gap: 16, alignItems: 'stretch', minHeight: 0, overflow: 'hidden' }}>
         {/* ── 左：来源选择 ── */}
-        <div style={{ width: 300, flexShrink: 0 }}>
+        <div style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <Text strong style={{ display: 'block', marginBottom: 8 }}>
             {sourceMode === 'style' ? '选择款' : '选择通用模板'}
           </Text>
@@ -315,7 +316,7 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
         </div>
 
         {/* ── 右：明细勾选 ── */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
           <Space wrap style={{ marginBottom: 12 }}>
             <Text strong>
               选择明细
@@ -340,7 +341,7 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
               }}
               columns={columns}
               pagination={false}
-              scroll={{ x: 'max-content', y: 'calc(100vh - 340px)' }}
+              scroll={{ x: 'max-content' }}
               locale={{ emptyText: emptyRowsText }}
             />
           )}

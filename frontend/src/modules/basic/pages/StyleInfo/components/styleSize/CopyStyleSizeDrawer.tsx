@@ -220,6 +220,7 @@ const CopyStyleSizeDrawer: React.FC<CopyStyleSizeDrawerProps> = ({
       open={open}
       onClose={onClose}
       width="88%"
+      styles={{ body: { overflow: "hidden", display: "flex", flexDirection: "column" } }}
       title="拷贝其他款尺寸"
       footer={
         <Space>
@@ -233,9 +234,9 @@ const CopyStyleSizeDrawer: React.FC<CopyStyleSizeDrawerProps> = ({
         </Space>
       }
     >
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+      <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', gap: 16, alignItems: 'stretch', minHeight: 0, overflow: 'hidden' }}>
         {/* ── 左：来源选择 ── */}
-        <div style={{ width: 300, flexShrink: 0 }}>
+        <div style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <Text strong style={{ display: 'block', marginBottom: 8 }}>
             {sourceMode === 'style' ? '选择款' : '选择通用模板'}
           </Text>
@@ -278,7 +279,7 @@ const CopyStyleSizeDrawer: React.FC<CopyStyleSizeDrawerProps> = ({
                   <Button onClick={() => { setStyleKeywordNo(''); setStyleKeywordName(''); setStylePage(1); void fetchStyles(1); }}>重置</Button>
                 </Space>
               </Space>
-              <div style={{ maxHeight: 'calc(100vh - 320px)', overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: 6 }}>
+              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: 6 }}>
                 {styles.map((s) => {
                   const active = selectedStyle && String(selectedStyle.id) === String(s.id);
                   return (
@@ -317,7 +318,7 @@ const CopyStyleSizeDrawer: React.FC<CopyStyleSizeDrawerProps> = ({
             </>
           )}
           {sourceMode === 'template' && (
-            <div style={{ maxHeight: 'calc(100vh - 320px)', overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: 6 }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: 6 }}>
               {templates.map((t) => {
                 const active = selectedTemplate && String(selectedTemplate.id) === String(t.id);
                 return (
@@ -345,7 +346,7 @@ const CopyStyleSizeDrawer: React.FC<CopyStyleSizeDrawerProps> = ({
         </div>
 
         {/* ── 右：来源款尺寸行（勾选） ── */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
           <Space wrap style={{ marginBottom: 12 }}>
             <Text strong>
               选择尺寸行{selectedStyle ? `（${selectedStyle.styleNo || ''}）` : selectedTemplate ? `（${selectedTemplate.templateName || ''}）` : ''}
@@ -368,7 +369,7 @@ const CopyStyleSizeDrawer: React.FC<CopyStyleSizeDrawerProps> = ({
               }}
               columns={columns}
               pagination={false}
-              scroll={{ x: 'max-content', y: 'calc(100vh - 340px)' }}
+              scroll={{ x: 'max-content' }}
               locale={{ emptyText: '该款暂无尺寸数据' }}
             />
           )}

@@ -176,7 +176,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
   };
 
   const listStyle: React.CSSProperties = {
-    maxHeight: 'calc(100vh - 320px)', overflowY: 'auto',
+    flex: 1, minHeight: 0, overflowY: 'auto',
     border: '1px solid var(--color-border)', borderRadius: 6,
   };
   const itemStyle = (active: boolean): React.CSSProperties => ({
@@ -203,9 +203,9 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
         </Space>
       }
     >
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+      <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', gap: 16, alignItems: 'stretch', minHeight: 0, overflow: 'hidden' }}>
         {/* ── 左：来源选择 ── */}
-        <div style={{ width: 300, flexShrink: 0 }}>
+        <div style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <Text strong style={{ display: 'block', marginBottom: 8 }}>
             {sourceMode === 'style' ? '选择款' : '选择通用模板'}
           </Text>
@@ -294,7 +294,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
         </div>
 
         {/* ── 右：富文本预览 ── */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
           <Space wrap style={{ marginBottom: 12 }}>
             <Text strong>
               工艺说明预览
@@ -307,7 +307,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
               {sourceMode === 'template' ? '请先在左侧选择通用模板' : '请先在左侧选择要拷贝的款'}
             </div>
           ) : (
-            <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, padding: 16, minHeight: 200, background: 'var(--color-bg-container)' }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: 6, padding: 16, background: 'var(--color-bg-container)' }}>
               <Spin spinning={previewLoading}>
                 <SheetRichViewer content={previewHtml} minHeight={320} />
               </Spin>

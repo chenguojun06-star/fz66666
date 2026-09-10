@@ -249,6 +249,7 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
       open={open}
       onClose={onClose}
       width="88%"
+      styles={{ body: { overflow: "hidden", display: "flex", flexDirection: "column" } }}
       title="拷贝其他款物料"
       footer={
         <Space>
@@ -262,9 +263,9 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
         </Space>
       }
     >
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+      <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', gap: 16, alignItems: 'stretch', minHeight: 0, overflow: 'hidden' }}>
         {/* ── 左：选择来源款 ── */}
-        <div style={{ width: 300, flexShrink: 0 }}>
+        <div style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <Text strong style={{ display: 'block', marginBottom: 8 }}>
             {sourceMode === 'style' ? '选择款' : '选择通用模板'}
           </Text>
@@ -312,7 +313,7 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
             </Space>
           </Space>
           {sourceMode === 'template' && (
-            <div style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: 6 }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: 6 }}>
               {templates.map((t) => {
                 const active = selectedTemplate && String(selectedTemplate.id) === String(t.id);
                 return (
@@ -338,7 +339,7 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
             </div>
           )}
           {sourceMode === 'style' && (
-          <div style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: 6 }}>
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: 6 }}>
             {styles.map((s) => {
               const active = selectedStyle && String(selectedStyle.id) === String(s.id);
               return (
@@ -378,7 +379,7 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
         </div>
 
         {/* ── 右：来源款物料清单（勾选拷贝项） ── */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
           <Text strong style={{ display: 'block', marginBottom: 8 }}>
             选择物料{selectedStyle ? `（${selectedStyle.styleNo || ''} ${selectedStyle.styleName || ''}）` : ''}
           </Text>
@@ -423,7 +424,7 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
                 }}
                 columns={columns}
                 pagination={false}
-                scroll={{ x: 'max-content', y: 'calc(100vh - 340px)' }}
+                scroll={{ x: 'max-content' }}
                 locale={{ emptyText: '该款暂无物料清单' }}
               />
             </>
