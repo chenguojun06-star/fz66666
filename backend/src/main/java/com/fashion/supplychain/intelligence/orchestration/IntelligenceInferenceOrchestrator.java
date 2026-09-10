@@ -7,6 +7,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.agent.AiToolCall;
+import com.fashion.supplychain.intelligence.helper.DsmlToolCallParser;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.service.TenantAiConfigService;
 import java.net.URI;
@@ -65,15 +66,15 @@ public class IntelligenceInferenceOrchestrator {
 
     @Value("${ai.deepseek.api-key:}") private String directApiKey;
     @Value("${ai.deepseek.api-url:https://api.deepseek.com/v1/chat/completions}") private String directApiUrl;
-    @Value("${ai.deepseek.model:deepseek-v4-flash}") private String directModel;
+    @Value("${ai.deepseek.model:deepseek-flash}") private String directModel;
     @Value("${ai.deepseek.timeout-seconds:90}") private int directTimeoutSeconds;
     @Value("${app.public-base-url:}") private String appPublicBaseUrl;
     @Value("${ai.vision-models.strategy:failover}") private String visionModelStrategy;
 
-    // ===== D-361：全站统一单模型 deepseek-v4-flash（多模态），视觉共用主模型 =====
+    // ===== D-361：全站统一单模型 deepseek-flash（多模态），视觉共用主模型 =====
     @Value("${ai.vision.api-key:}") private String visionApiKey;
     @Value("${ai.vision.api-url:https://api.deepseek.com/v1/chat/completions}") private String visionApiUrl;
-    @Value("${ai.vision.model:deepseek-v4-flash}") private String visionModelName;
+    @Value("${ai.vision.model:deepseek-flash}") private String visionModelName;
     @Value("${ai.vision.timeout-seconds:60}") private int visionTimeoutSeconds;
 
     private List<VisionModelConfig> visionModels = new ArrayList<>();
@@ -117,7 +118,7 @@ public class IntelligenceInferenceOrchestrator {
     private void initVisionModels() {
         visionModels.clear();
 
-        // D-361：主模型 deepseek-v4-flash 本身多模态，视觉首选就是它；
+        // D-361：主模型 deepseek-flash 本身多模态，视觉首选就是它；
         // VISION_MODEL_{N}_* 环境变量仍可追加任意备用视觉模型（兜底/多活）。
         if (hasText(visionApiKey)) {
             visionModels.add(new VisionModelConfig("vision", visionApiKey, visionApiUrl, visionModelName, visionTimeoutSeconds));
@@ -131,7 +132,7 @@ public class IntelligenceInferenceOrchestrator {
                 String apiUrl = resolveEnvOrProp("VISION_MODEL_" + i + "_API_URL");
                 apiUrl = apiUrl != null ? apiUrl : "https://api.deepseek.com/v1/chat/completions";
                 String model = resolveEnvOrProp("VISION_MODEL_" + i + "_MODEL");
-                model = model != null ? model : "deepseek-v4-flash";
+                model = model != null ? model : "deepseek-flash";
                 String timeoutStr = resolveEnvOrProp("VISION_MODEL_" + i + "_TIMEOUT_SECONDS");
                 int timeout = timeoutStr != null ? Integer.parseInt(timeoutStr) : 60;
                 visionModels.add(new VisionModelConfig("vision-model-" + i, apiKey, apiUrl, model, timeout));
@@ -706,7 +707,18 @@ public class IntelligenceInferenceOrchestrator {
 
     private void finalizeStreamResult(IntelligenceInferenceResult result, StreamAccumulator acc,
             long start, List<AiMessage> messages, String scene) {
-        result.setContent(acc.fullContent.toString());
+        String contentText = acc.fullContent.toString();
+        // D-361b：deepseek-flash 偶发把 DSML 工具协议原文写进 content——解析回结构化工具调用并剥除展示文本
+        if ((result.getToolCalls() == null || result.getToolCalls().isEmpty())
+                && DsmlToolCallParser.hasMarkup(contentText)) {
+            List<AiToolCall> dsmlCalls = DsmlToolCallParser.extractToolCalls(contentText);
+            if (!dsmlCalls.isEmpty()) {
+                result.setToolCalls(dsmlCalls);
+                result.setToolCallCount(dsmlCalls.size());
+            }
+            contentText = DsmlToolCallParser.strip(contentText);
+        }
+        result.setContent(contentText);
         if (acc.reasoningContent != null && acc.reasoningContent.length() > 0) {
             result.setReasoningContent(acc.reasoningContent.toString());
         }
@@ -949,6 +961,17 @@ public class IntelligenceInferenceOrchestrator {
             List<AiToolCall> toolCalls = MAPPER.convertValue(message.path("tool_calls"), new TypeReference<List<AiToolCall>>(){});
             result.setToolCalls(toolCalls);
             result.setToolCallCount(toolCalls == null ? 0 : toolCalls.size());
+        }
+        // D-361b：非流式同款兜底——DSML 协议原文写进 content 时解析回结构化工具调用并剥除
+        String content = result.getContent();
+        if ((result.getToolCalls() == null || result.getToolCalls().isEmpty())
+                && DsmlToolCallParser.hasMarkup(content)) {
+            List<AiToolCall> dsmlCalls = DsmlToolCallParser.extractToolCalls(content);
+            if (!dsmlCalls.isEmpty()) {
+                result.setToolCalls(dsmlCalls);
+                result.setToolCallCount(dsmlCalls.size());
+            }
+            result.setContent(DsmlToolCallParser.strip(content));
         }
     }
 

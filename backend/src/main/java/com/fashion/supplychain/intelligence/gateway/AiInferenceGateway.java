@@ -32,7 +32,7 @@ public interface AiInferenceGateway {
      * @param prompt   完整提示词（已包含 system + user 内容）
      * @param tenantId 租户 ID（多租户隔离 + 成本追踪，可为 null）
      * @param userId   用户 ID（成本追踪，可为 null）
-     * @param modelId  模型 ID（如 deepseek-v4-flash），null 则用默认模型
+     * @param modelId  模型 ID（如 deepseek-flash），null 则用默认模型
      * @return LLM 回答文本
      */
     default String chatWithModel(String prompt, Long tenantId, Long userId, String modelId) {

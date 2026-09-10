@@ -19,9 +19,9 @@ import org.springframework.context.annotation.Lazy;
 @Lazy
 public class AiCostTrackingOrchestrator {
 
-    // D-361：全站统一 deepseek-v4-flash，历史模型价格条目已随模型下线移除
+    // D-361：全站统一 deepseek-flash，历史模型价格条目已随模型下线移除
     private static final Map<String, BigDecimal> MODEL_PRICING = Map.of(
-            "deepseek-v4-flash", new BigDecimal("0.00014")
+            "deepseek-flash", new BigDecimal("0.00014")
     );
 
     @Autowired private AiCostTrackingMapper costTrackingMapper;

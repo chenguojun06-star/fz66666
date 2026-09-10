@@ -40,7 +40,7 @@ spring:
       chat:
         enabled: true
         options:
-          model: ${SPRING_AI_ADAPTER_MODEL:deepseek-v4-flash}
+          model: ${SPRING_AI_ADAPTER_MODEL:deepseek-flash}
   main:
     allow-circular-references: true
   threads:
@@ -362,17 +362,17 @@ ai:
   deepseek:
     api-key: ${DEEPSEEK_API_KEY:}          # 生产/云端：在环境变量中设置
     api-url: https://api.deepseek.com/v1/chat/completions
-    model: deepseek-v4-flash
+    model: deepseek-flash
     max-tokens: 1024
     timeout-seconds: 90
-  # D-361：全站 AI 统一单模型 deepseek-v4-flash（多模态：文本+图片识别共用）。
+  # D-361：全站 AI 统一单模型 deepseek-flash（多模态：文本+图片识别共用）。
   # 原 agnes/agnes2 视觉兜底（频繁 401 熔断）已整体下线，视觉直接走 deepseek 多模态。
   # D-238：视觉配置保留独立 key/url 覆盖能力（VISION_API_URL / VISION_API_KEY），
-  # 默认复用 DeepSeek 的 Key 与 endpoint；模型同为主模型 deepseek-v4-flash。
+  # 默认复用 DeepSeek 的 Key 与 endpoint；模型同为主模型 deepseek-flash。
   vision:
     api-key: ${VISION_API_KEY:${DEEPSEEK_API_KEY:}}
     api-url: ${VISION_API_URL:https://api.deepseek.com/v1/chat/completions}
-    model: ${VISION_MODEL:deepseek-v4-flash}
+    model: ${VISION_MODEL:deepseek-flash}
     timeout-seconds: ${VISION_TIMEOUT_SECONDS:60}
   vision-models:
     strategy: ${VISION_MODEL_STRATEGY:failover}   # failover（故障转移）/ round-robin（轮询）/ concurrent（并发取最快）
@@ -384,7 +384,7 @@ ai:
       enabled: ${SPRING_AI_ADAPTER_ENABLED:true}
       base-url: ${SPRING_AI_ADAPTER_BASE_URL:https://api.deepseek.com}
       api-key: ${SPRING_AI_ADAPTER_API_KEY:${DEEPSEEK_API_KEY:${ai.deepseek.api-key:}}}
-      model: ${SPRING_AI_ADAPTER_MODEL:deepseek-v4-flash}
+      model: ${SPRING_AI_ADAPTER_MODEL:deepseek-flash}
     chat:
       default-provider: ${AI_SPRING_AI_CHAT_DEFAULT_PROVIDER:deepseek}
       options:
@@ -426,10 +426,10 @@ ai:
       quality-threshold: ${AI_CONSORTIUM_QUALITY_THRESHOLD:0.95}  # 快速模型评分/推理模型评分 >= 此值时降级
       min-samples: ${AI_CONSORTIUM_MIN_SAMPLES:10}                # 最少样本数，不足时不降级
   model:
-    fast: ${AI_MODEL_FAST:deepseek-v4-flash}        # 简单查询用这个（快）
-    reasoning: ${AI_MODEL_REASONING:deepseek-v4-flash}  # D-361：与主模型统一（原 deepseek-v4-pro 已下线）
-    vision: ${AI_MODEL_VISION:deepseek-v4-flash}   # 图片分析用这个（D-361：主模型即多模态，原 vision-exp/agnes 已下线）
-    default: ${AI_MODEL_DEFAULT:deepseek-v4-flash}
+    fast: ${AI_MODEL_FAST:deepseek-flash}        # 简单查询用这个（快）
+    reasoning: ${AI_MODEL_REASONING:deepseek-flash}  # D-361：与主模型统一（原 deepseek-v4-pro 已下线）
+    vision: ${AI_MODEL_VISION:deepseek-flash}   # 图片分析用这个（D-361：主模型即多模态，原 vision-exp/agnes 已下线）
+    default: ${AI_MODEL_DEFAULT:deepseek-flash}
   openai-compat:
     enabled: ${AI_OPENAI_COMPAT_ENABLED:true}
     api-key: ${AI_OPENAI_COMPAT_API_KEY:}
@@ -535,17 +535,17 @@ xiaoyun:
     max-unread: ${XIAOYUN_PROACTIVE_INSIGHT_MAX_UNREAD:50}
     ttl-hours: ${XIAOYUN_PROACTIVE_INSIGHT_TTL_HOURS:4}
   # P2-2: per-call 模型选择（借鉴 Claude Agent SDK per-call model selection）
-  # D-361：全站统一 deepseek-v4-flash 单模型，三级分级仅保留 max-tokens 差异
+  # D-361：全站统一 deepseek-flash 单模型，三级分级仅保留 max-tokens 差异
   model-selection:
     enabled: ${XIAOYUN_MODEL_SELECTION_ENABLED:true}
     economy:
-      model-id: ${XIAOYUN_MODEL_ECONOMY:deepseek-v4-flash}
+      model-id: ${XIAOYUN_MODEL_ECONOMY:deepseek-flash}
       max-tokens: 1024
     standard:
-      model-id: ${XIAOYUN_MODEL_STANDARD:deepseek-v4-flash}
+      model-id: ${XIAOYUN_MODEL_STANDARD:deepseek-flash}
       max-tokens: 2048
     premium:
-      model-id: ${XIAOYUN_MODEL_PREMIUM:deepseek-v4-flash}
+      model-id: ${XIAOYUN_MODEL_PREMIUM:deepseek-flash}
       max-tokens: 4096
   # P2-2: 成本爆炸防御（借鉴 Ruflo 成本爆炸三大原因 + 防御）
   # 上下文肥大检测 / 多 Agent 重复检测 / 重试风暴熔断
@@ -582,7 +582,7 @@ spring-ai:
     enabled: ${SPRING_AI_ADAPTER_ENABLED:true}
     base-url: ${SPRING_AI_ADAPTER_BASE_URL:https://api.deepseek.com}
     api-key: ${DEEPSEEK_API_KEY:${SPRING_AI_ADAPTER_API_KEY:}}
-    model: ${SPRING_AI_ADAPTER_MODEL:deepseek-v4-flash}
+    model: ${SPRING_AI_ADAPTER_MODEL:deepseek-flash}
 
 tts:
   provider: ${TTS_PROVIDER:edge}

@@ -151,7 +151,7 @@ public class AiInferenceRouter implements AiInferenceGateway {
 
     @Override
     public IntelligenceInferenceResult chatWithVision(String scene, String systemPrompt, String userMessage, String imageUrl) {
-        // 视觉调用优先走 legacy adapter — 视觉模型(deepseek-v4-flash 多模态)支持真正的image_url格式，
+        // 视觉调用优先走 legacy adapter — 视觉模型(deepseek-flash 多模态)支持真正的image_url格式，
         // 比Spring AI适配器的文本嵌入方式更可靠
         if (legacyAdapter != null && legacyAdapter.isAvailable()) {
             try {
@@ -350,7 +350,7 @@ public class AiInferenceRouter implements AiInferenceGateway {
         if (modelConsortiumRouter != null) {
             return modelConsortiumRouter.selectModel(userMessage, hasImage, toolCount);
         }
-        return "deepseek-v4-flash";
+        return "deepseek-flash";
     }
 
     public String chatSimple(String prompt) {

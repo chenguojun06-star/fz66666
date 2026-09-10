@@ -39,7 +39,7 @@ public class StyleDifficultyOrchestrator {
     @Autowired private IntelligenceInferenceOrchestrator inferenceOrchestrator;
     @Autowired private StyleImageUrlResolver imageUrlResolver;
 
-    @Value("${ai.vision.model:deepseek-v4-flash}")
+    @Value("${ai.vision.model:deepseek-flash}")
     private String visionModelName;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

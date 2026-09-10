@@ -29,7 +29,7 @@ import java.util.Map;
  * <ul>
  *   <li>DeepSeek：HTTP GET {base-url}/v1/models（Authorization: Bearer {key}），2xx 视为 UP</li>
  *   <li>Qdrant：复用 {@link QdrantService#isAvailable()}（GET /healthz）</li>
- *   <li>视觉模型：HTTP GET {base-url}/v1/models（D-361 与主模型统一 deepseek-v4-flash）</li>
+ *   <li>视觉模型：HTTP GET {base-url}/v1/models（D-361 与主模型统一 deepseek-flash）</li>
  *   <li>LiteLLM：复用 {@link LiteLLMAdminOrchestrator#ping()}（GET /health）</li>
  *   <li>Langfuse：配置完整性检查（endpoint + publicKey + secretKey 非空且 endpoint 可达）</li>
  * </ul>
@@ -76,7 +76,7 @@ public class AiComponentHealthIndicator implements HealthIndicator {
     @Value("${ai.deepseek.api-url:https://api.deepseek.com/v1/chat/completions}")
     private String deepseekApiUrl;
 
-    // ── 视觉模型（D-361：与主模型统一 deepseek-v4-flash 多模态）──
+    // ── 视觉模型（D-361：与主模型统一 deepseek-flash 多模态）──
     @Value("${ai.vision.api-key:}")
     private String visionApiKey;
 

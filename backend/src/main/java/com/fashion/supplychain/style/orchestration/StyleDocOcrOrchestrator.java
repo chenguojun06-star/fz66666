@@ -15,7 +15,7 @@ import java.util.UUID;
 
 /**
  * 工艺单图片AI识别编排器
- * 上传图片到COS → 调用视觉模型(deepseek-v4-flash 多模态)识别文字 → 返回生产要求文本
+ * 上传图片到COS → 调用视觉模型(deepseek-flash 多模态)识别文字 → 返回生产要求文本
  */
 @Service
 @Slf4j

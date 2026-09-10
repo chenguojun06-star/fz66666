@@ -32,17 +32,17 @@ import java.util.regex.Pattern;
 @Lazy
 public class ModelConsortiumRouter {
 
-    @Value("${ai.model.fast:deepseek-v4-flash}")
+    @Value("${ai.model.fast:deepseek-flash}")
     private String fastModel;
 
-    @Value("${ai.model.reasoning:deepseek-v4-flash}")
+    @Value("${ai.model.reasoning:deepseek-flash}")
     private String reasoningModel;
 
-    // D-361：视觉与主模型统一 deepseek-v4-flash（主模型即多模态；原 agnes-2.5-flash 频繁 401 已弃用）
-    @Value("${ai.model.vision:deepseek-v4-flash}")
+    // D-361：视觉与主模型统一 deepseek-flash（主模型即多模态；原 agnes-2.5-flash 频繁 401 已弃用）
+    @Value("${ai.model.vision:deepseek-flash}")
     private String visionModel;
 
-    @Value("${ai.model.default:deepseek-v4-flash}")
+    @Value("${ai.model.default:deepseek-flash}")
     private String defaultModel;
 
     /**

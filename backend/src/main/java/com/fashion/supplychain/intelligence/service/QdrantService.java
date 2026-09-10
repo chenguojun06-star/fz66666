@@ -35,7 +35,7 @@ import org.springframework.context.annotation.Lazy;
  * <p>通过 Qdrant REST API v1.x 实现向量存储与相似检索。
  * 每个租户使用同一个 collection，通过 tenant_id payload 过滤隔离。
  *
- * <p>向量生成优先级：① 主模型(deepseek-v4-flash 多模态)视觉分析 + DeepSeek Embedding（图片→文字描述→向量，推荐）
+ * <p>向量生成优先级：① 主模型(deepseek-flash 多模态)视觉分析 + DeepSeek Embedding（图片→文字描述→向量，推荐）
  *                   ② DeepSeek Embedding API（text-embedding-v2，用图片URL文本生成向量）
  *                   ③ 关键词哈希伪向量（pseudoEmbedding，128维，无需 API Key）
  *
@@ -834,7 +834,7 @@ public class QdrantService {
     /**
      * 对款式封面图生成语义向量，用于以图搜款和难度评估。
      *
-     * <p>向量生成优先级（D-361：全站统一 deepseek-v4-flash 多模态，只需 DEEPSEEK_API_KEY）：
+     * <p>向量生成优先级（D-361：全站统一 deepseek-flash 多模态，只需 DEEPSEEK_API_KEY）：
      * 1. 主模型视觉分析 + DeepSeek Embedding（图片→描述→向量，质量最佳）
      * 2. DeepSeek 纯文本 Embedding（用图片 URL 文本生成向量，质量一般）
      * 3. 伪向量（哈希）— 最低质量，仅兜底

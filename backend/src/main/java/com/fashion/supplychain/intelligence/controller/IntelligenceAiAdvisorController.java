@@ -43,13 +43,13 @@ public class IntelligenceAiAdvisorController {
     @Value("${ai.vision.api-key:}")
     private String visionApiKey;
 
-    @Value("${ai.vision.model:deepseek-v4-flash}")
+    @Value("${ai.vision.model:deepseek-flash}")
     private String visionModelName;
 
     @Value("${ai.deepseek.api-key:}")
     private String deepseekApiKey;
 
-    @Value("${ai.deepseek.model:deepseek-v4-flash}")
+    @Value("${ai.deepseek.model:deepseek-flash}")
     private String deepseekModel;
 
     private final StringRedisTemplate stringRedisTemplate;
@@ -439,7 +439,7 @@ public class IntelligenceAiAdvisorController {
         diag.put("deepseekModel", deepseekModel);
 
         diag.put("hint",
-                "D-361 全站统一 deepseek-v4-flash：如果 deepseekKeyConfigured=false，请在微信云部署→环境变量中添加 DEEPSEEK_API_KEY=你的key");
+                "D-361 全站统一 deepseek-flash：如果 deepseekKeyConfigured=false，请在微信云部署→环境变量中添加 DEEPSEEK_API_KEY=你的key");
         return Result.success(diag);
     }
 

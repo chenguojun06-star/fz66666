@@ -56,6 +56,11 @@ function stripToolProtocol(text) {
     .replace(/<tool_name>[\s\S]*?<\/tool_name>/gi, '')
     .replace(/<param>[\s\S]*?<\/param>/gi, '')
     .replace(/<\/?(?:tool_think|tool_call|tool_name|tool_result|param|params|invoke)>/gi, '');
+  // D-361b：deepseek-flash 新版 DSML 工具协议原文——从首个协议标记起整段截断
+  var dsml = out.match(/[｜|]{1,4}\s*DSML[｜|]{1,4}/i);
+  if (dsml && dsml.index != null) {
+    out = out.substring(0, dsml.index);
+  }
   // 流式中途的未闭合协议开标签：从开标签起整段截断
   var unclosed = out.match(/<tool_(?:think|call)[\s>]/i);
   if (unclosed && unclosed.index != null) {
