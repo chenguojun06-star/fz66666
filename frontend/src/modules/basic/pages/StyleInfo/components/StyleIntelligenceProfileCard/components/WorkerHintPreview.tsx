@@ -25,11 +25,6 @@ const WorkerHintPreview: React.FC<WorkerHintPreviewProps> = ({ workerHint, activ
             <span style={{ color: 'var(--color-amber-900)', fontWeight: 600 }}>{item.value}</span>
           </div>
         ))}
-        {activeDifficulty?.imageInsight && String(activeDifficulty.imageInsight).trim() && !String(activeDifficulty.imageInsight).includes('未开通') && (
-          <div style={{ width: '100%', marginTop: 2, padding: '5px 8px', borderRadius: 4, background: 'rgba(180,83,9,0.06)', fontSize: 12, color: 'var(--color-amber-900)', lineHeight: 1.55 }}>
-            <b>AI 视觉分析：</b>{String(activeDifficulty.imageInsight).trim()}
-          </div>
-        )}
       </div>
     </div>
   );

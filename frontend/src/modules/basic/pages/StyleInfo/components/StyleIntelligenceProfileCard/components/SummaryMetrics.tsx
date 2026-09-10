@@ -29,23 +29,8 @@ const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
   orderCount,
   latestOrderStatus,
 }) => {
+  // D-347 去重：交期/完成度/订单数已由顶部标题栏常驻展示，这里只留标题栏没有的信息
   const metrics = [
-    {
-      key: 'delivery',
-      icon: <CalendarOutlined />,
-      title: '交期风险',
-      value: deliveryMeta.label,
-      extra: deliveryMeta.detail,
-      color: deliveryMeta.color === 'error' ? 'var(--color-danger)' : deliveryMeta.color === 'warning' ? 'var(--color-warning)' : 'var(--color-success)',
-    },
-    {
-      key: 'progress',
-      icon: <NodeIndexOutlined />,
-      title: '开发完成度',
-      value: `${completionRate}%`,
-      extra: `${doneCount}/${stageTags.length} 节点完成`,
-      color: 'var(--color-primary)',
-    },
     {
       key: 'quote',
       icon: <BulbOutlined />,
@@ -57,11 +42,12 @@ const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
       color: 'var(--color-warning)',
     },
     {
-      key: 'orders',
+      key: 'latestOrder',
       icon: <RadarChartOutlined />,
-      title: '系统联动',
-      value: `${orderCount} 单`,
-      extra: latestOrderStatus || '暂无订单',
+      title: '最新订单状态',
+      value: latestOrderStatus || '暂无订单',
+      // 距交期天数已在上方信息条展示，这里不再重复
+      extra: '',
       color: 'var(--color-accent-purple)',
     },
   ];

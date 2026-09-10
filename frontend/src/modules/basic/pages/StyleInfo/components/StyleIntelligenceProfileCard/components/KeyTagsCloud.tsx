@@ -33,40 +33,6 @@ const KeyTagsCloud: React.FC<KeyTagsCloudProps> = ({ style, activeDifficulty, pr
             价格：{fmtMoney(Number(style!.price))}
           </Tag>
         )}
-        {/* 工艺复杂度（由难度评估映射） */}
-        {activeDifficulty?.difficultyLevel && (
-          <Tag
-            color={difficultyColor(activeDifficulty.difficultyLevel)}
-            style={{ margin: 0, fontSize: 12, lineHeight: '20px', padding: '1px 8px', borderRadius: 10 }}
-          >
-            工艺复杂度：{activeDifficulty.difficultyLabel}
-          </Tag>
-        )}
-        {/* 二次工艺 */}
-        {Boolean(activeDifficulty?.hasSecondaryProcess || (style as any)?.secondaryProcess) && (
-          <Tag
-            color="purple"
-            style={{ margin: 0, fontSize: 12, lineHeight: '20px', padding: '1px 8px', borderRadius: 10 }}
-          >
-            含二次工艺
-          </Tag>
-        )}
-        {/* 是否已下单 */}
-        {Number(style?.orderCount) > 0 || Number((profile as any)?.production?.orderCount || 0) > 0 ? (
-          <Tag
-            color="green"
-            style={{ margin: 0, fontSize: 12, lineHeight: '20px', padding: '1px 8px', borderRadius: 10 }}
-          >
-            已下单 · {Number((profile as any)?.production?.orderCount || style?.orderCount || 0)} 单
-          </Tag>
-        ) : (
-          <Tag
-            color="default"
-            style={{ margin: 0, fontSize: 12, lineHeight: '20px', padding: '1px 8px', borderRadius: 10 }}
-          >
-            未下单
-          </Tag>
-        )}
       </div>
     </div>
   );
