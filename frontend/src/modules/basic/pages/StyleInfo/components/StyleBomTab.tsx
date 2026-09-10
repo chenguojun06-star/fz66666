@@ -62,12 +62,10 @@ const StyleBomTab: React.FC<Props> = ({
     locked,
     editingKey,
     tableEditable,
-    bomTemplateId,
     checkingStock,
     form,
     data,
     loading,
-    bomTemplates,
     templateLoading,
     materialCreateForm,
     materialModalOpen,
@@ -81,9 +79,7 @@ const StyleBomTab: React.FC<Props> = ({
     setMaterialModalOpen,
     setMaterialTab,
     setMaterialKeyword,
-    setBomTemplateId,
     fetchBom,
-    fetchBomTemplates,
     fetchMaterials,
     handleMaterialPageChange,
     handleUseMaterial,
@@ -92,7 +88,6 @@ const StyleBomTab: React.FC<Props> = ({
     exitTableEdit,
     saveAll,
     handleAddRows,
-    applyBomTemplate,
     handleGeneratePurchase,
     handleCheckStock,
     handleAddCartWithCallback,
@@ -133,30 +128,9 @@ const StyleBomTab: React.FC<Props> = ({
         tableEditable={tableEditable}
         templateLoading={templateLoading}
         editingKey={editingKey}
-        bomTemplateId={bomTemplateId}
-        bomTemplates={bomTemplates}
         styleId={styleId}
         purchaseStatus={purchaseStatus}
         onBomRecognized={handleBomRecognized}
-        onBomTemplateIdChange={setBomTemplateId}
-        onTemplateOpenChange={(open) => {
-          if (open && !bomTemplates.length) fetchBomTemplates('');
-        }}
-        onApplyTemplate={(mode) => {
-          if (editingKey) {
-            message.error('请先完成当前编辑再导入模板');
-            return;
-          }
-          if (tableEditable) {
-            message.error('请先保存或取消编辑后再导入模板');
-            return;
-          }
-          if (!bomTemplateId) {
-            message.error('请选择模板');
-            return;
-          }
-          void applyBomTemplate(mode);
-        }}
         onCheckStock={handleCheckStock}
         onGeneratePurchase={handleGeneratePurchase}
         onAddToPurchaseCart={handleAddCartWithCallback}

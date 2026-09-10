@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Button, Dropdown, Select, Space, Spin, Tag, Tooltip, Upload, message } from 'antd';
 import { CopyOutlined, DownOutlined, ReloadOutlined, RobotOutlined, ShoppingCartOutlined } from '@ant-design/icons';
-import type { TemplateLibrary } from '@/types/style';
 import StyleBomAddRowsDropdown from './StyleBomAddRowsDropdown';
 import api from '@/utils/api';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -30,11 +29,6 @@ interface StyleBomToolbarProps {
   tableEditable: boolean;
   templateLoading: boolean;
   editingKey: string;
-  bomTemplateId?: string;
-  bomTemplates: TemplateLibrary[];
-  onBomTemplateIdChange: (value?: string) => void;
-  onTemplateOpenChange: (open: boolean) => void;
-  onApplyTemplate: (mode: 'overwrite' | 'append') => void;
   onCheckStock: () => void;
   onGeneratePurchase: () => void;
   onAddToPurchaseCart: () => void;
@@ -55,11 +49,6 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
   tableEditable,
   templateLoading,
   editingKey,
-  bomTemplateId,
-  bomTemplates,
-  onBomTemplateIdChange,
-  onTemplateOpenChange,
-  onApplyTemplate,
   onCheckStock,
   onGeneratePurchase,
   onAddToPurchaseCart,
@@ -72,11 +61,6 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
   onOpenCopyBom,
 }) => {
   const hasEditingRow = Boolean(editingKey);
-  const templateOptions = bomTemplates.map((template) => ({
-    value: String(template.id || ''),
-    label: template.sourceStyleNo ? `${template.templateName}（${template.sourceStyleNo}）` : template.templateName,
-  }));
-
   const [ocrModalOpen, setOcrModalOpen] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrFile, setOcrFile] = useState<any>(null);
@@ -177,31 +161,6 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
           </Button>
         )}
 
-        <Select
-          allowClear
-          placeholder="导入物料清单模板"
-          value={bomTemplateId}
-          style={{ width: 240 }}
-          options={templateOptions}
-          onChange={(value) => onBomTemplateIdChange(value)}
-          disabled={locked || hasEditingRow || loading || templateLoading}
-          onOpenChange={onTemplateOpenChange}
-        />
-
-        <Dropdown
-          disabled={locked || hasEditingRow || loading || templateLoading || !bomTemplateId}
-          menu={{
-            items: [
-              { key: 'overwrite', label: '覆盖导入（清除现有数据）' },
-              { key: 'append', label: '追加导入（保留现有数据）' },
-            ],
-            onClick: ({ key }) => onApplyTemplate(key as 'overwrite' | 'append'),
-          }}
-        >
-          <Button disabled={locked || hasEditingRow || loading || templateLoading || !bomTemplateId}>
-            导入模板 <DownOutlined />
-          </Button>
-        </Dropdown>
         <StyleBomAddRowsDropdown
           onAddRows={onAddRows}
           disabled={locked || hasEditingRow || loading || templateLoading}

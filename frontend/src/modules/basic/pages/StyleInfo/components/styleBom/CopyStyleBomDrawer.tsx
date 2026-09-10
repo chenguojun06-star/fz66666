@@ -17,6 +17,13 @@ interface StyleBrief {
   styleCover?: string;
 }
 
+interface TemplateBrief {
+  id: string | number;
+  templateName?: string;
+  sourceStyleNo?: string;
+  styleCoverUrl?: string;
+}
+
 interface CopyStyleBomDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -48,6 +55,11 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
   const [styleTotal, setStyleTotal] = useState(0);
   const [styleLoading, setStyleLoading] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState<StyleBrief | null>(null);
+  // D-337 通用模板来源：模板=从款式沉淀的快照，导入即取其来源款的物料清单
+  const [sourceMode, setSourceMode] = useState<'style' | 'template'>('style');
+  const [templates, setTemplates] = useState<TemplateBrief[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateBrief | null>(null);
 
   // ── 右栏：来源款物料清单 ──
   const [bomRows, setBomRows] = useState<StyleBom[]>([]);
@@ -83,6 +95,28 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
     if (open) void fetchStyles(stylePage);
   }, [open, stylePage, fetchStyles]);
 
+  const fetchTemplates = useCallback(async () => {
+    setTemplatesLoading(true);
+    try {
+      const res = await api.get<{ code: number; data: unknown }>('/template-library/list', {
+        params: { page: 1, pageSize: 200, templateType: 'bom', keyword: '' },
+      });
+      if (res.code === 200) {
+        const remote = res.data as any;
+        const records: TemplateBrief[] = Array.isArray(remote)
+          ? remote
+          : (remote?.records || []);
+        setTemplates(records);
+      } else {
+        setTemplates([]);
+      }
+    } catch {
+      setTemplates([]);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }, []);
+
   // 打开时重置全部状态
   useEffect(() => {
     if (open) {
@@ -94,8 +128,11 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
       setColorFilter(undefined);
       setTypeFilter('all');
       setSelectedRowKeys([]);
+      setSourceMode('style');
+      setSelectedTemplate(null);
+      void fetchTemplates();
     }
-  }, [open]);
+  }, [open, fetchTemplates]);
 
   // 选中来源款 → 拉它的物料清单
   const fetchSourceBom = useCallback(async (styleId: string | number) => {
@@ -124,6 +161,32 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
     setColorFilter(undefined);
     setTypeFilter('all');
     void fetchSourceBom(record.id);
+  };
+
+  // D-337 选通用模板：模板沉淀自来源款，取来源款的物料清单供勾选
+  const handlePickTemplate = (record: TemplateBrief) => {
+    setSelectedTemplate(record);
+    setColorFilter(undefined);
+    setTypeFilter('all');
+    const sourceStyleNo = String(record.sourceStyleNo || '').trim();
+    if (!sourceStyleNo) {
+      setBomRows([]);
+      setSelectedRowKeys([]);
+      return;
+    }
+    setBomLoading(true);
+    api.get<{ code: number; data: StyleBom[] }>(`/style/bom/list?styleNo=${encodeURIComponent(sourceStyleNo)}`)
+      .then((res) => {
+        if (res.code === 200) {
+          const list = res.data || [];
+          setBomRows(list);
+          setSelectedRowKeys(list.map((r) => String(r.id)));
+        } else {
+          setBomRows([]);
+          setSelectedRowKeys([]);
+        }
+      })
+      .catch(() => { setBomRows([]); setSelectedRowKeys([]); });
   };
 
   const colorOptions = useMemo(
@@ -200,7 +263,28 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
         {/* ── 左：选择来源款 ── */}
         <div style={{ width: 300, flexShrink: 0 }}>
-          <Text strong style={{ display: 'block', marginBottom: 8 }}>选择款</Text>
+          <Text strong style={{ display: 'block', marginBottom: 8 }}>
+            {sourceMode === 'style' ? '选择款' : '选择通用模板'}
+          </Text>
+          <Radio.Group
+            value={sourceMode}
+            optionType="button"
+            buttonStyle="solid"
+            style={{ marginBottom: 8 }}
+            onChange={(e) => {
+              setSourceMode(e.target.value);
+              setSelectedStyle(null);
+              setSelectedTemplate(null);
+              setBomRows([]);
+              setSelectedRowKeys([]);
+              setColorFilter(undefined);
+              setTypeFilter('all');
+            }}
+            options={[
+              { value: 'style', label: '按款号' },
+              { value: 'template', label: '通用模板' },
+            ]}
+          />
           <Space direction="vertical" size={6} style={{ width: '100%', marginBottom: 8 }}>
             <Input
               placeholder="款号"
@@ -225,6 +309,33 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
               </Button>
             </Space>
           </Space>
+          {sourceMode === 'template' && (
+            <div style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: 6 }}>
+              {templates.map((t) => {
+                const active = selectedTemplate && String(selectedTemplate.id) === String(t.id);
+                return (
+                  <div
+                    key={String(t.id)}
+                    onClick={() => handlePickTemplate(t)}
+                    style={{
+                      padding: '8px 10px', cursor: 'pointer',
+                      borderBottom: '1px solid var(--color-border-light)',
+                      background: active ? 'var(--color-primary-bg, #e6f4ff)' : undefined,
+                    }}
+                  >
+                    <div style={{ fontWeight: 500, fontSize: 13 }}>{t.templateName || '-'}</div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {t.sourceStyleNo ? `来源款 ${t.sourceStyleNo}` : '未关联来源款'}
+                    </Text>
+                  </div>
+                );
+              })}
+              {!templates.length && !templatesLoading && (
+                <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 13 }}>暂无通用模板</div>
+              )}
+            </div>
+          )}
+          {sourceMode === 'style' && (
           <div style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: 6 }}>
             {styles.map((s) => {
               const active = selectedStyle && String(selectedStyle.id) === String(s.id);
@@ -252,6 +363,7 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
               <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 13 }}>暂无款式</div>
             )}
           </div>
+          )}
           <Pagination
             size="small"
             current={stylePage}
@@ -270,7 +382,7 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
           </Text>
           {!selectedStyle ? (
             <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 14 }}>
-              请先在左侧选择要拷贝的款
+              {sourceMode === 'template' ? '请先在左侧选择通用模板' : '请先在左侧选择要拷贝的款'}
             </div>
           ) : (
             <>
