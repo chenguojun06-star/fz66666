@@ -547,7 +547,7 @@ input.ant-input,
   --neutral-light: #0f1115;
   --neutral-medium: rgba(255, 255, 255, 0.08);
   --neutral-dark: rgba(255, 255, 255, 0.15);
-  --neutral-text: var(--color-bg-base);
+  --neutral-text: #f0f2f5;
   --neutral-text-light: #f0f2f5;
   --neutral-text-lighter: #d1d5db;
 

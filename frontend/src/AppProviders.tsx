@@ -46,7 +46,7 @@ const darkThemeTokens = {
   colorBgSpotlight: 'var(--color-slate-900)',
   colorBorder: 'rgba(255, 255, 255, 0.1)',
   colorBorderSecondary: 'rgba(255, 255, 255, 0.06)',
-  colorText: 'var(--color-bg-page)',
+  colorText: 'var(--color-text-primary)',
   colorTextSecondary: 'var(--color-slate-400)',
   colorTextTertiary: 'var(--color-slate-400)',
   colorTextQuaternary: 'rgba(240, 242, 245, 0.4)',
@@ -205,9 +205,9 @@ const AppWrapper: React.FC = () => {
       components: isDark ? {
         Table: {
           headerBg: 'var(--color-dark-bg)',
-          headerColor: 'var(--color-bg-page)',
-          colorText: 'var(--color-bg-page)',
-          colorTextHeading: 'var(--color-bg-page)',
+          headerColor: 'var(--color-text-primary)',
+          colorText: 'var(--color-text-primary)',
+          colorTextHeading: 'var(--color-text-primary)',
           colorTextDescription: 'var(--color-border)',
           rowHoverBg: 'rgba(107, 163, 255, 0.08)',
           borderColor: 'rgba(255, 255, 255, 0.06)',
@@ -221,21 +221,21 @@ const AppWrapper: React.FC = () => {
         Card: {
           headerBg: 'var(--color-bg-dark)',
           colorBgContainer: 'var(--color-bg-dark)',
-          colorText: 'var(--color-bg-page)',
-          colorTextHeading: 'var(--color-bg-page)',
+          colorText: 'var(--color-text-primary)',
+          colorTextHeading: 'var(--color-text-primary)',
           colorTextSecondary: 'var(--color-slate-400)',
         },
         Modal: {
           headerBg: 'var(--color-dark-bg)',
           contentBg: 'var(--color-bg-dark)',
           footerBg: 'var(--color-bg-dark)',
-          colorText: 'var(--color-bg-page)',
-          colorTextHeading: 'var(--color-bg-page)',
-          titleColor: 'var(--color-bg-page)',
+          colorText: 'var(--color-text-primary)',
+          colorTextHeading: 'var(--color-text-primary)',
+          titleColor: 'var(--color-text-primary)',
         },
         Select: {
           optionSelectedBg: 'rgba(107, 163, 255, 0.18)',
-          colorText: 'var(--color-bg-page)',
+          colorText: 'var(--color-text-primary)',
           colorTextPlaceholder: 'var(--color-slate-400)',
           colorBgContainer: 'var(--color-bg-dark)',
           colorBgElevated: 'var(--color-bg-dark)',
@@ -244,35 +244,35 @@ const AppWrapper: React.FC = () => {
         Input: {
           activeBorderColor: 'var(--color-primary-light)',
           hoverBorderColor: 'var(--color-primary-light)',
-          colorText: 'var(--color-bg-page)',
+          colorText: 'var(--color-text-primary)',
           colorTextPlaceholder: 'var(--color-slate-400)',
           colorBgContainer: 'var(--color-bg-dark)',
           addonBg: 'var(--color-dark-bg)',
           colorBorder: 'rgba(255, 255, 255, 0.15)',
         },
         Button: {
-          colorText: 'var(--color-bg-page)',
+          colorText: 'var(--color-text-primary)',
           colorTextLightSolid: 'var(--color-dark-bg)',
           primaryShadow: '0 2px 0 rgba(107, 163, 255, 0.1)',
         },
         Form: {
-          labelColor: 'var(--color-bg-page)',
+          labelColor: 'var(--color-text-primary)',
         },
         Descriptions: {
           labelBg: 'var(--color-bg-dark)',
-          colorText: 'var(--color-bg-page)',
+          colorText: 'var(--color-text-primary)',
         },
         DatePicker: {
-          colorText: 'var(--color-bg-page)',
+          colorText: 'var(--color-text-primary)',
           colorTextPlaceholder: 'var(--color-slate-400)',
         },
         Popover: {
           colorBgElevated: 'var(--color-bg-dark)',
-          colorText: 'var(--color-bg-page)',
+          colorText: 'var(--color-text-primary)',
         },
         Dropdown: {
           colorBgElevated: 'var(--color-bg-dark)',
-          colorText: 'var(--color-bg-page)',
+          colorText: 'var(--color-text-primary)',
         },
       } : isLightBlue ? {
         Table: {

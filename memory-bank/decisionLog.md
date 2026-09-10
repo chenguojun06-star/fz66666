@@ -1,7 +1,17 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-10（新增 D-332 智能采购推荐：齐料口径透明化+性能说明换人话）
+> 最后更新：2026-09-10（新增 D-333 主题令牌与OS媒体查询解耦——黑白块+弹出层文字不可见根修）
+
+---
+
+## D-333：主题切换"黑白块"+折叠弹出层文字不可见根修 — design-system 令牌与 data-theme 解耦（2026-09-10）
+
+用户报折叠侧边栏 hover 弹出层"看不到文字"、切主题出"黑白块"。Playwright 实测（本地 vite+8088 后端+test_admin 登录）OS配色×应用主题交叉矩阵定位总根因：**design-system.css 的暗色令牌挂在 `@media (prefers-color-scheme: dark)`（跟随 OS）和无人设置的 `html.dark-mode` 上，而应用切主题只改 `data-theme` 属性**——OS 深色外观+应用浅色主题时 `--color-text-primary` 被劫持成近白（浅底白字→弹出层文字不可见），OS 浅色+应用暗色时 `--color-bg-base` 等仍是白色（暗页白块，smart-alert-panel 实测命中）。
+
+**决策**：①媒体查询选择器收紧为 `:root:not([data-theme])`（app 启动后恒有属性，仅启动前一瞬跟随 OS）；②新增 `:root[data-theme="dark"]` 块承接暗色令牌（刻意不含 global.css 暗色块已掌管的 bg-page/bg-card/border/border-light 四项，保住现有暗色调色板）；③清理三层补丁堆栈里的"底色令牌反当文字色"地雷：dark-theme-global.css 45 处 `color: var(--color-bg-*)` → text 令牌、AppProviders 暗色 antd token 18 处 colorText/titleColor/labelColor/headerColor 同修、global.css 暗色 `--neutral-text` 由 `var(--color-bg-base)` 改直值 #f0f2f5——这类反写过去靠令牌劫持 bug 意外可读，令牌修正后必然现形，修令牌必须同步扫这类反写。
+
+**教训**：**主题令牌必须单一权威源跟 `data-theme` 走，OS 媒体查询只准在无显式主题时兜底**；排查主题类 bug 用 Playwright `colorScheme` 上下文做 OS×应用主题交叉矩阵，10 分钟实锤肉眼猜半天的东西；本机 /Volumes 卷上 vite watcher 会失灵，改 CSS 后必须重启 dev server 再验证。分辨率适配实测 1280/1920/2560 三档×三页面零横向溢出，无需改动。
 
 ---
 
