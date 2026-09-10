@@ -55,6 +55,19 @@ const MaintainGear: React.FC<{ dictType: string; fieldName: string; disabled?: b
  *  - 设计师独立使用 designer 字段，与原 sampleNo 解耦（sampleNo 仍保留向后兼容）
  *  - 商品类型 / 商品主题 / 供应商 为本次新增字段
  */
+/** D-348 存量枚举代码 → 中文（历史数据存的是 SELF_DEVELOPED/SELECTION_CENTER，直接显示会露出英文） */
+const LEGACY_SOURCE_LABELS: Record<string, string> = {
+  SELF_DEVELOPED: '自主开发',
+  SELECTION_CENTER: '选品中心',
+  CUSTOMER_PROVIDED: '客户提供',
+  MARKET_SAMPLING: '市场采样',
+};
+const toSourceLabel = (v: unknown): unknown => {
+  const raw = String(v ?? '').trim();
+  if (!raw) return v;
+  return LEGACY_SOURCE_LABELS[raw.toUpperCase()] || raw;
+};
+
 const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   _form,
   currentStyle,
@@ -241,6 +254,8 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             name="developmentSourceType"
             label="开发来源"
             style={{ marginBottom: 8 }}
+            // 存量英文代码按权威映射翻译成中文展示；选择后按中文词条保存
+            getValueProps={(v) => ({ value: toSourceLabel(v) })}
           >
             <DictAutoComplete
               dictType="development_source"

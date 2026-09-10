@@ -25,7 +25,17 @@ const normalizeSourceDetail = (type: string, detail: string): string => {
 };
 
 export const getStyleSourceMeta = (record: Pick<StyleInfo, 'developmentSourceType' | 'developmentSourceDetail'>) => {
-  const type = cleanText(record.developmentSourceType).toUpperCase();
+  const raw = cleanText(record.developmentSourceType);
+  const type = raw.toUpperCase();
+  // D-348：非内置代码（用户自定义的中文来源，如"客户提供"）原样展示，不再一律吞成"自主开发"
+  if (raw && type !== SOURCE_TYPE_SELECTION && type !== 'SELF_DEVELOPED') {
+    return {
+      type: raw,
+      detail: cleanText(record.developmentSourceDetail),
+      label: raw,
+      color: 'blue',
+    } as const;
+  }
   const normalizedType = type === SOURCE_TYPE_SELECTION ? SOURCE_TYPE_SELECTION : 'SELF_DEVELOPED';
   const detail = normalizeSourceDetail(normalizedType, cleanText(record.developmentSourceDetail));
   const label = normalizedType === SOURCE_TYPE_SELECTION ? `选品来源·${detail}` : '自主开发';
