@@ -68,7 +68,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>款号</span>
           <AutoComplete
             value={createTask.createStyleNo}
-            style={{ width: 260 }}
+            style={{ width: 220 }}
             placeholder="输入或选择已维护工价的款号"
             options={createTask.createStyleOptions.map((x) => ({
               value: x.styleNo,
@@ -85,14 +85,14 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>下单日期</span>
           <UnifiedDatePicker
             value={createTask.createOrderDate ? dayjs(createTask.createOrderDate, 'YYYY-MM-DD') : null}
-            style={{ width: 160 }}
+            style={{ width: 220 }}
             placeholder="请选择下单日期"
             onChange={(value) => createTask.setCreateOrderDate(Array.isArray(value) ? '' : (value ? value.format('YYYY-MM-DD') : ''))}
           />
           <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>订单交期</span>
           <UnifiedDatePicker
             value={createTask.createDeliveryDate ? dayjs(createTask.createDeliveryDate, 'YYYY-MM-DD') : null}
-            style={{ width: 160 }}
+            style={{ width: 220 }}
             placeholder="请选择订单交期"
             onChange={(value) => createTask.setCreateDeliveryDate(Array.isArray(value) ? '' : (value ? value.format('YYYY-MM-DD') : ''))}
           />
@@ -120,7 +120,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
             value={createTask.createFactoryMode === 'INTERNAL'
               ? (createTask.createOrgUnitId || undefined)
               : (createTask.createFactoryId || undefined)}
-            style={{ width: 290 }}
+            style={{ width: 220 }}
             placeholder={createTask.createFactoryMode === 'INTERNAL' ? '请选择内部生产组/车间' : '请选择外发工厂'}
             showSearch
             allowClear
@@ -155,7 +155,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           <CustomerSelect
             value={createTask.createCustomerName}
             onChange={(value) => createTask.setCreateCustomerName(value)}
-            style={{ width: 260 }}
+            style={{ width: 220 }}
             placeholder="选择或输入客户名称"
           />
           <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>品类</span>
@@ -173,7 +173,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           <Select
             value={createTask.createUrgencyLevel}
             onChange={(v) => createTask.setCreateUrgencyLevel(v)}
-            style={{ width: 100 }}
+            style={{ width: 220 }}
             options={[
               { label: '普通', value: 'normal' },
               { label: '急单', value: 'urgent' },
@@ -187,7 +187,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
             allowClear
             showSearch
             optionFilterProp="label"
-            style={{ width: 160 }}
+            style={{ width: 220 }}
             options={createTask.tenantUsers.map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
           />
           <span style={{ flexBasis: '100%', width: '100%', fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px', marginBottom: -6 }}>跟单员</span>
@@ -198,7 +198,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
             allowClear
             showSearch
             optionFilterProp="label"
-            style={{ width: 160 }}
+            style={{ width: 220 }}
             options={createTask.tenantUsers.map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
           />
         </Space>
