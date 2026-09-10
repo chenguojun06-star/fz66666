@@ -25,6 +25,8 @@ export function useCuttingBundles({
   const [bundlesInput, setBundlesInput] = useState<CuttingBundleRow[]>([{ skuNo: '', color: '', size: '', quantity: 0 }]);
   const [importLocked, setImportLocked] = useState(false);
   const [generateLoading, setGenerateLoading] = useState(false);
+  // D-335 加床次增量模式：只生成用户新填的分扎，已有菲号不重复生成
+  const [addBedMode, setAddBedMode] = useState(false);
 
   // 菲号选择
   const [selectedBundleRowKeys, setSelectedBundleRowKeys] = useState<React.Key[]>([]);
@@ -144,6 +146,7 @@ export function useCuttingBundles({
             clearBundleSelection();
             await Promise.all([list.fetchBundles(), syncActiveTaskByOrderNo(activeTask.productionOrderNo)]);
             setImportLocked(true);
+            setAddBedMode(false);
           } else {
             message.error(res.message || '生成失败');
           }
@@ -224,7 +227,12 @@ export function useCuttingBundles({
   };
 
   const handleAddBed = () => {
+    // D-335：加床次 = 增量模式。原实现只解锁面板，用户再点生成会把整单数量原样再提交一遍，
+    // 后端直接追加 → 旧菲号全部重复（超数量 bug 根因）。现在进入增量模式并清空输入。
+    setAddBedMode(true);
     setImportLocked(false);
+    setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
+    message.info('已进入加床次模式：请只录入新床次的分扎数量，已有菲号不会重复生成');
   };
 
   // 滚动到编辑区域
@@ -247,6 +255,7 @@ export function useCuttingBundles({
     // 菲号输入
     bundlesInput, setBundlesInput, importLocked, setImportLocked, generateLoading,
     handleAddRow, handleRemoveRow, handleChangeRow, handleGenerate, handleAutoImport, handleAddBed,
+    addBedMode,
     // 菲号列表
     queryParams: list.queryParams, setQueryParams: list.setQueryParams,
     listLoading: list.listLoading, dataSource: list.dataSource, total: list.total,

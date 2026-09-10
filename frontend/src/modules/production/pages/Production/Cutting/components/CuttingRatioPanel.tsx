@@ -26,6 +26,10 @@ interface CuttingRatioPanelProps {
   onConfirm: (rows: BundleInputRow[]) => void;
   onClear: () => void;
   existingCutQtyByKey?: Record<string, number>;
+  /** D-335 加床次增量模式：只生成用户填写的"本次新增"数量，不自动带出整单 */
+  incrementMode?: boolean;
+  /** D-335 已生成菲号的每码合计（color-size → 件数），增量模式下展示参考 */
+  existingBundleQtyBySize?: Record<string, number>;
 }
 
 interface BundleRow {
@@ -33,6 +37,7 @@ interface BundleRow {
   color: string;
   size: string;
   quantity: number;    // 订单数量
+  incrementInput: number; // D-335 增量模式下用户填的"本次新增"件数
   cuttingQty: number;  // 实际裁剪数量（含损耗加放）
   bundles: number;
   remainder: number;
@@ -49,10 +54,14 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
   onConfirm,
   onClear,
   existingCutQtyByKey,
+  incrementMode = false,
+  existingBundleQtyBySize,
 }) => {
   const [bundleSize, setBundleSize] = useState<number | null>(null);
   const [excessRate, setExcessRate] = useState<number>(0);
   const [lastBundleOverrides, setLastBundleOverrides] = useState<Record<string, number>>({});
+  // D-335 增量模式：每行"本次新增"件数（默认 0，只生成填了的行）
+  const [incrementQty, setIncrementQty] = useState<Record<string, number>>({});
 
   useEffect(() => { setLastBundleOverrides({}); }, [bundleSize, excessRate]);
 
@@ -60,17 +69,24 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
     setLastBundleOverrides(prev => ({ ...prev, [key]: val ?? 1 }));
   };
 
+  const handleIncrementChange = (key: string, val: number | null) => {
+    setIncrementQty(prev => ({ ...prev, [key]: Math.max(0, val ?? 0) }));
+  };
+
   const tableRows = useMemo<BundleRow[]>(() => {
     if (!entryOrderLines?.length) return [];
     return entryOrderLines.map((line, idx) => {
       const orderQty = Number(line.quantity) || 0;
-      const rate = excessRate > 0 ? excessRate : 0;
-      // 基础裁剪数 = 订单数 × (1 + 损耗率)，向上取整
-      const baseCuttingQty = rate > 0 ? Math.ceil(orderQty * (1 + rate / 100)) : orderQty;
+      const key = `${line.color}-${line.size}-${idx}`;
+      // D-335 增量模式：分扎按"本次新增"计算（默认 0），损耗加放不适用
+      const incrementInput = incrementMode ? Math.max(0, Number(incrementQty[key] ?? 0)) : 0;
+      const baseQty = incrementMode ? incrementInput : orderQty;
+      const rate = incrementMode ? 0 : (excessRate > 0 ? excessRate : 0);
+      // 基础裁剪数 = 基数 × (1 + 损耗率)，向上取整
+      const baseCuttingQty = rate > 0 ? Math.ceil(baseQty * (1 + rate / 100)) : baseQty;
       const bs = bundleSize && bundleSize > 0 ? bundleSize : 0;
       const bundles = baseCuttingQty > 0 && bs > 0 ? Math.ceil(baseCuttingQty / bs) : 0;
       const remainder = baseCuttingQty % bs;
-      const key = `${line.color}-${line.size}-${idx}`;
 
       // 用户修改末扎数量后，裁剪总数联动更新
       const defaultLastQty = remainder > 0 ? remainder : bs;
@@ -93,6 +109,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         color: line.color,
         size: line.size,
         quantity: orderQty,
+        incrementInput,
         cuttingQty,
         bundles,
         remainder,
@@ -100,7 +117,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         skuNo: line.skuNo || '',
       };
     });
-  }, [entryOrderLines, bundleSize, excessRate, lastBundleOverrides]);
+  }, [entryOrderLines, bundleSize, excessRate, lastBundleOverrides, incrementMode, incrementQty]);
 
   const { totalQty, totalAlreadyCut, totalCuttingQty, totalBundles } = useMemo(
     () =>
@@ -119,13 +136,18 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
     [tableRows, existingCutQtyByKey],
   );
 
-  const valid = tableRows.some((r) => r.quantity > 0 && r.bundles > 0);
+  // D-335 增量模式：只看"本次新增"是否有值；正常模式：看订单数量
+  const valid = incrementMode
+    ? tableRows.some((r) => r.incrementInput > 0 && r.bundles > 0)
+    : tableRows.some((r) => r.quantity > 0 && r.bundles > 0);
 
   const handleConfirm = () => {
     const bs = bundleSize && bundleSize > 0 ? bundleSize : 0;
     const rows: BundleInputRow[] = [];
     for (const row of tableRows) {
-      if (row.quantity <= 0 || row.bundles <= 0) continue;
+      // 增量模式只提交用户填写的"本次新增"，其余码数不下发
+      const effectiveQty = incrementMode ? row.incrementInput : row.quantity;
+      if (effectiveQty <= 0 || row.bundles <= 0) continue;
       const defaultLastQty = row.remainder > 0 ? row.remainder : bs;
       const lastQty = lastBundleOverrides[row.key] ?? defaultLastQty;
       for (let i = 0; i < row.bundles; i++) {
@@ -157,6 +179,36 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       width: 110,
       render: (val: number) => <Text>{val} 件</Text>,
     },
+    // D-335 增量模式专属：本次新增 + 已生成参考
+    ...(incrementMode ? [
+      {
+        title: '已生成菲号',
+        key: 'generatedQty',
+        width: 110,
+        align: 'right' as const,
+        render: (_: unknown, row: BundleRow) => {
+          const val = (existingBundleQtyBySize ?? {})[`${row.color}-${row.size}`] ?? 0;
+          return <Text type="secondary">{val} 件</Text>;
+        },
+      },
+      {
+        title: '本次新增(件)',
+        key: 'incrementInput',
+        width: 130,
+        render: (_: unknown, row: BundleRow) => (
+          <InputNumber
+            min={0}
+            max={9999}
+            precision={0}
+            value={row.incrementInput}
+            controls={false}
+            disabled={disabled}
+            onChange={(v) => handleIncrementChange(row.key, v)}
+            style={{ width: 90 }}
+          />
+        ),
+      },
+    ] : []),
     {
       title: '已裁剪',
       key: 'alreadyCutQty',
@@ -266,7 +318,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
           max={30}
           precision={1}
           value={excessRate}
-          disabled={disabled}
+          disabled={disabled || incrementMode}
           onChange={(val) => setExcessRate(val ?? 0)}
           style={{ width: 80 }}
           suffix="%"

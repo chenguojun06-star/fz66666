@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Button, Form, Space, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
@@ -60,6 +60,16 @@ const CuttingEntryView: React.FC<CuttingEntryViewProps> = ({
   onOpenCuttingSheetPrint,
   onRollbackActive,
 }) => {
+  // D-335 加床次增量模式：每码已生成菲号数量（color-size → 件数），供一键生成面板展示参考
+  const existingBundleQtyBySize = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const b of (bundles.dataSource || []) as any[]) {
+      const k = `${String(b?.color || '').trim()}-${String(b?.size || '').trim()}`;
+      map[k] = (map[k] || 0) + (Number(b?.quantity) || 0);
+    }
+    return map;
+  }, [bundles.dataSource]);
+
   return (
     <>
       <div ref={bundles.editSectionRef} />
@@ -168,6 +178,7 @@ const CuttingEntryView: React.FC<CuttingEntryViewProps> = ({
             {bundleMode === 'auto' ? (
               <Form layout="vertical">
                 <CuttingRatioPanel
+                  key={bundles.addBedMode ? 'ratio-addbed' : 'ratio'}
                   entryColorText={bundles.entryColorText || String(activeTask?.color || '').trim()}
                   entrySizeItems={bundles.entrySizeItems}
                   entryOrderLines={bundles.entryOrderLines}
@@ -177,6 +188,8 @@ const CuttingEntryView: React.FC<CuttingEntryViewProps> = ({
                   arrivedFabricM={bundles.entryMainFabricArrived}
                   generating={bundles.generateLoading}
                   disabled={bundles.importLocked}
+                  incrementMode={bundles.addBedMode}
+                  existingBundleQtyBySize={existingBundleQtyBySize}
                   onConfirm={(rows) => {
                     bundles.setBundlesInput(rows);
                     bundles.handleGenerate(rows);
@@ -190,6 +203,7 @@ const CuttingEntryView: React.FC<CuttingEntryViewProps> = ({
               </Form>
             ) : (
               <CuttingFreeBundlePanel
+                key={bundles.addBedMode ? 'free-addbed' : 'free'}
                 entryOrderLines={bundles.entryOrderLines}
                 generating={bundles.generateLoading}
                 disabled={bundles.importLocked}
