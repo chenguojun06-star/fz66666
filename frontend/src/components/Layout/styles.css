@@ -527,6 +527,25 @@
   color: var(--sidebar-text-strong, #111827);
 }
 
+/* D-333c：弹出层文字可见性硬保险——优先级压过一切（antd 折叠动画残留/新旧样式混包/缓存），
+   保证弹出菜单内文字永远渲染出来 */
+.layout-sidebar-submenu-popup .ant-menu-title-content,
+.ant-menu-submenu-popup .ant-menu-title-content {
+  opacity: 1 !important;
+  visibility: visible !important;
+  width: auto !important;
+  max-width: none !important;
+  transform: none !important;
+}
+
+.layout-sidebar-submenu-popup .ant-menu-item a,
+.layout-sidebar-submenu-popup .ant-menu-submenu-title a,
+.ant-menu-submenu-popup .ant-menu-item a {
+  color: inherit !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
 .ant-tooltip.ant-menu-inline-collapsed-tooltip .ant-tooltip-inner {
   background: var(--sidebar-bg);
   color: var(--sidebar-text);
