@@ -74,6 +74,17 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           <div style={{ flex: 1, minWidth: 0 }}>
             <Row gutter={[16, 12]}>
               <Col xs={24} sm={12}>
+                <Field label="订单号">
+                  <Input
+                    value={createTask.createOrderNo}
+                    onChange={(e) => createTask.setCreateOrderNo(e.target.value)}
+                    placeholder="留空自动生成（CUT…），也可手动填写"
+                    allowClear
+                    maxLength={64}
+                  />
+                </Field>
+              </Col>
+              <Col xs={24} sm={12}>
                 <Field label="款号">
                   <AutoComplete
                     value={createTask.createStyleNo}

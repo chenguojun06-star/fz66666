@@ -91,9 +91,23 @@ public class CuttingOrderFactory {
 
         syncStyleCover(styleImageUrl, style);
 
-        String baseOrderNo = StringUtils.hasText(orderNo)
-                ? orderNo
-                : "CUT" + DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS").format(LocalDateTime.now());
+        // D-358：用户手填订单号时校验重号（避免与既有订单撞号造成脏数据）；留空则自动生成 CUT...
+        String baseOrderNo;
+        if (StringUtils.hasText(orderNo)) {
+            String manualNo = orderNo.trim();
+            Long tenantIdForDup = com.fashion.supplychain.common.UserContext.tenantId();
+            boolean dup = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getOrderNo, manualNo)
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .eq(tenantIdForDup != null, ProductionOrder::getTenantId, tenantIdForDup)
+                    .exists();
+            if (dup) {
+                throw new IllegalArgumentException("订单号「" + manualNo + "」已存在，请更换或留空自动生成");
+            }
+            baseOrderNo = manualNo;
+        } else {
+            baseOrderNo = "CUT" + DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS").format(LocalDateTime.now());
+        }
 
         String progressWorkflowJson = workflowBuilderHelper.resolveProgressWorkflowJson(body, styleNo);
 

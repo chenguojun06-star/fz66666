@@ -36,6 +36,8 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
   const [createStyleOptions, setCreateStyleOptions] = useState<StyleOption[]>([]);
   const [createStyleLoading, setCreateStyleLoading] = useState(false);
   const [createStyleNo, setCreateStyleNo] = useState<string>('');
+  // D-358 无资料下单：订单号（留空自动生成 CUT…，手填则后端校验重号）
+  const [createOrderNo, setCreateOrderNo] = useState<string>('');
   const [createStyleName, setCreateStyleName] = useState<string>('');
   const [createFactoryMode, setCreateFactoryMode] = useState<CuttingFactoryMode>('INTERNAL');
   const [createOrgUnitId, setCreateOrgUnitId] = useState<string>('');
@@ -294,6 +296,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
       const orgUnit = createInternalUnitOptions.find((item) => String(item.id || '').trim() === String(createOrgUnitId || '').trim());
       const res = await api.post<{ code: number; message: string; data?: Record<string, unknown> }>('/production/cutting-task/custom/create', {
         styleNo,
+        orderNo: String(createOrderNo || '').trim() || undefined,
         factoryType: createFactoryMode,
         factoryId: createFactoryMode === 'EXTERNAL' ? String(createFactoryId || '').trim() : undefined,
         factoryName: createFactoryMode === 'EXTERNAL'
@@ -340,6 +343,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
     addCreateOrderLine,
     removeCreateOrderLine,
     createStyleOptions, createStyleLoading, createStyleNo, setCreateStyleNo,
+    createOrderNo, setCreateOrderNo,
     createStyleName, setCreateStyleName,
     createFactoryMode, setCreateFactoryMode,
     createOrgUnitId, setCreateOrgUnitId,
