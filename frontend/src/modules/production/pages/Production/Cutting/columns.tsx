@@ -300,13 +300,6 @@ export function useBundleColumns(activeTask: CuttingTask | null) {
     },
     { title: '颜色', dataIndex: 'color', key: 'color', width: 120 },
     { title: '尺码', dataIndex: 'size', key: 'size', width: 80 },
-    {
-      title: '面料层数',
-      dataIndex: 'layerCount',
-      key: 'layerCount',
-      width: 90,
-      render: (v: unknown) => (Number(v) > 0 ? Number(v) : '-'),
-    },
     { title: '扎号', dataIndex: 'bundleNo', key: 'bundleNo', width: 80 },
     {
       title: '床号',
