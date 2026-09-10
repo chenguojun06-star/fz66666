@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Button, Dropdown, Drawer, Space } from 'antd';
+import { Button, Dropdown, Drawer, Space, Tooltip } from 'antd';
+import { DownOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd/es/form';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
@@ -132,9 +133,12 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           }}
         >
           {/* D-333：打印/下载是只读操作，回料确认后仍应可用——只在没有采购数据时禁用 */}
-          <Button disabled={detailLoading || !detailPurchases.length}>
-            采购单生成
-          </Button>
+          {/* D-360c：原「采购单生成」无箭头且不提打印下载，用户找不到入口——改可发现的显式标签 */}
+          <Tooltip title="点击选择打印或下载采购单">
+            <Button disabled={detailLoading || !detailPurchases.length}>
+              打印/下载采购单 <DownOutlined />
+            </Button>
+          </Tooltip>
         </Dropdown>
         <Button key="close" type="primary" onClick={onCancel}>
           关闭

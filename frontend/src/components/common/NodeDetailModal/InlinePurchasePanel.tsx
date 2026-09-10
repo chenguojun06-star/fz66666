@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
-import { Alert, Button, Card, Collapse, Form, Input, InputNumber, Space, Spin, Tag } from 'antd';
+import { Alert, App, Button, Card, Collapse, Form, Input, InputNumber, Space, Spin, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
-import { buildColorSummary, getOrderQtyTotal } from '@/modules/production/pages/Production/MaterialPurchase/utils';
+import { buildColorSummary, buildPurchaseSheetHtml, getOrderQtyTotal } from '@/modules/production/pages/Production/MaterialPurchase/utils';
+import { safePrint } from '@/utils/safePrint';
 import { PurchaseActionBar, PurchaseEditActions, PURCHASE_ACTION_LABELS } from '@/components/common/purchase/PurchaseActionBar';
 import type { MaterialPurchase } from '@/types/production';
 import { InlinePurchasePanelProps, normalizeStatus } from './InlinePurchasePanel.helpers';
@@ -22,6 +23,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
     quantity: propQuantity,
   } = props;
 
+  const { message } = App.useApp();
   const h = useInlinePurchaseData(props);
   const {
     purchases,
@@ -109,6 +111,32 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
     ]
   );
 
+  // D-360c：节点弹窗补齐打印/下载采购单（与采购管理列表弹窗/物料详情页同一套前端生成逻辑）
+  const handlePrintPurchaseSheet = () => {
+    const html = buildPurchaseSheetHtml(firstPurchase || null, order || null, orderLines, purchases, sizePairs);
+    if (!safePrint(html, '采购单')) {
+      message.error('打印失败，请重试');
+    }
+  };
+
+  const handleDownloadPurchaseSheet = () => {
+    const html = buildPurchaseSheetHtml(firstPurchase || null, order || null, orderLines, purchases, sizePairs);
+    const orderNoText = String(firstPurchase?.orderNo || orderNo || '').trim();
+    const purchaseNo = String(firstPurchase?.purchaseNo || '').trim();
+    const now = new Date();
+    const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `采购单_${purchaseNo || orderNoText || 'sheet'}_${ts}.html`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    message.success('采购单已下载');
+  };
+
   return (
     <Spin spinning={loading}>
       <ProductionOrderHeader
@@ -178,6 +206,11 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
                   onClick: handleConfirmComplete,
                 }}
                 edit={{ onClick: handleStartEdit }}
+                sheet={{
+                  disabled: loading || !purchases.length,
+                  onPrint: handlePrintPurchaseSheet,
+                  onDownload: handleDownloadPurchaseSheet,
+                }}
                 linkAction={{
                   label: PURCHASE_ACTION_LABELS.goMaterialDetail,
                   onClick: () => navigate(`/production/material/${encodeURIComponent(String(order?.styleNo || firstPurchase?.styleNo || ''))}?orderNo=${encodeURIComponent(String(orderNo || ''))}`),

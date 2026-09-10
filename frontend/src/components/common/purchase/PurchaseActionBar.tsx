@@ -76,6 +76,12 @@ interface PurchaseActionBarProps {
   edit?: PurchaseActionButtonState;
   /** 编辑锁/信息不全等状态 Tag，跟在按钮组后 */
   extraTags?: React.ReactNode;
+  /** 打印/下载采购单（D-360c：三弹层统一可见按钮，点击展开两项；原「采购单生成」无箭头不可发现） */
+  sheet?: {
+    disabled?: boolean;
+    onPrint: () => void;
+    onDownload: () => void;
+  };
   /** 更多▾ 下拉（导出/打印/单据等低频动作），无则不渲染 */
   moreItems?: MenuProps['items'];
   /** 尾部跳转链接（去物料明细/去采购管理） */
@@ -93,6 +99,7 @@ export const PurchaseActionBar: React.FC<PurchaseActionBarProps> = ({
   confirmComplete,
   edit,
   extraTags,
+  sheet,
   moreItems,
   linkAction,
   size = 'small',
@@ -129,6 +136,21 @@ export const PurchaseActionBar: React.FC<PurchaseActionBarProps> = ({
         >
           {PURCHASE_ACTION_LABELS.editMaterial}
         </Button>
+      )}
+      {sheet && (
+        <Dropdown
+          trigger={['click']}
+          menu={{
+            items: [
+              { key: 'print', label: '打印采购单', onClick: sheet.onPrint },
+              { key: 'download', label: '下载采购单', onClick: sheet.onDownload },
+            ],
+          }}
+        >
+          <Button size={size} disabled={sheet.disabled} title="打印或下载采购单文件">
+            打印/下载采购单 <DownOutlined />
+          </Button>
+        </Dropdown>
       )}
       {extraTags}
       {moreItems && moreItems.length > 0 && (

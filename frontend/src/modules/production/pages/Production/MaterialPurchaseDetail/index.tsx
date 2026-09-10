@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, Tag, Space, Alert, Row, Col, App, Tooltip } from 'antd';
-import { PrinterOutlined, DownloadOutlined, ExportOutlined, ExclamationCircleOutlined, UploadOutlined, FileImageOutlined } from '@ant-design/icons';
+import { ExportOutlined, ExclamationCircleOutlined, UploadOutlined, FileImageOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import SkeletonLoader from '@/components/common/SkeletonLoader';
 import api from '@/utils/api';
@@ -74,6 +74,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
   const [docListOpen, setDocListOpen] = useState(false);
   const [batchPurchaseLoading, setBatchPurchaseLoading] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
+  const [printAutoDownload, setPrintAutoDownload] = useState(false);
 
   // D-272：仓库库存映射——「出库领取」只在仓库真有库存（做过入库）时显示。
   // 直采直用（登记到货但未入库）的采购不该出现该按钮，误点必报"仓库库存不足"。
@@ -305,11 +306,14 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                     </Tag>
                   ) : null
                 }
+                sheet={{
+                  disabled: loading || !purchaseList.length,
+                  onPrint: () => setPrintOpen(true),
+                  onDownload: () => { setPrintAutoDownload(true); setPrintOpen(true); },
+                }}
                 moreItems={[
                   { key: 'doc-recognize', label: '上传采购单', icon: <UploadOutlined />, onClick: () => setDocRecognizeOpen(true) },
                   ...(orderNo ? [{ key: 'doc-list', label: '采购单据', icon: <FileImageOutlined />, onClick: () => setDocListOpen(true) }] : []),
-                  { key: 'print', label: '打印采购单', icon: <PrinterOutlined />, onClick: () => setPrintOpen(true) },
-                  { key: 'download', label: '下载采购单', icon: <DownloadOutlined />, onClick: handleExport },
                   { type: 'divider' as const },
                   { key: 'export', label: '导出', icon: <ExportOutlined />, onClick: onExport },
                 ]}
@@ -421,7 +425,8 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
 
       <PurchasePrintModal
         open={printOpen}
-        onClose={() => setPrintOpen(false)}
+        autoDownload={printAutoDownload}
+        onClose={() => { setPrintOpen(false); setPrintAutoDownload(false); }}
         order={order}
         purchaseList={purchaseList}
         orderNo={headerOrderNo}

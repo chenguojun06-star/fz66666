@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
-import { Button, Space, Tag, Typography } from 'antd';
-import { PrinterOutlined } from '@ant-design/icons';
+import React, { useEffect, useMemo } from 'react';
+import { App, Button, Space, Tag, Typography } from 'antd';
+import { DownloadOutlined, PrinterOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
 import { parseProductionOrderLines, sortSizeNames, toNumberSafe } from '@/utils/api';
 import { getMaterialTypeLabel } from '@/utils/materialType';
@@ -20,6 +20,8 @@ interface PurchasePrintModalProps {
   styleCover?: string | null;
   color?: string;
   materialArrivalRate: number;
+  /** D-360c：打开即直接下载采购单文件（供工具条「下载采购单」一键调用），下载后自动关闭 */
+  autoDownload?: boolean;
 }
 
 const money = (v: unknown) => {
@@ -34,7 +36,9 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
   open, onClose, order, purchaseList,
   orderNo: orderNoProp, styleNo: styleNoProp, styleName: styleNameProp,
   styleCover: styleCoverProp, color: colorProp, materialArrivalRate,
+  autoDownload,
 }) => {
+  const { message } = App.useApp();
   const orderNo = String(orderNoProp ?? order?.orderNo ?? order?.productionOrderNo ?? '').trim();
   const styleNo = String(styleNoProp ?? order?.styleNo ?? '').trim();
   const styleName = String(styleNameProp ?? order?.styleName ?? '').trim();
@@ -175,6 +179,32 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
     w.document.close();
   };
 
+  const handleDownload = () => {
+    const html = buildHtml();
+    const now = new Date();
+    const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+    const fileName = `采购单_${orderNo || styleNo || 'sheet'}_${ts}.html`;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    message.success('采购单已下载');
+  };
+
+  // D-360c：工具条「下载采购单」一键直下（打开即下载并自动收起）
+  useEffect(() => {
+    if (open && autoDownload && purchaseList.length > 0) {
+      handleDownload();
+      onClose();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, autoDownload]);
+
   return (
     <SideDrawer
       open={open}
@@ -184,6 +214,9 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
       footer={(
         <Space wrap>
           <Button onClick={onClose}>关闭</Button>
+          <Button icon={<DownloadOutlined />} onClick={handleDownload} disabled={!purchaseList.length}>
+            下载采购单
+          </Button>
           <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrint} disabled={!purchaseList.length}>
             打印采购单
           </Button>
