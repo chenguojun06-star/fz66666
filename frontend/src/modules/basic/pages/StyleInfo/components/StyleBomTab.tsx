@@ -4,6 +4,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import StyleStageControlBar from './StyleStageControlBar';
 import { useStyleBomTabData } from './hooks/useStyleBomTabData';
 import StyleBomMaterialModal from './styleBom/StyleBomMaterialModal';
+import CopyStyleBomDrawer from './styleBom/CopyStyleBomDrawer';
 import StyleBomSizeColorSummary from './styleBom/StyleBomSizeColorSummary';
 import StyleBomToolbar from './styleBom/StyleBomToolbar';
 import MaterialPickupModal, { type MaterialPickupRecord } from '@/components/common/MaterialPickupModal';
@@ -39,6 +40,7 @@ const StyleBomTab: React.FC<Props> = ({
 }) => {
   const { message } = App.useApp();
   const [pickupRecord, setPickupRecord] = React.useState<MaterialPickupRecord | null>(null);
+  const [copyBomOpen, setCopyBomOpen] = React.useState(false);
 
   const handleApplyPickup = React.useCallback((record: StyleBom) => {
     setPickupRecord({
@@ -98,6 +100,7 @@ const StyleBomTab: React.FC<Props> = ({
     purchaseStatus,
     columns,
     onBeforeComplete,
+    appendCopiedBomRows,
   } = useStyleBomTabData({
     styleId,
     readOnly,
@@ -166,6 +169,28 @@ const StyleBomTab: React.FC<Props> = ({
         }}
         onCancelEdit={exitTableEdit}
         onAddRows={handleAddRows}
+        onOpenCopyBom={() => {
+          if (editingKey) {
+            message.error('请先完成当前编辑再拷贝');
+            return;
+          }
+          if (tableEditable) {
+            message.error('请先保存或取消编辑后再拷贝');
+            return;
+          }
+          setCopyBomOpen(true);
+        }}
+      />
+
+      <CopyStyleBomDrawer
+        open={copyBomOpen}
+        onClose={() => setCopyBomOpen(false)}
+        currentStyleId={styleId}
+        submitting={loading}
+        onConfirm={async (rows) => {
+          await appendCopiedBomRows(rows);
+          setCopyBomOpen(false);
+        }}
       />
 
       <StyleBomMaterialModal

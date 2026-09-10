@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button, Dropdown, Select, Space, Spin, Tag, Tooltip, Upload, message } from 'antd';
-import { DownOutlined, ReloadOutlined, RobotOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { CopyOutlined, DownOutlined, ReloadOutlined, RobotOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import type { TemplateLibrary } from '@/types/style';
 import StyleBomAddRowsDropdown from './StyleBomAddRowsDropdown';
 import api from '@/utils/api';
@@ -44,6 +44,7 @@ interface StyleBomToolbarProps {
   styleId: string | number;
   purchaseStatus?: SamplePurchaseStatus;
   onBomRecognized: (items: AiBomRecognizedItem[]) => void;
+  onOpenCopyBom: () => void;
 }
 
 const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
@@ -68,6 +69,7 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
   styleId,
   purchaseStatus,
   onBomRecognized,
+  onOpenCopyBom,
 }) => {
   const hasEditingRow = Boolean(editingKey);
   const templateOptions = bomTemplates.map((template) => ({
@@ -204,6 +206,13 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
           onAddRows={onAddRows}
           disabled={locked || hasEditingRow || loading || templateLoading}
         />
+        <Button
+          icon={<CopyOutlined />}
+          onClick={onOpenCopyBom}
+          disabled={locked || hasEditingRow || loading || templateLoading}
+        >
+          拷贝其他款物料
+        </Button>
         </>
       }
       right={

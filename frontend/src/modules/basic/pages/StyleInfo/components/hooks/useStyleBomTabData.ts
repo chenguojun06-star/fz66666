@@ -2,6 +2,7 @@ import { App, Form } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleBom, TemplateLibrary } from '@/types/style';
+import api from '@/utils/api';
 import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
 import useStyleBomActions from './useStyleBomActions';
 import { useBomColumns } from './useBomColumns';
@@ -93,6 +94,7 @@ export interface UseStyleBomTabDataResult {
   handleAddRows: (count?: number) => void;
   // mutations
   applyBomTemplate: (mode: unknown) => Promise<void>;
+  appendCopiedBomRows: (rows: StyleBom[]) => Promise<void>;
   // actions
   handleGeneratePurchase: () => Promise<void> | void;
   handleCheckStock: () => Promise<void> | void;
@@ -300,6 +302,55 @@ export const useStyleBomTabData = ({
     onCartAdded,
   });
 
+  // D-336 拷贝其他款物料：把勾选的源 BOM 行按当前款尺码重算用量后逐行落库
+  const appendCopiedBomRows = useCallback(async (rows: StyleBom[]) => {
+    if (locked) {
+      message.error('已完成，无法操作');
+      return;
+    }
+    if (!rows?.length) {
+      message.warning('请先勾选要拷贝的物料');
+      return;
+    }
+    const sid = Number(styleId);
+    if (!Number.isFinite(sid) || sid <= 0) {
+      message.error('styleId不合法');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      for (const row of rows) {
+        const {
+          id: _id, tenantId: _tenantId, createTime: _createTime, updateTime: _updateTime,
+          createBy: _createBy, updateBy: _updateBy, ...payload
+        } = row as Record<string, any>;
+        payload.styleId = sid;
+        // 源款尺码可能与本款不同：用量按本款尺码表重算，规格截长同样重算
+        const usage = Number(payload.usageAmount ?? 0) || 0;
+        payload.usageAmount = usage;
+        payload.sizeUsageMap = buildSizeUsageMap(usage);
+        payload.patternSizeUsageMap = payload.sizeUsageMap;
+        payload.sizeSpecMap = buildSizeSpecMap(payload.specification);
+        payload.totalPrice = calcTotalPriceHelper(payload as StyleBom);
+        const res = await api.post('/style/bom', payload) as Record<string, unknown>;
+        if (res.code !== 200) {
+          message.error(String(res.message || '拷贝失败'));
+          return;
+        }
+      }
+      message.success(`已拷贝 ${rows.length} 项物料，可编辑调整后保存`);
+      const next = await fetchBom();
+      if (Array.isArray(next) && next.length) {
+        enterTableEdit(next);
+      }
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '拷贝失败');
+    } finally {
+      setLoading(false);
+    }
+  }, [buildSizeSpecMap, buildSizeUsageMap, enterTableEdit, fetchBom, locked, message, setLoading, styleId]);
+
   // 列定义
   const columns = useBomColumns({
     locked,
@@ -375,6 +426,7 @@ export const useStyleBomTabData = ({
     fetchPurchaseStatus,
     columns,
     onBeforeComplete,
+    appendCopiedBomRows,
   };
 };
 
