@@ -9,6 +9,31 @@ import WorkerHintPreview from './StyleIntelligenceProfileCard/components/WorkerH
 import InsightPanel from './StyleIntelligenceProfileCard/components/InsightPanel';
 import KeyTagsCloud from './StyleIntelligenceProfileCard/components/KeyTagsCloud';
 
+/**
+ * D-346 统一分区容器：左侧色条 + 标题 + 可选说明，内容区统一内边距。
+ * 所有分区同一套标题样式/间距，避免"东一块西一块"的散乱观感。
+ */
+const Section: React.FC<{ title: string; hint?: string; children: React.ReactNode }> = ({ title, hint, children }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
+      <span style={{
+        fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)',
+        paddingLeft: 8, borderLeft: '3px solid var(--color-primary)', lineHeight: '16px',
+      }}>{title}</span>
+      {hint ? <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{hint}</span> : null}
+    </div>
+    <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+  </div>
+);
+
+/** 两栏栅格：窄屏自动堆叠，宽屏左右对齐等高 */
+const GRID2: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+  gap: 12,
+  alignItems: 'stretch',
+};
+
 interface Props {
   style: StyleInfo | null;
   /** 视觉AI分析文本就绪时回调（供详情页把结果回填进款式特征） */
@@ -71,56 +96,71 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style, onVisionAnalysis
         onToggle={() => setExpanded((v) => !v)}
       />
 
-      {/* ── 展开区域（紧凑左右两栏布局）── */}
+      {/* ── 展开区域：统一分区栅格（进度概览 / 难度评估 / AI洞察 / 工人端提示 / 关键标签）── */}
       {expanded && (
-        <div style={{ padding: '0 12px 8px' }}>
-          {/* 基本信息行 */}
-          <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, lineHeight: 1.6, marginBottom: 6, borderBottom: '1px solid rgba(0,0,0,0.04)', paddingBottom: 5 }}>
-            <span>节点：{progressNode} · {deliveryMeta.detail}</span>
-            {' · '}
-            <span>最新订单：{latestOrderNo} · 进度 {latestProgress}</span>
+        <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* 一行式关键信息条（节点 / 交期 / 最新订单进度） */}
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', gap: '2px 14px',
+            fontSize: 12, color: 'var(--color-text-secondary)',
+            background: 'var(--color-bg-container)', borderRadius: 8, padding: '6px 10px',
+          }}>
+            <span>节点：<b style={{ color: 'var(--color-text-primary)' }}>{progressNode}</b></span>
+            <span>{deliveryMeta.detail}</span>
+            <span>最新订单：<b style={{ color: 'var(--color-text-primary)' }}>{latestOrderNo}</b></span>
+            <span>进度：<b style={{ color: 'var(--color-text-primary)' }}>{latestProgress}</b></span>
           </div>
 
-          {/* 左右两栏主体 */}
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-            <SummaryMetrics
-              loading={loading}
-              profile={profile}
-              quoteSuggestion={quoteSuggestion}
-              activeDifficulty={activeDifficulty}
-              deliveryMeta={deliveryMeta}
-              completionRate={completionRate}
-              doneCount={doneCount}
-              stageTags={stageTags}
-              orderCount={orderCount}
-              latestOrderStatus={latestOrderStatus}
-            />
-            <DifficultyPanel
-              loading={loading}
-              difficultyLoading={difficultyLoading}
-              activeDifficulty={activeDifficulty}
-              visualResult={visualResult}
-              styleId={styleId}
-              onAiImageAnalysis={handleAiImageAnalysis}
-            />
+          <div style={GRID2}>
+            <Section title="进度概览" hint={`${doneCount}/${stageTags.length} 节点完成`}>
+              <SummaryMetrics
+                loading={loading}
+                profile={profile}
+                quoteSuggestion={quoteSuggestion}
+                activeDifficulty={activeDifficulty}
+                deliveryMeta={deliveryMeta}
+                completionRate={completionRate}
+                doneCount={doneCount}
+                stageTags={stageTags}
+                orderCount={orderCount}
+                latestOrderStatus={latestOrderStatus}
+              />
+            </Section>
+
+            <Section title="难度评估" hint="AI 视觉分析">
+              <DifficultyPanel
+                loading={loading}
+                difficultyLoading={difficultyLoading}
+                activeDifficulty={activeDifficulty}
+                visualResult={visualResult}
+                styleId={styleId}
+                onAiImageAnalysis={handleAiImageAnalysis}
+              />
+            </Section>
           </div>
 
-          {/* ── 工人提示预览：工人扫码时看到的内容 ── */}
-          <WorkerHintPreview workerHint={workerHint} activeDifficulty={activeDifficulty} />
+          <div style={GRID2}>
+            <Section title="AI 洞察" hint="风险提示与建议">
+              <InsightPanel
+                loading={loading}
+                profile={profile}
+                quoteSuggestion={quoteSuggestion}
+                style={style}
+                onRefresh={() => void loadProfile()}
+              />
+            </Section>
 
-          {/* AI 洞察区域 */}
-          <InsightPanel
-            loading={loading}
-            profile={profile}
-            quoteSuggestion={quoteSuggestion}
-            style={style}
-            onRefresh={() => void loadProfile()}
-          />
+            <Section title="工人端提示预览" hint="工人扫码时可见">
+              <WorkerHintPreview workerHint={workerHint} activeDifficulty={activeDifficulty} />
+            </Section>
+          </div>
 
-          {/* 关键标签云 */}
-          <KeyTagsCloud style={style} activeDifficulty={activeDifficulty} profile={profile} />
+          <Section title="关键标签">
+            <KeyTagsCloud style={style} activeDifficulty={activeDifficulty} profile={profile} />
+          </Section>
         </div>
       )}
+
     </Card>
   );
 };
