@@ -12,7 +12,8 @@ import { useStyleSizeDerived } from '../styleSize/useStyleSizeDerived';
 import { useStyleSizeGrading } from '../styleSize/useStyleSizeGrading';
 import { useStyleSizeStructure } from '../styleSize/useStyleSizeStructure';
 import { useStyleSizeSave } from '../styleSize/useStyleSizeSave';
-import { MatrixRow } from '../styleSize/shared';
+import { MatrixRow, resolveGroupName } from '../styleSize/shared';
+import CopyStyleSizeDrawer, { CopiedSizeRow } from '../styleSize/CopyStyleSizeDrawer';
 
 import { useStyleSizeRowHandlers } from './useStyleSizeRowHandlers';
 import { useStyleSizeAiRecognition } from './useStyleSizeAiRecognition';
@@ -53,6 +54,7 @@ const StyleSizeTab: React.FC<Props> = ({
 
   const [editMode, setEditMode] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [copySizeOpen, setCopySizeOpen] = useState(false);
   const snapshotRef = useRef<{ sizeColumns: string[]; rows: MatrixRow[] } | null>(null);
 
   const enterEdit = useCallback(() => {
@@ -102,6 +104,50 @@ const StyleSizeTab: React.FC<Props> = ({
     styleId, readOnly, rows, sizeColumns, setRows, setEditMode,
     deletedIds, originalRef, combinedSizeIdsRef, snapshotRef, fetchSize, message,
   });
+
+  // D-337 拷贝其他款尺寸：源行(一码一行)聚合成部位行追加进当前表，同名部位跳过；数量不做控制
+  const importCopiedSizeRows = useCallback((rawRows: CopiedSizeRow[]) => {
+    if (!rawRows?.length) return;
+    const byPart = new Map<string, CopiedSizeRow[]>();
+    rawRows.forEach((r) => {
+      const part = String(r.partName || '').trim();
+      const groupName = resolveGroupName(r.groupName, part);
+      const mapKey = `${groupName}::${part}`;
+      if (!byPart.has(mapKey)) byPart.set(mapKey, []);
+      byPart.get(mapKey)!.push(r);
+    });
+    const incomingSizes = Array.from(new Set(rawRows.map((r) => String(r.sizeName || '').trim()).filter(Boolean)));
+    if (incomingSizes.length) structure.mergeSizeColumns(incomingSizes);
+    setRows((prev) => {
+      const existingKeys = new Set(prev.map((r) => `${resolveGroupName(r.groupName, r.partName)}::${String(r.partName || '').trim()}`));
+      const next: MatrixRow[] = [...prev];
+      byPart.forEach((items, mapKey) => {
+        if (existingKeys.has(mapKey)) return;
+        const partName = String(items[0]?.partName || '').trim();
+        const groupName = resolveGroupName(items[0]?.groupName, partName);
+        const cells: Record<string, { value: number }> = {};
+        items.forEach((it) => {
+          const sn = String(it.sizeName || '').trim();
+          if (sn) cells[sn] = { value: Number(it.standardValue ?? 0) || 0 };
+        });
+        next.push({
+          key: `copied-${mapKey}-${Date.now()}-${Math.random()}`,
+          groupName,
+          partName,
+          measureMethod: String(items[0]?.measureMethod || ''),
+          baseSize: String(items[0]?.baseSize || ''),
+          gradingZones: [],
+          tolerance: (items[0]?.tolerance ?? '') as number | string,
+          sort: Number(items[0]?.sort ?? 0) || 0,
+          cells,
+        });
+      });
+      return next;
+    });
+    enterEdit();
+    message.success(`已拷贝 ${byPart.size} 个部位（同名部位已跳过），请检查后保存`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [structure, enterEdit, message, setRows]);
 
   const { handleSizeTableRecognized } = useStyleSizeAiRecognition({
     sizeColumns,
@@ -174,10 +220,13 @@ const StyleSizeTab: React.FC<Props> = ({
           enterEdit={enterEdit}
           exitEdit={exitEdit}
           saveAll={saveOps.saveAll}
-          sizeTemplates={sizeTemplates}
-          sizeTemplateKey={structure.sizeTemplateKey}
-          setSizeTemplateKey={structure.setSizeTemplateKey}
-          applySizeTemplate={structure.applySizeTemplate}
+          onOpenCopySize={() => {
+            if (editMode) {
+              message.error('请先保存或退出编辑后再拷贝');
+              return;
+            }
+            setCopySizeOpen(true);
+          }}
           newGroupName={structure.newGroupName}
           setNewGroupName={structure.setNewGroupName}
           confirmAddGroup={structure.confirmAddGroup}
@@ -192,6 +241,16 @@ const StyleSizeTab: React.FC<Props> = ({
           onSizeTableRecognized={handleSizeTableRecognized}
         />
       )}
+
+      <CopyStyleSizeDrawer
+        open={copySizeOpen}
+        onClose={() => setCopySizeOpen(false)}
+        currentStyleId={styleId}
+        onConfirm={async (rows) => {
+          importCopiedSizeRows(rows);
+          setCopySizeOpen(false);
+        }}
+      />
 
       <StyleSizeDataTable
         loading={loading}

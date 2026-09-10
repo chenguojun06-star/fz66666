@@ -1,10 +1,9 @@
 import React, { useRef, useState } from 'react';
-import { App, Button, Dropdown, Input, Popover, Select, Space, Upload, message as antdMessage, Spin } from 'antd';
-import { DownOutlined, PlusOutlined, RobotOutlined, SettingOutlined } from '@ant-design/icons';
+import { App, Button, Input, Popover, Select, Space, Upload, message as antdMessage, Spin } from 'antd';
+import { CopyOutlined, PlusOutlined, RobotOutlined, SettingOutlined } from '@ant-design/icons';
 import { sortSizeNames } from '@/utils/api';
 import api from '@/utils/api';
 import logger from '@/utils/logger';
-import { TemplateLibrary } from '@/types/style';
 import ResizableModal from '@/components/common/ResizableModal';
 import CircleIconButton from '@/components/common/CircleIconButton';
 import { hasSameSizeKey } from './shared';
@@ -23,10 +22,7 @@ interface Props {
   enterEdit: () => void;
   exitEdit: () => void;
   saveAll: () => void;
-  sizeTemplates: TemplateLibrary[];
-  sizeTemplateKey: string | undefined;
-  setSizeTemplateKey: (v: string | undefined) => void;
-  applySizeTemplate: (templateId: string, mode: 'merge' | 'overwrite') => void;
+
   newGroupName: string;
   setNewGroupName: (v: string) => void;
   confirmAddGroup: () => void;
@@ -37,15 +33,17 @@ interface Props {
   mergeSizeColumns: (additions: string[]) => void;
   fetchSizeDictOptions: () => void;
   message: { error: (msg: string) => void; loading: (msg: string) => void };
+  onOpenCopySize: () => void;
   styleId: string | number;
   onSizeTableRecognized: (result: { sizes: string[]; parts: any[] }) => void;
 }
 
 const StyleSizeToolbar: React.FC<Props> = ({
   editMode, readOnly, loading, saving, templateLoading,
+  onOpenCopySize,
   selectedRowKeys, setSelectedRowKeys, openBatchGradingConfig,
   enterEdit, exitEdit, saveAll,
-  sizeTemplates, sizeTemplateKey, setSizeTemplateKey, applySizeTemplate,
+
   newGroupName, setNewGroupName, confirmAddGroup, handleAddPartRow,
   sizeOptions, setSizeOptions, sizeColumns, mergeSizeColumns, fetchSizeDictOptions, message,
   styleId, onSizeTableRecognized,
@@ -177,35 +175,9 @@ const StyleSizeToolbar: React.FC<Props> = ({
             AI识别尺寸表
           </Button>
         )}
-        <Select
-          allowClear
-          style={{ width: 220 }}
-          placeholder="导入尺寸模板"
-          value={sizeTemplateKey}
-          onChange={(v) => setSizeTemplateKey(v)}
-          options={sizeTemplates.map((t) => ({
-            value: String(t.id || ''),
-            label: t.sourceStyleNo ? `${t.templateName}（${t.sourceStyleNo}）` : t.templateName,
-          }))}
-          disabled={loading || saving || isReadonly || templateLoading}
-        />
-        <Dropdown
-          disabled={loading || saving || isReadonly || templateLoading}
-          menu={{
-            items: [
-              { key: 'merge', label: '智能导入（回填空缺，不动已填数据）' },
-              { key: 'overwrite', label: '覆盖导入（清除现有数据）' },
-            ],
-            onClick: ({ key }) => {
-              if (!sizeTemplateKey) { message.error('请选择模板'); return; }
-              applySizeTemplate(sizeTemplateKey, key as 'merge' | 'overwrite');
-            },
-          }}
-        >
-          <Button disabled={loading || saving || isReadonly || templateLoading}>
-            导入模板 <DownOutlined />
-          </Button>
-        </Dropdown>
+        <Button icon={<CopyOutlined />} onClick={onOpenCopySize} disabled={loading || saving || isReadonly}>
+          拷贝其他款尺寸
+        </Button>
         {/* 免分组直接加行：分组按部位名自动推断，单件款式不必先建分组 */}
         <Button
           icon={<PlusOutlined />}
