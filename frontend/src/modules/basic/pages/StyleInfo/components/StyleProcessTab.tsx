@@ -102,7 +102,6 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
     });
     if (!editMode) enterEdit();
     message.success(`已拷贝 ${rows.length} 道工序，编码自动顺延，请检查后保存`);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [processStartTime, setData, styleId, editMode, enterEdit, message]);
 
   const { saving, exitEdit, handleAdd, handleRemoveSize, updateSizePrice, applyProcessTemplate, handleDelete, updateField, saveAll } = useStyleProcessActions({ styleId, readOnly: readOnly ?? false, processStartTime, data, setData, sizes, setSizes, fetchProcess, editMode, setEditMode, deletedIds, setDeletedIds, snapshotRef, onRefresh: onRefresh ?? (() => {}), enterEdit });

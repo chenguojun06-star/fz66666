@@ -89,7 +89,6 @@ const StyleBomTab: React.FC<Props> = ({
     exitTableEdit,
     saveAll,
     handleAddRows,
-    handleGeneratePurchase,
     generatePurchaseConfirmed,
     handleCheckStock,
     handleAddCartWithCallback,

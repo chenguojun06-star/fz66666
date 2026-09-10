@@ -38,7 +38,6 @@ interface MaterialTabContentProps {
  * 用户看清缺什么再选择「生成全部」或「仅缺料生成采购」；跳转统一叫「去采购管理」。
  */
 const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
-  orderId,
   orderNo,
   isFactoryUser,
   bomList,

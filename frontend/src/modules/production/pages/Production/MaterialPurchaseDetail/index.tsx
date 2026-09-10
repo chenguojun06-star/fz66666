@@ -93,7 +93,6 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
   const [batchPurchaseOpen, setBatchPurchaseOpen] = useState(false);
   const [batchPurchaseItems, setBatchPurchaseItems] = useState<BatchPurchaseItem[]>([]);
   const [batchReturnLoading, setBatchReturnLoading] = useState(false);
-  const [exportLoading, setExportLoading] = useState(false);
 
   /** 批量采购入口（D-104）：校验后打开可编辑确认弹窗（物料编码/规格/单价/供应商全展示，数量可调） */
   const onBatchPurchase = () => {
@@ -139,11 +138,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
     finally { setBatchReturnLoading(false); }
   };
 
-  const onExport = async () => {
-    setExportLoading(true);
-    try { await handleExport(); }
-    finally { setExportLoading(false); }
-  };
+  const onExport = async () => { await handleExport(); };
 
   const displayData = editing ? editableData : purchaseList;
 

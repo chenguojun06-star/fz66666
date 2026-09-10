@@ -146,7 +146,6 @@ const StyleSizeTab: React.FC<Props> = ({
     });
     enterEdit();
     message.success(`已拷贝 ${byPart.size} 个部位（同名部位已跳过），请检查后保存`);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [structure, enterEdit, message, setRows]);
 
   const { handleSizeTableRecognized } = useStyleSizeAiRecognition({
