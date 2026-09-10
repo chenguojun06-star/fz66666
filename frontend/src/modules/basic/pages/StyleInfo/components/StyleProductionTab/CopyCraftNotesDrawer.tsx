@@ -62,12 +62,14 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
   const [previewHtml, setPreviewHtml] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  const fetchStyles = useCallback(async (page: number) => {
+  const fetchStyles = useCallback(async (page: number, kwNo?: string, kwName?: string) => {
     setStyleLoading(true);
     try {
       const params: Record<string, unknown> = { page, pageSize: stylePageSize };
-      if (styleKeywordNo.trim()) params.styleNo = styleKeywordNo.trim();
-      if (styleKeywordName.trim()) params.styleName = styleKeywordName.trim();
+      const fkNo = (kwNo ?? styleKeywordNo).trim();
+      const fkName = (kwName ?? styleKeywordName).trim();
+      if (fkNo) params.styleNo = fkNo;
+      if (fkName) params.styleName = fkName;
       const res = await api.get<{ code: number; data: { records?: StyleBrief[]; total?: number } }>('/style/info/list', { params });
       if (res.code === 200) {
         const records = (res.data?.records || []).filter((r) => String(r.id) !== String(currentStyleId));
@@ -83,7 +85,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
     } finally {
       setStyleLoading(false);
     }
-  }, [currentStyleId, styleKeywordName, styleKeywordNo]);
+  }, [currentStyleId]);
 
   const fetchTemplates = useCallback(async () => {
     setTemplatesLoading(true);
@@ -138,8 +140,9 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
       setSelectedTemplate(null);
       setPreviewHtml('');
       void fetchTemplates();
+      void fetchStyles(1, '', '');
     }
-  }, [open, fetchTemplates]);
+  }, [open, fetchTemplates, fetchStyles]);
 
   const handlePickStyle = (record: StyleBrief) => {
     setSelectedStyle(record);
@@ -267,7 +270,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
                 current={stylePage}
                 pageSize={stylePageSize}
                 total={styleTotal}
-                onChange={(p) => setStylePage(p)}
+                onChange={(p) => { setStylePage(p); void fetchStyles(p); }}
                 style={{ marginTop: 8, textAlign: 'right' }}
                 showSizeChanger={false}
               />

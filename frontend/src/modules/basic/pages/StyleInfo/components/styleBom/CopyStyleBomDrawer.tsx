@@ -68,12 +68,14 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
   const [typeFilter, setTypeFilter] = useState<'all' | 'main' | 'aux'>('all');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  const fetchStyles = useCallback(async (page: number) => {
+  const fetchStyles = useCallback(async (page: number, kwNo?: string, kwName?: string) => {
     setStyleLoading(true);
     try {
       const params: Record<string, unknown> = { page, pageSize: stylePageSize };
-      if (styleKeywordNo.trim()) params.styleNo = styleKeywordNo.trim();
-      if (styleKeywordName.trim()) params.styleName = styleKeywordName.trim();
+      const fkNo = (kwNo ?? styleKeywordNo).trim();
+      const fkName = (kwName ?? styleKeywordName).trim();
+      if (fkNo) params.styleNo = fkNo;
+      if (fkName) params.styleName = fkName;
       const res = await api.get<{ code: number; data: { records?: StyleBrief[]; total?: number } }>('/style/info/list', { params });
       if (res.code === 200) {
         const records = (res.data?.records || []).filter((r) => String(r.id) !== String(currentStyleId));
@@ -89,7 +91,7 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
     } finally {
       setStyleLoading(false);
     }
-  }, [currentStyleId, styleKeywordName, styleKeywordNo]);
+  }, [currentStyleId]);
 
   useEffect(() => {
     if (open) void fetchStyles(stylePage);
@@ -369,7 +371,7 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
             current={stylePage}
             pageSize={stylePageSize}
             total={styleTotal}
-            onChange={(p) => setStylePage(p)}
+            onChange={(p) => { setStylePage(p); void fetchStyles(p); }}
             style={{ marginTop: 8, textAlign: 'right' }}
             showSizeChanger={false}
           />
