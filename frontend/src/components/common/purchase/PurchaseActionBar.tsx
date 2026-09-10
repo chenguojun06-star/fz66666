@@ -82,6 +82,8 @@ interface PurchaseActionBarProps {
     onPrint: () => void;
     onDownload: () => void;
   };
+  /** 页面自有的显式按钮（如 上传采购单/采购单据/导出），渲染在打印下载之后、更多之前 */
+  extraButtons?: React.ReactNode;
   /** 更多▾ 下拉（导出/打印/单据等低频动作），无则不渲染 */
   moreItems?: MenuProps['items'];
   /** 尾部跳转链接（去物料明细/去采购管理） */
@@ -100,6 +102,7 @@ export const PurchaseActionBar: React.FC<PurchaseActionBarProps> = ({
   edit,
   extraTags,
   sheet,
+  extraButtons,
   moreItems,
   linkAction,
   size = 'small',
@@ -152,6 +155,7 @@ export const PurchaseActionBar: React.FC<PurchaseActionBarProps> = ({
           </Button>
         </Dropdown>
       )}
+      {extraButtons}
       {extraTags}
       {moreItems && moreItems.length > 0 && (
         <Dropdown menu={{ items: moreItems }} trigger={['hover']}>

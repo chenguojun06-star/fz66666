@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Image, Space, Spin, Tooltip } from 'antd';
+import { Card, Empty, Image, Space, Spin, Tooltip } from 'antd';
 import { FileImageOutlined } from '@ant-design/icons';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { PurchaseDocRecord } from '../PurchaseDetailView.helpers';
@@ -11,7 +11,20 @@ interface PurchaseDocHistoryCardProps {
 
 // 历史上传单据 Card
 const PurchaseDocHistoryCard: React.FC<PurchaseDocHistoryCardProps> = ({ docList, docsLoading }) => {
-  if (docList.length === 0 && !docsLoading) return null;
+  // D-360d：空态不再整卡隐藏——用户不知道单据存哪/在哪看，给出明确指引
+  if (docList.length === 0 && !docsLoading) {
+    return (
+      <Card
+        style={{ marginTop: 12 }}
+        title={<Space><FileImageOutlined /><span>历史上传单据</span></Space>}
+      >
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description="暂无采购单据。在「物料采购明细」页点「上传采购单」上传供应商送货单，上传即自动保存在这里（按订单关联，可随时回看）。"
+        />
+      </Card>
+    );
+  }
 
   return (
     <Card

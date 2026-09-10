@@ -311,12 +311,22 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                   onPrint: () => setPrintOpen(true),
                   onDownload: () => { setPrintAutoDownload(true); setPrintOpen(true); },
                 }}
-                moreItems={[
-                  { key: 'doc-recognize', label: '上传采购单', icon: <UploadOutlined />, onClick: () => setDocRecognizeOpen(true) },
-                  ...(orderNo ? [{ key: 'doc-list', label: '采购单据', icon: <FileImageOutlined />, onClick: () => setDocListOpen(true) }] : []),
-                  { type: 'divider' as const },
-                  { key: 'export', label: '导出', icon: <ExportOutlined />, onClick: onExport },
-                ]}
+                extraButtons={(
+                  <>
+                    {/* D-360d：上传/查看采购单据从「更多▾」提为显式按钮——用户找不到单据存在哪 */}
+                    <Button size="small" icon={<UploadOutlined />} onClick={() => setDocRecognizeOpen(true)}>
+                      上传采购单
+                    </Button>
+                    {orderNo ? (
+                      <Button size="small" icon={<FileImageOutlined />} onClick={() => setDocListOpen(true)}>
+                        采购单据
+                      </Button>
+                    ) : null}
+                    <Button size="small" icon={<ExportOutlined />} onClick={onExport}>
+                      导出
+                    </Button>
+                  </>
+                )}
               />
             </Space>
           )
