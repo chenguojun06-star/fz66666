@@ -49,7 +49,28 @@ const QuotationProcessSection: React.FC<Props> = ({ processList, onRateChange, i
         dataSource={processList}
         showIndex
         columns={[
-          { title: '进度阶段', dataIndex: 'progressStage', width: 180, render: (v: string) => String(v || '').trim() || '-' },
+          {
+            title: '工序',
+            dataIndex: 'processName',
+            width: 220,
+            render: (v: string, r: any) => (
+              <div>
+                <div style={{ fontWeight: 500 }}>{String(v || '').trim() || '-'}</div>
+                {String(r?.progressStage || '').trim() && (
+                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                    {String(r.progressStage).trim()}
+                  </div>
+                )}
+              </div>
+            ),
+          },
+          {
+            title: '工序单价',
+            dataIndex: 'price',
+            width: 110,
+            align: 'right' as const,
+            render: (v: number) => formatMoney(toNumberSafe(v)),
+          },
           {
             title: '倍率', width: 120, align: 'center' as const,
             render: (_: any, r: any) => (

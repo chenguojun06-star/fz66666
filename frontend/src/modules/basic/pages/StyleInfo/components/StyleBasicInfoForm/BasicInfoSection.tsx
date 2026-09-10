@@ -235,6 +235,23 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           </Form.Item>
         </Col>
 
+        {/* D-344 开发来源（通用词典组件：齿轮可现场维护选项，与资料维护互通） */}
+        <Col xs={24} md={12}>
+          <Form.Item
+            name="developmentSourceType"
+            label="开发来源"
+            style={{ marginBottom: 8 }}
+          >
+            <DictAutoComplete
+              dictType="development_source"
+              placeholder="选择或输入开发来源"
+              quickManageTitle="维护开发来源"
+              disabled={editLocked}
+              enableQuickManage={!editLocked}
+            />
+          </Form.Item>
+        </Col>
+
         {/* 商品品牌（原"商品主题"更名，dictType 保持 style_theme 兼容历史数据） */}
         <Col xs={24} md={12}>
           <Form.Item

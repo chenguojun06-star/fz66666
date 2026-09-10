@@ -167,25 +167,21 @@ export const useStyleQuotationTabData = ({
         const name = String(p.processName || '').trim();
         return !(secondaryParentNames.has(stage) || secondaryParentNames.has(name));
       });
-      // 按父进度阶段分组汇总（只展示父节点，不展示子工序）
-      const stageMap = new Map<string, number>();
-      primaryDisplayList.forEach((p: any) => {
-        const stage = String(p.progressStage || p.processName || '').trim();
-        const price = (Number(p.price) || 0) * (Number(p.rateMultiplier) || 1);
-        stageMap.set(stage, (stageMap.get(stage) || 0) + price);
-      });
-      const groupedByStage = Array.from(stageMap.entries()).map(([stage, total], idx) => ({
-        id: `stage-${idx}`,
-        progressStage: stage,
-        processName: stage,
-        price: Number(total.toFixed(2)),
-        rateMultiplier: 1,
+      // D-344 报价单工序明细按"子工序"逐条展示（倍率按子工序设置，父节点汇总会抹掉差异）；
+      // 合计口径不变：逐条 price × rateMultiplier 求和
+      const flatProcessList = primaryDisplayList.map((p: any, idx: number) => ({
+        id: p.id ?? `proc-${idx}`,
+        processCode: p.processCode,
+        processName: p.processName,
+        progressStage: p.progressStage,
+        price: Number(p.price) || 0,
+        rateMultiplier: Number(p.rateMultiplier) || 1,
       }));
-      procCost = groupedByStage.reduce(
-        (sum: number, item: any) => sum + (Number(item.price) || 0),
+      procCost = flatProcessList.reduce(
+        (sum: number, item: any) => sum + (Number(item.price) || 0) * (Number(item.rateMultiplier) || 1),
         0,
       );
-      setProcessList(groupedByStage as any);
+      setProcessList(flatProcessList as any);
 
       setProcBaseTotal(procCost);
       setSecBaseTotal(secondaryCost);
