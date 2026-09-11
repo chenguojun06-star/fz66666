@@ -77,7 +77,12 @@ export const InboundModal: React.FC<InboundModalProps> = ({ visible, record, for
       <Form.Item name="arrivedQuantity" label="本次入库数量" rules={[{ required: true, message: '请输入数量' }]}>
         <InputNumber min={0.01} step={0.01} precision={2} style={{ width: '100%' }} addonAfter={record?.unit} />
       </Form.Item>
-      <Form.Item name="warehouseLocation" label="仓库库位">
+      {/* D-360k：入库必须选库位，杜绝"货到了不知道放哪" */}
+      <Form.Item
+        name="warehouseLocation"
+        label="仓库库位"
+        rules={[{ required: true, message: '请输入仓库库位（如 A区-01）' }]}
+      >
         <Input placeholder="请输入库位（如 A区-01）" />
       </Form.Item>
       <Form.Item name="remark" label="备注">

@@ -361,6 +361,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
           <Form.Item
             label="仓库库位"
             name="warehouseLocation"
+            rules={[{ required: true, message: '请输入仓库库位（如 A区-01）' }]}
           >
             <Input placeholder="请输入库位（如 A区-01）" />
           </Form.Item>

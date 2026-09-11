@@ -17,8 +17,8 @@ interface Props {
   qcRecords: WarehousingDetailRecord[];
   warehousingLoading: boolean;
   onSubmit: (items: { id: string; warehouse: string; warehouseAreaId: string }[]) => Promise<void>;
-  /** D-360i：质检后直接发货给客户（不落成品库存，只标记+留痕） */
-  onDirectShip?: (ids: string[]) => Promise<void>;
+  /** D-360k：质检后直接发货给客户——跳转成品库存「销售出库」完整流程 */
+  onDirectShip?: (ids: string[]) => void | Promise<void>;
 }
 
 const WarehousingActionPanel: React.FC<Props> = ({

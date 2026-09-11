@@ -6,7 +6,12 @@ import type { FinishedInventory, SKUDetail } from '../finishedInventoryColumns';
 
 export type OutboundType = 'sales' | 'free' | 'transfer' | 'scrap';
 
-export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], loadData: () => Promise<void>) => {
+export const useFinishedInventoryActions = (
+  rawDataSource: FinishedInventory[],
+  loadData: () => Promise<void>,
+  options?: { directShip?: boolean },
+) => {
+  const directShipMode = Boolean(options?.directShip);
   const { message } = App.useApp();
   const outboundModal = useModal<FinishedInventory>();
   const inboundHistoryModal = useModal<FinishedInventory>();
@@ -77,8 +82,11 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
     if (outboundType === 'scrap' && !outboundReason.trim()) { message.warning('请填写报废原因'); return; }
     const selectedItems = skuDetails.filter(item => (item.outboundQty || 0) > 0);
     if (selectedItems.length === 0) { message.warning('请至少输入一个商品编码的出库数量'); return; }
-    const invalidItems = selectedItems.filter(item => (item.outboundQty || 0) > item.availableQty);
-    if (invalidItems.length > 0) { message.error(`${invalidItems[0].sku} 的出库数量超过可用库存`); return; }
+    // D-360k：质检直发模式不校验可用库存（不落成品库存直接发客户）
+    if (!directShipMode) {
+      const invalidItems = selectedItems.filter(item => (item.outboundQty || 0) > item.availableQty);
+      if (invalidItems.length > 0) { message.error(`${invalidItems[0].sku} 的出库数量超过可用库存`); return; }
+    }
     outboundSubmittingRef.current = true;
     setOutboundSubmitting(true);
     try {
@@ -93,6 +101,7 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
       if (outboundItems.length === 0) { message.warning('请至少填写一个商品编码的出库数量'); return; }
       await api.post('/warehouse/finished-inventory/outbound', {
         outboundType,
+        ...(directShipMode ? { directShip: true } : {}),
         ...(outboundReason.trim() ? { outboundReason: outboundReason.trim() } : {}),
         items: outboundItems,
         ...(outboundModal.data?.orderId ? { orderId: outboundModal.data.orderId } : {}),
@@ -137,6 +146,7 @@ export const useFinishedInventoryActions = (rawDataSource: FinishedInventory[], 
         const fallbackWarehouse = record.warehouseLocation || '-';
         const rows = (res.data.records as Record<string, unknown>[]).map(item => ({
           id: String(item.id), styleNo: String((item.styleNo as string) || record.styleNo || '-'), orderNo: String(item.orderNo || '-'),
+          factoryName: String(item.factoryName || '-'),
           inboundDate: String(item.warehousingEndTime || item.createTime || '-'), qualityInspectionNo: String(item.warehousingNo || '-'),
           cuttingBundleNo: String(item.cuttingBundleNo || '-'), color: String(item.color || '-'), size: String(item.size || '-'),
           skuCode: String(item.skuCode || '-'),

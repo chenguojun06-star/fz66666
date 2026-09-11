@@ -213,7 +213,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
               qcRecords={qcRecords}
               warehousingLoading={warehousingLoading}
               onSubmit={handleWarehouseSubmit}
-              onDirectShip={handleDirectShip}
+              onDirectShip={(ids) => { handleDirectShip(ids); }}
             />
           </Drawer>
 

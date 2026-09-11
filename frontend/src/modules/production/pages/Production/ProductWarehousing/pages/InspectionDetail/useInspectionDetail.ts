@@ -236,25 +236,17 @@ export function useInspectionDetail(props: InspectionDetailProps) {
     }
   };
 
-  const handleDirectShip = useCallback(async (ids: string[]) => {
+  const handleDirectShip = useCallback((ids: string[]) => {
     if (!ids.length) return;
-    setWarehousingLoading(true);
-    try {
-      const res = await api.post<{ code: number; message?: string; data?: number }>(
-        '/production/warehousing/direct-ship', { ids },
-      );
-      if (res?.code === 200) {
-        message.success(`已直发 ${res.data || ids.length} 条记录给客户（不落成品库存，已留发货记录）`);
-        fetchQcRecords();
-      } else {
-        message.error(res?.message || '直发失败');
-      }
-    } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : '直发失败');
-    } finally {
-      setWarehousingLoading(false);
-    }
-  }, [fetchQcRecords, message]);
+    // D-360k：直发 = 打开成品库存「销售出库」完整流程（订单/款号/商品编码明细/客户/物流→生成出库单→扣库存）
+    const orderNoText = String(briefing?.order?.orderNo || '').trim();
+    const styleNoText = String(briefing?.order?.styleNo || '').trim();
+    const query = new URLSearchParams();
+    if (styleNoText) query.set('styleNo', styleNoText);
+    if (orderNoText) query.set('orderNo', orderNoText);
+    query.set('directShip', '1');
+    window.location.href = `/warehouse/finished?${query.toString()}`;
+  }, [briefing]);
 
   const handleMarkRepaired = useCallback(async (bundleId: string) => {
     if (!bundleId) return;

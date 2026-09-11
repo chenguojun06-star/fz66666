@@ -37,7 +37,7 @@ export function useInboundModal(params: UseInboundModalParams): UseInboundModalR
     const defaultQty = backfill
       ? (opts?.defaultQty != null ? opts.defaultQty : 0)
       : Math.max(0.01, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
-    inboundForm.setFieldsValue({ arrivedQuantity: defaultQty, warehouseLocation: '默认仓', remark: '' });
+    inboundForm.setFieldsValue({ arrivedQuantity: defaultQty, warehouseLocation: '', remark: '' });
     setInboundVisible(true);
   }, [inboundForm]);
 

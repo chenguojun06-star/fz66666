@@ -4,6 +4,7 @@ import { HistoryOutlined, ScanOutlined, InboxOutlined } from '@ant-design/icons'
 import QrcodeOutboundModal from './QrcodeOutboundModal';
 import OutstockRecordTab from './OutstockRecordTab';
 import CustomerInfoSection from './CustomerInfoSection';
+import StyleCoverThumb from '@/components/StyleAssets/StyleCoverThumb';
 import ScanOperationModal from './FinishedScanOperationModal';
 import FreeInboundModal from './FreeInboundModal';
 import { getMainColumns, getSkuColumns } from './finishedInventoryColumns';
@@ -19,6 +20,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { useFinishedInventoryData } from './hooks/useFinishedInventoryData';
 import { useFinishedInventoryActions } from './hooks/useFinishedInventoryActions';
 import { useSync } from '@/utils/syncManager';
+import { useSearchParams } from 'react-router-dom';
 
 const _FinishedInventory: React.FC = () => {
   const [qrcodeOutboundOpen, setQrcodeOutboundOpen] = useState(false);
@@ -28,7 +30,13 @@ const _FinishedInventory: React.FC = () => {
   const [inboundPageSize, setInboundPageSize] = useState(20);
 
   const { rawDataSource, dataSource, pagedDataSource, totalRecords, loading, smartError, showSmartErrorNotice, searchText, setSearchText, statusValue, setStatusValue, selectedFactoryType, setSelectedFactoryType, factoryTypeOptions, pagination, loadData } = useFinishedInventoryData();
-  const { outboundModal, inboundHistoryModal, skuDetails, inboundHistory, outstockTotal, outboundType, setOutboundType, outboundReason, setOutboundReason, outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo, outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName, outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress, outboundSubmitting, handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory } = useFinishedInventoryActions(rawDataSource, loadData);
+  const [searchParams] = useSearchParams();
+  const directShipInitRef = React.useRef(false);
+  const directShipStyleNo = String(searchParams.get('styleNo') || '').trim();
+  const directShipOrderNo = String(searchParams.get('orderNo') || '').trim();
+  const isDirectShipEntry = String(searchParams.get('directShip') || '') === '1';
+  const [directShipMode, setDirectShipMode] = React.useState(false);
+  const { outboundModal, inboundHistoryModal, skuDetails, inboundHistory, outstockTotal, outboundType, setOutboundType, outboundReason, setOutboundReason, outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo, outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName, outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress, outboundSubmitting, handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory } = useFinishedInventoryActions(rawDataSource, loadData, { directShip: directShipMode });
 
   // 30秒轮询自动刷新成品库存
   // 注意：fetchFn 必须返回非 null/undefined 值，否则 syncManager 会判定为"空数据"并累计 3 次后自动停止
@@ -45,6 +53,21 @@ const _FinishedInventory: React.FC = () => {
     window.addEventListener('data:changed', handleDataChanged);
     return () => window.removeEventListener('data:changed', handleDataChanged);
   }, [loadData]);
+
+  // D-360k：质检详情「直接发货」跳转本页 → 自动打开销售出库抽屉（预填订单/款号/商品编码明细，直发模式免库存校验）
+  React.useEffect(() => {
+    if (!directShipStyleNo || directShipInitRef.current) return;
+    const record = rawDataSource.find((r) => String(r.styleNo || '').trim() === directShipStyleNo);
+    if (!record) return;
+    directShipInitRef.current = true;
+    if (isDirectShipEntry) setDirectShipMode(true);
+    if (directShipOrderNo && !record.orderNo) {
+      record.orderNo = directShipOrderNo;
+    }
+    handleOutbound(record);
+    // 打开后清掉 URL 参数，避免刷新重复弹出
+    window.history.replaceState(null, '', window.location.pathname);
+  }, [directShipStyleNo, directShipOrderNo, isDirectShipEntry, rawDataSource, handleOutbound]);
 
   // D-241：序号按「款」编号，翻页后要接续上一页，故传入分页偏移
   const indexOffset = ((pagination.pagination.current || 1) - 1) * (pagination.pagination.pageSize || 0);
@@ -176,8 +199,24 @@ const _FinishedInventory: React.FC = () => {
           >
             {inboundHistoryModal.data && (
               <>
-                <Card style={{ marginBottom: 12 }}><Row gutter={16}><Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>款号</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.styleNo || '-'}</div></Col><Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>总入库量</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.totalInboundQty ?? 0} 件</div></Col><Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>当前库存</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.availableQty ?? 0} 件</div></Col></Row></Card>
-                <ResizableTable size="small" columns={[{ title: '入库日期', dataIndex: 'inboundDate', key: 'inboundDate', width: 120 }, { title: '质检单号', dataIndex: 'qualityInspectionNo', key: 'qualityInspectionNo', width: 140 }, { title: '菲号', dataIndex: 'cuttingBundleNo', key: 'cuttingBundleNo', width: 100 }, { title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 200, render: (v: string) => <span title={v} style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{v}</span> }, { title: '颜色', dataIndex: 'color', key: 'color', width: 80 }, { title: '尺码', dataIndex: 'size', key: 'size', width: 60 }, { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const }, { title: '操作人', dataIndex: 'operator', key: 'operator', width: 100 }, { title: '库位', dataIndex: 'warehouseLocation', key: 'warehouseLocation', width: 100 }]} dataSource={inboundHistory} rowKey="id" emptyDescription="暂无入库记录" pagination={{ current: inboundPage, pageSize: inboundPageSize, total: inboundHistory.length, onChange: (p, ps) => { setInboundPage(p); setInboundPageSize(ps); } }} />
+                <Card style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <StyleCoverThumb
+                      src={(inboundHistoryModal.data as any).styleCover || null}
+                      styleNo={inboundHistoryModal.data.styleNo}
+                      size={72}
+                      borderRadius={6}
+                    />
+                    <Row gutter={16} style={{ flex: 1, minWidth: 320 }}>
+                      <Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>款号</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.styleNo || '-'}</div></Col>
+                      <Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>订单号</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.orderNo || '-'}</div></Col>
+                      <Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>生产方</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.factoryName || '-'}</div></Col>
+                      <Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>总入库量</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.totalInboundQty ?? 0} 件</div></Col>
+                      <Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>当前库存</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.availableQty ?? 0} 件</div></Col>
+                    </Row>
+                  </div>
+                </Card>
+                <ResizableTable size="small" columns={[{ title: '入库日期', dataIndex: 'inboundDate', key: 'inboundDate', width: 120 }, { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 130, render: (v: string) => v || '-' }, { title: '生产方', dataIndex: 'factoryName', key: 'factoryName', width: 110, render: (v: string) => v || '-' }, { title: '质检单号', dataIndex: 'qualityInspectionNo', key: 'qualityInspectionNo', width: 140 }, { title: '菲号', dataIndex: 'cuttingBundleNo', key: 'cuttingBundleNo', width: 100 }, { title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 200, render: (v: string) => <span title={v} style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{v}</span> }, { title: '颜色', dataIndex: 'color', key: 'color', width: 80 }, { title: '尺码', dataIndex: 'size', key: 'size', width: 60 }, { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const }, { title: '操作人', dataIndex: 'operator', key: 'operator', width: 100 }, { title: '库位', dataIndex: 'warehouseLocation', key: 'warehouseLocation', width: 100 }]} dataSource={inboundHistory} rowKey="id" emptyDescription="暂无入库记录" pagination={{ current: inboundPage, pageSize: inboundPageSize, total: inboundHistory.length, onChange: (p, ps) => { setInboundPage(p); setInboundPageSize(ps); } }} />
                 <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--color-bg-container)', borderRadius: 6, fontSize: 14 }}>
                   <div style={{ fontWeight: 600, marginBottom: 4 }}>对账公式</div>
                   <div>入库总量: <b>{inboundHistoryModal.data.totalInboundQty ?? 0}</b> 件 = 当前库存: <b style={{ color: 'var(--color-success)' }}>{inboundHistoryModal.data.availableQty ?? 0}</b> 件 + 出库总量: <b style={{ color: 'var(--color-orange-600)' }}>{outstockTotal}</b> 件 + 次品: <b>{inboundHistoryModal.data.defectQty ?? 0}</b> 件</div>
