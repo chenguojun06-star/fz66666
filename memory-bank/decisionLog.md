@@ -1,7 +1,30 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-11（新增 D-363 每日流水/财务总览数据链路四项修复）
+> 最后更新：2026-09-11（新增 D-364 样衣采购弹窗款式信息头 + 打印单来源/款式图修复）
+
+---
+
+## D-364：样衣采购弹窗补款式信息头 + 打印单来源/款式图修复（2026-09-11）
+
+用户反馈：①样衣采购管理弹窗没有款式信息（对比样衣生产/入库节点弹窗都有）；②样衣打印的采购单没有款式图；③打印单上"工厂：-"，开发阶段没有工厂，应该显示"开发来源"。
+
+**1. 样衣采购弹窗缺款式信息（P0）**
+根因：`MaterialPurchaseDetail/index.tsx` 的渲染分两支——`order` 存在走 `ProductionOrderHeader`（款式图+款号款名+颜色+矩阵），**样衣没有生产订单 → 走 `!order` 分支，只渲染"款号/采购单数/到货率"一条简陋横条**。
+修复：样衣模式同样渲染 `ProductionOrderHeader`（coverSize 160、showOrderNo=false、orderLines 用 sampleOrderLines），并补「来源=样衣(开发)」「采购单数」「到货率」「BOM 状态」四列；非样衣（订单已删除）保留原横条 + 警告 Alert。
+
+**2. 样衣打印无款式图（P0，两个根因叠加）**
+- 根因 A：`usePurchaseDetailData` 里款式信息查询条件是 `sampleMode && styleIdParam`，**只传款号没传 styleId 的入口从不查款式** → 款名/封面/颜色/矩阵全空。
+- 根因 B：`buildHtml` 里 `<img src="${styleCover}">` 用原始 URL，**打印窗口没有 token**，需鉴权的相对路径地址全部加载失败。
+修复：A 增加 `else if (sampleMode && styleNoParam)` 走 `/style/info/list?styleNo=` 兜底回填（含 styleName/cover/color/sizeColorConfig）；B 用 `getFullAuthedFileUrl()` 包装 styleCover（打印 HTML 与页内预览共用）。
+
+**3. 打印单"工厂：-"（P1）**
+样衣（开发）采购本就没有生产工厂，硬显示工厂字段只会是空 "-"。
+修复：有工厂名显示「工厂：xxx」，否则改标签为「来源」显示 `sourceLabel`（样衣(开发) / 大货 / 批量）。打印模板与页内预览两处同步。
+
+**4. 附带**：废弃卡死的 worktree 分支 `agents/miniapp-homepage-click-issue`（28 文件合并冲突、落后 main 1344 提交、仅本地无远端），已 `git worktree remove --force` + `git branch -D`。
+
+**验证**：`npx tsc --noEmit` 0 错误、lint 0；commit 626199ad3 已推送。
 
 ---
 
