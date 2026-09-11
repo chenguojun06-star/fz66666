@@ -46,6 +46,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
     batchUnqualifiedModalOpen,
     setBatchUnqualifiedModalOpen,
     handleWarehouseSubmit,
+    handleDirectShip,
     handleMarkRepaired,
     handleBack,
     highlightWhNo,
@@ -212,6 +213,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
               qcRecords={qcRecords}
               warehousingLoading={warehousingLoading}
               onSubmit={handleWarehouseSubmit}
+              onDirectShip={handleDirectShip}
             />
           </Drawer>
 

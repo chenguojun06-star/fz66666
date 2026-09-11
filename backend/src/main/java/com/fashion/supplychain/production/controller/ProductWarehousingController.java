@@ -101,6 +101,18 @@ public class ProductWarehousingController {
         return Result.success(productWarehousingOrchestrator.delete(id));
     }
 
+    /**
+     * D-360i：质检后直接发货给客户——走出库/发货流程但不落成品库存，仅标记+留痕
+     */
+    @PostMapping("/direct-ship")
+    public Result<?> directShip(@RequestBody Map<String, Object> body) {
+        Object v = body == null ? null : body.get("ids");
+        java.util.List<String> ids = v instanceof java.util.List
+                ? ((java.util.List<?>) v).stream().map(String::valueOf).toList()
+                : java.util.List.of();
+        return Result.success(productWarehousingOrchestrator.directShip(ids));
+    }
+
     @PostMapping("/rollback-by-bundle")
     public Result<?> rollbackByBundle(@RequestBody Map<String, Object> body) {
         throw new IllegalStateException("入库记录不支持直接撤回，请先走出库，再重新入库");

@@ -236,6 +236,26 @@ export function useInspectionDetail(props: InspectionDetailProps) {
     }
   };
 
+  const handleDirectShip = useCallback(async (ids: string[]) => {
+    if (!ids.length) return;
+    setWarehousingLoading(true);
+    try {
+      const res = await api.post<{ code: number; message?: string; data?: number }>(
+        '/production/warehousing/direct-ship', { ids },
+      );
+      if (res?.code === 200) {
+        message.success(`已直发 ${res.data || ids.length} 条记录给客户（不落成品库存，已留发货记录）`);
+        fetchQcRecords();
+      } else {
+        message.error(res?.message || '直发失败');
+      }
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '直发失败');
+    } finally {
+      setWarehousingLoading(false);
+    }
+  }, [fetchQcRecords, message]);
+
   const handleMarkRepaired = useCallback(async (bundleId: string) => {
     if (!bundleId) return;
     setMarkingRepairBundleId(bundleId);
@@ -295,6 +315,7 @@ export function useInspectionDetail(props: InspectionDetailProps) {
     batchUnqualifiedModalOpen,
     setBatchUnqualifiedModalOpen,
     handleWarehouseSubmit,
+    handleDirectShip,
     handleMarkRepaired,
     handleBack,
     autoInitDone: autoInitRef.current,

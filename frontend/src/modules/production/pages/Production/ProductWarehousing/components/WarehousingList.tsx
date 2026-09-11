@@ -78,6 +78,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
       ),
     },
     { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 140 },
+    { title: '工厂', dataIndex: 'factoryName', key: 'factoryName', width: 110, render: (v: string) => v || '-' },
     { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120 },
     { title: '款名', dataIndex: 'styleName', key: 'styleName', width: 120, ellipsis: true },
     { title: '菲号', dataIndex: 'bundleNo', key: 'bundleNo', width: 70 },

@@ -92,7 +92,73 @@ public class ProductWarehousingOrchestrator {
     private MaterialOutboundLogMapper materialOutboundLogMapper;
 
     public IPage<ProductWarehousing> list(Map<String, Object> params) {
-        return queryHelper.list(params);
+        IPage<ProductWarehousing> page = queryHelper.list(params);
+        // D-360i：批量富化工厂名（订单关联），入库记录区分哪个工厂生产
+        if (page != null && page.getRecords() != null && !page.getRecords().isEmpty()) {
+            try {
+                java.util.Set<String> orderNos = new java.util.HashSet<>();
+                for (ProductWarehousing w : page.getRecords()) {
+                    if (StringUtils.hasText(w.getOrderNo())) orderNos.add(w.getOrderNo().trim());
+                }
+                if (!orderNos.isEmpty()) {
+                    java.util.Map<String, String> factoryMap = new java.util.HashMap<>();
+                    for (String on : orderNos) {
+                        try {
+                            com.fashion.supplychain.production.entity.ProductionOrder o = productionOrderService.getByOrderNo(on);
+                            if (o != null && StringUtils.hasText(o.getFactoryName())) {
+                                factoryMap.put(on, o.getFactoryName().trim());
+                            }
+                        } catch (Exception ignore) {
+                            // 单订单富化失败不影响列表
+                        }
+                    }
+                    for (ProductWarehousing w : page.getRecords()) {
+                        if (StringUtils.hasText(w.getOrderNo())) {
+                            w.setFactoryName(factoryMap.getOrDefault(w.getOrderNo().trim(), null));
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[Warehousing] 工厂名富化失败: {}", e.getMessage());
+            }
+        }
+        return page;
+    }
+
+    /**
+     * D-360i：质检后直接发货给客户——走出库/发货流程但不落成品库存，仅标记记录并留痕。
+     * 记录 warehouse 置为"直发客户"，不再出现在待入库列表；不更新 SKU/成品库存。
+     * @return 成功直发的记录数
+     */
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public int directShip(java.util.List<String> ids) {
+        if (ids == null || ids.isEmpty()) throw new IllegalArgumentException("请选择要直发的记录");
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        int count = 0;
+        for (String id : ids) {
+            if (!StringUtils.hasText(id)) continue;
+            ProductWarehousing w = productWarehousingService.getById(id.trim());
+            if (w == null || (w.getDeleteFlag() != null && w.getDeleteFlag() != 0)) continue;
+            TenantAssert.assertBelongsToCurrentTenant(w.getTenantId(), "入库记录");
+            if (StringUtils.hasText(w.getWarehouse())) continue; // 已入库/已直发，跳过
+            String qs = w.getQualityStatus() == null ? "" : String.valueOf(w.getQualityStatus()).toLowerCase();
+            if (!("qualified".equals(qs) || "".equals(qs))) continue; // 非合格不可直发
+            Integer qty = w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : (w.getWarehousingQuantity() != null ? w.getWarehousingQuantity() : 0);
+            if (qty <= 0) continue;
+            // 只标记+留痕，不落成品库存、不更新 SKU 库存
+            ProductWarehousing upd = new ProductWarehousing();
+            upd.setId(w.getId());
+            upd.setWarehouse("直发客户");
+            upd.setWarehousingEndTime(java.time.LocalDateTime.now());
+            productWarehousingService.updateById(upd);
+            try {
+                logAppendHelper.appendOperation(w.getOrderId(), "质检直发客户", "质检记录：" + w.getWarehousingNo() + "，直发数量：" + qty);
+            } catch (Exception ignore) {
+            }
+            count++;
+        }
+        if (count == 0) throw new IllegalStateException("没有可直发的合格记录（可能已入库或已直发）");
+        return count;
     }
 
     public Map<String, Object> getStatusStats(Map<String, Object> params) {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, Alert, Button, Space, Typography, Select, Checkbox, Tooltip, Tag } from 'antd';
-import { InboxOutlined, CopyOutlined } from '@ant-design/icons';
+import { InboxOutlined, CopyOutlined, SendOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
 import { useWarehouseAreaOptions } from '@/hooks/useWarehouseAreaOptions';
@@ -17,10 +17,12 @@ interface Props {
   qcRecords: WarehousingDetailRecord[];
   warehousingLoading: boolean;
   onSubmit: (items: { id: string; warehouse: string; warehouseAreaId: string }[]) => Promise<void>;
+  /** D-360i：质检后直接发货给客户（不落成品库存，只标记+留痕） */
+  onDirectShip?: (ids: string[]) => Promise<void>;
 }
 
 const WarehousingActionPanel: React.FC<Props> = ({
-  qcRecords, warehousingLoading, onSubmit,
+  qcRecords, warehousingLoading, onSubmit, onDirectShip,
 }) => {
   const { selectOptions: finishedWarehouseOptions, areas } = useWarehouseAreaOptions('FINISHED');
   const defaultAreaId = useMemo(() => areas.length > 0 ? areas[0].id : '', [areas]);
@@ -257,6 +259,16 @@ const WarehousingActionPanel: React.FC<Props> = ({
             disabled={selectedIds.length === 0 || selectedMissingLocation}>
             确认入库（{selectedIds.length} 条记录）
           </Button>
+          {onDirectShip && (
+            <Button size="large" icon={<SendOutlined />}
+              loading={warehousingLoading} onClick={() => onDirectShip(selectedIds)}
+              disabled={selectedIds.length === 0}>
+              直接发货给客户（{selectedIds.length} 条记录）
+            </Button>
+          )}
+          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+            直接发货 = 质检合格后不落成品库存，直接发给客户，留发货记录
+          </span>
           {locationGroups.size > 0 && (
             <Space size={4} wrap>
               {Array.from(locationGroups.entries()).map(([loc, count]) => (
