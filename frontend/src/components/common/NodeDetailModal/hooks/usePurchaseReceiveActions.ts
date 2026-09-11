@@ -48,45 +48,45 @@ export const usePurchaseReceiveActions = (params: UsePurchaseReceiveActionsParam
     setActionLoading,
   } = params;
 
+  // D-366b：领取 = 只认领任务（不再填数量、不再提交到货量）
   const handleReceive = useCallback(async (record: MaterialPurchase) => {
     setReceiveModalRecord(record);
-    receiveForm.setFieldsValue({ quantity: Number(record.purchaseQuantity || 0) });
     setReceiveModalVisible(true);
-  }, [setReceiveModalRecord, receiveForm, setReceiveModalVisible]);
+  }, [setReceiveModalRecord, setReceiveModalVisible]);
 
   const doReceive = useCallback(async () => {
     try {
-      const values = await receiveForm.validateFields();
       const record = receiveModalRecord;
       if (!record) return;
       const purchaseId = String(record?.id || '').trim();
       if (!purchaseId) return;
       const receiverId = String(user?.id || '').trim();
       const receiverName = String(user?.name || user?.username || '').trim();
+      // 注意：后端 /purchase/receive 的 quantity 语义是「修改采购数量」，
+      // 到货量必须走「登记到货」(confirm-arrival / confirm-complete)，此处不得传数量。
       const res = await api.post<{ code: number; message?: string }>('/production/purchase/receive', {
         purchaseId,
         receiverId,
         receiverName,
-        arrivedQuantity: values.quantity,
       });
       if (res?.code === 200) {
-        message.success(`${record.materialName || record.materialCode} 到货确认成功`);
+        message.success(`${record.materialName || record.materialCode} 领取成功，到货后请点「登记到货」`);
         setReceiveModalVisible(false);
         loadData();
       } else {
-        message.error(res?.message || '到货确认失败');
+        message.error(res?.message || '领取失败');
       }
     } catch (e) {
       if (e && typeof e === 'object' && 'errorFields' in e) return; // form validation
-      message.error((e as Error)?.message || '到货确认失败');
+      message.error((e as Error)?.message || '领取失败');
     }
-  }, [receiveModalRecord, receiveForm, user, message, loadData, setReceiveModalVisible]);
+  }, [receiveModalRecord, user, message, loadData, setReceiveModalVisible]);
 
-  // 到货入库：将物料入库到仓库库存
+  // D-366b：登记到货（到货 + 去向一次做完）
   const handleInbound = useCallback(async (record: MaterialPurchase) => {
     setInboundModalRecord(record);
     const maxQty = Math.max(0.01, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
-    inboundForm.setFieldsValue({ arrivedQuantity: maxQty });
+    inboundForm.setFieldsValue({ arrivedQuantity: maxQty, movementAction: 'inbound', warehouseLocation: '', remark: '' });
     setInboundModalVisible(true);
   }, [setInboundModalRecord, inboundForm, setInboundModalVisible]);
 
@@ -99,25 +99,42 @@ export const usePurchaseReceiveActions = (params: UsePurchaseReceiveActionsParam
       if (!purchaseId) return;
       const operatorId = String(user?.id || '').trim();
       const operatorName = String(user?.name || user?.username || '').trim();
-      const res = await api.post<{ code: number; message?: string }>('/production/material/inbound/confirm-arrival', {
-        purchaseId,
-        arrivedQuantity: values.arrivedQuantity,
-        operatorId,
-        operatorName,
-        warehouseLocation: values.warehouseLocation,
-        remark: values.remark,
-      });
+      const movementAction = values.movementAction || 'inbound';
+
+      let res: { code?: number; message?: string };
+      let successText: string;
+      if (movementAction === 'direct_use') {
+        // 直采使用：不进仓库、库存不变，只记一条采购直用流水
+        res = await api.post<{ code: number; message?: string }>('/production/purchase/confirm-complete', {
+          purchaseId,
+          movementAction: 'direct_use',
+          movementQuantity: values.arrivedQuantity,
+          receiverName: operatorName,
+          remark: values.remark,
+        });
+        successText = `${record.materialName || record.materialCode} 已登记到货（直采使用），并记入采购直用流水`;
+      } else {
+        res = await api.post<{ code: number; message?: string }>('/production/material/inbound/confirm-arrival', {
+          purchaseId,
+          arrivedQuantity: values.arrivedQuantity,
+          operatorId,
+          operatorName,
+          warehouseLocation: values.warehouseLocation,
+          remark: values.remark,
+        });
+        successText = `${record.materialName || record.materialCode} 到货入库成功，库存已更新`;
+      }
       if (res?.code === 200) {
-        message.success(`${record.materialName || record.materialCode} 到货入库成功，库存已更新`);
+        message.success(successText);
         setInboundModalVisible(false);
         inboundForm.resetFields();
         loadData();
       } else {
-        message.error(res?.message || '到货入库失败');
+        message.error(res?.message || '登记到货失败');
       }
     } catch (e) {
       if (e && typeof e === 'object' && 'errorFields' in e) return; // form validation
-      message.error((e as Error)?.message || '到货入库失败');
+      message.error((e as Error)?.message || '登记到货失败');
     }
   }, [params.inboundModalRecord, inboundForm, user, message, loadData, setInboundModalVisible]);
 

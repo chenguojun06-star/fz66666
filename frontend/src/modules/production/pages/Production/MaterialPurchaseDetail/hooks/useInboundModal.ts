@@ -11,7 +11,9 @@ export interface UseInboundModalReturn {
   inboundVisible: boolean;
   setInboundVisible: React.Dispatch<React.SetStateAction<boolean>>;
   inboundRecord: MaterialPurchase | null;
-  /** 打开入库弹窗；opts.backfill=true 走存量补录（不重复累加到货数，只增库存） */
+  /** 登记到货提交中（D-366b） */
+  inboundLoading: boolean;
+  /** 打开登记到货弹窗；opts.backfill=true 走存量补录（不重复累加到货数，只增库存） */
   openInbound: (record: MaterialPurchase, opts?: { backfill?: boolean; defaultQty?: number }) => void;
   doInbound: () => Promise<void>;
 }
@@ -29,6 +31,7 @@ export function useInboundModal(params: UseInboundModalParams): UseInboundModalR
   const [inboundRecord, setInboundRecord] = useState<MaterialPurchase | null>(null);
   const [inboundForm] = Form.useForm();
   const [backfillMode, setBackfillMode] = useState(false);
+  const [inboundLoading, setInboundLoading] = useState(false);
 
   const openInbound = useCallback((record: MaterialPurchase, opts?: { backfill?: boolean; defaultQty?: number }) => {
     setInboundRecord(record);
@@ -37,46 +40,83 @@ export function useInboundModal(params: UseInboundModalParams): UseInboundModalR
     const defaultQty = backfill
       ? (opts?.defaultQty != null ? opts.defaultQty : 0)
       : Math.max(0.01, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
-    inboundForm.setFieldsValue({ arrivedQuantity: defaultQty, warehouseLocation: '', remark: '' });
+    inboundForm.setFieldsValue({
+      arrivedQuantity: defaultQty,
+      // D-366b：默认去向=入库到物料仓库
+      movementAction: 'inbound',
+      warehouseLocation: '',
+      remark: '',
+    });
     setInboundVisible(true);
   }, [inboundForm]);
 
+  /**
+   * D-366b：登记到货（用户拍板：到货 + 去向一次做完）
+   * - 入库到物料仓库 → confirm-arrival（写到货量 + 生成入库单 + 增库存 + 对账回流）
+   * - 直采使用      → confirm-complete(movementAction=direct_use)：只记采购直用流水，库存不动
+   * - 存量补录(backfill) → 保持原逻辑，不重复累加到货量
+   */
   const doInbound = useCallback(async () => {
     if (!inboundRecord) return;
     try {
+      setInboundLoading(true);
       const values = await inboundForm.validateFields();
       const operatorName = getOperatorName(user);
-      // D-360h：已完成/回料确认行走存量补录（不重复累加到货数，只增库存+流水+对账回流）
-      const url = backfillMode ? '/production/material/inbound/backfill' : '/production/material/inbound/confirm-arrival';
-      const payload = backfillMode
-        ? {
-            purchaseId: inboundRecord.id,
-            quantity: values.arrivedQuantity,
-            operatorId: user?.id || '',
-            operatorName,
-            warehouseLocation: values.warehouseLocation,
-            remark: values.remark,
-          }
-        : {
-            purchaseId: inboundRecord.id,
-            arrivedQuantity: values.arrivedQuantity,
-            operatorId: user?.id || '',
-            operatorName,
-            warehouseLocation: values.warehouseLocation,
-            remark: values.remark,
-          };
+      const movementAction = backfillMode ? 'inbound' : (values.movementAction || 'inbound');
+
+      let url: string;
+      let payload: Record<string, unknown>;
+      let successText: string;
+
+      if (backfillMode) {
+        url = '/production/material/inbound/backfill';
+        payload = {
+          purchaseId: inboundRecord.id,
+          quantity: values.arrivedQuantity,
+          operatorId: user?.id || '',
+          operatorName,
+          warehouseLocation: values.warehouseLocation,
+          remark: values.remark,
+        };
+        successText = '补录入库成功，库存已更新并同步对账';
+      } else if (movementAction === 'direct_use') {
+        // 直采使用：不进仓库、库存不变，只记一条采购直用流水
+        url = '/production/purchase/confirm-complete';
+        payload = {
+          purchaseId: inboundRecord.id,
+          movementAction: 'direct_use',
+          movementQuantity: values.arrivedQuantity,
+          receiverName: operatorName,
+          remark: values.remark,
+        };
+        successText = '已登记到货（直采使用），并记入采购直用流水';
+      } else {
+        url = '/production/material/inbound/confirm-arrival';
+        payload = {
+          purchaseId: inboundRecord.id,
+          arrivedQuantity: values.arrivedQuantity,
+          operatorId: user?.id || '',
+          operatorName,
+          warehouseLocation: values.warehouseLocation,
+          remark: values.remark,
+        };
+        successText = '到货入库成功，库存已更新';
+      }
+
       const res = await api.post<ApiResult<unknown>>(url, payload);
       if (res.code === 200) {
-        message.success(backfillMode ? '补录入库成功，库存已更新并同步对账' : '到货入库成功，库存已更新');
+        message.success(successText);
         setBackfillMode(false);
         setInboundVisible(false);
         inboundForm.resetFields();
         await loadData();
       } else {
-        message.error(res.message || '到货入库失败');
+        message.error(res.message || '登记到货失败');
       }
     } catch (error: unknown) {
-      handleFormSubmitError(error, message, '到货入库失败');
+      handleFormSubmitError(error, message, '登记到货失败');
+    } finally {
+      setInboundLoading(false);
     }
   }, [inboundRecord, inboundForm, backfillMode, user, message, loadData]);
 
@@ -85,6 +125,7 @@ export function useInboundModal(params: UseInboundModalParams): UseInboundModalR
     inboundVisible,
     setInboundVisible,
     inboundRecord,
+    inboundLoading,
     openInbound,
     doInbound,
   };

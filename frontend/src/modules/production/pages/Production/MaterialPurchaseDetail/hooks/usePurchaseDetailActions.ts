@@ -39,6 +39,8 @@ export interface PurchaseDetailActionsState {
   inboundVisible: boolean;
   setInboundVisible: React.Dispatch<React.SetStateAction<boolean>>;
   inboundRecord: MaterialPurchase | null;
+  /** D-366b：登记到货提交中 */
+  inboundLoading: boolean;
   returnConfirmVisible: boolean;
   setReturnConfirmVisible: React.Dispatch<React.SetStateAction<boolean>>;
   returnConfirmRecord: MaterialPurchase | null;
@@ -256,6 +258,7 @@ export function usePurchaseDetailActions(params: PurchaseDetailActionsParams): P
     inboundVisible: inboundModal.inboundVisible,
     setInboundVisible: inboundModal.setInboundVisible,
     inboundRecord: inboundModal.inboundRecord,
+    inboundLoading: inboundModal.inboundLoading,
     returnConfirmVisible: returnConfirmModal.returnConfirmVisible,
     setReturnConfirmVisible: returnConfirmModal.setReturnConfirmVisible,
     returnConfirmRecord: returnConfirmModal.returnConfirmRecord,

@@ -51,7 +51,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
     loading, order, purchaseList, materialArrivalRate,
     receiveForm, returnConfirmForm, inboundForm,
     receiveVisible, setReceiveVisible, receiveRecord, receiveLoading,
-    inboundVisible, setInboundVisible, inboundRecord,
+    inboundVisible, setInboundVisible, inboundRecord, inboundLoading,
     returnConfirmVisible, setReturnConfirmVisible, returnConfirmRecord, returnConfirmLoading,
     qualityIssueVisible, setQualityIssueVisible, qualityIssueRecord, setQualityIssueRecord,
     confirmCompleteSubmitting,
@@ -459,6 +459,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         visible={inboundVisible}
         record={inboundRecord}
         form={inboundForm}
+        loading={inboundLoading}
         onOk={doInbound}
         onCancel={() => { setInboundVisible(false); inboundForm.resetFields(); }}
       />

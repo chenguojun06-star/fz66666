@@ -299,15 +299,22 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
               ]),
               { key: 'delete', label: '删除', title: rowEditLockTitle || '删除此物料行', onClick: () => handleDelete(record), danger: true, disabled: isCancelled || rowEditLocked },
               ...(isWarehousePending ? [{ key: 'warehouse-pending', label: '待仓库出库', title: '等待仓库出库', disabled: true }] : []),
-              ...(!isWarehousePending && (isPending || isReceived || isPartial) ? (() => {
+              // D-366b：领取与到货拆成两步——未领取只出现「领取」；已领取/部分到货出现「登记到货」（到货时选去向）
+              ...(!isWarehousePending ? (() => {
                 const rowMissing = getPurchaseMissingFields(record);
                 // D-122：已回料确认行禁止再登记到货（与列表页/大货 Drawer 联动）
                 const rowDisabled = rowMissing.length > 0 || isReturnConfirmed;
-                const rowTitle = isReturnConfirmed ? '已回料确认，如需重做请先退回' : (rowMissing.length > 0 ? `该行缺少：${rowMissing.join('、')}，请先编辑补全` : (isPending ? '领取采购并登记到货数量' : '登记追加到货数量'));
-                return [{ key: 'receive', label: isPending ? (rowMissing.length > 0 ? `领取（缺${rowMissing.join('、')}）` : '领取并到货') : '追加到货', title: rowTitle, onClick: () => openReceive(record), primary: isPending, disabled: rowDisabled }];
+                if (isPending) {
+                  const rowTitle = rowMissing.length > 0
+                    ? `该行缺少：${rowMissing.join('、')}，请先编辑补全`
+                    : '领取采购（不登记到货，到货时再点「登记到货」）';
+                  return [{ key: 'receive', label: rowMissing.length > 0 ? `领取（缺${rowMissing.join('、')}）` : '领取', title: rowTitle, onClick: () => openReceive(record), primary: true, disabled: rowDisabled }];
+                }
+                if ((isReceived || isPartial) && !isReturnConfirmed) {
+                  return [{ key: 'inbound', label: '登记到货', title: '登记到货数量并选择去向：入库到物料仓库 / 直采使用', onClick: () => openInbound(record), primary: true }];
+                }
+                return [];
               })() : []),
-              // D-360b 状态机收紧：未领取(PENDING)不允许登记到货——先「领取并到货」，追加到货在领取后进行
-              ...((isReceived || isPartial) && !isReturnConfirmed ? [{ key: 'inbound', label: '追加到货', title: '登记追加到货数量并入库', onClick: () => openInbound(record) }] : []),
               // D-122：已回料确认的行置灰（与批量操作/列表页/大货 Drawer 同一判定），如需重做先点「退回」
               ...(!isPending && !isCancelled ? [{ key: 'return-confirm', label: '回料确认', title: isReturnConfirmed ? '已回料确认，如需重做请先退回' : '确认物料已回料到仓库', disabled: isReturnConfirmed, onClick: () => handleReturnConfirm(record) }] : []),
               ...(isReturnConfirmed ? [{ key: 'return-reset', label: '退回', title: '退回已确认的回料', onClick: () => handleReturnReset(record), danger: true }] : []),

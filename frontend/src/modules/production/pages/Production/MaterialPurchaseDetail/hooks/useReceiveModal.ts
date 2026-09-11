@@ -38,24 +38,27 @@ export function useReceiveModal(params: UseReceiveModalParams): UseReceiveModalR
     }
     setReceiveRecord(record);
     receiveForm.resetFields();
-    receiveForm.setFieldsValue({ quantity: record.purchaseQuantity });
     setReceiveVisible(true);
   }, [message, receiveForm]);
 
+  /**
+   * D-366b：领取只认领任务，不再提交数量。
+   * 旧实现把弹窗里的「本次到货数量」当 quantity 提交，而后端 /purchase/receive 的 quantity
+   * 语义是「修改采购数量」(D-104) —— 界面与后端做的不是一回事。
+   * 到货改为独立动作：「登记到货」（useInboundModal），到货时必须选去向。
+   */
   const handleReceive = useCallback(async () => {
     if (!receiveRecord) return;
     try {
       setReceiveLoading(true);
-      const values = await receiveForm.validateFields();
       const receiverName = getOperatorName(user);
       const response = await postReceive({
         purchaseId: receiveRecord.id,
-        quantity: values.quantity,
         receiverId: user?.id || '',
         receiverName,
       });
       if (response.code === 200) {
-        message.success('采购/到货成功');
+        message.success('领取成功，到货后请点「登记到货」');
         setReceiveVisible(false);
         receiveForm.resetFields();
         await loadData();

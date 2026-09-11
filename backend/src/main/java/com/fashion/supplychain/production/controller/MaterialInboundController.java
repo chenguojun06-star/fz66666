@@ -57,7 +57,7 @@ public class MaterialInboundController {
     public Result<?> confirmArrival(@RequestBody Map<String, Object> params) {
         try {
             String purchaseId = (String) params.get("purchaseId");
-            Integer arrivedQuantity = (Integer) params.get("arrivedQuantity");
+            Integer arrivedQuantity = parseQuantity(params.get("arrivedQuantity"), "到货数量");
             String warehouseLocation = (String) params.get("warehouseLocation");
             String operatorId = (String) params.get("operatorId");
             String operatorName = (String) params.get("operatorName");
@@ -75,13 +75,51 @@ public class MaterialInboundController {
     }
 
     /**
+     * 安全解析数量参数。
+     * <p>
+     * 前端 JSON 数字经 Jackson 反序列化后可能是 Integer/Long/Double，旧代码直接
+     * {@code (Integer) params.get(...)} 遇到小数会抛 ClassCastException（用户只看到一串类型转换异常）。
+     * <p>
+     * 另：物料到货/入库量当前在数据模型上是 INT（{@code t_material_purchase.arrived_quantity}、
+     * {@code t_material_inbound.inbound_quantity}），而采购量是 DECIMAL，一旦采购量为小数
+     * （如 1.32 米）就会永远到不齐。小数支持需改列为 DECIMAL，属独立的数据模型升级，
+     * 此处先给出明确业务提示，不做静默截断（避免错账）。
+     */
+    private static Integer parseQuantity(Object value, String fieldLabel) {
+        if (value == null) {
+            return null;
+        }
+        java.math.BigDecimal decimal;
+        if (value instanceof java.math.BigDecimal bd) {
+            decimal = bd;
+        } else if (value instanceof Number number) {
+            decimal = new java.math.BigDecimal(number.toString());
+        } else {
+            String text = String.valueOf(value).trim();
+            if (text.isEmpty()) {
+                return null;
+            }
+            try {
+                decimal = new java.math.BigDecimal(text);
+            } catch (NumberFormatException ex) {
+                throw new IllegalArgumentException(fieldLabel + "格式不正确: " + text);
+            }
+        }
+        if (decimal.stripTrailingZeros().scale() > 0) {
+            throw new IllegalArgumentException(fieldLabel + "当前只支持整数（物料到货/入库量为整数模型）。"
+                    + "该物料采购数量为小数，小数到货支持待数据模型升级后开放。当前输入：" + decimal.toPlainString());
+        }
+        return decimal.intValue();
+    }
+
+    /**
      * D-360h：存量补录入库——已完成但未入仓的采购，把已到货数量补入仓库（不重复累加到货）
      */
     @PostMapping("/backfill")
     public Result<?> backfillInbound(@RequestBody Map<String, Object> params) {
         try {
             String purchaseId = (String) params.get("purchaseId");
-            Integer quantity = (Integer) params.get("quantity");
+            Integer quantity = parseQuantity(params.get("quantity"), "补录数量");
             String warehouseLocation = (String) params.get("warehouseLocation");
             String operatorId = (String) params.get("operatorId");
             String operatorName = (String) params.get("operatorName");
@@ -110,7 +148,7 @@ public class MaterialInboundController {
             String materialType = (String) params.get("materialType");
             String color = (String) params.get("color");
             String size = (String) params.get("size");
-            Integer quantity = (Integer) params.get("quantity");
+            Integer quantity = parseQuantity(params.get("quantity"), "入库数量");
             String warehouseLocation = (String) params.get("warehouseLocation");
             String supplierName = (String) params.get("supplierName");
             String operatorId = (String) params.get("operatorId");

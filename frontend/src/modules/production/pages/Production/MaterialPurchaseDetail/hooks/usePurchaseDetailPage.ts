@@ -66,6 +66,7 @@ export function usePurchaseDetailPage(styleNoParam: string, orderNoParam: string
     inboundVisible: actionsState.inboundVisible,
     setInboundVisible: actionsState.setInboundVisible,
     inboundRecord: actionsState.inboundRecord,
+    inboundLoading: actionsState.inboundLoading,
 
     // Modal 状态：回料确认
     returnConfirmVisible: actionsState.returnConfirmVisible,

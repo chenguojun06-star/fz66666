@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, App, Button, Card, Collapse, Form, Input, InputNumber, Select, Space, Spin, Tag } from 'antd';
+import { Alert, App, Button, Card, Collapse, Form, Input, InputNumber, Radio, Select, Space, Spin, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
-import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
-import { useWarehouseAreaOptions } from '@/hooks/useWarehouseAreaOptions';
+import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { buildColorSummary, buildPurchaseSheetHtml, getOrderQtyTotal } from '@/modules/production/pages/Production/MaterialPurchase/utils';
@@ -16,6 +15,8 @@ import { buildDisplayColumns, buildEditColumns } from './InlinePurchasePanel.col
 import MaterialPickerModal from './MaterialPickerModal';
 import ConfirmCompleteModal from '@/modules/production/pages/Production/MaterialPurchase/components/ConfirmCompleteModal';
 import useInlinePurchaseData from './useInlinePurchaseData';
+
+const { Option } = Select;
 
 const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
   const {
@@ -88,13 +89,17 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
     handleStartEdit,
   } = h;
 
-  // D-366：到货入库的库位必须来自物料仓库布局（与「物料入库」页同源），不再手输
+  // D-366b：仓库/库位选择照抄「样衣入库」范式（Select + options + 空态提示）；
+  // 到货时必须选去向（入库到物料仓库 / 直采使用）
   const { selectOptions: materialWarehouseOptions } = useWarehouseAreaOptions('MATERIAL');
   const [inboundAreaId, setInboundAreaId] = useState<string | undefined>(undefined);
+  const inboundMovement = Form.useWatch('movementAction', inboundForm) || 'inbound';
+  const { selectOptions: materialLocationOptions, loading: materialLocationLoading } =
+    useWarehouseLocationByArea('MATERIAL', inboundMovement === 'inbound' ? inboundAreaId : undefined);
   React.useEffect(() => {
     if (inboundModalVisible) {
       setInboundAreaId(undefined);
-      inboundForm.setFieldsValue({ warehouseLocation: '' });
+      inboundForm.setFieldsValue({ movementAction: 'inbound', warehouseLocation: '' });
     }
   }, [inboundModalVisible, inboundForm]);
 
@@ -346,7 +351,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
 
       {/* 到货入库弹窗：将物料入库到仓库库存 */}
       <ResizableModal
-        title="到货入库"
+        title="登记到货"
         open={inboundModalVisible}
         onCancel={() => setInboundModalVisible(false)}
         onOk={doInbound}
@@ -365,36 +370,72 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
             name="arrivedQuantity"
             rules={[
               { required: true, message: '请输入到货数量' },
-              { type: 'number', min: 0.01, message: '数量必须大于 0' },
+              { type: 'number', min: 1, message: '数量必须大于 0' },
             ]}
+            extra="物料到货/入库数量目前按整数登记；小数到货需数据模型升级后开放"
           >
-            {/* 物料按米/公斤计量，必须支持小数（原先 precision=0 只收整数） */}
-            <InputNumber style={{ width: '100%' }} min={0.01} step={0.01} precision={2} addonAfter={inboundModalRecord?.unit || ''} />
+            <InputNumber style={{ width: '100%' }} min={1} step={1} precision={0} addonAfter={inboundModalRecord?.unit || ''} />
           </Form.Item>
-          <Form.Item label="物料仓库" required>
-            <Select
-              placeholder="请选择物料仓库"
-              options={materialWarehouseOptions}
-              value={inboundAreaId}
-              onChange={(v) => {
-                setInboundAreaId(v);
-                inboundForm.setFieldsValue({ warehouseLocation: '' });
-              }}
-              allowClear
-            />
-          </Form.Item>
+          {/* D-366b：到货时必须选去向（用户拍板与大货/样衣统一） */}
           <Form.Item
-            label="库位"
-            name="warehouseLocation"
-            rules={[{ required: true, message: '请选择库位' }]}
+            label="到货去向"
+            name="movementAction"
+            rules={[{ required: true, message: '请选择到货去向' }]}
           >
-            <WarehouseLocationAutoComplete
-              warehouseType="MATERIAL"
-              areaId={inboundAreaId}
-              placeholder="请选择库位"
-              style={{ width: '100%' }}
-            />
+            <Radio.Group>
+              <Radio value="inbound">入库到物料仓库</Radio>
+              <Radio value="direct_use">直采使用（不进仓库）</Radio>
+            </Radio.Group>
           </Form.Item>
+          {inboundMovement === 'inbound' ? (
+            <>
+              <Form.Item label="物料仓库" required>
+                <Select
+                  placeholder="请选择物料仓库"
+                  value={inboundAreaId}
+                  onChange={(v) => {
+                    setInboundAreaId(v);
+                    inboundForm.setFieldsValue({ warehouseLocation: '' });
+                  }}
+                  allowClear
+                  notFoundContent="暂无物料仓库，请前往「仓库管理 → 库位地图」创建"
+                >
+                  {materialWarehouseOptions.length > 0
+                    ? materialWarehouseOptions.map((opt) => (
+                      <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                    ))
+                    : <Option value="" disabled>暂无物料仓库，请前往库位地图创建</Option>}
+                </Select>
+              </Form.Item>
+              <Form.Item
+                label="库位"
+                name="warehouseLocation"
+                rules={[{ required: true, message: '请选择库位' }]}
+              >
+                <Select
+                  placeholder={inboundAreaId ? '请选择库位' : '请先选择物料仓库'}
+                  allowClear
+                  showSearch
+                  loading={materialLocationLoading}
+                  disabled={!inboundAreaId}
+                  notFoundContent={materialLocationLoading ? '加载中...' : inboundAreaId ? '该仓库暂无库位' : '请先选择物料仓库'}
+                  filterOption={(input, option) => String(option?.children ?? '').toLowerCase().includes(input.toLowerCase())}
+                >
+                  {materialLocationOptions.map((opt) => (
+                    <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </>
+          ) : (
+            <Alert
+              type="info"
+              showIcon
+              message="直采使用：物料不进仓库"
+              description="到货数量只登记到货，不增加库存；系统会记一条采购直用流水，适合到货即上线使用的场景。"
+              style={{ marginBottom: 12 }}
+            />
+          )}
           <Form.Item
             label="备注"
             name="remark"
