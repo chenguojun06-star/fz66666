@@ -42,6 +42,20 @@ public class FinishedOutstockHelper {
             "shipment", "free_outbound", "sample_out", "damage_out", "transfer_out", "other_out", "scan_outbound");
 
     /**
+     * D-374：需要客户信息的出库类型（真正"发货给客户"的场景）。
+     * <p>
+     * 其余类型都是**内部流向**，强制要客户名属于逻辑错误：
+     * <ul>
+     *   <li>transfer_out 调拨出库——仓库/库位之间转移，与客户无关</li>
+     *   <li>damage_out 报废出库——内部损耗</li>
+     *   <li>sample_out 样衣出库——借出/内部流转</li>
+     *   <li>other_out 其他出库</li>
+     * </ul>
+     */
+    private static final Set<String> REQUIRES_CUSTOMER_TYPES = Set.of(
+            "shipment", "free_outbound", "scan_outbound");
+
+    /**
      * D-130 出库类型词汇表统一：前端旧值（sales/free/transfer/scrap）映射到后端规范值。
      * 规范值原样通过；空值默认销售出货 shipment。
      */
@@ -107,9 +121,6 @@ public class FinishedOutstockHelper {
         String trackingNo = trimToNull(params.get("trackingNo"));
         String expressCompany = trimToNull(params.get("expressCompany"));
         String customerName = trimToNull(params.get("customerName"));
-        if (!StringUtils.hasText(customerName)) {
-            throw new IllegalArgumentException("出库必须选择客户");
-        }
         String customerPhone = trimToNull(params.get("customerPhone"));
         String shippingAddress = trimToNull(params.get("shippingAddress"));
         // D-360k：质检直发——不落成品库存直接发客户，跳过库存扣减但仍写销售出库记录
@@ -124,6 +135,12 @@ public class FinishedOutstockHelper {
         String finalOutstockType = normalizeOutstockType(outstockType);
         if (!VALID_OUTSTOCK_TYPES.contains(finalOutstockType)) {
             throw new IllegalArgumentException("无效的出库类型: " + finalOutstockType);
+        }
+        // D-374：只有「发客户」类出库才要求客户——调拨/报废/样衣借出等内部流向不再强制；
+        // 质检直发（directShip）本质仍是发客户，同样要求客户
+        boolean needsCustomer = REQUIRES_CUSTOMER_TYPES.contains(finalOutstockType) || directShip;
+        if (needsCustomer && !StringUtils.hasText(customerName)) {
+            throw new IllegalArgumentException("销售/赠品/扫码出库必须选择客户");
         }
         String warehouseAreaId = trimToNull(params.get("warehouseAreaId"));
         String warehouseAreaName = resolveWarehouseAreaName(warehouseAreaId);
