@@ -111,11 +111,28 @@ public class DailyFlowOrchestrator {
 
     // ==================== 生产扫码 ====================
 
+    /**
+     * D-363：系统编排阶段名（与 ProductionOrderScanRecordDomainService.SYSTEM_STAGE_NAMES 同口径）。
+     * 这些「扫码记录」由系统在订单创建/进入采购阶段时自动写入（scanType=orchestration），
+     * 并非真实生产扫码，也不产生金额。此前混入每日流水会同时污染笔数与数量合计。
+     */
+    private static final java.util.Set<String> SYSTEM_ORCHESTRATION_STAGES =
+            new java.util.LinkedHashSet<>(java.util.Arrays.asList(
+                    "下单", "采购", "物料采购", "面辅料采购", "备料", "到料",
+                    "订单创建", "创建订单", "开单", "制单"));
+
     private List<DailyFlowItem> queryScan(Long tenantId, LocalDateTime start, LocalDateTime end) {
         try {
             LambdaQueryWrapper<ScanRecord> qw = new LambdaQueryWrapper<>();
             qw.eq(ScanRecord::getTenantId, tenantId)
               .eq(ScanRecord::getScanResult, "success")
+              // D-363：排除系统编排记录（新数据 scanType=orchestration；存量脏数据 scanType 可能
+              // 仍是 production，故再按阶段名兜底过滤）。NULL 阶段/工序名视为真实记录保留。
+              .ne(ScanRecord::getScanType, "orchestration")
+              .and(w -> w.isNull(ScanRecord::getProgressStage)
+                      .or().notIn(ScanRecord::getProgressStage, SYSTEM_ORCHESTRATION_STAGES))
+              .and(w -> w.isNull(ScanRecord::getProcessName)
+                      .or().notIn(ScanRecord::getProcessName, SYSTEM_ORCHESTRATION_STAGES))
               .ge(ScanRecord::getScanTime, start)
               .le(ScanRecord::getScanTime, end)
               .last("LIMIT " + PER_TYPE_LIMIT);

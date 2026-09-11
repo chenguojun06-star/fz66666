@@ -1,11 +1,54 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-11（D-360i 样衣开发节点弹窗顶部加款式信息头）
+> 最后更新：2026-09-11（D-362 成品入库/出库链路六连修 D-360i~n；采购闭环 D-360h）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-11 D-360n 一次出库一个出库单（明细多行）+ 调拨出库回入库
+
+- [x] `ProductOutstock` 加 `transferInboundStatus` 字段 + 迁移 `V202709110100`（INBOUND=已回入，调入方确认收货）
+- [x] `FinishedOutstockHelper` 一次出库生成一个出库单、明细多行；`FinishedInventoryOrchestrator` 同步
+- [x] PC 出库记录 Tab 支持展示回入库状态（index/columns/types 三文件）
+- [x] CI success（34587910760）；[ ] 待用户回归：调拨出库→调入方确认→回入库闭环
+
+### 2026-09-11 D-360m 入库记录按款号精确匹配（H001 混入 HH001/HH0013 根治）
+
+- [x] `ProductWarehousingServiceImpl` 查询由 `.like` 改 `.eq`（orderNo / styleNo）——模糊匹配把包含 H001 的款号全部捞进来
+- [x] 影响面：入库记录弹窗 / 质检入库列表按款号筛选，标题与明细口径一致
+- [ ] 待用户回归：H001 入库记录不再出现 HH001/HH0013
+
+### 2026-09-11 D-360l 成品资料 405 修复 + 误标直发记录退回
+
+- [x] `ProductWarehousingController` 补缺失端点（405 根因）；`ProductWarehousingOrchestrator` 加误标直发记录的退回能力
+- [x] `useProductInfoData` / `FinishedInventory/index.tsx` 前端同步
+- [ ] 待用户回归：成品资料页不再 405；误标直发记录可退回
+
+### 2026-09-11 D-360k 质检直发接入完整销售出库流程 + 物料入库库位必填
+
+- [x] `FinishedOutstockHelper` 直发走完整销售出库；入库记录补款式图/订单号/生产方三列
+- [x] 物料入库库位改必填（`useInboundModal` + `WarehousingActionPanel`）
+- [ ] 待用户回归：质检直发后出库单/库存扣减正确
+
+### 2026-09-11 D-360j 入库记录弹窗款式图兜底
+
+- [x] `InspectionDetail/StyleInfoCard` 改用 `StyleCoverThumb` 按款号拉图（原无图时空白）
+
+### 2026-09-11 D-360i（仓库组）质检直发客户 + 入库记录工厂列
+
+- [x] `ProductWarehousingOrchestrator` 补直发客户字段与工厂列（+68 行），PC `WarehousingList` 显示
+
+### 2026-09-11 D-360h（采购闭环组）到货后入库/出库闭环补齐
+
+- [x] 「确认完成」统一接物料去向选择；`MaterialInboundOrchestrator` +72 行；存量补录
+- [x] `useInboundModal` / `MaterialPurchaseDetail` / `usePurchaseReturnActions` 前端同步
+- [ ] 待用户回归：到货→确认完成→入库/出库分流，存量数据可补录
+
+### 2026-09-11 D-360g（采购矩阵组）节点弹窗双矩阵修复 + 码数合并脏数据防御
+
+- [x] `InlinePurchasePanel.helpers` + `OrderColorSizeMatrix` 防御码数合并串脏数据
 
 ### 2026-09-11 D-360i 样衣开发节点弹窗统一加款式信息头
 

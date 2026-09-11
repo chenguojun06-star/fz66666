@@ -1,7 +1,37 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-10（新增 D-361 AI 全站统一 deepseek-v4-flash 多模态单模型；D-360 采购动作全量统一）
+> 最后更新：2026-09-11（新增 D-362 成品入库/出库链路六连修 + 采购闭环补齐）
+
+---
+
+## D-362：2026-09-11 成品入库/出库链路六连修 + 采购闭环补齐（13 提交，CI 全绿）
+
+背景：用户当日连续反馈采购弹窗/单据/入库/出库各入口不一致、入库记录查不准、调拨出库无法回入库等问题，按「一个入口一套操作方式」口径逐条修。
+
+**A. 采购侧（上午，D-360f~i）**
+- D-360f：采购单据抽屉合并为 `PurchaseDocDrawer`（上传采购单弹窗 + 历史卡片合一）；物料对账批量下载；打印单优化（`MaterialPurchaseDocOrchestrator` +26 行）
+- D-360g：大货采购弹窗按样衣统一——`PurchaseModal/index.tsx` 移除顶部散落按钮，footer 只留关闭；`PurchaseDetailView` 改用统一 `PurchaseActionBar`；`buildPurchaseSheetHtml` 款式图回退 `styleCover`；`usePurchaseDetail.loadDetailByOrderNo` 在 orderDetails 为空时按款号解析 `sizeColorConfig` 矩阵兜底
+- D-360h：全端「选用物料编码」弹窗统一为 50% 侧滑抽屉（6 处面辅料选择组件：StyleBomMaterialModal / 两处 MaterialSelectModal / MaterialPickerModal / CuttingBomMaterialModal）——**排除** MaterialPickupModal、InstructionModal、MaterialFormDrawer、InboundDrawer（非选用语义，保持原样）
+- D-360i：节点详情弹窗统一头部卡（款式图 140px + 款号/款名/颜色/下单数量 + 码数矩阵），复用 `ProductionOrderHeader`（showOrderNo=false）
+
+**B. 采购闭环（下午，编号与上午重复，见教训）**
+- D-360g(2)：节点弹窗双矩阵修复 + 码数合并串脏数据防御（`InlinePurchasePanel.helpers` + `OrderColorSizeMatrix`）
+- D-360h(2)：到货后入库/出库闭环——「确认完成」统一接物料去向选择，`MaterialInboundOrchestrator` +72 行，存量补录
+
+**C. 成品入库/出库链路（下午，D-360i~n）**
+- D-360i(2)：质检直发客户 + 入库记录工厂列（`ProductWarehousingOrchestrator` +68）
+- D-360j：入库记录弹窗款式图兜底——`StyleInfoCard` 改 `StyleCoverThumb` 按款号拉图
+- D-360k：质检直发接入完整销售出库流程 + 入库记录补款式图/订单号/生产方 + 物料入库库位必填
+- D-360l：成品资料 405 修复（Controller 补端点）+ 误标直发记录退回
+- D-360m：**入库记录按款号精确匹配**——`ProductWarehousingServiceImpl` 的 `.like` 改 `.eq`，根治 H001 把 HH001/HH0013 混进来的问题（模糊匹配是这批最隐蔽的数据 bug）
+- D-360n：一次出库一个出库单（明细多行）+ 调拨出库回入库；迁移 `V202709110100__add_transfer_inbound_status_to_product_outstock.sql`（t_product_outstock 加 transfer_inbound_status）
+
+**验证**：当日 12 次 push 的 CI 全部 success（backend-test + frontend-build 全过）；工作区 clean，main = origin/main（8a54d29a5）。
+
+**待用户回归**（尚未验收，属未完成）：①各入口「选用物料」弹窗是否右滑 50% ②大货采购弹窗按钮一行 + 打印带款式图/码数矩阵 ③质检直发完整出库流程 ④调拨出库回入库闭环 ⑤H001 入库记录不再混入 HH001。
+
+**教训（进 MEMORY.md）**：并行会话导致 D 编号重复——D-360g/h/i 当日各被取用两次（上午采购组、下午仓库组各一套）。再次印证「取号必须 `git log` 实时查，不能信 memory-bank」。
 
 ---
 

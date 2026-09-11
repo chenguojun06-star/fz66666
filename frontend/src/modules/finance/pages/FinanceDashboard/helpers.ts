@@ -3,6 +3,7 @@ export type StatKey =
   | 'payable'
   | 'wage'
   | 'material'
+  | 'materialPending'
   | 'expense'
   | 'advance'
   | 'laborCost'

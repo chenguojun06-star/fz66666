@@ -426,9 +426,14 @@ public class ProductionOrderProgressRecomputeService {
                     order.getSize(),
                     qty,
                     ProductionOrderScanRecordDomainService.STAGE_PROCUREMENT,
-                    order.getUpdateTime() == null ? createdTime : order.getUpdateTime(),
+                    // D-363：采购阶段记录的时间锚点=订单创建时间（采购是下单后的首个阶段）。
+                    // 旧实现用 order.updateTime，订单每次变更都会把这条记录挪到最新时间。
+                    createdTime,
                     null,
                     "system");
+            // D-363 存量自愈：历史记录的 scanTime 曾被打成订单 updateTime，拉回订单创建时间
+            scanRecordDomainService.correctStageRecordTimeIfDrifted(
+                    ProductionOrderScanRecordDomainService.REQUEST_PREFIX_PROCUREMENT + oid, createdTime);
         }
     }
 

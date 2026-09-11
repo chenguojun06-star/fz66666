@@ -11,6 +11,8 @@ export interface FinanceSummary {
   accountsPayable: number;
   wageExpense: number;
   materialCost: number;
+  /** D-363：待审批物料对账金额（采购已到货/入库生成对账但未审批，未计入 materialCost） */
+  materialPending: number;
   expenseCost: number;
   advanceAmount: number;
   /** D-243：工序产值（本厂扫码结算），仅展示，不计入 totalCost */
@@ -108,6 +110,7 @@ const DEFAULT_DATA: FinanceDashboardData = {
     accountsPayable: 0,
     wageExpense: 0,
     materialCost: 0,
+    materialPending: 0,
     expenseCost: 0,
     advanceAmount: 0,
     laborCost: 0,
@@ -230,6 +233,7 @@ export const useFinanceBIData = () => {
         wage: paths.payrollOperatorSummary,
         expense: paths.expenseReimbursement,
         material: paths.materialReconciliation,
+        materialPending: paths.materialReconciliation,
         advance: paths.employeeAdvance,
         profit: paths.financeDashboard,
         approval: paths.financeCenter,

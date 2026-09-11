@@ -161,6 +161,8 @@ const buildStatCards = (
   { key: 'approval', title: `待审批 / 逾期`, value: summary.pendingApprovals, color: 'var(--color-info)' },
   { key: 'wage', title: '工资支出', value: summary.wageExpense, color: 'var(--color-danger)' },
   { key: 'material', title: '物料成本', value: summary.materialCost, color: 'var(--color-accent-cyan)' },
+  // D-363：采购已到货/入库并生成对账、但尚未审批的金额（未计入物料成本，审批后自动转入）
+  { key: 'materialPending', title: '待审批物料', value: summary.materialPending, color: 'var(--color-warning)' },
   { key: 'expense', title: '费用支出', value: summary.expenseCost, color: 'var(--color-orange-300)' },
   { key: 'advance', title: '员工借支', value: summary.advanceAmount, color: 'var(--color-danger)' },
   // D-243：扫码工序产值。仅作展示，不计入总成本/净利润（避免与工资支出口径重叠）
@@ -223,6 +225,20 @@ const buildDetailConfig = (
           { title: '审批时间', dataIndex: 'time', width: 110 },
         ],
         rows: data.details.material,
+      };
+    case 'materialPending':
+      return {
+        title: '待审批物料对账（采购已到货/入库，尚未审批）',
+        columns: [
+          { title: '项目', dataIndex: 'name', width: 200 },
+          { title: '金额 / 说明', dataIndex: 'value' },
+        ],
+        rows: [
+          { name: '待审批金额', value: `¥${Number(data.summary.materialPending || 0).toLocaleString()}` },
+          { name: '统计口径', value: '物料对账单状态为「待审批 / 已核对」（pending / verified），按对账创建时间落在统计区间' },
+          { name: '为何不计入物料成本', value: '对账单审批通过（approved）后才会写入审批时间并计入「物料成本」，避免未确认金额混入利润' },
+          { name: '如何入账', value: '前往「财务 → 物料对账」审批对应对账单，审批后金额自动转入物料成本' },
+        ],
       };
     case 'expense':
       return {

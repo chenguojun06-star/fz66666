@@ -509,10 +509,44 @@ public class ProductionOrderScanRecordDomainService {
                 .set(ScanRecord::getOperatorName, resolvedOpName)
                 .set(ScanRecord::getScanType, isSystemStage(processName) ? "orchestration" : "production")
                 .set(ScanRecord::getUpdateTime, now);
-        if (scanTime != null) {
-            uw.set(ScanRecord::getScanTime, scanTime);
-        }
+        // D-363：阶段记录（下单/采购）的 scanTime 固定为首次写入时间，不再随重算漂移。
+        // 旧实现每次重算都用订单 updateTime 覆盖 scanTime，导致历史订单的「采购」记录
+        // 被反复拽到当天——表现为每日流水里凭空多出一批"生产扫码-采购"、
+        // 订单时间轴上采购节点时间错乱。首次写入时间由 INSERT 路径落库，此后只更新数量/操作人。
         scanRecordMapper.update(null, uw);
+    }
+
+    /**
+     * D-363 存量自愈：把被订单 updateTime 污染到「当天」的阶段记录时间拉回锚点时间。
+     * <p>
+     * 历史实现用 {@code order.getUpdateTime()} 作为采购记录的 scanTime，
+     * 导致历史订单的采购记录每次重算都被挪到最新时间（每日流水里表现为凭空新增一批采购流水）。
+     * 幂等：仅在记录时间明显晚于锚点（&gt;1 分钟）时修正。
+     */
+    public void correctStageRecordTimeIfDrifted(String requestId, LocalDateTime anchorTime) {
+        if (!StringUtils.hasText(requestId) || anchorTime == null) {
+            return;
+        }
+        try {
+            ScanRecord existing = scanRecordMapper
+                    .selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ScanRecord>()
+                            .eq(ScanRecord::getRequestId, requestId)
+                            .last("limit 1"));
+            if (existing == null || existing.getScanTime() == null) {
+                return;
+            }
+            if (!existing.getScanTime().isAfter(anchorTime.plusMinutes(1))) {
+                return;
+            }
+            LocalDateTime before = existing.getScanTime();
+            scanRecordMapper.update(null, new LambdaUpdateWrapper<ScanRecord>()
+                    .eq(ScanRecord::getId, existing.getId())
+                    .set(ScanRecord::getScanTime, anchorTime)
+                    .set(ScanRecord::getUpdateTime, LocalDateTime.now()));
+            log.info("[D-363] 修正阶段记录漂移时间: requestId={}, {} -> {}", requestId, before, anchorTime);
+        } catch (Exception e) {
+            log.warn("[D-363] 修正阶段记录时间失败: requestId={}", requestId, e);
+        }
     }
 
     public void ensureBaseStageScanRecordsOnCreate(ProductionOrder order) {

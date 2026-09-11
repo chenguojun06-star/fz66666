@@ -107,6 +107,9 @@ public class FinanceDashboardHelper {
         BigDecimal accountsPayable = sumPayableOutstanding(tenantId);
         BigDecimal wageExpense = sumWagePaid(tenantId, startTime, endTime);
         BigDecimal materialCost = sumMaterialCost(tenantId, startTime, endTime);
+        // D-363：采购流水已生成对账但尚未审批的部分（pending/verified）——不计入 materialCost，
+        // 单独成指标，避免"采购花了钱、总览物料成本里看不到"的链路断裂观感
+        BigDecimal materialPending = sumMaterialPending(tenantId, startTime, endTime);
         BigDecimal expenseCost = sumExpenseCost(tenantId, startTime, endTime);
         BigDecimal advanceAmount = sumAdvanceOutstanding(tenantId);
         // D-243：工序产值仅作展示，不进 totalCost（避免与工资支出口径重叠导致成本翻倍）
@@ -122,6 +125,7 @@ public class FinanceDashboardHelper {
         summary.put("accountsPayable", accountsPayable);
         summary.put("wageExpense", wageExpense);
         summary.put("materialCost", materialCost);
+        summary.put("materialPending", materialPending);
         summary.put("expenseCost", expenseCost);
         summary.put("advanceAmount", advanceAmount);
         summary.put("laborCost", laborCost);
@@ -224,6 +228,33 @@ public class FinanceDashboardHelper {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         } catch (Exception e) {
             log.warn("[财务总览] 统计物料成本失败", e);
+            return BigDecimal.ZERO;
+        }
+    }
+
+    /**
+     * D-363：待审批物料对账金额（pending / verified）。
+     * <p>
+     * 采购到货/入库后由 {@code MaterialReconciliationSyncOrchestrator} 生成对账单，初始状态为 pending，
+     * 只有审批（approved）后才会写 approvedAt 并计入 {@link #sumMaterialCost}。
+     * 因此"采购付了钱但总览物料成本看不到"是审批口径差，不是数据链路断裂——
+     * 这里把未入账的部分单列成指标，让采购流水在总览可见。
+     */
+    private BigDecimal sumMaterialPending(Long tenantId, LocalDateTime start, LocalDateTime end) {
+        try {
+            LambdaQueryWrapper<MaterialReconciliation> qw = new LambdaQueryWrapper<>();
+            qw.eq(MaterialReconciliation::getTenantId, tenantId)
+              .eq(MaterialReconciliation::getDeleteFlag, 0)
+              .in(MaterialReconciliation::getStatus, Arrays.asList("pending", "verified"))
+              .ge(MaterialReconciliation::getCreateTime, start)
+              .le(MaterialReconciliation::getCreateTime, end)
+              .last("LIMIT " + QUERY_LIMIT);
+            return materialReconciliationService.list(qw).stream()
+                    .map(m -> m.getFinalAmount() != null ? m.getFinalAmount()
+                            : (m.getTotalAmount() != null ? m.getTotalAmount() : BigDecimal.ZERO))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        } catch (Exception e) {
+            log.warn("[财务总览] 统计待审批物料对账失败", e);
             return BigDecimal.ZERO;
         }
     }
@@ -741,6 +772,7 @@ public class FinanceDashboardHelper {
         summary.put("accountsPayable", BigDecimal.ZERO);
         summary.put("wageExpense", BigDecimal.ZERO);
         summary.put("materialCost", BigDecimal.ZERO);
+        summary.put("materialPending", BigDecimal.ZERO);
         summary.put("expenseCost", BigDecimal.ZERO);
         summary.put("advanceAmount", BigDecimal.ZERO);
         summary.put("laborCost", BigDecimal.ZERO);
