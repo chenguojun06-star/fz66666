@@ -5,6 +5,8 @@ import QrcodeOutboundModal from './QrcodeOutboundModal';
 import OutstockRecordTab from './OutstockRecordTab';
 import CustomerInfoSection from './CustomerInfoSection';
 import StyleCoverThumb from '@/components/StyleAssets/StyleCoverThumb';
+import { App } from 'antd';
+import api from '@/utils/api';
 import ScanOperationModal from './FinishedScanOperationModal';
 import FreeInboundModal from './FreeInboundModal';
 import { getMainColumns, getSkuColumns } from './finishedInventoryColumns';
@@ -76,6 +78,22 @@ const _FinishedInventory: React.FC = () => {
   // D-228：一款多码时拆成每个商品编码一行，款级信息由 rowSpan 纵向合并，
   // 避免 15 个编码堆在同一单元格把行高撑爆（列表密密麻麻的根因）
   const flatRows = React.useMemo(() => flattenInventoryBySku(pagedDataSource), [pagedDataSource]);
+  const { message: appMessage } = App.useApp();
+  // D-360l：误标「直发客户」的入库记录退回上一步（恢复待入库）
+  const handleRevertDirectship = async (row: { id: string }) => {
+    try {
+      const res = await api.post('/production/warehousing/revert-directship', { ids: [row.id] });
+      if (res?.code === 200) {
+        appMessage.success('已退回上一步，该记录恢复为待入库');
+        if (inboundHistoryModal.data) handleViewInboundHistory(inboundHistoryModal.data);
+      } else {
+        appMessage.error(res?.message || '退回失败');
+      }
+    } catch (e) {
+      appMessage.error(e instanceof Error ? e.message : '退回失败');
+    }
+  };
+
   const totalAvailableQty = dataSource.reduce((sum, item) => sum + (item.availableQty || 0), 0);
   const totalDefectQty = dataSource.reduce((sum, item) => sum + (item.defectQty || 0), 0);
   const skuTotalOutbound = skuDetails.reduce((sum, item) => sum + (item.outboundQty || 0), 0);
@@ -216,7 +234,7 @@ const _FinishedInventory: React.FC = () => {
                     </Row>
                   </div>
                 </Card>
-                <ResizableTable size="small" columns={[{ title: '入库日期', dataIndex: 'inboundDate', key: 'inboundDate', width: 120 }, { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 130, render: (v: string) => v || '-' }, { title: '生产方', dataIndex: 'factoryName', key: 'factoryName', width: 110, render: (v: string) => v || '-' }, { title: '质检单号', dataIndex: 'qualityInspectionNo', key: 'qualityInspectionNo', width: 140 }, { title: '菲号', dataIndex: 'cuttingBundleNo', key: 'cuttingBundleNo', width: 100 }, { title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 200, render: (v: string) => <span title={v} style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{v}</span> }, { title: '颜色', dataIndex: 'color', key: 'color', width: 80 }, { title: '尺码', dataIndex: 'size', key: 'size', width: 60 }, { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const }, { title: '操作人', dataIndex: 'operator', key: 'operator', width: 100 }, { title: '库位', dataIndex: 'warehouseLocation', key: 'warehouseLocation', width: 100 }]} dataSource={inboundHistory} rowKey="id" emptyDescription="暂无入库记录" pagination={{ current: inboundPage, pageSize: inboundPageSize, total: inboundHistory.length, onChange: (p, ps) => { setInboundPage(p); setInboundPageSize(ps); } }} />
+                <ResizableTable size="small" columns={[{ title: '入库日期', dataIndex: 'inboundDate', key: 'inboundDate', width: 120 }, { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 130, render: (v: string) => v || '-' }, { title: '生产方', dataIndex: 'factoryName', key: 'factoryName', width: 110, render: (v: string) => v || '-' }, { title: '质检单号', dataIndex: 'qualityInspectionNo', key: 'qualityInspectionNo', width: 140 }, { title: '菲号', dataIndex: 'cuttingBundleNo', key: 'cuttingBundleNo', width: 100 }, { title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 200, render: (v: string) => <span title={v} style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{v}</span> }, { title: '颜色', dataIndex: 'color', key: 'color', width: 80 }, { title: '尺码', dataIndex: 'size', key: 'size', width: 60 }, { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const }, { title: '操作人', dataIndex: 'operator', key: 'operator', width: 100 }, { title: '库位', dataIndex: 'warehouseLocation', key: 'warehouseLocation', width: 100 }, { title: '操作', key: 'action', width: 90, render: (_: unknown, r: { id: string; warehouseLocation?: string }) => (String(r.warehouseLocation || '') === '直发客户' ? <Button size="small" type="link" style={{ padding: 0 }} onClick={() => { void handleRevertDirectship(r); }}>退回上一步</Button> : null) }]} dataSource={inboundHistory} rowKey="id" emptyDescription="暂无入库记录" pagination={{ current: inboundPage, pageSize: inboundPageSize, total: inboundHistory.length, onChange: (p, ps) => { setInboundPage(p); setInboundPageSize(ps); } }} />
                 <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--color-bg-container)', borderRadius: 6, fontSize: 14 }}>
                   <div style={{ fontWeight: 600, marginBottom: 4 }}>对账公式</div>
                   <div>入库总量: <b>{inboundHistoryModal.data.totalInboundQty ?? 0}</b> 件 = 当前库存: <b style={{ color: 'var(--color-success)' }}>{inboundHistoryModal.data.availableQty ?? 0}</b> 件 + 出库总量: <b style={{ color: 'var(--color-orange-600)' }}>{outstockTotal}</b> 件 + 次品: <b>{inboundHistoryModal.data.defectQty ?? 0}</b> 件</div>

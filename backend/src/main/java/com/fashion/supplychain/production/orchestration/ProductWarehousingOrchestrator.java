@@ -91,6 +91,34 @@ public class ProductWarehousingOrchestrator {
     @Autowired
     private MaterialOutboundLogMapper materialOutboundLogMapper;
 
+    /**
+     * D-360l：误标「直发客户」的入库记录退回——清空仓库标记恢复待入库，可重新走入库/出库流程
+     */
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public int revertDirectship(java.util.List<String> ids) {
+        if (ids == null || ids.isEmpty()) throw new IllegalArgumentException("请选择要退回的记录");
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        int count = 0;
+        for (String id : ids) {
+            if (!StringUtils.hasText(id)) continue;
+            ProductWarehousing w = productWarehousingService.getById(id.trim());
+            if (w == null || (w.getDeleteFlag() != null && w.getDeleteFlag() != 0)) continue;
+            TenantAssert.assertBelongsToCurrentTenant(w.getTenantId(), "入库记录");
+            if (!"直发客户".equals(w.getWarehouse())) continue; // 只处理误标直发的
+            ProductWarehousing upd = new ProductWarehousing();
+            upd.setId(w.getId());
+            upd.setWarehouse(null);
+            upd.setWarehousingEndTime(null);
+            productWarehousingService.updateById(upd);
+            try {
+                logAppendHelper.appendOperation(w.getOrderId(), "误标直发退回", "质检记录：" + w.getWarehousingNo() + " 恢复待入库");
+            } catch (Exception ignore) {
+            }
+            count++;
+        }
+        return count;
+    }
+
     public IPage<ProductWarehousing> list(Map<String, Object> params) {
         IPage<ProductWarehousing> page = queryHelper.list(params);
         // D-360i：批量富化工厂名（订单关联），入库记录区分哪个工厂生产

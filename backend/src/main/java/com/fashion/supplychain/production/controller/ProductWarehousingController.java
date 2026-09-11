@@ -104,6 +104,18 @@ public class ProductWarehousingController {
     /**
      * D-360i：质检后直接发货给客户——走出库/发货流程但不落成品库存，仅标记+留痕
      */
+    /**
+     * D-360l：误标「直发客户」的记录退回上一步（恢复待入库，可重新入库/出库）
+     */
+    @PostMapping("/revert-directship")
+    public Result<?> revertDirectship(@RequestBody Map<String, Object> body) {
+        Object v = body == null ? null : body.get("ids");
+        java.util.List<String> ids = v instanceof java.util.List
+                ? ((java.util.List<?>) v).stream().map(String::valueOf).toList()
+                : java.util.List.of();
+        return Result.success(productWarehousingOrchestrator.revertDirectship(ids));
+    }
+
     @PostMapping("/direct-ship")
     public Result<?> directShip(@RequestBody Map<String, Object> body) {
         Object v = body == null ? null : body.get("ids");

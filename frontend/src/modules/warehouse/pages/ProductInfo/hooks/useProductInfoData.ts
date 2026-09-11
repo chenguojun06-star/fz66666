@@ -204,7 +204,7 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
     try {
       const [styleRes, skuRes] = await Promise.all([
         api.get<any>(`/style/info/${record.id}`),
-        api.post<any>('/style/sku/list-by-style', { styleId: record.id }).catch(() => null),
+        api.get<any>(`/style/sku/by-style/${record.id}`).catch(() => null),
       ]);
       if (styleRes.code === 200 && styleRes.data) {
         setDrawerRecord(styleRes.data);
