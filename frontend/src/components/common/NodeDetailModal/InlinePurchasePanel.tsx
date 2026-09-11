@@ -21,6 +21,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
     styleNo: propStyleNo,
     color: propColor,
     quantity: propQuantity,
+    embedded,
   } = props;
 
   const { message } = App.useApp();
@@ -139,6 +140,8 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
 
   return (
     <Spin spinning={loading}>
+      {/* D-360g：嵌入 NodeDetailModal 时统一头由 NodeDetailBody 渲染，这里不再重复 */}
+      {embedded ? null : (
       <ProductionOrderHeader
         order={order}
         orderLines={orderLines}
@@ -154,6 +157,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
         showOrderNo={sourceType !== 'sample'}
         coverSize={80}
       />
+      )}
 
       {missingColors.length > 0 && !editing && (
         <Alert

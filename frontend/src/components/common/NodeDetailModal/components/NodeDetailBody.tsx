@@ -224,6 +224,7 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
                     label: <span><ShoppingOutlined /> 面辅料采购</span>,
                     children: (
                       <InlinePurchasePanel
+                        embedded
                         orderId={orderId}
                         orderNo={orderSummary.orderNo || orderNo}
                         sourceType={sourceType}

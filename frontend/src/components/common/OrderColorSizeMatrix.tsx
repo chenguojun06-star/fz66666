@@ -60,11 +60,15 @@ export const shortSizeLabel = (size: string) => size.replace(/\([^)]*\)/g, '').t
 
 const splitFallbackSizes = (value?: string) => splitStyleOptions(value);
 
+/** D-360g：尺寸值含分隔符（逗号/顿号/空格）说明是"合并串"脏数据（如 XS,S,M,L,XL），
+ *  真实码数不可能含分隔符——矩阵表头剔除，避免码数重复/挤占列 */
+const isMergedSizeArtifact = (size: string) => /[,，、\s]/.test(size);
+
 const createSizeOrder = (items: CardSizeQuantityItem[], fallbackSizes: string[]) => {
   const ordered: string[] = [];
   const seen = new Set<string>();
   [...items.map((item) => String(item.size || '').trim()), ...fallbackSizes].forEach((size) => {
-    if (!size || seen.has(size)) return;
+    if (!size || isMergedSizeArtifact(size) || seen.has(size)) return;
     seen.add(size);
     ordered.push(size);
   });

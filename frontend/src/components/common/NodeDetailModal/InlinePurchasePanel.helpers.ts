@@ -2,6 +2,8 @@ import type { MaterialPurchase } from '@/types/production';
 import { getMaterialTypeSortKey } from '@/utils/materialType';
 
 export interface InlinePurchasePanelProps {
+  /** D-360g：嵌入 NodeDetailModal 时由外部统一头展示款式信息，自身不再重复渲染头（修复采购节点弹窗双矩阵） */
+  embedded?: boolean;
   orderId?: string;
   orderNo?: string;
   patternId?: string;
