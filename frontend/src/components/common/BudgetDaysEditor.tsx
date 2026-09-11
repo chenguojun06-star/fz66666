@@ -202,7 +202,7 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
       onCancel: () => { setEditing(false); },
       afterClose: () => { setEditing(false); },
     });
-  }, [record, nodeName, hint, isCompletedOrClosed, editing, onUpdated, modal, message, budgetHours, onBudgetHoursChange, isStageCompleted, effectiveBudgetHours]);
+  }, [record, nodeName, hint, isCompletedOrClosed, editing, onUpdated, modal, message, budgetHours, onBudgetHoursChange, isStageCompleted]);
 
   if (!hint && !gapInfo && budgetHours == null) return null;
 

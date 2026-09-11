@@ -85,7 +85,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
     } finally {
       setStyleLoading(false);
     }
-  }, [currentStyleId]);
+  }, [currentStyleId, styleKeywordName, styleKeywordNo]);
 
   const fetchTemplates = useCallback(async () => {
     setTemplatesLoading(true);

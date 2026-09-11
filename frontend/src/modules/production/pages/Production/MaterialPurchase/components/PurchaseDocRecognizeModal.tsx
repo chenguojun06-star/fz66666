@@ -121,7 +121,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, styleNo, on
     } else {
       message.error('应用失败，请检查权限或网络后重试');
     }
-  }, [result, editedQtys, orderNo, message, handleClose, onSuccess]);
+  }, [result, editedQtys, orderNo, message, handleClose, onSuccess, styleNo]);
 
   const recognizedCount = result?.items.filter((i) => !i.unrecognized).length ?? 0;
   const matchedCount = result?.items.filter((i) => i.matched).length ?? 0;

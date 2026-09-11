@@ -93,7 +93,7 @@ const OrderManagement: React.FC = () => {
       values: { cover: true, styleNo: true, styleName: true, statusTag: true, orderCount: true, latestOrderTime: true },
     },
     { key: 'standard', label: '标准', values: Object.fromEntries(ORDER_LIST_COLUMNS.map((c) => [c.key, true])) },
-  ], []);
+  ], [ORDER_LIST_COLUMNS]);
 
   const cuttingCreateTask = useCuttingCreateTask({ message, navigate, fetchTasks: async () => {} });
 

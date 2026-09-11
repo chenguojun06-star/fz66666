@@ -94,7 +94,7 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
     } finally {
       setStyleLoading(false);
     }
-  }, [currentStyleId]);
+  }, [currentStyleId, styleKeywordName, styleKeywordNo]);
 
   useEffect(() => {
     if (open) void fetchStyles(stylePage);
@@ -162,7 +162,7 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
         } catch { /* 忽略 */ }
       })();
     }
-  }, [open, fetchTemplates]);
+  }, [open, fetchTemplates, currentStyleId]);
 
   // 选中来源款 → 拉它的物料清单
   const fetchSourceBom = useCallback(async (styleId: string | number) => {
@@ -240,7 +240,7 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
   // 过滤变化后，勾选集 = 过滤结果的全集与已勾选的交集（保持"默认全选拷贝所有"语义）
   useEffect(() => {
     setSelectedRowKeys(filteredRows.map((r) => String(r.id)));
-  }, [colorFilter, typeFilter, bomRows]);
+  }, [colorFilter, typeFilter, bomRows, filteredRows]);
 
   const selectedRows = useMemo(
     () => bomRows.filter((r) => selectedRowKeys.includes(String(r.id))),

@@ -83,7 +83,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
     }
     printWindow.document.write(html);
     printWindow.document.close();
-  }, [bomList, processList, secondaryProcessList, styleNo, materialCost, processCost, otherCost, totalCost, totalPrice, profit, actualProfitRate, message]);
+  }, [bomList, processList, secondaryProcessList, styleNo, materialCost, processCost, otherCost, totalCost, totalPrice, profit, actualProfitRate, message, user?.name, user?.username]);
 
   return (
     <div className="style-quotation" style={{ padding: '0 8px' }}>

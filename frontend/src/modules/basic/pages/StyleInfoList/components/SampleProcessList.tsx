@@ -91,7 +91,7 @@ export default function SampleProcessList({
       onManualComplete: handleManualComplete,
       onUndo: handleUndo,
     }),
-    [activeTab, currentStage, actioningKey, completed, handleAssign, handlePurchaseClick, handleManualComplete, handleUndo],
+    [activeTab, currentStage, actioningKey, completed, handleAssign, handlePurchaseClick, handleManualComplete, handleUndo, canManage],
   );
 
   // 生产工序进度计算（采购/入库已从工序列表移除，stages 只含4个生产工序）

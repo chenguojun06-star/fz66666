@@ -121,7 +121,7 @@ export function useLabelPrintData({ open, order, styleInfo }: UseLabelPrintDataA
       careIconCodes,
     }));
     setCertSections(buildDefaultCertSections(order, styleInfo, compositionText));
-  }, [open, order?.styleNo, compositionText, washInstructionsText, careIconCodes]);
+  }, [open, order?.styleNo, compositionText, washInstructionsText, careIconCodes, order, styleInfo]);
 
   useEffect(() => {
     if (!open || !order?.factoryId) { setOrderFactoryCode(''); return; }

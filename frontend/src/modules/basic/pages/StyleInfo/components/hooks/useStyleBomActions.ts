@@ -122,7 +122,7 @@ const useStyleBomActions = ({
     } finally {
       setLoading(false);
     }
-  }, [setLoading, styleId, fetchPurchaseStatus]);
+  }, [setLoading, styleId, fetchPurchaseStatus, message]);
 
   /** 工具条入口：生成前先确认（含已生成的重新生成警示） */
   const handleGeneratePurchase = useCallback(async () => {
@@ -147,7 +147,7 @@ const useStyleBomActions = ({
       return;
     }
     await doGenerate(false);
-  }, [message, purchaseStatus, doGenerate]);
+  }, [purchaseStatus, doGenerate]);
 
 
   const handleCheckStock = useCallback(async () => {

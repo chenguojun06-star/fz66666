@@ -1,3 +1,9 @@
 **/__tests__/
 **/*.test.ts
 **/*.test.tsx
+
+# 构建产物与报告：本地 `vite build` / jscpd 生成，不属于源码，不应被 lint
+# （此前未排除，导致本地 `eslint .` 多出 2500+ 个无关问题）
+dist/
+reports/
+node_modules/

@@ -170,7 +170,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
     setPrintingRecord, quickEditModal, handleShareOrder, onOpenRemark,
     handlePrintLabel, canManageOrderLifecycle, isSupervisorOrAbove,
     handleToggleShipLock,
-    openSubProcessRemap, isFactoryAccount, openNodeDetail]);
+    openSubProcessRemap, isFactoryAccount, openNodeDetail, onOpenContract]);
 
   if (loading) return <div style={{ padding: 24 }}><Skeleton active paragraph={{ rows: 6 }} /></div>;
   if (data.length === 0) return <Empty description="暂无订单数据" style={{ padding: '80px 0' }} />;

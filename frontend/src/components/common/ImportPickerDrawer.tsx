@@ -108,7 +108,7 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
     } finally {
       setStyleLoading(false);
     }
-  }, [currentStyleId]);
+  }, [currentStyleId, styleKeywordName, styleKeywordNo]);
 
   // 存当前款为通用模板（与资料维护模板库同一接口，自动互通）
   const handleSaveCurrentAsTemplate = async () => {
@@ -194,7 +194,7 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
       })();
       void fetchStyles(1, '', '');
     }
-  }, [open, fetchTemplates, fetchStyles]);
+  }, [open, fetchTemplates, fetchStyles, currentStyleId]);
 
   const handlePickStyle = (record: StyleBrief) => {
     setSelectedStyle(record);

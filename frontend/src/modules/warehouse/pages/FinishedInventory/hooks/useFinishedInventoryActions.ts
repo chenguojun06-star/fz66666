@@ -133,7 +133,7 @@ export const useFinishedInventoryActions = (
       setOutboundSubmitting(false);
       outboundSubmittingRef.current = false;
     }
-  }, [skuDetails, outboundModal, outboundType, outboundReason, outboundProductionOrderNo, outboundTrackingNo, outboundExpressCompany, outboundCustomerName, outboundCustomerPhone, outboundShippingAddress, message, loadData]);
+  }, [skuDetails, outboundModal, outboundType, outboundReason, outboundProductionOrderNo, outboundTrackingNo, outboundExpressCompany, outboundCustomerName, outboundCustomerPhone, outboundShippingAddress, message, loadData, directShipMode]);
 
   const handleViewInboundHistory = useCallback(async (record: FinishedInventory) => {
     try {

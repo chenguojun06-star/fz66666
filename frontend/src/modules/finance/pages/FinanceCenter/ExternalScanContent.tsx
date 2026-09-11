@@ -101,7 +101,7 @@ const ExternalScanContent: React.FC = () => {
       values: { delegateTargetName: true, operatorName: true, processName: true, quantity: true, scanTime: true },
     },
     { key: 'standard', label: '标准', values: Object.fromEntries(SCAN_LIST_COLUMNS.map((c) => [c.key, true])) },
-  ], []);
+  ], [SCAN_LIST_COLUMNS]);
 
   const fetchData = useCallback(async (currentPage: number, currentPageSize: number, f: FilterState) => {
     setLoading(true);
