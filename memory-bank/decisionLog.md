@@ -1,7 +1,54 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-11（新增 D-365 采购单款式图兜底 + 标题主次两行）
+> 最后更新：2026-09-11（新增 D-366 到货入库弹窗字段修正 + 库位改真实物料库位；D-366b 流程拆分待实施）
+
+---
+
+## D-366：到货入库弹窗字段修正 + 库位改真实物料库位（2026-09-11）
+
+用户截图反馈"采购到入库逻辑完全搞不清楚"，逐项核实后本轮先修确定性的 4 项：
+
+**1. 物料信息里混进一串订单码数（XS(155/80A),S(160/84)...）**
+根因：弹窗把「规格」写成 `record.size`——`size` 是订单/款式码数字段，物料只有「颜色 + 规格(specifications)」。
+修复：`ReceiveModal` / `InboundModal` / `ReturnConfirmModal` 三处 `record.size` → `record.specifications`。
+（对照：`InlinePurchasePanel` 原本就用 specifications，是对的。）
+
+**2. "根本没入库怎么显示已入库 1 米"**
+根因：`arrivedQuantity` 语义是**已到货**，标签却写「已入库 / 待入库」，直接误导用户。
+修复：统一改「已到货 / 待到货」（样衣侧 + 大货节点弹窗）。
+补充说明：该 1 米是**已到货**，来源不止"到货入库"一个入口——供应商门户发货、采购单据识别自动执行、手工到货登记都会写 arrivedQuantity。
+
+**3. 到货入库选不到库位（纯手输文本框，与物料仓库布局无关联）**
+修复：改为「物料仓库下拉（`useWarehouseAreaOptions('MATERIAL')`）+ `WarehouseLocationAutoComplete(warehouseType="MATERIAL")`」，
+与「物料入库」页同源；仓库切换自动清空库位。
+覆盖：`MaterialPurchaseDetail/components/PurchaseActionModals.tsx`、`NodeDetailModal/InlinePurchasePanel.tsx`。
+
+**4. 大货节点弹窗"本次入库数量"只收整数**
+原 `InputNumber precision={0} min={1}`，物料按米/公斤计量必须支持小数 → `min=0.01 step=0.01 precision=2`。
+
+**验证**：`npx tsc --noEmit` 0 错误、lint 0；commit 6321fdcd8 已推送。
+
+---
+
+## D-366b：采购「领取 → 到货 → 去向」拆分（待实施，用户拍板口径）
+
+**用户诉求**：领取与到货不能一个按钮一步做完；到货时由用户选去向——「入库到物料仓库（选仓库+库位）」或「直采使用」；大货与样衣必须一致。
+
+**现状根因（语义错位）**：
+- 后端 `POST /production/purchase/receive` 的 `quantity` 是 **D-104 的"编辑采购数量"**，不是到货量；
+- 前端 `ReceiveModal` 却把该字段标成「本次到货数量」并提交 → 用户以为在登记到货，实际只改了采购数量、状态变 RECEIVED。
+- 真正的到货/入库是另一条链：`/production/material/inbound/confirm-arrival`（到货+入库一步，`confirmArrivalAndInbound`）、
+  `updateArrivedQuantity`（只登记到货不入库）、`/production/purchase/confirm-complete` + `movementAction=inbound|direct_use`（确认完成时选去向）。
+
+**改造方案（后端能力已齐备，纯前端拆分）**：
+1. 行操作拆两个按钮：「领取」（`receive` 不传 quantity）+ 「登记到货」（已领取后出现）
+2. 「登记到货」弹窗 = 到货数量 + **去向单选**：
+   - 入库到物料仓库 → `confirm-arrival`（库位必填，取 MATERIAL 仓库布局）
+   - 直采使用 → 只登记到货 + 记直用流水（`confirm-complete movementAction=direct_use`）
+3. 涉及文件：`useReceiveModal` / `useInboundModal` / `PurchaseActionModals` / `MaterialPurchaseDetail/index.tsx` / `columns.tsx` /
+   大货侧 `InlinePurchasePanel` + `useInlinePurchaseData` + 列表页 `MaterialPurchase`
+4. 属大改动（≥5 文件）→ 按 P0 铁律需本地启动验证后再推。
 
 ---
 
