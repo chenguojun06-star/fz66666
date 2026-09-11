@@ -1,9 +1,9 @@
 import React from 'react';
 import { Button, Form, Image, Input, InputNumber, Select, Tabs } from 'antd';
 import type { FormInstance } from 'antd/es/form';
-import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+import SideDrawer from '@/components/common/SideDrawer';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
@@ -49,13 +49,11 @@ const CuttingBomMaterialModal: React.FC<CuttingBomMaterialModalProps> = ({
   onCreateMaterial,
   onClose,
 }) => (
-  <ResizableModal
+  <SideDrawer
     title="面辅料选择"
     open={open}
-    onCancel={onClose}
-    footer={null}
-    width="85vw"
-    destroyOnHidden
+    onClose={onClose}
+    width="50%"
   >
     <Tabs
       activeKey={materialTab}
@@ -254,8 +252,8 @@ const CuttingBomMaterialModal: React.FC<CuttingBomMaterialModalProps> = ({
           ),
         },
       ]}
-    />
-  </ResizableModal>
-);
+      />
+    </SideDrawer>
+  );
 
 export default CuttingBomMaterialModal;

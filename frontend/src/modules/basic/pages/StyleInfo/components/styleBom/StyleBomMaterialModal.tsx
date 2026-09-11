@@ -1,10 +1,11 @@
 import React from 'react';
-import { Button, Form, Image, Input, InputNumber, Select, Tabs, Drawer } from 'antd';
+import { Button, Form, Image, Input, InputNumber, Select, Tabs } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+import SideDrawer from '@/components/common/SideDrawer';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -13,7 +14,6 @@ import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 
 interface StyleBomMaterialModalProps {
   open: boolean;
-  modalWidth: string | number;
   materialTab: 'select' | 'create';
   materialKeyword: string;
   materialLoading: boolean;
@@ -49,13 +49,11 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
   onUseMaterial,
   onCreateMaterial,
 }) => (
-  <Drawer
+  <SideDrawer
     title="面辅料选择"
     open={open}
     onClose={onClose}
-    placement="right"
-    styles={{ wrapper: { width: '85%' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
-    destroyOnHidden
+    width="50%"
   >
     <Tabs
       activeKey={materialTab}
@@ -292,7 +290,7 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
         },
       ]}
     />
-  </Drawer>
+  </SideDrawer>
 );
 
 export default StyleBomMaterialModal;

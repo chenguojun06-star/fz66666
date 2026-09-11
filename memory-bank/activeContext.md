@@ -1,13 +1,24 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-11（D-360 大货/样衣采购弹窗与打印统一）
+> 最后更新：2026-09-11（D-360h 全端物料选用弹窗统一 50% 侧滑）
 
 ---
 
 ## 最近变更（Latest Changes）
 
-### 2026-09-11 D-360 大货采购弹窗与打印按样衣统一
+### 2026-09-11 D-360h 所有"选用物料编码"弹窗统一为 50% 侧滑抽屉
+
+- [x] `StyleBomMaterialModal`（样衣开发详情页 BOM 选用）：裸 Drawer → 统一 SideDrawer 50%，并移除无用 modalWidth 传参（StyleBomTab 同步清理）
+- [x] `MaterialPurchaseDetail/components/MaterialSelectModal`（样衣采购编辑）：ResizableModal 60vw → SideDrawer 50%
+- [x] `MaterialPurchase/components/PurchaseModal/components/MaterialSelectModal`（大货采购编辑）：ResizableModal 85vw → SideDrawer 50%
+- [x] `NodeDetailModal/MaterialPickerModal`（节点物料选用）：ResizableModal 60vw → SideDrawer 50%
+- [x] `Cutting/components/CuttingBomMaterialModal`（裁剪节点物料选用）：ResizableModal 85vw → SideDrawer 50%
+- [x] 全库仅 6 处「面辅料选择」渲染，5 组件全部统一用公共 SideDrawer（width="50%"），与采购单据抽屉同款；tsc 0 errors
+- [x] 已排除非选用弹窗：MaterialPickupModal（领料数量确认）、InstructionModal（下发采购指令表单）、MaterialFormDrawer（物料档案编辑）、InboundDrawer（入库）等保持原样
+- [ ] 待用户回归：各入口点"选用物料"弹窗均为右侧 50% 侧滑
+
+### 2026-09-11 D-360g 大货采购弹窗按样衣统一
 
 - [x] **A1** `PurchaseModal/index.tsx`：移除 Drawer 顶部散落按钮（getViewHeader 残留引用一并删除），view 模式 footer 只留「关闭」；透传打印 props 给 `PurchaseDetailView`
 - [x] **A2** `PurchaseDetailView.tsx`：Card 操作区改用统一 `PurchaseActionBar`（批量领取▾/编辑面辅料/打印下载采购单/采购单据/采购退货全在一行，完成回料收进主按钮下拉）；「上传采购单」弹窗 + 历史卡片合并为「采购单据」50% 侧滑抽屉（`PurchaseDocDrawer`）；编辑态改 `PurchaseEditActions`

@@ -1,8 +1,8 @@
 import React, { useCallback, useState } from 'react';
 import { Button, Input, InputNumber, Form, Select, Image, Tabs } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+import SideDrawer from '@/components/common/SideDrawer';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
@@ -48,13 +48,11 @@ const MaterialSelectModal: React.FC<MaterialSelectModalProps> = ({ open, onClose
   }, [open, materialPage, materialPageSize, handleSearchMaterial]);
 
   return (
-    <ResizableModal
+    <SideDrawer
       title="面辅料选择"
       open={open}
-      onCancel={onClose}
-      footer={null}
-      width="60vw"
-      destroyOnHidden
+      onClose={onClose}
+      width="50%"
     >
       <Tabs
         activeKey={materialTab}
@@ -199,7 +197,7 @@ const MaterialSelectModal: React.FC<MaterialSelectModalProps> = ({ open, onClose
           },
         ]}
       />
-    </ResizableModal>
+    </SideDrawer>
   );
 };
 

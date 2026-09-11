@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Input, Tag } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
+import SideDrawer from '@/components/common/SideDrawer';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 
 interface MaterialSelectModalProps {
@@ -35,13 +35,11 @@ const MaterialSelectModal: React.FC<MaterialSelectModalProps> = ({
   onCancel,
 }) => {
   return (
-    <ResizableModal
+    <SideDrawer
       title="面辅料选择"
       open={open}
-      onCancel={onCancel}
-      footer={null}
-      width="85vw"
-      destroyOnHidden
+      onClose={onCancel}
+      width="50%"
     >
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <Input
@@ -83,7 +81,7 @@ const MaterialSelectModal: React.FC<MaterialSelectModalProps> = ({
           },
         ]}
       />
-    </ResizableModal>
+    </SideDrawer>
   );
 };
 

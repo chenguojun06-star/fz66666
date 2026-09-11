@@ -173,7 +173,6 @@ const StyleBomTab: React.FC<Props> = ({
 
       <StyleBomMaterialModal
         open={materialModalOpen}
-        modalWidth={'98vw'}
         materialTab={materialTab}
         materialKeyword={materialKeyword}
         materialLoading={materialLoading}

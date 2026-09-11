@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Image, Input } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
-import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
+import SideDrawer from '@/components/common/SideDrawer';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -49,13 +49,11 @@ const MaterialPickerModal: React.FC<MaterialPickerModalProps> = ({ open, onClose
   }, [onPick]);
 
   return (
-    <ResizableModal
+    <SideDrawer
       title="面辅料选择"
       open={open}
-      onCancel={onClose}
-      footer={null}
-      width="60vw"
-      destroyOnHidden
+      onClose={onClose}
+      width="50%"
     >
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <Input
@@ -173,7 +171,7 @@ const MaterialPickerModal: React.FC<MaterialPickerModalProps> = ({ open, onClose
           },
         ]}
       />
-    </ResizableModal>
+    </SideDrawer>
   );
 };
 
