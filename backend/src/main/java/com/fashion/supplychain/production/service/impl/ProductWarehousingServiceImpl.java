@@ -126,8 +126,9 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                     ProductWarehousing::getTenantId)
                 .eq(ProductWarehousing::getDeleteFlag, 0)
                 .eq(StringUtils.hasText(orderId), ProductWarehousing::getOrderId, orderId)
-                .like(StringUtils.hasText(orderNo), ProductWarehousing::getOrderNo, orderNo)
-                .like(StringUtils.hasText(styleNo), ProductWarehousing::getStyleNo, styleNo)
+                // D-360m：款号/订单号精确匹配——like 会把 HH001/HH0013 混进 H001 的入库记录
+                .eq(StringUtils.hasText(orderNo), ProductWarehousing::getOrderNo, orderNo)
+                .eq(StringUtils.hasText(styleNo), ProductWarehousing::getStyleNo, styleNo)
                 .eq(StringUtils.hasText(warehouse), ProductWarehousing::getWarehouse, warehouse)
                 .eq(StringUtils.hasText(warehouseAreaId), ProductWarehousing::getWarehouseAreaId, warehouseAreaId)
                 // P1 修复（数据一致性）：与 stats SQL 的 LOWER() 大小写不敏感保持一致
