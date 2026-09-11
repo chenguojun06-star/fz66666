@@ -1,7 +1,34 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-11（新增 D-366 到货入库弹窗字段修正 + 库位改真实物料库位；D-366b 流程拆分待实施）
+> 最后更新：2026-09-11（新增 D-368 采购按钮全灰根治 + 到货/出库数量默认预填）
+
+---
+
+## D-368：采购动作按钮全灰根治 + 到货/出库数量默认预填（2026-09-11）
+
+用户截图：采购管理里该行已到货 1/1.32（76%），但工具栏「批量领取▾」下拉里**三个动作全是灰的**。
+
+**1. 按钮永久灰的根因（前端状态判定过窄）**
+- `MaterialPurchaseDetail/hooks/utils.ts`：`filterReturnablePurchases` 用状态白名单 `received/partial/completed`；
+  `filterAwaitingConfirmPurchases` **只认 `awaiting_confirm` 一个枚举**；
+- 状态机一旦没推进到白名单里的枚举，`hasReturnable` / `hasAwaitingConfirm` 全为 false
+  → 三个动作永久置灰，用户看到"货都到了却什么都点不了"；
+- 大货/节点弹窗同病：`InlinePurchasePanel`（2 处）与 `usePurchaseReturnActions`（2 处）
+  都写 `normalizeStatus(p.status) === AWAITING_CONFIRM`。
+- 修复：**改为按业务事实判定**——
+  - 可「确认完成」= `arrivedQuantity > 0` 且状态非 completed/cancelled
+    （新增 `isConfirmCompleteAvailable()`，大货/样衣两侧共用）
+  - 可「回料确认」= `arrivedQuantity > 0` 且未回料确认、非 cancelled
+- **方法论（已进 MEMORY.md）**：动作可用性判定不要用状态枚举白名单，
+  用业务事实（到货量/回料标记）+ 终态排除。
+
+**2. 数量默认预填（用户要求"入库/出库默认已填数量"）**
+- 登记到货：默认带出「待到货量」并按整数约束归一 `Math.max(1, Math.round(待到货))`
+  —— 原样回填 0.32 会低于 `min=1`，弹窗一打开就校验失败；
+- 物料出库：单一批次时自动预填该批可用量并勾选；多批次保持 0（可点「FIFO 自动分配」），避免误扣光库存。
+
+**验证**：`npx tsc --noEmit` 0 错误、`npx vite build` ✓ built in 11.00s；commit 72e0e1de7 已推送。
 
 ---
 
