@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { Form } from 'antd';
+import { useUser } from '@/utils/AuthContext';
 import type { ModalStaticFunctions } from 'antd/es/modal/confirm';
 import api from '@/utils/api';
 import { safePrint } from '@/utils/safePrint';
@@ -49,6 +50,7 @@ export function usePurchaseDialog({
   detailPurchases,
   detailSizePairs,
 }: UsePurchaseDialogOptions) {
+  const { user } = useUser();
   const [previewList, setPreviewList] = useState<MaterialPurchaseType[]>([]);
   const [previewOrderId, setPreviewOrderId] = useState<string>('');
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -203,7 +205,7 @@ export function usePurchaseDialog({
   };
 
   const openPurchaseSheet = (_autoPrint: boolean) => {
-    const html = buildPurchaseSheetHtml(currentPurchase, detailOrder, detailOrderLines, detailPurchases, detailSizePairs);
+    const html = buildPurchaseSheetHtml(currentPurchase, detailOrder, detailOrderLines, detailPurchases, detailSizePairs, user?.tenantName);
     const success = safePrint(html, '采购单');
     if (!success) {
       message.error('打印失败，请重试');
@@ -211,7 +213,7 @@ export function usePurchaseDialog({
   };
 
   const downloadPurchaseSheet = () => {
-    const html = buildPurchaseSheetHtml(currentPurchase, detailOrder, detailOrderLines, detailPurchases, detailSizePairs);
+    const html = buildPurchaseSheetHtml(currentPurchase, detailOrder, detailOrderLines, detailPurchases, detailSizePairs, user?.tenantName);
     const orderNo = String(currentPurchase?.orderNo || '').trim();
     const purchaseNo = String(currentPurchase?.purchaseNo || '').trim();
     const now = new Date();

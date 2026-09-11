@@ -22,6 +22,8 @@ interface PurchasePrintModalProps {
   materialArrivalRate: number;
   /** D-360c：打开即直接下载采购单文件（供工具条「下载采购单」一键调用），下载后自动关闭 */
   autoDownload?: boolean;
+  /** D-360f：租户/公司名，打印页眉展示 */
+  companyName?: string;
 }
 
 const money = (v: unknown) => {
@@ -36,10 +38,13 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
   open, onClose, order, purchaseList,
   orderNo: orderNoProp, styleNo: styleNoProp, styleName: styleNameProp,
   styleCover: styleCoverProp, color: colorProp, materialArrivalRate,
-  autoDownload,
+  autoDownload, companyName,
 }) => {
   const { message } = App.useApp();
   const orderNo = String(orderNoProp ?? order?.orderNo ?? order?.productionOrderNo ?? '').trim();
+  // D-360f：大货/样衣(开发)采购标识
+  const firstSrcType = String(purchaseList.find((p) => p.sourceType)?.sourceType || '').toLowerCase();
+  const sourceLabel = firstSrcType === 'sample' ? '样衣(开发)' : (firstSrcType === 'order' ? '大货' : '批量');
   const styleNo = String(styleNoProp ?? order?.styleNo ?? '').trim();
   const styleName = String(styleNameProp ?? order?.styleName ?? '').trim();
   const styleCover = (styleCoverProp ?? order?.styleCover ?? null) as string | null;
@@ -125,11 +130,12 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
   @media print{body{padding:0} h1{margin-top:0}}
 </style></head>
 <body>
-  <h1>采 购 单</h1>
+  <h1>${companyName ? companyName + ' · ' : ''}采 购 单</h1>
   <table class="info">
     <tr>
       <td style="padding:3px 10px"><b>采购单号：</b>${purchaseList.find((p) => p.purchaseNo)?.purchaseNo || '-'}</td>
       ${orderNoHtml}
+      <td style="padding:3px 10px"><b>采购类型：</b>${sourceLabel}</td>
       <td style="padding:3px 10px"><b>日期：</b>${createDate ? createDate.slice(0, 10) : ''}</td>
     </tr>
   </table>
@@ -210,7 +216,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
       open={open}
       onClose={onClose}
       title="打印采购单"
-      width={960}
+      width="50%"
       footer={(
         <Space wrap>
           <Button onClick={onClose}>关闭</Button>
@@ -227,7 +233,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
       {/* 屏幕预览：与打印内容一致的工整布局 */}
       <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, padding: '16px 20px' }}>
         <Text style={{ display: 'block', textAlign: 'center', fontSize: 18, letterSpacing: 6, fontWeight: 600, marginBottom: 12 }}>
-          采 购 单
+          {companyName ? `${companyName} · ` : ''}采 购 单
         </Text>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 24px', marginBottom: 8 }}>
           <span><b>采购单号：</b>{purchaseList.find((p) => p.purchaseNo)?.purchaseNo || '-'}</span>

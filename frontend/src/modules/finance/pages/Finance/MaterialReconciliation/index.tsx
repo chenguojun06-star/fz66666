@@ -1,7 +1,7 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { App, Button, Card, DatePicker, Empty, Select, Space, Statistic, Tag, Tooltip } from 'antd';
 import type { Dayjs } from 'dayjs';
-import { ExportOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, ReloadOutlined } from '@ant-design/icons';
+import { ExportOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useUser } from '@/utils/AuthContext';
 import { useSync } from '@/utils/syncManager';
 import PageLayout from '@/components/common/PageLayout';
@@ -9,6 +9,8 @@ import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
+import PurchaseDocDrawer from '@/modules/production/pages/Production/MaterialPurchase/components/PurchaseDocDrawer';
+import api from '@/utils/api';
 import MaterialReconModalContent from '@/components/Finance/MaterialReconModalContent';
 import materialReconciliationApi from '@/services/finance/materialReconciliationApi';
 import { errorHandler } from '@/utils/errorHandling';
@@ -35,9 +37,55 @@ const MaterialReconciliation: React.FC = () => {
   // D-252：补生成存量对账。修复工厂类型判定口径后，历史采购单的对账仍需手动触发一次；
   // 否则修复只对新采购生效，用户看到的依旧是「大货采购全都不在对账里」。
   const [backfilling, setBackfilling] = useState(false);
+  // D-360f：采购单据抽屉（行级查看）+ 批量下载
+  const [docDrawerOpen, setDocDrawerOpen] = useState(false);
+  const [docDrawerOrderNo, setDocDrawerOrderNo] = useState<string | undefined>(undefined);
+  const [docDrawerStyleNo, setDocDrawerStyleNo] = useState<string | undefined>(undefined);
+  const [bulkDocDownloading, setBulkDocDownloading] = useState(false);
   const saveFormRef = useRef<(() => void) | null>(null);
 
   const openDialog = (recon?: MaterialReconType) => { setReconModalData(recon || null); setReconModalVisible(true); };
+
+  const openDocDrawer = (record: MaterialReconType) => {
+    const on = String(record.orderNo || '').trim();
+    const sn = String(record.styleNo || '').trim();
+    setDocDrawerOrderNo(on || undefined);
+    setDocDrawerStyleNo(!on ? sn : undefined);
+    setDocDrawerOpen(true);
+  };
+
+  const handleBulkDownloadDocs = async () => {
+    const orderNos = Array.from(new Set(reconciliationList.map((r) => String(r.orderNo || '').trim()).filter(Boolean)));
+    const styleNos = Array.from(new Set(reconciliationList.filter((r) => !String(r.orderNo || '').trim()).map((r) => String(r.styleNo || '').trim()).filter(Boolean)));
+    if (!orderNos.length && !styleNos.length) {
+      message.warning('当前列表没有可下载的采购单据');
+      return;
+    }
+    setBulkDocDownloading(true);
+    try {
+      const res = await api.post('/production/purchase/docs/export-zip', { orderNos, styleNos }, { responseType: 'blob', timeout: 120000 });
+      if (!(res instanceof Blob) && (res as any)?.code != null) {
+        throw new Error((res as any)?.message || '下载失败');
+      }
+      const blob = res as unknown as Blob;
+      if (!blob || blob.size === 0) {
+        message.info('当前对账单无采购单据图片可下载');
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `采购单据_${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      message.error((e as Error)?.message || '批量下载采购单据失败');
+    } finally {
+      setBulkDocDownloading(false);
+    }
+  };
   const closeDialog = () => { setReconModalVisible(false); setReconModalData(null); };
 
   const {
@@ -47,7 +95,7 @@ const MaterialReconciliation: React.FC = () => {
   } = useMaterialReconActions(reconciliationList, selectedRowKeys, fetchList, user);
 
   const { exporting, exportCsv } = useMaterialReconExport(queryParams, reconciliationList, selectedRowKeys, user);
-  const { columns } = useMaterialReconColumns({ user, canPerformAction, approvalSubmitting, updateStatusBatch, openRejectModal: (_ids) => { batchReject(); }, openDialog });
+  const { columns } = useMaterialReconColumns({ user, canPerformAction, approvalSubmitting, updateStatusBatch, openRejectModal: (_ids) => { batchReject(); }, openDialog, openDocDrawer });
 
   // ==================== 统计卡片 ====================
   const stats = useMemo(() => {
@@ -316,6 +364,9 @@ const MaterialReconciliation: React.FC = () => {
               <Button ghost disabled={exporting} onClick={exportCsv} icon={<ExportOutlined />}>
                 导出
               </Button>
+              <Button ghost disabled={bulkDocDownloading} onClick={handleBulkDownloadDocs} icon={<DownloadOutlined />}>
+                批量下载单据
+              </Button>
               <Tooltip title="按最新规则重新扫描已到货的采购单，补回缺失的对账单（已存在的只更新、不重复创建）">
                 <Button ghost disabled={backfilling} onClick={handleBackfill} icon={<ReloadOutlined />}>
                   补生成对账
@@ -354,6 +405,12 @@ const MaterialReconciliation: React.FC = () => {
         onOk={handleRejectConfirm}
         onCancel={() => {}}
         loading={rejectIdsLoading}
+      />
+      <PurchaseDocDrawer
+        open={docDrawerOpen}
+        orderNo={docDrawerOrderNo}
+        styleNo={docDrawerStyleNo}
+        onClose={() => setDocDrawerOpen(false)}
       />
     </>
   );

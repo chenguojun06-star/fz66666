@@ -15,6 +15,7 @@ type UseMaterialReconColumnsParams = {
   updateStatusBatch: (pairs: Array<{ id: string; status: string }>, successText: string) => Promise<void>;
   openRejectModal: (ids: string[]) => void;
   openDialog: (recon?: MaterialReconType) => void;
+  openDocDrawer: (record: MaterialReconType) => void;
 };
 
 const MaterialThumb: React.FC<{ imageUrl?: string }> = ({ imageUrl }) => (
@@ -24,7 +25,7 @@ const MaterialThumb: React.FC<{ imageUrl?: string }> = ({ imageUrl }) => (
 );
 
 export const useMaterialReconColumns = ({
-  user, canPerformAction, approvalSubmitting, updateStatusBatch, openRejectModal, openDialog,
+  user, canPerformAction, approvalSubmitting, updateStatusBatch, openRejectModal, openDialog, openDocDrawer,
 }: UseMaterialReconColumnsParams) => {
   const columns = useMemo(() => [
     { title: '图片', key: 'cover', width: 72, render: (_: any, record: MaterialReconType) => <MaterialThumb imageUrl={record.materialImageUrl} /> },
@@ -57,6 +58,7 @@ export const useMaterialReconColumns = ({
         const canResubmit = Boolean(id) && status === 'rejected';
         return (
           <RowActions className="table-actions" maxInline={1} actions={[
+            { key: 'doc', label: '采购单据', title: '查看该采购单上传的送货单图片', onClick: () => openDocDrawer(record) },
             { key: 'approve', label: '审批', disabled: !canApprove || approvalSubmitting, onClick: () => updateStatusBatch([{ id, status: 'approved' }], '审批成功'), primary: true },
             { key: 'resubmit', label: '重新提交', disabled: !canResubmit || approvalSubmitting, onClick: () => updateStatusBatch([{ id, status: 'pending' }], '已重新提交') },
             { key: 'reject', label: '驳回', disabled: !canReject || approvalSubmitting, onClick: () => openRejectModal([id]), danger: true },
@@ -64,7 +66,7 @@ export const useMaterialReconColumns = ({
         );
       },
     },
-  ], [user, canPerformAction, approvalSubmitting, updateStatusBatch, openRejectModal, openDialog]);
+  ], [user, canPerformAction, approvalSubmitting, updateStatusBatch, openRejectModal, openDialog, openDocDrawer]);
 
   return { columns };
 };

@@ -14,7 +14,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayOutputStream;
 import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -61,6 +64,64 @@ public class MaterialPurchaseDocOrchestrator {
      * @param orderNo 订单编号（用于匹配采购条目，可空）
      * @return 识别结果 Map，包含 items、rawText、imageUrl、matchCount
      */
+    /**
+     * D-360f：批量打包采购单据图片为 ZIP（物料对账批量下载用）。
+     * 按 orderNos + styleNos 拉取 t_purchase_order_doc，从 COS 读取每张图片字节后压缩。
+     * @return ZIP 字节流
+     */
+    public byte[] exportDocsZip(Long tenantId, List<String> orderNos, List<String> styleNos) {
+        // 去重收集单据
+        Map<String, PurchaseOrderDoc> uniq = new LinkedHashMap<>();
+        if (orderNos != null) {
+            for (String on : orderNos) {
+                if (on == null || on.isBlank()) continue;
+                for (PurchaseOrderDoc d : purchaseOrderDocService.listByOrderNo(tenantId, on.trim())) {
+                    uniq.put(d.getId(), d);
+                }
+            }
+        }
+        if (styleNos != null) {
+            for (String sn : styleNos) {
+                if (sn == null || sn.isBlank()) continue;
+                for (PurchaseOrderDoc d : purchaseOrderDocService.listByStyleNo(tenantId, sn.trim())) {
+                    uniq.put(d.getId(), d);
+                }
+            }
+        }
+        if (uniq.isEmpty()) return new byte[0];
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            int count = 0;
+            for (PurchaseOrderDoc doc : uniq.values()) {
+                if (++count > 300) break; // 上限防超时
+                String cosKey = doc.getImageUrl();
+                if (cosKey == null || cosKey.isBlank()) continue;
+                try {
+                    com.qcloud.cos.model.COSObject obj = cosService.streamObject(tenantId, cosKey);
+                    if (obj == null) continue;
+                    byte[] bytes = obj.getObjectContent().readAllBytes();
+                    obj.close();
+                    String ext = "jpg";
+                    int dot = cosKey.lastIndexOf('.');
+                    if (dot > 0 && dot < cosKey.length()) {
+                        String e = cosKey.substring(dot + 1).toLowerCase();
+                        if (e.matches("(jpg|jpeg|png|webp|gif|pdf|bmp)")) ext = e;
+                    }
+                    String owner = doc.getOrderNo() != null && !doc.getOrderNo().isBlank()
+                            ? doc.getOrderNo() : (doc.getStyleNo() != null ? doc.getStyleNo() : "doc");
+                    zos.putNextEntry(new ZipEntry(owner + "_" + doc.getId() + "." + ext));
+                    zos.write(bytes);
+                    zos.closeEntry();
+                } catch (Exception e) {
+                    log.warn("[PurchaseDocZip] 读取单据失败 key={} err={}", cosKey, e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[PurchaseDocZip] 打包失败: {}", e.getMessage());
+        }
+        return baos.toByteArray();
+    }
+
     public Map<String, Object> recognizeDoc(MultipartFile file, String orderNo, String styleNo) {
         Long tenantId = UserContext.tenantId();
 

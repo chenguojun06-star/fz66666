@@ -9,8 +9,8 @@ import { buildStockMap } from '@/components/common/NodeDetailModal/utils';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { PurchaseActionBar, PurchaseEditActions } from '@/components/common/purchase/PurchaseActionBar';
 import MaterialQualityIssueModal from '../MaterialPurchase/components/MaterialQualityIssueModal';
-import PurchaseDocRecognizeModal from '../MaterialPurchase/components/PurchaseDocRecognizeModal';
-import PurchaseDocListModal from '../MaterialPurchase/components/PurchaseDocListModal';
+import PurchaseDocDrawer from '../MaterialPurchase/components/PurchaseDocDrawer';
+import { useUser } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
 import { usePurchaseDetailPage } from './hooks/usePurchaseDetailPage';
 import type { MaterialPurchase } from '@/types/production';
@@ -43,6 +43,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
   const navigate = useNavigate();
   const { isMobile } = useViewport();
   const { message } = App.useApp();
+  const { user } = useUser();
 
   const {
     loading, order, purchaseList, materialArrivalRate,
@@ -70,8 +71,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
     loadData,
   } = usePurchaseDetailPage(styleNo, orderNo, sampleMode, propStyleId);
 
-  const [docRecognizeOpen, setDocRecognizeOpen] = useState(false);
-  const [docListOpen, setDocListOpen] = useState(false);
+  const [docDrawerOpen, setDocDrawerOpen] = useState(false);
   const [batchPurchaseLoading, setBatchPurchaseLoading] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
   const [printAutoDownload, setPrintAutoDownload] = useState(false);
@@ -313,13 +313,9 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                 }}
                 extraButtons={(
                   <>
-                    {/* D-360d：上传/查看采购单据从「更多▾」提为显式按钮——用户找不到单据存在哪 */}
-                    <Button size="small" icon={<UploadOutlined />} onClick={() => setDocRecognizeOpen(true)}>
-                      上传采购单
-                    </Button>
-                    {/* D-360d：样衣采购无订单号，按款号归属也能查看单据 */}
+                    {/* D-360f：上传+查看合并一个入口（50%侧滑抽屉，含历史单据与上传识别） */}
                     {(orderNo || headerStyleNo) ? (
-                      <Button size="small" icon={<FileImageOutlined />} onClick={() => setDocListOpen(true)}>
+                      <Button size="small" icon={<FileImageOutlined />} onClick={() => setDocDrawerOpen(true)}>
                         采购单据
                       </Button>
                     ) : null}
@@ -410,22 +406,12 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         onClose={() => { setQualityIssueVisible(false); setQualityIssueRecord(null); }}
       />
 
-      <PurchaseDocRecognizeModal
-        open={docRecognizeOpen}
+      <PurchaseDocDrawer
+        open={docDrawerOpen}
         orderNo={orderNo || undefined}
         styleNo={orderNo ? undefined : (headerStyleNo || undefined)}
-        onCancel={() => setDocRecognizeOpen(false)}
-        onSuccess={async () => {
-          setDocRecognizeOpen(false);
-          await loadData();
-        }}
-      />
-
-      <PurchaseDocListModal
-        open={docListOpen}
-        orderNo={orderNo || undefined}
-        styleNo={orderNo ? undefined : (headerStyleNo || undefined)}
-        onCancel={() => setDocListOpen(false)}
+        onClose={() => setDocDrawerOpen(false)}
+        onChanged={() => { void loadData(); }}
       />
 
       <BatchPurchaseModal
@@ -439,6 +425,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
       <PurchasePrintModal
         open={printOpen}
         autoDownload={printAutoDownload}
+        companyName={user?.tenantName}
         onClose={() => { setPrintOpen(false); setPrintAutoDownload(false); }}
         order={order}
         purchaseList={purchaseList}

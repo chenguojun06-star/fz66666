@@ -364,6 +364,29 @@ public class MaterialPurchaseController {
         return Result.success(purchaseDocOrchestrator.recognizeDoc(file, orderNo, styleNo));
     }
 
+    /**
+     * D-360f：批量下载采购单据图片（按订单号/款号收集后打包为 ZIP）
+     */
+    @PostMapping("/docs/export-zip")
+    public org.springframework.http.ResponseEntity<byte[]> exportDocsZip(@RequestBody Map<String, Object> body) {
+        Long tenantId = UserContext.tenantId();
+        List<String> orderNos = body.get("orderNos") instanceof List
+                ? (List<String>) ((List<?>) body.get("orderNos")).stream().map(String::valueOf).toList()
+                : List.of();
+        List<String> styleNos = body.get("styleNos") instanceof List
+                ? (List<String>) ((List<?>) body.get("styleNos")).stream().map(String::valueOf).toList()
+                : List.of();
+        byte[] zip = purchaseDocOrchestrator.exportDocsZip(tenantId, orderNos, styleNos);
+        if (zip == null || zip.length == 0) {
+            return org.springframework.http.ResponseEntity.noContent().build();
+        }
+        String fileName = "purchase_docs_" + System.currentTimeMillis() + ".zip";
+        return org.springframework.http.ResponseEntity.ok()
+                .header("Content-Type", "application/zip")
+                .header("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
+                .body(zip);
+    }
+
     @PostMapping("/replay-doc")
     public Result<?> replayDoc(@RequestBody Map<String, Object> body) {
         String docId = body == null ? null : String.valueOf(body.getOrDefault("docId", "")).trim();
