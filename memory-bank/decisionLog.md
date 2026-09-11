@@ -31,24 +31,32 @@
 
 ---
 
-## D-366b：采购「领取 → 到货 → 去向」拆分（待实施，用户拍板口径）
+## D-367：采购「领取 → 登记到货（选去向）」拆分落地（2026-09-11，9 前端 + 1 后端）
 
-**用户诉求**：领取与到货不能一个按钮一步做完；到货时由用户选去向——「入库到物料仓库（选仓库+库位）」或「直采使用」；大货与样衣必须一致。
+用户拍板：「一次做完，流程要完整，库位要能选，跟样衣入库一样」。
 
-**现状根因（语义错位）**：
-- 后端 `POST /production/purchase/receive` 的 `quantity` 是 **D-104 的"编辑采购数量"**，不是到货量；
-- 前端 `ReceiveModal` 却把该字段标成「本次到货数量」并提交 → 用户以为在登记到货，实际只改了采购数量、状态变 RECEIVED。
-- 真正的到货/入库是另一条链：`/production/material/inbound/confirm-arrival`（到货+入库一步，`confirmArrivalAndInbound`）、
-  `updateArrivedQuantity`（只登记到货不入库）、`/production/purchase/confirm-complete` + `movementAction=inbound|direct_use`（确认完成时选去向）。
+**1. 领取与到货彻底拆开（P0 语义错位）**
+- 样衣侧旧状：`ReceiveModal` 标「本次到货数量」提交 `quantity`，而后端 `/purchase/receive` 的 `quantity` 是 D-104 的**修改采购数量** → 界面与后端做的不是一回事；
+- 大货侧更严重：`usePurchaseReceiveActions.doReceive` 提交 `arrivedQuantity`，而后端**只读 `quantity`** → 到货量根本没登记。
+- 现在：`领取` 只认领（不传数量，ReceiveModal 去掉数量表单，改为提示文案）；`登记到货` 独立成 InboundModal，大货/样衣同一套。
 
-**改造方案（后端能力已齐备，纯前端拆分）**：
-1. 行操作拆两个按钮：「领取」（`receive` 不传 quantity）+ 「登记到货」（已领取后出现）
-2. 「登记到货」弹窗 = 到货数量 + **去向单选**：
-   - 入库到物料仓库 → `confirm-arrival`（库位必填，取 MATERIAL 仓库布局）
-   - 直采使用 → 只登记到货 + 记直用流水（`confirm-complete movementAction=direct_use`）
-3. 涉及文件：`useReceiveModal` / `useInboundModal` / `PurchaseActionModals` / `MaterialPurchaseDetail/index.tsx` / `columns.tsx` /
-   大货侧 `InlinePurchasePanel` + `useInlinePurchaseData` + 列表页 `MaterialPurchase`
-4. 属大改动（≥5 文件）→ 按 P0 铁律需本地启动验证后再推。
+**2. 登记到货必选去向（用户拍板）**
+- `入库到物料仓库` → `/production/material/inbound/confirm-arrival`（写到货量 + 入库单 + 增库存 + 对账回流）
+- `直采使用（不进仓库）` → `/production/purchase/confirm-complete` + `movementAction=direct_use`（只记采购直用流水，库存不动）
+
+**3. 仓库/库位选择照抄「样衣入库」范式（用户要求）**
+- 上一轮用 `WarehouseLocationAutoComplete`（AutoComplete 在无 options 时点击毫无反馈，用户以为坏了）
+- 改为样衣入库同款：仓库 `Select`（`useWarehouseAreaOptions('MATERIAL')`）+ 库位 `Select`（`useWarehouseLocationByArea('MATERIAL', areaId)`），
+  带「暂无物料仓库，请前往库位地图创建」「请先选择物料仓库」「该仓库暂无库位」空态提示；
+- 覆盖 `MaterialPurchaseDetail/PurchaseActionModals.tsx` 与 `NodeDetailModal/InlinePurchasePanel.tsx`。
+
+**4. 到货数量整数约束如实提示（暴露出的数据模型缺陷）**
+- `t_material_purchase.arrived_quantity`、`t_material_inbound.inbound_quantity` 是 **INT**，而 `purchase_quantity` 是 **DECIMAL**
+  → 采购 1.32 米时到货只能整数，永远差 0.32（用户截图"待到货 0.32"即此）。
+- 本轮：后端新增 `parseQuantity` 安全解析（旧代码直接 `(Integer)` 强转，小数会抛 ClassCastException 垃圾提示），给出明确业务提示；前端输入框整数 + 提示文案。
+- **待办（下一轮 P0）**：两列改 `DECIMAL(18,4)`（Flyway）+ 实体 `Integer→BigDecimal` + 全链路适配（编译器可兜底），届时开放小数到货。
+
+**验证**：`npx tsc --noEmit` 0 错误、`npx vite build` ✓ built in 10.40s、`mvn -o compile` BUILD SUCCESS；commit a3baa1d11。
 
 ---
 
