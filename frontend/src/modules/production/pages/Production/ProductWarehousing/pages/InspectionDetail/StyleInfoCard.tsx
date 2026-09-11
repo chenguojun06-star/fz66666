@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card, Descriptions, Image } from 'antd';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { Card, Descriptions } from 'antd';
+import StyleCoverThumb from '@/components/StyleAssets/StyleCoverThumb';
 import type { QualityBriefingData } from './types';
 
 interface StyleInfoCardProps {
@@ -9,16 +9,19 @@ interface StyleInfoCardProps {
 }
 
 const StyleInfoCard: React.FC<StyleInfoCardProps> = ({ order, style }) => {
+  // D-360j：款式图用 StyleCoverThumb——封面字段为空时按款号自动兜底拉图，保证弹窗顶部款式图一定显示
+  const coverSrc = style?.cover || (order as any)?.styleCover || (style as any)?.styleCover || undefined;
   return (
     <Card title="款式信息">
       <div style={{ textAlign: 'center', marginBottom: 12 }}>
-        {(style?.cover || order?.styleCover) ? (
-          <Image src={getFullAuthedFileUrl(style?.cover || order?.styleCover)} alt={order.styleName}
-            width={200} height={240} style={{ objectFit: 'cover', borderRadius: 8 }}
-            fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNjY2MiIGZvbnQtc2l6ZT0iMTQiPuaXoOWbvueJhzwvdGV4dD48L3N2Zz4=" />
-        ) : (
-          <div style={{ width: 200, height: 240, background: 'var(--color-bg-subtle)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)', margin: '0 auto' }}>无图片</div>
-        )}
+        <StyleCoverThumb
+          src={coverSrc}
+          styleId={(order as any)?.styleId}
+          styleNo={order.styleNo}
+          color={(order as any)?.color}
+          size={220}
+          borderRadius={8}
+        />
       </div>
       <Descriptions column={1}>
         <Descriptions.Item label="款号">{order.styleNo}</Descriptions.Item>
