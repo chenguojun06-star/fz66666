@@ -75,6 +75,30 @@ public class MaterialInboundController {
     }
 
     /**
+     * D-360h：存量补录入库——已完成但未入仓的采购，把已到货数量补入仓库（不重复累加到货）
+     */
+    @PostMapping("/backfill")
+    public Result<?> backfillInbound(@RequestBody Map<String, Object> params) {
+        try {
+            String purchaseId = (String) params.get("purchaseId");
+            Integer quantity = (Integer) params.get("quantity");
+            String warehouseLocation = (String) params.get("warehouseLocation");
+            String operatorId = (String) params.get("operatorId");
+            String operatorName = (String) params.get("operatorName");
+            String remark = (String) params.get("remark");
+
+            Map<String, Object> result = materialInboundOrchestrator.backfillInbound(
+                    purchaseId, quantity, warehouseLocation,
+                    operatorId, operatorName, remark);
+
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("采购补录入库失败", e);
+            return Result.fail(e.getMessage());
+        }
+    }
+
+    /**
      * 手动入库（无采购单）
      * 用于：退货入库、其他来源入库
      */

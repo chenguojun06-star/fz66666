@@ -19,6 +19,8 @@ import MaterialSelectModal from './components/MaterialSelectModal';
 import BatchPurchaseModal, { type BatchPurchaseItem } from './components/BatchPurchaseModal';
 import SizeUsageSummaryPanel from './components/SizeUsageSummaryPanel';
 import PurchasePrintModal from './components/PurchasePrintModal';
+import ConfirmCompleteModal from '../MaterialPurchase/components/ConfirmCompleteModal';
+import type { ConfirmCompleteOptions } from '../MaterialPurchase/hooks/usePurchaseConfirmCompleteActions';
 import { ReceiveModal, InboundModal, ReturnConfirmModal } from './components/PurchaseActionModals';
 import { filterPendingPurchases, filterReturnablePurchases, filterAwaitingConfirmPurchases } from './hooks/utils';
 import { isPurchaseRowComplete } from './hooks/types';
@@ -73,6 +75,9 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
   } = usePurchaseDetailPage(styleNo, orderNo, sampleMode, propStyleId);
 
   const [docDrawerOpen, setDocDrawerOpen] = useState(false);
+  // D-360h：确认完成时选择物料去向（入库到仓库/直接使用/暂不登记）
+  const [confirmCompleteModalOpen, setConfirmCompleteModalOpen] = useState(false);
+  const [confirmCompleteSubmittingLocal, setConfirmCompleteSubmittingLocal] = useState(false);
   const [batchPurchaseLoading, setBatchPurchaseLoading] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
   const [printAutoDownload, setPrintAutoDownload] = useState(false);
@@ -131,6 +136,33 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
       setBatchPurchaseOpen(false);
     } finally {
       setBatchPurchaseLoading(false);
+    }
+  };
+
+  const submitConfirmCompleteLocal = async (options: ConfirmCompleteOptions) => {
+    const targets = filterAwaitingConfirmPurchases(purchaseList);
+    if (!targets.length) { message.info('没有待确认完成的采购项目'); return; }
+    setConfirmCompleteSubmittingLocal(true);
+    try {
+      for (const t of targets) {
+        const payload: Record<string, unknown> = { purchaseId: String(t.id) };
+        if (options.movementAction !== 'none') {
+          payload.movementAction = options.movementAction;
+          if (targets.length === 1 && options.movementQuantity) payload.movementQuantity = options.movementQuantity;
+          if (options.movementAction === 'inbound' && options.warehouseLocation) payload.warehouseLocation = options.warehouseLocation;
+          if (options.movementAction === 'direct_use' && options.receiverName) payload.receiverName = options.receiverName;
+        }
+        await api.post('/production/purchase/confirm-complete', payload);
+      }
+      const actionText = options.movementAction === 'inbound' ? '，已登记入库'
+        : options.movementAction === 'direct_use' ? '，已记采购直用流水' : '';
+      message.success(`确认完成成功${actionText}`);
+      setConfirmCompleteModalOpen(false);
+      await loadData();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '确认完成失败');
+    } finally {
+      setConfirmCompleteSubmittingLocal(false);
     }
   };
 
@@ -291,7 +323,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                   disabled: confirmCompleteSubmitting || !hasAwaitingConfirm,
                   loading: confirmCompleteSubmitting,
                   title: hasAwaitingConfirm ? undefined : '无待完成项',
-                  onClick: handleConfirmComplete,
+                  onClick: () => setConfirmCompleteModalOpen(true),
                 }}
                 edit={{
                   disabled: toolbarEditLocked,
@@ -405,6 +437,14 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         purchase={qualityIssueRecord}
         onChanged={() => { qualityIssueVisible && setQualityIssueVisible(false); }}
         onClose={() => { setQualityIssueVisible(false); setQualityIssueRecord(null); }}
+      />
+
+      <ConfirmCompleteModal
+        visible={confirmCompleteModalOpen}
+        targets={filterAwaitingConfirmPurchases(purchaseList)}
+        submitting={confirmCompleteSubmittingLocal}
+        onCancel={() => setConfirmCompleteModalOpen(false)}
+        onConfirm={(options) => { void submitConfirmCompleteLocal(options); }}
       />
 
       <PurchaseDocDrawer

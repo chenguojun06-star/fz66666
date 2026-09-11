@@ -211,6 +211,78 @@ public class MaterialInboundOrchestrator {
     }
 
     /**
+     * D-360h：存量补录入库——已完成/回料确认但未入过库的采购单，把"已到货但未入仓"的数量补入仓库。
+     * 与 confirmArrivalAndInbound 的区别：不再累加到货数量、不改状态（行已完成），只做
+     * 入库记录 + 库存增加 + 对账回流 + 出入库流水，保证两本账一致。
+     */
+    public Map<String, Object> backfillInbound(
+            String purchaseId,
+            Integer quantity,
+            String warehouseLocation,
+            String operatorId,
+            String operatorName,
+            String remark) {
+
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        MaterialPurchase purchase = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getId, purchaseId)
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .one();
+        if (purchase == null) {
+            throw new RuntimeException("采购单不存在: " + purchaseId);
+        }
+        if (quantity == null || quantity <= 0) {
+            throw new RuntimeException("补录数量必须大于0");
+        }
+        Integer currentArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
+        if (quantity > currentArrived) {
+            throw new RuntimeException(String.format("补录数量超出已到货数量: 已到货=%d, 本次补录=%d", currentArrived, quantity));
+        }
+
+        MaterialInbound inbound = new MaterialInbound();
+        inbound.setPurchaseId(purchaseId);
+        inbound.setMaterialCode(purchase.getMaterialCode());
+        inbound.setMaterialName(purchase.getMaterialName());
+        inbound.setMaterialType(purchase.getMaterialType());
+        inbound.setColor(purchase.getColor());
+        inbound.setSize(purchase.getSize());
+        inbound.setInboundQuantity(quantity);
+        inbound.setWarehouseLocation(warehouseLocation != null ? warehouseLocation : "默认仓");
+        inbound.setSupplierName(purchase.getSupplierName());
+        inbound.setOperatorId(operatorId);
+        inbound.setOperatorName(operatorName);
+        inbound.setInboundTime(LocalDateTime.now());
+        inbound.setRemark(remark != null ? remark : "存量补录入库");
+        String inboundNo = materialInboundService.generateInboundNo();
+        inbound.setInboundNo(inboundNo);
+        materialInboundService.save(inbound);
+
+        logAppendHelper.appendInbound(inbound.getId(), quantity);
+        logAppendHelper.appendOperation(purchaseId, "物料补录入库", "入库单号：" + inboundNo + "，数量：" + quantity);
+
+        materialStockService.increaseStock(purchase, quantity, warehouseLocation);
+        log.info("补录入库成功: inboundNo={}, materialCode={}, quantity=+{}", inboundNo, purchase.getMaterialCode(), quantity);
+
+        try {
+            String reconciliationId = materialReconciliationSyncOrchestrator.syncFromInbound(inbound, purchase);
+            log.info("✅ 补录入库已回流物料对账: reconciliationId={}", reconciliationId);
+        } catch (Exception e) {
+            log.error("❌ 补录入库同步对账失败: inboundNo={}", inboundNo, e);
+        }
+        syncInboundTraceRecord(inbound, purchase, "PURCHASE_INBOUND_BACKFILL");
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("inboundNo", inboundNo);
+        result.put("inboundId", inbound.getId());
+        result.put("purchaseId", purchaseId);
+        result.put("quantity", quantity);
+        result.put("message", "补录入库成功，库存已更新并同步对账");
+        return result;
+    }
+
+    /**
      * 手动入库（无采购单）
      * 用于：退货入库、其他来源入库
      *

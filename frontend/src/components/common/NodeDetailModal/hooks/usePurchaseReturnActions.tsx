@@ -200,21 +200,39 @@ export const usePurchaseReturnActions = (params: UsePurchaseReturnActionsParams)
     });
   }, [purchases, user, message, modal, loadData, batchForm]);
 
-  const handleConfirmComplete = useCallback(async () => {
+  // D-360h：确认完成前让用户选择物料去向（入库到仓库/直接使用/暂不登记），与采购列表页/详情页同口径
+  const handleConfirmComplete = useCallback(() => {
     const awaiting = purchases.filter(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
     if (awaiting.length === 0) {
       message.info('没有待确认完成的物料');
       return;
     }
+    setConfirmCompleteModalVisible(true);
+  }, [purchases, message]);
+
+  const submitConfirmComplete = useCallback(async (options: {
+    movementAction: string;
+    movementQuantity?: number;
+    warehouseLocation?: string;
+    receiverName?: string;
+  }) => {
+    const awaiting = purchases.filter(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
+    if (awaiting.length === 0) return;
     setConfirmCompleteLoading(true);
     let successCount = 0;
     const failMessages: string[] = [];
     try {
-      // 逐项容错：单项失败不中断后续物料（避免一断全断），后端已对"已完成"做幂等返回成功
       for (const record of awaiting) {
         const label = record.materialName || record.materialCode || String(record.id || '');
         try {
-          const res = await api.post<{ code: number; message?: string }>('/production/purchase/confirm-complete', { purchaseId: record.id });
+          const payload: Record<string, unknown> = { purchaseId: record.id };
+          if (options.movementAction !== 'none') {
+            payload.movementAction = options.movementAction;
+            if (awaiting.length === 1 && options.movementQuantity) payload.movementQuantity = options.movementQuantity;
+            if (options.movementAction === 'inbound' && options.warehouseLocation) payload.warehouseLocation = options.warehouseLocation;
+            if (options.movementAction === 'direct_use' && options.receiverName) payload.receiverName = options.receiverName;
+          }
+          const res = await api.post<{ code: number; message?: string }>('/production/purchase/confirm-complete', payload);
           if (res?.code === 200) {
             successCount++;
           } else {
@@ -225,18 +243,22 @@ export const usePurchaseReturnActions = (params: UsePurchaseReturnActionsParams)
         }
       }
       if (failMessages.length === 0) {
-        message.success(`已确认完成 ${successCount} 项`);
+        const actionText = options.movementAction === 'inbound' ? '，已登记入库'
+          : options.movementAction === 'direct_use' ? '，已记采购直用流水' : '';
+        message.success(`已确认完成 ${successCount} 项${actionText}`);
       } else if (successCount === 0) {
         message.error(`确认完成失败：${failMessages[0]}${failMessages.length > 1 ? ` 等 ${failMessages.length} 项` : ''}`);
       } else {
         message.warning(`已确认 ${successCount} 项，失败 ${failMessages.length} 项：${failMessages[0]}${failMessages.length > 1 ? ' 等' : ''}`);
       }
-      // 无论成败都刷新，让已完成项实时反映到列表
+      setConfirmCompleteModalVisible(false);
       await loadData();
     } finally {
       setConfirmCompleteLoading(false);
     }
   }, [purchases, message, loadData, setConfirmCompleteLoading]);
+
+  const [confirmCompleteModalVisible, setConfirmCompleteModalVisible] = React.useState(false);
 
   const handleQualityIssue = useCallback((record: MaterialPurchase) => {
     message.info(`品质异常：${record.materialName || record.materialCode}，请前往物料采购页面处理`);
@@ -248,6 +270,9 @@ export const usePurchaseReturnActions = (params: UsePurchaseReturnActionsParams)
     handleReturnReset,
     handleBatchReturn,
     handleConfirmComplete,
+    submitConfirmComplete,
+    confirmCompleteModalVisible,
+    setConfirmCompleteModalVisible,
     handleQualityIssue,
   };
 };

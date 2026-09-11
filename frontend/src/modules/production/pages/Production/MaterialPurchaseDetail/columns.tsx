@@ -220,7 +220,7 @@ export interface ViewColumnsDeps {
   handleStartEdit: () => void;
   handleDelete: (record: MaterialPurchase) => void;
   openReceive: (record: MaterialPurchase) => void;
-  openInbound: (record: MaterialPurchase) => void;
+  openInbound: (record: MaterialPurchase, opts?: { backfill?: boolean; defaultQty?: number }) => void;
   handleReturnConfirm: (record: MaterialPurchase) => void;
   handleReturnReset: (record: MaterialPurchase) => void;
   handleCancelReceive: (record: MaterialPurchase) => void;
@@ -316,6 +316,21 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
               ...((isReceived || isPartial || isCompleted) && !isReturnConfirmed ? [
                 { key: 'quality-issue', label: '品质异常', title: '登记物料品质问题', onClick: () => { setQualityIssueRecord(record); setQualityIssueVisible(true); } },
               ] : []),
+              // D-360h：已完成/回料确认但未入过仓的行——提供「入库到仓」存量补录入口
+              ...(() => {
+                if (!(isCompleted || isReturnConfirmed)) return [];
+                const stockQty = stockMap?.[String(record.id)];
+                const arrived = Number(record.arrivedQuantity || 0);
+                const stocked = stockQty == null ? 0 : Number(stockQty);
+                const missingInbound = arrived - stocked;
+                if (missingInbound <= 0) return [];
+                return [{
+                  key: 'inbound-backfill',
+                  label: '入库到仓',
+                  title: `已到货 ${arrived}，仓库已入 ${stocked}，补录 ${missingInbound}${record.unit ? ' ' + record.unit : ''}入库`,
+                  onClick: () => openInbound(record, { backfill: true, defaultQty: missingInbound }),
+                }];
+              })(),
               // D-272+：大货/样衣采购统一支持「出库领取」——只要仓库有库存（做过入库）就显示。
               // 直采直用（登记到货但从未入库）的采购不走仓库流程，
               // 显示按钮只会让用户误点 → 后端 calcAvailableStock=0 → 400 仓库库存不足。

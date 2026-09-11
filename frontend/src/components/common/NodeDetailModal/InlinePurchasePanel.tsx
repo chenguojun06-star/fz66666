@@ -12,6 +12,7 @@ import { InlinePurchasePanelProps, normalizeStatus } from './InlinePurchasePanel
 import { isPurchaseRowComplete } from './utils';
 import { buildDisplayColumns, buildEditColumns } from './InlinePurchasePanel.columns';
 import MaterialPickerModal from './MaterialPickerModal';
+import ConfirmCompleteModal from '@/modules/production/pages/Production/MaterialPurchase/components/ConfirmCompleteModal';
 import useInlinePurchaseData from './useInlinePurchaseData';
 
 const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
@@ -77,6 +78,9 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
     handleCancelReceive,
     handleBatchReturn,
     handleConfirmComplete,
+    submitConfirmComplete,
+    confirmCompleteModalVisible,
+    setConfirmCompleteModalVisible,
     handleWarehousePick,
     handleQualityIssue,
     handleStartEdit,
@@ -287,6 +291,14 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
           />
         )}
       </Card>
+
+      <ConfirmCompleteModal
+        visible={confirmCompleteModalVisible}
+        targets={purchases.filter((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM)}
+        submitting={confirmCompleteLoading}
+        onCancel={() => setConfirmCompleteModalVisible(false)}
+        onConfirm={(options) => { void submitConfirmComplete(options); }}
+      />
 
       <MaterialPickerModal
         open={materialModalOpen}
