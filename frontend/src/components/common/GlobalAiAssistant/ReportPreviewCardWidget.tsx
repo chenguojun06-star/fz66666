@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { ReportPreviewData } from './types';
 import styles from './ReportPreviewCardWidget.module.css';
 
@@ -7,6 +8,15 @@ interface Props {
 }
 
 const ReportPreviewCardWidget: React.FC<Props> = ({ data }) => {
+  // D-360p：巡检卡片数据点可点击溯源——点订单跳订单进度详情，点风险卡跳订单管理列表
+  const navigate = useNavigate();
+  const goOrder = (orderNo: string) => {
+    if (!orderNo) return;
+    navigate(`/production/progress-detail?orderNo=${encodeURIComponent(orderNo)}`);
+  };
+  const goOrderList = () => {
+    navigate('/order-management');
+  };
   const changeClass = (change: string | null): string => {
     if (!change) return styles.kpiChangeFlat;
     if (change.startsWith('+') && change !== '+0.0%') return styles.kpiChangeUp;
@@ -90,15 +100,15 @@ const ReportPreviewCardWidget: React.FC<Props> = ({ data }) => {
       <div className={styles.reportSection}>
         <div className={styles.sectionTitle}>⚠️ 风险概览</div>
         <div className={styles.riskGrid}>
-          <div className={`${styles.riskChip} ${styles.riskChipDanger}`}>
+          <div className={`${styles.riskChip} ${styles.riskChipDanger}`} style={{ cursor: 'pointer' }} onClick={goOrderList} title="点击查看订单列表">
             <div className={styles.riskValue}>{data.riskSummary.overdueCount}</div>
             <div className={styles.riskLabel}>逾期订单</div>
           </div>
-          <div className={styles.riskChip}>
+          <div className={styles.riskChip} style={{ cursor: 'pointer' }} onClick={goOrderList} title="点击查看订单列表">
             <div className={styles.riskValue}>{data.riskSummary.highRiskCount}</div>
             <div className={styles.riskLabel}>高风险</div>
           </div>
-          <div className={styles.riskChip}>
+          <div className={styles.riskChip} style={{ cursor: 'pointer' }} onClick={goOrderList} title="点击查看订单列表">
             <div className={styles.riskValue}>{data.riskSummary.stagnantCount}</div>
             <div className={styles.riskLabel}>停滞订单</div>
           </div>
@@ -111,7 +121,7 @@ const ReportPreviewCardWidget: React.FC<Props> = ({ data }) => {
           <div className={styles.sectionTitle}>🔴 逾期订单 Top {(data.overdueOrders ?? []).length}</div>
           <div className={styles.orderList}>
             {(data.overdueOrders ?? []).map((o, i) => (
-              <div key={i} className={styles.orderItem}>
+              <div key={i} className={styles.orderItem} style={{ cursor: 'pointer' }} onClick={() => goOrder(o.orderNo)} title="点击查看该订单进度">
                 <div>
                   <span className={styles.orderNo}>{o.orderNo}</span>
                   {o.styleName ? ` · ${o.styleName}` : ''}
@@ -132,7 +142,7 @@ const ReportPreviewCardWidget: React.FC<Props> = ({ data }) => {
           <div className={styles.sectionTitle}>🟡 高风险订单 Top {(data.highRiskOrders ?? []).length}</div>
           <div className={styles.orderList}>
             {(data.highRiskOrders ?? []).map((o, i) => (
-              <div key={i} className={`${styles.orderItem} ${styles.highRisk}`}>
+              <div key={i} className={`${styles.orderItem} ${styles.highRisk}`} style={{ cursor: 'pointer' }} onClick={() => goOrder(o.orderNo)} title="点击查看该订单进度">
                 <div>
                   <span className={styles.orderNo}>{o.orderNo}</span>
                   {o.styleName ? ` · ${o.styleName}` : ''}
