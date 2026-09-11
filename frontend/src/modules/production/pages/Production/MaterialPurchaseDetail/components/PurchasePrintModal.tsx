@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { App, Button, Space, Tag, Typography } from 'antd';
 import { DownloadOutlined, PrinterOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
+import api from '@/utils/api';
 import { parseProductionOrderLines, sortSizeNames, toNumberSafe } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getMaterialTypeLabel } from '@/utils/materialType';
@@ -21,6 +22,8 @@ interface PurchasePrintModalProps {
   styleCover?: string | null;
   color?: string;
   materialArrivalRate: number;
+  /** D-364：款式ID——封面图兜底（附件列表）用 */
+  styleId?: string | number;
   /** D-360c：打开即直接下载采购单文件（供工具条「下载采购单」一键调用），下载后自动关闭 */
   autoDownload?: boolean;
   /** D-360f：租户/公司名，打印页眉展示 */
@@ -40,7 +43,7 @@ const money = (v: unknown) => {
 const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
   open, onClose, order, purchaseList,
   orderNo: orderNoProp, styleNo: styleNoProp, styleName: styleNameProp,
-  styleCover: styleCoverProp, color: colorProp, materialArrivalRate,
+  styleCover: styleCoverProp, color: colorProp, materialArrivalRate, styleId: styleIdProp,
   autoDownload, companyName, orderLines,
 }) => {
   const { message } = App.useApp();
@@ -58,6 +61,58 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
   const factoryName = String(order?.factoryName || purchaseList.find((p) => p.factoryName)?.factoryName || '').trim();
   const originLabel = factoryName ? '工厂' : '来源';
   const originValue = factoryName || sourceLabel;
+
+  // D-364：单据标题分主次——第一行公司名，第二行按来源区分的单据名
+  const docTitle = firstSrcType === 'sample'
+    ? '样衣开发采购单'
+    : (firstSrcType === 'order' ? '大货采购单' : '物料采购单');
+
+  /**
+   * D-364：封面图兜底。样衣（开发）采购的款式档案 cover / 订单 styleCover 常常为空，
+   * 但弹窗左侧 StyleCoverThumb 能显示图——因为组件自己是按「商品编码颜色图 → 款式附件第一张」
+   * 兜底拉的（/style/sku/color-image、/style/attachment/list）。打印新窗口没有组件，
+   * 只认 styleCover 就必然空白，这里把同一条兜底链搬过来。
+   */
+  const [fallbackCover, setFallbackCover] = useState<string | null>(null);
+  /** 兜底图加载中：打印/下载需等待，否则打印单会缺款式图 */
+  const [coverLoading, setCoverLoading] = useState(false);
+  const resolvedStyleId = styleIdProp ?? (order as any)?.styleId;
+  useEffect(() => {
+    if (!open || styleCover || !styleNo) {
+      setCoverLoading(false);
+      if (styleCover) setFallbackCover(null);
+      return;
+    }
+    let mounted = true;
+    setCoverLoading(true);
+    (async () => {
+      try {
+        if (color) {
+          const firstColor = String(color).split(',')[0].trim();
+          const colorRes = await api.get<any>('/style/sku/color-image', {
+            params: { styleNo, color: firstColor },
+          });
+          if (mounted && colorRes?.code === 200 && colorRes?.data) {
+            setFallbackCover(String(colorRes.data));
+            return;
+          }
+        }
+        const attRes = await api.get<any>('/style/attachment/list', {
+          params: { styleId: resolvedStyleId, styleNo },
+        });
+        const images = ((attRes?.data || []) as any[])
+          .filter((f) => String(f?.fileType || '').includes('image'));
+        if (mounted && images.length) {
+          setFallbackCover(String(images[0]?.fileUrl || '') || null);
+        }
+      } catch { /* 兜底失败保持无图，不影响打印 */ } finally {
+        if (mounted) setCoverLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [open, styleCover, styleNo, color, resolvedStyleId]);
+
+  const effectiveCover = styleCover || getFullAuthedFileUrl(fallbackCover) || null;
 
   // 下单明细颜色×尺码矩阵（orderLines 优先：样衣模式无订单，由款式 sizeColorConfig 生成）
   const matrix = useMemo(() => {
@@ -129,6 +184,9 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
 <style>
   body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;color:#1f1f1f;padding:24px;font-size:13px}
   h1{text-align:center;font-size:20px;letter-spacing:8px;margin:0 0 16px;font-weight:600}
+  .doc-head{text-align:center;margin:0 0 16px}
+  .company{font-size:19px;font-weight:700;letter-spacing:2px;color:#1f1f1f}
+  .doc-title{font-size:15px;font-weight:600;letter-spacing:6px;margin-top:6px;color:#434343}
   table{border-collapse:collapse;width:100%;font-size:12px}
   th,td{border:1px solid #d9d9d9;padding:5px 8px}
   .info td{border:none;padding:3px 10px}
@@ -140,7 +198,10 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
   @media print{body{padding:0} h1{margin-top:0}}
 </style></head>
 <body>
-  <h1>${companyName ? companyName + ' · ' : ''}采 购 单</h1>
+  <div class="doc-head">
+    ${companyName ? `<div class="company">${companyName}</div>` : ''}
+    <div class="doc-title">${docTitle}</div>
+  </div>
   <table class="info">
     <tr>
       <td style="padding:3px 10px"><b>采购单号：</b>${purchaseList.find((p) => p.purchaseNo)?.purchaseNo || '-'}</td>
@@ -150,7 +211,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
     </tr>
   </table>
   <div class="header" style="display:flex">
-    <div class="cover-wrap">${styleCover ? `<img class="cover" src="${styleCover}" />` : '<div class="cover" style="background:#fafafa"></div>'}</div>
+    <div class="cover-wrap">${effectiveCover ? `<img class="cover" src="${effectiveCover}" />` : '<div class="cover" style="background:#fafafa"></div>'}</div>
     <div style="flex:1;padding:10px 10px 10px 4px">
       <table class="info">
         <tr><td><b>款号：</b>${styleNo || '-'}</td><td><b>款名：</b>${styleName || '-'}</td></tr>
@@ -214,12 +275,13 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
 
   // D-360c：工具条「下载采购单」一键直下（打开即下载并自动收起）
   useEffect(() => {
-    if (open && autoDownload && purchaseList.length > 0) {
+    // D-364：等待封面兜底完成再下载，否则一键下载的单子会缺款式图
+    if (open && autoDownload && purchaseList.length > 0 && !coverLoading) {
       handleDownload();
       onClose();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, autoDownload]);
+  }, [open, autoDownload, coverLoading]);
 
   return (
     <SideDrawer
@@ -230,10 +292,10 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
       footer={(
         <Space wrap>
           <Button onClick={onClose}>关闭</Button>
-          <Button icon={<DownloadOutlined />} onClick={handleDownload} disabled={!purchaseList.length}>
+          <Button icon={<DownloadOutlined />} onClick={handleDownload} disabled={!purchaseList.length} loading={coverLoading}>
             下载采购单
           </Button>
-          <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrint} disabled={!purchaseList.length}>
+          <Button type="primary" icon={<PrinterOutlined />} onClick={handlePrint} disabled={!purchaseList.length} loading={coverLoading}>
             打印采购单
           </Button>
         </Space>
@@ -242,9 +304,14 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
     >
       {/* 屏幕预览：与打印内容一致的工整布局 */}
       <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, padding: '16px 20px' }}>
-        <Text style={{ display: 'block', textAlign: 'center', fontSize: 18, letterSpacing: 6, fontWeight: 600, marginBottom: 12 }}>
-          {companyName ? `${companyName} · ` : ''}采 购 单
-        </Text>
+        <div style={{ textAlign: 'center', marginBottom: 12 }}>
+          {companyName ? (
+            <div style={{ fontSize: 17, fontWeight: 700, letterSpacing: 2 }}>{companyName}</div>
+          ) : null}
+          <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: 6, marginTop: 4, color: 'var(--color-text-secondary)' }}>
+            {docTitle}
+          </div>
+        </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 24px', marginBottom: 8 }}>
           <span><b>采购单号：</b>{purchaseList.find((p) => p.purchaseNo)?.purchaseNo || '-'}</span>
           {orderNo && <span><b>订单号：</b>{orderNo}</span>}
@@ -252,7 +319,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
         </div>
         <div style={{ display: 'flex', gap: 12, padding: 10, background: 'var(--color-bg-subtle)', borderRadius: 4, marginBottom: 8 }}>
           <div style={{ width: 80, height: 106, flexShrink: 0, background: '#fafafa', border: '1px solid var(--color-border)', borderRadius: 4, overflow: 'hidden' }}>
-            {styleCover ? <img src={styleCover} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
+            {effectiveCover ? <img src={effectiveCover} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
           </div>
           <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '4px 16px', fontSize: 13 }}>
             <span><b>款号：</b>{styleNo || '-'}</span>

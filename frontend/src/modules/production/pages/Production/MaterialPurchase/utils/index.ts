@@ -184,6 +184,10 @@ export const buildPurchaseSheetHtml = (
   // D-360f：大货/样衣(开发)采购标识
   const sourceType = String(currentPurchase?.sourceType || '').toLowerCase();
   const sourceLabel = sourceType === 'sample' ? '样衣(开发)' : (sourceType === 'order' ? '大货' : '批量');
+  // D-364：单据名按来源区分，标题主次=公司名（第一行）+ 单据名（第二行）
+  const docTitle = sourceType === 'sample'
+    ? '样衣开发采购单'
+    : (sourceType === 'order' ? '大货采购单' : '物料采购单');
 
   const group: { fabric: MaterialPurchaseType[]; lining: MaterialPurchaseType[]; accessory: MaterialPurchaseType[] } = {
     fabric: detailPurchases.filter((p) => getMaterialTypeCategory(p.materialType) === MATERIAL_TYPES.FABRIC),
@@ -311,8 +315,9 @@ export const buildPurchaseSheetHtml = (
         <style>
           body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial,serif;margin:20px;color:var(--color-black)}
           .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-          .company{font-size:12px;color:var(--color-zinc-600);margin-bottom:2px}
-          .title{font-size:18px;font-weight:700}
+          .doc-head{text-align:center;margin:0 0 14px}
+          .company{font-size:18px;font-weight:700;color:var(--color-black);margin-bottom:2px}
+          .title{font-size:14px;font-weight:600;letter-spacing:6px;color:var(--color-zinc-600)}
           .meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 16px;margin-top:10px}
           .kv{font-size:12px;color:var(--color-zinc-600)}
           .kv b{display:block;color:var(--color-black);margin-top:2px;font-size:13px}
@@ -335,10 +340,12 @@ export const buildPurchaseSheetHtml = (
         </style>
       </head>
       <body>
+        <div class="doc-head">
+          ${companyName ? `<div class="company">${escapeHtml(companyName)}</div>` : ''}
+          <div class="title">${escapeHtml(docTitle)}</div>
+        </div>
         <div class="top">
           <div>
-            ${companyName ? `<div class="company">${escapeHtml(companyName)}</div>` : ''}
-            <div class="title">采购单</div>
             <div class="meta">
               <div class="kv">订单号<b>${escapeHtml(orderNo || '-')}</b></div>
               <div class="kv">采购单号<b>${escapeHtml(purchaseNo || '-')}</b></div>

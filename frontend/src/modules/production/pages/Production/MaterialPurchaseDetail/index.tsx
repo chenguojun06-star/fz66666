@@ -517,6 +517,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         color={headerColor}
         materialArrivalRate={materialArrivalRate}
         orderLines={sampleOrderLines}
+        styleId={headerStyleId ?? propStyleId}
       />
     </div>
   );

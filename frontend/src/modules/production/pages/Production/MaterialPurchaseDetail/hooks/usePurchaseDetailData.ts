@@ -204,7 +204,8 @@ export function usePurchaseDetailData(
             setSampleBomCompletedTime(String(styleData?.bomCompletedTime || ''));
             setSampleStyle({
               styleName: String(styleData?.styleName || ''),
-              styleCover: (styleData?.styleCover || null) as string | null,
+              // D-364：封面字段名在不同接口里不统一（cover / styleCover / coverImage），统一兜底
+              styleCover: (styleData?.cover || styleData?.styleCover || styleData?.coverImage || null) as string | null,
               color: String(styleData?.color || ''),
             });
             // D-360：优先用款式自身 sizeColorConfig；为空再兜底样衣生产详情的 sizeColorMatrix
