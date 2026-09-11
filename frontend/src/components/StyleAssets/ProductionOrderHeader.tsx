@@ -44,6 +44,8 @@ const ProductionOrderHeader: React.FC<{
   showColor?: boolean;
   hideEmptyColor?: boolean;
   hideSizeBlockWhenNoRealSize?: boolean;
+  /** D-372：隐藏「下单数量」行（矩阵区已展示「总下单数」时避免重复显示） */
+  hideOrderQuantity?: boolean;
   matrixColumnMinWidth?: number;
   matrixGap?: number;
   matrixFontSize?: number;
@@ -67,6 +69,7 @@ const ProductionOrderHeader: React.FC<{
   showColor = true,
   hideEmptyColor = false,
   hideSizeBlockWhenNoRealSize = false,
+  hideOrderQuantity = false,
   matrixColumnMinWidth = 0,
   matrixGap = 4,
   matrixFontSize = 12,
@@ -159,7 +162,7 @@ const ProductionOrderHeader: React.FC<{
       { label: '款号', value: resolvedStyleNo || '-' },
       { label: '款名', value: resolvedStyleName || '-' },
       ...(showColor && (!hideEmptyColor || !!resolvedColor) ? [{ label: '颜色', value: resolvedColor || '-' } as OrderHeaderField] : []),
-      { label: '下单数量', value: computedTotal > 0 ? `${computedTotal}` : '-' },
+      ...(hideOrderQuantity ? [] : [{ label: '下单数量', value: computedTotal > 0 ? `${computedTotal}` : '-' } as OrderHeaderField]),
       ...(extraFields || []),
     ];
     const infoLabelStyle: React.CSSProperties = { fontSize: 'var(--font-size-sm)' };

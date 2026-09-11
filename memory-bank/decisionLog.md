@@ -1,7 +1,30 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-11（新增 D-370 到货/出库默认带出「当前需求数」；小数化重构改下轮）
+> 最后更新：2026-09-11（新增 D-371 ESLint 全量清零 + 构建产物排除）
+
+---
+
+## D-371：ESLint 全量清零（101 → 0）+ 构建产物排除（2026-09-11）
+
+用户要求把 CI 里的警告也清掉。
+
+**1. 先澄清一个假象**：本地 `npx eslint .` 报 **2676 problems（1230 errors）**，远多于 CI 的 21 个。
+原因是 ESLint 没有忽略 **`dist/`（vite build 产物，84 个文件）与 `reports/`（jscpd 报告）**——
+`no-func-assign`(330) / `no-redeclare`(308) / `no-prototype-builtins`(135) 都是压缩产物特征。
+→ `.eslintignore` 补 `dist/`、`reports/`、`node_modules/`。（CI 不 blame 是因为 dist 在 .gitignore 中，CI 工作区没有。）
+
+**2. 真实源码问题 101 个（0 error + 101 warning）全部清零：**
+- 38 处未使用的具名 import → 脚本自动移除（多行 import 整行删除）
+- 42 处未使用的参数/局部变量 → 改 `_name`（符合 ESLint `^_` 约定）；其中 29 处是**对象解构**，
+  必须写成 `原名: _别名`，直接改名会报"属性不存在"
+- 3 处未使用导入手工清理
+- 18 处 `react-hooks/exhaustive-deps`：补齐缺失依赖（搜索关键字/currentStyleId/filteredRows/模块级常量/props 回调等）+ 移除多余依赖 2 处
+
+**方法论（进 MEMORY.md）**：批量改 lint 不要用"向后找第一个 `],`"定位依赖数组——会命中表格 columns 数组把依赖插错位置；
+应先 `awk` 打印候选行确认，再 `sed -i '<行号>s/<锚点>/<替换>/'`，锚点取「最后一个依赖名 + `]);`」。
+
+**验证**：`npx eslint .` exit=0 零输出；`tsc --noEmit` 0 错误；`vite build` ✓ 14.35s；commit 5ef0ac4dd。
 
 ---
 
