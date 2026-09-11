@@ -1,7 +1,33 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-11（新增 D-364 样衣采购弹窗款式信息头 + 打印单来源/款式图修复）
+> 最后更新：2026-09-11（新增 D-365 采购单款式图兜底 + 标题主次两行）
+
+---
+
+## D-365：采购单款式图兜底 + 标题主次（2026-09-11，用户二次反馈截图）
+
+用户反馈：D-364 之后**打印单和预览仍然没有款式图**；且打印单标题主次颠倒（应该第一行公司名、第二行"样衣开发采购单"）。
+
+**1. 仍然无图的真正根因（关键认知）**
+弹窗左侧**有**图，是因为 `StyleCoverThumb` 组件自己按
+「`/style/sku/color-image`(商品编码颜色图) → `/style/attachment/list`(款式附件第一张)」兜底拉的；
+而**数据层 `styleCover`（款式档案 cover / 订单 styleCover）本身就是空的**。
+打印新窗口里没有组件，只认 `styleCover` → 必然渲染空白框。
+教训：**组件能显示图 ≠ 数据里有图**；打印/导出/新窗口这类脱离组件渲染的场景，必须自带兜底链。
+修复：`PurchasePrintModal` 内置同一条兜底链（color-image → attachment 第一张）+ `getFullAuthedFileUrl` 补 token；
+兜底是异步的，故加载期间打印/下载按钮置 loading、`autoDownload` 等图就绪后再执行（否则一键下载的单子仍缺图）。
+另在 `usePurchaseDetailData` 主分支封面字段加 `cover / styleCover / coverImage` 三字段兜底。
+
+**2. 标题主次颠倒**
+原样式：公司名 12px 灰色小字在上、单据名 18px 大字在下。
+改为：第一行公司名（18px 加粗居中）+ 第二行单据名（14px 居中、字距 6px）；
+单据名按来源区分并**两套模板统一**：`样衣开发采购单` / `大货采购单` / `物料采购单`
+（样衣模板 `PurchasePrintModal`、大货模板 `MaterialPurchase/utils.buildPurchaseSheetHtml`）。
+
+**验证**：`npx tsc --noEmit` 0 错误、lint 0；commit 25c132acc 已推送。
+
+**遗留（未动）**：大货模板 `buildPurchaseSheetHtml` 的图片来源仍是 `detailOrder.styleCover || currentPurchase.styleCover`（后端 fillStyleCover 已回填，暂未加款号兜底）；如需彻底统一可让调用方预取封面后传入。
 
 ---
 
