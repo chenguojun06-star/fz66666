@@ -1,7 +1,37 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-11（新增 D-368 采购按钮全灰根治 + 到货/出库数量默认预填）
+> 最后更新：2026-09-11（新增 D-369 金额/数量显示规范 + 数量不预填 + 绿色文字对比度）
+
+---
+
+## D-369：金额/数量显示规范 + 数量一律用户填写 + 绿色文字对比度（2026-09-11）
+
+**1. 金额与笔数显示规范**
+- `StatCard` 新增 `format: 'money' | 'int'`：金额统一两位小数（`¥259,418.70`）；
+  「待审批 / 逾期」是**笔数**却被当成金额显示成「¥138」→ 改为整数且无货币符号。
+- 每日流水「数量合计」出现 `12,431.949000000006` 浮点长尾：前端 `quantity += Number(...)` 累加导致
+  → 累加后 `Number(quantity.toFixed(2))`。
+
+**2. 到货/出库数量一律由用户填写（用户拍板）**
+- D-368 曾给「登记到货」「物料出库」加默认预填（待到货量 / 单批次可用量）；
+  用户要求"全部要用户自己填写"→ 全部取消预填，数量字段清空为必填。
+- 涉及：`useInboundModal.openInbound`、`usePurchaseReceiveActions.handleInbound`、`useOutboundActions.handleOutbound`。
+
+**3. 绿色文字看不清**
+- 明色主题 `--color-success` 原为 `#52c41a`（Ant 默认），白底对比度约 2.9:1，作为文字极不清晰
+  → 改 `#237804`（Ant green-8，约 6.5:1），保留 success 语义；
+- 硬编码绿字 3 处一并改同色：订单分析毛利数字、ECharts 标签、AI 健康状态文字。
+
+**4. 关于 IDE 报错 `sumMaterialPending undefined`**
+方法实际存在（FinanceDashboardHelper 第 243 行），`mvn -o compile` BUILD SUCCESS —— 属 IDE（Java LS）索引陈旧，需刷新索引，非真实编译错误。
+
+**验证**：`npx tsc --noEmit` 0 错误、`npx vite build` ✓ built in 10.12s、`mvn compile` BUILD SUCCESS；commit 0daa53962 已推送。
+
+**待办（用户已拍板选 A，下一轮执行）**：物料数量全链路小数化——
+`t_material_purchase.arrived_quantity`、`t_material_inbound.inbound_quantity`、`t_material_stock.quantity/locked_quantity`
+改 DECIMAL(18,4)（Flyway）+ 实体 Integer→BigDecimal + MaterialStockService 12 个方法签名 + 34 处引用（编译器兜底），
+解决"采购 1.32 米永远差 0.32"。属 50 文件级重构，需独立会话完整回归。
 
 ---
 
