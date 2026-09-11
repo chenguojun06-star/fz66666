@@ -147,6 +147,9 @@ public class FinishedOutstockHelper {
         int totalItems = 0;
         int totalQty = 0;
 
+        // D-360n：一次出库共用同一出库单号（明细多行同单），不再按码数拆成多张出库单
+        String batchOutstockNo = buildOutstockNo(LocalDateTime.now());
+
         for (Map<String, Object> item : items) {
             String skuCode = (String) item.get("sku");
             if (!StringUtils.hasText(skuCode)) {
@@ -196,7 +199,7 @@ public class FinishedOutstockHelper {
                 }
             }
 
-            recordProductOutstock(sku, quantity, requestOrderId, requestOrderNo, effectiveWarehouse,
+            recordProductOutstock(batchOutstockNo, sku, quantity, requestOrderId, requestOrderNo, effectiveWarehouse,
                     "成品库存页面出库|sku=" + skuCode, trackingNo, expressCompany,
                     customerName, customerPhone, shippingAddress, finalOutstockType,
                     effectiveAreaId, effectiveAreaName, overrideSalesPrice, priceAdjustmentReason, platformCode);
@@ -309,7 +312,8 @@ public class FinishedOutstockHelper {
         outbound(outboundParams);
     }
 
-    private void recordProductOutstock(ProductSku sku,
+    private void recordProductOutstock(String outstockNo,
+                                       ProductSku sku,
                                        int quantity,
                                        String orderId,
                                        String orderNo,
@@ -329,7 +333,7 @@ public class FinishedOutstockHelper {
         ProductOutstock outstock = new ProductOutstock();
         LocalDateTime now = LocalDateTime.now();
         StyleInfo styleInfo = sku.getStyleId() == null ? null : styleInfoService.getById(sku.getStyleId());
-        outstock.setOutstockNo(buildOutstockNo(now));
+        outstock.setOutstockNo(outstockNo);
         outstock.setOrderId(orderId);
         outstock.setOrderNo(StringUtils.hasText(orderNo)
                 ? orderNo
@@ -543,6 +547,48 @@ public class FinishedOutstockHelper {
             return null;
         }
     }
+    /**
+     * D-360n：调拨出库回入库——调入方确认收货：增加SKU库存 + 标记出库记录已回入
+     */
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> transferInbound(String outstockId, String warehouseLocation, String warehouseAreaId) {
+        if (!StringUtils.hasText(outstockId)) throw new IllegalArgumentException("出库记录ID不能为空");
+        Long tenantId = UserContext.tenantId();
+        ProductOutstock outstock = productOutstockService.getById(outstockId.trim());
+        if (outstock == null || (outstock.getDeleteFlag() != null && outstock.getDeleteFlag() != 0)) {
+            throw new java.util.NoSuchElementException("出库记录不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(outstock.getTenantId(), "出库记录");
+        if (!"transfer_out".equals(outstock.getOutstockType())) {
+            throw new IllegalArgumentException("仅调拨出库支持回入库");
+        }
+        if ("INBOUND".equals(outstock.getTransferInboundStatus())) {
+            throw new IllegalStateException("该出库记录已回入，请勿重复操作");
+        }
+        String skuCode = outstock.getSkuCode();
+        int qty = outstock.getOutstockQuantity() != null ? outstock.getOutstockQuantity() : 0;
+        if (qty <= 0 || !StringUtils.hasText(skuCode)) {
+            throw new IllegalArgumentException("出库记录缺少商品编码或数量");
+        }
+        // 调入方确认收货：增加库存
+        productSkuService.updateStock(skuCode, qty);
+
+        ProductOutstock upd = new ProductOutstock();
+        upd.setId(outstock.getId());
+        upd.setTransferInboundStatus("INBOUND");
+        upd.setWarehouse(warehouseLocation != null ? warehouseLocation : outstock.getWarehouse());
+        upd.setWarehouseAreaId(warehouseAreaId);
+        productOutstockService.updateById(upd);
+        log.info("[TransferInbound] 调拨回入库成功 outstockId={} skuCode={} qty={}", outstockId, skuCode, qty);
+
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("success", true);
+        result.put("skuCode", skuCode);
+        result.put("quantity", qty);
+        result.put("message", "回入库成功，库存已增加");
+        return result;
+    }
+
 
     // D-001 修复：移除 Helper 层 @Transactional（调用方 FinishedInventoryOrchestrator.approveOutstock 已有事务保护）
     public Map<String, Object> approveOutstock(String id, String remark) {

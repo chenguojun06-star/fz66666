@@ -94,6 +94,9 @@ public class ProductOutstock {
     @TableField("platform_code")
     private String platformCode;
 
+    /** 调拨回入库状态（D-360n）：INBOUND=已回入 */
+    private String transferInboundStatus;
+
     // ==================== 收货字段（历史遗留，不再在出库流程使用）====================
 
     private String receiveStatus;

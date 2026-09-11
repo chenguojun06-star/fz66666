@@ -23,6 +23,7 @@ export interface OutstockRecord {
   paymentStatus?: string;
   settlementTime?: string;
   approvalStatus?: string;
+  transferInboundStatus?: string;
   approveByName?: string;
   approveTime?: string;
   platformCode?: string;

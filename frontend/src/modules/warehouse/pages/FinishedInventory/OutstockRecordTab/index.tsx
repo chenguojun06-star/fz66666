@@ -7,6 +7,7 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { useTablePagination } from '@/hooks';
 import api from '@/utils/api';
 import { useOutstockShare } from '../useOutstockShare';
+import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
 import ShareLinkModal from '../ShareLinkModal';
 import { getOutstockRecordColumns } from './outstockRecordColumns';
 import type { OutstockRecord } from './outstockRecordTypes';
@@ -93,7 +94,39 @@ const OutstockRecordTab: React.FC = () => {
     });
   };
 
-  const columns = getOutstockRecordColumns({ handleApprove, handleShare });
+  const [transferTarget, setTransferTarget] = useState<OutstockRecord | null>(null);
+  const [transferLocation, setTransferLocation] = useState('');
+  const [transferSubmitting, setTransferSubmitting] = useState(false);
+
+  // D-360n：调拨出库回入库（调入方确认收货）
+  const handleTransferInbound = (record: OutstockRecord) => {
+    setTransferTarget(record);
+    setTransferLocation('');
+  };
+  const submitTransferInbound = async () => {
+    if (!transferTarget) return;
+    if (!transferLocation.trim()) { message.warning('请选择或输入回入库位'); return; }
+    setTransferSubmitting(true);
+    try {
+      const res = await api.post('/warehouse/finished-inventory/transfer-inbound', {
+        outstockId: String(transferTarget.id),
+        warehouseLocation: transferLocation.trim(),
+      });
+      if (res?.code === 200) {
+        message.success('回入库成功，库存已增加');
+        setTransferTarget(null);
+        loadRecords();
+      } else {
+        message.error(res?.message || '回入库失败');
+      }
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '回入库失败');
+    } finally {
+      setTransferSubmitting(false);
+    }
+  };
+
+  const columns = getOutstockRecordColumns({ handleApprove, handleShare, handleTransferInbound });
 
   return (
     <Card
@@ -163,6 +196,25 @@ const OutstockRecordTab: React.FC = () => {
         wrapperStyle={{ paddingTop: 12 }}
         onChange={pagination.onChange}
       />
+
+      <Modal
+        title={`回入库 - ${transferTarget ? `${transferTarget.styleNo || ''} ${transferTarget.skuCode || ''}` : ''}`}
+        open={!!transferTarget}
+        onCancel={() => setTransferTarget(null)}
+        onOk={() => { void submitTransferInbound(); }}
+        confirmLoading={transferSubmitting}
+        okText="确认回入"
+        cancelText="取消"
+        width={480}
+      >
+        <p style={{ marginBottom: 12, color: 'var(--color-text-secondary)' }}>
+          调拨出库确认收货回入库：将把 {transferTarget?.outstockQuantity || 0} 件商品重新计入可用库存，并标记该出库记录已回入。
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ whiteSpace: 'nowrap' }}>回入库位：</span>
+          <WarehouseLocationAutoComplete value={transferLocation} onChange={setTransferLocation} style={{ flex: 1 }} />
+        </div>
+      </Modal>
 
       <ShareLinkModal
         open={shareModalOpen}

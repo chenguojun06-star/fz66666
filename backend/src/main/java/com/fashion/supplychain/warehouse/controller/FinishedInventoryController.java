@@ -86,6 +86,18 @@ public class FinishedInventoryController {
     /**
      * 确认收款
      */
+    /**
+     * D-360n：调拨出库回入库——调入方确认收货，增加库存并标记出库记录已回入
+     */
+    @PostMapping("/transfer-inbound")
+    public Result<Void> transferInbound(@RequestBody Map<String, Object> params) {
+        String outstockId = params.get("outstockId") == null ? "" : String.valueOf(params.get("outstockId")).trim();
+        String warehouseLocation = params.get("warehouseLocation") == null ? null : String.valueOf(params.get("warehouseLocation")).trim();
+        String warehouseAreaId = params.get("warehouseAreaId") == null ? null : String.valueOf(params.get("warehouseAreaId")).trim();
+        finishedInventoryOrchestrator.transferInbound(outstockId, warehouseLocation, warehouseAreaId);
+        return Result.success(null);
+    }
+
     @PostMapping("/confirm-payment")
     public Result<Void> confirmPayment(@RequestBody Map<String, Object> params) {
         Object idObj = params.get("id");

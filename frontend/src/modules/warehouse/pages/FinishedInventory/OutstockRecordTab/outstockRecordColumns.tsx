@@ -15,6 +15,7 @@ export type { OutstockRecord } from './outstockRecordTypes';
 export function getOutstockRecordColumns(handlers: {
   handleApprove: (id: number) => void;
   handleShare: (record: OutstockRecord) => void;
+  handleTransferInbound?: (record: OutstockRecord) => void;
 }): ColumnsType<OutstockRecord> {
   return [
     {
@@ -200,6 +201,16 @@ export function getOutstockRecordColumns(handlers: {
             label: '审核',
             primary: true,
             onClick: () => handlers.handleApprove(record.id),
+          });
+        }
+        // D-360n：调拨出库且未回入 → 提供「回入库」（调入方确认收货）
+        if (handlers.handleTransferInbound
+          && record.outstockType === 'transfer_out'
+          && record.transferInboundStatus !== 'INBOUND') {
+          actions.push({
+            key: 'transfer-inbound',
+            label: '回入库',
+            onClick: () => handlers.handleTransferInbound!(record),
           });
         }
         actions.push({

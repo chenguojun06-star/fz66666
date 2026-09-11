@@ -621,6 +621,13 @@ public class FinishedInventoryOrchestrator {
      * 确认收款
      */
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * D-360n：调拨出库回入库
+     */
+    public Map<String, Object> transferInbound(String outstockId, String warehouseLocation, String warehouseAreaId) {
+        return finishedOutstockHelper.transferInbound(outstockId, warehouseLocation, warehouseAreaId);
+    }
+
     public void confirmPayment(String id, BigDecimal paidAmount) {
         finishedOutstockHelper.confirmPayment(id, paidAmount);
     }
