@@ -790,8 +790,11 @@ public class FinanceTableMigrator {
 
         dbHelper.execSilently("ALTER TABLE t_product_outstock MODIFY COLUMN id VARCHAR(36)");
         if (!dbHelper.columnExists("t_product_outstock", "outstock_no")) {
+            // D-374：不再加 UNIQUE——出库单号是业务单号，一次出库的多行明细共用同一单号（D-360n），
+            // 唯一约束会导致多行明细插入第 2 行即撞唯一键（409）。存量唯一索引由
+            // V202709110300__drop_outstock_no_unique_index.sql 迁移删除。
             dbHelper.execSilently(
-                    "ALTER TABLE t_product_outstock ADD COLUMN outstock_no VARCHAR(50) NOT NULL UNIQUE COMMENT '出库单号'");
+                    "ALTER TABLE t_product_outstock ADD COLUMN outstock_no VARCHAR(50) NOT NULL COMMENT '出库单号'");
         }
         if (!dbHelper.columnExists("t_product_outstock", "outstock_type")) {
             dbHelper.execSilently(
