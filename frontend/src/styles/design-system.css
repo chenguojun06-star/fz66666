@@ -20,9 +20,7 @@
   --color-warning: #faad14; /* Ant Design 默认 warning */
   --color-danger: #ff4d4f;  /* Ant Design 默认 error */
   --color-danger-rgb: 255, 77, 79;
-  /* D-369：原 #52c41a（Ant 默认）在白底上对比度仅约 2.9:1，作为文字色看不清；
-     改用 Ant green-8 #237804（对比度约 6.5:1），保留 success 语义但文字清晰可读 */
-  --color-success: #237804;
+  --color-success: #52c41a; /* Ant Design 默认 success */
   --color-info: #722ed1;    /* Ant Design 默认 purple/info */
 
   /* 遮罩层 — 用于图片切换箭头、徽标背景等半透明场景 */
