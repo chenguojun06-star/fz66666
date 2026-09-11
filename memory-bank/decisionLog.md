@@ -1,7 +1,32 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-11（新增 D-362 成品入库/出库链路六连修 + 采购闭环补齐）
+> 最后更新：2026-09-11（新增 D-363 每日流水/财务总览数据链路四项修复）
+
+---
+
+## D-363：每日流水 + 财务总览数据链路四项修复（2026-09-11，用户截图反馈）
+
+用户反馈：①每日流水里出现一批"生产扫码-采购"（18:45 同一时刻 12 条，金额全"—"）；②采购流水没进财务总览；③数据链路没打通。
+
+**1. 每日流水混入系统编排记录（P0，已修）**
+根因：订单创建/进入采购阶段时，系统自动写伪扫码记录（`ProductionOrderScanRecordDomainService.upsertStageScanRecord`，requestId 前缀 `ORDER_CREATED:` / `ORDER_PROCUREMENT:`，scanType=orchestration），`DailyFlowOrchestrator.queryScan` 只过滤了 scanResult=success，把这类非生产、无金额的记录全量当"生产扫码"展示，污染笔数与数量合计。
+修复：queryScan 加 `.ne(scanType,"orchestration")` + 阶段名/工序名 NOT IN 系统阶段集合（下单/采购/物料采购/面辅料采购/备料/到料/订单创建/创建订单/开单/制单），**NULL 阶段/工序名视为真实记录保留**（避免误杀真实扫码）。
+
+**2. 采购阶段记录时间漂移（P0，已修 + 存量自愈）**
+根因：`ProductionOrderProgressRecomputeService.ensureProcurementRecord` 用 `order.getUpdateTime()` 作为 scanTime，且 `upsertStageScanRecord` 的 UPDATE 路径会覆盖 scanTime → 历史订单的采购记录每次重算都被拽到"当天"，表现为每日流水每天凭空多一批采购流水、订单时间轴采购节点时间错乱（截图 12 条全 18:45 即为此）。
+修复：①UPDATE 路径不再覆盖 scanTime（首次写入即锚定）；②时间锚点改 `order.getCreateTime()`；③新增 `correctStageRecordTimeIfDrifted()` 幂等自愈（仅当 scanTime 比锚点晚 >1 分钟才修正），随重算 Job 自动修复存量。
+
+**3. 财务总览看不到采购（P1，口径补齐）**
+核实结论：不是链路断裂，是**审批口径差**。采购到货/入库 → `MaterialReconciliationSyncOrchestrator.syncFromInbound` 生成对账单（status=**pending**，approvedAt 为空）→ 只有审批 approved/paid 才计入 `sumMaterialCost`。而现金流趋势图（D-273）走 dailyFlow，按采购 createTime 计入，**两套口径不同源**，用户自然觉得"总览里没有"。
+修复：不动 materialCost 口径（避免未确认金额混入利润），新增 `materialPending`（pending/verified 对账金额，按 createTime 区间），前端新增「待审批物料」卡 + 明细口径说明 + 跳转物料对账页。
+
+**4. 核实后判定无需改动的 3 项**
+- 一次出库 5 个出库单（FI20260911175205xxxx）：D-360n 已于 18:09 修增量，17:52 数据是修前产生；`ProductOutstockController.save` 是单条入口，前端无循环调用。
+- 每条 232,800：`totalAmount = salesPrice × 本行数量`（60 件 × 3880），5 单合计 1,164,000 为真实销售额，非金额虚增。
+- 入库 3 条 22.00：同一订单 3 个菲号各 22 件，`syncWarehouseScan` 按 orderId+bundleId+warehouse+success 判重生效，属正常数据。
+
+**验证**：后端 `mvn -o compile` BUILD SUCCESS；前端 `npx tsc --noEmit` 0 错误；safe-push 全过；commit fa8a35076 已推送。
 
 ---
 
