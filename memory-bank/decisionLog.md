@@ -1,7 +1,33 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-11（新增 D-369 金额/数量显示规范 + 数量不预填 + 绿色文字对比度）
+> 最后更新：2026-09-11（新增 D-370 到货/出库默认带出「当前需求数」；小数化重构改下轮）
+
+---
+
+## D-370：到货/出库数量默认带出「当前需求数」（2026-09-11，用户拍板）
+
+用户原话：「默认当前需求数，用户可以改，理解吗？不要是 0」。
+
+- **登记到货**：默认 = `采购数量 - 已到货数量`（需求数），按整数约束归一
+  `Math.max(1, Math.round(x))`——待到货 0.32 直接回填会低于 `min`，一打开就校验失败。
+- **物料出库**：默认按 FIFO 带出**最早一批**的可用量并勾选，用户可改；
+  多批次时其余批次留给「FIFO 自动分配」或手动填写（不能自动全填，否则会扣光库存）。
+- 覆盖三处且口径一致：`MaterialPurchaseDetail/hooks/useInboundModal`、
+  `NodeDetailModal/hooks/usePurchaseReceiveActions`、`warehouse/MaterialInventory/hooks/useOutboundActions`。
+
+**关于物料数量小数化（A 方案）——本轮已回退，改下轮：**
+- 动手改了 3 个实体（MaterialStock.quantity/lockedQuantity、MaterialInbound.inboundQuantity、
+  MaterialPurchase.arrivedQuantity → BigDecimal），编译器暴露 **34 个文件 / 89 处**适配点，
+  横跨采购 / 库存 / 对账 / 盘点 / 风控 / 看板 / 智能分析全链路；
+- 判断：属账目核心重构，本会话上下文不足以高质量完成 → **完整回退**，主分支保持 `mvn compile` BUILD SUCCESS；
+- ⚠️ 铁律：**迁移与实体必须同批上线**。若先跑迁移把列改 DECIMAL 而实体仍是 Integer，
+  MyBatis 读写会异常/截断，等于线上事故；
+- 下轮执行顺序：①Flyway 4 列 DECIMAL(18,4) ②实体改 BigDecimal ③编译驱动逐个适配 89 处
+  ④本地起库跑迁移 + 到货1.32→入库→出库→盘点→对账全链路冒烟 ⑤前端开放小数精度 2。
+
+**验证**：`npx tsc --noEmit` 0 错误、`npx vite build` ✓ built in 11.55s、`mvn -o compile` BUILD SUCCESS；
+commit c90506457 已推送。
 
 ---
 
