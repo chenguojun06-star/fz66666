@@ -76,12 +76,21 @@ export function useOutboundActions({
         materialCode: record.materialCode, color: record.color || undefined, size: record.size || undefined,
       });
       if (res?.code === 200 && Array.isArray(res.data)) {
-        setBatchDetails(res.data.map((item) => ({
+        const mapped = res.data.map((item) => ({
           batchNo: item.batchNo || '', warehouseLocation: item.warehouseLocation || '默认仓',
           color: item.color || '', availableQty: item.availableQty || 0, lockedQty: item.lockedQty || 0,
           inboundDate: item.inboundDate ? dayjs(item.inboundDate).format('YYYY-MM-DD') : '',
           expiryDate: item.expiryDate ? dayjs(item.expiryDate).format('YYYY-MM-DD') : undefined, outboundQty: 0,
-        })));
+        }));
+        // D-368：出库数量默认预填——只有单一批次时直接带出该批可用量并勾选，
+        // 多批次保持 0（避免误把库存全扣），用户可勾选批次或点「FIFO 自动分配」
+        if (mapped.length === 1 && Number(mapped[0].availableQty) > 0) {
+          mapped[0].outboundQty = mapped[0].availableQty;
+          setSelectedBatchNos([mapped[0].batchNo]);
+        } else {
+          setSelectedBatchNos([]);
+        }
+        setBatchDetails(mapped);
       } else { message.warning('未找到该物料的批次记录'); setBatchDetails([]); }
     } catch { message.error('加载批次明细失败'); setBatchDetails([]); }
   };

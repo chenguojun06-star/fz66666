@@ -5,7 +5,7 @@ import type { MessageInstance } from 'antd/es/message/interface';
 import type { HookAPI as ModalHookAPI } from 'antd/es/modal/useModal';
 import api from '@/utils/api';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
-import { normalizeStatus } from '../InlinePurchasePanel.helpers';
+import { normalizeStatus, isConfirmCompleteAvailable } from '../InlinePurchasePanel.helpers';
 import type { UserInfo } from '@/utils/AuthContext';
 import type { MaterialPurchase } from '@/types/production';
 
@@ -202,7 +202,7 @@ export const usePurchaseReturnActions = (params: UsePurchaseReturnActionsParams)
 
   // D-360h：确认完成前让用户选择物料去向（入库到仓库/直接使用/暂不登记），与采购列表页/详情页同口径
   const handleConfirmComplete = useCallback(() => {
-    const awaiting = purchases.filter(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
+    const awaiting = purchases.filter(p => isConfirmCompleteAvailable(p));
     if (awaiting.length === 0) {
       message.info('没有待确认完成的物料');
       return;
@@ -216,7 +216,7 @@ export const usePurchaseReturnActions = (params: UsePurchaseReturnActionsParams)
     warehouseLocation?: string;
     receiverName?: string;
   }) => {
-    const awaiting = purchases.filter(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
+    const awaiting = purchases.filter(p => isConfirmCompleteAvailable(p));
     if (awaiting.length === 0) return;
     setConfirmCompleteLoading(true);
     let successCount = 0;

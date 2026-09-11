@@ -49,3 +49,16 @@ export const sortPurchases = (arr: MaterialPurchase[]) =>
 
 export const normalizeStatus = (status?: MaterialPurchase['status'] | string) =>
   String(status || '').trim().toLowerCase();
+
+/**
+ * D-368：可「确认完成」的采购 = 已到货且未完成/取消。
+ * <p>
+ * 旧实现只认 status === 'awaiting_confirm'，状态机一旦没推进到该枚举
+ * （例如部分到货仍停留在 partial），工具栏动作就永久置灰——
+ * 用户看到"明明到货了，三个动作却全是灰的"。改为按业务事实（到货量 &gt; 0）判定。
+ */
+export const isConfirmCompleteAvailable = (p: MaterialPurchase | null | undefined): boolean => {
+  const s = normalizeStatus(p?.status);
+  if (s === 'completed' || s === 'cancelled') return false;
+  return Number((p as any)?.arrivedQuantity || 0) > 0;
+};

@@ -9,7 +9,7 @@ import { buildColorSummary, buildPurchaseSheetHtml, getOrderQtyTotal } from '@/m
 import { safePrint } from '@/utils/safePrint';
 import { PurchaseActionBar, PurchaseEditActions, PURCHASE_ACTION_LABELS } from '@/components/common/purchase/PurchaseActionBar';
 import type { MaterialPurchase } from '@/types/production';
-import { InlinePurchasePanelProps, normalizeStatus } from './InlinePurchasePanel.helpers';
+import { InlinePurchasePanelProps, normalizeStatus, isConfirmCompleteAvailable } from './InlinePurchasePanel.helpers';
 import { isPurchaseRowComplete } from './utils';
 import { buildDisplayColumns, buildEditColumns } from './InlinePurchasePanel.columns';
 import MaterialPickerModal from './MaterialPickerModal';
@@ -217,16 +217,16 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
                   onClick: handleReceiveAll,
                 }}
                 batchReturn={{
-                  disabled: !purchases.some(p => {
-                    const s = normalizeStatus(p.status);
-                    return (s === MATERIAL_PURCHASE_STATUS.RECEIVED || s === MATERIAL_PURCHASE_STATUS.PARTIAL || s === MATERIAL_PURCHASE_STATUS.COMPLETED)
-                      && Number(p?.returnConfirmed || 0) !== 1;
-                  }),
+                  // D-368：按业务事实判定（已到货且未回料确认），不再用状态白名单，
+                  // 否则 awaiting_confirm 等状态会被漏掉导致按钮永久灰
+                  disabled: !purchases.some(p => normalizeStatus(p.status) !== MATERIAL_PURCHASE_STATUS.CANCELLED
+                    && Number(p?.returnConfirmed || 0) !== 1
+                    && Number((p as any)?.arrivedQuantity || 0) > 0),
                   loading: actionLoading,
                   onClick: handleBatchReturn,
                 }}
                 confirmComplete={{
-                  disabled: !purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM),
+                  disabled: !purchases.some(p => isConfirmCompleteAvailable(p)),
                   loading: confirmCompleteLoading,
                   onClick: handleConfirmComplete,
                 }}
@@ -311,7 +311,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
 
       <ConfirmCompleteModal
         visible={confirmCompleteModalVisible}
-        targets={purchases.filter((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM)}
+        targets={purchases.filter((p) => isConfirmCompleteAvailable(p))}
         submitting={confirmCompleteLoading}
         onCancel={() => setConfirmCompleteModalVisible(false)}
         onConfirm={(options) => { void submitConfirmComplete(options); }}

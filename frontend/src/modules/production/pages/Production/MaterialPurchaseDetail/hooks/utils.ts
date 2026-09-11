@@ -100,18 +100,26 @@ export const filterPendingPurchases = (list: MaterialPurchase[]): MaterialPurcha
       String(p.id || '').trim()
   );
 
+/**
+ * D-368：可「回料确认」的行 = 已到货且未回料确认。
+ * 旧实现用状态枚举白名单（received/partial/completed），awaiting_confirm 等状态被漏掉，
+ * 出现"明明到货了，工具栏三个动作却全灰"的问题。改为按业务事实（到货量>0）判定。
+ */
 export const filterReturnablePurchases = (list: MaterialPurchase[]): MaterialPurchase[] =>
   list.filter((p) => {
     const s = String(p.status || '').toLowerCase();
-    return (
-      (s === MATERIAL_PURCHASE_STATUS.RECEIVED ||
-        s === MATERIAL_PURCHASE_STATUS.PARTIAL ||
-        s === MATERIAL_PURCHASE_STATUS.COMPLETED) &&
-      Number(p.returnConfirmed ? 1 : 0) !== 1
-    );
+    if (s === MATERIAL_PURCHASE_STATUS.CANCELLED) return false;
+    if (Number(p.returnConfirmed ? 1 : 0) === 1) return false;
+    return Number(p.arrivedQuantity || 0) > 0;
   });
 
+/**
+ * D-368：可「确认完成」的行 = 已到货但未完成的采购。
+ * 旧实现只认 awaiting_confirm 一个状态，状态机一旦没推进到该枚举，按钮就永久灰。
+ */
 export const filterAwaitingConfirmPurchases = (list: MaterialPurchase[]): MaterialPurchase[] =>
-  list.filter(
-    (p) => String(p.status || '').toLowerCase() === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM
-  );
+  list.filter((p) => {
+    const s = String(p.status || '').toLowerCase();
+    if (s === MATERIAL_PURCHASE_STATUS.COMPLETED || s === MATERIAL_PURCHASE_STATUS.CANCELLED) return false;
+    return Number(p.arrivedQuantity || 0) > 0;
+  });

@@ -85,7 +85,8 @@ export const usePurchaseReceiveActions = (params: UsePurchaseReceiveActionsParam
   // D-366b：登记到货（到货 + 去向一次做完）
   const handleInbound = useCallback(async (record: MaterialPurchase) => {
     setInboundModalRecord(record);
-    const maxQty = Math.max(0.01, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
+    // D-368：默认带出「待到货量」并规整为整数（输入框只收整数，0.32 回填会校验失败）
+    const maxQty = Math.max(1, Math.round(Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0)));
     inboundForm.setFieldsValue({ arrivedQuantity: maxQty, movementAction: 'inbound', warehouseLocation: '', remark: '' });
     setInboundModalVisible(true);
   }, [setInboundModalRecord, inboundForm, setInboundModalVisible]);
