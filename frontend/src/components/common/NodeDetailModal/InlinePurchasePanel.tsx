@@ -1,7 +1,9 @@
-import React, { useMemo } from 'react';
-import { Alert, App, Button, Card, Collapse, Form, Input, InputNumber, Space, Spin, Tag } from 'antd';
+import React, { useMemo, useState } from 'react';
+import { Alert, App, Button, Card, Collapse, Form, Input, InputNumber, Select, Space, Spin, Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
+import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
+import { useWarehouseAreaOptions } from '@/hooks/useWarehouseAreaOptions';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { buildColorSummary, buildPurchaseSheetHtml, getOrderQtyTotal } from '@/modules/production/pages/Production/MaterialPurchase/utils';
@@ -85,6 +87,16 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
     handleQualityIssue,
     handleStartEdit,
   } = h;
+
+  // D-366：到货入库的库位必须来自物料仓库布局（与「物料入库」页同源），不再手输
+  const { selectOptions: materialWarehouseOptions } = useWarehouseAreaOptions('MATERIAL');
+  const [inboundAreaId, setInboundAreaId] = useState<string | undefined>(undefined);
+  React.useEffect(() => {
+    if (inboundModalVisible) {
+      setInboundAreaId(undefined);
+      inboundForm.setFieldsValue({ warehouseLocation: '' });
+    }
+  }, [inboundModalVisible, inboundForm]);
 
   // 编辑模式列定义
   const editColumns = useMemo(
@@ -346,24 +358,42 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
           <Form.Item label="物料编码">{inboundModalRecord?.materialCode || '-'}</Form.Item>
           <Form.Item label="颜色/规格">{`${inboundModalRecord?.color || '-'} / ${inboundModalRecord?.specifications || '-'}`}</Form.Item>
           <Form.Item label="采购数量">{inboundModalRecord?.purchaseQuantity || 0} {inboundModalRecord?.unit || ''}</Form.Item>
-          <Form.Item label="已入库数量">{inboundModalRecord?.arrivedQuantity || 0} {inboundModalRecord?.unit || ''}</Form.Item>
-          <Form.Item label="待入库数量">{inboundModalRecord ? Math.max(0, Number(inboundModalRecord.purchaseQuantity || 0) - Number(inboundModalRecord.arrivedQuantity || 0)) : 0} {inboundModalRecord?.unit || ''}</Form.Item>
+          <Form.Item label="已到货数量">{inboundModalRecord?.arrivedQuantity || 0} {inboundModalRecord?.unit || ''}</Form.Item>
+          <Form.Item label="待到货数量">{inboundModalRecord ? Math.max(0, Number(inboundModalRecord.purchaseQuantity || 0) - Number(inboundModalRecord.arrivedQuantity || 0)) : 0} {inboundModalRecord?.unit || ''}</Form.Item>
           <Form.Item
-            label="本次入库数量"
+            label="本次到货数量"
             name="arrivedQuantity"
             rules={[
-              { required: true, message: '请输入入库数量' },
-              { type: 'number', min: 1, message: '数量必须大于 0' },
+              { required: true, message: '请输入到货数量' },
+              { type: 'number', min: 0.01, message: '数量必须大于 0' },
             ]}
           >
-            <InputNumber style={{ width: '100%' }} min={1} precision={0} addonAfter={inboundModalRecord?.unit || ''} />
+            {/* 物料按米/公斤计量，必须支持小数（原先 precision=0 只收整数） */}
+            <InputNumber style={{ width: '100%' }} min={0.01} step={0.01} precision={2} addonAfter={inboundModalRecord?.unit || ''} />
+          </Form.Item>
+          <Form.Item label="物料仓库" required>
+            <Select
+              placeholder="请选择物料仓库"
+              options={materialWarehouseOptions}
+              value={inboundAreaId}
+              onChange={(v) => {
+                setInboundAreaId(v);
+                inboundForm.setFieldsValue({ warehouseLocation: '' });
+              }}
+              allowClear
+            />
           </Form.Item>
           <Form.Item
-            label="仓库库位"
+            label="库位"
             name="warehouseLocation"
-            rules={[{ required: true, message: '请输入仓库库位（如 A区-01）' }]}
+            rules={[{ required: true, message: '请选择库位' }]}
           >
-            <Input placeholder="请输入库位（如 A区-01）" />
+            <WarehouseLocationAutoComplete
+              warehouseType="MATERIAL"
+              areaId={inboundAreaId}
+              placeholder="请选择库位"
+              style={{ width: '100%' }}
+            />
           </Form.Item>
           <Form.Item
             label="备注"
