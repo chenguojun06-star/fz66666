@@ -119,21 +119,18 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
               styleCover={selectedStage.record.cover}
               coverSize={140}
               /**
-               * D-372：码数必须用「样衣生产快照的实际色码」（sampleSnapshot.color/size/quantity），
-               * 不能再用 selectedStage.record.size——那是款式的全码数串，
-               * 会被矩阵拆成 XS/S/M/L/XL 多列且数量对不上（显示全 0、总数却是 1）。
+               * D-372/D-373：码数必须用「样衣生产快照的实际色码」（sampleSnapshot.color/size/quantity）。
+               * D-373 修订：**删除 record.size 回退分支**——那是款式的全码数串，塞进矩阵会被拆成
+               * XS/S/M/L/XL 多列且数量对不上（审核/入库节点恰无快照时走回退 → 再次显示错乱）。
+               * 无快照时直接不渲染矩阵（hideSizeBlockWhenNoRealSize 生效），只显示款号/款名/颜色。
                */
               sizeItems={
                 sample.sampleSnapshot?.size && Number(sample.sampleSnapshot?.quantity || 0) > 0
                   ? [{ size: String(sample.sampleSnapshot.size), quantity: Number(sample.sampleSnapshot.quantity) || 0 }]
-                  : (selectedStage.record.size && Number(selectedStage.record.sampleQuantity || 0) > 0
-                    ? [{ size: String(selectedStage.record.size), quantity: Number(selectedStage.record.sampleQuantity) || 0 }]
-                    : undefined)
+                  : undefined
               }
               totalQuantity={
-                Number(sample.sampleSnapshot?.quantity || 0) > 0
-                  ? Number(sample.sampleSnapshot?.quantity)
-                  : (Number(selectedStage.record.sampleQuantity || 0) > 0 ? Number(selectedStage.record.sampleQuantity) : undefined)
+                Number(sample.sampleSnapshot?.quantity || 0) > 0 ? Number(sample.sampleSnapshot?.quantity) : undefined
               }
               hideSizeBlockWhenNoRealSize
               /* 矩阵区已有「总下单数」，隐藏字段区的「下单数量」避免重复展示 */

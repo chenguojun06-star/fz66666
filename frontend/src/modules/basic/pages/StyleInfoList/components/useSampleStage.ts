@@ -129,7 +129,9 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
   }, []);
 
   const reloadSampleStage = useCallback(async () => {
-    if (!selectedStage || selectedStage.stage.key !== 'sample') return;
+    // D-373：审核/入库节点同样需要样衣快照——弹窗头部色码矩阵取快照的实际色码，
+    // 不加载就会走 record.size（款式全码串）回退 → 码数显示错乱
+    if (!selectedStage || !['sample', 'confirm', 'warehousing'].includes(selectedStage.stage.key)) return;
     setSampleSnapshotLoading(true);
     try {
       const { list, stale } = await loadSampleSnapshotList(selectedStage.record);
@@ -143,7 +145,7 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
   }, [loadSampleSnapshotList, onRefresh, selectedStage]);
 
   useEffect(() => {
-    if (selectedStage && selectedStage.stage.key === 'sample') {
+    if (selectedStage && ['sample', 'confirm', 'warehousing'].includes(selectedStage.stage.key)) {
       void reloadSampleStage();
     } else {
       setSampleSnapshotList([]);
