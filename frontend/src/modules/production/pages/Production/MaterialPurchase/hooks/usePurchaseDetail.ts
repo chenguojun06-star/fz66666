@@ -62,8 +62,48 @@ export function usePurchaseDetail({ currentPurchase, visible, dialogMode }: UseP
       setDetailPurchases(records);
 
       const parsedLines = parseProductionOrderLines(orderRecord);
+
+      // D-360：大货订单 orderDetails 为空/行数 0 时，按款号查 StyleInfo.sizeColorConfig 解析颜色×码数矩阵兜底
+      // （与 loadDetailByStyleNo 同款解析口径，保证打印/头部矩阵有数量，修复"有颜色、数量码数都没有"）
+      let fallbackLines: Array<{ color: string; size: string; quantity: number }> = [];
+      let styleCoverFallback: string | null | undefined;
+      if (!parsedLines.length && orderRecord?.styleNo) {
+        try {
+          const styleRes = await api.get<any>('/style/info/list', { params: { page: 1, pageSize: 5, styleNo: String(orderRecord.styleNo).trim() } });
+          const styleRecords: Array<Record<string, unknown>> = (styleRes?.code === 200 && Array.isArray(styleRes?.data?.records)) ? styleRes.data.records : [];
+          const styleRecord = styleRecords.find((r) => String(r?.styleNo || '').trim() === String(orderRecord?.styleNo || '').trim()) || styleRecords[0] || null;
+          if (styleRecord) {
+            const matrix = (styleRecord.sizeColorConfig || styleRecord.sizeColorMatrix) as Record<string, unknown> | string | undefined;
+            let parsedMatrix: { sizes?: string[]; matrixRows?: Array<Record<string, unknown>> } | null = null;
+            if (matrix && typeof matrix === 'string') {
+              try { parsedMatrix = JSON.parse(matrix); } catch { /* ignore */ }
+            } else if (matrix && typeof matrix === 'object') {
+              parsedMatrix = matrix as { sizes?: string[]; matrixRows?: Array<Record<string, unknown>> };
+            }
+            const sizes = Array.isArray(parsedMatrix?.sizes) ? (parsedMatrix!.sizes as string[]) : [];
+            const rows = Array.isArray(parsedMatrix?.matrixRows) ? (parsedMatrix!.matrixRows as Array<Record<string, unknown>>) : [];
+            rows.forEach((row) => {
+              const rowColor = String(row?.color || '').trim();
+              const quantities = Array.isArray(row?.quantities) ? (row.quantities as number[]) : [];
+              sizes.forEach((sz, idx) => {
+                const q = Number(quantities[idx] || 0);
+                if (q > 0) {
+                  fallbackLines.push({ color: rowColor, size: String(sz || '').trim(), quantity: q });
+                }
+              });
+            });
+            styleCoverFallback = String(styleRecord?.coverImage || styleRecord?.styleCover || '').trim() || null;
+          }
+        } catch { /* 款式信息不可用时走原兜底 */ }
+      }
+
       if (parsedLines.length) {
         setDetailOrderLines(parsedLines);
+      } else if (fallbackLines.length) {
+        setDetailOrderLines(fallbackLines);
+        if (orderRecord) {
+          setDetailOrder({ ...orderRecord, styleCover: styleCoverFallback ?? orderRecord.styleCover });
+        }
       } else if (orderRecord) {
         const fc = String(orderRecord?.color || '').trim();
         const fs = String(orderRecord?.size || '').trim();

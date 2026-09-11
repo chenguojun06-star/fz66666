@@ -298,7 +298,8 @@ export const buildPurchaseSheetHtml = (
 
   const now = new Date();
   const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  const styleImageUrl = getFullAuthedFileUrl(detailOrder?.styleCover);
+  // D-360：款式图回退 currentPurchase.styleCover（后端 fillStyleCover 填充），detailOrder 为空或缺失时仍能显示
+  const styleImageUrl = getFullAuthedFileUrl(detailOrder?.styleCover || currentPurchase?.styleCover);
 
   return `
       <!doctype html>

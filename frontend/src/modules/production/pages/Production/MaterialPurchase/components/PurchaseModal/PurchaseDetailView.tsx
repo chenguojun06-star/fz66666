@@ -1,9 +1,9 @@
-import React from 'react';
-import { Alert, Button, Card, Dropdown, Space, Tag } from 'antd';
-import { UploadOutlined, RollbackOutlined, ExclamationCircleOutlined, DownOutlined } from '@ant-design/icons';
-import PurchaseDocRecognizeModal from '../PurchaseDocRecognizeModal';
+import React, { useState } from 'react';
+import { Alert, Button, Card, Tag } from 'antd';
+import { RollbackOutlined, ExclamationCircleOutlined, FileImageOutlined } from '@ant-design/icons';
 import PurchaseReturnModal from '../PurchaseReturnModal';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
+import { PurchaseActionBar, PurchaseEditActions } from '@/components/common/purchase/PurchaseActionBar';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { buildColorSummary, getOrderQtyTotal } from '../../utils';
@@ -14,7 +14,7 @@ import {
 import { usePurchaseDetailData } from './usePurchaseDetailData';
 import EditablePurchaseTable from './components/EditablePurchaseTable';
 import PurchaseDetailCollapse from './components/PurchaseDetailCollapse';
-import PurchaseDocHistoryCard from './components/PurchaseDocHistoryCard';
+import PurchaseDocDrawer from '../PurchaseDocDrawer';
 import InvoiceUploadCard from './components/InvoiceUploadCard';
 import ArrivalFormModal from './components/ArrivalFormModal';
 import RejectPurchaseModal from './components/RejectPurchaseModal';
@@ -46,6 +46,9 @@ interface PurchaseDetailViewProps {
   onConfirmComplete?: () => void;
   confirmCompleteSubmitting?: boolean;
   onRefresh?: () => void;
+  /** 打印/下载采购单（D-360c，收进 PurchaseActionBar 打印/下载采购单入口） */
+  onGeneratePurchaseSheet?: (autoPrint: boolean) => void;
+  onDownloadPurchaseSheet?: () => void;
 }
 
 const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
@@ -74,6 +77,8 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   onConfirmComplete,
   confirmCompleteSubmitting,
   onRefresh,
+  onGeneratePurchaseSheet,
+  onDownloadPurchaseSheet,
 }) => {
   const data = usePurchaseDetailData({
     currentPurchase,
@@ -83,6 +88,8 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
     isSamplePurchase,
     onRefresh,
   });
+
+  const [docDrawerOpen, setDocDrawerOpen] = useState(false);
 
   const handleArrival = React.useCallback((record: MaterialPurchaseType) => {
     const maxQty = Math.max(0.01, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
@@ -156,75 +163,67 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         title={`需要采购的面辅料（${data.displayData.length}项）`}
         loading={detailLoading}
         extra={
-          <Space wrap>
-            {!data.editing && (
-              <>
-                <Button
-                  icon={<UploadOutlined />}
-                  onClick={() => data.setDocRecognizeOpen(true)}
-                  disabled={hasReturnConfirmed}
-                >
-                  上传采购单
-                </Button>
-                {/* D-119：批量动作集成悬停下拉（与样衣明细页 D-118 同模式），消除与底部按钮的重复平铺 */}
-                <Dropdown
-                  trigger={['hover']}
-                  menu={{
-                    items: [
-                      {
-                        key: 'receive-all',
-                        label: '采购全部',
-                        disabled: detailFrozen || !hasPendingForReceiveAll || !data.canProcure || hasReturnConfirmed,
-                        onClick: onReceiveAll,
-                      },
-                      {
-                        key: 'batch-return',
-                        label: '批量回料确认',
-                        disabled: detailFrozen || !hasReceiveStatusForBatch,
-                        onClick: onBatchReturn,
-                      },
-                      {
-                        key: 'confirm-complete',
-                        label: confirmCompleteSubmitting ? '确认回料完成（处理中…）' : (hasAwaitingConfirm ? '确认回料完成' : '确认回料完成（无待完成项）'),
-                        disabled: confirmCompleteSubmitting || !hasAwaitingConfirm,
-                        onClick: onConfirmComplete,
-                      },
-                    ],
-                  }}
-                >
-                  <Button disabled={detailFrozen || (!hasPendingForReceiveAll && !hasReceiveStatusForBatch && !hasAwaitingConfirm)}>
-                    批量操作 <DownOutlined />
+          data.editing ? (
+            <PurchaseEditActions
+              onAdd={data.addRow}
+              onSave={data.saveAll}
+              saving={data.saving}
+              onCancel={data.cancelEditing}
+            />
+          ) : (
+            // D-360：按钮统一一行（跟随样衣 PurchaseActionBar 布局），顶部不再散落按钮
+            <PurchaseActionBar
+              receive={{
+                disabled: detailFrozen || !hasPendingForReceiveAll || !data.canProcure || hasReturnConfirmed,
+                title: !hasPendingForReceiveAll ? '无可领取项' : undefined,
+                onClick: onReceiveAll,
+              }}
+              batchReturn={{
+                disabled: detailFrozen || !hasReceiveStatusForBatch,
+                onClick: onBatchReturn,
+              }}
+              confirmComplete={{
+                disabled: confirmCompleteSubmitting || !hasAwaitingConfirm,
+                loading: confirmCompleteSubmitting,
+                title: hasAwaitingConfirm ? undefined : '无待完成项',
+                onClick: () => onConfirmComplete?.(),
+              }}
+              edit={{
+                disabled: hasReturnConfirmed,
+                onClick: data.handleStartEdit,
+              }}
+              extraTags={data.bomIncomplete ? (
+                <Tag icon={<ExclamationCircleOutlined />} color="warning">
+                  请先编辑物料信息
+                </Tag>
+              ) : null}
+              sheet={{
+                disabled: detailLoading || !detailPurchases.length,
+                onPrint: () => onGeneratePurchaseSheet?.(true),
+                onDownload: () => onDownloadPurchaseSheet?.(),
+              }}
+              extraButtons={(
+                <>
+                  <Button
+                    size="small"
+                    icon={<FileImageOutlined />}
+                    onClick={() => setDocDrawerOpen(true)}
+                    disabled={hasReturnConfirmed}
+                  >
+                    采购单据
                   </Button>
-                </Dropdown>
-                {data.bomIncomplete && (
-                  <Tag icon={<ExclamationCircleOutlined />} color="warning" style={{ marginLeft: 4 }}>
-                    请先编辑物料信息
-                  </Tag>
-                )}
-                <Button
-                  icon={<RollbackOutlined />}
-                  disabled={detailFrozen || !hasReceiveStatusForReturn}
-                  onClick={() => data.setReturnModalOpen(true)}
-                >
-                  采购退货
-                </Button>
-                <Button
-                  type="primary"
-                  onClick={data.handleStartEdit}
-                  disabled={hasReturnConfirmed}
-                >
-                  编辑面辅料
-                </Button>
-              </>
-            )}
-            {data.editing && (
-              <>
-                <Button type="dashed" onClick={data.addRow}>添加物料</Button>
-                <Button type="primary" loading={data.saving} onClick={data.saveAll}>保存</Button>
-                <Button onClick={data.cancelEditing}>取消</Button>
-              </>
-            )}
-          </Space>
+                  <Button
+                    size="small"
+                    icon={<RollbackOutlined />}
+                    disabled={detailFrozen || !hasReceiveStatusForReturn}
+                    onClick={() => data.setReturnModalOpen(true)}
+                  >
+                    采购退货
+                  </Button>
+                </>
+              )}
+            />
+          )
         }
       >
         {data.editing ? (
@@ -276,7 +275,14 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         )}
       </Card>
 
-      <PurchaseDocHistoryCard docList={data.docList} docsLoading={data.docsLoading} />
+      {/* D-360f：采购单据统一入口——上传/识别 + 历史单据缩略图（50% 侧滑抽屉），替代原散落的「上传采购单」弹窗与历史卡片 */}
+      <PurchaseDocDrawer
+        open={docDrawerOpen}
+        orderNo={String(currentPurchase?.orderNo || '').trim() || undefined}
+        styleNo={String(currentPurchase?.orderNo || '').trim() ? undefined : (String(currentPurchase?.styleNo || '').trim() || undefined)}
+        onClose={() => setDocDrawerOpen(false)}
+        onChanged={onRefresh}
+      />
 
       <InvoiceUploadCard
         invoiceUrls={data.invoiceUrls}
@@ -301,16 +307,6 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
         form={data.arrivalForm}
         onSubmit={data.handleArrivalSubmit}
         onCancel={() => { data.setArrivalTarget(null); data.arrivalForm.resetFields(); }}
-      />
-
-      <PurchaseDocRecognizeModal
-        open={data.docRecognizeOpen}
-        orderNo={String(currentPurchase?.orderNo || '').trim() || undefined}
-        onCancel={() => data.setDocRecognizeOpen(false)}
-        onSuccess={async () => {
-          data.setDocRecognizeOpen(false);
-          onRefresh?.();
-        }}
       />
 
       {/* 采购退货弹窗 */}

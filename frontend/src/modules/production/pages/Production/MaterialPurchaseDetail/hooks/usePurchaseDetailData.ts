@@ -2,10 +2,38 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { App } from 'antd';
 import api from '@/utils/api';
 import { splitStyleOptions } from '@/utils/styleOptions';
+import { productionPatternApi } from '@/services/production/productionApi';
 import type { MaterialPurchase, ProductionOrder } from '@/types/production';
 import { normalizeMaterialQuantity } from '../../MaterialPurchase/utils';
 import type { ApiResult, PageResult, MaterialPurchaseListResponse, PurchaseListParams } from './types';
 import { REQUIRED_FIELDS, isPurchaseRowComplete } from './types';
+
+/**
+ * 将款式/样衣生产的 sizeColorConfig/sizeColorMatrix（{sizes, matrixRows:[{color, quantities}]}）
+ * 解析为 {color,size,quantity} 行数组，用于样衣打印采购单的"下单明细"矩阵与数量兜底。
+ */
+const parseSizeColorMatrix = (matrix: unknown): Array<{ color: string; size: string; quantity: number }> => {
+  const lines: Array<{ color: string; size: string; quantity: number }> = [];
+  let parsedMatrix: { sizes?: string[]; matrixRows?: Array<Record<string, unknown>> } | null = null;
+  if (matrix && typeof matrix === 'string') {
+    try { parsedMatrix = JSON.parse(matrix); } catch { /* ignore */ }
+  } else if (matrix && typeof matrix === 'object') {
+    parsedMatrix = matrix as { sizes?: string[]; matrixRows?: Array<Record<string, unknown>> };
+  }
+  const sizes = Array.isArray(parsedMatrix?.sizes) ? (parsedMatrix!.sizes as string[]) : [];
+  const rows = Array.isArray(parsedMatrix?.matrixRows) ? (parsedMatrix!.matrixRows as Array<Record<string, unknown>>) : [];
+  rows.forEach((row) => {
+    const rowColor = String(row?.color || '').trim();
+    const quantities = Array.isArray(row?.quantities) ? (row.quantities as number[]) : [];
+    sizes.forEach((sz, idx) => {
+      const q = Number(quantities[idx] || 0);
+      if (q > 0) {
+        lines.push({ color: rowColor, size: String(sz || '').trim(), quantity: q });
+      }
+    });
+  });
+  return lines;
+};
 
 export interface PurchaseDetailDataState {
   loading: boolean;
@@ -27,6 +55,8 @@ export interface PurchaseDetailDataState {
   /** 样衣采购场景：BOM 阶段已完成，编辑/删除需先在样衣详情退回 */
   sampleBomLocked: boolean;
   sampleBomCompletedTime: string;
+  /** D-360：样衣模式颜色×码数矩阵行（打印采购单"下单明细"矩阵与数量兜底） */
+  sampleOrderLines: Array<{ color: string; size: string; quantity: number }>;
 }
 
 export function usePurchaseDetailData(
@@ -43,6 +73,8 @@ export function usePurchaseDetailData(
   const [sampleBomCompletedTime, setSampleBomCompletedTime] = useState('');
   // 样衣采购场景：订单为空，抬头(款名/图片/颜色)由款式信息回填，避免打印/显示为"-"
   const [sampleStyle, setSampleStyle] = useState<{ styleName?: string; styleCover?: string | null; color?: string }>({});
+  // D-360：样衣模式颜色×码数矩阵行（打印采购单"下单明细"矩阵与数量兜底）
+  const [sampleOrderLines, setSampleOrderLines] = useState<Array<{ color: string; size: string; quantity: number }>>([]);
 
   const colorList = useMemo(() => {
     const raw = order?.color || '';
@@ -161,19 +193,37 @@ export function usePurchaseDetailData(
       // 样衣采购数量按样衣件数计算（如1件=1米），与大货订单需求（如6件=6米）口径不同，
       // 混用会导致"面料6米/辅料1米"这类数据不吻合（D-106）。
 
-      // 样衣采购场景：查询款式BOM阶段状态，已完成则锁定编辑（需在样衣详情退回后编辑）
+      // 样衣采购场景：查询款式BOM阶段状态 + 用款式的 sizeColorConfig 构造颜色×码数矩阵（打印"下单明细"数量兜底）
       if (sampleMode && styleIdParam) {
         try {
-          const styleRes = await api.get<{ code: number; data: { bomCompletedTime?: string } }>(
+          const styleRes = await api.get<{ code: number; data: any }>(
             `/style/info/${encodeURIComponent(String(styleIdParam))}`,
           );
           if (styleRes?.code === 200) {
-            setSampleBomCompletedTime(String((styleRes.data as any)?.bomCompletedTime || ''));
+            const styleData = styleRes.data as any;
+            setSampleBomCompletedTime(String(styleData?.bomCompletedTime || ''));
             setSampleStyle({
-              styleName: String((styleRes.data as any)?.styleName || ''),
-              styleCover: ((styleRes.data as any)?.styleCover || null) as string | null,
-              color: String((styleRes.data as any)?.color || ''),
+              styleName: String(styleData?.styleName || ''),
+              styleCover: (styleData?.styleCover || null) as string | null,
+              color: String(styleData?.color || ''),
             });
+            // D-360：优先用款式自身 sizeColorConfig；为空再兜底样衣生产详情的 sizeColorMatrix
+            const styleLines = parseSizeColorMatrix(styleData?.sizeColorConfig || styleData?.sizeColorMatrix);
+            if (styleLines.length) {
+              setSampleOrderLines(styleLines);
+            } else if (records[0]?.patternProductionId) {
+              try {
+                const patternRes = await productionPatternApi.getPatternDetail(String(records[0].patternProductionId));
+                const p = patternRes?.data as any;
+                if (patternRes?.code === 200 && p) {
+                  const patternLines = parseSizeColorMatrix(p?.sizeColorMatrix || p?.sizeColorConfig);
+                  if (patternLines.length) setSampleOrderLines(patternLines);
+                  if (!styleData?.styleCover && p?.coverImage) {
+                    setSampleStyle((prev) => ({ ...prev, styleCover: String(p.coverImage || '') || prev.styleCover }));
+                  }
+                }
+              } catch { /* 样衣生产详情不可用时忽略 */ }
+            }
           } else {
             setSampleBomCompletedTime('');
           }
@@ -230,5 +280,6 @@ export function usePurchaseDetailData(
     headerColor,
     sampleBomLocked,
     sampleBomCompletedTime,
+    sampleOrderLines,
   };
 }

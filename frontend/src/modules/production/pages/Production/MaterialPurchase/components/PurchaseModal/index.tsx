@@ -1,9 +1,7 @@
 import React, { useMemo } from 'react';
-import { Button, Dropdown, Drawer, Space, Tooltip } from 'antd';
-import { DownOutlined } from '@ant-design/icons';
+import { Button, Drawer } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
-import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import PurchaseDetailView from './PurchaseDetailView';
 import PurchaseCreateForm from './PurchaseCreateForm';
 import PurchasePreviewView from './PurchasePreviewView';
@@ -102,55 +100,14 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
     return Array.from(colors);
   }, [detailOrderLines]);
 
-  // 详情模式：确认完成 / 采购单生成 / 关闭 移入弹窗顶部（header extra），不再占用底部 footer
-  const getViewHeader = () => {
-    return (
-      <Space wrap>
-        <Button
-          key="confirmComplete"
-          disabled={!detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM) || detailPurchases.some(p => Number(p?.returnConfirmed || 0) === 1)}
-          loading={confirmCompleteSubmitting}
-          onClick={onConfirmComplete}
-        >
-          确认完成
-        </Button>
-        <Dropdown
-          key="sheet"
-          trigger={['click']}
-          menu={{
-            items: [
-              {
-                key: 'print',
-                label: '打印采购单',
-                onClick: () => onGeneratePurchaseSheet(true),
-              },
-              {
-                key: 'download',
-                label: '下载采购单',
-                onClick: () => onDownloadPurchaseSheet(),
-              },
-            ],
-          }}
-        >
-          {/* D-333：打印/下载是只读操作，回料确认后仍应可用——只在没有采购数据时禁用 */}
-          {/* D-360c：原「采购单生成」无箭头且不提打印下载，用户找不到入口——改可发现的显式标签 */}
-          <Tooltip title="点击选择打印或下载采购单">
-            <Button disabled={detailLoading || !detailPurchases.length}>
-              打印/下载采购单 <DownOutlined />
-            </Button>
-          </Tooltip>
-        </Dropdown>
+  const getFooter = () => {
+    // 详情模式按钮已统一收进「面辅料」卡片操作条（PurchaseActionBar），footer 只留关闭
+    if (dialogMode === 'view') {
+      return [
         <Button key="close" type="primary" onClick={onCancel}>
           关闭
         </Button>
-      </Space>
-    );
-  };
-
-  const getFooter = () => {
-    // 详情模式按钮已上移，底部 footer 不再渲染
-    if (dialogMode === 'view') {
-      return null;
+      ];
     }
 
     if (dialogMode === 'preview') {
@@ -186,7 +143,6 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
       open={visible}
       onClose={onCancel}
       placement="right"
-      extra={dialogMode === 'view' ? getViewHeader() : undefined}
       styles={{
         wrapper: { width: isMobile ? '96vw' : '85%' },
         body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
@@ -224,6 +180,8 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
             isOrderFrozenForRecord={isOrderFrozenForRecord}
             onWarehousePick={onWarehousePick}
             onRefresh={onRefresh}
+            onGeneratePurchaseSheet={onGeneratePurchaseSheet}
+            onDownloadPurchaseSheet={onDownloadPurchaseSheet}
           />
         ) : (
           <PurchaseCreateForm form={form} orderColors={orderColors} />

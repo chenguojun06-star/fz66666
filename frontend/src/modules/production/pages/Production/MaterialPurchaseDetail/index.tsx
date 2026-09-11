@@ -68,6 +68,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
     handleOpenMaterialModal, handleUseMaterial, handleCreateMaterial,
     colorList, isMultiColor, bomIncomplete, missingColors,
     sampleBomLocked, sampleBomCompletedTime,
+    sampleOrderLines,
     loadData,
   } = usePurchaseDetailPage(styleNo, orderNo, sampleMode, propStyleId);
 
@@ -435,6 +436,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         styleCover={headerStyleCover}
         color={headerColor}
         materialArrivalRate={materialArrivalRate}
+        orderLines={sampleOrderLines}
       />
     </div>
   );

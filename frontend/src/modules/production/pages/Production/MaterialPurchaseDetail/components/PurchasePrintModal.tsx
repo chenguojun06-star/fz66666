@@ -24,6 +24,8 @@ interface PurchasePrintModalProps {
   autoDownload?: boolean;
   /** D-360f：租户/公司名，打印页眉展示 */
   companyName?: string;
+  /** D-360：样衣模式下订单为空，由外部传入颜色×码数矩阵行（来自款式 sizeColorConfig），优先级高于 order 解析 */
+  orderLines?: Array<{ color: string; size: string; quantity: number }>;
 }
 
 const money = (v: unknown) => {
@@ -38,7 +40,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
   open, onClose, order, purchaseList,
   orderNo: orderNoProp, styleNo: styleNoProp, styleName: styleNameProp,
   styleCover: styleCoverProp, color: colorProp, materialArrivalRate,
-  autoDownload, companyName,
+  autoDownload, companyName, orderLines,
 }) => {
   const { message } = App.useApp();
   const orderNo = String(orderNoProp ?? order?.orderNo ?? order?.productionOrderNo ?? '').trim();
@@ -50,16 +52,17 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
   const styleCover = (styleCoverProp ?? order?.styleCover ?? null) as string | null;
   const color = String(colorProp ?? order?.color ?? '').trim();
 
-  // 下单明细颜色×尺码矩阵
+  // 下单明细颜色×尺码矩阵（orderLines 优先：样衣模式无订单，由款式 sizeColorConfig 生成）
   const matrix = useMemo(() => {
-    const lines = parseProductionOrderLines(order).filter((l) => String(l.size || '').trim());
+    const source = (orderLines && orderLines.length ? orderLines : parseProductionOrderLines(order)) as Array<{ color: string; size: string; quantity: number }>;
+    const lines = source.filter((l) => String(l.size || '').trim());
     if (!lines.length) return null;
     const colors = Array.from(new Set(lines.map((l) => String(l.color || '').trim()).filter(Boolean)));
     const sizes = sortSizeNames(Array.from(new Set(lines.map((l) => String(l.size || '').trim()))));
     const cell = (c: string, s: string) =>
       lines.reduce((sum, l) => (String(l.color || '').trim() === c && String(l.size || '').trim() === s ? sum + toNumberSafe(l.quantity) : sum), 0);
     return { colors, sizes, cell };
-  }, [order]);
+  }, [order, orderLines]);
 
   // 数量做小数归一：0.9+0.88 这类样衣数量在 JS 浮点下会产生 2.6799999... 长尾巴，统一保留2位小数
   const num = (v: unknown, d = 2) => { const n = Number(v); return Number.isFinite(n) ? Number(n.toFixed(d)) : 0; };
