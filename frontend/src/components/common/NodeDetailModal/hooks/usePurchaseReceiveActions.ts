@@ -40,7 +40,7 @@ export const usePurchaseReceiveActions = (params: UsePurchaseReceiveActionsParam
     receiveModalRecord,
     setReceiveModalRecord,
     setReceiveModalVisible,
-    receiveForm,
+    // D-366b 后领取不再需要数量表单，receiveForm 已不再使用（保留在 params 供外部传入）
     setInboundModalRecord,
     inboundForm,
     setInboundModalVisible,

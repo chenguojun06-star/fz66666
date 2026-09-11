@@ -202,7 +202,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
       // 静默处理：onclose 会处理重连
     };
 
-    ws.onclose = (event) => {
+    ws.onclose = () => {
       setConnected(false);
       stopHeartbeat();
 

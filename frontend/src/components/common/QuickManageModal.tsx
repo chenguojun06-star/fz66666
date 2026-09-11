@@ -161,7 +161,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
       setLoading(false);
     }
     return result;
-  }, [mode, dictType, message]);
+  }, [mode, dictType, message, supplierType]);
 
   useEffect(() => {
     if (open) {

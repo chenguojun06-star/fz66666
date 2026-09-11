@@ -96,7 +96,9 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   // D-206：基础属性库——颜色/码数成组选择（与样衣开发同组件）
   const [attrLibOpen, setAttrLibOpen] = useState(false);
-  const [attrLibTarget, setAttrLibTarget] = useState<'color' | 'size'>('size');
+  // attrLibTarget 只用于打开弹层时区分来源（读取处用 handleApplyAttrGroup 的 groupKey），
+  // 故只保留 setter，避免 ESLint 未使用变量报错
+  const [, setAttrLibTarget] = useState<'color' | 'size'>('size');
   const handleApplyAttrGroup = (groupKey: string, values: string[], mode: 'replace' | 'append') => {
     const incoming = values.map((v) => String(v || '').trim()).filter(Boolean);
     if (!incoming.length) return;
