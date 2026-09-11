@@ -225,25 +225,65 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         <SkeletonLoader type="table" rows={6} />
       ) : !order ? (
         <>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
-            marginBottom: 16, padding: '10px 14px',
-            border: '1px solid var(--color-border)', borderRadius: 12,
-            fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)',
-          }}>
-            <span><strong style={{ color: 'var(--color-text-primary)' }}>款号：</strong>{styleNo || '-'}</span>
-            <span><strong style={{ color: 'var(--color-text-primary)' }}>采购单数：</strong>{purchaseList.length} 个</span>
-            <span><strong style={{ color: 'var(--color-text-primary)' }}>到货率：</strong>
-              <Tag color={materialArrivalRate >= 100 ? 'green' : materialArrivalRate >= 50 ? 'orange' : 'red'}>{materialArrivalRate}%</Tag>
-            </span>
-            {sampleMode && sampleBomLocked && (
-              <Tooltip
-                title={`物料清单已完成${sampleBomCompletedTime ? `（${sampleBomCompletedTime}）` : ''}，采购数据已锁定。如需修改物料（编辑/删除/新增），请先到样衣详情 → 物料清单点击「退回」，退回后此处自动解锁。收货、回料确认等采购执行操作不受影响。`}
-              >
-                <ExclamationCircleOutlined style={{ color: 'var(--color-success)', fontSize: 16, cursor: 'pointer' }} />
-              </Tooltip>
-            )}
-          </div>
+          {/* D-364：样衣采购（无生产订单）也要有完整款式信息头，与大货/节点弹窗同款布局 */}
+          {sampleMode ? (
+            <Card
+              style={{ marginBottom: 16 }}
+              extra={
+                sampleBomLocked ? (
+                  <Tooltip
+                    title={`物料清单已完成${sampleBomCompletedTime ? `（${sampleBomCompletedTime}）` : ''}，采购数据已锁定。如需修改物料（编辑/删除/新增），请先到样衣详情 → 物料清单点击「退回」，退回后此处自动解锁。收货、回料确认等采购执行操作不受影响。`}
+                  >
+                    <ExclamationCircleOutlined style={{ color: 'var(--color-success)', fontSize: 16, cursor: 'pointer' }} />
+                  </Tooltip>
+                ) : null
+              }
+            >
+              <ProductionOrderHeader
+                order={null}
+                orderLines={sampleOrderLines.length ? (sampleOrderLines as any) : undefined}
+                styleNo={headerStyleNo}
+                styleName={headerStyleName}
+                styleId={headerStyleId ?? propStyleId}
+                styleCover={headerStyleCover}
+                color={headerColor}
+                coverSize={160}
+                showOrderNo={false}
+                hideSizeBlockWhenNoRealSize
+              />
+              <Row gutter={[16, 12]} style={{ marginTop: 12 }}>
+                <Col xs={24} sm={8} md={6}>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>来源</div>
+                  <div><Tag color="blue">样衣(开发)</Tag></div>
+                </Col>
+                <Col xs={24} sm={8} md={6}>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>采购单数</div>
+                  <div>{purchaseList.length} 个</div>
+                </Col>
+                <Col xs={24} sm={8} md={6}>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>物料到货率</div>
+                  <div><Tag color={materialArrivalRate >= 100 ? 'green' : materialArrivalRate >= 50 ? 'orange' : 'red'}>{materialArrivalRate}%</Tag></div>
+                </Col>
+                <Col xs={24} sm={8} md={6}>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>BOM 状态</div>
+                  <div>{sampleBomLocked ? <Tag color="success">已完成 · 已锁定</Tag> : <Tag color="default">未完成</Tag>}</div>
+                </Col>
+              </Row>
+            </Card>
+          ) : (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
+              marginBottom: 16, padding: '10px 14px',
+              border: '1px solid var(--color-border)', borderRadius: 12,
+              fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)',
+            }}>
+              <span><strong style={{ color: 'var(--color-text-primary)' }}>款号：</strong>{styleNo || '-'}</span>
+              <span><strong style={{ color: 'var(--color-text-primary)' }}>采购单数：</strong>{purchaseList.length} 个</span>
+              <span><strong style={{ color: 'var(--color-text-primary)' }}>到货率：</strong>
+                <Tag color={materialArrivalRate >= 100 ? 'green' : materialArrivalRate >= 50 ? 'orange' : 'red'}>{materialArrivalRate}%</Tag>
+              </span>
+            </div>
+          )}
           {purchaseList.length === 0 && !sampleMode ? (
             <Alert title="订单不存在或已删除" description={`款号: ${styleNo || '未知'}。该款号的订单可能已被删除。`} type="warning" showIcon style={{ marginBottom: 16 }} />
           ) : null}

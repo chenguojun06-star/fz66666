@@ -3,6 +3,7 @@ import { App, Button, Space, Tag, Typography } from 'antd';
 import { DownloadOutlined, PrinterOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
 import { parseProductionOrderLines, sortSizeNames, toNumberSafe } from '@/utils/api';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { getStatusConfig } from '../../MaterialPurchase/utils';
 import type { MaterialPurchase } from '@/types/production';
@@ -49,8 +50,14 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
   const sourceLabel = firstSrcType === 'sample' ? '样衣(开发)' : (firstSrcType === 'order' ? '大货' : '批量');
   const styleNo = String(styleNoProp ?? order?.styleNo ?? '').trim();
   const styleName = String(styleNameProp ?? order?.styleName ?? '').trim();
-  const styleCover = (styleCoverProp ?? order?.styleCover ?? null) as string | null;
+  // D-364：打印在新窗口打开，图片 URL 必须带 token（否则相对路径/需鉴权地址全部加载失败 → 打印无款式图）
+  const styleCover = (getFullAuthedFileUrl(styleCoverProp ?? order?.styleCover ?? null)
+    || (styleCoverProp ?? order?.styleCover ?? null) || null) as string | null;
   const color = String(colorProp ?? order?.color ?? '').trim();
+  // D-364：样衣(开发)采购没有生产工厂，显示"来源"而不是空的"工厂：-"
+  const factoryName = String(order?.factoryName || purchaseList.find((p) => p.factoryName)?.factoryName || '').trim();
+  const originLabel = factoryName ? '工厂' : '来源';
+  const originValue = factoryName || sourceLabel;
 
   // 下单明细颜色×尺码矩阵（orderLines 优先：样衣模式无订单，由款式 sizeColorConfig 生成）
   const matrix = useMemo(() => {
@@ -147,7 +154,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
     <div style="flex:1;padding:10px 10px 10px 4px">
       <table class="info">
         <tr><td><b>款号：</b>${styleNo || '-'}</td><td><b>款名：</b>${styleName || '-'}</td></tr>
-        <tr><td><b>颜色：</b>${color || '-'}</td><td><b>工厂：</b>${order?.factoryName || purchaseList.find((p) => p.factoryName)?.factoryName || '-'}</td></tr>
+        <tr><td><b>颜色：</b>${color || '-'}</td><td><b>${originLabel}：</b>${originValue || '-'}</td></tr>
         <tr><td><b>物料到货率：</b>${materialArrivalRate}%</td><td><b>供应商：</b>${suppliers || '-'}</td></tr>
       </table>
     </div>
@@ -251,7 +258,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
             <span><b>款号：</b>{styleNo || '-'}</span>
             <span><b>款名：</b>{styleName || '-'}</span>
             <span><b>颜色：</b>{color || '-'}</span>
-            <span><b>工厂：</b>{order?.factoryName || purchaseList.find((p) => p.factoryName)?.factoryName || '-'}</span>
+            <span><b>{originLabel}：</b>{originValue || '-'}</span>
             <span><b>到货率：</b>{materialArrivalRate}%</span>
             <span><b>供应商：</b>{suppliers || '-'}</span>
           </div>

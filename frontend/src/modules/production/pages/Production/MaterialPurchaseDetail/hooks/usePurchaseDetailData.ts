@@ -232,6 +232,28 @@ export function usePurchaseDetailData(
         }
       }
 
+      // D-364：样衣模式未传 styleId（部分入口只有款号）时按款号兜底查款式，
+      // 否则款名/款式图/颜色/码数矩阵全空——表现为弹窗和打印单"没有款式信息、没有图片"
+      if (sampleMode && !styleIdParam && styleNoParam) {
+        try {
+          const listRes = await api.get<any>('/style/info/list', {
+            params: { styleNo: styleNoParam, page: 1, pageSize: 5 },
+          });
+          const rows: any[] = (listRes as any)?.data?.records || [];
+          const hit = rows.find((s: any) => String(s?.styleNo || '').trim() === String(styleNoParam).trim()) || rows[0];
+          if (hit) {
+            setSampleBomCompletedTime(String(hit?.bomCompletedTime || ''));
+            setSampleStyle({
+              styleName: String(hit?.styleName || ''),
+              styleCover: (hit?.cover || hit?.styleCover || null) as string | null,
+              color: String(hit?.color || ''),
+            });
+            const lines = parseSizeColorMatrix(hit?.sizeColorConfig || hit?.sizeColorMatrix);
+            if (lines.length) setSampleOrderLines(lines);
+          }
+        } catch { /* 按款号兜底失败忽略，不影响主流程 */ }
+      }
+
       setPurchaseList(records);
     } catch {
       message.error('加载采购数据失败');
