@@ -47,7 +47,7 @@ const StyleSizeTab: React.FC<Props> = ({
   const { message } = App.useApp();
 
   const {
-    loading, sizeColumns, rows, sizeTemplates, templateLoading, sizeOptions, setSizeOptions,
+    loading, sizeColumns, rows, sizeTemplates: _sizeTemplates, templateLoading, sizeOptions, setSizeOptions,
     deletedIds, setDeletedIds, originalRef, combinedSizeIdsRef, linkedSizeColumns,
     setSizeColumns, setRows, fetchSize, fetchSizeDictOptions,
   } = useStyleSizeData(styleId, linkedSizes);

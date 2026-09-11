@@ -126,7 +126,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
 
   // ── 批量概览 Map（orderNo → overview），以及响应级汇总 ──
   const [overviewMap, setOverviewMap] = useState<Record<string, OrderOverviewDto>>({});
-  const [overviewLoading, setOverviewLoading] = useState(false);
+  const [_overviewLoading, setOverviewLoading] = useState(false);
   const [failedMap, setFailedMap] = useState<Record<string, string>>({});
 
   // ── 详情 Map（orderNo → NetDemandDetail[]） ──

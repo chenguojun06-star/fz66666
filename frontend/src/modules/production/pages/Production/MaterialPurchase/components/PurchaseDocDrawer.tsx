@@ -4,7 +4,6 @@ import { PlusOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
 import PurchaseDocRecognizeModal from './PurchaseDocRecognizeModal';
 import api from '@/utils/api';
-import { formatDateTime } from '@/utils/datetime';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
 interface PurchaseOrderDoc {

@@ -23,7 +23,7 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
   const [quickFillQty, setQuickFillQty] = useState(1);
   // 基础属性库——颜色/码数成组选择（与正常下单同组件）
   const [attrLibOpen, setAttrLibOpen] = useState(false);
-  const [attrLibTarget, setAttrLibTarget] = useState<'color' | 'size'>('size');
+  const [_attrLibTarget, setAttrLibTarget] = useState<'color' | 'size'>('size');
 
   const handleApplyAttrGroup = (groupKey: string, values: string[], mode: 'replace' | 'append') => {
     const incoming = values.map((v) => String(v || '').trim()).filter(Boolean);

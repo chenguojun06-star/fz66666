@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, Tag, Space, Alert, Row, Col, App, Tooltip } from 'antd';
-import { ExportOutlined, ExclamationCircleOutlined, UploadOutlined, FileImageOutlined } from '@ant-design/icons';
+import { ExportOutlined, ExclamationCircleOutlined, FileImageOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import SkeletonLoader from '@/components/common/SkeletonLoader';
 import api from '@/utils/api';
@@ -24,7 +24,6 @@ import type { ConfirmCompleteOptions } from '../MaterialPurchase/hooks/usePurcha
 import { ReceiveModal, InboundModal, ReturnConfirmModal } from './components/PurchaseActionModals';
 import { filterPendingPurchases, filterReturnablePurchases, filterAwaitingConfirmPurchases } from './hooks/utils';
 import { isPurchaseRowComplete } from './hooks/types';
-import { getMaterialTypeLabel } from '@/utils/materialType';
 
 export interface MaterialPurchaseDetailProps {
   styleNo?: string;
@@ -37,7 +36,7 @@ export interface MaterialPurchaseDetailProps {
   styleId?: string | number;
 }
 
-const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo: propStyleNo, orderNo: propOrderNo, embedded, onClose, sampleMode, styleId: propStyleId }) => {
+const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo: propStyleNo, orderNo: propOrderNo, embedded, onClose: _onClose, sampleMode, styleId: propStyleId }) => {
   const { styleNo: styleNoParam } = useParams<{ styleNo: string }>();
   const [searchParams] = useSearchParams();
   const orderNo = propOrderNo ?? searchParams.get('orderNo') ?? '';
@@ -59,7 +58,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
     openReceive, handleReceive,
     openInbound, doInbound,
     handleReturnConfirm, doReturnConfirm, handleCancelReceive,
-    handleBatchReceive, handleBatchReturnConfirm, handleConfirmComplete,
+    handleBatchReceive, handleBatchReturnConfirm, handleConfirmComplete: _handleConfirmComplete,
     handleReturnReset, handleWarehousePick: _handleWarehousePick,
     handleExport,
     headerOrderNo, headerStyleNo, headerStyleName, headerStyleId, headerStyleCover, headerColor,

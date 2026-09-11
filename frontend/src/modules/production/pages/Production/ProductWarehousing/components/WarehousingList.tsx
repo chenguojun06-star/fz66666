@@ -55,8 +55,8 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
     warehousingStats,
     statusFilter,
     handleStatusFilterChange,
-    showAllWarehousing,
-    setShowAllWarehousing,
+    showAllWarehousing: _showAllWarehousing,
+    setShowAllWarehousing: _setShowAllWarehousing,
     pendingBundles,
     pendingBundlesLoading,
   } = hook;

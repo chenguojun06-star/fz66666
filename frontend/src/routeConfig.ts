@@ -28,7 +28,6 @@ import {
   ShopOutlined,
   TagOutlined,
   ProfileOutlined,
-  BarChartOutlined,
   ClockCircleOutlined,
   PrinterOutlined,
 } from '@ant-design/icons';

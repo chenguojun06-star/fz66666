@@ -33,7 +33,7 @@ const cleanOcrRawText = (raw: string): string => {
     .replace(/&#39;/gi, "'");
   t = t
     .split(/\r\n|\r|\n/)
-    .filter((line, _, arr) => {
+    .filter((line, _, _arr) => {
       const trimmed = line.trim();
       // 纯数字行丢弃（源码视图行号残留，仅保留空行判别）
       return !(trimmed && /^\d{1,3}$/.test(trimmed));

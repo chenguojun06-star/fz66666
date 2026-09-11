@@ -23,7 +23,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
     {
       styleNoOptions,
       styleNoLoading,
-      modalWidth,
+      modalWidth: _modalWidth,
       onFetchList,
       onStyleNoSearch,
       onStyleNoDropdownOpen,

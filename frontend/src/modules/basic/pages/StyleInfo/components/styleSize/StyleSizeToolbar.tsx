@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { App, Button, Input, Popover, Select, Space, Upload, message as antdMessage, Spin } from 'antd';
+import { App, Button, Input, Popover, Select, Upload, message as antdMessage, Spin } from 'antd';
 import { CopyOutlined, PlusOutlined, RobotOutlined, SettingOutlined } from '@ant-design/icons';
 import { sortSizeNames } from '@/utils/api';
 import api from '@/utils/api';
@@ -39,13 +39,13 @@ interface Props {
 }
 
 const StyleSizeToolbar: React.FC<Props> = ({
-  editMode, readOnly, loading, saving, templateLoading,
+  editMode, readOnly, loading, saving, templateLoading: _templateLoading,
   onOpenCopySize,
   selectedRowKeys, setSelectedRowKeys, openBatchGradingConfig,
   enterEdit, exitEdit, saveAll,
 
   newGroupName, setNewGroupName, confirmAddGroup, handleAddPartRow,
-  sizeOptions, setSizeOptions, sizeColumns, mergeSizeColumns, fetchSizeDictOptions, message,
+  sizeOptions, setSizeOptions, sizeColumns, mergeSizeColumns, fetchSizeDictOptions, message: _message,
   styleId, onSizeTableRecognized,
 }) => {
   const isReadonly = Boolean(readOnly);

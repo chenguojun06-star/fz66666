@@ -14,7 +14,7 @@ interface Props {
   debouncedFetchStyleInfoOptions: (v: string) => void;
 }
 
-const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoOptions }) => {
+const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoOptions: _debouncedFetchStyleInfoOptions }) => {
   const { message } = App.useApp();
   const { sorted, spanMap } = computeStageSortedAndSpan(createTask.createProcessNodes, CUTTING_STAGE_ORDER);
   // D-352 工序导入统一为"拷贝其他款工序"侧滑抽屉（全站最后一处老式模板导入下线）

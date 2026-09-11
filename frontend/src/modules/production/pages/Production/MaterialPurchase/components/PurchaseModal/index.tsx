@@ -89,7 +89,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   onWarehousePick,
   onRefresh,
 }) => {
-  const normalizeStatus = (status?: MaterialPurchaseType['status'] | string) => String(status || '').trim().toLowerCase();
+  const _normalizeStatus = (status?: MaterialPurchaseType['status'] | string) => String(status || '').trim().toLowerCase();
 
   const orderColors = useMemo(() => {
     const colors = new Set<string>();

@@ -2,7 +2,7 @@ import React from 'react';
 import { Tag } from 'antd';
 import type { StyleInfo } from '@/types/style';
 import type { DifficultyAssessment, StyleIntelligenceProfileResponse } from '@/services/intelligence/intelligenceApi';
-import { difficultyColor, fmtMoney } from '../helpers';
+import { fmtMoney } from '../helpers';
 
 interface KeyTagsCloudProps {
   style: StyleInfo | null;
@@ -10,7 +10,7 @@ interface KeyTagsCloudProps {
   profile: StyleIntelligenceProfileResponse | null;
 }
 
-const KeyTagsCloud: React.FC<KeyTagsCloudProps> = ({ style, activeDifficulty, profile }) => {
+const KeyTagsCloud: React.FC<KeyTagsCloudProps> = ({ style, activeDifficulty: _activeDifficulty, profile: _profile }) => {
   return (
     <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: 'var(--color-bg-base)', border: '1px solid var(--color-border-antd)' }}>
       <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>关键标签</div>

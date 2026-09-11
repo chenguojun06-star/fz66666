@@ -14,7 +14,6 @@ import { DEFAULT_PAGE_SIZE, readPageSize } from '@/utils/pageSizeStore';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { useViewport } from '@/utils/useViewport';
-import { paths } from '@/routeConfig';
 import { useExtColumns } from '@/hooks/useExtColumns';
 import { flattenExtJson, collectExtValues } from '@/components/common/SchemaForm/ExtFieldsSection';
 import { getFactoryColumns } from './factoryListColumns';

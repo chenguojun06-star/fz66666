@@ -8,7 +8,7 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import SchemaPrint from '@/components/common/SchemaPrint';
 import { Button, Card, Space, Tabs, Tag, Tooltip } from 'antd';
-import { PlusOutlined, SettingOutlined, ShopOutlined, SyncOutlined } from '@ant-design/icons';
+import { PlusOutlined, ShopOutlined, SyncOutlined } from '@ant-design/icons';
 import { message } from '@/utils/antdStatic';
 import factoryApi from '@/services/system/factoryApi';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';

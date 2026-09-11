@@ -13,7 +13,6 @@ import { useViewport } from '@/utils/useViewport';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import { useCuttingCreateTask } from '@/modules/production/pages/Production/Cutting/hooks';
-import { paths } from '@/routeConfig';
 
 import { StyleInfo, StyleQueryParams } from '@/types/style';
 import type { StyleBom } from '@/types/style';

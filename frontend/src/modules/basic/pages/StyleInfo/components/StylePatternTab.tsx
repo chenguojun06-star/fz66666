@@ -25,7 +25,7 @@ interface Props {
 
 const StylePatternTab: React.FC<Props> = ({
   styleId,
-  styleNo,
+  styleNo: _styleNo,
   patternStatus,
   patternStartTime,
   patternCompletedTime,

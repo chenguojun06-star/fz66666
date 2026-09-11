@@ -51,7 +51,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
   isTyping,
   uploadingFile,
   isRecording,
-  openTraceCenter,
+  openTraceCenter: _openTraceCenter,
   emojiPanelRef,
   showEmojiPicker,
   setShowEmojiPicker,

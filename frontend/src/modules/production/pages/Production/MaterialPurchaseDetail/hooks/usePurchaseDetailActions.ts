@@ -17,7 +17,6 @@ import {
   getOperatorName,
   buildBatchModalContent,
   exportPurchaseListCSV,
-  filterPendingPurchases,
   filterReturnablePurchases,
   filterAwaitingConfirmPurchases,
 } from './utils';

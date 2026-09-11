@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tag } from 'antd';
-import { BulbOutlined, CalendarOutlined, NodeIndexOutlined, RadarChartOutlined } from '@ant-design/icons';
+import { BulbOutlined, RadarChartOutlined } from '@ant-design/icons';
 import type { DifficultyAssessment, StyleIntelligenceProfileResponse, StyleQuoteSuggestionResponse } from '@/services/intelligence/intelligenceApi';
 import { fmtMoney } from '../helpers';
 
@@ -22,11 +22,11 @@ const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
   profile,
   quoteSuggestion,
   activeDifficulty,
-  deliveryMeta,
-  completionRate,
-  doneCount,
+  deliveryMeta: _deliveryMeta,
+  completionRate: _completionRate,
+  doneCount: _doneCount,
   stageTags,
-  orderCount,
+  orderCount: _orderCount,
   latestOrderStatus,
 }) => {
   // D-347 去重：交期/完成度/订单数已由顶部标题栏常驻展示，这里只留标题栏没有的信息

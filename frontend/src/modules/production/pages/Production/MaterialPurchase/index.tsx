@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Card, Form, message, Tabs, Button, Table, Tag, Tooltip, Space, Alert, Statistic, Dropdown } from 'antd';
+import { Card, Form, message, Tabs, Button, Space, Dropdown } from 'antd';
 import { RobotOutlined, PlusOutlined, DownOutlined, ExportOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
@@ -11,7 +11,6 @@ import PurchaseReturnTab from './components/PurchaseReturnTab';
 import SmartSourcingDrawer from './components/SmartSourcingDrawer';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { usePurchaseCartActions, usePurchaseCart } from '@/hooks/usePurchaseCart';
-import { purchaseCartApi } from '@/services/purchaseCartApi';
 import '../../../styles.css';
 import { useMaterialPurchase } from './hooks/useMaterialPurchase';
 import { buildStatCards } from './statCardsConfig';
@@ -47,7 +46,7 @@ const MaterialPurchase: React.FC = () => {
     purchaseSortField, purchaseSortOrder, handlePurchaseSort,
     sortedPurchaseList,
     purchaseStats, activeStatFilter, handleStatClick, overdueCount,
-    showAllPurchases, setShowAllPurchases,
+    showAllPurchases: _showAllPurchases, setShowAllPurchases: _setShowAllPurchases,
     smartError, showSmartErrorNotice, showPurchaseAI,
     fetchMaterialPurchaseList,
     reloadCurrentDetail,

@@ -10,7 +10,7 @@ import { Role } from '@/types/system';
 import { getRoleIcon } from './helpers';
 import type { RoleRecord } from './helpers';
 
-const { Text } = Typography;
+const { Text: _Text } = Typography;
 
 interface RoleListPanelProps {
   roleList: RoleRecord[];

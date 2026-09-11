@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Button, Space, InputNumber, Collapse, Popconfirm, Slider, Switch, Input, Select, Dropdown } from 'antd';
+import { Card, Button, Space, InputNumber, Collapse, Popconfirm, Slider, Switch, Select, Dropdown } from 'antd';
 import { PrinterOutlined, SettingOutlined, SaveOutlined, BookOutlined, DeleteOutlined, StarOutlined, StarFilled } from '@ant-design/icons';
 import type { PrintType } from '../types';
 import type { HangSettings, BarSettings } from '../constants';
@@ -41,7 +41,7 @@ const sizePresets: Record<PrintType, { w: number; h: number; label: string }[]> 
 };
 
 const PrintSettingsPanel: React.FC<PrintSettingsPanelProps> = ({
-  selectedOrder,
+  selectedOrder: _selectedOrder,
   printType,
   printCount,
   setPrintCount,
@@ -59,7 +59,7 @@ const PrintSettingsPanel: React.FC<PrintSettingsPanelProps> = ({
   setBar,
   resetSettings,
 }) => {
-  const toggleRow = <T,>(
+  const _toggleRow = <T,>(
     label: string,
     field: string,
     checked: boolean,

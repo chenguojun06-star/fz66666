@@ -13,7 +13,6 @@ import { getStyleCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { getStyleSourceText } from '@/utils/styleSource';
 import { toCategoryCn, toSeasonCn, CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
-import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 
 interface Props {
   viewMode: 'table' | 'card';

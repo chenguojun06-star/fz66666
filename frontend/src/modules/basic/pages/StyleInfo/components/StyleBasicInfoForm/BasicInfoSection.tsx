@@ -73,7 +73,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   currentStyle,
   editLocked,
   isFieldLocked,
-  isNewPage,
+  isNewPage: _isNewPage,
   coverSlot,
 }) => {
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);

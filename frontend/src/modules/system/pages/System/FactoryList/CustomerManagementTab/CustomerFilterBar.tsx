@@ -1,6 +1,5 @@
 import React from 'react';
 import { Button, Card, Input, Select, Space } from 'antd';
-import { SettingOutlined } from '@ant-design/icons';
 import SchemaPrint from '@/components/common/SchemaPrint';
 import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 import type { Customer } from '@/services/crm/customerApi';

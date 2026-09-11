@@ -44,7 +44,7 @@ const UserList: React.FC = () => {
     logLoading, logRecords, setLogRecords, logTitle,
     inviteQr, setInviteQr,
     formRules,
-    getUserList, openDialog, closeDialog, handleGenerateInvite,
+    getUserList, openDialog, closeDialog, handleGenerateInvite: _handleGenerateInvite,
     handleRemarkConfirm, openLogModal,
     toggleUserStatus, applyRoleToUser, handleSubmit,
     handleResetPassword, changeEmploymentStatus,

@@ -37,7 +37,6 @@ import SmartReceiveModal from '../MaterialPurchase/components/SmartReceiveModal'
 import { useDelayedStageBreakdown } from '@/modules/dashboard/components/DelayedStageBreakdown/useDelayedStageBreakdown';
 import { useFieldConfig } from '@/hooks/useFieldConfig';
 import { SettingOutlined } from '@ant-design/icons';
-import { paths } from '@/routeConfig';
 import { usePatrolTitleTags } from './hooks/usePatrolTitleTags.tsx';
 import { useTableColumns } from './hooks/useTableColumns';
 import CooperationContractModal from '@/modules/basic/pages/OrderManagement/components/CooperationContractModal';

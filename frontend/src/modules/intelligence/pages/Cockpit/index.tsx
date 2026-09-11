@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { Button, Tooltip, Popover, Tag, Space } from 'antd';
+import { Button, Tooltip } from 'antd';
 import { ReloadOutlined, SyncOutlined } from '@ant-design/icons';
 import { TimeDimensionProvider } from './contexts/TimeDimensionContext';
 import { StyleLinkProvider } from './contexts/StyleLinkContext';

@@ -6,7 +6,6 @@ import { DEFAULT_PAGE_SIZE, readPageSize } from '@/utils/pageSizeStore';
 import { customerApi, type Customer } from '@/services/crm/customerApi';
 import { useDebouncedValue } from '@/hooks/usePerformance';
 import { useFieldConfig } from '@/hooks/useFieldConfig';
-import { paths } from '@/routeConfig';
 import { collectExtValues } from '@/components/common/SchemaForm/ExtFieldsSection';
 import CustomerFilterBar from './CustomerFilterBar';
 import CustomerTable from './CustomerTable';
@@ -21,7 +20,7 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm<Customer>();
   const { isMobile, modalWidth } = useViewport();
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const [dialogMode, setDialogMode] = useState<DialogMode>('view');
   const [modalOpen, setModalOpen] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<Customer | null>(null);

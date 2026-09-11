@@ -5,7 +5,6 @@ import OrderAnalysisTab from './OrderAnalysisTab';
 import OrderListContent from './OrderListContent';
 import type { StyleInfo } from '@/types/style';
 import type { StyleQueryParams } from '@/types/style';
-import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 
 interface OrderManagementTabsProps {
   viewMode: 'table' | 'card';

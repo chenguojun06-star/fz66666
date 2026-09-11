@@ -1,4 +1,3 @@
-import React from 'react';
 import type { ProductionQueryParams } from '@/types/production';
 import type { GlobalStats } from './useProductionStats';
 import type { StatCard, HintItem } from '@/components/common/PageStatCards';

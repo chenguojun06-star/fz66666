@@ -10,8 +10,7 @@ import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { useExtColumns } from '@/hooks/useExtColumns';
-import { useColumnSettings, ColumnSettingsDrawer } from '@/components/common/ColumnSettings';
-import { paths } from '@/routeConfig';
+import { useColumnSettings } from '@/components/common/ColumnSettings';
 
 const { RangePicker } = DatePicker;
 
@@ -43,7 +42,7 @@ interface FilterState {
 }
 
 const ExternalScanContent: React.FC = () => {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const [data, setData] = useState<ScanRecordRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -81,22 +80,22 @@ const ExternalScanContent: React.FC = () => {
     allColumns: SCAN_LIST_COLUMNS,
     defaultVisible: Object.fromEntries(SCAN_LIST_COLUMNS.map((c) => [c.key, true])),
   });
-  const [scanColumnSettingsOpen, setScanColumnSettingsOpen] = useState(false);
+  const [_scanColumnSettingsOpen, setScanColumnSettingsOpen] = useState(false);
   const scanExtColumnOptions = useMemo(
     () => (fieldConfigs || [])
       .filter((f: any) => f.isSystem === 0 && f.enabled !== 0)
       .map((f: any) => ({ key: `ext_${f.fieldKey}`, label: f.label })),
     [fieldConfigs],
   );
-  const scanMergedColumnOptions = useMemo(
+  const _scanMergedColumnOptions = useMemo(
     () => [...SCAN_LIST_COLUMNS, ...scanExtColumnOptions],
     [SCAN_LIST_COLUMNS, scanExtColumnOptions],
   );
-  const scanColumnGroups = useMemo(() => [
+  const _scanColumnGroups = useMemo(() => [
     { title: '扫码信息', keys: ['delegateTargetName', 'operatorName', 'processName', 'quantity', 'processUnitPrice', 'scanCost', 'scanTime', 'scanResult'] },
     { title: '关联单据', keys: ['orderNo', 'styleNo', 'color', 'size'] },
   ], []);
-  const scanColumnPresets = useMemo(() => [
+  const _scanColumnPresets = useMemo(() => [
     {
       key: 'simple', label: '精简',
       values: { delegateTargetName: true, operatorName: true, processName: true, quantity: true, scanTime: true },

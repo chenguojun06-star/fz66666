@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Dropdown, Select, Space, Spin, Tag, Upload, message } from 'antd';
+import { Button, Dropdown, Spin, Tag, Upload, message } from 'antd';
 import { CopyOutlined, DownOutlined, RobotOutlined } from '@ant-design/icons';
 import StyleBomAddRowsDropdown from './StyleBomAddRowsDropdown';
 import api from '@/utils/api';

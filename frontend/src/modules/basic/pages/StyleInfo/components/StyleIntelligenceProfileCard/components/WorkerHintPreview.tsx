@@ -8,7 +8,7 @@ interface WorkerHintPreviewProps {
   activeDifficulty: DifficultyAssessment | null;
 }
 
-const WorkerHintPreview: React.FC<WorkerHintPreviewProps> = ({ workerHint, activeDifficulty }) => {
+const WorkerHintPreview: React.FC<WorkerHintPreviewProps> = ({ workerHint, activeDifficulty: _activeDifficulty }) => {
   if (workerHint.length === 0) return null;
   return (
     <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, background: 'var(--color-bg-base)AEB', border: '1px solid var(--color-amber-400)' }}>

@@ -5,7 +5,6 @@ import ResizableModal from '@/components/common/ResizableModal';
 import ModalContentLayout from '@/components/common/ModalContentLayout';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/useWarehouseAreaOptions';
 import { formatMaterialQuantityWithUnit } from '../../MaterialPurchase/utils';
-import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import type { MaterialPurchase } from '@/types/production';
 
 const { Option } = Select;

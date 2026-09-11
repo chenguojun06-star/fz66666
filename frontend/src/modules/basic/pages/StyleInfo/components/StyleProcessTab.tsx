@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, Space, Select, App, Popover, Dropdown, Tag, Tooltip } from 'antd';
+import { Button, Input, Select, App, Popover, Dropdown, Tag } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import TabToolbar from '@/components/common/TabToolbar';
 import AttributeGroupLibraryModal from '@/components/common/AttributeGroupLibraryModal';
@@ -23,7 +23,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
   const [editMode, setEditMode] = useState(false);
   const [deletedIds, setDeletedIds] = useState<Array<string | number>>([]);
   const snapshotRef = useRef<StyleProcessWithSizePrice[] | null>(null);
-  const [processTemplateKey, setProcessTemplateKey] = useState<string | undefined>(undefined);
+  const [_processTemplateKey, _setProcessTemplateKey] = useState<string | undefined>(undefined);
   const [copyProcessOpen, setCopyProcessOpen] = useState(false);
 
   // D-264：导入方式（覆盖/追加）收进"导入模板"下拉按钮，不再单独占一个选择器
@@ -51,7 +51,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
     return () => { editHintTimersRef.current.forEach(t => clearTimeout(t)); };
   }, []);
 
-  const { data, setData, loading, sizes, setSizes, sizeOptions: _sizeOptions, setSizeOptions: _setSizeOptions, fetchSizeDictOptions: _fetchSizeDictOptions, fetchProcess, processTemplates, templateLoading } = useStyleProcessData({ styleId, onDataLoaded, sizeColorConfig });
+  const { data, setData, loading, sizes, setSizes, sizeOptions: _sizeOptions, setSizeOptions: _setSizeOptions, fetchSizeDictOptions: _fetchSizeDictOptions, fetchProcess, processTemplates: _processTemplates, templateLoading: _templateLoading } = useStyleProcessData({ styleId, onDataLoaded, sizeColorConfig });
 
   const fetchPriceHintRef = useRef<(id: string | number, processName: string, standardTime?: number) => void>(() => {});
 
@@ -104,7 +104,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
     message.success(`已拷贝 ${rows.length} 道工序，编码自动顺延，请检查后保存`);
   }, [processStartTime, setData, styleId, editMode, enterEdit, message]);
 
-  const { saving, exitEdit, handleAdd, handleRemoveSize, updateSizePrice, applyProcessTemplate, handleDelete, updateField, saveAll } = useStyleProcessActions({ styleId, readOnly: readOnly ?? false, processStartTime, data, setData, sizes, setSizes, fetchProcess, editMode, setEditMode, deletedIds, setDeletedIds, snapshotRef, onRefresh: onRefresh ?? (() => {}), enterEdit });
+  const { saving, exitEdit, handleAdd, handleRemoveSize, updateSizePrice, applyProcessTemplate: _applyProcessTemplate, handleDelete, updateField, saveAll } = useStyleProcessActions({ styleId, readOnly: readOnly ?? false, processStartTime, data, setData, sizes, setSizes, fetchProcess, editMode, setEditMode, deletedIds, setDeletedIds, snapshotRef, onRefresh: onRefresh ?? (() => {}), enterEdit });
 
   const { aiOpen, setAiOpen, aiCategory, setAiCategory, aiLoading, priceHints, priceHintLoading, categoryOptions, fetchPriceHint, handleAiTemplate } = useStyleProcessAi({ styleId, data, editMode, enterEdit });
 
