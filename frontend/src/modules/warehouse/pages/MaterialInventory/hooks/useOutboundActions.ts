@@ -82,8 +82,21 @@ export function useOutboundActions({
           inboundDate: item.inboundDate ? dayjs(item.inboundDate).format('YYYY-MM-DD') : '',
           expiryDate: item.expiryDate ? dayjs(item.expiryDate).format('YYYY-MM-DD') : undefined, outboundQty: 0,
         }));
-        // D-369：出库数量由用户实际填写，不预填（避免照抄可用量导致多扣库存）
-        setSelectedBatchNos([]);
+        // D-370：出库数量默认带出「当前需求数」= 该批可用量（用户可改，不预填为 0）；
+        // 多批次时只按 FIFO 预填最早一批，其余留给「FIFO 自动分配」或手动填写
+        if (mapped.length > 0) {
+          const sorted = [...mapped].sort((a, b) => (a.inboundDate || '').localeCompare(b.inboundDate || ''));
+          const first = sorted[0];
+          const idx = mapped.findIndex(i => i.batchNo === first.batchNo);
+          if (idx >= 0 && Number(mapped[idx].availableQty) > 0) {
+            mapped[idx].outboundQty = mapped[idx].availableQty;
+            setSelectedBatchNos([mapped[idx].batchNo]);
+          } else {
+            setSelectedBatchNos([]);
+          }
+        } else {
+          setSelectedBatchNos([]);
+        }
         setBatchDetails(mapped);
       } else { message.warning('未找到该物料的批次记录'); setBatchDetails([]); }
     } catch { message.error('加载批次明细失败'); setBatchDetails([]); }
