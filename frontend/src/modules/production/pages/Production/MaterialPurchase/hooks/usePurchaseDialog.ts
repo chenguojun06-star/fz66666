@@ -2,7 +2,7 @@
  * usePurchaseDialog — 采购弹窗状态：表单/预览/提交/打印下载
  * ~130 lines (target ≤ 200)
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Form } from 'antd';
 import { useUser } from '@/utils/AuthContext';
 import type { ModalStaticFunctions } from 'antd/es/modal/confirm';
@@ -204,16 +204,71 @@ export function usePurchaseDialog({
     }
   };
 
-  const openPurchaseSheet = (_autoPrint: boolean) => {
-    const html = buildPurchaseSheetHtml(currentPurchase, detailOrder, detailOrderLines, detailPurchases, detailSizePairs, user?.tenantName);
+  // D-360q：样衣采购没有生产订单——打印前按款号拉款式数据（颜色数量矩阵+封面）补齐打印数据源
+  const loadSamplePrintData = useCallback(async (purchase: MaterialPurchaseType | null) => {
+    if (!purchase) return { order: detailOrder, orderLines: detailOrderLines, sizePairs: detailSizePairs };
+    const hasOrderData = detailOrder != null && (detailOrderLines.length > 0 || detailSizePairs.length > 0);
+    if (hasOrderData) return { order: detailOrder, orderLines: detailOrderLines, sizePairs: detailSizePairs };
+    try {
+      let styleRecord: Record<string, unknown> | null = null;
+      if (purchase.styleId) {
+        const res = await api.get<any>(`/style/info/${purchase.styleId}`);
+        if (res?.code === 200 && res.data) styleRecord = res.data;
+      }
+      if (!styleRecord && purchase.styleNo) {
+        const res = await api.get<any>('/style/info/list', { params: { page: 1, pageSize: 1, styleNo: purchase.styleNo } });
+        const records = res?.code === 200 ? (res.data?.records || []) : [];
+        styleRecord = records[0] || null;
+      }
+      if (!styleRecord) return { order: detailOrder, orderLines: detailOrderLines, sizePairs: detailSizePairs };
+      const matrix = (styleRecord.sizeColorConfig || styleRecord.sizeColorMatrix) as Record<string, unknown> | string | undefined;
+      let parsed: { sizes?: string[]; matrixRows?: Array<Record<string, unknown>> } | null = null;
+      if (matrix && typeof matrix === 'string') { try { parsed = JSON.parse(matrix); } catch { parsed = null; } }
+      else if (matrix && typeof matrix === 'object') parsed = matrix as { sizes?: string[]; matrixRows?: Array<Record<string, unknown>> };
+      const sizes = Array.isArray(parsed?.sizes) ? (parsed!.sizes as string[]) : [];
+      const rows = Array.isArray(parsed?.matrixRows) ? (parsed!.matrixRows as Array<Record<string, unknown>>) : [];
+      const orderLines: Array<{ color: string; size: string; quantity: number }> = [];
+      const sizePairs: Array<{ size: string; quantity: number }> = [];
+      rows.forEach((row) => {
+        const rowColor = String(row?.color || '').trim() || '未设色';
+        const quantities = Array.isArray(row?.quantities) ? (row.quantities as number[]) : [];
+        sizes.forEach((sz, idx) => {
+          const q = Number(quantities[idx] || 0);
+          if (q > 0 && sz) {
+            orderLines.push({ color: rowColor, size: String(sz).trim(), quantity: q });
+          }
+        });
+      });
+      if (orderLines.length) {
+        const sizeMap = new Map<string, number>();
+        orderLines.forEach((l) => sizeMap.set(l.size, (sizeMap.get(l.size) || 0) + l.quantity));
+        sizeMap.forEach((q, sz) => sizePairs.push({ size: sz, quantity: q }));
+      }
+      const cover = String(styleRecord.coverImage || styleRecord.styleCover || '').trim() || null;
+      const color = String(styleRecord.color || purchase.color || '').trim();
+      const orderLike = { ...(detailOrder || {}), styleCover: cover || (detailOrder as any)?.styleCover, color } as unknown as ProductionOrder;
+      return { order: orderLike, orderLines, sizePairs };
+    } catch {
+      return { order: detailOrder, orderLines: detailOrderLines, sizePairs: detailSizePairs };
+    }
+  }, [detailOrder, detailOrderLines, detailSizePairs]);
+
+  const openPurchaseSheet = async (_autoPrint: boolean) => {
+    const printData = currentPurchase && String(currentPurchase.sourceType || '').toLowerCase() === 'sample'
+      ? await loadSamplePrintData(currentPurchase)
+      : { order: detailOrder, orderLines: detailOrderLines, sizePairs: detailSizePairs };
+    const html = buildPurchaseSheetHtml(currentPurchase, printData.order, printData.orderLines.length ? printData.orderLines : detailOrderLines, detailPurchases, printData.sizePairs.length ? printData.sizePairs : detailSizePairs, user?.tenantName);
     const success = safePrint(html, '采购单');
     if (!success) {
       message.error('打印失败，请重试');
     }
   };
 
-  const downloadPurchaseSheet = () => {
-    const html = buildPurchaseSheetHtml(currentPurchase, detailOrder, detailOrderLines, detailPurchases, detailSizePairs, user?.tenantName);
+  const downloadPurchaseSheet = async () => {
+    const printData = currentPurchase && String(currentPurchase.sourceType || '').toLowerCase() === 'sample'
+      ? await loadSamplePrintData(currentPurchase)
+      : { order: detailOrder, orderLines: detailOrderLines, sizePairs: detailSizePairs };
+    const html = buildPurchaseSheetHtml(currentPurchase, printData.order, printData.orderLines.length ? printData.orderLines : detailOrderLines, detailPurchases, printData.sizePairs.length ? printData.sizePairs : detailSizePairs, user?.tenantName);
     const orderNo = String(currentPurchase?.orderNo || '').trim();
     const purchaseNo = String(currentPurchase?.purchaseNo || '').trim();
     const now = new Date();
