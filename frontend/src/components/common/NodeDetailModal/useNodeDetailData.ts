@@ -49,7 +49,7 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
   const [repairLoading, setRepairLoading] = useState(false);
   const [loadWarnings, setLoadWarnings] = useState<string[]>([]);
 
-  const { orderSummary } = useOrderSummary({ orderId, orderNo });
+  const { orderSummary, orderDetail, orderLines } = useOrderSummary({ orderId, orderNo });
 
   const addLoadWarning = useCallback((warning: string) => {
     const text = String(warning || '').trim();
@@ -257,7 +257,7 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
 
   return {
     loading, factories, users, nodeOperations, setNodeOperations,
-    scanRecords, bundles, orderSummary,
+    scanRecords, bundles, orderSummary, orderDetail, orderLines,
     processTrackingRecords, trackingLoading, repairLoading,
     loadWarnings, prediction, predicting, feedbackSentKeyRef,
     filteredScanRecords, operatorSummary, cuttingSizeItems,

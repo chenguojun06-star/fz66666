@@ -4,6 +4,9 @@ import { Alert, Button, Spin, Tabs } from 'antd';
 import type { TabsProps } from 'antd';
 import { FileTextOutlined, ShoppingOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
+import ProductionOrderHeader from '@/components/StyleAssets/ProductionOrderHeader';
+import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
+import { getProgressColorStatus } from '@/utils/progressColor';
 import PredictionCard from '../PredictionCard';
 import OperatorsTab from '../OperatorsTab';
 import NodeSettingsTab from '../NodeSettingsTab';
@@ -27,6 +30,10 @@ interface NodeDetailBodyProps {
   orderId?: string;
   orderNo?: string;
   orderSummary: any;
+  /** 完整订单详情（NodeDetailModal 头部卡用，含款式图/进度/跟单员/生产方/公司） */
+  orderDetail?: any;
+  /** 颜色×码数×数量矩阵行（orderDetails 为空时由 sizeColorConfig 兜底解析） */
+  orderLines?: any[];
   nodeName: string;
   nodeTypeKey: NodeType;
   nodeStats?: NodeStats;
@@ -71,6 +78,8 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
   orderId,
   orderNo,
   orderSummary,
+  orderDetail,
+  orderLines,
   nodeName,
   nodeTypeKey,
   nodeStats,
@@ -107,6 +116,23 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
 }) => {
   const navigate = useNavigate();
 
+  // D-360k：头部卡进度值统一走 calcOrderProgress（boardStats 实时数据 + DB 工序完成率 + productionProgress 取最大），
+  //         颜色按交期剩余天数映射（绿/黄/红），与订单列表保持一致。
+  const progress = React.useMemo(() => calcOrderProgress(orderDetail), [orderDetail]);
+  const progressColor = React.useMemo(() => {
+    const status = getProgressColorStatus(
+      orderDetail?.plannedEndDate,
+      orderDetail?.status,
+      orderDetail?.actualEndDate,
+      orderDetail?.productionProgress,
+    );
+    return status === 'danger'
+      ? 'var(--color-danger)'
+      : status === 'warning'
+        ? 'var(--color-warning)'
+        : 'var(--color-success)';
+  }, [orderDetail]);
+
   return (
     <Spin spinning={loading}>
       {loadWarnings.length > 0 && (
@@ -117,6 +143,29 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
           title="部分数据加载失败"
           description={loadWarnings.join('；')}
         />
+      )}
+      {/* D-360k：统一头部卡——款式图 + 下单信息 + 进度 + 跟单员 + 生产方 + 公司，
+          三个页面（订单管理/工序跟进/外发管理）共用 NodeDetailModal，头部一次到位 */}
+      {orderDetail && (
+        <div style={{ marginBottom: 16 }}>
+          <ProductionOrderHeader
+            order={orderDetail}
+            orderLines={orderLines}
+            extraFields={[
+              {
+                label: '进度',
+                value: (
+                  <span style={{ color: progressColor }}>
+                    {progress}%
+                  </span>
+                ),
+              },
+              { label: '跟单员', value: String(orderDetail?.merchandiser || '').trim() || '-' },
+              { label: '生产方', value: String(orderDetail?.factoryName || '').trim() || '-' },
+              { label: '公司', value: String(orderDetail?.customerName || orderDetail?.company || '').trim() || '-' },
+            ]}
+          />
+        </div>
       )}
       {!isPatternProduction && orderId && (
         <PredictionCard

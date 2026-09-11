@@ -23,7 +23,7 @@ export const MODULE_SECTIONS = [
     { path: '/production', label: '我的订单' },
     { path: '/production/cutting', label: '裁剪管理' },
     { path: '/production/progress-detail', label: '工序跟进' },
-    { path: '/production/external-factory', label: '外发工厂' },
+    { path: '/production/external-factory', label: '外发管理' },
     { path: '/production/picking', label: '物料领用' },
     { path: '/production/warehousing', label: '质检入库' },
     { path: '/production/transfer', label: '订单转移' },

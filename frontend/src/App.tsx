@@ -217,7 +217,7 @@ const AppRoutes: React.FC = () => {
           <Route
             path={paths.externalFactory}
             element={
-              <RouteErrorBoundary pageName="外发工厂">
+              <RouteErrorBoundary pageName="外发管理">
                 <Suspense fallback={routeFallback}>
                   <ExternalFactory />
                 </Suspense>

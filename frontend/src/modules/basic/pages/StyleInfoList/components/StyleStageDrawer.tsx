@@ -5,6 +5,7 @@ import SampleScanRecordsTable from './SampleScanRecordsTable';
 import PatternRemarkPreview from './PatternRemarkPreview';
 import { STATUS_COLORS, STATUS_LABELS } from './useSampleProcurementQuickActions';
 import type { UseStyleTableViewDataReturn } from './useStyleTableViewData';
+import ProductionOrderHeader from '@/components/StyleAssets/ProductionOrderHeader';
 
 type StyleStageDrawerProps = Pick<
   UseStyleTableViewDataReturn,
@@ -99,6 +100,34 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
     >
       {selectedStage && panel.selectedStageTag ? (
         <div className="style-smart-stage-modal">
+          {/* 款式信息头（与采购详情一致）：款式图 + 款号/款名/颜色/下单数量 + 码数矩阵 */}
+          <div
+            style={{
+              marginBottom: 16,
+              padding: 16,
+              border: '1px solid var(--color-border)',
+              borderRadius: 12,
+              background: 'var(--color-bg-container)',
+            }}
+          >
+            <ProductionOrderHeader
+              showOrderNo={false}
+              styleNo={selectedStage.record.styleNo}
+              styleName={selectedStage.record.styleName}
+              color={selectedStage.record.color}
+              styleId={selectedStage.record.id}
+              styleCover={selectedStage.record.cover}
+              coverSize={140}
+              sizeItems={
+                selectedStage.record.size && Number(selectedStage.record.sampleQuantity || 0) > 0
+                  ? [{ size: String(selectedStage.record.size), quantity: Number(selectedStage.record.sampleQuantity) || 0 }]
+                  : undefined
+              }
+              totalQuantity={Number(selectedStage.record.sampleQuantity || 0) > 0 ? Number(selectedStage.record.sampleQuantity) : undefined}
+              hideSizeBlockWhenNoRealSize
+              matrixColumnMinWidth={64}
+            />
+          </div>
           {(selectedStage.stage.key === 'sample' && sample.sampleStageSummary) || (selectedStage.stage.key === 'confirm' && confirm.confirmStageSummary) ? (
             <div className="style-smart-stage-modal__summary style-smart-stage-modal__summary--compact">
               <div className="style-smart-stage-modal__meta">

@@ -544,7 +544,7 @@ export const menuConfig: MenuSection[] = [
       { label: '生产订单', path: paths.productionList, icon: React.createElement(BuildOutlined) },
       { label: '裁剪管理', path: paths.cutting, icon: React.createElement(ScissorOutlined) },
       { label: '工序跟进', path: paths.progressDetail, icon: React.createElement(FileSearchOutlined) },
-      { label: '外发工厂', path: paths.externalFactory, icon: React.createElement(ThunderboltOutlined) },
+      { label: '外发管理', path: paths.externalFactory, icon: React.createElement(ThunderboltOutlined) },
       { label: '质检入库', path: paths.warehousing, icon: React.createElement(InboxOutlined) },
     ],
   },

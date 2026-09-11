@@ -38,7 +38,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
 
   const {
     loading, factories, users, nodeOperations, setNodeOperations,
-    orderSummary, processTrackingRecords,
+    orderSummary, orderDetail, orderLines, processTrackingRecords,
     trackingLoading, repairLoading, loadWarnings, prediction, predicting,
     operatorSummary, cuttingSizeItems,
     bundles, filteredScanRecords, refreshBundles, reloadNodeOperations,
@@ -304,6 +304,8 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       orderId={orderId}
       orderNo={orderNo}
       orderSummary={orderSummary}
+      orderDetail={orderDetail}
+      orderLines={orderLines}
       nodeName={nodeName}
       nodeTypeKey={nodeTypeKey}
       nodeStats={nodeStats}

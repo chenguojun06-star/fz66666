@@ -275,7 +275,7 @@ const ExternalFactory: React.FC = () => {
                     title={
                       <Space>
                         <ShopOutlined />
-                        <span>外发工厂订单</span>
+                        <span>外发管理</span>
                         {selectedFactoryName && (
                           <Tag color="blue">{selectedFactoryName}</Tag>
                         )}
