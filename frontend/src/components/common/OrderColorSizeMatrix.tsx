@@ -197,7 +197,11 @@ export const createOrderColorSizeMatrixInfoItems = ({
           }}>
             <span style={leadLabelStyle}>码数</span>
             {model.sizes.map((size) => (
-              <span key={`matrix-size-${size}`} style={headerCellStyle} title={size}>{shortSizeLabel(size)}</span>
+              // D-373：码数少（≤2，样衣/单码场景）时显示完整码（M(165/88A)），
+              // 与款式详情保持一致；多码（大货）仍用短码防列被撑爆
+              <span key={`matrix-size-${size}`} style={headerCellStyle} title={size}>
+                {model.sizes.length <= 2 ? size : shortSizeLabel(size)}
+              </span>
             ))}
             {model.rows.map((row) => (
               <React.Fragment key={`matrix-row-${row.label}`}>
@@ -312,11 +316,12 @@ const OrderColorSizeMatrix: React.FC<OrderColorSizeMatrixProps> = ({
         alignItems: 'center',
         minWidth: 'max-content',
       }}>
-        {/* D-138 尺码表头行：短码+悬停完整规格——先看列是哪个码，再看数量 */}
+        {/* D-138 尺码表头行：短码+悬停完整规格——先看列是哪个码，再看数量
+            D-373：码数少（≤2）时直接显示完整码，避免与款式详情的码数观感不一致 */}
         <span style={{ ...leadStyle, color: 'var(--neutral-text-light, var(--color-text-muted))' }}>颜色</span>
         {model.sizes.map((size) => (
           <span key={`head-${size}`} style={headerCellStyle} title={size}>
-            {shortSizeLabel(size)}
+            {model.sizes.length <= 2 ? size : shortSizeLabel(size)}
           </span>
         ))}
         {model.rows.map((row) => (

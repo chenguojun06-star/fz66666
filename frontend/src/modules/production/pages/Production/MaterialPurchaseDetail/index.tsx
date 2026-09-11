@@ -249,6 +249,8 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                 coverSize={160}
                 showOrderNo={false}
                 hideSizeBlockWhenNoRealSize
+                /* D-373：矩阵区已有「总下单数」，隐藏字段区「下单数量」避免重复（与样衣节点弹窗口径一致） */
+                hideOrderQuantity
               />
               <Row gutter={[16, 12]} style={{ marginTop: 12 }}>
                 <Col xs={24} sm={8} md={6}>
