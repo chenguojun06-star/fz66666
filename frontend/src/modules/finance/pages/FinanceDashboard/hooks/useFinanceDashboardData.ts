@@ -12,6 +12,8 @@ export interface StatCardConfig {
   title: string;
   value: number;
   color?: string;
+  /** D-369：money=金额（两位小数）、int=笔数 */
+  format?: 'money' | 'int';
 }
 
 export interface DetailConfig {
@@ -158,7 +160,8 @@ const buildStatCards = (
   { key: 'revenue', title: '总营收', value: summary.totalRevenue, color: undefined },
   { key: 'payable', title: '应付账款', value: summary.accountsPayable, color: 'var(--color-warning)' },
   { key: 'profit', title: '净利润', value: summary.netProfit, color: summary.netProfit >= 0 ? 'var(--color-success)' : 'var(--color-error)' },
-  { key: 'approval', title: `待审批 / 逾期`, value: summary.pendingApprovals, color: 'var(--color-info)' },
+  // D-369：待审批/逾期是「笔数」，不是金额——不能带 ¥ 也不能按金额格式显示
+  { key: 'approval', title: `待审批 / 逾期`, value: summary.pendingApprovals, color: 'var(--color-info)', format: 'int' },
   { key: 'wage', title: '工资支出', value: summary.wageExpense, color: 'var(--color-danger)' },
   { key: 'material', title: '物料成本', value: summary.materialCost, color: 'var(--color-accent-cyan)' },
   // D-363：采购已到货/入库并生成对账、但尚未审批的金额（未计入物料成本，审批后自动转入）

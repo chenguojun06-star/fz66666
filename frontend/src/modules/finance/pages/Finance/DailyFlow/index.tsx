@@ -95,7 +95,8 @@ const DailyFlowContent: React.FC = () => {
         amountCount++;
       }
     });
-    return { count: rows.length, quantity, amount, amountCount };
+    // D-369：浮点累加会产生 12431.949000000006 这类长尾，统一保留 2 位展示
+    return { count: rows.length, quantity: Number(quantity.toFixed(2)), amount, amountCount };
   }, [rows]);
 
   const columns: ColumnsType<DailyFlowItem> = [

@@ -37,10 +37,10 @@ export function useInboundModal(params: UseInboundModalParams): UseInboundModalR
     setInboundRecord(record);
     const backfill = Boolean(opts?.backfill);
     setBackfillMode(backfill);
-    // D-368：默认带出「待到货量」，并规整为整数（输入框只收整数；待到货 0.32 直接回填会校验失败）
+    // D-369：到货数量必须由用户实际填写（用户拍板：不预填，避免照抄默认量导致账实不符）
     const defaultQty = backfill
       ? (opts?.defaultQty != null ? opts.defaultQty : 0)
-      : Math.max(1, Math.round(Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0)));
+      : 0;
     inboundForm.setFieldsValue({
       arrivedQuantity: defaultQty,
       // D-366b：默认去向=入库到物料仓库

@@ -122,7 +122,7 @@ const AiHealthIndicator: React.FC = () => {
           type="text"
           icon={<ApiOutlined style={{ color: overallColor === 'red' ? '#cf1322' : overallColor === 'orange' ? '#fa8c16' : '#52c41a' }} />}
         >
-          <span style={{ fontSize: 11, color: overallColor === 'red' ? '#cf1322' : overallColor === 'orange' ? '#fa8c16' : '#52c41a' }}>
+          <span style={{ fontSize: 11, color: overallColor === 'red' ? '#cf1322' : overallColor === 'orange' ? '#fa8c16' : '#237804' }}>
             AI {overallText}
           </span>
         </Button>

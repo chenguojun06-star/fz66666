@@ -57,6 +57,7 @@ const FinanceDashboard: React.FC = () => {
               title={card.title}
               value={card.value}
               color={card.color}
+              format={card.format}
               active={selectedDetail === card.key}
               onClick={() => setSelectedDetail(card.key)}
             />

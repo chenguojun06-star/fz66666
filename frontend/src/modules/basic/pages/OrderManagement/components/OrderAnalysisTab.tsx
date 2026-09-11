@@ -186,7 +186,7 @@ const OrderAnalysisTab: React.FC = () => {
         barMaxWidth: 28,
         data: list.map((f) => f.avgCompletionDays >= 0 ? f.avgCompletionDays : 0),
         itemStyle: { color: '#52c41a', borderRadius: [3, 3, 0, 0] },
-        label: { show: true, position: 'top', fontSize: 11, color: '#52c41a', formatter: (p: any) => (list[p.dataIndex].avgCompletionDays >= 0 ? list[p.dataIndex].avgCompletionDays.toFixed(1) : '-') },
+        label: { show: true, position: 'top', fontSize: 11, color: '#237804', formatter: (p: any) => (list[p.dataIndex].avgCompletionDays >= 0 ? list[p.dataIndex].avgCompletionDays.toFixed(1) : '-') },
       }],
     };
   }, [data?.factoryRanking]);
@@ -388,7 +388,7 @@ const OrderAnalysisTab: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, borderTop: '1px dashed var(--color-border-light)', paddingTop: 10 }}>
                   <span style={{ color: 'var(--color-text-secondary)' }}>毛利估算</span>
-                  <span style={{ fontWeight: 700, color: margin.grossProfit >= 0 ? '#52c41a' : 'var(--color-error)' }}>
+                  <span style={{ fontWeight: 700, color: margin.grossProfit >= 0 ? '#237804' : 'var(--color-error)' }}>
                     {fmtMoney(margin.grossProfit)}
                   </span>
                 </div>
