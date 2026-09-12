@@ -561,17 +561,23 @@ Page({
     var newExpanded = !item.expanded;
     var patternId = item.id || item.patternId;
 
-    // 收起或已加载过：仅切换 expanded
-    if (!newExpanded || item._configLoaded) {
-      this.setData({ ['list[' + idx + '].expanded']: newExpanded });
+    // 收起：仅切换 expanded
+    if (!newExpanded) {
+      this.setData({ ['list[' + idx + '].expanded']: false });
       return;
     }
 
-    // 展开 + 首次加载：一次性 setData（expanded + loading + 占位空数组）
+    // D-380：展开时**每次都重新拉**工序+扫码记录。
+    // 旧实现 `if (item._configLoaded) { 只切换展开状态; return; }` 会让展开过一次的卡片
+    // 永远复用旧数据 —— 用户在详情页领取/报工完返回列表，展开还是 0/N 灰点，
+    // 表现就是"根本没有联动、像没有数据一样"。
     var initPayload = {};
     initPayload['list[' + idx + '].expanded'] = true;
-    initPayload['list[' + idx + ']._configLoading'] = true;
-    initPayload['list[' + idx + ']._processes'] = [];
+    if (!item._configLoaded) {
+      // 首次展开：显示加载中 + 占位
+      initPayload['list[' + idx + ']._configLoading'] = true;
+      initPayload['list[' + idx + ']._processes'] = [];
+    }
     this.setData(initPayload);
 
     if (!patternId) {

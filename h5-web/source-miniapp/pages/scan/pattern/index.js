@@ -61,6 +61,10 @@ Page({
     claimMode: false, // D-173：领取模式——点「领取」先填数量再提交，而非直接 quantity=1 提交
     skuList: [],
     summary: {},
+    // D-379：领取模式多色勾选——[{ name: '红色', qty: 2, checked: true }]，每色一条独立 CLAIM
+    claimColors: [],
+    claimColorSummary: { colorCount: 0, totalQty: 0 }, // D-379：已选颜色数/件数（WXML 不能调方法）
+    colorQtyMap: {}, // D-379：颜色 -> 该色订单总件数（领取时预填数量用）
     loading: false,
     warehouseOptions: [],
     filteredWarehouseOptions: [],
@@ -208,6 +212,14 @@ Page({
         matrixUpdate['detail.sizeText'] = matrixItems.map(function(i) { return i.size; }).join(' / ');
         matrixUpdate['detail.quantityText'] = matrixItems.map(function(i) { return String(i.quantity); }).join(' / ');
         matrixUpdate['detail.totalQuantity'] = grandTotal;
+        // D-312：多色样衣可选颜色——领取/报工表单按颜色区分，单色样衣自动隐藏
+        matrixUpdate['detail.colorOptions'] = uniqueColors;
+        if (uniqueColors.length > 0) {
+          const curColor = this.data.detail.color || '';
+          if (uniqueColors.indexOf(curColor) === -1) {
+            matrixUpdate['detail.color'] = uniqueColors[0];
+          }
+        }
       }
 
       this.setData(matrixUpdate);
@@ -218,13 +230,23 @@ Page({
       const skuItems = matrixItems.length > 0 ? matrixItems : (data.orderItems || []);
       const normalized = SKUProcessor.normalizeOrderItems(skuItems, data.orderNo, data.styleNo);
       const formItems = SKUProcessor.buildSKUInputList(normalized);
-      // D-172：样衣按件统计，每个颜色×码数默认1件（而非计划总数），用户可按实际制作件数调整
+      // D-383：数量**不预设默认值**——一个版可能由多人分批生产，每人实际完成件数各不相同，
+      // 预设 1 件会让记录失真（与 PC 端统一：数量一律由操作人按实际件数填写）。
+      // 提交时会自动跳过未填数量的行。
       formItems.forEach(function(item) {
         item.defaultQuantity = 1;
-        item.inputQuantity = 1;
+        item.inputQuantity = '';
       });
       const summary = SKUProcessor.getSummary(formItems);
-      this.setData({ skuList: formItems, summary: summary });
+      // D-379：按颜色聚合件数，供「领取时多色勾选」预填每色数量
+      const colorQtyMap = {};
+      formItems.forEach(function (item) {
+        const c = String(item.color || '').trim();
+        if (c) {
+          colorQtyMap[c] = (colorQtyMap[c] || 0) + (Number(item.totalQuantity) || 0);
+        }
+      });
+      this.setData({ skuList: formItems, summary: summary, colorQtyMap: colorQtyMap });
     }
 
     this._loadWarehouseOptions();
@@ -304,6 +326,13 @@ Page({
     }
   },
 
+  onColorChipTap(e) {
+    const color = e.currentTarget.dataset.color;
+    if (!color) return;
+    this.setData({ 'detail.color': color });
+    this._refreshQtyHint();
+  },
+
   /**
    * MES 报工模型：领取工序（行内按钮）
    * D-173：点「领取」进入领取表单（录入本次计划制作数量），填完再提交；
@@ -319,15 +348,27 @@ Page({
       return;
     }
     if (proc.status === 'CLAIMED' && !proc.claimedByMe) {
-      toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取生产中');
-      return;
+      // D-312：多色样衣他人已领某色，仍可进入领取表单选择其他颜色（单色时后端兜底拦截）
+      const colorOpts = this.data.detail.colorOptions || [];
+      if (colorOpts.length <= 1) {
+        toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取生产中');
+        return;
+      }
+      toast.info('该工序已有他人领取，请选择其他颜色领取');
     }
     if (proc.status === 'CLAIMED' && proc.claimedByMe) {
-      toast.info('你已领取该工序，请完成报工');
-      return;
+      // D-379：多色样衣可能只领了部分颜色，允许继续加领其他颜色
+      // （重复勾选已领颜色时后端按「工序+颜色」幂等短路，直接返回既有记录，不会产生重复 CLAIM）
+      const claimedColorOpts = this.data.detail.colorOptions || [];
+      if (claimedColorOpts.length <= 1) {
+        toast.info('你已领取该工序，请完成报工');
+        return;
+      }
+      toast.info('你已领取部分颜色，可继续勾选其他颜色加领');
     }
 
-    // 进入领取表单：数量默认1件，计划数量仅作上限
+    // 进入领取表单：D-379 改为按颜色勾选（每色一行：勾选 + 数量），不再只有一个总数
+    const claimColors = this._buildClaimColors();
     this.setData({
       selectedProcess: proc,
       claimMode: true,
@@ -339,8 +380,77 @@ Page({
       'detail.requiresReviewBeforeInbound': false,
       'detail.quantity': 1,
       'detail.remark': '',
+      claimColors: claimColors,
     });
+    this._refreshClaimColorSummary();
     this._refreshQtyHint();
+  },
+
+  /**
+   * D-379：构建领取用的颜色勾选列表
+   * 有几个颜色就显示几行；单色样衣也给一行（方便只领部分数量）。
+   * 数量默认取该色订单件数（取不到按 1 件），用户可改。
+   */
+  _buildClaimColors() {
+    const d = this.data.detail || {};
+    let colors = (d.colorOptions || []).filter(function (c) { return String(c || '').trim(); });
+    if (colors.length === 0) {
+      const single = String(d.color || '').trim();
+      colors = single ? [single] : [];
+    }
+    const qtyMap = this.data.colorQtyMap || {};
+    return colors.map(function (c) {
+      const qty = Number(qtyMap[c]);
+      return { name: c, qty: (qty > 0 ? qty : 1), checked: false };
+    });
+  },
+
+  /** D-379：勾选/取消某个颜色 */
+  onClaimColorToggle(e) {
+    const idx = e.currentTarget.dataset.index;
+    const key = 'claimColors[' + idx + '].checked';
+    const cur = this.data.claimColors[idx];
+    this.setData({ [key]: !cur.checked });
+    this._refreshClaimColorSummary();
+  },
+
+  /** D-379：修改某个颜色的领取数量 */
+  onClaimColorQtyInput(e) {
+    const idx = e.currentTarget.dataset.index;
+    const val = parseInt(e.detail.value, 10);
+    const key = 'claimColors[' + idx + '].qty';
+    this.setData({ [key]: (isNaN(val) || val < 0) ? 0 : val });
+    this._refreshClaimColorSummary();
+  },
+
+  /** D-379：点数量输入框时阻止冒泡（否则会顺带切换该行勾选） */
+  onClaimColorQtyTap() {},
+
+  /** D-379：刷新「已选 N 个颜色 · 共 M 件」（WXML 不能调方法，值在 JS 算好挂 data） */
+  _refreshClaimColorSummary() {
+    const list = this.data.claimColors || [];
+    let colorCount = 0;
+    let totalQty = 0;
+    list.forEach(function (c) {
+      if (c.checked) {
+        colorCount++;
+        totalQty += Number(c.qty) || 0;
+      }
+    });
+    this.setData({ claimColorSummary: { colorCount: colorCount, totalQty: totalQty } });
+  },
+
+  /** D-379：全选/清空颜色 */
+  onClaimColorSelectAll() {
+    const list = (this.data.claimColors || []).map(function (c) { return { name: c.name, qty: c.qty, checked: true }; });
+    this.setData({ claimColors: list });
+    this._refreshClaimColorSummary();
+  },
+
+  onClaimColorClearAll() {
+    const list = (this.data.claimColors || []).map(function (c) { return { name: c.name, qty: c.qty, checked: false }; });
+    this.setData({ claimColors: list });
+    this._refreshClaimColorSummary();
   },
 
   /**
@@ -356,8 +466,13 @@ Page({
       return;
     }
     if (proc.status === 'CLAIMED' && !proc.claimedByMe) {
-      toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取生产中，不能报工');
-      return;
+      // D-312：多色样衣他人已领某色，报工时可选择自己领取的其他颜色（后端按色绑定领取人兜底）
+      const colorOpts = this.data.detail.colorOptions || [];
+      if (colorOpts.length <= 1) {
+        toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取生产中，不能报工');
+        return;
+      }
+      toast.info('该工序已有他人领取，请选择自己领取的颜色报工');
     }
     if (proc.status === 'PENDING' && !proc.isWarehouse && !proc.isReview) {
       toast.warning('请先领取工序【' + proc.processName + '】，领取后才能报工');
@@ -401,12 +516,16 @@ Page({
     });
   },
 
-  /** D-164：当前操作剩余可报数量 = 任务数量 - 已报累计（任务数量未知时不限） */
   /** D-164：数量提示（已报/任务/可报） */
   _refreshQtyHint() {
     const d = this.data.detail || {};
     const taskQty = Number(d.taskQuantity) || 0;
     if (taskQty <= 0) { this.setData({ qtyHint: '' }); return; }
+    // D-312：多色样衣按颜色独立报工，后端按色校验；前端无每色已报数据，不显示汇总提示避免误导
+    if (d.colorOptions && d.colorOptions.length > 1) {
+      this.setData({ qtyHint: '' });
+      return;
+    }
     const remain = this._remainingQty();
     const proc = this.data.selectedProcess;
     const procName = proc ? (proc.processName || '') : (d.processName || '');
@@ -808,6 +927,51 @@ Page({
       || (selectedOption && selectedOption.progressStage) || operationType;
     const scanType = selectedOption && selectedOption.scanType || 'production';
 
+    // D-379：领取模式按颜色勾选——勾选几个颜色就提交几条 CLAIM。
+    // 后端幂等钥匙是「工序 + 颜色」（findClaimByProcessAndColor / validateProcessClaim），
+    // 不同颜色互不短路，所以逐色提交是安全的；同色拆多码才会被短路吞掉（那仍走报工录入）。
+    if (claimMode) {
+      const picked = (this.data.claimColors || []).filter(function (c) {
+        return c.checked && Number(c.qty) > 0;
+      });
+      if (picked.length === 0) {
+        toast.error('请至少勾选一个颜色并填写数量');
+        return;
+      }
+      this.setData({ loading: true });
+      try {
+        // D-380：改为批量一次提交——后端在同一个事务里逐色写 CLAIM，任一色校验失败整批回滚，
+        // 不会出现"领了 3 个色只成功了 2 个"这种半成品状态。
+        const items = picked.map(function (c) {
+          return { color: c.name, quantity: Number(c.qty) || 1 };
+        });
+        await api.production.submitPatternScanBatch({
+          patternId: d.patternId,
+          operationType: operationType,
+          operatorRole: 'PLATE_WORKER',
+          remark: remark || '',
+          processName: processName,
+          progressStage: progressStage,
+          warehouseCode: d.warehouseCode,
+          warehouseAreaId: this.data.warehouseAreaId,
+          warehouseLocationCode: this.data.warehouseLocationCode,
+          items: items,
+        });
+        const names = [];
+        for (let j = 0; j < picked.length; j++) names.push(picked[j].name);
+        toast.success('已领取【' + processName + '】' + names.join('、'));
+        this.setData({ claimColors: [] });
+        this._emitRefresh();
+        await this._refreshProcessList();
+      } catch (e) {
+        console.error('[样板页] 多色领取提交失败:', e);
+        toast.error((e && (e.errMsg || e.message)) || '领取失败');
+      } finally {
+        this.setData({ loading: false });
+      }
+      return;
+    }
+
     // D-173：领取是工序级动作，强制单数量路径（CLAIM 拆多条会因幂等短路丢失色码明细）；
     // 多色多码的色码数量在报工（COMPLETE）时按 SKU 明细录入
     const hasSkuList = !claimMode && this.data.skuList && this.data.skuList.length > 0;
@@ -824,45 +988,32 @@ Page({
 
       this.setData({ loading: true });
       try {
-        const requests = SKUProcessor.generateScanRequests(
-          validation.validList,
-          d.orderNo,
-          d.styleNo,
-          progressStage,
-          {
-            scanCode: d.patternId || '',
-            sourceBizType: 'SAMPLE',
-            operatorRole: 'PLATE_WORKER',
-            orderId: d.orderId,
-            processName: processName,
-            remark: remark || '',
-          },
-        );
-
-        // 添加仓库信息到每个请求
-        requests.forEach(function(req) {
-          // generateScanRequests 只透传固定字段，样衣上下文必须在此补齐，
-          // 否则后端按大货菲号扫码处理（D-112：此前 sourceBizType 被丢弃导致领取不到）
-          req.sourceBizType = 'SAMPLE';
-          req.patternId = d.patternId || '';
-          req.operationType = operationType;
-          req.operatorRole = 'PLATE_WORKER';
-          req.orderId = d.orderId || '';
-          req.processName = processName;
-          req.remark = remark || '';
-          req.scanType = scanType;
-          req.bundleNo = d.bundleNo || '01';
-          if (d.warehouseCode) req.warehouse = d.warehouseCode;
-          if (this.data.warehouseAreaId) req.warehouseAreaId = this.data.warehouseAreaId;
-          if (this.data.warehouseLocationCode) req.warehouseLocationCode = this.data.warehouseLocationCode;
-        }.bind(this));
-
-        const tasks = requests.map(function(req) {
-          return api.production.executeScan(req);
+        // D-380：批量一次提交（原实现按「颜色×码数」逐条发起——外单 20 色 × 8 码 = 160 条并发请求，
+        // 小程序并发上限会让请求排队变慢，后端每条独立事务还可能出现"报了一半"的半成品数据）
+        const items = validation.validList
+          .filter(function (item) { return Number(item.inputQuantity) > 0; })
+          .map(function (item) {
+            return { color: item.color, size: item.size, quantity: Number(item.inputQuantity) };
+          });
+        // D-383：数量不再预设默认值，未填数量的行会被跳过；全都没填时给出明确提示
+        if (items.length === 0) {
+          toast.error('请至少填写一个「本次件数」');
+          return;
+        }
+        const batchRes = await api.production.submitPatternScanBatch({
+          patternId: d.patternId,
+          operationType: operationType,
+          operatorRole: 'PLATE_WORKER',
+          remark: remark || '',
+          processName: processName,
+          progressStage: progressStage,
+          warehouseCode: d.warehouseCode,
+          warehouseAreaId: this.data.warehouseAreaId,
+          warehouseLocationCode: this.data.warehouseLocationCode,
+          items: items,
         });
-
-        await Promise.all(tasks);
-        toast.success((selectedOption && selectedOption.label) || processName + ' 完成（' + tasks.length + '条）');
+        const savedCount = (batchRes && batchRes.savedCount) || items.length;
+        toast.success(((selectedOption && selectedOption.label) || processName) + ' 完成（' + savedCount + '项）');
         this._emitRefresh();
         await this._refreshProcessList();
       } catch (e) {
@@ -899,6 +1050,9 @@ Page({
           operatorRole: 'PLATE_WORKER',
           remark: remark || '',
         };
+
+        // 多色样衣：非SKU明细路径也要透传颜色，后端按颜色独立累计报工（D-311）
+        if (d.color) scanData.color = d.color;
 
         if (d.warehouseCode) scanData.warehouse = d.warehouseCode;
         if (this.data.warehouseAreaId) scanData.warehouseAreaId = this.data.warehouseAreaId;

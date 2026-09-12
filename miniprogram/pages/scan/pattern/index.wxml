@@ -112,12 +112,12 @@
               {{item.statusLabel}}
             </view>
           </view>
-          <!-- 待领取：领取按钮 -->
-          <view wx:if="{{item.status === 'PENDING' && !item.isWarehouse && !item.isReview}}"
+          <!-- D-379：领取按钮——未领取时显示；多色样衣已领部分颜色时也显示，便于继续加领其他颜色 -->
+          <view wx:if="{{(item.status === 'PENDING' || (item.status === 'CLAIMED' && detail.colorOptions.length > 1)) && !item.isWarehouse && !item.isReview}}"
                 class="process-claim-btn {{loading ? 'process-claim-btn--disabled' : ''}}"
                 hover-class="process-claim-btn-hover"
                 bindtap="onClaimProcess" data-index="{{index}}">
-            领取
+            {{item.status === 'PENDING' ? '领取' : '加领'}}
           </view>
           <!-- 本人已领取：完成报工按钮 -->
           <view wx:if="{{item.status === 'CLAIMED' && item.claimedByMe}}"
@@ -180,7 +180,7 @@
             <input class="sku-qty-input" type="number"
                    value="{{item.inputQuantity}}"
                    data-index="{{index}}" bindinput="onSkuInput"
-                   placeholder="数量" />
+                   placeholder="本次件数" />
             <text class="sku-unit">件</text>
           </view>
         </view>
@@ -195,8 +195,46 @@
       </view>
     </view>
 
-    <!-- D-312：多色样衣选颜色（领取/报工通用；单色样衣自动隐藏） -->
-    <view wx:if="{{detail.colorOptions && detail.colorOptions.length > 1 && (claimMode || !skuList || skuList.length === 0)}}" class="input-row color-row">
+    <!-- D-379：领取按颜色勾选——有几个颜色就显示几行，可多选，每色填数量，一起领取 -->
+    <view wx:if="{{claimMode && claimColors.length > 0}}" class="section-card claim-color-card">
+      <view class="claim-color-head">
+        <text class="section-title">领取颜色（可多选）</text>
+        <view class="claim-color-actions">
+          <text class="claim-color-link" bindtap="onClaimColorSelectAll">全选</text>
+          <text class="claim-color-link" bindtap="onClaimColorClearAll">清空</text>
+        </view>
+      </view>
+      <view
+        wx:for="{{claimColors}}"
+        wx:key="name"
+        class="claim-color-row {{item.checked ? 'claim-color-row--active' : ''}}"
+        data-index="{{index}}"
+        bindtap="onClaimColorToggle"
+      >
+        <view class="claim-color-check {{item.checked ? 'claim-color-check--on' : ''}}">
+          <text wx:if="{{item.checked}}" class="claim-color-check-icon">✓</text>
+        </view>
+        <text class="claim-color-name">{{item.name}}</text>
+        <view class="claim-color-qty-wrap">
+          <input
+            class="claim-color-qty"
+            type="number"
+            value="{{item.qty}}"
+            data-index="{{index}}"
+            bindinput="onClaimColorQtyInput"
+            catchtap="onClaimColorQtyTap"
+            placeholder="数量"
+          />
+          <text class="claim-color-unit">件</text>
+        </view>
+      </view>
+      <view class="claim-color-total">
+        <text>已选 {{claimColorSummary.colorCount}} 个颜色 · 共 {{claimColorSummary.totalQty}} 件</text>
+      </view>
+    </view>
+
+    <!-- D-312：多色样衣选颜色（报工模式；领取已改为上方多色勾选） -->
+    <view wx:if="{{!claimMode && detail.colorOptions && detail.colorOptions.length > 1 && (!skuList || skuList.length === 0)}}" class="input-row color-row">
       <text class="input-label">颜色</text>
       <view class="color-options">
         <view
@@ -210,9 +248,9 @@
       </view>
     </view>
 
-    <!-- 数量输入（完成/返修操作时隐藏；领取时强制单数量输入；无 skuList 时显示） -->
-    <view wx:if="{{(claimMode || !skuList || skuList.length === 0) && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="input-row">
-      <text class="input-label">{{claimMode ? '计划制作数量' : '数量'}}</text>
+    <!-- 数量输入：报工模式（完成/返修操作时隐藏；无 skuList 时显示） -->
+    <view wx:if="{{!claimMode && (!skuList || skuList.length === 0) && detail.operationType !== 'COMPLETE' && detail.operationType !== 'REVIEW'}}" class="input-row">
+      <text class="input-label">数量</text>
       <input
         class="input-field"
         type="digit"
@@ -222,6 +260,19 @@
       />
       <text class="input-suffix" wx:if="{{qtyHint}}">{{qtyHint}}</text>
       <text class="input-suffix" wx:else>件（最多{{detail.maxQuantity || detail.quantity || 0}}件）</text>
+    </view>
+
+    <!-- 数量输入：领取模式且该样衣取不到颜色数据时的兜底（正常多色样衣走上方勾选列表） -->
+    <view wx:if="{{claimMode && claimColors.length === 0}}" class="input-row">
+      <text class="input-label">计划制作数量</text>
+      <input
+        class="input-field"
+        type="digit"
+        placeholder="请输入数量"
+        value="{{detail.quantity}}"
+        bindinput="onQuantityInput"
+      />
+      <text class="input-suffix">件</text>
     </view>
 
     <!-- 仓位编号（仓库操作时显示） -->

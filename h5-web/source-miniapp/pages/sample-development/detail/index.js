@@ -4,11 +4,11 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { getToken } = require('../../../utils/storage');
 const { getBaseUrl } = require('../../../config');
 const { eventBus, Events } = require('../../../utils/eventBus');
-const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, getStageName, resolveStageKey } = require('../../../utils/sampleHelper');
+const { SAMPLE_PARENT_STAGES, SAMPLE_PROGRESS_NODE_ALIASES, resolveStageKey } = require('../../../utils/sampleHelper');
 const { enrichBomList, processTypeLabel, processStatusLabel, PATTERN_STATUS_MAP } = require('../../../shared/enumLabels');
 const PatternScanProcessor = require('../../scan/handlers/PatternScanProcessor');
 const { displayCategory } = require('../../../utils/displayHelper');
-const { buildProcessTimeline } = require('../../../utils/sampleProcessTimeline');
+const { buildProcessTimeline, resolveSampleTotalQty } = require('../../../utils/sampleProcessTimeline');
 const { splitStyleOptions } = require('../../../utils/styleOptions');
 const { sortSizeNames } = require('../../../utils/sizeUtils');
 
@@ -495,8 +495,11 @@ Page({
     const NON_GATE_STAGE_KEYS = { procurement: true, warehousing: true };
     let totalPercent = 0; // 只累加生产工序的进度
     let productionCount = 0; // 生产工序数量
-    const canOperate = received && !snapshot._isScrapped && !completed;
-    const stages = SAMPLE_PARENT_STAGES.map(function (s, idx) {
+    // D-383：必须遍历 stageDefs（= 实际配置了子工序的父阶段），不能再用写死的 SAMPLE_PARENT_STAGES。
+    // 原实现上面算出了 stageDefs 却从未使用 → 进度分母恒为 4：
+    // 用户在 PC 只配了「裁剪 + 车缝」2 个阶段，手机端仍显示 x/4，两端完成率口径不一致。
+    // 现在「PC 配几个阶段，手机端就是几个」，与 PC 端 effectiveStages（只统计配了子工序的阶段）一致。
+    const stages = stageDefs.map(function (s, idx) {
       let percent;
       if (completed) {
         percent = 100;
@@ -1049,7 +1052,6 @@ Page({
   /** 按阶段过滤工序和扫码记录 */
   _filterStageContent(stageKey) {
     // 工序按 progressStage 过滤
-    const stageKeyLower = String(stageKey || '').toLowerCase();
     const stageAliases = SAMPLE_PROGRESS_NODE_ALIASES[stageKey] || [stageKey];
     const stageProcesses = (this.data.allProcesses || []).filter(function (p) {
       const ps = String(p.progressStage || p.stage || '').toLowerCase();
@@ -1111,8 +1113,12 @@ Page({
 
     // D-257：构建逻辑收敛到 utils/sampleProcessTimeline.js（与列表页共用同一份，保证两边显示一致）
     const snapshot = this.data.patternSnapshot || {};
-    const totalQty = Number(snapshot.quantity || snapshot.totalQuantity
-      || (this.data.styleInfo && (this.data.styleInfo.sampleQuantity || this.data.styleInfo.quantity)) || 0) || 0;
+    // D-380：分母统一为「应做总件数」——色码矩阵合计优先（3 色 × 每色 1 件 = 3）。
+    // 原来直接用 snapshot.quantity（常常只有 1），导致详情页显示 3/1、列表页显示 3/3 的矛盾。
+    const totalQty = resolveSampleTotalQty(
+      snapshot,
+      Number((this.data.styleInfo && (this.data.styleInfo.sampleQuantity || this.data.styleInfo.quantity)) || 0) || 0,
+    );
     const built = buildProcessTimeline(processes, scans, totalQty);
 
     this.setData({

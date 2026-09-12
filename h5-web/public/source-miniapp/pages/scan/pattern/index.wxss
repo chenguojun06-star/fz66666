@@ -703,3 +703,94 @@
   font-size: var(--font-size-xs, 12px);
   color: var(--color-primary, #2d7ff9);
 }
+/* --- D-379：领取按颜色勾选（多色可多选，每色填数量，一起领取） --- */
+.claim-color-card {
+  margin-top: 0;
+  margin-bottom: 12px;
+  padding: 12px;
+}
+.claim-color-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+.claim-color-actions {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+}
+.claim-color-link {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-primary, #2d7ff9);
+}
+.claim-color-row {
+  display: flex;
+  align-items: center;
+  padding: 16rpx;
+  border-radius: var(--radius-sm, 6rpx);
+  border: 1rpx solid var(--color-border, #e5e5e5);
+  background: var(--color-bg-card, #ffffff);
+  margin-bottom: 12rpx;
+}
+.claim-color-row--active {
+  border-color: var(--color-primary, #2d7ff9);
+  background: var(--color-primary-bg, #eaf3ff);
+}
+.claim-color-check {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 8rpx;
+  border: 1rpx solid var(--color-border, #e5e5e5);
+  background: var(--color-bg-card, #ffffff);
+  margin-right: 16rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.claim-color-check--on {
+  border-color: var(--color-primary, #2d7ff9);
+  background: var(--color-primary, #2d7ff9);
+}
+.claim-color-check-icon {
+  font-size: 24rpx;
+  line-height: 1;
+  color: #ffffff;
+}
+.claim-color-name {
+  flex: 1;
+  font-size: var(--font-size-base, 14px);
+  color: var(--color-text-primary, #1a1a1a);
+}
+.claim-color-row--active .claim-color-name {
+  color: var(--color-primary, #2d7ff9);
+  font-weight: var(--font-weight-medium, 500);
+}
+.claim-color-qty-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  flex-shrink: 0;
+}
+.claim-color-qty {
+  width: 120rpx;
+  height: 56rpx;
+  min-height: 56rpx;
+  text-align: center;
+  border: 1rpx solid var(--color-border, #e5e5e5);
+  border-radius: var(--radius-sm, 6rpx);
+  background: var(--color-bg-card, #ffffff);
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-text-primary, #1a1a1a);
+}
+.claim-color-unit {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-text-tertiary, #999999);
+}
+.claim-color-total {
+  margin-top: 8rpx;
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-text-secondary, #666666);
+  text-align: right;
+}

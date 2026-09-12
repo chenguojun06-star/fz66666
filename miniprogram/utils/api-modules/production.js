@@ -330,6 +330,16 @@ const production = {
   submitPatternScan(payload) {
     return ok('/api/production/pattern/scan', 'POST', payload || {});
   },
+  /**
+   * D-380：批量提交样板扫码（多色多码一次提交）
+   * 外单齐码齐色时颜色 × 码数可达上百组合，逐条并发提交会慢且可能"报了一半"。
+   * payload: { patternId, operationType, processName, progressStage, operatorRole, remark,
+   *            warehouseCode, warehouseAreaId, warehouseLocationCode, unitPrice,
+   *            items: [{ color, size, quantity }] }
+   */
+  submitPatternScanBatch(payload) {
+    return ok('/api/production/pattern/scan-batch', 'POST', payload || {});
+  },
   reviewPattern(patternId, result, remark, images) {
     const id = _normalizePatternId(patternId);
     const action = encodeURIComponent('review');

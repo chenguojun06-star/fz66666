@@ -56,6 +56,46 @@ function toList(res) {
  * 构建子工序时间线
  * @returns {{ processes: Array, scanRecords: Array }}
  */
+/**
+ * D-380：解析色码矩阵（sizeColorMatrix）为可渲染结构
+ * （与列表页 parseMatrix 同逻辑，收敛到这里避免两页口径漂移）
+ */
+function parseColorSizeMatrix(item) {
+  const scm = (item && item.sizeColorMatrix) || null;
+  if (!scm) return { sizes: [], rows: [] };
+  const sizes = Array.isArray(scm.sizes) ? scm.sizes.map(String) : [];
+  const rows = Array.isArray(scm.matrixRows) ? scm.matrixRows.map(function (r) {
+    const qtyArr = Array.isArray(r && r.quantities) ? r.quantities : [];
+    const rowTotal = qtyArr.reduce(function (s, n) { return s + (Number(n) || 0); }, 0);
+    return { color: (r && r.color) || '', quantities: qtyArr, rowTotal: rowTotal };
+  }) : [];
+  return { sizes: sizes, rows: rows };
+}
+
+/**
+ * D-380：样衣「应做总件数」——工序进度的分母。
+ *
+ * 为什么不能直接用 quantity：`t_pattern_production.quantity` 常常只记了 1 件，
+ * 而真实件数在 `sizeColorMatrix` 里（例如 3 色 × 每色 1 件 = 应做 3 件）。
+ * 列表页 D-177 已按这个口径算（显示 0/3），但详情页一直用 quantity（显示 3/1），
+ * 两页对不上。统一收敛到这里。
+ *
+ * @param {object} item 样衣快照 / 列表项（需含 sizeColorMatrix / quantity）
+ * @param {number} fallback 矩阵与 quantity 都取不到时的兜底（如款式 sampleQuantity）
+ */
+function resolveSampleTotalQty(item, fallback) {
+  const matrix = parseColorSizeMatrix(item);
+  let matrixTotal = 0;
+  (matrix.rows || []).forEach(function (r) { matrixTotal += Number(r.rowTotal) || 0; });
+  if (matrixTotal > 0) return matrixTotal;
+  const raw = Number((item && (item.quantity || item.totalQuantity)) || fallback);
+  return raw > 0 ? raw : 0;
+}
+
+/**
+ * 构建子工序时间线
+ * @returns {{ processes: Array, scanRecords: Array }}
+ */
 function buildProcessTimeline(processes, scans, totalQty) {
   const validProcesses = (processes || []).filter(function (p) { return !isNonProductionProcess(p); });
   const total = Number(totalQty) || 0;
@@ -82,21 +122,37 @@ function buildProcessTimeline(processes, scans, totalQty) {
     const claimRec = myScans.find(function (r) { return r.operationType === 'CLAIM'; });
     const workScans = myScans.filter(function (r) { return r.operationType !== 'CLAIM'; });
 
-    // 状态判断：有报工记录 → 已完成；有 CLAIM 未报工 → 生产中；无记录 → 待领取
+    // 数量统计（D-167：CLAIM 不计入数量）——必须先算，状态判定要用
+    let completedQty = 0;
+    workScans.forEach(function (r) {
+      completedQty += Number(r.quantity) || 0;
+    });
+
+    // D-380：状态按「件数」判定，不再"有报工就算完成"。
+    // 旧逻辑会让只做了 1 个颜色（1/3）的工序显示"已完成"，用户以为做完了、
+    // 后续该工序颜色无法继续报工 → 业务被卡死。
+    //   报工数 ≥ 应做数        → 已完成
+    //   有报工 / 已领取未做满   → 生产中
+    //   应做数取不到(=0)        → 回退旧行为：有报工即完成（避免误判阻塞）
     let status = 'pending';
     let statusText = '待领取';
-    if (workScans.length > 0) {
+    if (total > 0) {
+      if (completedQty >= total) {
+        status = 'completed';
+        statusText = '已完成';
+      } else if (completedQty > 0 || claimRec) {
+        status = 'in_progress';
+        statusText = completedQty > 0
+          ? ('已完成 ' + completedQty + '/' + total)
+          : ((claimRec.operatorName || '') + ' 生产中');
+      }
+    } else if (workScans.length > 0) {
       status = 'completed';
       statusText = '已完成';
     } else if (claimRec) {
       status = 'in_progress';
       statusText = (claimRec.operatorName || '') + ' 生产中';
     }
-    // 数量统计（D-167：CLAIM 不计入数量）
-    let completedQty = 0;
-    workScans.forEach(function (r) {
-      completedQty += Number(r.quantity) || 0;
-    });
     let receivedQty = 0;
     myScans.forEach(function (r) {
       if (r.operationType === 'RECEIVE') {
@@ -152,4 +208,6 @@ function buildProcessTimeline(processes, scans, totalQty) {
 module.exports = {
   buildProcessTimeline: buildProcessTimeline,
   toList: toList,
+  parseColorSizeMatrix: parseColorSizeMatrix,
+  resolveSampleTotalQty: resolveSampleTotalQty,
 };
