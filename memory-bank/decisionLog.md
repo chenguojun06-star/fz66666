@@ -1,7 +1,214 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-11（新增 D-373b 审核/入库节点加载样衣快照——码数不一致根治）
+> 最后更新：2026-09-12（新增 D-384 指派明细表 + 按人卡额度 + 工资按各自实际件数）
+
+---
+
+## D-384：指派明细表 + 按人卡额度 + 工资按人计（2026-09-12）
+
+**用户拍板**：①不同工序数量一样（前面几件后面就几件）；②同一工序会分给多人（张三 2 件 / 李四 1 件）；
+③页面要能看到安排；④**要算工资**；⑤报工可一次报完、可分次报完，总数不超过指派数量。
+
+**关键语义（用户定）**：「指派就是固定的任务数量，报数也是报这个指派数量，不能超过」。
+
+**方案**：新增指派明细表 `t_pattern_process_assignment`（**Flyway `V202709120500`**），一道工序可指派多人、
+各自独立额度；报工校验**优先按「工序 + 颜色 + 操作人」的指派额度**，未被指派的人回退
+矩阵（D-312）/ `pattern.quantity`（完全兼容）。
+
+**实施**：
+1. 迁移 `V202709120500__create_pattern_process_assignment.sql`（IF NOT EXISTS + 存储过程幂等模式）
+2. `PatternProcessAssignment` 实体（ASSIGN_ID / tenantId fill / deleteFlag）+ Mapper
+3. `assignPattern` 扩为 5 参（+processName/processCode），落指派明细（unitPrice 用 `lookupStyleProcessPrice` 快照）
+4. `submitScan`：`findAssignmentQuantity(patternId, processName, reqColor, currentOperatorName)`；
+   有指派 → `taskQty = 该人额度` 且 **`summed` 只累计本人已报数**（每人额度互不挤占，分次报也正确）；
+   无指派 → 回退旧口径
+5. `GET /api/production/pattern/{patternId}/assignments` → PC 展示「指派安排」
+
+**工资逻辑未改也不需要改**：工资本就按 `t_scan_record`（报工镜像）的 操作人 + 件数 + 单价 计；
+指派明细让"计划安排"可追溯 + 额度按人卡控，天然支持多人各自计件。
+
+**校验**：`mvn compile BUILD SUCCESS`、PC `tsc 0 错` / `eslint 0 错` / `vite build ✓`。
+
+---
+
+## D-383：完成数量改为「人为输入」+ 手机端阶段数按配置（2026-09-12）
+
+**用户原话**：「全部统一，pc端的数量也需要人为的输入，与手机端一样，**不要默认多少**，
+因为**一个版多人生产的时候记录的数据都是不一样的**」。
+
+**一、数量不再预设默认值（两端统一为"手填本次完成数量"）**
+
+- **PC**：`BatchCompleteModal` 每行加数量输入框（默认空、勾选行必填才计入提交）；
+  **删除「手动完成」按钮**（它不让人填数量、后端取样板记录的数量）→ 统一为「完成」弹窗。
+- **手机端**：报工 SKU 列表 `inputQuantity` 由 **1 → 空**；placeholder 由「数量」改「**本次件数**」；
+  全未填时 toast 提示；提交自动跳过未填行。
+- **领取（CLAIM）保留原预填**：领取只是认领动作、数量不计入完成数也不影响工资，保留更省操作。
+
+**二、手机端「进度分母恒为 4」根治**
+
+`pages/sample-development/detail/index.js` 的 `buildStages()` 里
+**算出了 `stageDefs`（实际配置了子工序的父阶段）却从未使用**，渲染与统计仍用写死的
+`SAMPLE_PARENT_STAGES`（裁剪/二次工艺/车缝/尾部）→ 用户只在 PC 配 2 个阶段时，
+PC 显示 `1/2`、手机端显示 `x/4`，两端完成率对不上。
+改为遍历 `stageDefs`，与 PC 端 `effectiveStages`（只统计配了子工序的阶段）口径一致；
+配置未知（`configStageKeys === null`）仍回退 4 个阶段兜底。
+
+**顺带**：清掉 `detail/index.js` 3 个历史 `no-unused-vars`（`getStageName`/`canOperate`/`stageKeyLower`）。
+
+**校验**：PC `tsc 0 错` / `eslint 0 错` / `vite build ✓ 19.85s`；
+小程序 `node --check ×4` / `eslint 0 错` / js+wxml 四副本 md5 唯一值 1。
+
+**注意**：`defaultQuantity` 全仓库无消费方（grep 确认），保持原值未动。
+
+---
+
+## D-382：PC 端对齐手机端「多色多码」（2026-09-12）
+
+**用户诉求**：「全部做到一样 很直观 好手动操作 全部优化好」。
+
+**核实结论（D-382 调研）**：PC 与手机端**不一致**——
+PC 无领取按钮、报工一次只能操作一个色码（顶部「色码任务」下拉切换）、不用批量接口、
+撤回**不区分颜色**（会连带删掉该工序其他颜色的记录）、数量与进度分母口径也不同。
+
+**1. PC 新增「批量完成」—— 解决"20 色码 = 20 次切换 + 20 次点按"**
+- 新建 `components/BatchCompleteModal.tsx`：一次列出该款式**全部色码任务**
+- 打开时并行拉每个色码的 `scan-records`，标出已完成的色码并**默认不勾选**
+  → 避免重复完成产生重复报工记录（**重复报工会重复计件工资**）
+- 确认后并发提交同一个 `/production/pattern/scan`
+- 按钮**不受 `record.status === 'completed'` 限制**：整行 completed 只代表"至少一个颜色完成"，
+  否则其余颜色永远没有入口完成（多色多码的关键陷阱）
+
+**2. PC 现在能看到颜色维度**
+- 根因：`useSampleProcessProgress` 拉了 `scan-records` 却**把 color 丢弃**（只用来填名字集合）
+- 现在保留原始记录 → `buildProcessColorItems()` 按「工序名 + 颜色」聚合为 `ProcessColorItem[]`
+- 状态列多色时显示「x/y 色」，不再"一色完成整行显示已完成"（与手机端口径一致）
+
+**3. 撤回不再跨颜色误删（数据风险）**
+- `findRowUndoRecords` / `undoPatternScanRow` 加**可选 color（重载，向后兼容）**；`undo-process` 端点接收 color
+- 前端撤回带上当前色码 `color` → 只撤该颜色
+
+**4. 顺带修掉坏页面**
+- `StyleProgressTab.tsx:159` 把 `by-style`（已返回数组）当单对象 → `pData.id` undefined
+  → 请求 `/production/pattern/undefined/scan-records` → 整页数据全空
+
+**校验**：`mvn compile BUILD SUCCESS`、tsc 0 错、ESLint 0 错 0 警告、`vite build` ✓。
+
+**仍未做（需业务口径确认）**：
+① PC 手动完成不传 quantity（后端取 `pattern.getQuantity()`）vs 手机端默认 1 件/色码 → 工资镜像数量可能不同；
+② 进度分母：PC 只算"有子工序的阶段"（动态）vs 手机端固定 4 个生产阶段。
+
+---
+
+## D-381：样衣批量扫码接口（外单大单性能，2026-09-12）
+
+**用户诉求**：「做吧 优化到最好用，不然很多用户会觉得我们的系统不好、很垃圾」，
+场景是**外单/亚马逊齐码齐色、颜色超多**。
+
+**问题**：多色多码报工时前端按「颜色 × 码数」逐条发请求 + `Promise.all` 并发：
+- 20 色 × 8 码 = **160 条请求** → 小程序并发上限导致排队，很慢
+- **每条独立事务** → 中途失败会出现「报了一半」，用户无法判断、数据成半成品
+
+**决策：新增批量端点，服务端在同一事务内循环复用现有 `submitScan`**（不重写校验逻辑）。
+理由：单条 `submitScan` 已承载全部业务规则（工序配置校验/累计报工上限/按颜色领取绑定/工资镜像/库存同步/状态流转），
+重写一份必然产生行为漂移；复用则**行为完全一致**，且任一明细失败整批回滚，天然消灭"半成品"。
+
+**改动**：
+1. `PatternProductionOrchestrator.submitScanBatch(...)` + `@Transactional(rollbackFor=Exception.class)`，
+   循环调用 `submitScan`（同类自调用会加入外层事务，事务语义正确）；返回
+   `{patternId, operationType, savedCount, skippedCount, totalQuantity}`；数量 ≤0/非法的明细跳过
+2. `PatternProductionController` 新增 `POST /api/production/pattern/scan-batch`（单条 `/scan` 保留不删）
+3. 小程序 `api-modules/production.js` 新增 `submitPatternScanBatch(payload)`
+4. 小程序扫描页两处改批量：报工（原 `generateScanRequests` + `Promise.all(N)`）、
+   多色领取（原 for 循环 N 条）→ 各 1 条请求、整批原子
+
+**核实**：PC 端不调 `executeScan`/`submitPatternScan`（全前端 grep 为空）→ 该问题仅手机端。
+
+**校验**：`mvn compile BUILD SUCCESS`、`node --check` ×4、ESLint 无新增错误、四副本 md5 唯一值 1。
+
+**遗留（未做）**：批量端点内部仍是"每条一个 `submitScan`"，即每条仍会各查一次该样板的全部扫码记录
+（累计校验用）。HTTP 往返与事务问题已解决；若将来组合数再上一个量级（500+），
+可把 `priorRecords` 提到循环外一次查出、在内存里累计校验。
+
+---
+
+## D-380：样衣工序进度「3/1」根因 + 状态按件数判定（2026-09-12）
+
+**用户反馈**：样衣详情「工序进度」显示 裁剪 3/1、整件 3/1、整烫 3/1、包装 2/1，
+并明确口径：**「领取只是一个动作，完成报工才是这 1 件完成」**；3 个颜色各 1 件 → 报工 3 件 → **应该是 3/3**。
+用户同时警告：**「不然显示完成了，后面的全部都不能报工了」**。
+
+**根因（两处）**：
+1. **分母口径不一致**：`utils/sampleProcessTimeline.js` 的 `_totalQty` 由调用方传入。
+   详情页传 `snapshot.quantity`（`t_pattern_production.quantity` 常常只记 1 件）→ 3/1；
+   而**列表页 D-177 早就按「色码矩阵合计」算**（同一件样衣显示 0/3）→ 两页自相矛盾。
+   （分子 `_completedQty` 是对的：该工序所有报工件数累加 = 3 色 × 1 件 = 3）
+2. **状态判定过宽**：`if (workScans.length > 0) status = 'completed'` —— 只做了 1 个颜色（1/3）也显示"已完成"，
+   导致该工序剩下的颜色被认为"不用做了"，**阻塞后续报工**。
+
+**修复**：
+1. `sampleProcessTimeline.js` 新增并导出 `parseColorSizeMatrix(item)` + `resolveSampleTotalQty(item, fallback)`：
+   **色码矩阵合计优先**（3 色 × 1 件 = 3），取不到再回退 `quantity` → 把列表页 D-177 的口径收敛为共享函数，两页同源
+2. 详情页 `_loadProcessesAndScans` 的 `totalQty` 改用 `resolveSampleTotalQty(snapshot, styleInfo.sampleQuantity)`
+3. **状态按件数判定**：`completedQty >= total` → `completed`；有报工/已领取但未做满 → `in_progress`
+   （文案「已完成 1/3」/「XX 生产中」）；`total <= 0`（取不到应做数）→ 回退旧行为"有报工即完成"，**避免误判阻塞**
+
+**验证**：node --check ×4 通过、utils 与 detail 的 md5 唯一值 = 1、ESLint 无新增错误。
+（`detail/index.js` 有 3 个 HEAD 就存在的历史 `no-unused-vars`：`getStageName`/`canOperate`/`stageKeyLower`，非本次引入，未动）
+
+**待确认（联动问题）**：用户另一张截图——列表页展开显示 3 项工序（裁剪/整件/整烫）全部 `0/3` 灰点、卡片标"待领取"，
+与详情页（4 项、已完成）不一致。已查清：
+- 列表页工序源 = `styleApi.listProcesses({styleId})` → **款式工序**（3 项）
+- 详情页工序源 = `production.getPatternProcessConfig(patternId)` → **样板工序**（4 项，多"包装"）
+两页本就不同源；需确认用户看的**是否为同一条样板记录**（同款号可有多条打样记录）再决定是否统一数据源。
+
+---
+
+## D-379：样衣扫码「多颜色勾选领取」（2026-09-12，手机端小程序）
+
+**用户诉求（原话）**：「手机端要支持多颜色领取，勾选颜色、填写数量，就可以领取了。颜色可以单领取，
+也可以选择多色领取。**有几个颜色就显示几个颜色**，用户可以选择多色一起领取」——指 `pages/scan/pattern`（样衣扫码页）的「领取工序」。
+
+**旧实现的问题**：
+- 领取表单只显示一个**单选**颜色 chips（`onColorChipTap` 只写 `detail.color`）+ **一个**「计划制作数量」输入框
+  → 一次只能领 1 个颜色、1 个数量，多色样衣要反复进表单。
+- 多色多码列表（`skuList`）在领取时被 `!claimMode` 条件**显式隐藏**。
+- **更严重**：工序行「领取」按钮条件是 `item.status === 'PENDING'`，领完红色后工序变 `CLAIMED`，
+  按钮直接消失 → **根本领不了第二个颜色**（`onClaimProcess` 里 D-312 写的"他人已领仍可选其他颜色"分支
+  因按钮不渲染而成了死代码）。
+
+**先核实的关键前提（决定方案可行性）**：后端 CLAIM 的幂等钥匙是 **「工序 + 颜色」**
+（`PatternProductionOrchestrator.validateProcessClaim` / `findClaimByProcessAndColor`，**不含码数**）：
+- 按**颜色**逐条提交 → 每条颜色钥匙不同，**不会被幂等短路吞掉** ✅
+- 同色拆**多码** → 钥匙相同 → 第 2 条被短路丢弃 ❌（这就是 D-173 注释"CLAIM 拆多条会丢失色码明细"的真正原因）
+→ 所以「按颜色勾选」可以纯前端实现，**后端零改动**。
+另核实：`if (!isClaimOperation)` 双重守卫使 **CLAIM 不写 t_scan_record 工资镜像、不同步库存**
+（749-764 行）→ 多色多条 CLAIM **不会让工资翻倍**。
+
+**改动（`miniprogram/pages/scan/pattern/`，纯前端）**：
+1. `data` 新增 `claimColors: [{name, qty, checked}]`、`claimColorSummary`、`colorQtyMap`（颜色→该色件数）
+2. `onLoad` 构建 skuList 时顺带聚合 `colorQtyMap`，供领取表单预填每色数量
+3. `onClaimProcess` 进入领取表单时用 `_buildClaimColors()` 构建颜色行（有几个颜色几行，单色也给一行）
+4. 新增 `onClaimColorToggle` / `onClaimColorQtyInput` / `onClaimColorQtyTap`（catchtap 防冒泡误勾选）
+   / `onClaimColorSelectAll` / `onClaimColorClearAll` / `_refreshClaimColorSummary`
+5. `_submitProcessScan` 顶部插入 claimMode 分支：勾选的颜色**逐个** `executeScan`（每色一条 CLAIM，带 `color` + 该色 `quantity`），
+   全失败才报错、部分成功提示成功明细
+6. **按钮与拦截修好**：领取按钮条件放宽为 `PENDING || (CLAIMED && detail.colorOptions.length > 1)`，文案
+   `PENDING ? '领取' : '加领'`；`onClaimProcess` 里 `CLAIMED && claimedByMe` 在多色时不再 return，改为提示"可继续加领"
+7. wxml：领取区改为颜色勾选列表（勾选框 + 每色数量 + 已选汇总 + 全选/清空）；
+   报工模式的颜色 chips 与单数量输入保持不变；无颜色数据时保留单数量兜底
+
+**踩坑/wxml 规范**：输入框在可点击行内，必须 `catchtap` 阻止冒泡，否则点输入框会顺带切换该行勾选；
+"已选 N 色·共 M 件"必须在 JS 算好挂 data（WXML 禁止表达式里调方法）。
+
+**同步**：四副本（miniprogram / h5-web source、public、dist）。此时副本相对主工程还停在 D-312 之前
+（历史差异 42 行，只有缺失、无独有内容；dist 独有的 `CATEGORY_LABELS` 是已被 `displayCategory()` 取代的旧实现）
+→ js/wxml 整文件覆盖安全，**wxss 只追加新片段不覆盖**（四副本 wxss 本就不同）。
+校验：node --check ×4 通过、js/wxml md5 唯一值=1、wxss 括号配对、WXML 标签栈扫描通过、表达式调方法 0。
+
+**教训（已进 MEMORY.md）**：上一轮把"多色多码勾选领取"误解成 PC 采购按行勾选领取，
+在**已存在的「批量领取（全部）」**上重复造轮子，被用户否掉并全量回退。
+**歧义需求必须先确认真实页面/入口，不能只凭任务简称动手**。
 
 ---
 
