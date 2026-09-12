@@ -2,7 +2,7 @@
 // 抽离自原 ProcessKanbanDrawer.tsx，保持业务逻辑不变
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Spin, Tag, Button, Input, Empty } from 'antd';
+import { Spin, Tag, Button, Input, Empty, Table } from 'antd';
 import { remarkApi } from '@/services/system/remarkApi';
 import type { OrderRemark } from '@/services/system/remarkApi';
 import { formatDateTime } from '@/utils/datetime';
@@ -60,20 +60,19 @@ const RemarkTimelineContent: React.FC<RemarkTimelineContentProps> = ({
         {remarks.length === 0 && !loading ? (
           <Empty description="暂无备注" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 340, overflow: 'auto' }}>
-            {remarks.map((r) => (
-              <div key={r.id} style={{ padding: '8px 10px', background: 'var(--color-bg-container)', borderRadius: 6, border: '1px solid var(--color-border-light)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                  <span>
-                    <strong style={{ fontSize: 14 }}>{r.authorName || '匿名'}</strong>
-                    {r.authorRole && <Tag style={{ marginLeft: 6, fontSize: 14 }}>{r.authorRole}</Tag>}
-                  </span>
-                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>{formatDateTime(r.createTime)}</span>
-                </div>
-                <div style={{ fontSize: 14, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{r.content}</div>
-              </div>
-            ))}
-          </div>
+          // D-362g：对齐全站日志标准四列（操作时间/操作类型/操作内容/操作人）
+          <Table
+            size="small"
+            rowKey="id"
+            dataSource={remarks}
+            pagination={false}
+            columns={[
+              { title: '操作时间', dataIndex: 'createTime', key: 'time', width: 150, render: (v: string) => <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{formatDateTime(v)}</span> },
+              { title: '操作类型', dataIndex: 'authorRole', key: 'type', width: 130, render: (v: string) => v ? <Tag style={{ marginRight: 0 }}>{v}</Tag> : <span>备注</span> },
+              { title: '操作内容', dataIndex: 'content', key: 'content', render: (v: string) => <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{v}</span> },
+              { title: '操作人', dataIndex: 'authorName', key: 'operator', width: 110, render: (v: string) => v || '匿名' },
+            ]}
+          />
         )}
       </Spin>
     </div>

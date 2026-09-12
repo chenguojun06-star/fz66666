@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Empty, Spin, Tag, Typography } from 'antd';
+import { Empty, Spin, Table, Tag, Typography } from 'antd';
 import api from '@/utils/api';
 
 interface OrderOperationLogItem {
@@ -52,22 +52,23 @@ const OrderOperationLogSection: React.FC<{ orderNo?: string; orderId?: number | 
         {logs.length === 0 && !loading ? (
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无操作记录" style={{ margin: '8px 0' }} />
         ) : (
-          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-            {visibleLogs.map((item, idx) => (
-              <div
-                key={item.id ?? idx}
-                style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 0', borderBottom: '1px dashed var(--color-border-light)', fontSize: 13 }}
-              >
-                <Tag color="blue" style={{ marginInlineEnd: 0, flexShrink: 0 }}>订单</Tag>
-                <span style={{ color: 'var(--color-text-tertiary)', flexShrink: 0, fontSize: 12, lineHeight: '22px' }}>{item.createTime ?? '-'}</span>
-                <span style={{ fontWeight: 500, flexShrink: 0, lineHeight: '22px' }}>{item.operator ?? '-'}</span>
-                <span style={{ lineHeight: '22px', wordBreak: 'break-all' }}>
-                  {item.action}
-                  {item.remark ? `：${item.remark}` : ''}
+          <Table
+            size="small"
+            rowKey={(r) => String(r.id ?? r.createTime)}
+            dataSource={visibleLogs}
+            pagination={false}
+            columns={[
+              { title: '操作时间', dataIndex: 'createTime', key: 'time', width: 160, render: (v: string) => <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{v ?? '-'}</span> },
+              { title: '操作类型', dataIndex: 'action', key: 'type', width: 150, render: (_: unknown, item) => (
+                <span style={{ fontWeight: 500 }}>
+                  <Tag color="blue" style={{ marginInlineEnd: 4 }}>订单</Tag>
+                  {item.action ?? '-'}
                 </span>
-              </div>
-            ))}
-          </div>
+              ) },
+              { title: '操作内容', dataIndex: 'remark', key: 'content', render: (v: string) => <span style={{ wordBreak: 'break-all' }}>{v || '-'}</span> },
+              { title: '操作人', dataIndex: 'operator', key: 'operator', width: 120, render: (v: string) => v || '-' },
+            ]}
+          />
         )}
         {logs.length > 20 && (
           <div style={{ textAlign: 'center', marginTop: 6 }}>
