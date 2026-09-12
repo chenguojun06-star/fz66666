@@ -204,7 +204,11 @@ public class OrderRemarkController {
                 }
                 r.setContent(content);
                 r.setAuthorName(log.getOperator());
-                r.setAuthorRole(log.getBizType());
+                // D-375：authorRole 语义是"角色/工序"（如 裁剪/车缝/AI巡检），
+                // 原实现塞的是 log.getBizType()（业务类型，值为 "style"），
+                // 导致备注列表里"操作人"一栏显示成 style——数据来源混淆。
+                // 这里明确标记为「操作日志」来源，操作类型由 content 前缀(action)体现。
+                r.setAuthorRole("操作日志");
                 r.setCreateTime(log.getCreateTime());
                 r.setDeleteFlag(0);
                 result.add(r);

@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import { Button, Empty, Input, Table, Image, Tag } from 'antd';
 import {
   HistoryOutlined,
-  UserOutlined,
   ScanOutlined,
   ShoppingOutlined,
   ScissorOutlined,

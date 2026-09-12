@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { App, Input, Button, Empty, Spin, Table, Tag, Image, Drawer, Alert } from 'antd';
 import {
-  UserOutlined,
-  ClockCircleOutlined,
   WarningOutlined,
-  NodeIndexOutlined,
 } from '@ant-design/icons';
 import MultiImageUploadBox from './MultiImageUploadBox';
 import { remarkApi } from '@/services/system/remarkApi';
@@ -267,9 +264,14 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
               pagination={false}
               columns={[
                 { title: '操作时间', dataIndex: 'timeDisplay', key: 'time', width: 150, render: (v: string) => <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{v || '-'}</span> },
+                /**
+                 * D-375：「操作类型」列曾在没有 tag 时渲染 it.author（人名）→ 表头写"操作类型"、
+                 * 单元格却是人名，观感完全错位。改为：有 tag 用 tag，否则显示操作类型/来源，
+                 * 纯备注显示"备注"、链路节点显示"链路"。
+                 */
                 { title: '操作类型', key: 'type', width: 130, render: (_: unknown, it: any) => it.tag
                   ? <Tag color={it.tag.color} style={{ marginRight: 0 }}>{it.tag.label}</Tag>
-                  : <span style={{ fontWeight: 500 }}>{it.author || '-'}</span> },
+                  : <span style={{ fontWeight: 500 }}>{it.operation || it.operator || (it.isLink ? '链路' : '备注')}</span> },
                 { title: '操作内容', key: 'content', render: (_: unknown, it: any) => (
                   <div>
                     {it.content && <div style={{ wordBreak: 'break-all' }}>{it.content}</div>}
@@ -284,7 +286,16 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
                     )}
                   </div>
                 ) },
-                { title: '操作人', dataIndex: 'operator', key: 'operator', width: 110, render: (v: string, it: any) => v || it.author || '-' },
+                /**
+                 * D-375：「操作人」列曾用 dataIndex='operator'（= remark.authorRole，角色/工序，
+                 * 且历史数据被错填成 targetType，出现"操作人=style"）。操作人应该显示**人名**，
+                 * 角色/工序放到括号内作为补充。
+                 */
+                { title: '操作人', key: 'operator', width: 130, render: (_: unknown, it: any) => {
+                  const name = it.author || it.operatorName || '-';
+                  const role = it.operator && it.operator !== name ? it.operator : '';
+                  return role ? <span>{name}（{role}）</span> : <span>{name}</span>;
+                } },
               ]}
             />
             )}
