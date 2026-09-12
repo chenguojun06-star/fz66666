@@ -65,13 +65,18 @@ const _FinishedInventory: React.FC = () => {
     const record = rawDataSource.find((r) => String(r.styleNo || '').trim() === directShipStyleNo);
     if (!record) return;
     directShipInitRef.current = true;
-    if (isDirectShipEntry) setDirectShipMode(true);
+    if (isDirectShipEntry) {
+      setDirectShipMode(true);
+      // D-363e：直发模式只允许销售出库——直发不扣库存，选调拨/报废会生成幽灵出库单
+      setOutboundType('sales');
+    }
     if (directShipOrderNo && !record.orderNo) {
       record.orderNo = directShipOrderNo;
     }
     handleOutbound(record);
     // 打开后清掉 URL 参数，避免刷新重复弹出
     window.history.replaceState(null, '', window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setOutboundType 为 setState 稳定引用，仅直发入口打开时执行一次
   }, [directShipStyleNo, directShipOrderNo, isDirectShipEntry, rawDataSource, handleOutbound]);
 
   // D-241：序号按「款」编号，翻页后要接续上一页，故传入分页偏移
@@ -163,6 +168,7 @@ const _FinishedInventory: React.FC = () => {
                       <Select
                         style={{ width: '100%' }}
                         value={outboundType}
+                        disabled={directShipMode}
                         onChange={(v) => setOutboundType(v)}
                         options={[
                           { label: '销售出库', value: 'sales' },

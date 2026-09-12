@@ -136,6 +136,11 @@ public class FinishedOutstockHelper {
         if (!VALID_OUTSTOCK_TYPES.contains(finalOutstockType)) {
             throw new IllegalArgumentException("无效的出库类型: " + finalOutstockType);
         }
+        // D-363e：直发模式(质检直发入口)只允许销售出库——直发不扣库存，若允许调拨/报废等
+        // 内部流向，会生成"记了出库单但库存没扣"的幽灵出库，之后回入库再加库存就翻倍
+        if (directShip && !"shipment".equals(finalOutstockType)) {
+            throw new IllegalArgumentException("直发模式仅支持销售出库；调拨/报废出库请从库存管理页正常出库（会扣减库存）");
+        }
         // D-374：只有「发客户」类出库才要求客户——调拨/报废/样衣借出等内部流向不再强制；
         // 质检直发（directShip）本质仍是发客户，同样要求客户
         boolean needsCustomer = REQUIRES_CUSTOMER_TYPES.contains(finalOutstockType) || directShip;
@@ -591,6 +596,38 @@ public class FinishedOutstockHelper {
         }
         // 调入方确认收货：增加库存
         productSkuService.updateStock(skuCode, qty);
+
+        // D-363e：回入库写入库记录留痕——否则对账公式（入库=库存+出库+次品）永远闭合不了，
+        // 且"这批货是什么时候回来入库的"在页面上无迹可查
+        try {
+            ProductWarehousing wh = new ProductWarehousing();
+            wh.setId(java.util.UUID.randomUUID().toString().replace("-", ""));
+            // 单号带出库单号，回库来源可直接追溯（t_product_warehousing 无 remark 列）
+            wh.setWarehousingNo("TR" + outstock.getOutstockNo());
+            wh.setWarehousingQuantity(qty);
+            wh.setQualifiedQuantity(qty);
+            wh.setWarehousingType("transfer_inbound");
+            wh.setWarehouse(warehouseLocation != null && !warehouseLocation.isBlank()
+                    ? warehouseLocation : (outstock.getWarehouse() != null ? outstock.getWarehouse() : "默认仓"));
+            wh.setWarehouseAreaId(warehouseAreaId);
+            wh.setStyleId(outstock.getStyleId());
+            wh.setStyleNo(outstock.getStyleNo() != null ? outstock.getStyleNo() : "");
+            wh.setStyleName(outstock.getStyleName());
+            wh.setOrderNo(outstock.getOrderNo());
+            wh.setSkuCode(skuCode);
+            wh.setColor(outstock.getColor());
+            wh.setSize(outstock.getSize());
+            wh.setWarehousingStartTime(LocalDateTime.now());
+            wh.setWarehousingEndTime(LocalDateTime.now());
+            wh.setWarehousingOperatorId(UserContext.userId());
+            wh.setWarehousingOperatorName(UserContext.username());
+            wh.setStatus("completed");
+            wh.setCreateTime(LocalDateTime.now());
+            wh.setUpdateTime(LocalDateTime.now());
+            productWarehousingService.save(wh);
+        } catch (Exception e) {
+            log.warn("[TransferInbound] 写入库记录失败（不阻塞回入库主流程）: outstockId={}, err={}", outstockId, e.getMessage());
+        }
 
         ProductOutstock upd = new ProductOutstock();
         upd.setId(outstock.getId());

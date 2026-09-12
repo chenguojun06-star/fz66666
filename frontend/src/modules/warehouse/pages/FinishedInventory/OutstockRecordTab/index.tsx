@@ -96,14 +96,17 @@ const OutstockRecordTab: React.FC = () => {
   };
 
   const [transferTarget, setTransferTarget] = useState<OutstockRecord | null>(null);
-  // D-362h：批量回库——与批量审核共用一套勾选，仅统计可回库行（调拨出库且未回入）
+  // D-362h：批量回库
   const [batchTransferSubmitting, setBatchTransferSubmitting] = useState(false);
+  // D-363e：批量回库先弹库位选择——回入哪个仓哪个位要人拍板，不能静默落原库位
+  const [batchTransferOpen, setBatchTransferOpen] = useState(false);
+  const [batchTransferLocation, setBatchTransferLocation] = useState('');
+  const [batchTransferAreaId, setBatchTransferAreaId] = useState('');
   const transferEligibleIds = records
     .filter((r) => r.outstockType === 'transfer_out' && r.transferInboundStatus !== 'INBOUND' && selectedRowKeys.includes(r.id))
     .map((r) => String(r.id));
 
-  const handleBatchTransferInbound = async () => {
-    const ids = transferEligibleIds.slice();
+  const runBatchTransferInbound = async (ids: string[], location: string, areaId: string) => {
     if (!ids.length) { message.warning('请先勾选要回库的调拨出库记录'); return; }
     let success = 0; const fails: string[] = [];
     setBatchTransferSubmitting(true);
@@ -114,7 +117,11 @@ const OutstockRecordTab: React.FC = () => {
           const id = queue.shift();
           if (!id) continue;
           try {
-            const res = await api.post('/warehouse/finished-inventory/transfer-inbound', { outstockId: id });
+            const res = await api.post('/warehouse/finished-inventory/transfer-inbound', {
+              outstockId: id,
+              warehouseLocation: location || undefined,
+              warehouseAreaId: areaId || undefined,
+            });
             if (res?.code === 200) success++; else fails.push(res?.message || id);
           } catch (e) { fails.push(e instanceof Error ? e.message : id); }
         }
@@ -126,6 +133,14 @@ const OutstockRecordTab: React.FC = () => {
       setSelectedRowKeys([]);
       loadRecords();
     } finally { setBatchTransferSubmitting(false); }
+  };
+
+  const handleBatchTransferConfirm = async () => {
+    if (!batchTransferLocation.trim()) { message.warning('请选择回入仓库与库位'); return; }
+    const ids = transferEligibleIds.slice();
+    setBatchTransferOpen(false);
+    await runBatchTransferInbound(ids, batchTransferLocation.trim(), batchTransferAreaId);
+    setBatchTransferLocation(''); setBatchTransferAreaId('');
   };
   const [transferLocation, setTransferLocation] = useState('');
   const [transferAreaId, setTransferAreaId] = useState('');
@@ -215,7 +230,7 @@ const OutstockRecordTab: React.FC = () => {
               </Button>
             )}
             {transferEligibleIds.length > 0 && (
-              <Button ghost loading={batchTransferSubmitting} onClick={() => { void handleBatchTransferInbound(); }}>
+              <Button ghost loading={batchTransferSubmitting} onClick={() => setBatchTransferOpen(true)}>
                 批量回库（{transferEligibleIds.length}）
               </Button>
             )}
@@ -271,6 +286,26 @@ const OutstockRecordTab: React.FC = () => {
           <span style={{ whiteSpace: 'nowrap' }}>回入库位：</span>
           <MaterialWarehouseLocationPicker warehouseType="FINISHED" value={transferLocation} onChange={(v, areaId) => { setTransferLocation(v); setTransferAreaId(areaId || ''); }} />
         </div>
+      </Modal>
+
+      <Modal
+        title={`批量回入库 - ${transferEligibleIds.length} 条`}
+        open={batchTransferOpen}
+        onCancel={() => setBatchTransferOpen(false)}
+        onOk={() => { void handleBatchTransferConfirm(); }}
+        confirmLoading={batchTransferSubmitting}
+        okText="确认回入"
+        cancelText="取消"
+        width={480}
+      >
+        <p style={{ marginBottom: 12, color: 'var(--color-text-secondary)' }}>
+          将把勾选的 {transferEligibleIds.length} 条调拨出库记录统一回入以下仓库库位，并计入入库记录。
+        </p>
+        <MaterialWarehouseLocationPicker
+          warehouseType="FINISHED"
+          value={batchTransferLocation}
+          onChange={(v, areaId) => { setBatchTransferLocation(v); setBatchTransferAreaId(areaId || ''); }}
+        />
       </Modal>
 
       <RecordLogDrawer
