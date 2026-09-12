@@ -382,11 +382,8 @@ public class FactoryShipmentOrchestrator {
             return reconCheck;
         }
 
-        FactoryShipment patch = new FactoryShipment();
-        patch.setId(shipmentId);
-        patch.setDeleteFlag(1);
-        patch.setUpdateTime(LocalDateTime.now());
-        factoryShipmentService.updateById(patch);
+        // D-363d：逻辑删除空操作修复
+        factoryShipmentService.removeById(shipmentId);
 
         log.info("[FactoryShipment] 软删除发货单 shipmentId={}", shipmentId);
         return Result.success(null);

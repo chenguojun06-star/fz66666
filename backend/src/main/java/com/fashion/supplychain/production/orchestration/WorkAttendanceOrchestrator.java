@@ -836,10 +836,11 @@ public class WorkAttendanceOrchestrator {
         record.setOperatorId(ctx.getUserId());
         record.setOperatorName(ctx.getUsername());
         record.setOperateTime(LocalDateTime.now());
-        record.setDeleteFlag(1);
         String prefix = StringUtils.hasText(reason) ? ("[作废原因：" + reason + "] ") : "";
         record.setRemark(prefix + (StringUtils.hasText(record.getRemark()) ? record.getRemark() : ""));
         workAttendanceService.updateById(record);
+        // D-363d：逻辑删除空操作修复——作废=软删，单独走 removeById 落 delete_flag
+        workAttendanceService.removeById(record.getId());
 
         log.info("[adminCancel] id={} tenantId={} operator={} reason={}",
                 id, tenantId, ctx.getUserId(), reason);

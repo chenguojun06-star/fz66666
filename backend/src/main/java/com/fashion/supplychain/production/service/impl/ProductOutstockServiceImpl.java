@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -198,13 +199,12 @@ public class ProductOutstockServiceImpl extends ServiceImpl<ProductOutstockMappe
                 }
             }
         }
-        ProductOutstock patch = new ProductOutstock();
-        patch.setDeleteFlag(1);
-        patch.setUpdateTime(LocalDateTime.now());
-        return this.update(patch, new LambdaQueryWrapper<ProductOutstock>()
+        // D-363d：逻辑删除空操作修复——实体 update 的 SET 不含 delete_flag，必须 setSql 显式落列
+        return this.update(new LambdaUpdateWrapper<ProductOutstock>()
                 .eq(ProductOutstock::getOrderId, orderId.trim())
                 .eq(ProductOutstock::getTenantId, tenantId)
-                .eq(ProductOutstock::getDeleteFlag, 0));
+                .eq(ProductOutstock::getDeleteFlag, 0)
+                .setSql("delete_flag = 1, update_time = NOW()"));
     }
 
     private String buildOutstockNo(LocalDateTime now) {

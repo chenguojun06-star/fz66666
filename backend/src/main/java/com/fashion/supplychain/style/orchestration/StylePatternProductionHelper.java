@@ -400,9 +400,10 @@ public class StylePatternProductionHelper {
         while (it.hasNext()) {
             PatternProduction leftover = it.next();
             if (!hasAnyProgress(leftover)) {
-                leftover.setDeleteFlag(1);
                 leftover.setUpdateTime(LocalDateTime.now());
                 patternProductionService.updateById(leftover);
+                // D-363d：逻辑删除空操作修复
+                patternProductionService.removeById(leftover.getId());
                 removed++;
             }
         }

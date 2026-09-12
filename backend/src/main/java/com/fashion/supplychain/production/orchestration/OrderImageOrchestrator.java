@@ -109,7 +109,6 @@ public class OrderImageOrchestrator {
 
         String beforeUrls = getCurrentUrlsJson(image.getOrderNo(), tenantId);
 
-        image.setDeleteFlag(1);
         image.setUpdateTime(LocalDateTime.now());
         UserContext ctx = UserContext.get();
         if (ctx != null) {
@@ -117,6 +116,8 @@ public class OrderImageOrchestrator {
             image.setOperatorName(ctx.getUsername());
         }
         orderImageService.updateById(image);
+        // D-363d：逻辑删除空操作修复
+        orderImageService.removeById(image.getId());
 
         reorderImages(image.getOrderNo(), tenantId);
 

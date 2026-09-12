@@ -92,8 +92,8 @@ public class DistributorOrchestrator {
         Long tenantId = UserContext.tenantId();
         DistributorProfile existing = profileService.getByIdAndTenant(tenantId, id);
         if (existing == null) return;
-        existing.setDeleteFlag(1);
-        profileService.updateById(existing);
+        // D-363d：逻辑删除空操作修复
+        profileService.removeById(existing.getId());
     }
 
     /** 冻结/解冻分销商 */
@@ -154,8 +154,7 @@ public class DistributorOrchestrator {
         if (!level.getTenantId().equals(UserContext.tenantId())) {
             throw new IllegalArgumentException("无权操作");
         }
-        level.setDeleteFlag(1);
-        levelService.updateById(level);
+        levelService.removeById(level.getId());
     }
 
     // ==================== 价格政策 ====================
@@ -199,8 +198,7 @@ public class DistributorOrchestrator {
         if (!policy.getTenantId().equals(UserContext.tenantId())) {
             throw new IllegalArgumentException("无权操作");
         }
-        policy.setDeleteFlag(1);
-        pricePolicyService.updateById(policy);
+        pricePolicyService.removeById(policy.getId());
     }
 
     /**

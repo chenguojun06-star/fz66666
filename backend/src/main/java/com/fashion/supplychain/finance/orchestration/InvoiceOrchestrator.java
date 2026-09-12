@@ -230,11 +230,8 @@ public class InvoiceOrchestrator {
         if (existing == null) {
             throw new NoSuchElementException("发票不存在");
         }
-        Invoice patch = new Invoice();
-        patch.setId(id);
-        patch.setDeleteFlag(1);
-        patch.setUpdateTime(java.time.LocalDateTime.now());
-        invoiceService.updateById(patch);
+        // D-363d：逻辑删除空操作修复
+        invoiceService.removeById(id);
     }
 
     // ─── 内部方法 ────────────────────────────────────────────────────────────

@@ -174,9 +174,10 @@ public class CuttingBomOrchestrator {
             return;
         }
         validateCuttingTaskEditable(existing.getCuttingTaskId());
-        existing.setDeleteFlag(1);
         existing.setUpdateTime(LocalDateTime.now());
         cuttingBomService.updateById(existing);
+        // D-363d：逻辑删除空操作修复
+        cuttingBomService.removeById(existing.getId());
     }
 
     @Transactional

@@ -171,8 +171,7 @@ public class MemoryArchiveJob {
                         null);
                 if (ok) {
                     // 软删除原记录
-                    mem.setDeleteFlag(1);
-                    conversationMemoryMapper.updateById(mem);
+                    conversationMemoryMapper.deleteById(mem);
                     archived++;
                 }
             } catch (Exception e) {
@@ -207,8 +206,7 @@ public class MemoryArchiveJob {
                         mem.getCreateTime() != null ? mem.getCreateTime().toString() : "",
                         null);
                 if (ok) {
-                    mem.setDeleteFlag(1);
-                    longMemoryMapper.updateById(mem);
+                    longMemoryMapper.deleteById(mem);
                     archived++;
                 }
             } catch (Exception e) {

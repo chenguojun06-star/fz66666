@@ -476,11 +476,8 @@ public class PayableOrchestrator {
         if (existing == null) {
             throw new NoSuchElementException("应付单不存在");
         }
-        Payable patch = new Payable();
-        patch.setId(id);
-        patch.setDeleteFlag(1);
-        patch.setUpdateTime(java.time.LocalDateTime.now());
-        payableService.updateById(patch);
+        // D-363d：逻辑删除空操作修复
+        payableService.removeById(id);
         logAppendHelper.appendDelete(id);
     }
 

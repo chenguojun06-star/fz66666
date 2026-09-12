@@ -96,8 +96,7 @@ public class EcGiftRuleService extends ServiceImpl<EcGiftRuleMapper, EcGiftRule>
                 .eq(EcGiftRule::getId, ruleId)
                 .eq(EcGiftRule::getTenantId, tenantId));
         if (rule == null) throw new IllegalArgumentException("规则不存在或无权操作");
-        rule.setDeleteFlag(1);
-        updateById(rule);
+        removeById(ruleId);
     }
 
     /** 命中的赠品 */

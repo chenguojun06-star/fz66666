@@ -282,9 +282,10 @@ public class CustomerOrchestrator {
         if (existing == null) {
             throw new IllegalArgumentException("客户不存在或无权操作");
         }
-        existing.setDeleteFlag(1);
         existing.setUpdateTime(LocalDateTime.now());
         customerService.updateById(existing);
+        // D-363d：逻辑删除空操作修复——单独走 removeById 落 delete_flag
+        customerService.removeById(existing.getId());
         log.info("[CRM] 删除客户: id={}", id);
     }
 

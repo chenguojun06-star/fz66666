@@ -497,8 +497,8 @@ public class PatternProductionOrchestrator {
         int removed = 0;
         if (legacy != null) {
             for (PatternScanRecord r : legacy) {
-                r.setDeleteFlag(1);
-                removed += patternScanRecordService.updateById(r) ? 1 : 0;
+                // D-363d：逻辑删除空操作修复
+                removed += patternScanRecordService.removeById(r.getId()) ? 1 : 0;
             }
         }
         Map<String, Object> result = new HashMap<>();

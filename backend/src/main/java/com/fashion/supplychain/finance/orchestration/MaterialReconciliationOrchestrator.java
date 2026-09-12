@@ -324,11 +324,8 @@ public class MaterialReconciliationOrchestrator {
         if (StringUtils.hasText(st) && !"pending".equalsIgnoreCase(st) && !UserContext.isTopAdmin()) {
             throw new IllegalStateException("当前状态不允许删除，请先退回到上一个环节");
         }
-        MaterialReconciliation patch = new MaterialReconciliation();
-        patch.setId(key);
-        patch.setDeleteFlag(1);
-        patch.setUpdateTime(java.time.LocalDateTime.now());
-        boolean ok = materialReconciliationService.updateById(patch);
+        // D-363d：逻辑删除空操作修复
+        boolean ok = materialReconciliationService.removeById(key);
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }

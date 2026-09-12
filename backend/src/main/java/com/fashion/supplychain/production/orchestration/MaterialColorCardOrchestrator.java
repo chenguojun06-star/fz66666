@@ -191,11 +191,8 @@ public class MaterialColorCardOrchestrator {
         if (!StringUtils.hasText(id)) throw new IllegalArgumentException("id不能为空");
         MaterialColorCard current = getCardById(id.trim());
         // 软删除色卡
-        MaterialColorCard patch = new MaterialColorCard();
-        patch.setId(current.getId());
-        patch.setDeleteFlag(1);
-        patch.setUpdateTime(LocalDateTime.now());
-        cardMapper.updateById(patch);
+        // D-363d：逻辑删除空操作修复
+        cardMapper.deleteById(current.getId());
         // 软删除全部子条目
         itemMapper.deleteByCardIdAndTenantId(current.getId(), current.getTenantId());
         return true;
@@ -303,11 +300,8 @@ public class MaterialColorCardOrchestrator {
             log.warn("[MATERIAL-ITEM-DELETE] id={} already deleted", itemId);
             return true;
         }
-        MaterialColorCardItem patch = new MaterialColorCardItem();
-        patch.setId(itemId);
-        patch.setDeleteFlag(1);
-        patch.setUpdateTime(LocalDateTime.now());
-        itemMapper.updateById(patch);
+        // D-363d：逻辑删除空操作修复
+        itemMapper.deleteById(itemId);
 
         // 更新数量
         long count = itemMapper.selectCount(

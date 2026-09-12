@@ -430,10 +430,8 @@ public class ProceduralMemoryService {
         }
         requireSopBelongsToTenant(tenantId, id);
 
-        ProceduralMemory update = new ProceduralMemory();
-        update.setId(id);
-        update.setDeleteFlag(1);
-        proceduralMemoryMapper.updateById(update);
+        // D-363d：逻辑删除实体上 setDeleteFlag(1)+updateById 是空操作（UPDATE 不含 delete_flag 列），必须 deleteById
+        proceduralMemoryMapper.deleteById(id);
         log.info("[ProceduralMemory.deleteSop] 软删除SOP成功，tenantId={}, id={}", tenantId, id);
     }
 

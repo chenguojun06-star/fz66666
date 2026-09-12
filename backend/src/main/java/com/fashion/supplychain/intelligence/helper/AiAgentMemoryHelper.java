@@ -496,10 +496,7 @@ public class AiAgentMemoryHelper {
                     .last("LIMIT " + toEvict);
             List<ProceduralMemory> toEvictList = proceduralMemoryMapper.selectList(wrapper);
             for (ProceduralMemory pm : toEvictList) {
-                ProceduralMemory update = new ProceduralMemory();
-                update.setId(pm.getId());
-                update.setDeleteFlag(1);
-                proceduralMemoryMapper.updateById(update);
+                proceduralMemoryMapper.deleteById(pm.getId());
             }
             if (!toEvictList.isEmpty()) {
                 log.debug("[AiAgent-PM] 软删除 {} 条最旧的 crystallized 程序记忆", toEvictList.size());

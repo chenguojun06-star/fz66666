@@ -127,9 +127,10 @@ public class SupplierUserOrchestrator {
             throw new IllegalArgumentException("用户不存在");
         }
 
-        user.setDeleteFlag(1);
         user.setUpdateTime(LocalDateTime.now());
         supplierUserService.updateById(user);
+        // D-363d：逻辑删除空操作修复
+        supplierUserService.removeById(user.getId());
 
         log.info("[供应商账号] 删除: userId={}, operator={}", userId, UserContext.username());
     }
