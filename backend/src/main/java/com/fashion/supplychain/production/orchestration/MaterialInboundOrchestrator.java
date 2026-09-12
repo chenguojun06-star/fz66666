@@ -110,6 +110,18 @@ public class MaterialInboundOrchestrator {
                     purchase.getPurchaseQuantity() == null ? "null" : purchase.getPurchaseQuantity().toPlainString()));
         }
 
+        // D-362：入库防重总闸——累计入库(台账)+本次 不能超过采购数量。
+        // 此前只有"确认完成入库"路径有这道闸，登记到货/补录路径没有 → 同一采购可从
+        // 批量菜单、行上操作、更多菜单重复入库多倍库存。总闸装在账本层，入口全覆盖。
+        String unitText = purchase.getUnit() == null ? "" : purchase.getUnit();
+        int purchaseQtyInt = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity().intValue();
+        int alreadyInboundQty = sumInboundQuantity(purchase.getId(), tenantId);
+        if (alreadyInboundQty + arrivedQuantity > purchaseQtyInt) {
+            throw new RuntimeException(String.format(
+                    "重复入库被拦截：该采购单已登记入库 %d%s，累计入库不能超过采购数量 %d%s。如需调整请先核对【入库记录】，或用出库冲正多入部分。",
+                    alreadyInboundQty, unitText, purchaseQtyInt, unitText));
+        }
+
         // 3. 创建入库记录
         MaterialInbound inbound = new MaterialInbound();
         inbound.setPurchaseId(purchaseId);
@@ -238,6 +250,14 @@ public class MaterialInboundOrchestrator {
         Integer currentArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
         if (quantity > currentArrived) {
             throw new RuntimeException(String.format("补录数量超出已到货数量: 已到货=%d, 本次补录=%d", currentArrived, quantity));
+        }
+        // D-362：入库防重总闸——累计入库(台账)+补录 不能超过采购数量
+        int purchaseQtyInt2 = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity().intValue();
+        int alreadyInboundQty2 = sumInboundQuantity(purchase.getId(), tenantId);
+        if (alreadyInboundQty2 + quantity > purchaseQtyInt2) {
+            throw new RuntimeException(String.format(
+                    "重复入库被拦截：该采购单已登记入库 %d，累计入库不能超过采购数量 %d。多入部分请用出库冲正。",
+                    alreadyInboundQty2, purchaseQtyInt2));
         }
 
         MaterialInbound inbound = new MaterialInbound();

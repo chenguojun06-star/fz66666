@@ -45,6 +45,9 @@ public class MaterialStockController {
     private MaterialStockService materialStockService;
 
     @Autowired
+    private com.fashion.supplychain.production.service.MaterialDatabaseService materialDatabaseService;
+
+    @Autowired
     private MaterialStockOrchestrator materialStockOrchestrator;
 
     @Autowired
@@ -70,6 +73,32 @@ public class MaterialStockController {
             return Result.success(empty);
         }
         IPage<MaterialStock> page = materialStockService.queryPage(params);
+
+        // D-360z：批量富化物料图片（按物料编码关联物料资料）——入库后列表不再"无图"
+        if (page.getRecords() != null && !page.getRecords().isEmpty()) {
+            try {
+                java.util.Set<String> codes = page.getRecords().stream()
+                        .map(MaterialStock::getMaterialCode)
+                        .filter(c -> c != null && !c.isBlank())
+                        .collect(java.util.stream.Collectors.toSet());
+                if (!codes.isEmpty()) {
+                    java.util.Map<String, String> imageMap = materialDatabaseService.list(
+                            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.fashion.supplychain.production.entity.MaterialDatabase>()
+                                    .in(com.fashion.supplychain.production.entity.MaterialDatabase::getMaterialCode, codes))
+                            .stream()
+                            .filter(md -> md.getImage() != null && !md.getImage().isBlank())
+                            .collect(java.util.stream.Collectors.toMap(
+                                    com.fashion.supplychain.production.entity.MaterialDatabase::getMaterialCode,
+                                    com.fashion.supplychain.production.entity.MaterialDatabase::getImage,
+                                    (a, b) -> a));
+                    for (MaterialStock stock : page.getRecords()) {
+                        stock.setMaterialImage(imageMap.get(stock.getMaterialCode()));
+                    }
+                }
+            } catch (Exception e) {
+                // 图片富化失败不影响列表
+            }
+        }
         enrichLastOperationInfo(page.getRecords());
 
         Map<String, Object> result = new HashMap<>();

@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.Version;
 import java.time.LocalDateTime;
 import lombok.Data;
+import com.baomidou.mybatisplus.annotation.TableField;
 
 /**
  * 面辅料库存实体
@@ -163,4 +164,8 @@ public class MaterialStock {
 
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
+
+    /** 物料图片（列表展示用：按物料编码从物料资料富化，不落库，D-360z） */
+    @TableField(exist = false)
+    private String materialImage;
 }
