@@ -273,6 +273,27 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
       },
     },
     {
+      // D-362c：仓库库存列——入库后直接在这里点出库（生成待出库单，仓库确认；两侧均可取消）
+      title: '仓库库存', key: 'stockCol', width: 90,
+      render: (_: unknown, record: MaterialPurchase) => {
+        const stockQty = stockMap?.[String(record.id)];
+        if (stockQty == null) return <span style={{ color: 'var(--color-text-quaternary)' }}>-</span>;
+        if (Number(stockQty) <= 0) return <span style={{ color: 'var(--color-text-quaternary)' }}>0{record.unit || ''}</span>;
+        const arrived = Number(record.arrivedQuantity || record.purchaseQuantity || 0);
+        const pickQty = Math.min(Number(stockQty), arrived);
+        return (
+          <div
+            style={{ cursor: 'pointer', textAlign: 'center' }}
+            onClick={() => handleWarehousePick(record, pickQty)}
+            title={`点击领取出库 ${pickQty}${record.unit ? ' ' + record.unit : ''}（生成出库单，仓库确认后扣库存；两侧均可取消）`}
+          >
+            <div style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{Number(stockQty)}{record.unit || ''}</div>
+            <div style={{ fontSize: 11, color: 'var(--color-warning)' }}>点击出库</div>
+          </div>
+        );
+      },
+    },
+    {
       title: '操作', key: 'action', width: 120, fixed: 'right' as const,
       render: (_: unknown, record: MaterialPurchase) => {
         const status = String(record.status || '').toLowerCase();
