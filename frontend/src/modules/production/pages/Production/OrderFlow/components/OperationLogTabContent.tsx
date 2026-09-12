@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Button, Empty, Input, Timeline, Image, Tag } from 'antd';
+import { Button, Empty, Input, Table, Image, Tag } from 'antd';
 import {
   HistoryOutlined,
   UserOutlined,
@@ -123,31 +123,20 @@ const OperationLogTabContent: React.FC<OperationLogTabContentProps> = ({
       {loading ? (
         <div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-tertiary)' }}>加载中...</div>
       ) : items.length > 0 ? (
-        <Timeline
-          items={items.map((it) => ({
-            color: it.color,
-            dot: it.icon ? (
-              <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>{it.icon}</span>
-            ) : undefined,
-            children: (
-              <div key={it.key} style={{ paddingBottom: 4 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                  {it.tag && <Tag color={it.tag.color} style={{ marginRight: 0 }}>{it.tag.label}</Tag>}
-                  <strong>{it.author}</strong>
-                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
-                    {it.operator && (
-                      <>
-                        <UserOutlined /> {it.operator}
-                      </>
-                    )}
-                  </span>
-                  <span style={{ color: 'var(--color-text-quaternary)', fontSize: 12 }}>
-                    {it.timeDisplay}
-                  </span>
-                </div>
-                {it.content && (
-                  <div style={{ color: 'var(--color-text-primary)' }}>{it.content}</div>
-                )}
+        // D-362d：对齐全站日志标准四列（操作时间/操作类型/操作内容/操作人）——替换旧时间线
+        <Table
+          size="small"
+          rowKey="key"
+          dataSource={items}
+          pagination={false}
+          columns={[
+            { title: '操作时间', dataIndex: 'timeDisplay', key: 'time', width: 150, render: (v: string) => <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{v}</span> },
+            { title: '操作类型', key: 'type', width: 130, render: (_: unknown, it: UnifiedItem) => it.tag
+                ? <Tag color={it.tag.color} style={{ marginRight: 0 }}>{it.tag.label}</Tag>
+                : <span style={{ fontWeight: 500 }}>{it.author}</span> },
+            { title: '操作内容', key: 'content', render: (_: unknown, it: UnifiedItem) => (
+              <div>
+                {it.content && <div style={{ wordBreak: 'break-all' }}>{it.content}</div>}
                 {it.images && it.images.length > 0 && (
                   <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                     <Image.PreviewGroup>
@@ -155,7 +144,7 @@ const OperationLogTabContent: React.FC<OperationLogTabContentProps> = ({
                         <Image
                           key={idx}
                           src={getFullAuthedFileUrl(url)}
-                          style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
+                          style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
                           preview={{ cover: '预览' }}
                         />
                       ))}
@@ -163,8 +152,9 @@ const OperationLogTabContent: React.FC<OperationLogTabContentProps> = ({
                   </div>
                 )}
               </div>
-            ),
-          }))}
+            ) },
+            { title: '操作人', key: 'operator', width: 110, render: (_: unknown, it: UnifiedItem) => it.operator || it.author || '-' },
+          ]}
         />
       ) : (
         <Empty description="暂无操作记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
