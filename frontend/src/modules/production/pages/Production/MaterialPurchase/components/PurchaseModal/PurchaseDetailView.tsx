@@ -175,7 +175,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
             <PurchaseActionBar
               receive={{
                 // D-360x：部分行已回料确认不再整体禁用——只要还有待领取行就可用（行级各自校验）
-                disabled: detailFrozen || !hasPendingForReceiveAll || !data.canProcure,
+                disabled: !hasPendingForReceiveAll || !data.canProcure,
                 title: !hasPendingForReceiveAll ? '无可领取项' : undefined,
                 onClick: onReceiveAll,
               }}
