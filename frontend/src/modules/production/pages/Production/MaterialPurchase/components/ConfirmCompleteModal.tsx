@@ -70,7 +70,9 @@ const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
   return (
     <Modal
       open={visible}
-      title={`确认完成（${targets.length}张采购单，共${totalQuantity}件）`}
+      // D-376：物料采购单位可能是 米/公斤/个，硬编码「件」会误导；
+      // 多张采购单单位可能不同，这里不显示单位，明细处按各自 unit 展示
+      title={`确认完成（${targets.length}张采购单，共 ${totalQuantity}）`}
       onCancel={onCancel}
       confirmLoading={submitting}
       onOk={handleConfirm}
