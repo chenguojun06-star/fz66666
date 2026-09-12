@@ -773,7 +773,8 @@ public class QdrantService {
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", model);
         body.put("input", text);
-        body.put("encoding_format", "float");
+        // Voyage 只接受 base64（float 会被 400 拒绝），OpenAI 兼容方对 base64 也通用
+        body.put("encoding_format", "base64");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -788,13 +789,25 @@ public class QdrantService {
             } catch (Exception e) {
                 throw new RuntimeException("Embedding response parse failed", e);
             }
-            JsonNode embedding = root.path("data").path(0).path("embedding");
+            JsonNode item = root.path("data").path(0);
+            JsonNode embedding = item.path("embedding");
             if (embedding.isArray()) {
                 float[] vec = new float[embedding.size()];
                 for (int i = 0; i < embedding.size(); i++) {
                     vec[i] = (float) embedding.get(i).asDouble();
                 }
                 log.debug("[Qdrant] 真实语义向量生成成功，维度={}", vec.length);
+                return vec;
+            }
+            // base64 编码格式（Voyage 风格）：data[0].data 为 little-endian float32 的 base64
+            JsonNode b64 = item.path("data");
+            if (b64.isTextual() && !b64.asText().isEmpty()) {
+                byte[] bytes = java.util.Base64.getDecoder().decode(b64.asText());
+                float[] vec = new float[bytes.length / 4];
+                java.nio.ByteBuffer.wrap(bytes)
+                        .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                        .asFloatBuffer().get(vec);
+                log.debug("[Qdrant] 真实语义向量生成成功(base64)，维度={}", vec.length);
                 return vec;
             }
         }
