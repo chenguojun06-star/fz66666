@@ -656,6 +656,12 @@ public class IntelligenceInferenceOrchestrator {
                 String content = delta.path("content").asText(null);
                 if (content != null && !content.isEmpty()) {
                     acc.fullContent.append(content);
+                    // D-361c：deepseek-flash 会把 DSML 工具协议混在正文流式输出——
+                    // 含协议标记的片段实时剔除，不再把协议原文推给前端
+                    if (content.contains("DSML")) {
+                        content = content.replaceAll("[｜|]{1,4}\\s*DSML[｜|]{1,4}[^\\n]*", "");
+                        if (content.isEmpty()) return;
+                    }
                     if (chunkConsumer != null) chunkConsumer.accept(content, false);
                 }
 

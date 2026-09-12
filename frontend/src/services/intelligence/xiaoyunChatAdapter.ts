@@ -50,12 +50,13 @@ export function stripToolProtocolText(raw: string): string {
   if (unclosed && unclosed.index !== undefined) {
     text = text.substring(0, unclosed.index);
   }
-  // D-361b：deepseek-flash 新版 DSML 工具协议（<｜｜DSML｜｜ invoke/parameter ...>）——
-  // 从首个协议标记起整段截断（工具调用已由后端解析执行，展示层一律不外泄）
-  const dsml = text.match(/[｜|]{1,4}\s*DSML[｜|]{1,4}/i);
-  if (dsml && dsml.index !== undefined) {
-    text = text.substring(0, dsml.index).trimEnd();
-  }
+  // D-361c：DSML 协议行按行剔除（保留正文行）——旧"从首标记整段截断"会把
+  // 混在协议行之后的正文一起砍掉，出现"只剩看板没有文字"
+  text = text
+    .split('\n')
+    .filter((line) => !/[｜|]{1,4}\s*DSML[｜|]{1,4}/i.test(line))
+    .join('\n')
+    .trimEnd();
   return text;
 }
 

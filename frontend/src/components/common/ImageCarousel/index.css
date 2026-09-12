@@ -1,4 +1,5 @@
-/* 全局图片轮播 — 箭头常显，原生button避免antd hover样式覆盖导致按钮"消失" */
+/* 全局图片轮播 — 箭头默认隐藏，悬停图片区才显示（D-360w：箭头常显遮挡图片观感差）；
+   触屏设备无hover保持常显；原生button避免antd hover样式覆盖导致按钮"消失" */
 
 /* antd 预览遮罩禁用指针事件：遮罩只做视觉提示，
    否则"悬停→遮罩淡入盖住箭头→箭头区不再hover→遮罩淡出→又hover"死循环造成闪烁 */
@@ -21,10 +22,21 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  opacity: 0.85;
+  opacity: 0;
   transition: opacity 0.15s ease, background 0.15s ease;
   z-index: 5;
   padding: 0;
+}
+
+/* 悬停图片区才显示箭头；触屏设备（无hover能力）保持常显 */
+.image-carousel:hover .image-carousel-arrow {
+  opacity: 0.85;
+}
+
+@media not (hover: hover) {
+  .image-carousel-arrow {
+    opacity: 0.85;
+  }
 }
 
 .image-carousel-arrow--left {
