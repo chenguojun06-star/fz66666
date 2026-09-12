@@ -158,6 +158,15 @@ export const useResizableTableData = <T extends object>(params: UseResizableTabl
   React.useEffect(() => {
     const shell = shellRef.current;
     if (!shell) return;
+    // D-360w：页签（Tabs）内的表格一律平铺——填充注入会把详情页内嵌表格截断成内部滚动条，
+    // 用户明确要求：详情页/页签内的表格全部自然撑开（哪怕一行也留白），禁止内部截断
+    let holderEl: HTMLElement | null = shell;
+    let tabHolderCount = 0;
+    while (holderEl) {
+      if (holderEl.classList?.contains('ant-tabs-content-holder')) tabHolderCount++;
+      holderEl = holderEl.parentElement;
+    }
+    if (tabHolderCount > 0) return;
     let container: HTMLElement | null = shell.closest<HTMLElement>('.page-layout-body');
     if (!container) {
       // 页签页：Tabs 自身已占满 page-layout-body 时，以签内容区为填充容器
