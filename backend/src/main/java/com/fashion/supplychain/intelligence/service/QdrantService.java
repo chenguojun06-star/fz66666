@@ -254,7 +254,7 @@ public class QdrantService {
             ObjectNode body = objectMapper.createObjectNode();
             ArrayNode points = body.putArray("points");
             ObjectNode point = points.addObject();
-            point.put("id", pointId);
+            point.put("id", toPointId(pointId));
 
             ArrayNode vec = point.putArray("vector");
             for (float v : vector) {
@@ -263,6 +263,8 @@ public class QdrantService {
 
             ObjectNode payloadNode = point.putObject("payload");
             payloadNode.put("tenant_id", tenantId);
+            // 原始业务ID入payload：点ID已转UUID，检索侧凭此还原，保证下游按原始ID回查DB不断链
+            payloadNode.put("original_id", pointId);
             if (payload != null) {
                 payload.forEach((k, v) -> payloadNode.put(k, String.valueOf(v)));
             }
@@ -337,6 +339,7 @@ public class QdrantService {
                         sp.setPointId(item.path("id").asText());
                         sp.setScore((float) item.path("score").asDouble());
                         sp.setPayload(readPayload(item.path("payload")));
+                        restoreOriginalId(sp);
                         results.add(sp);
                     }
                 }
@@ -354,6 +357,16 @@ public class QdrantService {
         Map<String, String> payload = new LinkedHashMap<>();
         payloadNode.fields().forEachRemaining(entry -> payload.put(entry.getKey(), entry.getValue().asText("")));
         return payload;
+    }
+
+    /** 点ID已转UUID存储：payload 若带 original_id 则还原为原始业务ID，保证下游按原ID回查DB不断链 */
+    private void restoreOriginalId(ScoredPoint sp) {
+        if (sp.getPayload() != null) {
+            String originalId = sp.getPayload().get("original_id");
+            if (originalId != null && !originalId.isEmpty()) {
+                sp.setPointId(originalId);
+            }
+        }
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -450,6 +463,7 @@ public class QdrantService {
                         sp.setPointId(item.path("id").asText());
                         sp.setScore((float) item.path("score").asDouble());
                         sp.setPayload(readPayload(item.path("payload")));
+                        restoreOriginalId(sp);
                         results.add(sp);
                     }
                 }
@@ -565,7 +579,7 @@ public class QdrantService {
             ArrayNode must = filter.putArray("must");
             ObjectNode idCond = must.addObject();
             idCond.put("key", "id");
-            idCond.putObject("match").put("value", pointId);
+            idCond.putObject("match").put("value", toPointId(pointId));
             ObjectNode tenantCond = must.addObject();
             tenantCond.put("key", "tenant_id");
             tenantCond.putObject("match").put("integer", tenantId);
@@ -662,6 +676,23 @@ public class QdrantService {
     // ──────────────────────────────────────────────────────────────
     //  内部工具
     // ──────────────────────────────────────────────────────────────
+
+    /**
+     * Qdrant 点 ID 只接受无符号整数或 UUID——业务字符串 ID（表名/记忆id/缓存key等）
+     * 确定性转为 UUID（同一字符串恒得同一 UUID，写入与删除天然对上）；
+     * 本身已是 UUID 的原样返回（搜索结果回查场景）。
+     */
+    private static String toPointId(String raw) {
+        if (raw == null || raw.isEmpty()) {
+            return raw;
+        }
+        if (raw.length() == 36 && raw.toLowerCase().matches(
+                "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) {
+            return raw.toLowerCase();
+        }
+        return java.util.UUID.nameUUIDFromBytes(
+                raw.getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+    }
 
     private void ensureCollectionExists() {
         if (collectionVerified.get()) return;
@@ -1195,7 +1226,7 @@ public class QdrantService {
             ObjectNode body = objectMapper.createObjectNode();
             ArrayNode points = body.putArray("points");
             ObjectNode point = points.addObject();
-            point.put("id", pointId);
+            point.put("id", toPointId(pointId));
             point.set("vector", toJsonArray(vector));
 
             ObjectNode payload = point.putObject("payload");
@@ -1291,6 +1322,7 @@ public class QdrantService {
                 sp.setPointId(item.path("id").asText());
                 sp.setScore((float) item.path("score").asDouble());
                 sp.setPayload(readPayload(item.path("payload")));
+                restoreOriginalId(sp);
                 results.add(sp);
             }
             return results;
@@ -1373,6 +1405,7 @@ public class QdrantService {
                 sp.setPointId(item.path("id").asText());
                 sp.setScore((float) item.path("score").asDouble());
                 sp.setPayload(readPayload(item.path("payload")));
+                restoreOriginalId(sp);
                 results.add(sp);
             }
             return results;
