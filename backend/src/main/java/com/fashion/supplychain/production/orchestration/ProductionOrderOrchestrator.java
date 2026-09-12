@@ -797,6 +797,26 @@ public class ProductionOrderOrchestrator {
             }
         }
 
+        // D-363c：变更快照——修改前抓旧值，成功后写「字段: 前值 → 后值」进操作日志
+        java.time.format.DateTimeFormatter tsFmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        String oldExpectedShip = order.getExpectedShipDate() != null ? order.getExpectedShipDate().format(tsFmt) : "";
+        String oldUrgency = order.getUrgencyLevel() != null ? order.getUrgencyLevel() : "";
+        String oldRemarks = order.getRemarks() != null ? order.getRemarks() : "";
+        java.util.Map<String, String> oldBudgetHours = new java.util.LinkedHashMap<>();
+        for (String f : new String[]{"procurementBudgetHours", "cuttingBudgetHours", "secondaryProcessBudgetHours",
+                "carSewingBudgetHours", "ironingBudgetHours", "packagingBudgetHours",
+                "qualityBudgetHours", "warehousingBudgetHours"}) {
+            Object v = payload.get(f);
+            if (v != null) {
+                try {
+                    java.lang.reflect.Field fld = ProductionOrder.class.getDeclaredField(f);
+                    fld.setAccessible(true);
+                    Object old = fld.get(order);
+                    oldBudgetHours.put(f, old != null ? String.valueOf(old) : "0");
+                } catch (Exception ignored) { }
+            }
+        }
+
         if (payload.containsKey("remarks")) {
             String remarks = (String) payload.get("remarks");
             order.setRemarks(remarks);
@@ -909,15 +929,39 @@ public class ProductionOrderOrchestrator {
 
         if (success) {
             evictCacheAfterCommit(id);
-            // 写订单操作记录：快速编辑/改交期
+            // 写订单操作记录：快速编辑/改交期（D-363c：带变更快照 前值 → 后值）
             if (orderLogHelper != null) {
                 java.util.ArrayList<String> changed = new java.util.ArrayList<>();
-                if (payload.containsKey("expectedShipDate")) changed.add("改交期");
-                if (payload.containsKey("urgencyLevel")) changed.add("紧急程度");
+                java.util.ArrayList<String> snapshots = new java.util.ArrayList<>();
+                if (payload.containsKey("expectedShipDate")) {
+                    changed.add("改交期");
+                    String newV = order.getExpectedShipDate() != null ? order.getExpectedShipDate().format(tsFmt) : "";
+                    snapshots.add("交期: " + oldExpectedShip + " → " + newV);
+                }
+                if (payload.containsKey("urgencyLevel")) {
+                    changed.add("紧急程度");
+                    snapshots.add("紧急程度: " + oldUrgency + " → " + (order.getUrgencyLevel() != null ? order.getUrgencyLevel() : ""));
+                }
                 if (payload.containsKey("progressWorkflowJson")) changed.add("工序");
-                if (payload.containsKey("remarks")) changed.add("备注");
+                if (payload.containsKey("remarks")) {
+                    changed.add("备注");
+                    String oldShort = oldRemarks.length() > 60 ? oldRemarks.substring(0, 60) + "…" : oldRemarks;
+                    String newShort = (order.getRemarks() != null ? order.getRemarks() : "");
+                    newShort = newShort.length() > 60 ? newShort.substring(0, 60) + "…" : newShort;
+                    snapshots.add("备注: " + oldShort + " → " + newShort);
+                }
+                for (String f : oldBudgetHours.keySet()) {
+                    try {
+                        java.lang.reflect.Field fld = ProductionOrder.class.getDeclaredField(f);
+                        fld.setAccessible(true);
+                        Object newV = fld.get(order);
+                        snapshots.add(f.replace("BudgetHours", "预算工时") + ": " + oldBudgetHours.get(f) + " → " + (newV != null ? String.valueOf(newV) : "0"));
+                    } catch (Exception ignored) { }
+                }
                 if (changed.isEmpty()) changed.add("快速编辑");
-                orderLogHelper.writeOrderLog(order.getOrderNo(), null, String.join("+", changed), null);
+                String remark = snapshots.isEmpty() ? null : String.join("；", snapshots);
+                if (remark != null && remark.length() > 500) remark = remark.substring(0, 500);
+                orderLogHelper.writeOrderLog(order.getOrderNo(), null, String.join("+", changed), remark);
             }
         }
         return success;
@@ -971,6 +1015,8 @@ public class ProductionOrderOrchestrator {
         String remark = operationRemark != null ? operationRemark
                 : String.format("修改%s：%s → %s", fieldLabel(field), oldValue, value.trim());
         appendRemark(order, remark);
+        // D-363c：变更快照同步进订单操作记录（t_order_operation_log）
+        writeOrderOperationLog(id, "修改", remark);
 
         if (!productionOrderService.updateById(order)) {
             throw new IllegalStateException("更新失败");
