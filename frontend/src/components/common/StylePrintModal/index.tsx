@@ -121,7 +121,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           >
             <style>{`
               .print-section { margin-bottom: 16px; }
-              .print-section-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 0.75px solid var(--color-zinc-300); }
+              .print-section-title { font-size: 13px; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-left: 3px solid #1677ff; border-radius: 2px; margin-bottom: 10px; }
               /* 统一打印表格样式 */
               .pt { width: 100%; border-collapse: collapse; font-size: 12px; }
               .pt th, .pt td { border: 0.5px solid var(--color-zinc-300); padding: 5px 8px; vertical-align: middle; }
@@ -166,23 +166,35 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             )}
 
             {/* 生产制单（生产要求） */}
-            {options.productionSheet && (
+            {options.productionSheet &&  (
+              <>
+              <div className="print-section-title">生产制单</div>
               <ProductionSheetSection productionSheet={data.productionSheet} />
+            </>
             )}
 
             {/* 尺寸表 */}
-            {options.sizeTable && (
+            {options.sizeTable &&  (
+              <>
+              <div className="print-section-title">尺寸表</div>
               <SizeTableSection sizes={data.sizes} />
+            </>
             )}
 
             {/* BOM表 */}
-            {options.bomTable && (
+            {options.bomTable &&  (
+              <>
+              <div className="print-section-title">物料明细（BOM）</div>
               <BomTableSection bom={data.bom} showPrice={showPrice} />
+            </>
             )}
 
             {/* 工序表 */}
-            {options.processTable && (
+            {options.processTable &&  (
+              <>
+              <div className="print-section-title">工序表</div>
               <ProcessTableSection process={data.process} showPrice={showPrice} />
+            </>
             )}
 
             {/* 无数据提示 */}

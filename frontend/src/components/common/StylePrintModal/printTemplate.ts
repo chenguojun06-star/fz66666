@@ -113,12 +113,7 @@ export function buildPrintHtml({
             break-inside: avoid;
           }
           .print-section-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--color-text-primary);
-            margin-bottom: 10px;
-            padding-bottom: 6px;
-            border-bottom: 0.75px solid var(--color-zinc-300);
+            font-size: 13px; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-left: 3px solid #1677ff; border-radius: 2px; margin-bottom: 10px;
           }
 
           /* 表格样式 */

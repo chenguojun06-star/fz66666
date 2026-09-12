@@ -327,7 +327,8 @@ export const buildPurchaseSheetHtml = (
           .size-table .row-head{background:var(--color-bg-container)}
           .size-table .total-cell{min-width:140px;text-align:center;background:var(--color-bg-container)}
           .section{margin-top:18px}
-          .section h3{margin:0 0 8px 0;font-size:14px}
+          .section h3{margin:0 0 8px 0;font-size:13px;font-weight:700;background:#f0f0f0;padding:6px 10px;border-left:3px solid #1677ff;border-radius:2px}
+          .block-title{margin:14px 0 8px 0;font-size:13px;font-weight:700;background:#f0f0f0;padding:6px 10px;border-left:3px solid #1677ff;border-radius:2px}
           .data-table{width:100%;border-collapse:collapse;font-size:12px}
           .data-table th,.data-table td{border:1px solid var(--color-border);padding:6px 8px;vertical-align:middle;text-align:center}
           .data-table th{background:var(--color-bg-container);text-align:center}
@@ -366,6 +367,7 @@ export const buildPurchaseSheetHtml = (
         </div>
 
         <div class="block">
+          <div class="block-title">码数明细</div>
           ${buildSizeTable()}
         </div>
 

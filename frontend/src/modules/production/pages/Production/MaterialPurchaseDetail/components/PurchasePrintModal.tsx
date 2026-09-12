@@ -170,7 +170,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
           }).join('')
         : `<tr><td>${color || '-'}</td>${matrix.sizes.map((sz) => { const v = matrix.cell('', sz); return `<td style="text-align:center">${v > 0 ? v : '-'}</td>`; }).join('')}<td style="text-align:center;font-weight:600">${matrix.sizes.reduce((s, sz) => s + matrix.cell('', sz), 0)}</td></tr>`;
       matrixHtml = `
-        <h3 style="font-size:14px;margin:18px 0 8px;">下单明细</h3>
+        <h3 style="font-size:13px;font-weight:700;background:#f0f0f0;padding:6px 10px;border-left:3px solid #1677ff;border-radius:2px;margin:18px 0 8px;">下单明细</h3>
         <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px">
           <thead><tr>${thead}</tr></thead>
           <tbody>${tbody}</tbody>
