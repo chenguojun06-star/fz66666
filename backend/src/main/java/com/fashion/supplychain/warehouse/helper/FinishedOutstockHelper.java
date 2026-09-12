@@ -668,6 +668,11 @@ public class FinishedOutstockHelper {
         if ("approved".equals(outstock.getApprovalStatus())) {
             throw new IllegalArgumentException("该记录已审批，不可重复操作");
         }
+        // D-363g：已回入库的调拨出库不可审核——货已回仓，这张单不再产生任何结算账单
+        if ("transfer_out".equals(outstock.getOutstockType())
+                && "INBOUND".equals(outstock.getTransferInboundStatus())) {
+            throw new IllegalArgumentException("该调拨出库已回入库（货已回仓），无需审核，不会推送结算账单");
+        }
         outstock.setApprovalStatus("approved");
         outstock.setApproveBy(UserContext.userId());
         outstock.setApproveByName(UserContext.username());
@@ -677,8 +682,11 @@ public class FinishedOutstockHelper {
             outstock.setRemark(outstock.getRemark() != null ? outstock.getRemark() + " | 审批: " + remark : "审批: " + remark);
         }
         productOutstockService.updateById(outstock);
-        pushOutstockBill(outstock);
-        log.info("[成品出库审批] outstockNo={}", outstock.getOutstockNo());
+        // D-363g：调拨出库是内部流向（无客户无金额），审核只改状态，不推应收账单
+        if (!"transfer_out".equals(outstock.getOutstockType())) {
+            pushOutstockBill(outstock);
+        }
+        log.info("[成品出库审批] outstockNo={} type={}", outstock.getOutstockNo(), outstock.getOutstockType());
         return Map.of("id", id, "status", "approved");
     }
 

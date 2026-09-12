@@ -180,9 +180,15 @@ export function getOutstockRecordColumns(handlers: {
       dataIndex: 'approvalStatus',
       width: 100,
       align: 'center',
-      render: (text) => text === 'approved'
-        ? <Tag color="green">已审核</Tag>
-        : <Tag color="orange">待审核</Tag>,
+      render: (text, record) => {
+        // D-363g：已回入库的调拨出库终态展示——不参与审核与结算
+        if (record.outstockType === 'transfer_out' && record.transferInboundStatus === 'INBOUND') {
+          return <Tag color="cyan">已回入库</Tag>;
+        }
+        return text === 'approved'
+          ? <Tag color="green">已审核</Tag>
+          : <Tag color="orange">待审核</Tag>;
+      },
     },
     {
       title: '出库时间',
@@ -196,7 +202,9 @@ export function getOutstockRecordColumns(handlers: {
       width: 160,
       render: (_, record) => {
         const actions: RowAction[] = [];
-        if (record.approvalStatus !== 'approved') {
+        // D-363g：已回入库的调拨出库不可审核（货已回仓，不推结算）
+        const returnedTransfer = record.outstockType === 'transfer_out' && record.transferInboundStatus === 'INBOUND';
+        if (record.approvalStatus !== 'approved' && !returnedTransfer) {
           actions.push({
             key: 'approve',
             label: '审核',
