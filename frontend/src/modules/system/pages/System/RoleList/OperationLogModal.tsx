@@ -26,11 +26,12 @@ const OperationLogModal: React.FC<OperationLogModalProps> = ({
 }) => {
   const { isMobile, modalWidth } = useViewport();
 
+  // D-360s：对齐全站日志标准四列（操作时间/操作类型/操作内容/操作人）
   const columns: ColumnsType<OperationLog> = useMemo(() => [
-    { title: '动作', dataIndex: 'action', key: 'action', width: 120, render: (v: string) => v || '-' },
+    { title: '操作时间', dataIndex: 'createTime', key: 'createTime', width: 160, render: (v: string) => formatDateTime(v) },
+    { title: '操作类型', dataIndex: 'action', key: 'action', width: 140, render: (v: string) => v || '-' },
+    { title: '操作内容', dataIndex: 'remark', key: 'remark', render: (v: string) => v || '-' },
     { title: '操作人', dataIndex: 'operator', key: 'operator', width: 120, render: (v: string) => v || '-' },
-    { title: '原因', dataIndex: 'remark', key: 'remark', render: (v: string) => v || '-' },
-    { title: '时间', dataIndex: 'createTime', key: 'createTime', width: 180, render: (v: string) => formatDateTime(v) },
   ], []);
 
   return (
