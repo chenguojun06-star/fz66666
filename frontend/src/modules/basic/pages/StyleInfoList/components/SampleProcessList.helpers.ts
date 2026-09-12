@@ -1,6 +1,8 @@
 // SampleProcessList 的常量、类型与纯函数
 // 从原 SampleProcessList.tsx 拆分而来，保持原 API/字段名不变
 
+import type { ProcessColorItem } from './useSampleProcessProgress';
+
 export interface SubProcessRow {
   key: string;
   name: string;
@@ -14,6 +16,10 @@ export interface SubProcessRow {
   status: 'completed' | 'in_progress' | 'claimed' | 'pending';
   percent: number;
   unitPrice?: number;
+  /** D-382：多色多码——该工序按颜色拆分的完成明细（PC 端展示"x/y 色"并提供批量完成） */
+  colorItems?: ProcessColorItem[];
+  /** D-384：该工序的指派安排（张三 2 件 / 李四 1 件） */
+  assignments?: Array<{ assignee: string; quantity: number }>;
 }
 
 export const STAGE_COLORS: Record<string, string> = {

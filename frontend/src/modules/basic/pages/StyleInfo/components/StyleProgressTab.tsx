@@ -157,11 +157,16 @@ const StyleProgressTab: React.FC<Props> = ({ styleId, styleNo }) => {
       if (d) setDetail(d);
 
       const patternRes = await api.get(`/production/pattern/by-style/${styleId}`);
-      const pData = (patternRes as any)?.data;
+      const pDataRaw = (patternRes as any)?.data;
+      // D-382：by-style 已改为返回「该款式全部色码记录」数组（多色多码：每个 颜色×码数 一条独立记录）。
+      // 原实现把返回值当单对象用 → 数组的 .id 为 undefined → 请求发到
+      // /production/pattern/undefined/scan-records 并进入 catch，导致本页数据全空。
+      const pData = Array.isArray(pDataRaw) ? (pDataRaw[0] || null) : pDataRaw;
       if (pData) {
         setPattern(pData);
         const scanRes = await api.get(`/production/pattern/${pData.id}/scan-records`);
-        setScanRecords(Array.isArray((scanRes as any)?.data) ? (scanRes as any).data : []);
+        const scanData = (scanRes as any)?.data;
+        setScanRecords(Array.isArray(scanData) ? scanData : (Array.isArray(scanData?.records) ? scanData.records : []));
       } else {
         setPattern(null);
         setScanRecords([]);

@@ -376,6 +376,7 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                       completed={sample.isSampleSnapshotCompleted}
                       onCompleteProcess={sampleProcessProgress.completeProcess}
                       onRefresh={refreshDrawerData}
+                      sampleSnapshots={sample.sampleSnapshotList}
                     />
                   </div>
                 </>

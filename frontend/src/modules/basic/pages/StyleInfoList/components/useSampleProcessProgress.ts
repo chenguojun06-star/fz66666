@@ -13,6 +13,24 @@ export interface ProcessNodeInfo {
   status?: string;
   claimedBy?: string;
   claimedTime?: string;
+  /**
+   * D-382：多色多码——该工序下按颜色拆分的明细（与手机端「颜色勾选」同一份数据来源）。
+   * 后端 process-config 的 status 不带颜色维度（任一颜色完成即整行 COMPLETED），
+   * 这里用扫码记录按「工序 + 颜色」聚合，让 PC 也能看出"哪几个颜色做了、哪几个没做"。
+   */
+  colorItems?: ProcessColorItem[];
+  /** D-384：该工序的指派安排（张三 2 件 / 李四 1 件），与手机端同一份数据 */
+  assignments?: Array<{ assignee: string; quantity: number }>;
+}
+
+export interface ProcessColorItem {
+  color: string;
+  size?: string;
+  /** 累计完成件数（非 CLAIM 记录数量求和） */
+  quantity: number;
+  completed: boolean;
+  claimedBy?: string;
+  time?: string;
 }
 
 export interface ProcessStageProgress {
@@ -53,6 +71,10 @@ export default function useSampleProcessProgress(
       let loadedOrderNo: string | null = null;
       const scannedNames = new Set<string>();
       const scannedStages = new Set<string>();
+      // D-382：保留原始扫码记录（含 color/size），用于按「工序 × 颜色」聚合颜色明细
+      const patternScanRecords: any[] = [];
+      // D-384：工序指派明细（一道工序可指派多人，各自件数额度）
+      const processAssignments: Array<{ assignee: string; quantity: number; processName: string }> = [];
 
       if (productionOrderId) {
         const [orderRes, scanRes] = await Promise.allSettled([
@@ -141,11 +163,17 @@ export default function useSampleProcessProgress(
       if (patternProductionId && nodes.length === 0) {
         loadedOrderId = null;
         loadedOrderNo = null;
-        // 并行请求：工序配置 + 样衣扫码记录
-        const [configRes, patternScanRes] = await Promise.allSettled([
+        // 并行请求：工序配置 + 样衣扫码记录 + 工序指派明细（D-384）
+        const [configRes, patternScanRes, assignmentRes] = await Promise.allSettled([
           api.get(`/production/pattern/${patternProductionId}/process-config`),
           api.get(`/production/pattern/${patternProductionId}/scan-records`),
+          api.get(`/production/pattern/${patternProductionId}/assignments`),
         ]);
+
+        if (assignmentRes.status === 'fulfilled') {
+          const aData = (assignmentRes.value as any)?.data;
+          if (Array.isArray(aData)) processAssignments.push(...aData);
+        }
 
         if (configRes.status === 'fulfilled') {
           const configData = (configRes.value as any)?.data;
@@ -167,6 +195,7 @@ export default function useSampleProcessProgress(
         if (patternScanRes.status === 'fulfilled') {
           const scanData = (patternScanRes.value as any)?.data;
           const records = Array.isArray(scanData) ? scanData : Array.isArray(scanData?.data) ? scanData.data : [];
+          patternScanRecords.push(...records);
           // D-115：行级记录（processName=已配置子工序名）只点亮自身，不做阶段兜底
           const configuredNames = new Set(nodes.map((n) => n.name).filter(Boolean));
           for (const r of records) {
@@ -208,7 +237,20 @@ export default function useSampleProcessProgress(
             || !!(n.progressStage && scannedStages.has(n.progressStage)),
         };
       });
-      setWorkflowNodes(markedNodes);
+      // D-382：给每个工序节点附加「按颜色」的完成明细——多色多码时 PC 才能看出
+      // "哪几个颜色做了、哪几个没做"，并据此提供按颜色批量完成/撤回。
+      // D-384：同时挂上该工序的指派安排（张三 2 件 / 李四 1 件）。
+      setWorkflowNodes(markedNodes.map((n) => {
+        const nameKey = String(n.name || '').trim().toLowerCase();
+        const assignments = processAssignments
+          .filter((a) => String(a.processName || '').trim().toLowerCase() === nameKey)
+          .map((a) => ({ assignee: String(a.assignee || ''), quantity: Number(a.quantity) || 0 }));
+        return {
+          ...n,
+          colorItems: buildProcessColorItems(patternScanRecords, n.name),
+          assignments,
+        };
+      }));
       setOrderId(loadedOrderId);
       setOrderNo(loadedOrderNo);
     } catch {
@@ -359,4 +401,42 @@ function normalizeOperationType(opType: string | null | undefined): string | nul
   if (!opType) return null;
   const upper = opType.trim().toUpperCase();
   return OP_TYPE_TO_CHINESE[upper] || null;
+}
+
+/**
+ * D-382：按「工序名 + 颜色」聚合扫码记录，得到该工序的颜色明细。
+ * - CLAIM 记录只标记领取人/时间，**不计入完成件数**（与后端 D-167/D-189 口径一致：
+ *   领取只是动作，报工才是完成）
+ * - 非 CLAIM 且数量 > 0 的记录累加数量，并把该颜色标记为已完成
+ */
+function buildProcessColorItems(records: any[], processName: string): ProcessColorItem[] {
+  const target = String(processName || '').trim().toLowerCase();
+  if (!target || !Array.isArray(records)) return [];
+  const map = new Map<string, ProcessColorItem>();
+  for (const r of records) {
+    if (!r || r.success === false) continue;
+    if (String(r.processName || '').trim().toLowerCase() !== target) continue;
+    const color = String(r.color || '').trim();
+    if (!color) continue;
+    const key = color.toLowerCase();
+    const isClaim = String(r.operationType || '').trim().toUpperCase() === 'CLAIM';
+    const cur: ProcessColorItem = map.get(key) || { color, quantity: 0, completed: false };
+    if (!cur.size) {
+      const size = String(r.size || '').trim();
+      if (size) cur.size = size;
+    }
+    if (isClaim) {
+      cur.claimedBy = r.operatorName || cur.claimedBy;
+      cur.time = r.scanTime || r.createTime || cur.time;
+    } else {
+      const qty = Number(r.quantity) || 0;
+      if (qty > 0) {
+        cur.quantity += qty;
+        cur.completed = true;
+        cur.time = r.scanTime || r.createTime || cur.time;
+      }
+    }
+    map.set(key, cur);
+  }
+  return Array.from(map.values());
 }

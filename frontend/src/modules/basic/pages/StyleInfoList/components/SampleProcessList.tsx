@@ -1,12 +1,14 @@
 import React, { useMemo } from 'react';
 import { Alert, Table } from 'antd';
 import type { ProcessStageProgress } from './useSampleProcessProgress';
-import { parseSizeDisplay, type SubProcessRow } from './SampleProcessList.helpers';
+import { parseSizeDisplay, OPERATION_TYPE_MAP, type SubProcessRow } from './SampleProcessList.helpers';
 import { buildColumns } from './SampleProcessList.columns';
 import useSampleProcessListData from './useSampleProcessListData';
 import StageTabs from './components/StageTabs';
 import AssigneeModal from './components/AssigneeModal';
 import PurchaseDrawer from './components/PurchaseDrawer';
+import BatchCompleteModal from './components/BatchCompleteModal';
+import type { PatternProductionSnapshot } from './styleTableViewUtils.types';
 import { useUser, isAdmin } from '@/utils/AuthContext';
 
 // 行业标准：采购/入库不属于生产工序，已从工序列表中移除
@@ -29,6 +31,8 @@ interface SampleProcessListProps {
   onRefresh?: () => void;
   /** 整件样衣生产是否已完成：完成后工序行操作置灰、撤回仅管理且禁用 */
   completed?: boolean;
+  /** D-382：该款式全部色码任务（多色多码时启用「批量完成」，一次勾选完成多个色码） */
+  sampleSnapshots?: PatternProductionSnapshot[];
 }
 
 export default function SampleProcessList({
@@ -38,6 +42,7 @@ export default function SampleProcessList({
   patternProductionId,
   onCompleteProcess, onRefresh,
   completed,
+  sampleSnapshots,
 }: SampleProcessListProps) {
   // 撤回等敏感操作仅管理账号可见
   const { user } = useUser();
@@ -55,6 +60,7 @@ export default function SampleProcessList({
     receiveTime,
     onCompleteProcess,
     onRefresh,
+    sampleSnapshots,
   });
 
   const {
@@ -72,11 +78,16 @@ export default function SampleProcessList({
     currentStage,
     subTableData,
     currentStageEmpty,
-    handleManualComplete,
     handleUndo,
     handleAssign,
     handleAssignSubmit,
     handlePurchaseClick,
+    batchCompleteOpen,
+    setBatchCompleteOpen,
+    batchCompleteRow,
+    batchCompleteSubmitting,
+    handleBatchComplete,
+    handleBatchCompleteSubmit,
   } = data;
 
   const columns = useMemo<ReturnType<typeof buildColumns>>(
@@ -88,10 +99,10 @@ export default function SampleProcessList({
       canManage,
       onAssign: handleAssign,
       onPurchaseClick: handlePurchaseClick,
-      onManualComplete: handleManualComplete,
       onUndo: handleUndo,
+      onBatchComplete: handleBatchComplete,
     }),
-    [activeTab, currentStage, actioningKey, completed, handleAssign, handlePurchaseClick, handleManualComplete, handleUndo, canManage],
+    [activeTab, currentStage, actioningKey, completed, handleAssign, handlePurchaseClick, handleUndo, canManage, handleBatchComplete],
   );
 
   // 生产工序进度计算（采购/入库已从工序列表移除，stages 只含4个生产工序）
@@ -183,6 +194,17 @@ export default function SampleProcessList({
         form={assignForm}
         onCancel={() => setAssignModalOpen(false)}
         onOk={handleAssignSubmit}
+      />
+
+      {/* D-382：多色多码批量完成（勾选色码一次完成，与手机端"多色勾选"同款交互） */}
+      <BatchCompleteModal
+        open={batchCompleteOpen}
+        processName={batchCompleteRow?.name || ''}
+        operationType={OPERATION_TYPE_MAP[currentStage?.key || ''] || 'PLATE'}
+        snapshots={sampleSnapshots || []}
+        submitting={batchCompleteSubmitting}
+        onCancel={() => setBatchCompleteOpen(false)}
+        onConfirm={handleBatchCompleteSubmit}
       />
     </div>
   );
