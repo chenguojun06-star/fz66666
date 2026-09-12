@@ -121,7 +121,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           >
             <style>{`
               .print-section { margin-bottom: 16px; }
-              .print-section-title { font-size: 13px; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-left: 3px solid #1677ff; border-radius: 2px; margin-bottom: 10px; }
+              .print-section-title { font-size: 13px; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-radius: 2px; margin-bottom: 0; border: 1px solid #d9d9d9; border-bottom: none; }
               /* 统一打印表格样式 */
               .pt { width: 100%; border-collapse: collapse; font-size: 12px; }
               .pt th, .pt td { border: 0.5px solid var(--color-zinc-300); padding: 5px 8px; vertical-align: middle; }

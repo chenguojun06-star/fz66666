@@ -113,7 +113,7 @@ export function buildPrintHtml({
             break-inside: avoid;
           }
           .print-section-title {
-            font-size: 13px; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-left: 3px solid #1677ff; border-radius: 2px; margin-bottom: 10px;
+            font-size: 13px; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-radius: 2px; margin-bottom: 0; border: 1px solid #d9d9d9; border-bottom: none;
           }
 
           /* 表格样式 */
@@ -122,7 +122,12 @@ export function buildPrintHtml({
             border-collapse: collapse;
             font-size: 12px;
             margin-bottom: 16px;
+            /* D-361e：整表不拆页——放不下整体挪到下一页 */
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
+          /* D-361e：工艺单等富文本颜色打印保真（彩色文字打印出来也是原色） */
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           thead {
             page-break-inside: avoid;
             break-inside: avoid;

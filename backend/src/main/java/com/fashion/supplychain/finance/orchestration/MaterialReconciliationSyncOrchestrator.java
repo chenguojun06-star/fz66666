@@ -50,7 +50,11 @@ public class MaterialReconciliationSyncOrchestrator {
      * @param purchase 采购单
      * @return 对账记录ID
      */
-    @Transactional(rollbackFor = Exception.class)
+    // D-361d：改 REQUIRES_NEW 独立事务——样衣采购（无订单号）等场景同步失败会把你这个
+    // 方法所在的入库主事务标记 rollback-only，导致入库整体回滚报
+    // "Transaction rolled back because it has been marked as rollback-only"。
+    // 同步是对账回流（辅助），失败只回滚同步自身，入库主流程必须成功。
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public String syncFromInbound(MaterialInbound inbound, MaterialPurchase purchase) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();

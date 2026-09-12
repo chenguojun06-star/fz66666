@@ -257,7 +257,7 @@ export function usePurchaseDialog({
     const printData = currentPurchase && String(currentPurchase.sourceType || '').toLowerCase() === 'sample'
       ? await loadSamplePrintData(currentPurchase)
       : { order: detailOrder, orderLines: detailOrderLines, sizePairs: detailSizePairs };
-    const html = buildPurchaseSheetHtml(currentPurchase, printData.order, printData.orderLines.length ? printData.orderLines : detailOrderLines, detailPurchases, printData.sizePairs.length ? printData.sizePairs : detailSizePairs, user?.tenantName);
+    const html = buildPurchaseSheetHtml(currentPurchase, printData.order, printData.orderLines.length ? printData.orderLines : detailOrderLines, detailPurchases, printData.sizePairs.length ? printData.sizePairs : detailSizePairs, user?.tenantName, user?.name);
     const success = safePrint(html, '采购单');
     if (!success) {
       message.error('打印失败，请重试');
@@ -268,7 +268,7 @@ export function usePurchaseDialog({
     const printData = currentPurchase && String(currentPurchase.sourceType || '').toLowerCase() === 'sample'
       ? await loadSamplePrintData(currentPurchase)
       : { order: detailOrder, orderLines: detailOrderLines, sizePairs: detailSizePairs };
-    const html = buildPurchaseSheetHtml(currentPurchase, printData.order, printData.orderLines.length ? printData.orderLines : detailOrderLines, detailPurchases, printData.sizePairs.length ? printData.sizePairs : detailSizePairs, user?.tenantName);
+    const html = buildPurchaseSheetHtml(currentPurchase, printData.order, printData.orderLines.length ? printData.orderLines : detailOrderLines, detailPurchases, printData.sizePairs.length ? printData.sizePairs : detailSizePairs, user?.tenantName, user?.name);
     const orderNo = String(currentPurchase?.orderNo || '').trim();
     const purchaseNo = String(currentPurchase?.purchaseNo || '').trim();
     const now = new Date();
