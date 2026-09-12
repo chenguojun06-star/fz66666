@@ -80,6 +80,21 @@ public class QdrantService {
     @Value("${ai.deepseek.base-url:https://api.deepseek.com}")
     private String deepseekBaseUrl;
 
+    // ── 独立 Embedding 提供方（OpenAI 兼容 /v1/embeddings）──
+    // DeepSeek 官方无 embeddings 接口（404 实证 2026-09-13），真实语义向量需配置独立提供方，
+    // 推荐：硅基流动 https://api.siliconflow.cn + BAAI/bge-m3（1024维，与 VECTOR_DIM_REAL 对齐，有免费额度）
+    @Value("${ai.embedding.api-key:}")
+    private String embeddingApiKey;
+
+    @Value("${ai.embedding.base-url:https://api.siliconflow.cn}")
+    private String embeddingBaseUrl;
+
+    @Value("${ai.embedding.model:BAAI/bge-m3}")
+    private String embeddingModelName;
+
+    /** Embedding 远端永久性失败（404 等）熔断标记：本次运行内不再重试，避免预向量化刷屏 */
+    private volatile boolean embeddingRemoteBroken = false;
+
     @Value("${intelligence.qdrant.enabled:false}")
     private boolean qdrantEnabled;
 
@@ -705,17 +720,28 @@ public class QdrantService {
         if (cached != null && !cached.isExpired()) {
             return cached.vector;
         }
-        if (PROVIDER_DEEPSEEK.equals(activeProvider)) {
+        if (!embeddingRemoteBroken && hasRealEmbeddingProvider()) {
             try {
                 float[] vector = callEmbeddingApi(text);
                 embeddingCache.put(cacheKey, new EmbeddingCacheEntry(vector));
                 evictCacheIfNeeded();
                 return vector;
             } catch (Exception e) {
-                log.warn("[Qdrant] DeepSeek Embedding API 调用失败，降级为伪向量: {}", e.getMessage());
+                log.warn("[Qdrant] Embedding API 调用失败，降级为伪向量: {}", e.getMessage());
+                // 404 = 接口根本不存在（如 DeepSeek 无 embeddings），本次运行内熔断不再重试
+                if (e.getMessage() != null && e.getMessage().contains("404")) {
+                    embeddingRemoteBroken = true;
+                    log.warn("[Qdrant] Embedding 接口 404（不存在），已熔断：本次运行内直接使用伪向量，配置 ai.embedding.api-key 可启用真实语义向量");
+                }
             }
         }
         return pseudoEmbedding(text);
+    }
+
+    /** 是否配置了可用的真实 Embedding 提供方（独立配置优先，回落 DeepSeek Key） */
+    private boolean hasRealEmbeddingProvider() {
+        return (embeddingApiKey != null && !embeddingApiKey.isEmpty())
+                || (deepseekApiKey != null && !deepseekApiKey.isEmpty());
     }
 
     private String resolveActiveProvider() {
@@ -735,12 +761,17 @@ public class QdrantService {
     }
 
     /**
-     * 调用 DeepSeek Embedding API 获取真实语义向量。
+     * 调用 OpenAI 兼容 Embedding API 获取真实语义向量。
+     * 独立配置（ai.embedding.*，推荐硅基流动 bge-m3=1024维）优先；未配置时回落 DeepSeek（无 embeddings 接口，必然 404）。
      */
     private float[] callEmbeddingApi(String text) {
-        String url = deepseekBaseUrl + "/v1/embeddings";
+        boolean useStandalone = embeddingApiKey != null && !embeddingApiKey.isEmpty();
+        String apiKey = useStandalone ? embeddingApiKey : deepseekApiKey;
+        String baseUrl = useStandalone ? embeddingBaseUrl : deepseekBaseUrl;
+        String model = useStandalone ? embeddingModelName : embeddingModel;
+        String url = baseUrl + "/v1/embeddings";
         ObjectNode body = objectMapper.createObjectNode();
-        body.put("model", embeddingModel);
+        body.put("model", model);
         body.put("input", text);
         body.put("encoding_format", "float");
 
