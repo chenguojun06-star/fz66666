@@ -313,6 +313,14 @@ const production = {
     const id = _normalizePatternId(patternId);
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/linked-order`, 'GET', {});
   },
+  /**
+   * D-385：按款式查询全部色码生产记录
+   * 多色多码拆分后，一个款式会有 N 条 PatternProduction（每个 颜色×码数 一条），
+   * 页面进度必须聚合所有色码，否则会出现「列表 0/3、详情 3/3」的两页不一致。
+   */
+  getPatternsByStyle(styleId) {
+    return ok(`/api/production/pattern/by-style/${encodeURIComponent(String(styleId || '').trim())}`, 'GET', {});
+  },
   getPatternScanRecords(patternId) {
     const id = _normalizePatternId(patternId);
     return ok(`/api/production/pattern/${encodeURIComponent(id)}/scan-records`, 'GET', {});

@@ -1094,22 +1094,42 @@ Page({
       tasks.push(Promise.resolve([]));
     }
 
-    // 2. 扫码记录：GET /api/production/pattern/{pid}/scan-records
+    // 2. 扫码记录：D-385 按款式聚合——多色多码拆分后一个款式有 N 条色码记录，
+    //    只看当前条会导致「列表 0/3、详情 3/3」两页不一致；合并该款式全部色码的扫码记录。
+    const styleIdForScan = this.data.styleId;
     let pid = this.data.patternId;
     if (!pid && this.data.patternSnapshot && this.data.patternSnapshot.id) {
       pid = this.data.patternSnapshot.id;
     }
-    if (pid) {
+    if (styleIdForScan) {
       tasks.push(
-        production.getPatternScanRecords(pid)
-          .then(toArray)
+        production.getPatternsByStyle(styleIdForScan)
+          .then(function (res) {
+            const d = res && (res.data || res);
+            return Array.isArray(d) ? d : (d && Array.isArray(d.records) ? d.records : []);
+          })
           .catch(function () { return []; })
       );
+    } else if (pid) {
+      // 无款式ID时退回单条
+      tasks.push(Promise.resolve([{ id: pid }]));
     } else {
       tasks.push(Promise.resolve([]));
     }
 
-    const [processes, scans] = await Promise.all(tasks);
+    const [processes, colorPatterns] = await Promise.all(tasks);
+
+    // 合并该款式所有色码的扫码记录（分母用款式总件数 = 色码矩阵合计）
+    const scanTasks = (colorPatterns || [])
+      .filter(function (p) { return p && p.id; })
+      .map(function (p) {
+        return production.getPatternScanRecords(p.id)
+          .then(toArray)
+          .catch(function () { return []; });
+      });
+    const scanLists = await Promise.all(scanTasks);
+    const scans = [];
+    scanLists.forEach(function (list) { scans.push.apply(scans, list); });
 
     // D-257：构建逻辑收敛到 utils/sampleProcessTimeline.js（与列表页共用同一份，保证两边显示一致）
     const snapshot = this.data.patternSnapshot || {};

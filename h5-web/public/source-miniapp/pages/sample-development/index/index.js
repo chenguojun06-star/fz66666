@@ -589,10 +589,30 @@ Page({
       return;
     }
 
+    // D-385：按款式聚合所有色码的扫码记录——多色多码拆分后一个款式有 N 条色码记录，
+    // 只看当前条会导致「列表 0/3、详情 3/3」两页不一致（用户实测反馈）。
+    var scanRecordsForStyle = (item.styleId
+      ? api.production.getPatternsByStyle(item.styleId)
+          .then(function (res) {
+            var d = res && (res.data || res);
+            return Array.isArray(d) ? d : (d && Array.isArray(d.records) ? d.records : []);
+          })
+          .catch(function () { return []; })
+      : Promise.resolve(patternId ? [{ id: patternId }] : [])
+    ).then(function (patterns) {
+      return Promise.all((patterns || []).filter(function (p) { return p && p.id; }).map(function (p) {
+        return api.production.getPatternScanRecords(p.id).then(toList).catch(function () { return []; });
+      })).then(function (lists) {
+        var all = [];
+        lists.forEach(function (l) { all.push.apply(all, l); });
+        return all;
+      });
+    });
+
     Promise.all([
       // D-257：与详情页同源——款式工序列表 + 扫码记录，构建子工序时间线（含领取人/时间/单价）
       item.styleId ? styleApi.listProcesses({ styleId: item.styleId }).catch(function () { return []; }) : Promise.resolve([]),
-      api.production.getPatternScanRecords(patternId).catch(function () { return []; }),
+      scanRecordsForStyle,
     ]).then(function (results) {
       var processes = toList(results[0]);
       var scanRecords = toList(results[1]);
