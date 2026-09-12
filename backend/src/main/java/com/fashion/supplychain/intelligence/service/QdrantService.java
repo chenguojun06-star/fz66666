@@ -92,6 +92,18 @@ public class QdrantService {
     @Value("${ai.embedding.model:BAAI/bge-m3}")
     private String embeddingModelName;
 
+    /** Embedding 接口路径：标准 OpenAI 兼容为 /v1/embeddings；智谱为 /api/paas/v4/embeddings */
+    @Value("${ai.embedding.path:/v1/embeddings}")
+    private String embeddingPath;
+
+    /** 指定输出维度（智谱 embedding-3 支持 256/512/1024/2048）；0=不传该参数 */
+    @Value("${ai.embedding.dimensions:0}")
+    private int embeddingDimensions;
+
+    /** 编码格式：Voyage 只认 base64；部分提供方（如智谱）不认此参数，留空则不传 */
+    @Value("${ai.embedding.encoding-format:base64}")
+    private String embeddingEncodingFormat;
+
     /** Embedding 远端永久性失败（404 等）熔断标记：本次运行内不再重试，避免预向量化刷屏 */
     private volatile boolean embeddingRemoteBroken = false;
 
@@ -812,12 +824,17 @@ public class QdrantService {
                     apiKey.substring(Math.max(5, apiKey.length() - 3)),
                     apiKey.length(), model, baseUrl);
         }
-        String url = baseUrl + "/v1/embeddings";
+        String url = baseUrl + embeddingPath;
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", model);
         body.put("input", text);
-        // Voyage 只接受 base64（float 会被 400 拒绝），OpenAI 兼容方对 base64 也通用
-        body.put("encoding_format", "base64");
+        // Voyage 只接受 base64（float 会被 400 拒绝）；不认此参数的提供方留空则整个省略
+        if (embeddingEncodingFormat != null && !embeddingEncodingFormat.isEmpty()) {
+            body.put("encoding_format", embeddingEncodingFormat);
+        }
+        if (embeddingDimensions > 0) {
+            body.put("dimensions", embeddingDimensions);
+        }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
