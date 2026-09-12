@@ -180,7 +180,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                 onClick: onReceiveAll,
               }}
               batchReturn={{
-                disabled: detailFrozen || !hasReceiveStatusForBatch,
+                disabled: !hasReceiveStatusForBatch,
                 onClick: onBatchReturn,
               }}
               confirmComplete={{
