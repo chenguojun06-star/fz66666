@@ -145,6 +145,13 @@ ai:
     api-key-map: ${AI_OPENAI_COMPAT_API_KEY_MAP:}
     tenant-id: ${AI_OPENAI_COMPAT_TENANT_ID:}
     model-name: ${AI_OPENAI_COMPAT_MODEL_NAME:xiaoyun-agent}
+  # 独立 Embedding 提供方（Voyage voyage-3，1024维与向量集合对齐）。
+  # 2026-09-13：控制台环境变量三次粘贴均 401，改为随代码部署（私有仓库）；
+  # ⚠️ 控制台同名环境变量 AI_EMBEDDING_* 优先级高于本文件会覆盖此值，保持控制台为空！
+  embedding:
+    api-key: ${AI_EMBEDDING_API_KEY:pa-YpCRgA3iyNimaBJYAAVAshUUFJ49uilpPbv1LRQqe2j}
+    base-url: ${AI_EMBEDDING_BASE_URL:https://api.voyageai.com}
+    model: ${AI_EMBEDDING_MODEL:voyage-3}
 
 # 小云 AI Agent 运行参数（运维可调，无需改代码）
 xiaoyun:

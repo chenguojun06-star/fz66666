@@ -95,6 +95,10 @@ public class QdrantService {
     /** Embedding 远端永久性失败（404 等）熔断标记：本次运行内不再重试，避免预向量化刷屏 */
     private volatile boolean embeddingRemoteBroken = false;
 
+    /** Embedding key 指纹只打一次 */
+    private final java.util.concurrent.atomic.AtomicBoolean embeddingKeyFingerprintLogged =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
     @Value("${intelligence.qdrant.enabled:false}")
     private boolean qdrantEnabled;
 
@@ -801,6 +805,13 @@ public class QdrantService {
         String apiKey = useStandalone ? embeddingApiKey : deepseekApiKey;
         String baseUrl = useStandalone ? embeddingBaseUrl : deepseekBaseUrl;
         String model = useStandalone ? embeddingModelName : embeddingModel;
+        if (embeddingKeyFingerprintLogged.compareAndSet(false, true)) {
+            log.info("[Qdrant] Embedding 提供方={} key指纹={}...{} 长度={} 模型={} url={}",
+                    useStandalone ? "standalone(ai.embedding.*)" : "deepseek回落",
+                    apiKey.substring(0, Math.min(5, apiKey.length())),
+                    apiKey.substring(Math.max(5, apiKey.length() - 3)),
+                    apiKey.length(), model, baseUrl);
+        }
         String url = baseUrl + "/v1/embeddings";
         ObjectNode body = objectMapper.createObjectNode();
         body.put("model", model);
