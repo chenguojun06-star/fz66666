@@ -44,14 +44,14 @@ const _FinishedInventory: React.FC = () => {
   // 注意：fetchFn 必须返回非 null/undefined 值，否则 syncManager 会判定为"空数据"并累计 3 次后自动停止
   useSync(
     'warehouse-finished-inventory-poll',
-    async () => { await loadData(); return true; },
+    async () => { await loadData(true); return true; },
     () => {},
     { interval: 30000, pauseOnHidden: true }
   );
 
   // 跨页面实时联动：其它模块（仓库地图/扫码入库等）发生库存变动广播 data:changed 后立即刷新
   React.useEffect(() => {
-    const handleDataChanged = () => { void loadData(); };
+    const handleDataChanged = () => { void loadData(true); };
     window.addEventListener('data:changed', handleDataChanged);
     return () => window.removeEventListener('data:changed', handleDataChanged);
   }, [loadData]);

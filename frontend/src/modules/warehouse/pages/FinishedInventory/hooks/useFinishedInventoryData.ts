@@ -26,18 +26,21 @@ export const useFinishedInventoryData = () => {
     setSmartError({ title, reason, code, actionText: '刷新重试' });
   }, [showSmartErrorNotice]);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  // D-360u：silent 静默刷新——轮询/联动刷新只换数据不转圈（后台刷新可以，前端不能让人感觉在刷新）
+  const loadData = useCallback(async (silent?: boolean) => {
+    if (!silent) setLoading(true);
     try {
       const res = await api.post<{ code: number; data: { records: FinishedInventory[]; total: number } }>('/warehouse/finished-inventory/list', { page: 1, pageSize: 500, factoryType: selectedFactoryType || undefined });
       if (res.code === 200 && res.data?.records) { setRawDataSource(res.data.records); if (showSmartErrorNotice) setSmartError(null); }
-      else setRawDataSource([]);
+      else if (!silent) setRawDataSource([]);
     } catch (error) {
       console.error('加载成品库存失败:', error);
-      reportSmartError('成品库存加载失败', '网络异常或服务不可用，请稍后重试', 'FINISHED_INVENTORY_LOAD_FAILED');
-      message.error('加载成品库存数据失败');
-      setRawDataSource([]);
-    } finally { setLoading(false); }
+      if (!silent) {
+        reportSmartError('成品库存加载失败', '网络异常或服务不可用，请稍后重试', 'FINISHED_INVENTORY_LOAD_FAILED');
+        message.error('加载成品库存数据失败');
+        setRawDataSource([]);
+      }
+    } finally { if (!silent) setLoading(false); }
   }, [selectedFactoryType, showSmartErrorNotice, reportSmartError, message]);
 
   useEffect(() => { loadData(); }, [loadData]);

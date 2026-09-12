@@ -36,8 +36,9 @@ export function useMaterialInventoryList() {
   const currentPageSize = pagination.pagination.pageSize;
   const setPaginationTotal = pagination.setTotal;
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  // D-360u：silent 静默刷新——轮询/联动只换数据不转圈
+  const fetchData = useCallback(async (silent?: boolean) => {
+    if (!silent) setLoading(true);
     try {
       const res = await materialInventoryApi.list({
         page: currentPage, pageSize: currentPageSize,

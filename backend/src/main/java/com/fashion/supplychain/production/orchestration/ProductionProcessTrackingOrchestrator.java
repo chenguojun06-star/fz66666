@@ -667,92 +667,115 @@ public class ProductionProcessTrackingOrchestrator {
 
         String operatorId = UserContext.userId() != null ? String.valueOf(UserContext.userId()) : null;
         String operatorName = UserContext.username() != null ? UserContext.username() : "system";
-        int successCount = 0;
-        int skipCount = 0;
         List<String> errors = new ArrayList<>();
 
         Map<String, ProductionProcessTracking> trackingMap = trackingService.listByIds(trackingIds).stream()
                 .collect(Collectors.toMap(ProductionProcessTracking::getId, t -> t));
 
+        // D-360v：批量写优化——旧实现逐条UPDATE+逐条查菲号+逐条插备注（N条=3~4N次DB往返，云库下极慢）
+        List<String> normalIds = new ArrayList<>();
+        List<String> reinspectedIds = new ArrayList<>();
+        int skipCount = 0;
+
         for (String trackingId : trackingIds) {
-            try {
-                ProductionProcessTracking tracking = trackingMap.get(trackingId);
-                if (tracking == null) {
-                    errors.add("记录不存在: " + trackingId);
-                    continue;
-                }
-                if (!"scanned".equals(tracking.getScanStatus())) {
-                    skipCount++;
-                    continue;
-                }
-                if ("qualified".equals(tracking.getQualityStatus())) {
-                    skipCount++;
-                    continue;
-                }
+            ProductionProcessTracking tracking = trackingMap.get(trackingId);
+            if (tracking == null) {
+                errors.add("记录不存在: " + trackingId);
+                continue;
+            }
+            if (!"scanned".equals(tracking.getScanStatus())) { skipCount++; continue; }
+            if ("qualified".equals(tracking.getQualityStatus())) { skipCount++; continue; }
+            if ("repair_done".equals(tracking.getRepairStatus())) reinspectedIds.add(trackingId);
+            else normalIds.add(trackingId);
+        }
 
-                boolean isReinspection = "repair_done".equals(tracking.getRepairStatus());
+        // 1. 分两组各一条批量UPDATE（返修重检组要写repairCompletedTime）
+        LocalDateTime now = LocalDateTime.now();
+        if (!normalIds.isEmpty()) {
+            trackingService.update(new LambdaUpdateWrapper<ProductionProcessTracking>()
+                    .in(ProductionProcessTracking::getId, normalIds)
+                    .set(ProductionProcessTracking::getQualityStatus, "qualified")
+                    .set(ProductionProcessTracking::getDefectQuantity, 0)
+                    .set(ProductionProcessTracking::getQualityOperatorId, operatorId)
+                    .set(ProductionProcessTracking::getQualityOperatorName, operatorName)
+                    .set(ProductionProcessTracking::getQualityTime, now)
+                    .set(ProductionProcessTracking::getRepairStatus, null)
+                    .set(ProductionProcessTracking::getUpdater, operatorName));
+        }
+        if (!reinspectedIds.isEmpty()) {
+            trackingService.update(new LambdaUpdateWrapper<ProductionProcessTracking>()
+                    .in(ProductionProcessTracking::getId, reinspectedIds)
+                    .set(ProductionProcessTracking::getQualityStatus, "qualified")
+                    .set(ProductionProcessTracking::getDefectQuantity, 0)
+                    .set(ProductionProcessTracking::getQualityOperatorId, operatorId)
+                    .set(ProductionProcessTracking::getQualityOperatorName, operatorName)
+                    .set(ProductionProcessTracking::getQualityTime, now)
+                    .set(ProductionProcessTracking::getRepairStatus, "completed")
+                    .set(ProductionProcessTracking::getRepairCompletedTime, now)
+                    .set(ProductionProcessTracking::getUpdater, operatorName));
+        }
+        int successCount = normalIds.size() + reinspectedIds.size();
 
-                LambdaUpdateWrapper<ProductionProcessTracking> uw = new LambdaUpdateWrapper<>();
-                uw.eq(ProductionProcessTracking::getId, trackingId)
-                        .set(ProductionProcessTracking::getQualityStatus, "qualified")
-                        .set(ProductionProcessTracking::getDefectQuantity, 0)
-                        .set(ProductionProcessTracking::getQualityOperatorId, operatorId)
-                        .set(ProductionProcessTracking::getQualityOperatorName, operatorName)
-                        .set(ProductionProcessTracking::getQualityTime, LocalDateTime.now())
-                        .set(ProductionProcessTracking::getRepairStatus, isReinspection ? "completed" : null)
-                        .set(ProductionProcessTracking::getUpdater, operatorName);
-                if (isReinspection) {
-                    uw.set(ProductionProcessTracking::getRepairCompletedTime, LocalDateTime.now());
+        // 2. 批量修正菲号状态（一次listByIds + 一次updateBatchById）
+        Set<String> bundleIds = trackingMap.values().stream()
+                .filter(t -> normalIds.contains(t.getId()) || reinspectedIds.contains(t.getId()))
+                .map(ProductionProcessTracking::getCuttingBundleId)
+                .filter(bid -> bid != null && !bid.isBlank())
+                .collect(Collectors.toSet());
+        if (!bundleIds.isEmpty()) {
+            List<CuttingBundle> bundles = cuttingBundleService.listByIds(bundleIds);
+            List<CuttingBundle> changedBundles = new ArrayList<>();
+            for (CuttingBundle bundle : bundles) {
+                boolean needUpdate = false;
+                if (Boolean.TRUE.equals(bundle.getScanBlocked())) {
+                    bundle.setScanBlocked(false);
+                    needUpdate = true;
                 }
-                trackingService.update(uw);
-
-                if (tracking.getCuttingBundleId() != null) {
-                    CuttingBundle bundle = cuttingBundleService.getById(tracking.getCuttingBundleId());
-                    if (bundle != null) {
-                        boolean needUpdate = false;
-                        if (Boolean.TRUE.equals(bundle.getScanBlocked())) {
-                            bundle.setScanBlocked(false);
-                            needUpdate = true;
-                        }
-                        if ("unqualified".equals(bundle.getStatus()) || "repaired_waiting_qc".equals(bundle.getStatus())) {
-                            bundle.setStatus("qualified");
-                            needUpdate = true;
-                        }
-                        if (needUpdate) {
-                            cuttingBundleService.updateById(bundle);
-                        }
-                    }
+                if ("unqualified".equals(bundle.getStatus()) || "repaired_waiting_qc".equals(bundle.getStatus())) {
+                    bundle.setStatus("qualified");
+                    needUpdate = true;
                 }
-
-                if (tracking.getProductionOrderNo() != null) {
-                    try {
-                        OrderRemark remark = new OrderRemark();
-                        remark.setTargetType("order");
-                        remark.setTargetNo(tracking.getProductionOrderNo());
-                        remark.setAuthorId(operatorId);
-                        remark.setAuthorName(operatorName);
-                        remark.setAuthorRole("工序质检");
-                        remark.setContent(String.format("[质检合格] 菲号#%d %s: %d件全部合格(批量质检)",
-                                tracking.getBundleNo(), tracking.getProcessName(), tracking.getQuantity()));
-                        remark.setTenantId(tracking.getTenantId());
-                        orderRemarkService.save(remark);
-                    } catch (Exception e) {
-                        log.warn("[批量质检] 同步备注失败: {}", e.getMessage());
-                    }
-                }
-
-                successCount++;
-            } catch (Exception e) {
-                errors.add(trackingId + ": " + e.getMessage());
+                if (needUpdate) changedBundles.add(bundle);
+            }
+            if (!changedBundles.isEmpty()) {
+                cuttingBundleService.updateBatchById(changedBundles);
             }
         }
 
-        log.info("[批量质检合格] 总数={}, 成功={}, 跳过={}, 失败={}", trackingIds.size(), successCount, skipCount, errors.size());
+        // 3. 批量写订单备注（一次saveBatch）
+        try {
+            List<OrderRemark> remarks = new ArrayList<>();
+            for (ProductionProcessTracking tracking : trackingMap.values()) {
+                if (!(normalIds.contains(tracking.getId()) || reinspectedIds.contains(tracking.getId()))) continue;
+                if (tracking.getProductionOrderNo() == null || tracking.getProductionOrderNo().isBlank()) continue;
+                OrderRemark remark = new OrderRemark();
+                remark.setTargetType("order");
+                remark.setTargetNo(tracking.getProductionOrderNo());
+                remark.setAuthorId(operatorId);
+                remark.setAuthorName(operatorName);
+                remark.setAuthorRole("工序质检");
+                remark.setContent(String.format("[质检合格] 菲号#%d %s: %d件全部合格(批量质检)",
+                        tracking.getBundleNo() != null ? tracking.getBundleNo() : 0,
+                        tracking.getSku() != null ? tracking.getSku() : "",
+                        tracking.getQuantity() != null ? tracking.getQuantity() : 0));
+                remark.setTenantId(tracking.getTenantId());
+                remark.setCreateTime(LocalDateTime.now());
+                remark.setDeleteFlag(0);
+                remarks.add(remark);
+            }
+            if (!remarks.isEmpty()) {
+                orderRemarkService.saveBatch(remarks);
+            }
+        } catch (Exception e) {
+            log.warn("[批量质检] 同步备注失败: {}", e.getMessage());
+        }
 
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("total", trackingIds.size());
-        result.put("success", successCount);
-        result.put("skipped", skipCount);
+        log.info("[批量质检合格] 总数={}, 成功={}, 跳过={}, 失败={}", trackingIds.size(), successCount, skipCount, errors.size());
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", errors.isEmpty());
+        result.put("successCount", successCount);
+        result.put("skipCount", skipCount);
+        result.put("failCount", errors.size());
         result.put("errors", errors);
         result.put("message", String.format("批量质检完成: %d条合格, %d条跳过", successCount, skipCount));
         return result;
