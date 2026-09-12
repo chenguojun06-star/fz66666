@@ -60,6 +60,8 @@ export interface WarehouseLocationOption {
   warehouseType: string;
   areaId: string;
   status: string;
+  capacity?: number;
+  usedCapacity?: number;
 }
 
 export function useWarehouseLocationByArea(warehouseType?: string, areaId?: string) {

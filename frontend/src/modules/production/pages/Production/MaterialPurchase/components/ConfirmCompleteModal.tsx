@@ -77,7 +77,7 @@ const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
       okButtonProps={{ disabled: movementAction === 'inbound' && !warehouseLocation.trim() }}
       okText="确认完成"
       cancelText="取消"
-      width={520}
+      width={640}
       destroyOnClose
     >
       <Space direction="vertical" size={12} style={{ width: '100%' }}>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Space, Image, Tag } from 'antd';
-import { InboxOutlined } from '@ant-design/icons';
+import { InboxOutlined , SendOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormInstance } from 'antd/es/form';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
@@ -173,6 +173,18 @@ export function useMaterialInventoryColumns({
                   {availableQty.toLocaleString()}
                 </div>
                 <div className="stock-unit">{record.unit}</div>
+              </div>
+              {/* D-360y：库存数量点击出库——出库弹窗默认带出全部可用量，可改 */}
+              <div
+                style={{ cursor: 'pointer' }}
+                onClick={() => handleOutbound(record)}
+                title="点击出库（出库数量默认为当前可用量，可修改）"
+              >
+                <div className="stock-label">出库 <SendOutlined style={{ color: 'var(--color-warning)' }} /></div>
+                <div className="stock-value stock-value--warn" style={{ color: 'var(--color-warning)' }}>
+                  出
+                </div>
+                <div className="stock-unit">点击出库</div>
               </div>
               <div>
                 <div className="stock-label">在途</div>

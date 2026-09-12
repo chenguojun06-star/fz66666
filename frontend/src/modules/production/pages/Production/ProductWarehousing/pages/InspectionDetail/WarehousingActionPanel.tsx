@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, Alert, Button, Space, Typography, Select, Checkbox, Tooltip, Tag } from 'antd';
 import { InboxOutlined, CopyOutlined, SendOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import ResizableTable from '@/components/common/ResizableTable';
 import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
 import { useWarehouseAreaOptions } from '@/hooks/useWarehouseAreaOptions';
@@ -24,6 +25,7 @@ interface Props {
 const WarehousingActionPanel: React.FC<Props> = ({
   qcRecords, warehousingLoading, onSubmit, onDirectShip,
 }) => {
+  const navigate = useNavigate();
   const { selectOptions: finishedWarehouseOptions, areas } = useWarehouseAreaOptions('FINISHED');
   const defaultAreaId = useMemo(() => areas.length > 0 ? areas[0].id : '', [areas]);
 
@@ -135,6 +137,13 @@ const WarehousingActionPanel: React.FC<Props> = ({
 
   return (
     <>
+      {/* D-360y：没有成品仓时引导去库位地图新建（与物料仓口径一致） */}
+      {areas.length === 0 && (
+        <Alert type="warning" showIcon style={{ marginBottom: 12 }}
+          title="还没有成品仓库"
+          description={<span>请先到「库位地图」新建成品仓并划分库位，再回来入库。<Button type="link" size="small" style={{ padding: 0 }} onClick={() => navigate('/warehouse/location-map')}>去库位地图新建 →</Button></span>}
+        />
+      )}
       <Alert type="info" showIcon style={{ marginBottom: 16 }}
         title={`共 ${pendingRecords.length} 条合格记录待入库，合格数量合计 ${pendingQty} 件`} />
 
