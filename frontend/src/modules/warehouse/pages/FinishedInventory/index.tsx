@@ -42,7 +42,7 @@ const _FinishedInventory: React.FC = () => {
   const directShipOrderNo = String(searchParams.get('orderNo') || '').trim();
   const isDirectShipEntry = String(searchParams.get('directShip') || '') === '1';
   const [directShipMode, setDirectShipMode] = React.useState(false);
-  const { outboundModal, inboundHistoryModal, skuDetails, inboundHistory, outstockTotal, outboundType, setOutboundType, outboundReason, setOutboundReason, outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo, outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName, outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress, outboundSubmitting, handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory, handleAddStyleToCart, handleRemoveStyleFromCart } = useFinishedInventoryActions(rawDataSource, loadData, { directShip: directShipMode });
+  const { outboundModal, inboundHistoryModal, skuDetails, inboundHistory, outstockTotal, outboundType, setOutboundType, outboundReason, setOutboundReason, outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo, outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName, outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress, outboundSubmitting, handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory, handleAddStyleRows, handleRemoveStyleFromCart } = useFinishedInventoryActions(rawDataSource, loadData, { directShip: directShipMode });
 
   // 30秒轮询自动刷新成品库存
   // 注意：fetchFn 必须返回非 null/undefined 值，否则 syncManager 会判定为"空数据"并累计 3 次后自动停止
@@ -83,20 +83,52 @@ const _FinishedInventory: React.FC = () => {
   // D-241：序号按「款」编号，翻页后要接续上一页，故传入分页偏移
   const indexOffset = ((pagination.pagination.current || 1) - 1) * (pagination.pagination.pageSize || 0);
   const columns = getMainColumns({ handleOutbound, handleViewInboundHistory }, indexOffset);
-  // D-363i：多款混出购物车——清单里的款列表 + 可添加的款选项（当前页库存范围内）
+  // D-363i：多款混出购物车——加款全库搜索（不受当前页限制），添加后可继续搜索，
+  // 表格只显示已勾选进清单的款
   const cartStyleNos = Array.from(new Set(skuDetails.map(item => item.styleNo || outboundModal.data?.styleNo || '').filter(Boolean)));
   const cartStyleNames = new Map(skuDetails.map(item => [item.styleNo || '', item.styleName || '']));
-  const addableStyleOptions = React.useMemo(() => {
-    const seen = new Set<string>();
-    const options: { label: string; value: string; record: FinishedInventory }[] = [];
-    for (const item of rawDataSource) {
-      const sn = String(item.styleNo || '');
-      if (!sn || seen.has(sn) || cartStyleNos.includes(sn)) continue;
-      seen.add(sn);
-      options.push({ label: `${sn}${item.styleName ? ` ${item.styleName}` : ''}`, value: sn, record: item });
-    }
-    return options;
-  }, [rawDataSource, cartStyleNos]);
+  const [styleSearchText, setStyleSearchText] = useState('');
+  const [styleSearchOptions, setStyleSearchOptions] = useState<{ label: string; value: string; rows: FinishedInventory[] }[]>([]);
+  const [styleSearching, setStyleSearching] = useState(false);
+  const styleSearchTimer = React.useRef<number | undefined>(undefined);
+  const handleStyleSearch = React.useCallback((text: string) => {
+    setStyleSearchText(text);
+    if (styleSearchTimer.current) window.clearTimeout(styleSearchTimer.current);
+    const kw = text.trim();
+    if (!kw) { setStyleSearchOptions([]); return; }
+    styleSearchTimer.current = window.setTimeout(async () => {
+      setStyleSearching(true);
+      try {
+        const res = await api.post('/warehouse/finished-inventory/list', { page: 1, pageSize: 100, keyword: kw });
+        const data = res.data || res;
+        const recs: FinishedInventory[] = data.records || [];
+        const byStyle = new Map<string, FinishedInventory[]>();
+        for (const r of recs) {
+          const sn = String(r.styleNo || '');
+          if (!sn) continue;
+          if (!byStyle.has(sn)) byStyle.set(sn, []);
+          byStyle.get(sn)!.push(r);
+        }
+        setStyleSearchOptions(Array.from(byStyle.entries())
+          .filter(([sn]) => !cartStyleNos.includes(sn))
+          .map(([sn, rows]) => ({
+            label: `${sn}${rows[0].styleName ? ` ${rows[0].styleName}` : ''}（可用 ${rows.reduce((sum, r) => sum + (r.availableQty ?? 0), 0)} 件）`,
+            value: sn,
+            rows,
+          })));
+      } catch { setStyleSearchOptions([]); }
+      finally { setStyleSearching(false); }
+    }, 300);
+  }, [cartStyleNos]);
+  const handleStyleSelect = (sn: string) => {
+    const opt = styleSearchOptions.find(o => o.value === sn);
+    if (opt) handleAddStyleRows(opt.rows);
+    setStyleSearchText(''); setStyleSearchOptions([]);
+  };
+  // 关抽屉清搜索残留
+  React.useEffect(() => {
+    if (!outboundModal.visible) { setStyleSearchText(''); setStyleSearchOptions([]); }
+  }, [outboundModal.visible]);
   // D-228：一款多码时拆成每个商品编码一行，款级信息由 rowSpan 纵向合并，
   // 避免 15 个编码堆在同一单元格把行高撑爆（列表密密麻麻的根因）
   const flatRows = React.useMemo(() => flattenInventoryBySku(pagedDataSource), [pagedDataSource]);
@@ -208,18 +240,17 @@ const _FinishedInventory: React.FC = () => {
                   <span style={{ fontWeight: 600 }}>商品编码明细</span>
                   {!directShipMode && (
                     <Select
-                      style={{ width: 260 }}
-                      placeholder="＋ 添加款混出（同一张出库单）"
+                      style={{ width: 320 }}
+                      placeholder="＋ 搜索款号/款名添加混出（可连续添加）"
                       showSearch
-                      optionFilterProp="label"
+                      filterOption={false}
+                      searchValue={styleSearchText || undefined}
+                      onSearch={handleStyleSearch}
+                      loading={styleSearching}
                       value={null}
-                      loading={!addableStyleOptions.length && rawDataSource.length === 0}
-                      options={addableStyleOptions.map(o => ({ label: o.label, value: o.value }))}
-                      onChange={(sn) => {
-                        const opt = addableStyleOptions.find(o => o.value === sn);
-                        if (opt) handleAddStyleToCart(opt.record);
-                      }}
-                      notFoundContent={addableStyleOptions.length === 0 ? '当前列表没有可添加的款' : '无匹配款号'}
+                      options={styleSearchOptions.map(o => ({ label: o.label, value: o.value }))}
+                      onChange={handleStyleSelect}
+                      notFoundContent={styleSearching ? '搜索中…' : (styleSearchText ? '无匹配款号' : '输入款号/款名搜索全库')}
                     />
                   )}
                   {cartStyleNos.length > 1 && (

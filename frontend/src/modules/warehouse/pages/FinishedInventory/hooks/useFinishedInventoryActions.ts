@@ -56,26 +56,31 @@ export const useFinishedInventoryActions = (
     outboundModal.open(record);
   }, [rawDataSource, outboundModal]);
 
-  // D-363i：多款混出购物车——把另一个款的 SKU 追加进当前出库清单（一次出库一张单）
-  const handleAddStyleToCart = useCallback((record: FinishedInventory) => {
+  // D-363i：多款混出购物车——加款不限当前页，直接吃远程搜索返回的该款 SKU 行
+  //（添加后可继续搜索加下一个款；表格只显示已添加进清单的款）
+  const handleAddStyleRows = useCallback((rows: FinishedInventory[]) => {
     if (directShipMode) {
       message.warning('直发模式仅支持单款出库');
       return;
     }
+    if (!rows || rows.length === 0) {
+      message.warning('该款没有可出库的商品编码');
+      return;
+    }
+    const target = String(rows[0].styleNo || '');
     setSkuDetails(prev => {
-      const target = String(record.styleNo || '');
       if (prev.some(item => item.styleNo === target)) {
         message.warning(`款 ${target} 已在出库清单里`);
         return prev;
       }
-      const styleSKUs: SKUDetail[] = rawDataSource
-        .filter(item => item.styleNo === record.styleNo && (item.sku || item.id))
+      const styleSKUs: SKUDetail[] = rows
+        .filter(item => (item.sku || item.id))
         .map(item => ({
           color: item.color || '',
           size: item.size || '',
           sku: item.sku || item.id || '',
-          styleNo: item.styleNo || record.styleNo || '',
-          styleName: item.styleName || record.styleName || '',
+          styleNo: item.styleNo || target,
+          styleName: item.styleName || rows[0].styleName || '',
           availableQty: item.availableQty ?? 0,
           lockedQty: item.lockedQty ?? 0,
           defectQty: item.defectQty ?? 0,
@@ -89,10 +94,10 @@ export const useFinishedInventoryActions = (
         message.warning(`款 ${target} 没有可出库的商品编码`);
         return prev;
       }
-      message.success(`已添加款 ${target}（${styleSKUs.length} 个商品编码）`);
+      message.success(`已添加款 ${target}（${styleSKUs.length} 个商品编码），可继续搜索添加下一个款`);
       return [...prev, ...styleSKUs];
     });
-  }, [directShipMode, message, rawDataSource]);
+  }, [directShipMode, message]);
 
   const handleRemoveStyleFromCart = useCallback((styleNo: string) => {
     setSkuDetails(prev => prev.filter(item => item.styleNo !== styleNo));
@@ -221,6 +226,6 @@ export const useFinishedInventoryActions = (
     outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress,
     outboundSubmitting,
     handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory,
-    handleAddStyleToCart, handleRemoveStyleFromCart,
+    handleAddStyleRows, handleRemoveStyleFromCart,
   };
 };
