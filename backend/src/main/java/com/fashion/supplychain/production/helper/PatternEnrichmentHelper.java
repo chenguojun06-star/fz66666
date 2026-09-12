@@ -732,10 +732,24 @@ public class PatternEnrichmentHelper {
      * 否则就会出现前端"未找到对应的扫码记录"但行状态卡死的不一致。
      */
     public List<PatternScanRecord> findRowUndoRecords(String patternId, String rowProcessName) {
+        return findRowUndoRecords(patternId, rowProcessName, null);
+    }
+
+    /**
+     * D-382：行级撤回（可选按颜色收窄）。
+     *
+     * <p>多色多码场景下，同一道工序在同一条样板记录下会有**多个颜色**的报工记录。
+     * 原实现只按工序名匹配、不带颜色维度，导致"撤回车缝"会把车缝下**所有颜色**的记录
+     * 一起软删（红色做完、蓝色也做了，撤回红色时蓝色被一起抹掉）。
+     *
+     * @param rowColor 指定颜色时只撤回该颜色的记录；为空则保持原行为（撤回该工序名下全部记录，向后兼容）
+     */
+    public List<PatternScanRecord> findRowUndoRecords(String patternId, String rowProcessName, String rowColor) {
         if (!StringUtils.hasText(patternId) || !StringUtils.hasText(rowProcessName)) {
             return Collections.emptyList();
         }
         String target = rowProcessName.trim().toLowerCase();
+        String colorFilter = StringUtils.hasText(rowColor) ? rowColor.trim() : null;
 
         PatternProduction pattern = patternProductionService.getById(patternId);
         if (pattern == null || pattern.getDeleteFlag() == 1) {
@@ -788,6 +802,10 @@ public class PatternEnrichmentHelper {
             } else {
                 // 完成/报工记录：操作类型或工序名命中候选集合（与 isProcessCompletedByRecords 口径一致）
                 hit = candidates.contains(opType.toLowerCase()) || candidates.contains(recordProcess);
+            }
+            // D-382：指定颜色时只撤回该颜色的记录，避免误删同工序其他颜色
+            if (hit && colorFilter != null && !colorFilter.equalsIgnoreCase(safeTrim(r.getColor()))) {
+                continue;
             }
             if (hit && r.getId() != null) {
                 matched.put(r.getId(), r);

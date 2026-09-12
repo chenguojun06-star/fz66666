@@ -49,6 +49,10 @@ public class PatternProductionOrchestrator {
     @Autowired
     private PatternScanRecordService patternScanRecordService;
 
+    /** D-384：工序指派明细（一道工序可指派多人，各自件数额度；报工按人卡额度） */
+    @Autowired
+    private com.fashion.supplychain.production.mapper.PatternProcessAssignmentMapper patternProcessAssignmentMapper;
+
     @Autowired
     private ScanRecordService scanRecordService;
 
@@ -640,15 +644,27 @@ public class PatternProductionOrchestrator {
         Integer scanQty = quantity == null ? 0 : Math.max(0, quantity);
         Integer taskQty = pattern.getQuantity();
         String reqColor = color == null ? "" : color.trim();
+        // D-380：领取（CLAIM）只是认领动作、不产生完成数量，因此不受下方「报工任务量」上限约束。
+        // 原实现会对 CLAIM 也做该校验：多色样衣按颜色领取时，用户在领取表单里填了大于
+        // 该颜色任务量的数量（例如预填 3 却手改成 5），会收到"累计报工超限"这种与领取无关的误导报错。
+        boolean isClaimOperation = "CLAIM".equalsIgnoreCase(operationType.trim());
+        // D-384：指派额度——同一道工序可指派多人（张三 2 件 / 李四 1 件），每人只报自己那份额度，
+        // 可以一次报完也可以分次报完（累计到各自的指派数量为止）；未被指派的人回退现有逻辑。
+        String currentOperatorName = UserContext.username();
+        Integer assignedQty = findAssignmentQuantity(pattern.getId(), processName, reqColor, currentOperatorName);
+        boolean perPersonQuota = assignedQty != null && assignedQty > 0;
         // D-312：多色样衣按颜色取任务量——读款式 sizeColorConfig 矩阵该颜色全码数量求和，
-        // 使「白2+黑1」各自按 2/1 独立累计（原实现只取样板总数量，多色多量仍误拦）
-        if (taskQty != null && taskQty > 0 && StringUtils.hasText(reqColor)) {
+        // 使「白2+黑1」各自按 2/1 独立累计（原实现只取样板总数量，多色多量仍误拦）。
+        // D-384：有指派明细时以指派数量为准（用户语义：指派=固定任务量，报工不得超过）。
+        if (perPersonQuota) {
+            taskQty = assignedQty;
+        } else if (taskQty != null && taskQty > 0 && StringUtils.hasText(reqColor)) {
             Integer colorQty = resolveColorTaskQty(pattern.getStyleId(), reqColor);
             if (colorQty != null && colorQty > 0) {
                 taskQty = colorQty;
             }
         }
-        if (scanQty > 0 && !"REVIEW".equalsIgnoreCase(operationType.trim())
+        if (scanQty > 0 && !"REVIEW".equalsIgnoreCase(operationType.trim()) && !isClaimOperation
                 && taskQty != null && taskQty > 0) {
             String opKey = operationType.trim().toUpperCase();
             // D-164：钥匙口径=有工序名按工序名（阶段预算），无工序名按操作类型——与小程序汇总一致
@@ -671,7 +687,17 @@ public class PatternProductionOrchestrator {
                         String rKey = StringUtils.hasText(rProc) ? rProc
                                 : (r.getOperationType() == null ? "" : r.getOperationType().trim().toUpperCase());
                         String rColor = r.getColor() == null ? "" : r.getColor().trim();
-                        return rKey.equals(procKey) && rColor.equals(reqColor);
+                        if (!rKey.equals(procKey) || !rColor.equals(reqColor)) {
+                            return false;
+                        }
+                        // D-384：按人卡额度时只累计本人已报数（每人各自额度，互不挤占）
+                        if (perPersonQuota) {
+                            String rOperator = r.getOperatorName() == null ? "" : r.getOperatorName().trim();
+                            if (!rOperator.equals(currentOperatorName == null ? "" : currentOperatorName.trim())) {
+                                return false;
+                            }
+                        }
+                        return true;
                     })
                     .filter(r -> !StringUtils.hasText(r.getRemark()) || !r.getRemark().contains("撤销"))
                     .filter(r -> r.getQuantity() != null)
@@ -708,7 +734,7 @@ public class PatternProductionOrchestrator {
         String effectiveSize = StringUtils.hasText(size) ? size : pattern.getSize();
 
         // MES 报工模型：领取工序（CLAIM）校验——工序须存在配置、未完成、未被他人领取（D-312 按工序+颜色）
-        boolean isClaimOperation = "CLAIM".equalsIgnoreCase(operationType.trim());
+        // isClaimOperation 已在方法顶部定义（D-380 起同时用于跳过「报工任务量」上限校验）
         if (isClaimOperation) {
             PatternScanRecord selfClaim = validateProcessClaim(pattern, processName, effectiveColor);
             // D-167 幂等短路：本人已领取过该工序该颜色时直接返回既有记录，不再写重复 CLAIM（防连点产生垃圾记录）
@@ -764,6 +790,81 @@ public class PatternProductionOrchestrator {
         }
 
         return buildSubmitScanResult(scanRecord, patternId, pattern, operationType, operatorName, warehouseCode, effectiveUnitPrice);
+    }
+
+    /**
+     * D-380：批量提交样板生产扫码记录（多色多码一次提交，替代 N 条并发请求）
+     *
+     * <p>背景：外单/亚马逊常见「齐码齐色、颜色超多」，例如 20 色 × 8 码 = 160 个组合。
+     * 原实现由小程序对每个组合发一条请求（`Promise.all` 并发）：
+     * <ul>
+     *   <li>小程序并发请求有上限，160 条会排队 → 慢</li>
+     *   <li>每条请求独立事务 → 中途失败会出现「报了一半」，用户无法判断</li>
+     * </ul>
+     *
+     * <p>本方法把整批放进**同一个事务**，内部循环复用 {@link #submitScan} 的完整逻辑
+     * （工序配置校验/累计报工上限/按颜色领取绑定/工资镜像/库存同步/状态流转），因此行为与
+     * 单条提交完全一致；任一条校验失败即**整批回滚**，不会再出现半成品数据。
+     *
+     * @param items 明细列表，每项形如 {color, size, quantity}；数量 ≤ 0 的明细会被跳过
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> submitScanBatch(String patternId, String operationType, String operatorRole,
+                                               String remark, java.util.List<Map<String, Object>> items,
+                                               String warehouseCode, String warehouseAreaId,
+                                               String warehouseLocationCode, BigDecimal unitPrice,
+                                               String processName, String progressStage) {
+        assertSubmitScanParams(patternId, operationType);
+        if (items == null || items.isEmpty()) {
+            throw new IllegalArgumentException("批量提交明细不能为空");
+        }
+        int savedCount = 0;
+        int skippedCount = 0;
+        int totalQuantity = 0;
+        for (Map<String, Object> item : items) {
+            if (item == null) {
+                skippedCount++;
+                continue;
+            }
+            Integer qty = coercePositiveInt(item.get("quantity"));
+            if (qty == null || qty <= 0) {
+                // 数量为空/非法的明细跳过（前端未填数量的行），不阻断整批
+                skippedCount++;
+                continue;
+            }
+            String color = item.get("color") == null ? null : String.valueOf(item.get("color")).trim();
+            String size = item.get("size") == null ? null : String.valueOf(item.get("size")).trim();
+            // 复用单条提交：校验、记工资镜像、库存同步、状态流转全部一致
+            submitScan(patternId, operationType, operatorRole, remark, qty,
+                    StringUtils.hasText(color) ? color : null,
+                    StringUtils.hasText(size) ? size : null,
+                    warehouseCode, warehouseAreaId, warehouseLocationCode, unitPrice,
+                    processName, progressStage);
+            savedCount++;
+            totalQuantity += qty;
+        }
+        if (savedCount == 0) {
+            throw new IllegalArgumentException("批量提交明细里没有有效数量（每行数量需大于 0）");
+        }
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("patternId", patternId);
+        result.put("operationType", operationType);
+        result.put("savedCount", savedCount);
+        result.put("skippedCount", skippedCount);
+        result.put("totalQuantity", totalQuantity);
+        return result;
+    }
+
+    /** 解析正整数；null/非数字/非法一律返回 null（调用方按"跳过该明细"处理） */
+    private Integer coercePositiveInt(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(String.valueOf(raw).trim());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private void assertSubmitScanParams(String patternId, String operationType) {
@@ -925,7 +1026,10 @@ public class PatternProductionOrchestrator {
                 }
                 Map<?, ?> row = (Map<?, ?>) rowObj;
                 Object rowColor = row.get("color");
-                if (rowColor == null || !target.equals(String.valueOf(rowColor).trim())) {
+                // D-380：颜色匹配放宽大小写（外单/亚马逊常有英文颜色名，大小写不一致会导致取不到任务量
+                // → 回退样板总数量(常为1) → 该颜色只能报 1 件）。仅放宽大小写与首尾空格，不做模糊匹配，
+                // 避免"红"与"红色"这类不同颜色被误判为同一色。
+                if (rowColor == null || !target.equalsIgnoreCase(String.valueOf(rowColor).trim())) {
                     continue;
                 }
                 found = true;
@@ -949,6 +1053,71 @@ public class PatternProductionOrchestrator {
             log.warn("[D-312] 按颜色解析任务量失败: styleId={}, color={}", styleId, color, e);
             return null;
         }
+    }
+
+    /**
+     * D-384：查「工序 + 颜色 + 操作人」的指派额度（取最新一条有效的指派明细）。
+     *
+     * @return 指派数量；没有指派明细时返回 null（调用方回退矩阵 / 样板任务数量）
+     */
+    private Integer findAssignmentQuantity(String patternId, String processName, String color, String operatorName) {
+        if (!StringUtils.hasText(patternId) || !StringUtils.hasText(processName)
+                || !StringUtils.hasText(operatorName)) {
+            return null;
+        }
+        try {
+            LambdaQueryWrapper<com.fashion.supplychain.production.entity.PatternProcessAssignment> wrapper =
+                    new LambdaQueryWrapper<>();
+            wrapper.eq(com.fashion.supplychain.production.entity.PatternProcessAssignment::getPatternProductionId, patternId)
+                    .eq(com.fashion.supplychain.production.entity.PatternProcessAssignment::getProcessName, processName.trim())
+                    .eq(com.fashion.supplychain.production.entity.PatternProcessAssignment::getAssignee, operatorName.trim())
+                    .orderByDesc(com.fashion.supplychain.production.entity.PatternProcessAssignment::getCreateTime)
+                    .last("LIMIT 1");
+            if (StringUtils.hasText(color)) {
+                wrapper.eq(com.fashion.supplychain.production.entity.PatternProcessAssignment::getColor, color.trim());
+            }
+            com.fashion.supplychain.production.entity.PatternProcessAssignment assignment =
+                    patternProcessAssignmentMapper.selectOne(wrapper);
+            return assignment == null ? null : assignment.getAssignmentQuantity();
+        } catch (Exception e) {
+            log.warn("[D-384] 查询指派额度失败: patternId={} process={} color={} operator={}",
+                    patternId, processName, color, operatorName, e);
+            return null;
+        }
+    }
+
+    /**
+     * D-384：列出某条样板记录的工序指派明细（供 PC 页面展示「张三 2 件 / 李四 1 件」的安排）。
+     */
+    public List<Map<String, Object>> listProcessAssignments(String patternId) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (!StringUtils.hasText(patternId)) {
+            return result;
+        }
+        LambdaQueryWrapper<com.fashion.supplychain.production.entity.PatternProcessAssignment> wrapper =
+                new LambdaQueryWrapper<>();
+        wrapper.eq(com.fashion.supplychain.production.entity.PatternProcessAssignment::getPatternProductionId, patternId)
+                .eq(com.fashion.supplychain.production.entity.PatternProcessAssignment::getDeleteFlag, 0)
+                .orderByAsc(com.fashion.supplychain.production.entity.PatternProcessAssignment::getProcessName)
+                .orderByAsc(com.fashion.supplychain.production.entity.PatternProcessAssignment::getCreateTime);
+        List<com.fashion.supplychain.production.entity.PatternProcessAssignment> list =
+                patternProcessAssignmentMapper.selectList(wrapper);
+        for (com.fashion.supplychain.production.entity.PatternProcessAssignment a : list) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", a.getId());
+            item.put("patternProductionId", a.getPatternProductionId());
+            item.put("processName", a.getProcessName());
+            item.put("processCode", a.getProcessCode());
+            item.put("assignee", a.getAssignee());
+            item.put("assigneeId", a.getAssigneeId());
+            item.put("quantity", a.getAssignmentQuantity());
+            item.put("unitPrice", a.getUnitPrice());
+            item.put("color", a.getColor());
+            item.put("size", a.getSize());
+            item.put("createTime", a.getCreateTime() == null ? null : a.getCreateTime().toString());
+            result.add(item);
+        }
+        return result;
     }
 
     private PatternProduction loadPatternForScan(String patternId) {
@@ -1718,6 +1887,17 @@ public class PatternProductionOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> undoPatternScanRow(String patternId, String processName) {
+        return undoPatternScanRow(patternId, processName, null);
+    }
+
+    /**
+     * D-382：行级撤回（可选按颜色收窄）。
+     *
+     * <p>多色多码场景：同一工序在同一条样板记录下会有多个颜色的报工记录。
+     * 传 color 时只撤回该颜色的记录；不传则保持原行为（撤回该工序名下全部记录）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> undoPatternScanRow(String patternId, String processName, String color) {
         if (!StringUtils.hasText(patternId) || !StringUtils.hasText(processName)) {
             throw new IllegalArgumentException("样衣ID与工序名不能为空");
         }
@@ -1735,7 +1915,7 @@ public class PatternProductionOrchestrator {
         }
         TenantAssert.assertBelongsToCurrentTenant(pattern.getTenantId(), "样板生产");
 
-        List<PatternScanRecord> records = enrichmentHelper.findRowUndoRecords(patternId, processName);
+        List<PatternScanRecord> records = enrichmentHelper.findRowUndoRecords(patternId, processName, color);
         if (records.isEmpty()) {
             Map<String, Object> empty = new HashMap<>();
             empty.put("success", true);
@@ -1845,7 +2025,7 @@ public class PatternProductionOrchestrator {
      * D-P2-7：扩展接收 quantity（多色多码场景下让用户在弹窗里确认/调整数量）
      */
     public void assignPattern(String patternId, String assignee) {
-        assignPattern(patternId, assignee, null);
+        assignPattern(patternId, assignee, null, null, null);
     }
 
     /**
@@ -1855,6 +2035,20 @@ public class PatternProductionOrchestrator {
      * @param quantity 指派数量（可选，null 或 <=0 表示不修改原数量）
      */
     public void assignPattern(String patternId, String assignee, Integer quantity) {
+        assignPattern(patternId, assignee, quantity, null, null);
+    }
+
+    /**
+     * D-384：指派样板生产（带工序与数量，并落指派明细）。
+     *
+     * <p>语义（用户拍板）：指派数量 = 该工序的**固定任务量**，报工不能超过它；
+     * 同一道工序可指派给多人分工（张三 2 件 / 李四 1 件），可以一次报完也可以分次报完
+     * （累计到各自的指派数量为止）。指派明细落在 t_pattern_process_assignment，
+     * 供页面展示「张三 2 件 / 李四 1 件」的安排，并作为报工卡额度的依据。
+     *
+     * @param processName 工序名（子工序，如「车缝」）；为空时不落指派明细（保持旧版仅改指派人）
+     */
+    public void assignPattern(String patternId, String assignee, Integer quantity, String processName, String processCode) {
         if (!StringUtils.hasText(patternId)) {
             throw new IllegalArgumentException("样板生产ID不能为空");
         }
@@ -1885,6 +2079,31 @@ public class PatternProductionOrchestrator {
         }
 
         patternProductionService.updateById(pattern);
+
+        // D-384：落指派明细——同一道工序可指派多人（张三 2 件 / 李四 1 件），
+        // 每人一个独立额度；报工时按「工序 + 颜色 + 操作人」卡额度，可以一次报完也可以分次报完。
+        if (quantity != null && quantity > 0 && StringUtils.hasText(processName)) {
+            com.fashion.supplychain.production.entity.PatternProcessAssignment assignment =
+                    new com.fashion.supplychain.production.entity.PatternProcessAssignment();
+            assignment.setPatternProductionId(patternId);
+            assignment.setStyleNo(pattern.getStyleNo());
+            assignment.setColor(pattern.getColor());
+            assignment.setSize(pattern.getSize());
+            assignment.setProcessName(processName.trim());
+            assignment.setProcessCode(StringUtils.hasText(processCode) ? processCode.trim() : processName.trim());
+            assignment.setAssignee(assignee);
+            assignment.setAssigneeId(UserContext.userId());
+            assignment.setAssignmentQuantity(quantity);
+            // 指派时的工序单价快照（该工序配了单价才有，算工资参考）
+            java.math.BigDecimal assignPrice = lookupStyleProcessPrice(pattern.getStyleId(), processName.trim());
+            if (assignPrice != null && assignPrice.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                assignment.setUnitPrice(assignPrice);
+            }
+            assignment.setRemark("指派");
+            patternProcessAssignmentMapper.insert(assignment);
+            log.info("[样衣指派] 写指派明细: patternId={} process={} assignee={} qty={}",
+                    patternId, processName.trim(), assignee, quantity);
+        }
 
         log.info("[样衣指派] patternId={} assignee={} color={} size={} qty={} oldStatus={} newStatus={}",
                 patternId, assignee, pattern.getColor(), pattern.getSize(), pattern.getQuantity(),

@@ -543,6 +543,67 @@ public class PatternProductionController {
         }
     }
 
+    /**
+     * D-380：批量提交样板生产扫码记录（多色多码一次提交，替代 N 条并发请求）
+     *
+     * <p>外单/亚马逊常见齐码齐色（颜色 × 码数可达上百组合），逐条提交会慢、且中途失败会出现
+     * 「报了一半」。本端点把整批放进同一个事务，任一条校验失败整批回滚。
+     * 入参：{patternId, operationType, operatorRole, remark, processName, progressStage,
+     *        warehouseCode, warehouseAreaId, warehouseLocationCode, unitPrice,
+     *        items: [{color, size, quantity}, ...]}
+     */
+    @PostMapping("/scan-batch")
+    public Result<Map<String, Object>> submitScanBatch(@RequestBody Map<String, Object> request) {
+        try {
+            String patternId = (String) request.get("patternId");
+            String operationType = (String) request.get("operationType");
+            String operatorRole = (String) request.get("operatorRole");
+            String remark = (String) request.get("remark");
+            String warehouseCode = request.get("warehouseCode") == null
+                    ? null : String.valueOf(request.get("warehouseCode"));
+            String warehouseAreaId = request.get("warehouseAreaId") == null
+                    ? null : String.valueOf(request.get("warehouseAreaId"));
+            String warehouseLocationCode = request.get("warehouseLocationCode") == null
+                    ? null : String.valueOf(request.get("warehouseLocationCode"));
+            java.math.BigDecimal unitPrice = null;
+            Object unitPriceObj = request.get("unitPrice");
+            if (unitPriceObj != null) {
+                try {
+                    unitPrice = new java.math.BigDecimal(String.valueOf(unitPriceObj));
+                } catch (Exception e) {
+                    log.warn("[样衣批量扫码] 单价解析失败: unitPriceObj={}", unitPriceObj);
+                }
+            }
+            String processName = request.get("processName") == null
+                    ? null : String.valueOf(request.get("processName")).trim();
+            String progressStage = request.get("progressStage") == null
+                    ? null : String.valueOf(request.get("progressStage")).trim();
+
+            java.util.List<Map<String, Object>> items = new java.util.ArrayList<>();
+            Object itemsObj = request.get("items");
+            if (itemsObj instanceof java.util.List) {
+                for (Object o : (java.util.List<?>) itemsObj) {
+                    if (o instanceof Map) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> m = (Map<String, Object>) o;
+                        items.add(m);
+                    }
+                }
+            }
+
+            Map<String, Object> result = patternProductionOrchestrator.submitScanBatch(
+                    patternId, operationType, operatorRole, remark, items,
+                    warehouseCode, warehouseAreaId, warehouseLocationCode, unitPrice,
+                    processName, progressStage);
+            return Result.success(result);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("样板生产批量扫码失败", e);
+            throw new BusinessException("批量扫码失败: " + e.getMessage(), e);
+        }
+    }
+
 
     /**
      * 获取当前员工的样板扫码历史
@@ -737,13 +798,28 @@ public class PatternProductionController {
             @RequestBody Map<String, String> request) {
         try {
             String processName = request.get("processName");
-            Map<String, Object> result = patternProductionOrchestrator.undoPatternScanRow(patternId, processName);
+            // D-382：可选颜色——多色多码时只撤回该颜色的记录；不传则撤回该工序名下全部颜色（兼容旧行为）
+            String color = request.get("color");
+            Map<String, Object> result = patternProductionOrchestrator.undoPatternScanRow(patternId, processName, color);
             return Result.success(result);
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw new BusinessException(e.getMessage(), e);
         } catch (Exception e) {
             log.error("行级撤回失败: patternId={} processName={}", patternId, request.get("processName"), e);
             throw new BusinessException("撤回失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * D-384：查询某条样板记录的工序指派明细（张三 2 件 / 李四 1 件）
+     */
+    @GetMapping("/{patternId}/assignments")
+    public Result<List<Map<String, Object>>> listProcessAssignments(@PathVariable String patternId) {
+        try {
+            return Result.success(patternProductionOrchestrator.listProcessAssignments(patternId));
+        } catch (Exception e) {
+            log.error("查询工序指派明细失败: patternId={}", patternId, e);
+            throw new BusinessException("查询指派明细失败: " + e.getMessage(), e);
         }
     }
 
@@ -790,7 +866,10 @@ public class PatternProductionController {
                 } catch (NumberFormatException ignored) {
                 }
             }
-            patternProductionOrchestrator.assignPattern(patternId, assignee, quantity);
+            // D-384：接收工序名/编码——指派数量是「该工序」的固定任务量（一道工序可指派多人分工）
+            String processName = request.get("processName") == null ? null : String.valueOf(request.get("processName")).trim();
+            String processCode = request.get("processCode") == null ? null : String.valueOf(request.get("processCode")).trim();
+            patternProductionOrchestrator.assignPattern(patternId, assignee, quantity, processName, processCode);
             return Result.success("指派成功");
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw new BusinessException(e.getMessage(), e);
