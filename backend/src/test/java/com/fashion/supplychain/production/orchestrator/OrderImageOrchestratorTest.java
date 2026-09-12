@@ -178,7 +178,10 @@ class OrderImageOrchestratorTest {
 
         orchestrator.deleteImage(1L);
 
-        verify(orderImageService).updateById(argThat(image -> image.getDeleteFlag() == 1));
+        // D-363d：软删改走 removeById（逻辑删除配置下 updateById 不含 delete_flag 列），
+        // 删标记在 removeById 落库，不再断言内存对象的 deleteFlag
+        verify(orderImageService).updateById(any(OrderImage.class));
+        verify(orderImageService).removeById(1L);
         verify(orderImageSnapshotService).save(any(OrderImageSnapshot.class));
     }
 
