@@ -463,18 +463,19 @@ Component({
         const data = res;
         if (!data) return;
         const suggestions = [];
+        // D-360t：真实数据的提醒 chips 点击直达真实页面（路径放 path，点 chips 即核验）
         if (data.overdueOrderCount > 0) {
-          suggestions.push({ icon: 'icon-alert', label: data.overdueOrderCount + '个逾期', question: '当前有哪些逾期订单？帮我分析一下' });
+          suggestions.push({ icon: 'icon-alert', label: data.overdueOrderCount + '个逾期', question: '当前有哪些逾期订单？帮我分析一下', path: '/pages/sales/order-list/index' });
         }
         if (data.qualityTaskCount > 0) {
-          suggestions.push({ icon: 'icon-clipboard', label: data.qualityTaskCount + '个待质检', question: '有哪些待质检的任务？' });
+          suggestions.push({ icon: 'icon-clipboard', label: data.qualityTaskCount + '个待质检', question: '有哪些待质检的任务？', path: '/pages/scan/index', tab: true });
         }
         // D-237：质检异常（不合格/次品）同步给小云，让用户一眼看到并可直接追问
         if (data.qualityDefectCount > 0) {
-          suggestions.push({ icon: 'icon-alert', label: data.qualityDefectCount + '件不合格', question: '最近有哪些质检不合格的记录？帮我分析原因' });
+          suggestions.push({ icon: 'icon-alert', label: data.qualityDefectCount + '件不合格', question: '最近有哪些质检不合格的记录？帮我分析原因', path: '/pages/defect/index', tab: true });
         }
         if (data.materialShortageCount > 0) {
-          suggestions.push({ icon: 'icon-alert', label: '面料缺口', question: '当前有哪些面料缺口预警？' });
+          suggestions.push({ icon: 'icon-alert', label: '面料缺口', question: '当前有哪些面料缺口预警？', path: '/pages/procurement/task-list/index' });
         }
         if (suggestions.length > 0) {
           self.setData({ dynamicSuggestions: suggestions });
@@ -656,7 +657,14 @@ Component({
       else { this._startIdleSnap(); }
     },
     autoAsk(e) {
-      const question = e.currentTarget.dataset.question;
+      // D-360t：真实数据的提醒 chips 优先直达真实页面（点击查看），无路径才问小云
+      const dataset = e.currentTarget.dataset || {};
+      if (dataset.path) {
+        if (dataset.tab) { wx.switchTab({ url: dataset.path }); }
+        else { wx.navigateTo({ url: dataset.path }); }
+        return;
+      }
+      const question = dataset.question;
       if (question) { this.setData({ inputValue: question }, () => { this.sendMessage(); }); }
     },
     onInput(e) { this.setData({ inputValue: e.detail.value }); },

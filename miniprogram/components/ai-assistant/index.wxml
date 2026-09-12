@@ -69,7 +69,7 @@
         </view>
       </view>
       <view class="dynamic-suggestions-list" wx:if="{{dynamicSuggestions.length > 0}}">
-        <view class="dynamic-suggestion-chip" hover-class="dynamic-suggestion-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="{{item.question}}" wx:for="{{dynamicSuggestions}}" wx:key="label">
+        <view class="dynamic-suggestion-chip" hover-class="dynamic-suggestion-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="{{item.question}}" data-path="{{item.path}}" data-tab="{{item.tab}}" wx:for="{{dynamicSuggestions}}" wx:key="label">
           <text>{{item.label}}</text>
         </view>
       </view>
