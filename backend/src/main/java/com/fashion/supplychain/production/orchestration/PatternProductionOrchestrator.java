@@ -1663,8 +1663,11 @@ public class PatternProductionOrchestrator {
         }
 
         // 软删 PatternScanRecord
-        scanRecord.setDeleteFlag(1);
-        patternScanRecordService.updateById(scanRecord);
+        // D-363 真凶修复：全局 logic-delete-field=deleteFlag 下，updateById 生成的 UPDATE
+        // 根本不含 delete_flag 列（该字段只出现在 WHERE 过滤）——setDeleteFlag(1)+updateById
+        // 是静默空操作，撤回返回成功但记录永远还在，行状态（领取人/已完成）永不重算。
+        // 必须走 removeById（逻辑删除语义下生成 UPDATE SET delete_flag=1）。
+        patternScanRecordService.removeById(scanRecord.getId());
 
         // 硬删 ScanRecord 镜像（与大货 ScanUndoHelper.undoNormalScan 一致，ScanRecord 无 deleteFlag 字段）
         // P1 修复 5：删除失败必须抛异常触发事务回滚，避免 PatternScanRecord 软删但 ScanRecord 留存的数据悬挂
@@ -1698,6 +1701,82 @@ public class PatternProductionOrchestrator {
         result.put("scanRecordId", scanRecordId);
         result.put("undoBy", operatorName);
         result.put("mirrorScanRecordId", mirrorScanRecord != null ? mirrorScanRecord.getId() : null);
+        return result;
+    }
+
+    /**
+     * D-363：行级撤回——按工序行抹掉其名下全部实际记录（完成报工+领取CLAIM+阶段级历史）。
+     * <p>
+     * 背景：原撤回由前端按 processName 全等匹配找一条记录再删，口径比状态推导窄
+     * （后端判定完成还看 progressStage/legacyOp/忽略大小写），匹配不到就"未找到对应的扫码记录"，
+     * 行状态（领取人/已完成）卡死。用户语义：撤回=抹掉实际记录+日志记一笔。
+     * <p>
+     * 规则：
+     * - 仅管理角色可调（前端撤回按钮本就仅管理可见，且不受扫码30分钟时间窗约束——管理页面行级操作）
+     * - 已参与工资结算的记录仍然拒撤（防工资悬挂）
+     * - 抹掉 PatternScanRecord（软删）+ ScanRecord 镜像（硬删），日志只写一笔
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> undoPatternScanRow(String patternId, String processName) {
+        if (!StringUtils.hasText(patternId) || !StringUtils.hasText(processName)) {
+            throw new IllegalArgumentException("样衣ID与工序名不能为空");
+        }
+        TenantAssert.assertTenantContext();
+        UserContext ctx = UserContext.get();
+        // 与前端 canManage 口径对齐：租户主账号/超管/管理类角色（isAdminRole）
+        boolean canManage = isAdminRole(ctx) || ctx.isTenantOwner() || ctx.isSuperAdmin();
+        if (!canManage) {
+            throw new IllegalStateException("撤回为管理操作，仅管理账号可执行");
+        }
+
+        PatternProduction pattern = patternProductionService.getById(patternId);
+        if (pattern == null || pattern.getDeleteFlag() == 1) {
+            throw new IllegalArgumentException("样板生产记录不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(pattern.getTenantId(), "样板生产");
+
+        List<PatternScanRecord> records = enrichmentHelper.findRowUndoRecords(patternId, processName);
+        if (records.isEmpty()) {
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("success", true);
+            empty.put("count", 0);
+            empty.put("message", "该工序名下没有可撤回的扫码记录");
+            return empty;
+        }
+
+        int undone = 0;
+        for (PatternScanRecord record : records) {
+            // 工资结算守卫：镜像已结算的记录拒撤（与单条撤回口径一致）
+            ScanRecord mirrorScanRecord = findPatternScanRecordMirror(record);
+            if (mirrorScanRecord != null) {
+                if (StringUtils.hasText(mirrorScanRecord.getPayrollSettlementId())
+                        || "payroll_settled".equals(mirrorScanRecord.getSettlementStatus())) {
+                    throw new IllegalStateException("工序「" + processName + "」有记录已参与工资结算，无法撤回");
+                }
+            }
+            // 软删走 removeById（逻辑删除语义）——setDeleteFlag+updateById 在全局逻辑删除配置下是空操作（D-363）
+            patternScanRecordService.removeById(record.getId());
+            if (mirrorScanRecord != null) {
+                scanRecordService.removeById(mirrorScanRecord.getId());
+            }
+            undone++;
+        }
+
+        // 日志只记一笔：谁撤回了什么、抹了几条
+        try {
+            appendPatternRemarkSimple(pattern, "撤回工序",
+                    processName + "·抹掉" + undone + "条记录·操作人" + UserContext.username());
+        } catch (Exception e) {
+            log.warn("[样衣行级撤回] 写备注日志失败（不阻塞主流程）: patternId={}, err={}", patternId, e.getMessage());
+        }
+        log.info("[样衣行级撤回] patternId={} processName={} undone={} by={}",
+                patternId, processName, undone, UserContext.username());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("count", undone);
+        result.put("processName", processName);
+        result.put("message", "已撤回「" + processName + "」，共抹掉 " + undone + " 条记录");
         return result;
     }
 

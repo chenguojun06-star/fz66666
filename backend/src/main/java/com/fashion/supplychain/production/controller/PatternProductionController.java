@@ -728,6 +728,26 @@ public class PatternProductionController {
     }
 
     /**
+     * D-363：行级撤回——按工序行抹掉其名下全部实际记录（完成报工+领取+历史记录），
+     * 状态由扫码记录推导，抹掉后行自动回到待领取。仅管理角色可调。
+     */
+    @PostMapping("/{patternId}/undo-process")
+    public Result<Map<String, Object>> undoPatternScanRow(
+            @PathVariable String patternId,
+            @RequestBody Map<String, String> request) {
+        try {
+            String processName = request.get("processName");
+            Map<String, Object> result = patternProductionOrchestrator.undoPatternScanRow(patternId, processName);
+            return Result.success(result);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            throw new BusinessException(e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("行级撤回失败: patternId={} processName={}", patternId, request.get("processName"), e);
+            throw new BusinessException("撤回失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * 编辑样衣基本信息
      */
     @PutMapping("/{id}/basic-info")

@@ -725,6 +725,77 @@ public class PatternEnrichmentHelper {
 
     // ==================== MES 报工模型：工序状态推导 ====================
 
+    /**
+     * D-363：行级撤回——按工序行找出其名下全部扫码记录（完成报工+领取CLAIM+阶段级历史记录）。
+     * 匹配口径与状态推导(isProcessCompletedByRecords/findActiveClaim)完全一致：
+     * 后端认为该行"已完成/已领取"的记录，撤回时必须能全部找到并抹掉，
+     * 否则就会出现前端"未找到对应的扫码记录"但行状态卡死的不一致。
+     */
+    public List<PatternScanRecord> findRowUndoRecords(String patternId, String rowProcessName) {
+        if (!StringUtils.hasText(patternId) || !StringUtils.hasText(rowProcessName)) {
+            return Collections.emptyList();
+        }
+        String target = rowProcessName.trim().toLowerCase();
+
+        PatternProduction pattern = patternProductionService.getById(patternId);
+        if (pattern == null || pattern.getDeleteFlag() == 1) {
+            return Collections.emptyList();
+        }
+        Long styleId = parseStyleId(pattern.getStyleId());
+        String progressStage = null;
+        if (styleId != null) {
+            LambdaQueryWrapper<StyleProcess> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(StyleProcess::getStyleId, styleId)
+                    .orderByAsc(StyleProcess::getSortOrder)
+                    .orderByAsc(StyleProcess::getId);
+            List<StyleProcess> processes = styleProcessService.list(wrapper);
+            if (processes != null) {
+                for (StyleProcess process : processes) {
+                    String name = StringUtils.hasText(process.getProcessName())
+                            ? process.getProcessName().trim()
+                            : StringUtils.hasText(process.getProgressStage()) ? process.getProgressStage().trim() : "";
+                    if (target.equalsIgnoreCase(name.trim())) {
+                        progressStage = resolveProgressStage(process.getProgressStage(), name);
+                        break;
+                    }
+                }
+            }
+        }
+
+        List<PatternScanRecord> records = listPatternScanRecords(patternId);
+        List<String> candidates = new ArrayList<>();
+        candidates.add(target);
+        if (StringUtils.hasText(progressStage)) {
+            candidates.add(progressStage.trim().toLowerCase());
+            String legacyOp = mapLegacyOperationByStage(progressStage);
+            if (StringUtils.hasText(legacyOp)) {
+                candidates.add(legacyOp.toLowerCase());
+            }
+        }
+
+        Map<String, PatternScanRecord> matched = new LinkedHashMap<>();
+        for (PatternScanRecord r : records) {
+            String opType = safeTrim(r.getOperationType());
+            if (!StringUtils.hasText(opType)) {
+                continue;
+            }
+            String recordProcess = safeTrim(r.getProcessName()).toLowerCase();
+            boolean isClaim = "CLAIM".equalsIgnoreCase(opType);
+            boolean hit;
+            if (isClaim) {
+                // 领取记录只按工序名归行（与 findActiveClaim 口径一致）
+                hit = target.equals(recordProcess);
+            } else {
+                // 完成/报工记录：操作类型或工序名命中候选集合（与 isProcessCompletedByRecords 口径一致）
+                hit = candidates.contains(opType.toLowerCase()) || candidates.contains(recordProcess);
+            }
+            if (hit && r.getId() != null) {
+                matched.put(r.getId(), r);
+            }
+        }
+        return new ArrayList<>(matched.values());
+    }
+
     private List<PatternScanRecord> listPatternScanRecords(String patternId) {
         try {
             LambdaQueryWrapper<PatternScanRecord> wrapper = new LambdaQueryWrapper<>();

@@ -170,29 +170,27 @@ export default function useSampleProcessListData(
     }
     modal.confirm({
       title: '确认撤回',
-      content: `确定撤回「${row.name}」的完成记录？`,
+      content: `确定撤回「${row.name}」？将抹掉该工序名下的全部领取与完成记录，状态回到待领取。`,
       okText: '确认撤回',
       cancelText: '取消',
       onOk: async () => {
         setActioningKey(row.key);
         try {
           const { default: api } = await import('@/utils/api');
-          const opType = OPERATION_TYPE_MAP[currentStage?.key || ''] || '';
-          const scanRes: any = await api.get(`/production/pattern/${patternProductionId}/scan-records`);
-          const records = Array.isArray(scanRes?.data) ? scanRes.data : Array.isArray(scanRes) ? scanRes : [];
-          // D-115：优先按行级 processName 精确匹配（取最新一条），仅旧数据（阶段级记录）才退回 operationType 匹配。
-          // 原逻辑 find 第一条阶段记录——点任意行的撤回删的都是同一条记录
-          const byName = records.filter((r: any) => r.processName === row.name);
-          const byType = opType ? records.filter((r: any) => r.operationType === opType) : [];
-          const matched = byName.length > 0 ? byName[byName.length - 1] : (byType.length > 0 ? byType[byType.length - 1] : undefined);
-          if (matched?.id) {
-            await api.delete(`/production/pattern/${patternProductionId}/scan-records/${matched.id}`);
-            message.success('撤回成功');
-            if (onCompleteProcess) await onCompleteProcess(currentStage?.key || '');
-            if (onRefresh) await onRefresh();
+          // D-363：行级撤回下沉后端——按工序行抹掉全部实际记录（完成报工+领取CLAIM+阶段级历史），
+          // 匹配口径与状态推导完全一致。原前端全等匹配比后端窄，匹配不到就"未找到对应的扫码记录"，
+          // 行状态（领取人/已完成）卡死。
+          const res: any = await api.post(`/production/pattern/${patternProductionId}/undo-process`, {
+            processName: row.name,
+          });
+          const count = Number(res?.data?.count ?? res?.count ?? 0);
+          if (count > 0) {
+            message.success(`撤回成功，共抹掉 ${count} 条记录`);
           } else {
-            message.warning('未找到对应的扫码记录');
+            message.warning(res?.data?.message || res?.message || '该工序名下没有可撤回的扫码记录');
           }
+          if (onCompleteProcess) await onCompleteProcess(currentStage?.key || '');
+          if (onRefresh) await onRefresh();
         } catch (e: any) {
           message.error(e?.response?.data?.message || e?.message || '撤回失败');
         } finally {
