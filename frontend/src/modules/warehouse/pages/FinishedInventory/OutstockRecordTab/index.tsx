@@ -187,7 +187,25 @@ const OutstockRecordTab: React.FC = () => {
     });
   };
 
-  const columns = getOutstockRecordColumns({ handleApprove, handleShare, handleTransferInbound, handleLog: openRecordLog });
+  // D-363h：整单打印——拉取同一出库单号的全部明细行，一张纸打完整单（多码数/多款混合）
+  const handlePrint = useCallback(async (record: OutstockRecord) => {
+    if (!record.outstockNo) { message.warning('该记录缺少出库单号'); return; }
+    try {
+      const res = await api.post('/warehouse/finished-inventory/outstock-records', {
+        page: 1, pageSize: 100, keyword: record.outstockNo,
+      });
+      const data = res.data || res;
+      const all: OutstockRecord[] = data.records || [];
+      const rows = all.filter((r) => r.outstockNo === record.outstockNo);
+      if (rows.length === 0) { message.error('未查到该出库单的明细'); return; }
+      const { printOutstockRecords } = await import('../outstockPrintHelper');
+      printOutstockRecords(rows);
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '打印失败');
+    }
+  }, [message]);
+
+  const columns = getOutstockRecordColumns({ handleApprove, handleShare, handleTransferInbound, handleLog: openRecordLog, handlePrint });
 
   return (
     <Card

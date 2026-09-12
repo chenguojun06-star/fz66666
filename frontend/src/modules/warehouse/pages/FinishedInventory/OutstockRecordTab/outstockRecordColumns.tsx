@@ -6,7 +6,6 @@ import type { RowAction } from '@/components/common/RowActions';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
 import { getPlatformTag } from '@/utils/platform';
-import { printOutstockRecord } from '../outstockPrintHelper';
 import type { OutstockRecord } from './outstockRecordTypes';
 import { outstockTypeMap } from './outstockRecordTypes';
 
@@ -17,6 +16,7 @@ export function getOutstockRecordColumns(handlers: {
   handleShare: (record: OutstockRecord) => void;
   handleTransferInbound?: (record: OutstockRecord) => void;
   handleLog?: (record: OutstockRecord) => void;
+  handlePrint?: (record: OutstockRecord) => void;
 }): ColumnsType<OutstockRecord> {
   return [
     {
@@ -234,11 +234,14 @@ export function getOutstockRecordColumns(handlers: {
             onClick: () => handlers.handleLog!(record),
           });
         }
-        actions.push({
-          key: 'print',
-          label: '打印',
-          onClick: () => printOutstockRecord(record),
-        });
+        if (handlers.handlePrint) {
+          actions.push({
+            key: 'print',
+            label: '打印',
+            // D-363h：整单打印——同一出库单号的全部明细（多码数/多款）打在一张纸上
+            onClick: () => handlers.handlePrint!(record),
+          });
+        }
         return <RowActions actions={actions} />;
       },
     },
