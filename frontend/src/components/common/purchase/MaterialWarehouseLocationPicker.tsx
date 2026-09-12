@@ -6,6 +6,8 @@ import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '@/hooks/use
 interface Props {
   /** 库位编码（受控） */
   value?: string;
+  /** 仓库类型：MATERIAL(物料)/FINISHED(成品)/SAMPLE(样衣) */
+  warehouseType?: 'FINISHED' | 'MATERIAL' | 'SAMPLE';
   onChange: (locationCode: string, areaId?: string) => void;
 }
 
@@ -13,11 +15,11 @@ interface Props {
  * 物料仓库库位选择器（D-360x）——入库库位必须关联真实物料仓库。
  * 数据源 = 库位地图的 MATERIAL 仓库/库区/库位；没有仓库时引导去库位地图新建。
  */
-const MaterialWarehouseLocationPicker: React.FC<Props> = ({ value, onChange }) => {
+const MaterialWarehouseLocationPicker: React.FC<Props> = ({ value, warehouseType = 'MATERIAL', onChange }) => {
   const navigate = useNavigate();
-  const { areas, selectOptions, loading } = useWarehouseAreaOptions('MATERIAL');
+  const { areas, selectOptions, loading } = useWarehouseAreaOptions(warehouseType);
   const [areaId, setAreaId] = useState<string>('');
-  const { locations, loading: locationsLoading } = useWarehouseLocationByArea('MATERIAL', areaId || undefined);
+  const { locations, loading: locationsLoading } = useWarehouseLocationByArea(warehouseType, areaId || undefined);
 
   useEffect(() => {
     if (!areaId && areas.length > 0) setAreaId(areas[0].id);
@@ -28,10 +30,10 @@ const MaterialWarehouseLocationPicker: React.FC<Props> = ({ value, onChange }) =
       <Alert
         type="warning"
         showIcon
-        title="还没有物料仓库"
+        title={`还没有${warehouseType === 'FINISHED' ? '成品' : '物料'}仓库`}
         description={
           <span>
-            请先到「库位地图」新建物料仓并划分库位，再回来选择入库库位。
+            请先到「库位地图」新建仓库并划分库位，再回来选择。
             <Button type="link" size="small" style={{ padding: 0 }} onClick={() => navigate('/warehouse/location-map')}>
               去库位地图新建 →
             </Button>

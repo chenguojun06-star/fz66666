@@ -7,7 +7,7 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { useTablePagination } from '@/hooks';
 import api from '@/utils/api';
 import { useOutstockShare } from '../useOutstockShare';
-import WarehouseLocationAutoComplete from '@/components/common/WarehouseLocationAutoComplete';
+import MaterialWarehouseLocationPicker from '@/components/common/purchase/MaterialWarehouseLocationPicker';
 import ShareLinkModal from '../ShareLinkModal';
 import { getOutstockRecordColumns } from './outstockRecordColumns';
 import type { OutstockRecord } from './outstockRecordTypes';
@@ -95,22 +95,56 @@ const OutstockRecordTab: React.FC = () => {
   };
 
   const [transferTarget, setTransferTarget] = useState<OutstockRecord | null>(null);
+  // D-362h：批量回库——与批量审核共用一套勾选，仅统计可回库行（调拨出库且未回入）
+  const [batchTransferSubmitting, setBatchTransferSubmitting] = useState(false);
+  const transferEligibleIds = records
+    .filter((r) => r.outstockType === 'transfer_out' && r.transferInboundStatus !== 'INBOUND' && selectedRowKeys.includes(r.id))
+    .map((r) => String(r.id));
+
+  const handleBatchTransferInbound = async () => {
+    const ids = transferEligibleIds.slice();
+    if (!ids.length) { message.warning('请先勾选要回库的调拨出库记录'); return; }
+    let success = 0; const fails: string[] = [];
+    setBatchTransferSubmitting(true);
+    try {
+      const queue = ids.slice();
+      const workers = Array.from({ length: Math.min(3, queue.length) }).map(async () => {
+        while (queue.length) {
+          const id = queue.shift();
+          if (!id) continue;
+          try {
+            const res = await api.post('/warehouse/finished-inventory/transfer-inbound', { outstockId: id });
+            if (res?.code === 200) success++; else fails.push(res?.message || id);
+          } catch (e) { fails.push(e instanceof Error ? e.message : id); }
+        }
+      });
+      await Promise.all(workers);
+      if (fails.length === 0) message.success(`批量回库成功（${success} 条）`);
+      else if (success > 0) message.warning(`成功 ${success} 条，失败 ${fails.length} 条：${fails[0]}`);
+      else message.error(`批量回库失败：${fails[0]}`);
+      setSelectedRowKeys([]);
+      loadRecords();
+    } finally { setBatchTransferSubmitting(false); }
+  };
   const [transferLocation, setTransferLocation] = useState('');
+  const [transferAreaId, setTransferAreaId] = useState('');
   const [transferSubmitting, setTransferSubmitting] = useState(false);
 
   // D-360n：调拨出库回入库（调入方确认收货）
   const handleTransferInbound = (record: OutstockRecord) => {
     setTransferTarget(record);
     setTransferLocation('');
+    setTransferAreaId('');
   };
   const submitTransferInbound = async () => {
     if (!transferTarget) return;
-    if (!transferLocation.trim()) { message.warning('请选择或输入回入库位'); return; }
+    if (!transferLocation.trim()) { message.warning('请选择回入仓库与库位'); return; }
     setTransferSubmitting(true);
     try {
       const res = await api.post('/warehouse/finished-inventory/transfer-inbound', {
         outstockId: String(transferTarget.id),
         warehouseLocation: transferLocation.trim(),
+        warehouseAreaId: transferAreaId || undefined,
       });
       if (res?.code === 200) {
         message.success('回入库成功，库存已增加');
@@ -168,11 +202,26 @@ const OutstockRecordTab: React.FC = () => {
                 批量审核（{selectedRowKeys.length}）
               </Button>
             )}
+            {transferEligibleIds.length > 0 && (
+              <Button ghost loading={batchTransferSubmitting} onClick={() => { void handleBatchTransferInbound(); }}>
+                批量回库（{transferEligibleIds.length}）
+              </Button>
+            )}
           </Space>
         }
       />
       <ResizableTable
         storageKey="finished-inventory-outstock-records"
+        rowSelection={{
+          selectedRowKeys,
+          onChange: (keys) => setSelectedRowKeys(keys as number[]),
+          getCheckboxProps: (record) => ({
+            disabled:
+              record.outstockType === 'transfer_out'
+                ? record.transferInboundStatus === 'INBOUND'
+                : record.approvalStatus === 'approved',
+          }),
+        }}
         columns={columns}
         dataSource={records}
         loading={loading}
@@ -181,13 +230,6 @@ const OutstockRecordTab: React.FC = () => {
         stickyHeader
         scroll={{ x: 2400 }}
         pagination={false}
-        rowSelection={{
-          selectedRowKeys,
-          onChange: (keys) => setSelectedRowKeys(keys as number[]),
-          getCheckboxProps: (record) => ({
-            disabled: record.approvalStatus === 'approved',
-          }),
-        }}
       />
       <StandardPagination
         current={pagination.pagination.current}
@@ -212,7 +254,7 @@ const OutstockRecordTab: React.FC = () => {
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ whiteSpace: 'nowrap' }}>回入库位：</span>
-          <WarehouseLocationAutoComplete value={transferLocation} onChange={setTransferLocation} style={{ flex: 1 }} />
+          <MaterialWarehouseLocationPicker warehouseType="FINISHED" value={transferLocation} onChange={(v, areaId) => { setTransferLocation(v); setTransferAreaId(areaId || ''); }} />
         </div>
       </Modal>
 

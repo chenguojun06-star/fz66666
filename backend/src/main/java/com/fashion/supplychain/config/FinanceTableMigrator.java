@@ -761,8 +761,8 @@ public class FinanceTableMigrator {
             String createProductOutstockTable = "CREATE TABLE IF NOT EXISTS t_product_outstock (" +
                     "id VARCHAR(36) PRIMARY KEY COMMENT '出库ID'," +
                     "outstock_no VARCHAR(50) NOT NULL UNIQUE COMMENT '出库单号'," +
-                    "order_id VARCHAR(36) NOT NULL COMMENT '订单ID'," +
-                    "order_no VARCHAR(50) NOT NULL COMMENT '订单号'," +
+                    "order_id VARCHAR(36) COMMENT '订单ID'," +
+                    "order_no VARCHAR(50) COMMENT '订单号'," +
                     "style_id VARCHAR(36) COMMENT '款号ID'," +
                     "style_no VARCHAR(50) COMMENT '款号'," +
                     "style_name VARCHAR(100) COMMENT '款名'," +
