@@ -16,6 +16,7 @@ export function getOutstockRecordColumns(handlers: {
   handleApprove: (id: number) => void;
   handleShare: (record: OutstockRecord) => void;
   handleTransferInbound?: (record: OutstockRecord) => void;
+  handleLog?: (record: OutstockRecord) => void;
 }): ColumnsType<OutstockRecord> {
   return [
     {
@@ -218,6 +219,13 @@ export function getOutstockRecordColumns(handlers: {
           label: '分享',
           onClick: () => handlers.handleShare(record),
         });
+        if (handlers.handleLog) {
+          actions.push({
+            key: 'log',
+            label: '日志',
+            onClick: () => handlers.handleLog!(record),
+          });
+        }
         actions.push({
           key: 'print',
           label: '打印',

@@ -161,4 +161,16 @@ public final class SecurityConstants {
             "/api/system/tenant/**",
             "/api/system/**",
     };
+
+    /**
+     * D-362i：操作日志只读端点放开到所有登录用户。
+     * 背景：/api/system/** 整体在 TENANT_OWNER_ENDPOINTS 中要求租户主账号角色，
+     * 普通主管连页面内「操作日志」侧滑都打不开（403）——这正是"日志只能去日志中心看"的根源。
+     * 安全性：OperationLogServiceImpl 查询已强制租户隔离（非超管只返回本租户日志）；
+     * 仅放行 GET 读端点，创建/删除仍走租户主账号门槛。
+     */
+    public static final String[] OPERATION_LOG_AUTH_ENDPOINTS = {
+            "/api/system/operation-log/list",
+            "/api/system/operation-log/by-target",
+    };
 }

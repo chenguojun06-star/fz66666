@@ -89,6 +89,8 @@ public class SystemOperationLogAspect {
         "/api/system/app-store", "/api/system/operation-log", "/api/system/login-log",
         "/api/system/menu", "/api/auth/", "/api/internal/", "/api/dashboard/",
         "/api/datacenter/", "/api/wechat/", "/api/template/operation-log",
+        // D-362i：查询类POST不是业务操作——此前每次翻出库记录列表都被误记成一条「出库」日志（污染日志中心）
+        "/api/warehouse/finished-inventory/outstock-records",
     };
 
     @Pointcut("within(com.fashion.supplychain..controller..*) && (@annotation(org.springframework.web.bind.annotation.PostMapping) || @annotation(org.springframework.web.bind.annotation.PutMapping) || @annotation(org.springframework.web.bind.annotation.DeleteMapping))")
@@ -135,6 +137,15 @@ public class SystemOperationLogAspect {
 
         try {
             Object result = pjp.proceed();
+
+            // D-362i：兜底重解析 targetId——部分操作的业务单号在方法执行中才生成
+            // （如成品出库的 batchOutstockNo 回填进请求 Map），执行前解析只能得到 null
+            if (targetId == null) {
+                String reResolved = resolveTargetId(pjp.getArgs());
+                if (reResolved != null) {
+                    targetId = reResolved;
+                }
+            }
 
             // 修改操作：执行后查询新值，生成变更摘要
             String changeSummary = null;
@@ -220,7 +231,7 @@ public class SystemOperationLogAspect {
         if (uri.contains("/cancel"))                return "撤销";
         if (uri.contains("/transfer"))              return "转移";
         if (uri.contains("/delete-full-link"))       return "删除扫码链";
-        if (uri.contains("/outstock"))              return "出库";
+        if (uri.contains("/outstock") || uri.contains("/outbound")) return "出库";
         if (uri.contains("/warehousing"))           return "入库";
         if (uri.contains("/inbound"))               return "物料入库";
         if (uri.contains("/picking"))               return "领料";
@@ -259,7 +270,7 @@ public class SystemOperationLogAspect {
         if (u.contains("/cutting"))   return "裁剪单";
         if (u.contains("/scan"))      return "扫码记录";
         if (u.contains("/warehousing")) return "入库单";
-        if (u.contains("/outstock"))  return "出货单";
+        if (u.contains("/outstock") || u.contains("/outbound"))  return "出货单";
         if (u.contains("/order") || u.contains("/orders"))     return "订单";
         if (u.contains("/warehouse")) return "仓库单";
         if (u.contains("/style"))     return "款式";
@@ -297,7 +308,7 @@ public class SystemOperationLogAspect {
         String[] keys = new String[]{
             "id","orderId","styleId","templateId","factoryId","userId",
             "purchaseId","pickingId","cuttingBundleId","cuttingTaskId","warehouseId","inboundId",
-            "orderNo","purchaseNo","pickingNo","bundleNo","cuttingNo"
+            "orderNo","purchaseNo","pickingNo","bundleNo","cuttingNo","outstockNo"
         };
         for (String k : keys) {
             if (map.containsKey(k)) {

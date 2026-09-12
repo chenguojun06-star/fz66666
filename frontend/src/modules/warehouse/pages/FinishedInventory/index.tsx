@@ -9,6 +9,7 @@ import { App } from 'antd';
 import api from '@/utils/api';
 import ScanOperationModal from './FinishedScanOperationModal';
 import FreeInboundModal from './FreeInboundModal';
+import RecordLogDrawer from '@/components/common/RecordLogDrawer';
 import { getMainColumns, getSkuColumns } from './finishedInventoryColumns';
 import type { FinishedInventoryRow } from './finishedInventoryColumns';
 import { flattenInventoryBySku } from './flattenBySku';
@@ -28,6 +29,8 @@ const _FinishedInventory: React.FC = () => {
   const [qrcodeOutboundOpen, setQrcodeOutboundOpen] = useState(false);
   const [scanOperationOpen, setScanOperationOpen] = useState(false);
   const [freeInboundOpen, setFreeInboundOpen] = useState(false);
+  // D-362i：成品仓库全页日志侧滑看板（含出库/入库/扫码流水）
+  const [pageLogOpen, setPageLogOpen] = useState(false);
   const [inboundPage, setInboundPage] = useState(1);
   const [inboundPageSize, setInboundPageSize] = useState(20);
 
@@ -104,7 +107,7 @@ const _FinishedInventory: React.FC = () => {
     <>
       {showSmartErrorNotice && smartError && <Card style={{ marginBottom: 12 }}><SmartErrorNotice error={smartError} onFix={() => { void loadData(); }} /></Card>}
       <Card style={{ marginBottom: 0, border: 'none', boxShadow: 'none', background: 'transparent' }}>
-        <StandardToolbar left={<StandardSearchBar searchValue={searchText} onSearchChange={setSearchText} searchPlaceholder="搜索订单号/款号/商品编码" statusValue={statusValue} onStatusChange={setStatusValue} statusOptions={[{ label: '全部', value: '' }, { label: '有库存', value: 'available' }, { label: '有次品', value: 'defect' }]} />} right={<Space wrap><Select style={{ width: 140 }} placeholder="工厂类型" allowClear value={selectedFactoryType || undefined} onChange={setSelectedFactoryType} options={factoryTypeOptions} /><Button icon={<InboxOutlined />} onClick={() => setFreeInboundOpen(true)}>无采购单入库</Button><Button icon={<ScanOutlined />} onClick={() => setScanOperationOpen(true)}>扫码出入库</Button><Button icon={<ScanOutlined />} onClick={() => setQrcodeOutboundOpen(true)}>扫码出库</Button></Space>} />
+        <StandardToolbar left={<StandardSearchBar searchValue={searchText} onSearchChange={setSearchText} searchPlaceholder="搜索订单号/款号/商品编码" statusValue={statusValue} onStatusChange={setStatusValue} statusOptions={[{ label: '全部', value: '' }, { label: '有库存', value: 'available' }, { label: '有次品', value: 'defect' }]} />} right={<Space wrap><Select style={{ width: 140 }} placeholder="工厂类型" allowClear value={selectedFactoryType || undefined} onChange={setSelectedFactoryType} options={factoryTypeOptions} /><Button icon={<InboxOutlined />} onClick={() => setFreeInboundOpen(true)}>无采购单入库</Button><Button icon={<ScanOutlined />} onClick={() => setScanOperationOpen(true)}>扫码出入库</Button><Button icon={<ScanOutlined />} onClick={() => setQrcodeOutboundOpen(true)}>扫码出库</Button><Button icon={<HistoryOutlined />} onClick={() => setPageLogOpen(true)}>操作日志</Button></Space>} />
       </Card>
       <PageStatCards cards={[{ key: 'total', items: [{ label: '成品总数', value: totalRecords, unit: '款', color: 'var(--color-primary)' }] }, { key: 'available', items: [{ label: '可用库存', value: totalAvailableQty, unit: '件', color: 'var(--color-success)' }] }, { key: 'defect', items: [{ label: '次品数量', value: totalDefectQty, unit: '件', color: 'var(--color-danger)' }] }]} activeKey="" />
       <Tabs defaultActiveKey="inventory" style={{ marginTop: 12 }} items={[
@@ -253,6 +256,12 @@ const _FinishedInventory: React.FC = () => {
           children: <OutstockRecordTab />,
         },
       ]} />
+      <RecordLogDrawer
+        open={pageLogOpen}
+        onClose={() => setPageLogOpen(false)}
+        title="成品仓库操作日志"
+        filter={{ module: '仓库管理' }}
+      />
     </>
   );
 };

@@ -8,6 +8,7 @@ import { useTablePagination } from '@/hooks';
 import api from '@/utils/api';
 import { useOutstockShare } from '../useOutstockShare';
 import MaterialWarehouseLocationPicker from '@/components/common/purchase/MaterialWarehouseLocationPicker';
+import RecordLogDrawer, { type RecordLogDrawerFilter } from '@/components/common/RecordLogDrawer';
 import ShareLinkModal from '../ShareLinkModal';
 import { getOutstockRecordColumns } from './outstockRecordColumns';
 import type { OutstockRecord } from './outstockRecordTypes';
@@ -160,7 +161,18 @@ const OutstockRecordTab: React.FC = () => {
     }
   };
 
-  const columns = getOutstockRecordColumns({ handleApprove, handleShare, handleTransferInbound });
+  // D-362i：页面内日志侧滑看板——不必再跑去系统日志中心翻
+  const [logDrawer, setLogDrawer] = useState<{ open: boolean; title: string; filter: RecordLogDrawerFilter } | null>(null);
+  const openRecordLog = (record: OutstockRecord) => {
+    setLogDrawer({
+      open: true,
+      title: `出库日志 - ${record.outstockNo || ''}`,
+      // targetId 形态随链路不同：出库=出库单号(AOP回填)、回入库/审批=出库记录id——一并传给客户端过滤
+      filter: { module: '仓库管理', targetIds: [record.outstockNo, String(record.id)].filter(Boolean) as string[] },
+    });
+  };
+
+  const columns = getOutstockRecordColumns({ handleApprove, handleShare, handleTransferInbound, handleLog: openRecordLog });
 
   return (
     <Card
@@ -207,6 +219,9 @@ const OutstockRecordTab: React.FC = () => {
                 批量回库（{transferEligibleIds.length}）
               </Button>
             )}
+            <Button onClick={() => setLogDrawer({ open: true, title: '仓库操作日志', filter: { module: '仓库管理' } })}>
+              操作日志
+            </Button>
           </Space>
         }
       />
@@ -257,6 +272,13 @@ const OutstockRecordTab: React.FC = () => {
           <MaterialWarehouseLocationPicker warehouseType="FINISHED" value={transferLocation} onChange={(v, areaId) => { setTransferLocation(v); setTransferAreaId(areaId || ''); }} />
         </div>
       </Modal>
+
+      <RecordLogDrawer
+        open={!!logDrawer?.open}
+        onClose={() => setLogDrawer(null)}
+        title={logDrawer?.title}
+        filter={logDrawer?.filter || {}}
+      />
 
       <ShareLinkModal
         open={shareModalOpen}

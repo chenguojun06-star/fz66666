@@ -55,6 +55,9 @@ public final class SecurityConfigHelper {
 
         authz.requestMatchers(SecurityConstants.ORDER_REMARK_AUTH_ENDPOINTS).authenticated();
 
+        // D-362i：操作日志只读端点（服务层已租户隔离，仅放行 GET）
+        authz.requestMatchers(HttpMethod.GET, SecurityConstants.OPERATION_LOG_AUTH_ENDPOINTS).authenticated();
+
         authz.requestMatchers(SecurityConstants.ADMIN_USER_MANAGEMENT_ENDPOINTS)
                 .hasAnyAuthority(SecurityConstants.ADMIN_ROLES.toArray(new String[0]));
 

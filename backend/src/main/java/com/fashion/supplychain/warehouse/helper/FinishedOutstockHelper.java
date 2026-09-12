@@ -166,6 +166,8 @@ public class FinishedOutstockHelper {
 
         // D-360n：一次出库共用同一出库单号（明细多行同单），不再按码数拆成多张出库单
         String batchOutstockNo = buildOutstockNo(LocalDateTime.now());
+        // D-362i：把出库单号回填进请求参数，操作日志AOP的 targetId 才能落到单号（否则日志无法按单追溯）
+        params.put("outstockNo", batchOutstockNo);
 
         for (Map<String, Object> item : items) {
             String skuCode = (String) item.get("sku");
