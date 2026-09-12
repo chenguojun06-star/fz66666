@@ -663,9 +663,10 @@ public class QdrantService {
                 // 添加稀疏向量支持
                 ObjectNode sparseVectors = body.putObject("sparse_vectors");
                 sparseVectors.putObject(SPARSE_VECTOR_NAME);
-                restTemplate.postForEntity(
+                // Qdrant REST 创建集合必须用 PUT（POST 该路径 404），2026-09-13 首次真实连通时暴露
+                restTemplate.exchange(
                         qdrantUrl + "/collections/" + collectionName,
-                        jsonEntity(body.toString()), String.class);
+                        HttpMethod.PUT, jsonEntity(body.toString()), String.class);
                 log.info("[Qdrant] 集合 {} 已自动创建（含稀疏向量支持）", collectionName);
                 collectionVerified.set(true);
             } catch (Exception ex) {
@@ -676,9 +677,9 @@ public class QdrantService {
                     ObjectNode params2 = body2.putObject("vectors");
                     params2.put("size", getVectorDim());
                     params2.put("distance", "Cosine");
-                    restTemplate.postForEntity(
+                    restTemplate.exchange(
                             qdrantUrl + "/collections/" + collectionName,
-                            jsonEntity(body2.toString()), String.class);
+                            HttpMethod.PUT, jsonEntity(body2.toString()), String.class);
                     log.info("[Qdrant] 集合 {} 已自动创建（不含稀疏向量，旧版Qdrant）", collectionName);
                     collectionVerified.set(true);
                     hybridSearchDegraded.set(true);
