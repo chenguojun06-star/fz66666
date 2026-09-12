@@ -100,6 +100,14 @@ public interface MaterialPurchaseService extends IService<MaterialPurchase> {
 
     boolean existsActivePurchaseForOrder(String orderId);
 
+    /**
+     * D-377：批量判断哪些订单已存在有效采购记录（一次 IN 查询，替代循环内逐个查询的 N+1）。
+     *
+     * @param orderIds 生产订单ID集合
+     * @return 已存在有效采购记录的订单ID集合（未查到/异常时返回空集合）
+     */
+    java.util.Set<String> findOrderIdsWithActivePurchase(java.util.Collection<String> orderIds);
+
     List<MaterialPurchase> previewDemandByOrderId(String orderId);
 
     List<MaterialPurchase> generateDemandByOrderId(String orderId, boolean overwrite);

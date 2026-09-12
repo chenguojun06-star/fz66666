@@ -634,10 +634,15 @@ public class MaterialPurchaseOrchestrator {
                     ? Collections.emptyMap()
                     : productionOrderService.listByIds(validOrderIds).stream()
                             .collect(Collectors.toMap(ProductionOrder::getId, Function.identity()));
+            // D-377：批量预加载「已存在有效采购」的订单集合——
+            // 原实现在循环内逐个调 existsActivePurchaseForOrder（N+1：100 个订单 = 100 次查询），
+            // 现改为一次 IN 查询。覆写/仅缺料模式不需要该判断，直接跳过查询。
+            java.util.Set<String> ordersWithPurchase = (overwriteFlag || shortageOnly)
+                ? java.util.Collections.emptySet()
+                : materialPurchaseService.findOrderIdsWithActivePurchase(validOrderIds);
             LinkedHashMap<LocalDate, List<String>> orderIdsByDate = new LinkedHashMap<>();
             for (String id : validOrderIds) {
-                // TODO: existsActivePurchaseForOrder 改为批量 IN 查询（P1）
-                if (!overwriteFlag && !shortageOnly && materialPurchaseService.existsActivePurchaseForOrder(id)) continue;
+                if (!overwriteFlag && !shortageOnly && ordersWithPurchase.contains(id)) continue;
                 ProductionOrder o = orderMap.get(id);
                 if (o == null) continue;
                 LocalDate day = (o.getCreateTime() != null) ? o.getCreateTime().toLocalDate() : LocalDate.now();

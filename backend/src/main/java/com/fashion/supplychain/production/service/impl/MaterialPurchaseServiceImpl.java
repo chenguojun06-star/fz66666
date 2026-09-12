@@ -88,12 +88,46 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             return false;
         }
         try {
+            // D-377：补租户隔离（P0铁律4）；tenantId 为空（系统任务）时条件自动跳过，行为不变
+            Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
             return this.count(new LambdaQueryWrapper<MaterialPurchase>()
                     .eq(MaterialPurchase::getOrderId, oid)
-                    .eq(MaterialPurchase::getDeleteFlag, 0)) > 0;
+                    .eq(MaterialPurchase::getDeleteFlag, 0)
+                    .eq(tenantId != null, MaterialPurchase::getTenantId, tenantId)) > 0;
         } catch (Exception e) {
             log.warn("Failed to check purchases for order: orderId={}", oid, e);
             return false;
+        }
+    }
+
+    @Override
+    public java.util.Set<String> findOrderIdsWithActivePurchase(java.util.Collection<String> orderIds) {
+        if (orderIds == null || orderIds.isEmpty()) {
+            return java.util.Collections.emptySet();
+        }
+        java.util.List<String> ids = orderIds.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+        if (ids.isEmpty()) {
+            return java.util.Collections.emptySet();
+        }
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        try {
+            java.util.List<MaterialPurchase> list = this.list(new LambdaQueryWrapper<MaterialPurchase>()
+                    .select(MaterialPurchase::getOrderId)
+                    .in(MaterialPurchase::getOrderId, ids)
+                    .eq(MaterialPurchase::getDeleteFlag, 0)
+                    .eq(tenantId != null, MaterialPurchase::getTenantId, tenantId));
+            return list.stream()
+                    .map(MaterialPurchase::getOrderId)
+                    .filter(StringUtils::hasText)
+                    .map(String::trim)
+                    .collect(java.util.stream.Collectors.toSet());
+        } catch (Exception e) {
+            log.warn("Failed to batch check purchases for orders: size={}", ids.size(), e);
+            return java.util.Collections.emptySet();
         }
     }
 
