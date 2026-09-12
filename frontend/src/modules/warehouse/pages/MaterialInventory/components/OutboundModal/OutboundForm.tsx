@@ -85,17 +85,20 @@ const OutboundForm: React.FC<OutboundFormProps> = ({
             </Form.Item>
           </Col>
           <Col span={6}>
-            <Form.Item noStyle shouldUpdate={(prev, cur) => prev.pickupType !== cur.pickupType}>
+            {/* D-362b：关联订单仅大货用料必填——样衣/备库/其他没有订单号，不强制 */}
+            <Form.Item noStyle shouldUpdate={(prev, cur) => prev.pickupType !== cur.pickupType || prev.usageType !== cur.usageType}>
               {() => {
                 const pickupType = outboundForm.getFieldValue('pickupType');
+                const usageType = outboundForm.getFieldValue('usageType');
+                const orderRequired = usageType === 'BULK' && pickupType !== 'FREE';
                 return (
                   <Form.Item
                     label="关联订单"
                     name="orderNo"
-                    rules={[{ required: pickupType !== 'FREE', message: '请输入关联订单' }]}
+                    rules={[{ required: orderRequired, message: '大货用料请输入关联订单' }]}
                   >
                     <AutoComplete
-                      placeholder={pickupType === 'FREE' ? '自由出库无需关联订单' : '按工厂自动匹配或手填订单号'}
+                      placeholder={orderRequired ? '按工厂自动匹配或手填订单号' : '样衣/备库出库无需订单号'}
                       options={outboundOrderOptions}
                       filterOption={(inputValue, option) => String(option?.label || '').toLowerCase().includes(inputValue.toLowerCase())}
                       onSearch={(value) => { if (pickupType !== 'FREE') void handleOutboundOrderInput(value); }}

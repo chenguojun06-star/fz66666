@@ -38,6 +38,13 @@ public class MaterialInbound implements Serializable {
      */
     private String purchaseId;
 
+    /** 关联订单号（大货采购，D-362b） */
+    private String orderNo;
+
+    /** 关联款号（样衣/大货采购，D-362b） */
+    private String styleNo;
+
+
     /**
      * 物料编码
      */

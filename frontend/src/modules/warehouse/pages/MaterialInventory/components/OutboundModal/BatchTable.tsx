@@ -92,6 +92,20 @@ const BatchTable: React.FC<BatchTableProps> = ({
             ),
           },
           {
+            title: '关联订单',
+            dataIndex: 'orderNo',
+            key: 'orderNo',
+            width: 130,
+            render: (v: string) => v && v !== '-' ? v : <span style={{ color: 'var(--color-text-quaternary)' }}>-</span>,
+          },
+          {
+            title: '关联款号',
+            dataIndex: 'styleNo',
+            key: 'styleNo',
+            width: 130,
+            render: (v: string) => v && v !== '-' ? v : <span style={{ color: 'var(--color-text-quaternary)' }}>-</span>,
+          },
+{
             title: '仓库位置',
             dataIndex: 'warehouseLocation',
             key: 'warehouseLocation',

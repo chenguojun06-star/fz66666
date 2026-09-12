@@ -398,7 +398,9 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         return inboundList.stream()
                 .map(inbound -> {
                     MaterialBatchDetailDto dto = new MaterialBatchDetailDto();
-                    dto.setBatchNo(inbound.getInboundNo());
+                    dto.setOrderNo(String.valueOf(inbound.getOrderNo() != null ? inbound.getOrderNo() : "-"));
+        dto.setStyleNo(String.valueOf(inbound.getStyleNo() != null ? inbound.getStyleNo() : "-"));
+        dto.setBatchNo(inbound.getInboundNo());
                     dto.setWarehouseLocation(inbound.getWarehouseLocation());
                     dto.setColor(inbound.getColor());
                     dto.setSize(inbound.getSize());

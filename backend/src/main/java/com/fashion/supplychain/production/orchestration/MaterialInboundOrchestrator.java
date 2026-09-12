@@ -464,6 +464,10 @@ public class MaterialInboundOrchestrator {
 
         MaterialInbound inbound = new MaterialInbound();
         inbound.setPurchaseId(purchase.getId());
+        // D-362b：入库记录关联采购来源（大货挂订单号/样衣挂款号）
+        inbound.setOrderNo(purchase.getOrderNo());
+        inbound.setStyleNo(purchase.getStyleNo());
+        inbound.setSourceType(purchase.getSourceType());
         inbound.setMaterialCode(purchase.getMaterialCode());
         inbound.setMaterialName(purchase.getMaterialName());
         inbound.setMaterialType(purchase.getMaterialType());

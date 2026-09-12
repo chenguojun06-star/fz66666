@@ -17,6 +17,12 @@ public class MaterialBatchDetailDto {
      */
     private String batchNo;
 
+    /** 关联订单号（大货采购，D-362b） */
+    private String orderNo;
+
+    /** 关联款号（样衣/大货采购，D-362b） */
+    private String styleNo;
+
     /**
      * 仓库位置
      */
