@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Input, InputNumber, Modal, Radio, Space, Typography } from 'antd';
+import MaterialWarehouseLocationPicker from '@/components/common/purchase/MaterialWarehouseLocationPicker';
 import type { MaterialPurchase } from '@/types/production';
 import type { ConfirmCompleteOptions, MovementAction } from '../hooks/usePurchaseConfirmCompleteActions';
 
@@ -28,7 +29,7 @@ const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
   onConfirm,
 }) => {
   const [movementAction, setMovementAction] = useState<MovementAction>('inbound');
-  const [warehouseLocation, setWarehouseLocation] = useState('默认仓');
+  const [warehouseLocation, setWarehouseLocation] = useState('');
   const [receiverName, setReceiverName] = useState('');
   const [quantity, setQuantity] = useState<number | null>(null);
 
@@ -45,7 +46,7 @@ const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
       setReceiverName(String(first.receiverName || '').trim());
     }
     setMovementAction('inbound');
-    setWarehouseLocation('默认仓');
+    setWarehouseLocation('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openKey]);
 
@@ -55,6 +56,9 @@ const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
   );
 
   const handleConfirm = () => {
+    if (movementAction === 'inbound' && !warehouseLocation.trim()) {
+      return; // 双保险：选择器空态按钮已禁用
+    }
     onConfirm({
       movementAction,
       ...(movementAction !== 'none' && singleTarget && quantity ? { movementQuantity: quantity } : {}),
@@ -70,6 +74,7 @@ const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
       onCancel={onCancel}
       confirmLoading={submitting}
       onOk={handleConfirm}
+      okButtonProps={{ disabled: movementAction === 'inbound' && !warehouseLocation.trim() }}
       okText="确认完成"
       cancelText="取消"
       width={520}
@@ -104,16 +109,12 @@ const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
           </Radio.Group>
         </div>
 
+        {' '}
         {movementAction === 'inbound' && (
-          <Space size={8} wrap>
-            <Text type="secondary">仓位</Text>
-            <Input
-              value={warehouseLocation}
-              onChange={(e) => setWarehouseLocation(e.target.value)}
-              placeholder="默认仓"
-              style={{ width: 200 }}
-            />
-          </Space>
+          <div>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>入库仓库/库位（必选）</Text>
+            <MaterialWarehouseLocationPicker value={warehouseLocation} onChange={(v) => setWarehouseLocation(v)} />
+          </div>
         )}
 
         {movementAction === 'direct_use' && (

@@ -174,7 +174,8 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
             // D-360：按钮统一一行（跟随样衣 PurchaseActionBar 布局），顶部不再散落按钮
             <PurchaseActionBar
               receive={{
-                disabled: detailFrozen || !hasPendingForReceiveAll || !data.canProcure || hasReturnConfirmed,
+                // D-360x：部分行已回料确认不再整体禁用——只要还有待领取行就可用（行级各自校验）
+                disabled: detailFrozen || !hasPendingForReceiveAll || !data.canProcure,
                 title: !hasPendingForReceiveAll ? '无可领取项' : undefined,
                 onClick: onReceiveAll,
               }}
