@@ -86,7 +86,7 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
             <Descriptions.Item label="面料成分" span={3}>{String(d.fabricComposition ?? '-')}</Descriptions.Item>
             <Descriptions.Item label="状态">
               <span style={{ color: d.status === 'ENABLED' ? 'var(--color-success)' : 'var(--color-text-tertiary)', fontWeight: 500 }}>
-                {d.status === 'ENABLED' ? '启用' : d.status === 'DISABLED' ? '停用' : d.status || '-'}
+                {d.status === 'ENABLED' ? '启用' : d.status === 'DISABLED' ? '停用' : d.status === 'SCRAPPED' ? '已报废' : d.status || '-'}
               </span>
             </Descriptions.Item>
             <Descriptions.Item label="下单次数">{d.orderCount != null ? `${d.orderCount}次` : '-'}</Descriptions.Item>

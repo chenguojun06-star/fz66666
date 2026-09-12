@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Empty, Spin, Tag, Typography } from 'antd';
+import { Empty, Spin, Table, Tag, Typography } from 'antd';
 import api from '@/utils/api';
 
 interface StyleOperationLogItem {
@@ -63,24 +63,28 @@ const OperationLogSection: React.FC<{ styleId?: string | number; styleNo?: strin
         {logs.length === 0 && !loading ? (
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无操作记录" style={{ margin: '8px 0' }} />
         ) : (
-          <div style={{ maxHeight: 280, overflowY: 'auto' }}>
-            {visibleLogs.map((item, idx) => {
-              const tag = BIZ_TAG[item.bizType ?? ''] ?? { color: 'default', text: item.bizType || '日志' };
-              return (
-                <div
-                  key={item.id ?? idx}
-                  style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 0', borderBottom: '1px dashed #f0f0f0', fontSize: 13 }}
-                >
-                  <Tag color={tag.color} style={{ marginInlineEnd: 0, flexShrink: 0 }}>{tag.text}</Tag>
-                  <span style={{ color: '#8c8c8c', flexShrink: 0, fontSize: 12, lineHeight: '22px' }}>{item.createTime ?? '-'}</span>
-                  <span style={{ fontWeight: 500, flexShrink: 0, lineHeight: '22px' }}>{item.operator ?? '-'}</span>
-                  <span style={{ lineHeight: '22px', wordBreak: 'break-all' }}>
-                    {item.action}
-                    {item.remark ? `：${item.remark}` : ''}
-                  </span>
-                </div>
-              );
-            })}
+          // D-360r：对齐订单生产日志的表格布局（操作时间/操作类型/操作内容/操作人），全站日志口径统一
+          <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+            <Table
+              size="small"
+              rowKey={(r) => String(r.id ?? r.createTime)}
+              dataSource={visibleLogs}
+              pagination={false}
+              columns={[
+                { title: '操作时间', dataIndex: 'createTime', key: 'time', width: 150, render: (v: string) => <span style={{ color: '#8c8c8c', fontSize: 12 }}>{v ?? '-'}</span> },
+                { title: '操作类型', dataIndex: 'action', key: 'type', width: 150, render: (_: unknown, item) => {
+                  const tag = BIZ_TAG[item.bizType ?? ''] ?? { color: 'default', text: item.bizType || '日志' };
+                  return (
+                    <span style={{ fontWeight: 500 }}>
+                      <Tag color={tag.color} style={{ marginInlineEnd: 4 }}>{tag.text}</Tag>
+                      {item.action ?? '-'}
+                    </span>
+                  );
+                } },
+                { title: '操作内容', dataIndex: 'remark', key: 'content', render: (v: string) => <span style={{ wordBreak: 'break-all' }}>{v || '-'}</span> },
+                { title: '操作人', dataIndex: 'operator', key: 'operator', width: 110, render: (v: string) => v || '-' },
+              ]}
+            />
           </div>
         )}
         {logs.length > 20 && (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image } from 'antd';
+import { Tag, Image } from 'antd';
 import AttachmentThumb from '@/components/common/AttachmentThumb';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
@@ -57,6 +57,7 @@ export const buildColumns = (handlers: ColumnHandlers) => [
     render: (v: string) => {
       if (v === 'ENABLED') return <span style={{ color: 'var(--color-success)', fontWeight: 500 }}>启用</span>;
       if (v === 'DISABLED') return <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 400 }}>停用</span>;
+      if (v === 'SCRAPPED') return <Tag color="error" style={{ margin: 0 }}>已报废</Tag>;
       return <span style={{ color: 'var(--color-text-tertiary)' }}>{v || '-'}</span>;
     },
   },
