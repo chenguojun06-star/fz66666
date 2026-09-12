@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Input, Button, Empty, Spin, App, Tag, Image, Drawer, Timeline, Alert } from 'antd';
+import { App, Input, Button, Empty, Spin, Table, Tag, Image, Drawer, Alert } from 'antd';
 import {
   UserOutlined,
   ClockCircleOutlined,
@@ -260,65 +260,33 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
             {unifiedItems.length === 0 && !totalLoading ? (
               <Empty description="暂无备注与链路记录" />
             ) : (
-              <Timeline
-                items={unifiedItems.map((it) => ({
-                  color: it.isLink ? 'blue' : 'green',
-                  dot: it.isLink ? (
-                    <NodeIndexOutlined style={{ fontSize: 14, color: 'var(--color-primary)' }} />
-                  ) : undefined,
-                  children: (
-                    <div
-                      key={it.key}
-                      style={{
-                        padding: '10px 12px',
-                        background: it.isLink ? 'var(--color-primary-light)' : 'var(--color-bg-base)',
-                        border: '1px solid var(--color-border-light)',
-                        borderRadius: 6,
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {it.isLink && <Tag color="blue" style={{ marginRight: 0 }}>链路</Tag>}
-                          <strong>{it.author}</strong>
-                          {it.operator && (
-                            <Tag style={{ marginLeft: 0 }}>
-                              <UserOutlined /> {it.operator}
-                            </Tag>
-                          )}
-                        </span>
-                        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <ClockCircleOutlined />
-                          {it.timeDisplay}
-                          {it.isLink && it.durationHours != null && it.durationHours > 0 && (
-                            <span style={{ color: 'var(--color-text-quaternary)', marginLeft: 4 }}>
-                              · 耗时{it.durationHours}h
-                            </span>
-                          )}
-                        </span>
+            <Table
+              size="small"
+              rowKey="key"
+              dataSource={unifiedItems}
+              pagination={false}
+              columns={[
+                { title: '操作时间', dataIndex: 'timeDisplay', key: 'time', width: 150, render: (v: string) => <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{v || '-'}</span> },
+                { title: '操作类型', key: 'type', width: 130, render: (_: unknown, it: any) => it.tag
+                  ? <Tag color={it.tag.color} style={{ marginRight: 0 }}>{it.tag.label}</Tag>
+                  : <span style={{ fontWeight: 500 }}>{it.author || '-'}</span> },
+                { title: '操作内容', key: 'content', render: (_: unknown, it: any) => (
+                  <div>
+                    {it.content && <div style={{ wordBreak: 'break-all' }}>{it.content}</div>}
+                    {it.images && it.images.length > 0 && (
+                      <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        <Image.PreviewGroup>
+                          {it.images.map((url: string, idx: number) => (
+                            <Image key={idx} src={getFullAuthedFileUrl(url)} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }} preview={{ cover: '预览' }} />
+                          ))}
+                        </Image.PreviewGroup>
                       </div>
-                      {it.content && (
-                        <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                          {it.content}
-                        </div>
-                      )}
-                      {it.images && it.images.length > 0 && (
-                        <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                          <Image.PreviewGroup>
-                            {it.images.map((url, idx) => (
-                              <Image
-                                key={idx}
-                                src={getFullAuthedFileUrl(url)}
-                                style={{ width: 320, height: 320, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
-                                preview={{ cover: '预览' }}
-                              />
-                            ))}
-                          </Image.PreviewGroup>
-                        </div>
-                      )}
-                    </div>
-                  ),
-                }))}
-              />
+                    )}
+                  </div>
+                ) },
+                { title: '操作人', dataIndex: 'operator', key: 'operator', width: 110, render: (v: string, it: any) => v || it.author || '-' },
+              ]}
+            />
             )}
           </Spin>
         </div>

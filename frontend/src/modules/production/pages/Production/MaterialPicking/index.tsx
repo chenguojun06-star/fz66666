@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Card, Tag, Input, Select, Space } from 'antd';
+import { Button, Card, Tag, Input, Select, Space , Modal } from 'antd';
 
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -45,6 +45,38 @@ const MaterialPickingList: React.FC = () => {
   // 筛选状态
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  // D-362f：勾选批量确认出库（仓库侧闭环）
+  const [selectedPickingIds, setSelectedPickingIds] = useState<React.Key[]>([]);
+  const [batchOutboundSubmitting, setBatchOutboundSubmitting] = useState(false);
+
+  const handleBatchConfirmOutbound = async () => {
+    const pending = selectedPickingIds.map(String);
+    if (!pending.length) { message.warning('请先勾选待出库的领料单'); return; }
+    let success = 0;
+    const fails: string[] = [];
+    setBatchOutboundSubmitting(true);
+    try {
+      const queue = pending.slice();
+      const workers = Array.from({ length: Math.min(3, queue.length) }).map(async () => {
+        while (queue.length) {
+          const id = queue.shift();
+          if (!id) continue;
+          try {
+            const res = await api.post(`/production/material-picking/${id}/confirm-outbound`);
+            if (res?.code === 200) success++; else fails.push(res?.message || id);
+          } catch (e) { fails.push(e instanceof Error ? e.message : id); }
+        }
+      });
+      await Promise.all(workers);
+      if (fails.length === 0) message.success(`批量出库成功（${success} 张）`);
+      else if (success > 0) message.warning(`成功 ${success} 张，失败 ${fails.length} 张：${fails[0]}`);
+      else message.error(`批量出库失败：${fails[0]}`);
+      setSelectedPickingIds([]);
+      await fetchList(1, pageSize, { status: statusFilter });
+    } finally {
+      setBatchOutboundSubmitting(false);
+    }
+  };
   const [usageType, setUsageType] = useState('');
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
@@ -159,6 +191,23 @@ const MaterialPickingList: React.FC = () => {
       render: (_: any, record: any) => (
         <RowActions
           actions={[
+            ...(record.status === 'pending' ? [{
+              key: 'confirm-outbound',
+              label: '确认出库',
+              primary: true,
+              onClick: () => {
+                Modal.confirm({
+                  title: '确认出库',
+                  content: `领料单 ${record.pickingNo || ''} 将扣减库存并完成出库，是否继续？`,
+                  okText: '确认出库',
+                  onOk: async () => {
+                    const res = await api.post(`/production/material-picking/${record.id}/confirm-outbound`);
+                    if (res?.code === 200) { message.success('出库成功'); fetchList(1, pageSize, { status: statusFilter }); }
+                    else message.error(res?.message || '出库失败');
+                  },
+                });
+              },
+            }] : []),
             {
               key: 'detail',
               label: '详情',
@@ -205,6 +254,16 @@ const MaterialPickingList: React.FC = () => {
         ) : null}
         <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <Space wrap>
+            <Button
+              type="primary"
+              ghost
+              danger={false}
+              loading={batchOutboundSubmitting}
+              disabled={selectedPickingIds.length === 0}
+              onClick={() => { void handleBatchConfirmOutbound(); }}
+            >
+              批量确认出库{selectedPickingIds.length > 0 ? `（${selectedPickingIds.length}）` : ''}
+            </Button>
             <Input.Search
               placeholder="搜索领料单号/订单/款号/领料人"
               value={keyword}
@@ -234,6 +293,11 @@ const MaterialPickingList: React.FC = () => {
           </Button>
         </div>
         <ResizableTable
+          rowSelection={{
+            selectedRowKeys: selectedPickingIds,
+            onChange: (keys: React.Key[]) => setSelectedPickingIds(keys),
+            getCheckboxProps: (r: any) => ({ disabled: r.status !== 'pending' }),
+          }}
           loading={loading}
           dataSource={dataSource}
           columns={columns}
