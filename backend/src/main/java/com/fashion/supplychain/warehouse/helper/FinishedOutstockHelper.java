@@ -575,7 +575,10 @@ public class FinishedOutstockHelper {
      * D-360n：调拨出库回入库——调入方确认收货：增加SKU库存 + 标记出库记录已回入
      */
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
-    public Map<String, Object> transferInbound(String outstockId, String warehouseLocation, String warehouseAreaId) {
+    public Map<String, Object> transferInbound(java.util.Map<String, Object> params) {
+        String outstockId = params.get("outstockId") == null ? "" : String.valueOf(params.get("outstockId")).trim();
+        String warehouseLocation = params.get("warehouseLocation") == null ? null : String.valueOf(params.get("warehouseLocation")).trim();
+        String warehouseAreaId = params.get("warehouseAreaId") == null ? null : String.valueOf(params.get("warehouseAreaId")).trim();
         if (!StringUtils.hasText(outstockId)) throw new IllegalArgumentException("出库记录ID不能为空");
         Long tenantId = UserContext.tenantId();
         ProductOutstock outstock = productOutstockService.getById(outstockId.trim());
@@ -594,6 +597,12 @@ public class FinishedOutstockHelper {
         if (qty <= 0 || !StringUtils.hasText(skuCode)) {
             throw new IllegalArgumentException("出库记录缺少商品编码或数量");
         }
+        // D-363f：回填键给操作日志AOP——targetId 落到出库单号（与出库行一致，行级日志按单号可查），
+        // 详情带上 sku/数量/款号（方法执行前解析拿不到这些）
+        params.put("outstockNo", outstock.getOutstockNo());
+        params.put("skuCode", skuCode);
+        params.put("quantity", qty);
+        if (StringUtils.hasText(outstock.getStyleNo())) params.put("styleNo", outstock.getStyleNo());
         // 调入方确认收货：增加库存
         productSkuService.updateStock(skuCode, qty);
 

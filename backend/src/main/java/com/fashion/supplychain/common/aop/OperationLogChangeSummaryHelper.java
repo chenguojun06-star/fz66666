@@ -69,7 +69,13 @@ public class OperationLogChangeSummaryHelper {
         Map.entry("type", "类型"), Map.entry("priority", "优先级"),
         Map.entry("source", "来源"), Map.entry("version", "版本"),
         Map.entry("enabled", "是否启用"), Map.entry("sortOrder", "排序"),
-        Map.entry("isDefault", "是否默认")
+        Map.entry("isDefault", "是否默认"),
+        // D-363f：仓库出入库链路键
+        Map.entry("outstockNo", "出库单号"), Map.entry("outstockId", "出库记录"),
+        Map.entry("warehouseLocation", "库位"), Map.entry("warehouseAreaId", "仓库"),
+        Map.entry("items", "明细"), Map.entry("pickQty", "领取数量"),
+        Map.entry("expressCompany", "快递公司"), Map.entry("trackingNo", "物流单号"),
+        Map.entry("platformCode", "平台"), Map.entry("productionOrderNo", "生产单号")
     );
 
     /**
@@ -136,11 +142,17 @@ public class OperationLogChangeSummaryHelper {
                     if (arg instanceof Map) {
                         @SuppressWarnings("unchecked")
                         Map<String, Object> map = (Map<String, Object>) arg;
+                        // D-363f：扩充可读字段——仓库出库/回入库/领料的明细键此前全部不在名单里，
+                        // 详情永远为 null，日志中心只剩一行操作类型看不出做了什么
                         String[] keyFields = {
                             "id", "orderId", "styleId", "purchaseId", "pickingId", "cuttingBundleId",
                             "orderNo", "styleNo", "purchaseNo", "pickingNo", "bundleNo",
                             "name", "code", "materialName", "status", "expectedShipDate",
-                            "reason", "remark", "remarks", "quantity"
+                            "reason", "remark", "remarks", "quantity",
+                            "outstockNo", "outstockId", "skuCode", "color", "size",
+                            "warehouseLocation", "warehouseAreaId", "warehouse", "customerName",
+                            "materialCode", "pickQty", "trackingNo", "expressCompany",
+                            "productionOrderNo", "platformCode", "assignee"
                         };
                         for (String key : keyFields) {
                             if (map.containsKey(key)) {
@@ -154,13 +166,46 @@ public class OperationLogChangeSummaryHelper {
                                 }
                             }
                         }
+                        // items 明细（出库/领料等）：摘要成「共N项/M件：sku×qty、sku×qty」
+                        Object itemsObj = map.get("items");
+                        if (itemsObj instanceof List<?> items && !items.isEmpty()) {
+                            int totalQty = 0;
+                            List<String> parts = new ArrayList<>();
+                            for (Object o : items) {
+                                if (!(o instanceof Map)) continue;
+                                @SuppressWarnings("unchecked")
+                                Map<String, Object> item = (Map<String, Object>) o;
+                                Object sku = item.containsKey("sku") ? item.get("sku")
+                                        : item.containsKey("skuCode") ? item.get("skuCode")
+                                        : item.containsKey("materialCode") ? item.get("materialCode") : null;
+                                int q = 0;
+                                Object qObj = item.get("quantity");
+                                if (qObj instanceof Number n) q = n.intValue();
+                                else if (qObj != null) { try { q = Integer.parseInt(String.valueOf(qObj).trim()); } catch (NumberFormatException ignored) { } }
+                                totalQty += q;
+                                if (sku != null && parts.size() < 5) parts.add(sku + "×" + q);
+                            }
+                            String summary = "共" + items.size() + "项/" + totalQty + "件";
+                            if (!parts.isEmpty()) summary += "：" + String.join("、", parts) + (items.size() > 5 ? "…" : "");
+                            detailMap.put("items", summary);
+                        }
                     }
                 }
             }
 
             enrichDetailsFromRequest(detailMap, request);
             if (detailMap.isEmpty()) return null;
-            return OBJECT_MAPPER.writeValueAsString(detailMap);
+            // D-363f：输出可读中文（「标签: 值」用；连接）——此前是原始 JSON，页面上没人看得懂
+            StringBuilder sb = new StringBuilder();
+            for (Map.Entry<String, Object> e : detailMap.entrySet()) {
+                if (sb.length() > 0) sb.append("；");
+                String label = FIELD_LABEL_MAP.getOrDefault(e.getKey(), e.getKey());
+                String val = String.valueOf(e.getValue());
+                if (val.length() > 120) val = val.substring(0, 120) + "…";
+                sb.append(label).append(": ").append(val);
+            }
+            String rendered = sb.toString();
+            return rendered.length() > 2000 ? rendered.substring(0, 2000) : rendered;
         } catch (Exception e) {
             return null;
         }

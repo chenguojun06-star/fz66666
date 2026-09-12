@@ -72,7 +72,7 @@ public class SystemOperationLogAspect {
      * 保留：入库/出库/结算（有财务意义需可追溯）
      */
     private static final Set<String> LOGGED_OPERATIONS = Set.of(
-        "修改", "删除", "报废", "转移", "删除扫码链",
+        "修改", "删除", "报废", "转移", "删除扫码链", "回入库",
         "关单", "驳回", "撤销", "审批通过", "审批",
         "入库", "物料入库", "出库", "结算"
     );
@@ -145,6 +145,12 @@ public class SystemOperationLogAspect {
                 if (reResolved != null) {
                     targetId = reResolved;
                 }
+            }
+            // D-363f：方法执行中回填进请求 Map 的键（outstockNo/skuCode 等）执行前不可见，
+            // 用最终参数重算详情，保证操作内容完整可读（回入库的 targetId 也落到出库单号）
+            String rebuiltDetails = changeSummaryHelper.buildDetails(method, pjp.getArgs(), request, SENSITIVE_FIELDS);
+            if (rebuiltDetails != null) {
+                details = rebuiltDetails;
             }
 
             // 修改操作：执行后查询新值，生成变更摘要
@@ -229,6 +235,7 @@ public class SystemOperationLogAspect {
         if (uri.contains("/reject"))                return "驳回";
         if (uri.contains("/submit"))                return "提交";
         if (uri.contains("/cancel"))                return "撤销";
+        if (uri.contains("transfer-inbound"))       return "回入库";
         if (uri.contains("/transfer"))              return "转移";
         if (uri.contains("/delete-full-link"))       return "删除扫码链";
         if (uri.contains("/outstock") || uri.contains("/outbound")) return "出库";
@@ -270,7 +277,7 @@ public class SystemOperationLogAspect {
         if (u.contains("/cutting"))   return "裁剪单";
         if (u.contains("/scan"))      return "扫码记录";
         if (u.contains("/warehousing")) return "入库单";
-        if (u.contains("/outstock") || u.contains("/outbound"))  return "出货单";
+        if (u.contains("/outstock") || u.contains("/outbound") || u.contains("transfer-inbound"))  return "出货单";
         if (u.contains("/order") || u.contains("/orders"))     return "订单";
         if (u.contains("/warehouse")) return "仓库单";
         if (u.contains("/style"))     return "款式";

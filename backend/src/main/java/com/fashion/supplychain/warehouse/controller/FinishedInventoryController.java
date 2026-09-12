@@ -91,10 +91,7 @@ public class FinishedInventoryController {
      */
     @PostMapping("/transfer-inbound")
     public Result<Void> transferInbound(@RequestBody Map<String, Object> params) {
-        String outstockId = params.get("outstockId") == null ? "" : String.valueOf(params.get("outstockId")).trim();
-        String warehouseLocation = params.get("warehouseLocation") == null ? null : String.valueOf(params.get("warehouseLocation")).trim();
-        String warehouseAreaId = params.get("warehouseAreaId") == null ? null : String.valueOf(params.get("warehouseAreaId")).trim();
-        finishedInventoryOrchestrator.transferInbound(outstockId, warehouseLocation, warehouseAreaId);
+        finishedInventoryOrchestrator.transferInbound(params);
         return Result.success(null);
     }
 

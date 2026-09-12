@@ -624,8 +624,8 @@ public class FinishedInventoryOrchestrator {
     /**
      * D-360n：调拨出库回入库
      */
-    public Map<String, Object> transferInbound(String outstockId, String warehouseLocation, String warehouseAreaId) {
-        return finishedOutstockHelper.transferInbound(outstockId, warehouseLocation, warehouseAreaId);
+    public Map<String, Object> transferInbound(java.util.Map<String, Object> params) {
+        return finishedOutstockHelper.transferInbound(params);
     }
 
     public void confirmPayment(String id, BigDecimal paidAmount) {
