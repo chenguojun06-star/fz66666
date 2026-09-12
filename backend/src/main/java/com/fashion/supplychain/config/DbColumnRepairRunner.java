@@ -67,8 +67,10 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             }
 
             repaired += DbViewRepairHelper.ensureSettlementViewHasCompleteTime(conn, schema);
-            repaired += DbViewRepairHelper.ensureFlowStageSnapshotView(conn, schema);
-            repaired += DbViewRepairHelper.ensureStageDoneAggView(conn, schema);
+            // 下面两个是"每次启动强制同步"视图（无条件 CREATE OR REPLACE 且恒返回1），
+            // 属例行刷新非缺失修复，不计入 repaired——否则每次启动都误报"共修复 2 个缺失列"
+            DbViewRepairHelper.ensureFlowStageSnapshotView(conn, schema);
+            DbViewRepairHelper.ensureStageDoneAggView(conn, schema);
             repaired += ensureColumnType(conn, schema, "t_style_info", "size_color_config",
                     "mediumtext", "MODIFY COLUMN `size_color_config` MEDIUMTEXT DEFAULT NULL COMMENT '颜色尺码数量矩阵JSON'");
             repaired += ensureColumnType(conn, schema, "t_style_size", "tolerance",

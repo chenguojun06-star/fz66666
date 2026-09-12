@@ -252,8 +252,29 @@ public class StyleQuotationOrchestrator {
             int fixed = 0;
             for (StyleQuotation q : dirty) {
                 try {
-                    recalculateFromLiveData(q.getStyleId());
-                    fixed++;
+                    Long tenantId = q.getTenantId();
+                    if (tenantId == null) {
+                        log.warn("[Startup Migration] styleId={} 无租户信息，跳过", q.getStyleId());
+                        continue;
+                    }
+                    UserContext previous = UserContext.get();
+                    try {
+                        // 启动线程无请求上下文，按报价单归属租户补齐（范式同 AbstractPatrolJob.withTenantContext），
+                        // 否则 recalculateFromLiveData 的 assertTenantContext 必抛、脏数据永远修不掉
+                        UserContext ctx = new UserContext();
+                        ctx.setTenantId(tenantId);
+                        ctx.setUserId("system");
+                        ctx.setUsername("system");
+                        UserContext.set(ctx);
+                        recalculateFromLiveData(q.getStyleId());
+                        fixed++;
+                    } finally {
+                        if (previous != null) {
+                            UserContext.set(previous);
+                        } else {
+                            UserContext.clear();
+                        }
+                    }
                 } catch (Exception e) {
                     log.warn("[Startup Migration] Failed to recalculate styleId={}: {}", q.getStyleId(), e.getMessage());
                 }
