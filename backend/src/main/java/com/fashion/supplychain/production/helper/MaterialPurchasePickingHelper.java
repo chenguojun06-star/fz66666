@@ -430,6 +430,7 @@ public class MaterialPurchasePickingHelper {
                 MaterialPurchase::getMaterialType, MaterialPurchase::getColor, MaterialPurchase::getSize,
                 MaterialPurchase::getPurchaseQuantity, MaterialPurchase::getStatus, MaterialPurchase::getUnit,
                 MaterialPurchase::getArrivedQuantity, MaterialPurchase::getSourceType,
+                MaterialPurchase::getUsedQuantity,
                 MaterialPurchase::getOrderNo, MaterialPurchase::getStyleNo);
         if (byOrderNo) {
             purchaseWrapper.eq(MaterialPurchase::getOrderNo, orderNo.trim());
@@ -467,6 +468,11 @@ public class MaterialPurchasePickingHelper {
         item.put("needPurchaseQty", needPurchaseQty);
         item.put("unit", purchase.getUnit());
         item.put("arrivedQuantity", purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0);
+        // D-363b：领取终点口径——剩余可领 = 采购量 - 已领取出库量(usedQuantity，仓库确认出库时累加)
+        int usedQty = purchase.getUsedQuantity() != null ? purchase.getUsedQuantity().intValue() : 0;
+        int remainingPickupQty = Math.max(0, requiredQty - usedQty);
+        item.put("usedQuantity", usedQty);
+        item.put("remainingPickupQty", remainingPickupQty);
         return item;
     }
 
@@ -551,6 +557,17 @@ public class MaterialPurchasePickingHelper {
             throw new IllegalStateException("该物料已提交仓库出库申请（待仓库确认），请勿重复提交");
         }
 
+        // D-363b：领取终点——已领取出库量(usedQuantity)达到采购量即封口，杜绝反复领取出库
+        int requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
+        int usedQty = purchase.getUsedQuantity() != null ? purchase.getUsedQuantity().intValue() : 0;
+        int remainingQty = Math.max(0, requiredQty - usedQty);
+        if (requiredQty > 0 && remainingQty <= 0) {
+            throw new IllegalStateException("该采购任务已完成领取出库（共" + usedQty + "件），无剩余可领数量");
+        }
+        if (requiredQty > 0 && pickQty > remainingQty) {
+            pickQty = remainingQty;
+        }
+
         String materialCode = purchase.getMaterialCode();
         int availableStock = calcAvailableStock(materialCode, purchase.getColor(), purchase.getSize());
         if (availableStock < pickQty) {
@@ -566,12 +583,11 @@ public class MaterialPurchasePickingHelper {
         purchase.setUpdateTime(LocalDateTime.now());
         materialPurchaseService.updateById(purchase);
 
-        int requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("pickingId", pickingId);
         result.put("pickingNo", "PICK-" + System.currentTimeMillis());
         result.put("pickedQty", pickQty);
-        result.put("remainingPurchaseQty", Math.max(0, requiredQty - pickQty));
+        result.put("remainingPickupQty", Math.max(0, remainingQty - pickQty));
         result.put("materialCode", materialCode);
         result.put("materialName", purchase.getMaterialName());
         log.info("✅ 仓库单项领取成功: pickingId={}, materialCode={}, qty={}", pickingId, materialCode, pickQty);

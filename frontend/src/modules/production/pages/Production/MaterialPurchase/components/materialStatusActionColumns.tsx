@@ -62,11 +62,25 @@ export const buildStatusActionColumns = (params: UseMaterialColumnsParams): Colu
         const hasStockNum = stockNum != null && stockNum > 0;
         const stockText = hasStockNum ? `${stockNum}${record.unit || ''}` : '';
         // 领取按钮：库存充足 + 有库存数 + 采购状态非终态（completed/cancelled 不可再领取）
+        // D-363b：领取终点——已领取出库量达采购量即封口，显示「已领完」终态不再出按钮
         const recordStatus = String(record?.status || '').toLowerCase();
+        const usedQty = Number((record as any)?.usedQuantity ?? 0);
+        const purchaseQty = Number(record?.purchaseQuantity ?? 0);
+        const fullyPicked = purchaseQty > 0 && usedQty >= purchaseQty;
         const canPickup = status === 'sufficient'
           && !!onApplyPickup
           && hasStockNum
+          && !fullyPicked
           && !['completed', 'cancelled'].includes(recordStatus);
+
+        if (fullyPicked && !['completed', 'cancelled'].includes(recordStatus)) {
+          return (
+            <Space direction="vertical" size={2} style={{ lineHeight: 1.4 }}>
+              <Tag color={config.color} style={{ margin: 0 }}>{config.text}</Tag>
+              <Tag color="green" style={{ margin: 0 }}>已领完 {usedQty}{record.unit || ''}</Tag>
+            </Space>
+          );
+        }
 
         if (canPickup) {
           return (

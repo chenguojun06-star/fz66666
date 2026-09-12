@@ -44,20 +44,21 @@ export function usePurchaseReceiveActions({
     const receiverId = String(user?.id || '').trim();
 
     let availableStock = 0;
+    let matched: any = null;
     try {
       const orderNo = String(record?.orderNo || '').trim();
       const styleNo = String(record?.styleNo || '').trim();
       if (orderNo && orderNo !== '-') {
         const previewRes = await api.get<any>('/production/purchase/smart-receive-preview', { params: { orderNo } });
         const materials: any[] = previewRes?.data?.materials || previewRes?.materials || [];
-        const matched = materials.find((m: any) => String(m.purchaseId) === id);
+        matched = materials.find((m: any) => String(m.purchaseId) === id);
         if (matched) {
           availableStock = Number(matched.availableStock ?? 0);
         }
       } else if (styleNo && styleNo !== '-') {
         const previewRes = await api.get<any>('/production/purchase/smart-receive-preview', { params: { styleNo } });
         const materials: any[] = previewRes?.data?.materials || previewRes?.materials || [];
-        const matched = materials.find((m: any) => String(m.purchaseId) === id);
+        matched = materials.find((m: any) => String(m.purchaseId) === id);
         if (matched) {
           availableStock = Number(matched.availableStock ?? 0);
         }
@@ -65,7 +66,16 @@ export function usePurchaseReceiveActions({
     } catch { /* 查询库存失败时按无库存处理 */ }
 
     if (availableStock > 0) {
-      const pickQty = Math.min(availableStock, Number(record.purchaseQuantity || 0));
+      // D-363b：领取终点——剩余可领 = 采购量 - 已领取出库量(usedQuantity)，领完即封口
+      const usedQty = Number(matched?.usedQuantity ?? (record as any)?.usedQuantity ?? 0);
+      const remainingPickup = matched?.remainingPickupQty != null
+        ? Number(matched.remainingPickupQty)
+        : Math.max(0, Number(record.purchaseQuantity || 0) - usedQty);
+      if (Number(record.purchaseQuantity || 0) > 0 && remainingPickup <= 0) {
+        message.warning('该采购任务已完成领取出库，无剩余可领数量');
+        return;
+      }
+      const pickQty = Math.min(availableStock, remainingPickup > 0 ? remainingPickup : Number(record.purchaseQuantity || 0));
       Modal.confirm({
         width: '30vw',
         title: `确认仓库领取 - ${record.materialName || record.materialCode}`,
@@ -75,6 +85,7 @@ export function usePurchaseReceiveActions({
             <p>物料：<strong>{record.materialName || record.materialCode}</strong> {record.color ? `(${record.color})` : ''}</p>
             <p>需求数量：<strong>{record.purchaseQuantity}</strong></p>
             <p>仓库库存：<strong>{availableStock}</strong></p>
+            {usedQty > 0 && <p>已领取出库：<strong>{usedQty}</strong>（剩余可领 <strong style={{ color: 'var(--color-primary)' }}>{remainingPickup}</strong>）</p>}
             <p>仓库领取数量：<strong style={{ color: 'var(--color-primary)' }}>{pickQty}</strong></p>
             <p style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>领取后将创建出库单，等待仓库确认出库</p>
           </div>
