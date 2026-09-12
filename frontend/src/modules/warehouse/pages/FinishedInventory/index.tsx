@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Button, Space, Input, Select, Tabs, Row, Col, Drawer } from 'antd';
+import { Card, Button, Space, Input, Select, Tabs, Row, Col, Drawer, Tag } from 'antd';
 import { HistoryOutlined, ScanOutlined, InboxOutlined } from '@ant-design/icons';
 import QrcodeOutboundModal from './QrcodeOutboundModal';
 import OutstockRecordTab from './OutstockRecordTab';
@@ -11,6 +11,7 @@ import ScanOperationModal from './FinishedScanOperationModal';
 import FreeInboundModal from './FreeInboundModal';
 import RecordLogDrawer from '@/components/common/RecordLogDrawer';
 import { getMainColumns, getSkuColumns } from './finishedInventoryColumns';
+import type { FinishedInventory } from './finishedInventoryTypes';
 import type { FinishedInventoryRow } from './finishedInventoryColumns';
 import { flattenInventoryBySku } from './flattenBySku';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -41,7 +42,7 @@ const _FinishedInventory: React.FC = () => {
   const directShipOrderNo = String(searchParams.get('orderNo') || '').trim();
   const isDirectShipEntry = String(searchParams.get('directShip') || '') === '1';
   const [directShipMode, setDirectShipMode] = React.useState(false);
-  const { outboundModal, inboundHistoryModal, skuDetails, inboundHistory, outstockTotal, outboundType, setOutboundType, outboundReason, setOutboundReason, outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo, outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName, outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress, outboundSubmitting, handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory } = useFinishedInventoryActions(rawDataSource, loadData, { directShip: directShipMode });
+  const { outboundModal, inboundHistoryModal, skuDetails, inboundHistory, outstockTotal, outboundType, setOutboundType, outboundReason, setOutboundReason, outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo, outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName, outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress, outboundSubmitting, handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory, handleAddStyleToCart, handleRemoveStyleFromCart } = useFinishedInventoryActions(rawDataSource, loadData, { directShip: directShipMode });
 
   // 30秒轮询自动刷新成品库存
   // 注意：fetchFn 必须返回非 null/undefined 值，否则 syncManager 会判定为"空数据"并累计 3 次后自动停止
@@ -82,7 +83,20 @@ const _FinishedInventory: React.FC = () => {
   // D-241：序号按「款」编号，翻页后要接续上一页，故传入分页偏移
   const indexOffset = ((pagination.pagination.current || 1) - 1) * (pagination.pagination.pageSize || 0);
   const columns = getMainColumns({ handleOutbound, handleViewInboundHistory }, indexOffset);
-  const skuColumns = getSkuColumns({ handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange });
+  // D-363i：多款混出购物车——清单里的款列表 + 可添加的款选项（当前页库存范围内）
+  const cartStyleNos = Array.from(new Set(skuDetails.map(item => item.styleNo || outboundModal.data?.styleNo || '').filter(Boolean)));
+  const cartStyleNames = new Map(skuDetails.map(item => [item.styleNo || '', item.styleName || '']));
+  const addableStyleOptions = React.useMemo(() => {
+    const seen = new Set<string>();
+    const options: { label: string; value: string; record: FinishedInventory }[] = [];
+    for (const item of rawDataSource) {
+      const sn = String(item.styleNo || '');
+      if (!sn || seen.has(sn) || cartStyleNos.includes(sn)) continue;
+      seen.add(sn);
+      options.push({ label: `${sn}${item.styleName ? ` ${item.styleName}` : ''}`, value: sn, record: item });
+    }
+    return options;
+  }, [rawDataSource, cartStyleNos]);
   // D-228：一款多码时拆成每个商品编码一行，款级信息由 rowSpan 纵向合并，
   // 避免 15 个编码堆在同一单元格把行高撑爆（列表密密麻麻的根因）
   const flatRows = React.useMemo(() => flattenInventoryBySku(pagedDataSource), [pagedDataSource]);
@@ -130,7 +144,7 @@ const _FinishedInventory: React.FC = () => {
             <StandardPagination current={pagination.pagination.current} pageSize={pagination.pagination.pageSize} total={totalRecords} onChange={(page, _pageSize) => pagination.gotoPage(page)} />
           </Card>
           <Drawer
-            title={`出库 - ${outboundModal.data?.styleNo || ''}`}
+            title={`出库${cartStyleNos.length > 1 ? ` - ${cartStyleNos.length} 个款（混出一张单）` : ` - ${outboundModal.data?.styleNo || ''}`}`}
             open={outboundModal.visible}
             onClose={outboundModal.close}
             size="large"
@@ -190,8 +204,57 @@ const _FinishedInventory: React.FC = () => {
                     </Col>
                   </Row>
                 </Card>
-                <div style={{ marginBottom: 8, fontWeight: 600 }}>商品编码明细</div>
-                <ResizableTable columns={skuColumns} dataSource={skuDetails} rowKey="sku" pagination={false} emptyDescription="暂无商品编码数据" />
+                <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontWeight: 600 }}>商品编码明细</span>
+                  {!directShipMode && (
+                    <Select
+                      style={{ width: 260 }}
+                      placeholder="＋ 添加款混出（同一张出库单）"
+                      showSearch
+                      optionFilterProp="label"
+                      value={null}
+                      loading={!addableStyleOptions.length && rawDataSource.length === 0}
+                      options={addableStyleOptions.map(o => ({ label: o.label, value: o.value }))}
+                      onChange={(sn) => {
+                        const opt = addableStyleOptions.find(o => o.value === sn);
+                        if (opt) handleAddStyleToCart(opt.record);
+                      }}
+                      notFoundContent={addableStyleOptions.length === 0 ? '当前列表没有可添加的款' : '无匹配款号'}
+                    />
+                  )}
+                  {cartStyleNos.length > 1 && (
+                    <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+                      已混 {cartStyleNos.length} 个款，确认后合并为一张出库单
+                    </span>
+                  )}
+                </div>
+                {cartStyleNos.map((sn) => {
+                  const offset = skuDetails.findIndex(item => (item.styleNo || outboundModal.data?.styleNo || '') === sn);
+                  const groupRows = skuDetails.filter(item => (item.styleNo || outboundModal.data?.styleNo || '') === sn);
+                  if (offset < 0 || groupRows.length === 0) return null;
+                  const groupColumns = getSkuColumns({
+                    handleSKUQtyChange: (i, v) => handleSKUQtyChange(offset + i, v),
+                    handleSKUSalesPriceChange: (i, v) => handleSKUSalesPriceChange(offset + i, v),
+                    handleSKUPriceReasonChange: (i, v) => handleSKUPriceReasonChange(offset + i, v),
+                  });
+                  return (
+                    <div key={sn} style={{ marginBottom: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                        <Tag color="blue" style={{ margin: 0 }}>{sn}</Tag>
+                        <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                          {cartStyleNames.get(sn) || outboundModal.data?.styleName || ''}
+                        </span>
+                        {!directShipMode && (
+                          <Button type="link" size="small" style={{ padding: 0, marginLeft: 'auto' }}
+                            onClick={() => handleRemoveStyleFromCart(sn)}>
+                            移除该款
+                          </Button>
+                        )}
+                      </div>
+                      <ResizableTable columns={groupColumns} dataSource={groupRows} rowKey="sku" pagination={false} emptyDescription="暂无商品编码数据" />
+                    </div>
+                  );
+                })}
                 <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
                   <span>出库总量: {skuTotalOutbound} 件</span>
                   <span>出库金额: {formatMoney(skuTotalAmount)}</span>

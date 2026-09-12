@@ -38,6 +38,8 @@ export const useFinishedInventoryActions = (
         color: item.color || '',
         size: item.size || '',
         sku: item.sku || item.id || '',
+        styleNo: item.styleNo || record.styleNo || '',
+        styleName: item.styleName || record.styleName || '',
         availableQty: item.availableQty ?? 0,
         lockedQty: item.lockedQty ?? 0,
         defectQty: item.defectQty ?? 0,
@@ -47,12 +49,54 @@ export const useFinishedInventoryActions = (
         inProductionQty: item.inProductionQty,
         pendingSalesQty: item.pendingSalesQty,
       }));
-    setSkuDetails(styleSKUs.length > 0 ? styleSKUs : [{ color: record.color || '', size: record.size || '', sku: record.sku || record.id || '', availableQty: record.availableQty ?? 0, lockedQty: record.lockedQty ?? 0, defectQty: record.defectQty ?? 0, warehouseLocation: record.warehouseLocation || '-', costPrice: record.costPrice, salesPrice: record.salesPrice }]);
+    setSkuDetails(styleSKUs.length > 0 ? styleSKUs : [{ color: record.color || '', size: record.size || '', sku: record.sku || record.id || '', styleNo: record.styleNo || '', styleName: record.styleName || '', availableQty: record.availableQty ?? 0, lockedQty: record.lockedQty ?? 0, defectQty: record.defectQty ?? 0, warehouseLocation: record.warehouseLocation || '-', costPrice: record.costPrice, salesPrice: record.salesPrice }]);
     setOutboundType('sales'); setOutboundReason('');
     setOutboundProductionOrderNo(''); setOutboundTrackingNo(''); setOutboundExpressCompany('');
     setOutboundCustomerName(''); setOutboundCustomerPhone(''); setOutboundShippingAddress('');
     outboundModal.open(record);
   }, [rawDataSource, outboundModal]);
+
+  // D-363i：多款混出购物车——把另一个款的 SKU 追加进当前出库清单（一次出库一张单）
+  const handleAddStyleToCart = useCallback((record: FinishedInventory) => {
+    if (directShipMode) {
+      message.warning('直发模式仅支持单款出库');
+      return;
+    }
+    setSkuDetails(prev => {
+      const target = String(record.styleNo || '');
+      if (prev.some(item => item.styleNo === target)) {
+        message.warning(`款 ${target} 已在出库清单里`);
+        return prev;
+      }
+      const styleSKUs: SKUDetail[] = rawDataSource
+        .filter(item => item.styleNo === record.styleNo && (item.sku || item.id))
+        .map(item => ({
+          color: item.color || '',
+          size: item.size || '',
+          sku: item.sku || item.id || '',
+          styleNo: item.styleNo || record.styleNo || '',
+          styleName: item.styleName || record.styleName || '',
+          availableQty: item.availableQty ?? 0,
+          lockedQty: item.lockedQty ?? 0,
+          defectQty: item.defectQty ?? 0,
+          warehouseLocation: item.warehouseLocation || '-',
+          costPrice: item.costPrice,
+          salesPrice: item.salesPrice,
+          inProductionQty: item.inProductionQty,
+          pendingSalesQty: item.pendingSalesQty,
+        }));
+      if (styleSKUs.length === 0) {
+        message.warning(`款 ${target} 没有可出库的商品编码`);
+        return prev;
+      }
+      message.success(`已添加款 ${target}（${styleSKUs.length} 个商品编码）`);
+      return [...prev, ...styleSKUs];
+    });
+  }, [directShipMode, message, rawDataSource]);
+
+  const handleRemoveStyleFromCart = useCallback((styleNo: string) => {
+    setSkuDetails(prev => prev.filter(item => item.styleNo !== styleNo));
+  }, []);
 
   const handleSKUQtyChange = useCallback((index: number, value: number | null) => {
     setSkuDetails(prev => { const newDetails = [...prev]; newDetails[index].outboundQty = value || 0; return newDetails; });
@@ -99,15 +143,17 @@ export const useFinishedInventoryActions = (
         return result;
       });
       if (outboundItems.length === 0) { message.warning('请至少填写一个商品编码的出库数量'); return; }
+      const multiStyle = new Set(skuDetails.map(item => item.styleNo).filter(Boolean)).size > 1;
       await api.post('/warehouse/finished-inventory/outbound', {
         outboundType,
         ...(directShipMode ? { directShip: true } : {}),
         ...(outboundReason.trim() ? { outboundReason: outboundReason.trim() } : {}),
         items: outboundItems,
-        ...(outboundModal.data?.orderId ? { orderId: outboundModal.data.orderId } : {}),
-        ...(outboundModal.data?.orderNo ? { orderNo: outboundModal.data.orderNo } : {}),
-        ...(outboundModal.data?.styleId ? { styleId: outboundModal.data.styleId } : {}),
-        ...(outboundModal.data?.styleNo ? { styleNo: outboundModal.data.styleNo } : {}),
+        // D-363i：多款混单不挂单一订单/款（订单字段只在单款出库时随单）
+        ...(!multiStyle && outboundModal.data?.orderId ? { orderId: outboundModal.data.orderId } : {}),
+        ...(!multiStyle && outboundModal.data?.orderNo ? { orderNo: outboundModal.data.orderNo } : {}),
+        ...(!multiStyle && outboundModal.data?.styleId ? { styleId: outboundModal.data.styleId } : {}),
+        ...(!multiStyle && outboundModal.data?.styleNo ? { styleNo: outboundModal.data.styleNo } : {}),
         ...(outboundModal.data?.styleName ? { styleName: outboundModal.data.styleName } : {}),
         ...(outboundModal.data?.warehouseLocation ? { warehouseLocation: outboundModal.data.warehouseLocation } : {}),
         ...(outboundProductionOrderNo ? { productionOrderNo: outboundProductionOrderNo } : {}),
@@ -175,5 +221,6 @@ export const useFinishedInventoryActions = (
     outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress,
     outboundSubmitting,
     handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory,
+    handleAddStyleToCart, handleRemoveStyleFromCart,
   };
 };

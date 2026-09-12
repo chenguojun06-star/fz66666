@@ -2,6 +2,9 @@ export interface SKUDetail {
   color: string;
   size: string;
   sku: string;
+  /** D-363i：多款混出购物车——行归属款 */
+  styleNo?: string;
+  styleName?: string;
   availableQty: number;
   lockedQty: number;
   defectQty: number;
