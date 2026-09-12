@@ -728,10 +728,11 @@ public class QdrantService {
                 return vector;
             } catch (Exception e) {
                 log.warn("[Qdrant] Embedding API 调用失败，降级为伪向量: {}", e.getMessage());
-                // 404 = 接口根本不存在（如 DeepSeek 无 embeddings），本次运行内熔断不再重试
-                if (e.getMessage() != null && e.getMessage().contains("404")) {
+                // 404=接口不存在（DeepSeek）；401=密钥被拒（配错/失效）——都不会自愈，本次运行内熔断不再重试
+                String msg = String.valueOf(e.getMessage());
+                if (msg.contains("404") || msg.contains("401")) {
                     embeddingRemoteBroken = true;
-                    log.warn("[Qdrant] Embedding 接口 404（不存在），已熔断：本次运行内直接使用伪向量，配置 ai.embedding.api-key 可启用真实语义向量");
+                    log.warn("[Qdrant] Embedding 接口不可用({})，已熔断：本次运行内直接使用伪向量。404=接口不存在，401=检查 AI_EMBEDDING_API_KEY 密钥", msg);
                 }
             }
         }
