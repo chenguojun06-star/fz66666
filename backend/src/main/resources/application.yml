@@ -418,6 +418,14 @@ ai:
       api-key: ${COHERE_API_KEY:}                   # Cohere API Key（https://cohere.com）
       model: ${AI_COHERE_RERANK_MODEL:rerank-v3.5}  # rerank-v3.5（多语言，推荐）/ rerank-multilingual-v3.0
       top-n: ${AI_COHERE_RERANK_TOP_N:5}            # 精排后返回条数（候选池 15 → 精排后 top-n）
+  rerank:
+    enabled: ${AI_RERANK_ENABLED:true}                          # 精排总开关；关闭时全链路不调 rerank
+    provider: ${AI_RERANK_PROVIDER:siliconflow}                 # siliconflow（默认，国内直连）/ cohere
+    api-key: ${AI_RERANK_API_KEY:${AI_EMBEDDING_API_KEY:}}      # 默认复用硅基流动 embedding key
+    model: ${AI_RERANK_MODEL:BAAI/bge-reranker-v2-m3}           # 与现用 bge-m3 embedding 同源
+    base-url: ${AI_RERANK_BASE_URL:https://api.siliconflow.cn}
+    top-n: ${AI_RERANK_TOP_N:5}                                 # 精排后返回条数；候选数 <= top-n 时跳过
+    timeout-ms: ${AI_RERANK_TIMEOUT_MS:3000}                    # 硬超时，超时静默降级回原排序
   consortium:
     enabled: ${AI_CONSORTIUM_ENABLED:true}
     strategy: ${AI_CONSORTIUM_STRATEGY:speed-first}  # speed-first（默认）/ cost-optimal（需质量样本）/ quality-first

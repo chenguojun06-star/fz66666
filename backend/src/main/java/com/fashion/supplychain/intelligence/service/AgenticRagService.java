@@ -45,6 +45,7 @@ public class AgenticRagService {
     @Autowired(required = false) private EntityMemoryContextService entityMemoryContextService;
     @Autowired(required = false) private RedisService redisService;
     @Autowired(required = false) private AiAdvisorService aiAdvisorService;
+    @Autowired(required = false) private RerankService rerankService;
 
     private static final int DEFAULT_TOP_K = 5;
     private static final float MIN_SCORE = 0.35f;
@@ -508,29 +509,48 @@ public class AgenticRagService {
 
         // KB关键词检索
         List<KnowledgeBase> kbResults = searchKB(tenantId, query, null, DEFAULT_TOP_K);
-        if (!kbResults.isEmpty()) {
-            ctx.append("【知识库匹配】\n");
-            for (KnowledgeBase kb : kbResults) {
-                ctx.append(formatKB(kb));
-            }
-            sourceCount += kbResults.size();
-        }
+        Set<String> kbIds = kbResults.stream().map(KnowledgeBase::getId).collect(Collectors.toSet());
 
         // 语义向量补充（优先混合检索，不可用时回退纯稠密检索）
+        List<KnowledgeBase> newResults = List.of();
         if (qdrantService != null) {
             List<KnowledgeBase> semanticResults = searchSemanticKBWithHybrid(tenantId, query, 3);
-            Set<String> seenIds = kbResults.stream().map(KnowledgeBase::getId).collect(Collectors.toSet());
-            List<KnowledgeBase> newResults = semanticResults.stream()
-                    .filter(kb -> !seenIds.contains(kb.getId()))
+            newResults = semanticResults.stream()
+                    .filter(kb -> !kbIds.contains(kb.getId()))
                     .limit(2)
                     .toList();
-            if (!newResults.isEmpty()) {
-                ctx.append("【语义关联】\n");
-                for (KnowledgeBase kb : newResults) {
-                    ctx.append(formatKB(kb));
-                }
-                sourceCount += newResults.size();
+        }
+
+        // 合并候选池后统一精排：单路 top-k 较小时条数不足 top-n，合并后精排才有意义
+        List<KnowledgeBase> pool = new ArrayList<>(kbResults);
+        pool.addAll(newResults);
+        List<KnowledgeBase> ranked = rerankKb(query, pool);
+
+        // 按来源分流，保持原有上下文结构
+        List<KnowledgeBase> rankedKb = new ArrayList<>();
+        List<KnowledgeBase> rankedSemantic = new ArrayList<>();
+        for (KnowledgeBase kb : ranked) {
+            if (kbIds.contains(kb.getId())) {
+                rankedKb.add(kb);
+            } else {
+                rankedSemantic.add(kb);
             }
+        }
+
+        if (!rankedKb.isEmpty()) {
+            ctx.append("【知识库匹配】\n");
+            for (KnowledgeBase kb : rankedKb) {
+                ctx.append(formatKB(kb));
+            }
+            sourceCount += rankedKb.size();
+        }
+
+        if (!rankedSemantic.isEmpty()) {
+            ctx.append("【语义关联】\n");
+            for (KnowledgeBase kb : rankedSemantic) {
+                ctx.append(formatKB(kb));
+            }
+            sourceCount += rankedSemantic.size();
         }
 
         return new RagResult(trim(ctx.toString()), QuestionType.FACTUAL, sourceCount, "factual");
@@ -543,8 +563,8 @@ public class AgenticRagService {
         int sourceCount = 0;
 
         // 精准匹配系统操作指南
-        List<KnowledgeBase> guides = searchKB(tenantId, query,
-                List.of("system_guide", "sop"), DEFAULT_TOP_K);
+        List<KnowledgeBase> guides = rerankKb(query, searchKB(tenantId, query,
+                List.of("system_guide", "sop"), DEFAULT_TOP_K));
         if (!guides.isEmpty()) {
             ctx.append("【操作指南】\n");
             for (KnowledgeBase kb : guides) {
@@ -555,7 +575,7 @@ public class AgenticRagService {
 
         // 补充FAQ
         if (guides.size() < 2) {
-            List<KnowledgeBase> faqs = searchKB(tenantId, query, List.of("faq"), 2);
+            List<KnowledgeBase> faqs = rerankKb(query, searchKB(tenantId, query, List.of("faq"), 2));
             if (!faqs.isEmpty()) {
                 ctx.append("【常见问题】\n");
                 for (KnowledgeBase kb : faqs) {
@@ -576,29 +596,47 @@ public class AgenticRagService {
 
         // KB检索
         List<KnowledgeBase> kbResults = searchKB(tenantId, query, null, 3);
-        if (!kbResults.isEmpty()) {
-            ctx.append("【相关知识】\n");
-            for (KnowledgeBase kb : kbResults) {
-                ctx.append(formatKB(kb));
-            }
-            sourceCount += kbResults.size();
-        }
+        Set<String> kbIds = kbResults.stream().map(KnowledgeBase::getId).collect(Collectors.toSet());
 
         // 语义向量补充（优先混合检索，不可用时回退纯稠密检索）
+        List<KnowledgeBase> newResults = List.of();
         if (qdrantService != null && qdrantService.isHybridSearchAvailable()) {
             List<KnowledgeBase> hybridResults = searchSemanticKBWithHybrid(tenantId, query, 3);
-            Set<String> seenIds = kbResults.stream().map(KnowledgeBase::getId).collect(Collectors.toSet());
-            List<KnowledgeBase> newResults = hybridResults.stream()
-                    .filter(kb -> !seenIds.contains(kb.getId()))
+            newResults = hybridResults.stream()
+                    .filter(kb -> !kbIds.contains(kb.getId()))
                     .limit(2)
                     .toList();
-            if (!newResults.isEmpty()) {
-                ctx.append("【语义关联】\n");
-                for (KnowledgeBase kb : newResults) {
-                    ctx.append(formatKB(kb));
-                }
-                sourceCount += newResults.size();
+        }
+
+        // 合并候选池后统一精排
+        List<KnowledgeBase> pool = new ArrayList<>(kbResults);
+        pool.addAll(newResults);
+        List<KnowledgeBase> ranked = rerankKb(query, pool);
+
+        List<KnowledgeBase> rankedKb = new ArrayList<>();
+        List<KnowledgeBase> rankedSemantic = new ArrayList<>();
+        for (KnowledgeBase kb : ranked) {
+            if (kbIds.contains(kb.getId())) {
+                rankedKb.add(kb);
+            } else {
+                rankedSemantic.add(kb);
             }
+        }
+
+        if (!rankedKb.isEmpty()) {
+            ctx.append("【相关知识】\n");
+            for (KnowledgeBase kb : rankedKb) {
+                ctx.append(formatKB(kb));
+            }
+            sourceCount += rankedKb.size();
+        }
+
+        if (!rankedSemantic.isEmpty()) {
+            ctx.append("【语义关联】\n");
+            for (KnowledgeBase kb : rankedSemantic) {
+                ctx.append(formatKB(kb));
+            }
+            sourceCount += rankedSemantic.size();
         }
 
         // 历史记忆
@@ -680,7 +718,7 @@ public class AgenticRagService {
     private RagResult fallbackRetrieve(Long tenantId, String query, QuestionType qType) {
         // 降级到全文模糊检索
         String shortQuery = query.length() > 30 ? query.substring(0, 30) : query;
-        List<KnowledgeBase> fallback = searchKB(tenantId, shortQuery, null, 3);
+        List<KnowledgeBase> fallback = rerankKb(shortQuery, searchKB(tenantId, shortQuery, null, 3));
         if (!fallback.isEmpty()) {
             StringBuilder ctx = new StringBuilder("【模糊匹配】\n");
             for (KnowledgeBase kb : fallback) {
@@ -757,6 +795,28 @@ public class AgenticRagService {
         } catch (Exception e) {
             log.debug("[AgenticRAG] 混合语义检索异常，回退纯稠密检索: {}", e.getMessage());
             return searchSemanticKB(tenantId, query, limit);
+        }
+    }
+
+    /**
+     * 对候选知识库结果做 Rerank 精排。
+     *
+     * <p>未启用 / 候选不足（<= top-n）/ 调用失败或超时时，一律返回原排序，
+     * 保证 rerank 永远不会成为主链路的单点故障。
+     */
+    private List<KnowledgeBase> rerankKb(String query, List<KnowledgeBase> candidates) {
+        if (rerankService == null || candidates == null || candidates.size() <= 1) {
+            return candidates;
+        }
+        try {
+            List<KnowledgeBase> reranked = rerankService.rerank(query, candidates);
+            if (reranked == null || reranked.isEmpty()) {
+                return candidates;
+            }
+            return reranked;
+        } catch (Exception e) {
+            log.warn("[AgenticRAG] rerank 异常，降级原排序: {}", e.getMessage());
+            return candidates;
         }
     }
 
