@@ -20,7 +20,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class StyleVectorBackfillRunner implements ApplicationRunner {
 
-    private static final String MARKER_KEY = "style-vector-backfill:done:v1";
+    // v2：v1 标记在 style_images 集合创建 POST bug 期间被误打（全部失败也置位），升级版本号强制重跑
+    private static final String MARKER_KEY = "style-vector-backfill:done:v2";
 
     @Autowired(required = false)
     private RedisService redisService;
