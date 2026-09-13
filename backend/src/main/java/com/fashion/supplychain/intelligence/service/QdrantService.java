@@ -838,7 +838,7 @@ public class QdrantService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(deepseekApiKey);
+        headers.setBearerAuth(apiKey);
         HttpEntity<String> entity = new HttpEntity<>(body.toString(), headers);
 
         ResponseEntity<String> resp = restTemplate.postForEntity(url, entity, String.class);
