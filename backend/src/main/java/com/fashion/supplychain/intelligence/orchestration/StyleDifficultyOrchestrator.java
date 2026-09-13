@@ -353,6 +353,56 @@ public class StyleDifficultyOrchestrator {
         }
     }
 
+    /**
+     * 存量款式图片向量补齐（管理端调用，D-386）：
+     * 逐款 封面图→视觉描述→bge-m3向量→style_images 集合，供"以图搜款"向量检索使用。
+     * 同 ID upsert 幂等可重复执行；用 style.tenantId 入库（后台任务无请求上下文）。
+     *
+     * @param limit  本批处理条数（每款含 1 次视觉分析 + 1 次向量化，约 3~5 秒/款，建议 ≤100）
+     * @param offset 偏移量（配合 limit 分批处理存量）
+     */
+    public java.util.Map<String, Object> backfillStyleImageVectors(int limit, int offset) {
+        int safeLimit = Math.max(1, Math.min(limit, 500));
+        List<StyleInfo> styles = styleInfoService.lambdaQuery()
+                .select(StyleInfo::getId, StyleInfo::getStyleNo, StyleInfo::getCover,
+                        StyleInfo::getTenantId, StyleInfo::getDifficultyLevel, StyleInfo::getDifficultyScore)
+                .isNotNull(StyleInfo::getCover)
+                .last("LIMIT " + safeLimit + " OFFSET " + Math.max(0, offset))
+                .list();
+        int ok = 0, failed = 0, skipped = 0;
+        for (StyleInfo style : styles) {
+            try {
+                String imageUrl = style.getCover();
+                if (imageUrl == null || imageUrl.isBlank()) {
+                    skipped++;
+                    continue;
+                }
+                float[] vec = qdrantService.computeMultimodalEmbedding(imageUrl);
+                if (vec == null) {
+                    failed++;
+                    continue;
+                }
+                boolean stored = qdrantService.upsertStyleImageVector(style.getId(),
+                        style.getStyleNo() != null ? style.getStyleNo() : "",
+                        vec,
+                        style.getDifficultyLevel() != null ? style.getDifficultyLevel() : "MEDIUM",
+                        style.getDifficultyScore() != null ? style.getDifficultyScore() : 5,
+                        style.getTenantId());
+                if (stored) {
+                    ok++;
+                } else {
+                    failed++;
+                }
+            } catch (Exception e) {
+                failed++;
+                log.warn("[StyleDifficulty] 补向量失败 styleId={}: {}", style.getId(), e.getMessage());
+            }
+        }
+        log.info("[StyleDifficulty] 存量款式图片向量补齐 batch total={} ok={} failed={} skipped={}",
+                styles.size(), ok, failed, skipped);
+        return java.util.Map.of("total", styles.size(), "ok", ok, "failed", failed, "skipped", skipped);
+    }
+
     private List<String> buildKeyFactors(List<StyleBom> boms, List<StyleProcess> processes,
             List<SecondaryProcess> secondaryProcesses, String category, long hardCount) {
         List<String> factors = new ArrayList<>();

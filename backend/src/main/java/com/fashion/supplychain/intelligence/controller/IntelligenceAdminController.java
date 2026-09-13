@@ -45,6 +45,9 @@ public class IntelligenceAdminController {
     private com.fashion.supplychain.intelligence.service.QdrantService qdrantService;
 
     @Autowired
+    private com.fashion.supplychain.intelligence.orchestration.StyleDifficultyOrchestrator styleDifficultyOrchestrator;
+
+    @Autowired
     private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
 
     @Autowired
@@ -205,6 +208,20 @@ public class IntelligenceAdminController {
                 "message", "style_images tenant_id补刷完成",
                 "totalStyles", styleIdToTenantId.size(),
                 "updated", updated));
+    }
+
+    /**
+     * 存量款式图片向量补齐（D-386 以图搜款数据底座）：
+     * 逐款 封面图→视觉描述→bge-m3向量→style_images 集合。
+     * 每款约 3~5 秒（视觉分析+向量化），用 limit/offset 分批调用直到 total=0。
+     */
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @PostMapping("/qdrant/backfill-style-image-vectors")
+    public Result<?> backfillStyleImageVectors(
+            @RequestParam(defaultValue = "50") int limit,
+            @RequestParam(defaultValue = "0") int offset) {
+        var result = styleDifficultyOrchestrator.backfillStyleImageVectors(limit, offset);
+        return Result.success(result);
     }
 
     @Autowired(required = false)

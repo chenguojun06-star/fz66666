@@ -7,6 +7,8 @@ import com.fashion.supplychain.intelligence.entity.VisualAiLog;
 import com.fashion.supplychain.intelligence.mapper.VisualAiLogMapper;
 import com.fashion.supplychain.intelligence.service.QdrantService;
 import com.fashion.supplychain.intelligence.service.VisionAnalysisService;
+import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,9 @@ public class VisualAIOrchestrator {
 
     @Autowired
     private QdrantService qdrantService;
+
+    @Autowired
+    private StyleInfoService styleInfoService;
 
     // ──────────────────────────────────────────────────────────────────
     // 公共入口
@@ -257,14 +262,27 @@ public class VisualAIOrchestrator {
     }
 
     /**
-     * 以图搜款（不依赖向量数据库）：视觉模型识别图片 → 生成文字描述 → MySQL 关键词搜索
-     * 之前依赖 Qdrant，现在直接用文字搜索，效果可控且零运维
+     * 以图搜款（向量优先 + 关键词兜底两级策略）：
+     * 1) 向量路径：视觉模型描述图片 → bge-m3 文字向量 → Qdrant style_images 语义相似检索
+     *    （能找到"看起来像"的款，不依赖字段完全一致）
+     * 2) 关键词路径（兜底）：视觉模型提取特征关键词 → MySQL LIKE 匹配（向量库无结果时）
      */
     public Map<String, Object> searchSimilarStylesByImage(String imageUrl, int topK) {
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) {
             return Map.of("success", false, "error", "tenantId 为空", "styles", new ArrayList<Map<String, Object>>());
         }
+        try {
+            // ── 向量路径 ──
+            Map<String, Object> vectorResult = searchByVector(imageUrl, tenantId, topK);
+            if (vectorResult != null) {
+                return vectorResult;
+            }
+            log.info("[VisualAI] 向量以图搜款无结果/不可用，回退关键词搜索");
+        } catch (Exception e) {
+            log.info("[VisualAI] 向量以图搜款异常，回退关键词搜索: {}", e.getMessage());
+        }
+
         try {
             // 1. 视觉模型识别图片 → 得到款式特征文字描述
             VisionAnalysisService.StyleFieldParseResult fields = visionAnalysisService.parseStyleFields(imageUrl);
@@ -318,6 +336,7 @@ public class VisualAIOrchestrator {
 
             Map<String, Object> result = new java.util.LinkedHashMap<>();
             result.put("success", true);
+            result.put("searchMode", "keyword");
             result.put("recognizedTags", keywords);
             result.put("recognizedSummary", fields.getSummary() != null ? fields.getSummary() : "");
             result.put("styleNameSuggestion", fields.getStyleName() != null ? fields.getStyleName() : "");
@@ -328,6 +347,52 @@ public class VisualAIOrchestrator {
             log.warn("[VisualAI] 以图搜款异常: {}", e.getMessage(), e);
             return Map.of("success", false, "error", e.getMessage(), "matches", new ArrayList<Map<String, Object>>(), "matchCount", 0);
         }
+    }
+
+    /**
+     * 向量以图搜款：图片 → 视觉描述 → bge-m3 文字向量 → Qdrant style_images 语义相似检索。
+     * 不可用/无结果时返回 null（调用方回退关键词路径）。
+     */
+    private Map<String, Object> searchByVector(String imageUrl, Long tenantId, int topK) {
+        if (qdrantService == null || !qdrantService.isAvailable()) return null;
+        float[] embedding = qdrantService.computeMultimodalEmbedding(imageUrl);
+        if (embedding == null) return null;
+        List<QdrantService.SimilarStyle> sims = qdrantService.searchSimilarStyleImages(embedding, topK, tenantId);
+        if (sims == null || sims.isEmpty()) return null;
+
+        List<String> styleNos = new ArrayList<>();
+        for (QdrantService.SimilarStyle s : sims) {
+            if (s.getStyleNo() != null && !s.getStyleNo().isBlank()) styleNos.add(s.getStyleNo());
+        }
+        Map<String, StyleInfo> infoByStyleNo = new java.util.HashMap<>();
+        if (!styleNos.isEmpty()) {
+            for (StyleInfo si : styleInfoService.lambdaQuery().in(StyleInfo::getStyleNo, styleNos).list()) {
+                infoByStyleNo.putIfAbsent(si.getStyleNo(), si);
+            }
+        }
+
+        List<Map<String, Object>> matches = new ArrayList<>();
+        for (QdrantService.SimilarStyle s : sims) {
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("styleNo", s.getStyleNo());
+            StyleInfo info = s.getStyleNo() != null ? infoByStyleNo.get(s.getStyleNo()) : null;
+            item.put("styleName", info != null ? info.getStyleName() : null);
+            item.put("difficultyLevel", s.getDifficultyLevel());
+            item.put("difficultyScore", String.valueOf(s.getDifficultyScore()));
+            int pct = (int) Math.round(Math.max(0, Math.min(1, s.getSimilarity())) * 100);
+            item.put("similarity", pct + "%");
+            item.put("cover", info != null ? info.getCover() : null);
+            matches.add(item);
+        }
+
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("success", true);
+        result.put("searchMode", "vector");
+        result.put("recognizedTags", List.of("向量语义检索"));
+        result.put("recognizedSummary", "基于图片视觉描述的向量语义相似检索");
+        result.put("matchCount", matches.size());
+        result.put("matches", matches);
+        return result;
     }
 
     private String searchSimilarStyles(String imageUrl) {
