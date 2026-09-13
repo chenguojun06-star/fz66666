@@ -115,29 +115,35 @@ export function useCommandPaletteData(open: boolean, onClose: () => void) {
       }
       const imageUrl = uploadRes.data as string;
 
-      // 2. 用上传后的 URL 调用以图搜款
+      // 2. 用上传后的 URL 调用以图搜款（后端含视觉识别+向量化+检索，耗时较长，放宽超时）
       const res = await api.post('/intelligence/visual/style-search', {
         imageUrl,
         topK: 8,
-      });
+      }, { timeout: 90000 });
 
-      // 兼容两种返回结构：res.data.results[] 或 res.data.styles[]
+      // 兼容返回结构：results[] / styles[] / matches[]（后端 matches：styleNo/styleName/similarity/cover）
       const resultList = res?.code === 200 && res?.data
-        ? (res.data as any).results || (res.data as any).styles || []
+        ? (res.data as any).results || (res.data as any).styles || (res.data as any).matches || []
         : [];
 
       if (Array.isArray(resultList) && resultList.length > 0) {
-        const imageResults: ResultItem[] = (resultList as any[]).map((s, idx) => ({
-          kind: 'imageStyle' as const,
-          data: {
-            id: s.id || idx,
-            styleNo: s.styleNo || s.style_no || '',
-            styleName: s.styleName || s.style_name || '',
-            category: s.category || '',
-            coverUrl: s.coverUrl || s.imageUrl || s.cover_url || s.main_image || '',
-            similarity: s.similarity ?? s.score ?? (1 - idx * 0.1),
-          },
-        }));
+        const imageResults: ResultItem[] = (resultList as any[]).map((s, idx) => {
+          const rawSim = s.similarity ?? s.score;
+          const sim = typeof rawSim === 'string'
+            ? (parseFloat(rawSim) || 1 - idx * 0.1)
+            : (rawSim ?? 1 - idx * 0.1);
+          return {
+            kind: 'imageStyle' as const,
+            data: {
+              id: s.id || s.styleNo || idx,
+              styleNo: s.styleNo || s.style_no || '',
+              styleName: s.styleName || s.style_name || '',
+              category: s.category || '',
+              coverUrl: s.coverUrl || s.imageUrl || s.cover || s.cover_url || s.main_image || '',
+              similarity: sim,
+            },
+          };
+        });
         setItems(imageResults);
         setActiveIdx(0);
       } else {

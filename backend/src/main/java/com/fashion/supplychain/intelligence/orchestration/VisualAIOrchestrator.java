@@ -273,18 +273,7 @@ public class VisualAIOrchestrator {
             return Map.of("success", false, "error", "tenantId 为空", "styles", new ArrayList<Map<String, Object>>());
         }
         try {
-            // ── 向量路径 ──
-            Map<String, Object> vectorResult = searchByVector(imageUrl, tenantId, topK);
-            if (vectorResult != null) {
-                return vectorResult;
-            }
-            log.info("[VisualAI] 向量以图搜款无结果/不可用，回退关键词搜索");
-        } catch (Exception e) {
-            log.info("[VisualAI] 向量以图搜款异常，回退关键词搜索: {}", e.getMessage());
-        }
-
-        try {
-            // 1. 视觉模型识别图片 → 得到款式特征文字描述
+            // 1. 视觉模型识别图片（只调一次：文字描述 + 特征关键词两用，避免双重视觉调用超时）
             VisionAnalysisService.StyleFieldParseResult fields = visionAnalysisService.parseStyleFields(imageUrl);
             if (fields == null || !fields.isAvailable()) {
                 return Map.of("success", false, "error", "图片识别失败", "styles", new ArrayList<Map<String, Object>>());
@@ -301,14 +290,24 @@ public class VisualAIOrchestrator {
             if (fields.getNeckline() != null && !fields.getNeckline().isBlank()) keywords.add(fields.getNeckline());
             if (fields.getSeason() != null && !fields.getSeason().isBlank()) keywords.add(fields.getSeason());
             if (fields.getPattern() != null && !fields.getPattern().isBlank()) keywords.add(fields.getPattern());
+            String summary = fields.getSummary() != null ? fields.getSummary() : "";
 
+            // 3. 向量路径：描述文字 → bge-m3 向量 → style_images 语义检索（复用同一次视觉结果，不再二次看图）
+            Map<String, Object> vectorResult = searchByVector(summary, tenantId, topK);
+            if (vectorResult != null) {
+                log.info("[VisualAI] 以图搜款走向量路径 matchCount={}", vectorResult.get("matchCount"));
+                return vectorResult;
+            }
+            log.info("[VisualAI] 向量以图搜款无结果/不可用，回退关键词搜索");
+
+            // 4. 关键词路径（兜底，复用同一次视觉结果）
             if (keywords.isEmpty()) {
                 // 关键词过少，用综合描述兜底
-                String summary = fields.getSummary() != null ? fields.getSummary() : "";
-                return Map.of("success", false, "error", "无法从图片中提取有效特征", "recognizedSummary", summary, "styles", new ArrayList<Map<String, Object>>());
+                return Map.of("success", false, "error", "无法从图片中提取有效特征",
+                        "recognizedSummary", summary, "styles", new ArrayList<Map<String, Object>>());
             }
 
-            // 3. MySQL 关键词搜索（LIKE + OR，性能可控，因为只查 style_no/style_name/category/season/color/description/image_insight 等字段）
+            // 5. MySQL 关键词搜索（LIKE + OR，性能可控，因为只查 style_no/style_name/category/season/color/description/image_insight 等字段）
             List<Map<String, Object>> styles = visualAiLogMapper.searchSimilarStylesByKeywords(
                 tenantId,
                 keywords,
@@ -350,12 +349,13 @@ public class VisualAIOrchestrator {
     }
 
     /**
-     * 向量以图搜款：图片 → 视觉描述 → bge-m3 文字向量 → Qdrant style_images 语义相似检索。
+     * 向量以图搜款：视觉描述文字 → bge-m3 文字向量 → Qdrant style_images 语义相似检索。
      * 不可用/无结果时返回 null（调用方回退关键词路径）。
      */
-    private Map<String, Object> searchByVector(String imageUrl, Long tenantId, int topK) {
+    private Map<String, Object> searchByVector(String summaryText, Long tenantId, int topK) {
         if (qdrantService == null || !qdrantService.isAvailable()) return null;
-        float[] embedding = qdrantService.computeMultimodalEmbedding(imageUrl);
+        if (summaryText == null || summaryText.isBlank()) return null;
+        float[] embedding = qdrantService.embedText(summaryText);
         if (embedding == null) return null;
         List<QdrantService.SimilarStyle> sims = qdrantService.searchSimilarStyleImages(embedding, topK, tenantId);
         if (sims == null || sims.isEmpty()) return null;

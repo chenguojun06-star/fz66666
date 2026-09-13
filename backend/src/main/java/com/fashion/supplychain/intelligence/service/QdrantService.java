@@ -944,8 +944,18 @@ public class QdrantService {
      * 2. DeepSeek 纯文本 Embedding（用图片 URL 文本生成向量，质量一般）
      * 3. 伪向量（哈希）— 最低质量，仅兜底
      */
-    public float[] computeMultimodalEmbedding(String imageUrl) {
-        if (!qdrantActive()) return null;
+    /** 文本语义向量（供"以图搜款描述→向量"等场景复用 embedding 通道）。失败返回 null。 */
+    public float[] embedText(String text) {
+        if (!qdrantActive() || text == null || text.isBlank()) return null;
+        try {
+            return callEmbeddingApi(text);
+        } catch (Exception e) {
+            log.warn("[Qdrant] 文本向量化失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    public float[] computeMultimodalEmbedding(String imageUrl) {        if (!qdrantActive()) return null;
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new IllegalArgumentException("imageUrl 不能为空");
         }
