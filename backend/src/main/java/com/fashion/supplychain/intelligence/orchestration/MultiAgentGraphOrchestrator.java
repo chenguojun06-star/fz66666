@@ -130,13 +130,53 @@ public class MultiAgentGraphOrchestrator {
                 log.debug("[MultiAgentGraph] 更新MAS分析缓存失败: {}", e.getMessage());
             }
             emitSse(emitter, "graph_done", buildSuccessMap(state, latency));
+            // 此前只发 graph_done（前端不识别该事件名）→ 前端收不到任何文字 → "小云未返回有效回答"。
+            // 补发 answer + done：把图分析结论以文字形式送达前端（与 AgentLoop 的 answer 通道对齐）。
+            emitSse(emitter, "answer", Map.of("content", buildAnswerText(state), "commandId", threadId));
+            emitSse(emitter, "done", Map.of());
             emitter.complete();
         } catch (Exception e) {
             long latency = System.currentTimeMillis() - start;
             persistLog(state, "FAILED", latency);
-            try { emitSse(emitter, "graph_error", Map.of("error", e.getMessage() != null ? e.getMessage() : "未知错误")); emitter.complete(); }
+            try {
+                emitSse(emitter, "graph_error", Map.of("error", e.getMessage() != null ? e.getMessage() : "未知错误"));
+                // 失败同样补发 answer + done，避免前端只收到不认识的 graph_error 后显示"未返回有效回答"
+                emitSse(emitter, "answer", Map.of("content",
+                        "多Agent协同分析本次执行失败，请重试或换个问法；也可以直接问我具体订单/款号的进度。",
+                        "commandId", threadId));
+                emitSse(emitter, "done", Map.of());
+                emitter.complete();
+            }
             catch (Exception e2) { log.debug("[MultiAgentGraph] SSE错误发送失败: {}", e2.getMessage()); emitter.completeWithError(e); }
         }
+    }
+
+    /**
+     * 把多Agent图执行结论组装成前端可展示的文字回答。
+     * 顺序：上下文摘要 → 各专家分析（截断）→ 综合建议；全空时给兜底话术，保证 answer 事件永远有内容。
+     */
+    private String buildAnswerText(AgentState s) {
+        StringBuilder sb = new StringBuilder();
+        String summary = s.getContextSummary();
+        if (summary != null && !summary.isBlank()) {
+            sb.append(summary.trim());
+        }
+        Map<String, String> results = s.getSpecialistResults();
+        if (results != null && !results.isEmpty()) {
+            sb.append("\n\n【专家分析】");
+            results.forEach((domain, analysis) -> {
+                if (analysis == null || analysis.isBlank()) return;
+                sb.append("\n- [").append(domain).append("] ").append(truncate(analysis, 300));
+            });
+        }
+        String suggestion = s.getOptimizationSuggestion();
+        if (suggestion != null && !suggestion.isBlank()) {
+            sb.append("\n\n💡 **综合建议**：").append(truncate(suggestion, 500));
+        }
+        if (sb.length() == 0) {
+            sb.append("已完成多Agent协同分析，但本次没有产出文字结论。请换个问法，或直接告诉我具体订单号/款号，我来实时查询。");
+        }
+        return sb.toString();
     }
 
     // ── 图执行管线 ────────────────────────────────────────────────────────
