@@ -76,6 +76,15 @@ public class AiAgentOrchestrator {
     private long quickPathTimeoutMs;
     @Value("${xiaoyun.agent.sse-heartbeat-interval-s:15}")
     private int sseHeartbeatIntervalS;
+    /**
+     * 流式对话是否启用多Agent图路由（默认 false 关闭）。
+     *
+     * <p>2026-09-13 关闭原因：图编排单次问话 5-8 次 LLM（数字孪生+监督+4专家+反思），
+     * 耗时 20-60s、消耗大，而实际输出常为空（专家结果缺失）只剩一句"综合建议"，
+     * 体验明显不如 Agent 主循环（工具查询+多轮）。待图内专家产出质量修复后再评估开启。
+     */
+    @Value("${xiaoyun.agent.multi-agent-graph-streaming.enabled:false}")
+    private boolean multiAgentGraphStreamingEnabled;
     private static final ObjectMapper SSE_MAPPER = new ObjectMapper();
 
     private final ExecutorService postTurnExecutor = new ThreadPoolExecutor(
@@ -405,6 +414,10 @@ public class AiAgentOrchestrator {
      */
     private boolean tryRouteToMultiAgentGraphStreaming(
             String userMessage, String pageContext, SseEmitter emitter, String cacheKey) {
+        if (!multiAgentGraphStreamingEnabled) {
+            log.info("[MultiAgent路由-流式] 图路由开关已关闭（xiaoyun.agent.multi-agent-graph-streaming.enabled=false），走 Agent 主循环");
+            return false;
+        }
         try {
             var router = componentRegistry.getSemanticDomainRouter();
             var multiAgentGraph = componentRegistry.getMultiAgentGraphOrchestrator();
