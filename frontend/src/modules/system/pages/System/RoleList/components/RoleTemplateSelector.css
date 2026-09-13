@@ -38,7 +38,7 @@
 .template-header {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 8px;
 }
 
@@ -60,6 +60,6 @@
 .template-footer {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }

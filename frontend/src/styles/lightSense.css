@@ -52,7 +52,7 @@
  * -------------------------------------------------------------------------- */
 
 .light-sense-modal .ant-modal-content {
-  border-radius: 16px;
+  border-radius: 8px;
 }
 
 .light-sense-modal .ant-modal-body {
@@ -61,23 +61,23 @@
 
 /* 不同 modalType 的差异化光晕 */
 .light-sense-default .ant-modal-content {
-  box-shadow: 0 20px 60px rgba(var(--ls-primary), 0.18), 0 4px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-xl);
 }
 
 .light-sense-urgent .ant-modal-content {
-  box-shadow: 0 20px 60px rgba(var(--ls-urgent), 0.18), 0 4px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-xl);
 }
 
 .light-sense-success .ant-modal-content {
-  box-shadow: 0 20px 60px rgba(var(--ls-success), 0.18), 0 4px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-xl);
 }
 
 .light-sense-warning .ant-modal-content {
-  box-shadow: 0 20px 60px rgba(var(--ls-warning), 0.18), 0 4px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-xl);
 }
 
 .light-sense-info .ant-modal-content {
-  box-shadow: 0 20px 60px rgba(var(--ls-info), 0.18), 0 4px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-xl);
 }
 
 /* --------------------------------------------------------------------------
@@ -87,9 +87,9 @@
 /* 仪表板卡片 */
 .dashboard-card {
   background: var(--color-bg-base);
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid rgba(0, 0, 0, 0.04);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-md);
   transition: transform var(--ls-duration) var(--ls-easing),
               box-shadow var(--ls-duration) var(--ls-easing);
 }
@@ -97,14 +97,14 @@
 .dashboard-card:hover {
   will-change: transform;
   transform: translateY(-2px);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-xl);
 }
 
 /* antd Card 全局升级 */
 .ant-card {
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid rgba(0, 0, 0, 0.04);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-md);
   transition: transform var(--ls-duration) var(--ls-easing),
               box-shadow var(--ls-duration) var(--ls-easing);
 }
@@ -112,7 +112,7 @@
 .ant-card-hoverable:hover {
   will-change: transform;
   transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-xl);
 }
 
 /* --------------------------------------------------------------------------
@@ -141,8 +141,8 @@
 .intelligence-agent-card {
   display: flex;
   align-items: center;
-  padding: 14px;
-  border-radius: 12px;
+  padding: 16px;
+  border-radius: 8px;
   background: var(--color-bg-container);
   cursor: pointer;
   transition: transform var(--ls-duration) var(--ls-easing),
@@ -157,7 +157,7 @@
   will-change: transform;
   background: var(--color-indigo-50);
   transform: translateX(4px);
-  box-shadow: 0 4px 14px rgba(var(--ls-primary), 0.08);
+  box-shadow: var(--shadow-lg);
 }
 
 @keyframes card-fade-in {
@@ -178,7 +178,7 @@
  * -------------------------------------------------------------------------- */
 
 .market-item-hovered {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: var(--shadow-lg);
   transform: translateY(-2px) !important;
 }
 

@@ -203,7 +203,6 @@
   border-radius: 50%;
   background: radial-gradient(circle, rgba(31, 117, 234, 0.07), transparent 55%);
   filter: blur(clamp(40px, 5vw, 80px));
-  animation: glowBreath 10s ease-in-out infinite;
 }
 
 /* ---------- Brand Mark → removed, now tag below cloud ---------- */
@@ -223,7 +222,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  padding-right: clamp(10px, 3vw, 60px);
+  padding-right: clamp(12px, 3vw, 60px);
   margin-bottom: clamp(20px, 3vh, 40px);
   transform: translateX(-150px);
   position: relative;
@@ -319,7 +318,6 @@
   position: relative;
   width: clamp(60px, 6vw, 102px);
   height: clamp(42px, 4.2vw, 72px);
-  animation: floatSoft 4.8s ease-in-out infinite;
 }
 
 .tech-cloud__part,
@@ -390,19 +388,19 @@
   position: absolute;
   top: clamp(6px, 0.8vw, 14px);
   right: clamp(8px, 1vw, 20px);
-  padding: clamp(2px, 0.3vw, 5px) clamp(6px, 0.6vw, 10px);
+  padding: clamp(2px, 0.3vw, 4px) clamp(8px, 0.6vw, 12px);
   border-radius: 999px;
   background: var(--color-primary);
   color: var(--color-bg-base);
   font-size: clamp(8px, 0.7vw, 12px);
   font-weight: 800;
   letter-spacing: 1px;
-  box-shadow: 0 6px 16px rgba(31, 117, 234, 0.2);
+  box-shadow: var(--shadow-lg);
 }
 
 .login-tag {
   display: inline-block;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 999px;
   color: var(--color-primary);
   background: rgba(31, 117, 234, 0.06);
@@ -505,7 +503,7 @@
 }
 
 .login-subtitle {
-  margin-top: clamp(6px, 0.6vw, 10px);
+  margin-top: clamp(8px, 0.6vw, 12px);
   color: var(--color-slate-400);
   font-size: clamp(11px, 0.8vw, 13px);
   line-height: 1.6;
@@ -514,7 +512,7 @@
 .login-form { width: 100%; }
 
 .login-form-wrapper .ant-form-item {
-  margin-bottom: clamp(14px, 1.4vw, 22px);
+  margin-bottom: clamp(16px, 1.4vw, 22px);
 }
 
 .login-company-selected { color: var(--color-blue-500); font-size: 14px; }
@@ -532,7 +530,7 @@
 .modern-login-page .login-form-wrapper .ant-input-affix-wrapper,
 .modern-login-page .login-form-wrapper .ant-auto-complete .ant-input-affix-wrapper {
   height: clamp(40px, 3vw, 46px) !important;
-  padding: 0 14px !important;
+  padding: 0 16px !important;
   align-items: center !important;
 }
 
@@ -598,7 +596,7 @@
 .login-button {
   width: 100%;
   height: clamp(42px, 3.2vw, 50px);
-  margin-top: clamp(8px, 0.8vw, 14px);
+  margin-top: clamp(8px, 0.8vw, 16px);
   border-radius: 8px;
   font-weight: 700;
   font-size: clamp(14px, 1vw, 16px) !important;
@@ -666,7 +664,7 @@
   font-size: clamp(9px, 0.65vw, 11px);
 }
 
-.login-filing { margin-top: clamp(4px, 0.6vw, 10px); font-size: 11px; }
+.login-filing { margin-top: clamp(4px, 0.6vw, 12px); font-size: 12px; }
 
 .login-filing-row {
   display: flex;
@@ -681,7 +679,7 @@
 .login-filing-icon {
   width: clamp(10px, 0.8vw, 13px);
   height: clamp(10px, 0.8vw, 13px);
-  margin-right: clamp(3px, 0.3vw, 5px);
+  margin-right: clamp(4px, 0.3vw, 4px);
   opacity: 0.5;
 }
 
@@ -691,14 +689,6 @@
 /* ---------- Animations ---------- */
 @keyframes rotateClockwise { to { transform: rotate(360deg); } }
 @keyframes rotateReverse { to { transform: rotate(-360deg); } }
-@keyframes floatSoft { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-@keyframes glowBreath { 0%, 100% { transform: scale(0.96); opacity: 0.7; } 50% { transform: scale(1.04); opacity: 1; } }
-@keyframes haloBreath { 0%, 100% { transform: scale(0.97); opacity: 0.6; } 50% { transform: scale(1.08); opacity: 1; } }
-@keyframes coreBreath { 0%, 100% { transform: scale(0.99); } 50% { transform: scale(1.02); } }
-@keyframes cloudBlink { 0%, 44%, 48%, 92%, 96%, 100% { transform: scaleY(1); opacity: 1; } 46%, 94% { transform: scaleY(0.18); opacity: 0.85; } }
-@keyframes cloudSmileTalk { 0%, 100% { transform: translateX(-50%) scaleX(1); } 50% { transform: translateX(-50%) scaleX(1.1); } }
-@keyframes sparkleBlink { 0%, 100% { opacity: 0.3; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1.05); } }
-@keyframes eyeHighlightTwinkle { 0%, 100% { opacity: 0.7; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.1); } }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1520px) {

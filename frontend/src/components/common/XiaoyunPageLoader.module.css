@@ -16,11 +16,11 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 16px;
   padding: 24px 32px;
   border-radius: 24px;
   background: var(--neutral-bg, rgba(255, 255, 255, 0.78));
-  box-shadow: 0 16px 36px rgba(95, 129, 196, 0.12);
+  box-shadow: var(--shadow-xl);
   backdrop-filter: blur(10px);
 }
 
@@ -44,5 +44,5 @@
 
 :root[data-theme="dark"] .card {
   background: rgba(255, 255, 255, 0.04);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-xl);
 }

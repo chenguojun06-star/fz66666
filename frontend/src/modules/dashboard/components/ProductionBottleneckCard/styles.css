@@ -4,7 +4,7 @@
 }
 
 .bn-card .card-header {
-  gap: 10px;
+  gap: 12px;
 }
 
 .bn-card .card-content {
@@ -41,9 +41,9 @@
 .bn-bar-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding: 5px 8px;
+  padding: 4px 8px;
   border: none;
   background: none;
   border-radius: 6px;
@@ -99,7 +99,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   padding: 16px 0;
 }
 

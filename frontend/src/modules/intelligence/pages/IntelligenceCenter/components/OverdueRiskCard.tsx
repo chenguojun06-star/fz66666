@@ -15,7 +15,7 @@ const OverdueRiskCard: React.FC<any> = ({
   };
 
   return (
-  <div className="c-card c-breathe-red">
+  <div className="c-card c-hover-hl">
     <div className="c-kpi-label" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
       <LiveDot size={8} color={overdueRisk.overdue.length > 0 ? 'var(--color-red-400)' : 'var(--color-warning-deep)'} />
       <span style={{ fontWeight: 700 }}>逾期 &amp; 延期风险订单</span>

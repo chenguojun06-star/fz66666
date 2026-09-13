@@ -1,7 +1,7 @@
 /* 下单排行网格数据看板 */
 
 .order-ranking-grid {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   border-radius: 6px;
 }
 
@@ -14,8 +14,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
-  padding-bottom: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--table-border-color, var(--color-border-light));
 }
 
@@ -64,7 +64,7 @@
 
 .ranking-grid-container::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.2);
-  border-radius: 2px;
+  border-radius: 4px;
 }
 
 .ranking-grid-container::-webkit-scrollbar-thumb:hover {
@@ -76,7 +76,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 6px;
+  padding: 4px 8px;
   background: var(--table-row-hover-bg, var(--color-bg-container));
   border-radius: 6px;
   cursor: pointer;
@@ -87,7 +87,7 @@
 .ranking-grid-item:hover {
   background: var(--status-processing-bg);
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .rank-number {
@@ -123,7 +123,7 @@
 
 .ranking-info .ant-tag {
   font-size: 12px;
-  padding: 0 3px;
+  padding: 0 4px;
   line-height: 14px;
   width: fit-content;
 }
@@ -157,8 +157,8 @@
 .ranking-tooltip .tooltip-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin: 6px 0;
+  gap: 8px;
+  margin: 8px 0;
   color: rgba(255,255,255,0.9);
 }
 

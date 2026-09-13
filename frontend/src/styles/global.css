@@ -55,7 +55,7 @@ html {
 }
 ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.15);
-  border-radius: 3px;
+  border-radius: 4px;
   transition: background 0.2s;
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -121,7 +121,7 @@ body {
       用 !important 覆盖；用户拖拽后 rc-textarea 会保留用户高度）
    ============================================ */
 textarea.ant-input {
-  padding: 6px 10px !important;
+  padding: 8px 12px !important;
   line-height: 1.6 !important;
   resize: vertical !important;
 }
@@ -371,7 +371,7 @@ input.ant-input,
   --kpi-change-size: 12px;
 
   --card-header-bg: var(--color-bg-container);
-  --card-header-padding: 10px 16px;
+  --card-header-padding: 12px 16px;
   --card-title-indicator: 3px solid var(--color-primary);
 
   --radius-sm: 4px;
@@ -800,7 +800,7 @@ input.ant-input,
 
 .table th,
 .table td {
-  padding: 12px 14px;
+  padding: 12px 16px;
   text-align: center !important;
   border-bottom: 1px solid var(--neutral-dark);
   font-size: var(--font-size-base);
@@ -982,7 +982,7 @@ input.ant-input,
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+  box-shadow: var(--shadow-xl);
 }
 
 .ant-modal-header,
@@ -1003,7 +1003,7 @@ input.ant-input,
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px !important;
+  padding: 12px 16px !important;
 }
 
 .ant-modal-footer .ant-btn {
@@ -1370,11 +1370,11 @@ input.ant-input,
 @media (max-width: 1024px) and (min-width: 769px) {
   .resizable-table .ant-table-tbody > tr > td .ant-tag {
     font-size: 12px;
-    padding: 1px 6px;
+    padding: 1px 8px;
   }
 
   .resizable-table-shell .ant-pagination {
-    padding: 10px 14px;
+    padding: 12px 16px;
   }
 }
 
@@ -1435,7 +1435,7 @@ input.ant-input,
   margin: 0 !important;
   border-top: 1px solid var(--table-border-light);
   border-radius: 0 0 8px 8px;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-md);
 }
 
 [data-theme="dark"] .resizable-table-shell .ant-pagination {
@@ -1611,12 +1611,12 @@ input.ant-input,
 .ant-table-cell .ant-input-number {
   width: 100% !important;
   height: 30px !important;
-  border-radius: 2px !important;
+  border-radius: 4px !important;
 }
 
 .ant-table-cell .ant-input-number .ant-input-number-input {
   height: 28px !important;
-  padding: 0 10px !important;
+  padding: 0 12px !important;
   text-align: center;
   font-size: 13px;
 }
@@ -1627,8 +1627,8 @@ input.ant-input,
 
 .ant-table-cell input.ant-input {
   height: 30px !important;
-  padding: 0 10px !important;
-  border-radius: 2px !important;
+  padding: 0 12px !important;
+  border-radius: 4px !important;
   text-align: center;
   font-size: 13px;
 }
@@ -1639,8 +1639,8 @@ input.ant-input,
 
 .ant-table-cell .ant-select-selector {
   height: 30px !important;
-  padding: 0 10px !important;
-  border-radius: 2px !important;
+  padding: 0 12px !important;
+  border-radius: 4px !important;
 }
 
 .ant-table-cell .ant-select-selection-item,
@@ -1685,7 +1685,7 @@ input.ant-input,
 .modal-detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 14px;
+  gap: 12px 16px;
   align-content: start;
 }
 
@@ -1811,7 +1811,7 @@ input.ant-input,
   width: 220px;
   height: 140px;
   border: 1px solid rgba(0, 0, 0, 0.16);
-  padding: 10px;
+  padding: 12px;
 }
 
 .cutting-qr-print-grid--screen .cutting-qr-label-text {
@@ -1966,26 +1966,17 @@ input.ant-input,
    停滞订单脉冲动画（stagnant-pulse-badge）
    使用：状态列有 ≥3天无扫码的非完成订单时显示
    ================================================================ */
-@keyframes stagnant-dot-blink {
-  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.6); }
-  50%       { opacity: 0.7; transform: scale(1.3); box-shadow: 0 0 0 5px rgba(255, 77, 79, 0); }
-}
-@keyframes stagnant-badge-pulse {
-  0%, 100% { background: rgba(255, 77, 79, 0.08); }
-  50%       { background: rgba(255, 77, 79, 0.18); }
-}
 .stagnant-pulse-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-danger);
   background: rgba(255, 77, 79, 0.08);
   border-radius: 4px;
-  padding: 1px 6px 1px 4px;
+  padding: 1px 8px 1px 4px;
   width: fit-content;
-  animation: stagnant-badge-pulse 1.8s ease-in-out infinite;
   cursor: default;
 }
 .stagnant-pulse-dot {
@@ -1995,7 +1986,6 @@ input.ant-input,
   border-radius: 50%;
   background: var(--color-danger);
   flex-shrink: 0;
-  animation: stagnant-dot-blink 1.8s ease-in-out infinite;
 }
 
 /* ==========================================================================
@@ -2094,7 +2084,7 @@ input.ant-input,
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 .stat-card:hover {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.09);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-1px);
 }
 
@@ -2345,7 +2335,7 @@ img.img-cover {
 
 /* Modal — 统一圆角（不覆盖 light-sense-modal 的圆角） */
 .ant-modal-content {
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
 /* Input / Select / Picker — 统一圆角 + 高度（已有部分覆盖，这里补齐遗漏的组件） */
@@ -2388,7 +2378,7 @@ img.img-cover {
 
 /* Badge — 统一圆角 */
 .ant-badge .ant-badge-count {
-  border-radius: 10px !important;
+  border-radius: 8px !important;
 }
 
 /* Tabs card 类型圆角 */
@@ -2403,7 +2393,7 @@ img.img-cover {
 .ant-card-head {
   background: var(--card-header-bg, var(--color-bg-container));
   border-bottom: 1px solid var(--color-border-light);
-  padding: var(--card-header-padding, 10px 16px);
+  padding: var(--card-header-padding, 12px 16px);
   min-height: 40px;
 }
 .ant-card-head-title {
@@ -2417,7 +2407,7 @@ img.img-cover {
   width: 3px;
   height: 14px;
   background: var(--color-primary);
-  border-radius: 2px;
+  border-radius: 4px;
   margin-right: 8px;
   vertical-align: middle;
 }

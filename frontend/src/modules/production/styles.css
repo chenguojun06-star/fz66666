@@ -36,7 +36,7 @@
 .purchase-detail-size-block {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   margin-top: 12px;
   padding: 12px;
   background: var(--color-slate-50);
@@ -44,7 +44,7 @@
 
 .purchase-detail-size-line {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: flex-start;
 }
 
@@ -53,7 +53,7 @@
   flex: 1;
   min-width: 0;
   flex-wrap: wrap;
-  gap: 6px 12px;
+  gap: 8px 12px;
   align-items: center;
 }
 
@@ -82,7 +82,7 @@
 .purchase-detail-size-meta {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -102,7 +102,7 @@
 }
 
 .order-flow-section {
-  padding: 14px 16px 12px;
+  padding: 16px 16px 12px;
 }
 
 .order-flow-section + .order-flow-section {
@@ -113,13 +113,13 @@
   font-size: var(--font-size-base);
   font-weight: 800;
   color: var(--color-gray-800);
-  margin: 0 0 10px;
+  margin: 0 0 12px;
 }
 
 .order-flow-kv-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px 18px;
+  gap: 12px 18px;
 }
 
 .order-flow-kv {
@@ -147,7 +147,7 @@
 .order-flow-order-row {
   display: flex;
   align-items: flex-start;
-  gap: 14px;
+  gap: 16px;
 }
 
 .order-flow-order-cover {
@@ -165,7 +165,7 @@
 .order-flow-order-col {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -224,7 +224,7 @@
 /* ========= 紧凑订单头部（OrderFlow 页专用）========= */
 .ofh {
   display: flex;
-  gap: 14px;
+  gap: 16px;
   padding: 12px 16px;
   align-items: flex-start;
 }
@@ -266,7 +266,7 @@
 .ofh-inline-kv {
   display: inline-flex;
   align-items: baseline;
-  gap: 3px;
+  gap: 4px;
   margin-right: 20px;
   white-space: nowrap;
   flex-shrink: 0;
@@ -275,11 +275,11 @@
   text-overflow: ellipsis;
 }
 .ofh-inline-kv .ofh-kv-label {
-  font-size: 11px;
+  font-size: 12px;
   color: rgba(0, 0, 0, 0.42);
 }
 .ofh-inline-kv .ofh-kv-value {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.85);
 }
@@ -287,7 +287,7 @@
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0 12px;
-  padding-top: 6px;
+  padding-top: 8px;
   border-top: 1px solid var(--color-border-light);
 }
 .ofh-kv {
@@ -297,12 +297,12 @@
   min-width: 0;
 }
 .ofh-kv-label {
-  font-size: 11px;
+  font-size: 12px;
   color: rgba(0, 0, 0, 0.42);
   white-space: nowrap;
 }
 .ofh-kv-value {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.85);
   white-space: nowrap;
@@ -313,7 +313,7 @@
   color: var(--primary-color, var(--color-primary));
 }
 .ofh-kv-value--time {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   color: rgba(0, 0, 0, 0.6);
 }
@@ -342,7 +342,7 @@
 .progress-row-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   padding: 0 4px;
 }
 
@@ -364,28 +364,28 @@
 .progress-row:hover {
   transform: translateY(-1px);
 }
-.progress-row--normal:hover   { box-shadow: 0 16px 48px rgba(15,23,42,0.10), inset 1px 0 0 rgba(34,197,94,0.78); }
-.progress-row--warning:hover  { box-shadow: 0 16px 48px rgba(15,23,42,0.10), inset 1px 0 0 rgba(250,173,20,0.85); }
-.progress-row--danger:hover   { box-shadow: 0 16px 48px rgba(15,23,42,0.10), inset 1px 0 0 rgba(255,77,79,0.78); }
-.progress-row--scrapped:hover { box-shadow: 0 16px 48px rgba(15,23,42,0.10), inset 1px 0 0 rgba(148,163,184,0.88); }
+.progress-row--normal:hover   { box-shadow: var(--shadow-xl); }
+.progress-row--warning:hover  { box-shadow: var(--shadow-xl); }
+.progress-row--danger:hover   { box-shadow: var(--shadow-xl); }
+.progress-row--scrapped:hover { box-shadow: var(--shadow-xl); }
 
 .progress-row--focus {
-  box-shadow: 0 0 0 2px rgba(250, 173, 20, 0.3), 0 16px 36px rgba(250, 173, 20, 0.16);
+  box-shadow: var(--shadow-xl);
   transform: translateY(-2px);
 }
 
 /* ── 左边竖线（颜色逻辑与卡片视图 getProgressColorStatus 完全一致，线宽 1.5px）── */
 .progress-row--normal {
-  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06), inset 1px 0 0 rgba(34, 197, 94, 0.78);
+  box-shadow: var(--shadow-xl);
 }
 .progress-row--warning {
-  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06), inset 1px 0 0 rgba(250, 173, 20, 0.85);
+  box-shadow: var(--shadow-xl);
 }
 .progress-row--danger {
-  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06), inset 1px 0 0 rgba(255, 77, 79, 0.78);
+  box-shadow: var(--shadow-xl);
 }
 .progress-row--scrapped {
-  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06), inset 1px 0 0 rgba(148, 163, 184, 0.88);
+  box-shadow: var(--shadow-xl);
 }
 
 .progress-row__cover {
@@ -433,7 +433,7 @@
   background: rgba(255, 255, 255, 0.95);
   padding: 4px 8px;
   border-radius: 999px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
   z-index: var(--z-local);
 }
 
@@ -443,9 +443,9 @@
 }
 
 .progress-row-actions .ant-btn {
-  border-radius: 999px;
+  border-radius: 4px;
   padding-inline: 8px;
-  font-size: 11px;
+  font-size: 12px;
   min-width: 0;
 }
 
@@ -493,7 +493,7 @@
 .order-flow-summary-meta {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -513,7 +513,7 @@
 .order-flow-summary-sub {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 12px;
+  gap: 8px 12px;
   color: var(--color-gray-700);
   font-size: var(--font-size-sm);
 }
@@ -528,7 +528,7 @@
 
 .order-flow-metric {
   background: var(--color-slate-50);
-  padding: 10px 12px;
+  padding: 12px 12px;
   min-width: 120px;
 }
 
@@ -549,7 +549,7 @@
   margin-top: 12px;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px 12px;
+  gap: 12px 12px;
 }
 
 .order-flow-field {
@@ -597,7 +597,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .order-flow-h-timeline-title-main {
@@ -627,7 +627,7 @@
   min-width: 320px;
   background: var(--color-bg-container);
   border: 1px solid var(--color-border-light);
-  padding: 10px;
+  padding: 12px;
   scroll-snap-align: start;
 }
 
@@ -661,9 +661,9 @@
   border: none;
   background: transparent;
   color: var(--color-primary);
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 4px 8px;
 }
 
 .order-flow-h-stage-toggle:hover {
@@ -671,8 +671,8 @@
 }
 
 .order-flow-h-stage-meta {
-  margin-top: 6px;
-  font-size: 11px;
+  margin-top: 8px;
+  font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
   white-space: nowrap;
   overflow: hidden;
@@ -680,7 +680,7 @@
 }
 
 .order-flow-h-stage-body {
-  margin-top: 10px;
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -689,7 +689,7 @@
 .order-flow-h-event {
   background: var(--color-bg-base);
   border: 1px solid var(--color-border-light);
-  padding: 10px;
+  padding: 12px;
 }
 
 .order-flow-h-event-top {
@@ -709,26 +709,26 @@
 }
 
 .order-flow-h-event-time {
-  font-size: 11px;
+  font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
   white-space: nowrap;
 }
 
 .order-flow-h-event-meta {
-  margin-top: 6px;
+  margin-top: 8px;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
 }
 
 .order-flow-h-event-desc {
-  font-size: 11px;
+  font-size: 12px;
   color: rgba(0, 0, 0, 0.65);
 }
 
 .order-flow-h-empty {
-  padding: 10px;
+  padding: 12px;
   background: var(--color-bg-base);
   border: 1px dashed var(--color-border-antd);
   color: rgba(0, 0, 0, 0.45);
@@ -788,7 +788,7 @@
 .purchase-detail-size-th,
 .purchase-detail-size-td,
 .purchase-detail-size-total-cell {
-  padding: 6px 10px;
+  padding: 8px 12px;
   font-size: var(--font-size-base);
   color: var(--color-gray-800);
   font-weight: 600;
@@ -876,13 +876,13 @@
 .wh-lines {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .wh-line {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
@@ -935,7 +935,7 @@
 .wh-detail-box {
   border: 1px solid var(--color-border-antd);
   background: var(--color-bg-base);
-  padding: 10px;
+  padding: 12px;
 }
 
 .wh-detail-table .ant-table-thead > tr > th {
@@ -1005,7 +1005,7 @@
 .cutting-entry-info {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   padding: 12px;
   border: 1px solid var(--color-border-light);
   background: var(--color-bg-base);
@@ -1039,14 +1039,14 @@
   flex-direction: column;
   gap: 8px;
   margin-top: 2px;
-  padding: 10px 12px;
+  padding: 12px 12px;
   background: var(--color-slate-50);
 }
 
 .cutting-entry-size-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 12px;
+  gap: 8px 12px;
   align-items: center;
   min-width: 0;
 }
@@ -1074,7 +1074,7 @@
 .cutting-entry-actions {
   display: flex;
   justify-content: flex-end;
-  padding: 6px 0 0;
+  padding: 8px 0 0;
 }
 
 .cutting-entry-purchase-card > .ant-card-head {
@@ -1094,7 +1094,7 @@
 .cutting-entry-footer {
   border: 1px solid var(--color-border-light);
   background: var(--color-bg-base);
-  padding: 14px 12px;
+  padding: 16px 12px;
 }
 
 .cutting-entry-footer-grid {

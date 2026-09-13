@@ -16,7 +16,7 @@
 }
 
 .user-dept-header {
-  padding: 10px 12px;
+  padding: 12px 12px;
   font-weight: 600;
   font-size: 14px;
   border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
@@ -37,7 +37,7 @@
   display: flex;
   align-items: center;
   min-height: 40px;
-  padding: 6px 8px;
+  padding: 8px 8px;
   border-radius: 4px;
   margin: 1px 4px;
   transition: background 0.15s;
@@ -67,7 +67,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 8px;
+  font-size: 12px;
   color: var(--color-text-tertiary, var(--color-gray-label));
   margin-right: 4px;
 }
@@ -147,7 +147,7 @@
 
 .user-perm-tree {
   border: 1px solid var(--color-border-light, var(--color-border-light));
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 12px;
   background: var(--color-bg-base, var(--color-bg-base));
 }

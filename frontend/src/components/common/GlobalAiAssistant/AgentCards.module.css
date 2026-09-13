@@ -1,7 +1,7 @@
 .teamStatusCard {
   background: linear-gradient(180deg, var(--status-success-bg) 0%, #fcffe6 100%);
   border: 1px solid var(--status-success-border);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 12px;
   margin: 8px 0;
 }
@@ -10,7 +10,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 8px;
 }
 
@@ -36,17 +36,17 @@
 .teamStatusStats {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
   color: var(--color-lime-600);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .teamStatusStats span {
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(183, 235, 143, 0.9);
   border-radius: 999px;
-  padding: 3px 8px;
+  padding: 4px 8px;
 }
 
 .teamStatusRecipients {
@@ -58,8 +58,8 @@
 .teamRecipientItem {
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(183, 235, 143, 0.95);
-  border-radius: 10px;
-  padding: 9px 10px;
+  border-radius: 8px;
+  padding: 8px 12px;
 }
 
 .teamRecipientHead {
@@ -87,7 +87,7 @@
   flex-wrap: wrap;
   font-size: 13px;
   color: var(--color-emerald-700);
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 
 .teamRecipientNext {
@@ -101,35 +101,35 @@
   background: var(--color-bg-base)1f0;
   border: 1px solid var(--status-error-border);
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 8px 12px;
   font-size: 12px;
   color: var(--color-error);
 }
 
 .teamStatusHistory {
-  margin-top: 10px;
+  margin-top: 12px;
   border-top: 1px dashed rgba(24, 144, 255, 0.18);
   padding-top: 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .teamStatusHistoryItem {
   display: grid;
   grid-template-columns: 124px 72px 70px 1fr;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
   color: var(--color-lime-700);
   background: rgba(255, 255, 255, 0.68);
   border-radius: 8px;
-  padding: 6px 8px;
+  padding: 8px 8px;
 }
 
 .purchaseDocCard {
   background: linear-gradient(180deg, #fff7e6 0%, var(--status-warning-bg) 100%);
   border: 1px solid var(--status-warning-border);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 12px;
   margin: 8px 0;
 }
@@ -138,7 +138,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 8px;
 }
 
@@ -156,7 +156,7 @@
 
 .purchaseDocActions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -169,16 +169,16 @@
 
 .purchaseDocStats {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .purchaseDocStats span {
   background: rgba(255, 255, 255, 0.75);
   border: 1px solid rgba(255, 213, 145, 0.9);
   border-radius: 999px;
-  padding: 3px 8px;
+  padding: 4px 8px;
   font-size: 13px;
   color: var(--color-warning-deep);
 }
@@ -192,8 +192,8 @@
 .purchaseDocItem {
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(255, 213, 145, 0.95);
-  border-radius: 10px;
-  padding: 8px 10px;
+  border-radius: 8px;
+  padding: 8px 12px;
 }
 
 .purchaseDocItemHead {

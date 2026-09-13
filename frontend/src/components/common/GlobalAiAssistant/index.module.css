@@ -19,8 +19,8 @@
   width: var(--xiaoyun-panel-width, 640px);
   height: var(--xiaoyun-panel-height, 820px);
   background: var(--xiaoyun-bg-card);
-  border-radius: 20px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -49,16 +49,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.12);
+  box-shadow: var(--shadow-md);
   margin-right: 16px;
   font-size: 18px;
-  animation: floatAvatar 3s ease-in-out infinite;
 }
 
-@keyframes floatAvatar {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
 
 .headerText {
   flex: 1;
@@ -134,7 +129,7 @@
 }
 
 .inputArea {
-  padding: 10px 16px 12px;
+  padding: 12px 16px 12px;
   background: var(--xiaoyun-bg-card);
   border-top: 1px solid var(--xiaoyun-border-card);
   display: flex;
@@ -152,8 +147,8 @@
   flex: 1;
   border: none;
   background: var(--xiaoyun-bg-page);
-  padding: 10px 16px;
-  border-radius: 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
   font-size: 14px;
   outline: none;
   transition: all 0.3s;
@@ -172,7 +167,7 @@
 .sendBtn {
   height: 34px;
   min-width: 58px;
-  padding: 0 10px;
+  padding: 0 12px;
   border-radius: 18px;
   background: var(--xiaoyun-primary);
   color: white;
@@ -207,7 +202,7 @@
   border: none;
   color: var(--xiaoyun-text-tertiary);
   cursor: pointer;
-  padding: 6px;
+  padding: 8px;
   font-size: 16px;
   transition: color 0.2s;
   flex-shrink: 0;
@@ -218,10 +213,10 @@
 
 .traceBtn {
   min-width: 42px;
-  padding: 6px 8px;
+  padding: 8px 8px;
   font-size: 14px;
   color: var(--xiaoyun-text-secondary);
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--xiaoyun-bg-page);
 }
 
@@ -233,7 +228,7 @@
 .voiceBtn {
   height: 34px;
   min-width: 54px;
-  padding: 0 10px;
+  padding: 0 12px;
   background: var(--xiaoyun-bg-page);
   border: 1px solid var(--xiaoyun-border-card);
   border-radius: 18px;
@@ -258,12 +253,12 @@
 .attachChip {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   background: var(--xiaoyun-primary-bg);
   border: 1px solid var(--xiaoyun-primary-border);
   border-radius: 6px;
-  padding: 4px 10px;
-  margin-bottom: 6px;
+  padding: 4px 12px;
+  margin-bottom: 8px;
   font-size: 14px;
   color: var(--xiaoyun-primary-hover);
   overflow: hidden;
@@ -274,7 +269,7 @@
 .quickHint {
   font-size: 14px;
   color: var(--xiaoyun-primary);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .attachChipRemove {
@@ -323,7 +318,7 @@
 .sidebarItem {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -349,7 +344,7 @@
 }
 
 .sidebarLabel {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1;
 }
 
@@ -362,7 +357,7 @@
   border-radius: 8px;
   background: var(--xiaoyun-danger);
   color: var(--color-bg-base);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 16px;
   text-align: center;
   padding: 0 4px;
@@ -414,10 +409,10 @@
   border-radius: 7px;
   background: var(--xiaoyun-danger);
   color: var(--color-bg-base);
-  font-size: 9px;
+  font-size: 12px;
   line-height: 14px;
   text-align: center;
-  padding: 0 3px;
+  padding: 0 4px;
 }
 
 .mainContent {
@@ -440,7 +435,7 @@
   font-size: 14px;
   color: var(--xiaoyun-text-tertiary);
   font-weight: 500;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .auxStatItem {
@@ -460,7 +455,7 @@
 
 /* ── Dark theme ── */
 :root[data-theme="dark"] .chatPanel {
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-xl);
 }
 :root[data-theme="dark"] .panelHeader {
   background: var(--xiaoyun-bg-card);
@@ -520,7 +515,7 @@
     height: calc(100vh - 100px) !important;
     bottom: 8px !important;
     right: 8px !important;
-    border-radius: 16px;
+    border-radius: 8px;
   }
 }
 @media (max-width: 480px) {

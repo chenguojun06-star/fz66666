@@ -88,26 +88,26 @@
 /* ── Markdown 渲染样式 ── */
 /* AI 回答中的排版样式，使用 CSS class 替代内联 style，兼容 DOMPurify 过滤 */
 
-.md-h1 { display: block; margin: 12px 0 6px; font-size: 13px; font-weight: 700; }
-.md-h2 { display: block; margin: 10px 0 4px; font-size: 15px; font-weight: 700; }
+.md-h1 { display: block; margin: 12px 0 8px; font-size: 13px; font-weight: 700; }
+.md-h2 { display: block; margin: 12px 0 4px; font-size: 14px; font-weight: 700; }
 .md-h3 { display: block; margin: 8px 0 4px; font-size: 14px; font-weight: 700; }
 .md-p  { margin: 2px 0; line-height: 1.6; }
 .md-ul { margin: 4px 0; padding-left: 20px; }
 .md-ol { margin: 4px 0; padding-left: 20px; }
 .md-code-block {
   background: var(--color-bg-subtle); padding: 8px; border-radius: 6px; overflow-x: auto;
-  font-size: 14px; margin: 6px 0; white-space: pre-wrap; word-break: break-all;
+  font-size: 14px; margin: 8px 0; white-space: pre-wrap; word-break: break-all;
 }
 .md-table {
   border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 14px;
 }
 .md-table th, .md-table td {
-  border: 1px solid var(--xiaoyun-border-card); padding: 6px 8px; text-align: left;
+  border: 1px solid var(--xiaoyun-border-card); padding: 8px 8px; text-align: left;
 }
 .md-table th { background: var(--xiaoyun-bg-page); font-weight: 600; }
 .md-link { color: var(--xiaoyun-primary); text-decoration: underline; }
 .inline-code {
-  background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 3px;
+  background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 4px;
   font-family: monospace; font-size: 0.9em;
 }
 .order-link {

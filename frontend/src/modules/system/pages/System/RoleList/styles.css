@@ -16,7 +16,7 @@
 }
 
 .role-list-header {
-  padding: 10px 12px;
+  padding: 12px 12px;
   border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
   color: var(--color-text-primary, var(--color-gray-800));
   flex-shrink: 0;
@@ -47,7 +47,7 @@
   border: 1px solid var(--color-border-light, var(--color-border-light));
   border-radius: 6px;
   background: var(--color-bg-base);
-  padding: 10px 12px;
+  padding: 12px 12px;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
@@ -71,7 +71,7 @@
 .role-card-name-wrap {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
   flex: 1;
 }
@@ -96,9 +96,9 @@
 
 .role-card-current {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: 12px;
   padding: 1px 8px;
-  border-radius: 2px;
+  border-radius: 4px;
   color: var(--color-primary);
   background: var(--status-processing-bg);
   border: 1px solid var(--status-processing-border);
@@ -118,8 +118,8 @@
 .role-card-metrics {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 6px;
+  gap: 8px;
+  margin-top: 8px;
   font-size: 12px;
   color: var(--color-text-tertiary, var(--color-gray-label));
 }
@@ -141,7 +141,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 20px 0;
+  padding: 16px 20px 0;
   flex-shrink: 0;
 }
 
@@ -169,7 +169,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 10px 20px 12px;
+  padding: 12px 20px 12px;
   border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
   flex-shrink: 0;
   flex-wrap: wrap;
@@ -214,7 +214,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
   background: var(--color-bg-page, var(--color-slate-50));
   border-radius: 6px 6px 0 0;
@@ -236,7 +236,7 @@
 .data-scope-group {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   width: 100%;
 }
 
@@ -292,7 +292,7 @@
   flex-wrap: wrap;
   gap: 8px;
   flex-shrink: 0;
-  padding: 10px 20px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
   background: var(--color-bg-base, var(--color-bg-base));
 }
@@ -316,7 +316,7 @@
 .perm-matrix-global-header {
   display: flex;
   align-items: center;
-  padding: 10px 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
   background: var(--color-bg-base, var(--color-bg-base));
 }
@@ -333,7 +333,7 @@
 .perm-matrix-section-header {
   display: flex;
   align-items: center;
-  padding: 10px 16px;
+  padding: 12px 16px;
   background: var(--color-bg-page);
   border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
   font-weight: 600;
@@ -346,7 +346,7 @@
   padding: 8px 16px 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .perm-matrix-item-group {
@@ -357,7 +357,7 @@
 }
 
 .perm-matrix-item-head {
-  padding: 6px 10px;
+  padding: 8px 12px;
   background: var(--color-indigo-50, #f5f7ff);
   border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
 }
@@ -369,7 +369,7 @@
 }
 
 .perm-matrix-item-btns {
-  padding: 6px 10px 8px 18px;
+  padding: 8px 12px 8px 18px;
   display: flex;
   flex-wrap: wrap;
   gap: 2px 20px;
@@ -426,7 +426,7 @@
 .perm-group-row {
   display: flex;
   align-items: flex-start;
-  padding: 6px 20px;
+  padding: 8px 20px;
   border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
   gap: 12px;
 }
@@ -455,7 +455,7 @@
 .perm-group-btns .ant-checkbox-wrapper {
   min-width: 90px;
   margin: 0;
-  padding: 2px 6px 2px 0;
+  padding: 2px 8px 2px 0;
   font-size: 13px;
   font-weight: 400;
   color: var(--color-text-primary, var(--color-gray-800));

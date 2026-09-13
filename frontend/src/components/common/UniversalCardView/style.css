@@ -6,15 +6,15 @@
 }
 .universal-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-md);
 }
 .universal-card .ant-card-body {
-  padding: 10px 12px;
+  padding: 12px 12px;
 }
 
 .universal-card-layout {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   min-height: 160px;
 }
 
@@ -50,7 +50,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  gap: 3px;
+  gap: 4px;
 }
 
 .universal-card-header {
@@ -59,7 +59,7 @@
 .universal-card-title-row {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 8px;
 }
 .universal-card-title {
   margin: 0;
@@ -84,7 +84,7 @@
 }
 .universal-card-tags {
   display: flex;
-  gap: 3px;
+  gap: 4px;
   flex-wrap: wrap;
   margin-top: 2px;
 }
@@ -103,7 +103,7 @@
 }
 .universal-card-fields::-webkit-scrollbar-thumb {
   background: var(--color-border-antd, var(--color-border-antd));
-  border-radius: 2px;
+  border-radius: 4px;
 }
 .universal-card-fields::-webkit-scrollbar-track {
   background: transparent;
@@ -143,7 +143,7 @@
 
 .universal-card-progress-section {
   flex-shrink: 0;
-  margin-top: 3px;
+  margin-top: 4px;
   animation: progressFadeIn 0.5s ease-out;
 }
 
@@ -159,10 +159,10 @@
   align-items: center;
   justify-content: center;
   padding: 0 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 .universal-card-progress-text {
-  font-size: 9px;
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.95);
   font-weight: 700;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
@@ -191,8 +191,8 @@
   flex-shrink: 0;
   display: flex;
   justify-content: center;
-  margin-top: 3px;
-  padding-top: 3px;
+  margin-top: 4px;
+  padding-top: 4px;
   border-top: 1px solid var(--color-border-light, var(--color-border-light));
 }
 .universal-card-actions .ant-space {
@@ -235,5 +235,5 @@
   }
   .universal-card-title { font-size: 12px; }
   .universal-card-field { font-size: 12px; }
-  .universal-card .ant-card-body { padding: 8px 10px; }
+  .universal-card .ant-card-body { padding: 8px 12px; }
 }

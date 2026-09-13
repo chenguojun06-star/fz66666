@@ -10,7 +10,7 @@
 /* ── 行高锁定 + body 上下滑动 ── */
 .ef-compact .style-smart-row {
   padding: 8px;
-  gap: 10px;
+  gap: 12px;
   grid-template-columns: 100px minmax(0, 1fr) auto;
   border-radius: 6px;
   overflow: hidden;
@@ -56,7 +56,7 @@
 .ef-thumb-empty {
   background: var(--color-bg-subtle);
   color: var(--color-text-quaternary);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 /* ── 图片下方区域：标签 + 日期 ── */
@@ -64,7 +64,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 /* ── 标签条 ── */
@@ -77,9 +77,9 @@
 
 .ef-delivery-badge {
   display: inline-block;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
-  padding: 2px 5px;
+  padding: 2px 4px;
   border-radius: 4px;
   font-weight: 500;
   white-space: nowrap;
@@ -98,19 +98,19 @@
 
 /* ── 身份信息区：紧凑内联 ── */
 .ef-compact .style-smart-row__identity {
-  gap: 3px;
+  gap: 4px;
 }
 
 .ef-info-fields {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 12px;
+  gap: 8px 12px;
 }
 
 .ef-field-row {
   display: inline-flex;
   align-items: baseline;
-  gap: 3px;
+  gap: 4px;
   line-height: 1.4;
   white-space: nowrap;
 }
@@ -135,7 +135,7 @@
 
 .ef-field-row .ant-tag {
   margin-inline-end: 0;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 14px;
   padding: 0 4px;
 }
@@ -163,7 +163,7 @@
   display: inline-block;
   min-width: 36px;
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
   color: var(--color-text-primary);
   font-weight: 500;
@@ -201,20 +201,20 @@
 }
 
 .ef-compact .style-smart-stage__time {
-  font-size: 11px;
+  font-size: 12px;
   min-height: 11px;
   color: var(--color-accent-emerald);
   font-weight: 600;
 }
 
 .ef-compact .style-smart-stage__time-start {
-  font-size: 11px;
+  font-size: 12px;
   min-height: 11px;
   color: var(--color-text-secondary);
 }
 
 .ef-compact .style-smart-stage__time-combined {
-  font-size: 11px;
+  font-size: 12px;
   min-height: 11px;
   max-width: 100%;
   overflow: hidden;
@@ -263,7 +263,7 @@
 }
 
 .ef-compact .style-smart-row__overview-value {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--color-zinc-600);
   white-space: nowrap;

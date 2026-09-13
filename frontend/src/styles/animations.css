@@ -356,7 +356,7 @@
 
 :root:not([data-theme="dark"]) ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.13);
-  border-radius: 3px;
+  border-radius: 4px;
   transition: background 0.2s ease;
 }
 

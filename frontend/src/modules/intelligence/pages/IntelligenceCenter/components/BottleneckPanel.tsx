@@ -13,7 +13,7 @@ const BottleneckPanel: React.FC<BottleneckPanelProps> = ({
   factoryBottleneck, collapsedPanels, toggleCollapse,
 }) => {
   return (
-    <div className="c-card c-breathe-cyan">
+    <div className="c-card c-hover-hl">
       <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('bottleneck')}>
         <LiveDot size={7} color="var(--color-accent-cyan-bright)" />
         工厂工序卡点

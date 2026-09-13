@@ -1,8 +1,8 @@
 .urgeOrderCard {
   background: var(--status-warning-bg);
   border: 1.5px solid var(--status-warning-border);
-  border-radius: 12px;
-  padding: 12px 14px;
+  border-radius: 8px;
+  padding: 12px 16px;
   margin: 8px 0;
 }
 .urgeCardHeader {
@@ -24,7 +24,7 @@
 .urgeCardDesc {
   font-size: 14px;
   color: var(--color-amber-700);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   line-height: 1.5;
 }
 .urgeCardForm {
@@ -41,7 +41,7 @@
 .urgeFormInput {
   border: 1px solid var(--color-amber-300);
   border-radius: 6px;
-  padding: 6px 10px;
+  padding: 8px 12px;
   font-size: 14px;
   background: var(--status-success-bg);
   color: var(--color-text-primary);
@@ -56,7 +56,7 @@
 .urgeFormTextarea {
   border: 1px solid var(--color-amber-300);
   border-radius: 6px;
-  padding: 6px 10px;
+  padding: 8px 12px;
   font-size: 14px;
   background: var(--status-success-bg);
   color: var(--color-text-primary);
@@ -79,12 +79,12 @@
   padding: 4px 8px;
 }
 .urgeSubmitBtn {
-  margin-top: 6px;
+  margin-top: 8px;
   background: var(--color-warning);
   color: var(--color-bg-base);
   border: none;
   border-radius: 8px;
-  padding: 7px 0;
+  padding: 8px 0;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -101,9 +101,9 @@
 .urgeCardSaved {
   background: var(--status-success-bg);
   border: 1px solid var(--status-success-border);
-  border-radius: 10px;
-  padding: 10px 14px;
+  border-radius: 8px;
+  padding: 12px 16px;
   color: var(--color-success);
   font-size: 14px;
-  margin: 6px 0;
+  margin: 8px 0;
 }

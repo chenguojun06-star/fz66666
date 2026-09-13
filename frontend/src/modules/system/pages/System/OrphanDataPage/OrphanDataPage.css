@@ -49,8 +49,8 @@
 .orphan-category-card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: 12px;
+  padding: 12px 16px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   cursor: pointer;
@@ -62,13 +62,13 @@
   border-color: var(--status-processing-border);
   background: var(--status-processing-bg);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.12);
+  box-shadow: var(--shadow-md);
 }
 
 .orphan-category-active {
   border-color: var(--color-info);
   background: var(--status-processing-bg);
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .orphan-category-icon {

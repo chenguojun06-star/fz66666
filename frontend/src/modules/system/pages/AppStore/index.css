@@ -23,7 +23,7 @@
 
 /* 应用卡片 */
 .app-store-card {
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   transition: all 0.3s ease;
   height: 100%;
@@ -31,7 +31,7 @@
 
 .app-store-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-lg);
 }
 
 .app-icon-container {
@@ -133,7 +133,7 @@
 
 .price-card:hover {
   transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
 .price-card.recommended {
@@ -170,10 +170,10 @@
 .trial-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 10px;
+  padding: 2px 12px;
   background: linear-gradient(135deg, var(--status-success-bg) 0%, #e6ffe6 100%);
   border: 1px solid var(--status-success-border);
-  border-radius: 12px;
+  border-radius: 8px;
   color: var(--color-success);
   font-size: 14px;
   font-weight: 600;

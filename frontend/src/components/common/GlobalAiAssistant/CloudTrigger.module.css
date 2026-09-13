@@ -49,7 +49,7 @@
   align-items: center;
   justify-content: center;
   padding: 0 4px;
-  box-shadow: 0 2px 6px rgba(255, 77, 79, 0.55);
+  box-shadow: var(--shadow-sm);
   border: 2px solid var(--color-bg-base);
   pointer-events: none;
   animation: badgePulse 2s ease-in-out infinite;

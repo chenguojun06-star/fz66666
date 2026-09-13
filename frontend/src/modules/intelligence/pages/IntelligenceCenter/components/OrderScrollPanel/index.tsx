@@ -21,7 +21,7 @@ export const OrderScrollPanel: React.FC<{
   }, [orders]);
 
   return (
-    <div className="c-card c-breathe-green">
+    <div className="c-card c-hover-hl">
       <div className="c-card-title" style={{ cursor: onToggle ? 'pointer' : undefined }} onClick={onToggle}>
         <LiveDot size={7} />
         活跃订单实时滚动

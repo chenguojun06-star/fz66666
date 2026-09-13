@@ -1,7 +1,7 @@
 .time-dimension-wrapper {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .time-dimension-selector {
@@ -9,11 +9,11 @@
   gap: 2px;
   background: var(--color-bg-stripe);
   border-radius: 8px;
-  padding: 3px;
+  padding: 4px;
 }
 
 .time-dimension-btn {
-  padding: 5px 14px;
+  padding: 4px 16px;
   border: none;
   background: transparent;
   color: var(--color-text-tertiary);
@@ -34,7 +34,7 @@
   background: var(--color-bg-base);
   color: var(--color-bg-dark);
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-sm);
 }
 
 .time-dimension-range {

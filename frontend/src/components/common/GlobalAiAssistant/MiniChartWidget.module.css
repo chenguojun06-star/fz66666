@@ -1,16 +1,16 @@
 /* MiniChartWidget.module.css — 小云 AI 内嵌图表专用样式，仅此文件使用 */
 
 .chartsWrapper {
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 /* ECharts 容器 */
 .miniEChart {
   background: var(--color-slate-50);
   border: 1px solid var(--color-blue-50);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 8px;
-  margin: 6px 0;
+  margin: 8px 0;
   overflow: hidden;
 }
 
@@ -38,9 +38,9 @@
 .miniProgressChart {
   background: var(--color-slate-50);
   border: 1px solid var(--color-blue-50);
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin: 6px 0;
+  border-radius: 8px;
+  padding: 12px 12px;
+  margin: 8px 0;
 }
 
 .progressBarWrap {
@@ -48,7 +48,7 @@
   background: var(--color-border-light);
   border-radius: 4px;
   overflow: hidden;
-  margin: 6px 0;
+  margin: 8px 0;
 }
 
 .progressBarFill {

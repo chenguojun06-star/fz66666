@@ -1,7 +1,7 @@
 .order-cutting-chart-card {
   height: 100%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  border-radius: 8px;
 }
 
 .order-cutting-chart-card .ant-card-head {
@@ -38,7 +38,7 @@
 /* 深色主题覆盖 */
 :root[data-theme="dark"] .order-cutting-chart-card {
   background: rgba(26, 29, 36, 0.6);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-md);
 }
 
 :root[data-theme="dark"] .order-cutting-chart-card .ant-card-head {

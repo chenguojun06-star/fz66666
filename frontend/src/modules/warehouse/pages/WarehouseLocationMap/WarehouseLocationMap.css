@@ -24,7 +24,7 @@
   border-bottom: 1px solid var(--color-border-light);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .wlm-sidebar-icon {
@@ -65,7 +65,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
+  padding: 12px 16px;
   margin-bottom: 4px;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -133,7 +133,7 @@
   color: var(--color-text-primary);
   display: flex;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .wlm-header-subtitle {
@@ -262,7 +262,7 @@
   opacity: 0;
   transition: all 0.2s ease;
   padding: 2px;
-  border-radius: 2px;
+  border-radius: 4px;
 }
 
 .wlm-location-card:hover .wlm-location-delete-icon {
@@ -369,7 +369,7 @@
   display: grid;
   grid-template-columns: 1.1fr 0.7fr 1.1fr 1.6fr 80px 90px;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 12px 12px;
   background: var(--color-bg-container);
   border-bottom: 1px solid var(--color-border-light);
   font-size: 14px;
@@ -387,7 +387,7 @@
   display: grid;
   grid-template-columns: 1.1fr 0.7fr 1.1fr 1.6fr 80px 90px;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 12px 12px;
   border-bottom: 1px solid var(--color-border-light);
   font-size: 14px;
   align-items: center;

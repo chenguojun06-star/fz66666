@@ -24,7 +24,7 @@
   color: var(--color-accent-cyan-bright) !important;
   font-weight: 500 !important;
   font-size: 14px !important;
-  padding: 7px 0 !important;
+  padding: 8px 0 !important;
   letter-spacing: 0.5px;
 }
 
@@ -39,7 +39,7 @@
 
 /* 卡片内容区 */
 .ai-execution-panel .ai-panel-card .ant-card-body {
-  padding: 10px 12px !important;
+  padding: 12px 12px !important;
   background: transparent !important;
 }
 
@@ -55,7 +55,7 @@
   color: rgba(0, 229, 255, 0.6) !important;
   border-bottom: 1px solid rgba(0, 229, 255, 0.1) !important;
   font-size: 14px !important;
-  padding: 5px 8px !important;
+  padding: 4px 8px !important;
   font-weight: 500;
 }
 
@@ -63,7 +63,7 @@
   background: transparent !important;
   color: var(--color-blue-200) !important;
   border-bottom: 1px solid rgba(0, 229, 255, 0.06) !important;
-  padding: 6px 8px !important;
+  padding: 8px 8px !important;
 }
 
 .ai-execution-panel .ant-table-tbody > tr:hover > td {
@@ -114,11 +114,11 @@
 }
 
 .ai-execution-panel .command-detail-section h4 {
-  margin: 0 0 10px 0;
+  margin: 0 0 12px 0;
   font-weight: 600;
   color: var(--color-accent-cyan-bright);
   border-bottom: 1px solid rgba(0, 229, 255, 0.2);
-  padding-bottom: 6px;
+  padding-bottom: 8px;
   font-size: 14px;
 }
 
@@ -140,7 +140,7 @@
 }
 
 .ai-execution-panel .command-detail-section ul li {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   color: var(--color-blue-200);
   line-height: 1.6;
   font-size: 14px;
@@ -162,7 +162,7 @@
 }
 
 .ai-execution-panel .result-content h4 {
-  margin: 10px 0 6px 0;
+  margin: 12px 0 8px 0;
   font-weight: 600;
   color: var(--color-accent-cyan-bright);
   font-size: 14px;
@@ -173,10 +173,10 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 7px;
+  padding: 2px 8px;
   background: rgba(251, 146, 60, 0.12);
   border: 1px solid rgba(251, 146, 60, 0.35);
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 14px;
   color: var(--color-orange-400);
   font-weight: 500;
@@ -187,7 +187,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
+  padding: 12px 16px;
   background: rgba(74, 222, 128, 0.08);
   border: 1px solid rgba(74, 222, 128, 0.25);
   border-radius: 4px;
@@ -195,7 +195,7 @@
   font-size: 14px;
 
   .icon {
-    font-size: 15px;
+    font-size: 14px;
   }
 }
 
@@ -204,7 +204,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
+  padding: 12px 16px;
   background: rgba(248, 113, 113, 0.08);
   border: 1px solid rgba(248, 113, 113, 0.25);
   border-radius: 4px;
@@ -212,16 +212,16 @@
   font-size: 14px;
 
   .icon {
-    font-size: 15px;
+    font-size: 14px;
   }
 }
 
 /* 级联任务通知 */
 .cascaded-notification {
-  padding: 10px 12px;
+  padding: 12px 12px;
   background: rgba(167, 139, 250, 0.08);
   border-left: 3px solid rgba(167, 139, 250, 0.5);
-  border-radius: 3px;
+  border-radius: 4px;
   margin-bottom: 12px;
 
   .title {
@@ -234,13 +234,13 @@
   .tasks {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
 
     .task-tag {
-      padding: 2px 7px;
+      padding: 2px 8px;
       background: rgba(167, 139, 250, 0.1);
       border: 1px solid rgba(167, 139, 250, 0.25);
-      border-radius: 2px;
+      border-radius: 4px;
       font-size: 14px;
     color: var(--color-purple-200);
     }

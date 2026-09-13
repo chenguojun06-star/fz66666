@@ -603,7 +603,7 @@ html.dark-mode {
   align-items: center;
   justify-content: center;
   gap: var(--spacing-xs);
-  padding: 10px 24px;
+  padding: 12px 24px;
   font-size: 14px;
   font-weight: 500;
   border-radius: var(--radius-pill);
@@ -618,13 +618,13 @@ html.dark-mode {
 .btn-pill-primary {
   background: var(--color-primary);
   color: white;
-  box-shadow: 0 4px 12px rgba(45, 127, 249, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-pill-primary:hover {
   background: var(--color-primary-dark);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(45, 127, 249, 0.4);
+  box-shadow: var(--shadow-lg);
 }
 
 .btn-pill-primary:active {
@@ -659,12 +659,12 @@ html.dark-mode {
 
 /* 尺寸变体 */
 .btn-pill-sm {
-  padding: 6px 16px;
+  padding: 8px 16px;
   font-size: 14px;
 }
 
 .btn-pill-lg {
-  padding: 14px 32px;
+  padding: 16px 32px;
   font-size: 14px;
 }
 
@@ -724,7 +724,7 @@ html.dark-mode {
   width: 3px;
   height: 16px;
   background: var(--color-primary);
-  border-radius: 2px;
+  border-radius: 4px;
 }
 
 /* 卡片内容 */
@@ -734,7 +734,7 @@ html.dark-mode {
 
 /* ========== 4. 表单输入（统一圆角） ========== */
 .input-glass {
-  padding: 10px 16px;
+  padding: 12px 16px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-bg-base);
@@ -766,7 +766,7 @@ html.dark-mode {
   background: rgba(255, 255, 255, 0.14);
   border: 1px solid rgba(255, 255, 255, 0.30);
   backdrop-filter: blur(10px) saturate(160%);
-  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.10);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -1158,7 +1158,7 @@ html.dark-mode {
   font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-text-primary);
-  padding-left: 10px;
+  padding-left: 12px;
   border-left: 3px solid var(--color-primary);
 }
 .unified-content-card__body {
@@ -1270,7 +1270,7 @@ html.dark-mode {
 .ant-image-preview-close {
   color: #ffffff !important;
   background-color: rgba(0, 0, 0, 0.55) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-md);
 }
 .ant-image-preview-close:hover {
   background-color: rgba(0, 0, 0, 0.75) !important;
@@ -1281,9 +1281,9 @@ html.dark-mode {
 }
 .ant-image-preview-actions {
   background-color: rgba(0, 0, 0, 0.55) !important;
-  padding: 6px 18px !important;
+  padding: 8px 18px !important;
   border-radius: 999px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-lg);
 }
 .ant-image-preview-actions-action,
 .ant-image-preview-actions .anticon {
@@ -1315,7 +1315,7 @@ html.dark-mode {
   width: 44px !important;
   height: 44px !important;
   font-size: 18px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-md);
 }
 .ant-image-preview-switch-prev:hover,
 .ant-image-preview-switch-next:hover {
@@ -1329,11 +1329,11 @@ html.dark-mode {
 .style-image-preview-toolbar {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 8px;
+  padding: 8px 12px;
   background: rgba(0, 0, 0, 0.55);
   border-radius: 999px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-lg);
 }
 .style-image-preview-toolbar .ant-image-preview-actions {
   background: transparent !important;
