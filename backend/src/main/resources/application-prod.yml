@@ -149,7 +149,7 @@ ai:
   # 现用智谱 embedding-3（免费，dimensions=1024与向量集合对齐）。拿到新 Key 后替换下行默认值即可。
   # ⚠️ 控制台同名环境变量 AI_EMBEDDING_* 优先级高于本文件会覆盖此值，保持控制台为空！
   embedding:
-    api-key: ${AI_EMBEDDING_API_KEY:cd5c7b3ddf904c95b2755d9e87e2d4c1.LUqFWZHmRuAfyQDM}
+    api-key: ${AI_EMBEDDING_API_KEY:9a6782301c9f487ca10cd934f91309d4.KhM5pfDaVKfgwGaE}
     base-url: ${AI_EMBEDDING_BASE_URL:https://open.bigmodel.cn/api/paas}
     model: ${AI_EMBEDDING_MODEL:embedding-3}
     path: ${AI_EMBEDDING_PATH:/v4/embeddings}
