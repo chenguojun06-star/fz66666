@@ -369,7 +369,7 @@
 }
 
 .perm-matrix-item-btns {
-  padding: 8px 12px 8px 18px;
+  padding: 8px 12px 8px 16px;
   display: flex;
   flex-wrap: wrap;
   gap: 2px 20px;

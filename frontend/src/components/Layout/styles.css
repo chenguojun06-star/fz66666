@@ -501,7 +501,7 @@
 .layout-sidebar-submenu-popup.ant-menu-submenu-popup .ant-menu {
   background: var(--sidebar-bg, #ffffff);
   border: 1px solid var(--sidebar-item-border-hover);
-  border-radius: 14px;
+  border-radius: 8px;
   box-shadow: var(--shadow-xl);
   padding: 8px;
 }
@@ -679,7 +679,7 @@
 .nav-section-header.single-link.active {
   background-color: transparent;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: 8px;
   margin: 2px 12px;
 }
 
@@ -755,7 +755,7 @@
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
-  border-radius: 14px;
+  border-radius: 8px;
   margin: 2px 12px;
   background: transparent;
   border: 1px solid transparent;
@@ -1209,7 +1209,7 @@
   gap: 8px;
   padding: 4px 8px;
   margin: 0 -8px;
-  border-radius: 5px;
+  border-radius: 4px;
   transition: background 0.12s;
 }
 .sap-event-row:hover { background: var(--color-bg-stripe); }
@@ -1239,7 +1239,7 @@
 .sap-notice-row {
   display: flex; align-items: flex-start; gap: 8px;
   padding: 4px 8px; margin-bottom: 2px;
-  border-radius: 5px; cursor: pointer;
+  border-radius: 4px; cursor: pointer;
   transition: background 0.12s;
 }
 .sap-notice-row:hover { filter: brightness(0.97); }
@@ -1247,7 +1247,7 @@
 .sap-insight-row {
   display: flex; align-items: flex-start; gap: 8px;
   padding: 8px 8px; margin-bottom: 4px;
-  border-radius: 5px;
+  border-radius: 4px;
   background: var(--color-bg-container);
   transition: filter 0.12s;
 }

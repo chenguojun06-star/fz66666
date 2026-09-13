@@ -222,6 +222,20 @@ jobs:
       working-directory: ./frontend
       run: npx tsc --noEmit
 
+    - name: UI 规范检查（字号/圆角/间距档位，不阻断，仅报告）
+      continue-on-error: true
+      run: |
+        echo "📐 开始 UI 规范检查..."
+        node frontend/scripts/check-ui-tokens.mjs 2>&1 | head -60 || true
+        echo "ℹ️  UI 规范检查报告已生成（规范档位见 docs/前端UI工整度审查-2026-09-13.md）"
+
+    - name: 内联样式基线检查（不阻断，仅报告）
+      continue-on-error: true
+      run: |
+        echo "📏 开始内联样式检查..."
+        node frontend/scripts/check-inline-style.mjs 2>&1 | head -20 || true
+        echo "ℹ️  内联样式基线已锁定，新增 style={{}} 会被报告"
+
     - name: 死代码检测（ts-prune，不阻断，仅生成报告）
       continue-on-error: true
       working-directory: ./frontend

@@ -168,7 +168,7 @@
   height: 34px;
   min-width: 58px;
   padding: 0 12px;
-  border-radius: 18px;
+  border-radius: 8px;
   background: var(--xiaoyun-primary);
   color: white;
   border: none;
@@ -231,7 +231,7 @@
   padding: 0 12px;
   background: var(--xiaoyun-bg-page);
   border: 1px solid var(--xiaoyun-border-card);
-  border-radius: 18px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
   color: var(--xiaoyun-text-secondary);

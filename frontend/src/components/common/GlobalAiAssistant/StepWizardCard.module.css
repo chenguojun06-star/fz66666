@@ -1,7 +1,7 @@
 .card {
   background: var(--color-bg-base);
   border: 1px solid var(--color-slate-100);
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 16px;
   margin: 8px 0;
   box-shadow: var(--shadow-md);
@@ -208,7 +208,7 @@
 }
 
 .prevBtn {
-  padding: 8px 18px;
+  padding: 8px 16px;
   border: 1px solid var(--color-border-antd);
   border-radius: 8px;
   background: var(--color-bg-base);
@@ -224,7 +224,7 @@
 }
 
 .nextBtn {
-  padding: 8px 22px;
+  padding: 8px 20px;
   border: none;
   border-radius: 8px;
   background: var(--color-primary);
