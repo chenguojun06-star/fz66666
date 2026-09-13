@@ -486,6 +486,64 @@ public class ProceduralMemoryService {
         return proceduralMemoryMapper.selectList(wrapper);
     }
 
+    /**
+     * 重灌用：分页遍历全部可用 SOP，逐条重新索引到 Qdrant。
+     *
+     * <p>与 {@link #listSops} 的区别：{@code listSops} 依赖 UserContext 的租户上下文，
+     * 只能查当前租户；本方法面向系统级重灌任务（后台线程，无用户上下文），
+     * 一次覆盖<b>所有租户</b>的可用 SOP（含公共 SOP tenant_id=0）。
+     *
+     * <p>租户隔离没有被破坏：每条 SOP 最终走 {@link #indexSopToQdrant}，
+     * 写入 Qdrant 时用的是<b>该条 SOP 自己的 tenant_id</b>（pointId 与 payload 都带），
+     * 因此不存在跨租户串数据。
+     *
+     * <p>筛选条件与 {@link #listSops} 一致：{@code delete_flag = 0 AND enabled = 1}。
+     * 单条失败只计数不中断整批。
+     *
+     * @param offset 分页起点（断点续跑用，按 id 升序）
+     * @param limit  本批最多条数（上限 200）
+     * @return 本批索引结果计数
+     */
+    public SopIndexResult indexAllSopsToQdrant(int offset, int limit) {
+        SopIndexResult result = new SopIndexResult();
+        int safeLimit = Math.min(Math.max(limit, 1), 200);
+        int safeOffset = Math.max(offset, 0);
+
+        List<ProceduralMemory> sops = proceduralMemoryMapper.selectList(
+                new LambdaQueryWrapper<ProceduralMemory>()
+                        .eq(ProceduralMemory::getDeleteFlag, 0)
+                        .eq(ProceduralMemory::getEnabled, 1)
+                        .orderByAsc(ProceduralMemory::getId)
+                        .last("LIMIT " + safeLimit + " OFFSET " + safeOffset));
+
+        result.total = sops.size();
+        for (ProceduralMemory sop : sops) {
+            try {
+                if (indexSopToQdrant(sop)) {
+                    result.ok++;
+                } else {
+                    result.failed++;
+                }
+            } catch (Exception e) {
+                // 单条内容异常（如 steps_json 脏数据）不应中断整批重灌
+                result.failed++;
+                log.warn("[ProceduralMemory.indexAllSopsToQdrant] 索引异常 sopId={}: {}", sop.getId(), e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    /** 批量索引 SOP 的结果计数 */
+    @lombok.Data
+    public static class SopIndexResult {
+        /** 本批取到的 SOP 条数 */
+        private int total;
+        /** 索引成功条数 */
+        private int ok;
+        /** 索引失败条数 */
+        private int failed;
+    }
+
     // ────────────────────────────────────────────────────────────────────────────
     // 内部辅助方法
     // ────────────────────────────────────────────────────────────────────────────

@@ -227,6 +227,40 @@ public class IntelligenceAdminController {
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.service.SchemaVectorManager schemaVectorManager;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.intelligence.config.SparseVectorBackfillRunner sparseVectorBackfillRunner;
+
+    /**
+     * 稀疏（sparse）向量存量重灌（异步、断点续跑）。
+     *
+     * <p>存量数据此前只有 dense，切换到命名向量集合后必须重灌一次，混合检索才会真正生效。
+     * 分两阶段：① 全库表结构 schema ② SOP 程序记忆；每阶段/每批完成写 Redis 进度，
+     * 实例重启从断点续跑。底层是 upsert 覆盖，重复跑无脏数据。</p>
+     *
+     * <p><b>会调用大量 embedding API（约 = 表数量 + 启用 SOP 数量）</b>，故仅超管可触发。</p>
+     */
+    @PreAuthorize("isAuthenticated() and (T(com.fashion.supplychain.common.UserContext).isTopAdmin() or hasAuthority('ROLE_SUPER_ADMIN'))")
+    @PostMapping("/qdrant/backfill-sparse-vectors")
+    public Result<?> backfillSparseVectors() {
+        if (sparseVectorBackfillRunner == null) {
+            return Result.fail("SparseVectorBackfillRunner 未注册");
+        }
+        boolean started = sparseVectorBackfillRunner.startAsync();
+        return Result.success(Map.of(
+                "message", started ? "稀疏向量重灌已在后台启动" : "已有重灌任务在执行，本次忽略",
+                "started", started));
+    }
+
+    /** 查询稀疏向量重灌进度 */
+    @PreAuthorize("isAuthenticated() and (T(com.fashion.supplychain.common.UserContext).isTopAdmin() or hasAuthority('ROLE_SUPER_ADMIN'))")
+    @GetMapping("/qdrant/backfill-sparse-vectors/progress")
+    public Result<?> getSparseBackfillProgress() {
+        if (sparseVectorBackfillRunner == null) {
+            return Result.fail("SparseVectorBackfillRunner 未注册");
+        }
+        return Result.success(sparseVectorBackfillRunner.getProgress());
+    }
+
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/qdrant/vectorize-schema")
     public Result<?> vectorizeSchema(@RequestBody(required = false) Map<String, Object> body) {
