@@ -145,16 +145,16 @@ ai:
     api-key-map: ${AI_OPENAI_COMPAT_API_KEY_MAP:}
     tenant-id: ${AI_OPENAI_COMPAT_TENANT_ID:}
     model-name: ${AI_OPENAI_COMPAT_MODEL_NAME:xiaoyun-agent}
-  # 独立 Embedding 提供方。Voyage 对大陆IP封锁(401)弃用；
-  # 现用智谱 embedding-3（免费，dimensions=1024与向量集合对齐）。拿到新 Key 后替换下行默认值即可。
+  # 独立 Embedding 提供方。历经：DeepSeek无接口(404)→Voyage封大陆IP(401)→智谱拦机房IP(实名后仍401)→
+  # 终选硅基流动 bge-m3（免费、1024维、国内直连、标准OpenAI兼容无怪癖）。2026-09-13 定版。
   # ⚠️ 控制台同名环境变量 AI_EMBEDDING_* 优先级高于本文件会覆盖此值，保持控制台为空！
   embedding:
-    api-key: ${AI_EMBEDDING_API_KEY:9a6782301c9f487ca10cd934f91309d4.KhM5pfDaVKfgwGaE}
-    base-url: ${AI_EMBEDDING_BASE_URL:https://open.bigmodel.cn/api/paas}
-    model: ${AI_EMBEDDING_MODEL:embedding-3}
-    path: ${AI_EMBEDDING_PATH:/v4/embeddings}
-    dimensions: ${AI_EMBEDDING_DIMENSIONS:1024}
-    encoding-format: ${AI_EMBEDDING_ENCODING_FORMAT:}
+    api-key: ${AI_EMBEDDING_API_KEY:sk-iyziehtuamsxcirefnogzszdocxlzxczmkdajkdldsphquet}
+    base-url: ${AI_EMBEDDING_BASE_URL:https://api.siliconflow.cn}
+    model: ${AI_EMBEDDING_MODEL:BAAI/bge-m3}
+    path: ${AI_EMBEDDING_PATH:/v1/embeddings}
+    dimensions: ${AI_EMBEDDING_DIMENSIONS:0}
+    encoding-format: ${AI_EMBEDDING_ENCODING_FORMAT:float}
 
 # 小云 AI Agent 运行参数（运维可调，无需改代码）
 xiaoyun:
