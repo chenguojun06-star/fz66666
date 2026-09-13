@@ -1,0 +1,30 @@
+{
+  "total": 7854,
+  "layout": 7489,
+  "capturedAt": "2026-09-13",
+  "byModule": {
+    "App.tsx": 3,
+    "smart/components": 16,
+    "components/StyleAssets": 17,
+    "components/Layout": 121,
+    "components/PieChartCard": 1,
+    "components/print": 6,
+    "components/common": 775,
+    "components/production": 86,
+    "components/Finance": 1,
+    "hooks/useExtColumns.tsx": 1,
+    "modules/ecommerce": 241,
+    "modules/intelligence": 395,
+    "modules/integration": 122,
+    "modules/crm": 54,
+    "modules/basic": 1678,
+    "modules/dashboard": 115,
+    "modules/system": 1003,
+    "modules/production": 1689,
+    "modules/finance": 573,
+    "modules/selection": 126,
+    "modules/warehouse": 823,
+    "pages/Register": 5,
+    "pages/Login": 3
+  }
+}
