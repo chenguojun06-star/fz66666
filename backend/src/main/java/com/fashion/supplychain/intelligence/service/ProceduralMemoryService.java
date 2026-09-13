@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.dto.ProceduralMemoryCreateDTO;
 import com.fashion.supplychain.intelligence.dto.ProceduralMemoryUpdateDTO;
 import com.fashion.supplychain.intelligence.entity.ProceduralMemory;
 import com.fashion.supplychain.intelligence.mapper.ProceduralMemoryMapper;
+import com.fashion.supplychain.intelligence.util.ChineseKeywordExtractor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +50,14 @@ public class ProceduralMemoryService {
     private static final String SOP_POINT_ID_PREFIX = "sop:";
 
     /**
+     * 查询侧最多尝试的候选关键词个数。
+     *
+     * <p>命中即止，所以典型开销仍是 1 次 LIKE 查询；只有前几个都没命中才会多试几次。
+     * 相比一次 Qdrant 向量检索（含 embedding 调用），多几次本地 LIKE 便宜得多。
+     */
+    private static final int MAX_QUERY_KEYWORDS = 5;
+
+    /**
      * 根据用户消息检索匹配的SOP
      *
      * @param userMessage 用户消息
@@ -61,16 +70,20 @@ public class ProceduralMemoryService {
             return List.of();
         }
 
-        // 提取关键词
-        String keyword = extractKeyword(userMessage);
-        if (keyword == null || keyword.isBlank()) {
-            return List.of();
+        // 提取候选关键词，依次尝试，命中即止
+        List<String> keywords = extractKeywords(userMessage);
+        for (String keyword : keywords) {
+            if (keyword == null || keyword.isBlank()) {
+                continue;
+            }
+            log.debug("[ProceduralMemory] 检索SOP，tenantId={}, keyword={}", tenantId, keyword);
+            List<ProceduralMemory> sops = proceduralMemoryMapper.searchByKeyword(tenantId, keyword);
+            if (sops != null && !sops.isEmpty()) {
+                log.debug("[ProceduralMemory] 找到{}个匹配SOP", sops.size());
+                return sops;
+            }
         }
-
-        log.debug("[ProceduralMemory] 检索SOP，tenantId={}, keyword={}", tenantId, keyword);
-        List<ProceduralMemory> sops = proceduralMemoryMapper.searchByKeyword(tenantId, keyword);
-        log.debug("[ProceduralMemory] 找到{}个匹配SOP", sops.size());
-        return sops;
+        return List.of();
     }
 
     /**
@@ -155,9 +168,48 @@ public class ProceduralMemoryService {
     }
 
     /**
-     * 从用户消息中提取关键词
+     * 从用户消息中提取候选关键词（按相关度降序，最多 {@value #MAX_QUERY_KEYWORDS} 个）。
+     *
+     * <p>改造背景（2026-09-13）：原实现只有 13 个硬编码词，命中不了就"取内容前 10 个字符"。
+     * 前者覆盖面太窄，后者几乎不可能成为 {@code trigger_keywords} 的子串，
+     * 导致 L1 关键词层基本失效，SOP 只能靠 Qdrant 语义兜底（慢且依赖 embedding）。
+     *
+     * <p>新实现走 {@link ChineseKeywordExtractor}：领域词典最长匹配为主，
+     * 词典无命中时用 2-gram 词频/位置加权兜底，产出 1~5 个候选，
+     * 由调用方依次尝试匹配、命中即止。
+     *
+     * <p>降级保证：提取器无产出（极短句、纯标点、纯英文）或抛异常时，
+     * 回退到 {@link #fallbackKeyword} 的原有逻辑，不会比改造前更差。
+     *
+     * @param userMessage 用户消息
+     * @return 候选关键词列表（可能为空，但绝不为 null）
      */
-    private String extractKeyword(String userMessage) {
+    private List<String> extractKeywords(String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) {
+            return List.of();
+        }
+        try {
+            List<String> keywords = ChineseKeywordExtractor.extract(userMessage, MAX_QUERY_KEYWORDS);
+            if (!keywords.isEmpty()) {
+                return keywords;
+            }
+        } catch (Exception e) {
+            log.debug("[ProceduralMemory] 关键词提取失败，降级到原逻辑: {}", e.getMessage());
+        }
+        String legacy = fallbackKeyword(userMessage);
+        return legacy == null ? List.of() : List.of(legacy);
+    }
+
+    /**
+     * 降级用的原有提取逻辑（改造前的实现，原样保留）。
+     *
+     * <p>仅在 {@link ChineseKeywordExtractor} 无产出时兜底，
+     * 保证"取内容前 10 个字符"虽然在关键词匹配上几乎无效，但至少不会让检索变成空转。
+     *
+     * @param userMessage 用户消息
+     * @return 单个关键词；输入为空时返回 null
+     */
+    private String fallbackKeyword(String userMessage) {
         if (userMessage == null || userMessage.isBlank()) {
             return null;
         }
@@ -201,14 +253,16 @@ public class ProceduralMemoryService {
             return null;
         }
 
-        // 第 1 层：trigger_keywords 精确匹配
-        String keyword = extractKeyword(userMessage);
-        if (keyword != null && !keyword.isBlank()) {
+        // 第 1 层：trigger_keywords 精确匹配（多候选依次尝试，命中即止）
+        for (String keyword : extractKeywords(userMessage)) {
+            if (keyword == null || keyword.isBlank()) {
+                continue;
+            }
             log.debug("[ProceduralMemory.matchSOP] L1 关键词匹配 tenantId={}, keyword={}", tenantId, keyword);
             List<ProceduralMemory> sops = proceduralMemoryMapper.searchByKeyword(tenantId, keyword);
             if (sops != null && !sops.isEmpty()) {
                 ProceduralMemory bestSOP = sops.get(0);
-                log.debug("[ProceduralMemory.matchSOP] L1 命中: {}", bestSOP.getSopName());
+                log.debug("[ProceduralMemory.matchSOP] L1 命中: {} (keyword={})", bestSOP.getSopName(), keyword);
                 // 修复 P0：命中后异步记录调用统计，供 SOP 淘汰/升级决策使用。
                 // 公共 SOP（tenant_id=0）也按当前租户累计统计（updateUsageStats 已支持 OR tenant_id=0）。
                 recordUsage(bestSOP.getId(), true);
@@ -359,7 +413,9 @@ public class ProceduralMemoryService {
         sop.setStepsJson(dto.getStepsJson());
         sop.setPreconditions(dto.getPreconditions());
         sop.setPostcheck(dto.getPostcheck());
-        sop.setTriggerKeywords(dto.getTriggerKeywords());
+        // 未显式填写触发关键词时自动补齐，避免这条 SOP 永远无法被关键词层召回
+        // （提取失败只返回空串，不阻断创建）
+        sop.setTriggerKeywords(resolveTriggerKeywords(dto));
         sop.setConfidence(dto.getConfidence() != null ? dto.getConfidence() : BigDecimal.valueOf(0.80));
         sop.setSource(dto.getSource() != null ? dto.getSource() : ProceduralMemory.SOURCE_MANUAL);
         sop.setEnabled(dto.getEnabled() != null ? dto.getEnabled() : 1);
@@ -374,6 +430,59 @@ public class ProceduralMemoryService {
         // P1-2：创建后索引到 Qdrant，供语义搜索兜底（失败不阻塞主流程）
         indexSopToQdrant(sop);
         return sop;
+    }
+
+    /**
+     * 确定落库的 trigger_keywords：调用方显式填写则原样使用，否则自动生成。
+     *
+     * <p>自动生成的原因：SOP 的创建路径有人工录入、ProceduralMemoryTool（AI 工具调用）、
+     * 结晶化升级等，trigger_keywords 经常为空。空关键词意味着这条 SOP
+     * 在 L1 关键词层永远无法被召回，只能靠 Qdrant 语义兜底。
+     *
+     * <p>硬约束：提取失败返回空串，绝不抛出、绝不阻断 SOP 创建。
+     *
+     * @param dto 创建参数
+     * @return 触发关键词（逗号分隔）；提取失败时为 ""
+     */
+    private String resolveTriggerKeywords(ProceduralMemoryCreateDTO dto) {
+        String explicit = dto.getTriggerKeywords();
+        if (explicit != null && !explicit.isBlank()) {
+            return explicit;
+        }
+        try {
+            String derived = ChineseKeywordExtractor.extractForStorage(
+                    dto.getSopName(), extractStepActions(dto.getStepsJson()));
+            if (!derived.isBlank()) {
+                log.info("[ProceduralMemory.createSop] 自动补齐触发关键词: {}", derived);
+            }
+            return derived;
+        } catch (Exception e) {
+            log.warn("[ProceduralMemory.createSop] 自动提取触发关键词失败（不阻断创建）: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    /**
+     * 从 steps_json 中抽取 action 文本（{@code [{"step":1,"action":"扫工序码",...}]}）。
+     *
+     * <p>只取 action 是为了避免 tool/expected 里的技术字段名（如 scan_operation）
+     * 和 JSON 结构噪声污染关键词提取。
+     *
+     * @param stepsJson 步骤 JSON
+     * @return 空格拼接的 action 文本；无内容时为 ""
+     */
+    private String extractStepActions(String stepsJson) {
+        if (stepsJson == null || stepsJson.isBlank()) {
+            return "";
+        }
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("\"action\"\\s*:\\s*\"([^\"]+)\"")
+                .matcher(stepsJson);
+        StringBuilder sb = new StringBuilder();
+        while (m.find()) {
+            sb.append(m.group(1)).append(' ');
+        }
+        return sb.toString();
     }
 
     /**
