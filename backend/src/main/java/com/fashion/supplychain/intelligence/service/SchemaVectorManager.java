@@ -74,7 +74,8 @@ public class SchemaVectorManager {
                 int count = vectorizeAllSchemas();
                 log.info("[SchemaVectorManager] 启动时预向量化完成，共 {} 张表", count);
             } catch (Exception e) {
-                log.debug("[SchemaVectorManager] 启动时预向量化失败（可后续手动触发）: {}", e.getMessage());
+                // 原来是 debug：生产 INFO 级别下失败完全静默，无法判断预向量化是否成功
+                log.warn("[SchemaVectorManager] 启动时预向量化失败（可后续手动触发）: {}", e.getMessage(), e);
             }
         }, 5, java.util.concurrent.TimeUnit.SECONDS);
     }

@@ -20,8 +20,11 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class StyleVectorBackfillRunner implements ApplicationRunner {
 
-    // v2：v1 标记在 style_images 集合创建 POST bug 期间被误打（全部失败也置位），升级版本号强制重跑
-    private static final String MARKER_KEY = "style-vector-backfill:done:v2";
+    // v3：v2 只在全部 15 批跑完才写标记，实例重启/重新部署即清零重来。
+    //     线上实测：2574 跑到一半被 2575 取代，进度全丢（2026-09-13）。
+    //     v3 改为每批结束写一次进度 offset，重启从断点续跑，不再白烧 embedding 额度。
+    private static final String MARKER_KEY = "style-vector-backfill:done:v3";
+    private static final String OFFSET_KEY = "style-vector-backfill:offset:v3";
 
     @Autowired(required = false)
     private RedisService redisService;
@@ -29,12 +32,17 @@ public class StyleVectorBackfillRunner implements ApplicationRunner {
     @Autowired
     private StyleDifficultyOrchestrator styleDifficultyOrchestrator;
 
-    /** 每批条数（每款约 3~5 秒：视觉分析+向量化） */
-    @Value("${fashion.qdrant.style-vector-backfill.batch-size:200}")
+    /**
+     * 每批条数（每款约 3~5 秒：视觉分析+向量化）。
+     * 原为 200：backend 容器仅 1 核 2G 且未设 -Xmx，单批 200 款的内存峰值极高，
+     * 与 OOM 重启嫌疑直接相关（线上观测到实例反复重建）。改为 50 降低单次峰值，
+     * 同时把 maxBatches 提到 60，处理上限仍为 3000 款，覆盖量不变。
+     */
+    @Value("${fashion.qdrant.style-vector-backfill.batch-size:50}")
     private int batchSize;
 
     /** 最多批次（批次×条数=处理上限，防止超长占用） */
-    @Value("${fashion.qdrant.style-vector-backfill.max-batches:15}")
+    @Value("${fashion.qdrant.style-vector-backfill.max-batches:60}")
     private int maxBatches;
 
     @Override
@@ -50,9 +58,11 @@ public class StyleVectorBackfillRunner implements ApplicationRunner {
                 log.info("[StyleVectorBackfill] 已执行过（Redis标记存在），跳过");
                 return;
             }
-            log.info("[StyleVectorBackfill] 开始存量款式图片向量补齐 batchSize={} maxBatches={}", batchSize, maxBatches);
+            int startBatch = readOffset();
+            log.info("[StyleVectorBackfill] 开始存量款式图片向量补齐 batchSize={} maxBatches={} 起始批次={}",
+                    batchSize, maxBatches, startBatch + 1);
             int totalOk = 0;
-            for (int batch = 0; batch < maxBatches; batch++) {
+            for (int batch = startBatch; batch < maxBatches; batch++) {
                 var result = styleDifficultyOrchestrator.backfillStyleImageVectors(batchSize, batch * batchSize);
                 int total = ((Number) result.get("total")).intValue();
                 int ok = ((Number) result.get("ok")).intValue();
@@ -60,16 +70,48 @@ public class StyleVectorBackfillRunner implements ApplicationRunner {
                 totalOk += ok;
                 log.info("[StyleVectorBackfill] 批次{}/{} total={} ok={} failed={}",
                         batch + 1, maxBatches, total, ok, failed);
+                writeOffset(batch + 1); // 断点：本批已完成，下一批从这里开始
                 if (total < batchSize) {
                     break; // 到底了
                 }
             }
             if (redisService != null) {
                 redisService.set(MARKER_KEY, "1");
+                redisService.delete(OFFSET_KEY);
             }
             log.info("[StyleVectorBackfill] 存量款式图片向量补齐完成，累计入库 {} 款", totalOk);
         } catch (Exception e) {
-            log.warn("[StyleVectorBackfill] 执行失败（不影响启动，下次启动重试）: {}", e.getMessage());
+            log.warn("[StyleVectorBackfill] 执行失败（不影响启动，下次启动从断点续跑）: {}", e.getMessage(), e);
+        }
+    }
+
+    /** 读取已完成的批次数（断点续跑起点）；无记录或值损坏则从 0 开始 */
+    private int readOffset() {
+        if (redisService == null) {
+            return 0;
+        }
+        try {
+            String v = redisService.get(OFFSET_KEY);
+            if (v == null || v.isBlank()) {
+                return 0;
+            }
+            int off = Integer.parseInt(v.trim());
+            return Math.max(0, Math.min(off, maxBatches));
+        } catch (Exception e) {
+            log.warn("[StyleVectorBackfill] 进度读取失败，从第 1 批开始: {}", e.getMessage());
+            return 0;
+        }
+    }
+
+    /** 记录已完成到的批次数（即下一批的起点），7 天 TTL 防止僵尸进度永久卡住续跑 */
+    private void writeOffset(int nextBatch) {
+        if (redisService == null) {
+            return;
+        }
+        try {
+            redisService.set(OFFSET_KEY, String.valueOf(nextBatch), 7, java.util.concurrent.TimeUnit.DAYS);
+        } catch (Exception e) {
+            log.warn("[StyleVectorBackfill] 进度写入失败（不影响本批结果）: {}", e.getMessage());
         }
     }
 }

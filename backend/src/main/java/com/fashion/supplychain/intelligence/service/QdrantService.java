@@ -35,9 +35,12 @@ import org.springframework.context.annotation.Lazy;
  * <p>通过 Qdrant REST API v1.x 实现向量存储与相似检索。
  * 每个租户使用同一个 collection，通过 tenant_id payload 过滤隔离。
  *
- * <p>向量生成优先级：① 主模型(deepseek-flash 多模态)视觉分析 + DeepSeek Embedding（图片→文字描述→向量，推荐）
- *                   ② DeepSeek Embedding API（text-embedding-v2，用图片URL文本生成向量）
+ * <p>向量生成优先级：① 主模型(deepseek-flash 多模态)视觉分析 + Embedding（图片→文字描述→向量，推荐）
+ *                   ② Embedding API（用图片URL文本生成向量）
  *                   ③ 关键词哈希伪向量（pseudoEmbedding，128维，无需 API Key）
+ *
+ * <p>注意：Embedding 实际提供方由 ai.embedding.* 决定（当前线上为硅基流动 BAAI/bge-m3，1024 维）。
+ *         DeepSeek 官方并未提供 embeddings 接口，日志里的「Embedding(...)」会打印真实模型，勿再写死 DeepSeek。
  *
  * <p>配置项（application.yml）：
  * <pre>
@@ -792,6 +795,17 @@ public class QdrantService {
                 || (deepseekApiKey != null && !deepseekApiKey.isEmpty());
     }
 
+    /**
+     * 当前实际生效的 Embedding 提供方标签（日志用）。
+     * 历史教训：日志里写死「DeepSeek Embedding」，而实际跑的是硅基流动 bge-m3，排查时被严重误导。
+     */
+    private String activeEmbeddingLabel() {
+        boolean useStandalone = embeddingApiKey != null && !embeddingApiKey.isEmpty();
+        return useStandalone
+                ? embeddingModelName + "@" + embeddingBaseUrl
+                : "deepseek:" + embeddingModel + "@" + deepseekBaseUrl;
+    }
+
     private String resolveActiveProvider() {
         if (deepseekApiKey != null && !deepseekApiKey.isEmpty()) {
             log.debug("[Qdrant] Embedding provider=DEEPSEEK (key长度={})", deepseekApiKey.length());
@@ -876,8 +890,9 @@ public class QdrantService {
 
     /** 获取当前使用的向量维度（DeepSeek 为 1024 维，伪向量 128 维） */
     private int getVectorDim() {
-        boolean hasRealKey = deepseekApiKey != null && !deepseekApiKey.isEmpty();
-        return hasRealKey ? VECTOR_DIM_REAL : VECTOR_DIM_PSEUDO;
+        // 同 computeMultimodalEmbedding：独立配置 ai.embedding.* 也能出真实向量，不能只看 deepseekApiKey。
+        // 原判定在只配 standalone key 时返回 128（伪向量维度），与实际生成的 1024 不符 → 建集合维度会错。
+        return hasRealEmbeddingProvider() ? VECTOR_DIM_REAL : VECTOR_DIM_PSEUDO;
     }
 
     /**
@@ -891,6 +906,13 @@ public class QdrantService {
         info.put("deepseekBaseUrl", deepseekBaseUrl);
         info.put("deepseekEmbeddingModel", embeddingModel);
         info.put("hasInferenceOrchestrator", hasInferenceOrch);
+        // 真实生效的 Embedding 提供方（线上为硅基流动 bge-m3，光看上面几个 DeepSeek 字段会被误导）
+        info.put("hasRealEmbedding", hasRealEmbeddingProvider());
+        info.put("embeddingProvider", activeEmbeddingLabel());
+        info.put("embeddingBaseUrl", embeddingBaseUrl);
+        info.put("embeddingModelName", embeddingModelName);
+        info.put("embeddingPath", embeddingPath);
+        info.put("embeddingDimensions", embeddingDimensions);
         info.put("currentVectorDim", getVectorDim());
         info.put("realVectorDim", VECTOR_DIM_REAL);
         info.put("pseudoVectorDim", VECTOR_DIM_PSEUDO);
@@ -939,9 +961,9 @@ public class QdrantService {
     /**
      * 对款式封面图生成语义向量，用于以图搜款和难度评估。
      *
-     * <p>向量生成优先级（D-361：全站统一 deepseek-flash 多模态，只需 DEEPSEEK_API_KEY）：
-     * 1. 主模型视觉分析 + DeepSeek Embedding（图片→描述→向量，质量最佳）
-     * 2. DeepSeek 纯文本 Embedding（用图片 URL 文本生成向量，质量一般）
+     * <p>向量生成优先级（D-361：全站统一 deepseek-flash 多模态）：
+     * 1. 主模型视觉分析 + Embedding（图片→描述→向量，质量最佳）
+     * 2. 纯文本 Embedding（用图片 URL 文本生成向量，质量一般）
      * 3. 伪向量（哈希）— 最低质量，仅兜底
      */
     /** 文本语义向量（供"以图搜款描述→向量"等场景复用 embedding 通道）。失败返回 null。 */
@@ -960,24 +982,26 @@ public class QdrantService {
             throw new IllegalArgumentException("imageUrl 不能为空");
         }
 
-        boolean hasDeepSeekKey = deepseekApiKey != null && !deepseekApiKey.isEmpty();
+        // 不能只判 deepseekApiKey：callEmbeddingApi 优先用独立配置 ai.embedding.*，
+        // 只配 standalone key 时同样能出真实向量。原判定会让它静默降级伪向量（搜索质量掉地上无感知）。
+        boolean hasRealEmbedding = hasRealEmbeddingProvider();
         boolean hasInferenceOrch = inferenceOrchestrator != null;
-        log.info("[Qdrant] 向量生成启动 imageUrlLen={} hasDeepSeekKey={} hasInferenceOrch={}",
-                imageUrl.length(), hasDeepSeekKey, hasInferenceOrch);
+        log.info("[Qdrant] 向量生成启动 imageUrlLen={} hasRealEmbedding={} hasInferenceOrch={} embedding={}",
+                imageUrl.length(), hasRealEmbedding, hasInferenceOrch, activeEmbeddingLabel());
 
-        // ========== 第 1 级：主模型（多模态）视觉分析 → 文字描述 → DeepSeek Embedding ==========
+        // ========== 第 1 级：主模型（多模态）视觉分析 → 文字描述 → Embedding ==========
         if (hasInferenceOrch) {
             try {
-                log.info("[Qdrant] 尝试方案1: 主模型视觉描述 + DeepSeek Embedding");
+                log.info("[Qdrant] 尝试方案1: 主模型视觉描述 + Embedding({})", activeEmbeddingLabel());
                 String visualDescription = describeImageWithVision(imageUrl);
                 if (visualDescription != null && !visualDescription.isBlank()) {
                     log.info("[Qdrant] 视觉描述成功 descLen={}", visualDescription.length());
-                    if (hasDeepSeekKey) {
+                    if (hasRealEmbedding) {
                         float[] vec = callEmbeddingApi(visualDescription);
-                        log.info("[Qdrant] ✓ 方案1成功 视觉描述+DeepSeek Embedding 维度={}", vec.length);
+                        log.info("[Qdrant] ✓ 方案1成功 视觉描述+Embedding({}) 维度={}", activeEmbeddingLabel(), vec.length);
                         return vec;
                     }
-                    log.warn("[Qdrant] 已获取视觉描述但未配置 DeepSeek Key，无法生成向量");
+                    log.warn("[Qdrant] 已获取视觉描述但未配置任何 Embedding Key（ai.embedding.api-key 或 DEEPSEEK_API_KEY），无法生成向量");
                 } else {
                     log.warn("[Qdrant] 视觉描述返回空");
                 }
@@ -986,23 +1010,23 @@ public class QdrantService {
             }
         }
 
-        // ========== 第 2 级：DeepSeek 纯文本 Embedding（用图片 URL 文本生成向量） ==========
-        if (hasDeepSeekKey) {
-            log.info("[Qdrant] 尝试方案2: DeepSeek 文本 Embedding（用 imageUrl 文本）");
+        // ========== 第 2 级：纯文本 Embedding（用图片 URL 文本生成向量） ==========
+        if (hasRealEmbedding) {
+            log.info("[Qdrant] 尝试方案2: 文本 Embedding({})（用 imageUrl 文本）", activeEmbeddingLabel());
             try {
                 float[] vec = callEmbeddingApi(imageUrl);
-                log.info("[Qdrant] ✓ 方案2成功 DeepSeek 文本 Embedding 维度={}", vec.length);
+                log.info("[Qdrant] ✓ 方案2成功 文本 Embedding({}) 维度={}", activeEmbeddingLabel(), vec.length);
                 return vec;
             } catch (Exception e) {
-                log.warn("[Qdrant] DeepSeek Embedding 失败: {}", e.getMessage());
+                log.warn("[Qdrant] Embedding({}) 失败: {}", activeEmbeddingLabel(), e.getMessage());
             }
         }
 
         // ========== 第 3 级：伪向量兜底 ==========
         log.warn("[Qdrant] Embedding 降级为伪向量（搜索质量降低但不影响功能）" +
-                "当前配置: hasDeepSeekKey={}。" +
-                "如需高质量向量搜索：请配置 DEEPSEEK_API_KEY（Embedding 与视觉描述共用）",
-                hasDeepSeekKey);
+                "当前配置: hasRealEmbedding={}。" +
+                "如需高质量向量搜索：请配置 ai.embedding.api-key（推荐硅基流动 bge-m3）或 DEEPSEEK_API_KEY",
+                hasRealEmbedding);
         return pseudoEmbedding(imageUrl);
     }
 
