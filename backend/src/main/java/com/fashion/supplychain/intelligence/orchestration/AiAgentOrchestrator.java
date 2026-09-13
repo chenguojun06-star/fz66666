@@ -424,6 +424,21 @@ public class AiAgentOrchestrator {
                 return false;
             }
 
+            // D-395 硬闸门：多Agent图单次问话要跑 5-8 次 LLM（数字孪生+监督+4专家+反思），
+            // 而路由判定过宽（闲聊"你会什么啊"也会被判 COMPLEX）→ 配额被秒烧穿，
+            // 图内专家被配额拦后回答只剩一句"综合建议"，体验远不如 Agent 主循环（工具查询+多轮）。
+            // 因此收紧：①只允许真正的多领域问题进图 ②问候/闲聊/极短消息一律回主循环。
+            if (!routing.isMultiDomain()) {
+                log.info("[MultiAgent路由-流式] 单领域问题(complexity={})，跳过图编排走主循环: msg={}",
+                        routing.getComplexity(), abbreviate(userMessage));
+                return false;
+            }
+            if (isTrivialQuestion(userMessage)) {
+                log.info("[MultiAgent路由-流式] 问候/闲聊/极短消息，跳过图编排走主循环: msg={}",
+                        abbreviate(userMessage));
+                return false;
+            }
+
             log.info("[MultiAgent路由-流式] 触发多Agent图编排，domains={}, complexity={}",
                     routing.getDomains(), routing.getComplexity());
 
@@ -441,9 +456,28 @@ public class AiAgentOrchestrator {
         }
     }
 
+    /**
+     * D-395：多Agent图的免进判定——问候/闲聊/寒暄/极短消息。
+     * 这些输入进图只会烧配额（5-8 次 LLM）且答非所问，应走 Agent 主循环。
+     */
+    private boolean isTrivialQuestion(String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) return true;
+        String msg = userMessage.trim();
+        if (msg.length() < 12) return true;
+        if (XiaoyunPatterns.isGreeting(msg)) return true;
+        String lower = msg.toLowerCase();
+        return lower.matches(".*(你会什么|能做什么|你能干|怎么用|你是谁|在吗|谢谢|好的|嗯嗯|哈哈).*");
+    }
+
+    /** 日志用缩写（避免把用户完整问题打进日志） */
+    private String abbreviate(String text) {
+        if (text == null) return "";
+        String t = text.trim();
+        return t.length() > 30 ? t.substring(0, 30) + "…" : t;
+    }
+
     /** v2: 只提取关键词→数据路由提示，不直接返回模板，让 AI 基于真实数据回答。 */
-    private String extractKeywordDataHint(String userMessage) {
-        if (userMessage == null || userMessage.isBlank()) return null;
+    private String extractKeywordDataHint(String userMessage) {        if (userMessage == null || userMessage.isBlank()) return null;
         String msg = userMessage.toLowerCase();
         StringBuilder hint = new StringBuilder();
         if (msg.contains("订单") && (msg.contains("进度") || msg.contains("状态"))) {

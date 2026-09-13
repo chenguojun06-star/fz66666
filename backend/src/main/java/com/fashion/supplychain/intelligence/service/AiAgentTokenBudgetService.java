@@ -52,9 +52,11 @@ public class AiAgentTokenBudgetService {
     @Autowired(required = false)
     private StringRedisTemplate redis;
 
-    // 2026-09-13：RAG 改造（召回3→20+rerank+多Agent分析）后每轮 token 暴涨，20万/日不够用，默认提到 50 万。
-    // 仍可用环境变量 AI_BUDGET_TENANT_DAILY_TOKEN_LIMIT 覆盖。
-    @Value("${ai.budget.tenant-daily-token-limit:500000}")
+    // 2026-09-13：RAG 改造（召回3→20+rerank+多Agent分析）后每轮 token 暴涨。
+    // 20万 → 50万 仍被秒烧穿（多Agent图单次问话 5-8 次 LLM），提到 200 万/日。
+    // 配套 D-395 已收紧多Agent图闸门，从源头压低消耗。
+    // 仍可用环境变量 AI_BUDGET_TENANT_DAILY_TOKEN_LIMIT 覆盖（如需临时调整请改云托管环境变量）。
+    @Value("${ai.budget.tenant-daily-token-limit:2000000}")
     private long dailyTokenLimit;
 
     @Value("${ai.budget.enabled:true}")
