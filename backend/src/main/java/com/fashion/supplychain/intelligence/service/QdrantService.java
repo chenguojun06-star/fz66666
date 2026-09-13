@@ -124,6 +124,19 @@ public class QdrantService {
         return qdrantEnabled && qdrantReady;
     }
 
+    /**
+     * 稀疏向量 v2（默认关闭）：去掉中文单字符噪声 + token 哈希从 10 万桶扩到 31 位。
+     *
+     * <p>⚠️ 与存量索引不兼容：v1 用 {@code hashCode() % 100000}，v2 用 {@code hashCode() & 0x7FFFFFFF}，
+     * 同一批存量向量是按 v1 哈希写入的。开启 v2 后若不重建索引，查询侧的新哈希与库里的旧哈希对不上，
+     * sparse 侧会完全召回不到（dense 不受影响，混合检索退化为纯 dense）。
+     *
+     * <p>开启步骤：①全量重建 sparse 索引 → ②置 {@code intelligence.qdrant.sparse-v2=true} → ③重启。
+     * 失败回滚：改回 false 重启即可，无需再动数据。
+     */
+    @Value("${intelligence.qdrant.sparse-v2:false}")
+    private boolean sparseV2;
+
     @Value("${intelligence.qdrant.timeout-seconds:10}")
     private int qdrantTimeoutSeconds;
 
@@ -553,12 +566,15 @@ public class QdrantService {
                 }
             }
 
-            // 中文单字符（仅对高频字单独建索引）
-            for (int i = 0; i < trimmed.length(); i++) {
-                char c = trimmed.charAt(i);
-                if (isChineseChar(c)) {
-                    String single = String.valueOf(c);
-                    termFreq.merge(single, 1, Integer::sum);
+            // 中文单字符索引（v1 行为，v2 关闭）：
+            // "的/是/在"这类字在几乎所有文档里都出现，只有 TF 没有 IDF 的情况下纯属噪声，
+            // 会拉低款号/色号这类真正有区分度的 token 的相对权重。
+            if (!sparseV2) {
+                for (int i = 0; i < trimmed.length(); i++) {
+                    char c = trimmed.charAt(i);
+                    if (isChineseChar(c)) {
+                        termFreq.merge(String.valueOf(c), 1, Integer::sum);
+                    }
                 }
             }
 
@@ -570,7 +586,13 @@ public class QdrantService {
             // 构建 SparseVector
             SparseVector sv = new SparseVector();
             for (Map.Entry<String, Integer> entry : termFreq.entrySet()) {
-                int tokenId = Math.abs(entry.getKey().hashCode()) % 100000 + 1;
+                // v1：hashCode() % 100000 + 1 —— 只有 10 万个桶，中文 bigram 极易撞桶，
+                //     两个语义无关的词共用一个 index 会直接导致错误匹配（款号/色号撞桶即精确检索失效）。
+                // v2：hashCode() & 0x7FFFFFFF —— 31 位正整数（Qdrant sparse index 要求非负 32 位整数），
+                //     冲突概率从"必然"降到极低。
+                int tokenId = sparseV2
+                        ? (entry.getKey().hashCode() & 0x7FFFFFFF)
+                        : (Math.abs(entry.getKey().hashCode()) % 100000 + 1);
                 float tf = (float) entry.getValue() / maxFreq;
                 sv.indices.add(tokenId);
                 sv.values.add(tf);
