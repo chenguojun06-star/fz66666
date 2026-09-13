@@ -158,7 +158,9 @@ public class MultiAgentGraphOrchestrator {
     private String buildAnswerText(AgentState s) {
         StringBuilder sb = new StringBuilder();
         String summary = s.getContextSummary();
-        if (summary != null && !summary.isBlank()) {
+        // 过滤 supervisor LLM 失败时的占位话术（"系统正在分析中…请稍后刷新查看结果"）——
+        // 这是异步轮询场景的提示语，出现在最终回答里会让用户以为"说了但没干活"
+        if (summary != null && !summary.isBlank() && !summary.contains("请稍后刷新查看结果")) {
             sb.append(summary.trim());
         }
         Map<String, String> results = s.getSpecialistResults();
