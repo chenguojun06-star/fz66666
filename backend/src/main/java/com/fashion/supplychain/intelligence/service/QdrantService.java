@@ -1104,9 +1104,10 @@ public class QdrantService {
             ObjectNode params = body.putObject("vectors");
             params.put("size", VECTOR_DIM_REAL);
             params.put("distance", "Cosine");
-            restTemplate.postForEntity(
+            // Qdrant 创建集合必须 PUT（POST 该路径 404），同 fashion_memory 修复
+            restTemplate.exchange(
                     qdrantUrl + "/collections/" + STYLE_IMAGE_COLLECTION,
-                    jsonEntity(body.toString()), String.class);
+                    HttpMethod.PUT, jsonEntity(body.toString()), String.class);
             log.info("[Qdrant] 集合 {} 已自动创建", STYLE_IMAGE_COLLECTION);
             styleImageCollectionVerified.set(true);
         } catch (Exception ex) {
@@ -1188,9 +1189,10 @@ public class QdrantService {
                 ObjectNode params = body.putObject("vectors");
                 params.put("size", getVectorDim());
                 params.put("distance", "Cosine");
-                restTemplate.postForEntity(
+                // Qdrant 创建集合必须 PUT（POST 该路径 404）
+                restTemplate.exchange(
                         qdrantUrl + "/collections/" + collection,
-                        jsonEntity(body.toString()), String.class);
+                        HttpMethod.PUT, jsonEntity(body.toString()), String.class);
                 log.info("[Archival] 租户 {} 归档 collection 已创建: {}", tenantId, collection);
                 archivalCollectionsVerified.add(tenantId);
                 return true;
@@ -1268,7 +1270,8 @@ public class QdrantService {
             payload.put("tier", finalTier.name()); // P3-3：分级字段
 
             String url = qdrantUrl + "/collections/" + archivalCollectionName(tenantId) + "/points?wait=true";
-            restTemplate.postForEntity(url, jsonEntity(body.toString()), String.class);
+            // upsert 端点是 PUT，POST 会 404
+            restTemplate.exchange(url, HttpMethod.PUT, jsonEntity(body.toString()), String.class);
             return true;
         } catch (Exception e) {
             log.warn("[Archival] 写入归档失败 tenantId={} originalId={}: {}", tenantId, originalId, e.getMessage());
