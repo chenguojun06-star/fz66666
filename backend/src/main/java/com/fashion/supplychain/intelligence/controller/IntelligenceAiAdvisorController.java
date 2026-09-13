@@ -170,11 +170,23 @@ public class IntelligenceAiAdvisorController {
             } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             return emitter;
         }
+        // 【图片分析修复】前端通过 ?imageUrl= 传图片地址，但视觉工具（tool_vision_style_identify /
+        // tool_visual_style_search 等）的 imageUrl 是必填参数，只能由模型从上下文里取。
+        // 此前该参数声明后从未被使用 → 模型拿不到图片地址，只会回一句"我来帮您识别这张图片…"
+        // 然后空转到超时（表现为"图片根本分析不了、以图搜款更不可能"）。
+        // 注入 pageContext 而不是 question：pageContext 会进系统提示词（AgentLoopContextBuilder:79），
+        // 且不会被写进长期记忆；同时它参与查询缓存 key，不同图片自然分桶。
+        final String effectivePageContext = (imageUrl != null && !imageUrl.isBlank())
+                ? "[用户上传的图片URL] " + imageUrl
+                  + "\n请把上面这个 URL 作为 imageUrl 参数传给视觉工具（tool_vision_style_identify 款式识别 / "
+                  + "tool_visual_style_search 以图搜款 / tool_vision_analyze 通用分析）后再作答，不要凭空猜测。"
+                  + (pageContext != null && !pageContext.isBlank() ? "\n" + pageContext : "")
+                : pageContext;
         UserContext snapshot = UserContext.get() != null ? UserContext.get().copy() : null;
         Thread.startVirtualThread(() -> {
             try {
                 UserContext.set(snapshot);
-                aiAgentOrchestrator.executeAgentStreaming(question, pageContext, AgentMode.fromString(mode), emitter);
+                aiAgentOrchestrator.executeAgentStreaming(question, effectivePageContext, AgentMode.fromString(mode), emitter);
             } catch (Exception e) {
                 try {
                     emitter.send(SseEmitter.event().name("error").data("{\"message\":\"" + e.getMessage() + "\"}"));
