@@ -905,10 +905,10 @@ public class QdrantService {
         ArrayNode should = filter.putArray("should");
         ObjectNode tenantCond = should.addObject();
         tenantCond.put("key", "tenant_id");
-        tenantCond.putObject("match").put("integer", tenantId);
+        tenantCond.putObject("match").put("value", tenantId);
         ObjectNode publicCond = should.addObject();
         publicCond.put("key", "tenant_id");
-        publicCond.putObject("match").put("integer", 0);
+        publicCond.putObject("match").put("value", 0);
         return filter;
     }
 
@@ -1016,7 +1016,7 @@ public class QdrantService {
             idCond.putObject("match").put("value", toPointId(pointId));
             ObjectNode tenantCond = must.addObject();
             tenantCond.put("key", "tenant_id");
-            tenantCond.putObject("match").put("integer", tenantId);
+            tenantCond.putObject("match").put("value", tenantId);
 
             String url = qdrantUrl + "/collections/" + collectionName + "/points/delete";
             restTemplate.exchange(url, HttpMethod.POST, jsonEntity(body.toString()), String.class);
@@ -1095,7 +1095,7 @@ public class QdrantService {
             ArrayNode must = filter.putArray("must");
             ObjectNode cond = must.addObject();
             cond.put("key", "tenant_id");
-            cond.putObject("match").put("integer", tenantId);
+            cond.putObject("match").put("value", tenantId);
 
             String url = qdrantUrl + "/collections/" + collectionName + "/points/delete";
             restTemplate.exchange(url, HttpMethod.POST, jsonEntity(body.toString()), String.class);
@@ -1562,10 +1562,10 @@ public class QdrantService {
             ArrayNode should = filter.putArray("should");
             ObjectNode tenantCond = should.addObject();
             tenantCond.put("key", "tenant_id");
-            tenantCond.putObject("match").put("integer", tenantId);
+            tenantCond.putObject("match").put("value", tenantId);
             ObjectNode publicCond = should.addObject();
             publicCond.put("key", "tenant_id");
-            publicCond.putObject("match").put("integer", 0);
+            publicCond.putObject("match").put("value", 0);
             String url = qdrantUrl + "/collections/" + STYLE_IMAGE_COLLECTION + "/points/search";
             ResponseEntity<String> resp = restTemplate.postForEntity(url, jsonEntity(body.toString()), String.class);
             if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
@@ -1825,7 +1825,7 @@ public class QdrantService {
             ArrayNode must = filter.putArray("must");
             ObjectNode tenantCond = must.addObject();
             tenantCond.put("key", "tenant_id");
-            tenantCond.putObject("match").put("integer", tenantId);
+            tenantCond.putObject("match").put("value", tenantId);
 
             // 时间范围过滤（可选）
             if (startTimeIso != null && !startTimeIso.isBlank()
@@ -1896,7 +1896,7 @@ public class QdrantService {
             ArrayNode must = filter.putArray("must");
             ObjectNode tenantCond = must.addObject();
             tenantCond.put("key", "tenant_id");
-            tenantCond.putObject("match").put("integer", tenantId);
+            tenantCond.putObject("match").put("value", tenantId);
 
             // P3-3：分级过滤
             if (tierFilter != null && !tierFilter.isEmpty()) {
@@ -2016,11 +2016,11 @@ public class QdrantService {
 
                 ObjectNode tenantCond = must.addObject();
                 tenantCond.put("key", "tenant_id");
-                tenantCond.putObject("match").put("integer", tenantId);
+                tenantCond.putObject("match").put("value", tenantId);
 
                 ObjectNode tierCond = must.addObject();
                 tierCond.put("key", "tier");
-                tierCond.putObject("match").put("keyword", tier.name());
+                tierCond.putObject("match").put("value", tier.name());
 
                 String url = qdrantUrl + "/collections/" + archivalCollectionName(tenantId)
                         + "/points/count";
