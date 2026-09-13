@@ -21,11 +21,23 @@ public class SchemaVectorManager {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    /**
+     * 预热幂等标记用的 Redis（可选注入）。
+     * 2026-09-13 连接池耗尽事故：本类原先每次启动都无条件全量重灌全库表向量（221+ 张），
+     * 当天部署 13 次 → 每次重启都重灌 → 打满 HikariCP 连接池 + 烧 embedding 额度，
+     * 表现为 AgentCheckpointMapper.insert 刷屏报错、小云完全答不出问题。
+     */
+    @Autowired(required = false)
+    private com.fashion.supplychain.service.RedisService redisService;
+
     private final Map<String, TableSchema> schemaCache = new ConcurrentHashMap<>();
     private volatile boolean schemaLoaded = false;
     private java.util.concurrent.ScheduledExecutorService preheatScheduler;
 
     private static final String SCHEMA_VECTOR_PREFIX = "schema_";
+
+    /** 预热完成标记；需要强制重灌时删掉这个 key（或调 POST /api/intelligence/qdrant/vectorize-schema） */
+    private static final String PREHEAT_MARKER_KEY = "schema-vector-preheat:done:v1";
 
     @lombok.Data
     public static class TableSchema {
@@ -70,8 +82,18 @@ public class SchemaVectorManager {
         });
         preheatScheduler.schedule(() -> {
             try {
-                log.info("[SchemaVectorManager] 启动5秒后开始异步预向量化Schema");
+                // ⚠️ 幂等保护：Schema 是低频变化的数据，每次重启全量重灌纯属浪费且会打满连接池。
+                // 只有首次（或手动删除标记后）才灌，之后重启一律跳过。
+                if (redisService != null && "1".equals(redisService.get(PREHEAT_MARKER_KEY))) {
+                    log.info("[SchemaVectorManager] Schema 向量已预热过（Redis标记存在），跳过本次预向量化");
+                    return;
+                }
+                log.info("[SchemaVectorManager] 开始异步预向量化Schema（首次或标记已清除）");
                 int count = vectorizeAllSchemas();
+                if (redisService != null) {
+                    redisService.set(PREHEAT_MARKER_KEY, "1");
+                    log.info("[SchemaVectorManager] 已写入预热完成标记，后续重启将跳过");
+                }
                 log.info("[SchemaVectorManager] 启动时预向量化完成，共 {} 张表", count);
             } catch (Exception e) {
                 // 原来是 debug：生产 INFO 级别下失败完全静默，无法判断预向量化是否成功
