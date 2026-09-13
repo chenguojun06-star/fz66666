@@ -328,10 +328,15 @@ export function useAiChatStream(config: StreamConfig) {
           }
           break;
         }
-        case 'error':
-          accumulatedText = String(event.data.message || '智能分析暂时异常，请稍后再试。');
+        case 'error': {
+          const rawErrMsg = String(event.data.message || '智能分析暂时异常，请稍后再试。');
+          // 配额类报错不透出技术细节（如 tenant-daily-token-quota-exceeded），统一为友好文案
+          accumulatedText = /tenant-daily-token-quota-exceeded|配额已用完|已达上限/.test(rawErrMsg)
+            ? '今天的回答次数已消耗完成，请明天再来或联系管理员调整额度 🙏'
+            : rawErrMsg;
           setTextMessage(aiMsgId, accumulatedText);
           break;
+        }
       }
     };
 

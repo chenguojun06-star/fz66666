@@ -135,6 +135,27 @@ public class AiAgentTokenBudgetService {
         return dailyTokenLimit;
     }
 
+    /**
+     * 重置当前租户今日配额（管理动作：仅租户主账号/超管可触达的 Controller 调用）。
+     * 返回释放的 token 数；-1 表示重置失败。
+     */
+    public long resetToday() {
+        if (redis == null) return -1L;
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) return -1L;
+        try {
+            String key = buildKey(tenantId);
+            String val = redis.opsForValue().get(key);
+            long usage = val == null ? 0L : Long.parseLong(val);
+            redis.delete(key);
+            log.info("[AiBudget] 租户 {} 今日配额已重置（释放 {} tokens）", tenantId, usage);
+            return usage;
+        } catch (Exception e) {
+            log.warn("[AiBudget] 配额重置失败 tenant={}: {}", tenantId, e.getMessage());
+            return -1L;
+        }
+    }
+
     public List<Long> getBudgetStatus() {
         long usage = getTodayUsage();
         return List.of(usage, dailyTokenLimit, dailyTokenLimit - usage);

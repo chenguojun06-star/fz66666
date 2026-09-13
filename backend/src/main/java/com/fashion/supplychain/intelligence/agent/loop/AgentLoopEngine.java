@@ -30,6 +30,7 @@ import com.fashion.supplychain.intelligence.orchestration.SkillTreeOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.XiaoyunInsightCardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.XiaoyunResponseParser;
 import com.fashion.supplychain.intelligence.service.AgentStateStore;
+import com.fashion.supplychain.intelligence.service.AiAgentTokenBudgetService;
 import com.fashion.supplychain.intelligence.service.DataTruthGuard;
 import com.fashion.supplychain.intelligence.service.EntityFactChecker;
 import com.fashion.supplychain.intelligence.service.GroundedGenerationGuard;
@@ -64,6 +65,8 @@ public class AgentLoopEngine {
     private boolean dataTruthGuardEnabled;
 
     @Autowired private AiInferenceGateway inferenceGateway;
+    // 租户日 token 配额预检：配额用完时入口即返回明确文案，避免 planning/主循环空转后被吞成"无回答"
+    @Autowired private org.springframework.beans.factory.ObjectProvider<AiAgentTokenBudgetService> tokenBudgetServiceProvider;
     @Autowired private AiAgentToolExecHelper toolExecHelper;
     @Autowired private AiAgentEvidenceHelper evidenceHelper;
     @Autowired private AiCriticOrchestrator criticOrchestrator;
@@ -110,6 +113,18 @@ public class AgentLoopEngine {
         String sessionId = ctx.getCommandId();
         compensatingTxManager.beginSession(sessionId);
         try {
+            // 租户日配额预检：用完时直接以 answer 事件返回明确文案（前端 answerReceived=true 正常展示），
+            // 不再进入 planning/主循环——否则第一轮推理被配额拦截后走 error 通道，SSE 断开时用户只看到"未返回有效回答"
+            AiAgentTokenBudgetService budgetService = tokenBudgetServiceProvider.getIfAvailable();
+            if (budgetService != null && !budgetService.canInvoke()) {
+                String quotaMsg = "今天的回答次数已消耗完成，请明天再来或联系管理员调整额度";
+                log.warn("[AgentLoop] 租户日 token 配额已用完，入口直接返回提示 commandId={}", sessionId);
+                aiAgentTraceOrchestrator.finishRequest(sessionId, quotaMsg, "tenant_quota_exceeded",
+                        System.currentTimeMillis() - ctx.getRequestStartAt());
+                cb.onTokenBudgetExceeded(quotaMsg, sessionId);
+                return quotaMsg;
+            }
+
             // 加载跨会话对话记忆上下文
             // P0-4: span inject_memory
             try (LangfuseSpanHelper.SpanScope injectMemScope = langfuseSpanHelper == null
@@ -470,8 +485,17 @@ public class AgentLoopEngine {
 
     private String handleInferenceError(AgentLoopContext ctx, IntelligenceInferenceResult result,
                                          AgentLoopCallback cb) {
-        String errMsg = "推理服务暂时不可用: " + result.getErrorMessage();
-        aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), null, result.getErrorMessage(),
+        String rawError = result.getErrorMessage() == null ? "" : result.getErrorMessage();
+        // 配额类失败：以 answer 事件返回友好文案（与 handleTokenBudgetExceeded 同通道），不透出技术报错
+        if (rawError.contains("tenant-daily-token-quota-exceeded") || rawError.contains("配额已用完")) {
+            String quotaMsg = "今天的回答次数已消耗完成，请明天再来或联系管理员调整额度";
+            aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), quotaMsg, "tenant_quota_exceeded",
+                    System.currentTimeMillis() - ctx.getRequestStartAt());
+            cb.onTokenBudgetExceeded(quotaMsg, ctx.getCommandId());
+            return quotaMsg;
+        }
+        String errMsg = "推理服务暂时不可用: " + rawError;
+        aiAgentTraceOrchestrator.finishRequest(ctx.getCommandId(), null, rawError,
                 System.currentTimeMillis() - ctx.getRequestStartAt());
         cb.onError(errMsg);
         return errMsg;
