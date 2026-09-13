@@ -13,6 +13,7 @@
           "dockerfilePath": "./backend/Dockerfile",
           "containerPort": 8088,
           "initialDelaySeconds": 300,
+          "healthPath": "/actuator/health/liveness",
           "minNum": 1,
           "maxNum": 5,
           "cpu": 1,

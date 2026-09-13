@@ -41,10 +41,15 @@ COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 EXPOSE 8088
 
-# ⚠️ CloudBase 探针：主探测 readiness 组（只反映应用存活，不被 Qdrant 等 AI 可选组件 DEGRADED 拖垮）
-# 【2026-08-16 部署失败修复】原 /actuator/health 因 Qdrant DOWN 返回 503；TCP 兜底 echo > /dev/tcp 在
-# 默认 /bin/sh(dash) 下不支持，从未生效 → 容器被误判 unhealthy → 部署失败回滚。现改用 readiness + bash 显式兜底。
-# start-period=300s：给 Spring Boot 5 分钟启动时间，期间探针失败不计入重启计数
+# ⚠️⚠️ 这个 HEALTHCHECK 只在本地 `docker run` / docker compose 下生效。
+#   CloudBase 云托管跑在 k8s(TKE) 上，**k8s 不读取镜像的 HEALTHCHECK 指令**，
+#   只认 Pod spec 里的探针 —— 即云托管控制台「服务设置 → 健康检查」，或 cloudbaserc.json 的探针参数。
+#   所以下面的 start-period=300s **不是**启动保护。别再据此判断"启动慢没关系"：
+#   D-388 正是基于这个错误假设移除了 JIT 的 C1 锁，直接导致 2577/2578/2579 部署失败。
+#
+# 本地兜底逻辑：探测 readiness 组（只反映应用存活，不被 Qdrant 等 AI 可选组件 DEGRADED 拖垮）
+# 【2026-08-16 修复】原 /actuator/health 因 Qdrant DOWN 返回 503；TCP 兜底 echo > /dev/tcp 在
+# 默认 /bin/sh(dash) 下不支持，从未生效。现改用 readiness + bash 显式兜底。
 HEALTHCHECK --interval=30s --timeout=5s --start-period=300s --retries=3 \
   CMD curl -fsS -o /dev/null --max-time 3 http://127.0.0.1:8088/actuator/health/readiness 2>/dev/null || \
       (echo "readiness not ok, fallback TCP" && /bin/bash -c 'echo > /dev/tcp/127.0.0.1/8088' 2>/dev/null || exit 1)
