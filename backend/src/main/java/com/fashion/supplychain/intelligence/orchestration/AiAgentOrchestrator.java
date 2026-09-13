@@ -640,6 +640,24 @@ public class AiAgentOrchestrator {
                 queryCache.put(cacheKey, wrapCacheValue(UserContext.tenantId(), deduplicateAnswer(cb.getFinalContent())));
             }
 
+            // 【兜底】保证 answer 事件一定到达前端。
+            // AgentLoop 可能沿 deadline_exceeded / cancelled 等路径直接 return，全程不回调任何终止事件
+            // （onAnswer / onDone / onError 都没走）；此时前端只剩 answer_chunk 拼出的原始文本，
+            // 若那段文本全是 <tool_call> / <tool_think> / DSML 协议内容，会被前端 stripToolProtocolText
+            // 清洗成空串，而"逾期/延期"仍出现在原始文本里 → 卡片照常渲染、气泡一个字都没有。
+            if (!cb.isTerminalEmitted() && (cb.getFinalContent() == null || cb.getFinalContent().isBlank())) {
+                log.warn("[AiAgent-Stream] 循环结束但未发出终止事件（loopResult={}），补发兜底回答", loopResult);
+                emitSse(emitter, "answer", java.util.Map.of(
+                        "content", "小云这次没能拿到有效结论，请换个问法或稍后重试。若反复出现，请联系管理员查看 AI 运行日志。",
+                        "commandId", ctx.getCommandId()));
+                emitSse(emitter, "done", java.util.Map.of());
+                try {
+                    emitter.complete();
+                } catch (Exception ex) {
+                    log.debug("[AiAgent-Stream] 兜底回答后关闭 SSE 异常: {}", ex.getMessage());
+                }
+            }
+
             // P0-4: 净化输出 — 剥离 prompt 内部标记，确保后处理与记忆存储的是干净内容
             String sanitizedFinal = sanitizeAssistantResponse(cb.getFinalContent());
             triggerPostTurnHooks(ctx, userMessage, sanitizedFinal, cb.getExecRecords(), false);

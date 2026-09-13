@@ -130,6 +130,7 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
         String stuckMsg = "抱歉，我在处理过程中遇到了循环，已自动终止。请尝试换一种方式描述您的需求。";
         emitSse("answer", Map.of("content", stuckMsg, "commandId", ctx.getCommandId()));
         emitSse("done", Map.of());
+        emitterClosed = true;
         try { emitter.complete(); } catch (Exception e) { log.debug("[StreamCallback] SSE异常", e); }
     }
 
@@ -137,6 +138,7 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
     public void onTokenBudgetExceeded(String message, String commandId) {
         emitSse("answer", Map.of("content", message, "commandId", commandId));
         emitSse("done", Map.of());
+        emitterClosed = true;
         try { emitter.complete(); } catch (Exception e) { log.debug("[StreamCallback] SSE异常", e); }
     }
 
@@ -146,6 +148,7 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
         String planContent = (content != null && !content.isBlank() ? content + "\n\n" : "") + planDesc;
         emitSse("answer", Map.of("content", planContent, "commandId", ctx.getCommandId()));
         emitSse("done", Map.of());
+        emitterClosed = true;
         try { emitter.complete(); } catch (Exception e) { log.debug("[StreamCallback] SSE异常", e); }
     }
 
@@ -153,6 +156,7 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
     public void onMaxIterationsExceeded() {
         emitSse("error", Map.of("message", "对话轮数超过限制"));
         emitSse("done", Map.of());
+        emitterClosed = true;
         try { emitter.complete(); } catch (Exception e) { log.debug("[StreamCallback] SSE异常", e); }
     }
 
@@ -171,6 +175,15 @@ public class StreamingAgentLoopCallback implements AgentLoopCallback {
 
     public List<AiAgentToolExecHelper.ToolExecRecord> getExecRecords() {
         return execRecords;
+    }
+
+    /**
+     * 终止事件是否已发出（answer / done / error / stuck / plan / 超轮数等分支）。
+     * 供 Orchestrator 判断循环结束后是否还需补一条兜底回答，
+     * 避免前端只剩 answer_chunk 拼出的原始文本被清洗成空 → "只有看板没有文字"。
+     */
+    public boolean isTerminalEmitted() {
+        return emitterClosed;
     }
 
     private void emitSse(String eventName, Map<String, Object> data) {

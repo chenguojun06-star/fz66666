@@ -45,10 +45,16 @@ export function stripToolProtocolText(raw: string): string {
     .replace(/<tool_name>[\s\S]*?<\/tool_name>/gi, '')
     .replace(/<param>[\s\S]*?<\/param>/gi, '')
     .replace(/<\/?(?:tool_think|tool_call|tool_name|tool_result|param|params|invoke)>/gi, '');
-  // 流式中途的未闭合协议开标签：从开标签起整段截断，避免协议原文滚出
-  const unclosed = text.match(/<tool_(?:think|call)[\s>]/i);
+  // 未闭合的协议开标签（带属性/空白形式，如 `<tool_call foo>`；裸标签已被上一行删除）：
+  // 只删标签本身、保留其后的正文；只有紧跟其后的内容看起来是 JSON 载荷（{ / [ 开头）时才截断。
+  // 旧逻辑"从开标签起整段截断"会把标签之后的正文一并砍掉 → 页面"只剩看板没有文字"。
+  // 注：本函数真正的"清空"来源是上面的成对块删除（如 <tool_think>…</tool_think> 整块消失），
+  //     因此调用方必须用清洗后的文本判断要不要出卡片，见 useAiChatStream.fireOverdueFactory。
+  const unclosed = text.match(/<tool_(?:think|call|name|param|params|invoke)[\s>]/i);
   if (unclosed && unclosed.index !== undefined) {
-    text = text.substring(0, unclosed.index);
+    const head = text.substring(0, unclosed.index);
+    const tail = text.substring(unclosed.index).replace(/<\/?tool_[a-z_]*[\s>]?/gi, '');
+    text = head + (/^\s*(\{|\[)/.test(tail) ? '' : tail);
   }
   // D-361c：DSML 协议行按行剔除（保留正文行）——旧"从首标记整段截断"会把
   // 混在协议行之后的正文一起砍掉，出现"只剩看板没有文字"

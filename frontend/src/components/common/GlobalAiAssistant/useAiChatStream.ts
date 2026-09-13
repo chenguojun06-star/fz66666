@@ -176,7 +176,9 @@ export function useAiChatStream(config: StreamConfig) {
     };
 
     const fireOverdueFactory = () => {
-      if (!needsOverdueFactory(accumulatedText)) return;
+      // 与气泡文字用同一份"清洗后"文本判断：否则原始协议文本命中"逾期/延期"、
+      // 而展示文本被 stripToolProtocolText 清空时，就会出现"只有看板没有文字"
+      if (!needsOverdueFactory(stripToolProtocolText(accumulatedText))) return;
       const signal = subRequestAbortRef.current?.signal;
       api.get('/dashboard/overdue-factory-stats')
         .then((res) => {
@@ -232,7 +234,10 @@ export function useAiChatStream(config: StreamConfig) {
       completed = true;
       if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = undefined; }
       if (!answerReceived) {
-        if (!accumulatedText) setTextMessage(aiMsgId, '小云未返回有效回答，请重试或换个问法 🤔');
+        // 兜底判定改用"清洗后"的文本：原始文本非空但被 stripToolProtocolText 清空时，
+        // 旧逻辑（判 !accumulatedText）不会补兜底文案，气泡就是一个字都没有、只剩卡片
+        const cleaned = stripToolProtocolText(accumulatedText).trim();
+        setTextMessage(aiMsgId, cleaned || '小云未返回有效回答，请重试或换个问法 🤔');
         finishTyping();
       }
       safeUpdateLiveStatus({ ...currentLiveStatus, mood: 'done' });
