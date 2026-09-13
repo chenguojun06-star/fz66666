@@ -518,6 +518,13 @@ xiaoyun:
     # 数据真实性守卫 — 4项并行校验（数据真实性/数字一致性/实体事实/接地率）
     data-truth-guard:
       enabled: ${XIAOYUN_DATA_TRUTH_GUARD_ENABLED:true}
+  # Text-to-SQL 执行前预校验 + 执行失败自修正重试
+  text-to-sql:
+    # 执行前先跑 EXPLAIN：语法错误/表或字段不存在/权限不足时直接拒绝执行，不落真实查询。
+    # 是 root 数据源之外的一道闸，即使 SqlSecurityValidator 有漏网也能拦下一批
+    precheck-enabled: ${XIAOYUN_TEXT_TO_SQL_PRECHECK_ENABLED:true}
+    # 执行失败后把「原始SQL + 数据库错误信息」回喂 LLM 自修正的重试次数（0 = 关闭重试）
+    max-retry-attempts: ${XIAOYUN_TEXT_TO_SQL_MAX_RETRY_ATTEMPTS:1}
   # 数字孪生全模块快照
   digital-twin:
     enabled: ${XIAOYUN_DIGITAL_TWIN_ENABLED:true}

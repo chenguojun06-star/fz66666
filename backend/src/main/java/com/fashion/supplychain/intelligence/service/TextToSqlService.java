@@ -4,6 +4,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.NlQueryResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,7 @@ public class TextToSqlService {
      *   <li>敏感字段黑名单：拦截 password/token/phone/id_card 等 PII 字段</li>
      *   <li>审计日志：query 方法记录 tenantId/userId/question/generatedSql/validatedSql/rowCount/elapsedMs（P0-4）</li>
      *   <li>行数限制 + 查询超时：最多 500 行、15 秒超时</li>
+     *   <li>执行前 EXPLAIN 预校验：语法错误/表字段不存在/权限不足在执行前拦下，不执行真实查询</li>
      * </ul>
      *
      * <p>建议（未实施，避免影响其他模块）：为 Text-to-SQL 配置专用只读数据源，
@@ -56,6 +58,23 @@ public class TextToSqlService {
     private static final int CACHE_TTL_MINUTES = 5;
     private static final int CACHE_MAX_SIZE = 200;
     private static final int RATE_LIMIT_PER_MINUTE = 10; // 每个租户每分钟最多10次查询
+
+    /**
+     * EXPLAIN 预校验自身的超时（秒）。预校验只做语法解析与元数据检查，
+     * 远快于真实查询；设上限是为了避免 DB 异常时长期占用请求线程。
+     */
+    private static final int PRECHECK_TIMEOUT_SECONDS = 5;
+
+    /** 预校验失败/执行失败时，返回给用户的错误信息最大长度 */
+    private static final int MAX_ERROR_MESSAGE_LEN = 200;
+
+    /** 执行前是否先跑 EXPLAIN 预校验（语法/表字段/权限错误直接拒绝执行） */
+    @Value("${xiaoyun.text-to-sql.precheck-enabled:true}")
+    private boolean precheckEnabled;
+
+    /** 执行失败后回喂 LLM 自修正的重试次数（0 = 关闭重试） */
+    @Value("${xiaoyun.text-to-sql.max-retry-attempts:1}")
+    private int maxRetryAttempts;
 
     /** 限流计数: tenantId → [上次重置时间, 当前计数] */
     private final Map<Long, long[]> rateLimitMap = new ConcurrentHashMap<>();
@@ -219,22 +238,100 @@ public class TextToSqlService {
             log.info("[TextToSql-Audit] VALIDATED tenantId={} userId={} validatedSql=\"{}\"",
                     tenantId, auditUserId, validatedSql);
 
-            List<Map<String, Object>> resultData = executeQueryWithTimeout(
-                    validatedSql,
-                    sqlSecurityValidator.getQueryTimeoutSeconds()
-            );
+            // ── 执行前 EXPLAIN 预校验 ──
+            // 目的：在 root 数据源上再加一道闸。即使 SqlSecurityValidator 有漏网之鱼，
+            // EXPLAIN 阶段也能拦下语法错误、表/字段不存在、权限不足等问题，且不执行真实查询。
+            if (precheckEnabled) {
+                PrecheckResult precheck = precheckWithExplain(validatedSql);
+                if (!precheck.passed) {
+                    log.warn("[TextToSql-Audit] END status=precheck_failed tenantId={} userId={} reason=\"{}\" validatedSql=\"{}\" elapsedMs={}",
+                            tenantId, auditUserId, precheck.errorMessage, validatedSql,
+                            System.currentTimeMillis() - startTime);
+                    response.setIntent("text_to_sql_precheck_failed");
+                    response.setConfidence(0);
+                    response.setAnswer("SQL 预校验未通过，已阻止执行：" + precheck.errorMessage
+                            + "\n\n请换一种问法试试。");
+                    return response;
+                }
+            }
+
+            // ── 执行 + 失败自修正重试 ──
+            // 失败时把「原始SQL + 数据库错误信息」回喂 LLM，修正后重新走一遍
+            // SqlSecurityValidator + EXPLAIN 预校验（重试不豁免任何校验），再执行。
+            List<Map<String, Object>> resultData = null;
+            String executedSql = validatedSql;
+            String lastError = null;
+            boolean retried = false;
+            int maxAttempts = 1 + Math.max(0, maxRetryAttempts);
+
+            for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+                try {
+                    resultData = executeQueryWithTimeout(executedSql, sqlSecurityValidator.getQueryTimeoutSeconds());
+                    break;
+                } catch (Exception ex) {
+                    lastError = ex.getMessage() != null ? ex.getMessage() : ex.toString();
+
+                    if (attempt >= maxAttempts) {
+                        break;
+                    }
+
+                    // 1) LLM 自修正
+                    String fixedSql = requestSelfCorrection(question, schemaContext, executedSql, lastError);
+                    if (fixedSql == null) {
+                        log.warn("[TextToSql] 自修正未产出SQL，放弃重试 tenantId={} attempt={} failedSql=\"{}\" error=\"{}\"",
+                                tenantId, attempt, executedSql, lastError);
+                        break;
+                    }
+
+                    // 2) 重试前重新过安全校验（不因为是重试就跳过）
+                    SqlSecurityValidator.ValidationResult revalidation = sqlSecurityValidator.validate(fixedSql, tenantId);
+                    if (!revalidation.isValid()) {
+                        log.warn("[TextToSql] 自修正SQL被安全拦截，放弃重试 tenantId={} attempt={} reason=\"{}\" failedSql=\"{}\" fixedSql=\"{}\"",
+                                tenantId, attempt, revalidation.getErrorMessage(), executedSql, fixedSql);
+                        lastError = "修正后的SQL未通过安全校验：" + revalidation.getErrorMessage();
+                        break;
+                    }
+
+                    // 3) 重试前重新过 EXPLAIN 预校验
+                    String reSql = revalidation.getValidatedSql();
+                    if (precheckEnabled) {
+                        PrecheckResult rePrecheck = precheckWithExplain(reSql);
+                        if (!rePrecheck.passed) {
+                            log.warn("[TextToSql] 自修正SQL未通过EXPLAIN预校验，放弃重试 tenantId={} attempt={} reason=\"{}\" fixedSql=\"{}\"",
+                                    tenantId, attempt, rePrecheck.errorMessage, reSql);
+                            lastError = "修正后的SQL未通过预校验：" + rePrecheck.errorMessage;
+                            break;
+                        }
+                    }
+
+                    log.info("[TextToSql] 自修正重试 attempt={}/{} tenantId={} failedSql=\"{}\" error=\"{}\" fixedSql=\"{}\"",
+                            attempt, maxRetryAttempts, tenantId, executedSql, lastError, reSql);
+                    executedSql = reSql;
+                    retried = true;
+                }
+            }
+
+            if (resultData == null) {
+                log.error("[TextToSql-Audit] END status=error tenantId={} userId={} retried={} elapsedMs={} error=\"{}\" failedSql=\"{}\"",
+                        tenantId, auditUserId, retried, System.currentTimeMillis() - startTime, lastError, executedSql);
+                response.setIntent("text_to_sql_error");
+                response.setConfidence(0);
+                response.setAnswer("查询执行失败：" + truncateErrorMessage(lastError) + "。请换一种问法试试。");
+                return response;
+            }
 
             long elapsed = System.currentTimeMillis() - startTime;
-            // P0-4 审计日志：记录查询执行结果（rowCount/elapsedMs/validatedSql 便于事后追溯）
-            log.info("[TextToSql-Audit] END status=success tenantId={} userId={} rowCount={} elapsedMs={} validatedSql=\"{}\"",
-                    tenantId, auditUserId, resultData.size(), elapsed, validatedSql);
+            // P0-4 审计日志：记录查询执行结果（rowCount/elapsedMs/executedSql 便于事后追溯）
+            // retried + elapsedMs 同时用于统计 SQL 一次成功率
+            log.info("[TextToSql-Audit] END status=success tenantId={} userId={} rowCount={} elapsedMs={} retried={} executedSql=\"{}\"",
+                    tenantId, auditUserId, resultData.size(), elapsed, retried, executedSql);
 
             response.setIntent("text_to_sql_success");
             response.setConfidence(85);
 
             // ── 限制返回数据量：只返回前50行用于展示 + 汇总统计 ──
             Map<String, Object> responseData = new LinkedHashMap<>();
-            responseData.put("sql", validatedSql);
+            responseData.put("sql", executedSql);
             responseData.put("rowCount", resultData.size());
             responseData.put("displayRows", Math.min(resultData.size(), DISPLAY_ROWS));
             responseData.put("rows", resultData.subList(0, Math.min(resultData.size(), DISPLAY_ROWS)));
@@ -267,6 +364,79 @@ public class TextToSqlService {
         }
 
         return response;
+    }
+
+    /** EXPLAIN 预校验结果 */
+    private static class PrecheckResult {
+        final boolean passed;
+        final String errorMessage;
+        PrecheckResult(boolean passed, String errorMessage) {
+            this.passed = passed;
+            this.errorMessage = errorMessage;
+        }
+    }
+
+    /**
+     * 执行前用 EXPLAIN 预校验 SQL：只做语法解析与元数据检查，不会执行真实查询、不返回业务数据。
+     * 语法错误、表/字段不存在、权限不足都会在此暴露，从而在真正执行前拦下。
+     */
+    private PrecheckResult precheckWithExplain(String sql) {
+        try {
+            Future<List<Map<String, Object>>> future = queryExecutor.submit(
+                    (Callable<List<Map<String, Object>>>) () -> jdbcTemplate.queryForList("EXPLAIN " + sql));
+            future.get(PRECHECK_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            return new PrecheckResult(true, null);
+        } catch (Exception e) {
+            // ExecutionException 会包住真实的 SQLException，取 cause 才能拿到数据库原始报错
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            String message = cause.getMessage() != null ? cause.getMessage() : cause.toString();
+            return new PrecheckResult(false, truncateErrorMessage(message));
+        }
+    }
+
+    /**
+     * 执行失败时把「原始SQL + 数据库错误信息」回喂 LLM，让其产出修正后的 SQL。
+     * 返回 null 表示没有拿到可用 SQL（调用方应放弃重试）。
+     */
+    private String requestSelfCorrection(String question, String schemaContext, String failedSql, String errorMessage) {
+        if (aiAdvisorService == null || !aiAdvisorService.isEnabled()) {
+            return null;
+        }
+
+        String systemPrompt = "你是MySQL SQL纠错专家。下面这条SQL执行失败了，请根据数据库错误信息修正它。\n\n"
+                + "【修正规则】\n"
+                + "1. 只输出一条可执行的SELECT语句，禁止INSERT/UPDATE/DELETE/DDL等写操作\n"
+                + "2. 禁止UNION与子查询，禁止SELECT *，不要查询password/token/phone等敏感字段\n"
+                + "3. 不要手写tenant_id条件，也不要手写LIMIT，系统会自动添加\n"
+                + "4. 每张表必须使用别名\n"
+                + "5. 表名与字段名只能取自下面给出的表结构，不要臆造\n\n"
+                + "【数据库表结构参考】\n"
+                + schemaContext + "\n\n"
+                + "【输出格式】\n"
+                + "只输出一个 ```sql 代码块，不要输出其他内容。\n";
+
+        String userPrompt = "原始问题：" + question + "\n\n"
+                + "执行失败的SQL：\n```sql\n" + failedSql + "\n```\n\n"
+                + "数据库错误信息：\n" + truncateErrorMessage(errorMessage) + "\n\n"
+                + "请输出修正后的SQL。";
+
+        try {
+            return extractSql(aiAdvisorService.chat(systemPrompt, userPrompt));
+        } catch (Exception e) {
+            log.warn("[TextToSql] 自修正LLM调用失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /** 压缩错误信息：折叠换行、截断长度，避免把数据库原始堆栈直接透给用户 */
+    private String truncateErrorMessage(String message) {
+        if (message == null || message.isBlank()) {
+            return "未知错误";
+        }
+        String flat = message.replaceAll("\\s+", " ").trim();
+        return flat.length() <= MAX_ERROR_MESSAGE_LEN
+                ? flat
+                : flat.substring(0, MAX_ERROR_MESSAGE_LEN) + "...";
     }
 
     private String buildSystemPrompt(String schemaContext, Long tenantId) {
