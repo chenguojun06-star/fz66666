@@ -47,7 +47,9 @@ import org.springframework.context.annotation.Lazy;
  * intelligence:
  *   qdrant:
  *     url: http://localhost:6333
- *     collection: fashion_memory
+ *     collection: fashion_memory            # 旧集合名，切换时保留用于回退
+ *     collection-name: fashion_memory       # 实际生效的集合名，未配置时回落 collection
+ *     named-vectors: false                  # 默认 false=未命名 dense，行为与改造前一致
  *     vector-size: 1024
  * ai:
  *   deepseek:
@@ -67,11 +69,22 @@ public class QdrantService {
     private static final String STYLE_IMAGE_COLLECTION = "style_images";
     /** 稀疏向量名称，与 Qdrant 集合的 sparse_vectors 配置对应 */
     private static final String SPARSE_VECTOR_NAME = "text-sparse";
+    /** 命名向量模式下稠密向量的名称：空串表示"默认命名向量"，与未命名模式在写入格式上区分开 */
+    private static final String DENSE_VECTOR_NAME = "";
+    /** payload 中原文的截断长度，防止超长正文撑爆 payload */
+    private static final int CONTENT_PAYLOAD_MAX_LEN = 1000;
 
     @Value("${intelligence.qdrant.url:http://localhost:6333}")
     private String qdrantUrl;
 
-    @Value("${intelligence.qdrant.collection:" + COLLECTION_DEFAULT + "}")
+    /**
+     * 主集合名。优先取 {@code intelligence.qdrant.collection-name}，未配置时回落到
+     * {@code intelligence.qdrant.collection}，最终默认 {@code fashion_memory}。
+     *
+     * <p>拆出 collection-name 是为了切换新集合时不用改掉旧值——旧集合名留在 collection 里，
+     * 出问题把 collection-name 删掉/改回即可回退。
+     */
+    @Value("${intelligence.qdrant.collection-name:${intelligence.qdrant.collection:" + COLLECTION_DEFAULT + "}}")
     private String collectionName;
 
     @Value("${ai.deepseek.api-key:}")
@@ -137,6 +150,23 @@ public class QdrantService {
     @Value("${intelligence.qdrant.sparse-v2:false}")
     private boolean sparseV2;
 
+    /**
+     * 命名向量模式开关（默认关闭）。
+     *
+     * <p>true：集合按 {@code vectors: {"": {size, distance}} + sparse_vectors: {"text-sparse": {}}}
+     * 创建/识别，写入时同一个点同时携带 dense("") 与 sparse("text-sparse")，混合检索才真正生效。
+     *
+     * <p>false（默认）：集合仍按未命名 dense 创建，写入、检索与改造前逐字节一致，不写 sparse。
+     *
+     * <p>⚠️ Qdrant 不支持原地修改集合的向量定义，未命名 dense 与命名 sparse 也无法共存于同一个点，
+     * 因此开启本开关必须配合新建集合（换 {@code intelligence.qdrant.collection-name}）+ 重灌数据。
+     *
+     * <p>切换：① 设新 collection-name 且 named-vectors=true → ② 重启 → ③ 重灌 → ④ 验证 sparse 命中。
+     * 回退：把 collection-name 改回旧集合名、named-vectors 改回 false 重启即可，旧集合全程未被修改。
+     */
+    @Value("${intelligence.qdrant.named-vectors:false}")
+    private boolean namedVectorsEnabled;
+
     @Value("${intelligence.qdrant.timeout-seconds:10}")
     private int qdrantTimeoutSeconds;
 
@@ -161,6 +191,10 @@ public class QdrantService {
     private final AtomicBoolean styleImageCollectionVerified = new AtomicBoolean(false);
     /** 混合检索降级标记：true 表示 Qdrant 不支持混合检索，后续直接走纯稠密检索 */
     private final AtomicBoolean hybridSearchDegraded = new AtomicBoolean(false);
+    /** 主集合是否为命名向量模式：null=尚未探测，true=可写 dense("")+sparse，false=只能写未命名 dense */
+    private volatile Boolean namedVectorMode;
+    /** 命名向量模式下 sparse 是否真的可用（集合降级为不含 sparse 时为 false） */
+    private volatile boolean sparseWriteEnabled = false;
 
     private static class EmbeddingCacheEntry {
         final float[] vector;
@@ -221,8 +255,12 @@ public class QdrantService {
                     qdrantUrl + "/collections/" + collectionName, String.class);
             if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
                 JsonNode root = objectMapper.readTree(resp.getBody());
-                long storedDim = root.path("result").path("config")
-                        .path("params").path("vectors").path("size").asLong(-1);
+                JsonNode vectorsNode = root.path("result").path("config")
+                        .path("params").path("vectors");
+                // 命名向量模式下 vectors 是 {"": {size,...}}，维度挂在默认向量分支下
+                JsonNode vecParams = vectorsNode.has("size") ? vectorsNode
+                        : vectorsNode.path(DENSE_VECTOR_NAME);
+                long storedDim = vecParams.path("size").asLong(-1);
                 int expectedDim = getVectorDim();
                 if (storedDim > 0 && storedDim != expectedDim) {
                     // 【P1-7修复】原 log.error 在"无 API Key 走 pseudoEmbedding(128维)"场景下产生大量 ERROR 噪音
@@ -262,9 +300,12 @@ public class QdrantService {
     /**
      * 向量化存储一条记忆。
      *
+     * <p>集合为命名向量模式时，同一个点同时写入 dense("") 与 sparse("text-sparse")，
+     * 否则只写未命名 dense 数组（与改造前完全一致）。
+     *
      * @param pointId  唯一ID（使用 t_intelligence_memory.id 转字符串）
      * @param tenantId 租户ID（用于 payload 过滤）
-     * @param content  记忆文本（用于生成伪向量）
+     * @param content  记忆文本（用于生成伪向量与稀疏向量）
      * @param payload  附加元数据（title/type/domain 等）
      * @return 是否成功
      */
@@ -283,20 +324,41 @@ public class QdrantService {
                 return false;
             }
 
+            boolean named = Boolean.TRUE.equals(namedVectorMode);
+
             ObjectNode body = objectMapper.createObjectNode();
             ArrayNode points = body.putArray("points");
             ObjectNode point = points.addObject();
             point.put("id", toPointId(pointId));
 
-            ArrayNode vec = point.putArray("vector");
-            for (float v : vector) {
-                vec.add(v);
+            if (named) {
+                ObjectNode vectorNode = point.putObject("vector");
+                vectorNode.set(DENSE_VECTOR_NAME, toJsonArray(vector));
+                SparseVector sparseVector = null;
+                if (sparseWriteEnabled) {
+                    sparseVector = computeSparseVector(content);
+                    if (sparseVector != null && !sparseVector.indices.isEmpty()) {
+                        vectorNode.set(SPARSE_VECTOR_NAME, toSparseJson(sparseVector));
+                    } else {
+                        log.debug("[Qdrant] sparse写入跳过：文本未产出有效token pointId={}", pointId);
+                    }
+                }
+                log.debug("[Qdrant] upsert 命名向量模式 pointId={} dense={} sparse={}",
+                        pointId, vector.length,
+                        sparseVector == null ? 0 : sparseVector.indices.size());
+            } else {
+                // 未命名模式：保持改造前的点格式，一个字节都不变
+                point.set("vector", toJsonArray(vector));
             }
 
             ObjectNode payloadNode = point.putObject("payload");
             payloadNode.put("tenant_id", tenantId);
             // 原始业务ID入payload：点ID已转UUID，检索侧凭此还原，保证下游按原始ID回查DB不断链
             payloadNode.put("original_id", pointId);
+            // 原文入payload：为将来重建索引与线上排查留后路，超长截断避免撑爆 payload
+            if (content != null && !content.isBlank()) {
+                payloadNode.put("content", truncate(content, CONTENT_PAYLOAD_MAX_LEN));
+            }
             if (payload != null) {
                 payload.forEach((k, v) -> payloadNode.put(k, String.valueOf(v)));
             }
@@ -310,6 +372,24 @@ public class QdrantService {
             logQdrantConnFail("upsert", "pointId=" + pointId + " " + e.getMessage());
             return false;
         }
+    }
+
+    /** 稀疏向量 → Qdrant 命名向量格式 {"indices":[...],"values":[...]} */
+    private ObjectNode toSparseJson(SparseVector sv) {
+        ObjectNode node = objectMapper.createObjectNode();
+        ArrayNode indices = node.putArray("indices");
+        ArrayNode values = node.putArray("values");
+        for (int i = 0; i < sv.indices.size(); i++) {
+            indices.add(sv.indices.get(i));
+            values.add(sv.values.get(i));
+        }
+        return node;
+    }
+
+    /** 超长文本截断，避免撑爆 payload */
+    private static String truncate(String text, int maxLen) {
+        if (text == null) return null;
+        return text.length() > maxLen ? text.substring(0, maxLen) : text;
     }
 
     /**
@@ -406,10 +486,14 @@ public class QdrantService {
     // ──────────────────────────────────────────────────────────────
 
     /**
-     * 混合检索：同时执行稠密向量检索和稀疏关键词检索，合并结果按综合分数排序。
+     * 混合检索：同时执行稠密向量检索和稀疏关键词检索，用 RRF 融合后返回。
      *
-     * <p>使用 Qdrant 的 /points/query 端点，支持稀疏+稠密混合检索。
-     * 如果 Qdrant 不支持混合检索（旧版本），自动降级到纯稠密检索。
+     * <p>Qdrant Query API 没有顶层 {@code sparse_vector} 字段（旧写法会被忽略，等于纯稠密检索）。
+     * 正确用法是 {@code prefetch} 双路 —— dense 一路 + sparse 一路 —— 加顶层 {@code query: {fusion: rrf}}。
+     *
+     * <p>集合不是命名向量模式（未切换集合，默认情况）时，库里没有 sparse 数据，
+     * 直接走纯稠密检索 {@link #search}，与改造前行为一致。
+     * 若 Qdrant 不支持混合检索（旧版本），捕获异常后降级到纯稠密检索。
      *
      * @param tenantId  租户ID（必须非null，否则拒绝搜索）
      * @param queryText 查询文本
@@ -432,6 +516,13 @@ public class QdrantService {
         try {
             ensureCollectionExists();
 
+            // 集合没有 sparse 配置（默认未切换场景）→ 纯稠密，行为与改造前一致
+            if (!sparseWriteEnabled) {
+                log.debug("[Qdrant] hybridSearch 走纯稠密：集合 {} 未启用 sparse（named={}）",
+                        collectionName, namedVectorMode);
+                return search(tenantId, queryText, topK);
+            }
+
             // 1. 生成稠密向量
             float[] denseVector = computeEmbedding(queryText);
             if (denseVector == null) {
@@ -441,44 +532,40 @@ public class QdrantService {
 
             // 2. 生成稀疏向量
             SparseVector sparseVector = computeSparseVector(queryText);
+            if (sparseVector == null || sparseVector.indices.isEmpty()) {
+                // sparse 侧无 token（纯标点/空串等）不影响稠密结果，退化为本轮纯稠密
+                log.debug("[Qdrant] hybridSearch 查询未产出 sparse token，本轮退化为纯稠密");
+                return search(tenantId, queryText, topK);
+            }
 
-            // 3. 构造 /points/query 请求体
+            // 3. 构造 /points/query 请求体：prefetch 双路 + RRF 融合
             ObjectNode body = objectMapper.createObjectNode();
+            int prefetchLimit = Math.max(topK * 3, 20);
 
-            // 稠密向量
-            ArrayNode queryArr = body.putArray("query");
-            for (float v : denseVector) {
-                queryArr.add(v);
-            }
+            ArrayNode prefetch = body.putArray("prefetch");
 
-            // 稀疏向量
-            if (sparseVector != null && !sparseVector.indices.isEmpty()) {
-                ObjectNode sparseNode = body.putObject("sparse_vector");
-                ArrayNode indicesArr = sparseNode.putArray("indices");
-                ArrayNode valuesArr = sparseNode.putArray("values");
-                for (int i = 0; i < sparseVector.indices.size(); i++) {
-                    indicesArr.add(sparseVector.indices.get(i));
-                    valuesArr.add(sparseVector.values.get(i));
-                }
-            }
+            // 3.1 稠密一路（分数是余弦，沿用 0.3 低质量过滤）
+            ObjectNode densePrefetch = prefetch.addObject();
+            densePrefetch.set("query", toJsonArray(denseVector));
+            densePrefetch.put("using", DENSE_VECTOR_NAME);
+            densePrefetch.put("limit", prefetchLimit);
+            densePrefetch.put("score_threshold", 0.3);
+            densePrefetch.set("filter", tenantFilter(tenantId));
+
+            // 3.2 稀疏一路（BM25 风格 token，分数不是余弦，不设阈值）
+            ObjectNode sparsePrefetch = prefetch.addObject();
+            sparsePrefetch.set("query", toSparseJson(sparseVector));
+            sparsePrefetch.put("using", SPARSE_VECTOR_NAME);
+            sparsePrefetch.put("limit", prefetchLimit);
+            sparsePrefetch.set("filter", tenantFilter(tenantId));
+
+            // 3.3 顶层 RRF 融合
+            ObjectNode fusion = body.putObject("query");
+            fusion.put("fusion", "rrf");
 
             body.put("limit", topK);
             body.put("with_payload", true);
-            body.put("score_threshold", 0.3);
-
-            // 租户隔离过滤
-            ObjectNode filter = body.putObject("filter");
-            ArrayNode should = filter.putArray("should");
-
-            ObjectNode tenantCond = should.addObject();
-            tenantCond.put("key", "tenant_id");
-            ObjectNode tenantMatchVal = tenantCond.putObject("match");
-            tenantMatchVal.put("integer", tenantId);
-
-            ObjectNode publicCond = should.addObject();
-            publicCond.put("key", "tenant_id");
-            ObjectNode publicMatchVal = publicCond.putObject("match");
-            publicMatchVal.put("integer", 0);
+            // 注意：融合后分数是 RRF 排名分（量级远小于余弦），不能再套 0.3 阈值，否则一条都出不来
 
             // 4. 调用 /points/query 端点
             String url = qdrantUrl + "/collections/" + collectionName + "/points/query";
@@ -499,7 +586,8 @@ public class QdrantService {
                         results.add(sp);
                     }
                 }
-                log.debug("[Qdrant] hybridSearch成功 tenantId={} 结果数={}", tenantId, results.size());
+                log.info("[Qdrant] hybridSearch(prefetch+RRF) tenantId={} dense={} sparseTokens={} 命中={}",
+                        tenantId, denseVector.length, sparseVector.indices.size(), results.size());
                 return results;
             }
         } catch (Exception e) {
@@ -517,6 +605,19 @@ public class QdrantService {
 
         // 降级到纯稠密检索
         return search(tenantId, queryText, topK);
+    }
+
+    /** 租户隔离过滤器：命中本租户或公共(tenant_id=0)数据 */
+    private ObjectNode tenantFilter(Long tenantId) {
+        ObjectNode filter = objectMapper.createObjectNode();
+        ArrayNode should = filter.putArray("should");
+        ObjectNode tenantCond = should.addObject();
+        tenantCond.put("key", "tenant_id");
+        tenantCond.putObject("match").put("integer", tenantId);
+        ObjectNode publicCond = should.addObject();
+        publicCond.put("key", "tenant_id");
+        publicCond.putObject("match").put("integer", 0);
+        return filter;
     }
 
     /**
@@ -738,42 +839,91 @@ public class QdrantService {
     private void ensureCollectionExists() {
         if (collectionVerified.get()) return;
         try {
-            restTemplate.getForEntity(
+            ResponseEntity<String> resp = restTemplate.getForEntity(
                     qdrantUrl + "/collections/" + collectionName, String.class);
             collectionVerified.set(true);
+            detectVectorMode(resp.getBody());
+            return;
         } catch (Exception e) {
-            try {
-                ObjectNode body = objectMapper.createObjectNode();
-                ObjectNode params = body.putObject("vectors");
-                params.put("size", getVectorDim());
-                params.put("distance", "Cosine");
-                // 添加稀疏向量支持
-                ObjectNode sparseVectors = body.putObject("sparse_vectors");
-                sparseVectors.putObject(SPARSE_VECTOR_NAME);
-                // Qdrant REST 创建集合必须用 PUT（POST 该路径 404），2026-09-13 首次真实连通时暴露
-                restTemplate.exchange(
-                        qdrantUrl + "/collections/" + collectionName,
-                        HttpMethod.PUT, jsonEntity(body.toString()), String.class);
-                log.info("[Qdrant] 集合 {} 已自动创建（含稀疏向量支持）", collectionName);
-                collectionVerified.set(true);
-            } catch (Exception ex) {
-                // 稀疏向量配置可能不被旧版 Qdrant 支持，尝试不带稀疏向量创建
-                log.warn("[Qdrant] 集合创建（含稀疏向量）失败，尝试不带稀疏向量创建: {}", ex.getMessage());
-                try {
-                    ObjectNode body2 = objectMapper.createObjectNode();
-                    ObjectNode params2 = body2.putObject("vectors");
-                    params2.put("size", getVectorDim());
-                    params2.put("distance", "Cosine");
-                    restTemplate.exchange(
-                            qdrantUrl + "/collections/" + collectionName,
-                            HttpMethod.PUT, jsonEntity(body2.toString()), String.class);
-                    log.info("[Qdrant] 集合 {} 已自动创建（不含稀疏向量，旧版Qdrant）", collectionName);
-                    collectionVerified.set(true);
-                    hybridSearchDegraded.set(true);
-                } catch (Exception ex2) {
-                    log.warn("[Qdrant] 集合创建失败: {}", ex2.getMessage());
-                }
+            log.debug("[Qdrant] 集合 {} 不存在，尝试自动创建", collectionName);
+        }
+
+        boolean created = false;
+        if (namedVectorsEnabled) {
+            // 命名向量模式：dense("") + sparse("text-sparse") 才能共存于同一个点
+            created = tryCreateCollection(true, true)
+                    || tryCreateCollection(true, false);
+        }
+        if (!created) {
+            // 未命名模式（默认）：与改造前完全一致的创建顺序
+            created = tryCreateCollection(false, true)
+                    || tryCreateCollection(false, false);
+            if (created) {
+                // 未命名 dense 集合里 sparse 无法写入同一个点，混合检索不可用
+                hybridSearchDegraded.set(true);
             }
+        }
+        if (!created) {
+            log.warn("[Qdrant] 集合 {} 创建失败", collectionName);
+        }
+    }
+
+    /**
+     * 按指定形态创建集合。
+     *
+     * @param named      是否命名向量模式（vectors: {"": {...}}）；false 为未命名（vectors: {size, distance}）
+     * @param withSparse 是否声明 sparse_vectors
+     */
+    private boolean tryCreateCollection(boolean named, boolean withSparse) {
+        try {
+            ObjectNode body = objectMapper.createObjectNode();
+            ObjectNode vectors = body.putObject("vectors");
+            ObjectNode denseParams = named ? vectors.putObject(DENSE_VECTOR_NAME) : vectors;
+            denseParams.put("size", getVectorDim());
+            denseParams.put("distance", "Cosine");
+            if (withSparse) {
+                body.putObject("sparse_vectors").putObject(SPARSE_VECTOR_NAME);
+            }
+            // Qdrant REST 创建集合必须用 PUT（POST 该路径 404），2026-09-13 首次真实连通时暴露
+            restTemplate.exchange(
+                    qdrantUrl + "/collections/" + collectionName,
+                    HttpMethod.PUT, jsonEntity(body.toString()), String.class);
+            namedVectorMode = named;
+            sparseWriteEnabled = named && withSparse;
+            collectionVerified.set(true);
+            log.info("[Qdrant] 集合 {} 已自动创建（named={} sparse={}）", collectionName, named, sparseWriteEnabled);
+            return true;
+        } catch (Exception e) {
+            log.warn("[Qdrant] 集合创建失败（named={} sparse={}）: {}", named, withSparse, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 探测集合真实的向量形态：未命名 dense（{size, distance}）还是命名向量（{"": {...}}），
+     * 并据此判断 sparse 是否可写。集合可能由旧版本代码创建，不能只信配置开关。
+     */
+    private void detectVectorMode(String responseBody) {
+        try {
+            if (responseBody == null) return;
+            JsonNode params = objectMapper.readTree(responseBody)
+                    .path("result").path("config").path("params");
+            JsonNode vectors = params.path("vectors");
+            // 未命名模式解析出来是 {size, distance}；命名模式是 {"": {size, distance}, ...}
+            boolean named = vectors.isObject() && !vectors.has("size");
+            namedVectorMode = named;
+            sparseWriteEnabled = named && params.path("sparse_vectors").has(SPARSE_VECTOR_NAME);
+            log.info("[Qdrant] 集合 {} 向量形态探测: named={} sparse可写={}",
+                    collectionName, named, sparseWriteEnabled);
+            if (!sparseWriteEnabled) {
+                log.info("[Qdrant] 集合 {} 暂不支持 sparse：混合检索走纯稠密。"
+                        + "需新建命名向量集合（intelligence.qdrant.named-vectors=true + 新集合名）后重灌数据",
+                        collectionName);
+            }
+        } catch (Exception e) {
+            log.debug("[Qdrant] 集合向量形态探测失败，按未命名 dense 处理: {}", e.getMessage());
+            namedVectorMode = Boolean.FALSE;
+            sparseWriteEnabled = false;
         }
     }
 

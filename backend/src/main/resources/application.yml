@@ -467,6 +467,11 @@ intelligence:
     enabled: ${QDRANT_ENABLED:true}
     url: ${QDRANT_URL:http://localhost:6333}
     collection: ${QDRANT_COLLECTION:fashion_memory}
+    # 实际生效的集合名，未配置时回落 collection。切换新集合时只改这里，collection 保留旧值便于回退
+    collection-name: ${QDRANT_COLLECTION_NAME:${QDRANT_COLLECTION:fashion_memory}}
+    # 命名向量模式（dense "" + sparse "text-sparse"）。默认 false=未命名 dense，行为与混合检索改造前完全一致；
+    # 置 true 必须配合新集合名 + 全量重灌，因为 Qdrant 不支持原地改集合向量定义
+    named-vectors: ${QDRANT_NAMED_VECTORS:false}
     vector-size: ${QDRANT_VECTOR_SIZE:1024}
     api-key: ${QDRANT_API_KEY:}                  # Qdrant Cloud 需要；本地部署留空
     timeout-seconds: ${QDRANT_TIMEOUT_SECONDS:10}
