@@ -10,7 +10,9 @@ export function upsertMessage(
   if (existing) {
     return messages.map((m) => (m.id === id ? build(existing) : m));
   }
-  return [...messages, build(undefined)];
+  // 首次创建时打时间戳（AI 消息统一在此处补齐，避免每个调用点重复写）
+  const created = build(undefined);
+  return [...messages, { ...created, timestamp: created.timestamp ?? Date.now() }];
 }
 
 type ParsedAnswer = ReturnType<typeof parseAiResponse>;

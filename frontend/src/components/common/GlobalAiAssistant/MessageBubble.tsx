@@ -267,6 +267,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       ) : (
         <div style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</div>
       )}
+      {msg.timestamp && (
+        <div className={msgStyles.messageTime}>
+          {new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      )}
     </div>
 
     {msg.role === 'ai' && (

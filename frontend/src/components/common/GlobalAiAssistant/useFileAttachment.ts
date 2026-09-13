@@ -74,6 +74,7 @@ export function useFileAttachment(options: UseFileAttachmentOptions) {
         role: 'user' as const,
         text: userMsgText,
         imageUrl: localPreviewUrl,
+        timestamp: Date.now(),
       }]);
       setInputValue('');
       const fileToUpload = attachedFile;
@@ -121,7 +122,7 @@ export function useFileAttachment(options: UseFileAttachmentOptions) {
     }
 
     const userMsgText = question ? `📎 ${attachedFile.name}\n${question}` : `📎 ${attachedFile.name}`;
-    setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user' as const, text: userMsgText }]);
+    setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user' as const, text: userMsgText, timestamp: Date.now() }]);
     setInputValue('');
     const fileToUpload = attachedFile;
     setAttachedFile(null);

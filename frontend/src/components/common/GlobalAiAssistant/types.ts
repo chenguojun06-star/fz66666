@@ -94,6 +94,8 @@ export interface Message {
   id: string;
   role: 'ai' | 'user';
   text: string;
+  /** 消息时间戳（毫秒）。用于气泡下方显示发送/回答时间（HH:mm） */
+  timestamp?: number;
   intent?: string;
   hasSpeech?: boolean;
   imageUrl?: string;         // 用户上传的图片 URL 或 Base64

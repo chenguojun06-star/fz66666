@@ -39,8 +39,8 @@ export function useVoiceInput(options: UseVoiceInputOptions) {
         if (answer) {
           setMessages(prev => [
             ...prev,
-            { id: `voice-u-${Date.now()}`, role: 'user' as const, text },
-            { id: `voice-a-${Date.now()}`, role: 'ai' as const, text: answer },
+            { id: `voice-u-${Date.now()}`, role: 'user' as const, text, timestamp: Date.now() },
+            { id: `voice-a-${Date.now()}`, role: 'ai' as const, text: answer, timestamp: Date.now() },
           ]);
           setInputValue('');
           speak(answer);

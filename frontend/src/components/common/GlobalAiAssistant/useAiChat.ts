@@ -162,7 +162,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
       factoryName,
     });
 
-    setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user', text }]);
+    setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user', text, timestamp: Date.now() }]);
     if (!manualText) setInputValue('');
 
     const reportTypeToDownload = detectReportType(text);

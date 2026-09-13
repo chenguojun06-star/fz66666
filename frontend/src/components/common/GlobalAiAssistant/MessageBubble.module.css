@@ -49,6 +49,21 @@
   border-top-right-radius: 2px;
 }
 
+/* 气泡底部时间戳（HH:mm） */
+.messageTime {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1;
+  text-align: right;
+  color: var(--color-text-tertiary);
+  user-select: none;
+}
+
+/* 用户气泡底色较深，时间戳用半透明白色保证可读 */
+.bubbleUser .messageTime {
+  color: rgba(255, 255, 255, 0.75);
+}
+
 .mdContent {
   line-height: 1.6;
   font-size: 14px;
