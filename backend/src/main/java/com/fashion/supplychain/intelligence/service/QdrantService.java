@@ -710,15 +710,17 @@ public class QdrantService {
             ObjectNode filter = body.putObject("filter");
             ArrayNode should = filter.putArray("should");
 
+            // ⚠️ match 只能用 "value"。旧写法 "integer"/"keyword" 在 Qdrant 新版会直接 400：
+            //    data did not match any variant of untagged enum MatchInterface
+            // 2026-09-13 故障：全仓 9 处 match 有 8 处已改成 value，唯独 search() 这处漏改，
+            // 导致 /points/search 全部 400 → 检索恒空 → 小云答不出任何问题。
             ObjectNode tenantCond = should.addObject();
             tenantCond.put("key", "tenant_id");
-            ObjectNode tenantMatchVal = tenantCond.putObject("match");
-            tenantMatchVal.put("integer", tenantId);
+            tenantCond.putObject("match").put("value", tenantId);
 
             ObjectNode publicCond = should.addObject();
             publicCond.put("key", "tenant_id");
-            ObjectNode publicMatchVal = publicCond.putObject("match");
-            publicMatchVal.put("integer", 0);
+            publicCond.putObject("match").put("value", 0);
 
             String url = qdrantUrl + "/collections/" + collectionName + "/points/search";
             HttpEntity<String> entity = jsonEntity(body.toString());
