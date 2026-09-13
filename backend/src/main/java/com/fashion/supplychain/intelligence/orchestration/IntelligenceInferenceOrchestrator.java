@@ -46,14 +46,14 @@ public class IntelligenceInferenceOrchestrator {
     private static final Map<String, Double> SCENE_TEMPERATURE = Map.of(
         "agent-loop", 0.3, "critic_review", 0.1, "nl-intent", 0.0,
         "daily-brief", 0.0, "memory_summarize", 0.2, "history-compact", 0.1,
-        "memory-extract", 0.3
+        "memory-extract", 0.3, "semantic-cache-verify", 0.0
     );
     private static final double DEFAULT_TEMPERATURE = 0.3;
 
     private static final Map<String, Integer> SCENE_MAX_TOKENS = Map.of(
         "agent-loop", 4096, "critic_review", 1024, "nl-intent", 256,
         "daily-brief", 512, "memory_summarize", 256, "history-compact", 256,
-        "memory-extract", 256
+        "memory-extract", 256, "semantic-cache-verify", 16
     );
     private static final int DEFAULT_MAX_TOKENS = 2048;
 

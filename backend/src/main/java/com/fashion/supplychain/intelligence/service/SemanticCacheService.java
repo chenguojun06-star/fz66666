@@ -1,7 +1,10 @@
 package com.fashion.supplychain.intelligence.service;
 
+import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
+import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -62,6 +65,18 @@ public class SemanticCacheService {
 
     @Value("${xiaoyun.semantic-cache.min-response-length:50}")
     private int minResponseLength;
+
+    // ── 意图校验护栏（业界范式：防语义缓存"近失命中"答错）──
+    // 相似问题可能需要完全不同的答案（如"延期工厂"vs"延期最多的工厂"），高分段放行、灰区 LLM 比对意图
+    @Value("${xiaoyun.semantic-cache.intent-verify.enabled:true}")
+    private boolean intentVerifyEnabled;
+
+    /** 直接返回阈值：语义分数 ≥ 此值视为同一问题，跳过意图校验直接命中 */
+    @Value("${xiaoyun.semantic-cache.intent-verify.direct-threshold:0.95}")
+    private float directReturnThreshold;
+
+    @Autowired(required = false)
+    private ObjectProvider<IntelligenceInferenceOrchestrator> inferenceOrchestratorProvider;
 
     private static final String CACHE_PREFIX = "semantic:llm:";
 
@@ -302,13 +317,56 @@ public class SemanticCacheService {
                 String response = top.getPayload() != null
                         ? top.getPayload().get("response") : null;
                 if (response != null && !response.isBlank()) {
-                    return response;
+                    // 意图校验护栏：≥直接阈值视为同一问题放行；灰区 [阈值,直接阈值) 用 LLM 比对意图，
+                    // 拦截"近失命中"（相似≠同义，答错比答慢严重）
+                    if (top.getScore() >= directReturnThreshold) {
+                        return response;
+                    }
+                    if (!intentVerifyEnabled) {
+                        return response;
+                    }
+                    String cachedQuery = top.getPayload() != null
+                            ? top.getPayload().get("query") : null;
+                    if (cachedQuery == null || cachedQuery.isBlank()) {
+                        return response; // 历史数据无原查询可比对，保守放行
+                    }
+                    if (verifySameIntent(cachedQuery, query)) {
+                        return response;
+                    }
+                    log.info("[SemanticCache] 意图校验拦截近失命中 score={} cachedQuery={} query={}",
+                            String.format("%.3f", top.getScore()),
+                            truncate(cachedQuery, 50), truncate(query, 50));
+                    return null;
                 }
             }
         } catch (Exception e) {
             log.debug("[SemanticCache] Qdrant语义查找失败: {}", e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * LLM 意图比对：两个问题是否可用同一答案回答。
+     * 校验失败/异常时保守视为"不同"（宁可不命中，不可答错）。
+     */
+    private boolean verifySameIntent(String cachedQuery, String currentQuery) {
+        IntelligenceInferenceOrchestrator orchestrator = inferenceOrchestratorProvider.getIfAvailable();
+        if (orchestrator == null) {
+            return true; // 推理能力不可用，退回旧行为直接命中
+        }
+        try {
+            IntelligenceInferenceResult result = orchestrator.chat("semantic-cache-verify",
+                    "你是意图比对器。判断两个用户问题是否在询问同一件事、能否用同一个答案回答。只回答两个字：相同 或 不同。",
+                    "问题A（已有答案的问题）：" + truncate(cachedQuery, 300)
+                            + "\n问题B（当前问题）：" + truncate(currentQuery, 300));
+            if (result == null || !result.isSuccess() || result.getContent() == null) {
+                return false;
+            }
+            return result.getContent().trim().contains("相同");
+        } catch (Exception e) {
+            log.debug("[SemanticCache] 意图校验异常，视为未命中: {}", e.getMessage());
+            return false;
+        }
     }
 
     private void storeSemantic(Long tenantId, String query, String response) {
