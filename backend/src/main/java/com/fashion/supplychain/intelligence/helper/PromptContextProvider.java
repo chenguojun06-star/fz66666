@@ -36,6 +36,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PromptContextProvider {
 
+    /** 进 prompt 的记忆条数上限（召回量可放大，但上下文条数必须收口） */
+    private static final int MEMORY_CONTEXT_MAX_ITEMS = 3;
+
     @Value("${xiaoyun.agent.rag.recall-top-k:5}")
     private int ragRecallTopK;
 
@@ -436,8 +439,10 @@ public class PromptContextProvider {
         List<IntelligenceMemoryResponse.MemoryItem> recalled = ragResult.getRecalled();
         if (recalled == null || recalled.isEmpty()) return "";
 
+        // P0-3：recall-top-k 上调到 20 后，此处必须限条数，否则最多 20 条记忆进 prompt
         List<IntelligenceMemoryResponse.MemoryItem> relevant = recalled.stream()
                 .filter(item -> item.getSimilarityScore() >= ragSimilarityThreshold)
+                .limit(MEMORY_CONTEXT_MAX_ITEMS)
                 .collect(Collectors.toList());
         if (relevant.isEmpty()) return "";
 

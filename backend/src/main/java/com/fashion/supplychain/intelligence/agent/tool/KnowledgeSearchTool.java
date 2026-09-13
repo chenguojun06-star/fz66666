@@ -55,6 +55,9 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
 
     private static final int RECALL_TIMEOUT_SECONDS = 2;
 
+    /** P0-3：最终返回条数上限（与 rerank topN 对齐），降级分支同样收口，避免 10 条全量进 LLM */
+    private static final int RESULT_TOP_N = 5;
+
     @Override
     public String getName() {
         return "tool_knowledge_search";
@@ -248,7 +251,7 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
         if (cohereRerankService != null && cohereRerankService.isAvailable()) {
             List<KnowledgeBase> candidateKbs = candidateHits.stream()
                     .map(KnowledgeHit::getKnowledgeBase).collect(Collectors.toList());
-            List<KnowledgeBase> rerankedKbs = cohereRerankService.rerank(query, candidateKbs, 5);
+            List<KnowledgeBase> rerankedKbs = cohereRerankService.rerank(query, candidateKbs, RESULT_TOP_N);
             Map<String, KnowledgeHit> hitMap = candidateHits.stream()
                     .collect(Collectors.toMap(h -> h.getKnowledgeBase().getId(), h -> h));
             rankedHits = rerankedKbs.stream()
@@ -256,7 +259,10 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
         } else {
-            rankedHits = candidateHits;
+            // P0-3：cohere 不可用时降级为混合评分顺序，同样收口到 RESULT_TOP_N，与精排路径条数一致
+            rankedHits = candidateHits.size() > RESULT_TOP_N
+                    ? new ArrayList<>(candidateHits.subList(0, RESULT_TOP_N))
+                    : candidateHits;
         }
 
         List<KnowledgeBase> finalList = rankedHits.stream()

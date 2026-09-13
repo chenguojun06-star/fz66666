@@ -47,9 +47,12 @@ public class AgenticRagService {
     @Autowired(required = false) private AiAdvisorService aiAdvisorService;
     @Autowired(required = false) private RerankService rerankService;
 
-    private static final int DEFAULT_TOP_K = 5;
     private static final float MIN_SCORE = 0.35f;
     private static final int MAX_CONTEXT_CHARS = 2000;
+    /** P0-3：语义补充单路召回上限（向量检索放大过多会拖慢首字，单独设限） */
+    private static final int SEMANTIC_SUPPLEMENT = 5;
+    /** P0-3：max-context-items 配置缺失/非法时的兜底值 */
+    private static final int MAX_CONTEXT_ITEMS_FALLBACK = 8;
 
     /** RAG缓存前缀 */
     private static final String RAG_CACHE_PREFIX = "rag:cache:";
@@ -65,6 +68,12 @@ public class AgenticRagService {
     /** P1-1：检索质量达标阈值（0-1，低于此值触发下一轮改写重试） */
     @Value("${xiaoyun.rag.relevance-threshold:0.30}")
     private double relevanceThreshold;
+    /** P0-3：召回量（与 xiaoyun.agent.rag.recall-top-k 对齐，默认 20）—— 召回放大后由 rerank 收窄 */
+    @Value("${xiaoyun.agent.rag.recall-top-k:20}")
+    private int recallTopK;
+    /** P0-3：上下文条数硬上限，兜底防 rerank 跳过/降级时打爆 prompt */
+    @Value("${xiaoyun.agent.rag.max-context-items:8}")
+    private int maxContextItems;
 
     /** P1-1：LLM 查询改写提示词 */
     private static final String LLM_REWRITE_PROMPT =
@@ -507,17 +516,17 @@ public class AgenticRagService {
         StringBuilder ctx = new StringBuilder();
         int sourceCount = 0;
 
-        // KB关键词检索
-        List<KnowledgeBase> kbResults = searchKB(tenantId, query, null, DEFAULT_TOP_K);
+        // KB关键词检索（P0-3：召回量跟随 recall-top-k）
+        List<KnowledgeBase> kbResults = searchKB(tenantId, query, null, recallTopK);
         Set<String> kbIds = kbResults.stream().map(KnowledgeBase::getId).collect(Collectors.toSet());
 
         // 语义向量补充（优先混合检索，不可用时回退纯稠密检索）
         List<KnowledgeBase> newResults = List.of();
         if (qdrantService != null) {
-            List<KnowledgeBase> semanticResults = searchSemanticKBWithHybrid(tenantId, query, 3);
+            List<KnowledgeBase> semanticResults = searchSemanticKBWithHybrid(tenantId, query, SEMANTIC_SUPPLEMENT);
             newResults = semanticResults.stream()
                     .filter(kb -> !kbIds.contains(kb.getId()))
-                    .limit(2)
+                    .limit(SEMANTIC_SUPPLEMENT)
                     .toList();
         }
 
@@ -564,7 +573,7 @@ public class AgenticRagService {
 
         // 精准匹配系统操作指南
         List<KnowledgeBase> guides = rerankKb(query, searchKB(tenantId, query,
-                List.of("system_guide", "sop"), DEFAULT_TOP_K));
+                List.of("system_guide", "sop"), recallTopK));
         if (!guides.isEmpty()) {
             ctx.append("【操作指南】\n");
             for (KnowledgeBase kb : guides) {
@@ -594,17 +603,17 @@ public class AgenticRagService {
         StringBuilder ctx = new StringBuilder();
         int sourceCount = 0;
 
-        // KB检索
-        List<KnowledgeBase> kbResults = searchKB(tenantId, query, null, 3);
+        // KB检索（P0-3：召回量跟随 recall-top-k）
+        List<KnowledgeBase> kbResults = searchKB(tenantId, query, null, recallTopK);
         Set<String> kbIds = kbResults.stream().map(KnowledgeBase::getId).collect(Collectors.toSet());
 
         // 语义向量补充（优先混合检索，不可用时回退纯稠密检索）
         List<KnowledgeBase> newResults = List.of();
         if (qdrantService != null && qdrantService.isHybridSearchAvailable()) {
-            List<KnowledgeBase> hybridResults = searchSemanticKBWithHybrid(tenantId, query, 3);
+            List<KnowledgeBase> hybridResults = searchSemanticKBWithHybrid(tenantId, query, SEMANTIC_SUPPLEMENT);
             newResults = hybridResults.stream()
                     .filter(kb -> !kbIds.contains(kb.getId()))
-                    .limit(2)
+                    .limit(SEMANTIC_SUPPLEMENT)
                     .toList();
         }
 
@@ -718,7 +727,7 @@ public class AgenticRagService {
     private RagResult fallbackRetrieve(Long tenantId, String query, QuestionType qType) {
         // 降级到全文模糊检索
         String shortQuery = query.length() > 30 ? query.substring(0, 30) : query;
-        List<KnowledgeBase> fallback = rerankKb(shortQuery, searchKB(tenantId, shortQuery, null, 3));
+        List<KnowledgeBase> fallback = rerankKb(shortQuery, searchKB(tenantId, shortQuery, null, recallTopK));
         if (!fallback.isEmpty()) {
             StringBuilder ctx = new StringBuilder("【模糊匹配】\n");
             for (KnowledgeBase kb : fallback) {
@@ -803,6 +812,9 @@ public class AgenticRagService {
      *
      * <p>未启用 / 候选不足（<= top-n）/ 调用失败或超时时，一律返回原排序，
      * 保证 rerank 永远不会成为主链路的单点故障。
+     *
+     * <p>P0-3：所有返回路径再经过 {@link #capToContextLimit(List)} 兜底，
+     * 召回量上调后即使精排被跳过或降级，也不会把整池候选灌进 LLM 上下文。
      */
     private List<KnowledgeBase> rerankKb(String query, List<KnowledgeBase> candidates) {
         if (rerankService == null || candidates == null || candidates.size() <= 1) {
@@ -811,13 +823,24 @@ public class AgenticRagService {
         try {
             List<KnowledgeBase> reranked = rerankService.rerank(query, candidates);
             if (reranked == null || reranked.isEmpty()) {
-                return candidates;
+                return capToContextLimit(candidates);
             }
-            return reranked;
+            return capToContextLimit(reranked);
         } catch (Exception e) {
             log.warn("[AgenticRAG] rerank 异常，降级原排序: {}", e.getMessage());
-            return candidates;
+            return capToContextLimit(candidates);
         }
+    }
+
+    /**
+     * P0-3 上下文条数兜底：候选项数超过 {@code xiaoyun.agent.rag.max-context-items} 时截断。
+     */
+    private List<KnowledgeBase> capToContextLimit(List<KnowledgeBase> list) {
+        if (list == null || list.isEmpty()) return list;
+        int limit = maxContextItems > 0 ? maxContextItems : MAX_CONTEXT_ITEMS_FALLBACK;
+        if (list.size() <= limit) return list;
+        log.debug("[AgenticRAG] 候选 {} 条超过上下文条数上限 {}，截断", list.size(), limit);
+        return new ArrayList<>(list.subList(0, limit));
     }
 
     private String formatKB(KnowledgeBase kb) {

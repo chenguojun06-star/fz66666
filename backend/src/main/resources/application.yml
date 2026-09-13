@@ -500,7 +500,10 @@ xiaoyun:
       queue-capacity: ${XIAOYUN_PROMPT_EXECUTOR_QUEUE:128}
     sse-heartbeat-interval-s: ${XIAOYUN_SSE_HEARTBEAT_INTERVAL:15}
     rag:
-      recall-top-k: ${XIAOYUN_RAG_RECALL_TOP_K:3}
+      # P0-3：召回与精排分离 —— 先多召回（20），再由 rerank 收窄到 ai.rerank.top-n（5）送 LLM
+      recall-top-k: ${XIAOYUN_RAG_RECALL_TOP_K:20}
+      # P0-3：上下文条数硬上限（兜底，防 rerank 被跳过/降级时打爆 prompt）
+      max-context-items: ${XIAOYUN_RAG_MAX_CONTEXT_ITEMS:8}
       similarity-threshold: ${XIAOYUN_RAG_SIMILARITY_THRESHOLD:0.45}
     # 工具发现RAG — 工具数量超过此阈值时启用智能筛选
     tool-discovery:

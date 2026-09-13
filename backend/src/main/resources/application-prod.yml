@@ -166,7 +166,7 @@ xiaoyun:
     quick-path-timeout-ms: ${XIAOYUN_QUICK_PATH_TIMEOUT_MS:15000}
     sse-heartbeat-interval-s: ${XIAOYUN_SSE_HEARTBEAT_INTERVAL:15}
     rag:
-      recall-top-k: ${XIAOYUN_RAG_RECALL_TOP_K:3}
+      recall-top-k: ${XIAOYUN_RAG_RECALL_TOP_K:20}
       similarity-threshold: ${XIAOYUN_RAG_SIMILARITY_THRESHOLD:0.45}
     tool-discovery:
       enabled: ${XIAOYUN_TOOL_DISCOVERY_ENABLED:true}
