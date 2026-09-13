@@ -559,32 +559,42 @@ public class QdrantService {
             sparsePrefetch.put("limit", prefetchLimit);
             sparsePrefetch.set("filter", tenantFilter(tenantId));
 
-            // 3.3 顶层 RRF 融合
-            ObjectNode fusion = body.putObject("query");
-            fusion.put("fusion", "rrf");
-
             body.put("limit", topK);
             body.put("with_payload", true);
             // 注意：融合后分数是 RRF 排名分（量级远小于余弦），不能再套 0.3 阈值，否则一条都出不来
 
             // 4. 调用 /points/query 端点
             String url = qdrantUrl + "/collections/" + collectionName + "/points/query";
-            HttpEntity<String> entity = jsonEntity(body.toString());
-            ResponseEntity<String> resp = restTemplate.postForEntity(url, entity, String.class);
+
+            // 4.1 顶层 RRF 融合。Qdrant 各版本的 RRF 写法不一致：新版 {"rrf":{}}，旧版 {"fusion":"rrf"}。
+            //     先按新版发，被 4xx 拒绝则用旧版重试一次；两次都失败抛异常，交给下面的纯稠密降级。
+            ResponseEntity<String> resp;
+            try {
+                body.putObject("query").putObject("rrf");
+                resp = restTemplate.postForEntity(url, jsonEntity(body.toString()), String.class);
+            } catch (org.springframework.web.client.HttpStatusCodeException e) {
+                if (!e.getStatusCode().is4xxClientError()) throw e;
+                log.info("[Qdrant] RRF 新版写法被拒（{}），改用旧版 fusion 写法重试", e.getStatusCode().value());
+                body.putObject("query").put("fusion", "rrf");
+                resp = restTemplate.postForEntity(url, jsonEntity(body.toString()), String.class);
+            }
 
             if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
                 List<ScoredPoint> results = new ArrayList<>();
-                JsonNode root = objectMapper.readTree(resp.getBody());
-                JsonNode resultNode = root.path("result");
-                if (resultNode.isArray()) {
-                    for (JsonNode item : resultNode) {
-                        ScoredPoint sp = new ScoredPoint();
-                        sp.setPointId(item.path("id").asText());
-                        sp.setScore((float) item.path("score").asDouble());
-                        sp.setPayload(readPayload(item.path("payload")));
-                        restoreOriginalId(sp);
-                        results.add(sp);
-                    }
+                JsonNode resultNode = objectMapper.readTree(resp.getBody()).path("result");
+                // /points/query 返回 {"result":{"points":[...]}}；直挂数组是 /points/search 的响应格式，两种都兼容
+                JsonNode pointsNode = resultNode.isArray() ? resultNode : resultNode.path("points");
+                if (!pointsNode.isArray()) {
+                    log.warn("[Qdrant] hybridSearch 响应结构异常（无 points 数组），降级为纯稠密检索");
+                    return search(tenantId, queryText, topK);
+                }
+                for (JsonNode item : pointsNode) {
+                    ScoredPoint sp = new ScoredPoint();
+                    sp.setPointId(item.path("id").asText());
+                    sp.setScore((float) item.path("score").asDouble());
+                    sp.setPayload(readPayload(item.path("payload")));
+                    restoreOriginalId(sp);
+                    results.add(sp);
                 }
                 log.info("[Qdrant] hybridSearch(prefetch+RRF) tenantId={} dense={} sparseTokens={} 命中={}",
                         tenantId, denseVector.length, sparseVector.indices.size(), results.size());
