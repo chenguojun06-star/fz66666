@@ -123,6 +123,15 @@ public class QdrantService {
     /** Embedding 远端永久性失败（404 等）熔断标记：本次运行内不再重试，避免预向量化刷屏 */
     private volatile boolean embeddingRemoteBroken = false;
 
+    /**
+     * 批量 Embedding 熔断标记：批量接口失败过一次后本次运行内不再尝试批量。
+     *
+     * <p>必要性：批量与单条共用同一个 RestTemplate（读超时 = intelligence.qdrant.timeout-seconds）。
+     * 若提供方不支持 input 数组、或批量总是超时，没有熔断就会「每个 chunk 白等一次超时 + 再逐条」，
+     * 反而比不做批量更慢。熔断后回退逐条，最差情况与改造前完全一致。
+     */
+    private volatile boolean embeddingBatchBroken = false;
+
     /** Embedding key 指纹只打一次 */
     private final java.util.concurrent.atomic.AtomicBoolean embeddingKeyFingerprintLogged =
             new java.util.concurrent.atomic.AtomicBoolean(false);
@@ -169,6 +178,13 @@ public class QdrantService {
 
     @Value("${intelligence.qdrant.timeout-seconds:10}")
     private int qdrantTimeoutSeconds;
+
+    /**
+     * 批量写入/批量 embedding 的批大小。仅影响 {@link #upsertVectorBatch}，单条路径不受影响。
+     * 调小可降低单次 HTTP body 体积与 embedding 超时风险；调大可减少请求数。
+     */
+    @Value("${intelligence.qdrant.upsert-batch-size:50}")
+    private int upsertBatchSize;
 
     /** Qdrant 连接失败静默：首次 ERROR，之后 5 分钟内同操作降级为 DEBUG，避免刷屏 */
     private static final long CONN_FAIL_SILENCE_MS = 5 * 60 * 1000L;
@@ -372,6 +388,272 @@ public class QdrantService {
             logQdrantConnFail("upsert", "pointId=" + pointId + " " + e.getMessage());
             return false;
         }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  批量写入（全量重灌提速）
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * 批量向量化写入：一次 HTTP 请求写多个点，embedding 也按批调用（硅基流动 input 支持字符串数组）。
+     *
+     * <p>点格式与 {@link #upsertVector} 完全一致：命名向量模式下每个点带
+     * {@code {"": dense, "text-sparse": {...}}}，未命名模式下只带 dense 数组。
+     *
+     * <p>任何一批失败都会回退到该批的逐条 {@link #upsertVector}，保证不比单条写入更差。
+     *
+     * @param points 待写入的点；tenantId 为 null 的点会被跳过（与单条写入拒绝孤儿向量一致）
+     * @return 成功写入的点数（0 表示全部失败）
+     */
+    public int upsertVectorBatch(List<VectorPoint> points) {
+        if (points == null || points.isEmpty()) return 0;
+        if (!qdrantActive()) return 0;
+
+        List<VectorPoint> valid = new ArrayList<>(points.size());
+        for (VectorPoint p : points) {
+            if (p == null) continue;
+            if (p.getTenantId() == null) {
+                log.warn("[Qdrant] 批量upsert拒绝：tenantId为null，禁止写入孤儿向量 pointId={}", p.getPointId());
+                continue;
+            }
+            valid.add(p);
+        }
+        if (valid.isEmpty()) return 0;
+
+        int size = Math.max(1, upsertBatchSize);
+        int ok = 0;
+        for (int from = 0; from < valid.size(); from += size) {
+            ok += upsertChunk(valid.subList(from, Math.min(from + size, valid.size())));
+        }
+        return ok;
+    }
+
+    /** 写入单个批次；整批失败时回退到逐条 upsertVector */
+    private int upsertChunk(List<VectorPoint> chunk) {
+        try {
+            ensureCollectionExists();
+
+            List<String> contents = new ArrayList<>(chunk.size());
+            for (VectorPoint p : chunk) contents.add(p.getContent());
+            List<float[]> vectors = computeEmbeddings(contents);
+
+            boolean named = Boolean.TRUE.equals(namedVectorMode);
+            ObjectNode body = objectMapper.createObjectNode();
+            ArrayNode pointsNode = body.putArray("points");
+            for (int i = 0; i < chunk.size(); i++) {
+                float[] vector = vectors.get(i);
+                if (vector == null) {
+                    log.warn("[Qdrant] 批量upsert跳过：内容为空无法生成向量 pointId={}", chunk.get(i).getPointId());
+                    continue;
+                }
+                pointsNode.add(buildPointNode(chunk.get(i), vector, named));
+            }
+            if (pointsNode.size() == 0) return 0;
+
+            String url = qdrantUrl + "/collections/" + collectionName + "/points";
+            ResponseEntity<String> resp = restTemplate.exchange(url, HttpMethod.PUT,
+                    jsonEntity(body.toString()), String.class);
+            if (!resp.getStatusCode().is2xxSuccessful()) {
+                throw new IllegalStateException("HTTP " + resp.getStatusCode());
+            }
+            log.debug("[Qdrant] 批量upsert成功 写入={} named={}", pointsNode.size(), named);
+            return pointsNode.size();
+        } catch (Exception e) {
+            log.warn("[Qdrant] 批量upsert失败（批大小={}），回退逐条写入: {}", chunk.size(), e.getMessage());
+            int ok = 0;
+            for (VectorPoint p : chunk) {
+                try {
+                    if (upsertVector(p.getPointId(), p.getTenantId(), p.getContent(), p.getPayload())) ok++;
+                } catch (Exception inner) {
+                    log.warn("[Qdrant] 回退写入失败 pointId={}: {}", p.getPointId(), inner.getMessage());
+                }
+            }
+            return ok;
+        }
+    }
+
+    /**
+     * 构造批量写入用的单个点，格式与 {@link #upsertVector} 中的点构造保持一致
+     * （命名模式 dense ""+sparse "text-sparse"，未命名模式单个 dense 数组；payload 字段也一致）。
+     */
+    private ObjectNode buildPointNode(VectorPoint p, float[] vector, boolean named) {
+        String content = p.getContent();
+        ObjectNode point = objectMapper.createObjectNode();
+        point.put("id", toPointId(p.getPointId()));
+
+        if (named) {
+            ObjectNode vectorNode = point.putObject("vector");
+            vectorNode.set(DENSE_VECTOR_NAME, toJsonArray(vector));
+            if (sparseWriteEnabled) {
+                SparseVector sparseVector = computeSparseVector(content);
+                if (sparseVector != null && !sparseVector.indices.isEmpty()) {
+                    vectorNode.set(SPARSE_VECTOR_NAME, toSparseJson(sparseVector));
+                }
+            }
+        } else {
+            // 未命名模式：与单条写入的点格式一致，一个字节都不变
+            point.set("vector", toJsonArray(vector));
+        }
+
+        ObjectNode payloadNode = point.putObject("payload");
+        payloadNode.put("tenant_id", p.getTenantId());
+        payloadNode.put("original_id", p.getPointId());
+        if (content != null && !content.isBlank()) {
+            payloadNode.put("content", truncate(content, CONTENT_PAYLOAD_MAX_LEN));
+        }
+        if (p.getPayload() != null) {
+            p.getPayload().forEach((k, v) -> payloadNode.put(k, String.valueOf(v)));
+        }
+        return point;
+    }
+
+    /**
+     * 批量生成语义向量，返回列表顺序与入参一一对应。
+     *
+     * <p>缓存命中不产生 API 调用；批量 API 失败时整批回退到 {@link #computeEmbedding} 逐条计算
+     * （逐条路径自身还会再降级为伪向量），因此最差情况与改造前一致。
+     *
+     * @return 与 texts 等长的向量列表；某条为空文本或无法生成时对应位置为 null
+     */
+    public List<float[]> computeEmbeddings(List<String> texts) {
+        List<float[]> result = new ArrayList<>(texts.size());
+        for (int i = 0; i < texts.size(); i++) result.add(null);
+        if (texts.isEmpty()) return result;
+
+        String activeProvider = resolveActiveProvider();
+        String[] cacheKeys = new String[texts.size()];
+        List<Integer> missIdx = new ArrayList<>();
+        for (int i = 0; i < texts.size(); i++) {
+            String text = texts.get(i);
+            if (text == null || text.isBlank()) continue; // 空文本保持 null，与单条 computeEmbedding 一致
+            cacheKeys[i] = sha256Hex(text) + ":" + activeProvider;
+            EmbeddingCacheEntry cached = embeddingCache.get(cacheKeys[i]);
+            if (cached != null && !cached.isExpired()) result.set(i, cached.vector);
+            else missIdx.add(i);
+        }
+        if (missIdx.isEmpty()) return result;
+
+        if (!embeddingRemoteBroken && !embeddingBatchBroken && hasRealEmbeddingProvider()) {
+            List<String> missTexts = new ArrayList<>(missIdx.size());
+            for (int idx : missIdx) missTexts.add(texts.get(idx));
+            try {
+                List<float[]> vecs = callEmbeddingApiBatch(missTexts);
+                if (vecs.size() != missTexts.size()) {
+                    throw new IllegalStateException(
+                            "批量embedding返回条数不符 期望=" + missTexts.size() + " 实际=" + vecs.size());
+                }
+                for (int k = 0; k < missIdx.size(); k++) {
+                    int idx = missIdx.get(k);
+                    result.set(idx, vecs.get(k));
+                    embeddingCache.put(cacheKeys[idx], new EmbeddingCacheEntry(vecs.get(k)));
+                }
+                evictCacheIfNeeded();
+                return result;
+            } catch (Exception e) {
+                log.warn("[Qdrant] 批量Embedding API 调用失败，回退逐条: {}", e.getMessage());
+                // 批量一旦失败就本次运行内不再试：否则每批都要先白等一次超时再回退，比重灌前更慢
+                embeddingBatchBroken = true;
+                String msg = String.valueOf(e.getMessage());
+                if (msg.contains("404") || msg.contains("401")) {
+                    embeddingRemoteBroken = true;
+                    log.warn("[Qdrant] Embedding 接口不可用({})，已熔断：本次运行内直接使用伪向量。404=接口不存在，401=检查 AI_EMBEDDING_API_KEY 密钥", msg);
+                }
+            }
+        }
+        for (int idx : missIdx) {
+            result.set(idx, computeEmbedding(texts.get(idx)));
+        }
+        return result;
+    }
+
+    /**
+     * OpenAI 兼容 Embedding API 的批量版本：{@code input} 传字符串数组，一次算多条。
+     * 硅基流动 /v1/embeddings 明确支持（官方文档：pass an array of strings to embed multiple inputs）。
+     *
+     * @return 与 texts 等长且按下标归位后的向量列表
+     */
+    private List<float[]> callEmbeddingApiBatch(List<String> texts) {
+        boolean useStandalone = embeddingApiKey != null && !embeddingApiKey.isEmpty();
+        String apiKey = useStandalone ? embeddingApiKey : deepseekApiKey;
+        String baseUrl = useStandalone ? embeddingBaseUrl : deepseekBaseUrl;
+        String model = useStandalone ? embeddingModelName : embeddingModel;
+        if (embeddingKeyFingerprintLogged.compareAndSet(false, true)) {
+            log.info("[Qdrant] Embedding 提供方={}（批量）key指纹={}...{} 长度={} 模型={} url={}",
+                    useStandalone ? "standalone(ai.embedding.*)" : "deepseek回落",
+                    apiKey.substring(0, Math.min(5, apiKey.length())),
+                    apiKey.substring(Math.max(5, apiKey.length() - 3)),
+                    apiKey.length(), model, baseUrl);
+        }
+        String url = baseUrl + embeddingPath;
+        ObjectNode body = objectMapper.createObjectNode();
+        body.put("model", model);
+        ArrayNode input = body.putArray("input");
+        for (String t : texts) input.add(t);
+        if (embeddingEncodingFormat != null && !embeddingEncodingFormat.isEmpty()) {
+            body.put("encoding_format", embeddingEncodingFormat);
+        }
+        if (embeddingDimensions > 0) {
+            body.put("dimensions", embeddingDimensions);
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey);
+        HttpEntity<String> entity = new HttpEntity<>(body.toString(), headers);
+
+        ResponseEntity<String> resp = restTemplate.postForEntity(url, entity, String.class);
+        if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) {
+            throw new RuntimeException("Embedding API returned unexpected response");
+        }
+        JsonNode root;
+        try {
+            root = objectMapper.readTree(resp.getBody());
+        } catch (Exception e) {
+            throw new RuntimeException("Embedding response parse failed", e);
+        }
+        JsonNode data = root.path("data");
+        if (!data.isArray()) {
+            throw new RuntimeException("Embedding response missing data array");
+        }
+
+        // 按 index 归位：OpenAI 兼容接口不保证 data[] 顺序与 input 一致
+        List<float[]> out = new ArrayList<>(texts.size());
+        for (int i = 0; i < texts.size(); i++) out.add(null);
+        for (JsonNode item : data) {
+            int idx = item.path("index").asInt(-1);
+            if (idx < 0 || idx >= texts.size()) {
+                throw new RuntimeException("Embedding response index invalid: " + idx);
+            }
+            out.set(idx, parseEmbeddingItem(item));
+        }
+        for (int i = 0; i < out.size(); i++) {
+            if (out.get(i) == null) {
+                throw new RuntimeException("Embedding response missing item at index " + i);
+            }
+        }
+        return out;
+    }
+
+    /** 解析 data[] 中单条 embedding：支持 float 数组与 base64 两种编码，与单条路径的解析规则一致 */
+    private float[] parseEmbeddingItem(JsonNode item) {
+        JsonNode embedding = item.path("embedding");
+        if (embedding.isArray()) {
+            float[] vec = new float[embedding.size()];
+            for (int i = 0; i < embedding.size(); i++) {
+                vec[i] = (float) embedding.get(i).asDouble();
+            }
+            return vec;
+        }
+        JsonNode b64 = item.path("data");
+        if (b64.isTextual() && !b64.asText().isEmpty()) {
+            byte[] bytes = java.util.Base64.getDecoder().decode(b64.asText());
+            float[] vec = new float[bytes.length / 4];
+            java.nio.ByteBuffer.wrap(bytes)
+                    .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                    .asFloatBuffer().get(vec);
+            return vec;
+        }
+        throw new RuntimeException("Embedding item has no usable vector");
     }
 
     /** 稀疏向量 → Qdrant 命名向量格式 {"indices":[...],"values":[...]} */
@@ -1792,6 +2074,19 @@ public class QdrantService {
         private String pointId;
         private float score;
         private Map<String, String> payload;
+    }
+
+    /** 批量写入入参：字段与 {@link #upsertVector} 的四个入参一一对应 */
+    @lombok.Data
+    public static class VectorPoint {
+        /** 唯一ID（原始业务ID，内部会转成点ID） */
+        private String pointId;
+        /** 租户ID；为 null 会被拒绝写入（禁止孤儿向量） */
+        private Long tenantId;
+        /** 用于生成向量的文本，同时截断后写入 payload.content */
+        private String content;
+        /** 附加元数据（title/type/domain 等） */
+        private Map<String, Object> payload;
     }
 
     @lombok.Data

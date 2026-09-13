@@ -231,7 +231,8 @@ public class SchemaVectorManager {
 
         if (!schemaLoaded) loadSchemaFromDb();
 
-        int count = 0;
+        // 先攒批再批量写入：embedding 按批调用 + 一次 HTTP 写一批点，重灌从 N 次请求降到 N/batchSize 次
+        List<QdrantService.VectorPoint> batch = new ArrayList<>();
         for (TableSchema ts : schemaCache.values()) {
             try {
                 String content = ts.toSearchableText();
@@ -242,13 +243,20 @@ public class SchemaVectorManager {
                 payload.put("table_name", ts.getTableName());
                 payload.put("table_comment", ts.getTableComment() != null ? ts.getTableComment() : "");
 
-                qdrantService.upsertVector(pointId, 0L, content, payload);
-                count++;
+                QdrantService.VectorPoint vp = new QdrantService.VectorPoint();
+                vp.setPointId(pointId);
+                vp.setTenantId(0L);
+                vp.setContent(content);
+                vp.setPayload(payload);
+                batch.add(vp);
             } catch (Exception e) {
-                log.warn("[SchemaVectorManager] 向量化表 {} 失败: {}", ts.getTableName(), e.getMessage());
+                log.warn("[SchemaVectorManager] 构造表 {} 向量点失败: {}", ts.getTableName(), e.getMessage());
             }
         }
-        log.info("[SchemaVectorManager] Schema向量化完成，共 {} 张表", count);
+
+        // 批量失败时 QdrantService 内部已回退逐条写入，这里只统计最终成功写入的点数
+        int count = batch.isEmpty() ? 0 : qdrantService.upsertVectorBatch(batch);
+        log.info("[SchemaVectorManager] Schema向量化完成，共 {} 张表（提交 {} 张）", count, batch.size());
         return count;
     }
 

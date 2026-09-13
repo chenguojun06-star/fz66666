@@ -475,6 +475,8 @@ intelligence:
     vector-size: ${QDRANT_VECTOR_SIZE:1024}
     api-key: ${QDRANT_API_KEY:}                  # Qdrant Cloud 需要；本地部署留空
     timeout-seconds: ${QDRANT_TIMEOUT_SECONDS:10}
+    # 批量写入/批量 embedding 的批大小，仅影响全量重灌等批量路径（单条写入不受影响）
+    upsert-batch-size: ${QDRANT_UPSERT_BATCH_SIZE:50}
   # A 子项目：小云核心智能化升级 — 双跑 Feature Flag
   cognition:
     enabled: ${INTELLIGENCE_COGNITION_ENABLED:true}
