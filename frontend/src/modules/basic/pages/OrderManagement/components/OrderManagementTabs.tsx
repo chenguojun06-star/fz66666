@@ -1,10 +1,10 @@
 import React from 'react';
-import { Tabs } from 'antd';
 import OrderRankingDashboard from './OrderRankingDashboard';
 import OrderAnalysisTab from './OrderAnalysisTab';
 import OrderListContent from './OrderListContent';
 import type { StyleInfo } from '@/types/style';
 import type { StyleQueryParams } from '@/types/style';
+import PersistentTabs from '@/components/common/PersistentTabs';
 
 interface OrderManagementTabsProps {
   viewMode: 'table' | 'card';
@@ -38,7 +38,7 @@ const OrderManagementTabs: React.FC<OrderManagementTabsProps> = ({
   onOpenColumnSettings,
 }) => {
   return (
-    <Tabs defaultActiveKey="list" items={[
+    <PersistentTabs paramName="orderMgmtTab" defaultKey="list" items={[
       {
         key: 'list',
         label: '商品下单',

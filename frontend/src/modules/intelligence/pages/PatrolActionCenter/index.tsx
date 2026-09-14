@@ -15,6 +15,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { PatrolAction, PatrolSummary } from '@/services/intelligence/intelligenceApi';
 import { purchaseCartApi } from '@/services/purchaseCartApi';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 import './index.css';
 
 const ISSUE_TYPE_LABELS: Record<string, string> = {
@@ -63,7 +64,7 @@ const PatrolActionCenter: React.FC = () => {
   const [list, setList] = useState<PatrolAction[]>([]);
   const [summary, setSummary] = useState<PatrolSummary>(DEFAULT_SUMMARY);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('PENDING');
+  const [activeTab, setActiveTab] = usePersistentTab<string>('tab', 'PENDING');
   const [modalState, setModalState] = useState<ModalState>({ type: null, action: null });
   const [submitting, setSubmitting] = useState(false);
   const [smartSourcingLoading, setSmartSourcingLoading] = useState(false);

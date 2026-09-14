@@ -1,7 +1,8 @@
 import React from 'react';
-import { Tabs, Card, Typography } from 'antd';
+import { Card, Typography } from 'antd';
 import { FileExcelOutlined, FileZipOutlined } from '@ant-design/icons';
 import { TAB_CONFIGS } from './tabConfigs';
+import PersistentTabs from '@/components/common/PersistentTabs';
 import ZipImportPanel from './ZipImportPanel';
 import ImportPanel from './ImportPanel';
 
@@ -21,8 +22,9 @@ const DataImport: React.FC = () => {
       </div>
 
       <Card>
-        <Tabs
-          defaultActiveKey="zip-style"
+        <PersistentTabs
+          paramName="tab"
+          defaultKey="zip-style"
           size="large"
           items={[
             {

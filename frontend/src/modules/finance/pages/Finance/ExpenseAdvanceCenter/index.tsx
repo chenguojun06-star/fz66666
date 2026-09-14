@@ -1,9 +1,10 @@
-import React, { Suspense, useState } from 'react';
+import React, { Suspense } from 'react';
 import { Card, Spin, Tabs } from 'antd';
 import { DollarOutlined } from '@ant-design/icons';
 import { useUser } from '@/utils/AuthContext';
 import { hasPermission } from '@/utils/permission';
 import { permissionCodes } from '@/routeConfig';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 
 // D-301：借支与费用报销合并为一页（用户反馈页面太多）。
 // 两个原页面组件原样挂载为零改动零回归；页签按权限码显隐，路径直达由 App 路由传 initialTab 兼容收藏。
@@ -25,7 +26,8 @@ const ExpenseAdvanceCenter: React.FC<ExpenseAdvanceCenterProps> = ({ initialTab 
   const { user } = useUser();
   const canExpense = hasPermission(user, permissionCodes.expenseReimbursement);
   const canAdvance = hasPermission(user, permissionCodes.employeeAdvance);
-  const [activeTab, setActiveTab] = useState<string>(
+  const [activeTab, setActiveTab] = usePersistentTab<string>(
+    'tab',
     initialTab === 'advance' && canAdvance ? 'advance' : canExpense ? 'expense' : canAdvance ? 'advance' : 'expense',
   );
 

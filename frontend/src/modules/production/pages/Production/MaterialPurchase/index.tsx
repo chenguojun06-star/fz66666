@@ -17,10 +17,11 @@ import { buildStatCards } from './statCardsConfig';
 import TitleExtraTooltip from './TitleExtraTooltip';
 import PurchaseModals from './PurchaseModals';
 import type { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 
 const MaterialPurchase: React.FC = () => {
   const navigate = useNavigate();
-  const [activeMainTab, setActiveMainTab] = useState('purchase');
+  const [activeMainTab, setActiveMainTab] = usePersistentTab<string>('tab', 'purchase');
   const [orderPickerOpen, setOrderPickerOpen] = useState(false);
   // 订单选择器用途：add=新增采购跳详情；smart=智能采购推荐带回订单号并自动分析
   const [orderPickerContext, setOrderPickerContext] = useState<'add' | 'smart'>('add');

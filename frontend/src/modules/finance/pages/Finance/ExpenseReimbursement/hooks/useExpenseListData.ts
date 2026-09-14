@@ -8,6 +8,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import type { Dayjs } from 'dayjs';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 
 export const useExpenseListData = () => {
   const { user } = useUser();
@@ -18,7 +19,9 @@ export const useExpenseListData = () => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(readPageSize(20));
-  const [filterStatus, setFilterStatus] = useState<string | undefined>();
+  // 状态 Tab 持久化到 URL（'' = 全部），刷新后不回退
+  const [statusTab, setStatusTab] = usePersistentTab<string>('status', '');
+  const filterStatus = statusTab || undefined;
   const [filterType, setFilterType] = useState<string | undefined>();
   const [keyword, setKeyword] = useState('');
   const debouncedKeyword = useDebouncedValue(keyword, 300);
@@ -77,7 +80,7 @@ export const useExpenseListData = () => {
   return {
     list, loading, total, page, pageSize, filterStatus, filterType, keyword,
     viewMode, dateRange, stats, smartError, showSmartErrorNotice,
-    setPage, setPageSize, setFilterStatus, setFilterType, setKeyword,
+    setPage, setPageSize, setFilterStatus: setStatusTab, setFilterType, setKeyword,
     setViewMode, setDateRange, fetchList, reportSmartError,
   };
 };

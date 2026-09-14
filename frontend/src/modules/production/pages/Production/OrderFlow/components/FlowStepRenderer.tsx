@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { App, Card, Tabs } from 'antd';
+import { App, Card } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import StylePatternSimpleTab from './StylePatternSimpleTab';
 import StyleSecondaryProcessTab from '@/modules/basic/pages/StyleInfo/components/StyleSecondaryProcessTab';
@@ -12,6 +12,7 @@ import { CuttingBundlesContent, CuttingSizeItemsContent } from './CuttingTabCont
 import MaterialTabContent from './MaterialTabContent';
 import WorkflowTabContent from './WorkflowTabContent';
 import OperationLogTabContent from './OperationLogTabContent';
+import PersistentTabs from '@/components/common/PersistentTabs';
 
 interface Props {
   loading: boolean;
@@ -93,7 +94,9 @@ const FlowStepRenderer: React.FC<Props> = ({
       style={{ marginTop: 8 }}
       loading={loading}
     >
-      <Tabs
+      <PersistentTabs
+        paramName="flowTab"
+        defaultKey="overview"
         items={[
           {
             key: 'overview',

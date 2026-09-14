@@ -205,13 +205,16 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
         }
         center={
           <>
-          {/* 环节配置：按款独立（负责人/时长/预警），侧滑弹窗，未配置回退全厂基线 */}
-          <Button
-            icon={<SettingOutlined />}
-            onClick={() => setStageConfigOpen(true)}
-          >
-            环节配置
-          </Button>
+          {/* 环节配置：按款独立（负责人/时长/预警），侧滑弹窗，未配置回退全厂基线。
+              只读态下 StageConfigArea 本身不渲染，按钮也一并隐藏，避免打开一个空白抽屉 */}
+          {!readOnly && (
+            <Button
+              icon={<SettingOutlined />}
+              onClick={() => setStageConfigOpen(true)}
+            >
+              环节配置
+            </Button>
+          )}
           <Button
             icon={<CopyOutlined />}
             disabled={Boolean(readOnly) || !processStartTime || loading || saving}
@@ -300,7 +303,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
         width="50%"
         title="环节配置"
       >
-        <StageConfigArea styleId={String(styleId ?? '')} />
+        <StageConfigArea readOnly={Boolean(readOnly)} styleId={String(styleId ?? '')} />
       </SideDrawer>
       <ProcessCostSummary data={data} />
       <ResizableTable bordered components={draggableComponents as any} onRow={(_record: any, index?: number) => ({ 'data-index': index } as any)} dataSource={sortedData as unknown as any[]} columns={columns as unknown as any[]} pagination={false} loading={loading} rowKey="id" scroll={{ x: 'max-content' }} storageKey={`style-process-${String(styleId)}`} emptyDescription="暂无工序数据" showExport={true} exportFilename="款式工序.xlsx" />

@@ -9,6 +9,7 @@ import PageLayout from '@/components/common/PageLayout';
 import { intelligenceApi } from '../../../../services/intelligence/intelligenceApi';
 import { paths } from '../../../../routeConfig';
 import { useDebouncedValue } from '@/hooks/usePerformance';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 import { useUser } from '@/utils/AuthContext';
 import AgentActivityPanel from './AgentActivityPanel';
 
@@ -118,7 +119,7 @@ const AiAgentTraceCenter: React.FC = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detail, setDetail] = useState<{ commandId?: string; logs?: TraceRow[]; count?: number } | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('activity');
+  const [activeTab, setActiveTab] = usePersistentTab<string>('tab', 'activity');
 
   // P0-1: 仅平台超级管理员可访问（含原始工具名/JSON/错误栈等技术细节）
   // 普通用户访问会暴露 tool_xxx 等内部标识，违反 prompt 中"禁止暴露工具名"原则

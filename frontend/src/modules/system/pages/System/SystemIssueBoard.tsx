@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { Alert, Badge, Button, Card, Col, Empty, Row, Space, Spin, Tabs, Tag, Typography } from 'antd';
+import { Alert, Badge, Button, Card, Col, Empty, Row, Space, Spin, Tag, Typography } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
+import PersistentTabs from '@/components/common/PersistentTabs';
 import { BugOutlined, CheckCircleOutlined, CodeOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -280,8 +281,9 @@ export default function SystemIssueBoard() {
         </Space>
       </Space>
 
-      <Tabs
-        defaultActiveKey="issues"
+      <PersistentTabs
+        paramName="tab"
+        defaultKey="issues"
         items={[
           {
             key: 'issues',

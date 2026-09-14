@@ -9,6 +9,7 @@ import { useWarehousingForm } from '../../components/WarehousingModal/hooks/useW
 import { qualityAiApi } from '@/services/production/productionApi';
 import type { QualityAiSuggestionResult } from '@/services/production/productionApi';
 import type { InspectionDetailProps, QualityBriefingData } from './types';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 
 export function useInspectionDetail(props: InspectionDetailProps) {
   const { orderId: propOrderId, defaultTab: propDefaultTab, embedded, onClose } = props;
@@ -17,11 +18,11 @@ export function useInspectionDetail(props: InspectionDetailProps) {
   const navigate = useNavigate();
   const orderId = propOrderId || paramOrderId || '';
   // 只读模式默认展示入库进度（订单视角关注入库情况）；操作模式默认质检记录
-  const defaultTab = propDefaultTab || searchParams.get('tab') || (props.readOnly ? 'orderLines' : 'records');
+  const defaultTab = propDefaultTab || (props.readOnly ? 'orderLines' : 'records');
   const highlightWhNo = searchParams.get('warehousingNo') || '';
   const [loading, setLoading] = useState(true);
   const [briefing, setBriefing] = useState<QualityBriefingData | null>(null);
-  const [activeTab, setActiveTab] = useState(defaultTab);
+  const [activeTab, setActiveTab] = usePersistentTab<string>('tab', defaultTab);
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [qcRecords, setQcRecords] = useState<WarehousingDetailRecord[]>([]);
   const [aiSuggestion, setAiSuggestion] = useState<QualityAiSuggestionResult | null>(null);

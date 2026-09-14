@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { App, Button, Card, Space, Tabs, Tag } from 'antd';
+import { App, Button, Card, Space, Tag } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined, ShopOutlined, InboxOutlined } from '@ant-design/icons';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import StickyFilterBar from '@/components/common/StickyFilterBar';
 import SkeletonLoader from '@/components/common/SkeletonLoader';
+import PersistentTabs from '@/components/common/PersistentTabs';
 import { useUser, isSupervisorOrAboveUser } from '@/utils/AuthContext';
 import { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import { productionOrderApi, type ProductionOrderListParams } from '@/services/production/productionApi';
@@ -262,7 +263,7 @@ const ExternalFactory: React.FC = () => {
           loading={loading}
         />
         <div className="u-flex-1 u-d-flex u-fd-column u-ov-hidden u-p-16" style={{ minHeight: 0 }}>
-          <Tabs defaultActiveKey="orders" className="ef-tabs" items={[
+          <PersistentTabs paramName="efTab" defaultKey="orders" className="ef-tabs" items={[
             {
               key: 'orders',
               label: <span><ShopOutlined /> 订单管理</span>,

@@ -10,6 +10,7 @@ import {
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { formatMoney } from '@/utils/format';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 
 interface UsePaymentDataOptions {
   msg: { success: (text: string) => void; error: (text: string) => void; warning: (text: string) => void };
@@ -29,10 +30,11 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
 
   // ---- Tab ----
   // 支持 ?tab=pending|records|receivable|payable 直达（付款计划页"去付款"等入口跳转用）
-  const [activeTab, setActiveTab] = useState<string>(() => {
-    const tab = new URLSearchParams(window.location.search).get('tab');
-    return ['pending', 'records', 'receivable', 'payable'].includes(tab || '') ? (tab as string) : 'pending';
-  });
+  const [activeTab, setActiveTab] = usePersistentTab<string>(
+    'tab',
+    'pending',
+    ['pending', 'records', 'receivable', 'payable'],
+  );
 
   // ---- 待收付款列表 ----
   const [payables, setPayables] = useState<PayableItem[]>([]);

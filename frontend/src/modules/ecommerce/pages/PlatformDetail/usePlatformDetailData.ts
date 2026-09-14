@@ -6,6 +6,8 @@ import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { useDebouncedValue } from '@/hooks/usePerformance';
 import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
+import { useSearchParams } from 'react-router-dom';
 import type { EcOrder } from './types';
 
 export interface UsePlatformDetailDataReturn {
@@ -28,7 +30,7 @@ export interface UsePlatformDetailDataReturn {
   imageMap: ReturnType<typeof useStyleCoverImages>['imageMap'];
   configForm: ReturnType<typeof Form.useForm>[0];
   testResult: { success: boolean; message: string } | null;
-  setActiveTab: React.Dispatch<React.SetStateAction<string>>;
+  setActiveTab: (key: string) => void;
   setShowGuide: React.Dispatch<React.SetStateAction<boolean>>;
   setFilterStatus: React.Dispatch<React.SetStateAction<number | undefined>>;
   setKeyword: React.Dispatch<React.SetStateAction<string>>;
@@ -51,7 +53,11 @@ export function usePlatformDetailData(platformCode: string | undefined): UsePlat
 
   const [stats, setStats] = useState<ShopStats | null>(null);
   const [configured, setConfigured] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('config');
+  const [activeTab, setActiveTab] = usePersistentTab<string>('tab', 'config');
+  // URL 上带了显式 tab（比如用户点了「进销存」后刷新）时，不再被下面的自动跳转覆盖，
+  // 否则刷新后永远会被拉回订单页。不带参数时保持原有自动跳转行为不变。
+  const [searchParams] = useSearchParams();
+  const urlTabOnMountRef = useRef<string | null>(searchParams.get('tab'));
   const [showGuide, setShowGuide] = useState(false);
 
   const [orders, setOrders] = useState<EcOrder[]>([]);
@@ -112,7 +118,10 @@ export function usePlatformDetailData(platformCode: string | undefined): UsePlat
 
   useEffect(() => { loadPlatformData(); }, [loadPlatformData]);
   useEffect(() => { if (configured) loadOrders(); }, [loadOrders, configured]);
-  useEffect(() => { setActiveTab(configured ? 'orders' : 'config'); }, [configured]);
+  useEffect(() => {
+    if (urlTabOnMountRef.current) return;
+    setActiveTab(configured ? 'orders' : 'config');
+  }, [configured, setActiveTab]);
 
   const handleSaveConfig = async () => {
     if (!platformCode) return;

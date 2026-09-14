@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Typography, Alert, Collapse, Tabs, Row, Col, Divider } from 'antd';
+import { Card, Typography, Alert, Collapse, Row, Col, Divider } from 'antd';
 import {
   SendOutlined,
   CheckCircleOutlined,
@@ -14,6 +14,7 @@ import {
 } from '@ant-design/icons';
 import CopyBlock from './components/CopyBlock';
 import IntegrationQuickStart from './components/IntegrationQuickStart';
+import PersistentTabs from '@/components/common/PersistentTabs';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -69,7 +70,7 @@ const IntegrationGuideTab: React.FC = () => (
     </Card>
 
     <Card title={<span><CodeOutlined style={{ marginRight: 8, color: 'var(--color-success)' }} />API接口参考</span>} style={{ marginBottom: 24 }}>
-      <Tabs items={[
+      <PersistentTabs paramName="apiRef" defaultKey="order" items={[
         { key: 'order', label: '下单对接', children: (<div><Title level={5}>POST /openapi/v1/orders/create — 创建订单</Title><CopyBlock lang="json" code={`{\n  "externalOrderNo": "ERP-20260211-001",\n  "styleNo": "FZ2024001",\n  "styleName": "春季衬衫A款",\n  "quantity": 500,\n  "colors": ["红", "蓝"],\n  "sizes": ["S", "M", "L"],\n  "plannedDeliveryDate": "2026-03-15"\n}`} /><Title level={5} style={{ marginTop: 16 }}>GET /openapi/v1/orders/&var(--color-dark-bg);orderNo&var(--color-blue-800); — 查询订单状态</Title><CopyBlock lang="json" code={`{\n  "orderNo": "PO20260211001",\n  "status": "in_production",\n  "progress": 65,\n  "currentStage": "车缝",\n  "estimatedCompletion": "2026-03-10"\n}`} /></div>) },
         { key: 'quality', label: '质检反馈', children: (<div><Title level={5}>Webhook: quality_feedback</Title><CopyBlock lang="json" code={`{\n  "event": "quality_feedback",\n  "orderNo": "PO20260211001",\n  "result": "qualified",\n  "quantity": 480,\n  "defectQuantity": 20,\n  "defectDescription": "少量线头",\n  "timestamp": "2026-03-10T14:30:00Z"\n}`} /><Title level={5} style={{ marginTop: 16 }}>GET /openapi/v1/quality/&var(--color-dark-bg);orderNo&var(--color-blue-800); — 查询质检报告</Title></div>) },
         { key: 'logistics', label: '物流对接', children: (<div><Title level={5}>Webhook: logistics_sync</Title><CopyBlock lang="json" code={`{\n  "event": "logistics_sync",\n  "orderNo": "PO20260211001",\n  "shipmentNo": "SH20260310001",\n  "carrier": "顺丰速运",\n  "trackingNo": "SF1234567890",\n  "timestamp": "2026-03-10T16:00:00Z"\n}`} /></div>) },

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Button, Space, Tabs } from 'antd';
+import { Button, Space } from 'antd';
 import { WarningOutlined, ShoppingCartOutlined, InboxOutlined, SwapOutlined, ThunderboltOutlined, RobotOutlined, MergeCellsOutlined, GiftOutlined, PlusOutlined, EnvironmentOutlined, AuditOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { UniversalStock, StockAlert, PurchaseSuggestion, WarehouseAllocation, MergeGroup, GiftRule, LogisticsAnomaly, PlatformBill } from './useEcStock';
@@ -9,6 +9,7 @@ import SafeStockModal from './components/SafeStockModal';
 import SplitDetailModal from './components/SplitDetailModal';
 import MergeOutboundModal from './components/MergeOutboundModal';
 import GiftRuleModal from './components/GiftRuleModal';
+import PersistentTabs from '@/components/common/PersistentTabs';
 
 const SmartStockTab: React.FC = () => {
   const data = useSmartStockData();
@@ -133,7 +134,7 @@ const SmartStockTab: React.FC = () => {
 
   return (
     <>
-      <Tabs items={tabItems} />
+      <PersistentTabs paramName="stockTab" defaultKey="alerts" items={tabItems} />
       <SafeStockModal open={!!safeStockRecord} record={safeStockRecord} onClose={() => setSafeStockRecord(null)} onOk={handleSafeStock} />
       <SplitDetailModal open={splitVisible} splits={[]} onClose={() => setSplitVisible(false)} />
       <MergeOutboundModal open={mergeModalOpen} group={mergeGroup} onClose={() => setMergeModalOpen(false)} onOk={handleMergeOutbound} />

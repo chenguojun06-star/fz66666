@@ -4,9 +4,10 @@
  * Tab 2: 我的账单（MyBillingTab）— 仅租户主账号/管理员显示，工厂账号与普通员工不显示
  */
 import React from 'react';
-import { Tabs, Typography } from 'antd';
+import { Typography } from 'antd';
 import { UserOutlined, AppstoreOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
+import PersistentTabs from '@/components/common/PersistentTabs';
 import { useUser } from '@/utils/AuthContext';
 import ProfileInfoTab from './components/ProfileInfoTab';
 import MyModulesTab from './components/MyModulesTab';
@@ -46,8 +47,9 @@ const Profile: React.FC = () => {
                     </Typography.Text>
                 }
             >
-                <Tabs
-                    defaultActiveKey="profile"
+                <PersistentTabs
+                    paramName="tab"
+                    defaultKey="profile"
                     items={tabItems}
                 />
             </PageLayout>

@@ -7,6 +7,7 @@ import { useUser, isSupervisorOrAbove } from '@/utils/AuthContext';
 import { paths } from '@/routeConfig';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 
 interface UseUserApprovalDataOptions {
   isTenantOwner: boolean;
@@ -17,7 +18,7 @@ export function useUserApprovalData({ isTenantOwner }: UseUserApprovalDataOption
   const navigate = useNavigate();
   const canApproveFactory = isTenantOwner || isSupervisorOrAbove(user);
 
-  const [activeTab, setActiveTab] = useState('tenant');
+  const [activeTab, setActiveTab] = usePersistentTab<string>('tab', 'tenant');
   const [loading, setLoading] = useState(false);
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);

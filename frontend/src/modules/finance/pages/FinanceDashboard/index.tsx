@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { Card, Row, Col, Spin, Space, Table, Empty, DatePicker, Tabs } from 'antd';
+import { Card, Row, Col, Spin, Space, Table, Empty, DatePicker } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { useFinanceDashboardData } from './hooks/useFinanceDashboardData';
 import styles from './index.module.css';
@@ -7,6 +7,7 @@ import StatCard from './components/StatCard';
 import TrendChart from './components/TrendChart';
 import PieChart from './components/PieChart';
 import { DailyFlowContent } from '../Finance/DailyFlow';
+import PersistentTabs from '@/components/common/PersistentTabs';
 
 const ReactECharts = lazy(() => import('echarts-for-react'));
 
@@ -125,7 +126,9 @@ const FinanceDashboard: React.FC = () => {
   return (
     <Spin spinning={loading}>
       {/* D-273：每日流水并入财务总览做 tab（数据同源：六类业务流水） */}
-      <Tabs
+      <PersistentTabs
+        paramName="tab"
+        defaultKey="overview"
         type="card"
         items={[
           { key: 'overview', label: '总览', children: overviewContent },

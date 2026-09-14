@@ -18,6 +18,7 @@ import {
   employeeAdvanceApi,
   type EmployeeAdvance,
 } from '@/services/finance/employeeAdvanceApi';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 
 const statusTag = (val: string) => {
   const s = ADVANCE_STATUS.find(t => t.value === val);
@@ -39,7 +40,9 @@ const EmployeeAdvancePage: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
+  // 状态 Tab 持久化到 URL，刷新后不回退到「全部」
+  const [statusTab, setStatusTab] = usePersistentTab<string>('status', '');
+  const filterStatus = statusTab || undefined;
   const [filterRepayment, setFilterRepayment] = useState<string | undefined>(undefined);
   const [keyword, setKeyword] = useState('');
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
@@ -230,7 +233,7 @@ const EmployeeAdvancePage: React.FC = () => {
       <Card style={{ marginBottom: 12, borderRadius: 6, border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
         <Tabs
           activeKey={filterStatus || ''}
-          onChange={(k) => { setFilterStatus(k || undefined); setPage(1); }}
+          onChange={(k) => { setStatusTab(k); setPage(1); }}
           size="small"
           items={[
             { key: '', label: `全部 (${total})` },

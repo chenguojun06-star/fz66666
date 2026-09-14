@@ -201,7 +201,7 @@ const ExpenseReimbursementPage: React.FC = () => {
         <Card style={{ marginBottom: 12, borderRadius: 6, border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
           <Tabs
             activeKey={filterStatus || ''}
-            onChange={(k) => { setFilterStatus(k || undefined); setPage(1); }}
+            onChange={(k) => { setFilterStatus(k); setPage(1); }}
             size="small"
             items={[
               { key: '', label: `全部 (${total})` },

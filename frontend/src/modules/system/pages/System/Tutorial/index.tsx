@@ -11,11 +11,11 @@ import {
   Button,
   Row,
   Col,
-  Tabs,
   Alert,
   Timeline,
   Badge,
 } from 'antd';
+import PersistentTabs from '@/components/common/PersistentTabs';
 import {
   BookOutlined,
   QuestionCircleOutlined,
@@ -257,8 +257,9 @@ const SystemTutorial: React.FC = () => {
                   </Space>
                 }
               >
-                <Tabs
-                  defaultActiveKey="steps"
+                <PersistentTabs
+                  paramName={`tutorialTab-${tutorial.id}`}
+                  defaultKey="steps"
                   items={[
                     {
                       key: 'steps',

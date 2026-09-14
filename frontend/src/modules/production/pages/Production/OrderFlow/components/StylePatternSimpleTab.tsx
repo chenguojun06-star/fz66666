@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Tabs, Spin, Button, Space, Tag } from 'antd';
+import { Card, Spin, Button, Space, Tag } from 'antd';
 import { FileOutlined } from '@ant-design/icons';
 import SheetRichViewer from '@/components/common/SheetRichViewer';
 import type { StyleAttachment } from '@/types/style';
@@ -9,6 +9,7 @@ import api from '@/utils/api';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
 import { downloadFile } from '@/utils/fileUrl';
 import { message } from '@/utils/antdStatic';
+import PersistentTabs from '@/components/common/PersistentTabs';
 
 interface Props {
   styleId: string | number;
@@ -100,7 +101,9 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
       <div className="u-mb-8 u-fs-var--font-size-xs" style={{ color: 'var(--neutral-text-secondary)' }}>
         款号：<span className="u-fw-500" style={{ color: 'var(--neutral-text)' }}>{styleNo || '-'}</span>
       </div>
-      <Tabs
+      <PersistentTabs
+        paramName="patternTab"
+        defaultKey="pattern"
         tabBarExtraContent={
           <Button onClick={handleRefresh}>
             更新

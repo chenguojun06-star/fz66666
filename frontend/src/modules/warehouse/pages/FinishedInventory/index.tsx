@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Button, Space, Input, Select, Tabs, Row, Col, Drawer, Tag } from 'antd';
+import { Card, Button, Space, Input, Select, Row, Col, Drawer, Tag } from 'antd';
 import { HistoryOutlined, ScanOutlined, InboxOutlined } from '@ant-design/icons';
 import QrcodeOutboundModal from './QrcodeOutboundModal';
 import OutstockRecordTab from './OutstockRecordTab';
@@ -21,6 +21,7 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { formatMoney } from '@/utils/format';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import PersistentTabs from '@/components/common/PersistentTabs';
 import { useFinishedInventoryData } from './hooks/useFinishedInventoryData';
 import { useFinishedInventoryActions } from './hooks/useFinishedInventoryActions';
 import { useSync } from '@/utils/syncManager';
@@ -161,7 +162,7 @@ const _FinishedInventory: React.FC = () => {
         <StandardToolbar left={<StandardSearchBar searchValue={searchText} onSearchChange={setSearchText} searchPlaceholder="搜索订单号/款号/商品编码" statusValue={statusValue} onStatusChange={setStatusValue} statusOptions={[{ label: '全部', value: '' }, { label: '有库存', value: 'available' }, { label: '有次品', value: 'defect' }]} />} right={<Space wrap><Select style={{ width: 140 }} placeholder="工厂类型" allowClear value={selectedFactoryType || undefined} onChange={setSelectedFactoryType} options={factoryTypeOptions} /><Button icon={<InboxOutlined />} onClick={() => setFreeInboundOpen(true)}>无采购单入库</Button><Button icon={<ScanOutlined />} onClick={() => setScanOperationOpen(true)}>扫码出入库</Button><Button icon={<ScanOutlined />} onClick={() => setQrcodeOutboundOpen(true)}>扫码出库</Button><Button icon={<HistoryOutlined />} onClick={() => setPageLogOpen(true)}>操作日志</Button></Space>} />
       </Card>
       <PageStatCards cards={[{ key: 'total', items: [{ label: '成品总数', value: totalRecords, unit: '款', color: 'var(--color-primary)' }] }, { key: 'available', items: [{ label: '可用库存', value: totalAvailableQty, unit: '件', color: 'var(--color-success)' }] }, { key: 'defect', items: [{ label: '次品数量', value: totalDefectQty, unit: '件', color: 'var(--color-danger)' }] }]} activeKey="" />
-      <Tabs defaultActiveKey="inventory" style={{ marginTop: 12 }} items={[
+      <PersistentTabs paramName="invTab" defaultKey="inventory" style={{ marginTop: 12 }} items={[
         {
           key: 'inventory',
           label: '库存管理',

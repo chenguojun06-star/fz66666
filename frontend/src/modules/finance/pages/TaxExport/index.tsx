@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Button, DatePicker, Space, Tag, Typography, Divider, Alert, Modal, Tabs } from 'antd';
+import { Card, Row, Col, Button, DatePicker, Space, Tag, Typography, Divider, Alert, Modal } from 'antd';
 import {
   DownloadOutlined, FileExcelOutlined, CheckCircleOutlined, LockOutlined, RocketOutlined,
   UnlockOutlined, SettingOutlined, FileTextOutlined, DollarOutlined,
@@ -11,6 +11,7 @@ import { appStoreService } from '@/services/system/appStore';
 import { useUser } from '@/utils/AuthContext';
 import { message } from '@/utils/antdStatic';
 import api from '@/utils/api';
+import PersistentTabs from '@/components/common/PersistentTabs';
 import InvoiceTab from './InvoiceTab';
 import PayableTab from './PayableTab';
 import TaxConfigTab from './TaxConfigTab';
@@ -208,7 +209,7 @@ const TaxExport: React.FC = () => {
       <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
         数据导出、发票台账、应付账款、税率配置一站式管理
       </Text>
-      <Tabs items={tabs} defaultActiveKey="export" />
+      <PersistentTabs paramName="tab" defaultKey="export" items={tabs} />
     </div>
   );
 };

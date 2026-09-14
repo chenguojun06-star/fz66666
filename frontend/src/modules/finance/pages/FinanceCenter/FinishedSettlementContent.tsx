@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Card, Button, Input, Select, Empty, Space, Statistic, Timeline, Tabs, Table, InputNumber } from 'antd';
 import { CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, DownloadOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -10,6 +10,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { useSettlementData, type PageParams } from './useSettlementData';
 import { getSettlementColumns } from './settlementColumns';
 import { isOrderFrozenByStatus } from '@/utils/api/production';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 
 interface Props {
   auditedOrderNos: Set<string>;
@@ -17,7 +18,9 @@ interface Props {
 }
 
 const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosChange }) => {
-  const [approvalFilter, setApprovalFilter] = useState<'all' | 'pending' | 'approved'>('all');
+  const [approvalFilter, setApprovalFilter] = usePersistentTab<'all' | 'pending' | 'approved'>(
+    'settleFilter', 'all', ['all', 'pending', 'approved'],
+  );
   const {
     searchOrderNo, setSearchOrderNo,
     searchStatus, setSearchStatus,

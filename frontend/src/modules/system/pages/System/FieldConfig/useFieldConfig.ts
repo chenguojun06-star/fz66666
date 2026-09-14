@@ -4,6 +4,7 @@ import { Form, message } from 'antd';
 import { fieldConfigApi, BIZ_TYPE_OPTIONS } from '@/services/system/fieldConfigApi';
 import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 import { parseValidations, parseOptions, mapTypeToWidget } from './utils';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 
 export function useFieldConfig() {
   const [searchParams] = useSearchParams();
@@ -18,7 +19,7 @@ export function useFieldConfig() {
   const [form] = Form.useForm();
   const [previewForm] = Form.useForm();
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('list');
+  const [activeTab, setActiveTab] = usePersistentTab<string>('tab', 'list');
   const [dirty, setDirty] = useState(false);
 
   const fetchList = useCallback(async () => {

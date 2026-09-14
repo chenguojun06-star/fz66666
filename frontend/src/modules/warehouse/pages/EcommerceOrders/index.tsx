@@ -8,10 +8,11 @@ import EcommerceReturnTab from './EcommerceReturnTab';
 import OrdersTab from './OrdersTab';
 import PricingTab from './PricingTab';
 import type { EcOrder } from './types';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 
 const EcommerceOrders: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<EcOrder | null>(null);
-  const [activeTab, setActiveTab] = useState('orders');
+  const [activeTab, setActiveTab] = usePersistentTab('tab', 'orders');
   return (
     <>
       <div style={{ padding: 20 }}>
