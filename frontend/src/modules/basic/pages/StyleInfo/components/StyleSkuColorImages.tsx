@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { App, Image, Upload, Button, Table, Tag, Empty, Spin, Tooltip, Space } from 'antd';
-import { UploadOutlined, DeleteOutlined, PictureOutlined, SyncOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { App, Image, Button, Table, Tag, Empty, Spin, Tooltip, Space } from 'antd';
+import { UploadOutlined, DeleteOutlined, EyeOutlined, SyncOutlined } from '@ant-design/icons';
+import ImageUploadBox from '@/components/common/ImageUploadBox';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { confirmAction } from '@/utils/confirm';
@@ -21,10 +22,12 @@ interface StyleSkuColorImagesProps {
 
 /**
  * 颜色图片管理（一行一颜色）
- * - 表格布局：每行 = 颜色 + 小图（48px）+ 状态 + 行内操作（上传/更换、移除）
+ * - 表格布局：每行 = 颜色 + 方形上传框（56px）+ 状态 + 行内操作（预览、移除）
+ * - 图片格统一用 ImageUploadBox：正方形，支持点击 / 拖拽 / Ctrl+V 粘贴三种上传方式
+ *   （与「尺码颜色」矩阵的上传体验保持一致，不再用 antd Upload 的按钮样式）
  * - 行内上传仅应用到该行颜色；勾选多行可批量应用同一张图片
  * - 上传/移除后即时保存，无需手动点保存
- * - 预览使用 antd 单层预览（工具栏放大/缩小/关闭全局已增强可见性）
+ * - 预览：点操作列的眼睛图标开 antd 大图预览（放大/缩小/旋转/关闭）
  */
 const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styleNo, onSaved, hideHeader }) => {
   const { message: antMessage } = App.useApp();
@@ -32,7 +35,8 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
   const [saving, setSaving] = useState(false);
   const [colorImages, setColorImages] = useState<ColorImage[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [uploadingColor, setUploadingColor] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ open: boolean; src: string }>({ open: false, src: '' });
+  const batchInputRef = useRef<HTMLInputElement>(null);
 
   // 获取该款所有颜色和商品编码信息
   const fetchColorImages = useCallback(async () => {
@@ -96,36 +100,29 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
     }
   }, [colorImages, styleId, antMessage, onSaved]);
 
-  // 行内上传（仅应用到该行颜色，上传后即时保存）
-  const handleUpload = useCallback(async (file: File, color: string) => {
-    setUploadingColor(color);
+  /** 上传到服务器（只负责拿 url，不写状态） */
+  const uploadFile = useCallback(async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('category', 'style-color-image');
+    const res = await api.post<{ code: number; data: string; message?: string }>('/upload', formData);
+    if (res.code !== 200 || !res.data) throw new Error(res.message || '上传失败');
+    return res.data;
+  }, []);
 
-    try {
-      const res = await api.post<{ code: number; data: string; message?: string }>('/upload', formData);
-      if (res.code === 200) {
-        const imageUrl = res.data;
-        const nextMap: Record<string, string> = {};
-        setColorImages(prev => {
-          const next = prev.map(c => (c.color === color ? { ...c, imageUrl } : c));
-          for (const c of next) {
-            if (c.imageUrl) nextMap[c.color] = c.imageUrl;
-          }
-          return next;
-        });
-        antMessage.success(`已为「${color}」应用图片`);
-        // 即时保存（等待 state 构建完成）
-        setTimeout(() => { saveImages(nextMap); }, 0);
-      } else {
-        antMessage.error(res.message || '上传失败');
+  /** 把图片写入某个颜色并即时保存 */
+  const applyImage = useCallback((color: string, imageUrl: string) => {
+    const nextMap: Record<string, string> = {};
+    setColorImages(prev => {
+      const next = prev.map(c => (c.color === color ? { ...c, imageUrl } : c));
+      for (const c of next) {
+        if (c.imageUrl) nextMap[c.color] = c.imageUrl;
       }
-    } catch (err) {
-      antMessage.error('上传失败');
-    } finally {
-      setUploadingColor(null);
-    }
+      return next;
+    });
+    antMessage.success(`已为「${color}」应用图片`);
+    // 即时保存（等待 state 构建完成）
+    setTimeout(() => { saveImages(nextMap); }, 0);
   }, [antMessage, saveImages]);
 
   // 批量上传：同一张图片应用到勾选的多个颜色
@@ -220,35 +217,19 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
       title: '图片',
       dataIndex: 'imageUrl',
       key: 'imageUrl',
-      width: 96,
-      render: (imageUrl: string | null) =>
-        imageUrl ? (
-          <Image
-            src={getFullAuthedFileUrl(imageUrl)}
-            alt="颜色图"
-            width={32}
-            height={32}
-            style={{ objectFit: 'contain', borderRadius: 6 }}
-            preview={{ src: getFullAuthedFileUrl(imageUrl) }}
-          />
-        ) : (
-          <Tooltip title="未上传，点击右侧「上传」按钮为该颜色配图">
-            <span
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 6,
-                border: '1px dashed var(--color-border)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--color-text-quaternary)',
-              }}
-            >
-              <PictureOutlined style={{ fontSize: 14 }} />
-            </span>
-          </Tooltip>
-        ),
+      width: 88,
+      render: (_imageUrl: string | null, record: ColorImage) => (
+        <ImageUploadBox
+          size={56}
+          label="上传"
+          showClear={false}
+          enableDrop
+          maxSizeMB={10}
+          value={record.imageUrl}
+          uploadFn={uploadFile}
+          onChange={(url) => { if (url) applyImage(record.color, url); }}
+        />
+      ),
     },
     {
       title: '状态',
@@ -261,46 +242,22 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
     {
       title: '操作',
       key: 'action',
-      width: 160,
-      render: (_: unknown, record: ColorImage) => (
-        <Space size={4}>
-          <div
-            tabIndex={0}
-            className="u-d-inline-flex" style={{ outline: 'none' }}
-            onDragOver={(e) => { e.preventDefault(); }}
-            onDrop={(e) => {
-              e.preventDefault();
-              const f = e.dataTransfer.files?.[0];
-              if (f) void handleUpload(f, record.color);
-            }}
-            onPaste={(e) => {
-              const f = e.clipboardData.files?.[0];
-              if (f) { e.preventDefault(); void handleUpload(f, record.color); }
-            }}
-          >
-            <Upload
-              accept="image/*"
-              showUploadList={false}
-              beforeUpload={(file) => {
-                handleUpload(file, record.color);
-                return false;
-              }}
-              disabled={uploadingColor === record.color}
-            >
-              <Tooltip title={record.imageUrl ? '更换该颜色的图片' : '为该颜色上传图片'}>
-                <Button size="small" icon={<UploadOutlined />} loading={uploadingColor === record.color}>
-                  {record.imageUrl ? '更换' : '上传'}
-                </Button>
-              </Tooltip>
-            </Upload>
-          </div>
-          {record.imageUrl && (
+      width: 100,
+      render: (_: unknown, record: ColorImage) =>
+        record.imageUrl ? (
+          <Space size={4}>
+            <Tooltip title="预览大图">
+              <Button
+                size="small"
+                icon={<EyeOutlined />}
+                onClick={() => setPreview({ open: true, src: getFullAuthedFileUrl(record.imageUrl as string) })}
+              />
+            </Tooltip>
             <Tooltip title="移除该颜色的图片">
               <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.color)} />
             </Tooltip>
-          )}
-        </Space>
-      ),
+          </Space>
+        ) : null,
     },
   ];
 
@@ -329,18 +286,26 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
               if (f) { e.preventDefault(); void handleBatchUpload(f); }
             }}
           >
-            <Upload
+            <input
+              ref={batchInputRef}
+              type="file"
               accept="image/*"
-              showUploadList={false}
-              beforeUpload={handleBatchUpload}
-              disabled={selectedRowKeys.length === 0 || saving}
-            >
-              <Tooltip title="先勾选左侧颜色行，可将同一张图片批量应用到这些颜色">
-                <Button icon={<UploadOutlined />} disabled={selectedRowKeys.length === 0}>
-                  批量应用图片到勾选 ({selectedRowKeys.length})
-                </Button>
-              </Tooltip>
-            </Upload>
+              className="u-d-none"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleBatchUpload(f);
+                e.currentTarget.value = '';
+              }}
+            />
+            <Tooltip title="先勾选左侧颜色行，可将同一张图片批量应用到这些颜色（支持拖拽/粘贴）">
+              <Button
+                icon={<UploadOutlined />}
+                disabled={selectedRowKeys.length === 0 || saving}
+                onClick={() => batchInputRef.current?.click()}
+              >
+                批量应用图片到勾选 ({selectedRowKeys.length})
+              </Button>
+            </Tooltip>
           </div>
           <Button icon={<SyncOutlined />} onClick={fetchColorImages} loading={loading}>
             刷新
@@ -350,8 +315,8 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
 
       {/* 说明 */}
       <div className="u-mb-10 u-p-6px10px u-br-4 u-fs-12" style={{ background: 'var(--color-bg-subtle, rgba(0,0,0,0.03))', color: 'var(--color-text-tertiary)' }}>
-        一行对应一个颜色：点击行内「上传/更换」为该颜色单独配图；勾选多行后可批量应用同一张图片。操作后自动保存。
-        点击图片可放大预览（支持放大/缩小/旋转/关闭）。
+        一行对应一个颜色：点击该行「图片」列的方形格子即可上传（也支持把图片拖进去、或 Ctrl+V 粘贴）；
+        勾选多行后可批量应用同一张图片。操作后自动保存。点操作列的眼睛图标可放大预览。
       </div>
 
       {/* 颜色图片表格（一行一颜色） */}
@@ -373,6 +338,17 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
           />
         )}
       </Spin>
+
+      {/* 受控大图预览（由操作列眼睛图标触发） */}
+      <Image
+        style={{ display: 'none' }}
+        src={preview.src}
+        preview={{
+          open: preview.open,
+          src: preview.src,
+          onOpenChange: (open) => setPreview((p) => ({ ...p, open })),
+        }}
+      />
     </div>
   );
 };
