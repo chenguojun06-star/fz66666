@@ -364,13 +364,13 @@ const StyleInfoDetailPage: React.FC = () => {
               borderTop: '1px solid var(--color-border-light)',
               borderRadius: '0 0 10px 10px',
               margin: '4px -20px -20px',
-              padding: '8px 20px 0',
+              padding: '6px 20px 0',
             }}
           >
             {!isNewPage && currentStyle?.id ? (
               <StyleStatusCard style={currentStyle} compact />
             ) : null}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 0' }}>
               {actionButtons}
             </div>
           </div>

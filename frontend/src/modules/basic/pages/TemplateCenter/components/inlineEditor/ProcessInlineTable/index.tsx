@@ -9,6 +9,7 @@ import { useProcessInlineTableData } from './useProcessInlineTableData';
 import { buildProcessColumns } from './columns';
 import ProcessImageUploader from './ProcessImageUploader';
 import StageConfigArea from './StageConfigArea';
+import SideDrawer from '@/components/common/SideDrawer';
 import type { ProcessInlineTableProps } from './types';
 
 const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
@@ -32,6 +33,9 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
 }) => {
   // D-206：基础属性库——尺码成组选择
   const [attrLibOpen, setAttrLibOpen] = useState(false);
+  // D-387：环节配置（负责人/时长/预警）改为侧滑弹窗，与款式详情保持一致；
+  // 内嵌时会占掉 400+px 把工序表整个推下去
+  const [stageConfigOpen, setStageConfigOpen] = useState(false);
 
   const { sortedSteps, stageSpanMap, updateStep, deleteStep, addStepToStage } = useProcessInlineTableData({
     value,
@@ -79,6 +83,12 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
               各尺码单价不同时使用，默认沿用工价。
             </span>
           ) : null}
+          {/* 环节配置：全厂基线（不传 styleId），只读态下 StageConfigArea 不渲染，按钮一并隐藏 */}
+          {!readOnly && (
+            <Button icon={<SettingOutlined />} onClick={() => setStageConfigOpen(true)}>
+              环节配置
+            </Button>
+          )}
         </div>
         {showSizePrices ? (
           <div className="u-d-flex u-ai-center u-gap-6 u-fwrap-wrap">
@@ -110,8 +120,16 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
         ) : null}
       </div>
 
-      {/* D-387：环节配置内嵌——按父环节配置 负责人(可多选)+预计时长+超期预警，写全局 t_stage_config */}
-      <StageConfigArea readOnly={readOnly} />
+      {/* D-387：环节配置——按父环节配置 负责人(可多选)+预计时长+超期预警，写全局 t_stage_config。
+          由工具栏「环节配置」按钮打开侧滑弹窗，不再内嵌（内嵌会把工序表整体推下去 400+px） */}
+      <SideDrawer
+        open={stageConfigOpen}
+        onClose={() => setStageConfigOpen(false)}
+        width="50%"
+        title="环节配置"
+      >
+        <StageConfigArea readOnly={readOnly} />
+      </SideDrawer>
 
       <ResizableTable
         storageKey="maintenance-inline-process-editor"

@@ -36,7 +36,7 @@ const StatusTagConfig: Record<string, { color: string; text: string }> = {
   SCRAPPED: { color: 'error', text: '已报废' },
 };
 
-const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
+const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style, compact = false }) => {
   if (!style) return null;
 
   const sampleStatus = String(style.sampleStatus ?? '').trim().toUpperCase();
@@ -119,19 +119,22 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
     <div
       style={{
         display: 'flex',
-        flexWrap: 'wrap',
+        // 紧凑模式（钉在底部 sticky 条里）不换行、超出横向滚动：
+        // 否则窄屏会折成 2~3 行，把底部固定条越撑越高，挤压正文可视区
+        flexWrap: compact ? 'nowrap' : 'wrap',
         alignItems: 'center',
         gap: '6px 16px',
-        padding: '8px 12px',
-        borderRadius: 10,
+        padding: compact ? '6px 10px' : '8px 12px',
+        borderRadius: compact ? 8 : 10,
         border: '1px solid var(--color-border)',
         background: 'var(--color-bg-container, var(--color-bg-base))',
         fontSize: 12,
         minWidth: 0,
+        ...(compact ? { overflowX: 'auto', whiteSpace: 'nowrap' } : null),
       }}
     >
       {/* 状态徽章 */}
-      <span className="u-d-inline-flex u-gap-4 u-ai-center">
+      <span className="u-d-inline-flex u-gap-4 u-ai-center u-fshrink-0">
         {sampleConfig && (
           <Tag color={sampleConfig.color} style={{ margin: 0 }}>
             <ExperimentOutlined style={{ marginRight: 4 }} />
@@ -169,7 +172,7 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
       {/* 当前操作人（动态字段：随最近启动工序自动更新） */}
       {currentOperator && (
         <Tooltip title="当前操作人为动态字段：自动取「最近一次已启动工序」的负责人，工序变化后会自动更新，无需手动维护">
-          <span className="u-d-inline-flex u-ai-center u-gap-4">
+          <span className="u-d-inline-flex u-ai-center u-gap-4 u-fshrink-0">
             <SummaryItem
               icon={<UserOutlined style={{ color: 'var(--color-primary)' }} />}
               label="当前操作人"
@@ -193,7 +196,7 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
       )}
 
       {/* 关键数量（横向紧凑） */}
-      <span className="u-d-inline-flex u-ai-center u-gap-12">
+      <span className="u-d-inline-flex u-ai-center u-gap-12 u-fshrink-0">
         <MetricInline label="样衣数" value={sampleQuantity} />
         <MetricInline label="入库数" value={totalWarehousedQuantity} />
         <MetricInline label="订单数" value={orderCount} />
@@ -203,7 +206,7 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
       {/* 详情收纳 */}
       {hasDetail && (
         <Popover content={detailContent} title="时间信息" placement="bottomRight">
-          <span className="u-d-inline-flex u-ai-center u-gap-4 u-cur-pointer" style={{ color: 'var(--color-text-tertiary)' }}>
+          <span className="u-d-inline-flex u-ai-center u-gap-4 u-cur-pointer u-fshrink-0" style={{ color: 'var(--color-text-tertiary)' }}>
             <SyncOutlined />
             <span>{updateTime || createTime || ''}</span>
             <InfoCircleOutlined style={{ fontSize: 11 }} />
@@ -229,6 +232,8 @@ const SummaryItem: React.FC<{ icon: React.ReactNode; label: string; value: strin
       maxWidth: 260,
       whiteSpace: 'nowrap',
       overflow: 'hidden',
+      // 不参与收缩：紧凑模式下靠容器横向滚动，而不是把文字挤扁
+      flexShrink: 0,
     }}
     title={`${label}：${value}`}
   >

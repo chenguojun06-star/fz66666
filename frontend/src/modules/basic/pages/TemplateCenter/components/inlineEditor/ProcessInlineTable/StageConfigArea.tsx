@@ -181,7 +181,7 @@ export default function StageConfigArea({ readOnly = false, styleId }: Props) {
       title: '负责人（可多选）',
       key: 'operators',
       render: (_: unknown, row: RowData) => (
-        <div style={{ width: '100%', maxWidth: 460 }}>
+        <div className="u-d-flex u-ai-center u-gap-8" style={{ width: '100%', maxWidth: 520 }}>
           <Select
             mode="multiple"
             allowClear
@@ -194,10 +194,11 @@ export default function StageConfigArea({ readOnly = false, styleId }: Props) {
               value: u.id,
               label: u.name ? `${u.name}（${u.username || u.id}）` : u.username || u.id,
             }))}
-            style={{ width: '100%' }}
+            style={{ flex: 1, minWidth: 0 }}
             notFoundContent="无可选人员"
           />
-          <div className="u-d-flex u-gap-4" style={{ marginTop: 4 }}>
+          {/* 全选/清空与下拉同一行，避免每行多占 24px */}
+          <div className="u-d-flex u-gap-4 u-fshrink-0">
             <Button type="link" size="small" style={{ padding: 0 }} onClick={() => changeOperators(row.stageName, userOptions.map(o => o.id))}>一键全选</Button>
             <Button type="link" size="small" style={{ padding: 0 }} onClick={() => changeOperators(row.stageName, [])}>清空</Button>
           </div>
