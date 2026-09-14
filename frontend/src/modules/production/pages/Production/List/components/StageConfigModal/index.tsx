@@ -140,7 +140,7 @@ export default function StageConfigModal({
       });
       updateRow(stageName, { operators });
     },
-    [userOptions], // eslint-disable-line react-hooks/exhaustive-deps
+    [userOptions],
   );
 
   async function handleSave() {

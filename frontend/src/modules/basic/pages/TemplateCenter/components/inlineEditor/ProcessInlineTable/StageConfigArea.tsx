@@ -131,7 +131,7 @@ export default function StageConfigArea({ readOnly = false, styleId }: Props) {
       });
       updateRow(stageName, { operators });
     },
-    [userOptions], // eslint-disable-line react-hooks/exhaustive-deps
+    [userOptions],
   );
 
   async function handleSave() {
