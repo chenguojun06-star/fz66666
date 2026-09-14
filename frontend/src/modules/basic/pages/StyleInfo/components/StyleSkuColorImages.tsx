@@ -22,7 +22,7 @@ interface StyleSkuColorImagesProps {
 
 /**
  * 颜色图片管理（一行一颜色）
- * - 表格布局：每行 = 颜色 + 方形上传框（56px）+ 状态 + 行内操作（预览、移除）
+ * - 表格布局：每行 = 颜色 + 方形上传框（80px）+ 状态 + 行内操作（预览、移除）
  * - 图片格统一用 ImageUploadBox：正方形，支持点击 / 拖拽 / Ctrl+V 粘贴三种上传方式
  *   （与「尺码颜色」矩阵的上传体验保持一致，不再用 antd Upload 的按钮样式）
  * - 行内上传仅应用到该行颜色；勾选多行可批量应用同一张图片
@@ -217,10 +217,12 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
       title: '图片',
       dataIndex: 'imageUrl',
       key: 'imageUrl',
-      width: 88,
+      width: 104,
       render: (_imageUrl: string | null, record: ColorImage) => (
         <ImageUploadBox
-          size={56}
+          // 与「尺码颜色」矩阵的颜色图保持同一尺寸（StyleColorSizeTable 用 80），
+          // 同一个功能两处大小不一致会让用户以为换了个东西
+          size={80}
           label="上传"
           showClear={false}
           enableDrop
@@ -290,7 +292,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
               ref={batchInputRef}
               type="file"
               accept="image/*"
-              className="u-d-none"
+              style={{ display: 'none' }}
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) void handleBatchUpload(f);
