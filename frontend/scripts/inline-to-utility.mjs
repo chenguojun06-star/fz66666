@@ -311,7 +311,12 @@ if (GEN) {
   out.push('/* 注意：本文件在 main.tsx 中最后引入，以保证优先级等价于原内联样式 */');
   out.push('');
   const names = Object.keys(classDefs).filter((c) => allowed.has(c)).sort();
-  for (const cls of names) out.push(`.${cls} { ${classDefs[cls]} }`);
+  // 双写类名（.u-fs-14.u-fs-14）把特异性从 (0,1,0) 提到 (0,2,0)。
+  // 原因：这些类是用来替代**内联样式**的，而内联样式不会被普通 CSS 覆盖。
+  // 单类会被 .parent .child 这类后代选择器（0,2,0）压过 → 视觉回归。
+  // 双写后与后代选择器同特异性，靠"utilities.css 最后加载"取胜 ≈ 还原内联行为。
+  // 实测项目里有 642 个（21.7%）设置迁移属性的选择器特异性高于单类，确有此风险。
+  for (const cls of names) out.push(`.${cls}.${cls} { ${classDefs[cls]} }`);
   const dest = join(CWD, 'frontend/src/styles/utilities.css');
   writeFileSync(dest, out.join('\n') + '\n');
   console.log(`\n✅ 已生成 ${dest.replace(CWD + '/', '')}（${names.length} 个类）`);
