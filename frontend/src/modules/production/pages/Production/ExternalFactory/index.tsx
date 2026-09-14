@@ -38,7 +38,6 @@ const ExternalFactory: React.FC = () => {
   // 工厂账号不能自行关单/报废，与生产管理保持一致
   const canManageOrderLifecycle = !isFactoryAccount && isSupervisorOrAbove;
   const [loading, setLoading] = useState(false);
-  const [stageConfigVisible, setStageConfigVisible] = useState(false);
   const [total, setTotal] = useState(0);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [factoryStats, setFactoryStats] = useState<FactoryStats[]>([]);
@@ -442,8 +441,6 @@ const ExternalFactory: React.FC = () => {
         closeInspectDrawer={() => inspectDrawerModal.close()}
         customFields={customFields}
         fieldConfigs={fieldConfigs}
-        stageConfigVisible={stageConfigVisible}
-        closeStageConfig={() => setStageConfigVisible(false)}
       />
     </>
     </>

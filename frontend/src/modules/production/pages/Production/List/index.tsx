@@ -62,7 +62,6 @@ const ProductionList: React.FC = () => {
   const workflowEditorModal = useModal<string>();
   const inspectDrawerModal = useModal<string>();
   const smartReceiveModal = useModal<string>();
-  const [stageConfigVisible, setStageConfigVisible] = useState(false);
 
   const nodeDetailModal = useNodeDetailModal();
   const labelPrint = useLabelPrint();
@@ -189,11 +188,6 @@ const ProductionList: React.FC = () => {
         filterRight={
           <>
             {ProductionFilterBar(filterBarProps).filterRight}
-            {isSupervisorOrAbove && !isFactoryAccount && (
-              <Button icon={<SettingOutlined />} onClick={() => setStageConfigVisible(true)}>
-                环节配置
-              </Button>
-            )}
             <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsOpen(true)}>
               显示字段
             </Button>
@@ -333,8 +327,6 @@ const ProductionList: React.FC = () => {
         closeInspectDrawer={() => inspectDrawerModal.close()}
         customFields={customFields}
         fieldConfigs={fieldConfigs}
-        stageConfigVisible={stageConfigVisible}
-        closeStageConfig={() => setStageConfigVisible(false)}
       />
 
       <SmartReceiveModal
