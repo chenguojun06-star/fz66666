@@ -124,10 +124,12 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style, compact = fals
         flexWrap: compact ? 'nowrap' : 'wrap',
         alignItems: 'center',
         gap: '6px 16px',
-        padding: compact ? '6px 10px' : '8px 12px',
-        borderRadius: compact ? 8 : 10,
-        border: '1px solid var(--color-border)',
-        background: 'var(--color-bg-container, var(--color-bg-base))',
+        // compact 模式：去掉自己的 border/background/padding，
+        // 融入外层 sticky 容器，视觉上是 1 个连续条而不是 2 个独立漂浮条
+        padding: compact ? '0' : '8px 12px',
+        borderRadius: compact ? 0 : 10,
+        border: compact ? 'none' : '1px solid var(--color-border)',
+        background: compact ? 'transparent' : 'var(--color-bg-container, var(--color-bg-base))',
         fontSize: 12,
         minWidth: 0,
         ...(compact ? { overflowX: 'auto', whiteSpace: 'nowrap' } : null),

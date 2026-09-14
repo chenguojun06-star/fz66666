@@ -380,7 +380,9 @@ const StyleInfoDetailPage: React.FC = () => {
             />
           </Form>
           {/* 底部 sticky 固定条：款式状态摘要 + 解锁编辑/保存操作条。
-              两者作为同一 sticky 容器钉在底部（统计条恒在操作条上方），滚动到表单底部不会滚走 */}
+              两者作为同一 sticky 容器钉在底部（统计条恒在操作条上方），滚动到表单底部不会滚走。
+              StyleStatusCard 已用 compact 模式（去掉自己的 border/background/padding），
+              整个区域视觉上是 1 个连续条，避免出现"2 个底部漂浮条"的重复感。 */}
           <div
             style={{
               position: 'sticky',
@@ -390,13 +392,13 @@ const StyleInfoDetailPage: React.FC = () => {
               borderTop: '1px solid var(--color-border-light)',
               borderRadius: '0 0 10px 10px',
               margin: '4px -20px -20px',
-              padding: '6px 20px 0',
+              padding: '8px 20px',
             }}
           >
             {!isNewPage && currentStyle?.id ? (
               <StyleStatusCard style={currentStyle} compact />
             ) : null}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 0 0' }}>
               {actionButtons}
             </div>
           </div>
