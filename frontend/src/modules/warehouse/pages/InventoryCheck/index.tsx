@@ -51,7 +51,7 @@ const InventoryCheck: React.FC = () => {
   const itemColumns = buildItemColumns(currentItems, setCurrentItems);
 
   return (
-    <div style={{ padding: 16 }}>
+    <div className="u-p-16">
       <Alert
         type="info"
         showIcon
@@ -60,14 +60,14 @@ const InventoryCheck: React.FC = () => {
         description={
           <span>
             新建盘点单 → 系统自动加载库存快照 → 填写实盘数量 → 确认盘点（自动调整库存）
-            <Button type="link" size="small" onClick={() => setGuideVisible(true)} style={{ padding: 0, marginLeft: 8 }}>查看详细说明</Button>
+            <Button type="link" size="small" onClick={() => setGuideVisible(true)} className="u-p-0 u-ml-8">查看详细说明</Button>
           </span>
         }
-        style={{ marginBottom: 16 }}
+        className="u-mb-16"
         closable
       />
 
-      <Row gutter={16} style={{ marginBottom: 16 }}>
+      <Row gutter={16} className="u-mb-16">
         <Col span={6}><Card><Statistic title="物料库存品种" value={summary.materialStockCount ?? '-'} /></Card></Col>
         <Col span={6}><Card><Statistic title="成品库存商品编码" value={summary.skuStockCount ?? '-'} /></Card></Col>
         <Col span={6}><Card><Statistic title="样衣库存" value={summary.sampleStockCount ?? '-'} /></Card></Col>
@@ -140,7 +140,7 @@ const InventoryCheck: React.FC = () => {
       <StandardModal title={`盘点详情 - ${currentCheck?.checkNo || ''}`} open={detailModalVisible} onCancel={() => setDetailModalVisible(false)} size="lg" footer={null}>
         {currentCheck && (
           <>
-            <Descriptions bordered column={3} style={{ marginBottom: 12 }}>
+            <Descriptions bordered column={3} className="u-mb-12">
               <Descriptions.Item label="盘点单号">{currentCheck.checkNo}</Descriptions.Item>
               <Descriptions.Item label="类型"><Tag color={CHECK_TYPE_MAP[currentCheck.checkType]?.color}>{CHECK_TYPE_MAP[currentCheck.checkType]?.label}</Tag></Descriptions.Item>
               <Descriptions.Item label="状态"><Tag color={STATUS_MAP[currentCheck.status]?.color}>{STATUS_MAP[currentCheck.status]?.label}</Tag></Descriptions.Item>

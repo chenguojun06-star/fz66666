@@ -29,8 +29,8 @@ interface OperatorsTabProps {
 }
 
 const OperatorsTab: React.FC<OperatorsTabProps> = ({ operatorSummary }) => (
-  <div style={{ padding: '8px 0' }}>
-    <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+  <div className="u-p-8px0">
+    <div className="u-mb-8 u-d-flex u-jc-between u-ai-center">
       <Text type="secondary">共 {operatorSummary.length} 位操作员参与</Text>
       <Text type="secondary">
         总完成: {operatorSummary.reduce((s, o) => s + o.totalQty, 0)} 件

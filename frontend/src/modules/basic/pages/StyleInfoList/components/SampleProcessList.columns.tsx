@@ -45,10 +45,10 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
       width: 90,
       render: (val: string, record: SubProcessRow) => {
         const icon = record.status === 'completed'
-          ? <CheckCircleOutlined style={{ color: 'var(--color-success)', fontSize: 12, marginRight: 4 }} />
+          ? <CheckCircleOutlined className="u-fs-12 u-mr-4" style={{ color: 'var(--color-success)' }} />
           : record.status === 'in_progress'
             ? <PlayCircleOutlined style={{ color: STAGE_COLORS[activeTab] || 'var(--color-info)', fontSize: 12, marginRight: 4 }} />
-            : <ClockCircleOutlined style={{ color: 'var(--color-text-quaternary)', fontSize: 12, marginRight: 4 }} />;
+            : <ClockCircleOutlined className="u-fs-12 u-mr-4" style={{ color: 'var(--color-text-quaternary)' }} />;
         return <span>{icon}{val}</span>;
       },
     },
@@ -58,7 +58,7 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
       key: 'quantity',
       width: 65,
       align: 'right' as const,
-      render: (val: string) => <span style={{ fontWeight: 600 }}>{val}</span>,
+      render: (val: string) => <span className="u-fw-600">{val}</span>,
     },
     {
       title: '单价',
@@ -81,9 +81,9 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
           const text = assigns
             .map((a) => `${a.assignee} ${a.quantity}件`)
             .join('、');
-          return <span style={{ fontSize: 12 }}>{text}</span>;
+          return <span className="u-fs-12">{text}</span>;
         }
-        return <span style={{ fontSize: 12 }}>{val || '-'}</span>;
+        return <span className="u-fs-12">{val || '-'}</span>;
       },
     },
     {
@@ -91,7 +91,7 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
       dataIndex: 'time',
       key: 'time',
       width: 100,
-      render: (val: string) => <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{val || '-'}</span>,
+      render: (val: string) => <span className="u-fs-12" style={{ color: 'var(--color-text-secondary)' }}>{val || '-'}</span>,
     },
     {
       title: '状态',
@@ -106,16 +106,16 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
           const doneColors = colorItems.filter((c) => c.completed).length;
           const allDone = doneColors >= colorItems.length;
           return (
-            <Tag color={allDone ? 'success' : 'processing'} style={{ fontSize: 11 }}>
+            <Tag color={allDone ? 'success' : 'processing'} className="u-fs-11">
               {allDone ? '已完成' : `${doneColors}/${colorItems.length} 色`}
             </Tag>
           );
         }
-        if (record.status === 'completed') return <Tag color="success" style={{ fontSize: 11 }}>已完成</Tag>;
-        if (record.status === 'in_progress') return <Tag color="processing" style={{ fontSize: 11 }}>{record.percent}%</Tag>;
+        if (record.status === 'completed') return <Tag color="success" className="u-fs-11">已完成</Tag>;
+        if (record.status === 'in_progress') return <Tag color="processing" className="u-fs-11">{record.percent}%</Tag>;
         // D-208：已领取未报工=生产中（与手机端 process-config 口径一致）
-        if (record.status === 'claimed') return <Tag color="processing" style={{ fontSize: 11 }}>生产中</Tag>;
-        return <Tag color="default" style={{ fontSize: 11 }}>待领取</Tag>;
+        if (record.status === 'claimed') return <Tag color="processing" className="u-fs-11">生产中</Tag>;
+        return <Tag color="default" className="u-fs-11">待领取</Tag>;
       },
     },
     {

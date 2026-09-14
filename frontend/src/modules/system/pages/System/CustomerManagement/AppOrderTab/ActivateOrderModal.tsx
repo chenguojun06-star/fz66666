@@ -48,7 +48,7 @@ const ActivateOrderModal: React.FC<ActivateOrderModalProps> = ({
             title="激活后将自动为客户创建订阅和API凭证，请确认已收到付款。"
             type="warning"
             showIcon
-            style={{ marginBottom: 16 }}
+            className="u-mb-16"
           />
           <Descriptions column={1} bordered>
             <Descriptions.Item label="订单号">{order.orderNo}</Descriptions.Item>
@@ -71,14 +71,14 @@ const ActivateOrderModal: React.FC<ActivateOrderModalProps> = ({
               <Descriptions.Item label="公司名称">{order.companyName}</Descriptions.Item>
             )}
           </Descriptions>
-          <div style={{ marginTop: 16 }}>
+          <div className="u-mt-16">
             <Text>备注（可选）：</Text>
             <Input.TextArea
               rows={3}
               placeholder="如：已收到转账 / 线下签约确认"
               value={remark}
               onChange={(e) => onRemarkChange(e.target.value)}
-              style={{ marginTop: 8 }}
+              className="u-mt-8"
             />
           </div>
         </>

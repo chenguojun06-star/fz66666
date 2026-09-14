@@ -51,7 +51,7 @@ const SectionBox: React.FC<SectionBoxProps> = ({
         }}
       >
         <span style={{ minWidth: 0 }}>{title}</span>
-        {extra ? <span style={{ marginLeft: 'auto', fontWeight: 400 }}>{extra}</span> : null}
+        {extra ? <span className="u-ml-auto u-fw-400">{extra}</span> : null}
       </div>
       {children}
     </div>

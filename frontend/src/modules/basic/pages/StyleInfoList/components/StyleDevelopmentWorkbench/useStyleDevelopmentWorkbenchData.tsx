@@ -178,17 +178,17 @@ const useStyleDevelopmentWorkbenchData = ({ record, initialSection, onSync }: Pi
       cancelText: '取消',
       destroyOnHidden: true,
       content: (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ marginBottom: 8, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+        <div className="u-mt-12">
+          <div className="u-mb-8 u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
             {currentHours != null ? `当前预算 ${formatBudgetHours(currentHours)}` : `默认预算 ${formatBudgetHours(DEFAULT_BUDGET_HOURS)}，设定后覆盖`}
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Space.Compact style={{ flex: 1 }}>
+          <div className="u-d-flex u-gap-8 u-ai-center">
+            <Space.Compact className="u-flex-1">
               <InputNumber
                 defaultValue={initDays}
                 min={0}
                 max={99}
-                style={{ width: '100%' }}
+                className="u-w-full"
                 onChange={(v) => { draftDays = v ?? 0; }}
               />
               <span style={{
@@ -200,12 +200,12 @@ const useStyleDevelopmentWorkbenchData = ({ record, initialSection, onSync }: Pi
                 whiteSpace: 'nowrap',
               }}>天</span>
             </Space.Compact>
-            <Space.Compact style={{ flex: 1 }}>
+            <Space.Compact className="u-flex-1">
               <InputNumber
                 defaultValue={initHours}
                 min={0}
                 max={13}
-                style={{ width: '100%' }}
+                className="u-w-full"
                 onChange={(v) => { draftHours = v ?? 0; }}
               />
               <span style={{
@@ -218,7 +218,7 @@ const useStyleDevelopmentWorkbenchData = ({ record, initialSection, onSync }: Pi
               }}>小时</span>
             </Space.Compact>
           </div>
-          <div style={{ marginTop: 6, color: 'var(--color-text-quaternary)', fontSize: 11 }}>
+          <div className="u-mt-6 u-fs-11" style={{ color: 'var(--color-text-quaternary)' }}>
             1工作日 = 14小时（08:00-22:00）
           </div>
         </div>

@@ -204,9 +204,9 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
 
   if (loading) {
     return (
-      <div style={{ padding: '12px 0', textAlign: 'center' }}>
+      <div className="u-ta-center" style={{ padding: '12px 0' }}>
         <Spin />
-        <span style={{ marginLeft: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>
+        <span className="u-ml-8 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>
           正在分析历史数据…
         </span>
       </div>
@@ -238,19 +238,19 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
       marginTop: 8,
     }}>
       <div onClick={() => setCollapsed(!collapsed)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: collapsed ? 0 : 8, cursor: 'pointer' }}>
-        <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-primary)' }}>
+        <span className="u-fw-700 u-fs-14" style={{ color: 'var(--color-primary)' }}>
           {styleNo} 下单分析
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div className="u-d-flex u-ai-center u-gap-6">
           <Button
             type="link"
-            icon={<ReloadOutlined style={{ fontSize: 13 }} />}
+            icon={<ReloadOutlined className="u-fs-13" />}
             onClick={(e) => { e.stopPropagation(); void calcInsight(); }}
-            style={{ padding: 0, height: 'auto', color: 'var(--color-text-tertiary)', fontSize: 14 }}
+            className="u-p-0 u-h-auto u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}
           >
             刷新
           </Button>
-          {collapsed ? <RightOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} /> : <DownOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} />}
+          {collapsed ? <RightOutlined className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }} /> : <DownOutlined className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }} />}
         </div>
       </div>
 
@@ -271,21 +271,21 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
+      <div className="u-d-grid u-gap-6 u-mb-8" style={{ gridTemplateColumns: '1fr 1fr' }}>
         {metricItems.map((item) => (
           <div key={item.label} style={{ background: 'var(--color-bg-base)', borderRadius: 7, padding: '7px 10px', border: '1px solid var(--status-processing-border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+            <div className="u-d-flex u-jc-between u-gap-8" style={{ alignItems: 'baseline' }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: item.color }}>{item.value}</span>
-              <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{item.suffix}</span>
+              <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{item.suffix}</span>
             </div>
-            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>{item.label}</div>
+            <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{item.label}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
+      <div className="u-d-flex u-fwrap-wrap u-mb-8" style={{ gap: 5 }}>
         {quickTags.map((text) => (
-          <Tag key={text} style={{ fontSize: 14, color: 'var(--color-text-secondary)', background: 'var(--color-bg-page)', border: '1px solid var(--color-border)', marginInlineEnd: 0 }}>
+          <Tag key={text} className="u-fs-14" style={{ color: 'var(--color-text-secondary)', background: 'var(--color-bg-page)', border: '1px solid var(--color-border)', marginInlineEnd: 0 }}>
             {text}
           </Tag>
         ))}
@@ -298,7 +298,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
           onClick={() => setAiAdviceVisible(true)}
           type="primary"
           ghost
-          style={{ fontSize: 14 }}
+          className="u-fs-14"
         >
           AI 下单建议
         </Button>
@@ -308,25 +308,25 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
           background: 'var(--color-bg-base)', border: '1px solid var(--status-processing-border)', borderRadius: 8,
           padding: '10px 12px', marginTop: 4,
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-primary)' }}>
+          <div className="u-d-flex u-jc-between u-mb-6">
+            <span className="u-fw-600 u-fs-14" style={{ color: 'var(--color-primary)' }}>
               <XiaoyunCloudAvatar size={16} active /> AI 下单建议
             </span>
             <Space size={8}>
               <Button
                 type="link"
                 onClick={() => setAiAdviceVisible(false)}
-                style={{ padding: 0, height: 'auto', fontSize: 14 }}
+                className="u-p-0 u-h-auto u-fs-14"
               >
                 关闭
               </Button>
             </Space>
           </div>
-          <div style={{ display: 'grid', gap: 6 }}>
+          <div className="u-d-grid u-gap-6">
             {aiAdviceItems.map((item) => (
-              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 14, lineHeight: '18px' }}>
+              <div key={item.label} className="u-d-flex u-jc-between u-gap-12 u-fs-14 u-lh-18px">
                 <span style={{ color: 'var(--color-text-secondary)' }}>{item.label}</span>
-                <span style={{ fontWeight: 600, color: 'var(--color-text-primary)', textAlign: 'right' }}>{item.value}</span>
+                <span className="u-fw-600 u-ta-right" style={{ color: 'var(--color-text-primary)' }}>{item.value}</span>
               </div>
             ))}
           </div>

@@ -19,8 +19,8 @@ type UseMaterialReconColumnsParams = {
 };
 
 const MaterialThumb: React.FC<{ imageUrl?: string }> = ({ imageUrl }) => (
-  <div style={{ width: 48, minHeight: 28, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }}>
-    {imageUrl ? <SmartImage src={imageUrl} alt="物料" width={48} height={48} style={{ objectFit: 'contain' }} preview={{ cover: <span>预览</span> }} /> : <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)', height: '48px', display: 'flex', alignItems: 'center' }}>无图</span>}
+  <div className="u-ov-hidden u-d-flex u-ai-center u-jc-center u-br-4" style={{ width: 48, minHeight: 28, background: 'var(--color-bg-subtle)' }}>
+    {imageUrl ? <SmartImage src={imageUrl} alt="物料" width={48} height={48} style={{ objectFit: 'contain' }} preview={{ cover: <span>预览</span> }} /> : <span className="u-fs-var--font-size-sm u-d-flex u-ai-center" style={{ color: 'var(--neutral-text-disabled)', height: '48px' }}>无图</span>}
   </div>
 );
 
@@ -29,7 +29,7 @@ export const useMaterialReconColumns = ({
 }: UseMaterialReconColumnsParams) => {
   const columns = useMemo(() => [
     { title: '图片', key: 'cover', width: 72, render: (_: any, record: MaterialReconType) => <MaterialThumb imageUrl={record.materialImageUrl} /> },
-    { title: '对账单号', dataIndex: 'reconciliationNo', key: 'reconciliationNo', width: 140, render: (_: any, record: MaterialReconType) => <Button type="link" onClick={() => openDialog(record)} style={{ padding: 0 }}>{String(record.reconciliationNo || '').trim() || '-'}</Button> },
+    { title: '对账单号', dataIndex: 'reconciliationNo', key: 'reconciliationNo', width: 140, render: (_: any, record: MaterialReconType) => <Button type="link" onClick={() => openDialog(record)} className="u-p-0">{String(record.reconciliationNo || '').trim() || '-'}</Button> },
     { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 120, render: (_: unknown, record: MaterialReconType) => <SupplierNameTooltip name={record.supplierName} contactPerson={(record as any).supplierContactPerson} contactPhone={(record as any).supplierContactPhone} /> },
     { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 100 },
     { title: '物料名称', dataIndex: 'materialName', key: 'materialName', ellipsis: true },

@@ -76,7 +76,7 @@ const FieldConfigPage: React.FC = () => {
           showIcon
           message="有未保存的修改"
           description="调整字段顺序/显隐/编辑后，需点击「保存全部」才会生效到数据库。"
-          style={{ marginBottom: 12 }}
+          className="u-mb-12"
         />
       )}
 

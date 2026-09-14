@@ -36,14 +36,14 @@ export const CartSummary: React.FC<CartSummaryProps> = ({
       }}
     >
       <div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+        <div className="u-fs-12" style={{ color: 'var(--color-text-secondary)' }}>
           预计生成：<strong>{selectedCount}</strong> 件物料
         </div>
-        <div style={{ fontSize: 16, fontWeight: 600 }}>
+        <div className="u-fs-16 u-fw-600">
           合计：¥{totalAmount.toFixed(2)}
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div className="u-d-flex u-gap-8">
         <Button onClick={onPreview} disabled={totalItems === 0}>
           预览
         </Button>

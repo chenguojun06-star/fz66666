@@ -141,7 +141,7 @@ const PurchaseReturnTab: React.FC = () => {
 
   return (
     <div>
-      <Form form={form} layout="inline" style={{ marginBottom: 16 }}>
+      <Form form={form} layout="inline" className="u-mb-16">
         <Form.Item name="keyword" label="关键词">
           <Input allowClear placeholder="退货单号/原采购单号/供应商" style={{ width: 240 }} onPressEnter={onSearch} />
         </Form.Item>

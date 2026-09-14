@@ -332,8 +332,8 @@ export function renderProgressInsight(insight: ProgressInsight): React.ReactNode
   ].filter(Boolean) as string[];
 
   return (
-    <div style={{ borderTop: '1px dashed var(--color-border)', marginTop: 6, paddingTop: 6 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6, fontWeight: 600, fontSize: 11 }}>
+    <div className="u-mt-6" style={{ borderTop: '1px dashed var(--color-border)', paddingTop: 6 }}>
+      <div className="u-d-flex u-ai-center u-gap-4 u-mb-6 u-fw-600 u-fs-11">
         <span> 小云实时推演</span>
         <span style={{
           fontSize: 6, padding: '0 5px', borderRadius: 3,

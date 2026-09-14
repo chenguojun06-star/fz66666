@@ -145,10 +145,10 @@ export const PlatformDashboard: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: 24, background: 'var(--color-bg-subtle)', minHeight: '100vh' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>平台级 AI 数据面板</Title>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="u-p-24" style={{ background: 'var(--color-bg-subtle)', minHeight: '100vh' }}>
+      <div className="u-d-flex u-jc-between u-ai-center u-mb-16">
+        <Title level={4} className="u-m-0">平台级 AI 数据面板</Title>
+        <div className="u-d-flex u-ai-center u-gap-8">
           <Text type="secondary">统计周期：</Text>
           <Select
             value={days}
@@ -159,11 +159,11 @@ export const PlatformDashboard: React.FC = () => {
         </div>
       </div>
 
-      {error && <Alert type="error" title={error} style={{ marginBottom: 16 }} closable />}
+      {error && <Alert type="error" title={error} className="u-mb-16" closable />}
 
       <Spin spinning={loading}>
         {/* 综合指标卡 */}
-        <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Row gutter={16} className="u-mb-16">
           {[
             { title: '接入工具数', value: summary.toolCount, suffix: '个' },
             { title: 'AI 总调用次数', value: summary.totalCalls, suffix: '次' },
@@ -182,7 +182,7 @@ export const PlatformDashboard: React.FC = () => {
         </Row>
 
         {/* 工具表现 */}
-        <Card title="工具表现明细" style={{ marginBottom: 16 }}>
+        <Card title="工具表现明细" className="u-mb-16">
           <ResizableTable<ToolRow>
             storageKey="platform-tool-table"
             dataSource={tools}

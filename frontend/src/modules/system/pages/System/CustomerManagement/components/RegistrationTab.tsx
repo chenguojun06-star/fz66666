@@ -135,12 +135,12 @@ const RegistrationTab: React.FC = () => {
         description={'此页面用于审批新工厂的入驻申请。审批通过后工厂主账号将自动创建，工厂即可登录使用。员工注册审批由各工厂在「人员管理」中自行处理。'}
         type="info"
         showIcon
-        style={{ marginBottom: 16 }}
+        className="u-mb-16"
       />
 
-      <div style={{ marginBottom: 24 }}>
-        <Typography.Title level={5} style={{ marginBottom: 12 }}>
-           工厂入驻申请 {tenantApps.length > 0 && <Badge count={tenantApps.length} style={{ marginLeft: 8 }} />}
+      <div className="u-mb-24">
+        <Typography.Title level={5} className="u-mb-12">
+           工厂入驻申请 {tenantApps.length > 0 && <Badge count={tenantApps.length} className="u-ml-8" />}
         </Typography.Title>
         {tenantApps.length > 0 ? (
           <ResizableTable
@@ -154,7 +154,7 @@ const RegistrationTab: React.FC = () => {
            
           />
         ) : (
-          <Card style={{ textAlign: 'center', color: 'var(--color-text-tertiary)' }}>
+          <Card className="u-ta-center" style={{ color: 'var(--color-text-tertiary)' }}>
             {tenantAppsLoading ? '加载中...' : '暂无待审核的工厂入驻申请'}
           </Card>
         )}
@@ -176,7 +176,7 @@ const RegistrationTab: React.FC = () => {
           title="如果申请账号已被其他工厂占用，可以在此修改后再审批通过。"
           type="warning"
           showIcon
-          style={{ marginBottom: 16 }}
+          className="u-mb-16"
         />
         <Form form={editForm} layout="vertical">
           <Form.Item label="申请账号" name="applyUsername" rules={[{ required: true, message: '账号不能为空' }]}>

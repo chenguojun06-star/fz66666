@@ -96,21 +96,21 @@ export function useStyleSizeColumns({
           const imgs = record.chunkImageUrls || [];
           const blockHeight = imgs.length > 1 ? 108 : 220;
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch', justifyContent: 'flex-start', width: '100%', minHeight: 240, padding: '8px 0' }}>
+            <div className="u-d-flex u-fd-column u-gap-8 u-w-full u-p-8px0" style={{ alignItems: 'stretch', justifyContent: 'flex-start', minHeight: 240 }}>
               <Image.PreviewGroup>
                 {imgs.map((url, i) => (
-                  <div key={url} style={{ position: 'relative', width: '100%' }}>
+                  <div key={url} className="u-pos-relative u-w-full">
                     <Image
                       src={getFullAuthedFileUrl(url)}
                       width="100%"
                       height={blockHeight}
-                      style={{ objectFit: 'contain', borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-bg-base)', padding: 6 }}
+                      className="u-br-8" style={{ objectFit: 'contain', border: '1px solid var(--color-border-light)', background: 'var(--color-bg-base)', padding: 6 }}
                       preview={{ src: getFullAuthedFileUrl(url) }}
                     />
                     {editableMode && (
                       <DeleteOutlined
                         onClick={() => setChunkImageUrls(record.chunkRowKeys, imgs.filter((_, ii) => ii !== i))}
-                        style={{ position: 'absolute', top: -4, right: -4, background: 'rgba(0,0,0,0.55)', color: 'var(--color-bg-base)', borderRadius: '50%', padding: 2, fontSize: 14, cursor: 'pointer' }}
+                        className="u-pos-absolute u-fs-14 u-cur-pointer" style={{ top: -4, right: -4, background: 'rgba(0,0,0,0.55)', color: 'var(--color-bg-base)', borderRadius: '50%', padding: 2 }}
                       />
                     )}
                   </div>
@@ -144,7 +144,7 @@ export function useStyleSizeColumns({
                       }
                     }
                   }}
-                  style={{ display: 'inline-block', width: '100%' }}
+                  className="u-d-inline-block u-w-full"
                 >
                   <Button icon={<PlusOutlined />} style={{ width: '100%', height: imgs.length > 0 ? 84 : 220, borderRadius: 8, borderStyle: 'dashed' }}
                     onClick={(e) => {
@@ -179,7 +179,7 @@ export function useStyleSizeColumns({
           if (!record.isGroupChunkStart) return null;
 
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch', padding: '8px 0' }}>
+            <div className="u-d-flex u-fd-column u-gap-8 u-p-8px0" style={{ alignItems: 'stretch' }}>
               <div
                 style={{
                   display: 'flex',
@@ -193,7 +193,7 @@ export function useStyleSizeColumns({
                   boxShadow: `inset 0 0 0 1px ${record.groupToneMeta.tagColor}22`,
                 }}
               >
-                <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, lineHeight: 1.5 }}>
+                <span className="u-fs-var--font-size-sm u-fw-700" style={{ lineHeight: 1.5 }}>
                   {record.resolvedGroupName}
                 </span>
               </div>
@@ -201,7 +201,7 @@ export function useStyleSizeColumns({
                 <Select
                   value={String(record.groupName || record.resolvedGroupName || '其他区')}
                   placeholder="选择分组"
-                  style={{ width: '100%' }}
+                  className="u-w-full"
                   options={groupNameOptions}
                   onChange={(value) => updateChunkGroupName(record.chunkRowKeys, String(value || '其他区'))}
                 />
@@ -211,7 +211,7 @@ export function useStyleSizeColumns({
                  
                   icon={<PlusOutlined />}
                   type="dashed"
-                  style={{ width: '100%', marginTop: 8 }}
+                  className="u-w-full u-mt-8"
                   onClick={() => handleAddPartInGroup(record.resolvedGroupName)}
                 >
                   添加行
@@ -256,7 +256,7 @@ export function useStyleSizeColumns({
             <Select
               value={record.baseSize || undefined}
               allowClear
-              style={{ width: '100%' }}
+              className="u-w-full"
               options={sizeColumns.map((size) => ({ value: size, label: shortSizeLabel(size) }))}
               onChange={(value) => updateBaseSize(record.key, String(value || ''))}
             />
@@ -292,7 +292,7 @@ export function useStyleSizeColumns({
           const summary = buildZoneText(false);
           const detail = buildZoneText(true);
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div className="u-d-flex u-fd-column u-gap-6">
               <Tooltip title={detail || undefined}>
                 <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--color-slate-700)', whiteSpace: 'pre-wrap', cursor: detail ? 'help' : 'default' }}>{summary || '-'}</div>
               </Tooltip>
@@ -313,8 +313,8 @@ export function useStyleSizeColumns({
         // 此前 D-252 只显示简称 S，而带型体的码（如 S(155/80A)）被简称后看似重复（S/S/M/M…），
         // 用户误以为数据被简化/丢失，且与同页下方用量表、小程序显示不一致。
         // 完整名支持换行，列宽由表格自适应，避免此前"多个码并列列被撑爆"的问题回归。
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>
-          <span style={{ fontWeight: 600 }}>{sn}</span>
+        <span className="u-d-inline-flex u-ai-center u-gap-6" style={{ whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>
+          <span className="u-fw-600">{sn}</span>
           {editableMode ? (
             <Button
               type="text"
@@ -367,7 +367,7 @@ export function useStyleSizeColumns({
               value={String(record.tolerance ?? '')}
               addonBefore="±"
               placeholder="如：1"
-              style={{ width: '100%' }}
+              className="u-w-full"
               onChange={(e) => updateTolerance(record.key, normalizeToleranceInput(e.target.value))}
             />
           ) : (

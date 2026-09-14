@@ -41,7 +41,7 @@ const MaterialSelectModal: React.FC<MaterialSelectModalProps> = ({
       onClose={onCancel}
       width="50%"
     >
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+      <div className="u-d-flex u-gap-8 u-mb-12">
         <Input
           value={keyword}
           onChange={(e) => onKeywordChange(e.target.value)}

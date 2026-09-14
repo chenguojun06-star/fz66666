@@ -95,7 +95,7 @@ function renderValue(
       const arr = Array.isArray(value) ? value : String(value).split(',').filter(Boolean);
       if (arr.length === 0) return '-';
       return (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        <div className="u-d-flex u-fwrap-wrap u-gap-4">
           {arr.map((v: string | number, i: number) => (
             <Tag key={i}>{optionLabelMap[String(v)] ?? String(v)}</Tag>
           ))}

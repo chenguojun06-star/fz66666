@@ -298,12 +298,12 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
 
   return (
     <div className="style-color-size-table" style={{ marginBottom: hideInternalTitle ? 0 : 12 }}>
-      {!hideInternalTitle && <div style={{ marginBottom: 10, fontWeight: 600 }}>码数/颜色/数量配置</div>}
+      {!hideInternalTitle && <div className="u-mb-10 u-fw-600">码数/颜色/数量配置</div>}
 
-      <div style={{ display: 'grid', gap: 10 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
+      <div className="u-d-grid u-gap-10">
+        <div className="u-d-grid u-gap-10 u-ai-start" style={{ gridTemplateColumns: '72px minmax(0, 1fr)' }}>
           <div style={{ paddingTop: 8, color: 'var(--color-text-secondary)' }}>颜色</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <div className="u-d-flex u-fwrap-wrap u-gap-6">
             {selectedColors.map((color, colorIndex) => (
               <Tag
                 key={color}
@@ -367,9 +367,9 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 10, alignItems: 'start' }}>
+        <div className="u-d-grid u-gap-10 u-ai-start" style={{ gridTemplateColumns: '72px minmax(0, 1fr)' }}>
           <div style={{ paddingTop: 8, color: 'var(--color-text-secondary)' }}>码数</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+          <div className="u-d-flex u-fwrap-wrap u-gap-6 u-ai-center">
             {selectedSizes.map((size, sizeIndex) => (
               <Tag
                 key={size}
@@ -408,7 +408,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                 }}
               >
                 {!editLocked && (
-                  <span style={{ display: 'inline-flex', gap: 1, marginRight: 2 }}>
+                  <span className="u-d-inline-flex" style={{ gap: 1, marginRight: 2 }}>
                     <Tooltip title="前移（小码方向）">
                       <ArrowUpOutlined
                         onClick={(e) => {
@@ -452,7 +452,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
               </Tooltip>
             )}
             {!editLocked && selectedSizes.length > 0 && (
-              <span style={{ fontSize: 12, color: 'var(--color-text-quaternary)', userSelect: 'none' }}>
+              <span className="u-fs-12" style={{ color: 'var(--color-text-quaternary)', userSelect: 'none' }}>
                 新增自动按小→大排位，可拖动标签调整顺序
               </span>
             )}
@@ -484,22 +484,22 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
 
         {!hideMatrix && (
           <>
-            <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 12 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
+            <div className="u-br-12" style={{ overflowX: 'auto', border: '1px solid var(--color-border)' }}>
+              <table className="u-w-full" style={{ borderCollapse: 'collapse', minWidth: 560 }}>
                 <tbody>
                   <tr>
-                    <td style={{ width: 120, padding: '8px 10px', background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 14 }}>颜色 / 尺码</td>
+                    <td className="u-p-8px10px u-fw-600 u-fs-14" style={{ width: 120, background: 'var(--color-bg-container)' }}>颜色 / 尺码</td>
                     {selectedSizes.map((size) => (
-                      <td key={size} style={{ padding: '8px 10px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 600, fontSize: 14 }}>{size}</td>
+                      <td key={size} className="u-p-8px10px u-ta-center u-fw-600 u-fs-14" style={{ background: 'var(--color-bg-container)' }}>{size}</td>
                     ))}
-                    <td style={{ width: 72, padding: '8px 10px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 600, fontSize: 14 }}>小计</td>
+                    <td className="u-p-8px10px u-ta-center u-fw-600 u-fs-14" style={{ width: 72, background: 'var(--color-bg-container)' }}>小计</td>
                   </tr>
                   {matrixRows.map((row, rowIndex) => {
                     const rowTotal = row.quantities.reduce((sum, qty) => sum + Number(qty || 0), 0);
                     return (
                       <tr key={row.color || rowIndex}>
-                        <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                        <td className="u-p-8px10px" style={{ borderTop: '1px solid var(--color-border)' }}>
+                          <div className="u-d-flex u-fd-column u-ai-center u-gap-4">
                             <ImageUploadBox
                               size={80}
                               enableDrop
@@ -528,7 +528,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                                 }
                               }}
                             />
-                            <div style={{ fontWeight: 600, color: 'var(--color-danger)', fontSize: 14, textAlign: 'center', maxWidth: 90, wordBreak: 'break-all' }}>{row.color}</div>
+                            <div className="u-fw-600 u-fs-14 u-ta-center" style={{ color: 'var(--color-danger)', maxWidth: 90, wordBreak: 'break-all' }}>{row.color}</div>
                           </div>
                         </td>
                         {selectedSizes.map((_, columnIndex) => (
@@ -540,30 +540,30 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                               controls={false}
                               value={Number(row.quantities[columnIndex] || 0)}
                               onChange={(value) => updateCell(rowIndex, columnIndex, Number(value || 0))}
-                              style={{ width: '100%' }}
+                              className="u-w-full"
                               disabled={editLocked}
                             />
                           </td>
                         ))}
-                        <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', textAlign: 'center', fontWeight: 600, fontSize: 14 }}>{rowTotal}</td>
+                        <td className="u-p-8px10px u-ta-center u-fw-600 u-fs-14" style={{ borderTop: '1px solid var(--color-border)' }}>{rowTotal}</td>
                       </tr>
                     );
                   })}
                   <tr>
-                    <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)', fontWeight: 700, fontSize: 14 }}>合计</td>
+                    <td className="u-p-8px10px u-fw-700 u-fs-14" style={{ borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)' }}>合计</td>
                     {sizeColumnTotals.map((total, index) => (
-                      <td key={index} style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)', textAlign: 'center', fontWeight: 700, fontSize: 14 }}>{total}</td>
+                      <td key={index} className="u-p-8px10px u-ta-center u-fw-700 u-fs-14" style={{ borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)' }}>{total}</td>
                     ))}
-                    <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)', textAlign: 'center', fontWeight: 700, fontSize: 14 }}>{matrixTotal}</td>
+                    <td className="u-p-8px10px u-ta-center u-fw-700 u-fs-14" style={{ borderTop: '1px solid var(--color-border)', background: 'rgba(37, 99, 235, 0.04)' }}>{matrixTotal}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
             {matrixTotal > 0 && (
-              <div style={{ marginTop: 4, padding: '5px 8px', background: 'var(--color-slate-50)', border: '1px solid var(--status-processing-border)', display: 'inline-block', borderRadius: 8 }}>
-                <span style={{ fontWeight: 500, color: 'var(--primary-color)' }}>总数量：</span>
-                <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--primary-color)' }}>{matrixTotal}</span>
+              <div className="u-mt-4 u-d-inline-block u-br-8" style={{ padding: '5px 8px', background: 'var(--color-slate-50)', border: '1px solid var(--status-processing-border)' }}>
+                <span className="u-fw-500" style={{ color: 'var(--primary-color)' }}>总数量：</span>
+                <span className="u-fs-16 u-fw-700" style={{ color: 'var(--primary-color)' }}>{matrixTotal}</span>
               </div>
             )}
           </>

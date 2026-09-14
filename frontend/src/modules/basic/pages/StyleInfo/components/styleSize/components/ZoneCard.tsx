@@ -68,7 +68,7 @@ const ZoneCard: React.FC<Props> = ({
           onChange={(values) => onUpdateZone(zone.key, { partKeys: values })}
           options={rows.map((row) => ({ value: row.key, label: row.partName || '未命名' }))}
           placeholder="选择部位"
-          style={{ flex: 1, minWidth: 120 }}
+          className="u-flex-1" style={{ minWidth: 120 }}
           maxTagCount="responsive"
         />
         <Button
@@ -81,13 +81,13 @@ const ZoneCard: React.FC<Props> = ({
       </div>
 
       {/* 前区 + 后区 两列布局 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+      <div className="u-d-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 0 }}>
         {/* 前区 */}
         <div style={{ padding: '12px 14px', borderRight: '1px solid var(--color-border, var(--color-slate-200))' }}>
-          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: 'var(--color-text-secondary)' }}>
+          <div className="u-fw-600 u-fs-13 u-mb-8" style={{ color: 'var(--color-text-secondary)' }}>
             前区（小码方向 ↓）
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+          <div className="u-d-flex u-fwrap-wrap u-gap-4 u-mb-8">
             {sizeColumns.map((size) => {
               const checked = (zone.frontSizes || []).includes(size);
               return (
@@ -110,8 +110,8 @@ const ZoneCard: React.FC<Props> = ({
               );
             })}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>每码跳码</span>
+          <div className="u-d-flex u-ai-center u-gap-6">
+            <span className="u-fs-13 u-ws-nowrap" style={{ color: 'var(--color-text-secondary)' }}>每码跳码</span>
             <InputNumber
               value={zone.frontStep}
               min={0}
@@ -125,10 +125,10 @@ const ZoneCard: React.FC<Props> = ({
 
         {/* 后区 */}
         <div style={{ padding: '12px 14px' }}>
-          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: 'var(--color-text-secondary)' }}>
+          <div className="u-fw-600 u-fs-13 u-mb-8" style={{ color: 'var(--color-text-secondary)' }}>
             后区（大码方向 ↑）
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+          <div className="u-d-flex u-fwrap-wrap u-gap-4 u-mb-8">
             {sizeColumns.map((size) => {
               const checked = (zone.backSizes || []).includes(size);
               return (
@@ -151,8 +151,8 @@ const ZoneCard: React.FC<Props> = ({
               );
             })}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>每码跳码</span>
+          <div className="u-d-flex u-ai-center u-gap-6">
+            <span className="u-fs-13 u-ws-nowrap" style={{ color: 'var(--color-text-secondary)' }}>每码跳码</span>
             <InputNumber
               value={zone.backStep}
               min={0}
@@ -168,13 +168,13 @@ const ZoneCard: React.FC<Props> = ({
       {/* 自定义跳码列 */}
       {sizeStepColumns.length > 0 && (
         <div style={{ borderTop: '1px solid var(--color-border, var(--color-slate-200))', padding: '10px 14px' }}>
-          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: 'var(--color-text-secondary)' }}>
+          <div className="u-fw-600 u-fs-13 u-mb-8" style={{ color: 'var(--color-text-secondary)' }}>
             自定义跳码段
           </div>
           {sizeStepColumns.map((col, colIndex) => (
-            <div key={col.key} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <span style={{ fontSize: 13, color: 'var(--color-text-tertiary)', minWidth: 40 }}>段{colIndex + 1}</span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, flex: 1 }}>
+            <div key={col.key} className="u-d-flex u-ai-center u-gap-8 u-mb-6">
+              <span className="u-fs-13" style={{ color: 'var(--color-text-tertiary)', minWidth: 40 }}>段{colIndex + 1}</span>
+              <div className="u-d-flex u-fwrap-wrap u-flex-1" style={{ gap: 3 }}>
                 {sizeColumns.map((size) => {
                   const checked = col.sizes.includes(size);
                   return (

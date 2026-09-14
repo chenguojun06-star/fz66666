@@ -88,25 +88,25 @@ const AiHealthIndicator: React.FC = () => {
 
   const popoverContent = (
     <div style={{ minWidth: 280 }}>
-      <div style={{ marginBottom: 8, fontWeight: 600, fontSize: 13 }}>
+      <div className="u-mb-8 u-fw-600 u-fs-13">
         AI 组件健康状态
       </div>
-      <Space direction="vertical" size={4} style={{ width: '100%' }}>
+      <Space direction="vertical" size={4} className="u-w-full">
         {entries.map(([key, val]) => (
-          <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 12 }}>{COMPONENT_LABELS[key] || key}</span>
-            <Tag color={STATUS_COLORS[val.status]} style={{ margin: 0, fontSize: 11 }}>
+          <div key={key} className="u-d-flex u-jc-between u-ai-center">
+            <span className="u-fs-12">{COMPONENT_LABELS[key] || key}</span>
+            <Tag color={STATUS_COLORS[val.status]} className="u-m-0 u-fs-11">
               {STATUS_TEXT[val.status] || val.status}
             </Tag>
           </div>
         ))}
       </Space>
       {downCount > 0 && (
-        <div style={{ marginTop: 8, padding: '4px 8px', background: '#fff2f0', borderRadius: 4, fontSize: 11, color: '#cf1322' }}>
+        <div className="u-mt-8 u-br-4 u-fs-11" style={{ padding: '4px 8px', background: '#fff2f0', color: '#cf1322' }}>
           ⚠️ {downCount} 个组件异常，可能影响 AI 对话/视觉识别/向量搜索
         </div>
       )}
-      <div style={{ marginTop: 8, textAlign: 'right' }}>
+      <div className="u-mt-8 u-ta-right">
         <Button size="small" type="link" icon={<ReloadOutlined />} onClick={fetchHealth} loading={loading}>
           刷新
         </Button>

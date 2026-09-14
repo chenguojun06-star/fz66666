@@ -37,12 +37,12 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
         <Alert
           type="warning"
           showIcon
-          style={{ marginBottom: 12 }}
+          className="u-mb-12"
           message={`有 ${pendingReceive.length} 批外发发货待收货确认`}
           description="外发工厂已发货，请在下方列表展开对应记录并点击「确认收货」；确认后工厂端会收到收货回执通知。"
         />
       )}
-      <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="u-mb-12 u-d-flex u-jc-between u-ai-center">
         <Space>
           <Tag color="blue">共 {data.total} 条记录</Tag>
         </Space>

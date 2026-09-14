@@ -208,7 +208,7 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
     <Drawer
       mask={false}
       title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div className="u-d-flex u-ai-center u-gap-8 u-fwrap-wrap">
           <DollarOutlined style={{ color: 'var(--primary-color)' }} />
           <span>款式成本明细</span>
           {/* 快捷时间按钮 */}
@@ -228,7 +228,7 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
                 type={rangeType === key ? 'primary' : 'text'}
                 size="small"
                 onClick={() => onRangeChange(key)}
-                style={{ minWidth: 40, fontSize: 12, height: 26, padding: '0 8px' }}
+                className="u-fs-12 u-p-08px" style={{ minWidth: 40, height: 26 }}
               >
                 {label}
               </Button>
@@ -252,7 +252,7 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
             size="small"
             icon={<DownloadOutlined />}
             onClick={handleDownload}
-            style={{ marginLeft: 'auto' }}
+            className="u-ml-auto"
           >
             下载
           </Button>
@@ -274,45 +274,45 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
           marginBottom: 16,
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center', flexWrap: 'wrap', gap: 16 }}>
+        <div className="u-d-flex u-ta-center u-fwrap-wrap u-gap-16" style={{ justifyContent: 'space-around' }}>
           <div>
-            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>样衣数量</div>
-            <div style={{ color: 'var(--color-text-primary)', fontSize: 20, fontWeight: 700 }}>{summaryData.patternCount} 件</div>
+            <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>样衣数量</div>
+            <div className="u-fs-20 u-fw-700" style={{ color: 'var(--color-text-primary)' }}>{summaryData.patternCount} 件</div>
           </div>
           <div>
-            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>平均开发时间</div>
+            <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>平均开发时间</div>
             {avgDevSeconds > 0 ? (
-              <div style={{ color: 'var(--color-text-primary)', fontSize: 18, fontWeight: 700 }}>
-                <ClockCircleOutlined style={{ marginRight: 4 }} />
+              <div className="u-fw-700" style={{ color: 'var(--color-text-primary)', fontSize: 18 }}>
+                <ClockCircleOutlined className="u-mr-4" />
                 {formatDuration(avgDevSeconds)}
-                <span style={{ fontSize: 12, color: 'var(--color-text-quaternary)', marginLeft: 4 }}>
+                <span className="u-fs-12 u-ml-4" style={{ color: 'var(--color-text-quaternary)' }}>
                   ({stylesWithTime.length}款)
                 </span>
               </div>
             ) : (
-              <div style={{ color: 'var(--color-text-quaternary)', fontSize: 18, fontWeight: 700 }}>-</div>
+              <div className="u-fw-700" style={{ color: 'var(--color-text-quaternary)', fontSize: 18 }}>-</div>
             )}
           </div>
           <div>
-            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>面辅料</div>
-            <div style={{ color: 'var(--color-text-primary)', fontSize: 20, fontWeight: 700 }}>{formatMoney(summaryData.materialCost)}</div>
+            <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>面辅料</div>
+            <div className="u-fs-20 u-fw-700" style={{ color: 'var(--color-text-primary)' }}>{formatMoney(summaryData.materialCost)}</div>
           </div>
           <div>
-            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>工序费用</div>
-            <div style={{ color: 'var(--color-text-primary)', fontSize: 20, fontWeight: 700 }}>{formatMoney(summaryData.processCost)}</div>
+            <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>工序费用</div>
+            <div className="u-fs-20 u-fw-700" style={{ color: 'var(--color-text-primary)' }}>{formatMoney(summaryData.processCost)}</div>
           </div>
           <div>
-            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>二次工艺</div>
-            <div style={{ color: 'var(--color-text-primary)', fontSize: 20, fontWeight: 700 }}>{formatMoney(summaryData.secondaryProcessCost)}</div>
+            <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>二次工艺</div>
+            <div className="u-fs-20 u-fw-700" style={{ color: 'var(--color-text-primary)' }}>{formatMoney(summaryData.secondaryProcessCost)}</div>
           </div>
           <div>
-            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>总费用</div>
-            <div style={{ color: 'var(--primary-color)', fontSize: 24, fontWeight: 700 }}>{formatMoney(summaryData.totalCost)}</div>
+            <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>总费用</div>
+            <div className="u-fw-700" style={{ color: 'var(--primary-color)', fontSize: 24 }}>{formatMoney(summaryData.totalCost)}</div>
           </div>
         </div>
       </Card>
 
-      <Divider style={{ margin: '12px 0' }}>款式明细列表{styleDetails.length > 0 ? `（共 ${styleDetails.length} 款，${summaryData.patternCount} 件样衣）` : ''}</Divider>
+      <Divider className="u-m-12px0">款式明细列表{styleDetails.length > 0 ? `（共 ${styleDetails.length} 款，${summaryData.patternCount} 件样衣）` : ''}</Divider>
 
       {/* 明细表格 */}
       <Table<StyleCostDetail>

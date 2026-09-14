@@ -35,7 +35,7 @@ const ItemsManageModal: React.FC<Props> = ({
       render: (idx, record) => (
         <Tag
           color="blue"
-          style={{ cursor: 'pointer' }}
+          className="u-cur-pointer"
           title="查看完整信息"
           onClick={() => colorDetailParent && onOpenColorDetail(colorDetailParent, record)}
         >
@@ -86,7 +86,7 @@ const ItemsManageModal: React.FC<Props> = ({
           onChange={(v) => onUpdateItem(r.__idx, 'unitPrice', v)}
           min={0}
           step={0.01}
-          style={{ width: '100%' }}
+          className="u-w-full"
           size="small"
         />
       ),
@@ -156,10 +156,10 @@ const ItemsManageModal: React.FC<Props> = ({
       ]}
     >
       <div>
-        <Space style={{ marginBottom: 12 }}>
+        <Space className="u-mb-12">
           <CircleIconButton type="add" size={24} title="添加颜色" onClick={onAddEmptyItem} />
           <span style={{ color: 'var(--color-text-tertiary)' }}>共 {currentItems.length} 条</span>
-          <span style={{ color: 'var(--color-text-quaternary)', fontSize: 12 }}>规格/成分/幅宽继承自母卡</span>
+          <span className="u-fs-12" style={{ color: 'var(--color-text-quaternary)' }}>规格/成分/幅宽继承自母卡</span>
         </Space>
         <ResizableTable<MaterialColorCardItem & { __idx: number }>
           columns={columns}

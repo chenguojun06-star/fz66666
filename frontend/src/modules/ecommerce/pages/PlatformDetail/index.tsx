@@ -73,12 +73,12 @@ const PlatformDetail: React.FC = () => {
             ].map((s, i) => (
               <Col span={6} key={i}>
                 <Card styles={{ body: { padding: '8px 12px' } }}>
-                  <Statistic title={<span style={{ fontSize: 14 }}>{s.title}</span>} value={s.value} suffix={s.suffix} styles={{ content: { fontSize: 20, color: s.color } }} />
+                  <Statistic title={<span className="u-fs-14">{s.title}</span>} value={s.value} suffix={s.suffix} styles={{ content: { fontSize: 20, color: s.color } }} />
                 </Card>
               </Col>
             ))}
           </Row>
-          <Card style={{ marginBottom: 10 }}>
+          <Card className="u-mb-10">
             <Space wrap>
               <Select placeholder="全部状态" allowClear value={filterStatus} onChange={v => { setFilterStatus(v); setOrderPage(1); }} style={{ width: 100 }}>
                 {Object.entries(STATUS_MAP).map(([k, v]) => <Select.Option key={k} value={Number(k)}>{v.label}</Select.Option>)}
@@ -97,26 +97,26 @@ const PlatformDetail: React.FC = () => {
       label: <span><InboxOutlined /> 进销存</span>,
       children: configured ? (
         <div>
-          <Alert type="info" showIcon style={{ marginBottom: 16, borderRadius: 8 }}
-            title={<div style={{ fontWeight: 600, marginBottom: 8 }}>两条出库链路</div>}
+          <Alert type="info" showIcon className="u-mb-16 u-br-8"
+            title={<div className="u-fw-600 u-mb-8">两条出库链路</div>}
             description={
               <Row gutter={24}>
                 <Col span={12}>
-                  <Card style={{ borderRadius: 6, border: '1px solid var(--status-processing-border)', background: 'var(--color-slate-50)' }}>
-                    <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--color-primary)' }}>📦 链路一：成品仓（有生产单）</div>
-                    <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
+                  <Card className="u-br-6" style={{ border: '1px solid var(--status-processing-border)', background: 'var(--color-slate-50)' }}>
+                    <div className="u-fw-600 u-mb-6" style={{ color: 'var(--color-primary)' }}>📦 链路一：成品仓（有生产单）</div>
+                    <div className="u-fs-14 u-lh-18" style={{ color: 'var(--color-text-secondary)' }}>
                       订单 → 商品编码匹配款号 → <Tag color="blue">关联生产单</Tag> → 生产加工 → 完工入库 → 出库发货 → 物流回传
                     </div>
-                    <div style={{ marginTop: 6 }}><Tag color="blue">备货中 {stats?.preparing ?? 0}</Tag></div>
+                    <div className="u-mt-6"><Tag color="blue">备货中 {stats?.preparing ?? 0}</Tag></div>
                   </Card>
                 </Col>
                 <Col span={12}>
-                  <Card style={{ borderRadius: 6, border: '1px solid var(--status-success-border)', background: 'var(--status-success-bg)' }}>
-                    <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--color-success)' }}>🛒 链路二：电商仓（现货发货）</div>
-                    <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
+                  <Card className="u-br-6" style={{ border: '1px solid var(--status-success-border)', background: 'var(--status-success-bg)' }}>
+                    <div className="u-fw-600 u-mb-6" style={{ color: 'var(--color-success)' }}>🛒 链路二：电商仓（现货发货）</div>
+                    <div className="u-fs-14 u-lh-18" style={{ color: 'var(--color-text-secondary)' }}>
                       订单 → <Tag color="orange">待拣货</Tag> → 仓库拣货 → 复核包装 → 出库发货 → 物流回传
                     </div>
-                    <div style={{ marginTop: 6 }}>
+                    <div className="u-mt-6">
                       <Tag color="orange">待拣货 {stats?.pendingPick ?? 0}</Tag>
                       {(stats?.noStockWarn ?? 0) > 0 && <Tag color="red">缺货预警 {stats?.noStockWarn}</Tag>}
                     </div>
@@ -125,19 +125,19 @@ const PlatformDetail: React.FC = () => {
               </Row>
             }
           />
-          <Row gutter={12} style={{ marginBottom: 16 }}>
+          <Row gutter={12} className="u-mb-16">
             <Col span={6}>
-              <Card style={{ background: 'var(--status-warning-bg)', borderRadius: 8, border: '1px solid var(--status-warning-border)' }}>
+              <Card className="u-br-8" style={{ background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)' }}>
                 <Statistic title="待拣货" value={stats?.pendingPick ?? 0} suffix="单" styles={{ content: { color: 'var(--color-warning)', fontSize: 20 } }} prefix={<ShoppingCartOutlined />} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card style={{ background: 'var(--status-processing-bg)', borderRadius: 8, border: '1px solid var(--status-processing-border)' }}>
+              <Card className="u-br-8" style={{ background: 'var(--status-processing-bg)', border: '1px solid var(--status-processing-border)' }}>
                 <Statistic title="备货中" value={stats?.preparing ?? 0} suffix="单" styles={{ content: { color: 'var(--color-primary)', fontSize: 20 } }} prefix={<SyncOutlined />} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card style={{ background: 'var(--status-success-bg)', borderRadius: 8, border: '1px solid var(--color-success)' }}>
+              <Card className="u-br-8" style={{ background: 'var(--status-success-bg)', border: '1px solid var(--color-success)' }}>
                 <Statistic title="已出库" value={stats?.shippedToday ?? 0} suffix="单" styles={{ content: { color: 'var(--color-success)', fontSize: 20 } }} prefix={<CheckCircleOutlined />} />
               </Card>
             </Col>
@@ -167,30 +167,30 @@ const PlatformDetail: React.FC = () => {
               type="warning"
               showIcon
               icon={<ClockCircleOutlined />}
-              style={{ marginBottom: 16, borderRadius: 8 }}
+              className="u-mb-16 u-br-8"
               title={<span><strong>{platform.name} 平台 Adapter 正在开发中，敬请期待</strong></span>}
               description="该平台后端 Adapter 尚未实现，配置凭证后无法同步订单。请优先选择已支持的平台：聚水潭 / 淘宝 / 京东 / 拼多多。"
             />
           )}
           {!showGuide ? (
-            <Alert type="warning" showIcon icon={<WarningOutlined />} style={{ marginBottom: 16, borderRadius: 8 }}
-              title={<span>不知道怎么获取 {platform.name} 的凭证？<Button type="link" onClick={() => setShowGuide(true)} style={{ padding: '0 4px' }}>点击查看获取教程 →</Button></span>}
+            <Alert type="warning" showIcon icon={<WarningOutlined />} className="u-mb-16 u-br-8"
+              title={<span>不知道怎么获取 {platform.name} 的凭证？<Button type="link" onClick={() => setShowGuide(true)} className="u-p-04px">点击查看获取教程 →</Button></span>}
             />
           ) : (
-            <Card title={guide.title} style={{ marginBottom: 16, borderRadius: 8, border: '1px solid var(--status-warning-border)' }}
+            <Card title={guide.title} className="u-mb-16 u-br-8" style={{ border: '1px solid var(--status-warning-border)' }}
               extra={<Button type="link" onClick={() => setShowGuide(false)}>收起</Button>}>
               <Steps direction="vertical" current={-1}
                 items={guide.steps.map(s => ({ title: s.title, description: <Text type="secondary">{s.description}</Text>, status: 'process' as const }))}
               />
               {guide.docUrl && (
-                <div style={{ marginTop: 12, textAlign: 'center' }}>
+                <div className="u-mt-12 u-ta-center">
                   <Button icon={<LinkOutlined />} onClick={() => window.open(guide.docUrl, '_blank')}>打开 {platform.name} 开放平台 →</Button>
                 </div>
               )}
             </Card>
           )}
 
-          <Descriptions bordered column={1} style={{ marginBottom: 16 }}>
+          <Descriptions bordered column={1} className="u-mb-16">
             <Descriptions.Item label="平台">{platform.name}</Descriptions.Item>
             <Descriptions.Item label="同步方式">{SYNC_MODE_LABELS[platform.syncMode]}</Descriptions.Item>
             <Descriptions.Item label="功能">{platform.features.join('、')}</Descriptions.Item>
@@ -209,17 +209,17 @@ const PlatformDetail: React.FC = () => {
             </Form.Item>
           </Form>
 
-          <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
-            <Button type="primary" icon={<ThunderboltOutlined />} loading={testing} onClick={handleTestConnection} disabled={!isAvailable} style={{ flex: 1 }}>保存并测试连接</Button>
-            <Button icon={<SettingOutlined />} onClick={handleSaveConfig} disabled={!isAvailable} style={{ flex: 1 }}>仅保存</Button>
+          <div className="u-d-flex u-gap-12" style={{ marginTop: 20 }}>
+            <Button type="primary" icon={<ThunderboltOutlined />} loading={testing} onClick={handleTestConnection} disabled={!isAvailable} className="u-flex-1">保存并测试连接</Button>
+            <Button icon={<SettingOutlined />} onClick={handleSaveConfig} disabled={!isAvailable} className="u-flex-1">仅保存</Button>
           </div>
 
           {testResult && (
-            <Alert type={testResult.success ? 'success' : 'error'} showIcon title={testResult.success ? '连接成功' : '连接失败'} description={testResult.message} style={{ marginTop: 16, borderRadius: 8 }} />
+            <Alert type={testResult.success ? 'success' : 'error'} showIcon title={testResult.success ? '连接成功' : '连接失败'} description={testResult.message} className="u-mt-16 u-br-8" />
           )}
 
           {configured && platform.syncMode === 'pull' && (
-            <div style={{ marginTop: 16 }}>
+            <div className="u-mt-16">
               <Button icon={<SyncOutlined />} loading={syncing} onClick={handleSync} block>手动同步订单</Button>
             </div>
           )}
@@ -230,9 +230,9 @@ const PlatformDetail: React.FC = () => {
 
   return (
     <SkeletonLoader type="card" rows={4} loading={loading}>
-      <div style={{ padding: '0 8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16, marginTop: 16 }}>
-          <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(paths.ecommerceCenter)} style={{ marginRight: 8 }} />
+      <div className="u-p-08px">
+        <div className="u-d-flex u-ai-center u-mb-16 u-mt-16">
+          <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(paths.ecommerceCenter)} className="u-mr-8" />
           <span style={{
             width: 40, height: 40, borderRadius: 10,
             background: configured ? 'var(--status-success-bg)' : 'var(--status-warning-bg)',
@@ -242,34 +242,34 @@ const PlatformDetail: React.FC = () => {
             {renderIcon(platform.icon)}
           </span>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 600 }}>{platform.name}</div>
-            <Text type="secondary" style={{ fontSize: 14 }}>{platform.desc}</Text>
+            <div className="u-fw-600" style={{ fontSize: 18 }}>{platform.name}</div>
+            <Text type="secondary" className="u-fs-14">{platform.desc}</Text>
           </div>
-          <div style={{ marginLeft: 'auto' }}>
+          <div className="u-ml-auto">
             {!isAvailable ? (
-              <Tag icon={<ClockCircleOutlined />} color="default" style={{ fontSize: 14, padding: '2px 12px' }}>敬请期待</Tag>
+              <Tag icon={<ClockCircleOutlined />} color="default" className="u-fs-14" style={{ padding: '2px 12px' }}>敬请期待</Tag>
             ) : configured ? (
-              <Tag icon={<CheckCircleOutlined />} color="success" style={{ fontSize: 14, padding: '2px 12px' }}>已连接</Tag>
+              <Tag icon={<CheckCircleOutlined />} color="success" className="u-fs-14" style={{ padding: '2px 12px' }}>已连接</Tag>
             ) : (
-              <Tag icon={<CloseCircleOutlined />} color="default" style={{ fontSize: 14, padding: '2px 12px' }}>未配置</Tag>
+              <Tag icon={<CloseCircleOutlined />} color="default" className="u-fs-14" style={{ padding: '2px 12px' }}>未配置</Tag>
             )}
           </div>
         </div>
 
         {configured && stats && (
-          <Row gutter={16} style={{ marginBottom: 12 }}>
+          <Row gutter={16} className="u-mb-12">
             <Col span={6}>
-              <Card variant="borderless" style={{ background: 'var(--status-processing-bg)', borderRadius: 12 }}>
+              <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-processing-bg)' }}>
                 <Statistic title="今日订单" value={stats.todayOrders} suffix="单" prefix={<ShoppingCartOutlined style={{ color: 'var(--color-primary)' }} />} styles={{ content: { color: 'var(--color-primary)' } }} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card variant="borderless" style={{ background: 'var(--status-success-bg)', borderRadius: 12 }}>
+              <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-success-bg)' }}>
                 <Statistic title="今日销售" value={formatMoney(parseFloat(stats.todaySales))} styles={{ content: { color: 'var(--color-success)' } }} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card variant="borderless" style={{ background: 'var(--status-warning-bg)', borderRadius: 12 }}>
+              <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-warning-bg)' }}>
                 <Statistic title="待发货" value={stats.pendingShip} suffix="单" prefix={<InboxOutlined style={{ color: 'var(--color-warning)' }} />} styles={{ content: { color: 'var(--color-warning)' } }} />
               </Card>
             </Col>
@@ -281,7 +281,7 @@ const PlatformDetail: React.FC = () => {
           </Row>
         )}
 
-        <Card style={{ borderRadius: 12 }}>
+        <Card className="u-br-12">
           <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabs} />
         </Card>
 

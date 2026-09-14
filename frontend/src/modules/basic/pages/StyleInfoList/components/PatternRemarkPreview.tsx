@@ -26,13 +26,13 @@ const PatternRemarkPreview: React.FC<{ patternId: string }> = ({ patternId }) =>
   if (loading) return <Skeleton active paragraph={{ rows: 2 }} />;
   if (list.length === 0) {
     return (
-      <div style={{ padding: '12px 0', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+      <div className="u-ta-center u-fs-13" style={{ padding: '12px 0', color: 'var(--color-text-tertiary)' }}>
         暂无备注日志
       </div>
     );
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="u-d-flex u-fd-column u-gap-8">
       {list.map((r) => (
         <div
           key={r.id}
@@ -44,16 +44,16 @@ const PatternRemarkPreview: React.FC<{ patternId: string }> = ({ patternId }) =>
             fontSize: 13,
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div className="u-d-flex u-jc-between u-mb-4">
             <span>
               <strong>{r.authorName || '匿名'}</strong>
-              {r.authorRole && <Tag style={{ marginLeft: 8 }}>{r.authorRole}</Tag>}
+              {r.authorRole && <Tag className="u-ml-8">{r.authorRole}</Tag>}
             </span>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+            <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
               {r.createTime ? String(r.createTime).replace('T', ' ').substring(0, 16) : ''}
             </span>
           </div>
-          <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'var(--color-text-secondary)' }}>
+          <div className="u-ws-pre-wrap" style={{ wordBreak: 'break-all', color: 'var(--color-text-secondary)' }}>
             {r.content}
           </div>
         </div>

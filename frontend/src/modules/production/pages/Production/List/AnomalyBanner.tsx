@@ -20,19 +20,19 @@ const AnomalyBanner: React.FC<AnomalyBannerProps> = ({ visible, items, onClose, 
   if (!visible || items.length === 0) return null;
 
   return (
-    <div style={{ marginBottom: 12 }}>
+    <div className="u-mb-12">
       <Alert
         type={items.some(i => i.severity === 'critical') ? 'error' : 'warning'}
         showIcon
         closable
         onClose={onClose}
         title={
-          <span style={{ fontWeight: 600, fontSize: 14 }}>
+          <span className="u-fw-600 u-fs-14">
              智能异常检测：发现 {items.length} 条异常
           </span>
         }
         description={
-          <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <div className="u-mt-4 u-d-flex u-fd-column" style={{ gap: 3 }}>
             {items.slice(0, 5).map((item, idx) => {
               const severityColor = item.severity === 'critical' ? 'var(--color-danger)' : 'var(--color-warning)';
               return (
@@ -59,7 +59,7 @@ const AnomalyBanner: React.FC<AnomalyBannerProps> = ({ visible, items, onClose, 
                   <span style={{ color: severityColor, fontWeight: 700, minWidth: 60 }}>
                     [{TYPE_LABELS[item.type] ?? '未知'}]
                   </span>
-                  <span style={{ fontWeight: 500, color: 'var(--text-primary)', minWidth: 80 }}>{item.targetName}</span>
+                  <span className="u-fw-500" style={{ color: 'var(--text-primary)', minWidth: 80 }}>{item.targetName}</span>
                   <span>{item.description}</span>
                   {item.deviationRatio > 0 && (
                     <span style={{ color: severityColor, marginLeft: 4 }}>
@@ -70,7 +70,7 @@ const AnomalyBanner: React.FC<AnomalyBannerProps> = ({ visible, items, onClose, 
               );
             })}
             {items.length > 5 && (
-              <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>…还有 {items.length - 5} 条，建议继续按异常项逐条处理</div>
+              <div className="u-fs-14" style={{ color: 'var(--text-secondary)' }}>…还有 {items.length - 5} 条，建议继续按异常项逐条处理</div>
             )}
           </div>
         }

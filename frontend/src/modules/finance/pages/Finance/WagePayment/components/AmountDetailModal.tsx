@@ -35,7 +35,7 @@ const AmountDetailModal: React.FC<AmountDetailModalProps> = ({
             {target.payeeType === 'WORKER' ? '员工' : '工厂/供应商'}
           </Descriptions.Item>
           <Descriptions.Item label="应付金额">
-            <span style={{ fontWeight: 600, color: 'var(--color-error)' }}>{formatMoney(target.amount)}</span>
+            <span className="u-fw-600" style={{ color: 'var(--color-error)' }}>{formatMoney(target.amount)}</span>
           </Descriptions.Item>
           <Descriptions.Item label="已付金额">
             <span style={{ color: 'var(--color-success)' }}>{formatMoney(target.paidAmount || 0)}</span>

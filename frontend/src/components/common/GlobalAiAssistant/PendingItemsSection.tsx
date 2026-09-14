@@ -35,13 +35,13 @@ const PendingItemsSection: React.FC<PendingItemsSectionProps> = ({
           <div key={item.id || item.orderNo} className={msgStyles.pendingItem} style={{position:'relative'}}
             onClick={() => onNavigate(navPath)}
           >
-            <span style={{flex:1}}>
+            <span className="u-flex-1">
               {isPendingTask
                 ? `${item.title}${item.description ? ' — ' + item.description : ''}`
                 : `${item.orderNo}${item.styleNo ? `（${item.styleNo}）` : ''} — ${status}，进度${item.progress}%`
               }
             </span>
-            <span style={{color:'var(--xiaoyun-primary)',fontSize:13}}>查看 →</span>
+            <span className="u-fs-13" style={{ color: 'var(--xiaoyun-primary)' }}>查看 →</span>
             <button
               className={msgStyles.pendingDismissBtn}
               onClick={(e) => onDismiss(item.id || item.orderNo, e)}

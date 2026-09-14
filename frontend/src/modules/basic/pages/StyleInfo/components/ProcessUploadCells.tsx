@@ -44,25 +44,25 @@ export const ProcessImageCell: React.FC<{ record: any; readOnly?: boolean }> = (
   }, [doUpload]);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', justifyContent: 'center', minHeight: 24, outline: 'none' }}
+    <div className="u-d-flex u-ai-center u-fwrap-wrap u-jc-center" style={{ gap: 3, minHeight: 24, outline: 'none' }}
       tabIndex={0}
       onClick={(e) => e.stopPropagation()}
       onDragOver={(e) => { e.preventDefault(); }}
       onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) handleFileSelect(e.dataTransfer.files); }}
       onPaste={(e) => { const f = e.clipboardData.files; if (f?.length) { e.preventDefault(); handleFileSelect(f); } }}>
-      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+      <input ref={fileInputRef} type="file" accept="image/*" className="u-d-none"
         onChange={(e) => { if (e.target.files?.length) handleFileSelect(e.target.files); }} />
       {imgs.length > 0 && (
         <Image.PreviewGroup>
           {imgs.slice(0, 2).map((url, i) => (
             <Image key={i} src={getFullAuthedFileUrl(url)} width={28} height={28}
-              style={{ borderRadius: 3, objectFit: 'cover', flexShrink: 0 }}
+              className="u-objf-cover u-fshrink-0" style={{ borderRadius: 3 }}
               styles={{ root: { display: 'inline-block', flexShrink: 0 } }}
             />
           ))}
         </Image.PreviewGroup>
       )}
-      {imgs.length > 2 && <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>+{imgs.length - 2}</span>}
+      {imgs.length > 2 && <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>+{imgs.length - 2}</span>}
       {!readOnly && record.id && (
         <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
           <CameraOutlined style={{ fontSize: 13, color: uploading ? 'var(--color-primary)' : 'var(--color-text-quaternary)', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
@@ -112,21 +112,21 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
 
   const popoverContent = (
     <div style={{ minWidth: 180, maxWidth: 300 }}>
-      {files.length === 0 && <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, padding: '4px 0' }}>暂无附件</div>}
+      {files.length === 0 && <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)', padding: '4px 0' }}>暂无附件</div>}
       {files.map((f, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
-          <PaperClipOutlined style={{ color: 'var(--color-primary)', flexShrink: 0, fontSize: 12 }} />
+        <div key={i} className="u-d-flex u-ai-center u-gap-6" style={{ padding: '3px 0' }}>
+          <PaperClipOutlined className="u-fshrink-0 u-fs-12" style={{ color: 'var(--color-primary)' }} />
           <a onClick={(e) => { e.preventDefault(); downloadFile(f.url, f.name); }}
-            href="#" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, cursor: 'pointer' }}>
+            href="#" className="u-flex-1 u-ov-hidden u-ws-nowrap u-fs-14 u-cur-pointer" style={{ textOverflow: 'ellipsis' }}>
             {f.name}
           </a>
         </div>
       ))}
       {!readOnly && record.id && (
         <>
-          <input ref={fileInputRef} type="file" style={{ display: 'none' }}
+          <input ref={fileInputRef} type="file" className="u-d-none"
             onChange={(e) => { if (e.target.files?.length) handleFileSelect(e.target.files); }} />
-          <Button icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}
+          <Button icon={<PaperClipOutlined />} loading={uploading} className="u-mt-6 u-w-full"
             onClick={() => fileInputRef.current?.click()}>
             上传附件
           </Button>
@@ -137,10 +137,10 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
 
   return (
     <Popover content={popoverContent} title="附件" trigger="click" placement="bottomRight">
-      <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 4px' }}
+      <div className="u-cur-pointer u-d-inline-flex u-ai-center u-gap-4 u-p-04px"
         onClick={(e) => e.stopPropagation()}>
         <PaperClipOutlined style={{ fontSize: 12, color: files.length > 0 ? 'var(--color-primary)' : 'var(--color-text-quaternary)' }} />
-        {files.length > 0 && <span style={{ fontSize: 14, color: 'var(--color-primary)' }}>{files.length}</span>}
+        {files.length > 0 && <span className="u-fs-14" style={{ color: 'var(--color-primary)' }}>{files.length}</span>}
       </div>
     </Popover>
   );
@@ -177,25 +177,25 @@ export const NewRowImageUpload: React.FC<{
   }, [doUpload]);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', justifyContent: 'center', minHeight: 24, outline: 'none' }}
+    <div className="u-d-flex u-ai-center u-fwrap-wrap u-jc-center" style={{ gap: 3, minHeight: 24, outline: 'none' }}
       tabIndex={0}
       onClick={(e) => e.stopPropagation()}
       onDragOver={(e) => { e.preventDefault(); }}
       onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) handleFileSelect(e.dataTransfer.files); }}
       onPaste={(e) => { const f = e.clipboardData.files; if (f?.length) { e.preventDefault(); handleFileSelect(f); } }}>
-      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+      <input ref={fileInputRef} type="file" accept="image/*" className="u-d-none"
         onChange={(e) => { if (e.target.files?.length) handleFileSelect(e.target.files); }} />
       {value.length > 0 && (
         <Image.PreviewGroup>
           {value.slice(0, 2).map((url, i) => (
             <Image key={i} src={getFullAuthedFileUrl(url)} width={28} height={28}
-              style={{ borderRadius: 3, objectFit: 'cover', flexShrink: 0 }}
+              className="u-objf-cover u-fshrink-0" style={{ borderRadius: 3 }}
               styles={{ root: { display: 'inline-block', flexShrink: 0 } }}
             />
           ))}
         </Image.PreviewGroup>
       )}
-      {value.length > 2 && <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>+{value.length - 2}</span>}
+      {value.length > 2 && <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>+{value.length - 2}</span>}
       <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
         <CameraOutlined style={{ fontSize: 13, color: uploading ? 'var(--color-primary)' : 'var(--color-text-quaternary)', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
           onClick={() => fileInputRef.current?.click()} />
@@ -236,20 +236,20 @@ export const NewRowAttachmentUpload: React.FC<{
 
   const popoverContent = (
     <div style={{ minWidth: 180, maxWidth: 300 }}>
-      {value.length === 0 && <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14, padding: '4px 0' }}>暂无附件</div>}
+      {value.length === 0 && <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)', padding: '4px 0' }}>暂无附件</div>}
       {value.map((f, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
-          <PaperClipOutlined style={{ color: 'var(--color-primary)', flexShrink: 0, fontSize: 12 }} />
+        <div key={i} className="u-d-flex u-ai-center u-gap-6" style={{ padding: '3px 0' }}>
+          <PaperClipOutlined className="u-fshrink-0 u-fs-12" style={{ color: 'var(--color-primary)' }} />
           <a onClick={(e) => { e.preventDefault(); downloadFile(f.url, f.name); }}
-            href="#" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, cursor: 'pointer' }}>
+            href="#" className="u-flex-1 u-ov-hidden u-ws-nowrap u-fs-14 u-cur-pointer" style={{ textOverflow: 'ellipsis' }}>
             {f.name}
           </a>
         </div>
       ))}
       <>
-        <input ref={fileInputRef} type="file" style={{ display: 'none' }}
+        <input ref={fileInputRef} type="file" className="u-d-none"
           onChange={(e) => { if (e.target.files?.length) handleFileSelect(e.target.files); }} />
-        <Button icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}
+        <Button icon={<PaperClipOutlined />} loading={uploading} className="u-mt-6 u-w-full"
           onClick={() => fileInputRef.current?.click()}>
           上传附件
         </Button>
@@ -259,10 +259,10 @@ export const NewRowAttachmentUpload: React.FC<{
 
   return (
     <Popover content={popoverContent} title="附件" trigger="click" placement="bottomRight">
-      <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 4px' }}
+      <div className="u-cur-pointer u-d-inline-flex u-ai-center u-gap-4 u-p-04px"
         onClick={(e) => e.stopPropagation()}>
         <PaperClipOutlined style={{ fontSize: 12, color: value.length > 0 ? 'var(--color-primary)' : 'var(--color-text-quaternary)' }} />
-        {value.length > 0 && <span style={{ fontSize: 14, color: 'var(--color-primary)' }}>{value.length}</span>}
+        {value.length > 0 && <span className="u-fs-14" style={{ color: 'var(--color-primary)' }}>{value.length}</span>}
       </div>
     </Popover>
   );

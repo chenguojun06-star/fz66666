@@ -55,9 +55,9 @@ export const buildColumns = (handlers: ColumnHandlers) => [
   {
     title: '状态', dataIndex: 'status', key: 'status', width: 60,
     render: (v: string) => {
-      if (v === 'ENABLED') return <span style={{ color: 'var(--color-success)', fontWeight: 500 }}>启用</span>;
-      if (v === 'DISABLED') return <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 400 }}>停用</span>;
-      if (v === 'SCRAPPED') return <Tag color="error" style={{ margin: 0 }}>已报废</Tag>;
+      if (v === 'ENABLED') return <span className="u-fw-500" style={{ color: 'var(--color-success)' }}>启用</span>;
+      if (v === 'DISABLED') return <span className="u-fw-400" style={{ color: 'var(--color-text-tertiary)' }}>停用</span>;
+      if (v === 'SCRAPPED') return <Tag color="error" className="u-m-0">已报废</Tag>;
       return <span style={{ color: 'var(--color-text-tertiary)' }}>{v || '-'}</span>;
     },
   },
@@ -86,15 +86,15 @@ export const buildSkuColumns = () => [
             alt=""
             width={36}
             height={36}
-            style={{ objectFit: 'contain', borderRadius: 4 }}
-            preview={{ mask: <span style={{ fontSize: 10 }}>查看</span> }}
+            className="u-br-4" style={{ objectFit: 'contain' }}
+            preview={{ mask: <span className="u-fs-10">查看</span> }}
           />
         );
       }
-      return <div style={{ width: 36, height: 36, background: 'var(--color-bg-subtle)', borderRadius: 4 }} />;
+      return <div className="u-br-4" style={{ width: 36, height: 36, background: 'var(--color-bg-subtle)' }} />;
     },
   },
-  { title: '颜色', dataIndex: 'color', key: 'color', width: 80, render: (v: unknown) => <span style={{ fontWeight: 500 }}>{v ? String(v) : '-'}</span> },
+  { title: '颜色', dataIndex: 'color', key: 'color', width: 80, render: (v: unknown) => <span className="u-fw-500">{v ? String(v) : '-'}</span> },
   { title: '尺码', dataIndex: 'size', key: 'size', width: 70, render: (v: unknown) => <span>{v ? String(v) : '-'}</span> },
   { title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 180, ellipsis: true },
   { title: '条形码', dataIndex: 'barcode', key: 'barcode', width: 130, ellipsis: true, render: (v: unknown) => String(v ?? '-') },

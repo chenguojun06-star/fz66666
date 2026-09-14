@@ -34,7 +34,7 @@ const confColor = (v: number) =>
 
 const RouteTag: React.FC<{ route?: string }> = ({ route }) => {
   const [label, color] = ROUTE_MAP[route ?? ''] ?? ['未知', 'var(--color-gray-label)'];
-  return <Tag color={color} style={{ fontWeight: 600 }}>{label}</Tag>;
+  return <Tag color={color} className="u-fw-600">{label}</Tag>;
 };
 
 /* ── 图节点流水线可视化 ──────────────────────────── */
@@ -73,8 +73,8 @@ const GraphPipeline: React.FC<{ events: NodeEvent[]; streaming: boolean }> = ({ 
                 position: 'relative',
               }}>
                 {label}
-                {active && <Spin style={{ marginLeft: 6 }} />}
-                {done && <span style={{ marginLeft: 4 }}></span>}
+                {active && <Spin className="u-ml-6" />}
+                {done && <span className="u-ml-4"></span>}
               </div>
             </Tooltip>
           </React.Fragment>
@@ -103,16 +103,16 @@ const SpecialistCards: React.FC<{ results?: Record<string, string> }> = ({ resul
     compliance: ' 合规分析', logistics: ' 物流分析',
   };
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8, marginBottom: 8 }}>
+    <div className="u-d-grid u-gap-8 u-mb-8" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
       {Object.entries(results).map(([key, val]) => (
         <div key={key} style={{
           background: 'rgba(0,0,0,0.18)', borderRadius: 6, padding: '8px 10px',
           border: '1px solid rgba(255,255,255,0.06)',
         }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-accent-purple)', marginBottom: 4 }}>
+          <div className="u-fs-14 u-fw-600 u-mb-4" style={{ color: 'var(--color-accent-purple)' }}>
             {nameMap[key] ?? '分析结果'}
           </div>
-          <div style={{ fontSize: 14, color: 'var(--color-text-quaternary)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+          <div className="u-fs-14 u-ws-pre-wrap" style={{ color: 'var(--color-text-quaternary)', lineHeight: 1.55 }}>
             {(val?.length ?? 0) > 300 ? val.slice(0, 300) + '…' : val}
           </div>
         </div>
@@ -150,7 +150,7 @@ const HistoryTable: React.FC = () => {
       render: (v: number, row: any) => (
         <Rate
           count={5} value={v ?? 0}
-          style={{ fontSize: 14 }}
+          className="u-fs-14"
           onChange={(val) => submitFeedback(row.id, val).then(loadHistory).catch(console.error)}
         />
       ),
@@ -165,7 +165,7 @@ const HistoryTable: React.FC = () => {
       rowKey="id"
 
       pagination={false}
-      style={{ marginTop: 8 }}
+      className="u-mt-8"
     />
   );
 };
@@ -185,7 +185,7 @@ const AgentGraphPanel: React.FC = () => {
   return (
     <div style={{ padding: '12px 0' }}>
       {/* Tab 切换 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+      <div className="u-d-flex u-jc-between u-ai-center u-mb-10">
         <Segmented
          
           value={activeTab}
@@ -208,7 +208,7 @@ const AgentGraphPanel: React.FC = () => {
             gap: 8,
             marginBottom: 12,
           }}>
-            <Select value={scene} onChange={setScene} options={SCENES} style={{ width: '100%' }} />
+            <Select value={scene} onChange={setScene} options={SCENES} className="u-w-full" />
             <Input
               placeholder="订单ID（逗号分隔，留空=全部）"
               value={orderIds}
@@ -227,7 +227,7 @@ const AgentGraphPanel: React.FC = () => {
               icon={<ThunderboltOutlined />}
               loading={loading}
               onClick={runGraphStream}
-              style={{ background: 'var(--color-violet-600)', borderColor: 'var(--color-violet-600)', whiteSpace: 'nowrap' }}
+              className="u-ws-nowrap" style={{ background: 'var(--color-violet-600)', borderColor: 'var(--color-violet-600)' }}
             >
               流式执行
             </Button>
@@ -240,9 +240,9 @@ const AgentGraphPanel: React.FC = () => {
 
           {/* ── 执行中 ────────────────────────────────────── */}
           {streaming && nodeEvents.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--color-accent-purple)' }}>
+            <div className="u-ta-center" style={{ padding: '20px 0', color: 'var(--color-accent-purple)' }}>
               <Spin />
-              <span style={{ marginLeft: 8, fontSize: 14 }}>
+              <span className="u-ml-8 u-fs-14">
                 AI 多代理图推理中… 数字孪生 → 主管 → 专家 → 反思
               </span>
             </div>
@@ -253,7 +253,7 @@ const AgentGraphPanel: React.FC = () => {
             <Alert
               type="error"
               title={error}
-              style={{ marginBottom: 8 }}
+              className="u-mb-8"
               action={<Button onClick={reset}>清除</Button>}
             />
           )}
@@ -267,29 +267,29 @@ const AgentGraphPanel: React.FC = () => {
               padding: 12,
             }}>
               {/* 路由 + 置信度 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+              <div className="u-d-flex u-ai-center u-gap-12 u-mb-8">
                 <BranchesOutlined style={{ color: 'var(--color-accent-purple)' }} />
                 <RouteTag route={result.route} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 2 }}>置信度</div>
+                <div className="u-flex-1">
+                  <div className="u-fs-14 u-mb-2" style={{ color: 'var(--color-text-muted)' }}>置信度</div>
                   <Progress
                     percent={result.confidenceScore}
                     strokeColor={confColor(result.confidenceScore)}
                    
-                    style={{ marginBottom: 0 }}
+                    className="u-mb-0"
                     format={v => <span style={{ fontSize: 14, color: confColor(v!) }}>{v} 分</span>}
                   />
                 </div>
-                <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>{result.latencyMs} ms</span>
+                <span className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>{result.latencyMs} ms</span>
               </div>
 
               {/* 节点轨迹 */}
               {result.nodeTrace && result.nodeTrace.length > 0 && (
-                <div style={{ marginBottom: 8 }}>
-                  <span style={{ fontSize: 14, color: 'var(--color-text-muted)', marginRight: 6 }}>执行路径:</span>
+                <div className="u-mb-8">
+                  <span className="u-fs-14 u-mr-6" style={{ color: 'var(--color-text-muted)' }}>执行路径:</span>
                   {result.nodeTrace.map((n, i) => {
                     const [label] = NODE_LABELS[n] ?? ['未知', 'var(--color-gray-label)'];
-                    return <Tag key={i} style={{ fontSize: 14 }}>{label}</Tag>;
+                    return <Tag key={i} className="u-fs-14">{label}</Tag>;
                   })}
                 </div>
               )}
@@ -301,11 +301,11 @@ const AgentGraphPanel: React.FC = () => {
 
               {/* 分析摘要 */}
               {result.contextSummary && (
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-accent-purple)', fontWeight: 600, marginBottom: 4 }}>
+                <div className="u-mb-8">
+                  <div className="u-fs-14 u-fw-600 u-mb-4" style={{ color: 'var(--color-accent-purple)' }}>
                     <XiaoyunCloudAvatar size={16} active />分析结果
                   </div>
-                  <div style={{ fontSize: 14, color: 'var(--color-neutral-300)', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+                  <div className="u-fs-14 u-ws-pre-wrap" style={{ color: 'var(--color-neutral-300)', lineHeight: 1.65 }}>
                     {result.contextSummary}
                   </div>
                 </div>
@@ -313,11 +313,11 @@ const AgentGraphPanel: React.FC = () => {
 
               {/* 优化建议 */}
               {result.optimizationSuggestion && (
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-emerald-400)', fontWeight: 600, marginBottom: 4 }}>
+                <div className="u-mb-8">
+                  <div className="u-fs-14 u-fw-600 u-mb-4" style={{ color: 'var(--color-emerald-400)' }}>
                      AI 优化建议
                   </div>
-                  <div style={{ fontSize: 14, color: 'var(--color-neutral-300)', lineHeight: 1.65 }}>
+                  <div className="u-fs-14" style={{ color: 'var(--color-neutral-300)', lineHeight: 1.65 }}>
                     {result.optimizationSuggestion}
                   </div>
                 </div>
@@ -325,8 +325,8 @@ const AgentGraphPanel: React.FC = () => {
 
               {/* 自我反思 */}
               {result.reflection && (
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-warning)', fontWeight: 600, marginBottom: 4 }}>
+                <div className="u-mb-8">
+                  <div className="u-fs-14 u-fw-600 u-mb-4" style={{ color: 'var(--color-warning)' }}>
                      自我反思（置信评估）
                   </div>
                   <div style={{
@@ -341,11 +341,11 @@ const AgentGraphPanel: React.FC = () => {
 
               {/* 反馈评分 */}
               {result.executionId && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                  <span style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>结果评分:</span>
+                <div className="u-d-flex u-ai-center u-gap-8 u-mt-4">
+                  <span className="u-fs-14" style={{ color: 'var(--color-text-muted)' }}>结果评分:</span>
                   <Rate
                     count={5}
-                    style={{ fontSize: 14 }}
+                    className="u-fs-14"
                     onChange={(val) => {
                       const store = useAgentGraphStore.getState();
                       store.submitFeedback(result.executionId!, val).catch(console.error);

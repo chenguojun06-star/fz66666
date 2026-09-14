@@ -1,0 +1,102 @@
+/* 全局原子工具类 —— 由 scripts/inline-to-utility.mjs 自动生成，请勿手改 */
+/* 用途：替代静态内联样式 style={{}}，使样式可被主题覆盖、可响应式、可批量收敛 */
+/* 注意：本文件在 main.tsx 中最后引入，以保证优先级等价于原内联样式 */
+
+.u-ai-center { align-items: center; }
+.u-ai-start { align-items: flex-start; }
+.u-br-10 { border-radius: 10px; }
+.u-br-12 { border-radius: 12px; }
+.u-br-4 { border-radius: 4px; }
+.u-br-6 { border-radius: 6px; }
+.u-br-8 { border-radius: 8px; }
+.u-cur-pointer { cursor: pointer; }
+.u-d-block { display: block; }
+.u-d-flex { display: flex; }
+.u-d-grid { display: grid; }
+.u-d-inline-block { display: inline-block; }
+.u-d-inline-flex { display: inline-flex; }
+.u-d-none { display: none; }
+.u-fd-column { flex-direction: column; }
+.u-flex-1 { flex: 1; }
+.u-fs-10 { font-size: 10px; }
+.u-fs-11 { font-size: 11px; }
+.u-fs-12 { font-size: 12px; }
+.u-fs-12px { font-size: 12px; }
+.u-fs-13 { font-size: 13px; }
+.u-fs-14 { font-size: 14px; }
+.u-fs-15 { font-size: 15px; }
+.u-fs-16 { font-size: 16px; }
+.u-fs-20 { font-size: 20px; }
+.u-fs-28 { font-size: 28px; }
+.u-fs-var--font-size-sm { font-size: var(--font-size-sm); }
+.u-fs-var--font-size-xs { font-size: var(--font-size-xs); }
+.u-fshrink-0 { flex-shrink: 0; }
+.u-fw-400 { font-weight: 400; }
+.u-fw-500 { font-weight: 500; }
+.u-fw-600 { font-weight: 600; }
+.u-fw-700 { font-weight: 700; }
+.u-fwrap-wrap { flex-wrap: wrap; }
+.u-gap-10 { gap: 10px; }
+.u-gap-12 { gap: 12px; }
+.u-gap-16 { gap: 16px; }
+.u-gap-4 { gap: 4px; }
+.u-gap-6 { gap: 6px; }
+.u-gap-8 { gap: 8px; }
+.u-h-auto { height: auto; }
+.u-h-full { height: 100%; }
+.u-jc-between { justify-content: space-between; }
+.u-jc-center { justify-content: center; }
+.u-jc-end { justify-content: flex-end; }
+.u-lh-16px { line-height: 16px; }
+.u-lh-18 { line-height: 1.8px; }
+.u-lh-18px { line-height: 18px; }
+.u-m-0 { margin: 0px; }
+.u-m-12px0 { margin: 12px 0; }
+.u-m-8px0 { margin: 8px 0; }
+.u-mb-0 { margin-bottom: 0px; }
+.u-mb-10 { margin-bottom: 10px; }
+.u-mb-12 { margin-bottom: 12px; }
+.u-mb-16 { margin-bottom: 16px; }
+.u-mb-2 { margin-bottom: 2px; }
+.u-mb-24 { margin-bottom: 24px; }
+.u-mb-4 { margin-bottom: 4px; }
+.u-mb-6 { margin-bottom: 6px; }
+.u-mb-8 { margin-bottom: 8px; }
+.u-ml-2 { margin-left: 2px; }
+.u-ml-4 { margin-left: 4px; }
+.u-ml-6 { margin-left: 6px; }
+.u-ml-8 { margin-left: 8px; }
+.u-ml-auto { margin-left: auto; }
+.u-mr-4 { margin-right: 4px; }
+.u-mr-6 { margin-right: 6px; }
+.u-mr-8 { margin-right: 8px; }
+.u-mt-10 { margin-top: 10px; }
+.u-mt-12 { margin-top: 12px; }
+.u-mt-16 { margin-top: 16px; }
+.u-mt-2 { margin-top: 2px; }
+.u-mt-4 { margin-top: 4px; }
+.u-mt-6 { margin-top: 6px; }
+.u-mt-8 { margin-top: 8px; }
+.u-objf-cover { object-fit: cover; }
+.u-ov-auto { overflow: auto; }
+.u-ov-hidden { overflow: hidden; }
+.u-p-0 { padding: 0px; }
+.u-p-04px { padding: 0 4px; }
+.u-p-08px { padding: 0 8px; }
+.u-p-12 { padding: 12px; }
+.u-p-16 { padding: 16px; }
+.u-p-24 { padding: 24px; }
+.u-p-24px0 { padding: 24px 0; }
+.u-p-6px10px { padding: 6px 10px; }
+.u-p-6px12px { padding: 6px 12px; }
+.u-p-8px0 { padding: 8px 0; }
+.u-p-8px10px { padding: 8px 10px; }
+.u-p-8px12px { padding: 8px 12px; }
+.u-pos-absolute { position: absolute; }
+.u-pos-relative { position: relative; }
+.u-ta-center { text-align: center; }
+.u-ta-left { text-align: left; }
+.u-ta-right { text-align: right; }
+.u-w-full { width: 100%; }
+.u-ws-nowrap { white-space: nowrap; }
+.u-ws-pre-wrap { white-space: pre-wrap; }

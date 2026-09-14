@@ -58,8 +58,8 @@ const StyleFilterPanel: React.FC<StyleFilterPanelProps> = ({
   ];
 
   return (
-    <div className="filter-card mb-sm" style={{ background: 'var(--color-bg-container)', padding: 12, borderRadius: 8 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
+    <div className="filter-card mb-sm u-p-12 u-br-8" style={{ background: 'var(--color-bg-container)' }}>
+      <div className="u-d-flex u-jc-between u-ai-center u-w-full u-fwrap-wrap u-gap-16">
         {/* 左侧：搜索条件 */}
         <Space className="style-filter-inline" size={12} wrap>
           <Input

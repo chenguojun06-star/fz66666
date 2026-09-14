@@ -38,13 +38,13 @@ const StyleBomSizeColorSummary: React.FC<StyleBomSizeColorSummaryProps> = ({ siz
       {sizes.length ? (
         <div style={sectionStyle}>
           <span style={labelStyle}>基础码数</span>
-          {sizes.map((size) => <Tag key={size} style={{ margin: 0 }}>{size}</Tag>)}
+          {sizes.map((size) => <Tag key={size} className="u-m-0">{size}</Tag>)}
         </div>
       ) : null}
       {colors.length ? (
         <div style={sectionStyle}>
           <span style={labelStyle}>基础颜色</span>
-          {colors.map((color) => <Tag key={color} style={{ margin: 0 }}>{color}</Tag>)}
+          {colors.map((color) => <Tag key={color} className="u-m-0">{color}</Tag>)}
         </div>
       ) : null}
     </div>

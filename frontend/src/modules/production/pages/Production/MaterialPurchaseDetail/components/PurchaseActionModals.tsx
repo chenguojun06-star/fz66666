@@ -108,7 +108,7 @@ export const InboundModal: React.FC<InboundModalProps> = ({ visible, record, for
           rules={[{ required: true, message: '请输入到货数量' }]}
           extra="物料到货/入库数量目前按整数登记；小数到货需数据模型升级后开放"
         >
-          <InputNumber min={1} step={1} precision={0} style={{ width: '100%' }} addonAfter={record?.unit} />
+          <InputNumber min={1} step={1} precision={0} className="u-w-full" addonAfter={record?.unit} />
         </Form.Item>
         {/* D-366b：用户拍板——到货时必须选去向 */}
         <Form.Item name="movementAction" label="到货去向" rules={[{ required: true, message: '请选择到货去向' }]}>
@@ -163,7 +163,7 @@ export const InboundModal: React.FC<InboundModalProps> = ({ visible, record, for
             showIcon
             message="直采使用：物料不进仓库"
             description="到货数量只登记到货，不增加库存；系统会记一条采购直用流水，适合到货即上线使用的场景。"
-            style={{ marginBottom: 12 }}
+            className="u-mb-12"
           />
         )}
         <Form.Item name="remark" label="备注">
@@ -205,7 +205,7 @@ export const ReturnConfirmModal: React.FC<ReturnConfirmModalProps> = ({ visible,
     )}
     <Form form={form} layout="vertical">
       <Form.Item name="quantity" label="实际回料数量" rules={[{ required: true, message: '请输入实际回料数量' }]}>
-        <InputNumber min={0} step={0.01} precision={2} style={{ width: '100%' }} addonAfter={record?.unit} />
+        <InputNumber min={0} step={0.01} precision={2} className="u-w-full" addonAfter={record?.unit} />
       </Form.Item>
     </Form>
   </ResizableModal>

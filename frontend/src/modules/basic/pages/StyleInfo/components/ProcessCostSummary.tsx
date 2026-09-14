@@ -61,7 +61,7 @@ const ProcessCostSummary: React.FC<Props> = ({ data }) => {
   };
 
   return (
-    <div style={{ marginBottom: 12, display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 12 }}>
+    <div className="u-mb-12 u-d-grid u-gap-12" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
       <div style={cardStyle}>
         <span style={labelStyle}>工序单价（总计）</span>
         <span style={valueStyle}>¥{totalProcessCost.toFixed(2)}</span>

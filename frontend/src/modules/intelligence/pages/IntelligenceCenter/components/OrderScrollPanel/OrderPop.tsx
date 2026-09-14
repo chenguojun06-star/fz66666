@@ -61,7 +61,7 @@ export const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
     <div className="order-pop-body">
       <div className="order-pop-header">
         <span className="order-pop-no">{order.orderNo}</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div className="u-d-flex u-ai-center u-gap-6">
           {intel.riskItem && (() => {
             const b = risk2badge(intel.riskItem.riskLevel);
             return (
@@ -107,13 +107,12 @@ export const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
         <div style={{ margin: '8px 0 6px', padding: '6px 8px',
           background: 'rgba(224,48,48,0.04)', borderRadius: 5,
           border: '1px solid rgba(224,48,48,0.15)' }}>
-          <div style={{ fontSize: 14, color: 'var(--color-danger)', fontWeight: 700,
-            marginBottom: 5, letterSpacing: 0.5 }}> 工序瓶颈 Top{intel.bottleneck.items.length > 1 ? '2' : '1'}</div>
+          <div className="u-fs-14 u-fw-700" style={{ color: 'var(--color-danger)', marginBottom: 5, letterSpacing: 0.5 }}> 工序瓶颈 Top{intel.bottleneck.items.length > 1 ? '2' : '1'}</div>
           {intel.bottleneck.items.slice(0, 2).map((b, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center',
               gap: 6, marginBottom: i < 1 ? 3 : 0, fontSize: 14 }}>
               <span style={{ color: sev2c(b.severity), fontWeight: 700, minWidth: 34 }}>{b.stageName}</span>
-              <span style={{ color: 'var(--color-blue-300)', flex: 1 }}>积压 {b.backlog} 件</span>
+              <span className="u-flex-1" style={{ color: 'var(--color-blue-300)' }}>积压 {b.backlog} 件</span>
               <span style={{ color: sev2c(b.severity), fontSize: 14,
                 border: `1px solid ${sev2c(b.severity)}44`, padding: '0 4px', borderRadius: 3 }}>
                 {b.severity === 'critical' ? '严重' : b.severity === 'warning' ? '预警' : '正常'}
@@ -121,7 +120,7 @@ export const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
             </div>
           ))}
           {intel.bottleneck.items[0]?.suggestion && (
-            <div style={{ fontSize: 14, color: 'var(--color-blue-300)', marginTop: 5, lineHeight: 1.5 }}>
+            <div className="u-fs-14" style={{ color: 'var(--color-blue-300)', marginTop: 5, lineHeight: 1.5 }}>
                {intel.bottleneck.items[0].suggestion}
             </div>
           )}
@@ -132,19 +131,18 @@ export const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
         <div style={{ marginBottom: 6, padding: '6px 8px',
           background: `${risk2badge(intel.riskItem.riskLevel).color}08`,
           borderRadius: 5, border: `1px solid ${risk2badge(intel.riskItem.riskLevel).color}22` }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between',
-            alignItems: 'center', marginBottom: 4 }}>
+          <div className="u-d-flex u-jc-between u-ai-center u-mb-4">
             <span style={{ fontSize: 14, color: risk2badge(intel.riskItem.riskLevel).color,
               fontWeight: 700 }}> 交期风险评估</span>
-            <span style={{ fontSize: 14, color: 'var(--color-blue-300)' }}>
+            <span className="u-fs-14" style={{ color: 'var(--color-blue-300)' }}>
               预测: {intel.riskItem.predictedEndDate?.slice(0, 10) ?? '--'}
             </span>
           </div>
-          <div style={{ fontSize: 14, color: 'var(--color-blue-300)', lineHeight: 1.55 }}>
+          <div className="u-fs-14" style={{ color: 'var(--color-blue-300)', lineHeight: 1.55 }}>
             {intel.riskItem.riskDescription}
           </div>
           {(intel.riskItem.requiredDailyOutput || intel.riskItem.currentDailyOutput) ? (
-            <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 14 }}>
+            <div className="u-d-flex u-gap-12 u-mt-4 u-fs-14">
               <span style={{ color: 'var(--color-blue-300)' }}>日产需 <b style={{ color: 'var(--color-warning-deep)' }}>{intel.riskItem.requiredDailyOutput}</b> 件</span>
               <span style={{ color: 'var(--color-blue-300)' }}>当前 <b style={{ color: 'var(--color-accent-cyan-bright)' }}>{intel.riskItem.currentDailyOutput}</b> 件</span>
             </div>
@@ -153,10 +151,8 @@ export const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
       )}
 
       {!intel.loading && intel.anomalies.length > 0 && (
-        <div style={{ marginBottom: 6, padding: '6px 8px',
-          background: 'rgba(255,200,0,0.04)', borderRadius: 5,
-          border: '1px solid rgba(255,200,0,0.12)' }}>
-          <div style={{ fontSize: 14, color: 'var(--color-warning-deep)', fontWeight: 700, marginBottom: 4 }}>
+        <div className="u-mb-6" style={{ padding: '6px 8px', background: 'rgba(255,200,0,0.04)', borderRadius: 5, border: '1px solid rgba(255,200,0,0.12)' }}>
+          <div className="u-fs-14 u-fw-700 u-mb-4" style={{ color: 'var(--color-warning-deep)' }}>
              异常行为 ({intel.anomalies.length})
           </div>
           {intel.anomalies.map((a, i) => (
@@ -170,37 +166,33 @@ export const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
         </div>
       )}
       {!intel.loading && intel.anomalies.length === 0 && (
-        <div style={{ marginBottom: 6, padding: '5px 8px',
-          background: 'rgba(57,255,20,0.03)', borderRadius: 5,
-          border: '1px solid rgba(57,255,20,0.10)', fontSize: 14, color: 'var(--color-emerald-700)' }}>
+        <div className="u-mb-6 u-fs-14" style={{ padding: '5px 8px', background: 'rgba(57,255,20,0.03)', borderRadius: 5, border: '1px solid rgba(57,255,20,0.10)', color: 'var(--color-emerald-700)' }}>
            暂无异常行为
         </div>
       )}
 
       {intel.loading && (
-        <div style={{ textAlign: 'center', padding: '8px 0', fontSize: 14, color: 'var(--color-blue-400)' }}>
+        <div className="u-ta-center u-p-8px0 u-fs-14" style={{ color: 'var(--color-blue-400)' }}>
           ⁙ 智能分析中...
         </div>
       )}
 
       {!intel.loading && intel.defectTrace && (
-        <div style={{ marginBottom: 6, padding: '6px 8px',
-          background: 'rgba(180,80,255,0.05)', borderRadius: 5,
-          border: '1px solid rgba(180,80,255,0.18)' }}>
-          <div style={{ fontSize: 14, color: 'var(--color-purple-400)', fontWeight: 700, marginBottom: 4 }}> 缺陷溯源</div>
+        <div className="u-mb-6" style={{ padding: '6px 8px', background: 'rgba(180,80,255,0.05)', borderRadius: 5, border: '1px solid rgba(180,80,255,0.18)' }}>
+          <div className="u-fs-14 u-fw-700 u-mb-4" style={{ color: 'var(--color-purple-400)' }}> 缺陷溯源</div>
           {intel.defectTrace.workers?.slice(0, 2).map((w, i) => (
-            <div key={i} style={{ fontSize: 14, color: 'var(--color-accent-purple)', marginBottom: 2 }}>
+            <div key={i} className="u-fs-14 u-mb-2" style={{ color: 'var(--color-accent-purple)' }}>
                {w.operatorName}：缺陷率 <b style={{ color: 'var(--color-pink-400)' }}>{(w.defectRate * 100).toFixed(1)}%</b>
               {w.worstProcess ? ` · ${w.worstProcess}` : ''}
             </div>
           ))}
           {intel.defectTrace.hotProcesses?.slice(0, 1).map((p, i) => (
-            <div key={i} style={{ fontSize: 14, color: 'var(--color-indigo-400)', marginTop: 2 }}>
+            <div key={i} className="u-fs-14 u-mt-2" style={{ color: 'var(--color-indigo-400)' }}>
                高发工序：{p.processName}（{p.defectCount} 件）
             </div>
           ))}
           {intel.defectTrace.overallDefectRate !== undefined && (
-            <div style={{ fontSize: 14, color: 'var(--color-purple-400)', marginTop: 4 }}> 总缺陷率：{(intel.defectTrace.overallDefectRate * 100).toFixed(1)}%（{intel.defectTrace.totalDefects} 件/{intel.defectTrace.totalScans} 件）</div>
+            <div className="u-fs-14 u-mt-4" style={{ color: 'var(--color-purple-400)' }}> 总缺陷率：{(intel.defectTrace.overallDefectRate * 100).toFixed(1)}%（{intel.defectTrace.totalDefects} 件/{intel.defectTrace.totalScans} 件）</div>
           )}
         </div>
       )}

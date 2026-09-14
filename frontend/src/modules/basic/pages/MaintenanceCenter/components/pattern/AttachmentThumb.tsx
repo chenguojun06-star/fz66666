@@ -29,13 +29,13 @@ export const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: stri
   }, [styleId, cover]);
 
   return (
-    <div style={{ width: 56, height: 56, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className="u-ov-hidden u-d-flex u-ai-center u-jc-center" style={{ width: 56, height: 56, background: 'var(--color-bg-subtle)' }}>
       {loading ? (
-        <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-sm)' }}>...</span>
+        <span className="u-fs-var--font-size-sm" style={{ color: 'var(--neutral-text-secondary)' }}>...</span>
       ) : url ? (
-        <SmartImage src={url || ''} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} preview={{ cover: <span>预览</span> }} />
+        <SmartImage src={url || ''} alt="cover" className="u-w-full u-h-full u-objf-cover" preview={{ cover: <span>预览</span> }} />
       ) : (
-        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-sm)' }}>无图</span>
+        <span className="u-fs-var--font-size-sm" style={{ color: 'var(--neutral-text-disabled)' }}>无图</span>
       )}
     </div>
   );

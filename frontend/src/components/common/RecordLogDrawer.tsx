@@ -110,8 +110,8 @@ const RecordLogDrawer: React.FC<Props> = ({ open, onClose, title, filter }) => {
       title={title || '操作日志'}
       width={760}
       footer={(
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+        <div className="u-d-flex u-ai-center u-gap-12">
+          <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
             共 {total} 条{filter.targetIds && total >= PAGE_SIZE ? '（仅匹配最近 200 条）' : ''}
           </span>
           <Button icon={<ReloadOutlined />} size="small" onClick={() => { void load(); }}>刷新</Button>
@@ -133,7 +133,7 @@ const RecordLogDrawer: React.FC<Props> = ({ open, onClose, title, filter }) => {
                 dataIndex: 'operationTime',
                 key: 'time',
                 width: 160,
-                render: (v: string) => <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{v ?? '-'}</span>,
+                render: (v: string) => <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>{v ?? '-'}</span>,
               },
               {
                 title: '操作类型',
@@ -141,7 +141,7 @@ const RecordLogDrawer: React.FC<Props> = ({ open, onClose, title, filter }) => {
                 key: 'type',
                 width: 150,
                 render: (_: unknown, item: OperationLogItem) => (
-                  <span style={{ fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <span className="u-fw-500 u-d-inline-flex u-ai-center u-gap-4">
                     <Tag color={item.status === 'failure' ? 'red' : 'blue'} style={{ marginInlineEnd: 4 }}>
                       {item.status === 'failure' ? '失败' : (item.operation || '-')}
                     </Tag>

@@ -43,14 +43,14 @@ const OrderOperationLogSection: React.FC<{ orderNo?: string; orderId?: number | 
   const visibleLogs = showAll ? logs : logs.slice(0, 20);
 
   return (
-    <div style={{ background: 'var(--color-bg-base)', borderRadius: 8, padding: '16px 20px', marginBottom: 16, border: '1px solid var(--color-border-light)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <Typography.Title level={5} style={{ margin: 0 }}>操作记录</Typography.Title>
-        <a style={{ marginLeft: 'auto', fontSize: 12 }} onClick={load}>刷新</a>
+    <div className="u-br-8 u-mb-16" style={{ background: 'var(--color-bg-base)', padding: '16px 20px', border: '1px solid var(--color-border-light)' }}>
+      <div className="u-d-flex u-ai-center u-gap-8 u-mb-8">
+        <Typography.Title level={5} className="u-m-0">操作记录</Typography.Title>
+        <a className="u-ml-auto u-fs-12" onClick={load}>刷新</a>
       </div>
       <Spin spinning={loading}>
         {logs.length === 0 && !loading ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无操作记录" style={{ margin: '8px 0' }} />
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无操作记录" className="u-m-8px0" />
         ) : (
           <Table
             size="small"
@@ -58,9 +58,9 @@ const OrderOperationLogSection: React.FC<{ orderNo?: string; orderId?: number | 
             dataSource={visibleLogs}
             pagination={false}
             columns={[
-              { title: '操作时间', dataIndex: 'createTime', key: 'time', width: 160, render: (v: string) => <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{v ?? '-'}</span> },
+              { title: '操作时间', dataIndex: 'createTime', key: 'time', width: 160, render: (v: string) => <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>{v ?? '-'}</span> },
               { title: '操作类型', dataIndex: 'action', key: 'type', width: 150, render: (_: unknown, item) => (
-                <span style={{ fontWeight: 500 }}>
+                <span className="u-fw-500">
                   <Tag color="blue" style={{ marginInlineEnd: 4 }}>订单</Tag>
                   {item.action ?? '-'}
                 </span>
@@ -71,8 +71,8 @@ const OrderOperationLogSection: React.FC<{ orderNo?: string; orderId?: number | 
           />
         )}
         {logs.length > 20 && (
-          <div style={{ textAlign: 'center', marginTop: 6 }}>
-            <a style={{ fontSize: 12 }} onClick={() => setShowAll((v) => !v)}>
+          <div className="u-ta-center u-mt-6">
+            <a className="u-fs-12" onClick={() => setShowAll((v) => !v)}>
               {showAll ? '收起，仅显示 20 条' : `查看全部（共 ${logs.length} 条）`}
             </a>
           </div>

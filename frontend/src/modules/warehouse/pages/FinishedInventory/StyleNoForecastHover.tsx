@@ -33,21 +33,21 @@ export function StyleNoForecastHover({ styleNo }: { styleNo: string }) {
         loading ? (
           '加载中...'
         ) : forecast ? (
-          <div style={{ fontSize: 14, lineHeight: 1.8, minWidth: 160 }}>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>销量预测（{forecast.horizonMonths}个月）</div>
+          <div className="u-fs-14 u-lh-18" style={{ minWidth: 160 }}>
+            <div className="u-fw-600 u-mb-4">销量预测（{forecast.horizonMonths}个月）</div>
             <div>预测: <b>{forecast.predictedQty}</b> 件</div>
             <div>乐观: {forecast.optimistic} / 悲观: {forecast.pessimistic}</div>
             <div>置信度: {forecast.confidence}%</div>
             {sizeEntries.length > 0 && (
               <>
-                <div style={{ fontWeight: 600, marginTop: 6, marginBottom: 4 }}>尺码曲线</div>
+                <div className="u-fw-600 u-mt-6 u-mb-4">尺码曲线</div>
                 {sizeEntries.map(([size, pct]) => (
-                  <div key={size} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div key={size} className="u-d-flex u-jc-between">
                     <span>{size}</span>
                     <span>{pct}%</span>
                   </div>
                 ))}
-                <div style={{ color: 'var(--color-text-tertiary)', marginTop: 2 }}>样本 {sizeCurve!.sampleCount} 条，置信 {sizeCurve!.confidence}%</div>
+                <div className="u-mt-2" style={{ color: 'var(--color-text-tertiary)' }}>样本 {sizeCurve!.sampleCount} 条，置信 {sizeCurve!.confidence}%</div>
               </>
             )}
           </div>
@@ -59,7 +59,7 @@ export function StyleNoForecastHover({ styleNo }: { styleNo: string }) {
         if (open) fetchForecast();
       }}
     >
-      <span style={{ color: 'var(--primary-color)', fontWeight: 600, cursor: 'pointer' }}>
+      <span className="u-fw-600 u-cur-pointer" style={{ color: 'var(--primary-color)' }}>
         {styleNo}
       </span>
     </Tooltip>

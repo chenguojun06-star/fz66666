@@ -130,8 +130,8 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
           {nodeInfo}
         </div>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontWeight: 600, fontSize: 'var(--font-size-subtitle)', color: 'var(--color-text-primary)' }}>菲号委派</span>
+      <div className="u-d-flex u-ai-center u-gap-10 u-mb-8 u-fwrap-wrap">
+        <span className="u-fw-600" style={{ fontSize: 'var(--font-size-subtitle)', color: 'var(--color-text-primary)' }}>菲号委派</span>
         <Checkbox
           checked={allSelected}
           indeterminate={selectedIds.length > 0 && !allSelected}
@@ -140,7 +140,7 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
         >
           全选可选菲号
         </Checkbox>
-        <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
+        <span className="u-fs-var--font-size-sm" style={{ color: 'var(--color-text-secondary)' }}>
           已选 <strong style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-subtitle)' }}>{selectedIds.length}</strong> 扎 ·{' '}
           <strong style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-subtitle)' }}>{selectedQuantity}</strong> 件 / 可选 {selectableBundles.length} 扎
         </span>
@@ -157,7 +157,7 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
         }}
       >
         {bundles.length === 0 ? (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary)', gridColumn: '1 / -1' }}>
+          <div className="u-p-24 u-ta-center" style={{ color: 'var(--color-text-secondary)', gridColumn: '1 / -1' }}>
             暂无菲号数据
           </div>
         ) : (
@@ -189,23 +189,23 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
                   onChange={(e) => handleToggleOne(b.id, e.target.checked)}
                   onClick={(e) => e.stopPropagation()}
                 />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ color: 'var(--color-text-primary)', fontSize: 'var(--font-size-subtitle)', fontWeight: 600 }}>
+                <div className="u-flex-1" style={{ minWidth: 0 }}>
+                  <div className="u-fw-600" style={{ color: 'var(--color-text-primary)', fontSize: 'var(--font-size-subtitle)' }}>
                     菲号 {b.bundleNo ?? '-'}
                   </div>
-                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', marginTop: 2 }}>
+                  <div className="u-fs-var--font-size-sm u-mt-2" style={{ color: 'var(--color-text-secondary)' }}>
                     {b.color || '-'} / {b.size || '-'}
                   </div>
-                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
+                  <div className="u-fs-var--font-size-sm" style={{ color: 'var(--color-text-secondary)' }}>
                     {b.quantity ?? 0} 件 · {BUNDLE_STATUS_LABEL[b.status ?? ''] ?? b.status ?? '-'}
                   </div>
                   {currentDelegate && currentDelegate !== '-' && (
-                    <div style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div className="u-fs-var--font-size-sm u-ov-hidden u-ws-nowrap" style={{ color: 'var(--color-text-tertiary)', textOverflow: 'ellipsis' }}>
                       委派：{currentDelegate}
                     </div>
                   )}
                   {delegateProcessText && (
-                    <div style={{ color: 'var(--color-text-tertiary)', fontSize: 'var(--font-size-sm)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div className="u-fs-var--font-size-sm u-ov-hidden u-ws-nowrap" style={{ color: 'var(--color-text-tertiary)', textOverflow: 'ellipsis' }}>
                       工序：{delegateProcessText}
                     </div>
                   )}
@@ -223,8 +223,8 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
         border: '1px solid var(--color-border-light)',
         borderRadius: 8,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', flexShrink: 0 }}>外发工序</span>
+        <div className="u-d-flex u-ai-center u-gap-10 u-fwrap-wrap">
+          <span className="u-fs-var--font-size-sm u-fshrink-0" style={{ color: 'var(--color-text-secondary)' }}>外发工序</span>
           <Select
             mode="multiple"
             allowClear
@@ -235,25 +235,25 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
             options={processSelectOptions}
             filterOption={(input, option) => String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
             disabled={disableEdit}
-            style={{ minWidth: 320, maxWidth: 560, flex: 1, fontSize: 'var(--font-size-base)' }}
+            className="u-flex-1" style={{ minWidth: 320, maxWidth: 560, fontSize: 'var(--font-size-base)' }}
           />
         </div>
         {selectedProcessPrices.length > 0 && (
-          <div style={{ marginTop: 6, fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+          <div className="u-mt-6 u-fs-var--font-size-sm" style={{ color: 'var(--color-text-secondary)' }}>
             逐工序单价：
             {selectedProcessPrices.map((p, idx) => (
               <span key={p.name}>
                 {idx > 0 ? ' · ' : ''}
                 {p.name}
-                <strong style={{ color: 'var(--color-primary)', marginLeft: 4 }}>
+                <strong className="u-ml-4" style={{ color: 'var(--color-primary)' }}>
                   {p.price > 0 ? `¥${p.price.toFixed(2)}/件` : '待定价'}
                 </strong>
               </span>
             ))}
           </div>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', flexShrink: 0 }}>
+        <div className="u-d-flex u-ai-center u-gap-10 u-mt-10 u-fwrap-wrap">
+          <span className="u-fs-var--font-size-sm u-fshrink-0" style={{ color: 'var(--color-text-secondary)' }}>
             {delegateType === 'factory' ? '执行工厂' : '委派人员'}
           </span>
           <Select

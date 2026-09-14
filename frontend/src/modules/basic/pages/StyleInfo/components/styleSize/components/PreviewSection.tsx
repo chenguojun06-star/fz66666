@@ -11,13 +11,13 @@ const PreviewSection: React.FC<Props> = ({ previewData, columns }) => {
   if (previewData.length === 0) return null;
   return (
     <>
-      <Divider style={{ margin: '12px 0' }} />
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <Divider className="u-m-12px0" />
+      <div className="u-mb-16">
+        <div className="u-fw-600 u-mb-8 u-fs-15 u-d-flex u-ai-center u-gap-6">
           <CheckCircleFilled style={{ color: 'var(--color-success)' }} />
           实时预览
         </div>
-        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 8 }}>
+        <div className="u-fs-13 u-mb-8" style={{ color: 'var(--color-text-tertiary)' }}>
           以下为根据当前跳码配置自动计算的放码结果，蓝色加粗为基准码
         </div>
         <Table
@@ -26,7 +26,7 @@ const PreviewSection: React.FC<Props> = ({ previewData, columns }) => {
           pagination={false}
           size="small"
           bordered
-          style={{ fontSize: 13 }}
+          className="u-fs-13"
         />
       </div>
     </>

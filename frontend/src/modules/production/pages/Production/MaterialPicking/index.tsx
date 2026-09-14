@@ -119,7 +119,7 @@ const MaterialPickingList: React.FC = () => {
       dataIndex: 'pickingNo',
       width: 150,
       render: (text: string, record: any) => (
-        <Button type="link" style={{ padding: 0, height: 'auto' }} onClick={() => {
+        <Button type="link" className="u-p-0 u-h-auto" onClick={() => {
           setSelectedPickingId(record.id);
           setDetailVisible(true);
         }}>{text}</Button>
@@ -248,11 +248,11 @@ const MaterialPickingList: React.FC = () => {
     <>
       <Card variant="borderless">
         {showSmartErrorNotice && smartError ? (
-          <Card style={{ marginBottom: 12 }}>
+          <Card className="u-mb-12">
             <SmartErrorNotice error={smartError} onFix={() => { void fetchList(); }} />
           </Card>
         ) : null}
-        <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div className="u-mb-16 u-d-flex u-ai-center u-jc-between u-gap-12 u-fwrap-wrap">
           <Space wrap>
             <Button
               type="primary"

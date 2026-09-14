@@ -140,7 +140,7 @@ const FeedbackTab: React.FC = () => {
     <div>
       {/* 统计卡片 */}
       {stats && (
-        <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Row gutter={16} className="u-mb-16">
           <Col span={6}><Card><Statistic title="总反馈" value={stats.total} /></Card></Col>
           <Col span={6}><Card><Statistic title="待处理" value={stats.pending} styles={{ content: { color: stats.pending > 0 ? 'var(--color-danger)' : undefined } }} /></Card></Col>
           <Col span={6}><Card><Statistic title="处理中" value={stats.processing} styles={{ content: { color: 'var(--color-info)' } }} /></Card></Col>
@@ -149,7 +149,7 @@ const FeedbackTab: React.FC = () => {
       )}
 
       {/* 筛选 */}
-      <Card style={{ marginBottom: 16 }}>
+      <Card className="u-mb-16">
         <Space wrap>
           <Select style={{ width: 120 }} placeholder="状态" allowClear value={queryParams.status || undefined}
             onChange={v => setQueryParams(p => ({ ...p, page: 1, status: v || '' }))}
@@ -219,7 +219,7 @@ const FeedbackTab: React.FC = () => {
             </Descriptions.Item>
             <Descriptions.Item label="标题" span={2}>{detailModal.data.title}</Descriptions.Item>
             <Descriptions.Item label="详细描述" span={2}>
-              <div style={{ whiteSpace: 'pre-wrap', maxHeight: 200, overflow: 'auto' }}>{detailModal.data.content}</div>
+              <div className="u-ws-pre-wrap u-ov-auto" style={{ maxHeight: 200 }}>{detailModal.data.content}</div>
             </Descriptions.Item>
             <Descriptions.Item label="联系方式" span={2}>{detailModal.data.contact || '-'}</Descriptions.Item>
             <Descriptions.Item label="提交时间">{detailModal.data.createTime}</Descriptions.Item>
@@ -227,7 +227,7 @@ const FeedbackTab: React.FC = () => {
             {detailModal.data.reply && (
               <>
                 <Descriptions.Item label="管理员回复" span={2}>
-                  <div style={{ whiteSpace: 'pre-wrap', color: 'var(--color-info)' }}>{detailModal.data.reply}</div>
+                  <div className="u-ws-pre-wrap" style={{ color: 'var(--color-info)' }}>{detailModal.data.reply}</div>
                 </Descriptions.Item>
                 <Descriptions.Item label="回复时间" span={2}>{detailModal.data.replyTime}</Descriptions.Item>
               </>
@@ -241,9 +241,9 @@ const FeedbackTab: React.FC = () => {
         onCancel={replyModal.close} width="40vw" onOk={handleReply} confirmLoading={replying} okText="提交回复"
       >
         {replyModal.data && (
-          <div style={{ marginBottom: 16, padding: 12, background: 'var(--color-bg-subtle)', borderRadius: 8 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{replyModal.data.title}</div>
-            <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>{replyModal.data.content}</div>
+          <div className="u-mb-16 u-p-12 u-br-8" style={{ background: 'var(--color-bg-subtle)' }}>
+            <div className="u-fs-14 u-fw-600 u-mb-4">{replyModal.data.title}</div>
+            <div className="u-fs-14 u-ws-pre-wrap" style={{ color: 'var(--color-text-secondary)' }}>{replyModal.data.content}</div>
           </div>
         )}
         <Form form={replyForm} layout="vertical">

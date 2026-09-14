@@ -67,7 +67,7 @@ export default function SampleStageExpandedContent({
       render: (val: string, record: ScanRecord) => (
         <span>
           {val || record.operatorId || '-'}
-          {record.operatorRole ? <Tag color="blue" style={{ marginLeft: 4, fontSize: 10 }}>{record.operatorRole}</Tag> : null}
+          {record.operatorRole ? <Tag color="blue" className="u-ml-4 u-fs-10">{record.operatorRole}</Tag> : null}
         </span>
       ),
     },
@@ -103,7 +103,7 @@ export default function SampleStageExpandedContent({
       align: 'right' as const,
       render: (v: number | null | undefined) =>
         v != null && v > 0 ? (
-          <span style={{ color: 'var(--color-success)', fontWeight: 500 }}>¥{Number(v).toFixed(2)}</span>
+          <span className="u-fw-500" style={{ color: 'var(--color-success)' }}>¥{Number(v).toFixed(2)}</span>
         ) : (
           <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>
         ),
@@ -154,7 +154,7 @@ export default function SampleStageExpandedContent({
             </div>
             <div className="sample-stage-expanded__fact">
               <span className="sample-stage-expanded__fact-label">二维码号</span>
-              <span className="sample-stage-expanded__fact-value" style={{ fontFamily: 'monospace', fontSize: 12 }}>
+              <span className="sample-stage-expanded__fact-value u-fs-12" style={{ fontFamily: 'monospace' }}>
                 {patternProductionId || patternId || '-'}
               </span>
             </div>
@@ -164,11 +164,11 @@ export default function SampleStageExpandedContent({
               value={JSON.stringify({ type: 'pattern', id: patternProductionId || patternId })}
               size={140}
               errorLevel="M"
-              style={{ flexShrink: 0 }}
+              className="u-fshrink-0"
             />
-            <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', lineHeight: 1.8 }}>
-              <div style={{ fontWeight: 500, color: 'var(--color-gray-700)', marginBottom: 2 }}>工人扫码领取 / 完成</div>
-              <div style={{ fontSize: 12 }}>样衣单号: {patternProductionId || patternId || '-'}</div>
+            <div className="u-fs-13 u-lh-18" style={{ color: 'var(--color-text-tertiary)' }}>
+              <div className="u-fw-500 u-mb-2" style={{ color: 'var(--color-gray-700)' }}>工人扫码领取 / 完成</div>
+              <div className="u-fs-12">样衣单号: {patternProductionId || patternId || '-'}</div>
             </div>
 
           </div>
@@ -176,8 +176,8 @@ export default function SampleStageExpandedContent({
 
         {stages.length > 0 || processLoading ? (
           <div className="sample-stage-expanded__section">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <div className="sample-stage-expanded__section-title" style={{ marginBottom: 0 }}>工序进度</div>
+            <div className="u-d-flex u-jc-between u-ai-center u-mb-8">
+              <div className="sample-stage-expanded__section-title u-mb-0" >工序进度</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: overallColor }}>
                 {overallPercent}%
               </div>
@@ -187,7 +187,7 @@ export default function SampleStageExpandedContent({
               showInfo={false}
               size={6}
               strokeColor={overallColor}
-              style={{ marginBottom: 12 }}
+              className="u-mb-12"
             />
             {processLoading ? (
               <Skeleton active paragraph={{ rows: 2 }} />
@@ -216,7 +216,7 @@ export default function SampleStageExpandedContent({
         <div className="sample-stage-expanded__section">
           <div className="sample-stage-expanded__section-title">
             扫码记录
-            <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--color-text-tertiary)', marginLeft: 8 }}>
+            <span className="u-fw-400 u-fs-12 u-ml-8" style={{ color: 'var(--color-text-tertiary)' }}>
               {scanRecords.length > 0 ? `${scanRecords.length} 条` : ''}
             </span>
           </div>
@@ -239,7 +239,7 @@ export default function SampleStageExpandedContent({
               size="small"
               pagination={scanRecords.length > 10 ? { pageSize: 10, size: 'small' } : false}
               scroll={{ x: 560, y: 300 }}
-              style={{ fontSize: 12 }}
+              className="u-fs-12"
             />
           )}
         </div>

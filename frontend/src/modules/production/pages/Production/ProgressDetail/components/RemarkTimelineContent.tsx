@@ -49,10 +49,10 @@ const RemarkTimelineContent: React.FC<RemarkTimelineContentProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 400 }}>
+    <div className="u-d-flex u-fd-column u-gap-12" style={{ maxHeight: 400 }}>
       {canAddRemark && (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Input.TextArea value={content} onChange={(e) => setContent(e.target.value)} rows={3} placeholder="添加备注…" style={{ flex: 1 }} />
+        <div className="u-d-flex u-gap-8">
+          <Input.TextArea value={content} onChange={(e) => setContent(e.target.value)} rows={3} placeholder="添加备注…" className="u-flex-1" />
           <Button type="primary" onClick={handleAdd} loading={submitting} disabled={!content.trim()}>提交</Button>
         </div>
       )}
@@ -67,9 +67,9 @@ const RemarkTimelineContent: React.FC<RemarkTimelineContentProps> = ({
             dataSource={remarks}
             pagination={false}
             columns={[
-              { title: '操作时间', dataIndex: 'createTime', key: 'time', width: 150, render: (v: string) => <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{formatDateTime(v)}</span> },
+              { title: '操作时间', dataIndex: 'createTime', key: 'time', width: 150, render: (v: string) => <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>{formatDateTime(v)}</span> },
               { title: '操作类型', dataIndex: 'authorRole', key: 'type', width: 130, render: (v: string) => v ? <Tag style={{ marginRight: 0 }}>{v}</Tag> : <span>备注</span> },
-              { title: '操作内容', dataIndex: 'content', key: 'content', render: (v: string) => <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{v}</span> },
+              { title: '操作内容', dataIndex: 'content', key: 'content', render: (v: string) => <span className="u-ws-pre-wrap" style={{ wordBreak: 'break-all' }}>{v}</span> },
               { title: '操作人', dataIndex: 'authorName', key: 'operator', width: 110, render: (v: string) => v || '匿名' },
             ]}
           />

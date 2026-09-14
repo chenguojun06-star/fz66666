@@ -79,7 +79,7 @@ export const getMaterialDatabaseColumns = (actions: MaterialColumnActions): Colu
         return (
           <Tag
             color="geekblue"
-            style={{ cursor: 'pointer' }}
+            className="u-cur-pointer"
             onClick={() => viewColorItems(record)}
           >
             色卡本物料
@@ -108,7 +108,7 @@ export const getMaterialDatabaseColumns = (actions: MaterialColumnActions): Colu
             label: '查看备注',
             onClick: () => Modal.info({
               title: '物料备注',
-              content: <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 320, overflow: 'auto' }}>{record.remark}</div>,
+              content: <div className="u-ws-pre-wrap u-ov-auto" style={{ wordBreak: 'break-word', maxHeight: 320 }}>{record.remark}</div>,
               width: 480,
               okText: '关闭',
             }),

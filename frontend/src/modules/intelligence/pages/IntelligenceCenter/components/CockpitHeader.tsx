@@ -59,15 +59,15 @@ const CockpitHeader: React.FC<CockpitHeaderProps> = ({
         </Tooltip>
         <Tooltip title="⌘K 全局搜索">
           <button
-            className="cockpit-fs-btn"
+            className="cockpit-fs-btn u-mr-4"
             onClick={onOpenCommandPalette}
-            style={{ marginRight: 4 }}
+            
           >
             <SearchOutlined />
           </button>
         </Tooltip>
         <Tooltip title="查看 AI 执行记录">
-          <button className="cockpit-fs-btn" onClick={onNavigateTrace} style={{ marginRight: 4 }}>
+          <button className="cockpit-fs-btn u-mr-4" onClick={onNavigateTrace} >
             <XiaoyunCloudAvatar size={18} active />
           </button>
         </Tooltip>

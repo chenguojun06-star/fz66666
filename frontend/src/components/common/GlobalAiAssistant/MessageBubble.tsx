@@ -54,17 +54,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     <div className={`${msgStyles.messageBubble} ${msg.role === 'ai' ? msgStyles.bubbleAi : msgStyles.bubbleUser}`}>
       {/* 显示用户上传的图片 */}
       {msg.imageUrl && (
-        <div style={{ marginBottom: 12 }}>
+        <div className="u-mb-12">
           <img
             src={msg.imageUrl}
             alt="用户上传的图片"
-            style={{
-              maxWidth: '100%',
-              maxHeight: 300,
-              borderRadius: 8,
-              border: '1px solid var(--color-border)',
-              objectFit: 'contain'
-            }}
+            className="u-br-8" style={{ maxWidth: '100%', maxHeight: 300, border: '1px solid var(--color-border)', objectFit: 'contain' }}
           />
         </div>
       )}
@@ -88,7 +82,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             <OverdueFactoryCardWidget data={msg.overdueFactoryCard} onNavigate={(path) => onSafeNavigate(path)} />
           )}
           {msg.reportType && (
-            <div style={{ marginTop: 6 }}>
+            <div className="u-mt-6">
               {msg.reportPreview && <ReportPreviewCardWidget data={msg.reportPreview} />}
               <button
                 className={msgStyles.reportDownloadBtn}
@@ -230,7 +224,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           {msg.traceableAdvice && (
             <div className={msgStyles.traceableAdvice}>
               <div className={msgStyles.adviceTitle}>{msg.traceableAdvice.title}</div>
-              <div style={{ marginBottom: 12 }}>
+              <div className="u-mb-12">
                 <details className={msgStyles.adviceSummary}>
                   <summary style={{ outline: 'none', userSelect: 'none' }}>🔍 查看评估依据</summary>
                   <ul className={msgStyles.adviceDetails}>
@@ -265,7 +259,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           {(msg.traceId || msg.agentCommandId) && <FeedbackWidget msg={msg} onFeedback={onFeedback} />}
         </>
       ) : (
-        <div style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</div>
+        <div className="u-ws-pre-wrap">{msg.text}</div>
       )}
       {msg.timestamp && (
         <div className={msgStyles.messageTime}>

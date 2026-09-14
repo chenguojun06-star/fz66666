@@ -21,7 +21,7 @@ const InvoiceUploadCard: React.FC<InvoiceUploadCardProps> = ({
 }) => {
   return (
     <Card
-      style={{ marginTop: 12 }}
+      className="u-mt-12"
       title={
         <Space>
           <FileImageOutlined />
@@ -31,8 +31,8 @@ const InvoiceUploadCard: React.FC<InvoiceUploadCardProps> = ({
       }
     >
       {invoiceUploading && (
-        <div style={{ marginBottom: 8 }}>
-          <Spin indicator={<LoadingOutlined style={{ fontSize: 16 }} />} /> 上传中...
+        <div className="u-mb-8">
+          <Spin indicator={<LoadingOutlined className="u-fs-16" />} /> 上传中...
         </div>
       )}
       <MultiImageUploadBox
@@ -47,7 +47,7 @@ const InvoiceUploadCard: React.FC<InvoiceUploadCardProps> = ({
         disabled={disabled}
       />
       {invoiceUrls.length === 0 && !invoiceUploading && (
-        <div style={{ color: 'var(--color-text-quaternary)', fontSize: 14, textAlign: 'center', padding: '4px 0 0' }}>
+        <div className="u-fs-14 u-ta-center" style={{ color: 'var(--color-text-quaternary)', padding: '4px 0 0' }}>
           暂无发票/单据，支持拖拽、粘贴或点击上传
         </div>
       )}

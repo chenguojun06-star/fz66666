@@ -192,7 +192,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
               请前往<a href={`/production/material/${encodeURIComponent(String(order?.styleNo || firstPurchase?.styleNo || ''))}?orderNo=${encodeURIComponent(String(orderNo || ''))}`}>物料采购详情页</a>为每个颜色分别添加面料信息。
             </span>
           }
-          style={{ marginBottom: 12 }}
+          className="u-mb-12"
         />
       )}
 
@@ -268,7 +268,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
             columns={editColumns}
           />
         ) : purchases.length === 0 && !loading ? (
-          <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+          <div className="u-ta-center" style={{ padding: '48px 16px' }}>
             <Alert
               type="info"
               showIcon
@@ -278,7 +278,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
                   ? `订单包含 ${orderColorSet.size} 种颜色（${Array.from(orderColorSet).join('、')}），点击「编辑物料」按钮为每种颜色创建对应的面辅料记录。`
                   : '点击上方「编辑物料」按钮，为订单添加面辅料信息（物料编码、名称、单位、供应商等），完善后才可进行采购。'
               }
-              style={{ maxWidth: 600, margin: '0 auto', textAlign: 'left' }}
+              className="u-ta-left" style={{ maxWidth: 600, margin: '0 auto' }}
               action={
                 <Button type="primary" size="small" onClick={handleStartEdit}>
                   编辑物料
@@ -331,7 +331,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
         width="40vw"
         destroyOnHidden
       >
-        <Form form={receiveForm} layout="vertical" style={{ marginTop: 12 }}>
+        <Form form={receiveForm} layout="vertical" className="u-mt-12">
           <Form.Item label="物料">{receiveModalRecord?.materialName || receiveModalRecord?.materialCode || '-'}</Form.Item>
           <Form.Item label="物料编码">{receiveModalRecord?.materialCode || '-'}</Form.Item>
           <Form.Item label="颜色/规格">{`${receiveModalRecord?.color || '-'} / ${receiveModalRecord?.specifications || '-'}`}</Form.Item>
@@ -344,7 +344,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
               { type: 'number', min: 1, message: '数量必须大于 0' },
             ]}
           >
-            <InputNumber style={{ width: '100%' }} min={1} precision={0} addonAfter={receiveModalRecord?.unit || ''} />
+            <InputNumber className="u-w-full" min={1} precision={0} addonAfter={receiveModalRecord?.unit || ''} />
           </Form.Item>
         </Form>
       </ResizableModal>
@@ -358,7 +358,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
         width="40vw"
         destroyOnHidden
       >
-        <Form form={inboundForm} layout="vertical" style={{ marginTop: 12 }}>
+        <Form form={inboundForm} layout="vertical" className="u-mt-12">
           <Form.Item label="物料">{inboundModalRecord?.materialName || inboundModalRecord?.materialCode || '-'}</Form.Item>
           <Form.Item label="物料编码">{inboundModalRecord?.materialCode || '-'}</Form.Item>
           <Form.Item label="颜色/规格">{`${inboundModalRecord?.color || '-'} / ${inboundModalRecord?.specifications || '-'}`}</Form.Item>
@@ -374,7 +374,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
             ]}
             extra="物料到货/入库数量目前按整数登记；小数到货需数据模型升级后开放"
           >
-            <InputNumber style={{ width: '100%' }} min={1} step={1} precision={0} addonAfter={inboundModalRecord?.unit || ''} />
+            <InputNumber className="u-w-full" min={1} step={1} precision={0} addonAfter={inboundModalRecord?.unit || ''} />
           </Form.Item>
           {/* D-366b：到货时必须选去向（用户拍板与大货/样衣统一） */}
           <Form.Item
@@ -433,7 +433,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
               showIcon
               message="直采使用：物料不进仓库"
               description="到货数量只登记到货，不增加库存；系统会记一条采购直用流水，适合到货即上线使用的场景。"
-              style={{ marginBottom: 12 }}
+              className="u-mb-12"
             />
           )}
           <Form.Item
@@ -453,7 +453,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
         width="40vw"
         destroyOnHidden
       >
-        <Form form={returnForm} layout="vertical" style={{ marginTop: 12 }}>
+        <Form form={returnForm} layout="vertical" className="u-mt-12">
           <Form.Item label="物料">{returnModalRecord?.materialName || returnModalRecord?.materialCode || '-'}</Form.Item>
           <Form.Item label="物料编码">{returnModalRecord?.materialCode || '-'}</Form.Item>
           <Form.Item label="颜色/规格">{`${returnModalRecord?.color || '-'} / ${returnModalRecord?.specifications || '-'}`}</Form.Item>
@@ -466,7 +466,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
               { type: 'number', min: 0, message: '不能为负数' },
             ]}
           >
-            <InputNumber style={{ width: '100%' }} min={0} precision={0} addonAfter={returnModalRecord?.unit || ''} />
+            <InputNumber className="u-w-full" min={0} precision={0} addonAfter={returnModalRecord?.unit || ''} />
           </Form.Item>
         </Form>
       </ResizableModal>

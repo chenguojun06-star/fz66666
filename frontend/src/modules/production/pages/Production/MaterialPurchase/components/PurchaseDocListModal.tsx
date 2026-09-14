@@ -73,7 +73,7 @@ const PurchaseDocListModal: React.FC<Props> = ({ open, orderNo, styleNo, onCance
           />
         ) : (
           <Image.PreviewGroup>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, maxHeight: '60vh', overflowY: 'auto' }}>
+            <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', maxHeight: '60vh', overflowY: 'auto' }}>
               {docs.map((doc) => (
                 <div
                   key={doc.id}
@@ -89,10 +89,10 @@ const PurchaseDocListModal: React.FC<Props> = ({ open, orderNo, styleNo, onCance
                   <Image
                     src={doc.imageUrl}
                     alt="采购单据"
-                    style={{ width: '100%', height: 140, objectFit: 'contain', background: 'var(--color-fill-quaternary)' }}
+                    className="u-w-full" style={{ height: 140, objectFit: 'contain', background: 'var(--color-fill-quaternary)' }}
                     fallback="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciLz4="
                   />
-                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <div className="u-fs-var--font-size-xs u-d-flex u-fd-column" style={{ color: 'var(--color-text-secondary)', gap: 2 }}>
                     <span>{doc.uploaderName ? `${doc.uploaderName} 上传` : '—'}</span>
                     <span>{formatDateTime(doc.createTime)}</span>
                     <span>

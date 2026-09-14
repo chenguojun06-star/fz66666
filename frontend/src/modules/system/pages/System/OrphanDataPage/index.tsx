@@ -91,7 +91,7 @@ const OrphanDataPage: React.FC = () => {
 
   const columns = [
     { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 140,
-      render: (v: string) => v ? <span style={{ color: 'var(--color-info)', fontWeight: 500 }}>{v}</span> : <span style={{ color: 'var(--color-text-quaternary)' }}>-</span> },
+      render: (v: string) => v ? <span className="u-fw-500" style={{ color: 'var(--color-info)' }}>{v}</span> : <span style={{ color: 'var(--color-text-quaternary)' }}>-</span> },
     { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120,
       render: (v: string) => v || <span style={{ color: 'var(--color-text-quaternary)' }}>-</span> },
     { title: '摘要', dataIndex: 'summary', key: 'summary', ellipsis: true },
@@ -113,7 +113,7 @@ const OrphanDataPage: React.FC = () => {
       }
     },
     { title: '孤立原因', dataIndex: 'orphanReason', key: 'orphanReason', width: 120,
-      render: (v: string) => <span style={{ color: 'var(--color-warning)', fontSize: 14 }}>{v}</span> },
+      render: (v: string) => <span className="u-fs-14" style={{ color: 'var(--color-warning)' }}>{v}</span> },
     { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 160,
       render: (v: string) => v ? new Date(v).toLocaleString('zh-CN') : '-' },
   ];
@@ -131,7 +131,7 @@ const OrphanDataPage: React.FC = () => {
 
       {scanResult && (
         <div className="orphan-scan-result">
-          <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Row gutter={16} className="u-mb-16">
             <Col span={8}>
               <Card>
                 <Statistic title="孤立数据总量" value={scanResult.totalOrphanCount} suffix="条"
@@ -164,7 +164,7 @@ const OrphanDataPage: React.FC = () => {
                     <div className="orphan-category-label">{cat.tableLabel}</div>
                     <div className="orphan-category-count">{cat.count} 条</div>
                   </div>
-                  <Tag color={MODULE_COLORS[cat.module] || 'default'} style={{ marginLeft: 'auto' }}>{cat.module}</Tag>
+                  <Tag color={MODULE_COLORS[cat.module] || 'default'} className="u-ml-auto">{cat.module}</Tag>
                 </div>
               ))}
             </div>

@@ -62,7 +62,7 @@ const OrderBasicInfoCard: React.FC<Props> = ({
   warehousingTotal, warehousingQualified, warehousingUnqualified,
 }) => {
   return (
-    <Card className="order-flow-detail" style={{ marginTop: 8 }} loading={loading}>
+    <Card className="order-flow-detail u-mt-8"  loading={loading}>
       {/* ── 上：订单概况 —— 图片 + 基本信息 ── */}
       <div className="order-flow-detail-block">
         <div className="order-flow-detail-head">
@@ -74,17 +74,17 @@ const OrderBasicInfoCard: React.FC<Props> = ({
           <div className="order-flow-detail-head__info">
             <SectionTitle
               text="基本信息"
-              extra={editing ? <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--color-text-quaternary)' }}>点击字段值可编辑</span> : undefined}
+              extra={editing ? <span className="u-fs-12 u-fw-400" style={{ color: 'var(--color-text-quaternary)' }}>点击字段值可编辑</span> : undefined}
             />
             <Descriptions column={2} size="small" bordered
               labelStyle={descLabelStyle} contentStyle={descContentStyle}
             >
               <Descriptions.Item label="订单号">
-                <span style={{ fontWeight: 600 }}>
+                <span className="u-fw-600">
                   {(order as any)?.orderNo || '-'}
                   {(order as any)?.ecPlatform && (() => {
                     const t = getPlatformTag((order as any).ecPlatform);
-                    return <Tag color={t.color} style={{ marginLeft: 8 }}>{t.label}</Tag>;
+                    return <Tag color={t.color} className="u-ml-8">{t.label}</Tag>;
                   })()}
                 </span>
               </Descriptions.Item>
@@ -151,7 +151,7 @@ const OrderBasicInfoCard: React.FC<Props> = ({
             />
           )
         ) : (
-          <span style={{ fontSize: 13, color: 'var(--color-text-quaternary)' }}>-</span>
+          <span className="u-fs-13" style={{ color: 'var(--color-text-quaternary)' }}>-</span>
         )}
       </div>
 
@@ -163,15 +163,15 @@ const OrderBasicInfoCard: React.FC<Props> = ({
             labelStyle={descLabelStyle} contentStyle={descContentStyle}
           >
             <Descriptions.Item label="下单数">
-              <span style={{ fontWeight: 600 }}>{toNumberSafe((order as any)?.orderQuantity)}</span>
+              <span className="u-fw-600">{toNumberSafe((order as any)?.orderQuantity)}</span>
             </Descriptions.Item>
             <Descriptions.Item label="已完成">{toNumberSafe((order as any)?.completedQuantity)}</Descriptions.Item>
             <Descriptions.Item label="生产进度">
-              <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{`${calcOrderProgress(order ?? undefined)}%`}</span>
+              <span className="u-fw-600" style={{ color: 'var(--color-primary)' }}>{`${calcOrderProgress(order ?? undefined)}%`}</span>
             </Descriptions.Item>
             <Descriptions.Item label="扎数">{toNumberSafe((order as any)?.cuttingBundleCount)}</Descriptions.Item>
             <Descriptions.Item label="入库数">
-              <span style={{ fontWeight: 600 }}>{warehousingTotal}</span>
+              <span className="u-fw-600">{warehousingTotal}</span>
             </Descriptions.Item>
             <Descriptions.Item label="合格/不合格">{`${warehousingQualified} / ${warehousingUnqualified}`}</Descriptions.Item>
           </Descriptions>

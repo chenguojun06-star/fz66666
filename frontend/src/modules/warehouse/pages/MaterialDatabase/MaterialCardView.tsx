@@ -37,7 +37,7 @@ const MaterialCardView: React.FC<MaterialCardViewProps> = ({
   return (
     <>
       {/* 卡片视图搜索栏 —— 使用标准 StandardToolbar + StandardSearchBar */}
-      <Card style={{ marginBottom: 12, background: 'var(--color-bg-container)' }}>
+      <Card className="u-mb-12" style={{ background: 'var(--color-bg-container)' }}>
         <StandardToolbar
           left={
             <StandardSearchBar
@@ -117,7 +117,7 @@ const MaterialCardView: React.FC<MaterialCardViewProps> = ({
         }}
         hoverRender={(record) => (
           <div style={{ maxWidth: 400 }}>
-            {record.remark && <div style={{ marginBottom: 8, color: 'var(--color-text-secondary)' }}>备注：{record.remark}</div>}
+            {record.remark && <div className="u-mb-8" style={{ color: 'var(--color-text-secondary)' }}>备注：{record.remark}</div>}
             {record.supplierContactPerson && <div>联系人：{record.supplierContactPerson}</div>}
             {record.supplierContactPhone && <div>电话：{record.supplierContactPhone}</div>}
             <div>创建时间：{record.createTime?.slice(0, 19).replace('T', ' ')}</div>
@@ -127,8 +127,8 @@ const MaterialCardView: React.FC<MaterialCardViewProps> = ({
 
       {/* 空状态 */}
       {cardDataList.length === 0 && !cardLoading && (
-        <Card style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-tertiary)', marginTop: 12 }}>
-          <FileTextOutlined style={{ fontSize: 48, marginBottom: 12 }} />
+        <Card className="u-ta-center u-mt-12" style={{ padding: '60px 0', color: 'var(--color-text-tertiary)' }}>
+          <FileTextOutlined className="u-mb-12" style={{ fontSize: 48 }} />
           <div>暂无物料色卡，点击右上角"新建物料色卡"开始创建</div>
         </Card>
       )}

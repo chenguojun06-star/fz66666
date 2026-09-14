@@ -28,16 +28,16 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({ activeTab, internalOr
         return (
             <>
                 <Card size="small" style={cardStyle} styles={{ body: bodyStyle }}>
-                    <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ShopOutlined style={{ marginRight: 4, fontSize: 12 }} />订单数</span>} value={internalOrders.length} suffix="条" valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 600 }} />
+                    <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ShopOutlined className="u-mr-4 u-fs-12" />订单数</span>} value={internalOrders.length} suffix="条" valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 600 }} />
                 </Card>
                 <Card size="small" style={cardStyle} styles={{ body: bodyStyle }}>
-                    <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />生产中</span>} value={internalOrders.filter((r: any) => r.status === 'production' || r.status === 'IN_PRODUCTION' || r.status === 'in_production').length} suffix="条" valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 600 }} />
+                    <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined className="u-mr-4 u-fs-12" />生产中</span>} value={internalOrders.filter((r: any) => r.status === 'production' || r.status === 'IN_PRODUCTION' || r.status === 'in_production').length} suffix="条" valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 600 }} />
                 </Card>
                 <Card size="small" style={cardStyle} styles={{ body: bodyStyle }}>
-                    <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已完成</span>} value={internalOrders.filter((r: any) => r.status === 'completed' || r.status === 'COMPLETED' || r.status === 'closed' || r.status === 'CLOSED').length} suffix="条" valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 600 }} />
+                    <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined className="u-mr-4 u-fs-12" />已完成</span>} value={internalOrders.filter((r: any) => r.status === 'completed' || r.status === 'COMPLETED' || r.status === 'closed' || r.status === 'CLOSED').length} suffix="条" valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 600 }} />
                 </Card>
                 <Card size="small" style={cardStyle} styles={{ body: bodyStyle }}>
-                    <Statistic title={<span style={{ color: 'var(--color-text-secondary)', fontSize: 12, fontWeight: 500 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />合计金额</span>} value={internalOrders.reduce((s: number, r: any) => s + toNumberOrZero(r.totalAmount), 0)} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-primary)', fontSize: 17, fontWeight: 700 }} />
+                    <Statistic title={<span className="u-fs-12 u-fw-500" style={{ color: 'var(--color-text-secondary)' }}><DollarOutlined className="u-mr-4 u-fs-12" />合计金额</span>} value={internalOrders.reduce((s: number, r: any) => s + toNumberOrZero(r.totalAmount), 0)} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-primary)', fontSize: 17, fontWeight: 700 }} />
                 </Card>
             </>
         );
@@ -45,16 +45,16 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({ activeTab, internalOr
     return (
         <>
             <Card size="small" style={cardStyle} styles={{ body: bodyStyle }}>
-                <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>} value={rows.filter((r: any) => !r.auditStatus || r.auditStatus === 'pending').length} suffix="条" valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 600 }} />
+                <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined className="u-mr-4 u-fs-12" />待审批</span>} value={rows.filter((r: any) => !r.auditStatus || r.auditStatus === 'pending').length} suffix="条" valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 600 }} />
             </Card>
             <Card size="small" style={cardStyle} styles={{ body: bodyStyle }}>
-                <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>} value={rows.filter((r: any) => r.auditStatus === 'approved' || r.auditStatus === 'audited').length} suffix="条" valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 600 }} />
+                <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined className="u-mr-4 u-fs-12" />已审批</span>} value={rows.filter((r: any) => r.auditStatus === 'approved' || r.auditStatus === 'audited').length} suffix="条" valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 600 }} />
             </Card>
             <Card size="small" style={cardStyle} styles={{ body: bodyStyle }}>
-                <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已付款</span>} value={rows.filter((r: any) => r.paymentStatus === 'paid' || r.status === 'paid').length} suffix="条" valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 600 }} />
+                <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined className="u-mr-4 u-fs-12" />已付款</span>} value={rows.filter((r: any) => r.paymentStatus === 'paid' || r.status === 'paid').length} suffix="条" valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 600 }} />
             </Card>
             <Card size="small" style={cardStyle} styles={{ body: bodyStyle }}>
-                <Statistic title={<span style={{ color: 'var(--color-text-secondary)', fontSize: 12, fontWeight: 500 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />合计金额</span>} value={totalAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-primary)', fontSize: 17, fontWeight: 700 }} />
+                <Statistic title={<span className="u-fs-12 u-fw-500" style={{ color: 'var(--color-text-secondary)' }}><DollarOutlined className="u-mr-4 u-fs-12" />合计金额</span>} value={totalAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-primary)', fontSize: 17, fontWeight: 700 }} />
             </Card>
         </>
     );

@@ -180,9 +180,9 @@ const VERDICT_LABEL = { good: '可开工', warn: '需关注', critical: '阻塞�
 /** 渲染智能分析 Tooltip 内容 */
 export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string): React.ReactNode {
   return (
-    <div style={{ fontSize: 14, maxWidth: 360, lineHeight: 1.7, color: 'var(--color-text-primary)' }}>
+    <div className="u-fs-14" style={{ maxWidth: 360, lineHeight: 1.7, color: 'var(--color-text-primary)' }}>
       {/* 标题 + 状态 */}
-      <div style={{ fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div className="u-fw-600 u-mb-6 u-d-flex u-ai-center u-gap-6">
         <span> 智能采购分析</span>
         <span style={{
           fontSize: 14, padding: '1px 6px', borderRadius: 4,
@@ -191,21 +191,21 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
       </div>
 
       {/* 核心数据 */}
-      <div style={{ marginBottom: 6, padding: '4px 8px', background: 'rgba(0,0,0,0.04)', borderRadius: 4, color: 'var(--color-text-secondary)' }}>
+      <div className="u-mb-6 u-br-4" style={{ padding: '4px 8px', background: 'rgba(0,0,0,0.04)', color: 'var(--color-text-secondary)' }}>
         {insight.totalMaterials} 种物料 · 到货率 {insight.arrivalRate}%
         {insight.canStartCutting ? ' ·  可开裁' : ' ·  不可开裁'}
       </div>
 
       {/* 关键路径 */}
       {insight.criticalPath && (
-        <div style={{ marginBottom: 6, fontWeight: 500, color: 'var(--color-text-primary)' }}>
+        <div className="u-mb-6 u-fw-500" style={{ color: 'var(--color-text-primary)' }}>
            {insight.criticalPath}
         </div>
       )}
 
       {/* 风险 */}
       {insight.risks.length > 0 && (
-        <div style={{ marginBottom: 6 }}>
+        <div className="u-mb-6">
           {insight.risks.map((r, i) => (
             <div key={`r${i}`} style={{ color: 'var(--color-orange-700)' }}> {r}</div>
           ))}
@@ -214,7 +214,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
 
       {/* 供应商情况 */}
       {insight.supplierIssues.length > 0 && (
-        <div style={{ marginBottom: 6 }}>
+        <div className="u-mb-6">
           {insight.supplierIssues.map((s, i) => (
             <div key={`sp${i}`} style={{ color: 'var(--color-gray-700)' }}> {s}</div>
           ))}
@@ -223,7 +223,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
 
       {/* 预计影响 */}
       {insight.impact.length > 0 && (
-        <div style={{ marginBottom: 6 }}>
+        <div className="u-mb-6">
           {insight.impact.map((line, i) => (
             <div key={`i${i}`} style={{ color: 'var(--color-primary)' }}> {line}</div>
           ))}

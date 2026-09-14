@@ -57,8 +57,8 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
 
   return (
     <Card className="filter-card mb-sm">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="u-d-flex u-ai-center u-jc-between u-gap-12">
+        <div className="u-flex-1 u-d-flex u-ai-center u-gap-8">
           <StandardSearchBar
             searchValue={queryParams.orderNo || ''}
             onSearchChange={handleSearchChange}

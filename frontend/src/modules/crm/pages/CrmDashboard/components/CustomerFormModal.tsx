@@ -56,7 +56,7 @@ const CustomerFormModal: React.FC<CustomerFormModalProps> = ({ open, editData, o
       width="40vw"
       destroyOnHidden
     >
-      <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+      <Form form={form} layout="vertical" className="u-mt-16">
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="companyName" label="公司名称" rules={[{ required: true, message: '请输入公司名称' }]}>

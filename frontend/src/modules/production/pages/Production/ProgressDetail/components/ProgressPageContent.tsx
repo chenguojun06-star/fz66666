@@ -131,7 +131,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
     const label = RISK_TYPE_LABELS[risks[0]?.issueType] || 'AI巡检';
     const colorMap: Record<string, string> = { HIGH: 'red', MEDIUM: 'orange', LOW: 'gold' };
     return (
-      <Tag color={colorMap[severity] || 'orange'} style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 4px' }}>
+      <Tag color={colorMap[severity] || 'orange'} className="u-m-0 u-fs-12 u-lh-18px u-p-04px">
         {label}
       </Tag>
     );
@@ -142,7 +142,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
     const patrol = patrolTitleTags(record);
     if (!base && !patrol) return null;
     return (
-      <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="u-d-flex u-fwrap-wrap u-ai-center" style={{ gap: 3 }}>
         {base}
         {patrol}
       </div>
@@ -166,7 +166,7 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
         type={type}
         showIcon
         title={`${msg}${autoInfo}`}
-        style={{ marginBottom: 10 }}
+        className="u-mb-10"
         closable
       />
     );
@@ -195,11 +195,11 @@ const ProgressPageContent: React.FC<ProgressPageContentProps> = ({
       { label: '', key: 'statusTags', render: (_val: any, record: any) => {
         const { text: remainText, color: remainColor } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string);
         return (
-          <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-            <DisplayStatusTag status={record?.status} variant="order" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }} />
-            {record?.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }}>急</Tag>}
-            {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
-            {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
+          <div className="u-d-flex u-fwrap-wrap u-ai-center" style={{ gap: 3 }}>
+            <DisplayStatusTag status={record?.status} variant="order" className="u-m-0 u-fs-14 u-p-04px u-lh-18px" style={{ height: 18 }} />
+            {record?.urgencyLevel === 'urgent' && <Tag color="red" className="u-m-0 u-fs-14 u-p-04px u-lh-18px" style={{ height: 18 }}>急</Tag>}
+            {String(record?.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" className="u-m-0 u-fs-14 u-p-04px u-lh-18px" style={{ height: 18 }}>首单</Tag>}
+            {String(record?.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" className="u-m-0 u-fs-14 u-p-04px u-lh-18px" style={{ height: 18 }}>翻单</Tag>}
             {remainText && remainText !== '已完成' && remainText !== '已报废' && remainText !== '已关单' && remainText !== '已取消' && remainText !== '-'
               && <Tag style={{ margin: 0, fontSize: 14, padding: '0 4px', lineHeight: '18px', height: 18, color: remainColor, borderColor: remainColor, background: 'transparent', fontWeight: 600 }}>{remainText}</Tag>}
           </div>

@@ -47,8 +47,8 @@ const CancelReceiveModal: React.FC<CancelReceiveModalProps> = ({ open, target, o
       title="撤回采购"
       description={target ? (
         <div>
-          <p style={{ marginBottom: 8 }}>确定撤回「{target.materialName || target.materialCode}」的采购记录？</p>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 4 }}>领取人：{target.receiverName || '-'}，到货数量：{formatMaterialQuantityWithUnit(target.arrivedQuantity || 0, target.unit)}</p>
+          <p className="u-mb-8">确定撤回「{target.materialName || target.materialCode}」的采购记录？</p>
+          <p className="u-fs-14 u-mb-4" style={{ color: 'var(--text-secondary)' }}>领取人：{target.receiverName || '-'}，到货数量：{formatMaterialQuantityWithUnit(target.arrivedQuantity || 0, target.unit)}</p>
         </div>
       ) : null}
       fieldLabel="撤回原因"

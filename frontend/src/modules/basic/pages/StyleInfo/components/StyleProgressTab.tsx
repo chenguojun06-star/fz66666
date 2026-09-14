@@ -87,7 +87,7 @@ const StageNode: React.FC<{
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', flex: '0 0 auto' }}>
+    <div className="u-d-flex u-ai-center" style={{ flex: '0 0 auto' }}>
       <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         width: 100, gap: 4, padding: '8px 0',
@@ -107,12 +107,12 @@ const StageNode: React.FC<{
           {name}
         </div>
         {startTime && (
-          <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', textAlign: 'center' }}>
+          <div className="u-fs-10 u-ta-center" style={{ color: 'var(--color-text-tertiary)' }}>
             领取：{fmt(startTime)}
           </div>
         )}
         {completeTime && (
-          <div style={{ fontSize: 10, color: 'var(--color-success)', textAlign: 'center' }}>
+          <div className="u-fs-10 u-ta-center" style={{ color: 'var(--color-success)' }}>
             完成：{fmt(completeTime)}
           </div>
         )}
@@ -235,12 +235,12 @@ const StyleProgressTab: React.FC<Props> = ({ styleId, styleNo }) => {
   }, [pattern]);
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: 40 }}><Spin tip="加载中..." /></div>;
+    return <div className="u-ta-center" style={{ padding: 40 }}><Spin tip="加载中..." /></div>;
   }
 
   if (!detail) {
     return (
-      <div style={{ textAlign: 'center', padding: 40 }}>
+      <div className="u-ta-center" style={{ padding: 40 }}>
         <Empty description="暂无样衣开发记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       </div>
     );
@@ -249,14 +249,14 @@ const StyleProgressTab: React.FC<Props> = ({ styleId, styleNo }) => {
   const statusStr = pattern ? String(pattern.status || '').toUpperCase() : '';
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <div className="u-p-04px">
       <div style={{
         display: 'flex', alignItems: 'center', gap: 16,
         padding: '12px 16px', marginBottom: 16,
         background: 'var(--color-bg-subtle, var(--color-bg-container))',
         borderRadius: 8, flexWrap: 'wrap',
       }}>
-        <div style={{ fontSize: 14, fontWeight: 600 }}>
+        <div className="u-fs-14 u-fw-600">
           款号：{styleNo}
         </div>
         {pattern && (
@@ -265,18 +265,18 @@ const StyleProgressTab: React.FC<Props> = ({ styleId, styleNo }) => {
           </Tag>
         )}
         {pattern?.quantity && (
-          <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+          <div className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
             数量：{pattern.quantity} 件
           </div>
         )}
         {pattern?.deliveryTime && (
           <div style={{ fontSize: 13, color: overdueDays > 0 ? 'var(--color-danger)' : 'var(--color-text-secondary)' }}>
             交期：{dayjs(String(pattern.deliveryTime)).format('YYYY-MM-DD')}
-            {overdueDays > 0 && <span style={{ marginLeft: 4, color: 'var(--color-danger)', fontWeight: 600 }}>逾{overdueDays}天</span>}
+            {overdueDays > 0 && <span className="u-ml-4 u-fw-600" style={{ color: 'var(--color-danger)' }}>逾{overdueDays}天</span>}
           </div>
         )}
         {pattern?.patternMaker && (
-          <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+          <div className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
             纸样师傅：{String(pattern.patternMaker)}
           </div>
         )}

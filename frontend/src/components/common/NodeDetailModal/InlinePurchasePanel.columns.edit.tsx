@@ -22,7 +22,7 @@ export const buildEditColumns = (handlers: EditColumnHandlers): ColumnsType<Mate
           value={String(v || 'fabricA')}
           options={MATERIAL_TYPE_OPTIONS}
           onChange={(val) => handleUpdateRow(rid(r), 'materialType', val)}
-          style={{ width: '100%' }}
+          className="u-w-full"
           size="small"
         />
       ),
@@ -38,7 +38,7 @@ export const buildEditColumns = (handlers: EditColumnHandlers): ColumnsType<Mate
           onChange={(e) => handleUpdateRow(rid(r), 'materialCode', e.target.value)}
           placeholder="输入编码"
           size="small"
-          suffix={<span style={{ fontSize: 10, color: 'var(--color-primary)', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); handleOpenMaterialModal(rid(r)); }}>选用</span>}
+          suffix={<span className="u-fs-10 u-cur-pointer" style={{ color: 'var(--color-primary)' }} onClick={(e) => { e.stopPropagation(); handleOpenMaterialModal(rid(r)); }}>选用</span>}
         />
       ),
     },
@@ -99,7 +99,7 @@ export const buildEditColumns = (handlers: EditColumnHandlers): ColumnsType<Mate
             onChange={(val) => handleUpdateRow(rid(r), 'color', val)}
             placeholder="颜色"
             allowClear
-            style={{ width: '100%' }}
+            className="u-w-full"
             size="small"
           />
         ) : (
@@ -136,7 +136,7 @@ export const buildEditColumns = (handlers: EditColumnHandlers): ColumnsType<Mate
           value={String(v || '')}
           onChange={(val: string) => handleUpdateRow(rid(r), 'unit', val)}
           placeholder="单位"
-          style={{ width: '100%' }}
+          className="u-w-full"
           size="small"
         />
       ),
@@ -152,7 +152,7 @@ export const buildEditColumns = (handlers: EditColumnHandlers): ColumnsType<Mate
           value={Number(v || 0)}
           min={0}
           precision={2}
-          style={{ width: '100%' }}
+          className="u-w-full"
           onChange={(val) => handleUpdateRow(rid(r), 'purchaseQuantity', val ?? 0)}
           size="small"
         />
@@ -169,7 +169,7 @@ export const buildEditColumns = (handlers: EditColumnHandlers): ColumnsType<Mate
           value={Number(v || 0)}
           min={0}
           precision={2}
-          style={{ width: '100%' }}
+          className="u-w-full"
           onChange={(val) => handleUpdateRow(rid(r), 'unitPrice', val ?? 0)}
           size="small"
           addonAfter="元"
@@ -186,7 +186,7 @@ export const buildEditColumns = (handlers: EditColumnHandlers): ColumnsType<Mate
         <SupplierSelect
           value={String(v || '')}
           placeholder="供应商"
-          style={{ width: '100%' }}
+          className="u-w-full"
           onChange={(_val: string, option: any) => {
             handleUpdateRow(rid(r), 'supplierName', _val);
             const sel = Array.isArray(option) ? option[0] : option;

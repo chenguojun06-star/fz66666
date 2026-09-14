@@ -17,7 +17,7 @@ const TemplateViewContent: React.FC<TemplateViewContentProps> = ({ activeRow, vi
 
   if (!viewObj || typeof viewObj !== 'object') {
     return (
-      <pre style={{ margin: 0, maxHeight: '60vh', overflow: 'auto', background: 'var(--color-dark-bg)', color: 'var(--color-slate-200)', padding: 12 }}>
+      <pre className="u-m-0 u-ov-auto u-p-12" style={{ maxHeight: '60vh', background: 'var(--color-dark-bg)', color: 'var(--color-slate-200)' }}>
         {viewContent || ''}
       </pre>
     );
@@ -40,7 +40,7 @@ const TemplateViewContent: React.FC<TemplateViewContentProps> = ({ activeRow, vi
   }
 
   return (
-    <pre style={{ margin: 0, maxHeight: '60vh', overflow: 'auto', background: 'var(--color-dark-bg)', color: 'var(--color-slate-200)', padding: 12 }}>
+    <pre className="u-m-0 u-ov-auto u-p-12" style={{ maxHeight: '60vh', background: 'var(--color-dark-bg)', color: 'var(--color-slate-200)' }}>
       {viewContent || ''}
     </pre>
   );
@@ -58,29 +58,29 @@ const ProgressView: React.FC<{ obj: unknown }> = ({ obj }) => {
   });
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+    <div className="u-d-grid u-gap-8" style={{ gridTemplateColumns: '1fr 1fr' }}>
       <div style={{ border: '1px solid var(--color-border)', padding: 8 }}>
-        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>进度节点</div>
-        <div style={{ maxHeight: 480, overflow: 'auto' }}>
+        <div className="u-fs-var--font-size-sm u-fw-500 u-mb-8">进度节点</div>
+        <div className="u-ov-auto" style={{ maxHeight: 480 }}>
           {nodes.map((n, idx) => (
-            <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid var(--color-border-light)', fontSize: "var(--font-size-sm)" }}>
+            <div key={idx} className="u-fs-var--font-size-sm" style={{ padding: '6px 8px', borderBottom: '1px solid var(--color-border-light)' }}>
               {String(n?.name || '-')}
             </div>
           ))}
-          {nodes.length === 0 && <div style={{ padding: 12, textAlign: 'center', color: 'var(--neutral-text-disabled)' }}>暂无数据</div>}
+          {nodes.length === 0 && <div className="u-p-12 u-ta-center" style={{ color: 'var(--neutral-text-disabled)' }}>暂无数据</div>}
         </div>
       </div>
       <div style={{ border: '1px solid var(--color-border)', padding: 8 }}>
-        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>单价工序库</div>
-        <div style={{ maxHeight: 480, overflow: 'auto' }}>
+        <div className="u-fs-var--font-size-sm u-fw-500 u-mb-8">单价工序库</div>
+        <div className="u-ov-auto" style={{ maxHeight: 480 }}>
           {nodes.filter((n) => n?.unitPrice != null && n.unitPrice !== 0).map((n, idx) => (
-            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid var(--color-border-light)', fontSize: "var(--font-size-sm)" }}>
+            <div key={idx} className="u-d-flex u-jc-between u-fs-var--font-size-sm" style={{ padding: '6px 8px', borderBottom: '1px solid var(--color-border-light)' }}>
               <span>{String(n?.name || '-')}</span>
-              <span style={{ fontWeight: 500 }}>¥{Number(n?.unitPrice || 0).toFixed(2)}</span>
+              <span className="u-fw-500">¥{Number(n?.unitPrice || 0).toFixed(2)}</span>
             </div>
           ))}
           {nodes.filter((n) => n?.unitPrice != null && n.unitPrice !== 0).length === 0 &&
-            <div style={{ padding: 12, textAlign: 'center', color: 'var(--neutral-text-disabled)' }}>暂无单价数据</div>
+            <div className="u-p-12 u-ta-center" style={{ color: 'var(--neutral-text-disabled)' }}>暂无单价数据</div>
           }
         </div>
       </div>
@@ -110,38 +110,38 @@ const ProcessView: React.FC<{ obj: unknown; type: string }> = ({ obj, type }) =>
   }));
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+    <div className="u-d-grid u-gap-8" style={{ gridTemplateColumns: '1fr 1fr' }}>
       <div style={{ border: '1px solid var(--color-border)', padding: 8 }}>
-        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>
+        <div className="u-fs-var--font-size-sm u-fw-500 u-mb-8">
           {type === 'process_price' ? '工序节点' : '工艺节点'}
         </div>
-        <div style={{ maxHeight: 480, overflow: 'auto' }}>
+        <div className="u-ov-auto" style={{ maxHeight: 480 }}>
           {steps.map((s, idx) => (
-            <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid var(--color-border-light)', fontSize: "var(--font-size-sm)" }}>
+            <div key={idx} className="u-fs-var--font-size-sm" style={{ padding: '6px 8px', borderBottom: '1px solid var(--color-border-light)' }}>
               <div>{formatProcessDisplayName(s?.processCode, s?.processName)}</div>
-              {type === 'process' && s?.machineType && <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>机器: {s.machineType}</div>}
-              {type === 'process' && s?.standardTime && <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>工时: {s.standardTime}秒</div>}
+              {type === 'process' && s?.machineType && <div className="u-fs-var--font-size-xs u-mt-2" style={{ color: 'var(--neutral-text-disabled)' }}>机器: {s.machineType}</div>}
+              {type === 'process' && s?.standardTime && <div className="u-fs-var--font-size-xs u-mt-2" style={{ color: 'var(--neutral-text-disabled)' }}>工时: {s.standardTime}秒</div>}
             </div>
           ))}
-          {steps.length === 0 && <div style={{ padding: 12, textAlign: 'center', color: 'var(--neutral-text-disabled)' }}>暂无数据</div>}
+          {steps.length === 0 && <div className="u-p-12 u-ta-center" style={{ color: 'var(--neutral-text-disabled)' }}>暂无数据</div>}
         </div>
       </div>
       <div style={{ border: '1px solid var(--color-border)', padding: 8 }}>
-        <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, marginBottom: 8 }}>
+        <div className="u-fs-var--font-size-sm u-fw-500 u-mb-8">
           {type === 'process_price' ? '单价工序库' : '工价工序库'}
         </div>
-        <div style={{ maxHeight: 480, overflow: 'auto' }}>
+        <div className="u-ov-auto" style={{ maxHeight: 480 }}>
           {steps.filter((s) => getPriceValue(s as unknown as Record<string, unknown>) > 0).map((s, idx) => {
             const price = getPriceValue(s as unknown as Record<string, unknown>);
             return (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid var(--color-border-light)', fontSize: "var(--font-size-sm)" }}>
+              <div key={idx} className="u-d-flex u-jc-between u-fs-var--font-size-sm" style={{ padding: '6px 8px', borderBottom: '1px solid var(--color-border-light)' }}>
                 <span>{formatProcessDisplayName(s?.processCode, s?.processName)}</span>
-                <span style={{ fontWeight: 500 }}>¥{price.toFixed(2)}</span>
+                <span className="u-fw-500">¥{price.toFixed(2)}</span>
               </div>
             );
           })}
           {steps.filter((s) => getPriceValue(s as unknown as Record<string, unknown>) > 0).length === 0 &&
-            <div style={{ padding: 12, textAlign: 'center', color: 'var(--neutral-text-disabled)' }}>暂无价格数据</div>
+            <div className="u-p-12 u-ta-center" style={{ color: 'var(--neutral-text-disabled)' }}>暂无价格数据</div>
           }
         </div>
       </div>
@@ -198,7 +198,7 @@ const SizeView: React.FC<{ obj: unknown }> = ({ obj }) => {
     : (Array.isArray(obj) ? convertStyleSizeListToTable(obj as Record<string, unknown>[]) : null);
 
   if (!tableData) {
-    return <div style={{ padding: 12, textAlign: 'center', color: 'var(--neutral-text-disabled)' }}>暂无数据</div>;
+    return <div className="u-p-12 u-ta-center" style={{ color: 'var(--neutral-text-disabled)' }}>暂无数据</div>;
   }
 
   const sizes = tableData.sizes.map((s) => String(s || '').trim()).filter(Boolean);

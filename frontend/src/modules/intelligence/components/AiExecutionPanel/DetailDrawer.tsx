@@ -85,13 +85,7 @@ export default function DetailDrawer({
           {selectedCommand.params && (
             <div className="command-detail-section">
               <h4>命令参数</h4>
-              <pre style={{
-                fontSize: '12px',
-                background: 'var(--color-bg-subtle)',
-                padding: '8px',
-                borderRadius: '4px',
-                overflow: 'auto'
-              }}>
+              <pre className="u-fs-12px u-ov-auto" style={{ background: 'var(--color-bg-subtle)', padding: '8px', borderRadius: '4px' }}>
                 {JSON.stringify(selectedCommand.params, null, 2)}
               </pre>
             </div>
@@ -109,7 +103,7 @@ export default function DetailDrawer({
 
           {/* 操作按钮 */}
           <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--color-border-light)' }}>
-            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+            <Space className="u-w-full u-jc-end">
               <Button
                 type="primary"
                 danger

@@ -157,7 +157,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
         {/* 左：编码模式 / 前缀开关 — 语义集中 */}
         <Space size="middle" wrap>
           <Space size={8} align="center">
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>编码模式</span>
+            <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>编码模式</span>
             <Switch
               checked={isManual}
               onChange={handleModeToggle}
@@ -228,8 +228,8 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
       }}>
         <Space size="middle" align="center" wrap>
           <Space size={8} align="center">
-            <CheckCircleFilled style={{ color: 'var(--color-primary, #2563eb)', fontSize: 14 }} />
-            <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>SKC编号</span>
+            <CheckCircleFilled className="u-fs-14" style={{ color: 'var(--color-primary, #2563eb)' }} />
+            <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>SKC编号</span>
           </Space>
           {skcEditing ? (
             <>
@@ -259,7 +259,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
               <Button type="link" size="small" onClick={() => setSkcEditing(true)}>修改SKC编号</Button>
             </>
           )}
-          <span style={{ fontSize: 12, color: 'var(--color-text-quaternary)' }}>
+          <span className="u-fs-12" style={{ color: 'var(--color-text-quaternary)' }}>
             SKC = 款式+颜色编号，同步到关联生产订单；改商品编码请先切换「手动编辑」再点编辑
           </span>
         </Space>
@@ -279,7 +279,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
       }}>
         {/* 左：批量填充区 — 仅真实后端字段 */}
         <Space size={8} wrap align="center">
-          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-secondary)' }}>填充：</span>
+          <span className="u-fs-13 u-fw-500" style={{ color: 'var(--color-text-secondary)' }}>填充：</span>
           <Input
             size="small"
             placeholder="成本价"
@@ -348,12 +348,12 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
 
       {/* ─── 第五层：底部警示条（橙色Alert，对应图片底部「有 X 个SKU的成本价为空」） ─── */}
       {(emptyCostCount > 0 || emptyTagCount > 0 || selectedRowKeys.length > 0) && (
-        <div style={{ marginTop: 10 }}>
+        <div className="u-mt-10">
           {emptyCostCount > 0 && (
             <Alert
               type="warning"
               showIcon
-              style={{ marginBottom: 6, borderRadius: 6 }}
+              className="u-mb-6 u-br-6"
               message={
                 <span>
                   <strong>有 {emptyCostCount} 个 SKU 的成本价为空</strong>，
@@ -362,7 +362,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
                     <Button
                       type="link"
                       size="small"
-                      style={{ padding: '0 4px', height: 'auto' }}
+                      className="u-p-04px u-h-auto"
                       onClick={() => {
                         // 定位到工具栏：聚焦到对应输入框（通过滚动到批量填充区）
                         document.getElementById('batch-fill-toolbar')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -379,7 +379,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
             <Alert
               type="warning"
               showIcon
-              style={{ marginBottom: 6, borderRadius: 6 }}
+              className="u-mb-6 u-br-6"
               message={
                 <span>
                   <strong>有 {emptyTagCount} 个 SKU 的吊牌价为空</strong>，
@@ -388,7 +388,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
                     <Button
                       type="link"
                       size="small"
-                      style={{ padding: '0 4px', height: 'auto' }}
+                      className="u-p-04px u-h-auto"
                       onClick={() => {
                         document.getElementById('batch-fill-toolbar')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                       }}
@@ -404,7 +404,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
             <Alert
               type="info"
               showIcon
-              style={{ borderRadius: 6 }}
+              className="u-br-6"
               message={
                 <Space size={8} align="center">
                   <Badge count={selectedRowKeys.length} style={{ backgroundColor: 'var(--color-primary)' }} offset={[4, 0]} />
@@ -444,7 +444,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
         destroyOnHidden
       >
         <Form form={rollbackForm} layout="vertical" onFinish={handleRollbackOk}>
-          <p style={{ marginBottom: 8, color: 'var(--color-text-secondary)' }}>
+          <p className="u-mb-8" style={{ color: 'var(--color-text-secondary)' }}>
             确定退回当前编辑？所有未保存的修改将被丢弃。
           </p>
           <Form.Item name="remark" label="退回备注（可选）">

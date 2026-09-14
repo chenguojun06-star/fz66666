@@ -110,7 +110,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           </Col>
           <Col span={8}>
             <Form.Item name="hireDate" label="入职日期">
-              <DatePicker style={{ width: '100%' }} placeholder="请选择入职日期" />
+              <DatePicker className="u-w-full" placeholder="请选择入职日期" />
             </Form.Item>
           </Col>
         </Row>
@@ -131,9 +131,9 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
           <Col span={8}>
             <Form.Item name="permissionRange" label="数据权限" rules={formRules.permissionRange}>
               <Select placeholder="请选择数据权限范围">
-                <Option value="all"><Tag color="blue" style={{ marginRight: 4 }}>全部</Tag>查看全厂数据</Option>
-                <Option value="team"><Tag color="green" style={{ marginRight: 4 }}>团队</Tag>查看团队数据</Option>
-                <Option value="own"><Tag color="orange" style={{ marginRight: 4 }}>个人</Tag>仅查看自己数据</Option>
+                <Option value="all"><Tag color="blue" className="u-mr-4">全部</Tag>查看全厂数据</Option>
+                <Option value="team"><Tag color="green" className="u-mr-4">团队</Tag>查看团队数据</Option>
+                <Option value="own"><Tag color="orange" className="u-mr-4">个人</Tag>仅查看自己数据</Option>
               </Select>
             </Form.Item>
           </Col>

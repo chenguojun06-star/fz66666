@@ -157,24 +157,24 @@ const BomPanel: React.FC<BomPanelProps> = ({ styleNo }) => {
     <Card styles={{ body: { padding: '8px 12px' } }}>
       <div>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 16, color: 'rgba(0,0,0,0.45)' }}>加载中...</div>
+          <div className="u-ta-center u-p-16" style={{ color: 'rgba(0,0,0,0.45)' }}>加载中...</div>
         ) : hydratingTemplate ? (
-          <div style={{ textAlign: 'center', padding: 16, color: 'rgba(0,0,0,0.45)' }}>正在根据当前款号生成物料清单模板...</div>
+          <div className="u-ta-center u-p-16" style={{ color: 'rgba(0,0,0,0.45)' }}>正在根据当前款号生成物料清单模板...</div>
         ) : !directRow ? (
-          <div style={{ textAlign: 'center', padding: 16, color: 'rgba(0,0,0,0.45)' }}>未找到该款号的物料清单模板</div>
+          <div className="u-ta-center u-p-16" style={{ color: 'rgba(0,0,0,0.45)' }}>未找到该款号的物料清单模板</div>
         ) : Number(directRow.locked) === 1 ? (
           <div style={directStackStyle}>
             <div style={directCardStyle}>
-              <div style={{ marginBottom: 8 }}>
+              <div className="u-mb-8">
                 <span style={directTitleStyle}>退回后再维护</span>
               </div>
               <Form form={directRollbackForm} layout="vertical">
                 <div style={directFieldLabelStyle}>退回原因</div>
-                <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} style={{ marginBottom: 8 }}>
+                <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} className="u-mb-8">
                   <TextArea rows={2} placeholder="请说明本次退回原因" />
                 </Form.Item>
               </Form>
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div className="u-d-flex u-jc-end">
                 <Button
                   type="default"
                   danger

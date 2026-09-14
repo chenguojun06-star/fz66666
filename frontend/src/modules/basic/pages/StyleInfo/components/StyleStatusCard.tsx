@@ -105,7 +105,7 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
 
   // 详情 Popover 内容（次要时间信息收纳）
   const detailContent = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 180 }}>
+    <div className="u-d-flex u-fd-column u-gap-4" style={{ minWidth: 180 }}>
       {createTime && <DetailRow label="创建" value={createTime} />}
       {updateTime && updateTime !== createTime && <DetailRow label="更新" value={updateTime} />}
       {sampleCompletedTime && <DetailRow label="完工" value={sampleCompletedTime} />}
@@ -131,27 +131,27 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
       }}
     >
       {/* 状态徽章 */}
-      <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+      <span className="u-d-inline-flex u-gap-4 u-ai-center">
         {sampleConfig && (
-          <Tag color={sampleConfig.color} style={{ margin: 0 }}>
-            <ExperimentOutlined style={{ marginRight: 4 }} />
+          <Tag color={sampleConfig.color} className="u-m-0">
+            <ExperimentOutlined className="u-mr-4" />
             {sampleConfig.text}
           </Tag>
         )}
         {generalConfig && generalConfig.text !== sampleConfig?.text && (
-          <Tag color={generalConfig.color} style={{ margin: 0 }}>
+          <Tag color={generalConfig.color} className="u-m-0">
             {generalConfig.text}
           </Tag>
         )}
         {reviewConfig && (
-          <Tag color={reviewConfig.color} style={{ margin: 0 }}>
-            <AuditOutlined style={{ marginRight: 4 }} />
+          <Tag color={reviewConfig.color} className="u-m-0">
+            <AuditOutlined className="u-mr-4" />
             {reviewConfig.text}
           </Tag>
         )}
         {pushedToOrder && (
-          <Tag color="blue" style={{ margin: 0 }}>
-            <CheckCircleOutlined style={{ marginRight: 4 }} />
+          <Tag color="blue" className="u-m-0">
+            <CheckCircleOutlined className="u-mr-4" />
             已推单
           </Tag>
         )}
@@ -169,13 +169,13 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
       {/* 当前操作人（动态字段：随最近启动工序自动更新） */}
       {currentOperator && (
         <Tooltip title="当前操作人为动态字段：自动取「最近一次已启动工序」的负责人，工序变化后会自动更新，无需手动维护">
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <span className="u-d-inline-flex u-ai-center u-gap-4">
             <SummaryItem
               icon={<UserOutlined style={{ color: 'var(--color-primary)' }} />}
               label="当前操作人"
               value={currentOperator}
             />
-            <InfoCircleOutlined style={{ color: 'var(--color-text-quaternary)', fontSize: 11 }} />
+            <InfoCircleOutlined className="u-fs-11" style={{ color: 'var(--color-text-quaternary)' }} />
           </span>
         </Tooltip>
       )}
@@ -193,7 +193,7 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
       )}
 
       {/* 关键数量（横向紧凑） */}
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
+      <span className="u-d-inline-flex u-ai-center u-gap-12">
         <MetricInline label="样衣数" value={sampleQuantity} />
         <MetricInline label="入库数" value={totalWarehousedQuantity} />
         <MetricInline label="订单数" value={orderCount} />
@@ -203,10 +203,10 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
       {/* 详情收纳 */}
       {hasDetail && (
         <Popover content={detailContent} title="时间信息" placement="bottomRight">
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', color: 'var(--color-text-tertiary)' }}>
+          <span className="u-d-inline-flex u-ai-center u-gap-4 u-cur-pointer" style={{ color: 'var(--color-text-tertiary)' }}>
             <SyncOutlined />
             <span>{updateTime || createTime || ''}</span>
-            <InfoCircleOutlined style={{ fontSize: 11 }} />
+            <InfoCircleOutlined className="u-fs-11" />
           </span>
         </Popover>
       )}
@@ -232,8 +232,8 @@ const SummaryItem: React.FC<{ icon: React.ReactNode; label: string; value: strin
     }}
     title={`${label}：${value}`}
   >
-    <span style={{ display: 'inline-flex', flexShrink: 0 }}>{icon}</span>
-    <span style={{ flexShrink: 0 }}>{label}：</span>
+    <span className="u-d-inline-flex u-fshrink-0">{icon}</span>
+    <span className="u-fshrink-0">{label}：</span>
     <span
       style={{
         color: valueColor || 'var(--color-text)',
@@ -248,16 +248,16 @@ const SummaryItem: React.FC<{ icon: React.ReactNode; label: string; value: strin
 );
 
 const DetailRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div style={{ display: 'flex', gap: 8, fontSize: 12, color: 'var(--color-text-secondary)' }}>
-    <span style={{ flexShrink: 0 }}>{label}：</span>
+  <div className="u-d-flex u-gap-8 u-fs-12" style={{ color: 'var(--color-text-secondary)' }}>
+    <span className="u-fshrink-0">{label}：</span>
     <span style={{ color: 'var(--color-text)' }}>{value}</span>
   </div>
 );
 
 const MetricInline: React.FC<{ label: string; value: number | string }> = ({ label, value }) => (
-  <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4 }}>
-    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text)' }}>{value}</span>
-    <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{label}</span>
+  <span className="u-d-inline-flex u-gap-4" style={{ alignItems: 'baseline' }}>
+    <span className="u-fs-15 u-fw-600" style={{ color: 'var(--color-text)' }}>{value}</span>
+    <span className="u-fs-11" style={{ color: 'var(--color-text-tertiary)' }}>{label}</span>
   </span>
 );
 

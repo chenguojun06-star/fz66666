@@ -206,12 +206,12 @@ export const SupplierSection: React.FC<SupplierSectionProps> = ({ form }) => (
     </Col>
     <Col xs={24} md={6}>
       <Form.Item name="unitPrice" label="单价(元)" rules={[{ required: true, message: '必填' }]}>
-        <InputNumber style={{ width: '100%' }} min={0} step={0.01} />
+        <InputNumber className="u-w-full" min={0} step={0.01} />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
       <Form.Item name="totalAmount" label="金额(元)">
-        <InputNumber disabled style={{ width: '100%' }} />
+        <InputNumber disabled className="u-w-full" />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
@@ -238,17 +238,17 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({ form: _form, p
   <Row gutter={[16, 0]}>
     <Col xs={24} md={6}>
       <Form.Item name="purchaseQuantity" label="采购数量" rules={[{ required: true, message: '必填' }]}>
-        <InputNumber style={{ width: '100%' }} min={0} />
+        <InputNumber className="u-w-full" min={0} />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
       <Form.Item name="arrivedQuantity" label="到货数量">
-        <InputNumber style={{ width: '100%' }} min={0} />
+        <InputNumber className="u-w-full" min={0} />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>
       <Form.Item name="conversionRate" label="换算">
-        <InputNumber style={{ width: '100%' }} min={0} step={0.01} precision={4} placeholder="如：3" />
+        <InputNumber className="u-w-full" min={0} step={0.01} precision={4} placeholder="如：3" />
       </Form.Item>
     </Col>
     <Col xs={24} md={6}>

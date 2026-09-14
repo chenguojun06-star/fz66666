@@ -27,7 +27,7 @@ const NodeDetailFooter: React.FC<NodeDetailFooterProps> = ({
   if (nodeTypeKey === 'procurement') return undefined;
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+    <div className="u-d-flex u-jc-between u-w-full">
       <div>
         {hasSettings && (
           <Popconfirm

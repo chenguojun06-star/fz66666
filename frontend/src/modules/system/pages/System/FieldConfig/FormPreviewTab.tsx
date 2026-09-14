@@ -19,18 +19,18 @@ const FormPreviewTab: React.FC<FormPreviewTabProps> = ({
 }) => {
   return (
     <>
-      <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+      <Text type="secondary" className="u-d-block u-mb-12">
         实时预览配置后的表单效果（扩展字段区）
       </Text>
       <Card size="small" style={{ background: 'var(--color-bg-container)' }}>
-        <div style={{ fontWeight: 600, marginBottom: 12, color: 'var(--color-gray-800)' }}>
+        <div className="u-fw-600 u-mb-12" style={{ color: 'var(--color-gray-800)' }}>
           标准字段（固定）
         </div>
-        <div style={{ color: 'var(--color-text-muted)', marginBottom: 16 }}>
+        <div className="u-mb-16" style={{ color: 'var(--color-text-muted)' }}>
           （业务表单的标准字段区域，此处省略）
         </div>
-        <Divider style={{ margin: '12px 0' }} />
-        <div style={{ fontWeight: 600, marginBottom: 12, color: 'var(--color-gray-800)' }}>
+        <Divider className="u-m-12px0" />
+        <div className="u-fw-600 u-mb-12" style={{ color: 'var(--color-gray-800)' }}>
           扩展字段（{customFields.length} 个自定义字段）
         </div>
         <Form form={previewForm} layout="vertical" initialValues={flattenExtJson(previewRecord.extJson as string | undefined)}>

@@ -70,14 +70,14 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
   return (
     <>
       {/* ===== 统计卡片 ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+      <div className="u-d-grid u-gap-12 u-mb-12" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
         <Card
           size="small"
-          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
           styles={{ body: { padding: '5px 10px' } }}
         >
           <Statistic
-            title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>}
+            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined className="u-mr-4 u-fs-12" />待审批</span>}
             value={stats.pendingCount}
             suffix="条"
             valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 500 }}
@@ -85,11 +85,11 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
         </Card>
         <Card
           size="small"
-          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
           styles={{ body: { padding: '5px 10px' } }}
         >
           <Statistic
-            title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>}
+            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined className="u-mr-4 u-fs-12" />已审批</span>}
             value={stats.approvedCount}
             suffix="条"
             valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 500 }}
@@ -97,11 +97,11 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
         </Card>
         <Card
           size="small"
-          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
           styles={{ body: { padding: '5px 10px' } }}
         >
           <Statistic
-            title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />订单数</span>}
+            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined className="u-mr-4 u-fs-12" />订单数</span>}
             value={total}
             suffix="条"
             valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 500 }}
@@ -109,11 +109,11 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
         </Card>
         <Card
           size="small"
-          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
           styles={{ body: { padding: '5px 10px' } }}
         >
           <Statistic
-            title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>合计金额</span>}
+            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>合计金额</span>}
             value={stats.totalAmount}
             precision={2}
             prefix="¥"
@@ -126,14 +126,14 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
         filterCard={false}
         headerContent={
           showSmartErrorNotice && smartError ? (
-            <Card style={{ marginBottom: 12 }}>
+            <Card className="u-mb-12">
               <SmartErrorNotice error={smartError} onFix={() => { }} />
             </Card>
           ) : null
         }
       >
         {/* 筛选区 */}
-        <Card className="filter-card mb-sm" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)', borderRadius: 6 }} styles={{ body: { padding: '12px 16px' } }}>
+        <Card className="filter-card mb-sm u-mb-12 u-br-6" style={{ border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
           <Tabs
             activeKey={activeTab}
             onChange={handleTabChange}
@@ -143,9 +143,9 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
               { key: 'pending', label: `待审批 (${stats.pendingCount})` },
               { key: 'approved', label: `已审批 (${stats.approvedCount})` },
             ]}
-            style={{ marginBottom: 8 }}
+            className="u-mb-8"
           />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <div className="u-d-flex u-jc-between u-ai-center u-fwrap-wrap u-gap-8">
             <Space size={8} wrap>
               <StandardSearchBar
                 searchValue={searchOrderNo}
@@ -164,7 +164,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
 
             </Space>
             <Space size={8}>
-              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+              <span className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
                 {selectedRowKeys.length > 0 ? `已选 ${selectedRowKeys.length} 条` : `共 ${total} 条`}
               </span>
               <Button
@@ -197,7 +197,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
       </PageLayout>
 
       <SmallModal title="编辑备注" open={remarkModalVisible} onOk={saveRemark} onCancel={() => setRemarkModalVisible(false)} okText="保存" cancelText="取消">
-        <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--neutral-text-secondary)' }}>备注内容</div>
+        <div className="u-mb-8 u-fs-14" style={{ color: 'var(--neutral-text-secondary)' }}>备注内容</div>
         <Input.TextArea rows={6} value={remarkText} onChange={(e) => setRemarkText(e.target.value)} placeholder="请输入备注内容..." maxLength={500} showCount />
       </SmallModal>
 
@@ -206,9 +206,9 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
           <Timeline items={orderLogs.map((log: any) => ({
             content: (
               <div>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>{log.action || log.operationType}</div>
-                <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 13, marginBottom: 4 }}>{log.description || log.content}</div>
-                <div style={{ color: 'var(--neutral-text-disabled)', fontSize: 12 }}>
+                <div className="u-fw-600 u-mb-4">{log.action || log.operationType}</div>
+                <div className="u-fs-13 u-mb-4" style={{ color: 'var(--neutral-text-secondary)' }}>{log.description || log.content}</div>
+                <div className="u-fs-12" style={{ color: 'var(--neutral-text-disabled)' }}>
                   <span>{log.operatorName || log.userName || '系统'}</span>
                   <span style={{ margin: '0 8px' }}>·</span>
                   <span>{log.createTime ? new Date(log.createTime).toLocaleString() : '-'}</span>
@@ -217,7 +217,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
             ),
           }))} />
         ) : (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--neutral-text-disabled)' }}>暂无操作日志</div>
+          <div className="u-ta-center" style={{ padding: '40px', color: 'var(--neutral-text-disabled)' }}>暂无操作日志</div>
         )}
       </StandardModal>
 
@@ -297,7 +297,7 @@ const DeductionModal: React.FC<DeductionModalProps> = ({ open, orderId, items, l
         <Select
           value={items[index]?.deductionType}
           onChange={(val) => handleItemChange(index, 'deductionType', val)}
-          style={{ width: '100%' }}
+          className="u-w-full"
           options={deductionTypeOptions}
         />
       ),
@@ -311,7 +311,7 @@ const DeductionModal: React.FC<DeductionModalProps> = ({ open, orderId, items, l
         <InputNumber
           value={items[index]?.deductionAmount}
           onChange={(val) => handleItemChange(index, 'deductionAmount', val)}
-          style={{ width: '100%' }}
+          className="u-w-full"
           min={0}
           precision={2}
           placeholder="金额"
@@ -355,11 +355,11 @@ const DeductionModal: React.FC<DeductionModalProps> = ({ open, orderId, items, l
         </Space>
       }
     >
-      <div style={{ marginBottom: 16 }}>
-        <Space style={{ marginBottom: 8 }}>
+      <div className="u-mb-16">
+        <Space className="u-mb-8">
           <Button icon={<PlusOutlined />} onClick={handleAddItem} size="small">添加扣款</Button>
         </Space>
-        <div style={{ marginBottom: 8, fontSize: 13, color: 'var(--neutral-text-secondary)' }}>
+        <div className="u-mb-8 u-fs-13" style={{ color: 'var(--neutral-text-secondary)' }}>
           <span style={{ marginRight: 16 }}>扣款合计：<b style={{ color: 'var(--color-danger)' }}>¥{totalDeduction.toFixed(2)}</b></span>
           <span>补款合计：<b style={{ color: 'var(--color-success)' }}>¥{totalSupplement.toFixed(2)}</b></span>
         </div>

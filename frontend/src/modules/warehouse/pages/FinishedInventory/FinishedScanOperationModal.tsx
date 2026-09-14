@@ -100,19 +100,19 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
         </Space>
       }
     >
-      <Space orientation="vertical" style={{ width: '100%' }} size={16}>
+      <Space orientation="vertical" className="u-w-full" size={16}>
         <Row gutter={12}>
           <Col span={12}>
-            <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>操作类型</div>
-            <Select style={{ width: '100%' }} value={operationType} onChange={setOperationType}>
+            <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>操作类型</div>
+            <Select className="u-w-full" value={operationType} onChange={setOperationType}>
               <Select.Option value="inbound"><Space><InboxOutlined />入库</Space></Select.Option>
               <Select.Option value="outbound"><Space><LogoutOutlined />出库</Space></Select.Option>
             </Select>
           </Col>
         </Row>
         <div>
-          <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>扫码/输入商品编码</div>
-          <Space.Compact style={{ width: '100%' }}>
+          <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>扫码/输入商品编码</div>
+          <Space.Compact className="u-w-full">
             <Input ref={inputRef} value={scanCode} onChange={e => setScanCode(e.target.value)} onKeyDown={handleKeyDown} placeholder="扫描枪扫码或手动输入商品编码" prefix={<ScanOutlined />} size="large" allowClear />
             <Button type="primary" size="large" icon={<SearchOutlined />} loading={querying} onClick={handleScanQuery}>查询</Button>
           </Space.Compact>
@@ -131,18 +131,18 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
         )}
         {scanResult && !scanResult.found && (
           <Card style={{ background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)' }}>
-            <div style={{ marginBottom: 8, color: 'var(--color-warning)', fontWeight: 600 }}> 商品编码不存在，入库时将自动创建</div>
+            <div className="u-mb-8 u-fw-600" style={{ color: 'var(--color-warning)' }}> 商品编码不存在，入库时将自动创建</div>
             <Row gutter={12}>
               <Col span={8}>
-                <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>款号</div>
+                <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>款号</div>
                 <Input value={styleNo} onChange={e => setStyleNo(e.target.value)} placeholder="款号" />
               </Col>
               <Col span={8}>
-                <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>颜色</div>
+                <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>颜色</div>
                 <Input value={color} onChange={e => setColor(e.target.value)} placeholder="颜色" />
               </Col>
               <Col span={8}>
-                <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>尺码</div>
+                <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>尺码</div>
                 <Input value={size} onChange={e => setSize(e.target.value)} placeholder="尺码" />
               </Col>
             </Row>
@@ -150,14 +150,14 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
         )}
         <Row gutter={12}>
           <Col span={8}>
-            <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>数量</div>
-            <InputNumber style={{ width: '100%' }} min={1} value={quantity} onChange={v => setQuantity(v || 1)} size="large" />
+            <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>数量</div>
+            <InputNumber className="u-w-full" min={1} value={quantity} onChange={v => setQuantity(v || 1)} size="large" />
           </Col>
           {operationType === 'inbound' ? (
             <>
               <Col span={8}>
-                <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>入库来源</div>
-                <Select style={{ width: '100%' }} value={sourceType} onChange={setSourceType}>
+                <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>入库来源</div>
+                <Select className="u-w-full" value={sourceType} onChange={setSourceType}>
                   <Select.Option value="scan_inbound">扫码入库</Select.Option>
                   <Select.Option value="external_purchase">外采入库</Select.Option>
                   <Select.Option value="transfer_in">调拨入库</Select.Option>
@@ -166,16 +166,16 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
                 </Select>
               </Col>
               <Col span={8}>
-                <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>入库仓库</div>
-                <Select style={{ width: '100%' }} placeholder="选择仓库" allowClear loading={areaLoading} value={warehouseAreaId || undefined} onChange={(v) => { setWarehouseAreaId(v || ''); setWarehouseLocation(''); }} notFoundContent={areaLoading ? '加载中...' : '暂无仓库'}>
+                <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>入库仓库</div>
+                <Select className="u-w-full" placeholder="选择仓库" allowClear loading={areaLoading} value={warehouseAreaId || undefined} onChange={(v) => { setWarehouseAreaId(v || ''); setWarehouseLocation(''); }} notFoundContent={areaLoading ? '加载中...' : '暂无仓库'}>
                   {areaOptions.map(opt => (
                     <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
                   ))}
                 </Select>
               </Col>
               <Col span={8}>
-                <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>库位</div>
-                <Select style={{ width: '100%' }} placeholder={warehouseAreaId ? '选择库位' : '请先选择仓库'} allowClear showSearch loading={locationLoading} disabled={!warehouseAreaId} value={warehouseLocation || undefined} onChange={setWarehouseLocation} notFoundContent={locationLoading ? '加载中...' : warehouseAreaId ? '该仓库暂无库位' : '请先选择仓库'} filterOption={(input, option) => (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase()) ?? false}>
+                <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>库位</div>
+                <Select className="u-w-full" placeholder={warehouseAreaId ? '选择库位' : '请先选择仓库'} allowClear showSearch loading={locationLoading} disabled={!warehouseAreaId} value={warehouseLocation || undefined} onChange={setWarehouseLocation} notFoundContent={locationLoading ? '加载中...' : warehouseAreaId ? '该仓库暂无库位' : '请先选择仓库'} filterOption={(input, option) => (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase()) ?? false}>
                   {locationOptions.map(opt => (
                     <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
                   ))}
@@ -185,8 +185,8 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
           ) : (
             <>
               <Col span={8}>
-                <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>出库类型</div>
-                <Select style={{ width: '100%' }} value={outstockType} onChange={setOutstockType}>
+                <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>出库类型</div>
+                <Select className="u-w-full" value={outstockType} onChange={setOutstockType}>
                   <Select.Option value="scan_outbound">扫码出库</Select.Option>
                   <Select.Option value="sample_out">样品出库</Select.Option>
                   <Select.Option value="damage_out">报损出库</Select.Option>
@@ -194,16 +194,16 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
                 </Select>
               </Col>
               <Col span={8}>
-                <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>出库仓库</div>
-                <Select style={{ width: '100%' }} placeholder="选择仓库" allowClear loading={areaLoading} value={warehouseAreaId || undefined} onChange={(v) => { setWarehouseAreaId(v || ''); setWarehouseLocation(''); }} notFoundContent={areaLoading ? '加载中...' : '暂无仓库'}>
+                <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>出库仓库</div>
+                <Select className="u-w-full" placeholder="选择仓库" allowClear loading={areaLoading} value={warehouseAreaId || undefined} onChange={(v) => { setWarehouseAreaId(v || ''); setWarehouseLocation(''); }} notFoundContent={areaLoading ? '加载中...' : '暂无仓库'}>
                   {areaOptions.map(opt => (
                     <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
                   ))}
                 </Select>
               </Col>
               <Col span={8}>
-                <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>库位</div>
-                <Select style={{ width: '100%' }} placeholder={warehouseAreaId ? '选择库位' : '请先选择仓库'} allowClear showSearch loading={locationLoading} disabled={!warehouseAreaId} value={warehouseLocation || undefined} onChange={setWarehouseLocation} notFoundContent={locationLoading ? '加载中...' : warehouseAreaId ? '该仓库暂无库位' : '请先选择仓库'} filterOption={(input, option) => (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase()) ?? false}>
+                <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>库位</div>
+                <Select className="u-w-full" placeholder={warehouseAreaId ? '选择库位' : '请先选择仓库'} allowClear showSearch loading={locationLoading} disabled={!warehouseAreaId} value={warehouseLocation || undefined} onChange={setWarehouseLocation} notFoundContent={locationLoading ? '加载中...' : warehouseAreaId ? '该仓库暂无库位' : '请先选择仓库'} filterOption={(input, option) => (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase()) ?? false}>
                   {locationOptions.map(opt => (
                     <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
                   ))}
@@ -213,7 +213,7 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
           )}
         </Row>
         <div>
-          <div style={{ marginBottom: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>备注</div>
+          <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>备注</div>
           <Input.TextArea rows={3} value={remark} onChange={e => setRemark(e.target.value)} placeholder="选填" />
         </div>
       </Space>

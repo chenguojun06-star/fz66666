@@ -101,10 +101,10 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
               borderBottom: '1px solid var(--color-border-light)',
               color: 'var(--color-text-tertiary)', fontSize: 14,
             }}>
-              <div style={{ width: 72, flexShrink: 0 }}>品类</div>
+              <div className="u-fshrink-0" style={{ width: 72 }}>品类</div>
               <div style={{ flex: '1 1 160px' }}>成分</div>
               <div style={{ flex: '1 1 160px' }}>洗涤说明</div>
-              <div style={{ width: 28, flexShrink: 0 }} />
+              <div className="u-fshrink-0" style={{ width: 28 }} />
             </div>
 
             {/* 数据行 */}
@@ -117,8 +117,8 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                 }}
               >
                 {/* 品类 */}
-                <div style={{ width: 72, flexShrink: 0, paddingTop: 3 }}>
-                  <Tag color="blue" style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
+                <div className="u-fshrink-0" style={{ width: 72, paddingTop: 3 }}>
+                  <Tag color="blue" className="u-m-0 u-fs-14 u-fw-600">
                     {partLabel}
                   </Tag>
                 </div>
@@ -126,7 +126,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                 {/* 成分列表 */}
                 <div style={{ flex: '1 1 160px' }}>
                   {(partsMap[partLabel] || []).map((mat, idx) => (
-                    <Space key={idx} style={{ display: 'flex', marginBottom: 4 }} align="center">
+                    <Space key={idx} className="u-d-flex u-mb-4" align="center">
                       <Input
                        
                         value={mat}
@@ -144,13 +144,13 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                     </Space>
                   ))}
                   {!(partsMap[partLabel]?.length) && disabled && (
-                    <span style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>（未设置）</span>
+                    <span className="u-fs-14" style={{ color: 'var(--color-text-quaternary)' }}>（未设置）</span>
                   )}
                   {!disabled && (
                     <Button
                       type="link" icon={<PlusOutlined />}
                       onClick={() => addMaterial(partLabel)}
-                      style={{ padding: 0, height: 22 }}
+                      className="u-p-0" style={{ height: 22 }}
                     >
                       加成分
                     </Button>
@@ -170,7 +170,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                 </div>
 
                 {/* 删除整行 */}
-                <div style={{ width: 28, flexShrink: 0, paddingTop: 3 }}>
+                <div className="u-fshrink-0" style={{ width: 28, paddingTop: 3 }}>
                   {!disabled && (
                     <Popconfirm title={`删除品类「${partLabel}」及其所有成分？`} description="删除后不可恢复" onConfirm={() => removeSection(partLabel)} okText="删除" cancelText="取消" okButtonProps={{ danger: true }}>
                       <Button type="text" danger icon={<DeleteOutlined />} />
@@ -211,7 +211,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
         )}
 
         {!hasRows && disabled && (
-          <span style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>（未设置成分）</span>
+          <span className="u-fs-14" style={{ color: 'var(--color-text-quaternary)' }}>（未设置成分）</span>
         )}
       </div>
     </Spin>

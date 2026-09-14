@@ -37,8 +37,8 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
       title: '订单号', dataIndex: 'platformOrderNo', width: 160,
       render: (v, r) => (
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600 }}>{v || r.orderNo}</div>
-          {v && <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>内部 {r.orderNo}</div>}
+          <div className="u-fs-14 u-fw-600">{v || r.orderNo}</div>
+          {v && <div className="u-fs-14" style={{ color: 'var(--color-text-muted)' }}>内部 {r.orderNo}</div>}
         </div>
       ),
     },
@@ -47,7 +47,7 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
       render: (_: unknown, r: EcOrder) => {
         const styleNo = (r.skuCode || '').split('-')[0];
         return styleNo
-          ? <Text strong style={{ fontSize: 14, fontFamily: 'monospace' }}>{styleNo}</Text>
+          ? <Text strong className="u-fs-14" style={{ fontFamily: 'monospace' }}>{styleNo}</Text>
           : <Text type="secondary">-</Text>;
       },
     },
@@ -60,8 +60,8 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
           ? <Image
               src={getFullAuthedFileUrl(imgUrl)}
               width={44} height={44}
-              style={{ objectFit: 'cover', borderRadius: 4 }}
-              preview={{ cover: <EyeOutlined style={{ fontSize: 12 }} /> }}
+              className="u-objf-cover u-br-4"
+              preview={{ cover: <EyeOutlined className="u-fs-12" /> }}
             />
           : <div style={{
               width: 44, height: 44, background: 'var(--color-bg-subtle)', borderRadius: 4,
@@ -74,9 +74,9 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
       title: '商品 / 买家', width: 190,
       render: (_: unknown, r: EcOrder) => (
         <div>
-          <div style={{ fontSize: 14 }}>{r.productName || '-'} <Text type="secondary">×{r.quantity}</Text></div>
-          {r.skuCode && <div style={{ fontSize: 14, color: 'var(--color-success)' }}>SKU {r.skuCode}</div>}
-          <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>{r.buyerNick || r.receiverName}</div>
+          <div className="u-fs-14">{r.productName || '-'} <Text type="secondary">×{r.quantity}</Text></div>
+          {r.skuCode && <div className="u-fs-14" style={{ color: 'var(--color-success)' }}>SKU {r.skuCode}</div>}
+          <div className="u-fs-14" style={{ color: 'var(--color-text-muted)' }}>{r.buyerNick || r.receiverName}</div>
         </div>
       ),
     },
@@ -84,9 +84,9 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
       title: '金额', width: 130,
       render: (_: unknown, r: EcOrder) => (
         <div>
-          {r.unitPrice ? <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>单价 ¥{r.unitPrice} × {r.quantity}</div> : null}
-          <div style={{ color: 'var(--color-warning)', fontWeight: 600 }}>实付 ¥{r.payAmount ?? '-'}</div>
-          {r.freight ? <div style={{ fontSize: 14, color: 'var(--color-text-quaternary)' }}>运费 ¥{r.freight}</div> : null}
+          {r.unitPrice ? <div className="u-fs-14" style={{ color: 'var(--color-text-muted)' }}>单价 ¥{r.unitPrice} × {r.quantity}</div> : null}
+          <div className="u-fw-600" style={{ color: 'var(--color-warning)' }}>实付 ¥{r.payAmount ?? '-'}</div>
+          {r.freight ? <div className="u-fs-14" style={{ color: 'var(--color-text-quaternary)' }}>运费 ¥{r.freight}</div> : null}
         </div>
       ),
     },
@@ -102,20 +102,20 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
       title: '关联生产单', dataIndex: 'productionOrderNo', width: 140,
       render: v => v
         ? <Tag color="blue" icon={<CheckCircleOutlined />}>{v}</Tag>
-        : <Tag color="orange" style={{ cursor: 'pointer' }}>待处理</Tag>,
+        : <Tag color="orange" className="u-cur-pointer">待处理</Tag>,
     },
     {
       title: '快递', dataIndex: 'trackingNo', width: 130,
       render: (v, r) => v
         ? <div>
-            <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>{r.expressCompany}</div>
-            <div style={{ fontSize: 14 }}>{v}</div>
+            <div className="u-fs-14" style={{ color: 'var(--color-text-muted)' }}>{r.expressCompany}</div>
+            <div className="u-fs-14">{v}</div>
           </div>
         : <Text type="secondary">-</Text>,
     },
     {
       title: '下单时间', dataIndex: 'createTime', width: 100,
-      render: v => <span style={{ fontSize: 14 }}>{v?.slice(0, 16)}</span>,
+      render: v => <span className="u-fs-14">{v?.slice(0, 16)}</span>,
     },
     {
       title: '操作', width: 160, fixed: 'right',
@@ -170,7 +170,7 @@ export function buildPricingColumns(args: PricingColumnsArgs): ColumnsType<Sku> 
     { title: '尺码',   dataIndex: 'size',    width: 70 },
     {
       title: '商品编码', dataIndex: 'skuCode', width: 190,
-      render: v => <Text style={{ fontSize: 14, color: 'var(--color-success)' }}>{v}</Text>,
+      render: v => <Text className="u-fs-14" style={{ color: 'var(--color-success)' }}>{v}</Text>,
     },
     {
       title: '库存', dataIndex: 'stockQuantity', width: 70,
@@ -190,7 +190,7 @@ export function buildPricingColumns(args: PricingColumnsArgs): ColumnsType<Sku> 
         ? <InputNumber value={editRow.salesPrice ?? undefined} min={0} precision={2}
             style={{ width: 110 }}
             onChange={onSalesChange} />
-        : <Text style={{ color: 'var(--color-warning)', fontWeight: 600 }}>{v != null ? `¥${v}` : <Text type="secondary">—</Text>}</Text>,
+        : <Text className="u-fw-600" style={{ color: 'var(--color-warning)' }}>{v != null ? `¥${v}` : <Text type="secondary">—</Text>}</Text>,
     },
     {
       title: '毛利率', width: 80,

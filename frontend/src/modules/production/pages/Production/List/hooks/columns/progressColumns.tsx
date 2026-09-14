@@ -46,10 +46,10 @@ export function buildProgressColumns({
               style={{ ...PROGRESS_CELL_BASE, cursor: 'default', opacity: 0.8 }}
               onClick={(e) => { e.stopPropagation(); }}
             >
-              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
+              <div className="u-fs-11 u-ta-center" style={{ color: 'var(--color-text-secondary)', marginBottom: '2px' }}>
                 无采购
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
+              <div className="u-fs-12px u-ta-center" style={{ color: 'var(--color-text-secondary)', marginBottom: '2px' }}>
                 -/-
               </div>
               <LiquidProgressBar percent={0} width="100%" height={16} status="default" />

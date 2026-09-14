@@ -51,7 +51,7 @@ export const ClarificationCard: React.FC<{ missingInfo?: string[]; onAsk?: (ques
   <div className={styles.clarificationCard}>
     <span className={styles.clarificationLabel}>🤔 需要补充以下信息才能给出准确分析：</span>
     {missingInfo && missingInfo.length > 0 ? (
-      <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      <div className="u-mt-8 u-d-flex u-gap-6 u-fwrap-wrap">
         {missingInfo.map((info, idx) => (
           <button
             key={idx}
@@ -62,7 +62,7 @@ export const ClarificationCard: React.FC<{ missingInfo?: string[]; onAsk?: (ques
         ))}
       </div>
     ) : (
-      <div style={{ marginTop: 6, fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>
+      <div className="u-mt-6 u-fs-14" style={{ color: 'rgba(255,255,255,0.5)' }}>
         请提供：订单号 / 款号 / 工厂名 / 时间范围 等
       </div>
     )}

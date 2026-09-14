@@ -22,7 +22,7 @@ const RemarkExceptionModal: React.FC<RemarkExceptionModalProps> = ({
 }) => {
   return (
     <SmallModal
-      title={<><ExclamationCircleOutlined style={{ color: 'var(--color-warning)', marginRight: 8 }} />备注异常</>}
+      title={<><ExclamationCircleOutlined className="u-mr-8" style={{ color: 'var(--color-warning)' }} />备注异常</>}
       open={visible}
       onCancel={onCancel}
       onOk={onOk}
@@ -36,7 +36,7 @@ const RemarkExceptionModal: React.FC<RemarkExceptionModalProps> = ({
         rows={3}
         placeholder="请输入异常备注..."
         autoFocus
-        style={{ marginTop: 8 }}
+        className="u-mt-8"
       />
     </SmallModal>
   );

@@ -56,7 +56,7 @@ const OrderFlow: React.FC = () => {
           headerContent={
             <>
               {showSmartErrorNotice && smartError ? (
-                <div style={{ marginBottom: 12 }}><SmartErrorNotice error={smartError} onFix={fetchFlow} /></div>
+                <div className="u-mb-12"><SmartErrorNotice error={smartError} onFix={fetchFlow} /></div>
               ) : null}
               {!query.orderId && !query.orderNo ? (
                 <Alert type="warning" showIcon title="缺少订单ID，无法打开全流程记录"

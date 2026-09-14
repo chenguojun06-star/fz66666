@@ -11,8 +11,8 @@ interface SummaryCardProps {
 const SummaryCard: React.FC<SummaryCardProps> = ({ icon, label, value, color }) => (
   <div style={summaryCardStyle}>
     <span style={{ color, fontSize: 15, marginBottom: 4 }}>{icon}</span>
-    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{label}</div>
-    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)', marginTop: 2 }}>{value}</div>
+    <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{label}</div>
+    <div className="u-fs-14 u-fw-700 u-mt-2" style={{ color: 'var(--color-text-primary)' }}>{value}</div>
   </div>
 );
 

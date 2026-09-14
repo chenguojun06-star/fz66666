@@ -128,30 +128,17 @@ const StyleDevelopmentProgressBanner: React.FC<StyleDevelopmentProgressBannerPro
                 transition: 'all 0.2s ease',
               }}
             >
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                marginBottom: 8 
-              }}>
-                <span style={{ 
-                  fontWeight: 600, 
-                  fontSize: 14,
-                  color: 'var(--color-text-primary)' 
-                }}>
+              <div className="u-d-flex u-jc-between u-ai-center u-mb-8">
+                <span className="u-fw-600 u-fs-14" style={{ color: 'var(--color-text-primary)' }}>
                   {item.title}
                 </span>
-                <Tag color={item.meta.color} style={{ margin: 0, fontSize: 11, padding: '0 6px', height: 20, lineHeight: '18px' }}>
+                <Tag color={item.meta.color} className="u-m-0 u-fs-11 u-lh-18px" style={{ padding: '0 6px', height: 20 }}>
                   {item.meta.label}
                 </Tag>
               </div>
 
               {item.count && (
-                <div style={{ 
-                  fontSize: 12, 
-                  color: 'var(--color-text-secondary)', 
-                  marginBottom: 8 
-                }}>
+                <div className="u-fs-12 u-mb-8" style={{ color: 'var(--color-text-secondary)' }}>
                   {item.count}
                 </div>
               )}
@@ -162,10 +149,10 @@ const StyleDevelopmentProgressBanner: React.FC<StyleDevelopmentProgressBannerPro
                 showInfo={false}
                 size="small"
                 strokeLinecap="round"
-                style={{ marginBottom: 10 }}
+                className="u-mb-10"
               />
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11 }}>
+              <div className="u-d-flex u-fd-column u-gap-4 u-fs-11">
                 {item.budgetLabel && (
                   <div style={{ 
                     color: item.budgetLabel.color,

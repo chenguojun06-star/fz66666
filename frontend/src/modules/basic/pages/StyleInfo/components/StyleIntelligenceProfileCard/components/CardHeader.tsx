@@ -40,31 +40,31 @@ const CardHeader: React.FC<CardHeaderProps> = ({
         flexWrap: 'wrap',
       }}
     >
-      <RadarChartOutlined style={{ color: 'var(--color-primary)', fontSize: 15 }} />
-      <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)' }}>款式智能档案卡</span>
+      <RadarChartOutlined className="u-fs-15" style={{ color: 'var(--color-primary)' }} />
+      <span className="u-fs-14 u-fw-700" style={{ color: 'var(--color-text-primary)' }}>款式智能档案卡</span>
       {/* 关键摘要 */}
-      <Tag color={deliveryMeta.color} style={{ margin: 0 }}>{deliveryMeta.label}</Tag>
-      <span style={{ fontSize: 14, color: 'var(--color-gray-700)' }}>完成度 <b style={{ color: 'var(--color-primary)' }}>{completionRate}%</b></span>
+      <Tag color={deliveryMeta.color} className="u-m-0">{deliveryMeta.label}</Tag>
+      <span className="u-fs-14" style={{ color: 'var(--color-gray-700)' }}>完成度 <b style={{ color: 'var(--color-primary)' }}>{completionRate}%</b></span>
       {doneCount < stageTotal ? (
-        <span style={{ fontSize: 14, color: 'var(--color-gray-700)' }}>剩 <b style={{ color: 'var(--color-danger)' }}>{stageTotal - doneCount}</b> 环节未完成</span>
+        <span className="u-fs-14" style={{ color: 'var(--color-gray-700)' }}>剩 <b style={{ color: 'var(--color-danger)' }}>{stageTotal - doneCount}</b> 环节未完成</span>
       ) : (
-        <span style={{ fontSize: 14, color: 'var(--color-success)' }}>✓ {stageTotal} 环节已全部完成</span>
+        <span className="u-fs-14" style={{ color: 'var(--color-success)' }}>✓ {stageTotal} 环节已全部完成</span>
       )}
-      <span style={{ fontSize: 14, color: 'var(--color-gray-700)' }}>订单 <b style={{ color: 'var(--color-accent-purple)' }}>{orderCount} 单</b></span>
+      <span className="u-fs-14" style={{ color: 'var(--color-gray-700)' }}>订单 <b style={{ color: 'var(--color-accent-purple)' }}>{orderCount} 单</b></span>
       {/* 难度徽章 */}
       {activeDifficulty && (
         <Tooltip title={`难度分 ${activeDifficulty.difficultyScore}/10，定价倍率 ×${activeDifficulty.pricingMultiplier}`}>
           <Tag
             color={difficultyColor(activeDifficulty.difficultyLevel)}
             icon={<ExperimentOutlined />}
-            style={{ margin: 0 }}
+            className="u-m-0"
           >
             {activeDifficulty.difficultyLabel}
           </Tag>
         </Tooltip>
       )}
-      {loading && <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>分析中…</span>}
-      <span style={{ marginLeft: 'auto', fontSize: 14, color: 'var(--color-text-tertiary)' }}>
+      {loading && <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>分析中…</span>}
+      <span className="u-ml-auto u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>
         {expanded ? '收起 ▲' : '展开详情 ▼'}
       </span>
     </div>

@@ -36,14 +36,14 @@ const FactoryRejectModal: React.FC<FactoryRejectModalProps> = ({
       confirmLoading={factoryApproveLoading}
       width="40vw"
     >
-      <div style={{ marginBottom: 16 }}>
+      <div className="u-mb-16">
         <p>
           确定拒绝外发工厂员工"<strong>{currentUser?.name || currentUser?.username}</strong>"吗？
         </p>
         {Boolean(currentUser?.factoryName) && (
           <p style={{ color: 'var(--color-primary)' }}>所属工厂：{String(currentUser?.factoryName as string)}</p>
         )}
-        <p style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>拒绝后该员工将无法登录系统</p>
+        <p className="u-fs-var--font-size-xs" style={{ color: 'var(--neutral-text-disabled)' }}>拒绝后该员工将无法登录系统</p>
       </div>
       <TextArea
         placeholder="请输入拒绝原因（必填）"

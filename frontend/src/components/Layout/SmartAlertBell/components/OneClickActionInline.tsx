@@ -49,13 +49,13 @@ const OneClickActionInline: React.FC<{
   };
 
   return (
-    <div style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
+    <div className="u-mt-6" onClick={(e) => e.stopPropagation()}>
       {done ? (
-        <div style={{ fontSize: 12, color: 'var(--color-success)' }}>
+        <div className="u-fs-12" style={{ color: 'var(--color-success)' }}>
           ✅ 已催单，工厂已收到通知
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <div className="u-d-flex u-gap-6 u-ai-center">
           <button
             onClick={() => void handleAction()}
             disabled={loading}
@@ -74,7 +74,7 @@ const OneClickActionInline: React.FC<{
             {loading ? '处理中...' : buttonText()}
           </button>
           {error && (
-            <span style={{ fontSize: 11, color: 'var(--color-error)' }}>{error}</span>
+            <span className="u-fs-11" style={{ color: 'var(--color-error)' }}>{error}</span>
           )}
         </div>
       )}

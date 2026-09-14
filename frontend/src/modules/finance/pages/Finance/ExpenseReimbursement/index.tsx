@@ -109,7 +109,7 @@ const ExpenseReimbursementPage: React.FC = () => {
         <div>
           <p>报销单号：{record.reimbursementNo}</p>
           <p>申请人：{record.applicantName}</p>
-          <p>金额：<strong style={{ color: 'var(--color-danger)', fontSize: 13 }}>{formatMoney(record.amount)}</strong></p>
+          <p>金额：<strong className="u-fs-13" style={{ color: 'var(--color-danger)' }}>{formatMoney(record.amount)}</strong></p>
           <p>收款方式：{PAYMENT_METHODS.find(m => m.value === record.paymentMethod)?.label || record.paymentMethod}</p>
           <p>收款账号：{record.paymentAccount}</p>
           <p>收款户名：{record.accountName}</p>
@@ -134,10 +134,10 @@ const ExpenseReimbursementPage: React.FC = () => {
   const openDetail = (record: ExpenseReimbursement) => { setDetailRecord(record); setDetailOpen(true); };
 
   const columns: ColumnsType<ExpenseReimbursement> = [
-    { title: '报销单号', dataIndex: 'reimbursementNo', width: 160, render: (text: string, record) => <Button type="link" style={{ padding: 0, height: 'auto' }} onClick={() => openDetail(record)}>{text}</Button> },
+    { title: '报销单号', dataIndex: 'reimbursementNo', width: 160, render: (text: string, record) => <Button type="link" className="u-p-0 u-h-auto" onClick={() => openDetail(record)}>{text}</Button> },
     { title: '事由', dataIndex: 'title', width: 180, ellipsis: true },
     { title: '类型', dataIndex: 'expenseType', width: 110, render: (val: string) => typeLabel(val) },
-    { title: '金额', dataIndex: 'amount', width: 110, align: 'right', render: (val: number) => <span style={{ color: 'var(--color-danger)', fontWeight: 500 }}>{formatMoney(val || 0)}</span> },
+    { title: '金额', dataIndex: 'amount', width: 110, align: 'right', render: (val: number) => <span className="u-fw-500" style={{ color: 'var(--color-danger)' }}>{formatMoney(val || 0)}</span> },
     { title: '费用日期', dataIndex: 'expenseDate', width: 110, render: (val: string) => val ? formatDateTime(val) : '-' },
     { title: '状态', dataIndex: 'status', width: 90, render: (val: string) => statusTag(val) },
     { title: '报销人', dataIndex: 'applicantName', width: 90, render: (val: string) => val || '-' },
@@ -180,25 +180,25 @@ const ExpenseReimbursementPage: React.FC = () => {
   return (
     <>
       <PageLayout>
-        {showSmartErrorNotice && smartError ? (<Card style={{ marginBottom: 16 }}><SmartErrorNotice error={smartError} onFix={() => { void fetchList(); }} /></Card>) : null}
+        {showSmartErrorNotice && smartError ? (<Card className="u-mb-16"><SmartErrorNotice error={smartError} onFix={() => { void fetchList(); }} /></Card>) : null}
 
         {/* ===== 统一统计卡片 ===== */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
-          <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-            <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>} value={stats.pending} suffix="件" valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 500 }} />
+        <div className="u-d-grid u-gap-12 u-mb-12" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+          <Card size="small" className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+            <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined className="u-mr-4 u-fs-12" />待审批</span>} value={stats.pending} suffix="件" valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 500 }} />
           </Card>
-          <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-            <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>} value={cardStats.approved + cardStats.paid} suffix="件" valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 500 }} />
+          <Card size="small" className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+            <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined className="u-mr-4 u-fs-12" />已审批</span>} value={cardStats.approved + cardStats.paid} suffix="件" valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 500 }} />
           </Card>
-          <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-            <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已付款</span>} value={stats.paidAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 500 }} />
+          <Card size="small" className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+            <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined className="u-mr-4 u-fs-12" />已付款</span>} value={stats.paidAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 500 }} />
           </Card>
-          <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-            <Statistic title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />合计金额</span>} value={stats.totalAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-text-primary)', fontSize: 15, fontWeight: 500 }} />
+          <Card size="small" className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+            <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined className="u-mr-4 u-fs-12" />合计金额</span>} value={stats.totalAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-text-primary)', fontSize: 15, fontWeight: 500 }} />
           </Card>
         </div>
 
-        <Card style={{ marginBottom: 12, borderRadius: 6, border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
+        <Card className="u-mb-12 u-br-6" style={{ border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
           <Tabs
             activeKey={filterStatus || ''}
             onChange={(k) => { setFilterStatus(k || undefined); setPage(1); }}
@@ -211,7 +211,7 @@ const ExpenseReimbursementPage: React.FC = () => {
               { key: 'rejected', label: `已驳回` },
             ]}
           />
-          <Row gutter={[12, 12]} align="middle" style={{ marginTop: 8 }}>
+          <Row gutter={[12, 12]} align="middle" className="u-mt-8">
             <Col><Select value={viewMode} onChange={(v) => { setViewMode(v); setPage(1); }} style={{ width: 130 }} options={[{ value: 'my', label: '我的报销' }, { value: 'all', label: '全部报销（审批）' }]} /></Col>
             <Col><Select value={filterType} onChange={(v) => { setFilterType(v); setPage(1); }} allowClear placeholder="费用类型" style={{ width: 130 }} options={EXPENSE_TYPES} /></Col>
             <Col><Input value={keyword} onChange={(e) => setKeyword(e.target.value)} onPressEnter={() => { setPage(1); fetchList(); }} placeholder="搜索事由" style={{ width: 160 }} suffix={<SearchOutlined style={{ color: 'var(--color-text-quaternary)' }} />} /></Col>
@@ -224,7 +224,7 @@ const ExpenseReimbursementPage: React.FC = () => {
                 style={{ width: 240 }}
               />
             </Col>
-            <Col flex="auto" style={{ textAlign: 'right' }}>
+            <Col flex="auto" className="u-ta-right">
               <Space size={8}>
                 <Button type="primary" ghost size="small" icon={<PlusOutlined />} onClick={() => openForm()}>新建报销</Button>
                 <Button size="small" ghost onClick={() => fetchList()}>刷新</Button>
@@ -243,12 +243,12 @@ const ExpenseReimbursementPage: React.FC = () => {
       <ResizableModal open={formOpen} title={editingRecord ? '编辑报销单' : '新建报销单'} onCancel={() => setFormOpen(false)} width="40vw" centered
         footer={<Space><Button size="small" onClick={() => setFormOpen(false)}>取消</Button><Button type="primary" ghost size="small" loading={submitting} onClick={handleFormSubmit}>{editingRecord ? '更新' : '提交报销'}</Button></Space>}
       >
-        <div style={{ padding: '0 8px', maxHeight: '68vh', overflowY: 'auto', overflowX: 'hidden' }}>
+        <div className="u-p-08px" style={{ maxHeight: '68vh', overflowY: 'auto', overflowX: 'hidden' }}>
           <Form form={form} layout="vertical" requiredMark="optional">
             <Form.Item label="报销凭证" required={!editingRecord} validateStatus={uploadedDocs.some(d => d.docId) ? 'success' : undefined}
               help={uploadedDocs.some(d => d.docId) ? ` 已上传 ${uploadedDocs.filter(d => d.docId).length} 张，点击图片可放大预览` : editingRecord ? undefined : '请上传发票/收据图片，支持拖拽、粘贴或点击上传'}
             >
-              <Space orientation="vertical" style={{ width: '100%' }} size={8}>
+              <Space orientation="vertical" className="u-w-full" size={8}>
                 <div
                   onDragOver={(e) => { e.preventDefault(); }}
                   onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) processFiles(e.dataTransfer.files); }}
@@ -265,14 +265,14 @@ const ExpenseReimbursementPage: React.FC = () => {
                       }
                     }
                   }}
-                  style={{ display: 'inline-block' }}
+                  className="u-d-inline-block"
                 >
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     multiple
-                    style={{ display: 'none' }}
+                    className="u-d-none"
                     onChange={(e) => { if (e.target.files?.length) processFiles(e.target.files); e.target.value = ''; }}
                   />
                   <Button
@@ -285,13 +285,13 @@ const ExpenseReimbursementPage: React.FC = () => {
                 </div>
                 {uploadedDocs.length > 0 && (
                   <Image.PreviewGroup>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <div className="u-d-flex u-fwrap-wrap u-gap-8">
                       {uploadedDocs.map((doc, idx) => (
-                        <div key={doc.tempId} style={{ position: 'relative', flexShrink: 0 }}>
-                          {doc.recognizing ? (<div style={{ width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--color-border-antd)', borderRadius: 6, background: 'var(--color-bg-container)' }}><Spin /></div>)
-                            : doc.imageUrl ? (<Image src={getFullAuthedFileUrl(doc.imageUrl)} width={72} height={72} style={{ objectFit: 'cover', borderRadius: 6 }} />) : null}
+                        <div key={doc.tempId} className="u-pos-relative u-fshrink-0">
+                          {doc.recognizing ? (<div className="u-d-flex u-ai-center u-jc-center u-br-6" style={{ width: 72, height: 72, border: '1px dashed var(--color-border-antd)', background: 'var(--color-bg-container)' }}><Spin /></div>)
+                            : doc.imageUrl ? (<Image src={getFullAuthedFileUrl(doc.imageUrl)} width={72} height={72} className="u-objf-cover u-br-6" />) : null}
                           <Button type="text" danger icon={<CloseCircleOutlined />}
-                            style={{ position: 'absolute', top: -8, right: -8, padding: 0, minWidth: 18, height: 18, background: 'var(--color-bg-base)', borderRadius: '50%', border: '1px solid var(--color-danger)' }}
+                            className="u-pos-absolute u-p-0" style={{ top: -8, right: -8, minWidth: 18, height: 18, background: 'var(--color-bg-base)', borderRadius: '50%', border: '1px solid var(--color-danger)' }}
                             onClick={() => setUploadedDocs(prev => prev.filter((_, i) => i !== idx))}
                           />
                         </div>
@@ -306,8 +306,8 @@ const ExpenseReimbursementPage: React.FC = () => {
               <Col span={14}><Form.Item name="title" label="报销事由" rules={[{ required: true, message: '请填写报销事由' }]}><Input placeholder="如：出差往返打车费" /></Form.Item></Col>
             </Row>
             <Row gutter={16}>
-              <Col span={12}><Form.Item name="amount" label="报销金额" rules={[{ required: true, message: '请填写金额' }]}><InputNumber min={0.01} precision={2} prefix="¥" placeholder="0.00" style={{ width: '100%' }} /></Form.Item></Col>
-              <Col span={12}><Form.Item name="expenseDate" label="费用日期" rules={[{ required: true, message: '请选择日期' }]}><Input style={{ width: '100%' }} /></Form.Item></Col>
+              <Col span={12}><Form.Item name="amount" label="报销金额" rules={[{ required: true, message: '请填写金额' }]}><InputNumber min={0.01} precision={2} prefix="¥" placeholder="0.00" className="u-w-full" /></Form.Item></Col>
+              <Col span={12}><Form.Item name="expenseDate" label="费用日期" rules={[{ required: true, message: '请选择日期' }]}><Input className="u-w-full" /></Form.Item></Col>
             </Row>
             {expenseTypeValue === 'material_advance' && (
               <Row gutter={16}>
@@ -321,7 +321,7 @@ const ExpenseReimbursementPage: React.FC = () => {
               </Row>
             )}
             <Form.Item name="description" label="详细说明"><Input.TextArea rows={3} placeholder="详细描述费用用途、原因等" /></Form.Item>
-            <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '16px 0 8px', paddingTop: 12 }}><span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>收款信息</span></div>
+            <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '16px 0 8px', paddingTop: 12 }}><span className="u-fw-500" style={{ color: 'var(--color-text-primary)' }}>收款信息</span></div>
             <Row gutter={16}>
               <Col span={12}><Form.Item name="paymentMethod" label="收款方式" rules={[{ required: true }]}><Select options={PAYMENT_METHODS} placeholder="请选择" /></Form.Item></Col>
               <Col span={12}><Form.Item name="accountName" label="收款户名" rules={[{ required: true, message: '请填写收款户名' }]}><Input placeholder="收款人姓名" /></Form.Item></Col>
@@ -331,9 +331,9 @@ const ExpenseReimbursementPage: React.FC = () => {
               <Col span={10}><Form.Item name="bankName" label="开户银行（选填）"><Input placeholder="转账时填写开户行" /></Form.Item></Col>
             </Row>
             {editingRecord && docList.length > 0 && (
-              <div style={{ marginTop: 16, borderTop: '1px solid var(--color-border-light)', paddingTop: 12 }}>
-                <div style={{ fontWeight: 500, marginBottom: 8, color: 'var(--color-text-primary)' }}>已上传凭证（点击预览）</div>
-                <Image.PreviewGroup><Space wrap>{docList.map(doc => (<Image key={doc.id} src={getFullAuthedFileUrl(doc.imageUrl)} width={80} height={80} style={{ objectFit: 'cover', borderRadius: 6 }} />))}</Space></Image.PreviewGroup>
+              <div className="u-mt-16" style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: 12 }}>
+                <div className="u-fw-500 u-mb-8" style={{ color: 'var(--color-text-primary)' }}>已上传凭证（点击预览）</div>
+                <Image.PreviewGroup><Space wrap>{docList.map(doc => (<Image key={doc.id} src={getFullAuthedFileUrl(doc.imageUrl)} width={80} height={80} className="u-objf-cover u-br-6" />))}</Space></Image.PreviewGroup>
               </div>
             )}
           </Form>

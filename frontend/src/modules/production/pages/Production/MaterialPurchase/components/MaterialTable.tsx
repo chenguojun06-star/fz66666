@@ -203,7 +203,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         onClear={() => setSelectedRows([])}
         onBatchAddToCart={onBatchAddToCart}
       />
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+      <div className="u-d-flex u-jc-end u-mb-8">
         <Button icon={<SettingOutlined />} onClick={() => setColumnSettingsOpen(true)}>
           显示字段
         </Button>

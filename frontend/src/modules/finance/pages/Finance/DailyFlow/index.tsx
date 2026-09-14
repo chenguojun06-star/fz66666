@@ -107,7 +107,7 @@ const DailyFlowContent: React.FC = () => {
     {
       title: '类型', dataIndex: 'bizType', width: 110,
       render: (v: string, r) => (
-        <Tag color={BIZ_TYPE_COLOR[v] ?? 'default'} style={{ margin: 0 }}>
+        <Tag color={BIZ_TYPE_COLOR[v] ?? 'default'} className="u-m-0">
           {r.bizTypeLabel || v}
         </Tag>
       ),
@@ -133,7 +133,7 @@ const DailyFlowContent: React.FC = () => {
 
   return (
     <>
-      <Card style={{ marginBottom: 12 }}>
+      <Card className="u-mb-12">
         <Space wrap size={12}>
           <span>日期</span>
           <RangePicker
@@ -154,7 +154,7 @@ const DailyFlowContent: React.FC = () => {
         </Space>
       </Card>
 
-      <Row gutter={12} style={{ marginBottom: 12 }}>
+      <Row gutter={12} className="u-mb-12">
         <Col span={8}>
           <Card><Statistic title="流水笔数" value={stats.count} /></Card>
         </Col>

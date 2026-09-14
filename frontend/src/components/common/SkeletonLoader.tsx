@@ -25,21 +25,21 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   switch (type) {
     case 'table':
       return (
-        <div style={{ padding: 16 }}>
+        <div className="u-p-16">
           <Skeleton active={active} paragraph={{ rows: 1 }} />
           {Array.from({ length: rows }).map((_, i) => (
-            <Skeleton key={i} active={active} paragraph={{ rows: 1 }} style={{ marginTop: 12 }} />
+            <Skeleton key={i} active={active} paragraph={{ rows: 1 }} className="u-mt-12" />
           ))}
         </div>
       );
 
     case 'card':
       return (
-        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+        <div className="u-d-grid u-gap-16" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
           {Array.from({ length: rows }).map((_, i) => (
-            <div key={i} style={{ background: 'var(--color-bg-base)', borderRadius: 8, padding: 16 }}>
-              <Skeleton.Image active={active} style={{ width: '100%', height: 120 }} />
-              <Skeleton active={active} paragraph={{ rows: 2 }} style={{ marginTop: 12 }} />
+            <div key={i} className="u-br-8 u-p-16" style={{ background: 'var(--color-bg-base)' }}>
+              <Skeleton.Image active={active} className="u-w-full" style={{ height: 120 }} />
+              <Skeleton active={active} paragraph={{ rows: 2 }} className="u-mt-12" />
             </div>
           ))}
         </div>
@@ -47,9 +47,9 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 
     case 'image':
       return (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="u-d-flex u-gap-8 u-fwrap-wrap">
           {Array.from({ length: rows }).map((_, i) => (
-            <Skeleton.Image key={i} active={active} style={{ width: 80, height: 80, borderRadius: 4 }} />
+            <Skeleton.Image key={i} active={active} className="u-br-4" style={{ width: 80, height: 80 }} />
           ))}
         </div>
       );
@@ -67,7 +67,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
               avatar={avatar}
               active={active}
               paragraph={{ rows: 1 }}
-              style={{ marginBottom: 12 }}
+              className="u-mb-12"
             />
           ))}
         </div>

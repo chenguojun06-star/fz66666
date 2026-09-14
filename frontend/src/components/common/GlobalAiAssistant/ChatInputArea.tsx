@@ -82,35 +82,21 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
         if (f) { e.preventDefault(); handleAttachFile(f); }
       }}
     >
-      <input ref={fileInputRef} type="file" style={{ display: 'none' }} accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,.gif,.pdf,.webp,.bmp" onChange={handleFileSelect} />
+      <input ref={fileInputRef} type="file" className="u-d-none" accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,.gif,.pdf,.webp,.bmp" onChange={handleFileSelect} />
 
       {/* 图片预览区域 */}
       {previewImage && (
-        <div style={{
-          padding: '8px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          background: 'var(--color-bg-subtle)',
-          borderRadius: 8,
-          marginBottom: 8
-        }}>
+        <div className="u-p-8px12px u-d-flex u-ai-center u-gap-12 u-br-8 u-mb-8" style={{ background: 'var(--color-bg-subtle)' }}>
           <img
             src={previewImage}
             alt="预览"
-            style={{
-              width: 60,
-              height: 60,
-              objectFit: 'cover',
-              borderRadius: 6,
-              border: '1px solid var(--color-border)'
-            }}
+            className="u-objf-cover u-br-6" style={{ width: 60, height: 60, border: '1px solid var(--color-border)' }}
           />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
+          <div className="u-flex-1">
+            <div className="u-fs-13 u-fw-500" style={{ color: 'var(--color-text-secondary)' }}>
               {attachedFile?.name || '图片'}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+            <div className="u-fs-12 u-mt-2" style={{ color: 'var(--color-text-secondary)' }}>
               即将上传并分析
             </div>
           </div>
@@ -120,14 +106,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
               setAttachedFile(null);
               setPreviewImage(null);
             }}
-            style={{
-              padding: '4px 8px',
-              border: 'none',
-              background: 'transparent',
-              color: 'var(--color-text-secondary)',
-              fontSize: 16,
-              cursor: 'pointer'
-            }}
+            className="u-fs-16 u-cur-pointer" style={{ padding: '4px 8px', border: 'none', background: 'transparent', color: 'var(--color-text-secondary)' }}
             title="移除"
           >
             ×

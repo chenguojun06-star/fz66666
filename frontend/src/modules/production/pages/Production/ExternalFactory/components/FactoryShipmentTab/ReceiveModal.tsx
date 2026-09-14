@@ -30,7 +30,7 @@ const ReceiveModal: React.FC<ReceiveModalProps> = ({
       width="30vw"
     >
       {record && (
-        <div style={{ padding: '8px 0' }}>
+        <div className="u-p-8px0">
           <Descriptions column={1} bordered>
             <Descriptions.Item label="发货单号">{record.shipmentNo}</Descriptions.Item>
             <Descriptions.Item label="订单号">{record.orderNo}</Descriptions.Item>
@@ -41,22 +41,22 @@ const ReceiveModal: React.FC<ReceiveModalProps> = ({
               <Descriptions.Item label="已收数量">{alreadyReceived} 件</Descriptions.Item>
             )}
             <Descriptions.Item label="本次待收">
-              <span style={{ color: 'var(--color-warning-deep)', fontWeight: 600 }}>
+              <span className="u-fw-600" style={{ color: 'var(--color-warning-deep)' }}>
                 {remaining} 件
               </span>
             </Descriptions.Item>
           </Descriptions>
-          <div style={{ marginTop: 16 }}>
-            <div style={{ marginBottom: 8, fontWeight: 500 }}>本次到货数量（点货数量）</div>
+          <div className="u-mt-16">
+            <div className="u-mb-8 u-fw-500">本次到货数量（点货数量）</div>
             <InputNumber
               value={receiveQty}
               min={1}
               max={remaining}
               onChange={val => onReceiveQtyChange(Number(val) || 0)}
-              style={{ width: '100%' }}
+              className="u-w-full"
               suffix="件"
             />
-            <div style={{ marginTop: 4, fontSize: 14, color: 'var(--color-text-tertiary)' }}>
+            <div className="u-mt-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>
               {alreadyReceived > 0
                 ? `该发货单共发 ${shipQty} 件，已收 ${alreadyReceived} 件，本次最多可收 ${remaining} 件`
                 : '默认等于发货数量，如实际到货数量不同请修改'}

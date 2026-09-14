@@ -146,7 +146,7 @@ const PatternSupplementButton: React.FC<{
       render: (text: string, record: StyleAttachment) => {
         const fileUrl = getFullAuthedFileUrl(record.fileUrl);
         return (
-          <a href={fileUrl} target="_blank" rel="noreferrer" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', maxWidth: '100%' }}>
+          <a href={fileUrl} target="_blank" rel="noreferrer" className="u-ov-hidden u-ws-nowrap u-d-inline-block" style={{ textOverflow: 'ellipsis', maxWidth: '100%' }}>
             {text}
           </a>
         );
@@ -230,7 +230,7 @@ const PatternSupplementButton: React.FC<{
               ref={fileInputRef}
               type="file"
               accept={acceptFormats}
-              style={{ display: 'none' }}
+              className="u-d-none"
               onChange={(e) => {
                 if (e.target.files?.length) handleFileSelect(e.target.files);
               }}
@@ -243,7 +243,7 @@ const PatternSupplementButton: React.FC<{
         }
       >
         <div
-          style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}
+          className="u-h-full u-d-flex u-fd-column" style={{ minHeight: 0 }}
           onDragOver={(e) => { e.preventDefault(); }}
           onDrop={handleDrop}
           onPaste={handlePaste}

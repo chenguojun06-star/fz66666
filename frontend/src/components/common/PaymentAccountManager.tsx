@@ -173,9 +173,9 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
       centered
       footer={<Button onClick={onClose}>关闭</Button>}
     >
-      <div style={{ padding: '0 8px' }}>
+      <div className="u-p-08px">
         {/* 头部 */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div className="u-d-flex u-jc-between u-mb-16">
           <span style={{ color: 'var(--neutral-text-secondary, var(--color-gray-label))' }}>
             {ownerLabel}：{ownerName}
           </span>
@@ -186,11 +186,11 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
 
         {/* 账户列表 */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 32, color: 'var(--neutral-text-secondary, var(--color-gray-label))' }}>
+          <div className="u-ta-center" style={{ padding: 32, color: 'var(--neutral-text-secondary, var(--color-gray-label))' }}>
             加载中...
           </div>
         ) : accounts.length === 0 ? (
-          <div style={{ textAlign: 'center', color: 'var(--neutral-text-secondary, var(--color-gray-label))', padding: 32 }}>
+          <div className="u-ta-center" style={{ color: 'var(--neutral-text-secondary, var(--color-gray-label))', padding: 32 }}>
             暂无收款账户，请点击「添加账户」
           </div>
         ) : (
@@ -219,12 +219,12 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
               }
             >
               <Space>
-                <span style={{ fontSize: 20 }}>{accountTypeIconMap[acc.accountType]}</span>
+                <span className="u-fs-20">{accountTypeIconMap[acc.accountType]}</span>
                 <div>
-                  <div style={{ fontWeight: 500 }}>
+                  <div className="u-fw-500">
                     {ACCOUNT_TYPE_OPTIONS.find((o) => o.value === acc.accountType)?.label}
                     {acc.isDefault === 1 && (
-                      <Tag color="blue" style={{ marginLeft: 8 }}>
+                      <Tag color="blue" className="u-ml-8">
                         默认
                       </Tag>
                     )}
@@ -247,10 +247,10 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
         {/* 添加 / 编辑表单 */}
         {formOpen && (
           <div
-            style={{ marginTop: 16 }}
+            className="u-mt-16"
           >
             <Form form={form} layout="vertical" requiredMark="optional">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+              <div className="u-d-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                 <Form.Item
                   label="账户类型"
                   name="accountType"
@@ -273,7 +273,7 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
                   if (type === 'BANK') {
                     return (
                       <div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                        <div className="u-d-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                           <Form.Item
                             label="银行卡号"
                             name="accountNo"

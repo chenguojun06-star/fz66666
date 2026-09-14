@@ -47,7 +47,7 @@ const ArrivalConfirmModal: React.FC<ArrivalConfirmModalProps> = ({ open, target,
         } catch { message.error('入库失败'); }
         finally { setLoading(false); }
       }}>
-        <Descriptions bordered column={3} size="small" style={{ marginBottom: 16 }}>
+        <Descriptions bordered column={3} size="small" className="u-mb-16">
           <Descriptions.Item label="物料类型">{target?.materialType ? <MaterialTypeTag value={target.materialType} /> : '-'}</Descriptions.Item>
           <Descriptions.Item label="物料名称">{target?.materialName || '-'}</Descriptions.Item>
           <Descriptions.Item label="物料编码">{target?.materialCode || '-'}</Descriptions.Item>
@@ -63,7 +63,7 @@ const ArrivalConfirmModal: React.FC<ArrivalConfirmModalProps> = ({ open, target,
             min={0.01}
             max={target ? Math.max(0.01, Number(target.purchaseQuantity || 0) - Number(target.arrivedQuantity || 0)) : 1}
             step={0.01} precision={2}
-            style={{ width: '100%' }}
+            className="u-w-full"
             placeholder="请输入到货数量（支持小数）"
             autoFocus
           />

@@ -26,23 +26,23 @@ const InsightPanel: React.FC<InsightPanelProps> = ({ loading, profile, quoteSugg
   }, [profile, quoteSuggestion, style]);
 
   return (
-    <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 8, background: 'rgba(114,46,209,0.05)', border: '1px solid rgba(114,46,209,0.15)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <BulbOutlined style={{ color: 'var(--color-accent-purple)', fontSize: 14 }} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>AI 洞察</span>
+    <div className="u-mt-10 u-p-8px10px u-br-8" style={{ background: 'rgba(114,46,209,0.05)', border: '1px solid rgba(114,46,209,0.15)' }}>
+      <div className="u-d-flex u-ai-center u-jc-between u-mb-6">
+        <div className="u-d-flex u-ai-center u-gap-6">
+          <BulbOutlined className="u-fs-14" style={{ color: 'var(--color-accent-purple)' }} />
+          <span className="u-fs-13 u-fw-600" style={{ color: 'var(--color-text-primary)' }}>AI 洞察</span>
         </div>
         <Button
           size="small"
           type="link"
           onClick={onRefresh}
           loading={loading}
-          style={{ padding: 0, fontSize: 12 }}
+          className="u-p-0 u-fs-12"
         >
           刷新洞察
         </Button>
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+      <div className="u-d-flex u-fwrap-wrap u-gap-6">
         {items.map((it, idx) => (
           <Tag
             key={`${it.category}_${idx}`}
@@ -58,7 +58,7 @@ const InsightPanel: React.FC<InsightPanelProps> = ({ loading, profile, quoteSugg
             }}
           >
             <b style={{ color: INSIGHT_COLOR[it.category] }}>{INSIGHT_LABEL[it.category]}</b>
-            <span style={{ color: 'var(--color-gray-700)', marginLeft: 6 }}>{it.text}</span>
+            <span className="u-ml-6" style={{ color: 'var(--color-gray-700)' }}>{it.text}</span>
           </Tag>
         ))}
       </div>

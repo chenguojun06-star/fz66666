@@ -16,30 +16,30 @@ const DecisionCardRow: React.FC<{
       borderRadius: 8, border: `1px solid ${borderColor}`,
       background: bgColor, padding: '14px 16px', marginBottom: 10,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-        <Tag color={card.level === 'danger' ? 'error' : card.level === 'warning' ? 'warning' : card.level === 'success' ? 'success' : 'processing'} style={{ margin: 0 }}>
+      <div className="u-d-flex u-ai-center u-gap-8 u-mb-6">
+        <Tag color={card.level === 'danger' ? 'error' : card.level === 'warning' ? 'warning' : card.level === 'success' ? 'success' : 'processing'} className="u-m-0">
           {card.level === 'danger' ? '紧急' : card.level === 'warning' ? '注意' : card.level === 'success' ? '良好' : '提示'}
         </Tag>
-        <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-text)' }}>{card.title}</span>
+        <span className="u-fw-600 u-fs-14" style={{ color: 'var(--color-text)' }}>{card.title}</span>
         {card.confidence > 0 && (
-          <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginLeft: 'auto' }}>
+          <span className="u-fs-14 u-ml-auto" style={{ color: 'var(--color-text-tertiary)' }}>
             置信度 {card.confidence}%
           </span>
         )}
       </div>
-      <div style={{ fontSize: 14, color: 'var(--color-text)', lineHeight: 1.6, marginBottom: 6 }}>
+      <div className="u-fs-14 u-mb-6" style={{ color: 'var(--color-text)', lineHeight: 1.6 }}>
         {card.summary}
       </div>
       {card.painPoint && (
         <div style={{ fontSize: 14, color: accentColor, marginBottom: 6 }}>
-          <BulbOutlined style={{ marginRight: 4 }} />
+          <BulbOutlined className="u-mr-4" />
           建议：{card.painPoint}
         </div>
       )}
       {card.evidence?.length > 0 && (
-        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>
+        <div className="u-fs-14 u-mb-6" style={{ color: 'var(--color-text-tertiary)' }}>
           {card.evidence.slice(0, 6).map((e, i) => (
-            <div key={i} style={{ marginBottom: 2 }}>· {e}</div>
+            <div key={i} className="u-mb-2">· {e}</div>
           ))}
         </div>
       )}
@@ -52,7 +52,7 @@ const DecisionCardRow: React.FC<{
             fontWeight: 500,
           }}
         >
-          {card.actionLabel} <RightOutlined style={{ fontSize: 12 }} />
+          {card.actionLabel} <RightOutlined className="u-fs-12" />
         </div>
       )}
     </div>

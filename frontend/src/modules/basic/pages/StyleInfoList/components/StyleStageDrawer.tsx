@@ -198,9 +198,9 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
               </div>
               {(selectedStage.stage.key === 'procurement' || selectedStage.stage.key === 'cutting' || selectedStage.stage.key === 'secondary' || selectedStage.stage.key === 'sewing' || selectedStage.stage.key === 'tail' || selectedStage.stage.key === 'warehousing') && sample.sampleSnapshot ? (
                 <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--color-border-light)' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '10px', color: 'var(--color-text-primary)' }}>
+                  <div className="u-fw-700" style={{ fontSize: '14px', marginBottom: '10px', color: 'var(--color-text-primary)' }}>
                     扫码记录
-                    <span style={{ fontWeight: 400, fontSize: '12px', color: 'var(--color-text-secondary)', marginLeft: 8 }}>
+                    <span className="u-fw-400 u-fs-12px u-ml-8" style={{ color: 'var(--color-text-secondary)' }}>
                       — {selectedStage.stage.label} 环节
                     </span>
                   </div>
@@ -214,10 +214,10 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
               ) : null}
               {sample.sampleSnapshot ? (
                 <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--color-border-light)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                  <div className="u-d-flex u-ai-center u-jc-between u-mb-12">
+                    <div className="u-fs-14 u-fw-700" style={{ color: 'var(--color-text-primary)' }}>
                       备注日志
-                      <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8 }}>
+                      <span className="u-fw-400 u-fs-12 u-ml-8" style={{ color: 'var(--color-text-secondary)' }}>
                         — 样衣 {sample.sampleSnapshot.id}
                       </span>
                     </div>
@@ -233,10 +233,10 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
               ) : null}
               {selectedStage.stage.key === 'procurement' ? (
                 <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--color-border-light)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                  <div className="u-d-flex u-ai-center u-jc-between u-mb-12">
+                    <div className="u-fs-14 u-fw-700" style={{ color: 'var(--color-text-primary)' }}>
                       快捷采购
-                      <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8 }}>
+                      <span className="u-fw-400 u-fs-12 u-ml-8" style={{ color: 'var(--color-text-secondary)' }}>
                         — 款号 {selectedStage.record.styleNo}
                       </span>
                     </div>
@@ -247,35 +247,35 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                   {procurement.loading ? (
                     <Skeleton active paragraph={{ rows: 3 }} />
                   ) : procurement.error ? (
-                    <div style={{ color: 'var(--color-error)', padding: '8px 0' }}>{procurement.error}</div>
+                    <div className="u-p-8px0" style={{ color: 'var(--color-error)' }}>{procurement.error}</div>
                   ) : procurement.items.length === 0 ? (
-                    <div style={{ color: 'var(--color-text-tertiary)', padding: '16px', textAlign: 'center', background: 'var(--color-bg-light)', borderRadius: 6 }}>
+                    <div className="u-ta-center u-br-6" style={{ color: 'var(--color-text-tertiary)', padding: '16px', background: 'var(--color-bg-light)' }}>
                       暂无采购物料，请先在物料清单中配置物料并生成采购单
                     </div>
                   ) : (
                     <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                      <table className="u-w-full u-fs-13" style={{ borderCollapse: 'collapse' }}>
                         <thead>
                           <tr style={{ background: 'var(--color-bg-light)', borderBottom: '2px solid var(--color-border-light)' }}>
-                            <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>物料名称</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>规格</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600 }}>采购数量</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>供应商</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600 }}>状态</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600 }}>操作</th>
+                            <th className="u-p-8px12px u-ta-left u-fw-600">物料名称</th>
+                            <th className="u-p-8px12px u-ta-left u-fw-600">规格</th>
+                            <th className="u-p-8px12px u-ta-right u-fw-600">采购数量</th>
+                            <th className="u-p-8px12px u-ta-left u-fw-600">供应商</th>
+                            <th className="u-p-8px12px u-ta-center u-fw-600">状态</th>
+                            <th className="u-p-8px12px u-ta-center u-fw-600">操作</th>
                           </tr>
                         </thead>
                         <tbody>
                           {procurement.items.map((item) => (
                             <tr key={item.id} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                              <td style={{ padding: '8px 12px' }}>{item.materialName}</td>
-                              <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)' }}>{item.specifications || '-'}</td>
-                              <td style={{ padding: '8px 12px', textAlign: 'right' }}>{item.purchaseQuantity} {item.unit}</td>
-                              <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)' }}>{item.supplierName || '-'}</td>
-                              <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                              <td className="u-p-8px12px">{item.materialName}</td>
+                              <td className="u-p-8px12px" style={{ color: 'var(--color-text-secondary)' }}>{item.specifications || '-'}</td>
+                              <td className="u-p-8px12px u-ta-right">{item.purchaseQuantity} {item.unit}</td>
+                              <td className="u-p-8px12px" style={{ color: 'var(--color-text-secondary)' }}>{item.supplierName || '-'}</td>
+                              <td className="u-p-8px12px u-ta-center">
                                 <Tag color={STATUS_COLORS[item.status] ?? 'default'}>{STATUS_LABELS[item.status] ?? '未知'}</Tag>
                               </td>
-                              <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                              <td className="u-p-8px12px u-ta-center">
                                 {item.status === 'pending' ? (
                                   <Button size="small" type="primary" onClick={() => procurement.receiveItem(item.id)}>
                                     领取
@@ -304,10 +304,10 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
               ) : sample.sampleSnapshot ? (
                 <>
                   {sample.sampleSnapshotList.length > 1 ? (
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: 'var(--color-text-primary)' }}>
+                    <div className="u-mb-12">
+                      <div className="u-fs-13 u-fw-600 u-mb-6" style={{ color: 'var(--color-text-primary)' }}>
                         色码任务
-                        <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--color-text-tertiary)', marginLeft: 8 }}>
+                        <span className="u-fw-400 u-fs-12 u-ml-8" style={{ color: 'var(--color-text-tertiary)' }}>
                           共 {sample.sampleSnapshotList.length} 条
                         </span>
                       </div>
@@ -328,7 +328,7 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                       <div className="style-smart-stage-modal__fact">
                         <span>领取人</span>
                         <strong
-                          style={{ cursor: 'pointer', color: 'var(--color-primary)', textDecoration: 'underline' }}
+                          className="u-cur-pointer" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
                           onClick={() => setRemarkTarget({ open: true, styleNo: selectedStage?.record?.styleNo || '', defaultRole: '领取人 — ' + sample.sampleReceiverLabel })}
                         >{sample.sampleReceiverLabel}</strong>
                       </div>
@@ -346,20 +346,20 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                       </div>
                     )}
                   </div>
-                  <div style={{ marginTop: 12, padding: '10px 0', borderTop: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div className="u-mt-12 u-d-flex u-ai-center" style={{ padding: '10px 0', borderTop: '1px solid var(--color-border-light)', gap: 14 }}>
                     <QRCode
                       value={JSON.stringify({ type: 'pattern', id: sample.sampleSnapshot.id })}
                       size={140}
                       errorLevel="M"
                     />
-                    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', lineHeight: 1.8 }}>
-                      <div style={{ fontWeight: 500, color: 'var(--color-gray-700)' }}>工人扫码领取/完成</div>
+                    <div className="u-fs-14 u-lh-18" style={{ color: 'var(--color-text-tertiary)' }}>
+                      <div className="u-fw-500" style={{ color: 'var(--color-gray-700)' }}>工人扫码领取/完成</div>
                       <div>样衣单号: {sample.sampleSnapshot.id}</div>
                     </div>
                   </div>
 
                   {/* 子工序表格 - 与大货一致的表格展示 */}
-                  <div style={{ marginTop: 16 }}>
+                  <div className="u-mt-16">
                     <SampleProcessList
                       stages={sampleProcessProgress.stages}
                       loading={sampleProcessProgress.loading}
@@ -399,7 +399,7 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                   <div className="style-smart-stage-modal__fact">
                     <span>审核人</span>
                     <strong
-                      style={{ cursor: 'pointer', color: 'var(--color-primary)', textDecoration: 'underline' }}
+                      className="u-cur-pointer" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
                       onClick={() => setRemarkTarget({ open: true, styleNo: selectedStage?.record?.styleNo || '', defaultRole: '审核人 — ' + confirm.confirmReviewerLabel })}
                     >{confirm.confirmReviewerLabel}</strong>
                   </div>
@@ -425,7 +425,7 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                     </div>
                   ) : null}
                   {!selectedStage.record.sampleReviewComment && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', alignItems: 'center' }}>
+                    <div className="u-d-flex u-fwrap-wrap u-ai-center" style={{ gap: '4px 16px' }}>
                       {selectedStage.stage.details.map((item) => (
                         <span key={item} className="style-smart-stage-modal__detail-item">
                           {item}

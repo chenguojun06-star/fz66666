@@ -15,7 +15,7 @@ interface TrendChartProps {
 
 // D-142：与首页/现金流趋势统一的 ECharts 平滑线条风格（原 CSS 叠条已废弃）
 const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
-  if (!data.length) return <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-tertiary)', fontSize: 14 }}>暂无数据</div>;
+  if (!data.length) return <div className="u-ta-center u-fs-14" style={{ padding: '60px 0', color: 'var(--color-text-tertiary)' }}>暂无数据</div>;
 
   const option = {
     tooltip: {
@@ -118,7 +118,7 @@ const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
   };
 
   return (
-    <Suspense fallback={<div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-tertiary)', fontSize: 14 }}>图表加载中...</div>}>
+    <Suspense fallback={<div className="u-ta-center u-fs-14" style={{ padding: '60px 0', color: 'var(--color-text-tertiary)' }}>图表加载中...</div>}>
       <ReactECharts option={option} style={{ height: 260 }} />
     </Suspense>
   );

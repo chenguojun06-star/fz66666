@@ -141,8 +141,8 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
       onCancel={onClose}
       destroyOnClose
       footer={
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+        <div className="u-d-flex u-jc-between u-ai-center u-gap-12">
+          <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
             {rows.length > 0
               ? `共 ${rows.length} 项物料：缺料 ${needRows.length} 项，库存足够 ${enoughCount} 项`
               : ''}
@@ -150,14 +150,14 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
           <span>
             <Button onClick={onClose}>取消</Button>
             <Button
-              style={{ marginLeft: 8 }}
+              className="u-ml-8"
               onClick={handleGenerateAll}
             >
               生成全部{rows.length > 0 ? `（${rows.length}项）` : ''}
             </Button>
             <Button
               type="primary"
-              style={{ marginLeft: 8 }}
+              className="u-ml-8"
               loading={generating}
               disabled={rows.length > 0 && needRows.length === 0}
               onClick={handleGenerateShortage}
@@ -171,14 +171,14 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
       }
     >
       {analyzeError ? (
-        <Alert type="warning" showIcon message={analyzeError} style={{ marginBottom: 12 }} />
+        <Alert type="warning" showIcon message={analyzeError} className="u-mb-12" />
       ) : null}
 
       {rows.length > 0 && enoughCount > 0 && (
         <Alert
           type="info"
           showIcon
-          style={{ marginBottom: 12 }}
+          className="u-mb-12"
           message={isSampleMode
             ? `有 ${enoughCount} 项物料库存足够：点「仅缺料加入采购车」时这些不会加入；库存足够的物料可在物料清单表格内直接领取。`
             : `有 ${enoughCount} 项物料库存足够：点「仅缺料生成采购」时这些不会生成；库存足够的物料到仓库领料即可。`}
@@ -212,8 +212,8 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
             fixed: 'left',
             render: (_: string, r: any) => (
               <div>
-                <div style={{ fontWeight: 500 }}>{r.materialName || '-'}</div>
-                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                <div className="u-fw-500">{r.materialName || '-'}</div>
+                <div className="u-fs-11" style={{ color: 'var(--color-text-secondary)' }}>
                   {r.materialCode}
                   {r.specification ? ` | ${r.specification}` : ''}
                   {r.color ? ` | ${r.color}` : ''}
@@ -226,7 +226,7 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
             dataIndex: 'demand',
             width: 100,
             render: (v: any, r: any) => (
-              <span style={{ fontWeight: 500 }}>{v} {r.unit || ''}</span>
+              <span className="u-fw-500">{v} {r.unit || ''}</span>
             ),
           },
           { title: '可用库存', dataIndex: 'availableStock', width: 90, render: (v: number) => v ?? 0 },
@@ -251,7 +251,7 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
             render: (s: any) => (s?.supplierName ? (
               <span>
                 {s.supplierName}
-                {s.isBomDesignated ? <Tag color="blue" style={{ marginLeft: 4, fontSize: 10 }}>清单指定</Tag> : null}
+                {s.isBomDesignated ? <Tag color="blue" className="u-ml-4 u-fs-10">清单指定</Tag> : null}
               </span>
             ) : <span style={{ color: 'var(--color-text-quaternary)' }}>暂无</span>),
           },
@@ -260,7 +260,7 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
 
       {!isSampleMode && (
         <Input.TextArea
-          style={{ marginTop: 12 }}
+          className="u-mt-12"
           rows={2}
           maxLength={200}
           value={reason}

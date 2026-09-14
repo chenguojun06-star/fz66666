@@ -80,7 +80,7 @@ const RoleTemplateSelector: React.FC<RoleTemplateSelectorProps> = ({ value, onCh
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px 0' }}>
+      <div className="u-ta-center" style={{ padding: '40px 0' }}>
         <Spin tip="加载模板中..." />
       </div>
     );
@@ -88,7 +88,7 @@ const RoleTemplateSelector: React.FC<RoleTemplateSelectorProps> = ({ value, onCh
 
   if (error) {
     return (
-      <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} />
+      <Alert type="error" message={error} showIcon className="u-mb-16" />
     );
   }
 
@@ -98,7 +98,7 @@ const RoleTemplateSelector: React.FC<RoleTemplateSelectorProps> = ({ value, onCh
 
   return (
     <div className="role-template-selector">
-      <Radio.Group value={value} onChange={handleSelect} style={{ width: '100%' }}>
+      <Radio.Group value={value} onChange={handleSelect} className="u-w-full">
         <div className="template-grid">
           {templates.map(template => {
             const categoryConfig = CATEGORY_CONFIG[template.category] || CATEGORY_CONFIG.CUSTOM;
@@ -116,25 +116,25 @@ const RoleTemplateSelector: React.FC<RoleTemplateSelectorProps> = ({ value, onCh
                   <div className="template-content">
                     <div className="template-header">
                       <div className="template-title-row">
-                        <Text strong style={{ fontSize: 14 }}>{template.templateName}</Text>
+                        <Text strong className="u-fs-14">{template.templateName}</Text>
                         {template.isDefault && (
-                          <Tag color="gold" style={{ fontSize: 10, marginLeft: 8 }}>默认</Tag>
+                          <Tag color="gold" className="u-fs-10 u-ml-8">默认</Tag>
                         )}
                       </div>
-                      <Tag color={categoryConfig.color} icon={categoryConfig.icon} style={{ fontSize: 11 }}>
+                      <Tag color={categoryConfig.color} icon={categoryConfig.icon} className="u-fs-11">
                         {categoryConfig.label}
                       </Tag>
                     </div>
 
-                    <Text type="secondary" className="template-desc" style={{ fontSize: 12 }}>
+                    <Text type="secondary" className="template-desc u-fs-12" >
                       {template.templateDesc || '暂无描述'}
                     </Text>
 
                     <div className="template-footer">
-                      <Badge count={permCount} showZero={false} style={{ fontSize: 11 }}>
-                        <Tag style={{ fontSize: 11 }}>权限</Tag>
+                      <Badge count={permCount} showZero={false} className="u-fs-11">
+                        <Tag className="u-fs-11">权限</Tag>
                       </Badge>
-                      <Tag style={{ fontSize: 11 }}>
+                      <Tag className="u-fs-11">
                         {PERMISSION_RANGE_LABEL[template.permissionRange] || template.permissionRange}
                       </Tag>
                     </div>

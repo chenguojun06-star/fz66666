@@ -44,7 +44,7 @@ const ScanConfirmModal: React.FC<ScanConfirmModalProps> = ({
       </Button>,
     ]}
   >
-    <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
+    <div className="u-mb-8 u-fs-14" style={{ color: 'var(--neutral-text-secondary)' }}>
       {remain > 10
         ? `确认时间充裕（${remain}秒），请核对信息后领取`
         : remain > 0
@@ -52,7 +52,7 @@ const ScanConfirmModal: React.FC<ScanConfirmModalProps> = ({
           : '确认时间已到，可重新扫码'}
     </div>
     {detail && (
-      <div style={{ display: 'grid', gap: 6 }}>
+      <div className="u-d-grid u-gap-6">
         <div>二维码：{detail.scanCode || '-'}</div>
         <div>数量：{detail.quantity || '-'}</div>
         <div>环节：{detail.progressStage || detail.processName || '-'}</div>

@@ -27,21 +27,21 @@ const InviteQrModal: React.FC<InviteQrModalProps> = ({ inviteQr, onClose, user }
       onCancel={onClose}
       footer={null}
     >
-      <div style={{ textAlign: 'center', padding: '16px 0' }}>
+      <div className="u-ta-center" style={{ padding: '16px 0' }}>
         {inviteQr.loading ? (
           <Spin tip="正在生成二维码..."><div style={{ padding: '48px 0' }} /></Spin>
         ) : inviteQr.qrBase64 ? (
           <>
-            <img src={inviteQr.qrBase64} alt="邀请二维码" style={{ width: 200, height: 200, display: 'block', margin: '0 auto 12px' }} />
-            <div style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))', fontSize: 13 }}>
+            <img src={inviteQr.qrBase64} alt="邀请二维码" className="u-d-block" style={{ width: 200, height: 200, margin: '0 auto 12px' }} />
+            <div className="u-fs-13" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
               员工用微信扫码后，输入系统账号密码即可完成绑定
             </div>
             {inviteQr.expiresAt && (
-              <div style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))', fontSize: 12, marginTop: 6 }}>
+              <div className="u-fs-12 u-mt-6" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
                 有效期至：{formatDateTime(inviteQr.expiresAt)}
               </div>
             )}
-            <div style={{ marginTop: 12 }}>
+            <div className="u-mt-12">
               <Button
                 icon={<LinkOutlined />}
                 onClick={async () => {
@@ -62,7 +62,7 @@ const InviteQrModal: React.FC<InviteQrModalProps> = ({ inviteQr, onClose, user }
             </div>
           </>
         ) : (
-          <div style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))', padding: '24px 0' }}>二维码生成失败，请重试</div>
+          <div className="u-p-24px0" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>二维码生成失败，请重试</div>
         )}
       </div>
     </SmallModal>

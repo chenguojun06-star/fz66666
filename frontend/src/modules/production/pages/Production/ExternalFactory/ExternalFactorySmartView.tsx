@@ -172,16 +172,16 @@ const ExternalFactorySmartView: React.FC<Props> = ({
     handleToggleShipLock,
     openSubProcessRemap, isFactoryAccount, openNodeDetail, onOpenContract]);
 
-  if (loading) return <div style={{ padding: 24 }}><Skeleton active paragraph={{ rows: 6 }} /></div>;
+  if (loading) return <div className="u-p-24"><Skeleton active paragraph={{ rows: 6 }} /></div>;
   if (data.length === 0) return <Empty description="暂无订单数据" style={{ padding: '80px 0' }} />;
 
   return (
     <div className="style-smart-list ef-compact">
-      <div style={{ flex: 1, minHeight: 0 }}>
+      <div className="u-flex-1" style={{ minHeight: 0 }}>
         <Virtuoso
           totalCount={rows.length}
           itemContent={rowRenderer}
-          style={{ height: '100%' }}
+          className="u-h-full"
           overscan={400}
         />
       </div>

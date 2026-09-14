@@ -105,7 +105,7 @@ const SkuColorImage: React.FC<SkuColorImageProps> = ({
           borderRadius: 4,
           display: 'block',
         }}
-        preview={{ mask: <span style={{ fontSize: 10 }}>查看</span> }}
+        preview={{ mask: <span className="u-fs-10">查看</span> }}
         fallback={undefined}
       />
     );

@@ -69,10 +69,10 @@ const PatternRevisionManagement: React.FC = () => {
   return (
     <>
       <Card>
-        <Space orientation="vertical" style={{ width: '100%' }} size="large">
+        <Space orientation="vertical" className="u-w-full" size="large">
           {/* 标题 */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ margin: 0 }}>纸样修改记录</h2>
+          <div className="u-d-flex u-jc-between u-ai-center">
+            <h2 className="u-m-0">纸样修改记录</h2>
             <Button type="primary" onClick={handleCreate}>
               新增修改记录
             </Button>

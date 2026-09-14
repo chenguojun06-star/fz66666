@@ -135,7 +135,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
 
   return (
     <div style={{ padding: '12px 0' }}>
-      <Card style={{ marginBottom: 12, background: 'var(--card-bg, var(--color-slate-50))' }}>
+      <Card className="u-mb-12" style={{ background: 'var(--card-bg, var(--color-slate-50))' }}>
         <Row gutter={32} align="middle">
           <Col>
             <Statistic title="工序种类" value={stats.totalProcessTypes} suffix="种" />
@@ -146,7 +146,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
           <Col>
             <Statistic title="历史记录" value={stats.totalRecords} suffix="条" />
           </Col>
-          <Col flex="1" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+          <Col flex="1" className="u-d-flex u-ai-center u-jc-end u-gap-8 u-fwrap-wrap">
             <Select
               placeholder="选择品类"
               allowClear
@@ -196,14 +196,14 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
       </Card>
 
       {error && (
-        <Alert type="warning" title={error} style={{ marginBottom: 12 }} showIcon />
+        <Alert type="warning" title={error} className="u-mb-12" showIcon />
       )}
 
       {hasFilter && (
         <Alert
           type="info"
           showIcon
-          style={{ marginBottom: 12 }}
+          className="u-mb-12"
           message={
             <Space>
               <span>当前筛选：</span>
@@ -222,10 +222,10 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
             key: String(index),
             label: (
               <Space>
-                <Tag color={STAGE_COLOR[group.parentNode] || 'default'} style={{ fontSize: 14, fontWeight: 600 }}>
+                <Tag color={STAGE_COLOR[group.parentNode] || 'default'} className="u-fs-14 u-fw-600">
                   {group.parentNode}
                 </Tag>
-                <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
                   {group.items.length} 道工序
                 </span>
               </Space>
@@ -254,7 +254,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
             onChange: (page, size) => onPageChange(page, size),
           }}
           footer={() => (
-             <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
+             <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>
                数据实时聚合自本厂扫码历史记录，点击行左侧展开查看最近 5 款历史记录。异常价格 = 偏离均价±30%的记录，可作为定价复核参考。
              </span>
           )}

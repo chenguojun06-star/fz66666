@@ -53,7 +53,7 @@ export default function ResultModal({ executeResult, open, onClose }: ResultModa
             )}
 
             <div style={{ marginTop: '16px', padding: '12px', background: 'var(--color-slate-50)', borderRadius: '4px' }}>
-              <p style={{ margin: 0, fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+              <p className="u-m-0 u-fs-12px" style={{ color: 'var(--color-text-secondary)' }}>
                 命令已成功执行，相关团队将在3分钟内看到影响。
               </p>
             </div>

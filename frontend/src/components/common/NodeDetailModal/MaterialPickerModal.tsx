@@ -55,7 +55,7 @@ const MaterialPickerModal: React.FC<MaterialPickerModalProps> = ({ open, onClose
       onClose={onClose}
       width="50%"
     >
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+      <div className="u-d-flex u-gap-8 u-mb-12">
         <Input
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
@@ -99,7 +99,7 @@ const MaterialPickerModal: React.FC<MaterialPickerModalProps> = ({ open, onClose
                   src={url}
                   width={40}
                   height={40}
-                  style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid var(--color-border)' }}
+                  className="u-objf-cover u-br-4" style={{ border: '1px solid var(--color-border)' }}
                   preview={{ src: url }}
                 />
               );

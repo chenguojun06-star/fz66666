@@ -193,7 +193,7 @@ const StyleBomTab: React.FC<Props> = ({
       />
       <Form form={form} component={false}>
         {data.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-secondary)' }}>
+          <div className="u-ta-center" style={{ padding: '40px 0', color: 'var(--color-text-secondary)' }}>
             暂无物料清单数据，请点击"添加物料"开始配置
           </div>
         ) : (

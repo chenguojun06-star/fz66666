@@ -41,7 +41,7 @@ const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+    <div className="u-d-flex u-ai-center u-gap-8 u-fwrap-wrap">
       <Tooltip title="点击查看明细">
         <Button
           type="primary"

@@ -37,22 +37,22 @@ const FactoryApproveModal: React.FC<FactoryApproveModalProps> = ({
       confirmLoading={factoryApproveLoading}
       width="40vw"
     >
-      <div style={{ marginBottom: 16 }}>
+      <div className="u-mb-16">
         <p>
           批准外发工厂员工"<strong>{currentUser?.name || currentUser?.username}</strong>"
         </p>
         {Boolean(currentUser?.factoryName) && (
           <p style={{ color: 'var(--color-primary)' }}>所属工厂：{String(currentUser?.factoryName as string)}</p>
         )}
-        <p style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)", marginBottom: 16 }}>
+        <p className="u-fs-var--font-size-xs u-mb-16" style={{ color: 'var(--neutral-text-disabled)' }}>
           批准后该员工可以正常登录系统
         </p>
         <div>
-          <div style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
+          <div className="u-d-block u-mb-8 u-fw-500">
             选择角色<span style={{ color: 'var(--color-danger)' }}>*</span>
           </div>
           <Select
-            style={{ width: '100%' }}
+            className="u-w-full"
             placeholder="请选择角色"
             value={factorySelectedRole}
             onChange={setFactorySelectedRole}

@@ -11,7 +11,7 @@ const ExpenseReimbursement = React.lazy(() => import('../ExpenseReimbursement'))
 const EmployeeAdvance = React.lazy(() => import('../EmployeeAdvance'));
 
 const tabSuspense = (
-  <div style={{ textAlign: 'center', padding: 80 }}>
+  <div className="u-ta-center" style={{ padding: 80 }}>
     <Spin />
   </div>
 );
@@ -47,16 +47,16 @@ const ExpenseAdvanceCenter: React.FC<ExpenseAdvanceCenterProps> = ({ initialTab 
 
   return (
     <>
-      <Card className="page-card" size="small" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '10px 16px' } }}>
-        <h2 style={{ margin: 0, fontSize: 16 }}>
-          <DollarOutlined style={{ marginRight: 8 }} />
+      <Card className="page-card u-mb-12" size="small" style={{ border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '10px 16px' } }}>
+        <h2 className="u-m-0 u-fs-16">
+          <DollarOutlined className="u-mr-8" />
           费用与借支
         </h2>
-        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+        <span className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
           员工费用报销与借支/还款的登记、审批、明细都在这里；审批通过后进入收付款中心打款
         </span>
       </Card>
-      <Card className="page-card" style={{ border: '1px solid var(--color-border-secondary)', borderRadius: 6 }} styles={{ body: { padding: '12px 16px' } }}>
+      <Card className="page-card u-br-6" style={{ border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
         <Tabs activeKey={activeTab} onChange={setActiveTab} destroyOnHidden={false} size="small" items={items} />
       </Card>
     </>

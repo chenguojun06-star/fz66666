@@ -123,25 +123,25 @@ const OutboundDrawer: React.FC<Props> = ({
         </Button>
       }
     >
-      <div style={{ padding: '8px 0' }}>
+      <div className="u-p-8px0">
         {outboundItems.length === 0 ? (
           <Empty description="该库位暂无库存" />
         ) : (
           <>
             {/* 出库类型 */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>出库类型</div>
+            <div className="u-mb-16">
+              <div className="u-fw-600 u-mb-8">出库类型</div>
               <Select
                 value={outstockType}
                 onChange={onOutstockTypeChange}
-                style={{ width: '100%' }}
+                className="u-w-full"
                 options={OUTSTOCK_TYPE_OPTIONS}
               />
             </div>
 
             {/* 按款号分组的库存明细 */}
-            <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 600 }}>库存物品</span>
+            <div className="u-mb-12 u-d-flex u-jc-between u-ai-center">
+              <span className="u-fw-600">库存物品</span>
               <Button
                 type="link"
                 size="small"
@@ -167,17 +167,17 @@ const OutboundDrawer: React.FC<Props> = ({
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     borderBottom: '1px solid var(--color-border-secondary, var(--color-border-light))',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="u-d-flex u-ai-center u-gap-8">
                       <Checkbox
                         checked={items.every(i => i.selected)}
                         indeterminate={groupSelected.length > 0 && groupSelected.length < items.length}
                         onChange={(e) => handleGroupSelect(items, e.target.checked)}
                       />
-                      <span style={{ fontWeight: 600, fontSize: 15 }}>{styleNo}</span>
+                      <span className="u-fw-600 u-fs-15">{styleNo}</span>
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                    <div className="u-fs-12" style={{ color: 'var(--color-text-secondary)' }}>
                       库存 {groupTotalStock} 件 | 已选出库 {groupTotalOut} 件
-                      {groupTotalAmount > 0 && <span style={{ marginLeft: 8, color: 'var(--color-primary)', fontWeight: 500 }}>¥{groupTotalAmount.toFixed(2)}</span>}
+                      {groupTotalAmount > 0 && <span className="u-ml-8 u-fw-500" style={{ color: 'var(--color-primary)' }}>¥{groupTotalAmount.toFixed(2)}</span>}
                     </div>
                   </div>
 
@@ -191,10 +191,10 @@ const OutboundDrawer: React.FC<Props> = ({
                     }}>
                       <div>选择</div>
                     <div>商品编码</div>
-                    <div style={{ textAlign: 'right' }}>库存</div>
-                      <div style={{ textAlign: 'right' }}>出库数量</div>
-                      <div style={{ textAlign: 'right' }}>出库单价</div>
-                      <div style={{ textAlign: 'right' }}>小计</div>
+                    <div className="u-ta-right">库存</div>
+                      <div className="u-ta-right">出库数量</div>
+                      <div className="u-ta-right">出库单价</div>
+                      <div className="u-ta-right">小计</div>
                     </div>
                     {/* 行 */}
                     {items.map((item) => {
@@ -215,18 +215,18 @@ const OutboundDrawer: React.FC<Props> = ({
                           </div>
                           <div>
                             {/* D-226：完整商品编码原样显示，不简写 */}
-                            <div style={{ fontSize: 13, fontFamily: 'var(--font-family-mono, monospace)', color: 'var(--color-text)' }} title={item.skuCode}>
+                            <div className="u-fs-13" style={{ fontFamily: 'var(--font-family-mono, monospace)', color: 'var(--color-text)' }} title={item.skuCode}>
                               {item.skuCode}
                             </div>
-                            <div style={{ marginTop: 2 }}>
-                              <Tag color="blue" style={{ marginRight: 4 }}>{item.color}</Tag>
+                            <div className="u-mt-2">
+                              <Tag color="blue" className="u-mr-4">{item.color}</Tag>
                               <Tag>{item.size}</Tag>
                             </div>
                           </div>
-                          <div style={{ textAlign: 'right', fontWeight: 500 }}>
+                          <div className="u-ta-right u-fw-500">
                             {item.stockQuantity}
                           </div>
-                          <div style={{ textAlign: 'right' }}>
+                          <div className="u-ta-right">
                             <InputNumber
                               size="small"
                               min={0}
@@ -237,7 +237,7 @@ const OutboundDrawer: React.FC<Props> = ({
                               style={{ width: 72 }}
                             />
                           </div>
-                          <div style={{ textAlign: 'right' }}>
+                          <div className="u-ta-right">
                             <InputNumber
                               size="small"
                               min={0}
@@ -249,12 +249,12 @@ const OutboundDrawer: React.FC<Props> = ({
                               prefix="¥"
                             />
                             {priceChanged && (
-                              <div style={{ fontSize: 10, color: 'var(--color-warning)', marginTop: 2 }}>
+                              <div className="u-fs-10 u-mt-2" style={{ color: 'var(--color-warning)' }}>
                                 原价 ¥{item.salesPrice?.toFixed(2)}
                               </div>
                             )}
                           </div>
-                          <div style={{ textAlign: 'right', fontWeight: 500, color: 'var(--color-primary)' }}>
+                          <div className="u-ta-right u-fw-500" style={{ color: 'var(--color-primary)' }}>
                             {item.outboundQty > 0 ? `¥${subtotal.toFixed(2)}` : '-'}
                           </div>
                         </div>
@@ -273,11 +273,11 @@ const OutboundDrawer: React.FC<Props> = ({
                 borderRadius: 8, border: '1px solid var(--color-border-secondary, var(--color-border-light))',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               }}>
-                <span style={{ fontWeight: 600 }}>出库汇总</span>
-                <div style={{ display: 'flex', gap: 24 }}>
+                <span className="u-fw-600">出库汇总</span>
+                <div className="u-d-flex" style={{ gap: 24 }}>
                   <span>共 <strong style={{ color: 'var(--color-primary)' }}>{selectedItems.length}</strong> 项</span>
                   <span>总数量 <strong style={{ color: 'var(--color-primary)' }}>{totalQty}</strong> 件</span>
-                  <span>总金额 <strong style={{ color: 'var(--color-primary)', fontSize: 16 }}>¥{totalAmount.toFixed(2)}</strong></span>
+                  <span>总金额 <strong className="u-fs-16" style={{ color: 'var(--color-primary)' }}>¥{totalAmount.toFixed(2)}</strong></span>
                 </div>
               </div>
             )}
@@ -287,21 +287,21 @@ const OutboundDrawer: React.FC<Props> = ({
               marginTop: 16, borderTop: '1px solid var(--color-border-secondary, var(--color-border-light))',
               paddingTop: 16,
             }}>
-              <div style={{ fontWeight: 600, marginBottom: 12 }}>客户/收货信息</div>
+              <div className="u-fw-600 u-mb-12">客户/收货信息</div>
               <Form layout="vertical">
                 <Row gutter={12}>
                   <Col span={12}>
-                    <Form.Item label="客户/领取人" style={{ marginBottom: 12 }}>
+                    <Form.Item label="客户/领取人" className="u-mb-12">
                       <CustomerSelect
                         value={outboundCustomerName}
                         onChange={handleCustomerSelect}
                         placeholder="搜索选择客户，或直接输入名称"
-                        style={{ width: '100%' }}
+                        className="u-w-full"
                       />
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item label="联系电话" style={{ marginBottom: 12 }}>
+                    <Form.Item label="联系电话" className="u-mb-12">
                       <Input
                         placeholder="联系电话（选填）"
                         value={outboundCustomerPhone}
@@ -310,14 +310,14 @@ const OutboundDrawer: React.FC<Props> = ({
                     </Form.Item>
                   </Col>
                 </Row>
-                <Form.Item label="收货地址" style={{ marginBottom: 12 }}>
+                <Form.Item label="收货地址" className="u-mb-12">
                   <Input
                     placeholder="收货地址（选填）"
                     value={outboundShippingAddress}
                     onChange={(e) => onShippingAddressChange(e.target.value)}
                   />
                 </Form.Item>
-                <Form.Item label="备注" style={{ marginBottom: 0 }}>
+                <Form.Item label="备注" className="u-mb-0">
                   <Input.TextArea
                     rows={3}
                     placeholder="出库备注（选填）"

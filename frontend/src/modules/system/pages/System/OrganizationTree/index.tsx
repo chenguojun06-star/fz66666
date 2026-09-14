@@ -92,8 +92,8 @@ const OrganizationTreePage: React.FC = () => {
       content: (
         <div>
           <p>仅允许删除没有子节点的部门，删除后该部门下成员将自动释放。</p>
-          <p style={{ color: 'var(--color-error, var(--color-danger))', fontWeight: 500 }}>若该部门/工厂有未完成的生产订单，将无法删除。</p>
-          <div style={{ marginTop: 16 }}>
+          <p className="u-fw-500" style={{ color: 'var(--color-error, var(--color-danger))' }}>若该部门/工厂有未完成的生产订单，将无法删除。</p>
+          <div className="u-mt-16">
             <span style={{ color: 'var(--color-error, var(--color-danger))' }}>*</span> 删除原因：
             <Input.TextArea
               rows={3}
@@ -215,17 +215,17 @@ const OrganizationTreePage: React.FC = () => {
     <>
       <PageLayout
         title={
-          <span style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+          <span className="u-d-flex u-ai-center" style={{ gap: 0 }}>
             {currentFactoryName ? (
               <>
-                <BankOutlined style={{ marginRight: 6, color: 'var(--primary-color, var(--color-primary))', fontSize: 22 }} />
-                <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--primary-color, var(--color-primary))', marginRight: 14 }}>
+                <BankOutlined className="u-mr-6" style={{ color: 'var(--primary-color, var(--color-primary))', fontSize: 22 }} />
+                <span className="u-fw-700" style={{ fontSize: 22, color: 'var(--primary-color, var(--color-primary))', marginRight: 14 }}>
                   {currentFactoryName}
                 </span>
-                <span style={{ color: 'var(--color-border-antd, var(--color-border-antd))', fontWeight: 300, fontSize: 20, marginRight: 14 }}>|</span>
+                <span className="u-fs-20" style={{ color: 'var(--color-border-antd, var(--color-border-antd))', fontWeight: 300, marginRight: 14 }}>|</span>
               </>
             ) : null}
-            <ApartmentOutlined style={{ marginRight: 8 }} />
+            <ApartmentOutlined className="u-mr-8" />
             部门和成员
           </span>
         }
@@ -246,7 +246,7 @@ const OrganizationTreePage: React.FC = () => {
         }
         headerContent={
           !isFactoryAccount ? (
-            <div style={{ color: 'var(--neutral-text-secondary)', marginTop: 4 }}>
+            <div className="u-mt-4" style={{ color: 'var(--neutral-text-secondary)' }}>
               管理公司组织结构与人员，包含部门、成员分配、职位权限。
             </div>
           ) : undefined

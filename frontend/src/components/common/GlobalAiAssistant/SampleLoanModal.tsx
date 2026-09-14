@@ -161,7 +161,7 @@ const SampleLoanModal: React.FC<SampleLoanModalProps> = ({ visible, prefillData,
               label: `${s.styleNo} (${s.color}/${s.size}) - 可用${s.available}件`,
               value: s.id,
             }))}
-            style={{ width: '100%' }}
+            className="u-w-full"
           />
         </Form.Item>
 
@@ -215,14 +215,14 @@ const SampleLoanModal: React.FC<SampleLoanModalProps> = ({ visible, prefillData,
           label={`借出数量 ${selectedSample ? `(可用: ${available})` : ''}`}
           rules={[{ required: true, message: '请输入数量' }]}
         >
-          <InputNumber min={1} max={available || undefined} style={{ width: '100%' }} />
+          <InputNumber min={1} max={available || undefined} className="u-w-full" />
         </Form.Item>
 
         <Form.Item
           name="expectedReturnDate"
           label="预计归还时间"
         >
-          <DatePicker showTime style={{ width: '100%' }} />
+          <DatePicker showTime className="u-w-full" />
         </Form.Item>
 
         <Form.Item name="remark" label="借出原因/备注">

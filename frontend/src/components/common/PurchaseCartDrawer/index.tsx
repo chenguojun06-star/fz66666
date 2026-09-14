@@ -68,7 +68,7 @@ export const PurchaseCartDrawer: React.FC<PurchaseCartDrawerProps> = ({
           />
         )}
 
-        <div style={{ flex: 1, overflow: 'hidden', padding: '0 16px 16px' }}>
+        <div className="u-flex-1 u-ov-hidden" style={{ padding: '0 16px 16px' }}>
           <CartList
             items={cart?.items || []}
             loading={loading}

@@ -50,7 +50,7 @@ const CreateReceivableModal: React.FC<{
       width="40vw"
       destroyOnHidden
     >
-      <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+      <Form form={form} layout="vertical" className="u-mt-16">
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="customerName" label="客户名称" rules={[{ required: true }]}>
@@ -66,12 +66,12 @@ const CreateReceivableModal: React.FC<{
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="amount" label="应收金额（元）" rules={[{ required: true }]}>
-              <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="0.00" />
+              <InputNumber min={0} precision={2} className="u-w-full" placeholder="0.00" />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item name="dueDate" label="到期日期">
-              <DatePicker style={{ width: '100%' }} placeholder="选择到期日期" />
+              <DatePicker className="u-w-full" placeholder="选择到期日期" />
             </Form.Item>
           </Col>
         </Row>

@@ -655,7 +655,7 @@ const SupplementModal: React.FC<SupplementModalProps> = ({ open, userOptions, on
           rules={[{ required: true, message: '请选择日期' }]}
         >
           <DatePicker
-            style={{ width: '100%' }}
+            className="u-w-full"
             disabledDate={(d) => d && d.isAfter(dayjs().endOf('day'))}
           />
         </Form.Item>
@@ -663,7 +663,7 @@ const SupplementModal: React.FC<SupplementModalProps> = ({ open, userOptions, on
           <DatePicker
             showTime={{ format: 'HH:mm' }}
             format="YYYY-MM-DD HH:mm"
-            style={{ width: '100%' }}
+            className="u-w-full"
             placeholder="上班打卡时间"
           />
         </Form.Item>
@@ -671,14 +671,14 @@ const SupplementModal: React.FC<SupplementModalProps> = ({ open, userOptions, on
           <DatePicker
             showTime={{ format: 'HH:mm' }}
             format="YYYY-MM-DD HH:mm"
-            style={{ width: '100%' }}
+            className="u-w-full"
             placeholder="下班打卡时间"
           />
         </Form.Item>
         <Form.Item name="remark" label="备注">
           <Input.TextArea rows={3} placeholder="补录原因（可选）" maxLength={200} showCount />
         </Form.Item>
-        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+        <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
           提示：上班时间和下班时间至少填一项。不允许补录未来日期。
         </div>
       </Form>
@@ -755,7 +755,7 @@ const AdjustModal: React.FC<AdjustModalProps> = ({ open, record, onCancel, onSuc
           <DatePicker
             showTime={{ format: 'HH:mm' }}
             format="YYYY-MM-DD HH:mm"
-            style={{ width: '100%' }}
+            className="u-w-full"
             placeholder="上班打卡时间"
           />
         </Form.Item>
@@ -763,7 +763,7 @@ const AdjustModal: React.FC<AdjustModalProps> = ({ open, record, onCancel, onSuc
           <DatePicker
             showTime={{ format: 'HH:mm' }}
             format="YYYY-MM-DD HH:mm"
-            style={{ width: '100%' }}
+            className="u-w-full"
             placeholder="下班打卡时间"
           />
         </Form.Item>
@@ -824,7 +824,7 @@ const CancelModal: React.FC<CancelModalProps> = ({ open, record, onCancel, onSuc
       size="sm"
       destroyOnHidden
     >
-      <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+      <div className="u-mb-12 u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
         作废后该记录将标记为「已作废」，不再计入工时统计。此操作可追溯，但不可恢复。
       </div>
       <Input.TextArea
@@ -918,7 +918,7 @@ const BatchLeaveModal: React.FC<BatchLeaveModalProps> = ({ open, userOptions, on
           label="休假日期范围"
           rules={[{ required: true, message: '请选择日期范围' }]}
         >
-          <RangePicker style={{ width: '100%' }} />
+          <RangePicker className="u-w-full" />
         </Form.Item>
         <Form.Item
           name="leaveType"
@@ -930,7 +930,7 @@ const BatchLeaveModal: React.FC<BatchLeaveModalProps> = ({ open, userOptions, on
         <Form.Item name="remark" label="备注">
           <Input.TextArea rows={3} placeholder="休假说明（可选）" maxLength={200} showCount />
         </Form.Item>
-        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+        <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
           提示：单次最多标记 31 天。已有打卡记录的日期会自动跳过。
         </div>
       </Form>

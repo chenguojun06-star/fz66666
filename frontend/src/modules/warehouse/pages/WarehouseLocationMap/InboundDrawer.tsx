@@ -43,7 +43,7 @@ const InboundDrawer: React.FC<Props> = ({
         </Button>
       }
     >
-      <div style={{ padding: '8px 0' }}>
+      <div className="u-p-8px0">
         <Form form={inboundForm} layout="vertical">
           <Form.Item name="materialCode" label="物料编码" rules={[{ required: true, message: '请输入或选择物料编码' }]}>
             <AutoComplete
@@ -73,7 +73,7 @@ const InboundDrawer: React.FC<Props> = ({
             </Col>
           </Row>
           <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请输入数量' }]}>
-            <InputNumber style={{ width: '100%' }} min={0.01} precision={2} placeholder="数量" />
+            <InputNumber className="u-w-full" min={0.01} precision={2} placeholder="数量" />
           </Form.Item>
           <Form.Item name="warehouseLocation" label="库位">
             <Input placeholder="库位编码" disabled />

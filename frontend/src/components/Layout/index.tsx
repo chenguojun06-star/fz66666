@@ -221,7 +221,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="header-user">
             <SmartAlertBell />
             {auth.isFactoryAccount && (
-              <Tag color="orange" style={{ marginLeft: 0, marginRight: 8, fontSize: 14 }}>
+              <Tag color="orange" className="u-mr-8 u-fs-14" style={{ marginLeft: 0 }}>
                  {auth.factoryName || '外发工厂'}
               </Tag>
             )}
@@ -275,7 +275,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <main className="layout-content">
             <div className="content-wrapper">
               {showGlobalSmartGuide && globalGuide ? (
-                <div style={{ marginBottom: 12 }}>
+                <div className="u-mb-12">
                   <SmartGuideBar
                     stage={globalGuide.stage}
                     nextStep={globalGuide.nextStep}

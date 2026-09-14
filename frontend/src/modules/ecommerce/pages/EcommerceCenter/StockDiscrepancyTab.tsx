@@ -106,11 +106,11 @@ const StockDiscrepancyTab: React.FC = () => {
     { title: '商品编码', dataIndex: 'skuCode', width: 160 },
     {
       title: '本地库存', dataIndex: 'localStock', width: 100, align: 'right' as const,
-      render: (v: number) => <span style={{ fontWeight: 500 }}>{v}</span>,
+      render: (v: number) => <span className="u-fw-500">{v}</span>,
     },
     {
       title: '平台库存', dataIndex: 'platformStock', width: 100, align: 'right' as const,
-      render: (v: number) => <span style={{ fontWeight: 500 }}>{v}</span>,
+      render: (v: number) => <span className="u-fw-500">{v}</span>,
     },
     {
       title: '差异数量', dataIndex: 'diffQty', width: 110, align: 'center' as const,
@@ -169,9 +169,9 @@ const StockDiscrepancyTab: React.FC = () => {
 
   return (
     <div>
-      <Row gutter={16} style={{ marginBottom: 16 }}>
+      <Row gutter={16} className="u-mb-16">
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'var(--status-processing-bg)', borderRadius: 12 }}>
+          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-processing-bg)' }}>
             <Statistic
               title="差异记录"
               value={stats?.totalDiscrepancies || 0}
@@ -182,7 +182,7 @@ const StockDiscrepancyTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'var(--status-error-bg)', borderRadius: 12 }}>
+          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-error-bg)' }}>
             <Statistic
               title="未解决"
               value={stats?.unresolvedCount || 0}
@@ -193,7 +193,7 @@ const StockDiscrepancyTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'var(--status-warning-bg)', borderRadius: 12 }}>
+          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-warning-bg)' }}>
             <Statistic
               title="盘盈"
               value={stats?.surplusCount || 0}
@@ -204,7 +204,7 @@ const StockDiscrepancyTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'var(--color-bg-subtle)', borderRadius: 12 }}>
+          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--color-bg-subtle)' }}>
             <Statistic
               title="盘亏"
               value={stats?.shortageCount || 0}
@@ -216,9 +216,9 @@ const StockDiscrepancyTab: React.FC = () => {
         </Col>
       </Row>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
-          <RobotOutlined style={{ marginRight: 4, color: 'var(--color-primary)' }} />
+      <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
+        <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
+          <RobotOutlined className="u-mr-4" style={{ color: 'var(--color-primary)' }} />
           AI 库存差异检测：自动比对本地库存与平台库存，超过阈值时生成差异记录
         </span>
         <Space>
@@ -229,7 +229,7 @@ const StockDiscrepancyTab: React.FC = () => {
         </Space>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+      <div className="u-d-flex u-gap-12 u-mb-12">
         <Input
           placeholder="搜索商品编码"
           prefix={<SearchOutlined />}
@@ -267,29 +267,29 @@ const StockDiscrepancyTab: React.FC = () => {
       >
         {currentRecord && (
           <div>
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 500, marginBottom: 8 }}>商品编码：{currentRecord.skuCode}</div>
+            <div className="u-mb-16">
+              <div className="u-fw-500 u-mb-8">商品编码：{currentRecord.skuCode}</div>
             </div>
-            <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
+            <div className="u-d-flex u-mb-16" style={{ gap: 24 }}>
               <div>
-                <div style={{ color: 'var(--color-text-quaternary)', fontSize: 13, marginBottom: 4 }}>本地库存</div>
-                <div style={{ fontSize: 24, fontWeight: 600 }}>{currentRecord.localStock}</div>
+                <div className="u-fs-13 u-mb-4" style={{ color: 'var(--color-text-quaternary)' }}>本地库存</div>
+                <div className="u-fw-600" style={{ fontSize: 24 }}>{currentRecord.localStock}</div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div className="u-d-flex u-ai-center">
                 <span style={{ fontSize: 24, color: 'var(--color-text-quaternary)' }}>VS</span>
               </div>
               <div>
-                <div style={{ color: 'var(--color-text-quaternary)', fontSize: 13, marginBottom: 4 }}>平台库存</div>
-                <div style={{ fontSize: 24, fontWeight: 600 }}>{currentRecord.platformStock}</div>
+                <div className="u-fs-13 u-mb-4" style={{ color: 'var(--color-text-quaternary)' }}>平台库存</div>
+                <div className="u-fw-600" style={{ fontSize: 24 }}>{currentRecord.platformStock}</div>
               </div>
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ color: 'var(--color-text-quaternary)', fontSize: 13, marginBottom: 4 }}>差异详情</div>
+            <div className="u-mb-16">
+              <div className="u-fs-13 u-mb-4" style={{ color: 'var(--color-text-quaternary)' }}>差异详情</div>
               <Tag color={currentRecord.diffQty > 0 ? 'red' : 'orange'}>
                 {currentRecord.diffQty > 0 ? '盘盈' : '盘亏'}: {currentRecord.diffQty > 0 ? '+' : ''}{currentRecord.diffQty}
               </Tag>
             </div>
-            <div style={{ display: 'flex', gap: 12 }}>
+            <div className="u-d-flex u-gap-12">
               <Button type="primary" loading={resolving} onClick={() => handleConfirmResolve('ACCEPT_LOCAL')}>以本地为准</Button>
               <Button loading={resolving} onClick={() => handleConfirmResolve('ACCEPT_PLATFORM')}>以平台为准</Button>
               <Button loading={resolving} onClick={() => handleConfirmResolve('MANUAL_CHECK')}>人工核对</Button>

@@ -109,7 +109,7 @@ const SmartPriceTab: React.FC = () => {
     { title: '商品编码', dataIndex: 'skuId', width: 100 },
     {
       title: '当前价格', dataIndex: 'oldPrice', width: 110, align: 'right' as const,
-      render: (v: number) => <span style={{ fontWeight: 500 }}>¥{Number(v).toFixed(2)}</span>,
+      render: (v: number) => <span className="u-fw-500">¥{Number(v).toFixed(2)}</span>,
     },
     {
       title: '建议价格', dataIndex: 'newPrice', width: 110, align: 'right' as const,
@@ -161,9 +161,9 @@ const SmartPriceTab: React.FC = () => {
 
   return (
     <div>
-      <Row gutter={16} style={{ marginBottom: 16 }}>
+      <Row gutter={16} className="u-mb-16">
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'var(--status-processing-bg)', borderRadius: 12 }}>
+          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-processing-bg)' }}>
             <Statistic
               title="定价建议"
               value={stats?.totalSuggestions || 0}
@@ -174,7 +174,7 @@ const SmartPriceTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'var(--status-warning-bg)', borderRadius: 12 }}>
+          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-warning-bg)' }}>
             <Statistic
               title="待处理"
               value={stats?.pendingCount || 0}
@@ -185,7 +185,7 @@ const SmartPriceTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'var(--status-success-bg)', borderRadius: 12 }}>
+          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-success-bg)' }}>
             <Statistic
               title="已同步"
               value={stats?.appliedCount || 0}
@@ -196,7 +196,7 @@ const SmartPriceTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'var(--color-bg-subtle)', borderRadius: 12 }}>
+          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--color-bg-subtle)' }}>
             <Statistic
               title="平均置信度"
               value={stats?.avgConfidence || 0}
@@ -208,9 +208,9 @@ const SmartPriceTab: React.FC = () => {
         </Col>
       </Row>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
-          <RobotOutlined style={{ marginRight: 4, color: 'var(--color-primary)' }} />
+      <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
+        <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
+          <RobotOutlined className="u-mr-4" style={{ color: 'var(--color-primary)' }} />
           AI 定价顾问根据库存水平、销量速度自动计算最优售价
         </span>
         <Space>
@@ -244,29 +244,29 @@ const SmartPriceTab: React.FC = () => {
       >
         {currentRecord && (
           <div>
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 500, marginBottom: 8 }}>商品编码：{currentRecord.skuId}</div>
+            <div className="u-mb-16">
+              <div className="u-fw-500 u-mb-8">商品编码：{currentRecord.skuId}</div>
             </div>
-            <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
+            <div className="u-d-flex u-mb-16" style={{ gap: 24 }}>
               <div>
-                <div style={{ color: 'var(--color-text-quaternary)', fontSize: 13, marginBottom: 4 }}>当前价格</div>
-                <div style={{ fontSize: 20, fontWeight: 600 }}>¥{Number(currentRecord.oldPrice).toFixed(2)}</div>
+                <div className="u-fs-13 u-mb-4" style={{ color: 'var(--color-text-quaternary)' }}>当前价格</div>
+                <div className="u-fs-20 u-fw-600">¥{Number(currentRecord.oldPrice).toFixed(2)}</div>
               </div>
               <div>
-                <div style={{ color: 'var(--color-text-quaternary)', fontSize: 13, marginBottom: 4 }}>建议价格</div>
+                <div className="u-fs-13 u-mb-4" style={{ color: 'var(--color-text-quaternary)' }}>建议价格</div>
                 <div style={{ fontSize: 20, fontWeight: 600, color: currentRecord.priceChange >= 0 ? 'var(--color-danger)' : 'var(--color-success)' }}>
                   ¥{Number(currentRecord.newPrice).toFixed(2)}
                 </div>
               </div>
               <div>
-                <div style={{ color: 'var(--color-text-quaternary)', fontSize: 13, marginBottom: 4 }}>变动幅度</div>
+                <div className="u-fs-13 u-mb-4" style={{ color: 'var(--color-text-quaternary)' }}>变动幅度</div>
                 <div style={{ fontSize: 20, fontWeight: 600, color: currentRecord.priceChange >= 0 ? 'var(--color-danger)' : 'var(--color-success)' }}>
                   {currentRecord.priceChange >= 0 ? '+' : ''}{Number(currentRecord.priceChangePercent).toFixed(1)}%
                 </div>
               </div>
             </div>
-            <div style={{ padding: 12, background: 'var(--color-bg-subtle)', borderRadius: 8 }}>
-              <div style={{ color: 'var(--color-text-quaternary)', fontSize: 13, marginBottom: 4 }}>AI 推理依据</div>
+            <div className="u-p-12 u-br-8" style={{ background: 'var(--color-bg-subtle)' }}>
+              <div className="u-fs-13 u-mb-4" style={{ color: 'var(--color-text-quaternary)' }}>AI 推理依据</div>
               <div>{currentRecord.reason}</div>
             </div>
           </div>

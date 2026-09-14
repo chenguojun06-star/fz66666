@@ -55,9 +55,9 @@ const SmartStockTab: React.FC = () => {
       label: <span><ShoppingCartOutlined /> 补货建议</span>,
       children: (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
-              <RobotOutlined style={{ marginRight: 4, color: 'var(--color-primary)' }} />
+          <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
+            <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
+              <RobotOutlined className="u-mr-4" style={{ color: 'var(--color-primary)' }} />
               AI 补货顾问根据租户类型与款式物料清单自动判断走采购还是生产，置信度低于 70% 时请仔细核对
             </span>
             <Space>
@@ -75,7 +75,7 @@ const SmartStockTab: React.FC = () => {
       label: <span><MergeCellsOutlined /> 合单管理</span>,
       children: (
         <div>
-          <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 12 }}>
+          <div className="u-fs-13 u-mb-12" style={{ color: 'var(--color-text-secondary)' }}>
             系统自动扫描同收货人+同平台的多笔待发货订单，合并成一个包裹发货可节省运费
           </div>
           <ResizableTable<MergeGroup> dataSource={st.mergeGroups} columns={cols.mergeCols} rowKey={(r) => `${r.receiverPhone}_${r.platform}`} size="small" loading={st.loading} emptyDescription="暂无数据" />
@@ -87,8 +87,8 @@ const SmartStockTab: React.FC = () => {
       label: <span><GiftOutlined /> 赠品规则</span>,
       children: (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+          <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
+            <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
               按订单金额/数量/平台自动匹配赠品规则
             </span>
             <Button icon={<PlusOutlined />} type="primary" onClick={() => { setGiftRuleRecord(null); setGiftRuleModalOpen(true); }}>新增规则</Button>
@@ -102,9 +102,9 @@ const SmartStockTab: React.FC = () => {
       label: <span><EnvironmentOutlined /> 物流监控</span>,
       children: (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
-              <RobotOutlined style={{ marginRight: 4, color: 'var(--color-primary)' }} />
+          <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
+            <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
+              <RobotOutlined className="u-mr-4" style={{ color: 'var(--color-primary)' }} />
               AI 监控在途订单物流异常（超时未签/轨迹停滞/轨迹异常），自动生成处理建议
             </span>
             <Button icon={<ThunderboltOutlined />} loading={anomalyScanning} onClick={handleScanAnomalies}>扫描物流异常</Button>
@@ -118,9 +118,9 @@ const SmartStockTab: React.FC = () => {
       label: <span><AuditOutlined /> 账单对账</span>,
       children: (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
-              <RobotOutlined style={{ marginRight: 4, color: 'var(--color-primary)' }} />
+          <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
+            <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
+              <RobotOutlined className="u-mr-4" style={{ color: 'var(--color-primary)' }} />
               AI 对账：拉取平台账单与本地收入流水比对，自动分析差异原因（佣金扣除/跨账期/优惠券等）
             </span>
             <Button icon={<ThunderboltOutlined />} loading={billReconciling} onClick={handleReconcileBills}>触发对账</Button>

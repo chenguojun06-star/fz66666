@@ -33,7 +33,7 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, detail, onClose }) => {
               <Tag color={WH_MAP[detail.warehouseStatus]?.color}>{WH_MAP[detail.warehouseStatus]?.label}</Tag>
             </Descriptions.Item>
           </Descriptions>
-          <Divider style={{ margin: '12px 0' }}>商品 &amp; 金额</Divider>
+          <Divider className="u-m-12px0">商品 &amp; 金额</Divider>
           <Descriptions column={2} bordered>
             <Descriptions.Item label="商品名" span={2}>{detail.productName || '-'}</Descriptions.Item>
             <Descriptions.Item label="商品编码">{detail.skuCode || '-'}</Descriptions.Item>
@@ -41,19 +41,19 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, detail, onClose }) => {
             <Descriptions.Item label="商品单价">¥{detail.unitPrice ?? '-'}</Descriptions.Item>
             <Descriptions.Item label="订单总额">¥{detail.totalAmount ?? '-'}</Descriptions.Item>
             <Descriptions.Item label="实付金额">
-              <Text style={{ color: 'var(--color-warning)', fontWeight: 700 }}>¥{detail.payAmount ?? '-'}</Text>
+              <Text className="u-fw-700" style={{ color: 'var(--color-warning)' }}>¥{detail.payAmount ?? '-'}</Text>
             </Descriptions.Item>
             <Descriptions.Item label="运费">¥{detail.freight ?? 0}</Descriptions.Item>
             <Descriptions.Item label="优惠">-¥{detail.discount ?? 0}</Descriptions.Item>
             <Descriptions.Item label="支付方式">{detail.payType || '-'}</Descriptions.Item>
           </Descriptions>
-          <Divider style={{ margin: '12px 0' }}>收件人</Divider>
+          <Divider className="u-m-12px0">收件人</Divider>
           <Descriptions column={1} bordered>
             <Descriptions.Item label="姓名">{detail.receiverName}</Descriptions.Item>
             <Descriptions.Item label="电话">{detail.receiverPhone}</Descriptions.Item>
             <Descriptions.Item label="地址">{detail.receiverAddress}</Descriptions.Item>
           </Descriptions>
-          <Divider style={{ margin: '12px 0' }}>物流 &amp; 关联</Divider>
+          <Divider className="u-m-12px0">物流 &amp; 关联</Divider>
           <Descriptions column={2} bordered>
             <Descriptions.Item label="快递公司">{detail.expressCompany || '-'}</Descriptions.Item>
             <Descriptions.Item label="快递单号">{detail.trackingNo || '-'}</Descriptions.Item>
@@ -65,14 +65,14 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, detail, onClose }) => {
           </Descriptions>
           {(detail.buyerRemark || detail.sellerRemark) && (
             <>
-              <Divider style={{ margin: '12px 0' }}>备注</Divider>
+              <Divider className="u-m-12px0">备注</Divider>
               <Descriptions column={1} bordered>
                 {detail.buyerRemark && <Descriptions.Item label="买家备注">{detail.buyerRemark}</Descriptions.Item>}
                 {detail.sellerRemark && <Descriptions.Item label="卖家备注">{detail.sellerRemark}</Descriptions.Item>}
               </Descriptions>
             </>
           )}
-          <Divider style={{ margin: '12px 0' }}>时间节点</Divider>
+          <Divider className="u-m-12px0">时间节点</Divider>
           <Descriptions column={1} bordered>
             <Descriptions.Item label="下单时间">{detail.createTime?.slice(0, 16)}</Descriptions.Item>
             <Descriptions.Item label="付款时间">{detail.payTime?.slice(0, 16) || '-'}</Descriptions.Item>

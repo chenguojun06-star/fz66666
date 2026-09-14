@@ -6,16 +6,16 @@ import type { MaterialItem, PickingRecord } from '../smartReceiveTypes';
 import { getMaterialTypeName, getMaterialTypeColor } from '../smartReceiveHelpers';
 
 const renderPurchaseItemsTable = (items: MaterialItem[], showStockColumn = true) => (
-  <div style={{ maxHeight: 320, overflow: 'auto', margin: '8px 0', border: '1px solid var(--color-border)', borderRadius: 4 }}>
-    <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+  <div className="u-ov-auto u-m-8px0 u-br-4" style={{ maxHeight: 320, border: '1px solid var(--color-border)' }}>
+    <table className="u-w-full u-fs-13" style={{ borderCollapse: 'collapse' }}>
       <thead>
-        <tr style={{ background: 'var(--color-bg-container)', textAlign: 'left' }}>
-          <th style={{ padding: '8px 10px', fontWeight: 600, width: 90 }}>物料类型</th>
-          <th style={{ padding: '8px 10px', fontWeight: 600 }}>物料名称 / 编号</th>
-          <th style={{ padding: '8px 10px', fontWeight: 600, width: 100 }}>颜色 / 规格</th>
-          <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center', width: 80 }}>需求量</th>
-          {showStockColumn && <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center', width: 70 }}>库存</th>}
-          <th style={{ padding: '8px 10px', fontWeight: 600, textAlign: 'center', width: 80 }}>待采购</th>
+        <tr className="u-ta-left" style={{ background: 'var(--color-bg-container)' }}>
+          <th className="u-p-8px10px u-fw-600" style={{ width: 90 }}>物料类型</th>
+          <th className="u-p-8px10px u-fw-600">物料名称 / 编号</th>
+          <th className="u-p-8px10px u-fw-600" style={{ width: 100 }}>颜色 / 规格</th>
+          <th className="u-p-8px10px u-fw-600 u-ta-center" style={{ width: 80 }}>需求量</th>
+          {showStockColumn && <th className="u-p-8px10px u-fw-600 u-ta-center" style={{ width: 70 }}>库存</th>}
+          <th className="u-p-8px10px u-fw-600 u-ta-center" style={{ width: 80 }}>待采购</th>
         </tr>
       </thead>
       <tbody>
@@ -23,21 +23,21 @@ const renderPurchaseItemsTable = (items: MaterialItem[], showStockColumn = true)
           const purchaseQty = Math.max(0, item.requiredQty - (showStockColumn ? item.availableStock : 0));
           return (
             <tr key={item.purchaseId} style={{ borderTop: '1px solid var(--color-border)' }}>
-              <td style={{ padding: '8px 10px' }}>
-                <Tag color={getMaterialTypeColor(item.materialType)} style={{ margin: 0 }}>
+              <td className="u-p-8px10px">
+                <Tag color={getMaterialTypeColor(item.materialType)} className="u-m-0">
                   {getMaterialTypeName(item.materialType) || '-'}
                 </Tag>
               </td>
-              <td style={{ padding: '8px 10px' }}>
-                <div style={{ fontWeight: 500 }}>{item.materialName || '无'}</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', fontFamily: 'monospace' }}>
+              <td className="u-p-8px10px">
+                <div className="u-fw-500">{item.materialName || '无'}</div>
+                <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)', fontFamily: 'monospace' }}>
                   {item.materialCode || '-'}
                 </div>
               </td>
-              <td style={{ padding: '8px 10px', color: 'var(--color-text-secondary)' }}>
+              <td className="u-p-8px10px" style={{ color: 'var(--color-text-secondary)' }}>
                 {item.color || '-'} / {item.size || '-'}
               </td>
-              <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 600 }}>
+              <td className="u-p-8px10px u-ta-center u-fw-600">
                 {item.requiredQty} {item.unit}
               </td>
               {showStockColumn && (
@@ -45,7 +45,7 @@ const renderPurchaseItemsTable = (items: MaterialItem[], showStockColumn = true)
                   {item.availableStock}
                 </td>
               )}
-              <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 600, color: 'var(--color-warning)' }}>
+              <td className="u-p-8px10px u-ta-center u-fw-600" style={{ color: 'var(--color-warning)' }}>
                 {purchaseQty} {item.unit}
               </td>
             </tr>
@@ -91,7 +91,7 @@ export const useSmartReceiveActions = (
   const handlePurchaseOnly = (item: MaterialItem) => {
     Modal.confirm({
       width: '30vw', title: `确认采购 - ${item.materialName}`, icon: <SendOutlined style={{ color: 'var(--color-primary)' }} />,
-      content: (<div><p>物料编号：<strong>{item.materialCode}</strong></p><p>物料名称：<strong>{item.materialName}</strong>（{getMaterialTypeName(item.materialType)}）</p><p>需求数量：<strong>{item.requiredQty} {item.unit}</strong></p><p>仓库库存：<span style={{ color: 'var(--color-danger)', fontWeight: 600 }}>0（无库存）</span></p><Divider style={{ margin: '8px 0' }} /><p style={{ color: 'var(--color-primary)', fontWeight: 600 }}>确认后将标记为"采购中"，请联系供应商进行采购。</p></div>),
+      content: (<div><p>物料编号：<strong>{item.materialCode}</strong></p><p>物料名称：<strong>{item.materialName}</strong>（{getMaterialTypeName(item.materialType)}）</p><p>需求数量：<strong>{item.requiredQty} {item.unit}</strong></p><p>仓库库存：<span className="u-fw-600" style={{ color: 'var(--color-danger)' }}>0（无库存）</span></p><Divider className="u-m-8px0" /><p className="u-fw-600" style={{ color: 'var(--color-primary)' }}>确认后将标记为"采购中"，请联系供应商进行采购。</p></div>),
       okText: '确认采购', cancelText: '取消',
       onOk: async () => {
         setActionLoading((prev) => ({ ...prev, [item.purchaseId]: true }));
@@ -109,7 +109,7 @@ export const useSmartReceiveActions = (
     let reason = '';
     Modal.confirm({
       width: '30vw', title: '撤销出库单', icon: <ExclamationCircleOutlined />,
-      content: (<div><p>出库单号：<strong>{record.pickingNo}</strong></p><p>领料人：{record.pickerName}</p><p style={{ marginBottom: 8 }}>撤销后将回退库存并恢复采购任务状态。</p><Input.TextArea placeholder="请填写撤销原因（必填）" rows={3} onChange={(e) => { reason = e.target.value; }} /></div>),
+      content: (<div><p>出库单号：<strong>{record.pickingNo}</strong></p><p>领料人：{record.pickerName}</p><p className="u-mb-8">撤销后将回退库存并恢复采购任务状态。</p><Input.TextArea placeholder="请填写撤销原因（必填）" rows={3} onChange={(e) => { reason = e.target.value; }} /></div>),
       okText: '确认撤销', okButtonProps: { danger: true, type: 'default' }, cancelText: '取消',
       onOk: async () => {
         if (!reason.trim()) { message.error('请填写撤销原因'); throw new Error('请填写撤销原因'); }
@@ -130,10 +130,10 @@ export const useSmartReceiveActions = (
       width: '60vw', title: '确认批量采购', icon: <SendOutlined style={{ color: 'var(--color-primary)' }} />,
       content: (
         <div>
-          <p style={{ marginBottom: 4 }}>以下 <strong>{needPurchaseItems.length}</strong> 项无库存物料将标记为"采购中"：</p>
+          <p className="u-mb-4">以下 <strong>{needPurchaseItems.length}</strong> 项无库存物料将标记为"采购中"：</p>
           {renderPurchaseItemsTable(needPurchaseItems, true)}
-          <Divider style={{ margin: '8px 0' }} />
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 4 }}>
+          <Divider className="u-m-8px0" />
+          <p className="u-fs-13 u-mb-4" style={{ color: 'var(--color-text-secondary)' }}>
             采购数量按 <strong>需求数量</strong> 自动登记，确认后请前往
             <strong style={{ color: 'var(--color-primary)' }}> 采购单管理</strong>
             创建采购单（含供应商 / 单价 / 到货时间）。
@@ -168,14 +168,14 @@ export const useSmartReceiveActions = (
       content: (
         <div>
           {hasStockCount > 0 && (
-            <p style={{ color: 'var(--color-warning)', fontWeight: 600, marginBottom: 4 }}>
+            <p className="u-fw-600 u-mb-4" style={{ color: 'var(--color-warning)' }}>
               有 {hasStockCount} 项物料存在可用库存，确认后将跳过仓库直接外采。
             </p>
           )}
-          <p style={{ marginBottom: 4 }}>以下 <strong>{allPendingItems.length}</strong> 项物料将全部标记为"采购中"：</p>
+          <p className="u-mb-4">以下 <strong>{allPendingItems.length}</strong> 项物料将全部标记为"采购中"：</p>
           {renderPurchaseItemsTable(allPendingItems, true)}
-          <Divider style={{ margin: '8px 0' }} />
-          <p style={{ color: 'var(--color-warning)', fontWeight: 600 }}>
+          <Divider className="u-m-8px0" />
+          <p className="u-fw-600" style={{ color: 'var(--color-warning)' }}>
             确认后将跳过仓库库存，全部按需求量登记为外采，请前往采购单管理创建采购单。
           </p>
         </div>

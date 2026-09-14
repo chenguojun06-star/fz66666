@@ -120,24 +120,24 @@ export const usePurchaseReturnActions = (params: UsePurchaseReturnActionsParams)
     const contentEl = (
       <div>
         <p style={{ marginTop: 0 }}>确认回料以下 {returnable.length} 项物料，请填写每项实际回料数量：</p>
-        <div style={{ maxHeight: 260, overflowY: 'auto', marginTop: 4 }}>
+        <div className="u-mt-4" style={{ maxHeight: 260, overflowY: 'auto' }}>
           <Form form={batchForm} layout="vertical" preserve={false}>
             {returnable.map((item, idx) => (
-              <div key={idx} style={{ padding: '6px 0', borderBottom: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div key={idx} className="u-d-flex u-ai-center u-gap-8" style={{ padding: '6px 0', borderBottom: '1px solid var(--color-border-light)' }}>
+                <div className="u-flex-1" style={{ minWidth: 0 }}>
+                  <div className="u-fs-13 u-ov-hidden u-ws-nowrap" style={{ color: 'var(--color-text-primary)', textOverflow: 'ellipsis' }}>
                     {item.materialName || item.materialCode} {item.color ? `· ${item.color}` : ''}
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                  <div className="u-fs-12" style={{ color: 'var(--color-text-secondary)' }}>
                     采购 {Number(item.purchaseQuantity || 0)}{item.unit || ''} · 到货 {Number(item.arrivedQuantity || 0)}{item.unit || ''}
                   </div>
                 </div>
-                <Form.Item name={['items', idx, 'purchaseId']} hidden style={{ margin: 0 }}>
+                <Form.Item name={['items', idx, 'purchaseId']} hidden className="u-m-0">
                   <Input />
                 </Form.Item>
                 <Form.Item
                   name={['items', idx, 'returnQuantity']}
-                  style={{ margin: 0 }}
+                  className="u-m-0"
                   rules={[
                     { required: true, message: '请输入实际回料数量' },
                     {

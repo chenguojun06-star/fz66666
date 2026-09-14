@@ -26,15 +26,15 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="u-d-flex u-fd-column u-gap-8">
+      <div className="u-d-flex u-ai-center u-gap-8">
         <Button onClick={() => setVisible((prev) => !prev)}>
           {visible ? '收起建议' : '排产建议'}
         </Button>
-        <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        <span className="u-fs-14 u-d-inline-flex u-ai-center u-gap-4" style={{ color: 'var(--color-text-tertiary)' }}>
           {loading ? (
             <>
-              <LoadingOutlined style={{ fontSize: 13 }} />
+              <LoadingOutlined className="u-fs-13" />
               <span>分析中...</span>
             </>
           ) : (
@@ -55,9 +55,9 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
           }}
         >
           {loading ? (
-            <div style={{ padding: '10px 0', fontSize: 14, color: 'var(--color-text-tertiary)', textAlign: 'center' }}>正在分析工厂排产...</div>
+            <div className="u-fs-14 u-ta-center" style={{ padding: '10px 0', color: 'var(--color-text-tertiary)' }}>正在分析工厂排产...</div>
           ) : items.length === 0 ? (
-            <div style={{ padding: '10px 0', fontSize: 14, color: 'var(--color-text-tertiary)', textAlign: 'center', lineHeight: '20px' }}>
+            <div className="u-fs-14 u-ta-center" style={{ padding: '10px 0', color: 'var(--color-text-tertiary)', lineHeight: '20px' }}>
               当前没有可用的排产建议数据
               <br />
               不代表不能下单，可继续手动选择工厂
@@ -73,37 +73,37 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
                   background: item.selected ? 'var(--status-success-bg)' : 'var(--color-bg-container)',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div className="u-d-flex u-ai-center u-jc-between u-gap-8">
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                    <div className="u-fs-14 u-fw-600" style={{ color: 'var(--color-text-primary)' }}>
                       {item.pinned ? '当前工厂' : `推荐${item.rank}`} · {item.factoryName}
                     </div>
-                    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>{item.estimatedText}</div>
+                    <div className="u-fs-14 u-mt-2" style={{ color: 'var(--color-text-tertiary)' }}>{item.estimatedText}</div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div className="u-d-flex u-ai-center u-gap-6">
                     {item.pinned ? <Tag color="green" style={{ marginInlineEnd: 0 }}>当前</Tag> : null}
                     <Tag color="blue" style={{ marginInlineEnd: 0 }}>{item.score}分</Tag>
                     <span style={{ fontSize: 14, color: item.sourceTone }}>{item.sourceLabel}</span>
                   </div>
                 </div>
-                <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+                <div className="u-mt-8 u-d-grid u-gap-8" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
                   <div>
-                    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>在制</div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>{item.currentLoadText}</div>
+                    <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>在制</div>
+                    <div className="u-fs-14 u-fw-600" style={{ color: 'var(--color-text-primary)' }}>{item.currentLoadText}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>可用</div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>{item.availableCapacityText}</div>
+                    <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>可用</div>
+                    <div className="u-fs-14 u-fw-600" style={{ color: 'var(--color-text-primary)' }}>{item.availableCapacityText}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>日产能</div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>{item.dailyCapacityText}</div>
+                    <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>日产能</div>
+                    <div className="u-fs-14 u-fw-600" style={{ color: 'var(--color-text-primary)' }}>{item.dailyCapacityText}</div>
                   </div>
                 </div>
                 {item.dataNote ? (
-                  <div style={{ marginTop: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>{item.dataNote}</div>
+                  <div className="u-mt-8 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{item.dataNote}</div>
                 ) : null}
-                <div style={{ marginTop: 8 }}>
+                <div className="u-mt-8">
                   <Button
                    
                     type={item.selected ? 'primary' : 'default'}

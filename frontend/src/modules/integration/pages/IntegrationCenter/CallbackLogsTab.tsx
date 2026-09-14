@@ -85,7 +85,7 @@ const CallbackLogsTab: React.FC<Props> = ({ active }) => {
     { title: '渠道', dataIndex: 'channel', width: 100,
       render: (v: string) => <Tag color={CHANNEL_COLOR[v] || 'default'}>{CHANNEL_NAME[v] ?? '未知'}</Tag> },
     { title: '关联订单', dataIndex: 'relatedOrderId', width: 150,
-      render: (v: string | null) => <span style={{ fontFamily: 'monospace', fontSize: 14 }}>{v || '-'}</span> },
+      render: (v: string | null) => <span className="u-fs-14" style={{ fontFamily: 'monospace' }}>{v || '-'}</span> },
     { title: '验签', dataIndex: 'verified', width: 70,
       render: (v: boolean) => <Tag color={v ? 'success' : 'error'}>{v ? '通过' : '失败'}</Tag> },
     { title: '处理结果', dataIndex: 'processed', width: 80,
@@ -109,7 +109,7 @@ const CallbackLogsTab: React.FC<Props> = ({ active }) => {
 
   return (
     <div style={{ paddingTop: 16 }}>
-      <Card style={{ marginBottom: 12, borderRadius: 8 }} variant="borderless">
+      <Card className="u-mb-12 u-br-8" variant="borderless">
         <Space wrap>
           <Select placeholder="类型" allowClear style={{ width: 100 }}
             value={filters.type} onChange={v => setFilters(f => ({ ...f, type: v }))}>

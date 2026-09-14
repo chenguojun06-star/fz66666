@@ -22,7 +22,7 @@ const PhoneCell: React.FC<PhoneCellProps> = ({ phone }) => {
   if (!phone) return <Text type="secondary">-</Text>;
 
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+    <span className="u-d-inline-flex u-ai-center u-gap-4">
       <Text style={{ fontVariantNumeric: 'tabular-nums' }}>
         {visible ? phone : maskPhone(phone)}
       </Text>

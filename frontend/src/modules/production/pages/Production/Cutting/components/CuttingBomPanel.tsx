@@ -75,8 +75,8 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
     <Card
 
       title="面辅料信息"
-      className="cutting-entry-purchase-card"
-      style={{ marginTop: 12 }}
+      className="cutting-entry-purchase-card u-mt-12"
+      
       loading={bomLoading}
       extra={
         canEdit ? (
@@ -100,12 +100,12 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
             )}
           </Space>
         ) : isBundled ? (
-          <span style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>裁剪已完成，不可修改</span>
+          <span className="u-fs-14" style={{ color: 'var(--color-text-quaternary)' }}>裁剪已完成，不可修改</span>
         ) : null
       }
     >
       {bomList.length === 0 && !bomEditing ? (
-        <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--color-text-quaternary)' }}>
+        <div className="u-ta-center u-p-24px0" style={{ color: 'var(--color-text-quaternary)' }}>
           暂无面辅料信息
           {canEdit && (
             <Button type="link" onClick={() => { onAddRow(); onSetEditing(true); }}>

@@ -13,9 +13,9 @@ const SuperAdminPanels: React.FC<SuperAdminPanelsProps> = ({ collapsedPanels, to
   return (
     <>
       <div style={{ padding: '0 24px 4px' }}>
-        <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('graphmas')}>
-          <span style={{ fontSize: 14, color: 'var(--color-purple-400)', fontWeight: 600 }}> 多代理图分析（Graph MAS）</span>
-          <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(192,132,252,0.15)', color: 'var(--color-purple-400)' }}>
+        <div className="c-card-title u-cur-pointer u-p-8px0 u-mb-0"  onClick={() => toggleCollapse('graphmas')}>
+          <span className="u-fs-14 u-fw-600" style={{ color: 'var(--color-purple-400)' }}> 多代理图分析（Graph MAS）</span>
+          <span className="c-card-badge u-ml-8" style={{ background: 'rgba(192,132,252,0.15)', color: 'var(--color-purple-400)' }}>
             Plan · Act · Reflect v4.0
           </span>
           <CollapseChevron panelKey="graphmas" collapsed={!!collapsedPanels['graphmas']} />
@@ -23,16 +23,16 @@ const SuperAdminPanels: React.FC<SuperAdminPanelsProps> = ({ collapsedPanels, to
       </div>
       <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['graphmas'] ? 0 : 600, transition: 'max-height 0.3s ease' }}>
         <div style={{ padding: '0 24px 20px' }}>
-          <Suspense fallback={<div style={{ padding: 16, textAlign: 'center', color: 'var(--color-text-muted)' }}>加载中…</div>}>
+          <Suspense fallback={<div className="u-p-16 u-ta-center" style={{ color: 'var(--color-text-muted)' }}>加载中…</div>}>
             <AgentGraphPanel />
           </Suspense>
         </div>
       </div>
 
       <div style={{ padding: '0 24px 4px' }}>
-        <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('abtest')}>
-          <span style={{ fontSize: 14, color: 'var(--color-accent-sky)', fontWeight: 600 }}> A/B 测试统计</span>
-          <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(56,189,248,0.15)', color: 'var(--color-accent-sky)' }}>
+        <div className="c-card-title u-cur-pointer u-p-8px0 u-mb-0"  onClick={() => toggleCollapse('abtest')}>
+          <span className="u-fs-14 u-fw-600" style={{ color: 'var(--color-accent-sky)' }}> A/B 测试统计</span>
+          <span className="c-card-badge u-ml-8" style={{ background: 'rgba(56,189,248,0.15)', color: 'var(--color-accent-sky)' }}>
             Scene Comparison
           </span>
           <CollapseChevron panelKey="abtest" collapsed={!!collapsedPanels['abtest']} />
@@ -40,7 +40,7 @@ const SuperAdminPanels: React.FC<SuperAdminPanelsProps> = ({ collapsedPanels, to
       </div>
       <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['abtest'] ? 0 : 400, transition: 'max-height 0.3s ease' }}>
         <div style={{ padding: '0 24px 20px' }}>
-          <Suspense fallback={<div style={{ padding: 16, textAlign: 'center', color: 'var(--color-text-muted)' }}>加载中…</div>}>
+          <Suspense fallback={<div className="u-p-16 u-ta-center" style={{ color: 'var(--color-text-muted)' }}>加载中…</div>}>
             <ABTestStatsPanel />
           </Suspense>
         </div>

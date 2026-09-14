@@ -48,7 +48,7 @@ export function buildCuttingBomColumns({
             value={String(v || '')}
             onChange={(e) => onUpdateRow(record.id!, 'materialCode', e.target.value)}
             placeholder="输入编码"
-            suffix={<span style={{ fontSize: 10, color: 'var(--color-primary)', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); onOpenMaterialModal(record.id!); }}>选用</span>}
+            suffix={<span className="u-fs-10 u-cur-pointer" style={{ color: 'var(--color-primary)' }} onClick={(e) => { e.stopPropagation(); onOpenMaterialModal(record.id!); }}>选用</span>}
           />
         ) : (
           String(v || '').trim() || '-'
@@ -137,7 +137,7 @@ export function buildCuttingBomColumns({
             onChange={(val: string) => onUpdateRow(record.id!, 'size', val)}
             placeholder="码数"
 
-            style={{ width: '100%' }}
+            className="u-w-full"
           />
         ) : (
           String(v || '').trim() || '-'
@@ -173,7 +173,7 @@ export function buildCuttingBomColumns({
             onChange={(val: string) => onUpdateRow(record.id!, 'unit', val)}
             placeholder="单位"
 
-            style={{ width: '100%' }}
+            className="u-w-full"
           />
         ) : (
           String(v || '').trim() || '-'
@@ -193,7 +193,7 @@ export function buildCuttingBomColumns({
             min={0}
             precision={2}
             controls={false}
-            style={{ width: '100%' }}
+            className="u-w-full"
             onChange={(val) => onUpdateRow(record.id!, 'usageAmount', val ?? 0)}
           />
         ) : (
@@ -215,7 +215,7 @@ export function buildCuttingBomColumns({
             max={100}
             precision={1}
             controls={false}
-            style={{ width: '100%' }}
+            className="u-w-full"
             onChange={(val) => onUpdateRow(record.id!, 'lossRate', val ?? 0)}
           />
         ) : (
@@ -236,7 +236,7 @@ export function buildCuttingBomColumns({
             min={0}
             precision={2}
             controls={false}
-            style={{ width: '100%' }}
+            className="u-w-full"
             prefix="¥"
             onChange={(val) => onUpdateRow(record.id!, 'unitPrice', val ?? 0)}
           />
@@ -256,7 +256,7 @@ export function buildCuttingBomColumns({
             value={String(v || '')}
             placeholder="供应商"
 
-            style={{ width: '100%' }}
+            className="u-w-full"
             onChange={(_val: string, option: any) => {
               onUpdateRow(record.id!, 'supplierName', _val);
               const sel = Array.isArray(option) ? option[0] : option;

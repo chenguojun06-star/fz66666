@@ -25,7 +25,7 @@ const ExpiringAppsAlert: React.FC<Props> = ({ expiringApps }) => {
       type={isCritical ? 'error' : 'warning'}
       icon={<BellOutlined />}
       showIcon
-      style={{ marginBottom: 16 }}
+      className="u-mb-16"
       title={
         <Space size={4} wrap>
           <Text strong>续费提醒：</Text>

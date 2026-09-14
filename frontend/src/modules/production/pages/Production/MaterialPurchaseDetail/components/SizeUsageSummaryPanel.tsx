@@ -196,10 +196,10 @@ const SizeUsageSummaryPanel: React.FC<Props> = ({ orderId, purchaseList }) => {
       title="码数用量明细与汇总"
       loading={loading}
       size="small"
-      style={{ marginBottom: 16 }}
+      className="u-mb-16"
       extra={
         data?.totalQuantity != null ? (
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
+          <span className="u-fs-var--font-size-xs" style={{ color: 'var(--color-text-tertiary)' }}>
             总下单 {data.totalQuantity} 件
           </span>
         ) : null
@@ -213,15 +213,15 @@ const SizeUsageSummaryPanel: React.FC<Props> = ({ orderId, purchaseList }) => {
         />
       ) : (
         <>
-          <div style={{ marginBottom: 12, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>下单码数：</span>
+          <div className="u-mb-12 u-d-flex u-fwrap-wrap u-gap-8 u-ai-center">
+            <span className="u-fs-var--font-size-xs" style={{ color: 'var(--color-text-tertiary)' }}>下单码数：</span>
             {Object.entries(data?.sizeQuantities || {}).map(([size, qty]) => (
               <Tag key={size}>
                 {size} × {qty}
               </Tag>
             ))}
             {Object.keys(data?.sizeQuantities || {}).length === 0 && (
-              <span style={{ color: 'var(--color-text-quaternary)', fontSize: 'var(--font-size-xs)' }}>无</span>
+              <span className="u-fs-var--font-size-xs" style={{ color: 'var(--color-text-quaternary)' }}>无</span>
             )}
           </div>
           <ResizableTable
@@ -233,7 +233,7 @@ const SizeUsageSummaryPanel: React.FC<Props> = ({ orderId, purchaseList }) => {
             size="small"
             scroll={{ x: 'max-content' }}
           />
-          <div style={{ marginTop: 8, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-quaternary)' }}>
+          <div className="u-mt-8 u-fs-var--font-size-xs" style={{ color: 'var(--color-text-quaternary)' }}>
             需求总量 = Σ(单件用量 × 该码下单数量) × (1 + 损耗率)，与采购需求生成口径一致；分码用量未配置时按统一单件用量计算。
           </div>
         </>

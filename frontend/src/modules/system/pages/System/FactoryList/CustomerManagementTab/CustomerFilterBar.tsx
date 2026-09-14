@@ -22,7 +22,7 @@ const CustomerFilterBar: React.FC<CustomerFilterBarProps> = ({
 }) => {
   return (
     <Card className="filter-card mb-sm">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
+      <div className="u-d-flex u-jc-between u-ai-center u-w-full u-fwrap-wrap u-gap-16">
         <Space wrap size={12}>
           <Input
             placeholder="客户名称/联系人/电话"

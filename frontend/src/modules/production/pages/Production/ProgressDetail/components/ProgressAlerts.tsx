@@ -33,9 +33,9 @@ const ProgressAlerts: React.FC<ProgressAlertsProps> = ({
 
     {/* 工序瓶颈横幅：加载期间预占位（minHeight=54），避免 Banner 出现时表格下移 (CLS) */}
     {bottleneckLoading && !bottleneckBannerVisible ? (
-      <div style={{ marginBottom: 10, minHeight: 54 }} aria-hidden="true" />
+      <div className="u-mb-10" style={{ minHeight: 54 }} aria-hidden="true" />
     ) : bottleneckBannerVisible && bottleneckItems.length > 0 ? (
-      <div style={{ marginBottom: 10 }}>
+      <div className="u-mb-10">
         <Alert
           type={bottleneckItems.some(i => i.severity === 'critical') ? 'error' : 'warning'}
           showIcon
@@ -46,12 +46,12 @@ const ProgressAlerts: React.FC<ProgressAlertsProps> = ({
           )}
           title={<span> 工序瓶颈：{bottleneckItems.length} 个阶段存在积压风险</span>}
           description={
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <ul className="u-m-0" style={{ paddingLeft: 18 }}>
               {bottleneckItems.slice(0, 4).map((it, idx) => (
                 <li key={idx}>
                   <b>{it.stageName}</b>
-                  {it.backlog > 0 && <span style={{ marginLeft: 6, color: 'var(--color-text-muted)' }}>积压 {it.backlog} 件</span>}
-                  {it.suggestion && <span style={{ marginLeft: 6, color: 'var(--color-text-secondary)' }}>{it.suggestion}</span>}
+                  {it.backlog > 0 && <span className="u-ml-6" style={{ color: 'var(--color-text-muted)' }}>积压 {it.backlog} 件</span>}
+                  {it.suggestion && <span className="u-ml-6" style={{ color: 'var(--color-text-secondary)' }}>{it.suggestion}</span>}
                 </li>
               ))}
               {bottleneckItems.length > 4 && <li style={{ color: 'var(--color-text-tertiary)' }}>还有 {bottleneckItems.length - 4} 个阶段...</li>}

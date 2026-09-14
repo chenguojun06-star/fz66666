@@ -57,7 +57,7 @@ function StandardDataPage<T extends Record<string, any> = any>({
     searchBar && (searchBar.searchValue !== undefined || searchBar.showDate || searchBar.showStatus);
 
   const filterLeft = hasSearchBar ? (
-    <div style={{ width: '100%' }}>
+    <div className="u-w-full">
       <StandardSearchBar {...searchBar} />
     </div>
   ) : (

@@ -50,7 +50,7 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({ images, imageHeight = 280
   const goNext = () => switchTo(idx < count - 1 ? idx + 1 : 0);
 
   return (
-    <div className="image-carousel" style={{ position: 'relative', width: '100%', borderRadius: 8, overflow: 'hidden' }}>
+    <div className="image-carousel u-pos-relative u-w-full u-br-8 u-ov-hidden" >
       <Image.PreviewGroup>
         {images.map((item, i) => (
           <Image
@@ -65,7 +65,7 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({ images, imageHeight = 280
               cursor: 'pointer',
             }}
             preview={{
-              mask: <span style={{ fontSize: 12 }}>点击预览</span>,
+              mask: <span className="u-fs-12">点击预览</span>,
             }}
           />
         ))}

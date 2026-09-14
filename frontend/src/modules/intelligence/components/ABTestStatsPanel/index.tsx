@@ -43,8 +43,8 @@ const ABTestStatsPanel: React.FC = () => {
 
   return (
     <Spin spinning={loading}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>按场景对比近 {days} 天数据</span>
+      <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
+        <span className="u-fs-14" style={{ color: 'var(--color-text-muted)' }}>按场景对比近 {days} 天数据</span>
         <Select value={days} onChange={setDays} style={{ width: 100 }}
                 options={[{ value: 7, label: '7 天' }, { value: 14, label: '14 天' }, { value: 30, label: '30 天' }]} />
       </div>
@@ -62,10 +62,10 @@ const ABTestStatsPanel: React.FC = () => {
                 background: 'var(--color-dark-bg-2)', borderRadius: 8, padding: '12px 14px',
                 border: (isBestLatency || isBestFeedback) ? '1px solid rgba(74,222,128,0.4)' : '1px solid rgba(255,255,255,0.06)',
               }}>
-                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8, color: 'var(--color-border-light)' }}>
+                <div className="u-fw-600 u-fs-14 u-mb-8" style={{ color: 'var(--color-border-light)' }}>
                   {SCENE_LABELS[r.scene] ?? '未知'}
-                  {isBestLatency && <Tooltip title="最低延迟"><span style={{ marginLeft: 4, fontSize: 14, color: 'var(--color-green-400)' }}></span></Tooltip>}
-                  {isBestFeedback && <Tooltip title="最高评分"><span style={{ marginLeft: 4, fontSize: 14, color: 'var(--color-amber-400)' }}></span></Tooltip>}
+                  {isBestLatency && <Tooltip title="最低延迟"><span className="u-ml-4 u-fs-14" style={{ color: 'var(--color-green-400)' }}></span></Tooltip>}
+                  {isBestFeedback && <Tooltip title="最高评分"><span className="u-ml-4 u-fs-14" style={{ color: 'var(--color-amber-400)' }}></span></Tooltip>}
                 </div>
                 <Metric label="执行次数" value={r.totalRuns} />
                 <Metric label="成功率" value={`${successRate}%`} color={successRate >= 90 ? 'var(--color-green-400)' : successRate >= 70 ? 'var(--color-amber-400)' : 'var(--color-red-400)'} />
@@ -83,7 +83,7 @@ const ABTestStatsPanel: React.FC = () => {
 
 function Metric({ label, value, color }: { label: string; value: React.ReactNode; color?: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, lineHeight: '22px' }}>
+    <div className="u-d-flex u-jc-between u-fs-14" style={{ lineHeight: '22px' }}>
       <span style={{ color: 'var(--color-text-muted)' }}>{label}</span>
       <span style={{ color: color ?? 'var(--color-zinc-300)', fontWeight: 500 }}>{value}</span>
     </div>

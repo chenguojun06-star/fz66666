@@ -142,9 +142,9 @@ export function useAppStore() {
       Modal.success({
         title: '购买意向已提交！', width: 440,
         content: (
-          <div style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--color-text-secondary)' }}>
+          <div className="u-fs-14 u-lh-18" style={{ color: 'var(--color-text-secondary)' }}>
             <div>商务团队将在 <strong>1-3个工作日</strong> 内联系您确认订单。</div>
-            <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--color-fill-quaternary)', borderRadius: 6, fontSize: 14 }}>
+            <div className="u-mt-12 u-p-8px12px u-br-6 u-fs-14" style={{ background: 'var(--color-fill-quaternary)' }}>
               <div> 商务电话：400-xxx-xxxx（请联系管理员获取）</div>
               <div> 商务邮箱：sales@yourcompany.com</div>
             </div>

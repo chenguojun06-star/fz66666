@@ -183,7 +183,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                         mouseEnterDelay={0.3}
                         overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
                       >
-                        <span style={{ cursor: 'pointer' }}>{record[titleField]}</span>
+                        <span className="u-cur-pointer">{record[titleField]}</span>
                       </Popover>
                     ) : (
                       record[titleField]

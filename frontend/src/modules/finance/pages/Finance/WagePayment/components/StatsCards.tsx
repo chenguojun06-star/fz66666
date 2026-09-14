@@ -31,7 +31,7 @@ interface StatsCardsProps {
   selectedPayableKeysLength: number;
 }
 
-const CloseIcon = () => <span style={{ marginRight: 4, fontSize: 12 }}>✕</span>;
+const CloseIcon = () => <span className="u-mr-4 u-fs-12">✕</span>;
 
 /**
  * 顶部统计卡（D-298 梳理）：
@@ -52,29 +52,29 @@ const StatsCards: React.FC<StatsCardsProps> = ({
 
   const cards = isPendingTab
     ? [
-        { title: '待付款笔数', icon: <ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />, value: pendingStats.total, suffix: '笔', color: 'var(--color-warning)' },
-        { title: '待付款金额', icon: <DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />, value: pendingStats.totalAmount, prefix: '¥', precision: 2, color: 'var(--color-text-primary)' },
-        { title: '其中工资结算', icon: <WalletOutlined style={{ marginRight: 4, fontSize: 12 }} />, value: pendingStats.payrollCount, suffix: '笔', color: 'var(--color-text-secondary)' },
-        { title: selectedPayableKeysLength > 0 ? '已勾选（可批量付款）' : '工厂对账 + 费用报销', icon: <CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />, value: selectedPayableKeysLength > 0 ? selectedPayableKeysLength : pendingStats.reconCount + pendingStats.reimbCount, suffix: selectedPayableKeysLength > 0 ? '笔' : '笔', color: selectedPayableKeysLength > 0 ? 'var(--color-primary)' : 'var(--color-text-secondary)' },
+        { title: '待付款笔数', icon: <ClockCircleOutlined className="u-mr-4 u-fs-12" />, value: pendingStats.total, suffix: '笔', color: 'var(--color-warning)' },
+        { title: '待付款金额', icon: <DollarOutlined className="u-mr-4 u-fs-12" />, value: pendingStats.totalAmount, prefix: '¥', precision: 2, color: 'var(--color-text-primary)' },
+        { title: '其中工资结算', icon: <WalletOutlined className="u-mr-4 u-fs-12" />, value: pendingStats.payrollCount, suffix: '笔', color: 'var(--color-text-secondary)' },
+        { title: selectedPayableKeysLength > 0 ? '已勾选（可批量付款）' : '工厂对账 + 费用报销', icon: <CheckCircleOutlined className="u-mr-4 u-fs-12" />, value: selectedPayableKeysLength > 0 ? selectedPayableKeysLength : pendingStats.reconCount + pendingStats.reimbCount, suffix: selectedPayableKeysLength > 0 ? '笔' : '笔', color: selectedPayableKeysLength > 0 ? 'var(--color-primary)' : 'var(--color-text-secondary)' },
       ]
     : [
-        { title: '付款笔数', icon: <DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />, value: paymentStats.total, suffix: '笔', color: 'var(--color-text-primary)' },
-        { title: '处理中', icon: <ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />, value: paymentStats.pendingCount, suffix: '笔', color: 'var(--color-warning)' },
-        { title: '已成功金额', icon: <CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />, value: paymentStats.successAmount, prefix: '¥', precision: 2, color: 'var(--color-success)' },
+        { title: '付款笔数', icon: <DollarOutlined className="u-mr-4 u-fs-12" />, value: paymentStats.total, suffix: '笔', color: 'var(--color-text-primary)' },
+        { title: '处理中', icon: <ClockCircleOutlined className="u-mr-4 u-fs-12" />, value: paymentStats.pendingCount, suffix: '笔', color: 'var(--color-warning)' },
+        { title: '已成功金额', icon: <CheckCircleOutlined className="u-mr-4 u-fs-12" />, value: paymentStats.successAmount, prefix: '¥', precision: 2, color: 'var(--color-success)' },
         { title: '失败/取消', icon: <CloseIcon />, value: paymentStats.rejectedCount, suffix: '笔', color: 'var(--color-text-secondary)' },
       ];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+    <div className="u-d-grid u-gap-12 u-mb-12" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
       {cards.map((c) => (
         <Card
           key={c.title}
           size="small"
-          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
           styles={{ body: { padding: '5px 10px' } }}
         >
           <Statistic
-            title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{c.icon}{c.title}</span>}
+            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>{c.icon}{c.title}</span>}
             value={c.value}
             prefix={c.prefix}
             precision={c.precision}

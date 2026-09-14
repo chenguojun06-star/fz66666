@@ -135,7 +135,7 @@ const StageTimelineHint: React.FC<StageTimelineHintProps> = ({
     const s = computed[stageIndex];
     if (!s) return null;
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div className="u-d-flex u-fd-column" style={{ gap: 2 }}>
         {s.gapText && (
           <Tooltip title={`${s.gapFrom} → ${s.name} ${s.gapText}`}>
             <div style={{ ...hintStyle, color: s.gapColor }}>{s.gapText}</div>
@@ -151,7 +151,7 @@ const StageTimelineHint: React.FC<StageTimelineHintProps> = ({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <div className="u-d-flex u-fd-column" style={{ gap: 2 }}>
       {computed.map((s, i) => (
         <React.Fragment key={i}>
           {s.gapText && (

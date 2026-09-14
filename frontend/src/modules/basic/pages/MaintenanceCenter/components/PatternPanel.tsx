@@ -76,9 +76,9 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
   };
 
   if (styleNo) {
-    if (loading && !directRow) return <div style={{ textAlign: 'center', padding: 24, color: 'rgba(0,0,0,0.45)' }}>加载中...</div>;
-    if (!directRow && !loading) return <div style={{ textAlign: 'center', padding: 24, color: 'rgba(0,0,0,0.45)' }}>未找到该款号的数据</div>;
-    if (!directRow) return <div style={{ textAlign: 'center', padding: 24, color: 'rgba(0,0,0,0.45)' }}>加载中...</div>;
+    if (loading && !directRow) return <div className="u-ta-center u-p-24" style={{ color: 'rgba(0,0,0,0.45)' }}>加载中...</div>;
+    if (!directRow && !loading) return <div className="u-ta-center u-p-24" style={{ color: 'rgba(0,0,0,0.45)' }}>未找到该款号的数据</div>;
+    if (!directRow) return <div className="u-ta-center u-p-24" style={{ color: 'rgba(0,0,0,0.45)' }}>加载中...</div>;
     if (!canManage) {
       return (
         <div style={directStackStyle}>
@@ -99,7 +99,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
               ) : null}
               <Form form={returnPatternForm} layout="vertical">
                 <div style={directFieldLabelStyle}>退回原因</div>
-                <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} style={{ marginBottom: 10 }}>
+                <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} className="u-mb-10">
                   <TextArea rows={3} placeholder="请说明退回原因，将记录到操作日志" />
                 </Form.Item>
               </Form>
@@ -145,7 +145,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
 
   return (
     <>
-      <Card className="filter-card" style={{ marginBottom: 16 }}>
+      <Card className="filter-card u-mb-16" >
         <StandardToolbar
           left={<Space wrap>
             <Input placeholder="款号" style={{ width: 180 }} value={styleNoInput} onChange={(e) => setStyleNoInput(e.target.value)} />
@@ -163,7 +163,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
         onCancel={() => { setReturnPatternModalVisible(false); returnPatternForm.resetFields(); }}
         footer={<Space><Button onClick={() => { setReturnPatternModalVisible(false); returnPatternForm.resetFields(); }}>取消</Button><Button danger loading={returnPatternSaving} onClick={handleReturnPatternSave}>确认退回</Button></Space>}>
         {returnPatternRecord?.patternRevReturnComment && (
-          <div style={{ marginBottom: 12, padding: '8px 12px', background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)', borderRadius: 4, fontSize: 14 }}>
+          <div className="u-mb-12 u-p-8px12px u-br-4 u-fs-14" style={{ background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)' }}>
             上次退回：{returnPatternRecord.patternRevReturnComment}（{returnPatternRecord.patternRevReturnBy}）
           </div>
         )}

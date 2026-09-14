@@ -36,8 +36,8 @@ const StyleMaintenanceModal: React.FC<StyleMaintenanceModalProps> = ({
       okText="确定"
       cancelText="取消"
     >
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)' }}>
+      <div className="u-mb-16">
+        <div className="u-mb-8" style={{ color: 'var(--neutral-text-secondary)' }}>
           维护说明：将重置 <strong>{record?.styleNo}</strong> 的完成状态，允许再次修改和提交
         </div>
         <Input.TextArea
@@ -47,7 +47,7 @@ const StyleMaintenanceModal: React.FC<StyleMaintenanceModalProps> = ({
           value={reason}
           onChange={(e) => onReasonChange(e.target.value)}
           rows={4}
-          style={{ width: '100%', resize: 'vertical' }}
+          className="u-w-full" style={{ resize: 'vertical' }}
         />
       </div>
     </SmallModal>

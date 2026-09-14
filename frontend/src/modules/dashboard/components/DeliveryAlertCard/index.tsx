@@ -57,7 +57,7 @@ const DeliveryAlertCard: React.FC = () => {
       return (
         <div className="da-body">
           <Skeleton active paragraph={{ rows: 1 }} title={false} />
-          <Skeleton active paragraph={{ rows: 3 }} title={false} style={{ marginTop: 12 }} />
+          <Skeleton active paragraph={{ rows: 3 }} title={false} className="u-mt-12" />
         </div>
       );
     }

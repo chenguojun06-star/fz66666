@@ -36,11 +36,11 @@ const RejectUserModal: React.FC<RejectUserModalProps> = ({
       confirmLoading={rejectSubmitting}
       width="40vw"
     >
-      <div style={{ marginBottom: 16 }}>
+      <div className="u-mb-16">
         <p>
           确定拒绝用户"<strong>{currentUser?.name || currentUser?.username}</strong>"吗？
         </p>
-        <p style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>拒绝后该用户将无法登录系统</p>
+        <p className="u-fs-var--font-size-xs" style={{ color: 'var(--neutral-text-disabled)' }}>拒绝后该用户将无法登录系统</p>
       </div>
       <TextArea
         placeholder="请输入拒绝原因（必填）"

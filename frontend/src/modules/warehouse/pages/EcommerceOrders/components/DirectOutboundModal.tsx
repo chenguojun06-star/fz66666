@@ -20,13 +20,13 @@ const DirectOutboundModal: React.FC<Props> = ({ open, target, outbounding, form,
       open={open} onCancel={onCancel}
       onOk={onOk} confirmLoading={outbounding} okText="确认出库" width="85vw" maskClosable={false}>
       {target && (
-        <div style={{ marginBottom: 12, padding: '8px 12px', background: 'var(--color-bg-stripe)', borderRadius: 6, fontSize: 14 }}>
+        <div className="u-mb-12 u-p-8px12px u-br-6 u-fs-14" style={{ background: 'var(--color-bg-stripe)' }}>
           <div>平台订单: <b>{target.platformOrderNo || target.orderNo}</b></div>
           <div>商品: {target.productName} × {target.quantity}</div>
           <div>收件人: {target.receiverName} &nbsp;{target.receiverPhone}</div>
         </div>
       )}
-      <Alert style={{ marginBottom: 12, fontSize: 14 }} type="success" showIcon
+      <Alert className="u-mb-12 u-fs-14" type="success" showIcon
         title="出库后自动扣减商品编码库存、更新订单状态为【已出库】、生成销售收入流水、回传物流信息到平台" />
       <Form form={form} layout="vertical">
         <Form.Item name="expressCompany" label="快递公司"

@@ -81,7 +81,7 @@ const FilterToolbar: React.FC<Props> = ({
   );
 
   return (
-    <Card className="filter-card mb-sm" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)', borderRadius: 6 }} styles={{ body: { padding: '12px 16px' } }}>
+    <Card className="filter-card mb-sm u-mb-12 u-br-6" style={{ border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
       <Tabs
         activeKey={statusTab}
         onChange={onStatusTabChange}
@@ -91,14 +91,14 @@ const FilterToolbar: React.FC<Props> = ({
           { key: 'pending', label: `待推送 (${stats.pendingCount})` },
           { key: 'approved', label: `已推送 (${stats.approvedCount})` },
         ]}
-        style={{ marginBottom: 0 }}
+        className="u-mb-0"
       />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
+      <div className="u-d-flex u-jc-between u-ai-center u-mt-8 u-fwrap-wrap u-gap-8">
         <Space size={8} wrap>
           {searchFields}
         </Space>
         <Space size={8}>
-          <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+          <span className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
             {selectedRowKeysCount > 0 ? `已选 ${selectedRowKeysCount} 个` : `共 ${dataCount} 个工厂`}
           </span>
           <Button

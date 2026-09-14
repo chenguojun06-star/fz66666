@@ -42,10 +42,10 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
           userSelect: 'none',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="u-d-flex u-ai-center u-gap-8">
           <SearchOutlined style={{ color: 'var(--primary-color)' }} />
           <span>相似款式推荐</span>
-          <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 400, fontSize: 12 }}>
+          <span className="u-fw-400 u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
             （{searchResult.matchCount} 个）
           </span>
         </div>
@@ -73,8 +73,8 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             }}>
               <div>
-                <span style={{ fontWeight: 600, marginRight: 8 }}>{m.styleNo || '[无款号]'}</span>
-                <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+                <span className="u-fw-600 u-mr-8">{m.styleNo || '[无款号]'}</span>
+                <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
                   难度 {m.difficultyScore}/10（{m.difficultyLevel}）
                 </span>
               </div>
@@ -87,7 +87,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
               </span>
             </div>
           ))}
-          <div style={{ fontSize: 12, color: 'var(--color-text-quaternary)', marginTop: 6 }}>
+          <div className="u-fs-12 u-mt-6" style={{ color: 'var(--color-text-quaternary)' }}>
             相似度≥72%为高相似，可重点关注
           </div>
         </div>

@@ -40,7 +40,7 @@ const OrderCreateModalSidebar: React.FC<Props> = ({
     >
       <StyleQuotePopover styleNo={selectedStyle?.styleNo || ''}>
         <div>
-          <div style={{ width: '100%' }}>
+          <div className="u-w-full">
             <StyleCoverGallery
               styleId={selectedStyle?.id}
               styleNo={selectedStyle?.styleNo}
@@ -49,7 +49,7 @@ const OrderCreateModalSidebar: React.FC<Props> = ({
               borderRadius={8}
             />
           </div>
-          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', textAlign: 'center', marginTop: 4 }}>
+          <div className="u-fs-14 u-ta-center u-mt-4" style={{ color: 'var(--color-text-tertiary)' }}>
             悬停查看报价参考
           </div>
         </div>

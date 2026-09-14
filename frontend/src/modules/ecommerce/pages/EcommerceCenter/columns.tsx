@@ -207,7 +207,7 @@ export function buildAnomalyCols(ctx: ColumnContext): ColumnsType<LogisticsAnoma
         return (
           <Tooltip title={text}>
             <span style={{ color }}>
-              {conf != null && <span style={{ marginRight: 4 }}>[{conf}%]</span>}
+              {conf != null && <span className="u-mr-4">[{conf}%]</span>}
               {text}
             </span>
           </Tooltip>
@@ -259,7 +259,7 @@ export function buildBillCols(ctx: ColumnContext): ColumnsType<PlatformBill> {
         return (
           <Tooltip title={text}>
             <span style={{ color }}>
-              {conf != null && <span style={{ marginRight: 4 }}>[{conf}%]</span>}
+              {conf != null && <span className="u-mr-4">[{conf}%]</span>}
               {text}
             </span>
           </Tooltip>

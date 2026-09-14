@@ -30,14 +30,14 @@ export const buildBasicColumns = (ctx: BomColumnsContext) => {
         if (!urls.length) return null;
         return (
           <Image.PreviewGroup>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            <div className="u-d-flex u-fwrap-wrap u-gap-4">
               {urls.map((url) => (
                 <Image
                   key={url}
                   src={getFullAuthedFileUrl(url)}
                   width={40}
                   height={40}
-                  style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid var(--color-border-light)' }}
+                  className="u-objf-cover u-br-4" style={{ border: '1px solid var(--color-border-light)' }}
                   preview={{ src: getFullAuthedFileUrl(url) }}
                 />
               ))}

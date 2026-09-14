@@ -55,7 +55,7 @@ export const CartPreviewDrawer: React.FC<CartPreviewDrawerProps> = ({
       dataIndex: 'groupLabel',
       width: 90,
       fixed: 'left',
-      render: (text: string) => <span style={{ fontWeight: 600 }}>{text}</span>,
+      render: (text: string) => <span className="u-fw-600">{text}</span>,
     },
     {
       title: '图片',
@@ -65,12 +65,12 @@ export const CartPreviewDrawer: React.FC<CartPreviewDrawerProps> = ({
         const imgUrl = url || row.styleImageUrl;
         if (!imgUrl) {
           return (
-            <div style={{ width: 40, height: 40, background: 'var(--color-bg-base)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--color-text-tertiary)' }}>
+            <div className="u-br-4 u-d-flex u-ai-center u-jc-center u-fs-10" style={{ width: 40, height: 40, background: 'var(--color-bg-base)', color: 'var(--color-text-tertiary)' }}>
               无图
             </div>
           );
         }
-        return <Image src={imgUrl} width={40} height={40} style={{ borderRadius: 4, objectFit: 'cover' }} />;
+        return <Image src={imgUrl} width={40} height={40} className="u-br-4 u-objf-cover" />;
       },
     },
     {
@@ -79,14 +79,14 @@ export const CartPreviewDrawer: React.FC<CartPreviewDrawerProps> = ({
       width: 200,
       fixed: 'left',
       render: (name: string, row) => (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontWeight: 600 }}>{name}</span>
-          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{row.materialCode}</span>
+        <div className="u-d-flex u-fd-column">
+          <span className="u-fw-600">{name}</span>
+          <span className="u-fs-12" style={{ color: 'var(--color-text-secondary)' }}>{row.materialCode}</span>
           {row.specifications && (
-            <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{row.specifications}</span>
+            <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>{row.specifications}</span>
           )}
           {row.color && (
-            <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>颜色: {row.color}</span>
+            <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>颜色: {row.color}</span>
           )}
         </div>
       ),
@@ -121,9 +121,9 @@ export const CartPreviewDrawer: React.FC<CartPreviewDrawerProps> = ({
           return <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>;
         }
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div className="u-d-flex u-fd-column" style={{ gap: 2 }}>
             {row.sourceItems.map((s, i) => (
-              <span key={i} style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+              <span key={i} className="u-fs-12" style={{ color: 'var(--color-text-secondary)' }}>
                 [{SOURCE_TYPE_LABELS[String(s.sourceType || '').toUpperCase()] || '来源'}] {s.sourceNo || '-'}{' '}
                 <span style={{ color: 'var(--color-text-tertiary)' }}>×{s.quantity}</span>
               </span>
@@ -151,7 +151,7 @@ export const CartPreviewDrawer: React.FC<CartPreviewDrawerProps> = ({
             width: '100%',
           }}
         >
-          <div style={{ display: 'flex', gap: 24 }}>
+          <div className="u-d-flex" style={{ gap: 24 }}>
             <Statistic
               title="采购单数"
               value={data?.summary?.totalGroups ?? 0}
@@ -170,7 +170,7 @@ export const CartPreviewDrawer: React.FC<CartPreviewDrawerProps> = ({
               valueStyle={{ fontSize: 16, color: 'var(--color-primary)' }}
             />
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="u-d-flex u-gap-8">
             <Button onClick={onClose} disabled={submitting}>
               取消
             </Button>

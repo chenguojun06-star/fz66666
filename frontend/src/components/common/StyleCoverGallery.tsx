@@ -213,7 +213,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+    <div className="u-d-flex u-fd-column u-gap-8 u-w-full">
       <div
         style={{
           width: '100%',
@@ -242,7 +242,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
             style={{ width: '100%', height: '100%', objectFit: fit, display: 'block' }}
           />
         ) : (
-          <span style={{ color: 'var(--color-text-quaternary)', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>无图</span>
+          <span className="u-fs-var--font-size-xs u-d-flex u-ai-center" style={{ color: 'var(--color-text-quaternary)' }}>无图</span>
         )}
         {assets.length > 1 && isHovered && (
           <>
@@ -266,7 +266,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
             >
-              <LeftOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
+              <LeftOutlined className="u-fs-12" style={{ color: 'var(--color-bg-base)' }} />
             </div>
             <div
               onClick={(e) => { e.stopPropagation(); goToNext(); }}
@@ -288,13 +288,13 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
             >
-              <RightOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
+              <RightOutlined className="u-fs-12" style={{ color: 'var(--color-bg-base)' }} />
             </div>
           </>
         )}
       </div>
       {assets.length > 1 ? (
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', minHeight: 36 }}>
+        <div className="u-d-flex u-gap-6 u-ai-center" style={{ minHeight: 36 }}>
           {visibleAssets.map((item, index) => {
             const thumbUrl = getFullAuthedFileUrl(item.url);
             const isSelected = item.url === selectedAsset?.url;
@@ -323,7 +323,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
                   <img
                     src={thumbUrl}
                     alt={item.color || `thumb-${index}`}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    className="u-w-full u-h-full u-objf-cover u-d-block"
                   />
                 ) : null}
                 {isLastVisible ? (
@@ -360,7 +360,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
           },
         }}
       >
-        <Image src={selectedImageUrl || undefined} style={{ display: 'none' }} alt="cover" />
+        <Image src={selectedImageUrl || undefined} className="u-d-none" alt="cover" />
       </Image.PreviewGroup>
     </div>
   );

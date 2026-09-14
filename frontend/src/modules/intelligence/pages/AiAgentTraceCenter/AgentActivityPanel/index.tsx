@@ -275,9 +275,9 @@ const AgentActivityPanel: React.FC = () => {
             <span className="office-toolbar-logo" />
             AI 智能体办公室
           </div>
-          <Tag color="blue" style={{ margin: 0 }}><RobotOutlined /> {agents.length}人</Tag>
-          <Tag color="green" style={{ margin: 0 }}><ThunderboltOutlined /> {workingCount}工作中</Tag>
-          {criticalAlerts > 0 && <Tag color="red" style={{ margin: 0 }}><WarningOutlined /> {criticalAlerts}告警</Tag>}
+          <Tag color="blue" className="u-m-0"><RobotOutlined /> {agents.length}人</Tag>
+          <Tag color="green" className="u-m-0"><ThunderboltOutlined /> {workingCount}工作中</Tag>
+          {criticalAlerts > 0 && <Tag color="red" className="u-m-0"><WarningOutlined /> {criticalAlerts}告警</Tag>}
         </div>
         <div className="office-toolbar-right">
           <span className={`office-live-dot ${isLive ? 'office-live-dot--on' : ''}`} />

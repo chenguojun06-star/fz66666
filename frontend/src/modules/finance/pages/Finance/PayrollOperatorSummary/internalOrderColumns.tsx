@@ -25,13 +25,13 @@ export const internalOrderColumns = [
         width: 220,
         render: (_text: string, record: any) => (
             <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div className="u-d-flex u-ai-center u-gap-4">
                     <FactoryTypeTag factoryType={record.factoryType} />
                     <span>{record.factoryName || '-'}</span>
                 </div>
                 {(record.orgPath || record.parentOrgUnitName) &&
                  (record.orgPath || record.parentOrgUnitName) !== record.factoryName ? (
-                    <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 12 }}>
+                    <div className="u-fs-12" style={{ color: 'var(--neutral-text-secondary)' }}>
                         {record.orgPath || record.parentOrgUnitName}
                     </div>
                 ) : null}
@@ -101,7 +101,7 @@ export const internalOrderColumns = [
         width: 150,
         align: 'right' as const,
         render: (val: number) => (
-            <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{formatMoney(val)}</span>
+            <span className="u-fw-600" style={{ color: 'var(--primary-color)' }}>{formatMoney(val)}</span>
         ),
     },
     {
@@ -139,7 +139,7 @@ export const internalOrderColumns = [
         width: 130,
         align: 'right' as const,
         render: (val: number) => (
-            <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{formatMoney(val)}</span>
+            <span className="u-fw-600" style={{ color: 'var(--primary-color)' }}>{formatMoney(val)}</span>
         ),
     },
     {

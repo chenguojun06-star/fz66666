@@ -184,7 +184,7 @@ const ProgressModals: React.FC<ProgressModalsProps> = (props) => {
         description={pendingCloseOrder ? (
           <div>
             {pendingCloseOrder.isSpecial && (
-              <div style={{ color: 'var(--color-warning)', marginBottom: 8 }}>
+              <div className="u-mb-8" style={{ color: 'var(--color-warning)' }}>
                 ⚠️ 该订单未满足关单条件（合格入库 {pendingCloseOrder.warehousingQualified}/{pendingCloseOrder.minRequired}），特需关单不可撤销，请填写原因。
               </div>
             )}
@@ -192,7 +192,7 @@ const ProgressModals: React.FC<ProgressModalsProps> = (props) => {
             <div>关单閘値（裁剪数90%）：{pendingCloseOrder.minRequired}</div>
             <div>当前裁剪数：{pendingCloseOrder.cuttingQty}</div>
             <div>当前合格入库：{pendingCloseOrder.warehousingQualified}</div>
-            <div style={{ marginTop: 8 }}>关单后订单状态将变为“已完成”，并自动生成对账记录。</div>
+            <div className="u-mt-8">关单后订单状态将变为“已完成”，并自动生成对账记录。</div>
           </div>
         ) : undefined}
         fieldLabel={pendingCloseOrder?.isSpecial ? '特需原因' : '关闭原因（可选，将记录到操作日志）'}

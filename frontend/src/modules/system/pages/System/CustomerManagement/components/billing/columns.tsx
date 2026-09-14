@@ -48,7 +48,7 @@ export const getTenantColumns = (actions: TenantColumnActions): ColumnsType<Tena
 
               status={percent >= 90 ? 'exception' : 'normal'}
               format={() => `${formatStorageSize(used)}/${formatStorageSize(quota)}`}
-              style={{ marginBottom: 0 }}
+              className="u-mb-0"
             />
           </div>
         );

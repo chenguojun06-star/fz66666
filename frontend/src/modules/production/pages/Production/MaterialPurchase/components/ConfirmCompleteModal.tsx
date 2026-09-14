@@ -82,29 +82,29 @@ const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
       width={640}
       destroyOnClose
     >
-      <Space direction="vertical" size={12} style={{ width: '100%' }}>
+      <Space direction="vertical" size={12} className="u-w-full">
         <div>
           <Text strong>物料去向</Text>
           <Radio.Group
             value={movementAction}
             onChange={(e) => setMovementAction(e.target.value)}
-            style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}
+            className="u-d-flex u-fd-column u-gap-8 u-mt-8"
           >
             <Radio value="inbound">
               <Text strong>入库到仓库</Text>
-              <Text type="secondary" style={{ display: 'block', fontSize: 12, marginLeft: 22 }}>
+              <Text type="secondary" className="u-d-block u-fs-12" style={{ marginLeft: 22 }}>
                 登记入库单并增加库存，之后领料出库时再扣减，出入库都有流水
               </Text>
             </Radio>
             <Radio value="direct_use">
               <Text strong>直接使用</Text>
-              <Text type="secondary" style={{ display: 'block', fontSize: 12, marginLeft: 22 }}>
+              <Text type="secondary" className="u-d-block u-fs-12" style={{ marginLeft: 22 }}>
                 到货即用不进仓库，记一条采购直用流水，库存不变
               </Text>
             </Radio>
             <Radio value="none">
               <Text strong>暂不登记</Text>
-              <Text type="secondary" style={{ display: 'block', fontSize: 12, marginLeft: 22 }}>
+              <Text type="secondary" className="u-d-block u-fs-12" style={{ marginLeft: 22 }}>
                 仅确认完成，不产生出入库记录
               </Text>
             </Radio>
@@ -114,7 +114,7 @@ const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
         {' '}
         {movementAction === 'inbound' && (
           <div>
-            <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>入库仓库/库位（必选）</Text>
+            <Text type="secondary" className="u-d-block u-mb-4">入库仓库/库位（必选）</Text>
             <MaterialWarehouseLocationPicker value={warehouseLocation} onChange={(v) => setWarehouseLocation(v)} />
           </div>
         )}
@@ -148,7 +148,7 @@ const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
         )}
 
         {movementAction !== 'none' && targets.length > 1 && (
-          <Text type="secondary" style={{ fontSize: 12 }}>
+          <Text type="secondary" className="u-fs-12">
             多张采购单将按各自采购量全额登记，如需拆分请到单张采购单单独操作
           </Text>
         )}

@@ -55,23 +55,23 @@ const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
   return (
     <div style={{ flex: '0 0 42%', minWidth: 0 }}>
       {/* 4个指标 — 紧凑 2x2 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 6 }}>
+      <div className="u-d-grid u-mb-6" style={{ gridTemplateColumns: '1fr 1fr', gap: 5 }}>
         {metrics.map((item) => (
-          <div key={item.key} style={{ padding: '5px 7px', borderRadius: 6, background: 'var(--color-bg-base)', border: '1px solid rgba(0,0,0,0.06)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 1 }}>
+          <div key={item.key} className="u-br-6" style={{ padding: '5px 7px', background: 'var(--color-bg-base)', border: '1px solid rgba(0,0,0,0.06)' }}>
+            <div className="u-d-flex u-ai-center" style={{ gap: 3, marginBottom: 1 }}>
               <span style={{ color: item.color, fontSize: 12 }}>{item.icon}</span>
-              <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{item.title}</span>
+              <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>{item.title}</span>
             </div>
             <div style={{ fontSize: 13, fontWeight: 700, color: item.color, lineHeight: 1.3 }}>{item.value}</div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-quaternary)', marginTop: 1, lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{item.extra}</div>
+            <div className="u-fs-11 u-ov-hidden u-ws-nowrap" style={{ color: 'var(--color-text-quaternary)', marginTop: 1, lineHeight: 1.3, textOverflow: 'ellipsis' }}>{item.extra}</div>
           </div>
         ))}
       </div>
 
       {/* 节点标签 */}
-      <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+      <div className="u-d-flex u-fwrap-wrap" style={{ gap: 3 }}>
         {stageTags.map((item) => (
-          <Tag key={item.key} color={item.done ? 'success' : 'default'} style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 5px' }}>
+          <Tag key={item.key} color={item.done ? 'success' : 'default'} className="u-m-0 u-fs-12 u-lh-18px" style={{ padding: '0 5px' }}>
             {item.label}{item.done ? ' ' : ''}
           </Tag>
         ))}

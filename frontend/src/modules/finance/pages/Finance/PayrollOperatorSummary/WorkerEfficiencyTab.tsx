@@ -42,13 +42,13 @@ const WorkerEfficiencyTab: React.FC<WorkerEfficiencyTabProps> = ({ list, loading
         {
             title: '综合得分', dataIndex: 'overallScore', key: 'overall', width: 160,
             render: (v: number) => (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="u-d-flex u-ai-center u-gap-8">
                     <Progress
                         percent={v ?? 0}
                        
                         strokeColor={v >= 80 ? 'var(--color-success)' : v >= 60 ? 'var(--color-warning)' : 'var(--color-danger)'}
-                        format={() => <span style={{ fontSize: 14 }}>{v}</span>}
-                        style={{ flex: 1, minWidth: 80 }}
+                        format={() => <span className="u-fs-14">{v}</span>}
+                        className="u-flex-1" style={{ minWidth: 80 }}
                     />
                 </div>
             ),
@@ -77,7 +77,7 @@ const WorkerEfficiencyTab: React.FC<WorkerEfficiencyTabProps> = ({ list, loading
 
     return (
         <>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <div className="u-d-flex u-jc-end u-mb-8">
                 <Button onClick={onRefresh} loading={loading}>刷新</Button>
             </div>
             <ResizableTable

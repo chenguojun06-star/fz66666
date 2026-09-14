@@ -33,12 +33,12 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
         </div>
       </div>
 
-      <div style={{ marginBottom: 16 }}>
+      <div className="u-mb-16">
         <StyleDevelopmentProgressBanner
           stages={stageCards as any}
           activeKey={activeSection}
           onStageClick={(key) => setActiveSection(key as typeof activeSection)}
-          style={{ margin: 0 }}
+          className="u-m-0"
         />
       </div>
 

@@ -71,7 +71,7 @@ async function fetchProfile(name: string): Promise<WorkerProfile | null> {
 
 function LevelDot({ level }: { level?: string }) {
   if (level === 'excellent') {
-    return <span style={{ fontSize: 14, lineHeight: 1, cursor: 'pointer' }}></span>;
+    return <span className="u-fs-14 u-cur-pointer" style={{ lineHeight: 1 }}></span>;
   }
   if (level === 'good') {
     return (
@@ -112,8 +112,7 @@ function StageRow({ sp }: { sp: StageProfile }) {
   const color = diff >= 0 ? 'var(--color-success)' : 'var(--color-warning)';
   const arrow = diff >= 0 ? '▲' : '▼';
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12,
-                  fontSize: 14, padding: '3px 0', borderBottom: '1px solid var(--color-border-light)' }}>
+    <div className="u-d-flex u-jc-between u-gap-12 u-fs-14" style={{ padding: '3px 0', borderBottom: '1px solid var(--color-border-light)' }}>
       <span style={{ color: 'var(--color-text-primary)', minWidth: 48 }}>{sp.stageName}</span>
       <span style={{ color: 'var(--color-text-secondary)' }}>{sp.avgPerDay.toFixed(1)} 件/天</span>
       <span style={{ color, fontSize: 14 }}>
@@ -141,13 +140,13 @@ function ProfileContent({ profile }: { profile: WorkerProfile }) {
 
   return (
     <div style={{ minWidth: 220, maxWidth: 280 }}>
-      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div className="u-fw-600 u-fs-14 u-mb-6 u-d-flex u-ai-center u-gap-6">
         <span>{profile.operatorName}</span>
         <LevelDot level={topLevel} />
       </div>
 
       {stages.length === 0 ? (
-        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
+        <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>
           {lastDate !== '—' ? '近期无扫码活动' : '暂无扫码历史'}
         </div>
       ) : (
@@ -158,7 +157,7 @@ function ProfileContent({ profile }: { profile: WorkerProfile }) {
         </div>
       )}
 
-      <div style={{ fontSize: 14, color: 'var(--color-text-quaternary)', marginTop: 6 }}>
+      <div className="u-fs-14 u-mt-6" style={{ color: 'var(--color-text-quaternary)' }}>
         {stages.length > 0 ? `近${profile.dateDays}天 · ` : ''}最近扫码：{lastDate}
       </div>
     </div>
@@ -196,11 +195,11 @@ const WorkerPerformanceBadge: React.FC<Props> = ({ operatorName }) => {
     <Popover
       content={
         profile === 'loading' ? (
-          <div style={{ padding: '8px 12px' }}>
+          <div className="u-p-8px12px">
             <Spin />
           </div>
         ) : profile === null ? (
-          <div style={{ padding: '8px 12px', color: 'var(--color-text-tertiary)', fontSize: 14 }}>
+          <div className="u-p-8px12px u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>
             暂无绩效画像
           </div>
         ) : (
@@ -213,7 +212,7 @@ const WorkerPerformanceBadge: React.FC<Props> = ({ operatorName }) => {
       onOpenChange={handleOpen}
       placement="right"
     >
-      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+      <span className="u-d-inline-flex u-ai-center">
         <LevelDot level={topLevel ?? 'normal'} />
       </span>
     </Popover>

@@ -181,7 +181,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
       key: 'employeeNo',
       width: 100,
       render: (v: string) => v ? (
-        <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 12, color: 'var(--color-text-secondary, #595959)' }}>{v}</span>
+        <span className="u-fs-12" style={{ fontFamily: 'var(--font-mono, monospace)', color: 'var(--color-text-secondary, #595959)' }}>{v}</span>
       ) : <span style={{ color: 'var(--color-text-quaternary, #bfbfbf)' }}>-</span>,
     },
     {
@@ -205,7 +205,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
           options={deptOptions}
           showSearch
           optionFilterProp="label"
-          style={{ width: '100%' }}
+          className="u-w-full"
           popupMatchSelectWidth={false}
           onChange={(v) => { void handleInlineUpdate(r, { orgUnitId: v }, '部门'); }}
         />
@@ -250,9 +250,9 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
           return (
             <Dropdown menu={{ items: noRoleItems }} disabled={roleOptionsLoading} trigger={['click']}>
               <Button size="small" type="dashed">
-                <span style={{ fontSize: 12, color: "var(--color-text-secondary, var(--color-gray-dark))" }}>
-                  <UserOutlined style={{ fontSize: 11 }} />
-                  <span style={{ marginLeft: 4 }}>点击设置角色</span>
+                <span className="u-fs-12" style={{ color: "var(--color-text-secondary, var(--color-gray-dark))" }}>
+                  <UserOutlined className="u-fs-11" />
+                  <span className="u-ml-4">点击设置角色</span>
                 </span>
               </Button>
             </Dropdown>
@@ -265,13 +265,13 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
           return {
             key: String(role.id),
             label: (
-              <span style={{ display: 'inline-block', width: '100%' }}>
+              <span className="u-d-inline-block u-w-full">
                 {isCurrent && (
-                  <CheckOutlined style={{ fontSize: 10, marginRight: 4, color: 'var(--color-primary, var(--color-success))' }} />
+                  <CheckOutlined className="u-fs-10 u-mr-4" style={{ color: 'var(--color-primary, var(--color-success))' }} />
                 )}
                 {role.roleName}
                 {isCurrent && (
-                  <span style={{ fontSize: 10, marginLeft: 8, color: 'var(--color-text-quaternary, var(--color-gray-label))' }}>
+                  <span className="u-fs-10 u-ml-8" style={{ color: 'var(--color-text-quaternary, var(--color-gray-label))' }}>
                     （当前）
                   </span>
                 )}
@@ -294,8 +294,8 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
                 borderRadius: 4,
               }}
             >
-              <span style={{ fontSize: 12 }}>{v}</span>
-              <span style={{ fontSize: 10, marginLeft: 4, color: 'var(--color-text-quaternary, var(--color-gray-label))' }}>
+              <span className="u-fs-12">{v}</span>
+              <span className="u-fs-10 u-ml-4" style={{ color: 'var(--color-text-quaternary, var(--color-gray-label))' }}>
                 点击切换
               </span>
             </Tag>

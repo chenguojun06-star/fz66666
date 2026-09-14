@@ -260,18 +260,18 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      <div className="u-d-flex u-jc-between u-gap-12 u-ai-center u-mb-12 u-fwrap-wrap">
+        <div className="u-d-flex u-gap-6 u-fwrap-wrap">
 <Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: 'var(--status-processing-bg)', borderColor: 'var(--status-processing-border)' }}>开发色 {availableColors.length}</Tag>
               <Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: 'var(--status-processing-bg)', borderColor: 'var(--status-processing-border)' }}>开发码 {availableSizes.length}</Tag>
               <Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: 'var(--status-processing-bg)', borderColor: 'var(--status-processing-border)' }}>已选 {selectedColors.length} 色 / {selectedSizes.length} 码</Tag>
               <Tag style={{ marginInlineEnd: 0, color: 'var(--color-primary)', background: 'var(--status-processing-bg)', borderColor: 'var(--status-processing-border)' }}>组合 {orderLines.length}</Tag>
         </div>
         <div style={{ color: 'var(--neutral-text-light)' }}>
-          总数量：<span style={{ fontWeight: 600 }}>{totalQuantity}</span>
+          总数量：<span className="u-fw-600">{totalQuantity}</span>
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10, color: 'var(--color-text-tertiary)' }}>
+      <div className="u-d-flex u-gap-8 u-fwrap-wrap u-mb-10" style={{ color: 'var(--color-text-tertiary)' }}>
         <span>开发颜色：{availableColors.join(' / ') || '-'}</span>
         <span>可手动加色</span>
       </div>
@@ -287,7 +287,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
           suffix={(
             <Tooltip title="基础属性库——成组选择颜色">
               <SettingOutlined
-                style={{ color: 'rgba(0,0,0,0.45)', cursor: 'pointer' }}
+                className="u-cur-pointer" style={{ color: 'rgba(0,0,0,0.45)' }}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAttrLibTarget('color'); setAttrLibOpen(true); }}
               />
             </Tooltip>
@@ -303,7 +303,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
           suffix={(
             <Tooltip title="基础属性库——成组选择码数">
               <SettingOutlined
-                style={{ color: 'rgba(0,0,0,0.45)', cursor: 'pointer' }}
+                className="u-cur-pointer" style={{ color: 'rgba(0,0,0,0.45)' }}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAttrLibTarget('size'); setAttrLibOpen(true); }}
               />
             </Tooltip>
@@ -316,7 +316,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
         onApply={handleApplyAttrGroup}
       />
 
-      <Space size={8} style={{ marginBottom: 12 }}>
+      <Space size={8} className="u-mb-12">
         <Button onClick={() => syncSelection(availableColors, selectedSizes)}>全选颜色</Button>
         <Button onClick={() => syncSelection(selectedColors, availableSizes)}>全选码数</Button>
         <Button onClick={() => syncSelection([], [])}>清空</Button>
@@ -331,9 +331,9 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
           ) : summary ? (
             <span>
               <WarningOutlined /> 该款式当前：
-              {summary.inProduction > 0 && <strong style={{ fontSize: 15 }}>在途 {summary.inProduction}</strong>}
-              {summary.stock > 0 && <strong style={{ fontSize: 15, marginLeft: 8 }}>库存 {summary.stock}</strong>}
-              {summary.pendingSales > 0 && <strong style={{ fontSize: 15, marginLeft: 8, color: 'var(--color-error)' }}>欠数 {summary.pendingSales}</strong>}
+              {summary.inProduction > 0 && <strong className="u-fs-15">在途 {summary.inProduction}</strong>}
+              {summary.stock > 0 && <strong className="u-fs-15 u-ml-8">库存 {summary.stock}</strong>}
+              {summary.pendingSales > 0 && <strong className="u-fs-15 u-ml-8" style={{ color: 'var(--color-error)' }}>欠数 {summary.pendingSales}</strong>}
               ，请合理安排本次下单数量
             </span>
           ) : null}
@@ -341,42 +341,42 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
       ) : null}
 
       {!selectedColors.length || !selectedSizes.length ? (
-        <div style={{ border: '1px dashed var(--color-border-antd)', borderRadius: 8, padding: '24px 12px', background: 'var(--color-bg-container)' }}>
+        <div className="u-br-8" style={{ border: '1px dashed var(--color-border-antd)', padding: '24px 12px', background: 'var(--color-bg-container)' }}>
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="先选颜色和码数" />
         </div>
       ) : (
-        <div style={{ border: '1px solid var(--color-border-light)', borderRadius: 8, overflow: 'auto', width: '100%' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        <div className="u-br-8 u-ov-auto u-w-full" style={{ border: '1px solid var(--color-border-light)' }}>
+          <table className="u-w-full" style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <thead>
               <tr>
-                <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-bg-container)', width: '15%' }}>颜色</th>
+                <th className="u-ta-left" style={{ padding: '8px 6px', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-bg-container)', width: '15%' }}>颜色</th>
                 {selectedSizes.map((size) => (
                   <th key={size} style={{ textAlign: 'center', padding: '8px 2px', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-bg-container)', width: `${70 / selectedSizes.length}%` }}>{size}</th>
                 ))}
-                <th style={{ textAlign: 'center', padding: '8px 4px', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-bg-container)', width: '15%' }}>小计</th>
+                <th className="u-ta-center" style={{ padding: '8px 4px', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-bg-container)', width: '15%' }}>小计</th>
               </tr>
             </thead>
             <tbody>
               {matrixRows.map((row) => (
                 <tr key={row.key}>
-                  <td style={{ padding: '6px 6px', borderBottom: '1px solid var(--color-bg-subtle)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.color}</td>
+                  <td className="u-fw-600 u-ov-hidden u-ws-nowrap" style={{ padding: '6px 6px', borderBottom: '1px solid var(--color-bg-subtle)', textOverflow: 'ellipsis' }}>{row.color}</td>
                   {selectedSizes.map((size) => {
                     const matched = orderLines.find((line) => buildComboKey(line.color, line.size) === buildComboKey(row.color, size));
                     const avail = getAvailability(row.color, size);
                     const hasInfo = avail.inProduction > 0 || avail.stock > 0 || avail.pendingSales > 0;
                     return (
                       <td key={`${row.key}-${size}`} style={{ padding: 2, borderBottom: '1px solid var(--color-bg-subtle)' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <div className="u-d-flex u-fd-column" style={{ gap: 2 }}>
                           <InputNumber
                             min={0}
                             value={matched?.quantity || 0}
-                            style={{ width: '100%' }}
+                            className="u-w-full"
                             controls={false}
                            
                             onChange={(value) => updateMatrixQty(row.color, size, Number(value) || 0)}
                           />
                           {hasInfo ? (
-                            <div style={{ fontSize: 11, textAlign: 'center', lineHeight: 1.4, display: 'flex', gap: 4, justifyContent: 'center' }}>
+                            <div className="u-fs-11 u-ta-center u-d-flex u-gap-4 u-jc-center" style={{ lineHeight: 1.4 }}>
                               {avail.inProduction > 0 && <span style={{ color: 'var(--color-warning-deep)' }}>在途{avail.inProduction}</span>}
                               {avail.stock > 0 && <span style={{ color: 'var(--color-success)' }}>库存{avail.stock}</span>}
                               {avail.pendingSales > 0 && <span style={{ color: 'var(--color-error)' }}>欠{avail.pendingSales}</span>}
@@ -386,17 +386,17 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
                       </td>
                     );
                   })}
-                  <td style={{ padding: '6px 6px', borderBottom: '1px solid var(--color-bg-subtle)', textAlign: 'center', fontWeight: 600 }}>{row.total}</td>
+                  <td className="u-ta-center u-fw-600" style={{ padding: '6px 6px', borderBottom: '1px solid var(--color-bg-subtle)' }}>{row.total}</td>
                 </tr>
               ))}
               <tr>
-                <td style={{ padding: '6px 6px', background: 'var(--color-bg-container)', fontWeight: 700 }}>码数合计</td>
+                <td className="u-fw-700" style={{ padding: '6px 6px', background: 'var(--color-bg-container)' }}>码数合计</td>
                 {selectedSizes.map((size) => (
-                  <td key={`total-${size}`} style={{ padding: '6px 2px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 700 }}>
+                  <td key={`total-${size}`} className="u-ta-center u-fw-700" style={{ padding: '6px 2px', background: 'var(--color-bg-container)' }}>
                     {sizeTotals[size] || 0}
                   </td>
                 ))}
-                <td style={{ padding: '6px 6px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 700 }}>{totalQuantity}</td>
+                <td className="u-ta-center u-fw-700" style={{ padding: '6px 6px', background: 'var(--color-bg-container)' }}>{totalQuantity}</td>
               </tr>
             </tbody>
           </table>

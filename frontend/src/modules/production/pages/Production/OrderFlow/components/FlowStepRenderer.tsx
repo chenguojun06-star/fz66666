@@ -89,8 +89,8 @@ const FlowStepRenderer: React.FC<Props> = ({
 
   return (
     <Card
-      className="order-flow-tabs-card"
-      style={{ marginTop: 8 }}
+      className="order-flow-tabs-card u-mt-8"
+      
       loading={loading}
     >
       <Tabs

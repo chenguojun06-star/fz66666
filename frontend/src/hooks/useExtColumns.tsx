@@ -53,7 +53,7 @@ export function renderCellValue(value: unknown, fieldType?: string): React.React
       const arr = Array.isArray(value) ? value : String(value).split(',').filter(Boolean);
       if (arr.length === 0) return '-';
       return (
-        <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>
+        <span className="u-d-inline-flex u-gap-4 u-fwrap-wrap">
           {arr.map((v: string | number, i: number) => <Tag key={i}>{String(v)}</Tag>)}
         </span>
       );

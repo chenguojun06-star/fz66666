@@ -48,7 +48,7 @@ const RecordsTabContent: React.FC<RecordsTabContentProps> = ({
   return (
     <>
       {/* 快捷日期筛选 + 状态 Tab */}
-      <Card className="filter-card mb-sm" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)', borderRadius: 6 }} styles={{ body: { padding: '12px 16px' } }}>
+      <Card className="filter-card mb-sm u-mb-12 u-br-6" style={{ border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
         <Tabs
           activeKey={paymentStatusTab}
           onChange={setPaymentStatusTab}
@@ -59,9 +59,9 @@ const RecordsTabContent: React.FC<RecordsTabContentProps> = ({
             { key: 'success', label: `已成功 (${payments.filter((p: any) => p.status === 'success').length})` },
             { key: 'failed', label: `失败/取消 (${payments.filter((p: any) => p.status === 'rejected' || p.status === 'failed' || p.status === 'cancelled').length})` },
           ]}
-          style={{ marginBottom: 0 }}
+          className="u-mb-0"
         />
-        <div style={{ marginTop: 8 }}>
+        <div className="u-mt-8">
           <Form layout="inline" onFinish={(values) => { filterValuesRef.current = values; fetchPayments(values); }}>
             <Form.Item name="payeeName">
               <Input placeholder="收款方姓名" allowClear prefix={<SearchOutlined />} style={{ width: 150 }} />

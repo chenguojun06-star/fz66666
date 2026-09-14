@@ -166,7 +166,7 @@ const ProductionList: React.FC = () => {
         title="订单管理"
         headerContent={<>
           {listData.showSmartErrorNotice && listData.smartError ? (
-            <div style={{ marginBottom: 12 }}>
+            <div className="u-mb-12">
               <SmartErrorNotice error={listData.smartError} onFix={listData.fetchProductionList} />
             </div>
           ) : null}

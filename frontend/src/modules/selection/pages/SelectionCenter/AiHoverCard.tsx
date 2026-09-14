@@ -18,9 +18,9 @@ const AiHoverCard: React.FC<{
 
   return (
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, boxSizing: 'border-box' }}>
-      <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Text strong style={{ fontSize: 14 }}>{record.styleName || '未命名'}</Text>
-        <Tag color={STATUS_MAP[record.status]?.color} style={{ margin: 0 }}>
+      <div className="u-mb-8 u-d-flex u-jc-between u-ai-center">
+        <Text strong className="u-fs-14">{record.styleName || '未命名'}</Text>
+        <Tag color={STATUS_MAP[record.status]?.color} className="u-m-0">
           {STATUS_MAP[record.status]?.label}
         </Tag>
       </div>
@@ -32,7 +32,7 @@ const AiHoverCard: React.FC<{
           border: `1px solid ${latestReview.decision === 'APPROVE' ? 'var(--status-success-border)' : 'var(--status-error-border)'}`,
           borderRadius: 6, fontSize: 14,
         }}>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+          <div className="u-fw-600 u-mb-4">
             审核意见{latestReview.reviewerName ? ` · ${latestReview.reviewerName}` : ''}
           </div>
           <div style={{ color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{latestReview.comment}</div>
@@ -41,12 +41,12 @@ const AiHoverCard: React.FC<{
 
       {hasScore ? (
         <>
-          <div style={{ marginBottom: 4 }}>
+          <div className="u-mb-4">
             <Space size={4}>
               <ThunderboltOutlined style={{ color: 'var(--color-accent-purple)' }} />
-              <Text type="secondary" style={{ fontSize: 14 }}>趋势评分</Text>
+              <Text type="secondary" className="u-fs-14">趋势评分</Text>
               <Tooltip title={scoreMeta.title}>
-                <Tag color={scoreMeta.color} style={{ margin: 0, fontSize: 14 }}>{scoreMeta.label}</Tag>
+                <Tag color={scoreMeta.color} className="u-m-0 u-fs-14">{scoreMeta.label}</Tag>
               </Tooltip>
               <Text strong style={{
                 color: record.trendScore! >= 75 ? 'var(--color-success)' : record.trendScore! >= 50 ? 'var(--color-warning)' : 'var(--color-danger)',
@@ -59,38 +59,38 @@ const AiHoverCard: React.FC<{
             percent={record.trendScore}
             strokeColor={record.trendScore! >= 75 ? 'var(--color-success)' : record.trendScore! >= 50 ? 'var(--color-warning)' : 'var(--color-danger)'}
            
-            style={{ marginBottom: 8 }}
+            className="u-mb-8"
           />
           {record.trendScoreReason && (
-            <Paragraph style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 8, lineHeight: 1.5 }}>
+            <Paragraph className="u-fs-14 u-mb-8" style={{ color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
               {record.trendScoreReason.slice(0, 150)}{record.trendScoreReason.length > 150 ? '…' : ''}
             </Paragraph>
           )}
         </>
       ) : (
-        <div style={{ textAlign: 'center', padding: '12px 0 8px', color: 'var(--color-text-muted)', fontSize: 14 }}>
+        <div className="u-ta-center u-fs-14" style={{ padding: '12px 0 8px', color: 'var(--color-text-muted)' }}>
           {aiLoading ? '正在生成 AI 分析...' : '悬停后自动分析趋势、价值与决策建议'}
         </div>
       )}
 
-      <Divider style={{ margin: '8px 0' }} />
+      <Divider className="u-m-8px0" />
 
       <Row gutter={[8, 6]}>
         {record.costEstimate != null && (
           <Col span={12}>
-            <Text type="secondary" style={{ fontSize: 14 }}>成本估算</Text>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>¥{record.costEstimate}</div>
+            <Text type="secondary" className="u-fs-14">成本估算</Text>
+            <div className="u-fs-14 u-fw-600">¥{record.costEstimate}</div>
           </Col>
         )}
         {record.targetPrice != null && (
           <Col span={12}>
-            <Text type="secondary" style={{ fontSize: 14 }}>目标报价</Text>
-            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-success)' }}>¥{record.targetPrice}</div>
+            <Text type="secondary" className="u-fs-14">目标报价</Text>
+            <div className="u-fs-14 u-fw-600" style={{ color: 'var(--color-success)' }}>¥{record.targetPrice}</div>
           </Col>
         )}
         {record.profitEstimate != null && (
           <Col span={12}>
-            <Text type="secondary" style={{ fontSize: 14 }}>预估利润率</Text>
+            <Text type="secondary" className="u-fs-14">预估利润率</Text>
             <div style={{ fontSize: 14, fontWeight: 600, color: record.profitEstimate >= 30 ? 'var(--color-success)' : 'var(--color-warning)' }}>
               {record.profitEstimate}%
             </div>
@@ -98,8 +98,8 @@ const AiHoverCard: React.FC<{
         )}
         {record.targetQty != null && (
           <Col span={12}>
-            <Text type="secondary" style={{ fontSize: 14 }}>预计下单</Text>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>{record.targetQty} 件</div>
+            <Text type="secondary" className="u-fs-14">预计下单</Text>
+            <div className="u-fs-14 u-fw-600">{record.targetQty} 件</div>
           </Col>
         )}
       </Row>
@@ -108,15 +108,15 @@ const AiHoverCard: React.FC<{
         try {
           const tags: string[] = JSON.parse(record.seasonTags);
           return tags.length > 0 ? (
-            <div style={{ marginTop: 8 }}>
-              {tags.map(t => <Tag key={t} style={{ fontSize: 14, marginBottom: 2 }}>{t}</Tag>)}
+            <div className="u-mt-8">
+              {tags.map(t => <Tag key={t} className="u-fs-14 u-mb-2">{t}</Tag>)}
             </div>
           ) : null;
         } catch { return null; }
       })()}
 
       {hasScore && decisionInsight && (
-        <div style={{ marginTop: 10 }}>
+        <div className="u-mt-10">
           <DecisionInsightCard compact insight={decisionInsight} />
         </div>
       )}

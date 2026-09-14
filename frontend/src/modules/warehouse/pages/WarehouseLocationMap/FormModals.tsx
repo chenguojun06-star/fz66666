@@ -58,7 +58,7 @@ const FormModals: React.FC<Props> = ({
         onOk={onCreateArea}
         okText="创建"
       >
-        <div style={{ padding: '8px 0' }}>
+        <div className="u-p-8px0">
           <Form form={createAreaForm} layout="vertical">
             <Form.Item name="warehouseType" label="仓库类型" rules={[{ required: true, message: '请选择仓库类型' }]}>
               <Select placeholder="请选择仓库类型" options={WAREHOUSE_TYPE_OPTIONS} />
@@ -79,7 +79,7 @@ const FormModals: React.FC<Props> = ({
         onOk={onCreateLocation}
         okText="创建"
       >
-        <div style={{ padding: '8px 0' }}>
+        <div className="u-p-8px0">
           <Form form={createLocationForm} layout="vertical">
             <Form.Item name="zoneName" label="库区名称" rules={[{ required: true, message: '请输入库区名称' }]}>
               <Select
@@ -109,10 +109,10 @@ const FormModals: React.FC<Props> = ({
                 </Form.Item>
               </Col>
             </Row>
-            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
+            <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>
               编码格式：{createLocationForm.getFieldValue('zoneCode') || 'A'}-{String(createLocationForm.getFieldValue('rackNum') || '01').padStart(2,'0')}-{createLocationForm.getFieldValue('levelNum') || 1}-{createLocationForm.getFieldValue('positionNum') || 1}
             </div>
-            <Form.Item name="capacity" label="容量上限" initialValue={100} style={{ marginTop: 12 }}>
+            <Form.Item name="capacity" label="容量上限" initialValue={100} className="u-mt-12">
               <Input type="number" placeholder="100" />
             </Form.Item>
           </Form>
@@ -128,7 +128,7 @@ const FormModals: React.FC<Props> = ({
         onOk={onBatchInit}
         okText="开始初始化"
       >
-        <div style={{ padding: '8px 0' }}>
+        <div className="u-p-8px0">
           <Form form={batchInitForm} layout="vertical">
             <Form.Item name="zoneName" label="库区名称" rules={[{ required: true, message: '请输入库区名称' }]} initialValue="A区">
               <Input placeholder="例如：A区" />
@@ -150,7 +150,7 @@ const FormModals: React.FC<Props> = ({
                 </Form.Item>
               </Col>
             </Row>
-            <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
+            <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>
               将生成 {(batchInitForm.getFieldValue('rackCount') || 2) * (batchInitForm.getFieldValue('levelCount') || 3) * (batchInitForm.getFieldValue('positionCount') || 2)} 个库位，编码如 A-01-1-1 到 A-{(String(batchInitForm.getFieldValue('rackCount') || 2)).padStart(2,'0')}-{batchInitForm.getFieldValue('levelCount') || 3}-{batchInitForm.getFieldValue('positionCount') || 2}
             </div>
           </Form>

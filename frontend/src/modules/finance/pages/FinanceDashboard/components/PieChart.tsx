@@ -38,7 +38,7 @@ const PieChart: React.FC<PieChartProps> = ({ data }) => {
         <circle cx="50" cy="50" r="25" style={{ fill: 'var(--color-bg-base)' }} />
       </svg>
       <div className={styles.pieLegend}>
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
+        <div className="u-fs-12 u-mb-8" style={{ color: 'var(--color-text-secondary)' }}>
           总成本 ¥{total.toLocaleString()}
         </div>
         {data.map((item, idx) => {

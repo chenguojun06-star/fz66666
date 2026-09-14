@@ -42,8 +42,8 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
     centered
     footer={<Button onClick={onClose}>关闭</Button>}
   >
-    <div style={{ padding: '0 8px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+    <div className="u-p-08px">
+      <div className="u-d-flex u-jc-between u-mb-16">
         <span style={{ color: 'var(--color-text-tertiary)' }}>
           {ownerType === 'WORKER' ? '员工' : '工厂'}：{ownerName}
         </span>
@@ -77,11 +77,11 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
           }
         >
           <Space>
-            <span style={{ fontSize: 15 }}>{accountTypeIconMap[acc.accountType]}</span>
+            <span className="u-fs-15">{accountTypeIconMap[acc.accountType]}</span>
             <div>
-              <div style={{ fontWeight: 500 }}>
+              <div className="u-fw-500">
                 {ACCOUNT_TYPE_OPTIONS.find(o => o.value === acc.accountType)?.label}
-                {acc.isDefault === 1 && <Tag color="blue" style={{ marginLeft: 8 }}>默认</Tag>}
+                {acc.isDefault === 1 && <Tag color="blue" className="u-ml-8">默认</Tag>}
               </div>
               {acc.accountType === 'BANK' ? (
                 <span style={{ color: 'var(--color-text-secondary)' }}>{acc.bankName} {acc.accountNo}</span>
@@ -93,7 +93,7 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
         </Card>
       ))}
       {!accountsLoading && accounts.length === 0 && (
-        <div style={{ textAlign: 'center', color: 'var(--color-text-tertiary)', padding: 32 }}>暂无收款账户，请点击"添加账户"</div>
+        <div className="u-ta-center" style={{ color: 'var(--color-text-tertiary)', padding: 32 }}>暂无收款账户，请点击"添加账户"</div>
       )}
 
       <Card title={editingAccount ? '编辑账户' : '添加账户'} style={{ marginTop: 16, display: accountDetailOpen ? undefined : 'none' }}>

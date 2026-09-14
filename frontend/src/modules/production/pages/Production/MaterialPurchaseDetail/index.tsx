@@ -211,7 +211,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
 
   return (
     <div style={{ padding: embedded ? 0 : (isMobile ? 12 : 24) }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+      <div className="u-d-flex u-jc-between u-ai-center u-mb-16 u-fwrap-wrap u-gap-12">
         <Space>
           {!embedded && (
             <Button onClick={() => navigate(-1)}>返回</Button>
@@ -227,13 +227,13 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
           {/* D-364：样衣采购（无生产订单）也要有完整款式信息头，与大货/节点弹窗同款布局 */}
           {sampleMode ? (
             <Card
-              style={{ marginBottom: 16 }}
+              className="u-mb-16"
               extra={
                 sampleBomLocked ? (
                   <Tooltip
                     title={`物料清单已完成${sampleBomCompletedTime ? `（${sampleBomCompletedTime}）` : ''}，采购数据已锁定。如需修改物料（编辑/删除/新增），请先到样衣详情 → 物料清单点击「退回」，退回后此处自动解锁。收货、回料确认等采购执行操作不受影响。`}
                   >
-                    <ExclamationCircleOutlined style={{ color: 'var(--color-success)', fontSize: 16, cursor: 'pointer' }} />
+                    <ExclamationCircleOutlined className="u-fs-16 u-cur-pointer" style={{ color: 'var(--color-success)' }} />
                   </Tooltip>
                 ) : null
               }
@@ -252,21 +252,21 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                 /* D-373：矩阵区已有「总下单数」，隐藏字段区「下单数量」避免重复（与样衣节点弹窗口径一致） */
                 hideOrderQuantity
               />
-              <Row gutter={[16, 12]} style={{ marginTop: 12 }}>
+              <Row gutter={[16, 12]} className="u-mt-12">
                 <Col xs={24} sm={8} md={6}>
-                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>来源</div>
+                  <div className="u-fs-var--font-size-xs" style={{ color: 'var(--color-text-tertiary)' }}>来源</div>
                   <div><Tag color="blue">样衣(开发)</Tag></div>
                 </Col>
                 <Col xs={24} sm={8} md={6}>
-                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>采购单数</div>
+                  <div className="u-fs-var--font-size-xs" style={{ color: 'var(--color-text-tertiary)' }}>采购单数</div>
                   <div>{purchaseList.length} 个</div>
                 </Col>
                 <Col xs={24} sm={8} md={6}>
-                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>物料到货率</div>
+                  <div className="u-fs-var--font-size-xs" style={{ color: 'var(--color-text-tertiary)' }}>物料到货率</div>
                   <div><Tag color={materialArrivalRate >= 100 ? 'green' : materialArrivalRate >= 50 ? 'orange' : 'red'}>{materialArrivalRate}%</Tag></div>
                 </Col>
                 <Col xs={24} sm={8} md={6}>
-                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>BOM 状态</div>
+                  <div className="u-fs-var--font-size-xs" style={{ color: 'var(--color-text-tertiary)' }}>BOM 状态</div>
                   <div>{sampleBomLocked ? <Tag color="success">已完成 · 已锁定</Tag> : <Tag color="default">未完成</Tag>}</div>
                 </Col>
               </Row>
@@ -286,27 +286,27 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
             </div>
           )}
           {purchaseList.length === 0 && !sampleMode ? (
-            <Alert title="订单不存在或已删除" description={`款号: ${styleNo || '未知'}。该款号的订单可能已被删除。`} type="warning" showIcon style={{ marginBottom: 16 }} />
+            <Alert title="订单不存在或已删除" description={`款号: ${styleNo || '未知'}。该款号的订单可能已被删除。`} type="warning" showIcon className="u-mb-16" />
           ) : null}
         </>
       ) : (
-        <Card style={{ marginBottom: 16 }}>
+        <Card className="u-mb-16">
           <ProductionOrderHeader order={order} orderNo={headerOrderNo} styleNo={headerStyleNo} styleName={headerStyleName} styleId={headerStyleId} styleCover={headerStyleCover} color={headerColor} coverSize={160} />
-          <Row gutter={[16, 12]} style={{ marginTop: 12 }}>
+          <Row gutter={[16, 12]} className="u-mt-12">
             <Col xs={24} sm={8} md={6}>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>工厂</div>
+              <div className="u-fs-var--font-size-xs" style={{ color: 'var(--color-text-tertiary)' }}>工厂</div>
               <div>{order?.factoryName || '-'}</div>
             </Col>
             <Col xs={24} sm={8} md={6}>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>采购单数</div>
+              <div className="u-fs-var--font-size-xs" style={{ color: 'var(--color-text-tertiary)' }}>采购单数</div>
               <div>{purchaseList.length} 个</div>
             </Col>
             <Col xs={24} sm={8} md={6}>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>物料到货率</div>
+              <div className="u-fs-var--font-size-xs" style={{ color: 'var(--color-text-tertiary)' }}>物料到货率</div>
               <div><Tag color={materialArrivalRate >= 100 ? 'green' : materialArrivalRate >= 50 ? 'orange' : 'red'}>{materialArrivalRate}%</Tag></div>
             </Col>
             <Col xs={24} sm={8} md={6}>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>回料完成状态</div>
+              <div className="u-fs-var--font-size-xs" style={{ color: 'var(--color-text-tertiary)' }}>回料完成状态</div>
               <div>{order?.procurementManuallyCompleted === 1 ? <Tag color="success">已确认</Tag> : materialArrivalRate >= 95 ? <Tag color="success">已自动完成</Tag> : <Tag color="default">未确认</Tag>}</div>
             </Col>
           </Row>
@@ -325,7 +325,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
               请点击「编辑物料」为每个颜色分别添加面料信息。
             </span>
           }
-          style={{ marginBottom: 16 }}
+          className="u-mb-16"
         />
       )}
 
@@ -404,7 +404,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
         }
       >
         {displayData.length === 0 && !editing ? (
-          <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+          <div className="u-ta-center" style={{ padding: '48px 16px' }}>
             <Alert
               type="info"
               showIcon
@@ -415,7 +415,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                   ? `订单包含 ${colorList.length} 种颜色（${colorList.join('、')}），需要为每种颜色分别创建对应的面辅料记录。`
                   : `请为订单编辑物料信息（物料编码、名称、单位、供应商等），完善后才可进行采购。`
               }
-              style={{ maxWidth: 600, margin: '0 auto', textAlign: 'left' }}
+              className="u-ta-left" style={{ maxWidth: 600, margin: '0 auto' }}
               action={
                 !sampleMode ? (
                   <Button size="small" onClick={handleStartEdit}>

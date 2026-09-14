@@ -38,13 +38,13 @@ const ZipImportPanel: React.FC = () => {
   return (
     <div>
       {/* 说明 */}
-      <Card style={{ marginBottom: 16, background: 'var(--status-processing-bg)', border: '1px solid var(--status-processing-border)' }}>
-        <Paragraph style={{ marginBottom: 8 }}>
-          <Text strong><FileZipOutlined style={{ marginRight: 6 }} />ZIP 打包导入：一次性导入款式数据 + 封面图片</Text>
+      <Card className="u-mb-16" style={{ background: 'var(--status-processing-bg)', border: '1px solid var(--status-processing-border)' }}>
+        <Paragraph className="u-mb-8">
+          <Text strong><FileZipOutlined className="u-mr-6" />ZIP 打包导入：一次性导入款式数据 + 封面图片</Text>
         </Paragraph>
         <Steps
 
-          style={{ marginBottom: 12 }}
+          className="u-mb-12"
           items={[
             { title: '下载 Excel 模板', content: '填写款式数据' },
             { title: '准备图片', content: '文件名 = 款号（如 FZ2024001.jpg）' },
@@ -60,7 +60,7 @@ const ZipImportPanel: React.FC = () => {
         </Space>
       </Card>
 
-      <Space orientation="vertical" style={{ width: '100%' }} size="middle">
+      <Space orientation="vertical" className="u-w-full" size="middle">
         {/* 下载模板 */}
         <Card title="第一步：下载款式 Excel 模板">
           <Button icon={<DownloadOutlined />} onClick={() => { void dataImportService.downloadTemplate('style'); }}>
@@ -69,13 +69,13 @@ const ZipImportPanel: React.FC = () => {
         </Card>
 
         {/* 上传 ZIP */}
-        <Card title={<span><PictureOutlined style={{ marginRight: 6 }} />第二步：上传 ZIP 包</span>}>
-          <Space orientation="vertical" style={{ width: '100%' }}>
+        <Card title={<span><PictureOutlined className="u-mr-6" />第二步：上传 ZIP 包</span>}>
+          <Space orientation="vertical" className="u-w-full">
             <input
               ref={zipInputRef}
               type="file"
               accept=".zip"
-              style={{ display: 'none' }}
+              className="u-d-none"
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (!f) return;
@@ -101,13 +101,13 @@ const ZipImportPanel: React.FC = () => {
                 setFileList([toUploadFile(f)]);
                 setResult(null);
               }}
-              style={{ display: 'inline-block' }}
+              className="u-d-inline-block"
             >
               <Button icon={<FileZipOutlined />} onClick={() => zipInputRef.current?.click()}>
                 {fileList.length > 0 ? `已选择: ${fileList[0].name}` : '选择 ZIP 文件'}
               </Button>
               {fileList.length > 0 && (
-                <Button size="small" style={{ marginLeft: 8 }} onClick={() => { setFileList([]); setResult(null); }}>
+                <Button size="small" className="u-ml-8" onClick={() => { setFileList([]); setResult(null); }}>
                   移除
                 </Button>
               )}
@@ -158,7 +158,7 @@ const ZipImportPanel: React.FC = () => {
                       {(result.withCoverCount ?? 0) > 0 && <Tag icon={<PictureOutlined />} color="blue">封面图 {result.withCoverCount} 张</Tag>}
                     </Space>
                   }
-                  style={{ marginBottom: 12 }}
+                  className="u-mb-12"
                 />
                 <ResizableTable
                   dataSource={result.failedRecords as Record<string, unknown>[]}

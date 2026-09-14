@@ -40,10 +40,10 @@ const QuickEntrySettingsModal: React.FC<QuickEntrySettingsModalProps> = ({
       ]}
     >
       <div style={{ padding: '16px 0' }}>
-        <p style={{ marginBottom: 16, color: 'var(--color-text-tertiary)' }}>
+        <p className="u-mb-16" style={{ color: 'var(--color-text-tertiary)' }}>
           勾选需要在首页显示的快捷入口（至少保留一个）
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+        <div className="u-d-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
           {quickEntries.map(entry => (
             <Checkbox
               key={entry.id}
@@ -51,7 +51,7 @@ const QuickEntrySettingsModal: React.FC<QuickEntrySettingsModalProps> = ({
               onChange={() => onToggle(entry.id)}
               disabled={quickEntries.filter(e => e.enabled).length === 1 && entry.enabled}
             >
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <span className="u-d-inline-flex u-ai-center" style={{ gap: '8px' }}>
                 {entry.icon}
                 {entry.label}
               </span>

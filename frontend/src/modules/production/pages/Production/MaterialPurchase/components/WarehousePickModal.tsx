@@ -84,7 +84,7 @@ const WarehousePickModal: React.FC<WarehousePickModalProps> = ({
         {target && (
           <>
             {/* 物料详细信息卡片 */}
-            <Card size="small" style={{ marginBottom: 16 }}>
+            <Card size="small" className="u-mb-16">
               <ResizableTable
                 dataSource={[target]}
                 pagination={false}
@@ -103,21 +103,21 @@ const WarehousePickModal: React.FC<WarehousePickModalProps> = ({
             </Card>
 
             {/* 需求/库存对比 */}
-            <div style={{ marginBottom: 16, display: 'flex', gap: 24, padding: '8px 12px', background: 'var(--color-bg-container)', borderRadius: 4 }}>
+            <div className="u-mb-16 u-d-flex u-p-8px12px u-br-4" style={{ gap: 24, background: 'var(--color-bg-container)' }}>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>需求数量</div>
-                <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{formatMaterialQuantity(target.purchaseQuantity)} {target.unit || ''}</div>
+                <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>需求数量</div>
+                <div className="u-fw-600" style={{ color: 'var(--color-text-primary)' }}>{formatMaterialQuantity(target.purchaseQuantity)} {target.unit || ''}</div>
               </div>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>本次领取</div>
-                <div style={{ fontWeight: 600, color: 'var(--color-primary)' }} id="warehouse-pick-qty-display">-</div>
+                <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>本次领取</div>
+                <div className="u-fw-600" style={{ color: 'var(--color-primary)' }} id="warehouse-pick-qty-display">-</div>
               </div>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>剩余待采购</div>
-                <div style={{ fontWeight: 600, color: 'var(--color-warning)' }} id="warehouse-pick-remain-display">-</div>
+                <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>剩余待采购</div>
+                <div className="u-fw-600" style={{ color: 'var(--color-warning)' }} id="warehouse-pick-remain-display">-</div>
               </div>
             </div>
-            <div style={{ marginBottom: 16, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+            <div className="u-mb-16 u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
               领取后将创建出库单，等待仓库确认出库；剩余数量将自动转采购任务。
             </div>
 
@@ -135,9 +135,9 @@ const WarehousePickModal: React.FC<WarehousePickModalProps> = ({
                 },
               ]}
             >
-              <Space.Compact style={{ width: '100%' }}>
+              <Space.Compact className="u-w-full">
                 <InputNumber
-                  style={{ width: '100%' }}
+                  className="u-w-full"
                   min={0}
                   max={target.purchaseQuantity}
                   step={0.01}
@@ -153,7 +153,7 @@ const WarehousePickModal: React.FC<WarehousePickModalProps> = ({
                   }}
                 />
                 <Input
-                  style={{ width: 80, textAlign: 'center' }}
+                  className="u-ta-center" style={{ width: 80 }}
                   value={target.unit || ''}
                   disabled
                 />

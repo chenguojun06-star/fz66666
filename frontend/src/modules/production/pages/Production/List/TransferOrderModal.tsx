@@ -92,7 +92,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
       size="large"
       styles={{ wrapper: { width: '85%' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
       footer={
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <div className="u-d-flex u-jc-end u-gap-8">
           <Button onClick={closeTransferModal}>取消</Button>
           <Button type="primary" loading={transferSubmitting} onClick={handleSubmit}>
             {transferType === 'factory' ? '确认转工厂' : '确认转人员'}
@@ -100,11 +100,11 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
         </div>
       }
     >
-      <div style={{ padding: '8px 0' }}>
+      <div className="u-p-8px0">
         <Tabs
           activeKey={transferType}
           onChange={(key) => setTransferType(key as 'user' | 'factory')}
-          style={{ marginBottom: 16 }}
+          className="u-mb-16"
           items={[
             { key: 'user', label: '转人员（系统内部）' },
             { key: 'factory', label: '转工厂（系统内部）' },
@@ -112,14 +112,14 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
         />
 
         {transferType === 'user' && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 6, fontWeight: 500 }}>转给谁：</div>
+          <div className="u-mb-16">
+            <div className="u-mb-6 u-fw-500">转给谁：</div>
             <Select
               showSearch placeholder="输入姓名搜索系统用户（仅限本系统内部）" value={transferUserId}
               onChange={(val) => setTransferUserId(val)} onSearch={searchTransferUsers}
               filterOption={false} loading={transferSearching}
               notFoundContent={transferSearching ? '搜索中...' : '输入姓名搜索'}
-              style={{ width: '100%' }} allowClear
+              className="u-w-full" allowClear
             >
               {transferUsers.map(u => (
                 <Option key={u.id} value={u.id}>
@@ -131,14 +131,14 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
         )}
 
         {transferType === 'factory' && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 6, fontWeight: 500 }}>转给哪个工厂：</div>
+          <div className="u-mb-16">
+            <div className="u-mb-6 u-fw-500">转给哪个工厂：</div>
             <Select
               showSearch placeholder="输入工厂名称搜索（仅限本系统内部工厂）" value={transferFactoryId}
               onChange={(val) => setTransferFactoryId(val)} onSearch={searchTransferFactories}
               filterOption={false} loading={transferFactorySearching}
               notFoundContent={transferFactorySearching ? '搜索中...' : '输入工厂名称搜索'}
-              style={{ width: '100%' }} allowClear
+              className="u-w-full" allowClear
             >
               {transferFactories.map(f => (
                 <Option key={f.id} value={f.id}>
@@ -150,11 +150,11 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
           </div>
         )}
 
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ marginBottom: 6, fontWeight: 500 }}>
+        <div className="u-mb-16">
+          <div className="u-mb-6 u-fw-500">
             选择菲号（可选）：
             {transferSelectedBundleIds.length > 0 && (
-              <span style={{ fontWeight: 400, color: 'var(--color-text-tertiary)', marginLeft: 8 }}>
+              <span className="u-fw-400 u-ml-8" style={{ color: 'var(--color-text-tertiary)' }}>
                 已选 {transferSelectedBundleIds.length} 个
               </span>
             )}
@@ -196,11 +196,11 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
           />
         </div>
 
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ marginBottom: 6, fontWeight: 500 }}>
+        <div className="u-mb-16">
+          <div className="u-mb-6 u-fw-500">
             选择工序（可选）：
             {transferSelectedProcessCodes.length > 0 && (
-              <span style={{ fontWeight: 400, color: 'var(--color-text-tertiary)', marginLeft: 8 }}>
+              <span className="u-fw-400 u-ml-8" style={{ color: 'var(--color-text-tertiary)' }}>
                 已选 {transferSelectedProcessCodes.length} 个工序
               </span>
             )}
@@ -208,7 +208,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
           <Select
             mode="multiple" placeholder="选择要转移的工序" value={transferSelectedProcessCodes}
             onChange={(vals) => setTransferSelectedProcessCodes(vals)}
-            loading={transferProcessesLoading} style={{ width: '100%' }}
+            loading={transferProcessesLoading} className="u-w-full"
             allowClear optionFilterProp="label" maxTagCount="responsive"
           >
             {transferProcesses.map((p: any) => {
@@ -217,9 +217,9 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
               const label = `${p.processName}${priceText}${p.progressStage ? ` (${p.progressStage})` : ''}`;
               return (
                 <Option key={p.processCode || p.id} value={p.processCode || p.id} label={label}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="u-d-flex u-jc-between u-ai-center">
                     <span>{p.processName}</span>
-                    <span style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
+                    <span className="u-fs-12px" style={{ color: 'var(--color-text-tertiary)' }}>
                       {p.progressStage && `${p.progressStage} | `}
                       {price > 0 ? formatMoney(price) : '未配置单价'}
                     </span>
@@ -229,27 +229,27 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
             })}
           </Select>
           {transferProcesses.length === 0 && !transferProcessesLoading && (
-            <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px', marginTop: 4 }}>
+            <div className="u-fs-12px u-mt-4" style={{ color: 'var(--color-text-tertiary)' }}>
               该订单暂无工序配置
             </div>
           )}
         </div>
 
         {transferType === 'factory' && selectedProcessDetails.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 6, fontWeight: 500 }}>
+          <div className="u-mb-16">
+            <div className="u-mb-6 u-fw-500">
               工序单价设置：
-              <span style={{ fontWeight: 400, color: 'var(--color-text-tertiary)', fontSize: '12px', marginLeft: 6 }}>
+              <span className="u-fw-400 u-fs-12px u-ml-6" style={{ color: 'var(--color-text-tertiary)' }}>
                 转厂后外部工厂将按新单价结算工资
               </span>
             </div>
-            <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+            <div className="u-br-6 u-ov-hidden" style={{ border: '1px solid var(--color-border)' }}>
+              <table className="u-w-full u-fs-14" style={{ borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: 'var(--color-bg-layout)' }}>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 500 }}>工序名称</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 500, width: 120 }}>原单价</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 500, width: 160 }}>新单价（元/件）</th>
+                    <th className="u-p-8px12px u-ta-left u-fw-500">工序名称</th>
+                    <th className="u-p-8px12px u-ta-right u-fw-500" style={{ width: 120 }}>原单价</th>
+                    <th className="u-p-8px12px u-ta-right u-fw-500" style={{ width: 160 }}>新单价（元/件）</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -259,11 +259,11 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
                     const newPrice = priceOverrides[code];
                     return (
                       <tr key={code} style={{ borderTop: '1px solid var(--color-border)' }}>
-                        <td style={{ padding: '6px 12px' }}>{p.processName}</td>
-                        <td style={{ padding: '6px 12px', textAlign: 'right', color: 'var(--color-text-tertiary)' }}>
+                        <td className="u-p-6px12px">{p.processName}</td>
+                        <td className="u-p-6px12px u-ta-right" style={{ color: 'var(--color-text-tertiary)' }}>
                           {originalPrice > 0 ? formatMoney(originalPrice) : '-'}
                         </td>
-                        <td style={{ padding: '6px 12px', textAlign: 'right' }}>
+                        <td className="u-p-6px12px u-ta-right">
                           <InputNumber
                            
                             min={0}
@@ -285,9 +285,9 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
         )}
 
         <div>
-          <div style={{ marginBottom: 6, fontWeight: 500 }}>
+          <div className="u-mb-6 u-fw-500">
             备注（可选）：
-            <span style={{ fontWeight: 400, color: 'var(--color-text-tertiary)', fontSize: '12px', marginLeft: 6 }}>
+            <span className="u-fw-400 u-fs-12px u-ml-6" style={{ color: 'var(--color-text-tertiary)' }}>
               系统将自动记录备注时间
             </span>
           </div>

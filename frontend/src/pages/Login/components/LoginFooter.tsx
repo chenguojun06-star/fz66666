@@ -14,7 +14,7 @@ const LoginFooter: React.FC<LoginFooterProps> = ({ year, buildCommit, buildTimeT
   return (
     <>
       <div className="login-footer">© {year} {t('login.brand', language)}</div>
-      <div className="login-footer" style={{ marginTop: 2, fontSize: 14 }}>
+      <div className="login-footer u-mt-2 u-fs-14" >
         部署版本：{buildCommit} · 构建时间：{buildTimeText}
       </div>
       <div className="login-footer login-filing">

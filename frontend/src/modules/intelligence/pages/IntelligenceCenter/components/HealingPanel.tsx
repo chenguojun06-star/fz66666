@@ -17,7 +17,7 @@ const HealingPanel: React.FC<HealingPanelProps> = ({
 }) => {
   return (
     <div className="c-card">
-      <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('healing')}>
+      <div className="c-card-title u-cur-pointer"  onClick={() => toggleCollapse('healing')}>
         <LiveDot size={7} color={healing && healing.healthScore < 80 ? 'var(--color-warning)' : 'var(--color-success)'} />
         系统异常自愈诊断
         {healing && (
@@ -38,19 +38,19 @@ const HealingPanel: React.FC<HealingPanelProps> = ({
               <span className={`c-heal-dot ${item.status === 'OK' ? 'dot-ok' : item.autoFixed ? 'dot-fixed' : 'dot-warn'}`} />
               <span className="c-heal-name">{item.checkName}</span>
               <span className="c-heal-detail">{item.detail}</span>
-              <span style={{ marginLeft: 'auto', flexShrink: 0 }}>
+              <span className="u-ml-auto u-fshrink-0">
                 {item.autoFixed
-                  ? <Tag style={{ fontSize: 14, background: 'rgba(45, 127, 249, 0.13)', color: 'var(--color-primary-light)', borderColor: '#4096ff55' }}>已自修</Tag>
+                  ? <Tag className="u-fs-14" style={{ background: 'rgba(45, 127, 249, 0.13)', color: 'var(--color-primary-light)', borderColor: '#4096ff55' }}>已自修</Tag>
                   : item.status !== 'OK'
-                    ? <Tag style={{ fontSize: 14, background: 'var(--color-warning)22', color: 'var(--color-warning)', borderColor: 'var(--color-warning)55' }}>需处理</Tag>
-                    : <Tag style={{ fontSize: 14, background: 'rgba(82, 196, 26, 0.13)', color: 'var(--color-success)', borderColor: '#73d13d55' }}>正常</Tag>
+                    ? <Tag className="u-fs-14" style={{ background: 'var(--color-warning)22', color: 'var(--color-warning)', borderColor: 'var(--color-warning)55' }}>需处理</Tag>
+                    : <Tag className="u-fs-14" style={{ background: 'rgba(82, 196, 26, 0.13)', color: 'var(--color-success)', borderColor: '#73d13d55' }}>正常</Tag>
                 }
               </span>
             </div>
           ))
         ) : <div className="c-empty">暂无诊断数据</div>}
         {healing && healing.needManual > 0 && (
-          <div style={{ padding: '8px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="u-d-flex u-ai-center u-gap-10" style={{ padding: '8px 14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
             <button
               onClick={onRepair}
               disabled={repairing}

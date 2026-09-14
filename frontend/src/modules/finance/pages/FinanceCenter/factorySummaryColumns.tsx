@@ -27,16 +27,16 @@ export function getFactorySummaryColumns(
           <div style={{ lineHeight: 1.35 }}>
             <Space>
               <ShopOutlined style={{ color: record.factoryType === 'INTERNAL' ? 'var(--color-warning)' : 'var(--primary-color)' }} />
-              <span style={{ fontWeight: 500, cursor: 'pointer', borderBottom: '1px dashed var(--primary-color)' }}>{text}</span>
+              <span className="u-fw-500 u-cur-pointer" style={{ borderBottom: '1px dashed var(--primary-color)' }}>{text}</span>
               {record.factoryType === 'INTERNAL' && (
                 <Tooltip title="内部工厂——工人工资已通过「工资结算」按人员审核，无需在此推送订单结算">
-                  <Tag color="orange" style={{ margin: 0, fontSize: 14 }}>内部</Tag>
+                  <Tag color="orange" className="u-m-0 u-fs-14">内部</Tag>
                 </Tooltip>
               )}
-              {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 14 }}>外部</Tag>}
+              {record.factoryType === 'EXTERNAL' && <Tag color="purple" className="u-m-0 u-fs-14">外部</Tag>}
             </Space>
             {record.orgPath || record.parentOrgUnitName ? (
-              <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 14, marginTop: 4 }}>
+              <div className="u-fs-14 u-mt-4" style={{ color: 'var(--neutral-text-secondary)' }}>
                 {record.orgPath || record.parentOrgUnitName}
               </div>
             ) : null}
@@ -104,7 +104,7 @@ export function getFactorySummaryColumns(
       align: 'right',
       render: (v: unknown, record: FactorySummaryRow) => (
         <span
-          style={{ fontWeight: 600, color: 'var(--primary-color)', cursor: 'pointer', textDecoration: 'underline' }}
+          className="u-fw-600 u-cur-pointer" style={{ color: 'var(--primary-color)', textDecoration: 'underline' }}
           title="点击查看订单明细"
           onClick={() => openDrilldown(record)}
         >

@@ -284,7 +284,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
         title: `删除供应商"${selectedRow.name}"`,
         content: (
           <div>
-            <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)' }}>
+            <div className="u-mb-12" style={{ color: 'var(--color-text-secondary)' }}>
               删除后不可恢复。存在未完成订单/在途采购时无法删除。
             </div>
             <Input.TextArea
@@ -368,7 +368,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
       minHeight={300}
       styles={{ body: { paddingTop: 12 } }}
     >
-      <div style={{ display: 'flex', gap: 16, height: '54vh', minHeight: 260 }}>
+      <div className="u-d-flex u-gap-16" style={{ height: '54vh', minHeight: 260 }}>
         {/* ===== 左侧：目录 ===== */}
         <div
           style={{
@@ -376,25 +376,25 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
             borderRight: '1px solid var(--color-border-light)', paddingRight: 12,
           }}
         >
-          <div style={{ display: 'flex', gap: 6, marginBottom: 10, alignItems: 'center' }}>
+          <div className="u-d-flex u-gap-6 u-mb-10 u-ai-center">
             <Input.Search
               placeholder={meta.searchPlaceholder}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               allowClear
               size="small"
-              style={{ flex: 1 }}
+              className="u-flex-1"
             />
             <Tooltip title="刷新列表">
               <Button size="small" icon={<SyncOutlined />} onClick={loadList} loading={loading} />
             </Tooltip>
             <CircleIconButton size={24} type="add" title={`新增${meta.defaultTitle}`} onClick={startCreate} />
           </div>
-          <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+          <div className="u-mb-8 u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
             共 <Tag color="blue" style={{ marginInlineEnd: 0 }}>{rows.length}</Tag> {meta.unit}，点击左侧条目在右侧编辑
           </div>
           <Spin spinning={loading}>
-            <div style={{ flex: 1, minHeight: 120, overflowY: 'auto', marginLeft: -4 }}>
+            <div className="u-flex-1" style={{ minHeight: 120, overflowY: 'auto', marginLeft: -4 }}>
               {filtered.length === 0 && !loading ? (
                 <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" style={{ marginTop: 24 }} />
               ) : (
@@ -412,14 +412,14 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                       onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
                       onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                     >
-                      <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.name}</span>
+                      <div className="u-fw-600 u-fs-13 u-ov-hidden u-ws-nowrap u-d-flex u-ai-center u-gap-6" style={{ textOverflow: 'ellipsis' }}>
+                        <span className="u-ov-hidden u-ws-nowrap" style={{ textOverflow: 'ellipsis' }}>{row.name}</span>
                         {mode === 'supplier' && row.supplierTag && (
-                          <Tag style={{ flexShrink: 0, fontSize: 10, lineHeight: '16px', padding: '0 6px', margin: 0 }}>{row.supplierTag}</Tag>
+                          <Tag className="u-fshrink-0 u-fs-10 u-lh-16px u-m-0" style={{ padding: '0 6px' }}>{row.supplierTag}</Tag>
                         )}
                       </div>
                       {meta.hasContact && (
-                        <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div className="u-fs-11 u-mt-2 u-ov-hidden u-ws-nowrap" style={{ color: 'var(--color-text-tertiary)', textOverflow: 'ellipsis' }}>
                           {[row.contact, row.phone].filter(Boolean).join(' · ') || '—'}
                         </div>
                       )}
@@ -432,10 +432,10 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
         </div>
 
         {/* ===== 右侧：编辑区 ===== */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <div className="u-flex-1 u-d-flex u-fd-column" style={{ minWidth: 0 }}>
           {creating ? (
             <>
-              <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 16 }}>新增{meta.defaultTitle}</div>
+              <div className="u-fw-600 u-fs-15 u-mb-16">新增{meta.defaultTitle}</div>
               <div style={FIELD_ROW_STYLE}>
                 <span style={FIELD_LABEL_STYLE}>{meta.nameLabel}</span>
                 {fieldInput('name', `请输入${meta.nameLabel}`, 100)}
@@ -463,7 +463,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                         placeholder="布行/辅料店/纱线行等（选填）"
                         allowClear
                         showSearch
-                        style={{ flex: 1 }}
+                        className="u-flex-1"
                         options={tagOptions}
                       />
                       {/* D-244：齿轮维护标签选项（新增 / 改名 / 删除），与 DictAutoComplete 同款交互 */}
@@ -471,25 +471,25 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                         <Button
                           icon={<SettingOutlined />}
                           onClick={() => setTagManageOpen(true)}
-                          style={{ flexShrink: 0 }}
+                          className="u-fshrink-0"
                         />
                       </Tooltip>
                     </div>
                   )}
                 </>
               )}
-              <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+              <div className="u-mt-8 u-d-flex u-gap-8">
                 <Button icon={<SaveOutlined />} loading={saving} onClick={handleSave}>添加并生效</Button>
                 <Button onClick={() => { setCreating(false); setDraft(emptyDraft); }}>取消</Button>
               </div>
-              <div style={{ marginTop: 16, padding: '6px 10px', background: 'var(--color-bg-subtle, rgba(0,0,0,0.03))', borderRadius: 4, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+              <div className="u-mt-16 u-p-6px10px u-br-4 u-fs-12" style={{ background: 'var(--color-bg-subtle, rgba(0,0,0,0.03))', color: 'var(--color-text-tertiary)' }}>
                 添加后立即生效，并同步到当前表单的下拉选项。
               </div>
             </>
           ) : selectedRow ? (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <span style={{ fontWeight: 600, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div className="u-d-flex u-jc-between u-ai-center u-mb-16">
+                <span className="u-fw-600 u-fs-15 u-ov-hidden u-ws-nowrap" style={{ textOverflow: 'ellipsis' }}>
                   编辑：{selectedRow.name}
                 </span>
                 <Popconfirm
@@ -531,7 +531,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                         placeholder="布行/辅料店/纱线行等（选填）"
                         allowClear
                         showSearch
-                        style={{ flex: 1 }}
+                        className="u-flex-1"
                         options={tagOptions}
                       />
                       {/* D-244：齿轮维护标签选项（新增 / 改名 / 删除），与 DictAutoComplete 同款交互 */}
@@ -539,17 +539,17 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                         <Button
                           icon={<SettingOutlined />}
                           onClick={() => setTagManageOpen(true)}
-                          style={{ flexShrink: 0 }}
+                          className="u-fshrink-0"
                         />
                       </Tooltip>
                     </div>
                   )}
                 </>
               )}
-              <div style={{ marginTop: 8 }}>
+              <div className="u-mt-8">
                 <Button icon={<SaveOutlined />} loading={saving} onClick={handleSave}>保存</Button>
               </div>
-              <div style={{ marginTop: 16, padding: '6px 10px', background: 'var(--color-bg-subtle, rgba(0,0,0,0.03))', borderRadius: 4, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+              <div className="u-mt-16 u-p-6px10px u-br-4 u-fs-12" style={{ background: 'var(--color-bg-subtle, rgba(0,0,0,0.03))', color: 'var(--color-text-tertiary)' }}>
                 左侧点击其他条目可切换；保存即时生效，并同步到当前表单的下拉选项。
               </div>
             </>

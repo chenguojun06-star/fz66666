@@ -68,7 +68,7 @@ const MaterialInventoryAISummary: React.FC<MaterialInventoryAISummaryProps> = ({
       showIcon
       type={insight.type}
       title={insight.message}
-      style={{ marginBottom: 8, fontSize: 14 }}
+      className="u-mb-8 u-fs-14"
       closable
     />
   );

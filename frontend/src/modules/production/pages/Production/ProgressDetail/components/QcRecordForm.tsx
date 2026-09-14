@@ -35,22 +35,22 @@ const QcRecordForm: React.FC<QcRecordFormProps> = ({
 }) => {
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-        <Button type="link" icon={<ArrowLeftOutlined />} onClick={onBack} style={{ padding: 0 }}>
+      <div className="u-d-flex u-ai-center u-gap-8 u-mb-16">
+        <Button type="link" icon={<ArrowLeftOutlined />} onClick={onBack} className="u-p-0">
           返回菲号列表
         </Button>
         <Divider orientation="vertical" />
-        <span style={{ fontWeight: 600, fontSize: 15 }}>
+        <span className="u-fw-600 u-fs-15">
           {qcRecord.repairStatus === 'repair_done' ? '复检' : '工序质检'} — 菲号#{qcRecord.bundleNo} {qcRecord.processName}
         </span>
       </div>
-      <div style={{ marginBottom: 12, padding: '10px 14px', background: 'var(--color-bg-page)', borderRadius: 8 }}>
+      <div className="u-mb-12 u-br-8" style={{ padding: '10px 14px', background: 'var(--color-bg-page)' }}>
         <Row gutter={16}>
           <Col span={8}><Statistic title="菲号" value={qcRecord.bundleNo} styles={{ content: { fontSize: 18 } }} /></Col>
           <Col span={8}><Statistic title="总数量" value={qcRecord.quantity} styles={{ content: { fontSize: 18 } }} /></Col>
           <Col span={8}><Statistic title="工序" value={qcRecord.processName} styles={{ content: { fontSize: 15 } }} /></Col>
         </Row>
-        <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="u-mt-6 u-d-flex u-jc-between u-ai-center">
           <div>
             {qcRecord.color && <Tag>{qcRecord.color}</Tag>}
             {qcRecord.size && <Tag>{qcRecord.size}</Tag>}
@@ -90,7 +90,7 @@ const QcRecordForm: React.FC<QcRecordFormProps> = ({
           {qcResult === 'unqualified' && (
             <Col span={14}>
               <Form.Item name="defectQuantity" label="次品数量" rules={[{ required: true, message: '请输入' }]}>
-                <InputNumber min={1} max={qcRecord?.quantity || 999} style={{ width: '100%' }} placeholder="次品数量" />
+                <InputNumber min={1} max={qcRecord?.quantity || 999} className="u-w-full" placeholder="次品数量" />
               </Form.Item>
             </Col>
           )}
@@ -118,11 +118,11 @@ const QcRecordForm: React.FC<QcRecordFormProps> = ({
                 </Form.Item>
               </Col>
             </Row>
-            <div style={{ padding: '8px 12px', border: '1px solid var(--status-error-border)', borderRadius: 6, marginBottom: 12 }}>
-              <Form.Item name="lockBundle" valuePropName="checked" style={{ marginBottom: 0 }}>
+            <div className="u-p-8px12px u-br-6 u-mb-12" style={{ border: '1px solid var(--status-error-border)' }}>
+              <Form.Item name="lockBundle" valuePropName="checked" className="u-mb-0">
                 <Space>
                   <Switch checkedChildren={<LockOutlined />} unCheckedChildren={<UnlockOutlined />} />
-                  <span style={{ color: 'var(--color-error)', fontWeight: 500 }}>锁定菲号，阻止下游扫码</span>
+                  <span className="u-fw-500" style={{ color: 'var(--color-error)' }}>锁定菲号，阻止下游扫码</span>
                 </Space>
               </Form.Item>
             </div>
@@ -133,16 +133,16 @@ const QcRecordForm: React.FC<QcRecordFormProps> = ({
           <Input.TextArea rows={3} placeholder="可选，记录质检情况" />
         </Form.Item>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+        <div className="u-d-flex u-jc-end u-gap-8 u-mt-8">
           <Button onClick={onBack}>取消</Button>
           <Button type="primary" onClick={onSubmit} loading={submitting}>提交质检结果</Button>
         </div>
       </Form>
 
       {remarkPanelOpen && orderNo && (
-        <div style={{ marginTop: 16, borderTop: '1px solid var(--color-border-light)', paddingTop: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ fontWeight: 600 }}><FileTextOutlined style={{ marginRight: 6 }} />订单备注 — {orderNo}</span>
+        <div className="u-mt-16" style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: 16 }}>
+          <div className="u-d-flex u-jc-between u-ai-center u-mb-8">
+            <span className="u-fw-600"><FileTextOutlined className="u-mr-6" />订单备注 — {orderNo}</span>
             <Button type="link" size="small" onClick={() => setRemarkPanelOpen(false)}>收起</Button>
           </div>
           <RemarkTimelineContent targetType="order" targetNo={orderNo} canAddRemark />

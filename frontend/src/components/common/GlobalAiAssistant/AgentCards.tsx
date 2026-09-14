@@ -267,7 +267,7 @@ export const AiTraceCardWidget: React.FC<{
   return (
     <div className={styles.purchaseDocCard}>
       <div className={styles.purchaseDocHeader}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="u-d-flex u-ai-center u-gap-10">
           <XiaoyunCloudAvatar size={28} active />
           <div>
             <div className={styles.purchaseDocTitle}>小云刚才的处理过程</div>
@@ -339,7 +339,7 @@ export const BundleSplitCardWidget: React.FC<{
               {item.operatorName ? ` · ${item.operatorName}` : item.operatorId ? ` · ${item.operatorId}` : ''}
             </div>
             {item.qrCode ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+              <div className="u-d-flex u-ai-center u-gap-12 u-mt-8">
                 <QRCodeCanvas value={item.qrCode} size={58} includeMargin />
                 <div className={styles.purchaseDocItemTip} style={{ marginTop: 0 }}>
                   扫这个子菲号继续后续工序

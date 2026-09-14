@@ -64,14 +64,14 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
     : null;
 
   return (
-    <div style={{ margin: '8px 0', padding: '10px 12px', background: 'var(--status-processing-bg)', borderRadius: 6, border: '1px solid var(--color-blue-100)' }}>
+    <div className="u-m-8px0 u-br-6" style={{ padding: '10px 12px', background: 'var(--status-processing-bg)', border: '1px solid var(--color-blue-100)' }}>
       {/* 标题行 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+      <div className="u-d-flex u-ai-center u-gap-6 u-mb-8">
         <XiaoyunCloudAvatar size={16} active />
-        <Text strong style={{ fontSize: 14, color: 'var(--color-primary)' }}>AI质检助手</Text>
-        {loading && <Spin style={{ marginLeft: 4 }} />}
+        <Text strong className="u-fs-14" style={{ color: 'var(--color-primary)' }}>AI质检助手</Text>
+        {loading && <Spin className="u-ml-4" />}
         {data && data.historicalVerdict && (
-          <Tag color={verdictColor[data.historicalVerdict]} style={{ marginLeft: 'auto', fontSize: 14 }}>
+          <Tag color={verdictColor[data.historicalVerdict]} className="u-ml-auto u-fs-14">
             {verdictLabel[data.historicalVerdict]}
             {data.historicalDefectRate != null && ` ${toPercent(data.historicalDefectRate)}`}
           </Tag>
@@ -88,7 +88,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
           type="warning"
           showIcon
           icon={<WarningOutlined />}
-          style={{ marginBottom: 8, padding: '4px 10px', fontSize: 14 }}
+          className="u-mb-8 u-fs-14" style={{ padding: '4px 10px' }}
           banner
         />
       )}
@@ -99,7 +99,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
           title="该订单历史次品率偏高，请加强本次质检力度"
           type="error"
           showIcon
-          style={{ marginBottom: 8, padding: '4px 10px', fontSize: 14 }}
+          className="u-mb-8 u-fs-14" style={{ padding: '4px 10px' }}
           banner
         />
       )}
@@ -107,8 +107,8 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
       {/* 质检要点 */}
       {data && data.checkpoints && data.checkpoints.length > 0 && (
         <div style={{ marginBottom: suggestion ? 8 : 0 }}>
-          <Text type="secondary" style={{ fontSize: 14 }}>质检要点：</Text>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+          <Text type="secondary" className="u-fs-14">质检要点：</Text>
+          <div className="u-d-flex u-fd-column u-gap-4 u-mt-4">
             {data.checkpoints.map((point, idx) => {
               const isRed = point.startsWith('🔴');
               const isYellow = point.startsWith('🟡');
@@ -128,14 +128,14 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
       {/* 异常建议 + 采纳按钮 */}
       {defectCategory && !loading && (
         suggestion ? (
-          <div style={{ marginTop: 8, padding: '8px 10px', background: 'var(--status-warning-bg)', borderRadius: 4, border: '1px solid var(--status-warning-border)' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <CheckCircleOutlined style={{ color: 'var(--color-warning)', marginTop: 2, flexShrink: 0 }} />
-              <Text style={{ fontSize: 14, flex: 1 }}>{suggestion}</Text>
+          <div className="u-mt-8 u-p-8px10px u-br-4" style={{ background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)' }}>
+            <div className="u-d-flex u-ai-start u-gap-8">
+              <CheckCircleOutlined className="u-mt-2 u-fshrink-0" style={{ color: 'var(--color-warning)' }} />
+              <Text className="u-fs-14 u-flex-1">{suggestion}</Text>
               <Button
                 type="primary"
                
-                style={{ flexShrink: 0, marginLeft: 8 }}
+                className="u-fshrink-0 u-ml-8"
                 onClick={() => onAdopt(suggestion)}
               >
                 采纳
@@ -144,7 +144,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
           </div>
         ) : (
           !loading && data && (
-            <Text type="secondary" style={{ fontSize: 14, display: 'block', marginTop: 4 }}>
+            <Text type="secondary" className="u-fs-14 u-d-block u-mt-4">
               暂无该次品类别的处理建议
             </Text>
           )

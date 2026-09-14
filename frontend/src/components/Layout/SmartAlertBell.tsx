@@ -59,7 +59,7 @@ const SmartAlertBell: React.FC = () => {
         title="今日跟踪预警"
       >
         <span className="smart-alert-btn-icon">
-          <ThunderboltOutlined style={{ fontSize: 15 }} />
+          <ThunderboltOutlined className="u-fs-15" />
           {totalWithInsights > 0 && (
             <span className="smart-alert-dot" style={{ background: dotColor }} />
           )}
@@ -88,7 +88,7 @@ const SmartAlertBell: React.FC = () => {
             {brief?.date && <span className="sap-date">{brief.date}</span>}
           </div>
           <button className="sap-close" onClick={() => setOpen(false)}>
-            <CloseOutlined style={{ fontSize: 12 }} />
+            <CloseOutlined className="u-fs-12" />
           </button>
         </div>
 
@@ -108,7 +108,7 @@ const SmartAlertBell: React.FC = () => {
                 <div className="sap-section-title">
                   <RobotOutlined style={{ color: 'var(--color-accent-purple)' }} /> 小云主动洞察
                   <Badge count={proactiveInsights.length} size="small"
-                    style={{ marginLeft: 8, background: 'var(--color-error)', boxShadow: 'none' }} />
+                    className="u-ml-8" style={{ background: 'var(--color-error)', boxShadow: 'none' }} />
                 </div>
                 {proactiveInsights.slice(0, 5).map((it) => (
                   <div key={it.id} className="sap-insight-row"
@@ -120,12 +120,12 @@ const SmartAlertBell: React.FC = () => {
                       }`,
                     }}
                   >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.4 }}>
+                    <div className="u-flex-1" style={{ minWidth: 0 }}>
+                      <div className="u-fs-14 u-fw-600" style={{ color: 'var(--color-text-primary)', lineHeight: 1.4 }}>
                         {it.title}
                       </div>
                       {it.content && (
-                        <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 2, whiteSpace: 'pre-wrap' }}>
+                        <div className="u-fs-13 u-mt-2 u-ws-pre-wrap" style={{ color: 'var(--color-text-secondary)' }}>
                           {it.content}
                         </div>
                       )}
@@ -148,13 +148,13 @@ const SmartAlertBell: React.FC = () => {
                 <div className="sap-section-title">
                   <RobotOutlined style={{ color: 'var(--color-accent-purple)' }} /> AI巡检简报
                   {patrolSummary.autoExecutedToday > 0 && (
-                    <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--color-accent-purple)', background: 'var(--status-info-bg)', borderRadius: 10, padding: '1px 8px' }}>
+                    <span className="u-ml-8 u-fs-11 u-br-10" style={{ color: 'var(--color-accent-purple)', background: 'var(--status-info-bg)', padding: '1px 8px' }}>
                       今日自动执行 {patrolSummary.autoExecutedToday} 次
                     </span>
                   )}
                   {patrolSummary.highRiskPending > 0 && (
                     <Badge count={patrolSummary.highRiskPending} size="small"
-                      style={{ marginLeft: 8, background: 'var(--color-error)', boxShadow: 'none' }} />
+                      className="u-ml-8" style={{ background: 'var(--color-error)', boxShadow: 'none' }} />
                   )}
                 </div>
                 {patrolSummary.recentActions.slice(0, 5).map((action, idx) => (
@@ -182,17 +182,17 @@ const SmartAlertBell: React.FC = () => {
               <div className="sap-section">
                 <div className="sap-section-title">
                   <AlertOutlined style={{ color: 'var(--color-accent-purple)' }} /> 首要关注
-                  <span style={{ marginLeft: 6, fontSize: 14, color: 'var(--color-text-tertiary)' }}>点 × 今日不再提醒</span>
+                  <span className="u-ml-6 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>点 × 今日不再提醒</span>
                 </div>
                 <div
                 className="sap-priority-card"
                 onClick={() => goTo(`/production?orderNo=${brief.topPriorityOrder?.orderNo ?? ''}`)}
-                style={{ cursor: 'pointer', position: 'relative' }}
+                className="u-cur-pointer u-pos-relative"
                 title="点击查看该订单"
               >
                   <button
-                    className="sap-event-dismiss-btn"
-                    style={{ position: 'absolute', top: 6, right: 6 }}
+                    className="sap-event-dismiss-btn u-pos-absolute"
+                    style={{ top: 6, right: 6 }}
                     onClick={(e) => dismissEvent('topPriority', e)}
                     title="今日不再提醒（明天会重新检测）"
                   >
@@ -224,14 +224,14 @@ const SmartAlertBell: React.FC = () => {
               <div className="sap-section">
                 <div className="sap-section-title">
                   <ExclamationCircleOutlined style={{ color: 'var(--color-danger)' }} /> 待处理事项
-                  <span style={{ marginLeft: 6, fontSize: 14, color: 'var(--color-text-tertiary)' }}>点 × 今日不再提醒，明日自动重检</span>
+                  <span className="u-ml-6 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>点 × 今日不再提醒，明日自动重检</span>
                 </div>
                 {visibleEvents.slice(0, 6).map(ev => (
                   <div
                     key={ev.id}
                     className="sap-event-row"
                     onClick={() => goTo(getEventNav(ev))}
-                    style={{ cursor: 'pointer' }}
+                    className="u-cur-pointer"
                     title="点击前往处理"
                   >
                     <span className="sap-event-dot" />
@@ -254,15 +254,15 @@ const SmartAlertBell: React.FC = () => {
               <div className="sap-section">
                 <div className="sap-section-title">
                   <CheckCircleOutlined style={{ color: 'var(--color-sky-500)' }} /> 提醒建议
-                  <span style={{ marginLeft: 6, fontSize: 14, color: 'var(--color-text-tertiary)' }}>点 × 今日不再提醒</span>
+                  <span className="u-ml-6 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>点 × 今日不再提醒</span>
                 </div>
                 {brief.decisionCards && brief.decisionCards.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div className="u-d-flex u-fd-column u-gap-8">
                     {brief.decisionCards.slice(0, 3).map((card, i) => dismissedIds.has(`decisionCard_${i}`) ? null : (
-                      <div key={`${card.title}-${i}`} className="sap-dismissible" style={{ position: 'relative' }}>
+                      <div key={`${card.title}-${i}`} className="sap-dismissible u-pos-relative" >
                         <button
-                          className="sap-event-dismiss-btn"
-                          style={{ position: 'absolute', top: 6, right: 6, zIndex: 2 }}
+                          className="sap-event-dismiss-btn u-pos-absolute"
+                          style={{ top: 6, right: 6, zIndex: 2 }}
                           onClick={(e) => dismissEvent(`decisionCard_${i}`, e)}
                           title="今日不再提醒（明天会重新检测）"
                         >
@@ -295,7 +295,7 @@ const SmartAlertBell: React.FC = () => {
                   </div>
                 ) : (
                   brief.suggestions.slice(0, 3).map((s, i) => dismissedIds.has(`suggestion_${i}`) ? null : (
-                    <div key={i} className="sap-suggestion" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div key={i} className="sap-suggestion u-d-flex u-ai-center u-jc-between" >
                       <span>· {s}</span>
                       <button
                         className="sap-event-dismiss-btn"
@@ -326,7 +326,7 @@ const SmartAlertBell: React.FC = () => {
                 <div className="sap-section-title">
                   <span style={{ color: 'var(--color-warning-deep)' }}></span> 我的通知
                   {unreadNoticeCount > 0 && (
-                    <span style={{ marginLeft: 4, fontSize: 11, background: 'var(--color-warning)', color: 'var(--color-bg-base)', borderRadius: 10, padding: '1px 8px' }}>
+                    <span className="u-ml-4 u-fs-11 u-br-10" style={{ background: 'var(--color-warning)', color: 'var(--color-bg-base)', padding: '1px 8px' }}>
                       {unreadNoticeCount} 未读
                     </span>
                   )}
@@ -368,11 +368,11 @@ const SmartAlertBell: React.FC = () => {
                         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                       />
                     )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="u-flex-1" style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: n.isRead ? 400 : 600, color: 'var(--color-text-primary)', lineHeight: 1.4 }}>
                         {n.title}
                       </div>
-                      <div style={{ fontSize: 14, color: 'var(--color-text-muted)', marginTop: 1 }}>
+                      <div className="u-fs-14" style={{ color: 'var(--color-text-muted)', marginTop: 1 }}>
                         {n.fromName} · {n.createdAt?.slice(5, 16)}
                       </div>
                       {n.actionType === 'urge_order' && n.urgeRecordId && !n.isRead && (

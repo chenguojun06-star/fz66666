@@ -41,30 +41,30 @@ const MaterialColorItemsModal: React.FC<MaterialColorItemsModalProps> = ({
       footer={null}
       width={720}
     >
-      {loading && <div style={{ textAlign: 'center', padding: 20, color: 'var(--color-text-secondary)' }}>加载中...</div>}
+      {loading && <div className="u-ta-center" style={{ padding: 20, color: 'var(--color-text-secondary)' }}>加载中...</div>}
       {!loading && data?.card && (
         <>
-          <div style={{ marginBottom: 16, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+          <div className="u-mb-16 u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
             色卡编号：{data.card.cardCode || '-'} · 共 {Array.isArray(data.items) ? data.items.length : 0} 种颜色
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="u-d-flex u-fd-column u-gap-8">
             {Array.isArray(data.items) && data.items.map((item: ColorItemEntry, idx: number) => (
               <Card key={item.id || idx} size="small" style={{ border: '1px solid var(--color-border)' }}>
                 <Row gutter={12} align="middle">
-                  <Col xs={24} sm={2} style={{ fontWeight: 600, color: 'var(--color-primary)' }}>#{idx + 1}</Col>
+                  <Col xs={24} sm={2} className="u-fw-600" style={{ color: 'var(--color-primary)' }}>#{idx + 1}</Col>
                   <Col xs={24} sm={5}>颜色：{item.color || '-'}</Col>
                   <Col xs={24} sm={5}>物料：{item.materialName || '-'}</Col>
                   <Col xs={24} sm={6}>
                     {item.unitPrice != null && item.unitPrice !== undefined ? `单价：${item.unitPrice} 元` : '-'}
                   </Col>
-                  <Col xs={24} sm={6} style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+                  <Col xs={24} sm={6} className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
                     {item.remark || ''}
                   </Col>
                 </Row>
               </Card>
             ))}
             {Array.isArray(data.items) && data.items.length === 0 && (
-              <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-tertiary)' }}>暂无颜色信息</div>
+              <div className="u-ta-center" style={{ padding: 40, color: 'var(--color-text-tertiary)' }}>暂无颜色信息</div>
             )}
           </div>
         </>

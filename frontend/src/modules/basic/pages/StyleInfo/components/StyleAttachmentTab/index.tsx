@@ -24,8 +24,8 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
 
   return (
     <div className="style-attachment">
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <span style={{ color: 'var(--neutral-text-lighter)', fontSize: 'var(--font-size-sm)', lineHeight: 1.4 }}>
+      <div className="u-mb-16 u-d-flex u-jc-between u-ai-center u-gap-12">
+        <span className="u-fs-var--font-size-sm" style={{ color: 'var(--neutral-text-lighter)', lineHeight: 1.4 }}>
           {'单个文件不超过10MB，一次最多上传4个'}
         </span>
         <UploadButton

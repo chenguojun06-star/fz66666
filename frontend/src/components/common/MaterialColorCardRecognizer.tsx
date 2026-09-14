@@ -241,7 +241,7 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
           </Button>,
         ]}
       >
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        <Space direction="vertical" className="u-w-full" size="middle">
 
             {!result && (
               <Alert
@@ -252,15 +252,15 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
             )}
 
             {/* 图片上传区 */}
-            <div style={{ textAlign: 'center' }}>
+            <div className="u-ta-center">
               {imageUrl ? (
-                <div style={{ position: 'relative', display: 'inline-block' }}>
+                <div className="u-pos-relative u-d-inline-block">
                   <Image
                     src={getFullAuthedFileUrl(imageUrl)}
                     alt="色卡图片"
                     width={220}
                     height={220}
-                    style={{ objectFit: 'contain', borderRadius: 8, border: '1px solid var(--color-border-light)' }}
+                    className="u-br-8" style={{ objectFit: 'contain', border: '1px solid var(--color-border-light)' }}
                     preview
                   />
                 </div>
@@ -274,7 +274,7 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
                 </div>
               )}
               <div
-                style={{ marginTop: 12 }}
+                className="u-mt-12"
                 tabIndex={0}
                 onDragOver={(e) => { e.preventDefault(); }}
                 onDrop={(e) => {
@@ -296,7 +296,7 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
                 >
                   <Button icon={<CameraOutlined />} disabled={uploading}>拍照</Button>
                 </Upload>
-                <span style={{ marginLeft: 8 }} />
+                <span className="u-ml-8" />
                 <Upload
                   accept="image/*"
                   showUploadList={false}
@@ -306,7 +306,7 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
                   <Button icon={<UploadOutlined />} disabled={uploading}>选择图片</Button>
                 </Upload>
               </div>
-              <div style={{ marginTop: 12 }}>
+              <div className="u-mt-12">
                 <Button
                   type="primary"
                   icon={<ScanOutlined />}
@@ -342,7 +342,7 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
 
                 {result.success && (
                   <div>
-                    <div style={{ fontSize: 13, color: 'var(--color-text-primary)', fontWeight: 600, marginBottom: 8 }}>
+                    <div className="u-fs-13 u-fw-600 u-mb-8" style={{ color: 'var(--color-text-primary)' }}>
                       识别结果（可编辑，低置信度字段请特别留意）：
                     </div>
                     <div style={{
@@ -361,12 +361,12 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
                             padding: 8, border: '1px solid var(--color-border-light)',
                             borderRadius: 4, background: 'var(--color-bg-container)',
                           }}>
-                            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', display: 'flex', justifyContent: 'space-between' }}>
+                            <div className="u-fs-12 u-d-flex u-jc-between" style={{ color: 'var(--color-text-secondary)' }}>
                               <span>{label}</span>
                               {fv && (
                                 <Tag
                                   color={confidenceColor(conf)}
-                                  style={{ fontSize: 11, padding: '0 6px', marginRight: 0 }}
+                                  className="u-fs-11" style={{ padding: '0 6px', marginRight: 0 }}
                                 >
                                   {confidenceLabel(conf)}
                                 </Tag>
@@ -377,10 +377,10 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
                               onChange={(e) => onEditChange(key as string, e.target.value)}
                               placeholder={fv ? '' : '（未识别到）'}
                               size="small"
-                              style={{ marginTop: 4 }}
+                              className="u-mt-4"
                             />
                             {fv && fv.rawText && fv.rawText !== displayValue && (
-                              <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+                              <div className="u-fs-11 u-mt-4" style={{ color: 'var(--color-text-tertiary)' }}>
                                 原文：{fv.rawText}
                               </div>
                             )}

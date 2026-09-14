@@ -30,7 +30,7 @@ export function useStyleDraft({ isNewPage, form, setCurrentStyle, sizeColorConfi
         content: (
           <div>
             <p>检测到您有未保存的款号草稿（{draftInfo.timeDescription}），是否恢复？</p>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginTop: 8 }}>
+            <p className="u-fs-12 u-mt-8" style={{ color: 'var(--color-text-secondary)' }}>
               选择"恢复草稿"将恢复之前未保存的款号内容，选择"新建款号"将清空草稿并重新开始。
             </p>
           </div>

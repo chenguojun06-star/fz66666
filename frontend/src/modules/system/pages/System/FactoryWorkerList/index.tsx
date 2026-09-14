@@ -114,7 +114,7 @@ const FactoryWorkerList: React.FC = () => {
       content: (
         <div>
           <p>确认要删除该账号吗？</p>
-          <div style={{ marginTop: 16 }}>
+          <div className="u-mt-16">
             <span style={{ color: 'red' }}>*</span> 删除原因：
             <Input.TextArea
               rows={3}
@@ -247,7 +247,7 @@ const FactoryWorkerList: React.FC = () => {
           )
         }
         filterBar={
-          <Space style={{ marginBottom: 16 }}>
+          <Space className="u-mb-16">
             <Select
               placeholder="状态筛选"
               allowClear

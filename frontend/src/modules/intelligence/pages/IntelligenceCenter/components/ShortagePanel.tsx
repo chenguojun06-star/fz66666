@@ -14,7 +14,7 @@ const ShortagePanel: React.FC<ShortagePanelProps> = ({
 }) => {
   return (
     <div className="c-card">
-      <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('shortage')}>
+      <div className="c-card-title u-cur-pointer"  onClick={() => toggleCollapse('shortage')}>
         <LiveDot color={(shortage?.shortageItems?.length ?? 0) > 0 ? 'var(--color-warning-deep)' : 'var(--color-accent-neon)'} />
         面料 &amp; 辅料缺口预警
         <CollapseChevron panelKey="shortage" collapsed={!!collapsedPanels['shortage']} />
@@ -38,7 +38,7 @@ const ShortagePanel: React.FC<ShortagePanelProps> = ({
           ))
         ) : (
           <div className="c-all-ok">
-            <CheckCircleOutlined style={{ marginRight: 6 }} />
+            <CheckCircleOutlined className="u-mr-6" />
             所有面辅料库存充足
           </div>
         )}

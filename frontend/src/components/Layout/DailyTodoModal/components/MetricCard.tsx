@@ -10,7 +10,7 @@ const MetricCard: React.FC<{
     <div style={{ fontSize: 16, fontWeight: 700, color, lineHeight: 1.2 }}>
       {Number(value) || 0}{suffix}
     </div>
-    <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginTop: 4 }}>{label}</div>
+    <div className="u-fs-14 u-mt-4" style={{ color: 'var(--color-text-secondary)' }}>{label}</div>
   </div>
 );
 

@@ -57,7 +57,7 @@ const DecisionInsightCard: React.FC<{
   const row = (dotColor: string, text?: string, textColor = 'var(--color-gray-800)') => {
     if (!text) return null;
     return (
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+      <div className="u-d-flex u-ai-start" style={{ gap: 7 }}>
         {dot(dotColor)}
         <span style={{ color: textColor, fontSize: compact ? 11 : 12, lineHeight: 1.6, wordBreak: 'break-word', flex: 1 }}>
           {text}
@@ -78,19 +78,19 @@ const DecisionInsightCard: React.FC<{
       }}
     >
       {/* 标题行 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+      <div className="u-d-flex u-ai-center u-jc-between u-gap-8 u-mb-6">
+        <div className="u-d-flex u-ai-center u-gap-6" style={{ minWidth: 0 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: tone.dot, flexShrink: 0 }} />
           <span style={{ color: tone.title, fontSize: compact ? 12 : 13, fontWeight: 700 }}>{insight.title}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-          {insight.source ? <Tag color="default" style={{ margin: 0, fontSize: 14 }}>{insight.source}</Tag> : null}
-          {insight.confidence ? <Tag color="blue" style={{ margin: 0, fontSize: 14 }}>{insight.confidence}</Tag> : null}
+        <div className="u-d-flex u-ai-center u-gap-4 u-fshrink-0">
+          {insight.source ? <Tag color="default" className="u-m-0 u-fs-14">{insight.source}</Tag> : null}
+          {insight.confidence ? <Tag color="blue" className="u-m-0 u-fs-14">{insight.confidence}</Tag> : null}
         </div>
       </div>
 
       {/* 内容行：圆点颜色随紧急程度区分 */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div className="u-d-flex u-fd-column u-gap-4">
         {/* 现状 → 卡片主色调点 */}
         {row(tone.dot, insight.summary)}
         {/* 卡点 → 最强调色（danger=红/warning=橙/info=蓝/success=绿） */}
@@ -109,10 +109,10 @@ const DecisionInsightCard: React.FC<{
 
       {/* 操作按钮 */}
       {insight.actionLabel ? (
-        <div style={{ marginTop: 6, paddingLeft: 13 }}>
+        <div className="u-mt-6" style={{ paddingLeft: 13 }}>
           {insight.onAction ? (
             <Button type="link" onClick={insight.onAction}
-              style={{ padding: 0, height: 'auto', fontSize: 14, justifyContent: 'flex-start' }}>
+              className="u-p-0 u-h-auto u-fs-14" style={{ justifyContent: 'flex-start' }}>
               {insight.actionLabel}
             </Button>
           ) : (

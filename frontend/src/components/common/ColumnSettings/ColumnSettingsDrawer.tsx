@@ -92,9 +92,9 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
         <Checkbox.Group
           value={columnOptions.filter((c) => visibleColumns[c.key] !== false).map((c) => c.key)}
           onChange={(checkedKeys) => applyCheckedChange(checkedKeys as string[])}
-          style={{ width: '100%' }}
+          className="u-w-full"
         >
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 16px' }}>
+          <div className="u-d-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 16px' }}>
             {columnOptions.map((c) => renderOneCheckbox(c))}
           </div>
         </Checkbox.Group>
@@ -107,9 +107,9 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
       <Checkbox.Group
         value={columnOptions.filter((c) => visibleColumns[c.key] !== false).map((c) => c.key)}
         onChange={(checkedKeys) => applyCheckedChange(checkedKeys as string[])}
-        style={{ width: '100%' }}
+        className="u-w-full"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="u-d-flex u-fd-column" style={{ gap: 14 }}>
           {groups.map((g) => {
             const opts = g.keys
               .map((k) => columnOptions.find((c) => c.key === k))
@@ -117,10 +117,10 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
             if (!opts.length) return null;
             return (
               <div key={g.title}>
-                <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
+                <Typography.Text type="secondary" className="u-fs-12 u-d-block u-mb-6">
                   {g.title}
                 </Typography.Text>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 16px' }}>
+                <div className="u-d-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 16px' }}>
                   {opts.map(renderOneCheckbox)}
                 </div>
               </div>
@@ -128,10 +128,10 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
           })}
           {others.length > 0 && (
             <div>
-              <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
+              <Typography.Text type="secondary" className="u-fs-12 u-d-block u-mb-6">
                 其他
               </Typography.Text>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 16px' }}>
+              <div className="u-d-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 16px' }}>
                 {others.map(renderOneCheckbox)}
               </div>
             </div>
@@ -145,7 +145,7 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
     <Checkbox key={c.key} value={c.key} style={{ marginInlineStart: 0 }}>
       {c.label}
       {c.key.startsWith('ext_') && (
-        <Tag style={{ marginInlineStart: 6, fontSize: 11, lineHeight: '16px', padding: '0 4px' }}>自定义</Tag>
+        <Tag className="u-fs-11 u-lh-16px u-p-04px" style={{ marginInlineStart: 6 }}>自定义</Tag>
       )}
     </Checkbox>
   );
@@ -169,7 +169,7 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
         <Space>
           <SettingOutlined />
           <span>{title}</span>
-          <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 'normal' }}>
+          <Typography.Text type="secondary" className="u-fs-12" style={{ fontWeight: 'normal' }}>
             已选 {visibleCount}/{columnOptions.length}
           </Typography.Text>
         </Space>
@@ -191,10 +191,10 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
     >
       {presets?.length ? (
         <>
-          <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+          <Typography.Text type="secondary" className="u-fs-12 u-d-block u-mb-8">
             推荐方案，一键套用：
           </Typography.Text>
-          <Space wrap size={8} style={{ marginBottom: 4 }}>
+          <Space wrap size={8} className="u-mb-4">
             {presets.map((p) => (
               <Button
                 key={p.key}
@@ -209,14 +209,14 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
               <Tag style={{ marginInlineEnd: 0 }}>自定义</Tag>
             )}
           </Space>
-          <Divider style={{ margin: '12px 0' }} />
+          <Divider className="u-m-12px0" />
         </>
       ) : null}
 
       {renderOptions()}
 
-      <Divider style={{ margin: '12px 0' }} />
-      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+      <Divider className="u-m-12px0" />
+      <Typography.Text type="secondary" className="u-fs-12">
         勾选要显示的字段，取消勾选即隐藏。方案会自动保存到你的账号，换电脑也生效。
       </Typography.Text>
     </SideDrawer>

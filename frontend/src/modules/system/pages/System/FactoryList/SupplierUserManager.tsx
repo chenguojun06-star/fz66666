@@ -88,7 +88,7 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
             content: (
               <div>
                 <p>用户 <strong>{user.username}</strong> 的新密码：</p>
-                <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-info)' }}>{data?.newPassword || newPwd}</p>
+                <p className="u-fw-700" style={{ fontSize: 18, color: 'var(--color-info)' }}>{data?.newPassword || newPwd}</p>
                 <p style={{ color: 'var(--color-text-tertiary)' }}>请及时通知供应商</p>
               </div>
             ),
@@ -174,7 +174,7 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
         width="85vw"
         destroyOnHidden
       >
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="u-mb-16 u-d-flex u-jc-between u-ai-center">
           <span style={{ color: 'var(--color-text-muted)' }}>供应商通过 H5 页面「供应商登录」入口登录，账号由管理员创建和管理</span>
           <Button type="primary" onClick={() => setCreateOpen(true)}>新增账号</Button>
         </div>

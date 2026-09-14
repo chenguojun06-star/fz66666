@@ -140,7 +140,7 @@ const BatchCompleteModal: React.FC<BatchCompleteModalProps> = ({
         <Alert
           type="info"
           showIcon
-          style={{ marginBottom: 12 }}
+          className="u-mb-12"
           message="勾选色码并填写本次完成数量"
           description={
             pendingRows.length === 0
@@ -149,7 +149,7 @@ const BatchCompleteModal: React.FC<BatchCompleteModalProps> = ({
           }
         />
         {rows.length > 1 && (
-          <div style={{ marginBottom: 8 }}>
+          <div className="u-mb-8">
             <Checkbox
               indeterminate={checkedKeys.length > 0 && checkedKeys.length < rows.length}
               checked={checkedKeys.length === rows.length}
@@ -183,11 +183,11 @@ const BatchCompleteModal: React.FC<BatchCompleteModalProps> = ({
                     ));
                   }}
                 >
-                  <span style={{ fontWeight: 500 }}>{row.label}</span>
+                  <span className="u-fw-500">{row.label}</span>
                 </Checkbox>
-                <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="u-ml-auto u-d-flex u-ai-center u-gap-6">
                   {row.completed
-                    ? <Tag color="success" style={{ fontSize: 11 }}>已完成</Tag>
+                    ? <Tag color="success" className="u-fs-11">已完成</Tag>
                     : (
                       <InputNumber
                         size="small"
@@ -206,7 +206,7 @@ const BatchCompleteModal: React.FC<BatchCompleteModalProps> = ({
           })}
         </div>
         {missingQtyCount > 0 && (
-          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-warning)' }}>
+          <div className="u-mt-8 u-fs-12" style={{ color: 'var(--color-warning)' }}>
             有 {missingQtyCount} 个已勾选的色码还没填数量，提交时会自动跳过。
           </div>
         )}

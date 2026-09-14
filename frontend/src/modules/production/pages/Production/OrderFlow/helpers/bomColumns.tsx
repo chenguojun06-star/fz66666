@@ -27,9 +27,9 @@ export function getBomColumns(isFactoryUser: boolean) {
             const entries = Object.entries(map);
             if (entries.length > 0) {
               return (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                <div className="u-d-flex u-fwrap-wrap" style={{ gap: 2 }}>
                   {entries.map(([sz, usage]) => (
-                    <span key={sz} style={{ fontSize: 14, background: 'var(--color-border-light)', padding: '0 4px', borderRadius: 2 }}>
+                    <span key={sz} className="u-fs-14 u-p-04px" style={{ background: 'var(--color-border-light)', borderRadius: 2 }}>
                       {sz}: {Number(usage).toFixed(2)}{record.unit || ''}
                     </span>
                   ))}

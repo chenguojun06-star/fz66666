@@ -82,7 +82,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
       }
     >
       {outboundModal.data && (
-        <Space orientation="vertical" style={{ width: '100%' }} size={12}>
+        <Space orientation="vertical" className="u-w-full" size={12}>
           <MaterialInfoCard
             materialCode={outboundModal.data.materialCode}
             materialName={outboundModal.data.materialName}
@@ -122,13 +122,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
             onClear={handleClearBatches}
           />
 
-          <div style={{
-            background: 'var(--color-primary-bg-light, var(--status-processing-bg))',
-            border: '1px solid var(--color-primary-border, var(--status-processing-border))',
-            padding: '8px 12px',
-            fontSize: "var(--font-size-sm)",
-            color: 'var(--color-primary)'
-          }}>
+          <div className="u-p-8px12px u-fs-var--font-size-sm" style={{ background: 'var(--color-primary-bg-light, var(--status-processing-bg))', border: '1px solid var(--color-primary-border, var(--status-processing-border))', color: 'var(--color-primary)' }}>
              请先勾选要出库的批次，再输入出库数量；或直接输入目标总量后点击"按FIFO分配"自动按入库日期从早到晚分配。
           </div>
         </Space>

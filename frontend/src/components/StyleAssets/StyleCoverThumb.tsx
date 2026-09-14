@@ -191,7 +191,7 @@ const StyleCoverThumb: React.FC<{
       }}
     >
       {loading ? (
-        <span style={{ color: 'var(--color-text-quaternary)', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>...</span>
+        <span className="u-fs-var--font-size-xs u-d-flex u-ai-center" style={{ color: 'var(--color-text-quaternary)' }}>...</span>
       ) : url ? (
         <Image.PreviewGroup items={previewItems}>
           <Image
@@ -219,7 +219,7 @@ const StyleCoverThumb: React.FC<{
           />
         </Image.PreviewGroup>
       ) : (
-        <span style={{ color: 'var(--color-text-quaternary)', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>无图</span>
+        <span className="u-fs-var--font-size-xs u-d-flex u-ai-center" style={{ color: 'var(--color-text-quaternary)' }}>无图</span>
       )}
     </div>
   );

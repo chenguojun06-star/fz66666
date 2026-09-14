@@ -38,7 +38,7 @@ const EmployeeListModal: React.FC<EmployeeListModalProps> = ({
       title: '姓名', dataIndex: 'name', key: 'name',
       render: (v: string, r: EmployeeRecord) => (
         <Space size={6}>
-          <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: 'var(--primary-color, var(--color-primary))', flexShrink: 0 }} />
+          <Avatar size={24} icon={<UserOutlined />} className="u-fshrink-0" style={{ backgroundColor: 'var(--primary-color, var(--color-primary))' }} />
           {v || r.username}
         </Space>
       ),

@@ -82,7 +82,7 @@ const CustomerManagement: React.FC = () => {
             label: (
               <span>
                 <ShoppingCartOutlined /> 应用订单
-                {pendingOrderCount > 0 && <Badge count={pendingOrderCount} style={{ marginLeft: 6 }} size='small' />}
+                {pendingOrderCount > 0 && <Badge count={pendingOrderCount} className="u-ml-6" size='small' />}
               </span>
             ),
             children: <AppOrderTab onOrderActivated={fetchPendingOrderCount} />,
@@ -92,7 +92,7 @@ const CustomerManagement: React.FC = () => {
             label: (
               <span>
                 <MessageOutlined /> 问题反馈
-                {pendingFeedbackCount > 0 && <Badge count={pendingFeedbackCount} style={{ marginLeft: 6 }} size='small' />}
+                {pendingFeedbackCount > 0 && <Badge count={pendingFeedbackCount} className="u-ml-6" size='small' />}
               </span>
             ),
             children: <FeedbackTab />,

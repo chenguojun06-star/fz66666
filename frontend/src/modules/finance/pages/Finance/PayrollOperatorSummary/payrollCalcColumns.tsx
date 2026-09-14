@@ -38,7 +38,7 @@ export function getSummaryPayrollColumns(deps: SummaryColumnDeps): any[] {
                     grandTotal={totalAmount}
                     workerCount={summaryRows.length}
                 >
-                    <span style={{ cursor: 'pointer', borderBottom: '1px dashed var(--color-border-antd)', whiteSpace: 'nowrap' }}>
+                    <span className="u-cur-pointer u-ws-nowrap" style={{ borderBottom: '1px dashed var(--color-border-antd)' }}>
                         {toMoneyText(v)}
                     </span>
                 </WorkerPayrollAuditPopover>

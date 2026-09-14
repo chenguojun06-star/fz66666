@@ -199,7 +199,7 @@ const AiAgentTraceCenter: React.FC = () => {
     <>
       <PageLayout
         title="AI 执行记录中心"
-        headerContent={<div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>统一查看小云每次执行的指令编号、状态、耗时、工具轨迹与失败信息</div>}
+        headerContent={<div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>统一查看小云每次执行的指令编号、状态、耗时、工具轨迹与失败信息</div>}
         titleExtra={
           <Space>
             <Button onClick={() => navigate(paths.cockpit)}>返回智能运营中心</Button>
@@ -222,7 +222,7 @@ const AiAgentTraceCenter: React.FC = () => {
               label: <span><UnorderedListOutlined /> 执行记录</span>,
               children: (
                 <>
-                  <Card style={{ marginBottom: 12 }}>
+                  <Card className="u-mb-12">
                     <Space wrap>
                   <Input
                     allowClear
@@ -268,14 +268,14 @@ const AiAgentTraceCenter: React.FC = () => {
                     仅看失败
                   </Button>
                   <Button type="primary" onClick={() => void fetchRecent()}>查询</Button>
-                      <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>共 {filteredRows.length} 条请求</span>
+                      <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>共 {filteredRows.length} 条请求</span>
                     </Space>
                   </Card>
 
                   <Alert
                     showIcon
                     type={filteredRows.some((item) => item.status === 'FAILED') ? 'warning' : 'info'}
-                    style={{ marginBottom: 12 }}
+                    className="u-mb-12"
                     title="追溯范围"
                     description={filteredRows.some((item) => item.status === 'FAILED')
                       ? '当前结果中包含失败记录，建议优先查看详情中的错误信息、工具参数与补救建议。'
@@ -335,7 +335,7 @@ const AiAgentTraceCenter: React.FC = () => {
           setSearchParams({});
         }}
       >
-        <Space size={16} style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Space size={16} className="u-w-full u-d-flex u-fd-column">
           <Descriptions column={1} bordered>
             <Descriptions.Item label="指令编号">{detail?.commandId || '-'}</Descriptions.Item>
             <Descriptions.Item label="轨迹条数">{detail?.count ?? detail?.logs?.length ?? 0}</Descriptions.Item>
@@ -369,11 +369,11 @@ const AiAgentTraceCenter: React.FC = () => {
                       <span>{item.createdAt || '--'}</span>
                       {typeof item.durationMs === 'number' ? <span>{item.durationMs}ms</span> : null}
                     </Space>
-                    {item.reason ? <div style={{ marginTop: 6, color: 'var(--color-gray-700)' }}>{item.reason}</div> : null}
-                    {item.errorMessage ? <div style={{ marginTop: 6, color: 'var(--color-error)' }}>{item.errorMessage}</div> : null}
-                    {item.status === 'FAILED' ? <div style={{ marginTop: 6, color: 'var(--color-amber-700)' }}>补救建议：{buildSuggestion(item)}</div> : null}
+                    {item.reason ? <div className="u-mt-6" style={{ color: 'var(--color-gray-700)' }}>{item.reason}</div> : null}
+                    {item.errorMessage ? <div className="u-mt-6" style={{ color: 'var(--color-error)' }}>{item.errorMessage}</div> : null}
+                    {item.status === 'FAILED' ? <div className="u-mt-6" style={{ color: 'var(--color-amber-700)' }}>补救建议：{buildSuggestion(item)}</div> : null}
                     {item.resultData ? (
-                      <pre style={{ marginTop: 8, background: 'var(--color-bg-container)', padding: 10, borderRadius: 6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                      <pre className="u-mt-8 u-br-6 u-ws-pre-wrap" style={{ background: 'var(--color-bg-container)', padding: 10, wordBreak: 'break-word' }}>
                         {item.resultData}
                       </pre>
                     ) : null}

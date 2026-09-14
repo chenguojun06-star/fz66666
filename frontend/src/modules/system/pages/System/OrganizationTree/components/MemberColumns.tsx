@@ -51,7 +51,7 @@ export function buildExternalMemberColumns(params: BuildColumnParams): TableColu
           />
           {v || r.username}
           {r.isFactoryOwner && (
-            <Tag icon={<CrownFilled />} color="gold" style={{ marginLeft: 2 }}>老板</Tag>
+            <Tag icon={<CrownFilled />} color="gold" className="u-ml-2">老板</Tag>
           )}
         </Space>
       ),
@@ -108,10 +108,10 @@ export function buildInternalMemberColumns(params: BuildColumnParams): TableColu
       width: 120,
       render: (v: string, r: User) => (
         <Space size={6}>
-          <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: 'var(--primary-color, var(--color-primary))', flexShrink: 0, cursor: 'pointer' }} onClick={() => setProfileUser(r)} />
+          <Avatar size={24} icon={<UserOutlined />} className="u-fshrink-0 u-cur-pointer" style={{ backgroundColor: 'var(--primary-color, var(--color-primary))' }} onClick={() => setProfileUser(r)} />
           {v || r.username}
           {selectedUnit?.managerUserId && String(r.id) === String(selectedUnit.managerUserId) && (
-            <Tag color="blue" style={{ fontSize: 14 }}>领取人</Tag>
+            <Tag color="blue" className="u-fs-14">领取人</Tag>
           )}
         </Space>
       ),

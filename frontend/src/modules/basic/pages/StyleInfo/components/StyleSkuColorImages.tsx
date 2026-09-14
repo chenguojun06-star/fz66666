@@ -211,8 +211,8 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
               flexShrink: 0,
             }}
           />
-          <span style={{ fontWeight: 500 }}>{color}</span>
-          <Tag style={{ margin: 0 }}>{record.skuCount} 个编码</Tag>
+          <span className="u-fw-500">{color}</span>
+          <Tag className="u-m-0">{record.skuCount} 个编码</Tag>
         </Space>
       ),
     },
@@ -228,7 +228,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
             alt="颜色图"
             width={32}
             height={32}
-            style={{ objectFit: 'contain', borderRadius: 6 }}
+            className="u-br-6" style={{ objectFit: 'contain' }}
             preview={{ src: getFullAuthedFileUrl(imageUrl) }}
           />
         ) : (
@@ -245,7 +245,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
                 color: 'var(--color-text-quaternary)',
               }}
             >
-              <PictureOutlined style={{ fontSize: 14 }} />
+              <PictureOutlined className="u-fs-14" />
             </span>
           </Tooltip>
         ),
@@ -256,7 +256,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
       key: 'status',
       width: 90,
       render: (_: unknown, record: ColorImage) =>
-        record.imageUrl ? <Tag color="green" style={{ margin: 0 }}>已配图</Tag> : <Tag color="orange" style={{ margin: 0 }}>待配图</Tag>,
+        record.imageUrl ? <Tag color="green" className="u-m-0">已配图</Tag> : <Tag color="orange" className="u-m-0">待配图</Tag>,
     },
     {
       title: '操作',
@@ -266,7 +266,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
         <Space size={4}>
           <div
             tabIndex={0}
-            style={{ outline: 'none', display: 'inline-flex' }}
+            className="u-d-inline-flex" style={{ outline: 'none' }}
             onDragOver={(e) => { e.preventDefault(); }}
             onDrop={(e) => {
               e.preventDefault();
@@ -305,11 +305,11 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
   ];
 
   return (
-    <div style={{ padding: '8px 0' }}>
+    <div className="u-p-8px0">
       {/* 头部操作栏 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+      <div className="u-d-flex u-jc-between u-ai-center u-mb-12 u-fwrap-wrap u-gap-8">
         <Space size={6} wrap>
-          {!hideHeader && <span style={{ fontWeight: 600 }}>颜色图片管理</span>}
+          {!hideHeader && <span className="u-fw-600">颜色图片管理</span>}
           <Tag color="blue">{stats.withImage} 已配图</Tag>
           <Tag color="orange">{stats.withoutImage} 待配图</Tag>
           <Tag>{stats.total} 个颜色</Tag>
@@ -317,7 +317,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
         <Space size={6}>
           <div
             tabIndex={0}
-            style={{ outline: 'none', display: 'inline-flex' }}
+            className="u-d-inline-flex" style={{ outline: 'none' }}
             onDragOver={(e) => { e.preventDefault(); }}
             onDrop={(e) => {
               e.preventDefault();
@@ -349,7 +349,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
       </div>
 
       {/* 说明 */}
-      <div style={{ marginBottom: 10, padding: '6px 10px', background: 'var(--color-bg-subtle, rgba(0,0,0,0.03))', borderRadius: 4, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+      <div className="u-mb-10 u-p-6px10px u-br-4 u-fs-12" style={{ background: 'var(--color-bg-subtle, rgba(0,0,0,0.03))', color: 'var(--color-text-tertiary)' }}>
         一行对应一个颜色：点击行内「上传/更换」为该颜色单独配图；勾选多行后可批量应用同一张图片。操作后自动保存。
         点击图片可放大预览（支持放大/缩小/旋转/关闭）。
       </div>

@@ -41,10 +41,10 @@ const VideoPlayerBlock: React.FC<{ url: string }> = ({ url }) => {
   const bvMatch = u.match(/bilibili\.com\/video\/(BV[\w]+)/i);
   if (bvMatch) {
     return (
-      <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden' }}>
+      <div className="u-pos-relative u-ov-hidden" style={{ paddingBottom: '56.25%', height: 0 }}>
         <iframe
           src={`//player.bilibili.com/player.html?bvid=${bvMatch[1]}&page=1&high_quality=1&danmaku=0`}
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+          className="u-pos-absolute u-w-full u-h-full" style={{ top: 0, left: 0, border: 'none' }}
           allowFullScreen
           title="视频教程"
         />
@@ -77,7 +77,7 @@ const VideoPlayerBlock: React.FC<{ url: string }> = ({ url }) => {
       <video
         src={u}
         controls
-        style={{ width: '100%', maxHeight: 480, background: 'var(--color-black)', display: 'block', borderRadius: 6 }}
+        className="u-w-full u-d-block u-br-6" style={{ maxHeight: 480, background: 'var(--color-black)' }}
         preload="metadata"
       >
         您的浏览器不支持 video 标签，请
@@ -88,7 +88,7 @@ const VideoPlayerBlock: React.FC<{ url: string }> = ({ url }) => {
 
   // 其他链接：直接显示可点击链接
   return (
-    <Space orientation="vertical" style={{ width: '100%' }}>
+    <Space orientation="vertical" className="u-w-full">
       <Alert
         type="info"
         showIcon
@@ -179,7 +179,7 @@ const SystemTutorial: React.FC = () => {
         title=" 新手指引"
         description={
           <div>
-            <p style={{ marginBottom: 8 }}>
+            <p className="u-mb-8">
               <strong>建议学习路径：</strong>
             </p>
             <Timeline
@@ -194,12 +194,12 @@ const SystemTutorial: React.FC = () => {
         }
         type="info"
         showIcon
-        style={{ marginBottom: 12 }}
+        className="u-mb-12"
       />
 
       {/* 搜索和分类 */}
-      <Card style={{ marginBottom: 12 }}>
-        <Space orientation="vertical" size={16} style={{ width: '100%' }}>
+      <Card className="u-mb-12">
+        <Space orientation="vertical" size={16} className="u-w-full">
           <StandardSearchBar
             searchValue={searchText}
             onSearchChange={setSearchText}
@@ -281,7 +281,7 @@ const SystemTutorial: React.FC = () => {
                                   <Alert
                                     title=" 温馨提示"
                                     description={
-                                      <ul style={{ margin: '8px 0', paddingLeft: 20 }}>
+                                      <ul className="u-m-8px0" style={{ paddingLeft: 20 }}>
                                         {step.tips.map((tip, i) => (
                                           <li key={i}>{tip}</li>
                                         ))}
@@ -289,14 +289,14 @@ const SystemTutorial: React.FC = () => {
                                     }
                                     type="success"
                                     showIcon
-                                    style={{ marginTop: 12 }}
+                                    className="u-mt-12"
                                   />
                                 )}
                                 {step.image && (
                                   <Image
                                     src={step.image}
                                     alt={step.title}
-                                    style={{ marginTop: 12, maxWidth: 600 }}
+                                    className="u-mt-12" style={{ maxWidth: 600 }}
                                     preview
                                   />
                                 )}
@@ -340,8 +340,8 @@ const SystemTutorial: React.FC = () => {
       )}
 
       {/* 底部帮助 */}
-      <Card style={{ marginTop: 12 }}>
-        <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+      <Card className="u-mt-12">
+        <Space orientation="vertical" size={12} className="u-w-full">
           <Title level={4}>
             <QuestionCircleOutlined /> 需要更多帮助？
           </Title>

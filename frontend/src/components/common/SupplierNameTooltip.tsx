@@ -48,7 +48,7 @@ const SupplierNameTooltip: React.FC<SupplierNameTooltipProps> = ({
   return (
     <Tooltip
       title={(
-        <div style={{ display: 'grid', gap: 4 }}>
+        <div className="u-d-grid u-gap-4">
           <div>{label}：{supplierName}</div>
           {person ? <div>联系人：{person}</div> : null}
           {phone ? <div>联系电话：{phone}</div> : null}

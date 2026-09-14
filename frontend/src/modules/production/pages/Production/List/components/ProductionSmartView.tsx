@@ -59,7 +59,7 @@ const ProductionSmartView: React.FC<ProductionSmartViewProps> = ({
   const displayTotal = showFilteredTotal ? data.length : total;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="u-d-flex u-fd-column u-h-full">
       <ExternalFactorySmartView
         data={data}
         loading={loading}

@@ -193,7 +193,7 @@ const EcommerceReturnTab: React.FC<EcommerceReturnTabProps> = ({ selectedOrder, 
 
   return (
     <div>
-      <Form form={form} layout="inline" style={{ marginBottom: 16 }}>
+      <Form form={form} layout="inline" className="u-mb-16">
         <Form.Item name="keyword" label="关键词">
           <Input allowClear placeholder="退货单号/原订单号/客户" style={{ width: 220 }} onPressEnter={onSearch} />
         </Form.Item>
@@ -214,7 +214,7 @@ const EcommerceReturnTab: React.FC<EcommerceReturnTabProps> = ({ selectedOrder, 
         </Form.Item>
       </Form>
       {selectedOrder && (
-        <div style={{ marginBottom: 12, padding: '8px 12px', background: 'var(--color-bg-container)', borderRadius: 4, fontSize: 12, color: 'var(--color-text-secondary)' }}>
+        <div className="u-mb-12 u-p-8px12px u-br-4 u-fs-12" style={{ background: 'var(--color-bg-container)', color: 'var(--color-text-secondary)' }}>
           当前选中订单：{selectedOrder.orderNo} · {selectedOrder.productName || '-'} · ¥{selectedOrder.payAmount || 0}
         </div>
       )}
@@ -245,10 +245,10 @@ const EcommerceReturnTab: React.FC<EcommerceReturnTabProps> = ({ selectedOrder, 
       >
         <Form form={createForm} layout="vertical">
           <Form.Item label="退货数量" name="quantity" rules={[{ required: true, message: '请输入退货数量' }]}>
-            <InputNumber min={1} style={{ width: '100%' }} />
+            <InputNumber min={1} className="u-w-full" />
           </Form.Item>
           <Form.Item label="退货单价" name="unitPrice" rules={[{ required: true, message: '请输入退货单价' }]}>
-            <InputNumber min={0} precision={2} style={{ width: '100%' }} prefix="¥" />
+            <InputNumber min={0} precision={2} className="u-w-full" prefix="¥" />
           </Form.Item>
           <Form.Item label="退货原因" name="returnReason">
             <Input.TextArea rows={3} placeholder="请输入退货原因" />

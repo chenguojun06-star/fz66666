@@ -26,11 +26,11 @@ const MergeOutboundModal: React.FC<MergeOutboundModalProps> = ({ open, group, on
   return (
     <ResizableModal title="合单发货" open={open} onCancel={onClose} onOk={handleOk} confirmLoading={submitting} width="40vw">
       {group && (
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 8 }}>
+        <div className="u-mb-12">
+          <div className="u-fs-13 u-mb-8" style={{ color: 'var(--color-text-secondary)' }}>
             收货人：{group.receiverName} | {group.receiverPhone} | 平台：{group.platform}
           </div>
-          <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 8 }}>
+          <div className="u-fs-13 u-mb-8" style={{ color: 'var(--color-text-secondary)' }}>
             共 {group.orderCount} 笔订单，{group.totalQuantity} 件商品
           </div>
         </div>

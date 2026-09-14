@@ -29,12 +29,12 @@ const StockStatusCell: React.FC<{
   if (canPickup) {
     return (
       <Space direction="vertical" size={2} style={{ lineHeight: 1.4 }}>
-        <Tag color={config.color} style={{ margin: 0 }}>{config.text}</Tag>
+        <Tag color={config.color} className="u-m-0">{config.text}</Tag>
         <Tooltip title="点击领取">
           <Button
             type="link"
             size="small"
-            style={{ padding: 0, height: 'auto', fontSize: '13px', fontWeight: 500 }}
+            className="u-p-0 u-h-auto u-fw-500" style={{ fontSize: '13px' }}
             onClick={() => onApplyPickup!(record)}
           >
             {stockText} · 领取
@@ -46,9 +46,9 @@ const StockStatusCell: React.FC<{
 
   return (
     <Space direction="vertical" size={2} style={{ lineHeight: 1.4 }}>
-      <Tag color={config.color} style={{ margin: 0 }}>{config.text}</Tag>
+      <Tag color={config.color} className="u-m-0">{config.text}</Tag>
       {stockText && (
-        <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{stockText}</span>
+        <span className="u-fs-12px" style={{ color: 'var(--color-text-secondary)' }}>{stockText}</span>
       )}
     </Space>
   );

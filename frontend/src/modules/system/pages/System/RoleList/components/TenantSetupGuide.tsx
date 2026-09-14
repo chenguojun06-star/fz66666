@@ -82,7 +82,7 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
     >
       <Steps
         current={step}
-        style={{ marginBottom: 24 }}
+        className="u-mb-24"
         items={[
           { title: '选择角色模板' },
           { title: '完成' },
@@ -95,11 +95,11 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
             type="info"
             showIcon
             icon={<TeamOutlined />}
-            style={{ marginBottom: 16 }}
+            className="u-mb-16"
             message="选择您需要的角色模板，系统将自动为您创建对应的角色和权限"
           />
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 16 }}>
+          <div className="u-d-grid u-gap-12 u-mb-16" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
             {templates.map((tpl) => (
               <Card
                 key={tpl.id}
@@ -111,7 +111,7 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
                 }}
                 bodyStyle={{ padding: 12 }}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div className="u-d-flex u-ai-start u-gap-8">
                   <CheckCircleOutlined
                     style={{
                       color: selectedIds.includes(tpl.id) ? 'var(--color-info)' : 'var(--color-border-antd)',
@@ -119,13 +119,13 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
                       marginTop: 2,
                     }}
                   />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>{tpl.templateName}</div>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
+                  <div className="u-flex-1">
+                    <div className="u-fw-600 u-mb-4">{tpl.templateName}</div>
+                    <Text type="secondary" className="u-fs-12">
                       {tpl.templateDesc || '暂无描述'}
                     </Text>
-                    <div style={{ marginTop: 4 }}>
-                      <Tag color="blue" style={{ fontSize: 11 }}>
+                    <div className="u-mt-4">
+                      <Tag color="blue" className="u-fs-11">
                         {tpl.category}
                       </Tag>
                     </div>
@@ -135,8 +135,8 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
             ))}
           </div>
 
-          <div style={{ textAlign: 'right' }}>
-            <Button onClick={onSkip} style={{ marginRight: 8 }}>
+          <div className="u-ta-right">
+            <Button onClick={onSkip} className="u-mr-8">
               跳过，稍后配置
             </Button>
             <Button
@@ -152,10 +152,10 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
       )}
 
       {step === 1 && (
-        <div style={{ textAlign: 'center', padding: '20px 0' }}>
-          <CheckCircleOutlined style={{ fontSize: 48, color: 'var(--color-success)', marginBottom: 16 }} />
-          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>初始化完成！</div>
-          <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+        <div className="u-ta-center" style={{ padding: '20px 0' }}>
+          <CheckCircleOutlined className="u-mb-16" style={{ fontSize: 48, color: 'var(--color-success)' }} />
+          <div className="u-fs-16 u-fw-600 u-mb-8">初始化完成！</div>
+          <Text type="secondary" className="u-d-block u-mb-16">
             已为您创建 {selectedIds.length} 个基础角色，现在可以开始使用了
           </Text>
           <Button type="primary" onClick={onComplete}>

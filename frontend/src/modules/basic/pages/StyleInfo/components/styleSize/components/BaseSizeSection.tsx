@@ -16,8 +16,8 @@ const BaseSizeSection: React.FC<Props> = ({
 }) => {
   return (
     <div style={{ marginBottom: 20 }}>
-      <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>1. 选择基准码（样版码）</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <div className="u-fw-600 u-mb-8 u-fs-15">1. 选择基准码（样版码）</div>
+      <div className="u-d-flex u-ai-center u-gap-12 u-fwrap-wrap">
         <Select
           value={gradingDraftBaseSize || undefined}
           allowClear
@@ -27,12 +27,12 @@ const BaseSizeSection: React.FC<Props> = ({
           style={{ width: 140 }}
         />
         {gradingDraftBaseSize && baseSizeValue !== null && (
-          <Tag color="blue" style={{ fontSize: 14, padding: '2px 10px' }}>
+          <Tag color="blue" className="u-fs-14" style={{ padding: '2px 10px' }}>
             基准尺寸: {baseSizeValue}
           </Tag>
         )}
       </div>
-      <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginTop: 6 }}>
+      <div className="u-fs-13 u-mt-6" style={{ color: 'var(--color-text-tertiary)' }}>
         基准码为放码的参考基准，其他码数相对于基准码递增/递减
       </div>
     </div>

@@ -52,22 +52,22 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
   return (
     <div>
       {/* 说明区域 */}
-      <Card style={{ marginBottom: 16, background: 'var(--color-slate-50)' }}>
-        <Paragraph style={{ marginBottom: 8 }}>
+      <Card className="u-mb-16" style={{ background: 'var(--color-slate-50)' }}>
+        <Paragraph className="u-mb-8">
           <Text strong>{config.description}</Text>
         </Paragraph>
-        <Paragraph style={{ marginBottom: 4 }}>
+        <Paragraph className="u-mb-4">
           <Text type="secondary">必填字段：{config.requiredFields}</Text>
         </Paragraph>
         {config.tips.map((tip, i) => (
-          <Paragraph key={i} style={{ marginBottom: 2, paddingLeft: 12 }}>
+          <Paragraph key={i} className="u-mb-2" style={{ paddingLeft: 12 }}>
             <Text type="secondary">• {tip}</Text>
           </Paragraph>
         ))}
       </Card>
 
       {/* 操作区域 */}
-      <Space orientation="vertical" style={{ width: '100%' }} size="middle">
+      <Space orientation="vertical" className="u-w-full" size="middle">
         {/* 步骤1：下载模板 */}
         <Card title="第一步：下载模板">
           <Button
@@ -84,12 +84,12 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
 
         {/* 步骤2：上传文件 */}
         <Card title="第二步：上传数据">
-          <Space orientation="vertical" style={{ width: '100%' }}>
+          <Space orientation="vertical" className="u-w-full">
             <input
               ref={excelInputRef}
               type="file"
               accept=".xlsx,.xls"
-              style={{ display: 'none' }}
+              className="u-d-none"
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (!f) return;
@@ -115,13 +115,13 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
                 setFileList([toUploadFile(f)]);
                 setResult(null);
               }}
-              style={{ display: 'inline-block' }}
+              className="u-d-inline-block"
             >
               <Button icon={<UploadOutlined />} onClick={() => excelInputRef.current?.click()}>
                 {fileList.length > 0 ? `已选择: ${fileList[0].name}` : '选择 Excel 文件'}
               </Button>
               {fileList.length > 0 && (
-                <Button size="small" style={{ marginLeft: 8 }} onClick={() => { setFileList([]); setResult(null); }}>
+                <Button size="small" className="u-ml-8" onClick={() => { setFileList([]); setResult(null); }}>
                   移除
                 </Button>
               )}
@@ -171,7 +171,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
                       <Text type="secondary">（共 {result.total} 条）</Text>
                     </Space>
                   }
-                  style={{ marginBottom: 12 }}
+                  className="u-mb-12"
                 />
                 <ResizableTable
                   dataSource={result.failedRecords as Record<string, unknown>[]}

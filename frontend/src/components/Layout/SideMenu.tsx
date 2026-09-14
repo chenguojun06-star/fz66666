@@ -147,7 +147,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
                 icon: item.icon,
                 label: (
                   <span
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}
+                    className="u-d-flex u-ai-center u-jc-between u-w-full"
                     onClick={() => { if (badgeCount > 0) onMenuClick(itemPath); }}
                   >
                     <Link to={itemPath}>{item.label}</Link>

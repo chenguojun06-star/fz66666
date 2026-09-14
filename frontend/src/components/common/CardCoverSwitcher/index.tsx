@@ -146,7 +146,7 @@ function CardCoverSwitcher({
 
   return (
     <div
-      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+      className="u-pos-absolute u-w-full u-h-full" style={{ top: 0, left: 0 }}
       onMouseEnter={() => hasMultiple && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -156,7 +156,7 @@ function CardCoverSwitcher({
           alignItems: 'center', justifyContent: 'center',
           background: 'var(--color-bg-subtle)',
         }}>
-          <span style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>...</span>
+          <span className="u-fs-14" style={{ color: 'var(--color-text-quaternary)' }}>...</span>
         </div>
       ) : authedUrl ? (
         <img
@@ -176,7 +176,7 @@ function CardCoverSwitcher({
           alignItems: 'center', justifyContent: 'center',
           background: 'var(--color-bg-subtle)',
         }}>
-          <span style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>无图</span>
+          <span className="u-fs-14" style={{ color: 'var(--color-text-quaternary)' }}>无图</span>
         </div>
       )}
 
@@ -188,7 +188,7 @@ function CardCoverSwitcher({
             onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.3)'; }}
           >
-            <LeftOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
+            <LeftOutlined className="u-fs-12" style={{ color: 'var(--color-bg-base)' }} />
           </div>
           <div
             onClick={goToNext}
@@ -196,7 +196,7 @@ function CardCoverSwitcher({
             onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.3)'; }}
           >
-            <RightOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
+            <RightOutlined className="u-fs-12" style={{ color: 'var(--color-bg-base)' }} />
           </div>
           <div style={{
             position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',

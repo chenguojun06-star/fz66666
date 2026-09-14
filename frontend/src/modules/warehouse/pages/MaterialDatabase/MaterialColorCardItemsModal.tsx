@@ -54,13 +54,13 @@ const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = 
         <Button key="save" type="primary" onClick={onSave}>保存全部</Button>,
       ]}
     >
-      <Space style={{ marginBottom: 12 }}>
+      <Space className="u-mb-12">
         <Button type="primary" icon={<PlusOutlined />} onClick={addEmptyCardItem}>+ 添加物料</Button>
         <span style={{ color: 'var(--color-text-tertiary)' }}>共 {currentItems.length} 条</span>
       </Space>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 480, overflowY: 'auto' }}>
+      <div className="u-d-flex u-fd-column u-gap-8" style={{ maxHeight: 480, overflowY: 'auto' }}>
         {currentItems.length === 0 && (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-tertiary)' }}>暂无物料，点击"添加物料"开始添加</div>
+          <div className="u-ta-center" style={{ padding: 40, color: 'var(--color-text-tertiary)' }}>暂无物料，点击"添加物料"开始添加</div>
         )}
         {currentItems.map((item, idx) => (
           <Card key={idx} size="small" style={{ border: '1px solid var(--color-border)' }}>
@@ -83,11 +83,11 @@ const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = 
               <Col xs={24} sm={3}>
                 <InputNumber placeholder="单价" value={item.unitPrice}
                   onChange={(v) => updateCardItem(idx, 'unitPrice', v)}
-                  min={0} step={0.01} style={{ width: '100%' }} size="small" />
+                  min={0} step={0.01} className="u-w-full" size="small" />
               </Col>
               <Col xs={24} sm={3}>
                 <Select placeholder="物料类型" value={item.materialType || undefined}
-                  onChange={(v) => updateCardItem(idx, 'materialType', v)} size="small" style={{ width: '100%' }}>
+                  onChange={(v) => updateCardItem(idx, 'materialType', v)} size="small" className="u-w-full">
                   {MATERIAL_TYPE_OPTIONS.map((o) => (
                     <Select.Option key={o.value} value={o.value}>{o.label}</Select.Option>
                   ))}
@@ -97,7 +97,7 @@ const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = 
                 <Space.Compact>
                   <Button size="small" icon={<PlusOutlined />} onClick={() => handleUploadImage(idx)}>上传图片</Button>
                   {item.image && (
-                    <Image src={getFullAuthedFileUrl(item.image)} width={32} height={32} style={{ objectFit: 'cover' }} preview />
+                    <Image src={getFullAuthedFileUrl(item.image)} width={32} height={32} className="u-objf-cover" preview />
                   )}
                 </Space.Compact>
               </Col>

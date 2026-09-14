@@ -29,14 +29,14 @@ const ColorDetailModal: React.FC<Props> = ({
     >
       {colorDetailItem && colorDetailParent && (
         <div>
-          <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
-            <div style={{ width: 180, flexShrink: 0 }}>
+          <div className="u-d-flex u-mb-16" style={{ gap: 20 }}>
+            <div className="u-fshrink-0" style={{ width: 180 }}>
               {colorDetailItem.image ? (
                 <Image
                   src={getFullAuthedFileUrl(colorDetailItem.image)}
                   width={180}
                   height={180}
-                  style={{ objectFit: 'cover', borderRadius: 8, border: '1px solid var(--color-border-light)' }}
+                  className="u-objf-cover u-br-8" style={{ border: '1px solid var(--color-border-light)' }}
                 />
               ) : (
                 <div style={{
@@ -50,7 +50,7 @@ const ColorDetailModal: React.FC<Props> = ({
               )}
             </div>
 
-            <div style={{ flex: 1 }}>
+            <div className="u-flex-1">
               <Descriptions column={1} size="small" bordered>
                 <Descriptions.Item label="颜色">{colorDetailItem.color || '-'}</Descriptions.Item>
                 <Descriptions.Item label="物料名称">{colorDetailItem.materialName || '-'}</Descriptions.Item>

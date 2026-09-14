@@ -43,7 +43,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
       placement="right"
       styles={{ wrapper: { width: '85%' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
       footer={
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <div className="u-d-flex u-jc-end u-gap-8">
           <Button onClick={onCancel}>关闭</Button>
           <Button icon={<SendOutlined />} loading={actionLoading._batchPurchase} disabled={pendingMaterials.filter((m) => m.availableStock <= 0).length === 0} onClick={() => handleBatchPurchaseAll(materials)} style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}>一键采购全部{noStockCount > 0 ? `（${noStockCount}项）` : ''}</Button>
           <Tooltip title={pendingMaterials.filter((m) => m.availableStock > 0).length === 0 ? '当前所有待处理物料均无可用库存，无需跳过库存' : ''}>
@@ -66,9 +66,9 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
         activeKey="stock"
       />
 
-      <div style={{ marginBottom: 8 }}>
-        <span style={{ fontWeight: 600, fontSize: 14 }}> 面辅料需求明细</span>
-        {pendingCount === 0 && materials.length > 0 && <Tag color="green" style={{ marginLeft: 8 }}>全部已处理</Tag>}
+      <div className="u-mb-8">
+        <span className="u-fw-600 u-fs-14"> 面辅料需求明细</span>
+        {pendingCount === 0 && materials.length > 0 && <Tag color="green" className="u-ml-8">全部已处理</Tag>}
       </div>
 
       {materials.length > 0 ? (
@@ -85,10 +85,10 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
 
       {pickingRecords.length > 0 && (
         <>
-          <Divider style={{ margin: '12px 0' }} />
-          <div style={{ marginBottom: 8 }}>
-            <span style={{ fontWeight: 600, fontSize: 14 }}> 出库单记录</span>
-            {isSupervisorOrAbove && <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginLeft: 8 }}>（主管以上可撤销）</span>}
+          <Divider className="u-m-12px0" />
+          <div className="u-mb-8">
+            <span className="u-fw-600 u-fs-14"> 出库单记录</span>
+            {isSupervisorOrAbove && <span className="u-fs-14 u-ml-8" style={{ color: 'var(--color-text-tertiary)' }}>（主管以上可撤销）</span>}
           </div>
           <ResizableTable
             storageKey="smart-receive-picking" dataSource={pickingRecords} columns={pickingColumns}

@@ -174,7 +174,7 @@ export function ProgressNodeItem({
         </div>
       </div>
       {showConnector ? (
-        <div style={{ flex: 1, alignSelf: 'center', display: 'flex', alignItems: 'center', paddingLeft: 2, paddingRight: 2 }}>
+        <div className="u-flex-1 u-d-flex u-ai-center" style={{ alignSelf: 'center', paddingLeft: 2, paddingRight: 2 }}>
           <div
             style={{
               flex: 1,

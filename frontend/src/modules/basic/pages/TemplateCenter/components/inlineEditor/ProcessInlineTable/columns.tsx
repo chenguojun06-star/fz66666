@@ -85,13 +85,13 @@ export const buildProcessColumns = ({
         if (!info || info.rowSpan === 0) return null;
         const stage = record.progressStage || '车缝';
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <div className="u-d-flex u-fd-column u-ai-center u-gap-4">
             <Tag style={{ background: STAGE_ACCENT, color: 'var(--color-bg-base)', border: 'none', fontWeight: 600, fontSize: compact ? 12 : 13, marginInlineEnd: 0 }}>
               {stage}
             </Tag>
             <span style={{ fontSize: compact ? 11 : 12, color: 'var(--color-text-tertiary)' }}>{info.count} 个工序</span>
             {readOnly ? null : (
-              <Button type="link" icon={<PlusOutlined />} onClick={() => addStepToStage(stage)} style={{ padding: 0 }}>
+              <Button type="link" icon={<PlusOutlined />} onClick={() => addStepToStage(stage)} className="u-p-0">
                 添加
               </Button>
             )}
@@ -138,7 +138,7 @@ export const buildProcessColumns = ({
           controls={false}
           value={value || 0}
           onChange={(nextValue) => updateStep(index, { standardTime: nextValue || 0 })}
-          style={{ width: '100%' }}
+          className="u-w-full"
         />
       ),
     },
@@ -154,7 +154,7 @@ export const buildProcessColumns = ({
           controls={false}
           value={record.unitPrice ?? record.price ?? 0}
           onChange={(nextValue) => updateStep(index, { unitPrice: nextValue || 0 })}
-          style={{ width: '100%' }}
+          className="u-w-full"
         />
       ),
     },
@@ -182,7 +182,7 @@ export const buildProcessColumns = ({
                   };
                   onChange({ ...value, steps: nextSteps });
                 }}
-                style={{ width: '100%' }}
+                className="u-w-full"
               />
             ),
           }))

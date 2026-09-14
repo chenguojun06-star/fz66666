@@ -24,17 +24,17 @@ export const buildColumns = (options: BuildColumnsOptions): ColumnsType<SampleSt
       width: 72,
       align: 'center' as const,
       render: (text) => (
-        <div style={{ width: 48, minHeight: 28, borderRadius: 4, overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="u-br-4 u-ov-hidden u-d-flex u-ai-center u-jc-center" style={{ width: 48, minHeight: 28, background: 'var(--color-bg-subtle)' }}>
           {text ? (
             <Image
               src={getFullAuthedFileUrl(text)}
               alt="样衣"
               width={48}
-              style={{ height: 'auto', display: 'block' }}
+              className="u-h-auto u-d-block"
               preview={false}
             />
           ) : (
-            <span style={{ color: 'var(--color-text-quaternary)', fontSize: 14, height: 48, display: 'flex', alignItems: 'center' }}>无图</span>
+            <span className="u-fs-14 u-d-flex u-ai-center" style={{ color: 'var(--color-text-quaternary)', height: 48 }}>无图</span>
           )}
         </div>
       ),

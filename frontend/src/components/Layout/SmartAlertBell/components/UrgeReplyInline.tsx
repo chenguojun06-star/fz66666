@@ -28,20 +28,20 @@ const UrgeReplyInline: React.FC<{
 
   if (submitted) {
     return (
-      <div style={{ fontSize: 12, color: 'var(--color-success)', marginTop: 4 }}>
+      <div className="u-fs-12 u-mt-4" style={{ color: 'var(--color-success)' }}>
         ✅ 已回复
       </div>
     );
   }
 
   return (
-    <div style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
+    <div className="u-mt-6" onClick={(e) => e.stopPropagation()}>
+      <div className="u-d-flex u-gap-6 u-ai-center u-mb-4">
         <input
           type="date"
           value={expectedShipDate}
           onChange={(e) => setExpectedShipDate(e.target.value)}
-          style={{ fontSize: 12, padding: '2px 4px', border: '1px solid var(--color-border-antd)', borderRadius: 4, width: 130 }}
+          className="u-fs-12 u-br-4" style={{ padding: '2px 4px', border: '1px solid var(--color-border-antd)', width: 130 }}
           placeholder="预计出货日"
         />
         <input
@@ -49,7 +49,7 @@ const UrgeReplyInline: React.FC<{
           value={replyContent}
           onChange={(e) => setReplyContent(e.target.value)}
           placeholder="回复备注..."
-          style={{ fontSize: 12, padding: '2px 4px', border: '1px solid var(--color-border-antd)', borderRadius: 4, flex: 1, minWidth: 80 }}
+          className="u-fs-12 u-br-4 u-flex-1" style={{ padding: '2px 4px', border: '1px solid var(--color-border-antd)', minWidth: 80 }}
         />
       </div>
       <button

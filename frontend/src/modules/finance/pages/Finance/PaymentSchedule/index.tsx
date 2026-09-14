@@ -126,7 +126,7 @@ const PaymentSchedule: React.FC = () => {
       title: '应付单号',
       dataIndex: 'payableNo',
       width: 160,
-      render: v => <Text code style={{ fontSize: 14 }}>{v || '-'}</Text>,
+      render: v => <Text code className="u-fs-14">{v || '-'}</Text>,
     },
     { title: '供应商', dataIndex: 'supplierName', width: 180 },
     {
@@ -162,7 +162,7 @@ const PaymentSchedule: React.FC = () => {
         if (days === null) return '-';
         const tagColor = days <= 3 ? 'red' : days <= 7 ? 'orange' : 'blue';
         return (
-          <Tag color={tagColor} style={{ margin: 0 }}>
+          <Tag color={tagColor} className="u-m-0">
             {days} 天
           </Tag>
         );
@@ -194,16 +194,16 @@ const PaymentSchedule: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="u-p-24">
       {/* 页头说明 */}
-      <Card size="small" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '10px 16px' } }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Card size="small" className="u-mb-12" style={{ border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '10px 16px' } }}>
+        <div className="u-d-flex u-jc-between u-ai-center">
           <div>
-            <h2 style={{ margin: 0, fontSize: 16 }}>
-              <ClockCircleOutlined style={{ marginRight: 8 }} />
+            <h2 className="u-m-0 u-fs-16">
+              <ClockCircleOutlined className="u-mr-8" />
               付款计划
             </h2>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+            <span className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
               未来要付给供应商的钱按到期日排列；实际打款去「财务管理 → 收付款中心」
             </span>
           </div>
@@ -215,12 +215,12 @@ const PaymentSchedule: React.FC = () => {
         <Alert
           type="warning"
           showIcon
-          style={{ marginBottom: 12 }}
+          className="u-mb-12"
           message={`有 ${noDueDateAll} 笔应付单未填写到期日`}
           description="这些单据已计入「待付总额」，但因缺少到期日无法归入 7 / 14 / 30 天到期预测。建议补填到期日，付款计划才准确。"
         />
       )}
-      <Row gutter={16} style={{ marginBottom: 12 }}>
+      <Row gutter={16} className="u-mb-12">
         <Col span={6}>
           <Card>
             <Statistic
@@ -271,7 +271,7 @@ const PaymentSchedule: React.FC = () => {
         </Col>
       </Row>
 
-      <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
+      <Card className="u-mb-16" styles={{ body: { padding: '12px 16px' } }}>
         <Row gutter={12} align="middle" justify="space-between">
           <Col>
             <Space size={8}>

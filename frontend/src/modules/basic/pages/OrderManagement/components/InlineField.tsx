@@ -10,8 +10,8 @@ const InlineField: React.FC<InlineFieldProps> = ({
   children,
 }) => {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '60px minmax(0, 1fr)', gap: 6, alignItems: 'center' }}>
-      <div style={{ fontSize: 14, lineHeight: '22px', color: 'var(--neutral-text)', whiteSpace: 'nowrap' }}>{label}</div>
+    <div className="u-d-grid u-gap-6 u-ai-center" style={{ gridTemplateColumns: '60px minmax(0, 1fr)' }}>
+      <div className="u-fs-14 u-ws-nowrap" style={{ lineHeight: '22px', color: 'var(--neutral-text)' }}>{label}</div>
       <div style={{ width: 'calc(100% - 20px)' }}>{children}</div>
     </div>
   );

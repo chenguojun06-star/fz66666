@@ -32,7 +32,7 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
       footer={<Button onClick={onClose}>关闭</Button>}
     >
       {detailRecord && (
-        <div style={{ padding: '0 8px' }}>
+        <div className="u-p-08px">
           <Descriptions bordered column={2}>
             <Descriptions.Item label="支付单号">{detailRecord.paymentNo}</Descriptions.Item>
             <Descriptions.Item label="状态">
@@ -59,7 +59,7 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
               </Space>
             </Descriptions.Item>
             <Descriptions.Item label="金额">
-              <span style={{ fontWeight: 600, color: 'var(--color-error)' }}>{formatMoney(detailRecord.amount)}</span>
+              <span className="u-fw-600" style={{ color: 'var(--color-error)' }}>{formatMoney(detailRecord.amount)}</span>
             </Descriptions.Item>
             <Descriptions.Item label="操作人">{detailRecord.operatorName}</Descriptions.Item>
             <Descriptions.Item label="创建时间">{formatDateTime(detailRecord.createTime)}</Descriptions.Item>
@@ -74,8 +74,8 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
             )}
           </Descriptions>
           {detailRecord.paymentProof && (
-            <div style={{ marginTop: 16 }}>
-              <div style={{ fontWeight: 500, marginBottom: 8 }}>支付凭证</div>
+            <div className="u-mt-16">
+              <div className="u-fw-500 u-mb-8">支付凭证</div>
               <Image src={getFullAuthedFileUrl(detailRecord.paymentProof)} width={200} alt="支付凭证" />
             </div>
           )}

@@ -135,7 +135,7 @@ const CuttingTaskListView: React.FC<CuttingTaskListViewProps> = ({ tasks, taskCo
       <StickyFilterBar>
       <StandardToolbar
         left={(
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div className="u-d-flex u-ai-center u-gap-12 u-fwrap-wrap">
             <StandardSearchBar
               searchValue={tasks.taskQuery.orderNo || ''}
               onSearchChange={(value) => tasks.setTaskQuery(prev => ({ ...prev, orderNo: value, page: 1 }))}

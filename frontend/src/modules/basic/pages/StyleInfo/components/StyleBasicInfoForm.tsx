@@ -167,7 +167,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
   );
 
   return (
-    <div className="square-inputs" style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+    <div className="square-inputs u-d-flex u-fd-column u-gap-12" style={{ minWidth: 0 }}>
       {/* 款式状态摘要条（紧凑模式，仅在已存在款式时显示） */}
       {!isNewPage && currentStyle?.id ? <StyleStatusCard style={currentStyle} compact /> : null}
 

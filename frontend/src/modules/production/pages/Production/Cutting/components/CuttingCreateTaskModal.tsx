@@ -16,8 +16,8 @@ interface Props {
 
 /** D-354 竖排字段包装：文字在上、输入框在下，与正常下单（OrderCreateModal）同一套观感 */
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-    <span style={{ fontSize: 13, color: 'rgba(0,0,0,0.65)', lineHeight: '20px' }}>{label}</span>
+  <div className="u-d-flex u-fd-column u-gap-4" style={{ minWidth: 0 }}>
+    <span className="u-fs-13" style={{ color: 'rgba(0,0,0,0.65)', lineHeight: '20px' }}>{label}</span>
     {children}
   </div>
 );
@@ -50,16 +50,16 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
       styles={{ wrapper: { width: '85%' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
       onClose={() => createTask.setCreateTaskOpen(false)}
       footer={
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <div className="u-d-flex u-jc-end u-gap-8">
           <Button onClick={() => createTask.setCreateTaskOpen(false)}>关闭</Button>
           <Button type="primary" onClick={createTask.handleSubmitCreateTask} loading={createTask.createTaskSubmitting}>创建</Button>
         </div>
       }
     >
-      <Card style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-          <div style={{ flexShrink: 0 }}>
-            <div style={{ color: 'rgba(0,0,0,0.65)', marginBottom: 6, fontSize: 14 }}>款式图</div>
+      <Card className="u-mb-12">
+        <div className="u-d-flex u-gap-16 u-ai-start">
+          <div className="u-fshrink-0">
+            <div className="u-mb-6 u-fs-14" style={{ color: 'rgba(0,0,0,0.65)' }}>款式图</div>
             <ImageUploadBox
               value={createTask.createStyleImageUrl}
               onChange={(url) => createTask.setCreateStyleImageUrl(url)}
@@ -71,7 +71,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
               borderRadius={6}
             />
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="u-flex-1" style={{ minWidth: 0 }}>
             <Row gutter={[16, 12]}>
               <Col xs={24} sm={12}>
                 <Field label="订单号">
@@ -88,7 +88,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 <Field label="款号">
                   <AutoComplete
                     value={createTask.createStyleNo}
-                    style={{ width: '100%' }}
+                    className="u-w-full"
                     placeholder="输入或选择已维护工价的款号"
                     options={createTask.createStyleOptions.map((x) => ({
                       value: x.styleNo,
@@ -108,7 +108,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 <Field label="下单日期">
                   <UnifiedDatePicker
                     value={createTask.createOrderDate ? dayjs(createTask.createOrderDate, 'YYYY-MM-DD') : null}
-                    style={{ width: '100%' }}
+                    className="u-w-full"
                     placeholder="请选择下单日期"
                     onChange={(value) => createTask.setCreateOrderDate(Array.isArray(value) ? '' : (value ? value.format('YYYY-MM-DD') : ''))}
                   />
@@ -118,7 +118,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 <Field label="订单交期">
                   <UnifiedDatePicker
                     value={createTask.createDeliveryDate ? dayjs(createTask.createDeliveryDate, 'YYYY-MM-DD') : null}
-                    style={{ width: '100%' }}
+                    className="u-w-full"
                     placeholder="请选择订单交期"
                     onChange={(value) => createTask.setCreateDeliveryDate(Array.isArray(value) ? '' : (value ? value.format('YYYY-MM-DD') : ''))}
                   />
@@ -132,7 +132,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                       { label: '内部工厂', value: 'INTERNAL' },
                       { label: '外发加工', value: 'EXTERNAL' },
                     ]}
-                    style={{ width: '100%' }}
+                    className="u-w-full"
                     onChange={(value) => {
                       const nextMode = value as 'INTERNAL' | 'EXTERNAL';
                       createTask.setCreateFactoryMode(nextMode);
@@ -153,7 +153,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                     value={createTask.createFactoryMode === 'INTERNAL'
                       ? (createTask.createOrgUnitId || undefined)
                       : (createTask.createFactoryId || undefined)}
-                    style={{ width: '100%' }}
+                    className="u-w-full"
                     placeholder={createTask.createFactoryMode === 'INTERNAL' ? '请选择内部生产组/车间' : '请选择外发工厂'}
                     showSearch
                     allowClear
@@ -189,7 +189,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                   <CustomerSelect
                     value={createTask.createCustomerName}
                     onChange={(value) => createTask.setCreateCustomerName(value)}
-                    style={{ width: '100%' }}
+                    className="u-w-full"
                     placeholder="选择或输入客户名称"
                   />
                 </Field>
@@ -203,7 +203,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                     allowClear
                     showSearch
                     optionFilterProp="label"
-                    style={{ width: '100%' }}
+                    className="u-w-full"
                     options={createTask.categoryOptions}
                   />
                 </Field>
@@ -213,7 +213,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                   <Select
                     value={createTask.createUrgencyLevel}
                     onChange={(v) => createTask.setCreateUrgencyLevel(v)}
-                    style={{ width: '100%' }}
+                    className="u-w-full"
                     options={[
                       { label: '普通', value: 'normal' },
                       { label: '急单', value: 'urgent' },
@@ -230,7 +230,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                     allowClear
                     showSearch
                     optionFilterProp="label"
-                    style={{ width: '100%' }}
+                    className="u-w-full"
                     options={createTask.tenantUsers.map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
                   />
                 </Field>
@@ -244,7 +244,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                     allowClear
                     showSearch
                     optionFilterProp="label"
-                    style={{ width: '100%' }}
+                    className="u-w-full"
                     options={createTask.tenantUsers.map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
                   />
                 </Field>
@@ -265,12 +265,12 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
 
             {createTask.selectedFactoryStat && <FactoryCapacityCard stat={createTask.selectedFactoryStat} />}
             {createTask.selectedFactoryStat && createTask.selectedFactoryStat.factoryName && (
-              <div style={{ marginTop: 6, textAlign: 'right' }}>
+              <div className="u-mt-6 u-ta-right">
                 <Button
                   size="small"
                   type="default"
                   onClick={() => setInsightOpen(true)}
-                  style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)', fontSize: 12 }}
+                  className="u-fs-12" style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}
                   icon={<RightOutlined />}
                   iconPosition="end"
                 >
@@ -290,7 +290,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
       />
 
       <Card>
-        <div style={{ color: 'rgba(0,0,0,0.65)', lineHeight: 1.8 }}>
+        <div className="u-lh-18" style={{ color: 'rgba(0,0,0,0.65)' }}>
           创建完成后，领取、生成菲号、打印裁剪单，继续回到裁剪页按正常订单逻辑处理。
           工序单价直接影响工资结算，请根据实际工价填写。
         </div>

@@ -8,7 +8,7 @@ interface Props {
 }
 
 const OrderLinesTable: React.FC<Props> = ({ rows, loading }) => (
-  <div style={{ padding: '8px 0' }}>
+  <div className="u-p-8px0">
     <ResizableTable<OrderLineWarehousingRow>
       storageKey="order-lines-warehousing-table"
       rowKey="key" loading={loading}
@@ -16,7 +16,7 @@ const OrderLinesTable: React.FC<Props> = ({ rows, loading }) => (
       pagination={false} dataSource={rows}
       resizableColumns={false}
       scroll={{ x: 820 }}
-      style={{ fontSize: 14 }}
+      className="u-fs-14"
       columns={[
         { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 150, ellipsis: true },
         { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120, ellipsis: true },

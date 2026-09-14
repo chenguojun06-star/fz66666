@@ -89,7 +89,7 @@ export const Sparkline: React.FC<{ pts: number[]; color?: string; width?: number
   // 用颜色哈希生成唯一 gradId，避免多个 Sparkline 使用同一 SVG defs 冲突
   const gradId = `sg-${color.replace(/[^a-z0-9]/gi, '')}`;
   return (
-    <svg width={width} height={height} style={{ display: 'block', overflow: 'visible' }}>
+    <svg width={width} height={height} className="u-d-block" style={{ overflow: 'visible' }}>
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.18" />

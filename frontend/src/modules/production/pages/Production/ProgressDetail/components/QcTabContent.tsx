@@ -51,9 +51,9 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
 }) => {
   if (!orderId) {
     return (
-      <div style={{ textAlign: 'center', padding: 60 }}>
-        <ExclamationCircleOutlined style={{ fontSize: 48, color: 'var(--color-warning)', marginBottom: 16 }} />
-        <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>请先选择一个订单</div>
+      <div className="u-ta-center" style={{ padding: 60 }}>
+        <ExclamationCircleOutlined className="u-mb-16" style={{ fontSize: 48, color: 'var(--color-warning)' }} />
+        <div className="u-fs-16 u-fw-500 u-mb-8">请先选择一个订单</div>
         <div style={{ color: 'var(--color-text-tertiary)' }}>在进度详情页点击某个订单的「看板」按钮，即可对该订单的菲号进行质检</div>
       </div>
     );
@@ -95,7 +95,7 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
             onChange={(e) => setSearchText(e.target.value)}
             allowClear
           />
-          <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>
+          <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>
             {scannedRecords.length} 已扫码 | {pendingQc.length} 待质检
           </span>
         </Space>
@@ -115,7 +115,7 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
             >
               全选
             </Checkbox>
-            {selectedIds.size > 0 && <span style={{ color: 'var(--color-info)', fontWeight: 500 }}>已选 {selectedIds.size} 条</span>}
+            {selectedIds.size > 0 && <span className="u-fw-500" style={{ color: 'var(--color-info)' }}>已选 {selectedIds.size} 条</span>}
           </Space>
           <Space>
             <Button
@@ -177,19 +177,19 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
           g.records.push(r);
         }
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="u-d-flex u-fd-column u-gap-12">
             {groups.map((g) => {
               const selectableInGroup = g.records.filter(r => !r.qualityStatus).map(r => r.id);
               return (
-                <div key={g.key} style={{ border: '1px solid var(--color-border-light)', borderRadius: 8, overflow: 'hidden' }}>
+                <div key={g.key} className="u-br-8 u-ov-hidden" style={{ border: '1px solid var(--color-border-light)' }}>
                   <div style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     padding: '8px 14px', background: 'var(--color-bg-container)', borderBottom: '1px solid var(--color-border-light)',
                   }}>
                     <Space>
                       <Tag color={STAGE_COLORS[g.stage] || undefined}>{g.stage}</Tag>
-                      <span style={{ fontWeight: 600, fontSize: 14 }}>{g.name}</span>
-                      <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>{g.records.length} 条菲号</span>
+                      <span className="u-fw-600 u-fs-14">{g.name}</span>
+                      <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{g.records.length} 条菲号</span>
                     </Space>
                     {qcFilter === 'pending' && selectableInGroup.length > 0 && (
                       <Checkbox
@@ -232,22 +232,22 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
                           }}
                         >
                           {isPendingQc && qcFilter === 'pending' && (
-                            <Checkbox checked={isSelected} onChange={() => toggleSelect(r.id)} style={{ marginTop: 2 }} />
+                            <Checkbox checked={isSelected} onChange={() => toggleSelect(r.id)} className="u-mt-2" />
                           )}
 
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ fontSize: 'var(--font-size-subtitle)', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                          <div className="u-flex-1" style={{ minWidth: 0 }}>
+                            <div className="u-fw-600" style={{ fontSize: 'var(--font-size-subtitle)', color: 'var(--color-text-primary)' }}>
                               #{r.bundleNo}
                             </div>
-                            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                            <div className="u-fs-var--font-size-sm u-mt-2" style={{ color: 'var(--color-text-secondary)' }}>
                               {r.color || '-'} / {r.size || '-'}
                             </div>
-                            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+                            <div className="u-fs-var--font-size-sm" style={{ color: 'var(--color-text-secondary)' }}>
                               {r.quantity}件{r.unitPrice ? ` × ¥${r.unitPrice}` : ''}{r.operatorName ? ` | ${r.operatorName}` : ''}
                             </div>
-                            {isObsolete && <Tag color="default" style={{ marginTop: 4 }}>已废弃</Tag>}
+                            {isObsolete && <Tag color="default" className="u-mt-4">已废弃</Tag>}
                             {isUnqualified && (
-                              <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                              <div className="u-mt-4 u-d-flex u-gap-4 u-fwrap-wrap">
                                 <Tag color="error">次品{r.defectQuantity || 0}件</Tag>
                                 {r.defectCategory && <Tag>{DEFECT_CATEGORIES.find(d => d.value === r.defectCategory)?.label || r.defectCategory}</Tag>}
                                 {r.defectProblems && r.defectProblems.length > 0 && r.defectProblems.map((p, i) => (
@@ -261,7 +261,7 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
                               </div>
                             )}
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+                            <div className="u-d-flex u-fd-column u-gap-4 u-mt-6">
                               {isPendingQc && (
                                 <Button block type="primary" icon={<SafetyCertificateOutlined />} onClick={() => handleQualityInspect(r)}>
                                   质检

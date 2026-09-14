@@ -172,7 +172,7 @@ const MaterialPurchaseAIBanner: React.FC<MaterialPurchaseAIBannerProps> = ({
       showIcon
       type={insight.type}
       title={insight.message}
-      style={{ marginBottom: 12, fontSize: 14, whiteSpace: 'pre-line' }}
+      className="u-mb-12 u-fs-14" style={{ whiteSpace: 'pre-line' }}
       closable
     />
   );

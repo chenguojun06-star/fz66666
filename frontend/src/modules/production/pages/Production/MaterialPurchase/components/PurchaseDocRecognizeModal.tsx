@@ -187,7 +187,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, styleNo, on
       footer={null}
     >
       <Spin spinning={recognizing} tip="AI识别中，请稍候…">
-        <Space orientation="vertical" style={{ width: '100%' }} size={16}>
+        <Space orientation="vertical" className="u-w-full" size={16}>
           {!result && (
             <>
               <div
@@ -245,7 +245,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, styleNo, on
 
           {result && (
             <>
-              <div style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>
+              <div className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>
                 共识别 <strong>{recognizedCount}</strong> 项，
                 已匹配采购记录 <strong>{matchedCount}</strong> 项（可编辑数量后点击应用）
               </div>
@@ -259,7 +259,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, styleNo, on
                 pagination={false}
                 emptyDescription="暂无物料数据"
               />
-              <Space style={{ justifyContent: 'flex-end', width: '100%' }}>
+              <Space className="u-jc-end u-w-full">
                 <Button
                   onClick={() => {
                     setResult(null);

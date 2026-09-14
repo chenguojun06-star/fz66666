@@ -14,7 +14,7 @@ interface Props {
 const BillingOverviewCards: React.FC<Props> = ({ overview, onOpenInvoiceInfo }) => {
   if (!overview) return null;
   return (
-    <Row gutter={16} style={{ marginBottom: 24 }}>
+    <Row gutter={16} className="u-mb-24">
       <Col span={6}>
         <Card>
           <Statistic
@@ -22,7 +22,7 @@ const BillingOverviewCards: React.FC<Props> = ({ overview, onOpenInvoiceInfo }) 
             value={PLAN_LABELS[overview.planType] ?? '未知'}
             styles={{ content: { color: 'var(--color-primary)', fontSize: 20 } }}
           />
-          <div style={{ marginTop: 8, color: 'var(--text-secondary)' }}>
+          <div className="u-mt-8" style={{ color: 'var(--text-secondary)' }}>
             {formatPlanFee(overview)}
             {overview.expireTime && <span> · 到期: {overview.expireTime?.slice(0, 10)}</span>}
           </div>
@@ -54,7 +54,7 @@ const BillingOverviewCards: React.FC<Props> = ({ overview, onOpenInvoiceInfo }) 
       <Col span={6}>
         <Card>
           <Statistic title="租户编码" value={overview.tenantCode || '—'} styles={{ content: { fontSize: 18 } }} />
-          <div style={{ marginTop: 8 }}>
+          <div className="u-mt-8">
             <Button type="link" onClick={onOpenInvoiceInfo}>
               维护开票信息
             </Button>

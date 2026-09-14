@@ -217,8 +217,8 @@ const ProductionRequirementsSection: React.FC<Props> = ({
           setCopyCraftOpen(false);
         }}
       />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="u-d-flex u-ai-center u-jc-between u-gap-8 u-mb-12 u-fwrap-wrap">
+        <div className="u-d-flex u-ai-center u-gap-8">
           <span style={{
             fontWeight: 600,
             fontSize: 15,
@@ -226,7 +226,7 @@ const ProductionRequirementsSection: React.FC<Props> = ({
             paddingLeft: 10,
             borderLeft: '3px solid var(--color-primary)',
           }}>工艺说明</span>
-          {sheetUploading && <span style={{ fontSize: 12, color: 'var(--color-primary)' }}>图片上传中…</span>}
+          {sheetUploading && <span className="u-fs-12" style={{ color: 'var(--color-primary)' }}>图片上传中…</span>}
         </div>
         <Space size={8} wrap>
           {!productionReqLocked && (
@@ -265,7 +265,7 @@ const ProductionRequirementsSection: React.FC<Props> = ({
       </div>
 
       {canEdit && (
-        <div style={{ fontSize: 12, color: 'var(--color-text-tertiary, rgba(0,0,0,0.45))', marginBottom: 8 }}>
+        <div className="u-fs-12 u-mb-8" style={{ color: 'var(--color-text-tertiary, rgba(0,0,0,0.45))' }}>
           推荐在 800 宽度内填写内容，超出可预览范围过多会导致打印出来的内容被截断；Ctrl+V 可直接粘贴截图（最多 {sheetImageMax} 张），选中图片按 Delete 可删除
         </div>
       )}
@@ -330,7 +330,7 @@ const ProductionRequirementsSection: React.FC<Props> = ({
           </Popover>
           <Tooltip title="插入图片"><Button {...toolBtn} type="text" icon={<PictureOutlined />} loading={sheetUploading} onClick={() => imageInputRef.current?.click()} /></Tooltip>
           <input
-            ref={imageInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+            ref={imageInputRef} type="file" accept="image/*" className="u-d-none"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) void insertUploadedImage(file);

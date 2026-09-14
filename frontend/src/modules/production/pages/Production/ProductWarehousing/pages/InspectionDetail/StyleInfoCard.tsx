@@ -13,7 +13,7 @@ const StyleInfoCard: React.FC<StyleInfoCardProps> = ({ order, style }) => {
   const coverSrc = style?.cover || (order as any)?.styleCover || (style as any)?.styleCover || undefined;
   return (
     <Card title="款式信息">
-      <div style={{ textAlign: 'center', marginBottom: 12 }}>
+      <div className="u-ta-center u-mb-12">
         <StyleCoverThumb
           src={coverSrc}
           styleId={(order as any)?.styleId}

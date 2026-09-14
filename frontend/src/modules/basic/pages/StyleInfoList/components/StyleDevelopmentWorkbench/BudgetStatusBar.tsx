@@ -50,7 +50,7 @@ const BudgetStatusBar: React.FC<BudgetStatusBarProps> = ({ stageCards, activeSec
         border: '1px solid var(--color-border-light, var(--color-border-light))',
       }}
     >
-      <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{activeCard.title}</span>
+      <span className="u-fw-600" style={{ color: 'var(--color-text-primary)' }}>{activeCard.title}</span>
       <span style={{ color: 'var(--color-text-tertiary)' }}>|</span>
       {activeCard.budgetCustomized ? (
         <span style={{ color: budgetStatus?.color || 'var(--color-text-secondary)' }}>
@@ -74,7 +74,7 @@ const BudgetStatusBar: React.FC<BudgetStatusBarProps> = ({ stageCards, activeSec
           <span style={{ color: 'var(--color-text-secondary)' }}>等待 {waitDuration}</span>
         </>
       )}
-      <div style={{ flex: 1 }} />
+      <div className="u-flex-1" />
       {canEdit && (
         <Button
           size="small"

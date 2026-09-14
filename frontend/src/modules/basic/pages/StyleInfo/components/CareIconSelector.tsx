@@ -23,7 +23,7 @@ const CareIconSelector: React.FC<Props> = ({ value, onChange, disabled }) => {
   return (
     <div>
       {CARE_CATEGORIES.map(cat => (
-        <div key={cat.key} style={{ marginBottom: 16 }}>
+        <div key={cat.key} className="u-mb-16">
           <div style={{
             fontSize: 14,
             fontWeight: 600,
@@ -34,7 +34,7 @@ const CareIconSelector: React.FC<Props> = ({ value, onChange, disabled }) => {
           }}>
             {cat.label}
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div className="u-d-flex u-fwrap-wrap u-gap-8">
             {cat.codes.map(code => {
               const icon = CARE_ICONS[code];
               if (!icon) return null;

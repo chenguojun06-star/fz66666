@@ -156,12 +156,12 @@ const _FinishedInventory: React.FC = () => {
 
   return (
     <>
-      {showSmartErrorNotice && smartError && <Card style={{ marginBottom: 12 }}><SmartErrorNotice error={smartError} onFix={() => { void loadData(); }} /></Card>}
-      <Card style={{ marginBottom: 0, border: 'none', boxShadow: 'none', background: 'transparent' }}>
+      {showSmartErrorNotice && smartError && <Card className="u-mb-12"><SmartErrorNotice error={smartError} onFix={() => { void loadData(); }} /></Card>}
+      <Card className="u-mb-0" style={{ border: 'none', boxShadow: 'none', background: 'transparent' }}>
         <StandardToolbar left={<StandardSearchBar searchValue={searchText} onSearchChange={setSearchText} searchPlaceholder="搜索订单号/款号/商品编码" statusValue={statusValue} onStatusChange={setStatusValue} statusOptions={[{ label: '全部', value: '' }, { label: '有库存', value: 'available' }, { label: '有次品', value: 'defect' }]} />} right={<Space wrap><Select style={{ width: 140 }} placeholder="工厂类型" allowClear value={selectedFactoryType || undefined} onChange={setSelectedFactoryType} options={factoryTypeOptions} /><Button icon={<InboxOutlined />} onClick={() => setFreeInboundOpen(true)}>无采购单入库</Button><Button icon={<ScanOutlined />} onClick={() => setScanOperationOpen(true)}>扫码出入库</Button><Button icon={<ScanOutlined />} onClick={() => setQrcodeOutboundOpen(true)}>扫码出库</Button><Button icon={<HistoryOutlined />} onClick={() => setPageLogOpen(true)}>操作日志</Button></Space>} />
       </Card>
       <PageStatCards cards={[{ key: 'total', items: [{ label: '成品总数', value: totalRecords, unit: '款', color: 'var(--color-primary)' }] }, { key: 'available', items: [{ label: '可用库存', value: totalAvailableQty, unit: '件', color: 'var(--color-success)' }] }, { key: 'defect', items: [{ label: '次品数量', value: totalDefectQty, unit: '件', color: 'var(--color-danger)' }] }]} activeKey="" />
-      <Tabs defaultActiveKey="inventory" style={{ marginTop: 12 }} items={[
+      <Tabs defaultActiveKey="inventory" className="u-mt-12" items={[
         {
           key: 'inventory',
           label: '库存管理',
@@ -191,28 +191,28 @@ const _FinishedInventory: React.FC = () => {
           >
             {outboundModal.data && (
               <>
-                <Card style={{ marginBottom: 12 }}>
+                <Card className="u-mb-12">
                   <Row gutter={16}>
                     <Col span={8}>
-                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>订单号</div>
-                      <div style={{ fontWeight: 600 }}>{outboundModal.data.orderNo || '-'}</div>
+                      <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>订单号</div>
+                      <div className="u-fw-600">{outboundModal.data.orderNo || '-'}</div>
                     </Col>
                     <Col span={8}>
-                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>款号</div>
-                      <div style={{ fontWeight: 600 }}>{outboundModal.data.styleNo || '-'}</div>
+                      <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>款号</div>
+                      <div className="u-fw-600">{outboundModal.data.styleNo || '-'}</div>
                     </Col>
                     <Col span={8}>
-                      <div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>款名</div>
-                      <div style={{ fontWeight: 600 }}>{outboundModal.data.styleName || '-'}</div>
+                      <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>款名</div>
+                      <div className="u-fw-600">{outboundModal.data.styleName || '-'}</div>
                     </Col>
                   </Row>
                 </Card>
-                <Card style={{ marginBottom: 12 }}>
+                <Card className="u-mb-12">
                   <Row gutter={16}>
                     <Col span={12}>
-                      <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>出库类型</div>
+                      <div className="u-mb-8 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>出库类型</div>
                       <Select
-                        style={{ width: '100%' }}
+                        className="u-w-full"
                         value={outboundType}
                         disabled={directShipMode}
                         onChange={(v) => setOutboundType(v)}
@@ -224,7 +224,7 @@ const _FinishedInventory: React.FC = () => {
                       />
                     </Col>
                     <Col span={12}>
-                      <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>
+                      <div className="u-mb-8 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>
                         {outboundType === 'scrap' ? '报废原因' : '备注（选填）'}
                       </div>
                       <Input
@@ -236,8 +236,8 @@ const _FinishedInventory: React.FC = () => {
                     </Col>
                   </Row>
                 </Card>
-                <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontWeight: 600 }}>商品编码明细</span>
+                <div className="u-mb-8 u-d-flex u-ai-center u-gap-12">
+                  <span className="u-fw-600">商品编码明细</span>
                   {!directShipMode && (
                     <Select
                       style={{ width: 320 }}
@@ -254,7 +254,7 @@ const _FinishedInventory: React.FC = () => {
                     />
                   )}
                   {cartStyleNos.length > 1 && (
-                    <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+                    <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
                       已混 {cartStyleNos.length} 个款，确认后合并为一张出库单
                     </span>
                   )}
@@ -269,14 +269,14 @@ const _FinishedInventory: React.FC = () => {
                     handleSKUPriceReasonChange: (i, v) => handleSKUPriceReasonChange(offset + i, v),
                   });
                   return (
-                    <div key={sn} style={{ marginBottom: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                        <Tag color="blue" style={{ margin: 0 }}>{sn}</Tag>
-                        <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                    <div key={sn} className="u-mb-12">
+                      <div className="u-d-flex u-ai-center u-gap-8 u-mb-6">
+                        <Tag color="blue" className="u-m-0">{sn}</Tag>
+                        <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
                           {cartStyleNames.get(sn) || outboundModal.data?.styleName || ''}
                         </span>
                         {!directShipMode && (
-                          <Button type="link" size="small" style={{ padding: 0, marginLeft: 'auto' }}
+                          <Button type="link" size="small" className="u-p-0 u-ml-auto"
                             onClick={() => handleRemoveStyleFromCart(sn)}>
                             移除该款
                           </Button>
@@ -286,23 +286,23 @@ const _FinishedInventory: React.FC = () => {
                     </div>
                   );
                 })}
-                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
+                <div className="u-mt-8 u-d-flex u-jc-between u-fw-600">
                   <span>出库总量: {skuTotalOutbound} 件</span>
                   <span>出库金额: {formatMoney(skuTotalAmount)}</span>
                 </div>
                 {outboundType === 'sales' && <CustomerInfoSection customerName={outboundCustomerName} onCustomerNameChange={setOutboundCustomerName} customerPhone={outboundCustomerPhone} onCustomerPhoneChange={setOutboundCustomerPhone} shippingAddress={outboundShippingAddress} onShippingAddressChange={setOutboundShippingAddress} variant="card" />}
-                <Card title="发货信息（选填）" style={{ marginTop: 12 }}>
+                <Card title="发货信息（选填）" className="u-mt-12">
                   <Row gutter={16}>
                     <Col span={8}>
-                      <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>关联生产单号</div>
+                      <div className="u-mb-8 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>关联生产单号</div>
                       <Input value={outboundProductionOrderNo} onChange={e => setOutboundProductionOrderNo(e.target.value)} placeholder="选填" />
                     </Col>
                     <Col span={8}>
-                      <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>快递单号</div>
+                      <div className="u-mb-8 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>快递单号</div>
                       <Input value={outboundTrackingNo} onChange={e => setOutboundTrackingNo(e.target.value)} placeholder="选填" />
                     </Col>
                     <Col span={8}>
-                      <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>快递公司</div>
+                      <div className="u-mb-8 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>快递公司</div>
                       <Input value={outboundExpressCompany} onChange={e => setOutboundExpressCompany(e.target.value)} placeholder="选填" />
                     </Col>
                   </Row>
@@ -320,28 +320,28 @@ const _FinishedInventory: React.FC = () => {
           >
             {inboundHistoryModal.data && (
               <>
-                <Card style={{ marginBottom: 12 }}>
-                  <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                <Card className="u-mb-12">
+                  <div className="u-d-flex u-gap-16 u-ai-center u-fwrap-wrap">
                     <StyleCoverThumb
                       src={(inboundHistoryModal.data as any).styleCover || null}
                       styleNo={inboundHistoryModal.data.styleNo}
                       size={72}
                       borderRadius={6}
                     />
-                    <Row gutter={16} style={{ flex: 1, minWidth: 320 }}>
-                      <Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>款号</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.styleNo || '-'}</div></Col>
-                      <Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>订单号</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.orderNo || '-'}</div></Col>
-                      <Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>生产方</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.factoryName || '-'}</div></Col>
-                      <Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>总入库量</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.totalInboundQty ?? 0} 件</div></Col>
-                      <Col span={8}><div style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>当前库存</div><div style={{ fontWeight: 600 }}>{inboundHistoryModal.data.availableQty ?? 0} 件</div></Col>
+                    <Row gutter={16} className="u-flex-1" style={{ minWidth: 320 }}>
+                      <Col span={8}><div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>款号</div><div className="u-fw-600">{inboundHistoryModal.data.styleNo || '-'}</div></Col>
+                      <Col span={8}><div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>订单号</div><div className="u-fw-600">{inboundHistoryModal.data.orderNo || '-'}</div></Col>
+                      <Col span={8}><div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>生产方</div><div className="u-fw-600">{inboundHistoryModal.data.factoryName || '-'}</div></Col>
+                      <Col span={8}><div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>总入库量</div><div className="u-fw-600">{inboundHistoryModal.data.totalInboundQty ?? 0} 件</div></Col>
+                      <Col span={8}><div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>当前库存</div><div className="u-fw-600">{inboundHistoryModal.data.availableQty ?? 0} 件</div></Col>
                     </Row>
                   </div>
                 </Card>
-                <ResizableTable size="small" columns={[{ title: '入库日期', dataIndex: 'inboundDate', key: 'inboundDate', width: 120 }, { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 130, render: (v: string) => v || '-' }, { title: '生产方', dataIndex: 'factoryName', key: 'factoryName', width: 110, render: (v: string) => v || '-' }, { title: '质检单号', dataIndex: 'qualityInspectionNo', key: 'qualityInspectionNo', width: 140 }, { title: '菲号', dataIndex: 'cuttingBundleNo', key: 'cuttingBundleNo', width: 100 }, { title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 200, render: (v: string) => <span title={v} style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{v}</span> }, { title: '颜色', dataIndex: 'color', key: 'color', width: 80 }, { title: '尺码', dataIndex: 'size', key: 'size', width: 60 }, { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const }, { title: '操作人', dataIndex: 'operator', key: 'operator', width: 100 }, { title: '库位', dataIndex: 'warehouseLocation', key: 'warehouseLocation', width: 100 }, { title: '操作', key: 'action', width: 90, render: (_: unknown, r: { id: string; warehouseLocation?: string }) => (String(r.warehouseLocation || '') === '直发客户' ? <Button size="small" type="link" style={{ padding: 0 }} onClick={() => { void handleRevertDirectship(r); }}>退回上一步</Button> : null) }]} dataSource={inboundHistory} rowKey="id" emptyDescription="暂无入库记录" pagination={{ current: inboundPage, pageSize: inboundPageSize, total: inboundHistory.length, onChange: (p, ps) => { setInboundPage(p); setInboundPageSize(ps); } }} />
-                <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--color-bg-container)', borderRadius: 6, fontSize: 14 }}>
-                  <div style={{ fontWeight: 600, marginBottom: 4 }}>对账公式</div>
+                <ResizableTable size="small" columns={[{ title: '入库日期', dataIndex: 'inboundDate', key: 'inboundDate', width: 120 }, { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 130, render: (v: string) => v || '-' }, { title: '生产方', dataIndex: 'factoryName', key: 'factoryName', width: 110, render: (v: string) => v || '-' }, { title: '质检单号', dataIndex: 'qualityInspectionNo', key: 'qualityInspectionNo', width: 140 }, { title: '菲号', dataIndex: 'cuttingBundleNo', key: 'cuttingBundleNo', width: 100 }, { title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 200, render: (v: string) => <span title={v} style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{v}</span> }, { title: '颜色', dataIndex: 'color', key: 'color', width: 80 }, { title: '尺码', dataIndex: 'size', key: 'size', width: 60 }, { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const }, { title: '操作人', dataIndex: 'operator', key: 'operator', width: 100 }, { title: '库位', dataIndex: 'warehouseLocation', key: 'warehouseLocation', width: 100 }, { title: '操作', key: 'action', width: 90, render: (_: unknown, r: { id: string; warehouseLocation?: string }) => (String(r.warehouseLocation || '') === '直发客户' ? <Button size="small" type="link" className="u-p-0" onClick={() => { void handleRevertDirectship(r); }}>退回上一步</Button> : null) }]} dataSource={inboundHistory} rowKey="id" emptyDescription="暂无入库记录" pagination={{ current: inboundPage, pageSize: inboundPageSize, total: inboundHistory.length, onChange: (p, ps) => { setInboundPage(p); setInboundPageSize(ps); } }} />
+                <div className="u-mt-12 u-p-8px12px u-br-6 u-fs-14" style={{ background: 'var(--color-bg-container)' }}>
+                  <div className="u-fw-600 u-mb-4">对账公式</div>
                   <div>入库总量: <b>{inboundHistoryModal.data.totalInboundQty ?? 0}</b> 件 = 当前库存: <b style={{ color: 'var(--color-success)' }}>{inboundHistoryModal.data.availableQty ?? 0}</b> 件 + 出库总量: <b style={{ color: 'var(--color-orange-600)' }}>{outstockTotal}</b> 件 + 次品: <b>{inboundHistoryModal.data.defectQty ?? 0}</b> 件</div>
-                  <div style={{ marginTop: 4, color: 'var(--color-text-tertiary)' }}>入库记录合计: {inboundTotalQty} 件（{inboundHistory.length} 条记录）</div>
+                  <div className="u-mt-4" style={{ color: 'var(--color-text-tertiary)' }}>入库记录合计: {inboundTotalQty} 件（{inboundHistory.length} 条记录）</div>
                 </div>
               </>
             )}

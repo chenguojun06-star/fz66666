@@ -22,12 +22,12 @@ const ShareLinkModal: React.FC<ShareLinkModalProps> = ({ open, onClose, shareUrl
     ]}
   >
     {shareLoading ? (
-      <div style={{ textAlign: 'center', padding: '20px 0' }}>
-        <Spin /> <span style={{ marginLeft: 8 }}>正在生成分享链接…</span>
+      <div className="u-ta-center" style={{ padding: '20px 0' }}>
+        <Spin /> <span className="u-ml-8">正在生成分享链接…</span>
       </div>
     ) : (
       <>
-        <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
+        <Typography.Paragraph type="secondary" className="u-mb-12">
           将此链接发送给客户，客户可查看本次出货的款式、数量、物流等信息：
         </Typography.Paragraph>
         <Input.TextArea value={shareUrl} readOnly rows={2} />

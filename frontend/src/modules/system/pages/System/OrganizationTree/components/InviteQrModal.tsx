@@ -23,21 +23,21 @@ const InviteQrModal: React.FC<InviteQrModalProps> = ({ inviteQr, setInviteQr }) 
       onCancel={() => setInviteQr({ open: false, loading: false })}
       footer={null}
     >
-      <div style={{ textAlign: 'center', padding: '16px 0' }}>
+      <div className="u-ta-center" style={{ padding: '16px 0' }}>
         {inviteQr.loading ? (
           <div style={{ padding: '48px 0' }}><Spin tip="正在生成二维码..." /></div>
         ) : inviteQr.qrBase64 ? (
           <>
-            <img src={inviteQr.qrBase64} alt="邀请二维码" style={{ width: 220, height: 220, display: 'block', margin: '0 auto 16px' }} />
-            <div style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))', fontSize: 14 }}>
+            <img src={inviteQr.qrBase64} alt="邀请二维码" className="u-d-block" style={{ width: 220, height: 220, margin: '0 auto 16px' }} />
+            <div className="u-fs-14" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
               员工用微信扫码后，输入系统账号密码即可完成绑定
             </div>
             {inviteQr.expiresAt && (
-              <div style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))', fontSize: 14, marginTop: 8 }}>
+              <div className="u-fs-14 u-mt-8" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
                 有效期至：{inviteQr.expiresAt.replace('T', ' ').slice(0, 16)}
               </div>
             )}
-            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center', gap: 8 }}>
+            <div className="u-mt-16 u-d-flex u-jc-center u-gap-8">
               <Button
                 icon={<LinkOutlined />}
                 onClick={async () => {
@@ -58,7 +58,7 @@ const InviteQrModal: React.FC<InviteQrModalProps> = ({ inviteQr, setInviteQr }) 
             </div>
           </>
         ) : (
-          <div style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))', padding: '24px 0' }}>二维码生成失败，请重试</div>
+          <div className="u-p-24px0" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>二维码生成失败，请重试</div>
         )}
       </div>
     </SmallModal>

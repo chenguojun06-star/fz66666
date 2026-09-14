@@ -67,11 +67,11 @@ const MyModulesTab: React.FC = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="u-mb-8 u-d-flex u-jc-between u-ai-center">
         <Text type="secondary">
           当前已开通 {CORE_MODULES.length} 个核心模块{addons.length > 0 ? `、${activeAddonCount} 个增值模块` : ''}
         </Text>
-        <a onClick={fetchAddons} style={{ fontSize: 14 }}><SyncOutlined /> 刷新</a>
+        <a onClick={fetchAddons} className="u-fs-14"><SyncOutlined /> 刷新</a>
       </div>
 
       {overview && (
@@ -83,7 +83,7 @@ const MyModulesTab: React.FC = () => {
                 value={PLAN_LABELS[overview.planType] || overview.planType || '未设置'}
                 styles={{ content: { color: 'var(--primary-color)', fontSize: 20 } }}
               />
-              <div style={{ marginTop: 8, color: 'var(--text-secondary)' }}>
+              <div className="u-mt-8" style={{ color: 'var(--text-secondary)' }}>
                 {formatPlanFee(overview)}
               </div>
             </Card>
@@ -91,7 +91,7 @@ const MyModulesTab: React.FC = () => {
           <Col xs={24} md={8}>
             <Card>
               <Statistic title="套餐存储配额" value={formatStorageQuota(overview.storageQuotaMb)} styles={{ content: { fontSize: 20 } }} />
-              <div style={{ marginTop: 8, color: 'var(--text-secondary)' }}>
+              <div className="u-mt-8" style={{ color: 'var(--text-secondary)' }}>
                 已用 {formatStorageQuota(overview.storageUsedMb)}
               </div>
             </Card>
@@ -99,7 +99,7 @@ const MyModulesTab: React.FC = () => {
           <Col xs={24} md={8}>
             <Card>
               <Statistic title="套餐用户数" value={overview.maxUsers || 0} suffix="人" styles={{ content: { fontSize: 20 } }} />
-              <div style={{ marginTop: 8, color: 'var(--text-secondary)' }}>
+              <div className="u-mt-8" style={{ color: 'var(--text-secondary)' }}>
                 当前已使用 {overview.currentUsers || 0} 人
               </div>
             </Card>
@@ -107,21 +107,21 @@ const MyModulesTab: React.FC = () => {
         </Row>
       )}
 
-      <Title level={5} style={{ marginBottom: 12 }}>核心功能模块</Title>
+      <Title level={5} className="u-mb-12">核心功能模块</Title>
       <Row gutter={[16, 16]}>
         {CORE_MODULES.map(m => (
           <Col xs={24} sm={12} lg={8} key={m.code}>
             <Card hoverable style={{ borderLeft: '3px solid var(--ant-color-success)' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <span style={{ fontSize: 28, lineHeight: 1 }}>{m.icon}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <Text strong style={{ fontSize: 15 }}>{m.name}</Text>
+              <div className="u-d-flex u-ai-start u-gap-12">
+                <span className="u-fs-28" style={{ lineHeight: 1 }}>{m.icon}</span>
+                <div className="u-flex-1" style={{ minWidth: 0 }}>
+                  <div className="u-d-flex u-ai-center u-gap-8 u-mb-4">
+                    <Text strong className="u-fs-15">{m.name}</Text>
                     <Tag color="success" icon={<CheckCircleOutlined />}>随套餐开通</Tag>
                   </div>
-                  <Text type="secondary" style={{ fontSize: 14 }}>{m.desc}</Text>
-                  <div style={{ marginTop: 8 }}>
-                    <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                  <Text type="secondary" className="u-fs-14">{m.desc}</Text>
+                  <div className="u-mt-8">
+                    <Text className="u-fs-14" style={{ color: 'var(--text-secondary)' }}>
                       套餐费用：{formatPlanFee(overview)}
                     </Text>
                   </div>
@@ -132,7 +132,7 @@ const MyModulesTab: React.FC = () => {
         ))}
       </Row>
 
-      {loading && <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>}
+      {loading && <div className="u-ta-center u-p-24"><Spin /></div>}
       {!loading && addons.length === 0 && (
         <Card style={{ marginTop: 20 }}>
           <Empty description="当前未开通增值模块" image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -145,7 +145,7 @@ const MyModulesTab: React.FC = () => {
       {addons.length > 0 && (
         <>
           <Divider />
-          <Title level={5} style={{ marginBottom: 12 }}>增值功能模块</Title>
+          <Title level={5} className="u-mb-12">增值功能模块</Title>
           <Row gutter={[16, 16]}>
             {addons.map(app => {
               const statusKey = app.isExpired ? 'EXPIRED' : (app.status || 'ACTIVE');
@@ -155,32 +155,32 @@ const MyModulesTab: React.FC = () => {
                 <Col xs={24} sm={12} lg={8} key={app.subscriptionId || app.appCode}>
                   <Card hoverable
                     style={{ borderLeft: `3px solid var(--ant-color-${sc.color === 'success' ? 'success' : sc.color === 'error' ? 'error' : 'primary'})` }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                      <span style={{ fontSize: 28, lineHeight: 1 }}><AppstoreOutlined /></span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                          <Text strong style={{ fontSize: 15 }}>{app.appName}</Text>
+                    <div className="u-d-flex u-ai-start u-gap-12">
+                      <span className="u-fs-28" style={{ lineHeight: 1 }}><AppstoreOutlined /></span>
+                      <div className="u-flex-1" style={{ minWidth: 0 }}>
+                        <div className="u-d-flex u-ai-center u-gap-8 u-mb-4">
+                          <Text strong className="u-fs-15">{app.appName}</Text>
                           <Tag color={sc.color} icon={sc.icon}>{sc.label}</Tag>
                         </div>
-                          <div style={{ marginBottom: 6 }}>
-                            <Text strong style={{ color: 'var(--primary-color)', fontSize: 14 }}>
+                          <div className="u-mb-6">
+                            <Text strong className="u-fs-14" style={{ color: 'var(--primary-color)' }}>
                               {formatSubscriptionPrice(app)}
                             </Text>
                           </div>
                         <Space size={4} wrap>
                           <Tag>{SUB_TYPE_LABELS[app.subscriptionType] || app.subscriptionType}</Tag>
                           {app.startTime && (
-                            <Text type="secondary" style={{ fontSize: 14 }}>
+                            <Text type="secondary" className="u-fs-14">
                               {dayjs(app.startTime).format('YYYY-MM-DD')} 开通
                             </Text>
                           )}
                           {daysLeft !== null && daysLeft >= 0 && (
-                            <Text type={daysLeft <= 7 ? 'danger' : 'secondary'} style={{ fontSize: 14 }}>
+                            <Text type={daysLeft <= 7 ? 'danger' : 'secondary'} className="u-fs-14">
                               · 剩余 {daysLeft} 天
                             </Text>
                           )}
                           {daysLeft === null && !app.endTime && (
-                            <Text type="success" style={{ fontSize: 14 }}>· 永久有效</Text>
+                            <Text type="success" className="u-fs-14">· 永久有效</Text>
                           )}
                         </Space>
                       </div>

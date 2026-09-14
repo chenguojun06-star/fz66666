@@ -95,8 +95,8 @@ const StyleQuotePopover: React.FC<{
   ) : (
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 14, boxSizing: 'border-box' }}>
       {/* 标题 */}
-      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>
-         报价参考 <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--color-text-tertiary)' }}>{data.styleNo}</span>
+      <div className="u-fw-600 u-fs-14 u-mb-8">
+         报价参考 <span className="u-fs-14 u-fw-400" style={{ color: 'var(--color-text-tertiary)' }}>{data.styleNo}</span>
       </div>
 
       {/* 成本分解 */}
@@ -105,8 +105,8 @@ const StyleQuotePopover: React.FC<{
           background: 'var(--status-success-bg)', border: '1px solid var(--status-success-border)', borderRadius: 4,
           padding: '8px 10px', marginBottom: 8,
         }}>
-          <div style={{ fontSize: 14, color: 'var(--color-success)', fontWeight: 600, marginBottom: 4 }}>成本拆解</div>
-          <div style={{ display: 'flex', gap: 16, fontSize: 14 }}>
+          <div className="u-fs-14 u-fw-600 u-mb-4" style={{ color: 'var(--color-success)' }}>成本拆解</div>
+          <div className="u-d-flex u-gap-16 u-fs-14">
             <span>面料 <b>{fmt(data.materialCost)}</b></span>
             <span>工序 <b>{fmt(data.processCost)}</b></span>
             <span>合计 <b style={{ color: 'var(--color-success)' }}>{fmt(data.totalCost)}</b></span>
@@ -121,14 +121,14 @@ const StyleQuotePopover: React.FC<{
           padding: '8px 10px', marginBottom: 8,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
-          <span style={{ fontSize: 14, color: 'var(--color-warning)', fontWeight: 600 }}>建议报价</span>
-          <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-warning)' }}>{fmt(data.suggestedPrice)}</span>
+          <span className="u-fs-14 u-fw-600" style={{ color: 'var(--color-warning)' }}>建议报价</span>
+          <span className="u-fw-700" style={{ fontSize: 18, color: 'var(--color-warning)' }}>{fmt(data.suggestedPrice)}</span>
         </div>
       )}
 
       {/* 现有报价引用 */}
       {data.currentQuotation != null && data.currentQuotation > 0 && (
-        <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
+        <div className="u-fs-14 u-mb-6" style={{ color: 'var(--color-text-secondary)' }}>
            现有报价单价：<b>{fmt(data.currentQuotation)}</b>
         </div>
       )}
@@ -136,20 +136,20 @@ const StyleQuotePopover: React.FC<{
       {/* 历史订单 */}
       {(data.recentOrders?.length ?? 0) > 0 && (
         <>
-          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
+          <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-text-tertiary)' }}>
              最近 {data.historicalOrderCount} 个订单（共 {data.historicalTotalQuantity} 件）
           </div>
           <div style={{ maxHeight: 120, overflowY: 'auto' }}>
             {data.recentOrders.slice(0, 5).map((o, i) => {
               const st = statusMap[o.status] || { text: o.status, color: 'var(--color-border-antd)' };
               return (
-                <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '2px 0', fontSize: 14 }}>
-                  <span style={{ fontWeight: 500, width: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div key={i} className="u-d-flex u-gap-6 u-ai-center u-fs-14" style={{ padding: '2px 0' }}>
+                  <span className="u-fw-500 u-ov-hidden u-ws-nowrap" style={{ width: 100, textOverflow: 'ellipsis' }}>
                     {o.orderNo}
                   </span>
                   <span>{o.quantity}件</span>
                   <span style={{ color: 'var(--color-warning)' }}>{fmt(o.unitPrice)}</span>
-                  <Tag color={st.color} style={{ fontSize: 14, lineHeight: '16px', padding: '0 4px', marginLeft: 'auto' }}>
+                  <Tag color={st.color} className="u-fs-14 u-lh-16px u-p-04px u-ml-auto">
                     {st.text}
                   </Tag>
                 </div>
@@ -160,7 +160,7 @@ const StyleQuotePopover: React.FC<{
       )}
 
       {quoteInsight && (
-        <div style={{ borderTop: '1px solid var(--color-border-light)', marginTop: 8, paddingTop: 8 }}>
+        <div className="u-mt-8" style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: 8 }}>
           <DecisionInsightCard compact insight={quoteInsight} />
         </div>
       )}
@@ -178,7 +178,7 @@ const StyleQuotePopover: React.FC<{
       getPopupContainer={(node) => node.closest('.ant-modal-body') || document.body}
       onOpenChange={(open) => { if (open) fetchData(); else requestIdRef.current++; }}
     >
-      <div style={{ display: 'inline-block', cursor: 'pointer' }}>
+      <div className="u-d-inline-block u-cur-pointer">
         {children}
       </div>
     </Popover>

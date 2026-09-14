@@ -184,15 +184,15 @@ export default function SubProcessRemapModal({
       render: (_: unknown, row: TableRow) => {
         if (!row.entry.enabled || row.subprocess === null) {
           return (
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, paddingLeft: 8 }}>
+            <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)', paddingLeft: 8 }}>
               使用系统默认节点 — 开启右侧开关可自定义
             </span>
           );
         }
         return (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 8 }}>
-              <Text style={{ fontSize: 14, color: 'var(--color-text-tertiary)', width: 18, flexShrink: 0 }}>
+            <div className="u-d-flex u-ai-center u-gap-4" style={{ paddingLeft: 8 }}>
+              <Text className="u-fs-14 u-fshrink-0" style={{ color: 'var(--color-text-tertiary)', width: 18 }}>
                 {row.subIndex + 1}.
               </Text>
               <Input
@@ -202,7 +202,7 @@ export default function SubProcessRemapModal({
                
                 maxLength={30}
                 status={!row.subprocess.name.trim() ? 'error' : undefined}
-                style={{ flex: 1 }}
+                className="u-flex-1"
               />
               <Button type="text" icon={<ArrowUpOutlined />}
                 disabled={row.subIndex === 0}
@@ -223,7 +223,7 @@ export default function SubProcessRemapModal({
               </Tooltip>
             </div>
             {isFactoryAccount && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 26, marginTop: 4 }}>
+              <div className="u-d-flex u-ai-center u-gap-4 u-mt-4" style={{ paddingLeft: 26 }}>
                 <InputNumber
                   value={row.subprocess.unitPrice}
                   min={0}
@@ -235,7 +235,7 @@ export default function SubProcessRemapModal({
                   style={{ width: 130 }}
                   onChange={v => updateSubProcessUnitPrice(row.parentNode.stageKey, row.subprocess!.id, v ?? undefined)}
                 />
-                <Text style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>厂方内部参考，不参与结算</Text>
+                <Text className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>厂方内部参考，不参与结算</Text>
               </div>
             )}
           </>
@@ -257,16 +257,16 @@ export default function SubProcessRemapModal({
         },
       }),
       render: (_: unknown, row: TableRow) => (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+        <div className="u-d-flex u-fd-column u-ai-center" style={{ gap: 5 }}>
           <Tag style={{ background: ACCENT, color: 'var(--color-bg-base)', border: 'none', fontWeight: 600, fontSize: 14, margin: 0 }}>
             {row.parentNode.name}
           </Tag>
-          <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>
+          <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>
             {row.entry.enabled && row.entry.subProcesses.length > 0
               ? `${row.entry.subProcesses.length} 个子工序`
               : '未启用'}
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div className="u-d-flex u-ai-center u-gap-4">
             <Text style={{ fontSize: 14, color: row.entry.enabled ? ACTIVE_COLOR : 'var(--color-text-tertiary)' }}>
               {row.entry.enabled ? '已启用' : '已关闭'}
             </Text>
@@ -279,7 +279,7 @@ export default function SubProcessRemapModal({
           {row.entry.enabled && (
             <Button type="link" icon={<PlusOutlined />}
               onClick={() => addSubProcess(row.parentNode.stageKey)}
-              style={{ fontSize: 14, padding: 0 }}
+              className="u-fs-14 u-p-0"
             >
               添加
             </Button>
@@ -317,10 +317,10 @@ export default function SubProcessRemapModal({
         marginBottom: 12, padding: '8px 12px',
         background: 'var(--color-bg-highlight)', border: '1px solid var(--color-blue-200)', borderRadius: 6,
       }}>
-        <span style={{ fontSize: 14, color: 'var(--color-gray-700)' }}>
+        <span className="u-fs-14" style={{ color: 'var(--color-gray-700)' }}>
           开启右侧开关后可自定义子工序，仅影响本订单扫码节点
         </span>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="u-d-flex u-gap-8">
           <Button onClick={onClose}>取消</Button>
           <Button type="primary" loading={saving} onClick={handleSave}>保存</Button>
         </div>

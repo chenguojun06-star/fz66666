@@ -61,7 +61,7 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
       {d && (
         <>
           {d.cover && (
-            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+            <div className="u-ta-center u-mb-16">
               <AttachmentThumb
                 styleId={d.id!}
                 cover={d.cover}
@@ -93,9 +93,9 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
             <Descriptions.Item label="入库总量">{d.totalWarehousedQuantity != null ? `${d.totalWarehousedQuantity}` : '-'}</Descriptions.Item>
           </Descriptions>
 
-          <Divider style={{ fontSize: 14, marginTop: 20 }}>商品编码 规格明细</Divider>
+          <Divider className="u-fs-14" style={{ marginTop: 20 }}>商品编码 规格明细</Divider>
           {skuLoading ? (
-            <div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-tertiary)' }}>加载中...</div>
+            <div className="u-ta-center u-p-24" style={{ color: 'var(--color-text-tertiary)' }}>加载中...</div>
           ) : skuList.length > 0 ? (
             <Table<SkuRow>
               columns={buildSkuColumns()}
@@ -104,15 +104,15 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
               size="small"
               pagination={false}
               bordered
-              style={{ marginBottom: 16 }}
+              className="u-mb-16"
             />
           ) : (
-            <div style={{ textAlign: 'center', padding: 16, color: 'var(--color-text-tertiary)', background: 'var(--color-bg-subtle)', borderRadius: 8 }}>
+            <div className="u-ta-center u-p-16 u-br-8" style={{ color: 'var(--color-text-tertiary)', background: 'var(--color-bg-subtle)' }}>
               暂无商品编码数据，请在样衣开发页面配置颜色尺码后同步
             </div>
           )}
 
-          <Divider style={{ fontSize: 14, marginTop: 20 }}>吊牌信息</Divider>
+          <Divider className="u-fs-14" style={{ marginTop: 20 }}>吊牌信息</Divider>
           <Descriptions column={3} size="small" bordered>
             <Descriptions.Item label="质量等级">{String(d.qualityGrade ?? '-')}</Descriptions.Item>
             <Descriptions.Item label="执行标准">{String(d.executeStandard ?? '-')}</Descriptions.Item>

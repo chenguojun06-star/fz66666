@@ -41,7 +41,7 @@ const InboundModal: React.FC<InboundModalProps> = (props) => {
       initialHeight={Math.round(window.innerHeight * 0.82)}
     >
       {showSmartErrorNotice && smartError ? (
-        <div style={{ marginBottom: 12 }}>
+        <div className="u-mb-12">
           <SmartErrorNotice
             error={smartError}
             onFix={() => {
@@ -106,8 +106,8 @@ const InboundModal: React.FC<InboundModalProps> = (props) => {
           </Col>
         </Row>
 
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>系统匹配入库明细</div>
+        <div className="u-mb-16">
+          <div className="u-fw-600 u-mb-8">系统匹配入库明细</div>
           <InboundPlanTable prefillLoading={prefillLoading} planRows={styleSnapshot?.planRows} />
         </div>
 
@@ -117,7 +117,7 @@ const InboundModal: React.FC<InboundModalProps> = (props) => {
               <Select
                 placeholder="请选择仓库"
                 allowClear
-                style={{ width: '100%' }}
+                className="u-w-full"
                 onChange={(areaId: string) => {
                   setSampleSelectedAreaId(areaId);
                   form.setFieldValue('warehouseLocation', undefined);

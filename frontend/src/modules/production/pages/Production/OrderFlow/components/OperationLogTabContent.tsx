@@ -105,7 +105,7 @@ const OperationLogTabContent: React.FC<OperationLogTabContentProps> = ({
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
+      <div className="u-mb-16 u-d-flex u-gap-8">
         <Input.TextArea
           value={newRemark}
           onChange={(e) => setNewRemark(e.target.value)}
@@ -113,14 +113,14 @@ const OperationLogTabContent: React.FC<OperationLogTabContentProps> = ({
           rows={3}
           maxLength={500}
           showCount
-          style={{ flex: 1 }}
+          className="u-flex-1"
         />
         <Button type="primary" onClick={handleAddRemark} disabled={!newRemark.trim()}>
           添加
         </Button>
       </div>
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-tertiary)' }}>加载中...</div>
+        <div className="u-ta-center u-p-24" style={{ color: 'var(--color-text-tertiary)' }}>加载中...</div>
       ) : items.length > 0 ? (
         // D-362d：对齐全站日志标准四列（操作时间/操作类型/操作内容/操作人）——替换旧时间线
         <Table
@@ -129,21 +129,21 @@ const OperationLogTabContent: React.FC<OperationLogTabContentProps> = ({
           dataSource={items}
           pagination={false}
           columns={[
-            { title: '操作时间', dataIndex: 'timeDisplay', key: 'time', width: 150, render: (v: string) => <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{v}</span> },
+            { title: '操作时间', dataIndex: 'timeDisplay', key: 'time', width: 150, render: (v: string) => <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>{v}</span> },
             { title: '操作类型', key: 'type', width: 130, render: (_: unknown, it: UnifiedItem) => it.tag
                 ? <Tag color={it.tag.color} style={{ marginRight: 0 }}>{it.tag.label}</Tag>
-                : <span style={{ fontWeight: 500 }}>{it.author}</span> },
+                : <span className="u-fw-500">{it.author}</span> },
             { title: '操作内容', key: 'content', render: (_: unknown, it: UnifiedItem) => (
               <div>
                 {it.content && <div style={{ wordBreak: 'break-all' }}>{it.content}</div>}
                 {it.images && it.images.length > 0 && (
-                  <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <div className="u-mt-4 u-d-flex u-gap-4 u-fwrap-wrap">
                     <Image.PreviewGroup>
                       {it.images.map((url: string, idx: number) => (
                         <Image
                           key={idx}
                           src={getFullAuthedFileUrl(url)}
-                          style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
+                          className="u-objf-cover u-br-4 u-cur-pointer" style={{ width: 64, height: 64 }}
                           preview={{ cover: '预览' }}
                         />
                       ))}

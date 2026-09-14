@@ -44,7 +44,7 @@ const fmtMoney = (v: number) => `¥${(Number(v) || 0).toLocaleString('zh-CN', { 
 /** 工具说明（标题 + 问号 Tooltip，减少视觉负担） */
 const Hint: React.FC<{ text: string }> = ({ text }) => (
   <Tooltip title={text}>
-    <span style={{ color: 'var(--color-text-tertiary)', cursor: 'help', marginLeft: 4, fontWeight: 400 }}>?</span>
+    <span className="u-ml-4 u-fw-400" style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }}>?</span>
   </Tooltip>
 );
 
@@ -231,7 +231,7 @@ const OrderAnalysisTab: React.FC = () => {
   return (
     <div>
       {/* ① 总览指标 */}
-      <Row gutter={12} style={{ marginBottom: 12 }}>
+      <Row gutter={12} className="u-mb-12">
         <Col xs={12} sm={12} md={6}>
           <Card size="small">
             <Statistic
@@ -277,7 +277,7 @@ const OrderAnalysisTab: React.FC = () => {
       </Row>
 
       {/* ② 状态分布 */}
-      <Row gutter={12} style={{ marginBottom: 12 }}>
+      <Row gutter={12} className="u-mb-12">
         <Col xs={12} sm={8} md={6}>
           <Card size="small">
             <Statistic
@@ -324,11 +324,11 @@ const OrderAnalysisTab: React.FC = () => {
       </Row>
 
       {/* ③ 趋势 + 工厂时效 */}
-      <Row gutter={12} style={{ marginBottom: 12 }}>
+      <Row gutter={12} className="u-mb-12">
         <Col xs={24} lg={14}>
           <Card size="small" title={<>近30天下单趋势<Hint text="每日新增订单数与下单件数" /></>}>
             {filledTrend.length ? (
-              <Suspense fallback={<div style={{ padding: 80, textAlign: 'center', color: 'var(--color-text-tertiary)' }}>加载图表中...</div>}>
+              <Suspense fallback={<div className="u-ta-center" style={{ padding: 80, color: 'var(--color-text-tertiary)' }}>加载图表中...</div>}>
                 <ReactECharts option={trendOption} style={{ height: 260 }} notMerge />
               </Suspense>
             ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />}
@@ -337,7 +337,7 @@ const OrderAnalysisTab: React.FC = () => {
         <Col xs={24} lg={10}>
           <Card size="small" title={<>工厂时效排行<Hint text="按平均完工天数排序，越快越靠前（近365天已完成订单）" /></>}>
             {(data?.factoryRanking || []).length ? (
-              <Suspense fallback={<div style={{ padding: 80, textAlign: 'center', color: 'var(--color-text-tertiary)' }}>加载图表中...</div>}>
+              <Suspense fallback={<div className="u-ta-center" style={{ padding: 80, color: 'var(--color-text-tertiary)' }}>加载图表中...</div>}>
                 <ReactECharts option={factoryOption} style={{ height: 260 }} notMerge />
               </Suspense>
             ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无完成订单数据" />}
@@ -364,44 +364,44 @@ const OrderAnalysisTab: React.FC = () => {
         <Col xs={24} lg={10}>
           <Card size="small" title={<>毛利估算<Hint text="销售额按 报价单价→下单锁定单价 依次兜底估算；成本 = 加工单价×数量 + 物料成本（内部工厂领料审核后自动累计）。估算值仅供参考" /></>}>
             {margin && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+              <div className="u-d-flex u-fd-column u-gap-12">
+                <div className="u-d-flex u-jc-between u-fs-14">
                   <span style={{ color: 'var(--color-text-secondary)' }}>
                     销售额估算
                     <Hint text="按 报价单价 优先、无报价用 下单锁定单价 兜底 × 下单数量" />
                   </span>
-                  <span style={{ fontWeight: 600 }}>{fmtMoney(margin.salesAmount)}</span>
+                  <span className="u-fw-600">{fmtMoney(margin.salesAmount)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                <div className="u-d-flex u-jc-between u-fs-14">
                   <span style={{ color: 'var(--color-text-secondary)' }}>
                     加工成本
                     <Hint text="加工单价 × 下单数量" />
                   </span>
-                  <span style={{ fontWeight: 600 }}>{fmtMoney(margin.processingCost)}</span>
+                  <span className="u-fw-600">{fmtMoney(margin.processingCost)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                <div className="u-d-flex u-jc-between u-fs-14">
                   <span style={{ color: 'var(--color-text-secondary)' }}>
                     物料成本
                     <Hint text="内部工厂物料领取审核结算后自动累计到订单" />
                   </span>
-                  <span style={{ fontWeight: 600 }}>{fmtMoney(margin.materialCost)}</span>
+                  <span className="u-fw-600">{fmtMoney(margin.materialCost)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, borderTop: '1px dashed var(--color-border-light)', paddingTop: 10 }}>
+                <div className="u-d-flex u-jc-between u-fs-14" style={{ borderTop: '1px dashed var(--color-border-light)', paddingTop: 10 }}>
                   <span style={{ color: 'var(--color-text-secondary)' }}>毛利估算</span>
                   <span style={{ fontWeight: 700, color: margin.grossProfit >= 0 ? '#52c41a' : 'var(--color-error)' }}>
                     {fmtMoney(margin.grossProfit)}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                <div className="u-d-flex u-jc-between u-fs-14">
                   <span style={{ color: 'var(--color-text-secondary)' }}>毛利率估算</span>
-                  <span style={{ fontWeight: 700 }}>
+                  <span className="u-fw-700">
                     {margin.hasCostData && margin.grossMarginRate >= 0
                       ? `${margin.grossMarginRate.toFixed(1)}%`
                       : <span style={{ color: 'var(--color-text-tertiary)' }}>暂无成本数据</span>}
                   </span>
                 </div>
                 {!margin.hasCostData && (
-                  <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', background: 'var(--color-bg-container)', borderRadius: 6, padding: '6px 10px' }}>
+                  <div className="u-fs-12 u-br-6 u-p-6px10px" style={{ color: 'var(--color-text-tertiary)', background: 'var(--color-bg-container)' }}>
                     订单未录加工单价、也没有物料成本汇总记录，暂无法估算毛利；内部工厂走完物料领取审核后会自动累计成本。
                   </div>
                 )}

@@ -119,7 +119,7 @@ export default function SampleProcessList({
         alignItems: 'center',
         marginBottom: 8,
       }}>
-        <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+        <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
           工序列表 <strong style={{ color: 'var(--color-text-primary)' }}>{completedCount}/{totalProduction}</strong> 完成
         </span>
       </div>
@@ -146,7 +146,7 @@ export default function SampleProcessList({
           showIcon
           message="该款号尚未配置子工序"
           description="请先在「款式工序配置」中添加子工序，配置后才会显示工序列表。"
-          style={{ marginBottom: 12 }}
+          className="u-mb-12"
         />
       ) : null}
 
@@ -157,7 +157,7 @@ export default function SampleProcessList({
           showIcon
           message={`「${currentStage?.label || '当前阶段'}」尚未配置子工序`}
           description="该阶段未配置具体子工序，如需展示明细请在「款式工序配置」中为该阶段添加子工序。若该阶段无需子工序，可忽略此提示。"
-          style={{ marginBottom: 12 }}
+          className="u-mb-12"
         />
       ) : null}
 
@@ -171,7 +171,7 @@ export default function SampleProcessList({
           loading={loading}
           pagination={false}
           scroll={{ x: 700 }}
-          style={{ fontSize: 13 }}
+          className="u-fs-13"
         />
       ) : null}
 

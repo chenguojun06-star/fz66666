@@ -110,17 +110,17 @@ export const useShareOrderDialog = ({ message }: UseShareOrderDialogOptions) => 
       destroyOnHidden
     >
       {shareModal.loading ? (
-        <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-secondary)' }}>正在生成分享链接…</div>
+        <div className="u-p-24px0 u-ta-center" style={{ color: 'var(--color-text-secondary)' }}>正在生成分享链接…</div>
       ) : (
         <div>
-          <p style={{ marginBottom: 8, color: 'var(--color-text-secondary)', fontSize: 14 }}>
+          <p className="u-mb-8 u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>
             发送以下链接给客户，客户无需登录即可实时查看订单工序跟进（30天有效）：
           </p>
           <Input.TextArea
             value={shareModal.shareUrl}
             rows={2}
             readOnly
-            style={{ fontSize: 14, background: 'var(--color-bg-subtle)', cursor: 'text' }}
+            className="u-fs-14" style={{ background: 'var(--color-bg-subtle)', cursor: 'text' }}
           />
         </div>
       )}

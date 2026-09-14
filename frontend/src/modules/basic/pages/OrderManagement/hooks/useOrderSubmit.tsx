@@ -69,11 +69,11 @@ export const useOrderSubmit = (deps: {
         width: 560,
         title: '下单提醒',
         content: (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="u-d-flex u-fd-column u-gap-12">
             <div style={{ color: 'var(--color-gray-700)' }}>请在提交前确认价格编排与面辅料编排都已核对完成。</div>
-            <div style={{ padding: 12, borderRadius: 10, border: '1px solid var(--color-border-antd)', background: 'var(--color-bg-container)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-                <span style={{ fontWeight: 600 }}>价格编排</span>
+            <div className="u-p-12 u-br-10" style={{ border: '1px solid var(--color-border-antd)', background: 'var(--color-bg-container)' }}>
+              <div className="u-d-flex u-jc-between u-gap-12 u-mb-8">
+                <span className="u-fw-600">价格编排</span>
                 <Tag color={deps.orderOrchestration.pricingStatus === 'error' ? 'error' : deps.orderOrchestration.pricingStatus === 'warning' ? 'warning' : deps.orderOrchestration.pricingStatus === 'success' ? 'success' : 'default'}>
                   {deps.watchedPricingMode === 'MANUAL'
                     ? '手动单价'
@@ -86,17 +86,17 @@ export const useOrderSubmit = (deps: {
                           : '工序单价'}
                 </Tag>
               </div>
-              <div style={{ fontSize: 14, color: 'var(--color-gray-700)' }}>{deps.orderOrchestration.pricingSummary}</div>
-              <div style={{ marginTop: 6, fontSize: 14, color: 'var(--color-primary)' }}>下单锁定单价：¥{deps.resolvedOrderUnitPrice.toFixed(2)} / 件</div>
+              <div className="u-fs-14" style={{ color: 'var(--color-gray-700)' }}>{deps.orderOrchestration.pricingSummary}</div>
+              <div className="u-mt-6 u-fs-14" style={{ color: 'var(--color-primary)' }}>下单锁定单价：¥{deps.resolvedOrderUnitPrice.toFixed(2)} / 件</div>
             </div>
-            <div style={{ padding: 12, borderRadius: 10, border: '1px solid var(--color-border-antd)', background: 'var(--color-bg-container)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-                <span style={{ fontWeight: 600 }}>面辅料编排</span>
+            <div className="u-p-12 u-br-10" style={{ border: '1px solid var(--color-border-antd)', background: 'var(--color-bg-container)' }}>
+              <div className="u-d-flex u-jc-between u-gap-12 u-mb-8">
+                <span className="u-fw-600">面辅料编排</span>
                 <Tag color={deps.orderOrchestration.scatterStatus === 'error' ? 'error' : deps.orderOrchestration.scatterStatus === 'warning' ? 'warning' : 'success'}>
                   {deps.orderOrchestration.scatterMode}
                 </Tag>
               </div>
-              <div style={{ fontSize: 14, color: 'var(--color-gray-700)' }}>{deps.orderOrchestration.scatterSummary}</div>
+              <div className="u-fs-14" style={{ color: 'var(--color-gray-700)' }}>{deps.orderOrchestration.scatterSummary}</div>
             </div>
           </div>
         ),

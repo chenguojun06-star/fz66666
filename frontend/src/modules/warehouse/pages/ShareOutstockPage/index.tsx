@@ -45,7 +45,7 @@ const ShareOutstockPage: React.FC = () => {
     return (
       <div style={loadingStyle}>
         <Spin size="large" />
-        <div style={{ marginTop: 16, color: 'var(--color-text-tertiary)', fontSize: 14 }}>正在加载出货信息…</div>
+        <div className="u-mt-16 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>正在加载出货信息…</div>
       </div>
     );
   }
@@ -69,7 +69,7 @@ const ShareOutstockPage: React.FC = () => {
           <div style={heroHeaderStyle}>
             <div>
               <div style={brandTitleStyle}>
-                <InboxOutlined style={{ marginRight: 6, color: 'var(--color-primary)' }} />
+                <InboxOutlined className="u-mr-6" style={{ color: 'var(--color-primary)' }} />
                 出货追踪
               </div>
               <div style={brandSubtitleStyle}>
@@ -128,7 +128,7 @@ const ShareOutstockPage: React.FC = () => {
 
           <div style={totalRowStyle}>
             <span>合计</span>
-            <span style={{ fontWeight: 700, fontSize: 14 }}>
+            <span className="u-fw-700 u-fs-14">
               {data.totalQuantity ?? 0} 件
               {data.totalAmount != null && (
                 <span style={{ marginLeft: 16, color: 'var(--color-accent-emerald)' }}>{formatMoney(data.totalAmount)}</span>

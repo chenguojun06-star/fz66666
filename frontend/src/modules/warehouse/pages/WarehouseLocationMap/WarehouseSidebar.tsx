@@ -54,7 +54,7 @@ const WarehouseSidebar: React.FC<Props> = ({
                     {area.areaName}
                     <Tag
                       color={area.warehouseType === 'FINISHED' ? 'blue' : area.warehouseType === 'MATERIAL' ? 'green' : 'orange'}
-                      style={{ marginLeft: 6, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}
+                      className="u-ml-6 u-fs-10 u-lh-16px u-p-04px"
                     >
                       {WAREHOUSE_TYPE_MAP[area.warehouseType] ?? '未知'}
                     </Tag>
@@ -66,8 +66,8 @@ const WarehouseSidebar: React.FC<Props> = ({
                 </div>
                 <div className="wlm-warehouse-actions" onClick={e => e.stopPropagation()}>
                   <DeleteOutlined
-                    className="wlm-action-icon"
-                    style={{ color: 'var(--color-danger)', marginRight: 6 }}
+                    className="wlm-action-icon u-mr-6"
+                    style={{ color: 'var(--color-danger)' }}
                     onClick={(e) => onDeleteArea(area.id, area.areaName, e)}
                   />
                   <Switch

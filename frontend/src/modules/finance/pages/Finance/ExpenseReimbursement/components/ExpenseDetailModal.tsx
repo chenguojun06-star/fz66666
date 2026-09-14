@@ -94,25 +94,25 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
       onClose={onClose}
       styles={{ body: { padding: 0 }, wrapper: { width: '85%' } }}
     >
-      <div style={{ display: 'flex', gap: 0, height: 'calc(100vh - 120px)' }}>
+      <div className="u-d-flex" style={{ gap: 0, height: 'calc(100vh - 120px)' }}>
         {/* 左侧：凭证图片 */}
-        <div style={{ width: '42%', background: 'var(--color-slate-50)', borderRight: '1px solid var(--color-border-light)', borderRadius: '6px 0 0 6px', padding: 12, height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="u-p-12 u-h-full u-d-flex u-fd-column u-ov-hidden" style={{ width: '42%', background: 'var(--color-slate-50)', borderRight: '1px solid var(--color-border-light)', borderRadius: '6px 0 0 6px', boxSizing: 'border-box' }}>
           {detailDocList.length === 0 ? (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)' }}>
-              <PictureOutlined style={{ fontSize: 48, marginBottom: 12 }} />
+            <div className="u-flex-1 u-d-flex u-fd-column u-ai-center u-jc-center" style={{ color: 'var(--color-text-quaternary)' }}>
+              <PictureOutlined className="u-mb-12" style={{ fontSize: 48 }} />
               <div>暂无凭证图片</div>
             </div>
           ) : (
             <>
-              <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-base)', borderRadius: 8, overflow: 'hidden', padding: 8 }}>
+              <div className="u-flex-1 u-d-flex u-ai-center u-jc-center u-br-8 u-ov-hidden" style={{ minHeight: 0, background: 'var(--color-bg-base)', padding: 8 }}>
                 <SmartImage
                   src={detailDocList[selectedDocIndex]?.imageUrl}
                   allSrcs={detailDocList.map(doc => doc.imageUrl)}
                   currentIndex={selectedDocIndex}
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 6, display: 'block' }}
+                  className="u-w-full u-h-full u-br-6 u-d-block" style={{ objectFit: 'contain' }}
                 />
               </div>
-              <div style={{ flexShrink: 0, fontSize: 14, color: 'var(--color-text-quaternary)', textAlign: 'center', padding: '6px 0 4px' }}>
+              <div className="u-fshrink-0 u-fs-14 u-ta-center" style={{ color: 'var(--color-text-quaternary)', padding: '6px 0 4px' }}>
                 第 {selectedDocIndex + 1} 张 / 共 {detailDocList.length} 张
               </div>
               {detailDocList.length > 1 && (
@@ -144,7 +144,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
         </div>
 
         {/* 右侧：详情信息 + 审批 */}
-        <div style={{ flex: 1, padding: '12px 20px', overflowY: 'auto', height: '100%', boxSizing: 'border-box' }}>
+        <div className="u-flex-1 u-h-full" style={{ padding: '12px 20px', overflowY: 'auto', boxSizing: 'border-box' }}>
           {/* 审批流程进度条 */}
           <ApprovalFlowProgress
             currentStatus={record.status || 'pending'}
@@ -176,7 +176,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
           <ModalFieldRow><ModalField label="申请人" value={record.applicantName || '-'} /><ModalField label="费用类型" value={typeLabel(record.expenseType)} /></ModalFieldRow>
           <ModalFieldRow><ModalField label="事由" value={record.title || '-'} /></ModalFieldRow>
           <ModalFieldRow>
-            <ModalField label="金额" value={<span style={{ color: 'var(--color-danger)', fontSize: 14, fontWeight: 600 }}>{formatMoney(record.amount)}</span>} />
+            <ModalField label="金额" value={<span className="u-fs-14 u-fw-600" style={{ color: 'var(--color-danger)' }}>{formatMoney(record.amount)}</span>} />
             <ModalField label="费用日期" value={record.expenseDate || '-'} />
           </ModalFieldRow>
           {record.description && <ModalFieldRow><ModalField label="详细说明" value={record.description} /></ModalFieldRow>}
@@ -187,13 +187,13 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
             </ModalFieldRow>
           )}
 
-          <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '16px 0 8px', paddingTop: 12 }}><span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>收款信息</span></div>
+          <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '16px 0 8px', paddingTop: 12 }}><span className="u-fw-500" style={{ color: 'var(--color-text-primary)' }}>收款信息</span></div>
           <ModalFieldRow><ModalField label="收款方式" value={PAYMENT_METHODS.find(m => m.value === record.paymentMethod)?.label || record.paymentMethod || '-'} /><ModalField label="收款户名" value={record.accountName || '-'} /></ModalFieldRow>
           <ModalFieldRow><ModalField label="收款账号" value={record.paymentAccount || '-'} />{record.bankName && <ModalField label="开户银行" value={record.bankName} />}</ModalFieldRow>
 
           {record.approverName && (
             <>
-              <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '16px 0 8px', paddingTop: 12 }}><span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>审批信息</span></div>
+              <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '16px 0 8px', paddingTop: 12 }}><span className="u-fw-500" style={{ color: 'var(--color-text-primary)' }}>审批信息</span></div>
               <ModalFieldRow><ModalField label="审批人" value={record.approverName} /><ModalField label="审批时间" value={record.approvalTime ? dayjs(record.approvalTime).format('YYYY-MM-DD HH:mm') : '-'} /></ModalFieldRow>
               {record.approvalRemark && <ModalFieldRow><ModalField label="审批备注" value={record.approvalRemark} /></ModalFieldRow>}
             </>
@@ -201,7 +201,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
 
           {record.paymentTime && (
             <>
-              <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '16px 0 8px', paddingTop: 12 }}><span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>付款信息</span></div>
+              <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '16px 0 8px', paddingTop: 12 }}><span className="u-fw-500" style={{ color: 'var(--color-text-primary)' }}>付款信息</span></div>
               <ModalFieldRow><ModalField label="付款时间" value={dayjs(record.paymentTime).format('YYYY-MM-DD HH:mm')} /><ModalField label="付款人" value={record.paymentBy || '-'} /></ModalFieldRow>
             </>
           )}
@@ -213,9 +213,9 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
             <>
               {canApprove && (
                 <div style={{ borderTop: '1px solid var(--color-border-light)', margin: '16px 0 8px', paddingTop: 12 }}>
-                  <div style={{ fontWeight: 500, marginBottom: 8, color: 'var(--color-text-primary)' }}>审批与备注</div>
+                  <div className="u-fw-500 u-mb-8" style={{ color: 'var(--color-text-primary)' }}>审批与备注</div>
                   <TextArea rows={3} value={approveRemark} onChange={(e) => setApproveRemark(e.target.value)} placeholder="请填写审批备注，驳回时必须填写原因" />
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+                  <div className="u-d-flex u-jc-end u-gap-8 u-mt-12">
                     <Button danger icon={<CloseCircleOutlined />} onClick={() => handleApprove('reject')}>驳回</Button>
                     <Button type="primary" icon={<CheckCircleOutlined />} onClick={() => handleApprove('approve')}>批准</Button>
                   </div>
@@ -223,7 +223,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
               )}
               {isOwnRecord && !canApprove && (
                 <div style={{ margin: '16px 0 8px' }}>
-                  <Alert type="info" showIcon title="等待审批" description={<><>您提交的报销单需由其他人审批。</><br /><span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>审批人请切换至「全部报销」标签页查看并操作。</span></>} />
+                  <Alert type="info" showIcon title="等待审批" description={<><>您提交的报销单需由其他人审批。</><br /><span className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>审批人请切换至「全部报销」标签页查看并操作。</span></>} />
                 </div>
               )}
             </>

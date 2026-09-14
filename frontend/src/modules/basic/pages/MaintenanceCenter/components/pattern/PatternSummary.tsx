@@ -56,12 +56,12 @@ export const PatternSummary: React.FC<PatternSummaryProps> = ({
       : { ...statusPillBaseStyle, color: 'var(--color-lime-800)', background: 'var(--status-success-bg)', border: '1px solid var(--status-success-border)' };
 
   return (
-    <div style={{ display: 'grid', gap: 10 }}>
+    <div className="u-d-grid u-gap-10">
       <div style={heroStyle}>
         <div style={heroThumbStyle}>
           <AttachmentThumb styleId={(record as any).id} cover={(record as any).cover || null} />
         </div>
-        <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
+        <div className="u-d-grid u-gap-4" style={{ minWidth: 0 }}>
           <div style={heroHeadlineStyle}>
             <div style={{ ...directTitleStyle, fontSize: 15 }}>纸样维护</div>
             <span style={statusPillStyle}>{statusLabel}</span>
@@ -69,7 +69,7 @@ export const PatternSummary: React.FC<PatternSummaryProps> = ({
           <div style={directMetaStyle}>状态 {patternStatusLabel}</div>
           {record.patternCompletedTime ? <div style={directMetaStyle}>完成时间 {formatDateTime(record.patternCompletedTime)}</div> : null}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div className="u-d-flex u-jc-end">
           <StyleAttachmentsButton styleId={(record as any).id} styleNo={(record as any).styleNo} />
         </div>
       </div>
@@ -97,7 +97,7 @@ export const PatternSummary: React.FC<PatternSummaryProps> = ({
       </div>
 
       <div style={metaCardStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+        <div className="u-d-flex u-ai-center u-jc-between u-gap-8 u-fwrap-wrap">
           <div style={{ minWidth: 0 }}>
             <div style={directFieldLabelStyle}>当前读取文件</div>
             <div style={{ ...directMetaStyle, wordBreak: 'break-all' }}>
@@ -105,7 +105,7 @@ export const PatternSummary: React.FC<PatternSummaryProps> = ({
             </div>
           </div>
           {currentPatternFile?.fileUrl ? (
-            <a href={getFullAuthedFileUrl(currentPatternFile.fileUrl)} target="_blank" rel="noreferrer" title="下载当前纸样文件（大货读取版本）" style={{ fontSize: 14, color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>↓ 下载</a>
+            <a href={getFullAuthedFileUrl(currentPatternFile.fileUrl)} target="_blank" rel="noreferrer" title="下载当前纸样文件（大货读取版本）" className="u-fs-14 u-ws-nowrap" style={{ color: 'var(--color-primary)' }}>↓ 下载</a>
           ) : null}
         </div>
         <div style={{ ...directMetaStyle, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -116,30 +116,30 @@ export const PatternSummary: React.FC<PatternSummaryProps> = ({
       </div>
 
       {!patternMetaLoading && patternVersionList.filter(v => v.status === 'archived').length > 0 ? (
-        <div style={{ border: '1px solid var(--color-border-light)', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={{ padding: '8px 12px', background: 'var(--color-bg-container)', borderBottom: '1px solid var(--color-border-light)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>历史封存版本</span>
-            <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', background: 'var(--status-warning-bg)', padding: '1px 8px', borderRadius: 4, border: '1px solid var(--status-warning-border)' }}>已封存 · 仅供参考 · 不参与大货生产</span>
+        <div className="u-br-10 u-ov-hidden" style={{ border: '1px solid var(--color-border-light)' }}>
+          <div className="u-p-8px12px u-d-flex u-ai-center u-gap-8 u-fwrap-wrap" style={{ background: 'var(--color-bg-container)', borderBottom: '1px solid var(--color-border-light)' }}>
+            <span className="u-fs-14 u-fw-600" style={{ color: 'var(--color-text-primary)' }}>历史封存版本</span>
+            <span className="u-fs-14 u-br-4" style={{ color: 'var(--color-text-tertiary)', background: 'var(--status-warning-bg)', padding: '1px 8px', border: '1px solid var(--status-warning-border)' }}>已封存 · 仅供参考 · 不参与大货生产</span>
           </div>
           <div>
             {patternVersionList
               .filter(v => v.status === 'archived')
               .sort((a, b) => (b.version || 0) - (a.version || 0))
               .map((ver, idx) => (
-                <div key={(ver as any).id || idx} style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)', flexShrink: 0 }}>V{ver.version || '-'}</span>
-                      <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', background: 'var(--color-bg-subtle)', padding: '0 6px', borderRadius: 3, border: '1px solid var(--color-border)', flexShrink: 0 }}>封存</span>
-                      <span style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{ver.fileName || '-'}</span>
+                <div key={(ver as any).id || idx} className="u-p-8px12px u-d-flex u-ai-center u-jc-between u-gap-8" style={{ borderBottom: '1px solid var(--color-bg-subtle)' }}>
+                  <div className="u-flex-1" style={{ minWidth: 0 }}>
+                    <div className="u-d-flex u-ai-center u-gap-6 u-fwrap-wrap">
+                      <span className="u-fs-14 u-fw-600 u-fshrink-0" style={{ color: 'var(--color-text-primary)' }}>V{ver.version || '-'}</span>
+                      <span className="u-fs-14 u-fshrink-0" style={{ color: 'var(--color-text-tertiary)', background: 'var(--color-bg-subtle)', padding: '0 6px', borderRadius: 3, border: '1px solid var(--color-border)' }}>封存</span>
+                      <span className="u-fs-14 u-ov-hidden u-ws-nowrap" style={{ color: 'var(--neutral-text-secondary)', textOverflow: 'ellipsis', maxWidth: 180 }}>{ver.fileName || '-'}</span>
                     </div>
-                    <div style={{ marginTop: 2, fontSize: 14, color: 'var(--neutral-text-disabled)' }}>
+                    <div className="u-mt-2 u-fs-14" style={{ color: 'var(--neutral-text-disabled)' }}>
                       上传人 {ver.uploader || '-'} · {ver.createTime ? formatDateTime(ver.createTime) : '-'}
                     </div>
                   </div>
                   {ver.fileUrl ? (
-                    <a href={getFullAuthedFileUrl(ver.fileUrl)} target="_blank" rel="noreferrer" title="下载此封存版本" style={{ fontSize: 14, color: 'var(--color-primary)', flexShrink: 0, whiteSpace: 'nowrap' }}>↓ 下载</a>
-                  ) : <span style={{ fontSize: 14, color: 'var(--color-border-antd)', flexShrink: 0 }}>无文件</span>}
+                    <a href={getFullAuthedFileUrl(ver.fileUrl)} target="_blank" rel="noreferrer" title="下载此封存版本" className="u-fs-14 u-fshrink-0 u-ws-nowrap" style={{ color: 'var(--color-primary)' }}>↓ 下载</a>
+                  ) : <span className="u-fs-14 u-fshrink-0" style={{ color: 'var(--color-border-antd)' }}>无文件</span>}
                 </div>
               ))}
           </div>

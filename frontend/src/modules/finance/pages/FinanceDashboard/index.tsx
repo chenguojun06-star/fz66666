@@ -102,7 +102,7 @@ const FinanceDashboard: React.FC = () => {
             title={detailConfig.title}
             className={styles.tableCard}
             extra={
-              <a onClick={() => goToModule(selectedDetail)} style={{ fontSize: 12 }}>
+              <a onClick={() => goToModule(selectedDetail)} className="u-fs-12">
                 查看全部
               </a>
             }

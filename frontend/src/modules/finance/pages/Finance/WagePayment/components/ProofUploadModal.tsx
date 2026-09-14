@@ -37,7 +37,7 @@ const ProofUploadModal: React.FC<ProofUploadModalProps> = ({
         </Space>
       }
     >
-      <div style={{ padding: '0 8px' }}>
+      <div className="u-p-08px">
         <Form form={proofForm} layout="vertical">
           <Form.Item label="上传支付凭证" name="proofUrl">
             <Input placeholder="自动填充" disabled />

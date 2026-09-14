@@ -29,7 +29,7 @@ const OverviewModal: React.FC<OverviewModalProps> = ({
       footer={<Button onClick={onClose}>关闭</Button>}
     >
       {overviewLoading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-tertiary)' }}>加载中...</div>
+        <div className="u-ta-center" style={{ padding: 40, color: 'var(--color-text-tertiary)' }}>加载中...</div>
       ) : overview ? (
         <div>
           <Descriptions column={2} bordered>
@@ -52,9 +52,9 @@ const OverviewModal: React.FC<OverviewModalProps> = ({
                 percent={overview.storageUsedPercent || 0}
 
                 status={(overview.storageUsedPercent || 0) >= 90 ? 'exception' : 'normal'}
-                style={{ width: 150, display: 'inline-flex' }}
+                className="u-d-inline-flex" style={{ width: 150 }}
               />
-              <span style={{ marginLeft: 8 }}>
+              <span className="u-ml-8">
                 {formatStorageSize(overview.storageUsedMb || 0)}
               </span>
             </Descriptions.Item>
@@ -93,7 +93,7 @@ const OverviewModal: React.FC<OverviewModalProps> = ({
           )}
         </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-tertiary)' }}>暂无数据</div>
+        <div className="u-ta-center" style={{ padding: 40, color: 'var(--color-text-tertiary)' }}>暂无数据</div>
       )}
     </ResizableModal>
   );

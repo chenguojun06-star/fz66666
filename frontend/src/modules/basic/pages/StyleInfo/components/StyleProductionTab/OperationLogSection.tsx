@@ -51,17 +51,17 @@ const OperationLogSection: React.FC<{ styleId?: string | number; styleNo?: strin
   const visibleLogs = showAll ? logs : logs.slice(0, 20);
 
   return (
-    <div style={{ background: '#fff', borderRadius: 8, padding: '16px 24px', marginBottom: 16, border: '1px solid #f0f0f0' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <Typography.Title level={5} style={{ margin: 0 }}>操作记录</Typography.Title>
-        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+    <div className="u-br-8 u-mb-16" style={{ background: '#fff', padding: '16px 24px', border: '1px solid #f0f0f0' }}>
+      <div className="u-d-flex u-ai-center u-gap-8 u-mb-8">
+        <Typography.Title level={5} className="u-m-0">操作记录</Typography.Title>
+        <Typography.Text type="secondary" className="u-fs-12">
           （物料清单同步、库存检查、生成采购任务等款式级操作日志）
         </Typography.Text>
-        <a style={{ marginLeft: 'auto', fontSize: 12 }} onClick={load}>刷新</a>
+        <a className="u-ml-auto u-fs-12" onClick={load}>刷新</a>
       </div>
       <Spin spinning={loading}>
         {logs.length === 0 && !loading ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无操作记录" style={{ margin: '8px 0' }} />
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无操作记录" className="u-m-8px0" />
         ) : (
           // D-360r：对齐订单生产日志的表格布局（操作时间/操作类型/操作内容/操作人），全站日志口径统一
           <div style={{ maxHeight: 320, overflowY: 'auto' }}>
@@ -71,11 +71,11 @@ const OperationLogSection: React.FC<{ styleId?: string | number; styleNo?: strin
               dataSource={visibleLogs}
               pagination={false}
               columns={[
-                { title: '操作时间', dataIndex: 'createTime', key: 'time', width: 150, render: (v: string) => <span style={{ color: '#8c8c8c', fontSize: 12 }}>{v ?? '-'}</span> },
+                { title: '操作时间', dataIndex: 'createTime', key: 'time', width: 150, render: (v: string) => <span className="u-fs-12" style={{ color: '#8c8c8c' }}>{v ?? '-'}</span> },
                 { title: '操作类型', dataIndex: 'action', key: 'type', width: 150, render: (_: unknown, item) => {
                   const tag = BIZ_TAG[item.bizType ?? ''] ?? { color: 'default', text: item.bizType || '日志' };
                   return (
-                    <span style={{ fontWeight: 500 }}>
+                    <span className="u-fw-500">
                       <Tag color={tag.color} style={{ marginInlineEnd: 4 }}>{tag.text}</Tag>
                       {item.action ?? '-'}
                     </span>
@@ -88,8 +88,8 @@ const OperationLogSection: React.FC<{ styleId?: string | number; styleNo?: strin
           </div>
         )}
         {logs.length > 20 && (
-          <div style={{ textAlign: 'center', marginTop: 6 }}>
-            <a style={{ fontSize: 12 }} onClick={() => setShowAll((v) => !v)}>
+          <div className="u-ta-center u-mt-6">
+            <a className="u-fs-12" onClick={() => setShowAll((v) => !v)}>
               {showAll ? `收起，仅显示 20 条` : `查看全部（共 ${logs.length} 条）`}
             </a>
           </div>

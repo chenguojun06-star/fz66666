@@ -112,7 +112,7 @@ const CustomerDialog: React.FC<CustomerDialogProps> = ({
         />
       ) : (
         <Form form={form} layout="vertical" disabled={mode === 'view'}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: '1fr 1fr' }}>
             <Form.Item name="companyName" label="客户名称" rules={[{ required: true, message: '请输入客户名称' }]}>
               <Input placeholder="请输入客户名称" />
             </Form.Item>
@@ -120,7 +120,7 @@ const CustomerDialog: React.FC<CustomerDialogProps> = ({
               <Select options={CUSTOMER_LEVEL_OPTIONS} />
             </Form.Item>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: '1fr 1fr' }}>
             <Form.Item name="contactPerson" label="联系人">
               <Input placeholder="请输入联系人" />
             </Form.Item>
@@ -128,7 +128,7 @@ const CustomerDialog: React.FC<CustomerDialogProps> = ({
               <Input placeholder="请输入联系电话" />
             </Form.Item>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: '1fr 1fr' }}>
             <Form.Item name="industry" label="行业/品类">
               <Input placeholder="请输入行业或品类" />
             </Form.Item>
@@ -151,8 +151,8 @@ const CustomerDialog: React.FC<CustomerDialogProps> = ({
             <Select options={CUSTOMER_STATUS_OPTIONS} />
           </Form.Item>
           {customFields.length > 0 && (
-            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--color-border-light)' }}>
-              <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14, color: 'var(--color-text-primary)' }}>扩展字段</div>
+            <div className="u-mt-16" style={{ paddingTop: 16, borderTop: '1px solid var(--color-border-light)' }}>
+              <div className="u-fw-600 u-mb-12 u-fs-14" style={{ color: 'var(--color-text-primary)' }}>扩展字段</div>
               <ExtFieldsSection
                 fields={customFields}
                 disabled={mode === 'view'}

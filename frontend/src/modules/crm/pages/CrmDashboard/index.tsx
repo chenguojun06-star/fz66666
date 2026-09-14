@@ -58,7 +58,7 @@ const CustomerManagement: React.FC = () => {
   return (
     <>
       {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 12 }}>
+      <Row gutter={16} className="u-mb-12">
         {[
           { icon: <TeamOutlined />, label: '客户总数', value: stats.total, color: 'var(--color-primary)' },
           { icon: <CheckCircleOutlined />, label: '合作中', value: stats.activeCount, color: 'var(--color-success)' },
@@ -69,8 +69,8 @@ const CustomerManagement: React.FC = () => {
             <Card styles={{ body: { display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' } }}>
               <div style={{ fontSize: 28, color: s.color }}>{s.icon}</div>
               <div>
-                <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>{s.value}</div>
-                <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>{s.label}</div>
+                <div className="u-fw-700" style={{ fontSize: 22, lineHeight: 1.2 }}>{s.value}</div>
+                <div className="u-fs-14 u-mt-2" style={{ color: 'var(--color-text-tertiary)' }}>{s.label}</div>
               </div>
             </Card>
           </Col>
@@ -78,7 +78,7 @@ const CustomerManagement: React.FC = () => {
       </Row>
 
       {/* 搜索栏 */}
-      <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
+      <Card className="u-mb-16" styles={{ body: { padding: '12px 16px' } }}>
         <Row gutter={12} align="middle">
           <Col flex="auto">
             <Space>
@@ -163,7 +163,7 @@ const CrmDashboard: React.FC = () => {
     <>
       <div style={{ padding: '24px' }}>
         {checking ? (
-          <div style={{ textAlign: 'center', padding: '80px 0' }}><Spin size="large" /></div>
+          <div className="u-ta-center" style={{ padding: '80px 0' }}><Spin size="large" /></div>
         ) : subscribed ? (
           <CustomerManagement />
         ) : (

@@ -82,12 +82,12 @@ export const CartList: React.FC<CartListProps> = ({
         const imgUrl = url || record.styleImageUrl;
         if (!imgUrl) {
           return (
-            <div style={{ width: 40, height: 40, background: 'var(--color-bg-base)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--color-text-tertiary)' }}>
+            <div className="u-br-4 u-d-flex u-ai-center u-jc-center u-fs-10" style={{ width: 40, height: 40, background: 'var(--color-bg-base)', color: 'var(--color-text-tertiary)' }}>
               无图
             </div>
           );
         }
-        return <Image src={imgUrl} width={40} height={40} style={{ borderRadius: 4, objectFit: 'cover' }} />;
+        return <Image src={imgUrl} width={40} height={40} className="u-br-4 u-objf-cover" />;
       },
     },
     {
@@ -107,17 +107,17 @@ export const CartList: React.FC<CartListProps> = ({
       fixed: 'left',
       render: (id: string, item) => (
         <Checkbox checked={selectedItems.has(id)} onChange={() => onToggleSelect(id)}>
-          <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 2, marginLeft: 4 }}>
-            <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+          <div className="u-d-inline-flex u-fd-column u-ml-4" style={{ gap: 2 }}>
+            <span className="u-fw-600" style={{ color: 'var(--color-text-primary)' }}>
               {item.materialName}
             </span>
-            <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+            <span className="u-fs-12" style={{ color: 'var(--color-text-secondary)' }}>
               {item.materialCode}
               {item.specifications ? ` · ${item.specifications}` : ''}
               {item.color ? ` · ${item.color}` : ''}
             </span>
             {item.styleNo && (
-              <span style={{ fontSize: 12, color: 'var(--color-primary)', cursor: 'pointer' }}
+              <span className="u-fs-12 u-cur-pointer" style={{ color: 'var(--color-primary)' }}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -144,13 +144,13 @@ export const CartList: React.FC<CartListProps> = ({
       key: 'source',
       width: 200,
       render: (_, item) => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+        <div className="u-d-flex u-fd-column" style={{ gap: 2 }}>
+          <span className="u-fs-12" style={{ color: 'var(--color-text-secondary)' }}>
             {SOURCE_LABELS[item.sourceType] ?? '未知'}
           </span>
           {item.sourceNo && (
             <Tooltip title={item.sourceNo}>
-              <span style={{ fontFamily: 'monospace', fontSize: 12 }}>
+              <span className="u-fs-12" style={{ fontFamily: 'monospace' }}>
                 {item.sourceNo}
               </span>
             </Tooltip>
@@ -210,7 +210,7 @@ export const CartList: React.FC<CartListProps> = ({
         const isEditing = editingMap[item.id] !== undefined;
         if (isEditing) {
           return (
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div className="u-d-flex u-gap-4">
               <Button
                 type="text"
                 size="small"
@@ -228,7 +228,7 @@ export const CartList: React.FC<CartListProps> = ({
           );
         }
         return (
-          <div style={{ display: 'flex', gap: 0 }}>
+          <div className="u-d-flex" style={{ gap: 0 }}>
             <Tooltip title="编辑数量">
               <Button
                 type="text"
@@ -263,7 +263,7 @@ export const CartList: React.FC<CartListProps> = ({
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '80px 0' }}>
+      <div className="u-ta-center" style={{ padding: '80px 0' }}>
         <Spin tip="加载中..." />
       </div>
     );

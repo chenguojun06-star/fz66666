@@ -55,8 +55,8 @@ const MarkReceivedModal: React.FC<{
       confirmLoading={saving}
     >
       {record && (
-        <div style={{ marginTop: 16 }}>
-          <Descriptions column={1} bordered style={{ marginBottom: 16 }}>
+        <div className="u-mt-16">
+          <Descriptions column={1} bordered className="u-mb-16">
             <Descriptions.Item label="客户">{record.customerName}</Descriptions.Item>
             <Descriptions.Item label="应收金额">{formatMoney(record.amount)}</Descriptions.Item>
             <Descriptions.Item label="已收金额">{formatMoney(record.receivedAmount)}</Descriptions.Item>
@@ -71,7 +71,7 @@ const MarkReceivedModal: React.FC<{
                 { type: 'number', min: 0.01, message: '金额必须大于0' },
               ]}
             >
-              <InputNumber min={0.01} precision={2} style={{ width: '100%' }} placeholder="0.00" />
+              <InputNumber min={0.01} precision={2} className="u-w-full" placeholder="0.00" />
             </Form.Item>
             <Form.Item name="remark" label="到账备注">
               <Input.TextArea rows={3} placeholder="选填" />

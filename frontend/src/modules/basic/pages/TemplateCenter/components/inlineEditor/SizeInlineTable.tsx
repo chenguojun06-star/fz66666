@@ -223,7 +223,7 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
     value.sizes.forEach((size, sizeIndex) => {
       cols.push({
         title: (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+          <div className="u-d-flex u-ai-center u-gap-4 u-jc-center">
             {editingSizeHeader === size ? (
               <Input
                 ref={sizeHeaderInputRef}
@@ -231,7 +231,7 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
                 onChange={(e) => setSizeHeaderDraft(e.target.value)}
                 onPressEnter={() => handleSizeHeaderConfirm(size)}
                 onBlur={() => handleSizeHeaderConfirm(size)}
-                style={{ width: 80, textAlign: 'center' }}
+                className="u-ta-center" style={{ width: 80 }}
                 autoFocus
               />
             ) : (
@@ -253,12 +253,12 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
                 }}
               >
                 {size}
-                {!readOnly && <EditOutlined style={{ fontSize: 13, opacity: 0.45 }} />}
+                {!readOnly && <EditOutlined className="u-fs-13" style={{ opacity: 0.45 }} />}
               </span>
             )}
             {!readOnly && value.sizes.length > 1 && (
               <Popconfirm title="删除此尺码列？" onConfirm={() => handleRemoveSize(size)} okText="删除" cancelText="取消">
-                <DeleteOutlined style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: 13 }} />
+                <DeleteOutlined className="u-cur-pointer u-fs-13" style={{ color: 'var(--color-danger)' }} />
               </Popconfirm>
             )}
           </div>
@@ -300,7 +300,7 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
         width: 88,
         resizable: false,
         render: (_: unknown, __: SizeTablePart, index?: number) => (
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div className="u-d-flex u-gap-4">
             <Tooltip title="复制此行">
               <Button type="text" icon={<CopyOutlined />} onClick={() => handleDuplicatePart(index ?? 0)} />
             </Tooltip>
@@ -323,7 +323,7 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
   return (
     <div>
       {!readOnly && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+        <div className="u-d-flex u-jc-end u-ai-center u-mb-12 u-gap-8">
             <Button icon={<PlusOutlined />} onClick={handleAddPart}>新增部位</Button>
             <Button icon={<SettingOutlined />} disabled={readOnly} onClick={() => setAttrLibOpen(true)}>基础属性库</Button>
             <Select

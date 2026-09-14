@@ -68,7 +68,7 @@ export function useOrderBom(orderLines: OrderLine[]) {
             const effectiveUnit = calcBomBudgetQty(record) / divisor;
             return (
               <span title="已配置码数用量，此处为加权平均值">
-                {Number(effectiveUnit.toFixed(4))}<span style={{ color: 'var(--warning-color, var(--color-warning-deep))', marginLeft: 2 }}>★</span>
+                {Number(effectiveUnit.toFixed(4))}<span className="u-ml-2" style={{ color: 'var(--warning-color, var(--color-warning-deep))' }}>★</span>
               </span>
             );
           }

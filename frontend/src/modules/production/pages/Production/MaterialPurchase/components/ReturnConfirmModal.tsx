@@ -50,11 +50,11 @@ const ReturnConfirmModal: React.FC<ReturnConfirmModalProps> = ({
       initialHeight={typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.78) : 700}
       scaleWithViewport
     >
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+      <div className="u-d-flex u-gap-16 u-ai-start">
         {/* 左侧：凭证上传 + AI识别 */}
         {!isMobile && (
           <div
-              style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10, outline: 'none' }}
+              className="u-fshrink-0 u-d-flex u-fd-column u-gap-10" style={{ width: 220, outline: 'none' }}
               tabIndex={0}
               onPaste={(e) => {
                 const files = e.clipboardData.files;
@@ -83,7 +83,7 @@ const ReturnConfirmModal: React.FC<ReturnConfirmModalProps> = ({
                 }
               }}
             >
-            <div style={{ color: 'var(--neutral-text)', fontSize: 'var(--font-size-sm)', marginBottom: 2 }}>
+            <div className="u-fs-var--font-size-sm u-mb-2" style={{ color: 'var(--neutral-text)' }}>
               确认人：{String(user?.name || user?.username || '系统操作员').trim() || '系统操作员'}
             </div>
             <input
@@ -91,7 +91,7 @@ const ReturnConfirmModal: React.FC<ReturnConfirmModalProps> = ({
               type="file"
               accept="image/*"
               multiple
-              style={{ display: 'none' }}
+              className="u-d-none"
               onChange={(e) => {
                 const files = e.target.files;
                 if (!files?.length) return;
@@ -128,23 +128,23 @@ const ReturnConfirmModal: React.FC<ReturnConfirmModalProps> = ({
               onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-primary)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-border-antd)'; }}
             >
-              <p className="ant-upload-drag-icon" style={{ marginBottom: 4 }}>
+              <p className="ant-upload-drag-icon u-mb-4" >
                 <InboxOutlined style={{ fontSize: 24, color: 'var(--color-primary)' }} />
               </p>
-              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text)', margin: 0 }}>上传回料凭据图片</p>
-              <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--neutral-text-disabled)', margin: '2px 0 0' }}>支持多张，最多5张</p>
+              <p className="u-fs-var--font-size-sm u-m-0" style={{ color: 'var(--neutral-text)' }}>上传回料凭据图片</p>
+              <p className="u-fs-var--font-size-xs" style={{ color: 'var(--neutral-text-disabled)', margin: '2px 0 0' }}>支持多张，最多5张</p>
             </div>
             {returnEvidenceFiles.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              <div className="u-d-flex u-fwrap-wrap u-gap-4">
                 {returnEvidenceFiles.map((f: any) => (
-                  <div key={f.uid} style={{ width: 48, height: 48, borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+                  <div key={f.uid} className="u-br-4 u-ov-hidden u-pos-relative" style={{ width: 48, height: 48 }}>
                     <img
                       src={f.url || (f.originFileObj ? URL.createObjectURL(f.originFileObj) : '')}
                       alt={f.name || ''}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      className="u-w-full u-h-full u-objf-cover"
                     />
                     <span
-                      style={{ position: 'absolute', top: 0, right: 0, width: 16, height: 16, background: 'rgba(0,0,0,0.5)', color: 'var(--color-bg-base)', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                      className="u-pos-absolute u-fs-10 u-d-flex u-ai-center u-jc-center u-cur-pointer" style={{ top: 0, right: 0, width: 16, height: 16, background: 'rgba(0,0,0,0.5)', color: 'var(--color-bg-base)' }}
                       onClick={(e) => {
                         e.stopPropagation();
                         setReturnEvidenceFiles((prev: any[]) => prev.filter((x: any) => x.uid !== f.uid));
@@ -187,9 +187,9 @@ const ReturnConfirmModal: React.FC<ReturnConfirmModalProps> = ({
         )}
 
         {/* 右侧：物料明细表 */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="u-flex-1" style={{ minWidth: 0 }}>
           {isMobile && (
-            <div style={{ marginBottom: 8, color: 'var(--neutral-text)', fontSize: 'var(--font-size-sm)' }}>
+            <div className="u-mb-8 u-fs-var--font-size-sm" style={{ color: 'var(--neutral-text)' }}>
               确认人：{String(user?.name || user?.username || '系统操作员').trim() || '系统操作员'}
             </div>
           )}
@@ -214,8 +214,8 @@ const ReturnConfirmModal: React.FC<ReturnConfirmModalProps> = ({
                   key: 'materialName',
                   render: (_, record) => (
                     <>
-                      <div style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>{String(record.materialName || '-')}</div>
-                      <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-disabled)' }}>{String(record.materialCode || '')}</div>
+                      <div className="u-fw-600" style={{ color: 'var(--neutral-text)' }}>{String(record.materialName || '-')}</div>
+                      <div className="u-fs-var--font-size-sm" style={{ color: 'var(--neutral-text-disabled)' }}>{String(record.materialCode || '')}</div>
                       <Form.Item name={['items', record.index, 'purchaseId']} initialValue={String(record.id || '')} hidden>
                         <Input />
                       </Form.Item>
@@ -256,7 +256,7 @@ const ReturnConfirmModal: React.FC<ReturnConfirmModalProps> = ({
                       <Form.Item
                         name={['items', record.index, 'returnQuantity']}
                         initialValue={Number(record.returnQuantity || 0) || (max || 0)}
-                        style={{ margin: 0 }}
+                        className="u-m-0"
                         rules={[
                           { required: true, message: '请输入实际回料数量' },
                           {

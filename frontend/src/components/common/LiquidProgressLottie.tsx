@@ -86,7 +86,7 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
 
   return (
     <div style={{ width: D, height: D, display: 'inline-block', flexShrink: 0, borderRadius: '50%', overflow: 'hidden', boxShadow: '0 0 0 1.5px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.1)' }}>
-      <svg width={D} height={D} viewBox={`0 0 ${D} ${D}`} style={{ display: 'block' }}>
+      <svg width={D} height={D} viewBox={`0 0 ${D} ${D}`} className="u-d-block">
         <defs>
           {/*
            * 静态对角渐变（不使用 animateTransform — Chrome 对 linearGradient 的

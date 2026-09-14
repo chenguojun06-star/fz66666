@@ -99,7 +99,7 @@ export const ModalPrimaryField: React.FC<PrimaryFieldProps> = ({
 }) => {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.2, minWidth: 0, maxWidth: '100%', ...style }}>
-      <span style={{ fontSize: 'var(--font-size-base)', color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1.2 }}>{label}</span>
+      <span className="u-fw-600 u-ws-nowrap" style={{ fontSize: 'var(--font-size-base)', color: 'var(--neutral-text-light)', lineHeight: 1.2 }}>{label}</span>
       <span
         style={{
           fontSize: 'var(--font-size-lg)',
@@ -148,7 +148,7 @@ export const ModalFieldRow: React.FC<FieldRowProps> = ({
       }}
     >
       {label && (
-        <span style={{ minWidth: 80, color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
+        <span className="u-fs-var--font-size-sm" style={{ minWidth: 80, color: 'var(--neutral-text-secondary)' }}>
           {label}
         </span>
       )}
@@ -234,7 +234,7 @@ export const ModalSideLayout: React.FC<SideLayoutProps> = ({ left, right, style 
   return (
     <div style={{ display: 'flex', gap: 16, maxWidth: '100%', overflow: 'hidden', ...style }}>
       {left}
-      <div style={{ flex: 1, minWidth: 0, maxWidth: '100%' }}>{right}</div>
+      <div className="u-flex-1" style={{ minWidth: 0, maxWidth: '100%' }}>{right}</div>
     </div>
   );
 };

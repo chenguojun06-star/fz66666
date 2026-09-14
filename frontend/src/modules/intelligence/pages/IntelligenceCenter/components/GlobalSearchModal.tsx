@@ -189,10 +189,10 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
         onKeyDown={handleKeyNav}
       >
         {/* 搜索输入框 */}
-        <div style={{ display: 'flex', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid rgba(0,229,255,0.12)' }}>
+        <div className="u-d-flex u-ai-center" style={{ padding: '14px 18px', borderBottom: '1px solid rgba(0,229,255,0.12)' }}>
           {loading
             ? <Spin style={{ marginRight: 12 }} />
-            : <SearchOutlined style={{ color: 'var(--color-accent-cyan-bright)', fontSize: 14, marginRight: 12 }} />
+            : <SearchOutlined className="u-fs-14" style={{ color: 'var(--color-accent-cyan-bright)', marginRight: 12 }} />
           }
           <Input
             ref={inputRef}
@@ -205,15 +205,15 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
               fontSize: 13, padding: 0,
             }}
           />
-          <span style={{ fontSize: 14, color: 'var(--color-ocean-lighter)', letterSpacing: 0.5, flexShrink: 0 }}>ESC 关闭</span>
+          <span className="u-fs-14 u-fshrink-0" style={{ color: 'var(--color-ocean-lighter)', letterSpacing: 0.5 }}>ESC 关闭</span>
         </div>
 
         {/* 空状态 */}
         {!query && !isCommandMode && (
-          <div style={{ padding: '24px 20px', color: 'var(--color-ocean-lighter)', fontSize: 14, lineHeight: 1.8 }}>
-            <div style={{ marginBottom: 8, color: 'var(--color-blue-400)', fontWeight: 600 }}>搜索示例</div>
+          <div className="u-fs-14 u-lh-18" style={{ padding: '24px 20px', color: 'var(--color-ocean-lighter)' }}>
+            <div className="u-mb-8 u-fw-600" style={{ color: 'var(--color-blue-400)' }}>搜索示例</div>
             {['PO2024001', 'hlq（红领桥 拼音首字母）', '张师傅', '风衣'].map(tip => (
-              <div key={tip} style={{ display: 'inline-block', margin: '3px 4px', padding: '2px 10px', borderRadius: 20, background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.12)', cursor: 'pointer', color: 'var(--color-blue-300)' }}
+              <div key={tip} className="u-d-inline-block u-cur-pointer" style={{ margin: '3px 4px', padding: '2px 10px', borderRadius: 20, background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.12)', color: 'var(--color-blue-300)' }}
                 onClick={() => handleChange(tip)}>
                 {tip}
               </div>
@@ -224,7 +224,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
         {/* 命令模式 */}
         {isCommandMode && (
           <div style={{ maxHeight: 460, overflowY: 'auto', padding: '6px 0 10px' }}>
-            <div style={{ padding: '6px 18px 4px', fontSize: 14, color: 'var(--color-accent-cyan-bright)', fontWeight: 600, letterSpacing: 1 }}>
+            <div className="u-fs-14 u-fw-600" style={{ padding: '6px 18px 4px', color: 'var(--color-accent-cyan-bright)', letterSpacing: 1 }}>
               快捷命令
             </div>
             {filteredCommands.map((cmd, i) => (
@@ -238,20 +238,20 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                 onClick={() => executeCommand(cmd.action)}
                 onMouseEnter={() => setActiveIdx(i)}
               >
-                <span style={{ color: 'var(--color-accent-cyan-bright)', fontSize: 13 }}>{cmd.icon}</span>
-                <span style={{ color: 'var(--color-blue-100)', fontWeight: 500, fontSize: 14 }}>{cmd.label}</span>
-                <RightOutlined style={{ color: 'var(--color-ocean-light)', fontSize: 12, marginLeft: 'auto' }} />
+                <span className="u-fs-13" style={{ color: 'var(--color-accent-cyan-bright)' }}>{cmd.icon}</span>
+                <span className="u-fw-500 u-fs-14" style={{ color: 'var(--color-blue-100)' }}>{cmd.label}</span>
+                <RightOutlined className="u-fs-12 u-ml-auto" style={{ color: 'var(--color-ocean-light)' }} />
               </div>
             ))}
             {filteredCommands.length === 0 && (
-              <div style={{ padding: '16px 18px', color: 'var(--color-blue-400)', fontSize: 14 }}>无匹配命令</div>
+              <div className="u-fs-14" style={{ padding: '16px 18px', color: 'var(--color-blue-400)' }}>无匹配命令</div>
             )}
           </div>
         )}
 
         {/* 结果列表 */}
         {!isCommandMode && totalCount === 0 && query && !loading && (
-          <div style={{ padding: '32px 0', textAlign: 'center' }}>
+          <div className="u-ta-center" style={{ padding: '32px 0' }}>
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={<span style={{ color: 'var(--color-ocean-lighter)' }}>没有找到 "{query}" 相关结果</span>}
@@ -280,7 +280,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
             {/* 订单 */}
             {(result?.orders.length ?? 0) > 0 && (
               <section>
-                <div style={{ padding: '6px 18px 4px', fontSize: 14, color: 'var(--color-ocean-lighter)', fontWeight: 600, letterSpacing: 1 }}>
+                <div className="u-fs-14 u-fw-600" style={{ padding: '6px 18px 4px', color: 'var(--color-ocean-lighter)', letterSpacing: 1 }}>
                   <FileTextOutlined style={{ marginRight: 5 }} />生产订单
                 </div>
                 {result!.orders.map(o => {
@@ -296,20 +296,20 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                       }}
                       onClick={() => handleSelect('order', o)}
                       onMouseEnter={() => setActiveIdx(idx)}>
-                      <span style={{ color: 'var(--color-accent-cyan-bright)', fontWeight: 600, fontSize: 14, minWidth: 120 }}>{o.orderNo}</span>
-                      <span style={{ flex: 1, fontSize: 14, color: 'var(--color-blue-200)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span className="u-fw-600 u-fs-14" style={{ color: 'var(--color-accent-cyan-bright)', minWidth: 120 }}>{o.orderNo}</span>
+                      <span className="u-flex-1 u-fs-14 u-ov-hidden u-ws-nowrap" style={{ color: 'var(--color-blue-200)', textOverflow: 'ellipsis' }}>
                         {o.styleName || o.styleNo}
                       </span>
-                      <span style={{ fontSize: 14, color: 'var(--color-blue-400)', flexShrink: 0 }}>{o.factoryName}</span>
+                      <span className="u-fs-14 u-fshrink-0" style={{ color: 'var(--color-blue-400)' }}>{o.factoryName}</span>
                       <span style={{ fontSize: 14, fontWeight: 600, padding: '1px 6px', borderRadius: 4, flexShrink: 0,
                         color: STATUS_COLOR[o.status] ?? 'var(--color-blue-300)',
                         border: `1px solid ${(STATUS_COLOR[o.status] ?? 'var(--color-blue-300)')}44`,
                         background: `${(STATUS_COLOR[o.status] ?? 'var(--color-blue-300)')}11`
                       }}>{o.statusLabel}</span>
                       {o.progress != null && (
-                        <span style={{ fontSize: 14, color: 'var(--color-ocean-lighter)', flexShrink: 0 }}>{o.progress}%</span>
+                        <span className="u-fs-14 u-fshrink-0" style={{ color: 'var(--color-ocean-lighter)' }}>{o.progress}%</span>
                       )}
-                      <RightOutlined style={{ color: 'var(--color-ocean-light)', fontSize: 12, flexShrink: 0 }} />
+                      <RightOutlined className="u-fs-12 u-fshrink-0" style={{ color: 'var(--color-ocean-light)' }} />
                     </div>
                   );
                 })}
@@ -318,8 +318,8 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
 
             {/* 款式 */}
             {(result?.styles.length ?? 0) > 0 && (
-              <section style={{ marginTop: 4 }}>
-                <div style={{ padding: '6px 18px 4px', fontSize: 14, color: 'var(--color-ocean-lighter)', fontWeight: 600, letterSpacing: 1 }}>
+              <section className="u-mt-4">
+                <div className="u-fs-14 u-fw-600" style={{ padding: '6px 18px 4px', color: 'var(--color-ocean-lighter)', letterSpacing: 1 }}>
                   <AppstoreOutlined style={{ marginRight: 5 }} />款式
                 </div>
                 {result!.styles.map(s => {
@@ -335,10 +335,10 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                       }}
                       onClick={() => handleSelect('style', s)}
                       onMouseEnter={() => setActiveIdx(idx)}>
-                      <span style={{ color: 'var(--color-accent-purple)', fontWeight: 600, fontSize: 14, minWidth: 100 }}>{s.styleNo}</span>
-                      <span style={{ flex: 1, fontSize: 14, color: 'var(--color-blue-200)' }}>{s.styleName}</span>
-                      {s.category && <span style={{ fontSize: 14, color: 'var(--color-blue-400)', flexShrink: 0 }}>{s.category}</span>}
-                      <RightOutlined style={{ color: 'var(--color-ocean-light)', fontSize: 12, flexShrink: 0 }} />
+                      <span className="u-fw-600 u-fs-14" style={{ color: 'var(--color-accent-purple)', minWidth: 100 }}>{s.styleNo}</span>
+                      <span className="u-flex-1 u-fs-14" style={{ color: 'var(--color-blue-200)' }}>{s.styleName}</span>
+                      {s.category && <span className="u-fs-14 u-fshrink-0" style={{ color: 'var(--color-blue-400)' }}>{s.category}</span>}
+                      <RightOutlined className="u-fs-12 u-fshrink-0" style={{ color: 'var(--color-ocean-light)' }} />
                     </div>
                   );
                 })}
@@ -347,8 +347,8 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
 
             {/* 工人 */}
             {(result?.workers.length ?? 0) > 0 && (
-              <section style={{ marginTop: 4 }}>
-                <div style={{ padding: '6px 18px 4px', fontSize: 14, color: 'var(--color-ocean-lighter)', fontWeight: 600, letterSpacing: 1 }}>
+              <section className="u-mt-4">
+                <div className="u-fs-14 u-fw-600" style={{ padding: '6px 18px 4px', color: 'var(--color-ocean-lighter)', letterSpacing: 1 }}>
                   <UserOutlined style={{ marginRight: 5 }} />工人 / 员工
                 </div>
                 {result!.workers.map(w => {
@@ -364,11 +364,11 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                       }}
                       onClick={() => handleSelect('worker', w)}
                       onMouseEnter={() => setActiveIdx(idx)}>
-                      <UserOutlined style={{ color: 'var(--color-accent-neon)', fontSize: 12 }} />
-                      <span style={{ color: 'var(--color-blue-100)', fontWeight: 600, fontSize: 14, minWidth: 72 }}>{w.name}</span>
-                      <span style={{ fontSize: 14, color: 'var(--color-blue-400)', flex: 1 }}>{w.factoryName}</span>
-                      {w.role && <span style={{ fontSize: 14, color: 'var(--color-ocean-lighter)' }}>{w.role}</span>}
-                      <RightOutlined style={{ color: 'var(--color-ocean-light)', fontSize: 12, flexShrink: 0 }} />
+                      <UserOutlined className="u-fs-12" style={{ color: 'var(--color-accent-neon)' }} />
+                      <span className="u-fw-600 u-fs-14" style={{ color: 'var(--color-blue-100)', minWidth: 72 }}>{w.name}</span>
+                      <span className="u-fs-14 u-flex-1" style={{ color: 'var(--color-blue-400)' }}>{w.factoryName}</span>
+                      {w.role && <span className="u-fs-14" style={{ color: 'var(--color-ocean-lighter)' }}>{w.role}</span>}
+                      <RightOutlined className="u-fs-12 u-fshrink-0" style={{ color: 'var(--color-ocean-light)' }} />
                     </div>
                   );
                 })}
@@ -378,11 +378,11 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
         )}
 
         {/* 底部提示 */}
-        <div style={{ padding: '8px 18px', borderTop: '1px solid rgba(0,229,255,0.08)', display: 'flex', gap: 16, fontSize: 14, color: 'var(--color-ocean-light)' }}>
+        <div className="u-d-flex u-gap-16 u-fs-14" style={{ padding: '8px 18px', borderTop: '1px solid rgba(0,229,255,0.08)', color: 'var(--color-ocean-light)' }}>
           <span>↑↓ 导航</span>
           <span>↵ 跳转</span>
           <span>Esc 关闭</span>
-          {totalCount > 0 && <span style={{ marginLeft: 'auto', color: 'var(--color-ocean-lighter)' }}>共 {totalCount} 条结果</span>}
+          {totalCount > 0 && <span className="u-ml-auto" style={{ color: 'var(--color-ocean-lighter)' }}>共 {totalCount} 条结果</span>}
         </div>
       </div>
     </div>

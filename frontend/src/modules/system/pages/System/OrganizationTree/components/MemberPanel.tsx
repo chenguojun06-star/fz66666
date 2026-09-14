@@ -89,12 +89,12 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
       width: '30vw',
       title: `设置「${selectedUnit?.unitName}」的审批负责人`,
       content: (
-        <div style={{ marginTop: 12 }}>
-          <p style={{ color: 'var(--neutral-text-secondary)', marginBottom: 12 }}>
+        <div className="u-mt-12">
+          <p className="u-mb-12" style={{ color: 'var(--neutral-text-secondary)' }}>
             审批负责人将负责审批该部门下成员发起的重要操作（删除/撤回/报废等）。
           </p>
           <Select
-            style={{ width: '100%' }}
+            className="u-w-full"
             showSearch
             allowClear
             optionFilterProp="label"
@@ -123,26 +123,26 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
       {/* 部门信息概览 */}
       <Card
         size="small"
-        style={{ marginBottom: 12, borderColor: 'var(--color-border-antd)' }}
+        className="u-mb-12" style={{ borderColor: 'var(--color-border-antd)' }}
         bodyStyle={{ padding: 12 }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 16, fontWeight: 600 }}>
+        <div className="u-d-flex u-jc-between u-ai-center u-mb-8">
+          <div className="u-d-flex u-ai-center u-gap-8">
+            <span className="u-fs-16 u-fw-600">
               {selectedUnit?.nodeType === 'FACTORY' || selectedUnit?.ownerType === 'EXTERNAL'
-                ? <BankOutlined style={{ color: 'var(--color-primary)', marginRight: 4 }} />
-                : <ApartmentOutlined style={{ color: 'var(--color-accent-purple, var(--color-accent-purple))', marginRight: 4 }} />
+                ? <BankOutlined className="u-mr-4" style={{ color: 'var(--color-primary)' }} />
+                : <ApartmentOutlined className="u-mr-4" style={{ color: 'var(--color-accent-purple, var(--color-accent-purple))' }} />
               }
               {selectedUnit?.unitName}
             </span>
             {selectedUnit?.nodeType === 'FACTORY' && (
-              <Tag color="orange" style={{ margin: 0 }}>工厂</Tag>
+              <Tag color="orange" className="u-m-0">工厂</Tag>
             )}
             {selectedUnit?.ownerType === 'EXTERNAL' && (
-              <Tag color="purple" style={{ margin: 0 }}>外协</Tag>
+              <Tag color="purple" className="u-m-0">外协</Tag>
             )}
           </div>
-          <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+          <div className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
             <Space>
               <span>成员 {unitMemberCount.countMap[String(selectedUnit?.id)] ?? 0} 人</span>
               <span style={{ color: 'var(--color-border-antd)' }}>|</span>
@@ -151,27 +151,27 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
           </div>
         </div>
 
-        <Row gutter={12} style={{ marginTop: 8 }}>
+        <Row gutter={12} className="u-mt-8">
           <Col xs={24} sm={12} md={8} style={{ paddingTop: 4, paddingBottom: 4 }}>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>部门类型:</span>
-            <span style={{ marginLeft: 8, fontSize: 13 }}>
+            <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>部门类型:</span>
+            <span className="u-ml-8 u-fs-13">
               {selectedUnit?.nodeType === 'FACTORY' || selectedUnit?.ownerType === 'EXTERNAL' ? '外协工厂' : '内部部门'}
             </span>
           </Col>
           <Col xs={24} sm={12} md={8} style={{ paddingTop: 4, paddingBottom: 4 }}>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>审批人:</span>
-            <span style={{ marginLeft: 8, fontSize: 13 }}>
+            <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>审批人:</span>
+            <span className="u-ml-8 u-fs-13">
               {selectedUnit?.managerUserName
-                ? <Tag icon={<SafetyCertificateOutlined />} color="blue" style={{ margin: 0 }}>{selectedUnit.managerUserName}</Tag>
+                ? <Tag icon={<SafetyCertificateOutlined />} color="blue" className="u-m-0">{selectedUnit.managerUserName}</Tag>
                 : <span style={{ color: 'var(--color-text-tertiary)' }}>未设置</span>}
             </span>
           </Col>
           <Col xs={24} sm={12} md={8} style={{ paddingTop: 4, paddingBottom: 4 }}>
-            <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>状态:</span>
-            <span style={{ marginLeft: 8, fontSize: 13 }}>
+            <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>状态:</span>
+            <span className="u-ml-8 u-fs-13">
               {selectedUnit && isUnitEnabled(selectedUnit)
-                ? <Tag color="success" style={{ margin: 0 }}>启用</Tag>
-                : <Tag color="default" style={{ margin: 0 }}>未启用</Tag>}
+                ? <Tag color="success" className="u-m-0">启用</Tag>
+                : <Tag color="default" className="u-m-0">未启用</Tag>}
             </span>
           </Col>
         </Row>
@@ -190,8 +190,8 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
                 <div key={cid} className="org-subunit-card" onClick={() => onSelectUnit(cid)}>
                   <div className="org-subunit-name">
                     {child.nodeType === 'FACTORY' || child.ownerType === 'EXTERNAL'
-                      ? <BankOutlined style={{ marginRight: 4 }} />
-                      : <ApartmentOutlined style={{ marginRight: 4 }} />}
+                      ? <BankOutlined className="u-mr-4" />
+                      : <ApartmentOutlined className="u-mr-4" />}
                     {child.unitName}
                   </div>
                   <div className="org-subunit-meta">
@@ -204,10 +204,10 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
         </div>
       )}
 
-      <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontWeight: 600, fontSize: 15 }}>
+      <div className="u-mb-8 u-d-flex u-jc-between u-ai-center">
+        <div className="u-fw-600 u-fs-15">
           成员列表
-          <span style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))', fontWeight: 400, marginLeft: 8, fontSize: 14 }}>
+          <span className="u-fw-400 u-ml-8 u-fs-14" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
             共 {displayedMembers.length} 人
           </span>
         </div>
@@ -221,7 +221,7 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
           </Button>
         )}
       </div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="u-d-flex u-gap-8 u-mb-12 u-fwrap-wrap u-ai-center">
         <Input
           placeholder="搜索姓名或手机号"
           allowClear

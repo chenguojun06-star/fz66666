@@ -47,26 +47,26 @@ const TreePanel: React.FC<TreePanelProps> = ({
         : <ApartmentOutlined style={{ color: 'var(--color-accent-purple)' }} />,
       meta: metaParts.length > 0 ? metaParts.join(' · ') : undefined,
       actions: isFactoryAccount ? undefined : (
-        <span style={{ display: 'inline-flex', gap: 2 }}>
+        <span className="u-d-inline-flex" style={{ gap: 2 }}>
           <Tooltip title={isExternal ? '注册二维码' : '添加成员'}>
             <Button
               type="text" size="small"
-              icon={isExternal ? <QrcodeOutlined style={{ fontSize: 12 }} /> : <UserAddOutlined style={{ fontSize: 12 }} />}
+              icon={isExternal ? <QrcodeOutlined className="u-fs-12" /> : <UserAddOutlined className="u-fs-12" />}
               onClick={e => { e.stopPropagation(); isExternal ? onShowQRCode(node) : onAddMember(node); }}
             />
           </Tooltip>
           {(!isFactoryNode || isExternal) && (
             <>
               <Tooltip title="新增下级">
-                <Button type="text" size="small" icon={<PlusOutlined style={{ fontSize: 12 }} />}
+                <Button type="text" size="small" icon={<PlusOutlined className="u-fs-12" />}
                   onClick={e => { e.stopPropagation(); onAdd(node); }} />
               </Tooltip>
               <Tooltip title="编辑">
-                <Button type="text" size="small" icon={<EditOutlined style={{ fontSize: 12 }} />}
+                <Button type="text" size="small" icon={<EditOutlined className="u-fs-12" />}
                   onClick={e => { e.stopPropagation(); onEdit(node); }} />
               </Tooltip>
               <Tooltip title="删除">
-                <Button type="text" size="small" danger icon={<DeleteOutlined style={{ fontSize: 12 }} />}
+                <Button type="text" size="small" danger icon={<DeleteOutlined className="u-fs-12" />}
                   onClick={e => { e.stopPropagation(); onDelete(node); }} />
               </Tooltip>
             </>

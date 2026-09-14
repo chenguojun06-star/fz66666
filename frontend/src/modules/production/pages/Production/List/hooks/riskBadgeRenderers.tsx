@@ -145,7 +145,7 @@ export function renderAiRiskBadge(aiRisk: DeliveryRiskItem | undefined, orderNo:
 export function renderStagnantBadge(stagnantDays: number | undefined) {
   if (stagnantDays === undefined) return null;
   return (
-    <div className="stagnant-pulse-badge" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+    <div className="stagnant-pulse-badge u-d-flex u-ai-center u-gap-4" >
       <span className="stagnant-pulse-dot" />
       <span>停滞 {stagnantDays} 天</span>
     </div>
@@ -177,20 +177,20 @@ export function renderMerchandiserCell(v: any, record: ProductionOrder, onOpenRe
 
   return (
     <div
-      style={{ position: 'relative', lineHeight: 1.3, cursor: 'pointer' }}
+      className="u-pos-relative u-cur-pointer" style={{ lineHeight: 1.3 }}
       onClick={() => onOpenRemark?.(record, '跟单员 — ' + name)}
     >
       {remarkTime && (
-        <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 2 }}>
+        <div className="u-fs-14 u-mb-2" style={{ color: 'var(--color-text-secondary)' }}>
           {remarkTime}
         </div>
       )}
       <Tooltip title={remark ? `备注：${remark}` : '点击添加备注'} placement="top">
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>{name || '-'}</span>
+        <div className="u-d-inline-flex u-ai-center u-gap-4">
+          <span className="u-fw-500" style={{ color: 'var(--color-text-primary)' }}>{name || '-'}</span>
           {remark && (
             <Badge dot color="var(--color-text-tertiary)" offset={[0, -2]}>
-              <ExclamationCircleOutlined style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }} />
+              <ExclamationCircleOutlined className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }} />
             </Badge>
           )}
         </div>
@@ -230,9 +230,9 @@ export function renderWarehousingCell(record: ProductionOrder, navigate: (path: 
       title={frozen ? '订单已关单/报废/完成' : '点击查看入库进度 / 质检记录'}
     >
       {renderCompletionTimeTag(record, '入库', rate || 0, 'left')}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--neutral-text)' }}>{qualified}/{total}</span>
-        <div style={{ position: 'relative', width: '42px', height: '42px' }}>
+      <div className="u-d-flex u-fd-column u-ai-center" style={{ gap: '2px' }}>
+        <span className="u-fw-600" style={{ fontSize: '11px', color: 'var(--neutral-text)' }}>{qualified}/{total}</span>
+        <div className="u-pos-relative" style={{ width: '42px', height: '42px' }}>
           <svg width="42" height="42" style={{ transform: 'rotate(-90deg)' }}>
             <circle cx="21" cy="21" r="19" fill="none" stroke="var(--color-bg-subtle)" strokeWidth="3" />
             <circle cx="21" cy="21" r="19" fill="none" stroke={getColor()} strokeWidth="3"
@@ -258,7 +258,7 @@ export function renderWarehousingCell(record: ProductionOrder, navigate: (path: 
   return (
     <div
       onClick={(e) => { e.stopPropagation(); onOpenInspectDrawer(record.id!); }}
-      style={{ cursor: 'pointer' }}
+      className="u-cur-pointer"
     >
       {inner}
     </div>

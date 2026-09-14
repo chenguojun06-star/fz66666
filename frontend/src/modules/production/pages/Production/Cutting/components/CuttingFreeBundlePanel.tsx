@@ -203,26 +203,26 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
 
   if (!entryOrderLines?.length) {
     return (
-      <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--neutral-text-light, var(--color-text-muted))', fontSize: 14 }}>
+      <div className="u-p-24px0 u-ta-center u-fs-14" style={{ color: 'var(--neutral-text-light, var(--color-text-muted))' }}>
         订单明细中无颜色/尺码数据，请先在订单中维护颜色尺码信息
       </div>
     );
   }
 
   const statusTag = (orderQty: number, filled: number) => {
-    if (orderQty <= 0) return <Tag style={{ margin: 0 }} color="default">无下单</Tag>;
-    if (filled > orderQty) return <Tag style={{ margin: 0 }} color="error">超出 {filled - orderQty} 件</Tag>;
-    if (filled === orderQty) return <Tag style={{ margin: 0 }} color="success">已满</Tag>;
-    if (filled > 0) return <Tag style={{ margin: 0 }} color="processing">未满</Tag>;
-    return <Tag style={{ margin: 0 }} color="default">未填</Tag>;
+    if (orderQty <= 0) return <Tag className="u-m-0" color="default">无下单</Tag>;
+    if (filled > orderQty) return <Tag className="u-m-0" color="error">超出 {filled - orderQty} 件</Tag>;
+    if (filled === orderQty) return <Tag className="u-m-0" color="success">已满</Tag>;
+    if (filled > 0) return <Tag className="u-m-0" color="processing">未满</Tag>;
+    return <Tag className="u-m-0" color="default">未填</Tag>;
   };
 
   return (
     <div ref={panelRef} style={{ padding: '0 0 8px' }}>
       {/* 顶栏说明 + 添加行 */}
-      <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+      <div className="u-mb-12 u-d-flex u-ai-center u-jc-between u-fwrap-wrap u-gap-8">
         <Space size={8}>
-          <Text strong style={{ fontSize: 15 }}>自由编菲</Text>
+          <Text strong className="u-fs-15">自由编菲</Text>
           <Tooltip title="自由添加菲号行，颜色/尺码按下单选择；数量即面料层数，下单数量仅作提醒不限制输入。快捷键：Ctrl/⌘+Enter 加 1 行 · Ctrl/⌘+Shift+Enter 加 5 行">
             <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
           </Tooltip>
@@ -237,7 +237,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
         >
           <Button icon={<PlusOutlined />} disabled={disabled}>
             添加行
-            <DownOutlined style={{ fontSize: 10, marginLeft: 2 }} />
+            <DownOutlined className="u-fs-10 u-ml-2" />
           </Button>
         </Dropdown>
       </div>
@@ -251,7 +251,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
         }}
       >
         <Space size={8}>
-          <Text strong style={{ fontSize: 15 }}>快捷分扎</Text>
+          <Text strong className="u-fs-15">快捷分扎</Text>
           <Tooltip title="按「颜色 + 尺码 + 每扎件数 × 扎数」一次追加多行，减少逐行添加">
             <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
           </Tooltip>
@@ -296,25 +296,25 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
       </div>
 
       {rows.length === 0 && (
-        <div style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-tertiary)', background: 'var(--color-bg-container)', borderRadius: 6, marginBottom: 12 }}>
+        <div className="u-ta-center u-br-6 u-mb-12" style={{ padding: '16px', color: 'var(--color-text-tertiary)', background: 'var(--color-bg-container)' }}>
           暂无数据，点击「添加行」、使用「快捷分扎」或按 Ctrl/⌘+Enter 开始编辑
         </div>
       )}
 
       {rows.length > 0 && (
-        <div style={{ overflowX: 'auto', marginBottom: 12 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15 }}>
+        <div className="u-mb-12" style={{ overflowX: 'auto' }}>
+          <table className="u-w-full u-fs-15" style={{ borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--color-bg-container)', borderBottom: '2px solid var(--color-border-light)' }}>
-                <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600, width: 36 }}>
+                <th className="u-p-8px12px u-ta-center u-fw-600" style={{ width: 36 }}>
                   <Checkbox checked={allChecked} indeterminate={selectedKeys.length > 0 && !allChecked} disabled={disabled || rows.length === 0} onChange={toggleAll} />
                 </th>
-                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, width: 30 }}>#</th>
-                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>颜色</th>
-                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>尺码</th>
-                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>数量(层数)</th>
-                <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600, width: 80 }}>下单数</th>
-                <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600, width: 90 }}>操作</th>
+                <th className="u-p-8px12px u-ta-left u-fw-600" style={{ width: 30 }}>#</th>
+                <th className="u-p-8px12px u-ta-left u-fw-600">颜色</th>
+                <th className="u-p-8px12px u-ta-left u-fw-600">尺码</th>
+                <th className="u-p-8px12px u-ta-left u-fw-600">数量(层数)</th>
+                <th className="u-p-8px12px u-ta-center u-fw-600" style={{ width: 80 }}>下单数</th>
+                <th className="u-p-8px12px u-ta-center u-fw-600" style={{ width: 90 }}>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -325,7 +325,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                 const overOrder = orderQty > 0 && filledQty > orderQty;
                 return (
                   <tr key={row.key} style={{ borderBottom: '1px solid var(--color-border-light)', background: overOrder ? 'var(--color-error-bg, #fff1f0)' : undefined }}>
-                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                    <td className="u-p-6px12px u-ta-center">
                       <Checkbox
                         checked={selectedKeys.includes(row.key)}
                         disabled={disabled}
@@ -335,8 +335,8 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                         }}
                       />
                     </td>
-                    <td style={{ padding: '6px 12px', color: 'var(--color-text-tertiary)' }}>{idx + 1}</td>
-                    <td style={{ padding: '6px 12px' }}>
+                    <td className="u-p-6px12px" style={{ color: 'var(--color-text-tertiary)' }}>{idx + 1}</td>
+                    <td className="u-p-6px12px">
                       <AutoComplete
                         value={row.color || undefined}
                         options={colorOptions}
@@ -347,7 +347,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                         allowClear
                       />
                     </td>
-                    <td style={{ padding: '6px 12px' }}>
+                    <td className="u-p-6px12px">
                       <AutoComplete
                         value={row.size || undefined}
                         options={sizeOptions}
@@ -358,7 +358,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                         allowClear
                       />
                     </td>
-                    <td style={{ padding: '6px 12px' }}>
+                    <td className="u-p-6px12px">
                       <Space size={4}>
                         <InputNumber
                           min={0} max={9999} precision={0}
@@ -369,16 +369,16 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                           onChange={(v) => updateRow(row.key, 'quantity', v ?? 0)}
                         />
                         {overOrder && (
-                          <Tag color="error" style={{ margin: 0, fontSize: 12, lineHeight: '20px' }}>超 {filledQty - orderQty}</Tag>
+                          <Tag color="error" className="u-m-0 u-fs-12" style={{ lineHeight: '20px' }}>超 {filledQty - orderQty}</Tag>
                         )}
                       </Space>
                     </td>
-                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                    <td className="u-p-6px12px u-ta-center">
                       <Text style={{ color: orderQty > 0 ? 'var(--color-primary)' : 'var(--color-text-quaternary)', fontWeight: orderQty > 0 ? 500 : 400, fontSize: 14 }}>
                         {orderQty > 0 ? orderQty : '-'}
                       </Text>
                     </td>
-                    <td style={{ padding: '6px 12px', textAlign: 'center' }}>
+                    <td className="u-p-6px12px u-ta-center">
                       <Popconfirm title="确定删除此行吗？" onConfirm={() => deleteRow(row.key)} okText="确定" cancelText="取消">
                         <Button type="text" danger size="small" icon={<DeleteOutlined />} disabled={disabled}>
                           删除
@@ -395,23 +395,23 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
 
       {/* 码数汇总匹配：下单数 / 已填 / 剩余 */}
       {summaryRows.length > 0 && (
-        <div style={{ marginBottom: 12 }}>
-          <Space size={8} style={{ marginBottom: 6 }}>
-            <Text strong style={{ fontSize: 14 }}>码数汇总匹配</Text>
+        <div className="u-mb-12">
+          <Space size={8} className="u-mb-6">
+            <Text strong className="u-fs-14">码数汇总匹配</Text>
             <Tooltip title="各码已填数量与下单数量对比：未填/未满/已满/超出，超出标红提醒">
               <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
             </Tooltip>
           </Space>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15 }}>
+            <table className="u-w-full u-fs-15" style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--color-bg-container)', borderBottom: '1px solid var(--color-border-light)' }}>
-                  <th style={{ padding: '6px 12px', textAlign: 'left', fontWeight: 600, width: 120 }}>颜色</th>
-                  <th style={{ padding: '6px 12px', textAlign: 'left', fontWeight: 600, width: 120 }}>尺码</th>
-                  <th style={{ padding: '6px 12px', textAlign: 'center', fontWeight: 600, width: 90 }}>下单数</th>
-                  <th style={{ padding: '6px 12px', textAlign: 'center', fontWeight: 600, width: 90 }}>已填</th>
-                  <th style={{ padding: '6px 12px', textAlign: 'center', fontWeight: 600, width: 90 }}>剩余</th>
-                  <th style={{ padding: '6px 12px', textAlign: 'center', fontWeight: 600, width: 100 }}>状态</th>
+                  <th className="u-p-6px12px u-ta-left u-fw-600" style={{ width: 120 }}>颜色</th>
+                  <th className="u-p-6px12px u-ta-left u-fw-600" style={{ width: 120 }}>尺码</th>
+                  <th className="u-p-6px12px u-ta-center u-fw-600" style={{ width: 90 }}>下单数</th>
+                  <th className="u-p-6px12px u-ta-center u-fw-600" style={{ width: 90 }}>已填</th>
+                  <th className="u-p-6px12px u-ta-center u-fw-600" style={{ width: 90 }}>剩余</th>
+                  <th className="u-p-6px12px u-ta-center u-fw-600" style={{ width: 100 }}>状态</th>
                 </tr>
               </thead>
               <tbody>
@@ -419,20 +419,20 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                   <tr key={`${r.color}|${r.size}`} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
                     <td style={{ padding: '5px 12px' }}>{r.color}</td>
                     <td style={{ padding: '5px 12px' }}>{r.size}</td>
-                    <td style={{ padding: '5px 12px', textAlign: 'center' }}>
+                    <td className="u-ta-center" style={{ padding: '5px 12px' }}>
                       <Text style={{ color: r.orderQty > 0 ? 'var(--color-primary)' : 'var(--color-text-quaternary)' }}>{r.orderQty > 0 ? r.orderQty : '-'}</Text>
                     </td>
-                    <td style={{ padding: '5px 12px', textAlign: 'center' }}>
+                    <td className="u-ta-center" style={{ padding: '5px 12px' }}>
                       <Text style={{ color: r.filled > r.orderQty && r.orderQty > 0 ? 'var(--color-error, #ff4d4f)' : undefined, fontWeight: r.filled > 0 ? 500 : 400 }}>
                         {r.filled > 0 ? r.filled : '-'}
                       </Text>
                     </td>
-                    <td style={{ padding: '5px 12px', textAlign: 'center' }}>
+                    <td className="u-ta-center" style={{ padding: '5px 12px' }}>
                       <Text style={{ color: r.remaining === 0 && r.orderQty > 0 ? 'var(--color-success, #52c41a)' : undefined }}>
                         {r.orderQty > 0 ? r.remaining : '-'}
                       </Text>
                     </td>
-                    <td style={{ padding: '5px 12px', textAlign: 'center' }}>{statusTag(r.orderQty, r.filled)}</td>
+                    <td className="u-ta-center" style={{ padding: '5px 12px' }}>{statusTag(r.orderQty, r.filled)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -442,7 +442,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
       )}
 
       {rows.length > 0 && (
-        <Space wrap style={{ marginBottom: 12 }}>
+        <Space wrap className="u-mb-12">
           <Tag color="blue">共 {rows.length} 行</Tag>
           <Tag color="green">总数量：{totalQty} 件</Tag>
           <Popconfirm

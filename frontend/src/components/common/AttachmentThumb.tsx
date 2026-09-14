@@ -127,7 +127,7 @@ const AttachmentThumb: React.FC<AttachmentThumbProps> = ({
       }}
     >
       {loading ? (
-        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>...</span>
+        <span className="u-fs-var--font-size-xs u-d-flex u-ai-center" style={{ color: 'var(--neutral-text-disabled)' }}>...</span>
       ) : url ? (
         <img
           src={getFullAuthedFileUrl(url)}
@@ -144,7 +144,7 @@ const AttachmentThumb: React.FC<AttachmentThumbProps> = ({
           }}
         />
       ) : (
-        <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center' }}>无图</span>
+        <span className="u-fs-var--font-size-xs u-d-flex u-ai-center" style={{ color: 'var(--neutral-text-disabled)' }}>无图</span>
       )}
     </div>
   );

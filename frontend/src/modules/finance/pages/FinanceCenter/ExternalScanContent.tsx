@@ -255,7 +255,7 @@ const ExternalScanContent: React.FC = () => {
   return (
     <Card styles={{ body: { padding: '16px 20px' } }}>
       {/* 搜索栏 */}
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+      <div className="u-mb-16 u-d-flex u-jc-between u-ai-center u-fwrap-wrap u-gap-12">
         <Space wrap>
           <RangePicker
             value={[pendingFilters.startTime, pendingFilters.endTime]}

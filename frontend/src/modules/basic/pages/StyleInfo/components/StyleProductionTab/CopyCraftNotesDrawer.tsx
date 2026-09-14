@@ -193,7 +193,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
       title="拷贝其他款工艺说明"
       footer={
         <Space>
-          <Text type="secondary" style={{ fontSize: 12, marginInlineEnd: 12 }}>
+          <Text type="secondary" className="u-fs-12" style={{ marginInlineEnd: 12 }}>
             确认后整篇替换当前工艺说明（当前内容会被覆盖，替换后自动保存）
           </Text>
           <Button onClick={onClose}>取消</Button>
@@ -203,17 +203,17 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
         </Space>
       }
     >
-      <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', gap: 16, alignItems: 'stretch', minHeight: 0, overflow: 'hidden' }}>
+      <div className="u-flex-1 u-h-full u-d-flex u-gap-16 u-ov-hidden" style={{ minWidth: 0, alignItems: 'stretch', minHeight: 0 }}>
         {/* ── 左：来源选择 ── */}
-        <div style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <Text strong style={{ display: 'block', marginBottom: 8 }}>
+        <div className="u-fshrink-0 u-d-flex u-fd-column" style={{ width: 300, minHeight: 0 }}>
+          <Text strong className="u-d-block u-mb-8">
             {sourceMode === 'style' ? '选择款' : '选择通用模板'}
           </Text>
           <Radio.Group
             value={sourceMode}
             optionType="button"
             buttonStyle="solid"
-            style={{ marginBottom: 8 }}
+            className="u-mb-8"
             onChange={(e) => {
               setSourceMode(e.target.value);
               setSelectedStyle(null);
@@ -227,7 +227,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
           />
           {sourceMode === 'style' && (
             <>
-              <Space direction="vertical" size={6} style={{ width: '100%', marginBottom: 8 }}>
+              <Space direction="vertical" size={6} className="u-w-full u-mb-8">
                 <Input
                   placeholder="款号"
                   allowClear
@@ -250,11 +250,11 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
               <div style={listStyle}>
                 {styles.map((s) => (
                   <div key={String(s.id)} onClick={() => handlePickStyle(s)} style={itemStyle(Boolean(selectedStyle && String(selectedStyle.id) === String(s.id)))}>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div className="u-d-flex u-gap-8 u-ai-center">
                       <StyleCoverThumb src={s.cover || s.styleCover || null} styleId={s.id} styleNo={String(s.styleNo || '')} size={40} borderRadius={4} />
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontWeight: 500, fontSize: 13 }}>{s.styleNo || '-'}</div>
-                        <Text type="secondary" style={{ fontSize: 12, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div className="u-flex-1" style={{ minWidth: 0 }}>
+                        <div className="u-fw-500 u-fs-13">{s.styleNo || '-'}</div>
+                        <Text type="secondary" className="u-fs-12 u-d-block u-ov-hidden u-ws-nowrap" style={{ textOverflow: 'ellipsis' }}>
                           {s.styleName || '-'}
                         </Text>
                       </div>
@@ -262,7 +262,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
                   </div>
                 ))}
                 {!styles.length && !styleLoading && (
-                  <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 13 }}>暂无款式</div>
+                  <div className="u-p-24px0 u-ta-center u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>暂无款式</div>
                 )}
               </div>
               <Pagination
@@ -271,7 +271,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
                 pageSize={stylePageSize}
                 total={styleTotal}
                 onChange={(p) => { setStylePage(p); void fetchStyles(p); }}
-                style={{ marginTop: 8, textAlign: 'right' }}
+                className="u-mt-8 u-ta-right"
                 showSizeChanger={false}
               />
             </>
@@ -280,34 +280,34 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
             <div style={listStyle}>
               {templates.map((t) => (
                 <div key={String(t.id)} onClick={() => void handlePickTemplate(t)} style={itemStyle(Boolean(selectedTemplate && String(selectedTemplate.id) === String(t.id)))}>
-                  <div style={{ fontWeight: 500, fontSize: 13 }}>{t.templateName || '-'}</div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
+                  <div className="u-fw-500 u-fs-13">{t.templateName || '-'}</div>
+                  <Text type="secondary" className="u-fs-12">
                     {t.sourceStyleNo ? `来源款 ${t.sourceStyleNo}` : '未关联来源款'}
                   </Text>
                 </div>
               ))}
               {!templates.length && !templatesLoading && (
-                <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 13 }}>暂无通用模板</div>
+                <div className="u-p-24px0 u-ta-center u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>暂无通用模板</div>
               )}
             </div>
           )}
         </div>
 
         {/* ── 右：富文本预览 ── */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-          <Space wrap style={{ marginBottom: 12 }}>
+        <div className="u-flex-1 u-d-flex u-fd-column u-ov-hidden" style={{ minWidth: 0, minHeight: 0 }}>
+          <Space wrap className="u-mb-12">
             <Text strong>
               工艺说明预览
               {selectedStyle ? `（${selectedStyle.styleNo || ''}）` : selectedTemplate ? `（${selectedTemplate.templateName || ''}）` : ''}
             </Text>
-            <Text type="secondary" style={{ fontSize: 12 }}>确认导入后整篇替换当前工艺说明</Text>
+            <Text type="secondary" className="u-fs-12">确认导入后整篇替换当前工艺说明</Text>
           </Space>
           {!selectedStyle && !selectedTemplate ? (
-            <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 14 }}>
+            <div className="u-ta-center u-fs-14" style={{ padding: '60px 0', color: 'var(--color-text-tertiary)' }}>
               {sourceMode === 'template' ? '请先在左侧选择通用模板' : '请先在左侧选择要拷贝的款'}
             </div>
           ) : (
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: 6, padding: 16, background: 'var(--color-bg-container)' }}>
+            <div className="u-flex-1 u-br-6 u-p-16" style={{ minHeight: 0, overflowY: 'auto', border: '1px solid var(--color-border)', background: 'var(--color-bg-container)' }}>
               <Spin spinning={previewLoading}>
                 <SheetRichViewer content={previewHtml} minHeight={320} />
               </Spin>

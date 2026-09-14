@@ -85,30 +85,30 @@ export const useStyleProcessAi = ({ styleId, data, editMode, enterEdit }: UseSty
           title: `AI 推荐 ${incoming.length} 道完整工序`,
           width: 560,
           content: (<div>
-            <p style={{ marginBottom: 12, color: 'var(--color-text-secondary)' }}>
+            <p className="u-mb-12" style={{ color: 'var(--color-text-secondary)' }}>
               数据来源：本厂历史数据 · {matchDesc} · {sampleCount} 个样本参考
             </p>
-            <p style={{ marginBottom: 12, color: 'var(--color-warning)', fontSize: 13 }}>
+            <p className="u-mb-12 u-fs-13" style={{ color: 'var(--color-warning)' }}>
               ⚠ 确认后将<strong>替换当前所有工序</strong>（共 {data.length} 道）。
               {overlapCount > 0 && ` 其中 ${overlapCount} 道同名工序将保留你已设置的价格，`}
               {newCount > 0 && `新增 ${newCount} 道工序。`}
             </p>
             <div style={{ maxHeight: 360, overflowY: 'auto', paddingRight: 8 }}>
               {grouped.length > 0 ? grouped.map((g, gi) => (
-                <div key={gi} style={{ marginBottom: 12 }}>
-                  <Space style={{ marginBottom: 6 }}>
-                    <Tag color={STAGE_COLOR[g.parentNode] || 'default'} style={{ fontSize: 13, fontWeight: 600 }}>
+                <div key={gi} className="u-mb-12">
+                  <Space className="u-mb-6">
+                    <Tag color={STAGE_COLOR[g.parentNode] || 'default'} className="u-fs-13 u-fw-600">
                       {g.parentNode}
                     </Tag>
-                    <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+                    <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
                       {g.items.length} 道
                     </span>
                   </Space>
                   <div style={{ paddingLeft: 8 }}>
                     {g.items.map((p, pi) => (
-                      <div key={pi} style={{ color: 'var(--color-text-secondary)', lineHeight: '22px', fontSize: 13 }}>
+                      <div key={pi} className="u-fs-13" style={{ color: 'var(--color-text-secondary)', lineHeight: '22px' }}>
                         • {p.processName}
-                        <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 8 }}>
+                        <span className="u-ml-8" style={{ color: 'var(--color-text-tertiary)' }}>
                           参考价 ¥{p.suggestedPrice ?? 0}
                         </span>
                       </div>

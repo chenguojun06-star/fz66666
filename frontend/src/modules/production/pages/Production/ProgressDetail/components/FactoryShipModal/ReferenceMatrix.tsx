@@ -37,14 +37,14 @@ const ReferenceMatrix: React.FC<ReferenceMatrixProps> = ({ orderRecord, detailSu
 
   return (
     <>
-      <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
+      <div className="u-fw-600 u-fs-14 u-mb-6" style={{ color: 'var(--color-text-secondary)' }}>
         下单与已发明细参考
-        <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: 8 }}>
+        <span className="u-fw-400 u-ml-8" style={{ color: 'var(--color-text-muted)' }}>
           （格式：下单数 / <span style={{ color: 'var(--color-primary)' }}>已发数</span>）
         </span>
       </div>
-      <div style={{ overflowX: 'auto', marginBottom: 12 }}>
-        <table style={{ borderCollapse: 'collapse', minWidth: '100%', fontSize: 14 }}>
+      <div className="u-mb-12" style={{ overflowX: 'auto' }}>
+        <table className="u-fs-14" style={{ borderCollapse: 'collapse', minWidth: '100%' }}>
           <thead>
             <tr style={{ background: 'var(--color-bg-container)' }}>
               <th style={thStyle}>颜色</th>

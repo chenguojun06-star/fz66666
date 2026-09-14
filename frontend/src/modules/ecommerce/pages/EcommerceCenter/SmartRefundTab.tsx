@@ -130,7 +130,7 @@ const SmartRefundTab: React.FC = () => {
     { title: '数量', dataIndex: 'quantity', width: 70, align: 'center' as const },
     {
       title: '退款金额', dataIndex: 'payAmount', width: 100, align: 'right' as const,
-      render: (v: number) => <span style={{ fontWeight: 600, color: 'var(--color-danger)' }}>¥{Number(v).toFixed(2)}</span>,
+      render: (v: number) => <span className="u-fw-600" style={{ color: 'var(--color-danger)' }}>¥{Number(v).toFixed(2)}</span>,
     },
     {
       title: '发货状态', dataIndex: 'hasShipped', width: 80,
@@ -183,9 +183,9 @@ const SmartRefundTab: React.FC = () => {
 
   return (
     <div>
-      <Row gutter={16} style={{ marginBottom: 16 }}>
+      <Row gutter={16} className="u-mb-16">
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'var(--status-processing-bg)', borderRadius: 12 }}>
+          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-processing-bg)' }}>
             <Statistic
               title="退款申请"
               value={stats?.totalRequests || 0}
@@ -196,7 +196,7 @@ const SmartRefundTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'var(--status-warning-bg)', borderRadius: 12 }}>
+          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-warning-bg)' }}>
             <Statistic
               title="待处理"
               value={stats?.pendingCount || 0}
@@ -207,7 +207,7 @@ const SmartRefundTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'var(--status-success-bg)', borderRadius: 12 }}>
+          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-success-bg)' }}>
             <Statistic
               title="自动通过"
               value={stats?.autoApprovedCount || 0}
@@ -218,7 +218,7 @@ const SmartRefundTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" style={{ background: 'var(--status-error-bg)', borderRadius: 12 }}>
+          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-error-bg)' }}>
             <Statistic
               title="退款总额"
               value={Number(stats?.totalRefundAmount || 0)}
@@ -230,9 +230,9 @@ const SmartRefundTab: React.FC = () => {
         </Col>
       </Row>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
-          <RobotOutlined style={{ marginRight: 4, color: 'var(--color-primary)' }} />
+      <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
+        <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
+          <RobotOutlined className="u-mr-4" style={{ color: 'var(--color-primary)' }} />
           AI 退款顾问自动审核退款请求：≤100元且未发货自动通过，大额/已发货需人工审核
         </span>
         <Space>
@@ -243,7 +243,7 @@ const SmartRefundTab: React.FC = () => {
         </Space>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+      <div className="u-d-flex u-gap-12 u-mb-12">
         <Input
           placeholder="搜索订单号"
           prefix={<SearchOutlined />}
@@ -286,31 +286,31 @@ const SmartRefundTab: React.FC = () => {
       >
         {currentRecord && (
           <div>
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 500, marginBottom: 8 }}>订单号: {currentRecord.orderNo}</div>
+            <div className="u-mb-16">
+              <div className="u-fw-500 u-mb-8">订单号: {currentRecord.orderNo}</div>
               <div style={{ color: 'var(--color-text-secondary)' }}>平台订单号: {currentRecord.platformOrderNo || '-'}</div>
             </div>
-            <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
+            <div className="u-d-flex u-mb-16" style={{ gap: 24 }}>
               <div>
-                <div style={{ color: 'var(--color-text-quaternary)', fontSize: 13, marginBottom: 4 }}>退款金额</div>
-                <div style={{ fontSize: 24, fontWeight: 600, color: 'var(--color-danger)' }}>¥{Number(currentRecord.payAmount).toFixed(2)}</div>
+                <div className="u-fs-13 u-mb-4" style={{ color: 'var(--color-text-quaternary)' }}>退款金额</div>
+                <div className="u-fw-600" style={{ fontSize: 24, color: 'var(--color-danger)' }}>¥{Number(currentRecord.payAmount).toFixed(2)}</div>
               </div>
               <div>
-                <div style={{ color: 'var(--color-text-quaternary)', fontSize: 13, marginBottom: 4 }}>发货状态</div>
+                <div className="u-fs-13 u-mb-4" style={{ color: 'var(--color-text-quaternary)' }}>发货状态</div>
                 <div style={{ fontSize: 18, fontWeight: 500, color: currentRecord.hasShipped ? 'var(--color-warning)' : 'var(--color-success)' }}>
                   {currentRecord.hasShipped ? '已发货' : '未发货'}
                 </div>
               </div>
             </div>
             {currentRecord.sellerRemark && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ color: 'var(--color-text-quaternary)', fontSize: 13, marginBottom: 4 }}>备注</div>
+              <div className="u-mb-16">
+                <div className="u-fs-13 u-mb-4" style={{ color: 'var(--color-text-quaternary)' }}>备注</div>
                 <div>{currentRecord.sellerRemark}</div>
               </div>
             )}
-            <div style={{ padding: 12, background: 'var(--color-bg-subtle)', borderRadius: 8 }}>
-              <div style={{ color: 'var(--color-text-quaternary)', fontSize: 13, marginBottom: 4 }}>AI 审核建议</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <div className="u-p-12 u-br-8" style={{ background: 'var(--color-bg-subtle)' }}>
+              <div className="u-fs-13 u-mb-4" style={{ color: 'var(--color-text-quaternary)' }}>AI 审核建议</div>
+              <div className="u-d-flex u-ai-center u-gap-8 u-mb-4">
                 <Tag color={currentRecord.aiDecision === 'APPROVE' ? 'success' : 'warning'}>
                   {currentRecord.aiDecision === 'APPROVE' ? '自动通过' : '人工审核'}
                 </Tag>

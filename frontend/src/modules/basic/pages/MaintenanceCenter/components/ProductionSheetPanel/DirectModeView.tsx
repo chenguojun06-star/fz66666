@@ -44,9 +44,9 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
   handleReturnDescSave,
   handleCancelEdit,
 }) => {
-  if (loading && !directRow) return <div style={{ textAlign: 'center', padding: 24, color: 'rgba(0,0,0,0.45)' }}>加载中...</div>;
-  if (!directRow && !loading) return <div style={{ textAlign: 'center', padding: 24, color: 'rgba(0,0,0,0.45)' }}>未找到该款号的数据</div>;
-  if (!directRow) return <div style={{ textAlign: 'center', padding: 24, color: 'rgba(0,0,0,0.45)' }}>加载中...</div>;
+  if (loading && !directRow) return <div className="u-ta-center u-p-24" style={{ color: 'rgba(0,0,0,0.45)' }}>加载中...</div>;
+  if (!directRow && !loading) return <div className="u-ta-center u-p-24" style={{ color: 'rgba(0,0,0,0.45)' }}>未找到该款号的数据</div>;
+  if (!directRow) return <div className="u-ta-center u-p-24" style={{ color: 'rgba(0,0,0,0.45)' }}>加载中...</div>;
   if (!canManage) {
     return (
       <div style={directCardStyle}>
@@ -61,7 +61,7 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
     return (
       <div style={directStackStyle}>
         <div style={directCardStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+          <div className="u-d-flex u-ai-center u-jc-between u-gap-8 u-fwrap-wrap u-mb-8">
             <span style={directTitleStyle}>已锁定，退回后直接编辑</span>
             <span style={directMetaStyle}>制单维护</span>
           </div>
@@ -71,11 +71,11 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
           ) : null}
           <Form form={returnDescForm} layout="vertical">
             <div style={directFieldLabelStyle}>退回原因</div>
-            <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} style={{ marginBottom: 8 }}>
+            <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} className="u-mb-8">
               <TextArea rows={2} placeholder="请说明制单退回原因" />
             </Form.Item>
           </Form>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div className="u-d-flex u-jc-end">
             <Button danger ghost loading={returnDescSaving} onClick={handleReturnDescSave}>确认退回</Button>
           </div>
         </div>
@@ -98,11 +98,11 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
       <ProductionSummary record={directRow} />
       <Form form={editForm} layout="vertical">
         <div style={directFieldLabelStyle}>工艺说明 / 制单描述</div>
-        <Form.Item name="description" style={{ marginBottom: 0 }}>
+        <Form.Item name="description" className="u-mb-0">
           <TextArea rows={10} placeholder={'请输入生产要求和制单描述信息\n示例：\n1. 面料：主面料用32支全棉平纹\n2. 颜色：藏蓝色（潘通色号19-4024）\n3. 缝制要求：1/4″四线包缝'} />
         </Form.Item>
       </Form>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10, gap: 8 }}>
+      <div className="u-d-flex u-jc-end u-mt-10 u-gap-8">
         <Button loading={cancelLocking} onClick={handleCancelEdit}>取消修改</Button>
         <Button type="primary" loading={editSaving} onClick={handleEditSave}>保存</Button>
       </div>

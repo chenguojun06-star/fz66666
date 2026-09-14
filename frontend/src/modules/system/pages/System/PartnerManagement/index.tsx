@@ -154,7 +154,7 @@ const PartnerManagement: React.FC = () => {
           />
           {v || r.username}
           {r.isFactoryOwner && (
-            <Tag icon={<CrownFilled />} color="gold" style={{ marginLeft: 2 }}>老板</Tag>
+            <Tag icon={<CrownFilled />} color="gold" className="u-ml-2">老板</Tag>
           )}
         </Space>
       ),
@@ -204,13 +204,13 @@ const PartnerManagement: React.FC = () => {
     <>
       <PageLayout
         title={
-          <span style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-            <BankOutlined style={{ marginRight: 8, color: 'var(--primary-color, var(--color-primary))', fontSize: 20 }} />
+          <span className="u-d-flex u-ai-center" style={{ gap: 0 }}>
+            <BankOutlined className="u-mr-8 u-fs-20" style={{ color: 'var(--primary-color, var(--color-primary))' }} />
             合作企业管理
           </span>
         }
         headerContent={
-          <div style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))', marginTop: 4 }}>
+          <div className="u-mt-4" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
             管理外部合作工厂及其成员，支持添加成员、设置工厂老板、注册二维码等操作。
             <span style={{ marginLeft: 12 }}>
               共 <strong>{treeData.length}</strong> 家合作企业 · <strong>{totalExternalMembers}</strong> 名外部人员
@@ -252,9 +252,9 @@ const PartnerManagement: React.FC = () => {
                 ) : (
                   <>
                     <div className="partner-member-header">
-                      <div style={{ fontWeight: 600, fontSize: 15 }}>
+                      <div className="u-fw-600 u-fs-15">
                         {selectedUnit?.unitName} · 成员列表
-                        <span style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))', fontWeight: 400, marginLeft: 8, fontSize: 14 }}>
+                        <span className="u-fw-400 u-ml-8 u-fs-14" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
                           共 {displayedMembers.length} 人
                         </span>
                       </div>
@@ -276,7 +276,7 @@ const PartnerManagement: React.FC = () => {
                         </Button>
                       </Space>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                    <div className="u-d-flex u-gap-8 u-mb-12">
                       <Input
                         placeholder="搜索姓名或手机号"
                         allowClear

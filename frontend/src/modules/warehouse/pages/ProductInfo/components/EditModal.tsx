@@ -43,9 +43,9 @@ const EditModal: React.FC<EditModalProps> = ({
         </Button>,
       ]}
     >
-      <div style={{ padding: '0 4px' }}>
+      <div className="u-p-04px">
         <Form form={form} layout="vertical" size={isMobile ? 'small' : 'middle'}>
-          <div style={{ marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+          <div className="u-mb-16 u-d-flex u-ai-start u-gap-16">
             <ImageUploadBox
               value={coverUrl}
               onChange={setCoverUrl}
@@ -65,9 +65,9 @@ const EditModal: React.FC<EditModalProps> = ({
                 throw new Error((res as any).message || '上传失败');
               }}
             />
-            <div style={{ flex: 1, color: 'var(--color-text-tertiary)', fontSize: 14, paddingTop: 4 }}>
+            <div className="u-flex-1 u-fs-14" style={{ color: 'var(--color-text-tertiary)', paddingTop: 4 }}>
               <div>点击上传成品图片</div>
-              <div style={{ marginTop: 4 }}>支持 JPG/PNG，最大 5MB</div>
+              <div className="u-mt-4">支持 JPG/PNG，最大 5MB</div>
             </div>
           </div>
           <Row gutter={[12, 8]}>
@@ -125,7 +125,7 @@ const EditModal: React.FC<EditModalProps> = ({
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="price" label="单价(元)">
-                <InputNumber placeholder="请输入单价" style={{ width: '100%' }} min={0} step={0.01} precision={2} />
+                <InputNumber placeholder="请输入单价" className="u-w-full" min={0} step={0.01} precision={2} />
               </Form.Item>
             </Col>
           </Row>
@@ -137,7 +137,7 @@ const EditModal: React.FC<EditModalProps> = ({
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="cycle" label="生产周期(天)">
-                <InputNumber placeholder="天数" style={{ width: '100%' }} min={0} />
+                <InputNumber placeholder="天数" className="u-w-full" min={0} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>

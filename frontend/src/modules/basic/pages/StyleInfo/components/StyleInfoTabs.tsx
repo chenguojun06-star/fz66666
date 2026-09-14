@@ -98,7 +98,7 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
   };
 
   return (
-    <div style={{ marginTop: 4 }}>
+    <div className="u-mt-4">
       <Tabs
         activeKey={activeKey}
         onChange={onChange}

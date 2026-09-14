@@ -131,7 +131,7 @@ const StyleAttachmentsButton: React.FC<{
             href={fileUrl}
             target="_blank"
             rel="noreferrer"
-            style={{ display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            className="u-d-inline-block u-ov-hidden u-ws-nowrap" style={{ maxWidth: '100%', textOverflow: 'ellipsis' }}
           >
             {text}
           </a>
@@ -173,7 +173,7 @@ const StyleAttachmentsButton: React.FC<{
           onModalClose?.();
         }}>关闭</Button></Space>}
       >
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div className="u-h-full u-d-flex u-fd-column" style={{ minHeight: 0 }}>
           <div ref={tableWrapRef} style={{ flex: '1 1 auto', minHeight: 0 }}>
             <ResizableTable
               rowKey={(r) => String((r as any).id)}

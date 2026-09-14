@@ -24,7 +24,7 @@ const MaterialCardItem: React.FC<Props> = ({
   <Card
     key={card.id}
     hoverable
-    style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+    className="u-h-full u-d-flex u-fd-column"
     bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 0 }}
     styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', padding: 0 } }}
     title={
@@ -35,7 +35,7 @@ const MaterialCardItem: React.FC<Props> = ({
         }} title={card.cardName}>
           {card.cardName}
         </div>
-        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{card.cardCode}</div>
+        <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>{card.cardCode}</div>
       </div>
     }
     extra={
@@ -47,15 +47,15 @@ const MaterialCardItem: React.FC<Props> = ({
       </Space>
     }
   >
-    <div style={{ padding: '12px 16px 16px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+    <div className="u-flex-1 u-d-flex u-fd-column" style={{ padding: '12px 16px 16px 16px' }}>
       {/* 封面图 + 供应商信息 */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
+      <div className="u-d-flex u-gap-12" style={{ marginBottom: 14 }}>
         {card.coverImage ? (
           <Image
             src={getFullAuthedFileUrl(card.coverImage)}
             width={96}
             height={96}
-            style={{ objectFit: 'cover', borderRadius: 8, flexShrink: 0, border: '1px solid var(--color-border-light)' }}
+            className="u-objf-cover u-br-8 u-fshrink-0" style={{ border: '1px solid var(--color-border-light)' }}
             preview
           />
         ) : (
@@ -65,23 +65,23 @@ const MaterialCardItem: React.FC<Props> = ({
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'var(--color-bg-page)', color: 'var(--color-text-quaternary)',
           }}>
-            <FileTextOutlined style={{ fontSize: 28 }} />
+            <FileTextOutlined className="u-fs-28" />
           </div>
         )}
 
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 6 }}>
+        <div className="u-flex-1" style={{ minWidth: 0 }}>
+          <div className="u-fs-13 u-mb-6" style={{ color: 'var(--color-text-secondary)' }}>
             <span style={{ color: 'var(--color-text-tertiary)' }}>供应商：</span>
-            <span style={{ fontWeight: 500 }}>{card.supplierName || '-'}</span>
+            <span className="u-fw-500">{card.supplierName || '-'}</span>
           </div>
           {card.supplierContactPerson && (
-            <div style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginBottom: 4 }}>
+            <div className="u-fs-12 u-mb-4" style={{ color: 'var(--color-text-secondary)' }}>
               <span style={{ color: 'var(--color-text-tertiary)' }}>联系人：</span>{card.supplierContactPerson}
               {card.supplierContactPhone && <span> · {card.supplierContactPhone}</span>}
             </div>
           )}
-          <Tag color="blue" style={{ marginTop: 4 }}>{getMaterialTypeLabel(card.materialType)}</Tag>
-          <Tag color={card.materialCount && card.materialCount > 0 ? 'green' : 'default'} style={{ marginTop: 4 }}>
+          <Tag color="blue" className="u-mt-4">{getMaterialTypeLabel(card.materialType)}</Tag>
+          <Tag color={card.materialCount && card.materialCount > 0 ? 'green' : 'default'} className="u-mt-4">
             {card.materialCount || 0} 条物料
           </Tag>
         </div>
@@ -93,7 +93,7 @@ const MaterialCardItem: React.FC<Props> = ({
           padding: 10, background: 'var(--color-bg-container)', borderRadius: 6, marginBottom: 12,
           fontSize: 12, color: 'var(--color-text-secondary)',
         }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
+          <div className="u-d-flex u-fwrap-wrap" style={{ gap: '6px 16px' }}>
             {card.fabricWidth && <span>幅宽：{card.fabricWidth}</span>}
             {card.fabricWeight && <span>克重：{card.fabricWeight}</span>}
             {card.specifications && <span>规格：{card.specifications}</span>}
@@ -104,8 +104,8 @@ const MaterialCardItem: React.FC<Props> = ({
 
       {/* 操作按钮：集中到底部 */}
       <div style={{ marginTop: 'auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>创建：{card.createTime?.slice(0, 10)}</span>
+        <div className="u-d-flex u-ai-center u-jc-between u-mb-12">
+          <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>创建：{card.createTime?.slice(0, 10)}</span>
         </div>
 
         <Space size={8} wrap>

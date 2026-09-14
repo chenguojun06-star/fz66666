@@ -13,7 +13,7 @@ const RankingPanel: React.FC<RankingPanelProps> = ({
 }) => {
   return (
     <div className="c-card">
-      <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('ranking')}>
+      <div className="c-card-title u-cur-pointer"  onClick={() => toggleCollapse('ranking')}>
         <LiveDot size={7} color="var(--color-gold)" />
         工厂绩效排行榜
         <span className="c-card-badge purple-badge">实时评分</span>

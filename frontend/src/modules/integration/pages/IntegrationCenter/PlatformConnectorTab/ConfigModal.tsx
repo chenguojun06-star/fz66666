@@ -24,13 +24,13 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ open, activePlatform, form, t
   return (
     <ResizableModal
       open={open}
-      title={<Space><span style={{ fontSize: 20 }}>{activePlatform ? renderIcon(activePlatform.icon) : <ApiOutlined />}</span><span>配置 {activePlatform?.name} 连接</span></Space>}
+      title={<Space><span className="u-fs-20">{activePlatform ? renderIcon(activePlatform.icon) : <ApiOutlined />}</span><span>配置 {activePlatform?.name} 连接</span></Space>}
       onCancel={onCancel}
       footer={null} width="40vw" destroyOnHidden
     >
-      <div style={{ background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)', borderRadius: 8, padding: '16px', marginBottom: 16 }}>
-        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}><BulbOutlined /> 对接说明</div>
-        <div style={{ fontSize: 14, color: 'var(--color-gray-700)', marginBottom: 8 }}>
+      <div className="u-br-8 u-mb-16" style={{ background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)', padding: '16px' }}>
+        <div className="u-fs-16 u-fw-600 u-mb-8"><BulbOutlined /> 对接说明</div>
+        <div className="u-fs-14 u-mb-8" style={{ color: 'var(--color-gray-700)' }}>
           {PLATFORM_HELP_TIPS[activePlatform?.code || '']?.tip || '在对应平台开放平台创建应用，获取 AppKey 和 AppSecret'}
         </div>
         {PLATFORM_HELP_TIPS[activePlatform?.code || '']?.openUrl && (
@@ -52,9 +52,9 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ open, activePlatform, form, t
         </Form.Item>
       </Form>
 
-      <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
-        <Button type="primary" icon={<ThunderboltOutlined />} loading={testing} onClick={onTest} style={{ flex: 1 }}>保存并测试连接</Button>
-        <Button icon={<SettingOutlined />} onClick={onSave} style={{ flex: 1 }}>仅保存</Button>
+      <div className="u-d-flex u-gap-12" style={{ marginTop: 20 }}>
+        <Button type="primary" icon={<ThunderboltOutlined />} loading={testing} onClick={onTest} className="u-flex-1">保存并测试连接</Button>
+        <Button icon={<SettingOutlined />} onClick={onSave} className="u-flex-1">仅保存</Button>
       </div>
     </ResizableModal>
   );

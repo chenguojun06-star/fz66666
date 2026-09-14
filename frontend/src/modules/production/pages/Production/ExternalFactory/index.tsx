@@ -254,20 +254,20 @@ const ExternalFactory: React.FC = () => {
   return (
     <>
     <>
-      <div style={{ display: 'flex', height: 'calc(100vh - 64px)' }}>
+      <div className="u-d-flex" style={{ height: 'calc(100vh - 64px)' }}>
         <FactorySidebar
           stats={factoryStats}
           selectedFactoryId={selectedFactoryId}
           onSelect={handleFactorySelect}
           loading={loading}
         />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0, padding: 16 }}>
+        <div className="u-flex-1 u-d-flex u-fd-column u-ov-hidden u-p-16" style={{ minHeight: 0 }}>
           <Tabs defaultActiveKey="orders" className="ef-tabs" items={[
             {
               key: 'orders',
               label: <span><ShopOutlined /> 订单管理</span>,
               children: (
-                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                <div className="u-d-flex u-fd-column u-h-full u-ov-hidden">
                   <StickyFilterBar>
                   <Card
                    
@@ -289,7 +289,7 @@ const ExternalFactory: React.FC = () => {
                           icon={dateSortAsc ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
                           onClick={toggleDateSort}
                           title={dateSortAsc ? '按时间升序' : '按时间降序'}
-                          style={{ borderRadius: 16, minWidth: 32, width: 32, padding: 0 }}
+                          className="u-p-0" style={{ borderRadius: 16, minWidth: 32, width: 32 }}
                         />
                       </Space>
                     }
@@ -342,7 +342,7 @@ const ExternalFactory: React.FC = () => {
             {
               key: 'shipments',
               label: <span><InboxOutlined /> 收货管理</span>,
-              children: <div style={{ overflow: 'auto', height: '100%' }}><FactoryShipmentTab selectedFactoryId={selectedFactoryId} isFactoryAccount={isFactoryAccount} /></div>,
+              children: <div className="u-ov-auto u-h-full"><FactoryShipmentTab selectedFactoryId={selectedFactoryId} isFactoryAccount={isFactoryAccount} /></div>,
             },
           ]} />
         </div>

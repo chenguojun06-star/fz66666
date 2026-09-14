@@ -38,13 +38,13 @@ const AssignMemberModal: React.FC<AssignMemberModalProps> = ({
     width="40vw"
     initialHeight={580}
   >
-    <div style={{ padding: '8px 0' }}>
+    <div className="u-p-8px0">
       <Input.Search
         placeholder="搜索姓名或账号"
         allowClear
         value={assignSearch}
         onChange={(e) => setAssignSearch(e.target.value)}
-        style={{ marginBottom: 12 }}
+        className="u-mb-12"
       />
       {filteredAssignableUsers.length === 0 ? (
         <Empty description="暂无用户（该租户下尚无活跃账号）" style={{ padding: '32px 0' }} />
@@ -71,11 +71,11 @@ const AssignMemberModal: React.FC<AssignMemberModalProps> = ({
                     <Avatar size={28} icon={<UserOutlined />}
                       style={{ backgroundColor: alreadyIn ? 'var(--color-zinc-300)' : 'var(--color-primary)', flexShrink: 0 }} />
                     <div>
-                      <div style={{ fontWeight: 500 }}>{r.name || r.username}</div>
-                      <div style={{ fontSize: 14, color: 'var(--neutral-text-secondary)' }}>
+                      <div className="u-fw-500">{r.name || r.username}</div>
+                      <div className="u-fs-14" style={{ color: 'var(--neutral-text-secondary)' }}>
                         {r.username}
                         {!alreadyIn && r.orgUnitId && (
-                          <Tag color="orange" style={{ marginLeft: 6, fontSize: 14 }}>
+                          <Tag color="orange" className="u-ml-6 u-fs-14">
                             已在: {unitNameMap[String(r.orgUnitId)] || '其他组织'}
                           </Tag>
                         )}
@@ -89,7 +89,7 @@ const AssignMemberModal: React.FC<AssignMemberModalProps> = ({
             {
               title: '状态', width: 72,
               render: (_: unknown, r: User) => currentNodeMemberIds.has(String(r.id))
-                ? <Tag color="success" style={{ fontSize: 14 }}>已添加</Tag>
+                ? <Tag color="success" className="u-fs-14">已添加</Tag>
                 : null,
             },
           ]}
@@ -99,7 +99,7 @@ const AssignMemberModal: React.FC<AssignMemberModalProps> = ({
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--color-border-light)',
       }}>
-        <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
+        <span className="u-fs-14" style={{ color: 'var(--neutral-text-secondary)' }}>
           {batchSelectedIds.length > 0 ? `已勾选 ${batchSelectedIds.length} 人` : '勾选后批量添加'}
         </span>
         <Space>

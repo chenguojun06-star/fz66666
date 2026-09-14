@@ -147,11 +147,11 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
 
   return (
     <>
-    <div style={{ fontSize: 14 }}>
-      <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="u-fs-14">
+      <div className="u-mb-12 u-d-flex u-jc-between u-ai-center u-fwrap-wrap u-gap-12">
+        <div className="u-d-flex u-ai-center u-gap-8">
           {filterType && (
-            <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
+            <span className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>
               当前筛选：<strong style={{ color: 'var(--color-text-primary)' }}>{nodeName || filterType}</strong>
             </span>
           )}
@@ -162,7 +162,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
                   type="link"
                   size="small"
                   onClick={() => onOpenInspectDrawer(orderId!)}
-                  style={{ padding: 0, fontSize: 13 }}
+                  className="u-p-0 u-fs-13"
                 >
                   侧滑质检
                 </Button>
@@ -172,7 +172,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
                 size="small"
                 icon={<SendOutlined />}
                 onClick={() => navigate(paths.warehousingInspect.replace(':orderId', orderId!))}
-                style={{ padding: 0, fontSize: 13 }}
+                className="u-p-0 u-fs-13"
               >
                 跳转详情页
               </Button>
@@ -199,16 +199,16 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
           )}
         </div>
         <Space separator={'·'}>
-          <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
+          <span className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>
             菲号: <strong>{stats.bundles}</strong> 个
           </span>
-          <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
+          <span className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>
             工序: <strong>{stats.total}</strong> 条
           </span>
-          <span style={{ fontSize: 14, color: 'var(--color-success)' }}>
+          <span className="u-fs-14" style={{ color: 'var(--color-success)' }}>
             已扫: <strong>{stats.scanned}</strong> 条
           </span>
-          <span style={{ fontSize: 14, color: 'var(--color-success)' }}>
+          <span className="u-fs-14" style={{ color: 'var(--color-success)' }}>
             金额: <strong>{`¥${stats.totalAmount.toFixed(2)}`}</strong>
           </span>
           <Button
@@ -216,7 +216,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
             size="small"
             icon={<SettingOutlined />}
             onClick={() => setColumnSettingsOpen(true)}
-            style={{ padding: 0, fontSize: 13 }}
+            className="u-p-0 u-fs-13"
           >
             显示字段
           </Button>

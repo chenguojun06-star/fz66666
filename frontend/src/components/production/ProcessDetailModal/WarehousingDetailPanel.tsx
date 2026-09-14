@@ -40,16 +40,7 @@ const WarehousingDetailPanel: React.FC<WarehousingDetailPanelProps> = ({
 };
 
 const OrderInfoGrid: React.FC<{ record: ProductionOrder }> = ({ record }) => (
-  <div style={{
-    background: 'var(--color-slate-50)',
-    padding: '12px',
-    borderRadius: '6px',
-    marginBottom: '12px',
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '12px',
-    fontSize: '13px'
-  }}>
+  <div className="u-d-grid" style={{ background: 'var(--color-slate-50)', padding: '12px', borderRadius: '6px', marginBottom: '12px', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', fontSize: '13px' }}>
     <InfoItem label="订单号" value={record.orderNo} />
     <InfoItem label="款号" value={record.styleNo} />
     <InfoItem label="款名" value={record.styleName} />
@@ -60,20 +51,10 @@ const WarehouseOperationInfo: React.FC<{
   record: ProductionOrder;
   onNavigateToPayroll: (processName: string) => void;
 }> = ({ record, onNavigateToPayroll }) => (
-  <div style={{
-    background: 'var(--color-bg-base)',
-    border: '1px solid var(--color-border)',
-    borderRadius: '6px',
-    padding: '12px',
-    marginBottom: '12px',
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '12px',
-    fontSize: '13px'
-  }}>
+  <div className="u-d-grid" style={{ background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderRadius: '6px', padding: '12px', marginBottom: '12px', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', fontSize: '13px' }}>
     <div>
       <span style={{ color: 'var(--color-text-secondary)' }}>入库单号：</span>
-      <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>
+      <span className="u-fw-600" style={{ color: 'var(--color-primary)' }}>
         {(record.warehousingOrderNo as any) || '-'}
       </span>
     </div>
@@ -81,7 +62,7 @@ const WarehouseOperationInfo: React.FC<{
       <span style={{ color: 'var(--color-text-secondary)' }}>操作人：</span>
       {record.warehousingOperatorName ? (
         <a
-          style={{ cursor: 'pointer', color: 'var(--color-primary)', fontWeight: 600 }}
+          className="u-cur-pointer u-fw-600" style={{ color: 'var(--color-primary)' }}
           onClick={() => {
             if (record?.orderNo) {
               onNavigateToPayroll('入库');
@@ -91,18 +72,18 @@ const WarehouseOperationInfo: React.FC<{
           {record.warehousingOperatorName}
         </a>
       ) : (
-        <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>-</span>
+        <span className="u-fw-600" style={{ color: 'var(--color-text-primary)' }}>-</span>
       )}
     </div>
     <div>
       <span style={{ color: 'var(--color-text-secondary)' }}>开始时间：</span>
-      <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
+      <span className="u-fw-500" style={{ color: 'var(--color-text-primary)' }}>
         {formatDateTime(record.warehousingStartTime)}
       </span>
     </div>
     <div>
       <span style={{ color: 'var(--color-text-secondary)' }}>完成时间：</span>
-      <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
+      <span className="u-fw-500" style={{ color: 'var(--color-text-primary)' }}>
         {formatDateTime(record.warehousingEndTime)}
       </span>
     </div>
@@ -116,12 +97,7 @@ const WarehouseStatsCards: React.FC<{
   stockQty: number;
   qualifiedRate: number;
 }> = ({ qualifiedQty, unqualifiedQty, repairQty, stockQty, qualifiedRate }) => (
-  <div style={{
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '8px',
-    marginBottom: '8px'
-  }}>
+  <div className="u-d-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '8px' }}>
     {[
       { label: '合格入库', value: qualifiedQty, color: 'var(--color-success)', percent: qualifiedRate },
       { label: '次品数', value: unqualifiedQty, color: 'var(--color-error)' },
@@ -140,7 +116,7 @@ const WarehouseStatsCards: React.FC<{
           gap: '4px',
         }}
       >
-        <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
+        <span className="u-fw-500" style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
           {item.label}
         </span>
         <span style={{ fontSize: '18px', fontWeight: 700, color: item.color }}>
@@ -165,7 +141,7 @@ const WarehouseSizeTable: React.FC<{
     borderRadius: '6px',
     padding: '12px',
   }}>
-    <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--color-text-primary)' }}>
+    <div className="u-fw-600" style={{ fontSize: '14px', marginBottom: '12px', color: 'var(--color-text-primary)' }}>
       码数明细
     </div>
     <ResizableTable
@@ -185,7 +161,7 @@ const WarehouseSizeTable: React.FC<{
           key: 'quantity',
           width: 80,
           align: 'right' as const,
-          render: (v: number) => <span style={{ fontWeight: 600 }}>{v}</span>,
+          render: (v: number) => <span className="u-fw-600">{v}</span>,
         },
       ]}
       pagination={false}
@@ -197,10 +173,10 @@ const WarehouseSizeTable: React.FC<{
         return (
           <ResizableTable.Summary.Row style={{ background: 'var(--color-bg-container)' }}>
             <ResizableTable.Summary.Cell index={0} colSpan={2}>
-              <span style={{ fontWeight: 600 }}>合计</span>
+              <span className="u-fw-600">合计</span>
             </ResizableTable.Summary.Cell>
             <ResizableTable.Summary.Cell index={2} align="right">
-              <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>{total} 件</span>
+              <span className="u-fw-700" style={{ color: 'var(--color-success)' }}>{total} 件</span>
             </ResizableTable.Summary.Cell>
           </ResizableTable.Summary.Row>
         );

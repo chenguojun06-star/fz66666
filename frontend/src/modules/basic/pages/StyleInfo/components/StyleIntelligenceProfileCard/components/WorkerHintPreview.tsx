@@ -11,18 +11,18 @@ interface WorkerHintPreviewProps {
 const WorkerHintPreview: React.FC<WorkerHintPreviewProps> = ({ workerHint, activeDifficulty: _activeDifficulty }) => {
   if (workerHint.length === 0) return null;
   return (
-    <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, background: 'var(--color-bg-base)AEB', border: '1px solid var(--color-amber-400)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 12, color: 'var(--color-amber-700)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}><WarningOutlined /> 工人提示预览</span>
-          <Tag color="gold" style={{ margin: 0, fontSize: 11, lineHeight: '16px', padding: '0 5px' }}>工人扫码时可见</Tag>
+    <div className="u-mt-10 u-br-8" style={{ padding: '10px 12px', background: 'var(--color-bg-base)AEB', border: '1px solid var(--color-amber-400)' }}>
+      <div className="u-d-flex u-ai-center u-jc-between u-mb-6">
+        <div className="u-d-flex u-ai-center u-gap-6">
+          <span className="u-fs-12 u-fw-700 u-d-inline-flex u-ai-center u-gap-4" style={{ color: 'var(--color-amber-700)' }}><WarningOutlined /> 工人提示预览</span>
+          <Tag color="gold" className="u-m-0 u-fs-11 u-lh-16px" style={{ padding: '0 5px' }}>工人扫码时可见</Tag>
         </div>
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: 12 }}>
+      <div className="u-d-flex u-fwrap-wrap u-gap-8 u-fs-12">
         {workerHint.map((item) => (
-          <div key={item.key} style={{ background: 'var(--color-bg-base)7dc', borderRadius: 4, padding: '4px 8px', border: '1px solid var(--color-amber-200)' }}>
-            <span style={{ color: 'var(--color-amber-700)', marginRight: 6 }}>{item.label}：</span>
-            <span style={{ color: 'var(--color-amber-900)', fontWeight: 600 }}>{item.value}</span>
+          <div key={item.key} className="u-br-4" style={{ background: 'var(--color-bg-base)7dc', padding: '4px 8px', border: '1px solid var(--color-amber-200)' }}>
+            <span className="u-mr-6" style={{ color: 'var(--color-amber-700)' }}>{item.label}：</span>
+            <span className="u-fw-600" style={{ color: 'var(--color-amber-900)' }}>{item.value}</span>
           </div>
         ))}
       </div>

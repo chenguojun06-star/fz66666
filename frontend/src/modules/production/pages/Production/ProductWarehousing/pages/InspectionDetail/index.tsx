@@ -58,7 +58,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
   const embedded = props.embedded === true;
 
   if (loading) return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+    <div className="u-d-flex u-jc-center u-ai-center" style={{ minHeight: 400 }}>
       <Spin size="large" spinning tip="加载中..."><div /></Spin>
     </div>
   );
@@ -114,11 +114,11 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
       key: 'sizeChart',
       label: '尺寸表',
       children: (
-        <div style={{ padding: '8px 0' }}>
+        <div className="u-p-8px0">
           {styleId ? (
             <StyleSizeTab styleId={styleId} readOnly simpleView />
           ) : (
-            <div style={{ textAlign: 'center', padding: 40, color: 'rgba(0,0,0,0.45)' }}>
+            <div className="u-ta-center" style={{ padding: 40, color: 'rgba(0,0,0,0.45)' }}>
               暂无尺寸表数据
             </div>
           )}
@@ -153,7 +153,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 16, minHeight: embedded ? 'auto' : 'calc(100vh - 200px)' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="u-d-flex u-fd-column u-gap-12">
           <StyleInfoCard order={order} style={style} />
           <AiQualityHelperCard
             aiSuggestion={aiSuggestion}
@@ -162,7 +162,7 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
           />
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, overflow: 'auto', maxWidth: '100%' }}>
+        <div className="u-d-flex u-fd-column u-gap-16 u-ov-auto" style={{ maxWidth: '100%' }}>
           {readOnly && (
             <Alert
               type="info"
@@ -171,17 +171,17 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
               description="此处为订单视角的只读视图，仅展示入库进度与质检记录。质检扫码、次品处理与入库操作请前往 成品仓 → 质检入库 进行。"
             />
           )}
-          <Card style={{ overflow: 'hidden' }}>
+          <Card className="u-ov-hidden">
             <Tabs
               activeKey={activeTab}
               onChange={setActiveTab}
-              style={{ width: '100%' }}
+              className="u-w-full"
               items={tabItems}
             />
           </Card>
 
           {!readOnly && (
-            <Card title={<><CheckCircleOutlined style={{ marginRight: 6 }} />质检操作</>}>
+            <Card title={<><CheckCircleOutlined className="u-mr-6" />质检操作</>}>
               {formHook.batchSelectRows.length > 0 && formHook.batchSelectableQrs.length === 0 && qcStats.pendingWarehouse === 0 && qcStats.count > 0 ? (
                 <Alert type="success" showIcon
                   title="该订单所有菲号已完成质检入库，无需再操作"

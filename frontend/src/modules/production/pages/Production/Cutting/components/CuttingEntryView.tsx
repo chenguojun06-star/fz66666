@@ -151,7 +151,7 @@ const CuttingEntryView: React.FC<CuttingEntryViewProps> = ({
               onSetMaterialModalOpen={bom.setMaterialModalOpen}
             />
 
-            <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div className="u-mb-12 u-d-flex u-ai-center u-gap-4">
               {([
                 { value: 'auto', label: '一键生成' },
                 { value: 'free', label: '自由编菲' },
@@ -238,7 +238,7 @@ const CuttingEntryView: React.FC<CuttingEntryViewProps> = ({
         </div>
       </div>
 
-      <Space style={{ marginBottom: 12 }}>
+      <Space className="u-mb-12">
         <Button type="primary" onClick={() => print.openBatchPrint(bundles.selectedBundles)} disabled={!bundles.selectedBundles.length}>
           打印菲号
         </Button>

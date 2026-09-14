@@ -17,9 +17,9 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
      
       style={{ background: 'var(--color-bg-base)', border: '1px solid var(--color-blue-100)' }}
       title={
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span className="u-d-flex u-ai-center u-gap-6">
           <XiaoyunCloudAvatar size={18} active />
-          <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>智能质检助手</span>
+          <span className="u-fw-600" style={{ color: 'var(--color-primary)' }}>智能质检助手</span>
           {aiSuggestion?.historicalDefectRate !== undefined && (
             <span style={{
               fontSize: 14, fontWeight: 400, padding: '1px 7px',
@@ -37,13 +37,13 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
       loading={aiLoading}
     >
       {!aiSuggestion && !aiLoading && (
-        <div style={{ color: 'var(--color-text-quaternary)', textAlign: 'center', padding: '16px 0', fontSize: 14 }}>
-          <div style={{ fontSize: 20, marginBottom: 6 }}></div>
+        <div className="u-ta-center u-fs-14" style={{ color: 'var(--color-text-quaternary)', padding: '16px 0' }}>
+          <div className="u-fs-20 u-mb-6"></div>
           AI正在分析订单数据，请稍后…
         </div>
       )}
       {aiSuggestion && (
-        <div style={{ fontSize: 14, lineHeight: 1.8 }}>
+        <div className="u-fs-14 u-lh-18">
           {aiSuggestion.urgentTip && (
             <div style={{
               padding: '6px 12px', background: 'var(--status-warning-bg)',
@@ -53,8 +53,8 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
               {aiSuggestion.urgentTip}
             </div>
           )}
-          <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 8, fontSize: 14 }}>质检要点</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div className="u-fw-600 u-mb-8 u-fs-14" style={{ color: 'var(--color-text-primary)' }}>质检要点</div>
+          <div className="u-d-flex u-fd-column u-gap-6">
             {aiSuggestion.checkpoints.map((cp, i) => {
               const isRed = cp.startsWith('🔴');
               const isYellow = cp.startsWith('🟡');
@@ -73,13 +73,13 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
           </div>
           {aiSuggestion.defectSuggestions && Object.keys(aiSuggestion.defectSuggestions).length > 0 && (
             <>
-              <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', marginTop: 12, marginBottom: 8, fontSize: 14 }}>
+              <div className="u-fw-600 u-mt-12 u-mb-8 u-fs-14" style={{ color: 'var(--color-text-primary)' }}>
                 缺陷处理建议
                 {actualDefectSet.size === 0 && (
-                  <span style={{ fontWeight: 400, fontSize: 14, color: 'var(--color-text-quaternary)', marginLeft: 6 }}>（本批暂无次品）</span>
+                  <span className="u-fw-400 u-fs-14 u-ml-6" style={{ color: 'var(--color-text-quaternary)' }}>（本批暂无次品）</span>
                 )}
                 {actualDefectSet.size > 0 && (
-                  <span style={{ fontWeight: 400, fontSize: 14, color: 'var(--color-error)', marginLeft: 6 }}> 本批已发现 {actualDefectSet.size} 类缺陷</span>
+                  <span className="u-fw-400 u-fs-14 u-ml-6" style={{ color: 'var(--color-error)' }}> 本批已发现 {actualDefectSet.size} 类缺陷</span>
                 )}
               </div>
               {Object.entries(aiSuggestion.defectSuggestions)
@@ -93,15 +93,15 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
                       borderLeft: `3px solid ${isActual ? 'var(--color-danger)' : 'var(--color-border-antd)'}`,
                       borderRadius: '0 4px 4px 0',
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                      <div className="u-d-flex u-ai-center u-gap-6 u-mb-2">
                         {isActual && (
-                          <span style={{ background: 'var(--color-danger)', color: 'var(--color-bg-base)', fontSize: 14, padding: '1px 5px', borderRadius: 2, flexShrink: 0 }}>本批已发现</span>
+                          <span className="u-fs-14 u-fshrink-0" style={{ background: 'var(--color-danger)', color: 'var(--color-bg-base)', padding: '1px 5px', borderRadius: 2 }}>本批已发现</span>
                         )}
                         <span style={{ fontWeight: 600, color: isActual ? 'var(--color-error)' : 'var(--color-text-secondary)', fontSize: 14 }}>
                           {getDefectCategoryLabel(defect)}
                         </span>
                       </div>
-                      <div style={{ color: 'var(--color-text-secondary)', fontSize: 14, lineHeight: 1.6 }}>{advice}</div>
+                      <div className="u-fs-14" style={{ color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{advice}</div>
                     </div>
                   );
                 })}

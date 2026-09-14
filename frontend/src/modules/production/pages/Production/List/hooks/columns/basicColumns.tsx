@@ -41,7 +41,7 @@ export function buildBasicColumns({
         const styleNo = safeString((record as any)?.styleNo, '');
         const orderId = safeString((record as any)?.id, '');
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+          <div className="u-d-flex u-ai-center u-gap-4 u-fwrap-wrap">
             <Popover
               content={<SmartOrderHoverCard order={record} />}
               trigger="hover"
@@ -50,8 +50,8 @@ export function buildBasicColumns({
               overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
             >
             <a
-              className="order-no-wrap"
-              style={{ cursor: 'pointer', color: 'var(--primary-color, var(--color-primary))' }}
+              className="order-no-wrap u-cur-pointer"
+              style={{ color: 'var(--primary-color, var(--color-primary))' }}
               onClick={(e) => {
                 e.preventDefault();
                 navigate(withQuery('/production/order-flow', { orderId, orderNo, styleNo }));
@@ -61,22 +61,22 @@ export function buildBasicColumns({
             </a>
             </Popover>
             {(record as any).urgencyLevel === 'urgent' && (
-              <Tag color="error" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>急</Tag>
+              <Tag color="error" className="u-m-0 u-fs-12 u-p-04px u-lh-18px">急</Tag>
             )}
             {String((record as any).plateType || '').toUpperCase() === 'FIRST' && (
-              <Tag color="processing" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>首</Tag>
+              <Tag color="processing" className="u-m-0 u-fs-12 u-p-04px u-lh-18px">首</Tag>
             )}
             {String((record as any).plateType || '').toUpperCase() === 'REORDER' && (
-              <Tag color="warning" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>翻</Tag>
+              <Tag color="warning" className="u-m-0 u-fs-12 u-p-04px u-lh-18px">翻</Tag>
             )}
             {(record as any).orderBizType && (() => {
               const bizType = String((record as any).orderBizType);
               const colorMap: Record<string, string> = { FOB: 'processing', ODM: 'info', OEM: 'processing', CMT: 'warning' };
               const bizLabel = ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知';
-              return <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{bizLabel}</Tag>;
+              return <Tag color={colorMap[bizType] ?? 'default'} className="u-m-0 u-fs-12 u-p-04px u-lh-18px">{bizLabel}</Tag>;
             })()}
             {record.ecPlatform && (
-              <Tag color={getPlatformTag(record.ecPlatform).color} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>
+              <Tag color={getPlatformTag(record.ecPlatform).color} className="u-m-0 u-fs-12 u-p-04px u-lh-18px">
                 {getPlatformTag(record.ecPlatform).label}
               </Tag>
             )}

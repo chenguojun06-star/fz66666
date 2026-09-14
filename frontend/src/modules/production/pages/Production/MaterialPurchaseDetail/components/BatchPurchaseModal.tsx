@@ -72,8 +72,8 @@ const BatchPurchaseModal: React.FC<BatchPurchaseModalProps> = ({
       width: 190,
       render: (_: string, r: BatchPurchaseItem) => (
         <div>
-          <div style={{ fontWeight: 500 }}>{r.materialName || '无'}</div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', fontFamily: 'monospace' }}>{r.materialCode || '-'}</div>
+          <div className="u-fw-500">{r.materialName || '无'}</div>
+          <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)', fontFamily: 'monospace' }}>{r.materialCode || '-'}</div>
         </div>
       ),
     },
@@ -120,7 +120,7 @@ const BatchPurchaseModal: React.FC<BatchPurchaseModalProps> = ({
           <InputNumber
             id={`batch-purchase-qty-${r.id}`}
             aria-label={`${r.materialName || r.materialCode} 领取数量`}
-            style={{ width: '100%' }}
+            className="u-w-full"
             min={0}
             precision={2}
             addonAfter={r.unit || undefined}
@@ -158,8 +158,8 @@ const BatchPurchaseModal: React.FC<BatchPurchaseModalProps> = ({
           scroll={{ x: 850, y: 360 }}
         />
       </Form>
-      <div style={{ marginTop: 12, textAlign: 'right', fontSize: 13, color: 'var(--color-text-secondary)' }}>
-        合计金额：<span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>¥{totalAmount.toFixed(2)}</span>
+      <div className="u-mt-12 u-ta-right u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
+        合计金额：<span className="u-fw-600" style={{ color: 'var(--color-primary)' }}>¥{totalAmount.toFixed(2)}</span>
       </div>
     </ResizableModal>
   );

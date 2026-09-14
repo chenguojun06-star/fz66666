@@ -298,7 +298,7 @@ const OrderTransferPage: React.FC = () => {
         </div>
 
         {showSmartErrorNotice && smartError ? (
-          <div style={{ marginBottom: 12 }}>
+          <div className="u-mb-12">
             <SmartErrorNotice error={smartError} onFix={fetchTransfers} />
           </div>
         ) : null}
@@ -332,10 +332,10 @@ const OrderTransferPage: React.FC = () => {
           cancelText="取消"
           width="40vw"
         >
-          <div style={{ marginBottom: 16 }}>
+          <div className="u-mb-16">
             <strong>订单号:</strong> {selectedTransfer?.orderNo}
           </div>
-          <div style={{ marginBottom: 16 }}>
+          <div className="u-mb-16">
             <strong>发起人:</strong> {selectedTransfer?.fromUserName}
           </div>
           <div>
@@ -345,7 +345,7 @@ const OrderTransferPage: React.FC = () => {
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="请输入拒绝原因"
-              style={{ marginTop: 8 }}
+              className="u-mt-8"
             />
           </div>
         </ResizableModal>

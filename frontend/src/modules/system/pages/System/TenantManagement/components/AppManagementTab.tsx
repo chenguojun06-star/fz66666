@@ -33,8 +33,8 @@ const AppManagementTab: React.FC = () => {
         const cfg = APP_TYPE_CONFIG[record.appType];
         return (
           <div>
-            <div style={{ fontWeight: 600 }}>{cfg?.icon} {name}</div>
-            <Text type="secondary" style={{ fontSize: 14 }}>{cfg?.label || record.appType}</Text>
+            <div className="u-fw-600">{cfg?.icon} {name}</div>
+            <Text type="secondary" className="u-fs-14">{cfg?.label || record.appType}</Text>
           </div>
         );
       },
@@ -43,8 +43,8 @@ const AppManagementTab: React.FC = () => {
       title: 'AppKey', dataIndex: 'appKey', width: 200,
       render: (key: string) => (
         <Space>
-          <Text code style={{ fontSize: 14 }}>{key}</Text>
-          <Tooltip title="复制"><CopyOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => copyToClipboard(key)} /></Tooltip>
+          <Text code className="u-fs-14">{key}</Text>
+          <Tooltip title="复制"><CopyOutlined className="u-cur-pointer" style={{ color: 'var(--color-primary)' }} onClick={() => copyToClipboard(key)} /></Tooltip>
         </Space>
       ),
     },
@@ -54,7 +54,7 @@ const AppManagementTab: React.FC = () => {
         const hasUrl = !!(record.callbackUrl || record.externalApiUrl);
         return (
           <Tooltip title={hasUrl ? '已配置接口地址' : '未配置接口地址，点击操作列编辑'}>
-            <Tag color={hasUrl ? 'success' : 'warning'} style={{ fontSize: 14 }}>
+            <Tag color={hasUrl ? 'success' : 'warning'} className="u-fs-14">
               {hasUrl ? ' 已配置' : ' 待配置'}
             </Tag>
           </Tooltip>
@@ -68,20 +68,20 @@ const AppManagementTab: React.FC = () => {
           return (
             <Space size={4}>
               <Input value={editingUrlValue} onChange={e => setEditingUrlValue(e.target.value)}
-                placeholder="https://..." style={{ width: 150, fontSize: 14 }} />
-              <SaveOutlined style={{ cursor: 'pointer', color: 'var(--color-success)' }} onClick={handleSaveUrl} />
-              <CloseOutlined style={{ cursor: 'pointer', color: 'var(--color-danger)' }} onClick={cancelEditUrl} />
+                placeholder="https://..." className="u-fs-14" style={{ width: 150 }} />
+              <SaveOutlined className="u-cur-pointer" style={{ color: 'var(--color-success)' }} onClick={handleSaveUrl} />
+              <CloseOutlined className="u-cur-pointer" style={{ color: 'var(--color-danger)' }} onClick={cancelEditUrl} />
             </Space>
           );
         }
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div className="u-d-flex u-ai-center u-gap-4">
             {record.callbackUrl ? (
-              <Text style={{ fontSize: 14 }} ellipsis={{ tooltip: record.callbackUrl }}>{record.callbackUrl}</Text>
+              <Text className="u-fs-14" ellipsis={{ tooltip: record.callbackUrl }}>{record.callbackUrl}</Text>
             ) : (
-              <Text type="secondary" style={{ fontSize: 14 }}>未配置</Text>
+              <Text type="secondary" className="u-fs-14">未配置</Text>
             )}
-            <EditOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: 13, flexShrink: 0 }}
+            <EditOutlined className="u-cur-pointer u-fs-13 u-fshrink-0" style={{ color: 'var(--color-primary)' }}
               onClick={() => startEditUrl(record, 'callbackUrl')} />
           </div>
         );
@@ -142,14 +142,14 @@ const AppManagementTab: React.FC = () => {
   ];
   return (
     <div>
-      <Row gutter={16} style={{ marginBottom: 16 }}>
+      <Row gutter={16} className="u-mb-16">
         <Col span={6}><Card><Statistic title="应用总数" value={stats.total} prefix={<ApiOutlined />} /></Card></Col>
         <Col span={6}><Card><Statistic title="运行中" value={stats.active} styles={{ content: { color: 'var(--color-success)' } }} prefix={<PlayCircleOutlined />} /></Card></Col>
         <Col span={6}><Card><Statistic title="已停用" value={stats.disabled} styles={{ content: { color: 'var(--color-danger)' } }} prefix={<StopOutlined />} /></Card></Col>
         <Col span={6}><Card><Statistic title="总调用次数" value={stats.totalCalls} prefix={<CodeOutlined />} /></Card></Col>
       </Row>
 
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+      <div className="u-mb-16 u-d-flex u-jc-between">
         <Space>
           <Select
             placeholder="应用类型"
@@ -201,11 +201,11 @@ const AppManagementTab: React.FC = () => {
         }
       >
         {selectedApp && (
-          <div style={{ padding: '0 8px' }}>
+          <div className="u-p-08px">
             {newSecret && (
-              <div style={{ background: 'rgba(250, 140, 22, 0.1)', border: '1px solid rgba(250, 140, 22, 0.5)', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, color: 'var(--color-warning)', marginBottom: 8 }}> 请妥善保管以下密钥（仅显示一次）</div>
-                <div style={{ marginBottom: 8 }}>
+              <div className="u-br-8 u-p-16 u-mb-16" style={{ background: 'rgba(250, 140, 22, 0.1)', border: '1px solid rgba(250, 140, 22, 0.5)' }}>
+                <div className="u-fw-700 u-mb-8" style={{ color: 'var(--color-warning)' }}> 请妥善保管以下密钥（仅显示一次）</div>
+                <div className="u-mb-8">
                   <Text strong>AppSecret: </Text>
                   <Text code copyable>{newSecret}</Text>
                 </div>
@@ -227,29 +227,29 @@ const AppManagementTab: React.FC = () => {
               <Descriptions.Item label="AppKey">
                 <Space>
                   <Text code>{selectedApp.appKey}</Text>
-                  <CopyOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => copyToClipboard(selectedApp.appKey)} />
+                  <CopyOutlined className="u-cur-pointer" style={{ color: 'var(--color-primary)' }} onClick={() => copyToClipboard(selectedApp.appKey)} />
                 </Space>
               </Descriptions.Item>
               <Descriptions.Item label="状态">
                 <Badge status={selectedApp.status === 'active' ? 'success' : 'error'} text={selectedApp.statusName} />
               </Descriptions.Item>
               <Descriptions.Item label="回调地址" span={2}>
-                <Space.Compact style={{ width: '100%' }}>
+                <Space.Compact className="u-w-full">
                   <Input
                     value={detailEditCallbackUrl}
                     onChange={e => setDetailEditCallbackUrl(e.target.value)}
                     placeholder="https://your-domain.com/webhook（我们主动推送数据到此地址）"
-                    style={{ fontSize: 14 }}
+                    className="u-fs-14"
                   />
                 </Space.Compact>
               </Descriptions.Item>
               <Descriptions.Item label="客户API" span={2}>
-                <Space.Compact style={{ width: '100%' }}>
+                <Space.Compact className="u-w-full">
                   <Input
                     value={detailEditExternalApiUrl}
                     onChange={e => setDetailEditExternalApiUrl(e.target.value)}
                     placeholder="https://your-domain.com/api（系统主动调用客户系统时使用）"
-                    style={{ fontSize: 14 }}
+                    className="u-fs-14"
                   />
                 </Space.Compact>
               </Descriptions.Item>
@@ -258,8 +258,8 @@ const AppManagementTab: React.FC = () => {
               <Descriptions.Item label="创建时间">{selectedApp.createTime}</Descriptions.Item>
             </Descriptions>
             {selectedApp.exampleSnippet && (
-              <div style={{ marginTop: 16 }}>
-                <div style={{ fontWeight: 600, marginBottom: 8 }}> 接入示例</div>
+              <div className="u-mt-16">
+                <div className="u-fw-600 u-mb-8"> 接入示例</div>
                 <pre style={{
                   background: 'var(--color-bg-base)', color: 'var(--color-text-secondary)', padding: 16, borderRadius: 8,
                   fontSize: 14, lineHeight: 1.5, overflow: 'auto', maxHeight: 300,

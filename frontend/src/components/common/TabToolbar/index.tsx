@@ -32,8 +32,8 @@ const TabToolbar: React.FC<TabToolbarProps> = ({ left, center, right, style }) =
     }}
   >
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flex: left ? '1 1 auto' : '1 1 0', minWidth: 0 }}>{left}</div>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>{center}</div>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginLeft: 'auto' }}>{right}</div>
+    <div className="u-d-flex u-ai-center u-gap-12 u-fwrap-wrap">{center}</div>
+    <div className="u-d-flex u-ai-center u-gap-12 u-fwrap-wrap u-ml-auto">{right}</div>
   </div>
 );
 

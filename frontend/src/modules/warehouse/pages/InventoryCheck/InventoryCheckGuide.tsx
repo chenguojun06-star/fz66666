@@ -41,7 +41,7 @@ const InventoryCheckGuide: React.FC<InventoryCheckGuideProps> = ({ visible, onCl
             <li>未填写实盘数量的项目不会参与差异计算</li>
           </ul>
         }
-        style={{ marginTop: 16 }}
+        className="u-mt-16"
       />
     </Modal>
   );

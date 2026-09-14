@@ -135,7 +135,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
           </div>
 
           {showSmartErrorNotice && smartError ? (
-            <Card style={{ marginBottom: 12 }}>
+            <Card className="u-mb-12">
               <SmartErrorNotice
                 error={smartError}
                 onFix={() => {
@@ -217,7 +217,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
             />
           ) : (
             <>
-              <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div className="u-mb-12 u-d-flex u-ai-center u-jc-between">
                 <Tag color={statusFilter === 'pendingQc' ? 'warning' : statusFilter === 'pendingPackaging' ? 'purple' : 'processing'}>
                   {statusFilterLabels[statusFilter]} · {(() => {
                     const kw = (queryParams.warehousingNo || '').toLowerCase().trim();

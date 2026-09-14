@@ -29,7 +29,7 @@ const InvoiceModal: React.FC<Props> = ({ open, currentBill, form, submitting, on
       confirmLoading={submitting}
     >
       {currentBill && (
-        <Descriptions column={2} style={{ marginBottom: 16 }}>
+        <Descriptions column={2} className="u-mb-16">
           <Descriptions.Item label="账单编号">{currentBill.billingNo}</Descriptions.Item>
           <Descriptions.Item label="金额">{formatMoney(currentBill.totalAmount)}</Descriptions.Item>
         </Descriptions>

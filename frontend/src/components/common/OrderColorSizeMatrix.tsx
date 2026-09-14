@@ -231,7 +231,7 @@ export const ColorSizeMatrixPopoverContent: React.FC<{
   if (!model.hasData) return null;
   return (
     <div style={{ minWidth: 100 }}>
-      <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 14, color: 'var(--color-text-primary)' }}>{title}</div>
+      <div className="u-fw-600 u-mb-6 u-fs-14" style={{ color: 'var(--color-text-primary)' }}>{title}</div>
       <div style={{
         display: 'grid',
         gridTemplateColumns: `max-content repeat(${model.sizes.length}, minmax(20px, max-content))`,
@@ -240,19 +240,19 @@ export const ColorSizeMatrixPopoverContent: React.FC<{
         fontSize: 14,
         textAlign: 'center',
       }}>
-        <span style={{ color: 'var(--color-slate-400)', fontWeight: 600 }}>码</span>
-        {model.sizes.map(s => <span key={`h-${s}`} style={{ fontWeight: 600 }}>{s}</span>)}
+        <span className="u-fw-600" style={{ color: 'var(--color-slate-400)' }}>码</span>
+        {model.sizes.map(s => <span key={`h-${s}`} className="u-fw-600">{s}</span>)}
         {model.rows.map(row => (
           <React.Fragment key={row.label}>
-            <span style={{ color: 'var(--color-slate-400)', textAlign: 'left' }}>{row.label}</span>
+            <span className="u-ta-left" style={{ color: 'var(--color-slate-400)' }}>{row.label}</span>
             {model.sizes.map(s => (
-              <span key={`${row.label}-${s}`} style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
+              <span key={`${row.label}-${s}`} className="u-fw-600" style={{ color: 'var(--color-primary)' }}>
                 {row.quantityMap.get(s) || 0}
               </span>
             ))}
           </React.Fragment>
         ))}
-        <span style={{ color: 'var(--color-slate-400)', fontWeight: 600 }}>总</span>
+        <span className="u-fw-600" style={{ color: 'var(--color-slate-400)' }}>总</span>
         <span style={{ gridColumn: `2 / ${model.sizes.length + 2}`, fontWeight: 700, textAlign: 'left' }}>
           {model.total}件
         </span>

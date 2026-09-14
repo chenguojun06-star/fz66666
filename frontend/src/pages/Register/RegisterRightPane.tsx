@@ -45,7 +45,7 @@ const RegisterRightPane: React.FC<RegisterRightPaneProps> = ({
             <Title level={2} className="login-title">
               云裳智链
             </Title>
-            <p style={{ textAlign: 'center', color: 'var(--color-slate-600)', marginTop: 8, fontSize: 13 }}>
+            <p className="u-ta-center u-mt-8 u-fs-13" style={{ color: 'var(--color-slate-600)' }}>
               {isWorkerInvite
                 ? isFactoryInvite
                   ? '外发工厂工人注册'
@@ -74,7 +74,7 @@ const RegisterRightPane: React.FC<RegisterRightPaneProps> = ({
                 type="info"
                 showIcon
                 icon={<BankOutlined />}
-                style={{ marginBottom: 16, borderRadius: 8 }}
+                className="u-mb-16 u-br-8"
               />
             )}
 
@@ -174,7 +174,7 @@ const RegisterRightPane: React.FC<RegisterRightPaneProps> = ({
                 message="以下账号信息用于审批通过后登录系统"
                 type="info"
                 showIcon
-                style={{ marginBottom: 16, borderRadius: 8 }}
+                className="u-mb-16 u-br-8"
               />
             )}
 
@@ -256,11 +256,11 @@ const RegisterRightPane: React.FC<RegisterRightPaneProps> = ({
                 {isWorkerInvite ? '提交注册' : '提交入驻申请'}
               </Button>
             </Form.Item>
-            <Form.Item style={{ marginBottom: 0 }}>
+            <Form.Item className="u-mb-0">
               <Button
                 type="link"
                 onClick={() => navigate('/login')}
-                style={{ width: '100%', padding: 0 }}
+                className="u-w-full u-p-0"
                 disabled={submitting}
               >
                 已有账号？返回登录

@@ -154,7 +154,7 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
     },
     {
       title: '金额', dataIndex: 'amount', key: 'amount', width: 120, align: 'right',
-      render: (v: number) => <span style={{ fontWeight: 600 }}>¥{(v ?? 0).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</span>,
+      render: (v: number) => <span className="u-fw-600">¥{(v ?? 0).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</span>,
     },
     {
       title: '已结算', dataIndex: 'settledAmount', key: 'settledAmount', width: 110, align: 'right',
@@ -199,23 +199,23 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
   return (
     <div>
       {/* 统计卡片 */}
-      <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-        <Card style={{ flex: 1 }}>
+      <div className="u-d-flex u-gap-16 u-mb-16">
+        <Card className="u-flex-1">
           <Statistic title="待确认" value={stats.pendingAmount ?? 0} prefix="¥" precision={2}
-            suffix={<span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{stats.pendingCount ?? 0}笔</span>} />
+            suffix={<span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{stats.pendingCount ?? 0}笔</span>} />
         </Card>
-        <Card style={{ flex: 1 }}>
+        <Card className="u-flex-1">
           <Statistic title="已确认" value={stats.confirmedAmount ?? 0} prefix="¥" precision={2} styles={{ content: { color: 'var(--color-primary)' } }}
-            suffix={<span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{stats.confirmedCount ?? 0}笔</span>} />
+            suffix={<span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{stats.confirmedCount ?? 0}笔</span>} />
         </Card>
-        <Card style={{ flex: 1 }}>
+        <Card className="u-flex-1">
           <Statistic title="已结清" value={stats.settledAmount ?? 0} prefix="¥" precision={2} styles={{ content: { color: 'var(--color-success)' } }}
-            suffix={<span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{stats.settledCount ?? 0}笔</span>} />
+            suffix={<span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{stats.settledCount ?? 0}笔</span>} />
         </Card>
       </div>
 
       {/* 筛选栏 */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="u-d-flex u-gap-12 u-mb-16 u-fwrap-wrap u-ai-center">
         {/* 类型筛选：defaultBillType 锁定时不显示 */}
         {!defaultBillType && (
           <Select style={{ width: 100 }} options={BILL_TYPE_OPTIONS} value={query.billType || ''} onChange={v => updateQuery({ billType: v || undefined })} />

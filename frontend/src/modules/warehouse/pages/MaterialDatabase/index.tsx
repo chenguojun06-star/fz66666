@@ -134,15 +134,15 @@ const MaterialDatabasePage: React.FC = () => {
   return (
     <>
       {showSmartErrorNotice && smartError ? (
-        <Card style={{ marginBottom: 12 }}>
+        <Card className="u-mb-12">
           <SmartErrorNotice error={smartError} onFix={() => { void fetchList(); }} />
         </Card>
       ) : null}
 
       {/* 视图切换 + 标题栏 */}
-      <Card style={{ marginBottom: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0 }}>
-          <h2 style={{ margin: 0 }}> 物料资料库</h2>
+      <Card className="u-mb-0">
+        <div className="u-d-flex u-jc-between u-ai-center u-mb-0">
+          <h2 className="u-m-0"> 物料资料库</h2>
           <Space>
             <Segmented
               value={viewMode}
@@ -162,8 +162,8 @@ const MaterialDatabasePage: React.FC = () => {
 
       {/* 列表视图 */}
       {viewMode === 'list' && (
-        <Card style={{ marginTop: 12 }}>
-          <Card style={{ marginBottom: 12, background: 'var(--color-bg-container)' }}>
+        <Card className="u-mt-12">
+          <Card className="u-mb-12" style={{ background: 'var(--color-bg-container)' }}>
             <StandardToolbar
               left={(
                 <StandardSearchBar
@@ -186,8 +186,8 @@ const MaterialDatabasePage: React.FC = () => {
 
       {/* 物料卡片视图 */}
       {viewMode === 'materialCard' && (
-        <Card style={{ marginTop: 12 }}>
-          <Card style={{ marginBottom: 12, background: 'var(--color-bg-container)' }}>
+        <Card className="u-mt-12">
+          <Card className="u-mb-12" style={{ background: 'var(--color-bg-container)' }}>
             <StandardToolbar
               left={(
                 <StandardSearchBar
@@ -234,10 +234,10 @@ const MaterialDatabasePage: React.FC = () => {
             }}
             hoverRender={(record) => (
               <div style={{ maxWidth: 400 }}>
-                {record.supplierName && <div style={{ marginBottom: 6 }}>供应商：{record.supplierName}</div>}
+                {record.supplierName && <div className="u-mb-6">供应商：{record.supplierName}</div>}
                 {record.supplierContactPerson && <div>联系人：{record.supplierContactPerson}{record.supplierContactPhone ? ` · ${record.supplierContactPhone}` : ''}</div>}
-                {record.description && <div style={{ marginTop: 6, color: 'var(--color-gray-dark)' }}>{record.description}</div>}
-                {record.remark && <div style={{ marginTop: 6, color: 'var(--color-amber-700)' }}>备注：{record.remark}</div>}
+                {record.description && <div className="u-mt-6" style={{ color: 'var(--color-gray-dark)' }}>{record.description}</div>}
+                {record.remark && <div className="u-mt-6" style={{ color: 'var(--color-amber-700)' }}>备注：{record.remark}</div>}
               </div>
             )}
           />
@@ -246,7 +246,7 @@ const MaterialDatabasePage: React.FC = () => {
 
       {/* 供应商色卡视图 */}
       {viewMode === 'supplierCard' && (
-        <Card style={{ marginTop: 12 }}>
+        <Card className="u-mt-12">
           <MaterialCardView
             cardDataList={cardDataList}
             cardLoading={cardLoading}

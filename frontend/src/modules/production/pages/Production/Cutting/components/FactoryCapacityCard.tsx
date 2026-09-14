@@ -15,16 +15,16 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
     }}
   >
     {stat.matchScore > 0 && (
-      <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div className="u-mb-4 u-d-flex u-ai-center u-gap-6">
         <span style={{ fontWeight: 600, color: stat.matchScore >= 70 ? 'var(--color-success)' : stat.matchScore >= 40 ? 'var(--color-warning)' : 'var(--color-danger)' }}>
           推荐指数 {stat.matchScore}分
         </span>
-        {stat.matchScore >= 70 && <span style={{ background: 'var(--status-success-bg)', color: 'var(--color-success)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--status-success-border)' }}>推荐</span>}
-        {stat.capacitySource === 'configured' && <span style={{ background: 'var(--status-warning-bg)', color: 'var(--color-warning)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--status-warning-border)' }}>配置产能</span>}
-        {stat.capacitySource === 'none' && <span style={{ background: 'var(--status-error-bg)', color: 'var(--color-danger)', padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--status-error-border)' }}>无产能数据</span>}
+        {stat.matchScore >= 70 && <span className="u-br-4 u-fs-14" style={{ background: 'var(--status-success-bg)', color: 'var(--color-success)', padding: '0 6px', border: '1px solid var(--status-success-border)' }}>推荐</span>}
+        {stat.capacitySource === 'configured' && <span className="u-br-4 u-fs-14" style={{ background: 'var(--status-warning-bg)', color: 'var(--color-warning)', padding: '0 6px', border: '1px solid var(--status-warning-border)' }}>配置产能</span>}
+        {stat.capacitySource === 'none' && <span className="u-br-4 u-fs-14" style={{ background: 'var(--status-error-bg)', color: 'var(--color-danger)', padding: '0 6px', border: '1px solid var(--status-error-border)' }}>无产能数据</span>}
       </div>
     )}
-    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+    <div className="u-d-flex u-gap-12 u-fwrap-wrap">
       <span>生产中 <b style={{ color: 'var(--color-text-primary)' }}>{stat.totalOrders}</b> 单</span>
       <span>共 <b style={{ color: 'var(--color-text-primary)' }}>{stat.totalQuantity?.toLocaleString() ?? 0}</b> 件</span>
       <span>
@@ -36,7 +36,7 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
       {stat.atRiskCount > 0 ? <span style={{ color: 'var(--color-warning)' }}>高风险 <b>{stat.atRiskCount}</b> 单</span> : null}
       {stat.overdueCount > 0 ? <span style={{ color: 'var(--color-danger)' }}>逾期 <b>{stat.overdueCount}</b> 单</span> : null}
     </div>
-    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, paddingTop: 4, borderTop: '1px dashed var(--color-border, var(--color-border-light))' }}>
+    <div className="u-d-flex u-gap-12 u-fwrap-wrap u-mt-4" style={{ paddingTop: 4, borderTop: '1px dashed var(--color-border, var(--color-border-light))' }}>
       <span>生产人数 <b style={{ color: 'var(--color-text-primary)' }}>{stat.activeWorkers}</b> 人</span>
       {stat.avgDailyOutput > 0 ? <span>日均产量 <b style={{ color: 'var(--color-info)' }}>{stat.avgDailyOutput}</b> 件/天{stat.capacitySource === 'configured' ? '（配置值）' : ''}</span> : null}
       {stat.estimatedCompletionDays > 0 ? (

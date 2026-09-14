@@ -49,7 +49,7 @@ const ShipDetailTable: React.FC<ShipDetailTableProps> = ({
     <>
       {hasShipSizes ? (
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ borderCollapse: 'collapse', minWidth: '100%', fontSize: 14 }}>
+          <table className="u-fs-14" style={{ borderCollapse: 'collapse', minWidth: '100%' }}>
             <thead>
               <tr style={{ background: 'var(--color-bg-container)' }}>
                 <th style={{ ...thStyle, minWidth: 90 }}>颜色</th>
@@ -82,7 +82,7 @@ const ShipDetailTable: React.FC<ShipDetailTableProps> = ({
                             );
                             onShipDetailsChange(nextDetails);
                           }}
-                          style={{ width: '100%' }}
+                          className="u-w-full"
                           placeholder="颜色"
                         />
                       </td>
@@ -97,7 +97,7 @@ const ShipDetailTable: React.FC<ShipDetailTableProps> = ({
                             <Tooltip title={ordered > 0 ? `下单:${ordered} 已发:${shipped} 剩:${remaining}` : undefined}>
                               <InputNumber
                                 min={0}
-                                style={{ width: '100%' }}
+                                className="u-w-full"
                                 value={rowForSz?.quantity ?? 0}
                                 onChange={v => {
                                   if (detailIdx >= 0) {
@@ -142,7 +142,7 @@ const ShipDetailTable: React.FC<ShipDetailTableProps> = ({
       ) : (
         <div>
           {shipDetails.map((row, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+            <div key={idx} className="u-d-flex u-gap-8 u-mb-6 u-ai-center">
               <AutoComplete
                 value={row.color}
                 options={colorOptions.map(c => ({ value: c }))}
@@ -162,7 +162,7 @@ const ShipDetailTable: React.FC<ShipDetailTableProps> = ({
           ))}
         </div>
       )}
-      <div style={{ marginTop: 8 }}>
+      <div className="u-mt-8">
         <CircleIconButton
           type="add"
           size={24}

@@ -128,7 +128,7 @@ const _MaterialInventory: React.FC = () => {
   return (
     <>
       {showSmartErrorNotice && smartError ? (
-        <Card style={{ marginBottom: 12 }}>
+        <Card className="u-mb-12">
           <SmartErrorNotice
             error={smartError}
             onFix={() => { void fetchData(); }}
@@ -136,8 +136,8 @@ const _MaterialInventory: React.FC = () => {
         </Card>
       ) : null}
 
-      <div style={{ marginBottom: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 14 }}>数据概览</h2>
+      <div className="u-mb-12">
+        <h2 className="u-m-0 u-fs-14">数据概览</h2>
       </div>
       <PageStatCards
         activeKey={selectedType || 'all'}
@@ -183,7 +183,7 @@ const _MaterialInventory: React.FC = () => {
 
       <Tabs
         activeKey={activeTab}
-        style={{ marginTop: 8 }}
+        className="u-mt-8"
         items={[
           {
             key: 'overview',
@@ -195,7 +195,7 @@ const _MaterialInventory: React.FC = () => {
                     <Badge count={Number(stats.lowStockCount || 0)} />
                   )}
                 </Space>
-                <div style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>物料仓储与预警</div>
+                <div className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>物料仓储与预警</div>
               </div>
             ),
             children: (
@@ -210,8 +210,8 @@ const _MaterialInventory: React.FC = () => {
                 </div>
 
                 <Card>
-                  <div style={{ marginBottom: 16 }}>
-                    <h2 style={{ margin: 0 }}> 物料仓储</h2>
+                  <div className="u-mb-16">
+                    <h2 className="u-m-0"> 物料仓储</h2>
                   </div>
 
                   <StandardToolbar
@@ -286,14 +286,14 @@ const _MaterialInventory: React.FC = () => {
                   领取记录
                   <Badge count={pickupData.pendingPickupCount || 0} />
                 </Space>
-                <div style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>领料确认与出库管理</div>
+                <div className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>领料确认与出库管理</div>
               </div>
             ),
             children: (
               <Card>
-                <div style={{ marginBottom: 16 }}>
-                  <h2 style={{ margin: 0 }}>领料记录</h2>
-                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginTop: 4 }}>
+                <div className="u-mb-16">
+                  <h2 className="u-m-0">领料记录</h2>
+                  <div className="u-fs-14 u-mt-4" style={{ color: 'var(--color-text-secondary)' }}>
                     流程：采购侧领取 → 仓库确认出库 → 审核通过（外发工厂自动扣款/内部工厂平账）→ 打印出库单
                   </div>
                 </div>

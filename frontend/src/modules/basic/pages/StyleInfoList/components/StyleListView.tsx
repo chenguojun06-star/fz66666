@@ -157,7 +157,7 @@ const StyleListView: React.FC<StyleListViewProps> = ({
       case 'styleNo':
         return (
           <a
-            style={{ cursor: 'pointer', color: 'var(--primary-color, var(--color-primary))' }}
+            className="u-cur-pointer" style={{ color: 'var(--primary-color, var(--color-primary))' }}
             onClick={(e) => {
               e.preventDefault();
               navigate(`/style-info/${record.id}`);

@@ -34,7 +34,7 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
         <Select
           value={String(v || 'fabricA')}
           size="small"
-          style={{ width: '100%' }}
+          className="u-w-full"
           onChange={(val) => handleUpdateRow(record.id!, 'materialType', val)}
         >
           {MATERIAL_TYPE_OPTIONS.map((opt) => (
@@ -51,7 +51,7 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
           size="small"
           onChange={(e) => handleUpdateRow(record.id!, 'materialCode', e.target.value)}
           placeholder="输入编码"
-          suffix={<span style={{ fontSize: 10, color: 'var(--color-primary)', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); handleOpenMaterialModal(record.id!); }}>选用</span>}
+          suffix={<span className="u-fs-10 u-cur-pointer" style={{ color: 'var(--color-primary)' }} onClick={(e) => { e.stopPropagation(); handleOpenMaterialModal(record.id!); }}>选用</span>}
         />
       ),
     },
@@ -95,7 +95,7 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
           <Select
             value={String(v || '')}
             size="small"
-            style={{ width: '100%' }}
+            className="u-w-full"
             placeholder="选择颜色"
             allowClear
             onChange={(val) => handleUpdateRow(record.id!, 'color', val)}
@@ -119,7 +119,7 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
           onChange={(val: string) => handleUpdateRow(record.id!, 'size', val)}
           placeholder="码数"
           size="small"
-          style={{ width: '100%' }}
+          className="u-w-full"
         />
       ),
     },
@@ -143,7 +143,7 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
           onChange={(val: string) => handleUpdateRow(record.id!, 'unit', val)}
           placeholder="单位"
           size="small"
-          style={{ width: '100%' }}
+          className="u-w-full"
         />
       ),
     },
@@ -154,7 +154,7 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
           value={Number(v || 0)}
           size="small"
           min={0}
-          style={{ width: '100%' }}
+          className="u-w-full"
           onChange={(val) => handleUpdateRow(record.id!, 'purchaseQuantity', val ?? 0)}
         />
       ),
@@ -167,7 +167,7 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
           size="small"
           min={0}
           precision={2}
-          style={{ width: '100%' }}
+          className="u-w-full"
           prefix="¥"
           onChange={(val) => handleUpdateRow(record.id!, 'unitPrice', val ?? 0)}
         />
@@ -180,7 +180,7 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
           value={String(v || '')}
           placeholder="供应商"
           size="small"
-          style={{ width: '100%' }}
+          className="u-w-full"
           onChange={(_val: string, option: any) => {
             handleUpdateRow(record.id!, 'supplierName', _val);
             const sel = Array.isArray(option) ? option[0] : option;
@@ -283,12 +283,12 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
         const pickQty = Math.min(Number(stockQty), arrived);
         return (
           <div
-            style={{ cursor: 'pointer', textAlign: 'center' }}
+            className="u-cur-pointer u-ta-center"
             onClick={() => handleWarehousePick(record, pickQty)}
             title={`点击领取出库 ${pickQty}${record.unit ? ' ' + record.unit : ''}（生成出库单，仓库确认后扣库存；两侧均可取消）`}
           >
-            <div style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{Number(stockQty)}{record.unit || ''}</div>
-            <div style={{ fontSize: 11, color: 'var(--color-warning)' }}>点击出库</div>
+            <div className="u-fw-600" style={{ color: 'var(--color-primary)' }}>{Number(stockQty)}{record.unit || ''}</div>
+            <div className="u-fs-11" style={{ color: 'var(--color-warning)' }}>点击出库</div>
           </div>
         );
       },

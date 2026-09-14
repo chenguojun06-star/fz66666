@@ -294,9 +294,9 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
   const renderEditor = () => {
     if (!editor) return null;
     return (
-      <div style={{ display: 'grid', gap: 12, paddingTop: 4 }}>
-        <div style={{ display: 'grid', gap: 6 }}>
-          <span style={{ fontWeight: 600 }}>组合名称</span>
+      <div className="u-d-grid u-gap-12" style={{ paddingTop: 4 }}>
+        <div className="u-d-grid u-gap-6">
+          <span className="u-fw-600">组合名称</span>
           <Input
             value={editor.name}
             onChange={(e) => setEditor({ ...editor, name: e.target.value })}
@@ -304,11 +304,11 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
             maxLength={MAX_NAME_LENGTH}
           />
         </div>
-        <div style={{ display: 'grid', gap: 6 }}>
-          <span style={{ fontWeight: 600 }}>
+        <div className="u-d-grid u-gap-6">
+          <span className="u-fw-600">
             {activeType.itemLabel}成员（{editor.values.length} 个，按添加顺序应用）
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div className="u-d-flex u-ai-center u-gap-4">
             <DictAutoComplete
               dictType={activeType.itemDictType}
               autoCollect={false}
@@ -321,19 +321,19 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
                   addItem();
                 }
               }}
-              style={{ flex: 1, minWidth: 200 }}
+              className="u-flex-1" style={{ minWidth: 200 }}
               placeholder={`输入或选择${activeType.itemLabel}后回车`}
             />
             <CircleIconButton type="add" size={24} title={`添加${activeType.itemLabel}`} onClick={addItem} />
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
+          <div className="u-d-flex u-fwrap-wrap u-gap-6 u-mt-2">
             {editor.values.map((value) => (
-              <Tag key={value} closable closeIcon={<TagMinusCloseIcon />} onClose={(e) => { e.preventDefault(); removeItem(value); }} style={{ margin: 0 }}>
+              <Tag key={value} closable closeIcon={<TagMinusCloseIcon />} onClose={(e) => { e.preventDefault(); removeItem(value); }} className="u-m-0">
                 {value}
               </Tag>
             ))}
             {!editor.values.length ? (
-              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>尚未添加成员</span>
+              <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>尚未添加成员</span>
             ) : null}
           </div>
         </div>
@@ -360,7 +360,7 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
       width={860}
       destroyOnHidden
     >
-      <div style={{ marginBottom: 12, color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+      <div className="u-mb-12 u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
         维护常用的成套{groups.map((g) => g.itemLabel).join('/')}组合，点击「使用」一键填入，「追加」在现有基础上叠加。
       </div>
       {groups.length > 1 ? (
@@ -376,11 +376,11 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
         />
       ) : null}
       {loading ? (
-        <div style={{ padding: '32px 0', textAlign: 'center' }}>
+        <div className="u-ta-center" style={{ padding: '32px 0' }}>
           <Spin />
         </div>
       ) : (
-        <div style={{ display: 'flex', minHeight: 420, border: '1px solid var(--color-border)', borderRadius: 8, overflow: 'hidden' }}>
+        <div className="u-d-flex u-br-8 u-ov-hidden" style={{ minHeight: 420, border: '1px solid var(--color-border)' }}>
           {/* 左：组合目录 */}
           <div
             style={{
@@ -397,7 +397,7 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
                 新增{activeType.tabLabel}
               </Button>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div className="u-flex-1 u-d-flex u-fd-column u-gap-6" style={{ overflowY: 'auto', padding: '0 8px 8px' }}>
               {currentGroups.map((g) => {
                 const active = !!selectedGroup && g.id === selectedGroup.id;
                 return (
@@ -428,7 +428,7 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
                     >
                       {g.name}
                     </span>
-                    <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{g.values.length} 项</span>
+                    <span className="u-fs-11" style={{ color: 'var(--color-text-tertiary)' }}>{g.values.length} 项</span>
                   </div>
                 );
               })}
@@ -438,13 +438,13 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
             </div>
           </div>
           {/* 右：选中组合内容 / 编辑器 */}
-          <div style={{ flex: 1, minWidth: 0, padding: 16, overflowY: 'auto', maxHeight: 480 }}>
+          <div className="u-flex-1 u-p-16" style={{ minWidth: 0, overflowY: 'auto', maxHeight: 480 }}>
             {editor ? (
               renderEditor()
             ) : selectedGroup ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: 600, fontSize: 15 }}>{selectedGroup.name}</span>
+              <div className="u-d-flex u-fd-column" style={{ gap: 14 }}>
+                <div className="u-d-flex u-ai-center u-jc-between u-gap-8 u-fwrap-wrap">
+                  <span className="u-fw-600 u-fs-15">{selectedGroup.name}</span>
                   <Space size={6} wrap>
                     <Button type="primary" size="small" onClick={() => handleApply(selectedGroup, 'replace')}>
                       使用
@@ -460,17 +460,17 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
                     </Tooltip>
                   </Space>
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
                   共 {selectedGroup.values.length} 项{activeType.itemLabel}（按添加顺序应用）
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                <div className="u-d-flex u-fwrap-wrap u-gap-6">
                   {selectedGroup.values.map((value) => (
-                    <Tag key={value} style={{ margin: 0, padding: '2px 10px' }}>
+                    <Tag key={value} className="u-m-0" style={{ padding: '2px 10px' }}>
                       {value}
                     </Tag>
                   ))}
                   {!selectedGroup.values.length ? (
-                    <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>(空组合，请编辑补充成员)</span>
+                    <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>(空组合，请编辑补充成员)</span>
                   ) : null}
                 </div>
               </div>

@@ -30,14 +30,14 @@ const HeaderSection: React.FC<Props> = ({ order, deadline }) => (
           </span>
         )}
         {order.styleName && (
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span className="u-fs-11 u-ov-hidden u-ws-nowrap" style={{ color: 'var(--color-text-muted)', maxWidth: 100, textOverflow: 'ellipsis' }}>
             {order.styleName}
           </span>
         )}
         {order.ecOrderNo && (
           <>
             {order.ecPlatform && (
-              <Tag color={getPlatformTag(order.ecPlatform).color} style={{ margin: 0, fontSize: 11, padding: '0 6px', lineHeight: '16px', borderRadius: 10 }}>
+              <Tag color={getPlatformTag(order.ecPlatform).color} className="u-m-0 u-fs-11 u-lh-16px u-br-10" style={{ padding: '0 6px' }}>
                 {getPlatformTag(order.ecPlatform).label}
               </Tag>
             )}
@@ -57,7 +57,7 @@ const HeaderSection: React.FC<Props> = ({ order, deadline }) => (
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       marginBottom: 8,
     }}>
-      <span style={{ color: 'var(--color-text-secondary)', fontWeight: 600, fontSize: 11 }}>
+      <span className="u-fw-600 u-fs-11" style={{ color: 'var(--color-text-secondary)' }}>
         {order.factoryName || '工序进度'}
       </span>
       {deadline && (

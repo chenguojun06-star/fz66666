@@ -190,7 +190,7 @@ const StyleSizeToolbar: React.FC<Props> = ({
           trigger="click"
           placement="bottom"
           content={
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center', width: 220 }}>
+            <div className="u-d-flex u-gap-4 u-ai-center" style={{ width: 220 }}>
               <Input
                 placeholder="如：上装区 / 下装区"
                 value={newGroupName}
@@ -327,16 +327,16 @@ const StyleSizeToolbar: React.FC<Props> = ({
               <p className="ant-upload-text">点击上传尺寸表图片</p>
               <p className="ant-upload-hint">
                 支持 JPG、PNG 格式，图片中应包含尺码名称和部位尺寸数值<br/>
-                <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>也可以直接粘贴图片（Ctrl+V）</span>
+                <span className="u-fs-12" style={{ color: 'var(--color-text-secondary)' }}>也可以直接粘贴图片（Ctrl+V）</span>
               </p>
             </Upload.Dragger>
             
             {!ocrLoading && ocrFile && (
-              <div style={{ marginTop: 16, padding: 12, background: 'var(--status-success-bg)', borderRadius: 8, border: '1px solid var(--status-success-border)' }}>
-                <p style={{ margin: 0, color: 'var(--color-success)', fontWeight: 500 }}>
+              <div className="u-mt-16 u-p-12 u-br-8" style={{ background: 'var(--status-success-bg)', border: '1px solid var(--status-success-border)' }}>
+                <p className="u-m-0 u-fw-500" style={{ color: 'var(--color-success)' }}>
                   已选择: {ocrFile.name}
                 </p>
-                <p style={{ margin: '8px 0 0', color: 'var(--color-text-muted)', fontSize: 12 }}>
+                <p className="u-fs-12" style={{ margin: '8px 0 0', color: 'var(--color-text-muted)' }}>
                   点击"识别"按钮开始AI分析
                 </p>
               </div>

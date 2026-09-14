@@ -13,7 +13,7 @@ interface ProfileActionBarProps {
 
 const ProfileActionBar: React.FC<ProfileActionBarProps> = ({ loading, saving, onRefresh, onSave }) => {
     return (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <div className="u-d-flex u-jc-end u-mb-16">
             <Space>
                 <Button onClick={onRefresh} disabled={loading || saving}>刷新</Button>
                 <Button type="primary" onClick={onSave} loading={saving}>保存手机号</Button>

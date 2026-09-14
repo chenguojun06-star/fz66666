@@ -114,7 +114,7 @@ const FollowUpCard: React.FC<{
     <div className={styles.followUpCard}>
       {/* 主按钮行 */}
       <button type="button" className={styles.followUpBtn} onClick={handleClick}>
-        {action.icon && <span style={{ marginRight: 4 }}>{resolveIcon(action.icon)}</span>}
+        {action.icon && <span className="u-mr-4">{resolveIcon(action.icon)}</span>}
         {action.label}
         {action.actionType === 'EXECUTE' && <span className={styles.followUpExecBadge}>可执行</span>}
       </button>

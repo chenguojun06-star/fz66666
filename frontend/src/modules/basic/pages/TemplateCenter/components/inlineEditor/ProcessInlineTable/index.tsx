@@ -65,7 +65,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
             onRemoveImage={onRemoveImage}
           />
         ) : null}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div className="u-d-flex u-ai-center u-gap-8 u-fwrap-wrap">
           {readOnly ? (
             showSizePrices ? <Tag style={{ marginInlineEnd: 0 }}>多码单价</Tag> : null
           ) : (
@@ -74,14 +74,14 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
             </Checkbox>
           )}
           {!compact && showSizePrices ? (
-            <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
+            <span className="u-fs-14" style={{ color: 'var(--neutral-text-secondary)' }}>
               各尺码单价不同时使用，默认沿用工价。
             </span>
           ) : null}
         </div>
         {showSizePrices ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>尺码</span>
+          <div className="u-d-flex u-ai-center u-gap-6 u-fwrap-wrap">
+            <span className="u-fs-14" style={{ color: 'var(--neutral-text-secondary)' }}>尺码</span>
             {templateSizes.map((size) => (
               <Tag key={size} closable={!readOnly} closeIcon={<TagMinusCloseIcon />} onClose={() => onRemoveSize(size)} style={{ marginInlineEnd: 0 }}>
                 {size}
@@ -126,7 +126,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
               onClick: ({ key }) => addStepToStage(String(key)),
             }}
           >
-            <Button type="dashed" style={{ width: '100%' }}>
+            <Button type="dashed" className="u-w-full">
               新增工序 <DownOutlined />
             </Button>
           </Dropdown>

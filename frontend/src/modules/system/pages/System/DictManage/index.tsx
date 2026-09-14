@@ -49,13 +49,13 @@ const DictManage: React.FC = () => {
         }
       >
         {showSmartErrorNotice && smartError ? (
-          <Card style={{ marginBottom: 12 }}>
+          <Card className="u-mb-12">
             <SmartErrorNotice error={smartError} onFix={() => { void fetchData(selectedType); }} />
           </Card>
         ) : null}
         {showDictAutocollect && (
           <Alert
-            style={{ marginBottom: 12 }}
+            className="u-mb-12"
             type="info"
             showIcon
             icon={<span></span>}

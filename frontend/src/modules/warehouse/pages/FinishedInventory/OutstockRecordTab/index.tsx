@@ -297,11 +297,11 @@ const OutstockRecordTab: React.FC = () => {
         cancelText="取消"
         width={480}
       >
-        <p style={{ marginBottom: 12, color: 'var(--color-text-secondary)' }}>
+        <p className="u-mb-12" style={{ color: 'var(--color-text-secondary)' }}>
           调拨出库确认收货回入库：将把 {transferTarget?.outstockQuantity || 0} 件商品重新计入可用库存，并标记该出库记录已回入。
         </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ whiteSpace: 'nowrap' }}>回入库位：</span>
+        <div className="u-d-flex u-ai-center u-gap-8">
+          <span className="u-ws-nowrap">回入库位：</span>
           <MaterialWarehouseLocationPicker warehouseType="FINISHED" value={transferLocation} onChange={(v, areaId) => { setTransferLocation(v); setTransferAreaId(areaId || ''); }} />
         </div>
       </Modal>
@@ -316,7 +316,7 @@ const OutstockRecordTab: React.FC = () => {
         cancelText="取消"
         width={480}
       >
-        <p style={{ marginBottom: 12, color: 'var(--color-text-secondary)' }}>
+        <p className="u-mb-12" style={{ color: 'var(--color-text-secondary)' }}>
           将把勾选的 {transferEligibleIds.length} 条调拨出库记录统一回入以下仓库库位，并计入入库记录。
         </p>
         <MaterialWarehouseLocationPicker

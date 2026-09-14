@@ -32,7 +32,7 @@ const ArrivalFormModal: React.FC<ArrivalFormModalProps> = ({
       destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={onSubmit}>
-        <p style={{ marginBottom: 8, color: 'var(--color-text-secondary)', fontSize: 12 }}>
+        <p className="u-mb-8 u-fs-12" style={{ color: 'var(--color-text-secondary)' }}>
           采购 {target?.purchaseQuantity || '-'}{target?.unit ? ' ' + target.unit : ''}，
           已到 {target?.arrivedQuantity || 0}，
           待到 {target ? Math.max(0.01, Number(target.purchaseQuantity || 0) - Number(target.arrivedQuantity || 0)) : 0}
@@ -43,7 +43,7 @@ const ArrivalFormModal: React.FC<ArrivalFormModalProps> = ({
             max={target ? Math.max(0.01, Number(target.purchaseQuantity || 0) - Number(target.arrivedQuantity || 0)) : 1}
             step={0.01}
             precision={2}
-            style={{ width: '100%' }}
+            className="u-w-full"
             placeholder="请输入到货数量（支持小数）"
             autoFocus
           />

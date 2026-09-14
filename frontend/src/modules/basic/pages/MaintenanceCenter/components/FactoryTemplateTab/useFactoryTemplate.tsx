@@ -214,7 +214,7 @@ export function useFactoryTemplate() {
 
   const createMenuItems = useMemo(() => FACTORY_TEMPLATE_TYPE_OPTIONS.map(opt => ({
     key: opt.value,
-    label: <span><PlusOutlined style={{ marginRight: 8 }} />{opt.label}</span>,
+    label: <span><PlusOutlined className="u-mr-8" />{opt.label}</span>,
     onClick: () => handleCreateBlank(opt.value),
   })), []);
 

@@ -43,19 +43,19 @@ const ApproveUserModal: React.FC<ApproveUserModalProps> = ({
       width="40vw"
       confirmLoading={approveSubmitting}
     >
-      <div style={{ marginBottom: 16 }}>
+      <div className="u-mb-16">
         <p>
           批准用户"<strong>{currentUser?.name || currentUser?.username}</strong>"
         </p>
-        <p style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)", marginBottom: 16 }}>
+        <p className="u-fs-var--font-size-xs u-mb-16" style={{ color: 'var(--neutral-text-disabled)' }}>
           批准后该用户可以正常登录系统
         </p>
         <div>
-          <div style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
+          <div className="u-d-block u-mb-8 u-fw-500">
             选择角色<span style={{ color: 'var(--color-danger)' }}>*</span>
           </div>
           <Select
-            style={{ width: '100%' }}
+            className="u-w-full"
             placeholder="请选择角色"
             value={selectedRoleId}
             onChange={setSelectedRoleId}
@@ -65,7 +65,7 @@ const ApproveUserModal: React.FC<ApproveUserModalProps> = ({
               value: String(role.id)
             }))}
           />
-          <div style={{ display: 'block', margin: '16px 0 8px', fontWeight: 500 }}>
+          <div className="u-d-block u-fw-500" style={{ margin: '16px 0 8px' }}>
             批准原因<span style={{ color: 'var(--color-danger)' }}>*</span>
           </div>
           <TextArea

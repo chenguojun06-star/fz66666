@@ -39,8 +39,8 @@ const OutstockTable: React.FC<OutstockTableProps> = ({ items }) => (
               <td style={tdStyle}>{item.outstockNo || '—'}</td>
               <td style={tdStyle}>{item.orderNo || '—'}</td>
               <td style={tdStyle}>
-                <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{item.styleNo || '—'}</div>
-                {item.styleName && <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{item.styleName}</div>}
+                <div className="u-fw-600" style={{ color: 'var(--color-text-primary)' }}>{item.styleNo || '—'}</div>
+                {item.styleName && <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{item.styleName}</div>}
               </td>
               <td style={tdStyle}>{item.color} / {item.size}</td>
               <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 600 }}>{item.outstockQuantity}</td>
@@ -53,8 +53,8 @@ const OutstockTable: React.FC<OutstockTableProps> = ({ items }) => (
               <td style={tdStyle}>
                 {item.expressCompany || item.trackingNo ? (
                   <div>
-                    {item.expressCompany && <div style={{ fontSize: 14 }}>{item.expressCompany}</div>}
-                    {item.trackingNo && <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{item.trackingNo}</div>}
+                    {item.expressCompany && <div className="u-fs-14">{item.expressCompany}</div>}
+                    {item.trackingNo && <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{item.trackingNo}</div>}
                   </div>
                 ) : '—'}
               </td>

@@ -47,7 +47,7 @@ export function getDetailActionColumns(deps: DetailColumnDeps): any[] {
                 const canAudit = isInternal || isOrderFrozenByStatus({ status: record.orderStatus });
                 const audited = isDetailAudited(record);
                 if (audited) return <Tag color="processing">已审核</Tag>;
-                if (!canAudit) return <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 14 }}>未关单</span>;
+                if (!canAudit) return <span className="u-fs-14" style={{ color: 'var(--neutral-text-disabled)' }}>未关单</span>;
                 return (
                     <Button
                         type="primary"

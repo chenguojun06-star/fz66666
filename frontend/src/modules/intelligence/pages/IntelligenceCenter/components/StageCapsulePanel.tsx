@@ -266,7 +266,7 @@ const StageCapsulePanel: React.FC<StageCapsulePanelProps> = ({ orders }) => {
   return (
     <div className="c-stage-capsule-panel">
       <div className="c-card c-stage-shell">
-        <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={toggleCollapsed}>
+        <div className="c-card-title u-cur-pointer"  onClick={toggleCollapsed}>
           <span className="live-dot" style={{ ['--dot-size' as any]: '7px', ['--dot-color' as any]: STAGE_ACCENT }} />
           进度节点
           <span className="c-card-badge cyan-badge">点击卡片展开订单</span>

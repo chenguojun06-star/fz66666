@@ -73,7 +73,7 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
         </Button>,
       ]}
     >
-      <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid var(--color-border)' }}>
+      <div className="u-mb-12" style={{ paddingBottom: 12, borderBottom: '1px solid var(--color-border)' }}>
         <MaterialColorCardRecognizer
           form={form}
           onMaterialTypeRecognized={(type) => fetchMaterialCode(type)}
@@ -82,7 +82,7 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
             setImageFiles([{ uid: '-1', name: 'image', status: 'done' as const, url }]);
           }}
         />
-        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12, marginLeft: 12 }}>
+        <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)', marginLeft: 12 }}>
           提示：拍照色卡图片，AI 自动识别物料信息，识别后可编辑再保存
         </span>
       </div>
@@ -151,10 +151,10 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
             <Form.Item name="supplierContactPhone" hidden><Input /></Form.Item>
           </Col>
           <Col xs={24} sm={8} md={6} lg={4} xl={4}>
-            <Form.Item name="unitPrice" label="单价(元)"><InputNumber placeholder="请输入单价" style={{ width: '100%' }} min={0} step={0.01} precision={2} /></Form.Item>
+            <Form.Item name="unitPrice" label="单价(元)"><InputNumber placeholder="请输入单价" className="u-w-full" min={0} step={0.01} precision={2} /></Form.Item>
           </Col>
           <Col xs={24} sm={8} md={6} lg={4} xl={4}>
-            <Form.Item name="conversionRate" label="换算"><InputNumber placeholder="如：3" style={{ width: '100%' }} min={0} step={0.01} precision={4} /></Form.Item>
+            <Form.Item name="conversionRate" label="换算"><InputNumber placeholder="如：3" className="u-w-full" min={0} step={0.01} precision={4} /></Form.Item>
           </Col>
         </Row>
         <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.materialType !== currentValues.materialType}>
@@ -164,7 +164,7 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
             if (mt !== 'fabric' && mt !== 'lining' && mt !== 'accessory') return null;
             return (
               <Row gutter={[12, 8]}>
-                <Col xs={24}><div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, marginTop: 4, marginBottom: 8, color: 'var(--primary-color)' }}> 面料属性</div></Col>
+                <Col xs={24}><div className="u-fs-var--font-size-sm u-fw-600 u-mt-4 u-mb-8" style={{ color: 'var(--primary-color)' }}> 面料属性</div></Col>
                 <Col xs={24} sm={8} md={6} lg={5} xl={4}>
                   <Form.Item name="fabricWeight" label="克重"><Input placeholder="如：200g/m²" /></Form.Item>
                 </Col>
@@ -197,7 +197,7 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
             })();
             return (
               <Row gutter={[12, 8]}>
-                <Col xs={24}><div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, marginTop: 4, marginBottom: 8, color: 'var(--primary-color)' }}>关联辅料（物料清单自动带入）</div></Col>
+                <Col xs={24}><div className="u-fs-var--font-size-sm u-fw-600 u-mt-4 u-mb-8" style={{ color: 'var(--primary-color)' }}>关联辅料（物料清单自动带入）</div></Col>
                 <Col xs={24}>
                   <Form.Item
                     name="companionMaterialIds"
@@ -222,14 +222,14 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
                         value: a.id,
                         label: `${a.materialName}${a.materialCode ? `（${a.materialCode}）` : ''}${a.supplierName ? ` · ${a.supplierName}` : ''}`,
                       }))}
-                      style={{ width: '100%' }}
+                      className="u-w-full"
                       allowClear
                     />
                   </Form.Item>
                 </Col>
                 {companionArr.length > 0 && (
                   <Col xs={24}>
-                    <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+                    <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
                       已配置 {companionArr.length} 个关联辅料：物料清单选该主面料时会自动追加这些辅料行
                     </span>
                   </Col>

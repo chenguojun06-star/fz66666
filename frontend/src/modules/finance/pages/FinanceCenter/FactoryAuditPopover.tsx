@@ -92,16 +92,16 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
 
   const content = (
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+      <div className="u-d-flex u-ai-center u-gap-6 u-mb-8">
         <XiaoyunCloudAvatar size={18} active />
-        <span style={{ fontWeight: 600, fontSize: 14 }}>AI 智能分析</span>
-        <Tag color={analysis.auditedCount === analysis.totalCount ? 'success' : 'orange'} style={{ marginLeft: 'auto', fontSize: 14 }}>
+        <span className="u-fw-600 u-fs-14">AI 智能分析</span>
+        <Tag color={analysis.auditedCount === analysis.totalCount ? 'success' : 'orange'} className="u-ml-auto u-fs-14">
           {analysis.auditedCount === analysis.totalCount ? '全部已审核' : `${analysis.auditedCount}/${analysis.totalCount} 已审核`}
         </Tag>
       </div>
 
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', marginBottom: 4 }}>
+      <div className="u-mb-8">
+        <div className="u-fs-14 u-mb-4" style={{ color: 'var(--neutral-text-secondary)' }}>
           订单审核进度
         </div>
         <Progress
@@ -111,9 +111,9 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
-        <div style={{ textAlign: 'center', padding: '6px', background: 'var(--color-bg-container)', borderRadius: 4 }}>
-          <div style={{ fontSize: 14, color: 'var(--neutral-text-secondary)' }}>利润率</div>
+      <div className="u-d-grid u-gap-8 u-mb-10" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <div className="u-ta-center u-br-4" style={{ padding: '6px', background: 'var(--color-bg-container)' }}>
+          <div className="u-fs-14" style={{ color: 'var(--neutral-text-secondary)' }}>利润率</div>
           <div style={{
             fontSize: 16, fontWeight: 600,
             color: analysis.profitRate >= 10 ? 'var(--color-success)' : analysis.profitRate >= 0 ? 'var(--color-warning)' : 'var(--color-danger)'
@@ -121,8 +121,8 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
             {analysis.profitRate.toFixed(1)}%
           </div>
         </div>
-        <div style={{ textAlign: 'center', padding: '6px', background: 'var(--color-bg-container)', borderRadius: 4 }}>
-          <div style={{ fontSize: 14, color: 'var(--neutral-text-secondary)' }}>次品率</div>
+        <div className="u-ta-center u-br-4" style={{ padding: '6px', background: 'var(--color-bg-container)' }}>
+          <div className="u-fs-14" style={{ color: 'var(--neutral-text-secondary)' }}>次品率</div>
           <div style={{
             fontSize: 16, fontWeight: 600,
             color: analysis.defectRate <= 1 ? 'var(--color-success)' : analysis.defectRate <= 3 ? 'var(--color-warning)' : 'var(--color-danger)'
@@ -132,10 +132,10 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
         </div>
       </div>
 
-      <Divider style={{ margin: '8px 0' }} />
+      <Divider className="u-m-8px0" />
 
       <div>
-        <div style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+        <div className="u-fs-14 u-mb-6 u-d-flex u-ai-center u-gap-4" style={{ color: 'var(--neutral-text-secondary)' }}>
           {analysis.topSuggestion.startsWith('') || analysis.topSuggestion.includes('警')
             ? <WarningOutlined style={{ color: 'var(--color-warning)' }} />
             : <CheckCircleOutlined style={{ color: 'var(--color-success)' }} />}

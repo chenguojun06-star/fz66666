@@ -7,7 +7,7 @@ const LoginLeftPane: React.FC = () => {
         <div className="tech-grid" />
         <div className="tech-glow-center" />
       </div>
-      <svg className="pencil-filters" aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
+      <svg className="pencil-filters u-pos-absolute u-ov-hidden" aria-hidden="true" style={{ width: 0, height: 0 }}>
         <defs>
           <filter id="pencil-texture" x="-10%" y="-10%" width="120%" height="120%">
             <feTurbulence type="fractalNoise" baseFrequency="0.042 0.022" numOctaves="4" seed="7" result="noise"/>

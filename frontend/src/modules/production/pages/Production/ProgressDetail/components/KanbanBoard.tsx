@@ -14,7 +14,7 @@ interface KanbanBoardProps {
 const KanbanBoard: React.FC<KanbanBoardProps> = ({ nodeStats }) => {
   if (nodeStats.length === 0) return <Empty description="暂无工序数据" />;
   return (
-    <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 12 }}>
+    <div className="u-d-flex u-gap-12" style={{ overflowX: 'auto', paddingBottom: 12 }}>
       {nodeStats.map((stage) => (
         <Card
           key={stage.stageName}
@@ -28,15 +28,15 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ nodeStats }) => {
           }
           style={{ minWidth: 220, flex: '0 0 auto' }}
         >
-          <Progress percent={stage.completionRate} strokeColor={STAGE_COLORS[stage.stageName] || 'var(--color-info)'} style={{ marginBottom: 8 }} />
-          <div style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
+          <Progress percent={stage.completionRate} strokeColor={STAGE_COLORS[stage.stageName] || 'var(--color-info)'} className="u-mb-8" />
+          <div className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>
             <div>总记录: {stage.totalRecords}</div>
             <div style={{ color: 'var(--color-success)' }}>已完成: {stage.scannedRecords}</div>
             <div style={{ color: 'var(--color-danger)' }}>待完成: {stage.pendingRecords}</div>
           </div>
           {stage.processBreakdown && Object.keys(stage.processBreakdown).length > 0 && (
-            <div style={{ marginTop: 8, borderTop: '1px solid var(--color-border-light)', paddingTop: 8 }}>
-              <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>工序明细</div>
+            <div className="u-mt-8" style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: 8 }}>
+              <div className="u-fs-12 u-mb-6" style={{ color: 'var(--color-text-tertiary)' }}>工序明细</div>
               {Object.entries(stage.processBreakdown).map(([name, detail]) => {
                 const { total, completed, pending } = detail;
                 const isAllDone = completed === total;
@@ -44,22 +44,22 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ nodeStats }) => {
                 const tagColor = isAllDone ? 'var(--color-success)' : hasPending ? 'var(--color-danger)' : 'var(--color-warning)';
                 const tagBg = isAllDone ? 'rgba(82, 196, 26, 0.1)' : hasPending ? 'rgba(255, 77, 79, 0.1)' : 'rgba(250, 173, 20, 0.1)';
                 return (
-                  <div key={name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <div key={name} className="u-d-flex u-jc-between u-ai-center u-mb-6">
                     <Tag style={{ backgroundColor: tagBg, borderColor: tagColor, color: tagColor, marginBottom: 0 }}>
                       {name}
                     </Tag>
                     <Space size={4}>
                       {pending > 0 && (
-                        <span style={{ color: 'var(--color-danger)', fontSize: 12 }}>
+                        <span className="u-fs-12" style={{ color: 'var(--color-danger)' }}>
                           <CheckCircleOutlined /> {pending}
                         </span>
                       )}
                       {completed > 0 && (
-                        <span style={{ color: 'var(--color-success)', fontSize: 12 }}>
+                        <span className="u-fs-12" style={{ color: 'var(--color-success)' }}>
                           {completed}
                         </span>
                       )}
-                      <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>/{total}</span>
+                      <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>/{total}</span>
                     </Space>
                   </div>
                 );

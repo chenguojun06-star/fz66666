@@ -15,9 +15,9 @@ export interface CustomerColumnHandlers {
 export function buildColumns(handlers: CustomerColumnHandlers): ColumnsType<Customer> {
   const { openDrawer, openEditModal, handleDelete } = handlers;
   return [
-    { title: '客户编号', dataIndex: 'customerNo', width: 130, render: v => <Text code style={{ fontSize: 14 }}>{v}</Text> },
+    { title: '客户编号', dataIndex: 'customerNo', width: 130, render: v => <Text code className="u-fs-14">{v}</Text> },
     { title: '公司名称', dataIndex: 'companyName', width: 180, render: (v, r) => (
-      <Button type="link" style={{ padding: 0, fontWeight: 600 }} onClick={() => openDrawer(r)}>{v}</Button>
+      <Button type="link" className="u-p-0 u-fw-600" onClick={() => openDrawer(r)}>{v}</Button>
     )},
     { title: '等级', dataIndex: 'customerLevel', width: 90, render: v =>
       v === 'VIP' ? <Tag color="gold">VIP</Tag> : <Tag>普通</Tag>

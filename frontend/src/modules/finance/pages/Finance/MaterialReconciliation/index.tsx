@@ -185,11 +185,11 @@ const MaterialReconciliation: React.FC = () => {
                 width: '52vw',
                 title: `补生成完成：成功 ${touched} 条，失败 ${failed} 条`,
                 content: (
-                  <div style={{ maxHeight: 320, overflow: 'auto' }}>
-                    {skippedText && <div style={{ marginBottom: 8, color: 'var(--color-text-secondary)' }}>跳过：{skippedText}</div>}
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>失败明细（前 {failures.length} 条）：</div>
+                  <div className="u-ov-auto" style={{ maxHeight: 320 }}>
+                    {skippedText && <div className="u-mb-8" style={{ color: 'var(--color-text-secondary)' }}>跳过：{skippedText}</div>}
+                    <div className="u-fw-600 u-mb-4">失败明细（前 {failures.length} 条）：</div>
                     {failures.map((f, i) => (
-                      <div key={i} style={{ fontSize: 12, color: 'var(--color-danger)', marginBottom: 2 }}>
+                      <div key={i} className="u-fs-12 u-mb-2" style={{ color: 'var(--color-danger)' }}>
                         {f.purchaseNo || f.purchaseId} · {f.material}：{f.error}
                       </div>
                     ))}
@@ -224,23 +224,23 @@ const MaterialReconciliation: React.FC = () => {
     <>
       <PageLayout
         title="物料对账"
-        headerContent={showSmartErrorNotice && smartError ? <div style={{ marginBottom: 12 }}><SmartErrorNotice error={smartError} onFix={fetchList} /></div> : null}
+        headerContent={showSmartErrorNotice && smartError ? <div className="u-mb-12"><SmartErrorNotice error={smartError} onFix={fetchList} /></div> : null}
       >
         {/* ===== AI审核助手 ===== */}
         {showSmartErrorNotice && (
-          <Card style={{ marginBottom: 12, background: 'var(--color-primary-bg-light, var(--color-bg-highlight))', border: '1px solid var(--color-primary-border, var(--color-blue-200))' }} styles={{ body: { padding: '8px 12px' } }}
-            extra={<Button type="link" loading={auditLoading} onClick={fetchFinanceAudit} style={{ padding: 0 }}>{financeAudit ? '重新分析' : ' AI分析'}</Button>}
-            title={<span style={{ fontSize: 14, color: 'var(--color-primary)' }}> 智能财务审核助手</span>}
+          <Card className="u-mb-12" style={{ background: 'var(--color-primary-bg-light, var(--color-bg-highlight))', border: '1px solid var(--color-primary-border, var(--color-blue-200))' }} styles={{ body: { padding: '8px 12px' } }}
+            extra={<Button type="link" loading={auditLoading} onClick={fetchFinanceAudit} className="u-p-0">{financeAudit ? '重新分析' : ' AI分析'}</Button>}
+            title={<span className="u-fs-14" style={{ color: 'var(--color-primary)' }}> 智能财务审核助手</span>}
           >
             {!financeAudit ? (
-              <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>点击「AI分析」自动检测对账差异并给出审核建议</span>
+              <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>点击「AI分析」自动检测对账差异并给出审核建议</span>
             ) : (
-              <div style={{ fontSize: 14 }}>
-                <div style={{ marginBottom: 4 }}>
+              <div className="u-fs-14">
+                <div className="u-mb-4">
                   <Tag color={financeAudit.overallRisk === 'HIGH' ? 'red' : financeAudit.overallRisk === 'MEDIUM' ? 'orange' : 'green'}>
                     整体风险：{financeAudit.overallRisk === 'HIGH' ? '高' : financeAudit.overallRisk === 'MEDIUM' ? '中' : '低'}
                   </Tag>
-                  <span style={{ color: 'var(--color-text)', marginLeft: 8 }}>{financeAudit.suggestion}</span>
+                  <span className="u-ml-8" style={{ color: 'var(--color-text)' }}>{financeAudit.suggestion}</span>
                 </div>
                 {financeAudit.findings?.length > 0 && (
                   <ul style={{ margin: '4px 0 0 0', paddingLeft: 16, color: 'var(--color-text-secondary)' }}>
@@ -254,7 +254,7 @@ const MaterialReconciliation: React.FC = () => {
         )}
 
         {/* ===== 统计卡片 ===== */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 8 }}>
+        <div className="u-d-grid u-gap-8 u-mb-8" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
           <Card
             size="small"
             hoverable
@@ -263,7 +263,7 @@ const MaterialReconciliation: React.FC = () => {
             styles={{ body: { padding: '5px 10px' } }}
           >
             <Statistic
-              title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>}
+              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined className="u-mr-4 u-fs-12" />待审批</span>}
               value={stats.pendingCount}
               suffix="条"
               valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 500 }}
@@ -277,7 +277,7 @@ const MaterialReconciliation: React.FC = () => {
             styles={{ body: { padding: '5px 10px' } }}
           >
             <Statistic
-              title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>}
+              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined className="u-mr-4 u-fs-12" />已审批</span>}
               value={stats.approvedCount}
               suffix="条"
               valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 500 }}
@@ -291,7 +291,7 @@ const MaterialReconciliation: React.FC = () => {
             styles={{ body: { padding: '5px 10px' } }}
           >
             <Statistic
-              title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已付款</span>}
+              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined className="u-mr-4 u-fs-12" />已付款</span>}
               value={stats.paidCount}
               suffix="条"
               valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 500 }}
@@ -304,7 +304,7 @@ const MaterialReconciliation: React.FC = () => {
             styles={{ body: { padding: '5px 10px' } }}
           >
             <Statistic
-              title={<span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>合计金额（点击查看全部）</span>}
+              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>合计金额（点击查看全部）</span>}
               value={stats.totalAmount}
               precision={2}
               prefix="¥"
@@ -318,9 +318,9 @@ const MaterialReconciliation: React.FC = () => {
         {/* D-140：状态Tab与统计卡功能完全重复（统计卡即可点击筛选），删除冗余Tab压缩页头 */}
         <Card className="filter-card mb-sm" styles={{ body: { padding: '8px 12px' } }}>
           {/* 操作按钮区 */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <div className="u-d-flex u-jc-between u-ai-center u-fwrap-wrap u-gap-8">
             <Space size={8} wrap>
-              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+              <span className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
                 {selectedRowKeys.length > 0 ? `已选 ${selectedRowKeys.length} 条` : `共 ${stats.total} 条`}
               </span>
               <DatePicker.RangePicker

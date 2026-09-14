@@ -101,7 +101,7 @@ const CardEditModal: React.FC<Props> = ({
               }}>
                 AI 拍照识别色卡
               </Button>
-              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>上传色卡/吊牌照片，自动识别物料类型、规格、成分等信息</span>
+              <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>上传色卡/吊牌照片，自动识别物料类型、规格、成分等信息</span>
             </Space>
           </div>
           <Row gutter={12}>

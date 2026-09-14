@@ -66,11 +66,11 @@ export function OrderStartNode({ record, totalQty, frozen, isCompletedOrClosed }
   const popoverContent = (
     <div style={{ minWidth: 160 }}>
       {hasExtraInfo && (
-        <div style={{ marginBottom: 8 }}>
+        <div className="u-mb-8">
           {styleFullText ? (
             <div style={infoRowStyle}>
               <span style={infoLabelStyle}>款号</span>
-              <span style={{ fontWeight: 600 }}>{styleFullText}</span>
+              <span className="u-fw-600">{styleFullText}</span>
             </div>
           ) : null}
           {skcText ? (
@@ -92,7 +92,7 @@ export function OrderStartNode({ record, totalQty, frozen, isCompletedOrClosed }
   );
 
   return (
-    <div style={{ display: 'flex', alignItems: 'stretch', flex: '1 1 0' }}>
+    <div className="u-d-flex" style={{ alignItems: 'stretch', flex: '1 1 0' }}>
       <Popover
         content={popoverContent}
         trigger="hover"
@@ -146,7 +146,7 @@ export function OrderStartNode({ record, totalQty, frozen, isCompletedOrClosed }
           </div>
         </div>
       </Popover>
-      <div style={{ flex: 1, alignSelf: 'center', display: 'flex', alignItems: 'center', paddingLeft: 2, paddingRight: 2, minWidth: 16 }}>
+      <div className="u-flex-1 u-d-flex u-ai-center" style={{ alignSelf: 'center', paddingLeft: 2, paddingRight: 2, minWidth: 16 }}>
         <div style={{ flex: 1, position: 'relative', height: 1, borderRadius: 999,
           background: colorWithAlpha(nodeColor2, 0.28), overflow: 'hidden' }}>
           <div style={{ width: '100%', height: '100%', borderRadius: 999,

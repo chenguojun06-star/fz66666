@@ -95,7 +95,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
         <span>
           工序流程
           <Tooltip title="填写款号自动加载工序模板，可自由增减子工序和修改单价，工序单价直接影响工资结算">
-            <QuestionCircleOutlined style={{ marginLeft: 6, color: 'var(--color-primary)', cursor: 'help' }} />
+            <QuestionCircleOutlined className="u-ml-6" style={{ color: 'var(--color-primary)', cursor: 'help' }} />
           </Tooltip>
         </span>
       }
@@ -119,7 +119,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
           </Dropdown>
         </Space>
       }
-      style={{ marginBottom: 12 }}
+      className="u-mb-12"
     >
 
       <CopyStyleProcessDrawer
@@ -128,15 +128,15 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
         currentStyleId={currentStyleId}
         onConfirm={async (rows) => { handleCopyProcesses(rows); }}
       />
-      <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="u-mb-12 u-d-flex u-ai-center u-gap-8">
         <div style={cardStyle}>
-          <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>工序单价（总计）</span>
-          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>¥{totalCost.toFixed(2)}</span>
-          <span style={{ fontSize: 14, color: 'var(--color-text-quaternary)', marginLeft: 'auto' }}>{createTask.createProcessNodes.length} 道工序</span>
+          <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>工序单价（总计）</span>
+          <span className="u-fs-14 u-fw-600" style={{ color: 'var(--color-text-primary)' }}>¥{totalCost.toFixed(2)}</span>
+          <span className="u-fs-14 u-ml-auto" style={{ color: 'var(--color-text-quaternary)' }}>{createTask.createProcessNodes.length} 道工序</span>
         </div>
       </div>
 
-      <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, overflow: 'hidden', overflowX: 'auto' }}>
+      <div className="u-br-6 u-ov-hidden" style={{ border: '1px solid var(--color-border)', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 900 + uniqueSizes.length * 90 }}>
           <colgroup>
             <col style={{ width: 50 }} />
@@ -152,18 +152,18 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
           </colgroup>
           <thead>
             <tr style={{ background: 'var(--color-bg-container)' }}>
-              <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>排序</th>
-              <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>工序编号</th>
-              <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>工序名称</th>
-              <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>进度节点</th>
-              <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>机器类型</th>
-              <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>工序难度</th>
-              <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>工时(秒)</th>
-              <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>工价(元)</th>
+              <th className="u-ta-center" style={{ padding: '8px 8px', borderBottom: '1px solid var(--color-border)' }}>排序</th>
+              <th className="u-ta-center" style={{ padding: '8px 8px', borderBottom: '1px solid var(--color-border)' }}>工序编号</th>
+              <th className="u-ta-center" style={{ padding: '8px 8px', borderBottom: '1px solid var(--color-border)' }}>工序名称</th>
+              <th className="u-ta-center" style={{ padding: '8px 8px', borderBottom: '1px solid var(--color-border)' }}>进度节点</th>
+              <th className="u-ta-center" style={{ padding: '8px 8px', borderBottom: '1px solid var(--color-border)' }}>机器类型</th>
+              <th className="u-ta-center" style={{ padding: '8px 8px', borderBottom: '1px solid var(--color-border)' }}>工序难度</th>
+              <th className="u-ta-center" style={{ padding: '8px 8px', borderBottom: '1px solid var(--color-border)' }}>工时(秒)</th>
+              <th className="u-ta-center" style={{ padding: '8px 8px', borderBottom: '1px solid var(--color-border)' }}>工价(元)</th>
               {uniqueSizes.map((s) => (
-                <th key={s} style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>{s}码</th>
+                <th key={s} className="u-ta-center" style={{ padding: '8px 8px', borderBottom: '1px solid var(--color-border)' }}>{s}码</th>
               ))}
-              <th style={{ padding: '8px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border)' }}>操作</th>
+              <th className="u-ta-center" style={{ padding: '8px 8px', borderBottom: '1px solid var(--color-border)' }}>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -172,10 +172,10 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
               const originalIndex = createTask.createProcessNodes.indexOf(node);
               return (
                 <tr key={`process-row-${originalIndex}`}>
-                  <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)' }}>
+                  <td className="u-ta-center" style={{ padding: '6px 8px', borderBottom: '1px solid var(--color-border-light)' }}>
                     {index + 1}
                   </td>
-                  <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-tertiary)' }}>
+                  <td className="u-ta-center" style={{ padding: '6px 8px', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-tertiary)' }}>
                     {String(index + 1).padStart(2, '0')}
                   </td>
                   <td style={{ padding: '4px 6px', borderBottom: '1px solid var(--color-border-light)' }}>
@@ -184,7 +184,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
                       autoCollect
                       value={node.name}
                       placeholder="请选择或输入工序名称"
-                      style={{ width: '100%' }}
+                      className="u-w-full"
                       onChange={(v) => createTask.updateProcessNode(originalIndex, 'name', v)}
                     />
                   </td>
@@ -200,17 +200,17 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
                         borderBottom: '1px solid var(--color-border-light)',
                       }}
                     >
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <div className="u-d-flex u-fd-column u-ai-center u-gap-4">
                         <Tag style={{ background: STAGE_ACCENT, color: 'var(--color-bg-base)', border: 'none', fontWeight: 600, fontSize: 14 }}>
                           {spanInfo.stage}
                         </Tag>
-                        <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{spanInfo.count} 个工序</span>
+                        <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{spanInfo.count} 个工序</span>
                         <Button
                           type="link"
 
                           icon={<PlusOutlined />}
                           onClick={() => handleAddToStage(spanInfo.stage)}
-                          style={{ fontSize: 14, padding: 0 }}
+                          className="u-fs-14 u-p-0"
                         >
                           添加
                         </Button>
@@ -223,7 +223,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
                       autoCollect
                       value={node.machineType || ''}
                       placeholder="请选择或输入"
-                      style={{ width: '100%' }}
+                      className="u-w-full"
                       onChange={(v) => createTask.updateProcessNode(originalIndex, 'machineType', v)}
                     />
                   </td>
@@ -233,7 +233,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
                       value={node.difficulty || undefined}
                       allowClear
                       placeholder="选择"
-                      style={{ width: '100%' }}
+                      className="u-w-full"
                       onChange={(v) => createTask.updateProcessNode(originalIndex, 'difficulty', v || '')}
                       options={[
                         { value: '易', label: '易' },
@@ -246,7 +246,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
                     <InputNumber
 
                       value={node.standardTime || 0}
-                      style={{ width: '100%' }}
+                      className="u-w-full"
                       min={0}
                       onChange={(v) => createTask.updateProcessNode(originalIndex, 'standardTime', typeof v === 'number' ? v : 0)}
                     />
@@ -255,7 +255,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
                     <InputNumber
 
                       value={node.unitPrice}
-                      style={{ width: '100%' }}
+                      className="u-w-full"
                       min={0}
                       precision={2}
                       step={0.01}
@@ -269,7 +269,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
                       <InputNumber
 
                         value={node.sizePrices?.[s] ?? node.unitPrice}
-                        style={{ width: '100%' }}
+                        className="u-w-full"
                         min={0}
                         precision={2}
                         step={0.01}
@@ -278,7 +278,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
                       />
                     </td>
                   ))}
-                  <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)' }}>
+                  <td className="u-ta-center" style={{ padding: '6px 8px', borderBottom: '1px solid var(--color-border-light)' }}>
                     <Button
 
                       type="text"
@@ -293,7 +293,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
             })}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={colCount} style={{ padding: 16, textAlign: 'center', color: 'rgba(0,0,0,0.25)' }}>
+                <td colSpan={colCount} className="u-p-16 u-ta-center" style={{ color: 'rgba(0,0,0,0.25)' }}>
                   暂无工序，点击"添加工序"开始
                 </td>
               </tr>

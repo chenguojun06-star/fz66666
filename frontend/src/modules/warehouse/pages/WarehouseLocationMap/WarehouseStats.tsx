@@ -23,9 +23,9 @@ const WarehouseStats: React.FC<Props> = ({
     <div className="wlm-main-header">
       <div className="wlm-header-left">
         <div className="wlm-header-title">
-          <EnvironmentOutlined style={{ color: 'var(--color-primary)', marginRight: 8 }} />
+          <EnvironmentOutlined className="u-mr-8" style={{ color: 'var(--color-primary)' }} />
           {selectedArea.areaName}
-          <Tag color={selectedArea.warehouseType === 'FINISHED' ? 'blue' : selectedArea.warehouseType === 'MATERIAL' ? 'green' : 'orange'} style={{ marginLeft: 8 }}>
+          <Tag color={selectedArea.warehouseType === 'FINISHED' ? 'blue' : selectedArea.warehouseType === 'MATERIAL' ? 'green' : 'orange'} className="u-ml-8">
             {WAREHOUSE_TYPE_MAP[selectedArea.warehouseType] ?? '未知'}
           </Tag>
         </div>

@@ -246,7 +246,7 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
               type="link"
               icon={collapsed ? <DownOutlined /> : <UpOutlined />}
               onClick={() => setCollapsed(!collapsed)}
-              style={{ padding: '0 4px' }}
+              className="u-p-04px"
             >
               {collapsed ? '更多筛选' : '收起'}
             </Button>

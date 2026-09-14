@@ -49,7 +49,7 @@ const MaterialInfoCard: React.FC<MaterialInfoCardProps> = (props) => {
         </Descriptions.Item>
         <Descriptions.Item label="类型">
           {materialType
-            ? <Tag color={typeTagColor} style={{ margin: 0 }}>{getBaseMaterialTypeLabel(materialType)}</Tag>
+            ? <Tag color={typeTagColor} className="u-m-0">{getBaseMaterialTypeLabel(materialType)}</Tag>
             : '-'}
         </Descriptions.Item>
         <Descriptions.Item label="颜色">

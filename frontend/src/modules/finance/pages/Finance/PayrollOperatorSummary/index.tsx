@@ -84,7 +84,7 @@ const PayrollOperatorSummary: React.FC = () => {
                 }
             >
                 {/* ===== 统一统计卡片 ===== */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+                <div className="u-d-grid u-gap-12 u-mb-12" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
                     <StatisticsCards
                         activeTab={activeTab}
                         internalOrders={internalOrders}

@@ -61,7 +61,7 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
   if (materialPurchases.length > 0) {
     return (
       <>
-        <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end' }}>
+        <div className="u-mb-12 u-d-flex u-jc-end">
           <Space>
             {bomList.length > 0 && (
               <PurchaseGenerateDropdown onAnalyze={openPurchasePreview} generating={generating} />
@@ -99,9 +99,9 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
                     const entries = Object.entries(map).sort(([a], [b]) => compareSizeAsc(a, b));
                     if (entries.length > 0) {
                       return (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                        <div className="u-d-flex u-fwrap-wrap" style={{ gap: 2 }}>
                           {entries.map(([sz, usage]) => (
-                            <span key={sz} style={{ fontSize: 12, background: 'var(--color-border-light)', padding: '0 4px', borderRadius: 2 }}>
+                            <span key={sz} className="u-fs-12 u-p-04px" style={{ background: 'var(--color-border-light)', borderRadius: 2 }}>
                               {sz}: {Number(usage).toFixed(2)}{record.unit || ''}
                             </span>
                           ))}
@@ -164,7 +164,7 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
               // D-138：状态中文化（复用全系统统一的采购状态映射）
               render: (v: any) => {
                 const item = MATERIAL_PURCHASE_STATUS_MAP[String(v || '').toLowerCase()];
-                return item ? <Tag color={item.color} style={{ margin: 0 }}>{item.text}</Tag> : (v || '-');
+                return item ? <Tag color={item.color} className="u-m-0">{item.text}</Tag> : (v || '-');
               },
             },
           ]}
@@ -187,7 +187,7 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
   if (bomList.length > 0) {
     return (
       <>
-        <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end' }}>
+        <div className="u-mb-12 u-d-flex u-jc-end">
           <PurchaseGenerateDropdown onAnalyze={openPurchasePreview} generating={generating} />
         </div>
         <ResizableTable

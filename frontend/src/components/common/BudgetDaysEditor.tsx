@@ -104,16 +104,16 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
         cancelText: '取消',
         destroyOnHidden: true,
         content: (
-          <div style={{ marginTop: 12 }}>
-            <div style={{ marginBottom: 8, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+          <div className="u-mt-12">
+            <div className="u-mb-8 u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
               当前预算 {formatBudgetHours(budgetHours)}，调整后将保存到服务器
             </div>
-            <Space.Compact style={{ width: '100%' }}>
+            <Space.Compact className="u-w-full">
               <InputNumber
                 defaultValue={budgetHours}
                 min={1}
                 max={999}
-                style={{ width: '100%' }}
+                className="u-w-full"
                 onChange={(v) => { newBudgetHours = v ?? budgetHours; }}
               />
               <span style={{
@@ -151,16 +151,16 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
       cancelText: '取消',
       destroyOnHidden: true,
       content: (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ marginBottom: 8, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+        <div className="u-mt-12">
+          <div className="u-mb-8 u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
             当前预算 {currentBudgetDays} 天。调整后将重算该工序预算与订单计划完工日期（预计交期），不影响订单交货日期。
           </div>
-          <Space.Compact style={{ width: '100%' }}>
+          <Space.Compact className="u-w-full">
             <InputNumber
               defaultValue={currentBudgetDays}
               min={1}
               max={999}
-              style={{ width: '100%' }}
+              className="u-w-full"
               onChange={(v) => { newBudgetDays = v ?? currentBudgetDays; }}
             />
             <span style={{
@@ -232,7 +232,7 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
   })();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
+    <div className="u-d-flex u-fd-column u-ai-center" style={{ gap: 1 }}>
       {gapInfo && (
         <Tooltip title={`${gapInfo.from} → ${nodeName} ${gapInfo.text}`}>
           <div style={{

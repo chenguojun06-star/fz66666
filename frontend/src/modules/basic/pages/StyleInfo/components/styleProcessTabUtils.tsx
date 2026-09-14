@@ -182,11 +182,11 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
         if (!info || info.rowSpan === 0) return null;
         const stage = record.progressStage || '车缝';
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <div className="u-d-flex u-fd-column u-ai-center u-gap-4">
             <Tag style={{ background: STAGE_ACCENT, color: 'var(--color-bg-base)', border: 'none', fontWeight: 600, fontSize: 14 }}>{stage}</Tag>
-            <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{info.count} 个工序</span>
+            <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{info.count} 个工序</span>
             {editableMode && (
-              <Button type="link" icon={<PlusOutlined />} onClick={() => handleAdd(stage)} style={{ fontSize: 14, padding: 0 }}>
+              <Button type="link" icon={<PlusOutlined />} onClick={() => handleAdd(stage)} className="u-fs-14 u-p-0">
                 添加
               </Button>
             )}
@@ -222,7 +222,7 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
         editableMode ? (
           <Select
             value={record.difficulty || undefined}
-            style={{ width: '100%' }}
+            className="u-w-full"
             allowClear
             placeholder="-"
             onChange={(v) => updateField(record.id!, 'difficulty', v ?? null)}
@@ -265,7 +265,7 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
           <InputNumber
             value={record.standardTime}
             min={0}
-            style={{ width: '100%' }}
+            className="u-w-full"
             onChange={(v) => updateField(record.id!, 'standardTime', toNumberSafe(v))}
           />
         ) : (
@@ -281,19 +281,19 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
         const hint = priceHints[record.id!];
         const loading = priceHintLoading[record.id!];
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div className="u-d-flex u-fd-column u-gap-4">
             <InputNumber
               value={record.price}
               min={0}
               step={0.01}
               prefix="¥"
-              style={{ width: '100%' }}
+              className="u-w-full"
               onChange={(v) => updateField(record.id!, 'price', v)}
             />
             {/* AI 单价提示卡片 */}
             {loading && (
-              <span style={{ fontSize: 14, color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                <LoadingOutlined style={{ fontSize: 12 }} /> 查询历史...
+              <span className="u-fs-14 u-d-flex u-ai-center" style={{ color: 'var(--color-text-secondary)', gap: 3 }}>
+                <LoadingOutlined className="u-fs-12" /> 查询历史...
               </span>
             )}
             {!loading && hint && (
@@ -308,17 +308,17 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
                     updateField(record.id!, 'price', hint.suggestedPrice);
                   }}
                 >
-                  <BulbOutlined style={{ fontSize: 13, color: 'var(--color-primary)' }} />
-                  <span style={{ fontSize: 14, color: 'var(--color-primary)' }}>
+                  <BulbOutlined className="u-fs-13" style={{ color: 'var(--color-primary)' }} />
+                  <span className="u-fs-14" style={{ color: 'var(--color-primary)' }}>
                     建议 ¥{Number(hint.suggestedPrice).toFixed(2)}
                   </span>
                   <Tag
                     color="blue"
-                    style={{ fontSize: 14, padding: '0 4px', lineHeight: '16px', margin: 0, cursor: 'pointer' }}
+                    className="u-fs-14 u-p-04px u-lh-16px u-m-0 u-cur-pointer"
                   >
                     采用
                   </Tag>
-                  <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
+                  <span className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>
                     均¥{Number(hint.avgPrice).toFixed(2)} · {hint.usageCount}款
                   </span>
                 </div>
@@ -331,11 +331,11 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
     // 多码单价列（动态生成）
     ...(showSizePrices ? sizes.map((size) => ({
       title: (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+        <div className="u-d-flex u-ai-center u-jc-center u-gap-4">
           <span>{size}</span>
           {editableMode && (
             <DeleteOutlined
-              style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: "var(--font-size-xs)" }}
+              className="u-cur-pointer u-fs-var--font-size-xs" style={{ color: 'var(--color-danger)' }}
               onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
                 modal.confirm({
@@ -360,7 +360,7 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
             step={0.01}
             prefix="¥"
            
-            style={{ width: '100%' }}
+            className="u-w-full"
             onChange={(v) => updateSizePrice(record.id!, size, toNumberSafe(v))}
           />
         ) : (

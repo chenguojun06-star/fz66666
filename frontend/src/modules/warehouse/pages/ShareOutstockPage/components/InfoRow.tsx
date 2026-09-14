@@ -7,10 +7,10 @@ interface InfoRowProps {
 }
 
 const InfoRow: React.FC<InfoRowProps> = ({ icon, label, value }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-    <span style={{ color: 'var(--color-primary)', fontSize: 14 }}>{icon}</span>
-    <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14, minWidth: 32 }}>{label}</span>
-    <span style={{ color: 'var(--color-text-primary)', fontSize: 14, fontWeight: 600 }}>{value}</span>
+  <div className="u-d-flex u-ai-center u-gap-8">
+    <span className="u-fs-14" style={{ color: 'var(--color-primary)' }}>{icon}</span>
+    <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)', minWidth: 32 }}>{label}</span>
+    <span className="u-fs-14 u-fw-600" style={{ color: 'var(--color-text-primary)' }}>{value}</span>
   </div>
 );
 

@@ -6,10 +6,10 @@ import type { ExpandedDetailProps } from './types';
  */
 const ExpandedDetail: React.FC<ExpandedDetailProps> = ({ details, loading }) => {
   if (loading) {
-    return <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>加载中...</span>;
+    return <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>加载中...</span>;
   }
   if (details.length === 0) {
-    return <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>无明细</span>;
+    return <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>无明细</span>;
   }
   return (
     <table style={{ fontSize: 14, borderCollapse: 'collapse' as const }}>

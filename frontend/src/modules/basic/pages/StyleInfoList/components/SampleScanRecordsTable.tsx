@@ -77,7 +77,7 @@ const SampleScanRecordsTable: React.FC<SampleScanRecordsTableProps> = ({ pattern
       width: 160,
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 500 }}>{getOperationLabel(record.operationType)}</div>
+          <div className="u-fw-500">{getOperationLabel(record.operationType)}</div>
           {record.processName && record.operationType !== record.processName?.toUpperCase() ? (
             <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
               {record.processName}
@@ -132,7 +132,7 @@ const SampleScanRecordsTable: React.FC<SampleScanRecordsTableProps> = ({ pattern
       align: 'right' as const,
       render: (v: number | null | undefined) =>
         v != null && v > 0 ? (
-          <span style={{ color: 'var(--color-success)', fontWeight: 500 }}>¥{Number(v).toFixed(2)}</span>
+          <span className="u-fw-500" style={{ color: 'var(--color-success)' }}>¥{Number(v).toFixed(2)}</span>
         ) : (
           <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>
         ),

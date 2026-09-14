@@ -54,11 +54,11 @@ const NotifyConfigModal: React.FC<NotifyConfigModalProps> = ({
         title="配置后，每当客户在应用商店提交购买订单，系统自动推送微信通知到您的手机。"
         type="info"
         showIcon
-        style={{ marginBottom: 16 }}
+        className="u-mb-16"
       />
-      <div style={{ marginBottom: 12 }}>
+      <div className="u-mb-12">
         <Text strong>获取 Server酱 SendKey：</Text>
-        <ol style={{ marginTop: 8, paddingLeft: 20, fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 2 }}>
+        <ol className="u-mt-8 u-fs-14" style={{ paddingLeft: 20, color: 'var(--color-text-secondary)', lineHeight: 2 }}>
           <li>用微信扫码登录 <a href="https://sct.ftqq.com/" target="_blank" rel="noreferrer">sct.ftqq.com</a></li>
           <li>点击「SendKey」复制您的专属Key</li>
           <li>粘贴到下方输入框保存</li>
@@ -69,7 +69,7 @@ const NotifyConfigModal: React.FC<NotifyConfigModalProps> = ({
           title={`当前已配置：${notifyMaskedKey}`}
           type="success"
           showIcon
-          style={{ marginBottom: 12 }}
+          className="u-mb-12"
         />
       )}
       <Input

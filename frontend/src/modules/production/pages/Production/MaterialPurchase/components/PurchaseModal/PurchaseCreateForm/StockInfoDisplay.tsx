@@ -20,12 +20,12 @@ const StockInfoDisplay: React.FC<StockInfoDisplayProps> = ({ materialCode, stock
           <Tag color={stockInfo.quantity < stockInfo.safetyStock ? 'red' : 'green'}>
             {stockInfo.quantity} {unit || ''}
           </Tag>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--neutral-text-disabled)' }}>
+          <span className="u-fs-var--font-size-xs" style={{ color: 'var(--neutral-text-disabled)' }}>
             位置: {stockInfo.location}
           </span>
           {stockInfo.quantity < stockInfo.safetyStock && (
             <Tooltip title={`低于安全库存 (${stockInfo.safetyStock})`}>
-              <Tag color="error" style={{ marginLeft: 8 }}>预警</Tag>
+              <Tag color="error" className="u-ml-8">预警</Tag>
             </Tooltip>
           )}
         </div>

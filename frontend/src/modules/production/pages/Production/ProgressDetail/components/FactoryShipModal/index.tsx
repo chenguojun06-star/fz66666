@@ -106,14 +106,14 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
       <Divider style={{ margin: '8px 0 12px' }} />
 
       <Form form={form} layout="vertical">
-        <Form.Item label="发货方式" name="shipMethod" initialValue="SELF_DELIVERY" style={{ marginBottom: 10 }}>
+        <Form.Item label="发货方式" name="shipMethod" initialValue="SELF_DELIVERY" className="u-mb-10">
           <Radio.Group>
             <Radio value="SELF_DELIVERY" style={{ marginRight: 24 }}>自发货</Radio>
             <Radio value="EXPRESS">快递发货</Radio>
           </Radio.Group>
         </Form.Item>
 
-        <Form.Item label="本次发货明细" style={{ marginBottom: 8 }}>
+        <Form.Item label="本次发货明细" className="u-mb-8">
           <ShipDetailTable
             shipDetails={shipDetails}
             onShipDetailsChange={onShipDetailsChange}
@@ -126,19 +126,19 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
 
         {shipType === 'EXPRESS' && (
           <>
-            <Form.Item label="快递公司" name="expressCompany" style={{ marginBottom: 8 }}>
+            <Form.Item label="快递公司" name="expressCompany" className="u-mb-8">
               <AutoComplete
                 options={['顺丰速运', '中通快递', '圆通快递', '韵达快递', '申通快递', '京东快递'].map(v => ({ value: v }))}
                 placeholder="请填写快递公司"
               />
             </Form.Item>
-            <Form.Item label="快递单号" name="trackingNo" style={{ marginBottom: 8 }}>
+            <Form.Item label="快递单号" name="trackingNo" className="u-mb-8">
               <Input placeholder="请填写快递单号" />
             </Form.Item>
           </>
         )}
 
-        <Form.Item label="备注" name="remarks" style={{ marginBottom: 0 }}>
+        <Form.Item label="备注" name="remarks" className="u-mb-0">
           <Input.TextArea rows={2} placeholder="选填备注" />
         </Form.Item>
       </Form>

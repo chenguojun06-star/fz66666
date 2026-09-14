@@ -70,7 +70,7 @@ export const buildUsageColumns = (ctx: BomColumnsContext) => {
                 return (
                   <span style={{ color: 'var(--color-text-tertiary)' }}>
                     {liveDisplay != null ? liveDisplay : '-'}
-                    {hasPatternData && <span style={{ fontSize: 14, marginLeft: 4, color: 'var(--color-success)' }}>(纸样)</span>}
+                    {hasPatternData && <span className="u-fs-14 u-ml-4" style={{ color: 'var(--color-success)' }}>(纸样)</span>}
                   </span>
                 );
               }}
@@ -86,7 +86,7 @@ export const buildUsageColumns = (ctx: BomColumnsContext) => {
           if (!anomaly) return null;
           return (
             <span title={`同类面料平均用量 ${anomaly.avg.toFixed(2)}，偏差 ${anomaly.pct}%`}
-              style={{ marginLeft: 6, color: 'var(--color-warning)', cursor: 'help', fontSize: 14 }}>
+              className="u-ml-6 u-fs-14" style={{ color: 'var(--color-warning)', cursor: 'help' }}>
               {anomaly.isHigh ? `+${anomaly.pct}%` : `-${anomaly.pct}%`}
             </span>
           );

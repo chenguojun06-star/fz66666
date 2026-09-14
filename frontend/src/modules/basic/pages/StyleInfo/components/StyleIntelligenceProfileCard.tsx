@@ -14,15 +14,15 @@ import KeyTagsCloud from './StyleIntelligenceProfileCard/components/KeyTagsCloud
  * 所有分区同一套标题样式/间距，避免"东一块西一块"的散乱观感。
  */
 const Section: React.FC<{ title: string; hint?: string; children: React.ReactNode }> = ({ title, hint, children }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
+  <div className="u-d-flex u-fd-column u-h-full" style={{ minWidth: 0 }}>
+    <div className="u-d-flex u-gap-6 u-mb-8" style={{ alignItems: 'baseline' }}>
       <span style={{
         fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)',
         paddingLeft: 8, borderLeft: '3px solid var(--color-primary)', lineHeight: '16px',
       }}>{title}</span>
-      {hint ? <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{hint}</span> : null}
+      {hint ? <span className="u-fs-11" style={{ color: 'var(--color-text-tertiary)' }}>{hint}</span> : null}
     </div>
-    <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+    <div className="u-flex-1" style={{ minWidth: 0 }}>{children}</div>
   </div>
 );
 
@@ -98,7 +98,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style, onVisionAnalysis
 
       {/* ── 展开区域：统一分区栅格（进度概览 / 难度评估 / AI洞察 / 工人端提示 / 关键标签）── */}
       {expanded && (
-        <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="u-d-flex u-fd-column u-gap-12" style={{ padding: '0 12px 12px' }}>
           {/* 一行式关键信息条（节点 / 交期 / 最新订单进度） */}
           <div style={{
             display: 'flex', flexWrap: 'wrap', gap: '2px 14px',

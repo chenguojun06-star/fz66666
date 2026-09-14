@@ -103,15 +103,15 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
   };
 
   return (
-    <Card style={{ marginBottom: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+    <Card className="u-mb-12">
+      <div className="u-d-flex u-ai-center u-jc-between u-mb-8">
         <span style={{ color: 'rgba(0,0,0,0.85)', fontWeight: 50 }}>下单明细</span>
         <div style={{ color: 'var(--neutral-text-light)' }}>
-          总数量：<span style={{ fontWeight: 600 }}>{totalQuantity}</span>
+          总数量：<span className="u-fw-600">{totalQuantity}</span>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 10 }}>
+      <div className="u-d-grid u-gap-12 u-mb-10" style={{ gridTemplateColumns: '1fr 1fr' }}>
         <Select
           mode="tags"
           placeholder="选择或输入下单颜色"
@@ -122,7 +122,7 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
           suffix={(
             <Tooltip title="基础属性库——成组选择颜色">
               <SettingOutlined
-                style={{ color: 'rgba(0,0,0,0.45)', cursor: 'pointer' }}
+                className="u-cur-pointer" style={{ color: 'rgba(0,0,0,0.45)' }}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAttrLibTarget('color'); setAttrLibOpen(true); }}
               />
             </Tooltip>
@@ -138,7 +138,7 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
           suffix={(
             <Tooltip title="基础属性库——成组选择码数">
               <SettingOutlined
-                style={{ color: 'rgba(0,0,0,0.45)', cursor: 'pointer' }}
+                className="u-cur-pointer" style={{ color: 'rgba(0,0,0,0.45)' }}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAttrLibTarget('size'); setAttrLibOpen(true); }}
               />
             </Tooltip>
@@ -151,7 +151,7 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
         onApply={handleApplyAttrGroup}
       />
 
-      <Space size={8} style={{ marginBottom: 12 }} wrap>
+      <Space size={8} className="u-mb-12" wrap>
         <Button onClick={() => syncSelection([], [])}>清空</Button>
         <InputNumber
           min={1}
@@ -164,25 +164,25 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
       </Space>
 
       {!selectedColors.length || !selectedSizes.length ? (
-        <div style={{ border: '1px dashed var(--color-border-antd)', borderRadius: 8, padding: '24px 12px', background: 'var(--color-bg-container)' }}>
+        <div className="u-br-8" style={{ border: '1px dashed var(--color-border-antd)', padding: '24px 12px', background: 'var(--color-bg-container)' }}>
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="先选颜色和码数，再在矩阵中填数量" />
         </div>
       ) : (
-        <div style={{ border: '1px solid var(--color-border-light)', borderRadius: 8, overflow: 'auto', width: '100%' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        <div className="u-br-8 u-ov-auto u-w-full" style={{ border: '1px solid var(--color-border-light)' }}>
+          <table className="u-w-full" style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <thead>
               <tr>
-                <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-bg-container)', width: '15%' }}>颜色</th>
+                <th className="u-ta-left" style={{ padding: '8px 6px', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-bg-container)', width: '15%' }}>颜色</th>
                 {selectedSizes.map((size) => (
                   <th key={size} style={{ textAlign: 'center', padding: '8px 2px', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-bg-container)', width: `${70 / selectedSizes.length}%` }}>{size}</th>
                 ))}
-                <th style={{ textAlign: 'center', padding: '8px 4px', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-bg-container)', width: '15%' }}>小计</th>
+                <th className="u-ta-center" style={{ padding: '8px 4px', borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-bg-container)', width: '15%' }}>小计</th>
               </tr>
             </thead>
             <tbody>
               {matrixRows.map((row) => (
                 <tr key={row.key}>
-                  <td style={{ padding: '6px 6px', borderBottom: '1px solid var(--color-bg-subtle)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.color}</td>
+                  <td className="u-fw-600 u-ov-hidden u-ws-nowrap" style={{ padding: '6px 6px', borderBottom: '1px solid var(--color-bg-subtle)', textOverflow: 'ellipsis' }}>{row.color}</td>
                   {selectedSizes.map((size) => {
                     const matched = lines.find((l) => normalizeKey(l.color) === normalizeKey(row.color) && normalizeKey(l.size) === normalizeKey(size));
                     return (
@@ -190,31 +190,31 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
                         <InputNumber
                           min={0}
                           value={matched?.quantity || 0}
-                          style={{ width: '100%' }}
+                          className="u-w-full"
                           controls={false}
                           onChange={(value) => updateMatrixQty(row.color, size, Number(value) || 0)}
                         />
                       </td>
                     );
                   })}
-                  <td style={{ padding: '6px 6px', borderBottom: '1px solid var(--color-bg-subtle)', textAlign: 'center', fontWeight: 600 }}>{row.total}</td>
+                  <td className="u-ta-center u-fw-600" style={{ padding: '6px 6px', borderBottom: '1px solid var(--color-bg-subtle)' }}>{row.total}</td>
                 </tr>
               ))}
               <tr>
-                <td style={{ padding: '6px 6px', background: 'var(--color-bg-container)', fontWeight: 700 }}>码数合计</td>
+                <td className="u-fw-700" style={{ padding: '6px 6px', background: 'var(--color-bg-container)' }}>码数合计</td>
                 {selectedSizes.map((size) => (
-                  <td key={`total-${size}`} style={{ padding: '6px 2px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 700 }}>
+                  <td key={`total-${size}`} className="u-ta-center u-fw-700" style={{ padding: '6px 2px', background: 'var(--color-bg-container)' }}>
                     {sizeTotals[size] || 0}
                   </td>
                 ))}
-                <td style={{ padding: '6px 6px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 700 }}>{totalQuantity}</td>
+                <td className="u-ta-center u-fw-700" style={{ padding: '6px 6px', background: 'var(--color-bg-container)' }}>{totalQuantity}</td>
               </tr>
             </tbody>
           </table>
         </div>
       )}
       {createTask.createStyleName ? (
-        <div style={{ marginTop: 8, color: 'rgba(0,0,0,0.65)' }}>款名：{createTask.createStyleName}</div>
+        <div className="u-mt-8" style={{ color: 'rgba(0,0,0,0.65)' }}>款名：{createTask.createStyleName}</div>
       ) : null}
     </Card>
   );

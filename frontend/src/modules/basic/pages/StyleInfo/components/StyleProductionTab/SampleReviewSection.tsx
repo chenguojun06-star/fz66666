@@ -54,11 +54,11 @@ const SampleReviewSection: React.FC<Props> = ({
             : 'var(--color-bg-card, var(--color-bg-container))',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: sampleReviewStatus ? 8 : 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontWeight: 600, fontSize: 14, paddingLeft: 10, borderLeft: '3px solid var(--color-primary)' }}>样衣审核</span>
+        <div className="u-d-flex u-ai-center u-gap-8">
+          <span className="u-fw-600 u-fs-14" style={{ paddingLeft: 10, borderLeft: '3px solid var(--color-primary)' }}>样衣审核</span>
           {reviewStatusTag(sampleReviewStatus)}
           {!sampleReviewStatus && !sampleCompleted && !productionCompletedTime && (
-            <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
+            <span className="u-fs-var--font-size-xs" style={{ color: 'var(--neutral-text-secondary)' }}>
               （样衣生产完成后可记录审核结论）
             </span>
           )}
@@ -93,11 +93,11 @@ const SampleReviewSection: React.FC<Props> = ({
         审核通过只代表样衣确认通过，完成入库后才算样衣闭环。
       </div>
       {sampleReviewStatus && (
-        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--neutral-text-secondary)', lineHeight: '1.8' }}>
+        <div className="u-fs-var--font-size-xs u-lh-18" style={{ color: 'var(--neutral-text-secondary)' }}>
           {sampleReviewer && <span style={{ marginRight: 16 }}>审核人：<span style={{ color: 'var(--neutral-text)' }}>{sampleReviewer}</span></span>}
           {sampleReviewTime && <span>时间：<span style={{ color: 'var(--neutral-text)' }}>{String(sampleReviewTime).replace('T', ' ').slice(0, 16)}</span></span>}
           {sampleReviewComment && (
-            <div style={{ marginTop: 4, color: 'var(--neutral-text)', whiteSpace: 'pre-wrap' }}>
+            <div className="u-mt-4 u-ws-pre-wrap" style={{ color: 'var(--neutral-text)' }}>
               评语：{sampleReviewComment}
             </div>
           )}

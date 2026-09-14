@@ -130,19 +130,19 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
 
     return (
       <List.Item style={{ padding: '12px 4px', borderBlockEnd: '1px solid var(--color-border-secondary, var(--color-border-light))' }}>
-        <div style={{ width: '100%' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div className="u-w-full">
+          <div className="u-d-flex u-jc-between u-ai-center u-gap-12 u-fwrap-wrap">
+            <div className="u-d-flex u-ai-center u-gap-8 u-fwrap-wrap">
               <Text strong style={{ color: 'var(--color-text-primary, var(--color-gray-800))' }}>{item.materialName}</Text>
-              <Text style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))', fontSize: 12 }}>({item.materialCode})</Text>
+              <Text className="u-fs-12" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>({item.materialCode})</Text>
               <Tag color={cfg.color} style={{ color: cfg.color, borderColor: cfg.color, background: `${cfg.color}1A`, margin: 0 }}>
-                <span style={{ marginRight: 4 }}>{cfg.icon}</span>
+                <span className="u-mr-4">{cfg.icon}</span>
                 {cfg.label}
               </Tag>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div className="u-d-flex u-ai-center u-gap-8 u-fwrap-wrap">
               <Tooltip title={`建议补货数量 ${formatNumber(item.suggestedQuantity)}`}>
-                <Tag color="blue" style={{ margin: 0 }}>
+                <Tag color="blue" className="u-m-0">
                   建议补货 {formatNumber(item.suggestedQuantity)}
                 </Tag>
               </Tooltip>
@@ -159,7 +159,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap', fontSize: 12, color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
+          <div className="u-d-flex u-gap-16 u-mt-8 u-fwrap-wrap u-fs-12" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
             <span>当前库存：<Text style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }} strong>{formatNumber(item.currentStock)}</Text></span>
             <span>安全库存：<Text style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }} strong>{formatNumber(item.safetyStock)}</Text></span>
             <span>日均消耗：<Text style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }} strong>{formatNumber(item.avgDailyUsage)}</Text></span>
@@ -168,8 +168,8 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
             </span>
           </div>
 
-          <div style={{ marginTop: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--color-text-secondary, var(--color-gray-dark))', marginBottom: 4 }}>
+          <div className="u-mt-8">
+            <div className="u-d-flex u-jc-between u-fs-12 u-mb-4" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
               <span>库存水位（相对 2×安全库存）</span>
               <span>{shortagePercent.toFixed(0)}%</span>
             </div>
@@ -180,7 +180,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
               showInfo={false}
               status={isHigh ? 'exception' : undefined}
             />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-text-tertiary, var(--color-gray-label))', marginTop: 4 }}>
+            <div className="u-d-flex u-jc-between u-fs-11 u-mt-4" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
               <span>0</span>
               <span>安全库存线 ({formatNumber(item.safetyStock)})</span>
               <span>{formatNumber(safetyStock * 2)}</span>
@@ -196,11 +196,11 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
               <span style={{ position: 'absolute', left: `${Math.min(50, 100)}%`, top: -6, width: 2, height: 14, background: 'var(--color-warning, var(--color-warning))' }} />
             </div>
             {/* 避免对未使用变量 maxBase 的警告 */}
-            <span aria-hidden style={{ display: 'none' }}>{maxBase}</span>
+            <span aria-hidden className="u-d-none">{maxBase}</span>
           </div>
 
           {item.reason ? (
-            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
+            <div className="u-mt-8 u-fs-12" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
               <Text type="secondary">原因：{item.reason}</Text>
             </div>
           ) : null}
@@ -214,7 +214,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
       return (
         <div style={{ padding: 8 }}>
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton active key={i} paragraph={{ rows: 2 }} title={false} style={{ marginBottom: 16 }} />
+            <Skeleton active key={i} paragraph={{ rows: 2 }} title={false} className="u-mb-16" />
           ))}
         </div>
       );
@@ -222,10 +222,10 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
 
     if (error) {
       return (
-        <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
-          <ExclamationCircleFilled style={{ color: 'var(--color-error, var(--color-danger))', fontSize: 28 }} />
-          <div style={{ marginTop: 8 }}>{error}</div>
-          <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData} style={{ marginTop: 12 }}>
+        <div className="u-p-24 u-ta-center" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
+          <ExclamationCircleFilled className="u-fs-28" style={{ color: 'var(--color-error, var(--color-danger))' }} />
+          <div className="u-mt-8">{error}</div>
+          <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData} className="u-mt-12">
             重试
           </Button>
         </div>
@@ -234,10 +234,10 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
 
     if (sortedItems.length === 0) {
       return (
-        <div style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
+        <div className="u-ta-center" style={{ padding: 32, color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
           <CheckCircleFilled style={{ fontSize: 32, color: 'var(--color-success, var(--color-success))' }} />
-          <div style={{ marginTop: 8 }}>暂无补货建议</div>
-          <div style={{ fontSize: 12, marginTop: 4 }}>库存水位健康</div>
+          <div className="u-mt-8">暂无补货建议</div>
+          <div className="u-fs-12 u-mt-4">库存水位健康</div>
         </div>
       );
     }
@@ -257,10 +257,10 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
       <Card
         style={CARD_STYLE}
         title={
-          <Space size={8} style={{ cursor: 'pointer' }} onClick={() => setCollapsed(!collapsed)}>
+          <Space size={8} className="u-cur-pointer" onClick={() => setCollapsed(!collapsed)}>
             <span style={{ color: 'var(--color-warning, var(--color-warning))' }}>●</span>
-            <span style={{ fontWeight: 600 }}>补货建议 Top {topN}</span>
-            <span style={{ fontSize: 12, color: 'var(--color-text-tertiary, var(--color-gray-label))', marginLeft: 4 }}>
+            <span className="u-fw-600">补货建议 Top {topN}</span>
+            <span className="u-fs-12 u-ml-4" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
               {collapsed ? '点击展开' : '点击收起'}
             </span>
           </Space>
@@ -284,7 +284,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
       >
         {!collapsed && (
           <>
-            <Title level={5} style={{ margin: '0 0 8px 0', color: 'var(--color-text-secondary, var(--color-gray-dark))', fontWeight: 500 }}>
+            <Title level={5} className="u-fw-500" style={{ margin: '0 0 8px 0', color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
               按优先级与可消耗天数排序
             </Title>
             {renderBody()}
@@ -304,16 +304,16 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
         destroyOnClose
       >
         {activeItem && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Paragraph style={{ margin: 0, fontSize: 13 }}>
+          <div className="u-d-flex u-fd-column u-gap-12">
+            <Paragraph className="u-m-0 u-fs-13">
               <Text type="secondary">物料名称：</Text>
               <Text strong>{activeItem.materialName}</Text>
             </Paragraph>
-            <Paragraph style={{ margin: 0, fontSize: 13 }}>
+            <Paragraph className="u-m-0 u-fs-13">
               <Text type="secondary">物料编码：</Text>
               <Text>{activeItem.materialCode}</Text>
             </Paragraph>
-            <Paragraph style={{ margin: 0, fontSize: 13 }}>
+            <Paragraph className="u-m-0 u-fs-13">
               <Text type="secondary">当前库存：</Text>
               <Text strong>{formatNumber(activeItem.currentStock)}</Text>
               <span style={{ marginLeft: 16, color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
@@ -321,21 +321,21 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
               </span>
             </Paragraph>
 
-            <div style={{ marginTop: 4 }}>
-              <div style={{ marginBottom: 6, fontSize: 13, color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
+            <div className="u-mt-4">
+              <div className="u-mb-6 u-fs-13" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
                 采购数量
               </div>
               <InputNumber
                 min={0}
                 step={1}
-                style={{ width: '100%' }}
+                className="u-w-full"
                 value={editQuantity}
                 onChange={(v) => setEditQuantity(typeof v === 'number' ? v : 0)}
               />
             </div>
 
-            <div style={{ marginTop: 4 }}>
-              <div style={{ marginBottom: 6, fontSize: 13, color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
+            <div className="u-mt-4">
+              <div className="u-mb-6 u-fs-13" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
                 备注
               </div>
               <TextArea

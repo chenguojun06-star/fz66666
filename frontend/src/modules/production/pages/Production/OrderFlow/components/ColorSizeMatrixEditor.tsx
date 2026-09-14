@@ -18,14 +18,14 @@ const ColorSizeMatrixEditor: React.FC<Props> = ({
   onSave, onClearAll, onAutoGen,
 }) => {
   return (
-    <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+    <div className="u-br-8" style={{ border: '1px solid var(--color-border)', overflowX: 'auto' }}>
+      <table className="u-w-full u-fs-13" style={{ borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'left', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--color-border)' }}>颜色</th>
-            <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'left', fontWeight: 600, fontSize: 13, borderBottom: '1px solid var(--color-border)' }}>尺码</th>
-            <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 600, fontSize: 13, width: 56, borderBottom: '1px solid var(--color-border)' }}>数量</th>
-            <th style={{ padding: '6px 10px', background: 'var(--color-bg-container)', textAlign: 'left', fontWeight: 600, fontSize: 13, minWidth: 200, borderBottom: '1px solid var(--color-border)' }}>商品编码</th>
+            <th className="u-p-6px10px u-ta-left u-fw-600 u-fs-13" style={{ background: 'var(--color-bg-container)', borderBottom: '1px solid var(--color-border)' }}>颜色</th>
+            <th className="u-p-6px10px u-ta-left u-fw-600 u-fs-13" style={{ background: 'var(--color-bg-container)', borderBottom: '1px solid var(--color-border)' }}>尺码</th>
+            <th className="u-p-6px10px u-ta-center u-fw-600 u-fs-13" style={{ background: 'var(--color-bg-container)', width: 56, borderBottom: '1px solid var(--color-border)' }}>数量</th>
+            <th className="u-p-6px10px u-ta-left u-fw-600 u-fs-13" style={{ background: 'var(--color-bg-container)', minWidth: 200, borderBottom: '1px solid var(--color-border)' }}>商品编码</th>
           </tr>
         </thead>
         <tbody>
@@ -36,32 +36,32 @@ const ColorSizeMatrixEditor: React.FC<Props> = ({
             return (
               <tr key={idx} style={{ background: isOdd ? 'var(--color-bg-stripe, var(--color-bg-container))' : undefined }}>
                 <td style={{ padding: '5px 10px', borderBottom: '1px solid var(--color-border-light)' }}>
-                  <Tag style={{ margin: 0, fontSize: 12, borderRadius: 4 }}>{line.color || '-'}</Tag>
+                  <Tag className="u-m-0 u-fs-12 u-br-4">{line.color || '-'}</Tag>
                 </td>
-                <td style={{ padding: '5px 10px', borderBottom: '1px solid var(--color-border-light)', fontWeight: 500 }}>{line.size || '-'}</td>
-                <td style={{ padding: '5px 10px', borderBottom: '1px solid var(--color-border-light)', textAlign: 'center', fontWeight: 500, color: 'var(--color-info)' }}>{line.quantity}</td>
+                <td className="u-fw-500" style={{ padding: '5px 10px', borderBottom: '1px solid var(--color-border-light)' }}>{line.size || '-'}</td>
+                <td className="u-ta-center u-fw-500" style={{ padding: '5px 10px', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-info)' }}>{line.quantity}</td>
                 <td style={{ padding: '3px 6px', borderBottom: '1px solid var(--color-border-light)' }}>
                   <Input
                     size="small"
                     value={skuVal}
                     onChange={e => setSkuEditMap(prev => ({ ...prev, [key]: e.target.value }))}
                     placeholder="输入商品编码"
-                    style={{ fontSize: 13, width: '100%' }}
+                    className="u-fs-13 u-w-full"
                   />
                 </td>
               </tr>
             );
           })}
           <tr>
-            <td colSpan={2} style={{ padding: '6px 10px', background: 'rgba(37, 99, 235, 0.04)', fontWeight: 700, fontSize: 13 }}>合计</td>
-            <td style={{ padding: '6px 10px', background: 'rgba(37, 99, 235, 0.04)', textAlign: 'center', fontWeight: 700, fontSize: 13, color: 'var(--color-info)' }}>
+            <td colSpan={2} className="u-p-6px10px u-fw-700 u-fs-13" style={{ background: 'rgba(37, 99, 235, 0.04)' }}>合计</td>
+            <td className="u-p-6px10px u-ta-center u-fw-700 u-fs-13" style={{ background: 'rgba(37, 99, 235, 0.04)', color: 'var(--color-info)' }}>
               {orderLines.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0)}
             </td>
-            <td style={{ padding: '6px 10px', background: 'rgba(37, 99, 235, 0.04)' }}></td>
+            <td className="u-p-6px10px" style={{ background: 'rgba(37, 99, 235, 0.04)' }}></td>
           </tr>
         </tbody>
       </table>
-      <div style={{ padding: '6px 10px', borderTop: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+      <div className="u-p-6px10px u-d-flex u-jc-between u-ai-center u-gap-8" style={{ borderTop: '1px solid var(--color-border-light)' }}>
         <Space size={4}>
           <Tooltip title={'按【款号+颜色+尺码+顺序】自动生成 商品编码（不加前缀），生成后可在输入框微调'}>
             <Button

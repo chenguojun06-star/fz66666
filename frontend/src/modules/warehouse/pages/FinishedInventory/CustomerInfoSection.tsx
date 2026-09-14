@@ -36,9 +36,9 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
 
   if (variant === 'inline') {
     return (
-      <div style={{ background: 'var(--color-bg-page)', borderRadius: 8, padding: '12px 16px', marginBottom: 12 }}>
-        <Typography.Text strong style={{ display: 'block', marginBottom: 8 }}>客户信息</Typography.Text>
-        <Space wrap style={{ width: '100%' }}>
+      <div className="u-br-8 u-mb-12" style={{ background: 'var(--color-bg-page)', padding: '12px 16px' }}>
+        <Typography.Text strong className="u-d-block u-mb-8">客户信息</Typography.Text>
+        <Space wrap className="u-w-full">
           <span>
             <span style={{ color: 'var(--color-danger)' }}>*</span> 客户名称：
             <CustomerSelect
@@ -73,22 +73,22 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
 
   return (
     <Card style={{ background: 'var(--color-bg-highlight)', border: '1px solid var(--color-blue-200)' }}>
-      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: 'var(--color-primary-darker)' }}>
+      <div className="u-fs-14 u-fw-600 u-mb-8" style={{ color: 'var(--color-primary-darker)' }}>
         客户信息 —— 出库发送给哪个客户
       </div>
       <Row gutter={12}>
         <Col span={8}>
-          <div style={{ fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 4 }}><span style={{ color: 'var(--color-danger)' }}>*</span> 客户名称</div>
+          <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-text-muted)' }}><span style={{ color: 'var(--color-danger)' }}>*</span> 客户名称</div>
           <CustomerSelect
             value={customerName}
             onChange={handleCustomerSelect}
             placeholder="搜索或输入客户名称"
-            style={{ width: '100%' }}
+            className="u-w-full"
             status={customerName.trim() ? undefined : 'warning'}
           />
         </Col>
         <Col span={8}>
-          <div style={{ fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 4 }}>联系电话</div>
+          <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-text-muted)' }}>联系电话</div>
           <Input
             placeholder="输入联系电话"
             value={customerPhone}
@@ -96,7 +96,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
           />
         </Col>
         <Col span={8}>
-          <div style={{ fontSize: 14, color: 'var(--color-text-muted)', marginBottom: 4 }}>收货地址</div>
+          <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-text-muted)' }}>收货地址</div>
           <Input
             placeholder="输入收货地址"
             value={shippingAddress}

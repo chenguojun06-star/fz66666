@@ -15,6 +15,9 @@ import './styles/button-override.css';
 import './styles/animations.css';
 import './components/common/GlobalAiAssistant/xiaoyun-tokens.css';
 import './styles/lightSense.css';
+// 全局原子工具类：必须最后引入。它用来替代静态内联样式 style={{}}，
+// 单类选择器特异性相同的情况下「后加载者胜出」，放在最后才能保证优先级等价于原内联样式。
+import './styles/utilities.css';
 
 import { initFrontendErrorReporter } from './utils/frontendErrorReporter';
 import {

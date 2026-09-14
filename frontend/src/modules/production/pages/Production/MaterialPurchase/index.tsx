@@ -178,7 +178,7 @@ const MaterialPurchase: React.FC = () => {
         activeKey={activeMainTab}
         onChange={setActiveMainTab}
         type="card"
-        style={{ marginBottom: 0 }}
+        className="u-mb-0"
         items={[
           { key: 'purchase', label: '采购管理', children: null },
           { key: 'return', label: '退货记录', children: null },
@@ -194,7 +194,7 @@ const MaterialPurchase: React.FC = () => {
           title="物料采购"
           headerContent={
             showSmartErrorNotice && smartError ? (
-              <Card style={{ marginBottom: 12 }}>
+              <Card className="u-mb-12">
                 <SmartErrorNotice error={smartError} onFix={fetchMaterialPurchaseList} />
               </Card>
             ) : null

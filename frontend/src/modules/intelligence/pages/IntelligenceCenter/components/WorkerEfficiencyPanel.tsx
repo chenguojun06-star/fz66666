@@ -13,7 +13,7 @@ const WorkerEfficiencyPanel: React.FC<WorkerEfficiencyPanelProps> = ({
 }) => {
   return (
     <div className="c-card">
-      <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('workers')}>
+      <div className="c-card-title u-cur-pointer"  onClick={() => toggleCollapse('workers')}>
         <LiveDot size={7} />
         人效实时动态
         <CollapseChevron panelKey="workers" collapsed={!!collapsedPanels['workers']} />
@@ -33,14 +33,14 @@ const WorkerEfficiencyPanel: React.FC<WorkerEfficiencyPanelProps> = ({
                 <td>{w.versatilityScore}</td>
                 <td>{w.attendanceScore}</td>
                 <td><b style={{ color: 'var(--color-accent-cyan-bright)' }}>{w.overallScore}</b></td>
-                <td style={{ whiteSpace: 'nowrap' }}>
+                <td className="u-ws-nowrap">
                   {(() => {
                     const grd = w.overallScore >= 85 ? { g: 'A', c: 'var(--color-accent-neon)' }
                       : w.overallScore >= 70 ? { g: 'B', c: 'var(--color-accent-cyan-bright)' }
                       : w.overallScore >= 55 ? { g: 'C', c: 'var(--color-warning-deep)' }
                       : { g: 'D', c: 'var(--color-danger)' };
                     return (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <span className="u-d-inline-flex u-ai-center u-gap-4">
                         <b style={{ color: grd.c, border: `1px solid ${grd.c}55`, padding: '0 3px', borderRadius: 3, fontSize: 14 }}>{grd.g}</b>
                         {w.trend === 'UP' ? '' : w.trend === 'DOWN' ? '' : ''}
                       </span>

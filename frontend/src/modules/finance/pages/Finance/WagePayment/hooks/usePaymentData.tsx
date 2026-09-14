@@ -133,7 +133,7 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
       content: (
         <div>
           <p>选中 <strong>{selected.length}</strong> 笔待收付款，合计金额：<strong style={{ color: 'var(--color-error)' }}>{formatMoney(totalAmt)}</strong></p>
-          <p style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>将以「线下付款」方式逐笔发起，请在完成转账后分别上传凭证确认。</p>
+          <p className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>将以「线下付款」方式逐笔发起，请在完成转账后分别上传凭证确认。</p>
         </div>
       ),
       okText: '确认批量发起',

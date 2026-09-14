@@ -53,15 +53,15 @@ const BatchSelectionPanel: React.FC<BatchSelectionPanelProps> = ({
 
     return (
         <>
-            <div className="wh-line" style={{ alignItems: 'flex-start' }}>
+            <div className="wh-line u-ai-start" >
                 <div className="wh-label">批量选择</div>
-                <div className="wh-control" style={{ flex: 1 }}>
+                <div className="wh-control u-flex-1" >
                     {/* 批量多选折叠面板 */}
                     <div
                         style={collapseHeaderStyle}
                         onClick={() => setBatchSelectOpen((v) => !v)}
                     >
-                        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span className="u-flex-1 u-ov-hidden" style={{ minWidth: 0, textOverflow: 'ellipsis' }}>
                             {batchSelectOpen ? '▾' : '▸'} 点击展开批量多选
                         </span>
                         <Tag color={batchSelectedBundleQrs.length ? 'blue' : 'default'}>
@@ -72,7 +72,7 @@ const BatchSelectionPanel: React.FC<BatchSelectionPanelProps> = ({
                         </Tag>
                     </div>
                     {batchSelectOpen && (
-                        <div style={{ border: '1px solid var(--color-border-antd)', borderTop: 'none', borderRadius: '0 0 6px 6px', padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div className="u-p-12 u-d-flex u-fd-column u-gap-10" style={{ border: '1px solid var(--color-border-antd)', borderTop: 'none', borderRadius: '0 0 6px 6px' }}>
                             <Space wrap>
                                 <Button onClick={onSelectAll} disabled={!batchSelectableQrs.length}>全选</Button>
                                 <Button onClick={onSelectInvert} disabled={!batchSelectableQrs.length}>反选</Button>
@@ -121,15 +121,15 @@ const BatchSelectionPanel: React.FC<BatchSelectionPanelProps> = ({
             </div>
 
             {batchSelectedBundleQrs.length ? (
-                <div className="wh-line" style={{ alignItems: 'flex-start' }}>
+                <div className="wh-line u-ai-start" >
                     <div className="wh-label">批量菲号</div>
-                    <div className="wh-control" style={{ flex: 1 }}>
+                    <div className="wh-control u-flex-1" >
                         {/* 已选菲号列表折叠面板 */}
                         <div
                             style={collapseHeaderStyle}
                             onClick={() => setBatchListOpen((v) => !v)}
                         >
-                            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <span className="u-flex-1 u-ov-hidden" style={{ minWidth: 0, textOverflow: 'ellipsis' }}>
                                 {batchListOpen ? '▾' : '▸'} 点击展开查看已选菲号
                             </span>
                             <Tag color="blue">已选 {batchSelectedBundleQrs.length}</Tag>
@@ -151,8 +151,8 @@ const BatchSelectionPanel: React.FC<BatchSelectionPanelProps> = ({
                                         : Math.max(0, Number(b?.quantity || 0) || 0);
                                     const currentQty = Math.max(0, Math.min(maxQty, Number(batchQtyByQr[qr] || 0) || 0));
                                     return (
-                                        <div key={qr} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                                            <div style={{ flex: 1, minWidth: 240 }}>
+                                        <div key={qr} className="u-d-flex u-gap-12 u-ai-center">
+                                            <div className="u-flex-1" style={{ minWidth: 240 }}>
                                                 {`菲号：${qr}`}
                                                 {b?.bundleNo ? `｜扎号：${b.bundleNo}` : ''}
                                                 {b?.color ? `｜颜色：${b.color}` : ''}
@@ -161,7 +161,7 @@ const BatchSelectionPanel: React.FC<BatchSelectionPanelProps> = ({
                                             </div>
                                             <div style={{ width: 140 }}>
                                                 <InputNumber
-                                                    style={{ width: '100%' }}
+                                                    className="u-w-full"
                                                     min={1}
                                                     max={maxQty || undefined}
                                                     value={currentQty || undefined}

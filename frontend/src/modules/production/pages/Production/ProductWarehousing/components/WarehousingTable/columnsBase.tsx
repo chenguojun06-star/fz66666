@@ -33,7 +33,7 @@ export function buildBaseColumns({ goToDetail, dataSource }: BuildColumnsParams)
         const text = String(v || '').trim();
         if (!text) return '-';
         return (
-          <Button type="link" style={{ padding: 0, fontSize: 'var(--table-cell-font-size)' }} onClick={() => goToDetail(record, 'inspect')} title={text}>
+          <Button type="link" className="u-p-0" style={{ fontSize: 'var(--table-cell-font-size)' }} onClick={() => goToDetail(record, 'inspect')} title={text}>
             {text}
           </Button>
         );
@@ -60,13 +60,13 @@ export function buildBaseColumns({ goToDetail, dataSource }: BuildColumnsParams)
 
         const inner = (
           <div style={{ fontSize: 'var(--table-cell-font-size)' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            <div className="u-d-inline-flex u-ai-center u-gap-4 u-fwrap-wrap">
               <span style={tooltipContent ? { borderBottom: '1px dotted var(--color-primary)', cursor: 'help' } : undefined}>{text}</span>
               {plateTag && <Tag color={plateTag.color} style={{ marginInlineEnd: 0, fontSize: 'var(--table-cell-font-size)' }}>{plateTag.text}</Tag>}
               {urgencyTag && <Tag color={urgencyTag.color} style={{ marginInlineEnd: 0, fontSize: 'var(--table-cell-font-size)' }}>{urgencyTag.text}</Tag>}
             </div>
             {(record as any).orgPath || (record as any).parentOrgUnitName ? (
-              <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)', marginTop: 2 }}>
+              <div className="u-fs-var--font-size-xs u-mt-2" style={{ color: 'var(--neutral-text-secondary)' }}>
                 {(record as any).orgPath || (record as any).parentOrgUnitName}
               </div>
             ) : null}

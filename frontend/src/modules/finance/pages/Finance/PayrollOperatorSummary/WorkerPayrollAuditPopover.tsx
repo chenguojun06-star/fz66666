@@ -178,18 +178,18 @@ const WorkerPayrollAuditPopover: React.FC<{
 
   const content = (
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 14, boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <span style={{ fontWeight: 600, fontSize: 14 }}> 工资审核</span>
+      <div className="u-d-flex u-jc-between u-ai-center u-mb-8">
+        <span className="u-fw-600 u-fs-14"> 工资审核</span>
         <Tag color={riskTagColor[analysis.risk]}>{suggestionLabel[analysis.suggestion]}</Tag>
       </div>
       <DecisionInsightCard compact insight={insight} />
 
       {analysis.breakdown.length > 0 && (
-        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '4px 10px', padding: '6px 8px', background: 'var(--color-bg-container)', borderRadius: 6 }}>
+        <div className="u-mt-8 u-d-flex u-fwrap-wrap u-br-6" style={{ gap: '4px 10px', padding: '6px 8px', background: 'var(--color-bg-container)' }}>
           {analysis.breakdown.slice(0, 6).map((b, i) => (
-            <span key={i} style={{ whiteSpace: 'nowrap', color: 'var(--color-gray-700)', fontSize: 14 }}>
+            <span key={i} className="u-ws-nowrap u-fs-14" style={{ color: 'var(--color-gray-700)' }}>
               <span style={{ color: 'var(--color-text-tertiary)' }}>{b.label}：</span>
-              <span style={{ fontWeight: 500 }}>{b.value}</span>
+              <span className="u-fw-500">{b.value}</span>
             </span>
           ))}
         </div>

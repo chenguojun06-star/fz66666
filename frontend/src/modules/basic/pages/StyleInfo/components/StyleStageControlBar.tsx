@@ -218,22 +218,22 @@ const StyleStageControlBar: React.FC<Props> = ({
       }}
     >
       {/* 左侧：状态信息 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="u-d-flex u-ai-center u-fwrap-wrap" style={{ gap: 24 }}>
+        <div className="u-d-flex u-ai-center u-gap-8">
           <span style={{ color: 'var(--text-secondary)' }}>{stageName}状态：</span>
           {statusTag}
         </div>
         <span style={{ color: 'var(--text-secondary)' }}>
-          领取人：<span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{assignee || '-'}</span>
+          领取人：<span className="u-fw-500" style={{ color: 'var(--text-primary)' }}>{assignee || '-'}</span>
         </span>
         <span style={{ color: 'var(--text-secondary)' }}>
-          开始时间：<span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{startTimeText}</span>
+          开始时间：<span className="u-fw-500" style={{ color: 'var(--text-primary)' }}>{startTimeText}</span>
         </span>
         <span style={{ color: 'var(--text-secondary)' }}>
-          完成时间：<span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{completedTimeText}</span>
+          完成时间：<span className="u-fw-500" style={{ color: 'var(--text-primary)' }}>{completedTimeText}</span>
         </span>
         <span style={{ color: 'var(--text-secondary)' }}>
-          款号：<span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{resolvedStyleNo || '-'}</span>
+          款号：<span className="u-fw-500" style={{ color: 'var(--text-primary)' }}>{resolvedStyleNo || '-'}</span>
         </span>
         {/* 额外信息 */}
         {extraInfo}

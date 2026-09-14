@@ -161,7 +161,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
         styles={{ wrapper: { width: '85%' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
         destroyOnHidden
       >
-        <div style={{ marginTop: 16, display: 'grid', gap: 16 }}>
+        <div className="u-mt-16 u-d-grid u-gap-16">
           <Descriptions bordered column={3} size="small">
             <Descriptions.Item label="采购单号">{purchase?.purchaseNo || '-'}</Descriptions.Item>
             <Descriptions.Item label="供应商">{purchase?.supplierName || '-'}</Descriptions.Item>
@@ -178,7 +178,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
           </Descriptions>
           <Card title="登记异常">
             <Form form={createForm} layout="vertical">
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
+              <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
                 <Form.Item name="issueType" label="异常类型" rules={[{ required: true, message: '请选择异常类型' }]}>
                   <Select options={ISSUE_TYPE_OPTIONS} showSearch optionFilterProp="label" />
                 </Form.Item>
@@ -190,7 +190,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
                   label="异常数量"
                   rules={[{ required: true, message: '请填写异常数量' }]}
                 >
-                  <InputNumber min={1} max={maxIssueQuantity > 0 ? maxIssueQuantity : undefined} precision={0} style={{ width: '100%' }} />
+                  <InputNumber min={1} max={maxIssueQuantity > 0 ? maxIssueQuantity : undefined} precision={0} className="u-w-full" />
                 </Form.Item>
                 <Form.Item name="disposition" label="建议处理" rules={[{ required: true, message: '请选择建议处理' }]}>
                   <Select options={DISPOSITION_OPTIONS} showSearch optionFilterProp="label" />
@@ -292,7 +292,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
         confirmLoading={resolveSubmitting}
         destroyOnHidden
       >
-        <Form form={resolveForm} layout="vertical" style={{ marginTop: 16 }}>
+        <Form form={resolveForm} layout="vertical" className="u-mt-16">
           <Form.Item name="disposition" label="最终处理方式" rules={[{ required: true, message: '请选择处理方式' }]}>
             <Select options={DISPOSITION_OPTIONS} showSearch optionFilterProp="label" />
           </Form.Item>

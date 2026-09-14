@@ -63,8 +63,8 @@ export function useRemarks({ orderNo }: UseRemarksArgs) {
         title,
         width: '40vw',
         content: (
-          <div style={{ marginTop: 12 }}>
-            <p style={{ marginBottom: 8, color: 'var(--color-text-secondary)' }}>
+          <div className="u-mt-12">
+            <p className="u-mb-8" style={{ color: 'var(--color-text-secondary)' }}>
               请输入{actionLabel}原因（将记录到订单操作记录）：
             </p>
             <Input.TextArea

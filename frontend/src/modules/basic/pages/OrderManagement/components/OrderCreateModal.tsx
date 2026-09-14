@@ -86,7 +86,7 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
       placement="right"
       styles={{ wrapper: { width: isMobile ? '96vw' : '85%' }, body: { padding: '16px 24px', display: 'flex', flexDirection: 'column', overflow: 'auto' } }}
       footer={
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <div className="u-d-flex u-jc-end u-gap-8">
           <Button onClick={onClose} disabled={submitLoading}>关闭</Button>
           <Button type="primary" onClick={onSubmit} loading={submitLoading} disabled={!!createdOrder}>下单</Button>
         </div>
@@ -94,7 +94,7 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
     >
       {/* D-357 标签排版对齐无资料下单：13px 灰字、行高 20、紧跟输入框 */}
       <style>{`.order-create-form .ant-form-item-label > label { font-size: 13px; color: rgba(0,0,0,0.65); line-height: 20px; height: auto; } .order-create-form .ant-form-item-label { padding-bottom: 4px; } .order-create-form .ant-form-item { margin-bottom: 0; }`}</style>
-      <Form form={form} layout="vertical" className="order-create-form" style={{ minWidth: 0, width: '100%' }}>
+      <Form form={form} layout="vertical" className="order-create-form u-w-full" style={{ minWidth: 0 }}>
         <div
           style={isMobile
             ? { display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0, width: '100%', maxWidth: '100%' }
@@ -125,9 +125,9 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
           >
             <Row gutter={[16, 12]}>
               <Col xs={24} sm={12}>
-                <div style={{ marginBottom: 4, fontWeight: 600 }}>订单号 <span style={{ color: 'var(--color-danger)' }}>*</span></div>
-                <Form.Item name="orderNo" rules={[{ required: true, message: '请输入订单号' }]} style={{ marginBottom: 0 }}>
-                  <Space.Compact style={{ width: '100%' }}>
+                <div className="u-mb-4 u-fw-600">订单号 <span style={{ color: 'var(--color-danger)' }}>*</span></div>
+                <Form.Item name="orderNo" rules={[{ required: true, message: '请输入订单号' }]} className="u-mb-0">
+                  <Space.Compact className="u-w-full">
                     <Input placeholder="例如:PO20260513143025" />
                     <Button onClick={generateOrderNo}>自动生成</Button>
                   </Space.Compact>
@@ -148,8 +148,8 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
             <Row gutter={[16, 12]}>
               <Col xs={24} sm={8}>
                 <InlineField label={<>下单时间 <span style={{ color: 'var(--color-danger)' }}>*</span></>}>
-                  <Form.Item name="plannedStartDate" rules={[{ required: true, message: '请选择下单时间' }]} style={{ marginBottom: 0 }}>
-                    <UnifiedDatePicker showTime style={{ width: '100%' }} />
+                  <Form.Item name="plannedStartDate" rules={[{ required: true, message: '请选择下单时间' }]} className="u-mb-0">
+                    <UnifiedDatePicker showTime className="u-w-full" />
                   </Form.Item>
                 </InlineField>
               </Col>
@@ -158,7 +158,7 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
                   <Tooltip title={deliverySuggestion.reason}>
                     <Tag
                       color="blue"
-                      style={{ marginLeft: 4, cursor: 'pointer' }}
+                      className="u-ml-4 u-cur-pointer"
                       onClick={() => {
                         const d = dayjs().add(deliverySuggestion.recommendedDays, 'day').hour(18).minute(0).second(0);
                         form.setFieldValue('plannedEndDate', d);
@@ -166,14 +166,14 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
                     >建议</Tag>
                   </Tooltip>
                 )}</>}>
-                  <Form.Item name="plannedEndDate" rules={[{ required: true, message: '请选择订单交期' }]} style={{ marginBottom: 0 }}>
-                    <UnifiedDatePicker showTime style={{ width: '100%' }} />
+                  <Form.Item name="plannedEndDate" rules={[{ required: true, message: '请选择订单交期' }]} className="u-mb-0">
+                    <UnifiedDatePicker showTime className="u-w-full" />
                   </Form.Item>
                 </InlineField>
               </Col>
               <Col xs={24} sm={8}>
                 <InlineField label="急单">
-                  <Form.Item name="urgencyLevel" initialValue="normal" style={{ marginBottom: 0 }}>
+                  <Form.Item name="urgencyLevel" initialValue="normal" className="u-mb-0">
                     <Select
                       placeholder="普通"
                       allowClear
@@ -189,7 +189,7 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
             <Row gutter={[16, 12]}>
               <Col xs={24} sm={8}>
                 <InlineField label="客户">
-                  <Form.Item name="company" style={{ marginBottom: 0 }}>
+                  <Form.Item name="company" className="u-mb-0">
                     <CustomerSelect
                       placeholder="选填"
                       allowClear
@@ -211,14 +211,14 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
               </Col>
               <Col xs={24} sm={8}>
                 <InlineField label="品类">
-                  <Form.Item name="productCategory" style={{ marginBottom: 0 }}>
-                    <Select placeholder="选填" allowClear showSearch optionFilterProp="label" style={{ width: '100%' }} options={categoryOptions} />
+                  <Form.Item name="productCategory" className="u-mb-0">
+                    <Select placeholder="选填" allowClear showSearch optionFilterProp="label" className="u-w-full" options={categoryOptions} />
                   </Form.Item>
                 </InlineField>
               </Col>
               <Col xs={24} sm={8}>
                 <InlineField label="首翻单">
-                  <Form.Item name="plateType" style={{ marginBottom: 0 }}>
+                  <Form.Item name="plateType" className="u-mb-0">
                     <Select placeholder="不填自动判断" allowClear options={[{ label: '首单', value: 'FIRST' }, { label: '翻单', value: 'REORDER' }]} />
                   </Form.Item>
                 </InlineField>
@@ -227,7 +227,7 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
             <Row gutter={[16, 12]}>
               <Col xs={24} sm={8}>
                 <InlineField label="下单类型">
-                  <Form.Item name="orderBizType" style={{ marginBottom: 0 }}>
+                  <Form.Item name="orderBizType" className="u-mb-0">
                     <Select placeholder="选填" allowClear options={[
                       { label: 'FOB 离岸价', value: 'FOB' },
                       { label: 'ODM 原厂设计', value: 'ODM' },
@@ -239,7 +239,7 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
               </Col>
               <Col xs={24} sm={8}>
                 <InlineField label="纸样师">
-                  <Form.Item name="patternMaker" style={{ marginBottom: 0 }}>
+                  <Form.Item name="patternMaker" className="u-mb-0">
                     <Select placeholder="选填" allowClear showSearch optionFilterProp="label"
                       options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))} />
                   </Form.Item>
@@ -247,7 +247,7 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
               </Col>
               <Col xs={24} sm={8}>
                 <InlineField label="跟单员">
-                  <Form.Item name="merchandiser" style={{ marginBottom: 0 }}>
+                  <Form.Item name="merchandiser" className="u-mb-0">
                     <Select placeholder="选填" allowClear showSearch optionFilterProp="label"
                       options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))} />
                   </Form.Item>
@@ -255,8 +255,8 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
               </Col>
             </Row>
 
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ marginBottom: 8 }}><span style={{ fontWeight: 600 }}> 下单数量</span></div>
+            <div className="u-mb-12">
+              <div className="u-mb-8"><span className="u-fw-600"> 下单数量</span></div>
               <MultiColorOrderEditor
                 styleId={selectedStyle?.id ?? null}
                 availableColors={selectableColors}
@@ -289,8 +289,8 @@ const OrderCreateModal: React.FC<OrderCreateModalProps> = (p) => {
             />
 
             {customFields.length > 0 && (
-              <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--color-border-light)' }}>
-                <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14 }}>扩展字段</div>
+              <div className="u-mt-16" style={{ paddingTop: 16, borderTop: '1px solid var(--color-border-light)' }}>
+                <div className="u-fw-600 u-mb-12 u-fs-14">扩展字段</div>
                 <ExtFieldsSection fields={customFields} />
               </div>
             )}

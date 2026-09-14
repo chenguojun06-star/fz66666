@@ -34,7 +34,7 @@ const ExportModal: React.FC<ExportModalProps> = ({
       <Checkbox.Group
         value={selectedColumns}
         onChange={(values) => onSelectedColumnsChange(values as string[])}
-        style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+        className="u-d-flex u-fd-column u-gap-8"
       >
         {exportableColumns.map(col => (
           <Checkbox
@@ -45,7 +45,7 @@ const ExportModal: React.FC<ExportModalProps> = ({
           </Checkbox>
         ))}
       </Checkbox.Group>
-      <div style={{ marginTop: 12, color: 'var(--color-text-muted)', fontSize: 12 }}>
+      <div className="u-mt-12 u-fs-12" style={{ color: 'var(--color-text-muted)' }}>
         提示：导出当前页数据，共 {recordCount} 条记录
       </div>
     </Modal>

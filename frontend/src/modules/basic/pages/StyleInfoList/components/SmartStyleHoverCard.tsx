@@ -116,21 +116,21 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
         paddingBottom: 8,
         borderBottom: '1px solid var(--color-border-light)',
       }}>
-        <span style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: 12 }}>{record.styleNo}</span>
-        <Tag color="blue" style={{ margin: 0, fontSize: 12, lineHeight: '18px' }}>{progressNode}</Tag>
+        <span className="u-fw-600 u-fs-12" style={{ color: 'var(--color-text-primary)' }}>{record.styleNo}</span>
+        <Tag color="blue" className="u-m-0 u-fs-12 u-lh-18px">{progressNode}</Tag>
       </div>
 
-      <div style={{ marginBottom: 10 }}>
+      <div className="u-mb-10">
         <DecisionInsightCard compact insight={insight} />
       </div>
 
       {/* 阶段列表 */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div className="u-d-flex u-fd-column u-gap-6">
         {stages.map(s => {
           const isNext = !s.done && nextStage?.key === s.key;
           return (
-            <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 11, lineHeight: 1, flexShrink: 0 }}>
+            <div key={s.key} className="u-d-flex u-ai-center u-gap-6">
+              <span className="u-fs-11 u-fshrink-0" style={{ lineHeight: 1 }}>
                 {s.done ? '' : ''}
               </span>
               <span style={{
@@ -141,12 +141,12 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
                 {s.label}
               </span>
               {isNext && !s.done && (
-                <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px', flexShrink: 0 }}>
+                <Tag color="blue" className="u-m-0 u-fs-12 u-p-04px u-lh-18px u-fshrink-0">
                   下一步
                 </Tag>
               )}
               {s.completedAt && (
-                <span style={{ color: 'var(--color-text-quaternary)', fontSize: 12, flexShrink: 0 }}>{s.completedAt}</span>
+                <span className="u-fs-12 u-fshrink-0" style={{ color: 'var(--color-text-quaternary)' }}>{s.completedAt}</span>
               )}
             </div>
           );

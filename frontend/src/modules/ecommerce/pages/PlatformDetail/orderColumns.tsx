@@ -30,8 +30,8 @@ export function buildOrderColumns(args: OrderColumnsArgs): ColumnsType<EcOrder> 
       title: '订单号', dataIndex: 'platformOrderNo', width: 160,
       render: (v, r) => (
         <div>
-          <div style={{ fontWeight: 600 }}>{v || r.orderNo}</div>
-          {v && <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>内部 {r.orderNo}</div>}
+          <div className="u-fw-600">{v || r.orderNo}</div>
+          {v && <div className="u-fs-14" style={{ color: 'var(--color-text-muted)' }}>内部 {r.orderNo}</div>}
         </div>
       ),
     },
@@ -54,8 +54,8 @@ export function buildOrderColumns(args: OrderColumnsArgs): ColumnsType<EcOrder> 
       render: (_: unknown, r: EcOrder) => (
         <div>
           <div>{r.productName || '-'} <Text type="secondary">×{r.quantity}</Text></div>
-          {r.skuCode && <div style={{ fontSize: 14, color: 'var(--color-success)' }}>SKU {r.skuCode}</div>}
-          <div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>{r.buyerNick || r.receiverName}</div>
+          {r.skuCode && <div className="u-fs-14" style={{ color: 'var(--color-success)' }}>SKU {r.skuCode}</div>}
+          <div className="u-fs-14" style={{ color: 'var(--color-text-muted)' }}>{r.buyerNick || r.receiverName}</div>
         </div>
       ),
     },
@@ -63,8 +63,8 @@ export function buildOrderColumns(args: OrderColumnsArgs): ColumnsType<EcOrder> 
       title: '金额', width: 130,
       render: (_: unknown, r: EcOrder) => (
         <div>
-          <div style={{ color: 'var(--color-warning)', fontWeight: 600 }}>¥{r.payAmount ?? '-'}</div>
-          {r.freight ? <div style={{ fontSize: 14, color: 'var(--color-text-quaternary)' }}>运费 ¥{r.freight}</div> : null}
+          <div className="u-fw-600" style={{ color: 'var(--color-warning)' }}>¥{r.payAmount ?? '-'}</div>
+          {r.freight ? <div className="u-fs-14" style={{ color: 'var(--color-text-quaternary)' }}>运费 ¥{r.freight}</div> : null}
         </div>
       ),
     },
@@ -82,7 +82,7 @@ export function buildOrderColumns(args: OrderColumnsArgs): ColumnsType<EcOrder> 
     },
     {
       title: '快递', dataIndex: 'trackingNo', width: 130,
-      render: (v, r) => v ? <div><div style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>{r.expressCompany}</div><div>{v}</div></div> : <Text type="secondary">-</Text>,
+      render: (v, r) => v ? <div><div className="u-fs-14" style={{ color: 'var(--color-text-muted)' }}>{r.expressCompany}</div><div>{v}</div></div> : <Text type="secondary">-</Text>,
     },
     {
       title: '下单时间', dataIndex: 'createTime', width: 110,

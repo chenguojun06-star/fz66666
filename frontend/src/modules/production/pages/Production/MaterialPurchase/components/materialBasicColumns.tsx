@@ -85,7 +85,7 @@ export const buildBasicColumns = (params: UseMaterialColumnsParams): ColumnsType
           <Space size={4}>
             <FactoryTypeTag factoryType={type} />
             <SupplierNameTooltip name={name} />
-            {bizType && <Tag color={BIZ_TYPE_COLOR_MAP[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知'}</Tag>}
+            {bizType && <Tag color={BIZ_TYPE_COLOR_MAP[bizType] ?? 'default'} className="u-m-0 u-fs-12 u-p-04px u-lh-18px">{ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知'}</Tag>}
           </Space>
         );
       },
@@ -135,7 +135,7 @@ export const buildBasicColumns = (params: UseMaterialColumnsParams): ColumnsType
                 }
               }
             }}
-            style={{ color: 'var(--color-primary)', cursor: 'pointer' }}
+            className="u-cur-pointer" style={{ color: 'var(--color-primary)' }}
           >
             {v}
           </a>

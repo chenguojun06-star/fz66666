@@ -161,7 +161,7 @@ const LoanHistoryDrawer: React.FC<LoanHistoryDrawerProps> = ({ visible, stock, o
         initialHeight={typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.5) : 400}
       >
         {showSmartErrorNotice && smartError ? (
-          <div style={{ marginBottom: 12 }}>
+          <div className="u-mb-12">
             <SmartErrorNotice
               error={smartError}
               onFix={() => {

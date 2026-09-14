@@ -68,7 +68,7 @@ const ShareOrderPage: React.FC = () => {
           </div>
           <div style={S.heroOverviewStyle}>
             <div style={S.styleCoverCardStyle}>
-              {styleCoverUrl ? <Image loading="lazy" src={styleCoverUrl} alt={data.styleName || data.styleNo || data.orderNo} style={S.styleCoverImageStyle} /> : <div style={S.styleCoverPlaceholderStyle}><div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>暂无款式图</div></div>}
+              {styleCoverUrl ? <Image loading="lazy" src={styleCoverUrl} alt={data.styleName || data.styleNo || data.orderNo} style={S.styleCoverImageStyle} /> : <div style={S.styleCoverPlaceholderStyle}><div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>暂无款式图</div></div>}
             </div>
             <div>
               <div style={S.orderNoStyle}>{data.orderNo}</div>
@@ -112,11 +112,11 @@ const ShareOrderPage: React.FC = () => {
             <div style={S.panelStyle}>
               <div style={S.panelTitleStyle}>AI 智能进度卡</div>
               <div style={S.aiHeaderStyle}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div className="u-d-flex u-ai-center u-gap-10">
                   <XiaoyunMascotLink riskTone={riskTone} />
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)' }}>{riskTone.label}</div>
-                    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{deliveryDiffText}</div>
+                    <div className="u-fs-14 u-fw-700" style={{ color: 'var(--color-text-primary)' }}>{riskTone.label}</div>
+                    <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{deliveryDiffText}</div>
                     <div style={S.aiSupportTextStyle}>数据由 云裳智链 · 实时智能化平台提供支持</div>
                   </div>
                 </div>
@@ -135,15 +135,15 @@ const ShareOrderPage: React.FC = () => {
                   const active = isCurrentStage(stage.stageName, currentStage, data.latestScanStage);
                   return (
                     <div key={stage.stageName} style={{ ...S.stageCardStyle, borderColor: active ? tone.color : 'rgba(148, 163, 184, 0.18)', boxShadow: active ? `0 10px 24px ${tone.shadow}` : 'none' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                      <div className="u-d-flex u-jc-between u-ai-center" style={{ marginBottom: 5 }}>
+                        <div className="u-d-flex u-ai-center u-fs-14 u-fw-700" style={{ gap: 5, color: 'var(--color-text-primary)' }}>
                           <span style={{ color: tone.color }}>{stageIconMap[stage.stageName] || <DeploymentUnitOutlined />}</span><span>{stage.stageName}</span>
                         </div>
-                        <Tag color={tone.tagColor} style={{ marginInlineEnd: 0, paddingInline: 6, lineHeight: '16px', fontSize: 14 }}>{tone.label}</Tag>
+                        <Tag color={tone.tagColor} className="u-lh-16px u-fs-14" style={{ marginInlineEnd: 0, paddingInline: 6 }}>{tone.label}</Tag>
                       </div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: tone.color, marginBottom: 4, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{active ? `当前节点 · 总进度 ${progress}%` : tone.label}</div>
                       <Progress percent={Math.max(0, Math.min(100, stage.rate ?? 0))} showInfo={false} strokeColor={tone.color} trailColor="rgba(148, 163, 184, 0.18)" />
-                      <div style={{ marginTop: 4, fontSize: 14, color: 'var(--color-text-tertiary)', lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{active ? `实际当前节点：${currentStage}` : tone.helper}</div>
+                      <div className="u-mt-4 u-fs-14 u-ws-nowrap u-ov-hidden" style={{ color: 'var(--color-text-tertiary)', lineHeight: 1.25, textOverflow: 'ellipsis' }}>{active ? `实际当前节点：${currentStage}` : tone.helper}</div>
                     </div>
                   );
                 }) : <div style={S.emptyPanelStyle}>暂未同步到节点数据</div>}
@@ -152,7 +152,7 @@ const ShareOrderPage: React.FC = () => {
             {data.remarks && (
               <div style={S.panelStyle}>
                 <div style={S.panelTitleStyle}>订单备注</div>
-                <div style={S.remarkCardStyle}><MessageOutlined style={{ color: 'var(--color-primary)', fontSize: 13, marginTop: 2 }} /><div style={S.remarkTextStyle}>{data.remarks}</div></div>
+                <div style={S.remarkCardStyle}><MessageOutlined className="u-fs-13 u-mt-2" style={{ color: 'var(--color-primary)' }} /><div style={S.remarkTextStyle}>{data.remarks}</div></div>
               </div>
             )}
           </div>
@@ -173,9 +173,9 @@ const ShareOrderPage: React.FC = () => {
                   <div key={`${scan.processName || 'scan'}-${scan.scanTime || index}`} style={S.timelineItemStyle}>
                     <div style={S.timelineDotStyle} />
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>{scan.processName || '生产更新'}</div>
-                      <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>{scan.quantity != null ? `完成 ${scan.quantity} 件` : '有新的进展记录'}</div>
-                      <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>{formatDateTime(scan.scanTime)}</div>
+                      <div className="u-fs-14 u-fw-600" style={{ color: 'var(--color-text-primary)' }}>{scan.processName || '生产更新'}</div>
+                      <div className="u-fs-14 u-mt-2" style={{ color: 'var(--color-text-tertiary)' }}>{scan.quantity != null ? `完成 ${scan.quantity} 件` : '有新的进展记录'}</div>
+                      <div className="u-fs-14 u-mt-2" style={{ color: 'var(--color-text-tertiary)' }}>{formatDateTime(scan.scanTime)}</div>
                     </div>
                   </div>
                 )) : <div style={S.emptyPanelStyle}>暂无最新扫码动态</div>}

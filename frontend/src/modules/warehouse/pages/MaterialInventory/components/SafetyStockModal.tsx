@@ -45,16 +45,16 @@ const SafetyStockModal: React.FC<SafetyStockModalProps> = ({
     >
       {safetyStockTarget && (
         <div>
-          <Card style={{ marginBottom: 16, background: 'var(--color-bg-subtle)' }}>
+          <Card className="u-mb-16" style={{ background: 'var(--color-bg-subtle)' }}>
             <div><strong>{safetyStockTarget.materialCode}</strong> <Tag color={getMaterialTypeCategory(safetyStockTarget.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(safetyStockTarget.materialType) === 'lining' ? 'cyan' : 'green'}>{getBaseMaterialTypeLabel(safetyStockTarget.materialType)}</Tag></div>
-            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', marginTop: 4 }}>{safetyStockTarget.materialName}</div>
-            <div style={{ fontSize: "var(--font-size-sm)", marginTop: 4 }}>
+            <div className="u-fs-var--font-size-sm u-mt-4" style={{ color: 'var(--neutral-text-secondary)' }}>{safetyStockTarget.materialName}</div>
+            <div className="u-fs-var--font-size-sm u-mt-4">
               当前库存: <strong>{safetyStockTarget.quantity ?? 0}</strong> {safetyStockTarget.unit}
             </div>
           </Card>
-          <div style={{ marginBottom: 8 }}>安全库存（低于此值将触发预警）</div>
+          <div className="u-mb-8">安全库存（低于此值将触发预警）</div>
           <InputNumber
-            style={{ width: '100%' }}
+            className="u-w-full"
             min={0}
             max={999999}
             value={safetyStockValue}
@@ -62,7 +62,7 @@ const SafetyStockModal: React.FC<SafetyStockModalProps> = ({
             suffix={safetyStockTarget.unit || '件'}
             placeholder="请输入安全库存"
           />
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginTop: 8 }}>
+          <div className="u-fs-var--font-size-sm u-mt-8" style={{ color: 'var(--neutral-text-disabled)' }}>
             当库存低于安全库存时，系统将在仓库看板和面辅料预警中显示该物料
           </div>
         </div>

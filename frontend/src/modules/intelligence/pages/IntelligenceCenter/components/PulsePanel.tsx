@@ -17,7 +17,7 @@ const PulsePanel: React.FC<PulsePanelProps> = ({
 }) => {
   return (
     <div className="c-card c-scanline-card">
-      <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('pulse')}>
+      <div className="c-card-title u-cur-pointer"  onClick={() => toggleCollapse('pulse')}>
         <LiveDot />
         实时生产脉搏
         <span className="c-card-badge cyan-badge">{pulse?.scanRatePerHour ?? 0} 件/时</span>
@@ -47,7 +47,7 @@ const PulsePanel: React.FC<PulsePanelProps> = ({
           </div>
         ) : (
           <div className="c-all-ok">
-            <CheckCircleOutlined style={{ marginRight: 6 }} />
+            <CheckCircleOutlined className="u-mr-6" />
             今日暂无扫码记录
           </div>
         )}

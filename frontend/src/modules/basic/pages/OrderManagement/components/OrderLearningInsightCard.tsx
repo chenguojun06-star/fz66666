@@ -22,7 +22,7 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
   const presented = presentOrderLearningRecommendation(data);
 
   return (
-    <div style={{ marginTop: 12, marginBottom: 12 }}>
+    <div className="u-mt-12 u-mb-12">
       <div
         onClick={() => setExpanded(!expanded)}
         style={{
@@ -36,22 +36,22 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
           border: '1px solid var(--color-border)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--color-text-tertiary)' }}>AI 学习建议</span>
+        <div className="u-d-flex u-ai-center u-gap-8">
+          <span className="u-fs-14 u-fw-400" style={{ color: 'var(--color-text-tertiary)' }}>AI 学习建议</span>
           {loading && !expanded && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
-              <LoadingOutlined style={{ fontSize: 12 }} />
+            <span className="u-d-inline-flex u-ai-center u-gap-4 u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
+              <LoadingOutlined className="u-fs-12" />
               <span>分析中...</span>
             </span>
           )}
           {presented && presented.tags.length > 0 && (
-            <div style={{ display: 'flex', gap: 4 }}>
-              {presented.tags.slice(0, 2).map((tag) => <Tag key={tag} style={{ margin: 0 }}>{tag}</Tag>)}
+            <div className="u-d-flex u-gap-4">
+              {presented.tags.slice(0, 2).map((tag) => <Tag key={tag} className="u-m-0">{tag}</Tag>)}
             </div>
           )}
         </div>
-        <span style={{ display: 'flex', alignItems: 'center' }}>
-          {expanded ? <DownOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} /> : <RightOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} />}
+        <span className="u-d-flex u-ai-center">
+          {expanded ? <DownOutlined className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }} /> : <RightOutlined className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }} />}
         </span>
       </div>
 
@@ -62,18 +62,18 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="AI 学习建议暂不可用" />
             ) : (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>{presented.title}</div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div className="u-d-flex u-jc-between u-gap-12 u-fwrap-wrap u-mb-10">
+                  <div className="u-fs-14 u-fw-500" style={{ color: 'var(--color-text-primary)' }}>{presented.title}</div>
+                  <div className="u-d-flex u-gap-8 u-fwrap-wrap">
                     {presented.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)}
                   </div>
                 </div>
-                <Alert type="info" showIcon title={presented.summary} style={{ marginBottom: 10 }} />
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12, marginBottom: 12 }}>
+                <Alert type="info" showIcon title={presented.summary} className="u-mb-10" />
+                <div className="u-d-grid u-gap-12 u-mb-12" style={{ gridTemplateColumns: '1.2fr 1fr' }}>
                   <OrderLearningRecommendationSummary lines={presented.recommendationLines} />
                   <OrderLearningHistoryPanel lines={presented.recentCaseLines} />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div className="u-d-grid u-gap-12 u-mb-12" style={{ gridTemplateColumns: '1fr 1fr' }}>
                   <OrderLearningFactoryScoreBoard lines={presented.factoryScoreLines} />
                   <OrderLearningSimilarCasesPanel lines={presented.similarCaseLines} />
                 </div>

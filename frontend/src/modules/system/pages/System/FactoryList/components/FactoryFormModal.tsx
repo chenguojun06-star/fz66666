@@ -69,7 +69,7 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
       const v = String(value || '');
       if (!v) return '-';
       const colorMap: Record<string, string> = { S: 'warning', A: 'success', B: 'processing', C: 'error' };
-      return <Tag color={colorMap[v] || 'default'} style={{ fontWeight: 700 }}>{v}</Tag>;
+      return <Tag color={colorMap[v] || 'default'} className="u-fw-700">{v}</Tag>;
     },
     admissionStatus: (value: unknown) => {
       const v = String(value || '');
@@ -174,7 +174,7 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
             allowClear
           />
         </Form.Item>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: '1fr 1fr' }}>
           <Form.Item
             name="factoryType"
             label={
@@ -182,7 +182,7 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
                 <span>内外标签</span>
                 <Tooltip
                   title={
-                    <div style={{ fontSize: 14, lineHeight: 1.8 }}>
+                    <div className="u-fs-14 u-lh-18">
                       <div><strong>内部工厂</strong>：组织内部产能，完成后按人员工序统计工资（<span style={{ color: 'var(--color-warning)' }}>工资结算</span>）</div>
                       <div><strong>外部工厂</strong>：外发加工厂，完成后按工厂结算加工费（<span style={{ color: 'var(--color-success)' }}>订单结算</span>）</div>
                     </div>
@@ -221,7 +221,7 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
             />
           </Form.Item>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: '1fr 1fr' }}>
           <Form.Item name="factoryCode" label="供应商编码" rules={[{ required: true, message: '请输入供应商编码' }]}>
             <Input placeholder="请输入供应商编码" autoComplete="off" />
           </Form.Item>
@@ -287,7 +287,7 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
             max={99999}
             precision={0}
             placeholder="请输入日产能，如：200"
-            style={{ width: '100%' }}
+            className="u-w-full"
             suffix="件/天"
           />
         </Form.Item>
@@ -302,7 +302,7 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
             value={businessLicenseUrl || null}
             onChange={(url) => form.setFieldsValue({ businessLicense: url ?? undefined })}
           />
-          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-disabled)', marginTop: 4 }}>支持jpg、png格式，最大10MB（非必填）</div>
+          <div className="u-fs-var--font-size-sm u-mt-4" style={{ color: 'var(--neutral-text-disabled)' }}>支持jpg、png格式，最大10MB（非必填）</div>
         </Form.Item>
         <Form.Item name="remark" label="备注">
           <Input.TextArea rows={3} placeholder="请输入备注" />
@@ -316,8 +316,8 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
           />
         </Form.Item>
         {customFields.length > 0 && (
-          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--color-border-light)' }}>
-            <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14, color: 'var(--color-text-primary)' }}>扩展字段</div>
+          <div className="u-mt-16" style={{ paddingTop: 16, borderTop: '1px solid var(--color-border-light)' }}>
+            <div className="u-fw-600 u-mb-12 u-fs-14" style={{ color: 'var(--color-text-primary)' }}>扩展字段</div>
             <ExtFieldsSection
               fields={customFields}
               disabled={mode === 'view'}

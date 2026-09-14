@@ -96,9 +96,9 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
   };
 
   return (
-    <div style={{ padding: '0 8px' }}>
-      <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)', fontSize: "var(--font-size-xs)" }}>
-        款号：<span style={{ color: 'var(--neutral-text)', fontWeight: 500 }}>{styleNo || '-'}</span>
+    <div className="u-p-08px">
+      <div className="u-mb-8 u-fs-var--font-size-xs" style={{ color: 'var(--neutral-text-secondary)' }}>
+        款号：<span className="u-fw-500" style={{ color: 'var(--neutral-text)' }}>{styleNo || '-'}</span>
       </div>
       <Tabs
         tabBarExtraContent={
@@ -111,7 +111,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             key: 'pattern',
             label: ` 大货纸样 (${allPatternFiles.length})`,
             children: (
-              <Card style={{ marginBottom: 16 }}>
+              <Card className="u-mb-16">
                 {allPatternFiles.length > 0 ? (
                   <div>
                     {allPatternFiles.map((item, idx) => (
@@ -124,15 +124,15 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                           borderBottom: idx < allPatternFiles.length - 1 ? '1px solid var(--neutral-border-subtle)' : 'none',
                         }}
                       >
-                        <FileOutlined style={{ fontSize: 'var(--font-size-xxl)', color: 'var(--primary-color)', marginRight: 12, flexShrink: 0 }} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                        <FileOutlined className="u-fshrink-0" style={{ fontSize: 'var(--font-size-xxl)', color: 'var(--primary-color)', marginRight: 12 }} />
+                        <div className="u-flex-1" style={{ minWidth: 0 }}>
                           <Space wrap>
                             {item.fileName}
                             {getFileTypeTag(item.fileName || '')}
                             {item.bizType === 'pattern' && <Tag color="green">原始纸样</Tag>}
                             {item.bizType === 'pattern_grading' && <Tag color="purple">放码纸样</Tag>}
                           </Space>
-                          <div style={{ fontSize: 14, color: 'var(--neutral-text-disabled)', marginTop: 2 }}>
+                          <div className="u-fs-14 u-mt-2" style={{ color: 'var(--neutral-text-disabled)' }}>
                             {`上传者: ${item.uploader || '-'} | 上传时间: ${item.createTime || '-'}`}
                           </div>
                         </div>
@@ -141,7 +141,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                     ))}
                   </div>
                 ) : (
-                  <div style={{ textAlign: 'center', padding: '24px', color: 'var(--neutral-text-disabled)' }}>
+                  <div className="u-ta-center" style={{ padding: '24px', color: 'var(--neutral-text-disabled)' }}>
                     暂无纸样文件
                   </div>
                 )}
@@ -152,7 +152,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             key: 'size',
             label: ' 尺寸表',
             children: (
-              <Card style={{ marginBottom: 16 }}>
+              <Card className="u-mb-16">
                 <StyleSizeTab styleId={styleId} readOnly={true} simpleView={true} linkedSizes={EMPTY_LINKED_SIZES} />
               </Card>
             ),
@@ -161,7 +161,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             key: 'production',
             label: ' 工艺说明',
             children: (
-              <Card style={{ marginBottom: 16 }}>
+              <Card className="u-mb-16">
                 <Spin spinning={loading}>
                   <SheetRichViewer content={productionReq} emptyText="暂无工艺说明" />
                 </Spin>
@@ -172,7 +172,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             key: 'secondary',
             label: ' 二次工艺',
             children: (
-              <Card style={{ marginBottom: 16 }}>
+              <Card className="u-mb-16">
                 <StyleSecondaryProcessTab styleId={styleId} styleNo={styleNo} readOnly simpleView />
               </Card>
             ),

@@ -59,7 +59,7 @@ const renderTextCell = (
             ...(extraUpdates ? extraUpdates(String(nextValue || '')) : {}),
           })
         }
-        style={{ width: '100%' }}
+        className="u-w-full"
       />
     );
   }
@@ -100,7 +100,7 @@ const renderNumberCell = (
           keys.reduce((acc, key) => ({ ...acc, [key]: numericValue }), {} as Partial<BomEditableRow>),
         );
       }}
-      style={{ width: '100%' }}
+      className="u-w-full"
     />
   );
 };
@@ -116,9 +116,9 @@ const renderSizeUsageCell = (record: BomEditableRow, index: number, props: BomCo
 
   if (readOnly) {
     return (
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+      <div className="u-d-flex u-fwrap-wrap u-gap-6">
         {sizeKeys.map((sizeKey) => (
-          <span key={sizeKey} style={{ fontSize: 14, color: 'var(--color-text-primary)' }}>
+          <span key={sizeKey} className="u-fs-14" style={{ color: 'var(--color-text-primary)' }}>
             {sizeKey}:{formatNumber(usageMap[sizeKey] ?? 0, 4)}
           </span>
         ))}
@@ -127,10 +127,10 @@ const renderSizeUsageCell = (record: BomEditableRow, index: number, props: BomCo
   }
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+    <div className="u-d-flex u-fwrap-wrap u-gap-8">
       {sizeKeys.map((sizeKey) => (
-        <div key={sizeKey} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 14, color: 'var(--neutral-text-secondary)' }}>{sizeKey}</span>
+        <div key={sizeKey} className="u-d-flex u-ai-center u-gap-6">
+          <span className="u-fs-14" style={{ color: 'var(--neutral-text-secondary)' }}>{sizeKey}</span>
           <InputNumber
             min={0}
             step={0.01}
@@ -160,7 +160,7 @@ const renderSpecWidthCell = (record: BomEditableRow, index: number, props: BomCo
   }
 
   return (
-    <div style={{ display: 'grid', gap: 6 }}>
+    <div className="u-d-grid u-gap-6">
       <Input
         value={normalizeText(record.specification)}
         placeholder="规格"

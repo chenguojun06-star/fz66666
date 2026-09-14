@@ -88,9 +88,9 @@ const PredictionFeedbackBar: React.FC<Props> = ({
   };
 
   return (
-    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--color-border-antd)', width: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-        <span style={{ color: 'var(--color-text-primary)', fontSize: 14, fontWeight: 500 }}>这条预测是否可执行？</span>
+    <div className="u-mt-8 u-w-full" style={{ paddingTop: 8, borderTop: '1px solid var(--color-border-antd)' }}>
+      <div className="u-d-flex u-ai-center u-gap-8 u-fwrap-wrap u-mb-8">
+        <span className="u-fs-14 u-fw-500" style={{ color: 'var(--color-text-primary)' }}>这条预测是否可执行？</span>
         <Button
          
           type={mode === 'accept' ? 'primary' : 'default'}
@@ -110,7 +110,7 @@ const PredictionFeedbackBar: React.FC<Props> = ({
       </div>
 
       {mode && (
-        <Space.Compact style={{ display: 'flex', width: '100%' }}>
+        <Space.Compact className="u-d-flex u-w-full">
           <Select
             style={{ width: 220 }}
             value={reasonCode}

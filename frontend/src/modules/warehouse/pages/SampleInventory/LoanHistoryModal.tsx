@@ -144,7 +144,7 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
         <span>
           {buildLendToDisplay(record)}
           {record.transferFromLoanId && (
-            <Tag color="purple" style={{ marginLeft: 4, fontSize: 11 }}>转借</Tag>
+            <Tag color="purple" className="u-ml-4 u-fs-11">转借</Tag>
           )}
         </span>
       ),
@@ -235,7 +235,7 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
         initialHeight={typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.5) : 400}
       >
         {showSmartErrorNotice && smartError ? (
-          <div style={{ marginBottom: 12 }}>
+          <div className="u-mb-12">
             <SmartErrorNotice
               error={smartError}
               onFix={() => {
@@ -264,14 +264,14 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
         width="30vw" maskClosable={false}
       >
         <p>确认归还样衣吗？</p>
-        <div style={{ marginBottom: 8 }}>
+        <div className="u-mb-8">
           <span>归还数量（剩余未还 {currentLoan?.remainingQuantity || currentLoan?.quantity || 0} 件）：</span>
           <InputNumber
             min={1}
             max={currentLoan?.remainingQuantity || currentLoan?.quantity || 1}
             value={returnQty}
             onChange={v => setReturnQty(v || 1)}
-            style={{ width: 120, marginLeft: 8 }}
+            className="u-ml-8" style={{ width: 120 }}
           />
         </div>
         <Input.TextArea
@@ -290,27 +290,27 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
         width="30vw" maskClosable={false}
       >
         <p>将当前借调转借给其他人或工厂</p>
-        <div style={{ marginBottom: 8 }}>
+        <div className="u-mb-8">
           <span>转借数量（最多 {currentLoan?.remainingQuantity || currentLoan?.quantity || 0} 件）：</span>
           <InputNumber
             min={1}
             max={currentLoan?.remainingQuantity || currentLoan?.quantity || 1}
             value={transferForm.quantity}
             onChange={v => setTransferForm({ ...transferForm, quantity: v || 1 })}
-            style={{ width: 120, marginLeft: 8 }}
+            className="u-ml-8" style={{ width: 120 }}
           />
         </div>
         <Input
           placeholder="转借入人姓名"
           value={transferForm.lendTo}
           onChange={e => setTransferForm({ ...transferForm, lendTo: e.target.value })}
-          style={{ marginBottom: 8 }}
+          className="u-mb-8"
         />
         <Input
           placeholder="转借入工厂名称（选填）"
           value={transferForm.lendToFactoryName}
           onChange={e => setTransferForm({ ...transferForm, lendToFactoryName: e.target.value })}
-          style={{ marginBottom: 8 }}
+          className="u-mb-8"
         />
         <Input.TextArea
           placeholder="转借备注（选填）"

@@ -192,7 +192,7 @@ const PatternManageDrawer: React.FC<{
       width: 260,
       ellipsis: true,
       render: (text: string, record: StyleAttachment) => (
-        <a href={getFullAuthedFileUrl(record.fileUrl)} target="_blank" rel="noreferrer" style={{ display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <a href={getFullAuthedFileUrl(record.fileUrl)} target="_blank" rel="noreferrer" className="u-d-inline-block u-ov-hidden u-ws-nowrap" style={{ maxWidth: '100%', textOverflow: 'ellipsis' }}>
           {text}
         </a>
       ),
@@ -223,7 +223,7 @@ const PatternManageDrawer: React.FC<{
       width: 220,
       ellipsis: true,
       render: (text: string, record: StyleAttachment) => (
-        <a href={getFullAuthedFileUrl(record.fileUrl)} target="_blank" rel="noreferrer" style={{ display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <a href={getFullAuthedFileUrl(record.fileUrl)} target="_blank" rel="noreferrer" className="u-d-inline-block u-ov-hidden u-ws-nowrap" style={{ maxWidth: '100%', textOverflow: 'ellipsis' }}>
           {text}
         </a>
       ),
@@ -312,7 +312,7 @@ const PatternManageDrawer: React.FC<{
               label: '补充纸样',
               children: (
                 <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+                  className="u-d-flex u-fd-column u-gap-12"
                   onDragOver={(e) => { e.preventDefault(); }}
                   onDrop={handleDrop}
                   onPaste={handlePaste}
@@ -322,7 +322,7 @@ const PatternManageDrawer: React.FC<{
                       ref={fileInputRef}
                       type="file"
                       accept={acceptFormats}
-                      style={{ display: 'none' }}
+                      className="u-d-none"
                       onChange={(e) => {
                         if (e.target.files?.length) handleFileSelect(e.target.files);
                       }}
@@ -335,7 +335,7 @@ const PatternManageDrawer: React.FC<{
                     >
                       上传纸样
                     </Button>
-                    <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                    <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
                       支持拖拽/粘贴文件，格式：{acceptFormats}
                     </span>
                   </Space>

@@ -38,11 +38,11 @@ const TransferDrawer: React.FC<Props> = ({
         </Button>
       }
     >
-      <div style={{ padding: '8px 0' }}>
+      <div className="u-p-8px0">
         <Alert
           type="info"
           showIcon
-          style={{ marginBottom: 16 }}
+          className="u-mb-16"
           title={
             <span>
               源库位：<strong>{selectedLocation?.locationCode}</strong>
@@ -59,7 +59,7 @@ const TransferDrawer: React.FC<Props> = ({
               value={transferTargetLocation}
               onChange={onTargetLocationChange}
               placeholder="请选择目标库位"
-              style={{ width: '100%' }}
+              className="u-w-full"
             />
           </Form.Item>
         </Form>

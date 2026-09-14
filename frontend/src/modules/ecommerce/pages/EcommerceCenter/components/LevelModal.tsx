@@ -33,13 +33,13 @@ const LevelModal: React.FC<LevelModalProps> = ({ open, record, onClose, onOk }) 
           <Input placeholder="如 黄金分销商" />
         </Form.Item>
         <Form.Item label="默认折扣率（0-100）" name="defaultDiscount">
-          <InputNumber min={0} max={100} precision={2} style={{ width: '100%' }} />
+          <InputNumber min={0} max={100} precision={2} className="u-w-full" />
         </Form.Item>
         <Form.Item label="升级门槛（累计采购额）" name="minPurchaseAmount">
-          <InputNumber min={0} precision={2} style={{ width: '100%' }} />
+          <InputNumber min={0} precision={2} className="u-w-full" />
         </Form.Item>
         <Form.Item label="排序" name="sortOrder">
-          <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+          <InputNumber min={0} precision={0} className="u-w-full" />
         </Form.Item>
       </Form>
     </ResizableModal>

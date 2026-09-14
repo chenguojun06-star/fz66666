@@ -32,11 +32,7 @@ const ProcessStageGroup: React.FC<ProcessStageGroupProps> = ({
   const stageTotal = processes.reduce((sum: number, p: any) => sum + (Number(p.unitPrice) || 0), 0);
 
   return (
-    <div style={{
-      border: '1px solid var(--color-border)',
-      borderRadius: '8px',
-      overflow: 'hidden'
-    }}>
+    <div className="u-ov-hidden" style={{ border: '1px solid var(--color-border)', borderRadius: '8px' }}>
       <StageHeader
         stageKey={stageKey}
         stageName={stageName}
@@ -63,7 +59,7 @@ const ProcessStageGroup: React.FC<ProcessStageGroupProps> = ({
             dataIndex: 'name',
             key: 'name',
             width: '20%',
-            render: (v: string, record: any) => <span style={{ fontWeight: 600 }}>{formatProcessDisplayName(record.id, v)}</span>,
+            render: (v: string, record: any) => <span className="u-fw-600">{formatProcessDisplayName(record.id, v)}</span>,
           },
           {
             title: descriptionTitle,
@@ -87,7 +83,7 @@ const ProcessStageGroup: React.FC<ProcessStageGroupProps> = ({
             width: '14%',
             align: 'right' as const,
             render: (v: number) => (
-              <span style={{ fontWeight: 600, color: 'var(--color-error)' }}>
+              <span className="u-fw-600" style={{ color: 'var(--color-error)' }}>
                 ¥{(v || 0).toFixed(2)}
               </span>
             ),
@@ -100,7 +96,7 @@ const ProcessStageGroup: React.FC<ProcessStageGroupProps> = ({
             render: (_: any, record: any) => {
               const total = (record.unitPrice || 0) * cuttingQty;
               return (
-                <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>
+                <span className="u-fw-700" style={{ color: 'var(--color-success)' }}>
                   ¥{total.toFixed(2)}
                 </span>
               );
@@ -125,16 +121,9 @@ const StageHeader: React.FC<{
   orderNo?: string;
   onNavigateToPayroll: (processName: string) => void;
 }> = ({ stageKey, stageName, processCount, stageTotal, cuttingQty, procurementStatus, processStatus, orderNo, onNavigateToPayroll }) => (
-  <div style={{
-    background: 'var(--color-bg-stripe)',
-    padding: '10px 16px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottom: '1px solid var(--color-border)'
-  }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--color-text-secondary)' }}>
+  <div className="u-d-flex u-jc-between u-ai-center" style={{ background: 'var(--color-bg-stripe)', padding: '10px 16px', borderBottom: '1px solid var(--color-border)' }}>
+    <div className="u-d-flex u-ai-center" style={{ gap: '8px' }}>
+      <span className="u-fw-700" style={{ fontSize: '15px', color: 'var(--color-text-secondary)' }}>
         {stageName}
       </span>
       <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
@@ -147,11 +136,11 @@ const StageHeader: React.FC<{
         <CuttingStatus status={processStatus.cutting} />
       )}
     </div>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-      <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-error)' }}>
+    <div className="u-d-flex u-ai-center" style={{ gap: '16px' }}>
+      <span className="u-fw-700" style={{ fontSize: '14px', color: 'var(--color-error)' }}>
         小计: ¥{stageTotal.toFixed(2)}
       </span>
-      <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-success)' }}>
+      <span className="u-fw-700" style={{ fontSize: '14px', color: 'var(--color-success)' }}>
         总工资: ¥{(stageTotal * cuttingQty).toFixed(2)}
       </span>
     </div>
@@ -163,19 +152,16 @@ const ProcurementStatus: React.FC<{
   orderNo?: string;
   onNavigate: (processName: string) => void;
 }> = ({ status, onNavigate }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
+  <div className="u-d-flex u-ai-center" style={{ gap: '12px', marginLeft: '16px' }}>
     {status.completed ? (
       <>
-        <span style={{
-          fontSize: '13px', fontWeight: 600, color: 'var(--color-success)',
-          background: 'rgba(34, 197, 94, 0.15)', padding: '2px 8px', borderRadius: '4px'
-        }}>
+        <span className="u-fw-600" style={{ fontSize: '13px', color: 'var(--color-success)', background: 'rgba(34, 197, 94, 0.15)', padding: '2px 8px', borderRadius: '4px' }}>
           已完成
         </span>
         {status.operatorName && (
-          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+          <span className="u-fs-12px" style={{ color: 'var(--color-text-secondary)' }}>
             操作人: <a
-              style={{ cursor: 'pointer', color: 'var(--color-primary)', fontWeight: 600 }}
+              className="u-cur-pointer u-fw-600" style={{ color: 'var(--color-primary)' }}
               onClick={() => onNavigate('采购')}
             >
               {status.operatorName}
@@ -183,8 +169,8 @@ const ProcurementStatus: React.FC<{
           </span>
         )}
         {status.completedTime && (
-          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-            完成时间: <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+          <span className="u-fs-12px" style={{ color: 'var(--color-text-secondary)' }}>
+            完成时间: <span className="u-fw-600" style={{ color: 'var(--color-text-secondary)' }}>
               {new Date(status.completedTime).toLocaleString('zh-CN', {
                 year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
               })}
@@ -193,10 +179,7 @@ const ProcurementStatus: React.FC<{
         )}
       </>
     ) : (
-      <span style={{
-        fontSize: '13px', fontWeight: 600, color: 'var(--color-warning)',
-        background: 'rgba(234, 179, 8, 0.15)', padding: '2px 8px', borderRadius: '4px'
-      }}>
+      <span className="u-fw-600" style={{ fontSize: '13px', color: 'var(--color-warning)', background: 'rgba(234, 179, 8, 0.15)', padding: '2px 8px', borderRadius: '4px' }}>
         进行中 ({status.completionRate}%)
       </span>
     )}
@@ -204,7 +187,7 @@ const ProcurementStatus: React.FC<{
 );
 
 const CuttingStatus: React.FC<{ status: any }> = ({ status }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '16px' }}>
+  <div className="u-d-flex u-ai-center" style={{ gap: '12px', marginLeft: '16px' }}>
     <span style={{
       fontSize: '13px', fontWeight: 600,
       color: status.completed ? 'var(--color-emerald-600)' : 'var(--color-warning)',
@@ -213,12 +196,12 @@ const CuttingStatus: React.FC<{ status: any }> = ({ status }) => (
     }}>
       {status.completed ? ' 已完成' : `进行中 (${status.completionRate}%)`}
     </span>
-    <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-      完成: <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>{status.completedQuantity} 件</span>
+    <span className="u-fs-12px" style={{ color: 'var(--color-text-secondary)' }}>
+      完成: <span className="u-fw-600" style={{ color: 'var(--color-success)' }}>{status.completedQuantity} 件</span>
     </span>
     {!status.completed && (
-      <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-        剩余: <span style={{ fontWeight: 600, color: 'var(--color-warning)' }}>{status.remainingQuantity} 件</span>
+      <span className="u-fs-12px" style={{ color: 'var(--color-text-secondary)' }}>
+        剩余: <span className="u-fw-600" style={{ color: 'var(--color-warning)' }}>{status.remainingQuantity} 件</span>
       </span>
     )}
   </div>

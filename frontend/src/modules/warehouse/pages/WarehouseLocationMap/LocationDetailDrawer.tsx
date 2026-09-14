@@ -50,7 +50,7 @@ const LocationDetailDrawer: React.FC<Props> = ({
     >
       {selectedLocation && (
         <div className="wlm-detail-content">
-          <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Row gutter={16} className="u-mb-16">
             <Col span={6}>
               <div className="wlm-detail-label">库位编码</div>
               <div className="wlm-detail-value">{selectedLocation.locationCode}</div>
@@ -65,13 +65,13 @@ const LocationDetailDrawer: React.FC<Props> = ({
             </Col>
             <Col span={6}>
               <div className="wlm-detail-label">容量</div>
-              <div className="wlm-detail-value" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
+              <div className="wlm-detail-value u-fw-600" style={{ color: 'var(--color-primary)' }}>
                 {selectedLocation.usedCapacity}/{selectedLocation.capacity || '∞'}
               </div>
             </Col>
           </Row>
 
-          <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
+          <div className="u-mb-16 u-d-flex u-gap-8">
             {selectedLocation.warehouseType === 'MATERIAL' && (
               <Button
                 type="primary"
@@ -104,14 +104,14 @@ const LocationDetailDrawer: React.FC<Props> = ({
             {locationItems.length === 0 && !locationItemsLoading ? (
               <Empty description="该库位暂无库存" />
             ) : selectedLocation.warehouseType === 'MATERIAL' ? (
-              <div className="wlm-detail-table wlm-detail-table--material" style={{ marginTop: 16 }}>
+              <div className="wlm-detail-table wlm-detail-table--material u-mt-16" >
                 <div className="wlm-detail-table-header">
                   <div className="wlm-detail-th">图片</div>
                   <div className="wlm-detail-th">物料编码</div>
                   <div className="wlm-detail-th">物料名称</div>
                   <div className="wlm-detail-th">类型</div>
                   <div className="wlm-detail-th">规格</div>
-                  <div className="wlm-detail-th" style={{ textAlign: 'right' }}>库存数量</div>
+                  <div className="wlm-detail-th u-ta-right" >库存数量</div>
                 </div>
                 {locationItems.map((sku, idx) => (
                   <div key={idx} className="wlm-detail-tr">
@@ -120,21 +120,21 @@ const LocationDetailDrawer: React.FC<Props> = ({
                     <div className="wlm-detail-td" title={sku.materialName || '-'}>{sku.materialName || '-'}</div>
                     <div className="wlm-detail-td" title={sku.materialType || '-'}>{sku.materialType || '-'}</div>
                     <div className="wlm-detail-td" title={sku.specifications || '-'}>{sku.specifications || '-'}</div>
-                    <div className="wlm-detail-td" style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 500 }}>
+                    <div className="wlm-detail-td u-ta-right u-fw-500" style={{ color: 'var(--color-success)' }}>
                       {sku.stockQuantity ?? 0}{sku.unit ? ` ${sku.unit}` : ''}
                     </div>
                   </div>
                 ))}
               </div>
             ) : selectedLocation.warehouseType === 'SAMPLE' ? (
-              <div className="wlm-detail-table wlm-detail-table--sample" style={{ marginTop: 16 }}>
+              <div className="wlm-detail-table wlm-detail-table--sample u-mt-16" >
                 <div className="wlm-detail-table-header">
                   <div className="wlm-detail-th">图片</div>
                   <div className="wlm-detail-th">款号</div>
                   <div className="wlm-detail-th">款式名称</div>
                   <div className="wlm-detail-th">颜色</div>
                   <div className="wlm-detail-th">尺码</div>
-                  <div className="wlm-detail-th" style={{ textAlign: 'right' }}>库存数量</div>
+                  <div className="wlm-detail-th u-ta-right" >库存数量</div>
                 </div>
                 {locationItems.map((sku, idx) => (
                   <div key={idx} className="wlm-detail-tr">
@@ -147,22 +147,22 @@ const LocationDetailDrawer: React.FC<Props> = ({
                     <div className="wlm-detail-td" title={sku.size || '-'}>
                       <Tag>{sku.size || '-'}</Tag>
                     </div>
-                    <div className="wlm-detail-td" style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 500 }}>
+                    <div className="wlm-detail-td u-ta-right u-fw-500" style={{ color: 'var(--color-success)' }}>
                       {sku.stockQuantity ?? 0}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="wlm-detail-table wlm-detail-table--finished" style={{ marginTop: 16 }}>
+              <div className="wlm-detail-table wlm-detail-table--finished u-mt-16" >
                 <div className="wlm-detail-table-header">
                   <div className="wlm-detail-th">图片</div>
                   <div className="wlm-detail-th">款号</div>
                   <div className="wlm-detail-th">颜色</div>
                   <div className="wlm-detail-th">尺码</div>
                   <div className="wlm-detail-th">商品编码</div>
-                  <div className="wlm-detail-th" style={{ textAlign: 'right' }}>库存数量</div>
-                  <div className="wlm-detail-th" style={{ textAlign: 'right' }}>单价</div>
+                  <div className="wlm-detail-th u-ta-right" >库存数量</div>
+                  <div className="wlm-detail-th u-ta-right" >单价</div>
                 </div>
                 {locationItems.map((sku, idx) => (
                   <div key={idx} className="wlm-detail-tr">
@@ -174,13 +174,13 @@ const LocationDetailDrawer: React.FC<Props> = ({
                     <div className="wlm-detail-td" title={sku.size || '-'}>
                       <Tag>{sku.size || '-'}</Tag>
                     </div>
-                    <div className="wlm-detail-td" title={sku.skuCode} style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
+                    <div className="wlm-detail-td u-fs-14" title={sku.skuCode} style={{ color: 'var(--color-text-secondary)' }}>
                       {sku.skuCode}
                     </div>
-                    <div className="wlm-detail-td" style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 500 }}>
+                    <div className="wlm-detail-td u-ta-right u-fw-500" style={{ color: 'var(--color-success)' }}>
                       {sku.stockQuantity}
                     </div>
-                    <div className="wlm-detail-td" style={{ textAlign: 'right', fontWeight: 500 }}>
+                    <div className="wlm-detail-td u-ta-right u-fw-500" >
                       ¥{sku.salesPrice?.toFixed(2) || sku.costPrice?.toFixed(2) || '-'}
                     </div>
                   </div>

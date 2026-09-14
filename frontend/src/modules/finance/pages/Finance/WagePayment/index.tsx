@@ -137,7 +137,7 @@ const PaymentCenterPage: React.FC = () => {
   return (
     <>
         {data.showSmartErrorNotice && data.smartError ? (
-          <Card style={{ marginBottom: 12 }}>
+          <Card className="u-mb-12">
             <SmartErrorNotice
               error={data.smartError}
               onFix={() => {
@@ -152,14 +152,14 @@ const PaymentCenterPage: React.FC = () => {
         ) : null}
 
         {/* 页头 */}
-        <Card className="page-card" size="small" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Card className="page-card u-mb-12" size="small" style={{ border: '1px solid var(--color-border-secondary)' }}>
+          <div className="u-d-flex u-jc-between u-ai-center">
             <div>
-              <h2 style={{ margin: 0, fontSize: 16 }}>
-                <PayCircleOutlined style={{ marginRight: 8 }} />
+              <h2 className="u-m-0 u-fs-16">
+                <PayCircleOutlined className="u-mr-8" />
                 收付款中心
               </h2>
-              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
+              <span className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
                 打款在「待付款」完成，自动留痕到「付款记录」；应收账单为客户款项、应付账单为供应商款项，确认后进入待付款
               </span>
             </div>
@@ -178,7 +178,7 @@ const PaymentCenterPage: React.FC = () => {
         />
 
         {/* Tab 切换 */}
-        <Card className="page-card" style={{ border: '1px solid var(--color-border-secondary)', borderRadius: 6 }} styles={{ body: { padding: '12px 16px' } }}>
+        <Card className="page-card u-br-6" style={{ border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
           <Tabs
             activeKey={data.activeTab}
             onChange={data.setActiveTab}

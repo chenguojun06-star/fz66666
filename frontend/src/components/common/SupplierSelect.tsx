@@ -197,7 +197,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
             e.stopPropagation();
             setManageOpen(true);
           }}
-          style={{ color: 'rgba(0, 0, 0, 0.45)', cursor: 'pointer' }}
+          className="u-cur-pointer" style={{ color: 'rgba(0, 0, 0, 0.45)' }}
         />
       </Tooltip>
     ) : undefined;

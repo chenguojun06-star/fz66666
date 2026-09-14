@@ -36,7 +36,7 @@ const ShipModal: React.FC<ShipModalProps> = ({
           rules={[{ required: true, message: '请选择订单' }]}
         >
           <select
-            style={{ width: '100%', height: 32, borderRadius: 6, border: '1px solid var(--color-border-antd)', padding: '0 8px' }}
+            className="u-w-full u-br-6 u-p-08px" style={{ height: 32, border: '1px solid var(--color-border-antd)' }}
             onChange={e => onOrderSelect(e.target.value)}
             defaultValue=""
           >
@@ -50,7 +50,7 @@ const ShipModal: React.FC<ShipModalProps> = ({
         </Form.Item>
 
         {shippableInfo && (
-          <Descriptions column={3} bordered style={{ marginBottom: 16 }}>
+          <Descriptions column={3} bordered className="u-mb-16">
             <Descriptions.Item label="裁剪总数">{shippableInfo.cuttingTotal}</Descriptions.Item>
             <Descriptions.Item label="已发货">{shippableInfo.shippedTotal}</Descriptions.Item>
             <Descriptions.Item label="可发货">
@@ -63,7 +63,7 @@ const ShipModal: React.FC<ShipModalProps> = ({
 
         <Form.Item label="发货明细（颜色/尺码/数量）" required>
           {shipDetails.map((detail, idx) => (
-            <Space key={idx} style={{ marginBottom: 8, display: 'flex' }} align="baseline">
+            <Space key={idx} className="u-mb-8 u-d-flex" align="baseline">
               <Input
                 placeholder="颜色"
                 value={detail.color}

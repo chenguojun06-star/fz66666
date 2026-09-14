@@ -31,7 +31,7 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
           displayText = `${orderNo}-${bundleNo}`;
         }
         return (
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)' }}>{displayText || bundleNo}</span>
+          <span className="u-fs-13 u-fw-700" style={{ color: 'var(--color-text-primary)' }}>{displayText || bundleNo}</span>
         );
       },
     },
@@ -41,7 +41,7 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
       key: 'processName',
       width: 100,
       render: (v: string, record: any) => (
-        <span style={{ fontSize: 14, fontWeight: 500 }}>{formatProcessDisplayName(record.processCode, v)}</span>
+        <span className="u-fs-14 u-fw-500">{formatProcessDisplayName(record.processCode, v)}</span>
       ),
     },
     {
@@ -49,14 +49,14 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
       dataIndex: 'color',
       key: 'color',
       width: 80,
-      render: (v: string) => <span style={{ fontSize: 14 }}>{v || '-'}</span>,
+      render: (v: string) => <span className="u-fs-14">{v || '-'}</span>,
     },
     {
       title: '尺码',
       dataIndex: 'size',
       key: 'size',
       width: 70,
-      render: (v: string) => <span style={{ fontSize: 14 }}>{v || '-'}</span>,
+      render: (v: string) => <span className="u-fs-14">{v || '-'}</span>,
     },
     {
       title: '数量',
@@ -64,7 +64,7 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
       key: 'quantity',
       width: 70,
       align: 'right' as const,
-      render: (v: number) => <span style={{ fontSize: 14, fontWeight: 600 }}>{v || 0}</span>,
+      render: (v: number) => <span className="u-fs-14 u-fw-600">{v || 0}</span>,
     },
     {
       title: '单价',
@@ -73,7 +73,7 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
       width: 80,
       align: 'right' as const,
       render: (price: number) => (
-        <span style={{ fontSize: 14, color: 'var(--color-error)', fontWeight: 600 }}>
+        <span className="u-fs-14 u-fw-600" style={{ color: 'var(--color-error)' }}>
           {price ? `¥${Number(price).toFixed(2)}` : '-'}
         </span>
       ),
@@ -102,14 +102,14 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
       dataIndex: 'scanTime',
       key: 'scanTime',
       width: 140,
-      render: (v: string) => <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{v || '-'}</span>,
+      render: (v: string) => <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>{v || '-'}</span>,
     },
     {
       title: '操作人',
       dataIndex: 'operatorName',
       key: 'operatorName',
       width: 100,
-      render: (v: string) => <span style={{ fontSize: 13 }}>{v || '-'}</span>,
+      render: (v: string) => <span className="u-fs-13">{v || '-'}</span>,
     },
     {
       title: '结算金额',
@@ -118,7 +118,7 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
       width: 90,
       align: 'right' as const,
       render: (v: number) => (
-        <span style={{ fontSize: 13, color: 'var(--color-error)', fontWeight: 600 }}>
+        <span className="u-fs-13 u-fw-600" style={{ color: 'var(--color-error)' }}>
           {v ? `¥${Number(v).toFixed(2)}` : '-'}
         </span>
       ),

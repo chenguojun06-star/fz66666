@@ -84,7 +84,7 @@ const StockPickModal: React.FC<StockPickModalProps> = ({ open, record, onClose, 
       confirmLoading={loading}
       size="lg"
     >
-      <Descriptions column={2} bordered style={{ marginBottom: 16 }}>
+      <Descriptions column={2} bordered className="u-mb-16">
         <Descriptions.Item label="物料名称">{record.materialName}</Descriptions.Item>
         <Descriptions.Item label="物料编号">{record.materialCode}</Descriptions.Item>
         <Descriptions.Item label="颜色">{record.color || '-'}</Descriptions.Item>
@@ -97,14 +97,14 @@ const StockPickModal: React.FC<StockPickModalProps> = ({ open, record, onClose, 
         </Descriptions.Item>
       </Descriptions>
 
-      <Divider style={{ margin: '12px 0' }} />
+      <Divider className="u-m-12px0" />
 
       <Form form={form} layout="vertical">
         <Form.Item name="quantity" label="领取数量" rules={[
           { required: true, message: '请输入领取数量' },
           { type: 'number', min: 1, max: availableQty, message: `1-${availableQty} ${record.unit}` },
         ]}>
-          <InputNumber style={{ width: '100%' }} min={1} max={availableQty}
+          <InputNumber className="u-w-full" min={1} max={availableQty}
             addonAfter={record.unit} placeholder="请输入领取数量" />
         </Form.Item>
 

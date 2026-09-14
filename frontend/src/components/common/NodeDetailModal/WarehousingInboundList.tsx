@@ -44,8 +44,8 @@ const WarehousingInboundList: React.FC<WarehousingInboundListProps> = ({ orderId
 
   return (
     <div>
-      <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+      <div className="u-mb-8 u-d-flex u-jc-between u-ai-center u-fwrap-wrap u-gap-8">
+        <div className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
           入库不是计件工序，以下为该订单的<strong>成品入库单记录</strong>（合格合计 <b style={{ color: 'var(--color-primary)' }}>{totalQualified}</b> 件）：
         </div>
         {onNavigateInspect && (
@@ -55,7 +55,7 @@ const WarehousingInboundList: React.FC<WarehousingInboundListProps> = ({ orderId
             onClick={onNavigateInspect}
           >
             跳转详情页
-            {completed && <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 4 }}>（已完成）</span>}
+            {completed && <span className="u-ml-4" style={{ color: 'var(--color-text-tertiary)' }}>（已完成）</span>}
           </Button>
         )}
       </div>

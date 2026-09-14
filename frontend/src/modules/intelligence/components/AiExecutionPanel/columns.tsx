@@ -55,7 +55,7 @@ export function buildColumns(onViewDetail: ViewDetailHandler): ColumnsType<Pendi
       render: (roles: string[]) => (
         <Space wrap>
           {roles?.map((role: string) => (
-            <Tag key={role} color="blue" style={{ fontSize: '12px' }}>
+            <Tag key={role} color="blue" className="u-fs-12px">
               {role}
             </Tag>
           ))}

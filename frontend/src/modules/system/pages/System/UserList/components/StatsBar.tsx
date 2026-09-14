@@ -79,10 +79,10 @@ const StatsBar: React.FC<StatsBarProps> = ({
   ];
 
   return (
-    <Row gutter={12} style={{ marginBottom: 12 }}>
+    <Row gutter={12} className="u-mb-12">
       {items.map((item) => {
         const cardBody = (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 0' }}>
+          <div className="u-d-flex u-ai-center u-gap-12" style={{ padding: '4px 0' }}>
             <div
               style={{
                 width: 40,
@@ -100,10 +100,10 @@ const StatsBar: React.FC<StatsBarProps> = ({
               {item.icon}
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 12, color: 'var(--color-text-tertiary, #8c8c8c)', lineHeight: '16px' }}>
+              <div className="u-fs-12 u-lh-16px" style={{ color: 'var(--color-text-tertiary, #8c8c8c)' }}>
                 {item.label}
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <div className="u-d-flex u-gap-6" style={{ alignItems: 'baseline' }}>
                 <span
                   style={{
                     fontSize: 22,
@@ -115,7 +115,7 @@ const StatsBar: React.FC<StatsBarProps> = ({
                 >
                   {item.value}
                 </span>
-                <Text type="secondary" style={{ fontSize: 11 }}>
+                <Text type="secondary" className="u-fs-11">
                   {item.subtext}
                 </Text>
               </div>
@@ -132,7 +132,7 @@ const StatsBar: React.FC<StatsBarProps> = ({
                   hoverable
                   onClick={item.onClick}
                   styles={{ body: { padding: '12px 16px' } }}
-                  style={{ cursor: 'pointer', boxShadow: 'var(--card-shadow, 0 1px 4px rgba(0,0,0,0.06))' }}
+                  className="u-cur-pointer" style={{ boxShadow: 'var(--card-shadow, 0 1px 4px rgba(0,0,0,0.06))' }}
                 >
                   {cardBody}
                 </Card>

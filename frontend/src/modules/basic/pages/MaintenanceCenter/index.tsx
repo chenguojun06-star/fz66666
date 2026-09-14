@@ -268,10 +268,10 @@ const MaintenanceCenter: React.FC = () => {
                   </div>
 
                   {cardDataSource.length === 0 && !loading && (
-                    <div style={{ padding: 48, textAlign: 'center' }}><Empty description="暂无已推送到资料侧的款式" /></div>
+                    <div className="u-ta-center" style={{ padding: 48 }}><Empty description="暂无已推送到资料侧的款式" /></div>
                   )}
                   {loading && cardDataSource.length === 0 && (
-                    <div style={{ padding: 24 }}><Skeleton active paragraph={{ rows: 4 }} /></div>
+                    <div className="u-p-24"><Skeleton active paragraph={{ rows: 4 }} /></div>
                   )}
 
                   {cardDataSource.length > 0 && (

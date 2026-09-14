@@ -20,15 +20,15 @@ function renderTagGroup(values: string[] | undefined, fallback: string | undefin
   const visible = list.slice(0, MAX_VISIBLE_TAGS);
   const rest = list.length - visible.length;
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+    <div className="u-d-flex u-fwrap-wrap u-gap-4 u-ai-center">
       {visible.map((v, i) => (
-        <Tag key={i} color={color} style={{ margin: 0 }}>
+        <Tag key={i} color={color} className="u-m-0">
           {v}
         </Tag>
       ))}
       {rest > 0 && (
         <Tooltip title={list.slice(MAX_VISIBLE_TAGS).join('、')}>
-          <Tag style={{ margin: 0, background: 'var(--color-border-light)' }}>+{rest}</Tag>
+          <Tag className="u-m-0" style={{ background: 'var(--color-border-light)' }}>+{rest}</Tag>
         </Tooltip>
       )}
     </div>
@@ -107,7 +107,7 @@ export function getMainBasicColumns(indexOffset = 0): ColumnsType<FinishedInvent
             >
               {record.styleName || '-'}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
+            <div className="u-fs-12" style={{ color: 'var(--neutral-text-secondary)' }}>
               工厂: {record.factoryName || '-'}
             </div>
           </div>,
@@ -119,7 +119,7 @@ export function getMainBasicColumns(indexOffset = 0): ColumnsType<FinishedInvent
       width: 170,
       render: (_, record) =>
         mergeAcrossRows(
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div className="u-d-flex u-fd-column u-gap-6">
             {renderTagGroup(record.colors, record.color, 'blue')}
             {renderTagGroup(record.sizes, record.size, 'default')}
           </div>,

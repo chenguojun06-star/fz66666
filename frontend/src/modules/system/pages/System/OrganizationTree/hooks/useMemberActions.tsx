@@ -83,7 +83,7 @@ export function useMemberActions(
       content: (
         <div>
           <p>该成员将从当前组织节点移出，账号本身不受影响。</p>
-          <div style={{ marginTop: 16 }}>
+          <div className="u-mt-16">
             <span style={{ color: 'red' }}>*</span> 移出原因：
             <Input.TextArea
               rows={3}

@@ -93,7 +93,7 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
                 placeholder="请选择仓库"
                 value={selectedAreaId || undefined}
                 onChange={(value) => setSelectedAreaId(value)}
-                style={{ width: '100%' }}
+                className="u-w-full"
                 options={finishedWarehouseOptions}
               />
             </Form.Item>
@@ -106,7 +106,7 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
                 placeholder="请选择或输入库位"
                 value={warehouse || undefined}
                 onChange={(v) => setWarehouse(String(v || '').trim())}
-                style={{ width: '100%' }}
+                className="u-w-full"
               />
             </Form.Item>
           </Col>

@@ -28,7 +28,7 @@ export const CuttingBundlesContent: React.FC<CuttingBundlesContentProps> = ({
   return (
     <div>
       {showTaskCard && (
-        <Card size="small" title="裁剪任务" style={{ marginBottom: 12 }}>
+        <Card size="small" title="裁剪任务" className="u-mb-12">
           <ResizableTable
             storageKey="order-flow-cutting-tasks"
             size="small"

@@ -73,7 +73,7 @@ const RevisionModal: React.FC<RevisionModalProps> = ({
           <Input placeholder="请输入款号" />
         </Form.Item>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+        <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
           <Form.Item name="revisionNo" label="版本号">
             <Input placeholder="自动生成" />
           </Form.Item>
@@ -91,7 +91,7 @@ const RevisionModal: React.FC<RevisionModalProps> = ({
             </Select>
           </Form.Item>
           <Form.Item name="revisionDate" label="修改日期">
-            <DatePicker style={{ width: '100%' }} />
+            <DatePicker className="u-w-full" />
           </Form.Item>
         </div>
 
@@ -107,12 +107,12 @@ const RevisionModal: React.FC<RevisionModalProps> = ({
           <TextArea rows={4} placeholder="请详细描述修改内容" />
         </Form.Item>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: '1fr 1fr' }}>
           <Form.Item name="patternMakerName" label="纸样师傅">
             <Input placeholder="请输入纸样师傅姓名" />
           </Form.Item>
           <Form.Item name="expectedCompleteDate" label="预计完成日期">
-            <DatePicker style={{ width: '100%' }} />
+            <DatePicker className="u-w-full" />
           </Form.Item>
         </div>
 
@@ -146,7 +146,7 @@ const RevisionModal: React.FC<RevisionModalProps> = ({
                   审核时间：{formatDateTime(currentRecord.approvalTime)}
                 </div>
                 {currentRecord.approvalComment && (
-                  <div style={{ marginTop: 8 }}>
+                  <div className="u-mt-8">
                     审核意见：{currentRecord.approvalComment}
                   </div>
                 )}

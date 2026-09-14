@@ -25,7 +25,7 @@ const PatternFilePicker: React.FC<{
   const current = value?.[0];
   return (
     <div
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, outline: 'none' }}
+      className="u-d-inline-flex u-ai-center u-gap-8" style={{ outline: 'none' }}
       tabIndex={0}
       onDragOver={(e) => { e.preventDefault(); }}
       onDrop={(e) => {
@@ -42,7 +42,7 @@ const PatternFilePicker: React.FC<{
         ref={ref}
         type="file"
         accept={ACCEPT_PATTERN}
-        style={{ display: 'none' }}
+        className="u-d-none"
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) onChange?.(f);
@@ -84,7 +84,7 @@ const DataCenter: React.FC = () => {
 
   return (
     <>
-      <div className="page-header" style={{ marginBottom: 16 }}>
+      <div className="page-header u-mb-16" >
         <h2 className="page-title">资料中心</h2>
       </div>
 
@@ -97,7 +97,7 @@ const DataCenter: React.FC = () => {
       />
 
       <StickyFilterBar>
-        <Card className="filter-card" style={{ marginBottom: 16 }}>
+        <Card className="filter-card u-mb-16" >
           <StandardToolbar
             left={(
               <Space wrap>
@@ -158,7 +158,7 @@ const DataCenter: React.FC = () => {
         }
       >
         {returnDescRecord?.descriptionReturnComment && (
-          <div style={{ marginBottom: 12, padding: '8px 12px', background: 'var(--color-bg-base)7e6', border: '1px solid var(--status-warning-border)', borderRadius: 4, fontSize: 14 }}>
+          <div className="u-mb-12 u-p-8px12px u-br-4 u-fs-14" style={{ background: 'var(--color-bg-base)7e6', border: '1px solid var(--status-warning-border)' }}>
             上次退回：{returnDescRecord.descriptionReturnComment}（{returnDescRecord.descriptionReturnBy}）
           </div>
         )}
@@ -181,7 +181,7 @@ const DataCenter: React.FC = () => {
         }
       >
         {returnPatternRecord?.patternRevReturnComment && (
-          <div style={{ marginBottom: 12, padding: '8px 12px', background: 'var(--color-bg-base)7e6', border: '1px solid var(--status-warning-border)', borderRadius: 4, fontSize: 14 }}>
+          <div className="u-mb-12 u-p-8px12px u-br-4 u-fs-14" style={{ background: 'var(--color-bg-base)7e6', border: '1px solid var(--status-warning-border)' }}>
             上次退回：{returnPatternRecord.patternRevReturnComment}（{returnPatternRecord.patternRevReturnBy}）
           </div>
         )}
@@ -205,7 +205,7 @@ const DataCenter: React.FC = () => {
         }
       >
         <Form form={patternRevisionForm} layout="vertical">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
             <Form.Item name="styleNo" label="款号"><Input disabled /></Form.Item>
             <Form.Item name="revisionType" label="修改类型" rules={[{ required: true, message: '请选择修改类型' }]}>
               <Select>
@@ -214,14 +214,14 @@ const DataCenter: React.FC = () => {
                 <Select.Option value="URGENT">紧急修改</Select.Option>
               </Select>
             </Form.Item>
-            <Form.Item name="revisionDate" label="修改日期"><DatePicker style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="revisionDate" label="修改日期"><DatePicker className="u-w-full" /></Form.Item>
             <Form.Item name="patternMakerName" label="纸样师傅"><Input placeholder="请输入" /></Form.Item>
           </div>
           <Form.Item name="revisionReason" label="修改原因" rules={[{ required: true, message: '请填写修改原因' }]}>
             <TextArea rows={3} placeholder="请说明需要修改的原因" />
           </Form.Item>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-            <Form.Item name="expectedCompleteDate" label="预计完成日期"><DatePicker style={{ width: '100%' }} /></Form.Item>
+          <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+            <Form.Item name="expectedCompleteDate" label="预计完成日期"><DatePicker className="u-w-full" /></Form.Item>
             <Form.Item name="remark" label="备注" style={{ gridColumn: 'span 3' }}><Input.TextArea rows={3} placeholder="其他说明" /></Form.Item>
           </div>
           <Form.Item name="patternFile" label="纸样文件" getValueFromEvent={(file: File | null) => file ? [{ uid: '-1', name: file.name, originFileObj: file }] : []}>
@@ -242,7 +242,7 @@ const DataCenter: React.FC = () => {
           <div style={{ padding: '16px' }}>
             <Row gutter={[16, 16]}>
               <Col span={8}>
-                <div style={{ width: '100%', aspectRatio: '1', overflow: 'hidden', background: 'var(--color-bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="u-w-full u-ov-hidden u-d-flex u-ai-center u-jc-center" style={{ aspectRatio: '1', background: 'var(--color-bg-subtle)' }}>
                   {detailRecord.cover ? (
                     <StyleCoverThumb 
                       styleId={detailRecord.id} 
@@ -257,7 +257,7 @@ const DataCenter: React.FC = () => {
                 </div>
               </Col>
               <Col span={16}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="u-d-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div><span style={{ color: 'var(--neutral-text-secondary)' }}>款号：</span>{detailRecord.styleNo}</div>
                   <div><span style={{ color: 'var(--neutral-text-secondary)' }}>款名：</span>{detailRecord.styleName}</div>
                   <div><span style={{ color: 'var(--neutral-text-secondary)' }}>品类：</span>{toCategoryCn(detailRecord.category)}</div>
@@ -265,13 +265,13 @@ const DataCenter: React.FC = () => {
                   <div><span style={{ color: 'var(--neutral-text-secondary)' }}>推送人：</span>{(detailRecord as any).productionAssignee || '-'}</div>
                   <div><span style={{ color: 'var(--neutral-text-secondary)' }}>推送时间：</span>{(detailRecord as any).productionCompletedTime ? formatDateTime((detailRecord as any).productionCompletedTime) : '-'}</div>
                 </div>
-                <div style={{ marginTop: 16 }}>
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>工艺说明：</div>
+                <div className="u-mt-16">
+                  <div className="u-fw-600 u-mb-8">工艺说明：</div>
                   <SheetRichViewer
                     content={String(detailRecord.description || '')}
                     emptyText="暂无工艺说明"
                     minHeight={0}
-                    style={{ maxHeight: 240, overflow: 'auto' }}
+                    className="u-ov-auto" style={{ maxHeight: 240 }}
                   />
                 </div>
               </Col>

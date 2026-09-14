@@ -51,13 +51,13 @@ const UploadButton: React.FC<UploadButtonProps> = ({
           }
         }
       }}
-      style={{ display: 'inline-block' }}
+      className="u-d-inline-block"
     >
       <input
         ref={fileInputRef}
         type="file"
         multiple
-        style={{ display: 'none' }}
+        className="u-d-none"
         disabled={Boolean(readOnly)}
         onChange={(e) => {
           handleFiles(e.target.files);

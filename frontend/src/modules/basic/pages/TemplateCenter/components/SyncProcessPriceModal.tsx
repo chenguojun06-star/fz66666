@@ -80,7 +80,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
   }, [open, handleCancel]);
 
   const renderStyleSelector = () => (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
+    <div className="u-d-flex u-gap-8 u-mb-12 u-ai-center">
       <Input
         placeholder="输入款号搜索..."
         allowClear
@@ -91,14 +91,14 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
         }}
         style={{ width: 280 }}
       />
-      <span style={{ color: 'var(--color-text-3)', fontSize: 14 }}>
+      <span className="u-fs-14" style={{ color: 'var(--color-text-3)' }}>
         {matchedScope === 'style' ? '已匹配款号模板' : matchedScope === 'order' ? '从订单工序数据加载' : '未匹配，将创建新模板'}
       </span>
     </div>
   );
 
   const renderToolbar = () => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+    <div className="u-d-flex u-jc-between u-ai-center u-mb-8">
       <Space>
         {editMode ? (
           <>
@@ -107,7 +107,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
               open={addSizePopoverOpen}
               onOpenChange={setAddSizePopoverOpen}
               content={
-                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <div className="u-d-flex u-gap-4 u-ai-center">
                   <Input
 
                     placeholder="输入尺码名，如 XL(175/96A)"
@@ -159,7 +159,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
   );
 
   const renderImageArea = () => (
-    <div style={{ marginBottom: 12 }}>
+    <div className="u-mb-12">
       <span
         onDragOver={(e) => { if (readyForScope && !imageUploading) e.preventDefault(); }}
         onDrop={(e) => {
@@ -178,13 +178,13 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
             if (items[i].type.startsWith('image/')) { e.preventDefault(); const f = items[i].getAsFile(); if (f) void handleUploadImage(f); break; }
           }
         }}
-        style={{ display: 'inline-block' }}
+        className="u-d-inline-block"
       >
         <input
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          style={{ display: 'none' }}
+          className="u-d-none"
           disabled={!readyForScope || imageUploading}
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -201,13 +201,13 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
         </Button>
       </span>
       {imageUrls.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+        <div className="u-d-flex u-gap-8 u-mt-8 u-fwrap-wrap">
           {imageUrls.map((url, idx) => (
-            <div key={idx} style={{ position: 'relative', width: 64, height: 64, border: '1px solid var(--color-border)', borderRadius: 4, overflow: 'hidden' }}>
-              <Image loading="lazy" src={getFullAuthedFileUrl(url)} alt={`工艺图${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} preview={{ cover: <span>预览</span> }} />
+            <div key={idx} className="u-pos-relative u-br-4 u-ov-hidden" style={{ width: 64, height: 64, border: '1px solid var(--color-border)' }}>
+              <Image loading="lazy" src={getFullAuthedFileUrl(url)} alt={`工艺图${idx + 1}`} className="u-w-full u-h-full u-objf-cover" preview={{ cover: <span>预览</span> }} />
               {editMode && (
                 <DeleteOutlined
-                  style={{ position: 'absolute', top: 2, right: 2, color: 'var(--color-danger)', cursor: 'pointer', background: 'rgba(255,255,255,0.8)', borderRadius: '50%', padding: 2 }}
+                  className="u-pos-absolute u-cur-pointer" style={{ top: 2, right: 2, color: 'var(--color-danger)', background: 'rgba(255,255,255,0.8)', borderRadius: '50%', padding: 2 }}
                   onClick={() => {
                     const next = [...imageUrls];
                     next.splice(idx, 1);

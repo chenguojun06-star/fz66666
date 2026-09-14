@@ -35,16 +35,16 @@ const QrCodeModal: React.FC<QrCodeModalProps> = ({ open, unit, tenantCode, onClo
       width="30vw"
       initialHeight={420}
     >
-      <div style={{ textAlign: 'center', padding: '24px 0' }}>
+      <div className="u-ta-center u-p-24px0">
         <QRCode
           value={registerUrl}
           size={220}
           style={{ margin: '0 auto' }}
         />
-        <Typography.Text type="secondary" style={{ display: 'block', marginTop: 16, fontSize: 14 }}>
+        <Typography.Text type="secondary" className="u-d-block u-mt-16 u-fs-14">
           外发工厂工人扫码注册，自动归属到「{unit?.unitName}」
         </Typography.Text>
-        <div style={{ marginTop: 12 }}>
+        <div className="u-mt-12">
           <Button onClick={handleCopyLink}>
             复制注册链接
           </Button>

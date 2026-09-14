@@ -31,7 +31,7 @@ export default function SelectionCenter() {
       <Tabs
         activeKey={activeTab}
         onChange={setActiveTab}
-        style={{ marginBottom: 16 }}
+        className="u-mb-16"
         items={[
           { key: 'market', label: <span><FireOutlined style={{ color: 'var(--color-danger)' }} /> 市场热品发现</span> },
           { key: 'mine',   label: <span><CheckCircleOutlined /> 我的选品库</span> },
@@ -43,7 +43,7 @@ export default function SelectionCenter() {
       )}
 
       {activeTab === 'mine' && (<>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
         <Space wrap>
           <StandardSearchBar searchValue={search} onSearchChange={setSearch} searchPlaceholder="搜索款式名 / 候选款号" showDate={false} showStatus={false} />
           <Select placeholder="全部状态" value={statusFilter || undefined} onChange={v => setStatusFilter(v ?? '')} allowClear style={{ width: 120 }}
@@ -52,7 +52,7 @@ export default function SelectionCenter() {
             <Select placeholder="全部品类" value={categoryFilter || undefined} onChange={v => setCategoryFilter(v ?? '')} allowClear style={{ width: 120 }}
               options={categories.map(c => ({ value: c, label: c }))} />
           )}
-          <Text type="secondary" style={{ fontSize: 14 }}>共 {filtered.length} 款 · 鼠标悬停查看评分来源、分析依据与审核意见</Text>
+          <Text type="secondary" className="u-fs-14">共 {filtered.length} 款 · 鼠标悬停查看评分来源、分析依据与审核意见</Text>
         </Space>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>新增候选款</Button>
       </div>
@@ -80,52 +80,52 @@ export default function SelectionCenter() {
                         if (open && item.trendScore == null && !aiLoading) handleAiScore(item.id);
                       }}
                     >
-                      <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflow: 'hidden', background: 'var(--color-bg-base)', cursor: 'pointer', transition: 'box-shadow 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
+                      <div className="u-br-8 u-ov-hidden u-cur-pointer" style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-base)', transition: 'box-shadow 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
                         onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.14)')}
                         onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)')}>
-                        <div style={{ position: 'relative', height: 260, background: 'var(--color-slate-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
+                        <div className="u-pos-relative u-d-flex u-ai-center u-jc-center" style={{ height: 260, background: 'var(--color-slate-50)', padding: 8 }}>
                           {img ? (
-                            <Image loading="lazy" src={img} alt={item.styleName} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                            <Image loading="lazy" src={img} alt={item.styleName} className="u-w-full u-h-full" style={{ objectFit: 'contain' }} />
                           ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', color: 'var(--color-text-quaternary)' }}>
+                            <div className="u-d-flex u-ai-center u-jc-center u-h-full u-fd-column" style={{ color: 'var(--color-text-quaternary)' }}>
                               <FireOutlined style={{ fontSize: 24 }} />
-                              <div style={{ fontSize: 14, marginTop: 6 }}>暂无参考图</div>
+                              <div className="u-fs-14 u-mt-6">暂无参考图</div>
                             </div>
                           )}
-                          <div style={{ position: 'absolute', top: 8, right: 8 }}><Tag color={color} style={{ margin: 0, fontSize: 14 }}>{label}</Tag></div>
+                          <div className="u-pos-absolute" style={{ top: 8, right: 8 }}><Tag color={color} className="u-m-0 u-fs-14">{label}</Tag></div>
                           {item.trendScore != null && (
-                            <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(114,46,209,0.88)', borderRadius: 4, padding: '2px 8px', color: 'var(--color-bg-base)', fontSize: 14, fontWeight: 700 }}>
+                            <div className="u-pos-absolute u-br-4 u-fs-14 u-fw-700" style={{ top: 8, left: 8, background: 'rgba(114,46,209,0.88)', padding: '2px 8px', color: 'var(--color-bg-base)' }}>
                               <ThunderboltOutlined /> {item.trendScore}
                             </div>
                           )}
                         </div>
                         <div style={{ padding: '10px 12px' }}>
-                          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.styleName || '未命名'}</div>
-                          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 10 }}>{[item.category, item.colorFamily, SOURCE_MAP[item.sourceType] ?? '未知'].filter(Boolean).join(' · ')}</div>
-                          <div style={{ fontSize: 14, color: 'var(--color-zinc-500)', marginBottom: 8, minHeight: 18 }}>
+                          <div className="u-fw-600 u-fs-14 u-mb-2 u-ov-hidden u-ws-nowrap" style={{ textOverflow: 'ellipsis' }}>{item.styleName || '未命名'}</div>
+                          <div className="u-fs-14 u-mb-10" style={{ color: 'var(--color-text-tertiary)' }}>{[item.category, item.colorFamily, SOURCE_MAP[item.sourceType] ?? '未知'].filter(Boolean).join(' · ')}</div>
+                          <div className="u-fs-14 u-mb-8" style={{ color: 'var(--color-zinc-500)', minHeight: 18 }}>
                             {item.reviewCount ? `已评审 ${item.reviewCount} 次` : '待审核'}{item.avgReviewScore != null ? ` · 平均分 ${item.avgReviewScore}` : ''}
                           </div>
-                          <div style={{ marginBottom: 8, minHeight: 22 }}>
-                            {item.status === 'APPROVED' && <Tag color="green" style={{ margin: 0 }}>通过</Tag>}
-                            {item.status === 'REJECTED' && <Tag color="red" style={{ margin: 0 }}>未通过</Tag>}
-                            {item.status === 'HOLD' && <Tag color="blue" style={{ margin: 0 }}>待定</Tag>}
-                            {item.status === 'PENDING' && <Tag color="orange" style={{ margin: 0 }}>待评审</Tag>}
-                            {item.trendScore != null && <Tag color={scoreMeta.color} style={{ marginLeft: 6, fontSize: 14 }}>{scoreMeta.label}</Tag>}
+                          <div className="u-mb-8" style={{ minHeight: 22 }}>
+                            {item.status === 'APPROVED' && <Tag color="green" className="u-m-0">通过</Tag>}
+                            {item.status === 'REJECTED' && <Tag color="red" className="u-m-0">未通过</Tag>}
+                            {item.status === 'HOLD' && <Tag color="blue" className="u-m-0">待定</Tag>}
+                            {item.status === 'PENDING' && <Tag color="orange" className="u-m-0">待评审</Tag>}
+                            {item.trendScore != null && <Tag color={scoreMeta.color} className="u-ml-6 u-fs-14">{scoreMeta.label}</Tag>}
                           </div>
-                          <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 10, minHeight: 34, lineHeight: 1.5 }}>
+                          <div className="u-fs-14 u-mb-10" style={{ color: 'var(--color-text-secondary)', minHeight: 34, lineHeight: 1.5 }}>
                             {latestReview?.comment || item.rejectReason || item.trendScoreReason || '悬停查看 AI 分析、趋势与价值建议'}
                           </div>
-                          <Space size={6} style={{ width: '100%' }}>
+                          <Space size={6} className="u-w-full">
                             {(item.status === 'PENDING' || item.status === 'HOLD') && (
-                              <Tooltip title="填写审核结果：通过或不通过"><Button onClick={() => openReviewModal(item)} style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)', fontSize: 14 }}>审核</Button></Tooltip>
+                              <Tooltip title="填写审核结果：通过或不通过"><Button onClick={() => openReviewModal(item)} className="u-fs-14" style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}>审核</Button></Tooltip>
                             )}
                             {item.status === 'APPROVED' && !item.createdStyleId && (
-                              <Tooltip title="生成正式款式，进入样衣开发流程"><Button type="primary" icon={<SendOutlined />} onClick={() => handleCreateStyle(item.id, item.styleName)} style={{ fontSize: 14 }}>下版到样衣</Button></Tooltip>
+                              <Tooltip title="生成正式款式，进入样衣开发流程"><Button type="primary" icon={<SendOutlined />} onClick={() => handleCreateStyle(item.id, item.styleName)} className="u-fs-14">下版到样衣</Button></Tooltip>
                             )}
-                            {item.createdStyleId && <Tag color="green" style={{ fontSize: 14, margin: 0 }}> 已下版 {item.createdStyleNo}</Tag>}
+                            {item.createdStyleId && <Tag color="green" className="u-fs-14 u-m-0"> 已下版 {item.createdStyleNo}</Tag>}
                             {canDeleteCandidate(item) && (
                               <Tooltip title={item.status === 'APPROVED' ? '审核通过满 10 天后可手动删除候选款' : '审核不通过可直接删除'}>
-                                <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteCandidate(item)} style={{ fontSize: 14 }}>删除</Button>
+                                <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteCandidate(item)} className="u-fs-14">删除</Button>
                               </Tooltip>
                             )}
                           </Space>
@@ -143,7 +143,7 @@ export default function SelectionCenter() {
       </Spin>
 
       <ResizableModal title="新增候选款" open={addOpen} onCancel={() => { setAddOpen(false); addForm.resetFields(); }} onOk={handleAddSave} width="40vw" okText="确认添加">
-        <Form form={addForm} layout="vertical" style={{ marginTop: 8 }}>
+        <Form form={addForm} layout="vertical" className="u-mt-8">
           <Form.Item name="styleName" label="款式名称" rules={[{ required: true, message: '请填写款式名称' }]}><Input placeholder="如：春季碎花连衣裙" /></Form.Item>
           <Row gutter={12}>
             <Col span={12}><Form.Item name="category" label="品类"><Input placeholder="如：连衣裙" /></Form.Item></Col>
@@ -151,11 +151,11 @@ export default function SelectionCenter() {
           </Row>
           <Row gutter={12}>
             <Col span={12}><Form.Item name="sourceType" label="来源" initialValue="INTERNAL"><Select options={[{ value: 'INTERNAL', label: '自主开发' }, { value: 'SUPPLIER', label: '供应商' }, { value: 'CLIENT', label: '客户定制' }]} /></Form.Item></Col>
-            <Col span={12}><Form.Item name="targetQty" label="预计下单量"><InputNumber min={1} style={{ width: '100%' }} placeholder="件" /></Form.Item></Col>
+            <Col span={12}><Form.Item name="targetQty" label="预计下单量"><InputNumber min={1} className="u-w-full" placeholder="件" /></Form.Item></Col>
           </Row>
           <Row gutter={12}>
-            <Col span={12}><Form.Item name="costEstimate" label="成本估算 (¥)"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item></Col>
-            <Col span={12}><Form.Item name="targetPrice" label="目标报价 (¥)"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item></Col>
+            <Col span={12}><Form.Item name="costEstimate" label="成本估算 (¥)"><InputNumber min={0} className="u-w-full" /></Form.Item></Col>
+            <Col span={12}><Form.Item name="targetPrice" label="目标报价 (¥)"><InputNumber min={0} className="u-w-full" /></Form.Item></Col>
           </Row>
           <Form.Item name="remark" label="备注"><Input.TextArea rows={3} /></Form.Item>
         </Form>
@@ -163,11 +163,11 @@ export default function SelectionCenter() {
 
       <ResizableModal title={reviewTarget ? `审核候选款：${reviewTarget.styleName}` : '审核候选款'} open={reviewOpen}
         onCancel={() => { setReviewOpen(false); reviewForm.resetFields(); }} onOk={submitReview} confirmLoading={reviewSubmitting} okText="提交审核" width="40vw">
-        <Form form={reviewForm} layout="vertical" style={{ marginTop: 12 }}>
+        <Form form={reviewForm} layout="vertical" className="u-mt-12">
           <Form.Item name="decision" label="审核结果" rules={[{ required: true, message: '请选择审核结果' }]}>
             <Select options={[{ value: 'APPROVE', label: '通过' }, { value: 'REJECT', label: '不通过' }]} />
           </Form.Item>
-          <Form.Item name="score" label="评审分数"><InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="可选，0-100" /></Form.Item>
+          <Form.Item name="score" label="评审分数"><InputNumber min={0} max={100} className="u-w-full" placeholder="可选，0-100" /></Form.Item>
           <Form.Item name="comment" label="审核意见" rules={[{ required: true, message: '请填写审核意见' }]}><Input.TextArea rows={4} placeholder="填写通过原因、不通过原因或后续建议" /></Form.Item>
         </Form>
       </ResizableModal>

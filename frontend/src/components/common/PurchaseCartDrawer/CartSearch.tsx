@@ -42,7 +42,7 @@ export const CartSearch: React.FC<CartSearchProps> = ({ onAdd, submitting }) => 
 
   return (
     <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
-      <Space.Compact style={{ width: '100%' }}>
+      <Space.Compact className="u-w-full">
         <Input
           style={{ width: 'calc(100% - 80px)' }}
           placeholder="输入物料编码或名称"

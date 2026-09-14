@@ -26,7 +26,7 @@ const InvoiceInfoModal: React.FC<Props> = ({ open, form, submitting, onClose, on
       width="40vw"
       confirmLoading={submitting}
     >
-      <div style={{ marginBottom: 12, color: 'var(--text-secondary)' }}>
+      <div className="u-mb-12" style={{ color: 'var(--text-secondary)' }}>
         设置后，每次申请发票时会自动填充以下信息
       </div>
       <Form form={form} layout="vertical">

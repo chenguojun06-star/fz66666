@@ -24,9 +24,9 @@ const ProfileAvatarThemeCard: React.FC<ProfileAvatarThemeCardProps> = ({
     onAvatarChange,
 }) => {
     return (
-        <Card title="头像与主题" style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <Card title="头像与主题" className="u-mb-16">
+            <div className="u-d-flex u-ai-center u-jc-between u-gap-16 u-fwrap-wrap">
+                <div className="u-d-flex u-ai-center u-gap-12">
                     <ImageUploadBox
                         shape="round"
                         size={72}
@@ -50,8 +50,8 @@ const ProfileAvatarThemeCard: React.FC<ProfileAvatarThemeCardProps> = ({
                         }}
                     />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <label htmlFor="profile-theme-select" style={{ fontWeight: 700 }}>主题</label>
+                <div className="u-d-flex u-ai-center u-gap-10">
+                    <label htmlFor="profile-theme-select" className="u-fw-700">主题</label>
                     <Select
                         id="profile-theme-select"
                         style={{ width: 220 }}

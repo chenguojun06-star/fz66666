@@ -127,17 +127,17 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
     if (!nodes || nodes.length === 0) return <Empty description="无时间线数据" />;
     const sorted = [...nodes].sort((a, b) => a.daysFromToday - b.daysFromToday);
     return (
-      <div style={{ position: 'relative', padding: '24px 12px 12px' }}>
-        <div style={{ position: 'relative', height: 60 }}>
-          <div style={{ position: 'absolute', top: 11, left: 12, right: 12, height: 2, background: 'var(--color-border, var(--color-border-light))' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative' }}>
+      <div className="u-pos-relative" style={{ padding: '24px 12px 12px' }}>
+        <div className="u-pos-relative" style={{ height: 60 }}>
+          <div className="u-pos-absolute" style={{ top: 11, left: 12, right: 12, height: 2, background: 'var(--color-border, var(--color-border-light))' }} />
+          <div className="u-d-flex u-jc-between u-pos-relative">
             {sorted.map((n) => {
               const color = RISK_COLOR[n.riskLevel] || 'var(--color-text-secondary)';
               return (
                 <Tooltip key={n.type} title={`${n.label}: ${n.date}（${n.daysFromToday >= 0 ? '+' : ''}${n.daysFromToday}天）`}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                  <div className="u-d-flex u-fd-column u-ai-center u-flex-1">
                     <div style={{ width: 12, height: 12, borderRadius: '50%', background: color, border: '2px solid var(--color-bg-container, var(--color-bg-base))', boxShadow: `0 0 0 2px ${color}33` }} />
-                    <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-secondary)', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                    <div className="u-mt-6 u-fs-11 u-ta-center u-ws-nowrap" style={{ color: 'var(--color-text-secondary)' }}>
                       {n.label}
                     </div>
                     <div style={{ fontSize: 11, fontWeight: 600, color }}>
@@ -183,7 +183,7 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
 
   return (
     <Drawer
-      title={<span style={{ fontSize: 15, fontWeight: 600 }}>{factoryName} — 工厂全动态详情</span>}
+      title={<span className="u-fs-15 u-fw-600">{factoryName} — 工厂全动态详情</span>}
       open={open}
       onClose={onClose}
       styles={{ wrapper: { width: '85%' } }}
@@ -200,15 +200,15 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
             type="error"
             message={error}
             action={<Button size="small" onClick={loadAll} loading={loading}>重试</Button>}
-            style={{ marginBottom: 16 }}
+            className="u-mb-16"
           />
         )}
         {/* Section 1: 三档交期预测时间线 */}
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: 'var(--color-text-primary)' }}>
+          <div className="u-fs-14 u-fw-600 u-mb-8" style={{ color: 'var(--color-text-primary)' }}>
             交期预测时间线
             {prediction?.confidence != null && (
-              <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+              <span className="u-ml-8 u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
                 置信度 {prediction.confidence}%
               </span>
             )}
@@ -216,17 +216,17 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
           {prediction ? (
             <>
               {renderTimeline(prediction.timelineNodes)}
-              <div style={{ padding: '8px 12px', background: 'var(--color-bg-layout, var(--color-bg-subtle))', borderRadius: 6, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+              <div className="u-p-8px12px u-br-6 u-fs-12" style={{ background: 'var(--color-bg-layout, var(--color-bg-subtle))', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
                 {prediction.rationale}
               </div>
               {prediction.factoryDailyVelocity > 0 && (
-                <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                <div className="u-d-flex u-gap-16 u-mt-8 u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
                   <span>工厂日均产能 <b style={{ color: 'var(--color-info)' }}>{prediction.factoryDailyVelocity}</b> 件/天</span>
                   <span>在手总负载 <b style={{ color: 'var(--color-text-primary)' }}>{prediction.factoryPendingQuantity}</b> 件（含本单 {orderQuantity}）</span>
                 </div>
               )}
               {prediction.likelyDelayed && (
-                <div style={{ marginTop: 8, padding: '6px 10px', background: 'var(--status-error-bg)', border: '1px solid var(--status-error-border)', borderRadius: 4, fontSize: 12, color: 'var(--color-danger)' }}>
+                <div className="u-mt-8 u-p-6px10px u-br-4 u-fs-12" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error-border)', color: 'var(--color-danger)' }}>
                   预计延期：最可能完工日期晚于计划交期，建议调整交期或增加产能
                 </div>
               )}
@@ -238,10 +238,10 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
 
         {/* Section 2: 产能缺口分析 */}
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: 'var(--color-text-primary)' }}>产能缺口分析</div>
+          <div className="u-fs-14 u-fw-600 u-mb-8" style={{ color: 'var(--color-text-primary)' }}>产能缺口分析</div>
           {gapList ? (
-            <div style={{ padding: '10px 12px', background: 'var(--color-bg-layout, var(--color-bg-subtle))', borderRadius: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <div className="u-br-6" style={{ padding: '10px 12px', background: 'var(--color-bg-layout, var(--color-bg-subtle))' }}>
+              <div className="u-d-flex u-ai-center u-gap-8 u-mb-6">
                 <Tag style={{
                   color: GAP_LEVEL_META[gapList.gapLevel]?.color,
                   borderColor: GAP_LEVEL_META[gapList.gapLevel]?.color,
@@ -250,11 +250,11 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
                 }}>
                   {GAP_LEVEL_META[gapList.gapLevel]?.label || gapList.gapLevel}
                 </Tag>
-                <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                <span className="u-fs-12" style={{ color: 'var(--color-text-secondary)' }}>
                   在手 {gapList.pendingQuantity} 件 · 日产 {gapList.dailyCapacity} 件/天 · 预计 {gapList.estimatedDaysToComplete} 天
                 </span>
               </div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', lineHeight: 1.6 }}>{gapList.advice}</div>
+              <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)', lineHeight: 1.6 }}>{gapList.advice}</div>
             </div>
           ) : (
             <Empty description="暂无缺口分析数据" />
@@ -263,7 +263,7 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
 
         {/* Section 3: 在产订单明细 */}
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: 'var(--color-text-primary)' }}>
+          <div className="u-fs-14 u-fw-600 u-mb-8" style={{ color: 'var(--color-text-primary)' }}>
             在产订单明细（{activeOrders.length} 单）
           </div>
           <Table

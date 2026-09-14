@@ -59,18 +59,18 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
   }
 
   return (
-    <div style={{ minWidth: 168, maxWidth: 230, fontSize: 14 }}>
-      <div style={{ fontWeight: 600, marginBottom: 8, color: 'var(--color-text-primary)', fontSize: 14 }}>{label}</div>
+    <div className="u-fs-14" style={{ minWidth: 168, maxWidth: 230 }}>
+      <div className="u-fw-600 u-mb-8 u-fs-14" style={{ color: 'var(--color-text-primary)' }}>{label}</div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
+      <div className="u-d-flex u-jc-between u-gap-16 u-mb-4">
         <span style={{ color: 'var(--color-text-tertiary)' }}>已生产</span>
-        <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{doneQty} 件</span>
+        <span className="u-fw-600" style={{ color: 'var(--color-text-primary)' }}>{doneQty} 件</span>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
+      <div className="u-d-flex u-jc-between u-gap-16 u-mb-4">
         <span style={{ color: 'var(--color-text-tertiary)' }}>还剩</span>
         <span style={{ color: leftQty > 0 ? 'var(--color-text-secondary)' : 'var(--color-success)', fontWeight: 600 }}>{leftQty} 件</span>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 8 }}>
+      <div className="u-d-flex u-jc-between u-gap-16 u-mb-8">
         <span style={{ color: 'var(--color-text-tertiary)' }}>近7天工人</span>
         <span style={{ color: scanData.workerCount > 0 ? 'var(--color-text-primary)' : 'var(--color-text-quaternary)', fontWeight: 600 }}>
           {scanData.loading ? '…' : scanData.workerCount > 0 ? `${scanData.workerCount} 人` : '-'}
@@ -78,28 +78,28 @@ const StagePopoverContent: React.FC<StagePopoverInfo & { open?: boolean }> = ({
       </div>
 
       {scanData.loading ? (
-        <div style={{ textAlign: 'center', paddingTop: 6, paddingBottom: 4, borderTop: '1px solid var(--color-border-light)', marginBottom: 6 }}>
-          <Spin /><span style={{ color: 'var(--color-text-quaternary)', marginLeft: 6, fontSize: 14 }}>加载子工序…</span>
+        <div className="u-ta-center u-mb-6" style={{ paddingTop: 6, paddingBottom: 4, borderTop: '1px solid var(--color-border-light)' }}>
+          <Spin /><span className="u-ml-6 u-fs-14" style={{ color: 'var(--color-text-quaternary)' }}>加载子工序…</span>
         </div>
       ) : scanData.subProcesses.length > 0 ? (
-        <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: 6, marginBottom: 6 }}>
-          <div style={{ color: 'var(--color-text-tertiary)', marginBottom: 4 }}>子工序明细</div>
+        <div className="u-mb-6" style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: 6 }}>
+          <div className="u-mb-4" style={{ color: 'var(--color-text-tertiary)' }}>子工序明细</div>
           {scanData.subProcesses.map(sp => (
-            <div key={sp.name} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 3 }}>
-              <span style={{ color: 'var(--color-gray-700)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 120 }}>{sp.name}</span>
-              <span style={{ color: 'var(--color-primary)', fontWeight: 600, flexShrink: 0 }}>{sp.qty}</span>
+            <div key={sp.name} className="u-d-flex u-jc-between u-gap-12" style={{ marginBottom: 3 }}>
+              <span className="u-ov-hidden u-ws-nowrap" style={{ color: 'var(--color-gray-700)', textOverflow: 'ellipsis', maxWidth: 120 }}>{sp.name}</span>
+              <span className="u-fw-600 u-fshrink-0" style={{ color: 'var(--color-primary)' }}>{sp.qty}</span>
             </div>
           ))}
         </div>
       ) : null}
 
       <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: 6 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}>
+        <div className="u-d-flex u-jc-between u-gap-16 u-ai-center">
           <span style={{ color: 'var(--color-text-tertiary)' }}>AI预计</span>
           <span style={{ color: aiColor, fontWeight: 600 }}>{aiLabel}</span>
         </div>
         {scanData.dailyRate7d > 0 && (
-          <div style={{ color: 'var(--color-text-quaternary)', fontSize: 14, textAlign: 'right', marginTop: 2 }}>
+          <div className="u-fs-14 u-ta-right u-mt-2" style={{ color: 'var(--color-text-quaternary)' }}>
             近7日 {Math.round(scanData.dailyRate7d)} 件/天
           </div>
         )}

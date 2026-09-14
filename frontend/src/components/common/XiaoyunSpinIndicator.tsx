@@ -19,7 +19,7 @@ const XiaoyunSpinIndicator: React.FC<XiaoyunSpinIndicatorProps> = ({ size = 'def
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+    <div className="u-d-flex u-ai-center u-jc-center u-w-full u-h-full">
       <XiaoyunCloudAvatar size={getSize()} loading />
     </div>
   );

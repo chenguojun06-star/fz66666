@@ -101,8 +101,8 @@ const Dashboard: React.FC = () => {
                 notFoundContent={searchLoading ? '搜索中...' : null}
                 optionRender={(opt: any) => (
                   <div>
-                    <div style={{ fontWeight: 500 }}>{opt.label}</div>
-                    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{opt.desc}</div>
+                    <div className="u-fw-500">{opt.label}</div>
+                    <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{opt.desc}</div>
                   </div>
                 )}
               />

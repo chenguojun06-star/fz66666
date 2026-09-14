@@ -37,7 +37,7 @@ const TableModeView: React.FC<TableModeViewProps> = ({
 }) => {
   return (
     <>
-      <Form form={queryForm} layout="inline" style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+      <Form form={queryForm} layout="inline" className="u-d-flex u-jc-between u-fwrap-wrap u-gap-8 u-mb-12">
         <Space wrap>
           <Form.Item name="keyword" noStyle>
             <Input placeholder="搜索名称/标识" allowClear style={{ width: 200 }} onPressEnter={() => fetchList({ page: 1 })} />

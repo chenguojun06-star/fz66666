@@ -49,8 +49,8 @@ const TemplateInitModal: React.FC<TemplateInitModalProps> = ({
     initialHeight={500}
   >
     <div style={{ padding: '16px 0' }}>
-      <div style={{ marginBottom: 12, fontWeight: 500 }}>第一步：选择模板类型</div>
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+      <div className="u-mb-12 u-fw-500">第一步：选择模板类型</div>
+      <div className="u-d-flex u-gap-12" style={{ marginBottom: 20 }}>
         {TEMPLATES.map((tpl) => (
           <div
             key={tpl.type}
@@ -65,21 +65,21 @@ const TemplateInitModal: React.FC<TemplateInitModalProps> = ({
               transition: 'border-color .2s, background .2s',
             }}
           >
-            <div style={{ fontSize: 28, marginBottom: 6 }}>{tpl.icon}</div>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>{tpl.label}</div>
-            <div style={{ fontSize: 14, color: 'var(--neutral-text-secondary)', marginBottom: 10 }}>
+            <div className="u-fs-28 u-mb-6">{tpl.icon}</div>
+            <div className="u-fw-600 u-mb-4">{tpl.label}</div>
+            <div className="u-fs-14 u-mb-10" style={{ color: 'var(--neutral-text-secondary)' }}>
               {tpl.desc}
             </div>
-            <div style={{ fontSize: 14 }}>
+            <div className="u-fs-14">
               {tpl.children.map((c) => (
-                <Tag key={c} style={{ marginBottom: 4 }}>{c}</Tag>
+                <Tag key={c} className="u-mb-4">{c}</Tag>
               ))}
             </div>
           </div>
         ))}
       </div>
 
-      <div style={{ marginBottom: 8, fontWeight: 500 }}>第二步：输入根节点名称</div>
+      <div className="u-mb-8 u-fw-500">第二步：输入根节点名称</div>
       <Input
         placeholder={
           tplModal.type === 'FACTORY'
@@ -91,12 +91,12 @@ const TemplateInitModal: React.FC<TemplateInitModalProps> = ({
         allowClear
         onChange={(e) => setTplModal((prev) => ({ ...prev, rootName: e.target.value }))}
         onPressEnter={handleInitTemplate}
-        style={{ marginBottom: 16 }}
+        className="u-mb-16"
       />
 
       {tplModal.type === 'FACTORY' && (
         <>
-          <div style={{ marginBottom: 8, fontWeight: 500 }}>第三步：关联现有工厂（可选）</div>
+          <div className="u-mb-8 u-fw-500">第三步：关联现有工厂（可选）</div>
           <Select
             allowClear
             placeholder="选择已有工厂，可跳过"
@@ -106,24 +106,24 @@ const TemplateInitModal: React.FC<TemplateInitModalProps> = ({
               value: f.id,
               label: f.factoryName + (f.contactPerson ? ' · ' + f.contactPerson : ''),
             }))}
-            style={{ width: '100%', marginBottom: 16 }}
+            className="u-w-full u-mb-16"
           />
         </>
       )}
 
       {tplModal.type && (
-        <div style={{ background: 'var(--color-slate-50)', borderRadius: 6, padding: '12px 16px', fontSize: 14 }}>
-          <div style={{ fontWeight: 500, marginBottom: 8, color: 'var(--neutral-text-secondary)' }}>
+        <div className="u-br-6 u-fs-14" style={{ background: 'var(--color-slate-50)', padding: '12px 16px' }}>
+          <div className="u-fw-500 u-mb-8" style={{ color: 'var(--neutral-text-secondary)' }}>
             创建预览
           </div>
-          <div style={{ marginBottom: 4 }}>
+          <div className="u-mb-4">
              <strong>{tplModal.rootName || '(待填写)'}</strong>
           </div>
           {(tplModal.type === 'FACTORY'
             ? ['车间一', '车间二', '车间三']
             : ['生产部门', '财务部门', '行政部门']
           ).map((c) => (
-            <div key={c} style={{ paddingLeft: 20, color: 'var(--neutral-text-secondary)', lineHeight: 1.8 }}>
+            <div key={c} className="u-lh-18" style={{ paddingLeft: 20, color: 'var(--neutral-text-secondary)' }}>
               └ {c}
             </div>
           ))}

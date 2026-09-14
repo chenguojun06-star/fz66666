@@ -79,7 +79,7 @@ const DailyTodoModal: React.FC = () => {
       open={open}
       title={null}
       footer={
-        <div style={{ textAlign: 'center', padding: '4px 0' }}>
+        <div className="u-ta-center" style={{ padding: '4px 0' }}>
           <Button type="primary" size="large" style={{ minWidth: 160 }} onClick={handleClose}>
             已了解，开始工作
           </Button>
@@ -94,38 +94,38 @@ const DailyTodoModal: React.FC = () => {
       onCancel={handleClose}
     >
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+        <div className="u-ta-center" style={{ padding: '60px 0' }}>
           <Spin spinning tip="正在分析生产数据..."><div /></Spin>
         </div>
       ) : brief ? (
-        <div style={{ padding: '0 4px' }}>
+        <div className="u-p-04px">
           {/* ── 头部：问候 + 日期 + 健康状态 ── */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             marginBottom: 16,
           }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)' }}>
+              <div className="u-fs-14 u-fw-700" style={{ color: 'var(--color-text)' }}>
                 ☀️ 早上好，今日生产运营简报
               </div>
-              <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+              <div className="u-fs-14 u-mt-2" style={{ color: 'var(--color-text-tertiary)' }}>
                 {brief.date} · 数据已实时同步
                 {brief.suggestionsSource === 'ai' && (
-                  <Tag color="purple" style={{ marginLeft: 8, fontSize: 14 }}>
+                  <Tag color="purple" className="u-ml-8 u-fs-14">
                     <RobotOutlined /> AI 增强
                   </Tag>
                 )}
               </div>
             </div>
             {health && (
-              <Tag color={health.tagColor} style={{ fontSize: 14, padding: '2px 12px' }}>
+              <Tag color={health.tagColor} className="u-fs-14" style={{ padding: '2px 12px' }}>
                 {health.label}
               </Tag>
             )}
           </div>
 
           {/* ── 核心指标卡片 ── */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+          <div className="u-d-flex u-gap-10 u-mb-16">
             <MetricCard
               label="逾期订单" color={LEVEL_COLOR.danger} bg={LEVEL_BG.danger}
               value={Number(brief.overdueOrderCount) || 0} suffix="单"
@@ -158,7 +158,7 @@ const DailyTodoModal: React.FC = () => {
                 <TrendArrow trend={trend} />
               </div>
               <Suspense fallback={
-                <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="u-d-flex u-ai-center u-jc-center" style={{ height: 180 }}>
                   <Spin />
                 </div>
               }>
@@ -173,8 +173,8 @@ const DailyTodoModal: React.FC = () => {
 
           {/* ── 决策卡片：问题 + 方案 + 行动 ── */}
           {cards.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 8 }}>
+            <div className="u-mb-16">
+              <div className="u-fs-14 u-fw-600 u-mb-8" style={{ color: 'var(--color-text-primary)' }}>
                 🎯 今日需要解决的问题
               </div>
               {cards.map((card, i) => (
@@ -185,8 +185,8 @@ const DailyTodoModal: React.FC = () => {
 
           {/* ── 无决策卡片时的兜底摘要 ── */}
           {cards.length === 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text)', marginBottom: 8 }}>
+            <div className="u-mb-16">
+              <div className="u-fs-14 u-fw-600 u-mb-8" style={{ color: 'var(--color-text)' }}>
                 📅 今日关键任务
               </div>
               {(Number(brief.overdueOrderCount) || 0) > 0 && (
@@ -244,7 +244,7 @@ const DailyTodoModal: React.FC = () => {
           )}
         </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-tertiary)' }}>
+        <div className="u-ta-center" style={{ padding: '40px 0', color: 'var(--color-text-tertiary)' }}>
           数据加载中，请稍后
         </div>
       )}

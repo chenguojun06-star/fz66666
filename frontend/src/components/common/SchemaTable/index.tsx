@@ -214,7 +214,7 @@ function SchemaTable<T extends object>(props: SchemaTableProps<T>) {
   return (
     <>
       {enableColumnSettings && settingsPosition === 'outside' && (
-        <div style={{ marginBottom: 8, textAlign: 'right' }}>
+        <div className="u-mb-8 u-ta-right">
           {settingsTrigger}
         </div>
       )}

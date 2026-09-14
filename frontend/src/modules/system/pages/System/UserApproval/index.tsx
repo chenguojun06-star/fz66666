@@ -73,7 +73,7 @@ const UserApproval: React.FC = () => {
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无待审批用户" />
           ) : (
             <>
-              <Alert message={`当前有 ${total} 个租户员工待审批`} type="info" showIcon style={{ marginBottom: 16 }} />
+              <Alert message={`当前有 ${total} 个租户员工待审批`} type="info" showIcon className="u-mb-16" />
               <ResizableTable
                 columns={columns}
                 dataSource={pendingUsers}
@@ -110,7 +110,7 @@ const UserApproval: React.FC = () => {
                   : "以下为外发工厂的待审批员工，由各外发工厂管理员自行审批，租户仅可查看"}
                 type={canApproveFactory ? "info" : "warning"}
                 showIcon
-                style={{ marginBottom: 16 }}
+                className="u-mb-16"
               />
               <ResizableTable
                 columns={factoryColumns}

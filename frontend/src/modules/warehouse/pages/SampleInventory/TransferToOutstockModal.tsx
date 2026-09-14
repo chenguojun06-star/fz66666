@@ -78,7 +78,7 @@ const TransferToOutstockModal: React.FC<TransferToOutstockModalProps> = ({
       <Descriptions
         column={2}
         size="small"
-        style={{ marginBottom: 16 }}
+        className="u-mb-16"
         styles={{ label: { color: 'var(--color-text-secondary)' } }}
       >
         <Descriptions.Item label="款号">{record?.styleNo || '-'}</Descriptions.Item>
@@ -96,7 +96,7 @@ const TransferToOutstockModal: React.FC<TransferToOutstockModalProps> = ({
           rules={[{ required: true, message: '请输入出库数量' }]}
           initialValue={1}
         >
-          <InputNumber min={1} max={available} style={{ width: '100%' }} placeholder="请输入出库数量" />
+          <InputNumber min={1} max={available} className="u-w-full" placeholder="请输入出库数量" />
         </Form.Item>
         <Form.Item name="customerName" label="客户名称">
           <Input placeholder="请输入客户名称" />

@@ -33,8 +33,8 @@ const BroadcastTab: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: 720, padding: '24px 0' }}>
-      <Space orientation="vertical" style={{ width: '100%' }} size="large">
+    <div className="u-p-24px0" style={{ maxWidth: 720 }}>
+      <Space orientation="vertical" className="u-w-full" size="large">
         <Alert
           type="info"
           showIcon

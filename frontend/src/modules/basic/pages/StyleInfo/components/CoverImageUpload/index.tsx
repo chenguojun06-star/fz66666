@@ -127,7 +127,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
   return (
     <div
       ref={containerRef}
-      style={{ width: '100%', outline: 'none' }}
+      className="u-w-full" style={{ outline: 'none' }}
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDrop}
       onPaste={onPaste}
@@ -138,7 +138,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
         type="file"
         accept="image/*"
         multiple
-        style={{ display: 'none' }}
+        className="u-d-none"
         onChange={(e) => {
           uploadFiles(Array.from(e.target.files || []));
           e.currentTarget.value = '';
@@ -189,12 +189,12 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
           }}
           items={previewSrcs}
         >
-          <Image src={previewSrcs[0]} style={{ display: 'none' }} preview={false} />
+          <Image src={previewSrcs[0]} className="u-d-none" preview={false} />
         </Image.PreviewGroup>
       )}
 
       {/* 图片卡一排排列 + ➕上传卡 + 行尾小工具 */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+      <div className="u-d-flex u-fwrap-wrap u-gap-8 u-ai-center">
         {displayImages.map((img, idx) => {
             // 主图徽标按真实 cover 判定，不再钉在列表第一张：
             // 此前 coverFileUrl 取 displayImages[0]，设为主图成功后列表不重排、
@@ -217,7 +217,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
                   alt={`款式图${idx + 1}`}
                   loading="lazy"
                   decoding="async"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  className="u-w-full u-h-full u-objf-cover u-d-block"
                 />
                 {/* 主图标记 */}
                 {isCover && (
@@ -243,7 +243,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
                   >
                     <Tooltip title="预览大图">
                       <EyeOutlined
-                        style={{ color: '#fff', fontSize: 15 }}
+                        className="u-fs-15" style={{ color: '#fff' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setPreviewIndex(idx);
@@ -254,10 +254,10 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
                     {!isNewMode && !img.isLocal && !(img as { isCoverFallback?: boolean }).isCoverFallback && (
                       <Tooltip title={isCover ? '当前主图' : '设为主图'}>
                         {isCover ? (
-                          <StarFilled style={{ color: '#ffd666', fontSize: 15 }} />
+                          <StarFilled className="u-fs-15" style={{ color: '#ffd666' }} />
                         ) : (
                           <StarOutlined
-                            style={{ color: '#fff', fontSize: 15 }}
+                            className="u-fs-15" style={{ color: '#fff' }}
                             onClick={(e) => {
                               e.stopPropagation();
                               void handleSetCover(idx);
@@ -268,7 +268,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
                     )}
                     <Tooltip title="删除">
                       <DeleteOutlined
-                        style={{ color: '#fff', fontSize: 15 }}
+                        className="u-fs-15" style={{ color: '#fff' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDelete(img.id, img.localIndex);
@@ -293,8 +293,8 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
                 cursor: 'pointer', userSelect: 'none',
               }}
             >
-              <PlusOutlined style={{ fontSize: 16, color: 'var(--color-text-tertiary)' }} />
-              <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 3 }}>
+              <PlusOutlined className="u-fs-16" style={{ color: 'var(--color-text-tertiary)' }} />
+              <div className="u-fs-11" style={{ color: 'var(--color-text-tertiary)', marginTop: 3 }}>
                 款式图 {displayImages.length}/{MAX_IMAGES}
               </div>
             </div>
@@ -302,7 +302,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
         )}
 
         {displayImages.length === 0 && !isNewMode && (
-          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span className="u-fs-12 u-d-flex u-ai-center u-gap-4" style={{ color: 'var(--color-text-tertiary)' }}>
             <PictureOutlined /> 暂无款式图，点击 + 上传或直接拖拽/粘贴图片
           </span>
         )}

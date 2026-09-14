@@ -63,27 +63,27 @@ const FactorySettleConfirmContent: React.FC<FactorySettleConfirmContentProps> = 
 
   return (
     <div>
-      <div style={{ marginBottom: 8 }}>
+      <div className="u-mb-8">
         工厂「{factoryName}」· {orderCount} 个已审核订单 · 加工费 <b>¥{gross.toFixed(2)}</b>
       </div>
       {items.length > 0 && (
-        <div style={{ border: '1px solid var(--color-border-antd, #f0f0f0)', borderRadius: 6, padding: '6px 10px', marginBottom: 8, maxHeight: 180, overflowY: 'auto' }}>
-          <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
+        <div className="u-br-6 u-p-6px10px u-mb-8" style={{ border: '1px solid var(--color-border-antd, #f0f0f0)', maxHeight: 180, overflowY: 'auto' }}>
+          <div className="u-fs-12 u-mb-4" style={{ color: 'var(--color-text-tertiary)' }}>
             扣款/补款清单（取消勾选 = 本期不抵扣，自动滚存下期）：
           </div>
           {items.map(it => (
-            <label key={it.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, padding: '3px 0', cursor: 'pointer', fontSize: 13 }}>
+            <label key={it.id} className="u-d-flex u-ai-start u-gap-6 u-cur-pointer u-fs-13" style={{ padding: '3px 0' }}>
               <input
                 type="checkbox"
                 checked={checkedIds.includes(it.id)}
                 onChange={() => toggle(it.id)}
                 style={{ marginTop: 3 }}
               />
-              <span style={{ flex: 1 }}>
-                {it.carryOver && <span style={{ color: 'var(--color-warning, #faad14)', marginRight: 4 }}>[上期结转]</span>}
+              <span className="u-flex-1">
+                {it.carryOver && <span className="u-mr-4" style={{ color: 'var(--color-warning, #faad14)' }}>[上期结转]</span>}
                 {typeLabel[it.deductionType || ''] || it.deductionType || '扣款'}
                 {it.orderNo ? ` · ${it.orderNo}` : ''}
-                {it.description ? <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}> · {it.description}</span> : null}
+                {it.description ? <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}> · {it.description}</span> : null}
               </span>
               <span style={{ color: it.isSupplement ? 'var(--color-success, #52c41a)' : 'var(--color-danger, #cf1322)', whiteSpace: 'nowrap' }}>
                 {it.isSupplement ? '+' : '−'}¥{Number(it.amount || 0).toFixed(2)}
@@ -92,9 +92,9 @@ const FactorySettleConfirmContent: React.FC<FactorySettleConfirmContentProps> = 
           ))}
         </div>
       )}
-      <div style={{ marginBottom: 4 }}>本次结算金额：</div>
+      <div className="u-mb-4">本次结算金额：</div>
       <InputNumber
-        style={{ width: '100%' }}
+        className="u-w-full"
         value={amount}
         min={0}
         precision={2}
@@ -104,7 +104,7 @@ const FactorySettleConfirmContent: React.FC<FactorySettleConfirmContentProps> = 
           onAmountChange(nv);
         }}
       />
-      <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, marginTop: 4 }}>
+      <div className="u-fs-12 u-mt-4" style={{ color: 'var(--color-text-tertiary)' }}>
         默认 = 加工费 − 勾选扣款 + 补款；可手动微调
       </div>
     </div>

@@ -56,7 +56,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
   });
 
   return (
-    <div style={{ padding: '0 4px' }}>
+    <div className="u-p-04px">
       {!simpleView && (
         <StyleStageControlBar
           stageName="二次工艺"
@@ -73,7 +73,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
       )}
 
       {!readOnly && !simpleView && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div className="u-d-flex u-jc-between u-ai-center u-mb-16">
           <div />
           <Space>
             {!secondaryCompletedTime && (
@@ -103,7 +103,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
       )}
 
       {simpleView && dataSource.length === 0 && (
-        <Alert title="无二次工艺记录" type="info" showIcon style={{ marginBottom: 16 }} />
+        <Alert title="无二次工艺记录" type="info" showIcon className="u-mb-16" />
       )}
 
       <Form form={form} component={false}>

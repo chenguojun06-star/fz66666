@@ -48,7 +48,7 @@ const BatchUnqualifiedModal: React.FC<BatchUnqualifiedModalProps> = ({
       open={open}
       onCancel={handleCancel}
       footer={
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <div className="u-d-flex u-jc-end u-gap-8">
           <Button onClick={handleCancel}>取消</Button>
           <Popconfirm
             title="确认批量不合格"

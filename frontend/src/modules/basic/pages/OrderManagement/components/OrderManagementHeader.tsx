@@ -27,7 +27,7 @@ const OrderManagementHeader: React.FC<OrderManagementHeaderProps> = ({
   return (
     <>
       {showSmartErrorNotice && smartError ? (
-        <Card style={{ marginBottom: 12 }}>
+        <Card className="u-mb-12">
           <SmartErrorNotice error={smartError} onFix={fetchStyles} />
         </Card>
       ) : null}

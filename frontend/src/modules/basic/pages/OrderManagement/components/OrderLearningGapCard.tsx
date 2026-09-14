@@ -11,7 +11,7 @@ const OrderLearningGapCard: React.FC<OrderLearningGapCardProps> = ({
   const effectiveLines = lines.length ? lines : ['当前方案与历史最优建议基本一致。'];
 
   return (
-    <div style={{ display: 'grid', gap: 8 }}>
+    <div className="u-d-grid u-gap-8">
       {effectiveLines.map((line, index) => (
         <Alert
           key={`${line}-${index}`}

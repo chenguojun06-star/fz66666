@@ -19,7 +19,7 @@ const FactoryFilterBar: React.FC<FactoryFilterBarProps> = ({
 }) => {
   return (
     <Card className="filter-card mb-sm">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
+      <div className="u-d-flex u-jc-between u-ai-center u-w-full u-fwrap-wrap u-gap-16">
         <Space wrap size={12}>
           <Input
             placeholder="供应商编码"

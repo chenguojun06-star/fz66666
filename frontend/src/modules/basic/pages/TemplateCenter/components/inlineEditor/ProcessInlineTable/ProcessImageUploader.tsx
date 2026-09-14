@@ -59,16 +59,16 @@ const ProcessImageUploader: React.FC<ProcessImageUploaderProps> = ({
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: compact ? 0 : 12 }}>
-      {compact ? <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text-secondary)' }}>参考图</span> : null}
-      {!compact ? <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 6, width: '100%' }}>款号参考图</div> : null}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      {compact ? <span className="u-fs-14 u-fw-600" style={{ color: 'var(--neutral-text-secondary)' }}>参考图</span> : null}
+      {!compact ? <div className="u-fs-14 u-fw-500 u-mb-6 u-w-full">款号参考图</div> : null}
+      <div className="u-d-flex u-ai-center u-gap-8 u-fwrap-wrap">
         {imageUrls.map((url) => (
           <div key={url} style={{ position: 'relative', width: compact ? 44 : 52, height: compact ? 44 : 52 }}>
             <Image
               src={getFullAuthedFileUrl(url)}
               width={compact ? 44 : 52}
               height={compact ? 44 : 52}
-              style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid var(--color-border-light)' }}
+              className="u-objf-cover u-br-4" style={{ border: '1px solid var(--color-border-light)' }}
               preview
             />
             {readOnly ? null : (
@@ -98,13 +98,13 @@ const ProcessImageUploader: React.FC<ProcessImageUploaderProps> = ({
             onDragOver={(e) => { if (!readOnly) e.preventDefault(); }}
             onDrop={handleDrop}
             onPaste={handlePaste}
-            style={{ display: 'inline-block' }}
+            className="u-d-inline-block"
           >
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              style={{ display: 'none' }}
+              className="u-d-none"
               disabled={readOnly}
               onChange={handleFileChange}
             />

@@ -205,7 +205,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
 
           return (
               <Select
-                  style={{ width: '100%' }}
+                  className="u-w-full"
                   placeholder="选择库存批次"
                   value={currentStockId}
                   onChange={(val) => {
@@ -242,7 +242,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
               <InputNumber
                   min={0}
                   max={maxQty || undefined}
-                  style={{ width: '100%' }}
+                  className="u-w-full"
                   value={selected?.pickQuantity}
                   disabled={!selected?.stockId}
                   placeholder={!selected?.stockId ? "请先选库存" : "数量"}
@@ -274,7 +274,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
         <Form.Item name="pickerName" label="领料人"><Input readOnly /></Form.Item>
         <Form.Item name="remark" label="备注"><Input.TextArea rows={3} placeholder="请输入备注" /></Form.Item>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
           <Typography.Text strong>领料明细</Typography.Text>
           <Space>
             <Button size="small" onClick={handleClearSelection}>清空选择</Button>

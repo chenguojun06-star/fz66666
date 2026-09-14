@@ -20,13 +20,13 @@ function StockMetric({
   color: string;
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <span style={{ fontSize: 12, color: 'var(--neutral-text-disabled)', fontWeight: 500 }}>
+    <div className="u-d-flex u-fd-column" style={{ gap: 2 }}>
+      <span className="u-fs-12 u-fw-500" style={{ color: 'var(--neutral-text-disabled)' }}>
         {label}
       </span>
       <span style={{ fontSize: 16, fontWeight: 700, color, lineHeight: 1.2 }}>
         {value.toLocaleString()}
-        <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--neutral-text-disabled)', marginLeft: 3 }}>
+        <span className="u-fs-11 u-fw-400" style={{ color: 'var(--neutral-text-disabled)', marginLeft: 3 }}>
           件
         </span>
       </span>
@@ -68,7 +68,7 @@ export function getMainInventoryColumns(): ColumnsType<FinishedInventoryRow> {
       render: (v: number | null, record: FinishedInventoryRow) =>
         mergeAcrossRows(
           v != null ? (
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-error)' }}>
+            <span className="u-fs-14 u-fw-700" style={{ color: 'var(--color-error)' }}>
               {formatMoney(Number(v))}
             </span>
           ) : (
@@ -82,7 +82,7 @@ export function getMainInventoryColumns(): ColumnsType<FinishedInventoryRow> {
       width: 150,
       render: (_, record) =>
         mergeAcrossRows(
-          <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--neutral-text)' }}>
+          <div className="u-fs-13" style={{ lineHeight: 1.7, color: 'var(--neutral-text)' }}>
             <div>{formatDateTime(record.lastInboundDate)}</div>
             <div>
               数量:{' '}
@@ -101,7 +101,7 @@ export function getMainInventoryColumns(): ColumnsType<FinishedInventoryRow> {
       width: 150,
       render: (_, record) =>
         mergeAcrossRows(
-          <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--neutral-text)' }}>
+          <div className="u-fs-13" style={{ lineHeight: 1.7, color: 'var(--neutral-text)' }}>
             <div>{formatDateTime(record.lastOutboundDate)}</div>
             <div style={{ color: 'var(--neutral-text-secondary)' }}>
               单号: {record.lastOutstockNo || '-'}

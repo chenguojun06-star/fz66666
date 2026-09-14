@@ -44,7 +44,7 @@ const ProgressRowList: React.FC<ProgressRowListProps> = ({
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+      <div className="u-d-flex u-jc-center" style={{ padding: '60px 0' }}>
         <Spin size="large" />
       </div>
     );

@@ -20,14 +20,14 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
     >
       <Row align="middle" gutter={24}>
         <Col flex="auto">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <LockOutlined style={{ fontSize: 20, color: 'var(--color-primary)' }} />
-            <Tag color="gold" style={{ fontWeight: 600, margin: 0 }}>付费模块 · ¥599/月</Tag>
+          <div className="u-d-flex u-ai-center u-gap-10 u-mb-8">
+            <LockOutlined className="u-fs-20" style={{ color: 'var(--color-primary)' }} />
+            <Tag color="gold" className="u-fw-600 u-m-0">付费模块 · ¥599/月</Tag>
           </div>
           <Title level={3} style={{ color: 'var(--color-text-primary)', margin: '0 0 8px' }}>
             客户管理 CRM
           </Title>
-          <Paragraph style={{ color: 'var(--color-text-secondary)', margin: 0, fontSize: 14 }}>
+          <Paragraph className="u-m-0 u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>
             深度整合您的生产数据，让每位B端客户都能实时追踪到自己的订单进度。低价对标鼎普 CRM（¥3000+/月），专为中小服装工厂设计。
           </Paragraph>
         </Col>
@@ -37,7 +37,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
             icon={<RocketOutlined />}
             ghost
             type="primary"
-            style={{ height: 44, padding: '0 28px', fontWeight: 600 }}
+            className="u-fw-600" style={{ height: 44, padding: '0 28px' }}
             onClick={onGoStore}
           >
             立即开通 <ArrowRightOutlined />
@@ -47,7 +47,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
     </Card>
 
     {/* 功能列表区：白色卡片 + 阴影 */}
-    <Title level={5} style={{ marginBottom: 16, color: 'var(--color-text-primary)' }}>
+    <Title level={5} className="u-mb-16" style={{ color: 'var(--color-text-primary)' }}>
       开通后解锁以下功能
     </Title>
     <Row gutter={[16, 16]}>
@@ -63,11 +63,11 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
             hoverable={false}
             styles={{ body: { padding: 16 } }}
           >
-            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 28, lineHeight: 1, color: 'var(--color-primary)' }}>{f.icon}</span>
+            <div className="u-d-flex u-gap-10 u-ai-start">
+              <span className="u-fs-28" style={{ lineHeight: 1, color: 'var(--color-primary)' }}>{f.icon}</span>
               <div>
-                <Text strong style={{ color: 'var(--color-text-primary)', fontSize: 15 }}>{f.title}</Text>
-                <Paragraph style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--color-text-tertiary)' }}>
+                <Text strong className="u-fs-15" style={{ color: 'var(--color-text-primary)' }}>{f.title}</Text>
+                <Paragraph className="u-fs-13" style={{ margin: '4px 0 0', color: 'var(--color-text-tertiary)' }}>
                   {f.desc}
                 </Paragraph>
               </div>
@@ -89,21 +89,21 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
     >
       <Row gutter={24} align="middle">
         <Col span={16}>
-          <Text strong style={{ color: 'var(--color-text-primary)', fontSize: 15 }}>
+          <Text strong className="u-fs-15" style={{ color: 'var(--color-text-primary)' }}>
             为什么比鼎普便宜5倍？
           </Text>
-          <Paragraph style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--color-text-secondary)' }}>
+          <Paragraph className="u-fs-14" style={{ margin: '4px 0 0', color: 'var(--color-text-secondary)' }}>
             鼎普 CRM 模块定价 ¥3000+/月，功能复杂适合大企业。本模块专注中小服装工厂核心需求：
             应收款追踪 + 客户门户查单，去掉80%用不上的功能，降到 ¥599/月，90天回本，开通当月即可用起来。
           </Paragraph>
         </Col>
-        <Col span={8} style={{ textAlign: 'center' }}>
+        <Col span={8} className="u-ta-center">
           <Button
             size="large"
             ghost
             type="primary"
             onClick={onGoStore}
-            style={{ width: '100%', fontWeight: 600 }}
+            className="u-w-full u-fw-600"
           >
             前往应用商店开通
           </Button>

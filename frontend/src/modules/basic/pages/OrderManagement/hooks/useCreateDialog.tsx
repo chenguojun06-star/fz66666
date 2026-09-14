@@ -37,7 +37,7 @@ export function useCreateDialog({
         content: (
           <div>
             <p>检测到您有未保存的订单草稿（{draftInfo.timeDescription}），是否恢复？</p>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginTop: 8 }}>
+            <p className="u-fs-12 u-mt-8" style={{ color: 'var(--color-text-secondary)' }}>
               选择"恢复草稿"将恢复之前未提交的订单内容，选择"新建订单"将清空草稿并重新开始。
             </p>
           </div>

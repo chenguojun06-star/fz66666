@@ -38,7 +38,7 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
       scaleWithViewport
     >
       <Form form={form} layout="vertical">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: '1fr 1fr' }}>
           <Form.Item name="roleName" label="角色名称" rules={[{ required: true, message: '请输入角色名称' }]}>
             <Input placeholder="请输入角色名称" />
           </Form.Item>
@@ -49,7 +49,7 @@ const RoleFormModal: React.FC<RoleFormModalProps> = ({
         <Form.Item name="description" label="描述">
           <Input.TextArea rows={3} placeholder="请输入描述" />
         </Form.Item>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: '1fr 1fr' }}>
           <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
             <Select options={[{ value: 'active', label: '启用' }, { value: 'inactive', label: '停用' }]} />
           </Form.Item>

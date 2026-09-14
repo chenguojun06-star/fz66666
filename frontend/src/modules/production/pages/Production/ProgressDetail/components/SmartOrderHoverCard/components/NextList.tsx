@@ -37,7 +37,7 @@ const NextList: React.FC<Props> = ({
         display: 'flex', alignItems: 'center', gap: 6,
         borderTop: '1px dashed var(--color-border)', margin: '2px 0 6px',
       }}>
-        <span style={{ fontSize: 11, color: 'var(--color-text-quaternary)', paddingTop: 3, whiteSpace: 'nowrap' }}>预测</span>
+        <span className="u-fs-11 u-ws-nowrap" style={{ color: 'var(--color-text-quaternary)', paddingTop: 3 }}>预测</span>
       </div>
     )}
 
@@ -51,11 +51,11 @@ const NextList: React.FC<Props> = ({
           const predictDate = now.add(startOffset, 'day').format('MM-DD');
           return (
             <div key={s.label} style={{ marginBottom: 7 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 14, fontSize: 11, textAlign: 'center', flexShrink: 0, color: 'var(--color-border-antd)' }}>○</span>
-                <span style={{ width: 26, flexShrink: 0, fontWeight: 400, color: 'var(--color-text-quaternary)' }}>{s.label}</span>
-                <div style={{ flex: 1, height: 5, background: 'var(--color-bg-subtle)', borderRadius: 3 }} />
-                <span style={{ width: 70, textAlign: 'right', flexShrink: 0, fontSize: 11, color: 'var(--color-text-quaternary)' }}>
+              <div className="u-d-flex u-ai-center u-gap-6">
+                <span className="u-fs-11 u-ta-center u-fshrink-0" style={{ width: 14, color: 'var(--color-border-antd)' }}>○</span>
+                <span className="u-fshrink-0 u-fw-400" style={{ width: 26, color: 'var(--color-text-quaternary)' }}>{s.label}</span>
+                <div className="u-flex-1" style={{ height: 5, background: 'var(--color-bg-subtle)', borderRadius: 3 }} />
+                <span className="u-ta-right u-fshrink-0 u-fs-11" style={{ width: 70, color: 'var(--color-text-quaternary)' }}>
                   约 {predictDate}
                 </span>
               </div>
@@ -64,7 +64,7 @@ const NextList: React.FC<Props> = ({
         })}
       </div>
     ) : !hasScan && (
-      <div style={{ color: 'var(--color-text-quaternary)', fontSize: 11, textAlign: 'center', padding: '8px 0' }}>
+      <div className="u-fs-11 u-ta-center u-p-8px0" style={{ color: 'var(--color-text-quaternary)' }}>
         {prog > 0 ? `整体进度 ${prog}%，工序数据加载中…` : '待开工'}
       </div>
     )}

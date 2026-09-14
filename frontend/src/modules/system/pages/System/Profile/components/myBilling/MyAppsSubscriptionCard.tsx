@@ -22,7 +22,7 @@ const MyAppsSubscriptionCard: React.FC<Props> = ({ myApps, loading, onRefresh })
     <Card
       title={<Space><AppstoreOutlined />我的应用订阅</Space>}
 
-      style={{ marginBottom: 24 }}
+      className="u-mb-24"
       extra={
         <Button
           type="link"

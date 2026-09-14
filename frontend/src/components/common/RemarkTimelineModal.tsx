@@ -202,7 +202,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
       zIndex={1100}
       mask={false}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
+      <div className="u-d-flex u-fd-column u-gap-16 u-h-full">
         {/* 样衣异常提示（跟随模式：异常信息直接展示在备注日志顶部） */}
         {isPattern && patternAnomalies.length > 0 && (
           <Alert
@@ -211,7 +211,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
             icon={<WarningOutlined />}
             message="链路异常"
             description={
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
+              <ul className="u-m-0" style={{ paddingLeft: 18 }}>
                 {patternAnomalies.map((a, i) => (
                   <li key={i}>{a}</li>
                 ))}
@@ -220,8 +220,8 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
           />
         )}
 
-        {canAddRemark ? <div style={{ background: 'var(--color-bg-container)', padding: 12, borderRadius: 6 }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        {canAddRemark ? <div className="u-p-12 u-br-6" style={{ background: 'var(--color-bg-container)' }}>
+          <div className="u-d-flex u-gap-8 u-mb-8">
             <Input
               placeholder="你的角色/工序（可选，如：裁剪、车缝、质检）"
               value={authorRole}
@@ -241,7 +241,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
             maxLength={1000}
             showCount
           />
-          <div style={{ marginTop: 8 }}>
+          <div className="u-mt-8">
             <MultiImageUploadBox
               value={uploadedImages}
               onChange={setUploadedImages}
@@ -252,7 +252,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
           </div>
         </div> : null}
 
-        <div style={{ flex: 1, overflow: 'auto', minHeight: 200 }}>
+        <div className="u-flex-1 u-ov-auto" style={{ minHeight: 200 }}>
           <Spin spinning={totalLoading}>
             {unifiedItems.length === 0 && !totalLoading ? (
               <Empty description="暂无备注与链路记录" />
@@ -263,7 +263,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
               dataSource={unifiedItems}
               pagination={false}
               columns={[
-                { title: '操作时间', dataIndex: 'timeDisplay', key: 'time', width: 150, render: (v: string) => <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{v || '-'}</span> },
+                { title: '操作时间', dataIndex: 'timeDisplay', key: 'time', width: 150, render: (v: string) => <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>{v || '-'}</span> },
                 /**
                  * D-375：「操作类型」列曾在没有 tag 时渲染 it.author（人名）→ 表头写"操作类型"、
                  * 单元格却是人名，观感完全错位。改为：有 tag 用 tag，否则显示操作类型/来源，
@@ -271,15 +271,15 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
                  */
                 { title: '操作类型', key: 'type', width: 130, render: (_: unknown, it: any) => it.tag
                   ? <Tag color={it.tag.color} style={{ marginRight: 0 }}>{it.tag.label}</Tag>
-                  : <span style={{ fontWeight: 500 }}>{it.operation || it.operator || (it.isLink ? '链路' : '备注')}</span> },
+                  : <span className="u-fw-500">{it.operation || it.operator || (it.isLink ? '链路' : '备注')}</span> },
                 { title: '操作内容', key: 'content', render: (_: unknown, it: any) => (
                   <div>
                     {it.content && <div style={{ wordBreak: 'break-all' }}>{it.content}</div>}
                     {it.images && it.images.length > 0 && (
-                      <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      <div className="u-mt-4 u-d-flex u-gap-4 u-fwrap-wrap">
                         <Image.PreviewGroup>
                           {it.images.map((url: string, idx: number) => (
-                            <Image key={idx} src={getFullAuthedFileUrl(url)} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }} preview={{ cover: '预览' }} />
+                            <Image key={idx} src={getFullAuthedFileUrl(url)} className="u-objf-cover u-br-4 u-cur-pointer" style={{ width: 64, height: 64 }} preview={{ cover: '预览' }} />
                           ))}
                         </Image.PreviewGroup>
                       </div>

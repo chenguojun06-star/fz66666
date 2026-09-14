@@ -84,7 +84,7 @@ const WageFeedbackTab: React.FC = () => {
       render: (v: string, r: any) => v ? (
         <div>
           <div>{v}</div>
-          {r.resolverName && <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>处理人: {r.resolverName}</div>}
+          {r.resolverName && <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>处理人: {r.resolverName}</div>}
         </div>
       ) : '-',
     },
@@ -108,7 +108,7 @@ const WageFeedbackTab: React.FC = () => {
 
   return (
     <div>
-      <Row gutter={16} style={{ marginBottom: 16 }}>
+      <Row gutter={16} className="u-mb-16">
         <Col span={6}>
           <Card><Statistic title="总反馈" value={stats.totalCount ?? 0} prefix={<MessageOutlined />} /></Card>
         </Col>

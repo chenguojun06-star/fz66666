@@ -24,9 +24,9 @@ const InspectionHeader: React.FC<InspectionHeaderProps> = ({
   onWarehouse,
 }) => {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+    <div className="u-d-flex u-ai-center u-gap-12 u-mb-16">
       <Button icon={<ArrowLeftOutlined />} onClick={onBack}>返回</Button>
-      <span style={{ fontWeight: 600, fontSize: 16 }}>质检入库 - {order.orderNo}</span>
+      <span className="u-fw-600 u-fs-16">质检入库 - {order.orderNo}</span>
       {(plateTypeKey === 'FIRST') && <Tag color="blue">首</Tag>}
       {(plateTypeKey === 'REORDER' || plateTypeKey === 'REPLATE') && <Tag color="purple">翻</Tag>}
       {(urgencyKey === 'urgent') && <Tag color="red">急</Tag>}
@@ -34,7 +34,7 @@ const InspectionHeader: React.FC<InspectionHeaderProps> = ({
       <Tag color="blue">{order.styleNo}</Tag>
       <Tag color="green">{order.styleName}</Tag>
       {qcStatsCount > 0 && <Tag color="cyan">已质检 {qcStatsCount} 次</Tag>}
-      <div style={{ flex: 1 }} />
+      <div className="u-flex-1" />
       {onWarehouse && (
         <Button
           type="primary"

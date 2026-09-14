@@ -127,15 +127,15 @@ const TemplateCenter: React.FC = () => {
     {
       title: '图片', dataIndex: 'styleCoverUrl', key: 'styleCoverUrl', width: 72, align: 'center' as const,
       render: (url: string) =>
-        url ? (<Image src={getFullAuthedFileUrl(url)} width={48} style={{ height: 'auto', display: 'block', borderRadius: 4 }} preview={false} />)
-          : (<div style={{ width: 48, height: 48, margin: '0 auto', background: 'var(--color-bg-subtle)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)', fontSize: 14 }}>无图</div>),
+        url ? (<Image src={getFullAuthedFileUrl(url)} width={48} className="u-h-auto u-d-block u-br-4" preview={false} />)
+          : (<div className="u-br-4 u-d-flex u-ai-center u-jc-center u-fs-14" style={{ width: 48, height: 48, margin: '0 auto', background: 'var(--color-bg-subtle)', color: 'var(--color-text-quaternary)' }}>无图</div>),
     },
     { title: '名称', dataIndex: 'templateName', key: 'templateName', width: 220, render: (v) => String(v || '-') },
     { title: '类型', dataIndex: 'templateType', key: 'templateType', width: 90, render: (v) => <Tag color={typeColor(String(v || ''))}>{typeLabel(String(v || ''))}</Tag> },
     {
       title: (<Space size={6}><span>标识</span><Tooltip title="系统内部用来识别模板来源/用途，部分场景用于自动套用"><span style={{ cursor: 'help', color: 'rgba(0,0,0,0.45)' }}>?</span></Tooltip></Space>),
       dataIndex: 'templateKey', key: 'templateKey', width: 180,
-      render: (v) => { const formatted = formatTemplateKey(v); if (!formatted.full) return '-'; return <Text ellipsis={{ tooltip: formatted.full }} style={{ maxWidth: 160, display: 'inline-block' }}>{formatted.text}</Text>; },
+      render: (v) => { const formatted = formatTemplateKey(v); if (!formatted.full) return '-'; return <Text ellipsis={{ tooltip: formatted.full }} className="u-d-inline-block" style={{ maxWidth: 160 }}>{formatted.text}</Text>; },
     },
     { title: '来源款号', dataIndex: 'sourceStyleNo', key: 'sourceStyleNo', width: 140, render: (v) => String(v || '-') },
     { title: '更新时间', dataIndex: 'updateTime', key: 'updateTime', width: 170, render: (v) => String(v || '-') },
@@ -166,18 +166,18 @@ const TemplateCenter: React.FC = () => {
         headerContent={
           <Tabs activeKey={cardTab} onChange={(key) => setCardTab(key as 'list' | 'knowledge')}
             items={[{ key: 'list', label: '模板列表' }, ...(!isFactoryUser ? [{ key: 'knowledge', label: '工序库' }] : [])]}
-            style={{ marginBottom: 0 }}
+            className="u-mb-0"
           />
         }
       >
-        {showSmartErrorNotice && smartError ? (<Card style={{ marginBottom: 12 }}><SmartErrorNotice error={smartError} onFix={() => { void fetchList({ page: 1 }); }} /></Card>) : null}
+        {showSmartErrorNotice && smartError ? (<Card className="u-mb-12"><SmartErrorNotice error={smartError} onFix={() => { void fetchList({ page: 1 }); }} /></Card>) : null}
         {cardTab === 'knowledge' ? (
           <StyleProcessKnowledgeTab keyword={knowledgeKeyword} onKeywordChange={setKnowledgeKeyword} currentPage={knowledgePage} pageSize={knowledgePageSize} onPageChange={(page, size) => { setKnowledgePage(page); setKnowledgePageSize(size); }} selectedKeys={knowledgeSelectedKeys} onSelectionChange={setKnowledgeSelectedKeys} />
         ) : (
           <>
             <Card className="filter-card mb-sm">
               <Form form={queryForm}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: 16 }}>
+                <div className="u-d-flex u-jc-between u-ai-center u-w-full u-fwrap-wrap u-gap-16">
                   <Space wrap size={12}>
                     <Form.Item name="keyword" noStyle><Input value={keyword} onChange={(e) => { setKeyword(e.target.value); queryForm.setFieldsValue({ keyword: e.target.value }); }} placeholder="名称/关键字" allowClear style={{ width: 200 }} /></Form.Item>
                     <Form.Item name="templateType" noStyle><Select value={templateType || undefined} onChange={(value) => { setTemplateType(value || ''); queryForm.setFieldsValue({ templateType: value }); }} options={TEMPLATE_TYPE_OPTIONS.map((opt) => ({ label: opt.label, value: opt.value }))} placeholder="全部类型" allowClear style={{ width: 140 }} /></Form.Item>

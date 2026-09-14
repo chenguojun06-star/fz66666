@@ -75,7 +75,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
       width={typeof window !== 'undefined' ? Math.round(window.innerWidth * 0.85) : '85%'}  // D-209：加宽到屏宽85%，跳码区配置不再局促
       styles={{ body: { padding: '16px 20px', overflow: 'auto' } }}
       footer={
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+        <div className="u-d-flex u-jc-end u-gap-12">
           <Button onClick={onCancel}>取消</Button>
           <Button type="primary" onClick={onSubmit} disabled={!gradingDraftBaseSize}>
             保存并带出
@@ -86,7 +86,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
       {/* 行业预设模板 */}
       <PresetSection onApplyPreset={handleApplyPreset} />
 
-      <Divider style={{ margin: '12px 0' }} />
+      <Divider className="u-m-12px0" />
 
       {/* 基准码选择 */}
       <BaseSizeSection
@@ -96,12 +96,12 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
         onChange={handleBaseSizeChange}
       />
 
-      <Divider style={{ margin: '12px 0' }} />
+      <Divider className="u-m-12px0" />
 
       {/* 跳码区配置 */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 15 }}>2. 配置跳码区</div>
-        <div style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginBottom: 12 }}>
+        <div className="u-fw-600 u-mb-8 u-fs-15">2. 配置跳码区</div>
+        <div className="u-fs-13 u-mb-12" style={{ color: 'var(--color-text-tertiary)' }}>
           前区 = 比基准码小的码数，后区 = 比基准码大的码数。点击码数标签可切换选中状态。
         </div>
 

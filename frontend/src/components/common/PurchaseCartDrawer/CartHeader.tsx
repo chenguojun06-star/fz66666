@@ -13,7 +13,7 @@ export const CartHeader: React.FC<CartHeaderProps> = ({ cart, onClear }) => {
   const itemCount = cart?.items?.length ?? cart?.totalItems ?? 0;
   
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="u-d-flex u-jc-between u-ai-center">
       <span>采购购物车 {itemCount > 0 && `(${itemCount}件)`}</span>
       {itemCount > 0 && (
         <Button

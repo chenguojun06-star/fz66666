@@ -126,7 +126,7 @@ const ShareOrderPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'var(--color-bg-stripe)' }}>
+      <div className="u-d-flex u-jc-center u-ai-center" style={{ minHeight: '100vh', background: 'var(--color-bg-stripe)' }}>
         <Spin size="large" spinning tip="加载中..."><div /></Spin>
       </div>
     );
@@ -134,11 +134,11 @@ const ShareOrderPage: React.FC = () => {
 
   if (error || !data) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'var(--color-bg-stripe)' }}>
-        <div style={{ textAlign: 'center', padding: 40 }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}></div>
-          <div style={{ fontSize: 18, color: 'var(--color-text-secondary)', marginBottom: 8 }}>链接无效或已过期</div>
-          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>{error}</div>
+      <div className="u-d-flex u-jc-center u-ai-center" style={{ minHeight: '100vh', background: 'var(--color-bg-stripe)' }}>
+        <div className="u-ta-center" style={{ padding: 40 }}>
+          <div className="u-mb-16" style={{ fontSize: 48 }}></div>
+          <div className="u-mb-8" style={{ fontSize: 18, color: 'var(--color-text-secondary)' }}>链接无效或已过期</div>
+          <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{error}</div>
         </div>
       </div>
     );
@@ -166,13 +166,13 @@ const ShareOrderPage: React.FC = () => {
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 16px' }}>
 
         {/* 品牌标题 */}
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 14, color: 'var(--color-sky-500)', letterSpacing: 2, marginBottom: 4 }}>PRODUCTION TRACKING</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--status-processing-bg)', letterSpacing: 0.5, textShadow: '0 0 18px rgba(0,229,255,0.25)' }}>工序跟进追踪</div>
+        <div className="u-ta-center u-mb-24">
+          <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-sky-500)', letterSpacing: 2 }}>PRODUCTION TRACKING</div>
+          <div className="u-fw-700" style={{ fontSize: 22, color: 'var(--status-processing-bg)', letterSpacing: 0.5, textShadow: '0 0 18px rgba(0,229,255,0.25)' }}>工序跟进追踪</div>
         </div>
 
         <Alert
-          style={{ marginBottom: 16, borderRadius: 12, background: 'rgba(8,20,40,0.72)', borderColor: 'rgba(0,229,255,0.16)', color: 'var(--color-sky-50)' }}
+          className="u-mb-16 u-br-12" style={{ background: 'rgba(8,20,40,0.72)', borderColor: 'rgba(0,229,255,0.16)', color: 'var(--color-sky-50)' }}
           type="info"
           showIcon
           title="该分享链接1天内有效"
@@ -180,11 +180,11 @@ const ShareOrderPage: React.FC = () => {
         />
 
         {/* 订单基本信息 */}
-        <div style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '20px 24px', marginBottom: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(0,229,255,0.12)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+        <div className="u-mb-16" style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '20px 24px', boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(0,229,255,0.12)' }}>
+          <div className="u-d-flex u-jc-between u-ai-start u-mb-16">
             <div>
-              <div style={{ fontSize: 14, color: 'var(--color-blue-300)', marginBottom: 2 }}>订单编号</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-sky-50)', fontFamily: 'monospace' }}>{data.orderNo}</div>
+              <div className="u-fs-14 u-mb-2" style={{ color: 'var(--color-blue-300)' }}>订单编号</div>
+              <div className="u-fs-16 u-fw-700" style={{ color: 'var(--color-sky-50)', fontFamily: 'monospace' }}>{data.orderNo}</div>
             </div>
             <Tag color={pageRiskTone.color} style={{ fontSize: 14, padding: '2px 10px', borderRadius: 20, border: 'none', color: 'var(--color-bg-base)', boxShadow: `0 0 18px ${pageRiskTone.color}33` }}>
               {pageRiskTone.label}
@@ -205,7 +205,7 @@ const ShareOrderPage: React.FC = () => {
               { label: '预计交期', value: formatDate(data.plannedEndDate), labelStyle: shareInfoLabelStyle, valueStyle: shareInfoValueStyle },
               {
                 label: '总体进度',
-                value: <span style={{ color: 'var(--color-accent-cyan-bright)', fontWeight: 700 }}>{clampProgress(data.productionProgress ?? 0)}%</span>,
+                value: <span className="u-fw-700" style={{ color: 'var(--color-accent-cyan-bright)' }}>{clampProgress(data.productionProgress ?? 0)}%</span>,
                 labelStyle: shareInfoLabelStyle,
                 valueStyle: shareInfoValueStyle,
               },
@@ -213,35 +213,35 @@ const ShareOrderPage: React.FC = () => {
           />
         </div>
 
-        <div style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '18px 24px', marginBottom: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(57,255,20,0.14)' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--status-processing-bg)', marginBottom: 12 }}> 智能进度说明</div>
-          <div style={{ display: 'grid', gap: 10 }}>
-            <div style={{ borderRadius: 12, background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
-              <div style={{ fontSize: 14, color: 'var(--color-blue-300)', marginBottom: 4 }}>当前状态</div>
-              <div style={{ fontSize: 14, color: 'var(--color-blue-100)', lineHeight: 1.7 }}>{smartNarrative.summary}</div>
+        <div className="u-mb-16" style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '18px 24px', boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(57,255,20,0.14)' }}>
+          <div className="u-fs-14 u-fw-700 u-mb-12" style={{ color: 'var(--status-processing-bg)' }}> 智能进度说明</div>
+          <div className="u-d-grid u-gap-10">
+            <div className="u-br-12" style={{ background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
+              <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-blue-300)' }}>当前状态</div>
+              <div className="u-fs-14" style={{ color: 'var(--color-blue-100)', lineHeight: 1.7 }}>{smartNarrative.summary}</div>
             </div>
-            <div style={{ borderRadius: 12, background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
-              <div style={{ fontSize: 14, color: 'var(--color-blue-300)', marginBottom: 4 }}>当前判断</div>
-              <div style={{ fontSize: 14, color: 'var(--color-blue-100)', lineHeight: 1.7 }}>{smartNarrative.reason}</div>
+            <div className="u-br-12" style={{ background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
+              <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-blue-300)' }}>当前判断</div>
+              <div className="u-fs-14" style={{ color: 'var(--color-blue-100)', lineHeight: 1.7 }}>{smartNarrative.reason}</div>
             </div>
-            <div style={{ borderRadius: 12, background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
-              <div style={{ fontSize: 14, color: 'var(--color-blue-300)', marginBottom: 4 }}>预计说明</div>
-              <div style={{ fontSize: 14, color: 'var(--color-blue-100)', lineHeight: 1.7 }}>{smartNarrative.prediction}</div>
+            <div className="u-br-12" style={{ background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
+              <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-blue-300)' }}>预计说明</div>
+              <div className="u-fs-14" style={{ color: 'var(--color-blue-100)', lineHeight: 1.7 }}>{smartNarrative.prediction}</div>
             </div>
           </div>
         </div>
 
         {/* 工序进度 */}
-        <div style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '20px 24px', marginBottom: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(0,229,255,0.12)' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--status-processing-bg)', marginBottom: 16 }}>工序进度</div>
+        <div className="u-mb-16" style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '20px 24px', boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(0,229,255,0.12)' }}>
+          <div className="u-fs-14 u-fw-700 u-mb-16" style={{ color: 'var(--status-processing-bg)' }}>工序进度</div>
           {data.stages?.map(s => (
             <div key={s.stageName} style={{ marginBottom: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="u-d-flex u-jc-between u-ai-center u-mb-4">
+                <div className="u-d-flex u-ai-center u-gap-8">
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: STATUS_COLOR[s.status] }} />
-                  <span style={{ fontSize: 14, color: 'var(--color-blue-100)' }}>{s.stageName}</span>
+                  <span className="u-fs-14" style={{ color: 'var(--color-blue-100)' }}>{s.stageName}</span>
                 </div>
-                <span style={{ fontSize: 14, color: 'var(--color-sky-300)', fontWeight: 600 }}>{s.rate}%</span>
+                <span className="u-fs-14 u-fw-600" style={{ color: 'var(--color-sky-300)' }}>{s.rate}%</span>
               </div>
               <Progress
                 percent={s.rate}
@@ -257,19 +257,19 @@ const ShareOrderPage: React.FC = () => {
         {/* AI 预测 */}
         {ai && (
           <div style={{ background: `linear-gradient(135deg, rgba(8,20,40,0.88), rgba(8,20,40,0.76))`, border: `1px solid ${riskColor}30`, borderRadius: 16, padding: '18px 24px', marginBottom: 16, boxShadow: `0 8px 24px ${riskColor}14` }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--status-processing-bg)', marginBottom: 12 }}> AI 预测分析</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px' }}>
-                <div style={{ fontSize: 14, color: 'var(--color-blue-300)', marginBottom: 4 }}>预测完成日期</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--status-processing-bg)' }}>{ai.predictedFinishDate || '计算中'}</div>
+            <div className="u-fs-14 u-fw-700 u-mb-12" style={{ color: 'var(--status-processing-bg)' }}> AI 预测分析</div>
+            <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: '1fr 1fr' }}>
+              <div className="u-br-10" style={{ background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
+                <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-blue-300)' }}>预测完成日期</div>
+                <div className="u-fs-14 u-fw-700" style={{ color: 'var(--status-processing-bg)' }}>{ai.predictedFinishDate || '计算中'}</div>
               </div>
-              <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px' }}>
-                <div style={{ fontSize: 14, color: 'var(--color-blue-300)', marginBottom: 4 }}>预测置信度</div>
+              <div className="u-br-10" style={{ background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
+                <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-blue-300)' }}>预测置信度</div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: riskColor }}>{ai.confidence ?? 0}%</div>
               </div>
             </div>
             {ai.riskReason && (
-              <div style={{ marginTop: 10, fontSize: 14, color: 'var(--color-sky-50)', background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '8px 12px' }}>
+              <div className="u-mt-10 u-fs-14 u-br-8 u-p-8px12px" style={{ color: 'var(--color-sky-50)', background: 'rgba(255,255,255,0.04)' }}>
                  {ai.riskReason}
               </div>
             )}
@@ -278,27 +278,27 @@ const ShareOrderPage: React.FC = () => {
 
         {/* 最近扫码记录 */}
         {data.recentScans && data.recentScans.length > 0 && (
-          <div style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '20px 24px', marginBottom: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(0,229,255,0.12)' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--status-processing-bg)', marginBottom: 14 }}>最近生产记录</div>
+          <div className="u-mb-16" style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '20px 24px', boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(0,229,255,0.12)' }}>
+            <div className="u-fs-14 u-fw-700" style={{ color: 'var(--status-processing-bg)', marginBottom: 14 }}>最近生产记录</div>
             {data.recentScans.map((s: ScanEntry, i: number) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < data.recentScans!.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(57,255,20,0.14)', color: 'var(--color-accent-neon)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
+                <div className="u-d-flex u-ai-center u-gap-10">
+                  <div className="u-d-flex u-ai-center u-jc-center u-fs-14" style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(57,255,20,0.14)', color: 'var(--color-accent-neon)' }}>
 
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, color: 'var(--color-blue-100)', fontWeight: 500 }}>{s.processName || '工序'}</div>
-                    <div style={{ fontSize: 14, color: 'var(--color-blue-300)' }}>{formatTime(s.scanTime as string | null | undefined)}</div>
+                    <div className="u-fs-14 u-fw-500" style={{ color: 'var(--color-blue-100)' }}>{s.processName || '工序'}</div>
+                    <div className="u-fs-14" style={{ color: 'var(--color-blue-300)' }}>{formatTime(s.scanTime as string | null | undefined)}</div>
                   </div>
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-accent-cyan-bright)' }}>×{s.quantity as React.ReactNode}</div>
+                <div className="u-fs-14 u-fw-600" style={{ color: 'var(--color-accent-cyan-bright)' }}>×{s.quantity as React.ReactNode}</div>
               </div>
             ))}
           </div>
         )}
 
         {/* 底部说明 */}
-        <div style={{ textAlign: 'center', padding: '16px 0 8px', color: 'var(--color-blue-300)', fontSize: 14 }}>
+        <div className="u-ta-center u-fs-14" style={{ padding: '16px 0 8px', color: 'var(--color-blue-300)' }}>
           此链接由供应链系统生成
           {data.expiresAt && (
             <span> · 失效时间 {formatTime(new Date(data.expiresAt).toISOString())}</span>

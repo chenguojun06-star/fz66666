@@ -42,10 +42,10 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
   return (
     <div>
       {/* 菲号列表 - 平铺显示 */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+      <div className="u-mb-16">
+        <div className="u-d-flex u-ai-center u-jc-between u-mb-8">
           <Space>
-            <Text strong style={{ fontSize: 14 }}>菲号列表</Text>
+            <Text strong className="u-fs-14">菲号列表</Text>
             <Tag color={batchSelectedBundleQrs.length ? 'blue' : 'default'}>
               已选 {batchSelectedBundleQrs.length}/{batchSelectRows.length}
             </Tag>
@@ -61,7 +61,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
         </div>
 
         {batchSelectRows.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '32px 0', color: 'rgba(0,0,0,0.45)' }}>
+          <div className="u-ta-center" style={{ padding: '32px 0', color: 'rgba(0,0,0,0.45)' }}>
             {bundlesLoading ? <Spin spinning tip="正在加载菲号..."><div /></Spin> : '该订单暂无裁剪菲号'}
           </div>
         ) : (
@@ -100,7 +100,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
                   if (hints.length === 0) return tagEl;
                   return (
                     <Tooltip title={<div style={{ lineHeight: '22px' }}>{hints.map((h, i) => <div key={i}>{h}</div>)}</div>}>
-                      <Space size={4}>{tagEl}<InfoCircleOutlined style={{ color: 'var(--color-info)', fontSize: 12 }} /></Space>
+                      <Space size={4}>{tagEl}<InfoCircleOutlined className="u-fs-12" style={{ color: 'var(--color-info)' }} /></Space>
                     </Tooltip>
                   );
                 },
@@ -138,7 +138,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
       {showQcForm && (
         <Card
           title={isMultiSelected ? `批量质检（${batchSelectedBundleQrs.length} 个菲号）` : '质检操作'}
-          style={{ marginTop: 8 }}>
+          className="u-mt-8">
           <Form form={qcForm} layout="vertical">
             {/* 隐藏字段 */}
             <Form.Item name="orderNo" hidden><Input /></Form.Item>
@@ -154,18 +154,18 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
 
             {/* 已选菲号摘要 */}
             {isSingleSelected && singleSelectedBundle && (
-              <Alert type="info" showIcon style={{ marginBottom: 12 }}
+              <Alert type="info" showIcon className="u-mb-12"
                 title={`菲号: ${singleSelectedBundle.qrCode}  颜色: ${singleSelectedBundle.color || '-'}  码数: ${singleSelectedBundle.size || '-'}  质检数量: ${batchQtyByQr[String(singleSelectedBundle.qrCode || '').trim()] || singleSelectedBundle.quantity || 0}`}
               />
             )}
             {isMultiSelected && (
-              <Alert type="info" showIcon style={{ marginBottom: 12 }}
+              <Alert type="info" showIcon className="u-mb-12"
                 title={`已选 ${batchSelectedBundleQrs.length} 个菲号，合计 ${batchSelectedSummary.totalQty} 件`} />
             )}
 
             {/* 返修统计（单选且次品待返修）→ 提示可重新质检 */}
             {isSingleSelected && isSingleSelectedBundleBlocked && singleSelectedBundleRepairStats && (
-              <Alert type="warning" style={{ marginBottom: 12 }}
+              <Alert type="warning" className="u-mb-12"
                 title="该菲号为次品待返修 — 可进行返修质检"
                 description={`次品数量: ${singleSelectedBundleRepairStats.repairPool}  已返修: ${singleSelectedBundleRepairStats.repairedOut}  |  设置不合格数量为0即表示返修质检全部合格`}
               />
@@ -174,7 +174,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
             {/* 批量模式：批量合格/不合格 */}
             {isMultiSelected && !batchSelectedHasBlocked && (
               <>
-                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                <div className="u-d-flex u-gap-12 u-mt-8">
                   <Button type="primary" size="large" loading={submitLoading}
                     onClick={handleBatchQualifiedSubmit}>
                     批量合格质检（{batchSelectedSummary.totalQty} 件）
@@ -188,7 +188,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
               </>
             )}
             {isMultiSelected && batchSelectedHasBlocked && (
-              <Alert type="warning" showIcon style={{ marginBottom: 12 }}
+              <Alert type="warning" showIcon className="u-mb-12"
                 title="选中包含次品待返修菲号，请逐个处理或取消选择后再批量操作" />
             )}
 
@@ -198,18 +198,18 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
                 <Row gutter={16}>
                   <Col span={8}>
                     <Form.Item name="warehousingQuantity" label="质检数量">
-                      <InputNumber style={{ width: '100%' }} disabled />
+                      <InputNumber className="u-w-full" disabled />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
                     <Form.Item name="qualifiedQuantity" label="合格数量">
-                      <InputNumber style={{ width: '100%' }} disabled />
+                      <InputNumber className="u-w-full" disabled />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
                     <Form.Item name="unqualifiedQuantity" label="不合格数量">
                       <InputNumber
-                        style={{ width: '100%' }}
+                        className="u-w-full"
                         min={0}
                         max={Number(watchedWarehousingQty || 0) || 0}
                         onChange={(val) => {
@@ -272,7 +272,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
                   </Form.Item>
                 )}
 
-                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                <div className="u-d-flex u-gap-12 u-mt-8">
                   <Button type="primary" size="large" loading={submitLoading} onClick={handleQcSubmit}>
                     {isSingleSelectedBundleBlocked ? '返修质检' : '确定'}
                   </Button>
@@ -285,7 +285,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
       )}
 
       {!showQcForm && batchSelectRows.length > 0 && (
-        <Alert type="info" showIcon style={{ marginTop: 8 }}
+        <Alert type="info" showIcon className="u-mt-8"
           title="请勾选上方菲号，开始质检操作" />
       )}
     </div>

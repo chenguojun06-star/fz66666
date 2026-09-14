@@ -112,7 +112,7 @@ const EcSalesRevenue: React.FC = () => {
       title: '流水号',
       dataIndex: 'revenueNo',
       width: 170,
-      render: (v: string) => <Text code style={{ fontSize: 14 }}>{v}</Text>,
+      render: (v: string) => <Text code className="u-fs-14">{v}</Text>,
     },
     {
       title: '平台',
@@ -136,8 +136,8 @@ const EcSalesRevenue: React.FC = () => {
       ellipsis: true,
       render: (_: unknown, r: EcRevenueRecord) => (
         <Space orientation="vertical" size={0}>
-          <Text ellipsis style={{ fontSize: 14 }}>{r.productName}</Text>
-          <Text type="secondary" style={{ fontSize: 14 }}>{r.skuCode}</Text>
+          <Text ellipsis className="u-fs-14">{r.productName}</Text>
+          <Text type="secondary" className="u-fs-14">{r.skuCode}</Text>
         </Space>
       ),
     },
@@ -153,7 +153,7 @@ const EcSalesRevenue: React.FC = () => {
       width: 100,
       align: 'right',
       render: (v: number) => (
-        <Text style={{ color: 'var(--color-success)', fontWeight: 600 }}>
+        <Text className="u-fw-600" style={{ color: 'var(--color-success)' }}>
           {formatMoney(v)}
         </Text>
       ),
@@ -163,7 +163,7 @@ const EcSalesRevenue: React.FC = () => {
       dataIndex: 'productionOrderNo',
       width: 140,
       render: (v: string) =>
-        v ? <Text code style={{ fontSize: 14 }}>{v}</Text> : <Text type="secondary">-</Text>,
+        v ? <Text code className="u-fs-14">{v}</Text> : <Text type="secondary">-</Text>,
     },
     {
       title: '发货时间',
@@ -231,15 +231,15 @@ const EcSalesRevenue: React.FC = () => {
 
   return (
     <>
-      <Space orientation="vertical" size={16} style={{ width: '100%' }}>
+      <Space orientation="vertical" size={16} className="u-w-full">
         {/* 汇总卡片 */}
         <Row gutter={16}>
           <Col span={8}>
             <Card loading={summaryLoading && !summary}>
               <Statistic
-                title={<><ClockCircleOutlined style={{ color: 'orange', marginRight: 4 }} />待核账</>}
+                title={<><ClockCircleOutlined className="u-mr-4" style={{ color: 'orange' }} />待核账</>}
                 value={fmtAmt(summary?.pendingAmount)}
-                suffix={<Text type="secondary" style={{ fontSize: 14 }}>（{summary?.pendingCount ?? 0} 笔）</Text>}
+                suffix={<Text type="secondary" className="u-fs-14">（{summary?.pendingCount ?? 0} 笔）</Text>}
                 styles={{ content: { color: 'orange', fontSize: 18 } }}
               />
             </Card>
@@ -247,9 +247,9 @@ const EcSalesRevenue: React.FC = () => {
           <Col span={8}>
             <Card loading={summaryLoading && !summary}>
               <Statistic
-                title={<><CheckCircleOutlined style={{ color: 'var(--color-primary)', marginRight: 4 }} />已核账</>}
+                title={<><CheckCircleOutlined className="u-mr-4" style={{ color: 'var(--color-primary)' }} />已核账</>}
                 value={fmtAmt(summary?.confirmedAmount)}
-                suffix={<Text type="secondary" style={{ fontSize: 14 }}>（{summary?.confirmedCount ?? 0} 笔）</Text>}
+                suffix={<Text type="secondary" className="u-fs-14">（{summary?.confirmedCount ?? 0} 笔）</Text>}
                 styles={{ content: { color: 'var(--color-primary)', fontSize: 18 } }}
               />
             </Card>
@@ -257,9 +257,9 @@ const EcSalesRevenue: React.FC = () => {
           <Col span={8}>
             <Card loading={summaryLoading && !summary}>
               <Statistic
-                title={<><DollarOutlined style={{ color: 'var(--color-success)', marginRight: 4 }} />已入账净收入</>}
+                title={<><DollarOutlined className="u-mr-4" style={{ color: 'var(--color-success)' }} />已入账净收入</>}
                 value={fmtAmt(summary?.netIncome)}
-                suffix={<Text type="secondary" style={{ fontSize: 14 }}>（{summary?.reconciledCount ?? 0} 笔）</Text>}
+                suffix={<Text type="secondary" className="u-fs-14">（{summary?.reconciledCount ?? 0} 笔）</Text>}
                 styles={{ content: { color: 'var(--color-success)', fontSize: 18 } }}
               />
             </Card>
@@ -268,7 +268,7 @@ const EcSalesRevenue: React.FC = () => {
 
         {/* 按平台分组统计 */}
         {summaryLoading && !summary ? (
-          <Card title="平台销售分布" size="small"><div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>加载中...</div></Card>
+          <Card title="平台销售分布" size="small"><div className="u-ta-center u-p-24" style={{ color: 'var(--color-text-muted)' }}>加载中...</div></Card>
         ) : summary?.platformBreakdown && summary.platformBreakdown.length > 0 ? (
           <Card title="平台销售分布" size="small">
             <Row gutter={[8, 8]}>
@@ -277,17 +277,17 @@ const EcSalesRevenue: React.FC = () => {
                 return (
                   <Col xs={12} sm={8} md={6} key={item.platform}>
                     <Card size="small" style={{ borderLeft: `3px solid ${t.color}` }}>
-                      <Space direction="vertical" size={2} style={{ width: '100%' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Space direction="vertical" size={2} className="u-w-full">
+                        <div className="u-d-flex u-jc-between u-ai-center">
                           <Tag color={t.color}>{t.label}</Tag>
-                          <Text type="secondary" style={{ fontSize: 12 }}>{item.orderCount.toLocaleString()}单</Text>
+                          <Text type="secondary" className="u-fs-12">{item.orderCount.toLocaleString()}单</Text>
                         </div>
                         <div>
-                          <Text style={{ color: 'var(--color-success)', fontWeight: 600, fontSize: 16 }}>
+                          <Text className="u-fw-600 u-fs-16" style={{ color: 'var(--color-success)' }}>
                             ¥{formatMoney(item.totalPayAmount)}
                           </Text>
                         </div>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                        <div className="u-fs-12" style={{ color: 'var(--color-text-muted)' }}>
                           {item.totalQuantity.toLocaleString()}件 · 运费¥{formatMoney(item.totalFreight)} · 净¥{formatMoney(item.netRevenue)}
                         </div>
                       </Space>
@@ -298,7 +298,7 @@ const EcSalesRevenue: React.FC = () => {
             </Row>
           </Card>
         ) : summary && !summaryLoading ? (
-          <Card title="平台销售分布" size="small"><div style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-muted)' }}>暂无平台销售数据</div></Card>
+          <Card title="平台销售分布" size="small"><div className="u-ta-center u-p-24" style={{ color: 'var(--color-text-muted)' }}>暂无平台销售数据</div></Card>
         ) : null}
 
         {/* 筛选栏 */}
@@ -346,7 +346,7 @@ const EcSalesRevenue: React.FC = () => {
         </Card>
 
         {/* 数据表格 */}
-        <Card style={{ overflow: 'hidden' }}>
+        <Card className="u-ov-hidden">
           <ResizableTable<EcRevenueRecord>
             rowKey="id"
             loading={loading}

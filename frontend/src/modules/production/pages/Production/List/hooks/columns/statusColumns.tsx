@@ -32,19 +32,19 @@ export function buildStatusColumns({
         };
         const sla = slaMap[record.deliverySlaStatus || ''] || null;
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, lineHeight: 1.4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-              <Tag color={color} style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 4px' }}>{text}</Tag>
+          <div className="u-d-flex u-fd-column" style={{ gap: 3, lineHeight: 1.4 }}>
+            <div className="u-d-flex u-ai-center u-gap-4 u-fwrap-wrap">
+              <Tag color={color} className="u-m-0 u-fs-12 u-lh-18px u-p-04px">{text}</Tag>
               <span style={{ ...CELL_CHIP_STYLE, color: 'var(--color-text-secondary)', fontWeight: 500 }}>{progress}%</span>
               {deliveryDate !== '-' && <span style={CELL_CHIP_STYLE}>{deliveryDate}</span>}
               {remain.text && remain.text !== '-' && (
                 <span style={{ ...CELL_CHIP_STYLE, fontWeight: 600, color: remain.color }}>{remain.text}</span>
               )}
-              {record.isQuickResponse && <Tag color="volcano" style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 4px' }}>快反</Tag>}
+              {record.isQuickResponse && <Tag color="volcano" className="u-m-0 u-fs-12 u-lh-18px u-p-04px">快反</Tag>}
             </div>
             {stagnantDays !== undefined && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--color-danger)', animation: 'pulse-dot 1.5s infinite' }} />
+              <div className="u-d-flex u-ai-center" style={{ gap: 3 }}>
+                <span className="u-d-inline-block" style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--color-danger)', animation: 'pulse-dot 1.5s infinite' }} />
                 <span style={{ ...CELL_CHIP_STYLE, color: 'var(--color-danger)', fontWeight: 500 }}>停滞{stagnantDays}天</span>
               </div>
             )}

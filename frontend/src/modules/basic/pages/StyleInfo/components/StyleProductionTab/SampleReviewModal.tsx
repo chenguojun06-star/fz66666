@@ -34,7 +34,7 @@ const SampleReviewModal: React.FC<Props> = ({
       // 提高 mask 层级，确保覆盖在 Drawer 之上
       styles={{ mask: { zIndex: 1099 } }}
     >
-      <Form form={form} layout="vertical" style={{ marginTop: 8 }}>
+      <Form form={form} layout="vertical" className="u-mt-8">
         <Form.Item
           name="reviewStatus"
           label="审核结论"

@@ -12,7 +12,7 @@ const ShipHistoryList: React.FC<ShipHistoryListProps> = ({ shipHistory }) => {
 
   return (
     <>
-      <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 6 }}>历史发货记录</div>
+      <div className="u-fw-600 u-fs-14 u-mb-6" style={{ color: 'var(--color-text-secondary)' }}>历史发货记录</div>
       <div style={{
         background: 'var(--color-bg-container)', border: '1px solid var(--color-border-light)', borderRadius: 4,
         padding: '6px 10px', marginBottom: 12, maxHeight: 120, overflowY: 'auto',
@@ -25,7 +25,7 @@ const ShipHistoryList: React.FC<ShipHistoryListProps> = ({ shipHistory }) => {
             <span><b>{rec.shipQuantity ?? '-'}</b> 件</span>
             {rec.trackingNo && <span style={{ color: 'var(--color-text-secondary)' }}>单号：{rec.trackingNo}</span>}
             {rec.receiveStatus && (
-              <Tag color={rec.receiveStatus === 'received' ? 'success' : rec.receiveStatus === 'pending' ? 'processing' : 'default'} style={{ fontSize: 14, padding: '0 4px', lineHeight: '16px' }}>
+              <Tag color={rec.receiveStatus === 'received' ? 'success' : rec.receiveStatus === 'pending' ? 'processing' : 'default'} className="u-fs-14 u-p-04px u-lh-16px">
                 {rec.receiveStatus === 'received' ? '已收货' : rec.receiveStatus === 'pending' ? '待收货' : rec.receiveStatus}
               </Tag>
             )}

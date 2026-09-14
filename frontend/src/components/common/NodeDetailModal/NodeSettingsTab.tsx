@@ -65,46 +65,21 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
         title={hasBundles
           ? '该订单已按菲号管理：勾选菲号 → 选择执行工厂 → 保存委派（内部不再重复计件）'
           : '可以为不同的生产节点指定执行工厂'}
-        style={{ marginBottom: 10 }}
+        className="u-mb-10"
       />
-      <div style={{
-        padding: '8px 12px',
-        border: '1px solid var(--color-border)',
-        borderRadius: 12,
-        marginBottom: 8,
-        fontSize: "var(--font-size-xs)",
-        color: 'var(--color-text-secondary)'
-      }}>
+      <div className="u-p-8px12px u-br-12 u-mb-8 u-fs-var--font-size-xs" style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}>
         订单：<span style={{ color: 'var(--color-text-primary)' }}>{orderInfoLine}</span>
       </div>
 
       {cuttingSizeItems.length > 0 && (
-        <div style={{
-          padding: '8px 12px',
-          border: '1px solid var(--color-border)',
-          background: 'var(--color-bg-container)',
-          borderRadius: 12,
-          marginBottom: 8,
-          fontSize: "var(--font-size-sm)",
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          flexWrap: 'wrap'
-        }}>
-          <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>裁剪数量：</span>
+        <div className="u-p-8px12px u-br-12 u-mb-8 u-fs-var--font-size-sm u-d-flex u-ai-center u-gap-8 u-fwrap-wrap" style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-container)' }}>
+          <span className="u-fw-600" style={{ color: 'var(--color-text-primary)' }}>裁剪数量：</span>
           {cuttingSizeItems.map(item => (
-            <span key={item.size} style={{
-              color: 'var(--color-primary)',
-              fontWeight: 600,
-              padding: '2px 8px',
-              background: 'var(--color-bg-base)',
-              borderRadius: 4,
-              border: '1px solid var(--color-border)'
-            }}>
+            <span key={item.size} className="u-fw-600 u-br-4" style={{ color: 'var(--color-primary)', padding: '2px 8px', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)' }}>
               {item.size}: {item.quantity}
             </span>
           ))}
-          <span style={{ color: 'var(--color-primary)', fontWeight: 700, marginLeft: 4 }}>
+          <span className="u-fw-700 u-ml-4" style={{ color: 'var(--color-primary)' }}>
             总计: {cuttingSizeItems.reduce((sum, item) => sum + item.quantity, 0)}
           </span>
         </div>
@@ -122,7 +97,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
           processOptions={processList}
           nodeInfo={
             <>
-              <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{nodeName || '-'}</span>
+              <span className="u-fw-600" style={{ color: 'var(--color-text-primary)' }}>{nodeName || '-'}</span>
               <span>当前 {nodeStatusText}</span>
               <span>工序 {processDisplay}</span>
               <span>
@@ -165,7 +140,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
             width: '100%',
             overflow: 'hidden',
           }}>
-            <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', minWidth: 0 }}>{nodeName || '-'}</div>
+            <div className="u-fw-600" style={{ color: 'var(--color-text-primary)', minWidth: 0 }}>{nodeName || '-'}</div>
             <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{nodeStatusText}</div>
             <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{delegateProcessCode || '-'}</div>
             <Select
@@ -177,7 +152,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
                 return { value: name, label: formatProcessDisplayName(code, name) };
               }).filter((o) => o.value)}
               disabled
-              style={{ width: '100%', minWidth: 0 }}
+              className="u-w-full" style={{ minWidth: 0 }}
             />
             <InputNumber
               placeholder="数量"
@@ -186,7 +161,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
               value={typeof currentNodeData.assigneeQuantity === 'number' ? currentNodeData.assigneeQuantity : undefined}
               onChange={(v) => updateNodeData('assigneeQuantity', v ?? undefined)}
               disabled={disableEdit}
-              style={{ width: '100%', minWidth: 0 }}
+              className="u-w-full" style={{ minWidth: 0 }}
             />
             <Select
               value={currentNodeData.delegateType || 'factory'}
@@ -205,7 +180,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
                 { value: 'person', label: '人员' },
               ]}
               disabled={disableEdit}
-              style={{ width: '100%', minWidth: 0 }}
+              className="u-w-full" style={{ minWidth: 0 }}
             />
             <Select
               allowClear
@@ -218,7 +193,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
               }
               options={factories?.map(f => ({ value: f.id, label: f.factoryName })) || []}
               disabled={disableEdit || currentNodeData.delegateType === 'person'}
-              style={{ width: '100%', minWidth: 0 }}
+              className="u-w-full" style={{ minWidth: 0 }}
             />
             <Select
               allowClear
@@ -234,13 +209,13 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
               }
               options={users.map(u => ({ value: u.id, label: u.name || u.username }))}
               disabled={disableEdit || currentNodeData.delegateType === 'factory'}
-              style={{ width: '100%', minWidth: 0 }}
+              className="u-w-full" style={{ minWidth: 0 }}
             />
             <Input
               prefix="¥"
               value={Number.isFinite(fixedUnitPrice) ? fixedUnitPrice.toFixed(2) : '0.00'}
               disabled
-              style={{ width: '100%', minWidth: 0 }}
+              className="u-w-full" style={{ minWidth: 0 }}
             />
             <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{formatDelegationTime(currentNodeData.updatedAt)}</div>
             <Button type="primary" loading={saving} onClick={handleSave} disabled={disableEdit}>
@@ -250,19 +225,19 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
         </>
       )}
 
-      <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--color-text-secondary)', marginBottom: 4 }}>委派历史</div>
+      <div className="u-fs-var--font-size-xs u-mb-4" style={{ color: 'var(--color-text-secondary)' }}>委派历史</div>
       {currentNodeData.history && currentNodeData.history.length > 0 ? (
-        <div style={{ border: '1px solid var(--color-border)', borderRadius: 12, padding: '10px' }}>
+        <div className="u-br-12" style={{ border: '1px solid var(--color-border)', padding: '10px' }}>
           {currentNodeData.history.slice().reverse().map((h, idx) => (
             <div key={`${h.time}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', borderBottom: idx === currentNodeData.history!.length - 1 ? 'none' : '1px solid var(--color-border)' }}>
               <div style={{ color: 'var(--color-text-primary)' }}>{h.operatorName || '-'}</div>
               <div style={{ color: 'var(--color-text-secondary)' }}>{formatDelegationTime(h.time)}</div>
-              <div style={{ color: 'var(--color-text-secondary)', flex: 1 }}>{h.changes || '-'}</div>
+              <div className="u-flex-1" style={{ color: 'var(--color-text-secondary)' }}>{h.changes || '-'}</div>
             </div>
           ))}
         </div>
       ) : (
-        <div style={{ border: '1px solid var(--color-border)', borderRadius: 12, padding: '24px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+        <div className="u-br-12 u-ta-center" style={{ border: '1px solid var(--color-border)', padding: '24px', color: 'var(--color-text-secondary)' }}>
           暂无委派记录
         </div>
       )}

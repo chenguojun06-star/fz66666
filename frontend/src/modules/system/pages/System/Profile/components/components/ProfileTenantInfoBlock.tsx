@@ -22,18 +22,18 @@ const ProfileTenantInfoBlock: React.FC<ProfileTenantInfoBlockProps> = ({
     if (!tenantInfo?.tenantCode) return null;
 
     return (
-        <Card title={<>工厂信息 <Typography.Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>（如需修改请联系管理员）</Typography.Text></>} style={{ marginBottom: 16 }}>
+        <Card title={<>工厂信息 <Typography.Text type="secondary" className="u-fs-13 u-fw-400">（如需修改请联系管理员）</Typography.Text></>} className="u-mb-16">
             <Form form={tenantForm} layout="vertical" requiredMark={false}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 16px' }}>
+                <div className="u-d-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '0 16px' }}>
                     <Form.Item label="工厂名称" name="tenantName"><Input disabled autoComplete="organization" /></Form.Item>
                     <Form.Item label="联系人" name="contactName"><Input disabled autoComplete="name" /></Form.Item>
                     <Form.Item label="联系电话" name="contactPhone"><Input disabled autoComplete="tel" /></Form.Item>
                 </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                <div className="u-d-flex u-gap-8" style={{ alignItems: 'flex-end' }}>
                     <Form.Item
                         label="企业微信群机器人 Webhook"
                         name="wechatWorkWebhookUrl"
-                        style={{ flex: 1, marginBottom: 0 }}
+                        className="u-flex-1 u-mb-0"
                         tooltip="广播订单风险预警和透单通知到工厂微信群；空时不发送"
                     >
                         <Input
@@ -42,14 +42,14 @@ const ProfileTenantInfoBlock: React.FC<ProfileTenantInfoBlockProps> = ({
                             autoComplete="url"
                         />
                     </Form.Item>
-                    <Form.Item style={{ marginBottom: 0 }}>
+                    <Form.Item className="u-mb-0">
                         <Button type="primary" onClick={onSaveWebhook} loading={savingWebhook}>
                             保存
                         </Button>
                     </Form.Item>
                 </div>
             </Form>
-            <Typography.Text type="secondary" style={{ fontSize: 14 }}>
+            <Typography.Text type="secondary" className="u-fs-14">
                 工厂码：<Typography.Text code copyable>{tenantInfo.tenantCode}</Typography.Text>（不可修改）
             </Typography.Text>
         </Card>

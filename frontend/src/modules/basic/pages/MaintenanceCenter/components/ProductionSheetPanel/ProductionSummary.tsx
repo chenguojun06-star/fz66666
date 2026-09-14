@@ -9,7 +9,7 @@ interface ProductionSummaryProps {
 }
 
 const ProductionSummary: React.FC<ProductionSummaryProps> = ({ record }) => (
-  <div style={{ display: 'grid', gap: 4, marginBottom: 10 }}>
+  <div className="u-d-grid u-gap-4 u-mb-10">
     <div style={directTitleStyle}>制单维护</div>
     <div style={directMetaStyle}>款号 {record.styleNo || '-'} · {toCategoryCn((record as any).category) || '-'}</div>
     <div style={directMetaStyle}>推送人 {(record as any).productionAssignee || '-'} · 推送时间 {(record as any).productionCompletedTime ? formatDateTime((record as any).productionCompletedTime) : '-'}</div>

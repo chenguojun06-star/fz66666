@@ -49,7 +49,7 @@ const ReceivableDetailModal: React.FC<{
       width="56vw"
       destroyOnHidden
     >
-      <div style={{ marginTop: 16 }}>
+      <div className="u-mt-16">
         <Descriptions column={2} bordered>
           <Descriptions.Item label="客户名称">{detail?.customerName || '-'}</Descriptions.Item>
           <Descriptions.Item label="关联订单">{detail?.orderNo || '-'}</Descriptions.Item>
@@ -68,7 +68,7 @@ const ReceivableDetailModal: React.FC<{
           <Descriptions.Item label="到期日">{detail?.dueDate || '-'}</Descriptions.Item>
           <Descriptions.Item label="备注">{detail?.description || '-'}</Descriptions.Item>
         </Descriptions>
-        <Card title="回款流水" style={{ marginTop: 16 }}>
+        <Card title="回款流水" className="u-mt-16">
           <ResizableTable
             rowKey="id"
 

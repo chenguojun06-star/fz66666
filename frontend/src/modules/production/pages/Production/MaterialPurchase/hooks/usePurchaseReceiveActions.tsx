@@ -87,7 +87,7 @@ export function usePurchaseReceiveActions({
             <p>仓库库存：<strong>{availableStock}</strong></p>
             {usedQty > 0 && <p>已领取出库：<strong>{usedQty}</strong>（剩余可领 <strong style={{ color: 'var(--color-primary)' }}>{remainingPickup}</strong>）</p>}
             <p>仓库领取数量：<strong style={{ color: 'var(--color-primary)' }}>{pickQty}</strong></p>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>领取后将创建出库单，等待仓库确认出库</p>
+            <p className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>领取后将创建出库单，等待仓库确认出库</p>
           </div>
         ),
         okText: '确认领取',
@@ -127,14 +127,14 @@ export function usePurchaseReceiveActions({
           title: '发现当天同款面辅料采购任务',
           content: (
             <div>
-              <p style={{ marginBottom: 8 }}>当天有 <strong>{mergeableCount}</strong> 条相同面辅料（<strong>{materialInfo}</strong>）的待采购任务，是否合并采购？</p>
-              <div style={{ maxHeight: 200, overflow: 'auto', background: 'var(--color-bg-subtle)', padding: '8px 12px', borderRadius: 4, fontSize: 14 }}>
+              <p className="u-mb-8">当天有 <strong>{mergeableCount}</strong> 条相同面辅料（<strong>{materialInfo}</strong>）的待采购任务，是否合并采购？</p>
+              <div className="u-ov-auto u-p-8px12px u-br-4 u-fs-14" style={{ maxHeight: 200, background: 'var(--color-bg-subtle)' }}>
                 {mergeableItems.map((item, i) => (
                   <div key={item.id} style={{ marginBottom: 4, borderBottom: i < mergeableItems.length - 1 ? '1px solid var(--color-border-antd)' : 'none', paddingBottom: 4 }}>
                     <span style={{ color: 'var(--color-text-secondary)' }}>{item.orderNo || item.styleNo || '-'}</span>{' '}
                     <span>{item.materialName}</span>{' '}
                     <span style={{ color: 'var(--color-primary)' }}>{formatMaterialQuantity(item.purchaseQuantity)}{item.unit || ''}</span>
-                    {item.supplierName ? <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 8 }}>{item.supplierName}</span> : null}
+                    {item.supplierName ? <span className="u-ml-8" style={{ color: 'var(--color-text-tertiary)' }}>{item.supplierName}</span> : null}
                   </div>
                 ))}
               </div>
@@ -179,7 +179,7 @@ export function usePurchaseReceiveActions({
             <p>物料：<strong>{record.materialName || record.materialCode}</strong> {record.color ? `(${record.color})` : ''}</p>
             <p>采购数量：<strong>{formatMaterialQuantity(record.purchaseQuantity)}{record.unit || ''}</strong></p>
             <p>供应商：{record.supplierName || '-'}</p>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>确认后将直接创建采购任务</p>
+            <p className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>确认后将直接创建采购任务</p>
           </div>
         ),
         okText: '确认采购',
@@ -278,12 +278,12 @@ export function usePurchaseReceiveActions({
         content: (
           <div>
             <p>即将采购以下 <strong>{pending.length}</strong> 项物料（有库存自动出库，无库存按外采登记，数量可调整）：</p>
-            <div style={{ maxHeight: 260, overflow: 'auto', marginTop: 8, fontSize: 13 }}>
+            <div className="u-ov-auto u-mt-8 u-fs-13" style={{ maxHeight: 260 }}>
               {pending.map((p, i) => (
                 <div key={i} style={{ padding: '6px 0', borderBottom: i < pending.length - 1 ? '1px solid var(--color-border-light)' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                  <span style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 500 }}>{p.materialName || p.materialCode}</div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                  <span className="u-flex-1">
+                    <div className="u-fw-500">{p.materialName || p.materialCode}</div>
+                    <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
                       {[p.materialCode, p.specifications, p.color].filter(Boolean).join(' | ') || '-'}
                       {p.unitPrice != null ? ` | ¥${Number(p.unitPrice).toFixed(2)}` : ''}
                       {p.supplierName ? ` | ${p.supplierName}` : ''}
@@ -333,22 +333,22 @@ export function usePurchaseReceiveActions({
       content: (
         <div>
           <p>确认批量采购以下物料：</p>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+          <p className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
             有库存出库 <strong>{withStock.length}</strong> 项（按库存自动出库）+ 无库存外采 <strong>{noStock.length}</strong> 项（数量可调整）
           </p>
-          <div style={{ maxHeight: 260, overflow: 'auto', marginTop: 8, fontSize: 13 }}>
+          <div className="u-ov-auto u-mt-8 u-fs-13" style={{ maxHeight: 260 }}>
             {[...withStock, ...noStock].map((m, i) => {
               const hasStock = Number(m.availableStock ?? 0) > 0;
               return (
-                <div key={i} style={{ padding: '6px 0', borderBottom: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                  <span style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 500 }}>{m.materialName || m.materialCode}</div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                <div key={i} className="u-d-flex u-jc-between u-ai-center u-gap-8" style={{ padding: '6px 0', borderBottom: '1px solid var(--color-border-light)' }}>
+                  <span className="u-flex-1">
+                    <div className="u-fw-500">{m.materialName || m.materialCode}</div>
+                    <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
                       {[m.materialCode, m.specifications, m.color].filter(Boolean).join(' | ') || '-'}
                     </div>
                   </span>
                   {hasStock ? (
-                    <span style={{ color: 'var(--color-success)', whiteSpace: 'nowrap' }}>
+                    <span className="u-ws-nowrap" style={{ color: 'var(--color-success)' }}>
                       出库 {m.canPickQty}{m.unit || ''}
                     </span>
                   ) : (

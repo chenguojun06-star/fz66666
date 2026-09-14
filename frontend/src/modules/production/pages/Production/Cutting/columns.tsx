@@ -55,7 +55,7 @@ export function useTaskColumns({
         <a
           onClick={(e) => { e.stopPropagation(); goToEntry(record); }}
           title={String(v || '').trim() || '-'}
-          style={{ color: 'var(--primary-color)', cursor: 'pointer' }}
+          className="u-cur-pointer" style={{ color: 'var(--primary-color)' }}
         >
           <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>
         </a>

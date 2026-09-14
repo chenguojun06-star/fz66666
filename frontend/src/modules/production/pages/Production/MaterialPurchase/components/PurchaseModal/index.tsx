@@ -151,7 +151,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
       maskClosable={false}
       footer={getFooter()}
     >
-      <div style={{ padding: '16px', flex: 1, overflow: 'auto' }}>
+      <div className="u-flex-1 u-ov-auto" style={{ padding: '16px' }}>
         {dialogMode === 'preview' ? (
           <PurchasePreviewView previewList={previewList} isMobile={isMobile} />
         ) : dialogMode === 'view' ? (

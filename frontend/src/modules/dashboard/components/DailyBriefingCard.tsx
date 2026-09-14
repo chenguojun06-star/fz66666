@@ -79,12 +79,12 @@ const DailyBriefingCard: React.FC = () => {
       return (
         <div style={{ padding: 8 }}>
           <Skeleton active paragraph={{ rows: 2 }} title />
-          <Row gutter={[12, 12]} style={{ marginTop: 16 }}>
+          <Row gutter={[12, 12]} className="u-mt-16">
             {METRICS.map((m) => (
               <Col xs={12} sm={8} md={8} lg={8} xl={6} key={m.key}>
                 <div style={METRIC_CARD_STYLE}>
                   <Skeleton active paragraph={{ rows: 1, width: '60%' }} title={false} />
-                  <Skeleton.Button active size="small" block style={{ marginTop: 8 }} />
+                  <Skeleton.Button active size="small" block className="u-mt-8" />
                 </div>
               </Col>
             ))}
@@ -95,10 +95,10 @@ const DailyBriefingCard: React.FC = () => {
 
     if (error) {
       return (
-        <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
-          <WarningOutlined style={{ color: 'var(--color-error, var(--color-danger))', fontSize: 28 }} />
-          <div style={{ marginTop: 8 }}>{error}</div>
-          <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData} style={{ marginTop: 12 }}>
+        <div className="u-p-24 u-ta-center" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
+          <WarningOutlined className="u-fs-28" style={{ color: 'var(--color-error, var(--color-danger))' }} />
+          <div className="u-mt-8">{error}</div>
+          <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData} className="u-mt-12">
             重试
           </Button>
         </div>
@@ -107,10 +107,10 @@ const DailyBriefingCard: React.FC = () => {
 
     if (isEmpty) {
       return (
-        <div style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
+        <div className="u-ta-center" style={{ padding: 32, color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
           <InboxOutlined style={{ fontSize: 32 }} />
-          <div style={{ marginTop: 8 }}>暂无简报数据</div>
-          <div style={{ fontSize: 12, marginTop: 4 }}>稍后刷新重试</div>
+          <div className="u-mt-8">暂无简报数据</div>
+          <div className="u-fs-12 u-mt-4">稍后刷新重试</div>
         </div>
       );
     }
@@ -127,13 +127,13 @@ const DailyBriefingCard: React.FC = () => {
           }}
         >
           <Space>
-            <Tag color="processing" style={{ margin: 0 }}>
+            <Tag color="processing" className="u-m-0">
               AI 摘要
             </Tag>
             <Text style={{ color: 'var(--color-text-primary, var(--color-gray-800))' }}>{summaryText}</Text>
           </Space>
         </div>
-        <Row gutter={[12, 12]} style={{ marginTop: 16 }}>
+        <Row gutter={[12, 12]} className="u-mt-16">
           {METRICS.map((metric) => {
             const raw = data?.[metric.key] as number | undefined;
             return (
@@ -157,9 +157,9 @@ const DailyBriefingCard: React.FC = () => {
                       >
                         {metric.icon}
                       </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>{metric.label}</div>
-                        <Title level={5} style={{ margin: '2px 0 0 0', color: 'var(--color-text-primary, var(--color-gray-800))', fontWeight: 600 }}>
+                      <div className="u-flex-1" style={{ minWidth: 0 }}>
+                        <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>{metric.label}</div>
+                        <Title level={5} className="u-fw-600" style={{ margin: '2px 0 0 0', color: 'var(--color-text-primary, var(--color-gray-800))' }}>
                           {metric.formatter(raw)}
                         </Title>
                       </div>
@@ -178,13 +178,13 @@ const DailyBriefingCard: React.FC = () => {
     <Card
       style={CARD_STYLE}
       title={
-        <Space size={8} style={{ cursor: 'pointer' }} onClick={() => setCollapsed(!collapsed)}>
+        <Space size={8} className="u-cur-pointer" onClick={() => setCollapsed(!collapsed)}>
           <span style={{ color: 'var(--color-primary, var(--color-primary))' }}>●</span>
-          <span style={{ fontWeight: 600 }}>今日简报</span>
-          <Tag color="green" style={{ marginLeft: 8 }}>
+          <span className="u-fw-600">今日简报</span>
+          <Tag color="green" className="u-ml-8">
             系统健康
           </Tag>
-          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary, var(--color-gray-label))', marginLeft: 4 }}>
+          <span className="u-fs-12 u-ml-4" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
             {collapsed ? '点击展开' : '点击收起'}
           </span>
         </Space>

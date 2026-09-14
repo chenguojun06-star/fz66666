@@ -137,7 +137,7 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
     <Spin spinning={loading}>
       {loadWarnings.length > 0 && (
         <Alert
-          style={{ marginBottom: 8 }}
+          className="u-mb-8"
           type="warning"
           showIcon
           title="部分数据加载失败"
@@ -147,7 +147,7 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
       {/* D-360k：统一头部卡——款式图 + 下单信息 + 进度 + 跟单员 + 生产方 + 公司，
           三个页面（订单管理/工序跟进/外发管理）共用 NodeDetailModal，头部一次到位 */}
       {orderDetail && (
-        <div style={{ marginBottom: 16 }}>
+        <div className="u-mb-16">
           <ProductionOrderHeader
             order={orderDetail}
             orderLines={orderLines}
@@ -181,20 +181,20 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
           导致「前往裁剪管理」按钮在任何情况下都不渲染（用户：裁剪弹窗里的快捷键没了）。
           抽屉 body 顶部放按钮布局无冲突，两种形态都显示。 */}
       {nodeTypeKey === 'cutting' && (
-        <div style={{ marginBottom: 8 }}>
+        <div className="u-mb-8">
           <Button
             style={(nodeStats?.percent || 0) >= 100 ? { color: 'var(--color-text-tertiary)', borderColor: 'var(--color-border-antd)' } : {}}
             onClick={() => navigate(`/production/cutting/task/${encodeURIComponent(orderSummary.orderNo || orderNo || '')}`)}
           >
              前往裁剪管理 →
             {(nodeStats?.percent || 0) >= 100 && (
-              <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 4 }}>（已完成）</span>
+              <span className="u-ml-4" style={{ color: 'var(--color-text-tertiary)' }}>（已完成）</span>
             )}
           </Button>
         </div>
       )}
       {nodeTypeKey === 'warehousing' && orderId && factoryType !== 'EXTERNAL' && (
-        <div style={{ marginBottom: 8 }}>
+        <div className="u-mb-8">
           {onOpenInspectDrawer && (
             <Button type="primary" onClick={() => onOpenInspectDrawer(orderId)}>
               侧滑质检
@@ -286,7 +286,7 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
                     />
                   ) : (
                     <>
-                      <div style={{ marginBottom: 8, textAlign: 'right' }}>
+                      <div className="u-mb-8 u-ta-right">
                         <Button
                           loading={repairLoading}
                           onClick={handleRepairTracking}

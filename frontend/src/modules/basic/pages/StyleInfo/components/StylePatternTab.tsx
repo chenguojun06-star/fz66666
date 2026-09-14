@@ -118,7 +118,7 @@ const StylePatternTab: React.FC<Props> = ({
       />
 
       {/* 纸样文件上传区域 */}
-      <div style={{ marginTop: 16 }}>
+      <div className="u-mt-16">
         <StyleAttachmentTab
           styleId={styleId}
           bizType="pattern"
@@ -129,7 +129,7 @@ const StylePatternTab: React.FC<Props> = ({
       </div>
 
       {/* 尺寸表模块 */}
-      <div style={{ marginTop: 16 }}>
+      <div className="u-mt-16">
         <StyleSizeTab
           styleId={styleId}
           readOnly={childReadOnly}

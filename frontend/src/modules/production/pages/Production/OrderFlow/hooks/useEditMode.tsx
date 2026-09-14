@@ -36,8 +36,8 @@ export function useEditMode({ orderNoForImage, order, fetchFlow }: UseEditModeAr
       title,
       width: 480,
       content: (
-        <div style={{ marginTop: 12 }}>
-          <p style={{ marginBottom: 8, color: 'var(--color-text-secondary)' }}>请输入{actionLabel}原因（将记录到订单操作记录）：</p>
+        <div className="u-mt-12">
+          <p className="u-mb-8" style={{ color: 'var(--color-text-secondary)' }}>请输入{actionLabel}原因（将记录到订单操作记录）：</p>
           <Input.TextArea
             rows={3}
             maxLength={500}

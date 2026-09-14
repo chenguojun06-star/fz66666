@@ -154,7 +154,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
       width="40vw" maskClosable={false}
     >
       {showSmartErrorNotice && smartError ? (
-        <div style={{ marginBottom: 12 }}>
+        <div className="u-mb-12">
           <SmartErrorNotice
             error={smartError}
             onFix={() => {
@@ -239,14 +239,14 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
           rules={[{ required: true, message: '请输入数量' }]}
           initialValue={1}
         >
-          <InputNumber min={1} max={available} style={{ width: '100%' }} />
+          <InputNumber min={1} max={available} className="u-w-full" />
         </Form.Item>
         <Form.Item
           name="expectedReturnDate"
           label="预计归还时间"
           initialValue={dayjs().add(7, 'day')}
         >
-          <DatePicker showTime style={{ width: '100%' }} />
+          <DatePicker showTime className="u-w-full" />
         </Form.Item>
         <Form.Item
           name="remark"
@@ -255,8 +255,8 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
           <Input.TextArea rows={3} />
         </Form.Item>
         {(stock?.warehouseAreaName || stock?.location) && (
-          <div style={{ background: 'var(--color-bg-stripe)', padding: '10px 12px', borderRadius: 6, marginBottom: 8 }}>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+          <div className="u-br-6 u-mb-8" style={{ background: 'var(--color-bg-stripe)', padding: '10px 12px' }}>
+            <Typography.Text type="secondary" className="u-fs-13">
               出库仓库：{stock.warehouseAreaName || '-'}
               {stock?.location ? ` | 库位：${stock.location}` : ''}
             </Typography.Text>

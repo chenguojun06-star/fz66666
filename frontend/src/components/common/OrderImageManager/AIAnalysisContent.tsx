@@ -11,19 +11,19 @@ const AIAnalysisContent: React.FC<AIAnalysisContentProps> = ({ analysisResult })
   return (
     <div>
       {analysisResult.report && (
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>分析结果</div>
-          <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{analysisResult.report}</div>
+        <div className="u-mb-12">
+          <div className="u-fw-600 u-mb-4">分析结果</div>
+          <div className="u-ws-pre-wrap" style={{ lineHeight: 1.6 }}>{analysisResult.report}</div>
         </div>
       )}
       {analysisResult.recommendation && (
-        <div style={{ padding: 10, background: 'var(--color-bg-container)', borderRadius: 6, border: '1px solid var(--color-border-light)' }}>
-          <span style={{ fontWeight: 600 }}>建议：</span>
+        <div className="u-br-6" style={{ padding: 10, background: 'var(--color-bg-container)', border: '1px solid var(--color-border-light)' }}>
+          <span className="u-fw-600">建议：</span>
           {analysisResult.recommendation}
         </div>
       )}
       {analysisResult.severity && analysisResult.severity !== 'NONE' && (
-        <div style={{ marginTop: 8 }}>
+        <div className="u-mt-8">
           <Tag color={analysisResult.severity === 'HIGH' || analysisResult.severity === 'CRITICAL' ? 'red' : analysisResult.severity === 'MEDIUM' ? 'orange' : 'blue'}>
             严重程度：{analysisResult.severity}
           </Tag>

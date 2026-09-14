@@ -41,7 +41,7 @@ export const useUsageColumns = ({
         render: (_: unknown, record: PatternMaterialRow) => (
           <div>
             <div>{record.bom.materialName}</div>
-            {record.bom.color && <Text type="secondary" style={{ fontSize: 14 }}>{record.bom.color}</Text>}
+            {record.bom.color && <Text type="secondary" className="u-fs-14">{record.bom.color}</Text>}
           </div>
         ),
       },
@@ -62,7 +62,7 @@ export const useUsageColumns = ({
           <span>
             平均值
             <br />
-            <Text type="secondary" style={{ fontSize: 14 }}>(按码均值)</Text>
+            <Text type="secondary" className="u-fs-14">(按码均值)</Text>
           </span>
         ),
         key: 'avgUsage',
@@ -93,7 +93,7 @@ export const useUsageColumns = ({
               value={val}
               onChange={(v) => handleLossChange(record.bomId, v)}
               disabled={childReadOnly}
-              style={{ width: '100%' }}
+              className="u-w-full"
             />
           );
         },
@@ -103,8 +103,8 @@ export const useUsageColumns = ({
     for (const size of allSizes) {
       cols.push({
         title: (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontWeight: 600, color: 'var(--primary-color, var(--color-primary))' }}>{size}</span>
+          <span className="u-d-inline-flex u-ai-center u-gap-4">
+            <span className="u-fw-600" style={{ color: 'var(--primary-color, var(--color-primary))' }}>{size}</span>
             {!childReadOnly && extraSizes.includes(size) && (
               <Button
                 type="text"
@@ -143,7 +143,7 @@ export const useUsageColumns = ({
               value={val ?? undefined}
               onChange={(v) => handleUsageChange(record.bomId, size, v)}
               disabled={childReadOnly}
-              style={{ width: '100%' }}
+              className="u-w-full"
             />
           );
         },

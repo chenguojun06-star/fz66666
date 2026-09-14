@@ -225,7 +225,7 @@ const CuttingManagement: React.FC = () => {
 
           {isEntryPage && !activeTask ? (
             taskResolving ? (
-              <div style={{ padding: 64, textAlign: 'center' }}><Spin /></div>
+              <div className="u-ta-center" style={{ padding: 64 }}><Spin /></div>
             ) : (
               <Empty description="未找到裁剪任务（可能已被退回或删除）" style={{ padding: 48 }}>
                 <Button type="primary" onClick={() => resetActiveTask(true)}>返回裁剪管理</Button>

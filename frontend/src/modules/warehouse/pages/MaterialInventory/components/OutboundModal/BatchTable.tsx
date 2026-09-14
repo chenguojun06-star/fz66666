@@ -64,7 +64,7 @@ const BatchTable: React.FC<BatchTableProps> = ({
         </Space>
       </div>
 
-      <div style={{ marginBottom: 8, fontSize: 13, color: 'var(--color-text-secondary)' }}>
+      <div className="u-mb-8 u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
         已选 <Typography.Text strong>{selectedCount}</Typography.Text> 项，
         本次出库合计 <Typography.Text strong style={{ color: 'var(--color-primary)' }}>{totalOutbound} {unit}</Typography.Text>，
         可用库存合计 <Typography.Text type="success">{totalAvailable} {unit}</Typography.Text>
@@ -88,7 +88,7 @@ const BatchTable: React.FC<BatchTableProps> = ({
             key: 'batchNo',
             width: 160,
             render: (text: string) => (
-              <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{text}</span>
+              <span className="u-fw-600" style={{ color: 'var(--color-primary)' }}>{text}</span>
             ),
           },
           {
@@ -134,7 +134,7 @@ const BatchTable: React.FC<BatchTableProps> = ({
             width: 100,
             align: 'center' as const,
             render: (qty: number) => (
-              <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>{qty}</span>
+              <span className="u-fw-600" style={{ color: 'var(--color-success)' }}>{qty}</span>
             ),
           },
           {
@@ -144,7 +144,7 @@ const BatchTable: React.FC<BatchTableProps> = ({
             width: 100,
             align: 'center' as const,
             render: (qty: number) => (
-              <span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>{qty}</span>
+              <span className="u-fw-600" style={{ color: 'var(--color-warning)' }}>{qty}</span>
             ),
           },
           {
@@ -161,7 +161,7 @@ const BatchTable: React.FC<BatchTableProps> = ({
                   max={_record.availableQty}
                   value={value}
                   onChange={(val) => handleBatchQtyChange(index, val)}
-                  style={{ width: '100%' }}
+                  className="u-w-full"
                   placeholder={selected ? '0' : '先勾选批次'}
                   disabled={!selected}
                 />

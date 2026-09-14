@@ -17,7 +17,7 @@ export function getSummaryBaseInfoColumns(deps: SummaryColumnDeps): any[] {
         {
             title: '人员', dataIndex: 'operatorName', key: 'operatorName', width: 140, ellipsis: true,
             render: (name: string) => (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div className="u-d-flex u-ai-center u-gap-4">
                     <span>{name || '-'}</span>
                     {isSmartFeatureEnabled('smart.worker-profile.enabled') && name
                         ? <WorkerPerformanceBadge operatorName={name} />
@@ -71,7 +71,7 @@ export function getDetailBaseInfoColumns(deps: DetailColumnDeps): any[] {
         {
             title: '人员', dataIndex: 'operatorName', key: 'operatorName', width: 120, ellipsis: true,
             render: (name: string) => (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div className="u-d-flex u-ai-center u-gap-4">
                     <span>{name || '-'}</span>
                     {isSmartFeatureEnabled('smart.worker-profile.enabled') && name
                         ? <WorkerPerformanceBadge operatorName={name} />
@@ -128,10 +128,10 @@ export function getDetailBaseInfoColumns(deps: DetailColumnDeps): any[] {
                 }
 
                 if (type === 'external') {
-                    return <span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>{name}</span>;
+                    return <span className="u-fw-600" style={{ color: 'var(--color-warning)' }}>{name}</span>;
                 }
 
-                return <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{name}</span>;
+                return <span className="u-fw-600" style={{ color: 'var(--primary-color)' }}>{name}</span>;
             },
         },
         {
@@ -143,7 +143,7 @@ export function getDetailBaseInfoColumns(deps: DetailColumnDeps): any[] {
             render: (v: unknown, record: any) => {
                 const displayName = formatProcessDisplayName(record?.processCode, String(v || '').trim());
                 return displayName && displayName !== '-' ? (
-                    <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>{displayName}</span>
+                    <span className="u-fw-600" style={{ color: 'var(--neutral-text)' }}>{displayName}</span>
                 ) : (
                     <span style={{ color: 'var(--neutral-text-disabled)' }}>未记录</span>
                 );

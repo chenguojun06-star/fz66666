@@ -32,12 +32,12 @@ export function buildFactoryColumns({
                 contactPerson={record.factoryContactPerson}
                 contactPhone={record.factoryContactPhone}
                 label="工厂"
-                style={{ cursor: 'pointer' }}
+                className="u-cur-pointer"
                 onClick={(e) => { e.stopPropagation(); onOpenRemark?.(record, '生产方 — ' + (v || '')); }}
               />
             </span>
             {bizType && (
-              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知'}</Tag>
+              <Tag color={colorMap[bizType] ?? 'default'} className="u-m-0 u-fs-12 u-p-04px u-lh-18px">{ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知'}</Tag>
             )}
           </Space>
         );
@@ -77,7 +77,7 @@ export function buildFactoryColumns({
       render: (_: any, record: any) => {
         const v = Number(record?.factoryUnitPrice);
         return (Number.isFinite(v) && v > 0)
-          ? <span style={{ fontWeight: 500 }}>{displayAmount(v)}</span>
+          ? <span className="u-fw-500">{displayAmount(v)}</span>
           : <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>;
       },
     },

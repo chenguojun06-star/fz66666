@@ -82,18 +82,18 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
           cursor: 'pointer',
         }}
       >
-        <span style={{ color: 'var(--color-warning-deep)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <span className="u-fw-600 u-d-inline-flex u-ai-center u-gap-6" style={{ color: 'var(--color-warning-deep)' }}>
           <BulbOutlined /> AI报价建议
         </span>
-        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 14 }}>分析对象：{subjectText}</span>
-        <span style={{ marginLeft: 'auto', color: 'var(--color-warning-deep)', fontSize: 14, display: 'flex', alignItems: 'center', gap: 4 }}>
-          {expanded ? '收起' : '展开'} {expanded ? <DownOutlined style={{ fontSize: 12 }} /> : <RightOutlined style={{ fontSize: 12 }} />}
+        <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>分析对象：{subjectText}</span>
+        <span className="u-ml-auto u-fs-14 u-d-flex u-ai-center u-gap-4" style={{ color: 'var(--color-warning-deep)' }}>
+          {expanded ? '收起' : '展开'} {expanded ? <DownOutlined className="u-fs-12" /> : <RightOutlined className="u-fs-12" />}
         </span>
       </div>
 
       {expanded && (
         <div style={{ padding: '12px 14px', background: 'var(--color-bg-base)' }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+          <div className="u-d-flex u-jc-end u-mb-10">
             <Button
              
               icon={<ReloadOutlined />}
@@ -106,14 +106,14 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
           </div>
 
           {!effectiveStyleNo ? (
-            <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>当前款号为空，暂无法生成报价建议</div>
+            <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>当前款号为空，暂无法生成报价建议</div>
           ) : loading ? (
-            <div style={{ padding: '12px 0', textAlign: 'center' }}><Spin /></div>
+            <div className="u-ta-center" style={{ padding: '12px 0' }}><Spin /></div>
           ) : error ? (
-            <div style={{ fontSize: 14, color: 'var(--color-error)' }}>{error}</div>
+            <div className="u-fs-14" style={{ color: 'var(--color-error)' }}>{error}</div>
           ) : data ? (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, marginBottom: 10 }}>
+              <div className="u-d-grid u-gap-8 u-mb-10" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
                 {[
                   { label: '建议报价', value: fmtMoney(data.suggestedPrice), highlight: true },
                   { label: '综合成本', value: fmtMoney(data.totalCost) },
@@ -129,13 +129,13 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
                       background: item.highlight ? 'rgba(250,173,20,0.08)' : 'rgba(255,255,255,0.55)',
                     }}
                   >
-                    <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>{item.label}</div>
+                    <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-text-tertiary)' }}>{item.label}</div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: item.highlight ? 'var(--color-warning)' : 'var(--color-text-primary)' }}>{item.value}</div>
                   </div>
                 ))}
               </div>
 
-              <div style={{ fontSize: 14, color: 'var(--color-gray-700)', lineHeight: 1.7, marginBottom: 10 }}>
+              <div className="u-fs-14 u-mb-10" style={{ color: 'var(--color-gray-700)', lineHeight: 1.7 }}>
                 <div>历史接单：{data.historicalOrderCount || 0} 单 / {data.historicalTotalQuantity || 0} 件</div>
                 <div>建议说明：{data.suggestion || 'AI已结合历史报价、物料成本和工序成本给出建议'}</div>
               </div>

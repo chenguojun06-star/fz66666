@@ -87,7 +87,7 @@ const RoleList: React.FC = () => {
         headerContent={
           <>
             {showSmartErrorNotice && smartError ? (
-              <Card style={{ marginBottom: 12 }}>
+              <Card className="u-mb-12">
                 <SmartErrorNotice error={smartError} onFix={fetchRoles} />
               </Card>
             ) : null}
@@ -96,7 +96,7 @@ const RoleList: React.FC = () => {
               if (broadRoles.length === 0) return null;
               return (
                 <Alert
-                  style={{ marginBottom: 12 }}
+                  className="u-mb-12"
                   type="warning"
                   showIcon
                   message="权限防呆检测"

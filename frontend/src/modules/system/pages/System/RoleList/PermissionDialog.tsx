@@ -162,15 +162,15 @@ const PermissionDialog = forwardRef<PermissionDialogHandle, PermissionDialogProp
     <ResizableModal open={visible} title={roleModal.data ? `为「${roleModal.data.roleName}」授权` : '权限授权'} onCancel={close}
       footer={<div className="modal-footer-actions"><Button onClick={close} disabled={permSaving}>取消</Button><Button type="primary" onClick={savePerms} loading={permSaving}>保存</Button></div>}
       width={modalWidth} initialHeight={modalInitialHeight} minWidth={isMobile ? 320 : 520} scaleWithViewport minHeight={420}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="u-d-flex u-fd-column u-gap-12">
         <Alert type="info" showIcon title="角色权限将影响所有使用该角色的人员" description="建议先确定角色边界：新增角色 → 授权 → 分配给人员。" />
         <Space wrap>
           <Input value={permKeyword} onChange={(e) => setPermKeyword(e.target.value)} placeholder="搜索权限名称" style={{ width: 260 }} allowClear />
           <Button onClick={() => setPermKeyword('')} disabled={!String(permKeyword || '').trim()}>清空搜索</Button>
           <span style={{ color: 'var(--neutral-text-secondary)' }}>
-            已选 <span style={{ color: 'var(--primary-color, var(--color-primary))', fontWeight: 600 }}>{checkedPermIds.size}</span> 项
+            已选 <span className="u-fw-600" style={{ color: 'var(--primary-color, var(--color-primary))' }}>{checkedPermIds.size}</span> 项
             {String(permKeyword || '').trim() && permissionsByModule.length > 0 && (
-              <span style={{ marginLeft: 8 }}>· 匹配 {permissionsByModule.length} 个模块</span>
+              <span className="u-ml-8">· 匹配 {permissionsByModule.length} 个模块</span>
             )}
           </span>
         </Space>
@@ -179,9 +179,9 @@ const PermissionDialog = forwardRef<PermissionDialogHandle, PermissionDialogProp
           <Button onClick={() => applyTemplate(new Set())} disabled={!checkedPermIds.size}>清空</Button>
           {templatePresets.map((t) => (<Button key={t.key} onClick={() => applyTemplate(t.ids)} disabled={!t.count}>{t.label}</Button>))}
         </Space>
-        <div style={{ marginTop: 4, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start', maxHeight: 'calc(85vh - 220px)', overflowY: 'auto', paddingRight: 4 }}>
+        <div className="u-mt-4 u-d-flex u-gap-8 u-fwrap-wrap u-ai-start" style={{ maxHeight: 'calc(85vh - 220px)', overflowY: 'auto', paddingRight: 4 }}>
           {permissionsByModule.length === 0 && (
-            <div style={{ width: '100%' }}>
+            <div className="u-w-full">
               <Empty description="未找到匹配的权限" image={Empty.PRESENTED_IMAGE_SIMPLE} />
             </div>
           )}
@@ -223,20 +223,20 @@ const PermissionDialog = forwardRef<PermissionDialogHandle, PermissionDialogProp
                         checked={gState.allSelected}
                         indeterminate={gState.someSelected}
                         onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) gState.allIds.forEach(id => next.add(id)); else gState.allIds.forEach(id => next.delete(id)); setCheckedPermIds(next); }}
-                        style={{ fontSize: 13, fontWeight: 500 }}
+                        className="u-fs-13 u-fw-500"
                       >
                         {group.groupName}
                       </Checkbox>
-                      <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{gState.checked}/{gState.total}</span>
+                      <span className="u-fs-11" style={{ color: 'var(--color-text-tertiary)' }}>{gState.checked}/{gState.total}</span>
                     </div>
                     <div style={{ padding: '2px 4px 4px 16px' }}>
-                      {group.buttons.map(btn => (<div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? 'var(--status-processing-bg)' : undefined, borderRadius: 2, marginBottom: 1 }}><Checkbox checked={checkedPermIds.has(btn.id)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) next.add(btn.id); else next.delete(btn.id); setCheckedPermIds(next); }} style={{ fontSize: 13, width: '100%' }}>{btn.name}</Checkbox></div>))}
-                      {group.buttons.length === 0 && <span style={{ color: 'var(--color-text-quaternary)', fontSize: 13 }}>仅菜单权限</span>}
+                      {group.buttons.map(btn => (<div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? 'var(--status-processing-bg)' : undefined, borderRadius: 2, marginBottom: 1 }}><Checkbox checked={checkedPermIds.has(btn.id)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) next.add(btn.id); else next.delete(btn.id); setCheckedPermIds(next); }} className="u-fs-13 u-w-full">{btn.name}</Checkbox></div>))}
+                      {group.buttons.length === 0 && <span className="u-fs-13" style={{ color: 'var(--color-text-quaternary)' }}>仅菜单权限</span>}
                     </div>
                   </div>
                 );})}
-                {module.directButtons.length > 0 && (<div style={{ padding: '4px 6px' }}>{module.directButtons.map(btn => (<div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? 'var(--status-processing-bg)' : undefined, borderRadius: 2, marginBottom: 1 }}><Checkbox checked={checkedPermIds.has(btn.id)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) next.add(btn.id); else next.delete(btn.id); setCheckedPermIds(next); }} style={{ fontSize: 13, width: '100%' }}>{btn.name}</Checkbox></div>))}</div>)}
-                {module.groups.length === 0 && module.directButtons.length === 0 && (<div style={{ padding: '4px 8px', color: 'var(--color-text-quaternary)', fontSize: 13 }}>仅页面入口</div>)}
+                {module.directButtons.length > 0 && (<div style={{ padding: '4px 6px' }}>{module.directButtons.map(btn => (<div key={btn.id} style={{ background: checkedPermIds.has(btn.id) ? 'var(--status-processing-bg)' : undefined, borderRadius: 2, marginBottom: 1 }}><Checkbox checked={checkedPermIds.has(btn.id)} onChange={(e) => { const next = new Set(checkedPermIds); if (e.target.checked) next.add(btn.id); else next.delete(btn.id); setCheckedPermIds(next); }} className="u-fs-13 u-w-full">{btn.name}</Checkbox></div>))}</div>)}
+                {module.groups.length === 0 && module.directButtons.length === 0 && (<div className="u-fs-13" style={{ padding: '4px 8px', color: 'var(--color-text-quaternary)' }}>仅页面入口</div>)}
               </div>
             );
           })}

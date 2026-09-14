@@ -84,7 +84,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
       );
     }
     return (
-      <div style={{ padding: 16, color: 'var(--neutral-text-disabled)' }}>
+      <div className="u-p-16" style={{ color: 'var(--neutral-text-disabled)' }}>
         当前模板内容无法识别，请联系管理员检查模板数据。
       </div>
     );
@@ -98,7 +98,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
   ) => (
     <div>
       <div style={compactFieldLabelStyle}>{label}</div>
-      <Form.Item name={name} rules={rules} style={{ marginBottom: 0 }}>
+      <Form.Item name={name} rules={rules} className="u-mb-0">
         {node}
       </Form.Item>
     </div>
@@ -110,7 +110,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
     <div>
       {showTemplateMetaShell ? (
         <div style={{ marginBottom: compact ? 8 : 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div className="u-d-flex u-ai-center u-gap-8 u-fwrap-wrap">
             <Tag color={typeColor(String(row.templateType || ''))} style={{ marginInlineEnd: 0 }}>
               {typeLabel(String(row.templateType || ''))}
             </Tag>
@@ -123,7 +123,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
 
       <Form form={form} layout="vertical">
         {readOnly && !compact && showTemplateMetaShell ? (
-          <div style={{ marginBottom: 12, color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
+          <div className="u-mb-12 u-fs-14" style={{ color: 'var(--neutral-text-secondary)' }}>
             当前为只读预览，退回后可直接在此页面编辑。
           </div>
         ) : null}
@@ -141,7 +141,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
                   name="templateName"
                   label="模板名称"
                   rules={[{ required: true, message: '请输入模板名称' }]}
-                  style={{ marginBottom: 0 }}
+                  className="u-mb-0"
                 >
                   <Input placeholder="请输入模板名称" disabled={readOnly} />
                 </Form.Item>
@@ -149,7 +149,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
             {compact
               ? renderCompactField('templateKey', '模板标识', <Input placeholder="可选" disabled={readOnly} />)
               : (
-                <Form.Item name="templateKey" label="模板标识" style={{ marginBottom: 0 }}>
+                <Form.Item name="templateKey" label="模板标识" className="u-mb-0">
                   <Input placeholder="可选" disabled={readOnly} />
                 </Form.Item>
               )}
@@ -170,7 +170,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
                 />,
               )
               : (
-                <Form.Item name="sourceStyleNo" label="来源款号" style={{ marginBottom: 0 }}>
+                <Form.Item name="sourceStyleNo" label="来源款号" className="u-mb-0">
                   <Select
                     allowClear
                     showSearch

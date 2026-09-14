@@ -87,17 +87,17 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
       styles={{ wrapper: { width: '85%' }, body: { padding: 0, height: 'calc(100vh - 110px)' } }}
       destroyOnHidden
     >
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div className="u-h-full u-d-flex u-fd-column">
         <Tabs
           defaultActiveKey="inspection"
-          style={{ flex: 1, minHeight: 0 }}
+          className="u-flex-1" style={{ minHeight: 0 }}
           items={[
             {
               key: 'inspection',
               label: '质检信息',
               children: (
-        <Card className="order-flow-detail" style={{ marginTop: 0, height: '100%' }} loading={entryLoading}>
-          <div style={{ marginBottom: 12 }}>
+        <Card className="order-flow-detail u-h-full" style={{ marginTop: 0 }} loading={entryLoading}>
+          <div className="u-mb-12">
             <ProductionOrderHeader
               order={orderDetail || entryWarehousing}
               orderNo={String(orderDetail?.orderNo || entryWarehousing?.orderNo || '').trim()}
@@ -164,9 +164,9 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
             </div>
           </div>
 
-          <div className="order-flow-section" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <div className="order-flow-section u-d-flex u-fd-column" style={{ minHeight: 0 }}>
             <div className="order-flow-section-title">下单详细信息</div>
-            <div style={{ flex: 1, minHeight: 0 }}>
+            <div className="u-flex-1" style={{ minHeight: 0 }}>
               <ResizableTable<OrderLineWarehousingRow>
                 storageKey="independent-detail-main"
                 showIndex={false}
@@ -177,7 +177,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                 dataSource={orderLineWarehousingRows}
                 sticky
                 scroll={{ x: 1040 }}
-                style={{ fontSize: 14 }}
+                className="u-fs-14"
                 columns={[
                   { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 160 },
                   { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 130, ellipsis: true },
@@ -237,16 +237,16 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
           </div>
           <div className="order-flow-section">
             <div className="order-flow-section-title">不合格信息</div>
-            <div style={{ padding: 12 }}>
-              <div className="order-flow-field" style={{ marginBottom: 10 }}>
+            <div className="u-p-12">
+              <div className="order-flow-field u-mb-10" >
                 <div className="order-flow-field-label">次品类别</div>
                 <div className="order-flow-field-value">{getDefectCategoryLabel(entryWarehousing?.defectCategory)}</div>
               </div>
-              <div className="order-flow-field" style={{ marginBottom: 10 }}>
+              <div className="order-flow-field u-mb-10" >
                 <div className="order-flow-field-label">处理方式</div>
                 <div className="order-flow-field-value">{getDefectRemarkLabel(entryWarehousing?.defectRemark)}</div>
               </div>
-              <div className="order-flow-field" style={{ marginBottom: 10 }}>
+              <div className="order-flow-field u-mb-10" >
                 <div className="order-flow-field-label">返修备注</div>
                 <div className="order-flow-field-value">{String(entryWarehousing?.repairRemark || '').trim() || '-'}</div>
               </div>
@@ -260,7 +260,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                       alt="款式图片"
                       width={84}
                       height={84}
-                      style={{ objectFit: 'cover', cursor: 'pointer' }}
+                      className="u-objf-cover u-cur-pointer"
                       onClick={() => openPreview(url, '图片预览')}
                     />
                   ))}
@@ -277,7 +277,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
               key: 'production-sheet',
               label: '工艺说明',
               children: (
-                <Card style={{ height: '100%' }}>
+                <Card className="u-h-full">
                   <ProductionSheetPanel
                     description={styleDescription}
                     reviewStatus={styleSampleReviewStatus}
@@ -292,11 +292,11 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
               key: 'size-chart',
               label: ' 尺寸表',
               children: (
-                <Card style={{ height: '100%' }}>
+                <Card className="u-h-full">
                   {styleId ? (
                     <StyleSizeTab styleId={styleId} readOnly simpleView />
                   ) : (
-                    <div style={{ textAlign: 'center', padding: 40, color: 'rgba(0,0,0,0.45)' }}>
+                    <div className="u-ta-center" style={{ padding: 40, color: 'rgba(0,0,0,0.45)' }}>
                       暂无尺寸表数据
                     </div>
                   )}

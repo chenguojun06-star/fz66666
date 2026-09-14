@@ -37,7 +37,7 @@ const OutboundForm: React.FC<OutboundFormProps> = ({
   return (
     <Card title="出库流转信息">
       <Form form={outboundForm} layout="vertical">
-        <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 14 }}>
+        <div className="u-mb-12 u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>
           生产订单/样衣开发领料形成的待出库单会自动带出订单、款号、工厂、内外部和用料场景；这里只是给单独出库补完整业务信息。
         </div>
         <Row gutter={12}>
@@ -218,8 +218,8 @@ const OutboundForm: React.FC<OutboundFormProps> = ({
             </Form.Item>
           </Col>
           <Col span={24}>
-            <div style={{ background: 'var(--color-bg-stripe)', padding: '10px 12px', borderRadius: 6, marginBottom: 8 }}>
-              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+            <div className="u-br-6 u-mb-8" style={{ background: 'var(--color-bg-stripe)', padding: '10px 12px' }}>
+              <Typography.Text type="secondary" className="u-fs-13">
                 当前库存位置：{warehouseLocation || '-'}（出库将自动从该位置扣减）
               </Typography.Text>
             </div>

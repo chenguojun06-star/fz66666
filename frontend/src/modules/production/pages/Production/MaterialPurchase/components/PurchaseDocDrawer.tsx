@@ -73,7 +73,7 @@ const PurchaseDocDrawer: React.FC<PurchaseDocDrawerProps> = ({ open, orderNo, st
       title={`采购单据${docs.length > 0 ? `（${docs.length} 张）` : ''}`}
       width="50%"
     >
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+      <div className="u-mb-16 u-d-flex u-jc-end">
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setRecognizeOpen(true)}>
           上传新单据
         </Button>
@@ -86,7 +86,7 @@ const PurchaseDocDrawer: React.FC<PurchaseDocDrawerProps> = ({ open, orderNo, st
             description="暂无采购单据。点右上角「上传新单据」上传供应商送货单，AI 识别后自动保存在这里（按订单号/款号归属，可随时回看）。"
           />
         ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+          <div className="u-d-flex u-fwrap-wrap u-gap-16">
             {docs.map((doc) => (
               <div
                 key={doc.id}
@@ -102,19 +102,19 @@ const PurchaseDocDrawer: React.FC<PurchaseDocDrawerProps> = ({ open, orderNo, st
                   src={getFullAuthedFileUrl(doc.imageUrl)}
                   width={184}
                   height={128}
-                  style={{ objectFit: 'cover', borderRadius: 4 }}
+                  className="u-objf-cover u-br-4"
                   preview={{ cover: '预览' }}
                 />
-                <div style={{ marginTop: 6, fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                <div className="u-mt-6 u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
                   <Tooltip title={doc.uploaderName}>
-                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div className="u-ov-hidden u-ws-nowrap" style={{ textOverflow: 'ellipsis' }}>
                       {doc.uploaderName || '未知上传人'}
                     </div>
                   </Tooltip>
-                  <div style={{ color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+                  <div className="u-mt-2" style={{ color: 'var(--color-text-tertiary)' }}>
                     {doc.createTime ? doc.createTime.slice(0, 16).replace('T', ' ') : ''}
                   </div>
-                  <div style={{ marginTop: 2 }}>
+                  <div className="u-mt-2">
                     识别{doc.totalRecognized || 0}条 · 匹配{doc.matchCount || 0}条
                   </div>
                 </div>

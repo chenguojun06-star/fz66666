@@ -35,7 +35,7 @@ const ProductionSheetPanel: React.FC<Props> = ({
             : '';
 
   return (
-    <div style={{ padding: '8px 0' }}>
+    <div className="u-p-8px0">
       {(reviewLabel || comment || by || time) && (
         <div style={{
           marginBottom: 12,
@@ -46,16 +46,16 @@ const ProductionSheetPanel: React.FC<Props> = ({
           fontSize: 14,
           lineHeight: '20px',
         }}>
-          <div style={{ marginBottom: 4, fontWeight: 600 }}>样衣审核</div>
+          <div className="u-mb-4 u-fw-600">样衣审核</div>
           <div>
             <span>审核状态：{reviewLabel || '-'}</span>
             <span style={{ marginLeft: 16 }}>审核人：{by || '-'}</span>
             <span style={{ marginLeft: 16 }}>审核时间：{time ? formatDateTime(time) : '-'}</span>
           </div>
-          {comment && <div style={{ marginTop: 4, whiteSpace: 'pre-wrap' }}>审核评语：{comment}</div>}
+          {comment && <div className="u-mt-4 u-ws-pre-wrap">审核评语：{comment}</div>}
         </div>
       )}
-      <Title level={5} style={{ marginBottom: 12 }}>工艺说明</Title>
+      <Title level={5} className="u-mb-12">工艺说明</Title>
       <SheetRichViewer content={desc} />
     </div>
   );

@@ -49,8 +49,8 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
     {
       title: '图片', dataIndex: 'styleCoverUrl', key: 'styleCoverUrl', width: 72, align: 'center' as const,
       render: (url: string) => url
-        ? <Image src={getFullAuthedFileUrl(url)} width={48} style={{ height: 'auto', display: 'block', borderRadius: 4 }} preview={false} />
-        : <div style={{ width: 48, height: 48, margin: '0 auto', background: 'var(--color-bg-subtle)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-quaternary)', fontSize: 14 }}>无图</div>,
+        ? <Image src={getFullAuthedFileUrl(url)} width={48} className="u-h-auto u-d-block u-br-4" preview={false} />
+        : <div className="u-br-4 u-d-flex u-ai-center u-jc-center u-fs-14" style={{ width: 48, height: 48, margin: '0 auto', background: 'var(--color-bg-subtle)', color: 'var(--color-text-quaternary)' }}>无图</div>,
     },
     { title: '名称', dataIndex: 'templateName', key: 'templateName', width: 220, render: (v) => String(v || '-') },
     { title: '类型', dataIndex: 'templateType', key: 'templateType', width: 90,
@@ -58,7 +58,7 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
     {
       title: (<Space size={6}><span>标识</span><Tooltip title="系统内部用来识别模板来源/用途"><span style={{ cursor: 'help', color: 'rgba(0,0,0,0.45)' }}>?</span></Tooltip></Space>),
       dataIndex: 'templateKey', key: 'templateKey', width: 180,
-      render: (v) => { const f = formatTemplateKey(v); return f.full ? <Text ellipsis={{ tooltip: f.full }} style={{ maxWidth: 160, display: 'inline-block' }}>{f.text}</Text> : '-'; },
+      render: (v) => { const f = formatTemplateKey(v); return f.full ? <Text ellipsis={{ tooltip: f.full }} className="u-d-inline-block" style={{ maxWidth: 160 }}>{f.text}</Text> : '-'; },
     },
     { title: '来源款号', dataIndex: 'sourceStyleNo', key: 'sourceStyleNo', width: 140, render: (v) => String(v || '-') },
     { title: '更新时间', dataIndex: 'updateTime', key: 'updateTime', width: 170, render: (v) => String(v || '-') },
@@ -90,28 +90,28 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
 
   const renderDirectEditor = () => {
     if (loading) {
-      return <div style={{ textAlign: 'center', padding: 16, color: 'rgba(0,0,0,0.45)' }}>加载中...</div>;
+      return <div className="u-ta-center u-p-16" style={{ color: 'rgba(0,0,0,0.45)' }}>加载中...</div>;
     }
     if (hydratingTemplate) {
-      return <div style={{ textAlign: 'center', padding: 16, color: 'rgba(0,0,0,0.45)' }}>正在根据当前款号生成工序单价模板...</div>;
+      return <div className="u-ta-center u-p-16" style={{ color: 'rgba(0,0,0,0.45)' }}>正在根据当前款号生成工序单价模板...</div>;
     }
     if (!directRow) {
-      return <div style={{ textAlign: 'center', padding: 16, color: 'rgba(0,0,0,0.45)' }}>未找到该款号的数据</div>;
+      return <div className="u-ta-center u-p-16" style={{ color: 'rgba(0,0,0,0.45)' }}>未找到该款号的数据</div>;
     }
     if (isLocked(directRow)) {
       return (
         <div style={directStackStyle}>
           <div style={directCardStyle}>
-            <div style={{ marginBottom: 8 }}>
+            <div className="u-mb-8">
               <span style={directTitleStyle}>退回后再维护</span>
             </div>
             <Form form={directRollbackForm} layout="vertical">
               <div style={directFieldLabelStyle}>退回原因</div>
-              <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} style={{ marginBottom: 8 }}>
+              <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} className="u-mb-8">
                 <TextArea rows={2} placeholder="请说明本次退回原因" />
               </Form.Item>
             </Form>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <div className="u-d-flex u-jc-end">
               <Button
                 type="default"
                 danger
@@ -175,7 +175,7 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
           )}
 
           {/* toolbar */}
-          <Form form={queryForm} layout="inline" style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+          <Form form={queryForm} layout="inline" className="u-d-flex u-jc-between u-fwrap-wrap u-gap-8 u-mb-12">
             <Space wrap>
               <Form.Item name="keyword" noStyle>
                 <Input placeholder="搜索名称/标识" allowClear style={{ width: 200 }} onPressEnter={() => fetchList({ page: 1 })} />

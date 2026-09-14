@@ -139,12 +139,12 @@ const WarehousingActionPanel: React.FC<Props> = ({
     <>
       {/* D-360y：没有成品仓时引导去库位地图新建（与物料仓口径一致） */}
       {areas.length === 0 && (
-        <Alert type="warning" showIcon style={{ marginBottom: 12 }}
+        <Alert type="warning" showIcon className="u-mb-12"
           title="还没有成品仓库"
-          description={<span>请先到「库位地图」新建成品仓并划分库位，再回来入库。<Button type="link" size="small" style={{ padding: 0 }} onClick={() => navigate('/warehouse/location-map')}>去库位地图新建 →</Button></span>}
+          description={<span>请先到「库位地图」新建成品仓并划分库位，再回来入库。<Button type="link" size="small" className="u-p-0" onClick={() => navigate('/warehouse/location-map')}>去库位地图新建 →</Button></span>}
         />
       )}
-      <Alert type="info" showIcon style={{ marginBottom: 16 }}
+      <Alert type="info" showIcon className="u-mb-16"
         title={`共 ${pendingRecords.length} 条合格记录待入库，合格数量合计 ${pendingQty} 件`} />
 
       <Card
@@ -153,11 +153,11 @@ const WarehousingActionPanel: React.FC<Props> = ({
             <span>待入库记录</span>
             <Checkbox indeterminate={indeterminate} checked={allChecked} onChange={handleToggleAll}>全选</Checkbox>
             {!allChecked && (
-              <Text type="secondary" style={{ fontSize: 12 }}>已选 {selectedIds.length}/{pendingRecords.length} 条</Text>
+              <Text type="secondary" className="u-fs-12">已选 {selectedIds.length}/{pendingRecords.length} 条</Text>
             )}
           </Space>
         }
-        style={{ marginBottom: 16 }}
+        className="u-mb-16"
       >
         <ResizableTable<WarehousingDetailRecord>
           rowKey="id" pagination={false}
@@ -165,7 +165,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
           dataSource={pendingRecords}
           resizableColumns={false}
           scroll={{ x: 900 }}
-          style={{ fontSize: 12 }}
+          className="u-fs-12"
           columns={[
             {
               title: '',
@@ -198,7 +198,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
                     value={loc.areaId || undefined}
                     onChange={(v) => updateRowLocation(id, 'areaId', v)}
                     options={finishedWarehouseOptions}
-                    style={{ width: '100%' }}
+                    className="u-w-full"
                     size="small"
                     placeholder="仓库"
                   />
@@ -219,7 +219,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
                     placeholder="库位"
                     value={loc.locationCode || undefined}
                     onChange={(v) => updateRowLocation(id, 'locationCode', String(v || '').trim())}
-                    style={{ width: '100%' }}
+                    className="u-w-full"
                   />
                 );
               },
@@ -232,11 +232,11 @@ const WarehousingActionPanel: React.FC<Props> = ({
         <Space>
           <span>批量设置库位</span>
           <Tooltip title="为已选中的记录统一设置仓库和库位">
-            <Text type="secondary" style={{ fontSize: 12 }}>(选中 {selectedIds.length} 条)</Text>
+            <Text type="secondary" className="u-fs-12">(选中 {selectedIds.length} 条)</Text>
           </Tooltip>
         </Space>
       }>
-        <Space style={{ width: '100%' }} size="middle" wrap>
+        <Space className="u-w-full" size="middle" wrap>
           <Text strong>仓库：</Text>
           <Select
             value={batchAreaId || undefined}
@@ -262,7 +262,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
             应用到已选
           </Button>
         </Space>
-        <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <div className="u-mt-16 u-d-flex u-ai-center u-gap-16 u-fwrap-wrap">
           <Button type="primary" size="large" icon={<InboxOutlined />}
             loading={warehousingLoading} onClick={handleSubmit}
             disabled={selectedIds.length === 0 || selectedMissingLocation}>
@@ -275,13 +275,13 @@ const WarehousingActionPanel: React.FC<Props> = ({
               直接发货给客户（{selectedIds.length} 条记录）
             </Button>
           )}
-          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+          <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
             直接发货 = 质检合格后不落成品库存，直接发给客户，留发货记录
           </span>
           {locationGroups.size > 0 && (
             <Space size={4} wrap>
               {Array.from(locationGroups.entries()).map(([loc, count]) => (
-                <Tag key={loc} color={loc === '(未选库位)' ? 'error' : 'blue'} style={{ fontSize: 12 }}>
+                <Tag key={loc} color={loc === '(未选库位)' ? 'error' : 'blue'} className="u-fs-12">
                   {loc}: {count}条
                 </Tag>
               ))}

@@ -8,11 +8,11 @@ type ModuleConfigPanelProps = {
 };
 
 const ModuleConfigPanel: React.FC<ModuleConfigPanelProps> = ({ selectedModules, setSelectedModules }) => (
-  <div style={{ marginTop: 16, borderTop: '1px dashed var(--color-border)', paddingTop: 16 }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
-      <span style={{ fontWeight: 600, fontSize: 16, lineHeight: 1.5 }}>
+  <div className="u-mt-16" style={{ borderTop: '1px dashed var(--color-border)', paddingTop: 16 }}>
+    <div className="u-d-flex u-jc-between u-ai-start u-mb-12 u-gap-12 u-fwrap-wrap">
+      <span className="u-fw-600 u-fs-16" style={{ lineHeight: 1.5 }}>
         菜单模块配置
-        <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', fontWeight: 400, marginLeft: 8 }}>
+        <span className="u-fs-14 u-fw-400 u-ml-8" style={{ color: 'var(--color-text-tertiary)' }}>
           （不勾选 = 全部开放；勾选后只显示已配置模块）
         </span>
       </span>
@@ -24,24 +24,24 @@ const ModuleConfigPanel: React.FC<ModuleConfigPanelProps> = ({ selectedModules, 
       </Space>
     </div>
     {selectedModules === null ? (
-      <Alert title="当前：全部开放，账户可访问所有菜单。点击「基础版预设」快速配置基础套餐。" type="success" showIcon style={{ marginBottom: 10 }} />
+      <Alert title="当前：全部开放，账户可访问所有菜单。点击「基础版预设」快速配置基础套餐。" type="success" showIcon className="u-mb-10" />
     ) : selectedModules.length === 0 ? (
-      <Alert title="警告：白名单为空，账户登录后将没有任何菜单，请至少勾选一个模块。" type="error" showIcon style={{ marginBottom: 10 }} />
+      <Alert title="警告：白名单为空，账户登录后将没有任何菜单，请至少勾选一个模块。" type="error" showIcon className="u-mb-10" />
     ) : (
-      <Alert title={`已配置 ${selectedModules.length} 个模块路径，仅显示勾选的菜单项。`} type="info" showIcon style={{ marginBottom: 10 }} />
+      <Alert title={`已配置 ${selectedModules.length} 个模块路径，仅显示勾选的菜单项。`} type="info" showIcon className="u-mb-10" />
     )}
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, padding: 2, alignItems: 'start' }}>
+    <div className="u-d-grid u-gap-12 u-ai-start" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', padding: 2 }}>
       {MODULE_SECTIONS.map(section => {
         const sectionPaths = section.paths.map(item => item.path);
         const checkedCount = selectedModules === null ? 0 : sectionPaths.filter(path => selectedModules.includes(path)).length;
         const allChecked = selectedModules !== null && checkedCount === sectionPaths.length;
         const someChecked = checkedCount > 0 && !allChecked;
         return (
-          <div key={section.key} style={{ border: '1px solid var(--color-border-light)', borderRadius: 8, padding: '12px 14px', background: 'var(--color-bg-container)' }}>
+          <div key={section.key} className="u-br-8" style={{ border: '1px solid var(--color-border-light)', padding: '12px 14px', background: 'var(--color-bg-container)' }}>
             <Checkbox
               checked={allChecked}
               indeterminate={someChecked}
-              style={{ fontWeight: 600, marginBottom: 8, fontSize: 15, lineHeight: 1.5 }}
+              className="u-fw-600 u-mb-8 u-fs-15" style={{ lineHeight: 1.5 }}
               onChange={(e) => {
                 setSelectedModules(prev => {
                   const base = prev === null ? [] : [...prev];
@@ -52,12 +52,12 @@ const ModuleConfigPanel: React.FC<ModuleConfigPanelProps> = ({ selectedModules, 
             >
               {section.title}
             </Checkbox>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 4 }}>
+            <div className="u-d-flex u-fd-column u-gap-6" style={{ paddingLeft: 4 }}>
               {section.paths.map(item => (
                 <Checkbox
                   key={item.path}
                   checked={selectedModules !== null && selectedModules.includes(item.path)}
-                  style={{ fontSize: 14, marginLeft: 0, lineHeight: 1.6 }}
+                  className="u-fs-14" style={{ marginLeft: 0, lineHeight: 1.6 }}
                   onChange={(e) => {
                     setSelectedModules(prev => {
                       const base = prev === null ? [] : [...prev];

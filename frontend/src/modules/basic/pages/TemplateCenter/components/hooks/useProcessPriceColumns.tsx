@@ -65,7 +65,7 @@ export default function useProcessPriceColumns(
               <Select
                
                 value={value || '车缝'}
-                style={{ width: '100%' }}
+                className="u-w-full"
                 onChange={(nextValue) => updateField(record.id, 'progressStage', nextValue)}
                 options={PROGRESS_STAGES.map((stage) => ({ value: stage, label: stage }))}
               />
@@ -101,7 +101,7 @@ export default function useProcessPriceColumns(
                 value={value || undefined}
                 allowClear
                 placeholder="选择"
-                style={{ width: '100%' }}
+                className="u-w-full"
                 onChange={(nextValue) => updateField(record.id, 'difficulty', nextValue)}
                 options={[
                   { value: '易', label: '易' },
@@ -123,7 +123,7 @@ export default function useProcessPriceColumns(
                 value={value}
                 min={0}
                 controls={false}
-                style={{ width: '100%' }}
+                className="u-w-full"
                 onChange={(nextValue) => updateField(record.id, 'standardTime', toNumberSafe(nextValue))}
               />
             )
@@ -142,7 +142,7 @@ export default function useProcessPriceColumns(
                 step={0.01}
                 controls={false}
                 prefix="¥"
-                style={{ width: '100%' }}
+                className="u-w-full"
                 onChange={(nextValue) => updateField(record.id, 'price', nextValue)}
               />
             )
@@ -152,7 +152,7 @@ export default function useProcessPriceColumns(
 
     const sizeColumns = sizes.map((size) => ({
       title: (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+        <div className="u-d-flex u-ai-center u-jc-center u-gap-4">
           <span>{size}码</span>
           {editable && (
             <CircleIconButton
@@ -185,7 +185,7 @@ export default function useProcessPriceColumns(
                 step={0.01}
                 controls={false}
                 prefix="¥"
-                style={{ width: '100%' }}
+                className="u-w-full"
                 onChange={(nextValue) => updateSizePrice(record.id, size, toNumberSafe(nextValue))}
               />
             )

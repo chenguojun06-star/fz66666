@@ -49,17 +49,17 @@ const RoleListPanel: React.FC<RoleListPanelProps> = ({
       meta: `${memberCount} 人 · ${permCount} 权限点`,
       badge: isActive ? <span className="scp-item-badge">当前</span> : undefined,
       actions: !isActive ? (
-        <span style={{ display: 'inline-flex', gap: 2 }}>
+        <span className="u-d-inline-flex" style={{ gap: 2 }}>
           <Button
             type="text"
             size="small"
-            icon={<EditOutlined style={{ fontSize: 12 }} />}
+            icon={<EditOutlined className="u-fs-12" />}
             onClick={() => onEdit(role as any)}
           />
           <Button
             type="text"
             size="small"
-            icon={<DeleteOutlined style={{ fontSize: 12 }} />}
+            icon={<DeleteOutlined className="u-fs-12" />}
             onClick={() => onDelete(role.id)}
           />
         </span>

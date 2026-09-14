@@ -44,24 +44,24 @@ const renderChangeContent = (record: OperationLog): React.ReactNode => {
   if (record.changeSummary) {
     const { entries, mode } = parseChangeEntries(record.changeSummary);
     return (
-      <div style={{ marginTop: 12 }}>
-        <div style={{ fontWeight: 600, marginBottom: 8 }}>变更内容：</div>
-        <div style={{ backgroundColor: 'var(--color-bg-subtle)', padding: 12, borderRadius: 6 }}>
+      <div className="u-mt-12">
+        <div className="u-fw-600 u-mb-8">变更内容：</div>
+        <div className="u-p-12 u-br-6" style={{ backgroundColor: 'var(--color-bg-subtle)' }}>
           {entries.length > 0 ? entries.map((entry, idx) => {
             // 兼容纯文本行（old/new 均为空）
             if (!entry.old && !entry.new) {
-              return <div key={idx} style={{ marginBottom: 4, fontSize: 13 }}>{entry.label}</div>;
+              return <div key={idx} className="u-mb-4 u-fs-13">{entry.label}</div>;
             }
             return (
-              <div key={idx} style={{ marginBottom: 4, fontSize: 13 }}>
+              <div key={idx} className="u-mb-4 u-fs-13">
                 <span style={{ color: 'var(--color-text-secondary)' }}>{entry.label}：</span>
                 <span style={{ textDecoration: 'line-through', color: 'var(--color-text-tertiary)' }}>{entry.old}</span>
                 <span style={{ margin: '0 6px' }}>→</span>
-                <span style={{ color: 'var(--color-primary)', fontWeight: 500 }}>{entry.new}</span>
+                <span className="u-fw-500" style={{ color: 'var(--color-primary)' }}>{entry.new}</span>
               </div>
             );
           }) : (
-            <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>
+            <div className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
               {mode === 'plain' ? record.changeSummary : '无变更明细'}
             </div>
           )}
@@ -78,8 +78,8 @@ const renderChangeContent = (record: OperationLog): React.ReactNode => {
       detailsText = record.details;
     }
     return (
-      <div style={{ marginTop: 12 }}>
-        <div style={{ fontWeight: 600, marginBottom: 8 }}>详细信息：</div>
+      <div className="u-mt-12">
+        <div className="u-fw-600 u-mb-8">详细信息：</div>
         <div style={{
           backgroundColor: 'var(--color-bg-subtle)',
           padding: 12,
@@ -107,8 +107,8 @@ export const showOperationLogDetails = (modal: ModalInstance, record: OperationL
     title: '操作详情',
     width: 700,
     content: (
-      <div style={{ maxHeight: '60vh', overflow: 'auto' }}>
-        <div style={{ marginBottom: 8, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 24px' }}>
+      <div className="u-ov-auto" style={{ maxHeight: '60vh' }}>
+        <div className="u-mb-8 u-d-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '8px 24px' }}>
           <div><strong>模块：</strong>{record.module}</div>
           <div><strong>操作：</strong>{record.operation}</div>
           <div><strong>操作人：</strong>{record.operatorName}</div>

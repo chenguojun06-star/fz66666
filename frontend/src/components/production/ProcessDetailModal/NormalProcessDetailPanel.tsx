@@ -47,7 +47,7 @@ const NormalProcessDetailPanel: React.FC<NormalProcessDetailPanelProps> = ({
       {cuttingSizeItems.length > 0 && (
         <CuttingSizeDetail items={cuttingSizeItems} />
       )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div className="u-d-flex u-fd-column" style={{ gap: '16px' }}>
         {stagesToShow.map((stage) => (
           <ProcessStageGroup
             key={stage.key}
@@ -135,27 +135,18 @@ const ProcessOrderInfoGrid: React.FC<{
   operatorInfo: { operatorName?: string; endTime?: string; processName: string } | null;
   onNavigateToPayroll: (processName: string) => void;
 }> = ({ record, totalPrice, cuttingQty, operatorInfo, onNavigateToPayroll }) => (
-  <div style={{
-    background: 'var(--color-slate-50)',
-    padding: '12px',
-    borderRadius: '6px',
-    marginBottom: '12px',
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '8px',
-    fontSize: '12px'
-  }}>
+  <div className="u-d-grid u-fs-12px" style={{ background: 'var(--color-slate-50)', padding: '12px', borderRadius: '6px', marginBottom: '12px', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
     <InfoItem label="订单号" value={record.orderNo} />
     <InfoItem label="款号" value={record.styleNo} />
     <InfoItem label="款名" value={record.styleName} />
     <div>
       <span style={{ color: 'var(--color-text-secondary)' }}>总工价：</span>
-      <span style={{ fontWeight: 700, color: 'var(--color-error)' }}>¥{totalPrice.toFixed(2)}</span>
+      <span className="u-fw-700" style={{ color: 'var(--color-error)' }}>¥{totalPrice.toFixed(2)}</span>
     </div>
     <InfoItem label="订单数量" value={`${record.orderQuantity || 0} 件`} />
     <div>
       <span style={{ color: 'var(--color-text-secondary)' }}>裁剪数量：</span>
-      <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>{cuttingQty} 件</span>
+      <span className="u-fw-600" style={{ color: 'var(--color-success)' }}>{cuttingQty} 件</span>
     </div>
     {operatorInfo && (
       <div>
@@ -163,7 +154,7 @@ const ProcessOrderInfoGrid: React.FC<{
           <span style={{ color: 'var(--color-text-secondary)' }}>{operatorInfo.processName}操作人：</span>
           {operatorInfo.operatorName ? (
             <a
-              style={{ cursor: 'pointer', color: 'var(--color-primary)', fontWeight: 600 }}
+              className="u-cur-pointer u-fw-600" style={{ color: 'var(--color-primary)' }}
               onClick={() => {
                 if (record?.orderNo) {
                   onNavigateToPayroll(operatorInfo.processName);
@@ -178,7 +169,7 @@ const ProcessOrderInfoGrid: React.FC<{
         </div>
         <div>
           <span style={{ color: 'var(--color-text-secondary)' }}>{operatorInfo.processName}完成：</span>
-          <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>
+          <span className="u-fw-500" style={{ color: 'var(--color-text-primary)' }}>
             {operatorInfo.endTime ? (
               new Date(operatorInfo.endTime as string).toLocaleString('zh-CN', {
                 month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
@@ -194,32 +185,14 @@ const ProcessOrderInfoGrid: React.FC<{
 );
 
 const CuttingSizeDetail: React.FC<{ items: Array<{ size: string; quantity: number }> }> = ({ items }) => (
-  <div style={{
-    padding: '8px 12px',
-    border: '1px solid var(--status-success-border)',
-    background: 'rgba(34, 197, 94, 0.15)',
-    borderRadius: 12,
-    marginBottom: 12,
-    fontSize: '13px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap'
-  }}>
-    <span style={{ color: 'var(--color-gray-700)', fontWeight: 600 }}>裁剪数明细：</span>
+  <div className="u-p-8px12px u-br-12 u-mb-12 u-d-flex u-ai-center u-gap-8 u-fwrap-wrap" style={{ border: '1px solid var(--status-success-border)', background: 'rgba(34, 197, 94, 0.15)', fontSize: '13px' }}>
+    <span className="u-fw-600" style={{ color: 'var(--color-gray-700)' }}>裁剪数明细：</span>
     {items.map((item) => (
-      <span key={item.size} style={{
-        color: 'var(--color-success)',
-        fontWeight: 600,
-        padding: '2px 8px',
-        background: 'var(--color-bg-base)',
-        borderRadius: 4,
-        border: '1px solid var(--status-success-border)'
-      }}>
+      <span key={item.size} className="u-fw-600 u-br-4" style={{ color: 'var(--color-success)', padding: '2px 8px', background: 'var(--color-bg-base)', border: '1px solid var(--status-success-border)' }}>
         {item.size}: {item.quantity}
       </span>
     ))}
-    <span style={{ color: 'var(--color-success)', fontWeight: 700, marginLeft: 4 }}>
+    <span className="u-fw-700 u-ml-4" style={{ color: 'var(--color-success)' }}>
       总计: {items.reduce((sum, item) => sum + item.quantity, 0)}
     </span>
   </div>

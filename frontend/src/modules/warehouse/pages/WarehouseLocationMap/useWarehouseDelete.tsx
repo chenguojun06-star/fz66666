@@ -39,8 +39,8 @@ export const useWarehouseDelete = (options: UseWarehouseDeleteOptions) => {
     modal.confirm({
       title: `确定删除仓库「${areaName}」？`,
       content: (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ color: 'var(--color-danger)', marginBottom: 8 }}>
+        <div className="u-mt-12">
+          <div className="u-mb-8" style={{ color: 'var(--color-danger)' }}>
             此操作将硬删除该仓库及其下所有空闲库位，删除后不可恢复！
           </div>
           <Input.TextArea
@@ -94,8 +94,8 @@ export const useWarehouseDelete = (options: UseWarehouseDeleteOptions) => {
     modal.confirm({
       title: `确定删除库位「${locationCode}」？`,
       content: (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ color: 'var(--color-danger)', marginBottom: 8 }}>
+        <div className="u-mt-12">
+          <div className="u-mb-8" style={{ color: 'var(--color-danger)' }}>
             此操作将硬删除该库位，删除后不可恢复！
           </div>
           <Input.TextArea

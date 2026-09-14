@@ -52,7 +52,7 @@ class RouteErrorBoundary extends React.Component<RouteErrorBoundaryProps, RouteE
     if (this.state.hasError) {
       const isChunk = isChunkLoadError({ message: this.state.message } as Error);
       return (
-        <div style={{ padding: 48, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <div className="u-d-flex u-jc-center u-ai-center" style={{ padding: 48, minHeight: 400 }}>
           <Result
             status="500"
             title={isChunk ? '系统已更新' : `${this.props.pageName || '页面'}开小差了`}

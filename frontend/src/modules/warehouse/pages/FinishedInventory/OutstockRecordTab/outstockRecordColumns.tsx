@@ -24,7 +24,7 @@ export function getOutstockRecordColumns(handlers: {
       dataIndex: 'outstockNo',
       width: 160,
       render: (text) => (
-        <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{text}</span>
+        <span className="u-fw-600" style={{ color: 'var(--primary-color)' }}>{text}</span>
       ),
     },
     {
@@ -42,8 +42,8 @@ export function getOutstockRecordColumns(handlers: {
       width: 180,
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 600 }}>{record.styleNo || '-'}</div>
-          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-disabled)' }}>
+          <div className="u-fw-600">{record.styleNo || '-'}</div>
+          <div className="u-fs-var--font-size-sm" style={{ color: 'var(--neutral-text-disabled)' }}>
             {record.styleName || ''}
           </div>
         </div>
@@ -85,7 +85,7 @@ export function getOutstockRecordColumns(handlers: {
       align: 'center' as const,
       render: (val: number) => {
         const sale = Number(val) || 0;
-        return <span style={{ color: 'var(--color-error)', fontWeight: 600 }}>{formatMoney(sale)}</span>;
+        return <span className="u-fw-600" style={{ color: 'var(--color-error)' }}>{formatMoney(sale)}</span>;
       },
     },
     {
@@ -106,7 +106,7 @@ export function getOutstockRecordColumns(handlers: {
       width: 110,
       align: 'right',
       render: (val) => val != null ? (
-        <span style={{ color: 'var(--color-error)', fontWeight: 600 }}>{formatMoney(Number(val))}</span>
+        <span className="u-fw-600" style={{ color: 'var(--color-error)' }}>{formatMoney(Number(val))}</span>
       ) : '-',
     },
     {
@@ -115,7 +115,7 @@ export function getOutstockRecordColumns(handlers: {
       width: 110,
       align: 'right',
       render: (val) => val != null ? (
-        <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>{formatMoney(Number(val))}</span>
+        <span className="u-fw-600" style={{ color: 'var(--color-success)' }}>{formatMoney(Number(val))}</span>
       ) : '-',
     },
     {
@@ -141,7 +141,7 @@ export function getOutstockRecordColumns(handlers: {
           return <span style={{ color: 'var(--neutral-text-disabled)' }}>未填写</span>;
         }
         return (
-          <div style={{ fontSize: 'var(--font-size-sm)' }}>
+          <div className="u-fs-var--font-size-sm">
             {record.expressCompany && <div>快递: <Tag>{record.expressCompany}</Tag></div>}
             {record.trackingNo && <div>单号: <span style={{ color: 'var(--primary-color)' }}>{record.trackingNo}</span></div>}
           </div>

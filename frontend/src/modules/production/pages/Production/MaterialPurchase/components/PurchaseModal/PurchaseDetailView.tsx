@@ -155,7 +155,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
               请点击「编辑面辅料」为每个颜色分别添加面辅料信息。
             </span>
           }
-          style={{ marginBottom: 12 }}
+          className="u-mb-12"
         />
       )}
 
@@ -239,7 +239,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
             onOpenMaterialModal={data.openMaterialModal}
           />
         ) : detailPurchases.length === 0 && !detailLoading ? (
-          <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+          <div className="u-ta-center" style={{ padding: '48px 16px' }}>
             <Alert
               type="info"
               showIcon
@@ -249,7 +249,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                   ? `订单包含 ${data.orderColors.length} 种颜色（${data.orderColors.join('、')}），点击「编辑面辅料」按钮为每种颜色创建对应的面辅料记录。`
                   : '点击上方「编辑面辅料」按钮，为订单添加面辅料信息（物料编码、名称、单位、供应商等），完善后才可进行采购。'
               }
-              style={{ maxWidth: 600, margin: '0 auto', textAlign: 'left' }}
+              className="u-ta-left" style={{ maxWidth: 600, margin: '0 auto' }}
               action={
                 <Button type="primary" size="small" onClick={data.handleStartEdit}>
                   编辑面辅料

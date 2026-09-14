@@ -69,7 +69,7 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
   const doneCount = stages.filter(s => s.status === 'done').length;
   const timelinePercent = ((doneCount + 1) / (stages.length + 1)) * 100;
   const shipDate = (record as any).expectedShipDate || record.plannedEndDate;
-  const factoryTag = <FactoryTypeTag factoryType={record.factoryType} style={{ marginLeft: 4 }} />;
+  const factoryTag = <FactoryTypeTag factoryType={record.factoryType} className="u-ml-4" />;
 
   const timelineItems = useMemo<StageTimelineItem[]>(() => [
     { name: '下单', startTime: record.createTime, endTime: record.createTime, isCompleted: true },
@@ -134,8 +134,8 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
                   trigger="hover" placement="rightTop" mouseEnterDelay={0.3}
                 >
                   <span
-                    className="ef-field-value ef-order-no"
-                    style={{ cursor: 'pointer' }}
+                    className="ef-field-value ef-order-no u-cur-pointer"
+                    
                     onClick={() => navigate(withQuery('/production/order-flow', {
                       orderId: record.id, orderNo: record.orderNo, styleNo: record.styleNo,
                     }))}
@@ -158,18 +158,18 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
               </div>
               <div className="ef-field-row">
                 <span className="ef-field-label">总数</span>
-                <span className="ef-field-value" style={{ fontWeight: 700 }}>{totalQty}件</span>
+                <span className="ef-field-value u-fw-700" >{totalQty}件</span>
               </div>
               <div className="ef-field-row">
                 <span className="ef-field-label">交期</span>
                 <span className="ef-field-value">{shipDate ? dayjs(shipDate).format('YYYY-MM-DD') : '-'}</span>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-              <Tag color={statusInfo.color} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{statusInfo.text}</Tag>
-              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>急单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>首单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>翻单</Tag>}
+            <div className="u-d-flex u-fwrap-wrap u-ai-center" style={{ gap: 3 }}>
+              <Tag color={statusInfo.color} className="u-m-0 u-fs-12 u-p-04px u-lh-18px">{statusInfo.text}</Tag>
+              {record.urgencyLevel === 'urgent' && <Tag color="red" className="u-m-0 u-fs-12 u-p-04px u-lh-18px">急单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" className="u-m-0 u-fs-12 u-p-04px u-lh-18px">首单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" className="u-m-0 u-fs-12 u-p-04px u-lh-18px">翻单</Tag>}
               <span className={`ef-delivery-badge ef-delivery-badge--${deliveryMeta.tone}`} style={{ fontSize: 12, fontWeight: 600 }}>
                 {deliveryMeta.label}
               </span>
@@ -189,10 +189,10 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
               <Popover
                 content={(
                   <div style={{ minWidth: 160 }}>
-                    <div style={{ marginBottom: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, lineHeight: 1.5, whiteSpace: 'nowrap' }}>
-                        <span style={{ color: 'var(--color-slate-400)', flexShrink: 0 }}>款号</span>
-                        <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{record.styleNo}{record.styleName ? ` · ${record.styleName}` : ''}</span>
+                    <div className="u-mb-8">
+                      <div className="u-d-flex u-ai-center u-gap-6 u-fs-14 u-ws-nowrap" style={{ lineHeight: 1.5 }}>
+                        <span className="u-fshrink-0" style={{ color: 'var(--color-slate-400)' }}>款号</span>
+                        <span className="u-fw-600" style={{ color: 'var(--color-text-primary)' }}>{record.styleNo}{record.styleName ? ` · ${record.styleName}` : ''}</span>
                       </div>
                     </div>
                     <ColorSizeMatrixPopoverContent model={sizeMatrix} />
@@ -202,7 +202,7 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
                 overlayStyle={{ minWidth: 180, maxWidth: 560, zIndex: 1100 }}
                 getPopupContainer={() => document.body}
               >
-                <div className="style-smart-stage style-smart-stage--done" style={{ cursor: 'pointer' }}>
+                <div className="style-smart-stage style-smart-stage--done u-cur-pointer" >
                   <div className="style-smart-stage__node">
                     <span className="style-smart-stage__ring" />
                     <span className="style-smart-stage__orbit" />

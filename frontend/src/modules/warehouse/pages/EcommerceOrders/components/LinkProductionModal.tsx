@@ -19,13 +19,13 @@ const LinkProductionModal: React.FC<Props> = ({ open, target, linking, form, onO
       open={open} onCancel={onCancel}
       onOk={onOk} confirmLoading={linking} okText="确认关联" width="85vw" maskClosable={false}>
       {target && (
-        <div style={{ marginBottom: 12, padding: '8px 12px', background: 'var(--color-bg-stripe)', borderRadius: 6, fontSize: 14 }}>
+        <div className="u-mb-12 u-p-8px12px u-br-6 u-fs-14" style={{ background: 'var(--color-bg-stripe)' }}>
           <div>平台订单: <b>{target.platformOrderNo}</b></div>
           <div>商品: {target.productName} × {target.quantity}</div>
           <div>实付: ¥{target.payAmount} &nbsp;|&nbsp; 买家: {target.buyerNick || target.receiverName}</div>
         </div>
       )}
-      <Alert style={{ marginBottom: 12, fontSize: 14 }} type="info" showIcon
+      <Alert className="u-mb-12 u-fs-14" type="info" showIcon
         title="关联后，该生产订单从仓库出库时将自动更新此电商订单为【已出库】并写入快递单号" />
       <Form form={form} layout="vertical">
         <Form.Item name="productionOrderNo" label="生产订单号"

@@ -11,8 +11,8 @@ const DataImport: React.FC = () => {
   return (
     <>
       <div style={{ padding: '0 0 24px' }}>
-        <Title level={4} style={{ marginBottom: 4 }}>
-          <FileExcelOutlined style={{ marginRight: 8 }} />
+        <Title level={4} className="u-mb-4">
+          <FileExcelOutlined className="u-mr-8" />
           数据导入
         </Title>
         <Text type="secondary">
@@ -30,7 +30,7 @@ const DataImport: React.FC = () => {
               label: (
                 <span>
                   <FileZipOutlined />
-                  <span style={{ marginLeft: 6 }}>款式 + 图片批量导入</span>
+                  <span className="u-ml-6">款式 + 图片批量导入</span>
                 </span>
               ),
               children: <ZipImportPanel />,
@@ -40,7 +40,7 @@ const DataImport: React.FC = () => {
               label: (
                 <span>
                   {config.icon}
-                  <span style={{ marginLeft: 6 }}>{config.label}</span>
+                  <span className="u-ml-6">{config.label}</span>
                 </span>
               ),
               children: <ImportPanel config={config} />,

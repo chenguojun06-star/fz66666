@@ -57,11 +57,11 @@ export const MergeSuggestionCard: React.FC<MergeSuggestionCardProps> = ({
       title: '物料',
       key: 'material',
       render: (_, row) => (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontWeight: 600 }}>{row.materialName}</span>
-          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{row.materialCode}</span>
+        <div className="u-d-flex u-fd-column">
+          <span className="u-fw-600">{row.materialName}</span>
+          <span className="u-fs-12" style={{ color: 'var(--color-text-secondary)' }}>{row.materialCode}</span>
           {row.specifications && (
-            <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{row.specifications}</span>
+            <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>{row.specifications}</span>
           )}
         </div>
       ),
@@ -70,11 +70,11 @@ export const MergeSuggestionCard: React.FC<MergeSuggestionCardProps> = ({
       title: '供应商明细',
       key: 'suppliers',
       render: (_, row) => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div className="u-d-flex u-fd-column" style={{ gap: 2 }}>
           {row.items.map((item, i) => (
-            <span key={i} style={{ fontSize: 12 }}>
+            <span key={i} className="u-fs-12">
               {item.supplierName || '-'}
-              <span style={{ color: 'var(--color-text-tertiary)', marginLeft: 8 }}>×{item.quantity}</span>
+              <span className="u-ml-8" style={{ color: 'var(--color-text-tertiary)' }}>×{item.quantity}</span>
             </span>
           ))}
         </div>
@@ -86,7 +86,7 @@ export const MergeSuggestionCard: React.FC<MergeSuggestionCardProps> = ({
       width: 130,
       align: 'right',
       render: (qty: number) => (
-        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{qty}</span>
+        <span className="u-fw-600" style={{ fontVariantNumeric: 'tabular-nums' }}>{qty}</span>
       ),
     },
     {
@@ -112,7 +112,7 @@ export const MergeSuggestionCard: React.FC<MergeSuggestionCardProps> = ({
     <Card
       size="small"
       title={
-        <span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>
+        <span className="u-fw-600" style={{ color: 'var(--color-warning)' }}>
           🔔 推荐合并 ({suggestions.length})
         </span>
       }

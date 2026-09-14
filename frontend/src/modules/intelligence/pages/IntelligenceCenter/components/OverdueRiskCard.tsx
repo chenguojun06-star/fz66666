@@ -16,28 +16,28 @@ const OverdueRiskCard: React.FC<any> = ({
 
   return (
   <div className="c-card c-hover-hl">
-    <div className="c-kpi-label" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+    <div className="c-kpi-label u-cur-pointer u-d-flex u-ai-center u-gap-6" >
       <LiveDot size={8} color={overdueRisk.overdue.length > 0 ? 'var(--color-red-400)' : 'var(--color-warning-deep)'} />
-      <span style={{ fontWeight: 700 }}>逾期 &amp; 延期风险订单</span>
+      <span className="u-fw-700">逾期 &amp; 延期风险订单</span>
       {overdueRisk.overdue.length > 0 && (
-        <span style={{ background: 'var(--color-red-400)', color: 'var(--color-bg-base)', fontSize: 14, fontWeight: 700, borderRadius: 8, padding: '1px 7px', marginLeft: 2 }}>逾期 {overdueRisk.overdue.length} 单</span>
+        <span className="u-fs-14 u-fw-700 u-br-8 u-ml-2" style={{ background: 'var(--color-red-400)', color: 'var(--color-bg-base)', padding: '1px 7px' }}>逾期 {overdueRisk.overdue.length} 单</span>
       )}
       {overdueRisk.highRisk.length > 0 && (
-        <span style={{ background: 'var(--color-warning-deep)', color: 'var(--color-bg-base)', fontSize: 14, fontWeight: 700, borderRadius: 8, padding: '1px 7px' }}>高风险 {overdueRisk.highRisk.length} 单</span>
+        <span className="u-fs-14 u-fw-700 u-br-8" style={{ background: 'var(--color-warning-deep)', color: 'var(--color-bg-base)', padding: '1px 7px' }}>高风险 {overdueRisk.highRisk.length} 单</span>
       )}
-      <span onClick={() => toggleCollapse('overdueRisk')} style={{ cursor: 'pointer' }}><CollapseChevron panelKey="overdueRisk" collapsed={!!collapsedPanels['overdueRisk']} /></span>
+      <span onClick={() => toggleCollapse('overdueRisk')} className="u-cur-pointer"><CollapseChevron panelKey="overdueRisk" collapsed={!!collapsedPanels['overdueRisk']} /></span>
     </div>
     <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['overdueRisk'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
       {overdueRisk.overdue.length === 0 && overdueRisk.highRisk.length === 0 && overdueRisk.watch.length === 0 ? (
-        <div style={{ textAlign: 'center', color: 'var(--color-accent-neon)', padding: '20px 0', fontSize: 14, fontWeight: 600 }}>
-          <CheckCircleOutlined style={{ fontSize: 28, marginBottom: 6 }} /><br />所有订单均在健康交期内
+        <div className="u-ta-center u-fs-14 u-fw-600" style={{ color: 'var(--color-accent-neon)', padding: '20px 0' }}>
+          <CheckCircleOutlined className="u-fs-28 u-mb-6" /><br />所有订单均在健康交期内
         </div>
       ) : (
-        <div style={{ maxHeight: 380, marginTop: 6 }}><AutoScrollBox className="c-risk-list">
+        <div className="u-mt-6" style={{ maxHeight: 380 }}><AutoScrollBox className="c-risk-list">
           {overdueRisk.overdue.map((o: any) => {
             const d = Math.ceil((new Date(o.plannedEndDate!).getTime() - Date.now()) / 86400000);
             return (
-              <div key={String(o.id)} className="c-risk-row" style={{ cursor: 'pointer' }} onClick={() => goToOrder(o.orderNo)}>
+              <div key={String(o.id)} className="c-risk-row u-cur-pointer"  onClick={() => goToOrder(o.orderNo)}>
                 <span className="c-risk-badge" style={{ background: 'var(--color-red-400)' }}>逾{-d}天</span>
                 <span className="c-risk-order">{o.orderNo}</span>
                 <span className="c-risk-factory">{o.factoryName ?? '—'}</span>
@@ -49,7 +49,7 @@ const OverdueRiskCard: React.FC<any> = ({
           {overdueRisk.highRisk.map((o: any) => {
             const d = Math.ceil((new Date(o.plannedEndDate!).getTime() - Date.now()) / 86400000);
             return (
-              <div key={String(o.id)} className="c-risk-row" style={{ cursor: 'pointer' }} onClick={() => goToOrder(o.orderNo)}>
+              <div key={String(o.id)} className="c-risk-row u-cur-pointer"  onClick={() => goToOrder(o.orderNo)}>
                 <span className="c-risk-badge" style={{ background: 'var(--color-warning-deep)' }}>剩{d}天</span>
                 <span className="c-risk-order">{o.orderNo}</span>
                 <span className="c-risk-factory">{o.factoryName ?? '—'}</span>
@@ -61,7 +61,7 @@ const OverdueRiskCard: React.FC<any> = ({
           {overdueRisk.watch.map((o: any) => {
             const d = Math.ceil((new Date(o.plannedEndDate!).getTime() - Date.now()) / 86400000);
             return (
-              <div key={String(o.id)} className="c-risk-row" style={{ cursor: 'pointer' }} onClick={() => goToOrder(o.orderNo)}>
+              <div key={String(o.id)} className="c-risk-row u-cur-pointer"  onClick={() => goToOrder(o.orderNo)}>
                 <span className="c-risk-badge" style={{ background: 'var(--color-cyan-500)' }}>关注{d}d</span>
                 <span className="c-risk-order">{o.orderNo}</span>
                 <span className="c-risk-factory">{o.factoryName ?? '—'}</span>

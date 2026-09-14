@@ -56,8 +56,8 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
       width: 150,
       ellipsis: true,
       render: (text: string, record: SecondaryProcess) => ctx.isEditing(record) ? (
-        <Form.Item name="processName" style={{ margin: 0 }} rules={[{ required: true, message: '请输入工艺名称' }]}>
-          <DictAutoComplete dictType="process_name" autoCollect placeholder="工艺名称" style={{ width: '100%' }} />
+        <Form.Item name="processName" className="u-m-0" rules={[{ required: true, message: '请输入工艺名称' }]}>
+          <DictAutoComplete dictType="process_name" autoCollect placeholder="工艺名称" className="u-w-full" />
         </Form.Item>
       ) : (text || '-'),
     },
@@ -68,8 +68,8 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
       width: 160,
       ellipsis: true,
       render: (text: string, record: SecondaryProcess) => ctx.isEditing(record) ? (
-        <Form.Item name="description" style={{ margin: 0 }}>
-          <DictAutoComplete dictType="process_description" autoCollect placeholder="工艺描述" style={{ width: '100%' }} />
+        <Form.Item name="description" className="u-m-0">
+          <DictAutoComplete dictType="process_description" autoCollect placeholder="工艺描述" className="u-w-full" />
         </Form.Item>
       ) : (text || '-'),
     },
@@ -80,8 +80,8 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
       width: 90,
       align: 'right',
       render: (value: number, record: SecondaryProcess) => ctx.isEditing(record) ? (
-        <Form.Item name="quantity" style={{ margin: 0 }} rules={[{ required: true, message: '请输入' }]}>
-          <InputNumber min={0} controls={false} style={{ width: '100%' }} onChange={ctx.calculateTotalPrice} />
+        <Form.Item name="quantity" className="u-m-0" rules={[{ required: true, message: '请输入' }]}>
+          <InputNumber min={0} controls={false} className="u-w-full" onChange={ctx.calculateTotalPrice} />
         </Form.Item>
       ) : toNumberSafe(value).toLocaleString(),
     },
@@ -92,8 +92,8 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
       width: 110,
       align: 'right',
       render: (value: number, record: SecondaryProcess) => ctx.isEditing(record) ? (
-        <Form.Item name="unitPrice" style={{ margin: 0 }} rules={[{ required: true, message: '请输入' }]}>
-          <InputNumber min={0} precision={2} prefix="¥" controls={false} style={{ width: '100%' }} onChange={ctx.calculateTotalPrice} />
+        <Form.Item name="unitPrice" className="u-m-0" rules={[{ required: true, message: '请输入' }]}>
+          <InputNumber min={0} precision={2} prefix="¥" controls={false} className="u-w-full" onChange={ctx.calculateTotalPrice} />
         </Form.Item>
       ) : `¥${toNumberSafe(value).toFixed(2)}`,
     },
@@ -106,8 +106,8 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
       render: (value: number, record: SecondaryProcess) => {
         if (ctx.isEditing(record)) {
           return (
-            <Form.Item name="totalPrice" style={{ margin: 0 }}>
-              <InputNumber disabled precision={2} prefix="¥" controls={false} style={{ width: '100%' }} />
+            <Form.Item name="totalPrice" className="u-m-0">
+              <InputNumber disabled precision={2} prefix="¥" controls={false} className="u-w-full" />
             </Form.Item>
           );
         }
@@ -115,7 +115,7 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
           ? toNumberSafe(record.totalPrice)
           : toNumberSafe(record.quantity || 0) * toNumberSafe(record.unitPrice || 0);
         return (
-          <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>
+          <span className="u-fw-600" style={{ color: 'var(--primary-color)' }}>
             {formatMoney(total)}
           </span>
         );
@@ -128,7 +128,7 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
       width: 140,
       ellipsis: true,
       render: (text: string, record: SecondaryProcess) => ctx.isEditing(record) ? (
-        <Form.Item name="factoryName" style={{ margin: 0 }}>
+        <Form.Item name="factoryName" className="u-m-0">
           <SupplierSelect
             placeholder="选择加工厂"
             onChange={(_value: any, option: any) => {
@@ -153,8 +153,8 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
       render: (value: string, record: SecondaryProcess) => {
         if (ctx.isEditing(record)) {
           return (
-            <Form.Item name="status" style={{ margin: 0 }} rules={[{ required: true, message: '请选择' }]}>
-              <Select placeholder="状态" style={{ width: '100%' }}>
+            <Form.Item name="status" className="u-m-0" rules={[{ required: true, message: '请选择' }]}>
+              <Select placeholder="状态" className="u-w-full">
                 {statusOptions.map(opt => (
                   <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                 ))}
@@ -173,7 +173,7 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
       width: 150,
       ellipsis: true,
       render: (text: string, record: SecondaryProcess) => ctx.isEditing(record) ? (
-        <Form.Item name="remark" style={{ margin: 0 }}>
+        <Form.Item name="remark" className="u-m-0">
           <Input.TextArea placeholder="备注" rows={2} />
         </Form.Item>
       ) : (text || '-'),
@@ -227,10 +227,10 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
         if (ctx.isEditing(record)) {
           return (
             <Space>
-              <Button type="link" onClick={ctx.handleSave} style={{ padding: '0 4px' }}>
+              <Button type="link" onClick={ctx.handleSave} className="u-p-04px">
                 保存
               </Button>
-              <Button type="link" onClick={ctx.handleCancel} style={{ padding: '0 4px' }}>
+              <Button type="link" onClick={ctx.handleCancel} className="u-p-04px">
                 取消
               </Button>
             </Space>

@@ -16,7 +16,7 @@ const HeatmapPanel: React.FC<HeatmapPanelProps> = ({
 }) => {
   return (
     <div className="c-card">
-      <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('heatmap')}>
+      <div className="c-card-title u-cur-pointer"  onClick={() => toggleCollapse('heatmap')}>
         <LiveDot size={7} color={(heatmap?.totalDefects ?? 0) > 0 ? 'var(--color-danger)' : 'var(--color-accent-neon)'} />
         质量缺陷热力图
         {heatmap && (
@@ -56,7 +56,7 @@ const HeatmapPanel: React.FC<HeatmapPanelProps> = ({
                 </React.Fragment>
               ))}
             </div>}
-            {isLowEnd && <div style={{ fontSize: 14, color: 'var(--color-blue-300)', padding: '8px 0' }}>
+            {isLowEnd && <div className="u-fs-14 u-p-8px0" style={{ color: 'var(--color-blue-300)' }}>
               共 {heatmap.totalDefects} 个缺陷，涉及 {(heatmap.processes || []).length} 个工序、{(heatmap.factories || []).length} 个工厂
             </div>}
           </>

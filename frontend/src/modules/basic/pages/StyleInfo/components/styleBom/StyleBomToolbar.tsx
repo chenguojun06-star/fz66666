@@ -248,11 +248,11 @@ const StyleBomToolbar: React.FC<StyleBomToolbarProps> = ({
             </Upload.Dragger>
 
             {!ocrLoading && ocrFile && (
-              <div style={{ marginTop: 16, padding: 12, background: 'var(--color-success-bg-light, var(--status-success-bg))', borderRadius: 8, border: '1px solid var(--color-success-border, var(--status-success-border))' }}>
-                <p style={{ margin: 0, color: 'var(--color-success)', fontWeight: 500 }}>
+              <div className="u-mt-16 u-p-12 u-br-8" style={{ background: 'var(--color-success-bg-light, var(--status-success-bg))', border: '1px solid var(--color-success-border, var(--status-success-border))' }}>
+                <p className="u-m-0 u-fw-500" style={{ color: 'var(--color-success)' }}>
                   已选择: {ocrFile.name}
                 </p>
-                <p style={{ margin: '8px 0 0', color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+                <p className="u-fs-12" style={{ margin: '8px 0 0', color: 'var(--color-text-tertiary)' }}>
                   点击"识别"按钮开始AI分析
                 </p>
               </div>

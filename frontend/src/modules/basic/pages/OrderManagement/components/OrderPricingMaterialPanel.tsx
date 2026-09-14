@@ -58,14 +58,14 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
         background: 'var(--color-bg-base)',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+      <div className="u-d-flex u-jc-between u-gap-12 u-fwrap-wrap u-mb-10">
         <div>
-          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>单价与面辅料分析</div>
-          <div style={{ marginTop: 4, fontSize: 14, color: 'var(--color-text-secondary)' }}>
+          <div className="u-fs-14 u-fw-500" style={{ color: 'var(--color-text-primary)' }}>单价与面辅料分析</div>
+          <div className="u-mt-4 u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>
             {factoryMode === 'EXTERNAL' ? '成本价格已匹配外发整件单价' : '内部工厂继续使用工序单价'} · 报价参考 {quotationUnitPrice > 0 ? formatMoney(quotationUnitPrice) : '-'}
           </div>
         </div>
-        <div style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>{sizePriceLoading ? '码价读取中...' : `已维护 ${sizePriceCount} 条码价`}</div>
+        <div className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>{sizePriceLoading ? '码价读取中...' : `已维护 ${sizePriceCount} 条码价`}</div>
       </div>
       <div
         style={{
@@ -76,10 +76,10 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
           marginBottom: 12,
         }}
       >
-        <div style={{ display: 'grid', gridTemplateColumns: '56px minmax(0, 1fr)', gap: 8, alignItems: 'start' }}>
-          <div style={{ paddingTop: 6, fontSize: 14, color: 'var(--color-text-secondary)' }}>单价</div>
+        <div className="u-d-grid u-gap-8 u-ai-start" style={{ gridTemplateColumns: '56px minmax(0, 1fr)' }}>
+          <div className="u-fs-14" style={{ paddingTop: 6, color: 'var(--color-text-secondary)' }}>单价</div>
           <div>
-            <Form.Item name="pricingMode" initialValue="PROCESS" style={{ marginBottom: 0 }}>
+            <Form.Item name="pricingMode" initialValue="PROCESS" className="u-mb-0">
               <Select
                 onChange={onPricingModeChange}
                 options={[
@@ -93,21 +93,21 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
             </Form.Item>
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '56px minmax(0, 1fr)', gap: 8, alignItems: 'start' }}>
-          <div style={{ paddingTop: 6, fontSize: 14, color: 'var(--color-text-secondary)' }}>锁定价格</div>
+        <div className="u-d-grid u-gap-8 u-ai-start" style={{ gridTemplateColumns: '56px minmax(0, 1fr)' }}>
+          <div className="u-fs-14" style={{ paddingTop: 6, color: 'var(--color-text-secondary)' }}>锁定价格</div>
           <div>
             {watchedPricingMode === 'MANUAL' ? (
               <Form.Item
                 name="manualOrderUnitPrice"
                 rules={[{ required: true, message: '请输入单价' }]}
-                style={{ marginBottom: 0 }}
+                className="u-mb-0"
               >
-                <InputNumber min={0.01} precision={2} style={{ width: '100%' }} placeholder="输入单价" />
+                <InputNumber min={0.01} precision={2} className="u-w-full" placeholder="输入单价" />
               </Form.Item>
             ) : (
-              <div style={{ minHeight: 32, display: 'flex', alignItems: 'center', fontSize: 14, color: 'var(--color-text-secondary)' }}>
-                <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{formatMoney(resolvedOrderUnitPrice)} / 件</span>
-                {suggestedQuotationUnitPrice > 0 ? <span style={{ marginLeft: 8, color: 'var(--color-text-secondary)' }}>建议报价 {formatMoney(suggestedQuotationUnitPrice)}</span> : null}
+              <div className="u-d-flex u-ai-center u-fs-14" style={{ minHeight: 32, color: 'var(--color-text-secondary)' }}>
+                <span className="u-fw-600" style={{ color: 'var(--color-primary)' }}>{formatMoney(resolvedOrderUnitPrice)} / 件</span>
+                {suggestedQuotationUnitPrice > 0 ? <span className="u-ml-8" style={{ color: 'var(--color-text-secondary)' }}>建议报价 {formatMoney(suggestedQuotationUnitPrice)}</span> : null}
               </div>
             )}
           </div>
@@ -119,7 +119,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
        
         items={[{
           key: 'analysis',
-          label: <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>明细分析</span>,
+          label: <span className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>明细分析</span>,
           children: (
             <div
               style={{
@@ -131,18 +131,18 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
                 lineHeight: '20px',
               }}
             >
-        <div style={{ padding: 12, borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-slate-50)', minHeight: 96 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>码数与单价</div>
+        <div className="u-p-12 u-br-8" style={{ border: '1px solid var(--color-border-light)', background: 'var(--color-slate-50)', minHeight: 96 }}>
+          <div className="u-d-flex u-jc-between u-gap-8 u-ai-center u-mb-6">
+            <div className="u-fs-14 u-fw-500" style={{ color: 'var(--color-text-primary)' }}>码数与单价</div>
             <Tag color={orchestration.pricingStatus}>{orchestration.pricingMode}</Tag>
           </div>
           <div>尺码：{orchestration.sizeLabels.length ? orchestration.sizeLabels.join('、') : '-'}</div>
           <div>价差工序：{orchestration.differentialProcesses.length ? orchestration.differentialProcesses.join('、') : '无'}</div>
           <div>缺失码价：{orchestration.missingPriceRecords.length ? orchestration.missingPriceRecords.slice(0, 2).join('；') : '无'}</div>
         </div>
-        <div style={{ padding: 12, borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-slate-50)', minHeight: 96 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>面辅料散剪</div>
+        <div className="u-p-12 u-br-8" style={{ border: '1px solid var(--color-border-light)', background: 'var(--color-slate-50)', minHeight: 96 }}>
+          <div className="u-d-flex u-jc-between u-gap-8 u-ai-center u-mb-6">
+            <div className="u-fs-14 u-fw-500" style={{ color: 'var(--color-text-primary)' }}>面辅料散剪</div>
             <Tag color={orchestration.scatterStatus}>{orchestration.scatterMode}</Tag>
           </div>
           <div>{orchestration.fabricFamily} / {orchestration.fabricSubcategory || '常规品类'}</div>
@@ -157,19 +157,19 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
           <div>基准段长：约 {orchestration.benchmarkRollMeters || 0} 米（主面料）</div>
           <div>免散剪量：约 {orchestration.noScatterQtyThreshold || 0} 件</div>
         </div>
-        <div style={{ padding: 12, borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-slate-50)', minHeight: 96 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>面料差异</div>
+        <div className="u-p-12 u-br-8" style={{ border: '1px solid var(--color-border-light)', background: 'var(--color-slate-50)', minHeight: 96 }}>
+          <div className="u-d-flex u-jc-between u-gap-8 u-mb-8">
+            <div className="u-fs-14 u-fw-500" style={{ color: 'var(--color-text-primary)' }}>面料差异</div>
             <div style={{ color: orchestration.scatterLevel === 'high' ? 'var(--color-error)' : orchestration.scatterLevel === 'medium' ? 'var(--color-warning)' : 'var(--color-success)' }}>
               {scatterDecisionText}
             </div>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 8 }}>{usageFormulaText}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginBottom: 8 }}>
+          <div className="u-fs-12 u-mb-8" style={{ color: 'var(--color-text-tertiary)' }}>{usageFormulaText}</div>
+          <div className="u-d-grid u-gap-8 u-mb-8" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
             {visibleMaterials.map((item) => (
-              <div key={item.key} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-bg-base)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>{item.categoryLabel} · {item.label}</div>
+              <div key={item.key} className="u-br-8" style={{ padding: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-bg-base)' }}>
+                <div className="u-d-flex u-jc-between u-gap-8 u-mb-4">
+                  <div className="u-fs-14 u-fw-500" style={{ color: 'var(--color-text-primary)' }}>{item.categoryLabel} · {item.label}</div>
                 </div>
                 <div>单件用料：{item.perPieceMeters} 米/件（含损耗）</div>
                 <div>下单数量：{item.matchedOrderQty} 件</div>
@@ -179,12 +179,12 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
               </div>
             ))}
           </div>
-          <div style={{ display: 'grid', gap: 6 }}>
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          <div className="u-d-grid u-gap-6">
+            <div className="u-d-flex u-gap-16 u-fwrap-wrap">
               <span>订单：{orchestration.totalQty || 0} 件 / {orchestration.comboCount || 0} 组</span>
               <span>{orchestration.qtyGapToNoScatter > 0 ? `还差 ${orchestration.qtyGapToNoScatter} 件到免散剪线` : '已到免散剪线'}</span>
             </div>
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            <div className="u-d-flex u-gap-16 u-fwrap-wrap">
               <span>散剪偏差：{formatMoney(orchestration.scatterPremiumPerPiece)} / 件</span>
               <span>整单偏差：{formatMoney(orchestration.scatterPremiumTotal)}</span>
             </div>
