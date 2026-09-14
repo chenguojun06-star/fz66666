@@ -1,19 +1,19 @@
 import React from 'react';
 import { Tabs } from 'antd';
 import { ApiOutlined, DashboardOutlined } from '@ant-design/icons';
-import { useSearchParams } from 'react-router-dom';
 import IntegrationOverviewTab from './components/IntegrationOverviewTab';
 import AppManagementTab from './components/AppManagementTab';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 
 const TenantManagement: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'overview';
+  // 旧写法 setSearchParams({ tab: key }) 会整体替换 query，把其它参数清掉
+  const [activeTab, setActiveTab] = usePersistentTab('tab', 'overview');
 
   return (
     <>
       <Tabs
         activeKey={activeTab}
-        onChange={(key) => setSearchParams({ tab: key })}
+        onChange={setActiveTab}
         items={[
           {
             key: 'overview',

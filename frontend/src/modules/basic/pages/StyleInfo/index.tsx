@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Alert, App, Button, Card, Form } from 'antd';
 import api from '@/utils/api';
@@ -25,6 +25,30 @@ import { useFieldConfig } from '@/hooks/useFieldConfig';
 
 import './styles.css';
 
+/**
+ * 外部深链 ?tab= 取值 → 内容区 tab key。
+ * 尺寸表模块在「纸样开发」tab 内；file/files 等价于附件。
+ * 未命中映射时原样返回（我们自己回写的就是 tab key 本身），空值回退「基础信息」。
+ */
+const URL_TAB_TO_AREA_KEY: Record<string, string> = {
+  bom: 'bom',
+  pattern: 'pattern',
+  size: 'pattern',
+  process: 'process',
+  production: 'production',
+  secondary: 'secondary',
+  quotation: 'quotation',
+  attachment: 'attachment',
+  file: 'attachment',
+  files: 'attachment',
+  washlabel: 'washlabel',
+};
+
+function resolveAreaKeyFromUrl(tab: string | null): string {
+  const raw = tab || '';
+  return URL_TAB_TO_AREA_KEY[raw.toLowerCase()] ?? (raw || 'basic');
+}
+
 const StyleInfoDetailPage: React.FC = () => {
   const params = useParams();
   const location = window.location;
@@ -48,32 +72,34 @@ const StyleInfoDetailPage: React.FC = () => {
 
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
-  const [bomAreaTabKey, setBomAreaTabKey] = useState('basic');
-  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // URL ?tab= 定位到对应环节 tab：小云待办/外部跳转带 tab 参数时，让内容区直接落在目标 tab。
   // 此前 tab 参数只被 useStyleDetail 解析成数字 key 但该值未被消费，StyleInfoTabs 实际用 bomAreaTabKey（字符串 key），
   // 导致深链 ?tab=pattern 只打开详情页却停在「基础信息」。这里把 URL tab 映射到 bomAreaTabKey。
-  const [searchParams] = useSearchParams();
+  // 初始值直接从 URL 算，避免「先渲染基础信息、effect 再跳走」的闪一下。
+  const [bomAreaTabKey, setBomAreaTabKey] = useState(() => resolveAreaKeyFromUrl(searchParams.get('tab')));
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+
+  // 切 Tab 时回写 URL，刷新后不跳回「基础信息」。
+  // 用函数式 setSearchParams 增量改，避免像 setSearchParams({tab}) 那样把其它参数清掉。
+  const handleBomAreaTabChange = useCallback((key: string) => {
+    setBomAreaTabKey(key);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (key === 'basic') next.delete('tab');
+      else next.set('tab', key);
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  // 外部改变了 ?tab= 时同步（比如小云待办跳转、页面内其他地方改了 URL）。
+  // 与当前值相同就原样返回，React 会直接跳过重渲染，不会和我们自己的回写打架
   useEffect(() => {
-    const tab = (searchParams.get('tab') || '').toLowerCase();
+    const tab = searchParams.get('tab');
     if (!tab) return;
-    // 尺寸表模块在「纸样开发」tab 内；码数单价在「工序单价」tab 内
-    const tabKeyMap: Record<string, string> = {
-      bom: 'bom',
-      pattern: 'pattern',
-      size: 'pattern',
-      process: 'process',
-      production: 'production',
-      secondary: 'secondary',
-      quotation: 'quotation',
-      attachment: 'attachment',
-      file: 'attachment',
-      files: 'attachment',
-      washlabel: 'washlabel',
-    };
-    const target = tabKeyMap[tab];
-    if (target) setBomAreaTabKey(target);
+    const target = resolveAreaKeyFromUrl(tab);
+    setBomAreaTabKey((prev) => (prev === target ? prev : target));
   }, [searchParams]);
   const basicInfoFormRef = useRef<StyleBasicInfoFormRef | null>(null);
 
@@ -339,7 +365,7 @@ const StyleInfoDetailPage: React.FC = () => {
               renderBelowForm={(basicInfoTabContent?: React.ReactNode) => (
                 <StyleInfoTabs
                   activeKey={bomAreaTabKey}
-                  onChange={setBomAreaTabKey}
+                  onChange={handleBomAreaTabChange}
                   currentStyle={currentStyle}
                   styleIdParam={styleIdParam}
                   sizeColorConfig={colorSize.sizeColorConfig}

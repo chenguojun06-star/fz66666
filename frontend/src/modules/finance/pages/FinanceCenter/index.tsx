@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Tabs, Typography } from 'antd';
 import { ShopOutlined, ScanOutlined, BankOutlined } from '@ant-design/icons';
-import { useSearchParams } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 import FinishedSettlementContent from './FinishedSettlementContent';
 import ExternalScanContent from './ExternalScanContent';
 import FactorySummaryContent from './FactorySummaryContent';
@@ -13,34 +13,14 @@ const { Text } = Typography;
 type TabKey = 'settlement' | 'externalScan' | 'factorySummary';
 
 const FinanceCenter: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  // 从 URL 参数读取初始 Tab，默认 settlement
-  const getInitialTab = (): TabKey => {
-    const tab = searchParams.get('tab');
-    if (tab === 'settlement' || tab === 'externalScan' || tab === 'factorySummary') {
-      return tab;
-    }
-    return 'settlement';
-  };
-
-  const [activeTab, setActiveTab] = useState<TabKey>(getInitialTab);
-
-  // Tab 切换时更新 URL 参数
-  const handleTabChange = (key: string) => {
-    const tabKey = key as TabKey;
-    setActiveTab(tabKey);
-    setSearchParams({ tab: tabKey }, { replace: true });
-  };
-
-  // 初始化时同步 URL
-  React.useEffect(() => {
-    const currentTab = searchParams.get('tab');
-    if (currentTab !== activeTab) {
-      setSearchParams({ tab: activeTab }, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Tab 持久化到 URL ?tab=，刷新后不回退到第一个。
+  // 用统一 hook 替代原先手写的「读 + setSearchParams({tab})」：
+  // 旧写法会整体替换 query，把 URL 上的其它参数一并清掉
+  const [activeTab, setActiveTab] = usePersistentTab<TabKey>(
+    'tab',
+    'settlement',
+    ['settlement', 'externalScan', 'factorySummary'],
+  );
 
   // 已审核订单号集合：用于外发结算Tab内部状态共享
   const [auditedOrderNos, setAuditedOrderNos] = useState<Set<string>>(new Set());
@@ -97,7 +77,7 @@ const FinanceCenter: React.FC = () => {
     >
       <Tabs
         activeKey={activeTab}
-        onChange={handleTabChange}
+        onChange={setActiveTab}
         items={tabItems}
         className={styles.tabs}
         size="large"

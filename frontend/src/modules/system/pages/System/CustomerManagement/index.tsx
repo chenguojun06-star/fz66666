@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Tabs, Badge } from 'antd';
 import { CrownOutlined, TeamOutlined, DollarOutlined, MessageOutlined, DashboardOutlined, ShoppingCartOutlined, BugOutlined, NotificationOutlined } from '@ant-design/icons';
-import { useSearchParams } from 'react-router-dom';
 import { useUser } from '@/utils/AuthContext';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 import { appStoreService } from '@/services/system/appStore';
 import feedbackService from '@/services/feedbackService';
 import AppOrderTab from './AppOrderTab';
@@ -15,8 +15,8 @@ import SystemStatusTab from './components/SystemStatusTab';
 import BroadcastTab from './components/BroadcastTab';
 
 const CustomerManagement: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'tenants';
+  // 旧写法 setSearchParams({ tab: key }) 会整体替换 query，把其它参数清掉
+  const [activeTab, setActiveTab] = usePersistentTab('tab', 'tenants');
   const { isSuperAdmin } = useUser();
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
   const [pendingFeedbackCount, setPendingFeedbackCount] = useState(0);
@@ -51,10 +51,10 @@ const CustomerManagement: React.FC = () => {
   }, [fetchPendingOrderCount, fetchPendingFeedbackCount]);
 
   const handleTabChange = useCallback((key: string) => {
-    setSearchParams({ tab: key });
+    setActiveTab(key);
     if (key === 'app-orders') setPendingOrderCount(0);
     if (key === 'feedback') setPendingFeedbackCount(0);
-  }, [setSearchParams]);
+  }, [setActiveTab]);
 
   return (
     <>

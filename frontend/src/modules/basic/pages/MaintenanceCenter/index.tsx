@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { App, Empty, Input, Skeleton, Tabs, Tag } from 'antd';
 import { SearchOutlined, PrinterOutlined } from '@ant-design/icons';
-import { useSearchParams } from 'react-router-dom';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import UniversalCardView, { type CardAction } from '@/components/common/UniversalCardView';
 import StandardPagination from '@/components/common/StandardPagination';
@@ -18,6 +17,7 @@ import { toCategoryCn } from '@/utils/styleCategory';
 import { formatDateTime } from '@/utils/datetime';
 import { readPageSize, savePageSize } from '@/utils/pageSizeStore';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
+import { usePersistentTab } from '@/hooks/usePersistentTab';
 import type { StyleInfo, TemplateLibrary } from '@/types/style';
 
 interface MStage {
@@ -50,13 +50,12 @@ const MaintenanceCenter: React.FC = () => {
   const [total, setTotal] = useState(0);
 
   const [keyword, setKeyword] = useState('');
-  const [searchParams, setSearchParams] = useSearchParams();
-  const getInitialTab = (): 'maintenance' | 'knowledge' | 'template' => {
-    const t = searchParams.get('tab');
-    if (t === 'knowledge' || t === 'template') return t;
-    return 'maintenance';
-  };
-  const [pageTab, setPageTab] = useState<'maintenance' | 'knowledge' | 'template'>(getInitialTab);
+  // Tab 持久化到 URL ?tab=，刷新后不回退到第一个。
+  // 用统一 hook 替代原先手写的「读 + setSearchParams({tab})」：
+  // 旧写法会整体替换 query，把 URL 上的其它参数一并清掉
+  const [pageTab, setPageTab] = usePersistentTab<'maintenance' | 'knowledge' | 'template'>(
+    'tab', 'maintenance', ['maintenance', 'knowledge', 'template'],
+  );
   const [knowledgeKeyword, setKnowledgeKeyword] = useState('');
   const [knowledgePage, setKnowledgePage] = useState(1);
   const [knowledgePageSize, setKnowledgePageSize] = useState(10);
@@ -223,9 +222,7 @@ const MaintenanceCenter: React.FC = () => {
         <Tabs
           activeKey={pageTab}
           onChange={(key) => {
-            const tab = key as 'maintenance' | 'knowledge' | 'template';
-            setPageTab(tab);
-            setSearchParams({ tab }, { replace: true });
+            setPageTab(key);
             if (panelType) handlePanelClose();
           }}
           items={[
