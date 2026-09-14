@@ -115,8 +115,13 @@ management:
         include: ${ACTUATOR_ENDPOINTS:health,info,metrics,prometheus}
   endpoint:
     health:
-      show-details: when-authorized
-      show-components: when-authorized
+      # 默认 when-authorized（未登录只返回 status）。
+      # 线上排查时可在云托管控制台加环境变量 ACTUATOR_SHOW_DETAILS=always 后重启服务，
+      # 无需重新构建即可看到 components.ai 里每个组件（deepSeek/qdrant/vision/
+      # litellm/langfuse/memoryArchive）是 UP / DOWN / UNKNOWN。
+      # ⚠️ 用完务必改回 when-authorized，always 会把内部依赖信息暴露给匿名访问者。
+      show-details: ${ACTUATOR_SHOW_DETAILS:when-authorized}
+      show-components: ${ACTUATOR_SHOW_DETAILS:when-authorized}
       probes:
         enabled: true
     metrics:
