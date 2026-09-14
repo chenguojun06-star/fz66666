@@ -11,6 +11,7 @@ import { useStyleProduction } from './hooks/useStyleProduction';
 import { useStylePushOrder } from './hooks/useStylePushOrder';
 import { useStyleDraft } from './hooks/useStyleDraft';
 import StyleBasicInfoForm, { type StyleBasicInfoFormRef } from './components/StyleBasicInfoForm';
+import StyleStatusCard from './components/StyleStatusCard';
 import StyleActionButtons from './components/StyleActionButtons';
 import StyleInfoTabs from './components/StyleInfoTabs';
 import PushToOrderModal from './components/PushToOrderModal';
@@ -352,6 +353,12 @@ const StyleInfoDetailPage: React.FC = () => {
               )}
             />
           </Form>
+          {/* 底部：款式状态摘要条（移到表单/页签下方，位于「解锁编辑/保存」操作条上方） */}
+          {!isNewPage && currentStyle?.id ? (
+            <div style={{ margin: '4px -20px 4px', padding: '8px 20px', borderTop: '1px solid var(--color-border-light)' }}>
+              <StyleStatusCard style={currentStyle} compact />
+            </div>
+          ) : null}
           {/* 底部 sticky 保存条：长表单编辑到底部后无需滚回顶部保存。
               bottom/margin 负值抵消 Card body 底部 padding(20px)，使操作条贴住卡片底边 */}
           <div

@@ -41,11 +41,11 @@ public class StageConfigService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /** 每租户独立快照：tenantId → (stageName → 生效配置) */
-    private final ConcurrentHashMap<Long, Map<String, StageConfig>> perTenantSnapshot = new ConcurrentHashMap<>();
+    /** 每 (租户,款式) 独立快照：cacheKey → (stageName → 生效配置) */
+    private final ConcurrentHashMap<String, Map<String, StageConfig>> perStyleSnapshot = new ConcurrentHashMap<>();
 
-    /** 失效标记：tenantId → lastLoadTimestamp */
-    private final ConcurrentHashMap<Long, Long> perTenantLoadedAt = new ConcurrentHashMap<>();
+    /** 失效标记：cacheKey → lastLoadTimestamp */
+    private final ConcurrentHashMap<String, Long> perStyleLoadedAt = new ConcurrentHashMap<>();
 
     /** Caffeine 空数据占位（避免短时间反复查 DB） */
     private final Cache<String, String> negativeCache = Caffeine.newBuilder()
@@ -57,7 +57,7 @@ public class StageConfigService {
 
     @PostConstruct
     public void init() {
-        log.info("StageConfigService 初始化完成（按租户隔离）");
+        log.info("StageConfigService 初始化完成（按租户+款式隔离）");
     }
 
     /** 当前请求租户 */
@@ -69,25 +69,34 @@ public class StageConfigService {
         return ctx.getTenantId();
     }
 
-    /** 失效当前/指定租户缓存 */
+    /** 缓存键：tenantId:styleId（styleId 空串=基线） */
+    private static String cacheKey(Long tenantId, String styleId) {
+        return tenantId + ":" + (styleId == null ? "" : styleId.trim());
+    }
+
+    /** 失效指定租户+款式的缓存；两者皆可空（空 = 当前租户 / 仅基线） */
     public void reload() {
-        reload(null);
+        reload(null, null);
     }
 
     public void reload(Long tenantId) {
+        reload(tenantId, null);
+    }
+
+    public void reload(Long tenantId, String styleId) {
         if (tenantId == null) {
             tenantId = currentTenantId();
         }
         if (tenantId != null) {
-            perTenantSnapshot.remove(tenantId);
-            perTenantLoadedAt.remove(tenantId);
+            perStyleSnapshot.remove(cacheKey(tenantId, styleId));
+            perStyleLoadedAt.remove(cacheKey(tenantId, styleId));
         }
     }
 
-    /** 获取全部生效环节配置（合并系统默认 + 租户覆盖），按固定顺序输出 */
-    public List<StageConfig> getEffectiveConfigs() {
+    /** 获取全部生效环节配置（合并基线 + 款式覆盖），按固定顺序输出 */
+    public List<StageConfig> getEffectiveConfigs(String styleId) {
         Long tenantId = currentTenantId();
-        Map<String, StageConfig> snap = loadForTenant(tenantId);
+        Map<String, StageConfig> snap = loadForTenant(tenantId, styleId);
         List<StageConfig> result = new ArrayList<>();
         for (String stageName : StageConfigOrder.ORDER) {
             StageConfig cfg = snap.get(stageName);
@@ -98,13 +107,13 @@ public class StageConfigService {
         return result;
     }
 
-    /** 获取单个环节生效配置，无则返回 null */
-    public StageConfig getEffectiveConfig(String stageName) {
+    /** 获取单个环节生效配置（styleId 空 → 仅基线），无则返回 null */
+    public StageConfig getEffectiveConfig(String stageName, String styleId) {
         if (stageName == null || stageName.trim().isEmpty()) {
             return null;
         }
         Long tenantId = currentTenantId();
-        return loadForTenant(tenantId).get(stageName.trim());
+        return loadForTenant(tenantId, styleId).get(stageName.trim());
     }
 
     /**
@@ -112,8 +121,8 @@ public class StageConfigService {
      *
      * @return null = 未配置白名单（所有人员可操作）；true = 允许；false = 拒绝
      */
-    public Boolean isOperatorAllowed(String stageName, String operatorId, String operatorName) {
-        StageConfig cfg = getEffectiveConfig(stageName);
+    public Boolean isOperatorAllowed(String stageName, String styleId, String operatorId, String operatorName) {
+        StageConfig cfg = getEffectiveConfig(stageName, styleId);
         if (cfg == null || !hasText(cfg.getOperatorsJson())) {
             return null; // 未配置可操作人 → 全员可操作
         }
@@ -149,44 +158,72 @@ public class StageConfigService {
         return result;
     }
 
-    /** 加载指定租户生效配置（未命中或过期则实时查 DB 合并） */
-    private Map<String, StageConfig> loadForTenant(Long tenantId) {
-        Map<String, StageConfig> cached = perTenantSnapshot.get(tenantId);
-        Long loadedAt = perTenantLoadedAt.get(tenantId);
+    /** 清空指定租户下全部款式缓存（含基线） */
+    public void reloadAllTenant(Long tenantId) {
+        if (tenantId == null) {
+            return;
+        }
+        String prefix = tenantId + ":";
+        perStyleSnapshot.keySet().removeIf(k -> k.startsWith(prefix));
+        perStyleLoadedAt.keySet().removeIf(k -> k.startsWith(prefix));
+    }
+
+    /**
+     * 加载指定 (租户,款式) 生效配置（未命中或过期则实时查 DB 合并）。
+     * 合并顺序：系统默认（tenant NULL + style 空）→ 租户基线（tenant X + style 空）→ 款式覆盖（tenant X + style = styleId）。
+     */
+    private Map<String, StageConfig> loadForTenant(Long tenantId, String styleId) {
+        String style = styleId == null ? "" : styleId.trim();
+        String key = cacheKey(tenantId, style);
+        Map<String, StageConfig> cached = perStyleSnapshot.get(key);
+        Long loadedAt = perStyleLoadedAt.get(key);
         if (cached != null && loadedAt != null
                 && System.currentTimeMillis() - loadedAt < CACHE_TTL_MS) {
             return cached;
         }
         QueryWrapper<StageConfig> wrapper = new QueryWrapper<>();
-        wrapper.isNull("tenant_id").or().eq("tenant_id", tenantId);
+        // 系统默认基线(tenant NULL)+本租户基线(style 空)+本租户款式覆盖(style=styleId)
+        wrapper.and(w -> w.and(t -> t.isNull("tenant_id").eq("style_id", ""))
+                        .or(e -> e.eq("tenant_id", tenantId).eq("style_id", ""))
+                        .or(e -> e.eq("tenant_id", tenantId).eq("style_id", style)));
         wrapper.orderByAsc("id");
         List<StageConfig> rows = mapper.selectList(wrapper);
 
-        // 系统默认（tenant_id=NULL）
         Map<String, StageConfig> merged = new HashMap<>();
+        // 1) 系统默认（tenant_id=NULL）
         for (StageConfig row : rows) {
-            if (row.getStageName() == null) {
+            if (row.getStageName() == null || (row.getDeleteFlag() != null && row.getDeleteFlag() == 1)) {
                 continue;
             }
-            if (row.getDeleteFlag() != null && row.getDeleteFlag() == 1) {
-                continue;
+            if (row.getTenantId() == null) {
+                merged.putIfAbsent(row.getStageName().trim(), row);
             }
-            String key = row.getStageName().trim();
-            merged.putIfAbsent(key, row);
         }
-        // 租户覆盖覆盖系统默认
+        // 2) 本租户基线（tenant X + style 空）
         for (StageConfig row : rows) {
+            if (row.getStageName() == null || (row.getDeleteFlag() != null && row.getDeleteFlag() == 1)) {
+                continue;
+            }
             if (row.getTenantId() != null && row.getTenantId().equals(tenantId)
-                    && row.getStageName() != null) {
-                String key = row.getStageName().trim();
-                if (row.getDeleteFlag() == null || row.getDeleteFlag() != 1) {
-                    merged.put(key, row);
+                    && !hasText(row.getStyleId())) {
+                merged.put(row.getStageName().trim(), row);
+            }
+        }
+        // 3) 款式覆盖（tenant X + style = styleId）
+        if (hasText(style)) {
+            for (StageConfig row : rows) {
+                if (row.getStageName() == null || (row.getDeleteFlag() != null && row.getDeleteFlag() == 1)) {
+                    continue;
+                }
+                if (row.getTenantId() != null && row.getTenantId().equals(tenantId)
+                        && hasText(row.getStyleId()) && row.getStyleId().trim().equals(style)) {
+                    merged.put(row.getStageName().trim(), row);
                 }
             }
         }
-        perTenantSnapshot.put(tenantId, merged);
-        perTenantLoadedAt.put(tenantId, System.currentTimeMillis());
-        log.debug("租户 {} 环节配置缓存已加载: {} 条", tenantId, merged.size());
+        perStyleSnapshot.put(key, merged);
+        perStyleLoadedAt.put(key, System.currentTimeMillis());
+        log.debug("租户 {} 款式 {} 环节配置缓存已加载: {} 条", tenantId, style.isEmpty() ? "(基线)" : style, merged.size());
         return merged;
     }
 

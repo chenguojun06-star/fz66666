@@ -30,6 +30,9 @@ public class StageConfig {
     /** 租户ID，NULL 表示系统默认（全公司统一一套） */
     private Long tenantId;
 
+    /** 款式ID，空串=工厂默认基线；按款独立配置，未配置的款回退基线 */
+    private String styleId;
+
     /** 父环节名：采购/裁剪/二次工艺/车缝/尾部/入库 */
     private String stageName;
 

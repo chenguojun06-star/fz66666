@@ -6,8 +6,8 @@
  *   - 预计时长（天）：仅展示 + 超期预警，不影响交期计算
  *   - 超期预警开关
  *
- * 数据：写入全局 t_stage_config（按租户），扫码拦截(StageGatekeeper)+看板预警直接生效。
- * 作用范围：全厂一套，所有款式/模板共用（用户已确认）。
+ * 数据：写入 t_stage_config（按租户），扫码拦截(StageGatekeeper)+看板预警直接生效。
+ * 作用范围：不传 styleId → 全厂基线一套（模板中心）；传 styleId → 该款独立配置，未配置回退基线。
  * 默认环节：采购/入库 为「默认环节 · 不属生产工序」，仍可配负责人+时长。
  *
  * 说明：非弹窗、内嵌紧凑表格；负责人较长时自动换行。
@@ -40,14 +40,17 @@ interface RowData {
 interface Props {
   /** 只读时隐藏编辑区（预览场景不渲染配置） */
   readOnly?: boolean;
+  /** 款式ID：不传/空 = 全厂基线；传了 = 该款独立配置 */
+  styleId?: string;
 }
 
-export default function StageConfigArea({ readOnly = false }: Props) {
+export default function StageConfigArea({ readOnly = false, styleId }: Props) {
   const { message: appMessage } = App.useApp();
   const [rows, setRows] = useState<RowData[]>([]);
   const [userOptions, setUserOptions] = useState<{ id: string; name: string; username: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const isStyleScoped = Boolean(styleId);
 
   // 操作人下拉选项（当前租户人员）
   useEffect(() => {
@@ -74,13 +77,13 @@ export default function StageConfigArea({ readOnly = false }: Props) {
     })();
   }, [readOnly, appMessage]);
 
-  // 加载现有配置（全厂生效配置）
+  // 加载现有配置（styleId 空=全厂生效配置；非空=该款生效配置，含基线合并）
   useEffect(() => {
     if (readOnly) return;
     setLoading(true);
     (async () => {
       try {
-        const res = await getStageConfig();
+        const res = await getStageConfig(styleId);
         const list: StageConfigItem[] = res?.data ?? [];
         const byName = new Map<string, StageConfigItem>();
         list.forEach(c => c && c.stageName && byName.set(c.stageName, c));
@@ -113,7 +116,8 @@ export default function StageConfigArea({ readOnly = false }: Props) {
         setLoading(false);
       }
     })();
-  }, [readOnly, appMessage]);
+    // styleId 变化时重载（同一组件在详情页内复用会随款切换）
+  }, [readOnly, appMessage, styleId]);
 
   function updateRow(stageName: string, patch: Partial<RowData>) {
     setRows(prev => prev.map(r => (r.stageName === stageName ? { ...r, ...patch } : r)));
@@ -135,6 +139,7 @@ export default function StageConfigArea({ readOnly = false }: Props) {
     try {
       const payload: StageConfigItem[] = rows.map(r => ({
         id: r.id,
+        styleId: styleId ?? '',
         stageName: r.stageName,
         expectedDays: r.expectedDays,
         operators: r.operators,
@@ -144,7 +149,7 @@ export default function StageConfigArea({ readOnly = false }: Props) {
       }));
       const res = await saveStageConfig(payload);
       if (res?.code === 200) {
-        appMessage.success('环节配置已保存');
+        appMessage.success(isStyleScoped ? '该款环节配置已保存' : '环节配置已保存');
       } else {
         appMessage.error(res?.message || '保存失败');
       }
@@ -237,7 +242,9 @@ export default function StageConfigArea({ readOnly = false }: Props) {
         background: 'var(--color-bg-highlight)', border: '1px solid var(--color-blue-200)', borderRadius: 6,
       }}>
         <span className="u-fs-13" style={{ color: 'var(--color-gray-700)' }}>
-          环节配置：配置后可操作人仅限对应人员扫码，不配置则所有人员可操作；预计时长仅展示+超期预警，不参与交期计算。采购/入库为默认环节（不属生产工序），大货与样衣共用本配置。
+          {isStyleScoped
+            ? '该款式环节配置：可操作人仅限对应人员扫码，不配置则所有人员可操作；预计时长仅展示+超期预警，未配的环节回退全厂基线。采购/入库为默认环节（不属生产工序）。'
+            : '环节配置（全厂基线）：可操作人仅限对应人员扫码，不配置则所有人员可操作；预计时长仅展示+超期预警，不参与交期计算。采购/入库为默认环节（不属生产工序），大货与样衣共用本配置。'}
         </span>
         <div className="u-d-flex u-gap-8" style={{ flexShrink: 0 }}>
           <Button type="primary" size="small" loading={saving} onClick={handleSave}>保存环节配置</Button>

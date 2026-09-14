@@ -76,9 +76,10 @@ public class ProductionScanExecutor {
 
         resolveProcessStage(ctx, params, autoProcess);
 
-        // 环节扫码门禁：按父环节「可操作人」白名单校验（管理员不受限，未配置则全员可操作）
+        // 环节扫码门禁：按父环节「可操作人」白名单 + 款式独立配置校验（管理员不受限，未配置则全员可操作）
         String gateStage = stageGatekeeper.resolveStageForScan(scanType, ctx.progressStage, ctx.childProcessName);
-        stageGatekeeper.validateStagePermission(gateStage, operatorId, operatorName);
+        String gateStyleId = ctx.order != null ? ctx.order.getStyleId() : null;
+        stageGatekeeper.validateStagePermission(gateStage, gateStyleId, operatorId, operatorName);
 
         stageSupport.validateParentStagePrerequisite(ctx.order, ctx.bundle, ctx.progressStage, ctx.childProcessName);
         validateSplitGuard(ctx);

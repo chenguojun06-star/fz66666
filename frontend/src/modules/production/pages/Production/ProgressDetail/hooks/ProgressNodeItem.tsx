@@ -33,11 +33,11 @@ export function ProgressNodeItem({
   onClick,
   onMouseEnter,
 }: ProgressNodeItemProps) {
-  // D-387：环节配置预警 —— 首次挂载静默加载环节配置预算天数（loadStageConfigBudget 自带已加载 guard）
+  // D-387：环节配置预警 —— 首次挂载静默加载该款生效环节配置预算天数（loadStageConfigBudget 自带已加载 guard）
   useEffect(() => {
-    loadStageConfigBudget();
+    loadStageConfigBudget((record as any).styleId as string | null | undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [record]);
   const {
     nodeLabel,
     nodeType,

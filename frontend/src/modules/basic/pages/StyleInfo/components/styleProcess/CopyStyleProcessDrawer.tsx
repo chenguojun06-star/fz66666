@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { App } from 'antd';
 import ImportPickerDrawer from '@/components/common/ImportPickerDrawer';
 import type { StyleProcess } from '@/types/style';
 import api from '@/utils/api';
@@ -11,10 +12,36 @@ interface CopyStyleProcessDrawerProps {
   onConfirm: (rows: StyleProcess[]) => Promise<void> | void;
 }
 
-/** D-339 拷贝其他款工序（通用导入抽屉）：选款/通用模板 → 勾选工序 → 追加（编码自动顺延） */
+/** D-339 拷贝其他款工序（通用导入抽屉）：选款/通用模板 → 勾选工序 → 追加（编码自动顺延）。选来源款导入时，顺带把来源款环节配置拷到当前款（样式拷贝闭环）。 */
 const CopyStyleProcessDrawer: React.FC<CopyStyleProcessDrawerProps> = ({
   open, onClose, currentStyleId, submitting, onConfirm,
 }) => {
+  const { message: appMessage } = App.useApp();
+  // 记录来源款 id（仅「按款号」来源携带；通用模板来源清空，不拷环节配置）
+  const sourceStyleIdRef = useRef<string | number | null>(null);
+
+  const handleConfirm = async (rows: StyleProcess[]) => {
+    const src = sourceStyleIdRef.current;
+    const tgt = currentStyleId;
+    if (src != null && String(src) !== String(tgt)) {
+      try {
+        const res = await api.post<{ code: number; message?: string }>(
+          '/production/stage-config/copy',
+          null,
+          { params: { sourceStyleId: String(src), targetStyleId: String(tgt) } },
+        );
+        if (res?.code === 200) {
+          appMessage.success('已顺带拷贝来源款环节配置');
+        } else {
+          appMessage.warning(String(res?.message || '环节配置拷贝未完成'));
+        }
+      } catch (e) {
+        appMessage.warning(e instanceof Error ? e.message : '环节配置拷贝未完成');
+      }
+    }
+    await onConfirm(rows);
+  };
+
   return (
     <ImportPickerDrawer<StyleProcess>
       open={open}
@@ -23,6 +50,7 @@ const CopyStyleProcessDrawer: React.FC<CopyStyleProcessDrawerProps> = ({
       currentStyleId={currentStyleId}
       templateType="process"
       submitting={submitting}
+      onSourceAvailable={(source) => { sourceStyleIdRef.current = source ? source.styleId ?? null : null; }}
       fetchRowsByStyleId={async (sid) => {
         const res = await api.get<{ code: number; data: StyleProcess[] }>(`/style/process/list?styleId=${sid}`);
         return res.code === 200 ? (res.data || []) : [];
@@ -45,7 +73,7 @@ const CopyStyleProcessDrawer: React.FC<CopyStyleProcessDrawerProps> = ({
         { title: '单价', dataIndex: 'price', key: 'price', width: 90, align: 'right' as const, render: (v: number) => (v != null ? `¥${v}` : '-') },
       ]}
       rowKey={(r) => String(r.id ?? `${r.processCode}-${r.processName}`)}
-      onConfirm={onConfirm}
+      onConfirm={handleConfirm}
       emptyRowsText="该款暂无工序"
       footerHint="确认后追加到当前款工序，编码自动顺延"
     />

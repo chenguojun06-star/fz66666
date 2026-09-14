@@ -56,6 +56,7 @@ public class StageConfigOrchestrator {
                 throw new BusinessException("非法环节名: " + cfg.getStageName());
             }
             String stageName = cfg.getStageName().trim();
+            String styleId = cfg.getStyleId() == null ? "" : cfg.getStyleId().trim();
             BigDecimal days = StageConfigService.toDays(cfg.getExpectedDays());
             if (days.signum() < 0) {
                 throw new BusinessException("预计时长不能为负数: " + stageName);
@@ -65,6 +66,7 @@ public class StageConfigOrchestrator {
 
             StageConfig existing = stageConfigMapper.selectOne(new LambdaQueryWrapper<StageConfig>()
                     .eq(StageConfig::getTenantId, tenantId)
+                    .eq(StageConfig::getStyleId, styleId)
                     .eq(StageConfig::getStageName, stageName));
             int defaultStage = resolveDefaultStage(stageName);
             if (existing != null) {
@@ -78,6 +80,7 @@ public class StageConfigOrchestrator {
             } else {
                 StageConfig fresh = new StageConfig();
                 fresh.setTenantId(tenantId);
+                fresh.setStyleId(styleId);
                 fresh.setStageName(stageName);
                 fresh.setExpectedDays(days);
                 fresh.setOperatorsJson(operatorsJson);
@@ -88,15 +91,64 @@ public class StageConfigOrchestrator {
                 stageConfigMapper.insert(fresh);
             }
         }
-        stageConfigService.reload(tenantId);
+        stageConfigService.reloadAllTenant(tenantId);
         log.info("[StageConfig] 管理员保存环节配置完成 tenantId={} 共{}项", tenantId, configs.size());
     }
 
+    /**
+     * 拷贝源款环节配置到目标款（同租户内，样式拷贝闭环：拷贝其他款工序时顺带带上其环节配置）。
+     * 只拷贝「源款独立覆盖层」（style_id=sourceStyleId）到目标款；源款未独立配置则无内容可拷贝（目标款回退基线）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void copyStyleConfig(Long tenantId, String sourceStyleId, String targetStyleId) {
+        List<StageConfig> source = stageConfigMapper.selectList(new LambdaQueryWrapper<StageConfig>()
+                .eq(StageConfig::getTenantId, tenantId)
+                .eq(StageConfig::getStyleId, sourceStyleId)
+                .eq(StageConfig::getDeleteFlag, 0));
+        if (source == null || source.isEmpty()) {
+            log.info("[StageConfig] 拷贝环节配置：源款 {} 无独立配置，跳过", sourceStyleId);
+            return;
+        }
+        for (StageConfig cfg : source) {
+            StageConfig existing = stageConfigMapper.selectOne(new LambdaQueryWrapper<StageConfig>()
+                    .eq(StageConfig::getTenantId, tenantId)
+                    .eq(StageConfig::getStyleId, targetStyleId)
+                    .eq(StageConfig::getStageName, cfg.getStageName())
+                    .last("limit 1"));
+            if (existing != null) {
+                existing.setExpectedDays(cfg.getExpectedDays());
+                existing.setOperatorsJson(cfg.getOperatorsJson());
+                existing.setMonitorSwitch(cfg.getMonitorSwitch());
+                existing.setDefaultStage(cfg.getDefaultStage());
+                existing.setEnabled(1);
+                existing.setDeleteFlag(0);
+                stageConfigMapper.updateById(existing);
+            } else {
+                StageConfig fresh = new StageConfig();
+                fresh.setTenantId(tenantId);
+                fresh.setStyleId(targetStyleId);
+                fresh.setStageName(cfg.getStageName());
+                fresh.setExpectedDays(cfg.getExpectedDays());
+                fresh.setOperatorsJson(cfg.getOperatorsJson());
+                fresh.setMonitorSwitch(cfg.getMonitorSwitch());
+                fresh.setDefaultStage(cfg.getDefaultStage());
+                fresh.setEnabled(1);
+                fresh.setDeleteFlag(0);
+                stageConfigMapper.insert(fresh);
+            }
+        }
+        stageConfigService.reloadAllTenant(tenantId);
+        log.info("[StageConfig] 拷贝环节配置完成 tenantId={} source={} target={} 共{}项",
+                tenantId, sourceStyleId, targetStyleId, source.size());
+    }
+
     private int resolveDefaultStage(String stageName) {
-        // 从系统默认行继承 default_stage（采购/入库=1）
+        // 从系统默认基线行（tenant NULL + style 空）继承 default_stage（采购/入库=1）
         StageConfig sys = stageConfigMapper.selectOne(new LambdaQueryWrapper<StageConfig>()
                 .isNull(StageConfig::getTenantId)
-                .eq(StageConfig::getStageName, stageName));
+                .eq(StageConfig::getStyleId, "")
+                .eq(StageConfig::getStageName, stageName)
+                .last("limit 1"));
         if (sys != null && sys.getDefaultStage() != null) {
             return sys.getDefaultStage();
         }

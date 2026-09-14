@@ -283,9 +283,8 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
         onClose={() => setAttrLibOpen(false)}
         onApply={(_k, values, mode) => handleApplyAttrSizes(values, mode)}
       />
-      {editMode && !readOnly && (
-        <StageConfigArea readOnly={false} />
-      )}
+      {/* 环节配置（按款独立：传 styleId 配置当前款，未配回退全厂基线；随工序单价页常显，供负责人/时长/预警设置） */}
+      <StageConfigArea readOnly={Boolean(readOnly)} styleId={String(styleId ?? '')} />
       <ProcessCostSummary data={data} />
       <ResizableTable bordered components={draggableComponents as any} onRow={(_record: any, index?: number) => ({ 'data-index': index } as any)} dataSource={sortedData as unknown as any[]} columns={columns as unknown as any[]} pagination={false} loading={loading} rowKey="id" scroll={{ x: 'max-content' }} storageKey={`style-process-${String(styleId)}`} emptyDescription="暂无工序数据" showExport={true} exportFilename="款式工序.xlsx" />
     </div>

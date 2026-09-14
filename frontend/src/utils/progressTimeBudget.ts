@@ -65,27 +65,33 @@ const STAGE_CONFIG_BUDGET_RULES: { match: RegExp; key: string }[] = [
   { match: /入库|仓库|成品|warehousing/i, key: '入库' },
 ];
 
-let stageConfigBudgetMap: Record<string, number> | null = null;
+// 环节配置预算天数：按 (款式) 分层缓存。key = styleId（空串=全厂基线）；
+// 后端 getStageConfig(styleId) 返回「基线+款式覆盖」合并后的该款生效配置，故每款直接存一份生效 map。
+const stageConfigBudgetCache: Map<string, Record<string, number>> = new Map();
+// 基线首次加载成功后才触发一次全局刷新（style-level 加载不重复触发，避免看板循环重渲染）
 let stageBudgetRefreshFired = false;
 
-/** 取某环节在配置表中设定的预算天数；未配置返回 null */
-export function getConfigBudgetDays(nodeName: string): number | null {
-  if (!stageConfigBudgetMap) return null;
+/** 取某环节在该款式生效配置(t_stage_config.expectedDays)中设定的预算天数；未配置返回 null */
+export function getConfigBudgetDays(nodeName: string, styleId?: string | null): number | null {
+  const style = styleId == null ? '' : String(styleId);
+  const map = stageConfigBudgetCache.get(style);
+  if (!map) return null;
   for (const rule of STAGE_CONFIG_BUDGET_RULES) {
     if (rule.match.test(nodeName)) {
-      const v = stageConfigBudgetMap[rule.key];
+      const v = map[rule.key];
       return Number.isFinite(v) && v > 0 ? v : null;
     }
   }
   return null;
 }
 
-/** 惰性加载环节配置预算天数（全局统一套，登录后可调）。加载完成返回是否成功。 */
-export async function loadStageConfigBudget(): Promise<boolean> {
-  if (stageConfigBudgetMap !== null) return true;
+/** 惰性加载某款生效环节配置预算天数（styleId 空 → 全厂基线；非空 → 该款，未配回退基线）。加载完成返回是否成功。 */
+export async function loadStageConfigBudget(styleId?: string | null): Promise<boolean> {
+  const style = styleId == null ? '' : String(styleId);
+  if (stageConfigBudgetCache.has(style)) return true;
   try {
     const { getStageConfig } = await import('@/utils/api/production.scan');
-    const res = await getStageConfig();
+    const res = await getStageConfig(style || undefined);
     const list = res?.data ?? [];
     const map: Record<string, number> = {};
     (Array.isArray(list) ? list : []).forEach((c: any) => {
@@ -94,8 +100,8 @@ export async function loadStageConfigBudget(): Promise<boolean> {
         if (Number.isFinite(n) && n > 0) map[c.stageName] = n;
       }
     });
-    stageConfigBudgetMap = map;
-    // 仅首次加载成功时触发一次全局刷新，让进度看板立即用环节配置天数重渲染（guard 避免循环）
+    stageConfigBudgetCache.set(style, map);
+    // 仅基线首次加载成功时触发一次全局刷新，让进度看板立即用环节配置天数重渲染（guard 避免循环）
     if (!stageBudgetRefreshFired) {
       stageBudgetRefreshFired = true;
       if (typeof window !== 'undefined') {
@@ -110,6 +116,7 @@ export async function loadStageConfigBudget(): Promise<boolean> {
 
 export function computeStageBudgetHint(params: {
   nodeName: string;
+  styleId?: string | null;
   orderCreateTime: string | null | undefined;
   expectedShipDate: string | null | undefined;
   stageStartTime: string | null | undefined;
@@ -120,7 +127,7 @@ export function computeStageBudgetHint(params: {
   budgetHours?: number | null;
 }): StageBudgetHint | null {
   const {
-    nodeName, orderCreateTime, expectedShipDate,
+    nodeName, styleId, orderCreateTime, expectedShipDate,
     stageStartTime, stageEndTime,
     isCompletedOrClosed, isProcureNode,
     budgetHours,
@@ -137,8 +144,8 @@ export function computeStageBudgetHint(params: {
 
   const now = dayjs();
 
-  // D-387：优先使用环节配置表设定的预算天数（用户口径：按环节给，单环节独立判定）
-  const configBudgetDays = getConfigBudgetDays(nodeName);
+  // D-387：优先使用环节配置表设定的预算天数（用户口径：按环节给，单环节独立判定；按款生效，未配回退基线）
+  const configBudgetDays = getConfigBudgetDays(nodeName, styleId);
   const budgetDays = configBudgetDays != null
     ? Math.max(1, Math.round(configBudgetDays))
     : (budgetHours != null && budgetHours > 0

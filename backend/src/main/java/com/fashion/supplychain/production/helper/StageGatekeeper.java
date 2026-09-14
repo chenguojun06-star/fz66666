@@ -53,21 +53,22 @@ public class StageGatekeeper {
      * 校验当前操作员是否可执行指定父环节。不可操作时抛 {@link AccessDeniedException}。
      *
      * @param parentStage   父环节名（采购/裁剪/二次工艺/车缝/尾部/入库）
+     * @param styleId       款式ID（空=按租户基线配置；非空=按该款式独立配置，未配置时回退基线）
      * @param operatorId    操作员ID
      * @param operatorName  操作员名
      */
-    public void validateStagePermission(String parentStage, String operatorId, String operatorName) {
+    public void validateStagePermission(String parentStage, String styleId, String operatorId, String operatorName) {
         if (UserContext.isTopAdmin()) {
             return; // 管理员不受限
         }
         if (!hasText(parentStage)) {
             return; // 无法确定环节则不拦截（避免误伤）
         }
-        Boolean allowed = stageConfigService.isOperatorAllowed(parentStage, operatorId, operatorName);
+        Boolean allowed = stageConfigService.isOperatorAllowed(parentStage, styleId, operatorId, operatorName);
         if (Boolean.FALSE.equals(allowed)) {
             List<Map<String, String>> operators = stageConfigService.parseOperators(
-                    stageConfigService.getEffectiveConfig(parentStage) == null ? null
-                            : stageConfigService.getEffectiveConfig(parentStage).getOperatorsJson());
+                    stageConfigService.getEffectiveConfig(parentStage, styleId) == null ? null
+                            : stageConfigService.getEffectiveConfig(parentStage, styleId).getOperatorsJson());
             StringBuilder names = new StringBuilder();
             if (operators != null) {
                 for (Map<String, String> op : operators) {

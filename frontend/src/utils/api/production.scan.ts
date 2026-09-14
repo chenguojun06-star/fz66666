@@ -61,6 +61,8 @@ export interface StageOperator {
 export interface StageConfigItem {
   /** 后端主键（新建时为空） */
   id?: number;
+  /** 款式ID：空串=租户基线；按款独立配置时传入 */
+  styleId?: string;
   /** 父环节名：采购/裁剪/二次工艺/车缝/尾部/入库 */
   stageName: string;
   /** 预计时长（天），仅展示+超期预警，不参与交期计算 */
@@ -75,8 +77,11 @@ export interface StageConfigItem {
   defaultStage: number;
 }
 
-/** 读取全部生效环节配置（PC配置页 + 小程序/H5 只读展示共用） */
-export const getStageConfig = async (): Promise<ApiResponse> => {
+/** 读取全部生效环节配置（PC配置页 + 小程序/H5 只读展示共用；styleId 空串/省略=租户基线） */
+export const getStageConfig = async (styleId?: string): Promise<ApiResponse> => {
+  if (styleId) {
+    return api.get(`/production/stage-config?styleId=${encodeURIComponent(styleId)}`);
+  }
   return api.get('/production/stage-config');
 };
 

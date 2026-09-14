@@ -45,6 +45,7 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
 
   const hint = computeStageBudgetHint({
     nodeName,
+    styleId: (record as any).styleId as string | null | undefined,
     orderCreateTime: record.createTime as string | null,
     expectedShipDate: effectiveShipDate,
     stageStartTime: stageStartTime || undefined,

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Col, Row } from 'antd';
 import CoverImageUpload from './CoverImageUpload';
-import StyleStatusCard from './StyleStatusCard';
 import type { StyleBasicInfoFormProps } from './StyleBasicInfoForm/types';
 import { useStyleBasicInfoForm } from './StyleBasicInfoForm/useStyleBasicInfoForm';
 import BasicInfoSection from './StyleBasicInfoForm/BasicInfoSection';
@@ -168,9 +167,6 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
 
   return (
     <div className="square-inputs u-d-flex u-fd-column u-gap-12" style={{ minWidth: 0 }}>
-      {/* 款式状态摘要条（紧凑模式，仅在已存在款式时显示） */}
-      {!isNewPage && currentStyle?.id ? <StyleStatusCard style={currentStyle} compact /> : null}
-
       {/* 下方：统一 Tab 系统（基础信息排在最前，BOM清单等后续 Tab 由 renderBelowForm 提供） */}
       <div style={{ minWidth: 0 }}>
         {renderBelowForm ? (

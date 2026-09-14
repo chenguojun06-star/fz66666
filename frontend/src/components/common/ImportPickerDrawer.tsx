@@ -40,6 +40,8 @@ export interface ImportPickerDrawerProps<T> {
   fetchRowsByStyleNo: (styleNo: string) => Promise<T[]>;
   /** 确认导入（勾选行） */
   onConfirm: (rows: T[]) => Promise<void> | void;
+  /** 可选：来源款变更通知（用于拷贝类业务顺带带上源款附加数据，如环节配置）；模板来源暂不上抛 */
+  onSourceAvailable?: (source: { styleId?: string | number; styleNo?: string } | null) => void;
   /** 表格上方附加过滤控件（如 BOM 的颜色/主辅料） */
   tableFilters?: React.ReactNode;
   emptyRowsText?: string;
@@ -57,7 +59,7 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
     open, onClose, title, currentStyleId, templateType,
     submitting = false, columns, rowKey,
     fetchRowsByStyleId, fetchRowsByStyleNo, onConfirm,
-    tableFilters, emptyRowsText = '该来源暂无数据', footerHint,
+    onSourceAvailable, tableFilters, emptyRowsText = '该来源暂无数据', footerHint,
   } = props;
 
   const [sourceMode, setSourceMode] = useState<'style' | 'template'>('style');
@@ -193,17 +195,21 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
         } catch { /* 忽略 */ }
       })();
       void fetchStyles(1, '', '');
+      onSourceAvailable?.(null); // 每次打开先清空来源款
     }
-  }, [open, fetchTemplates, fetchStyles, currentStyleId]);
+  }, [open, fetchTemplates, fetchStyles, currentStyleId, onSourceAvailable]);
 
   const handlePickStyle = (record: StyleBrief) => {
     setSelectedStyle(record);
     setSelectedTemplate(null);
     void fetchByStyleId(record.id);
+    onSourceAvailable?.({ styleId: record.id, styleNo: record.styleNo });
   };
 
   const handlePickTemplate = (record: TemplateBrief) => {
     setSelectedTemplate(record);
+    // 通用模板不携带来源款附加数据（如环节配置），清空来源款
+    onSourceAvailable?.(null);
     const sourceStyleNo = String(record.sourceStyleNo || '').trim();
     if (!sourceStyleNo) {
       applyRows([]);
@@ -269,6 +275,7 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
               setSelectedTemplate(null);
               setRows([]);
               setSelectedRowKeys([]);
+              onSourceAvailable?.(null);
             }}
             options={[
               { value: 'style', label: '按款号' },

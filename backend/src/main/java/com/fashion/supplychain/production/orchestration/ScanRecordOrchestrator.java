@@ -283,9 +283,10 @@ public class ScanRecordOrchestrator {
         ProductionOrder order = resolveOrder(orderId, orderNo);
         if (order == null && !hasText(orderId) && !hasText(orderNo) && hasText(scanCode)) order = resolveOrder(null, scanCode);
         final ProductionOrder finalOrder = order;
-        // 环节扫码门禁：质检归尾部环节（管理员不受限，未配置则全员）
+        // 环节扫码门禁：质检归尾部环节（管理员不受限，未配置则全员；按款式独立配置）
         String gateStage = stageGatekeeper.resolveStageForScan("quality", null, TextUtils.safeText(params.get("processName")));
-        stageGatekeeper.validateStagePermission(gateStage, operatorId, operatorName);
+        String gateStyleId = finalOrder != null ? finalOrder.getStyleId() : null;
+        stageGatekeeper.validateStagePermission(gateStage, gateStyleId, operatorId, operatorName);
         // 菲号级工厂隔离校验（支持部分转单）
         validateBundleBelonging(bundle, ctx, resolveScanProcess(params));
         validateOrderBelonging(finalOrder, ctx, bundle);
@@ -312,8 +313,6 @@ public class ScanRecordOrchestrator {
         if (isSampleScanContext(params)) {
             return submitSamplePatternScan(params);
         }
-        // 环节扫码门禁：入库环节（管理员不受限，未配置则全员）
-        stageGatekeeper.validateStagePermission("入库", operatorId, operatorName);
         String scanCode = TextUtils.safeText(params.get("scanCode"));
         String orderId = TextUtils.safeText(params.get("orderId"));
         String orderNo = TextUtils.safeText(params.get("orderNo"));
@@ -322,12 +321,16 @@ public class ScanRecordOrchestrator {
         if ("ucode".equals(scanMode)) {
             ProductionOrder order = resolveOrder(orderId, orderNo);
             validateOrderBelonging(order, ctx, null);
+            // 环节扫码门禁：入库环节（管理员不受限，未配置则全员；按款式独立配置）
+            stageGatekeeper.validateStagePermission("入库", order != null ? order.getStyleId() : null, operatorId, operatorName);
             return warehouseScanExecutor.executeUCode(params, requestId, operatorId, operatorName, order);
         }
         final CuttingBundle bundle = hasText(scanCode) ? cuttingBundleService.getByQrCode(scanCode) : null;
         if (!hasText(orderId) && bundle != null && hasText(bundle.getProductionOrderId())) orderId = bundle.getProductionOrderId().trim();
         ProductionOrder order = resolveOrder(orderId, orderNo);
         if (order == null && !hasText(orderId) && !hasText(orderNo) && hasText(scanCode)) order = resolveOrder(null, scanCode);
+        // 环节扫码门禁：入库环节（管理员不受限，未配置则全员；按款式独立配置）
+        stageGatekeeper.validateStagePermission("入库", order != null ? order.getStyleId() : null, operatorId, operatorName);
         final ProductionOrder finalOrder = order;
         // 菲号级工厂隔离校验（支持部分转单）
         validateBundleBelonging(bundle, ctx, resolveScanProcess(params));
