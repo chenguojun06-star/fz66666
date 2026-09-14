@@ -114,6 +114,19 @@ export async function loadStageConfigBudget(styleId?: string | null): Promise<bo
   }
 }
 
+/**
+ * 环节配置保存后调用：清空预算天数缓存并触发看板刷新。
+ *
+ * 没有这一步的话，改完「预计时长」保存后，进度看板的超期预警仍然拿旧天数判定 ——
+ * 缓存是模块级的，SPA 内页面跳转不会重置，只有整页 F5 才生效。
+ */
+export function invalidateStageConfigBudget() {
+  stageConfigBudgetCache.clear();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('data:changed'));
+  }
+}
+
 export function computeStageBudgetHint(params: {
   nodeName: string;
   styleId?: string | null;

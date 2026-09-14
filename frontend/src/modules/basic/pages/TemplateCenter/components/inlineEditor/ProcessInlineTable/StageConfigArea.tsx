@@ -18,6 +18,7 @@ import { Button, Switch, InputNumber, Select, Tag, Typography, App, Table } from
 import type { ColumnsType } from 'antd/es/table';
 import api from '@/utils/api';
 import { getStageConfig, saveStageConfig } from '@/utils/api/production.scan';
+import { invalidateStageConfigBudget } from '@/utils/progressTimeBudget';
 import type { StageConfigItem, StageOperator } from '@/utils/api/production.scan';
 
 const { Text } = Typography;
@@ -149,6 +150,8 @@ export default function StageConfigArea({ readOnly = false, styleId }: Props) {
       }));
       const res = await saveStageConfig(payload);
       if (res?.code === 200) {
+        // 清掉预算天数缓存并通知看板刷新，否则改完「预计时长」看板预警还按旧天数判定
+        invalidateStageConfigBudget();
         appMessage.success(isStyleScoped ? '该款环节配置已保存' : '环节配置已保存');
       } else {
         appMessage.error(res?.message || '保存失败');

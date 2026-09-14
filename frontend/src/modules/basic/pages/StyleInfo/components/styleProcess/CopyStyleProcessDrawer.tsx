@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { App } from 'antd';
 import ImportPickerDrawer from '@/components/common/ImportPickerDrawer';
+import { invalidateStageConfigBudget } from '@/utils/progressTimeBudget';
 import type { StyleProcess } from '@/types/style';
 import api from '@/utils/api';
 
@@ -31,6 +32,8 @@ const CopyStyleProcessDrawer: React.FC<CopyStyleProcessDrawerProps> = ({
           { params: { sourceStyleId: String(src), targetStyleId: String(tgt) } },
         );
         if (res?.code === 200) {
+          // 清掉预算天数缓存，否则拷过来的「预计时长」不会立刻反映到进度看板
+          invalidateStageConfigBudget();
           appMessage.success('已顺带拷贝来源款环节配置');
         } else {
           appMessage.warning(String(res?.message || '环节配置拷贝未完成'));
