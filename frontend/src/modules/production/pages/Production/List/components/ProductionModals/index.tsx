@@ -14,6 +14,7 @@ import OrderConfirmModals from './OrderConfirmModals';
 import StylePrintModalSection from './StylePrintModalSection';
 import RemarkExceptionModal from './RemarkExceptionModal';
 import InspectDrawer from './InspectDrawer';
+import StageConfigModal from '../StageConfigModal';
 
 interface ProductionModalsProps {
   quickEditModal: {
@@ -113,6 +114,8 @@ interface ProductionModalsProps {
   closeInspectDrawer: () => void;
   customFields: FieldConfigItem[];
   fieldConfigs: FieldConfigItem[];
+  stageConfigVisible: boolean;
+  closeStageConfig: () => void;
 }
 
 const ProductionModals: React.FC<ProductionModalsProps> = ({
@@ -208,6 +211,8 @@ const ProductionModals: React.FC<ProductionModalsProps> = ({
   closeInspectDrawer,
   customFields,
   fieldConfigs: _fieldConfigs,
+  stageConfigVisible,
+  closeStageConfig,
 }) => {
   return (
   <>
@@ -318,6 +323,12 @@ const ProductionModals: React.FC<ProductionModalsProps> = ({
       onSave={saveRemap}
       onClose={closeRemap}
       isFactoryAccount={isFactoryAccount}
+    />
+
+    <StageConfigModal
+      visible={stageConfigVisible}
+      onClose={closeStageConfig}
+      isSupervisorOrAbove={isSupervisorOrAbove}
     />
 
     <SyncProcessPriceModal

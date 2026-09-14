@@ -7,6 +7,7 @@
 
 const api = require('../../../utils/api');
 const { DEBUG_MODE } = require('../../../config');
+const stageBudget = require('../services/stageBudget'); // D-387 环节预计时长
 
 /** 扫码结果通知停留时长：20 分钟 */
 const RESULT_DISMISS_MS = 20 * 60 * 1000;
@@ -62,6 +63,13 @@ module.exports = {
       this._startResultDismissTimer();
       this.addToLocalHistory(formattedResult);
       this.startUndoTimer(formattedResult);
+      // D-387：环节预计时长展示（只读，不参与任何计算）：按当前环节配置天数补到结果面板
+      const budgetStageName = result.progressStage || result.processName || '';
+      stageBudget.resolve(processName, budgetStageName).then(function(days) {
+        if (days != null) {
+          self.setData({ 'lastResult.stageBudget': '预计' + days + '天' });
+        }
+      }).catch(function() { /* 不影响主流程 */ });
       try {
         if (processName) { wx.setStorageSync('scan_pref_process', processName); this.setData({ lastUsedProcessName: processName }); }
         const curWarehouse = this.data.warehouse;

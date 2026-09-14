@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import BudgetDaysEditor from '@/components/common/BudgetDaysEditor';
 import DefectTracePopover from '../components/DefectTracePopover';
@@ -6,6 +6,7 @@ import { ProductionOrder } from '@/types/production';
 import { ProgressNode } from '../types';
 import { NodeCalculationResult } from './nodeCalculations';
 import { colorWithAlpha } from './cellRendererHelpers';
+import { loadStageConfigBudget } from '@/utils/progressTimeBudget';
 
 interface ProgressNodeItemProps {
   node: ProgressNode;
@@ -32,6 +33,11 @@ export function ProgressNodeItem({
   onClick,
   onMouseEnter,
 }: ProgressNodeItemProps) {
+  // D-387：环节配置预警 —— 首次挂载静默加载环节配置预算天数（loadStageConfigBudget 自带已加载 guard）
+  useEffect(() => {
+    loadStageConfigBudget();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const {
     nodeLabel,
     nodeType,

@@ -1,7 +1,34 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-12（新增 D-384 指派明细表 + 按人卡额度 + 工资按各自实际件数）
+> 最后更新：2026-09-14（新增 D-387 生产环节可配置系统：可操作人+预计时长+监控开关）
+
+---
+
+## D-387：生产环节可配置系统 —— 可操作人 + 预计时长 + 监控开关（2026-09-14）
+
+**需求**：把硬编码父环节（采购/裁剪/二次工艺/车缝/尾部/入库）变为可配置。每个环节可设：
+可操作人（配了→只有这些人扫码；不配→全员）、预计时长（天，仅展示+超期预警，不参与交期计算）、
+超期监控开关。大货与样衣**共用一套**（按父环节名统一）。采购/入库为默认环节（default_stage=1）
+不展示工序列表但可配置操作人+时长。谁操作谁撤回，管理员可撤任意。PC 做配置，小程序/H5 只读+拦截。
+
+**决策**：
+1. 新增 `t_stage_config` 表，`tenant_id=NULL=系统默认`，`tenant_id=X=租户覆盖`（与
+   `t_process_parent_mapping` 同构）。种子数据：系统层 6 环节。
+2. 扫码拦截由新 `StageGatekeeper` 接入三条路径（ProductionScanExecutor 生产【大货+样衣共用】/
+   quality/warehouse），全部扫码都拦，`UserContext.isTopAdmin()` 一律放行。
+3. 保存写入「当前租户覆盖层」（tenant_id=本租户），仅顶级管理员，事务在 Orchestrator（D-001）。
+   解释「全公司统一一套」= 一个租户内大货+样衣统一一套；跨租户靠覆盖层天然隔离（P0 #4）。
+   比方案初稿"写系统层 NULL"更安全，避免租户间配置串扰。
+4. 撤回权限补管理员例外：`ScanRescanHelper.validateRescanPermission`，管理员可退任意扫码。
+5. PC 配置入口挂在生产订单管理页 filterRight「环节配置」按钮，新增 `StageConfigModal`
+   （ResizableModal 85vw），操作人下拉复用 `GET /system/user/list`。
+6. 超期预警为「只读展示」增强，本期先交付配置+拦截闭环；小程序/H5 拦截靠后端
+   AccessDenied→GlobalExceptionHandler→扫码页 toast 统一兜底，无需改小程序核心扫码。
+
+**实现文件**：V202609140001__create_stage_config.sql、StageConfig(Entity/Mapper/Service/Orchestrator/
+Controller)、StageGatekeeper、StageConfigModal。后端 mvn compile ✅、前端 tsc --noEmit 0 error ✅、
+Flyway/实体/多租户审计通过。
 
 ---
 

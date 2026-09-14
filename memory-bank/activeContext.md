@@ -1,11 +1,22 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-11（D-370 默认需求数；绿色已回退；**小数化决策=暂缓不做**）
+> 最后更新：2026-09-14（D-387 生产环节可配置系统：可操作人+预计时长+监控开关）
 
 ---
 
 ## 最近变更（Latest Changes）
+
+### 2026-09-14 D-387 生产环节可配置系统（未推送）
+
+- [x] 新表 `t_stage_config`（Flyway `V202609140001`，information_schema 存储过程幂等，tenant_id=NULL 系统层+租户覆盖）：6 环节（采购/裁剪/二次工艺/车缝/尾部/入库）可配置可操作人 / 预计时长(天) / 监控开关；采购/入库 default_stage=1
+- [x] 后端：StageConfig Entity/Mapper/Service（按租户 Caffeine 缓存+合并）/Orchestrator（事务在编排层，仅顶级管理员，写租户覆盖层）/Controller（GET 全端读、PUT 管理员存）；StageGatekeeper 门禁接入生产(大货+样衣共用)/质检/入库三条扫码路径
+- [x] 撤回权限补管理员例外：ScanRescanHelper 管理员可退任意扫码
+- [x] PC 端：StageConfigModal（85vw ResizableModal，操作人下拉复用 /system/user/list）+ 订单管理页「环节配置」入口（主管且非工厂）
+- [x] 三端扫码拦截：后端 AccessDenied→GlobalExceptionHandler→小程序/H5 扫码页 toast 统一兜底
+- [x] PC 看板环节超期预警：预算天数取 t_stage_config.expectedDays（progressTimeBudget.ts），单环节独立计时、只展示不参与交期
+- [x] 小程序/H5 扫码结果面板显示当前环节「预计 N 天」（stageBudget.js 映射父环节+60s缓存 + handleScanSuccess 附加 + res-budget 标签）
+- [x] 质量门控：mvn compile✅ 前端 tsc 0 error✅ 小程序 node --check✅ Flyway/实体/多租户审计✅
 
 ### 2026-09-12 D-384 指派明细表 + 按人卡额度 + 工资按人计（未推送）
 

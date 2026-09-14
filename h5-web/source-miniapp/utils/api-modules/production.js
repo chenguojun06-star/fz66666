@@ -155,6 +155,10 @@ const production = {
   getProcessConfig(orderNo) {
     return ok(`/api/production/scan/process-config/${encodeURIComponent(orderNo)}`, 'GET', {});
   },
+  // D-387：环节配置（只读，扫码面板展示当前环节预计时长）
+  getStageConfig() {
+    return ok('/api/production/stage-config', 'GET', {});
+  },
   rollbackByBundle(payload) {
     return ok('/api/production/warehousing/rollback-by-bundle', 'POST', payload || {});
   },

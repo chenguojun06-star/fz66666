@@ -79,6 +79,7 @@ public class ScanRecordOrchestrator {
     @Autowired(required = false) private ScanPrecheckFeedbackOrchestrator scanPrecheckFeedbackOrchestrator;
     @Autowired(required = false) private OrderRiskTrackingOrchestrator orderRiskTrackingOrchestrator;
     @Autowired private com.fashion.supplychain.production.helper.OrderListCacheHelper orderListCacheHelper;
+    @Autowired private com.fashion.supplychain.production.helper.StageGatekeeper stageGatekeeper;
 
     public Map<String, Object> execute(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
@@ -282,6 +283,9 @@ public class ScanRecordOrchestrator {
         ProductionOrder order = resolveOrder(orderId, orderNo);
         if (order == null && !hasText(orderId) && !hasText(orderNo) && hasText(scanCode)) order = resolveOrder(null, scanCode);
         final ProductionOrder finalOrder = order;
+        // 环节扫码门禁：质检归尾部环节（管理员不受限，未配置则全员）
+        String gateStage = stageGatekeeper.resolveStageForScan("quality", null, TextUtils.safeText(params.get("processName")));
+        stageGatekeeper.validateStagePermission(gateStage, operatorId, operatorName);
         // 菲号级工厂隔离校验（支持部分转单）
         validateBundleBelonging(bundle, ctx, resolveScanProcess(params));
         validateOrderBelonging(finalOrder, ctx, bundle);
@@ -308,6 +312,8 @@ public class ScanRecordOrchestrator {
         if (isSampleScanContext(params)) {
             return submitSamplePatternScan(params);
         }
+        // 环节扫码门禁：入库环节（管理员不受限，未配置则全员）
+        stageGatekeeper.validateStagePermission("入库", operatorId, operatorName);
         String scanCode = TextUtils.safeText(params.get("scanCode"));
         String orderId = TextUtils.safeText(params.get("orderId"));
         String orderNo = TextUtils.safeText(params.get("orderNo"));

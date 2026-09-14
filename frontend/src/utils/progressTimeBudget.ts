@@ -54,6 +54,60 @@ export interface StageBudgetHint {
   budgetDays: number;
 }
 
+// D-387：环节配置（t_stage_config.expectedDays）作为超期预警预算天数的首选来源。
+// 用户口径：预算天数按「环节配置」给，单环节独立判定，只展示不参与交期计算。
+const STAGE_CONFIG_BUDGET_RULES: { match: RegExp; key: string }[] = [
+  { match: /采购|物料|备料|辅料|面料|procurement/i, key: '采购' },
+  { match: /裁剪|剪裁|cutting/i, key: '裁剪' },
+  { match: /二次工艺|特殊工艺|绣花|印花|secondary/i, key: '二次工艺' },
+  { match: /车缝|缝纫|平车|sewing/i, key: '车缝' },
+  { match: /尾部|尾工|包装|打包|大烫|整烫|熨烫|pressing|packaging|ironing/i, key: '尾部' },
+  { match: /入库|仓库|成品|warehousing/i, key: '入库' },
+];
+
+let stageConfigBudgetMap: Record<string, number> | null = null;
+let stageBudgetRefreshFired = false;
+
+/** 取某环节在配置表中设定的预算天数；未配置返回 null */
+export function getConfigBudgetDays(nodeName: string): number | null {
+  if (!stageConfigBudgetMap) return null;
+  for (const rule of STAGE_CONFIG_BUDGET_RULES) {
+    if (rule.match.test(nodeName)) {
+      const v = stageConfigBudgetMap[rule.key];
+      return Number.isFinite(v) && v > 0 ? v : null;
+    }
+  }
+  return null;
+}
+
+/** 惰性加载环节配置预算天数（全局统一套，登录后可调）。加载完成返回是否成功。 */
+export async function loadStageConfigBudget(): Promise<boolean> {
+  if (stageConfigBudgetMap !== null) return true;
+  try {
+    const { getStageConfig } = await import('@/utils/api/production.scan');
+    const res = await getStageConfig();
+    const list = res?.data ?? [];
+    const map: Record<string, number> = {};
+    (Array.isArray(list) ? list : []).forEach((c: any) => {
+      if (c && c.stageName) {
+        const n = Number(c.expectedDays);
+        if (Number.isFinite(n) && n > 0) map[c.stageName] = n;
+      }
+    });
+    stageConfigBudgetMap = map;
+    // 仅首次加载成功时触发一次全局刷新，让进度看板立即用环节配置天数重渲染（guard 避免循环）
+    if (!stageBudgetRefreshFired) {
+      stageBudgetRefreshFired = true;
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('data:changed'));
+      }
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 export function computeStageBudgetHint(params: {
   nodeName: string;
   orderCreateTime: string | null | undefined;
@@ -81,11 +135,15 @@ export function computeStageBudgetHint(params: {
   const totalDays = shipDate.diff(create, 'day');
   if (totalDays <= 0) return null;
 
-  // 如果提供了独立预算工时，使用它（budgetHours / 14 向上取整为天数）
-  const budgetDays = budgetHours != null && budgetHours > 0
-    ? Math.max(1, Math.ceil(budgetHours / 14))
-    : Math.max(1, Math.round(totalDays * config.ratio));
   const now = dayjs();
+
+  // D-387：优先使用环节配置表设定的预算天数（用户口径：按环节给，单环节独立判定）
+  const configBudgetDays = getConfigBudgetDays(nodeName);
+  const budgetDays = configBudgetDays != null
+    ? Math.max(1, Math.round(configBudgetDays))
+    : (budgetHours != null && budgetHours > 0
+        ? Math.max(1, Math.ceil(budgetHours / 14))
+        : Math.max(1, Math.round(totalDays * config.ratio)));
 
   if (stageEndTime) {
     const actualDays = dayjs(stageEndTime).diff(

@@ -48,6 +48,7 @@ public class ProductionScanExecutor {
     private final ProductionProcessTrackingService trackingService;
 
     private final ScanExecutorSupport executorSupport;
+    private final com.fashion.supplychain.production.helper.StageGatekeeper stageGatekeeper;
 
     public Map<String, Object> execute(Map<String, Object> params, String requestId, String operatorId,
                                        String operatorName, String scanType, int quantity, boolean autoProcess,
@@ -74,6 +75,10 @@ public class ProductionScanExecutor {
         executorSupport.validateBundleNotBlocked(ctx.bundle, "生产");
 
         resolveProcessStage(ctx, params, autoProcess);
+
+        // 环节扫码门禁：按父环节「可操作人」白名单校验（管理员不受限，未配置则全员可操作）
+        String gateStage = stageGatekeeper.resolveStageForScan(scanType, ctx.progressStage, ctx.childProcessName);
+        stageGatekeeper.validateStagePermission(gateStage, operatorId, operatorName);
 
         stageSupport.validateParentStagePrerequisite(ctx.order, ctx.bundle, ctx.progressStage, ctx.childProcessName);
         validateSplitGuard(ctx);

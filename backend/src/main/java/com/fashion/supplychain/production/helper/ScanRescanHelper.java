@@ -108,7 +108,9 @@ public class ScanRescanHelper {
     private void validateRescanPermission(ScanRecord target) {
         UserContext ctx = UserContext.get();
         String currentUserId = ctx == null ? null : ctx.getUserId();
-        if (!hasText(currentUserId) || !currentUserId.equals(target.getOperatorId())) {
+        // 撤回权限：只有操作者能撤回；管理员（含租户主账号）可撤回任意
+        if (!hasText(currentUserId) || (!currentUserId.equals(target.getOperatorId())
+                && !UserContext.isTopAdmin())) {
             throw new AccessDeniedException("只能退回自己的扫码记录");
         }
 

@@ -106,6 +106,15 @@
   font-weight: 500;
 }
 
+/* D-387 环节预计时长标签（贴合现有 res-proc 展示，弱化避免干扰核心信息） */
+.res-budget {
+  padding: 2px 8px;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-tertiary);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+}
+
 /* 单价提示信息 */
 .res-hint {
   display: flex;

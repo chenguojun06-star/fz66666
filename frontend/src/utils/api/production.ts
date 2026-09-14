@@ -27,4 +27,8 @@ export {
   lockBundle,
   unlockBundle,
   repairComplete,
+  getStageConfig,
+  saveStageConfig,
+  type StageOperator,
+  type StageConfigItem,
 } from './production.scan';
