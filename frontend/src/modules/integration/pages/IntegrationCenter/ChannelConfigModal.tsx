@@ -137,7 +137,7 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
         <Alert
           type="info"
           showIcon
-          className="u-mb-16"
+          style={{ marginBottom: 16 }}
           title={
             <span>
               填写接口密钥后开启渠道即可使用。
@@ -154,7 +154,7 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
         />
 
         {configData?.hasConfig && (
-          <Descriptions bordered column={1} className="u-mb-16">
+          <Descriptions bordered column={1} style={{ marginBottom: 16 }}>
             <Descriptions.Item label="当前状态">
               {configData.enabled ? ' 已启用' : ' 未启用'}
             </Descriptions.Item>

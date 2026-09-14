@@ -31,7 +31,7 @@ const PresetSection: React.FC<Props> = ({ onApplyPreset }) => {
       <Alert
         type="info"
         showIcon={false}
-        className="u-mt-8 u-fs-12 u-p-6px10px"
+        style={{ marginTop: 8, fontSize: 12, padding: '6px 10px' }}
         message="行业标准参考：胸围每码+2cm、肩宽+1cm、衣长+1cm、腰围+1.5cm、裤长+1.2cm、领围+0.5cm。具体数值请根据实际版型调整。"
       />
     </div>

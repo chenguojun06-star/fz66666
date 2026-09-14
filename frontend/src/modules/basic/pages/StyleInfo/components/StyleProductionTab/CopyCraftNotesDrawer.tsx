@@ -193,7 +193,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
       title="拷贝其他款工艺说明"
       footer={
         <Space>
-          <Text type="secondary" className="u-fs-12" style={{ marginInlineEnd: 12 }}>
+          <Text type="secondary" style={{ fontSize: 12, marginInlineEnd: 12 }}>
             确认后整篇替换当前工艺说明（当前内容会被覆盖，替换后自动保存）
           </Text>
           <Button onClick={onClose}>取消</Button>
@@ -206,14 +206,14 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
       <div className="u-flex-1 u-h-full u-d-flex u-gap-16 u-ov-hidden" style={{ minWidth: 0, alignItems: 'stretch', minHeight: 0 }}>
         {/* ── 左：来源选择 ── */}
         <div className="u-fshrink-0 u-d-flex u-fd-column" style={{ width: 300, minHeight: 0 }}>
-          <Text strong className="u-d-block u-mb-8">
+          <Text strong style={{ display: 'block', marginBottom: 8 }}>
             {sourceMode === 'style' ? '选择款' : '选择通用模板'}
           </Text>
           <Radio.Group
             value={sourceMode}
             optionType="button"
             buttonStyle="solid"
-            className="u-mb-8"
+            style={{ marginBottom: 8 }}
             onChange={(e) => {
               setSourceMode(e.target.value);
               setSelectedStyle(null);
@@ -227,7 +227,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
           />
           {sourceMode === 'style' && (
             <>
-              <Space direction="vertical" size={6} className="u-w-full u-mb-8">
+              <Space direction="vertical" size={6} style={{ width: '100%', marginBottom: 8 }}>
                 <Input
                   placeholder="款号"
                   allowClear
@@ -254,7 +254,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
                       <StyleCoverThumb src={s.cover || s.styleCover || null} styleId={s.id} styleNo={String(s.styleNo || '')} size={40} borderRadius={4} />
                       <div className="u-flex-1" style={{ minWidth: 0 }}>
                         <div className="u-fw-500 u-fs-13">{s.styleNo || '-'}</div>
-                        <Text type="secondary" className="u-fs-12 u-d-block u-ov-hidden u-ws-nowrap" style={{ textOverflow: 'ellipsis' }}>
+                        <Text type="secondary" style={{ fontSize: 12, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {s.styleName || '-'}
                         </Text>
                       </div>
@@ -271,7 +271,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
                 pageSize={stylePageSize}
                 total={styleTotal}
                 onChange={(p) => { setStylePage(p); void fetchStyles(p); }}
-                className="u-mt-8 u-ta-right"
+                style={{ marginTop: 8, textAlign: 'right' }}
                 showSizeChanger={false}
               />
             </>
@@ -281,7 +281,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
               {templates.map((t) => (
                 <div key={String(t.id)} onClick={() => void handlePickTemplate(t)} style={itemStyle(Boolean(selectedTemplate && String(selectedTemplate.id) === String(t.id)))}>
                   <div className="u-fw-500 u-fs-13">{t.templateName || '-'}</div>
-                  <Text type="secondary" className="u-fs-12">
+                  <Text type="secondary" style={{ fontSize: 12 }}>
                     {t.sourceStyleNo ? `来源款 ${t.sourceStyleNo}` : '未关联来源款'}
                   </Text>
                 </div>
@@ -295,12 +295,12 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
 
         {/* ── 右：富文本预览 ── */}
         <div className="u-flex-1 u-d-flex u-fd-column u-ov-hidden" style={{ minWidth: 0, minHeight: 0 }}>
-          <Space wrap className="u-mb-12">
+          <Space wrap style={{ marginBottom: 12 }}>
             <Text strong>
               工艺说明预览
               {selectedStyle ? `（${selectedStyle.styleNo || ''}）` : selectedTemplate ? `（${selectedTemplate.templateName || ''}）` : ''}
             </Text>
-            <Text type="secondary" className="u-fs-12">确认导入后整篇替换当前工艺说明</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>确认导入后整篇替换当前工艺说明</Text>
           </Space>
           {!selectedStyle && !selectedTemplate ? (
             <div className="u-ta-center u-fs-14" style={{ padding: '60px 0', color: 'var(--color-text-tertiary)' }}>

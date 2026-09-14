@@ -87,7 +87,7 @@ export function getSkuInventoryColumns(handlers: SkuInventoryHandlers): ColumnsT
               value={record.salesPrice ?? v}
               controls={false}
               onChange={(val) => handlers.handleSKUSalesPriceChange?.(index, val)}
-              className="u-w-full"
+              style={{ width: '100%' }}
               status={priceChanged ? 'warning' : undefined}
             />
             {record.originalSalesPrice != null && priceChanged && (
@@ -113,7 +113,7 @@ export function getSkuInventoryColumns(handlers: SkuInventoryHandlers): ColumnsT
             onChange={e => handlers.handleSKUPriceReasonChange?.(index, e.target.value)}
             placeholder="必填"
             status={!record.priceAdjustmentReason?.trim() ? 'error' : undefined}
-            className="u-w-full"
+            style={{ width: '100%' }}
           />
         );
       },

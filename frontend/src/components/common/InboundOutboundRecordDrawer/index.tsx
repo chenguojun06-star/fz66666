@@ -135,8 +135,8 @@ const InboundOutboundRecordDrawer: React.FC<InboundOutboundRecordDrawerProps> = 
       {...restProps}
     >
       {materialData && (
-        <Card className="u-mb-16" style={{ background: 'var(--color-bg-subtle)' }}>
-          <Space orientation="vertical" size={8} className="u-w-full">
+        <Card style={{ marginBottom: 16, background: 'var(--color-bg-subtle)' }}>
+          <Space orientation="vertical" size={8} style={{ width: '100%' }}>
             <div>
               <strong style={{ fontSize: 'var(--font-size-lg)' }}>{materialData.materialCode}</strong>
               <Tag
@@ -144,7 +144,7 @@ const InboundOutboundRecordDrawer: React.FC<InboundOutboundRecordDrawerProps> = 
                   getMaterialTypeCategory(materialData.materialType) === 'fabric' ? 'blue' :
                   getMaterialTypeCategory(materialData.materialType) === 'lining' ? 'cyan' : 'green'
                 }
-                className="u-ml-8"
+                style={{ marginLeft: 8 }}
               >
                 {getBaseMaterialTypeLabel(materialData.materialType)}
               </Tag>

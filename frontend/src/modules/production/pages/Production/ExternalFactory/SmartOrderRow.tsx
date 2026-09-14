@@ -69,7 +69,7 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
   const doneCount = stages.filter(s => s.status === 'done').length;
   const timelinePercent = ((doneCount + 1) / (stages.length + 1)) * 100;
   const shipDate = (record as any).expectedShipDate || record.plannedEndDate;
-  const factoryTag = <FactoryTypeTag factoryType={record.factoryType} className="u-ml-4" />;
+  const factoryTag = <FactoryTypeTag factoryType={record.factoryType} style={{ marginLeft: 4 }} />;
 
   const timelineItems = useMemo<StageTimelineItem[]>(() => [
     { name: '下单', startTime: record.createTime, endTime: record.createTime, isCompleted: true },
@@ -166,10 +166,10 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
               </div>
             </div>
             <div className="u-d-flex u-fwrap-wrap u-ai-center" style={{ gap: 3 }}>
-              <Tag color={statusInfo.color} className="u-m-0 u-fs-12 u-p-04px u-lh-18px">{statusInfo.text}</Tag>
-              {record.urgencyLevel === 'urgent' && <Tag color="red" className="u-m-0 u-fs-12 u-p-04px u-lh-18px">急单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" className="u-m-0 u-fs-12 u-p-04px u-lh-18px">首单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" className="u-m-0 u-fs-12 u-p-04px u-lh-18px">翻单</Tag>}
+              <Tag color={statusInfo.color} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{statusInfo.text}</Tag>
+              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>急单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>首单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>翻单</Tag>}
               <span className={`ef-delivery-badge ef-delivery-badge--${deliveryMeta.tone}`} style={{ fontSize: 12, fontWeight: 600 }}>
                 {deliveryMeta.label}
               </span>

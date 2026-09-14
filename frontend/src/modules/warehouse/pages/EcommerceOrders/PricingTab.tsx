@@ -33,9 +33,9 @@ const PricingTab: React.FC = () => {
 
   return (
     <div>
-      <Alert className="u-fs-14" style={{ marginBottom: 14 }} type="info" showIcon
+      <Alert style={{ marginBottom: 14, fontSize: 14 }} type="info" showIcon
         title="此处的【单价】和【成本价】将同步显示在成品仓库的单价列和毛利计算中。点击【定价】按钮直接修改，保存后实时生效。" />
-      <Card className="u-mb-10">
+      <Card style={{ marginBottom: 10 }}>
         <Space>
           <Input placeholder="按款式号筛选" allowClear style={{ width: 180 }}
             onChange={e => { if (!e.target.value) { h.setStyleNo(''); h.setPage(1); } }}

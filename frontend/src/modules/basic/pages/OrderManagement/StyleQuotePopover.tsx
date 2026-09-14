@@ -149,7 +149,7 @@ const StyleQuotePopover: React.FC<{
                   </span>
                   <span>{o.quantity}件</span>
                   <span style={{ color: 'var(--color-warning)' }}>{fmt(o.unitPrice)}</span>
-                  <Tag color={st.color} className="u-fs-14 u-lh-16px u-p-04px u-ml-auto">
+                  <Tag color={st.color} style={{ fontSize: 14, lineHeight: '16px', padding: '0 4px', marginLeft: 'auto' }}>
                     {st.text}
                   </Tag>
                 </div>

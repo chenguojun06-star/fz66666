@@ -22,7 +22,7 @@ export const buildEditColumns = (handlers: EditColumnHandlers): ColumnsType<Mate
           value={String(v || 'fabricA')}
           options={MATERIAL_TYPE_OPTIONS}
           onChange={(val) => handleUpdateRow(rid(r), 'materialType', val)}
-          className="u-w-full"
+          style={{ width: '100%' }}
           size="small"
         />
       ),
@@ -99,7 +99,7 @@ export const buildEditColumns = (handlers: EditColumnHandlers): ColumnsType<Mate
             onChange={(val) => handleUpdateRow(rid(r), 'color', val)}
             placeholder="颜色"
             allowClear
-            className="u-w-full"
+            style={{ width: '100%' }}
             size="small"
           />
         ) : (
@@ -136,7 +136,7 @@ export const buildEditColumns = (handlers: EditColumnHandlers): ColumnsType<Mate
           value={String(v || '')}
           onChange={(val: string) => handleUpdateRow(rid(r), 'unit', val)}
           placeholder="单位"
-          className="u-w-full"
+          style={{ width: '100%' }}
           size="small"
         />
       ),
@@ -152,7 +152,7 @@ export const buildEditColumns = (handlers: EditColumnHandlers): ColumnsType<Mate
           value={Number(v || 0)}
           min={0}
           precision={2}
-          className="u-w-full"
+          style={{ width: '100%' }}
           onChange={(val) => handleUpdateRow(rid(r), 'purchaseQuantity', val ?? 0)}
           size="small"
         />
@@ -169,7 +169,7 @@ export const buildEditColumns = (handlers: EditColumnHandlers): ColumnsType<Mate
           value={Number(v || 0)}
           min={0}
           precision={2}
-          className="u-w-full"
+          style={{ width: '100%' }}
           onChange={(val) => handleUpdateRow(rid(r), 'unitPrice', val ?? 0)}
           size="small"
           addonAfter="元"
@@ -186,7 +186,7 @@ export const buildEditColumns = (handlers: EditColumnHandlers): ColumnsType<Mate
         <SupplierSelect
           value={String(v || '')}
           placeholder="供应商"
-          className="u-w-full"
+          style={{ width: '100%' }}
           onChange={(_val: string, option: any) => {
             handleUpdateRow(rid(r), 'supplierName', _val);
             const sel = Array.isArray(option) ? option[0] : option;

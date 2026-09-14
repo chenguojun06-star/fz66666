@@ -133,25 +133,25 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
       {/* 状态徽章 */}
       <span className="u-d-inline-flex u-gap-4 u-ai-center">
         {sampleConfig && (
-          <Tag color={sampleConfig.color} className="u-m-0">
-            <ExperimentOutlined className="u-mr-4" />
+          <Tag color={sampleConfig.color} style={{ margin: 0 }}>
+            <ExperimentOutlined style={{ marginRight: 4 }} />
             {sampleConfig.text}
           </Tag>
         )}
         {generalConfig && generalConfig.text !== sampleConfig?.text && (
-          <Tag color={generalConfig.color} className="u-m-0">
+          <Tag color={generalConfig.color} style={{ margin: 0 }}>
             {generalConfig.text}
           </Tag>
         )}
         {reviewConfig && (
-          <Tag color={reviewConfig.color} className="u-m-0">
-            <AuditOutlined className="u-mr-4" />
+          <Tag color={reviewConfig.color} style={{ margin: 0 }}>
+            <AuditOutlined style={{ marginRight: 4 }} />
             {reviewConfig.text}
           </Tag>
         )}
         {pushedToOrder && (
-          <Tag color="blue" className="u-m-0">
-            <CheckCircleOutlined className="u-mr-4" />
+          <Tag color="blue" style={{ margin: 0 }}>
+            <CheckCircleOutlined style={{ marginRight: 4 }} />
             已推单
           </Tag>
         )}
@@ -175,7 +175,7 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
               label="当前操作人"
               value={currentOperator}
             />
-            <InfoCircleOutlined className="u-fs-11" style={{ color: 'var(--color-text-quaternary)' }} />
+            <InfoCircleOutlined style={{ color: 'var(--color-text-quaternary)', fontSize: 11 }} />
           </span>
         </Tooltip>
       )}
@@ -206,7 +206,7 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style }) => {
           <span className="u-d-inline-flex u-ai-center u-gap-4 u-cur-pointer" style={{ color: 'var(--color-text-tertiary)' }}>
             <SyncOutlined />
             <span>{updateTime || createTime || ''}</span>
-            <InfoCircleOutlined className="u-fs-11" />
+            <InfoCircleOutlined style={{ fontSize: 11 }} />
           </span>
         </Popover>
       )}

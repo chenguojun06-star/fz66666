@@ -131,7 +131,7 @@ const OrphanDataPage: React.FC = () => {
 
       {scanResult && (
         <div className="orphan-scan-result">
-          <Row gutter={16} className="u-mb-16">
+          <Row gutter={16} style={{ marginBottom: 16 }}>
             <Col span={8}>
               <Card>
                 <Statistic title="孤立数据总量" value={scanResult.totalOrphanCount} suffix="条"
@@ -164,7 +164,7 @@ const OrphanDataPage: React.FC = () => {
                     <div className="orphan-category-label">{cat.tableLabel}</div>
                     <div className="orphan-category-count">{cat.count} 条</div>
                   </div>
-                  <Tag color={MODULE_COLORS[cat.module] || 'default'} className="u-ml-auto">{cat.module}</Tag>
+                  <Tag color={MODULE_COLORS[cat.module] || 'default'} style={{ marginLeft: 'auto' }}>{cat.module}</Tag>
                 </div>
               ))}
             </div>

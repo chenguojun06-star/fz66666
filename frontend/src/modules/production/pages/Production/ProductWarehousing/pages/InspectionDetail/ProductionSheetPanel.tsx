@@ -55,7 +55,7 @@ const ProductionSheetPanel: React.FC<Props> = ({
           {comment && <div className="u-mt-4 u-ws-pre-wrap">审核评语：{comment}</div>}
         </div>
       )}
-      <Title level={5} className="u-mb-12">工艺说明</Title>
+      <Title level={5} style={{ marginBottom: 12 }}>工艺说明</Title>
       <SheetRichViewer content={desc} />
     </div>
   );

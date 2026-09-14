@@ -89,7 +89,7 @@ const PurchaseDocListModal: React.FC<Props> = ({ open, orderNo, styleNo, onCance
                   <Image
                     src={doc.imageUrl}
                     alt="采购单据"
-                    className="u-w-full" style={{ height: 140, objectFit: 'contain', background: 'var(--color-fill-quaternary)' }}
+                    style={{ width: '100%', height: 140, objectFit: 'contain', background: 'var(--color-fill-quaternary)' }}
                     fallback="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciLz4="
                   />
                   <div className="u-fs-var--font-size-xs u-d-flex u-fd-column" style={{ color: 'var(--color-text-secondary)', gap: 2 }}>

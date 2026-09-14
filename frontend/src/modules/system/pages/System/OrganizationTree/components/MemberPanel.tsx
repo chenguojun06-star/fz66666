@@ -94,7 +94,7 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
             审批负责人将负责审批该部门下成员发起的重要操作（删除/撤回/报废等）。
           </p>
           <Select
-            className="u-w-full"
+            style={{ width: '100%' }}
             showSearch
             allowClear
             optionFilterProp="label"
@@ -123,23 +123,23 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
       {/* 部门信息概览 */}
       <Card
         size="small"
-        className="u-mb-12" style={{ borderColor: 'var(--color-border-antd)' }}
+        style={{ marginBottom: 12, borderColor: 'var(--color-border-antd)' }}
         bodyStyle={{ padding: 12 }}
       >
         <div className="u-d-flex u-jc-between u-ai-center u-mb-8">
           <div className="u-d-flex u-ai-center u-gap-8">
             <span className="u-fs-16 u-fw-600">
               {selectedUnit?.nodeType === 'FACTORY' || selectedUnit?.ownerType === 'EXTERNAL'
-                ? <BankOutlined className="u-mr-4" style={{ color: 'var(--color-primary)' }} />
-                : <ApartmentOutlined className="u-mr-4" style={{ color: 'var(--color-accent-purple, var(--color-accent-purple))' }} />
+                ? <BankOutlined style={{ color: 'var(--color-primary)', marginRight: 4 }} />
+                : <ApartmentOutlined style={{ color: 'var(--color-accent-purple, var(--color-accent-purple))', marginRight: 4 }} />
               }
               {selectedUnit?.unitName}
             </span>
             {selectedUnit?.nodeType === 'FACTORY' && (
-              <Tag color="orange" className="u-m-0">工厂</Tag>
+              <Tag color="orange" style={{ margin: 0 }}>工厂</Tag>
             )}
             {selectedUnit?.ownerType === 'EXTERNAL' && (
-              <Tag color="purple" className="u-m-0">外协</Tag>
+              <Tag color="purple" style={{ margin: 0 }}>外协</Tag>
             )}
           </div>
           <div className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
@@ -151,7 +151,7 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
           </div>
         </div>
 
-        <Row gutter={12} className="u-mt-8">
+        <Row gutter={12} style={{ marginTop: 8 }}>
           <Col xs={24} sm={12} md={8} style={{ paddingTop: 4, paddingBottom: 4 }}>
             <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>部门类型:</span>
             <span className="u-ml-8 u-fs-13">
@@ -162,7 +162,7 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
             <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>审批人:</span>
             <span className="u-ml-8 u-fs-13">
               {selectedUnit?.managerUserName
-                ? <Tag icon={<SafetyCertificateOutlined />} color="blue" className="u-m-0">{selectedUnit.managerUserName}</Tag>
+                ? <Tag icon={<SafetyCertificateOutlined />} color="blue" style={{ margin: 0 }}>{selectedUnit.managerUserName}</Tag>
                 : <span style={{ color: 'var(--color-text-tertiary)' }}>未设置</span>}
             </span>
           </Col>
@@ -170,8 +170,8 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
             <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>状态:</span>
             <span className="u-ml-8 u-fs-13">
               {selectedUnit && isUnitEnabled(selectedUnit)
-                ? <Tag color="success" className="u-m-0">启用</Tag>
-                : <Tag color="default" className="u-m-0">未启用</Tag>}
+                ? <Tag color="success" style={{ margin: 0 }}>启用</Tag>
+                : <Tag color="default" style={{ margin: 0 }}>未启用</Tag>}
             </span>
           </Col>
         </Row>
@@ -190,8 +190,8 @@ const MemberPanel: React.FC<MemberPanelProps> = ({
                 <div key={cid} className="org-subunit-card" onClick={() => onSelectUnit(cid)}>
                   <div className="org-subunit-name">
                     {child.nodeType === 'FACTORY' || child.ownerType === 'EXTERNAL'
-                      ? <BankOutlined className="u-mr-4" />
-                      : <ApartmentOutlined className="u-mr-4" />}
+                      ? <BankOutlined style={{ marginRight: 4 }} />
+                      : <ApartmentOutlined style={{ marginRight: 4 }} />}
                     {child.unitName}
                   </div>
                   <div className="org-subunit-meta">

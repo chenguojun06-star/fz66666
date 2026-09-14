@@ -56,7 +56,7 @@ export const ProcessImageCell: React.FC<{ record: any; readOnly?: boolean }> = (
         <Image.PreviewGroup>
           {imgs.slice(0, 2).map((url, i) => (
             <Image key={i} src={getFullAuthedFileUrl(url)} width={28} height={28}
-              className="u-objf-cover u-fshrink-0" style={{ borderRadius: 3 }}
+              style={{ borderRadius: 3, objectFit: 'cover', flexShrink: 0 }}
               styles={{ root: { display: 'inline-block', flexShrink: 0 } }}
             />
           ))}
@@ -115,7 +115,7 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
       {files.length === 0 && <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)', padding: '4px 0' }}>暂无附件</div>}
       {files.map((f, i) => (
         <div key={i} className="u-d-flex u-ai-center u-gap-6" style={{ padding: '3px 0' }}>
-          <PaperClipOutlined className="u-fshrink-0 u-fs-12" style={{ color: 'var(--color-primary)' }} />
+          <PaperClipOutlined style={{ color: 'var(--color-primary)', flexShrink: 0, fontSize: 12 }} />
           <a onClick={(e) => { e.preventDefault(); downloadFile(f.url, f.name); }}
             href="#" className="u-flex-1 u-ov-hidden u-ws-nowrap u-fs-14 u-cur-pointer" style={{ textOverflow: 'ellipsis' }}>
             {f.name}
@@ -126,7 +126,7 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
         <>
           <input ref={fileInputRef} type="file" className="u-d-none"
             onChange={(e) => { if (e.target.files?.length) handleFileSelect(e.target.files); }} />
-          <Button icon={<PaperClipOutlined />} loading={uploading} className="u-mt-6 u-w-full"
+          <Button icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}
             onClick={() => fileInputRef.current?.click()}>
             上传附件
           </Button>
@@ -189,7 +189,7 @@ export const NewRowImageUpload: React.FC<{
         <Image.PreviewGroup>
           {value.slice(0, 2).map((url, i) => (
             <Image key={i} src={getFullAuthedFileUrl(url)} width={28} height={28}
-              className="u-objf-cover u-fshrink-0" style={{ borderRadius: 3 }}
+              style={{ borderRadius: 3, objectFit: 'cover', flexShrink: 0 }}
               styles={{ root: { display: 'inline-block', flexShrink: 0 } }}
             />
           ))}
@@ -239,7 +239,7 @@ export const NewRowAttachmentUpload: React.FC<{
       {value.length === 0 && <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)', padding: '4px 0' }}>暂无附件</div>}
       {value.map((f, i) => (
         <div key={i} className="u-d-flex u-ai-center u-gap-6" style={{ padding: '3px 0' }}>
-          <PaperClipOutlined className="u-fshrink-0 u-fs-12" style={{ color: 'var(--color-primary)' }} />
+          <PaperClipOutlined style={{ color: 'var(--color-primary)', flexShrink: 0, fontSize: 12 }} />
           <a onClick={(e) => { e.preventDefault(); downloadFile(f.url, f.name); }}
             href="#" className="u-flex-1 u-ov-hidden u-ws-nowrap u-fs-14 u-cur-pointer" style={{ textOverflow: 'ellipsis' }}>
             {f.name}
@@ -249,7 +249,7 @@ export const NewRowAttachmentUpload: React.FC<{
       <>
         <input ref={fileInputRef} type="file" className="u-d-none"
           onChange={(e) => { if (e.target.files?.length) handleFileSelect(e.target.files); }} />
-        <Button icon={<PaperClipOutlined />} loading={uploading} className="u-mt-6 u-w-full"
+        <Button icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}
           onClick={() => fileInputRef.current?.click()}>
           上传附件
         </Button>

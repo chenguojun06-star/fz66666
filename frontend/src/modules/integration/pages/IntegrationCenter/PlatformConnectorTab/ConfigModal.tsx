@@ -53,8 +53,8 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ open, activePlatform, form, t
       </Form>
 
       <div className="u-d-flex u-gap-12" style={{ marginTop: 20 }}>
-        <Button type="primary" icon={<ThunderboltOutlined />} loading={testing} onClick={onTest} className="u-flex-1">保存并测试连接</Button>
-        <Button icon={<SettingOutlined />} onClick={onSave} className="u-flex-1">仅保存</Button>
+        <Button type="primary" icon={<ThunderboltOutlined />} loading={testing} onClick={onTest} style={{ flex: 1 }}>保存并测试连接</Button>
+        <Button icon={<SettingOutlined />} onClick={onSave} style={{ flex: 1 }}>仅保存</Button>
       </div>
     </ResizableModal>
   );

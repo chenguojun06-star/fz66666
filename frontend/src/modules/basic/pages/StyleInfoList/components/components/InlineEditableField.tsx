@@ -64,10 +64,10 @@ const InlineEditableField: React.FC<{
           }}
         />
         <Tooltip title="确定">
-          <Button size="small" type="link" icon={<SaveOutlined />} onClick={handleSave} loading={saving} className="u-p-0" style={{ color: 'var(--color-success)' }} />
+          <Button size="small" type="link" icon={<SaveOutlined />} onClick={handleSave} loading={saving} style={{ padding: 0, color: 'var(--color-success)' }} />
         </Tooltip>
         <Tooltip title="取消">
-          <Button size="small" type="link" icon={<CloseOutlined />} onClick={() => { setEditing(false); setDraft(value); }} className="u-p-0" style={{ color: 'var(--color-gray-label)' }} />
+          <Button size="small" type="link" icon={<CloseOutlined />} onClick={() => { setEditing(false); setDraft(value); }} style={{ padding: 0, color: 'var(--color-gray-label)' }} />
         </Tooltip>
       </Space>
     );

@@ -88,7 +88,7 @@ const VideoPlayerBlock: React.FC<{ url: string }> = ({ url }) => {
 
   // 其他链接：直接显示可点击链接
   return (
-    <Space orientation="vertical" className="u-w-full">
+    <Space orientation="vertical" style={{ width: '100%' }}>
       <Alert
         type="info"
         showIcon
@@ -194,12 +194,12 @@ const SystemTutorial: React.FC = () => {
         }
         type="info"
         showIcon
-        className="u-mb-12"
+        style={{ marginBottom: 12 }}
       />
 
       {/* 搜索和分类 */}
-      <Card className="u-mb-12">
-        <Space orientation="vertical" size={16} className="u-w-full">
+      <Card style={{ marginBottom: 12 }}>
+        <Space orientation="vertical" size={16} style={{ width: '100%' }}>
           <StandardSearchBar
             searchValue={searchText}
             onSearchChange={setSearchText}
@@ -289,14 +289,14 @@ const SystemTutorial: React.FC = () => {
                                     }
                                     type="success"
                                     showIcon
-                                    className="u-mt-12"
+                                    style={{ marginTop: 12 }}
                                   />
                                 )}
                                 {step.image && (
                                   <Image
                                     src={step.image}
                                     alt={step.title}
-                                    className="u-mt-12" style={{ maxWidth: 600 }}
+                                    style={{ marginTop: 12, maxWidth: 600 }}
                                     preview
                                   />
                                 )}
@@ -340,8 +340,8 @@ const SystemTutorial: React.FC = () => {
       )}
 
       {/* 底部帮助 */}
-      <Card className="u-mt-12">
-        <Space orientation="vertical" size={12} className="u-w-full">
+      <Card style={{ marginTop: 12 }}>
+        <Space orientation="vertical" size={12} style={{ width: '100%' }}>
           <Title level={4}>
             <QuestionCircleOutlined /> 需要更多帮助？
           </Title>

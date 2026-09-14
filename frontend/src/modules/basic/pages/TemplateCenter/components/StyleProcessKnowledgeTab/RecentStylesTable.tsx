@@ -19,7 +19,7 @@ const RecentStylesTable: React.FC<{ records: ProcessKnowledgeStyleRecord[] }> = 
           return (
             <Tooltip title={r.abnormalType === 'HIGH' ? '价格偏高（偏离均价30%以上）' : '价格偏低（偏离均价30%以上）'}>
               <span style={{ color: r.abnormalType === 'HIGH' ? 'var(--color-error)' : 'var(--color-warning)', fontWeight: 600 }}>
-                <WarningOutlined className="u-mr-4" />
+                <WarningOutlined style={{ marginRight: 4 }} />
                 {formatMoney(v)}
               </span>
             </Tooltip>

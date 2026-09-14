@@ -68,7 +68,7 @@ const ProcessImageUploader: React.FC<ProcessImageUploaderProps> = ({
               src={getFullAuthedFileUrl(url)}
               width={compact ? 44 : 52}
               height={compact ? 44 : 52}
-              className="u-objf-cover u-br-4" style={{ border: '1px solid var(--color-border-light)' }}
+              style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid var(--color-border-light)' }}
               preview
             />
             {readOnly ? null : (

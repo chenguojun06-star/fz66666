@@ -213,21 +213,21 @@ const EmployeeAdvancePage: React.FC = () => {
 
       {/* ===== 统一统计卡片 ===== */}
       <div className="u-d-grid u-gap-12 u-mb-12" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-        <Card size="small" className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-          <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined className="u-mr-4 u-fs-12" />待审批</span>} value={advanceStats.pending} suffix="件" valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 500 }} />
+        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+          <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>} value={advanceStats.pending} suffix="件" valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 500 }} />
         </Card>
-        <Card size="small" className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-          <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined className="u-mr-4 u-fs-12" />已审批</span>} value={advanceStats.approved} suffix="件" valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 500 }} />
+        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+          <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>} value={advanceStats.approved} suffix="件" valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 500 }} />
         </Card>
-        <Card size="small" className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-          <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined className="u-mr-4 u-fs-12" />已还款</span>} value={advanceStats.paid} suffix="件" valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 500 }} />
+        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+          <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已还款</span>} value={advanceStats.paid} suffix="件" valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 500 }} />
         </Card>
-        <Card size="small" className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-          <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined className="u-mr-4 u-fs-12" />合计金额</span>} value={advanceStats.total} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-text-primary)', fontSize: 15, fontWeight: 500 }} />
+        <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+          <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />合计金额</span>} value={advanceStats.total} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-text-primary)', fontSize: 15, fontWeight: 500 }} />
         </Card>
       </div>
 
-      <Card className="u-mb-12 u-br-6" style={{ border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
+      <Card style={{ marginBottom: 12, borderRadius: 6, border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
         <Tabs
           activeKey={filterStatus || ''}
           onChange={(k) => { setFilterStatus(k || undefined); setPage(1); }}
@@ -239,7 +239,7 @@ const EmployeeAdvancePage: React.FC = () => {
             { key: 'rejected', label: `已驳回` },
           ]}
         />
-        <Row gutter={[12, 12]} align="middle" className="u-mt-8">
+        <Row gutter={[12, 12]} align="middle" style={{ marginTop: 8 }}>
           <Col>
             <Select value={filterRepayment} onChange={(v) => { setFilterRepayment(v); setPage(1); }}
               allowClear placeholder="还款状态" style={{ width: 120 }} options={REPAYMENT_STATUS} />
@@ -258,7 +258,7 @@ const EmployeeAdvancePage: React.FC = () => {
               style={{ width: 240 }}
             />
           </Col>
-          <Col flex="auto" className="u-ta-right">
+          <Col flex="auto" style={{ textAlign: 'right' }}>
             <Space size={8}>
               <Button type="primary" ghost size="small" icon={<PlusOutlined />} onClick={openForm}>新建借支</Button>
               <Button size="small" ghost onClick={() => { void fetchList(); }}>刷新</Button>
@@ -285,7 +285,7 @@ const EmployeeAdvancePage: React.FC = () => {
               </Col>
               <Col span={12}>
                 <Form.Item name="amount" label="借支金额" rules={[{ required: true, message: '请填写借支金额' }]}>
-                  <InputNumber min={0.01} precision={2} prefix="¥" placeholder="0.00" className="u-w-full" />
+                  <InputNumber min={0.01} precision={2} prefix="¥" placeholder="0.00" style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
             </Row>
@@ -304,7 +304,7 @@ const EmployeeAdvancePage: React.FC = () => {
       >
         <div className="u-p-08px">
           {repayRecord && (
-            <Card className="u-mb-16" style={{ background: 'var(--color-bg-container)', border: '1px solid var(--color-border-light)' }}>
+            <Card style={{ marginBottom: 16, background: 'var(--color-bg-container)', border: '1px solid var(--color-border-light)' }}>
               <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-text-tertiary)' }}>借支信息</div>
               <div className="u-fw-500">{repayRecord.employeeName} · {repayRecord.advanceNo}</div>
               <div className="u-mt-4">
@@ -317,7 +317,7 @@ const EmployeeAdvancePage: React.FC = () => {
           <Form form={repayForm} layout="vertical" requiredMark="optional">
             <Form.Item name="amount" label="还款金额" rules={[{ required: true, message: '请填写还款金额' }]}>
               <InputNumber min={0.01} max={repayRecord?.remainingAmount || repayRecord?.amount || undefined}
-                precision={2} prefix="¥" placeholder="0.00" className="u-w-full" />
+                precision={2} prefix="¥" placeholder="0.00" style={{ width: '100%' }} />
             </Form.Item>
           </Form>
         </div>

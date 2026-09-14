@@ -68,7 +68,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
 
       <div className="u-mb-8">
         <span className="u-fw-600 u-fs-14"> 面辅料需求明细</span>
-        {pendingCount === 0 && materials.length > 0 && <Tag color="green" className="u-ml-8">全部已处理</Tag>}
+        {pendingCount === 0 && materials.length > 0 && <Tag color="green" style={{ marginLeft: 8 }}>全部已处理</Tag>}
       </div>
 
       {materials.length > 0 ? (
@@ -85,7 +85,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
 
       {pickingRecords.length > 0 && (
         <>
-          <Divider className="u-m-12px0" />
+          <Divider style={{ margin: '12px 0' }} />
           <div className="u-mb-8">
             <span className="u-fw-600 u-fs-14"> 出库单记录</span>
             {isSupervisorOrAbove && <span className="u-fs-14 u-ml-8" style={{ color: 'var(--color-text-tertiary)' }}>（主管以上可撤销）</span>}

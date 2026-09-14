@@ -238,7 +238,7 @@ const CuttingEntryView: React.FC<CuttingEntryViewProps> = ({
         </div>
       </div>
 
-      <Space className="u-mb-12">
+      <Space style={{ marginBottom: 12 }}>
         <Button type="primary" onClick={() => print.openBatchPrint(bundles.selectedBundles)} disabled={!bundles.selectedBundles.length}>
           打印菲号
         </Button>

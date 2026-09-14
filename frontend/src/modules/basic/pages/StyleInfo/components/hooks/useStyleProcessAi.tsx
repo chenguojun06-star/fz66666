@@ -96,8 +96,8 @@ export const useStyleProcessAi = ({ styleId, data, editMode, enterEdit }: UseSty
             <div style={{ maxHeight: 360, overflowY: 'auto', paddingRight: 8 }}>
               {grouped.length > 0 ? grouped.map((g, gi) => (
                 <div key={gi} className="u-mb-12">
-                  <Space className="u-mb-6">
-                    <Tag color={STAGE_COLOR[g.parentNode] || 'default'} className="u-fs-13 u-fw-600">
+                  <Space style={{ marginBottom: 6 }}>
+                    <Tag color={STAGE_COLOR[g.parentNode] || 'default'} style={{ fontSize: 13, fontWeight: 600 }}>
                       {g.parentNode}
                     </Tag>
                     <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>

@@ -40,18 +40,18 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
           <span className="u-fs-14 u-fw-400" style={{ color: 'var(--color-text-tertiary)' }}>AI 学习建议</span>
           {loading && !expanded && (
             <span className="u-d-inline-flex u-ai-center u-gap-4 u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
-              <LoadingOutlined className="u-fs-12" />
+              <LoadingOutlined style={{ fontSize: 12 }} />
               <span>分析中...</span>
             </span>
           )}
           {presented && presented.tags.length > 0 && (
             <div className="u-d-flex u-gap-4">
-              {presented.tags.slice(0, 2).map((tag) => <Tag key={tag} className="u-m-0">{tag}</Tag>)}
+              {presented.tags.slice(0, 2).map((tag) => <Tag key={tag} style={{ margin: 0 }}>{tag}</Tag>)}
             </div>
           )}
         </div>
         <span className="u-d-flex u-ai-center">
-          {expanded ? <DownOutlined className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }} /> : <RightOutlined className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }} />}
+          {expanded ? <DownOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} /> : <RightOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} />}
         </span>
       </div>
 
@@ -68,7 +68,7 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
                     {presented.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)}
                   </div>
                 </div>
-                <Alert type="info" showIcon title={presented.summary} className="u-mb-10" />
+                <Alert type="info" showIcon title={presented.summary} style={{ marginBottom: 10 }} />
                 <div className="u-d-grid u-gap-12 u-mb-12" style={{ gridTemplateColumns: '1.2fr 1fr' }}>
                   <OrderLearningRecommendationSummary lines={presented.recommendationLines} />
                   <OrderLearningHistoryPanel lines={presented.recentCaseLines} />

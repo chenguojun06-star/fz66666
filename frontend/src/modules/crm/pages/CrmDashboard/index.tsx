@@ -58,7 +58,7 @@ const CustomerManagement: React.FC = () => {
   return (
     <>
       {/* 统计卡片 */}
-      <Row gutter={16} className="u-mb-12">
+      <Row gutter={16} style={{ marginBottom: 12 }}>
         {[
           { icon: <TeamOutlined />, label: '客户总数', value: stats.total, color: 'var(--color-primary)' },
           { icon: <CheckCircleOutlined />, label: '合作中', value: stats.activeCount, color: 'var(--color-success)' },
@@ -78,7 +78,7 @@ const CustomerManagement: React.FC = () => {
       </Row>
 
       {/* 搜索栏 */}
-      <Card className="u-mb-16" styles={{ body: { padding: '12px 16px' } }}>
+      <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
         <Row gutter={12} align="middle">
           <Col flex="auto">
             <Space>

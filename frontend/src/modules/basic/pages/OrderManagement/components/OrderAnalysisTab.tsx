@@ -231,7 +231,7 @@ const OrderAnalysisTab: React.FC = () => {
   return (
     <div>
       {/* ① 总览指标 */}
-      <Row gutter={12} className="u-mb-12">
+      <Row gutter={12} style={{ marginBottom: 12 }}>
         <Col xs={12} sm={12} md={6}>
           <Card size="small">
             <Statistic
@@ -277,7 +277,7 @@ const OrderAnalysisTab: React.FC = () => {
       </Row>
 
       {/* ② 状态分布 */}
-      <Row gutter={12} className="u-mb-12">
+      <Row gutter={12} style={{ marginBottom: 12 }}>
         <Col xs={12} sm={8} md={6}>
           <Card size="small">
             <Statistic
@@ -324,7 +324,7 @@ const OrderAnalysisTab: React.FC = () => {
       </Row>
 
       {/* ③ 趋势 + 工厂时效 */}
-      <Row gutter={12} className="u-mb-12">
+      <Row gutter={12} style={{ marginBottom: 12 }}>
         <Col xs={24} lg={14}>
           <Card size="small" title={<>近30天下单趋势<Hint text="每日新增订单数与下单件数" /></>}>
             {filledTrend.length ? (

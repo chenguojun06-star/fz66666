@@ -99,7 +99,7 @@ const MaterialPickerModal: React.FC<MaterialPickerModalProps> = ({ open, onClose
                   src={url}
                   width={40}
                   height={40}
-                  className="u-objf-cover u-br-4" style={{ border: '1px solid var(--color-border)' }}
+                  style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid var(--color-border)' }}
                   preview={{ src: url }}
                 />
               );

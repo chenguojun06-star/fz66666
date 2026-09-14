@@ -33,7 +33,7 @@ export const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: stri
       {loading ? (
         <span className="u-fs-var--font-size-sm" style={{ color: 'var(--neutral-text-secondary)' }}>...</span>
       ) : url ? (
-        <SmartImage src={url || ''} alt="cover" className="u-w-full u-h-full u-objf-cover" preview={{ cover: <span>预览</span> }} />
+        <SmartImage src={url || ''} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} preview={{ cover: <span>预览</span> }} />
       ) : (
         <span className="u-fs-var--font-size-sm" style={{ color: 'var(--neutral-text-disabled)' }}>无图</span>
       )}

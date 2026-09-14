@@ -244,13 +244,13 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
         <div className="u-d-flex u-ai-center u-gap-6">
           <Button
             type="link"
-            icon={<ReloadOutlined className="u-fs-13" />}
+            icon={<ReloadOutlined style={{ fontSize: 13 }} />}
             onClick={(e) => { e.stopPropagation(); void calcInsight(); }}
-            className="u-p-0 u-h-auto u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}
+            style={{ padding: 0, height: 'auto', color: 'var(--color-text-tertiary)', fontSize: 14 }}
           >
             刷新
           </Button>
-          {collapsed ? <RightOutlined className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }} /> : <DownOutlined className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }} />}
+          {collapsed ? <RightOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} /> : <DownOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} />}
         </div>
       </div>
 
@@ -285,7 +285,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
 
       <div className="u-d-flex u-fwrap-wrap u-mb-8" style={{ gap: 5 }}>
         {quickTags.map((text) => (
-          <Tag key={text} className="u-fs-14" style={{ color: 'var(--color-text-secondary)', background: 'var(--color-bg-page)', border: '1px solid var(--color-border)', marginInlineEnd: 0 }}>
+          <Tag key={text} style={{ fontSize: 14, color: 'var(--color-text-secondary)', background: 'var(--color-bg-page)', border: '1px solid var(--color-border)', marginInlineEnd: 0 }}>
             {text}
           </Tag>
         ))}
@@ -298,7 +298,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
           onClick={() => setAiAdviceVisible(true)}
           type="primary"
           ghost
-          className="u-fs-14"
+          style={{ fontSize: 14 }}
         >
           AI 下单建议
         </Button>
@@ -316,7 +316,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
               <Button
                 type="link"
                 onClick={() => setAiAdviceVisible(false)}
-                className="u-p-0 u-h-auto u-fs-14"
+                style={{ padding: 0, height: 'auto', fontSize: 14 }}
               >
                 关闭
               </Button>

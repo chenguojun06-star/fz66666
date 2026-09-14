@@ -24,7 +24,7 @@ const SafeStockModal: React.FC<SafeStockModalProps> = ({ open, record, onClose, 
     <ResizableModal title="设置安全库存" open={open} onCancel={onClose} onOk={handleOk} confirmLoading={submitting} width="30vw">
       <Form form={form} layout="vertical" initialValues={{ safeStock: record?.safeStock ?? 0 }}>
         <Form.Item label="安全库存" name="safeStock" rules={[{ required: true, message: '请输入安全库存' }]}>
-          <InputNumber min={0} precision={0} className="u-w-full" />
+          <InputNumber min={0} precision={0} style={{ width: '100%' }} />
         </Form.Item>
       </Form>
     </ResizableModal>

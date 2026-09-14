@@ -109,7 +109,7 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
                 <Text style={{ color: cfg.color, fontWeight: 600 }}>{item.riskScore ?? '-'}</Text>
               </Tooltip>
               <Tooltip title={item.delayDays && item.delayDays > 0 ? `预计延误 ${item.delayDays} 天` : '进度正常'}>
-                <Tag color={item.delayDays && item.delayDays > 0 ? 'red' : 'green'} className="u-m-0">
+                <Tag color={item.delayDays && item.delayDays > 0 ? 'red' : 'green'} style={{ margin: 0 }}>
                   {item.delayDays && item.delayDays > 0 ? `延误 ${item.delayDays} 天` : '按时'}
                 </Tag>
               </Tooltip>
@@ -153,7 +153,7 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
       return (
         <div style={{ padding: 8 }}>
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton active key={i} paragraph={{ rows: 2 }} title={false} className="u-mb-16" />
+            <Skeleton active key={i} paragraph={{ rows: 2 }} title={false} style={{ marginBottom: 16 }} />
           ))}
         </div>
       );
@@ -162,9 +162,9 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
     if (error) {
       return (
         <div className="u-p-24 u-ta-center" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
-          <ExclamationCircleFilled className="u-fs-28" style={{ color: 'var(--color-error, var(--color-danger))' }} />
+          <ExclamationCircleFilled style={{ color: 'var(--color-error, var(--color-danger))', fontSize: 28 }} />
           <div className="u-mt-8">{error}</div>
-          <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData} className="u-mt-12">
+          <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData} style={{ marginTop: 12 }}>
             重试
           </Button>
         </div>
@@ -195,7 +195,7 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
     <Card
       style={CARD_STYLE}
       title={
-        <Space size={8} className="u-cur-pointer" onClick={() => setCollapsed(!collapsed)}>
+        <Space size={8} style={{ cursor: 'pointer' }} onClick={() => setCollapsed(!collapsed)}>
           <span style={{ color: 'var(--color-error, var(--color-danger))' }}>●</span>
           <span className="u-fw-600">高风险订单 Top {topN}</span>
           <span className="u-fs-12 u-ml-4" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
@@ -218,7 +218,7 @@ const DeliveryRiskCard: React.FC<DeliveryRiskCardProps> = ({ topN = 10 }) => {
     >
       {!collapsed && (
         <>
-          <Title level={5} className="u-fw-500" style={{ margin: '0 0 8px 0', color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
+          <Title level={5} style={{ margin: '0 0 8px 0', color: 'var(--color-text-secondary, var(--color-gray-dark))', fontWeight: 500 }}>
             按风险等级与评分排序
           </Title>
           {renderBody()}

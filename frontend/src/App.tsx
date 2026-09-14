@@ -111,7 +111,7 @@ const GlobalImagePreview: React.FC = () => {
       <Image
         src={src}
         alt={alt || ''}
-        className="u-d-none"
+        style={{ display: 'none' }}
         preview={{
           open: open,
           onOpenChange: (isOpen) => {

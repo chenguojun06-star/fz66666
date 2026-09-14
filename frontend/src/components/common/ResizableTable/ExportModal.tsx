@@ -34,7 +34,7 @@ const ExportModal: React.FC<ExportModalProps> = ({
       <Checkbox.Group
         value={selectedColumns}
         onChange={(values) => onSelectedColumnsChange(values as string[])}
-        className="u-d-flex u-fd-column u-gap-8"
+        style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
       >
         {exportableColumns.map(col => (
           <Checkbox

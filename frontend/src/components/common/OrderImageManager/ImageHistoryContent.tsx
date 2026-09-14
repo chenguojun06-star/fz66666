@@ -36,7 +36,7 @@ const ImageHistoryContent: React.FC<ImageHistoryContentProps> = ({ snapshots }) 
                   <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-text-tertiary)' }}>变更前</div>
                   <div className="u-d-flex u-gap-4">
                     {beforeUrls.map((url, idx) => (
-                      <Image key={idx} src={getFullAuthedFileUrl(url)} className="u-objf-cover u-br-4" style={{ width: 48, height: 48 }} />
+                      <Image key={idx} src={getFullAuthedFileUrl(url)} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }} />
                     ))}
                   </div>
                 </div>
@@ -46,7 +46,7 @@ const ImageHistoryContent: React.FC<ImageHistoryContentProps> = ({ snapshots }) 
                   <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-text-tertiary)' }}>变更后</div>
                   <div className="u-d-flex u-gap-4">
                     {afterUrls.map((url, idx) => (
-                      <Image key={idx} src={getFullAuthedFileUrl(url)} className="u-objf-cover u-br-4" style={{ width: 48, height: 48 }} />
+                      <Image key={idx} src={getFullAuthedFileUrl(url)} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 4 }} />
                     ))}
                   </div>
                 </div>

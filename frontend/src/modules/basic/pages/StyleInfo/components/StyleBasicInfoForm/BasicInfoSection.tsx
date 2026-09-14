@@ -35,7 +35,7 @@ const MaintainGear: React.FC<{ dictType: string; fieldName: string; disabled?: b
             e.stopPropagation();
             setOpen(true);
           }}
-          className="u-cur-pointer" style={{ color: 'rgba(0, 0, 0, 0.45)' }}
+          style={{ color: 'rgba(0, 0, 0, 0.45)', cursor: 'pointer' }}
         />
       </Tooltip>
       <QuickManageModal open={open} mode="dict" dictType={dictType} title={fieldName} onClose={() => setOpen(false)} />
@@ -124,13 +124,13 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             name="styleName"
             label="款名称"
             rules={[{ required: true, message: '请输入款名称' }]}
-            className="u-mb-8"
+            style={{ marginBottom: 8 }}
           >
             <Input
               placeholder="请输入款名称"
               disabled={editLocked}
               maxLength={100}
-              className="u-w-full"
+              style={{ width: '100%' }}
             />
           </Form.Item>
         </Col>
@@ -141,7 +141,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             name="styleNo"
             label="款式编码"
             rules={[{ required: true, message: '请输入款式编码' }]}
-            className="u-mb-8"
+            style={{ marginBottom: 8 }}
           >
             <Input
               placeholder="请输入款式编码"
@@ -181,12 +181,12 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             name="category"
             label="商品分类"
             rules={[{ required: true, message: '请选择商品分类' }]}
-            className="u-mb-8"
+            style={{ marginBottom: 8 }}
           >
             <Select
               placeholder="请选择商品分类"
               disabled={isFieldLocked(currentStyle?.category)}
-              className="u-w-full"
+              style={{ width: '100%' }}
               allowClear
               showSearch
               optionFilterProp="label"
@@ -201,12 +201,12 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           <Form.Item
             name="season"
             label="季节分类"
-            className="u-mb-8"
+            style={{ marginBottom: 8 }}
           >
             <Select
               placeholder="请选择季节分类"
               disabled={isFieldLocked(currentStyle?.season)}
-              className="u-w-full"
+              style={{ width: '100%' }}
               allowClear
               showSearch
               optionFilterProp="label"
@@ -221,7 +221,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           <Form.Item
             name="productType"
             label="商品类型"
-            className="u-mb-8"
+            style={{ marginBottom: 8 }}
           >
             <DictAutoComplete
               dictType="product_type"
@@ -239,7 +239,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           <Form.Item
             name="designer"
             label="设计师"
-            className="u-mb-8"
+            style={{ marginBottom: 8 }}
           >
             <StaffSelect
               placeholder="搜索或选择设计师"
@@ -253,7 +253,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           <Form.Item
             name="developmentSourceType"
             label="开发来源"
-            className="u-mb-8"
+            style={{ marginBottom: 8 }}
             // 存量英文代码按权威映射翻译成中文展示；选择后按中文词条保存
             getValueProps={(v) => ({ value: toSourceLabel(v) })}
           >
@@ -272,14 +272,14 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           <Form.Item
             name="theme"
             label="商品品牌"
-            className="u-mb-8"
+            style={{ marginBottom: 8 }}
           >
             <DictAutoComplete
               dictType="style_theme"
               quickManageTitle="商品品牌"
               placeholder="请输入或选择商品品牌"
               disabled={editLocked}
-              className="u-w-full"
+              style={{ width: '100%' }}
               enableQuickManage={!editLocked}
             />
           </Form.Item>
@@ -290,7 +290,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           <Form.Item
             name="customer"
             label="客户"
-            className="u-mb-8"
+            style={{ marginBottom: 8 }}
           >
             <CustomerSelect
               placeholder="搜索或输入客户名称"
@@ -322,12 +322,12 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           <Form.Item
             name="supplier"
             label="供应商"
-            className="u-mb-8"
+            style={{ marginBottom: 8 }}
           >
             <SupplierSelect
               placeholder="请选择或输入供应商"
               disabled={editLocked}
-              className="u-w-full"
+              style={{ width: '100%' }}
               onChange={(_value, option) => {
                 if (option?.supplierId) {
                   _form.setFieldsValue({
@@ -353,7 +353,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           <Form.Item
             name="remark"
             label="备注"
-            className="u-mb-8"
+            style={{ marginBottom: 8 }}
           >
             <Input.TextArea
               rows={3}
@@ -368,35 +368,35 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 
         {/* 时间信息（从 TimeRemarkSection 迁移至此：创建/完成为系统字段，交板日期必填） */}
         <Col xs={24} md={8}>
-          <Form.Item name="createTime" label="创建时间" className="u-mb-8">
+          <Form.Item name="createTime" label="创建时间" style={{ marginBottom: 8 }}>
             <UnifiedDatePicker
               disabled
               allowClear={false}
               placeholder="系统自动生成"
               format="YYYY-MM-DD"
-              className="u-w-full"
+              style={{ width: '100%' }}
             />
           </Form.Item>
         </Col>
         <Col xs={24} md={8}>
-          <Form.Item name="completedTime" label="完成时间" className="u-mb-8">
+          <Form.Item name="completedTime" label="完成时间" style={{ marginBottom: 8 }}>
             <UnifiedDatePicker
               disabled
               allowClear={false}
               placeholder="全部环节入库完成后自动生成"
               format="YYYY-MM-DD"
-              className="u-w-full"
+              style={{ width: '100%' }}
             />
           </Form.Item>
         </Col>
         <Col xs={24} md={8}>
-          <Form.Item name="deliveryDate" label="交板日期" rules={[{ required: true, message: '请选择交板日期' }]} className="u-mb-8">
+          <Form.Item name="deliveryDate" label="交板日期" rules={[{ required: true, message: '请选择交板日期' }]} style={{ marginBottom: 8 }}>
             <UnifiedDatePicker
               disabled={isFieldLocked(currentStyle?.deliveryDate)}
               allowClear
               placeholder="请选择交板日期"
               format="YYYY-MM-DD"
-              className="u-w-full"
+              style={{ width: '100%' }}
             />
           </Form.Item>
         </Col>

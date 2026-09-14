@@ -200,7 +200,7 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
             type="error"
             message={error}
             action={<Button size="small" onClick={loadAll} loading={loading}>重试</Button>}
-            className="u-mb-16"
+            style={{ marginBottom: 16 }}
           />
         )}
         {/* Section 1: 三档交期预测时间线 */}

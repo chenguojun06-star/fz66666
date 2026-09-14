@@ -246,7 +246,7 @@ const StyleInfoDetailPage: React.FC = () => {
     <>
       <PageLayout>
         {showSmartErrorNotice && smartError ? (
-          <Card className="u-mb-12">
+          <Card style={{ marginBottom: 12 }}>
             <SmartErrorNotice error={smartError} onFix={handleRefresh} />
           </Card>
         ) : null}
@@ -254,7 +254,7 @@ const StyleInfoDetailPage: React.FC = () => {
           <Alert
             type="error"
             showIcon
-            className="u-mb-12 u-br-10"
+            style={{ marginBottom: 12, borderRadius: 10 }}
             message="该款式已报废，无法编辑保存"
             description="报废款式受保护，所有保存操作会被拦截。如需重新做单，请先取消报废恢复款式。"
             action={
@@ -269,7 +269,7 @@ const StyleInfoDetailPage: React.FC = () => {
           title={
             <span className="u-fs-15 u-fw-600" style={{ color: 'var(--color-text-primary)' }}>样衣详情</span>
           }
-          className="u-mb-16 u-br-10"
+          style={{ marginBottom: 16, borderRadius: 10 }}
           bodyStyle={{ padding: 20 }}
           extra={actionButtons}
         >

@@ -220,7 +220,7 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       key: 'location',
       width: 140,
       render: (_: unknown, record: QrcodeItem) => (
-        <Typography.Text type="secondary" className="u-fs-12">
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
           {record.warehouseAreaName || record.warehouseLocation || '-'}
         </Typography.Text>
       ),
@@ -303,20 +303,20 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
         <CircleIconButton type="add" size={32} title="添加" loading={adding} onClick={() => void handleAdd()} />
       </div>
 
-      <Typography.Text type="secondary" className="u-d-block u-mb-8 u-fs-14">
+      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8, fontSize: 14 }}>
         二维码格式：款号-颜色-尺码-序号。扫码后会自动显示 商品编码、颜色、码数、当前库存及库位，再填写本次要出库的数量。
       </Typography.Text>
 
       {items.length > 0 && (
         <div className="u-br-6 u-p-8px12px u-mb-12" style={{ background: 'var(--color-bg-stripe)' }}>
-          <Typography.Text type="secondary" className="u-fs-13">
+          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
             出库将自动从各 商品编码 当前存储的库位扣减，无需手动选择仓库
           </Typography.Text>
         </div>
       )}
 
       <div className="u-br-8 u-mb-12" style={{ background: 'var(--color-bg-page)', padding: '12px 16px' }}>
-        <Space wrap className="u-w-full">
+        <Space wrap style={{ width: '100%' }}>
           <span>
             出库类型：
             <Select style={{ width: 140 }} value={outboundType} onChange={v => setOutboundType(v)} options={[{ label: '销售出库', value: 'sales' }, { label: '调拨出库', value: 'transfer' }, { label: '报废出库', value: 'scrap' }]} />

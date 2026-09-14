@@ -40,10 +40,10 @@ const CardHeader: React.FC<CardHeaderProps> = ({
         flexWrap: 'wrap',
       }}
     >
-      <RadarChartOutlined className="u-fs-15" style={{ color: 'var(--color-primary)' }} />
+      <RadarChartOutlined style={{ color: 'var(--color-primary)', fontSize: 15 }} />
       <span className="u-fs-14 u-fw-700" style={{ color: 'var(--color-text-primary)' }}>款式智能档案卡</span>
       {/* 关键摘要 */}
-      <Tag color={deliveryMeta.color} className="u-m-0">{deliveryMeta.label}</Tag>
+      <Tag color={deliveryMeta.color} style={{ margin: 0 }}>{deliveryMeta.label}</Tag>
       <span className="u-fs-14" style={{ color: 'var(--color-gray-700)' }}>完成度 <b style={{ color: 'var(--color-primary)' }}>{completionRate}%</b></span>
       {doneCount < stageTotal ? (
         <span className="u-fs-14" style={{ color: 'var(--color-gray-700)' }}>剩 <b style={{ color: 'var(--color-danger)' }}>{stageTotal - doneCount}</b> 环节未完成</span>
@@ -57,7 +57,7 @@ const CardHeader: React.FC<CardHeaderProps> = ({
           <Tag
             color={difficultyColor(activeDifficulty.difficultyLevel)}
             icon={<ExperimentOutlined />}
-            className="u-m-0"
+            style={{ margin: 0 }}
           >
             {activeDifficulty.difficultyLabel}
           </Tag>

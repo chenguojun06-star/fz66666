@@ -9,7 +9,7 @@ const IntegrationQuickStart: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
 
   return (
-    <Card title={<span><RocketOutlined className="u-mr-8" style={{ color: 'var(--color-primary)' }} />快速开始 — 3步完成对接</span>} className="u-mb-24">
+    <Card title={<span><RocketOutlined style={{ marginRight: 8, color: 'var(--color-primary)' }} />快速开始 — 3步完成对接</span>} style={{ marginBottom: 24 }}>
       <Steps current={currentStep} onChange={setCurrentStep} orientation="horizontal" items={[
         { title: '购买/试用', content: '应用商店开通', icon: <ShoppingCartOutlined /> },
         { title: '获取密钥', content: '保存appKey和Secret', icon: <KeyOutlined /> },
@@ -31,7 +31,7 @@ const IntegrationQuickStart: React.FC = () => {
         {currentStep === 1 && (
           <div>
             <Title level={5}>步骤二：保存API密钥</Title>
-            <Alert type="warning" showIcon icon={<SafetyCertificateOutlined />} title=" 重要提醒" description="开通试用或购买成功后，系统会弹窗显示 appKey 和 appSecret。appSecret 仅此一次显示，请务必立即保存！如遗失可在「应用管理」Tab中重置密钥。" className="u-mb-16" />
+            <Alert type="warning" showIcon icon={<SafetyCertificateOutlined />} title=" 重要提醒" description="开通试用或购买成功后，系统会弹窗显示 appKey 和 appSecret。appSecret 仅此一次显示，请务必立即保存！如遗失可在「应用管理」Tab中重置密钥。" style={{ marginBottom: 16 }} />
             <Paragraph><ol style={{ paddingLeft: 20 }}>
               <li>开通后弹窗会显示：<CopyBlock code={`appKey:   os_a1b2c3d4e5f6  （公开标识）\nappSecret: Kx9mPq2sT7vW...  （签名密钥，仅显示一次！）`} /></li>
               <li>请将密钥保存到安全的位置（如密码管理器、配置文件）</li>

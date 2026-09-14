@@ -93,7 +93,7 @@ const ThumbnailList: React.FC<ThumbnailListProps> = ({
                 </Tooltip>
                 <Tooltip title={isNewMode ? '移除' : '删除'}>
                   <DeleteOutlined
-                    className="u-fs-14 u-cur-pointer" style={{ color: '#ff7875' }}
+                    style={{ color: '#ff7875', fontSize: 14, cursor: 'pointer' }}
                     onClick={() => handleDelete(img.id ?? '', index)}
                   />
                 </Tooltip>

@@ -57,7 +57,7 @@ const RoleTemplateModal: React.FC<RoleTemplateModalProps> = ({
           description={`已选择「${selectedTemplate.templateName}」模板。点击「下一步：编辑角色」继续创建角色，权限配置可在创建后编辑。`}
           type="info"
           showIcon
-          className="u-mt-16"
+          style={{ marginTop: 16 }}
         />
       )}
     </Modal>

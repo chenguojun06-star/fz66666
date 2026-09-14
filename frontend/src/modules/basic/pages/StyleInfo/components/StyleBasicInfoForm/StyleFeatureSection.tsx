@@ -29,7 +29,7 @@ const StyleFeatureSection: React.FC<StyleFeatureSectionProps> = ({
       <Form.Item
         name={['extJson', STYLE_FEATURE_KEY]}
         initialValue={initialText}
-        className="u-mb-4"
+        style={{ marginBottom: 4 }}
       >
         <Input.TextArea
           id="feature-styleFeature"

@@ -65,7 +65,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
         title={hasBundles
           ? '该订单已按菲号管理：勾选菲号 → 选择执行工厂 → 保存委派（内部不再重复计件）'
           : '可以为不同的生产节点指定执行工厂'}
-        className="u-mb-10"
+        style={{ marginBottom: 10 }}
       />
       <div className="u-p-8px12px u-br-12 u-mb-8 u-fs-var--font-size-xs" style={{ border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}>
         订单：<span style={{ color: 'var(--color-text-primary)' }}>{orderInfoLine}</span>
@@ -152,7 +152,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
                 return { value: name, label: formatProcessDisplayName(code, name) };
               }).filter((o) => o.value)}
               disabled
-              className="u-w-full" style={{ minWidth: 0 }}
+              style={{ width: '100%', minWidth: 0 }}
             />
             <InputNumber
               placeholder="数量"
@@ -161,7 +161,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
               value={typeof currentNodeData.assigneeQuantity === 'number' ? currentNodeData.assigneeQuantity : undefined}
               onChange={(v) => updateNodeData('assigneeQuantity', v ?? undefined)}
               disabled={disableEdit}
-              className="u-w-full" style={{ minWidth: 0 }}
+              style={{ width: '100%', minWidth: 0 }}
             />
             <Select
               value={currentNodeData.delegateType || 'factory'}
@@ -180,7 +180,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
                 { value: 'person', label: '人员' },
               ]}
               disabled={disableEdit}
-              className="u-w-full" style={{ minWidth: 0 }}
+              style={{ width: '100%', minWidth: 0 }}
             />
             <Select
               allowClear
@@ -193,7 +193,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
               }
               options={factories?.map(f => ({ value: f.id, label: f.factoryName })) || []}
               disabled={disableEdit || currentNodeData.delegateType === 'person'}
-              className="u-w-full" style={{ minWidth: 0 }}
+              style={{ width: '100%', minWidth: 0 }}
             />
             <Select
               allowClear
@@ -209,13 +209,13 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
               }
               options={users.map(u => ({ value: u.id, label: u.name || u.username }))}
               disabled={disableEdit || currentNodeData.delegateType === 'factory'}
-              className="u-w-full" style={{ minWidth: 0 }}
+              style={{ width: '100%', minWidth: 0 }}
             />
             <Input
               prefix="¥"
               value={Number.isFinite(fixedUnitPrice) ? fixedUnitPrice.toFixed(2) : '0.00'}
               disabled
-              className="u-w-full" style={{ minWidth: 0 }}
+              style={{ width: '100%', minWidth: 0 }}
             />
             <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{formatDelegationTime(currentNodeData.updatedAt)}</div>
             <Button type="primary" loading={saving} onClick={handleSave} disabled={disableEdit}>

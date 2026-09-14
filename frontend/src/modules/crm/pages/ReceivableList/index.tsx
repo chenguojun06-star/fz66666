@@ -59,9 +59,9 @@ const ReceivableList: React.FC = () => {
     <>
       <div className="u-p-24">
         {/* 页头说明 */}
-        <Card size="small" className="u-mb-12" style={{ border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '10px 16px' } }}>
+        <Card size="small" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '10px 16px' } }}>
           <h2 className="u-m-0 u-fs-16">
-            <DollarOutlined className="u-mr-8" />
+            <DollarOutlined style={{ marginRight: 8 }} />
             应收管理
           </h2>
           <span className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
@@ -70,7 +70,7 @@ const ReceivableList: React.FC = () => {
         </Card>
 
         {/* 统计卡片 */}
-        <Row gutter={16} className="u-mb-12">
+        <Row gutter={16} style={{ marginBottom: 12 }}>
           <Col span={6}>
             <Card>
               <Statistic
@@ -126,13 +126,13 @@ const ReceivableList: React.FC = () => {
             showIcon
             icon={<WarningOutlined />}
             message={`有 ${stats.overdueCount} 笔应收款已逾期未收，共 ¥${toMoneyLocale(Number(stats.totalOverdue))}，请及时催款。`}
-            className="u-mb-16"
+            style={{ marginBottom: 16 }}
             closable
           />
         )}
 
         {/* 过滤栏 */}
-        <Card className="u-mb-16" styles={{ body: { padding: '12px 16px' } }}>
+        <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '12px 16px' } }}>
           <Row gutter={12} align="middle">
             <Col flex="auto">
               <Space>

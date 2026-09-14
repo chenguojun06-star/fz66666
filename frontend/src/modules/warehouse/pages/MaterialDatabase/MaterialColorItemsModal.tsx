@@ -51,13 +51,13 @@ const MaterialColorItemsModal: React.FC<MaterialColorItemsModalProps> = ({
             {Array.isArray(data.items) && data.items.map((item: ColorItemEntry, idx: number) => (
               <Card key={item.id || idx} size="small" style={{ border: '1px solid var(--color-border)' }}>
                 <Row gutter={12} align="middle">
-                  <Col xs={24} sm={2} className="u-fw-600" style={{ color: 'var(--color-primary)' }}>#{idx + 1}</Col>
+                  <Col xs={24} sm={2} style={{ fontWeight: 600, color: 'var(--color-primary)' }}>#{idx + 1}</Col>
                   <Col xs={24} sm={5}>颜色：{item.color || '-'}</Col>
                   <Col xs={24} sm={5}>物料：{item.materialName || '-'}</Col>
                   <Col xs={24} sm={6}>
                     {item.unitPrice != null && item.unitPrice !== undefined ? `单价：${item.unitPrice} 元` : '-'}
                   </Col>
-                  <Col xs={24} sm={6} className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
+                  <Col xs={24} sm={6} style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
                     {item.remark || ''}
                   </Col>
                 </Row>

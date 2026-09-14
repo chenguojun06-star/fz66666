@@ -190,7 +190,7 @@ export function renderMerchandiserCell(v: any, record: ProductionOrder, onOpenRe
           <span className="u-fw-500" style={{ color: 'var(--color-text-primary)' }}>{name || '-'}</span>
           {remark && (
             <Badge dot color="var(--color-text-tertiary)" offset={[0, -2]}>
-              <ExclamationCircleOutlined className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }} />
+              <ExclamationCircleOutlined style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }} />
             </Badge>
           )}
         </div>

@@ -47,7 +47,7 @@ const StyleMaintenanceModal: React.FC<StyleMaintenanceModalProps> = ({
           value={reason}
           onChange={(e) => onReasonChange(e.target.value)}
           rows={4}
-          className="u-w-full" style={{ resize: 'vertical' }}
+          style={{ width: '100%', resize: 'vertical' }}
         />
       </div>
     </SmallModal>

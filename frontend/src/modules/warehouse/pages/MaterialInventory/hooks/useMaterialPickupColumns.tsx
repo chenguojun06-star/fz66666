@@ -100,10 +100,10 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
         const bizColorMap: Record<string, string> = { FOB: 'cyan', ODM: 'purple', OEM: 'blue', CMT: 'orange' };
         return (
           <Space size={4}>
-            {factoryType === 'INTERNAL' && <Tag color="blue" className="u-m-0 u-p-04px u-lh-18px">内</Tag>}
-            {factoryType === 'EXTERNAL' && <Tag color="purple" className="u-m-0 u-p-04px u-lh-18px">外</Tag>}
+            {factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, padding: '0 4px', lineHeight: '18px' }}>内</Tag>}
+            {factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, padding: '0 4px', lineHeight: '18px' }}>外</Tag>}
             <span>{factoryName}</span>
-            {orderBizType && <Tag color={bizColorMap[orderBizType] ?? 'default'} className="u-m-0 u-p-04px u-lh-18px">{ORDER_BIZ_TYPE_MAP[orderBizType]?.text ?? '未知'}</Tag>}
+            {orderBizType && <Tag color={bizColorMap[orderBizType] ?? 'default'} style={{ margin: 0, padding: '0 4px', lineHeight: '18px' }}>{ORDER_BIZ_TYPE_MAP[orderBizType]?.text ?? '未知'}</Tag>}
           </Space>
         );
       },
@@ -242,7 +242,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Lega
       ellipsis: true,
       render: (v: string | undefined, record: LegacyPickupRecord) => (
         v ? (
-          <Button type="link" className="u-p-0" onClick={() => actions.onOpenReceivable(record)}>
+          <Button type="link" style={{ padding: 0 }} onClick={() => actions.onOpenReceivable(record)}>
             {v}
           </Button>
         ) : '-'

@@ -56,7 +56,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
         </div>
       }
     >
-      <Card className="u-mb-12">
+      <Card style={{ marginBottom: 12 }}>
         <div className="u-d-flex u-gap-16 u-ai-start">
           <div className="u-fshrink-0">
             <div className="u-mb-6 u-fs-14" style={{ color: 'rgba(0,0,0,0.65)' }}>款式图</div>
@@ -88,7 +88,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 <Field label="款号">
                   <AutoComplete
                     value={createTask.createStyleNo}
-                    className="u-w-full"
+                    style={{ width: '100%' }}
                     placeholder="输入或选择已维护工价的款号"
                     options={createTask.createStyleOptions.map((x) => ({
                       value: x.styleNo,
@@ -108,7 +108,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 <Field label="下单日期">
                   <UnifiedDatePicker
                     value={createTask.createOrderDate ? dayjs(createTask.createOrderDate, 'YYYY-MM-DD') : null}
-                    className="u-w-full"
+                    style={{ width: '100%' }}
                     placeholder="请选择下单日期"
                     onChange={(value) => createTask.setCreateOrderDate(Array.isArray(value) ? '' : (value ? value.format('YYYY-MM-DD') : ''))}
                   />
@@ -118,7 +118,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                 <Field label="订单交期">
                   <UnifiedDatePicker
                     value={createTask.createDeliveryDate ? dayjs(createTask.createDeliveryDate, 'YYYY-MM-DD') : null}
-                    className="u-w-full"
+                    style={{ width: '100%' }}
                     placeholder="请选择订单交期"
                     onChange={(value) => createTask.setCreateDeliveryDate(Array.isArray(value) ? '' : (value ? value.format('YYYY-MM-DD') : ''))}
                   />
@@ -132,7 +132,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                       { label: '内部工厂', value: 'INTERNAL' },
                       { label: '外发加工', value: 'EXTERNAL' },
                     ]}
-                    className="u-w-full"
+                    style={{ width: '100%' }}
                     onChange={(value) => {
                       const nextMode = value as 'INTERNAL' | 'EXTERNAL';
                       createTask.setCreateFactoryMode(nextMode);
@@ -153,7 +153,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                     value={createTask.createFactoryMode === 'INTERNAL'
                       ? (createTask.createOrgUnitId || undefined)
                       : (createTask.createFactoryId || undefined)}
-                    className="u-w-full"
+                    style={{ width: '100%' }}
                     placeholder={createTask.createFactoryMode === 'INTERNAL' ? '请选择内部生产组/车间' : '请选择外发工厂'}
                     showSearch
                     allowClear
@@ -189,7 +189,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                   <CustomerSelect
                     value={createTask.createCustomerName}
                     onChange={(value) => createTask.setCreateCustomerName(value)}
-                    className="u-w-full"
+                    style={{ width: '100%' }}
                     placeholder="选择或输入客户名称"
                   />
                 </Field>
@@ -203,7 +203,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                     allowClear
                     showSearch
                     optionFilterProp="label"
-                    className="u-w-full"
+                    style={{ width: '100%' }}
                     options={createTask.categoryOptions}
                   />
                 </Field>
@@ -213,7 +213,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                   <Select
                     value={createTask.createUrgencyLevel}
                     onChange={(v) => createTask.setCreateUrgencyLevel(v)}
-                    className="u-w-full"
+                    style={{ width: '100%' }}
                     options={[
                       { label: '普通', value: 'normal' },
                       { label: '急单', value: 'urgent' },
@@ -230,7 +230,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                     allowClear
                     showSearch
                     optionFilterProp="label"
-                    className="u-w-full"
+                    style={{ width: '100%' }}
                     options={createTask.tenantUsers.map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
                   />
                 </Field>
@@ -244,7 +244,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                     allowClear
                     showSearch
                     optionFilterProp="label"
-                    className="u-w-full"
+                    style={{ width: '100%' }}
                     options={createTask.tenantUsers.map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
                   />
                 </Field>
@@ -270,7 +270,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                   size="small"
                   type="default"
                   onClick={() => setInsightOpen(true)}
-                  className="u-fs-12" style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}
+                  style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)', fontSize: 12 }}
                   icon={<RightOutlined />}
                   iconPosition="end"
                 >

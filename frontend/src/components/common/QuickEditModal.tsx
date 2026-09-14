@@ -91,7 +91,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
         },
       }}
     >
-      <Form form={form} layout="vertical" onFinish={handleOk} className="u-mt-16">
+      <Form form={form} layout="vertical" onFinish={handleOk} style={{ marginTop: 16 }}>
         <Form.Item label="紧急程度" name="urgencyLevel">
           <Select
             options={[
@@ -102,7 +102,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
           />
         </Form.Item>
         <Form.Item label="预计出货日期" name="expectedShipDate" rules={[{ required: true, message: '请选择预计出货日期' }]}>
-          <UnifiedDatePicker showTime className="u-w-full" />
+          <UnifiedDatePicker showTime style={{ width: '100%' }} />
         </Form.Item>
         {systemLogs.length > 0 && (
           <div className="u-mb-16">
@@ -143,7 +143,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
             }}>
               {aiLogs.map((line, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: i < aiLogs.length - 1 ? 4 : 0 }}>
-                  <Tag color="orange" className="u-m-0 u-fs-14 u-lh-18px u-p-04px u-fshrink-0">AI</Tag>
+                  <Tag color="orange" style={{ margin: 0, fontSize: 14, lineHeight: '18px', padding: '0 4px', flexShrink: 0 }}>AI</Tag>
                   <span>{line.replace(/^\[AI巡检\]\s*/, '')}</span>
                 </div>
               ))}

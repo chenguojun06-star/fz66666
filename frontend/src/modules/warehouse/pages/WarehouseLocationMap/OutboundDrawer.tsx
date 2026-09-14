@@ -134,7 +134,7 @@ const OutboundDrawer: React.FC<Props> = ({
               <Select
                 value={outstockType}
                 onChange={onOutstockTypeChange}
-                className="u-w-full"
+                style={{ width: '100%' }}
                 options={OUTSTOCK_TYPE_OPTIONS}
               />
             </div>
@@ -219,7 +219,7 @@ const OutboundDrawer: React.FC<Props> = ({
                               {item.skuCode}
                             </div>
                             <div className="u-mt-2">
-                              <Tag color="blue" className="u-mr-4">{item.color}</Tag>
+                              <Tag color="blue" style={{ marginRight: 4 }}>{item.color}</Tag>
                               <Tag>{item.size}</Tag>
                             </div>
                           </div>
@@ -291,17 +291,17 @@ const OutboundDrawer: React.FC<Props> = ({
               <Form layout="vertical">
                 <Row gutter={12}>
                   <Col span={12}>
-                    <Form.Item label="客户/领取人" className="u-mb-12">
+                    <Form.Item label="客户/领取人" style={{ marginBottom: 12 }}>
                       <CustomerSelect
                         value={outboundCustomerName}
                         onChange={handleCustomerSelect}
                         placeholder="搜索选择客户，或直接输入名称"
-                        className="u-w-full"
+                        style={{ width: '100%' }}
                       />
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item label="联系电话" className="u-mb-12">
+                    <Form.Item label="联系电话" style={{ marginBottom: 12 }}>
                       <Input
                         placeholder="联系电话（选填）"
                         value={outboundCustomerPhone}
@@ -310,14 +310,14 @@ const OutboundDrawer: React.FC<Props> = ({
                     </Form.Item>
                   </Col>
                 </Row>
-                <Form.Item label="收货地址" className="u-mb-12">
+                <Form.Item label="收货地址" style={{ marginBottom: 12 }}>
                   <Input
                     placeholder="收货地址（选填）"
                     value={outboundShippingAddress}
                     onChange={(e) => onShippingAddressChange(e.target.value)}
                   />
                 </Form.Item>
-                <Form.Item label="备注" className="u-mb-0">
+                <Form.Item label="备注" style={{ marginBottom: 0 }}>
                   <Input.TextArea
                     rows={3}
                     placeholder="出库备注（选填）"

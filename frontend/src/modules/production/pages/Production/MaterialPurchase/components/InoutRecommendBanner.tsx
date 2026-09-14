@@ -41,7 +41,7 @@ const InoutRecommendBanner: React.FC<Props> = ({ pendingCount, noStockCount, par
       marginBottom: 12, color: 'var(--color-primary)',
       display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
     }}>
-      <InfoCircleOutlined className="u-fshrink-0" />
+      <InfoCircleOutlined style={{ flexShrink: 0 }} />
       <span>{hint}</span>
     </div>
   );

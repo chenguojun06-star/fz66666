@@ -52,7 +52,7 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
   if (!orderId) {
     return (
       <div className="u-ta-center" style={{ padding: 60 }}>
-        <ExclamationCircleOutlined className="u-mb-16" style={{ fontSize: 48, color: 'var(--color-warning)' }} />
+        <ExclamationCircleOutlined style={{ fontSize: 48, color: 'var(--color-warning)', marginBottom: 16 }} />
         <div className="u-fs-16 u-fw-500 u-mb-8">请先选择一个订单</div>
         <div style={{ color: 'var(--color-text-tertiary)' }}>在进度详情页点击某个订单的「看板」按钮，即可对该订单的菲号进行质检</div>
       </div>
@@ -232,7 +232,7 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
                           }}
                         >
                           {isPendingQc && qcFilter === 'pending' && (
-                            <Checkbox checked={isSelected} onChange={() => toggleSelect(r.id)} className="u-mt-2" />
+                            <Checkbox checked={isSelected} onChange={() => toggleSelect(r.id)} style={{ marginTop: 2 }} />
                           )}
 
                           <div className="u-flex-1" style={{ minWidth: 0 }}>
@@ -245,7 +245,7 @@ const QcTabContent: React.FC<QcTabContentProps> = ({
                             <div className="u-fs-var--font-size-sm" style={{ color: 'var(--color-text-secondary)' }}>
                               {r.quantity}件{r.unitPrice ? ` × ¥${r.unitPrice}` : ''}{r.operatorName ? ` | ${r.operatorName}` : ''}
                             </div>
-                            {isObsolete && <Tag color="default" className="u-mt-4">已废弃</Tag>}
+                            {isObsolete && <Tag color="default" style={{ marginTop: 4 }}>已废弃</Tag>}
                             {isUnqualified && (
                               <div className="u-mt-4 u-d-flex u-gap-4 u-fwrap-wrap">
                                 <Tag color="error">次品{r.defectQuantity || 0}件</Tag>

@@ -168,7 +168,7 @@ const MaterialReconModalContent: React.FC<MaterialReconModalContentProps> = ({
                 { required: true, message: '请选择对账日期' },
                 { type: 'string', min: 10, message: '请选择有效的对账日期' }
               ]}>
-              <Input type="date" className="u-w-full" />
+              <Input type="date" style={{ width: '100%' }} />
             </Form.Item>
           </Col>
           <Col span={8}>

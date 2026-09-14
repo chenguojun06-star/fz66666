@@ -95,7 +95,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
         <span>
           工序流程
           <Tooltip title="填写款号自动加载工序模板，可自由增减子工序和修改单价，工序单价直接影响工资结算">
-            <QuestionCircleOutlined className="u-ml-6" style={{ color: 'var(--color-primary)', cursor: 'help' }} />
+            <QuestionCircleOutlined style={{ marginLeft: 6, color: 'var(--color-primary)', cursor: 'help' }} />
           </Tooltip>
         </span>
       }
@@ -119,7 +119,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
           </Dropdown>
         </Space>
       }
-      className="u-mb-12"
+      style={{ marginBottom: 12 }}
     >
 
       <CopyStyleProcessDrawer
@@ -184,7 +184,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
                       autoCollect
                       value={node.name}
                       placeholder="请选择或输入工序名称"
-                      className="u-w-full"
+                      style={{ width: '100%' }}
                       onChange={(v) => createTask.updateProcessNode(originalIndex, 'name', v)}
                     />
                   </td>
@@ -210,7 +210,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
 
                           icon={<PlusOutlined />}
                           onClick={() => handleAddToStage(spanInfo.stage)}
-                          className="u-fs-14 u-p-0"
+                          style={{ fontSize: 14, padding: 0 }}
                         >
                           添加
                         </Button>
@@ -223,7 +223,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
                       autoCollect
                       value={node.machineType || ''}
                       placeholder="请选择或输入"
-                      className="u-w-full"
+                      style={{ width: '100%' }}
                       onChange={(v) => createTask.updateProcessNode(originalIndex, 'machineType', v)}
                     />
                   </td>
@@ -233,7 +233,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
                       value={node.difficulty || undefined}
                       allowClear
                       placeholder="选择"
-                      className="u-w-full"
+                      style={{ width: '100%' }}
                       onChange={(v) => createTask.updateProcessNode(originalIndex, 'difficulty', v || '')}
                       options={[
                         { value: '易', label: '易' },
@@ -246,7 +246,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
                     <InputNumber
 
                       value={node.standardTime || 0}
-                      className="u-w-full"
+                      style={{ width: '100%' }}
                       min={0}
                       onChange={(v) => createTask.updateProcessNode(originalIndex, 'standardTime', typeof v === 'number' ? v : 0)}
                     />
@@ -255,7 +255,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
                     <InputNumber
 
                       value={node.unitPrice}
-                      className="u-w-full"
+                      style={{ width: '100%' }}
                       min={0}
                       precision={2}
                       step={0.01}
@@ -269,7 +269,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
                       <InputNumber
 
                         value={node.sizePrices?.[s] ?? node.unitPrice}
-                        className="u-w-full"
+                        style={{ width: '100%' }}
                         min={0}
                         precision={2}
                         step={0.01}

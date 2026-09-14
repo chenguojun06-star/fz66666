@@ -25,7 +25,7 @@ const ProfileUserColumn: React.FC<ProfileUserColumnProps> = ({
 }) => {
     return (
         <div>
-            <Card title="个人信息" className="u-mb-16">
+            <Card title="个人信息" style={{ marginBottom: 16 }}>
                 <Spin spinning={loading}>
                     <Form form={form} layout="vertical" requiredMark={false}>
                         <Form.Item name="avatarUrl" hidden><Input /></Form.Item>
@@ -70,7 +70,7 @@ const ProfileUserColumn: React.FC<ProfileUserColumnProps> = ({
                     ]}>
                         <Input.Password placeholder="请再次输入新密码" autoComplete="new-password" />
                     </Form.Item>
-                    <Form.Item className="u-mb-0">
+                    <Form.Item style={{ marginBottom: 0 }}>
                         <Button type="primary" onClick={onChangePassword} loading={savingPwd} icon={<LockOutlined />}>
                             确认修改密码
                         </Button>

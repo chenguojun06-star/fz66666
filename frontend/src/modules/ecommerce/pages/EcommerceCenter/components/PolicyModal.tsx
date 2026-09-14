@@ -41,10 +41,10 @@ const PolicyModal: React.FC<PolicyModalProps> = ({ open, record, levels, onClose
           <Input placeholder="商品编码" />
         </Form.Item>
         <Form.Item label="供货价" name="supplyPrice">
-          <InputNumber min={0} precision={2} className="u-w-full" />
+          <InputNumber min={0} precision={2} style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item label="最低零售价（限价）" name="minRetailPrice">
-          <InputNumber min={0} precision={2} className="u-w-full" />
+          <InputNumber min={0} precision={2} style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item label="阶梯价JSON（TIERED类型填写）" name="tierJson" tooltip='格式：[{"minQty":1,"maxQty":99,"price":50},{"minQty":100,"price":45}]'>
           <Input.TextArea rows={3} placeholder='[{"minQty":1,"maxQty":99,"price":50},{"minQty":100,"price":45}]' />

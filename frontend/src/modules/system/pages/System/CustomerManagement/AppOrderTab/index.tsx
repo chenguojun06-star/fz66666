@@ -126,7 +126,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
 
   return (
     <div>
-      <Space className="u-mb-16" wrap>
+      <Space style={{ marginBottom: 16 }} wrap>
         <Select
           value={statusFilter}
           onChange={setStatusFilter}

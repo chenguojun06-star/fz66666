@@ -113,7 +113,7 @@ const OperationLogTabContent: React.FC<OperationLogTabContentProps> = ({
           rows={3}
           maxLength={500}
           showCount
-          className="u-flex-1"
+          style={{ flex: 1 }}
         />
         <Button type="primary" onClick={handleAddRemark} disabled={!newRemark.trim()}>
           添加
@@ -143,7 +143,7 @@ const OperationLogTabContent: React.FC<OperationLogTabContentProps> = ({
                         <Image
                           key={idx}
                           src={getFullAuthedFileUrl(url)}
-                          className="u-objf-cover u-br-4 u-cur-pointer" style={{ width: 64, height: 64 }}
+                          style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
                           preview={{ cover: '预览' }}
                         />
                       ))}

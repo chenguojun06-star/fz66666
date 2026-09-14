@@ -172,7 +172,7 @@ const ShareOrderPage: React.FC = () => {
         </div>
 
         <Alert
-          className="u-mb-16 u-br-12" style={{ background: 'rgba(8,20,40,0.72)', borderColor: 'rgba(0,229,255,0.16)', color: 'var(--color-sky-50)' }}
+          style={{ marginBottom: 16, borderRadius: 12, background: 'rgba(8,20,40,0.72)', borderColor: 'rgba(0,229,255,0.16)', color: 'var(--color-sky-50)' }}
           type="info"
           showIcon
           title="该分享链接1天内有效"

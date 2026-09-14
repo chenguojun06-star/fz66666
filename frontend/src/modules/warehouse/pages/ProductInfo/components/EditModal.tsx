@@ -125,7 +125,7 @@ const EditModal: React.FC<EditModalProps> = ({
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="price" label="单价(元)">
-                <InputNumber placeholder="请输入单价" className="u-w-full" min={0} step={0.01} precision={2} />
+                <InputNumber placeholder="请输入单价" style={{ width: '100%' }} min={0} step={0.01} precision={2} />
               </Form.Item>
             </Col>
           </Row>
@@ -137,7 +137,7 @@ const EditModal: React.FC<EditModalProps> = ({
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="cycle" label="生产周期(天)">
-                <InputNumber placeholder="天数" className="u-w-full" min={0} />
+                <InputNumber placeholder="天数" style={{ width: '100%' }} min={0} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>

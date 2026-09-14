@@ -205,7 +205,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
           options={deptOptions}
           showSearch
           optionFilterProp="label"
-          className="u-w-full"
+          style={{ width: '100%' }}
           popupMatchSelectWidth={false}
           onChange={(v) => { void handleInlineUpdate(r, { orgUnitId: v }, '部门'); }}
         />
@@ -251,7 +251,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
             <Dropdown menu={{ items: noRoleItems }} disabled={roleOptionsLoading} trigger={['click']}>
               <Button size="small" type="dashed">
                 <span className="u-fs-12" style={{ color: "var(--color-text-secondary, var(--color-gray-dark))" }}>
-                  <UserOutlined className="u-fs-11" />
+                  <UserOutlined style={{ fontSize: 11 }} />
                   <span className="u-ml-4">点击设置角色</span>
                 </span>
               </Button>
@@ -267,7 +267,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
             label: (
               <span className="u-d-inline-block u-w-full">
                 {isCurrent && (
-                  <CheckOutlined className="u-fs-10 u-mr-4" style={{ color: 'var(--color-primary, var(--color-success))' }} />
+                  <CheckOutlined style={{ fontSize: 10, marginRight: 4, color: 'var(--color-primary, var(--color-success))' }} />
                 )}
                 {role.roleName}
                 {isCurrent && (

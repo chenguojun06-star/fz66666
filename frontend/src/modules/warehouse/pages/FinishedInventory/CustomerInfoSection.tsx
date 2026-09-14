@@ -37,8 +37,8 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
   if (variant === 'inline') {
     return (
       <div className="u-br-8 u-mb-12" style={{ background: 'var(--color-bg-page)', padding: '12px 16px' }}>
-        <Typography.Text strong className="u-d-block u-mb-8">客户信息</Typography.Text>
-        <Space wrap className="u-w-full">
+        <Typography.Text strong style={{ display: 'block', marginBottom: 8 }}>客户信息</Typography.Text>
+        <Space wrap style={{ width: '100%' }}>
           <span>
             <span style={{ color: 'var(--color-danger)' }}>*</span> 客户名称：
             <CustomerSelect
@@ -83,7 +83,7 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
             value={customerName}
             onChange={handleCustomerSelect}
             placeholder="搜索或输入客户名称"
-            className="u-w-full"
+            style={{ width: '100%' }}
             status={customerName.trim() ? undefined : 'warning'}
           />
         </Col>

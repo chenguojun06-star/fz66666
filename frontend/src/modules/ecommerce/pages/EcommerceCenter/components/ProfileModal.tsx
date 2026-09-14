@@ -45,7 +45,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, record, levels, onClo
           <Select options={SETTLEMENT_CYCLE_OPTIONS} />
         </Form.Item>
         <Form.Item label="信用额度（0=不限）" name="creditLimit">
-          <InputNumber min={0} precision={2} className="u-w-full" />
+          <InputNumber min={0} precision={2} style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item label="状态" name="status">
           <Select options={DISTRIBUTOR_STATUS_OPTIONS} />

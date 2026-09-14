@@ -241,7 +241,7 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
       title={title}
       footer={
         <Space>
-          <Text type="secondary" className="u-fs-12" style={{ marginInlineEnd: 12 }}>
+          <Text type="secondary" style={{ fontSize: 12, marginInlineEnd: 12 }}>
             已选 <Text strong style={{ color: 'var(--color-primary)' }}>{selectedRows.length}</Text> 项
             {footerHint ? `，${footerHint}` : ''}
           </Text>
@@ -255,14 +255,14 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
       <div className="u-flex-1 u-h-full u-d-flex u-gap-16 u-ov-hidden" style={{ minWidth: 0, alignItems: 'stretch', minHeight: 0 }}>
         {/* ── 左：来源选择 ── */}
         <div className="u-fshrink-0 u-d-flex u-fd-column" style={{ width: 300, minHeight: 0 }}>
-          <Text strong className="u-d-block u-mb-8">
+          <Text strong style={{ display: 'block', marginBottom: 8 }}>
             {sourceMode === 'style' ? '选择款' : '选择通用模板'}
           </Text>
           <Radio.Group
             value={sourceMode}
             optionType="button"
             buttonStyle="solid"
-            className="u-mb-8"
+            style={{ marginBottom: 8 }}
             onChange={(e) => {
               setSourceMode(e.target.value);
               setSelectedStyle(null);
@@ -282,14 +282,14 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
               loading={savingTemplate}
               disabled={!currentStyleNo}
               onClick={() => void handleSaveCurrentAsTemplate()}
-              className="u-mt-8"
+              style={{ marginTop: 8 }}
             >
               存当前款为模板
             </Button>
           )}
           {sourceMode === 'style' && (
             <>
-              <Space direction="vertical" size={6} className="u-w-full u-mb-8">
+              <Space direction="vertical" size={6} style={{ width: '100%', marginBottom: 8 }}>
                 <Input
                   placeholder="款号"
                   allowClear
@@ -316,7 +316,7 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
                       <StyleCoverThumb src={s.cover || s.styleCover || null} styleId={s.id} styleNo={String(s.styleNo || '')} size={40} borderRadius={4} />
                       <div className="u-flex-1" style={{ minWidth: 0 }}>
                         <div className="u-fw-500 u-fs-13">{s.styleNo || '-'}</div>
-                        <Text type="secondary" className="u-fs-12 u-d-block u-ov-hidden u-ws-nowrap" style={{ textOverflow: 'ellipsis' }}>
+                        <Text type="secondary" style={{ fontSize: 12, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {s.styleName || '-'}
                         </Text>
                       </div>
@@ -333,7 +333,7 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
                 pageSize={stylePageSize}
                 total={styleTotal}
                 onChange={(p) => { setStylePage(p); void fetchStyles(p); }}
-                className="u-mt-8 u-ta-right"
+                style={{ marginTop: 8, textAlign: 'right' }}
                 showSizeChanger={false}
               />
             </>
@@ -344,12 +344,12 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
                 <div key={String(t.id)} onClick={() => handlePickTemplate(t)} style={itemStyle(Boolean(selectedTemplate && String(selectedTemplate.id) === String(t.id)))}>
                   <div className="u-fw-500 u-fs-13">{t.templateName || '-'}</div>
                   <Space size={4} wrap>
-                    <Text type="secondary" className="u-fs-12">
+                    <Text type="secondary" style={{ fontSize: 12 }}>
                       {t.sourceStyleNo ? `来源款 ${t.sourceStyleNo}` : '未关联来源款'}
                     </Text>
                     {t.sourceStyleNo
-                      ? <Tag className="u-fs-11" style={{ marginInlineEnd: 0 }}>款式沉淀</Tag>
-                      : <Tag color="blue" className="u-fs-11" style={{ marginInlineEnd: 0 }}>通用</Tag>}
+                      ? <Tag style={{ marginInlineEnd: 0, fontSize: 11 }}>款式沉淀</Tag>
+                      : <Tag color="blue" style={{ marginInlineEnd: 0, fontSize: 11 }}>通用</Tag>}
                   </Space>
                 </div>
               ))}
@@ -362,12 +362,12 @@ export function ImportPickerDrawer<T>(props: ImportPickerDrawerProps<T>) {
 
         {/* ── 右：明细勾选 ── */}
         <div className="u-flex-1 u-d-flex u-fd-column u-ov-hidden" style={{ minWidth: 0, minHeight: 0 }}>
-          <Space wrap className="u-mb-12">
+          <Space wrap style={{ marginBottom: 12 }}>
             <Text strong>
               选择明细
               {selectedStyle ? `（${selectedStyle.styleNo || ''}）` : selectedTemplate ? `（${selectedTemplate.templateName || ''}）` : ''}
             </Text>
-            <Text type="secondary" className="u-fs-12">默认全选；取消勾选可只导入个别项</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>默认全选；取消勾选可只导入个别项</Text>
             {tableFilters}
           </Space>
           {!selectedStyle && !selectedTemplate ? (

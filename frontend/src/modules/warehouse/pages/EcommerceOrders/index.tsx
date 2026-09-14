@@ -15,10 +15,10 @@ const EcommerceOrders: React.FC = () => {
   return (
     <>
       <div style={{ padding: 20 }}>
-        <Alert className="u-fs-14" style={{ marginBottom: 14 }} type="info" showIcon
+        <Alert style={{ marginBottom: 14, fontSize: 14 }} type="info" showIcon
           title="电商对接全流程"
           description={
-            <Steps className="u-mt-8"
+            <Steps style={{ marginTop: 8 }}
               items={[
                 { title: '配置平台',  content: '应用商店填写 AppKey/Secret',    icon: <ShopOutlined style={{ color: 'var(--color-primary)' }} /> },
                 { title: '平台推单',  content: 'Webhook 自动接收，自动匹配款号',  icon: <ApiOutlined style={{ color: 'var(--color-warning)' }} /> },

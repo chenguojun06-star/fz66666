@@ -189,7 +189,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
           }}
           items={previewSrcs}
         >
-          <Image src={previewSrcs[0]} className="u-d-none" preview={false} />
+          <Image src={previewSrcs[0]} style={{ display: 'none' }} preview={false} />
         </Image.PreviewGroup>
       )}
 
@@ -243,7 +243,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
                   >
                     <Tooltip title="预览大图">
                       <EyeOutlined
-                        className="u-fs-15" style={{ color: '#fff' }}
+                        style={{ color: '#fff', fontSize: 15 }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setPreviewIndex(idx);
@@ -254,10 +254,10 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
                     {!isNewMode && !img.isLocal && !(img as { isCoverFallback?: boolean }).isCoverFallback && (
                       <Tooltip title={isCover ? '当前主图' : '设为主图'}>
                         {isCover ? (
-                          <StarFilled className="u-fs-15" style={{ color: '#ffd666' }} />
+                          <StarFilled style={{ color: '#ffd666', fontSize: 15 }} />
                         ) : (
                           <StarOutlined
-                            className="u-fs-15" style={{ color: '#fff' }}
+                            style={{ color: '#fff', fontSize: 15 }}
                             onClick={(e) => {
                               e.stopPropagation();
                               void handleSetCover(idx);
@@ -268,7 +268,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
                     )}
                     <Tooltip title="删除">
                       <DeleteOutlined
-                        className="u-fs-15" style={{ color: '#fff' }}
+                        style={{ color: '#fff', fontSize: 15 }}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDelete(img.id, img.localIndex);
@@ -293,7 +293,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
                 cursor: 'pointer', userSelect: 'none',
               }}
             >
-              <PlusOutlined className="u-fs-16" style={{ color: 'var(--color-text-tertiary)' }} />
+              <PlusOutlined style={{ fontSize: 16, color: 'var(--color-text-tertiary)' }} />
               <div className="u-fs-11" style={{ color: 'var(--color-text-tertiary)', marginTop: 3 }}>
                 款式图 {displayImages.length}/{MAX_IMAGES}
               </div>

@@ -98,7 +98,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
   ) => (
     <div>
       <div style={compactFieldLabelStyle}>{label}</div>
-      <Form.Item name={name} rules={rules} className="u-mb-0">
+      <Form.Item name={name} rules={rules} style={{ marginBottom: 0 }}>
         {node}
       </Form.Item>
     </div>
@@ -141,7 +141,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
                   name="templateName"
                   label="模板名称"
                   rules={[{ required: true, message: '请输入模板名称' }]}
-                  className="u-mb-0"
+                  style={{ marginBottom: 0 }}
                 >
                   <Input placeholder="请输入模板名称" disabled={readOnly} />
                 </Form.Item>
@@ -149,7 +149,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
             {compact
               ? renderCompactField('templateKey', '模板标识', <Input placeholder="可选" disabled={readOnly} />)
               : (
-                <Form.Item name="templateKey" label="模板标识" className="u-mb-0">
+                <Form.Item name="templateKey" label="模板标识" style={{ marginBottom: 0 }}>
                   <Input placeholder="可选" disabled={readOnly} />
                 </Form.Item>
               )}
@@ -170,7 +170,7 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
                 />,
               )
               : (
-                <Form.Item name="sourceStyleNo" label="来源款号" className="u-mb-0">
+                <Form.Item name="sourceStyleNo" label="来源款号" style={{ marginBottom: 0 }}>
                   <Select
                     allowClear
                     showSearch

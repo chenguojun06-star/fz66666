@@ -94,7 +94,7 @@ const FactorySettleConfirmContent: React.FC<FactorySettleConfirmContentProps> = 
       )}
       <div className="u-mb-4">本次结算金额：</div>
       <InputNumber
-        className="u-w-full"
+        style={{ width: '100%' }}
         value={amount}
         min={0}
         precision={2}

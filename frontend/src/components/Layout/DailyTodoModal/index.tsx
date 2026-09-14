@@ -111,14 +111,14 @@ const DailyTodoModal: React.FC = () => {
               <div className="u-fs-14 u-mt-2" style={{ color: 'var(--color-text-tertiary)' }}>
                 {brief.date} · 数据已实时同步
                 {brief.suggestionsSource === 'ai' && (
-                  <Tag color="purple" className="u-ml-8 u-fs-14">
+                  <Tag color="purple" style={{ marginLeft: 8, fontSize: 14 }}>
                     <RobotOutlined /> AI 增强
                   </Tag>
                 )}
               </div>
             </div>
             {health && (
-              <Tag color={health.tagColor} className="u-fs-14" style={{ padding: '2px 12px' }}>
+              <Tag color={health.tagColor} style={{ fontSize: 14, padding: '2px 12px' }}>
                 {health.label}
               </Tag>
             )}

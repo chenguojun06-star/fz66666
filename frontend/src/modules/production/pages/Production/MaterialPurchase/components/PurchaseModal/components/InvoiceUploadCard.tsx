@@ -21,7 +21,7 @@ const InvoiceUploadCard: React.FC<InvoiceUploadCardProps> = ({
 }) => {
   return (
     <Card
-      className="u-mt-12"
+      style={{ marginTop: 12 }}
       title={
         <Space>
           <FileImageOutlined />
@@ -32,7 +32,7 @@ const InvoiceUploadCard: React.FC<InvoiceUploadCardProps> = ({
     >
       {invoiceUploading && (
         <div className="u-mb-8">
-          <Spin indicator={<LoadingOutlined className="u-fs-16" />} /> 上传中...
+          <Spin indicator={<LoadingOutlined style={{ fontSize: 16 }} />} /> 上传中...
         </div>
       )}
       <MultiImageUploadBox

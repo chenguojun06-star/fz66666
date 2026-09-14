@@ -213,13 +213,13 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
               <div style={{ width: 260 }}>
                 <div className="u-mb-8 u-fw-600" style={{ color: 'var(--color-accent-purple)' }}> AI 智能 IE 指导价 & 全套工序生成</div>
                 <div className="u-mb-8 u-fs-14" style={{ color: 'var(--color-text-muted)' }}>选择品类，系统将基于 IE 数据库为您直接生成全套标准工序与智能指导单价。</div>
-                <Select className="u-w-full u-mb-8" placeholder="选择衣服品类（必选）" allowClear showSearch optionFilterProp="label" value={aiCategory} onChange={setAiCategory} options={categoryOptions} />
+                <Select style={{ width: '100%', marginBottom: 8 }} placeholder="选择衣服品类（必选）" allowClear showSearch optionFilterProp="label" value={aiCategory} onChange={setAiCategory} options={categoryOptions} />
                 <Button type="primary" block loading={aiLoading} disabled={aiLoading || !aiCategory} style={{ borderColor: 'var(--color-accent-purple)', color: 'var(--color-accent-purple)' }} onClick={() => handleAiTemplate(setData)}>{aiLoading ? '生成中…' : ' 一键生成全套工序与指导价'}</Button>
               </div>
             }>
             <Button type="primary" disabled={Boolean(readOnly) || !editMode || loading || saving}
               icon={aiLoading ? <LoadingOutlined /> : <span className="u-mr-4"></span>}
-              className="u-fw-500" style={{ background: 'transparent', borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}>AI建议单价</Button>
+              style={{ background: 'transparent', borderColor: 'var(--color-primary)', color: 'var(--color-primary)', fontWeight: 500 }}>AI建议单价</Button>
           </Popover>
           </>
         }
@@ -231,7 +231,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
           {editMode && !readOnly && sizes.length > 0 && (
             <span className="u-d-inline-flex u-ai-center u-gap-4 u-fwrap-wrap">
               {sizes.map((size) => (
-                <Tag key={size} closable onClose={() => handleRemoveSize(size)} className="u-m-0">{size}</Tag>
+                <Tag key={size} closable onClose={() => handleRemoveSize(size)} style={{ margin: 0 }}>{size}</Tag>
               ))}
             </span>
           )}
@@ -243,7 +243,7 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
                 <div style={{ width: 220 }}>
                   <Input
                     placeholder="输入码数名，如 XL(175/96A)"
-                    className="u-w-full u-mb-8"
+                    style={{ width: '100%', marginBottom: 8 }}
                     onPressEnter={(e) => {
                       const input = e.target as HTMLInputElement;
                       const val = input.value.trim().toUpperCase();

@@ -34,7 +34,7 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
         <span className="u-fs-14 u-d-inline-flex u-ai-center u-gap-4" style={{ color: 'var(--color-text-tertiary)' }}>
           {loading ? (
             <>
-              <LoadingOutlined className="u-fs-13" />
+              <LoadingOutlined style={{ fontSize: 13 }} />
               <span>分析中...</span>
             </>
           ) : (

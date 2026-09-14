@@ -134,13 +134,13 @@ const MaterialDatabasePage: React.FC = () => {
   return (
     <>
       {showSmartErrorNotice && smartError ? (
-        <Card className="u-mb-12">
+        <Card style={{ marginBottom: 12 }}>
           <SmartErrorNotice error={smartError} onFix={() => { void fetchList(); }} />
         </Card>
       ) : null}
 
       {/* 视图切换 + 标题栏 */}
-      <Card className="u-mb-0">
+      <Card style={{ marginBottom: 0 }}>
         <div className="u-d-flex u-jc-between u-ai-center u-mb-0">
           <h2 className="u-m-0"> 物料资料库</h2>
           <Space>
@@ -162,8 +162,8 @@ const MaterialDatabasePage: React.FC = () => {
 
       {/* 列表视图 */}
       {viewMode === 'list' && (
-        <Card className="u-mt-12">
-          <Card className="u-mb-12" style={{ background: 'var(--color-bg-container)' }}>
+        <Card style={{ marginTop: 12 }}>
+          <Card style={{ marginBottom: 12, background: 'var(--color-bg-container)' }}>
             <StandardToolbar
               left={(
                 <StandardSearchBar
@@ -186,8 +186,8 @@ const MaterialDatabasePage: React.FC = () => {
 
       {/* 物料卡片视图 */}
       {viewMode === 'materialCard' && (
-        <Card className="u-mt-12">
-          <Card className="u-mb-12" style={{ background: 'var(--color-bg-container)' }}>
+        <Card style={{ marginTop: 12 }}>
+          <Card style={{ marginBottom: 12, background: 'var(--color-bg-container)' }}>
             <StandardToolbar
               left={(
                 <StandardSearchBar
@@ -246,7 +246,7 @@ const MaterialDatabasePage: React.FC = () => {
 
       {/* 供应商色卡视图 */}
       {viewMode === 'supplierCard' && (
-        <Card className="u-mt-12">
+        <Card style={{ marginTop: 12 }}>
           <MaterialCardView
             cardDataList={cardDataList}
             cardLoading={cardLoading}

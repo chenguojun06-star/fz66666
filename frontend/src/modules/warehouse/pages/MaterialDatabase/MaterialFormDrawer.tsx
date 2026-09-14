@@ -151,10 +151,10 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
             <Form.Item name="supplierContactPhone" hidden><Input /></Form.Item>
           </Col>
           <Col xs={24} sm={8} md={6} lg={4} xl={4}>
-            <Form.Item name="unitPrice" label="单价(元)"><InputNumber placeholder="请输入单价" className="u-w-full" min={0} step={0.01} precision={2} /></Form.Item>
+            <Form.Item name="unitPrice" label="单价(元)"><InputNumber placeholder="请输入单价" style={{ width: '100%' }} min={0} step={0.01} precision={2} /></Form.Item>
           </Col>
           <Col xs={24} sm={8} md={6} lg={4} xl={4}>
-            <Form.Item name="conversionRate" label="换算"><InputNumber placeholder="如：3" className="u-w-full" min={0} step={0.01} precision={4} /></Form.Item>
+            <Form.Item name="conversionRate" label="换算"><InputNumber placeholder="如：3" style={{ width: '100%' }} min={0} step={0.01} precision={4} /></Form.Item>
           </Col>
         </Row>
         <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.materialType !== currentValues.materialType}>
@@ -222,7 +222,7 @@ const MaterialFormDrawer: React.FC<MaterialFormDrawerProps> = ({
                         value: a.id,
                         label: `${a.materialName}${a.materialCode ? `（${a.materialCode}）` : ''}${a.supplierName ? ` · ${a.supplierName}` : ''}`,
                       }))}
-                      className="u-w-full"
+                      style={{ width: '100%' }}
                       allowClear
                     />
                   </Form.Item>

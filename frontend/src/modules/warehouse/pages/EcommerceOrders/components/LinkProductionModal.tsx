@@ -25,7 +25,7 @@ const LinkProductionModal: React.FC<Props> = ({ open, target, linking, form, onO
           <div>实付: ¥{target.payAmount} &nbsp;|&nbsp; 买家: {target.buyerNick || target.receiverName}</div>
         </div>
       )}
-      <Alert className="u-mb-12 u-fs-14" type="info" showIcon
+      <Alert style={{ marginBottom: 12, fontSize: 14 }} type="info" showIcon
         title="关联后，该生产订单从仓库出库时将自动更新此电商订单为【已出库】并写入快递单号" />
       <Form form={form} layout="vertical">
         <Form.Item name="productionOrderNo" label="生产订单号"

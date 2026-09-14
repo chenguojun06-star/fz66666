@@ -20,7 +20,7 @@ export function buildColumns(handlers: ColumnHandlers): ColumnsType<FactoryShipm
       key: 'styleImage',
       width: 64,
       render: (v: string | undefined) =>
-        v ? <Image src={v} width={40} height={40} className="u-br-4 u-objf-cover" /> : <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>,
+        v ? <Image src={v} width={40} height={40} style={{ borderRadius: 4, objectFit: 'cover' }} /> : <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>,
     },
     { title: '发货单号', dataIndex: 'shipmentNo', key: 'shipmentNo', width: 160 },
     { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 150 },

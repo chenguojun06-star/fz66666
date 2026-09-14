@@ -88,7 +88,7 @@ const TaxConfigTab: React.FC = () => {
 
   return (
     <>
-      <Alert type="info" showIcon className="u-mb-16"
+      <Alert type="info" showIcon style={{ marginBottom: 16 }}
         title="税率配置会参与真实税额计算"
         description="发票台账默认 VAT 税额来自这里的默认税率；建议至少维护默认 VAT、附加税等常用税码，并标清生效时间。"
       />
@@ -110,10 +110,10 @@ const TaxConfigTab: React.FC = () => {
         <Form form={form} layout="vertical" style={{ padding: '16px 0' }}>
           <ModalFieldRow label="税种名称"><Form.Item name="taxName" noStyle rules={[{ required: true }]}><Input /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="税种代码"><Form.Item name="taxCode" noStyle rules={[{ required: true }]}><Input placeholder="如 VAT_6 / INCOME_25" /></Form.Item></ModalFieldRow>
-          <ModalFieldRow label="税率(%)"><Form.Item name="taxRate" noStyle rules={[{ required: true }]}><InputNumber min={0} max={100} precision={2} className="u-w-full" /></Form.Item></ModalFieldRow>
+          <ModalFieldRow label="税率(%)"><Form.Item name="taxRate" noStyle rules={[{ required: true }]}><InputNumber min={0} max={100} precision={2} style={{ width: '100%' }} /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="默认税率"><Form.Item name="isDefault" noStyle initialValue={0}><Select options={[{ value: 1, label: '是' }, { value: 0, label: '否' }]} /></Form.Item></ModalFieldRow>
-          <ModalFieldRow label="生效日期"><Form.Item name="effectiveDate" noStyle><DatePicker className="u-w-full" format="YYYY-MM-DD" /></Form.Item></ModalFieldRow>
-          <ModalFieldRow label="失效日期"><Form.Item name="expiryDate" noStyle><DatePicker className="u-w-full" format="YYYY-MM-DD" /></Form.Item></ModalFieldRow>
+          <ModalFieldRow label="生效日期"><Form.Item name="effectiveDate" noStyle><DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" /></Form.Item></ModalFieldRow>
+          <ModalFieldRow label="失效日期"><Form.Item name="expiryDate" noStyle><DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="描述"><Form.Item name="description" noStyle><Input placeholder="如：适用一般纳税人" /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="状态"><Form.Item name="status" noStyle initialValue="ACTIVE"><Select options={[{ value: 'ACTIVE', label: '启用' }, { value: 'INACTIVE', label: '停用' }]} /></Form.Item></ModalFieldRow>
         </Form>

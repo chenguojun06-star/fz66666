@@ -36,7 +36,7 @@ const IssueInvoiceModal: React.FC<IssueInvoiceModalProps> = ({
         placeholder="请输入发票号码"
         value={invoiceNoValue}
         onChange={(e) => onInvoiceNoChange(e.target.value)}
-        className="u-mt-8"
+        style={{ marginTop: 8 }}
       />
     </SmallModal>
   );

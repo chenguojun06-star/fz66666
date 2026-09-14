@@ -110,7 +110,7 @@ const PredictionFeedbackBar: React.FC<Props> = ({
       </div>
 
       {mode && (
-        <Space.Compact className="u-d-flex u-w-full">
+        <Space.Compact style={{ display: 'flex', width: '100%' }}>
           <Select
             style={{ width: 220 }}
             value={reasonCode}

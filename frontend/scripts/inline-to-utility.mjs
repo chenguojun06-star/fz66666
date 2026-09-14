@@ -228,26 +228,50 @@ for (const rel of files) {
     const clsStr = classes.join(' ');
     const stylePart = keep.length ? `style={{ ${keep.join(', ')} }}` : '';
 
-    // ① 向前逐字符扫描，只在「同一标签内、style 之前」找 className，遇 < 或 > 即停
-    let cmStart = -1;
-    const backLimit = Math.max(0, st.startIdx - 600);
-    for (let i = st.startIdx - 1; i >= backLimit; i--) {
+    // ① 反向找标签开始 '<'。
+    //    必须「深度感知」：onClick={() => ...} 里的 => 含 '>'，直接按字符判断会误当作标签结束，
+    //    导致扫描提前中断、找不到已有 className，于是又新建一个 → 重复属性 TS17001。
+    let depth = 0, tagStart = -1;
+    const backLim = Math.max(0, st.startIdx - 2000);
+    for (let i = st.startIdx - 1; i >= backLim; i--) {
       const c = out[i];
-      if (c === '<' || c === '>') break;
-      if (out.startsWith('className=', i)) { cmStart = i; break; }
+      if (c === '}' || c === ')') depth++;
+      else if (c === '{' || c === '(') depth--;
+      else if (depth === 0 && c === '<' && /[A-Za-z/]/.test(out[i + 1] || '')) { tagStart = i; break; }
+      else if (depth === 0 && c === '>') break;
     }
+    if (tagStart < 0 || out[tagStart + 1] === '/') { skipped++; continue; }
 
-    if (cmStart >= 0) {
-      const valStart = cmStart + 'className='.length;
+    // ② 只处理原生 DOM 元素（标签名小写开头）。
+    //    自定义组件的 Props 未必声明 className，强行加会报 TS2322
+    //    （实测 SideCardPanel / SupplierNameTooltip / StyleDevelopmentProgressBanner 等均不支持）。
+    //    宁可少迁移，也不要制造类型错误。
+    const tagNameM = /^<([A-Za-z][\w.-]*)/.exec(out.slice(tagStart, tagStart + 40));
+    if (!tagNameM || !/^[a-z]/.test(tagNameM[1])) { skipped++; continue; }
+
+    // ③ 正向找标签结束 '>'（同样深度感知，避免把 => 当成标签结束）
+    let d2 = 0, tagEnd = -1;
+    for (let i = tagStart + 1; i < out.length; i++) {
+      const c = out[i];
+      if (c === '{' || c === '(') d2++;
+      else if (c === '}' || c === ')') d2--;
+      else if (d2 === 0 && c === '>') { tagEnd = i; break; }
+    }
+    if (tagEnd < 0) { skipped++; continue; }
+
+    // ④ 在标签范围内找 className（取第一个）
+    const cmRel = out.slice(tagStart, tagEnd).indexOf('className=');
+    if (cmRel >= 0) {
+      const valStart = tagStart + cmRel + 'className='.length;
       if (out[valStart] === '"') {
         const close = out.indexOf('"', valStart + 1);
         const existing = out.slice(valStart + 1, close);
         const existSet = new Set(existing.split(/\s+/).filter(Boolean));
         if (classes.every((c) => existSet.has(c))) { skipped++; continue; } // 幂等
-        // 注意：必须是 close + 1 —— 跳过原有的结束引号，否则会残留一个多余的 "
-        // （曾导致 className="x u-fs-14"" 且后续偏移少 1，使 style 段错位多出一个 }）
+        // 必须 close + 1：跳过原结束引号，否则残留一个多余的 "
         out = out.slice(0, valStart) + `"${existing} ${clsStr}"` + out.slice(close + 1);
-        const delta = clsStr.length + 1;
+        // className 在 style 之前时 style 位置后移 delta；在之后则不受影响
+        const delta = valStart < st.startIdx ? clsStr.length + 1 : 0;
         const sStart = st.startIdx + delta;
         const sEnd = st.endIdx + delta;
         out = out.slice(0, sStart) + stylePart + out.slice(sEnd);
@@ -258,17 +282,7 @@ for (const rel of files) {
       continue;
     }
 
-    // ② 向后检查：若同一标签内 style 之后还有 className，跳过（避免重复属性）
-    let hasClassAfter = false;
-    const fwdLimit = Math.min(out.length, st.endIdx + 600);
-    for (let i = st.endIdx; i < fwdLimit; i++) {
-      const c = out[i];
-      if (c === '>' || c === '<') break;
-      if (out.startsWith('className=', i)) { hasClassAfter = true; break; }
-    }
-    if (hasClassAfter) { skipped++; continue; }
-
-    // ③ 无 className：style 段替换为 className（+ 保留的 style）
+    // ⑤ 标签内无 className：把 style 段替换为 className（+ 保留的 style）
     const parts = [`className="${clsStr}"`, stylePart].filter(Boolean);
     out = out.slice(0, st.startIdx) + parts.join(' ') + out.slice(st.endIdx);
     converted++;

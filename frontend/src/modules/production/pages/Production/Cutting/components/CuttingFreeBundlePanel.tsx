@@ -210,11 +210,11 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
   }
 
   const statusTag = (orderQty: number, filled: number) => {
-    if (orderQty <= 0) return <Tag className="u-m-0" color="default">无下单</Tag>;
-    if (filled > orderQty) return <Tag className="u-m-0" color="error">超出 {filled - orderQty} 件</Tag>;
-    if (filled === orderQty) return <Tag className="u-m-0" color="success">已满</Tag>;
-    if (filled > 0) return <Tag className="u-m-0" color="processing">未满</Tag>;
-    return <Tag className="u-m-0" color="default">未填</Tag>;
+    if (orderQty <= 0) return <Tag style={{ margin: 0 }} color="default">无下单</Tag>;
+    if (filled > orderQty) return <Tag style={{ margin: 0 }} color="error">超出 {filled - orderQty} 件</Tag>;
+    if (filled === orderQty) return <Tag style={{ margin: 0 }} color="success">已满</Tag>;
+    if (filled > 0) return <Tag style={{ margin: 0 }} color="processing">未满</Tag>;
+    return <Tag style={{ margin: 0 }} color="default">未填</Tag>;
   };
 
   return (
@@ -222,7 +222,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
       {/* 顶栏说明 + 添加行 */}
       <div className="u-mb-12 u-d-flex u-ai-center u-jc-between u-fwrap-wrap u-gap-8">
         <Space size={8}>
-          <Text strong className="u-fs-15">自由编菲</Text>
+          <Text strong style={{ fontSize: 15 }}>自由编菲</Text>
           <Tooltip title="自由添加菲号行，颜色/尺码按下单选择；数量即面料层数，下单数量仅作提醒不限制输入。快捷键：Ctrl/⌘+Enter 加 1 行 · Ctrl/⌘+Shift+Enter 加 5 行">
             <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
           </Tooltip>
@@ -237,7 +237,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
         >
           <Button icon={<PlusOutlined />} disabled={disabled}>
             添加行
-            <DownOutlined className="u-fs-10 u-ml-2" />
+            <DownOutlined style={{ fontSize: 10, marginLeft: 2 }} />
           </Button>
         </Dropdown>
       </div>
@@ -251,7 +251,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
         }}
       >
         <Space size={8}>
-          <Text strong className="u-fs-15">快捷分扎</Text>
+          <Text strong style={{ fontSize: 15 }}>快捷分扎</Text>
           <Tooltip title="按「颜色 + 尺码 + 每扎件数 × 扎数」一次追加多行，减少逐行添加">
             <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
           </Tooltip>
@@ -369,7 +369,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                           onChange={(v) => updateRow(row.key, 'quantity', v ?? 0)}
                         />
                         {overOrder && (
-                          <Tag color="error" className="u-m-0 u-fs-12" style={{ lineHeight: '20px' }}>超 {filledQty - orderQty}</Tag>
+                          <Tag color="error" style={{ margin: 0, fontSize: 12, lineHeight: '20px' }}>超 {filledQty - orderQty}</Tag>
                         )}
                       </Space>
                     </td>
@@ -396,8 +396,8 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
       {/* 码数汇总匹配：下单数 / 已填 / 剩余 */}
       {summaryRows.length > 0 && (
         <div className="u-mb-12">
-          <Space size={8} className="u-mb-6">
-            <Text strong className="u-fs-14">码数汇总匹配</Text>
+          <Space size={8} style={{ marginBottom: 6 }}>
+            <Text strong style={{ fontSize: 14 }}>码数汇总匹配</Text>
             <Tooltip title="各码已填数量与下单数量对比：未填/未满/已满/超出，超出标红提醒">
               <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
             </Tooltip>
@@ -442,7 +442,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
       )}
 
       {rows.length > 0 && (
-        <Space wrap className="u-mb-12">
+        <Space wrap style={{ marginBottom: 12 }}>
           <Tag color="blue">共 {rows.length} 行</Tag>
           <Tag color="green">总数量：{totalQty} 件</Tag>
           <Popconfirm

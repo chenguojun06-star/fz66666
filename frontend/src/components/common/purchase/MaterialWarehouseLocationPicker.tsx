@@ -34,7 +34,7 @@ const MaterialWarehouseLocationPicker: React.FC<Props> = ({ value, warehouseType
         description={
           <span>
             请先到「库位地图」新建仓库并划分库位，再回来选择。
-            <Button type="link" size="small" className="u-p-0" onClick={() => navigate('/warehouse/location-map')}>
+            <Button type="link" size="small" style={{ padding: 0 }} onClick={() => navigate('/warehouse/location-map')}>
               去库位地图新建 →
             </Button>
           </span>
@@ -46,7 +46,7 @@ const MaterialWarehouseLocationPicker: React.FC<Props> = ({ value, warehouseType
   return (
     <div>
       <Select
-        className="u-w-full"
+        style={{ width: '100%' }}
         size="large"
         placeholder="第一步：选择物料仓库"
         loading={loading}
@@ -64,7 +64,7 @@ const MaterialWarehouseLocationPicker: React.FC<Props> = ({ value, warehouseType
               type="info"
               showIcon
               title="该仓库还没有库位"
-              description={<Button type="link" size="small" className="u-p-0" onClick={() => navigate('/warehouse/location-map')}>去库位地图添加库位 →</Button>}
+              description={<Button type="link" size="small" style={{ padding: 0 }} onClick={() => navigate('/warehouse/location-map')}>去库位地图添加库位 →</Button>}
             />
           ) : (
             <div className="u-d-flex u-fwrap-wrap u-gap-8" style={{ maxHeight: 200, overflowY: 'auto', padding: 2 }}>

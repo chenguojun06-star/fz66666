@@ -24,11 +24,11 @@ const ModuleConfigPanel: React.FC<ModuleConfigPanelProps> = ({ selectedModules, 
       </Space>
     </div>
     {selectedModules === null ? (
-      <Alert title="当前：全部开放，账户可访问所有菜单。点击「基础版预设」快速配置基础套餐。" type="success" showIcon className="u-mb-10" />
+      <Alert title="当前：全部开放，账户可访问所有菜单。点击「基础版预设」快速配置基础套餐。" type="success" showIcon style={{ marginBottom: 10 }} />
     ) : selectedModules.length === 0 ? (
-      <Alert title="警告：白名单为空，账户登录后将没有任何菜单，请至少勾选一个模块。" type="error" showIcon className="u-mb-10" />
+      <Alert title="警告：白名单为空，账户登录后将没有任何菜单，请至少勾选一个模块。" type="error" showIcon style={{ marginBottom: 10 }} />
     ) : (
-      <Alert title={`已配置 ${selectedModules.length} 个模块路径，仅显示勾选的菜单项。`} type="info" showIcon className="u-mb-10" />
+      <Alert title={`已配置 ${selectedModules.length} 个模块路径，仅显示勾选的菜单项。`} type="info" showIcon style={{ marginBottom: 10 }} />
     )}
     <div className="u-d-grid u-gap-12 u-ai-start" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', padding: 2 }}>
       {MODULE_SECTIONS.map(section => {
@@ -41,7 +41,7 @@ const ModuleConfigPanel: React.FC<ModuleConfigPanelProps> = ({ selectedModules, 
             <Checkbox
               checked={allChecked}
               indeterminate={someChecked}
-              className="u-fw-600 u-mb-8 u-fs-15" style={{ lineHeight: 1.5 }}
+              style={{ fontWeight: 600, marginBottom: 8, fontSize: 15, lineHeight: 1.5 }}
               onChange={(e) => {
                 setSelectedModules(prev => {
                   const base = prev === null ? [] : [...prev];
@@ -57,7 +57,7 @@ const ModuleConfigPanel: React.FC<ModuleConfigPanelProps> = ({ selectedModules, 
                 <Checkbox
                   key={item.path}
                   checked={selectedModules !== null && selectedModules.includes(item.path)}
-                  className="u-fs-14" style={{ marginLeft: 0, lineHeight: 1.6 }}
+                  style={{ fontSize: 14, marginLeft: 0, lineHeight: 1.6 }}
                   onChange={(e) => {
                     setSelectedModules(prev => {
                       const base = prev === null ? [] : [...prev];

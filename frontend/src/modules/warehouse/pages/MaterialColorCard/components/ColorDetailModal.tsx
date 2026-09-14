@@ -36,7 +36,7 @@ const ColorDetailModal: React.FC<Props> = ({
                   src={getFullAuthedFileUrl(colorDetailItem.image)}
                   width={180}
                   height={180}
-                  className="u-objf-cover u-br-8" style={{ border: '1px solid var(--color-border-light)' }}
+                  style={{ objectFit: 'cover', borderRadius: 8, border: '1px solid var(--color-border-light)' }}
                 />
               ) : (
                 <div style={{

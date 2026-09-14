@@ -82,7 +82,7 @@ const OutboundModal: React.FC<OutboundModalProps> = ({
       }
     >
       {outboundModal.data && (
-        <Space orientation="vertical" className="u-w-full" size={12}>
+        <Space orientation="vertical" style={{ width: '100%' }} size={12}>
           <MaterialInfoCard
             materialCode={outboundModal.data.materialCode}
             materialName={outboundModal.data.materialName}

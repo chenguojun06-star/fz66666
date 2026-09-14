@@ -134,7 +134,7 @@ const ExpenseReimbursementPage: React.FC = () => {
   const openDetail = (record: ExpenseReimbursement) => { setDetailRecord(record); setDetailOpen(true); };
 
   const columns: ColumnsType<ExpenseReimbursement> = [
-    { title: '报销单号', dataIndex: 'reimbursementNo', width: 160, render: (text: string, record) => <Button type="link" className="u-p-0 u-h-auto" onClick={() => openDetail(record)}>{text}</Button> },
+    { title: '报销单号', dataIndex: 'reimbursementNo', width: 160, render: (text: string, record) => <Button type="link" style={{ padding: 0, height: 'auto' }} onClick={() => openDetail(record)}>{text}</Button> },
     { title: '事由', dataIndex: 'title', width: 180, ellipsis: true },
     { title: '类型', dataIndex: 'expenseType', width: 110, render: (val: string) => typeLabel(val) },
     { title: '金额', dataIndex: 'amount', width: 110, align: 'right', render: (val: number) => <span className="u-fw-500" style={{ color: 'var(--color-danger)' }}>{formatMoney(val || 0)}</span> },
@@ -180,25 +180,25 @@ const ExpenseReimbursementPage: React.FC = () => {
   return (
     <>
       <PageLayout>
-        {showSmartErrorNotice && smartError ? (<Card className="u-mb-16"><SmartErrorNotice error={smartError} onFix={() => { void fetchList(); }} /></Card>) : null}
+        {showSmartErrorNotice && smartError ? (<Card style={{ marginBottom: 16 }}><SmartErrorNotice error={smartError} onFix={() => { void fetchList(); }} /></Card>) : null}
 
         {/* ===== 统一统计卡片 ===== */}
         <div className="u-d-grid u-gap-12 u-mb-12" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-          <Card size="small" className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-            <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined className="u-mr-4 u-fs-12" />待审批</span>} value={stats.pending} suffix="件" valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 500 }} />
+          <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+            <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>} value={stats.pending} suffix="件" valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 500 }} />
           </Card>
-          <Card size="small" className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-            <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined className="u-mr-4 u-fs-12" />已审批</span>} value={cardStats.approved + cardStats.paid} suffix="件" valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 500 }} />
+          <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+            <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>} value={cardStats.approved + cardStats.paid} suffix="件" valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 500 }} />
           </Card>
-          <Card size="small" className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-            <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined className="u-mr-4 u-fs-12" />已付款</span>} value={stats.paidAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 500 }} />
+          <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+            <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已付款</span>} value={stats.paidAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 500 }} />
           </Card>
-          <Card size="small" className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
-            <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined className="u-mr-4 u-fs-12" />合计金额</span>} value={stats.totalAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-text-primary)', fontSize: 15, fontWeight: 500 }} />
+          <Card size="small" style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }} styles={{ body: { padding: '5px 10px' } }}>
+            <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />合计金额</span>} value={stats.totalAmount} prefix="¥" precision={2} valueStyle={{ color: 'var(--color-text-primary)', fontSize: 15, fontWeight: 500 }} />
           </Card>
         </div>
 
-        <Card className="u-mb-12 u-br-6" style={{ border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
+        <Card style={{ marginBottom: 12, borderRadius: 6, border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
           <Tabs
             activeKey={filterStatus || ''}
             onChange={(k) => { setFilterStatus(k || undefined); setPage(1); }}
@@ -211,7 +211,7 @@ const ExpenseReimbursementPage: React.FC = () => {
               { key: 'rejected', label: `已驳回` },
             ]}
           />
-          <Row gutter={[12, 12]} align="middle" className="u-mt-8">
+          <Row gutter={[12, 12]} align="middle" style={{ marginTop: 8 }}>
             <Col><Select value={viewMode} onChange={(v) => { setViewMode(v); setPage(1); }} style={{ width: 130 }} options={[{ value: 'my', label: '我的报销' }, { value: 'all', label: '全部报销（审批）' }]} /></Col>
             <Col><Select value={filterType} onChange={(v) => { setFilterType(v); setPage(1); }} allowClear placeholder="费用类型" style={{ width: 130 }} options={EXPENSE_TYPES} /></Col>
             <Col><Input value={keyword} onChange={(e) => setKeyword(e.target.value)} onPressEnter={() => { setPage(1); fetchList(); }} placeholder="搜索事由" style={{ width: 160 }} suffix={<SearchOutlined style={{ color: 'var(--color-text-quaternary)' }} />} /></Col>
@@ -224,7 +224,7 @@ const ExpenseReimbursementPage: React.FC = () => {
                 style={{ width: 240 }}
               />
             </Col>
-            <Col flex="auto" className="u-ta-right">
+            <Col flex="auto" style={{ textAlign: 'right' }}>
               <Space size={8}>
                 <Button type="primary" ghost size="small" icon={<PlusOutlined />} onClick={() => openForm()}>新建报销</Button>
                 <Button size="small" ghost onClick={() => fetchList()}>刷新</Button>
@@ -248,7 +248,7 @@ const ExpenseReimbursementPage: React.FC = () => {
             <Form.Item label="报销凭证" required={!editingRecord} validateStatus={uploadedDocs.some(d => d.docId) ? 'success' : undefined}
               help={uploadedDocs.some(d => d.docId) ? ` 已上传 ${uploadedDocs.filter(d => d.docId).length} 张，点击图片可放大预览` : editingRecord ? undefined : '请上传发票/收据图片，支持拖拽、粘贴或点击上传'}
             >
-              <Space orientation="vertical" className="u-w-full" size={8}>
+              <Space orientation="vertical" style={{ width: '100%' }} size={8}>
                 <div
                   onDragOver={(e) => { e.preventDefault(); }}
                   onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) processFiles(e.dataTransfer.files); }}
@@ -289,9 +289,9 @@ const ExpenseReimbursementPage: React.FC = () => {
                       {uploadedDocs.map((doc, idx) => (
                         <div key={doc.tempId} className="u-pos-relative u-fshrink-0">
                           {doc.recognizing ? (<div className="u-d-flex u-ai-center u-jc-center u-br-6" style={{ width: 72, height: 72, border: '1px dashed var(--color-border-antd)', background: 'var(--color-bg-container)' }}><Spin /></div>)
-                            : doc.imageUrl ? (<Image src={getFullAuthedFileUrl(doc.imageUrl)} width={72} height={72} className="u-objf-cover u-br-6" />) : null}
+                            : doc.imageUrl ? (<Image src={getFullAuthedFileUrl(doc.imageUrl)} width={72} height={72} style={{ objectFit: 'cover', borderRadius: 6 }} />) : null}
                           <Button type="text" danger icon={<CloseCircleOutlined />}
-                            className="u-pos-absolute u-p-0" style={{ top: -8, right: -8, minWidth: 18, height: 18, background: 'var(--color-bg-base)', borderRadius: '50%', border: '1px solid var(--color-danger)' }}
+                            style={{ position: 'absolute', top: -8, right: -8, padding: 0, minWidth: 18, height: 18, background: 'var(--color-bg-base)', borderRadius: '50%', border: '1px solid var(--color-danger)' }}
                             onClick={() => setUploadedDocs(prev => prev.filter((_, i) => i !== idx))}
                           />
                         </div>
@@ -306,8 +306,8 @@ const ExpenseReimbursementPage: React.FC = () => {
               <Col span={14}><Form.Item name="title" label="报销事由" rules={[{ required: true, message: '请填写报销事由' }]}><Input placeholder="如：出差往返打车费" /></Form.Item></Col>
             </Row>
             <Row gutter={16}>
-              <Col span={12}><Form.Item name="amount" label="报销金额" rules={[{ required: true, message: '请填写金额' }]}><InputNumber min={0.01} precision={2} prefix="¥" placeholder="0.00" className="u-w-full" /></Form.Item></Col>
-              <Col span={12}><Form.Item name="expenseDate" label="费用日期" rules={[{ required: true, message: '请选择日期' }]}><Input className="u-w-full" /></Form.Item></Col>
+              <Col span={12}><Form.Item name="amount" label="报销金额" rules={[{ required: true, message: '请填写金额' }]}><InputNumber min={0.01} precision={2} prefix="¥" placeholder="0.00" style={{ width: '100%' }} /></Form.Item></Col>
+              <Col span={12}><Form.Item name="expenseDate" label="费用日期" rules={[{ required: true, message: '请选择日期' }]}><Input style={{ width: '100%' }} /></Form.Item></Col>
             </Row>
             {expenseTypeValue === 'material_advance' && (
               <Row gutter={16}>
@@ -333,7 +333,7 @@ const ExpenseReimbursementPage: React.FC = () => {
             {editingRecord && docList.length > 0 && (
               <div className="u-mt-16" style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: 12 }}>
                 <div className="u-fw-500 u-mb-8" style={{ color: 'var(--color-text-primary)' }}>已上传凭证（点击预览）</div>
-                <Image.PreviewGroup><Space wrap>{docList.map(doc => (<Image key={doc.id} src={getFullAuthedFileUrl(doc.imageUrl)} width={80} height={80} className="u-objf-cover u-br-6" />))}</Space></Image.PreviewGroup>
+                <Image.PreviewGroup><Space wrap>{docList.map(doc => (<Image key={doc.id} src={getFullAuthedFileUrl(doc.imageUrl)} width={80} height={80} style={{ objectFit: 'cover', borderRadius: 6 }} />))}</Space></Image.PreviewGroup>
               </div>
             )}
           </Form>

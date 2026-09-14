@@ -144,7 +144,7 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
         <span>
           {buildLendToDisplay(record)}
           {record.transferFromLoanId && (
-            <Tag color="purple" className="u-ml-4 u-fs-11">转借</Tag>
+            <Tag color="purple" style={{ marginLeft: 4, fontSize: 11 }}>转借</Tag>
           )}
         </span>
       ),
@@ -271,7 +271,7 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
             max={currentLoan?.remainingQuantity || currentLoan?.quantity || 1}
             value={returnQty}
             onChange={v => setReturnQty(v || 1)}
-            className="u-ml-8" style={{ width: 120 }}
+            style={{ width: 120, marginLeft: 8 }}
           />
         </div>
         <Input.TextArea
@@ -297,20 +297,20 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
             max={currentLoan?.remainingQuantity || currentLoan?.quantity || 1}
             value={transferForm.quantity}
             onChange={v => setTransferForm({ ...transferForm, quantity: v || 1 })}
-            className="u-ml-8" style={{ width: 120 }}
+            style={{ width: 120, marginLeft: 8 }}
           />
         </div>
         <Input
           placeholder="转借入人姓名"
           value={transferForm.lendTo}
           onChange={e => setTransferForm({ ...transferForm, lendTo: e.target.value })}
-          className="u-mb-8"
+          style={{ marginBottom: 8 }}
         />
         <Input
           placeholder="转借入工厂名称（选填）"
           value={transferForm.lendToFactoryName}
           onChange={e => setTransferForm({ ...transferForm, lendToFactoryName: e.target.value })}
-          className="u-mb-8"
+          style={{ marginBottom: 8 }}
         />
         <Input.TextArea
           placeholder="转借备注（选填）"

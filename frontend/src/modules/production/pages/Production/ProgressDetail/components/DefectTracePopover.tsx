@@ -108,7 +108,7 @@ const DefectTracePopover: React.FC<{
               <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>
                 ({w.defectRate}%)
               </span>
-              <Tag color={riskColor[w.riskLevel]} className="u-fs-14 u-lh-16px u-p-04px u-ml-auto">
+              <Tag color={riskColor[w.riskLevel]} style={{ fontSize: 14, lineHeight: '16px', padding: '0 4px', marginLeft: 'auto' }}>
                 {riskLabel[w.riskLevel]}
               </Tag>
             </div>

@@ -37,7 +37,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
         <Alert
           type="warning"
           showIcon
-          className="u-mb-12"
+          style={{ marginBottom: 12 }}
           message={`有 ${pendingReceive.length} 批外发发货待收货确认`}
           description="外发工厂已发货，请在下方列表展开对应记录并点击「确认收货」；确认后工厂端会收到收货回执通知。"
         />

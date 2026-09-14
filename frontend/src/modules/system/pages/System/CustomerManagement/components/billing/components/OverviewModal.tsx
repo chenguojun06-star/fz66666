@@ -52,7 +52,7 @@ const OverviewModal: React.FC<OverviewModalProps> = ({
                 percent={overview.storageUsedPercent || 0}
 
                 status={(overview.storageUsedPercent || 0) >= 90 ? 'exception' : 'normal'}
-                className="u-d-inline-flex" style={{ width: 150 }}
+                style={{ width: 150, display: 'inline-flex' }}
               />
               <span className="u-ml-8">
                 {formatStorageSize(overview.storageUsedMb || 0)}

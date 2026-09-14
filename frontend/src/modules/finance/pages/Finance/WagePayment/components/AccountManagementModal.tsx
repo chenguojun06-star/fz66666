@@ -81,7 +81,7 @@ const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
             <div>
               <div className="u-fw-500">
                 {ACCOUNT_TYPE_OPTIONS.find(o => o.value === acc.accountType)?.label}
-                {acc.isDefault === 1 && <Tag color="blue" className="u-ml-8">默认</Tag>}
+                {acc.isDefault === 1 && <Tag color="blue" style={{ marginLeft: 8 }}>默认</Tag>}
               </div>
               {acc.accountType === 'BANK' ? (
                 <span style={{ color: 'var(--color-text-secondary)' }}>{acc.bankName} {acc.accountNo}</span>

@@ -91,11 +91,11 @@ const AiHealthIndicator: React.FC = () => {
       <div className="u-mb-8 u-fw-600 u-fs-13">
         AI 组件健康状态
       </div>
-      <Space direction="vertical" size={4} className="u-w-full">
+      <Space direction="vertical" size={4} style={{ width: '100%' }}>
         {entries.map(([key, val]) => (
           <div key={key} className="u-d-flex u-jc-between u-ai-center">
             <span className="u-fs-12">{COMPONENT_LABELS[key] || key}</span>
-            <Tag color={STATUS_COLORS[val.status]} className="u-m-0 u-fs-11">
+            <Tag color={STATUS_COLORS[val.status]} style={{ margin: 0, fontSize: 11 }}>
               {STATUS_TEXT[val.status] || val.status}
             </Tag>
           </div>

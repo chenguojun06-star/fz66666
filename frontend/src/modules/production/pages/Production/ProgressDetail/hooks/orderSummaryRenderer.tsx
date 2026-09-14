@@ -118,7 +118,7 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
                       <span style={metaValueStyle}>{merchandiserName}</span>
                       {remark ? (
                         <Badge dot color="var(--color-danger)" offset={[-2, 2]}>
-                          <ExclamationCircleOutlined className="u-fs-12" style={{ color: 'var(--color-danger)' }} />
+                          <ExclamationCircleOutlined style={{ fontSize: 12, color: 'var(--color-danger)' }} />
                         </Badge>
                       ) : null}
                     </div>
@@ -151,16 +151,16 @@ export function createOrderSummaryRender(ctx: OrderSummaryContext) {
               ]}
             />
             <div className="u-d-flex u-ai-center u-gap-6 u-fwrap-wrap">
-              <Tag color={status.color} className="u-m-0 u-fs-12">{status.text}</Tag>
-              {record.urgencyLevel === 'urgent' && <Tag color="red" className="u-m-0 u-fs-12">急单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" className="u-m-0 u-fs-12">首单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" className="u-m-0 u-fs-12">翻单</Tag>}
+              <Tag color={status.color} style={{ margin: 0, fontSize: 12 }}>{status.text}</Tag>
+              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 12 }}>急单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 12 }}>首单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 12 }}>翻单</Tag>}
               {(() => {
                 const { score, level } = calcHealthScore(record);
                 if (level === 'good') return null;
-                return <Tag color={level === 'warn' ? 'orange' : 'red'} className="u-m-0 u-fs-12">{level === 'warn' ? `关注 ${score}` : `风险 ${score}`}</Tag>;
+                return <Tag color={level === 'warn' ? 'orange' : 'red'} style={{ margin: 0, fontSize: 12 }}>{level === 'warn' ? `关注 ${score}` : `风险 ${score}`}</Tag>;
               })()}
-              {stagnantDays !== undefined ? <Tag color="orange" className="u-m-0 u-fs-12">停滞 {stagnantDays} 天</Tag> : null}
+              {stagnantDays !== undefined ? <Tag color="orange" style={{ margin: 0, fontSize: 12 }}>停滞 {stagnantDays} 天</Tag> : null}
               {aiRisk ? (
                 <Tooltip title={[aiRisk.riskDescription, aiRisk.predictedEndDate ? `预测完成：${aiRisk.predictedEndDate}` : ''].filter(Boolean).join(' · ')}>
                   <Tag color={aiRisk.riskLevel === 'overdue' ? 'error' : aiRisk.riskLevel === 'danger' ? 'volcano' : aiRisk.riskLevel === 'warning' ? 'warning' : 'success'} style={aiRisk.riskLevel === 'overdue' ? softTagStyle('var(--color-rose-50)', 'var(--color-rose-300)') : aiRisk.riskLevel === 'danger' ? softTagStyle('var(--color-orange-50)', 'var(--color-amber-300)') : aiRisk.riskLevel === 'warning' ? softTagStyle('var(--color-amber-50)', 'var(--color-amber-300)') : softTagStyle('var(--color-emerald-50)', 'var(--color-emerald-600)')}>

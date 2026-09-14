@@ -26,7 +26,7 @@ const DirectOutboundModal: React.FC<Props> = ({ open, target, outbounding, form,
           <div>收件人: {target.receiverName} &nbsp;{target.receiverPhone}</div>
         </div>
       )}
-      <Alert className="u-mb-12 u-fs-14" type="success" showIcon
+      <Alert style={{ marginBottom: 12, fontSize: 14 }} type="success" showIcon
         title="出库后自动扣减商品编码库存、更新订单状态为【已出库】、生成销售收入流水、回传物流信息到平台" />
       <Form form={form} layout="vertical">
         <Form.Item name="expressCompany" label="快递公司"

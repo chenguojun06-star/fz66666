@@ -200,7 +200,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar' }) => {
       <div className="insight-stage-content">
         <div className="insight-brain-section">
           <div className="insight-section-title">
-            <ThunderboltOutlined className="u-mr-6" style={{ color: 'var(--color-gold)' }} />
+            <ThunderboltOutlined style={{ color: 'var(--color-gold)', marginRight: 6 }} />
             AI 大脑状态
           </div>
           <div className="insight-brain-grid">
@@ -229,7 +229,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar' }) => {
           </div>
           {brainData?.summary?.topRisk && (
             <div className="insight-top-risk">
-              <WarningOutlined className="u-mr-6" style={{ color: 'var(--color-amber-600)' }} />
+              <WarningOutlined style={{ color: 'var(--color-amber-600)', marginRight: 6 }} />
               {brainData.summary.topRisk}
             </div>
           )}
@@ -237,13 +237,13 @@ const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar' }) => {
 
         <div className="insight-cards-section">
           <div className="insight-section-title">
-            <BulbOutlined className="u-mr-6" style={{ color: 'var(--color-secondary)' }} />
+            <BulbOutlined style={{ color: 'var(--color-secondary)', marginRight: 6 }} />
             智能洞察卡片
           </div>
           <div className="insight-cards-list">
             {insights.length === 0 ? (
               <div className="insight-empty">
-                <CheckCircleOutlined className="u-mr-6" style={{ color: 'var(--color-emerald-600)' }} />
+                <CheckCircleOutlined style={{ color: 'var(--color-emerald-600)', marginRight: 6 }} />
                 暂无预警，系统运行正常
               </div>
             ) : (
@@ -291,7 +291,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar' }) => {
         {actionTasks.length > 0 && (
           <div className="insight-actions-section">
             <div className="insight-section-title">
-              <ThunderboltOutlined className="u-mr-6" style={{ color: 'var(--color-error)' }} />
+              <ThunderboltOutlined style={{ color: 'var(--color-error)', marginRight: 6 }} />
               待处理任务
             </div>
             <div className="insight-actions-list">

@@ -91,7 +91,7 @@ export const buildProcessColumns = ({
             </Tag>
             <span style={{ fontSize: compact ? 11 : 12, color: 'var(--color-text-tertiary)' }}>{info.count} 个工序</span>
             {readOnly ? null : (
-              <Button type="link" icon={<PlusOutlined />} onClick={() => addStepToStage(stage)} className="u-p-0">
+              <Button type="link" icon={<PlusOutlined />} onClick={() => addStepToStage(stage)} style={{ padding: 0 }}>
                 添加
               </Button>
             )}
@@ -138,7 +138,7 @@ export const buildProcessColumns = ({
           controls={false}
           value={value || 0}
           onChange={(nextValue) => updateStep(index, { standardTime: nextValue || 0 })}
-          className="u-w-full"
+          style={{ width: '100%' }}
         />
       ),
     },
@@ -154,7 +154,7 @@ export const buildProcessColumns = ({
           controls={false}
           value={record.unitPrice ?? record.price ?? 0}
           onChange={(nextValue) => updateStep(index, { unitPrice: nextValue || 0 })}
-          className="u-w-full"
+          style={{ width: '100%' }}
         />
       ),
     },
@@ -182,7 +182,7 @@ export const buildProcessColumns = ({
                   };
                   onChange({ ...value, steps: nextSteps });
                 }}
-                className="u-w-full"
+                style={{ width: '100%' }}
               />
             ),
           }))

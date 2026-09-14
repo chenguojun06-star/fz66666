@@ -540,7 +540,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                               controls={false}
                               value={Number(row.quantities[columnIndex] || 0)}
                               onChange={(value) => updateCell(rowIndex, columnIndex, Number(value || 0))}
-                              className="u-w-full"
+                              style={{ width: '100%' }}
                               disabled={editLocked}
                             />
                           </td>

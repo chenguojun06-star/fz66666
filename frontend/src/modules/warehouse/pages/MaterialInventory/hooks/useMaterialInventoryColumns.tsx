@@ -76,7 +76,7 @@ export function useMaterialInventoryColumns({
               src={getFullAuthedFileUrl(record.materialImage)}
               alt="物料"
               width={48}
-              className="u-h-auto u-d-block"
+              style={{ height: 'auto', display: 'block' }}
               preview={false}
             />
           ) : (
@@ -90,7 +90,7 @@ export function useMaterialInventoryColumns({
       key: 'materialInfo',
       width: 280,
       render: (_, record) => (
-        <Space orientation="vertical" size={4} className="u-w-full">
+        <Space orientation="vertical" size={4} style={{ width: '100%' }}>
           <div className="u-d-flex u-fs-14" style={{ lineHeight: '22px', height: '22px' }}>
             <span className="u-ta-right u-fshrink-0" style={{ color: 'var(--neutral-text-disabled)', width: '60px' }}>编号：</span>
             <span className="u-fw-600" style={{ marginLeft: '8px' }}>{record.materialCode || '-'}</span>
@@ -98,7 +98,7 @@ export function useMaterialInventoryColumns({
           <div className="u-d-flex u-fs-14" style={{ lineHeight: '22px', height: '22px' }}>
             <span className="u-ta-right u-fshrink-0" style={{ color: 'var(--neutral-text-disabled)', width: '60px' }}>名称：</span>
             <span className="u-fw-600" style={{ marginLeft: '8px' }}>{record.materialName || '-'}</span>
-            {record.disabled === 1 && <Tag className="u-ml-6" color="default">已停用</Tag>}
+            {record.disabled === 1 && <Tag style={{ marginLeft: 6 }} color="default">已停用</Tag>}
           </div>
           <div className="u-d-flex u-fs-14 u-ai-center" style={{ lineHeight: '22px', height: '22px' }}>
             <span className="u-ta-right u-fshrink-0" style={{ color: 'var(--neutral-text-disabled)', width: '60px' }}>分类：</span>
@@ -127,7 +127,7 @@ export function useMaterialInventoryColumns({
         }
 
         return (
-          <Space orientation="vertical" size={4} className="u-w-full">
+          <Space orientation="vertical" size={4} style={{ width: '100%' }}>
             <div style={compactInfoRowStyle}>
               <span style={compactInfoLabelStyle}>规格/幅宽：</span>
               <span className="u-fw-600" style={{ marginLeft: '8px' }}>{formatMaterialSpecWidth(record.specification, record.fabricWidth)}</span>
@@ -161,7 +161,7 @@ export function useMaterialInventoryColumns({
         const safetyStock = record.safetyStock ?? 0;
         const isLow = availableQty < safetyStock;
         return (
-          <Space orientation="vertical" size={4} className="u-w-full">
+          <Space orientation="vertical" size={4} style={{ width: '100%' }}>
             <div className="stock-grid">
               <div
                 style={{ cursor: onPickStock ? 'pointer' : undefined }}
@@ -232,7 +232,7 @@ export function useMaterialInventoryColumns({
       key: 'price',
       width: 180,
       render: (_, record) => (
-        <Space orientation="vertical" size={10} className="u-w-full">
+        <Space orientation="vertical" size={10} style={{ width: '100%' }}>
           <div>
             <div className="u-fs-var--font-size-sm u-mb-4 u-fw-500" style={{ color: 'var(--neutral-text-disabled)' }}>单价</div>
             <div className="u-fw-700" style={{ fontSize: "var(--font-size-lg)", color: 'var(--neutral-text)' }}>
@@ -271,7 +271,7 @@ export function useMaterialInventoryColumns({
       key: 'records',
       width: 200,
       render: (_, record) => (
-        <Space orientation="vertical" size={6} className="u-w-full">
+        <Space orientation="vertical" size={6} style={{ width: '100%' }}>
           <div style={{ padding: '4px 8px', background: 'var(--color-bg-container)' }}>
             <div className="u-fs-var--font-size-xs u-mb-2" style={{ color: 'var(--neutral-text-secondary)' }}> 最后入库</div>
             <div className="u-fs-var--font-size-xs" style={{ color: 'var(--neutral-text-secondary)' }}>{record.lastInboundDate}</div>

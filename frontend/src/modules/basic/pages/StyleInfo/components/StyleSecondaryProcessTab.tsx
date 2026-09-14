@@ -103,7 +103,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
       )}
 
       {simpleView && dataSource.length === 0 && (
-        <Alert title="无二次工艺记录" type="info" showIcon className="u-mb-16" />
+        <Alert title="无二次工艺记录" type="info" showIcon style={{ marginBottom: 16 }} />
       )}
 
       <Form form={form} component={false}>

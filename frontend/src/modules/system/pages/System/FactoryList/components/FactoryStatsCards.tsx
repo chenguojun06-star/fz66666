@@ -20,11 +20,11 @@ interface FactoryStatsCardsProps {
 
 const FactoryStatsCards: React.FC<FactoryStatsCardsProps> = ({ total, factoryStats }) => {
   return (
-    <Row gutter={[12, 12]} className="u-mb-16">
+    <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
       <Col xs={12} sm={8} md={6} lg={4}>
-        <Card size="small" className="u-br-8" style={{ border: '1px solid var(--color-border-antd, var(--color-border-light))' }}>
+        <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, var(--color-border-light))' }}>
           <div className="u-d-flex u-ai-center u-gap-12">
-            <Avatar size={40} icon={<TeamOutlined />} className="u-fs-20" style={{ backgroundColor: 'var(--primary-color, var(--color-info))' }} />
+            <Avatar size={40} icon={<TeamOutlined />} style={{ backgroundColor: 'var(--primary-color, var(--color-info))', fontSize: 20 }} />
             <div>
               <div className="u-fs-12" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
                 <span className="u-d-block">供应商总数</span>
@@ -37,9 +37,9 @@ const FactoryStatsCards: React.FC<FactoryStatsCardsProps> = ({ total, factorySta
         </Card>
       </Col>
       <Col xs={12} sm={8} md={6} lg={4}>
-        <Card size="small" className="u-br-8" style={{ border: '1px solid var(--color-border-antd, var(--color-border-light))' }}>
+        <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, var(--color-border-light))' }}>
           <div className="u-d-flex u-ai-center u-gap-12">
-            <Avatar size={40} icon={<ShopOutlined />} className="u-fs-20" style={{ backgroundColor: 'var(--color-info, var(--color-info))' }} />
+            <Avatar size={40} icon={<ShopOutlined />} style={{ backgroundColor: 'var(--color-info, var(--color-info))', fontSize: 20 }} />
             <div>
               <div className="u-fs-12" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
                 <span className="u-d-block">面辅料供应商</span>
@@ -52,9 +52,9 @@ const FactoryStatsCards: React.FC<FactoryStatsCardsProps> = ({ total, factorySta
         </Card>
       </Col>
       <Col xs={12} sm={8} md={6} lg={4}>
-        <Card size="small" className="u-br-8" style={{ border: '1px solid var(--color-border-antd, var(--color-border-light))' }}>
+        <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, var(--color-border-light))' }}>
           <div className="u-d-flex u-ai-center u-gap-12">
-            <Avatar size={40} icon={<ApartmentOutlined />} className="u-fs-20" style={{ backgroundColor: 'var(--color-warning, var(--color-warning))' }} />
+            <Avatar size={40} icon={<ApartmentOutlined />} style={{ backgroundColor: 'var(--color-warning, var(--color-warning))', fontSize: 20 }} />
             <div>
               <div className="u-fs-12" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
                 <span className="u-d-block">外发工厂</span>
@@ -67,9 +67,9 @@ const FactoryStatsCards: React.FC<FactoryStatsCardsProps> = ({ total, factorySta
         </Card>
       </Col>
       <Col xs={12} sm={8} md={6} lg={4}>
-        <Card size="small" className="u-br-8" style={{ border: '1px solid var(--color-border-antd, var(--color-border-light))' }}>
+        <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, var(--color-border-light))' }}>
           <div className="u-d-flex u-ai-center u-gap-12">
-            <Avatar size={40} icon={<UserOutlined />} className="u-fs-20" style={{ backgroundColor: 'var(--color-success, var(--color-success))' }} />
+            <Avatar size={40} icon={<UserOutlined />} style={{ backgroundColor: 'var(--color-success, var(--color-success))', fontSize: 20 }} />
             <div>
               <div className="u-fs-12" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
                 <span className="u-d-block">启用中</span>
@@ -82,9 +82,9 @@ const FactoryStatsCards: React.FC<FactoryStatsCardsProps> = ({ total, factorySta
         </Card>
       </Col>
       <Col xs={12} sm={8} md={6} lg={4}>
-        <Card size="small" className="u-br-8" style={{ border: '1px solid var(--color-border-antd, var(--color-border-light))' }}>
+        <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, var(--color-border-light))' }}>
           <div className="u-d-flex u-ai-center u-gap-12">
-            <Avatar size={40} icon={<ApartmentOutlined />} className="u-fs-20" style={{ backgroundColor: 'var(--color-success, var(--color-success))' }} />
+            <Avatar size={40} icon={<ApartmentOutlined />} style={{ backgroundColor: 'var(--color-success, var(--color-success))', fontSize: 20 }} />
             <div>
               <div className="u-fs-12" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
                 <span className="u-d-block">已准入</span>
@@ -97,7 +97,7 @@ const FactoryStatsCards: React.FC<FactoryStatsCardsProps> = ({ total, factorySta
         </Card>
       </Col>
       <Col xs={12} sm={8} md={6} lg={4}>
-        <Card size="small" className="u-br-8" style={{ border: '1px solid var(--color-border-antd, var(--color-border-light))' }}>
+        <Card size="small" style={{ borderRadius: 8, border: '1px solid var(--color-border-antd, var(--color-border-light))' }}>
           <div className="u-d-flex u-ai-center u-gap-12">
             <Avatar size={40} icon={<TeamOutlined />} style={{ backgroundColor: factoryStats.pendingCount > 0 ? 'var(--color-warning, var(--color-warning))' : 'var(--color-text-quaternary, var(--color-border-antd))', fontSize: 20 }} />
             <div>

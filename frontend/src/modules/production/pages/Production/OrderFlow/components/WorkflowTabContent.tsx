@@ -58,7 +58,7 @@ const WorkflowTabContent: React.FC<WorkflowTabContentProps> = ({
             title="工序单价信息"
             type="info"
             showIcon
-            className="u-mb-16"
+            style={{ marginBottom: 16 }}
             description={
               <div>
                 <p>

@@ -69,7 +69,7 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
       const v = String(value || '');
       if (!v) return '-';
       const colorMap: Record<string, string> = { S: 'warning', A: 'success', B: 'processing', C: 'error' };
-      return <Tag color={colorMap[v] || 'default'} className="u-fw-700">{v}</Tag>;
+      return <Tag color={colorMap[v] || 'default'} style={{ fontWeight: 700 }}>{v}</Tag>;
     },
     admissionStatus: (value: unknown) => {
       const v = String(value || '');
@@ -287,7 +287,7 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
             max={99999}
             precision={0}
             placeholder="请输入日产能，如：200"
-            className="u-w-full"
+            style={{ width: '100%' }}
             suffix="件/天"
           />
         </Form.Item>

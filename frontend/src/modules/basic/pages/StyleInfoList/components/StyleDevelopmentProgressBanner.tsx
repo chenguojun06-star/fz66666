@@ -132,7 +132,7 @@ const StyleDevelopmentProgressBanner: React.FC<StyleDevelopmentProgressBannerPro
                 <span className="u-fw-600 u-fs-14" style={{ color: 'var(--color-text-primary)' }}>
                   {item.title}
                 </span>
-                <Tag color={item.meta.color} className="u-m-0 u-fs-11 u-lh-18px" style={{ padding: '0 6px', height: 20 }}>
+                <Tag color={item.meta.color} style={{ margin: 0, fontSize: 11, padding: '0 6px', height: 20, lineHeight: '18px' }}>
                   {item.meta.label}
                 </Tag>
               </div>
@@ -149,7 +149,7 @@ const StyleDevelopmentProgressBanner: React.FC<StyleDevelopmentProgressBannerPro
                 showInfo={false}
                 size="small"
                 strokeLinecap="round"
-                className="u-mb-10"
+                style={{ marginBottom: 10 }}
               />
 
               <div className="u-d-flex u-fd-column u-gap-4 u-fs-11">

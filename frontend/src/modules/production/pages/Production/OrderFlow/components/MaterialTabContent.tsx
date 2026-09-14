@@ -164,7 +164,7 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
               // D-138：状态中文化（复用全系统统一的采购状态映射）
               render: (v: any) => {
                 const item = MATERIAL_PURCHASE_STATUS_MAP[String(v || '').toLowerCase()];
-                return item ? <Tag color={item.color} className="u-m-0">{item.text}</Tag> : (v || '-');
+                return item ? <Tag color={item.color} style={{ margin: 0 }}>{item.text}</Tag> : (v || '-');
               },
             },
           ]}

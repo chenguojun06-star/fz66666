@@ -190,7 +190,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
                   label="异常数量"
                   rules={[{ required: true, message: '请填写异常数量' }]}
                 >
-                  <InputNumber min={1} max={maxIssueQuantity > 0 ? maxIssueQuantity : undefined} precision={0} className="u-w-full" />
+                  <InputNumber min={1} max={maxIssueQuantity > 0 ? maxIssueQuantity : undefined} precision={0} style={{ width: '100%' }} />
                 </Form.Item>
                 <Form.Item name="disposition" label="建议处理" rules={[{ required: true, message: '请选择建议处理' }]}>
                   <Select options={DISPOSITION_OPTIONS} showSearch optionFilterProp="label" />
@@ -292,7 +292,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
         confirmLoading={resolveSubmitting}
         destroyOnHidden
       >
-        <Form form={resolveForm} layout="vertical" className="u-mt-16">
+        <Form form={resolveForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="disposition" label="最终处理方式" rules={[{ required: true, message: '请选择处理方式' }]}>
             <Select options={DISPOSITION_OPTIONS} showSearch optionFilterProp="label" />
           </Form.Item>

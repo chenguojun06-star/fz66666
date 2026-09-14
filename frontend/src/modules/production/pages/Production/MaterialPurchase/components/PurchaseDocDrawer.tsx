@@ -102,7 +102,7 @@ const PurchaseDocDrawer: React.FC<PurchaseDocDrawerProps> = ({ open, orderNo, st
                   src={getFullAuthedFileUrl(doc.imageUrl)}
                   width={184}
                   height={128}
-                  className="u-objf-cover u-br-4"
+                  style={{ objectFit: 'cover', borderRadius: 4 }}
                   preview={{ cover: '预览' }}
                 />
                 <div className="u-mt-6 u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>

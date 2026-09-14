@@ -82,7 +82,7 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
     >
       <Steps
         current={step}
-        className="u-mb-24"
+        style={{ marginBottom: 24 }}
         items={[
           { title: '选择角色模板' },
           { title: '完成' },
@@ -95,7 +95,7 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
             type="info"
             showIcon
             icon={<TeamOutlined />}
-            className="u-mb-16"
+            style={{ marginBottom: 16 }}
             message="选择您需要的角色模板，系统将自动为您创建对应的角色和权限"
           />
 
@@ -121,11 +121,11 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
                   />
                   <div className="u-flex-1">
                     <div className="u-fw-600 u-mb-4">{tpl.templateName}</div>
-                    <Text type="secondary" className="u-fs-12">
+                    <Text type="secondary" style={{ fontSize: 12 }}>
                       {tpl.templateDesc || '暂无描述'}
                     </Text>
                     <div className="u-mt-4">
-                      <Tag color="blue" className="u-fs-11">
+                      <Tag color="blue" style={{ fontSize: 11 }}>
                         {tpl.category}
                       </Tag>
                     </div>
@@ -136,7 +136,7 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
           </div>
 
           <div className="u-ta-right">
-            <Button onClick={onSkip} className="u-mr-8">
+            <Button onClick={onSkip} style={{ marginRight: 8 }}>
               跳过，稍后配置
             </Button>
             <Button
@@ -153,9 +153,9 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
 
       {step === 1 && (
         <div className="u-ta-center" style={{ padding: '20px 0' }}>
-          <CheckCircleOutlined className="u-mb-16" style={{ fontSize: 48, color: 'var(--color-success)' }} />
+          <CheckCircleOutlined style={{ fontSize: 48, color: 'var(--color-success)', marginBottom: 16 }} />
           <div className="u-fs-16 u-fw-600 u-mb-8">初始化完成！</div>
-          <Text type="secondary" className="u-d-block u-mb-16">
+          <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
             已为您创建 {selectedIds.length} 个基础角色，现在可以开始使用了
           </Text>
           <Button type="primary" onClick={onComplete}>

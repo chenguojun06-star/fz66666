@@ -71,7 +71,7 @@ const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
       {/* 节点标签 */}
       <div className="u-d-flex u-fwrap-wrap" style={{ gap: 3 }}>
         {stageTags.map((item) => (
-          <Tag key={item.key} color={item.done ? 'success' : 'default'} className="u-m-0 u-fs-12 u-lh-18px" style={{ padding: '0 5px' }}>
+          <Tag key={item.key} color={item.done ? 'success' : 'default'} style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 5px' }}>
             {item.label}{item.done ? ' ' : ''}
           </Tag>
         ))}

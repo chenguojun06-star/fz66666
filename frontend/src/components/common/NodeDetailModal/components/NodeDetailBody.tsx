@@ -137,7 +137,7 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
     <Spin spinning={loading}>
       {loadWarnings.length > 0 && (
         <Alert
-          className="u-mb-8"
+          style={{ marginBottom: 8 }}
           type="warning"
           showIcon
           title="部分数据加载失败"

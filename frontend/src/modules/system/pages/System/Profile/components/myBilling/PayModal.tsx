@@ -31,7 +31,7 @@ const PayModal: React.FC<Props> = ({ open, payingBill, onClose, onCopy }) => {
     >
       {payingBill && (
         <div>
-          <Descriptions column={2} bordered className="u-mb-16">
+          <Descriptions column={2} bordered style={{ marginBottom: 16 }}>
             <Descriptions.Item label="账单编号" span={2}>
               <Space>
                 <Text code>{payingBill.billingNo}</Text>
@@ -55,12 +55,12 @@ const PayModal: React.FC<Props> = ({ open, payingBill, onClose, onCopy }) => {
           <Alert
             type="info"
             showIcon
-            className="u-mb-16"
+            style={{ marginBottom: 16 }}
             title="付款方式"
             description="请通过银行转账或扫码向管理员付款。付款时请在备注中注明账单编号，付款完成后联系管理员确认，确认后账单状态将更新为「已支付」。"
           />
 
-          <Card title="付款信息" className="u-mb-12">
+          <Card title="付款信息" style={{ marginBottom: 12 }}>
             <Descriptions column={1}>
               <Descriptions.Item label="付款备注（必填）">
                 <Space>

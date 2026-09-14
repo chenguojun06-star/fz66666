@@ -49,7 +49,7 @@ const FactorySidebar: React.FC<FactorySidebarProps> = ({
        
         title={
           <span className="u-fs-11">
-            <ShopOutlined className="u-mr-6" />
+            <ShopOutlined style={{ marginRight: 6 }} />
             加工厂汇总
           </span>
         }
@@ -85,7 +85,7 @@ const FactorySidebar: React.FC<FactorySidebarProps> = ({
           </div>
 
           {stats.length === 0 && !loading && (
-            <Empty description="暂无外发工厂" className="u-p-24" />
+            <Empty description="暂无外发工厂" style={{ padding: 24 }} />
           )}
 
           {stats.map((item) => (
@@ -103,29 +103,29 @@ const FactorySidebar: React.FC<FactorySidebarProps> = ({
                 {item.factoryName}
               </div>
               <div className="u-d-flex u-gap-6 u-fwrap-wrap u-mb-4">
-                <Tag className="u-m-0">{item.orderCount} 单</Tag>
-                <Tag color="orange" className="u-m-0">{item.totalQuantity} 件</Tag>
+                <Tag style={{ margin: 0 }}>{item.orderCount} 单</Tag>
+                <Tag color="orange" style={{ margin: 0 }}>{item.totalQuantity} 件</Tag>
                 {item.styleCount && item.styleCount > 0 && (
-                  <Tag icon={<AppstoreOutlined />} className="u-m-0">{item.styleCount} 款</Tag>
+                  <Tag icon={<AppstoreOutlined />} style={{ margin: 0 }}>{item.styleCount} 款</Tag>
                 )}
               </div>
               <div className="u-d-flex u-gap-6 u-fwrap-wrap u-mb-4">
-                <Tag color="processing" icon={<SyncOutlined spin />} className="u-m-0 u-fs-12">
+                <Tag color="processing" icon={<SyncOutlined spin />} style={{ margin: 0, fontSize: 12 }}>
                   {item.inProgressCount}
                 </Tag>
-                <Tag color="success" icon={<CheckCircleOutlined />} className="u-m-0 u-fs-12">
+                <Tag color="success" icon={<CheckCircleOutlined />} style={{ margin: 0, fontSize: 12 }}>
                   {item.completedCount}
                 </Tag>
               </div>
               {((item.overdueCount && item.overdueCount > 0) || (item.warningCount && item.warningCount > 0)) && (
                 <div className="u-d-flex u-gap-6 u-fwrap-wrap">
                   {item.overdueCount && item.overdueCount > 0 && (
-                    <Tag color="error" icon={<WarningOutlined />} className="u-m-0 u-fs-12">
+                    <Tag color="error" icon={<WarningOutlined />} style={{ margin: 0, fontSize: 12 }}>
                       {item.overdueCount} 逾期
                     </Tag>
                   )}
                   {item.warningCount && item.warningCount > 0 && (
-                    <Tag color="warning" className="u-m-0 u-fs-12">
+                    <Tag color="warning" style={{ margin: 0, fontSize: 12 }}>
                       {item.warningCount} 预警
                     </Tag>
                   )}

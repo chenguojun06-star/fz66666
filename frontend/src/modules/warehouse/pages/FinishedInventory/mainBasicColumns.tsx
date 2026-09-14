@@ -22,13 +22,13 @@ function renderTagGroup(values: string[] | undefined, fallback: string | undefin
   return (
     <div className="u-d-flex u-fwrap-wrap u-gap-4 u-ai-center">
       {visible.map((v, i) => (
-        <Tag key={i} color={color} className="u-m-0">
+        <Tag key={i} color={color} style={{ margin: 0 }}>
           {v}
         </Tag>
       ))}
       {rest > 0 && (
         <Tooltip title={list.slice(MAX_VISIBLE_TAGS).join('、')}>
-          <Tag className="u-m-0" style={{ background: 'var(--color-border-light)' }}>+{rest}</Tag>
+          <Tag style={{ margin: 0, background: 'var(--color-border-light)' }}>+{rest}</Tag>
         </Tooltip>
       )}
     </div>

@@ -81,7 +81,7 @@ const FactoryList: React.FC = () => {
       <PageLayout
         title={
           <span className="u-d-flex u-ai-center">
-            <ShopOutlined className="u-mr-8" style={{ fontSize: 22, color: 'var(--primary-color, var(--color-primary))' }} />
+            <ShopOutlined style={{ marginRight: 8, fontSize: 22, color: 'var(--primary-color, var(--color-primary))' }} />
             <span className="u-fw-700" style={{ fontSize: 22 }}>
               {managementTab === 'customer' ? '客户管理' : '供应商管理'}
             </span>
@@ -90,7 +90,7 @@ const FactoryList: React.FC = () => {
         headerContent={
           <>
             {showSmartErrorNotice && smartError ? (
-              <Card className="u-mb-12">
+              <Card style={{ marginBottom: 12 }}>
                 <SmartErrorNotice error={smartError} onFix={() => { void fetchFactories(); }} />
               </Card>
             ) : null}
@@ -123,7 +123,7 @@ const FactoryList: React.FC = () => {
                   <Tabs
                     activeKey={activeTab}
                     onChange={handleTabChange}
-                    className="u-mb-8"
+                    style={{ marginBottom: 8 }}
                     items={[
                       { key: 'ALL', label: '全部' },
                       { key: 'MATERIAL', label: '面辅料供应商' },

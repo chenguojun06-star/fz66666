@@ -37,7 +37,7 @@ export const buildBasicColumns = (ctx: BomColumnsContext) => {
                   src={getFullAuthedFileUrl(url)}
                   width={40}
                   height={40}
-                  className="u-objf-cover u-br-4" style={{ border: '1px solid var(--color-border-light)' }}
+                  style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid var(--color-border-light)' }}
                   preview={{ src: getFullAuthedFileUrl(url) }}
                 />
               ))}

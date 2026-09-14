@@ -40,7 +40,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
         <Space>
           <SafetyCertificateOutlined />
           <span>工序质检看板</span>
-          {orderNo && <Tag color="blue" className="u-fs-14">{orderNo}</Tag>}
+          {orderNo && <Tag color="blue" style={{ fontSize: 14 }}>{orderNo}</Tag>}
         </Space>
       }
       placement="right" size={Math.round(window.innerWidth * 0.85)} open={visible} onClose={onClose}
@@ -74,11 +74,11 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
         ) : remarkPanelOpen && orderNo ? (
           <div>
             <div className="u-d-flex u-ai-center u-gap-8 u-mb-16">
-              <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => setRemarkPanelOpen(false)} className="u-p-0">
+              <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => setRemarkPanelOpen(false)} style={{ padding: 0 }}>
                 返回菲号列表
               </Button>
               <Divider orientation="vertical" />
-              <span className="u-fw-600 u-fs-15"><FileTextOutlined className="u-mr-6" />订单备注 — {orderNo}</span>
+              <span className="u-fw-600 u-fs-15"><FileTextOutlined style={{ marginRight: 6 }} />订单备注 — {orderNo}</span>
             </div>
             <RemarkTimelineContent targetType="order" targetNo={orderNo} canAddRemark />
           </div>

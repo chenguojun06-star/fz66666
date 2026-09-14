@@ -287,7 +287,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
           suffix={(
             <Tooltip title="基础属性库——成组选择颜色">
               <SettingOutlined
-                className="u-cur-pointer" style={{ color: 'rgba(0,0,0,0.45)' }}
+                style={{ color: 'rgba(0,0,0,0.45)', cursor: 'pointer' }}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAttrLibTarget('color'); setAttrLibOpen(true); }}
               />
             </Tooltip>
@@ -303,7 +303,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
           suffix={(
             <Tooltip title="基础属性库——成组选择码数">
               <SettingOutlined
-                className="u-cur-pointer" style={{ color: 'rgba(0,0,0,0.45)' }}
+                style={{ color: 'rgba(0,0,0,0.45)', cursor: 'pointer' }}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAttrLibTarget('size'); setAttrLibOpen(true); }}
               />
             </Tooltip>
@@ -316,7 +316,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
         onApply={handleApplyAttrGroup}
       />
 
-      <Space size={8} className="u-mb-12">
+      <Space size={8} style={{ marginBottom: 12 }}>
         <Button onClick={() => syncSelection(availableColors, selectedSizes)}>全选颜色</Button>
         <Button onClick={() => syncSelection(selectedColors, availableSizes)}>全选码数</Button>
         <Button onClick={() => syncSelection([], [])}>清空</Button>
@@ -370,7 +370,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
                           <InputNumber
                             min={0}
                             value={matched?.quantity || 0}
-                            className="u-w-full"
+                            style={{ width: '100%' }}
                             controls={false}
                            
                             onChange={(value) => updateMatrixQty(row.color, size, Number(value) || 0)}

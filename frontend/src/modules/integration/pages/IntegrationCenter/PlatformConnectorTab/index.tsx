@@ -29,30 +29,30 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
     <Spin spinning={loading}>
       <div className="u-p-08px">
         {/* ====== 数据总览 ====== */}
-        <Row gutter={16} className="u-mb-24 u-mt-16">
+        <Row gutter={16} style={{ marginBottom: 24, marginTop: 16 }}>
           <Col span={6}>
-            <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-processing-bg)' }}>
+            <Card variant="borderless" style={{ background: 'var(--status-processing-bg)', borderRadius: 12 }}>
               <Statistic title="已对接平台" value={stats.connected} suffix={`/ ${stats.total}`} prefix={<ApiOutlined style={{ color: 'var(--color-primary)' }} />} styles={{ content: { color: 'var(--color-primary)' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-success-bg)' }}>
+            <Card variant="borderless" style={{ background: 'var(--status-success-bg)', borderRadius: 12 }}>
               <Statistic title="今日总订单" value={stats.todayOrders} suffix="单" prefix={<ShoppingCartOutlined style={{ color: 'var(--color-success)' }} />} styles={{ content: { color: 'var(--color-success)' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-warning-bg)' }}>
+            <Card variant="borderless" style={{ background: 'var(--status-warning-bg)', borderRadius: 12 }}>
               <Statistic title="今日销售额" value={stats.todaySales.toFixed(2)} prefix={<DollarOutlined style={{ color: 'var(--color-warning)' }} />} suffix="元" styles={{ content: { color: 'var(--color-warning)' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card variant="borderless" className="u-br-12" style={{ background: 'var(--color-bg-subtle)' }}>
+            <Card variant="borderless" style={{ background: 'var(--color-bg-subtle)', borderRadius: 12 }}>
               <Statistic title="平台总数" value={PLATFORM_LIST.length} suffix="个" prefix={<CloudUploadOutlined style={{ color: 'var(--color-accent-purple)' }} />} styles={{ content: { color: 'var(--color-accent-purple)' } }} />
             </Card>
           </Col>
         </Row>
 
-        <Alert type="success" showIcon className="u-br-8" style={{ marginBottom: 20 }}
+        <Alert type="success" showIcon style={{ marginBottom: 20, borderRadius: 8 }}
           title={<span><InboxOutlined /> <strong>三步傻瓜式对接</strong>：选择平台 → 粘贴凭证 → 复制回调地址到平台</span>}
           description="支持 10 大电商平台一键对接，订单自动同步，物流自动回传"
         />

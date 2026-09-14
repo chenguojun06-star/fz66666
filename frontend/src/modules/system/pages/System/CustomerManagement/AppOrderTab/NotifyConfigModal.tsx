@@ -54,7 +54,7 @@ const NotifyConfigModal: React.FC<NotifyConfigModalProps> = ({
         title="配置后，每当客户在应用商店提交购买订单，系统自动推送微信通知到您的手机。"
         type="info"
         showIcon
-        className="u-mb-16"
+        style={{ marginBottom: 16 }}
       />
       <div className="u-mb-12">
         <Text strong>获取 Server酱 SendKey：</Text>
@@ -69,7 +69,7 @@ const NotifyConfigModal: React.FC<NotifyConfigModalProps> = ({
           title={`当前已配置：${notifyMaskedKey}`}
           type="success"
           showIcon
-          className="u-mb-12"
+          style={{ marginBottom: 12 }}
         />
       )}
       <Input

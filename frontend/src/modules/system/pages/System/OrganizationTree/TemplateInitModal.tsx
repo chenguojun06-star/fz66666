@@ -72,7 +72,7 @@ const TemplateInitModal: React.FC<TemplateInitModalProps> = ({
             </div>
             <div className="u-fs-14">
               {tpl.children.map((c) => (
-                <Tag key={c} className="u-mb-4">{c}</Tag>
+                <Tag key={c} style={{ marginBottom: 4 }}>{c}</Tag>
               ))}
             </div>
           </div>
@@ -91,7 +91,7 @@ const TemplateInitModal: React.FC<TemplateInitModalProps> = ({
         allowClear
         onChange={(e) => setTplModal((prev) => ({ ...prev, rootName: e.target.value }))}
         onPressEnter={handleInitTemplate}
-        className="u-mb-16"
+        style={{ marginBottom: 16 }}
       />
 
       {tplModal.type === 'FACTORY' && (
@@ -106,7 +106,7 @@ const TemplateInitModal: React.FC<TemplateInitModalProps> = ({
               value: f.id,
               label: f.factoryName + (f.contactPerson ? ' · ' + f.contactPerson : ''),
             }))}
-            className="u-w-full u-mb-16"
+            style={{ width: '100%', marginBottom: 16 }}
           />
         </>
       )}

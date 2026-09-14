@@ -108,12 +108,12 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
             <div className="u-mb-8 u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
               当前预算 {formatBudgetHours(budgetHours)}，调整后将保存到服务器
             </div>
-            <Space.Compact className="u-w-full">
+            <Space.Compact style={{ width: '100%' }}>
               <InputNumber
                 defaultValue={budgetHours}
                 min={1}
                 max={999}
-                className="u-w-full"
+                style={{ width: '100%' }}
                 onChange={(v) => { newBudgetHours = v ?? budgetHours; }}
               />
               <span style={{
@@ -155,12 +155,12 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
           <div className="u-mb-8 u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
             当前预算 {currentBudgetDays} 天。调整后将重算该工序预算与订单计划完工日期（预计交期），不影响订单交货日期。
           </div>
-          <Space.Compact className="u-w-full">
+          <Space.Compact style={{ width: '100%' }}>
             <InputNumber
               defaultValue={currentBudgetDays}
               min={1}
               max={999}
-              className="u-w-full"
+              style={{ width: '100%' }}
               onChange={(v) => { newBudgetDays = v ?? currentBudgetDays; }}
             />
             <span style={{

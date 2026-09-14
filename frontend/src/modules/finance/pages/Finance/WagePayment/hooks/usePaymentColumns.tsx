@@ -132,7 +132,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
           const tag = resolvePayeeTag(r.bizType, r.payeeType);
           return (
             <Space size={4}>
-              <Tag color={tag.color} className="u-fs-14 u-m-0">{tag.text}</Tag>
+              <Tag color={tag.color} style={{ fontSize: 14, margin: 0 }}>{tag.text}</Tag>
               <span className="u-fw-500">{r.payeeName}</span>
             </Space>
           );
@@ -187,7 +187,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         render: (v: string, record: PayableItem) => {
           const count = record.billCount;
           if (count && count > 1) {
-            return <span>{v} <Tag color="blue" className="u-ml-4 u-fs-14">{count}笔合并</Tag></span>;
+            return <span>{v} <Tag color="blue" style={{ marginLeft: 4, fontSize: 14 }}>{count}笔合并</Tag></span>;
           }
           return v || '-';
         },
@@ -241,7 +241,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         key: 'paymentNo',
         width: 180,
         render: (v: string, record: WagePayment) => (
-          <Button type="link" className="u-p-0 u-h-auto" onClick={() => { setDetailRecord(record); setDetailOpen(true); }}>{v}</Button>
+          <Button type="link" style={{ padding: 0, height: 'auto' }} onClick={() => { setDetailRecord(record); setDetailOpen(true); }}>{v}</Button>
         ),
       },
       {
@@ -262,7 +262,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
           const tag = resolvePayeeTag(r.bizType, r.payeeType);
           return (
             <Space size={4}>
-              <Tag color={tag.color} className="u-fs-14 u-m-0">{tag.text}</Tag>
+              <Tag color={tag.color} style={{ fontSize: 14, margin: 0 }}>{tag.text}</Tag>
               <span>{r.payeeName}</span>
             </Space>
           );

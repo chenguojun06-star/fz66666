@@ -266,7 +266,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
             >
-              <LeftOutlined className="u-fs-12" style={{ color: 'var(--color-bg-base)' }} />
+              <LeftOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
             </div>
             <div
               onClick={(e) => { e.stopPropagation(); goToNext(); }}
@@ -288,7 +288,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
             >
-              <RightOutlined className="u-fs-12" style={{ color: 'var(--color-bg-base)' }} />
+              <RightOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
             </div>
           </>
         )}
@@ -360,7 +360,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
           },
         }}
       >
-        <Image src={selectedImageUrl || undefined} className="u-d-none" alt="cover" />
+        <Image src={selectedImageUrl || undefined} style={{ display: 'none' }} alt="cover" />
       </Image.PreviewGroup>
     </div>
   );

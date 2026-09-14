@@ -108,7 +108,7 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
                           src={url}
                           width={40}
                           height={40}
-                          className="u-objf-cover u-br-4" style={{ border: '1px solid var(--color-border)' }}
+                          style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid var(--color-border)' }}
                           preview={{ src: url }}
                         />
                       );
@@ -275,7 +275,7 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
                   <Input placeholder="如：220g" />
                 </Form.Item>
                 <Form.Item name="unitPrice" label="单价" initialValue={0}>
-                  <InputNumber min={0} step={0.01} className="u-w-full" prefix="¥" />
+                  <InputNumber min={0} step={0.01} style={{ width: '100%' }} prefix="¥" />
                 </Form.Item>
                 <Form.Item name="remark" label="备注">
                   <Input.TextArea rows={3} placeholder="请输入备注" />

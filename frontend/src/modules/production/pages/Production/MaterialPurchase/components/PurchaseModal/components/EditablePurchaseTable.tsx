@@ -53,7 +53,7 @@ const EditablePurchaseTable: React.FC<EditablePurchaseTableProps> = ({
               <Select
                 value={String(v || 'fabricA')}
                 size="small"
-                className="u-w-full"
+                style={{ width: '100%' }}
                 onChange={(val) => onUpdateRow(record.id!, 'materialType', val)}
               >
                 {MATERIAL_TYPE_OPTIONS.map(opt => (
@@ -114,7 +114,7 @@ const EditablePurchaseTable: React.FC<EditablePurchaseTableProps> = ({
                 <Select
                   value={String(v || '')}
                   size="small"
-                  className="u-w-full"
+                  style={{ width: '100%' }}
                   placeholder="选择颜色"
                   allowClear
                   onChange={(val) => onUpdateRow(record.id!, 'color', val)}
@@ -138,7 +138,7 @@ const EditablePurchaseTable: React.FC<EditablePurchaseTableProps> = ({
                 onChange={(val: string) => onUpdateRow(record.id!, 'size', val)}
                 placeholder="码数"
                 size="small"
-                className="u-w-full"
+                style={{ width: '100%' }}
               />
             ),
           },
@@ -162,7 +162,7 @@ const EditablePurchaseTable: React.FC<EditablePurchaseTableProps> = ({
                 onChange={(val: string) => onUpdateRow(record.id!, 'unit', val)}
                 placeholder="单位"
                 size="small"
-                className="u-w-full"
+                style={{ width: '100%' }}
               />
             ),
           },
@@ -173,7 +173,7 @@ const EditablePurchaseTable: React.FC<EditablePurchaseTableProps> = ({
                 value={Number(v || 0)}
                 size="small"
                 min={0}
-                className="u-w-full"
+                style={{ width: '100%' }}
                 onChange={(val) => onUpdateRow(record.id!, 'purchaseQuantity', val ?? 0)}
               />
             ),
@@ -186,7 +186,7 @@ const EditablePurchaseTable: React.FC<EditablePurchaseTableProps> = ({
                 size="small"
                 min={0}
                 precision={2}
-                className="u-w-full"
+                style={{ width: '100%' }}
                 prefix="¥"
                 onChange={(val) => onUpdateRow(record.id!, 'unitPrice', val ?? 0)}
               />
@@ -199,7 +199,7 @@ const EditablePurchaseTable: React.FC<EditablePurchaseTableProps> = ({
                 value={String(v || '')}
                 placeholder="供应商"
                 size="small"
-                className="u-w-full"
+                style={{ width: '100%' }}
                 onChange={(_val: string, option: any) => {
                   onUpdateRow(record.id!, 'supplierName', _val);
                   const sel = Array.isArray(option) ? option[0] : option;

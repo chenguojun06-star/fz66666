@@ -67,7 +67,7 @@ export default function SampleStageExpandedContent({
       render: (val: string, record: ScanRecord) => (
         <span>
           {val || record.operatorId || '-'}
-          {record.operatorRole ? <Tag color="blue" className="u-ml-4 u-fs-10">{record.operatorRole}</Tag> : null}
+          {record.operatorRole ? <Tag color="blue" style={{ marginLeft: 4, fontSize: 10 }}>{record.operatorRole}</Tag> : null}
         </span>
       ),
     },
@@ -164,7 +164,7 @@ export default function SampleStageExpandedContent({
               value={JSON.stringify({ type: 'pattern', id: patternProductionId || patternId })}
               size={140}
               errorLevel="M"
-              className="u-fshrink-0"
+              style={{ flexShrink: 0 }}
             />
             <div className="u-fs-13 u-lh-18" style={{ color: 'var(--color-text-tertiary)' }}>
               <div className="u-fw-500 u-mb-2" style={{ color: 'var(--color-gray-700)' }}>工人扫码领取 / 完成</div>
@@ -187,7 +187,7 @@ export default function SampleStageExpandedContent({
               showInfo={false}
               size={6}
               strokeColor={overallColor}
-              className="u-mb-12"
+              style={{ marginBottom: 12 }}
             />
             {processLoading ? (
               <Skeleton active paragraph={{ rows: 2 }} />
@@ -239,7 +239,7 @@ export default function SampleStageExpandedContent({
               size="small"
               pagination={scanRecords.length > 10 ? { pageSize: 10, size: 'small' } : false}
               scroll={{ x: 560, y: 300 }}
-              className="u-fs-12"
+              style={{ fontSize: 12 }}
             />
           )}
         </div>

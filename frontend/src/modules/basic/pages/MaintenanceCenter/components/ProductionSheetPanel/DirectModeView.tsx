@@ -71,7 +71,7 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
           ) : null}
           <Form form={returnDescForm} layout="vertical">
             <div style={directFieldLabelStyle}>退回原因</div>
-            <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} className="u-mb-8">
+            <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} style={{ marginBottom: 8 }}>
               <TextArea rows={2} placeholder="请说明制单退回原因" />
             </Form.Item>
           </Form>
@@ -98,7 +98,7 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
       <ProductionSummary record={directRow} />
       <Form form={editForm} layout="vertical">
         <div style={directFieldLabelStyle}>工艺说明 / 制单描述</div>
-        <Form.Item name="description" className="u-mb-0">
+        <Form.Item name="description" style={{ marginBottom: 0 }}>
           <TextArea rows={10} placeholder={'请输入生产要求和制单描述信息\n示例：\n1. 面料：主面料用32支全棉平纹\n2. 颜色：藏蓝色（潘通色号19-4024）\n3. 缝制要求：1/4″四线包缝'} />
         </Form.Item>
       </Form>

@@ -33,7 +33,7 @@ const ActivateResultModal: React.FC<ActivateResultModalProps> = ({ visible, data
     >
       {data && (
         <>
-          <Alert title="订单已激活成功，客户可以开始使用应用了。" type="success" showIcon className="u-mb-16" />
+          <Alert title="订单已激活成功，客户可以开始使用应用了。" type="success" showIcon style={{ marginBottom: 16 }} />
           <Descriptions column={1} bordered>
             <Descriptions.Item label="订单号">{data.orderNo}</Descriptions.Item>
             <Descriptions.Item label="激活时间">{data.activatedAt}</Descriptions.Item>
@@ -42,12 +42,12 @@ const ActivateResultModal: React.FC<ActivateResultModalProps> = ({ visible, data
           {data.apiCredentials && (
             <div className="u-mt-16">
               <Typography.Text strong>API 凭证（请妥善保管）：</Typography.Text>
-              <Descriptions column={1} bordered className="u-mt-8">
+              <Descriptions column={1} bordered style={{ marginTop: 8 }}>
                 <Descriptions.Item label="App Key">
-                  <Typography.Paragraph copyable className="u-mb-0">{data.apiCredentials.appKey}</Typography.Paragraph>
+                  <Typography.Paragraph copyable style={{ marginBottom: 0 }}>{data.apiCredentials.appKey}</Typography.Paragraph>
                 </Descriptions.Item>
                 <Descriptions.Item label="App Secret">
-                  <Typography.Paragraph copyable className="u-mb-0">{data.apiCredentials.appSecret}</Typography.Paragraph>
+                  <Typography.Paragraph copyable style={{ marginBottom: 0 }}>{data.apiCredentials.appSecret}</Typography.Paragraph>
                 </Descriptions.Item>
               </Descriptions>
             </div>

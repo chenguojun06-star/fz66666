@@ -179,7 +179,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
           {loginMode === 'password' ? t('login.submit', language) : '验证码登录'}
         </Button>
       </Form.Item>
-      <Form.Item wrapperCol={{ span: 24 }} className="u-mb-0">
+      <Form.Item wrapperCol={{ span: 24 }} style={{ marginBottom: 0 }}>
         <Button
           type="link"
           onClick={() => navigate('/register')}

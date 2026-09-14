@@ -140,7 +140,7 @@ const FeedbackTab: React.FC = () => {
     <div>
       {/* 统计卡片 */}
       {stats && (
-        <Row gutter={16} className="u-mb-16">
+        <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col span={6}><Card><Statistic title="总反馈" value={stats.total} /></Card></Col>
           <Col span={6}><Card><Statistic title="待处理" value={stats.pending} styles={{ content: { color: stats.pending > 0 ? 'var(--color-danger)' : undefined } }} /></Card></Col>
           <Col span={6}><Card><Statistic title="处理中" value={stats.processing} styles={{ content: { color: 'var(--color-info)' } }} /></Card></Col>
@@ -149,7 +149,7 @@ const FeedbackTab: React.FC = () => {
       )}
 
       {/* 筛选 */}
-      <Card className="u-mb-16">
+      <Card style={{ marginBottom: 16 }}>
         <Space wrap>
           <Select style={{ width: 120 }} placeholder="状态" allowClear value={queryParams.status || undefined}
             onChange={v => setQueryParams(p => ({ ...p, page: 1, status: v || '' }))}

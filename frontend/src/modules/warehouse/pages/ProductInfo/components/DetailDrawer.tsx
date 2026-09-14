@@ -93,7 +93,7 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
             <Descriptions.Item label="入库总量">{d.totalWarehousedQuantity != null ? `${d.totalWarehousedQuantity}` : '-'}</Descriptions.Item>
           </Descriptions>
 
-          <Divider className="u-fs-14" style={{ marginTop: 20 }}>商品编码 规格明细</Divider>
+          <Divider style={{ fontSize: 14, marginTop: 20 }}>商品编码 规格明细</Divider>
           {skuLoading ? (
             <div className="u-ta-center u-p-24" style={{ color: 'var(--color-text-tertiary)' }}>加载中...</div>
           ) : skuList.length > 0 ? (
@@ -104,7 +104,7 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
               size="small"
               pagination={false}
               bordered
-              className="u-mb-16"
+              style={{ marginBottom: 16 }}
             />
           ) : (
             <div className="u-ta-center u-p-16 u-br-8" style={{ color: 'var(--color-text-tertiary)', background: 'var(--color-bg-subtle)' }}>
@@ -112,7 +112,7 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
             </div>
           )}
 
-          <Divider className="u-fs-14" style={{ marginTop: 20 }}>吊牌信息</Divider>
+          <Divider style={{ fontSize: 14, marginTop: 20 }}>吊牌信息</Divider>
           <Descriptions column={3} size="small" bordered>
             <Descriptions.Item label="质量等级">{String(d.qualityGrade ?? '-')}</Descriptions.Item>
             <Descriptions.Item label="执行标准">{String(d.executeStandard ?? '-')}</Descriptions.Item>

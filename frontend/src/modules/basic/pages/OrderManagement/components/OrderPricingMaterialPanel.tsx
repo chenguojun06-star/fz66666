@@ -79,7 +79,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
         <div className="u-d-grid u-gap-8 u-ai-start" style={{ gridTemplateColumns: '56px minmax(0, 1fr)' }}>
           <div className="u-fs-14" style={{ paddingTop: 6, color: 'var(--color-text-secondary)' }}>单价</div>
           <div>
-            <Form.Item name="pricingMode" initialValue="PROCESS" className="u-mb-0">
+            <Form.Item name="pricingMode" initialValue="PROCESS" style={{ marginBottom: 0 }}>
               <Select
                 onChange={onPricingModeChange}
                 options={[
@@ -100,9 +100,9 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
               <Form.Item
                 name="manualOrderUnitPrice"
                 rules={[{ required: true, message: '请输入单价' }]}
-                className="u-mb-0"
+                style={{ marginBottom: 0 }}
               >
-                <InputNumber min={0.01} precision={2} className="u-w-full" placeholder="输入单价" />
+                <InputNumber min={0.01} precision={2} style={{ width: '100%' }} placeholder="输入单价" />
               </Form.Item>
             ) : (
               <div className="u-d-flex u-ai-center u-fs-14" style={{ minHeight: 32, color: 'var(--color-text-secondary)' }}>

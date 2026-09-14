@@ -71,7 +71,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
   return (
     <div>
       {showSmartErrorNotice && smartError ? (
-        <Card className="u-mb-12">
+        <Card style={{ marginBottom: 12 }}>
           <SmartErrorNotice
             error={smartError}
             onFix={() => {

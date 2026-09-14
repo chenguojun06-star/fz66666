@@ -311,7 +311,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
         </Space>
       }
     >
-      <Space vertical className="u-w-full" size={16}>
+      <Space vertical style={{ width: '100%' }} size={16}>
         <div>
           <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>添加商品编码</div>
           <div className="u-d-flex u-gap-4 u-ai-center u-w-full">
@@ -345,7 +345,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
                         }}
                         onChange={(v) => setAutoStyleNo(String(v || ''))}
                         placeholder="搜索或输入款号"
-                        className="u-w-full"
+                        style={{ width: '100%' }}
                         filterOption={false}
                       />
                     </Col>
@@ -357,11 +357,11 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
                         placeholder="选择或输入颜色"
                         value={autoColor}
                         onChange={(v) => setAutoColor(String(v || ''))}
-                        className="u-w-full"
+                        style={{ width: '100%' }}
                       />
                     </Col>
                     <Col span={6}><Input placeholder="尺码" value={autoSize} onChange={e => setAutoSize(e.target.value)} /></Col>
-                    <Col span={24} className="u-mt-8"><Button type="primary" size="small" onClick={handleAddAutoCreateSku}>添加到列表</Button></Col>
+                    <Col span={24} style={{ marginTop: 8 }}><Button type="primary" size="small" onClick={handleAddAutoCreateSku}>添加到列表</Button></Col>
                   </Row>
                 )}
               </div>
@@ -380,7 +380,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
           </>
         )}
 
-        <Divider className="u-m-8px0" />
+        <Divider style={{ margin: '8px 0' }} />
 
         <Row gutter={12}>
           <Col span={8}>
@@ -426,7 +426,7 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
         </Row>
 
         {selectedArea && (
-          <Alert type="info" showIcon className="u-mb-16" title={<span>入库至 <strong>{selectedArea.areaName || selectedArea.areaCode}</strong></span>} />
+          <Alert type="info" showIcon style={{ marginBottom: 16 }} title={<span>入库至 <strong>{selectedArea.areaName || selectedArea.areaCode}</strong></span>} />
         )}
 
         <Form.Item name="remark" label="备注">

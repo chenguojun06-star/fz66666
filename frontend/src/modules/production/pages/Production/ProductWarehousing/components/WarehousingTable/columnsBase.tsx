@@ -33,7 +33,7 @@ export function buildBaseColumns({ goToDetail, dataSource }: BuildColumnsParams)
         const text = String(v || '').trim();
         if (!text) return '-';
         return (
-          <Button type="link" className="u-p-0" style={{ fontSize: 'var(--table-cell-font-size)' }} onClick={() => goToDetail(record, 'inspect')} title={text}>
+          <Button type="link" style={{ padding: 0, fontSize: 'var(--table-cell-font-size)' }} onClick={() => goToDetail(record, 'inspect')} title={text}>
             {text}
           </Button>
         );

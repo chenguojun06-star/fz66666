@@ -74,7 +74,7 @@ const RegisterRightPane: React.FC<RegisterRightPaneProps> = ({
                 type="info"
                 showIcon
                 icon={<BankOutlined />}
-                className="u-mb-16 u-br-8"
+                style={{ marginBottom: 16, borderRadius: 8 }}
               />
             )}
 
@@ -174,7 +174,7 @@ const RegisterRightPane: React.FC<RegisterRightPaneProps> = ({
                 message="以下账号信息用于审批通过后登录系统"
                 type="info"
                 showIcon
-                className="u-mb-16 u-br-8"
+                style={{ marginBottom: 16, borderRadius: 8 }}
               />
             )}
 
@@ -256,11 +256,11 @@ const RegisterRightPane: React.FC<RegisterRightPaneProps> = ({
                 {isWorkerInvite ? '提交注册' : '提交入驻申请'}
               </Button>
             </Form.Item>
-            <Form.Item className="u-mb-0">
+            <Form.Item style={{ marginBottom: 0 }}>
               <Button
                 type="link"
                 onClick={() => navigate('/login')}
-                className="u-w-full u-p-0"
+                style={{ width: '100%', padding: 0 }}
                 disabled={submitting}
               >
                 已有账号？返回登录

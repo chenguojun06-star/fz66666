@@ -75,8 +75,8 @@ const CuttingBomPanel: React.FC<CuttingBomPanelProps> = ({
     <Card
 
       title="面辅料信息"
-      className="cutting-entry-purchase-card u-mt-12"
-      
+      className="cutting-entry-purchase-card"
+      style={{ marginTop: 12 }}
       loading={bomLoading}
       extra={
         canEdit ? (

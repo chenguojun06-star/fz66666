@@ -227,13 +227,13 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
           {/* D-364：样衣采购（无生产订单）也要有完整款式信息头，与大货/节点弹窗同款布局 */}
           {sampleMode ? (
             <Card
-              className="u-mb-16"
+              style={{ marginBottom: 16 }}
               extra={
                 sampleBomLocked ? (
                   <Tooltip
                     title={`物料清单已完成${sampleBomCompletedTime ? `（${sampleBomCompletedTime}）` : ''}，采购数据已锁定。如需修改物料（编辑/删除/新增），请先到样衣详情 → 物料清单点击「退回」，退回后此处自动解锁。收货、回料确认等采购执行操作不受影响。`}
                   >
-                    <ExclamationCircleOutlined className="u-fs-16 u-cur-pointer" style={{ color: 'var(--color-success)' }} />
+                    <ExclamationCircleOutlined style={{ color: 'var(--color-success)', fontSize: 16, cursor: 'pointer' }} />
                   </Tooltip>
                 ) : null
               }
@@ -252,7 +252,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                 /* D-373：矩阵区已有「总下单数」，隐藏字段区「下单数量」避免重复（与样衣节点弹窗口径一致） */
                 hideOrderQuantity
               />
-              <Row gutter={[16, 12]} className="u-mt-12">
+              <Row gutter={[16, 12]} style={{ marginTop: 12 }}>
                 <Col xs={24} sm={8} md={6}>
                   <div className="u-fs-var--font-size-xs" style={{ color: 'var(--color-text-tertiary)' }}>来源</div>
                   <div><Tag color="blue">样衣(开发)</Tag></div>
@@ -286,13 +286,13 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
             </div>
           )}
           {purchaseList.length === 0 && !sampleMode ? (
-            <Alert title="订单不存在或已删除" description={`款号: ${styleNo || '未知'}。该款号的订单可能已被删除。`} type="warning" showIcon className="u-mb-16" />
+            <Alert title="订单不存在或已删除" description={`款号: ${styleNo || '未知'}。该款号的订单可能已被删除。`} type="warning" showIcon style={{ marginBottom: 16 }} />
           ) : null}
         </>
       ) : (
-        <Card className="u-mb-16">
+        <Card style={{ marginBottom: 16 }}>
           <ProductionOrderHeader order={order} orderNo={headerOrderNo} styleNo={headerStyleNo} styleName={headerStyleName} styleId={headerStyleId} styleCover={headerStyleCover} color={headerColor} coverSize={160} />
-          <Row gutter={[16, 12]} className="u-mt-12">
+          <Row gutter={[16, 12]} style={{ marginTop: 12 }}>
             <Col xs={24} sm={8} md={6}>
               <div className="u-fs-var--font-size-xs" style={{ color: 'var(--color-text-tertiary)' }}>工厂</div>
               <div>{order?.factoryName || '-'}</div>
@@ -325,7 +325,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
               请点击「编辑物料」为每个颜色分别添加面料信息。
             </span>
           }
-          className="u-mb-16"
+          style={{ marginBottom: 16 }}
         />
       )}
 
@@ -415,7 +415,7 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                   ? `订单包含 ${colorList.length} 种颜色（${colorList.join('、')}），需要为每种颜色分别创建对应的面辅料记录。`
                   : `请为订单编辑物料信息（物料编码、名称、单位、供应商等），完善后才可进行采购。`
               }
-              className="u-ta-left" style={{ maxWidth: 600, margin: '0 auto' }}
+              style={{ maxWidth: 600, margin: '0 auto', textAlign: 'left' }}
               action={
                 !sampleMode ? (
                   <Button size="small" onClick={handleStartEdit}>

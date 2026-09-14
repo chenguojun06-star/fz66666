@@ -150,14 +150,14 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
           <span>
             <Button onClick={onClose}>取消</Button>
             <Button
-              className="u-ml-8"
+              style={{ marginLeft: 8 }}
               onClick={handleGenerateAll}
             >
               生成全部{rows.length > 0 ? `（${rows.length}项）` : ''}
             </Button>
             <Button
               type="primary"
-              className="u-ml-8"
+              style={{ marginLeft: 8 }}
               loading={generating}
               disabled={rows.length > 0 && needRows.length === 0}
               onClick={handleGenerateShortage}
@@ -171,14 +171,14 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
       }
     >
       {analyzeError ? (
-        <Alert type="warning" showIcon message={analyzeError} className="u-mb-12" />
+        <Alert type="warning" showIcon message={analyzeError} style={{ marginBottom: 12 }} />
       ) : null}
 
       {rows.length > 0 && enoughCount > 0 && (
         <Alert
           type="info"
           showIcon
-          className="u-mb-12"
+          style={{ marginBottom: 12 }}
           message={isSampleMode
             ? `有 ${enoughCount} 项物料库存足够：点「仅缺料加入采购车」时这些不会加入；库存足够的物料可在物料清单表格内直接领取。`
             : `有 ${enoughCount} 项物料库存足够：点「仅缺料生成采购」时这些不会生成；库存足够的物料到仓库领料即可。`}
@@ -251,7 +251,7 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
             render: (s: any) => (s?.supplierName ? (
               <span>
                 {s.supplierName}
-                {s.isBomDesignated ? <Tag color="blue" className="u-ml-4 u-fs-10">清单指定</Tag> : null}
+                {s.isBomDesignated ? <Tag color="blue" style={{ marginLeft: 4, fontSize: 10 }}>清单指定</Tag> : null}
               </span>
             ) : <span style={{ color: 'var(--color-text-quaternary)' }}>暂无</span>),
           },
@@ -260,7 +260,7 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
 
       {!isSampleMode && (
         <Input.TextArea
-          className="u-mt-12"
+          style={{ marginTop: 12 }}
           rows={2}
           maxLength={200}
           value={reason}

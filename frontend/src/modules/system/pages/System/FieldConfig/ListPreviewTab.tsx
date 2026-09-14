@@ -18,7 +18,7 @@ const ListPreviewTab: React.FC<ListPreviewTabProps> = ({
 }) => {
   return (
     <>
-      <Text type="secondary" className="u-d-block u-mb-12">
+      <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
         实时预览配置后的列表效果（模拟数据）
       </Text>
       <SchemaTable

@@ -171,17 +171,17 @@ const InspectionDetail: React.FC<InspectionDetailProps> = (props) => {
               description="此处为订单视角的只读视图，仅展示入库进度与质检记录。质检扫码、次品处理与入库操作请前往 成品仓 → 质检入库 进行。"
             />
           )}
-          <Card className="u-ov-hidden">
+          <Card style={{ overflow: 'hidden' }}>
             <Tabs
               activeKey={activeTab}
               onChange={setActiveTab}
-              className="u-w-full"
+              style={{ width: '100%' }}
               items={tabItems}
             />
           </Card>
 
           {!readOnly && (
-            <Card title={<><CheckCircleOutlined className="u-mr-6" />质检操作</>}>
+            <Card title={<><CheckCircleOutlined style={{ marginRight: 6 }} />质检操作</>}>
               {formHook.batchSelectRows.length > 0 && formHook.batchSelectableQrs.length === 0 && qcStats.pendingWarehouse === 0 && qcStats.count > 0 ? (
                 <Alert type="success" showIcon
                   title="该订单所有菲号已完成质检入库，无需再操作"

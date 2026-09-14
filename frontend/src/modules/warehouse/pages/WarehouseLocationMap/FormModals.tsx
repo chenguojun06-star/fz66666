@@ -112,7 +112,7 @@ const FormModals: React.FC<Props> = ({
             <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>
               编码格式：{createLocationForm.getFieldValue('zoneCode') || 'A'}-{String(createLocationForm.getFieldValue('rackNum') || '01').padStart(2,'0')}-{createLocationForm.getFieldValue('levelNum') || 1}-{createLocationForm.getFieldValue('positionNum') || 1}
             </div>
-            <Form.Item name="capacity" label="容量上限" initialValue={100} className="u-mt-12">
+            <Form.Item name="capacity" label="容量上限" initialValue={100} style={{ marginTop: 12 }}>
               <Input type="number" placeholder="100" />
             </Form.Item>
           </Form>

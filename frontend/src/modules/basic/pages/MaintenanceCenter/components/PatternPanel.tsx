@@ -99,7 +99,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
               ) : null}
               <Form form={returnPatternForm} layout="vertical">
                 <div style={directFieldLabelStyle}>退回原因</div>
-                <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} className="u-mb-10">
+                <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} style={{ marginBottom: 10 }}>
                   <TextArea rows={3} placeholder="请说明退回原因，将记录到操作日志" />
                 </Form.Item>
               </Form>
@@ -145,7 +145,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
 
   return (
     <>
-      <Card className="filter-card u-mb-16" >
+      <Card className="filter-card" style={{ marginBottom: 16 }}>
         <StandardToolbar
           left={<Space wrap>
             <Input placeholder="款号" style={{ width: 180 }} value={styleNoInput} onChange={(e) => setStyleNoInput(e.target.value)} />

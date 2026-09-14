@@ -113,10 +113,10 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
   const renderMaterialTypeEditor = (text: string, record: StyleBom) => {
     if (canEdit(record)) {
       return (
-        <Form.Item name={ctx.rowName(record.id, 'materialType')} className="u-m-0">
+        <Form.Item name={ctx.rowName(record.id, 'materialType')} style={{ margin: 0 }}>
           <Select
             options={materialTypeOptions as any}
-            className="u-w-full"
+            style={{ width: '100%' }}
           />
         </Form.Item>
       );
@@ -127,7 +127,7 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
   const renderMaterialCodeEditor = (text: string, record: StyleBom) => {
     if (canEdit(record)) {
       return (
-        <Form.Item name={ctx.rowName(record.id, 'materialCode')} className="u-m-0" rules={[{ required: true, message: '必填' }]}>
+        <Form.Item name={ctx.rowName(record.id, 'materialCode')} style={{ margin: 0 }} rules={[{ required: true, message: '必填' }]}>
           <Input
             placeholder="输入编码"
             suffix={<span className="u-fs-10 u-cur-pointer" style={{ color: 'var(--color-primary)' }} onClick={(e) => {
@@ -148,7 +148,7 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
   const renderTextEditor = (fieldName: string, record: StyleBom, required = false) => {
     if (canEdit(record)) {
       return (
-        <Form.Item name={ctx.rowName(record.id, fieldName)} className="u-m-0" rules={required ? [{ required: true, message: '必填' }] : undefined}>
+        <Form.Item name={ctx.rowName(record.id, fieldName)} style={{ margin: 0 }} rules={required ? [{ required: true, message: '必填' }] : undefined}>
           <Input />
         </Form.Item>
       );
@@ -159,7 +159,7 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
   const renderDictEditor = (fieldName: string, record: StyleBom, dictType: string, placeholder: string, required = false) => {
     if (canEdit(record)) {
       return (
-        <Form.Item name={ctx.rowName(record.id, fieldName)} className="u-m-0" rules={required ? [{ required: true, message: '必填' }] : undefined}>
+        <Form.Item name={ctx.rowName(record.id, fieldName)} style={{ margin: 0 }} rules={required ? [{ required: true, message: '必填' }] : undefined}>
           <DictAutoComplete dictType={dictType} placeholder={placeholder} />
         </Form.Item>
       );
@@ -170,8 +170,8 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
   const renderNumberEditor = (fieldName: string, record: StyleBom, min: number, step: number, prefix?: string, required = false) => {
     if (canEdit(record)) {
       return (
-        <Form.Item name={ctx.rowName(record.id, fieldName)} className="u-m-0" rules={required ? [{ required: true, message: '必填' }] : undefined}>
-          <InputNumber min={min} step={step} prefix={prefix} controls={false} className="u-w-full" />
+        <Form.Item name={ctx.rowName(record.id, fieldName)} style={{ margin: 0 }} rules={required ? [{ required: true, message: '必填' }] : undefined}>
+          <InputNumber min={min} step={step} prefix={prefix} controls={false} style={{ width: '100%' }} />
         </Form.Item>
       );
     }
@@ -191,7 +191,7 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
           <Form.Item name={ctx.rowName(record.id, 'supplierContactPhone')} hidden>
             <Input />
           </Form.Item>
-          <Form.Item name={ctx.rowName(record.id, 'supplier')} className="u-m-0" rules={[{ required: true, message: '必填' }]}>
+          <Form.Item name={ctx.rowName(record.id, 'supplier')} style={{ margin: 0 }} rules={[{ required: true, message: '必填' }]}>
             <SupplierSelect
               placeholder="选择供应商"
               onChange={(_, option) => {
@@ -214,12 +214,12 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
   const renderDevUsageAmountEditor = (text: number, record: StyleBom) => {
     if (canEdit(record)) {
       return (
-        <Form.Item name={ctx.rowName(record.id, 'devUsageAmount')} className="u-m-0">
+        <Form.Item name={ctx.rowName(record.id, 'devUsageAmount')} style={{ margin: 0 }}>
           <InputNumber
             min={0}
             step={0.01}
             controls={false}
-            className="u-w-full"
+            style={{ width: '100%' }}
             onChange={(val) => {
               if (val != null) {
                 form.setFieldValue(ctx.rowName(record.id, 'usageAmount'), val);
@@ -236,8 +236,8 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
     const value = Number(text ?? 1) || 1;
     if (canEdit(record)) {
       return (
-        <Form.Item name={ctx.rowName(record.id, 'conversionRate')} className="u-m-0" initialValue={value}>
-          <InputNumber min={0} step={0.01} controls={false} className="u-w-full" />
+        <Form.Item name={ctx.rowName(record.id, 'conversionRate')} style={{ margin: 0 }} initialValue={value}>
+          <InputNumber min={0} step={0.01} controls={false} style={{ width: '100%' }} />
         </Form.Item>
       );
     }
@@ -247,8 +247,8 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
   const renderLossRateEditor = (text: number, record: StyleBom) => {
     if (canEdit(record)) {
       return (
-        <Form.Item name={ctx.rowName(record.id, 'lossRate')} className="u-m-0">
-          <InputNumber min={0} max={100} controls={false} className="u-w-full" />
+        <Form.Item name={ctx.rowName(record.id, 'lossRate')} style={{ margin: 0 }}>
+          <InputNumber min={0} max={100} controls={false} style={{ width: '100%' }} />
         </Form.Item>
       );
     }
@@ -258,8 +258,8 @@ export function useBomEditorHelpers(ctx: BomEditorContext) {
   const renderUnitPriceEditor = (text: number, record: StyleBom) => {
     if (canEdit(record)) {
       return (
-        <Form.Item name={ctx.rowName(record.id, 'unitPrice')} className="u-m-0" rules={[{ required: true, message: '必填' }]}>
-          <InputNumber min={0} step={0.01} prefix="¥" controls={false} className="u-w-full" />
+        <Form.Item name={ctx.rowName(record.id, 'unitPrice')} style={{ margin: 0 }} rules={[{ required: true, message: '必填' }]}>
+          <InputNumber min={0} step={0.01} prefix="¥" controls={false} style={{ width: '100%' }} />
         </Form.Item>
       );
     }

@@ -37,7 +37,7 @@ const HeaderSection: React.FC<Props> = ({ order, deadline }) => (
         {order.ecOrderNo && (
           <>
             {order.ecPlatform && (
-              <Tag color={getPlatformTag(order.ecPlatform).color} className="u-m-0 u-fs-11 u-lh-16px u-br-10" style={{ padding: '0 6px' }}>
+              <Tag color={getPlatformTag(order.ecPlatform).color} style={{ margin: 0, fontSize: 11, padding: '0 6px', lineHeight: '16px', borderRadius: 10 }}>
                 {getPlatformTag(order.ecPlatform).label}
               </Tag>
             )}

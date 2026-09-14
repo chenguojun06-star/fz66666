@@ -192,7 +192,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
         <div className="u-d-flex u-ai-center" style={{ padding: '14px 18px', borderBottom: '1px solid rgba(0,229,255,0.12)' }}>
           {loading
             ? <Spin style={{ marginRight: 12 }} />
-            : <SearchOutlined className="u-fs-14" style={{ color: 'var(--color-accent-cyan-bright)', marginRight: 12 }} />
+            : <SearchOutlined style={{ color: 'var(--color-accent-cyan-bright)', fontSize: 14, marginRight: 12 }} />
           }
           <Input
             ref={inputRef}
@@ -240,7 +240,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
               >
                 <span className="u-fs-13" style={{ color: 'var(--color-accent-cyan-bright)' }}>{cmd.icon}</span>
                 <span className="u-fw-500 u-fs-14" style={{ color: 'var(--color-blue-100)' }}>{cmd.label}</span>
-                <RightOutlined className="u-fs-12 u-ml-auto" style={{ color: 'var(--color-ocean-light)' }} />
+                <RightOutlined style={{ color: 'var(--color-ocean-light)', fontSize: 12, marginLeft: 'auto' }} />
               </div>
             ))}
             {filteredCommands.length === 0 && (
@@ -309,7 +309,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                       {o.progress != null && (
                         <span className="u-fs-14 u-fshrink-0" style={{ color: 'var(--color-ocean-lighter)' }}>{o.progress}%</span>
                       )}
-                      <RightOutlined className="u-fs-12 u-fshrink-0" style={{ color: 'var(--color-ocean-light)' }} />
+                      <RightOutlined style={{ color: 'var(--color-ocean-light)', fontSize: 12, flexShrink: 0 }} />
                     </div>
                   );
                 })}
@@ -338,7 +338,7 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                       <span className="u-fw-600 u-fs-14" style={{ color: 'var(--color-accent-purple)', minWidth: 100 }}>{s.styleNo}</span>
                       <span className="u-flex-1 u-fs-14" style={{ color: 'var(--color-blue-200)' }}>{s.styleName}</span>
                       {s.category && <span className="u-fs-14 u-fshrink-0" style={{ color: 'var(--color-blue-400)' }}>{s.category}</span>}
-                      <RightOutlined className="u-fs-12 u-fshrink-0" style={{ color: 'var(--color-ocean-light)' }} />
+                      <RightOutlined style={{ color: 'var(--color-ocean-light)', fontSize: 12, flexShrink: 0 }} />
                     </div>
                   );
                 })}
@@ -364,11 +364,11 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
                       }}
                       onClick={() => handleSelect('worker', w)}
                       onMouseEnter={() => setActiveIdx(idx)}>
-                      <UserOutlined className="u-fs-12" style={{ color: 'var(--color-accent-neon)' }} />
+                      <UserOutlined style={{ color: 'var(--color-accent-neon)', fontSize: 12 }} />
                       <span className="u-fw-600 u-fs-14" style={{ color: 'var(--color-blue-100)', minWidth: 72 }}>{w.name}</span>
                       <span className="u-fs-14 u-flex-1" style={{ color: 'var(--color-blue-400)' }}>{w.factoryName}</span>
                       {w.role && <span className="u-fs-14" style={{ color: 'var(--color-ocean-lighter)' }}>{w.role}</span>}
-                      <RightOutlined className="u-fs-12 u-fshrink-0" style={{ color: 'var(--color-ocean-light)' }} />
+                      <RightOutlined style={{ color: 'var(--color-ocean-light)', fontSize: 12, flexShrink: 0 }} />
                     </div>
                   );
                 })}

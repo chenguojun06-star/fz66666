@@ -235,7 +235,7 @@ const BundleDelegatePanel: React.FC<BundleDelegatePanelProps> = ({
             options={processSelectOptions}
             filterOption={(input, option) => String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
             disabled={disableEdit}
-            className="u-flex-1" style={{ minWidth: 320, maxWidth: 560, fontSize: 'var(--font-size-base)' }}
+            style={{ minWidth: 320, maxWidth: 560, flex: 1, fontSize: 'var(--font-size-base)' }}
           />
         </div>
         {selectedProcessPrices.length > 0 && (

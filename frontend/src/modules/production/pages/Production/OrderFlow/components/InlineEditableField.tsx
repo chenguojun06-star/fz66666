@@ -70,7 +70,7 @@ const InlineEditableField: React.FC<InlineEditableFieldProps> = ({ label: _label
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
         disabled={saving}
-        className="u-fs-14" style={{ lineHeight: '22px' }}
+        style={{ fontSize: 14, lineHeight: '22px' }}
         onPressEnter={handleSave}
       />
     );

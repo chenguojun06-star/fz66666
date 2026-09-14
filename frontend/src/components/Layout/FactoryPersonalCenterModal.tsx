@@ -246,7 +246,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
             },
             {
               key: 'password',
-              label: <span><LockOutlined className="u-mr-4" />修改密码</span>,
+              label: <span><LockOutlined style={{ marginRight: 4 }} />修改密码</span>,
               children: (
                 <div className="u-p-8px0">
                   <Form form={changePasswordForm} layout="vertical" style={{ maxWidth: 360 }}>
@@ -285,7 +285,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
             },
             {
               key: 'tutorial',
-              label: <span><QuestionCircleOutlined className="u-mr-4" />使用教程</span>,
+              label: <span><QuestionCircleOutlined style={{ marginRight: 4 }} />使用教程</span>,
               children: (
                 <div style={{ padding: '4px 0' }}>
                   <div className="u-mb-12 u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>点击展开各功能操作说明：</div>
@@ -303,7 +303,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
                 <span>
                   成员管理
                   {members.length > 0 && (
-                    <Badge count={members.length} className="u-ml-4" />
+                    <Badge count={members.length} style={{ marginLeft: 4 }} />
                   )}
                 </span>
               ),
@@ -346,7 +346,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
         width="30vw"
         destroyOnHidden
       >
-        <Form form={addForm} layout="vertical" className="u-mt-16">
+        <Form form={addForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="name" label="姓名" rules={[{ required: true, message: '请输入姓名' }]}>
             <Input placeholder="请输入姓名" />
           </Form.Item>

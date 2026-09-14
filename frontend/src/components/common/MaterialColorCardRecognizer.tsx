@@ -241,7 +241,7 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
           </Button>,
         ]}
       >
-        <Space direction="vertical" className="u-w-full" size="middle">
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
 
             {!result && (
               <Alert
@@ -260,7 +260,7 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
                     alt="色卡图片"
                     width={220}
                     height={220}
-                    className="u-br-8" style={{ objectFit: 'contain', border: '1px solid var(--color-border-light)' }}
+                    style={{ objectFit: 'contain', borderRadius: 8, border: '1px solid var(--color-border-light)' }}
                     preview
                   />
                 </div>
@@ -366,7 +366,7 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
                               {fv && (
                                 <Tag
                                   color={confidenceColor(conf)}
-                                  className="u-fs-11" style={{ padding: '0 6px', marginRight: 0 }}
+                                  style={{ fontSize: 11, padding: '0 6px', marginRight: 0 }}
                                 >
                                   {confidenceLabel(conf)}
                                 </Tag>
@@ -377,7 +377,7 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
                               onChange={(e) => onEditChange(key as string, e.target.value)}
                               placeholder={fv ? '' : '（未识别到）'}
                               size="small"
-                              className="u-mt-4"
+                              style={{ marginTop: 4 }}
                             />
                             {fv && fv.rawText && fv.rawText !== displayValue && (
                               <div className="u-fs-11 u-mt-4" style={{ color: 'var(--color-text-tertiary)' }}>

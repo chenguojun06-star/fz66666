@@ -162,7 +162,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
                   type="link"
                   size="small"
                   onClick={() => onOpenInspectDrawer(orderId!)}
-                  className="u-p-0 u-fs-13"
+                  style={{ padding: 0, fontSize: 13 }}
                 >
                   侧滑质检
                 </Button>
@@ -172,7 +172,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
                 size="small"
                 icon={<SendOutlined />}
                 onClick={() => navigate(paths.warehousingInspect.replace(':orderId', orderId!))}
-                className="u-p-0 u-fs-13"
+                style={{ padding: 0, fontSize: 13 }}
               >
                 跳转详情页
               </Button>
@@ -216,7 +216,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
             size="small"
             icon={<SettingOutlined />}
             onClick={() => setColumnSettingsOpen(true)}
-            className="u-p-0 u-fs-13"
+            style={{ padding: 0, fontSize: 13 }}
           >
             显示字段
           </Button>

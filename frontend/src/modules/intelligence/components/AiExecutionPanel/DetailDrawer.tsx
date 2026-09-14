@@ -103,7 +103,7 @@ export default function DetailDrawer({
 
           {/* 操作按钮 */}
           <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--color-border-light)' }}>
-            <Space className="u-w-full u-jc-end">
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
               <Button
                 type="primary"
                 danger

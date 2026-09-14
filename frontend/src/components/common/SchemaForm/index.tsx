@@ -72,7 +72,7 @@ const WidgetRenderer: React.FC<{
           <Form.Item label={field.label} name={field.fieldKey} rules={rules}>
             <InputNumber
               disabled={disabled}
-              className="u-w-full"
+              style={{ width: '100%' }}
               min={validations.min}
               max={validations.max}
               placeholder={`请输入${field.label}`}
@@ -90,7 +90,7 @@ const WidgetRenderer: React.FC<{
             getValueProps={(v) => ({ value: v ? dayjs(v) : undefined })}
             normalize={(v) => (v ? (v as dayjs.Dayjs).format('YYYY-MM-DD') : undefined)}
           >
-            <DatePicker disabled={disabled} className="u-w-full" />
+            <DatePicker disabled={disabled} style={{ width: '100%' }} />
           </Form.Item>
         </Col>
       );

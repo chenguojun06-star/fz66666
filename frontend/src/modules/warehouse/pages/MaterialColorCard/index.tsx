@@ -38,8 +38,8 @@ const MaterialColorCardPage: React.FC = () => {
   return (
     <>
       {/* 搜索工具栏 */}
-      <Card className="u-mb-12" style={{ background: 'var(--color-bg-container)' }}>
-        <Space.Compact className="u-w-full u-d-flex">
+      <Card style={{ marginBottom: 12, background: 'var(--color-bg-container)' }}>
+        <Space.Compact style={{ width: '100%', display: 'flex' }}>
           <Input placeholder="搜索色卡编号/名称/供应商" value={keyword}
             onChange={(e) => setKeyword(e.target.value)} style={{ maxWidth: 280 }} allowClear />
           <Select placeholder="物料类型" value={materialType || undefined} onChange={setMaterialType}
@@ -56,9 +56,9 @@ const MaterialColorCardPage: React.FC = () => {
 
       {/* 卡片网格 */}
       {dataList.length === 0 && !loading ? (
-        <Card className="u-ta-center" style={{ padding: '60px 0' }}>
+        <Card style={{ textAlign: 'center', padding: '60px 0' }}>
           <Empty
-            image={<FileTextOutlined className="u-mb-12" style={{ fontSize: 48, color: 'var(--color-text-quaternary)' }} />}
+            image={<FileTextOutlined style={{ fontSize: 48, color: 'var(--color-text-quaternary)', marginBottom: 12 }} />}
             description={<span style={{ color: 'var(--color-text-tertiary)' }}>暂无物料色卡，点击右上角「新建物料色卡」开始创建</span>}
           />
         </Card>

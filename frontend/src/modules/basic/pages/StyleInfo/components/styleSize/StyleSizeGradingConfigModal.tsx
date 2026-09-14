@@ -86,7 +86,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
       {/* 行业预设模板 */}
       <PresetSection onApplyPreset={handleApplyPreset} />
 
-      <Divider className="u-m-12px0" />
+      <Divider style={{ margin: '12px 0' }} />
 
       {/* 基准码选择 */}
       <BaseSizeSection
@@ -96,7 +96,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
         onChange={handleBaseSizeChange}
       />
 
-      <Divider className="u-m-12px0" />
+      <Divider style={{ margin: '12px 0' }} />
 
       {/* 跳码区配置 */}
       <div style={{ marginBottom: 20 }}>

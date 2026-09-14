@@ -50,7 +50,7 @@ const LocationDetailDrawer: React.FC<Props> = ({
     >
       {selectedLocation && (
         <div className="wlm-detail-content">
-          <Row gutter={16} className="u-mb-16">
+          <Row gutter={16} style={{ marginBottom: 16 }}>
             <Col span={6}>
               <div className="wlm-detail-label">库位编码</div>
               <div className="wlm-detail-value">{selectedLocation.locationCode}</div>

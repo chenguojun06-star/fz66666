@@ -11,8 +11,8 @@ const DataImport: React.FC = () => {
   return (
     <>
       <div style={{ padding: '0 0 24px' }}>
-        <Title level={4} className="u-mb-4">
-          <FileExcelOutlined className="u-mr-8" />
+        <Title level={4} style={{ marginBottom: 4 }}>
+          <FileExcelOutlined style={{ marginRight: 8 }} />
           数据导入
         </Title>
         <Text type="secondary">

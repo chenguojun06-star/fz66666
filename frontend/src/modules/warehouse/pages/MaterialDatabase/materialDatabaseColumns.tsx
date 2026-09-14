@@ -79,7 +79,7 @@ export const getMaterialDatabaseColumns = (actions: MaterialColumnActions): Colu
         return (
           <Tag
             color="geekblue"
-            className="u-cur-pointer"
+            style={{ cursor: 'pointer' }}
             onClick={() => viewColorItems(record)}
           >
             色卡本物料

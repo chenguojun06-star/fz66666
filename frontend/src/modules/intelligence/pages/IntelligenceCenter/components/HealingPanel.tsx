@@ -40,10 +40,10 @@ const HealingPanel: React.FC<HealingPanelProps> = ({
               <span className="c-heal-detail">{item.detail}</span>
               <span className="u-ml-auto u-fshrink-0">
                 {item.autoFixed
-                  ? <Tag className="u-fs-14" style={{ background: 'rgba(45, 127, 249, 0.13)', color: 'var(--color-primary-light)', borderColor: '#4096ff55' }}>已自修</Tag>
+                  ? <Tag style={{ fontSize: 14, background: 'rgba(45, 127, 249, 0.13)', color: 'var(--color-primary-light)', borderColor: '#4096ff55' }}>已自修</Tag>
                   : item.status !== 'OK'
-                    ? <Tag className="u-fs-14" style={{ background: 'var(--color-warning)22', color: 'var(--color-warning)', borderColor: 'var(--color-warning)55' }}>需处理</Tag>
-                    : <Tag className="u-fs-14" style={{ background: 'rgba(82, 196, 26, 0.13)', color: 'var(--color-success)', borderColor: '#73d13d55' }}>正常</Tag>
+                    ? <Tag style={{ fontSize: 14, background: 'var(--color-warning)22', color: 'var(--color-warning)', borderColor: 'var(--color-warning)55' }}>需处理</Tag>
+                    : <Tag style={{ fontSize: 14, background: 'rgba(82, 196, 26, 0.13)', color: 'var(--color-success)', borderColor: '#73d13d55' }}>正常</Tag>
                 }
               </span>
             </div>

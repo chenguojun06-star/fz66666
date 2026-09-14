@@ -30,15 +30,15 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
         <div>
           <div className="u-d-flex u-ai-center u-jc-between" style={{ marginBottom: 3 }}>
             <div className="u-d-flex u-ai-center u-gap-4">
-              <Tag color={difficultyColor(activeDifficulty.difficultyLevel)} className="u-m-0 u-fs-12 u-lh-18px" style={{ padding: '0 5px' }}>{activeDifficulty.difficultyLabel}</Tag>
-              {activeDifficulty.assessmentSource === 'AI_ENHANCED' && <Tag color="purple" className="u-m-0 u-fs-12 u-lh-18px" style={{ padding: '0 5px' }}>AI增强</Tag>}
+              <Tag color={difficultyColor(activeDifficulty.difficultyLevel)} style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 5px' }}>{activeDifficulty.difficultyLabel}</Tag>
+              {activeDifficulty.assessmentSource === 'AI_ENHANCED' && <Tag color="purple" style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 5px' }}>AI增强</Tag>}
             </div>
-            <Button icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={onAiImageAnalysis} disabled={!styleId} className="u-fs-12" style={{ height: 20, padding: '0 5px' }}>图像分析</Button>
+            <Button icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={onAiImageAnalysis} disabled={!styleId} style={{ fontSize: 12, height: 20, padding: '0 5px' }}>图像分析</Button>
           </div>
           <div className="u-d-flex u-ai-center u-gap-6 u-mb-4">
             <Progress percent={activeDifficulty.difficultyScore * 10} showInfo={false}
               strokeColor={difficultyColor(activeDifficulty.difficultyLevel) === 'green' ? 'var(--color-success)' : difficultyColor(activeDifficulty.difficultyLevel) === 'orange' ? 'var(--color-warning)' : 'var(--color-danger)'}
-              className="u-flex-1 u-m-0" />
+              style={{ flex: 1, margin: 0 }} />
             <span className="u-fs-12 u-ws-nowrap" style={{ color: 'var(--color-gray-700)' }}><b>{activeDifficulty.difficultyScore}</b>/10 ×<b style={{ color: 'var(--color-accent-purple)' }}>{activeDifficulty.pricingMultiplier}</b></span>
           </div>
           <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>物料清单 {activeDifficulty.bomCount}种 · 工序 {activeDifficulty.processCount}道{activeDifficulty.hasSecondaryProcess ? ' · 含二次工艺' : ''}</div>
@@ -56,7 +56,7 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
               <div className="u-d-flex u-ai-center u-gap-4" style={{ marginBottom: 3 }}>
                 <span className="u-fs-12 u-fw-600" style={{ color: 'var(--color-accent-cyan)' }}>视觉AI</span>
                 {visualResult.severity && visualResult.severity !== 'NONE' && (
-                  <Tag className="u-m-0 u-fs-11 u-lh-16px u-p-04px" color={SEVERITY_COLOR[visualResult.severity] ?? 'default'}>{visualResult.severity}</Tag>
+                  <Tag style={{ margin: 0, fontSize: 11, lineHeight: '16px', padding: '0 4px' }} color={SEVERITY_COLOR[visualResult.severity] ?? 'default'}>{visualResult.severity}</Tag>
                 )}
                 <span className="u-fs-11 u-ml-auto" style={{ color: 'var(--color-text-tertiary)' }}>置信度 {Math.round(visualResult.confidence * 100)}%</span>
               </div>
@@ -71,7 +71,7 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
               {visualResult.styleFeatures && Object.keys(visualResult.styleFeatures).length > 0 && (
                 <div className="u-d-flex u-fwrap-wrap" style={{ gap: 3, marginTop: 3 }}>
                   {Object.entries(visualResult.styleFeatures).slice(0, 4).map(([k, v]) => (
-                    <Tag key={k} className="u-m-0 u-fs-11 u-lh-16px u-p-04px">{k}: {v}</Tag>
+                    <Tag key={k} style={{ margin: 0, fontSize: 11, lineHeight: '16px', padding: '0 4px' }}>{k}: {v}</Tag>
                   ))}
                 </div>
               )}
@@ -83,7 +83,7 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
         </div>
       ) : (
         <div className="u-ta-center" style={{ padding: '12px 0' }}>
-          <Button icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={onAiImageAnalysis} disabled={!styleId} className="u-fs-12">AI 难度分析</Button>
+          <Button icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={onAiImageAnalysis} disabled={!styleId} style={{ fontSize: 12 }}>AI 难度分析</Button>
           <div className="u-fs-11 u-mt-4" style={{ color: 'var(--color-text-quaternary)' }}>分析款式图片，评估制作难度与定价倍率</div>
         </div>
       )}

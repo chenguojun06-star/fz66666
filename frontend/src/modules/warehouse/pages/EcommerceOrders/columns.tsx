@@ -47,7 +47,7 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
       render: (_: unknown, r: EcOrder) => {
         const styleNo = (r.skuCode || '').split('-')[0];
         return styleNo
-          ? <Text strong className="u-fs-14" style={{ fontFamily: 'monospace' }}>{styleNo}</Text>
+          ? <Text strong style={{ fontSize: 14, fontFamily: 'monospace' }}>{styleNo}</Text>
           : <Text type="secondary">-</Text>;
       },
     },
@@ -60,8 +60,8 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
           ? <Image
               src={getFullAuthedFileUrl(imgUrl)}
               width={44} height={44}
-              className="u-objf-cover u-br-4"
-              preview={{ cover: <EyeOutlined className="u-fs-12" /> }}
+              style={{ objectFit: 'cover', borderRadius: 4 }}
+              preview={{ cover: <EyeOutlined style={{ fontSize: 12 }} /> }}
             />
           : <div style={{
               width: 44, height: 44, background: 'var(--color-bg-subtle)', borderRadius: 4,
@@ -102,7 +102,7 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
       title: '关联生产单', dataIndex: 'productionOrderNo', width: 140,
       render: v => v
         ? <Tag color="blue" icon={<CheckCircleOutlined />}>{v}</Tag>
-        : <Tag color="orange" className="u-cur-pointer">待处理</Tag>,
+        : <Tag color="orange" style={{ cursor: 'pointer' }}>待处理</Tag>,
     },
     {
       title: '快递', dataIndex: 'trackingNo', width: 130,
@@ -170,7 +170,7 @@ export function buildPricingColumns(args: PricingColumnsArgs): ColumnsType<Sku> 
     { title: '尺码',   dataIndex: 'size',    width: 70 },
     {
       title: '商品编码', dataIndex: 'skuCode', width: 190,
-      render: v => <Text className="u-fs-14" style={{ color: 'var(--color-success)' }}>{v}</Text>,
+      render: v => <Text style={{ fontSize: 14, color: 'var(--color-success)' }}>{v}</Text>,
     },
     {
       title: '库存', dataIndex: 'stockQuantity', width: 70,
@@ -190,7 +190,7 @@ export function buildPricingColumns(args: PricingColumnsArgs): ColumnsType<Sku> 
         ? <InputNumber value={editRow.salesPrice ?? undefined} min={0} precision={2}
             style={{ width: 110 }}
             onChange={onSalesChange} />
-        : <Text className="u-fw-600" style={{ color: 'var(--color-warning)' }}>{v != null ? `¥${v}` : <Text type="secondary">—</Text>}</Text>,
+        : <Text style={{ color: 'var(--color-warning)', fontWeight: 600 }}>{v != null ? `¥${v}` : <Text type="secondary">—</Text>}</Text>,
     },
     {
       title: '毛利率', width: 80,

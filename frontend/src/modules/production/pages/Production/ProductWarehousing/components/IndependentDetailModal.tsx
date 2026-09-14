@@ -90,13 +90,13 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
       <div className="u-h-full u-d-flex u-fd-column">
         <Tabs
           defaultActiveKey="inspection"
-          className="u-flex-1" style={{ minHeight: 0 }}
+          style={{ flex: 1, minHeight: 0 }}
           items={[
             {
               key: 'inspection',
               label: '质检信息',
               children: (
-        <Card className="order-flow-detail u-h-full" style={{ marginTop: 0 }} loading={entryLoading}>
+        <Card className="order-flow-detail" style={{ marginTop: 0, height: '100%' }} loading={entryLoading}>
           <div className="u-mb-12">
             <ProductionOrderHeader
               order={orderDetail || entryWarehousing}
@@ -177,7 +177,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                 dataSource={orderLineWarehousingRows}
                 sticky
                 scroll={{ x: 1040 }}
-                className="u-fs-14"
+                style={{ fontSize: 14 }}
                 columns={[
                   { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 160 },
                   { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 130, ellipsis: true },
@@ -277,7 +277,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
               key: 'production-sheet',
               label: '工艺说明',
               children: (
-                <Card className="u-h-full">
+                <Card style={{ height: '100%' }}>
                   <ProductionSheetPanel
                     description={styleDescription}
                     reviewStatus={styleSampleReviewStatus}
@@ -292,7 +292,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
               key: 'size-chart',
               label: ' 尺寸表',
               children: (
-                <Card className="u-h-full">
+                <Card style={{ height: '100%' }}>
                   {styleId ? (
                     <StyleSizeTab styleId={styleId} readOnly simpleView />
                   ) : (

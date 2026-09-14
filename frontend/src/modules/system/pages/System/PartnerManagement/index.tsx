@@ -154,7 +154,7 @@ const PartnerManagement: React.FC = () => {
           />
           {v || r.username}
           {r.isFactoryOwner && (
-            <Tag icon={<CrownFilled />} color="gold" className="u-ml-2">老板</Tag>
+            <Tag icon={<CrownFilled />} color="gold" style={{ marginLeft: 2 }}>老板</Tag>
           )}
         </Space>
       ),
@@ -205,7 +205,7 @@ const PartnerManagement: React.FC = () => {
       <PageLayout
         title={
           <span className="u-d-flex u-ai-center" style={{ gap: 0 }}>
-            <BankOutlined className="u-mr-8 u-fs-20" style={{ color: 'var(--primary-color, var(--color-primary))' }} />
+            <BankOutlined style={{ marginRight: 8, color: 'var(--primary-color, var(--color-primary))', fontSize: 20 }} />
             合作企业管理
           </span>
         }

@@ -135,7 +135,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
 
   return (
     <div style={{ padding: '12px 0' }}>
-      <Card className="u-mb-12" style={{ background: 'var(--card-bg, var(--color-slate-50))' }}>
+      <Card style={{ marginBottom: 12, background: 'var(--card-bg, var(--color-slate-50))' }}>
         <Row gutter={32} align="middle">
           <Col>
             <Statistic title="工序种类" value={stats.totalProcessTypes} suffix="种" />
@@ -146,7 +146,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
           <Col>
             <Statistic title="历史记录" value={stats.totalRecords} suffix="条" />
           </Col>
-          <Col flex="1" className="u-d-flex u-ai-center u-jc-end u-gap-8 u-fwrap-wrap">
+          <Col flex="1" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
             <Select
               placeholder="选择品类"
               allowClear
@@ -196,14 +196,14 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
       </Card>
 
       {error && (
-        <Alert type="warning" title={error} className="u-mb-12" showIcon />
+        <Alert type="warning" title={error} style={{ marginBottom: 12 }} showIcon />
       )}
 
       {hasFilter && (
         <Alert
           type="info"
           showIcon
-          className="u-mb-12"
+          style={{ marginBottom: 12 }}
           message={
             <Space>
               <span>当前筛选：</span>
@@ -222,7 +222,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
             key: String(index),
             label: (
               <Space>
-                <Tag color={STAGE_COLOR[group.parentNode] || 'default'} className="u-fs-14 u-fw-600">
+                <Tag color={STAGE_COLOR[group.parentNode] || 'default'} style={{ fontSize: 14, fontWeight: 600 }}>
                   {group.parentNode}
                 </Tag>
                 <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>

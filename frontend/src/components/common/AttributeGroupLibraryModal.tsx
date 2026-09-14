@@ -321,14 +321,14 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
                   addItem();
                 }
               }}
-              className="u-flex-1" style={{ minWidth: 200 }}
+              style={{ flex: 1, minWidth: 200 }}
               placeholder={`输入或选择${activeType.itemLabel}后回车`}
             />
             <CircleIconButton type="add" size={24} title={`添加${activeType.itemLabel}`} onClick={addItem} />
           </div>
           <div className="u-d-flex u-fwrap-wrap u-gap-6 u-mt-2">
             {editor.values.map((value) => (
-              <Tag key={value} closable closeIcon={<TagMinusCloseIcon />} onClose={(e) => { e.preventDefault(); removeItem(value); }} className="u-m-0">
+              <Tag key={value} closable closeIcon={<TagMinusCloseIcon />} onClose={(e) => { e.preventDefault(); removeItem(value); }} style={{ margin: 0 }}>
                 {value}
               </Tag>
             ))}
@@ -465,7 +465,7 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
                 </div>
                 <div className="u-d-flex u-fwrap-wrap u-gap-6">
                   {selectedGroup.values.map((value) => (
-                    <Tag key={value} className="u-m-0" style={{ padding: '2px 10px' }}>
+                    <Tag key={value} style={{ margin: 0, padding: '2px 10px' }}>
                       {value}
                     </Tag>
                   ))}

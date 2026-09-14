@@ -222,7 +222,7 @@ const AiAgentTraceCenter: React.FC = () => {
               label: <span><UnorderedListOutlined /> 执行记录</span>,
               children: (
                 <>
-                  <Card className="u-mb-12">
+                  <Card style={{ marginBottom: 12 }}>
                     <Space wrap>
                   <Input
                     allowClear
@@ -275,7 +275,7 @@ const AiAgentTraceCenter: React.FC = () => {
                   <Alert
                     showIcon
                     type={filteredRows.some((item) => item.status === 'FAILED') ? 'warning' : 'info'}
-                    className="u-mb-12"
+                    style={{ marginBottom: 12 }}
                     title="追溯范围"
                     description={filteredRows.some((item) => item.status === 'FAILED')
                       ? '当前结果中包含失败记录，建议优先查看详情中的错误信息、工具参数与补救建议。'
@@ -335,7 +335,7 @@ const AiAgentTraceCenter: React.FC = () => {
           setSearchParams({});
         }}
       >
-        <Space size={16} className="u-w-full u-d-flex u-fd-column">
+        <Space size={16} style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
           <Descriptions column={1} bordered>
             <Descriptions.Item label="指令编号">{detail?.commandId || '-'}</Descriptions.Item>
             <Descriptions.Item label="轨迹条数">{detail?.count ?? detail?.logs?.length ?? 0}</Descriptions.Item>

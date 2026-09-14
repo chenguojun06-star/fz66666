@@ -118,22 +118,22 @@ const EcommerceCenter: React.FC = () => {
               {renderIcon(p.icon)}
             </span>
             <div>
-              <Text strong className="u-fs-16">{p.name}</Text>
-              <div className="u-mt-2"><Tag icon={statusConfig.icon} color={!isAvailable ? 'default' : (isConnected ? 'success' : isConfigured ? 'warning' : 'default')} className="u-m-0">{statusConfig.text}</Tag></div>
+              <Text strong style={{ fontSize: 16 }}>{p.name}</Text>
+              <div className="u-mt-2"><Tag icon={statusConfig.icon} color={!isAvailable ? 'default' : (isConnected ? 'success' : isConfigured ? 'warning' : 'default')} style={{ margin: 0 }}>{statusConfig.text}</Tag></div>
             </div>
           </Space>
-          <ArrowRightOutlined className="u-fs-16" style={{ color: 'var(--color-text-quaternary)' }} />
+          <ArrowRightOutlined style={{ color: 'var(--color-text-quaternary)', fontSize: 16 }} />
         </div>
 
         {isAvailable && isConfigured && statsData ? (
           <Row gutter={8}>
             <Col span={8}>
               <div className="u-fs-14 u-mb-2" style={{ color: 'var(--color-text-muted)' }}>今日订单</div>
-              <Text strong className="u-fs-20" style={{ color: 'var(--color-primary)' }}>{statsData.todayOrders}</Text>
+              <Text strong style={{ color: 'var(--color-primary)', fontSize: 20 }}>{statsData.todayOrders}</Text>
             </Col>
             <Col span={8}>
               <div className="u-fs-14 u-mb-2" style={{ color: 'var(--color-text-muted)' }}>今日销售</div>
-              <Text strong className="u-fs-20" style={{ color: 'var(--color-success)' }}>¥{parseFloat(statsData.todaySales).toFixed(0)}</Text>
+              <Text strong style={{ color: 'var(--color-success)', fontSize: 20 }}>¥{parseFloat(statsData.todaySales).toFixed(0)}</Text>
             </Col>
             <Col span={8}>
               <div className="u-fs-14 u-mb-2" style={{ color: 'var(--color-text-muted)' }}>待发货</div>
@@ -141,7 +141,7 @@ const EcommerceCenter: React.FC = () => {
             </Col>
           </Row>
         ) : (
-          <Paragraph type="secondary" className="u-fs-14 u-mb-0" style={{ minHeight: 50 }}>{p.desc}</Paragraph>
+          <Paragraph type="secondary" style={{ fontSize: 14, marginBottom: 0, minHeight: 50 }}>{p.desc}</Paragraph>
         )}
 
         {isAvailable && isConfigured && statsData && (
@@ -161,7 +161,7 @@ const EcommerceCenter: React.FC = () => {
           <Button
             size="small" icon={<SyncOutlined />} loading={syncing}
             onClick={(e) => { e.stopPropagation(); handleSync(p); }}
-            className="u-mt-10 u-w-full"
+            style={{ marginTop: 10, width: '100%' }}
           >
             同步订单
           </Button>
@@ -169,7 +169,7 @@ const EcommerceCenter: React.FC = () => {
         {!isAvailable && (
           <Button
             size="small" icon={<ClockCircleOutlined />} disabled
-            className="u-mt-10 u-w-full"
+            style={{ marginTop: 10, width: '100%' }}
           >
             敬请期待
           </Button>
@@ -183,19 +183,19 @@ const EcommerceCenter: React.FC = () => {
 
   const overviewContent = (
     <div className="u-p-08px">
-      <Row gutter={16} className="u-mb-12 u-mt-8">
+      <Row gutter={16} style={{ marginBottom: 12, marginTop: 8 }}>
           <Col span={6}>
-            <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-processing-bg)' }}>
+            <Card variant="borderless" style={{ background: 'var(--status-processing-bg)', borderRadius: 12 }}>
               <Statistic title="已对接平台" value={globalStats.connected} suffix={`/ ${PLATFORM_LIST.length}`} prefix={<ApiOutlined style={{ color: 'var(--color-primary)' }} />} styles={{ content: { color: 'var(--color-primary)' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-success-bg)' }}>
+            <Card variant="borderless" style={{ background: 'var(--status-success-bg)', borderRadius: 12 }}>
               <Statistic title="今日总订单" value={globalStats.todayOrders} suffix="单" prefix={<ShoppingCartOutlined style={{ color: 'var(--color-success)' }} />} styles={{ content: { color: 'var(--color-success)' } }} />
             </Card>
           </Col>
           <Col span={6}>
-            <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-warning-bg)' }}>
+            <Card variant="borderless" style={{ background: 'var(--status-warning-bg)', borderRadius: 12 }}>
               <Statistic title="今日销售额" value={globalStats.todaySales.toFixed(2)} prefix={<DollarOutlined style={{ color: 'var(--color-warning)' }} />} suffix="元" styles={{ content: { color: 'var(--color-warning)' } }} />
             </Card>
           </Col>
@@ -207,10 +207,10 @@ const EcommerceCenter: React.FC = () => {
         </Row>
 
         {globalStats.noStockWarn > 0 && (
-          <Card className="u-mb-16 u-br-8" style={{ border: '1px solid var(--status-error-border)', background: 'var(--color-bg-base)1F0' }} styles={{ body: { padding: '10px 16px' } }}>
+          <Card style={{ marginBottom: 16, borderRadius: 8, border: '1px solid var(--status-error-border)', background: 'var(--color-bg-base)1F0' }} styles={{ body: { padding: '10px 16px' } }}>
             <Space>
               <WarningOutlined style={{ color: 'var(--color-danger)', fontSize: 18 }} />
-              <Text strong className="u-fs-14" style={{ color: 'var(--color-danger)' }}>缺货预警：{globalStats.noStockWarn} 单未匹配到生产单，需人工确认库存或创建生产计划</Text>
+              <Text strong style={{ color: 'var(--color-danger)', fontSize: 14 }}>缺货预警：{globalStats.noStockWarn} 单未匹配到生产单，需人工确认库存或创建生产计划</Text>
               <Button type="link" size="small" onClick={() => navigate('/warehouse/ecommerce')}>查看详情 →</Button>
             </Space>
           </Card>
@@ -219,9 +219,9 @@ const EcommerceCenter: React.FC = () => {
         {connectedPlatforms.length > 0 && (
           <div className="u-mb-12">
             <div className="u-d-flex u-ai-center" style={{ marginBottom: 14 }}>
-              <CheckCircleOutlined className="u-mr-8" style={{ color: 'var(--color-success)', fontSize: 18 }} />
+              <CheckCircleOutlined style={{ color: 'var(--color-success)', marginRight: 8, fontSize: 18 }} />
               <Text strong style={{ fontSize: 17 }}>已对接平台</Text>
-              <Tag color="green" className="u-ml-8">{connectedPlatforms.length} 个</Tag>
+              <Tag color="green" style={{ marginLeft: 8 }}>{connectedPlatforms.length} 个</Tag>
             </div>
             <Row gutter={[16, 16]}>
               {connectedPlatforms.map(renderPlatformCard)}
@@ -232,9 +232,9 @@ const EcommerceCenter: React.FC = () => {
         {unconnectedPlatforms.length > 0 && (
           <div>
             <div className="u-d-flex u-ai-center" style={{ marginBottom: 14 }}>
-              <CloudUploadOutlined className="u-mr-8" style={{ color: 'var(--color-warning)', fontSize: 18 }} />
+              <CloudUploadOutlined style={{ color: 'var(--color-warning)', marginRight: 8, fontSize: 18 }} />
               <Text strong style={{ fontSize: 17 }}>待对接平台</Text>
-              <Tag color="orange" className="u-ml-8">{unconnectedPlatforms.length} 个</Tag>
+              <Tag color="orange" style={{ marginLeft: 8 }}>{unconnectedPlatforms.length} 个</Tag>
             </div>
             <Row gutter={[16, 16]}>
               {unconnectedPlatforms.map(renderPlatformCard)}
@@ -307,7 +307,7 @@ const EcommerceCenter: React.FC = () => {
         activeKey={activeTab}
         onChange={setActiveTab}
         items={tabs}
-        className="u-br-8" style={{ background: 'var(--color-bg-base)', padding: '0 16px' }}
+        style={{ background: 'var(--color-bg-base)', padding: '0 16px', borderRadius: 8 }}
       />
     </PageLayout>
   );

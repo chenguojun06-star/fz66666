@@ -54,7 +54,7 @@ export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<Fa
         ) : score ? (
           <div className="u-fs-14 u-lh-18" style={{ minWidth: 160 }}>
             <div className="u-mb-4">
-              <Tag color={tierColorMap[score.tier] ?? 'var(--color-text-muted)'} className="u-fw-700 u-fs-14">
+              <Tag color={tierColorMap[score.tier] ?? 'var(--color-text-muted)'} style={{ fontWeight: 700, fontSize: 14 }}>
                 {score.tier}级
               </Tag>
               <span style={{ color: tierColorMap[score.tier] ?? 'var(--color-text-quaternary)', fontWeight: 600 }}>
@@ -133,7 +133,7 @@ export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<Fa
       render: (v: string) => {
         if (!v) return '-';
         const colorMap: Record<string, string> = { S: 'warning', A: 'success', B: 'processing', C: 'error' };
-        return <Tag color={colorMap[v] || 'default'} className="u-fw-700">{v}</Tag>;
+        return <Tag color={colorMap[v] || 'default'} style={{ fontWeight: 700 }}>{v}</Tag>;
       },
     },
     {

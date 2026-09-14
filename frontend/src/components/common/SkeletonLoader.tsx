@@ -28,7 +28,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
         <div className="u-p-16">
           <Skeleton active={active} paragraph={{ rows: 1 }} />
           {Array.from({ length: rows }).map((_, i) => (
-            <Skeleton key={i} active={active} paragraph={{ rows: 1 }} className="u-mt-12" />
+            <Skeleton key={i} active={active} paragraph={{ rows: 1 }} style={{ marginTop: 12 }} />
           ))}
         </div>
       );
@@ -38,8 +38,8 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
         <div className="u-d-grid u-gap-16" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
           {Array.from({ length: rows }).map((_, i) => (
             <div key={i} className="u-br-8 u-p-16" style={{ background: 'var(--color-bg-base)' }}>
-              <Skeleton.Image active={active} className="u-w-full" style={{ height: 120 }} />
-              <Skeleton active={active} paragraph={{ rows: 2 }} className="u-mt-12" />
+              <Skeleton.Image active={active} style={{ width: '100%', height: 120 }} />
+              <Skeleton active={active} paragraph={{ rows: 2 }} style={{ marginTop: 12 }} />
             </div>
           ))}
         </div>
@@ -49,7 +49,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
       return (
         <div className="u-d-flex u-gap-8 u-fwrap-wrap">
           {Array.from({ length: rows }).map((_, i) => (
-            <Skeleton.Image key={i} active={active} className="u-br-4" style={{ width: 80, height: 80 }} />
+            <Skeleton.Image key={i} active={active} style={{ width: 80, height: 80, borderRadius: 4 }} />
           ))}
         </div>
       );
@@ -67,7 +67,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
               avatar={avatar}
               active={active}
               paragraph={{ rows: 1 }}
-              className="u-mb-12"
+              style={{ marginBottom: 12 }}
             />
           ))}
         </div>

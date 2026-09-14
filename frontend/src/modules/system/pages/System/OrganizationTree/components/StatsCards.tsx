@@ -17,7 +17,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ departments, totalMembers }) =>
   const avgTeamSize = teamCount > 0 ? (totalMembers / teamCount).toFixed(1) : '0';
 
   return (
-    <Row gutter={16} className="u-mb-16">
+    <Row gutter={16} style={{ marginBottom: 16 }}>
       <Col xs={12} md={6}>
         <Card size="small" className="stats-card" style={{ borderColor: 'var(--color-border-antd)' }}>
           <div className="stats-card-value">

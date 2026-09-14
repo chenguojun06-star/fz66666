@@ -183,9 +183,9 @@ const SmartRefundTab: React.FC = () => {
 
   return (
     <div>
-      <Row gutter={16} className="u-mb-16">
+      <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
-          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-processing-bg)' }}>
+          <Card variant="borderless" style={{ background: 'var(--status-processing-bg)', borderRadius: 12 }}>
             <Statistic
               title="退款申请"
               value={stats?.totalRequests || 0}
@@ -196,7 +196,7 @@ const SmartRefundTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-warning-bg)' }}>
+          <Card variant="borderless" style={{ background: 'var(--status-warning-bg)', borderRadius: 12 }}>
             <Statistic
               title="待处理"
               value={stats?.pendingCount || 0}
@@ -207,7 +207,7 @@ const SmartRefundTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-success-bg)' }}>
+          <Card variant="borderless" style={{ background: 'var(--status-success-bg)', borderRadius: 12 }}>
             <Statistic
               title="自动通过"
               value={stats?.autoApprovedCount || 0}
@@ -218,7 +218,7 @@ const SmartRefundTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-error-bg)' }}>
+          <Card variant="borderless" style={{ background: 'var(--status-error-bg)', borderRadius: 12 }}>
             <Statistic
               title="退款总额"
               value={Number(stats?.totalRefundAmount || 0)}
@@ -232,7 +232,7 @@ const SmartRefundTab: React.FC = () => {
 
       <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
         <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
-          <RobotOutlined className="u-mr-4" style={{ color: 'var(--color-primary)' }} />
+          <RobotOutlined style={{ marginRight: 4, color: 'var(--color-primary)' }} />
           AI 退款顾问自动审核退款请求：≤100元且未发货自动通过，大额/已发货需人工审核
         </span>
         <Space>

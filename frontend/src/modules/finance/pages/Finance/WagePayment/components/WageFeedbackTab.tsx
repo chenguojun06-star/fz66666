@@ -108,7 +108,7 @@ const WageFeedbackTab: React.FC = () => {
 
   return (
     <div>
-      <Row gutter={16} className="u-mb-16">
+      <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
           <Card><Statistic title="总反馈" value={stats.totalCount ?? 0} prefix={<MessageOutlined />} /></Card>
         </Col>

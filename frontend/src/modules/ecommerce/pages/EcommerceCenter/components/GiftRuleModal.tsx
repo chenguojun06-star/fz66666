@@ -37,7 +37,7 @@ const GiftRuleModal: React.FC<GiftRuleModalProps> = ({ open, record, onClose, on
           <Input placeholder="赠品商品编码" />
         </Form.Item>
         <Form.Item label="赠品数量" name="giftQuantity" rules={[{ required: true, message: '请输入赠品数量' }]}>
-          <InputNumber min={1} precision={0} className="u-w-full" />
+          <InputNumber min={1} precision={0} style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item label="触发类型" name="triggerType" rules={[{ required: true }]}>
           <Select options={GIFT_TRIGGER_TYPE_OPTIONS} />
@@ -48,7 +48,7 @@ const GiftRuleModal: React.FC<GiftRuleModalProps> = ({ open, record, onClose, on
             if (type === 'AMOUNT' || type === 'QUANTITY') {
               return (
                 <Form.Item label={type === 'AMOUNT' ? '触发金额（元）' : '触发数量（件）'} name="triggerValue" rules={[{ required: true, message: '请输入触发阈值' }]}>
-                  <InputNumber min={0} precision={type === 'AMOUNT' ? 2 : 0} className="u-w-full" />
+                  <InputNumber min={0} precision={type === 'AMOUNT' ? 2 : 0} style={{ width: '100%' }} />
                 </Form.Item>
               );
             }

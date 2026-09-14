@@ -186,7 +186,7 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
             <Tag style={{ background: STAGE_ACCENT, color: 'var(--color-bg-base)', border: 'none', fontWeight: 600, fontSize: 14 }}>{stage}</Tag>
             <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{info.count} 个工序</span>
             {editableMode && (
-              <Button type="link" icon={<PlusOutlined />} onClick={() => handleAdd(stage)} className="u-fs-14 u-p-0">
+              <Button type="link" icon={<PlusOutlined />} onClick={() => handleAdd(stage)} style={{ fontSize: 14, padding: 0 }}>
                 添加
               </Button>
             )}
@@ -222,7 +222,7 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
         editableMode ? (
           <Select
             value={record.difficulty || undefined}
-            className="u-w-full"
+            style={{ width: '100%' }}
             allowClear
             placeholder="-"
             onChange={(v) => updateField(record.id!, 'difficulty', v ?? null)}
@@ -265,7 +265,7 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
           <InputNumber
             value={record.standardTime}
             min={0}
-            className="u-w-full"
+            style={{ width: '100%' }}
             onChange={(v) => updateField(record.id!, 'standardTime', toNumberSafe(v))}
           />
         ) : (
@@ -287,13 +287,13 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
               min={0}
               step={0.01}
               prefix="¥"
-              className="u-w-full"
+              style={{ width: '100%' }}
               onChange={(v) => updateField(record.id!, 'price', v)}
             />
             {/* AI 单价提示卡片 */}
             {loading && (
               <span className="u-fs-14 u-d-flex u-ai-center" style={{ color: 'var(--color-text-secondary)', gap: 3 }}>
-                <LoadingOutlined className="u-fs-12" /> 查询历史...
+                <LoadingOutlined style={{ fontSize: 12 }} /> 查询历史...
               </span>
             )}
             {!loading && hint && (
@@ -308,13 +308,13 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
                     updateField(record.id!, 'price', hint.suggestedPrice);
                   }}
                 >
-                  <BulbOutlined className="u-fs-13" style={{ color: 'var(--color-primary)' }} />
+                  <BulbOutlined style={{ fontSize: 13, color: 'var(--color-primary)' }} />
                   <span className="u-fs-14" style={{ color: 'var(--color-primary)' }}>
                     建议 ¥{Number(hint.suggestedPrice).toFixed(2)}
                   </span>
                   <Tag
                     color="blue"
-                    className="u-fs-14 u-p-04px u-lh-16px u-m-0 u-cur-pointer"
+                    style={{ fontSize: 14, padding: '0 4px', lineHeight: '16px', margin: 0, cursor: 'pointer' }}
                   >
                     采用
                   </Tag>
@@ -335,7 +335,7 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
           <span>{size}</span>
           {editableMode && (
             <DeleteOutlined
-              className="u-cur-pointer u-fs-var--font-size-xs" style={{ color: 'var(--color-danger)' }}
+              style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: "var(--font-size-xs)" }}
               onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
                 modal.confirm({
@@ -360,7 +360,7 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
             step={0.01}
             prefix="¥"
            
-            className="u-w-full"
+            style={{ width: '100%' }}
             onChange={(v) => updateSizePrice(record.id!, size, toNumberSafe(v))}
           />
         ) : (

@@ -139,12 +139,12 @@ const WarehousingActionPanel: React.FC<Props> = ({
     <>
       {/* D-360y：没有成品仓时引导去库位地图新建（与物料仓口径一致） */}
       {areas.length === 0 && (
-        <Alert type="warning" showIcon className="u-mb-12"
+        <Alert type="warning" showIcon style={{ marginBottom: 12 }}
           title="还没有成品仓库"
-          description={<span>请先到「库位地图」新建成品仓并划分库位，再回来入库。<Button type="link" size="small" className="u-p-0" onClick={() => navigate('/warehouse/location-map')}>去库位地图新建 →</Button></span>}
+          description={<span>请先到「库位地图」新建成品仓并划分库位，再回来入库。<Button type="link" size="small" style={{ padding: 0 }} onClick={() => navigate('/warehouse/location-map')}>去库位地图新建 →</Button></span>}
         />
       )}
-      <Alert type="info" showIcon className="u-mb-16"
+      <Alert type="info" showIcon style={{ marginBottom: 16 }}
         title={`共 ${pendingRecords.length} 条合格记录待入库，合格数量合计 ${pendingQty} 件`} />
 
       <Card
@@ -153,11 +153,11 @@ const WarehousingActionPanel: React.FC<Props> = ({
             <span>待入库记录</span>
             <Checkbox indeterminate={indeterminate} checked={allChecked} onChange={handleToggleAll}>全选</Checkbox>
             {!allChecked && (
-              <Text type="secondary" className="u-fs-12">已选 {selectedIds.length}/{pendingRecords.length} 条</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>已选 {selectedIds.length}/{pendingRecords.length} 条</Text>
             )}
           </Space>
         }
-        className="u-mb-16"
+        style={{ marginBottom: 16 }}
       >
         <ResizableTable<WarehousingDetailRecord>
           rowKey="id" pagination={false}
@@ -165,7 +165,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
           dataSource={pendingRecords}
           resizableColumns={false}
           scroll={{ x: 900 }}
-          className="u-fs-12"
+          style={{ fontSize: 12 }}
           columns={[
             {
               title: '',
@@ -198,7 +198,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
                     value={loc.areaId || undefined}
                     onChange={(v) => updateRowLocation(id, 'areaId', v)}
                     options={finishedWarehouseOptions}
-                    className="u-w-full"
+                    style={{ width: '100%' }}
                     size="small"
                     placeholder="仓库"
                   />
@@ -219,7 +219,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
                     placeholder="库位"
                     value={loc.locationCode || undefined}
                     onChange={(v) => updateRowLocation(id, 'locationCode', String(v || '').trim())}
-                    className="u-w-full"
+                    style={{ width: '100%' }}
                   />
                 );
               },
@@ -232,11 +232,11 @@ const WarehousingActionPanel: React.FC<Props> = ({
         <Space>
           <span>批量设置库位</span>
           <Tooltip title="为已选中的记录统一设置仓库和库位">
-            <Text type="secondary" className="u-fs-12">(选中 {selectedIds.length} 条)</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>(选中 {selectedIds.length} 条)</Text>
           </Tooltip>
         </Space>
       }>
-        <Space className="u-w-full" size="middle" wrap>
+        <Space style={{ width: '100%' }} size="middle" wrap>
           <Text strong>仓库：</Text>
           <Select
             value={batchAreaId || undefined}
@@ -281,7 +281,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
           {locationGroups.size > 0 && (
             <Space size={4} wrap>
               {Array.from(locationGroups.entries()).map(([loc, count]) => (
-                <Tag key={loc} color={loc === '(未选库位)' ? 'error' : 'blue'} className="u-fs-12">
+                <Tag key={loc} color={loc === '(未选库位)' ? 'error' : 'blue'} style={{ fontSize: 12 }}>
                   {loc}: {count}条
                 </Tag>
               ))}

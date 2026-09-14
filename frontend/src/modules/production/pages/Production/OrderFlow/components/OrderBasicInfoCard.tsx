@@ -62,7 +62,7 @@ const OrderBasicInfoCard: React.FC<Props> = ({
   warehousingTotal, warehousingQualified, warehousingUnqualified,
 }) => {
   return (
-    <Card className="order-flow-detail u-mt-8"  loading={loading}>
+    <Card className="order-flow-detail" style={{ marginTop: 8 }} loading={loading}>
       {/* ── 上：订单概况 —— 图片 + 基本信息 ── */}
       <div className="order-flow-detail-block">
         <div className="order-flow-detail-head">
@@ -84,7 +84,7 @@ const OrderBasicInfoCard: React.FC<Props> = ({
                   {(order as any)?.orderNo || '-'}
                   {(order as any)?.ecPlatform && (() => {
                     const t = getPlatformTag((order as any).ecPlatform);
-                    return <Tag color={t.color} className="u-ml-8">{t.label}</Tag>;
+                    return <Tag color={t.color} style={{ marginLeft: 8 }}>{t.label}</Tag>;
                   })()}
                 </span>
               </Descriptions.Item>

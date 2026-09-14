@@ -65,7 +65,7 @@ export default function useProcessPriceColumns(
               <Select
                
                 value={value || '车缝'}
-                className="u-w-full"
+                style={{ width: '100%' }}
                 onChange={(nextValue) => updateField(record.id, 'progressStage', nextValue)}
                 options={PROGRESS_STAGES.map((stage) => ({ value: stage, label: stage }))}
               />
@@ -101,7 +101,7 @@ export default function useProcessPriceColumns(
                 value={value || undefined}
                 allowClear
                 placeholder="选择"
-                className="u-w-full"
+                style={{ width: '100%' }}
                 onChange={(nextValue) => updateField(record.id, 'difficulty', nextValue)}
                 options={[
                   { value: '易', label: '易' },
@@ -123,7 +123,7 @@ export default function useProcessPriceColumns(
                 value={value}
                 min={0}
                 controls={false}
-                className="u-w-full"
+                style={{ width: '100%' }}
                 onChange={(nextValue) => updateField(record.id, 'standardTime', toNumberSafe(nextValue))}
               />
             )
@@ -142,7 +142,7 @@ export default function useProcessPriceColumns(
                 step={0.01}
                 controls={false}
                 prefix="¥"
-                className="u-w-full"
+                style={{ width: '100%' }}
                 onChange={(nextValue) => updateField(record.id, 'price', nextValue)}
               />
             )
@@ -185,7 +185,7 @@ export default function useProcessPriceColumns(
                 step={0.01}
                 controls={false}
                 prefix="¥"
-                className="u-w-full"
+                style={{ width: '100%' }}
                 onChange={(nextValue) => updateSizePrice(record.id, size, toNumberSafe(nextValue))}
               />
             )

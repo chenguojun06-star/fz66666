@@ -655,7 +655,7 @@ const SupplementModal: React.FC<SupplementModalProps> = ({ open, userOptions, on
           rules={[{ required: true, message: '请选择日期' }]}
         >
           <DatePicker
-            className="u-w-full"
+            style={{ width: '100%' }}
             disabledDate={(d) => d && d.isAfter(dayjs().endOf('day'))}
           />
         </Form.Item>
@@ -663,7 +663,7 @@ const SupplementModal: React.FC<SupplementModalProps> = ({ open, userOptions, on
           <DatePicker
             showTime={{ format: 'HH:mm' }}
             format="YYYY-MM-DD HH:mm"
-            className="u-w-full"
+            style={{ width: '100%' }}
             placeholder="上班打卡时间"
           />
         </Form.Item>
@@ -671,7 +671,7 @@ const SupplementModal: React.FC<SupplementModalProps> = ({ open, userOptions, on
           <DatePicker
             showTime={{ format: 'HH:mm' }}
             format="YYYY-MM-DD HH:mm"
-            className="u-w-full"
+            style={{ width: '100%' }}
             placeholder="下班打卡时间"
           />
         </Form.Item>
@@ -755,7 +755,7 @@ const AdjustModal: React.FC<AdjustModalProps> = ({ open, record, onCancel, onSuc
           <DatePicker
             showTime={{ format: 'HH:mm' }}
             format="YYYY-MM-DD HH:mm"
-            className="u-w-full"
+            style={{ width: '100%' }}
             placeholder="上班打卡时间"
           />
         </Form.Item>
@@ -763,7 +763,7 @@ const AdjustModal: React.FC<AdjustModalProps> = ({ open, record, onCancel, onSuc
           <DatePicker
             showTime={{ format: 'HH:mm' }}
             format="YYYY-MM-DD HH:mm"
-            className="u-w-full"
+            style={{ width: '100%' }}
             placeholder="下班打卡时间"
           />
         </Form.Item>
@@ -918,7 +918,7 @@ const BatchLeaveModal: React.FC<BatchLeaveModalProps> = ({ open, userOptions, on
           label="休假日期范围"
           rules={[{ required: true, message: '请选择日期范围' }]}
         >
-          <RangePicker className="u-w-full" />
+          <RangePicker style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item
           name="leaveType"

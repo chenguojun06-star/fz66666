@@ -17,7 +17,7 @@ const DecisionCardRow: React.FC<{
       background: bgColor, padding: '14px 16px', marginBottom: 10,
     }}>
       <div className="u-d-flex u-ai-center u-gap-8 u-mb-6">
-        <Tag color={card.level === 'danger' ? 'error' : card.level === 'warning' ? 'warning' : card.level === 'success' ? 'success' : 'processing'} className="u-m-0">
+        <Tag color={card.level === 'danger' ? 'error' : card.level === 'warning' ? 'warning' : card.level === 'success' ? 'success' : 'processing'} style={{ margin: 0 }}>
           {card.level === 'danger' ? '紧急' : card.level === 'warning' ? '注意' : card.level === 'success' ? '良好' : '提示'}
         </Tag>
         <span className="u-fw-600 u-fs-14" style={{ color: 'var(--color-text)' }}>{card.title}</span>
@@ -32,7 +32,7 @@ const DecisionCardRow: React.FC<{
       </div>
       {card.painPoint && (
         <div style={{ fontSize: 14, color: accentColor, marginBottom: 6 }}>
-          <BulbOutlined className="u-mr-4" />
+          <BulbOutlined style={{ marginRight: 4 }} />
           建议：{card.painPoint}
         </div>
       )}
@@ -52,7 +52,7 @@ const DecisionCardRow: React.FC<{
             fontWeight: 500,
           }}
         >
-          {card.actionLabel} <RightOutlined className="u-fs-12" />
+          {card.actionLabel} <RightOutlined style={{ fontSize: 12 }} />
         </div>
       )}
     </div>

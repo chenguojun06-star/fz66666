@@ -161,7 +161,7 @@ const BatchSelectionPanel: React.FC<BatchSelectionPanelProps> = ({
                                             </div>
                                             <div style={{ width: 140 }}>
                                                 <InputNumber
-                                                    className="u-w-full"
+                                                    style={{ width: '100%' }}
                                                     min={1}
                                                     max={maxQty || undefined}
                                                     value={currentQty || undefined}

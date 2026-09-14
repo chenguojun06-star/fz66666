@@ -61,10 +61,10 @@ const OrdersTab: React.FC<Props> = ({ onInitReturn }) => {
                 : undefined}>
               <Statistic title={
                 <span className="u-fs-14">
-                  {s.key === 'pending' && <Badge status="error" className="u-mr-4" />}
+                  {s.key === 'pending' && <Badge status="error" style={{ marginRight: 4 }} />}
                   {s.title}
                   {s.key === 'pending' && h.isFilteringPending && (
-                    <Tag color="red" className="u-ml-6 u-fs-10">筛选中</Tag>
+                    <Tag color="red" style={{ marginLeft: 6, fontSize: 10 }}>筛选中</Tag>
                   )}
                 </span>}
                 value={s.value} suffix={s.suffix}
@@ -73,13 +73,13 @@ const OrdersTab: React.FC<Props> = ({ onInitReturn }) => {
           </Col>
         ))}
       </Row>
-      <Card className="u-mb-8" style={{ background: 'rgba(235,47,150,0.04)', border: '1px solid rgba(235,47,150,0.18)' }}
+      <Card style={{ marginBottom: 8, background: 'rgba(235,47,150,0.04)', border: '1px solid rgba(235,47,150,0.18)' }}
         styles={{ body: { padding: '8px 14px' } }}>
         <span className="u-fs-14" style={{ color: 'var(--color-text-muted)' }}>本页实付合计：</span>
         <span className="u-fs-15 u-fw-700" style={{ color: 'var(--color-magenta)' }}>{formatMoney(h.totalRevenue)}</span>
       </Card>
 
-      <Card className="u-mb-10">
+      <Card style={{ marginBottom: 10 }}>
         <Space wrap>
           <Select placeholder="全部平台" allowClear value={h.filterPlatform || undefined}
             onChange={v => { h.setFilterPlatform(v ?? ''); h.setPage(1); }} style={{ width: 120 }}

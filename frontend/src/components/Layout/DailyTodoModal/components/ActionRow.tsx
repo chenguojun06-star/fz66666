@@ -17,7 +17,7 @@ const ActionRow: React.FC<{
   >
     <span style={{ fontSize: 13, color }}>{icon}</span>
     <span className="u-flex-1 u-fs-14" style={{ color: 'var(--color-text)' }}>{title}</span>
-    <RightOutlined className="u-fs-13" style={{ color: 'var(--color-text-quaternary)' }} />
+    <RightOutlined style={{ fontSize: 13, color: 'var(--color-text-quaternary)' }} />
   </div>
 );
 

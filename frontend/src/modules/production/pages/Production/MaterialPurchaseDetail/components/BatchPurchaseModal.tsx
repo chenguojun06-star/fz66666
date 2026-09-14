@@ -120,7 +120,7 @@ const BatchPurchaseModal: React.FC<BatchPurchaseModalProps> = ({
           <InputNumber
             id={`batch-purchase-qty-${r.id}`}
             aria-label={`${r.materialName || r.materialCode} 领取数量`}
-            className="u-w-full"
+            style={{ width: '100%' }}
             min={0}
             precision={2}
             addonAfter={r.unit || undefined}

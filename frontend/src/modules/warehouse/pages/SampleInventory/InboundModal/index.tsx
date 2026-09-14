@@ -117,7 +117,7 @@ const InboundModal: React.FC<InboundModalProps> = (props) => {
               <Select
                 placeholder="请选择仓库"
                 allowClear
-                className="u-w-full"
+                style={{ width: '100%' }}
                 onChange={(areaId: string) => {
                   setSampleSelectedAreaId(areaId);
                   form.setFieldValue('warehouseLocation', undefined);

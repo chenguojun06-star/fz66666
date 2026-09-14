@@ -56,7 +56,7 @@ const PendingTabContent: React.FC<PendingTabContentProps> = ({
   return (
     <>
       {/* 快捷筛选区 */}
-      <Card className="filter-card mb-sm u-mb-12 u-br-6" style={{ border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
+      <Card className="filter-card mb-sm" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)', borderRadius: 6 }} styles={{ body: { padding: '12px 16px' } }}>
         <div className="u-d-flex u-jc-between u-ai-center u-fwrap-wrap u-gap-8">
           <Space size={8} wrap>
             <span className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>

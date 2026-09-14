@@ -209,7 +209,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       key: 'name',
       width: 180,
       render: (v: string, row: WorkflowRow) => (
-        <DictAutoComplete dictType="process_name" autoCollect value={v} placeholder="请选择或输入工序名称" className="u-w-full" onChange={(val) => update(row._key, 'name', val)} />
+        <DictAutoComplete dictType="process_name" autoCollect value={v} placeholder="请选择或输入工序名称" style={{ width: '100%' }} onChange={(val) => update(row._key, 'name', val)} />
       ),
     },
     {
@@ -218,7 +218,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       key: 'progressStage',
       width: 120,
       render: (v: string, row: WorkflowRow) => (
-        <Select value={v || undefined} allowClear placeholder="选择" className="u-w-full" onChange={(val) => update(row._key, 'progressStage', val || '')}
+        <Select value={v || undefined} allowClear placeholder="选择" style={{ width: '100%' }} onChange={(val) => update(row._key, 'progressStage', val || '')}
           options={STAGE_ORDER.map(s => ({ value: s, label: s }))}
         />
       ),
@@ -229,7 +229,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       key: 'machineType',
       width: 120,
       render: (v: string, row: WorkflowRow) => (
-        <DictAutoComplete dictType="machine_type" autoCollect value={v || ''} placeholder="请选择或输入" className="u-w-full" onChange={(val) => update(row._key, 'machineType', val)} />
+        <DictAutoComplete dictType="machine_type" autoCollect value={v || ''} placeholder="请选择或输入" style={{ width: '100%' }} onChange={(val) => update(row._key, 'machineType', val)} />
       ),
     },
     {
@@ -238,7 +238,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       key: 'difficulty',
       width: 90,
       render: (v: string, row: WorkflowRow) => (
-        <Select value={v || undefined} allowClear placeholder="选择" className="u-w-full" onChange={(val) => update(row._key, 'difficulty', val || '')}
+        <Select value={v || undefined} allowClear placeholder="选择" style={{ width: '100%' }} onChange={(val) => update(row._key, 'difficulty', val || '')}
           options={[{ value: '易', label: '易' }, { value: '中', label: '中' }, { value: '难', label: '难' }]}
         />
       ),
@@ -249,7 +249,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       key: 'standardTime',
       width: 90,
       render: (v: number, row: WorkflowRow) => (
-        <InputNumber value={v || 0} className="u-w-full" min={0} controls={false} onChange={(val) => update(row._key, 'standardTime', typeof val === 'number' ? val : 0)} />
+        <InputNumber value={v || 0} style={{ width: '100%' }} min={0} controls={false} onChange={(val) => update(row._key, 'standardTime', typeof val === 'number' ? val : 0)} />
       ),
     },
     {
@@ -258,7 +258,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
       key: 'unitPrice',
       width: 100,
       render: (v: number, row: WorkflowRow) => (
-        <InputNumber value={v} className="u-w-full" min={0} precision={2} step={0.01} controls={false} prefix="¥" onChange={(val) => update(row._key, 'unitPrice', typeof val === 'number' ? val : 0)} />
+        <InputNumber value={v} style={{ width: '100%' }} min={0} precision={2} step={0.01} controls={false} prefix="¥" onChange={(val) => update(row._key, 'unitPrice', typeof val === 'number' ? val : 0)} />
       ),
     },
     {

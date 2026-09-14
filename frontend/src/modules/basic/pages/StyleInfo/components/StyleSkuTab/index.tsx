@@ -228,7 +228,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
       }}>
         <Space size="middle" align="center" wrap>
           <Space size={8} align="center">
-            <CheckCircleFilled className="u-fs-14" style={{ color: 'var(--color-primary, #2563eb)' }} />
+            <CheckCircleFilled style={{ color: 'var(--color-primary, #2563eb)', fontSize: 14 }} />
             <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>SKC编号</span>
           </Space>
           {skcEditing ? (
@@ -353,7 +353,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
             <Alert
               type="warning"
               showIcon
-              className="u-mb-6 u-br-6"
+              style={{ marginBottom: 6, borderRadius: 6 }}
               message={
                 <span>
                   <strong>有 {emptyCostCount} 个 SKU 的成本价为空</strong>，
@@ -362,7 +362,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
                     <Button
                       type="link"
                       size="small"
-                      className="u-p-04px u-h-auto"
+                      style={{ padding: '0 4px', height: 'auto' }}
                       onClick={() => {
                         // 定位到工具栏：聚焦到对应输入框（通过滚动到批量填充区）
                         document.getElementById('batch-fill-toolbar')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -379,7 +379,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
             <Alert
               type="warning"
               showIcon
-              className="u-mb-6 u-br-6"
+              style={{ marginBottom: 6, borderRadius: 6 }}
               message={
                 <span>
                   <strong>有 {emptyTagCount} 个 SKU 的吊牌价为空</strong>，
@@ -388,7 +388,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
                     <Button
                       type="link"
                       size="small"
-                      className="u-p-04px u-h-auto"
+                      style={{ padding: '0 4px', height: 'auto' }}
                       onClick={() => {
                         document.getElementById('batch-fill-toolbar')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                       }}
@@ -404,7 +404,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
             <Alert
               type="info"
               showIcon
-              className="u-br-6"
+              style={{ borderRadius: 6 }}
               message={
                 <Space size={8} align="center">
                   <Badge count={selectedRowKeys.length} style={{ backgroundColor: 'var(--color-primary)' }} offset={[4, 0]} />

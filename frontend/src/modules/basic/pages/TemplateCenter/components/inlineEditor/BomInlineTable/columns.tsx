@@ -59,7 +59,7 @@ const renderTextCell = (
             ...(extraUpdates ? extraUpdates(String(nextValue || '')) : {}),
           })
         }
-        className="u-w-full"
+        style={{ width: '100%' }}
       />
     );
   }
@@ -100,7 +100,7 @@ const renderNumberCell = (
           keys.reduce((acc, key) => ({ ...acc, [key]: numericValue }), {} as Partial<BomEditableRow>),
         );
       }}
-      className="u-w-full"
+      style={{ width: '100%' }}
     />
   );
 };

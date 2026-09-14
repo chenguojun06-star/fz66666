@@ -53,32 +53,32 @@ const PlatformCard: React.FC<PlatformCardProps> = ({
         color={isAvailable ? (p.syncMode === 'pull' ? 'blue' : 'green') : 'default'}
         style={{ opacity: 0.85 }}
       >
-        <Card hoverable className="u-br-12 u-h-full" styles={{ body: { padding: '20px 16px 12px' } }}>
+        <Card hoverable style={{ borderRadius: 12, height: '100%' }} styles={{ body: { padding: '20px 16px 12px' } }}>
           {/* 头部 */}
           <div className="u-d-flex u-ai-center u-jc-between u-mb-8">
             <Space size={8}>
               <span style={{ fontSize: 24 }}>{renderIcon(p.icon)}</span>
-              <Text strong className="u-fs-16">{p.name}</Text>
+              <Text strong style={{ fontSize: 16 }}>{p.name}</Text>
             </Space>
-            <Tag icon={statusDot.icon} color={!isAvailable ? 'default' : (isConfigured && isConnected ? 'success' : isConfigured ? 'warning' : 'default')} className="u-m-0">
+            <Tag icon={statusDot.icon} color={!isAvailable ? 'default' : (isConfigured && isConnected ? 'success' : isConfigured ? 'warning' : 'default')} style={{ margin: 0 }}>
               {statusDot.text}
             </Tag>
           </div>
 
-          <Paragraph type="secondary" className="u-fs-14 u-mb-8" style={{ minHeight: 36 }}>{p.desc}</Paragraph>
+          <Paragraph type="secondary" style={{ fontSize: 14, marginBottom: 8, minHeight: 36 }}>{p.desc}</Paragraph>
           <div className="u-mb-8">{modeLabel(p.syncMode)}</div>
 
           {/* 功能标签 */}
           <div className="u-mb-8">
-            {p.features.slice(0, 3).map(f => (<Tag key={f} className="u-mb-4 u-fs-14">{f}</Tag>))}
+            {p.features.slice(0, 3).map(f => (<Tag key={f} style={{ marginBottom: 4, fontSize: 14 }}>{f}</Tag>))}
             {p.features.length > 3 && (
-              <Tooltip title={p.features.slice(3).join('、')}><Tag className="u-fs-14">+{p.features.length - 3}</Tag></Tooltip>
+              <Tooltip title={p.features.slice(3).join('、')}><Tag style={{ fontSize: 14 }}>+{p.features.length - 3}</Tag></Tooltip>
             )}
           </div>
 
           {/* 连接后的迷你数据 */}
           {isAvailable && isConfigured && statsData && (
-            <Row gutter={8} className="u-mb-8">
+            <Row gutter={8} style={{ marginBottom: 8 }}>
               <Col span={12}>
                 <div className="u-fs-14" style={{ color: 'var(--color-text-muted)' }}>今日订单</div>
                 <Text strong style={{ color: 'var(--color-primary)' }}>{statsData.todayOrders}</Text>
@@ -90,9 +90,9 @@ const PlatformCard: React.FC<PlatformCardProps> = ({
             </Row>
           )}
 
-          <Divider className="u-m-8px0" />
+          <Divider style={{ margin: '8px 0' }} />
           {isAvailable ? (
-            <Space orientation="vertical" className="u-w-full" size={6}>
+            <Space orientation="vertical" style={{ width: '100%' }} size={6}>
               <Button type={isConfigured ? 'default' : 'primary'} icon={<SettingOutlined />} block onClick={() => onConfig(p)}>
                 {isConfigured ? '修改凭证' : '配置连接'}
               </Button>
@@ -106,16 +106,16 @@ const PlatformCard: React.FC<PlatformCardProps> = ({
                 <Button icon={<SyncOutlined />} block loading={syncing && activePlatformCode === p.code} onClick={() => onSync(p)}>同步订单</Button>
               )}
               {p.docUrl && (
-                <Button type="link" icon={<LinkOutlined />} block onClick={() => window.open(p.docUrl, '_blank')} className="u-p-0">开放平台文档</Button>
+                <Button type="link" icon={<LinkOutlined />} block onClick={() => window.open(p.docUrl, '_blank')} style={{ padding: 0 }}>开放平台文档</Button>
               )}
             </Space>
           ) : (
-            <Space orientation="vertical" className="u-w-full" size={6}>
+            <Space orientation="vertical" style={{ width: '100%' }} size={6}>
               <Button type="default" icon={<ClockCircleOutlined />} block disabled>
                 敬请期待
               </Button>
               {p.docUrl && (
-                <Button type="link" icon={<LinkOutlined />} block onClick={() => window.open(p.docUrl, '_blank')} className="u-p-0">开放平台文档</Button>
+                <Button type="link" icon={<LinkOutlined />} block onClick={() => window.open(p.docUrl, '_blank')} style={{ padding: 0 }}>开放平台文档</Button>
               )}
             </Space>
           )}

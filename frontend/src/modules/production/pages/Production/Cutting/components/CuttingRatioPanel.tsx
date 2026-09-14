@@ -245,7 +245,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       width: 110,
       render: (val: number, row: BundleRow) =>
         val !== row.quantity ? (
-          <Text className="u-fw-500" style={{ color: 'var(--color-warning-deep)' }}>{val} 件</Text>
+          <Text style={{ color: 'var(--color-warning-deep)', fontWeight: 500 }}>{val} 件</Text>
         ) : (
           <Text>{val} 件</Text>
         ),
@@ -263,7 +263,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         const prefix = record.bundles > 1 ? `${record.bundles - 1}×${bs} + ` : '';
         return (
           <Space size={2} align="center">
-            <Text className="u-fw-500" style={{ color: 'var(--color-primary)' }}>{prefix}1×</Text>
+            <Text style={{ color: 'var(--color-primary)', fontWeight: 500 }}>{prefix}1×</Text>
             <InputNumber
               min={1}
               max={9999}
@@ -274,7 +274,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
               onChange={(v) => handleLastBundleChange(record.key, v)}
               style={{ width: 64 }}
             />
-            <Text className="u-fw-500" style={{ color: 'var(--color-primary)' }}>件（{record.bundles} 扎）</Text>
+            <Text style={{ color: 'var(--color-primary)', fontWeight: 500 }}>件（{record.bundles} 扎）</Text>
           </Space>
         );
       },
@@ -295,12 +295,12 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       )}
       {entryOrderLines?.length > 0 && (
       <>
-      <Space align="center" wrap className="u-mb-16">
-        <Text strong className="u-fs-15">一键生成</Text>
+      <Space align="center" wrap style={{ marginBottom: 16 }}>
+        <Text strong style={{ fontSize: 15 }}>一键生成</Text>
         <Tooltip title="按订单颜色/尺码自动分扎：每扎件数决定扎数，损耗加放按百分比增加裁剪数量">
           <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
         </Tooltip>
-        <Text strong className="u-fs-15 u-ml-8">每扎件数：</Text>
+        <Text strong style={{ fontSize: 15, marginLeft: 8 }}>每扎件数：</Text>
         <InputNumber
           min={1}
           max={9999}
@@ -312,7 +312,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
           style={{ width: 90 }}
         />
         <Text type="secondary">件/扎</Text>
-        <Text strong className="u-fs-15" style={{ marginLeft: 12 }}>损耗加放：</Text>
+        <Text strong style={{ fontSize: 15, marginLeft: 12 }}>损耗加放：</Text>
         <InputNumber
           min={0}
           max={30}
@@ -334,11 +334,11 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         disableFillScrollY
         size="middle"
         scroll={{ x: 'max-content' }}
-        className="u-mb-12 u-fs-15"
+        style={{ marginBottom: 12, fontSize: 15 }}
         locale={{ emptyText: '暂无尺码数据，请先选择裁剪任务' }}
       />
 
-      <Space wrap className="u-mb-12">
+      <Space wrap style={{ marginBottom: 12 }}>
         <Tag color="green">总下单：{totalQty} 件</Tag>
         {totalAlreadyCut > 0 && <Tag color="blue">已裁剪：{totalAlreadyCut} 件</Tag>}
         <Tag color={totalQty - totalAlreadyCut > 0 ? 'cyan' : 'default'}>剩余：{totalQty - totalAlreadyCut} 件</Tag>
@@ -367,7 +367,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         </div>
       )}
 
-      <Form.Item className="u-mb-0">
+      <Form.Item style={{ marginBottom: 0 }}>
         <Space>
           <Button
             type="primary"

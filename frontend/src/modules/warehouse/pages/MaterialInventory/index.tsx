@@ -128,7 +128,7 @@ const _MaterialInventory: React.FC = () => {
   return (
     <>
       {showSmartErrorNotice && smartError ? (
-        <Card className="u-mb-12">
+        <Card style={{ marginBottom: 12 }}>
           <SmartErrorNotice
             error={smartError}
             onFix={() => { void fetchData(); }}
@@ -183,7 +183,7 @@ const _MaterialInventory: React.FC = () => {
 
       <Tabs
         activeKey={activeTab}
-        className="u-mt-8"
+        style={{ marginTop: 8 }}
         items={[
           {
             key: 'overview',

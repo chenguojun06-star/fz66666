@@ -118,7 +118,7 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
       footer={null}
       destroyOnHidden
     >
-      <Descriptions column={6} bordered className="u-mb-16">
+      <Descriptions column={6} bordered style={{ marginBottom: 16 }}>
         <Descriptions.Item label="工厂类型">
           <Tag color={factoryType === 'EXTERNAL' ? 'purple' : 'orange'}>
             {factoryType === 'EXTERNAL' ? '外发工厂' : '内部工厂'}

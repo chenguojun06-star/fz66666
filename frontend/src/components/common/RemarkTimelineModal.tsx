@@ -279,7 +279,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
                       <div className="u-mt-4 u-d-flex u-gap-4 u-fwrap-wrap">
                         <Image.PreviewGroup>
                           {it.images.map((url: string, idx: number) => (
-                            <Image key={idx} src={getFullAuthedFileUrl(url)} className="u-objf-cover u-br-4 u-cur-pointer" style={{ width: 64, height: 64 }} preview={{ cover: '预览' }} />
+                            <Image key={idx} src={getFullAuthedFileUrl(url)} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }} preview={{ cover: '预览' }} />
                           ))}
                         </Image.PreviewGroup>
                       </div>

@@ -183,12 +183,12 @@ const useStyleDevelopmentWorkbenchData = ({ record, initialSection, onSync }: Pi
             {currentHours != null ? `当前预算 ${formatBudgetHours(currentHours)}` : `默认预算 ${formatBudgetHours(DEFAULT_BUDGET_HOURS)}，设定后覆盖`}
           </div>
           <div className="u-d-flex u-gap-8 u-ai-center">
-            <Space.Compact className="u-flex-1">
+            <Space.Compact style={{ flex: 1 }}>
               <InputNumber
                 defaultValue={initDays}
                 min={0}
                 max={99}
-                className="u-w-full"
+                style={{ width: '100%' }}
                 onChange={(v) => { draftDays = v ?? 0; }}
               />
               <span style={{
@@ -200,12 +200,12 @@ const useStyleDevelopmentWorkbenchData = ({ record, initialSection, onSync }: Pi
                 whiteSpace: 'nowrap',
               }}>天</span>
             </Space.Compact>
-            <Space.Compact className="u-flex-1">
+            <Space.Compact style={{ flex: 1 }}>
               <InputNumber
                 defaultValue={initHours}
                 min={0}
                 max={13}
-                className="u-w-full"
+                style={{ width: '100%' }}
                 onChange={(v) => { draftHours = v ?? 0; }}
               />
               <span style={{

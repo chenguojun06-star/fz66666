@@ -80,7 +80,7 @@ const PayModal: React.FC<PayModalProps> = ({
       <div className="u-p-08px">
         {/* 业务信息提示 */}
         {currentPayable && (
-          <Card className="u-mb-16" style={{ background: 'var(--status-success-bg)', border: '1px solid var(--status-success-border)' }}>
+          <Card style={{ marginBottom: 16, background: 'var(--status-success-bg)', border: '1px solid var(--status-success-border)' }}>
             <Descriptions column={2}>
               <Descriptions.Item label="业务类型">
                 <Tag color={BIZ_TYPE_MAP[currentPayable.bizType]?.color}>
@@ -134,7 +134,7 @@ const PayModal: React.FC<PayModalProps> = ({
           )}
 
           <Form.Item label="支付金额" name="amount" rules={[{ required: true, message: '请输入支付金额' }]}>
-            <InputNumber prefix="¥" min={0.01} precision={2} className="u-w-full" placeholder="支付金额" />
+            <InputNumber prefix="¥" min={0.01} precision={2} style={{ width: '100%' }} placeholder="支付金额" />
           </Form.Item>
 
           <Form.Item name="paymentMethod" hidden><Input /></Form.Item>
@@ -203,7 +203,7 @@ const PayModal: React.FC<PayModalProps> = ({
               ) : (
                 <span style={{ color: 'var(--color-warning)' }}>
                   收款方暂无{selectedMethod === 'BANK' ? '银行卡' : selectedMethod === 'WECHAT' ? '微信' : '支付宝'}账户，
-                  <Button type="link" className="u-p-0 u-h-auto" style={{ fontSize: 'inherit' }} onClick={() => {
+                  <Button type="link" style={{ padding: 0, height: 'auto', fontSize: 'inherit' }} onClick={() => {
                     const pt = payForm.getFieldValue('payeeType');
                     const pi = payForm.getFieldValue('payeeId');
                     const pn = payForm.getFieldValue('payeeName');

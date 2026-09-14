@@ -30,7 +30,7 @@ const OverdueRiskCard: React.FC<any> = ({
     <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['overdueRisk'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
       {overdueRisk.overdue.length === 0 && overdueRisk.highRisk.length === 0 && overdueRisk.watch.length === 0 ? (
         <div className="u-ta-center u-fs-14 u-fw-600" style={{ color: 'var(--color-accent-neon)', padding: '20px 0' }}>
-          <CheckCircleOutlined className="u-fs-28 u-mb-6" /><br />所有订单均在健康交期内
+          <CheckCircleOutlined style={{ fontSize: 28, marginBottom: 6 }} /><br />所有订单均在健康交期内
         </div>
       ) : (
         <div className="u-mt-6" style={{ maxHeight: 380 }}><AutoScrollBox className="c-risk-list">

@@ -97,7 +97,7 @@ const DataCenter: React.FC = () => {
       />
 
       <StickyFilterBar>
-        <Card className="filter-card u-mb-16" >
+        <Card className="filter-card" style={{ marginBottom: 16 }}>
           <StandardToolbar
             left={(
               <Space wrap>
@@ -214,14 +214,14 @@ const DataCenter: React.FC = () => {
                 <Select.Option value="URGENT">紧急修改</Select.Option>
               </Select>
             </Form.Item>
-            <Form.Item name="revisionDate" label="修改日期"><DatePicker className="u-w-full" /></Form.Item>
+            <Form.Item name="revisionDate" label="修改日期"><DatePicker style={{ width: '100%' }} /></Form.Item>
             <Form.Item name="patternMakerName" label="纸样师傅"><Input placeholder="请输入" /></Form.Item>
           </div>
           <Form.Item name="revisionReason" label="修改原因" rules={[{ required: true, message: '请填写修改原因' }]}>
             <TextArea rows={3} placeholder="请说明需要修改的原因" />
           </Form.Item>
           <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-            <Form.Item name="expectedCompleteDate" label="预计完成日期"><DatePicker className="u-w-full" /></Form.Item>
+            <Form.Item name="expectedCompleteDate" label="预计完成日期"><DatePicker style={{ width: '100%' }} /></Form.Item>
             <Form.Item name="remark" label="备注" style={{ gridColumn: 'span 3' }}><Input.TextArea rows={3} placeholder="其他说明" /></Form.Item>
           </div>
           <Form.Item name="patternFile" label="纸样文件" getValueFromEvent={(file: File | null) => file ? [{ uid: '-1', name: file.name, originFileObj: file }] : []}>
@@ -271,7 +271,7 @@ const DataCenter: React.FC = () => {
                     content={String(detailRecord.description || '')}
                     emptyText="暂无工艺说明"
                     minHeight={0}
-                    className="u-ov-auto" style={{ maxHeight: 240 }}
+                    style={{ maxHeight: 240, overflow: 'auto' }}
                   />
                 </div>
               </Col>

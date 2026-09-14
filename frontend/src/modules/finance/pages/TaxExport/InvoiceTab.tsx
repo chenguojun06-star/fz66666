@@ -144,17 +144,17 @@ const InvoiceTab: React.FC = () => {
 
   return (
     <>
-      <Alert type="info" showIcon className="u-mb-16"
+      <Alert type="info" showIcon style={{ marginBottom: 16 }}
         title="发票台账已接真实发票表与税额计算"
         description="当前为业务台账管理，不是税控盘/电子发票平台直连。适合先把开票信息、业务来源、税额和状态管起来；若要直连税盘或第三方开票平台，需要后续再接外部接口。"
       />
-      <Row gutter={16} className="u-mb-16">
+      <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col xs={24} md={6}><Card><Statistic title="草稿" value={stats.draftCount} /></Card></Col>
         <Col xs={24} md={6}><Card><Statistic title="已开票" value={stats.issuedCount} styles={{ content: { color: 'var(--color-success)' } }} /></Card></Col>
         <Col xs={24} md={6}><Card><Statistic title="本月开票额(元)" value={formatCurrency(stats.monthAmount)} /></Card></Col>
         <Col xs={24} md={6}><Card><Statistic title="累计开票额(元)" value={formatCurrency(stats.totalIssued)} /></Card></Col>
       </Row>
-      <Card className="u-mb-12">
+      <Card style={{ marginBottom: 12 }}>
         <Row gutter={[12, 12]} align="middle">
           <Col xs={24} md={6}>
             <Input allowClear prefix={<SearchOutlined />} placeholder="搜发票号 / 购方 / 关联单号"
@@ -163,20 +163,20 @@ const InvoiceTab: React.FC = () => {
             />
           </Col>
           <Col xs={12} md={4}>
-            <Select allowClear placeholder="状态" className="u-w-full"
+            <Select allowClear placeholder="状态" style={{ width: '100%' }}
               options={INVOICE_STATUS.map(item => ({ value: item.value, label: item.label }))}
               value={filters.status}
               onChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
             />
           </Col>
           <Col xs={12} md={4}>
-            <Select allowClear placeholder="发票类型" className="u-w-full"
+            <Select allowClear placeholder="发票类型" style={{ width: '100%' }}
               options={INVOICE_TYPES}
               value={filters.invoiceType}
               onChange={(value) => setFilters(prev => ({ ...prev, invoiceType: value }))}
             />
           </Col>
-          <Col xs={24} md={10} className="u-ta-right">
+          <Col xs={24} md={10} style={{ textAlign: 'right' }}>
             <Space>
               <Button onClick={() => { setFilters({ status: undefined, invoiceType: undefined, keyword: '' }); setPage(1); }}>重置</Button>
               <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditRecord(null); setFormOpen(true); }}>新建发票</Button>
@@ -205,18 +205,18 @@ const InvoiceTab: React.FC = () => {
           <ModalFieldRow label="关联单号"><Form.Item name="relatedBizNo" noStyle><Input placeholder="如结算单号、对账单号、订单号" /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="购方名称"><Form.Item name="titleName" noStyle rules={[{ required: true }]}><Input /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="购方税号"><Form.Item name="titleTaxNo" noStyle><Input placeholder="91XXXXXXXXXXXXXX" /></Form.Item></ModalFieldRow>
-          <ModalFieldRow label="未税金额(元)"><Form.Item name="amount" noStyle rules={[{ required: true }]}><InputNumber min={0} precision={2} className="u-w-full" /></Form.Item></ModalFieldRow>
-          <ModalFieldRow label="税率(%)"><Form.Item name="taxRate" noStyle><InputNumber min={0} max={100} precision={2} className="u-w-full" placeholder="留空则按默认 VAT 税率" /></Form.Item></ModalFieldRow>
+          <ModalFieldRow label="未税金额(元)"><Form.Item name="amount" noStyle rules={[{ required: true }]}><InputNumber min={0} precision={2} style={{ width: '100%' }} /></Form.Item></ModalFieldRow>
+          <ModalFieldRow label="税率(%)"><Form.Item name="taxRate" noStyle><InputNumber min={0} max={100} precision={2} style={{ width: '100%' }} placeholder="留空则按默认 VAT 税率" /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="税额(自动计算)">
             <div style={{ lineHeight: '32px', color: 'var(--color-gray-700)' }}>
               {calcTaxAmount.toFixed(2)} 元
-              <Text type="secondary" className="u-fs-14 u-ml-8">(未税金额 × 税率)</Text>
+              <Text type="secondary" style={{ fontSize: 14, marginLeft: 8 }}>(未税金额 × 税率)</Text>
             </div>
           </ModalFieldRow>
           <ModalFieldRow label="价税合计">
             <div className="u-fw-600 u-fs-15" style={{ lineHeight: '32px', color: 'var(--color-info)' }}>{calcTotal.toFixed(2)} 元</div>
           </ModalFieldRow>
-          <ModalFieldRow label="开票日期"><Form.Item name="issueDate" noStyle><DatePicker className="u-w-full" format="YYYY-MM-DD" /></Form.Item></ModalFieldRow>
+          <ModalFieldRow label="开票日期"><Form.Item name="issueDate" noStyle><DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="销方名称"><Form.Item name="sellerName" noStyle><Input placeholder="本公司抬头" /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="销方税号"><Form.Item name="sellerTaxNo" noStyle><Input /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="备注"><Form.Item name="remark" noStyle><Input.TextArea rows={3} /></Form.Item></ModalFieldRow>

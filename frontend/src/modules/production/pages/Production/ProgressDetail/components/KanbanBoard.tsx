@@ -28,7 +28,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ nodeStats }) => {
           }
           style={{ minWidth: 220, flex: '0 0 auto' }}
         >
-          <Progress percent={stage.completionRate} strokeColor={STAGE_COLORS[stage.stageName] || 'var(--color-info)'} className="u-mb-8" />
+          <Progress percent={stage.completionRate} strokeColor={STAGE_COLORS[stage.stageName] || 'var(--color-info)'} style={{ marginBottom: 8 }} />
           <div className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>
             <div>总记录: {stage.totalRecords}</div>
             <div style={{ color: 'var(--color-success)' }}>已完成: {stage.scannedRecords}</div>

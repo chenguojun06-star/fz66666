@@ -34,7 +34,7 @@ const confColor = (v: number) =>
 
 const RouteTag: React.FC<{ route?: string }> = ({ route }) => {
   const [label, color] = ROUTE_MAP[route ?? ''] ?? ['未知', 'var(--color-gray-label)'];
-  return <Tag color={color} className="u-fw-600">{label}</Tag>;
+  return <Tag color={color} style={{ fontWeight: 600 }}>{label}</Tag>;
 };
 
 /* ── 图节点流水线可视化 ──────────────────────────── */
@@ -73,7 +73,7 @@ const GraphPipeline: React.FC<{ events: NodeEvent[]; streaming: boolean }> = ({ 
                 position: 'relative',
               }}>
                 {label}
-                {active && <Spin className="u-ml-6" />}
+                {active && <Spin style={{ marginLeft: 6 }} />}
                 {done && <span className="u-ml-4"></span>}
               </div>
             </Tooltip>
@@ -150,7 +150,7 @@ const HistoryTable: React.FC = () => {
       render: (v: number, row: any) => (
         <Rate
           count={5} value={v ?? 0}
-          className="u-fs-14"
+          style={{ fontSize: 14 }}
           onChange={(val) => submitFeedback(row.id, val).then(loadHistory).catch(console.error)}
         />
       ),
@@ -165,7 +165,7 @@ const HistoryTable: React.FC = () => {
       rowKey="id"
 
       pagination={false}
-      className="u-mt-8"
+      style={{ marginTop: 8 }}
     />
   );
 };
@@ -208,7 +208,7 @@ const AgentGraphPanel: React.FC = () => {
             gap: 8,
             marginBottom: 12,
           }}>
-            <Select value={scene} onChange={setScene} options={SCENES} className="u-w-full" />
+            <Select value={scene} onChange={setScene} options={SCENES} style={{ width: '100%' }} />
             <Input
               placeholder="订单ID（逗号分隔，留空=全部）"
               value={orderIds}
@@ -227,7 +227,7 @@ const AgentGraphPanel: React.FC = () => {
               icon={<ThunderboltOutlined />}
               loading={loading}
               onClick={runGraphStream}
-              className="u-ws-nowrap" style={{ background: 'var(--color-violet-600)', borderColor: 'var(--color-violet-600)' }}
+              style={{ background: 'var(--color-violet-600)', borderColor: 'var(--color-violet-600)', whiteSpace: 'nowrap' }}
             >
               流式执行
             </Button>
@@ -253,7 +253,7 @@ const AgentGraphPanel: React.FC = () => {
             <Alert
               type="error"
               title={error}
-              className="u-mb-8"
+              style={{ marginBottom: 8 }}
               action={<Button onClick={reset}>清除</Button>}
             />
           )}
@@ -276,7 +276,7 @@ const AgentGraphPanel: React.FC = () => {
                     percent={result.confidenceScore}
                     strokeColor={confColor(result.confidenceScore)}
                    
-                    className="u-mb-0"
+                    style={{ marginBottom: 0 }}
                     format={v => <span style={{ fontSize: 14, color: confColor(v!) }}>{v} 分</span>}
                   />
                 </div>
@@ -289,7 +289,7 @@ const AgentGraphPanel: React.FC = () => {
                   <span className="u-fs-14 u-mr-6" style={{ color: 'var(--color-text-muted)' }}>执行路径:</span>
                   {result.nodeTrace.map((n, i) => {
                     const [label] = NODE_LABELS[n] ?? ['未知', 'var(--color-gray-label)'];
-                    return <Tag key={i} className="u-fs-14">{label}</Tag>;
+                    return <Tag key={i} style={{ fontSize: 14 }}>{label}</Tag>;
                   })}
                 </div>
               )}
@@ -345,7 +345,7 @@ const AgentGraphPanel: React.FC = () => {
                   <span className="u-fs-14" style={{ color: 'var(--color-text-muted)' }}>结果评分:</span>
                   <Rate
                     count={5}
-                    className="u-fs-14"
+                    style={{ fontSize: 14 }}
                     onChange={(val) => {
                       const store = useAgentGraphStore.getState();
                       store.submitFeedback(result.executionId!, val).catch(console.error);

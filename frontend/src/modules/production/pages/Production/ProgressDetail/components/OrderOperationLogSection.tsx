@@ -45,12 +45,12 @@ const OrderOperationLogSection: React.FC<{ orderNo?: string; orderId?: number | 
   return (
     <div className="u-br-8 u-mb-16" style={{ background: 'var(--color-bg-base)', padding: '16px 20px', border: '1px solid var(--color-border-light)' }}>
       <div className="u-d-flex u-ai-center u-gap-8 u-mb-8">
-        <Typography.Title level={5} className="u-m-0">操作记录</Typography.Title>
+        <Typography.Title level={5} style={{ margin: 0 }}>操作记录</Typography.Title>
         <a className="u-ml-auto u-fs-12" onClick={load}>刷新</a>
       </div>
       <Spin spinning={loading}>
         {logs.length === 0 && !loading ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无操作记录" className="u-m-8px0" />
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无操作记录" style={{ margin: '8px 0' }} />
         ) : (
           <Table
             size="small"

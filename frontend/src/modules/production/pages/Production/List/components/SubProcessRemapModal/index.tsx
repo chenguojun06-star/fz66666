@@ -192,7 +192,7 @@ export default function SubProcessRemapModal({
         return (
           <>
             <div className="u-d-flex u-ai-center u-gap-4" style={{ paddingLeft: 8 }}>
-              <Text className="u-fs-14 u-fshrink-0" style={{ color: 'var(--color-text-tertiary)', width: 18 }}>
+              <Text style={{ fontSize: 14, color: 'var(--color-text-tertiary)', width: 18, flexShrink: 0 }}>
                 {row.subIndex + 1}.
               </Text>
               <Input
@@ -202,7 +202,7 @@ export default function SubProcessRemapModal({
                
                 maxLength={30}
                 status={!row.subprocess.name.trim() ? 'error' : undefined}
-                className="u-flex-1"
+                style={{ flex: 1 }}
               />
               <Button type="text" icon={<ArrowUpOutlined />}
                 disabled={row.subIndex === 0}
@@ -235,7 +235,7 @@ export default function SubProcessRemapModal({
                   style={{ width: 130 }}
                   onChange={v => updateSubProcessUnitPrice(row.parentNode.stageKey, row.subprocess!.id, v ?? undefined)}
                 />
-                <Text className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>厂方内部参考，不参与结算</Text>
+                <Text style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>厂方内部参考，不参与结算</Text>
               </div>
             )}
           </>
@@ -279,7 +279,7 @@ export default function SubProcessRemapModal({
           {row.entry.enabled && (
             <Button type="link" icon={<PlusOutlined />}
               onClick={() => addSubProcess(row.parentNode.stageKey)}
-              className="u-fs-14 u-p-0"
+              style={{ fontSize: 14, padding: 0 }}
             >
               添加
             </Button>

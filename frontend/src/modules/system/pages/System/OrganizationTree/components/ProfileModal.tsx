@@ -63,7 +63,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, user, unitNameMap, on
             <div className="u-fs-16 u-fw-600">
               {user.name || user.username}
               {user.isFactoryOwner && (
-                <Tag icon={<CrownFilled />} color="gold" className="u-ml-8">老板</Tag>
+                <Tag icon={<CrownFilled />} color="gold" style={{ marginLeft: 8 }}>老板</Tag>
               )}
             </div>
             <div className="u-fs-14 u-mt-4" style={{ color: 'var(--neutral-text-tertiary, var(--color-gray-label))' }}>@{user.username}</div>
@@ -93,9 +93,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, user, unitNameMap, on
                     autoComplete="new-password"
                     value={resetPwdValue}
                     onChange={e => setResetPwdValue(e.target.value)}
-                    className="u-mb-8"
+                    style={{ marginBottom: 8 }}
                   />
-                  <Space className="u-w-full u-jc-end">
+                  <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
                     <Button onClick={() => { setResetPwdVisible(false); setResetPwdValue(''); }}>取消</Button>
                     <Button type="primary" loading={resetPwdLoading} onClick={handleResetPwd}>确认重置</Button>
                   </Space>

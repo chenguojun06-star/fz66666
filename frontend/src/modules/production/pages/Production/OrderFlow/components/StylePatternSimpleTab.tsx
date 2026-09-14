@@ -111,7 +111,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             key: 'pattern',
             label: ` 大货纸样 (${allPatternFiles.length})`,
             children: (
-              <Card className="u-mb-16">
+              <Card style={{ marginBottom: 16 }}>
                 {allPatternFiles.length > 0 ? (
                   <div>
                     {allPatternFiles.map((item, idx) => (
@@ -124,7 +124,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                           borderBottom: idx < allPatternFiles.length - 1 ? '1px solid var(--neutral-border-subtle)' : 'none',
                         }}
                       >
-                        <FileOutlined className="u-fshrink-0" style={{ fontSize: 'var(--font-size-xxl)', color: 'var(--primary-color)', marginRight: 12 }} />
+                        <FileOutlined style={{ fontSize: 'var(--font-size-xxl)', color: 'var(--primary-color)', marginRight: 12, flexShrink: 0 }} />
                         <div className="u-flex-1" style={{ minWidth: 0 }}>
                           <Space wrap>
                             {item.fileName}
@@ -152,7 +152,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             key: 'size',
             label: ' 尺寸表',
             children: (
-              <Card className="u-mb-16">
+              <Card style={{ marginBottom: 16 }}>
                 <StyleSizeTab styleId={styleId} readOnly={true} simpleView={true} linkedSizes={EMPTY_LINKED_SIZES} />
               </Card>
             ),
@@ -161,7 +161,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             key: 'production',
             label: ' 工艺说明',
             children: (
-              <Card className="u-mb-16">
+              <Card style={{ marginBottom: 16 }}>
                 <Spin spinning={loading}>
                   <SheetRichViewer content={productionReq} emptyText="暂无工艺说明" />
                 </Spin>
@@ -172,7 +172,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             key: 'secondary',
             label: ' 二次工艺',
             children: (
-              <Card className="u-mb-16">
+              <Card style={{ marginBottom: 16 }}>
                 <StyleSecondaryProcessTab styleId={styleId} styleNo={styleNo} readOnly simpleView />
               </Card>
             ),

@@ -212,7 +212,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
             }}
           />
           <span className="u-fw-500">{color}</span>
-          <Tag className="u-m-0">{record.skuCount} 个编码</Tag>
+          <Tag style={{ margin: 0 }}>{record.skuCount} 个编码</Tag>
         </Space>
       ),
     },
@@ -228,7 +228,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
             alt="颜色图"
             width={32}
             height={32}
-            className="u-br-6" style={{ objectFit: 'contain' }}
+            style={{ objectFit: 'contain', borderRadius: 6 }}
             preview={{ src: getFullAuthedFileUrl(imageUrl) }}
           />
         ) : (
@@ -245,7 +245,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
                 color: 'var(--color-text-quaternary)',
               }}
             >
-              <PictureOutlined className="u-fs-14" />
+              <PictureOutlined style={{ fontSize: 14 }} />
             </span>
           </Tooltip>
         ),
@@ -256,7 +256,7 @@ const StyleSkuColorImages: React.FC<StyleSkuColorImagesProps> = ({ styleId, styl
       key: 'status',
       width: 90,
       render: (_: unknown, record: ColorImage) =>
-        record.imageUrl ? <Tag color="green" className="u-m-0">已配图</Tag> : <Tag color="orange" className="u-m-0">待配图</Tag>,
+        record.imageUrl ? <Tag color="green" style={{ margin: 0 }}>已配图</Tag> : <Tag color="orange" style={{ margin: 0 }}>待配图</Tag>,
     },
     {
       title: '操作',

@@ -26,18 +26,18 @@ export const PatternEditorForm: React.FC<PatternEditorFormProps> = ({ form }) =>
       {unlockRemark ? <div style={{ height: 12 }} /> : null}
 
       <div style={editorGridStyle}>
-        <Form.Item name="revisionType" label="修改类型" rules={[{ required: true, message: '请选择修改类型' }]} className="u-mb-0">
+        <Form.Item name="revisionType" label="修改类型" rules={[{ required: true, message: '请选择修改类型' }]} style={{ marginBottom: 0 }}>
           <Select><Select.Option value="MINOR">小改</Select.Option><Select.Option value="MAJOR">大改</Select.Option><Select.Option value="URGENT">紧急修改</Select.Option></Select>
         </Form.Item>
-        <Form.Item name="actualCompleteDate" label="完成时间" className="u-mb-0">
-          <DatePicker className="u-w-full" />
+        <Form.Item name="actualCompleteDate" label="完成时间" style={{ marginBottom: 0 }}>
+          <DatePicker style={{ width: '100%' }} />
         </Form.Item>
-        <Form.Item name="remark" label="本次备注" className="u-mb-0">
+        <Form.Item name="remark" label="本次备注" style={{ marginBottom: 0 }}>
           <Input.TextArea rows={3} placeholder="其他说明" />
         </Form.Item>
       </div>
 
-      <Form.Item name="revisionReason" label="修改原因" rules={[{ required: true, message: '请填写修改原因' }]} className="u-mt-12 u-mb-0">
+      <Form.Item name="revisionReason" label="修改原因" rules={[{ required: true, message: '请填写修改原因' }]} style={{ marginTop: 12, marginBottom: 0 }}>
         <TextArea rows={4} placeholder="请说明需要修改的原因，例如版型收腰、袖笼调整、领口改窄等。" />
       </Form.Item>
 

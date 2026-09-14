@@ -54,7 +54,7 @@ const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = 
         <Button key="save" type="primary" onClick={onSave}>保存全部</Button>,
       ]}
     >
-      <Space className="u-mb-12">
+      <Space style={{ marginBottom: 12 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={addEmptyCardItem}>+ 添加物料</Button>
         <span style={{ color: 'var(--color-text-tertiary)' }}>共 {currentItems.length} 条</span>
       </Space>
@@ -83,11 +83,11 @@ const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = 
               <Col xs={24} sm={3}>
                 <InputNumber placeholder="单价" value={item.unitPrice}
                   onChange={(v) => updateCardItem(idx, 'unitPrice', v)}
-                  min={0} step={0.01} className="u-w-full" size="small" />
+                  min={0} step={0.01} style={{ width: '100%' }} size="small" />
               </Col>
               <Col xs={24} sm={3}>
                 <Select placeholder="物料类型" value={item.materialType || undefined}
-                  onChange={(v) => updateCardItem(idx, 'materialType', v)} size="small" className="u-w-full">
+                  onChange={(v) => updateCardItem(idx, 'materialType', v)} size="small" style={{ width: '100%' }}>
                   {MATERIAL_TYPE_OPTIONS.map((o) => (
                     <Select.Option key={o.value} value={o.value}>{o.label}</Select.Option>
                   ))}
@@ -97,7 +97,7 @@ const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = 
                 <Space.Compact>
                   <Button size="small" icon={<PlusOutlined />} onClick={() => handleUploadImage(idx)}>上传图片</Button>
                   {item.image && (
-                    <Image src={getFullAuthedFileUrl(item.image)} width={32} height={32} className="u-objf-cover" preview />
+                    <Image src={getFullAuthedFileUrl(item.image)} width={32} height={32} style={{ objectFit: 'cover' }} preview />
                   )}
                 </Space.Compact>
               </Col>

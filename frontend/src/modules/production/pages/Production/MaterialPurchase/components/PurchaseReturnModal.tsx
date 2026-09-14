@@ -178,7 +178,7 @@ const PurchaseReturnModal: React.FC<PurchaseReturnModalProps> = ({
           value={val}
           onChange={(num) => handleQuantityChange(record.purchaseId, num || 0)}
           addonAfter={record.unit || ''}
-          className="u-w-full"
+          style={{ width: '100%' }}
           disabled={record.maxQuantity <= 0}
           placeholder={record.maxQuantity <= 0 ? '无可退' : '数量'}
         />
@@ -205,7 +205,7 @@ const PurchaseReturnModal: React.FC<PurchaseReturnModalProps> = ({
           value={val}
           onChange={(e) => handleReasonChange(record.purchaseId, e.target.value)}
           placeholder="退货原因"
-          className="u-w-full"
+          style={{ width: '100%' }}
         />
       ),
     },

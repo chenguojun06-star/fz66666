@@ -64,7 +64,7 @@ const InboundDrawer: React.FC<InboundDrawerProps> = ({
         </Space>
       }
     >
-      <Form form={inboundForm} layout="vertical" className="u-mt-8">
+      <Form form={inboundForm} layout="vertical" style={{ marginTop: 8 }}>
         <Form.Item
           label="物料编号"
           name="materialCode"
@@ -110,7 +110,7 @@ const InboundDrawer: React.FC<InboundDrawerProps> = ({
               name="quantity"
               rules={[{ required: true, message: '请输入入库数量' }]}
             >
-              <InputNumber min={1} className="u-w-full" placeholder="数量" />
+              <InputNumber min={1} style={{ width: '100%' }} placeholder="数量" />
             </Form.Item>
           </Col>
           <Col span={6}>
@@ -161,7 +161,7 @@ const InboundDrawer: React.FC<InboundDrawerProps> = ({
               <Select
                 placeholder="请选择仓库"
                 allowClear
-                className="u-w-full"
+                style={{ width: '100%' }}
                 onChange={(areaId: string) => {
                   setMaterialSelectedAreaId(areaId);
                   inboundForm.setFieldValue('warehouseLocation', undefined);
@@ -204,8 +204,8 @@ const InboundDrawer: React.FC<InboundDrawerProps> = ({
             const materialType = getFieldValue('materialType');
             if (getMaterialTypeCategory(materialType) !== 'fabric') return null;
             return (
-              <Row gutter={12} className="u-br-6 u-mb-12" style={{ background: 'var(--color-primary-bg-light, var(--status-processing-bg))', padding: '8px 6px 0' }}>
-                <Col span={24} className="u-mb-6">
+              <Row gutter={12} style={{ background: 'var(--color-primary-bg-light, var(--status-processing-bg))', borderRadius: 6, padding: '8px 6px 0', marginBottom: 12 }}>
+                <Col span={24} style={{ marginBottom: 6 }}>
                   <span className="u-fs-var--font-size-sm u-fw-600" style={{ color: 'var(--color-primary)' }}> 面料属性</span>
                 </Col>
                 <Col span={8}>

@@ -41,7 +41,7 @@ export const useUsageColumns = ({
         render: (_: unknown, record: PatternMaterialRow) => (
           <div>
             <div>{record.bom.materialName}</div>
-            {record.bom.color && <Text type="secondary" className="u-fs-14">{record.bom.color}</Text>}
+            {record.bom.color && <Text type="secondary" style={{ fontSize: 14 }}>{record.bom.color}</Text>}
           </div>
         ),
       },
@@ -62,7 +62,7 @@ export const useUsageColumns = ({
           <span>
             平均值
             <br />
-            <Text type="secondary" className="u-fs-14">(按码均值)</Text>
+            <Text type="secondary" style={{ fontSize: 14 }}>(按码均值)</Text>
           </span>
         ),
         key: 'avgUsage',
@@ -93,7 +93,7 @@ export const useUsageColumns = ({
               value={val}
               onChange={(v) => handleLossChange(record.bomId, v)}
               disabled={childReadOnly}
-              className="u-w-full"
+              style={{ width: '100%' }}
             />
           );
         },
@@ -143,7 +143,7 @@ export const useUsageColumns = ({
               value={val ?? undefined}
               onChange={(v) => handleUsageChange(record.bomId, size, v)}
               disabled={childReadOnly}
-              className="u-w-full"
+              style={{ width: '100%' }}
             />
           );
         },

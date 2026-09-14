@@ -91,7 +91,7 @@ const RevisionModal: React.FC<RevisionModalProps> = ({
             </Select>
           </Form.Item>
           <Form.Item name="revisionDate" label="修改日期">
-            <DatePicker className="u-w-full" />
+            <DatePicker style={{ width: '100%' }} />
           </Form.Item>
         </div>
 
@@ -112,7 +112,7 @@ const RevisionModal: React.FC<RevisionModalProps> = ({
             <Input placeholder="请输入纸样师傅姓名" />
           </Form.Item>
           <Form.Item name="expectedCompleteDate" label="预计完成日期">
-            <DatePicker className="u-w-full" />
+            <DatePicker style={{ width: '100%' }} />
           </Form.Item>
         </div>
 

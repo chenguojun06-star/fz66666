@@ -79,12 +79,12 @@ const DailyBriefingCard: React.FC = () => {
       return (
         <div style={{ padding: 8 }}>
           <Skeleton active paragraph={{ rows: 2 }} title />
-          <Row gutter={[12, 12]} className="u-mt-16">
+          <Row gutter={[12, 12]} style={{ marginTop: 16 }}>
             {METRICS.map((m) => (
               <Col xs={12} sm={8} md={8} lg={8} xl={6} key={m.key}>
                 <div style={METRIC_CARD_STYLE}>
                   <Skeleton active paragraph={{ rows: 1, width: '60%' }} title={false} />
-                  <Skeleton.Button active size="small" block className="u-mt-8" />
+                  <Skeleton.Button active size="small" block style={{ marginTop: 8 }} />
                 </div>
               </Col>
             ))}
@@ -96,9 +96,9 @@ const DailyBriefingCard: React.FC = () => {
     if (error) {
       return (
         <div className="u-p-24 u-ta-center" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
-          <WarningOutlined className="u-fs-28" style={{ color: 'var(--color-error, var(--color-danger))' }} />
+          <WarningOutlined style={{ color: 'var(--color-error, var(--color-danger))', fontSize: 28 }} />
           <div className="u-mt-8">{error}</div>
-          <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData} className="u-mt-12">
+          <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData} style={{ marginTop: 12 }}>
             重试
           </Button>
         </div>
@@ -127,13 +127,13 @@ const DailyBriefingCard: React.FC = () => {
           }}
         >
           <Space>
-            <Tag color="processing" className="u-m-0">
+            <Tag color="processing" style={{ margin: 0 }}>
               AI 摘要
             </Tag>
             <Text style={{ color: 'var(--color-text-primary, var(--color-gray-800))' }}>{summaryText}</Text>
           </Space>
         </div>
-        <Row gutter={[12, 12]} className="u-mt-16">
+        <Row gutter={[12, 12]} style={{ marginTop: 16 }}>
           {METRICS.map((metric) => {
             const raw = data?.[metric.key] as number | undefined;
             return (
@@ -159,7 +159,7 @@ const DailyBriefingCard: React.FC = () => {
                       </span>
                       <div className="u-flex-1" style={{ minWidth: 0 }}>
                         <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>{metric.label}</div>
-                        <Title level={5} className="u-fw-600" style={{ margin: '2px 0 0 0', color: 'var(--color-text-primary, var(--color-gray-800))' }}>
+                        <Title level={5} style={{ margin: '2px 0 0 0', color: 'var(--color-text-primary, var(--color-gray-800))', fontWeight: 600 }}>
                           {metric.formatter(raw)}
                         </Title>
                       </div>
@@ -178,10 +178,10 @@ const DailyBriefingCard: React.FC = () => {
     <Card
       style={CARD_STYLE}
       title={
-        <Space size={8} className="u-cur-pointer" onClick={() => setCollapsed(!collapsed)}>
+        <Space size={8} style={{ cursor: 'pointer' }} onClick={() => setCollapsed(!collapsed)}>
           <span style={{ color: 'var(--color-primary, var(--color-primary))' }}>●</span>
           <span className="u-fw-600">今日简报</span>
-          <Tag color="green" className="u-ml-8">
+          <Tag color="green" style={{ marginLeft: 8 }}>
             系统健康
           </Tag>
           <span className="u-fs-12 u-ml-4" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>

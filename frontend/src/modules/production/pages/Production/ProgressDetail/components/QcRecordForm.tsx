@@ -36,7 +36,7 @@ const QcRecordForm: React.FC<QcRecordFormProps> = ({
   return (
     <div>
       <div className="u-d-flex u-ai-center u-gap-8 u-mb-16">
-        <Button type="link" icon={<ArrowLeftOutlined />} onClick={onBack} className="u-p-0">
+        <Button type="link" icon={<ArrowLeftOutlined />} onClick={onBack} style={{ padding: 0 }}>
           返回菲号列表
         </Button>
         <Divider orientation="vertical" />
@@ -90,7 +90,7 @@ const QcRecordForm: React.FC<QcRecordFormProps> = ({
           {qcResult === 'unqualified' && (
             <Col span={14}>
               <Form.Item name="defectQuantity" label="次品数量" rules={[{ required: true, message: '请输入' }]}>
-                <InputNumber min={1} max={qcRecord?.quantity || 999} className="u-w-full" placeholder="次品数量" />
+                <InputNumber min={1} max={qcRecord?.quantity || 999} style={{ width: '100%' }} placeholder="次品数量" />
               </Form.Item>
             </Col>
           )}
@@ -119,7 +119,7 @@ const QcRecordForm: React.FC<QcRecordFormProps> = ({
               </Col>
             </Row>
             <div className="u-p-8px12px u-br-6 u-mb-12" style={{ border: '1px solid var(--status-error-border)' }}>
-              <Form.Item name="lockBundle" valuePropName="checked" className="u-mb-0">
+              <Form.Item name="lockBundle" valuePropName="checked" style={{ marginBottom: 0 }}>
                 <Space>
                   <Switch checkedChildren={<LockOutlined />} unCheckedChildren={<UnlockOutlined />} />
                   <span className="u-fw-500" style={{ color: 'var(--color-error)' }}>锁定菲号，阻止下游扫码</span>
@@ -142,7 +142,7 @@ const QcRecordForm: React.FC<QcRecordFormProps> = ({
       {remarkPanelOpen && orderNo && (
         <div className="u-mt-16" style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: 16 }}>
           <div className="u-d-flex u-jc-between u-ai-center u-mb-8">
-            <span className="u-fw-600"><FileTextOutlined className="u-mr-6" />订单备注 — {orderNo}</span>
+            <span className="u-fw-600"><FileTextOutlined style={{ marginRight: 6 }} />订单备注 — {orderNo}</span>
             <Button type="link" size="small" onClick={() => setRemarkPanelOpen(false)}>收起</Button>
           </div>
           <RemarkTimelineContent targetType="order" targetNo={orderNo} canAddRemark />

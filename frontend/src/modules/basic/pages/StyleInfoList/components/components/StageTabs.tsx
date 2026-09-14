@@ -39,13 +39,13 @@ const StageTabs: React.FC<StageTabsProps> = ({ stages, activeTab, onTabChange })
           gap: 4,
         }}
       >
-        {isDone && <CheckCircleOutlined className="u-fs-11" />}
+        {isDone && <CheckCircleOutlined style={{ fontSize: 11 }} />}
         {stage.label}
         {isEmptyStage && (
           <span className="u-fs-10 u-fw-400" style={{ color: 'var(--color-text-quaternary)' }}>未配置</span>
         )}
         {stage.subProcesses.length > 0 && (
-          <Tag color={isActive ? 'blue' : 'default'} className="u-ml-2 u-fs-10 u-p-04px u-lh-16px">
+          <Tag color={isActive ? 'blue' : 'default'} style={{ marginLeft: 2, fontSize: 10, padding: '0 4px', lineHeight: '16px' }}>
             {stage.subProcesses.length}
           </Tag>
         )}

@@ -140,7 +140,7 @@ const BatchCompleteModal: React.FC<BatchCompleteModalProps> = ({
         <Alert
           type="info"
           showIcon
-          className="u-mb-12"
+          style={{ marginBottom: 12 }}
           message="勾选色码并填写本次完成数量"
           description={
             pendingRows.length === 0
@@ -187,7 +187,7 @@ const BatchCompleteModal: React.FC<BatchCompleteModalProps> = ({
                 </Checkbox>
                 <span className="u-ml-auto u-d-flex u-ai-center u-gap-6">
                   {row.completed
-                    ? <Tag color="success" className="u-fs-11">已完成</Tag>
+                    ? <Tag color="success" style={{ fontSize: 11 }}>已完成</Tag>
                     : (
                       <InputNumber
                         size="small"

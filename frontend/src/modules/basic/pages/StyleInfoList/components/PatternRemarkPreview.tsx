@@ -47,7 +47,7 @@ const PatternRemarkPreview: React.FC<{ patternId: string }> = ({ patternId }) =>
           <div className="u-d-flex u-jc-between u-mb-4">
             <span>
               <strong>{r.authorName || '匿名'}</strong>
-              {r.authorRole && <Tag className="u-ml-8">{r.authorRole}</Tag>}
+              {r.authorRole && <Tag style={{ marginLeft: 8 }}>{r.authorRole}</Tag>}
             </span>
             <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
               {r.createTime ? String(r.createTime).replace('T', ' ').substring(0, 16) : ''}

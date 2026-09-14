@@ -47,7 +47,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ imageStyles, activeIdx, setActive
                 {s.coverUrl ? (
                   <SmartImage src={s.coverUrl} alt={s.styleName} preview={{ cover: <span>预览</span> }} />
                 ) : (
-                  <PictureOutlined className="u-fs-28" style={{ color: 'var(--color-text-quaternary)' }} />
+                  <PictureOutlined style={{ fontSize: 28, color: 'var(--color-text-quaternary)' }} />
                 )}
                 {sim > 0 && (
                   <span

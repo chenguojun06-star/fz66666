@@ -11,7 +11,7 @@ const PreviewSection: React.FC<Props> = ({ previewData, columns }) => {
   if (previewData.length === 0) return null;
   return (
     <>
-      <Divider className="u-m-12px0" />
+      <Divider style={{ margin: '12px 0' }} />
       <div className="u-mb-16">
         <div className="u-fw-600 u-mb-8 u-fs-15 u-d-flex u-ai-center u-gap-6">
           <CheckCircleFilled style={{ color: 'var(--color-success)' }} />
@@ -26,7 +26,7 @@ const PreviewSection: React.FC<Props> = ({ previewData, columns }) => {
           pagination={false}
           size="small"
           bordered
-          className="u-fs-13"
+          style={{ fontSize: 13 }}
         />
       </div>
     </>

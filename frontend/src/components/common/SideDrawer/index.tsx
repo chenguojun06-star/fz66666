@@ -78,7 +78,7 @@ const SideDrawer: React.FC<SideDrawerProps> = ({
         <div className="side-drawer-footer-actions">{footer}</div>
       </div>
     ) : undefined}
-    closeIcon={<CloseOutlined className="u-fs-14" />}
+    closeIcon={<CloseOutlined style={{ fontSize: 14 }} />}
   >
     {children}
   </Drawer>

@@ -68,7 +68,7 @@ const ZoneCard: React.FC<Props> = ({
           onChange={(values) => onUpdateZone(zone.key, { partKeys: values })}
           options={rows.map((row) => ({ value: row.key, label: row.partName || '未命名' }))}
           placeholder="选择部位"
-          className="u-flex-1" style={{ minWidth: 120 }}
+          style={{ flex: 1, minWidth: 120 }}
           maxTagCount="responsive"
         />
         <Button

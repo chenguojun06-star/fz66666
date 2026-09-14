@@ -345,7 +345,7 @@ const OrderTransferPage: React.FC = () => {
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="请输入拒绝原因"
-              className="u-mt-8"
+              style={{ marginTop: 8 }}
             />
           </div>
         </ResizableModal>

@@ -104,13 +104,13 @@ export function useStyleSizeColumns({
                       src={getFullAuthedFileUrl(url)}
                       width="100%"
                       height={blockHeight}
-                      className="u-br-8" style={{ objectFit: 'contain', border: '1px solid var(--color-border-light)', background: 'var(--color-bg-base)', padding: 6 }}
+                      style={{ objectFit: 'contain', borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-bg-base)', padding: 6 }}
                       preview={{ src: getFullAuthedFileUrl(url) }}
                     />
                     {editableMode && (
                       <DeleteOutlined
                         onClick={() => setChunkImageUrls(record.chunkRowKeys, imgs.filter((_, ii) => ii !== i))}
-                        className="u-pos-absolute u-fs-14 u-cur-pointer" style={{ top: -4, right: -4, background: 'rgba(0,0,0,0.55)', color: 'var(--color-bg-base)', borderRadius: '50%', padding: 2 }}
+                        style={{ position: 'absolute', top: -4, right: -4, background: 'rgba(0,0,0,0.55)', color: 'var(--color-bg-base)', borderRadius: '50%', padding: 2, fontSize: 14, cursor: 'pointer' }}
                       />
                     )}
                   </div>
@@ -201,7 +201,7 @@ export function useStyleSizeColumns({
                 <Select
                   value={String(record.groupName || record.resolvedGroupName || '其他区')}
                   placeholder="选择分组"
-                  className="u-w-full"
+                  style={{ width: '100%' }}
                   options={groupNameOptions}
                   onChange={(value) => updateChunkGroupName(record.chunkRowKeys, String(value || '其他区'))}
                 />
@@ -211,7 +211,7 @@ export function useStyleSizeColumns({
                  
                   icon={<PlusOutlined />}
                   type="dashed"
-                  className="u-w-full u-mt-8"
+                  style={{ width: '100%', marginTop: 8 }}
                   onClick={() => handleAddPartInGroup(record.resolvedGroupName)}
                 >
                   添加行
@@ -256,7 +256,7 @@ export function useStyleSizeColumns({
             <Select
               value={record.baseSize || undefined}
               allowClear
-              className="u-w-full"
+              style={{ width: '100%' }}
               options={sizeColumns.map((size) => ({ value: size, label: shortSizeLabel(size) }))}
               onChange={(value) => updateBaseSize(record.key, String(value || ''))}
             />
@@ -367,7 +367,7 @@ export function useStyleSizeColumns({
               value={String(record.tolerance ?? '')}
               addonBefore="±"
               placeholder="如：1"
-              className="u-w-full"
+              style={{ width: '100%' }}
               onChange={(e) => updateTolerance(record.key, normalizeToleranceInput(e.target.value))}
             />
           ) : (

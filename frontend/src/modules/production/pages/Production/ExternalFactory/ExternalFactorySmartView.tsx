@@ -181,7 +181,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
         <Virtuoso
           totalCount={rows.length}
           itemContent={rowRenderer}
-          className="u-h-full"
+          style={{ height: '100%' }}
           overscan={400}
         />
       </div>

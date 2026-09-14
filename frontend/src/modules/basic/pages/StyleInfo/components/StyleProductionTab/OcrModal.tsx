@@ -90,7 +90,7 @@ const OcrModal: React.FC<Props> = ({
             <p className="u-fs-var--font-size-xs u-mt-4" style={{ color: 'var(--neutral-text-secondary)' }}>
               {(file.size / 1024 / 1024).toFixed(1)} MB — 点击更换或拖拽新文件
             </p>
-            <Button size="small" className="u-mt-6"
+            <Button size="small" style={{ marginTop: 6 }}
               onClick={(e) => { e.stopPropagation(); onFileRemove(); }}>
               移除
             </Button>
@@ -126,7 +126,7 @@ const OcrModal: React.FC<Props> = ({
             rows={12}
             style={{ marginTop: 12, fontFamily: "'PingFang SC', 'Microsoft YaHei', monospace", fontSize: 14, borderRadius: 6 }}
           />
-          <Space className="u-mt-8 u-d-flex u-jc-end">
+          <Space style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
             <Button onClick={onAppend}>追加到工艺说明</Button>
             <Button type="primary" onClick={onReplace}>替换工艺说明</Button>
           </Space>

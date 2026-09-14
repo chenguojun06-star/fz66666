@@ -52,11 +52,11 @@ const PatternUsageCard: React.FC<PatternUsageCardProps> = ({
   };
   return (
     <Card
-      className="u-mt-16"
+      style={{ marginTop: 16 }}
       title={
         <Space>
           <span>各码实际用量</span>
-          <Text type="secondary" className="u-fs-14 u-fw-400">
+          <Text type="secondary" style={{ fontSize: 14, fontWeight: 400 }}>
             纸样师傅按各码纸样测量填入，下单管理和裁剪管理将依此计算实际面辅料用量，拉链辅料也会自动带入
           </Text>
         </Space>

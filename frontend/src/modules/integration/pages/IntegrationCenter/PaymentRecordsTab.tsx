@@ -102,7 +102,7 @@ const PaymentRecordsTab: React.FC<Props> = ({ active }) => {
 
   return (
     <div style={{ paddingTop: 16 }}>
-      <Card className="u-mb-12 u-br-8" variant="borderless">
+      <Card style={{ marginBottom: 12, borderRadius: 8 }} variant="borderless">
         <Space wrap>
           <Select placeholder="渠道" allowClear style={{ width: 120 }}
             value={filters.channel} onChange={v => setFilters(f => ({ ...f, channel: v }))}>

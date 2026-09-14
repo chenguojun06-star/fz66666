@@ -156,12 +156,12 @@ const _FinishedInventory: React.FC = () => {
 
   return (
     <>
-      {showSmartErrorNotice && smartError && <Card className="u-mb-12"><SmartErrorNotice error={smartError} onFix={() => { void loadData(); }} /></Card>}
-      <Card className="u-mb-0" style={{ border: 'none', boxShadow: 'none', background: 'transparent' }}>
+      {showSmartErrorNotice && smartError && <Card style={{ marginBottom: 12 }}><SmartErrorNotice error={smartError} onFix={() => { void loadData(); }} /></Card>}
+      <Card style={{ marginBottom: 0, border: 'none', boxShadow: 'none', background: 'transparent' }}>
         <StandardToolbar left={<StandardSearchBar searchValue={searchText} onSearchChange={setSearchText} searchPlaceholder="搜索订单号/款号/商品编码" statusValue={statusValue} onStatusChange={setStatusValue} statusOptions={[{ label: '全部', value: '' }, { label: '有库存', value: 'available' }, { label: '有次品', value: 'defect' }]} />} right={<Space wrap><Select style={{ width: 140 }} placeholder="工厂类型" allowClear value={selectedFactoryType || undefined} onChange={setSelectedFactoryType} options={factoryTypeOptions} /><Button icon={<InboxOutlined />} onClick={() => setFreeInboundOpen(true)}>无采购单入库</Button><Button icon={<ScanOutlined />} onClick={() => setScanOperationOpen(true)}>扫码出入库</Button><Button icon={<ScanOutlined />} onClick={() => setQrcodeOutboundOpen(true)}>扫码出库</Button><Button icon={<HistoryOutlined />} onClick={() => setPageLogOpen(true)}>操作日志</Button></Space>} />
       </Card>
       <PageStatCards cards={[{ key: 'total', items: [{ label: '成品总数', value: totalRecords, unit: '款', color: 'var(--color-primary)' }] }, { key: 'available', items: [{ label: '可用库存', value: totalAvailableQty, unit: '件', color: 'var(--color-success)' }] }, { key: 'defect', items: [{ label: '次品数量', value: totalDefectQty, unit: '件', color: 'var(--color-danger)' }] }]} activeKey="" />
-      <Tabs defaultActiveKey="inventory" className="u-mt-12" items={[
+      <Tabs defaultActiveKey="inventory" style={{ marginTop: 12 }} items={[
         {
           key: 'inventory',
           label: '库存管理',
@@ -191,7 +191,7 @@ const _FinishedInventory: React.FC = () => {
           >
             {outboundModal.data && (
               <>
-                <Card className="u-mb-12">
+                <Card style={{ marginBottom: 12 }}>
                   <Row gutter={16}>
                     <Col span={8}>
                       <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>订单号</div>
@@ -207,12 +207,12 @@ const _FinishedInventory: React.FC = () => {
                     </Col>
                   </Row>
                 </Card>
-                <Card className="u-mb-12">
+                <Card style={{ marginBottom: 12 }}>
                   <Row gutter={16}>
                     <Col span={12}>
                       <div className="u-mb-8 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>出库类型</div>
                       <Select
-                        className="u-w-full"
+                        style={{ width: '100%' }}
                         value={outboundType}
                         disabled={directShipMode}
                         onChange={(v) => setOutboundType(v)}
@@ -271,12 +271,12 @@ const _FinishedInventory: React.FC = () => {
                   return (
                     <div key={sn} className="u-mb-12">
                       <div className="u-d-flex u-ai-center u-gap-8 u-mb-6">
-                        <Tag color="blue" className="u-m-0">{sn}</Tag>
+                        <Tag color="blue" style={{ margin: 0 }}>{sn}</Tag>
                         <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
                           {cartStyleNames.get(sn) || outboundModal.data?.styleName || ''}
                         </span>
                         {!directShipMode && (
-                          <Button type="link" size="small" className="u-p-0 u-ml-auto"
+                          <Button type="link" size="small" style={{ padding: 0, marginLeft: 'auto' }}
                             onClick={() => handleRemoveStyleFromCart(sn)}>
                             移除该款
                           </Button>
@@ -291,7 +291,7 @@ const _FinishedInventory: React.FC = () => {
                   <span>出库金额: {formatMoney(skuTotalAmount)}</span>
                 </div>
                 {outboundType === 'sales' && <CustomerInfoSection customerName={outboundCustomerName} onCustomerNameChange={setOutboundCustomerName} customerPhone={outboundCustomerPhone} onCustomerPhoneChange={setOutboundCustomerPhone} shippingAddress={outboundShippingAddress} onShippingAddressChange={setOutboundShippingAddress} variant="card" />}
-                <Card title="发货信息（选填）" className="u-mt-12">
+                <Card title="发货信息（选填）" style={{ marginTop: 12 }}>
                   <Row gutter={16}>
                     <Col span={8}>
                       <div className="u-mb-8 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>关联生产单号</div>
@@ -320,7 +320,7 @@ const _FinishedInventory: React.FC = () => {
           >
             {inboundHistoryModal.data && (
               <>
-                <Card className="u-mb-12">
+                <Card style={{ marginBottom: 12 }}>
                   <div className="u-d-flex u-gap-16 u-ai-center u-fwrap-wrap">
                     <StyleCoverThumb
                       src={(inboundHistoryModal.data as any).styleCover || null}
@@ -328,7 +328,7 @@ const _FinishedInventory: React.FC = () => {
                       size={72}
                       borderRadius={6}
                     />
-                    <Row gutter={16} className="u-flex-1" style={{ minWidth: 320 }}>
+                    <Row gutter={16} style={{ flex: 1, minWidth: 320 }}>
                       <Col span={8}><div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>款号</div><div className="u-fw-600">{inboundHistoryModal.data.styleNo || '-'}</div></Col>
                       <Col span={8}><div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>订单号</div><div className="u-fw-600">{inboundHistoryModal.data.orderNo || '-'}</div></Col>
                       <Col span={8}><div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>生产方</div><div className="u-fw-600">{inboundHistoryModal.data.factoryName || '-'}</div></Col>
@@ -337,7 +337,7 @@ const _FinishedInventory: React.FC = () => {
                     </Row>
                   </div>
                 </Card>
-                <ResizableTable size="small" columns={[{ title: '入库日期', dataIndex: 'inboundDate', key: 'inboundDate', width: 120 }, { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 130, render: (v: string) => v || '-' }, { title: '生产方', dataIndex: 'factoryName', key: 'factoryName', width: 110, render: (v: string) => v || '-' }, { title: '质检单号', dataIndex: 'qualityInspectionNo', key: 'qualityInspectionNo', width: 140 }, { title: '菲号', dataIndex: 'cuttingBundleNo', key: 'cuttingBundleNo', width: 100 }, { title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 200, render: (v: string) => <span title={v} style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{v}</span> }, { title: '颜色', dataIndex: 'color', key: 'color', width: 80 }, { title: '尺码', dataIndex: 'size', key: 'size', width: 60 }, { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const }, { title: '操作人', dataIndex: 'operator', key: 'operator', width: 100 }, { title: '库位', dataIndex: 'warehouseLocation', key: 'warehouseLocation', width: 100 }, { title: '操作', key: 'action', width: 90, render: (_: unknown, r: { id: string; warehouseLocation?: string }) => (String(r.warehouseLocation || '') === '直发客户' ? <Button size="small" type="link" className="u-p-0" onClick={() => { void handleRevertDirectship(r); }}>退回上一步</Button> : null) }]} dataSource={inboundHistory} rowKey="id" emptyDescription="暂无入库记录" pagination={{ current: inboundPage, pageSize: inboundPageSize, total: inboundHistory.length, onChange: (p, ps) => { setInboundPage(p); setInboundPageSize(ps); } }} />
+                <ResizableTable size="small" columns={[{ title: '入库日期', dataIndex: 'inboundDate', key: 'inboundDate', width: 120 }, { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 130, render: (v: string) => v || '-' }, { title: '生产方', dataIndex: 'factoryName', key: 'factoryName', width: 110, render: (v: string) => v || '-' }, { title: '质检单号', dataIndex: 'qualityInspectionNo', key: 'qualityInspectionNo', width: 140 }, { title: '菲号', dataIndex: 'cuttingBundleNo', key: 'cuttingBundleNo', width: 100 }, { title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 200, render: (v: string) => <span title={v} style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{v}</span> }, { title: '颜色', dataIndex: 'color', key: 'color', width: 80 }, { title: '尺码', dataIndex: 'size', key: 'size', width: 60 }, { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const }, { title: '操作人', dataIndex: 'operator', key: 'operator', width: 100 }, { title: '库位', dataIndex: 'warehouseLocation', key: 'warehouseLocation', width: 100 }, { title: '操作', key: 'action', width: 90, render: (_: unknown, r: { id: string; warehouseLocation?: string }) => (String(r.warehouseLocation || '') === '直发客户' ? <Button size="small" type="link" style={{ padding: 0 }} onClick={() => { void handleRevertDirectship(r); }}>退回上一步</Button> : null) }]} dataSource={inboundHistory} rowKey="id" emptyDescription="暂无入库记录" pagination={{ current: inboundPage, pageSize: inboundPageSize, total: inboundHistory.length, onChange: (p, ps) => { setInboundPage(p); setInboundPageSize(ps); } }} />
                 <div className="u-mt-12 u-p-8px12px u-br-6 u-fs-14" style={{ background: 'var(--color-bg-container)' }}>
                   <div className="u-fw-600 u-mb-4">对账公式</div>
                   <div>入库总量: <b>{inboundHistoryModal.data.totalInboundQty ?? 0}</b> 件 = 当前库存: <b style={{ color: 'var(--color-success)' }}>{inboundHistoryModal.data.availableQty ?? 0}</b> 件 + 出库总量: <b style={{ color: 'var(--color-orange-600)' }}>{outstockTotal}</b> 件 + 次品: <b>{inboundHistoryModal.data.defectQty ?? 0}</b> 件</div>

@@ -106,7 +106,7 @@ const FieldListTab: React.FC<FieldListTabProps> = ({
 
   return (
     <>
-      <Text type="secondary" className="u-d-block u-mb-12">
+      <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
         配置业务对象的字段显示/隐藏/排序/标签。系统字段不可删除，但可调整显示名和显隐。
         共 {rows.length} 个字段（系统 {rows.filter(r => r.isSystem === 1).length} / 自定义 {rows.filter(r => r.isSystem === 0).length}）
       </Text>

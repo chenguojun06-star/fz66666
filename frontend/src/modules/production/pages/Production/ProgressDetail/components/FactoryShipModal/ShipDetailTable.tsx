@@ -82,7 +82,7 @@ const ShipDetailTable: React.FC<ShipDetailTableProps> = ({
                             );
                             onShipDetailsChange(nextDetails);
                           }}
-                          className="u-w-full"
+                          style={{ width: '100%' }}
                           placeholder="颜色"
                         />
                       </td>
@@ -97,7 +97,7 @@ const ShipDetailTable: React.FC<ShipDetailTableProps> = ({
                             <Tooltip title={ordered > 0 ? `下单:${ordered} 已发:${shipped} 剩:${remaining}` : undefined}>
                               <InputNumber
                                 min={0}
-                                className="u-w-full"
+                                style={{ width: '100%' }}
                                 value={rowForSz?.quantity ?? 0}
                                 onChange={v => {
                                   if (detailIdx >= 0) {

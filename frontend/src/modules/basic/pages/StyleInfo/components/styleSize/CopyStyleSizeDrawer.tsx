@@ -252,7 +252,7 @@ const CopyStyleSizeDrawer: React.FC<CopyStyleSizeDrawerProps> = ({
       title="拷贝其他款尺寸"
       footer={
         <Space>
-          <Text type="secondary" className="u-fs-12" style={{ marginInlineEnd: 12 }}>
+          <Text type="secondary" style={{ fontSize: 12, marginInlineEnd: 12 }}>
             已选 <Text strong style={{ color: 'var(--color-primary)' }}>{selectedRows.length}</Text> 行，确认后合并进当前尺寸表（同名部位跳过）
           </Text>
           <Button onClick={onClose}>取消</Button>
@@ -265,14 +265,14 @@ const CopyStyleSizeDrawer: React.FC<CopyStyleSizeDrawerProps> = ({
       <div className="u-flex-1 u-h-full u-d-flex u-gap-16 u-ov-hidden" style={{ minWidth: 0, alignItems: 'stretch', minHeight: 0 }}>
         {/* ── 左：来源选择 ── */}
         <div className="u-fshrink-0 u-d-flex u-fd-column" style={{ width: 300, minHeight: 0 }}>
-          <Text strong className="u-d-block u-mb-8">
+          <Text strong style={{ display: 'block', marginBottom: 8 }}>
             {sourceMode === 'style' ? '选择款' : '选择通用模板'}
           </Text>
           <Radio.Group
             value={sourceMode}
             optionType="button"
             buttonStyle="solid"
-            className="u-mb-8"
+            style={{ marginBottom: 8 }}
             onChange={(e) => {
               setSourceMode(e.target.value);
               setSelectedStyle(null);
@@ -292,14 +292,14 @@ const CopyStyleSizeDrawer: React.FC<CopyStyleSizeDrawerProps> = ({
               loading={savingTemplate}
               disabled={!currentStyleNo}
               onClick={() => void handleSaveCurrentAsTemplate()}
-              className="u-mt-8"
+              style={{ marginTop: 8 }}
             >
               存当前款为模板
             </Button>
           )}
           {sourceMode === 'style' && (
             <>
-              <Space direction="vertical" size={6} className="u-w-full u-mb-8">
+              <Space direction="vertical" size={6} style={{ width: '100%', marginBottom: 8 }}>
                 <Input
                   placeholder="款号"
                   allowClear
@@ -335,7 +335,7 @@ const CopyStyleSizeDrawer: React.FC<CopyStyleSizeDrawerProps> = ({
                       <StyleCoverThumb src={s.cover || s.styleCover || null} styleId={s.id} styleNo={String(s.styleNo || '')} size={40} borderRadius={4} />
                       <div className="u-flex-1" style={{ minWidth: 0 }}>
                         <div className="u-fw-500 u-fs-13">{s.styleNo || '-'}</div>
-                        <Text type="secondary" className="u-fs-12 u-d-block u-ov-hidden u-ws-nowrap" style={{ textOverflow: 'ellipsis' }}>
+                        <Text type="secondary" style={{ fontSize: 12, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {s.styleName || '-'}
                         </Text>
                       </div>
@@ -352,7 +352,7 @@ const CopyStyleSizeDrawer: React.FC<CopyStyleSizeDrawerProps> = ({
                 pageSize={stylePageSize}
                 total={styleTotal}
                 onChange={(p) => { setStylePage(p); void fetchStyles(p); }}
-                className="u-mt-8 u-ta-right"
+                style={{ marginTop: 8, textAlign: 'right' }}
                 showSizeChanger={false}
               />
             </>
@@ -373,12 +373,12 @@ const CopyStyleSizeDrawer: React.FC<CopyStyleSizeDrawerProps> = ({
                   >
                     <div className="u-fw-500 u-fs-13">{t.templateName || '-'}</div>
                     <Space size={4} wrap>
-                      <Text type="secondary" className="u-fs-12">
+                      <Text type="secondary" style={{ fontSize: 12 }}>
                         {t.sourceStyleNo ? `来源款 ${t.sourceStyleNo}` : '未关联来源款'}
                       </Text>
                       {t.sourceStyleNo
-                        ? <Tag className="u-fs-11" style={{ marginInlineEnd: 0 }}>款式沉淀</Tag>
-                        : <Tag color="blue" className="u-fs-11" style={{ marginInlineEnd: 0 }}>通用</Tag>}
+                        ? <Tag style={{ marginInlineEnd: 0, fontSize: 11 }}>款式沉淀</Tag>
+                        : <Tag color="blue" style={{ marginInlineEnd: 0, fontSize: 11 }}>通用</Tag>}
                     </Space>
                   </div>
                 );
@@ -392,11 +392,11 @@ const CopyStyleSizeDrawer: React.FC<CopyStyleSizeDrawerProps> = ({
 
         {/* ── 右：来源款尺寸行（勾选） ── */}
         <div className="u-flex-1 u-d-flex u-fd-column u-ov-hidden" style={{ minWidth: 0, minHeight: 0 }}>
-          <Space wrap className="u-mb-12">
+          <Space wrap style={{ marginBottom: 12 }}>
             <Text strong>
               选择尺寸行{selectedStyle ? `（${selectedStyle.styleNo || ''}）` : selectedTemplate ? `（${selectedTemplate.templateName || ''}）` : ''}
             </Text>
-            <Text type="secondary" className="u-fs-12">默认全选；取消勾选可只拷个别部位</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>默认全选；取消勾选可只拷个别部位</Text>
           </Space>
           {!selectedStyle && !selectedTemplate ? (
             <div className="u-ta-center u-fs-14" style={{ padding: '60px 0', color: 'var(--color-text-tertiary)' }}>

@@ -228,7 +228,7 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
                 type={rangeType === key ? 'primary' : 'text'}
                 size="small"
                 onClick={() => onRangeChange(key)}
-                className="u-fs-12 u-p-08px" style={{ minWidth: 40, height: 26 }}
+                style={{ minWidth: 40, fontSize: 12, height: 26, padding: '0 8px' }}
               >
                 {label}
               </Button>
@@ -252,7 +252,7 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
             size="small"
             icon={<DownloadOutlined />}
             onClick={handleDownload}
-            className="u-ml-auto"
+            style={{ marginLeft: 'auto' }}
           >
             下载
           </Button>
@@ -283,7 +283,7 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
             <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>平均开发时间</div>
             {avgDevSeconds > 0 ? (
               <div className="u-fw-700" style={{ color: 'var(--color-text-primary)', fontSize: 18 }}>
-                <ClockCircleOutlined className="u-mr-4" />
+                <ClockCircleOutlined style={{ marginRight: 4 }} />
                 {formatDuration(avgDevSeconds)}
                 <span className="u-fs-12 u-ml-4" style={{ color: 'var(--color-text-quaternary)' }}>
                   ({stylesWithTime.length}款)
@@ -312,7 +312,7 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
         </div>
       </Card>
 
-      <Divider className="u-m-12px0">款式明细列表{styleDetails.length > 0 ? `（共 ${styleDetails.length} 款，${summaryData.patternCount} 件样衣）` : ''}</Divider>
+      <Divider style={{ margin: '12px 0' }}>款式明细列表{styleDetails.length > 0 ? `（共 ${styleDetails.length} 款，${summaryData.patternCount} 件样衣）` : ''}</Divider>
 
       {/* 明细表格 */}
       <Table<StyleCostDetail>

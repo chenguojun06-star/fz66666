@@ -132,12 +132,12 @@ export const usePurchaseReturnActions = (params: UsePurchaseReturnActionsParams)
                     采购 {Number(item.purchaseQuantity || 0)}{item.unit || ''} · 到货 {Number(item.arrivedQuantity || 0)}{item.unit || ''}
                   </div>
                 </div>
-                <Form.Item name={['items', idx, 'purchaseId']} hidden className="u-m-0">
+                <Form.Item name={['items', idx, 'purchaseId']} hidden style={{ margin: 0 }}>
                   <Input />
                 </Form.Item>
                 <Form.Item
                   name={['items', idx, 'returnQuantity']}
-                  className="u-m-0"
+                  style={{ margin: 0 }}
                   rules={[
                     { required: true, message: '请输入实际回料数量' },
                     {

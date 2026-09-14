@@ -289,7 +289,7 @@ const ExternalFactory: React.FC = () => {
                           icon={dateSortAsc ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
                           onClick={toggleDateSort}
                           title={dateSortAsc ? '按时间升序' : '按时间降序'}
-                          className="u-p-0" style={{ borderRadius: 16, minWidth: 32, width: 32 }}
+                          style={{ borderRadius: 16, minWidth: 32, width: 32, padding: 0 }}
                         />
                       </Space>
                     }

@@ -14,7 +14,7 @@ interface Props {
 const BillingOverviewCards: React.FC<Props> = ({ overview, onOpenInvoiceInfo }) => {
   if (!overview) return null;
   return (
-    <Row gutter={16} className="u-mb-24">
+    <Row gutter={16} style={{ marginBottom: 24 }}>
       <Col span={6}>
         <Card>
           <Statistic

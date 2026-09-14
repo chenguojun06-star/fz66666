@@ -10,7 +10,7 @@ const TitleExtraTooltip: React.FC = () => (
       + '合并方式：相同物料（类型/编码/名称/规格/单位/供应商相同）会共用同一采购单号，便于采购合单。'
     }
   >
-    <QuestionCircleOutlined className="u-cur-pointer" style={{ color: 'var(--neutral-text-disabled)' }} />
+    <QuestionCircleOutlined style={{ color: 'var(--neutral-text-disabled)', cursor: 'pointer' }} />
   </Tooltip>
 );
 

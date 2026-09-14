@@ -49,7 +49,7 @@ const DepartmentDialog: React.FC<DepartmentDialogProps> = ({
               placeholder="不选则为顶级部门"
               options={departmentOptions}
               notFoundContent={departmentOptions.length === 0 ? '暂无部门' : '无匹配'}
-              className="u-w-full"
+              style={{ width: '100%' }}
             />
           </Form.Item>
         </Col>
@@ -57,7 +57,7 @@ const DepartmentDialog: React.FC<DepartmentDialogProps> = ({
       <Row gutter={12}>
         <Col span={8}>
           <Form.Item name="ownerType" label="内外标签" rules={[{ required: true, message: '请选择' }]}>
-            <Select options={ownerTypeOptions} className="u-w-full" />
+            <Select options={ownerTypeOptions} style={{ width: '100%' }} />
           </Form.Item>
         </Col>
         <Col span={8}>
@@ -67,13 +67,13 @@ const DepartmentDialog: React.FC<DepartmentDialogProps> = ({
               showSearch
               placeholder="选择分类"
               options={categoryOptions}
-              className="u-w-full"
+              style={{ width: '100%' }}
             />
           </Form.Item>
         </Col>
         <Col span={8}>
           <Form.Item name="sortOrder" label="排序">
-            <InputNumber min={0} precision={0} placeholder="默认 0" className="u-w-full" />
+            <InputNumber min={0} precision={0} placeholder="默认 0" style={{ width: '100%' }} />
           </Form.Item>
         </Col>
       </Row>

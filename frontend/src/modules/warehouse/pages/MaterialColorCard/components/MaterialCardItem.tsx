@@ -24,7 +24,7 @@ const MaterialCardItem: React.FC<Props> = ({
   <Card
     key={card.id}
     hoverable
-    className="u-h-full u-d-flex u-fd-column"
+    style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
     bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 0 }}
     styles={{ body: { flex: 1, display: 'flex', flexDirection: 'column', padding: 0 } }}
     title={
@@ -55,7 +55,7 @@ const MaterialCardItem: React.FC<Props> = ({
             src={getFullAuthedFileUrl(card.coverImage)}
             width={96}
             height={96}
-            className="u-objf-cover u-br-8 u-fshrink-0" style={{ border: '1px solid var(--color-border-light)' }}
+            style={{ objectFit: 'cover', borderRadius: 8, flexShrink: 0, border: '1px solid var(--color-border-light)' }}
             preview
           />
         ) : (
@@ -65,7 +65,7 @@ const MaterialCardItem: React.FC<Props> = ({
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'var(--color-bg-page)', color: 'var(--color-text-quaternary)',
           }}>
-            <FileTextOutlined className="u-fs-28" />
+            <FileTextOutlined style={{ fontSize: 28 }} />
           </div>
         )}
 
@@ -80,8 +80,8 @@ const MaterialCardItem: React.FC<Props> = ({
               {card.supplierContactPhone && <span> · {card.supplierContactPhone}</span>}
             </div>
           )}
-          <Tag color="blue" className="u-mt-4">{getMaterialTypeLabel(card.materialType)}</Tag>
-          <Tag color={card.materialCount && card.materialCount > 0 ? 'green' : 'default'} className="u-mt-4">
+          <Tag color="blue" style={{ marginTop: 4 }}>{getMaterialTypeLabel(card.materialType)}</Tag>
+          <Tag color={card.materialCount && card.materialCount > 0 ? 'green' : 'default'} style={{ marginTop: 4 }}>
             {card.materialCount || 0} 条物料
           </Tag>
         </div>

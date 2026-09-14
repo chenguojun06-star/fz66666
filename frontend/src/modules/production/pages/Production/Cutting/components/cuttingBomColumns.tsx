@@ -137,7 +137,7 @@ export function buildCuttingBomColumns({
             onChange={(val: string) => onUpdateRow(record.id!, 'size', val)}
             placeholder="码数"
 
-            className="u-w-full"
+            style={{ width: '100%' }}
           />
         ) : (
           String(v || '').trim() || '-'
@@ -173,7 +173,7 @@ export function buildCuttingBomColumns({
             onChange={(val: string) => onUpdateRow(record.id!, 'unit', val)}
             placeholder="单位"
 
-            className="u-w-full"
+            style={{ width: '100%' }}
           />
         ) : (
           String(v || '').trim() || '-'
@@ -193,7 +193,7 @@ export function buildCuttingBomColumns({
             min={0}
             precision={2}
             controls={false}
-            className="u-w-full"
+            style={{ width: '100%' }}
             onChange={(val) => onUpdateRow(record.id!, 'usageAmount', val ?? 0)}
           />
         ) : (
@@ -215,7 +215,7 @@ export function buildCuttingBomColumns({
             max={100}
             precision={1}
             controls={false}
-            className="u-w-full"
+            style={{ width: '100%' }}
             onChange={(val) => onUpdateRow(record.id!, 'lossRate', val ?? 0)}
           />
         ) : (
@@ -236,7 +236,7 @@ export function buildCuttingBomColumns({
             min={0}
             precision={2}
             controls={false}
-            className="u-w-full"
+            style={{ width: '100%' }}
             prefix="¥"
             onChange={(val) => onUpdateRow(record.id!, 'unitPrice', val ?? 0)}
           />
@@ -256,7 +256,7 @@ export function buildCuttingBomColumns({
             value={String(v || '')}
             placeholder="供应商"
 
-            className="u-w-full"
+            style={{ width: '100%' }}
             onChange={(_val: string, option: any) => {
               onUpdateRow(record.id!, 'supplierName', _val);
               const sel = Array.isArray(option) ? option[0] : option;

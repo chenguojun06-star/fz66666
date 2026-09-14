@@ -51,7 +51,7 @@ const DepartmentTree: React.FC<{
 
   return (
     <SideCardPanel
-      className="u-h-full" style={{ width: 240 }}
+      style={{ width: 240, height: '100%' }}
       headerTitle="部门"
       nodes={nodes}
       activeKey={selectedId == null ? ALL_KEY : String(selectedId)}

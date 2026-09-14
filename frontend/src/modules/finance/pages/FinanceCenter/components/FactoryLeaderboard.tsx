@@ -16,11 +16,11 @@ const FactoryLeaderboard: React.FC<Props> = ({ leaderboard, lbLoading, lbCollaps
   return (
     <Card
       size="small"
-      className="u-mb-12 u-br-6" style={{ border: '1px solid var(--color-border-secondary)' }}
+      style={{ marginBottom: 12, borderRadius: 6, border: '1px solid var(--color-border-secondary)' }}
       loading={lbLoading}
       title={<span className="u-fs-14 u-fw-600">工厂绩效榜</span>}
       extra={
-        <Button type="link" onClick={onToggleCollapse} className="u-p-0">
+        <Button type="link" onClick={onToggleCollapse} style={{ padding: 0 }}>
           {lbCollapsed ? '展开' : '收起'}
         </Button>
       }

@@ -24,9 +24,9 @@ const TestResultModal: React.FC<TestResultModalProps> = ({ open, testResult, act
         <div>
           <Alert type={testResult.success ? 'success' : 'error'} showIcon
             title={testResult.success ? '连接成功' : '凭证未配置'}
-            description={testResult.message} className="u-mb-16" />
+            description={testResult.message} style={{ marginBottom: 16 }} />
           {testResult.credentialGuide && (
-            <Alert type="info" showIcon className="u-mb-16 u-br-8"
+            <Alert type="info" showIcon style={{ marginBottom: 16, borderRadius: 8 }}
               title="如何获取凭证？"
               description={testResult.credentialGuide} />
           )}
@@ -44,15 +44,15 @@ const TestResultModal: React.FC<TestResultModalProps> = ({ open, testResult, act
             </div>
           )}
           {testResult.success && testResult.supportedActions && (
-            <Descriptions bordered column={2} className="u-mb-16">
+            <Descriptions bordered column={2} style={{ marginBottom: 16 }}>
               <Descriptions.Item label="同步能力" span={2}>
-                {testResult.supportedActions.map(a => (<Tag key={a} color="blue" className="u-mb-4">{a}</Tag>))}
+                {testResult.supportedActions.map(a => (<Tag key={a} color="blue" style={{ marginBottom: 4 }}>{a}</Tag>))}
               </Descriptions.Item>
             </Descriptions>
           )}
           {testResult.success && testResult.shops && testResult.shops.length > 0 && (
             <div>
-              <Text strong className="u-d-block u-mb-8"><ShopOutlined /> 发现的店铺 ({testResult.shops.length})</Text>
+              <Text strong style={{ display: 'block', marginBottom: 8 }}><ShopOutlined /> 发现的店铺 ({testResult.shops.length})</Text>
               <List bordered dataSource={testResult.shops}
                 renderItem={(shop: ShopInfo) => (
                   <List.Item><Space><Tag color="green">{shop.platform || '-'}</Tag>{shop.shopName}<Tag color={shop.status === 'ACTIVE' || shop.status === 'CONNECTED' ? 'success' : 'default'}>{{ ACTIVE: '已激活', CONNECTED: '已连接', DISCONNECTED: '已断开', INACTIVE: '未激活', PENDING: '待激活' }[shop.status] || shop.status}</Tag></Space></List.Item>

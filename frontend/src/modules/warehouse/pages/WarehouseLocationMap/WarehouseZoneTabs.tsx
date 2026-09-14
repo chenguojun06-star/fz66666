@@ -50,11 +50,11 @@ const WarehouseZoneTabs: React.FC<Props> = ({
           className={`wlm-zone-tab ${selectedZoneName === zone.name ? 'active' : ''}`}
           onClick={() => onSelectZone(zone.name)}
         >
-          <AppstoreOutlined className="u-mr-4" />
+          <AppstoreOutlined style={{ marginRight: 4 }} />
           {zone.name}
           <Badge
             count={locations.filter(l => l.zoneName === zone.name && l.usedCapacity > 0).length}
-            className="u-ml-6" style={{ backgroundColor: 'var(--color-primary)' }}
+            style={{ marginLeft: 6, backgroundColor: 'var(--color-primary)' }}
           />
         </div>
       ))}

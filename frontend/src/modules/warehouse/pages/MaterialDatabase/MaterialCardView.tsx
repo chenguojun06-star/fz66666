@@ -37,7 +37,7 @@ const MaterialCardView: React.FC<MaterialCardViewProps> = ({
   return (
     <>
       {/* 卡片视图搜索栏 —— 使用标准 StandardToolbar + StandardSearchBar */}
-      <Card className="u-mb-12" style={{ background: 'var(--color-bg-container)' }}>
+      <Card style={{ marginBottom: 12, background: 'var(--color-bg-container)' }}>
         <StandardToolbar
           left={
             <StandardSearchBar
@@ -127,8 +127,8 @@ const MaterialCardView: React.FC<MaterialCardViewProps> = ({
 
       {/* 空状态 */}
       {cardDataList.length === 0 && !cardLoading && (
-        <Card className="u-ta-center u-mt-12" style={{ padding: '60px 0', color: 'var(--color-text-tertiary)' }}>
-          <FileTextOutlined className="u-mb-12" style={{ fontSize: 48 }} />
+        <Card style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-tertiary)', marginTop: 12 }}>
+          <FileTextOutlined style={{ fontSize: 48, marginBottom: 12 }} />
           <div>暂无物料色卡，点击右上角"新建物料色卡"开始创建</div>
         </Card>
       )}

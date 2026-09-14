@@ -247,7 +247,7 @@ const FactoryWorkerList: React.FC = () => {
           )
         }
         filterBar={
-          <Space className="u-mb-16">
+          <Space style={{ marginBottom: 16 }}>
             <Select
               placeholder="状态筛选"
               allowClear

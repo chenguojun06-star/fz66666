@@ -34,7 +34,7 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
         <Select
           value={String(v || 'fabricA')}
           size="small"
-          className="u-w-full"
+          style={{ width: '100%' }}
           onChange={(val) => handleUpdateRow(record.id!, 'materialType', val)}
         >
           {MATERIAL_TYPE_OPTIONS.map((opt) => (
@@ -95,7 +95,7 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
           <Select
             value={String(v || '')}
             size="small"
-            className="u-w-full"
+            style={{ width: '100%' }}
             placeholder="选择颜色"
             allowClear
             onChange={(val) => handleUpdateRow(record.id!, 'color', val)}
@@ -119,7 +119,7 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
           onChange={(val: string) => handleUpdateRow(record.id!, 'size', val)}
           placeholder="码数"
           size="small"
-          className="u-w-full"
+          style={{ width: '100%' }}
         />
       ),
     },
@@ -143,7 +143,7 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
           onChange={(val: string) => handleUpdateRow(record.id!, 'unit', val)}
           placeholder="单位"
           size="small"
-          className="u-w-full"
+          style={{ width: '100%' }}
         />
       ),
     },
@@ -154,7 +154,7 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
           value={Number(v || 0)}
           size="small"
           min={0}
-          className="u-w-full"
+          style={{ width: '100%' }}
           onChange={(val) => handleUpdateRow(record.id!, 'purchaseQuantity', val ?? 0)}
         />
       ),
@@ -167,7 +167,7 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
           size="small"
           min={0}
           precision={2}
-          className="u-w-full"
+          style={{ width: '100%' }}
           prefix="¥"
           onChange={(val) => handleUpdateRow(record.id!, 'unitPrice', val ?? 0)}
         />
@@ -180,7 +180,7 @@ export function buildEditColumns(deps: EditColumnsDeps): ColumnsType<MaterialPur
           value={String(v || '')}
           placeholder="供应商"
           size="small"
-          className="u-w-full"
+          style={{ width: '100%' }}
           onChange={(_val: string, option: any) => {
             handleUpdateRow(record.id!, 'supplierName', _val);
             const sel = Array.isArray(option) ? option[0] : option;

@@ -36,7 +36,7 @@ const B2BOrderModal: React.FC<B2BOrderModalProps> = ({ open, profiles, onClose, 
         </Form.Item>
         <Form.Item label="商品名称" name="productName"><Input /></Form.Item>
         <Form.Item label="数量" name="quantity" rules={[{ required: true, message: '请输入数量' }]}>
-          <InputNumber min={1} precision={0} className="u-w-full" />
+          <InputNumber min={1} precision={0} style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item label="收货人" name="receiverName"><Input /></Form.Item>
         <Form.Item label="收货电话" name="receiverPhone"><Input /></Form.Item>

@@ -30,7 +30,7 @@ export const buildColumns = (options: BuildColumnsOptions): ColumnsType<SampleSt
               src={getFullAuthedFileUrl(text)}
               alt="样衣"
               width={48}
-              className="u-h-auto u-d-block"
+              style={{ height: 'auto', display: 'block' }}
               preview={false}
             />
           ) : (

@@ -122,7 +122,7 @@ const FactoryStatBlock: React.FC<{
           size="small"
           type="default"
           onClick={onInsightClick}
-          className="u-fs-12" style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}
+          style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)', fontSize: 12 }}
           icon={<RightOutlined />}
           iconPosition="end"
         >
@@ -232,7 +232,7 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
           { label: '外发加工', value: 'EXTERNAL' },
         ]}
         block
-        className="u-mb-6"
+        style={{ marginBottom: 6 }}
       />
       {factoryMode === 'INTERNAL' ? (
         <>
@@ -270,7 +270,7 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
               suffix={(
                 <Tooltip title="快捷维护外发工厂（联动合作伙伴，保存后下拉即时刷新）">
                   <SettingOutlined
-                    className="u-cur-pointer" style={{ color: 'rgba(0,0,0,0.45)' }}
+                    style={{ color: 'rgba(0,0,0,0.45)', cursor: 'pointer' }}
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFactoryManageOpen(true); }}
                   />
                 </Tooltip>

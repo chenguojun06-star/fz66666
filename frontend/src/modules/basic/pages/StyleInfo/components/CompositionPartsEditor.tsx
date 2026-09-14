@@ -118,7 +118,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
               >
                 {/* 品类 */}
                 <div className="u-fshrink-0" style={{ width: 72, paddingTop: 3 }}>
-                  <Tag color="blue" className="u-m-0 u-fs-14 u-fw-600">
+                  <Tag color="blue" style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
                     {partLabel}
                   </Tag>
                 </div>
@@ -126,7 +126,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                 {/* 成分列表 */}
                 <div style={{ flex: '1 1 160px' }}>
                   {(partsMap[partLabel] || []).map((mat, idx) => (
-                    <Space key={idx} className="u-d-flex u-mb-4" align="center">
+                    <Space key={idx} style={{ display: 'flex', marginBottom: 4 }} align="center">
                       <Input
                        
                         value={mat}
@@ -150,7 +150,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                     <Button
                       type="link" icon={<PlusOutlined />}
                       onClick={() => addMaterial(partLabel)}
-                      className="u-p-0" style={{ height: 22 }}
+                      style={{ padding: 0, height: 22 }}
                     >
                       加成分
                     </Button>

@@ -120,7 +120,7 @@ export const useShareOrderDialog = ({ message }: UseShareOrderDialogOptions) => 
             value={shareModal.shareUrl}
             rows={2}
             readOnly
-            className="u-fs-14" style={{ background: 'var(--color-bg-subtle)', cursor: 'text' }}
+            style={{ fontSize: 14, background: 'var(--color-bg-subtle)', cursor: 'text' }}
           />
         </div>
       )}

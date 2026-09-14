@@ -83,10 +83,10 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
             autoComplete="off"
             spellCheck={false}
           />
-          {(loading || imageSearchLoading) && <Spin className="u-mr-8" size="small" />}
+          {(loading || imageSearchLoading) && <Spin style={{ marginRight: 8 }} size="small" />}
           {!loading && !imageSearchLoading && (query || imageSearchMode) && (
             <button type="button" className="cp-clear" onClick={() => { setQuery(''); setItems([]); setImageSearchMode(false); inputRef.current?.focus(); }}>
-              <CloseOutlined className="u-fs-13" />
+              <CloseOutlined style={{ fontSize: 13 }} />
             </button>
           )}
 
@@ -97,7 +97,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
             beforeUpload={(file) => { handleImageSearch(file); return false; }}
           >
             <button type="button" className="cp-img-btn" title="上传图片搜款">
-              <UploadOutlined className="u-fs-14" />
+              <UploadOutlined style={{ fontSize: 14 }} />
             </button>
           </Upload>
 
@@ -124,7 +124,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
         {isDragging && (
           <div className="cp-drop-overlay">
             <div className="cp-drop-inner">
-              <PictureOutlined className="u-mb-12" style={{ fontSize: 48, color: 'var(--color-purple-500)' }} />
+              <PictureOutlined style={{ fontSize: 48, color: 'var(--color-purple-500)', marginBottom: 12 }} />
               <div className="cp-drop-title">松开以图搜款</div>
               <div className="cp-drop-tip">支持 PNG / JPG / WEBP 等常见图片格式</div>
             </div>
@@ -135,7 +135,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
         <div ref={listRef} className="cp-list">
           {!query.trim() && !imageSearchMode && (
             <div className="cp-empty-hint">
-              <AppstoreOutlined className="u-fs-16 u-mb-8" style={{ opacity: 0.3 }} />
+              <AppstoreOutlined style={{ fontSize: 16, marginBottom: 8, opacity: 0.3 }} />
               <div>拖拽图片到这里，或按 Ctrl+V 粘贴图片</div>
               <div className="u-fs-12 u-mt-4" style={{ color: 'var(--color-text-tertiary)' }}>
                 也可输入关键词搜索订单 / 款式 / 工人
@@ -158,14 +158,14 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
 
           {imageSearchMode && !imageSearchLoading && imageStyles.length === 0 && (
             <div className="cp-empty-hint">
-              <PictureOutlined className="u-fs-16 u-mb-8" style={{ opacity: 0.3 }} />
+              <PictureOutlined style={{ fontSize: 16, marginBottom: 8, opacity: 0.3 }} />
               <div>未找到相似款式</div>
             </div>
           )}
 
           {query.trim() && !loading && !imageSearchMode && items.length === 0 && (
             <div className="cp-empty-hint">
-              <SearchOutlined className="u-fs-16 u-mb-8" style={{ opacity: 0.3 }} />
+              <SearchOutlined style={{ fontSize: 16, marginBottom: 8, opacity: 0.3 }} />
               <div>未找到与「{query}」相关的结果</div>
               <button
                 type="button"

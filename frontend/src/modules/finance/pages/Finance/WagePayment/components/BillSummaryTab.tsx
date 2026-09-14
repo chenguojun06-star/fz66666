@@ -200,15 +200,15 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
     <div>
       {/* 统计卡片 */}
       <div className="u-d-flex u-gap-16 u-mb-16">
-        <Card className="u-flex-1">
+        <Card style={{ flex: 1 }}>
           <Statistic title="待确认" value={stats.pendingAmount ?? 0} prefix="¥" precision={2}
             suffix={<span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{stats.pendingCount ?? 0}笔</span>} />
         </Card>
-        <Card className="u-flex-1">
+        <Card style={{ flex: 1 }}>
           <Statistic title="已确认" value={stats.confirmedAmount ?? 0} prefix="¥" precision={2} styles={{ content: { color: 'var(--color-primary)' } }}
             suffix={<span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{stats.confirmedCount ?? 0}笔</span>} />
         </Card>
-        <Card className="u-flex-1">
+        <Card style={{ flex: 1 }}>
           <Statistic title="已结清" value={stats.settledAmount ?? 0} prefix="¥" precision={2} styles={{ content: { color: 'var(--color-success)' } }}
             suffix={<span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{stats.settledCount ?? 0}笔</span>} />
         </Card>

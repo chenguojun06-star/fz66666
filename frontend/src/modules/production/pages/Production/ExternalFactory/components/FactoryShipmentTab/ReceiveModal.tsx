@@ -53,7 +53,7 @@ const ReceiveModal: React.FC<ReceiveModalProps> = ({
               min={1}
               max={remaining}
               onChange={val => onReceiveQtyChange(Number(val) || 0)}
-              className="u-w-full"
+              style={{ width: '100%' }}
               suffix="件"
             />
             <div className="u-mt-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>

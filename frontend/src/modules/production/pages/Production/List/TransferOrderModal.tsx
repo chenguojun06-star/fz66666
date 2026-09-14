@@ -104,7 +104,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
         <Tabs
           activeKey={transferType}
           onChange={(key) => setTransferType(key as 'user' | 'factory')}
-          className="u-mb-16"
+          style={{ marginBottom: 16 }}
           items={[
             { key: 'user', label: '转人员（系统内部）' },
             { key: 'factory', label: '转工厂（系统内部）' },
@@ -119,7 +119,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
               onChange={(val) => setTransferUserId(val)} onSearch={searchTransferUsers}
               filterOption={false} loading={transferSearching}
               notFoundContent={transferSearching ? '搜索中...' : '输入姓名搜索'}
-              className="u-w-full" allowClear
+              style={{ width: '100%' }} allowClear
             >
               {transferUsers.map(u => (
                 <Option key={u.id} value={u.id}>
@@ -138,7 +138,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
               onChange={(val) => setTransferFactoryId(val)} onSearch={searchTransferFactories}
               filterOption={false} loading={transferFactorySearching}
               notFoundContent={transferFactorySearching ? '搜索中...' : '输入工厂名称搜索'}
-              className="u-w-full" allowClear
+              style={{ width: '100%' }} allowClear
             >
               {transferFactories.map(f => (
                 <Option key={f.id} value={f.id}>
@@ -208,7 +208,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
           <Select
             mode="multiple" placeholder="选择要转移的工序" value={transferSelectedProcessCodes}
             onChange={(vals) => setTransferSelectedProcessCodes(vals)}
-            loading={transferProcessesLoading} className="u-w-full"
+            loading={transferProcessesLoading} style={{ width: '100%' }}
             allowClear optionFilterProp="label" maxTagCount="responsive"
           >
             {transferProcesses.map((p: any) => {

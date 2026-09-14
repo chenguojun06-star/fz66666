@@ -134,7 +134,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
           <div className="u-d-flex u-jc-between u-ai-center u-gap-12 u-fwrap-wrap">
             <div className="u-d-flex u-ai-center u-gap-8 u-fwrap-wrap">
               <Text strong style={{ color: 'var(--color-text-primary, var(--color-gray-800))' }}>{item.materialName}</Text>
-              <Text className="u-fs-12" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>({item.materialCode})</Text>
+              <Text style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))', fontSize: 12 }}>({item.materialCode})</Text>
               <Tag color={cfg.color} style={{ color: cfg.color, borderColor: cfg.color, background: `${cfg.color}1A`, margin: 0 }}>
                 <span className="u-mr-4">{cfg.icon}</span>
                 {cfg.label}
@@ -142,7 +142,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
             </div>
             <div className="u-d-flex u-ai-center u-gap-8 u-fwrap-wrap">
               <Tooltip title={`建议补货数量 ${formatNumber(item.suggestedQuantity)}`}>
-                <Tag color="blue" className="u-m-0">
+                <Tag color="blue" style={{ margin: 0 }}>
                   建议补货 {formatNumber(item.suggestedQuantity)}
                 </Tag>
               </Tooltip>
@@ -214,7 +214,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
       return (
         <div style={{ padding: 8 }}>
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton active key={i} paragraph={{ rows: 2 }} title={false} className="u-mb-16" />
+            <Skeleton active key={i} paragraph={{ rows: 2 }} title={false} style={{ marginBottom: 16 }} />
           ))}
         </div>
       );
@@ -223,9 +223,9 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
     if (error) {
       return (
         <div className="u-p-24 u-ta-center" style={{ color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
-          <ExclamationCircleFilled className="u-fs-28" style={{ color: 'var(--color-error, var(--color-danger))' }} />
+          <ExclamationCircleFilled style={{ color: 'var(--color-error, var(--color-danger))', fontSize: 28 }} />
           <div className="u-mt-8">{error}</div>
-          <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData} className="u-mt-12">
+          <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData} style={{ marginTop: 12 }}>
             重试
           </Button>
         </div>
@@ -257,7 +257,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
       <Card
         style={CARD_STYLE}
         title={
-          <Space size={8} className="u-cur-pointer" onClick={() => setCollapsed(!collapsed)}>
+          <Space size={8} style={{ cursor: 'pointer' }} onClick={() => setCollapsed(!collapsed)}>
             <span style={{ color: 'var(--color-warning, var(--color-warning))' }}>●</span>
             <span className="u-fw-600">补货建议 Top {topN}</span>
             <span className="u-fs-12 u-ml-4" style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))' }}>
@@ -284,7 +284,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
       >
         {!collapsed && (
           <>
-            <Title level={5} className="u-fw-500" style={{ margin: '0 0 8px 0', color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
+            <Title level={5} style={{ margin: '0 0 8px 0', color: 'var(--color-text-secondary, var(--color-gray-dark))', fontWeight: 500 }}>
               按优先级与可消耗天数排序
             </Title>
             {renderBody()}
@@ -305,15 +305,15 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
       >
         {activeItem && (
           <div className="u-d-flex u-fd-column u-gap-12">
-            <Paragraph className="u-m-0 u-fs-13">
+            <Paragraph style={{ margin: 0, fontSize: 13 }}>
               <Text type="secondary">物料名称：</Text>
               <Text strong>{activeItem.materialName}</Text>
             </Paragraph>
-            <Paragraph className="u-m-0 u-fs-13">
+            <Paragraph style={{ margin: 0, fontSize: 13 }}>
               <Text type="secondary">物料编码：</Text>
               <Text>{activeItem.materialCode}</Text>
             </Paragraph>
-            <Paragraph className="u-m-0 u-fs-13">
+            <Paragraph style={{ margin: 0, fontSize: 13 }}>
               <Text type="secondary">当前库存：</Text>
               <Text strong>{formatNumber(activeItem.currentStock)}</Text>
               <span style={{ marginLeft: 16, color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>
@@ -328,7 +328,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
               <InputNumber
                 min={0}
                 step={1}
-                className="u-w-full"
+                style={{ width: '100%' }}
                 value={editQuantity}
                 onChange={(v) => setEditQuantity(typeof v === 'number' ? v : 0)}
               />

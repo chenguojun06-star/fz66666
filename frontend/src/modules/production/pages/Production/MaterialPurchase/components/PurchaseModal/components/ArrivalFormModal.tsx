@@ -43,7 +43,7 @@ const ArrivalFormModal: React.FC<ArrivalFormModalProps> = ({
             max={target ? Math.max(0.01, Number(target.purchaseQuantity || 0) - Number(target.arrivedQuantity || 0)) : 1}
             step={0.01}
             precision={2}
-            className="u-w-full"
+            style={{ width: '100%' }}
             placeholder="请输入到货数量（支持小数）"
             autoFocus
           />

@@ -33,7 +33,7 @@ export const buildColumns = (): ColumnsType<ProcessKnowledgeItem> => [
     width: 80,
     render: (v) =>
       v ? (
-        <Tag color={STAGE_COLOR[v] || 'default'} className="u-fs-14">
+        <Tag color={STAGE_COLOR[v] || 'default'} style={{ fontSize: 14 }}>
           {v}
         </Tag>
       ) : (
@@ -46,7 +46,7 @@ export const buildColumns = (): ColumnsType<ProcessKnowledgeItem> => [
     width: 80,
     sorter: (a, b) => a.usageCount - b.usageCount,
     render: (v) => (
-      <Tag color="processing" className="u-ta-center" style={{ minWidth: 36 }}>
+      <Tag color="processing" style={{ minWidth: 36, textAlign: 'center' }}>
         {v} 款
       </Tag>
     ),

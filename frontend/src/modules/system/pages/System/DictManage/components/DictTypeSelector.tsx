@@ -12,7 +12,7 @@ const DictTypeSelector: React.FC<DictTypeSelectorProps> = ({
   onSelect,
 }) => {
   return (
-    <Row gutter={16} className="u-mb-16">
+    <Row gutter={16} style={{ marginBottom: 16 }}>
       <Col span={24}>
         <Space size="large">
           <span className="u-fw-500">字典类型：</span>
@@ -20,7 +20,7 @@ const DictTypeSelector: React.FC<DictTypeSelectorProps> = ({
             <Tag
               key={type.value}
               color={selectedType === type.value ? 'blue' : 'default'}
-              className="u-cur-pointer" style={{ fontSize: "var(--font-size-base)", padding: '4px 12px' }}
+              style={{ cursor: 'pointer', fontSize: "var(--font-size-base)", padding: '4px 12px' }}
               onClick={() => onSelect(type.value)}
             >
               {type.label} ({type.description})

@@ -146,7 +146,7 @@ const MaterialPickupModal: React.FC<MaterialPickupModalProps> = ({
       width={460}
       destroyOnClose
     >
-      <Descriptions column={1} size="small" className="u-mb-16">
+      <Descriptions column={1} size="small" style={{ marginBottom: 16 }}>
         <Descriptions.Item label="物料编码">{record.materialCode}</Descriptions.Item>
         <Descriptions.Item label="物料名称">{record.materialName}</Descriptions.Item>
         {record.color && <Descriptions.Item label="颜色">{record.color}</Descriptions.Item>}
@@ -174,7 +174,7 @@ const MaterialPickupModal: React.FC<MaterialPickupModalProps> = ({
             max={maxQty}
             step={0.1}
             precision={2}
-            className="u-w-full"
+            style={{ width: '100%' }}
             addonAfter={record.unit || ''}
           />
         </Form.Item>

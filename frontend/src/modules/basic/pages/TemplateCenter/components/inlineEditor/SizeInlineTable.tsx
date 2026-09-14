@@ -231,7 +231,7 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
                 onChange={(e) => setSizeHeaderDraft(e.target.value)}
                 onPressEnter={() => handleSizeHeaderConfirm(size)}
                 onBlur={() => handleSizeHeaderConfirm(size)}
-                className="u-ta-center" style={{ width: 80 }}
+                style={{ width: 80, textAlign: 'center' }}
                 autoFocus
               />
             ) : (
@@ -253,12 +253,12 @@ const SizeInlineTable: React.FC<SizeInlineTableProps> = ({ value, onChange, read
                 }}
               >
                 {size}
-                {!readOnly && <EditOutlined className="u-fs-13" style={{ opacity: 0.45 }} />}
+                {!readOnly && <EditOutlined style={{ fontSize: 13, opacity: 0.45 }} />}
               </span>
             )}
             {!readOnly && value.sizes.length > 1 && (
               <Popconfirm title="删除此尺码列？" onConfirm={() => handleRemoveSize(size)} okText="删除" cancelText="取消">
-                <DeleteOutlined className="u-cur-pointer u-fs-13" style={{ color: 'var(--color-danger)' }} />
+                <DeleteOutlined style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: 13 }} />
               </Popconfirm>
             )}
           </div>

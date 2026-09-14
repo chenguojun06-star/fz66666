@@ -165,7 +165,7 @@ export const PurchaseActionBar: React.FC<PurchaseActionBarProps> = ({
         </Dropdown>
       )}
       {linkAction && (
-        <Button type="link" size={size} className="u-p-0" onClick={linkAction.onClick}>
+        <Button type="link" size={size} style={{ padding: 0 }} onClick={linkAction.onClick}>
           {linkAction.label} →
         </Button>
       )}

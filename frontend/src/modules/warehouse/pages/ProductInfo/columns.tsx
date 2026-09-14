@@ -57,7 +57,7 @@ export const buildColumns = (handlers: ColumnHandlers) => [
     render: (v: string) => {
       if (v === 'ENABLED') return <span className="u-fw-500" style={{ color: 'var(--color-success)' }}>启用</span>;
       if (v === 'DISABLED') return <span className="u-fw-400" style={{ color: 'var(--color-text-tertiary)' }}>停用</span>;
-      if (v === 'SCRAPPED') return <Tag color="error" className="u-m-0">已报废</Tag>;
+      if (v === 'SCRAPPED') return <Tag color="error" style={{ margin: 0 }}>已报废</Tag>;
       return <span style={{ color: 'var(--color-text-tertiary)' }}>{v || '-'}</span>;
     },
   },
@@ -86,7 +86,7 @@ export const buildSkuColumns = () => [
             alt=""
             width={36}
             height={36}
-            className="u-br-4" style={{ objectFit: 'contain' }}
+            style={{ objectFit: 'contain', borderRadius: 4 }}
             preview={{ mask: <span className="u-fs-10">查看</span> }}
           />
         );

@@ -111,7 +111,7 @@ const UserList: React.FC = () => {
           headerContent={
             <>
               {showSmartErrorNotice && smartError ? (
-                <Card className="u-mb-12">
+                <Card style={{ marginBottom: 12 }}>
                   <SmartErrorNotice error={smartError} onFix={() => { void getUserList(); }} />
                 </Card>
               ) : null}
@@ -127,7 +127,7 @@ const UserList: React.FC = () => {
                       立即审批
                     </Button>
                   }
-                  className="u-mb-12"
+                  style={{ marginBottom: 12 }}
                 />
               )}
               <StatsBar
@@ -147,7 +147,7 @@ const UserList: React.FC = () => {
             />
 
             <div className="user-list-panel">
-              <Card size="small" className="u-mb-12" styles={{ body: { padding: '10px 16px' } }}>
+              <Card size="small" style={{ marginBottom: 12 }} styles={{ body: { padding: '10px 16px' } }}>
                 <StandardToolbar
                   left={
                     <StandardSearchBar
@@ -194,7 +194,7 @@ const UserList: React.FC = () => {
                   }
                   right={
                     <Space size={8}>
-                      <Text type="secondary" className="u-fs-12">
+                      <Text type="secondary" style={{ fontSize: 12 }}>
                         显示 {userList.length} / {total} 人
                       </Text>
                     </Space>

@@ -38,7 +38,7 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
           stages={stageCards as any}
           activeKey={activeSection}
           onStageClick={(key) => setActiveSection(key as typeof activeSection)}
-          className="u-m-0"
+          style={{ margin: 0 }}
         />
       </div>
 

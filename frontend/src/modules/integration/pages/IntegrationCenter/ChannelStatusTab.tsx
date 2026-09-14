@@ -80,14 +80,14 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
     <Spin spinning={loading}>
       {/* 统计栏 */}
       {stats && (
-        <Row gutter={16} className="u-mb-24 u-mt-16">
+        <Row gutter={16} style={{ marginBottom: 24, marginTop: 16 }}>
           <Col span={8}>
-            <Card variant="borderless" className="u-br-8" style={{ background: 'var(--status-success-bg)' }}>
+            <Card variant="borderless" style={{ background: 'var(--status-success-bg)', borderRadius: 8 }}>
               <Statistic title="迗7天支付流水" value={stats.paymentCount7d} suffix="笔" styles={{ content: { color: 'var(--color-success)' } }} />
             </Card>
           </Col>
           <Col span={8}>
-            <Card variant="borderless" className="u-br-8" style={{ background: 'var(--status-processing-bg)' }}>
+            <Card variant="borderless" style={{ background: 'var(--status-processing-bg)', borderRadius: 8 }}>
               <Statistic title="迗7天物流运单" value={stats.logisticsCount7d} suffix="件" styles={{ content: { color: 'var(--color-primary)' } }} />
             </Card>
           </Col>
@@ -113,13 +113,13 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
                   title={
                     <span>
                       {modeConf.icon}&nbsp;
-                      <Tag color={ch.category === 'PAYMENT' ? 'blue' : 'geekblue'} className="u-mr-4">
+                      <Tag color={ch.category === 'PAYMENT' ? 'blue' : 'geekblue'} style={{ marginRight: 4 }}>
                         {ch.category === 'PAYMENT' ? '支付' : '物流'}
                       </Tag>
                       {ch.name}
                     </span>
                   }
-                  className="u-h-full u-br-8"
+                  style={{ height: '100%', borderRadius: 8 }}
                   styles={{ body: { paddingTop: 12 } }}
                 >
                   {ch.mode === 'LIVE' && (
@@ -132,7 +132,7 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
                     <p style={{ color: 'var(--color-text-tertiary)', margin: '0 0 8px' }}>配置文件中已禁用（enabled=false）</p>
                   )}
 
-                  <Divider className="u-m-8px0" />
+                  <Divider style={{ margin: '8px 0' }} />
 
                   <div className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>
                     <div className="u-mb-4">
@@ -143,7 +143,7 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
                         </span>
                       </Tooltip>
                       <Button type="link" icon={<CopyOutlined />}
-                        onClick={() => copyText(webhookUrl)} className="u-p-0">
+                        onClick={() => copyText(webhookUrl)} style={{ padding: 0 }}>
                         复制
                       </Button>
                     </div>
@@ -153,17 +153,17 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
                         <strong>填写到配置文件：</strong>
                         <Tooltip title={<pre className="u-fs-14">{hint}</pre>} placement="bottom">
                           <Button type="link" icon={<QuestionCircleOutlined />}
-                            className="u-p-04px">查看配置项</Button>
+                            style={{ padding: '0 4px' }}>查看配置项</Button>
                         </Tooltip>
                         <Button type="link" icon={<CopyOutlined />}
-                          onClick={() => copyText(hint)} className="u-p-0">
+                          onClick={() => copyText(hint)} style={{ padding: 0 }}>
                           复制配置
                         </Button>
                       </div>
                     )}
                   </div>
 
-                  <Divider className="u-m-8px0" />
+                  <Divider style={{ margin: '8px 0' }} />
 
                   <Button
                     type="primary"

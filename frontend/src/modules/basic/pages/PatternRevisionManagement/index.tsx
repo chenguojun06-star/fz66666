@@ -69,7 +69,7 @@ const PatternRevisionManagement: React.FC = () => {
   return (
     <>
       <Card>
-        <Space orientation="vertical" className="u-w-full" size="large">
+        <Space orientation="vertical" style={{ width: '100%' }} size="large">
           {/* 标题 */}
           <div className="u-d-flex u-jc-between u-ai-center">
             <h2 className="u-m-0">纸样修改记录</h2>

@@ -24,7 +24,7 @@ const renderPurchaseItemsTable = (items: MaterialItem[], showStockColumn = true)
           return (
             <tr key={item.purchaseId} style={{ borderTop: '1px solid var(--color-border)' }}>
               <td className="u-p-8px10px">
-                <Tag color={getMaterialTypeColor(item.materialType)} className="u-m-0">
+                <Tag color={getMaterialTypeColor(item.materialType)} style={{ margin: 0 }}>
                   {getMaterialTypeName(item.materialType) || '-'}
                 </Tag>
               </td>
@@ -91,7 +91,7 @@ export const useSmartReceiveActions = (
   const handlePurchaseOnly = (item: MaterialItem) => {
     Modal.confirm({
       width: '30vw', title: `确认采购 - ${item.materialName}`, icon: <SendOutlined style={{ color: 'var(--color-primary)' }} />,
-      content: (<div><p>物料编号：<strong>{item.materialCode}</strong></p><p>物料名称：<strong>{item.materialName}</strong>（{getMaterialTypeName(item.materialType)}）</p><p>需求数量：<strong>{item.requiredQty} {item.unit}</strong></p><p>仓库库存：<span className="u-fw-600" style={{ color: 'var(--color-danger)' }}>0（无库存）</span></p><Divider className="u-m-8px0" /><p className="u-fw-600" style={{ color: 'var(--color-primary)' }}>确认后将标记为"采购中"，请联系供应商进行采购。</p></div>),
+      content: (<div><p>物料编号：<strong>{item.materialCode}</strong></p><p>物料名称：<strong>{item.materialName}</strong>（{getMaterialTypeName(item.materialType)}）</p><p>需求数量：<strong>{item.requiredQty} {item.unit}</strong></p><p>仓库库存：<span className="u-fw-600" style={{ color: 'var(--color-danger)' }}>0（无库存）</span></p><Divider style={{ margin: '8px 0' }} /><p className="u-fw-600" style={{ color: 'var(--color-primary)' }}>确认后将标记为"采购中"，请联系供应商进行采购。</p></div>),
       okText: '确认采购', cancelText: '取消',
       onOk: async () => {
         setActionLoading((prev) => ({ ...prev, [item.purchaseId]: true }));
@@ -132,7 +132,7 @@ export const useSmartReceiveActions = (
         <div>
           <p className="u-mb-4">以下 <strong>{needPurchaseItems.length}</strong> 项无库存物料将标记为"采购中"：</p>
           {renderPurchaseItemsTable(needPurchaseItems, true)}
-          <Divider className="u-m-8px0" />
+          <Divider style={{ margin: '8px 0' }} />
           <p className="u-fs-13 u-mb-4" style={{ color: 'var(--color-text-secondary)' }}>
             采购数量按 <strong>需求数量</strong> 自动登记，确认后请前往
             <strong style={{ color: 'var(--color-primary)' }}> 采购单管理</strong>
@@ -174,7 +174,7 @@ export const useSmartReceiveActions = (
           )}
           <p className="u-mb-4">以下 <strong>{allPendingItems.length}</strong> 项物料将全部标记为"采购中"：</p>
           {renderPurchaseItemsTable(allPendingItems, true)}
-          <Divider className="u-m-8px0" />
+          <Divider style={{ margin: '8px 0' }} />
           <p className="u-fw-600" style={{ color: 'var(--color-warning)' }}>
             确认后将跳过仓库库存，全部按需求量登记为外采，请前往采购单管理创建采购单。
           </p>

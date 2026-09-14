@@ -73,11 +73,11 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
       <div className="u-d-grid u-gap-12 u-mb-12" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
         <Card
           size="small"
-          className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
           styles={{ body: { padding: '5px 10px' } }}
         >
           <Statistic
-            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined className="u-mr-4 u-fs-12" />待审批</span>}
+            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>}
             value={stats.pendingCount}
             suffix="条"
             valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 500 }}
@@ -85,11 +85,11 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
         </Card>
         <Card
           size="small"
-          className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
           styles={{ body: { padding: '5px 10px' } }}
         >
           <Statistic
-            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined className="u-mr-4 u-fs-12" />已审批</span>}
+            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>}
             value={stats.approvedCount}
             suffix="条"
             valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 500 }}
@@ -97,11 +97,11 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
         </Card>
         <Card
           size="small"
-          className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
           styles={{ body: { padding: '5px 10px' } }}
         >
           <Statistic
-            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined className="u-mr-4 u-fs-12" />订单数</span>}
+            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />订单数</span>}
             value={total}
             suffix="条"
             valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 500 }}
@@ -109,7 +109,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
         </Card>
         <Card
           size="small"
-          className="u-br-6" style={{ border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
+          style={{ borderRadius: 6, border: '1px solid var(--color-border-secondary)', background: 'var(--color-fill-tertiary)' }}
           styles={{ body: { padding: '5px 10px' } }}
         >
           <Statistic
@@ -126,14 +126,14 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
         filterCard={false}
         headerContent={
           showSmartErrorNotice && smartError ? (
-            <Card className="u-mb-12">
+            <Card style={{ marginBottom: 12 }}>
               <SmartErrorNotice error={smartError} onFix={() => { }} />
             </Card>
           ) : null
         }
       >
         {/* 筛选区 */}
-        <Card className="filter-card mb-sm u-mb-12 u-br-6" style={{ border: '1px solid var(--color-border-secondary)' }} styles={{ body: { padding: '12px 16px' } }}>
+        <Card className="filter-card mb-sm" style={{ marginBottom: 12, border: '1px solid var(--color-border-secondary)', borderRadius: 6 }} styles={{ body: { padding: '12px 16px' } }}>
           <Tabs
             activeKey={activeTab}
             onChange={handleTabChange}
@@ -143,7 +143,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
               { key: 'pending', label: `待审批 (${stats.pendingCount})` },
               { key: 'approved', label: `已审批 (${stats.approvedCount})` },
             ]}
-            className="u-mb-8"
+            style={{ marginBottom: 8 }}
           />
           <div className="u-d-flex u-jc-between u-ai-center u-fwrap-wrap u-gap-8">
             <Space size={8} wrap>
@@ -297,7 +297,7 @@ const DeductionModal: React.FC<DeductionModalProps> = ({ open, orderId, items, l
         <Select
           value={items[index]?.deductionType}
           onChange={(val) => handleItemChange(index, 'deductionType', val)}
-          className="u-w-full"
+          style={{ width: '100%' }}
           options={deductionTypeOptions}
         />
       ),
@@ -311,7 +311,7 @@ const DeductionModal: React.FC<DeductionModalProps> = ({ open, orderId, items, l
         <InputNumber
           value={items[index]?.deductionAmount}
           onChange={(val) => handleItemChange(index, 'deductionAmount', val)}
-          className="u-w-full"
+          style={{ width: '100%' }}
           min={0}
           precision={2}
           placeholder="金额"
@@ -356,7 +356,7 @@ const DeductionModal: React.FC<DeductionModalProps> = ({ open, orderId, items, l
       }
     >
       <div className="u-mb-16">
-        <Space className="u-mb-8">
+        <Space style={{ marginBottom: 8 }}>
           <Button icon={<PlusOutlined />} onClick={handleAddItem} size="small">添加扣款</Button>
         </Space>
         <div className="u-mb-8 u-fs-13" style={{ color: 'var(--neutral-text-secondary)' }}>

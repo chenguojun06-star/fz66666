@@ -161,7 +161,7 @@ const BatchTable: React.FC<BatchTableProps> = ({
                   max={_record.availableQty}
                   value={value}
                   onChange={(val) => handleBatchQtyChange(index, val)}
-                  className="u-w-full"
+                  style={{ width: '100%' }}
                   placeholder={selected ? '0' : '先勾选批次'}
                   disabled={!selected}
                 />

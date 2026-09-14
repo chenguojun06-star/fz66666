@@ -228,8 +228,8 @@ const MaterialReconciliation: React.FC = () => {
       >
         {/* ===== AI审核助手 ===== */}
         {showSmartErrorNotice && (
-          <Card className="u-mb-12" style={{ background: 'var(--color-primary-bg-light, var(--color-bg-highlight))', border: '1px solid var(--color-primary-border, var(--color-blue-200))' }} styles={{ body: { padding: '8px 12px' } }}
-            extra={<Button type="link" loading={auditLoading} onClick={fetchFinanceAudit} className="u-p-0">{financeAudit ? '重新分析' : ' AI分析'}</Button>}
+          <Card style={{ marginBottom: 12, background: 'var(--color-primary-bg-light, var(--color-bg-highlight))', border: '1px solid var(--color-primary-border, var(--color-blue-200))' }} styles={{ body: { padding: '8px 12px' } }}
+            extra={<Button type="link" loading={auditLoading} onClick={fetchFinanceAudit} style={{ padding: 0 }}>{financeAudit ? '重新分析' : ' AI分析'}</Button>}
             title={<span className="u-fs-14" style={{ color: 'var(--color-primary)' }}> 智能财务审核助手</span>}
           >
             {!financeAudit ? (
@@ -263,7 +263,7 @@ const MaterialReconciliation: React.FC = () => {
             styles={{ body: { padding: '5px 10px' } }}
           >
             <Statistic
-              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined className="u-mr-4 u-fs-12" />待审批</span>}
+              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>}
               value={stats.pendingCount}
               suffix="条"
               valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 500 }}
@@ -277,7 +277,7 @@ const MaterialReconciliation: React.FC = () => {
             styles={{ body: { padding: '5px 10px' } }}
           >
             <Statistic
-              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined className="u-mr-4 u-fs-12" />已审批</span>}
+              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>}
               value={stats.approvedCount}
               suffix="条"
               valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 500 }}
@@ -291,7 +291,7 @@ const MaterialReconciliation: React.FC = () => {
             styles={{ body: { padding: '5px 10px' } }}
           >
             <Statistic
-              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined className="u-mr-4 u-fs-12" />已付款</span>}
+              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已付款</span>}
               value={stats.paidCount}
               suffix="条"
               valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 500 }}

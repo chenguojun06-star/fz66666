@@ -99,7 +99,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
         <div className="u-p-12 u-h-full u-d-flex u-fd-column u-ov-hidden" style={{ width: '42%', background: 'var(--color-slate-50)', borderRight: '1px solid var(--color-border-light)', borderRadius: '6px 0 0 6px', boxSizing: 'border-box' }}>
           {detailDocList.length === 0 ? (
             <div className="u-flex-1 u-d-flex u-fd-column u-ai-center u-jc-center" style={{ color: 'var(--color-text-quaternary)' }}>
-              <PictureOutlined className="u-mb-12" style={{ fontSize: 48 }} />
+              <PictureOutlined style={{ fontSize: 48, marginBottom: 12 }} />
               <div>暂无凭证图片</div>
             </div>
           ) : (
@@ -109,7 +109,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({ open, record, v
                   src={detailDocList[selectedDocIndex]?.imageUrl}
                   allSrcs={detailDocList.map(doc => doc.imageUrl)}
                   currentIndex={selectedDocIndex}
-                  className="u-w-full u-h-full u-br-6 u-d-block" style={{ objectFit: 'contain' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 6, display: 'block' }}
                 />
               </div>
               <div className="u-fshrink-0 u-fs-14 u-ta-center" style={{ color: 'var(--color-text-quaternary)', padding: '6px 0 4px' }}>

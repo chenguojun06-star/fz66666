@@ -45,7 +45,7 @@ const PlanModal: React.FC<PlanModalProps> = ({
         title="选择预设套餐会自动填充默认配置，也可手动调整各项参数。年付享8.3折优惠（买10个月送2个月）。"
         type="info"
         showIcon
-        className="u-mb-16"
+        style={{ marginBottom: 16 }}
       />
       <Form form={form} layout="vertical">
         <Form.Item label="计费周期" name="billingCycle" rules={[{ required: true }]}>
@@ -72,17 +72,17 @@ const PlanModal: React.FC<PlanModalProps> = ({
         <Row gutter={16}>
           <Col span={8}>
             <Form.Item label="月费(元)" name="monthlyFee" rules={[{ required: true }]}>
-              <InputNumber min={0} step={100} className="u-w-full" />
+              <InputNumber min={0} step={100} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
           <Col span={8}>
             <Form.Item label="存储配额(MB)" name="storageQuotaMb" rules={[{ required: true }]}>
-              <InputNumber min={100} step={1024} className="u-w-full" />
+              <InputNumber min={100} step={1024} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
           <Col span={8}>
             <Form.Item label="最大用户数" name="maxUsers" rules={[{ required: true }]}>
-              <InputNumber min={1} max={9999} className="u-w-full" />
+              <InputNumber min={1} max={9999} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
         </Row>

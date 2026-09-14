@@ -66,7 +66,7 @@ const SmartSourcingDrawer: React.FC<SmartSourcingDrawerProps> = ({
               label: (
                 <span>
                   <RobotOutlined /> 待采购订单列表
-                  <Tag color="blue" className="u-ml-6 u-fs-11">推荐</Tag>
+                  <Tag color="blue" style={{ marginLeft: 6, fontSize: 11 }}>推荐</Tag>
                 </span>
               ),
               children: <ListTab onPushedToCart={onPushedToCart} />,
@@ -329,7 +329,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
             <div className="u-fw-600">
               {v || '-'}
               {r.urgencyLevel === 'urgent' && (
-                <Tag color="red" className="u-ml-4 u-fs-10">急</Tag>
+                <Tag color="red" style={{ marginLeft: 4, fontSize: 10 }}>急</Tag>
               )}
             </div>
             <div className="u-fs-11" style={{ color: 'var(--color-text-secondary)', wordBreak: 'break-all' }}>
@@ -366,9 +366,9 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
         return (
           <Space direction="vertical" size={2}>
             <span>{d.format('YYYY-MM-DD')}</span>
-            {diffDay < 0 && <Tag color="red" className="u-fs-10">逾期 {-diffDay}天</Tag>}
+            {diffDay < 0 && <Tag color="red" style={{ fontSize: 10 }}>逾期 {-diffDay}天</Tag>}
             {diffDay >= 0 && diffDay <= 3 && (
-              <Tag color="orange" className="u-fs-10">剩 {diffDay}天</Tag>
+              <Tag color="orange" style={{ fontSize: 10 }}>剩 {diffDay}天</Tag>
             )}
           </Space>
         );
@@ -382,9 +382,9 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
         const ov = overviewMap[r.orderNo];
         // 物料全部充足（无缺料）时不展示刺眼的 0%——采购环节已完成，到位率无意义
         if (ov && (ov.shortageCount ?? 0) === 0 && (ov.sufficientCount ?? 0) > 0) {
-          return <Tag color="green" className="u-fs-10">已齐料</Tag>;
+          return <Tag color="green" style={{ fontSize: 10 }}>已齐料</Tag>;
         }
-        if (v == null) return <Tag className="u-fs-10">未维护</Tag>;
+        if (v == null) return <Tag style={{ fontSize: 10 }}>未维护</Tag>;
         const color = v >= 100 ? 'var(--color-success)'
           : v >= 60 ? 'var(--color-warning)' : 'var(--color-error)';
         return <span style={{ color, fontWeight: 600 }}>{v}%</span>;
@@ -409,7 +409,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
         if (failedReason) {
           return (
             <Tooltip title={failedReason}>
-              <Tag color="default" className="u-fs-11">计算失败</Tag>
+              <Tag color="default" style={{ fontSize: 11 }}>计算失败</Tag>
             </Tooltip>
           );
         }
@@ -421,19 +421,19 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
             <div className="u-fs-12 u-fw-500">{ov.criticalPath || '-'}</div>
             <Space size={4} wrap>
               {(ov.shortageCount ?? 0) > 0 && (
-                <Tag color="red" className="u-fs-10">缺{ov.shortageCount}种</Tag>
+                <Tag color="red" style={{ fontSize: 10 }}>缺{ov.shortageCount}种</Tag>
               )}
               {(ov.inTransitCoveredCount ?? 0) > 0 && (
                 <Tooltip title="这些物料当前库存不够，但已有采购在途，到货后即齐料（可点「展开明细」看每个物料的在途数量）">
-                  <Tag color="blue" className="u-fs-10">在途补{ov.inTransitCoveredCount}种</Tag>
+                  <Tag color="blue" style={{ fontSize: 10 }}>在途补{ov.inTransitCoveredCount}种</Tag>
                 </Tooltip>
               )}
               {(ov.stockCoveredCount ?? 0) > 0 && (
-                <Tag color="green" className="u-fs-10">库存够{ov.stockCoveredCount}种</Tag>
+                <Tag color="green" style={{ fontSize: 10 }}>库存够{ov.stockCoveredCount}种</Tag>
               )}
               {/* 兼容旧缓存（无覆盖数拆分字段时） */}
               {(ov.stockCoveredCount == null && ov.inTransitCoveredCount == null && (ov.sufficientCount ?? 0) > 0) && (
-                <Tag color="green" className="u-fs-10">齐{ov.sufficientCount}种</Tag>
+                <Tag color="green" style={{ fontSize: 10 }}>齐{ov.sufficientCount}种</Tag>
               )}
               {(ov.shortageAmount ?? 0) > 0 && (
                 <span className="u-fs-11" style={{ color: 'var(--color-text-secondary)' }}>
@@ -442,7 +442,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
               )}
               {ov.fromCache && (
                 <Tooltip title={`缓存于 ${ov.computedAt ? dayjs(ov.computedAt).format('HH:mm') : '-'}，2小时内复用`}>
-                  <Tag className="u-fs-10">缓存</Tag>
+                  <Tag style={{ fontSize: 10 }}>缓存</Tag>
                 </Tooltip>
               )}
             </Space>
@@ -548,7 +548,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
     const detail = detailMap[r.orderNo];
     const loading = !!detailLoadingMap[r.orderNo];
     const ov = overviewMap[r.orderNo];
-    if (loading) return <Spin className="u-p-12" />;
+    if (loading) return <Spin style={{ padding: 12 }} />;
     if (!detail || detail.length === 0) {
       return (
         <div style={{ padding: 8 }}>
@@ -559,7 +559,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
     return (
       <div style={{ padding: '4px 8px 8px' }}>
         {ov?.hints && ov.hints.length > 0 && (
-          <Space direction="vertical" size={4} className="u-mb-8 u-w-full">
+          <Space direction="vertical" size={4} style={{ marginBottom: 8, width: '100%' }}>
             {ov.hints.map((h, i) => {
               const type: any = h.type === 'risk' ? 'error' : h.type;
               return <Alert key={i} type={type} showIcon message={h.message} />;
@@ -585,7 +585,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
       <Card
         bordered
         size="small"
-        className="u-mb-8"
+        style={{ marginBottom: 8 }}
         title={<Space><FilterOutlined /><span>筛选条件（全部可配置）</span></Space>}
         extra={
           <Space>
@@ -607,18 +607,18 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
             sortDir: 'desc',
           }}
         >
-          <Space wrap size={16} className="u-w-full" align="start">
-            <Form.Item label="到位率 < (%)" className="u-mb-0">
+          <Space wrap size={16} style={{ width: '100%' }} align="start">
+            <Form.Item label="到位率 < (%)" style={{ marginBottom: 0 }}>
               <Form.Item name="arrivalRateLessThan" noStyle>
                 <InputNumber min={1} max={100} style={{ width: 100 }} placeholder="100=全部" />
               </Form.Item>
             </Form.Item>
-            <Form.Item label="创建于近(天)" className="u-mb-0">
+            <Form.Item label="创建于近(天)" style={{ marginBottom: 0 }}>
               <Form.Item name="createdWithinDays" noStyle>
                 <InputNumber min={1} max={730} style={{ width: 100 }} placeholder="0=不限" />
               </Form.Item>
             </Form.Item>
-            <Form.Item label="订单状态" className="u-mb-0">
+            <Form.Item label="订单状态" style={{ marginBottom: 0 }}>
               <Form.Item name="statuses" noStyle>
                 <Select
                   mode="multiple"
@@ -632,7 +632,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
                 />
               </Form.Item>
             </Form.Item>
-            <Form.Item label="关键词(订单号/款号)" className="u-mb-0">
+            <Form.Item label="关键词(订单号/款号)" style={{ marginBottom: 0 }}>
               <Form.Item name="searchKeyword" noStyle>
                 <Input
                   placeholder="搜索"
@@ -642,12 +642,12 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
                 />
               </Form.Item>
             </Form.Item>
-            <Form.Item label="急单" className="u-mb-0">
+            <Form.Item label="急单" style={{ marginBottom: 0 }}>
               <Form.Item name="onlyUrgent" noStyle valuePropName="checked">
                 <Checkbox>只看急单</Checkbox>
               </Form.Item>
             </Form.Item>
-            <Form.Item label="无缺料订单" className="u-mb-0">
+            <Form.Item label="无缺料订单" style={{ marginBottom: 0 }}>
               <Checkbox
                 checked={hideNoShortage}
                 onChange={(e) => setHideNoShortage(e.target.checked)}
@@ -655,7 +655,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
                 隐藏已完成（物料全部充足）
               </Checkbox>
             </Form.Item>
-            <Form.Item label="排序" className="u-mb-0">
+            <Form.Item label="排序" style={{ marginBottom: 0 }}>
               <Space.Compact>
                 <Form.Item name="sortBy" noStyle>
                   <Select style={{ width: 130 }} options={[
@@ -800,7 +800,7 @@ const SingleTab: React.FC<SingleTabProps> = ({
 
   return (
     <div className="u-p-12">
-      <Space.Compact className="u-w-full u-mb-16">
+      <Space.Compact style={{ width: '100%', marginBottom: 16 }}>
         <Input
           placeholder="选择或输入生产订单号"
           value={orderNo}
@@ -814,7 +814,7 @@ const SingleTab: React.FC<SingleTabProps> = ({
       </Space.Compact>
 
       {data.length > 0 && (
-        <Space className="u-mb-12">
+        <Space style={{ marginBottom: 12 }}>
           <Statistic
             title="需采购"
             value={needCount}
@@ -858,7 +858,7 @@ const SingleTab: React.FC<SingleTabProps> = ({
         )}
       </Spin>
 
-      {data.length > 0 && <Divider className="u-m-12px0" />}
+      {data.length > 0 && <Divider style={{ margin: '12px 0' }} />}
       <div className="u-d-flex u-jc-end">
         <Space>
           <Button
@@ -975,11 +975,11 @@ const netDemandColumns: ColumnsType<NetDemandDetail> = [
           <div className="u-fw-500">
             {s.supplierName}
             {s.isBomDesignated && (
-              <Tag color="blue" className="u-ml-4 u-fs-10">清单指定</Tag>
+              <Tag color="blue" style={{ marginLeft: 4, fontSize: 10 }}>清单指定</Tag>
             )}
           </div>
           <div className="u-fs-11">
-            {s.supplierTier && <Tag color={tierColor} className="u-fs-10">{s.supplierTier}级</Tag>}
+            {s.supplierTier && <Tag color={tierColor} style={{ fontSize: 10 }}>{s.supplierTier}级</Tag>}
             {s.overallScore != null && (
               <span className="u-ml-4" style={{ color: 'var(--color-text-secondary)' }}>
                 评分 {s.overallScore}
@@ -1009,7 +1009,7 @@ const netDemandColumns: ColumnsType<NetDemandDetail> = [
           </div>
         )}
         {typeof r.priceAlert === 'string' && r.priceAlert.trim() && (
-          <Tag color="orange" className="u-fs-10 u-mt-2">{r.priceAlert}</Tag>
+          <Tag color="orange" style={{ fontSize: 10, marginTop: 2 }}>{r.priceAlert}</Tag>
         )}
       </div>
     ),

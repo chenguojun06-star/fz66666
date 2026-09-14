@@ -80,7 +80,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
       render: (_: any, record: ProductSku) => (
         <HolderOutlined
           title="拖动调整顺序"
-          className="u-fs-13" style={{ cursor: 'grab', color: 'var(--color-text-quaternary)' }}
+          style={{ cursor: 'grab', color: 'var(--color-text-quaternary)', fontSize: 13 }}
           onMouseDown={() => setDragArmed(getRowKey(record))}
           onMouseUp={() => setDragArmed(null)}
         />
@@ -100,7 +100,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
             size="small"
           />
         ) : (
-          <Tag color="geekblue" className="u-m-0 u-br-4">{record.color || '-'}</Tag>
+          <Tag color="geekblue" style={{ margin: 0, borderRadius: 4 }}>{record.color || '-'}</Tag>
         );
       },
     },
@@ -118,7 +118,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
             size="small"
           />
         ) : (
-          <Tag color="purple" className="u-m-0 u-br-4">{record.size || '-'}</Tag>
+          <Tag color="purple" style={{ margin: 0, borderRadius: 4 }}>{record.size || '-'}</Tag>
         );
       },
     },
@@ -163,7 +163,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
               alt="商品图片"
               width={32}
               height={32}
-              className="u-br-4 u-cur-pointer" style={{ objectFit: 'contain', background: 'var(--color-bg-subtle)' }}
+              style={{ objectFit: 'contain', borderRadius: 4, cursor: 'pointer', background: 'var(--color-bg-subtle)' }}
               preview={{ mask: <span className="u-fs-10">查看</span> }}
             />
           );
@@ -175,7 +175,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
             background: 'var(--color-bg-subtle)',
             borderRadius: 4, color: 'var(--color-text-quaternary)',
           }}>
-            <PictureOutlined className="u-fs-14" />
+            <PictureOutlined style={{ fontSize: 14 }} />
           </div>
         );
       },
@@ -196,7 +196,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
             prefix="¥"
             controls={false}
             size="small"
-            className="u-w-full"
+            style={{ width: '100%' }}
           />
         ) : val != null ? formatMoney(val) : '-';
       },
@@ -217,7 +217,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
             prefix="¥"
             controls={false}
             size="small"
-            className="u-w-full"
+            style={{ width: '100%' }}
           />
         ) : val != null ? formatMoney(val) : '-';
       },
@@ -238,7 +238,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
             prefix="¥"
             controls={false}
             size="small"
-            className="u-w-full"
+            style={{ width: '100%' }}
           />
         ) : val != null ? formatMoney(val) : '-';
       },

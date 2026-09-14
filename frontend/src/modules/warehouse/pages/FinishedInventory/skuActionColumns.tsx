@@ -22,7 +22,7 @@ export function getSkuActionColumns(handlers: SkuActionHandlers): ColumnsType<SK
           value={value}
           controls={false}
           onChange={(val) => handlers.handleSKUQtyChange(index, val)}
-          className="u-w-full"
+          style={{ width: '100%' }}
           placeholder="0"
         />
       ),

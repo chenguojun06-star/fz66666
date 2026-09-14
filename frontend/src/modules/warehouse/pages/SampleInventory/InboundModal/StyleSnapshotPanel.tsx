@@ -19,7 +19,7 @@ const StyleSnapshotPanel: React.FC<StyleSnapshotPanelProps> = ({ snapshot }) => 
               alt={styleName || styleNo || '样衣'}
               width={96}
               height={96}
-              className="u-objf-cover u-br-8"
+              style={{ objectFit: 'cover', borderRadius: 8 }}
             />
           ) : (
             <div className="u-br-8 u-d-flex u-ai-center u-jc-center u-fs-14" style={{ width: 96, height: 96, background: 'var(--color-bg-subtle)', color: 'var(--color-text-tertiary)' }}>

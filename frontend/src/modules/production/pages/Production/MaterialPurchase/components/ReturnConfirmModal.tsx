@@ -256,7 +256,7 @@ const ReturnConfirmModal: React.FC<ReturnConfirmModalProps> = ({
                       <Form.Item
                         name={['items', record.index, 'returnQuantity']}
                         initialValue={Number(record.returnQuantity || 0) || (max || 0)}
-                        className="u-m-0"
+                        style={{ margin: 0 }}
                         rules={[
                           { required: true, message: '请输入实际回料数量' },
                           {

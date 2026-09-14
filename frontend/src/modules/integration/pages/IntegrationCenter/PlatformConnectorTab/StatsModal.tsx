@@ -24,41 +24,41 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
       {activeStats ? (
         <div>
           {/* 总览 */}
-          <Row gutter={[12, 12]} className="u-mb-16">
+          <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
             <Col span={6}>
-              <Card className="u-br-8" style={{ background: 'var(--status-processing-bg)', border: 'none' }}>
+              <Card style={{ background: 'var(--status-processing-bg)', borderRadius: 8, border: 'none' }}>
                 <Statistic title="今日订单" value={activeStats.todayOrders} suffix="单" styles={{ content: { color: 'var(--color-primary)' } }} prefix={<ShoppingCartOutlined />} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card className="u-br-8" style={{ background: 'var(--status-success-bg)', border: 'none' }}>
+              <Card style={{ background: 'var(--status-success-bg)', borderRadius: 8, border: 'none' }}>
                 <Statistic title="今日销售额" value={formatMoney(parseFloat(activeStats.todaySales))} styles={{ content: { color: 'var(--color-success)' } }} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card className="u-br-8" style={{ background: 'var(--status-warning-bg)', border: 'none' }}>
+              <Card style={{ background: 'var(--status-warning-bg)', borderRadius: 8, border: 'none' }}>
                 <Statistic title="累计订单" value={activeStats.totalOrders} suffix="单" styles={{ content: { color: 'var(--color-warning)' } }} />
               </Card>
             </Col>
             <Col span={6}>
-              <Card className="u-br-8" style={{ background: 'var(--status-info-bg)', border: 'none' }}>
+              <Card style={{ background: 'var(--status-info-bg)', borderRadius: 8, border: 'none' }}>
                 <Statistic title="关联店铺" value={activeStats.shopCount} suffix="个" styles={{ content: { color: 'var(--color-accent-purple)' } }} />
               </Card>
             </Col>
           </Row>
 
           {/* 两条出库链路 */}
-          <Alert type="info" showIcon className="u-mb-16 u-br-8"
+          <Alert type="info" showIcon style={{ marginBottom: 16, borderRadius: 8 }}
             title={<div className="u-fw-600 u-mb-8">两条出库链路</div>}
             description={
               <Row gutter={24}>
                 <Col span={12}>
-                  <Card className="u-br-6" style={{ border: '1px solid var(--status-processing-border)', background: 'var(--color-slate-50)' }}>
+                  <Card style={{ borderRadius: 6, border: '1px solid var(--status-processing-border)', background: 'var(--color-slate-50)' }}>
                     <div className="u-fw-600 u-mb-6" style={{ color: 'var(--color-primary)' }}>
                       <InboxOutlined /> 链路一：成品仓（有生产单）
                     </div>
                     <div className="u-fs-14 u-lh-18" style={{ color: 'var(--color-text-secondary)' }}>
-                      订单 → 商品编码匹配款号 → <Tag color="blue" className="u-fs-14">关联生产单</Tag>
+                      订单 → 商品编码匹配款号 → <Tag color="blue" style={{ fontSize: 14 }}>关联生产单</Tag>
                       → 生产加工 → 完工入库 → 出库发货 → 物流回传
                     </div>
                     <div className="u-mt-6">
@@ -67,12 +67,12 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
                   </Card>
                 </Col>
                 <Col span={12}>
-                  <Card className="u-br-6" style={{ border: '1px solid var(--status-success-border)', background: 'var(--status-success-bg)' }}>
+                  <Card style={{ borderRadius: 6, border: '1px solid var(--status-success-border)', background: 'var(--status-success-bg)' }}>
                     <div className="u-fw-600 u-mb-6" style={{ color: 'var(--color-success)' }}>
                       <ShoppingCartOutlined /> 链路二：电商仓（现货发货）
                     </div>
                     <div className="u-fs-14 u-lh-18" style={{ color: 'var(--color-text-secondary)' }}>
-                      订单 → <Tag color="orange" className="u-fs-14">待拣货</Tag>
+                      订单 → <Tag color="orange" style={{ fontSize: 14 }}>待拣货</Tag>
                       → 仓库拣货 → 复核包装 → 出库发货 → 物流回传
                     </div>
                     <div className="u-mt-6">
@@ -86,24 +86,24 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
           />
 
           {/* 订单状态分解 */}
-          <Text strong className="u-d-block u-mb-8"><BarChartOutlined /> 今日订单状态</Text>
-          <Row gutter={[12, 12]} className="u-mb-16">
+          <Text strong style={{ display: 'block', marginBottom: 8 }}><BarChartOutlined /> 今日订单状态</Text>
+          <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
             <Col span={8}>
-              <Card className="u-br-8" style={{ background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)' }}>
+              <Card style={{ background: 'var(--status-warning-bg)', borderRadius: 8, border: '1px solid var(--status-warning-border)' }}>
                 <Statistic title="待拣货" value={activeStats.pendingPick} suffix="单"
                   styles={{ content: { color: 'var(--color-warning)', fontSize: 20 } }}
                   prefix={<ShoppingCartOutlined />} />
               </Card>
             </Col>
             <Col span={8}>
-              <Card className="u-br-8" style={{ background: 'var(--status-processing-bg)', border: '1px solid var(--status-processing-border)' }}>
+              <Card style={{ background: 'var(--status-processing-bg)', borderRadius: 8, border: '1px solid var(--status-processing-border)' }}>
                 <Statistic title="备货中" value={activeStats.preparing} suffix="单"
                   styles={{ content: { color: 'var(--color-primary)', fontSize: 20 } }}
                   prefix={<SyncOutlined />} />
               </Card>
             </Col>
             <Col span={8}>
-              <Card className="u-br-8" style={{ background: 'var(--status-success-bg)', border: '1px solid var(--color-success)' }}>
+              <Card style={{ background: 'var(--status-success-bg)', borderRadius: 8, border: '1px solid var(--color-success)' }}>
                 <Statistic title="已出库" value={activeStats.shippedToday} suffix="单"
                   styles={{ content: { color: 'var(--color-success)', fontSize: 20 } }}
                   prefix={<CheckCircleOutlined />} />
@@ -112,7 +112,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
           </Row>
 
           {/* 汇总 */}
-          <Descriptions bordered column={2} className="u-mb-12">
+          <Descriptions bordered column={2} style={{ marginBottom: 12 }}>
             <Descriptions.Item label="累计订单">{activeStats.totalOrders} 单</Descriptions.Item>
             <Descriptions.Item label="累计销售额">{formatMoney(parseFloat(activeStats.totalSales))}</Descriptions.Item>
             <Descriptions.Item label="客单价">{formatMoney(parseFloat(activeStats.avgOrderValue))}</Descriptions.Item>
@@ -120,7 +120,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
           </Descriptions>
 
           {activeStats.noStockWarn > 0 && (
-            <Alert type="error" showIcon className="u-br-8"
+            <Alert type="error" showIcon style={{ borderRadius: 8 }}
               title={<React.Fragment><WarningOutlined /> {`缺货预警：${activeStats.noStockWarn} 单未匹配到生产单，需人工确认库存或创建生产计划`}</React.Fragment>} />
           )}
         </div>

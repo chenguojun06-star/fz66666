@@ -88,7 +88,7 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
           </div>
           <Form form={directRollbackForm} layout="vertical">
             <div style={directFieldLabelStyle}>退回原因</div>
-            <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} className="u-mb-8">
+            <Form.Item name="reason" rules={[{ required: true, message: '请填写退回原因' }]} style={{ marginBottom: 8 }}>
               <TextArea rows={2} placeholder="请说明本次退回原因" />
             </Form.Item>
           </Form>

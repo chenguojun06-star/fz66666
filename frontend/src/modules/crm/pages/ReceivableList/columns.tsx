@@ -23,8 +23,8 @@ export function buildColumns(handlers: ReceivableColumnHandlers): ColumnsType<Re
       dataIndex: 'receivableNo',
       width: 160,
       render: (v, record) => (
-        <Button type="link" className="u-p-0" onClick={() => openReceivableDetail(record)}>
-          <Text code className="u-fs-14">{v}</Text>
+        <Button type="link" style={{ padding: 0 }} onClick={() => openReceivableDetail(record)}>
+          <Text code style={{ fontSize: 14 }}>{v}</Text>
         </Button>
       ),
     },
@@ -42,7 +42,7 @@ export function buildColumns(handlers: ReceivableColumnHandlers): ColumnsType<Re
       width: 160,
       render: (v, record) => (
         record.sourceBizType === 'MATERIAL_PICKUP' && v ? (
-          <Button type="link" className="u-p-0" onClick={() => goToMaterialPickup(record, 'pickup')}>
+          <Button type="link" style={{ padding: 0 }} onClick={() => goToMaterialPickup(record, 'pickup')}>
             {v}
           </Button>
         ) : (v || '-')

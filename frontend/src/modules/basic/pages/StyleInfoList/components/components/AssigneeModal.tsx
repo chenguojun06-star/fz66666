@@ -108,7 +108,7 @@ const AssigneeModal: React.FC<AssigneeModalProps> = ({ open, assigningRow, loadi
       <Form form={form} layout="vertical">
         {/* D-P2-7：当前样板颜色/尺码只读展示，让用户明确"指派的是什么颜色什么尺码" */}
         {hasColorOrSize && (
-          <Form.Item label="当前样板" className="u-mb-12">
+          <Form.Item label="当前样板" style={{ marginBottom: 12 }}>
             <Space size={[8, 4]} wrap>
               {assigningRow?.color ? <Tag color="blue">颜色：{assigningRow.color}</Tag> : null}
               {assigningRow?.size ? <Tag color="purple">尺码：{assigningRow.size}</Tag> : null}
@@ -128,7 +128,7 @@ const AssigneeModal: React.FC<AssigneeModalProps> = ({ open, assigningRow, loadi
             step={1}
             precision={0}
             placeholder="请输入指派数量"
-            className="u-w-full"
+            style={{ width: '100%' }}
           />
         </Form.Item>
 
@@ -154,7 +154,7 @@ const AssigneeModal: React.FC<AssigneeModalProps> = ({ open, assigningRow, loadi
         </Form.Item>
 
         {defaultQuantity != null && (
-          <Text type="secondary" className="u-fs-12">
+          <Text type="secondary" style={{ fontSize: 12 }}>
             样板原数量：{defaultQuantity} 件{defaultQuantity !== form.getFieldValue('quantity') ? '（已调整）' : ''}
           </Text>
         )}

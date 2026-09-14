@@ -43,7 +43,7 @@ const IssueCard: React.FC<{ issue: PrecheckIssue; isHigh: boolean }> = ({ issue,
     }}
   >
     <div className="u-mb-4">
-      <Tag color={isHigh ? 'error' : 'warning'} className="u-mr-6 u-fw-600">
+      <Tag color={isHigh ? 'error' : 'warning'} style={{ marginRight: 6, fontWeight: 600 }}>
         {issue.level || (isHigh ? 'HIGH' : 'MEDIUM')}
       </Tag>
       <Text strong style={{ color: isHigh ? 'var(--color-error)' : 'var(--color-warning-deep)' }}>
@@ -55,7 +55,7 @@ const IssueCard: React.FC<{ issue: PrecheckIssue; isHigh: boolean }> = ({ issue,
     )}
     {issue.suggestion && (
       <div className="u-fs-14 u-mt-4" style={{ color: 'var(--color-primary)' }}>
-        <BulbOutlined className="u-mr-4" />
+        <BulbOutlined style={{ marginRight: 4 }} />
         {issue.suggestion}
       </div>
     )}
@@ -68,7 +68,7 @@ const ModalContent: React.FC<{ data: PrecheckData; isHigh: boolean }> = ({ data,
   const suggestions: string[] = Array.isArray(data?.suggestions) ? data.suggestions : [];
 
   return (
-    <Space orientation="vertical" className="u-w-full" size={10}>
+    <Space orientation="vertical" style={{ width: '100%' }} size={10}>
       {issues.map((issue, idx) => (
         <IssueCard key={issue.code ?? idx} issue={issue} isHigh={isHigh} />
       ))}
@@ -77,7 +77,7 @@ const ModalContent: React.FC<{ data: PrecheckData; isHigh: boolean }> = ({ data,
         <>
           {issues.length > 0 && <Divider style={{ margin: '4px 0' }} />}
           <div className="u-fs-14 u-lh-18px" style={{ color: 'var(--color-text-tertiary)' }}>
-            <BulbOutlined className="u-mr-4" style={{ color: 'var(--color-warning)' }} />
+            <BulbOutlined style={{ marginRight: 4, color: 'var(--color-warning)' }} />
             <Text type="secondary">智能建议：</Text>
             {suggestions.join('；')}
           </div>

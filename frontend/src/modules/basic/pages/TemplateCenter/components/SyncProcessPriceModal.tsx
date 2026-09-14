@@ -204,10 +204,10 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
         <div className="u-d-flex u-gap-8 u-mt-8 u-fwrap-wrap">
           {imageUrls.map((url, idx) => (
             <div key={idx} className="u-pos-relative u-br-4 u-ov-hidden" style={{ width: 64, height: 64, border: '1px solid var(--color-border)' }}>
-              <Image loading="lazy" src={getFullAuthedFileUrl(url)} alt={`工艺图${idx + 1}`} className="u-w-full u-h-full u-objf-cover" preview={{ cover: <span>预览</span> }} />
+              <Image loading="lazy" src={getFullAuthedFileUrl(url)} alt={`工艺图${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} preview={{ cover: <span>预览</span> }} />
               {editMode && (
                 <DeleteOutlined
-                  className="u-pos-absolute u-cur-pointer" style={{ top: 2, right: 2, color: 'var(--color-danger)', background: 'rgba(255,255,255,0.8)', borderRadius: '50%', padding: 2 }}
+                  style={{ position: 'absolute', top: 2, right: 2, color: 'var(--color-danger)', cursor: 'pointer', background: 'rgba(255,255,255,0.8)', borderRadius: '50%', padding: 2 }}
                   onClick={() => {
                     const next = [...imageUrls];
                     next.splice(idx, 1);

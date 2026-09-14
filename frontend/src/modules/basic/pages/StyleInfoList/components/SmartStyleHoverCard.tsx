@@ -117,7 +117,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
         borderBottom: '1px solid var(--color-border-light)',
       }}>
         <span className="u-fw-600 u-fs-12" style={{ color: 'var(--color-text-primary)' }}>{record.styleNo}</span>
-        <Tag color="blue" className="u-m-0 u-fs-12 u-lh-18px">{progressNode}</Tag>
+        <Tag color="blue" style={{ margin: 0, fontSize: 12, lineHeight: '18px' }}>{progressNode}</Tag>
       </div>
 
       <div className="u-mb-10">
@@ -141,7 +141,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
                 {s.label}
               </span>
               {isNext && !s.done && (
-                <Tag color="blue" className="u-m-0 u-fs-12 u-p-04px u-lh-18px u-fshrink-0">
+                <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px', flexShrink: 0 }}>
                   下一步
                 </Tag>
               )}

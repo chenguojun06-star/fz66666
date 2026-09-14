@@ -103,24 +103,24 @@ const TaxExport: React.FC = () => {
   const exportTabContent = (
     <div className="u-w-full">
       {!subscribed && (
-        <Alert type="info" showIcon icon={<UnlockOutlined />} className="u-mb-16"
+        <Alert type="info" showIcon icon={<UnlockOutlined />} style={{ marginBottom: 16 }}
           title="通用标准格式永久免费"
           description={<span>适合手工导入任意财务软件。如需金蝶/用友专用格式，可开通
-            <Button type="link" className="u-p-04px" onClick={() => navigate(paths.appStore)}>财税对接模块（¥499/月）</Button>
+            <Button type="link" style={{ padding: '0 4px' }} onClick={() => navigate(paths.appStore)}>财税对接模块（¥499/月）</Button>
           </span>} />
       )}
       {subscribed && (
         <Alert type="success" showIcon
           icon={subscriptionType === 'FREE' ? <span className="u-fs-16"></span> : <RocketOutlined />}
-          className="u-mb-16"
+          style={{ marginBottom: 16 }}
           title={subscriptionType === 'FREE' ? '新开户赠送已激活 · 财税对接模块（1年免费）' : '已开通财税对接模块'}
           description={subscriptionType === 'FREE' ? '恭喜！金蝶 KIS / 用友 T3 专用格式均已为您解锁，有效期1年。' : '金蝶 KIS / 用友 T3 专用格式均已解锁。'} />
       )}
-      <Alert type="warning" showIcon className="u-mb-16"
+      <Alert type="warning" showIcon style={{ marginBottom: 16 }}
         title="当前导出能力说明"
         description="这里导出的是真实业务数据，不是展示假按钮；但现阶段属于 Excel 凭证导入模板，不是税控盘、电子发票平台、金蝶/用友开放平台 API 直连。已接数据源：工资结算、物料对账。"
       />
-      <Card title="第一步：选择导出格式" className="u-mb-16">
+      <Card title="第一步：选择导出格式" style={{ marginBottom: 16 }}>
         <Row gutter={[12, 12]}>
           {FORMAT_OPTIONS.map(opt => {
             const locked = !opt.free && !subscribed;
@@ -137,20 +137,20 @@ const TaxExport: React.FC = () => {
                   <div className="u-d-flex u-ai-center u-gap-6 u-mb-4">
                     <Text strong style={{ color: locked ? 'var(--color-text-quaternary)' : undefined }}>{opt.label}</Text>
                     {opt.free
-                      ? <Tag color="green" className="u-fs-14">免费</Tag>
-                      : <Tag color={subscribed ? 'gold' : 'default'} icon={subscribed ? <CheckCircleOutlined /> : <LockOutlined />} className="u-fs-14">
+                      ? <Tag color="green" style={{ fontSize: 14 }}>免费</Tag>
+                      : <Tag color={subscribed ? 'gold' : 'default'} icon={subscribed ? <CheckCircleOutlined /> : <LockOutlined />} style={{ fontSize: 14 }}>
                           {subscribed ? '已解锁' : '付费'}
                         </Tag>}
                   </div>
-                  <Text type="secondary" className="u-fs-14">{opt.desc}</Text>
-                  {selected && <CheckCircleOutlined className="u-pos-absolute" style={{ top: 10, right: 10, color: 'var(--color-info)' }} />}
+                  <Text type="secondary" style={{ fontSize: 14 }}>{opt.desc}</Text>
+                  {selected && <CheckCircleOutlined style={{ position: 'absolute', top: 10, right: 10, color: 'var(--color-info)' }} />}
                 </div>
               </Col>
             );
           })}
         </Row>
       </Card>
-      <Card title="第二步：选择日期范围" className="u-mb-16">
+      <Card title="第二步：选择日期范围" style={{ marginBottom: 16 }}>
         <Space wrap>
           <RangePicker value={dateRange} onChange={val => val && setDateRange(val as [Dayjs, Dayjs])}
             format="YYYY-MM-DD" allowClear={false}
@@ -163,7 +163,7 @@ const TaxExport: React.FC = () => {
           <Text type="secondary">{dateRange[0].format('YYYY年MM月DD日')} — {dateRange[1].format('YYYY年MM月DD日')}</Text>
         </Space>
       </Card>
-      <Card title={<span>第三步：选择导出内容 <Tag color="blue" className="u-ml-8">{selectedFormatInfo?.label}</Tag></span>}>
+      <Card title={<span>第三步：选择导出内容 <Tag color="blue" style={{ marginLeft: 8 }}>{selectedFormatInfo?.label}</Tag></span>}>
         <Row gutter={[16, 16]}>
           {EXPORT_TYPES.map(type => (
             <Col xs={24} md={12} key={type.key}>
@@ -172,7 +172,7 @@ const TaxExport: React.FC = () => {
                   <div style={{ fontSize: 32, lineHeight: 1 }}>{type.icon}</div>
                   <div className="u-flex-1">
                     <Text strong style={{ fontSize: 15, color: type.color }}>{type.title}</Text>
-                    <Paragraph type="secondary" className="u-fs-14" style={{ margin: '4px 0 12px' }}>{type.desc}</Paragraph>
+                    <Paragraph type="secondary" style={{ margin: '4px 0 12px', fontSize: 14 }}>{type.desc}</Paragraph>
                     <Button type="primary" icon={<DownloadOutlined />} loading={loading[type.key]}
                       onClick={() => handleExport(type.key)} style={{ background: type.color, borderColor: type.color }}>
                       导出 Excel
@@ -185,8 +185,8 @@ const TaxExport: React.FC = () => {
         </Row>
         <Divider style={{ margin: '20px 0 12px' }} />
         <div className="u-d-flex u-gap-8 u-ai-center">
-          <FileExcelOutlined className="u-fs-16" style={{ color: 'var(--color-success)' }} />
-          <Text type="secondary" className="u-fs-14">导出文件为 .xlsx 格式 · 金蝶/用友格式当前为基础凭证导入列模板，如客户账套科目编码有差异，仍需按企业实际会计科目校准。</Text>
+          <FileExcelOutlined style={{ color: 'var(--color-success)', fontSize: 16 }} />
+          <Text type="secondary" style={{ fontSize: 14 }}>导出文件为 .xlsx 格式 · 金蝶/用友格式当前为基础凭证导入列模板，如客户账套科目编码有差异，仍需按企业实际会计科目校准。</Text>
         </div>
       </Card>
     </div>
@@ -201,11 +201,11 @@ const TaxExport: React.FC = () => {
 
   return (
     <div style={pageShellStyle}>
-      <Title level={4} className="u-mb-4">
-        <FileExcelOutlined className="u-mr-8" style={{ color: 'var(--color-success)' }} />
+      <Title level={4} style={{ marginBottom: 4 }}>
+        <FileExcelOutlined style={{ marginRight: 8, color: 'var(--color-success)' }} />
         财税管理
       </Title>
-      <Text type="secondary" className="u-d-block u-mb-12">
+      <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
         数据导出、发票台账、应付账款、税率配置一站式管理
       </Text>
       <Tabs items={tabs} defaultActiveKey="export" />

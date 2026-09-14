@@ -77,7 +77,7 @@ const TableModeView: React.FC<TableModeViewProps> = ({
         { key: 'production', items: { label: '生产单量', value: stats.productionCount } },
       ]} />
 
-      <Card className="filter-card u-mb-16" >
+      <Card className="filter-card" style={{ marginBottom: 16 }}>
         <StandardToolbar
           left={<Space wrap>
             <Input placeholder="款号" style={{ width: 180 }} onChange={(e) => setQueryParams(prev => ({ ...prev, styleNo: e.target.value, page: 1 }))} />
@@ -123,7 +123,7 @@ const TableModeView: React.FC<TableModeViewProps> = ({
             <Row gutter={24}>
               <Col span={8}>
                 {(detailRecord as any).cover ? (
-                  <Image src={getFullAuthedFileUrl((detailRecord as any).cover)} className="u-w-full u-objf-cover u-br-8" style={{ aspectRatio: '1' }} />
+                  <Image src={getFullAuthedFileUrl((detailRecord as any).cover)} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 8 }} />
                 ) : (
                   <div className="u-w-full u-d-flex u-ai-center u-jc-center u-br-8" style={{ aspectRatio: '1', background: 'var(--color-bg-subtle)' }}>暂无封面</div>
                 )}

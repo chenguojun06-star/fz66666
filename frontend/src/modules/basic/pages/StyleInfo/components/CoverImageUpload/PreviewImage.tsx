@@ -87,7 +87,7 @@ const PreviewImage: React.FC<PreviewImageProps> = ({
         alt="主图"
         width={size}
         height={size}
-        className="u-objf-cover u-br-8" style={{ cursor: 'zoom-in' }}
+        style={{ objectFit: 'cover', borderRadius: 8, cursor: 'zoom-in' }}
         preview={{ src: fullUrl || record.fileUrl }}
       />
       {/* 资产类型角标（唯一徽标，避免缩略图上重复显示） */}

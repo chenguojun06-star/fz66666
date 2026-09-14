@@ -218,14 +218,14 @@ const OrganizationTreePage: React.FC = () => {
           <span className="u-d-flex u-ai-center" style={{ gap: 0 }}>
             {currentFactoryName ? (
               <>
-                <BankOutlined className="u-mr-6" style={{ color: 'var(--primary-color, var(--color-primary))', fontSize: 22 }} />
+                <BankOutlined style={{ marginRight: 6, color: 'var(--primary-color, var(--color-primary))', fontSize: 22 }} />
                 <span className="u-fw-700" style={{ fontSize: 22, color: 'var(--primary-color, var(--color-primary))', marginRight: 14 }}>
                   {currentFactoryName}
                 </span>
                 <span className="u-fs-20" style={{ color: 'var(--color-border-antd, var(--color-border-antd))', fontWeight: 300, marginRight: 14 }}>|</span>
               </>
             ) : null}
-            <ApartmentOutlined className="u-mr-8" />
+            <ApartmentOutlined style={{ marginRight: 8 }} />
             部门和成员
           </span>
         }

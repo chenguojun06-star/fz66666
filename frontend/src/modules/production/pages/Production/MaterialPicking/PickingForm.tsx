@@ -205,7 +205,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
 
           return (
               <Select
-                  className="u-w-full"
+                  style={{ width: '100%' }}
                   placeholder="选择库存批次"
                   value={currentStockId}
                   onChange={(val) => {
@@ -242,7 +242,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
               <InputNumber
                   min={0}
                   max={maxQty || undefined}
-                  className="u-w-full"
+                  style={{ width: '100%' }}
                   value={selected?.pickQuantity}
                   disabled={!selected?.stockId}
                   placeholder={!selected?.stockId ? "请先选库存" : "数量"}

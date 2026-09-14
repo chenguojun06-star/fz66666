@@ -245,10 +245,10 @@ function MultiImageUploadBox({
                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0'; }}
                   >
-                    <EyeOutlined className="u-fs-12" style={{ color: 'var(--color-bg-base)' }} />
+                    <EyeOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
                   </div>
                   <div onClick={(e) => handleRemove(idx, e)} style={delBtnStyle}>
-                    <DeleteOutlined className="u-fs-12" style={{ color: 'var(--color-bg-base)' }} />
+                    <DeleteOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
                   </div>
                 </>
               )}

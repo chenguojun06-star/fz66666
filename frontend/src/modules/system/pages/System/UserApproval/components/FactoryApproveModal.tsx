@@ -52,7 +52,7 @@ const FactoryApproveModal: React.FC<FactoryApproveModalProps> = ({
             选择角色<span style={{ color: 'var(--color-danger)' }}>*</span>
           </div>
           <Select
-            className="u-w-full"
+            style={{ width: '100%' }}
             placeholder="请选择角色"
             value={factorySelectedRole}
             onChange={setFactorySelectedRole}

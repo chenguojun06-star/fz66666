@@ -100,10 +100,10 @@ const PayableTab: React.FC = () => {
         if (r.status === 'PAID') return <Text type="secondary">{v}</Text>;
         const days = getRemainDays(v);
         if (days === null) return <span>{v}</span>;
-        if (days < 0) return <span>{v} <Tag color="red" className="u-fs-14">逾期{Math.abs(days)}天</Tag></span>;
-        if (days === 0) return <span>{v} <Tag color="orange" className="u-fs-14">今日到期</Tag></span>;
-        if (days <= 3) return <span>{v} <Tag color="gold" className="u-fs-14">剩{days}天</Tag></span>;
-        return <span>{v} <Text type="secondary" className="u-fs-14">({days}天后)</Text></span>;
+        if (days < 0) return <span>{v} <Tag color="red" style={{ fontSize: 14 }}>逾期{Math.abs(days)}天</Tag></span>;
+        if (days === 0) return <span>{v} <Tag color="orange" style={{ fontSize: 14 }}>今日到期</Tag></span>;
+        if (days <= 3) return <span>{v} <Tag color="gold" style={{ fontSize: 14 }}>剩{days}天</Tag></span>;
+        return <span>{v} <Text type="secondary" style={{ fontSize: 14 }}>({days}天后)</Text></span>;
       },
     },
     {
@@ -137,13 +137,13 @@ const PayableTab: React.FC = () => {
         .ap-row-overdue td { background: var(--color-bg-base)1F0 !important; }
         .ap-row-warning td { background: var(--color-bg-base)BE6 !important; }
       `}</style>
-      <Row gutter={[12, 12]} className="u-mb-16">
+      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={6}><Card><Statistic title="待付款(元)" value={(stats.pendingAmount || 0).toFixed(2)} styles={{ content: { color: 'var(--color-warning)' } }} /></Card></Col>
         <Col xs={24} sm={6}><Card><Statistic title="逾期金额(元)" value={(stats.overdueAmount || 0).toFixed(2)} styles={{ content: { color: 'var(--color-error)' } }} suffix={stats.overdueCount ? <span className="u-fs-14" style={{ color: 'var(--color-error)' }}>/{stats.overdueCount}笔</span> : undefined} /></Card></Col>
         <Col xs={24} sm={6}><Card><Statistic title="本月已付(元)" value={(stats.paidAmount || 0).toFixed(2)} styles={{ content: { color: 'var(--color-success)' } }} /></Card></Col>
         <Col xs={24} sm={6}><Card><Statistic title="本月新增(笔)" value={stats.newThisMonth || 0} /></Card></Col>
       </Row>
-      <Card className="u-mb-12">
+      <Card style={{ marginBottom: 12 }}>
         <Row gutter={[12, 12]} align="middle">
           <Col xs={24} md={8}>
             <Input allowClear prefix={<SearchOutlined />} placeholder="搜应付单号 / 供应商 / 来源单号"
@@ -152,13 +152,13 @@ const PayableTab: React.FC = () => {
             />
           </Col>
           <Col xs={12} md={4}>
-            <Select allowClear placeholder="状态" className="u-w-full"
+            <Select allowClear placeholder="状态" style={{ width: '100%' }}
               options={PAYABLE_STATUS.map(item => ({ value: item.value, label: item.label }))}
               value={filters.status}
               onChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
             />
           </Col>
-          <Col xs={12} md={12} className="u-ta-right">
+          <Col xs={12} md={12} style={{ textAlign: 'right' }}>
             <Space>
               <Button onClick={() => { setFilters({ status: undefined, keyword: '' }); setPage(1); }}>重置</Button>
               <Button type="primary" icon={<PlusOutlined />} onClick={() => { setFormOpen(true); }}>新建应付款</Button>
@@ -166,7 +166,7 @@ const PayableTab: React.FC = () => {
           </Col>
         </Row>
       </Card>
-      <Alert type="info" showIcon icon={<DollarOutlined />} className="u-mb-12"
+      <Alert type="info" showIcon icon={<DollarOutlined />} style={{ marginBottom: 12 }}
         title="应付账款与业务系统深度联动"
         description="对账单审核通过、工资结算批准后，相关记录自动流入应付账款。逾期应付款红色高亮；3天内到期黄色预警；支持全额或部分付款。"
       />
@@ -189,8 +189,8 @@ const PayableTab: React.FC = () => {
           <ModalFieldRow label="供应商名称"><Form.Item name="supplierName" noStyle rules={[{ required: true }]}><Input /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="来源单号"><Form.Item name="orderNo" noStyle><Input placeholder="关联对账单号/采购单号（选填）" /></Form.Item></ModalFieldRow>
           <ModalFieldRow label="业务说明"><Form.Item name="description" noStyle><Input placeholder="如：1月面料采购货款" /></Form.Item></ModalFieldRow>
-          <ModalFieldRow label="应付金额(元)"><Form.Item name="amount" noStyle rules={[{ required: true }]}><InputNumber min={0} precision={2} className="u-w-full" /></Form.Item></ModalFieldRow>
-          <ModalFieldRow label="付款到期日"><Form.Item name="dueDate" noStyle><DatePicker className="u-w-full" format="YYYY-MM-DD" /></Form.Item></ModalFieldRow>
+          <ModalFieldRow label="应付金额(元)"><Form.Item name="amount" noStyle rules={[{ required: true }]}><InputNumber min={0} precision={2} style={{ width: '100%' }} /></Form.Item></ModalFieldRow>
+          <ModalFieldRow label="付款到期日"><Form.Item name="dueDate" noStyle><DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" /></Form.Item></ModalFieldRow>
         </Form>
       </ResizableModal>
       <SmallModal

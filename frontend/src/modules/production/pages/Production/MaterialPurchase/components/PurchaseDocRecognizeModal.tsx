@@ -187,7 +187,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, styleNo, on
       footer={null}
     >
       <Spin spinning={recognizing} tip="AI识别中，请稍候…">
-        <Space orientation="vertical" className="u-w-full" size={16}>
+        <Space orientation="vertical" style={{ width: '100%' }} size={16}>
           {!result && (
             <>
               <div
@@ -259,7 +259,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, styleNo, on
                 pagination={false}
                 emptyDescription="暂无物料数据"
               />
-              <Space className="u-jc-end u-w-full">
+              <Space style={{ justifyContent: 'flex-end', width: '100%' }}>
                 <Button
                   onClick={() => {
                     setResult(null);

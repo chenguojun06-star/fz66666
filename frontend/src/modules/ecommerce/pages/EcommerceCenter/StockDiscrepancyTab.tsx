@@ -169,9 +169,9 @@ const StockDiscrepancyTab: React.FC = () => {
 
   return (
     <div>
-      <Row gutter={16} className="u-mb-16">
+      <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
-          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-processing-bg)' }}>
+          <Card variant="borderless" style={{ background: 'var(--status-processing-bg)', borderRadius: 12 }}>
             <Statistic
               title="差异记录"
               value={stats?.totalDiscrepancies || 0}
@@ -182,7 +182,7 @@ const StockDiscrepancyTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-error-bg)' }}>
+          <Card variant="borderless" style={{ background: 'var(--status-error-bg)', borderRadius: 12 }}>
             <Statistic
               title="未解决"
               value={stats?.unresolvedCount || 0}
@@ -193,7 +193,7 @@ const StockDiscrepancyTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--status-warning-bg)' }}>
+          <Card variant="borderless" style={{ background: 'var(--status-warning-bg)', borderRadius: 12 }}>
             <Statistic
               title="盘盈"
               value={stats?.surplusCount || 0}
@@ -204,7 +204,7 @@ const StockDiscrepancyTab: React.FC = () => {
           </Card>
         </Col>
         <Col span={6}>
-          <Card variant="borderless" className="u-br-12" style={{ background: 'var(--color-bg-subtle)' }}>
+          <Card variant="borderless" style={{ background: 'var(--color-bg-subtle)', borderRadius: 12 }}>
             <Statistic
               title="盘亏"
               value={stats?.shortageCount || 0}
@@ -218,7 +218,7 @@ const StockDiscrepancyTab: React.FC = () => {
 
       <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
         <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
-          <RobotOutlined className="u-mr-4" style={{ color: 'var(--color-primary)' }} />
+          <RobotOutlined style={{ marginRight: 4, color: 'var(--color-primary)' }} />
           AI 库存差异检测：自动比对本地库存与平台库存，超过阈值时生成差异记录
         </span>
         <Space>

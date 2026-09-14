@@ -38,7 +38,7 @@ const ShortagePanel: React.FC<ShortagePanelProps> = ({
           ))
         ) : (
           <div className="c-all-ok">
-            <CheckCircleOutlined className="u-mr-6" />
+            <CheckCircleOutlined style={{ marginRight: 6 }} />
             所有面辅料库存充足
           </div>
         )}

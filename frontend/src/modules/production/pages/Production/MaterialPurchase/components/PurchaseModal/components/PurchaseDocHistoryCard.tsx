@@ -15,7 +15,7 @@ const PurchaseDocHistoryCard: React.FC<PurchaseDocHistoryCardProps> = ({ docList
   if (docList.length === 0 && !docsLoading) {
     return (
       <Card
-        className="u-mt-12"
+        style={{ marginTop: 12 }}
         title={<Space><FileImageOutlined /><span>历史上传单据</span></Space>}
       >
         <Empty
@@ -28,7 +28,7 @@ const PurchaseDocHistoryCard: React.FC<PurchaseDocHistoryCardProps> = ({ docList
 
   return (
     <Card
-      className="u-mt-12"
+      style={{ marginTop: 12 }}
       title={
         <Space>
           <FileImageOutlined />
@@ -54,7 +54,7 @@ const PurchaseDocHistoryCard: React.FC<PurchaseDocHistoryCardProps> = ({ docList
                 src={getFullAuthedFileUrl(doc.imageUrl)}
                 width={144}
                 height={100}
-                className="u-objf-cover u-br-4"
+                style={{ objectFit: 'cover', borderRadius: 4 }}
                 preview={{ cover: '预览' }}
               />
               <div className="u-mt-6 u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>

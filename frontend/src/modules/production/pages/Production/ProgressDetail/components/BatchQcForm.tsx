@@ -26,12 +26,12 @@ const BatchQcForm: React.FC<BatchQcFormProps> = ({
   return (
     <div>
       <div className="u-d-flex u-ai-center u-gap-8 u-mb-16">
-        <Button type="link" icon={<ArrowLeftOutlined />} onClick={onBack} className="u-p-0">
+        <Button type="link" icon={<ArrowLeftOutlined />} onClick={onBack} style={{ padding: 0 }}>
           返回菲号列表
         </Button>
         <Divider orientation="vertical" />
         <span className="u-fw-600 u-fs-15" style={{ color: 'var(--color-error)' }}>
-          <CloseCircleOutlined className="u-mr-4" />批量不合格 — 已选 {selectedCount} 条菲号
+          <CloseCircleOutlined style={{ marginRight: 4 }} />批量不合格 — 已选 {selectedCount} 条菲号
         </span>
       </div>
       <div className="u-mb-12 u-br-8" style={{ padding: '10px 14px', background: 'var(--status-success-bg)', border: '1px solid var(--status-error-border)' }}>
@@ -43,7 +43,7 @@ const BatchQcForm: React.FC<BatchQcFormProps> = ({
         <Row gutter={12}>
           <Col span={8}>
             <Form.Item name="defectQuantity" label="每条次品数量" rules={[{ required: true, message: '请输入' }]}>
-              <InputNumber min={1} className="u-w-full" placeholder="每条菲号的次品数" />
+              <InputNumber min={1} style={{ width: '100%' }} placeholder="每条菲号的次品数" />
             </Form.Item>
           </Col>
           <Col span={8}>
@@ -66,7 +66,7 @@ const BatchQcForm: React.FC<BatchQcFormProps> = ({
           </Col>
         </Row>
         <div className="u-p-8px12px u-br-6 u-mb-12" style={{ border: '1px solid var(--status-error-border)' }}>
-          <Form.Item name="lockBundle" valuePropName="checked" className="u-mb-0">
+          <Form.Item name="lockBundle" valuePropName="checked" style={{ marginBottom: 0 }}>
             <Space>
               <Switch checkedChildren={<LockOutlined />} unCheckedChildren={<UnlockOutlined />} />
               <span className="u-fw-500" style={{ color: 'var(--color-error)' }}>锁定菲号，阻止下游扫码</span>

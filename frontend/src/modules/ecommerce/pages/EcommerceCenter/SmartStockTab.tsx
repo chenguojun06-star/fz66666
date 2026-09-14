@@ -57,7 +57,7 @@ const SmartStockTab: React.FC = () => {
         <div>
           <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
             <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
-              <RobotOutlined className="u-mr-4" style={{ color: 'var(--color-primary)' }} />
+              <RobotOutlined style={{ marginRight: 4, color: 'var(--color-primary)' }} />
               AI 补货顾问根据租户类型与款式物料清单自动判断走采购还是生产，置信度低于 70% 时请仔细核对
             </span>
             <Space>
@@ -104,7 +104,7 @@ const SmartStockTab: React.FC = () => {
         <div>
           <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
             <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
-              <RobotOutlined className="u-mr-4" style={{ color: 'var(--color-primary)' }} />
+              <RobotOutlined style={{ marginRight: 4, color: 'var(--color-primary)' }} />
               AI 监控在途订单物流异常（超时未签/轨迹停滞/轨迹异常），自动生成处理建议
             </span>
             <Button icon={<ThunderboltOutlined />} loading={anomalyScanning} onClick={handleScanAnomalies}>扫描物流异常</Button>
@@ -120,7 +120,7 @@ const SmartStockTab: React.FC = () => {
         <div>
           <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
             <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
-              <RobotOutlined className="u-mr-4" style={{ color: 'var(--color-primary)' }} />
+              <RobotOutlined style={{ marginRight: 4, color: 'var(--color-primary)' }} />
               AI 对账：拉取平台账单与本地收入流水比对，自动分析差异原因（佣金扣除/跨账期/优惠券等）
             </span>
             <Button icon={<ThunderboltOutlined />} loading={billReconciling} onClick={handleReconcileBills}>触发对账</Button>

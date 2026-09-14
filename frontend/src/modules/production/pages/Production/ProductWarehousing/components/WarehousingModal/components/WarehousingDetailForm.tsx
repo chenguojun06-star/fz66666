@@ -37,17 +37,17 @@ const WarehousingDetailForm: React.FC<WarehousingDetailFormProps> = ({ form }) =
 
         <Col xs={24} sm={12} lg={6}>
           <Form.Item name="warehousingQuantity" label="质检数量">
-            <InputNumber disabled className="u-w-full" />
+            <InputNumber disabled style={{ width: '100%' }} />
           </Form.Item>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Form.Item name="qualifiedQuantity" label="合格数量">
-            <InputNumber disabled className="u-w-full" />
+            <InputNumber disabled style={{ width: '100%' }} />
           </Form.Item>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Form.Item name="unqualifiedQuantity" label="不合格数量">
-            <InputNumber disabled className="u-w-full" />
+            <InputNumber disabled style={{ width: '100%' }} />
           </Form.Item>
         </Col>
         <Col xs={24} sm={12} lg={6}>

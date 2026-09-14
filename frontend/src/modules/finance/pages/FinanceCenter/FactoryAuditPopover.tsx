@@ -95,7 +95,7 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
       <div className="u-d-flex u-ai-center u-gap-6 u-mb-8">
         <XiaoyunCloudAvatar size={18} active />
         <span className="u-fw-600 u-fs-14">AI 智能分析</span>
-        <Tag color={analysis.auditedCount === analysis.totalCount ? 'success' : 'orange'} className="u-ml-auto u-fs-14">
+        <Tag color={analysis.auditedCount === analysis.totalCount ? 'success' : 'orange'} style={{ marginLeft: 'auto', fontSize: 14 }}>
           {analysis.auditedCount === analysis.totalCount ? '全部已审核' : `${analysis.auditedCount}/${analysis.totalCount} 已审核`}
         </Tag>
       </div>
@@ -132,7 +132,7 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
         </div>
       </div>
 
-      <Divider className="u-m-8px0" />
+      <Divider style={{ margin: '8px 0' }} />
 
       <div>
         <div className="u-fs-14 u-mb-6 u-d-flex u-ai-center u-gap-4" style={{ color: 'var(--neutral-text-secondary)' }}>

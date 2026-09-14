@@ -70,7 +70,7 @@ export const CartPreviewDrawer: React.FC<CartPreviewDrawerProps> = ({
             </div>
           );
         }
-        return <Image src={imgUrl} width={40} height={40} className="u-br-4 u-objf-cover" />;
+        return <Image src={imgUrl} width={40} height={40} style={{ borderRadius: 4, objectFit: 'cover' }} />;
       },
     },
     {

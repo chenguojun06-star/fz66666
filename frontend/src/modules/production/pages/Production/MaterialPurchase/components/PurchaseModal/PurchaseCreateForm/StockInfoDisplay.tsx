@@ -25,7 +25,7 @@ const StockInfoDisplay: React.FC<StockInfoDisplayProps> = ({ materialCode, stock
           </span>
           {stockInfo.quantity < stockInfo.safetyStock && (
             <Tooltip title={`低于安全库存 (${stockInfo.safetyStock})`}>
-              <Tag color="error" className="u-ml-8">预警</Tag>
+              <Tag color="error" style={{ marginLeft: 8 }}>预警</Tag>
             </Tooltip>
           )}
         </div>

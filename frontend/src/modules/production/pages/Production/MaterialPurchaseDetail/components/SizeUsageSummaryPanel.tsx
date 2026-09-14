@@ -196,7 +196,7 @@ const SizeUsageSummaryPanel: React.FC<Props> = ({ orderId, purchaseList }) => {
       title="码数用量明细与汇总"
       loading={loading}
       size="small"
-      className="u-mb-16"
+      style={{ marginBottom: 16 }}
       extra={
         data?.totalQuantity != null ? (
           <span className="u-fs-var--font-size-xs" style={{ color: 'var(--color-text-tertiary)' }}>

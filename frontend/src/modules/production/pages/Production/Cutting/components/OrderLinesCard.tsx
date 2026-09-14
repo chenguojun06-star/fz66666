@@ -103,7 +103,7 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
   };
 
   return (
-    <Card className="u-mb-12">
+    <Card style={{ marginBottom: 12 }}>
       <div className="u-d-flex u-ai-center u-jc-between u-mb-8">
         <span style={{ color: 'rgba(0,0,0,0.85)', fontWeight: 50 }}>下单明细</span>
         <div style={{ color: 'var(--neutral-text-light)' }}>
@@ -122,7 +122,7 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
           suffix={(
             <Tooltip title="基础属性库——成组选择颜色">
               <SettingOutlined
-                className="u-cur-pointer" style={{ color: 'rgba(0,0,0,0.45)' }}
+                style={{ color: 'rgba(0,0,0,0.45)', cursor: 'pointer' }}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAttrLibTarget('color'); setAttrLibOpen(true); }}
               />
             </Tooltip>
@@ -138,7 +138,7 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
           suffix={(
             <Tooltip title="基础属性库——成组选择码数">
               <SettingOutlined
-                className="u-cur-pointer" style={{ color: 'rgba(0,0,0,0.45)' }}
+                style={{ color: 'rgba(0,0,0,0.45)', cursor: 'pointer' }}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAttrLibTarget('size'); setAttrLibOpen(true); }}
               />
             </Tooltip>
@@ -151,7 +151,7 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
         onApply={handleApplyAttrGroup}
       />
 
-      <Space size={8} className="u-mb-12" wrap>
+      <Space size={8} style={{ marginBottom: 12 }} wrap>
         <Button onClick={() => syncSelection([], [])}>清空</Button>
         <InputNumber
           min={1}
@@ -190,7 +190,7 @@ const OrderLinesCard: React.FC<Props> = ({ createTask }) => {
                         <InputNumber
                           min={0}
                           value={matched?.quantity || 0}
-                          className="u-w-full"
+                          style={{ width: '100%' }}
                           controls={false}
                           onChange={(value) => updateMatrixQty(row.color, size, Number(value) || 0)}
                         />

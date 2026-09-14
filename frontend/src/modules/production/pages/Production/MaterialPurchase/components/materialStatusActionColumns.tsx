@@ -76,8 +76,8 @@ export const buildStatusActionColumns = (params: UseMaterialColumnsParams): Colu
         if (fullyPicked && !['completed', 'cancelled'].includes(recordStatus)) {
           return (
             <Space direction="vertical" size={2} style={{ lineHeight: 1.4 }}>
-              <Tag color={config.color} className="u-m-0">{config.text}</Tag>
-              <Tag color="green" className="u-m-0">已领完 {usedQty}{record.unit || ''}</Tag>
+              <Tag color={config.color} style={{ margin: 0 }}>{config.text}</Tag>
+              <Tag color="green" style={{ margin: 0 }}>已领完 {usedQty}{record.unit || ''}</Tag>
             </Space>
           );
         }
@@ -85,12 +85,12 @@ export const buildStatusActionColumns = (params: UseMaterialColumnsParams): Colu
         if (canPickup) {
           return (
             <Space direction="vertical" size={2} style={{ lineHeight: 1.4 }}>
-              <Tag color={config.color} className="u-m-0">{config.text}</Tag>
+              <Tag color={config.color} style={{ margin: 0 }}>{config.text}</Tag>
               <Tooltip title="点击领取">
                 <Button
                   type="link"
                   size="small"
-                  className="u-p-0 u-h-auto u-fw-500" style={{ fontSize: '13px' }}
+                  style={{ padding: 0, height: 'auto', fontSize: '13px', fontWeight: 500 }}
                   onClick={() => onApplyPickup!(record)}
                 >
                   {stockText} · 领取
@@ -101,7 +101,7 @@ export const buildStatusActionColumns = (params: UseMaterialColumnsParams): Colu
         }
         return (
           <Space direction="vertical" size={2} style={{ lineHeight: 1.4 }}>
-            <Tag color={config.color} className="u-m-0">{config.text}</Tag>
+            <Tag color={config.color} style={{ margin: 0 }}>{config.text}</Tag>
             {stockText && (
               <span className="u-fs-12px" style={{ color: 'var(--color-text-secondary)' }}>{stockText}</span>
             )}
@@ -174,9 +174,9 @@ export const buildStatusActionColumns = (params: UseMaterialColumnsParams): Colu
         }
         const daysLeft = Math.ceil((new Date(v).getTime() - Date.now()) / 86400000);
         const riskTag = isNaN(daysLeft) ? null
-          : daysLeft < 0 ? <Tag color="red" className="u-fs-14 u-ml-4 u-lh-16px">已延误{Math.abs(daysLeft)}天</Tag>
-          : daysLeft <= 3 ? <Tag color="orange" className="u-fs-14 u-ml-4 u-lh-16px">仅剩{daysLeft}天</Tag>
-          : daysLeft <= 7 ? <Tag color="gold" className="u-fs-14 u-ml-4 u-lh-16px">需关注</Tag>
+          : daysLeft < 0 ? <Tag color="red" style={{ fontSize: 14, marginLeft: 4, lineHeight: '16px' }}>已延误{Math.abs(daysLeft)}天</Tag>
+          : daysLeft <= 3 ? <Tag color="orange" style={{ fontSize: 14, marginLeft: 4, lineHeight: '16px' }}>仅剩{daysLeft}天</Tag>
+          : daysLeft <= 7 ? <Tag color="gold" style={{ fontSize: 14, marginLeft: 4, lineHeight: '16px' }}>需关注</Tag>
           : null;
         return <span>{dateStr}{riskTag}</span>;
       },

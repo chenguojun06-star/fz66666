@@ -383,7 +383,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
               onChange={(e) => setKeyword(e.target.value)}
               allowClear
               size="small"
-              className="u-flex-1"
+              style={{ flex: 1 }}
             />
             <Tooltip title="刷新列表">
               <Button size="small" icon={<SyncOutlined />} onClick={loadList} loading={loading} />
@@ -415,7 +415,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                       <div className="u-fw-600 u-fs-13 u-ov-hidden u-ws-nowrap u-d-flex u-ai-center u-gap-6" style={{ textOverflow: 'ellipsis' }}>
                         <span className="u-ov-hidden u-ws-nowrap" style={{ textOverflow: 'ellipsis' }}>{row.name}</span>
                         {mode === 'supplier' && row.supplierTag && (
-                          <Tag className="u-fshrink-0 u-fs-10 u-lh-16px u-m-0" style={{ padding: '0 6px' }}>{row.supplierTag}</Tag>
+                          <Tag style={{ flexShrink: 0, fontSize: 10, lineHeight: '16px', padding: '0 6px', margin: 0 }}>{row.supplierTag}</Tag>
                         )}
                       </div>
                       {meta.hasContact && (
@@ -463,7 +463,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                         placeholder="布行/辅料店/纱线行等（选填）"
                         allowClear
                         showSearch
-                        className="u-flex-1"
+                        style={{ flex: 1 }}
                         options={tagOptions}
                       />
                       {/* D-244：齿轮维护标签选项（新增 / 改名 / 删除），与 DictAutoComplete 同款交互 */}
@@ -471,7 +471,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                         <Button
                           icon={<SettingOutlined />}
                           onClick={() => setTagManageOpen(true)}
-                          className="u-fshrink-0"
+                          style={{ flexShrink: 0 }}
                         />
                       </Tooltip>
                     </div>
@@ -531,7 +531,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                         placeholder="布行/辅料店/纱线行等（选填）"
                         allowClear
                         showSearch
-                        className="u-flex-1"
+                        style={{ flex: 1 }}
                         options={tagOptions}
                       />
                       {/* D-244：齿轮维护标签选项（新增 / 改名 / 删除），与 DictAutoComplete 同款交互 */}
@@ -539,7 +539,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                         <Button
                           icon={<SettingOutlined />}
                           onClick={() => setTagManageOpen(true)}
-                          className="u-fshrink-0"
+                          style={{ flexShrink: 0 }}
                         />
                       </Tooltip>
                     </div>

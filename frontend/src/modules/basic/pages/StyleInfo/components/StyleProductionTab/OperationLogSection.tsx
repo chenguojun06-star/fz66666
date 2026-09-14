@@ -53,15 +53,15 @@ const OperationLogSection: React.FC<{ styleId?: string | number; styleNo?: strin
   return (
     <div className="u-br-8 u-mb-16" style={{ background: '#fff', padding: '16px 24px', border: '1px solid #f0f0f0' }}>
       <div className="u-d-flex u-ai-center u-gap-8 u-mb-8">
-        <Typography.Title level={5} className="u-m-0">操作记录</Typography.Title>
-        <Typography.Text type="secondary" className="u-fs-12">
+        <Typography.Title level={5} style={{ margin: 0 }}>操作记录</Typography.Title>
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
           （物料清单同步、库存检查、生成采购任务等款式级操作日志）
         </Typography.Text>
         <a className="u-ml-auto u-fs-12" onClick={load}>刷新</a>
       </div>
       <Spin spinning={loading}>
         {logs.length === 0 && !loading ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无操作记录" className="u-m-8px0" />
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无操作记录" style={{ margin: '8px 0' }} />
         ) : (
           // D-360r：对齐订单生产日志的表格布局（操作时间/操作类型/操作内容/操作人），全站日志口径统一
           <div style={{ maxHeight: 320, overflowY: 'auto' }}>

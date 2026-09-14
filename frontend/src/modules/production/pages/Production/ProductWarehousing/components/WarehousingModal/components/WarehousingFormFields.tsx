@@ -93,7 +93,7 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
           <div className="wh-line">
             <div className="wh-label">质检编号</div>
             <div className="wh-control">
-              <Form.Item name="warehousingNo" className="u-mb-0">
+              <Form.Item name="warehousingNo" style={{ marginBottom: 0 }}>
                 <Input placeholder="自动生成" disabled />
               </Form.Item>
             </div>
@@ -102,7 +102,7 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
           <div className="wh-line">
             <div className="wh-label">订单号</div>
             <div className="wh-control u-flex-1" >
-              <Form.Item name="orderId" className="u-mb-0" rules={[{ required: true, message: '请选择订单号' }]}>
+              <Form.Item name="orderId" style={{ marginBottom: 0 }} rules={[{ required: true, message: '请选择订单号' }]}>
                 <Select
                   placeholder="请选择已裁剪的订单（裁剪数>0）"
                   showSearch
@@ -128,14 +128,14 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
 
             <div className="wh-label" style={{ width: 56 }}>款号</div>
             <div className="wh-control" style={{ width: 160 }}>
-              <Form.Item name="styleNo" className="u-mb-0" rules={[{ required: true, message: '款号缺失' }]}>
+              <Form.Item name="styleNo" style={{ marginBottom: 0 }} rules={[{ required: true, message: '款号缺失' }]}>
                 <Input disabled />
               </Form.Item>
             </div>
 
             <div className="wh-label" style={{ width: 56 }}>款名</div>
             <div className="wh-control" style={{ minWidth: 240, flex: 2 }}>
-              <Form.Item name="styleName" className="u-mb-0" rules={[{ required: true, message: '款名缺失' }]}>
+              <Form.Item name="styleName" style={{ marginBottom: 0 }} rules={[{ required: true, message: '款名缺失' }]}>
                 <Input disabled />
               </Form.Item>
             </div>
@@ -169,8 +169,8 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
             </div>
             <div className="wh-label" style={{ width: 72 }}>质检数量</div>
             <div className="wh-control" style={{ width: 160 }}>
-              <Form.Item name="warehousingQuantity" className="u-mb-0" rules={[{ required: true, message: '质检数量缺失' }]}>
-                <InputNumber className="u-w-full" min={1} disabled />
+              <Form.Item name="warehousingQuantity" style={{ marginBottom: 0 }} rules={[{ required: true, message: '质检数量缺失' }]}>
+                <InputNumber style={{ width: '100%' }} min={1} disabled />
               </Form.Item>
             </div>
           </div>
@@ -197,15 +197,15 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
           <div className="wh-line">
             <div className="wh-label">合格数量</div>
             <div className="wh-control" style={{ width: 160 }}>
-              <Form.Item name="qualifiedQuantity" className="u-mb-0" rules={[{ required: true, message: '合格数量缺失' }]}>
-                <InputNumber className="u-w-full" min={0} disabled />
+              <Form.Item name="qualifiedQuantity" style={{ marginBottom: 0 }} rules={[{ required: true, message: '合格数量缺失' }]}>
+                <InputNumber style={{ width: '100%' }} min={0} disabled />
               </Form.Item>
             </div>
             <div className="wh-label" style={{ width: 84 }}>不合格数量</div>
             <div className="wh-control" style={{ width: 160 }}>
-              <Form.Item name="unqualifiedQuantity" className="u-mb-0" rules={[{ required: true, message: '请输入不合格数量' }]}>
+              <Form.Item name="unqualifiedQuantity" style={{ marginBottom: 0 }} rules={[{ required: true, message: '请输入不合格数量' }]}>
                 <InputNumber
-                  className="u-w-full"
+                  style={{ width: '100%' }}
                   min={0}
                   max={isSingleSelectedBundleBlocked ? 0 : Math.max(0, Number(watchedWarehousingQty || 0) || 0)}
                   disabled={!watchedBundleQr || batchSelectedBundleQrs.length !== 1 || isSingleSelectedBundleBlocked}
@@ -235,7 +235,7 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
             <div className="wh-control" style={{ width: 240 }}>
               <Form.Item
                 name="defectCategory"
-                className="u-mb-0"
+                style={{ marginBottom: 0 }}
                 rules={[
                   ({ getFieldValue }) => ({
                     validator: async (_: any, value: any) => {
@@ -259,7 +259,7 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
             <div className="wh-control u-flex-1" style={{ minWidth: 240 }}>
               <Form.Item
                 name="defectRemark"
-                className="u-mb-0"
+                style={{ marginBottom: 0 }}
                 rules={[
                   ({ getFieldValue }) => ({
                     validator: async (_: any, value: any) => {
@@ -310,7 +310,7 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
               />
               <Form.Item
                 name="repairRemark"
-                className="u-mb-0"
+                style={{ marginBottom: 0 }}
                 rules={isSingleSelectedBundleBlocked ? [{ required: true, message: '请输入返修备注' }] : undefined}
               >
                 <Input.TextArea rows={3} placeholder="请输入返修备注" />
@@ -325,18 +325,18 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
                 value={selectedAreaId || undefined}
                 onChange={(v) => { setSelectedAreaId(v); form.setFieldValue('warehouse', undefined); }}
                 options={finishedWarehouseOptions}
-                className="u-w-full"
+                style={{ width: '100%' }}
                 placeholder="请选择仓库"
               />
             </div>
             <div className="wh-label" style={{ width: 72 }}>入库仓位</div>
             <div className="wh-control u-flex-1" style={{ minWidth: 200 }}>
-              <Form.Item name="warehouse" className="u-mb-0">
+              <Form.Item name="warehouse" style={{ marginBottom: 0 }}>
                 <WarehouseLocationAutoComplete
                   warehouseType="FINISHED"
                   areaId={selectedAreaId}
                   placeholder="请选择入库库位（如 A-01-1-1）"
-                  className="u-w-full"
+                  style={{ width: '100%' }}
                 />
               </Form.Item>
             </div>

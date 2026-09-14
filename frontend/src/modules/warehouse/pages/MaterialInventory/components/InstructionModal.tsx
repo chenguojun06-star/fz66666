@@ -93,7 +93,7 @@ const InstructionModal: React.FC<InstructionModalProps> = ({
               label="*需求数量"
               rules={[{ required: true, message: '请输入需求数量' }]}
             >
-              <InputNumber min={1} className="u-w-full" placeholder="自动计算为安全库存缺口" />
+              <InputNumber min={1} style={{ width: '100%' }} placeholder="自动计算为安全库存缺口" />
             </Form.Item>
           </Col>
           <Col span={12}>

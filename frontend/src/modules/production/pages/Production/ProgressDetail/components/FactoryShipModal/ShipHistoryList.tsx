@@ -25,7 +25,7 @@ const ShipHistoryList: React.FC<ShipHistoryListProps> = ({ shipHistory }) => {
             <span><b>{rec.shipQuantity ?? '-'}</b> 件</span>
             {rec.trackingNo && <span style={{ color: 'var(--color-text-secondary)' }}>单号：{rec.trackingNo}</span>}
             {rec.receiveStatus && (
-              <Tag color={rec.receiveStatus === 'received' ? 'success' : rec.receiveStatus === 'pending' ? 'processing' : 'default'} className="u-fs-14 u-p-04px u-lh-16px">
+              <Tag color={rec.receiveStatus === 'received' ? 'success' : rec.receiveStatus === 'pending' ? 'processing' : 'default'} style={{ fontSize: 14, padding: '0 4px', lineHeight: '16px' }}>
                 {rec.receiveStatus === 'received' ? '已收货' : rec.receiveStatus === 'pending' ? '待收货' : rec.receiveStatus}
               </Tag>
             )}

@@ -61,22 +61,22 @@ export function buildBasicColumns({
             </a>
             </Popover>
             {(record as any).urgencyLevel === 'urgent' && (
-              <Tag color="error" className="u-m-0 u-fs-12 u-p-04px u-lh-18px">急</Tag>
+              <Tag color="error" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>急</Tag>
             )}
             {String((record as any).plateType || '').toUpperCase() === 'FIRST' && (
-              <Tag color="processing" className="u-m-0 u-fs-12 u-p-04px u-lh-18px">首</Tag>
+              <Tag color="processing" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>首</Tag>
             )}
             {String((record as any).plateType || '').toUpperCase() === 'REORDER' && (
-              <Tag color="warning" className="u-m-0 u-fs-12 u-p-04px u-lh-18px">翻</Tag>
+              <Tag color="warning" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>翻</Tag>
             )}
             {(record as any).orderBizType && (() => {
               const bizType = String((record as any).orderBizType);
               const colorMap: Record<string, string> = { FOB: 'processing', ODM: 'info', OEM: 'processing', CMT: 'warning' };
               const bizLabel = ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知';
-              return <Tag color={colorMap[bizType] ?? 'default'} className="u-m-0 u-fs-12 u-p-04px u-lh-18px">{bizLabel}</Tag>;
+              return <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{bizLabel}</Tag>;
             })()}
             {record.ecPlatform && (
-              <Tag color={getPlatformTag(record.ecPlatform).color} className="u-m-0 u-fs-12 u-p-04px u-lh-18px">
+              <Tag color={getPlatformTag(record.ecPlatform).color} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>
                 {getPlatformTag(record.ecPlatform).label}
               </Tag>
             )}

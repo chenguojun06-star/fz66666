@@ -55,9 +55,9 @@ const columns: ColumnsType<SystemIssueItem> = [
     render: (_: unknown, record: SystemIssueItem) => (
       <Space orientation="vertical" size={2}>
         <Text strong>{record.title}</Text>
-        <Text type="secondary" className="u-fs-14">{record.description}</Text>
+        <Text type="secondary" style={{ fontSize: 14 }}>{record.description}</Text>
         {record.actionHint && (
-          <Text type="secondary" className="u-fs-14" style={{ color: 'var(--primary-color)' }}>
+          <Text type="secondary" style={{ fontSize: 14, color: 'var(--primary-color)' }}>
              {record.actionHint}
           </Text>
         )}
@@ -84,7 +84,7 @@ const columns: ColumnsType<SystemIssueItem> = [
     key: 'lastSeen',
     width: 130,
     render: (t: string | null) =>
-      t ? <Text className="u-fs-14">{dayjs(t).format('MM-DD')}</Text> : <Text type="secondary">-</Text>,
+      t ? <Text style={{ fontSize: 14 }}>{dayjs(t).format('MM-DD')}</Text> : <Text type="secondary">-</Text>,
   },
 ];
 
@@ -163,7 +163,7 @@ export default function SystemIssueBoard() {
       render: (_: unknown, r: FrontendErrorRecord) => (
         <Space orientation="vertical" size={2} style={{ maxWidth: 500 }}>
           <Text strong style={{ wordBreak: 'break-all' }}>{r.message}</Text>
-          <Text type="secondary" className="u-fs-14" style={{ wordBreak: 'break-all' }}>{r.url}</Text>
+          <Text type="secondary" style={{ fontSize: 14, wordBreak: 'break-all' }}>{r.url}</Text>
           {r.stack && (
             <pre className="u-fs-14 u-m-0 u-ov-auto u-ws-pre-wrap" style={{ color: 'var(--color-text-muted)', maxHeight: 80, wordBreak: 'break-all' }}>
               {r.stack.slice(0, 400)}
@@ -176,13 +176,13 @@ export default function SystemIssueBoard() {
       title: '发生时间',
       dataIndex: 'occurredAt',
       width: 130,
-      render: (t: string) => <Text className="u-fs-14">{dayjs(t).format('MM-DD')}</Text>,
+      render: (t: string) => <Text style={{ fontSize: 14 }}>{dayjs(t).format('MM-DD')}</Text>,
     },
   ];
 
   const issueTab = (
     <>
-      {error && <Alert title="检查失败" description={error} type="error" showIcon className="u-mb-16" />}
+      {error && <Alert title="检查失败" description={error} type="error" showIcon style={{ marginBottom: 16 }} />}
       <Row gutter={16} style={{ marginBottom: 20 }}>
         <Col span={8}>
           <Card style={{ borderColor: errCount > 0 ? 'var(--color-danger)' : 'var(--color-border-antd)' }}>
@@ -242,7 +242,7 @@ export default function SystemIssueBoard() {
 
   const feTab = (
     <>
-      {feError && <Alert title="获取失败" description={feError} type="error" showIcon className="u-mb-16" />}
+      {feError && <Alert title="获取失败" description={feError} type="error" showIcon style={{ marginBottom: 16 }} />}
       <Card title={`前端 JS 异常（最近 100 条，内存队列 · 重启后清空）`}>
         <Spin spinning={feLoading}>
           {feErrors.length === 0 ? (
@@ -263,14 +263,14 @@ export default function SystemIssueBoard() {
 
   return (
     <div style={{ padding: '24px', maxWidth: 1100 }}>
-      <Space className="u-mb-16 u-w-full u-jc-between" wrap>
-        <Title level={4} className="u-m-0">
+      <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }} wrap>
+        <Title level={4} style={{ margin: 0 }}>
           <BugOutlined style={{ marginRight: 8, color: errCount > 0 ? 'var(--color-danger)' : 'var(--color-primary)' }} />
           系统问题看板
         </Title>
         <Space>
           {summary && (
-            <Text type="secondary" className="u-fs-14">
+            <Text type="secondary" style={{ fontSize: 14 }}>
               检查时间：{dayjs(summary.checkedAt).format('MM-DD')}
             </Text>
           )}
@@ -289,7 +289,7 @@ export default function SystemIssueBoard() {
               <span>
                 <BugOutlined />
                 系统问题
-                {errCount > 0 && <Badge count={errCount} className="u-ml-6" style={{ backgroundColor: 'var(--color-danger)' }} />}
+                {errCount > 0 && <Badge count={errCount} style={{ marginLeft: 6, backgroundColor: 'var(--color-danger)' }} />}
               </span>
             ),
             children: issueTab,
@@ -300,7 +300,7 @@ export default function SystemIssueBoard() {
               <span>
                 <CodeOutlined />
                 前端异常
-                {feErrors.length > 0 && <Badge count={feErrors.length} overflowCount={99} className="u-ml-6" style={{ backgroundColor: 'var(--color-warning)' }} />}
+                {feErrors.length > 0 && <Badge count={feErrors.length} overflowCount={99} style={{ marginLeft: 6, backgroundColor: 'var(--color-warning)' }} />}
               </span>
             ),
             children: feTab,

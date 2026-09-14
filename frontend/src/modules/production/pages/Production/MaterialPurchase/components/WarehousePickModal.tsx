@@ -84,7 +84,7 @@ const WarehousePickModal: React.FC<WarehousePickModalProps> = ({
         {target && (
           <>
             {/* 物料详细信息卡片 */}
-            <Card size="small" className="u-mb-16">
+            <Card size="small" style={{ marginBottom: 16 }}>
               <ResizableTable
                 dataSource={[target]}
                 pagination={false}
@@ -135,9 +135,9 @@ const WarehousePickModal: React.FC<WarehousePickModalProps> = ({
                 },
               ]}
             >
-              <Space.Compact className="u-w-full">
+              <Space.Compact style={{ width: '100%' }}>
                 <InputNumber
-                  className="u-w-full"
+                  style={{ width: '100%' }}
                   min={0}
                   max={target.purchaseQuantity}
                   step={0.01}
@@ -153,7 +153,7 @@ const WarehousePickModal: React.FC<WarehousePickModalProps> = ({
                   }}
                 />
                 <Input
-                  className="u-ta-center" style={{ width: 80 }}
+                  style={{ width: 80, textAlign: 'center' }}
                   value={target.unit || ''}
                   disabled
                 />

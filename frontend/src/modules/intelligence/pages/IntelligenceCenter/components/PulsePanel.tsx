@@ -47,7 +47,7 @@ const PulsePanel: React.FC<PulsePanelProps> = ({
           </div>
         ) : (
           <div className="c-all-ok">
-            <CheckCircleOutlined className="u-mr-6" />
+            <CheckCircleOutlined style={{ marginRight: 6 }} />
             今日暂无扫码记录
           </div>
         )}

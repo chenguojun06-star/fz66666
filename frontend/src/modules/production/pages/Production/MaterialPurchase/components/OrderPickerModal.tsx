@@ -41,7 +41,7 @@ const OrderPickerModal: React.FC<OrderPickerModalProps> = ({ open, isMobile, onC
       width={isMobile ? '96vw' : 900}
       footer={null}
     >
-      <Space orientation="vertical" className="u-w-full" size={12}>
+      <Space orientation="vertical" style={{ width: '100%' }} size={12}>
         <div className="u-fs-13" style={{ color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
           选择一个生产订单，进入该订单的物料采购详情页，可编辑面辅料信息、采购到货、回料确认等操作。
         </div>

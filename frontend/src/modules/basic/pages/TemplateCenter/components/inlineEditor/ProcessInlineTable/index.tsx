@@ -126,7 +126,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
               onClick: ({ key }) => addStepToStage(String(key)),
             }}
           >
-            <Button type="dashed" className="u-w-full">
+            <Button type="dashed" style={{ width: '100%' }}>
               新增工序 <DownOutlined />
             </Button>
           </Dropdown>
