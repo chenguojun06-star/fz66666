@@ -151,51 +151,59 @@ public class ProductionOrderCreationHelper {
 
 // 使用 TransactionSynchronization 在主事务提交成功后执行，保证 CRM 动作独立，异常不回滚、不影响生产主流程
             if (StringUtils.hasText(productionOrder.getCustomerId()) && productionOrder.getQuotationUnitPrice() != null && productionOrder.getOrderQuantity() != null) {
-                TransactionSynchronizationManager.registerSynchronization(
-                    new TransactionSynchronization() {
-                        @Override
-                        public void afterCommit() {
-                            try {
-                                BigDecimal amount = productionOrder.getQuotationUnitPrice()
-                                        .multiply(new BigDecimal(productionOrder.getOrderQuantity()));
-                                receivableOrchestrator.generateFromOrder(
-                                        productionOrder.getCustomerId(),
-                                        productionOrder.getId(),
-                                        productionOrder.getOrderNo(),
-                                        amount,
-                                        productionOrder.getExpectedShipDate() != null
-                                                ? productionOrder.getExpectedShipDate().toLocalDate()
-                                                : (productionOrder.getPlannedEndDate() != null
-                                                        ? productionOrder.getPlannedEndDate().toLocalDate() : null),
-                                        "生产订单自动生成应收款"
-                                );
-                                log.info("CRM 闭环 - 主事务提交后异步/独立生成应收款，订单号: {}", productionOrder.getOrderNo());
-                            } catch (Exception e) {
-                                log.error("主事务后独立生成应收款失败，已隔离异常，不响主流程: orderId={}", productionOrder.getId(), e);
+                try {
+                    TransactionSynchronizationManager.registerSynchronization(
+                        new TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                try {
+                                    BigDecimal amount = productionOrder.getQuotationUnitPrice()
+                                            .multiply(new BigDecimal(productionOrder.getOrderQuantity()));
+                                    receivableOrchestrator.generateFromOrder(
+                                            productionOrder.getCustomerId(),
+                                            productionOrder.getId(),
+                                            productionOrder.getOrderNo(),
+                                            amount,
+                                            productionOrder.getExpectedShipDate() != null
+                                                    ? productionOrder.getExpectedShipDate().toLocalDate()
+                                                    : (productionOrder.getPlannedEndDate() != null
+                                                            ? productionOrder.getPlannedEndDate().toLocalDate() : null),
+                                            "生产订单自动生成应收款"
+                                    );
+                                    log.info("CRM 闭环 - 主事务提交后异步/独立生成应收款，订单号: {}", productionOrder.getOrderNo());
+                                } catch (Exception e) {
+                                    log.error("主事务后独立生成应收款失败，已隔离异常，不响主流程: orderId={}", productionOrder.getId(), e);
+                                }
                             }
                         }
-                    }
-                );
+                    );
+                } catch (Throwable ex) {
+                    log.warn("注册 CRM 应收款后置回调失败(不影响订单创建): orderId={}", productionOrder.getId(), ex);
+                }
             }
 
             if (orderDecisionCaptureOrchestrator != null || orderLearningOutcomeOrchestrator != null) {
-                TransactionSynchronizationManager.registerSynchronization(
-                    new TransactionSynchronization() {
-                        @Override
-                        public void afterCommit() {
-                            try {
-                                if (orderDecisionCaptureOrchestrator != null) {
-                                    orderDecisionCaptureOrchestrator.captureByOrderId(productionOrder.getId());
+                try {
+                    TransactionSynchronizationManager.registerSynchronization(
+                        new TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                try {
+                                    if (orderDecisionCaptureOrchestrator != null) {
+                                        orderDecisionCaptureOrchestrator.captureByOrderId(productionOrder.getId());
+                                    }
+                                    if (orderLearningOutcomeOrchestrator != null) {
+                                        orderLearningOutcomeOrchestrator.refreshByOrderId(productionOrder.getId());
+                                    }
+                                } catch (Exception ex) {
+                                    log.warn("order learning afterCommit sync failed, orderId={}", productionOrder.getId(), ex);
                                 }
-                                if (orderLearningOutcomeOrchestrator != null) {
-                                    orderLearningOutcomeOrchestrator.refreshByOrderId(productionOrder.getId());
-                                }
-                            } catch (Exception ex) {
-                                log.warn("order learning afterCommit sync failed, orderId={}", productionOrder.getId(), ex);
                             }
                         }
-                    }
-                );
+                    );
+                } catch (Throwable ex) {
+                    log.warn("注册 AI 决策后置回调失败(不影响订单创建): orderId={}", productionOrder.getId(), ex);
+                }
             }
 
             // PDF自动生成功能已移除

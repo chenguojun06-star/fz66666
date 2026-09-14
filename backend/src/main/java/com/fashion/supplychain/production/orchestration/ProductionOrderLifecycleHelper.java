@@ -284,17 +284,21 @@ public class ProductionOrderLifecycleHelper {
             log.warn("记录订单关闭操作日志失败: orderId={}", id, e);
         }
         if (result != null && (orderDecisionCaptureOrchestrator != null || orderLearningOutcomeOrchestrator != null)) {
-            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
-                new org.springframework.transaction.support.TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        try {
-                            if (orderDecisionCaptureOrchestrator != null) { orderDecisionCaptureOrchestrator.captureByOrderId(result.getId()); }
-                            if (orderLearningOutcomeOrchestrator != null) { orderLearningOutcomeOrchestrator.refreshByOrderId(result.getId()); }
-                        } catch (Exception ex) { log.warn("order learning close afterCommit sync failed, orderId={}", result.getId(), ex); }
+            try {
+                org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            try {
+                                if (orderDecisionCaptureOrchestrator != null) { orderDecisionCaptureOrchestrator.captureByOrderId(result.getId()); }
+                                if (orderLearningOutcomeOrchestrator != null) { orderLearningOutcomeOrchestrator.refreshByOrderId(result.getId()); }
+                            } catch (Exception ex) { log.warn("order learning close afterCommit sync failed, orderId={}", result.getId(), ex); }
+                        }
                     }
-                }
-            );
+                );
+            } catch (Throwable ex) {
+                log.warn("注册关单后置回调失败(不影响关单结果): orderId={}", id, ex);
+            }
         }
 
         try {
