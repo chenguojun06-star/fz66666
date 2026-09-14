@@ -181,21 +181,27 @@ export default function StageConfigArea({ readOnly = false, styleId }: Props) {
       title: '负责人（可多选）',
       key: 'operators',
       render: (_: unknown, row: RowData) => (
-        <Select
-          mode="multiple"
-          allowClear
-          showSearch
-          optionFilterProp="label"
-          placeholder="不配置=所有人员可操作"
-          value={row.operators.map(o => o.id)}
-          onChange={(ids: string[]) => changeOperators(row.stageName, ids)}
-          options={userOptions.map(u => ({
-            value: u.id,
-            label: u.name ? `${u.name}（${u.username || u.id}）` : u.username || u.id,
-          }))}
-          style={{ width: '100%', maxWidth: 460 }}
-          notFoundContent="无可选人员"
-        />
+        <div style={{ width: '100%', maxWidth: 460 }}>
+          <Select
+            mode="multiple"
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            placeholder="不配置=所有人员可操作"
+            value={row.operators.map(o => o.id)}
+            onChange={(ids: string[]) => changeOperators(row.stageName, ids)}
+            options={userOptions.map(u => ({
+              value: u.id,
+              label: u.name ? `${u.name}（${u.username || u.id}）` : u.username || u.id,
+            }))}
+            style={{ width: '100%' }}
+            notFoundContent="无可选人员"
+          />
+          <div className="u-d-flex u-gap-4" style={{ marginTop: 4 }}>
+            <Button type="link" size="small" style={{ padding: 0 }} onClick={() => changeOperators(row.stageName, userOptions.map(o => o.id))}>一键全选</Button>
+            <Button type="link" size="small" style={{ padding: 0 }} onClick={() => changeOperators(row.stageName, [])}>清空</Button>
+          </div>
+        </div>
       ),
     },
     {
