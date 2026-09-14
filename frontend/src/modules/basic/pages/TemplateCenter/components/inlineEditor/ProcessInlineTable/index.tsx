@@ -8,6 +8,7 @@ import { STAGE_ORDER } from '@/utils/productionStage';
 import { useProcessInlineTableData } from './useProcessInlineTableData';
 import { buildProcessColumns } from './columns';
 import ProcessImageUploader from './ProcessImageUploader';
+import StageConfigArea from './StageConfigArea';
 import type { ProcessInlineTableProps } from './types';
 
 const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
@@ -108,6 +109,9 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
           </div>
         ) : null}
       </div>
+
+      {/* D-387：环节配置内嵌——按父环节配置 负责人(可多选)+预计时长+超期预警，写全局 t_stage_config */}
+      <StageConfigArea readOnly={readOnly} />
 
       <ResizableTable
         storageKey="maintenance-inline-process-editor"

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button, Select, Input, Space, Dropdown } from 'antd';
-import { PlusOutlined, CopyOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons';
+import { PlusOutlined, CopyOutlined, SearchOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import { typeLabel } from '../../../TemplateCenter/utils/templateUtils';
@@ -10,12 +10,8 @@ import './FactoryTemplateTab.css';
 import { FACTORY_TEMPLATE_TYPES } from './constants';
 import { useFactoryTemplate } from './useFactoryTemplate.tsx';
 import CopyFromStyleModal from './CopyFromStyleModal';
-import { useUser, isAdmin } from '@/utils/AuthContext';
-import StageConfigModal from '@/modules/production/pages/Production/List/components/StageConfigModal';
 
 const FactoryTemplateTab: React.FC = () => {
-  const { user } = useUser();
-  const isAdminUser = isAdmin(user);
   const {
     data,
     loading,
@@ -41,7 +37,6 @@ const FactoryTemplateTab: React.FC = () => {
   } = useFactoryTemplate();
 
   const [copyOpen, setCopyOpen] = useState(false);
-  const [stageConfigOpen, setStageConfigOpen] = useState(false);
 
   return (
     <div className="factory-template-tab">
@@ -66,9 +61,6 @@ const FactoryTemplateTab: React.FC = () => {
             <Button type="primary" icon={<PlusOutlined />}>空白创建</Button>
           </Dropdown>
           <Button icon={<CopyOutlined />} onClick={() => setCopyOpen(true)}>从款式复制</Button>
-          {isAdminUser && (
-            <Button icon={<SettingOutlined />} onClick={() => setStageConfigOpen(true)}>环节设置</Button>
-          )}
         </Space>
       </div>
 
@@ -142,12 +134,6 @@ const FactoryTemplateTab: React.FC = () => {
         open={copyOpen}
         onCancel={() => setCopyOpen(false)}
         onSuccess={() => { setCopyOpen(false); fetchList(1); }}
-      />
-
-      <StageConfigModal
-        visible={stageConfigOpen}
-        onClose={() => setStageConfigOpen(false)}
-        isSupervisorOrAbove={isAdminUser}
       />
     </div>
   );
