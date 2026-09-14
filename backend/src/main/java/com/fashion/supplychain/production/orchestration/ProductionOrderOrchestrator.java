@@ -594,29 +594,33 @@ public class ProductionOrderOrchestrator {
         }
         if (result != null) {
             final String orderId = id;
-            TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        try {
-                            orderListCacheHelper.evictTenantListCache();
-                            orderListCacheHelper.evictDetailCache(orderId);
-                        } catch (Exception ex) {
-                            log.debug("[OrderCache] 关单后缓存清除失败: orderId={}", orderId);
-                        }
-                        try {
-                            if (orderDecisionCaptureOrchestrator != null) {
-                                orderDecisionCaptureOrchestrator.captureByOrderId(result.getId());
+            try {
+                TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            try {
+                                orderListCacheHelper.evictTenantListCache();
+                                orderListCacheHelper.evictDetailCache(orderId);
+                            } catch (Exception ex) {
+                                log.debug("[OrderCache] 关单后缓存清除失败: orderId={}", orderId);
                             }
-                            if (orderLearningOutcomeOrchestrator != null) {
-                                orderLearningOutcomeOrchestrator.refreshByOrderId(result.getId());
+                            try {
+                                if (orderDecisionCaptureOrchestrator != null) {
+                                    orderDecisionCaptureOrchestrator.captureByOrderId(result.getId());
+                                }
+                                if (orderLearningOutcomeOrchestrator != null) {
+                                    orderLearningOutcomeOrchestrator.refreshByOrderId(result.getId());
+                                }
+                            } catch (Exception ex) {
+                                log.warn("order learning close afterCommit sync failed, orderId={}", result.getId(), ex);
                             }
-                        } catch (Exception ex) {
-                            log.warn("order learning close afterCommit sync failed, orderId={}", result.getId(), ex);
                         }
                     }
-                }
-            );
+                );
+            } catch (Throwable ex) {
+                log.warn("[OrderOrch] 注册关单后事务回调失败(不影响关单结果): orderId={}", id, ex);
+            }
         }
         return result;
     }
@@ -1226,18 +1230,24 @@ public class ProductionOrderOrchestrator {
             factoryCapacityWarningHelper.evictFactoryCapacityCache(tenantId);
             return;
         }
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                try {
-                    orderListCacheHelper.evictTenantListCache();
-                    orderListCacheHelper.evictDetailCache(orderId);
-                    factoryCapacityWarningHelper.evictFactoryCapacityCache(tenantId);
-                } catch (Exception e) {
-                    log.debug("[OrderCache] 缓存清除失败: orderId={}", orderId);
+        try {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        orderListCacheHelper.evictTenantListCache();
+                        orderListCacheHelper.evictDetailCache(orderId);
+                        factoryCapacityWarningHelper.evictFactoryCapacityCache(tenantId);
+                    } catch (Exception e) {
+                        log.debug("[OrderCache] 缓存清除失败: orderId={}", orderId);
+                    }
                 }
-            }
-        });
+            });
+        } catch (Throwable ex) {
+            log.warn("[OrderOrch] 注册缓存清除回调失败: orderId={}", orderId, ex);
+            orderListCacheHelper.evictTenantListCache();
+            orderListCacheHelper.evictDetailCache(orderId);
+        }
     }
 
     /**
@@ -1251,12 +1261,17 @@ public class ProductionOrderOrchestrator {
             factoryCapacityWarningHelper.warnIfOverloaded(factoryName, tenantId);
             return;
         }
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                factoryCapacityWarningHelper.warnIfOverloaded(factoryName, tenantId);
-            }
-        });
+        try {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    factoryCapacityWarningHelper.warnIfOverloaded(factoryName, tenantId);
+                }
+            });
+        } catch (Throwable ex) {
+            log.warn("[OrderOrch] 注册产能预警回调失败", ex);
+            factoryCapacityWarningHelper.warnIfOverloaded(factoryName, tenantId);
+        }
     }
 
     private void evictTenantListCacheAfterCommit() {
@@ -1264,16 +1279,21 @@ public class ProductionOrderOrchestrator {
             orderListCacheHelper.evictTenantListCache();
             return;
         }
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                try {
-                    orderListCacheHelper.evictTenantListCache();
-                } catch (Exception e) {
-                    log.debug("[OrderCache] 租户列表缓存清除失败");
+        try {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        orderListCacheHelper.evictTenantListCache();
+                    } catch (Exception e) {
+                        log.debug("[OrderCache] 租户列表缓存清除失败");
+                    }
                 }
-            }
-        });
+            });
+        } catch (Throwable ex) {
+            log.warn("[OrderOrch] 注册租户缓存清除回调失败", ex);
+            orderListCacheHelper.evictTenantListCache();
+        }
     }
 
     /**
