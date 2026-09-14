@@ -117,41 +117,53 @@ public class AiComponentHealthIndicator implements HealthIndicator {
         }
 
         Map<String, Object> components = new LinkedHashMap<>();
-        boolean allUp = true;
+        boolean anyDown = false;
 
         // 1. DeepSeek
         HealthResult deepseek = checkDeepSeek();
         components.put("deepSeek", deepseek.toMap());
-        if (!deepseek.up) allUp = false;
+        anyDown |= isDown(deepseek);
 
         // 2. Qdrant
         HealthResult qdrant = checkQdrant();
         components.put("qdrant", qdrant.toMap());
-        if (!qdrant.up) allUp = false;
+        anyDown |= isDown(qdrant);
 
         // 3. 视觉模型（deepseek 多模态）
         HealthResult vision = checkVision();
         components.put("vision", vision.toMap());
-        if (!vision.up) allUp = false;
+        anyDown |= isDown(vision);
 
         // 4. LiteLLM
         HealthResult litellm = checkLiteLLM();
         components.put("litellm", litellm.toMap());
-        if (!litellm.up) allUp = false;
+        anyDown |= isDown(litellm);
 
         // 5. Langfuse
         HealthResult langfuse = checkLangfuse();
         components.put("langfuse", langfuse.toMap());
-        if (!langfuse.up) allUp = false;
+        anyDown |= isDown(langfuse);
 
         // 6. 数据库记忆归档（新增 — 之前 memory_summary 缺字段导致归档失败）
         HealthResult memoryArchive = checkMemoryArchive();
         components.put("memoryArchive", memoryArchive.toMap());
-        if (!memoryArchive.up) allUp = false;
+        anyDown |= isDown(memoryArchive);
 
-        // 全部 UP → UP；任一 DOWN → DEGRADED（AI 为可选增强组件，不拖垮整体 health，见类注释）
-        Health.Builder builder = allUp ? Health.up() : Health.status("DEGRADED");
+        // 任一组件真正 DOWN → DEGRADED；否则 UP（AI 为可选增强组件，不拖垮整体 health，见类注释）
+        Health.Builder builder = anyDown ? Health.status("DEGRADED") : Health.up();
         return builder.withDetails(components).build();
+    }
+
+    /**
+     * 只有「真正 DOWN」才拉低整体状态，UNKNOWN 不参与判定。
+     *
+     * <p>UNKNOWN 表示组件未配置/未启用，按类注释第 3 点属于「不视为 DOWN，避免误告警」。
+     * 此前这里直接写 {@code if (!result.up) allUp = false;}，而 UNKNOWN 的 up 同样是 false，
+     * 结果 memoryArchive（恒为 UNKNOWN 的空壳检查）把 /actuator/health 永久钉成 DEGRADED —— 
+     * 真实故障与一切正常都显示同一个状态，监控彻底失去分辨能力。
+     */
+    private static boolean isDown(HealthResult r) {
+        return !r.up && !r.unknown;
     }
 
     /**
