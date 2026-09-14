@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, Select, App, Popover, Dropdown, Tag } from 'antd';
+import { Button, Input, Select, App, Popover, Dropdown } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import TabToolbar from '@/components/common/TabToolbar';
 import AttributeGroupLibraryModal from '@/components/common/AttributeGroupLibraryModal';
@@ -13,6 +13,7 @@ import { useStyleProcessData } from './hooks/useStyleProcessData';
 import { useStyleProcessActions } from './hooks/useStyleProcessActions';
 import { useStyleProcessAi } from './hooks/useStyleProcessAi';
 import CopyStyleProcessDrawer from './styleProcess/CopyStyleProcessDrawer';
+import StageConfigArea from '@/modules/basic/pages/TemplateCenter/components/inlineEditor/ProcessInlineTable/StageConfigArea';
 
 const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
   styleId, readOnly, hidePrice = false,
@@ -228,13 +229,6 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
           {canDrag && (
             <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>可拖动行排序（编码自动重排，进度节点保持不变）</span>
           )}
-          {editMode && !readOnly && sizes.length > 0 && (
-            <span className="u-d-inline-flex u-ai-center u-gap-4 u-fwrap-wrap">
-              {sizes.map((size) => (
-                <Tag key={size} closable onClose={() => handleRemoveSize(size)} style={{ margin: 0 }}>{size}</Tag>
-              ))}
-            </span>
-          )}
           {editMode && !readOnly && (
             <Popover
               trigger="click"
@@ -289,6 +283,9 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
         onClose={() => setAttrLibOpen(false)}
         onApply={(_k, values, mode) => handleApplyAttrSizes(values, mode)}
       />
+      {editMode && !readOnly && (
+        <StageConfigArea readOnly={false} />
+      )}
       <ProcessCostSummary data={data} />
       <ResizableTable bordered components={draggableComponents as any} onRow={(_record: any, index?: number) => ({ 'data-index': index } as any)} dataSource={sortedData as unknown as any[]} columns={columns as unknown as any[]} pagination={false} loading={loading} rowKey="id" scroll={{ x: 'max-content' }} storageKey={`style-process-${String(styleId)}`} emptyDescription="暂无工序数据" showExport={true} exportFilename="款式工序.xlsx" />
     </div>
