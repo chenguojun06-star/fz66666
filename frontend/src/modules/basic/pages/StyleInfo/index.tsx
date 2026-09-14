@@ -353,29 +353,26 @@ const StyleInfoDetailPage: React.FC = () => {
               )}
             />
           </Form>
-          {/* 底部：款式状态摘要条（移到表单/页签下方，位于「解锁编辑/保存」操作条上方） */}
-          {!isNewPage && currentStyle?.id ? (
-            <div style={{ margin: '4px -20px 4px', padding: '8px 20px', borderTop: '1px solid var(--color-border-light)' }}>
-              <StyleStatusCard style={currentStyle} compact />
-            </div>
-          ) : null}
-          {/* 底部 sticky 保存条：长表单编辑到底部后无需滚回顶部保存。
-              bottom/margin 负值抵消 Card body 底部 padding(20px)，使操作条贴住卡片底边 */}
+          {/* 底部 sticky 固定条：款式状态摘要 + 解锁编辑/保存操作条。
+              两者作为同一 sticky 容器钉在底部（统计条恒在操作条上方），滚动到表单底部不会滚走 */}
           <div
             style={{
               position: 'sticky',
               bottom: -20,
               zIndex: 6,
-              display: 'flex',
-              justifyContent: 'flex-end',
-              padding: '10px 20px',
-              margin: '4px -20px -20px',
               background: 'var(--color-bg-base)',
               borderTop: '1px solid var(--color-border-light)',
               borderRadius: '0 0 10px 10px',
+              margin: '4px -20px -20px',
+              padding: '8px 20px 0',
             }}
           >
-            {actionButtons}
+            {!isNewPage && currentStyle?.id ? (
+              <StyleStatusCard style={currentStyle} compact />
+            ) : null}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 0' }}>
+              {actionButtons}
+            </div>
           </div>
         </Card>
       </PageLayout>

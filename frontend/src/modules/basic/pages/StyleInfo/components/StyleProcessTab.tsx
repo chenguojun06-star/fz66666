@@ -6,6 +6,7 @@ import AttributeGroupLibraryModal from '@/components/common/AttributeGroupLibrar
 import { CopyOutlined, LoadingOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
 import { toNumberSafe, sortSizeNames } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
+import SideDrawer from '@/components/common/SideDrawer';
 import StyleStageControlBar from './StyleStageControlBar';
 import ProcessCostSummary from './ProcessCostSummary';
 import { StyleProcessTabProps, StyleProcessWithSizePrice, STAGE_ORDER, computeSortedDataAndStageSpan, buildProcessColumns } from './styleProcessTabUtils';
@@ -26,6 +27,8 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
   const snapshotRef = useRef<StyleProcessWithSizePrice[] | null>(null);
   const [_processTemplateKey, _setProcessTemplateKey] = useState<string | undefined>(undefined);
   const [copyProcessOpen, setCopyProcessOpen] = useState(false);
+  // D-387：环节配置改为按钮+侧滑弹窗（按款独立配置，不内嵌页面）
+  const [stageConfigOpen, setStageConfigOpen] = useState(false);
 
   // D-264：导入方式（覆盖/追加）收进"导入模板"下拉按钮，不再单独占一个选择器
   // D-210：基础属性库——码数成组选择（与样衣开发/价格模板同组件）
@@ -202,6 +205,13 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
         }
         center={
           <>
+          {/* 环节配置：按款独立（负责人/时长/预警），侧滑弹窗，未配置回退全厂基线 */}
+          <Button
+            icon={<SettingOutlined />}
+            onClick={() => setStageConfigOpen(true)}
+          >
+            环节配置
+          </Button>
           <Button
             icon={<CopyOutlined />}
             disabled={Boolean(readOnly) || !processStartTime || loading || saving}
@@ -283,8 +293,15 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
         onClose={() => setAttrLibOpen(false)}
         onApply={(_k, values, mode) => handleApplyAttrSizes(values, mode)}
       />
-      {/* 环节配置（按款独立：传 styleId 配置当前款，未配回退全厂基线；随工序单价页常显，供负责人/时长/预警设置） */}
-      <StageConfigArea readOnly={Boolean(readOnly)} styleId={String(styleId ?? '')} />
+      {/* 环节配置（按款独立：传 styleId 配置当前款，未配回退全厂基线；由工具栏「环节配置」按钮打开，负责人/时长/预警设置） */}
+      <SideDrawer
+        open={stageConfigOpen}
+        onClose={() => setStageConfigOpen(false)}
+        width="50%"
+        title="环节配置"
+      >
+        <StageConfigArea styleId={String(styleId ?? '')} />
+      </SideDrawer>
       <ProcessCostSummary data={data} />
       <ResizableTable bordered components={draggableComponents as any} onRow={(_record: any, index?: number) => ({ 'data-index': index } as any)} dataSource={sortedData as unknown as any[]} columns={columns as unknown as any[]} pagination={false} loading={loading} rowKey="id" scroll={{ x: 'max-content' }} storageKey={`style-process-${String(styleId)}`} emptyDescription="暂无工序数据" showExport={true} exportFilename="款式工序.xlsx" />
     </div>
