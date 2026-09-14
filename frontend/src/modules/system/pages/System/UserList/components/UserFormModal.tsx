@@ -83,8 +83,14 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
             </Form.Item>
           </Col>
           <Col span={8}>
-            <Form.Item name="position" label="职位">
-              <Input placeholder="如：缝纫一组组长、车间主任" />
+            <Form.Item
+              name="position"
+              label="职位"
+              // 区分于角色权限（车间工人/跟单员/生产主管 等），这里填具体业务岗位，
+              // 例如「缝纫一组组长」「包装员」。两者同名会造成冗余。
+              extra="具体业务岗位，不要与角色权限同名（如：跟单员、生产主管等）"
+            >
+              <Input placeholder="如：缝纫一组组长、包装员" />
             </Form.Item>
           </Col>
           <Col span={8}>

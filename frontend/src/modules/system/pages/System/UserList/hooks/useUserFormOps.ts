@@ -140,34 +140,64 @@ export function useUserFormOps({
     });
   };
 
-  const handleSubmit = async () => {
+  // 提交流程：参数化 values，方便在校验弹窗中修改 values 后再调用
+  const doSubmit = async (values: any) => {
     if (submitLoadingRef.current) return;
+    const submit = async (remark?: string) => {
+      submitLoadingRef.current = true;
+      setSubmitLoading(true);
+      try {
+        let response;
+        const tenantId = user?.tenantId ? Number(user.tenantId) : null;
+        if (!isSuperAdmin && tenantId) {
+          if (userModal.data?.id) {
+            response = await tenantService.updateSubAccount(Number(userModal.data.id), { ...values, operationRemark: remark || null });
+          } else { response = await tenantService.addSubAccount(values); }
+        } else if (userModal.data?.id) {
+          response = await api.put('/system/user', { ...values, id: userModal.data.id, operationRemark: remark || null });
+        } else { response = await api.post('/system/user', values); }
+        const result = response as any;
+        if (result.code === 200) {
+          message.success(userModal.data?.id ? '编辑人员成功' : '新增人员成功');
+          closeDialog(); getUserList();
+        } else { message.error(result.message || '保存失败'); }
+      } finally { setSubmitLoading(false); submitLoadingRef.current = false; }
+    };
+    if (userModal.data?.id) { openRemarkModal('确认保存', '确认保存', undefined, submit); return; }
+    await submit();
+  };
+
+  const handleSubmit = async () => {
     try {
       const values: any = await form.validateFields();
       // DatePicker 提交值为 dayjs 实例，统一格式化为后端 LocalDate 可解析的 YYYY-MM-DD
       if (values.hireDate) values.hireDate = dayjs(values.hireDate).format('YYYY-MM-DD');
-      const submit = async (remark?: string) => {
-        submitLoadingRef.current = true;
-        setSubmitLoading(true);
-        try {
-          let response;
-          const tenantId = user?.tenantId ? Number(user.tenantId) : null;
-          if (!isSuperAdmin && tenantId) {
-            if (userModal.data?.id) {
-              response = await tenantService.updateSubAccount(Number(userModal.data.id), { ...values, operationRemark: remark || null });
-            } else { response = await tenantService.addSubAccount(values); }
-          } else if (userModal.data?.id) {
-            response = await api.put('/system/user', { ...values, id: userModal.data.id, operationRemark: remark || null });
-          } else { response = await api.post('/system/user', values); }
-          const result = response as any;
-          if (result.code === 200) {
-            message.success(userModal.data?.id ? '编辑人员成功' : '新增人员成功');
-            closeDialog(); getUserList();
-          } else { message.error(result.message || '保存失败'); }
-        } finally { setSubmitLoading(false); submitLoadingRef.current = false; }
-      };
-      if (userModal.data?.id) { openRemarkModal('确认保存', '确认保存', undefined, submit); return; }
-      await submit();
+
+      // 冗余数据防护：岗位 vs 角色权限同名
+      // 后端 position 语义是"具体业务岗位"（如缝纫一组组长），区别于 roleName（系统权限分类）。
+      // 同名会让「岗位」列沦为角色名的复述，没意义。
+      const selectedRole = roleOptions.find(r => String(r.id) === String(values.roleId));
+      const positionTrim = (values.position || '').trim();
+      const roleNameTrim = (selectedRole?.roleName || '').trim();
+      if (positionTrim && roleNameTrim && positionTrim === roleNameTrim) {
+        modal.confirm({
+          title: '岗位与角色权限同名',
+          content: `当前岗位「${positionTrim}」与角色权限「${roleNameTrim}」重复了。岗位字段用于填写具体业务岗位（如：制衣一组跟单员），建议清空或修改后再提交。`,
+          okText: '清空岗位并保存',
+          cancelText: '仍按原值保存',
+          okButtonProps: { type: 'primary' },
+          onOk: async () => {
+            values.position = '';
+            await doSubmit(values);
+          },
+          onCancel: async () => {
+            await doSubmit(values);
+          },
+        });
+        return;
+      }
+
+      await doSubmit(values);
     } catch (error) {
       if ((error as any).errorFields) {
         const firstError = (error as any).errorFields[0];

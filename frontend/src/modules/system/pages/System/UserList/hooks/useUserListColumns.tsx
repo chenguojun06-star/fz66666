@@ -15,9 +15,9 @@ function getUserAffiliation(roleName?: string, roleCode?: string): { type: UserA
   const name = (roleName || '').toLowerCase();
   const code = (roleCode || '').toLowerCase();
 
-  // 外发工厂用户
-  if (name.includes('factory') || name.includes('外发') || name.includes('外包') ||
-      code.includes('factory_owner') || code.includes('external')) {
+  // 1. 外发工厂（roleCode 优先：factory_owner / external / factory）
+  if (code.includes('factory_owner') || code.includes('external') || code.includes('factory') ||
+      name.includes('外发') || name.includes('外包') || name.includes('外协')) {
     return {
       type: 'external_factory',
       label: '外发工厂',
@@ -26,9 +26,9 @@ function getUserAffiliation(roleName?: string, roleCode?: string): { type: UserA
     };
   }
 
-  // 第三方供应商用户
-  if (name.includes('supplier') || name.includes('vendor') || name.includes('供应商') ||
-      name.includes('面辅料') || name.includes('物料')) {
+  // 2. 第三方供应商
+  if (code.includes('supplier') || code.includes('vendor') ||
+      name.includes('供应商') || name.includes('面辅料') || name.includes('物料') || name.includes('原料')) {
     return {
       type: 'supplier',
       label: '第三方供应商',
@@ -37,11 +37,22 @@ function getUserAffiliation(roleName?: string, roleCode?: string): { type: UserA
     };
   }
 
-  // 内部员工
-  if (name.includes('admin') || name.includes('manager') || name.includes('主管') ||
-      name.includes('组长') || name.includes('员工') || name.includes('operator') ||
-      name.includes('merchandiser') || name.includes('采购') || name.includes('财务') ||
-      name.includes('仓库')) {
+  // 3. 内部员工：roleCode + roleName 双兜底
+  // 内部身份类关键词 + 业务岗位类关键词，roleCode 比 roleName 更稳定
+  // （roleName 是用户可改的显示名，roleCode 是系统代码）
+  const internalKeywords = [
+    // 角色大类（roleCode 常见值）
+    'admin', 'manager', 'supervisor', 'worker', 'staff', 'operator', 'merchandiser',
+    // 身份/层级
+    '员工', '工人', '主管', '组长', '主任', '厂长', '管理员', '管理',
+    // 业务岗位（生产链路）
+    '跟单', '车缝', '裁剪', '包装', '后道', '整烫', '缝纫', '品检', '检验', '收发', '仓管', '仓库', '库管',
+    // 业务岗位（职能链路）
+    '采购', '销售', '业务', '外贸', '财务', '会计', '出纳', '人事', '行政',
+    '技术', '版师', '样衣', '机修', '工艺', '设计', '质检', '物流',
+    '运营', '客服', '前台',
+  ];
+  if (internalKeywords.some(k => name.includes(k) || code.includes(k))) {
     return {
       type: 'internal',
       label: '内部员工',
@@ -223,6 +234,12 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
             onChange: (next) => {
               const t = next.trim();
               if (t === (r.position || '').trim()) return;
+              // 岗位字段不能与角色权限同名（后端 position 语义是"具体业务岗位"，
+              // 区别于 roleName；同名会让"岗位"列沦为角色名的复述）。
+              if (t && t === (r.roleName || '').trim()) {
+                message.warning(`岗位不能与角色权限「${r.roleName}」同名，请填写具体业务岗位（如：缝纫一组组长、包装员）`);
+                return;
+              }
               void handleInlineUpdate(r, { position: t }, '职位');
             },
           }}
