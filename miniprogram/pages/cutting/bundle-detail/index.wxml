@@ -1,3 +1,4 @@
+<wxs src="/utils/wxmlUtils.wxs" module="wxu" />
 <view class="container">
   <!-- 订单选择列表（从首页直接进来时显示） -->
   <block wx:if="{{showOrderList}}">
@@ -74,7 +75,7 @@
                 lazy-load="true"
               />
               <view wx:else class="media-placeholder">
-                <text class="cover-abbr">{{item.styleNo ? item.styleNo.substring(0,2) : '--'}}</text>
+                <text class="cover-abbr">{{wxu.abbr(item.styleNo)}}</text>
               </view>
             </view>
             <view class="card-title-area cutting-card-title-area">
@@ -128,7 +129,7 @@
               mode="aspectFit"
             />
             <view wx:else class="cover-placeholder">
-              <text class="cover-abbr">{{orderInfo.styleNo ? orderInfo.styleNo.substring(0,2) : '--'}}</text>
+              <text class="cover-abbr">{{wxu.abbr(orderInfo.styleNo)}}</text>
             </view>
           </view>
           <!-- 右侧信息行 -->
