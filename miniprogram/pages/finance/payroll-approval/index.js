@@ -284,7 +284,9 @@ Page({
         r.unitPriceStr = r.unitPrice != null ? Number(r.unitPrice).toFixed(2) : '—';
         r.quantityStr = r.quantity != null ? String(r.quantity) : '0';
         r.operatorName = r.operatorName || r.actualOperatorName || '—';
-        r.processName = r.processName || '—';
+        // D-429：processName 不做 '—' 兜底 —— 否则 wxml 的 wx:if 恒真，
+        // 会在人员后面永远多渲染一个 " · —"
+        r.processName = r.processName || '';
         // D-418：款式封面图（后端 PayrollOperatorProcessSummaryDTO.coverImage，
         // 经 ScanRecordEnrichHelper 从 StyleInfo 补齐）→ 走鉴权 URL 处理后供 <image> 直接用
         r._image = r.coverImage ? fileUrl.getAuthedImageUrl(r.coverImage) : '';

@@ -73,6 +73,19 @@
     <!-- 关联信息 -->
     <view class="section-card">
       <text class="section-title">关联信息</text>
+      <!-- D-429：人员（用户反馈"谁做的这些全部都没有"） -->
+      <view class="fact-row">
+        <text class="fact-label">人员</text>
+        <text class="fact-val fact-val--strong">{{detail._operatorText}}</text>
+      </view>
+      <view wx:if="{{detail.processName}}" class="fact-row">
+        <text class="fact-label">工序</text>
+        <text class="fact-val">{{detail.processName}}</text>
+      </view>
+      <view wx:if="{{detail._showActual}}" class="fact-row">
+        <text class="fact-label">实际操作人</text>
+        <text class="fact-val">{{detail.actualOperatorName}}</text>
+      </view>
       <view wx:if="{{detail._sourceText}}" class="fact-row">
         <text class="fact-label">来源</text>
         <text class="fact-val fact-val--strong">{{detail._sourceText}}</text>
@@ -101,9 +114,9 @@
         <text class="fact-label">颜色 / 码数</text>
         <text class="fact-val">{{detail.color || '—'}} / {{detail.size || '—'}}</text>
       </view>
-      <view wx:if="{{detail.scanType}}" class="fact-row">
+      <view class="fact-row">
         <text class="fact-label">扫码类型</text>
-        <text class="fact-val">{{detail.scanType}}</text>
+        <text class="fact-val">{{detail._scanTypeText}}</text>
       </view>
       <view wx:if="{{detail.actualOperatorName && detail.actualOperatorName !== detail.operatorName}}" class="fact-row">
         <text class="fact-label">实际操作人</text>

@@ -45,6 +45,27 @@ var SCAN_TYPE_MAP = {
   cutting: { kind: 'cutting', text: '裁床' },
 };
 
+// D-429：扫码类型中文映射 —— 与 PC 端 components/common/ScanTypeBadge.tsx 的
+// SCAN_TYPE_LABEL 完全一致（此前详情页直接显示英文原值，用户反馈"为什么是英文"）
+var SCAN_TYPE_LABEL = {
+  production: '生产',
+  cutting: '裁剪',
+  procurement: '采购',
+  quality: '质检',
+  pressing: '大烫',
+  packaging: '包装',
+  warehouse: '入库',
+  warehousing: '入库',
+  sewing: '车缝',
+  carSewing: '车缝',
+  pattern: '样衣',
+};
+function scanTypeLabel(v) {
+  var key = String(v || '').trim();
+  if (!key) return '-';
+  return SCAN_TYPE_LABEL[key] || '未知';
+}
+
 // D-426：结算类型（字段为 delegateTargetType，与 PC 端「结算类型」列一致）
 //   none/空 → 自己完成   internal → 内部指派   external → 外发工厂
 // 只有**明确外发工厂**的订单才要求已关单才能审核。
@@ -187,6 +208,11 @@ Page({
     r._image = r.coverImage ? fileUrl.getAuthedImageUrl(r.coverImage) : '';
     r._startText = fmtDateTime(r.startTime);
     r._endText = fmtDateTime(r.endTime);
+    // D-429：扫码类型中文
+    r._scanTypeText = scanTypeLabel(r.scanType);
+    // D-429：人员（操作人 / 实际操作人）
+    r._operatorText = r.operatorName || r.actualOperatorName || '—';
+    r._showActual = !!(r.actualOperatorName && r.actualOperatorName !== r.operatorName);
     // D-421：来源标注（样衣 / 大货 / 裁床）
     var scan = SCAN_TYPE_MAP[String(r.scanType || '').toLowerCase()] || null;
     r._sourceKind = scan ? scan.kind : '';
