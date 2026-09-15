@@ -146,7 +146,8 @@
       "root": "pages/smart-ops",
       "name": "pkg-smart-ops",
       "pages": [
-        "index"
+        "index",
+        "exception-detail/index"
       ]
     },
     {
@@ -192,7 +193,10 @@
       "root": "pages/finance",
       "name": "pkg-finance",
       "pages": [
-        "payment/index"
+        "payment/index",
+        "reconciliation/index",
+        "reimbursement/index",
+        "payroll-approval/index"
       ]
     },
     {
@@ -232,6 +236,14 @@
       "name": "pkg-todo-detail",
       "pages": [
         "index"
+      ]
+    },
+    {
+      "root": "pages/collab-task",
+      "name": "pkg-collab-task",
+      "pages": [
+        "list/index",
+        "detail/index"
       ]
     }
   ],

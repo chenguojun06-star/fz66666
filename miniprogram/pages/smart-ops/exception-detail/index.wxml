@@ -1,0 +1,81 @@
+<view class="page">
+
+  <!-- 搜索 + 状态筛选 -->
+  <sticky-search-bar
+    placeholder="搜索订单号 / 工序 / 上报人"
+    value="{{keyword}}"
+    show-scan="{{false}}"
+    show-filter="{{true}}"
+    bind:input="onKeywordInput"
+    bind:confirm="onKeywordSearch"
+  >
+    <view slot="filter" class="filter-bar">
+      <view class="filter-item">
+        <picker mode="selector" range="{{STATUS_OPTIONS}}" range-key="label" bindchange="onStatusFilterChange">
+          <view class="picker-box">
+            <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : '全部状态'}}</text>
+            <view class="picker-chevron"></view>
+          </view>
+        </picker>
+      </view>
+    </view>
+  </sticky-search-bar>
+
+  <view class="list-section">
+    <empty-state wx:if="{{!loading && list.length === 0}}" text="暂无异常报告" />
+
+    <view class="exc-card {{item.statusCls}}" wx:for="{{list}}" wx:key="id" data-index="{{index}}" bindtap="onTapItem" hover-class="card-hover" hover-stay-time="50">
+      <!-- 类型 + 状态 -->
+      <view class="card-row1">
+        <text class="exc-type">{{item.typeText}}</text>
+        <text class="status-tag {{item.statusCls}}">{{item.statusText}}</text>
+      </view>
+      <!-- 订单 · 工序 -->
+      <view class="card-row2">
+        <text class="meta-text">{{item.orderNo || '—'}}</text>
+        <text class="row-separator">·</text>
+        <text class="meta-text">{{item.processName || '—'}}</text>
+      </view>
+      <!-- 描述 -->
+      <text class="exc-desc" wx:if="{{item.description}}">{{item.description}}</text>
+      <!-- 处理信息 -->
+      <view class="handle-info" wx:if="{{item.handlerName}}">
+        <text class="handle-text">处理：{{item.handlerName}}{{item.handleNote ? ' · ' + item.handleNote : ''}}</text>
+        <text class="handle-time" wx:if="{{item.handleTimeText}}">{{item.handleTimeText}}</text>
+      </view>
+      <!-- 底部 -->
+      <view class="card-footer">
+        <text class="time-text">上报 {{item.workerName || '—'}} {{item.createTimeText}}</text>
+        <text class="click-hint" wx:if="{{canOperate && item.isPending}}">点击处理</text>
+      </view>
+    </view>
+
+    <view class="load-more {{!hasMore ? 'disabled' : ''}}" wx:if="{{loading || !hasMore}}">
+      <text>{{loading ? '加载中...' : '没有更多了'}}</text>
+    </view>
+  </view>
+
+  <!-- 操作面板 -->
+  <view class="inline-form-card" wx:if="{{showActionSheet}}">
+    <view class="inline-form-title">
+      <text>{{current.title || current.typeText}}</text>
+      <text class="status-tag {{current.statusCls}}">{{current.statusText}}</text>
+    </view>
+    <view class="inline-form-body">
+      <view class="action-item action-approve" wx:if="{{currentCanResolve}}" bindtap="onActionResolve">
+        <view class="action-icon action-icon-check"></view>
+        <text>标记已解决</text>
+      </view>
+      <view class="action-item action-reopen" wx:if="{{currentCanReopen}}" bindtap="onActionReopen">
+        <view class="action-icon action-icon-warn"></view>
+        <text>重新打开</text>
+      </view>
+      <view class="action-blocked" wx:if="{{!canOperate}}">仅主管及以上可处理异常</view>
+      <view class="action-item action-cancel" bindtap="onCloseActionSheet">
+        <text>取消</text>
+      </view>
+    </view>
+  </view>
+
+  <ai-assistant />
+</view>

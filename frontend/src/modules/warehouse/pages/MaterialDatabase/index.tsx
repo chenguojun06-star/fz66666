@@ -310,11 +310,24 @@ const MaterialDatabasePage: React.FC = () => {
       />
 
       {/* ===== 物料资料库操作日志 ===== */}
+      {/*
+       * filter 取值依据（勿凭感觉改）：
+       * 物料资料库的操作日志由 MaterialDatabaseLogAppendHelper 落库，
+       * 经 OperationLogAppendUtil.writeLog(entityName=..., ...) 写入，
+       * 而 writeLog 的第一个实参进的是 **module** 字段（不是 targetType），
+       * 且 Helper 路径**从不设置 targetType**（恒为 null）。
+       * 所以这里必须只传 module='物料数据库'（= getEntityName() 返回值）。
+       *
+       * ⚠️ 不要加 targetType：后端 OperationLogServiceImpl 用 wrapper.eq 精确匹配，
+       *    传任何 targetType 都会因库中为 null 而查到 0 条。
+       * ⚠️ 也不要写成 module='生产管理'：AOP 的 resolveModule() 只返回
+       *    样衣开发/大货生产/仓库管理/财务管理/下单管理/基础设置/模板库/其他，没有"生产管理"。
+       */}
       <RecordLogDrawer
         open={operationLogOpen}
         onClose={() => setOperationLogOpen(false)}
         title="物料资料库操作日志"
-        filter={{ module: '生产管理', targetType: '物料数据库' }}
+        filter={{ module: '物料数据库' }}
       />
 
       {/* ===== 色卡本颜色详情弹窗（抽取为 MaterialColorItemsModal） ===== */}

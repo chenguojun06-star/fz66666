@@ -64,6 +64,7 @@ export const paths = {
   warehousingInspect: '/production/warehousing/inspect/:orderId',
   orderTransfer: '/production/transfer',
   materialPicking: '/production/picking',
+  exceptionReport: '/production/exception-report',
   attendanceAdmin: '/system/attendance',
 
   materialReconciliation: '/finance/material-reconciliation',

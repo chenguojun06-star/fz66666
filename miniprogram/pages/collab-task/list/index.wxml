@@ -1,0 +1,57 @@
+<view class="page">
+
+  <!-- 状态筛选（sticky 吸顶） -->
+  <sticky-search-bar
+    placeholder="搜索协作任务"
+    value="{{keyword}}"
+    show-scan="{{false}}"
+    show-filter="{{true}}"
+    bind:input="onKeywordInput"
+    bind:confirm="onKeywordSearch"
+  >
+    <view slot="filter" class="filter-bar">
+      <view class="filter-item">
+        <picker mode="selector" range="{{STATUS_OPTIONS}}" range-key="label" bindchange="onStatusFilterChange">
+          <view class="picker-box">
+            <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : '全部状态'}}</text>
+            <view class="picker-chevron"></view>
+          </view>
+        </picker>
+      </view>
+    </view>
+  </sticky-search-bar>
+
+  <view class="list-section">
+    <empty-state wx:if="{{!loading && list.length === 0}}" text="暂无协作任务" />
+
+    <view class="task-card {{item.statusCls}}" wx:for="{{list}}" wx:key="id" data-index="{{index}}" bindtap="onTapItem" hover-class="card-hover" hover-stay-time="50">
+      <!-- 标题 + 状态 -->
+      <view class="card-row1">
+        <text class="task-title">{{item.title}}</text>
+        <text class="status-tag {{item.statusCls}}">{{item.statusText}}</text>
+      </view>
+      <!-- 订单 · 款号 · 优先级 -->
+      <view class="card-row2">
+        <text class="meta-text">{{item.orderNo || '—'}}</text>
+        <text class="row-separator">·</text>
+        <text class="meta-text">{{item.styleNo || '—'}}</text>
+        <text class="row-separator">·</text>
+        <text class="meta-text">优先级 {{item.priorityText}}</text>
+      </view>
+      <!-- 阶段 / 下一步 -->
+      <text class="task-sub" wx:if="{{item.currentStage || item.nextStep}}">{{item.currentStage || ''}}{{item.nextStep ? ' → ' + item.nextStep : ''}}</text>
+      <!-- 底部 -->
+      <view class="card-footer">
+        <text class="time-text">{{item.assigneeName ? '负责人 ' + item.assigneeName : (item.creatorName ? '创建 ' + item.creatorName : '')}}</text>
+        <text class="overdue-text" wx:if="{{item.isOverdue}}">已逾期</text>
+        <text class="click-hint" wx:elif="{{item.statusCls === 'tag-orange'}}">点击领取</text>
+      </view>
+    </view>
+
+    <view class="load-more {{!hasMore ? 'disabled' : ''}}" wx:if="{{loading || !hasMore}}">
+      <text>{{loading ? '加载中...' : '没有更多了'}}</text>
+    </view>
+  </view>
+
+  <ai-assistant />
+</view>

@@ -1,0 +1,98 @@
+<view class="page">
+
+  <!-- 工厂（外部）账号拦截 -->
+  <view class="blocked-wrap" wx:if="{{blocked}}">
+    <view class="blocked-card">
+      <view class="blocked-icon"></view>
+      <text class="blocked-text">{{blockedMsg}}</text>
+    </view>
+  </view>
+
+  <block wx:else>
+    <sticky-search-bar
+      placeholder="搜索申请人 / 事由 / 单号"
+      value="{{keyword}}"
+      show-scan="{{false}}"
+      show-filter="{{true}}"
+      bind:input="onKeywordInput"
+      bind:confirm="onKeywordSearch"
+    >
+      <view slot="filter" class="filter-bar">
+        <view class="filter-item">
+          <picker mode="selector" range="{{STATUS_OPTIONS}}" range-key="label" bindchange="onStatusFilterChange">
+            <view class="picker-box">
+              <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : '全部状态'}}</text>
+              <view class="picker-chevron"></view>
+            </view>
+          </picker>
+        </view>
+      </view>
+    </sticky-search-bar>
+
+    <view class="list-section">
+      <empty-state wx:if="{{!loading && list.length === 0}}" text="暂无报销单" />
+
+      <view class="reimburse-card {{item.statusCls}}" wx:for="{{list}}" wx:key="id" data-index="{{index}}" bindtap="onTapItem" hover-class="card-hover" hover-stay-time="50">
+        <!-- 单号 + 状态 -->
+        <view class="card-row1">
+          <text class="recon-no">{{item.reimbursementNo || '—'}}</text>
+          <text class="status-tag {{item.statusCls}}">{{item.statusText}}</text>
+        </view>
+        <!-- 申请人 · 费用类型 -->
+        <view class="card-row2">
+          <view class="person-icon"></view>
+          <text class="person-name">{{item.applicantName || '—'}}</text>
+          <text class="row-separator">·</text>
+          <text class="factory-name">{{item.expenseType || '—'}}</text>
+        </view>
+        <!-- 金额 -->
+        <view class="card-row3">
+          <text class="amount-text">¥{{item.amountStr}}</text>
+          <text class="qty-hint">{{item.expenseDate || ''}}</text>
+        </view>
+        <!-- 事由 -->
+        <text class="remaining-text" wx:if="{{item.title || item.description}}">{{item.title || item.description}}</text>
+        <!-- 审批信息 -->
+        <text class="remaining-text" wx:if="{{item.approverName}}">审批：{{item.approverName}}{{item.approvalRemark ? ' · ' + item.approvalRemark : ''}}</text>
+        <!-- 底部 -->
+        <view class="card-footer">
+          <text class="time-text">{{item.orderNo ? '关联 ' + item.orderNo : ''}}</text>
+          <text class="click-hint" wx:if="{{canOperate && (item.status === 'pending' || item.status === 'approved')}}">
+            {{item.status === 'pending' ? '点击审批' : '待付款'}}
+          </text>
+        </view>
+      </view>
+
+      <view class="load-more {{!hasMore ? 'disabled' : ''}}" wx:if="{{loading || !hasMore}}">
+        <text>{{loading ? '加载中...' : '没有更多了'}}</text>
+      </view>
+    </view>
+
+    <!-- 操作面板 -->
+    <view class="inline-form-card" wx:if="{{showActionSheet}}">
+      <view class="inline-form-title">
+        <text>{{current.reimbursementNo || '报销操作'}}</text>
+        <text class="status-tag {{current.statusCls}}">{{current.statusText}}</text>
+      </view>
+      <view class="inline-form-body">
+        <view class="action-item action-approve" wx:if="{{currentCanApprove}}" bindtap="onActionApprove">
+          <view class="action-icon action-icon-check"></view>
+          <text>批准</text>
+        </view>
+        <view class="action-item action-reject" wx:if="{{currentCanApprove}}" bindtap="onActionReject">
+          <view class="action-icon action-icon-warn"></view>
+          <text>驳回</text>
+        </view>
+        <view class="action-item action-pay" wx:if="{{currentCanPay}}" bindtap="onActionPay">
+          <view class="action-icon action-icon-check"></view>
+          <text>确认付款</text>
+        </view>
+        <view class="action-item action-cancel" bindtap="onCloseActionSheet">
+          <text>取消</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <ai-assistant />
+</view>

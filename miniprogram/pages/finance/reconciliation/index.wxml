@@ -1,0 +1,92 @@
+<view class="page">
+
+  <!-- 工厂（外部）账号拦截：对账属租户财务数据，外部账号不参与 -->
+  <view class="blocked-wrap" wx:if="{{blocked}}">
+    <view class="blocked-card">
+      <view class="blocked-icon"></view>
+      <text class="blocked-text">{{blockedMsg}}</text>
+    </view>
+  </view>
+
+  <block wx:else>
+    <!-- 搜索 + 状态筛选（sticky 吸顶，统一通用组件） -->
+    <sticky-search-bar
+      placeholder="搜索供应商 / 物料 / 单号"
+      value="{{keyword}}"
+      show-scan="{{false}}"
+      show-filter="{{true}}"
+      bind:input="onKeywordInput"
+      bind:confirm="onKeywordSearch"
+    >
+      <view slot="filter" class="filter-bar">
+        <view class="filter-item">
+          <picker mode="selector" range="{{STATUS_OPTIONS}}" range-key="label" bindchange="onStatusFilterChange">
+            <view class="picker-box">
+              <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : '全部状态'}}</text>
+              <view class="picker-chevron"></view>
+            </view>
+          </picker>
+        </view>
+      </view>
+    </sticky-search-bar>
+
+    <!-- 列表 -->
+    <view class="list-section">
+      <empty-state wx:if="{{!loading && list.length === 0}}" text="暂无对账记录" />
+
+      <view class="recon-card {{item.statusCls}}" wx:for="{{list}}" wx:key="id" data-index="{{index}}" bindtap="onTapItem" hover-class="card-hover" hover-stay-time="50">
+        <!-- 单号 + 状态 -->
+        <view class="card-row1">
+          <text class="recon-no">{{item.reconciliationNo || '—'}}</text>
+          <text class="status-tag {{item.statusCls}}">{{item.statusText}}</text>
+        </view>
+        <!-- 供应商 · 物料 -->
+        <view class="card-row2">
+          <view class="person-icon"></view>
+          <text class="person-name">{{item.supplierName || '—'}}</text>
+          <text class="row-separator">·</text>
+          <text class="factory-name">{{item.materialName || item.materialCode || '—'}}</text>
+        </view>
+        <!-- 金额 + 数量×单价 -->
+        <view class="card-row3">
+          <text class="amount-text">¥{{item.amountStr}}</text>
+          <text class="qty-hint">{{item.quantityStr}}{{item.unit || ''}} × ¥{{item.unitPriceStr}}</text>
+        </view>
+        <!-- 关联单号 -->
+        <text class="remaining-text" wx:if="{{item.purchaseNo || item.orderNo}}">来源：{{item.purchaseNo || item.orderNo}}</text>
+        <!-- 底部 -->
+        <view class="card-footer">
+          <text class="time-text">{{item.reconciliationDate || item.createTime || ''}}</text>
+          <text class="click-hint" wx:if="{{canOperate && item.nextLabel}}">{{item.nextLabel}}</text>
+        </view>
+      </view>
+
+      <view class="load-more {{!hasMore ? 'disabled' : ''}}" wx:if="{{loading || !hasMore}}">
+        <text>{{loading ? '加载中...' : '没有更多了'}}</text>
+      </view>
+    </view>
+
+    <!-- 操作面板（底部，含状态推进 + 退回） -->
+    <view class="inline-form-card" wx:if="{{showActionSheet}}">
+      <view class="inline-form-title">
+        <text>{{current.reconciliationNo || '对账操作'}}</text>
+        <text class="status-tag {{current.statusCls}}">{{current.statusText}}</text>
+      </view>
+      <view class="inline-form-body">
+        <view class="action-item action-approve" wx:if="{{currentCanAdvance}}" bindtap="onActionAdvance">
+          <view class="action-icon action-icon-check"></view>
+          <text>{{currentNextLabel}}</text>
+        </view>
+        <view class="action-item action-reject" wx:if="{{currentCanReturn}}" bindtap="onActionReturn">
+          <view class="action-icon action-icon-warn"></view>
+          <text>退回上一步</text>
+        </view>
+        <view class="action-item action-cancel" bindtap="onCloseActionSheet">
+          <text>取消</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <ai-assistant />
+</view>

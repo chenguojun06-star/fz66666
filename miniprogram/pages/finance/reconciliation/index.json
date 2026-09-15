@@ -1,0 +1,9 @@
+{
+  "usingComponents": {
+    "empty-state": "/components/empty-state/empty-state",
+    "sticky-search-bar": "/components/sticky-search-bar/index"
+  },
+  "navigationBarTitleText": "物料对账",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
+}

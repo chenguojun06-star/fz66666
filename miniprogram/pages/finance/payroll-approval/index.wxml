@@ -1,0 +1,111 @@
+<view class="page">
+
+  <!-- 工厂（外部）账号拦截 -->
+  <view class="blocked-wrap" wx:if="{{blocked}}">
+    <view class="blocked-card">
+      <view class="blocked-icon"></view>
+      <text class="blocked-text">{{blockedMsg}}</text>
+    </view>
+  </view>
+
+  <block wx:else>
+    <!-- 统计卡 -->
+    <view class="stat-card">
+      <view class="stat-item">
+        <text class="stat-num stat-num--warn">{{pendingCount}}</text>
+        <text class="stat-label">待审核</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-num stat-num--ok">{{auditedCount}}</text>
+        <text class="stat-label">已审核</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-num">¥{{totalAmountStr}}</text>
+        <text class="stat-label">合计</text>
+      </view>
+    </view>
+
+    <!-- 搜索 + 月份筛选 -->
+    <sticky-search-bar
+      placeholder="搜索操作人 / 工序 / 订单号"
+      value="{{keyword}}"
+      show-scan="{{false}}"
+      show-filter="{{true}}"
+      bind:input="onKeywordInput"
+      bind:confirm="onKeywordSearch"
+    >
+      <view slot="filter" class="filter-bar">
+        <view class="filter-item">
+          <picker mode="date" fields="month" value="{{monthValue}}" bindchange="onMonthChange">
+            <view class="picker-box">
+              <text class="picker-text">{{monthLabel}}</text>
+              <view class="picker-chevron"></view>
+            </view>
+          </picker>
+        </view>
+      </view>
+    </sticky-search-bar>
+
+    <view class="list-section">
+      <empty-state wx:if="{{!loading && list.length === 0}}" text="本月暂无工资明细" />
+
+      <view class="payroll-card {{item.auditCls}}" wx:for="{{list}}" wx:key="approvalId" data-index="{{index}}" bindtap="onTapItem" hover-class="card-hover" hover-stay-time="50">
+        <!-- 操作人 + 审核状态 -->
+        <view class="card-row1">
+          <text class="recon-no">{{item.operatorName}}</text>
+          <text class="status-tag {{item.auditCls}}">{{item.auditText}}</text>
+        </view>
+        <!-- 工序 · 订单 -->
+        <view class="card-row2">
+          <text class="person-name">{{item.processName}}</text>
+          <text class="row-separator">·</text>
+          <text class="factory-name">{{item.orderNo || '—'}}</text>
+          <text class="row-separator">·</text>
+          <text class="factory-name">{{item.orderStatusText}}</text>
+        </view>
+        <!-- 金额 + 数量×单价 -->
+        <view class="card-row3">
+          <text class="amount-text">¥{{item.amountStr}}</text>
+          <text class="qty-hint">{{item.quantityStr}} × ¥{{item.unitPriceStr}}</text>
+        </view>
+        <!-- 不可审核原因 -->
+        <text class="remaining-text" wx:if="{{canOperate && !item.audited && item.blockReason}}">{{item.blockReason}}</text>
+        <!-- 底部 -->
+        <view class="card-footer">
+          <text class="time-text">{{item.styleNo || ''}}</text>
+          <text class="click-hint" wx:if="{{item.eligible}}">点击审核</text>
+          <text class="audited-hint" wx:elif="{{item.audited}}">已审核</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 批量审核 FAB -->
+    <view class="fab-btn" wx:if="{{canOperate && auditableIds.length > 0}}" bindtap="onBatchAudit">
+      <text class="fab-text">审核{{auditableIds.length}}条</text>
+    </view>
+
+    <!-- 操作面板 -->
+    <view class="inline-form-card" wx:if="{{showActionSheet}}">
+      <view class="inline-form-title">
+        <text>{{current.operatorName}} · {{current.processName}}</text>
+        <text class="status-tag {{current.auditCls}}">{{current.auditText}}</text>
+      </view>
+      <view class="inline-form-body">
+        <view class="action-item action-approve" wx:if="{{currentCanAudit}}" bindtap="onActionAudit">
+          <view class="action-icon action-icon-check"></view>
+          <text>审核通过</text>
+        </view>
+        <view class="action-blocked" wx:else>
+          <text>{{currentBlockReason || '当前不可审核'}}</text>
+        </view>
+        <view class="action-item action-cancel" bindtap="onCloseActionSheet">
+          <text>取消</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <ai-assistant />
+</view>

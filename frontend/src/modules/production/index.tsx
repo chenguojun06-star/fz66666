@@ -14,3 +14,4 @@ export const ProgressDetail = React.lazy(() => import('./pages/Production/Progre
 export const MaterialPicking = React.lazy(() => import('./pages/Production/MaterialPicking'));
 export const ExternalFactory = React.lazy(() => import('./pages/Production/ExternalFactory'));
 export const AttendanceAdmin = React.lazy(() => import('./pages/Production/AttendanceAdmin'));
+export const ExceptionReport = React.lazy(() => import('./pages/Production/ExceptionReport'));

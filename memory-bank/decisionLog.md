@@ -1,7 +1,71 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-14（新增 D-408 图片上传控件原生 input 暴露修复：原子类隐藏回退内联）
+> 最后更新：2026-09-15（新增 D-417 手机端待办「只能看不能办」补齐五套独立处理页）
+
+---
+
+## D-417：手机端「只能看不能办」待办 —— 每类建独立处理页（2026-09-15）
+
+**现象**：铃铛待办点击后，异常报告/样衣开发只能看、工资结算无审批按钮、物料对账/费用报销基本无处理能力、
+协作任务与未识别类型纯只读。用户要求「各自独立的页面、对应自己的入口按钮、风格与现有手机卡片一致」。
+
+**核实结论**：**绝大多数是前端缺页面，后端接口早已就绪** —— 这是本次最大的认知纠正。
+- 对账 `POST /{id}/status-action?action=update|return`（只有 update/return 两种 action，update 配 status）
+- 报销 `POST /{id}/approve?action=approve|reject&remark=`、`POST /{id}/pay`
+- 工资 `POST /detail-approval/{approvalId}/approve`（+ batch/finalize/cancel/reverse-approve）
+- 协作 `POST /tasks/{id}/claim`、`PUT /tasks/{id}/status`（body `{status, note}`）
+- **唯一真缺的是异常报告**：`t_production_exception_report` 有 status（PENDING/RESOLVED）但无任何写接口
+
+**决策**：
+1. **方案 A：每类一个独立页面**（不做"待我审批"聚合页）——与 PC 端页面一一对应，便于维护。
+2. **内外部账号三层区分**：
+   - 工厂（外部）`isFactoryAccount()` → **财务三页直接拦截**（对账/报销/工资属租户财务数据，不露出）
+   - 管理员/主管 `isAdminOrSupervisor()` → 审批按钮可见可用
+   - 普通员工 → 可看列表、无操作按钮
+   - **例外**：协作任务是跨角色协同工作流，工厂账号同样可处理派给自己的任务，**不做拦截**
+3. **工资审批复刻 PC 端内外部规则**：内部工厂可直接审核；**外部工厂必须订单进入终态**
+   （`completed/closed/cancelled/scrapped/archived`）才允许审核，否则明确提示原因。手机端内置同一套
+   `isOrderFrozenByStatus` 判断，不依赖 PC。
+4. **异常报告补后端闭环**（唯一新增后端能力的场景）：新增迁移加处理人/说明/时间 4 字段，
+   `handle` 支持 `resolve`/`reopen`，**仅主管及以上可处理**，并加显式租户校验；工厂账号列表按本工厂订单过滤。
+   避免「异常报了就永久挂在 PENDING」的假闭环。
+5. **待办直达精确化**：顺带修好三处「点了只能落列表」的问题 ——
+   样衣开发（解析 `STY_{styleId}_{stage}` / `/style-info/{styleId}` → 直达款式详情）、
+   协作任务（解析 `COLLAB_{id}` / `?taskId=` → 直达任务页）、异常报告（带单号预置筛选）。
+
+**验证**：后端 `mvn -o compile` BUILD SUCCESS；`app.json` JSON 合法（分包 29→30）；
+5 个新页面 × 4 文件齐全；11 个 JS 文件 `node --check` 全 OK。
+
+**踩坑记录**：
+- 小程序页面注册在 `app.json` 的 **`subpackages`（全小写）**，按 `subPackages` 读会得到 0 个分包而误判结构。
+- 新增页面必须**同时**改两处入口：`bellTaskActions.js`（铃铛）+ `pages/todo-detail/index.js`（中转页 `HANDLE_ROUTE`），
+  漏一处就会出现「从这里点能进、从那里点只能看」。
+- 后端枚举状态用 `valueOf(newStatus.toUpperCase())` 解析时，**前端必须传大写**，否则 500/校验失败。
+
+**追加决策：端到端「一端处理、另一端立刻同步」的核实与收敛（同日）**
+
+用户要求「手机端审核了 PC 端就没有这个状态了，相反一样的逻辑，全部核实清楚」。
+核实方法：逐类比对「手机端调用路径 ↔ PC 端调用路径 ↔ 状态落库表 ↔ 列表查询是否回读该表」。
+
+**结论：五类全部天然同步** —— 因为两端调的是**同一套后端接口**，不存在两套写入口。三处硬保障：
+1. **`approvalId` 必须是确定性 key**：`buildDetailApprovalId` = `"PAY_" + md5(租户|orderId|orderNo|styleNo|color|size|operatorId|工序|菲号)`。
+   两端各自算 key，只有「不含时间戳/随机数」时才可能对上。**这是同步的前提，改动时不可破坏。**
+2. **列表必须回读库、不能只靠前端内存**：`getOperatorSummary` 每次用
+   `approvalStatusService.getApprovalStatus(approvalId, tenantId)` 从库注入 `approvalStatus`。
+   若哪天改成"前端本地 Set 记录已审核"，跨端就又不同步了。
+3. **进入页面必须重新拉取**：手机端各页 `onShow`；PC 端待办面板轮询；对账页 `useSync`。
+
+**发现并修复的唯一真实不对称**：`EXCEPTION_REPORT` 待办深链指向 PC `/production/order-flow`，
+而 order-flow 页**没有任何异常处理入口** → 手机端能"标记已解决"、PC 端只能看。
+修复：新建 PC 页 `Production/ExceptionReport`（+ `exceptionReportApi` + 路由 `/production/exception-report`），
+并把后端深链改为 `?keyword={orderNo}` 直达预筛选。
+（协作任务的 `xiaoyun://tasks` 深链看似"不跳转"，实为**设计如此** —— 任务已在 AI 助手面板列表中，
+且面板带 `claimTask/completeTask` 与轮询，故本身即同步。）
+
+---
+
+## D-408：图片上传控件原生 input 暴露 —— 「隐藏」一律回退内联样式（2026-09-14）
 
 ---
 

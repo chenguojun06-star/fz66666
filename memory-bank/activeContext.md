@@ -1,7 +1,72 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-14（D-408 图片上传控件原生 input 暴露修复：原子类隐藏回退内联）
+> 最后更新：2026-09-15（D-417 手机端财务三类独立处理页：物料对账/费用报销/工资结算审批）
+
+---
+
+## D-417 手机端「只能看不能办」待办补齐独立处理页（未提交）
+
+**用户诉求**：异常报告/样衣开发、工资结算、物料对账/费用报销、协作任务在手机端只能查看，
+要求各自建独立页面、各自有入口按钮、沿用现有手机卡片风格，并注意内外部账号差异。
+
+**已完成（财务三类，小程序分包 `pages/finance`）**：
+- [x] `pages/finance/reconciliation/index` 物料对账：列表 + 状态推进（核实→审批→付款）+ 退回
+- [x] `pages/finance/reimbursement/index` 费用报销：列表 + 批准/驳回 + 确认付款
+- [x] `pages/finance/payroll-approval/index` 工资结算：operator-summary 列表 + 单条/批量审核明细
+- [x] 接口封装 `utils/api-modules/finance.js`：新增 `materialReconciliation`、`expenseReimbursement`，
+      `payrollSettlement` 增 `approveDetail`；`utils/api.js` require/exports 同步
+- [x] 路由连通：`bellTaskActions.handleBusinessTask` 3 个 case 改指新页；`pages/todo-detail` 的
+      `HANDLE_ROUTE`/`HANDLE_LABEL` 同步
+- [x] 样衣开发：解析待办 `id`(`STY_{styleId}_{stage}`)/`deepLinkPath`(`/style-info/{styleId}`) → 直达
+      `sample-development/detail?styleId=`（原仅落列表）
+- [x] 内外部区分：财务三页对 `isFactoryAccount()` 直接拦截（工厂账号不参与租户财务）；
+      工资审批复刻 PC 端规则「外部工厂订单须进入终态才可审核」
+- [x] 验证：`node --check` 全通过、`app.json` JSON 合法、3 页 × 4 文件齐全
+- [x] 协作任务独立页：`pages/collab-task/detail/index`（挂新分包 `pages/collab-task`）+
+      `utils/api-modules/collaboration.js`；状态流 `PENDING→ACCEPTED→IN_PROGRESS→COMPLETED`（+CANCELLED）
+- [x] 异常报告：**后端补齐处理能力** —— 迁移 `V202709150400`（加 handler_id/handler_name/handle_note/
+      handle_time + idx_exception_status）、实体加字段、`ExceptionReportOrchestrator.list/handleException`、
+      Controller `GET /list` + `POST /{id}/handle?action=resolve|reopen&note=`
+- [x] 手机端异常处理页 `pages/smart-ops/exception-detail/index` +
+      `api.production.listExceptions/handleException`
+- [x] 验证：后端 `mvn -o compile` BUILD SUCCESS；11 个 JS 文件 `node --check` 全 OK；
+      `app.json` JSON 合法（分包 29→30）；5 个新页面 × 4 文件齐全
+- [x] **端到端同步核实（用户要求"手机端与 PC 端审核必须完全同步"）**：逐类比对两端调用路径 ↔ 状态落库表，
+      结论**五类全部天然同步**（同一套后端接口、单一数据源）；**修复唯一一处不对称** ——
+      `EXCEPTION_REPORT` 深链原指向 PC `/production/order-flow`（该页无异常处理入口），
+      已新建 PC 页 `Production/ExceptionReport` + `services/production/exceptionReportApi.ts` + 路由
+      `/production/exception-report`，并改后端深链为 `?keyword={orderNo}`
+- [x] 顺手修复 `pages/collab-task/detail` 只有 `onLoad` 无 `onShow` 的陈旧状态隐患
+- [ ] 全部改动仍在工作区未提交（D-408 图片上传回退 / D-410 到货小数化 / D-417 手机端页面 + PC 异常页）
+
+**同步性硬保障（已逐条验证，后续改动勿破坏）**：
+1. 工资审批 `approvalId` = `buildDetailApprovalId` 的**确定性 MD5**（`"PAY_" + md5(tenant|orderId|orderNo|styleNo|color|size|operatorId|processName|bundleNo)`），
+   不含时间戳/随机数 —— 两端算出的 key 必然一致，**切勿改成含时间/随机的 key**。
+2. `approvalStatus` 由 `PayrollSettlementController.getOperatorSummary` **每次从库注入**
+   （`approvalStatusService.getApprovalStatus`），**不是前端缓存**。
+3. 手机端 5 个新页均有 `onShow` 重新拉取；PC 端待办面板有轮询；`MaterialReconciliation` 用 `useSync` 跨端刷新。
+
+**★ 手机端「应用 / 职务 / 权限」三层体系（新增应用时的完整 checklist）**：
+1. **应用清单**：`pages/home/index.js` 与 `pages/more-apps/index.js` **两处 `ALL_APPS`**（7 分组，必须同步）。
+2. **菜单可见性（按职务）**：两文件各加 `APP_ID_TO_MENU_KEY` 映射；后端
+   `TenantSmartFeatureOrchestrator.MINIPROGRAM_MENU_KEYS` + `MENU_KEY_LABELS` 加 key；
+   角色 = `admin/supervisor/worker`（key 形如 `miniprogram.menu.xxx.role.worker`），**默认全员可见**，
+   租户在 PC 端按职务关闭；过滤规则 `flags[menuKey] !== false`。
+3. **功能权限（按钮级）**：`utils/permission.js` 的 `featurePermissions`（`hasFeaturePermission`）。
+- [x] D-417 补齐上述三层：后端加 5 个菜单 key；home + more-apps 各加 5 应用项与映射；
+      `permission.js` 加 `approve_reconciliation`/`approve_expense`/`approve_payroll`/`handle_exception`，
+      4 个页面改用 `hasFeaturePermission('...')`（与借支页 `approve_advance` 规范统一）
+- [x] 新增 `pages/collab-task/list/index`（协作任务列表）作为应用入口落地页（详情页需 taskId，不能直接作入口）
+- [x] 验证：8 个 JS `node --check` 全 OK；app.json 合法（分包 30）；后端 BUILD SUCCESS
+
+**后端能力约束（重要）**：
+- 异常报告（已解决）：原只有 `POST /report`、status 永远停在 PENDING；D-417 已补 `list` + `handle`
+- 统一待办：`IntelligenceController` 仅 `GET /pending-tasks/my|summary`，**仍无"标记完成"接口**
+- 协作任务：`IntelligenceTaskCenterController`（claim/status/my-tasks）接口齐全 —— 已用
+- 协作任务状态用 `CollaborationTask.TaskStatus.valueOf(toUpperCase())` 解析，**前端必须传大写**
+
+---
 
 ---
 

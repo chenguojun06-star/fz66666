@@ -288,11 +288,24 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
         )}
       </SideDrawer>
 
+      {/*
+       * filter 取值依据（勿凭感觉改）：
+       * - module='仓库管理'：AOP 的 resolveModule() 对 /api/warehouse/finished-inventory/*
+       *   命中 u.contains("/warehouse/finished") 分支返回 "仓库管理"。
+       * - 不传 targetType：AOP 的 resolveTargetType() 对同一 URI 返回的是 "仓库单"
+       *   （命中 u.contains("/warehouse") 分支），不是"商品入库"；且入库编辑走的是
+       *   Orchestrator + Helper 路径，targetType 恒为 null。传错就是 0 条。
+       * - targetIds 传该 SKU 的入库单 id（AOP 从请求参数里解析出的就是 warehousingId），
+       *   由 RecordLogDrawer 客户端过滤（拉最近 200 条再匹配）。
+       */}
       <RecordLogDrawer
         open={logOpen}
         onClose={() => setLogOpen(false)}
         title={record ? `操作日志 - ${record.styleNo || ''} / ${skuCode}` : '操作日志'}
-        filter={record ? { module: '仓库管理', targetType: '商品入库', targetIds: [skuCode, record.styleNo || ''].filter(Boolean) as string[] } : { module: '仓库管理' }}
+        filter={{
+          module: '仓库管理',
+          targetIds: warehousingList.map((r) => r.id).filter(Boolean),
+        }}
       />
     </>
   );

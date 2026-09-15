@@ -299,8 +299,22 @@ function handleShipmentTask(task) {
  * @param {Object} _task - 任务对象
  * @returns {void}
  */
-function handleStyleDevTask(_task) { // eslint-disable-line no-unused-vars
-  safeNavigate({ url: '/pages/sample-development/index/index' }, 'navigateTo').catch(() => {});
+function handleStyleDevTask(task) {
+  // D-416：样衣开发待办可解析出 styleId，改为直达详情页（原仅落列表，用户还要再找一遍）
+  //   id           = "STY_{styleId}_{stageKey}"
+  //   deepLinkPath = "/style-info/{styleId}?tab={tabKey}"
+  let styleId = '';
+  const dl = String((task && task.deepLinkPath) || '');
+  const m = dl.match(/\/style-info\/([^/?]+)/);
+  if (m) styleId = decodeURIComponent(m[1]);
+  if (!styleId && /^STY_/.test(String((task && task.id) || ''))) {
+    styleId = String(task.id).replace(/^STY_/, '').replace(/_[^_]*$/, '');
+  }
+  if (styleId) {
+    safeNavigate({ url: '/pages/sample-development/detail/index?styleId=' + encodeURIComponent(styleId) }, 'navigateTo').catch(() => {});
+  } else {
+    safeNavigate({ url: '/pages/sample-development/index/index' }, 'navigateTo').catch(() => {});
+  }
 }
 
 /**
@@ -345,19 +359,24 @@ function handleBusinessTask(task) {
     // 缺口类型：点击直达最近真实业务页（与 PC 一致，不中转包装页）
     // 只读展示逻辑已由后端按租户+角色过滤，这里仅做页面直达
     case 'PAYROLL_SETTLEMENT':
-      safeNavigate({ url: '/pages/payroll/payroll' }, 'navigateTo').catch(() => {});
+      // D-416：直达手机端独立审批页（此前落工资页，只能看不能办）
+      safeNavigate({ url: '/pages/finance/payroll-approval/index?status=pending' }, 'navigateTo').catch(() => {});
       break;
     case 'MATERIAL_RECON':
+      // D-416：直达物料对账处理页（此前落付款页，基本无处理能力）
+      safeNavigate({ url: '/pages/finance/reconciliation/index?status=pending' }, 'navigateTo').catch(() => {});
+      break;
     case 'EXPENSE_REIMBURSE':
-      safeNavigate({ url: '/pages/finance/payment/index' }, 'navigateTo').catch(() => {});
+      // D-416：直达费用报销审批页（此前与对账共用付款页）
+      safeNavigate({ url: '/pages/finance/reimbursement/index?status=pending' }, 'navigateTo').catch(() => {});
       break;
     case 'EXCEPTION_REPORT':
-      // 订单级异常 → 订单详情页（按 orderNo/orderId 直达）
-      if (task.orderNo) {
-        safeNavigate({ url: '/pages/dashboard/order-detail/index?orderNo=' + encodeURIComponent(task.orderNo) }, 'navigateTo').catch(() => {});
-      } else {
-        safeNavigate({ url: '/pages/smart-ops/index' }, 'navigateTo').catch(() => {});
-      }
+      // D-416：异常报告已建独立处理页（标记已解决/重新打开）。
+      // 带单号时预置筛选，直达待处理列表；无单号则看全部待处理。
+      safeNavigate({
+        url: '/pages/smart-ops/exception-detail/index?status=PENDING'
+          + (task.orderNo ? '&keyword=' + encodeURIComponent(task.orderNo) : ''),
+      }, 'navigateTo').catch(() => {});
       break;
     case 'SAMPLE_LOAN':
       safeNavigate({ url: '/pages/warehouse/sample/scan-action/index' }, 'navigateTo').catch(() => {});
@@ -366,8 +385,24 @@ function handleBusinessTask(task) {
       safeNavigate({ url: '/pages/warehouse/material/scan/index' }, 'navigateTo').catch(() => {});
       break;
     case 'COLLAB_TASK':
+      // D-416：协作任务已建独立处理页（领取/开始/完成）。待办 id = "COLLAB_{taskId}"，
+      // deepLinkPath = "xiaoyun://tasks?taskId={id}"，两种方式都可解析出 taskId
+      var collabId = '';
+      var dlMatch = String(task.deepLinkPath || '').match(/taskId=(\d+)/);
+      if (dlMatch) collabId = dlMatch[1];
+      if (!collabId) {
+        var idMatch = String(task.id || '').match(/^COLLAB_(\d+)/);
+        if (idMatch) collabId = idMatch[1];
+      }
+      if (collabId) {
+        safeNavigate({ url: '/pages/collab-task/detail/index?taskId=' + encodeURIComponent(collabId) }, 'navigateTo').catch(() => {});
+      } else {
+        // 解析不出 taskId 时兜底到统一待办详情页，避免白屏
+        openUnifiedDetail(task);
+      }
+      break;
     default:
-      // 协作任务手机端无独立处理页，落到统一待办详情页提示
+      // 未识别类型 → 统一待办详情页（只读展示，不自造写操作）
       openUnifiedDetail(task); break;
   }
 }

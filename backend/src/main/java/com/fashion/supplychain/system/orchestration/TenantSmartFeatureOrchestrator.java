@@ -75,7 +75,13 @@ public class TenantSmartFeatureOrchestrator {
             "miniprogram.menu.salesOverview",
             "miniprogram.menu.returnList",
             "miniprogram.menu.userApproval",
-            "miniprogram.menu.feedback"
+            "miniprogram.menu.feedback",
+            // D-417：手机端新增的 5 个「可办事」独立页（默认全员可见，租户可按职务关闭）
+            "miniprogram.menu.materialRecon",
+            "miniprogram.menu.expenseReimburse",
+            "miniprogram.menu.payrollApproval",
+            "miniprogram.menu.exceptionReport",
+            "miniprogram.menu.collabTask"
     );
 
     public static final List<String> MINIPROGRAM_MENU_ROLES = Arrays.asList(
@@ -115,6 +121,12 @@ public class TenantSmartFeatureOrchestrator {
         put("miniprogram.menu.returnList", "退货管理");
         put("miniprogram.menu.userApproval", "用户审批");
         put("miniprogram.menu.feedback", "意见反馈");
+        // D-417：财务审批 / 业务处理独立页
+        put("miniprogram.menu.materialRecon", "物料对账");
+        put("miniprogram.menu.expenseReimburse", "费用报销");
+        put("miniprogram.menu.payrollApproval", "工资结算审批");
+        put("miniprogram.menu.exceptionReport", "生产异常");
+        put("miniprogram.menu.collabTask", "协作任务");
     }};
 
     public static final List<String> ALL_FEATURE_KEYS;

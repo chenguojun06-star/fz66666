@@ -6,12 +6,13 @@ const { safeNavigate } = require('../../utils/uiHelper');
  * 缺口类型（工资结算/物料对账/费用报销/异常/协作/样衣借还/领料出库）的手机端承载页。
  */
 
-// 每种缺口类型「去处理」就近可达的页面；无对应页的类型(如协作任务)给空，改为提示
+// 每种缺口类型「去处理」就近可达的页面
+// D-417：财务三类已建独立处理页（原统一落 /pages/finance/payment/index，只能看不能办）
 const HANDLE_ROUTE = {
-  PAYROLL_SETTLEMENT: '/pages/payroll/payroll',
-  MATERIAL_RECON: '/pages/finance/payment/index',
-  EXPENSE_REIMBURSE: '/pages/finance/payment/index',
-  EXCEPTION_REPORT: '/pages/smart-ops/index',
+  PAYROLL_SETTLEMENT: '/pages/finance/payroll-approval/index?status=pending',
+  MATERIAL_RECON: '/pages/finance/reconciliation/index?status=pending',
+  EXPENSE_REIMBURSE: '/pages/finance/reimbursement/index?status=pending',
+  EXCEPTION_REPORT: '/pages/smart-ops/exception-detail/index?status=PENDING',
   SAMPLE_LOAN: '/pages/warehouse/sample/scan-action/index',
   MATERIAL_PICKING: '/pages/warehouse/material/scan/index',
   COLLAB_TASK: null, // 协作任务手机端无处理页，提示在 PC 端处理
@@ -19,10 +20,10 @@ const HANDLE_ROUTE = {
 
 // 处理按钮文案（就近页的入口语义）
 const HANDLE_LABEL = {
-  PAYROLL_SETTLEMENT: '去查看工资',
-  MATERIAL_RECON: '去财务处理',
-  EXPENSE_REIMBURSE: '去财务处理',
-  EXCEPTION_REPORT: '去异常处理',
+  PAYROLL_SETTLEMENT: '去审核工资',
+  MATERIAL_RECON: '去处理对账',
+  EXPENSE_REIMBURSE: '去审批报销',
+  EXCEPTION_REPORT: '去处理异常',
   SAMPLE_LOAN: '去样衣借还',
   MATERIAL_PICKING: '去领料',
   COLLAB_TASK: '', // 无入口，不给按钮

@@ -424,9 +424,11 @@ public class PendingTaskOrchestrator {
             dto.setOrderNo(r.getOrderNo());
             // D-114：深链直达订单流程页（原只跳 /production 根路由）
             // D-326：同逾期单，必须带 orderNo 否则 order-flow 渲染整页空白
+            // D-417：改为直达「生产异常」处理页 —— PC 端已补齐该页面，
+            //        原落 order-flow 时 PC 端没有异常处理按钮，会出现「手机能办、PC 只能看」的不对称
             dto.setDeepLinkPath(StringUtils.hasText(r.getOrderNo())
-                    ? "/production/order-flow?orderNo=" + pathSegment(r.getOrderNo())
-                    : "/production/order-flow");
+                    ? "/production/exception-report?keyword=" + pathSegment(r.getOrderNo())
+                    : "/production/exception-report");
             dto.setPriority("high");
             dto.setCreatedAt(r.getCreateTime());
             dto.setTaskStatus("pending");
