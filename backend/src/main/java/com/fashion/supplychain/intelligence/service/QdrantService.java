@@ -142,8 +142,56 @@ public class QdrantService {
     /** 启动探测通过后为 true；一旦探测/Qdrant 不可用则置 false，短路后续所有调用（避免反复连不上+白调付费 embedding） */
     private volatile boolean qdrantReady = true;
 
+    /** 被短路禁用的时刻（毫秒）；0 表示未被禁用 */
+    private final java.util.concurrent.atomic.AtomicLong qdrantDisabledAt =
+            new java.util.concurrent.atomic.AtomicLong(0);
+
+    /** 禁用后隔多久允许重新探测一次。探测只打 /healthz，不生成 embedding，不花钱。 */
+    private static final long QDRANT_REPROBE_INTERVAL_MS = java.util.concurrent.TimeUnit.MINUTES.toMillis(5);
+
     private boolean qdrantActive() {
-        return qdrantEnabled && qdrantReady;
+        if (!qdrantEnabled) return false;
+        if (qdrantReady) return true;
+        // ⚠️ 原逻辑里 qdrantReady 一旦置 false 就**再也没人置回 true**（全文件仅 143/146/336/344 四处，
+        //    后两处都是置 false）。而它在 @PostConstruct validateCollectionDimension() 里被设置 ——
+        //    只要后端启动时 Qdrant 恰好不可用（容器正在重建），整个向量功能就**永久禁用直到后端重启**。
+        //    Qdrant 容器因健康检查 404 被反复重建时，后端撞上这个窗口的概率极高，
+        //    表现就是"莫名其妙又坏了、重启/重新部署就好了"。
+        //    这里加冷却重探测：最多每 5 分钟一次，且只打 /healthz（不生成 embedding，不花钱），
+        //    失败就重新计时，不影响原本"避免白调付费 embedding"的短路意图。
+        long disabledAt = qdrantDisabledAt.get();
+        if (disabledAt > 0 && System.currentTimeMillis() - disabledAt >= QDRANT_REPROBE_INTERVAL_MS) {
+            reprobeQdrant();
+        }
+        return qdrantReady;
+    }
+
+    /**
+     * 重新探测 Qdrant 是否恢复。冷却期内直接返回，保证同一时刻只有一个线程真正发起请求。
+     * 注意：不能用 {@link #isAvailable()} —— 它第一行就是 qdrantActive()，会无限递归。
+     */
+    private synchronized void reprobeQdrant() {
+        if (qdrantReady || restTemplate == null) return;
+        long disabledAt = qdrantDisabledAt.get();
+        if (disabledAt == 0
+                || System.currentTimeMillis() - disabledAt < QDRANT_REPROBE_INTERVAL_MS) {
+            return;
+        }
+        try {
+            org.springframework.http.ResponseEntity<String> resp =
+                    restTemplate.getForEntity(qdrantUrl + "/healthz", String.class);
+            if (resp.getStatusCode().is2xxSuccessful()) {
+                qdrantReady = true;
+                qdrantDisabledAt.set(0);
+                log.info("[Qdrant] 重新探测成功，向量功能已恢复（此前因启动探测失败被短路禁用）");
+                return;
+            }
+        } catch (Exception e) {
+            log.debug("[Qdrant] 重新探测仍未连通（{}），{}分钟后重试: {}",
+                    qdrantUrl, QDRANT_REPROBE_INTERVAL_MS / 60000, e.getMessage());
+        }
+        // 仍未恢复：重新计时，避免每个请求都去探测
+        qdrantDisabledAt.set(System.currentTimeMillis());
     }
 
     /**
@@ -251,6 +299,45 @@ public class QdrantService {
         }
     }
 
+    /**
+     * 集合丢失自愈：把「集合已校验」的一次性闩锁复位。
+     *
+     * <p>背景（2026-09-14 线上事故）：Qdrant 容器若未挂持久卷，重建后整个 storage 丢失，
+     * 集合随之消失。而 {@code collectionVerified} / {@code styleImageCollectionVerified}
+     * 是一次性闩锁 —— 一旦置 true 就再也不校验（见 ensureCollectionExists 的首行 return），
+     * 于是集合没了以后每次 upsert/search 都拿 404，却再没人去重建它，
+     * 结果就是「向量写入静默失败，一直失败到下次后端重启」，日志里只剩一堆 404 看不出根因。
+     *
+     * <p>这里在捕获到「集合不存在」（404 / Not found）时把闩锁复位，
+     * 下一次调用就会走 ensureCollectionExists() 自动重建集合，无需重启。
+     *
+     * @param e     写入/检索抛出的异常
+     * @param scene 场景名，仅用于日志
+     * @param latch 对应集合的校验闩锁
+     */
+    private static boolean isCollectionNotFound(Throwable e) {
+        if (e == null) return false;
+        String msg = String.valueOf(e.getMessage());
+        if (msg.isEmpty() || "null".equals(msg)) return false;
+        // RestTemplate 默认错误处理器抛出的是 HttpClientErrorException，
+        // getMessage() 形如 "404 Not Found"（响应体不在 message 里），所以 404 是最可靠的信号。
+        if (msg.contains("404")) return true;
+        // 若异常消息里带上了 Qdrant 的响应体，再认一次 "Collection ... not found"。
+        // 注意：不能只匹配裸的 "not found" —— sparse 不支持一类的报错也可能含该词，
+        // 那样会把「不支持混合检索」误判成「集合丢失」。
+        String lower = msg.toLowerCase();
+        return lower.contains("collection") && lower.contains("not found");
+    }
+
+    private void invalidateCollectionIfNotFound(Throwable e, String scene, AtomicBoolean latch) {
+        if (e == null || latch == null) return;
+        if (!isCollectionNotFound(e)) return;
+        if (latch.compareAndSet(true, false)) {
+            log.warn("[Qdrant] 集合疑似丢失（场景={}），已复位校验闩锁，下次调用将自动重建集合。原因：{}",
+                    scene, e.getMessage());
+        }
+    }
+
     @PostConstruct
     void initRestTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -295,17 +382,21 @@ public class QdrantService {
                 log.debug("[Qdrant] 集合 {} 尚未创建，跳过启动维度校验（首次使用时自动创建）", collectionName);
             } else {
                 qdrantReady = false;
-                log.warn("[Qdrant] 启动探测失败（url={}）: {} — 本实例已自动禁用向量记忆，相关检索降级为空结果；"
-                        + "如需启用请启动 Qdrant 服务或在环境变量配置 QDRANT_URL/QDRANT_ENABLED",
-                        qdrantUrl, httpEx.getMessage());
+                qdrantDisabledAt.set(System.currentTimeMillis());
+                log.warn("[Qdrant] 启动探测失败（url={}）: {} — 本实例暂时禁用向量记忆，相关检索降级为空结果；"
+                        + "每 {} 分钟会自动重新探测一次，恢复后无需重启。"
+                        + "如需立即启用请启动 Qdrant 服务或在环境变量配置 QDRANT_URL/QDRANT_ENABLED",
+                        qdrantUrl, httpEx.getMessage(), QDRANT_REPROBE_INTERVAL_MS / 60000);
             }
         } catch (Exception e) {
             // 启动探测失败（如云端容器无 Qdrant）：本实例直接短路，避免每次 AI 查询都
             // 先调付费 embedding 再连接失败的浪费，同时停止 Connection refused 刷屏
             qdrantReady = false;
-            log.warn("[Qdrant] 启动探测失败（url={}）: {} — 本实例已自动禁用向量记忆，相关检索降级为空结果；"
-                    + "如需启用请启动 Qdrant 服务或在环境变量配置 QDRANT_URL/QDRANT_ENABLED",
-                    qdrantUrl, e.getMessage());
+            qdrantDisabledAt.set(System.currentTimeMillis());
+            log.warn("[Qdrant] 启动探测失败（url={}）: {} — 本实例暂时禁用向量记忆，相关检索降级为空结果；"
+                    + "每 {} 分钟会自动重新探测一次，恢复后无需重启。"
+                    + "如需立即启用请启动 Qdrant 服务或在环境变量配置 QDRANT_URL/QDRANT_ENABLED",
+                    qdrantUrl, e.getMessage(), QDRANT_REPROBE_INTERVAL_MS / 60000);
         }
     }
 
@@ -386,6 +477,7 @@ public class QdrantService {
             return resp.getStatusCode().is2xxSuccessful();
         } catch (Exception e) {
             logQdrantConnFail("upsert", "pointId=" + pointId + " " + e.getMessage());
+            invalidateCollectionIfNotFound(e, "upsert", collectionVerified);
             return false;
         }
     }
@@ -460,6 +552,8 @@ public class QdrantService {
             return pointsNode.size();
         } catch (Exception e) {
             log.warn("[Qdrant] 批量upsert失败（批大小={}），回退逐条写入: {}", chunk.size(), e.getMessage());
+            // 先复位闩锁，后面的逐条回退写入才会顺带把集合重建出来
+            invalidateCollectionIfNotFound(e, "upsertBatch", collectionVerified);
             int ok = 0;
             for (VectorPoint p : chunk) {
                 try {
@@ -684,6 +778,11 @@ public class QdrantService {
      */
     public List<ScoredPoint> search(Long tenantId, String queryText, int topK) {
         if (!qdrantActive()) return Collections.emptyList();
+        // 集合丢失自愈：检索路径原本不校验集合（直接打 /points/search），
+        // 所以光复位闩锁没用 —— 只有写入路径会重建。这里补上校验，
+        // 纯检索场景（AI 问答只查不写）才能把丢掉的集合重新建起来。
+        // 有闩锁兜底：集合已校验时 ensureCollectionExists() 首行即 return，不产生额外请求。
+        ensureCollectionExists();
         List<ScoredPoint> results = new ArrayList<>();
         try {
             float[] vector = computeEmbedding(queryText);
@@ -742,6 +841,7 @@ public class QdrantService {
             }
         } catch (Exception e) {
             log.warn("[Qdrant] search失败 tenantId={}: {}", tenantId, e.getMessage());
+            invalidateCollectionIfNotFound(e, "search", collectionVerified);
         }
         return results;
     }
@@ -886,6 +986,14 @@ public class QdrantService {
             }
         } catch (Exception e) {
             String msg = e.getMessage();
+            // ⚠️ 顺序很重要：集合丢失同样表现为 404，但它 ≠ "不支持混合检索"。
+            // 容器被重建导致集合消失时，旧逻辑会在这里把 404 判成「不支持混合检索」并永久降级，
+            // 之后即使集合重建成功，混合检索也再也回不来（一次性闩锁）。
+            if (isCollectionNotFound(e)) {
+                invalidateCollectionIfNotFound(e, "hybridSearch", collectionVerified);
+                // 不设置 hybridSearchDegraded：等集合重建后应该重新尝试混合检索
+                return search(tenantId, queryText, topK);
+            }
             // 判断是否为不支持混合检索的错误
             if (msg != null && (msg.contains("sparse") || msg.contains("not found")
                     || msg.contains("not supported") || msg.contains("404")
@@ -1159,6 +1267,9 @@ public class QdrantService {
         }
         if (!created) {
             log.warn("[Qdrant] 集合 {} 创建失败", collectionName);
+        } else if (sparseWriteEnabled) {
+            // 新集合支持 sparse：把可能因集合丢失而误降级的混合检索恢复回来
+            hybridSearchDegraded.set(false);
         }
     }
 
@@ -1539,6 +1650,7 @@ public class QdrantService {
             return resp.getStatusCode().is2xxSuccessful();
         } catch (Exception e) {
             logQdrantConnFail("style_images upsert", "styleId=" + styleId + " " + e.getMessage());
+            invalidateCollectionIfNotFound(e, "style_images upsert", styleImageCollectionVerified);
             return false;
         }
     }
@@ -1548,6 +1660,8 @@ public class QdrantService {
      */
     public List<SimilarStyle> searchSimilarStyleImages(float[] embedding, int topK, Long tenantId) {
         if (!qdrantActive()) return Collections.emptyList();
+        // 同 search()：检索路径补上集合校验，否则闩锁复位后没人重建（以图搜款只查不写）
+        ensureStyleImageCollectionExists();
         List<SimilarStyle> results = new ArrayList<>();
         try {
             ObjectNode body = objectMapper.createObjectNode();
@@ -1585,6 +1699,7 @@ public class QdrantService {
             }
         } catch (Exception e) {
             logQdrantConnFail("style_images search", e.getMessage());
+            invalidateCollectionIfNotFound(e, "style_images search", styleImageCollectionVerified);
         }
         return results;
     }
