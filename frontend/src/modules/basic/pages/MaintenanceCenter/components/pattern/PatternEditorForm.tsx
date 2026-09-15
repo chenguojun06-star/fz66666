@@ -49,7 +49,7 @@ export const PatternEditorForm: React.FC<PatternEditorFormProps> = ({ form }) =>
           ref={fileInputRef}
           type="file"
           accept={ACCEPT_PATTERN}
-          className="u-d-none"
+          style={{ display: 'none' }}
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) form.setFieldValue('patternFile', [{ uid: '-1', name: f.name, originFileObj: f }]);

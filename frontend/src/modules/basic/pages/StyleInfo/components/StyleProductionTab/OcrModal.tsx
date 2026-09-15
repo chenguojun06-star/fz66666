@@ -47,7 +47,7 @@ const OcrModal: React.FC<Props> = ({
         ref={fileInputRef as React.RefObject<HTMLInputElement>}
         type="file"
         accept="image/*,.pdf"
-        className="u-d-none"
+        style={{ display: 'none' }}
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) { onFileSelect(f); }

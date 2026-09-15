@@ -230,7 +230,7 @@ const PatternSupplementButton: React.FC<{
               ref={fileInputRef}
               type="file"
               accept={acceptFormats}
-              className="u-d-none"
+              style={{ display: 'none' }}
               onChange={(e) => {
                 if (e.target.files?.length) handleFileSelect(e.target.files);
               }}

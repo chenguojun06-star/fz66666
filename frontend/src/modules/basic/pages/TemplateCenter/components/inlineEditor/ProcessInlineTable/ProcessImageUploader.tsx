@@ -104,7 +104,7 @@ const ProcessImageUploader: React.FC<ProcessImageUploaderProps> = ({
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              className="u-d-none"
+              style={{ display: 'none' }}
               disabled={readOnly}
               onChange={handleFileChange}
             />

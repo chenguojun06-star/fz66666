@@ -106,7 +106,7 @@ const GlobalImagePreview: React.FC = () => {
   if (!open || !src) return null;
 
   return createPortal(
-    <div className="u-d-none">
+    <div style={{ display: 'none' }}>
       <img src={src} alt={alt || ''} />
       <Image
         src={src}

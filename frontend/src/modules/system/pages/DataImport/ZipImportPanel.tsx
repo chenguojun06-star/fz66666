@@ -75,7 +75,7 @@ const ZipImportPanel: React.FC = () => {
               ref={zipInputRef}
               type="file"
               accept=".zip"
-              className="u-d-none"
+              style={{ display: 'none' }}
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (!f) return;

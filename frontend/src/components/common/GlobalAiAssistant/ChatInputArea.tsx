@@ -82,7 +82,7 @@ const ChatInputArea: React.FC<ChatInputAreaProps> = ({
         if (f) { e.preventDefault(); handleAttachFile(f); }
       }}
     >
-      <input ref={fileInputRef} type="file" className="u-d-none" accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,.gif,.pdf,.webp,.bmp" onChange={handleFileSelect} />
+      <input ref={fileInputRef} type="file" style={{ display: 'none' }} accept=".xlsx,.xls,.csv,.jpg,.jpeg,.png,.gif,.pdf,.webp,.bmp" onChange={handleFileSelect} />
 
       {/* 图片预览区域 */}
       {previewImage && (

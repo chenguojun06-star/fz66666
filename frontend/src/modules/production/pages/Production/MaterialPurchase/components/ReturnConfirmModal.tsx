@@ -91,7 +91,7 @@ const ReturnConfirmModal: React.FC<ReturnConfirmModalProps> = ({
               type="file"
               accept="image/*"
               multiple
-              className="u-d-none"
+              style={{ display: 'none' }}
               onChange={(e) => {
                 const files = e.target.files;
                 if (!files?.length) return;

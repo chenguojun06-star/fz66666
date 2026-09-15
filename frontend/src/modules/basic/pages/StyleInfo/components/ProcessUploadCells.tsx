@@ -50,7 +50,7 @@ export const ProcessImageCell: React.FC<{ record: any; readOnly?: boolean }> = (
       onDragOver={(e) => { e.preventDefault(); }}
       onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) handleFileSelect(e.dataTransfer.files); }}
       onPaste={(e) => { const f = e.clipboardData.files; if (f?.length) { e.preventDefault(); handleFileSelect(f); } }}>
-      <input ref={fileInputRef} type="file" accept="image/*" className="u-d-none"
+      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
         onChange={(e) => { if (e.target.files?.length) handleFileSelect(e.target.files); }} />
       {imgs.length > 0 && (
         <Image.PreviewGroup>
@@ -124,7 +124,7 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
       ))}
       {!readOnly && record.id && (
         <>
-          <input ref={fileInputRef} type="file" className="u-d-none"
+          <input ref={fileInputRef} type="file" style={{ display: 'none' }}
             onChange={(e) => { if (e.target.files?.length) handleFileSelect(e.target.files); }} />
           <Button icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}
             onClick={() => fileInputRef.current?.click()}>
@@ -183,7 +183,7 @@ export const NewRowImageUpload: React.FC<{
       onDragOver={(e) => { e.preventDefault(); }}
       onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files?.length) handleFileSelect(e.dataTransfer.files); }}
       onPaste={(e) => { const f = e.clipboardData.files; if (f?.length) { e.preventDefault(); handleFileSelect(f); } }}>
-      <input ref={fileInputRef} type="file" accept="image/*" className="u-d-none"
+      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
         onChange={(e) => { if (e.target.files?.length) handleFileSelect(e.target.files); }} />
       {value.length > 0 && (
         <Image.PreviewGroup>
@@ -247,7 +247,7 @@ export const NewRowAttachmentUpload: React.FC<{
         </div>
       ))}
       <>
-        <input ref={fileInputRef} type="file" className="u-d-none"
+        <input ref={fileInputRef} type="file" style={{ display: 'none' }}
           onChange={(e) => { if (e.target.files?.length) handleFileSelect(e.target.files); }} />
         <Button icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}
           onClick={() => fileInputRef.current?.click()}>

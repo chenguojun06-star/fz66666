@@ -214,7 +214,7 @@ function MultiImageUploadBox({
         type="file"
         accept={accept}
         multiple
-        className="u-d-none"
+        style={{ display: 'none' }}
         onChange={handleFileInputChange}
       />
 

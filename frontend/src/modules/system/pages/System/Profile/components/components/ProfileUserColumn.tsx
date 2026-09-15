@@ -52,7 +52,7 @@ const ProfileUserColumn: React.FC<ProfileUserColumnProps> = ({
             <Card title="修改密码">
                 <Form form={pwdForm} layout="vertical" requiredMark={false}>
                     {/* Hidden username field for browser password manager accessibility */}
-                    <input type="text" name="username" autoComplete="username" defaultValue={username ?? ''} className="u-d-none" readOnly aria-hidden="true" />
+                    <input type="text" name="username" autoComplete="username" defaultValue={username ?? ''} style={{ display: 'none' }} readOnly aria-hidden="true" />
                     <Form.Item label="原密码" name="oldPassword" rules={[{ required: true, message: '请输入原密码' }]}>
                         <Input.Password placeholder="请输入当前密码" autoComplete="current-password" />
                     </Form.Item>

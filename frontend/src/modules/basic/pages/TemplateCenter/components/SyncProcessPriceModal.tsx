@@ -184,7 +184,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          className="u-d-none"
+          style={{ display: 'none' }}
           disabled={!readyForScope || imageUploading}
           onChange={(e) => {
             const f = e.target.files?.[0];

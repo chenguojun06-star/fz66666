@@ -182,7 +182,7 @@ function ImageUploadBox({
         ref={inputRef}
         type="file"
         accept={accept}
-        className="u-d-none"
+        style={{ display: 'none' }}
         onChange={handleFileChange}
       />
       <Spin spinning={uploading}>

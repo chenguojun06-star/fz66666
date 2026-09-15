@@ -89,7 +89,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
               ref={excelInputRef}
               type="file"
               accept=".xlsx,.xls"
-              className="u-d-none"
+              style={{ display: 'none' }}
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (!f) return;

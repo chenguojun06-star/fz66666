@@ -272,7 +272,7 @@ const ExpenseReimbursementPage: React.FC = () => {
                     type="file"
                     accept="image/*"
                     multiple
-                    className="u-d-none"
+                    style={{ display: 'none' }}
                     onChange={(e) => { if (e.target.files?.length) processFiles(e.target.files); e.target.value = ''; }}
                   />
                   <Button

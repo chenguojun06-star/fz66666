@@ -330,7 +330,7 @@ const ProductionRequirementsSection: React.FC<Props> = ({
           </Popover>
           <Tooltip title="插入图片"><Button {...toolBtn} type="text" icon={<PictureOutlined />} loading={sheetUploading} onClick={() => imageInputRef.current?.click()} /></Tooltip>
           <input
-            ref={imageInputRef} type="file" accept="image/*" className="u-d-none"
+            ref={imageInputRef} type="file" accept="image/*" style={{ display: 'none' }}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) void insertUploadedImage(file);

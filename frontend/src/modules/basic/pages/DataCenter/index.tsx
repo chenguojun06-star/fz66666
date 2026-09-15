@@ -42,7 +42,7 @@ const PatternFilePicker: React.FC<{
         ref={ref}
         type="file"
         accept={ACCEPT_PATTERN}
-        className="u-d-none"
+        style={{ display: 'none' }}
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) onChange?.(f);

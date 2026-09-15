@@ -138,7 +138,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
         type="file"
         accept="image/*"
         multiple
-        className="u-d-none"
+        style={{ display: 'none' }}
         onChange={(e) => {
           uploadFiles(Array.from(e.target.files || []));
           e.currentTarget.value = '';

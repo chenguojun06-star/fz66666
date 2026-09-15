@@ -196,7 +196,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
               <span style={{ position: 'absolute', left: `${Math.min(50, 100)}%`, top: -6, width: 2, height: 14, background: 'var(--color-warning, var(--color-warning))' }} />
             </div>
             {/* 避免对未使用变量 maxBase 的警告 */}
-            <span aria-hidden className="u-d-none">{maxBase}</span>
+            <span aria-hidden style={{ display: 'none' }}>{maxBase}</span>
           </div>
 
           {item.reason ? (
