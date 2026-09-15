@@ -242,6 +242,8 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
               <InputNumber
                   min={0}
                   max={maxQty || undefined}
+                  precision={2}
+                  step={0.01}
                   style={{ width: '100%' }}
                   value={selected?.pickQuantity}
                   disabled={!selected?.stockId}

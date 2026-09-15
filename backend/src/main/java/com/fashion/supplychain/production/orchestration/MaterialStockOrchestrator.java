@@ -100,8 +100,8 @@ public class MaterialStockOrchestrator {
                 if (item == null) {
                     continue;
                 }
-                int qty = item.getQuantity() == null ? 0 : item.getQuantity();
-                if (qty <= 0) {
+                BigDecimal qty = item.getQuantity() == null ? BigDecimal.ZERO : item.getQuantity();
+                if (qty.compareTo(BigDecimal.ZERO) <= 0) {
                     continue;
                 }
                 LocalDateTime time = item.getCreateTime();
@@ -131,7 +131,8 @@ public class MaterialStockOrchestrator {
                 summary = materialKey == null ? null : byMaterialKey.get(materialKey);
             }
 
-            int recentOutQty = summary == null ? 0 : summary.quantity;
+            // D-414：领料汇总已是 BigDecimal，此处按小数取日均（1.32 米不再被截成 1）
+            double recentOutQty = summary == null ? 0d : summary.quantity.doubleValue();
             int dailyOutQty = (int) Math.ceil(recentOutQty / (double) days);
             int safetyStock = stock.getSafetyStock() == null ? 0 : stock.getSafetyStock();
             int suggestedSafety = Math.max(safetyStock, dailyOutQty * leadDays);
@@ -159,7 +160,8 @@ public class MaterialStockOrchestrator {
             // D-410：DTO 仍为 Integer，按原语义截断取整（库存小数精度暂不外泄到此告警列表）
             dto.setQuantity(quantity.intValue());
             dto.setSafetyStock(safetyStock);
-            dto.setRecentOutQuantity(recentOutQty);
+            // D-414：DTO 该字段仍是 Integer，按 CEILING 取整（1.32 米按 2 计，避免低估近期出库量）
+            dto.setRecentOutQuantity((int) Math.ceil(recentOutQty));
             dto.setSuggestedSafetyStock(suggestedSafety);
             dto.setDailyOutQuantity(dailyOutQty);
             dto.setNeedReplenish(need);
@@ -486,11 +488,12 @@ public class MaterialStockOrchestrator {
 
     @Data
     private static class Summary {
-        private int quantity;
+        // D-414：领料数量已支持小数，汇总也改 BigDecimal（int 会把 1.32 截成 1）
+        private BigDecimal quantity = BigDecimal.ZERO;
         private LocalDateTime lastTime;
 
-        void add(int qty, LocalDateTime time) {
-            this.quantity += qty;
+        void add(BigDecimal qty, LocalDateTime time) {
+            this.quantity = this.quantity.add(qty == null ? BigDecimal.ZERO : qty);
             if (time != null) {
                 if (this.lastTime == null || time.isAfter(this.lastTime)) {
                     this.lastTime = time;

@@ -1,7 +1,7 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { App, Button, Card, DatePicker, Empty, Select, Space, Statistic, Tag, Tooltip } from 'antd';
+import { App, Button, Card, Collapse, DatePicker, Empty, Select, Space, Statistic, Tag, Tooltip } from 'antd';
 import type { Dayjs } from 'dayjs';
-import { ExportOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
+import { ExportOutlined, CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, ReloadOutlined, DownloadOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useUser } from '@/utils/AuthContext';
 import { useSync } from '@/utils/syncManager';
 import PageLayout from '@/components/common/PageLayout';
@@ -313,6 +313,30 @@ const MaterialReconciliation: React.FC = () => {
             />
           </Card>
         </div>
+
+        {/* ===== 对账说明（可折叠，不占屏） ===== */}
+        <Collapse
+          ghost
+          size="small"
+          className="u-mb-8"
+          items={[{
+            key: 'how',
+            label: (
+              <span className="u-fs-12 u-fw-600" style={{ color: 'var(--color-text-secondary)' }}>
+                <InfoCircleOutlined style={{ marginRight: 5 }} />
+                物料对账怎么算的？（完成采购时按「物料去向」选择分账，点击展开）
+              </span>
+            ),
+            children: (
+              <div className="u-fs-13" style={{ lineHeight: 2 }}>
+                <div>① <b>选「入库到仓库」</b> → 物料进仓库，账走<b>物料仓库的出入库流水</b>（入库单 + 领料出库单），<b>不会出现在本对账页</b>。</div>
+                <div>② <b>选「直接使用」</b> → 采购款核销进<b>本对账页</b>，这里每单一条。</div>
+                <div>③ 本页<b>待审批 → 已审批 → 已付款</b> 走对账审核流程；如发现历史缺失可点「补生成」按最新规则扫一遍。</div>
+                <div>④ 若同一采购在「入库流水」和「物料对账」都出现，说明走了重复登记，请在完成采购时确认「物料去向」选对，避免对不平。</div>
+              </div>
+            ),
+          }]}
+        />
 
         {/* ===== 筛选区 ===== */}
         {/* D-140：状态Tab与统计卡功能完全重复（统计卡即可点击筛选），删除冗余Tab压缩页头 */}

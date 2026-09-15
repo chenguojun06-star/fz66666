@@ -65,8 +65,9 @@ public class ExternalFactoryMaterialDeductionHelper {
                         unitPrice = BigDecimal.ZERO;
                     }
                 }
-                int qty = item.getQuantity() != null ? item.getQuantity() : 0;
-                totalMaterialCost = totalMaterialCost.add(unitPrice.multiply(BigDecimal.valueOf(qty)));
+                // D-414：领料数量已是 BigDecimal，直接用（此前 int 会把 1.32 米截成 1，成本算少）
+                BigDecimal qty = item.getQuantity() != null ? item.getQuantity() : BigDecimal.ZERO;
+                totalMaterialCost = totalMaterialCost.add(unitPrice.multiply(qty));
             }
 
             if (totalMaterialCost.compareTo(BigDecimal.ZERO) <= 0) {

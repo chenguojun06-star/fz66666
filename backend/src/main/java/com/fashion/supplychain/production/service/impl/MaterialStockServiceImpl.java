@@ -128,7 +128,12 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
     @Override
     public void decreaseStock(String materialId, String color, String size, int quantity) {
-        if (quantity <= 0) {
+        decreaseStock(materialId, color, size, java.math.BigDecimal.valueOf(quantity));
+    }
+
+    @Override
+    public void decreaseStock(String materialId, String color, String size, java.math.BigDecimal quantity) {
+        if (quantity == null || quantity.compareTo(java.math.BigDecimal.ZERO) <= 0) {
             return;
         }
         LambdaQueryWrapper<MaterialStock> query = new LambdaQueryWrapper<MaterialStock>()
@@ -146,7 +151,7 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
         MaterialStock stock = this.getOne(query, false);
         if (stock != null) {
-            int rows2 = baseMapper.decreaseStockWithCheck(stock.getId(), quantity, com.fashion.supplychain.common.UserContext.tenantId());
+            int rows2 = baseMapper.decreaseStockWithCheckDecimal(stock.getId(), quantity, com.fashion.supplychain.common.UserContext.tenantId());
             if (rows2 == 0) {
                 throw new IllegalStateException("库存不足，扣减失败: " + stock.getMaterialName());
             }
@@ -512,6 +517,16 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
     }
 
     @Override
+    public void lockStock(String stockId, java.math.BigDecimal quantity) {
+        if (quantity == null || quantity.compareTo(java.math.BigDecimal.ZERO) <= 0 || !StringUtils.hasText(stockId)) {
+            return;
+        }
+        // locked_quantity 仍是 INT，按 CEILING 取整，避免 1.32 米只锁 1 造成超卖
+        int lockQty = quantity.setScale(0, java.math.RoundingMode.CEILING).intValue();
+        lockStock(stockId, lockQty);
+    }
+
+    @Override
     public void lockStock(String stockId, int quantity) {
         if (quantity <= 0 || !StringUtils.hasText(stockId)) {
             return;
@@ -526,10 +541,15 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
     @Override
     public void unlockStock(String stockId, int quantity) {
-        if (quantity <= 0 || !StringUtils.hasText(stockId)) {
+        unlockStock(stockId, java.math.BigDecimal.valueOf(quantity));
+    }
+
+    @Override
+    public void unlockStock(String stockId, java.math.BigDecimal quantity) {
+        if (quantity == null || quantity.compareTo(java.math.BigDecimal.ZERO) <= 0 || !StringUtils.hasText(stockId)) {
             return;
         }
-        int rows = baseMapper.unlockStock(stockId, quantity, com.fashion.supplychain.common.UserContext.tenantId());
+        int rows = baseMapper.unlockStockDecimal(stockId, quantity, com.fashion.supplychain.common.UserContext.tenantId());
         if (rows == 0) {
             MaterialStock stock = this.getById(stockId);
             String name = stock != null ? stock.getMaterialName() : "Unknown";
@@ -539,10 +559,15 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
     @Override
     public void decreaseStockAndUnlock(String stockId, int quantity) {
-        if (quantity <= 0 || !StringUtils.hasText(stockId)) {
+        decreaseStockAndUnlock(stockId, java.math.BigDecimal.valueOf(quantity));
+    }
+
+    @Override
+    public void decreaseStockAndUnlock(String stockId, java.math.BigDecimal quantity) {
+        if (quantity == null || quantity.compareTo(java.math.BigDecimal.ZERO) <= 0 || !StringUtils.hasText(stockId)) {
             return;
         }
-        int rows = baseMapper.decreaseStockAndUnlock(stockId, quantity, com.fashion.supplychain.common.UserContext.tenantId());
+        int rows = baseMapper.decreaseStockAndUnlockDecimal(stockId, quantity, com.fashion.supplychain.common.UserContext.tenantId());
         if (rows == 0) {
             MaterialStock stock = this.getById(stockId);
             String name = stock != null ? stock.getMaterialName() : "Unknown";
@@ -553,10 +578,15 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
     @Override
     public void updateStockQuantity(String stockId, int delta) {
-        if (delta == 0 || !StringUtils.hasText(stockId)) {
+        updateStockQuantity(stockId, java.math.BigDecimal.valueOf(delta));
+    }
+
+    @Override
+    public void updateStockQuantity(String stockId, java.math.BigDecimal delta) {
+        if (delta == null || delta.compareTo(java.math.BigDecimal.ZERO) == 0 || !StringUtils.hasText(stockId)) {
             return;
         }
-        int rows = baseMapper.updateStockQuantity(stockId, delta, com.fashion.supplychain.common.UserContext.tenantId());
+        int rows = baseMapper.updateStockQuantityDecimal(stockId, delta, com.fashion.supplychain.common.UserContext.tenantId());
         if (rows == 0) {
             throw new IllegalStateException("库存更新失败: stockId=" + stockId);
         }

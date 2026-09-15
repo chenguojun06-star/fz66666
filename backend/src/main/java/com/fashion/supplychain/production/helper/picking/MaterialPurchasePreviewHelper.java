@@ -106,13 +106,14 @@ public class MaterialPurchasePreviewHelper {
         String materialCode = purchase.getMaterialCode();
         String color = purchase.getColor();
         String size = purchase.getSize();
-        int requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
+        // D-414：预览口径改小数（可用 375.5 米不再显示成 375）
+        BigDecimal requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity() : BigDecimal.ZERO;
         String status = purchase.getStatus() != null ? purchase.getStatus() : "";
         String stockKey = support.stockCacheKey(materialCode, color, size);
-        int availableStock = support.calcAvailableStock(stockCache.getOrDefault(stockKey, Collections.emptyList()));
+        BigDecimal availableStock = support.calcAvailableStock(stockCache.getOrDefault(stockKey, Collections.emptyList()));
         boolean isPending = MaterialConstants.STATUS_PENDING.equals(status);
-        int canPickQty = isPending ? Math.min(requiredQty, availableStock) : 0;
-        int needPurchaseQty = isPending ? Math.max(0, requiredQty - canPickQty) : 0;
+        BigDecimal canPickQty = isPending ? requiredQty.min(availableStock) : BigDecimal.ZERO;
+        BigDecimal needPurchaseQty = isPending ? requiredQty.subtract(canPickQty).max(BigDecimal.ZERO) : BigDecimal.ZERO;
 
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("purchaseId", purchase.getId());

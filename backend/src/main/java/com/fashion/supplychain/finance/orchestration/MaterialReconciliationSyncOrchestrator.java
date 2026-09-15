@@ -67,85 +67,14 @@ public class MaterialReconciliationSyncOrchestrator {
             throw new RuntimeException("采购单不能为空");
         }
 
-        log.info("开始同步入库记录到物料对账: inboundNo={}, purchaseNo={}",
+        // 用户口径（物料去向按用户选择分账）：
+        //   「入库到仓库」→ 面料进仓库，账走「物料仓库/出入库流水」记账，不再回流生成物料对账；
+        //   「直接使用(直拨)」→ 才走物料对账（由 confirmComplete 的 upsert 生成）。
+        // 本方法是入库流程专用，凡走到这里 = 已是入库到仓库，因此一律不生成物料对账。
+        // 保留历史已存在的存量对账不变，仅停止新入库的自动回流。
+        log.info("物料入库由仓库流水记账，不再生成物料对账: inboundNo={}, purchaseNo={}",
                 inbound.getInboundNo(), purchase.getPurchaseNo());
-
-        // 1. 检查是否已同步（避免重复）— 按采购单+物料编码+入库单号三维度去重，支持部分入库场景。
-        // 注意：不能按 purchaseId 一维短路——同一采购单多次部分入库时，
-        // 第 2、3 批到货会被误判为"已同步"而跳过，供应商应付系统性少计。
-        LambdaQueryWrapper<MaterialReconciliation> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(MaterialReconciliation::getPurchaseId, purchase.getId())
-               .eq(MaterialReconciliation::getTenantId, tenantId)
-               .eq(MaterialReconciliation::getMaterialCode, inbound.getMaterialCode())
-               .like(MaterialReconciliation::getRemark, inbound.getInboundNo());
-
-        MaterialReconciliation existing = materialReconciliationService.getOne(wrapper);
-
-        if (existing != null) {
-            log.warn("该入库记录已同步到对账，跳过: reconciliationNo={}", existing.getReconciliationNo());
-            return existing.getId();
-        }
-
-        // 2. 创建对账记录
-        MaterialReconciliation reconciliation = new MaterialReconciliation();
-
-        // 基本信息
-        reconciliation.setReconciliationNo(generateReconciliationNo());
-        reconciliation.setSupplierId(purchase.getSupplierId());
-        reconciliation.setSupplierName(purchase.getSupplierName());
-        reconciliation.setMaterialId(purchase.getMaterialId());
-        reconciliation.setMaterialCode(inbound.getMaterialCode());
-        reconciliation.setMaterialName(inbound.getMaterialName());
-
-        // 关联信息
-        reconciliation.setPurchaseId(purchase.getId());
-        reconciliation.setPurchaseNo(purchase.getPurchaseNo());
-        reconciliation.setSourceType(purchase.getSourceType());
-        reconciliation.setOrderId(purchase.getOrderId());
-        reconciliation.setOrderNo(purchase.getOrderNo());
-        reconciliation.setPatternProductionId(purchase.getPatternProductionId());
-        reconciliation.setStyleId(purchase.getStyleId());
-        reconciliation.setStyleNo(purchase.getStyleNo());
-        reconciliation.setStyleName(purchase.getStyleName());
-
-        // 数量和金额（使用入库数量和采购单价）
-        reconciliation.setQuantity(inbound.getInboundQuantity());
-        reconciliation.setUnitPrice(purchase.getUnitPrice());
-
-        // 计算总金额和最终金额
-        if (purchase.getUnitPrice() != null && inbound.getInboundQuantity() != null) {
-            java.math.BigDecimal totalAmount = purchase.getUnitPrice().multiply(inbound.getInboundQuantity()).setScale(2, java.math.RoundingMode.HALF_UP);
-            reconciliation.setTotalAmount(totalAmount);
-            reconciliation.setFinalAmount(totalAmount); // 初始无扣款，最终金额=总金额
-        }
-
-        // 对账周期（使用入库时间）
-        LocalDateTime inboundTime = inbound.getInboundTime();
-        reconciliation.setPeriodStartDate(inboundTime.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0));
-        reconciliation.setPeriodEndDate(inboundTime.withDayOfMonth(inboundTime.toLocalDate().lengthOfMonth()).withHour(23).withMinute(59).withSecond(59));
-        reconciliation.setReconciliationDate(inboundTime.format(DateTimeFormatter.ofPattern("yyyy-MM")));
-
-        // 时间信息（从采购单和入库记录获取）
-        reconciliation.setExpectedArrivalDate(purchase.getExpectedArrivalDate());
-        reconciliation.setActualArrivalDate(purchase.getActualArrivalDate());
-        reconciliation.setInboundDate(inbound.getInboundTime());
-        reconciliation.setWarehouseLocation(inbound.getWarehouseLocation());
-
-        // 状态和操作人
-        reconciliation.setStatus("pending");
-        reconciliation.setReconciliationOperatorId(inbound.getOperatorId());
-        reconciliation.setReconciliationOperatorName(inbound.getOperatorName());
-
-        reconciliation.setRemark(String.format("由入库单 %s 自动生成", inbound.getInboundNo()));
-
-        // 3. 保存对账记录
-        materialReconciliationService.save(reconciliation);
-
-        log.info("入库记录同步到物料对账成功: reconciliationNo={}, materialCode={}, quantity={}, amount={}",
-                reconciliation.getReconciliationNo(), reconciliation.getMaterialCode(),
-                reconciliation.getQuantity(), reconciliation.getTotalAmount());
-
-        return reconciliation.getId();
+        return null;
     }
 
     /**

@@ -133,10 +133,10 @@ public class MaterialPurchasePickingHelper {
         java.util.Map<String, List<MaterialStock>> stockCache = batchQueryStockByPurchases(pendingPurchases);
 
         for (MaterialPurchase purchase : pendingPurchases) {
-            int requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
+            BigDecimal requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity() : BigDecimal.ZERO;
             String stockKey = stockCacheKey(purchase.getMaterialCode(), purchase.getColor(), purchase.getSize());
             List<MaterialStock> stockList = stockCache.getOrDefault(stockKey, java.util.Collections.emptyList());
-            int availableStock = calcAvailableStock(stockList);
+            BigDecimal availableStock = calcAvailableStock(stockList);
 
             Map<String, Object> detail = buildDetailBase(purchase, requiredQty, availableStock);
             dispatchPurchase(purchase, receiverId, receiverName, stockList, requiredQty, availableStock, detail);
@@ -179,22 +179,36 @@ public class MaterialPurchasePickingHelper {
                         s -> stockCacheKey(s.getMaterialCode(), s.getColor(), s.getSize())));
     }
 
+    /**
+     * D-414：把请求里的数量解析为 BigDecimal（走字符串，避免 double 精度毛刺）。
+     * 解析不出合法数字时返回 0（调用方统一按「<=0 非法」拦截）。
+     */
+    private static BigDecimal toDecimal(Object raw) {
+        if (raw == null) return BigDecimal.ZERO;
+        if (raw instanceof BigDecimal) return ((BigDecimal) raw).setScale(4, java.math.RoundingMode.HALF_UP);
+        try {
+            return new BigDecimal(String.valueOf(raw).trim()).setScale(4, java.math.RoundingMode.HALF_UP);
+        } catch (NumberFormatException e) {
+            return BigDecimal.ZERO;
+        }
+    }
+
     private String stockCacheKey(String materialCode, String color, String size) {
         return (materialCode == null ? "" : materialCode) + "|" + (color == null ? "" : color) + "|" + (size == null ? "" : size);
     }
 
-    private int calcAvailableStock(List<MaterialStock> stockList) {
+    /** D-414：可用库存按 BigDecimal 汇总（此前 intValue 会把 375.5 米算成 375） */
+    private BigDecimal calcAvailableStock(List<MaterialStock> stockList) {
         return stockList.stream()
-            .mapToInt(stock -> {
+            .map(stock -> {
                 BigDecimal qty = stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO;
                 int locked = stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0;
-                // D-410：库存已是 BigDecimal；领料数量仍按 int 统计，故在此取整
-                return qty.subtract(BigDecimal.valueOf(locked)).max(BigDecimal.ZERO).intValue();
+                return qty.subtract(BigDecimal.valueOf(locked)).max(BigDecimal.ZERO);
             })
-            .sum();
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private Map<String, Object> buildDetailBase(MaterialPurchase purchase, int requiredQty, int availableStock) {
+    private Map<String, Object> buildDetailBase(MaterialPurchase purchase, BigDecimal requiredQty, BigDecimal availableStock) {
         Map<String, Object> detail = new java.util.LinkedHashMap<>();
         detail.put("materialCode", purchase.getMaterialCode());
         detail.put("materialName", purchase.getMaterialName());
@@ -206,11 +220,11 @@ public class MaterialPurchasePickingHelper {
     }
 
     private void dispatchPurchase(MaterialPurchase purchase, String receiverId, String receiverName,
-                                   List<MaterialStock> stockList, int requiredQty, int availableStock,
+                                   List<MaterialStock> stockList, BigDecimal requiredQty, BigDecimal availableStock,
                                    Map<String, Object> detail) {
-        if (availableStock >= requiredQty && !stockList.isEmpty()) {
+        if (availableStock.compareTo(requiredQty) >= 0 && !stockList.isEmpty()) {
             dispatchFullOutbound(purchase, receiverId, receiverName, stockList, detail);
-        } else if (availableStock > 0 && !stockList.isEmpty()) {
+        } else if (availableStock.compareTo(BigDecimal.ZERO) > 0 && !stockList.isEmpty()) {
             dispatchPartialOutbound(purchase, receiverId, receiverName, stockList, requiredQty, availableStock, detail);
         } else {
             detail.put("action", "purchase");
@@ -234,19 +248,20 @@ public class MaterialPurchasePickingHelper {
     }
 
     private void dispatchPartialOutbound(MaterialPurchase purchase, String receiverId, String receiverName,
-                                          List<MaterialStock> stockList, int requiredQty, int availableStock,
+                                          List<MaterialStock> stockList, BigDecimal requiredQty, BigDecimal availableStock,
                                           Map<String, Object> detail) {
         try {
             createOutboundPicking(purchase, receiverId, receiverName, stockList, availableStock);
-            int deficitQty = requiredQty - availableStock;
+            // D-414：缺口按小数计算，375.5 - 375.2 = 0.3，不再被抹成 0
+            BigDecimal deficitQty = requiredQty.subtract(availableStock);
             createDeficitPurchase(purchase, deficitQty, receiverId);
             detail.put("action", "partial");
             detail.put("pickedQty", availableStock);
             detail.put("deficitQty", deficitQty);
             detail.put("status", "partial");
-            detail.put("message", String.format("部分出库 %d%s，缺口 %d%s 已创建采购任务",
-                availableStock, purchase.getUnit() != null ? purchase.getUnit() : "",
-                deficitQty, purchase.getUnit() != null ? purchase.getUnit() : ""));
+            detail.put("message", String.format("部分出库 %s%s，缺口 %s%s 已创建采购任务",
+                availableStock.stripTrailingZeros().toPlainString(), purchase.getUnit() != null ? purchase.getUnit() : "",
+                deficitQty.stripTrailingZeros().toPlainString(), purchase.getUnit() != null ? purchase.getUnit() : ""));
         } catch (Exception e) {
             log.error("创建部分出库单失败: materialCode={}, error={}", purchase.getMaterialCode(), e.getMessage());
             detail.put("action", "purchase");
@@ -255,7 +270,7 @@ public class MaterialPurchasePickingHelper {
         }
     }
 
-    private void createDeficitPurchase(MaterialPurchase original, int deficitQty, String receiverId) {
+    private void createDeficitPurchase(MaterialPurchase original, BigDecimal deficitQty, String receiverId) {
         MaterialPurchase deficitPurchase = new MaterialPurchase();
         deficitPurchase.setOrderId(original.getOrderId());
         deficitPurchase.setOrderNo(original.getOrderNo());
@@ -270,7 +285,7 @@ public class MaterialPurchasePickingHelper {
         deficitPurchase.setSize(original.getSize());
         deficitPurchase.setUnit(original.getUnit());
         deficitPurchase.setSpecifications(original.getSpecifications());
-        deficitPurchase.setPurchaseQuantity(BigDecimal.valueOf(deficitQty));
+        deficitPurchase.setPurchaseQuantity(deficitQty);
         deficitPurchase.setStatus("pending");
         deficitPurchase.setRemark("部分领取补采|原任务ID=" + original.getId() + "|缺口=" + deficitQty);
         deficitPurchase.setTenantId(original.getTenantId());
@@ -288,7 +303,7 @@ public class MaterialPurchasePickingHelper {
         }
         if (original.getUnitPrice() != null) {
             deficitPurchase.setUnitPrice(original.getUnitPrice());
-            deficitPurchase.setTotalAmount(original.getUnitPrice().multiply(BigDecimal.valueOf(deficitQty)));
+            deficitPurchase.setTotalAmount(original.getUnitPrice().multiply(deficitQty));
         }
         materialPurchaseService.savePurchaseAndUpdateOrder(deficitPurchase);
     }
@@ -302,12 +317,12 @@ public class MaterialPurchasePickingHelper {
      */
     private void createOutboundPicking(MaterialPurchase purchase, String receiverId, String receiverName,
                                        List<MaterialStock> stockList) {
-        int pickQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
-        createOutboundPicking(purchase, receiverId, receiverName, stockList, pickQty);
+        createOutboundPicking(purchase, receiverId, receiverName, stockList,
+                purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity() : BigDecimal.ZERO);
     }
 
     private void createOutboundPicking(MaterialPurchase purchase, String receiverId, String receiverName,
-                                       List<MaterialStock> stockList, int pickQty) {
+                                       List<MaterialStock> stockList, BigDecimal pickQty) {
         // 1. 创建主表（MaterialPicking）—— status="pending"，等待仓库确认后再扣库存
         MaterialPicking picking = new MaterialPicking();
         picking.setPickingNo("PICK-" + System.currentTimeMillis());
@@ -330,18 +345,18 @@ public class MaterialPurchasePickingHelper {
         List<MaterialPickingItem> items = new ArrayList<>();
 
         // 2. 仅准备明细（不扣库存，仓库确认出库时再扣）
-        int remainingQty = pickQty;
+        // D-414：领料数量已支持小数，分批次配货全程按小数计算（此前 intValue 会把 1.32 米截成 1）
+        BigDecimal remainingQty = pickQty == null ? BigDecimal.ZERO : pickQty;
         for (MaterialStock stock : stockList) {
-            if (remainingQty <= 0) break;
+            if (remainingQty.compareTo(BigDecimal.ZERO) <= 0) break;
 
-            // D-410：库存已是 BigDecimal，先按小数算可用量再取整（领料数量仍为 int）
-            int stockAvailable = (stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO)
+            BigDecimal stockAvailable = (stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO)
                 .subtract(BigDecimal.valueOf(stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0))
-                .max(BigDecimal.ZERO).intValue();
+                .max(BigDecimal.ZERO);
 
-            if (stockAvailable <= 0) continue;
+            if (stockAvailable.compareTo(BigDecimal.ZERO) <= 0) continue;
 
-            int pickFromThis = Math.min(remainingQty, stockAvailable);
+            BigDecimal pickFromThis = remainingQty.min(stockAvailable);
 
             MaterialPickingItem item = new MaterialPickingItem();
             item.setMaterialStockId(stock.getId());
@@ -362,7 +377,7 @@ public class MaterialPurchasePickingHelper {
 
             materialStockService.lockStock(stock.getId(), pickFromThis);
 
-            remainingQty -= pickFromThis;
+            remainingQty = remainingQty.subtract(pickFromThis);
         }
 
         // 3. 保存待出库单（不扣库存，但已锁定）
@@ -448,13 +463,14 @@ public class MaterialPurchasePickingHelper {
         String materialCode = purchase.getMaterialCode();
         String color = purchase.getColor();
         String size = purchase.getSize();
-        int requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
+        // D-414：预览口径同步改小数（采购 375.5 米不再被显示成 375）
+        BigDecimal requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity() : BigDecimal.ZERO;
         String status = purchase.getStatus() != null ? purchase.getStatus() : "";
         String stockKey = stockCacheKey(materialCode, color, size);
-        int availableStock = calcAvailableStock(stockCache.getOrDefault(stockKey, java.util.Collections.emptyList()));
+        BigDecimal availableStock = calcAvailableStock(stockCache.getOrDefault(stockKey, java.util.Collections.emptyList()));
         boolean isPending = MaterialConstants.STATUS_PENDING.equals(status);
-        int canPickQty = isPending ? Math.min(requiredQty, availableStock) : 0;
-        int needPurchaseQty = isPending ? Math.max(0, requiredQty - canPickQty) : 0;
+        BigDecimal canPickQty = isPending ? requiredQty.min(availableStock) : BigDecimal.ZERO;
+        BigDecimal needPurchaseQty = isPending ? requiredQty.subtract(canPickQty).max(BigDecimal.ZERO) : BigDecimal.ZERO;
 
         Map<String, Object> item = new java.util.LinkedHashMap<>();
         item.put("purchaseId", purchase.getId());
@@ -471,26 +487,20 @@ public class MaterialPurchasePickingHelper {
         item.put("unit", purchase.getUnit());
         item.put("arrivedQuantity", purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : BigDecimal.ZERO);
         // D-363b：领取终点口径——剩余可领 = 采购量 - 已领取出库量(usedQuantity，仓库确认出库时累加)
-        int usedQty = purchase.getUsedQuantity() != null ? purchase.getUsedQuantity().intValue() : 0;
-        int remainingPickupQty = Math.max(0, requiredQty - usedQty);
+        BigDecimal usedQty = purchase.getUsedQuantity() != null ? purchase.getUsedQuantity() : BigDecimal.ZERO;
+        BigDecimal remainingPickupQty = requiredQty.subtract(usedQty).max(BigDecimal.ZERO);
         item.put("usedQuantity", usedQty);
         item.put("remainingPickupQty", remainingPickupQty);
         return item;
     }
 
-    private int calcAvailableStock(String materialCode, String color, String size) {
+    private BigDecimal calcAvailableStock(String materialCode, String color, String size) {
         LambdaQueryWrapper<MaterialStock> stockWrapper = new LambdaQueryWrapper<>();
         stockWrapper.eq(MaterialStock::getMaterialCode, materialCode);
         if (StringUtils.hasText(color)) stockWrapper.eq(MaterialStock::getColor, color);
         if (StringUtils.hasText(size)) stockWrapper.eq(MaterialStock::getSize, size);
         List<MaterialStock> stockList = materialStockService.list(stockWrapper);
-        return stockList.stream()
-            .mapToInt(stock -> {
-                BigDecimal qty = stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO;
-                int locked = stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0;
-                // D-410：库存已是 BigDecimal；领料数量仍按 int 统计，故在此取整
-                return qty.subtract(BigDecimal.valueOf(locked)).max(BigDecimal.ZERO).intValue();
-            }).sum();
+        return calcAvailableStock(stockList);
     }
 
     private List<Map<String, Object>> queryExistingPickingRecords(boolean byOrderNo, String orderNo, boolean byStyleNo, String styleNo) {
@@ -544,12 +554,13 @@ public class MaterialPurchasePickingHelper {
     // D-001 修复：移除 Helper 层 @Transactional（调用方 MaterialPurchaseOrchestrator.warehousePickSingle 已有事务保护）
     public Map<String, Object> warehousePickSingle(Map<String, Object> body) {
         String purchaseId = ParamUtils.toTrimmedString(body == null ? null : body.get("purchaseId"));
-        int pickQty = ParamUtils.toIntSafe(body == null ? null : body.get("pickQty"));
+        // D-414：领取数量支持小数（此前 toIntSafe 会把用户填的 1.32 米截成 1）
+        BigDecimal pickQty = toDecimal(body == null ? null : body.get("pickQty"));
         String receiverId = ParamUtils.toTrimmedString(body == null ? null : body.get("receiverId"));
         String receiverName = ParamUtils.toTrimmedString(body == null ? null : body.get("receiverName"));
 
         if (!StringUtils.hasText(purchaseId)) throw new IllegalArgumentException("采购任务ID不能为空");
-        if (pickQty <= 0) throw new IllegalArgumentException("领取数量必须大于0");
+        if (pickQty == null || pickQty.compareTo(BigDecimal.ZERO) <= 0) throw new IllegalArgumentException("领取数量必须大于0");
 
         MaterialPurchase purchase = materialPurchaseService.lambdaQuery()
                 .eq(MaterialPurchase::getId, purchaseId)
@@ -561,19 +572,19 @@ public class MaterialPurchasePickingHelper {
         }
 
         // D-363b：领取终点——已领取出库量(usedQuantity)达到采购量即封口，杜绝反复领取出库
-        int requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : 0;
-        int usedQty = purchase.getUsedQuantity() != null ? purchase.getUsedQuantity().intValue() : 0;
-        int remainingQty = Math.max(0, requiredQty - usedQty);
-        if (requiredQty > 0 && remainingQty <= 0) {
-            throw new IllegalStateException("该采购任务已完成领取出库（共" + usedQty + "件），无剩余可领数量");
+        BigDecimal requiredQty = purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity() : BigDecimal.ZERO;
+        BigDecimal usedQty = purchase.getUsedQuantity() != null ? purchase.getUsedQuantity() : BigDecimal.ZERO;
+        BigDecimal remainingQty = requiredQty.subtract(usedQty).max(BigDecimal.ZERO);
+        if (requiredQty.compareTo(BigDecimal.ZERO) > 0 && remainingQty.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalStateException("该采购任务已完成领取出库（共" + usedQty.stripTrailingZeros().toPlainString() + "件），无剩余可领数量");
         }
-        if (requiredQty > 0 && pickQty > remainingQty) {
+        if (requiredQty.compareTo(BigDecimal.ZERO) > 0 && pickQty.compareTo(remainingQty) > 0) {
             pickQty = remainingQty;
         }
 
         String materialCode = purchase.getMaterialCode();
-        int availableStock = calcAvailableStock(materialCode, purchase.getColor(), purchase.getSize());
-        if (availableStock < pickQty) {
+        BigDecimal availableStock = calcAvailableStock(materialCode, purchase.getColor(), purchase.getSize());
+        if (availableStock.compareTo(pickQty) < 0) {
             throw new IllegalArgumentException("仓库库存不足，可用库存: " + availableStock + "，需领取: " + pickQty);
         }
 
@@ -590,7 +601,7 @@ public class MaterialPurchasePickingHelper {
         result.put("pickingId", pickingId);
         result.put("pickingNo", "PICK-" + System.currentTimeMillis());
         result.put("pickedQty", pickQty);
-        result.put("remainingPickupQty", Math.max(0, remainingQty - pickQty));
+        result.put("remainingPickupQty", remainingQty.subtract(pickQty).max(BigDecimal.ZERO));
         result.put("materialCode", materialCode);
         result.put("materialName", purchase.getMaterialName());
         log.info("✅ 仓库单项领取成功: pickingId={}, materialCode={}, qty={}", pickingId, materialCode, pickQty);
@@ -606,7 +617,7 @@ public class MaterialPurchasePickingHelper {
     }
 
     private String createPendingPicking(MaterialPurchase purchase, List<MaterialStock> stockList,
-                                         int pickQty, String receiverId, String receiverName) {
+                                         BigDecimal pickQty, String receiverId, String receiverName) {
         MaterialPicking picking = new MaterialPicking();
         picking.setPickingNo("PICK-" + System.currentTimeMillis());
         picking.setOrderId(purchase.getOrderId());
@@ -626,15 +637,15 @@ public class MaterialPurchasePickingHelper {
         picking.setDeleteFlag(0);
 
         List<MaterialPickingItem> items = new ArrayList<>();
-        int remainingQty = pickQty;
+        // D-414：与上面的分配逻辑一致，全程按小数计算
+        BigDecimal remainingQty = pickQty == null ? BigDecimal.ZERO : pickQty;
         for (MaterialStock stock : stockList) {
-            if (remainingQty <= 0) break;
-            // D-410：库存已是 BigDecimal，先按小数算可用量再取整（领料数量仍为 int）
-            int stockAvailable = (stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO)
+            if (remainingQty.compareTo(BigDecimal.ZERO) <= 0) break;
+            BigDecimal stockAvailable = (stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO)
                 .subtract(BigDecimal.valueOf(stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0))
-                .max(BigDecimal.ZERO).intValue();
-            if (stockAvailable <= 0) continue;
-            int pickFromThis = Math.min(remainingQty, stockAvailable);
+                .max(BigDecimal.ZERO);
+            if (stockAvailable.compareTo(BigDecimal.ZERO) <= 0) continue;
+            BigDecimal pickFromThis = remainingQty.min(stockAvailable);
 
             MaterialPickingItem item = new MaterialPickingItem();
             item.setMaterialStockId(stock.getId());
@@ -648,7 +659,7 @@ public class MaterialPurchasePickingHelper {
             item.setCreateTime(LocalDateTime.now());
             items.add(item);
             materialStockService.lockStock(stock.getId(), pickFromThis);
-            remainingQty -= pickFromThis;
+            remainingQty = remainingQty.subtract(pickFromThis);
         }
         return materialPickingService.savePendingPicking(picking, items);
     }
@@ -676,7 +687,7 @@ public class MaterialPurchasePickingHelper {
 
         List<com.fashion.supplychain.production.entity.MaterialPickingItem> items =
                 materialPickingService.getItemsByPickingId(pickingId);
-        int pickedTotalQty = deductStockForOutboundItems(picking, items);
+        BigDecimal pickedTotalQty = deductStockForOutboundItems(picking, items);
 
         picking.setStatus("completed");
         picking.setUpdateTime(LocalDateTime.now());
@@ -712,9 +723,10 @@ public class MaterialPurchasePickingHelper {
         }
     }
 
-    private int deductStockForOutboundItems(MaterialPicking picking, List<com.fashion.supplychain.production.entity.MaterialPickingItem> items) {
+    private BigDecimal deductStockForOutboundItems(MaterialPicking picking, List<com.fashion.supplychain.production.entity.MaterialPickingItem> items) {
         LocalDateTime outboundTime = LocalDateTime.now();
-        int pickedTotalQty = 0;
+        // D-414：领料数量已是 BigDecimal，累计也按小数（返回值仍为 int，供状态判断/日志使用）
+        BigDecimal pickedTotal = BigDecimal.ZERO;
         List<String> stockIds = items.stream()
                 .map(com.fashion.supplychain.production.entity.MaterialPickingItem::getMaterialStockId)
                 .filter(id -> id != null).distinct().toList();
@@ -723,8 +735,8 @@ public class MaterialPurchasePickingHelper {
                 : materialStockService.listByIds(stockIds).stream()
                         .collect(java.util.stream.Collectors.toMap(MaterialStock::getId, s -> s, (a, b) -> a));
         for (com.fashion.supplychain.production.entity.MaterialPickingItem item : items) {
-            if (item.getQuantity() != null && item.getQuantity() > 0) {
-                pickedTotalQty += item.getQuantity();
+            if (item.getQuantity() != null && item.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
+                pickedTotal = pickedTotal.add(item.getQuantity());
                 MaterialStock stock = null;
                 if (item.getMaterialStockId() != null) {
                     stock = stockMap.get(item.getMaterialStockId());
@@ -742,10 +754,10 @@ public class MaterialPurchasePickingHelper {
                 recordOutboundLog(picking, item, stock, outboundTime);
             }
         }
-        return pickedTotalQty;
+        return pickedTotal;
     }
 
-    private MaterialPurchase updatePurchaseAfterOutbound(MaterialPicking picking, int pickedTotalQty) {
+    private MaterialPurchase updatePurchaseAfterOutbound(MaterialPicking picking, BigDecimal pickedTotalQty) {
         MaterialPurchase purchase = null;
         String associatedPurchaseId = picking.getPurchaseId();
         if (!StringUtils.hasText(associatedPurchaseId)) {
@@ -766,10 +778,11 @@ public class MaterialPurchasePickingHelper {
                 // P2-5（D-076）：仓库确认出库 = 物料已实物领出，累加 usedQuantity。
                 // 到货率口径 eff = min(pq, max(arrived, used))，仓库路径（自由入库+领料出库）
                 // 不再导致到货率恒 0、订单卡在采购阶段。不动 arrivedQuantity（入库侧事实）。
-                if (pickedTotalQty > 0) {
+                // D-414：已领用数量按小数累加（1.32 米不再只记 1）
+                if (pickedTotalQty != null && pickedTotalQty.compareTo(java.math.BigDecimal.ZERO) > 0) {
                     java.math.BigDecimal used = purchase.getUsedQuantity() != null
                             ? purchase.getUsedQuantity() : java.math.BigDecimal.ZERO;
-                    purchase.setUsedQuantity(used.add(java.math.BigDecimal.valueOf(pickedTotalQty)));
+                    purchase.setUsedQuantity(used.add(pickedTotalQty));
                 }
                 materialPurchaseService.updateById(purchase);
                 try {
@@ -943,12 +956,12 @@ public class MaterialPurchasePickingHelper {
                         picking.getRemark().indexOf("purchaseId=") + "purchaseId=".length()).trim();
             }
             if (!StringUtils.hasText(purchaseId)) return;
-            int pickedQty = items.stream()
+            // D-414：领料数量已是 BigDecimal，按小数汇总
+            java.math.BigDecimal pickedQty = items.stream()
                     .map(MaterialPickingItem::getQuantity)
-                    .filter(q -> q != null && q > 0)
-                    .mapToInt(Integer::intValue)
-                    .sum();
-            if (pickedQty <= 0) return;
+                    .filter(q -> q != null && q.compareTo(java.math.BigDecimal.ZERO) > 0)
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+            if (pickedQty.compareTo(java.math.BigDecimal.ZERO) <= 0) return;
             MaterialPurchase purchase = materialPurchaseService.lambdaQuery()
                     .eq(MaterialPurchase::getId, purchaseId)
                     .eq(MaterialPurchase::getTenantId, UserContext.tenantId())
@@ -956,7 +969,7 @@ public class MaterialPurchasePickingHelper {
             if (purchase == null) return;
             java.math.BigDecimal used = purchase.getUsedQuantity() != null
                     ? purchase.getUsedQuantity() : java.math.BigDecimal.ZERO;
-            java.math.BigDecimal next = used.subtract(java.math.BigDecimal.valueOf(pickedQty)).max(java.math.BigDecimal.ZERO);
+            java.math.BigDecimal next = used.subtract(pickedQty).max(java.math.BigDecimal.ZERO);
             if (next.compareTo(used) != 0) {
                 materialPurchaseService.lambdaUpdate()
                         .eq(MaterialPurchase::getId, purchaseId)
@@ -982,8 +995,9 @@ public class MaterialPurchasePickingHelper {
             MaterialPicking picking,
             MaterialPurchase purchase,
             List<MaterialPickingItem> items,
-            int pickedTotalQty) {
-        if (picking == null || pickedTotalQty <= 0 || items == null || items.isEmpty()) {
+            BigDecimal pickedTotalQty) {
+        if (picking == null || pickedTotalQty == null || pickedTotalQty.compareTo(BigDecimal.ZERO) <= 0
+                || items == null || items.isEmpty()) {
             return;
         }
 
@@ -1152,8 +1166,7 @@ public class MaterialPurchasePickingHelper {
         outboundLog.setPickingNo(picking.getPickingNo());
         outboundLog.setMaterialCode(stock != null ? stock.getMaterialCode() : item.getMaterialCode());
         outboundLog.setMaterialName(stock != null ? stock.getMaterialName() : item.getMaterialName());
-        // D-414：领料单行数量为 Integer（整数精确），无损转 BigDecimal 写入出库流水
-        outboundLog.setQuantity(item.getQuantity() == null ? null : BigDecimal.valueOf(item.getQuantity()));
+        outboundLog.setQuantity(item.getQuantity());
         outboundLog.setOperatorId(StringUtils.hasText(UserContext.userId()) ? UserContext.userId() : picking.getPickerId());
         outboundLog.setOperatorName(StringUtils.hasText(UserContext.username()) ? UserContext.username() : picking.getPickerName());
         outboundLog.setReceiverId(picking.getPickerId());

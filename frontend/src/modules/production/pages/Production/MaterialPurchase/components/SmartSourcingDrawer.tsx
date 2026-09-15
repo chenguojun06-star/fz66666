@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
-  Button, Card, Drawer, Tabs, Table, Tag, Tooltip, Space, Alert, Input,
+  Button, Card, Drawer, Tabs, Table, Tag, Tooltip, Space, Alert, Collapse, Input,
   InputNumber, Select, Checkbox, Statistic, Empty, Spin, Divider, message, Form,
 } from 'antd';
+import { InfoCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
   RobotOutlined, SearchOutlined, ShoppingCartOutlined,
@@ -711,18 +712,26 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
         }}
       />
       <Divider style={{ margin: '16px 0 8px' }} />
-      <Alert
-        type="info"
-        showIcon
-        message="智能采购推荐是怎么运作的"
-        description={
-          <div className="u-fs-12" style={{ lineHeight: 1.9 }}>
-            <div>系统按每个订单的<b>物料清单</b>，用「订单需求数量 − 当前库存 − 在途采购」算出每种物料还缺多少。</div>
-            <div><b>有缺料</b>的订单：勾选后点「一键推送缺料到购物车」，缺什么补什么，数量和推荐供应商都算好了。</div>
-            <div><b>已齐料</b>的订单默认隐藏（上面的开关可打开查看）；其中「在途补N种」表示库存虽不够但采购已在路上，到货即齐，<b>不要重复下单</b>。</div>
-            <div>想看每个物料的库存/在途/缺口数字，点行上的「展开明细」；库存和在途会随采购到货、领料自动更新。</div>
-          </div>
-        }
+      <Collapse
+        ghost
+        size="small"
+        items={[{
+          key: 'how',
+          label: (
+            <span className="u-fs-12 u-fw-600" style={{ color: 'var(--color-text-secondary)' }}>
+              <InfoCircleOutlined style={{ marginRight: 5 }} />
+              智能采购推荐是怎么运作的？（点击展开）
+            </span>
+          ),
+          children: (
+            <div className="u-fs-12" style={{ lineHeight: 2 }}>
+              <div>① 系统按每个订单的<b>物料清单</b>，用 <b>净需求 = 物料用量 × 订单数量 × (1 + 损耗率) − 可用库存 − 在途采购</b> 算出每种物料还缺多少。</div>
+              <div>② <b>有缺料</b>的订单：勾选后点「一键推送缺料到购物车」，缺什么补什么，数量和推荐供应商都已算好。</div>
+              <div>③ <b>已齐料</b>的订单默认隐藏（上面的开关可打开查看）；其中「在途补N种」表示库存虽不够但采购已在路上，<b>到货即齐，不要重复下单</b>。</div>
+              <div>④ 想看每个物料的库存/在途/缺口数字，点行上的「展开明细」；库存和在途会随采购到货、领料自动更新。</div>
+            </div>
+          ),
+        }]}
       />
     </div>
   );
@@ -829,18 +838,27 @@ const SingleTab: React.FC<SingleTabProps> = ({
       )}
 
       {data.length === 0 && !loading && (
-        <Alert
-          type="info"
-          showIcon
-          message="单订单分析（兼容旧操作）"
-          description={
-            <div className="u-fs-13 u-lh-18">
-              <p style={{ margin: '0 0 4px' }}><strong>功能说明：</strong>输入生产订单号，系统自动分析该订单的物料清单，计算每个物料的净需求。</p>
-              <p style={{ margin: '0 0 4px' }}><strong>计算公式：</strong>净需求 = 物料用量 × 订单数量 × (1 + 损耗率) - 可用库存 - 在途采购</p>
-              <p style={{ margin: '0 0 4px' }}><strong>智能推荐：</strong>仅净需求 &gt; 0 的物料才会推送购物车，并自动推荐供应商。</p>
-              <p className="u-m-0"><strong>操作流程：</strong>输入订单号 → 点「分析需求」查看明细 → 确认后点「推送缺料到购物车」。</p>
-            </div>
-          }
+        <Collapse
+          ghost
+          size="small"
+          style={{ marginTop: 4 }}
+          items={[{
+            key: 'how2',
+            label: (
+              <span className="u-fs-12 u-fw-600" style={{ color: 'var(--color-text-secondary)' }}>
+                <InfoCircleOutlined style={{ marginRight: 5 }} />
+                单订单分析（兼容旧操作）说明【点击展开】
+              </span>
+            ),
+            children: (
+              <div className="u-fs-13" style={{ lineHeight: 2 }}>
+                <div><strong>功能说明：</strong>输入生产订单号，系统自动分析该订单的物料清单，计算每个物料的净需求。</div>
+                <div><strong>计算公式：</strong>净需求 = 物料用量 × 订单数量 × (1 + 损耗率) − 可用库存 − 在途采购</div>
+                <div><strong>智能推荐：</strong>仅净需求 &gt; 0 的物料才会推送购物车，并自动推荐供应商。</div>
+                <div><strong>操作流程：</strong>输入订单号 → 点「分析需求」查看明细 → 确认后点「推送缺料到购物车」。</div>
+              </div>
+            ),
+          }]}
         />
       )}
 

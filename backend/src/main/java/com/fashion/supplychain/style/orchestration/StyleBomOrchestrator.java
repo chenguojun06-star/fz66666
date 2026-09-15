@@ -32,6 +32,9 @@ import com.fashion.supplychain.production.service.MaterialStockService;
 @Slf4j
 public class StyleBomOrchestrator {
 
+    private static final com.fasterxml.jackson.databind.ObjectMapper BOM_JSON_MAPPER =
+            new com.fasterxml.jackson.databind.ObjectMapper();
+
     @Autowired
     private StyleBomService styleBomService;
 
@@ -509,22 +512,55 @@ public class StyleBomOrchestrator {
 
     /**
      * 与前端 calcTotalPrice 逻辑对齐：选择有效用量
-     * - 有纸样数据（patternSizeUsageMap 非空）→ 用 usageAmount
-     * - 否则 → 优先用 devUsageAmount，为空则用 usageAmount
+     * - 有纸样数据（patternSizeUsageMap 存在且至少一个尺码用量 > 0）→ 优先用 usageAmount
+     * - usageAmount 缺失/为 0（纸样用量未填）→ 回退 devUsageAmount 兜底，避免误判"未填用量"
+     * - 无纸样数据 → 优先 devUsageAmount，为空则用 usageAmount
+     *
+     * D-264 口径：保存链路会给每行写入全 0 的 patternSizeUsageMap，仅凭"非空字符串"判断
+     * 会把只有开发用量（devUsageAmount）的物料误判成纸样口径，导致用量归 0 → 库存检查显示"未填用量"。
+     * 必须与前端一致：至少一个值 > 0 才算"有纸样数据"。
      */
     private BigDecimal pickEffectiveUsage(StyleBom styleBom) {
-        String patternUsageMap = styleBom.getPatternSizeUsageMap();
-        boolean hasPatternData = StringUtils.hasText(patternUsageMap)
-                && patternUsageMap.trim().length() > 2; // 简单判断非 "{}" 等空对象
-        if (hasPatternData) {
-            return styleBom.getUsageAmount() == null ? BigDecimal.ZERO : styleBom.getUsageAmount();
-        }
         BigDecimal dev = styleBom.getDevUsageAmount();
         BigDecimal usage = styleBom.getUsageAmount();
+        if (hasEffectivePatternUsage(styleBom.getPatternSizeUsageMap())) {
+            if (usage != null && usage.compareTo(BigDecimal.ZERO) > 0) {
+                return usage;
+            }
+            // 纸样数据已生成但单件用量未填 → 开发采购用量兜底
+            if (dev != null && dev.compareTo(BigDecimal.ZERO) > 0) {
+                return dev;
+            }
+            return usage == null ? BigDecimal.ZERO : usage;
+        }
         if (dev != null && dev.compareTo(BigDecimal.ZERO) > 0) {
             return dev;
         }
         return usage == null ? BigDecimal.ZERO : usage;
+    }
+
+    /** 解析 patternSizeUsageMap，仅当存在至少一个 > 0 的尺码用量时视为"有纸样数据"（与前端 calcTotalPrice 一致） */
+    private boolean hasEffectivePatternUsage(String patternUsageMap) {
+        if (!StringUtils.hasText(patternUsageMap)) {
+            return false;
+        }
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = BOM_JSON_MAPPER.readTree(patternUsageMap);
+            if (node == null || !node.isObject() || node.isEmpty()) {
+                return false;
+            }
+            java.util.Iterator<com.fasterxml.jackson.databind.JsonNode> it = node.elements();
+            while (it.hasNext()) {
+                com.fasterxml.jackson.databind.JsonNode value = it.next();
+                if (value != null && value.isNumber()
+                        && value.decimalValue().compareTo(BigDecimal.ZERO) > 0) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            // 解析失败按无纸样数据处理，由 devUsageAmount 兜底
+        }
+        return false;
     }
 
     @Transactional(rollbackFor = Exception.class)

@@ -74,7 +74,9 @@ public class MaterialPickingOrchestrator {
                         .eq(MaterialPickingItem::getPickingId, id));
 
         for (MaterialPickingItem item : items) {
-            if (item.getMaterialStockId() != null && item.getQuantity() != null && item.getQuantity() > 0) {
+            // D-414：领料数量已是 BigDecimal，解锁量同步支持小数（此前 1.32 米只解锁 1）
+            if (item.getMaterialStockId() != null && item.getQuantity() != null
+                    && item.getQuantity().compareTo(java.math.BigDecimal.ZERO) > 0) {
                 materialStockService.unlockStock(item.getMaterialStockId(), item.getQuantity());
                 log.info("[Picking] 取消待出库: 解锁库存 stockId={}, qty={}", item.getMaterialStockId(), item.getQuantity());
             }

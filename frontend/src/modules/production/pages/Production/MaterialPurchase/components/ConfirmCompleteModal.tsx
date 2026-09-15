@@ -109,6 +109,9 @@ const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
               </Text>
             </Radio>
           </Radio.Group>
+          <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 8, color: 'var(--color-text-tertiary)' }}>
+            对账去向：选「入库到仓库」→ 账走物料仓库的出入库流水，不在物料对账页；选「直接使用 / 暂不登记」→ 采购款在物料对账页核销。
+          </Text>
         </div>
 
         {' '}

@@ -66,6 +66,35 @@ public interface MaterialStockMapper extends BaseMapper<MaterialStock> {
     int decreaseStockWithCheckDecimal(@Param("id") String id, @Param("delta") java.math.BigDecimal delta,
                                       @Param("tenantId") Long tenantId);
 
+    /**
+     * D-414：t_material_stock.quantity / locked_quantity 与领料数量都已支持小数，
+     * 解锁/扣减/回写也必须走小数版本（int 版会把 1.32 米截成 1）。
+     * 同样受限于 MyBatis 按方法名注册语句，另起方法名而不做重载。
+     */
+    @Update("UPDATE t_material_stock SET " +
+            "locked_quantity = GREATEST(0, locked_quantity - #{delta}), " +
+            "update_time = NOW() WHERE id = #{id} AND delete_flag = 0 " +
+            "AND tenant_id = #{tenantId}")
+    int unlockStockDecimal(@Param("id") String id, @Param("delta") java.math.BigDecimal delta,
+                           @Param("tenantId") Long tenantId);
+
+    @Update("UPDATE t_material_stock SET " +
+            "quantity = quantity - #{delta}, " +
+            "locked_quantity = GREATEST(0, locked_quantity - #{delta}), " +
+            "total_value = ROUND(GREATEST(0, quantity) * COALESCE(unit_price, 0), 2), " +
+            "update_time = NOW() WHERE id = #{id} AND quantity >= #{delta} AND delete_flag = 0 " +
+            "AND tenant_id = #{tenantId}")
+    int decreaseStockAndUnlockDecimal(@Param("id") String id, @Param("delta") java.math.BigDecimal delta,
+                                      @Param("tenantId") Long tenantId);
+
+    @Update("UPDATE t_material_stock SET " +
+            "quantity = GREATEST(0, quantity + #{delta}), " +
+            "total_value = ROUND(GREATEST(0, quantity) * COALESCE(unit_price, 0), 2), " +
+            "update_time = NOW() WHERE id = #{id} AND delete_flag = 0 " +
+            "AND tenant_id = #{tenantId}")
+    int updateStockQuantityDecimal(@Param("id") String id, @Param("delta") java.math.BigDecimal delta,
+                                   @Param("tenantId") Long tenantId);
+
     @Update("UPDATE t_material_stock SET " +
             // D-070: 加权单价须用扣减前的旧quantity计算，故unit_price的CASE放在quantity赋值之前（MySQL从左到右求值）
             "unit_price = CASE " +

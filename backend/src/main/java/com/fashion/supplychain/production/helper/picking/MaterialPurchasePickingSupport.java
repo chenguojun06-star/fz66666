@@ -53,21 +53,21 @@ public class MaterialPurchasePickingSupport {
                 + (size == null ? "" : size);
     }
 
-    public int calcAvailableStock(List<MaterialStock> stockList) {
+    /** D-414：可用库存按 BigDecimal 汇总（此前 intValue 会把 375.5 米算成 375） */
+    public BigDecimal calcAvailableStock(List<MaterialStock> stockList) {
         if (stockList == null || stockList.isEmpty()) {
-            return 0;
+            return BigDecimal.ZERO;
         }
         return stockList.stream()
-                .mapToInt(stock -> {
+                .map(stock -> {
                     BigDecimal qty = stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO;
                     int locked = stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0;
-                    // D-410：库存已是 BigDecimal；领料数量仍按 int 统计，故在此取整
-                    return qty.subtract(BigDecimal.valueOf(locked)).max(BigDecimal.ZERO).intValue();
+                    return qty.subtract(BigDecimal.valueOf(locked)).max(BigDecimal.ZERO);
                 })
-                .sum();
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public int calcAvailableStock(String materialCode, String color, String size) {
+    public BigDecimal calcAvailableStock(String materialCode, String color, String size) {
         return calcAvailableStock(queryStockList(materialCode, color, size));
     }
 

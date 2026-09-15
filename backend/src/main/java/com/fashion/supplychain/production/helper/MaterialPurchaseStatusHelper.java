@@ -705,18 +705,24 @@ public class MaterialPurchaseStatusHelper {
         } catch (Exception e) {
             log.warn("[采购确认完成] 写日志失败（不阻断）: {}", e.getMessage());
         }
-        // D-264：确认完成即生成/更新物料对账——对账编排器此前只注入未调用，
-        // 内部工厂采购完成后从不入对账，全靠手动"补生成"兜底（用户："最近都没有进去"）
-        try {
-            materialReconciliationOrchestrator.upsertFromPurchaseId(purchaseId);
-        } catch (Exception e) {
-            log.warn("[采购确认完成] 生成物料对账失败（不阻断，可用补生成兜底）: purchaseId={}, error={}",
-                    purchaseId, e.getMessage());
-        }
-
         // D-321b: 物料去向选择——入库到仓库 / 直接使用，均写入物料仓储出入库流水；
         // 不传 movementAction 时维持原行为（仅完成，向后兼容小程序等旧调用方）。
+        // 必须先解析：movementAction=inbound 时，下面的 inboundOnComplete 会触发 syncFromInbound
+        // 自动生成物料对账，这里再 upsertFromPurchaseId 会同一次入库记两条对账（重复根因）。
         String movementAction = ParamUtils.toTrimmedString(body == null ? null : body.get("movementAction"));
+
+        // D-264：确认完成即生成/更新物料对账——对账编排器此前只注入未调用，
+        // 内部工厂采购完成后从不入对账，全靠手动"补生成"兜底（用户："最近都没有进去"）
+        // 注意：仅当不走「入库」时才在此生成；走「入库」时由入库同步（syncFromInbound）统一记对账，
+        // 避免同一入库事件被双路径各记一条、导致物料对账多行。
+        if (!"inbound".equals(movementAction)) {
+            try {
+                materialReconciliationOrchestrator.upsertFromPurchaseId(purchaseId);
+            } catch (Exception e) {
+                log.warn("[采购确认完成] 生成物料对账失败（不阻断，可用补生成兜底）: purchaseId={}, error={}",
+                        purchaseId, e.getMessage());
+            }
+        }
         if (StringUtils.hasText(movementAction)) {
             applyMovementAction(fetchUpdatedWithFallback(purchaseId,
                     () -> queryPurchaseSafeFields(purchaseId)), movementAction, body, result);

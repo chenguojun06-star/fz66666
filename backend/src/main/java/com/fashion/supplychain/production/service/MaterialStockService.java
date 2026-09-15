@@ -34,6 +34,9 @@ public interface MaterialStockService extends IService<MaterialStock> {
      */
     void decreaseStock(String materialId, String color, String size, int quantity);
 
+    /** D-414：领料/出库数量支持小数（int 版本委托到此方法） */
+    void decreaseStock(String materialId, String color, String size, java.math.BigDecimal quantity);
+
     /**
      * 根据库存ID扣减库存
      */
@@ -70,11 +73,27 @@ public interface MaterialStockService extends IService<MaterialStock> {
 
     void lockStock(String stockId, int quantity);
 
+    /**
+     * D-414：锁定量走小数入口。t_material_stock.locked_quantity 目前仍是 INT，
+     * 故按 CEILING 取整锁定（宁可多锁不可少锁，避免小数领料被超卖）；
+     * 解锁走 {@link #unlockStock(String, java.math.BigDecimal)}，释放时按实际量归零，不会残留。
+     */
+    void lockStock(String stockId, java.math.BigDecimal quantity);
+
     void unlockStock(String stockId, int quantity);
+
+    /** D-414：解锁量支持小数（领料数量已是 DECIMAL，int 版本委托到此方法） */
+    void unlockStock(String stockId, java.math.BigDecimal quantity);
 
     void decreaseStockAndUnlock(String stockId, int quantity);
 
+    /** D-414：出库扣减+解锁支持小数（领料数量已是 DECIMAL，int 版本委托到此方法） */
+    void decreaseStockAndUnlock(String stockId, java.math.BigDecimal quantity);
+
     void updateStockQuantity(String stockId, int delta);
+
+    /** D-414：库存回写量支持小数（int 版本委托到此方法） */
+    void updateStockQuantity(String stockId, java.math.BigDecimal delta);
 
     /**
      * 入库并更新加权单价（仓库自由入库/扫码入库路径）

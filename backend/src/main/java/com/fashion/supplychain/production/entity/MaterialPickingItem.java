@@ -21,7 +21,8 @@ public class MaterialPickingItem {
     private String materialName;
     private String color;
     private String size;
-    private Integer quantity;
+    /** 领料数量（D-414：INT → DECIMAL(12,4)，支持面料按米/码的小数领料） */
+    private BigDecimal quantity;
     private String unit;
     private String specification;
     private BigDecimal unitPrice;

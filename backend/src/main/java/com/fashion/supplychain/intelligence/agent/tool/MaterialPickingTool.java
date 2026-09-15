@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Lazy;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -122,7 +123,8 @@ public class MaterialPickingTool extends AbstractAgentTool {
                 if (quantity != null) {
                     MaterialPickingItem item = new MaterialPickingItem();
                     item.setMaterialName(materialName);
-                    item.setQuantity(quantity);
+                    // D-414：领料数量字段已是 BigDecimal
+                    item.setQuantity(BigDecimal.valueOf(quantity));
                     item.setUnit(unit != null ? unit : "米");
                     item.setTenantId(tenantId);
                     items.add(item);
