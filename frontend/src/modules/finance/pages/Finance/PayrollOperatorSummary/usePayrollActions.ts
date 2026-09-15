@@ -40,9 +40,13 @@ export function usePayrollActions(deps: PayrollActionDeps) {
     } = deps;
 
     const handleAuditDetail = async (row: any) => {
-        const isInternal = row?.factoryType === 'INTERNAL';
-        if (!isInternal && !isOrderFrozenByStatus({ status: String(row?.orderStatus || '') })) {
-            message.warning('外部工厂订单尚未关单，只有已关单的订单才能审核');
+        // D-427 修正：后端 DTO 并无 factoryType 字段（原写法 `row?.factoryType` 恒为 undefined，
+        // 导致所有订单都被判为外发工厂、未关单一律不给审核）。
+        // 正确字段为 delegateTargetType：none/空=自己完成、internal=内部指派、external=外发工厂。
+        // 只有**明确外发工厂**的订单才要求订单已关单。
+        const isExternalFactory = String(row?.delegateTargetType || '').toLowerCase() === 'external';
+        if (isExternalFactory && !isOrderFrozenByStatus({ status: String(row?.orderStatus || '') })) {
+            message.warning('外发工厂订单尚未关单，只有已关单的订单才能审核');
             return;
         }
         const approvalId = getDetailApprovalId(row);
@@ -73,8 +77,8 @@ export function usePayrollActions(deps: PayrollActionDeps) {
         }).filter(Boolean);
 
         const notFrozenRows = selectedRows.filter((row): row is PayrollOperatorProcessSummaryRow => {
-            const isInternal = (row as any)?.factoryType === 'INTERNAL';
-            return Boolean(row && !isInternal && !isOrderFrozenByStatus({ status: String((row as any)?.orderStatus || '') }));
+            const isExternal = String((row as any)?.delegateTargetType || '').toLowerCase() === 'external';
+            return Boolean(row && isExternal && !isOrderFrozenByStatus({ status: String((row as any)?.orderStatus || '') }));
         });
         const alreadyAuditedRows = selectedRows.filter((row): row is PayrollOperatorProcessSummaryRow => {
             return Boolean(row && isDetailAudited(row, auditedDetailKeys));
@@ -85,17 +89,17 @@ export function usePayrollActions(deps: PayrollActionDeps) {
 
         const eligibleRows = selectedRows.filter((row): row is PayrollOperatorProcessSummaryRow => {
             const approvalId = getDetailApprovalId(row);
-            const isInternal = (row as any)?.factoryType === 'INTERNAL';
+            const isExternal = String((row as any)?.delegateTargetType || '').toLowerCase() === 'external';
             return Boolean(
                 row && approvalId &&
-                (isInternal || isOrderFrozenByStatus({ status: String((row as any)?.orderStatus || '') })) &&
+                (!isExternal || isOrderFrozenByStatus({ status: String((row as any)?.orderStatus || '') })) &&
                 !isDetailAudited(row, auditedDetailKeys)
             );
         });
 
         if (eligibleRows.length === 0) {
             if (notFrozenRows.length > 0) {
-                message.warning(`所选 ${notFrozenRows.length} 行外部工厂订单尚未关单，只有已关单的外部工厂订单才能审核`);
+                message.warning(`所选 ${notFrozenRows.length} 行外发工厂订单尚未关单，只有已关单的订单才能审核`);
             } else if (alreadyAuditedRows.length > 0) {
                 message.warning('所选行已全部审核过，无需重复审核');
             } else if (noApprovalIdRows.length > 0) {

@@ -63,6 +63,13 @@ var SCAN_TYPE_FALLBACK = { kind: 'bulk', text: '大货' };
 //    而该字段在后端 DTO 与前端类型里都不存在 → 恒为 undefined →
 //    所有订单被误判为"外发工厂"，未关单的一律不给审核。
 //    本处改用正确字段，并保留对旧值的兜底兼容。
+// D-427：结算类型筛选选项（客户端筛选，与卡片标签同源字段 delegateTargetType）
+var FACTORY_FILTER_OPTIONS = [
+  { value: '', label: '全部类型' },
+  { value: 'none', label: '自己完成' },
+  { value: 'internal', label: '内部指派' },
+  { value: 'external', label: '外发工厂' },
+];
 var DELEGATE_TYPE_MAP = {
   none: { kind: 'self', text: '自己完成' },
   internal: { kind: 'internal', text: '内部指派' },
@@ -123,6 +130,10 @@ Page({
     // 月份选择（monthValue 供 picker 用，格式 YYYY-MM；monthLabel 供展示）
     monthLabel: '',
     monthValue: '',
+    // D-427：结算类型筛选
+    factoryFilter: '',
+    factoryFilterLabel: '全部类型',
+    FACTORY_FILTER_OPTIONS: FACTORY_FILTER_OPTIONS,
     // 操作面板
     showActionSheet: false,
     current: null,
@@ -187,6 +198,14 @@ Page({
           return String(r.operatorName || '').toLowerCase().indexOf(kw) >= 0
             || String(r.processName || '').toLowerCase().indexOf(kw) >= 0
             || String(r.orderNo || '').toLowerCase().indexOf(kw) >= 0;
+        });
+      }
+      // D-427：按结算类型筛选（空值归入「自己完成」）
+      var ff = that.data.factoryFilter;
+      if (ff) {
+        rows = rows.filter(function (r) {
+          var d = String(r.delegateTargetType || '').toLowerCase() || 'none';
+          return d === ff;
         });
       }
 
@@ -284,6 +303,19 @@ Page({
   },
 
   onKeywordSearch: function () {
+    this._loadData();
+  },
+
+  /**
+   * D-427：结算类型筛选变更（客户端筛选，无需重新请求）
+   */
+  onFactoryFilterChange: function (e) {
+    var idx = Number(e.detail.value);
+    var opt = FACTORY_FILTER_OPTIONS[idx] || FACTORY_FILTER_OPTIONS[0];
+    this.setData({
+      factoryFilter: opt.value,
+      factoryFilterLabel: opt.label,
+    });
     this._loadData();
   },
 

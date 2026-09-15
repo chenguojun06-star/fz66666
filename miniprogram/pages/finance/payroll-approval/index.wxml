@@ -45,6 +45,15 @@
             </view>
           </picker>
         </view>
+        <!-- D-427：结算类型筛选（自己完成 / 内部指派 / 外发工厂） -->
+        <view class="filter-item">
+          <picker mode="selector" range="{{FACTORY_FILTER_OPTIONS}}" range-key="label" bindchange="onFactoryFilterChange">
+            <view class="picker-box {{factoryFilter ? 'picker-box--active' : ''}}">
+              <text class="picker-text">{{factoryFilterLabel}}</text>
+              <view class="picker-chevron"></view>
+            </view>
+          </picker>
+        </view>
       </view>
     </sticky-search-bar>
 
