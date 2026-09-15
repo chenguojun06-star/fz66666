@@ -344,3 +344,17 @@
   background: var(--color-success-bg);
   color: var(--color-success);
 }
+
+/* D-428：结算异常提示卡（红） */
+.abnormal-card {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: var(--color-danger-bg);
+  border-radius: var(--radius-xl);
+}
+.abnormal-card__text {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-danger);
+  line-height: 1.5;
+}

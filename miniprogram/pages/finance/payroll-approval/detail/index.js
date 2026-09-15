@@ -52,7 +52,12 @@ var DELEGATE_TYPE_MAP = {
   none: { kind: 'self', text: '自己完成' },
   internal: { kind: 'internal', text: '内部指派' },
   external: { kind: 'external', text: '外发工厂' },
+  factory: { kind: 'external', text: '外发工厂' },  // 后端实际写入值（大写 FACTORY）
 };
+function isExternalDelegateType(v) {
+  var t = String(v || '').toLowerCase();
+  return t === 'external' || t === 'factory';
+}
 
 function pad2(n) { return n < 10 ? '0' + n : String(n); }
 
@@ -141,8 +146,7 @@ Page({
   _enrich: function (r) {
     var canOperate = this.data.canOperate;
     // D-426：判定字段为 delegateTargetType；只有明确外发工厂才受关单限制
-    var dtype = String(r.delegateTargetType || '').toLowerCase();
-    var isExternalFactory = dtype === 'external';
+    var isExternalFactory = isExternalDelegateType(r.delegateTargetType);
     var audited = String(r.approvalStatus || '').toLowerCase() === 'approved';
     var hasApproval = !!(r.approvalId && String(r.approvalId).trim());
     var frozen = isOrderFrozenByStatus(r.orderStatus);
@@ -154,11 +158,24 @@ Page({
     else if (audited) blockReason = '该明细已审核';
     else if (!canAudit) blockReason = '外发工厂订单尚未关单，只有已关单的订单才能审核';
 
+    // D-428：结算异常判定（与列表页同一套规则）
+    var amtNum = Number(r.totalAmount || 0);
+    var qtyNum = Number(r.quantity || 0);
+    var priceNum = Number(r.unitPrice || 0);
+    var abnormalText = '';
+    if (!hasApproval) {
+      abnormalText = '缺少审批标识，数据可能未同步，请核实';
+    } else if (qtyNum > 0 && (amtNum <= 0 || priceNum <= 0)) {
+      abnormalText = '结算金额或工序单价为 0，请核实';
+    }
+
     r.audited = audited;
     r.canAudit = canAudit;
     r.isExternalFactory = isExternalFactory;
     r.eligible = eligible;
     r.blockReason = blockReason;
+    r._abnormalText = abnormalText;
+    r._isAbnormal = !!abnormalText;
     r.auditText = audited ? '已审核' : '待审核';
     r._statusColor = audited ? 'var(--color-success)' : 'var(--color-warning)';
     r.orderStatusText = ORDER_STATUS_TEXT[String(r.orderStatus || '').toLowerCase()] || (r.orderStatus || '—');

@@ -62,12 +62,17 @@
       <text class="batch-bar__text">批量审核 {{auditableIds.length}} 条</text>
     </view>
 
+    <!-- D-428：异常汇总提示（有数据异常时醒目告知，引导核实） -->
+    <view class="abnormal-bar" wx:if="{{abnormalCount > 0}}">
+      <text class="abnormal-bar__text">有 {{abnormalCount}} 条结算数据异常，已标红，请点开详情核实</text>
+    </view>
+
     <!-- 卡片列表 -->
     <view class="card-list">
       <empty-state wx:if="{{!loading && list.length === 0}}" text="本月暂无工资明细" />
 
       <view
-        class="order-card {{item.auditCls === 'tag-orange' ? 'order-card--warn' : ''}}"
+        class="order-card {{item._cardCls}}"
         wx:for="{{list}}"
         wx:key="approvalId"
       >
@@ -94,7 +99,9 @@
               <text wx:if="{{item.orderStatusText}}">{{item.orderStatusText}}</text>
             </view>
             <view class="info-line--weak" wx:if="{{item._timeText}}">{{item._timeText}}</view>
-            <view class="info-line--warn" wx:if="{{item.blockReason && !item.audited}}">{{item.blockReason}}</view>
+            <!-- D-428：结算异常提示 —— 红色=数据异常需核实；橙色=业务流转中 -->
+            <view class="info-line--danger" wx:if="{{item._abnormalText && item._cardCls === 'order-card--danger'}}">{{item._abnormalText}}</view>
+            <view class="info-line--warn" wx:elif="{{item._abnormalText}}">{{item._abnormalText}}</view>
           </view>
         </view>
 

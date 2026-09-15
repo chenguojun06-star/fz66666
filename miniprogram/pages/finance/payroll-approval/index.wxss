@@ -108,3 +108,15 @@
 .action-approve { color: var(--color-success); }
 .action-blocked { padding: 14px 0; text-align: center; color: var(--color-text-tertiary); }
 .action-cancel { color: var(--color-text-secondary); padding: 14px 16px; margin: 0 16px 12px; }
+/* D-428：结算异常汇总条（醒目告知 + 引导核实） */
+.abnormal-bar {
+  margin: 8px 16px 0;
+  padding: 10px 12px;
+  background: var(--color-danger-bg);
+  border-radius: var(--radius-lg);
+}
+.abnormal-bar__text {
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+  line-height: 1.4;
+}

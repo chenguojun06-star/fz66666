@@ -131,7 +131,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* 异常提示：同字号，警示色 */
+/* D-428：数据异常提示（红）—— 必须人工核实 */
+.info-line--danger {
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+  font-weight: var(--font-weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 业务流转中提示（橙） */
 .info-line--warn {
   font-size: var(--font-size-sm);
   color: var(--color-warning);

@@ -115,6 +115,11 @@
       </view>
     </view>
 
+    <!-- D-428：结算异常提示（红，需人工核实） -->
+    <view wx:if="{{detail._abnormalText}}" class="abnormal-card">
+      <text class="abnormal-card__text">{{detail._abnormalText}}</text>
+    </view>
+
     <!-- 底部操作：三态与 PC 端 actionColumns 对齐（可审核 / 已审核 / 未关单） -->
     <view wx:if="{{canOperate && !detail.audited && detail.eligible}}" class="footer-actions">
       <view class="action-btn action-btn--primary" hover-class="action-btn--pressed" bindtap="onAudit">审核通过</view>

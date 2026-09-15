@@ -74,7 +74,15 @@ var DELEGATE_TYPE_MAP = {
   none: { kind: 'self', text: '自己完成' },
   internal: { kind: 'internal', text: '内部指派' },
   external: { kind: 'external', text: '外发工厂' },
+  // ⚠️ 后端 ProductionScanExecutor:613 / ScanRecordFactoryBackfillRunner 实际写入的是
+  //    大写 'FACTORY'（不是 'external'），此处必须兼容，否则会 fallback 成"自己完成"。
+  factory: { kind: 'external', text: '外发工厂' },
 };
+// 判定"是否外发工厂"时同时接受两种写法
+function isExternalDelegateType(v) {
+  var t = String(v || '').toLowerCase();
+  return t === 'external' || t === 'factory';
+}
 
 /**
  * 订单是否已关单（冻结）——决定外部工厂明细能否审核
@@ -216,12 +224,12 @@ Page({
       // D-423：批量审核被跳过的分类计数（对齐 PC 端 handleBatchAuditDetails 的提示优先级）
       var notFrozenCount = 0;
       var noApprovalIdCount = 0;
+      var abnormalCount = 0;   // D-428：数据异常条数（标红）
 
       var enriched = rows.map(function (r) {
         // D-426：判定字段改为 delegateTargetType（正确字段），
         // 只有**明确外发工厂**才受"订单须关单"限制；自己完成/内部指派不受限。
-        var dtype = String(r.delegateTargetType || '').toLowerCase();
-        var isExternalFactory = dtype === 'external';
+        var isExternalFactory = isExternalDelegateType(r.delegateTargetType);
         var audited = String(r.approvalStatus || '').toLowerCase() === 'approved';
         var hasApproval = !!(r.approvalId && String(r.approvalId).trim());
         var frozen = isOrderFrozenByStatus(r.orderStatus);
@@ -235,12 +243,32 @@ Page({
           blockReason = '外发工厂订单尚未关单，只有已关单的订单才能审核';
         }
 
+        // D-428：结算异常判定 —— 异常项前端标红，提示用户核实详情
+        //   红色(danger)：数据本身有问题，必须人工核实
+        //   橙色(warn)  ：业务流转中（如外发订单待关单），非数据错误
+        var amtNum = Number(r.totalAmount || 0);
+        var qtyNum = Number(r.quantity || 0);
+        var priceNum = Number(r.unitPrice || 0);
+        var abnormalText = '';
+        var cardCls = '';
+        if (!hasApproval) {
+          abnormalText = '缺少审批标识，数据可能未同步，请核实';
+          cardCls = 'order-card--danger';
+        } else if (qtyNum > 0 && (amtNum <= 0 || priceNum <= 0)) {
+          abnormalText = '结算金额或工序单价为 0，请核实';
+          cardCls = 'order-card--danger';
+        } else if (!audited && !canAudit) {
+          abnormalText = '外发工厂订单尚未关单，暂不可审核';
+          cardCls = 'order-card--warn';
+        }
+
         if (audited) auditedCount++;
         else pendingCount++;
         totalAmount += Number(r.totalAmount || 0);
         if (eligible) auditableIds.push(r.approvalId);
         if (!audited && !eligible && !canAudit) notFrozenCount++;
         if (!audited && !hasApproval) noApprovalIdCount++;
+        if (cardCls === 'order-card--danger') abnormalCount++;
 
         r.audited = audited;
         r.canAudit = canAudit;
@@ -249,6 +277,8 @@ Page({
         r.auditCls = audited ? 'tag-green' : 'tag-orange';
         r.eligible = eligible;
         r.blockReason = blockReason;
+        r._abnormalText = abnormalText;
+        r._cardCls = cardCls;
         r.orderStatusText = ORDER_STATUS_TEXT[String(r.orderStatus || '').toLowerCase()] || (r.orderStatus || '—');
         r.amountStr = r.totalAmount != null ? Number(r.totalAmount).toFixed(2) : '0.00';
         r.unitPriceStr = r.unitPrice != null ? Number(r.unitPrice).toFixed(2) : '—';
@@ -290,6 +320,7 @@ Page({
         // D-423：供批量审核按 PC 端优先级给出准确提示
         notFrozenCount: notFrozenCount,
         noApprovalIdCount: noApprovalIdCount,
+        abnormalCount: abnormalCount,
         loading: false,
       });
     }).catch(function (e) {
