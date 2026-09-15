@@ -104,6 +104,12 @@ spring:
     baseline-version: 1
     validate-on-migrate: true
     out-of-order: true
+    # D-415：忽略「数据库已应用、但脚本已不在仓库」的迁移（*:missing）。
+    # 本地库存在 202709110200 / 202709120200 两条历史记录，但对应 .sql 在仓库里已不存在
+    # （git log 也查不到）→ Flyway 校验报 "Detected applied migration not resolved locally"
+    # 并阻断**后续所有**迁移，表现为新脚本静默不执行。
+    # 本次 V202709150100（数量小数化）就因此没跑：t_material_reconciliation.quantity 仍是 INT。
+    ignore-migration-patterns: "*:missing"
     locations: classpath:db/migration
     encoding: UTF-8
 

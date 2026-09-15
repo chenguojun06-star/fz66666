@@ -150,7 +150,9 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
                 width: 100,
                 align: 'right' as const,
                 render: (_: any, record: any) => {
-                  const total = Number(record.totalAmount || 0) || (Number(record.purchaseQuantity || 0) * Number(record.unitPrice || 0));
+                  // D-410：总价按「实际到货数量 × 单价」——与打印单、CSV 导出、对账单结算口径统一。
+                  // 此前用采购数量（或后端 totalAmount=采购量×单价），部分到货时金额虚高。
+                  const total = Number(record.arrivedQuantity || 0) * Number(record.unitPrice || 0);
                   return total > 0 ? <strong style={{ color: 'var(--color-primary)' }}>{displayAmount(total)}</strong> : '-';
                 },
               },

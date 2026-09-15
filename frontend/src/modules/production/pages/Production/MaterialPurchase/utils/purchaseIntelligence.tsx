@@ -39,8 +39,13 @@ export function analyzePurchase(orderRecs: MaterialPurchaseType[]): PurchaseInsi
   const rate = totalP > 0 ? Math.round(totalA / totalP * 100) : 0;
 
   // 成本分析
+  // totalCost = 采购计划金额（分母，用后端 totalAmount = 采购量×单价）
   const totalCost = orderRecs.reduce((s, r) => s + (Number(r.totalAmount) || 0), 0);
-  const arrivedCost = orderRecs.filter(r => isFullyArrived(r)).reduce((s, r) => s + (Number(r.totalAmount) || 0), 0);
+  // D-410：已到货金额必须按「实际到货数量 × 单价」逐条累加。
+  // 此前只统计"已到齐"的订单（filter isFullyArrived），导致部分到货的采购单金额完全不计入，
+  // "已到货 xx%" 明显偏低（例如 1.32 米到了 1 米，此前记 0）。
+  const arrivedCost = orderRecs.reduce(
+    (s, r) => s + normalizeMaterialQuantity(r.arrivedQuantity) * (Number(r.unitPrice) || 0), 0);
 
   // 按物料类型分组
   const fabrics     = orderRecs.filter(r => getMaterialTypeCategory(r.materialType) === 'fabric');

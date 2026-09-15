@@ -130,7 +130,10 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
   const num = (v: unknown, d = 2) => { const n = Number(v); return Number.isFinite(n) ? Number(n.toFixed(d)) : 0; };
   const totalPurchase = num(purchaseList.reduce((s, p) => s + (Number(p.purchaseQuantity) || 0), 0));
   const totalArrived = num(purchaseList.reduce((s, p) => s + (Number(p.arrivedQuantity) || 0), 0));
-  const totalAmount = purchaseList.reduce((s, p) => s + (Number(p.purchaseQuantity || 0) * Number(p.unitPrice || 0)), 0);
+  // D-410：金额一律按「实际到货数量 × 单价」结算。
+  // 此前按采购数量算：面料采购 1.32 米、实到 1 米时，打印单显示 ¥79.20（1.32×60），
+  // 而按到货量结算的对账单是 ¥60.00，两处对不上，用户看到"金额虚高"。
+  const totalAmount = num(purchaseList.reduce((s, p) => s + (Number(p.arrivedQuantity || 0) * Number(p.unitPrice || 0)), 0));
   const suppliers = Array.from(new Set(purchaseList.map((p) => String(p.supplierName || '').trim()).filter(Boolean))).join('、');
   const createDate = purchaseList.find((p) => p.createTime)?.createTime || '';
 
@@ -152,7 +155,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
           <td style="text-align:right">${qty}</td>
           <td style="text-align:right">${arrived}</td>
           <td style="text-align:right">${Number.isFinite(price) ? price.toFixed(2) : '-'}</td>
-          <td style="text-align:right">${money(qty * price)}</td>
+          <td style="text-align:right">${money(arrived * price)}</td>
           <td>${p.supplierName || ''}</td>
           <td style="text-align:center">${statusLabel(p)}</td>
         </tr>`;
@@ -227,7 +230,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
       <th style="text-align:center">序号</th><th>物料类型</th><th>物料编码</th><th>物料名称</th>
       <th style="text-align:center">颜色</th><th style="text-align:center">规格</th><th style="text-align:center">单位</th>
       <th style="text-align:right">采购数量</th><th style="text-align:right">到货数量</th>
-      <th style="text-align:right">单价</th><th style="text-align:right">金额</th><th>供应商</th><th style="text-align:center">状态</th>
+      <th style="text-align:right">单价</th><th style="text-align:right">金额(按到货)</th><th>供应商</th><th style="text-align:center">状态</th>
     </tr></thead>
     <tbody>${rowsHtml}</tbody>
     <tfoot>
@@ -242,7 +245,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
     </tfoot>
   </table>
   <table class="foot">
-    <tr><td>采购单数：${purchaseList.length} 个 · 采购总量：${totalPurchase} · 到货总量：${totalArrived} · 合计金额：${money(totalAmount)}</td></tr>
+    <tr><td>采购单数：${purchaseList.length} 个 · 采购总量：${totalPurchase} · 到货总量：${totalArrived} · 合计金额（按实际到货）：${money(totalAmount)}</td></tr>
     <tr><td>备注：该采购单由系统根据物料清单自动生成，供应商与单价以实际协商为准。</td></tr>
   </table>
   <script>window.onload=function(){setTimeout(function(){window.print()},300)}</script>
@@ -362,7 +365,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead>
             <tr style={{ background: 'var(--color-bg-subtle)' }}>
-              {['序号', '物料类型', '物料编码', '物料名称', '颜色', '规格', '单位', '采购数量', '到货数量', '单价', '金额', '供应商', '状态'].map((t) => (
+              {['序号', '物料类型', '物料编码', '物料名称', '颜色', '规格', '单位', '采购数量', '到货数量', '单价', '金额(按到货)', '供应商', '状态'].map((t) => (
                 <th key={t} style={{ border: '1px solid var(--color-border)', padding: '4px 8px', textAlign: t.includes('数量') || t === '单价' || t === '金额' || t === '序号' ? 'center' : 'left' }}>{t}</th>
               ))}
             </tr>
@@ -370,6 +373,8 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
           <tbody>
             {purchaseList.map((p, i) => {
               const qty = Number(p.purchaseQuantity || 0);
+              // D-410：金额列按实际到货数量计算（与对账单结算口径一致）
+              const arrived = Number(p.arrivedQuantity || 0);
               const price = Number(p.unitPrice || 0);
               const cfg = getStatusConfig(p.status as any);
               return (
@@ -384,7 +389,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
                   <td style={{ border: '1px solid var(--color-border)', padding: '4px 8px', textAlign: 'right' }}>{qty}</td>
                   <td style={{ border: '1px solid var(--color-border)', padding: '4px 8px', textAlign: 'right' }}>{Number(p.arrivedQuantity || 0)}</td>
                   <td style={{ border: '1px solid var(--color-border)', padding: '4px 8px', textAlign: 'right' }}>{Number.isFinite(price) ? price.toFixed(2) : '-'}</td>
-                  <td style={{ border: '1px solid var(--color-border)', padding: '4px 8px', textAlign: 'right' }}>{money(qty * price)}</td>
+                  <td style={{ border: '1px solid var(--color-border)', padding: '4px 8px', textAlign: 'right' }}>{money(arrived * price)}</td>
                   <td style={{ border: '1px solid var(--color-border)', padding: '4px 8px' }}>{p.supplierName || '-'}</td>
                   <td style={{ border: '1px solid var(--color-border)', padding: '4px 8px', textAlign: 'center' }}>
                     <Tag color={cfg.color} style={{ margin: 0 }}>{cfg.text}</Tag>
@@ -407,7 +412,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
         </table>
 
         <Text type="secondary" style={{ display: 'block', marginTop: 10, fontSize: 12 }}>
-          采购单数：{purchaseList.length} 个 · 采购总量：{totalPurchase} · 到货总量：{totalArrived} · 合计金额：{money(totalAmount)}
+          采购单数：{purchaseList.length} 个 · 采购总量：{totalPurchase} · 到货总量：{totalArrived} · 合计金额（按实际到货）：{money(totalAmount)}
         </Text>
       </div>
     </SideDrawer>
