@@ -77,9 +77,9 @@
         <text class="fact-label">来源</text>
         <text class="fact-val fact-val--strong">{{detail._sourceText}}</text>
       </view>
-      <view wx:if="{{detail._factoryText}}" class="fact-row">
-        <text class="fact-label">工厂类型</text>
-        <text class="fact-val fact-val--strong">{{detail._factoryText}}{{detail.isInternal ? '工厂（可直接审核）' : '工厂（订单须关单后可审核）'}}</text>
+      <view class="fact-row">
+        <text class="fact-label">结算类型</text>
+        <text class="fact-val fact-val--strong">{{detail._factoryText}}{{detail.isExternalFactory ? '（订单须关单后可审核）' : '（可直接审核）'}}</text>
       </view>
       <view wx:if="{{detail.orderNo}}" class="fact-row">
         <text class="fact-label">订单号</text>

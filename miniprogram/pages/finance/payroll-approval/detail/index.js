@@ -45,11 +45,13 @@ var SCAN_TYPE_MAP = {
   cutting: { kind: 'cutting', text: '裁床' },
 };
 
-// D-423：工厂类型（与 PC 端 FactoryTypeTag.FACTORY_TYPE_CONFIG 对齐）
-// 该字段同时决定审核资格：内部可直接审核；外发需订单进入终态
-var FACTORY_TYPE_MAP = {
-  INTERNAL: { kind: 'internal', text: '内部' },
-  EXTERNAL: { kind: 'external', text: '外发' },
+// D-426：结算类型（字段为 delegateTargetType，与 PC 端「结算类型」列一致）
+//   none/空 → 自己完成   internal → 内部指派   external → 外发工厂
+// 只有**明确外发工厂**的订单才要求已关单才能审核。
+var DELEGATE_TYPE_MAP = {
+  none: { kind: 'self', text: '自己完成' },
+  internal: { kind: 'internal', text: '内部指派' },
+  external: { kind: 'external', text: '外发工厂' },
 };
 
 function pad2(n) { return n < 10 ? '0' + n : String(n); }
@@ -138,12 +140,13 @@ Page({
    */
   _enrich: function (r) {
     var canOperate = this.data.canOperate;
-    var isInternal = String(r.factoryType || '') === 'INTERNAL';
+    // D-426：判定字段为 delegateTargetType；只有明确外发工厂才受关单限制
+    var dtype = String(r.delegateTargetType || '').toLowerCase();
+    var isExternalFactory = dtype === 'external';
     var audited = String(r.approvalStatus || '').toLowerCase() === 'approved';
     var hasApproval = !!(r.approvalId && String(r.approvalId).trim());
     var frozen = isOrderFrozenByStatus(r.orderStatus);
-    // D-423：与 PC 端 usePayrollActions.handleAuditDetail 严格一致
-    var canAudit = isInternal || frozen;
+    var canAudit = !isExternalFactory || frozen;
     var eligible = canOperate && hasApproval && !audited && canAudit;
 
     var blockReason = '';
@@ -153,7 +156,7 @@ Page({
 
     r.audited = audited;
     r.canAudit = canAudit;
-    r.isInternal = isInternal;
+    r.isExternalFactory = isExternalFactory;
     r.eligible = eligible;
     r.blockReason = blockReason;
     r.auditText = audited ? '已审核' : '待审核';
@@ -171,10 +174,11 @@ Page({
     var scan = SCAN_TYPE_MAP[String(r.scanType || '').toLowerCase()] || null;
     r._sourceKind = scan ? scan.kind : '';
     r._sourceText = scan ? scan.text : '';
-    // D-423：工厂类型标注（内部 / 外发）
-    var fty = FACTORY_TYPE_MAP[String(r.factoryType || '').toUpperCase()] || null;
-    r._factoryKind = fty ? fty.kind : '';
-    r._factoryText = fty ? fty.text : '';
+    // D-426：结算类型标签（自己完成 / 内部指派 / 外发工厂）
+    var dkey = String(r.delegateTargetType || '').toLowerCase();
+    var dty = DELEGATE_TYPE_MAP[dkey] || DELEGATE_TYPE_MAP.none;
+    r._factoryKind = dty.kind;
+    r._factoryText = dty.text;
     return r;
   },
 

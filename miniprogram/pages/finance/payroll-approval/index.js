@@ -5,10 +5,13 @@
  *   列表 = POST /finance/payroll-settlement/operator-summary
  *   审核 = POST /finance/payroll-settlement/detail-approval/{approvalId}/approve
  *
- * 内外部规则（与 PC 端 usePayrollActions.handleAuditDetail 一致）：
- *   内部工厂（factoryType === 'INTERNAL'）→ 可直接审核
- *   外部工厂 → 只有订单进入终态（已完成/已关单/已取消/已报废/已归档）才允许审核，
- *             否则先提示「订单尚未关单」，避免未完工就结钱。
+ * 结算类型规则（D-426 修正，与 PC 端 baseInfoColumns「结算类型」列同源字段）：
+ *   自己完成 / 内部指派（delegateTargetType = none | internal）→ 可直接审核
+ *   外发工厂（delegateTargetType = external）→ 只有订单进入终态
+ *     （已完成/已关单/已取消/已报废/已归档）才允许审核，
+ *     否则先提示「订单尚未关单」，避免未完工就结钱。
+ *   ⚠️ 原实现读的 row.factoryType 在后端 DTO 中并不存在（恒 undefined），
+ *      会把所有订单误判为"外发工厂"，导致未关单的一律无法审核。
  *
  * 权限：后端限制「主管及以上」；工厂（外部）账号不可查看工资汇总。
  */
@@ -52,12 +55,18 @@ var SCAN_TYPE_MAP = {
 };
 var SCAN_TYPE_FALLBACK = { kind: 'bulk', text: '大货' };
 
-// D-423：工厂类型标注 —— 与 PC 端 components/common/FactoryTypeTag.tsx 的
-// FACTORY_TYPE_CONFIG 完全对齐（INTERNAL→「内部」蓝 / EXTERNAL→「外发」紫）。
-// 该字段同时决定审核资格：内部工厂可直接审核，外发工厂需订单进入终态（已关单等）。
-var FACTORY_TYPE_MAP = {
-  INTERNAL: { kind: 'internal', text: '内部' },
-  EXTERNAL: { kind: 'external', text: '外发' },
+// D-426：结算类型标注 —— 字段为 delegateTargetType（**不是 factoryType**！）
+// 取值与 PC 端 PayrollOperatorSummary/baseInfoColumns「结算类型」列完全一致：
+//   none / 空 → 自己完成     internal → 内部指派     external → 外发工厂
+// 该字段同时决定审核资格：只有**明确外发工厂(external)**的订单才要求已关单。
+// ⚠️ 历史 bug：PC 端 usePayrollActions 读的是 row.factoryType，
+//    而该字段在后端 DTO 与前端类型里都不存在 → 恒为 undefined →
+//    所有订单被误判为"外发工厂"，未关单的一律不给审核。
+//    本处改用正确字段，并保留对旧值的兜底兼容。
+var DELEGATE_TYPE_MAP = {
+  none: { kind: 'self', text: '自己完成' },
+  internal: { kind: 'internal', text: '内部指派' },
+  external: { kind: 'external', text: '外发工厂' },
 };
 
 /**
@@ -190,14 +199,14 @@ Page({
       var noApprovalIdCount = 0;
 
       var enriched = rows.map(function (r) {
-        var isInternal = String(r.factoryType || '') === 'INTERNAL';
+        // D-426：判定字段改为 delegateTargetType（正确字段），
+        // 只有**明确外发工厂**才受"订单须关单"限制；自己完成/内部指派不受限。
+        var dtype = String(r.delegateTargetType || '').toLowerCase();
+        var isExternalFactory = dtype === 'external';
         var audited = String(r.approvalStatus || '').toLowerCase() === 'approved';
         var hasApproval = !!(r.approvalId && String(r.approvalId).trim());
         var frozen = isOrderFrozenByStatus(r.orderStatus);
-        // D-423：与 PC 端 usePayrollActions.handleAuditDetail 严格一致：
-        //   const isInternal = row.factoryType === 'INTERNAL';
-        //   const canAudit   = isInternal || isOrderFrozenByStatus({ status: row.orderStatus });
-        var canAudit = isInternal || frozen;
+        var canAudit = !isExternalFactory || frozen;
         var eligible = that.data.canOperate && hasApproval && !audited && canAudit;
 
         var blockReason = '';
@@ -216,7 +225,7 @@ Page({
 
         r.audited = audited;
         r.canAudit = canAudit;
-        r.isInternal = isInternal;
+        r.isExternalFactory = isExternalFactory;
         r.auditText = audited ? '已审核' : '待审核';
         r.auditCls = audited ? 'tag-green' : 'tag-orange';
         r.eligible = eligible;
@@ -244,10 +253,11 @@ Page({
         var scan = SCAN_TYPE_MAP[String(r.scanType || '').toLowerCase()] || SCAN_TYPE_FALLBACK;
         r._sourceKind = scan.kind;
         r._sourceText = scan.text;
-        // D-423：工厂类型标注（内部 / 外发）—— 与 PC 端 FactoryTypeTag 一致
-        var fty = FACTORY_TYPE_MAP[String(r.factoryType || '').toUpperCase()] || null;
-        r._factoryKind = fty ? fty.kind : '';
-        r._factoryText = fty ? fty.text : '';
+        // D-426：结算类型标签（自己完成 / 内部指派 / 外发工厂）
+        var dkey = String(r.delegateTargetType || '').toLowerCase();
+        var dty = DELEGATE_TYPE_MAP[dkey] || DELEGATE_TYPE_MAP.none;
+        r._factoryKind = dty.kind;
+        r._factoryText = dty.text;
         return r;
       });
 

@@ -199,6 +199,11 @@
 /* D-423：工厂类型标签（内部 / 外发）
    与 PC 端 FactoryTypeTag / baseInfoColumns 的语义对齐：
    内部=正常（绿）；外发=需注意，订单须进入终态才可审核（橙，对应 PC 的 color="warning"） */
+/* D-426：自己完成（delegateTargetType = none/空），对应 PC 端 Tag color="default" */
+.source-chip--self {
+  background: var(--color-bg-page);
+  color: var(--color-text-secondary);
+}
 .source-chip--internal {
   background: var(--color-success-bg);
   color: var(--color-success);
