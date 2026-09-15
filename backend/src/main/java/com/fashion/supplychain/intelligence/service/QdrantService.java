@@ -648,7 +648,7 @@ public class QdrantService {
                 // 批量一旦失败就本次运行内不再试：否则每批都要先白等一次超时再回退，比重灌前更慢
                 embeddingBatchBroken = true;
                 String msg = String.valueOf(e.getMessage());
-                if (msg.contains("404") || msg.contains("401")) {
+                if (msg.contains("404") || msg.contains("401") || msg.contains("402")) {
                     embeddingRemoteBroken = true;
                     log.warn("[Qdrant] Embedding 接口不可用({})，已熔断：本次运行内直接使用伪向量。404=接口不存在，401=检查 AI_EMBEDDING_API_KEY 密钥", msg);
                 }
@@ -1357,7 +1357,7 @@ public class QdrantService {
                 log.warn("[Qdrant] Embedding API 调用失败，降级为伪向量: {}", e.getMessage());
                 // 404=接口不存在（DeepSeek）；401=密钥被拒（配错/失效）——都不会自愈，本次运行内熔断不再重试
                 String msg = String.valueOf(e.getMessage());
-                if (msg.contains("404") || msg.contains("401")) {
+                if (msg.contains("404") || msg.contains("401") || msg.contains("402")) {
                     embeddingRemoteBroken = true;
                     log.warn("[Qdrant] Embedding 接口不可用({})，已熔断：本次运行内直接使用伪向量。404=接口不存在，401=检查 AI_EMBEDDING_API_KEY 密钥", msg);
                 }
