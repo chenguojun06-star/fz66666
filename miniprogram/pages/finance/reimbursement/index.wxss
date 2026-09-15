@@ -103,6 +103,33 @@
   background: var(--color-bg-hover);
 }
 
+/* ===== 图片位行（D-418，与仓库/成品卡片视觉统一）===== */
+.card-media-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.card-media {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  background: var(--color-bg-page);
+}
+.card-media--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card-media-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.card-media-body {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Row 1 */
 .card-row1 {
   display: flex;

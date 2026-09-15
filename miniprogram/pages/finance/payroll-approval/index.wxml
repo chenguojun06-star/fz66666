@@ -52,18 +52,26 @@
       <empty-state wx:if="{{!loading && list.length === 0}}" text="本月暂无工资明细" />
 
       <view class="payroll-card {{item.auditCls}}" wx:for="{{list}}" wx:key="approvalId" data-index="{{index}}" bindtap="onTapItem" hover-class="card-hover" hover-stay-time="50">
-        <!-- 操作人 + 审核状态 -->
-        <view class="card-row1">
-          <text class="recon-no">{{item.operatorName}}</text>
-          <text class="status-tag {{item.auditCls}}">{{item.auditText}}</text>
-        </view>
-        <!-- 工序 · 订单 -->
-        <view class="card-row2">
-          <text class="person-name">{{item.processName}}</text>
-          <text class="row-separator">·</text>
-          <text class="factory-name">{{item.orderNo || '—'}}</text>
-          <text class="row-separator">·</text>
-          <text class="factory-name">{{item.orderStatusText}}</text>
+        <!-- 款式封面图 + 操作人 + 审核状态（D-418：与成品/仓库卡片视觉统一） -->
+        <view class="card-media-row">
+          <image wx:if="{{item._image}}" src="{{item._image}}" mode="aspectFill" class="card-media" />
+          <view wx:else class="card-media card-media--placeholder">
+            <text class="card-media-text">款</text>
+          </view>
+          <view class="card-media-body">
+            <view class="card-row1">
+              <text class="recon-no">{{item.operatorName}}</text>
+              <text class="status-tag {{item.auditCls}}">{{item.auditText}}</text>
+            </view>
+            <!-- 工序 · 订单 · 订单状态 -->
+            <view class="card-row2">
+              <text class="person-name">{{item.processName}}</text>
+              <text class="row-separator">·</text>
+              <text class="factory-name">{{item.orderNo || '—'}}</text>
+              <text class="row-separator">·</text>
+              <text class="factory-name">{{item.orderStatusText}}</text>
+            </view>
+          </view>
         </view>
         <!-- 金额 + 数量×单价 -->
         <view class="card-row3">

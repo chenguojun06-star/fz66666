@@ -111,7 +111,7 @@ public class TenantSmartFeatureOrchestrator {
         put("miniprogram.menu.sampleDev", "样衣开发");
         put("miniprogram.menu.unitPrice", "资料单价");
         put("miniprogram.menu.procurement", "采购任务");
-        put("miniprogram.menu.materialScan", "物料入库");
+        put("miniprogram.menu.materialScan", "料卷出库/退回");
         put("miniprogram.menu.locationScan", "库位扫码");
         put("miniprogram.menu.materialDatabase", "物料资料");
         put("miniprogram.menu.finishedInventory", "成品仓储");

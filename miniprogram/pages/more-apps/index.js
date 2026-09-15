@@ -54,7 +54,7 @@ const ALL_APPS = [
   ]},
   { group: '物料', items: [
     { id: 'procurement', name: '采购任务', iconClass: 'icon-menu-cart', circleClass: 'menu-icon-circle--blue', route: '/pages/procurement/task-list/index' },
-    { id: 'materialScan', name: '物料入库', iconClass: 'icon-menu-warehouse', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material/scan/index' },
+    { id: 'materialScan', name: '料卷出库/退回', iconClass: 'icon-menu-warehouse', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material/scan/index' },
     { id: 'materialDatabase', name: '物料资料', iconClass: 'icon-menu-material', circleClass: 'menu-icon-circle--teal', route: '/pages/warehouse/material-database/index' },
   ]},
   { group: '成品', items: [

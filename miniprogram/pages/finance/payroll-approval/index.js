@@ -15,6 +15,7 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { hasFeaturePermission, isFactoryAccount } = require('../../../utils/permission');
+const fileUrl = require('../../../utils/fileUrl');
 
 // 订单终态（与 PC 端 production.order.ts TERMINAL_ORDER_STATUSES 对齐）
 var TERMINAL_ORDER_STATUSES = ['completed', 'closed', 'cancelled', 'scrapped', 'archived'];
@@ -166,6 +167,9 @@ Page({
         r.quantityStr = r.quantity != null ? String(r.quantity) : '0';
         r.operatorName = r.operatorName || r.actualOperatorName || '—';
         r.processName = r.processName || '—';
+        // D-418：款式封面图（后端 PayrollOperatorProcessSummaryDTO.coverImage，
+        // 经 ScanRecordEnrichHelper 从 StyleInfo 补齐）→ 走鉴权 URL 处理后供 <image> 直接用
+        r._image = r.coverImage ? fileUrl.getAuthedImageUrl(r.coverImage) : '';
         return r;
       });
 
