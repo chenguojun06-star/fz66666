@@ -358,14 +358,30 @@ function handleBusinessTask(task) {
     case 'STYLE_DEVELOPMENT': handleStyleDevTask(task); break;
     // 缺口类型：点击直达最近真实业务页（与 PC 一致，不中转包装页）
     // 只读展示逻辑已由后端按租户+角色过滤，这里仅做页面直达
-    case 'PAYROLL_SETTLEMENT':
-      // D-416：直达手机端独立审批页（此前落工资页，只能看不能办）
-      safeNavigate({ url: '/pages/finance/payroll-approval/index?status=pending' }, 'navigateTo').catch(() => {});
+    case 'PAYROLL_SETTLEMENT': {
+      // D-430：待办 id = "PAY_{settlementId}"（见 PendingTaskOrchestrator.collectPayrollSettlementTasks）
+      // 带上 settlementId 让列表页精确筛出该结算单的明细；若只有一条明细，
+      // 列表页会自动直达详情页（用户要求"点击直达详情页，不要停在列表"）。
+      var paySid = String(task.id || '').replace(/^PAY_/, '');
+      var payParams = [];
+      if (paySid) payParams.push('settlementId=' + encodeURIComponent(paySid));
+      if (task.orderNo) payParams.push('orderNo=' + encodeURIComponent(task.orderNo));
+      safeNavigate({
+        url: '/pages/finance/payroll-approval/index' + (payParams.length ? '?' + payParams.join('&') : ''),
+      }, 'navigateTo').catch(() => {});
       break;
-    case 'MATERIAL_RECON':
-      // D-416：直达物料对账处理页（此前落付款页，基本无处理能力）
-      safeNavigate({ url: '/pages/finance/reconciliation/index?status=pending' }, 'navigateTo').catch(() => {});
+    }
+    case 'MATERIAL_RECON': {
+      // D-430：待办 id = "MRC_{reconciliationId}"，同上——带 id 精确筛选 + 单条自动直达详情
+      var mrcId = String(task.id || '').replace(/^MRC_/, '');
+      var mrcParams = [];
+      if (mrcId) mrcParams.push('reconciliationId=' + encodeURIComponent(mrcId));
+      if (task.orderNo) mrcParams.push('orderNo=' + encodeURIComponent(task.orderNo));
+      safeNavigate({
+        url: '/pages/finance/reconciliation/index' + (mrcParams.length ? '?' + mrcParams.join('&') : ''),
+      }, 'navigateTo').catch(() => {});
       break;
+    }
     case 'EXPENSE_REIMBURSE':
       // D-416：直达费用报销审批页（此前与对账共用付款页）
       safeNavigate({ url: '/pages/finance/reimbursement/index?status=pending' }, 'navigateTo').catch(() => {});

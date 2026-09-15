@@ -153,7 +153,16 @@ Page({
     _month: 0,
   },
 
-  onLoad: function () {
+  onLoad: function (options) {
+    var opts = options || {};
+    // D-430：小云待办直达参数（见 bellTaskActions.handleBusinessTask）
+    //   settlementId —— 待办 id "PAY_{settlementId}" 解析而来，用于精确筛出该结算单的明细
+    //   orderNo      —— 兜底筛选（结算单与明细未绑定时）
+    this._incoming = {
+      settlementId: opts.settlementId ? String(opts.settlementId) : '',
+      orderNo: opts.orderNo ? String(opts.orderNo) : '',
+    };
+    this._autoOpened = false;
     if (isFactoryAccount()) {
       this.setData({
         blocked: true,
@@ -215,6 +224,20 @@ Page({
           var d = String(r.delegateTargetType || '').toLowerCase() || 'none';
           return d === ff;
         });
+      }
+      // D-430：来自小云待办的精确筛选（settlementId 优先，orderNo 兜底）
+      var inc = that._incoming || {};
+      if (inc.settlementId) {
+        var bySid = rows.filter(function (r) {
+          return String(r.settlementId || '') === inc.settlementId;
+        });
+        if (bySid.length) rows = bySid;
+      }
+      if (inc.orderNo) {
+        var byOrder = rows.filter(function (r) {
+          return String(r.orderNo || '') === inc.orderNo;
+        });
+        if (byOrder.length) rows = byOrder;
       }
 
       var pendingCount = 0;
@@ -325,6 +348,19 @@ Page({
         abnormalCount: abnormalCount,
         loading: false,
       });
+
+      // D-430：待办直达 —— 精确筛选后若只剩一条明细，直接打开详情页
+      // （用户要求"点击要直达详情页，不要到这个页面"；
+      //   一个结算单通常只含 1~2 条明细，单条时无需在列表停留）
+      var inc2 = that._incoming || {};
+      if (inc2.settlementId && !that._autoOpened && enriched.length === 1 && enriched[0].approvalId) {
+        that._autoOpened = true;
+        wx.navigateTo({
+          url: '/pages/finance/payroll-approval/detail/index?approvalId='
+            + encodeURIComponent(enriched[0].approvalId)
+            + '&year=' + that.data._year + '&month=' + that.data._month,
+        });
+      }
     }).catch(function (e) {
       that.setData({ loading: false });
       toast('加载失败: ' + (e.errMsg || e.message || e));

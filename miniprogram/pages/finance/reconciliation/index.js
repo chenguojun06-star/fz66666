@@ -111,6 +111,12 @@ Page({
       });
       return;
     }
+    // D-430：小云待办直达参数（待办 id "MRC_{reconciliationId}"，见 bellTaskActions）
+    this._incoming = {
+      reconciliationId: opts.reconciliationId ? String(opts.reconciliationId) : '',
+      orderNo: opts.orderNo ? String(opts.orderNo) : '',
+    };
+    this._autoOpened = false;
     this.setData({
       canOperate: hasFeaturePermission('approve_reconciliation'),
       // 支持从待办直达并预置筛选（如 ?status=pending / ?keyword=xxx）
@@ -151,6 +157,20 @@ Page({
     return api.materialReconciliation.list(params).then(function (res) {
       var records = (res && res.records) || [];
       var total = (res && res.total) || 0;
+      // D-430：来自小云待办的精确筛选（reconciliationId 优先，orderNo 兜底）
+      var inc = that._incoming || {};
+      if (inc.reconciliationId) {
+        var byId = records.filter(function (r) {
+          return String(r.id || '') === inc.reconciliationId;
+        });
+        if (byId.length) records = byId;
+      }
+      if (inc.orderNo) {
+        var byOrder = records.filter(function (r) {
+          return String(r.orderNo || '') === inc.orderNo;
+        });
+        if (byOrder.length) records = byOrder;
+      }
       var enriched = records.map(function (r) {
         r.statusText = statusText(r.status);
         r.statusCls = statusCls(r.status);
@@ -177,6 +197,15 @@ Page({
         page: that.data.page + 1,
         loading: false,
       });
+
+      // D-430：待办直达 —— 精确筛选后只剩一条时直接打开详情页
+      var inc2 = that._incoming || {};
+      if (inc2.reconciliationId && !that._autoOpened && enriched.length === 1 && enriched[0].id) {
+        that._autoOpened = true;
+        wx.navigateTo({
+          url: '/pages/finance/reconciliation/detail/index?id=' + encodeURIComponent(enriched[0].id),
+        });
+      }
     }).catch(function (e) {
       that.setData({ loading: false });
       toast('加载失败: ' + (e.errMsg || e.message || e));
