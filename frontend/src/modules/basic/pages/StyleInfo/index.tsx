@@ -20,7 +20,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { type StyleFieldParseResult } from '@/services/intelligence/intelligenceApi';
-import { isFailedParseText } from './components/StyleBasicInfoForm/styleFeature';
+import { isFailedParseText, cleanVisionText } from './components/StyleBasicInfoForm/styleFeature';
 import { useFieldConfig } from '@/hooks/useFieldConfig';
 
 import './styles.css';
@@ -111,12 +111,11 @@ const StyleInfoDetailPage: React.FC = () => {
   };
 
   // 顶部档案卡的视觉AI分析（缓存 visionRaw / 手动"图像分析"产出）回填款式特征。
-  // 此前卡片上的 AI 识别结果与表单完全两条链路，款式特征永远空着（用户："根本没打通"）。
-  // 为空时填充；已有内容是识别失败残留（"图片无法访问…"）时直接替换；
-  // 人工/正常 AI 内容不覆盖。
+  // D-391：识别文本先清洗（剔除"识别【…】｜颜色：无法确认｜原始分析：…"这类失败残留垃圾段），
+  // 清洗后为空 = 未识别，不写入；已有正常内容不覆盖；已有失败残留时替换为干净结果。
   const handleVisionAnalysisFill = React.useCallback((payload: { visionRaw: string; difficultyLabel?: string; difficultyScore?: number }) => {
-    const text = String(payload?.visionRaw || '').trim();
-    if (!text || isFailedParseText(text)) return;
+    const text = cleanVisionText(payload?.visionRaw);
+    if (!text) return;
     const current = form.getFieldValue(['extJson', 'styleFeature']);
     const currentText = typeof current === 'string' ? current.trim() : '';
     if (currentText && !isFailedParseText(currentText)) return;

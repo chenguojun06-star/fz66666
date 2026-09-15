@@ -334,7 +334,10 @@ export const useCoverImageUpload = (props: CoverImageUploadProps) => {
             notifyStyleMediaChanged();
             const deletedUrl = String(displayImages.find((item) => String(item?.id) === String(attachmentId))?.fileUrl || '');
             if (!deletedUrl || deletedUrl === currentImage?.fileUrl) {
-              const nextCover = displayImages.find((item) => String(item?.id) !== String(attachmentId) && !(item as { isCoverFallback?: boolean })?.isCoverFallback)?.fileUrl || null;
+              // D-392：取下一张封面必须用附件裸 URL（images），不能用 displayImages——
+              // displayImages 的 fileUrl 是 getFullAuthedFileUrl 加过 token 的展示地址，
+              // 写进款式 cover 后保存会持久化带 token 的链接，导致"删了图保存后图片又回来"。
+              const nextCover = images.find((item) => String(item?.id) !== String(attachmentId))?.fileUrl || null;
               onCoverChange?.(nextCover);
               setStyleCoverOverride(styleId, undefined, nextCover);
             }

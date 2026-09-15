@@ -6,7 +6,7 @@ import { useDictOptions } from '@/hooks/useDictOptions';
 import type { StyleFieldParseResult } from '@/services/intelligence/intelligenceApi';
 import type { StyleBasicInfoFormRef } from './types';
 import { DEFAULT_SIZE_MAP, FALLBACK_SIZES, SIZE_COLOR_SYNC_DEBOUNCE_MS } from './constants';
-import { STYLE_FEATURE_KEY, appendFeatureText, isFailedParseText } from './styleFeature';
+import { STYLE_FEATURE_KEY, appendFeatureText, isFailedParseText, cleanVisionText } from './styleFeature';
 
 interface UseStyleBasicInfoFormParams {
   _form: FormInstance;
@@ -180,7 +180,7 @@ export function useStyleBasicInfoForm(params: UseStyleBasicInfoFormParams) {
     const extJsonUpdates: Record<string, any> = { ...(typeof currentExtJson === 'object' ? currentExtJson : {}) };
     let extJsonChanged = false;
 
-    const featureText = buildFeatureText(result);
+    const featureText = cleanVisionText(buildFeatureText(result));
     if (featureText) {
       const existingFeature = typeof extJsonUpdates[STYLE_FEATURE_KEY] === 'string'
         ? extJsonUpdates[STYLE_FEATURE_KEY]

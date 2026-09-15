@@ -3,6 +3,7 @@ import { Button, Progress, Spin, Tag } from 'antd';
 import { ExperimentOutlined } from '@ant-design/icons';
 import type { DifficultyAssessment, VisualAIResponse } from '@/services/intelligence/intelligenceApi';
 import { difficultyColor, SEVERITY_COLOR } from '../helpers';
+import { cleanVisionText } from '../../StyleBasicInfoForm/styleFeature';
 
 interface DifficultyPanelProps {
   loading: boolean;
@@ -60,7 +61,12 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
                 )}
                 <span className="u-fs-11 u-ml-auto" style={{ color: 'var(--color-text-tertiary)' }}>置信度 {Math.round(visualResult.confidence * 100)}%</span>
               </div>
-              <div className="u-fs-12" style={{ color: 'var(--color-gray-700)', lineHeight: 1.5 }}>{visualResult.summary}</div>
+              <div className="u-fs-12" style={{ color: 'var(--color-gray-700)', lineHeight: 1.5 }}>
+                {(() => {
+                  const clean = cleanVisionText(visualResult.summary);
+                  return clean || '（未识别到有效视觉信息，请重新上传清晰图片后再试）';
+                })()}
+              </div>
               {visualResult.defects && visualResult.defects.length > 0 && (
                 <div style={{ marginTop: 3 }}>
                   {visualResult.defects.slice(0, 3).map((d, i) => (

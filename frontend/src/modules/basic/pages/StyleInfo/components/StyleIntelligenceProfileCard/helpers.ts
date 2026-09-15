@@ -11,7 +11,6 @@ export const STAGE_MAP = [
   { key: 'production', label: '制单', done: (style: StyleInfo) => Boolean((style as any)?.productionCompletedTime) },
   { key: 'secondary', label: '二次工艺', done: (style: StyleInfo) => Boolean((style as any)?.secondaryCompletedTime) },
   { key: 'process', label: '工序单价', done: (style: StyleInfo) => Boolean((style as any)?.processCompletedTime) },
-  { key: 'sizePrice', label: '码数单价', done: (style: StyleInfo) => Boolean((style as any)?.sizePriceCompletedTime) },
   { key: 'sample', label: '样衣生产', done: (style: StyleInfo) => Boolean((style as any)?.sampleCompletedTime) || String((style as any)?.sampleStatus || '').trim().toUpperCase() === 'COMPLETED' },
 ] as const;
 
