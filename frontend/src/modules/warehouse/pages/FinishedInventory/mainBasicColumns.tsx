@@ -37,8 +37,12 @@ function renderTagGroup(values: string[] | undefined, fallback: string | undefin
 
 /**
  * @param indexOffset 分页偏移（(current - 1) * pageSize），保证翻页后序号连续。
+ * @param handlers   编码点击触发 handleViewSkuDetail（侧滑打开该 SKU 详情）
  */
-export function getMainBasicColumns(indexOffset = 0): ColumnsType<FinishedInventoryRow> {
+export function getMainBasicColumns(
+  indexOffset = 0,
+  handlers?: { handleViewSkuDetail: (record: FinishedInventoryRow) => void },
+): ColumnsType<FinishedInventoryRow> {
   return [
     {
       // D-241：序号按「款」编号，与底部「共 N 条」口径一致。
@@ -129,6 +133,7 @@ export function getMainBasicColumns(indexOffset = 0): ColumnsType<FinishedInvent
     {
       // D-228：一个商品编码一行——原实现把一款下全部编码堆在同一单元格，
       // 多码款（15 个编码）行高失控。改为款级信息 rowSpan 合并、编码每行一个。
+      // 编码点击 → 侧滑打开该 SKU 详情（可看入库信息 + 编辑库位/单价/备注）
       title: '商品编码',
       dataIndex: '__skuCode',
       width: 210,
@@ -137,12 +142,19 @@ export function getMainBasicColumns(indexOffset = 0): ColumnsType<FinishedInvent
           return <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>;
         }
         return (
-          <Tooltip title={record.__skuCode}>
+          <Tooltip title="点击查看/编辑该商品编码详情">
             <span
+              role="button"
+              tabIndex={0}
+              onClick={() => handlers?.handleViewSkuDetail(record)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlers?.handleViewSkuDetail(record); } }}
               style={{
                 fontSize: 13,
                 fontFamily: 'var(--font-family-mono, monospace)',
-                color: 'var(--color-text)',
+                color: 'var(--color-primary)',
+                cursor: 'pointer',
+                borderBottom: '1px dashed var(--color-primary)',
+                paddingBottom: 1,
               }}
             >
               {record.__skuCode}

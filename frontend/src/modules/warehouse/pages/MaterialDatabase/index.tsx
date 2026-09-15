@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Card, Tag, message, Segmented, Space } from 'antd';
-import { UnorderedListOutlined, AppstoreOutlined, EditOutlined, DeleteOutlined, PrinterOutlined, BookOutlined } from '@ant-design/icons';
+import { UnorderedListOutlined, AppstoreOutlined, EditOutlined, DeleteOutlined, PrinterOutlined, BookOutlined, HistoryOutlined } from '@ant-design/icons';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
+import RecordLogDrawer from '@/components/common/RecordLogDrawer';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import { useUser } from '@/utils/AuthContext';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -88,10 +89,14 @@ const MaterialDatabasePage: React.FC = () => {
   const {
     form, visible, currentMaterial, imageFiles, setImageFiles,
     returnTarget, setReturnTarget, returnLoading, submitLoading,
+    deleteTarget, setDeleteTarget, deleteLoading, handleDeleteConfirm,
     fetchMaterialCode, uploadImage, openDialog, closeDialog, handleSubmit,
     handleDelete, handleComplete, handleReturn, handleReturnConfirm,
     handleDisable, handleEnable, toLocalDateTimeInputValue,
   } = useMaterialDatabaseActions({ dataList, fetchList });
+
+  // ===== 操作日志侧滑（物料数据库） =====
+  const [operationLogOpen, setOperationLogOpen] = useState(false);
 
   // ===== 色卡本颜色详情弹窗 =====
   const [colorItemsVisible, setColorItemsVisible] = useState(false);
@@ -153,6 +158,7 @@ const MaterialDatabasePage: React.FC = () => {
                 { value: 'supplierCard', label: <span><BookOutlined /> 供应商色卡</span> },
               ]}
             />
+            <Button icon={<HistoryOutlined />} onClick={() => setOperationLogOpen(true)}>操作日志</Button>
             {viewMode === 'list' && (
               <Button icon={<PrinterOutlined />} onClick={handlePrintMaterialDatabase}>打印清单</Button>
             )}
@@ -290,6 +296,25 @@ const MaterialDatabasePage: React.FC = () => {
         description="退回后该物料将恢复为待处理状态，可重新编辑。"
         fieldLabel="退回原因" placeholder="请填写退回原因（可选）" required={false}
         okText="确认退回" loading={returnLoading} onOk={handleReturnConfirm} onCancel={() => setReturnTarget(null)}
+      />
+
+      {/* ===== 删除原因弹窗（必填，原因落 t_operation_log.details） ===== */}
+      <RejectReasonModal
+        open={deleteTarget !== null}
+        title={`确认删除${deleteTarget ? ` - ${deleteTarget.materialCode || deleteTarget.materialName || ''}` : ''}`}
+        description="删除后该物料不可恢复。删除原因会写入操作日志，便于后续追溯。"
+        fieldLabel="删除原因" placeholder="请填写删除原因（如：录入错误 / 重复建档 / 已停用替代）" required
+        okText="确认删除" loading={deleteLoading}
+        onOk={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* ===== 物料资料库操作日志 ===== */}
+      <RecordLogDrawer
+        open={operationLogOpen}
+        onClose={() => setOperationLogOpen(false)}
+        title="物料资料库操作日志"
+        filter={{ module: '生产管理', targetType: '物料数据库' }}
       />
 
       {/* ===== 色卡本颜色详情弹窗（抽取为 MaterialColorItemsModal） ===== */}

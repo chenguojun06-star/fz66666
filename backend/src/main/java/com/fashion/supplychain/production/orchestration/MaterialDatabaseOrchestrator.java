@@ -235,9 +235,13 @@ public class MaterialDatabaseOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public boolean delete(String id) {
+    public boolean delete(String id, String reason) {
         if (!StringUtils.hasText(id)) {
             throw new IllegalArgumentException("id不能为空");
+        }
+        // 前端删除物料时强制要求填写原因，缺失即拒绝（与退回编辑必填原因保持一致）
+        if (!StringUtils.hasText(reason)) {
+            throw new IllegalArgumentException("删除原因不能为空，请填写删除原因后再提交");
         }
         // P0 铁律4：多租户隔离 — 删除前必须校验租户归属（含软删除记录的幂等性处理）
         com.fashion.supplychain.common.tenant.TenantAssert.assertTenantContext();
@@ -288,7 +292,7 @@ public class MaterialDatabaseOrchestrator {
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }
-        logAppendHelper.appendDelete(current.getId());
+        logAppendHelper.appendDelete(current.getId(), reason);
         return true;
     }
 

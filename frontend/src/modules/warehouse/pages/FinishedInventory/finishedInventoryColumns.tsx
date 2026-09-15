@@ -14,10 +14,11 @@ export type { FinishedInventoryRow } from './flattenBySku';
 /** D-228：主表按商品编码拆行后，列类型改为编码级行类型 */
 export function getMainColumns(handlers: {
   handleOutbound: (record: FinishedInventory) => void;
-  handleViewInboundHistory: (record: FinishedInventory) => void;
+  handleViewInboundHistory: (record: FinishedInventory) => void | Promise<void>;
+  handleViewSkuDetail: (record: FinishedInventoryRow) => void;
 }, indexOffset = 0): ColumnsType<FinishedInventoryRow> {
   return [
-    ...getMainBasicColumns(indexOffset),
+    ...getMainBasicColumns(indexOffset, { handleViewSkuDetail: handlers.handleViewSkuDetail }),
     ...getMainInventoryColumns(),
     ...getMainActionColumns(handlers),
   ];

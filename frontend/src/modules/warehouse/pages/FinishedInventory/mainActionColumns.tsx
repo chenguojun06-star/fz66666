@@ -7,18 +7,24 @@ import { mergeAcrossRows } from './flattenBySku';
 
 export interface MainHandlers {
   handleOutbound: (record: FinishedInventory) => void;
-  handleViewInboundHistory: (record: FinishedInventory) => void;
+  handleViewInboundHistory: (record: FinishedInventory) => void | Promise<void>;
+  handleViewSkuDetail: (record: FinishedInventoryRow) => void;
 }
 
 export function getMainActionColumns(handlers: MainHandlers): ColumnsType<FinishedInventoryRow> {
   return [
     {
       title: '操作',
-      width: 140,
+      width: 200,
       render: (_, record) =>
         mergeAcrossRows(
           <RowActions
             actions={[
+              {
+                key: 'detail',
+                label: '详情',
+                onClick: () => handlers.handleViewSkuDetail(record),
+              },
               {
                 key: 'outbound',
                 label: '出库',

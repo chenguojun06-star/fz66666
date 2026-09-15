@@ -84,8 +84,9 @@ public class MaterialDatabaseController {
     }
 
     @DeleteMapping("/{id}")
-    public Result<Boolean> delete(@PathVariable String id) {
-        return Result.success(materialDatabaseOrchestrator.delete(id));
+    public Result<Boolean> delete(@PathVariable String id, @RequestBody(required = false) Map<String, Object> body) {
+        String reason = body == null ? null : String.valueOf(body.getOrDefault("reason", "")).trim();
+        return Result.success(materialDatabaseOrchestrator.delete(id, reason));
     }
 
     @PutMapping("/{id}/disable")

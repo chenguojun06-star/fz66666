@@ -3,6 +3,7 @@ import { App } from 'antd';
 import api from '@/utils/api';
 import { useModal } from '@/hooks';
 import type { FinishedInventory, SKUDetail } from '../finishedInventoryColumns';
+import type { FinishedInventoryRow } from '../flattenBySku';
 
 export type OutboundType = 'sales' | 'free' | 'transfer' | 'scrap';
 
@@ -15,6 +16,7 @@ export const useFinishedInventoryActions = (
   const { message } = App.useApp();
   const outboundModal = useModal<FinishedInventory>();
   const inboundHistoryModal = useModal<FinishedInventory>();
+  const skuDetailModal = useModal<FinishedInventoryRow>();
   const [skuDetails, setSkuDetails] = useState<SKUDetail[]>([]);
   const [inboundHistory, setInboundHistory] = useState<any[]>([]);
   const [outstockTotal, setOutstockTotal] = useState(0);
@@ -196,14 +198,43 @@ export const useFinishedInventoryActions = (
         const fallbackOperator = record.lastInboundBy || '-';
         const fallbackWarehouse = record.warehouseLocation || '-';
         const rows = (res.data.records as Record<string, unknown>[]).map(item => ({
-          id: String(item.id), styleNo: String((item.styleNo as string) || record.styleNo || '-'), orderNo: String(item.orderNo || '-'),
+          id: String(item.id),
+          styleNo: String((item.styleNo as string) || record.styleNo || '-'),
+          orderNo: String(item.orderNo || '-'),
           factoryName: String(item.factoryName || '-'),
-          inboundDate: String(item.warehousingEndTime || item.createTime || '-'), qualityInspectionNo: String(item.warehousingNo || '-'),
-          cuttingBundleNo: String(item.cuttingBundleNo || '-'), color: String(item.color || '-'), size: String(item.size || '-'),
+          // 入库日期 / 完成时间
+          inboundDate: String(item.warehousingEndTime || item.createTime || '-'),
+          warehousingStartTime: String(item.warehousingStartTime || '-'),
+          warehousingEndTime: String(item.warehousingEndTime || '-'),
+          // 入库单
+          qualityInspectionNo: String(item.warehousingNo || '-'),
+          cuttingBundleNo: String(item.cuttingBundleNo || '-'),
+          // 商品编码维度
+          color: String(item.color || '-'),
+          size: String(item.size || '-'),
           skuCode: String(item.skuCode || '-'),
-          quantity: Number((item.warehousingQuantity as number) ?? (item.qualifiedQuantity as number) ?? 0),
+          // 数量三态
+          warehousingQuantity: Number((item.warehousingQuantity as number) ?? 0),
+          qualifiedQuantity: Number((item.qualifiedQuantity as number) ?? 0),
+          unqualifiedQuantity: Number((item.unqualifiedQuantity as number) ?? 0),
+          quantity: Number((item.qualifiedQuantity as number) ?? (item.warehousingQuantity as number) ?? 0),
+          // 质检 / 验收
+          qualityStatus: String(item.qualityStatus || '-'),
+          inspectionStatus: String(item.inspectionStatus || '-'),
+          // 人员
           operator: String(item.warehousingOperatorName || item.qualityOperatorName || item.receiverName || fallbackOperator),
+          receiverName: String(item.receiverName || '-'),
+          // 库位 / 库区
           warehouseLocation: String(item.warehouse || item.warehouseLocation || fallbackWarehouse),
+          warehouseAreaName: String(item.warehouseAreaName || '-'),
+          // 次品
+          defectCategory: String(item.defectCategory || '-'),
+          defectRemark: String(item.defectRemark || '-'),
+          // 价格
+          unitPrice: item.unitPrice != null ? Number(item.unitPrice) : null,
+          totalAmount: item.totalAmount != null ? Number(item.totalAmount) : null,
+          // 更新时间（编辑追踪）
+          updateTime: String(item.updateTime || '-'),
         }));
         setInboundHistory(rows);
       } else { setInboundHistory([]); }
@@ -218,14 +249,20 @@ export const useFinishedInventoryActions = (
     inboundHistoryModal.open(record);
   }, [message, inboundHistoryModal]);
 
+  // ===== 编码点击 → 侧滑打开 SKU 详情 =====
+  const handleViewSkuDetail = useCallback((record: FinishedInventoryRow) => {
+    skuDetailModal.open(record);
+  }, [skuDetailModal]);
+
   return {
-    outboundModal, inboundHistoryModal, skuDetails, inboundHistory, outstockTotal,
+    outboundModal, inboundHistoryModal, skuDetailModal, skuDetails, inboundHistory, outstockTotal,
     outboundType, setOutboundType, outboundReason, setOutboundReason,
     outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo,
     outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName,
     outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress,
     outboundSubmitting,
     handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory,
+    handleViewSkuDetail,
     handleAddStyleRows, handleRemoveStyleFromCart,
   };
 };

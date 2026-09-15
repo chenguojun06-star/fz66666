@@ -9,6 +9,7 @@ import { App } from 'antd';
 import api from '@/utils/api';
 import ScanOperationModal from './FinishedScanOperationModal';
 import FreeInboundModal from './FreeInboundModal';
+import SkuDetailDrawer from './SkuDetailDrawer';
 import RecordLogDrawer from '@/components/common/RecordLogDrawer';
 import { getMainColumns, getSkuColumns } from './finishedInventoryColumns';
 import type { FinishedInventory } from './finishedInventoryTypes';
@@ -43,7 +44,7 @@ const _FinishedInventory: React.FC = () => {
   const directShipOrderNo = String(searchParams.get('orderNo') || '').trim();
   const isDirectShipEntry = String(searchParams.get('directShip') || '') === '1';
   const [directShipMode, setDirectShipMode] = React.useState(false);
-  const { outboundModal, inboundHistoryModal, skuDetails, inboundHistory, outstockTotal, outboundType, setOutboundType, outboundReason, setOutboundReason, outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo, outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName, outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress, outboundSubmitting, handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory, handleAddStyleRows, handleRemoveStyleFromCart } = useFinishedInventoryActions(rawDataSource, loadData, { directShip: directShipMode });
+  const { outboundModal, inboundHistoryModal, skuDetailModal, skuDetails, inboundHistory, outstockTotal, outboundType, setOutboundType, outboundReason, setOutboundReason, outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo, outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName, outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress, outboundSubmitting, handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory, handleViewSkuDetail, handleAddStyleRows, handleRemoveStyleFromCart } = useFinishedInventoryActions(rawDataSource, loadData, { directShip: directShipMode });
 
   // 30秒轮询自动刷新成品库存
   // 注意：fetchFn 必须返回非 null/undefined 值，否则 syncManager 会判定为"空数据"并累计 3 次后自动停止
@@ -83,7 +84,7 @@ const _FinishedInventory: React.FC = () => {
 
   // D-241：序号按「款」编号，翻页后要接续上一页，故传入分页偏移
   const indexOffset = ((pagination.pagination.current || 1) - 1) * (pagination.pagination.pageSize || 0);
-  const columns = getMainColumns({ handleOutbound, handleViewInboundHistory }, indexOffset);
+  const columns = getMainColumns({ handleOutbound, handleViewInboundHistory, handleViewSkuDetail }, indexOffset);
   // D-363i：多款混出购物车——加款全库搜索（不受当前页限制），添加后可继续搜索，
   // 表格只显示已勾选进清单的款
   const cartStyleNos = Array.from(new Set(skuDetails.map(item => item.styleNo || outboundModal.data?.styleNo || '').filter(Boolean)));
@@ -338,7 +339,55 @@ const _FinishedInventory: React.FC = () => {
                     </Row>
                   </div>
                 </Card>
-                <ResizableTable size="small" columns={[{ title: '入库日期', dataIndex: 'inboundDate', key: 'inboundDate', width: 120 }, { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 130, render: (v: string) => v || '-' }, { title: '生产方', dataIndex: 'factoryName', key: 'factoryName', width: 110, render: (v: string) => v || '-' }, { title: '质检单号', dataIndex: 'qualityInspectionNo', key: 'qualityInspectionNo', width: 140 }, { title: '菲号', dataIndex: 'cuttingBundleNo', key: 'cuttingBundleNo', width: 100 }, { title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 200, render: (v: string) => <span title={v} style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{v}</span> }, { title: '颜色', dataIndex: 'color', key: 'color', width: 80 }, { title: '尺码', dataIndex: 'size', key: 'size', width: 60 }, { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const }, { title: '操作人', dataIndex: 'operator', key: 'operator', width: 100 }, { title: '库位', dataIndex: 'warehouseLocation', key: 'warehouseLocation', width: 100 }, { title: '操作', key: 'action', width: 90, render: (_: unknown, r: { id: string; warehouseLocation?: string }) => (String(r.warehouseLocation || '') === '直发客户' ? <Button size="small" type="link" style={{ padding: 0 }} onClick={() => { void handleRevertDirectship(r); }}>退回上一步</Button> : null) }]} dataSource={inboundHistory} rowKey="id" emptyDescription="暂无入库记录" pagination={{ current: inboundPage, pageSize: inboundPageSize, total: inboundHistory.length, onChange: (p, ps) => { setInboundPage(p); setInboundPageSize(ps); } }} />
+                <ResizableTable size="small" columns={[
+                  { title: '入库日期', dataIndex: 'inboundDate', key: 'inboundDate', width: 150 },
+                  { title: '入库单号', dataIndex: 'qualityInspectionNo', key: 'qualityInspectionNo', width: 150, render: (v: string) => <span style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{v || '-'}</span> },
+                  { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 130, render: (v: string) => v || '-' },
+                  { title: '生产方', dataIndex: 'factoryName', key: 'factoryName', width: 110, render: (v: string) => v || '-' },
+                  { title: '菲号', dataIndex: 'cuttingBundleNo', key: 'cuttingBundleNo', width: 80 },
+                  { title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 180, render: (v: string) => <span title={v} style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{v}</span> },
+                  { title: '颜色', dataIndex: 'color', key: 'color', width: 70 },
+                  { title: '尺码', dataIndex: 'size', key: 'size', width: 60 },
+                  {
+                    title: '数量(合格/不合格)',
+                    key: 'qty',
+                    width: 130,
+                    align: 'right' as const,
+                    render: (_: unknown, r: any) => (
+                      <span>
+                        <span style={{ color: 'var(--color-success)' }} className="u-fw-600">{r.qualifiedQuantity ?? '-'}</span>
+                        <span style={{ color: 'var(--color-text-tertiary)' }}> / </span>
+                        <span style={{ color: r.unqualifiedQuantity > 0 ? 'var(--color-danger)' : 'var(--color-text-tertiary)' }}>{r.unqualifiedQuantity ?? 0}</span>
+                      </span>
+                    ),
+                  },
+                  {
+                    title: '单价',
+                    dataIndex: 'unitPrice',
+                    key: 'unitPrice',
+                    width: 90,
+                    align: 'right' as const,
+                    render: (v: number | null) => v != null ? `¥${v.toFixed(2)}` : '-',
+                  },
+                  {
+                    title: '库位/库区',
+                    key: 'loc',
+                    width: 140,
+                    render: (_: unknown, r: any) => (
+                      <span>
+                        {r.warehouseLocation || '-'}
+                        {r.warehouseAreaName && r.warehouseAreaName !== '-' ? <span style={{ color: 'var(--color-text-tertiary)' }}> · {r.warehouseAreaName}</span> : null}
+                      </span>
+                    ),
+                  },
+                  { title: '质检', dataIndex: 'qualityStatus', key: 'qualityStatus', width: 90, render: (v: string) => v && v !== '-' ? <Tag color={v === 'qualified' ? 'green' : v === 'unqualified' ? 'red' : 'default'} style={{ margin: 0 }}>{v === 'qualified' ? '合格' : v === 'unqualified' ? '不合格' : v}</Tag> : '-' },
+                  { title: '次品类别', dataIndex: 'defectCategory', key: 'defectCategory', width: 100, render: (v: string) => v && v !== '-' ? v : '-' },
+                  { title: '次品备注', dataIndex: 'defectRemark', key: 'defectRemark', width: 160, render: (v: string) => v && v !== '-' ? <span style={{ color: 'var(--color-amber-700)' }}>{v}</span> : '-' },
+                  { title: '入库人', dataIndex: 'operator', key: 'operator', width: 90 },
+                  { title: '收货人', dataIndex: 'receiverName', key: 'receiverName', width: 90, render: (v: string) => v && v !== '-' ? v : '-' },
+                  { title: '更新时间', dataIndex: 'updateTime', key: 'updateTime', width: 150, render: (v: string) => v && v !== '-' ? <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>{v}</span> : '-' },
+                  { title: '操作', key: 'action', width: 100, render: (_: unknown, r: { id: string; warehouseLocation?: string }) => (String(r.warehouseLocation || '') === '直发客户' ? <Button size="small" type="link" style={{ padding: 0 }} onClick={() => { void handleRevertDirectship(r); }}>退回上一步</Button> : null) },
+                ]} dataSource={inboundHistory} rowKey="id" emptyDescription="暂无入库记录" pagination={{ current: inboundPage, pageSize: inboundPageSize, total: inboundHistory.length, onChange: (p, ps) => { setInboundPage(p); setInboundPageSize(ps); } }} />
                 <div className="u-mt-12 u-p-8px12px u-br-6 u-fs-14" style={{ background: 'var(--color-bg-container)' }}>
                   <div className="u-fw-600 u-mb-4">对账公式</div>
                   <div>入库总量: <b>{inboundHistoryModal.data.totalInboundQty ?? 0}</b> 件 = 当前库存: <b style={{ color: 'var(--color-success)' }}>{inboundHistoryModal.data.availableQty ?? 0}</b> 件 + 出库总量: <b style={{ color: 'var(--color-orange-600)' }}>{outstockTotal}</b> 件 + 次品: <b>{inboundHistoryModal.data.defectQty ?? 0}</b> 件</div>
@@ -362,6 +411,15 @@ const _FinishedInventory: React.FC = () => {
         onClose={() => setPageLogOpen(false)}
         title="成品仓库操作日志"
         filter={{ module: '仓库管理' }}
+      />
+
+      {/* ===== 编码点击 → SKU 详情侧滑（统一 SideDrawer，可编辑库位/库区/单价/备注） ===== */}
+      <SkuDetailDrawer
+        open={skuDetailModal.visible}
+        onClose={skuDetailModal.close}
+        record={skuDetailModal.data}
+        onRefresh={loadData}
+        rawDataSource={rawDataSource}
       />
     </>
   );

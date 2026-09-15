@@ -29,6 +29,8 @@ export function useMaterialDatabaseActions(deps: {
   const [imageFiles, setImageFiles] = useState<UploadFile[]>([]);
   const [returnTarget, setReturnTarget] = useState<MaterialDatabase | null>(null);
   const [returnLoading, setReturnLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<MaterialDatabase | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const generateLocalMaterialCode = useCallback((materialType: string): string => {
     const prefix = getMaterialCodePrefix(materialType);
@@ -114,8 +116,20 @@ export function useMaterialDatabaseActions(deps: {
   const handleDelete = useCallback((record: MaterialDatabase) => {
     const id = String(record?.id || '').trim();
     if (!id) { message.error('记录缺少ID'); return; }
-    modal.confirm({ width: '30vw', title: '确认删除', content: '删除后不可恢复，是否继续？', okText: '删除', cancelText: '取消', okButtonProps: { danger: true, type: 'default' }, onOk: async () => { unwrapApiData<boolean>(await api.delete<{ code: number; message: string; data: boolean }>(`/material/database/${encodeURIComponent(id)}`), '删除失败'); message.success('删除成功'); fetchList(); } });
-  }, [message, modal, fetchList]);
+    setDeleteTarget(record);
+  }, [message]);
+
+  const handleDeleteConfirm = useCallback(async (reason: string) => {
+    const id = String(deleteTarget?.id || '').trim();
+    if (!id) return;
+    setDeleteLoading(true);
+    try {
+      unwrapApiData<boolean>(await api.delete<{ code: number; message: string; data: boolean }>(`/material/database/${encodeURIComponent(id)}`, { data: { reason } }), '删除失败');
+      message.success('删除成功');
+      setDeleteTarget(null);
+      fetchList();
+    } finally { setDeleteLoading(false); }
+  }, [deleteTarget, fetchList, message]);
 
   const handleComplete = useCallback((record: MaterialDatabase) => {
     const id = String(record?.id || '').trim();
@@ -150,6 +164,7 @@ export function useMaterialDatabaseActions(deps: {
   return {
     form, visible, currentMaterial, imageFiles, setImageFiles,
     returnTarget, setReturnTarget, returnLoading,
+    deleteTarget, setDeleteTarget, deleteLoading, handleDeleteConfirm,
     submitLoading, fetchMaterialCode, uploadImage,
     openDialog, closeDialog, handleSubmit,
     handleDelete, handleComplete, handleReturn, handleReturnConfirm,

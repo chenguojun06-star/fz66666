@@ -6,6 +6,7 @@ import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -79,5 +80,14 @@ public class MaterialDatabaseLogAppendHelper extends AbstractOperationLogAppendH
 
     public void appendDelete(String materialId) {
         appendOperation(materialId, "删除物料", null);
+    }
+
+    /**
+     * 带删除原因的日志写入（前端必填原因场景）。
+     * 原因拼到 details 字段，可通过 RecordLogDrawer 的 details 列直接看到。
+     */
+    public void appendDelete(String materialId, String reason) {
+        appendOperation(materialId, "删除物料",
+                StringUtils.hasText(reason) ? "原因：" + reason.trim() : null);
     }
 }
