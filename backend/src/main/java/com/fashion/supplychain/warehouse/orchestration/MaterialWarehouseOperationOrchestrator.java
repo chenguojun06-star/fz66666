@@ -414,7 +414,8 @@ public class MaterialWarehouseOperationOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public MaterialStock scanInbound(String materialCode, int quantity, String warehouseLocation,
+    /** D-410 收尾：扫码入库数量支持小数（int 会把 1.32 米截断成 1） */
+    public MaterialStock scanInbound(String materialCode, BigDecimal quantity, String warehouseLocation,
                                       String warehouseAreaId, String sourceType, String remark,
                                       String materialName, String materialType, String color, String size) {
         TenantAssert.assertTenantContext();

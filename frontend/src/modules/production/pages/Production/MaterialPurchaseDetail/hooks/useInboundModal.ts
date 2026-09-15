@@ -38,10 +38,14 @@ export function useInboundModal(params: UseInboundModalParams): UseInboundModalR
     const backfill = Boolean(opts?.backfill);
     setBackfillMode(backfill);
     // D-370：默认带出「当前需求数」= 采购数量 - 已到货数量（用户可改，但不能是 0）
-    // 按整数约束归一：待到货 0.32 直接回填会低于 min 导致一打开就校验失败
+    // D-410 收尾：原「按整数约束归一」的做法（Math.max(1, Math.round(...))）有两个问题：
+    //   1) 1.32 会被预填成 1；
+    //   2) 待到货 0.5 会预填成 1，反而超过剩余量被后端拒绝。
+    // 输入框现已放开小数（min 0.01 / precision 2），这里直接回填精确值即可。
+    const remainingQty = Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0);
     const defaultQty = backfill
       ? (opts?.defaultQty != null ? opts.defaultQty : 0)
-      : Math.max(1, Math.round(Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0)));
+      : (remainingQty > 0 ? Number(remainingQty.toFixed(2)) : 0);
     inboundForm.setFieldsValue({
       arrivedQuantity: defaultQty,
       // D-366b：默认去向=入库到物料仓库

@@ -106,9 +106,9 @@ export const InboundModal: React.FC<InboundModalProps> = ({ visible, record, for
           name="arrivedQuantity"
           label="本次到货数量"
           rules={[{ required: true, message: '请输入到货数量' }]}
-          extra="物料到货/入库数量目前按整数登记；小数到货需数据模型升级后开放"
+          extra="支持小数（如面料 1.32 米），最多 2 位小数"
         >
-          <InputNumber min={1} step={1} precision={0} style={{ width: '100%' }} addonAfter={record?.unit} />
+          <InputNumber min={0.01} step={0.01} precision={2} style={{ width: '100%' }} addonAfter={record?.unit} placeholder="请输入到货数量（支持小数）" />
         </Form.Item>
         {/* D-366b：用户拍板——到货时必须选去向 */}
         <Form.Item name="movementAction" label="到货去向" rules={[{ required: true, message: '请选择到货去向' }]}>

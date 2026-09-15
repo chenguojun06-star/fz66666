@@ -467,7 +467,8 @@ public class MaterialStockController {
     @PostMapping("/scan-inbound")
     public Result<MaterialStock> scanInbound(@RequestBody Map<String, Object> params) {
         String materialCode = (String) params.get("materialCode");
-        Integer quantity = params.get("quantity") instanceof Number ? ((Number) params.get("quantity")).intValue() : 1;
+        // D-410 收尾：不要 intValue()（1.32 → 1），改为按字符串精确保留小数
+        java.math.BigDecimal quantity = parseQuantity(params.get("quantity"));
         String warehouseLocation = (String) params.get("warehouseLocation");
         String warehouseAreaId = (String) params.get("warehouseAreaId");
         String sourceType = (String) params.get("sourceType");
@@ -485,12 +486,35 @@ public class MaterialStockController {
     @PostMapping("/scan-outbound")
     public Result<MaterialOutboundLog> scanOutbound(@RequestBody Map<String, Object> params) {
         String materialCode = (String) params.get("materialCode");
+        // 出库单 MaterialOutboundLog.quantity 未纳入本次迁移（仍是 Integer），
+        // 这里保持整数语义；要支持小数出库需为 t_material_outbound_log 另开迁移。
         Integer quantity = params.get("quantity") instanceof Number ? ((Number) params.get("quantity")).intValue() : 1;
         String outstockType = (String) params.get("outstockType");
         String warehouseAreaId = params.get("warehouseAreaId") != null ? String.valueOf(params.get("warehouseAreaId")) : null;
         String remark = (String) params.get("remark");
         MaterialOutboundLog result = materialWarehouseOperationOrchestrator.scanOutbound(materialCode, quantity, outstockType, warehouseAreaId, remark);
         return Result.success(result);
+    }
+
+    /**
+     * D-410 收尾：把请求里的数量解析为 BigDecimal。
+     * 走字符串而不是 doubleValue()，避免 1.32 这类值在二进制浮点里出现精度毛刺。
+     */
+    private static java.math.BigDecimal parseQuantity(Object raw) {
+        if (raw instanceof java.math.BigDecimal) {
+            return ((java.math.BigDecimal) raw).setScale(4, java.math.RoundingMode.HALF_UP);
+        }
+        if (raw instanceof Number) {
+            return new java.math.BigDecimal(String.valueOf(raw).trim()).setScale(4, java.math.RoundingMode.HALF_UP);
+        }
+        if (raw != null && String.valueOf(raw).trim().length() > 0) {
+            try {
+                return new java.math.BigDecimal(String.valueOf(raw).trim()).setScale(4, java.math.RoundingMode.HALF_UP);
+            } catch (NumberFormatException e) {
+                return java.math.BigDecimal.ONE;
+            }
+        }
+        return java.math.BigDecimal.ONE;
     }
 
     @GetMapping("/scan-query")

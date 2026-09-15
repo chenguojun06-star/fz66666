@@ -134,15 +134,17 @@ const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
         {movementAction !== 'none' && singleTarget && (
           <Space size={8} wrap>
             <Text type="secondary">数量</Text>
+            {/* D-410 收尾：放开小数（面料按米计量）；单位不再写死「件」 */}
             <InputNumber
               value={quantity}
               onChange={(v) => setQuantity(v)}
-              min={1}
-              precision={0}
+              min={0.01}
+              step={0.01}
+              precision={2}
               style={{ width: 140 }}
             />
             {singleTarget.purchaseQuantity != null && (
-              <Text type="secondary">采购量 {singleTarget.purchaseQuantity}件</Text>
+              <Text type="secondary">采购量 {singleTarget.purchaseQuantity}{singleTarget.unit || '件'}</Text>
             )}
           </Space>
         )}

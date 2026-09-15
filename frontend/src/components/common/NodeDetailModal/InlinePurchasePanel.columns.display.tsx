@@ -123,12 +123,15 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
             title={hasStock ? '点击出库领取' : undefined}
             onClick={() => {
               if (hasStock) {
-                const safeStock = Number.isFinite(stock) ? Math.floor(stock as number) : 0;
+                // D-410 收尾：这里原来对库存/待领量先 Math.floor，
+                // 剩余 0.5 时会算成 0 → pickQty>0 为假 → 点了完全没反应（静默失效）。
+                // 改为传精确值，由 handleWarehousePick 统一判定并给出明确提示。
+                const safeStock = Number.isFinite(stock) ? (stock as number) : 0;
                 const remaining = Math.max(0, Number(r.purchaseQuantity || 0) - Number(r.arrivedQuantity || 0));
                 const requiredQty = remaining > 0
-                  ? Math.floor(remaining)
+                  ? remaining
                   : (Number.isFinite(Number(r.purchaseQuantity)) && Number(r.purchaseQuantity) > 0
-                      ? Math.floor(Number(r.purchaseQuantity))
+                      ? Number(r.purchaseQuantity)
                       : safeStock);
                 const pickQty = Math.min(safeStock, requiredQty);
                 if (pickQty > 0) {
@@ -228,12 +231,13 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
             primary: true,
             onClick: () => {
               if (hasStock) {
-                const safeStock = Number.isFinite(stock) ? Math.floor(stock as number) : 0;
+                // D-410 收尾：同上，去掉 Math.floor，改由 handleWarehousePick 判定并提示
+                const safeStock = Number.isFinite(stock) ? (stock as number) : 0;
                 const remaining = Math.max(0, Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0));
                 const requiredQty = remaining > 0
-                  ? Math.floor(remaining)
+                  ? remaining
                   : (Number.isFinite(Number(record.purchaseQuantity)) && Number(record.purchaseQuantity) > 0
-                      ? Math.floor(Number(record.purchaseQuantity))
+                      ? Number(record.purchaseQuantity)
                       : safeStock);
                 const pickQty = Math.min(safeStock, requiredQty);
                 if (pickQty > 0) {

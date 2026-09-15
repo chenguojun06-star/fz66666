@@ -370,11 +370,11 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
             name="arrivedQuantity"
             rules={[
               { required: true, message: '请输入到货数量' },
-              { type: 'number', min: 1, message: '数量必须大于 0' },
+              { type: 'number', min: 0.01, message: '数量必须大于 0' },
             ]}
-            extra="物料到货/入库数量目前按整数登记；小数到货需数据模型升级后开放"
+            extra="支持小数（如面料 1.32 米），最多 2 位小数"
           >
-            <InputNumber style={{ width: '100%' }} min={1} step={1} precision={0} addonAfter={inboundModalRecord?.unit || ''} />
+            <InputNumber style={{ width: '100%' }} min={0.01} step={0.01} precision={2} placeholder="请输入到货数量（支持小数）" addonAfter={inboundModalRecord?.unit || ''} />
           </Form.Item>
           {/* D-366b：到货时必须选去向（用户拍板与大货/样衣统一） */}
           <Form.Item

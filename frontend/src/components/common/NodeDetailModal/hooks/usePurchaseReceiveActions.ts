@@ -86,7 +86,12 @@ export const usePurchaseReceiveActions = (params: UsePurchaseReceiveActionsParam
   const handleInbound = useCallback(async (record: MaterialPurchase) => {
     setInboundModalRecord(record);
     // D-370：默认带出「当前需求数」= 采购数量 - 已到货数量（用户可改，但不预填为 0）
-    const maxQty = Math.max(1, Math.round(Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0)));
+    // D-410 收尾：不要 Math.round / Math.max(1, ...)。
+    //   1) 1.32 会被预填成 1；
+    //   2) 剩余 0.5 时 Math.max(1, round(0.5)) = 1 → 预填超过剩余量，
+    //      提交必被后端「到货数量超出采购数量」拒绝。
+    const remainingQty = Number(record.purchaseQuantity || 0) - Number(record.arrivedQuantity || 0);
+    const maxQty = remainingQty > 0 ? Number(remainingQty.toFixed(2)) : 0;
     inboundForm.setFieldsValue({ arrivedQuantity: maxQty, movementAction: 'inbound', warehouseLocation: '', remark: '' });
     setInboundModalVisible(true);
   }, [setInboundModalRecord, inboundForm, setInboundModalVisible]);
@@ -204,7 +209,11 @@ export const usePurchaseReceiveActions = (params: UsePurchaseReceiveActionsParam
     if (!purchaseId) return;
     const safePickQty = Number.isFinite(pickQty) ? Math.floor(pickQty) : 0;
     if (safePickQty <= 0) {
-      message.error('领取数量无效，请检查库存数据');
+      // D-410 收尾：领料单 quantity 仍是 Integer，不足 1 时取整会变成 0。
+      // 给明确原因，别让用户以为数据坏了。
+      message.error(pickQty > 0
+        ? `领取数量 ${pickQty} 不足 1，领料单目前按整数登记，暂不支持小数领料`
+        : '领取数量无效，请检查库存数据');
       return;
     }
     const receiverId = String(user?.id || '').trim();

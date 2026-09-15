@@ -431,7 +431,10 @@ public class MaterialPurchaseOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public boolean updateArrivedQuantity(Map<String, Object> params) {
         String id = params == null ? null : (params.get("id") == null ? null : String.valueOf(params.get("id")));
-        Integer arrivedQuantity = helper.coerceInt(params == null ? null : params.get("arrivedQuantity"));
+        // D-410 收尾：原来用 coerceInt（intValue 截断），1.32 米会变成 1，
+        // 改造只改了实体/DB 字段，这个主入口仍是瓶颈 → 小数到货依然存不进去。
+        // 改用现成的 coerceBigDecimal（setScale(4, HALF_UP)）。
+        BigDecimal arrivedQuantity = helper.coerceBigDecimal(params == null ? null : params.get("arrivedQuantity"));
         String remark = params == null ? null
                 : (params.get("remark") == null ? null : String.valueOf(params.get("remark")));
         String key = id == null ? null : id.trim();
@@ -441,7 +444,7 @@ public class MaterialPurchaseOrchestrator {
         if (arrivedQuantity == null) {
             throw new IllegalArgumentException("arrivedQuantity参数错误");
         }
-        if (arrivedQuantity < 0) {
+        if (arrivedQuantity.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("arrivedQuantity不能小于0");
         }
         MaterialPurchase current = materialPurchaseService.lambdaQuery()
@@ -451,14 +454,18 @@ public class MaterialPurchaseOrchestrator {
         if (current == null || (current.getDeleteFlag() != null && current.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("采购任务不存在");
         }
-        int purchaseQty = current.getPurchaseQuantity() == null ? 0 : current.getPurchaseQuantity().intValue();
-        if (purchaseQty > 0 && arrivedQuantity * 100 < purchaseQty * MaterialConstants.ARRIVAL_RATE_THRESHOLD_REMARK) {
+        // D-410 收尾：采购数量也别 intValue()，否则 1.32 被当成 1，到货比例判定算错
+        BigDecimal purchaseQty = current.getPurchaseQuantity() == null ? BigDecimal.ZERO : current.getPurchaseQuantity();
+        if (purchaseQty.compareTo(BigDecimal.ZERO) > 0
+                && arrivedQuantity.multiply(BigDecimal.valueOf(100))
+                        .compareTo(purchaseQty.multiply(
+                                BigDecimal.valueOf(MaterialConstants.ARRIVAL_RATE_THRESHOLD_REMARK))) < 0) {
             if (!StringUtils.hasText(remark)) {
                 throw new IllegalArgumentException(
                         "到货不足" + MaterialConstants.ARRIVAL_RATE_THRESHOLD_REMARK + "%，请填写备注");
             }
         }
-        boolean ok = updateArrivedQuantityAndSync(key, BigDecimal.valueOf(arrivedQuantity), remark);
+        boolean ok = updateArrivedQuantityAndSync(key, arrivedQuantity, remark);
         if (!ok) {
             throw new IllegalStateException("更新失败");
         }
@@ -487,7 +494,8 @@ public class MaterialPurchaseOrchestrator {
             }
         }
         String remark = ParamUtils.toTrimmedString(safeParams.get("remark"));
-        Integer qty = helper.coerceInt(safeParams.get("purchaseQuantity"));
+        // D-410 收尾：采购数量本身也是 DECIMAL，coerceInt 会把 1.32 截断成 1
+        BigDecimal qty = helper.coerceBigDecimal(safeParams.get("purchaseQuantity"));
         String supplierId = ParamUtils.toTrimmedString(safeParams.get("supplierId"));
         String supplierName = ParamUtils.toTrimmedString(safeParams.get("supplierName"));
         String fabricComposition = ParamUtils.toTrimmedString(safeParams.get("fabricComposition"));
@@ -535,7 +543,7 @@ public class MaterialPurchaseOrchestrator {
             if (conversionRate == null) conversionRate = dbMaterial.getConversionRate();
             if (!StringUtils.hasText(materialId)) materialId = dbMaterial.getId();
         }
-        if (qty == null || qty <= 0) {
+        if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("采购数量必须大于0");
         }
         MaterialPurchase purchase = new MaterialPurchase();
@@ -548,7 +556,7 @@ public class MaterialPurchaseOrchestrator {
         purchase.setConversionRate(conversionRate);
         purchase.setColor(color);
         purchase.setSize(size);
-        purchase.setPurchaseQuantity(BigDecimal.valueOf(qty));
+        purchase.setPurchaseQuantity(qty);
         purchase.setArrivedQuantity(BigDecimal.ZERO);
         purchase.setStatus(MaterialConstants.STATUS_PENDING);
         purchase.setRemark(remark);
