@@ -1,6 +1,7 @@
 package com.fashion.supplychain.stock.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
@@ -127,6 +128,11 @@ public class SampleStockOrchestrator {
         } else {
             log.warn("PC入库未找到对应样板生产记录，仅创建库存记录: styleNo={}, color={}", stock.getStyleNo(), stock.getColor());
         }
+
+        // 整款闭环：同一款可能有多条样衣生产记录（已完成的历史轮次），入库时一并置为已完成，
+        // 否则列表里同一款会出现"有的已完成、有的生产完成"、点进去仍显示入库按钮的不同步现象。
+        // 仅影响"生产完成待入库"的记录，不动制作中/待领取的其它轮回。
+        syncAllProductionCompletedToWarehousedIn(stock, currentTenantId);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -593,16 +599,69 @@ public class SampleStockOrchestrator {
             return null;
         }
         Long tenantId = UserContext.tenantId();
+        boolean hasColor = StringUtils.hasText(stock.getColor());
         LambdaQueryWrapper<PatternProduction> query = new LambdaQueryWrapper<PatternProduction>()
                 .eq(PatternProduction::getDeleteFlag, 0)
                 .eq(PatternProduction::getTenantId, tenantId)
                 .eq(StringUtils.hasText(stock.getStyleId()), PatternProduction::getStyleId, stock.getStyleId())
                 .eq(!StringUtils.hasText(stock.getStyleId()) && StringUtils.hasText(stock.getStyleNo()), PatternProduction::getStyleNo, stock.getStyleNo())
-                .eq(StringUtils.hasText(stock.getColor()), PatternProduction::getColor, stock.getColor())
+                .eq(hasColor, PatternProduction::getColor, stock.getColor())
                 .orderByDesc(PatternProduction::getUpdateTime)
                 .orderByDesc(PatternProduction::getCreateTime)
                 .last("LIMIT 1");
-        return patternProductionService.getOne(query, false);
+        PatternProduction matched = patternProductionService.getOne(query, false);
+        // 颜色不一致/为空会导致「多色多码」逐行入库时误判"未找到"→ 只建库存、不同步样衣状态，
+        // 手机端因此仍显示"生产完成/样衣入库"但实际已入库。这里回退为仅按款号匹配
+        //（样衣生产记录按款一条，颜色为冗余），保证任一颜色/码数入库都能正确命中并同步状态。
+        if (matched == null && hasColor
+                && (StringUtils.hasText(stock.getStyleId()) || StringUtils.hasText(stock.getStyleNo()))) {
+            LambdaQueryWrapper<PatternProduction> fallback = new LambdaQueryWrapper<PatternProduction>()
+                    .eq(PatternProduction::getDeleteFlag, 0)
+                    .eq(PatternProduction::getTenantId, tenantId)
+                    .eq(StringUtils.hasText(stock.getStyleId()), PatternProduction::getStyleId, stock.getStyleId())
+                    .eq(!StringUtils.hasText(stock.getStyleId()) && StringUtils.hasText(stock.getStyleNo()), PatternProduction::getStyleNo, stock.getStyleNo())
+                    .orderByDesc(PatternProduction::getUpdateTime)
+                    .orderByDesc(PatternProduction::getCreateTime)
+                    .last("LIMIT 1");
+            matched = patternProductionService.getOne(fallback, false);
+        }
+        return matched;
+    }
+
+    /**
+     * 样衣入库后，把同一款下所有"生产完成待入库"（PRODUCTION_COMPLETED）的记录一并置为已完成（COMPLETED）。
+     * 仅影响生产完成但尚未闭环的记录，不动制作中(IN_PROGRESS)/待领取(PENDING)的其它轮回，
+     * 从而避免同一款在列表里出现"有的已完成、有的生产完成"的状态不同步。
+     */
+    private void syncAllProductionCompletedToWarehousedIn(SampleStock stock, Long tenantId) {
+        try {
+            boolean hasStyleId = StringUtils.hasText(stock.getStyleId());
+            if (!hasStyleId && !StringUtils.hasText(stock.getStyleNo())) {
+                return;
+            }
+            LocalDateTime now = LocalDateTime.now();
+            LambdaUpdateWrapper<PatternProduction> wrapper = new LambdaUpdateWrapper<PatternProduction>()
+                    .eq(PatternProduction::getDeleteFlag, 0)
+                    .eq(PatternProduction::getTenantId, tenantId)
+                    .eq(PatternProduction::getStatus, "PRODUCTION_COMPLETED");
+            if (hasStyleId) {
+                wrapper.eq(PatternProduction::getStyleId, stock.getStyleId());
+            } else {
+                wrapper.eq(PatternProduction::getStyleNo, stock.getStyleNo());
+            }
+            wrapper
+                    .set(PatternProduction::getStatus, "COMPLETED")
+                    .setSql("complete_time = COALESCE(complete_time, NOW())")
+                    .set(PatternProduction::getUpdateTime, now);
+            boolean updated = patternProductionService.update(wrapper);
+            if (updated) {
+                log.info("样衣入库同步同款生产完成记录为已完成: styleId={}, styleNo={}, updated={}",
+                        stock.getStyleId(), stock.getStyleNo(), updated);
+            }
+        } catch (Exception e) {
+            log.warn("[样衣入库] 同步同款生产完成记录失败（不阻断）: styleNo={}, error={}",
+                    stock.getStyleNo(), e.getMessage());
+        }
     }
 
     private StyleInfo resolveStyleForInbound(SampleStock stock, Long tenantId) {

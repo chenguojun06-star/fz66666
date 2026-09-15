@@ -272,6 +272,12 @@ Page({
 
   onShow() {
     this._bindEvents();
+    // 从样衣仓库/扫码等页面返回时自动重载，保证入库/审核后的状态即时同步
+    // （首屏由 onLoad 加载，这里用 _shownOnce 避免首次重复请求）
+    if (this._shownOnce && (this.data.styleId || this.data.patternId)) {
+      this.loadStyleDetail();
+    }
+    this._shownOnce = true;
   },
 
   onHide() {
