@@ -40,9 +40,12 @@ const BatchTable: React.FC<BatchTableProps> = ({
       }}>
         <Typography.Text strong>批次出库明细</Typography.Text>
         <Space size="small" wrap>
+          {/* D-414：出库数量支持小数（面料按米/码计），后端已是 DECIMAL(12,4) */}
           <InputNumber
             min={0}
             max={totalAvailable || undefined}
+            precision={2}
+            step={0.01}
             placeholder="目标总量"
             value={targetQty}
             onChange={(v) => setTargetQty(v as number | null)}
@@ -159,6 +162,8 @@ const BatchTable: React.FC<BatchTableProps> = ({
                 <InputNumber
                   min={0}
                   max={_record.availableQty}
+                  precision={2}
+                  step={0.01}
                   value={value}
                   onChange={(val) => handleBatchQtyChange(index, val)}
                   style={{ width: '100%' }}

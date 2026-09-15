@@ -161,7 +161,8 @@ const MaterialScanOperationModal: React.FC<MaterialScanOperationModalProps> = ({
         <Row gutter={12}>
           <Col span={8}>
             <div className="u-mb-4 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>数量</div>
-            <InputNumber style={{ width: '100%' }} min={1} value={quantity} onChange={v => setQuantity(v || 1)} size="large" />
+            {/* D-414：扫码出/入库数量支持小数（面料按米计 1.32），后端已是 DECIMAL(12,4) */}
+            <InputNumber style={{ width: '100%' }} min={0.01} precision={2} step={0.01} value={quantity} onChange={v => setQuantity(v || 1)} size="large" />
           </Col>
           {operationType === 'inbound' ? (
             <>

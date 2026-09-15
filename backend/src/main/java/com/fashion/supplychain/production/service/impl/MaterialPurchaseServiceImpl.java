@@ -449,6 +449,11 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     private void applyArrivedQuantityUpdate(MaterialPurchase mp, BigDecimal newArrived, String remark) {
         mp.setArrivedQuantity(newArrived);
         mp.setUpdateTime(LocalDateTime.now());
+        // D-414：只要本次有到货就刷新「最新到货时间」（支持分次到货），
+        // 此前仅 completed 时写入，部分到货的行该字段一直为空。
+        if (newArrived != null && newArrived.compareTo(BigDecimal.ZERO) > 0) {
+            mp.setActualArrivalDate(LocalDateTime.now());
+        }
 
         if (StringUtils.hasText(remark)) {
             String current = mp.getRemark() == null ? "" : mp.getRemark().trim();
@@ -475,9 +480,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             BigDecimal purchaseQty = mp.getPurchaseQuantity() == null ? BigDecimal.ZERO : mp.getPurchaseQuantity();
             String nextStatus = MaterialPurchaseHelper.resolveStatusByArrived(currentStatus, newArrived, purchaseQty);
             mp.setStatus(nextStatus);
-            if ("completed".equalsIgnoreCase(nextStatus) && mp.getActualArrivalDate() == null) {
-                mp.setActualArrivalDate(LocalDateTime.now());
-            }
         }
 
         if (!StringUtils.hasText(mp.getUnit())) {

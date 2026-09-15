@@ -251,11 +251,16 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
     { title: '采购数量', dataIndex: 'purchaseQuantity', key: 'purchaseQuantity', width: colWidth || 100, align: 'right' as const, render: (v: number, r: MaterialPurchase) => formatMaterialQuantityWithUnit(v, r.unit) },
     { title: '到货数量', dataIndex: 'arrivedQuantity', key: 'arrivedQuantity', width: colWidth || 100, align: 'right' as const, render: (v: number, r: MaterialPurchase) => formatMaterialQuantityWithUnit(v, r.unit) },
     {
-      title: '金额', key: 'amount', width: colWidth || 100, align: 'right' as const,
+      // D-414：金额按「实际到货数量 × 单价」——此前按采购数量算，
+      // 到货 255.5 米却只算 255 米，与对账/付款口径对不上。
+      title: '金额（到货）', key: 'amount', width: colWidth || 110, align: 'right' as const,
       render: (_: unknown, r: MaterialPurchase) => {
-        const quantity = Number(r.purchaseQuantity || 0);
+        const arrived = Number(r.arrivedQuantity || 0);
         const price = Number(r.unitPrice || 0);
-        const total = quantity * price;
+        if (arrived <= 0) {
+          return <span style={{ color: 'var(--color-text-quaternary)' }} title="尚未到货，暂无实际金额">-</span>;
+        }
+        const total = arrived * price;
         return Number.isFinite(total) ? formatMoney(total) : '-';
       },
     },
@@ -264,7 +269,9 @@ export function buildViewColumns(deps: ViewColumnsDeps): ColumnsType<MaterialPur
       render: (_: unknown, r: MaterialPurchase) => <SupplierNameTooltip name={r.supplierName} contactPerson={(r as any).supplierContactPerson} contactPhone={(r as any).supplierContactPhone} />,
     },
     { title: '采购日期', dataIndex: 'receivedTime', key: 'receivedTime', width: colWidth || 120, render: (v: string) => v ? formatDateTime(v) : '-' },
-    { title: '最新到货日期', dataIndex: 'expectedArrivalDate', key: 'expectedArrivalDate', width: colWidth || 120, render: (v: string) => v ? formatDateTime(v) : '-' },
+    // D-414：最新到货日期取 actualArrivalDate（每次到货回写的真实时间），
+    // 此前错取 expectedArrivalDate（预计/计划日期），有到货数量却一直显示 "-"
+    { title: '最新到货日期', dataIndex: 'actualArrivalDate', key: 'actualArrivalDate', width: colWidth || 120, render: (v: string) => v ? formatDateTime(v) : '-' },
     {
       title: '状态', dataIndex: 'status', key: 'status', width: colWidth || 110,
       render: (status: string) => {

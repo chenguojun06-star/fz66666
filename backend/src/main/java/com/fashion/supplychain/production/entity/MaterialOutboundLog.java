@@ -56,8 +56,8 @@ public class MaterialOutboundLog {
     /** 物料名称 */
     private String materialName;
 
-    /** 出库数量 */
-    private Integer quantity;
+    /** 出库数量（D-414：支持小数，与入库/到货同精度 DECIMAL(12,4)） */
+    private java.math.BigDecimal quantity;
 
     /** 操作人ID */
     private String operatorId;

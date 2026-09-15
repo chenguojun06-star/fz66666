@@ -1,5 +1,7 @@
 package com.fashion.supplychain.warehouse.dto;
 
+import java.math.BigDecimal;
+
 import lombok.Data;
 
 /**
@@ -23,9 +25,9 @@ public class RecentOperationDTO {
     private String materialName;
 
     /**
-     * 数量
+     * 数量（D-414：支持小数，面料按米计可为 1.32）
      */
-    private Integer quantity;
+    private BigDecimal quantity;
 
     /**
      * 操作人

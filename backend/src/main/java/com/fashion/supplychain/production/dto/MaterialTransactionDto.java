@@ -1,5 +1,7 @@
 package com.fashion.supplychain.production.dto;
 
+import java.math.BigDecimal;
+
 import lombok.Data;
 
 /**
@@ -17,8 +19,8 @@ public class MaterialTransactionDto {
     /** 操作时间（ISO格式） */
     private String operationTime;
 
-    /** 数量 */
-    private Integer quantity;
+    /** 数量（D-414：支持小数，面料按米计可为 1.32） */
+    private BigDecimal quantity;
 
     /** 单位 */
     private String unit;

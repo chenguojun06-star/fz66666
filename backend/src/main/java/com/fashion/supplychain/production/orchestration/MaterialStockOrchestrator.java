@@ -188,9 +188,10 @@ public class MaterialStockOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /** D-414：手动出库数量支持小数（原 Integer 会把 1.32 米截断成 1，库存少扣） */
     public String manualOutbound(
             String stockId,
-            Integer quantity,
+            BigDecimal quantity,
             String reason,
             String orderNo,
             String styleNo,
@@ -205,7 +206,7 @@ public class MaterialStockOrchestrator {
         if (!StringUtils.hasText(stockId)) {
             throw new IllegalArgumentException("库存记录不能为空");
         }
-        if (quantity == null || quantity <= 0) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("出库数量必须大于0");
         }
         if (!StringUtils.hasText(receiverName)) {
@@ -315,8 +316,9 @@ public class MaterialStockOrchestrator {
         return outboundNo;
     }
 
-    private void pushManualOutboundBill(MaterialOutboundLog outboundLog, MaterialStock stock, int quantity) {
-        if (billAggregationOrchestrator == null || outboundLog == null || stock == null || quantity <= 0) {
+    private void pushManualOutboundBill(MaterialOutboundLog outboundLog, MaterialStock stock, BigDecimal quantity) {
+        if (billAggregationOrchestrator == null || outboundLog == null || stock == null
+                || quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
         try {
@@ -332,7 +334,7 @@ public class MaterialStockOrchestrator {
             if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
                 return;
             }
-            BigDecimal amount = unitPrice.multiply(BigDecimal.valueOf(quantity)).setScale(2, java.math.RoundingMode.HALF_UP);
+            BigDecimal amount = unitPrice.multiply(quantity).setScale(2, java.math.RoundingMode.HALF_UP);
             if (amount.compareTo(BigDecimal.ZERO) <= 0) {
                 return;
             }

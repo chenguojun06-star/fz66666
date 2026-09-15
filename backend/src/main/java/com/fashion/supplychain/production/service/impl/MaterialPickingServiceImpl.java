@@ -14,6 +14,7 @@ import com.fashion.supplychain.production.service.MaterialStockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -179,7 +180,8 @@ public class MaterialPickingServiceImpl extends ServiceImpl<MaterialPickingMappe
         log.setStockId(stock != null ? stock.getId() : item.getMaterialStockId());
         log.setMaterialCode(stock != null ? stock.getMaterialCode() : item.getMaterialCode());
         log.setMaterialName(stock != null ? stock.getMaterialName() : item.getMaterialName());
-        log.setQuantity(item.getQuantity());
+        // D-414：领料单行数量为 Integer（整数精确），无损转 BigDecimal 写入出库流水
+        log.setQuantity(item.getQuantity() == null ? null : BigDecimal.valueOf(item.getQuantity()));
         log.setOperatorId(StringUtils.hasText(UserContext.userId()) ? UserContext.userId() : picking.getPickerId());
         log.setOperatorName(StringUtils.hasText(UserContext.username()) ? UserContext.username() : picking.getPickerName());
         log.setWarehouseLocation(stock != null ? stock.getLocation() : null);

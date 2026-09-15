@@ -183,7 +183,8 @@ public class WarehouseDashboardOrchestrator {
             dto.setId(purchase.getId().toString());
             dto.setType("inbound");
             dto.setMaterialName(purchase.getMaterialName());
-            dto.setQuantity(purchase.getPurchaseQuantity() != null ? purchase.getPurchaseQuantity().intValue() : null);
+            // D-414：采购/到货数量已是小数，不再取整
+            dto.setQuantity(purchase.getPurchaseQuantity());
             dto.setOperator(purchase.getReceiverName() != null ? purchase.getReceiverName() : "系统");
             dto.setTime(formatTime(purchase.getActualArrivalDate()));
             operations.add(dto);
@@ -196,7 +197,7 @@ public class WarehouseDashboardOrchestrator {
             dto.setId(warehousing.getId().toString());
             dto.setType("inbound");
             dto.setMaterialName("成品-" + warehousing.getOrderNo());
-            dto.setQuantity(warehousing.getQualifiedQuantity());
+            dto.setQuantity(warehousing.getQualifiedQuantity() == null ? null : BigDecimal.valueOf(warehousing.getQualifiedQuantity()));
             dto.setOperator(warehousing.getWarehousingOperatorName() != null ? warehousing.getWarehousingOperatorName() : "质检员");
             dto.setTime(formatTime(warehousing.getWarehousingEndTime()));
             operations.add(dto);
@@ -235,7 +236,7 @@ public class WarehouseDashboardOrchestrator {
                 dto.setId(outstock.getId() != null ? outstock.getId() : "");
                 dto.setType("outbound");
                 dto.setMaterialName("成品出库-" + (outstock.getOrderNo() != null ? outstock.getOrderNo() : ""));
-                dto.setQuantity(outstock.getOutstockQuantity());
+                dto.setQuantity(outstock.getOutstockQuantity() == null ? null : BigDecimal.valueOf(outstock.getOutstockQuantity()));
                 dto.setOperator(outstock.getOperatorName() != null ? outstock.getOperatorName() : "仓管");
                 dto.setTime(formatTime(outstock.getCreateTime()));
                 operations.add(dto);

@@ -64,7 +64,9 @@ export const exportPurchaseListCSV = (
   }
   const header = '物料类型,物料名称,物料编码,颜色,尺码,单位,单价,采购数量,到货数量,金额,供应商,采购日期,最新到货日期,状态\n';
   const rows = purchaseList.map((item) => {
-    const amount = Number(item.purchaseQuantity || 0) * Number(item.unitPrice || 0);
+    // D-414：金额按实际到货数量计算（与列表列口径一致）
+    const arrived = Number(item.arrivedQuantity || 0);
+    const amount = arrived * Number(item.unitPrice || 0);
     return [
       getMaterialTypeLabel(item.materialType),
       item.materialName || '',
@@ -75,10 +77,11 @@ export const exportPurchaseListCSV = (
       item.unitPrice || '',
       item.purchaseQuantity || '',
       item.arrivedQuantity || '',
-      amount.toFixed(2),
+      arrived > 0 ? amount.toFixed(2) : '',
       item.supplierName || '',
       item.receivedTime || '',
-      item.expectedArrivalDate || '',
+      // D-414：最新到货日期取真实到货时间，而非预计日期
+      item.actualArrivalDate || '',
       item.status || '',
     ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',');
   }).join('\n');

@@ -102,9 +102,11 @@ const StockPickModal: React.FC<StockPickModalProps> = ({ open, record, onClose, 
       <Form form={form} layout="vertical">
         <Form.Item name="quantity" label="领取数量" rules={[
           { required: true, message: '请输入领取数量' },
-          { type: 'number', min: 1, max: availableQty, message: `1-${availableQty} ${record.unit}` },
+          { type: 'number', min: 0.01, max: availableQty, message: `0.01-${availableQty} ${record.unit}` },
         ]}>
-          <InputNumber style={{ width: '100%' }} min={1} max={availableQty}
+          {/* D-414：领取/出库数量支持小数（面料按米计 1.32），后端已是 DECIMAL(12,4) */}
+          <InputNumber style={{ width: '100%' }} min={0.01} max={availableQty}
+            precision={2} step={0.01}
             addonAfter={record.unit} placeholder="请输入领取数量" />
         </Form.Item>
 

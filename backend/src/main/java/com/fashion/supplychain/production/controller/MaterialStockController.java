@@ -208,8 +208,8 @@ public class MaterialStockController {
             MaterialTransactionDto dto = new MaterialTransactionDto();
             dto.setType("IN");
             dto.setTypeLabel("入库");
-            // D-410：入库量已是 BigDecimal，此 DTO 仍为 Integer，按原语义取整
-            dto.setQuantity(ib.getInboundQuantity() == null ? null : ib.getInboundQuantity().intValue());
+            // D-414：流水数量统一支持小数（1.32 米不再显示成 1）
+            dto.setQuantity(ib.getInboundQuantity());
             dto.setOperatorName(ib.getOperatorName());
             dto.setWarehouseLocation(ib.getWarehouseLocation());
             dto.setRemark(ib.getRemark());
@@ -334,7 +334,8 @@ public class MaterialStockController {
 
     public static class ManualOutboundRequest {
         private String stockId;
-        private Integer quantity;
+        /** D-414：手动出库数量支持小数 */
+        private BigDecimal quantity;
         private String reason;
         private String orderNo;
         private String styleNo;
@@ -355,11 +356,11 @@ public class MaterialStockController {
             this.stockId = stockId;
         }
 
-        public Integer getQuantity() {
+        public BigDecimal getQuantity() {
             return quantity;
         }
 
-        public void setQuantity(Integer quantity) {
+        public void setQuantity(BigDecimal quantity) {
             this.quantity = quantity;
         }
 
@@ -486,9 +487,9 @@ public class MaterialStockController {
     @PostMapping("/scan-outbound")
     public Result<MaterialOutboundLog> scanOutbound(@RequestBody Map<String, Object> params) {
         String materialCode = (String) params.get("materialCode");
-        // 出库单 MaterialOutboundLog.quantity 未纳入本次迁移（仍是 Integer），
-        // 这里保持整数语义；要支持小数出库需为 t_material_outbound_log 另开迁移。
-        Integer quantity = params.get("quantity") instanceof Number ? ((Number) params.get("quantity")).intValue() : 1;
+        // D-414：t_material_outbound_log.quantity 已迁移为 DECIMAL(12,4)，
+        // 这里与扫码入库一致走 parseQuantity，禁止 intValue()（1.32 → 1 会导致库存少扣）
+        java.math.BigDecimal quantity = parseQuantity(params.get("quantity"));
         String outstockType = (String) params.get("outstockType");
         String warehouseAreaId = params.get("warehouseAreaId") != null ? String.valueOf(params.get("warehouseAreaId")) : null;
         String remark = (String) params.get("remark");

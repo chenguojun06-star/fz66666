@@ -334,7 +334,9 @@ public class MaterialWarehouseOperationOrchestrator {
         Long tenantId = UserContext.tenantId();
 
         String materialCode = trimToNull(params.get("materialCode"));
-        Integer quantity = toInt(params.get("quantity"));
+        // D-414：出库数量改为 BigDecimal（t_material_outbound_log.quantity 已迁 DECIMAL(12,4)），
+        // 此前用 toInt() 会把 1.32 米静默截成 1，库存少扣、账实不符
+        BigDecimal quantity = toBigDecimal(params.get("quantity"));
         String outstockType = trimToNull(params.get("outstockType"));
         String remark = trimToNull(params.get("remark"));
         String receiverName = trimToNull(params.get("receiverName"));
@@ -343,7 +345,7 @@ public class MaterialWarehouseOperationOrchestrator {
         if (!StringUtils.hasText(materialCode)) {
             throw new IllegalArgumentException("物料编码不能为空");
         }
-        if (quantity == null || quantity <= 0) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("出库数量必须大于0");
         }
         if (!StringUtils.hasText(outstockType)) {
@@ -361,18 +363,16 @@ public class MaterialWarehouseOperationOrchestrator {
             throw new IllegalArgumentException("物料不存在: " + materialCode);
         }
 
-        // D-410：库存 quantity 已是 BigDecimal，可用量与变动量跟着改 BigDecimal 比较。
-        // 注意：出库数量本身仍是 int（MaterialOutboundLog.quantity 未纳入本次迁移），
-        // 所以这里用 valueOf 在中转，出库的小数支持需另开迁移。
+        // D-414：出库数量与库存同为 BigDecimal，直接比较，不再经 valueOf 中转
         BigDecimal beforeQty = stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO;
         BigDecimal available = beforeQty.subtract(
                 BigDecimal.valueOf(stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0));
-        if (available.compareTo(BigDecimal.valueOf(quantity)) < 0) {
+        if (available.compareTo(quantity) < 0) {
             throw new IllegalArgumentException("库存不足: " + materialCode + "，可用:" + available + stock.getUnit() + "，申请:" + quantity + stock.getUnit());
         }
 
         materialStockService.decreaseStockById(stock.getId(), quantity);
-        BigDecimal afterQty = beforeQty.subtract(BigDecimal.valueOf(quantity));
+        BigDecimal afterQty = beforeQty.subtract(quantity);
 
         if (!StringUtils.hasText(traceId)) {
             traceId = "TR-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
@@ -404,9 +404,9 @@ public class MaterialWarehouseOperationOrchestrator {
         logEntry.setTenantId(tenantId);
         materialOutboundLogMapper.insert(logEntry);
 
-        logStockChange("OUTSTOCK", stock, beforeQty, BigDecimal.valueOf(quantity).negate(), afterQty,
+        logStockChange("OUTSTOCK", stock, beforeQty, quantity.negate(), afterQty,
                 logEntry.getOutboundNo(), outstockType, stock.getUnitPrice(),
-                stock.getUnitPrice() != null ? stock.getUnitPrice().multiply(BigDecimal.valueOf(quantity)) : null,
+                stock.getUnitPrice() != null ? stock.getUnitPrice().multiply(quantity) : null,
                 traceId, UserContext.userId(), UserContext.username(), tenantId);
 
         log.info("[物料出库] materialCode={} -{} 类型={} traceId={}", materialCode, quantity, outstockType, traceId);
@@ -448,7 +448,8 @@ public class MaterialWarehouseOperationOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public MaterialOutboundLog scanOutbound(String materialCode, int quantity, String outstockType, String warehouseAreaId, String remark) {
+    /** D-414：扫码出库数量支持小数（原 int 会把 1.32 米截断成 1，库存少扣） */
+    public MaterialOutboundLog scanOutbound(String materialCode, BigDecimal quantity, String outstockType, String warehouseAreaId, String remark) {
         TenantAssert.assertTenantContext();
         Map<String, Object> params = new HashMap<>();
         params.put("materialCode", materialCode);

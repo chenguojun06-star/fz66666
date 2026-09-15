@@ -176,6 +176,10 @@ public class MaterialInboundOrchestrator {
             purchase.setStatus("partial_arrival");
         }
 
+        // D-414：每次到货都回写「最新到货时间」。此前只在状态变 completed 时写，
+        // 部分到货的行 actual_arrival_date 永远为空 → 采购明细「最新到货日期」一片 "-"。
+        purchase.setActualArrivalDate(LocalDateTime.now());
+
         materialPurchaseService.updateById(purchase);
         log.info("采购单已更新: 到货数量={}/{}, 状态={}", totalArrived, purchase.getPurchaseQuantity(), purchase.getStatus());
 

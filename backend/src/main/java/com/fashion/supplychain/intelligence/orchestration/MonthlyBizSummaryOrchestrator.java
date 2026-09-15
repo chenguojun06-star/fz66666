@@ -154,7 +154,7 @@ public class MonthlyBizSummaryOrchestrator {
         oqw.ge("outbound_time", start).lt("outbound_time", end).eq("delete_flag", 0).select("quantity");
         List<MaterialOutboundLog> outbounds = materialOutboundLogMapper.selectList(oqw);
         long outboundQty = outbounds.stream()
-            .mapToLong(o -> o.getQuantity() == null ? 0 : o.getQuantity()).sum();
+            .mapToLong(o -> o.getQuantity() == null ? 0L : o.getQuantity().longValue()).sum();
 
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("inboundCount", inbounds.size());

@@ -1152,7 +1152,8 @@ public class MaterialPurchasePickingHelper {
         outboundLog.setPickingNo(picking.getPickingNo());
         outboundLog.setMaterialCode(stock != null ? stock.getMaterialCode() : item.getMaterialCode());
         outboundLog.setMaterialName(stock != null ? stock.getMaterialName() : item.getMaterialName());
-        outboundLog.setQuantity(item.getQuantity());
+        // D-414：领料单行数量为 Integer（整数精确），无损转 BigDecimal 写入出库流水
+        outboundLog.setQuantity(item.getQuantity() == null ? null : BigDecimal.valueOf(item.getQuantity()));
         outboundLog.setOperatorId(StringUtils.hasText(UserContext.userId()) ? UserContext.userId() : picking.getPickerId());
         outboundLog.setOperatorName(StringUtils.hasText(UserContext.username()) ? UserContext.username() : picking.getPickerName());
         outboundLog.setReceiverId(picking.getPickerId());
