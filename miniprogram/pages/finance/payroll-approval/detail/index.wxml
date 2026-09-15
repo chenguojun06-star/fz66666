@@ -21,6 +21,7 @@
         <text class="header-no">{{detail.styleNo || detail.orderNo || '—'}}</text>
         <view class="info-badges">
           <view class="source-chip source-chip--{{detail._sourceKind}}" wx:if="{{detail._sourceText}}">{{detail._sourceText}}</view>
+          <view class="source-chip source-chip--{{detail._factoryKind}}" wx:if="{{detail._factoryText}}">{{detail._factoryText}}</view>
           <view class="status-badge" style="background:{{detail._statusColor}}">{{detail.auditText}}</view>
         </view>
         <text wx:if="{{detail.styleName}}" class="header-meta">{{detail.styleName}}</text>
@@ -76,6 +77,10 @@
         <text class="fact-label">来源</text>
         <text class="fact-val fact-val--strong">{{detail._sourceText}}</text>
       </view>
+      <view wx:if="{{detail._factoryText}}" class="fact-row">
+        <text class="fact-label">工厂类型</text>
+        <text class="fact-val fact-val--strong">{{detail._factoryText}}{{detail.isInternal ? '工厂（可直接审核）' : '工厂（订单须关单后可审核）'}}</text>
+      </view>
       <view wx:if="{{detail.orderNo}}" class="fact-row">
         <text class="fact-label">订单号</text>
         <text class="fact-val">{{detail.orderNo}}</text>
@@ -110,11 +115,12 @@
       </view>
     </view>
 
-    <!-- 底部操作：可审核时给按钮，否则只读 -->
+    <!-- 底部操作：三态与 PC 端 actionColumns 对齐（可审核 / 已审核 / 未关单） -->
     <view wx:if="{{canOperate && !detail.audited && detail.eligible}}" class="footer-actions">
       <view class="action-btn action-btn--primary" hover-class="action-btn--pressed" bindtap="onAudit">审核通过</view>
     </view>
-    <view wx:elif="{{detail.blockReason && !detail.audited}}" class="blocked-hint">{{detail.blockReason}}</view>
+    <view wx:elif="{{detail.audited}}" class="blocked-hint blocked-hint--ok">该明细已审核，无需重复操作</view>
+    <view wx:elif="{{detail.blockReason}}" class="blocked-hint">{{detail.blockReason}}</view>
 
     <view wx:if="{{canOperate && !detail.audited && detail.eligible}}" class="footer-spacer"></view>
   </block>

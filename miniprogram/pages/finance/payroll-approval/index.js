@@ -52,6 +52,14 @@ var SCAN_TYPE_MAP = {
 };
 var SCAN_TYPE_FALLBACK = { kind: 'bulk', text: '大货' };
 
+// D-423：工厂类型标注 —— 与 PC 端 components/common/FactoryTypeTag.tsx 的
+// FACTORY_TYPE_CONFIG 完全对齐（INTERNAL→「内部」蓝 / EXTERNAL→「外发」紫）。
+// 该字段同时决定审核资格：内部工厂可直接审核，外发工厂需订单进入终态（已关单等）。
+var FACTORY_TYPE_MAP = {
+  INTERNAL: { kind: 'internal', text: '内部' },
+  EXTERNAL: { kind: 'external', text: '外发' },
+};
+
 /**
  * 订单是否已关单（冻结）——决定外部工厂明细能否审核
  * @param {string} status - 订单状态
@@ -177,27 +185,38 @@ Page({
       var auditedCount = 0;
       var totalAmount = 0;
       var auditableIds = [];
+      // D-423：批量审核被跳过的分类计数（对齐 PC 端 handleBatchAuditDetails 的提示优先级）
+      var notFrozenCount = 0;
+      var noApprovalIdCount = 0;
 
       var enriched = rows.map(function (r) {
         var isInternal = String(r.factoryType || '') === 'INTERNAL';
         var audited = String(r.approvalStatus || '').toLowerCase() === 'approved';
         var hasApproval = !!(r.approvalId && String(r.approvalId).trim());
         var frozen = isOrderFrozenByStatus(r.orderStatus);
-        var eligible = that.data.canOperate && hasApproval && !audited && (isInternal || frozen);
+        // D-423：与 PC 端 usePayrollActions.handleAuditDetail 严格一致：
+        //   const isInternal = row.factoryType === 'INTERNAL';
+        //   const canAudit   = isInternal || isOrderFrozenByStatus({ status: row.orderStatus });
+        var canAudit = isInternal || frozen;
+        var eligible = that.data.canOperate && hasApproval && !audited && canAudit;
 
         var blockReason = '';
         if (!hasApproval) blockReason = '缺少审批标识';
         else if (audited) blockReason = '已审核';
-        else if (!isInternal && !frozen) {
-          blockReason = '外部工厂订单未关单，需订单进入终态后才能审核';
+        else if (!canAudit) {
+          blockReason = '外发工厂订单尚未关单，只有已关单的订单才能审核';
         }
 
         if (audited) auditedCount++;
         else pendingCount++;
         totalAmount += Number(r.totalAmount || 0);
         if (eligible) auditableIds.push(r.approvalId);
+        if (!audited && !eligible && !canAudit) notFrozenCount++;
+        if (!audited && !hasApproval) noApprovalIdCount++;
 
         r.audited = audited;
+        r.canAudit = canAudit;
+        r.isInternal = isInternal;
         r.auditText = audited ? '已审核' : '待审核';
         r.auditCls = audited ? 'tag-green' : 'tag-orange';
         r.eligible = eligible;
@@ -225,6 +244,10 @@ Page({
         var scan = SCAN_TYPE_MAP[String(r.scanType || '').toLowerCase()] || SCAN_TYPE_FALLBACK;
         r._sourceKind = scan.kind;
         r._sourceText = scan.text;
+        // D-423：工厂类型标注（内部 / 外发）—— 与 PC 端 FactoryTypeTag 一致
+        var fty = FACTORY_TYPE_MAP[String(r.factoryType || '').toUpperCase()] || null;
+        r._factoryKind = fty ? fty.kind : '';
+        r._factoryText = fty ? fty.text : '';
         return r;
       });
 
@@ -235,6 +258,9 @@ Page({
         auditedCount: auditedCount,
         totalAmountStr: totalAmount.toFixed(2),
         auditableIds: auditableIds,
+        // D-423：供批量审核按 PC 端优先级给出准确提示
+        notFrozenCount: notFrozenCount,
+        noApprovalIdCount: noApprovalIdCount,
         loading: false,
       });
     }).catch(function (e) {
@@ -357,11 +383,24 @@ Page({
   },
 
   /**
-   * 一键审核当前全部可审核明细（对应 PC 端批量审核）
+   * 一键审核当前全部可审核明细（对应 PC 端 handleBatchAuditDetails）
+   * D-423：无可审核项时的提示优先级与 PC 端完全对齐：
+   *   外发未关单 > 已全部审核 > 缺审批标识 > 无数据
    */
   onBatchAudit: function () {
     var ids = this.data.auditableIds || [];
-    if (!ids.length) { toast('当前没有可审核的明细'); return; }
+    if (!ids.length) {
+      if (this.data.notFrozenCount > 0) {
+        toast('外发工厂订单尚未关单，只有已关单的订单才能审核');
+      } else if (this.data.pendingCount === 0 && this.data.auditedCount > 0) {
+        toast('已全部审核过，无需重复审核');
+      } else if (this.data.noApprovalIdCount > 0) {
+        toast('存在缺少审批标识的明细，无法审核');
+      } else {
+        toast('当前没有可审核的明细');
+      }
+      return;
+    }
     var that = this;
     wx.showModal({
       title: '批量审核',

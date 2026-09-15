@@ -217,6 +217,18 @@
   color: var(--color-info-700, #0a6ca8);
 }
 
+/* D-423：工厂类型标签（内部 / 外发）
+   与 PC 端 FactoryTypeTag / baseInfoColumns 的语义对齐：
+   内部=正常（绿）；外发=需注意，订单须进入终态才可审核（橙，对应 PC 的 color="warning"） */
+.source-chip--internal {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+.source-chip--external {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
 /* ===== 末行：金额（蓝） + 计价说明 + 操作按钮，同一行 ===== */
 .card-bottom {
   display: flex;

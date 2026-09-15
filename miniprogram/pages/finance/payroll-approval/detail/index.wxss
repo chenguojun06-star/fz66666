@@ -338,3 +338,9 @@
 .fact-val--strong {
   font-weight: var(--font-weight-medium);
 }
+
+/* D-423：已审核状态提示（绿色，区别于不可审核的橙色警告） */
+.blocked-hint--ok {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}

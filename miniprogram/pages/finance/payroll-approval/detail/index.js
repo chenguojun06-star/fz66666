@@ -45,6 +45,13 @@ var SCAN_TYPE_MAP = {
   cutting: { kind: 'cutting', text: '裁床' },
 };
 
+// D-423：工厂类型（与 PC 端 FactoryTypeTag.FACTORY_TYPE_CONFIG 对齐）
+// 该字段同时决定审核资格：内部可直接审核；外发需订单进入终态
+var FACTORY_TYPE_MAP = {
+  INTERNAL: { kind: 'internal', text: '内部' },
+  EXTERNAL: { kind: 'external', text: '外发' },
+};
+
 function pad2(n) { return n < 10 ? '0' + n : String(n); }
 
 function fmtDateTime(v) {
@@ -135,14 +142,18 @@ Page({
     var audited = String(r.approvalStatus || '').toLowerCase() === 'approved';
     var hasApproval = !!(r.approvalId && String(r.approvalId).trim());
     var frozen = isOrderFrozenByStatus(r.orderStatus);
-    var eligible = canOperate && hasApproval && !audited && (isInternal || frozen);
+    // D-423：与 PC 端 usePayrollActions.handleAuditDetail 严格一致
+    var canAudit = isInternal || frozen;
+    var eligible = canOperate && hasApproval && !audited && canAudit;
 
     var blockReason = '';
     if (!hasApproval) blockReason = '缺少审批标识';
     else if (audited) blockReason = '该明细已审核';
-    else if (!isInternal && !frozen) blockReason = '外部工厂订单未关单，需订单进入终态后才能审核';
+    else if (!canAudit) blockReason = '外发工厂订单尚未关单，只有已关单的订单才能审核';
 
     r.audited = audited;
+    r.canAudit = canAudit;
+    r.isInternal = isInternal;
     r.eligible = eligible;
     r.blockReason = blockReason;
     r.auditText = audited ? '已审核' : '待审核';
@@ -160,6 +171,10 @@ Page({
     var scan = SCAN_TYPE_MAP[String(r.scanType || '').toLowerCase()] || null;
     r._sourceKind = scan ? scan.kind : '';
     r._sourceText = scan ? scan.text : '';
+    // D-423：工厂类型标注（内部 / 外发）
+    var fty = FACTORY_TYPE_MAP[String(r.factoryType || '').toUpperCase()] || null;
+    r._factoryKind = fty ? fty.kind : '';
+    r._factoryText = fty ? fty.text : '';
     return r;
   },
 

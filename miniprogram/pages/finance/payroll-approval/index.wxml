@@ -74,6 +74,7 @@
               <text class="info-no">{{item.styleNo || item.orderNo || '—'}}</text>
               <view class="info-badges">
                 <view class="source-chip source-chip--{{item._sourceKind}}" wx:if="{{item._sourceText}}">{{item._sourceText}}</view>
+                <view class="source-chip source-chip--{{item._factoryKind}}" wx:if="{{item._factoryText}}">{{item._factoryText}}</view>
                 <view class="status-badge" style="background:{{item._statusColor}}">{{item.auditText}}</view>
               </view>
             </view>
@@ -100,8 +101,17 @@
           <view class="amount-right" wx:if="{{item.quantityStr && item.unitPriceStr && item.unitPriceStr !== '—'}}">{{item.quantityStr}} × ¥{{item.unitPriceStr}}</view>
           <view class="amount-right" wx:else></view>
           <view class="bottom-actions">
+            <!-- D-423：审核列三态与 PC 端 actionColumns 对齐：已审核 / 未关单 / 审核 -->
             <view
-              wx:if="{{canOperate && !item.audited && item.eligible}}"
+              wx:if="{{item.audited}}"
+              class="action-btn action-btn--ghost action-btn--disabled"
+            >已审核</view>
+            <view
+              wx:elif="{{!item.canAudit}}"
+              class="action-btn action-btn--ghost action-btn--disabled"
+            >未关单</view>
+            <view
+              wx:elif="{{canOperate && item.eligible}}"
               class="action-btn action-btn--primary"
               data-index="{{index}}"
               catchtap="onActionAuditInline"
