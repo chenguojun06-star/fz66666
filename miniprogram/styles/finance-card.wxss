@@ -133,33 +133,12 @@
 }
 /* 异常提示：同字号，警示色 */
 .info-line--warn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
   font-size: var(--font-size-sm);
   color: var(--color-warning);
-  overflow: hidden;
-  white-space: nowrap;
-}
-/* D-421：异常时引导用户问 AI（带上下文提问） */
-.info-line--warn-text {
-  flex: 1;
-  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ask-ai {
-  flex-shrink: 0;
-  font-size: var(--font-size-2xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-primary);
-  background: var(--color-primary-bg);
-  border-radius: var(--radius-full);
-  padding: 2px 8px;
-  line-height: 1.4;
-}
-.ask-ai:active { opacity: 0.7; }
 .info-sep {
   color: var(--color-text-quaternary, var(--color-text-tertiary));
   margin: 0 2px;

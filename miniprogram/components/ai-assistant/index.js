@@ -324,23 +324,6 @@ Component({
   },
 
   methods: {
-    /**
-     * D-421：供业务页面主动唤起助手并预填问题。
-     * 用途：卡片/详情页出现异常（如"外部工厂订单未关单，不可审核"）时，
-     *      用户点「问 AI」直接带着上下文提问，不用自己描述一遍。
-     * 纯新增方法，不改动既有交互，向后兼容。
-     * @param {string} question - 预填到输入框的问题
-     */
-    openWithQuestion(question) {
-      try {
-        this.setData({ isOpen: true, inputValue: question || '' });
-        if (typeof this._snapToVisible === 'function') this._snapToVisible();
-        if (typeof this.scrollToBottom === 'function') this.scrollToBottom();
-      } catch (e) {
-        console.error('[ai-assistant] openWithQuestion failed', e);
-      }
-    },
-
     _setMessages(msgs, extra) {
       const MAX_VISIBLE = 30;
       const visible = msgs.length > MAX_VISIBLE ? msgs.slice(msgs.length - MAX_VISIBLE) : msgs;

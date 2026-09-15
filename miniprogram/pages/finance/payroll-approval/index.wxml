@@ -85,10 +85,7 @@
               <text wx:if="{{item.orderStatusText}}">{{item.orderStatusText}}</text>
             </view>
             <view class="info-line--weak" wx:if="{{item._timeText}}">{{item._timeText}}</view>
-            <view class="info-line--warn" wx:if="{{item.blockReason && !item.audited}}">
-              <text class="info-line--warn-text">{{item.blockReason}}</text>
-              <text class="ask-ai" data-index="{{index}}" catchtap="onAskAi">问 AI</text>
-            </view>
+            <view class="info-line--warn" wx:if="{{item.blockReason && !item.audited}}">{{item.blockReason}}</view>
           </view>
         </view>
 

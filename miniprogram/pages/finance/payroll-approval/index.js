@@ -333,29 +333,6 @@ Page({
   },
 
   /**
-   * D-421：异常时点「问 AI」→ 唤起助手并带上这条明细的上下文，
-   * 用户不用自己描述"哪条、为什么不能审核"。
-   */
-  onAskAi: function (e) {
-    var idx = e.currentTarget.dataset.index;
-    var item = this.data.list[idx];
-    if (!item) return;
-    var parts = [];
-    parts.push('工资明细「' + (item.operatorName || '—') + ' - ' + (item.processName || '—') + '」');
-    if (item.styleNo) parts.push('款号 ' + item.styleNo);
-    if (item.orderNo) parts.push('订单 ' + item.orderNo);
-    if (item.amountStr) parts.push('金额 ¥' + item.amountStr);
-    var q = parts.join('，') + '。系统提示：' + (item.blockReason || '当前不可审核')
-      + '。请告诉我该怎么处理。';
-    var comp = this.selectComponent('#ai-assistant');
-    if (comp && typeof comp.openWithQuestion === 'function') {
-      comp.openWithQuestion(q);
-    } else {
-      toast('AI 助手未就绪，请稍后重试');
-    }
-  },
-
-  /**
    * 审核单条明细（detail-approval/{approvalId}/approve）
    */
   onActionAudit: function () {
