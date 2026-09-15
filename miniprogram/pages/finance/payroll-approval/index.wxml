@@ -48,72 +48,79 @@
       </view>
     </sticky-search-bar>
 
-    <view class="list-section">
+    <!-- 批量审核入口（页面顶部，与卡片内单条审核职责区分，不重复） -->
+    <view class="batch-bar" wx:if="{{canOperate && auditableIds.length > 0}}" hover-class="batch-bar--pressed" hover-stay-time="60" bindtap="onBatchAudit">
+      <text class="batch-bar__text">批量审核 {{auditableIds.length}} 条</text>
+    </view>
+
+    <!-- 卡片列表 -->
+    <view class="card-list">
       <empty-state wx:if="{{!loading && list.length === 0}}" text="本月暂无工资明细" />
 
-      <view class="payroll-card {{item.auditCls}}" wx:for="{{list}}" wx:key="approvalId" data-index="{{index}}" bindtap="onTapItem" hover-class="card-hover" hover-stay-time="50">
-        <!-- 款式封面图 + 操作人 + 审核状态（D-418：与成品/仓库卡片视觉统一） -->
-        <view class="card-media-row">
-          <image wx:if="{{item._image}}" src="{{item._image}}" mode="aspectFill" class="card-media" />
-          <view wx:else class="card-media card-media--placeholder">
-            <text class="card-media-text">款</text>
+      <view
+        class="order-card {{item.auditCls === 'tag-orange' ? 'order-card--warn' : ''}}"
+        wx:for="{{list}}"
+        wx:key="approvalId"
+      >
+        <!-- 主行：封面 + 信息（点击进详情页） -->
+        <view class="order-main" data-item="{{item}}" data-index="{{index}}" catchtap="onTapItem">
+          <view class="order-cover">
+            <image wx:if="{{item._image}}" class="cover-pic" src="{{item._image}}" mode="aspectFill" lazy-load />
+            <view wx:else class="cover-placeholder"><view class="cover-ph-text">款</view></view>
           </view>
-          <view class="card-media-body">
-            <view class="card-row1">
-              <text class="recon-no">{{item.operatorName}}</text>
-              <text class="status-tag {{item.auditCls}}">{{item.auditText}}</text>
+
+          <view class="order-info">
+            <view class="info-line1">
+              <text class="info-no">{{item.styleNo || item.orderNo || '—'}}</text>
+              <view class="info-badges">
+                <view class="source-chip source-chip--{{item._sourceKind}}" wx:if="{{item._sourceText}}">{{item._sourceText}}</view>
+                <view class="status-badge" style="background:{{item._statusColor}}">{{item.auditText}}</view>
+              </view>
             </view>
-            <!-- 工序 · 订单 · 订单状态 -->
-            <view class="card-row2">
-              <text class="person-name">{{item.processName}}</text>
-              <text class="row-separator">·</text>
-              <text class="factory-name">{{item.orderNo || '—'}}</text>
-              <text class="row-separator">·</text>
-              <text class="factory-name">{{item.orderStatusText}}</text>
+            <view class="info-line--strong">{{item.operatorName}}<text wx:if="{{item.processName}}" class="info-sep">·</text><text wx:if="{{item.processName}}">{{item.processName}}</text></view>
+            <view class="info-line" wx:if="{{item.orderNo || item.orderStatusText}}">
+              <text wx:if="{{item.orderNo}}">{{item.orderNo}}</text>
+              <text wx:if="{{item.orderNo && item.orderStatusText}}" class="info-sep">·</text>
+              <text wx:if="{{item.orderStatusText}}">{{item.orderStatusText}}</text>
+            </view>
+            <view class="info-line--weak" wx:if="{{item._timeText}}">{{item._timeText}}</view>
+            <view class="info-line--warn" wx:if="{{item.blockReason && !item.audited}}">
+              <text class="info-line--warn-text">{{item.blockReason}}</text>
+              <text class="ask-ai" data-index="{{index}}" catchtap="onAskAi">问 AI</text>
             </view>
           </view>
         </view>
-        <!-- 金额 + 数量×单价 -->
-        <view class="card-row3">
-          <text class="amount-text">¥{{item.amountStr}}</text>
-          <text class="qty-hint">{{item.quantityStr}} × ¥{{item.unitPriceStr}}</text>
-        </view>
-        <!-- 不可审核原因 -->
-        <text class="remaining-text" wx:if="{{canOperate && !item.audited && item.blockReason}}">{{item.blockReason}}</text>
-        <!-- 底部 -->
-        <view class="card-footer">
-          <text class="time-text">{{item.styleNo || ''}}</text>
-          <text class="click-hint" wx:if="{{item.eligible}}">点击审核</text>
-          <text class="audited-hint" wx:elif="{{item.audited}}">已审核</text>
+
+        <!-- 末行：金额（蓝）+ 计价 + 操作（不占额外行，无分界线） -->
+        <view class="card-bottom">
+          <view class="amount-left">
+            <text class="amount-currency">¥</text>
+            <text class="amount-num">{{item.amountStr}}</text>
+          </view>
+          <view class="amount-right" wx:if="{{item.quantityStr && item.unitPriceStr && item.unitPriceStr !== '—'}}">{{item.quantityStr}} × ¥{{item.unitPriceStr}}</view>
+          <view class="amount-right" wx:else></view>
+          <view class="bottom-actions">
+            <view
+              wx:if="{{canOperate && !item.audited && item.eligible}}"
+              class="action-btn action-btn--primary"
+              data-index="{{index}}"
+              catchtap="onActionAuditInline"
+            >审核</view>
+            <view
+              class="action-btn action-btn--ghost"
+              data-item="{{item}}"
+              data-index="{{index}}"
+              catchtap="onTapItem"
+            >详情</view>
+          </view>
         </view>
       </view>
-    </view>
 
-    <!-- 批量审核 FAB -->
-    <view class="fab-btn" wx:if="{{canOperate && auditableIds.length > 0}}" bindtap="onBatchAudit">
-      <text class="fab-text">审核{{auditableIds.length}}条</text>
-    </view>
-
-    <!-- 操作面板 -->
-    <view class="inline-form-card" wx:if="{{showActionSheet}}">
-      <view class="inline-form-title">
-        <text>{{current.operatorName}} · {{current.processName}}</text>
-        <text class="status-tag {{current.auditCls}}">{{current.auditText}}</text>
-      </view>
-      <view class="inline-form-body">
-        <view class="action-item action-approve" wx:if="{{currentCanAudit}}" bindtap="onActionAudit">
-          <view class="action-icon action-icon-check"></view>
-          <text>审核通过</text>
-        </view>
-        <view class="action-blocked" wx:else>
-          <text>{{currentBlockReason || '当前不可审核'}}</text>
-        </view>
-        <view class="action-item action-cancel" bindtap="onCloseActionSheet">
-          <text>取消</text>
-        </view>
+      <view class="load-more {{!hasMore ? 'disabled' : ''}}" wx:if="{{loading || !hasMore}}">
+        <text>{{loading ? '加载中...' : '没有更多了'}}</text>
       </view>
     </view>
   </block>
 
-  <ai-assistant />
+  <ai-assistant id="ai-assistant" />
 </view>

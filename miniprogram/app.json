@@ -195,8 +195,10 @@
       "pages": [
         "payment/index",
         "reconciliation/index",
+        "reconciliation/detail/index",
         "reimbursement/index",
-        "payroll-approval/index"
+        "payroll-approval/index",
+        "payroll-approval/detail/index"
       ]
     },
     {

@@ -25,6 +25,15 @@ var STATUS_CLS = {
   ESCALATED: 'tag-red',
   CANCELLED: 'tag-gray',
 };
+// D-419：实底 status-badge 颜色（与样式表 --color-* 对齐）
+var STATUS_COLOR = {
+  PENDING: 'var(--color-warning)',
+  ACCEPTED: 'var(--color-primary)',
+  IN_PROGRESS: 'var(--color-primary)',
+  COMPLETED: 'var(--color-success)',
+  ESCALATED: 'var(--color-danger)',
+  CANCELLED: 'var(--color-text-tertiary)',
+};
 var STATUS_MAP = {};
 Object.keys(STATUS_TEXT).forEach(function (k) {
   STATUS_MAP[k] = { text: STATUS_TEXT[k], cls: STATUS_CLS[k] };
@@ -39,6 +48,10 @@ function statusText(s) {
 function statusCls(s) {
   var k = String(s || '').toUpperCase();
   return STATUS_CLS[k] || 'tag-gray';
+}
+function statusColor(s) {
+  var k = String(s || '').toUpperCase();
+  return STATUS_COLOR[k] || 'var(--color-text-tertiary)';
 }
 
 Page({
@@ -107,6 +120,8 @@ Page({
       var enriched = records.map(function (r) {
         r.statusText = statusText(r.taskStatus);
         r.statusCls = statusCls(r.taskStatus);
+        // D-419：实底 status-badge 用色
+        r._statusColor = statusColor(r.taskStatus);
         r.priorityText = PRIORITY_TEXT[String(r.priority || '').toUpperCase()] || '中';
         r.title = r.instruction || r.nextStep || '协作任务';
         r.isOverdue = !!r.overdue;

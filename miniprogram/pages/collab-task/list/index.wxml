@@ -21,39 +21,64 @@
     </view>
   </sticky-search-bar>
 
-  <view class="list-section">
+  <!-- 卡片列表 -->
+  <view class="card-list">
     <empty-state wx:if="{{!loading && list.length === 0}}" text="暂无协作任务" />
 
-    <view class="task-card {{item.statusCls}}" wx:for="{{list}}" wx:key="id" data-index="{{index}}" bindtap="onTapItem" hover-class="card-hover" hover-stay-time="50">
-      <!-- 标题 + 状态 -->
-      <!-- 图片位 + 标题 + 状态（D-418：卡片视觉与仓库/成品页统一） -->
-      <view class="card-media-row">
-        <image wx:if="{{item._image}}" src="{{item._image}}" mode="aspectFill" class="card-media" />
-        <view wx:else class="card-media card-media--placeholder">
-          <text class="card-media-text">协</text>
+    <view
+      class="order-card {{item.statusCls === 'tag-orange' ? 'order-card--warn' : (item.statusCls === 'tag-red' ? 'order-card--danger' : (item.statusCls === 'tag-blue' ? 'order-card--primary' : ''))}}"
+      wx:for="{{list}}"
+      wx:key="id"
+      data-item="{{item}}"
+      data-index="{{index}}"
+      bindtap="onTapItem"
+    >
+      <!-- 主行：封面 + 信息 -->
+      <view class="order-main">
+        <view class="order-cover">
+          <view class="cover-placeholder"><view class="cover-ph-text">协</view></view>
         </view>
-        <view class="card-media-body">
-          <view class="card-row1">
-            <text class="task-title">{{item.title}}</text>
-            <text class="status-tag {{item.statusCls}}">{{item.statusText}}</text>
+
+        <view class="order-info">
+          <view class="info-line1">
+            <text class="info-no">
+              <text wx:if="{{item.priorityText}}">[{{item.priorityText}}] </text>
+              <text wx:if="{{item.styleNo}}">{{item.styleNo}}</text>
+              <text wx:if="{{item.styleNo && item.orderNo}}" class="info-sep">·</text>
+              <text wx:if="{{item.orderNo}}">{{item.orderNo}}</text>
+              <text wx:if="{{!item.styleNo && !item.orderNo}}">—</text>
+            </text>
+            <view class="info-badges">
+              <view class="status-badge" style="background:{{item._statusColor}}">{{item.statusText}}</view>
+            </view>
           </view>
+          <view class="info-line--strong">{{item.title}}</view>
+          <view class="info-line" wx:if="{{item.currentStage || item.nextStep}}">{{item.currentStage || ''}}{{item.nextStep ? ' → ' + item.nextStep : ''}}</view>
+          <view class="info-line--weak" wx:if="{{item.assigneeName || item.creatorName}}">
+            <text wx:if="{{item.assigneeName}}">负责人 {{item.assigneeName}}</text>
+            <text wx:elif="{{item.creatorName}}">创建 {{item.creatorName}}</text>
+          </view>
+          <view class="info-line--warn" wx:if="{{item.isOverdue}}">已逾期</view>
         </view>
       </view>
-      <!-- 订单 · 款号 · 优先级 -->
-      <view class="card-row2">
-        <text class="meta-text">{{item.orderNo || '—'}}</text>
-        <text class="row-separator">·</text>
-        <text class="meta-text">{{item.styleNo || '—'}}</text>
-        <text class="row-separator">·</text>
-        <text class="meta-text">优先级 {{item.priorityText}}</text>
-      </view>
-      <!-- 阶段 / 下一步 -->
-      <text class="task-sub" wx:if="{{item.currentStage || item.nextStep}}">{{item.currentStage || ''}}{{item.nextStep ? ' → ' + item.nextStep : ''}}</text>
-      <!-- 底部 -->
-      <view class="card-footer">
-        <text class="time-text">{{item.assigneeName ? '负责人 ' + item.assigneeName : (item.creatorName ? '创建 ' + item.creatorName : '')}}</text>
-        <text class="overdue-text" wx:if="{{item.isOverdue}}">已逾期</text>
-        <text class="click-hint" wx:elif="{{item.statusCls === 'tag-orange'}}">点击领取</text>
+
+      <!-- 末行：期限 + 操作（无分界线，不占额外行） -->
+      <view class="card-bottom">
+        <view class="amount-right" wx:if="{{item.dueHint}}">{{item.dueHint}}</view>
+        <view class="amount-right" wx:else></view>
+        <view class="bottom-actions">
+          <view
+            wx:if="{{item.statusCls === 'tag-orange'}}"
+            class="action-btn action-btn--primary"
+            data-item="{{item}}"
+            catchtap="onClaim"
+          >领取</view>
+          <view
+            class="action-btn action-btn--ghost"
+            data-item="{{item}}"
+            catchtap="onTapItem"
+          >详情</view>
+        </view>
       </view>
     </view>
 
@@ -62,5 +87,5 @@
     </view>
   </view>
 
-  <ai-assistant />
+  <ai-assistant id="ai-assistant" />
 </view>

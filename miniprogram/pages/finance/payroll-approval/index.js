@@ -37,6 +37,21 @@ var ORDER_STATUS_TEXT = {
   delayed: '已逾期',
 };
 
+// D-419：实底 status-badge 颜色（与样式表 --color-* 对齐）
+var AUDIT_STATUS_COLOR_MAP = {
+  audited: 'var(--color-success)',
+  pending: 'var(--color-warning)',
+};
+
+// D-421：来源标注 —— 用户要求卡片上明确区分「样衣 / 大货」
+// scanType 取值来源：PayrollSettlementOrchestrator.PAYROLL_SCAN_TYPES = [production, cutting, pattern]
+var SCAN_TYPE_MAP = {
+  pattern: { kind: 'sample', text: '样衣' },
+  production: { kind: 'bulk', text: '大货' },
+  cutting: { kind: 'cutting', text: '裁床' },
+};
+var SCAN_TYPE_FALLBACK = { kind: 'bulk', text: '大货' };
+
 /**
  * 订单是否已关单（冻结）——决定外部工厂明细能否审核
  * @param {string} status - 订单状态
@@ -47,6 +62,32 @@ function isOrderFrozenByStatus(status) {
 }
 
 function pad2(n) { return n < 10 ? '0' + n : String(n); }
+
+/**
+ * D-421：格式化后端返回的时间（LocalDateTime 序列化后可能是
+ * "2026-09-15T14:30:00" / "2026-09-15 14:30:00" / 时间戳），
+ * 输出 "2026-09-15 14:30"。解析不了就返回空串（不显示）。
+ */
+function fmtDateTime(v) {
+  if (!v) return '';
+  if (typeof v === 'number') {
+    var d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate())
+      + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+  var s = String(v).trim();
+  if (!s) return '';
+  var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[T ](\d{1,2}):(\d{1,2})/);
+  if (m) {
+    return m[1] + '-' + pad2(Number(m[2])) + '-' + pad2(Number(m[3]))
+      + ' ' + pad2(Number(m[4])) + ':' + pad2(Number(m[5]));
+  }
+  // 仅日期
+  var d2 = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (d2) return d2[1] + '-' + pad2(Number(d2[2])) + '-' + pad2(Number(d2[3]));
+  return '';
+}
 
 Page({
   data: {
@@ -170,6 +211,20 @@ Page({
         // D-418：款式封面图（后端 PayrollOperatorProcessSummaryDTO.coverImage，
         // 经 ScanRecordEnrichHelper 从 StyleInfo 补齐）→ 走鉴权 URL 处理后供 <image> 直接用
         r._image = r.coverImage ? fileUrl.getAuthedImageUrl(r.coverImage) : '';
+        // D-421：完成时间（endTime 优先=最后扫码时间；无则退到 startTime）
+        var endText = fmtDateTime(r.endTime);
+        var startText = fmtDateTime(r.startTime);
+        if (endText) {
+          r._timeText = '完成 ' + endText;
+        } else if (startText) {
+          r._timeText = '开始 ' + startText;
+        } else {
+          r._timeText = '';
+        }
+        // D-421：来源标注（样衣 / 大货 / 裁床）
+        var scan = SCAN_TYPE_MAP[String(r.scanType || '').toLowerCase()] || SCAN_TYPE_FALLBACK;
+        r._sourceKind = scan.kind;
+        r._sourceText = scan.text;
         return r;
       });
 
@@ -209,16 +264,69 @@ Page({
     this._loadData();
   },
 
+  /**
+   * D-421：点击卡片 → 进详情页（不再弹面板；审核按钮仍可直接在卡片上点）
+   */
   onTapItem: function (e) {
     var idx = e.currentTarget.dataset.index;
     var item = this.data.list[idx];
     if (!item) return;
-    this.setData({
-      current: item,
-      showActionSheet: true,
-      currentCanAudit: !!item.eligible,
-      currentBlockReason: item.blockReason || '',
+    var approvalId = item.approvalId ? String(item.approvalId) : '';
+    if (!approvalId) { toast('该明细缺少审批标识，无法查看详情'); return; }
+    wx.navigateTo({
+      url: '/pages/finance/payroll-approval/detail/index?approvalId=' + encodeURIComponent(approvalId)
+        + '&year=' + this.data._year + '&month=' + this.data._month,
     });
+  },
+
+  /**
+   * D-419：卡片右下「审核通过」按钮（单次确认即执行，不再走弹面板）
+   */
+  onActionAuditInline: function (e) {
+    var that = this;
+    var idx = e.currentTarget.dataset.index;
+    var item = this.data.list[idx];
+    if (!item) return;
+    if (!item.eligible) { toast(item.blockReason || '当前不可审核'); return; }
+    wx.showModal({
+      title: '确认审核',
+      content: '审核 ' + (item.operatorName || '') + ' - ' + (item.processName || '') + ' ¥' + item.amountStr + '？',
+      success: function (res) {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '处理中...', mask: true });
+        api.payrollSettlement.approveDetail(item.approvalId).then(function () {
+          wx.hideLoading();
+          toast('已审核');
+          that._loadData();
+        }).catch(function (err) {
+          wx.hideLoading();
+          toast('审核失败: ' + (err.errMsg || err.message || err));
+        });
+      },
+    });
+  },
+
+  /**
+   * D-421：异常时点「问 AI」→ 唤起助手并带上这条明细的上下文，
+   * 用户不用自己描述"哪条、为什么不能审核"。
+   */
+  onAskAi: function (e) {
+    var idx = e.currentTarget.dataset.index;
+    var item = this.data.list[idx];
+    if (!item) return;
+    var parts = [];
+    parts.push('工资明细「' + (item.operatorName || '—') + ' - ' + (item.processName || '—') + '」');
+    if (item.styleNo) parts.push('款号 ' + item.styleNo);
+    if (item.orderNo) parts.push('订单 ' + item.orderNo);
+    if (item.amountStr) parts.push('金额 ¥' + item.amountStr);
+    var q = parts.join('，') + '。系统提示：' + (item.blockReason || '当前不可审核')
+      + '。请告诉我该怎么处理。';
+    var comp = this.selectComponent('#ai-assistant');
+    if (comp && typeof comp.openWithQuestion === 'function') {
+      comp.openWithQuestion(q);
+    } else {
+      toast('AI 助手未就绪，请稍后重试');
+    }
   },
 
   /**

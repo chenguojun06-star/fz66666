@@ -29,46 +29,72 @@
       </view>
     </sticky-search-bar>
 
-    <view class="list-section">
+    <!-- 卡片列表 -->
+    <view class="card-list">
       <empty-state wx:if="{{!loading && list.length === 0}}" text="暂无报销单" />
 
-      <view class="reimburse-card {{item.statusCls}}" wx:for="{{list}}" wx:key="id" data-index="{{index}}" bindtap="onTapItem" hover-class="card-hover" hover-stay-time="50">
-        <!-- 单号 + 状态 -->
-        <!-- 图片位 + 单号 + 状态（D-418：卡片视觉与仓库/成品页统一） -->
-        <view class="card-media-row">
-          <image wx:if="{{item._image}}" src="{{item._image}}" mode="aspectFill" class="card-media" />
-          <view wx:else class="card-media card-media--placeholder">
-            <text class="card-media-text">报</text>
+      <view
+        class="order-card {{item.statusCls === 'tag-orange' ? 'order-card--warn' : (item.statusCls === 'tag-red' ? 'order-card--danger' : '')}}"
+        wx:for="{{list}}"
+        wx:key="id"
+      >
+        <!-- 主行：封面 + 信息（点击进详情/操作） -->
+        <view class="order-main" data-item="{{item}}" data-index="{{index}}" catchtap="onTapItem">
+          <view class="order-cover">
+            <view class="cover-placeholder"><view class="cover-ph-text">报</view></view>
           </view>
-          <view class="card-media-body">
-            <view class="card-row1">
-              <text class="recon-no">{{item.reimbursementNo || '—'}}</text>
-              <text class="status-tag {{item.statusCls}}">{{item.statusText}}</text>
+
+          <view class="order-info">
+            <view class="info-line1">
+              <text class="info-no">{{item.reimbursementNo || '—'}}</text>
+              <view class="info-badges">
+                <view class="status-badge" style="background:{{item._statusColor}}">{{item.statusText}}</view>
+              </view>
             </view>
+            <view class="info-line--strong">{{item.applicantName || '—'}}<text wx:if="{{item.expenseType}}" class="info-sep">·</text><text wx:if="{{item.expenseType}}">{{item.expenseType}}</text></view>
+            <view class="info-line" wx:if="{{item.title || item.description}}">{{item.title || item.description}}</view>
+            <view class="info-line--weak" wx:if="{{item.approverName}}">审批 {{item.approverName}}</view>
+            <view class="info-line--weak" wx:if="{{item.orderNo}}">关联 {{item.orderNo}}</view>
           </view>
         </view>
-        <!-- 申请人 · 费用类型 -->
-        <view class="card-row2">
-          <view class="person-icon"></view>
-          <text class="person-name">{{item.applicantName || '—'}}</text>
-          <text class="row-separator">·</text>
-          <text class="factory-name">{{item.expenseType || '—'}}</text>
-        </view>
-        <!-- 金额 -->
-        <view class="card-row3">
-          <text class="amount-text">¥{{item.amountStr}}</text>
-          <text class="qty-hint">{{item.expenseDate || ''}}</text>
-        </view>
-        <!-- 事由 -->
-        <text class="remaining-text" wx:if="{{item.title || item.description}}">{{item.title || item.description}}</text>
-        <!-- 审批信息 -->
-        <text class="remaining-text" wx:if="{{item.approverName}}">审批：{{item.approverName}}{{item.approvalRemark ? ' · ' + item.approvalRemark : ''}}</text>
-        <!-- 底部 -->
-        <view class="card-footer">
-          <text class="time-text">{{item.orderNo ? '关联 ' + item.orderNo : ''}}</text>
-          <text class="click-hint" wx:if="{{canOperate && (item.status === 'pending' || item.status === 'approved')}}">
-            {{item.status === 'pending' ? '点击审批' : '待付款'}}
-          </text>
+
+        <!-- 末行：金额（蓝）+ 日期 + 操作 -->
+        <view class="card-bottom">
+          <view class="amount-left">
+            <text class="amount-currency">¥</text>
+            <text class="amount-num">{{item.amountStr}}</text>
+          </view>
+          <view class="amount-right" wx:if="{{item.expenseDate}}">{{item.expenseDate}}</view>
+          <view class="amount-right" wx:else></view>
+          <view class="bottom-actions">
+            <view
+              wx:if="{{canOperate && item.status === 'pending'}}"
+              class="action-btn action-btn--primary"
+              data-id="{{item.id}}"
+              data-index="{{index}}"
+              catchtap="onActionApproveInline"
+            >批准</view>
+            <view
+              wx:if="{{canOperate && item.status === 'pending'}}"
+              class="action-btn action-btn--ghost"
+              data-id="{{item.id}}"
+              data-index="{{index}}"
+              catchtap="onActionRejectInline"
+            >驳回</view>
+            <view
+              wx:if="{{canOperate && item.status === 'approved'}}"
+              class="action-btn action-btn--primary"
+              data-id="{{item.id}}"
+              data-index="{{index}}"
+              catchtap="onActionPayInline"
+            >付款</view>
+            <view
+              class="action-btn action-btn--ghost"
+              data-id="{{item.id}}"
+              data-index="{{index}}"
+              catchtap="onTapItem"
+            >详情</view>
+          </view>
         </view>
       </view>
 
@@ -77,7 +103,7 @@
       </view>
     </view>
 
-    <!-- 操作面板 -->
+    <!-- 操作面板（保留兼容） -->
     <view class="inline-form-card" wx:if="{{showActionSheet}}">
       <view class="inline-form-title">
         <text>{{current.reimbursementNo || '报销操作'}}</text>
@@ -103,5 +129,5 @@
     </view>
   </block>
 
-  <ai-assistant />
+  <ai-assistant id="ai-assistant" />
 </view>
