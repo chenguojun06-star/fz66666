@@ -81,10 +81,12 @@ public class MaterialQualityIssueOrchestrator {
         if (issueQuantity == null || issueQuantity <= 0) {
             throw new IllegalArgumentException("异常数量必须大于0");
         }
-        int max = purchase.getArrivedQuantity() != null && purchase.getArrivedQuantity() > 0
-                ? purchase.getArrivedQuantity()
-                : purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity().intValue();
-        if (max > 0 && issueQuantity > max) {
+        // D-410：到货量已是 BigDecimal，上限按小数比较，不要 intValue() 截断
+        BigDecimal arrivedQty = purchase.getArrivedQuantity();
+        BigDecimal max = arrivedQty != null && arrivedQty.compareTo(BigDecimal.ZERO) > 0
+                ? arrivedQty
+                : (purchase.getPurchaseQuantity() == null ? BigDecimal.ZERO : purchase.getPurchaseQuantity());
+        if (max.compareTo(BigDecimal.ZERO) > 0 && BigDecimal.valueOf(issueQuantity).compareTo(max) > 0) {
             throw new IllegalArgumentException("异常数量不能大于到货数量或采购数量");
         }
 
@@ -186,9 +188,10 @@ public class MaterialQualityIssueOrchestrator {
 
     private void adjustPurchaseAfterIssue(MaterialPurchase purchase, MaterialQualityIssue issue,
                                           String resolutionRemark, boolean keepQuantity) {
-        int currentArrived = purchase.getArrivedQuantity() == null ? 0 : purchase.getArrivedQuantity();
-        int issueQty = issue.getIssueQuantity() == null ? 0 : issue.getIssueQuantity();
-        int targetArrived = keepQuantity ? currentArrived : Math.max(0, currentArrived - issueQty);
+        BigDecimal currentArrived = purchase.getArrivedQuantity() == null ? BigDecimal.ZERO : purchase.getArrivedQuantity();
+        BigDecimal issueQty = issue.getIssueQuantity() == null
+                ? BigDecimal.ZERO : BigDecimal.valueOf(issue.getIssueQuantity());
+        BigDecimal targetArrived = keepQuantity ? currentArrived : currentArrived.subtract(issueQty).max(BigDecimal.ZERO);
 
         appendPurchaseRemark(purchase, buildImpactRemark(issue, resolutionRemark,
                 keepQuantity ? "数量保留" : ("有效到货调整为 " + targetArrived)));
@@ -200,10 +203,10 @@ public class MaterialQualityIssueOrchestrator {
             purchase.setReturnConfirmerName(null);
             purchase.setReturnConfirmTime(null);
         }
-        int purchaseQty = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity().intValue();
+        BigDecimal purchaseQty = purchase.getPurchaseQuantity() == null ? BigDecimal.ZERO : purchase.getPurchaseQuantity();
         purchase.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(
                 purchase.getStatus(), targetArrived, purchaseQty));
-        if (targetArrived <= 0) {
+        if (targetArrived.compareTo(BigDecimal.ZERO) <= 0) {
             purchase.setActualArrivalDate(null);
         }
         materialPurchaseService.updatePurchaseAndUpdateOrder(purchase);
@@ -220,7 +223,7 @@ public class MaterialQualityIssueOrchestrator {
         replacement.setSpecifications(source.getSpecifications());
         replacement.setUnit(source.getUnit());
         replacement.setPurchaseQuantity(BigDecimal.valueOf(issue.getIssueQuantity() == null ? 0 : issue.getIssueQuantity()));
-        replacement.setArrivedQuantity(0);
+        replacement.setArrivedQuantity(BigDecimal.ZERO);
         replacement.setSupplierId(source.getSupplierId());
         replacement.setSupplierName(source.getSupplierName());
         replacement.setUnitPrice(source.getUnitPrice());

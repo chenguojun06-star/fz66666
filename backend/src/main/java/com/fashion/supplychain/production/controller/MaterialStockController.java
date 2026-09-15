@@ -1,4 +1,5 @@
 package com.fashion.supplychain.production.controller;
+import java.math.BigDecimal;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -207,7 +208,8 @@ public class MaterialStockController {
             MaterialTransactionDto dto = new MaterialTransactionDto();
             dto.setType("IN");
             dto.setTypeLabel("入库");
-            dto.setQuantity(ib.getInboundQuantity());
+            // D-410：入库量已是 BigDecimal，此 DTO 仍为 Integer，按原语义取整
+            dto.setQuantity(ib.getInboundQuantity() == null ? null : ib.getInboundQuantity().intValue());
             dto.setOperatorName(ib.getOperatorName());
             dto.setWarehouseLocation(ib.getWarehouseLocation());
             dto.setRemark(ib.getRemark());

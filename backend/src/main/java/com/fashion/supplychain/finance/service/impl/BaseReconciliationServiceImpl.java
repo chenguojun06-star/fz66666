@@ -32,7 +32,7 @@ public abstract class BaseReconciliationServiceImpl<T extends BaseReconciliation
         if (!StringUtils.hasText(reconciliation.getId())) {
             return false;
         }
-        if (reconciliation.getQuantity() == null || reconciliation.getQuantity() <= 0) {
+        if (reconciliation.getQuantity() == null || reconciliation.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
             return false;
         }
 
@@ -72,7 +72,9 @@ public abstract class BaseReconciliationServiceImpl<T extends BaseReconciliation
         }
 
         BigDecimal deductionAmount = reconciliation.getDeductionAmount() == null ? BigDecimal.ZERO : reconciliation.getDeductionAmount();
-        BigDecimal total = computedUnitPrice.multiply(BigDecimal.valueOf(reconciliation.getQuantity())).setScale(2, RoundingMode.HALF_UP);
+        // D-410：数量改 BigDecimal 后不能用 BigDecimal.valueOf(Integer)，直接相乘（支持 1.32 米这类小数量）
+        BigDecimal qtyForAmount = reconciliation.getQuantity() == null ? BigDecimal.ZERO : reconciliation.getQuantity();
+        BigDecimal total = computedUnitPrice.multiply(qtyForAmount).setScale(2, RoundingMode.HALF_UP);
         BigDecimal finalAmount = total.subtract(deductionAmount).setScale(2, RoundingMode.HALF_UP);
 
         LocalDateTime now = LocalDateTime.now();
@@ -113,8 +115,8 @@ public abstract class BaseReconciliationServiceImpl<T extends BaseReconciliation
         void setId(String id);
         String getStatus();
         void setStatus(String status);
-        Integer getQuantity();
-        void setQuantity(Integer quantity);
+        BigDecimal getQuantity();
+        void setQuantity(BigDecimal quantity);
         BigDecimal getUnitPrice();
         void setUnitPrice(BigDecimal unitPrice);
         BigDecimal getTotalAmount();

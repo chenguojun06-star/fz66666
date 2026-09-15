@@ -404,7 +404,8 @@ public class OpenApiMaterialHelper {
                     purchase.setUnit(OpenApiParseUtils.valueAsString(item.get("unit"), "米"));
                     purchase.setPurchaseQuantity(purchaseQuantity != null ? new BigDecimal(purchaseQuantity) : null);
                     Integer aqi = OpenApiParseUtils.parseInteger(item.get("arrivedQuantity"));
-                    purchase.setArrivedQuantity(aqi != null ? aqi : 0);
+                    // D-410：到货量已是 BigDecimal（OpenAPI 侧暂按整数接收，此处提升类型）
+                    purchase.setArrivedQuantity(aqi != null ? BigDecimal.valueOf(aqi) : BigDecimal.ZERO);
                     purchase.setSupplierName(OpenApiParseUtils.valueAsString(item.get("supplierName"), app.getAppName()));
                     purchase.setRemark(OpenApiParseUtils.valueAsString(item.get("remark"), "[OpenAPI批量上传]"));
                     purchase.setStatus(OpenApiParseUtils.valueAsString(item.get("status"), "pending"));

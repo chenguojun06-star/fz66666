@@ -264,7 +264,7 @@ public class ShipmentReconciliationOrchestrator {
             }
         }
 
-        sr.setQuantity(Math.max(0, shippedQty));
+        sr.setQuantity(BigDecimal.valueOf(Math.max(0, shippedQty)));
         boolean isOwnFactory = orderReconciliationHelper != null && orderReconciliationHelper.isOwnFactory(order);
 
         if (isOwnFactory) {

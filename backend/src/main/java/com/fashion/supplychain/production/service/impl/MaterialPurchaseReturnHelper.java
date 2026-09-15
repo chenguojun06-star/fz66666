@@ -100,10 +100,11 @@ public class MaterialPurchaseReturnHelper {
         if (ok && !isOrderDrivenPurchase(existed)) {
             try {
                 BigDecimal returnQtyBd = existed.getReturnQuantity();
-                Integer arrivedQty = existed.getArrivedQuantity();
+                BigDecimal arrivedQty = existed.getArrivedQuantity();
                 if (returnQtyBd != null && returnQtyBd.compareTo(BigDecimal.ZERO) > 0 && arrivedQty != null) {
-                    int delta = returnQtyBd.intValue() - arrivedQty;
-                    if (delta > 0) {
+                    // D-410：差额改 BigDecimal，不要 intValue() 截断
+                    BigDecimal delta = returnQtyBd.subtract(arrivedQty);
+                    if (delta.compareTo(BigDecimal.ZERO) > 0) {
                         materialStockService.decreaseStockForCancelReceive(existed, delta);
                         log.info("resetReturnConfirm 已回退库存: purchaseId={}, delta={}", purchaseId, delta);
                     }
@@ -192,9 +193,9 @@ public class MaterialPurchaseReturnHelper {
     }
 
     private void syncStockOnReturnConfirm(MaterialPurchase existed, BigDecimal returnQuantity, String purchaseId) {
-        int arrivedQty = existed.getArrivedQuantity() == null ? 0 : existed.getArrivedQuantity();
-        int delta = returnQuantity.intValue() - arrivedQty;
-        if (delta == 0 || isOrderDrivenPurchase(existed)) return;
+        BigDecimal arrivedQty = existed.getArrivedQuantity() == null ? BigDecimal.ZERO : existed.getArrivedQuantity();
+        BigDecimal delta = returnQuantity.subtract(arrivedQty);
+        if (delta.compareTo(BigDecimal.ZERO) == 0 || isOrderDrivenPurchase(existed)) return;
         try {
             materialStockService.increaseStock(existed, delta);
             log.info("confirmReturnPurchase: 库存同步成功, purchaseId={}, delta={}", purchaseId, delta);

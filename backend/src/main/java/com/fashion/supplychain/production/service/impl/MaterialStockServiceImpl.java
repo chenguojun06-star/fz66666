@@ -1,4 +1,5 @@
 package com.fashion.supplychain.production.service.impl;
+import java.math.BigDecimal;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -92,13 +93,14 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
     }
 
     @Override
-    public void increaseStock(MaterialPurchase purchase, int quantity) {
+    public void increaseStock(MaterialPurchase purchase, java.math.BigDecimal quantity) {
         increaseStock(purchase, quantity, null);
     }
 
     @Override
-    public void increaseStock(MaterialPurchase purchase, int quantity, String warehouseLocation) {
-        if (quantity == 0) {
+    public void increaseStock(MaterialPurchase purchase, java.math.BigDecimal quantity, String warehouseLocation) {
+        // D-410：数量改 BigDecimal（1.32 米必须原样入库，不能先截断再加）
+        if (quantity == null || quantity.compareTo(java.math.BigDecimal.ZERO) == 0) {
             return;
         }
         MaterialStock stock = findOrCreateStock(purchase);
@@ -156,13 +158,18 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
     @Override
     public void decreaseStockById(String stockId, int quantity) {
-        if (quantity <= 0) {
+        decreaseStockById(stockId, java.math.BigDecimal.valueOf(quantity));
+    }
+
+    @Override
+    public void decreaseStockById(String stockId, java.math.BigDecimal quantity) {
+        if (quantity == null || quantity.compareTo(java.math.BigDecimal.ZERO) <= 0) {
             return;
         }
         if (!StringUtils.hasText(stockId)) {
             throw new IllegalArgumentException("库存ID不能为空");
         }
-        int rows = baseMapper.decreaseStockWithCheck(stockId, quantity, com.fashion.supplychain.common.UserContext.tenantId());
+        int rows = baseMapper.decreaseStockWithCheckDecimal(stockId, quantity, com.fashion.supplychain.common.UserContext.tenantId());
         if (rows == 0) {
             MaterialStock stock = this.getById(stockId);
             String name = stock != null ? stock.getMaterialName() : "Unknown";
@@ -243,7 +250,7 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         newStock.setUnit(p.getUnit());
         newStock.setColor(p.getColor() == null ? "" : p.getColor().trim());
         newStock.setSize(p.getSize() == null ? "" : p.getSize().trim());
-        newStock.setQuantity(0);
+        newStock.setQuantity(BigDecimal.ZERO);
         newStock.setLockedQuantity(0);
         newStock.setSafetyStock(100);
         if (p.getUnitPrice() != null) {
@@ -387,7 +394,7 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         }
 
         if (batchDetails.isEmpty() && currentStock != null
-                && currentStock.getQuantity() != null && currentStock.getQuantity() > 0) {
+                && currentStock.getQuantity() != null && currentStock.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
             return java.util.Collections.singletonList(buildFallbackBatchDetail(currentStock));
         }
 
@@ -415,23 +422,25 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
     }
 
     private void allocateByFifo(List<MaterialBatchDetailDto> batchDetails, MaterialStock currentStock) {
-        int totalBatchQty = batchDetails.stream()
-                .mapToInt(MaterialBatchDetailDto::getAvailableQty)
-                .sum();
+        // D-410：库存/批次数量全部 BigDecimal（1.32 米必须原样参与 FIFO 分配）
+        BigDecimal totalBatchQty = batchDetails.stream()
+                .map(d -> d.getAvailableQty() == null ? BigDecimal.ZERO : d.getAvailableQty())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        int currentQty = currentStock.getQuantity() != null ? currentStock.getQuantity() : 0;
+        BigDecimal currentQty = currentStock.getQuantity() != null ? currentStock.getQuantity() : BigDecimal.ZERO;
         int lockedQty = currentStock.getLockedQuantity() != null ? currentStock.getLockedQuantity() : 0;
 
-        if (totalBatchQty > currentQty) {
-            int remainingQty = currentQty;
+        if (totalBatchQty.compareTo(currentQty) > 0) {
+            BigDecimal remainingQty = currentQty;
             for (MaterialBatchDetailDto dto : batchDetails) {
-                if (remainingQty <= 0) {
-                    dto.setAvailableQty(0);
-                } else if (remainingQty >= dto.getAvailableQty()) {
-                    remainingQty -= dto.getAvailableQty();
+                BigDecimal avail = dto.getAvailableQty() == null ? BigDecimal.ZERO : dto.getAvailableQty();
+                if (remainingQty.compareTo(BigDecimal.ZERO) <= 0) {
+                    dto.setAvailableQty(BigDecimal.ZERO);
+                } else if (remainingQty.compareTo(avail) >= 0) {
+                    remainingQty = remainingQty.subtract(avail);
                 } else {
                     dto.setAvailableQty(remainingQty);
-                    remainingQty = 0;
+                    remainingQty = BigDecimal.ZERO;
                 }
             }
         }
@@ -451,7 +460,8 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         dto.setInboundDate(currentStock.getLastInboundDate() != null
                 ? currentStock.getLastInboundDate() : currentStock.getUpdateTime());
         int locked = currentStock.getLockedQuantity() != null ? currentStock.getLockedQuantity() : 0;
-        dto.setAvailableQty(Math.max(0, currentStock.getQuantity() - locked));
+        BigDecimal fbQty = currentStock.getQuantity() == null ? BigDecimal.ZERO : currentStock.getQuantity();
+        dto.setAvailableQty(fbQty.subtract(BigDecimal.valueOf(locked)).max(BigDecimal.ZERO));
         dto.setLockedQty(locked);
         dto.setOutboundQty(0);
         dto.setExpiryDate(null);
@@ -476,7 +486,12 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
     @Override
     public void decreaseStockForCancelReceive(MaterialPurchase purchase, int quantity) {
-        if (quantity <= 0) {
+        decreaseStockForCancelReceive(purchase, java.math.BigDecimal.valueOf(quantity));
+    }
+
+    @Override
+    public void decreaseStockForCancelReceive(MaterialPurchase purchase, java.math.BigDecimal quantity) {
+        if (quantity == null || quantity.compareTo(java.math.BigDecimal.ZERO) <= 0) {
             return;
         }
         MaterialStock stock = findOrCreateStock(purchase);
@@ -484,9 +499,9 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
             log.warn("decreaseStockForCancelReceive: 库存记录不存在，跳过: materialCode={}", purchase.getMaterialCode());
             return;
         }
-        int rows = baseMapper.decreaseStockWithCheck(stock.getId(), quantity, com.fashion.supplychain.common.UserContext.tenantId());
+        int rows = baseMapper.decreaseStockWithCheckDecimal(stock.getId(), quantity, com.fashion.supplychain.common.UserContext.tenantId());
         if (rows == 0) {
-            int currentQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+            BigDecimal currentQty = stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO;
             log.warn("decreaseStockForCancelReceive: 库存不足，当前库存={}, 需扣减={}, materialCode={}",
                     currentQty, quantity, purchase.getMaterialCode());
             throw new IllegalStateException(
@@ -549,9 +564,9 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
     }
 
     @Override
-    public void updateStockOnInbound(String stockId, int delta, String location,
+    public void updateStockOnInbound(String stockId, java.math.BigDecimal delta, String location,
             java.math.BigDecimal unitPrice, String supplierName) {
-        if (delta == 0 || !StringUtils.hasText(stockId)) {
+        if (delta == null || delta.compareTo(java.math.BigDecimal.ZERO) == 0 || !StringUtils.hasText(stockId)) {
             return;
         }
         // P2-6（D-076）：仓库入库与采购入库统一走加权单价 SQL，库存单价不再滞后于入库价

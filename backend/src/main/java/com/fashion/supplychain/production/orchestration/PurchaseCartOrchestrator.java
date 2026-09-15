@@ -549,7 +549,7 @@ public class PurchaseCartOrchestrator {
             purchase.setTotalAmount(group.getTotalAmount());
             purchase.setStatus(MaterialConstants.STATUS_PENDING);
             purchase.setTenantId(tenantId);
-            purchase.setArrivedQuantity(0);
+            purchase.setArrivedQuantity(BigDecimal.ZERO);
             purchase.setDeleteFlag(0);
             // 损耗率从购物车明细贯通到采购单
             purchase.setLossRate(group.getLossRate());

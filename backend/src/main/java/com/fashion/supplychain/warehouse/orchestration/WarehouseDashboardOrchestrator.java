@@ -153,7 +153,8 @@ public class WarehouseDashboardOrchestrator {
                     dto.setId(stock.getId());
                     dto.setMaterialCode(stock.getMaterialCode());
                     dto.setMaterialName(stock.getMaterialName());
-                    dto.setAvailableQty(stock.getQuantity() != null ? stock.getQuantity() : 0);
+                    // D-410：库存已是 BigDecimal，此 DTO 仍为 Integer，按原语义截断取整
+                    dto.setAvailableQty(stock.getQuantity() != null ? stock.getQuantity().intValue() : 0);
                     dto.setSafetyStock(stock.getSafetyStock() != null ? stock.getSafetyStock() : 100);
                     dto.setUnit(stock.getUnit());
                     dto.setShortage(dto.getSafetyStock() - dto.getAvailableQty());

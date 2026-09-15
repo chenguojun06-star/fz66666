@@ -1,4 +1,5 @@
 package com.fashion.supplychain.production.controller;
+import java.math.BigDecimal;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -57,7 +58,7 @@ public class MaterialInboundController {
     public Result<?> confirmArrival(@RequestBody Map<String, Object> params) {
         try {
             String purchaseId = (String) params.get("purchaseId");
-            Integer arrivedQuantity = parseQuantity(params.get("arrivedQuantity"), "到货数量");
+            BigDecimal arrivedQuantity = parseQuantity(params.get("arrivedQuantity"), "到货数量");
             String warehouseLocation = (String) params.get("warehouseLocation");
             String operatorId = (String) params.get("operatorId");
             String operatorName = (String) params.get("operatorName");
@@ -80,12 +81,13 @@ public class MaterialInboundController {
      * 前端 JSON 数字经 Jackson 反序列化后可能是 Integer/Long/Double，旧代码直接
      * {@code (Integer) params.get(...)} 遇到小数会抛 ClassCastException（用户只看到一串类型转换异常）。
      * <p>
-     * 另：物料到货/入库量当前在数据模型上是 INT（{@code t_material_purchase.arrived_quantity}、
-     * {@code t_material_inbound.inbound_quantity}），而采购量是 DECIMAL，一旦采购量为小数
-     * （如 1.32 米）就会永远到不齐。小数支持需改列为 DECIMAL，属独立的数据模型升级，
-     * 此处先给出明确业务提示，不做静默截断（避免错账）。
+     * D-410：物料到货/入库量已升级为 DECIMAL(12,4)（见 V202709150100），与采购量同精度。
+     * <p>
+     * 此前这里会检测小数并抛「当前只支持整数（物料到货/入库量为整数模型）」——
+     * 也就是说采购 1.32 米时，用户录入 1.32 会直接被接口拒绝，只能录入 1，
+     * 结果采购单永远到不齐、对账单还按 1 米结算（少付货款）。现已放开小数。
      */
-    private static Integer parseQuantity(Object value, String fieldLabel) {
+    private static BigDecimal parseQuantity(Object value, String fieldLabel) {
         if (value == null) {
             return null;
         }
@@ -105,11 +107,11 @@ public class MaterialInboundController {
                 throw new IllegalArgumentException(fieldLabel + "格式不正确: " + text);
             }
         }
-        if (decimal.stripTrailingZeros().scale() > 0) {
-            throw new IllegalArgumentException(fieldLabel + "当前只支持整数（物料到货/入库量为整数模型）。"
-                    + "该物料采购数量为小数，小数到货支持待数据模型升级后开放。当前输入：" + decimal.toPlainString());
+        // D-410：不再拒绝小数，仅保留"必须为正"的业务校验
+        if (decimal.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(fieldLabel + "必须大于 0，当前输入：" + decimal.toPlainString());
         }
-        return decimal.intValue();
+        return decimal;
     }
 
     /**
@@ -119,7 +121,7 @@ public class MaterialInboundController {
     public Result<?> backfillInbound(@RequestBody Map<String, Object> params) {
         try {
             String purchaseId = (String) params.get("purchaseId");
-            Integer quantity = parseQuantity(params.get("quantity"), "补录数量");
+            BigDecimal quantity = parseQuantity(params.get("quantity"), "补录数量");
             String warehouseLocation = (String) params.get("warehouseLocation");
             String operatorId = (String) params.get("operatorId");
             String operatorName = (String) params.get("operatorName");
@@ -148,7 +150,7 @@ public class MaterialInboundController {
             String materialType = (String) params.get("materialType");
             String color = (String) params.get("color");
             String size = (String) params.get("size");
-            Integer quantity = parseQuantity(params.get("quantity"), "入库数量");
+            BigDecimal quantity = parseQuantity(params.get("quantity"), "入库数量");
             String warehouseLocation = (String) params.get("warehouseLocation");
             String supplierName = (String) params.get("supplierName");
             String operatorId = (String) params.get("operatorId");

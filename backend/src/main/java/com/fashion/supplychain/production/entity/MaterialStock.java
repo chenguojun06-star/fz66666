@@ -80,7 +80,11 @@ public class MaterialStock {
     /**
      * 当前库存数量
      */
-    private Integer quantity;
+    /**
+     * 库存数量（D-410：INT → BigDecimal，DECIMAL(12,4)）
+     * 面料按「米/公斤/码」入库时是小数，用 INT 会把 1.32 米截断成 1 → 入库台账与库存账不符。
+     */
+    private java.math.BigDecimal quantity;
 
     /**
      * 占用/冻结数量 (用于生产预扣)

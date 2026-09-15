@@ -131,7 +131,7 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "actual_arrival_date = NOW(), " +
             "update_time = NOW() " +
             "WHERE id = #{id} AND tenant_id = #{tenantId} AND delete_flag = 0")
-    int atomicAddArrivedQuantity(@Param("id") String id, @Param("delta") int delta, @Param("tenantId") Long tenantId);
+    int atomicAddArrivedQuantity(@Param("id") String id, @Param("delta") java.math.BigDecimal delta, @Param("tenantId") Long tenantId);
 
     /**
      * 批量按物料编码汇总在途采购数量（在途 = 未完成状态剩余量：采购量 - 已到货量）

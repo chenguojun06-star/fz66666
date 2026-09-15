@@ -174,7 +174,7 @@ public class MaterialPurchaseQueryHelper {
                 .filter(p -> {
                     if (p.getArrivedQuantity() == null) return true;
                     if (p.getPurchaseQuantity() == null) return true;
-                    return p.getArrivedQuantity() < p.getPurchaseQuantity().intValue();
+                    return p.getArrivedQuantity().compareTo(p.getPurchaseQuantity()) < 0;
                 })
                 .collect(Collectors.toList());
 
@@ -633,11 +633,11 @@ public class MaterialPurchaseQueryHelper {
                 return m;
             });
             BigDecimal purchaseQty = p.getPurchaseQuantity() != null ? p.getPurchaseQuantity() : BigDecimal.ZERO;
-            Integer arrivedQty = p.getArrivedQuantity() != null ? p.getArrivedQuantity() : 0;
+            BigDecimal arrivedQty = p.getArrivedQuantity() != null ? p.getArrivedQuantity() : BigDecimal.ZERO;
             BigDecimal usedQty = p.getUsedQuantity() != null ? p.getUsedQuantity() : BigDecimal.ZERO;
             BigDecimal returnQty = p.getReturnQuantity() != null ? p.getReturnQuantity() : BigDecimal.ZERO;
             row.put("purchaseQuantity", ((BigDecimal) row.get("purchaseQuantity")).add(purchaseQty));
-            row.put("arrivedQuantity", (Integer) row.get("arrivedQuantity") + arrivedQty);
+            row.put("arrivedQuantity", ((BigDecimal) row.get("arrivedQuantity")).add(arrivedQty));
             row.put("usedQuantity", ((BigDecimal) row.get("usedQuantity")).add(usedQty));
             row.put("returnQuantity", ((BigDecimal) row.get("returnQuantity")).add(returnQty));
             row.put("purchaseCount", (Integer) row.get("purchaseCount") + 1);

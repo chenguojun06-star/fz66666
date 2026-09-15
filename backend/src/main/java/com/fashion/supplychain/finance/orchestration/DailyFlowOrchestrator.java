@@ -323,7 +323,10 @@ public class DailyFlowOrchestrator {
 
     // ==================== 工具 ====================
 
-    private BigDecimal toBigDecimal(Integer value) {
-        return value != null ? BigDecimal.valueOf(value) : null;
+    /** D-410：入参放宽到 Number —— MaterialInbound.inboundQuantity 已是 BigDecimal，只收 Integer 会编译失败 */
+    private BigDecimal toBigDecimal(Number value) {
+        if (value == null) return null;
+        if (value instanceof BigDecimal) return (BigDecimal) value;
+        return new BigDecimal(value.toString());
     }
 }

@@ -14,7 +14,7 @@ public interface MaterialStockService extends IService<MaterialStock> {
     /**
      * 增加库存 (采购入库)
      */
-    void increaseStock(MaterialPurchase purchase, int quantity);
+    void increaseStock(MaterialPurchase purchase, java.math.BigDecimal quantity);
 
     /**
      * 增加库存 (采购入库 - 带仓位)
@@ -22,7 +22,7 @@ public interface MaterialStockService extends IService<MaterialStock> {
      * @param quantity 入库数量
      * @param warehouseLocation 入库仓位
      */
-    void increaseStock(MaterialPurchase purchase, int quantity, String warehouseLocation);
+    void increaseStock(MaterialPurchase purchase, java.math.BigDecimal quantity, String warehouseLocation);
 
     /**
      * 扣减库存 (生产领料/退货)
@@ -38,6 +38,9 @@ public interface MaterialStockService extends IService<MaterialStock> {
      * 根据库存ID扣减库存
      */
     void decreaseStockById(String stockId, int quantity);
+
+    /** D-410：库存已是 DECIMAL(12,4)，扣减量支持小数（int 版本委托到此方法） */
+    void decreaseStockById(String stockId, java.math.BigDecimal quantity);
 
     /**
      * 根据物料ID列表批量获取库存
@@ -62,6 +65,9 @@ public interface MaterialStockService extends IService<MaterialStock> {
 
     void decreaseStockForCancelReceive(MaterialPurchase purchase, int quantity);
 
+    /** D-410：回滚量支持小数（到货量已是 DECIMAL，int 版本委托到此方法） */
+    void decreaseStockForCancelReceive(MaterialPurchase purchase, java.math.BigDecimal quantity);
+
     void lockStock(String stockId, int quantity);
 
     void unlockStock(String stockId, int quantity);
@@ -74,6 +80,6 @@ public interface MaterialStockService extends IService<MaterialStock> {
      * 入库并更新加权单价（仓库自由入库/扫码入库路径）
      * unitPrice 非空且 > 0 时按加权平均更新库存单价，否则仅累加数量
      */
-    void updateStockOnInbound(String stockId, int delta, String location,
+    void updateStockOnInbound(String stockId, java.math.BigDecimal delta, String location,
             java.math.BigDecimal unitPrice, String supplierName);
 }

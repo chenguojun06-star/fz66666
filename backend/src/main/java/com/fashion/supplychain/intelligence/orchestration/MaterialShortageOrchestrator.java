@@ -1,4 +1,5 @@
 package com.fashion.supplychain.intelligence.orchestration;
+import java.math.BigDecimal;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
@@ -203,7 +204,8 @@ public class MaterialShortageOrchestrator {
         Map<String, Integer> stockMap = new HashMap<>();
         for (MaterialStock s : stocks) {
             String k = s.getMaterialCode() + "|" + (s.getColor() != null ? s.getColor() : "");
-            stockMap.merge(k, s.getQuantity() != null ? s.getQuantity() : 0, Integer::sum);
+            // D-410：库存已是 BigDecimal，此 map 仍按 int 汇总
+            stockMap.merge(k, s.getQuantity() != null ? s.getQuantity().intValue() : 0, Integer::sum);
         }
         return stockMap;
     }

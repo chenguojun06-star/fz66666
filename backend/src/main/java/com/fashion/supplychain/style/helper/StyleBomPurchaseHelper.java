@@ -295,7 +295,7 @@ public class StyleBomPurchaseHelper {
         purchase.setUnit(bom.getUnit());
         purchase.setConversionRate(bom.getConversionRate());
         purchase.setPurchaseQuantity(purchaseQty);
-        purchase.setArrivedQuantity(0);
+        purchase.setArrivedQuantity(BigDecimal.ZERO);
 
         String supplier = bom.getSupplier();
         if (supplier == null || supplier.trim().isEmpty()) {

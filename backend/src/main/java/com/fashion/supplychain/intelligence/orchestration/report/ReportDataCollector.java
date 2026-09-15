@@ -160,7 +160,7 @@ public class ReportDataCollector {
             String fn = s.getProcessName() != null ? s.getProcessName() : "未知工厂";
             factoryData.computeIfAbsent(fn, k -> new long[2]);
             factoryData.get(fn)[0]++;
-            factoryData.get(fn)[1] += s.getQuantity() != null ? s.getQuantity() : 0;
+            factoryData.get(fn)[1] += (s.getQuantity() != null ? s.getQuantity() : BigDecimal.ZERO).longValue();
         }
 
         return factoryData.entrySet().stream()

@@ -50,7 +50,8 @@ public class MaterialWarehouseOperationOrchestrator {
         String username = UserContext.username();
 
         String materialCode = trimToNull(params.get("materialCode"));
-        Integer quantity = toInt(params.get("quantity"));
+        // D-410：数量改为 BigDecimal（面料按米/公斤计量时是小数，int 会把 1.32 截断成 1）
+        BigDecimal quantity = toBigDecimal(params.get("quantity"));
         String warehouseLocation = trimToNull(params.get("warehouseLocation"));
         String sourceType = trimToNull(params.get("sourceType"));
         String remark = trimToNull(params.get("remark"));
@@ -64,7 +65,7 @@ public class MaterialWarehouseOperationOrchestrator {
         if (!StringUtils.hasText(materialCode)) {
             throw new IllegalArgumentException("物料编码不能为空");
         }
-        if (quantity == null || quantity <= 0) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("入库数量必须大于0");
         }
         if (!StringUtils.hasText(warehouseLocation)) {
@@ -91,14 +92,14 @@ public class MaterialWarehouseOperationOrchestrator {
             stock = autoCreateMaterialStock(materialCode, params, tenantId);
         }
 
-        int beforeQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+        BigDecimal beforeQty = stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO;
         // P2-6（D-076）：仓库入库统一走加权单价 SQL（原 updateStockQuantity 只累加数量不动单价，
         // 采购入库与仓库入库两条路径库存成本口径不一致）。unitPrice 为空时仅累加数量，行为不变。
         materialStockService.updateStockOnInbound(stock.getId(), quantity, warehouseLocation, unitPrice, supplierName);
-        int afterQty = beforeQty + quantity;
+        BigDecimal afterQty = beforeQty.add(quantity);
 
         BigDecimal effectivePrice = unitPrice != null ? unitPrice : stock.getUnitPrice();
-        BigDecimal totalAmount = effectivePrice != null ? effectivePrice.multiply(BigDecimal.valueOf(quantity)) : null;
+        BigDecimal totalAmount = effectivePrice != null ? effectivePrice.multiply(quantity) : null;
 
         if (!StringUtils.hasText(traceId)) {
             traceId = "TR-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
@@ -110,7 +111,10 @@ public class MaterialWarehouseOperationOrchestrator {
         inbound.setInboundNo(buildNo("MI", now));
         inbound.setMaterialCode(materialCode);
         inbound.setMaterialName(stock.getMaterialName());
-        inbound.setQuantity(quantity);
+        // D-410：canonical 列是 inbound_quantity（DECIMAL 12,4）；MaterialInbound.quantity 是遗留 Integer 列，
+        // 此前只写它 → 小数被截断且 inbound_quantity 为空。这里两个都写：规范列存精确值，遗留列按原语义存整数。
+        inbound.setInboundQuantity(quantity);
+        inbound.setQuantity(quantity.intValue());
         inbound.setSourceType(sourceType);
         inbound.setWarehouseLocation(warehouseLocation);
         inbound.setSupplierName(supplierName);
@@ -212,8 +216,8 @@ public class MaterialWarehouseOperationOrchestrator {
         }
 
         String materialCode = original.getMaterialCode();
-        int reverseQty = original.getQuantity() != null ? original.getQuantity() : 0;
-        if (reverseQty <= 0) {
+        BigDecimal reverseQty = original.getInboundQuantity() != null ? original.getInboundQuantity() : BigDecimal.ZERO;
+        if (reverseQty.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("原入库记录数量为0，无需冲销");
         }
 
@@ -222,14 +226,16 @@ public class MaterialWarehouseOperationOrchestrator {
             throw new IllegalArgumentException("物料不存在: " + materialCode);
         }
 
-        int currentStock = stock.getQuantity() != null ? stock.getQuantity() : 0;
-        if (currentStock < reverseQty) {
+        BigDecimal currentStock = stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO;
+        if (currentStock.compareTo(reverseQty) < 0) {
             throw new IllegalArgumentException(String.format(
-                    "库存不足无法冲销！当前库存=%d，需冲销=%d。", currentStock, reverseQty));
+                    "库存不足无法冲销！当前库存=%s，需冲销=%s。",
+                    currentStock.stripTrailingZeros().toPlainString(),
+                    reverseQty.stripTrailingZeros().toPlainString()));
         }
 
         materialStockService.decreaseStockById(stock.getId(), reverseQty);
-        int afterQty = currentStock - reverseQty;
+        BigDecimal afterQty = currentStock.subtract(reverseQty);
 
         original.setReversalStatus("REVERSED");
         original.setUpdateTime(LocalDateTime.now());
@@ -244,7 +250,8 @@ public class MaterialWarehouseOperationOrchestrator {
         reversal.setInboundNo(buildNo("MRV", now));
         reversal.setMaterialCode(materialCode);
         reversal.setMaterialName(original.getMaterialName());
-        reversal.setQuantity(reverseQty);
+        reversal.setInboundQuantity(reverseQty);
+        reversal.setQuantity(reverseQty.intValue());
         reversal.setSourceType("reversal");
         reversal.setWarehouseLocation(original.getWarehouseLocation());
         reversal.setUnitPrice(original.getUnitPrice());
@@ -270,7 +277,7 @@ public class MaterialWarehouseOperationOrchestrator {
         original.setUpdateTime(LocalDateTime.now());
         materialInboundMapper.updateById(original);
 
-        logStockChange("REVERSAL", stock, currentStock, -reverseQty, afterQty,
+        logStockChange("REVERSAL", stock, currentStock, reverseQty.negate(), afterQty,
                 reversal.getInboundNo(), "reversal", original.getUnitPrice(),
                 reversal.getTotalAmount(), traceId, userId, username, tenantId);
 
@@ -354,14 +361,18 @@ public class MaterialWarehouseOperationOrchestrator {
             throw new IllegalArgumentException("物料不存在: " + materialCode);
         }
 
-        int beforeQty = stock.getQuantity() != null ? stock.getQuantity() : 0;
-        int available = beforeQty - (stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0);
-        if (available < quantity) {
+        // D-410：库存 quantity 已是 BigDecimal，可用量与变动量跟着改 BigDecimal 比较。
+        // 注意：出库数量本身仍是 int（MaterialOutboundLog.quantity 未纳入本次迁移），
+        // 所以这里用 valueOf 在中转，出库的小数支持需另开迁移。
+        BigDecimal beforeQty = stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO;
+        BigDecimal available = beforeQty.subtract(
+                BigDecimal.valueOf(stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0));
+        if (available.compareTo(BigDecimal.valueOf(quantity)) < 0) {
             throw new IllegalArgumentException("库存不足: " + materialCode + "，可用:" + available + stock.getUnit() + "，申请:" + quantity + stock.getUnit());
         }
 
         materialStockService.decreaseStockById(stock.getId(), quantity);
-        int afterQty = beforeQty - quantity;
+        BigDecimal afterQty = beforeQty.subtract(BigDecimal.valueOf(quantity));
 
         if (!StringUtils.hasText(traceId)) {
             traceId = "TR-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
@@ -393,7 +404,7 @@ public class MaterialWarehouseOperationOrchestrator {
         logEntry.setTenantId(tenantId);
         materialOutboundLogMapper.insert(logEntry);
 
-        logStockChange("OUTSTOCK", stock, beforeQty, -quantity, afterQty,
+        logStockChange("OUTSTOCK", stock, beforeQty, BigDecimal.valueOf(quantity).negate(), afterQty,
                 logEntry.getOutboundNo(), outstockType, stock.getUnitPrice(),
                 stock.getUnitPrice() != null ? stock.getUnitPrice().multiply(BigDecimal.valueOf(quantity)) : null,
                 traceId, UserContext.userId(), UserContext.username(), tenantId);
@@ -471,7 +482,7 @@ public class MaterialWarehouseOperationOrchestrator {
         r.put("materialType", stock.getMaterialType() != null ? stock.getMaterialType() : "");
         r.put("color", stock.getColor() != null ? stock.getColor() : "");
         r.put("size", stock.getSize() != null ? stock.getSize() : "");
-        r.put("quantity", stock.getQuantity() != null ? stock.getQuantity() : 0);
+        r.put("quantity", stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO);
         r.put("lockedQuantity", stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0);
         r.put("unitPrice", stock.getUnitPrice() != null ? stock.getUnitPrice() : BigDecimal.ZERO);
         r.put("location", stock.getLocation() != null ? stock.getLocation() : "");
@@ -519,7 +530,9 @@ public class MaterialWarehouseOperationOrchestrator {
         return result;
     }
 
-    private void logStockChange(String changeType, MaterialStock stock, int beforeQty, int delta, int afterQty,
+    // D-410：数量参数改 BigDecimal（StockChangeLog 的 before/after/changeQuantity 本就是 BigDecimal，
+    // 原先走 int 中转会把 1.32 记成 1，日志与实际库存对不上）
+    private void logStockChange(String changeType, MaterialStock stock, BigDecimal beforeQty, BigDecimal delta, BigDecimal afterQty,
                                  String bizNo, String bizType, BigDecimal unitPrice, BigDecimal totalAmount,
                                  String traceId, String operatorId, String operatorName, Long tenantId) {
         try {
@@ -531,9 +544,9 @@ public class MaterialWarehouseOperationOrchestrator {
             scl.setStyleNo(stock.getMaterialCode());
             scl.setColor(stock.getColor());
             scl.setSize(stock.getSize());
-            scl.setBeforeQuantity(BigDecimal.valueOf(beforeQty));
-            scl.setChangeQuantity(BigDecimal.valueOf(delta));
-            scl.setAfterQuantity(BigDecimal.valueOf(afterQty));
+            scl.setBeforeQuantity(beforeQty);
+            scl.setChangeQuantity(delta);
+            scl.setAfterQuantity(afterQty);
             scl.setBizType(bizType);
             scl.setBizNo(bizNo);
             scl.setUnitPrice(unitPrice);
@@ -577,7 +590,7 @@ public class MaterialWarehouseOperationOrchestrator {
         stock.setColor(trimToNull(params.get("color")));
         stock.setSize(trimToNull(params.get("size")));
         stock.setUnit(trimToNull(params.get("unit")));
-        stock.setQuantity(0);
+        stock.setQuantity(BigDecimal.ZERO);
         stock.setLockedQuantity(0);
         stock.setUnitPrice(toBigDecimal(params.get("unitPrice")));
         stock.setLocation(trimToNull(params.get("warehouseLocation")));

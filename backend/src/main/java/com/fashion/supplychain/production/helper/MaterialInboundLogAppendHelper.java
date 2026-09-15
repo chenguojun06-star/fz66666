@@ -49,8 +49,10 @@ public class MaterialInboundLogAppendHelper extends AbstractOperationLogAppendHe
         appendOperation(inboundId, "修改入库单", "更新字段：" + fieldNames);
     }
 
-    public void appendInbound(String inboundId, Integer quantity) {
-        appendOperation(inboundId, "确认入库", "入库数量：" + quantity);
+    public void appendInbound(String inboundId, java.math.BigDecimal quantity) {
+        // D-410：数量改 BigDecimal，日志去掉无意义的尾随 0（1.3200 → 1.32）
+        String qtyText = quantity == null ? "0" : quantity.stripTrailingZeros().toPlainString();
+        appendOperation(inboundId, "确认入库", "入库数量：" + qtyText);
     }
 
     public void appendQualityCheck(String inboundId, String result) {

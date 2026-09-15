@@ -158,7 +158,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         materialPurchase.setUpdateTime(now);
         materialPurchase.setDeleteFlag(0);
         materialPurchase.setArrivedQuantity(
-                materialPurchase.getArrivedQuantity() == null ? 0 : materialPurchase.getArrivedQuantity());
+                materialPurchase.getArrivedQuantity() == null ? BigDecimal.ZERO : materialPurchase.getArrivedQuantity());
 
         if (!StringUtils.hasText(materialPurchase.getPurchaseNo())) {
             materialPurchase.setPurchaseNo(serviceHelper.nextPurchaseNo());
@@ -172,7 +172,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             materialPurchase.setUnitPrice(BigDecimal.ZERO);
         }
 
-        int arrived = materialPurchase.getArrivedQuantity() == null ? 0 : materialPurchase.getArrivedQuantity();
+        BigDecimal arrived = materialPurchase.getArrivedQuantity() == null ? BigDecimal.ZERO : materialPurchase.getArrivedQuantity();
         // 口径统一（D-129）：totalAmount = 采购数 × 单价（与编辑/购物车/BOM推送一致）。
         // 旧逻辑用已到量计算，新建采购单 arrived=0 → 落库即 0 元。
         BigDecimal purchaseQtyForAmount = materialPurchase.getPurchaseQuantity() == null
@@ -181,8 +181,8 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
         String status = materialPurchase.getStatus() == null ? "" : materialPurchase.getStatus().trim();
         if (!MaterialConstants.STATUS_CANCELLED.equalsIgnoreCase(status)) {
-            int purchaseQty = materialPurchase.getPurchaseQuantity() == null ? 0
-                    : materialPurchase.getPurchaseQuantity().intValue();
+            BigDecimal purchaseQty = materialPurchase.getPurchaseQuantity() == null ? BigDecimal.ZERO
+                    : materialPurchase.getPurchaseQuantity();
             materialPurchase.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(status, arrived, purchaseQty));
         }
 
@@ -204,9 +204,9 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             // D-296 跨节点同步：任一节点生成采购单后，清掉购物车同需求（同物料+同款+同色）条目，
             // 防止样衣/大货/指令等不同入口已采购后购物车仍挂着被重复下单（购物车结算自身条目已在 confirm 内删除，此处幂等）
             purchaseCartSyncHelper.reconcileCartOnPurchase(materialPurchase);
-            int currentArrived = materialPurchase.getArrivedQuantity() == null ? 0
+            BigDecimal currentArrived = materialPurchase.getArrivedQuantity() == null ? BigDecimal.ZERO
                     : materialPurchase.getArrivedQuantity();
-            if (currentArrived > 0 && !isOrderDrivenPurchase(materialPurchase)) {
+            if (currentArrived.compareTo(BigDecimal.ZERO) > 0 && !isOrderDrivenPurchase(materialPurchase)) {
                 try {
                     materialStockService.increaseStock(materialPurchase, currentArrived);
                 } catch (Exception e) {
@@ -234,7 +234,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         if (materialPurchase.getUnitPrice() == null) {
             materialPurchase.setUnitPrice(BigDecimal.ZERO);
         }
-        int arrived = materialPurchase.getArrivedQuantity() == null ? 0 : materialPurchase.getArrivedQuantity();
+        BigDecimal arrived = materialPurchase.getArrivedQuantity() == null ? BigDecimal.ZERO : materialPurchase.getArrivedQuantity();
         // 口径统一（D-129）：totalAmount = 采购数 × 单价（与编辑/购物车/BOM推送一致）。
         // 旧逻辑用已到量计算，新建采购单 arrived=0 → 落库即 0 元。
         BigDecimal purchaseQtyForAmount = materialPurchase.getPurchaseQuantity() == null
@@ -243,8 +243,8 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
         String status = materialPurchase.getStatus() == null ? "" : materialPurchase.getStatus().trim();
         if (!MaterialConstants.STATUS_CANCELLED.equalsIgnoreCase(status)) {
-            int purchaseQty = materialPurchase.getPurchaseQuantity() == null ? 0
-                    : materialPurchase.getPurchaseQuantity().intValue();
+            BigDecimal purchaseQty = materialPurchase.getPurchaseQuantity() == null ? BigDecimal.ZERO
+                    : materialPurchase.getPurchaseQuantity();
             materialPurchase.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(status, arrived, purchaseQty));
         }
 
@@ -259,10 +259,10 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         boolean updated = this.updateById(materialPurchase);
 
         if (updated && oldPurchase != null && !isOrderDrivenPurchase(materialPurchase)) {
-            int oldArrived = oldPurchase.getArrivedQuantity() == null ? 0 : oldPurchase.getArrivedQuantity();
-            int newArrived = arrived;
-            int delta = newArrived - oldArrived;
-            if (delta != 0) {
+            BigDecimal oldArrived = oldPurchase.getArrivedQuantity() == null ? BigDecimal.ZERO : oldPurchase.getArrivedQuantity();
+            BigDecimal newArrived = arrived;
+            BigDecimal delta = newArrived.subtract(oldArrived);
+            if (delta.compareTo(BigDecimal.ZERO) != 0) {
                 try {
                     materialStockService.increaseStock(materialPurchase, delta);
                 } catch (Exception e) {
@@ -297,13 +297,13 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     }
 
     @Override
-    public int computeEffectiveArrivedQuantity(int purchaseQty, int arrivedQty) {
-        if (purchaseQty <= 0) {
-            return 0;
+    public BigDecimal computeEffectiveArrivedQuantity(BigDecimal purchaseQty, BigDecimal arrivedQty) {
+        if (purchaseQty == null || purchaseQty.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
         }
-
-        int aq = Math.max(0, arrivedQty);
-        return Math.min(aq, purchaseQty);
+        // 有效到货量 = 到货量封顶到采购量，负数按 0 处理（D-410：改 BigDecimal，保住 1.32 这类小数量）
+        BigDecimal aq = (arrivedQty == null || arrivedQty.compareTo(BigDecimal.ZERO) < 0) ? BigDecimal.ZERO : arrivedQty;
+        return aq.min(purchaseQty);
     }
 
     @Override
@@ -346,9 +346,9 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     @Override
     public ArrivalStats computeArrivalStats(List<MaterialPurchase> purchases) {
         ArrivalStats out = new ArrivalStats();
-        int plannedQty = 0;
-        int arrivedQty = 0;
-        int effectiveArrivedQty = 0;
+        BigDecimal plannedQty = BigDecimal.ZERO;
+        BigDecimal arrivedQty = BigDecimal.ZERO;
+        BigDecimal effectiveArrivedQty = BigDecimal.ZERO;
         BigDecimal plannedAmount = BigDecimal.ZERO;
         BigDecimal arrivedAmount = BigDecimal.ZERO;
 
@@ -361,29 +361,29 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 if ("cancelled".equalsIgnoreCase(st)) {
                     continue;
                 }
-                int pq = p.getPurchaseQuantity() == null ? 0 : p.getPurchaseQuantity().intValue();
-                int aq = p.getArrivedQuantity() == null ? 0 : p.getArrivedQuantity();
-                if (pq <= 0) {
+                BigDecimal pq = p.getPurchaseQuantity() == null ? BigDecimal.ZERO : p.getPurchaseQuantity();
+                BigDecimal aq = p.getArrivedQuantity() == null ? BigDecimal.ZERO : p.getArrivedQuantity();
+                if (pq.compareTo(BigDecimal.ZERO) <= 0) {
                     continue;
                 }
 
-                int clampedArrived = Math.min(Math.max(0, aq), pq);
+                BigDecimal clampedArrived = aq.max(BigDecimal.ZERO).min(pq);
                 // P2-5（D-076）：到货率需含仓库领料完成 —— 仓库路径（自由入库+领料出库）
                 // 下 arrivedQuantity 不更新，usedQuantity 才是实物事实；取 max 后封顶采购量
-                int uq = p.getUsedQuantity() == null ? 0 : p.getUsedQuantity().intValue();
-                int eff = computeEffectiveArrivedQuantity(pq, Math.max(aq, uq));
+                BigDecimal uq = p.getUsedQuantity() == null ? BigDecimal.ZERO : p.getUsedQuantity();
+                BigDecimal eff = computeEffectiveArrivedQuantity(pq, aq.max(uq));
 
-                plannedQty += pq;
-                arrivedQty += clampedArrived;
-                effectiveArrivedQty += eff;
+                plannedQty = plannedQty.add(pq);
+                arrivedQty = arrivedQty.add(clampedArrived);
+                effectiveArrivedQty = effectiveArrivedQty.add(eff);
 
                 BigDecimal up = p.getUnitPrice();
                 if (up != null) {
-                    if (pq > 0) {
-                        plannedAmount = plannedAmount.add(up.multiply(BigDecimal.valueOf(pq)));
+                    if (pq.compareTo(BigDecimal.ZERO) > 0) {
+                        plannedAmount = plannedAmount.add(up.multiply(pq));
                     }
-                    if (eff > 0) {
-                        arrivedAmount = arrivedAmount.add(up.multiply(BigDecimal.valueOf(eff)));
+                    if (eff.compareTo(BigDecimal.ZERO) > 0) {
+                        arrivedAmount = arrivedAmount.add(up.multiply(eff));
                     }
                 } else {
                     BigDecimal ta = p.getTotalAmount();
@@ -395,13 +395,15 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
 
         int rate = 0;
-        if (plannedQty > 0) {
-            rate = Math.min(100, (int) Math.round(effectiveArrivedQty * 100.0 / plannedQty));
+        if (plannedQty.compareTo(BigDecimal.ZERO) > 0) {
+            rate = Math.min(100, effectiveArrivedQty.multiply(BigDecimal.valueOf(100))
+                    .divide(plannedQty, 0, java.math.RoundingMode.HALF_UP).intValue());
         }
 
-        out.setPlannedQty(Math.max(0, plannedQty));
-        out.setArrivedQty(Math.max(0, arrivedQty));
-        out.setEffectiveArrivedQty(Math.max(0, effectiveArrivedQty));
+        // ArrivalStats 数量为整数展示口径（到货率），四舍五入落地
+        out.setPlannedQty(plannedQty.max(BigDecimal.ZERO).setScale(0, java.math.RoundingMode.HALF_UP).intValue());
+        out.setArrivedQty(arrivedQty.max(BigDecimal.ZERO).setScale(0, java.math.RoundingMode.HALF_UP).intValue());
+        out.setEffectiveArrivedQty(effectiveArrivedQty.max(BigDecimal.ZERO).setScale(0, java.math.RoundingMode.HALF_UP).intValue());
         out.setPlannedAmount(plannedAmount.setScale(2, java.math.RoundingMode.HALF_UP));
         out.setArrivedAmount(arrivedAmount.setScale(2, java.math.RoundingMode.HALF_UP));
         out.setArrivalRate(Math.max(0, rate));
@@ -409,19 +411,19 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     }
 
     @Override
-    public boolean updateArrivedQuantity(String id, Integer arrivedQuantity, String remark) {
+    public boolean updateArrivedQuantity(String id, BigDecimal arrivedQuantity, String remark) {
         MaterialPurchase materialPurchase = this.getById(id);
         if (materialPurchase == null) {
             return false;
         }
 
-        int oldArrived = materialPurchase.getArrivedQuantity() == null ? 0 : materialPurchase.getArrivedQuantity();
-        int newArrived = arrivedQuantity == null ? 0 : arrivedQuantity;
-        int delta = newArrived - oldArrived;
+        BigDecimal oldArrived = materialPurchase.getArrivedQuantity() == null ? BigDecimal.ZERO : materialPurchase.getArrivedQuantity();
+        BigDecimal newArrived = arrivedQuantity == null ? BigDecimal.ZERO : arrivedQuantity;
+        BigDecimal delta = newArrived.subtract(oldArrived);
 
         log.info("updateArrivedQuantity: id={}, old={}, new={}, delta={}", id, oldArrived, newArrived, delta);
 
-        if (delta == 0 && !StringUtils.hasText(remark)) {
+        if (delta.compareTo(BigDecimal.ZERO) == 0 && !StringUtils.hasText(remark)) {
             return true;
         }
 
@@ -431,7 +433,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         boolean updated = this.updateById(materialPurchase);
 
         // 双写：到货登记同步写入 ProductionOrder.remarks
-        if (updated && delta != 0) {
+        if (updated && delta.compareTo(BigDecimal.ZERO) != 0) {
             try {
                 String detail = "到货登记：" + oldArrived + " → " + newArrived
                         + "（物料：" + (materialPurchase.getMaterialName() == null ? "" : materialPurchase.getMaterialName()) + "）";
@@ -444,7 +446,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         return updated;
     }
 
-    private void applyArrivedQuantityUpdate(MaterialPurchase mp, int newArrived, String remark) {
+    private void applyArrivedQuantityUpdate(MaterialPurchase mp, BigDecimal newArrived, String remark) {
         mp.setArrivedQuantity(newArrived);
         mp.setUpdateTime(LocalDateTime.now());
 
@@ -470,7 +472,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
         String currentStatus = mp.getStatus() == null ? "" : mp.getStatus().trim();
         if (!"cancelled".equals(currentStatus)) {
-            int purchaseQty = mp.getPurchaseQuantity() == null ? 0 : mp.getPurchaseQuantity().intValue();
+            BigDecimal purchaseQty = mp.getPurchaseQuantity() == null ? BigDecimal.ZERO : mp.getPurchaseQuantity();
             String nextStatus = MaterialPurchaseHelper.resolveStatusByArrived(currentStatus, newArrived, purchaseQty);
             mp.setStatus(nextStatus);
             if ("completed".equalsIgnoreCase(nextStatus) && mp.getActualArrivalDate() == null) {
@@ -483,11 +485,11 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
     }
 
-    private void syncStockOnArrivedChange(MaterialPurchase mp, int delta) {
+    private void syncStockOnArrivedChange(MaterialPurchase mp, BigDecimal delta) {
         // 到货增量必须同步入库存（与手工到货 /material/inbound/confirm-arrival 口径一致）。
         // 旧逻辑对 order/sample 类型跳过，导致同一采购单走不同到货入口时库存/入库单/对账三本账不一致。
         // delta 为差值增量，与 confirm-arrival 混用不会重复入库。
-        if (delta == 0) {
+        if (delta.compareTo(BigDecimal.ZERO) == 0) {
             return;
         }
         try {

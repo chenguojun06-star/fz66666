@@ -116,7 +116,7 @@ public class MaterialReconciliationOrchestrator {
         Map<String, String> purchaserByPurchaseId = new HashMap<>();
         Map<String, String> unitByPurchaseId = new HashMap<>();
         Map<String, BigDecimal> unitPriceByPurchaseId = new HashMap<>();
-        Map<String, Integer> arrivedQuantityByPurchaseId = new HashMap<>();
+        Map<String, BigDecimal> arrivedQuantityByPurchaseId = new HashMap<>();
         Map<String, String> sourceTypeByPurchaseId = new HashMap<>();
     }
 
@@ -141,7 +141,8 @@ public class MaterialReconciliationOrchestrator {
                             data.unitPriceByPurchaseId.put(pid, p.getUnitPrice());
                         }
                         if (p.getArrivedQuantity() != null) {
-                            data.arrivedQuantityByPurchaseId.put(pid, p.getArrivedQuantity().intValue());
+                            // D-410：不再 intValue()，1.32 米必须原样进入对账数量
+                            data.arrivedQuantityByPurchaseId.put(pid, p.getArrivedQuantity());
                         }
                         if (StringUtils.hasText(p.getSourceType())) {
                             data.sourceTypeByPurchaseId.put(pid, p.getSourceType().trim());
@@ -162,7 +163,7 @@ public class MaterialReconciliationOrchestrator {
                 r.setMaterialImageUrl(data.coverByPurchaseId.get(pid));
                 r.setPurchaserName(data.purchaserByPurchaseId.get(pid));
                 r.setUnit(data.unitByPurchaseId.get(pid));
-                Integer arrivedQty = data.arrivedQuantityByPurchaseId.get(pid);
+                BigDecimal arrivedQty = data.arrivedQuantityByPurchaseId.get(pid);
                 if (arrivedQty != null) {
                     r.setQuantity(arrivedQty);
                 }
@@ -396,7 +397,7 @@ public class MaterialReconciliationOrchestrator {
         if ("cancelled".equalsIgnoreCase(status)) {
             return true;
         }
-        return resolveEffectiveQuantity(purchase) <= 0;
+        return resolveEffectiveQuantity(purchase).compareTo(BigDecimal.ZERO) <= 0;
     }
 
     /**
@@ -656,8 +657,8 @@ public class MaterialReconciliationOrchestrator {
         // 让历史 completed 且 arrivedQuantity=0 的存量采购能进对账
         healArrivedQuantityIfCompleted(purchase);
 
-        int qty = resolveEffectiveQuantity(purchase);
-        if (qty <= 0) {
+        BigDecimal qty = resolveEffectiveQuantity(purchase);
+        if (qty.compareTo(BigDecimal.ZERO) <= 0) {
             return "有效到货量为0(未到货)";
         }
 
@@ -686,26 +687,27 @@ public class MaterialReconciliationOrchestrator {
         return saved ? null : "新增对账保存失败";
     }
 
-    private BigDecimal[] resolvePrices(MaterialPurchase purchase, int qty) {
+    private BigDecimal[] resolvePrices(MaterialPurchase purchase, BigDecimal qty) {
         BigDecimal unitPrice = purchase.getUnitPrice();
         BigDecimal totalAmount = purchase.getTotalAmount();
-        int pq = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity().intValue();
+        BigDecimal pq = purchase.getPurchaseQuantity() == null ? BigDecimal.ZERO : purchase.getPurchaseQuantity();
         if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
             // 无单价：按采购数量（而非到货量）从采购总额反推真实单价，避免部分到货时单价虚高
-            if (pq > 0 && totalAmount != null && totalAmount.compareTo(BigDecimal.ZERO) > 0) {
-                unitPrice = totalAmount.divide(BigDecimal.valueOf(pq), 2, RoundingMode.HALF_UP);
+            if (pq.compareTo(BigDecimal.ZERO) > 0 && totalAmount != null && totalAmount.compareTo(BigDecimal.ZERO) > 0) {
+                unitPrice = totalAmount.divide(pq, 2, RoundingMode.HALF_UP);
             } else {
                 unitPrice = BigDecimal.ZERO;
             }
         }
-        // 金额一律按「单价 × 对账数量」重算：对账数量是封顶到货量，
+        // 金额一律按「单价 × 对账数量」重算：对账数量是封顶到货量（D-410 起支持小数），
         // 直接沿用采购全额会造成部分到货时应付虚增
-        totalAmount = unitPrice.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal qtyForAmount = qty == null ? BigDecimal.ZERO : qty;
+        totalAmount = unitPrice.multiply(qtyForAmount).setScale(2, RoundingMode.HALF_UP);
         return new BigDecimal[]{unitPrice, totalAmount};
     }
 
     private boolean patchExistingReconciliation(MaterialReconciliation existed, MaterialPurchase purchase,
-            int qty, BigDecimal unitPrice, BigDecimal totalAmount, LocalDateTime t, String uid) {
+            BigDecimal qty, BigDecimal unitPrice, BigDecimal totalAmount, LocalDateTime t, String uid) {
         String s = existed.getStatus() == null ? "" : existed.getStatus().trim();
         if (StringUtils.hasText(s) && !"pending".equalsIgnoreCase(s)) {
             return patchNonPendingFields(existed, purchase, t, uid);
@@ -820,7 +822,7 @@ public class MaterialReconciliationOrchestrator {
         return materialReconciliationService.updateById(patch);
     }
 
-    private MaterialReconciliation buildNewReconciliation(MaterialPurchase purchase, int qty,
+    private MaterialReconciliation buildNewReconciliation(MaterialPurchase purchase, BigDecimal qty,
             BigDecimal unitPrice, BigDecimal totalAmount, LocalDateTime t, String uid) {
         MaterialReconciliation mr = new MaterialReconciliation();
         mr.setReconciliationNo(buildFinanceNo("MR", t));
@@ -878,28 +880,28 @@ public class MaterialReconciliationOrchestrator {
         if (!"completed".equalsIgnoreCase(status)) {
             return;
         }
-        int aq = purchase.getArrivedQuantity() == null ? 0 : purchase.getArrivedQuantity().intValue();
-        if (aq > 0) {
+        BigDecimal aq = purchase.getArrivedQuantity() == null ? BigDecimal.ZERO : purchase.getArrivedQuantity();
+        if (aq.compareTo(BigDecimal.ZERO) > 0) {
             return;
         }
         BigDecimal pq = purchase.getPurchaseQuantity();
-        if (pq == null || pq.intValue() <= 0) {
+        if (pq == null || pq.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
         try {
             boolean updated = materialPurchaseService.lambdaUpdate()
                     .eq(MaterialPurchase::getId, purchase.getId().trim())
                     .and(w -> w.isNull(MaterialPurchase::getArrivedQuantity)
-                            .or().eq(MaterialPurchase::getArrivedQuantity, 0))
-                    .set(MaterialPurchase::getArrivedQuantity, pq.intValue())
+                            .or().eq(MaterialPurchase::getArrivedQuantity, BigDecimal.ZERO))
+                    .set(MaterialPurchase::getArrivedQuantity, pq)
                     .set(MaterialPurchase::getActualArrivalDate, LocalDateTime.now())
                     .set(MaterialPurchase::getUpdateTime, LocalDateTime.now())
                     .update();
             if (updated) {
                 // 回写内存对象，resolveEffectiveQuantity/resolvePrices 直接用新值
-                purchase.setArrivedQuantity(pq.intValue());
+                purchase.setArrivedQuantity(pq);
                 log.info("[MaterialReconciliation] 已完成采购到货量自愈 purchaseId={} purchaseNo={} arrivedQuantity={}",
-                        purchase.getId(), purchase.getPurchaseNo(), pq.intValue());
+                        purchase.getId(), purchase.getPurchaseNo(), pq);
             }
         } catch (Exception e) {
             log.warn("[MaterialReconciliation] 到货量自愈失败(不阻断) purchaseId={}: {}",
@@ -907,20 +909,21 @@ public class MaterialReconciliationOrchestrator {
         }
     }
 
-    private int resolveEffectiveQuantity(MaterialPurchase purchase) {
+    private BigDecimal resolveEffectiveQuantity(MaterialPurchase purchase) {
         if (purchase == null) {
-            return 0;
+            return BigDecimal.ZERO;
         }
-        int aq = purchase.getArrivedQuantity() == null ? 0 : purchase.getArrivedQuantity().intValue();
-        int pq = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity().intValue();
-        if (pq > 0) {
+        BigDecimal aq = purchase.getArrivedQuantity() == null ? BigDecimal.ZERO : purchase.getArrivedQuantity();
+        BigDecimal pq = purchase.getPurchaseQuantity() == null ? BigDecimal.ZERO : purchase.getPurchaseQuantity();
+        if (pq.compareTo(BigDecimal.ZERO) > 0) {
             try {
-                return Math.max(0, materialPurchaseService.computeEffectiveArrivedQuantity(pq, aq));
+                return materialPurchaseService.computeEffectiveArrivedQuantity(pq, aq);
             } catch (Exception e) {
-                return Math.max(0, Math.min(Math.max(0, aq), pq));
+                BigDecimal clamped = aq.min(pq);
+                return clamped.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : clamped;
             }
         }
-        return Math.max(0, aq);
+        return aq.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : aq;
     }
 
     private String resolveNotBlank(String v, String fallback) {

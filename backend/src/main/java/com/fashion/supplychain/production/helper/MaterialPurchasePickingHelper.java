@@ -186,9 +186,10 @@ public class MaterialPurchasePickingHelper {
     private int calcAvailableStock(List<MaterialStock> stockList) {
         return stockList.stream()
             .mapToInt(stock -> {
-                int qty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+                BigDecimal qty = stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO;
                 int locked = stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0;
-                return Math.max(0, qty - locked);
+                // D-410：库存已是 BigDecimal；领料数量仍按 int 统计，故在此取整
+                return qty.subtract(BigDecimal.valueOf(locked)).max(BigDecimal.ZERO).intValue();
             })
             .sum();
     }
@@ -333,9 +334,10 @@ public class MaterialPurchasePickingHelper {
         for (MaterialStock stock : stockList) {
             if (remainingQty <= 0) break;
 
-            int stockAvailable = Math.max(0,
-                (stock.getQuantity() != null ? stock.getQuantity() : 0)
-                - (stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0));
+            // D-410：库存已是 BigDecimal，先按小数算可用量再取整（领料数量仍为 int）
+            int stockAvailable = (stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO)
+                .subtract(BigDecimal.valueOf(stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0))
+                .max(BigDecimal.ZERO).intValue();
 
             if (stockAvailable <= 0) continue;
 
@@ -467,7 +469,7 @@ public class MaterialPurchasePickingHelper {
         item.put("canPickQty", canPickQty);
         item.put("needPurchaseQty", needPurchaseQty);
         item.put("unit", purchase.getUnit());
-        item.put("arrivedQuantity", purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0);
+        item.put("arrivedQuantity", purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : BigDecimal.ZERO);
         // D-363b：领取终点口径——剩余可领 = 采购量 - 已领取出库量(usedQuantity，仓库确认出库时累加)
         int usedQty = purchase.getUsedQuantity() != null ? purchase.getUsedQuantity().intValue() : 0;
         int remainingPickupQty = Math.max(0, requiredQty - usedQty);
@@ -484,9 +486,10 @@ public class MaterialPurchasePickingHelper {
         List<MaterialStock> stockList = materialStockService.list(stockWrapper);
         return stockList.stream()
             .mapToInt(stock -> {
-                int qty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+                BigDecimal qty = stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO;
                 int locked = stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0;
-                return Math.max(0, qty - locked);
+                // D-410：库存已是 BigDecimal；领料数量仍按 int 统计，故在此取整
+                return qty.subtract(BigDecimal.valueOf(locked)).max(BigDecimal.ZERO).intValue();
             }).sum();
     }
 
@@ -626,9 +629,10 @@ public class MaterialPurchasePickingHelper {
         int remainingQty = pickQty;
         for (MaterialStock stock : stockList) {
             if (remainingQty <= 0) break;
-            int stockAvailable = Math.max(0,
-                (stock.getQuantity() != null ? stock.getQuantity() : 0)
-                - (stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0));
+            // D-410：库存已是 BigDecimal，先按小数算可用量再取整（领料数量仍为 int）
+            int stockAvailable = (stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO)
+                .subtract(BigDecimal.valueOf(stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0))
+                .max(BigDecimal.ZERO).intValue();
             if (stockAvailable <= 0) continue;
             int pickFromThis = Math.min(remainingQty, stockAvailable);
 

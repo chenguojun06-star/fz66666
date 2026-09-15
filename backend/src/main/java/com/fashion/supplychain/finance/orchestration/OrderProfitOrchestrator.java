@@ -456,11 +456,11 @@ public class OrderProfitOrchestrator {
                 BigDecimal amt = null;
                 BigDecimal up = p.getUnitPrice();
                 if (up != null) {
-                    int pq = p.getPurchaseQuantity() == null ? 0 : p.getPurchaseQuantity().intValue();
-                    int aq = p.getArrivedQuantity() == null ? 0 : p.getArrivedQuantity().intValue();
-                    int eff = materialPurchaseService.computeEffectiveArrivedQuantity(pq, aq);
-                    if (eff <= 0) continue;
-                    amt = up.multiply(BigDecimal.valueOf(eff));
+                    BigDecimal pq = p.getPurchaseQuantity() == null ? BigDecimal.ZERO : p.getPurchaseQuantity();
+                    BigDecimal aq = p.getArrivedQuantity() == null ? BigDecimal.ZERO : p.getArrivedQuantity();
+                    BigDecimal eff = materialPurchaseService.computeEffectiveArrivedQuantity(pq, aq);
+                    if (eff.compareTo(BigDecimal.ZERO) <= 0) continue;
+                    amt = up.multiply(eff);
                 } else {
                     BigDecimal ta = p.getTotalAmount();
                     if (ta == null || ta.compareTo(BigDecimal.ZERO) <= 0) continue;

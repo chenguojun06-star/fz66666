@@ -200,7 +200,7 @@ public class MaterialPurchaseHelper {
         return null;
     }
 
-    public static String resolveStatusByArrived(String previousStatus, int arrivedQty, int purchaseQty) {
+    public static String resolveStatusByArrived(String previousStatus, java.math.BigDecimal arrivedQty, java.math.BigDecimal purchaseQty) {
         String prev = previousStatus == null ? "" : previousStatus.trim();
         if (MaterialConstants.STATUS_COMPLETED.equals(prev)) {
             return MaterialConstants.STATUS_COMPLETED;
@@ -208,14 +208,17 @@ public class MaterialPurchaseHelper {
         if (MaterialConstants.STATUS_CANCELLED.equals(prev)) {
             return MaterialConstants.STATUS_CANCELLED;
         }
-        if (arrivedQty <= 0) {
+        // D-410：到货/采购量改 BigDecimal，比较一律走 compareTo（1.32 与 1 必须能区分出"部分到货"）
+        java.math.BigDecimal aq = arrivedQty == null ? java.math.BigDecimal.ZERO : arrivedQty;
+        java.math.BigDecimal pq = purchaseQty == null ? java.math.BigDecimal.ZERO : purchaseQty;
+        if (aq.compareTo(java.math.BigDecimal.ZERO) <= 0) {
             return MaterialConstants.STATUS_RECEIVED.equals(prev) ? MaterialConstants.STATUS_RECEIVED
                     : MaterialConstants.STATUS_PENDING;
         }
-        if (purchaseQty <= 0) {
+        if (pq.compareTo(java.math.BigDecimal.ZERO) <= 0) {
             return MaterialConstants.STATUS_AWAITING_CONFIRM;
         }
-        if (arrivedQty < purchaseQty) {
+        if (aq.compareTo(pq) < 0) {
             return MaterialConstants.STATUS_PARTIAL;
         }
         return MaterialConstants.STATUS_AWAITING_CONFIRM;

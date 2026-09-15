@@ -86,7 +86,11 @@ public class MaterialReconciliation implements com.fashion.supplychain.finance.s
     @TableField(exist = false)
     private Integer productionCompletedQuantity;
 
-    private Integer quantity;
+    /**
+     * 对账数量（D-410：INT → BigDecimal，DECIMAL(12,4)）
+     * 对账单金额 = 单价 × 本数量，INT 会把 1.32 米截断成 1 → 少付货款。
+     */
+    private BigDecimal quantity;
 
     private BigDecimal unitPrice;
 

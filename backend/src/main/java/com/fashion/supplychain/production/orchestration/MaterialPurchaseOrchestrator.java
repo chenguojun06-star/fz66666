@@ -458,7 +458,7 @@ public class MaterialPurchaseOrchestrator {
                         "到货不足" + MaterialConstants.ARRIVAL_RATE_THRESHOLD_REMARK + "%，请填写备注");
             }
         }
-        boolean ok = updateArrivedQuantityAndSync(key, arrivedQuantity, remark);
+        boolean ok = updateArrivedQuantityAndSync(key, BigDecimal.valueOf(arrivedQuantity), remark);
         if (!ok) {
             throw new IllegalStateException("更新失败");
         }
@@ -549,7 +549,7 @@ public class MaterialPurchaseOrchestrator {
         purchase.setColor(color);
         purchase.setSize(size);
         purchase.setPurchaseQuantity(BigDecimal.valueOf(qty));
-        purchase.setArrivedQuantity(0);
+        purchase.setArrivedQuantity(BigDecimal.ZERO);
         purchase.setStatus(MaterialConstants.STATUS_PENDING);
         purchase.setRemark(remark);
         purchase.setSourceType("stock");
@@ -871,7 +871,7 @@ public class MaterialPurchaseOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public boolean updateArrivedQuantityAndSync(String purchaseId, Integer arrivedQuantity, String remark) {
+    public boolean updateArrivedQuantityAndSync(String purchaseId, BigDecimal arrivedQuantity, String remark) {
         boolean ok = materialPurchaseService.updateArrivedQuantity(purchaseId, arrivedQuantity, remark);
         if (!ok) {
             return false;
@@ -906,11 +906,12 @@ public class MaterialPurchaseOrchestrator {
             }
         }
 
-        Integer stockDelta = null;
+        // D-410：发货量/到货量改 BigDecimal，避免小数被截断
+        BigDecimal stockDelta = null;
         if (shipQuantity != null) {
-            int currentArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
-            purchase.setArrivedQuantity(currentArrived + shipQuantity);
-            stockDelta = shipQuantity;
+            BigDecimal currentArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : BigDecimal.ZERO;
+            purchase.setArrivedQuantity(currentArrived.add(BigDecimal.valueOf(shipQuantity)));
+            stockDelta = BigDecimal.valueOf(shipQuantity);
             changed = true;
         }
 
@@ -934,7 +935,7 @@ public class MaterialPurchaseOrchestrator {
             materialPurchaseService.updateById(purchase);
             // P1 到货口径统一：供应商门户发货数量同样计入到货，必须同步库存，
             // 否则同一采购单走不同入口时库存/到货两本账不一致（与 confirm-arrival / 手工到货口径对齐）
-            if (stockDelta != null && stockDelta > 0) {
+            if (stockDelta != null && stockDelta.compareTo(BigDecimal.ZERO) > 0) {
                 materialStockService.increaseStock(purchase, stockDelta);
             }
             log.info("[供应商门户] 发货更新: purchaseId={}, supplierId={}, status={}, stockDelta={}",
@@ -984,10 +985,11 @@ public class MaterialPurchaseOrchestrator {
         java.util.Map<String, Integer> stockByCode = new java.util.HashMap<>();
         for (com.fashion.supplychain.production.entity.MaterialStock s : stocks) {
             if (s == null || s.getMaterialCode() == null) continue;
-            int qty = s.getQuantity() != null ? s.getQuantity() : 0;
+            BigDecimal qty = s.getQuantity() != null ? s.getQuantity() : BigDecimal.ZERO;
             int locked = s.getLockedQuantity() != null ? s.getLockedQuantity() : 0;
-            int available = Math.max(0, qty - locked);
-            stockByCode.merge(s.getMaterialCode().trim(), available, Integer::sum);
+            BigDecimal available = qty.subtract(BigDecimal.valueOf(locked)).max(BigDecimal.ZERO);
+            // D-410：库存已是 BigDecimal，此 map 仍按 int 汇总（可用量用于前端判断是否"有货"）
+            stockByCode.merge(s.getMaterialCode().trim(), available.intValue(), Integer::sum);
         }
 
         // 构建返回结果

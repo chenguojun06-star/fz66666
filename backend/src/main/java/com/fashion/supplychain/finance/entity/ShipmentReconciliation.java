@@ -62,7 +62,10 @@ public class ShipmentReconciliation implements com.fashion.supplychain.finance.s
     /**
      * 数量
      */
-    private Integer quantity;
+    /**
+     * 数量（D-410：INT → BigDecimal，与 ReconciliationEntity 接口统一）
+     */
+    private BigDecimal quantity;
 
     @TableField(exist = false)
     private Integer productionCompletedQuantity;

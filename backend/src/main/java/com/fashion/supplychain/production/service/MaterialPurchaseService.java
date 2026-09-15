@@ -96,7 +96,8 @@ public interface MaterialPurchaseService extends IService<MaterialPurchase> {
      * @param arrivedQuantity 到货数量
      * @return 是否更新成功
      */
-    boolean updateArrivedQuantity(String id, Integer arrivedQuantity, String remark);
+    /** D-410：到货量改为 BigDecimal（DECIMAL 12,4），避免小数被截断 */
+    boolean updateArrivedQuantity(String id, java.math.BigDecimal arrivedQuantity, String remark);
 
     boolean existsActivePurchaseForOrder(String orderId);
 
@@ -118,7 +119,7 @@ public interface MaterialPurchaseService extends IService<MaterialPurchase> {
 
     boolean resetReturnConfirm(String purchaseId, String reason, String operatorId, String operatorName);
 
-    int computeEffectiveArrivedQuantity(int purchaseQty, int arrivedQty);
+    BigDecimal computeEffectiveArrivedQuantity(BigDecimal purchaseQty, BigDecimal arrivedQty);
 
     int sumConfirmedQuantityByOrderId(String orderId, boolean fabricOnly);
 

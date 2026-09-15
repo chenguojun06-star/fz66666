@@ -493,7 +493,8 @@ public class SupplierPortalController {
         m.put("location", s.getLocation());
         m.put("lastInboundDate", s.getLastInboundDate());
         m.put("lastOutboundDate", s.getLastOutboundDate());
-        m.put("isLowStock", s.getQuantity() != null && s.getSafetyStock() != null && s.getQuantity() <= s.getSafetyStock());
+        m.put("isLowStock", s.getQuantity() != null && s.getSafetyStock() != null
+                && s.getQuantity().compareTo(BigDecimal.valueOf(s.getSafetyStock())) <= 0);
         return m;
     }
 

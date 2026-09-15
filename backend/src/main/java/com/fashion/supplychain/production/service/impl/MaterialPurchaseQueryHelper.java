@@ -92,13 +92,14 @@ class MaterialPurchaseQueryHelper {
             if (record == null || !StringUtils.hasText(record.getId())) continue;
             serviceHelper.ensureSnapshot(record);
             if (record.getReturnConfirmed() != null && record.getReturnConfirmed() == 1) {
-                Integer beforeArrivedQuantity = record.getArrivedQuantity();
-                int arrived = beforeArrivedQuantity == null ? 0 : beforeArrivedQuantity;
-                int rq = record.getReturnQuantity() == null ? 0 : record.getReturnQuantity().intValue();
-                if (arrived != rq) {
+                BigDecimal beforeArrivedQuantity = record.getArrivedQuantity();
+                BigDecimal arrived = beforeArrivedQuantity == null ? BigDecimal.ZERO : beforeArrivedQuantity;
+                // D-410：退货量改为 BigDecimal，不要再 intValue() 截断（退货 1.32 米会被记成 1）
+                BigDecimal rq = record.getReturnQuantity() == null ? BigDecimal.ZERO : record.getReturnQuantity();
+                if (arrived.compareTo(rq) != 0) {
                     record.setArrivedQuantity(rq);
-                    if (record.getUnitPrice() != null) record.setTotalAmount(record.getUnitPrice().multiply(BigDecimal.valueOf(rq)));
-                    int pq = record.getPurchaseQuantity() == null ? 0 : record.getPurchaseQuantity().intValue();
+                    if (record.getUnitPrice() != null) record.setTotalAmount(record.getUnitPrice().multiply(rq));
+                    BigDecimal pq = record.getPurchaseQuantity() == null ? BigDecimal.ZERO : record.getPurchaseQuantity();
                     String s = record.getStatus() == null ? "" : record.getStatus().trim();
                     record.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(s, rq, pq));
                 }

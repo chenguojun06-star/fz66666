@@ -147,7 +147,7 @@ public class MonthlyBizSummaryOrchestrator {
         iqw.ge("inbound_time", start).lt("inbound_time", end).select("inbound_quantity");
         List<MaterialInbound> inbounds = materialInboundService.list(iqw);
         long inboundQty = inbounds.stream()
-            .mapToLong(i -> i.getInboundQuantity() == null ? 0 : i.getInboundQuantity()).sum();
+            .mapToLong(i -> (i.getInboundQuantity() == null ? BigDecimal.ZERO : i.getInboundQuantity()).longValue()).sum();
 
         QueryWrapper<MaterialOutboundLog> oqw = new QueryWrapper<>();
         oqw.eq("tenant_id", tenantId);

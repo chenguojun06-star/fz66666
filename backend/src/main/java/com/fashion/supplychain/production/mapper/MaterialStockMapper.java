@@ -52,6 +52,20 @@ public interface MaterialStockMapper extends BaseMapper<MaterialStock> {
             "AND (quantity - locked_quantity) >= #{delta}")
     int decreaseStockWithCheck(@Param("id") String id, @Param("delta") int delta, @Param("tenantId") Long tenantId);
 
+    /**
+     * D-410：t_material_stock.quantity 已改为 DECIMAL(12,4)，扣减量也必须支持小数
+     * （面料按米计量时冲销 1.32 米，走 int 版本会被截断成 1，库存对不上）。
+     * 注意：MyBatis 按方法名注册语句，不能与上面的 int 版本重名重载，故另起方法名。
+     */
+    @Update("UPDATE t_material_stock SET " +
+            "quantity = quantity - #{delta}, " +
+            "total_value = ROUND(GREATEST(0, quantity) * COALESCE(unit_price, 0), 2), " +
+            "update_time = NOW() WHERE id = #{id} AND quantity >= #{delta} AND delete_flag = 0 " +
+            "AND tenant_id = #{tenantId} " +
+            "AND (quantity - locked_quantity) >= #{delta}")
+    int decreaseStockWithCheckDecimal(@Param("id") String id, @Param("delta") java.math.BigDecimal delta,
+                                      @Param("tenantId") Long tenantId);
+
     @Update("UPDATE t_material_stock SET " +
             // D-070: 加权单价须用扣减前的旧quantity计算，故unit_price的CASE放在quantity赋值之前（MySQL从左到右求值）
             "unit_price = CASE " +
@@ -68,7 +82,7 @@ public interface MaterialStockMapper extends BaseMapper<MaterialStock> {
             "WHERE id = #{id} AND delete_flag = 0 " +
             "AND tenant_id = #{tenantId}")
     int updateStockOnInbound(@Param("id") String id,
-                             @Param("delta") int delta,
+                             @Param("delta") java.math.BigDecimal delta,
                              @Param("location") String location,
                              @Param("unitPrice") java.math.BigDecimal unitPrice,
                              @Param("supplierName") String supplierName,

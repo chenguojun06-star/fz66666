@@ -623,7 +623,7 @@ public class MaterialPurchaseServiceHelper {
         mp.setUnit(bom.getUnit());
         mp.setConversionRate(bom.getConversionRate());
         mp.setPurchaseQuantity(requiredQty);
-        mp.setArrivedQuantity(0);
+        mp.setArrivedQuantity(BigDecimal.ZERO);
         mp.setSupplierName(bom.getSupplier());
         mp.setSupplierId("");
         mp.setUnitPrice(bom.getUnitPrice() == null ? BigDecimal.ZERO : bom.getUnitPrice());

@@ -1,4 +1,5 @@
 package com.fashion.supplychain.procurement.orchestration;
+import java.math.BigDecimal;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -154,8 +155,9 @@ public class ProcurementOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> confirmArrivalAndInbound(Map<String, Object> params) {
         String purchaseId = params == null ? null : String.valueOf(params.getOrDefault("purchaseId", "")).trim();
-        Integer arrivedQuantity = params == null || params.get("arrivedQuantity") == null
-                ? null : Integer.parseInt(String.valueOf(params.get("arrivedQuantity")));
+        // D-410：到货量改 BigDecimal（面料按米计量是小数，parseInt 会把 1.32 截断成 1）
+        BigDecimal arrivedQuantity = params == null || params.get("arrivedQuantity") == null
+                ? null : new BigDecimal(String.valueOf(params.get("arrivedQuantity")).trim());
         String warehouseLocation = params == null ? null : String.valueOf(params.getOrDefault("warehouseLocation", "")).trim();
         String operatorId = params == null ? null : String.valueOf(params.getOrDefault("operatorId", "")).trim();
         String operatorName = params == null ? null : String.valueOf(params.getOrDefault("operatorName", "")).trim();

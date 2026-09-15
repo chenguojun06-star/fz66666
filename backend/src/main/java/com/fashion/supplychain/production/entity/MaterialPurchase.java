@@ -40,7 +40,11 @@ public class MaterialPurchase {
      */
     private BigDecimal conversionRate;
 
-    private Integer arrivedQuantity;
+    /**
+     * 到货数量（D-410：INT → BigDecimal，与 purchaseQuantity 同为 DECIMAL(12,4)）
+     * 面料按「米/公斤/码」计量时到货量是小数，用 INT 会把 1.32 米静默截断成 1，导致对账单少算货款。
+     */
+    private BigDecimal arrivedQuantity;
 
     /**
      * 入库记录ID（关联最新入库单）

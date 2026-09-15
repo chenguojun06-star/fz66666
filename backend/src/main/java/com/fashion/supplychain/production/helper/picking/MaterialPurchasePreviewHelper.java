@@ -1,4 +1,5 @@
 package com.fashion.supplychain.production.helper.picking;
+import java.math.BigDecimal;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -126,7 +127,7 @@ public class MaterialPurchasePreviewHelper {
         item.put("canPickQty", canPickQty);
         item.put("needPurchaseQty", needPurchaseQty);
         item.put("unit", purchase.getUnit());
-        item.put("arrivedQuantity", purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0);
+        item.put("arrivedQuantity", purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : BigDecimal.ZERO);
         return item;
     }
 

@@ -322,7 +322,7 @@ public class DeepAnalysisTool extends AbstractAgentTool {
             if (stage == null || stage.isBlank()) continue;
             stageStats.computeIfAbsent(stage, k -> new long[2]);
             stageStats.get(stage)[0]++;
-            stageStats.get(stage)[1] += s.getQuantity() != null ? s.getQuantity() : 0;
+            stageStats.get(stage)[1] += (s.getQuantity() != null ? s.getQuantity() : BigDecimal.ZERO).longValue();
         }
 
         List<Map<String, Object>> stages = stageStats.entrySet().stream()

@@ -378,9 +378,10 @@ public class MaterialPurchaseOrchestratorHelper {
         }
         return stockList.stream()
                 .mapToInt(stock -> {
-                    int qty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+                    BigDecimal qty = stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO;
                     int locked = stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0;
-                    return Math.max(0, qty - locked);
+                    // D-410：库存已是 BigDecimal；汇总口径仍为 int，故在此取整
+                    return qty.subtract(BigDecimal.valueOf(locked)).max(BigDecimal.ZERO).intValue();
                 })
                 .sum();
     }
@@ -546,9 +547,9 @@ public class MaterialPurchaseOrchestratorHelper {
                 .eq(MaterialStock::getDeleteFlag, 0)
                 .list();
         BigDecimal available = stocks.stream()
-                .map(st -> BigDecimal.valueOf(
-                        (st.getQuantity() != null ? st.getQuantity() : 0)
-                                - (st.getLockedQuantity() != null ? st.getLockedQuantity() : 0)))
+                // D-410：库存已是 BigDecimal，改用 subtract 而不是 int 相减再 valueOf
+                .map(st -> (st.getQuantity() != null ? st.getQuantity() : BigDecimal.ZERO)
+                        .subtract(BigDecimal.valueOf(st.getLockedQuantity() != null ? st.getLockedQuantity() : 0)))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .max(BigDecimal.ZERO);
 
@@ -561,8 +562,8 @@ public class MaterialPurchaseOrchestratorHelper {
                 .list().stream()
                 .map(x -> {
                     BigDecimal purchased = x.getPurchaseQuantity() != null ? x.getPurchaseQuantity() : BigDecimal.ZERO;
-                    int arrived = x.getArrivedQuantity() != null ? x.getArrivedQuantity() : 0;
-                    return purchased.subtract(BigDecimal.valueOf(arrived)).max(BigDecimal.ZERO);
+                    BigDecimal arrived = x.getArrivedQuantity() != null ? x.getArrivedQuantity() : BigDecimal.ZERO;
+                    return purchased.subtract(arrived).max(BigDecimal.ZERO);
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 

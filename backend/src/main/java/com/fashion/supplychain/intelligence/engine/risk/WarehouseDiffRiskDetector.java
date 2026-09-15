@@ -1,4 +1,5 @@
 package com.fashion.supplychain.intelligence.engine.risk;
+import java.math.BigDecimal;
 
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
@@ -44,16 +45,16 @@ public class WarehouseDiffRiskDetector implements RiskDetector {
         List<RiskItem> items = new ArrayList<>();
         for (MaterialPurchase mp : purchases) {
             java.math.BigDecimal purchaseQty = mp.getPurchaseQuantity();
-            Integer arrived = mp.getArrivedQuantity();
+            BigDecimal arrived = mp.getArrivedQuantity();
             if (purchaseQty == null || arrived == null) continue;
             double purchased = purchaseQty.doubleValue();
             if (purchased <= 0) continue;
 
             // 差异率 = |采购数 - 到货数| / 采购数
-            double diff = Math.abs(purchased - arrived);
+            double diff = Math.abs(purchased - arrived.doubleValue());
             double diffRate = diff / purchased;
             if (diffRate > 0.10) {
-                String direction = arrived < purchased ? "少到货" : "多到货";
+                String direction = arrived.doubleValue() < purchased ? "少到货" : "多到货";
                 double shortagePct = diffRate * 100;
                 String severity = diffRate >= 0.5 ? "CRITICAL"
                         : diffRate >= 0.3 ? "HIGH" : "MEDIUM";

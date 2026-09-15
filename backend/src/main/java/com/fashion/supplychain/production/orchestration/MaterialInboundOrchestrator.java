@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -77,7 +78,7 @@ public class MaterialInboundOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> confirmArrivalAndInbound(
             String purchaseId,
-            Integer arrivedQuantity,
+            BigDecimal arrivedQuantity,
             String warehouseLocation,
             String operatorId,
             String operatorName,
@@ -97,15 +98,15 @@ public class MaterialInboundOrchestrator {
         }
 
         // 2. 验证到货数量
-        if (arrivedQuantity == null || arrivedQuantity <= 0) {
+        if (arrivedQuantity == null || arrivedQuantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("到货数量必须大于0");
         }
 
-        Integer currentArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
-        Integer totalArrived = currentArrived + arrivedQuantity;
+        BigDecimal currentArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : BigDecimal.ZERO;
+        BigDecimal totalArrived = currentArrived.add(arrivedQuantity);
 
-        if (purchase.getPurchaseQuantity() == null || purchase.getPurchaseQuantity().compareTo(java.math.BigDecimal.valueOf(totalArrived)) < 0) {
-            throw new RuntimeException(String.format("到货数量超出采购数量: 已到货=%d, 本次到货=%d, 采购数量=%s",
+        if (purchase.getPurchaseQuantity() == null || purchase.getPurchaseQuantity().compareTo(totalArrived) < 0) {
+            throw new RuntimeException(String.format("到货数量超出采购数量: 已到货=%s, 本次到货=%s, 采购数量=%s",
                     currentArrived, arrivedQuantity,
                     purchase.getPurchaseQuantity() == null ? "null" : purchase.getPurchaseQuantity().toPlainString()));
         }
@@ -113,13 +114,16 @@ public class MaterialInboundOrchestrator {
         // D-362：入库防重总闸——累计入库(台账)+本次 不能超过采购数量。
         // 此前只有"确认完成入库"路径有这道闸，登记到货/补录路径没有 → 同一采购可从
         // 批量菜单、行上操作、更多菜单重复入库多倍库存。总闸装在账本层，入口全覆盖。
+        // D-410：防重总闸改用 BigDecimal 比较。此前用 int，采购 1.32 米时 purchaseQtyInt=1，
+        // 会导致"已入库 1 + 本次 1.32 > 1"被误拦 → 小数物料根本入不了库。
         String unitText = purchase.getUnit() == null ? "" : purchase.getUnit();
-        int purchaseQtyInt = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity().intValue();
-        int alreadyInboundQty = sumInboundQuantity(purchase.getId(), tenantId);
-        if (alreadyInboundQty + arrivedQuantity > purchaseQtyInt) {
+        BigDecimal purchaseQtyBd = purchase.getPurchaseQuantity() == null ? BigDecimal.ZERO : purchase.getPurchaseQuantity();
+        BigDecimal alreadyInboundQty = sumInboundQuantity(purchase.getId(), tenantId);
+        if (alreadyInboundQty.add(arrivedQuantity).compareTo(purchaseQtyBd) > 0) {
             throw new RuntimeException(String.format(
-                    "重复入库被拦截：该采购单已登记入库 %d%s，累计入库不能超过采购数量 %d%s。如需调整请先核对【入库记录】，或用出库冲正多入部分。",
-                    alreadyInboundQty, unitText, purchaseQtyInt, unitText));
+                    "重复入库被拦截：该采购单已登记入库 %s%s，累计入库不能超过采购数量 %s%s。如需调整请先核对【入库记录】，或用出库冲正多入部分。",
+                    alreadyInboundQty.stripTrailingZeros().toPlainString(), unitText,
+                    purchaseQtyBd.stripTrailingZeros().toPlainString(), unitText));
         }
 
         // 3. 创建入库记录
@@ -163,10 +167,10 @@ public class MaterialInboundOrchestrator {
                 .eq(MaterialPurchase::getId, purchaseId)
                 .eq(MaterialPurchase::getTenantId, tenantId)
                 .one();
-        totalArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
+        totalArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : BigDecimal.ZERO;
         purchase.setInboundRecordId(inbound.getId());
 
-        if (purchase.getPurchaseQuantity() == null || purchase.getPurchaseQuantity().compareTo(java.math.BigDecimal.valueOf(totalArrived)) <= 0) {
+        if (purchase.getPurchaseQuantity() == null || purchase.getPurchaseQuantity().compareTo(totalArrived) <= 0) {
             purchase.setStatus(MaterialConstants.STATUS_AWAITING_CONFIRM);
         } else {
             purchase.setStatus("partial_arrival");
@@ -229,7 +233,7 @@ public class MaterialInboundOrchestrator {
      */
     public Map<String, Object> backfillInbound(
             String purchaseId,
-            Integer quantity,
+            BigDecimal quantity,
             String warehouseLocation,
             String operatorId,
             String operatorName,
@@ -244,20 +248,21 @@ public class MaterialInboundOrchestrator {
         if (purchase == null) {
             throw new RuntimeException("采购单不存在: " + purchaseId);
         }
-        if (quantity == null || quantity <= 0) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("补录数量必须大于0");
         }
-        Integer currentArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
-        if (quantity > currentArrived) {
-            throw new RuntimeException(String.format("补录数量超出已到货数量: 已到货=%d, 本次补录=%d", currentArrived, quantity));
+        BigDecimal currentArrived = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : BigDecimal.ZERO;
+        if (quantity.compareTo(currentArrived) > 0) {
+            throw new RuntimeException(String.format("补录数量超出已到货数量: 已到货=%s, 本次补录=%s", currentArrived, quantity));
         }
-        // D-362：入库防重总闸——累计入库(台账)+补录 不能超过采购数量
-        int purchaseQtyInt2 = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity().intValue();
-        int alreadyInboundQty2 = sumInboundQuantity(purchase.getId(), tenantId);
-        if (alreadyInboundQty2 + quantity > purchaseQtyInt2) {
+        // D-362：入库防重总闸——累计入库(台账)+补录 不能超过采购数量（D-410 起用 BigDecimal，避免小数量被误拦）
+        BigDecimal purchaseQtyBd2 = purchase.getPurchaseQuantity() == null ? BigDecimal.ZERO : purchase.getPurchaseQuantity();
+        BigDecimal alreadyInboundQty2 = sumInboundQuantity(purchase.getId(), tenantId);
+        if (alreadyInboundQty2.add(quantity).compareTo(purchaseQtyBd2) > 0) {
             throw new RuntimeException(String.format(
-                    "重复入库被拦截：该采购单已登记入库 %d，累计入库不能超过采购数量 %d。多入部分请用出库冲正。",
-                    alreadyInboundQty2, purchaseQtyInt2));
+                    "重复入库被拦截：该采购单已登记入库 %s，累计入库不能超过采购数量 %s。多入部分请用出库冲正。",
+                    alreadyInboundQty2.stripTrailingZeros().toPlainString(),
+                    purchaseQtyBd2.stripTrailingZeros().toPlainString()));
         }
 
         MaterialInbound inbound = new MaterialInbound();
@@ -326,7 +331,7 @@ public class MaterialInboundOrchestrator {
             String materialType,
             String color,
             String size,
-            Integer quantity,
+            BigDecimal quantity,
             String warehouseLocation,
             String supplierName,
             String operatorId,
@@ -340,7 +345,7 @@ public class MaterialInboundOrchestrator {
         if (materialCode == null || materialCode.trim().isEmpty()) {
             throw new RuntimeException("物料编码不能为空");
         }
-        if (quantity == null || quantity <= 0) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("入库数量必须大于0");
         }
 
@@ -441,7 +446,7 @@ public class MaterialInboundOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> inboundOnComplete(MaterialPurchase purchase,
-                                                 Integer requestedQuantity,
+                                                 BigDecimal requestedQuantity,
                                                  String warehouseLocation,
                                                  String operatorId,
                                                  String operatorName,
@@ -451,16 +456,19 @@ public class MaterialInboundOrchestrator {
         if (purchase == null || purchase.getId() == null) {
             throw new RuntimeException("采购单不存在");
         }
-        int purchaseQty = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity().intValue();
-        int alreadyInbound = sumInboundQuantity(purchase.getId(), tenantId);
-        int remaining = purchaseQty - alreadyInbound;
+        // D-410：剩余可入库量改用 BigDecimal。此前 intValue() 会把 1.32 米当 1，
+        // 导致"已全额入库"误判（1.32 采购实际到 1 就 skip）或可入库量算少。
+        BigDecimal purchaseQty = purchase.getPurchaseQuantity() == null ? BigDecimal.ZERO : purchase.getPurchaseQuantity();
+        BigDecimal alreadyInbound = sumInboundQuantity(purchase.getId(), tenantId);
+        BigDecimal remaining = purchaseQty.subtract(alreadyInbound);
         Map<String, Object> result = new HashMap<>();
-        if (remaining <= 0) {
+        if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
             result.put("skipped", true);
             result.put("reason", "该采购单已全额入库，无需重复登记");
             return result;
         }
-        int quantity = (requestedQuantity == null || requestedQuantity <= 0) ? remaining : Math.min(requestedQuantity, remaining);
+        BigDecimal quantity = (requestedQuantity == null || requestedQuantity.compareTo(BigDecimal.ZERO) <= 0)
+                ? remaining : requestedQuantity.min(remaining);
 
         MaterialInbound inbound = new MaterialInbound();
         inbound.setPurchaseId(purchase.getId());
@@ -508,15 +516,15 @@ public class MaterialInboundOrchestrator {
     }
 
     /** 已入库总量（旧流到货登记/完成时登记都写 MaterialInbound，按它去重；排除软删） */
-    private int sumInboundQuantity(String purchaseId, Long tenantId) {
+    private BigDecimal sumInboundQuantity(String purchaseId, Long tenantId) {
         List<MaterialInbound> records = materialInboundService.listByPurchaseId(purchaseId);
-        if (records == null || records.isEmpty()) return 0;
+        if (records == null || records.isEmpty()) return BigDecimal.ZERO;
         return records.stream()
                 .filter(r -> r != null
                         && (r.getDeleteFlag() == null || r.getDeleteFlag() == 0)
                         && tenantId != null && tenantId.equals(r.getTenantId()))
-                .mapToInt(r -> r.getInboundQuantity() != null ? r.getInboundQuantity() : 0)
-                .sum();
+                .map(r -> r.getInboundQuantity() != null ? r.getInboundQuantity() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private void syncInboundTraceRecord(MaterialInbound inbound, MaterialPurchase purchase, String sourceType) {

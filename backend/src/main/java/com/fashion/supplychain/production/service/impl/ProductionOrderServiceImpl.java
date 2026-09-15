@@ -437,7 +437,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
             mp.setCreateTime(LocalDateTime.now());
             mp.setUpdateTime(LocalDateTime.now());
             mp.setDeleteFlag(0);
-            mp.setArrivedQuantity(0);
+            mp.setArrivedQuantity(BigDecimal.ZERO);
 
             purchases.add(mp);
         }

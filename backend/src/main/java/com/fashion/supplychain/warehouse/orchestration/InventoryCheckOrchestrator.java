@@ -145,7 +145,8 @@ public class InventoryCheckOrchestrator {
             item.setSpecifications(stock.getSpecifications());
             item.setUnit(stock.getUnit());
             item.setUnitPrice(stock.getUnitPrice());
-            item.setBookQuantity(stock.getQuantity() != null ? stock.getQuantity() : 0);
+            // D-410：库存已是 BigDecimal，盘点单明细仍为 Integer，按原语义截断取整
+            item.setBookQuantity(stock.getQuantity() != null ? stock.getQuantity().intValue() : 0);
             item.setCheckStatus("pending");
             item.setTenantId(tenantId);
             item.setDeleteFlag(0);

@@ -1,4 +1,5 @@
 package com.fashion.supplychain.production.helper;
+import java.math.BigDecimal;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -613,8 +614,8 @@ public class MaterialPurchaseStatusHelper {
     }
 
     private void rollbackStockIfNeeded(MaterialPurchase purchase, String purchaseId) {
-        int arrivedQty = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
-        if (arrivedQty > 0) {
+        BigDecimal arrivedQty = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : BigDecimal.ZERO;
+        if (arrivedQty.compareTo(BigDecimal.ZERO) > 0) {
             // P1-5 说明：仅 order（大货订单）/ sample（样衣采购）视为订单驱动，
             // 此处不回退库存（由订单状态机处理）；batch/stock/manual 不涉及订单库存，需回退。
             String sourceType = purchase.getSourceType();
@@ -679,9 +680,9 @@ public class MaterialPurchaseStatusHelper {
         // 新采购流（购物车/智能采购）不走入库登记，arrivedQuantity 一直是 0，
         // 对账按"有效到货量>0"判定会把这批完成单全部挡在账外。
         java.math.BigDecimal pq = purchase.getPurchaseQuantity();
-        int currentArrived = purchase.getArrivedQuantity() == null ? 0 : purchase.getArrivedQuantity().intValue();
-        if (currentArrived <= 0 && pq != null && pq.intValue() > 0) {
-            uw.set(MaterialPurchase::getArrivedQuantity, pq.intValue());
+        BigDecimal currentArrived = purchase.getArrivedQuantity() == null ? BigDecimal.ZERO : purchase.getArrivedQuantity();
+        if (currentArrived.compareTo(BigDecimal.ZERO) <= 0 && pq != null && pq.compareTo(BigDecimal.ZERO) > 0) {
+            uw.set(MaterialPurchase::getArrivedQuantity, pq);
             uw.set(MaterialPurchase::getActualArrivalDate, LocalDateTime.now());
         }
         materialPurchaseService.update(uw);
@@ -741,7 +742,7 @@ public class MaterialPurchaseStatusHelper {
             String warehouseLocation = ParamUtils.toTrimmedString(body.get("warehouseLocation"));
             Map<String, Object> inboundResult = materialInboundOrchestrator.inboundOnComplete(
                     purchase,
-                    requested == null ? null : requested.intValue(),
+                    requested,
                     warehouseLocation, operatorId, operatorName, "采购确认完成时登记入库");
             result.put("movementAction", "inbound");
             result.put("inbound", inboundResult);

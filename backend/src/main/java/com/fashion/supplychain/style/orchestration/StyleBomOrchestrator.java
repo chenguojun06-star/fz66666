@@ -107,9 +107,7 @@ public class StyleBomOrchestrator {
                                 || java.util.Objects.equals(s.getColor(), bom.getColor()))
                         .filter(s -> !StringUtils.hasText(bom.getSize())
                                 || java.util.Objects.equals(s.getSize(), bom.getSize()))
-                        .mapToInt(s -> Math.max(0,
-                                (s.getQuantity() != null ? s.getQuantity() : 0)
-                                        - (s.getLockedQuantity() != null ? s.getLockedQuantity() : 0)))
+                        .mapToInt(s -> availableOf(s))
                         .max()
                         .orElse(0);
                 int requiredQty = calculateRequirement(bom, 1);
@@ -306,9 +304,7 @@ public class StyleBomOrchestrator {
 
             int availableQty = 0;
             if (stock != null) {
-                availableQty = (stock.getQuantity() != null ? stock.getQuantity() : 0)
-                             - (stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0);
-                availableQty = Math.max(0, availableQty);
+                availableQty = availableOf(stock);
             }
 
             // D-153：单件用量未填/为0时需求为0，旧逻辑 0>=0 误判"库存充足"——
@@ -384,9 +380,7 @@ public class StyleBomOrchestrator {
                 MaterialStock stock = findStock(bom);
                 int availableQty = 0;
                 if (stock != null) {
-                    availableQty = Math.max(0,
-                            (stock.getQuantity() != null ? stock.getQuantity() : 0)
-                                    - (stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0));
+                    availableQty = availableOf(stock);
                 }
 
                 // D-153：与 saveBomWithStockCheck 同口径——需求为0（用量未填）标记"未填用量"
@@ -478,10 +472,8 @@ public class StyleBomOrchestrator {
         }
         return stockList.stream()
                 .max((s1, s2) -> {
-                    int qty1 = (s1.getQuantity() != null ? s1.getQuantity() : 0)
-                            - (s1.getLockedQuantity() != null ? s1.getLockedQuantity() : 0);
-                    int qty2 = (s2.getQuantity() != null ? s2.getQuantity() : 0)
-                            - (s2.getLockedQuantity() != null ? s2.getLockedQuantity() : 0);
+                    int qty1 = availableOf(s1);
+                    int qty2 = availableOf(s2);
                     return Integer.compare(qty1, qty2);
                 })
                 .orElse(null);
@@ -547,5 +539,17 @@ public class StyleBomOrchestrator {
 
     public java.util.Map<String, Object> getPurchaseStatus(Long styleId) {
         return purchaseHelper.getPurchaseStatus(styleId);
+    }
+
+    /**
+     * D-410：库存可用量 = 库存 - 锁定。库存 quantity 已是 BigDecimal，
+     * 原先直接用 "-" 相减会编译失败；这里统一走 BigDecimal 运算后再按 int 返回
+     * （BOM 可生产数属于估算值，仍按整数件数给前端）。
+     */
+    private static int availableOf(MaterialStock s) {
+        if (s == null) return 0;
+        BigDecimal qty = s.getQuantity() != null ? s.getQuantity() : BigDecimal.ZERO;
+        BigDecimal locked = BigDecimal.valueOf(s.getLockedQuantity() != null ? s.getLockedQuantity() : 0);
+        return qty.subtract(locked).max(BigDecimal.ZERO).intValue();
     }
 }

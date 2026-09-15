@@ -1,4 +1,5 @@
 package com.fashion.supplychain.warehouse.orchestration;
+import java.math.BigDecimal;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -199,7 +200,7 @@ public class StockTransferOrchestrator {
             throw new IllegalStateException(
                     "未找到物料库存，无法调拨: materialCode=" + transfer.getMaterialCode());
         }
-        if (stock.getQuantity() != null && stock.getQuantity() < qty) {
+        if (stock.getQuantity() != null && stock.getQuantity().compareTo(java.math.BigDecimal.valueOf(qty)) < 0) {
             throw new IllegalStateException(
                     "调出库位库存不足: materialCode=" + transfer.getMaterialCode()
                             + ", 当前库存=" + stock.getQuantity() + ", 调拨数量=" + qty);
@@ -252,7 +253,7 @@ public class StockTransferOrchestrator {
         target.setWarehouseAreaId(source.getWarehouseAreaId());
         target.setWarehouseAreaName(source.getWarehouseAreaName());
         target.setLocation(transfer.getToLocationCode());
-        target.setQuantity(0);
+        target.setQuantity(java.math.BigDecimal.ZERO);
         target.setLockedQuantity(0);
         target.setTotalValue(java.math.BigDecimal.ZERO);
         target.setSafetyStock(source.getSafetyStock());

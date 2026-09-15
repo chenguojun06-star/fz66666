@@ -41,7 +41,7 @@ public class MaterialBatchDetailDto {
     /**
      * 可用库存数量
      */
-    private Integer availableQty;
+    private java.math.BigDecimal availableQty;
 
     /**
      * 锁定库存数量

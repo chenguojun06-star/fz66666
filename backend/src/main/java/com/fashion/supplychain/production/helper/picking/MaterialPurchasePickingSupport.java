@@ -1,4 +1,5 @@
 package com.fashion.supplychain.production.helper.picking;
+import java.math.BigDecimal;
 
 import java.util.Collections;
 import java.util.List;
@@ -58,9 +59,10 @@ public class MaterialPurchasePickingSupport {
         }
         return stockList.stream()
                 .mapToInt(stock -> {
-                    int qty = stock.getQuantity() != null ? stock.getQuantity() : 0;
+                    BigDecimal qty = stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO;
                     int locked = stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0;
-                    return Math.max(0, qty - locked);
+                    // D-410：库存已是 BigDecimal；领料数量仍按 int 统计，故在此取整
+                    return qty.subtract(BigDecimal.valueOf(locked)).max(BigDecimal.ZERO).intValue();
                 })
                 .sum();
     }

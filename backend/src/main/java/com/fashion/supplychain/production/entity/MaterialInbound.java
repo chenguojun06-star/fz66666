@@ -73,7 +73,11 @@ public class MaterialInbound implements Serializable {
     /**
      * 入库数量
      */
-    private Integer inboundQuantity;
+    /**
+     * 入库数量（D-410：INT → BigDecimal，DECIMAL(12,4)）
+     * 与采购/到货数量同精度，避免米/公斤类物料入库时被截断。
+     */
+    private BigDecimal inboundQuantity;
 
     /**
      * 仓库位置

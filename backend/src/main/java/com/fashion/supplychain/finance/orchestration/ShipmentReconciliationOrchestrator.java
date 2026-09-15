@@ -480,8 +480,9 @@ public class ShipmentReconciliationOrchestrator {
         }
 
         BigDecimal unitPrice = current.getUnitPrice() == null ? BigDecimal.ZERO : current.getUnitPrice();
-        int qty = current.getQuantity() == null ? 0 : current.getQuantity();
-        BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(qty)).setScale(2, java.math.RoundingMode.HALF_UP);
+        // D-410：对账数量已是 BigDecimal，不要再转 int（小数会被截断导致金额算错）
+        BigDecimal qty = current.getQuantity() == null ? BigDecimal.ZERO : current.getQuantity();
+        BigDecimal totalAmount = unitPrice.multiply(qty).setScale(2, java.math.RoundingMode.HALF_UP);
         BigDecimal deductionAmount = totalDeduction.subtract(totalSupplement).setScale(2, java.math.RoundingMode.HALF_UP);
         BigDecimal finalAmount = totalAmount.subtract(totalDeduction).add(totalSupplement).setScale(2, java.math.RoundingMode.HALF_UP);
 

@@ -1,4 +1,5 @@
 package com.fashion.supplychain.intelligence.orchestration;
+import java.math.BigDecimal;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -324,7 +325,7 @@ public class PendingTaskOrchestrator {
             dto.setModule("production");
             dto.setTitle("采购待收货 " + safe(p.getPurchaseNo()));
             int purchased = p.getPurchaseQuantity() != null ? p.getPurchaseQuantity().intValue() : 0;
-            int arrived = p.getArrivedQuantity() != null ? p.getArrivedQuantity() : 0;
+            BigDecimal arrived = p.getArrivedQuantity() != null ? p.getArrivedQuantity() : BigDecimal.ZERO;
             dto.setDescription(safe(p.getMaterialName()) + " 已到" + arrived + "/" + purchased);
             dto.setOrderNo(p.getOrderNo());
             dto.setStyleNo(p.getStyleNo());

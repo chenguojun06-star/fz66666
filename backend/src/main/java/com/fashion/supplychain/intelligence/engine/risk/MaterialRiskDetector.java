@@ -1,4 +1,5 @@
 package com.fashion.supplychain.intelligence.engine.risk;
+import java.math.BigDecimal;
 
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.mapper.MaterialStockMapper;
@@ -43,14 +44,15 @@ public class MaterialRiskDetector implements RiskDetector {
 
         List<RiskItem> items = new ArrayList<>();
         for (MaterialStock ms : lowStockMaterials) {
-            Integer quantity = ms.getQuantity();
+            BigDecimal quantity = ms.getQuantity();
             Integer safetyStock = ms.getSafetyStock();
             if (quantity == null || safetyStock == null || safetyStock <= 0) continue;
 
             // P1修复：当前库存 < 安全库存即触发
-            if (quantity < safetyStock) {
-                double shortageRatio = 1.0 - (double) quantity / safetyStock;
-                String severity = quantity == 0 ? "CRITICAL"
+            // D-410：库存已是 BigDecimal，与安全库存（Integer）比较时提升类型
+            if (quantity.compareTo(BigDecimal.valueOf(safetyStock)) < 0) {
+                double shortageRatio = 1.0 - quantity.doubleValue() / safetyStock;
+                String severity = quantity.compareTo(BigDecimal.ZERO) == 0 ? "CRITICAL"
                         : shortageRatio >= 0.5 ? "HIGH" : "MEDIUM";
                 double score = Math.min(100, 50 + shortageRatio * 100);
                 RiskItem item = RiskItem.create(RiskType.MATERIAL, severity, score);

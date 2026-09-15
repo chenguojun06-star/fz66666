@@ -135,12 +135,13 @@ public class MaterialStockOrchestrator {
             int dailyOutQty = (int) Math.ceil(recentOutQty / (double) days);
             int safetyStock = stock.getSafetyStock() == null ? 0 : stock.getSafetyStock();
             int suggestedSafety = Math.max(safetyStock, dailyOutQty * leadDays);
-            int quantity = stock.getQuantity() == null ? 0 : stock.getQuantity();
-            boolean need = quantity < suggestedSafety;
+            BigDecimal quantity = stock.getQuantity() == null ? BigDecimal.ZERO : stock.getQuantity();
+            // D-410：suggestedSafety 仍按 int 估算（安全库存字段未纳入本次迁移），比较时提升到 BigDecimal
+            boolean need = quantity.compareTo(BigDecimal.valueOf(suggestedSafety)) < 0;
 
             BigDecimal perPieceUsage = resolveUsage(usageByMaterial, stock);
             Integer minProductionQty = calcProductionQty(quantity, perPieceUsage);
-            Integer maxProductionQty = calcProductionQty(suggestedSafety, perPieceUsage);
+            Integer maxProductionQty = calcProductionQty(BigDecimal.valueOf(suggestedSafety), perPieceUsage);
 
             if (onlyNeed && !need) {
                 continue;
@@ -155,7 +156,8 @@ public class MaterialStockOrchestrator {
             dto.setUnit(stock.getUnit());
             dto.setColor(stock.getColor());
             dto.setSize(stock.getSize());
-            dto.setQuantity(quantity);
+            // D-410：DTO 仍为 Integer，按原语义截断取整（库存小数精度暂不外泄到此告警列表）
+            dto.setQuantity(quantity.intValue());
             dto.setSafetyStock(safetyStock);
             dto.setRecentOutQuantity(recentOutQty);
             dto.setSuggestedSafetyStock(suggestedSafety);
@@ -447,12 +449,12 @@ public class MaterialStockOrchestrator {
                 normalize(size));
     }
 
-    private Integer calcProductionQty(int qty, BigDecimal perPiece) {
-        if (perPiece == null || perPiece.compareTo(BigDecimal.ZERO) <= 0) {
+    /** D-410：qty 改 BigDecimal，避免库存小数在计算可生产数时被截断 */
+    private Integer calcProductionQty(BigDecimal qty, BigDecimal perPiece) {
+        if (qty == null || perPiece == null || perPiece.compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
-        return BigDecimal.valueOf(qty)
-                .divide(perPiece, 0, java.math.RoundingMode.DOWN)
+        return qty.divide(perPiece, 0, java.math.RoundingMode.DOWN)
                 .intValue();
     }
 
