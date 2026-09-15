@@ -160,7 +160,15 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
         {!record ? (
           <Empty description="未选中商品编码" />
         ) : (
-          <>
+          /*
+           * 用 <Form component={false}> 而非 Fragment：
+           * Table 单元格里的 Form.Item 靠 **React context** 拿 form 实例，
+           * 必须处在 <Form> 的子树内。早前把 <Form> 放在 Table 外面（兄弟节点、
+           * 还 display:none），Form.Item 拿不到 context → 输入框值不同步、
+           * validateFields() 取到 undefined，保存必然失败。
+           * component={false} = 只提供 context、不渲染任何 DOM，等价于 Fragment。
+           */
+          <Form form={editForm} component={false}>
             <Card size="small" style={{ marginBottom: 12 }}>
               <div className="u-d-flex u-fwrap-wrap u-gap-16" style={{ rowGap: 8 }}>
                 <div style={{ minWidth: 120 }}>
@@ -282,9 +290,7 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
                 ]}
               />
             )}
-            {/* 把编辑表单挂到抽屉内（Table 内的 Form.Item 不会冒泡提交） */}
-            <Form form={editForm} component="div" style={{ display: 'none' }} />
-          </>
+          </Form>
         )}
       </SideDrawer>
 
