@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { App, Button, Checkbox, Input, InputNumber, Slider, Space } from 'antd';
 import { SaveOutlined, PrinterOutlined, EyeOutlined, EditOutlined, CloseOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
@@ -15,6 +15,7 @@ import { getDisplayWashCareCodes, buildWashLabelSections, parseWashLabelParts, p
 import { safePrint } from '@/utils/safePrint';
 import {
   buildWashLabelPrintHtml,
+  isWashLabelContentOverflow,
   buildWashLabelMultiPageHtml,
   washTextFromInstructions,
   type WashLabelPrintData,
@@ -163,28 +164,39 @@ const StyleWashLabelTab: React.FC<Props> = ({
     onRefresh?.();
   }, [initialParts, initialWash, initialUCode, onRefresh]);
 
+  // D-411：打印数据构造提到组件层，供「打印」与「内容是否放不下」检测共用
+  const buildOnePrintData = useCallback((section: { key: string; label: string; items: string[] }, washNote: string): WashLabelPrintData => ({
+    width: previewW,
+    height: previewH,
+    compositionText: section.items.join('\n'),
+    washInstructionsText: washNote,
+    careIconCodes: selectedIconCodes,
+    // 只打印用户输入的内容：制造区留空不显示；日期勾选时显示
+    manufacturingText: manufacturingText,
+    dateText: showDate ? (dateText || todayText()) : '',
+    // 距剪口偏移：用户可调（与预览一致）
+    topOffsetMm,
+    fontScale,
+    lineHeightScale,
+    sectionGapMm,
+  }), [previewW, previewH, selectedIconCodes, manufacturingText, showDate, dateText, topOffsetMm, fontScale, lineHeightScale, sectionGapMm]);
+
+  // D-411：只要有一页内容放不下就提示。以前是静默多打一张空白页，
+  // 现在改为本页截断（不再多打），但截断同样是静默丢内容 —— 必须明确告诉用户。
+  const contentOverflow = useMemo(() => {
+    const sections = buildWashLabelSections(compositionParts, initialComp);
+    const perPartWashNotes = parseWashNotePerPart(compositionParts);
+    const washText = washTextFromInstructions(washInstructions, compositionParts);
+    const list = sections.length ? sections : [{ key: 'other', label: '', items: [] }];
+    return list.some(s => isWashLabelContentOverflow(buildOnePrintData(s, perPartWashNotes[s.key] || washText)));
+  }, [compositionParts, initialComp, washInstructions, buildOnePrintData]);
+
   const handlePrint = useCallback(async () => {
     setPrintLoading(true);
     try {
     const sections = buildWashLabelSections(compositionParts, initialComp);
     const isMultiPart = sections.length > 1;
     const perPartWashNotes = parseWashNotePerPart(compositionParts);
-
-    const buildOnePrintData = (section: { key: string; label: string; items: string[] }, washNote: string): WashLabelPrintData => ({
-      width: previewW,
-      height: previewH,
-      compositionText: section.items.join('\n'),
-      washInstructionsText: washNote,
-      careIconCodes: selectedIconCodes,
-      // 只打印用户输入的内容：制造区留空不显示；日期勾选时显示
-      manufacturingText: manufacturingText,
-      dateText: showDate ? (dateText || todayText()) : '',
-      // 距剪口偏移：用户可调（与预览一致）
-      topOffsetMm,
-      fontScale,
-      lineHeightScale,
-      sectionGapMm,
-    });
 
     const washText = washTextFromInstructions(washInstructions, compositionParts);
 
@@ -202,7 +214,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
 
     safePrint(html);
     } finally { setPrintLoading(false); }
-  }, [compositionParts, initialComp, washInstructions, selectedIconCodes, manufacturingText, previewW, previewH, fontScale, lineHeightScale, topOffsetMm, sectionGapMm, showDate, dateText]);
+  }, [compositionParts, initialComp, washInstructions, selectedIconCodes, manufacturingText, previewW, previewH, fontScale, lineHeightScale, topOffsetMm, sectionGapMm, showDate, dateText, buildOnePrintData]);
 
   const sectionTitleStyle: React.CSSProperties = {
     fontSize: 14,
@@ -216,7 +228,9 @@ const StyleWashLabelTab: React.FC<Props> = ({
 
   return (
     <div style={{ display: 'flex', gap: 24 }}>
-      <div style={{ flex: '1 1 55%', minWidth: 0 }}>
+      {/* D-411：左栏改纵向 flex，配合参数区 order:-1 把「尺寸/距离」参数提到顶部。
+          用户反复反馈：这些参数放在内容最下方，调一次要滚到页面底部，右侧预览又在顶部，根本没法对照调。 */}
+      <div style={{ flex: '1 1 55%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         {/* 编辑控制栏 */}
         <div style={{
           display: 'flex',
@@ -348,14 +362,19 @@ const StyleWashLabelTab: React.FC<Props> = ({
           </div>
         </div>
 
+        {/* D-411：order:-1 提到左栏最顶部（紧贴编辑控制栏），与右侧 sticky 预览同屏对照调整 */}
         <div style={{
+          order: -1,
           display: 'flex',
           justifyContent: 'flex-end',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 8,
           padding: '12px 0',
-          borderTop: '1px solid var(--color-border-light, var(--color-border-light))',
+          marginBottom: 4,
+          borderBottom: '1px solid var(--color-border-light, var(--color-border-light))',
         }}>
-          <Space size={16}>
+          <Space size={16} wrap>
             <span style={{ color: 'var(--color-text-secondary)', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               距剪口偏移
               <InputNumber
@@ -424,6 +443,12 @@ const StyleWashLabelTab: React.FC<Props> = ({
               suffix="mm" style={{ width: 110 }}
             />
           </Space>
+          {/* D-411：内容放不下时明确告警——排版失败会静默表现为"多打一张空白页"或"本页被截断" */}
+          {contentOverflow && (
+            <div style={{ width: '100%', marginTop: 6, fontSize: 13, color: 'var(--color-error, #ff4d4f)' }}>
+              内容超出可打印区域：请加大「高」，或减小「距剪口偏移 / 字体大小 / 行距」，否则超出部分会被裁掉。
+            </div>
+          )}
         </div>
       </div>
 

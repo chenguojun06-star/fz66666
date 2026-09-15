@@ -247,11 +247,15 @@ function buildLabelCss(
   // iframe srcDoc 是独立文档上下文，不继承父页面 CSS 变量
   // 直接用硬编码颜色，避免 var(--color-*) 在 iframe 中失效
   // 间距与模板计算常量保持一致(GAP_*)，行高与 LH_* 保持一致——避免估算与渲染不一致
+  // D-411：body 不再设 min-height，高度完全由 .label-page 撑开；
+  // .label-page 固定 height=h 且 overflow:hidden —— 内容放到不下时在本页内截断，
+  // 绝不外溢撑出第二页。此前 body 的 min-height 与 @page 高度重合，浏览器打印时
+  // 亚像素舍入会让内容比纸高一点点 → 多吐一张空白页（用户反馈"调整长度就打两张"）。
   return `@page{size:${w}mm ${h}mm;margin:0}
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:${w}mm;min-height:${h}mm}
+html,body{width:${w}mm}
 body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;color:#000;background:#fff;-webkit-font-smoothing:antialiased}
-.label-page{position:relative;width:${w}mm;height:${h}mm;padding:${topPad}mm 2.2mm ${bottomSafe}mm;page-break-after:always;display:flex;flex-direction:column;align-items:center}
+.label-page{position:relative;width:${w}mm;height:${h}mm;overflow:hidden;padding:${topPad}mm 2.2mm ${bottomSafe}mm;page-break-after:always;display:flex;flex-direction:column;align-items:center}
 .label-page:last-child{page-break-after:auto}
 /* 顶部剪断虚线：剪口位置的裁剪指示（absolute 不占内容布局空间） */
 .cut-line{position:absolute;top:0.5mm;left:0;width:100%;border-top:0.35mm dashed #000}
@@ -411,4 +415,20 @@ export function washTextFromInstructions(
     return perPartNotes[keys[0]].replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
   }
   return (washInstructions || '').replace(/^洗涤说明[（(]水洗标专用[）)]\s*/u, '').trim();
+}
+
+/**
+ * D-411：内容在「纸张高 − 距剪口偏移」内放不下（字号已收缩到下限仍超出）。
+ *
+ * 背景：排版失败时会静默 —— 以前是外溢多打一张空白页，现在是本页内被 overflow 截断，
+ * 两种表现用户都看不出"内容没放完"。这里给 UI 一个布尔值，好明确提示
+ * 「内容超出，请加大纸张高度 / 减小距剪口偏移 / 减小字号」。
+ */
+export function isWashLabelContentOverflow(data: WashLabelPrintData): boolean {
+  const fs = fitFontSize([data]);
+  const availH = data.height - Math.max(0, data.topOffsetMm ?? 0) - 1.5;
+  const availW = data.width - H_PAD;
+  const iconRowH = calcIconRowHeight(data.width, (data.careIconCodes || []).length, data.fontScale ?? 1);
+  const need = estimateContentHeightMm(data, fs, iconRowH, availW, data.lineHeightScale ?? 1);
+  return need > availH;
 }
