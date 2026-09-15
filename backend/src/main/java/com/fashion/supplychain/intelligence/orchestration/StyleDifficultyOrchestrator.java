@@ -367,6 +367,7 @@ public class StyleDifficultyOrchestrator {
                 .select(StyleInfo::getId, StyleInfo::getStyleNo, StyleInfo::getCover,
                         StyleInfo::getTenantId, StyleInfo::getDifficultyLevel, StyleInfo::getDifficultyScore)
                 .isNotNull(StyleInfo::getCover)
+                .ne(StyleInfo::getCover, "")
                 .last("LIMIT " + safeLimit + " OFFSET " + Math.max(0, offset))
                 .list();
         int ok = 0, failed = 0, skipped = 0;
@@ -401,6 +402,14 @@ public class StyleDifficultyOrchestrator {
         log.info("[StyleDifficulty] 存量款式图片向量补齐 batch total={} ok={} failed={} skipped={}",
                 styles.size(), ok, failed, skipped);
         return java.util.Map.of("total", styles.size(), "ok", ok, "failed", failed, "skipped", skipped);
+    }
+
+    /** 有封面的款式总数（补齐任务的目标量） */
+    public long countStylesWithCover() {
+        return styleInfoService.lambdaQuery()
+                .isNotNull(StyleInfo::getCover)
+                .ne(StyleInfo::getCover, "")
+                .count();
     }
 
     private List<String> buildKeyFactors(List<StyleBom> boms, List<StyleProcess> processes,

@@ -1704,6 +1704,21 @@ public class QdrantService {
         return results;
     }
 
+    /** style_images 集合当前点数（集合不存在/异常返回 0），供补齐任务判断缺口 */
+    public long getStyleImagePointCount() {
+        try {
+            ResponseEntity<String> resp = restTemplate.getForEntity(
+                    qdrantUrl + "/collections/" + STYLE_IMAGE_COLLECTION, String.class);
+            if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
+                return objectMapper.readTree(resp.getBody())
+                        .path("result").path("points_count").asLong(0);
+            }
+        } catch (Exception e) {
+            log.debug("[Qdrant] 查询 style_images 点数失败: {}", e.getMessage());
+        }
+        return 0;
+    }
+
     private void ensureStyleImageCollectionExists() {
         if (styleImageCollectionVerified.get()) return;
         try {

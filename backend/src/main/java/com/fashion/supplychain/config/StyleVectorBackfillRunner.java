@@ -1,6 +1,7 @@
 package com.fashion.supplychain.config;
 
 import com.fashion.supplychain.intelligence.orchestration.StyleDifficultyOrchestrator;
+import com.fashion.supplychain.intelligence.service.QdrantService;
 import com.fashion.supplychain.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,9 @@ public class StyleVectorBackfillRunner implements ApplicationRunner {
     @Autowired
     private StyleDifficultyOrchestrator styleDifficultyOrchestrator;
 
+    @Autowired
+    private QdrantService qdrantService;
+
     /**
      * 每批条数（每款约 3~5 秒：视觉分析+向量化）。
      * 原为 200：backend 容器仅 1 核 2G 且未设 -Xmx，单批 200 款的内存峰值极高，
@@ -54,9 +58,23 @@ public class StyleVectorBackfillRunner implements ApplicationRunner {
 
     private void safeRun() {
         try {
-            if (redisService != null && "1".equals(redisService.get(MARKER_KEY))) {
-                log.info("[StyleVectorBackfill] 已执行过（Redis标记存在），跳过");
+            // 数量自愈（D-386 续）：qdrant 容器随代码推送被重建会导致集合清空，
+            // 完成标记会骗过重跑——改为对比「有封面款式数 vs style_images 向量条数」，
+            // 缺口存在就清掉标记/进度重跑（upsert 同 ID 幂等覆盖，重灌无脏数据）
+            long target = styleDifficultyOrchestrator.countStylesWithCover();
+            if (target <= 0) {
+                log.info("[StyleVectorBackfill] 无带封面款式，跳过");
                 return;
+            }
+            long have = qdrantService.getStyleImagePointCount();
+            if (have >= target) {
+                log.info("[StyleVectorBackfill] 向量条数已齐 have={} target={}，跳过", have, target);
+                return;
+            }
+            log.info("[StyleVectorBackfill] 检测到向量缺口 have={}/target={}，清除旧标记重新补齐", have, target);
+            if (redisService != null) {
+                redisService.delete(MARKER_KEY);
+                redisService.delete(OFFSET_KEY);
             }
             int startBatch = readOffset();
             log.info("[StyleVectorBackfill] 开始存量款式图片向量补齐 batchSize={} maxBatches={} 起始批次={}",
