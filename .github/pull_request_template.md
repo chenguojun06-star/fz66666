@@ -46,6 +46,43 @@
 - [ ] 打印相关 `font-family` 以 `serif` 结尾（规则12）
 - [ ] 弹窗使用 `ResizableModal`，表格使用 `ResizableTable`
 
+## ⚠️ 隐性缺陷检查（构建绿 ≠ 功能对）
+
+> 以下每一条都是本项目**真实踩过的坑**：编译、类型检查、CI 全部通过，但功能失效或静默出错。
+> 自动化工具查不出来，只能靠人眼过一遍。
+
+### 前端
+
+- [ ] **表单控件在 `<Form>` 的子树内**（React 层级，不是 DOM 层级）
+      D-419：把 `Form.Item` 写进 Table 的 columns，而 `<Form>` 放在 Table 外面当兄弟节点
+      → 值不同步、`validateFields()` 取到 undefined，点保存必然失败。
+      需要 Form 包住但不想多套 DOM 时，用 `<Form component={false}>`。
+- [ ] **弹窗/侧滑用了统一组件**（`SideDrawer` / `ResizableModal`），没有自己造一套
+- [ ] **没有新增硬编码颜色或 `!important`**（存量 940 个是历史债，只减不增）
+
+### 后端
+
+- [ ] **查询 filter 的常量值核对过实际落库值**
+      D-417：`RecordLogDrawer` 的 `module`/`targetType` 按字段名想当然填写，
+      实际一个不存在、一个是 null，后端 `wrapper.eq` 精确匹配 → **静默返回 0 条，不报错**。
+      改这类 filter 前先查 `OperationLogAppendUtil.writeLog()` 与 `SystemOperationLogAspect.resolveModule()`。
+- [ ] **类型改造后检查了截断点**（改数量/金额类型时必看）
+      D-410：`Integer`→`BigDecimal` 编译全过，但 6 处 `coerceInt()` 截断没改，语义没通。
+      自查：`grep -rnE "coerceInt|intValue\(\)|Math\.(floor|round)" <相关目录>`
+- [ ] **异常没有被吞掉**（空 catch / `printStackTrace` 当前已清零，保持 0）
+- [ ] **一次性闩锁有复位路径**（本项目高频缺陷模式）
+      boolean / AtomicBoolean 标记置 true 后**永不复位**，容器重建或依赖闪断后功能永久失效。
+      自查：grep 字段名，数一下有几处置 true、几处置 false —— **只有置 false 没有置 true 必是 bug**。
+
+### 架构与提交
+
+- [ ] **Controller 未直接依赖 Mapper**（ArchUnit 已卡，存量基线 47，只减不增）
+- [ ] **commit 带了路径**（`git commit -o -- <paths>`）
+      本项目多会话并发操作同一工作区，不带路径会把别人已暂存的改动一起提交。
+- [ ] **没有用 `-DskipTests` 绕过门控**（绕过的门控比假绿灯更糟：连记录都不留）
+
+---
+
 ## 🔍 变更影响分析
 
 <!-- 对照 memory-bank/change-impact-matrix.md 评估 -->
