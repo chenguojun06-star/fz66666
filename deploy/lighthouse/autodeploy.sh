@@ -20,9 +20,12 @@ echo "[$(date '+%F %T')] 检测到更新 $LOCAL..$REMOTE"
 
 cd deploy/lighthouse
 SERVICES=""
+RESTART_CADDY=0
 echo "$CHANGED" | grep -q '^backend/'  && SERVICES="$SERVICES backend"
 echo "$CHANGED" | grep -q '^frontend/' && SERVICES="$SERVICES frontend"
-echo "$CHANGED" | grep -q '^deploy/lighthouse/' && SERVICES=" backend frontend"
+echo "$CHANGED" | grep -q '^deploy/lighthouse/Caddyfile$'         && RESTART_CADDY=1
+echo "$CHANGED" | grep -q '^deploy/lighthouse/docker-compose.yml$' && RESTART_CADDY=1
+echo "$CHANGED" | grep -q '^deploy/lighthouse/' && SERVICES="$SERVICES backend frontend"
 
 if [ -n "$SERVICES" ]; then
   sudo docker compose up -d --build $SERVICES
@@ -34,4 +37,9 @@ if [ -n "$SERVICES" ]; then
   done
 else
   echo "[$(date '+%F %T')] 变更不涉及 backend/frontend，跳过构建"
+fi
+
+if [ "$RESTART_CADDY" = 1 ]; then
+  sudo docker compose restart caddy
+  echo "[$(date '+%F %T')] caddy 已重启（配置变更）"
 fi
