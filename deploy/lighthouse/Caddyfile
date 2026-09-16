@@ -13,6 +13,10 @@ api.webyszl.cn {
 	}
 }
 
+db.webyszl.cn {
+	reverse_proxy adminer:8080
+}
+
 www.webyszl.cn {
 	reverse_proxy /api/* backend:8088 {
 		flush_interval -1
