@@ -35,25 +35,53 @@ bash bootstrap-server.sh
 
 再跑一次 `bash bootstrap-server.sh` —— 会启动 MySQL/Redis/Qdrant 并等健康。
 
-## 3. 迁移生产数据（唯一需要小心的步骤）
+## 3. 迁移生产数据（手把手版，全程只读不影响线上）
 
-> ⚠️ 禁止让 Flyway 在空库上重放全部迁移（历史迁移非全幂等）。
-> 正确姿势：**整库导出导入**（flyway_schema_history 随库一起过来，Flyway 接着往后走）。
+### 第1步：给云托管 MySQL 开公网访问（3 次点击）
 
-导出（二选一）：
-- A. 云托管控制台 → MySQL → 导出（若有此入口）
-- B. 云托管 MySQL 开启公网访问 → 在你 Mac 上：
-  `mysqldump -h<公网host> -P端口 -u用户 -p --single-transaction --routines --triggers fashion_supplychain > dump.sql`
+1. 打开 腾讯云开发控制台(cloud.tencent.com/product/cloudbase) → 你的环境
+2. 左侧菜单找 **「数据库」** 或 **「MySQL」** 管理页
+3. 找 **「公网访问/外网访问」** 开关 → **开启**
+4. 开启后会显示一个 **公网域名 + 端口**（形如 xxx.tencentdb.com:6xxxx），复制下来
+5. 同一页面有 **IP 白名单** → 填入你**轻量服务器的公网 IP**
 
-导入（服务器上）：
+> 如果找不到这个开关：把该页面截图发我，走备用方案。
+
+### 第2步：找到数据库账号密码
+
+云托管控制台 → backend → 服务设置 → 环境变量，找这三行抄下来：
+- `APP_DB_USERNAME`（用户名，一般是 root）
+- `APP_DB_PASSWORD`（密码）
+
+### 第3步：在【新服务器】上跑两条命令
+
 ```bash
-scp dump.sql root@服务器IP:/root/
-ssh root@服务器IP
+# 导出（从云托管库拉全量，只读操作，线上无任何影响，几分钟）
+docker run --rm mysql:8.0 mysqldump \
+  -h<第1步的公网域名> -P<第1步的端口> \
+  -u<第2步用户名> -p'<第2步密码>' \
+  --single-transaction --routines --triggers \
+  fashion_supplychain > /opt/dump.sql
+
+# 确认文件不为 0 且有几~几百 MB
+ls -lh /opt/dump.sql
+
+# 导入（进新库）
 docker compose -f /opt/fz66666/deploy/lighthouse/docker-compose.yml exec -T mysql \
-  mysql -uroot -p'<密码>' fashion_supplychain < /root/dump.sql
+  mysql -uroot -p'<你的MYSQL_ROOT_PASSWORD>' fashion_supplychain < /opt/dump.sql
 ```
 
-核对：导入后两边行数抽查（t_user / t_production_order）。
+### 第4步：核对（两条数，两边应该一致）
+
+```bash
+# 新服务器上新库：
+docker compose -f /opt/fz66666/deploy/lighthouse/docker-compose.yml exec -T mysql \
+  mysql -uroot -p'<密码>' fashion_supplychain \
+  -e "SELECT COUNT(*) FROM t_user; SELECT COUNT(*) FROM t_production_order;"
+# 对照云托管后台同表数量（或问小云"系统里有多少用户/订单"）
+```
+
+> 导完先别动云托管那边的库——它是回滚保险，观察一周没问题再处理。
 
 ## 4. 启动全栈
 
