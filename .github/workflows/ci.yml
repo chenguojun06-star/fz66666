@@ -13,6 +13,9 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# 2026-09-17：生产环境已迁移至轻量服务器（deploy/lighthouse/）
+# 服务器 autodeploy 机器人每 2 分钟自动拉取 main 并重建变动服务；
+# 原「部署到微信云托管/冒烟测试」job 已移除（详见 git 历史与 deploy/lighthouse/README.md）
 jobs:
   quality-gate:
     name: 质量门禁（Entity-Flyway + SQL校验 + 安全扫描）
@@ -285,92 +288,12 @@ jobs:
         path: frontend/dist
         retention-days: 7
 
-  deploy:
-    name: 部署到微信云托管
-    runs-on: ubuntu-latest
-    needs: [backend-test, frontend-build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    steps:
-    - name: 检出代码
-      uses: actions/checkout@v6
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: 下载前端构建产物
-      uses: actions/download-artifact@v5
-      with:
-        name: frontend-dist
-        path: frontend/dist
-
-    - name: 注入构建时间戳（强制前端容器缓存失效）
-      run: echo "BUILD_DATE=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_ENV
-
-    - name: 写入构建时间到前端Dockerfile构建参数
-      run: |
-        sed -i "s/ARG BUILD_DATE=unknown/ARG BUILD_DATE=$BUILD_DATE/" frontend/Dockerfile
-
-    - name: 部署到腾讯云 CloudBase
-      uses: TencentCloudBase/cloudbase-action@v2
-      with:
-        secretId: ${{ secrets.CLOUDBASE_SECRET_ID }}
-        secretKey: ${{ secrets.CLOUDBASE_SECRET_KEY }}
-        envId: ${{ secrets.CLOUDBASE_ENV_ID }}
-
-  postdeploy-smoke-test:
-    name: 部署后冒烟测试（P0门控）
-    runs-on: ubuntu-latest
-    needs: [deploy]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-    - name: 检出代码
-      uses: actions/checkout@v6
-    - name: 下载前端构建产物（用于部署一致性对比）
-      uses: actions/download-artifact@v5
-      with:
-        name: frontend-dist
-        path: frontend-dist-artifact
-    - name: 提取本次构建主入口文件名
-      # ★ 2026-08-20 部署假成功事故：cloudbase-action 吞掉
-      # "Env Not Exists" 错误 → deploy 绿勾但生产没更新。
-      # 冒烟测试用本次构建的 index-[hash].js 与生产首页对比，
-      # 不一致即部署未生效，强制 CI 变红。
-      run: |
-        EXPECT_INDEX_JS=$(grep -oE 'index-[A-Za-z0-9_-]+\.js' frontend-dist-artifact/index.html | head -1)
-        if [ -z "$EXPECT_INDEX_JS" ]; then
-          echo "::error::无法从 frontend-dist/index.html 提取主入口文件名"
-          exit 1
-        fi
-        echo "本次构建主入口: $EXPECT_INDEX_JS"
-        echo "SMOKE_EXPECT_INDEX_JS=$EXPECT_INDEX_JS" >> $GITHUB_ENV
-    - name: 等待服务启动（120s，Spring Boot启动需70s+）
-      run: sleep 120
-    - name: 运行部署后冒烟测试
-      # ★ 2026-08-20 去掉 continue-on-error：
-      # 旧配置冒烟失败也显示绿勾 → 云端带病运行没人管 → 用户当测试员
-      # 冒烟失败必须红，阻止打标签 + 触发通知告警
-      env:
-        SMOKE_BASE_URL: ${{ secrets.SMOKE_BASE_URL || 'https://api.webyszl.cn' }}
-        SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME }}
-        SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
-        SMOKE_TENANT_ID: ${{ secrets.SMOKE_TENANT_ID || '' }}
-        SMOKE_FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
-        SMOKE_FRONTEND_URL: ${{ secrets.SMOKE_FRONTEND_URL || 'https://www.webyszl.cn' }}
-        SMOKE_MAX_RETRIES: '12'
-        SMOKE_TIMEOUT: '30'
-      run: |
-        if [ -z "$SMOKE_USERNAME" ] || [ -z "$SMOKE_PASSWORD" ]; then
-          echo "::error::SMOKE_USERNAME 或 SMOKE_PASSWORD 未配置，请到 Settings > Secrets and variables > Actions 配置生产环境冒烟测试账号"
-          exit 1
-        fi
-        python3 scripts/postdeploy-smoke-test.py
-
   create-release-tag:
     name: 创建发布标签
     runs-on: ubuntu-latest
     # ★ 2026-08-20 加 postdeploy-smoke-test：
     # 冒烟失败的版本不允许打发布标签（旧逻辑部署成功就打标签，掩盖带病版本）
-    needs: [deploy, postdeploy-smoke-test]
+    needs: [backend-test, frontend-build]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: write
@@ -400,7 +323,7 @@ jobs:
   notify:
     name: 通知结果
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-build, deploy, postdeploy-smoke-test]
+    needs: [backend-test, frontend-build]
     if: always()
 
     steps:
@@ -408,18 +331,14 @@ jobs:
       run: |
         BACKEND="${{ needs.backend-test.result }}"
         FRONTEND="${{ needs.frontend-build.result }}"
-        DEPLOY="${{ needs.deploy.result }}"
-        SMOKE="${{ needs.postdeploy-smoke-test.result }}"
 
         echo "后端测试: $BACKEND"
         echo "前端构建: $FRONTEND"
-        echo "部署结果: $DEPLOY"
-        echo "冒烟测试: $SMOKE"
 
         # ★ 2026-08-20 事故教训：CI 红了没人看 → 云端跑旧代码 → 用户当测试员
         # 任何环节失败都让整个 workflow 显示红叉，强迫推送者确认
         FAILED=0
-        for R in "$BACKEND" "$FRONTEND" "$DEPLOY" "$SMOKE"; do
+        for R in "$BACKEND" "$FRONTEND"; do
           if [[ "$R" == "failure" || "$R" == "cancelled" ]]; then
             FAILED=1
           fi
@@ -430,8 +349,8 @@ jobs:
           echo "╔══════════════════════════════════════════════╗"
           echo "║  ❌ 流水线存在失败环节 — 云端可能不是最新代码  ║"
           echo "╠══════════════════════════════════════════════╣"
-          echo "║  后端编译失败     → deploy 被跳过 → 旧代码    ║"
-          echo "║  冒烟测试失败     → 云端带病运行，立即排查     ║"
+          echo "║  后端编译失败     → 生产不更新 → 旧代码       ║"
+          echo "║  前端构建失败     → 生产不更新 → 旧代码       ║"
           echo "║  请到 Actions 页面查看失败详情并修复后重推     ║"
           echo "╚══════════════════════════════════════════════╝"
           exit 1
