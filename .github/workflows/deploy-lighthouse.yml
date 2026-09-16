@@ -1,0 +1,39 @@
+name: Deploy Lighthouse
+
+# 轻量服务器自动部署：推送后 SSH 到服务器 → 拉代码 → 重建容器
+# 迁移过渡期用 workflow_dispatch 手动触发；DNS 切换后可放开 push 触发（见注释）
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches: [main]   # 切换主用后放开这一段，即恢复"推代码即部署"
+
+concurrency:
+  group: deploy-lighthouse
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH 部署到轻量服务器
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.LIGHTHOUSE_HOST }}
+          username: ${{ secrets.LIGHTHOUSE_USER || 'root' }}
+          key: ${{ secrets.LIGHTHOUSE_SSH_KEY }}
+          script_stop: true
+          script: |
+            cd /opt/fz66666
+            git pull --rebase origin main
+            docker compose -f deploy/lighthouse/docker-compose.yml up -d --build backend frontend
+            echo "=== 等待后端健康检查 ==="
+            for i in $(seq 1 60); do
+              if docker compose -f deploy/lighthouse/docker-compose.yml exec -T backend curl -sf http://localhost:8088/actuator/health >/dev/null 2>&1; then
+                echo "backend healthy (attempt $i)"
+                exit 0
+              fi
+              sleep 10
+            done
+            echo "backend health check timeout"
+            exit 1

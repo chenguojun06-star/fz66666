@@ -1,0 +1,109 @@
+# =====================================================================
+# 轻量服务器一体化部署（D-386 迁移方案）
+# 一台 4核8G 轻量服务器承载：MySQL + Redis + Qdrant + backend + frontend + Caddy(HTTPS边缘)
+# 用法见同目录 README.md；所有密码/密钥放同目录 .env（不入库）
+# =====================================================================
+
+services:
+
+  # ── HTTPS 边缘（自动申请/续期 Let's Encrypt 证书）──
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  # ── PC 管理端前端（静态 + /api /ws 反代由 Caddy 承担，此容器只出静态）──
+  frontend:
+    build: ../../frontend
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: "http://backend:8088"
+    expose:
+      - "80"
+    depends_on:
+      - backend
+
+  # ── Spring Boot 后端 ──
+  backend:
+    build: ../../backend
+    restart: unless-stopped
+    env_file:
+      - .env.backend          # 从云托管控制台整份复制，再按 README 改 DB/Redis/Qdrant 三处指向
+    environment:
+      PORT: "8088"
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: "6379"
+      APP_DB_HOST: mysql
+      APP_DB_PORT: "3306"
+      QDRANT_URL: "http://qdrant:6333"
+      JAVA_OPTS: "-Xmx3g -Xms1g"
+    expose:
+      - "8088"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8088/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 300s   # 给足启动时间（根治云托管探针秒判的坑）
+
+  # ── MySQL 8（生产数据迁移进这里）──
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: fashion_supplychain
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max_allowed_packet=256M
+    volumes:
+      - mysql-data:/var/lib/mysql
+    expose:
+      - "3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # ── Redis 7 ──
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    expose:
+      - "6379"
+
+  # ── Qdrant 向量库（服务器本地磁盘 = 永久持久化，不再随发版清零）──
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    volumes:
+      - qdrant-data:/qdrant/storage
+    expose:
+      - "6333"
+
+volumes:
+  mysql-data:
+  redis-data:
+  qdrant-data:
+  caddy-data:
+  caddy-config:

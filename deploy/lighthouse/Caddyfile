@@ -1,0 +1,18 @@
+# api.webyszl.cn   → 后端（/api、/ws 及其余全部透传）
+# www.webyszl.cn   → PC 前端静态
+# Caddy 自动申请并续期 Let's Encrypt 证书，无需手动管理
+
+api.webyszl.cn {
+	# 小程序/PC 的 WebSocket
+	reverse_proxy /ws/* backend:8088
+	# 其余全部走后端（历史路径兼容：非 /api 前缀的接口也存在）
+	reverse_proxy backend:8088
+}
+
+www.webyszl.cn {
+	reverse_proxy frontend:80
+}
+
+webyszl.cn {
+	redir https://www.webyszl.cn{uri} permanent
+}
