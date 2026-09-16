@@ -5,6 +5,22 @@
 
 ---
 
+## 🚚 生产环境已迁移至轻量服务器（2026-09-17 完成，本节为当前最高优先级上下文）
+
+- **新生产环境**：腾讯云轻量 2核4G（IP 106.55.12.216，广州），`deploy/lighthouse/docker-compose.yml`
+  跑全家桶：caddy(HTTPS自动签) + frontend + backend + mysql8 + redis7 + qdrant
+- **数据已迁移**：438MB 整库（t_user=25 / t_production_order=114 / t_style_info=110 核对一致）
+- **自动部署**：服务器 cron 每 2 分钟 `autodeploy.sh` 检查 main 分支，backend/frontend 变动自动重建
+- **DNS 已切**：api / www.webyszl.cn → 106.55.12.216（DNSPod，A 记录）；Caddy 自动签 Let's Encrypt
+- **云开发体验版 2026-10-16 到期自然退役（不续费）**——期间老云托管 MySQL 保留作回滚保险
+- **⚠️ 切换后只在新系统录数据**（老库新库已分家；若老系统有增量→重跑 migrate-db.sh 覆盖式同步）
+- **⏳ 待办**：建 MySQL 定时备份（cron mysqldump 或轻量快照）；密钥轮换（微信MP Secret/DeepSeek/COS）；
+  删 DNS 的 h5 两条记录；稳定一周后清理云托管
+- **Embedding 已切智谱**：ai.embedding.* 配置（embedding-3，1024 维），硅基流动已弃（余额402）；
+  Qdrant 向量库本地持久化（服务器磁盘，不再随发版清零）
+
+---
+
 ## D-417 手机端「只能看不能办」待办补齐独立处理页（未提交）
 
 **用户诉求**：异常报告/样衣开发、工资结算、物料对账/费用报销、协作任务在手机端只能查看，
