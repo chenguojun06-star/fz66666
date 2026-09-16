@@ -23,17 +23,26 @@ bash bootstrap-server.sh
 
 脚本会装 Docker、克隆仓库到 /opt/fz66666、生成 `.env.backend` 模板后暂停。
 
-## 2. 填环境变量（5 分钟）
+## 2. 填环境变量（实际只需改 2 行）
 
-1. 云托管控制台 → backend → 服务设置 → 环境变量 → **整份复制**
+1. 云托管控制台 → backend → 服务设置 → 环境变量 → **整份复制**（从 SPRING_PROFILES_ACTIVE 到最后一行全选）
 2. 粘贴进服务器 `/opt/fz66666/deploy/lighthouse/.env.backend`
-3. 只需改/确认三行指向（其余 DEEPSEEK_API_KEY、COS、微信配置全部原样）：
-   - `APP_DB_HOST=mysql`、`APP_DB_USERNAME=root`、`APP_DB_PASSWORD=<你定的密码>`
-   - `SPRING_REDIS_HOST=redis`
-   - `QDRANT_URL=http://qdrant:6333`（**必须带 ：6333**）
-4. `echo "MYSQL_ROOT_PASSWORD=同一个密码" > /opt/fz66666/deploy/lighthouse/.env`
+3. **只改这 2 行**（其余一个字不动）：
 
-再跑一次 `bash bootstrap-server.sh` —— 会启动 MySQL/Redis/Qdrant 并等健康。
+```
+# 改这行：数据库指向本机容器（保留末尾的时区参数）
+SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/fashion_supplychain?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+
+# 清空这行：服务器上的 Redis 不设密码（等号后面留空）
+SPRING_REDIS_PASSWORD=
+```
+
+> 不用改的：SPRING_REDIS_HOST 和 QDRANT_URL 会被 docker-compose 自动覆盖成容器地址，改了也白改。
+
+4. `echo "MYSQL_ROOT_PASSWORD=自己定一个强密码" > /opt/fz66666/deploy/lighthouse/.env`
+5. 第 3 步迁移数据时用的数据库账号密码 = 上面抄过的 SPRING_DATASOURCE_USERNAME / SPRING_DATASOURCE_PASSWORD
+
+再跑一次 `bash bootstrap-server.sh` —— 启动 MySQL/Redis/Qdrant 并等健康。
 
 ## 3. 迁移生产数据（手把手版，全程只读不影响线上）
 
