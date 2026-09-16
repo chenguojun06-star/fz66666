@@ -23,7 +23,11 @@ services:
 
   # ── PC 管理端前端（静态 + /api /ws 反代由 Caddy 承担，此容器只出静态）──
   frontend:
-    build: ../../frontend
+    build:
+      context: ../../frontend
+      args:
+        # GIT_COMMIT 由 autodeploy.sh 写入同目录 .env，登录页版本水印据此显示当前 commit
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
     restart: unless-stopped
     environment:
       BACKEND_URL: "http://backend:8088"

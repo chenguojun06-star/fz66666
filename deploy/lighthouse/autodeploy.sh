@@ -19,6 +19,15 @@ git pull --ff-only origin main -q || exit 0
 echo "[$(date '+%F %T')] 检测到更新 $LOCAL..$REMOTE"
 
 cd deploy/lighthouse
+
+# 把刚拉到的 commit 写进 .env，供 compose 构建前端时注入版本水印（登录页"部署版本"）
+COMMIT=$(git -C /opt/fz66666 rev-parse --short HEAD)
+if grep -q '^GIT_COMMIT=' .env 2>/dev/null; then
+  sed -i "s|^GIT_COMMIT=.*|GIT_COMMIT=$COMMIT|" .env || true
+else
+  echo "GIT_COMMIT=$COMMIT" >> .env || true
+fi
+
 SERVICES=""
 RESTART_CADDY=0
 echo "$CHANGED" | grep -q '^backend/'  && SERVICES="$SERVICES backend"

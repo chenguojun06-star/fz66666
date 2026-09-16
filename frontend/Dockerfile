@@ -21,6 +21,11 @@ COPY . .
 ARG BUILD_DATE=unknown
 RUN echo "Build date: $BUILD_DATE"
 
+# 注入版本号：服务器构建上下文没有 .git（COPY . . 只含 frontend/），
+# 由部署脚本经 compose build args 传入；缺省时 vite 兜底为 unknown
+ARG GIT_COMMIT=unknown
+ENV VITE_BUILD_COMMIT=$GIT_COMMIT
+
 # 构建生产包（去掉 console/debugger，代码分割）
 RUN npm run build
 

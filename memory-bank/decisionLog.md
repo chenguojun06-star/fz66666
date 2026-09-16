@@ -1,7 +1,26 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-15（新增 D-417 手机端待办「只能看不能办」补齐五套独立处理页）
+> 最后更新：2026-09-17（新增 D-431 登录页「部署版本」unknown 根治——构建期注入 git commit）
+
+---
+
+## D-431：登录页「部署版本：unknown」—— Docker 构建上下文无 .git，版本号改由构建参数注入（2026-09-17）
+
+**现象**：迁移到轻量服务器后，登录页页脚显示「部署版本：unknown · 构建时间：正常」。
+
+**根因**：`vite.config.ts` 版本号取 `VITE_BUILD_COMMIT || git rev-parse --short HEAD`；服务器端前端是 Docker 构建
+（compose `build: ../../frontend`，上下文只含 frontend/ 目录，`.git` 在仓库根进不了上下文），
+`git rev-parse` 必败 → 兜底 unknown。构建时间正常是因为它是构建瞬间 `new Date()` 生成，不依赖 git。
+本地 dev 有 `.git` 所以一直正常，云端 CI 时代由流水线传 `VITE_BUILD_COMMIT`，迁移后这条链路断了。
+
+**决策**：版本号经「autodeploy → .env → compose args → Dockerfile ARG → Vite define」四级注入：
+1. `autodeploy.sh` 拉代码后把 `git rev-parse --short HEAD` 写入 `deploy/lighthouse/.env`（幂等 sed/append，`|| true` 防断部署）
+2. compose frontend `build.args.GIT_COMMIT: ${GIT_COMMIT:-unknown}`（compose 自动读同目录 .env，手动构建同样生效）
+3. Dockerfile `ARG GIT_COMMIT` + `ENV VITE_BUILD_COMMIT` 置于 `npm run build` 前（ARG 变化自动击穿层缓存强制重构建）
+4. vite 原有 `define.__BUILD_COMMIT__` 不动，本地 dev 路径不受影响
+
+**收益**：页脚版本 = 部署代码的精确 commit，线上问题可用 `git show <commit>` 直接定位；无需改任何业务代码。
 
 ---
 
