@@ -9,7 +9,6 @@ services:
   # ── HTTPS 边缘（自动申请/续期 Let's Encrypt 证书）──
   caddy:
     image: caddy:2-alpine
-    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
