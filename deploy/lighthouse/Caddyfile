@@ -14,7 +14,7 @@ api.webyszl.cn {
 }
 
 db.webyszl.cn {
-	reverse_proxy adminer:8080
+	reverse_proxy phpmyadmin:80
 }
 
 www.webyszl.cn {
