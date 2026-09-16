@@ -1,3 +1,9 @@
+{
+	servers {
+		protocols h1
+	}
+}
+
 api.webyszl.cn {
 	reverse_proxy /ws/* backend:8088 {
 		flush_interval -1
