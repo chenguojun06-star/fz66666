@@ -73,7 +73,12 @@ check_sensitive_files() {
   local bad=0
   # 检查暂存区和已跟踪文件中的敏感文件
   local patterns=(
-    '.env$' '.env\.' '*.pem' '*.key' '*.p12' '*.jks'
+    # ⚠️ 这些是给 grep -E 用的**正则**，不是 glob！
+    # 曾误写成 '*.pem' 等 glob 形式：在正则里 `*` 开头没有可重复的前置字符，
+    # grep 直接报 "repetition-operator operand invalid" 并返回空，
+    # 导致 .pem/.key/.p12/.jks 四类私钥/证书**从未被真正拦截**（空转门控）。
+    # 正确写法用转义的 \. 并以 $ 收尾。
+    '.env$' '.env\.' '\.pem$' '\.key$' '\.p12$' '\.jks$'
     '.github_token' 'token_local' 'secret'
     '\.class$' '\.jar$' '\.war$'
     '\.vsix$' '\.dmg$' '\.exe$'
