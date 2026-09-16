@@ -206,3 +206,7 @@ yizhilian-mini-program/yizhilian-mini-program.design
 
 # AI 助手工作目录（会话记忆/日志，仅本地，不入库）
 .workbuddy-ai/
+
+# 轻量服务器本地密钥配置（不入库）
+deploy/lighthouse/.env
+deploy/lighthouse/.env.backend
