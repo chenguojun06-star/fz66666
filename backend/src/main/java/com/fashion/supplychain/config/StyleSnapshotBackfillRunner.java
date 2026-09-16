@@ -185,6 +185,21 @@ public class StyleSnapshotBackfillRunner implements ApplicationRunner {
                 "UPDATE t_production_order SET status='scrapped', update_time=NOW() "
                 + "WHERE delete_flag=0 AND status='completed' AND IFNULL(completed_quantity,0)=0");
 
+        // 11) D-430：样衣入库状态补推进——存量样衣有 WAREHOUSE_IN 入库扫码记录、但状态停在
+        // PRODUCTION_COMPLETED（早期入库路径未执行 handleWarehouseIn 的状态推进），导致 PC/手机端
+        // 状态不一致、手机端仍显示入库按钮。推进到 COMPLETED 并补 complete_time/review_status，
+        // 与 handleWarehouseIn 的写入口径完全一致；按扫描记录 EXISTS 判定，天然幂等
+        exec("样衣入库状态补推进",
+                "UPDATE t_pattern_production pp "
+                + "SET pp.status = 'COMPLETED', "
+                + "pp.complete_time = COALESCE(pp.complete_time, NOW()), "
+                + "pp.review_status = COALESCE(pp.review_status, 'PENDING'), "
+                + "pp.update_time = NOW() "
+                + "WHERE pp.delete_flag = 0 AND pp.status = 'PRODUCTION_COMPLETED' "
+                + "AND EXISTS (SELECT 1 FROM t_pattern_scan_record r "
+                + "WHERE r.pattern_production_id = pp.id AND r.delete_flag = 0 "
+                + "AND r.operation_type = 'WAREHOUSE_IN')");
+
         log.info("[StyleSnapshotBackfill] 存量款号/编码一致性回填完成");
     }
 
