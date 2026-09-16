@@ -6,6 +6,7 @@ import type { PayrollOperatorProcessSummaryRow } from '@/types/finance';
 import { formatDateTimeSecond } from '@/utils/datetime';
 import dayjs from 'dayjs';
 import { scanTypeText } from './payrollOperatorColumns';
+import { isExternalDelegate } from './delegateUtils';
 import {
   toNumberOrZero,
   getDetailRowKey,
@@ -44,7 +45,7 @@ export function usePayrollActions(deps: PayrollActionDeps) {
         // 导致所有订单都被判为外发工厂、未关单一律不给审核）。
         // 正确字段为 delegateTargetType：none/空=自己完成、internal=内部指派、external=外发工厂。
         // 只有**明确外发工厂**的订单才要求订单已关单。
-        const isExternalFactory = String(row?.delegateTargetType || '').toLowerCase() === 'external';
+        const isExternalFactory = isExternalDelegate(row?.delegateTargetType);
         if (isExternalFactory && !isOrderFrozenByStatus({ status: String(row?.orderStatus || '') })) {
             message.warning('外发工厂订单尚未关单，只有已关单的订单才能审核');
             return;
@@ -77,7 +78,7 @@ export function usePayrollActions(deps: PayrollActionDeps) {
         }).filter(Boolean);
 
         const notFrozenRows = selectedRows.filter((row): row is PayrollOperatorProcessSummaryRow => {
-            const isExternal = String((row as any)?.delegateTargetType || '').toLowerCase() === 'external';
+            const isExternal = isExternalDelegate((row as any)?.delegateTargetType);
             return Boolean(row && isExternal && !isOrderFrozenByStatus({ status: String((row as any)?.orderStatus || '') }));
         });
         const alreadyAuditedRows = selectedRows.filter((row): row is PayrollOperatorProcessSummaryRow => {
@@ -89,7 +90,7 @@ export function usePayrollActions(deps: PayrollActionDeps) {
 
         const eligibleRows = selectedRows.filter((row): row is PayrollOperatorProcessSummaryRow => {
             const approvalId = getDetailApprovalId(row);
-            const isExternal = String((row as any)?.delegateTargetType || '').toLowerCase() === 'external';
+            const isExternal = isExternalDelegate((row as any)?.delegateTargetType);
             return Boolean(
                 row && approvalId &&
                 (!isExternal || isOrderFrozenByStatus({ status: String((row as any)?.orderStatus || '') })) &&

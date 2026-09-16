@@ -1,3 +1,4 @@
+import { normalizeDelegateType } from './delegateUtils';
 import { Tag, Tooltip } from 'antd';
 import { formatDateTime } from '@/utils/datetime';
 import { formatProcessDisplayName } from '@/utils/productionStage';
@@ -86,15 +87,17 @@ export function getDetailBaseInfoColumns(deps: DetailColumnDeps): any[] {
             width: 130,
             ellipsis: true,
             render: (_: unknown, record: any) => {
-                const type = record.delegateTargetType;
+                // D-431：改用 normalizeDelegateType —— 后端权威写入值为大写 'FACTORY'，
+                // 原先只判 'external' 会落到兜底分支显示 "-"（看不到"外发工厂"）
+                const kind = normalizeDelegateType(record.delegateTargetType);
                 const targetName = record.delegateTargetName;
                 const actualOperator = record.actualOperatorName;
 
-                if (!type || type === 'none') {
+                if (kind === 'self') {
                     return <Tag color="default">自己完成</Tag>;
                 }
 
-                if (type === 'internal') {
+                if (kind === 'internal') {
                     return (
                         <Tooltip title={actualOperator && actualOperator !== targetName ? `由 ${actualOperator} 代为操作` : undefined}>
                             <Tag color="processing">内部指派</Tag>
@@ -102,15 +105,11 @@ export function getDetailBaseInfoColumns(deps: DetailColumnDeps): any[] {
                     );
                 }
 
-                if (type === 'external') {
-                    return (
-                        <Tooltip title={actualOperator ? `由 ${actualOperator} 代为录入` : undefined}>
-                            <Tag color="warning">外发工厂</Tag>
-                        </Tooltip>
-                    );
-                }
-
-                return <Tag color="default">-</Tag>;
+                return (
+                    <Tooltip title={actualOperator ? `由 ${actualOperator} 代为录入` : undefined}>
+                        <Tag color="warning">外发工厂</Tag>
+                    </Tooltip>
+                );
             },
         },
         {
