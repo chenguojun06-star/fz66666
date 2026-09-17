@@ -13,6 +13,21 @@ git fetch origin main -q || exit 0
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/main)
 
+# ── 部署结果通知（D-456）──
+# 背景（2026-09-17 事故）：失败/跳过只写服务器本地日志，没人看就等于没有 ——
+# 当日实测内存守卫每轮跳过，**部署静默阻塞 20 分钟无人察觉**（站点正常、水印不变，
+# 从外部完全看不出异常）。故在关键节点加通知。
+# 未配置 NOTIFY_WEBHOOK 时是 no-op；任何情况下都不影响部署流程（见 notify.sh）。
+# ⚠️ 必须用绝对路径：构建段执行前脚本已 `cd deploy/lighthouse`，
+#    相对路径会解析成 deploy/lighthouse/deploy/lighthouse/... 从而静默失效。
+REPO_ROOT=/opt/fz66666
+notify() {
+  local f="$REPO_ROOT/deploy/lighthouse/notify.sh"
+  [ -f "$f" ] || return 0
+  bash "$f" "$1" >/dev/null 2>&1 || true
+  return 0
+}
+
 # ── 全服务在场巡检（D-455，替换 D-433 已退役的 phpMyAdmin 接管逻辑）──
 # 背景：D-433 的接管块用 grep '^  phpmyadmin:' 判定，D-435 移除该服务后永久失配 →
 # 死代码。但它暴露了真问题：autodeploy 只 up backend/frontend，
@@ -63,6 +78,15 @@ CHANGED=$(git diff --name-only "$LOCAL" "$REMOTE" || true)
 AVAIL_MB=$(free -m 2>/dev/null | awk '/^Mem:/{print $7}')
 if [ "${AVAIL_MB:-9999}" -lt 1200 ]; then
   echo "[$(date '+%F %T')] ⚠️ 可用内存仅 ${AVAIL_MB}MB < 1200MB，跳过本轮构建（防过载假死），下轮自动重试"
+  # 通知节流：每小时最多一次，否则每 2 分钟刷屏
+  NSTAMP=/tmp/autodeploy-skip-notify.stamp
+  NLAST=$(cat "$NSTAMP" 2>/dev/null || echo 0)
+  if [ $(( $(date +%s) - NLAST )) -ge 3600 ]; then
+    date +%s > "$NSTAMP" || true
+    notify "⚠️ 服装66666 部署被跳过：可用内存仅 ${AVAIL_MB}MB（阈值 1200MB，防整机假死）。
+积压变更：${LOCAL} → ${REMOTE}，内存回落后每 2 分钟自动重试。
+常见原因：CloudBeaver 等常驻服务吃内存 → sudo docker compose -f deploy/lighthouse/docker-compose.yml stop cloudbeaver"
+  fi
   exit 0
 fi
 
@@ -96,12 +120,15 @@ fi
 if [ -n "$SERVICES" ]; then
   # ── 串行构建（D-453，2026-09-17 P0）：Maven 与 Vite 并行构建曾把 2核4G 全栈机器打到假死，必须逐个来 ──
   # 顺序固定 backend → frontend：后端构建期间旧容器继续服务，新后端先起来健康了，再动前端
+  notify "🚀 服装66666 开始部署 ${LOCAL} → ${REMOTE}（重建：${SERVICES}，可用内存 ${AVAIL_MB}MB）"
   for S in backend frontend; do
     case " $SERVICES " in
       *" $S "*)
         echo "[$(date '+%F %T')] 串行构建 $S ..."
         if ! sudo docker compose up -d --build "$S"; then
           echo "[$(date '+%F %T')] ❌ $S 构建失败，中止本轮（后续轮次重试），旧容器继续服务"
+          notify "❌ 服装66666 部署失败：${S} 构建失败，已中止本轮（旧容器继续服务）。
+目标版本 ${REMOTE}，下轮 cron 会自动重试。"
           exit 1
         fi
         if [ "$S" = "backend" ]; then
@@ -115,6 +142,8 @@ if [ -n "$SERVICES" ]; then
         ;;
     esac
   done
+  notify "✅ 服装66666 部署完成 ${LOCAL} → ${REMOTE}（${SERVICES}）
+登录页底部「部署版本」应显示 ${REMOTE:0:7}"
 else
   echo "[$(date '+%F %T')] 变更不涉及 backend/frontend，跳过构建"
 fi

@@ -131,6 +131,26 @@ Caddy 需要域名解析到服务器才能签证书。**先切 DNS 再启动 Cad
 **判断是否上线**：登录页底部「部署版本：<7位短 commit>」。
 纯 `docs/` / `memory-bank/` 提交**不触发重建**，版本号不变是正常的。
 
+### 🔔 部署结果通知（D-456，强烈建议开启）
+
+autodeploy 的失败/跳过此前**只写服务器本地日志，没人看就等于没有** ——
+2026-09-17 实测内存守卫每轮跳过，**部署静默阻塞 20 分钟无人察觉**
+（站点正常、水印不变，从外部完全看不出异常）。
+
+配置：在服务器 `deploy/lighthouse/.env` 里加一行（该文件已 gitignore，密钥不入库）：
+
+```bash
+NOTIFY_WEBHOOK=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx   # 企业微信群机器人
+# 或 NOTIFY_WEBHOOK=https://sctapi.ftqq.com/SCTxxxx.send                  # Server 酱
+# 或任意接收 POST JSON {"text":"..."} 的地址
+# 可选：NOTIFY_FORMAT=wecom|serverchan|json   默认按 URL 自动嗅探
+```
+
+- 未配置时是 **no-op**（静默成功退出）
+- 通知失败**绝不**影响部署流程（任何情况返回 0）
+- 触发时机：① 内存守卫跳过（每小时最多 1 次，防刷屏）② 开始构建 ③ 构建失败 ④ 构建完成
+- 排查为何没发出：`NOTIFY_DEBUG=1 bash deploy/lighthouse/notify.sh "测试"`
+
 ### ⚠️ `Deploy Lighthouse` workflow 是死的（2026-09-17 核实）
 
 `.github/workflows/deploy-lighthouse.yml` 依赖 `LIGHTHOUSE_HOST` / `LIGHTHOUSE_USER` /
