@@ -157,10 +157,12 @@ export function useMaterialColorCard() {
     return { added: added.length, duplicated, failed, visionError: res.data?.visionError };
   }, [currentCardId, currentItems, reloadCurrentItems, fetchCardList]);
 
+  // D-448：生成物料带内部抬头（MaterialCardView 工具条维护，本地记忆），后端按 抬头+颜色+颜色编号 命名
   const handleGenerateCardMaterials = useCallback(async (card: MaterialColorCard) => {
     try {
       const res = await api.post<{ code: number; data: string[]; message?: string }>(
         `/material-color-card/${card.id}/generate-materials`,
+        { header: localStorage.getItem('colorCardInternalHeader') || '' },
       );
       if (res.code === 200) message.success(`成功生成 ${res.data.length} 条物料到物料资料`);
     } catch (err: any) { message.error(err?.message || '生成失败'); }

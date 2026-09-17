@@ -1,5 +1,5 @@
-import React from 'react';
-import { Button, Card, Tag } from 'antd';
+import React, { useState } from 'react';
+import { Button, Card, Input, Tag, Tooltip } from 'antd';
 import { PlusOutlined, ReloadOutlined, FileTextOutlined, AppstoreAddOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -35,6 +35,8 @@ const MaterialCardView: React.FC<MaterialCardViewProps> = ({
   setCardKeyword, setCardMaterialType, setCardPage, fetchCardList,
   openCardItemsDialog, handleGenerateCardMaterials, openCardEditDialog, openCardCreateDialog, handleCardDelete,
 }) => {
+  // D-448：内部抬头（本地记忆）——生成物料命名 = 内部抬头 + 颜色 + 颜色编号
+  const [internalHeader, setInternalHeader] = useState(() => localStorage.getItem('colorCardInternalHeader') || '');
   return (
     <>
       {/* 卡片视图搜索栏 —— 使用标准 StandardToolbar + StandardSearchBar */}
@@ -70,6 +72,15 @@ const MaterialCardView: React.FC<MaterialCardViewProps> = ({
           }
           right={
             <>
+              <Tooltip title="生成物料命名 = 内部抬头 + 颜色 + 颜色编号（如：东方制衣深桃粉色210）。留空则沿用条目物料名称">
+                <Input
+                  placeholder="内部抬头（生成物料用）"
+                  value={internalHeader}
+                  onChange={(e) => { const v = e.target.value; setInternalHeader(v); localStorage.setItem('colorCardInternalHeader', v); }}
+                  style={{ width: 180 }}
+                  allowClear
+                />
+              </Tooltip>
               <Button icon={<ReloadOutlined />} onClick={fetchCardList}>刷新</Button>
               <Button type="primary" icon={<PlusOutlined />} onClick={openCardCreateDialog}>新建物料色卡</Button>
             </>

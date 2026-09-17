@@ -178,10 +178,14 @@ public class MaterialColorCardController {
     // ==================== 批量生成物料 ====================
 
     @PostMapping("/{cardId}/generate-materials")
-    public Result<List<String>> generateMaterials(@PathVariable String cardId) {
-        List<String> ids = orchestrator.generateMaterialsFromCard(cardId);
+    public Result<List<String>> generateMaterials(@PathVariable String cardId,
+                                                  @RequestBody(required = false) Map<String, Object> body) {
+        String header = body == null || body.get("header") == null ? null : String.valueOf(body.get("header")).trim();
+        List<String> ids = orchestrator.generateMaterialsFromCard(cardId,
+                header != null && !header.isEmpty() ? header : null);
         if (ids != null && !ids.isEmpty()) {
-            materialDatabaseLogAppendHelper.appendOperation(cardId, "从色卡生成物料", ids.size() + " 个");
+            materialDatabaseLogAppendHelper.appendOperation(cardId, "从色卡生成物料",
+                    ids.size() + " 个" + (header != null && !header.isEmpty() ? "（抬头：" + header + "）" : ""));
         }
         return Result.success(ids);
     }

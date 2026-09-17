@@ -847,6 +847,16 @@ public class MaterialColorCardOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public List<String> generateMaterialsFromCard(String cardId) {
+        return generateMaterialsFromCard(cardId, null);
+    }
+
+    /**
+     * D-448：从色卡批量生成物料，支持「内部抬头」命名——
+     * header 有值时物料名称 = 内部抬头 + 颜色 + 颜色编号（如"东方制衣深桃粉色210"）；
+     * 无 header 时保持原行为（沿用条目物料名称）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public List<String> generateMaterialsFromCard(String cardId, String header) {
         MaterialColorCard card = getCardById(cardId);
         List<MaterialColorCardItem> items = itemMapper.selectByCardId(cardId, card.getTenantId());
         if (items == null || items.isEmpty()) {
@@ -866,7 +876,13 @@ public class MaterialColorCardOrchestrator {
             md.setMaterialCode(StringUtils.hasText(item.getMaterialCode())
                     ? item.getMaterialCode()
                     : materialDatabaseService.generateMaterialCode(item.getMaterialType()));
-            md.setMaterialName(item.getMaterialName());
+            if (StringUtils.hasText(header)) {
+                md.setMaterialName(header
+                        + (StringUtils.hasText(item.getColor()) ? item.getColor() : "")
+                        + (StringUtils.hasText(item.getMaterialCode()) ? item.getMaterialCode() : ""));
+            } else {
+                md.setMaterialName(item.getMaterialName());
+            }
             md.setMaterialType(item.getMaterialType());
             md.setColor(item.getColor());
             md.setFabricWidth(item.getFabricWidth());
