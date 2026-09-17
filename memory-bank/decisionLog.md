@@ -91,7 +91,10 @@ cd /opt/fz66666/deploy/lighthouse && sudo docker compose restart caddy
 
 ---
 
-## D-453：autodeploy 并行构建前后端导致 8G 服务器内存耗尽整机假死（2026-09-17，P0）
+## D-453：autodeploy 并行构建前后端导致 2核4G 服务器内存耗尽整机假死（2026-09-17，P0）
+
+> 注：本条原写「8G」，是笔误。实际机型为**腾讯云轻量 2核4G**（IP 106.55.12.216，广州），
+> 见 `activeContext.md`。容量只有原估的一半，正是本事故的必然前提 —— 排查时若按 8G 估算会低估风险。
 
 **事故**：推送双端同改提交 `d6fd94b11` 后整站超时。特征为 TCP 握手通但 SSH banner/TLS 全无响应——
 内核活着、用户态被饿死（内存耗尽 thrashing），腾讯云控制台硬重启后恢复。

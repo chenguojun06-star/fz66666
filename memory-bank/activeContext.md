@@ -19,7 +19,16 @@
 ## 🚚 生产环境已迁移至轻量服务器（2026-09-17 完成，本节为当前最高优先级上下文）
 
 - **新生产环境**：腾讯云轻量 2核4G（IP 106.55.12.216，广州），`deploy/lighthouse/docker-compose.yml`
-  跑全家桶：caddy(HTTPS自动签) + frontend + backend + mysql8 + redis7 + qdrant + phpmyadmin(D-433收编进compose,db.webyszl.cn管理台,autodeploy自动接管手动容器)
+  跑全家桶：caddy(HTTPS自动签) + frontend + backend + mysql8 + redis7 + qdrant + cloudbeaver(D-435 替换 phpMyAdmin，db.webyszl.cn 管理台)
+- **⚠️ db 管理台长期 502 的机制性原因（2026-09-17 查清）**：autodeploy **只** `up -d backend frontend`，
+  **从不拉起新加入 compose 的服务** → CloudBeaver 自 D-435 起容器从未被创建（实测 `up -d` 时输出
+  `Volume ... Created` + `Image Pulled`），`restart: unless-stopped` 对"从未创建过"的容器无能为力。
+  修复方案见 `deploy/lighthouse/autodeploy.sh` 的 D-455 补丁（全服务在场巡检）。
+- **自动部署**：服务器 cron 每 2 分钟 `autodeploy.sh` 检查 main 分支，backend/frontend 变动自动重建
+  - **判断是否上线**：登录页「部署版本：<7位短 commit>」；纯 docs/`memory-bank/` 提交**不触发重建**，版本号不变属正常
+  - **⚠️ 本机无法登服务器**：SSH 是密码登录（非密钥），且仓库 secrets 里没有
+    `LIGHTHOUSE_HOST`/`LIGHTHOUSE_USER`/`LIGHTHOUSE_SSH_KEY`（`deploy-lighthouse.yml` 因此是死的，触发必失败）
+    → 一切服务器侧动作只能靠「改脚本 + push」让 autodeploy 自执行
 - **数据已迁移**：438MB 整库（t_user=25 / t_production_order=114 / t_style_info=110 核对一致）
 - **自动部署**：服务器 cron 每 2 分钟 `autodeploy.sh` 检查 main 分支，backend/frontend 变动自动重建
 - **DNS 已切**：api / www.webyszl.cn → 106.55.12.216（DNSPod，A 记录）；Caddy 自动签 Let's Encrypt
