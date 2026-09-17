@@ -120,7 +120,7 @@
   align-items: center;
   gap: 16rpx;
   padding: 24rpx 24rpx;
-  border-bottom: 1px solid var(--color-border-light, rgba(0, 0, 0, 0.04));
+  border-bottom: 1px solid var(--color-border-light);
 }
 .process-row:last-child {
   border-bottom: none;
@@ -186,11 +186,11 @@
 }
 .process-status--pending {
   color: var(--color-text-tertiary);
-  background: var(--color-bg-secondary, rgba(0, 0, 0, 0.04));
+  background: var(--color-bg-secondary);
 }
 .process-status--claimed {
   color: var(--color-warning);
-  background: var(--color-warning-bg, rgba(255, 160, 30, 0.12));
+  background: var(--color-warning-bg);
 }
 .process-status--mine {
   color: var(--color-primary);
@@ -198,7 +198,7 @@
 }
 .process-status--completed {
   color: var(--color-success);
-  background: var(--color-success-bg, rgba(52, 199, 89, 0.12));
+  background: var(--color-success-bg);
 }
 .process-claim-btn {
   flex-shrink: 0;
@@ -206,14 +206,14 @@
   padding: 6rpx 18rpx;
   border-radius: 999rpx;
   background: var(--color-primary);
-  color: #fff;
-  font-size: 22rpx;
+  color: var(--color-text-white);
+  font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-medium);
   text-align: center;
   line-height: 1.4;
 }
 .process-claim-btn--report {
-  background: var(--color-success, #34c759);
+  background: var(--color-success);
 }
 .process-claim-btn--disabled {
   opacity: 0.5;
@@ -543,9 +543,9 @@
 
 /* D-172：样衣仓为空时的内联提示 */
 .warehouse-empty-tip {
-  font-size: 24rpx;
-  color: #fa8c16;
-  background: rgba(250, 140, 22, 0.08);
+  font-size: var(--font-size-xs);
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
   border-radius: 8rpx;
   padding: 10rpx 16rpx;
   margin-bottom: 8rpx;
@@ -607,9 +607,9 @@
 }
 
 .warehouse-chip-qty {
-  font-size: var(--font-size-2xs, 20rpx);
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
-  font-weight: var(--font-weight-regular, 400);
+  font-weight: var(--font-weight-regular);
 }
 
 .warehouse-chip--full {
@@ -637,7 +637,7 @@
   justify-content: space-between;
   padding: 12rpx 16rpx;
   border-radius: var(--radius-sm);
-  background: var(--color-bg-page, #f5f5f5);
+  background: var(--color-bg-page);
 }
 .sku-info {
   display: flex;
@@ -647,13 +647,13 @@
   min-width: 0;
 }
 .sku-label {
-  font-size: var(--font-size-base, 15px);
-  font-weight: var(--font-weight-medium, 500);
-  color: var(--color-text-primary, #000);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
 }
 .sku-total {
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-tertiary, #999);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 .sku-qty-wrap {
   display: flex;
@@ -665,15 +665,15 @@
   width: 100rpx;
   height: 64rpx;
   text-align: center;
-  border: 1rpx solid var(--input-border, #d9d9d9);
+  border: 1rpx solid var(--input-border);
   border-radius: var(--radius-xs);
-  font-size: var(--font-size-base, 15px);
-  font-weight: var(--font-weight-semibold, 600);
-  background: var(--input-bg, #fff);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  background: var(--input-bg);
 }
 .sku-unit {
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-tertiary, #999);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
 /* ===== 汇总卡片 ===== */
@@ -696,13 +696,13 @@
   padding: 6rpx 0;
 }
 .summary-label {
-  font-size: var(--font-size-sm, 13px);
-  color: var(--color-text-secondary, #666);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 .summary-value {
-  font-size: var(--font-size-base, 15px);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text-primary, #000);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -710,8 +710,8 @@
   margin: 12rpx 20rpx 0;
   padding: 12rpx 20rpx;
   border-radius: 10px;
-  background: var(--color-warning-bg, #fff5e6);
-  color: var(--color-warning, #ff9500);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
   font-size: var(--font-size-sm);
   line-height: 1.6;
 }
@@ -720,12 +720,12 @@
 .process-next-hint {
   margin-top: 12rpx;
   padding: 16rpx 20rpx;
-  background: var(--color-primary-bg, rgba(45, 127, 249, 0.08));
-  border-radius: var(--radius-sm, 8rpx);
+  background: var(--color-primary-bg);
+  border-radius: var(--radius-sm);
 }
 .process-next-hint__text {
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-primary, #2d7ff9);
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
 }
 
 /* --- D-379：领取按颜色勾选（多色可多选，每色填数量，一起领取） --- */
@@ -746,28 +746,28 @@
   gap: 24rpx;
 }
 .claim-color-link {
-  font-size: var(--font-size-sm, 13px);
-  color: var(--color-primary, #2d7ff9);
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
 }
 .claim-color-row {
   display: flex;
   align-items: center;
   padding: 16rpx;
-  border-radius: var(--radius-sm, 6rpx);
-  border: 1rpx solid var(--color-border, #e5e5e5);
-  background: var(--color-bg-card, #ffffff);
+  border-radius: var(--radius-sm);
+  border: 1rpx solid var(--color-border);
+  background: var(--color-bg-card);
   margin-bottom: 12rpx;
 }
 .claim-color-row--active {
-  border-color: var(--color-primary, #2d7ff9);
-  background: var(--color-primary-bg, #eaf3ff);
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
 }
 .claim-color-check {
   width: 36rpx;
   height: 36rpx;
   border-radius: 8rpx;
-  border: 1rpx solid var(--color-border, #e5e5e5);
-  background: var(--color-bg-card, #ffffff);
+  border: 1rpx solid var(--color-border);
+  background: var(--color-bg-card);
   margin-right: 16rpx;
   flex-shrink: 0;
   display: flex;
@@ -775,22 +775,22 @@
   justify-content: center;
 }
 .claim-color-check--on {
-  border-color: var(--color-primary, #2d7ff9);
-  background: var(--color-primary, #2d7ff9);
+  border-color: var(--color-primary);
+  background: var(--color-primary);
 }
 .claim-color-check-icon {
-  font-size: 24rpx;
+  font-size: var(--font-size-xs);
   line-height: 1;
-  color: #ffffff;
+  color: var(--color-text-white);
 }
 .claim-color-name {
   flex: 1;
-  font-size: var(--font-size-base, 14px);
-  color: var(--color-text-primary, #1a1a1a);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
 }
 .claim-color-row--active .claim-color-name {
-  color: var(--color-primary, #2d7ff9);
-  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
 }
 .claim-color-qty-wrap {
   display: flex;
@@ -803,19 +803,19 @@
   height: 56rpx;
   min-height: 56rpx;
   text-align: center;
-  border: 1rpx solid var(--color-border, #e5e5e5);
-  border-radius: var(--radius-sm, 6rpx);
-  background: var(--color-bg-card, #ffffff);
-  font-size: var(--font-size-sm, 13px);
-  color: var(--color-text-primary, #1a1a1a);
+  border: 1rpx solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-card);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
 }
 .claim-color-unit {
-  font-size: var(--font-size-sm, 13px);
-  color: var(--color-text-tertiary, #999999);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
 }
 .claim-color-total {
   margin-top: 8rpx;
-  font-size: var(--font-size-sm, 13px);
-  color: var(--color-text-secondary, #666666);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
   text-align: right;
 }

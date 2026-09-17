@@ -2,33 +2,33 @@
   padding: 24rpx;
   min-height: 100vh;
   box-sizing: border-box;
-  background: var(--color-bg-page, #f2f2f7);
+  background: var(--color-bg-page);
 }
 
 /* 顶部 hero */
 .hero {
-  background: var(--color-bg-card, #ffffff);
+  background: var(--color-bg-card);
   border-radius: 20rpx;
   padding: 28rpx 26rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
 }
 .hero-row { display: flex; align-items: center; gap: 12rpx; margin-bottom: 12rpx; }
 .hero-category {
-  font-size: 22rpx;
-  color: var(--color-primary, #007aff);
-  background: var(--color-info-bg, rgba(0, 122, 255, 0.08));
+  font-size: var(--font-size-2xs);
+  color: var(--color-primary);
+  background: var(--color-info-bg);
   padding: 4rpx 14rpx;
   border-radius: 8rpx;
   font-weight: 600;
 }
-.hero-priority { font-size: 20rpx; color: var(--color-text-secondary, #666); }
-.hero-title { display: block; font-size: 34rpx; font-weight: 700; color: var(--color-text-primary, #111); line-height: 1.4; margin-bottom: 8rpx; }
-.hero-desc { display: block; font-size: 26rpx; color: var(--color-text-secondary, #666); line-height: 1.5; }
+.hero-priority { font-size: var(--font-size-xxs); color: var(--color-text-secondary); }
+.hero-title { display: block; font-size: var(--font-size-lg-xl); font-weight: 700; color: var(--color-text-primary); line-height: 1.4; margin-bottom: 8rpx; }
+.hero-desc { display: block; font-size: var(--font-size-sm); color: var(--color-text-secondary); line-height: 1.5; }
 
 /* 明细卡 */
 .info-card {
   margin-top: 20rpx;
-  background: var(--color-bg-card, #ffffff);
+  background: var(--color-bg-card);
   border-radius: 20rpx;
   padding: 8rpx 26rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
@@ -38,12 +38,12 @@
   justify-content: space-between;
   align-items: flex-start;
   padding: 22rpx 0;
-  border-bottom: 1rpx solid var(--color-border, #eee);
+  border-bottom: 1rpx solid var(--color-border);
 }
 .info-row:last-child { border-bottom: none; }
-.info-label { font-size: 26rpx; color: var(--color-text-disabled, #999); flex-shrink: 0; margin-right: 24rpx; }
-.info-value { font-size: 26rpx; color: var(--color-text-primary, #111); text-align: right; word-break: break-all; }
-.pc-path { font-size: 22rpx; color: var(--color-text-secondary, #666); }
+.info-label { font-size: var(--font-size-sm); color: var(--color-text-disabled); flex-shrink: 0; margin-right: 24rpx; }
+.info-value { font-size: var(--font-size-sm); color: var(--color-text-primary); text-align: right; word-break: break-all; }
+.pc-path { font-size: var(--font-size-2xs); color: var(--color-text-secondary); }
 
 /* 处理区 */
 .action-area { margin-top: 32rpx; }
@@ -52,23 +52,23 @@
   height: 88rpx;
   line-height: 88rpx;
   text-align: center;
-  background: var(--color-primary, #007aff);
-  color: #fff;
-  font-size: 30rpx;
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  font-size: var(--font-size-md-lg);
   font-weight: 600;
   border-radius: 44rpx;
   box-sizing: border-box;
 }
 .action-btn-hover { opacity: 0.85; }
-.action-tip { display: block; margin-top: 16rpx; text-align: center; font-size: 22rpx; color: var(--color-text-disabled, #999); }
+.action-tip { display: block; margin-top: 16rpx; text-align: center; font-size: var(--font-size-2xs); color: var(--color-text-disabled); }
 .no-route-tip {
-  padding: 24rpx; text-align: center; font-size: 26rpx;
-  color: var(--color-text-secondary, #666);
-  background: var(--color-warning-bg, rgba(255, 153, 0, 0.08));
+  padding: 24rpx; text-align: center; font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-warning-bg);
   border-radius: 16rpx;
 }
 
 /* 空态 */
 .empty { display: flex; flex-direction: column; align-items: center; padding-top: 200rpx; gap: 20rpx; }
-.empty-text { font-size: 26rpx; color: var(--color-text-disabled, #999); }
-.back-btn { border: 1rpx solid var(--color-primary, #007aff); color: var(--color-primary, #007aff); border-radius: 32rpx; }
+.empty-text { font-size: var(--font-size-sm); color: var(--color-text-disabled); }
+.back-btn { border: 1rpx solid var(--color-primary); color: var(--color-primary); border-radius: 32rpx; }
