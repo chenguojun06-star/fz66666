@@ -11,7 +11,7 @@ import { useProductInfoData } from './hooks/useProductInfoData';
 import { buildColumns } from './columns';
 import EditModal from './components/EditModal';
 import DetailDrawer from './components/DetailDrawer';
-// D-436：入库/吊牌就地完成 —— 复用成品仓库自由入库弹窗与标签打印页，不再路由跳转
+// D-436：入库/吊牌就地完成 —— 复用商品仓储自由入库弹窗与标签打印页，不再路由跳转
 import FreeInboundModal from '../FinishedInventory/FreeInboundModal';
 import LabelPrint from '../LabelPrint';
 
@@ -63,7 +63,7 @@ const ProductInfoPage: React.FC = () => {
   return (
     <>
       <PageLayout
-        title="成品资料"
+        title="商品资料"
         headerContent={
           <PageStatCards
             cards={statCards}
@@ -156,7 +156,7 @@ const ProductInfoPage: React.FC = () => {
         onSubmit={handleSubmit}
       />
 
-      {/* D-436：入库就地完成 —— 与成品仓库同一套自由入库弹窗 */}
+      {/* D-436：入库就地完成 —— 与商品仓储同一套自由入库弹窗 */}
       <FreeInboundModal
         open={inboundOpen}
         onClose={() => setInboundOpen(false)}

@@ -16,7 +16,7 @@ import type { FinishedInventoryRow } from './flattenBySku';
  * - 顶部 Descriptions 只读区：款号 / 款名 / 商品编码 / 颜色 / 尺码 / 工厂 / 实时库存
  * - 中部：该 SKU 历次入库记录（middle 尺寸表格，不再 small 挤压）
  * - 行 [编辑] → 抽屉内弹出编辑框（库位/库区/单价/备注），不跳转任何页面
- * - 底部 [入库登记] → 复用成品仓库自由入库弹窗（FreeInboundModal 预置当前编码自动带出）
+ * - 底部 [入库登记] → 复用商品仓储自由入库弹窗（FreeInboundModal 预置当前编码自动带出）
  * - 操作日志 → RecordLogDrawer，便于追溯该款的出入库/编辑历史
  */
 interface WarehousingRow {
@@ -307,7 +307,7 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
       </SideDrawer>
 
       {/*
-       * 就地入库：复用成品仓库自由入库弹窗，带入当前商品编码自动添加一行（D-436）。
+       * 就地入库：复用商品仓储自由入库弹窗，带入当前商品编码自动添加一行（D-436）。
        * filter 取值依据（勿凭感觉改）：
        * - module='仓库管理'：AOP 的 resolveModule() 对 /api/warehouse/finished-inventory/*
        *   命中 u.contains("/warehouse/finished") 分支返回 "仓库管理"。

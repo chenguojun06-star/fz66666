@@ -127,6 +127,24 @@ export const useFinishedInventoryActions = (
     setSkuDetails(prev => { const newDetails = [...prev]; newDetails[index] = { ...newDetails[index], priceAdjustmentReason: value }; return newDetails; });
   }, []);
 
+  // D-437：一键按可用库存填满全部商品编码的出库数量
+  const handleFillAllAvailable = useCallback(() => {
+    setSkuDetails(prev => prev.map(item => ({ ...item, outboundQty: item.availableQty ?? 0 })));
+    message.success('已按可用库存填满全部出库数量');
+  }, [message]);
+
+  // D-437：统一单价——一个价应用到全部商品编码（原本有价的行自动记原价，改价原因列照常留痕）
+  const handleApplyUnifiedPrice = useCallback((price: number | null) => {
+    if (price == null || price <= 0) { message.warning('请先输入统一单价'); return; }
+    setSkuDetails(prev => prev.map(item => {
+      const next = { ...item };
+      if (next.originalSalesPrice == null && next.salesPrice != null) next.originalSalesPrice = next.salesPrice;
+      next.salesPrice = price;
+      return next;
+    }));
+    message.success(`已将单价 ${price} 元应用到全部商品编码`);
+  }, [message]);
+
   const handleOutboundConfirm = useCallback(async () => {
     if (outboundSubmittingRef.current) return;
     if (outboundType === 'sales' && !outboundCustomerName.trim()) { message.warning('销售出库请填写客户名称'); return; }
@@ -262,6 +280,7 @@ export const useFinishedInventoryActions = (
     outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress,
     outboundSubmitting,
     handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory,
+    handleFillAllAvailable, handleApplyUnifiedPrice,
     handleViewSkuDetail,
     handleAddStyleRows, handleRemoveStyleFromCart,
   };

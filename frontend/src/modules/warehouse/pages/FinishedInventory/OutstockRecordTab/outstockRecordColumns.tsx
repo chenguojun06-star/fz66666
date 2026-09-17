@@ -1,30 +1,48 @@
 import React from 'react';
-import { Tag } from 'antd';
+import { Button, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
 import { getPlatformTag } from '@/utils/platform';
-import type { OutstockRecord } from './outstockRecordTypes';
-import { outstockTypeMap } from './outstockRecordTypes';
+import type { GroupedOutstock, OutstockRecord } from './outstockRecordTypes';
+import { outstockTypeMap, isReturnedTransferLine } from './outstockRecordTypes';
 
 export type { OutstockRecord } from './outstockRecordTypes';
 
-export function getOutstockRecordColumns(handlers: {
-  handleApprove: (id: number) => void;
-  handleShare: (record: OutstockRecord) => void;
-  handleTransferInbound?: (record: OutstockRecord) => void;
-  handleLog?: (record: OutstockRecord) => void;
-  handlePrint?: (record: OutstockRecord) => void;
-}): ColumnsType<OutstockRecord> {
+/** D-437：审核状态统一渲染——returned=全部明细已回入库的调拨单 */
+function ApprovalTag({ status }: { status: GroupedOutstock['status'] }) {
+  if (status === 'returned') return <Tag color="cyan">已回入库</Tag>;
+  if (status === 'approved') return <Tag color="green">已审核</Tag>;
+  return <Tag color="orange">待审核</Tag>;
+}
+
+/**
+ * D-437：出库记录主表 = 一行一张出库单（按 outstockNo 聚合）。
+ * 点单号/明细 → 查看该单全部明细；审核/打印按单操作。
+ */
+export function getGroupedOutstockColumns(handlers: {
+  handleOpenDetail: (group: GroupedOutstock) => void;
+  handleApproveGroup: (group: GroupedOutstock) => void;
+  handleShare: (group: GroupedOutstock) => void;
+  handleLog: (group: GroupedOutstock) => void;
+  handlePrint: (group: GroupedOutstock) => void;
+}): ColumnsType<GroupedOutstock> {
   return [
     {
       title: '出库单号',
       dataIndex: 'outstockNo',
-      width: 160,
-      render: (text) => (
-        <span className="u-fw-600" style={{ color: 'var(--primary-color)' }}>{text}</span>
+      width: 170,
+      render: (text: string, group) => (
+        <Button
+          type="link"
+          size="small"
+          style={{ padding: 0, fontFamily: 'var(--font-family-mono, monospace)', fontWeight: 600, height: 'auto' }}
+          onClick={() => handlers.handleOpenDetail(group)}
+        >
+          {text}
+        </Button>
       ),
     },
     {
@@ -38,55 +56,38 @@ export function getOutstockRecordColumns(handlers: {
       },
     },
     {
-      title: '款号 / 款名',
-      width: 180,
-      render: (_, record) => (
+      title: '款式 / 明细',
+      key: 'styles',
+      width: 220,
+      render: (_, group) => (
         <div>
-          <div className="u-fw-600">{record.styleNo || '-'}</div>
-          <div className="u-fs-var--font-size-sm" style={{ color: 'var(--neutral-text-disabled)' }}>
-            {record.styleName || ''}
+          <div className="u-fw-600">
+            {group.styleNos[0] || '-'}
+            {group.styleNos.length > 1 ? <Tag color="purple" style={{ marginLeft: 6 }}>混{group.styleNos.length}款</Tag> : null}
+          </div>
+          <div className="u-fs-12" style={{ color: 'var(--neutral-text-disabled)' }}>
+            {group.styleNames[0] || ''} · 共 {group.skuCount} 个商品编码
           </div>
         </div>
       ),
     },
     {
-      title: '商品编码',
-      dataIndex: 'skuCode',
-      width: 150,
-      render: (text) => text || '-',
-    },
-    {
-      title: '颜色',
-      dataIndex: 'color',
-      width: 90,
-      render: (text) => text ? <Tag color="blue">{text}</Tag> : '-',
-    },
-    {
-      title: '尺码',
-      dataIndex: 'size',
-      width: 80,
-      render: (text) => text ? <Tag color="green">{text}</Tag> : '-',
-    },
-    {
       title: '出库数量',
-      dataIndex: 'outstockQuantity',
+      key: 'totalQuantity',
       width: 100,
       align: 'center',
-      render: (val) => (
-        <strong style={{ color: 'var(--primary-color)', fontSize: 'var(--font-size-md)' }}>
-          {val ?? 0}
-        </strong>
+      render: (_, group) => (
+        <strong style={{ color: 'var(--primary-color)', fontSize: 'var(--font-size-md)' }}>{group.totalQuantity}</strong>
       ),
     },
     {
-      title: '单价',
-      dataIndex: 'salesPrice',
-      width: 100,
-      align: 'center' as const,
-      render: (val: number) => {
-        const sale = Number(val) || 0;
-        return <span className="u-fw-600" style={{ color: 'var(--color-error)' }}>{formatMoney(sale)}</span>;
-      },
+      title: '出库金额',
+      key: 'totalAmount',
+      width: 110,
+      align: 'right',
+      render: (_, group) => group.totalAmount != null ? (
+        <span className="u-fw-600" style={{ color: 'var(--color-error)' }}>{formatMoney(Number(group.totalAmount))}</span>
+      ) : '-',
     },
     {
       title: '客户名称',
@@ -99,24 +100,6 @@ export function getOutstockRecordColumns(handlers: {
       dataIndex: 'customerPhone',
       width: 120,
       render: (text) => text || '-',
-    },
-    {
-      title: '出库金额',
-      dataIndex: 'totalAmount',
-      width: 110,
-      align: 'right',
-      render: (val) => val != null ? (
-        <span className="u-fw-600" style={{ color: 'var(--color-error)' }}>{formatMoney(Number(val))}</span>
-      ) : '-',
-    },
-    {
-      title: '已收金额',
-      dataIndex: 'paidAmount',
-      width: 110,
-      align: 'right',
-      render: (val) => val != null ? (
-        <span className="u-fw-600" style={{ color: 'var(--color-success)' }}>{formatMoney(Number(val))}</span>
-      ) : '-',
     },
     {
       title: '收款状态',
@@ -136,14 +119,14 @@ export function getOutstockRecordColumns(handlers: {
     {
       title: '物流信息',
       width: 180,
-      render: (_, record) => {
-        if (!record.trackingNo && !record.expressCompany) {
+      render: (_, group) => {
+        if (!group.trackingNo && !group.expressCompany) {
           return <span style={{ color: 'var(--neutral-text-disabled)' }}>未填写</span>;
         }
         return (
-          <div className="u-fs-var--font-size-sm">
-            {record.expressCompany && <div>快递: <Tag>{record.expressCompany}</Tag></div>}
-            {record.trackingNo && <div>单号: <span style={{ color: 'var(--primary-color)' }}>{record.trackingNo}</span></div>}
+          <div className="u-fs-12">
+            {group.expressCompany && <div>快递: <Tag>{group.expressCompany}</Tag></div>}
+            {group.trackingNo && <div>单号: <span style={{ color: 'var(--primary-color)' }}>{group.trackingNo}</span></div>}
           </div>
         );
       },
@@ -170,25 +153,11 @@ export function getOutstockRecordColumns(handlers: {
       width: 90,
     },
     {
-      title: '结算时间',
-      dataIndex: 'settlementTime',
-      width: 160,
-      render: (text) => text ? formatDateTime(text) : '-',
-    },
-    {
       title: '审核状态',
-      dataIndex: 'approvalStatus',
+      key: 'approvalStatus',
       width: 100,
       align: 'center',
-      render: (text, record) => {
-        // D-363g：已回入库的调拨出库终态展示——不参与审核与结算
-        if (record.outstockType === 'transfer_out' && record.transferInboundStatus === 'INBOUND') {
-          return <Tag color="cyan">已回入库</Tag>;
-        }
-        return text === 'approved'
-          ? <Tag color="green">已审核</Tag>
-          : <Tag color="orange">待审核</Tag>;
-      },
+      render: (_, group) => <ApprovalTag status={group.status} />,
     },
     {
       title: '出库时间',
@@ -199,50 +168,101 @@ export function getOutstockRecordColumns(handlers: {
     {
       title: '操作',
       key: 'actions',
-      width: 160,
-      render: (_, record) => {
-        const actions: RowAction[] = [];
-        // D-363g：已回入库的调拨出库不可审核（货已回仓，不推结算）
-        const returnedTransfer = record.outstockType === 'transfer_out' && record.transferInboundStatus === 'INBOUND';
-        if (record.approvalStatus !== 'approved' && !returnedTransfer) {
-          actions.push({
-            key: 'approve',
-            label: '审核',
-            primary: true,
-            onClick: () => handlers.handleApprove(record.id),
-          });
+      width: 180,
+      fixed: 'right' as const,
+      render: (_, group) => {
+        const actions: RowAction[] = [
+          { key: 'detail', label: '明细', primary: true, onClick: () => handlers.handleOpenDetail(group) },
+        ];
+        if (group.status === 'pending') {
+          actions.push({ key: 'approve', label: '审核', onClick: () => handlers.handleApproveGroup(group) });
         }
-        // D-360n：调拨出库且未回入 → 提供「回入库」（调入方确认收货）
+        actions.push(
+          { key: 'print', label: '打印', onClick: () => handlers.handlePrint(group) },
+          { key: 'share', label: '分享', onClick: () => handlers.handleShare(group) },
+          { key: 'log', label: '日志', onClick: () => handlers.handleLog(group) },
+        );
+        return <RowActions actions={actions} />;
+      },
+    },
+  ];
+}
+
+/** 出库单明细行（详情抽屉内）：一码一行 + 回入库入口 */
+export function getOutstockLineColumns(handlers: {
+  handleTransferInbound?: (record: OutstockRecord) => void;
+}): ColumnsType<OutstockRecord> {
+  return [
+    {
+      title: '商品编码',
+      dataIndex: 'skuCode',
+      width: 200,
+      render: (text) => <span style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{text || '-'}</span>,
+    },
+    {
+      title: '款号 / 款名',
+      width: 190,
+      render: (_, record) => (
+        <div>
+          <div className="u-fw-600">{record.styleNo || '-'}</div>
+          <div className="u-fs-12" style={{ color: 'var(--neutral-text-disabled)' }}>{record.styleName || ''}</div>
+        </div>
+      ),
+    },
+    {
+      title: '颜色',
+      dataIndex: 'color',
+      width: 90,
+      render: (text) => text ? <Tag color="blue">{text}</Tag> : '-',
+    },
+    {
+      title: '尺码',
+      dataIndex: 'size',
+      width: 80,
+      render: (text) => text ? <Tag color="green">{text}</Tag> : '-',
+    },
+    {
+      title: '出库数量',
+      dataIndex: 'outstockQuantity',
+      width: 100,
+      align: 'center',
+      render: (val) => <strong style={{ color: 'var(--primary-color)' }}>{val ?? 0}</strong>,
+    },
+    {
+      title: '单价',
+      dataIndex: 'salesPrice',
+      width: 100,
+      align: 'center' as const,
+      render: (val: number) => <span className="u-fw-600" style={{ color: 'var(--color-error)' }}>{formatMoney(Number(val) || 0)}</span>,
+    },
+    {
+      title: '出库金额',
+      dataIndex: 'totalAmount',
+      width: 110,
+      align: 'right',
+      render: (val) => val != null ? formatMoney(Number(val)) : '-',
+    },
+    {
+      title: '状态',
+      key: 'lineStatus',
+      width: 100,
+      align: 'center',
+      render: (_, record) => {
+        if (isReturnedTransferLine(record)) return <Tag color="cyan">已回入库</Tag>;
+        return record.approvalStatus === 'approved' ? <Tag color="green">已审核</Tag> : <Tag color="orange">待审核</Tag>;
+      },
+    },
+    {
+      title: '操作',
+      key: 'lineActions',
+      width: 100,
+      render: (_, record) => {
         if (handlers.handleTransferInbound
           && record.outstockType === 'transfer_out'
           && record.transferInboundStatus !== 'INBOUND') {
-          actions.push({
-            key: 'transfer-inbound',
-            label: '回入库',
-            onClick: () => handlers.handleTransferInbound!(record),
-          });
+          return <Button size="small" type="link" style={{ padding: 0 }} onClick={() => handlers.handleTransferInbound!(record)}>回入库</Button>;
         }
-        actions.push({
-          key: 'share',
-          label: '分享',
-          onClick: () => handlers.handleShare(record),
-        });
-        if (handlers.handleLog) {
-          actions.push({
-            key: 'log',
-            label: '日志',
-            onClick: () => handlers.handleLog!(record),
-          });
-        }
-        if (handlers.handlePrint) {
-          actions.push({
-            key: 'print',
-            label: '打印',
-            // D-363h：整单打印——同一出库单号的全部明细（多码数/多款）打在一张纸上
-            onClick: () => handlers.handlePrint!(record),
-          });
-        }
-        return <RowActions actions={actions} />;
+        return null;
       },
     },
   ];

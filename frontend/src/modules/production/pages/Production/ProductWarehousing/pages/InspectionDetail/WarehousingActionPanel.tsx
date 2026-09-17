@@ -140,7 +140,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
       {/* D-360y：没有成品仓时引导去库位地图新建（与物料仓口径一致） */}
       {areas.length === 0 && (
         <Alert type="warning" showIcon style={{ marginBottom: 12 }}
-          title="还没有成品仓库"
+          title="还没有商品仓储"
           description={<span>请先到「库位地图」新建成品仓并划分库位，再回来入库。<Button type="link" size="small" style={{ padding: 0 }} onClick={() => navigate('/warehouse/location-map')}>去库位地图新建 →</Button></span>}
         />
       )}

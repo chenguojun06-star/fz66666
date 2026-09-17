@@ -248,7 +248,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.ecommerceOrders} element={<RouteErrorBoundary pageName="电商订单"><Suspense fallback={routeFallback}><EcommerceOrders /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.inventoryCheck} element={<RouteErrorBoundary pageName="库存盘点"><Suspense fallback={routeFallback}><InventoryCheck /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.labelPrint} element={<RouteErrorBoundary pageName="标签打印"><Suspense fallback={routeFallback}><LabelPrint /></Suspense></RouteErrorBoundary>} />
-          <Route path={paths.productInfo} element={<RouteErrorBoundary pageName="成品资料"><Suspense fallback={routeFallback}><ProductInfo /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.productInfo} element={<RouteErrorBoundary pageName="商品资料"><Suspense fallback={routeFallback}><ProductInfo /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.warehouseLocationMap} element={<RouteErrorBoundary pageName="库位地图"><Suspense fallback={routeFallback}><WarehouseLocationMap /></Suspense></RouteErrorBoundary>} />
           {/* 旧「色卡本」页面已下线，统一入口为物料新增(物料资料库)的供应商色卡视图 */}
           <Route path={paths.colorCard} element={<Navigate to={paths.materialDatabase} replace />} />

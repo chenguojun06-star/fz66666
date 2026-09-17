@@ -32,7 +32,7 @@ const EditModal: React.FC<EditModalProps> = ({
 }) => {
   return (
     <ResizableModal
-      title={editingItem?.id ? '编辑成品资料' : '新增成品资料'}
+      title={editingItem?.id ? '编辑商品资料' : '新增商品资料'}
       open={open}
       onCancel={onCancel}
       width="40vw"

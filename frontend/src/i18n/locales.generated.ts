@@ -94,7 +94,7 @@ export const LOCALES = {
         "warehouseDashboard": "数据看板",
         "materialInventory": "物料仓储",
         "materialDatabase": "物料新增",
-        "finishedInventory": "成品仓库",
+        "finishedInventory": "商品仓储",
         "sampleInventory": "样衣库存",
         "materialReconciliation": "物料对账",
         "payrollOperatorSummary": "工资结算",

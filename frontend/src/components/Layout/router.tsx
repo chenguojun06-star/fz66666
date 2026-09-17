@@ -82,7 +82,7 @@ function resolveRecentTitle(basePath: string | undefined, pathname: string, lang
   if (base === '/finance/employee-advance') return '员工借支';
   if (base === '/finance/tax-export') return '财税导出';
   if (base === '/finance/dashboard') return '财务总览';
-  if (base === '/warehouse/product-info') return '成品资料';
+  if (base === '/warehouse/product-info') return '商品资料';
   if (base === '/warehouse/label-print') return '标签打印';
   if (base === '/warehouse/inventory-check') return '库存盘点';
   if (base === '/production/picking') return '物料领料';

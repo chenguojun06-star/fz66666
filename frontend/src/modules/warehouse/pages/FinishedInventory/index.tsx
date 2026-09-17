@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Button, Space, Input, Select, Row, Col, Drawer, Tag } from 'antd';
+import { Card, Button, Space, Input, InputNumber, Select, Row, Col, Drawer, Tag } from 'antd';
 import { HistoryOutlined, ScanOutlined, InboxOutlined } from '@ant-design/icons';
 import QrcodeOutboundModal from './QrcodeOutboundModal';
 import OutstockRecordTab from './OutstockRecordTab';
@@ -32,7 +32,7 @@ const _FinishedInventory: React.FC = () => {
   const [qrcodeOutboundOpen, setQrcodeOutboundOpen] = useState(false);
   const [scanOperationOpen, setScanOperationOpen] = useState(false);
   const [freeInboundOpen, setFreeInboundOpen] = useState(false);
-  // D-362i：成品仓库全页日志侧滑看板（含出库/入库/扫码流水）
+  // D-362i：商品仓储全页日志侧滑看板（含出库/入库/扫码流水）
   const [pageLogOpen, setPageLogOpen] = useState(false);
   const [inboundPage, setInboundPage] = useState(1);
   const [inboundPageSize, setInboundPageSize] = useState(20);
@@ -44,7 +44,9 @@ const _FinishedInventory: React.FC = () => {
   const directShipOrderNo = String(searchParams.get('orderNo') || '').trim();
   const isDirectShipEntry = String(searchParams.get('directShip') || '') === '1';
   const [directShipMode, setDirectShipMode] = React.useState(false);
-  const { outboundModal, inboundHistoryModal, skuDetailModal, skuDetails, inboundHistory, outstockTotal, outboundType, setOutboundType, outboundReason, setOutboundReason, outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo, outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName, outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress, outboundSubmitting, handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory, handleViewSkuDetail, handleAddStyleRows, handleRemoveStyleFromCart } = useFinishedInventoryActions(rawDataSource, loadData, { directShip: directShipMode });
+  const { outboundModal, inboundHistoryModal, skuDetailModal, skuDetails, inboundHistory, outstockTotal, outboundType, setOutboundType, outboundReason, setOutboundReason, outboundProductionOrderNo, setOutboundProductionOrderNo, outboundTrackingNo, setOutboundTrackingNo, outboundExpressCompany, setOutboundExpressCompany, outboundCustomerName, setOutboundCustomerName, outboundCustomerPhone, setOutboundCustomerPhone, outboundShippingAddress, setOutboundShippingAddress, outboundSubmitting, handleOutbound, handleSKUQtyChange, handleSKUSalesPriceChange, handleSKUPriceReasonChange, handleOutboundConfirm, handleViewInboundHistory, handleViewSkuDetail, handleAddStyleRows, handleRemoveStyleFromCart, handleFillAllAvailable, handleApplyUnifiedPrice } = useFinishedInventoryActions(rawDataSource, loadData, { directShip: directShipMode });
+  // D-437：统一单价输入
+  const [unifiedPrice, setUnifiedPrice] = React.useState<number | null>(null);
 
   // 30秒轮询自动刷新成品库存
   // 注意：fetchFn 必须返回非 null/undefined 值，否则 syncManager 会判定为"空数据"并累计 3 次后自动停止
@@ -129,7 +131,7 @@ const _FinishedInventory: React.FC = () => {
   };
   // 关抽屉清搜索残留
   React.useEffect(() => {
-    if (!outboundModal.visible) { setStyleSearchText(''); setStyleSearchOptions([]); }
+    if (!outboundModal.visible) { setStyleSearchText(''); setStyleSearchOptions([]); setUnifiedPrice(null); }
   }, [outboundModal.visible]);
   // D-228：一款多码时拆成每个商品编码一行，款级信息由 rowSpan 纵向合并，
   // 避免 15 个编码堆在同一单元格把行高撑爆（列表密密麻麻的根因）
@@ -238,7 +240,7 @@ const _FinishedInventory: React.FC = () => {
                     </Col>
                   </Row>
                 </Card>
-                <div className="u-mb-8 u-d-flex u-ai-center u-gap-12">
+                <div className="u-mb-8 u-d-flex u-ai-center u-gap-12 u-fwrap-wrap">
                   <span className="u-fw-600">商品编码明细</span>
                   {!directShipMode && (
                     <Select
@@ -255,6 +257,12 @@ const _FinishedInventory: React.FC = () => {
                       notFoundContent={styleSearching ? '搜索中…' : (styleSearchText ? '无匹配款号' : '输入款号/款名搜索全库')}
                     />
                   )}
+                  {/* D-437：一键按可用库存填满出库数量 + 统一单价批量应用 */}
+                  <Button size="small" onClick={handleFillAllAvailable}>一键全部库存</Button>
+                  <Space.Compact size="small">
+                    <InputNumber size="small" style={{ width: 110 }} min={0} precision={2} value={unifiedPrice} onChange={(v) => setUnifiedPrice(v)} placeholder="统一单价" />
+                    <Button size="small" onClick={() => handleApplyUnifiedPrice(unifiedPrice)}>单价应用到全部</Button>
+                  </Space.Compact>
                   {cartStyleNos.length > 1 && (
                     <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
                       已混 {cartStyleNos.length} 个款，确认后合并为一张出库单
@@ -409,7 +417,7 @@ const _FinishedInventory: React.FC = () => {
       <RecordLogDrawer
         open={pageLogOpen}
         onClose={() => setPageLogOpen(false)}
-        title="成品仓库操作日志"
+        title="商品仓储操作日志"
         filter={{ module: '仓库管理' }}
       />
 

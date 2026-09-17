@@ -240,7 +240,7 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
     setSkuList([]);
   };
 
-  // 就地入库：打开自由入库弹窗（复用成品仓库同款组件），不再跳转生产入库页
+  // 就地入库：打开自由入库弹窗（复用商品仓储同款组件），不再跳转生产入库页
   const handleInbound = (_record: StyleInfo) => {
     setInboundOpen(true);
   };

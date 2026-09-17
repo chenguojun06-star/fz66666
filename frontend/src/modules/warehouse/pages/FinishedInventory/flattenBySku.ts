@@ -2,7 +2,7 @@ import React from 'react';
 import type { FinishedInventory } from './finishedInventoryTypes';
 
 /**
- * D-228：成品仓库主表「一个商品编码一行」。
+ * D-228：商品仓储主表「一个商品编码一行」。
  *
  * 背景：原实现把一款下的所有商品编码纵向堆叠在同一个单元格里，
  * 遇到多码款（如 HYY202601111 有 15 个编码）行高被撑得极高，列表密密麻麻无法阅读。

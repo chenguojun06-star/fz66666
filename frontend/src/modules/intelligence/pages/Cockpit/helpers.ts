@@ -56,5 +56,5 @@ export const MODULE_TITLES: Record<WidgetKey, string> = {
   sample: '样衣开发',
   production: '大货生产',
   procurement: '物料采购',
-  warehouse: '成品仓库',
+  warehouse: '商品仓储',
 };

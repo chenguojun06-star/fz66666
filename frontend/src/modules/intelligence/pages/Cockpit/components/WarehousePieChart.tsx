@@ -174,7 +174,7 @@ const WarehousePieChart: React.FC<WarehousePieChartProps> = ({ mode = 'sidebar',
     <div className="warehouse-pie-wrapper">
       <PieChartCard
         mode={mode}
-        title="成品仓库"
+        title="商品仓储"
         total={stats.totalQty}
         inProgress={stats.totalPendingInbound}
         completed={stats.totalInStock}
