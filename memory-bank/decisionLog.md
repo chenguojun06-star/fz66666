@@ -35,6 +35,20 @@
 **上线**：`237487e97`。19:56 推送 → 20:03:49 autodeploy 串行构建完成，**端到端 7 分钟**，
 构建期间 `www` 全程 200 —— 实测验证 D-453 的串行改造 + 内存守卫有效。
 
+**附带收益（回归面已全量核查，2026-09-17 晚）**：把「空内容返回 `""`」改成「返回 `null`」，
+实际修掉了一个隐藏更深的缺陷 —— 原 `chatWithVisionFailover` 里是
+`if (result != null) return result;`，而 `""` **非 null**，
+所以**某个视觉模型返回空内容时会立刻当作成功返回，后面的备用模型根本不会被尝试**，
+多模型 failover 形同虚设。现在返回 null → 真正触发下一个模型。
+
+回归面核查结论（**无需额外修复**）：全部 7 个两参 `chatWithVision` 调用点均 null-safe ——
+`StyleDocOcrOrchestrator`(×3) / `ExpenseDocOrchestrator` / `MaterialPurchaseDocOrchestrator`
+用 `aiRaw == null || aiRaw.isBlank()` 判定；`StyleDifficultyOrchestrator` / `QdrantService`
+用 `!= null && !isBlank()`；`LegacyInferenceAdapter` 判定后置 `success=false` 并透传
+`getLastVisionError()`；`MaterialColorCardOrchestrator` 的两个 JSON 辅助方法
+（`extractJson:514` 有 `if (text == null) return null`、`parseJsonObject:694` 走
+`StringUtils.hasText`）都自带 null 守卫。
+
 ---
 
 ## 运维事实：`Deploy Lighthouse` workflow 是死的（2026-09-17 核实）
