@@ -118,7 +118,22 @@ if [ "${AVAIL_MB:-9999}" -lt 1200 ]; then
   exit 0
 fi
 
-git pull --ff-only origin main -q || exit 0
+# ── 拉取代码（D-458：失败必须可见）──
+# 原实现 `git pull --ff-only origin main -q || exit 0` **完全静默** ——
+# 2026-09-17 实测：服务器上存在一个手工放置的未跟踪文件 deploy/lighthouse/backup-db.sh，
+# 而 main 分支新增了同名文件 → git 拒绝覆盖 → 每次 pull 都 `Aborting`，
+# 日志里重复刷了 10+ 次却无人察觉，部署自 21:29 起停摆。
+# 现在：捕获并打印原始报错 + 发通知 + 明确给出处置办法。
+if ! PULL_ERR=$(git pull --ff-only origin main 2>&1); then
+  echo "[$(date '+%F %T')] ❌ git pull 失败："
+  echo "$PULL_ERR"
+  notify "❌ 服装66666 部署停摆：git pull --ff-only 失败。
+最常见原因：**服务器上存在未跟踪的同名文件**（有人手工放上去的），
+git 拒绝覆盖 → 每轮 pull 都 Aborting。处置：把冲突文件移走即可恢复。
+原始报错：
+$PULL_ERR"
+  exit 0
+fi
 echo "[$(date '+%F %T')] 检测到更新 $LOCAL..$REMOTE"
 
 cd deploy/lighthouse

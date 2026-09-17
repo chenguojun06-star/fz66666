@@ -149,7 +149,7 @@ cd /opt/fz66666 && sudo bash -x deploy/lighthouse/autodeploy.sh 2>&1 | tail -60
 | 3 | `flock -n 9` | 上一轮卡住持有锁 → 后续每轮立即退出 | `ps -ef \| grep autodeploy` |
 | 4 | `git fetch` | git 的 **dubious ownership** 校验（repo 属主≠执行身份）直接拒绝 | `sudo -u ubuntu git -C /opt/fz66666 status` |
 | 5 | `git fetch origin main` | 网络/凭证问题（注意用 **cron 同一身份**验证，`sudo` 走的是 root 的密钥） | `sudo -u ubuntu git -C /opt/fz66666 fetch origin main` |
-| 6 | `git pull --ff-only` | **本地分叉**时失败 | `git -C /opt/fz66666 status -sb` |
+| 6 | `git pull --ff-only` | ① **本地分叉**；② **服务器上存在未跟踪的同名文件** → git 拒绝覆盖，每轮 `Aborting`（2026-09-17 真实卡点，静默刷了 10+ 次） | `git -C /opt/fz66666 status --short` 看 `??` 项，与 `git diff --name-only A B` 比对 |
 | 7 | 内存守卫 | available < 1200MB 跳过（**先量再说**） | `free -m` 看 available |
 | 8 | 本就无需重建 | 纯 `docs/`、`memory-bank/` 提交不重建，水印不变是正常的 | `git diff --name-only A B` |
 
