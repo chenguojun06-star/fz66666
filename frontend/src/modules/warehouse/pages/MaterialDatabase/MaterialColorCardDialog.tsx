@@ -19,9 +19,47 @@ interface MaterialColorCardDialogProps {
   onOk: () => void;
 }
 
+const LAST_SUPPLIER_KEY = 'lastColorCardSupplier';
+
 const MaterialColorCardDialog: React.FC<MaterialColorCardDialogProps> = ({
   open, currentCard, cardForm, coverImageFiles, setCoverImageFiles, uploadCardImage, onCancel, onOk,
 }) => {
+  // D-446：快速添加——新建时自动预填上次用的供应商（名称/联系人/电话），少填一半表单
+  React.useEffect(() => {
+    if (open && !currentCard?.id) {
+      try {
+        const last = JSON.parse(localStorage.getItem(LAST_SUPPLIER_KEY) || 'null');
+        if (last?.supplierName && !cardForm.getFieldValue('supplierName')) {
+          cardForm.setFieldsValue({
+            supplierName: last.supplierName,
+            supplierId: last.supplierId,
+            supplierContactPerson: last.supplierContactPerson,
+            supplierContactPhone: last.supplierContactPhone,
+            unit: !cardForm.getFieldValue('unit') ? last.unit : cardForm.getFieldValue('unit'),
+          });
+        }
+      } catch { /* 忽略本地缓存异常 */ }
+    }
+  }, [open, currentCard, cardForm]);
+
+  const handleSupplierChange = (_value: any, option: any) => {
+    cardForm.setFieldsValue({
+      supplierId: option?.supplierId,
+      supplierContactPerson: option?.supplierContactPerson,
+      supplierContactPhone: option?.supplierContactPhone,
+    });
+    // 记忆本次供应商，供下次快速添加预填
+    try {
+      localStorage.setItem(LAST_SUPPLIER_KEY, JSON.stringify({
+        supplierName: _value,
+        supplierId: option?.supplierId,
+        supplierContactPerson: option?.supplierContactPerson,
+        supplierContactPhone: option?.supplierContactPhone,
+        unit: cardForm.getFieldValue('unit'),
+      }));
+    } catch { /* ignore */ }
+  };
+
   return (
     <SideDrawer
       title={currentCard?.id ? '编辑物料色卡' : '新建物料色卡'}
@@ -97,13 +135,7 @@ const MaterialColorCardDialog: React.FC<MaterialColorCardDialogProps> = ({
         >
           <SupplierSelect
             placeholder="请选择供应商"
-            onChange={(_value, option) => {
-              cardForm.setFieldsValue({
-                supplierId: (option as any)?.supplierId,
-                supplierContactPerson: (option as any)?.supplierContactPerson,
-                supplierContactPhone: (option as any)?.supplierContactPhone,
-              });
-            }}
+            onChange={handleSupplierChange}
           />
         </Form.Item>
 

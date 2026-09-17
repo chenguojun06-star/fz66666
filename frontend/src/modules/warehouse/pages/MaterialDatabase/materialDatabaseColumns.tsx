@@ -18,11 +18,13 @@ export interface MaterialColumnActions {
   handleDisable: (record: MaterialDatabase) => void;
   handleEnable: (record: MaterialDatabase) => void;
   viewColorItems: (record: MaterialDatabase) => void;
+  /** D-445：多供应商比价（色卡报价 + 采购成交价） */
+  handlePriceCompare?: (record: MaterialDatabase) => void;
   user: any;
 }
 
 export const getMaterialDatabaseColumns = (actions: MaterialColumnActions): ColumnsType<MaterialDatabase> => {
-  const { openDialog, handleComplete, handleDelete, handleReturn, handleDisable, handleEnable, viewColorItems, user } = actions;
+  const { openDialog, handleComplete, handleDelete, handleReturn, handleDisable, handleEnable, viewColorItems, handlePriceCompare, user } = actions;
 
   return [
     {
@@ -101,6 +103,10 @@ export const getMaterialDatabaseColumns = (actions: MaterialColumnActions): Colu
         const isCompleted = record.status === 'completed';
         const isDisabled = record.disabled === 1;
         const moreItems: MenuProps['items'] = [];
+        // D-445：多供应商比价（色卡报价 + 采购成交价）
+        if (handlePriceCompare) {
+          moreItems.push({ key: 'price-compare', label: '多供应商比价', onClick: () => handlePriceCompare(record) });
+        }
         // 备注统一收敛到「更多」里查看，避免列表被长文本撑开
         if (record.remark) {
           moreItems.push({

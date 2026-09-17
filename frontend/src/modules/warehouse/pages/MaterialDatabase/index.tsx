@@ -26,6 +26,7 @@ import MaterialFormDrawer from './MaterialFormDrawer';
 import MaterialColorCardDialog from './MaterialColorCardDialog';
 import MaterialColorCardItemsModal from './MaterialColorCardItemsModal';
 import MaterialColorItemsModal from './MaterialColorItemsModal';
+import PriceComparisonDrawer from './PriceComparisonDrawer';
 
 const MaterialDatabasePage: React.FC = () => {
   const { isMobile } = useViewport();
@@ -122,8 +123,14 @@ const MaterialDatabasePage: React.FC = () => {
     }
   }, []);
 
+  // D-445：多供应商比价抽屉（色卡报价 + 采购成交价）
+  const [priceCompare, setPriceCompare] = useState<{ open: boolean; keyword: string }>({ open: false, keyword: '' });
+  const handlePriceCompare = React.useCallback((record: MaterialDatabase) => {
+    setPriceCompare({ open: true, keyword: String(record.materialName || record.materialCode || '') });
+  }, []);
+
   const columns = getMaterialDatabaseColumns({
-    openDialog, handleComplete, handleDelete, handleReturn, handleDisable, handleEnable, viewColorItems, user,
+    openDialog, handleComplete, handleDelete, handleReturn, handleDisable, handleEnable, viewColorItems, handlePriceCompare, user,
   });
 
   // ===== 打印功能（抽取到 useMaterialPrint） =====
@@ -331,6 +338,12 @@ const MaterialDatabasePage: React.FC = () => {
       />
 
       {/* ===== 色卡本颜色详情弹窗（抽取为 MaterialColorItemsModal） ===== */}
+      <PriceComparisonDrawer
+        open={priceCompare.open}
+        keyword={priceCompare.keyword}
+        onClose={() => setPriceCompare({ open: false, keyword: '' })}
+      />
+
       <MaterialColorItemsModal
         open={colorItemsVisible}
         loading={colorItemsLoading}

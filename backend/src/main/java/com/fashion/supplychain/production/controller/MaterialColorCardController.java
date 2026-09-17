@@ -49,6 +49,12 @@ public class MaterialColorCardController {
         return Result.success(orchestrator.listCards(keyword, materialType, page, pageSize));
     }
 
+    /** D-445：多供应商比价（色卡报价 + 采购成交价，按单价升序） */
+    @GetMapping("/price-comparison")
+    public Result<List<Map<String, Object>>> priceComparison(@RequestParam String keyword) {
+        return Result.success(orchestrator.priceComparison(keyword));
+    }
+
     @GetMapping("/{id}")
     public Result<MaterialColorCardOrchestrator.CardWithItems> getDetail(@PathVariable String id) {
         return Result.success(orchestrator.getCardDetail(id));

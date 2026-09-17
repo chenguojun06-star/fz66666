@@ -737,4 +737,88 @@ public class MaterialColorCardOrchestrator {
         public List<MaterialColorCardItem> getItems() { return items; }
         public void setItems(List<MaterialColorCardItem> items) { this.items = items; }
     }
+
+    // ==================== D-445：多供应商比价（色卡报价 + 采购到货真实价） ====================
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.fashion.supplychain.production.mapper.MaterialPurchaseMapper materialPurchaseMapper;
+
+    /**
+     * 多供应商比价：按物料名称模糊匹配，聚合两个价格源——
+     * ①供应商色卡条目（报价口径，按色卡带出供应商）②物料采购到货记录（成交口径，含实际数量）。
+     * 返回按单价升序的扁平列表，前端渲染比价抽屉。
+     */
+    public List<Map<String, Object>> priceComparison(String keyword) {
+        String kw = keyword == null ? "" : keyword.trim();
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (kw.isEmpty()) {
+            return result;
+        }
+
+        // 源1：色卡条目报价
+        List<MaterialColorCardItem> items = itemMapper.selectList(
+                new LambdaQueryWrapper<MaterialColorCardItem>()
+                        .like(MaterialColorCardItem::getMaterialName, kw)
+                        .last("LIMIT 100"));
+        if (!items.isEmpty()) {
+            List<String> cardIds = items.stream()
+                    .map(MaterialColorCardItem::getMaterialColorCardId)
+                    .filter(java.util.Objects::nonNull)
+                    .distinct()
+                    .collect(java.util.stream.Collectors.toList());
+            Map<String, MaterialColorCard> cardMap = new HashMap<>();
+            if (!cardIds.isEmpty()) {
+                for (MaterialColorCard c : cardMapper.selectBatchIds(cardIds)) {
+                    cardMap.put(c.getId(), c);
+                }
+            }
+            for (MaterialColorCardItem it : items) {
+                if (it.getUnitPrice() == null) continue;
+                MaterialColorCard card = cardMap.get(it.getMaterialColorCardId());
+                Map<String, Object> row = new HashMap<>();
+                row.put("source", "色卡报价");
+                row.put("supplierName", card != null ? card.getSupplierName() : null);
+                row.put("cardName", card != null ? card.getCardName() : null);
+                row.put("materialName", it.getMaterialName());
+                row.put("color", it.getColor());
+                row.put("specifications", it.getSpecifications());
+                row.put("fabricComposition", it.getFabricComposition());
+                row.put("unitPrice", it.getUnitPrice());
+                result.add(row);
+            }
+        }
+
+        // 源2：采购到货成交价
+        try {
+            List<com.fashion.supplychain.production.entity.MaterialPurchase> purchases =
+                    materialPurchaseMapper.selectList(
+                            new LambdaQueryWrapper<com.fashion.supplychain.production.entity.MaterialPurchase>()
+                                    .like(com.fashion.supplychain.production.entity.MaterialPurchase::getMaterialName, kw)
+                                    .isNotNull(com.fashion.supplychain.production.entity.MaterialPurchase::getUnitPrice)
+                                    .last("LIMIT 100"));
+            for (com.fashion.supplychain.production.entity.MaterialPurchase p : purchases) {
+                Map<String, Object> row = new HashMap<>();
+                row.put("source", "采购成交");
+                row.put("supplierName", p.getSupplierName());
+                row.put("cardName", null);
+                row.put("materialName", p.getMaterialName());
+                row.put("color", null);
+                row.put("specifications", p.getSpecifications());
+                row.put("fabricComposition", null);
+                row.put("unitPrice", p.getUnitPrice());
+                row.put("purchaseQuantity", p.getPurchaseQuantity());
+                row.put("purchaseNo", p.getPurchaseNo());
+                result.add(row);
+            }
+        } catch (Exception e) {
+            log.warn("[MaterialColorCard] 比价查询采购记录失败（不阻断色卡报价返回）: {}", e.getMessage());
+        }
+
+        result.sort((a, b) -> {
+            BigDecimal pa = (BigDecimal) a.get("unitPrice");
+            BigDecimal pb = (BigDecimal) b.get("unitPrice");
+            return pa.compareTo(pb);
+        });
+        return result;
+    }
 }
