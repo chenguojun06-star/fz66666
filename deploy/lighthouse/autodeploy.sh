@@ -20,6 +20,14 @@ REMOTE=$(git rev-parse origin/main)
 # 且 restart:unless-stopped 对"从未创建过"的容器无能为力）。
 # 改为通用巡检：把 compose 里已定义但未运行的服务补起。幂等、不构建、放在版本判断前每轮重试。
 # 注意：backend/frontend 有独立的串行构建流程（见下方），此处跳过，避免无 --build 启动失败。
+#
+# ⚠️ 按需服务白名单（SWEEP_SKIP）—— 必须有，否则会跟"有意停掉的服务"打架：
+#   cloudbeaver 是查库工具、不在业务链路上。2核4G 上它常驻会吃掉内存余量，
+#   把下方内存守卫顶到阈值以下 → **autodeploy 每轮都跳过 → 部署被永久阻塞**
+#   （2026-09-17 实测：启动 CloudBeaver 后 20 分钟无任何部署落地）。
+#   故 CloudBeaver 改为按需启动：`docker compose up -d cloudbeaver`（用完 `stop`）。
+#   运维若手工 `docker compose stop <服务>`，也应把该服务名加到这里，否则会被自动拉起。
+SWEEP_SKIP="cloudbeaver"
 COMPOSE="deploy/lighthouse/docker-compose.yml"
 if [ -f "$COMPOSE" ]; then
   DEFINED=$(sudo docker compose -f "$COMPOSE" config --services 2>/dev/null || true)
@@ -27,6 +35,7 @@ if [ -f "$COMPOSE" ]; then
   MISSING=""
   for S in $DEFINED; do
     case "$S" in backend|frontend) continue ;; esac
+    case " $SWEEP_SKIP " in *" $S "*) continue ;; esac
     echo "$RUNNING" | grep -qx "$S" || MISSING="$MISSING $S"
   done
   if [ -n "$MISSING" ]; then

@@ -160,6 +160,12 @@ Caddy 需要域名解析到服务器才能签证书。**先切 DNS 再启动 Cad
 - **CloudBeaver**（DBeaver 官方 Web 版）跑在 compose 里（`cloudbeaver` 服务，端口 8978），Caddy 反代对外提供 HTTPS 入口 db.webyszl.cn，**不直接开端口**
 - 只允许内网连库（`jdbc:mysql://mysql:3306`），CloudBeaver → MySQL 流量不出服务器；管理台设置持久化在 `cloudbeaver-data` 卷
 - D-435 起替换原 phpMyAdmin（更现代：暗色模式/SQL 自动补全/手机浏览器可用）；phpMyAdmin 容器已退役
+- ⚠️ **CloudBeaver 建议按需启动，不要常驻**：它是 Java 应用，在 2核4G 上会吃掉内存余量，
+  把 `autodeploy.sh` 的内存守卫（available <1200MB 跳过）顶到阈值以下 →
+  **autodeploy 每轮都跳过 → 所有部署被永久阻塞**（2026-09-17 实测：启动后 20 分钟无任何部署落地）。
+  按需启动：`sudo docker compose up -d cloudbeaver`；用完停掉：`sudo docker compose stop cloudbeaver`
+- 它已在 `autodeploy.sh` 的 `SWEEP_SKIP` 名单里，**不会被"全服务在场巡检"自动拉起**
+  （否则会跟有意停掉它的操作形成每 2 分钟一次的拉锯）
 - **首次使用**：① 打开 db.webyszl.cn → 按向导创建管理员账号（自己起，记住即可）→ ② 左侧点「服装66666 业务库」→ 输一次 MySQL root 密码（服务器 `.env` 的 `MYSQL_ROOT_PASSWORD`）并勾选保存
 - 预置连接配置：`cloudbeaver/conf/initial-data-sources.conf`（**不含密码**，密码首次连接时输入；若预置连接未出现，在界面里 Add Connection 选 MySQL 手动加一次：host 填 `mysql`）
 - 第一次打开库会下载 MySQL 驱动（约 10~30 秒），属正常
