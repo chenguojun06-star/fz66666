@@ -44,6 +44,7 @@ interface UseProductInfoDataReturn {
   setInboundOpen: React.Dispatch<React.SetStateAction<boolean>>;
   tagPrintOpen: boolean;
   setTagPrintOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  tagPrintStyleNo: string;
   // D-438：抽屉编辑态
   drawerEditing: boolean;
   cancelDrawerEdit: () => void;
@@ -83,6 +84,8 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
   // D-436：入库/吊牌在当前页就地完成（原实现 navigate 跳生产入库页/标签打印页）
   const [inboundOpen, setInboundOpen] = useState(false);
   const [tagPrintOpen, setTagPrintOpen] = useState(false);
+  /** D-442：吊牌打印带入的款号（内嵌标签打印页自动搜索定位当前款） */
+  const [tagPrintStyleNo, setTagPrintStyleNo] = useState('');
   // D-438：详情抽屉编辑态——表单融入抽屉本体，不再弹第二个窗口
   const [drawerEditing, setDrawerEditing] = useState(false);
 
@@ -284,8 +287,9 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
     setInboundOpen(true);
   };
 
-  // 就地吊牌：抽屉内嵌完整标签打印页，不再跳转
-  const handlePrintTag = (_record: StyleInfo) => {
+  // 就地吊牌：抽屉内嵌完整标签打印页，不再跳转；带当前款号自动搜索
+  const handlePrintTag = (record: StyleInfo) => {
+    setTagPrintStyleNo(String(record?.styleNo || ''));
     setTagPrintOpen(true);
   };
 
@@ -321,6 +325,7 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
     setInboundOpen,
     tagPrintOpen,
     setTagPrintOpen,
+    tagPrintStyleNo,
     drawerEditing,
     cancelDrawerEdit,
     refreshSkuList,

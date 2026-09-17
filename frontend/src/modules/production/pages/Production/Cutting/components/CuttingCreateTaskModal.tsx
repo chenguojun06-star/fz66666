@@ -14,10 +14,11 @@ interface Props {
   createTask: CuttingCreateTaskState;
 }
 
-/** D-354 竖排字段包装：文字在上、输入框在下，与正常下单（OrderCreateModal）同一套观感 */
+/** D-354 竖排字段包装：文字在上、输入框在下，与正常下单（OrderCreateModal）同一套观感
+ *  D-442：标签色从 rgba(0,0,0,0.65) 提到 primary 文字色 + 加粗——用户反馈"颜色不清晰、看着不舒服" */
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div className="u-d-flex u-fd-column u-gap-4" style={{ minWidth: 0 }}>
-    <span className="u-fs-13" style={{ color: 'rgba(0,0,0,0.65)', lineHeight: '20px' }}>{label}</span>
+    <span className="u-fs-13" style={{ color: 'var(--color-text-primary)', fontWeight: 500, lineHeight: '20px' }}>{label}</span>
     {children}
   </div>
 );

@@ -15,7 +15,8 @@ const PRINT_TYPE_HINT: Record<string, string> = {
   washlabel: '缝在衣服内侧的标签：面料成分 + 洗护说明图标。',
 };
 
-const LabelPrint: React.FC = () => {
+/** D-442：initialKeyword —— 从商品资料点「吊牌」进来时自动带上当前款搜索，不再让用户二次搜索 */
+const LabelPrint: React.FC<{ initialKeyword?: string }> = ({ initialKeyword }) => {
   const {
     keyword, setKeyword,
     loading,
@@ -51,6 +52,18 @@ const LabelPrint: React.FC = () => {
     handleClear,
     ptLabel,
   } = useLabelPrintData();
+
+  // D-442：带初始关键词进入 → 自动搜索定位当前款（首个结果即选中，见 handleSearch 内 setSelectedOrder(first)）
+  const initKwRef = React.useRef('');
+  React.useEffect(() => {
+    const kw = (initialKeyword || '').trim();
+    if (kw && initKwRef.current !== kw) {
+      initKwRef.current = kw;
+      setKeyword(kw);
+      void handleSearch(kw);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialKeyword]);
 
   return (
     <div style={{ padding: 16 }}>

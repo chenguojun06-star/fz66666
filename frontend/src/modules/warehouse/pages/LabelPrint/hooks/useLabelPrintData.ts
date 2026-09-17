@@ -132,11 +132,13 @@ export const useLabelPrintData = () => {
     } catch (e: any) { message.error(e.message || '设置失败'); }
   }, [message, loadTemplates]);
 
-  const handleSearch = useCallback(async () => {
-    if (!keyword.trim()) { message.warning('请输入订单号或款号'); return; }
+  // D-442：支持外部直接传关键词（吊牌从商品资料带入当前款，免二次搜索）
+  const handleSearch = useCallback(async (kwArg?: string) => {
+    const kw = (kwArg ?? keyword).trim();
+    if (!kw) { message.warning('请输入订单号或款号'); return; }
     setLoading(true);
     try {
-      const res = await api.get('/production/order/list', { params: { keyword: keyword.trim(), page: 1, pageSize: 20 } });
+      const res = await api.get('/production/order/list', { params: { keyword: kw, page: 1, pageSize: 20 } });
       const data = res?.data?.data || res?.data || {};
       const records: any[] = data.records || (Array.isArray(data) ? data : []);
       if (records.length === 0) { message.info('未找到订单'); setOrders([]); setSelectedOrder(null); return; }

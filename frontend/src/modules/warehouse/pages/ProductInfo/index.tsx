@@ -48,6 +48,7 @@ const ProductInfoPage: React.FC = () => {
     setInboundOpen,
     tagPrintOpen,
     setTagPrintOpen,
+    tagPrintStyleNo,
     drawerEditing,
     cancelDrawerEdit,
     refreshSkuList,
@@ -175,16 +176,16 @@ const ProductInfoPage: React.FC = () => {
         onSuccess={() => setInboundOpen(false)}
       />
 
-      {/* D-436：吊牌就地完成 —— 抽屉内嵌完整标签打印页（每次打开重新挂载，状态干净） */}
+      {/* D-436/D-442：吊牌就地完成 —— 抽屉内嵌完整标签打印页，自动搜索当前款（每次打开重新挂载，状态干净） */}
       {tagPrintOpen && (
         <Drawer
-          title="吊牌打印"
+          title={`吊牌打印${tagPrintStyleNo ? ` - ${tagPrintStyleNo}` : ''}`}
           width="92%"
           open
           onClose={() => setTagPrintOpen(false)}
           styles={{ body: { padding: 0 } }}
         >
-          <LabelPrint />
+          <LabelPrint initialKeyword={tagPrintStyleNo} />
         </Drawer>
       )}
     </>

@@ -257,11 +257,11 @@ const _FinishedInventory: React.FC = () => {
                       notFoundContent={styleSearching ? '搜索中…' : (styleSearchText ? '无匹配款号' : '输入款号/款名搜索全库')}
                     />
                   )}
-                  {/* D-437：一键按可用库存填满出库数量 + 统一单价批量应用 */}
-                  <Button size="small" onClick={handleFillAllAvailable}>一键全部库存</Button>
-                  <Space.Compact size="small">
-                    <InputNumber size="small" style={{ width: 110 }} min={0} precision={2} value={unifiedPrice} onChange={(v) => setUnifiedPrice(v)} placeholder="统一单价" />
-                    <Button size="small" onClick={() => handleApplyUnifiedPrice(unifiedPrice)}>单价应用到全部</Button>
+                  {/* D-437/D-442：一键按可用库存填满出库数量 + 统一单价批量应用（统一 middle 尺寸消除高低差） */}
+                  <Button onClick={handleFillAllAvailable}>一键全部库存</Button>
+                  <Space.Compact>
+                    <InputNumber style={{ width: 130 }} min={0} precision={2} value={unifiedPrice} onChange={(v) => setUnifiedPrice(v)} placeholder="统一单价" />
+                    <Button onClick={() => handleApplyUnifiedPrice(unifiedPrice)}>单价应用到全部</Button>
                   </Space.Compact>
                   {cartStyleNos.length > 1 && (
                     <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>

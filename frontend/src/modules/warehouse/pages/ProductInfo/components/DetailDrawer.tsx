@@ -114,6 +114,24 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
 }) => {
   const d = drawerRecord;
   const [activeSection, setActiveSection] = useState('base');
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+
+  // D-442：滚动联动左侧锚点高亮（此前只有点击导航会高亮，滚动内容时导航不跟随）
+  const handleContentScroll = () => {
+    const c = scrollRef.current;
+    if (!c) return;
+    const cTop = c.getBoundingClientRect().top;
+    let current: string = SECTIONS[0].key;
+    for (const s of SECTIONS) {
+      const el = c.querySelector(`#pinfo-sec-${s.key}`) as HTMLElement | null;
+      if (el && el.getBoundingClientRect().top - cTop <= 90) current = s.key;
+    }
+    setActiveSection(current);
+  };
+
+  React.useEffect(() => {
+    if (open) setActiveSection('base');
+  }, [open, editing]);
 
   const goSection = (key: string) => {
     setActiveSection(key);
@@ -153,7 +171,11 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
       }
     >
       {d && (
-        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+        <div
+          ref={scrollRef}
+          onScroll={handleContentScroll}
+          style={{ display: 'flex', gap: 16, alignItems: 'flex-start', maxHeight: 'calc(100vh - 170px)', overflowY: 'auto', paddingRight: 4 }}
+        >
           <SectionNav active={activeSection} onGo={goSection} />
           <div style={{ flex: 1, minWidth: 0 }}>
             {editing && form ? (
