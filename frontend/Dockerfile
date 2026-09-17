@@ -26,6 +26,9 @@ RUN echo "Build date: $BUILD_DATE"
 ARG GIT_COMMIT=unknown
 ENV VITE_BUILD_COMMIT=$GIT_COMMIT
 
+# D-453：限制 Node 构建堆，防止 esbuild/rollup 峰值在 4G 生产机上与后端/Maven 抢内存打挂整机
+ENV NODE_OPTIONS="--max-old-space-size=1024"
+
 # 构建生产包（去掉 console/debugger，代码分割）
 RUN npm run build
 

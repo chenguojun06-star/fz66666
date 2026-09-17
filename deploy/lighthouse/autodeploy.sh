@@ -32,6 +32,15 @@ fi
 [ "$LOCAL" = "$REMOTE" ] && exit 0
 
 CHANGED=$(git diff --name-only "$LOCAL" "$REMOTE" || true)
+
+# ── 资源守卫（D-453，2026-09-17 P0 事故教训）──
+# 构建极耗内存（Maven ~2G + Vite ~1.5G），而机器上还跑着全栈；可用内存不足时跳过本轮，防整机假死
+AVAIL_MB=$(free -m 2>/dev/null | awk '/^Mem:/{print $7}')
+if [ "${AVAIL_MB:-9999}" -lt 1200 ]; then
+  echo "[$(date '+%F %T')] ⚠️ 可用内存仅 ${AVAIL_MB}MB < 1200MB，跳过本轮构建（防过载假死），下轮自动重试"
+  exit 0
+fi
+
 git pull --ff-only origin main -q || exit 0
 echo "[$(date '+%F %T')] 检测到更新 $LOCAL..$REMOTE"
 
@@ -54,12 +63,26 @@ echo "$CHANGED" | grep -q '^deploy/lighthouse/docker-compose.yml$' && RESTART_CA
 echo "$CHANGED" | grep -q '^deploy/lighthouse/' && SERVICES="$SERVICES backend frontend"
 
 if [ -n "$SERVICES" ]; then
-  sudo docker compose up -d --build $SERVICES
-  for i in $(seq 1 30); do
-    if sudo docker compose exec -T backend curl -sf http://localhost:8088/actuator/health >/dev/null 2>&1; then
-      echo "[$(date '+%F %T')] ✅ backend healthy"; break
-    fi
-    sleep 10
+  # ── 串行构建（D-453，2026-09-17 P0）：Maven 与 Vite 并行构建曾把 8G 全栈机器打到假死，必须逐个来 ──
+  # 顺序固定 backend → frontend：后端构建期间旧容器继续服务，新后端先起来健康了，再动前端
+  for S in backend frontend; do
+    case " $SERVICES " in
+      *" $S "*)
+        echo "[$(date '+%F %T')] 串行构建 $S ..."
+        if ! sudo docker compose up -d --build "$S"; then
+          echo "[$(date '+%F %T')] ❌ $S 构建失败，中止本轮（后续轮次重试），旧容器继续服务"
+          exit 1
+        fi
+        if [ "$S" = "backend" ]; then
+          for i in $(seq 1 30); do
+            if sudo docker compose exec -T backend curl -sf http://localhost:8088/actuator/health >/dev/null 2>&1; then
+              echo "[$(date '+%F %T')] ✅ backend healthy"; break
+            fi
+            sleep 10
+          done
+        fi
+        ;;
+    esac
   done
 else
   echo "[$(date '+%F %T')] 变更不涉及 backend/frontend，跳过构建"

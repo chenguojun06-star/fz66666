@@ -49,7 +49,8 @@ services:
       APP_DB_HOST: mysql
       APP_DB_PORT: "3306"
       QDRANT_URL: "http://qdrant:6333"
-      JAVA_OPTS: "-Xmx3g -Xms1g"
+      # D-453：4G 内存机上 -Xmx3g 与 OS+MySQL+构建抢内存（事故根因之一），降到 1536m；当前实测 RSS 1.2G 足够
+      JAVA_OPTS: "-Xmx1536m -Xms512m"
     expose:
       - "8088"
     depends_on:

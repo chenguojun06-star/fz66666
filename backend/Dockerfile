@@ -2,6 +2,10 @@
 FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
+# D-453：限制 Maven 构建 JVM 堆。2核4G 生产机上旧后端容器构建期间不停机，
+# 不封顶的 Maven 峰值可达 1.5~2G，与常驻容器叠加曾耗尽 4G 内存+swap 导致整机假死。
+ENV MAVEN_OPTS="-Xmx1280m -XX:MaxMetaspaceSize=320m -XX:+UseSerialGC"
+
 # 使用阿里云 Maven 镜像，大幅加快云端构建时依赖下载速度
 COPY maven-settings.xml /root/.m2/settings.xml
 

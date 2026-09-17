@@ -1,7 +1,20 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-17（色卡拍照一键识别/批量传图/翻页器修复/85%大弹窗/hover书本预览）
+> 最后更新：2026-09-17（🚨P0 D-453 自动部署内存耗尽事故：网站已重启恢复，修复待安全上线）
+
+---
+
+## 🚨 P0 事故处理中：D-453 自动部署并行构建打挂服务器（2026-09-17）
+
+- **现象**：推送 `d6fd94b11`（backend+frontend 双端同改）后整站超时；TCP 通但 SSH banner/TLS 无响应（用户态内存饥饿）
+- **根因**：**机型实为 2核4G**（非 4核8G），autodeploy `compose up --build backend frontend` 并行构建（Maven+Vite 峰值 6~8G），
+  叠加常驻 backend -Xmx3g/MySQL/CloudBeaver/Qdrant，击穿 3.6G RAM + 1.9G swap（/swap.img 镜像自带）→ 整机假死
+- **现状**：用户已控制台硬重启，网站恢复（**旧版本**，d6fd94b11 未上线）；我本机两把 SSH 公钥均未授权
+- **已做**：autodeploy.sh 本地修好（available<1200MB 跳过 + backend/frontend 串行 + 健康门控），**暂未推送**；
+  decisionLog D-453 + optimization-log-2026-09-17-deploy-oom-freeze.md 已记录
+- **待办**：① 用户网页终端：停 cron + 4G swap + 授权 SSH 公钥 → ② 我推送修复、降 JVM -Xmx1536m、手动串行部署 →
+  ③ 验证版本水印后恢复 cron；中期建议升级 4核8G
 
 ---
 
