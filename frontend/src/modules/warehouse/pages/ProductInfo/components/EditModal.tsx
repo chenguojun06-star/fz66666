@@ -1,16 +1,13 @@
 import React from 'react';
-import { Button, Form, Input, Select, InputNumber, Row, Col } from 'antd';
-import type { FormInstance } from 'antd';
+import { Button } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
-import ImageUploadBox from '@/components/common/ImageUploadBox';
-import api from '@/utils/api';
-import { CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategory';
 import { StyleInfo } from '@/types/style';
+import ProductInfoForm from './ProductInfoForm';
 
 interface EditModalProps {
   open: boolean;
   editingItem: StyleInfo | null;
-  form: FormInstance;
+  form: any;
   coverUrl: string | null;
   setCoverUrl: (v: string | null) => void;
   submitLoading: boolean;
@@ -19,6 +16,10 @@ interface EditModalProps {
   onSubmit: () => void;
 }
 
+/**
+ * D-438：列表/新增入口的编辑弹窗——字段全集抽到 ProductInfoForm 共享组件，
+ * 与详情抽屉编辑态共用同一份表单定义（详情抽屉的编辑已融合进抽屉本身，不再走这里）。
+ */
 const EditModal: React.FC<EditModalProps> = ({
   open,
   editingItem,
@@ -43,148 +44,13 @@ const EditModal: React.FC<EditModalProps> = ({
         </Button>,
       ]}
     >
-      <div className="u-p-04px">
-        <Form form={form} layout="vertical" size={isMobile ? 'small' : 'middle'}>
-          <div className="u-mb-16 u-d-flex u-ai-start u-gap-16">
-            <ImageUploadBox
-              value={coverUrl}
-              onChange={setCoverUrl}
-              width={100}
-              height={100}
-              label="封面图"
-              uploadFn={async (file) => {
-                const formData = new FormData();
-                formData.append('file', file);
-                if (editingItem?.id) formData.append('styleId', String(editingItem.id));
-                const res = await api.post('/style/attachment/upload', formData, {
-                  headers: { 'Content-Type': 'multipart/form-data' },
-                });
-                if ((res as any).code === 200 && (res as any).data?.fileUrl) {
-                  return (res as any).data.fileUrl;
-                }
-                throw new Error((res as any).message || '上传失败');
-              }}
-            />
-            <div className="u-flex-1 u-fs-14" style={{ color: 'var(--color-text-tertiary)', paddingTop: 4 }}>
-              <div>点击上传成品图片</div>
-              <div className="u-mt-4">支持 JPG/PNG，最大 5MB</div>
-            </div>
-          </div>
-          <Row gutter={[12, 8]}>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="styleNo" label="款号" rules={[{ required: true, message: '请输入款号' }]}>
-                <Input placeholder="请输入款号" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="styleName" label="款名" rules={[{ required: true, message: '请输入款名' }]}>
-                <Input placeholder="请输入款名" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="category" label="品类">
-                <Select placeholder="请选择品类" allowClear showSearch optionFilterProp="label">
-                  {CATEGORY_CODE_OPTIONS.map(opt => (
-                    <Select.Option key={opt.value} value={opt.value} label={opt.label}>{opt.label}</Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={[12, 8]}>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="season" label="季节">
-                <Select placeholder="请选择季节" allowClear>
-                  {SEASON_CODE_OPTIONS.map(opt => (
-                    <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="color" label="颜色">
-                <Input placeholder="请输入颜色" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="size" label="尺码">
-                <Input placeholder="请输入尺码" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={[12, 8]}>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="fabricComposition" label="面料成分">
-                <Input placeholder="如：100%棉" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="uCode" label="U编码">
-                <Input placeholder="请输入U编码" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="price" label="单价(元)">
-                <InputNumber placeholder="请输入单价" style={{ width: '100%' }} min={0} step={0.01} precision={2} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={[12, 8]}>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="customer" label="客户">
-                <Input placeholder="请输入客户" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="cycle" label="生产周期(天)">
-                <InputNumber placeholder="天数" style={{ width: '100%' }} min={0} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="status" label="状态">
-                <Select placeholder="请选择状态">
-                  <Select.Option value="ENABLED">启用</Select.Option>
-                  <Select.Option value="DISABLED">停用</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={[12, 8]}>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="qualityGrade" label="质量等级">
-                <Input placeholder="如：合格品" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="executeStandard" label="执行标准">
-                <Input placeholder="如：GB/T 2660-2017" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="safetyCategory" label="安全类别">
-                <Input placeholder="如：GB 18401 B类" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={[12, 8]}>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="inspector" label="检验员">
-                <Input placeholder="请输入检验员" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="washInstructions" label="洗涤说明">
-                <Input.TextArea placeholder="请输入洗涤说明" rows={2} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Form.Item name="description" label="描述">
-                <Input.TextArea placeholder="请输入描述" rows={2} />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
-      </div>
+      <ProductInfoForm
+        form={form}
+        coverUrl={coverUrl}
+        setCoverUrl={setCoverUrl}
+        editingItem={editingItem}
+        isMobile={isMobile}
+      />
     </ResizableModal>
   );
 };

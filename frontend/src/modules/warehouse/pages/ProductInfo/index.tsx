@@ -48,6 +48,8 @@ const ProductInfoPage: React.FC = () => {
     setInboundOpen,
     tagPrintOpen,
     setTagPrintOpen,
+    drawerEditing,
+    cancelDrawerEdit,
     localKeyword,
     handleKeywordChange,
     statCards,
@@ -142,6 +144,14 @@ const ProductInfoPage: React.FC = () => {
         onInbound={handleInbound}
         onPrintTag={handlePrintTag}
         onToggleStatus={handleToggleStatus}
+        editing={drawerEditing}
+        form={form}
+        coverUrl={coverUrl}
+        setCoverUrl={setCoverUrl}
+        submitLoading={submitLoading}
+        isMobile={isMobile}
+        onSave={handleSubmit}
+        onCancelEdit={cancelDrawerEdit}
       />
 
       <EditModal

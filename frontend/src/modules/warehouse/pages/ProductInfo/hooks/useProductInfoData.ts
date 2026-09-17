@@ -44,6 +44,9 @@ interface UseProductInfoDataReturn {
   setInboundOpen: React.Dispatch<React.SetStateAction<boolean>>;
   tagPrintOpen: boolean;
   setTagPrintOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  // D-438：抽屉编辑态
+  drawerEditing: boolean;
+  cancelDrawerEdit: () => void;
   // keyword
   localKeyword: string;
   handleKeywordChange: (v: string) => void;
@@ -79,6 +82,8 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
   // D-436：入库/吊牌在当前页就地完成（原实现 navigate 跳生产入库页/标签打印页）
   const [inboundOpen, setInboundOpen] = useState(false);
   const [tagPrintOpen, setTagPrintOpen] = useState(false);
+  // D-438：详情抽屉编辑态——表单融入抽屉本体，不再弹第二个窗口
+  const [drawerEditing, setDrawerEditing] = useState(false);
 
   const [localKeyword, setLocalKeyword] = useState(queryParams.keyword || '');
   const keywordDebounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -151,7 +156,12 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
           qualityGrade: d.qualityGrade, executeStandard: d.executeStandard,
           safetyCategory: d.safetyCategory, inspector: d.inspector,
         });
-        setModalOpen(true);
+        if (drawerOpen) {
+          // D-438：详情抽屉内的编辑——表单融入抽屉本体，不弹第二个窗口
+          setDrawerEditing(true);
+        } else {
+          setModalOpen(true);
+        }
       }
     } catch {
       message.error('获取详情失败');
@@ -168,8 +178,9 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
         if ((res as any).code === 200) {
           message.success('更新成功');
           setModalOpen(false);
+          setDrawerEditing(false);
           fetchList();
-          // D-436：详情抽屉保持打开（编辑不再先关抽屉），保存后同步刷新避免展示旧数据
+          // D-436：详情抽屉保持打开（编辑态就地切回只读），保存后同步刷新避免展示旧数据
           if (drawerOpen && editingItem?.id) {
             try {
               const detailRes = await api.get<any>(`/style/info/${editingItem.id}`);
@@ -238,6 +249,13 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
     setDrawerOpen(false);
     setDrawerRecord(null);
     setSkuList([]);
+    setDrawerEditing(false);
+  };
+
+  /** D-438：抽屉内编辑取消——丢弃表单改动回到只读态 */
+  const cancelDrawerEdit = () => {
+    setDrawerEditing(false);
+    form.resetFields();
   };
 
   // 就地入库：打开自由入库弹窗（复用商品仓储同款组件），不再跳转生产入库页
@@ -282,6 +300,8 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
     setInboundOpen,
     tagPrintOpen,
     setTagPrintOpen,
+    drawerEditing,
+    cancelDrawerEdit,
     localKeyword,
     handleKeywordChange,
     statCards,

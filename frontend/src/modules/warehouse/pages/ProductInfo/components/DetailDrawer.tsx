@@ -7,6 +7,7 @@ import { formatMoney } from '@/utils/format';
 import { StyleInfo } from '@/types/style';
 import { SkuRow } from '../types';
 import { buildSkuColumns } from '../columns';
+import ProductInfoForm from './ProductInfoForm';
 
 interface DetailDrawerProps {
   open: boolean;
@@ -19,6 +20,15 @@ interface DetailDrawerProps {
   onInbound: (record: StyleInfo) => void;
   onPrintTag: (record: StyleInfo) => void;
   onToggleStatus: (record: StyleInfo) => void;
+  /** D-438：编辑态融入抽屉——true 时抽屉内容原地切换为表单，不再弹第二个窗口 */
+  editing?: boolean;
+  form?: any;
+  coverUrl?: string | null;
+  setCoverUrl?: (v: string | null) => void;
+  submitLoading?: boolean;
+  isMobile?: boolean;
+  onSave?: () => void;
+  onCancelEdit?: () => void;
 }
 
 const DetailDrawer: React.FC<DetailDrawerProps> = ({
@@ -32,97 +42,122 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
   onInbound,
   onPrintTag,
   onToggleStatus,
+  editing = false,
+  form,
+  coverUrl,
+  setCoverUrl,
+  submitLoading = false,
+  isMobile = false,
+  onSave,
+  onCancelEdit,
 }) => {
   const d = drawerRecord;
 
   return (
     <Drawer
-      title={d ? `${d.styleNo} — ${d.styleName}` : '成品详情'}
+      title={d ? `${editing ? '编辑 - ' : ''}${d.styleNo} — ${d.styleName}` : '商品详情'}
       open={open}
       onClose={onClose}
       styles={{ wrapper: { width: '85%' } }}
       loading={drawerLoading}
       extra={
         d ? (
-          <Space>
-            {/* D-436：编辑在当前抽屉之上弹编辑框完成，不再先关抽屉 */}
-            <Button icon={<EditOutlined />} onClick={() => { onEdit(d); }}>编辑</Button>
-            <Button icon={<LoginOutlined />} onClick={() => onInbound(d)}>入库</Button>
-            <Button icon={<PrinterOutlined />} onClick={() => onPrintTag(d)}>吊牌</Button>
-            <Popconfirm
-              title={d.status === 'ENABLED' ? '确定停用该成品？' : '确定启用该成品？'}
-              onConfirm={() => onToggleStatus(d)}
-            >
-              <Button icon={<SwapOutlined />}>{d.status === 'ENABLED' ? '停用' : '启用'}</Button>
-            </Popconfirm>
-          </Space>
+          editing ? (
+            <Space>
+              <Button onClick={onCancelEdit}>取消</Button>
+              <Button type="primary" loading={submitLoading} onClick={onSave}>保存</Button>
+            </Space>
+          ) : (
+            <Space>
+              {/* D-438：编辑直接在本抽屉内完成，不再弹出编辑窗口 */}
+              <Button icon={<EditOutlined />} onClick={() => { onEdit(d); }}>编辑</Button>
+              <Button icon={<LoginOutlined />} onClick={() => onInbound(d)}>入库</Button>
+              <Button icon={<PrinterOutlined />} onClick={() => onPrintTag(d)}>吊牌</Button>
+              <Popconfirm
+                title={d.status === 'ENABLED' ? '确定停用该成品？' : '确定启用该成品？'}
+                onConfirm={() => onToggleStatus(d)}
+              >
+                <Button icon={<SwapOutlined />}>{d.status === 'ENABLED' ? '停用' : '启用'}</Button>
+              </Popconfirm>
+            </Space>
+          )
         ) : undefined
       }
     >
       {d && (
-        <>
-          {d.cover && (
-            <div className="u-ta-center u-mb-16">
-              <AttachmentThumb
-                styleId={d.id!}
-                cover={d.cover}
-                width="100%"
-                height={200}
-                borderRadius={8}
-                imageStyle={{ objectFit: 'contain' }}
+        editing && form ? (
+          <ProductInfoForm
+            form={form}
+            coverUrl={coverUrl ?? null}
+            setCoverUrl={setCoverUrl || (() => {})}
+            editingItem={d}
+            isMobile={isMobile}
+          />
+        ) : (
+          <>
+            {d.cover && (
+              <div className="u-ta-center u-mb-16">
+                <AttachmentThumb
+                  styleId={d.id!}
+                  cover={d.cover}
+                  width="100%"
+                  height={200}
+                  borderRadius={8}
+                  imageStyle={{ objectFit: 'contain' }}
+                />
+              </div>
+            )}
+
+            <Descriptions column={3} size="small" bordered>
+              <Descriptions.Item label="款号">{d.styleNo}</Descriptions.Item>
+              <Descriptions.Item label="款名">{d.styleName}</Descriptions.Item>
+              <Descriptions.Item label="品类">{toCategoryCn(d.category)}</Descriptions.Item>
+              <Descriptions.Item label="季节">{toSeasonCn(d.season)}</Descriptions.Item>
+              <Descriptions.Item label="SKC">{String(d.skc ?? '-')}</Descriptions.Item>
+              <Descriptions.Item label="U编码">{String(d.uCode ?? '-')}</Descriptions.Item>
+              <Descriptions.Item label="单价">{d.price != null ? formatMoney(d.price) : '-'}</Descriptions.Item>
+              <Descriptions.Item label="生产周期">{d.cycle ? `${d.cycle}天` : '-'}</Descriptions.Item>
+              <Descriptions.Item label="客户">{String(d.customer ?? '-')}</Descriptions.Item>
+              <Descriptions.Item label="面料成分" span={3}>{String(d.fabricComposition ?? '-')}</Descriptions.Item>
+              <Descriptions.Item label="状态">
+                <span style={{ color: d.status === 'ENABLED' ? 'var(--color-success)' : 'var(--color-text-tertiary)', fontWeight: 500 }}>
+                  {d.status === 'ENABLED' ? '启用' : d.status === 'DISABLED' ? '停用' : d.status === 'SCRAPPED' ? '已报废' : d.status || '-'}
+                </span>
+              </Descriptions.Item>
+              <Descriptions.Item label="下单次数">{d.orderCount != null ? `${d.orderCount}次` : '-'}</Descriptions.Item>
+              <Descriptions.Item label="入库总量">{d.totalWarehousedQuantity != null ? `${d.totalWarehousedQuantity}` : '-'}</Descriptions.Item>
+            </Descriptions>
+
+            <Divider style={{ fontSize: 14, marginTop: 20 }}>商品编码 规格明细</Divider>
+            {skuLoading ? (
+              <div className="u-ta-center u-p-24" style={{ color: 'var(--color-text-tertiary)' }}>加载中...</div>
+            ) : skuList.length > 0 ? (
+              <Table<SkuRow>
+                columns={buildSkuColumns()}
+                dataSource={skuList}
+                rowKey={(r) => String(r.id || r.skuCode)}
+                size="small"
+                pagination={false}
+                bordered
+                style={{ marginBottom: 16 }}
               />
-            </div>
-          )}
+            ) : (
+              <div className="u-ta-center u-p-16 u-br-8" style={{ color: 'var(--color-text-tertiary)', background: 'var(--color-bg-subtle)' }}>
+                暂无商品编码数据，请在样衣开发页面配置颜色尺码后同步
+              </div>
+            )}
 
-          <Descriptions column={3} size="small" bordered>
-            <Descriptions.Item label="款号">{d.styleNo}</Descriptions.Item>
-            <Descriptions.Item label="款名">{d.styleName}</Descriptions.Item>
-            <Descriptions.Item label="品类">{toCategoryCn(d.category)}</Descriptions.Item>
-            <Descriptions.Item label="季节">{toSeasonCn(d.season)}</Descriptions.Item>
-            <Descriptions.Item label="SKC">{String(d.skc ?? '-')}</Descriptions.Item>
-            <Descriptions.Item label="U编码">{String(d.uCode ?? '-')}</Descriptions.Item>
-            <Descriptions.Item label="单价">{d.price != null ? formatMoney(d.price) : '-'}</Descriptions.Item>
-            <Descriptions.Item label="生产周期">{d.cycle ? `${d.cycle}天` : '-'}</Descriptions.Item>
-            <Descriptions.Item label="客户">{String(d.customer ?? '-')}</Descriptions.Item>
-            <Descriptions.Item label="面料成分" span={3}>{String(d.fabricComposition ?? '-')}</Descriptions.Item>
-            <Descriptions.Item label="状态">
-              <span style={{ color: d.status === 'ENABLED' ? 'var(--color-success)' : 'var(--color-text-tertiary)', fontWeight: 500 }}>
-                {d.status === 'ENABLED' ? '启用' : d.status === 'DISABLED' ? '停用' : d.status === 'SCRAPPED' ? '已报废' : d.status || '-'}
-              </span>
-            </Descriptions.Item>
-            <Descriptions.Item label="下单次数">{d.orderCount != null ? `${d.orderCount}次` : '-'}</Descriptions.Item>
-            <Descriptions.Item label="入库总量">{d.totalWarehousedQuantity != null ? `${d.totalWarehousedQuantity}` : '-'}</Descriptions.Item>
-          </Descriptions>
-
-          <Divider style={{ fontSize: 14, marginTop: 20 }}>商品编码 规格明细</Divider>
-          {skuLoading ? (
-            <div className="u-ta-center u-p-24" style={{ color: 'var(--color-text-tertiary)' }}>加载中...</div>
-          ) : skuList.length > 0 ? (
-            <Table<SkuRow>
-              columns={buildSkuColumns()}
-              dataSource={skuList}
-              rowKey={(r) => String(r.id || r.skuCode)}
-              size="small"
-              pagination={false}
-              bordered
-              style={{ marginBottom: 16 }}
-            />
-          ) : (
-            <div className="u-ta-center u-p-16 u-br-8" style={{ color: 'var(--color-text-tertiary)', background: 'var(--color-bg-subtle)' }}>
-              暂无商品编码数据，请在样衣开发页面配置颜色尺码后同步
-            </div>
-          )}
-
-          <Divider style={{ fontSize: 14, marginTop: 20 }}>吊牌信息</Divider>
-          <Descriptions column={3} size="small" bordered>
-            <Descriptions.Item label="质量等级">{String(d.qualityGrade ?? '-')}</Descriptions.Item>
-            <Descriptions.Item label="执行标准">{String(d.executeStandard ?? '-')}</Descriptions.Item>
-            <Descriptions.Item label="安全类别">{String(d.safetyCategory ?? '-')}</Descriptions.Item>
-            <Descriptions.Item label="检验员">{String(d.inspector ?? '-')}</Descriptions.Item>
-            <Descriptions.Item label="检验日期">{String(d.inspectionDate ?? '-')}</Descriptions.Item>
-            <Descriptions.Item label="洗涤说明">{String(d.washInstructions ?? '-')}</Descriptions.Item>
-          </Descriptions>
-        </>
+            <Divider style={{ fontSize: 14, marginTop: 20 }}>吊牌信息</Divider>
+            <Descriptions column={3} size="small" bordered>
+              <Descriptions.Item label="质量等级">{String(d.qualityGrade ?? '-')}</Descriptions.Item>
+              <Descriptions.Item label="执行标准">{String(d.executeStandard ?? '-')}</Descriptions.Item>
+              <Descriptions.Item label="安全类别">{String(d.safetyCategory ?? '-')}</Descriptions.Item>
+              <Descriptions.Item label="检验员">{String(d.inspector ?? '-')}</Descriptions.Item>
+              <Descriptions.Item label="检验日期">{String(d.inspectionDate ?? '-')}</Descriptions.Item>
+              <Descriptions.Item label="洗涤说明">{String(d.washInstructions ?? '-')}</Descriptions.Item>
+            </Descriptions>
+          </>
+        )
       )}
     </Drawer>
   );
