@@ -1,7 +1,12 @@
-# 轻量服务器迁移手册（云托管 → 腾讯云轻量 4核8G）
+# 轻量服务器迁移手册（云托管 → 腾讯云轻量）
 
-> 目标成本：**约 52 元/月**（630 元/年）替代云托管每月数百元
-> 架构：一台服务器跑全栈 —— Caddy(HTTPS) + frontend + backend + MySQL + Redis + Qdrant + phpMyAdmin
+> ⚠️ **实际购买的是 2核4G**（见 `activeContext.md`），不是本文最初推荐的 4核8G。
+> 容量只有一半，直接导致 D-453 的并行构建假死事故 → 构建必须串行 + 内存守卫，
+> 详见 `memory-bank/optimization-log-2026-09-17-deploy-oom-freeze.md`。
+> 长期建议仍是升级 4核8G（约 630 元/年）。
+>
+> 架构：一台服务器跑全栈 —— Caddy(HTTPS) + frontend + backend + MySQL + Redis + Qdrant + CloudBeaver
+> （db.webyszl.cn 管理台，D-435 起由 CloudBeaver 提供，phpMyAdmin 已退役）
 > 已核实的前提：后端调微信全部**直连官方** api.weixin.qq.com，不依赖云托管任何专属能力 ✓
 
 ## 0. 购买服务器（你来操作，10 分钟）
@@ -113,13 +118,37 @@ Caddy 需要域名解析到服务器才能签证书。**先切 DNS 再启动 Cad
 
 ## 7. 自动部署（推代码即更新）
 
-1. 你 Mac 上生成部署密钥：`ssh-keygen -t ed25519 -f ~/.ssh/lighthouse_deploy -N ""`
-2. 公钥追加到服务器：`ssh root@IP 'cat >> ~/.ssh/authorized_keys' < ~/.ssh/lighthouse_deploy.pub`
-3. GitHub 仓库 → Settings → Secrets → 添加：
-   - `LIGHTHOUSE_HOST` = 服务器 IP
-   - `LIGHTHOUSE_SSH_KEY` = 私钥全文（lighthouse_deploy 文件内容）
-4. Actions 页手动跑一次 `Deploy Lighthouse` 验证
-5. 稳定后把 `.github/workflows/deploy-lighthouse.yml` 里 `push:` 两行注释放开 → 恢复"推代码即部署"
+### ✅ 实际生效的机制：服务器端 cron 自拉取
+
+**生产上线只依赖服务器上的 `deploy/lighthouse/autodeploy.sh`**（cron 每 2 分钟执行）：
+
+1. `git fetch origin main` → 与本地 HEAD 比对，无变化直接退出
+2. **全服务在场巡检**（D-455）：compose 里定义了但没在跑的服务自动补起（不构建）
+3. **内存守卫**：`free -m` available < 1200MB 则跳过本轮，下轮重试（防 D-453 假死）
+4. `git pull --ff-only` → 把短 commit 写进 `.env`（供登录页版本水印）
+5. **串行构建**：backend 先构建 + 等健康检查 → 再 frontend；单个失败立即中止，旧容器继续服务
+
+**判断是否上线**：登录页底部「部署版本：<7位短 commit>」。
+纯 `docs/` / `memory-bank/` 提交**不触发重建**，版本号不变是正常的。
+
+### ⚠️ `Deploy Lighthouse` workflow 是死的（2026-09-17 核实）
+
+`.github/workflows/deploy-lighthouse.yml` 依赖 `LIGHTHOUSE_HOST` / `LIGHTHOUSE_USER` /
+`LIGHTHOUSE_SSH_KEY`，但仓库 secrets 里**根本没有这三项**（现有仅 `CLOUDBASE_*` /
+`SERPAPI_KEY` / `SMOKE_*`），也无 environment / variable → **手动触发必然失败**。
+
+**且服务器 SSH 是密码登录而非密钥**，所以「本机 SSH 上去部署」这条路走不通 ——
+**一切服务器侧动作只能靠「改脚本 + push」让 autodeploy 自执行**。
+
+> 历史遗留：下面这套密钥开通步骤（原文档）从未完成过，保留仅供未来需要手动部署能力时参考。
+>
+> 1. 本机生成部署密钥：`ssh-keygen -t ed25519 -f ~/.ssh/lighthouse_deploy -N ""`
+> 2. 公钥追加到服务器：`ssh root@IP 'cat >> ~/.ssh/authorized_keys' < ~/.ssh/lighthouse_deploy.pub`
+> 3. GitHub → Settings → Secrets 添加 `LIGHTHOUSE_HOST` / `LIGHTHOUSE_SSH_KEY`
+> 4. Actions 页手动跑一次 `Deploy Lighthouse` 验证
+> 5. 稳定后放开 `.github/workflows/deploy-lighthouse.yml` 里的 `push:` 注释
+>
+> 若确认不需要，直接删掉该 workflow 更干净，避免误触发。
 
 ## 8. 回滚预案（迁移后观察一周）
 
@@ -135,6 +164,74 @@ Caddy 需要域名解析到服务器才能签证书。**先切 DNS 再启动 Cad
 - 预置连接配置：`cloudbeaver/conf/initial-data-sources.conf`（**不含密码**，密码首次连接时输入；若预置连接未出现，在界面里 Add Connection 选 MySQL 手动加一次：host 填 `mysql`）
 - 第一次打开库会下载 MySQL 驱动（约 10~30 秒），属正常
 - 导入大文件：CloudBeaver SQL 编辑器支持执行大 SQL；整库恢复仍建议命令行（见第 6 节迁移命令）
+
+## 10. 数据库备份与容灾（D-455 补齐）
+
+> ⚠️ **2026-09-17 核查发现：整条备份链路此前从未跑通，生产库长期零备份。**
+> 三处断点：① 服务器侧没有任何东西产出备份；② 本机公钥未授权到服务器；
+> ③ launchd 任务未加载。以下为补齐后的完整链路。
+
+### 链路总览
+
+```
+服务器 autodeploy（每 2 分钟）
+  └─ 调 deploy/lighthouse/backup-db.sh
+       └─ 自调度：每天 03:00 后首次执行 → /opt/backups/fz66666-YYYY-MM-DD.sql.gz（留 14 份）
+
+本机 launchd（每天 10:07）
+  └─ 调 ~/fz66666-backups/pull.sh
+       └─ rsync 拉回 ~/fz66666-backups/（留 14 份）→ 异地第二副本
+```
+
+### 服务器侧：`deploy/lighthouse/backup-db.sh`
+
+- 由 `autodeploy.sh` 每轮调用，脚本**内部自调度** —— autodeploy 每 2 分钟跑一次，
+  靠脚本内的日期戳 + 30 分钟冷却闸门控制「一天只真正备份一次」，失败也不会每 2 分钟猛跑
+- `--single-transaction` 一致性快照不锁表；`--routines --triggers` 一并备份存储过程/触发器
+- 密码取自容器内环境变量，不出现在宿主 `ps` 里
+- 守卫：磁盘可用 < 2GB 直接跳过（防写满）；mysql 容器未运行跳过
+- 先写 `.part` 再 `gzip -t` 校验通过才改名，避免半截文件被当成有效备份
+- 手动强制跑一次：`sudo bash /opt/fz66666/deploy/lighthouse/backup-db.sh --force`
+
+### 本机侧：`~/fz66666-backups/pull.sh`
+
+- **故意不放进仓库**：本机是外接卷 `/Volumes/macoo2`，卷没挂载时仓库路径不可用，
+  脚本必须自包含才能保证每天跑到
+- launchd 配置：`~/Library/LaunchAgents/com.fz66666.db-backup.plist`（每天 10:07）
+- 用 `BatchMode=yes`：密钥未授权时**快速失败并打印排查指引**，不会挂在密码提示上
+
+### 启用步骤（三步，缺一不可）
+
+```bash
+# ① 服务器侧：确认 autodeploy 已带 D-455 补丁（会产出备份）
+ssh ubuntu@106.55.12.216 'ls -lh /opt/backups/'
+
+# ② 本机公钥授权到服务器 ubuntu 用户
+ssh-copy-id -i ~/.ssh/fz66666_backup.pub ubuntu@106.55.12.216
+
+# ③ 加载 launchd 任务，并立刻手动验证一次
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.fz66666.db-backup.plist
+bash ~/fz66666-backups/pull.sh
+```
+
+### 恢复演练（**没演练过的备份等于没有备份**）
+
+```bash
+gunzip -c ~/fz66666-backups/fz66666-YYYY-MM-DD.sql.gz | head -50   # 先看内容是否正常
+# 恢复到新库（不要直接覆盖生产库）
+docker compose -f /opt/fz66666/deploy/lighthouse/docker-compose.yml exec -T mysql \
+  mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE restore_check;"
+gunzip -c /opt/backups/fz66666-YYYY-MM-DD.sql.gz | \
+  docker compose -f /opt/fz66666/deploy/lighthouse/docker-compose.yml exec -T mysql \
+  mysql -uroot -p"$MYSQL_ROOT_PASSWORD" restore_check
+```
+
+### 已知不足
+
+- **备份没有外部告警**：拉取失败只写本机 `pull.log`，没人看就等于没有
+- 本机 rsync 是 macOS 自带 **openrsync（协议 29 / 2.6.9 兼容）**，功能残缺；
+  若出现诡异行为，`brew install rsync` 换正式版
+- 备份产物只在服务器磁盘 + 本机（外接卷），**没有第三份异地存储**（可考虑 COS）
 
 ## 迁移收益清单
 
