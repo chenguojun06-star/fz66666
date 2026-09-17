@@ -73,6 +73,11 @@ export function useMaterialColorCard() {
     }]);
   }, [currentCard?.materialType]);
 
+  /** D-446：拍照识别——AI 识别结果批量追加为明细行 */
+  const appendRecognizedItems = useCallback((items: MaterialColorCardItem[]) => {
+    setCurrentItems((prev) => [...prev, ...items]);
+  }, []);
+
   const updateCardItem = useCallback((idx: number, field: keyof MaterialColorCardItem, value: any) => {
     setCurrentItems((prev) => {
       const next = [...prev];
@@ -189,6 +194,7 @@ export function useMaterialColorCard() {
     currentCard,
     openCardItemsDialog,
     addEmptyCardItem,
+    appendRecognizedItems,
     updateCardItem,
     removeCardItem,
     saveCardItems,

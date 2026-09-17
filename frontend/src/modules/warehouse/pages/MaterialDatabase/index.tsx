@@ -51,7 +51,7 @@ const MaterialDatabasePage: React.FC = () => {
     cardDataList, cardLoading, cardPage, cardPageSize, cardTotal, cardKeyword, cardMaterialType,
     setCardKeyword, setCardMaterialType, setCardPage, fetchCardList,
     itemVisible, setItemVisible, currentItems, currentCardName, currentCard,
-    openCardItemsDialog, addEmptyCardItem, updateCardItem, removeCardItem, saveCardItems,
+    openCardItemsDialog, addEmptyCardItem, appendRecognizedItems, updateCardItem, removeCardItem, saveCardItems,
     handleGenerateCardMaterials,
     cardDialogVisible, setCardDialogVisible, cardForm, coverImageFiles, setCoverImageFiles,
     openCardEditDialog, openCardCreateDialog, handleCardSave, handleCardDelete, uploadCardImage,
@@ -371,6 +371,7 @@ const MaterialDatabasePage: React.FC = () => {
         onCancel={() => setItemVisible(false)}
         onSave={saveCardItems}
         addEmptyCardItem={addEmptyCardItem}
+        appendRecognizedItems={appendRecognizedItems}
         updateCardItem={updateCardItem}
         removeCardItem={removeCardItem}
         uploadCardImage={uploadCardImage}

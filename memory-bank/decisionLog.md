@@ -1,7 +1,22 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-17（新增 D-445 多供应商比价——色卡报价+采购成交聚合 + 快速建卡供应商记忆）
+> 最后更新：2026-09-17（新增 D-446 色卡拍照识别前端——多图批量 AI 识别为明细行）
+
+---
+
+## D-446：色卡拍照识别——多张照片 AI 批量识别为明细行（2026-09-17）
+
+后端 `/material/database/recognize-color-card`（单图 imageUrl → MaterialColorCardRecognitionResult，
+Vision 读图返回字段级 textValue/numberValue/confidence/aiHint）已存在但前端从未接。本批补前端闭环：
+
+- 物料管理抽屉工具条新增「**拍照识别**」：多选/拍照上传 N 张色卡照片 → 逐张 uploadCardImage 传图 →
+  循环调识别接口 → 每张成功的识别结果生成一条明细行（物料名称/颜色/单价 numberValue 或文本清洗/
+  幅宽/克重/成分/规格/单位），**识别照片本身存为该行图片**
+- **同名同色去重**：与已有明细重复的识别结果跳过并计数提示；识别行 remark 自动标注"AI识别 置信度x%"与 aiHint
+- 追加用 hook 新增的 `appendRecognizedItems`（setCurrentItems 追加，不覆盖已有明细）；
+  识别中显示"AI 识别中 n/N…"进度，识别完提示"核对后点保存全部"
+- 识别顺序即上传顺序（串行，避免视觉服务并发压力）；失败单张 continue 不中断整批
 
 ---
 

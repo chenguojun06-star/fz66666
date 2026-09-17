@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { App, Button, Card, Col, Image, Input, InputNumber, Popconfirm, Row, Select, Space, Tag } from 'antd';
-import { AppstoreAddOutlined, PlusOutlined } from '@ant-design/icons';
+import { AppstoreAddOutlined, CameraOutlined, PlusOutlined } from '@ant-design/icons';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import api from '@/utils/api';
 import SideDrawer from '@/components/common/SideDrawer';
 import type { MaterialColorCardItem } from './types';
 import { MATERIAL_TYPE_OPTIONS } from './types';
 import { colorNameToHex } from './MaterialColorItemsModal';
 
-// ===== 物料色卡子物料管理（D-444：弹窗统一为侧滑抽屉 + 批量单价处理 + 无图色块） =====
+// ===== 物料色卡子物料管理（D-444：弹窗统一为侧滑抽屉 + 批量单价处理 + 无图色块 + D-446 拍照识别） =====
 interface MaterialColorCardItemsModalProps {
   open: boolean;
   currentCardName: string;
@@ -15,6 +16,7 @@ interface MaterialColorCardItemsModalProps {
   onCancel: () => void;
   onSave: () => void;
   addEmptyCardItem: () => void;
+  appendRecognizedItems?: (items: MaterialColorCardItem[]) => void;
   updateCardItem: (idx: number, field: keyof MaterialColorCardItem, value: any) => void;
   removeCardItem: (idx: number) => void;
   uploadCardImage: (file: File) => Promise<string>;
@@ -22,10 +24,13 @@ interface MaterialColorCardItemsModalProps {
 
 const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = ({
   open, currentCardName, currentItems,
-  onCancel, onSave, addEmptyCardItem, updateCardItem, removeCardItem, uploadCardImage,
+  onCancel, onSave, addEmptyCardItem, appendRecognizedItems, updateCardItem, removeCardItem, uploadCardImage,
 }) => {
   const { message } = App.useApp();
   const [unifiedPrice, setUnifiedPrice] = useState<number | null>(null);
+  const [recognizing, setRecognizing] = useState(false);
+  const [recognizeProgress, setRecognizeProgress] = useState('');
+  const recognizeInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // D-444：批量单价处理——一个价应用到全部明细（与出库统一单价同款交互）
   const handleApplyUnifiedPrice = () => {
@@ -53,6 +58,68 @@ const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = 
     }
   };
 
+  /** D-446：拍照识别——多张色卡照片逐张调视觉识别，结果批量追加为明细行（同名同色去重） */
+  const handleRecognize = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    if (!appendRecognizedItems) { message.warning('当前模式不支持识别'); return; }
+    const images = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (recognizeInputRef.current) recognizeInputRef.current.value = '';
+    if (images.length === 0) { message.warning('请选择图片文件'); return; }
+
+    setRecognizing(true);
+    let recognized = 0;
+    let duplicated = 0;
+    const newItems: MaterialColorCardItem[] = [];
+    try {
+      for (let i = 0; i < images.length; i++) {
+        setRecognizeProgress(`AI 识别中 ${i + 1}/${images.length}…`);
+        const url = await uploadCardImage(images[i]);
+        const res: any = await api.post('/material/database/recognize-color-card', { imageUrl: url });
+        const r = res?.data || res;
+        if (!r?.success) continue;
+        recognized++;
+        const name = String(r.materialName?.textValue || '').trim();
+        const color = String(r.color?.textValue || '').trim();
+        if (name && currentItems.some((it) => it.materialName === name && (it.color || '') === color)) {
+          duplicated++;
+          continue;
+        }
+        const priceRaw = r.unitPrice?.numberValue != null
+          ? Number(r.unitPrice.numberValue)
+          : (r.unitPrice?.textValue ? Number(String(r.unitPrice.textValue).replace(/[^\d.]/g, '')) : NaN);
+        const typeText = String(r.materialType?.textValue || '').toLowerCase();
+        newItems.push({
+          id: `ai-${Date.now()}-${i}`,
+          materialName: name || `识别物料 ${i + 1}`,
+          materialCode: '',
+          color,
+          materialType: typeText.includes('里') || typeText.includes('lining') ? 'lining'
+            : typeText.includes('辅') || typeText.includes('accessory') ? 'accessory'
+              : (currentItems[0]?.materialType || 'fabric'),
+          unitPrice: Number.isFinite(priceRaw) ? priceRaw : undefined,
+          fabricWidth: String(r.fabricWidth?.textValue || ''),
+          fabricWeight: String(r.fabricWeight?.textValue || ''),
+          fabricComposition: String(r.fabricComposition?.textValue || ''),
+          specifications: String(r.specifications?.textValue || ''),
+          unit: String(r.unit?.textValue || ''),
+          image: url,
+          remark: `AI识别${r.overallConfidence != null ? ` 置信度${r.overallConfidence}%` : ''}${r.aiHint ? `：${r.aiHint}` : ''}`,
+        });
+      }
+      if (newItems.length > 0) {
+        appendRecognizedItems(newItems);
+        message.success(`识别完成：新增 ${newItems.length} 条${duplicated ? `，跳过重复 ${duplicated} 条` : ''}。核对后点「保存全部」`);
+      } else {
+        message.warning(recognized > 0 ? '识别到的物料与已有明细重复' : '未识别出有效物料信息');
+      }
+    } catch (e: any) {
+      message.error(e?.message || '识别失败，请重试');
+    } finally {
+      setRecognizing(false);
+      setRecognizeProgress('');
+    }
+  };
+
   return (
     <SideDrawer
       title={<Space><AppstoreAddOutlined /> {currentCardName} - 物料管理</Space>}
@@ -66,6 +133,19 @@ const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = 
     >
       <Space wrap style={{ marginBottom: 12 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={addEmptyCardItem}>+ 添加物料</Button>
+        {/* D-446：拍照识别——多张色卡照片 AI 批量识别为明细行 */}
+        <Button icon={<CameraOutlined />} loading={recognizing} onClick={() => recognizeInputRef.current?.click()}>
+          拍照识别
+        </Button>
+        <input
+          ref={recognizeInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          style={{ display: 'none' }}
+          onChange={(e) => { void handleRecognize(e.target.files); }}
+        />
+        {recognizeProgress && <span className="u-fs-13" style={{ color: 'var(--color-primary)' }}>{recognizeProgress}</span>}
         {/* D-444：批量单价处理 */}
         <Space.Compact>
           <InputNumber style={{ width: 130 }} min={0} precision={2} value={unifiedPrice} onChange={(v) => setUnifiedPrice(v)} placeholder="统一单价" />
