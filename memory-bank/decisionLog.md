@@ -1,7 +1,32 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-17（新增 D-435 db 管理台升级 CloudBeaver 替换 phpMyAdmin）
+> 最后更新：2026-09-17（新增 D-436 成品仓库编码详情重构 + 成品资料入库/吊牌/编辑就地完成）
+
+---
+
+## D-436：编码详情抽屉重构大画布 + 成品资料三动作就地完成（2026-09-17）
+
+**用户痛点**（对照参考软件截图）：①成品仓库点商品编码弹的抽屉仅 760px、12px 小字、表格横向滚动——"弹窗这么小、字看不清"；
+②成品资料详情抽屉顶部 编辑/入库/吊牌 全部跳页（入库→/production/warehousing、吊牌→/warehouse/label-print、
+编辑先关抽屉再弹 Modal）——"处理这些编辑动作不要跳出来一个编辑页面，调用对应的组件来完成"。
+
+**修复**：
+- `SkuDetailDrawer` 重构：width 760→**85%**（对齐 SideDrawer 全宽惯例）；顶部只读区改 Descriptions bordered
+  （middle 尺寸，字号回归 14/15px）；入库记录表 small→**middle** + max-content 横向宽；行编辑从"单元格内嵌输入框"
+  改为**抽屉内弹编辑框**（库位/库区下拉[useWarehouseAreaOptions FINISHED]/单价/备注，forceRender 保证
+  setFieldsValue 生效）——D-419 的 Form context 结构随之整体移除；底部新增 **[入库登记]**，复用 FreeInboundModal
+  并**预置当前商品编码自动添加一行**（新增 presetSkuCode prop：open 时清空明细→自动 scanQuery 带出）
+- `ProductInfo`（成品资料）三动作就地完成：**入库**→打开 FreeInboundModal（同一套组件）；**吊牌**→92% 抽屉内嵌
+  完整 LabelPrint 页（根节点是普通 padding div 无 100vh 依赖，可直接嵌入；`{tagPrintOpen && <Drawer>}` 挂载式
+  渲染保证每次打开状态干净；原 navigate 的 ?styleNo= 参数本就无人消费）；**编辑**→不再先关抽屉，EditModal 直接
+  叠在详情抽屉上，保存成功后同步重拉 `/style/info/{id}` 刷新抽屉数据防旧值
+- 涉及 5 文件：SkuDetailDrawer / FreeInboundModal / ProductInfo index+DetailDrawer+useProductInfoData；
+  tsc --noEmit 通过
+
+**与参考稿的刻意差异**：参考稿是"编辑商品(款)"整页表单（左侧锚点导航），本系统成品资料的编辑沿用既有
+EditModal 表单字段全集（图片上传/颜色规格矩阵等已齐），本次先把**画布和动线**对齐（大抽屉+就地动作），
+表单内嵌化留待用户验收后再定。
 
 ---
 

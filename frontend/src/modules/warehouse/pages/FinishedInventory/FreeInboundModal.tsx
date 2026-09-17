@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Form, Input, InputNumber, Select, Button, Space, Row, Col, Alert, Switch, App, Divider, Drawer, AutoComplete } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import CircleIconButton from '@/components/common/CircleIconButton';
@@ -14,6 +14,8 @@ interface FreeInboundModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  /** D-436：外部带入商品编码（编码详情抽屉就地入库），打开时自动查询添加 */
+  presetSkuCode?: string;
 }
 
 const WAREHOUSE_TYPE_MAP: Record<string, string> = {
@@ -36,7 +38,7 @@ interface InboundItem {
   stockQuantity: number;
 }
 
-const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSuccess }) => {
+const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSuccess, presetSkuCode }) => {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const [skuInput, setSkuInput] = useState('');
@@ -80,14 +82,14 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
   const { selectOptions: areaOptions, loading: areaLoading, areas } = useWarehouseAreaOptions(warehouseType as any);
   const { selectOptions: locationOptions, loading: locationLoading } = useWarehouseLocationByArea(warehouseType, selectedAreaId);
 
-  const handleAddSku = async () => {
-    if (!skuInput.trim()) {
+  const addByCode = async (code: string) => {
+    if (!code.trim()) {
       message.warning('请输入商品编码');
       return;
     }
     setQuerying(true);
     try {
-      const res = await finishedWarehouseApi.scanQuery(skuInput.trim());
+      const res = await finishedWarehouseApi.scanQuery(code.trim());
       const data = res.data?.data || res.data;
       if (data.found) {
         const exists = items.find(i => i.skuCode === data.skuCode);
@@ -127,6 +129,17 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
       setQuerying(false);
     }
   };
+
+  const handleAddSku = () => { void addByCode(skuInput); };
+
+  // D-436：外部带入商品编码时，打开即自动查询添加（每次打开都重置明细，避免残留上次条目）
+  useEffect(() => {
+    if (open && presetSkuCode) {
+      setItems([]);
+      void addByCode(presetSkuCode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, presetSkuCode]);
 
   const handleAddAutoCreateSku = () => {
     const styleNo = autoStyleNo.trim();

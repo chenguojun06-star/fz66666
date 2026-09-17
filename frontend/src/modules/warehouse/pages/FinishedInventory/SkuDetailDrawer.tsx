@@ -1,20 +1,23 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, Empty, Form, Input, InputNumber, Skeleton, Space, Table, Tag } from 'antd';
-import { EditOutlined, ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
+import { Button, Descriptions, Empty, Form, Input, InputNumber, Modal, Select, Skeleton, Space, Table } from 'antd';
+import { EditOutlined, PlusOutlined, ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
 import RecordLogDrawer from '@/components/common/RecordLogDrawer';
+import FreeInboundModal from './FreeInboundModal';
+import { useWarehouseAreaOptions } from '../../../../hooks/useWarehouseAreaOptions';
 import api from '@/utils/api';
 import type { FinishedInventoryRow } from './flattenBySku';
 
 /**
- * SkuDetailDrawer —— 编码点击后的 SKU 详情侧滑。
+ * SkuDetailDrawer —— 编码点击后的 SKU 详情侧滑（D-436 重构）。
  *
- * 设计目标：
- * - 顶部只读卡片：款号 / 款名 / 商品编码 / 颜色 / 尺码 / 工厂 / 实时库存
- * - 中部：该 SKU 历次入库记录列表（按 skuCode 客户端过滤），每行可点 [编辑]
- * - 编辑表单：库位 / 库区 / 备注 / 单价（仅后端 /edit 接口允许的字段）
- * - 保存调用 POST /api/warehouse/finished-inventory/edit，成功后广播 data:changed 触发首页刷新
- * - 底部操作日志按钮 → RecordLogDrawer，便于追溯该款的出入库/编辑历史
+ * 设计目标（对齐参考稿：大画布、分区清晰、编辑不跳页）：
+ * - 宽度 85%（原 760px 窄条是"字看不清/横向滚动"的根因）
+ * - 顶部 Descriptions 只读区：款号 / 款名 / 商品编码 / 颜色 / 尺码 / 工厂 / 实时库存
+ * - 中部：该 SKU 历次入库记录（middle 尺寸表格，不再 small 挤压）
+ * - 行 [编辑] → 抽屉内弹出编辑框（库位/库区/单价/备注），不跳转任何页面
+ * - 底部 [入库登记] → 复用成品仓库自由入库弹窗（FreeInboundModal 预置当前编码自动带出）
+ * - 操作日志 → RecordLogDrawer，便于追溯该款的出入库/编辑历史
  */
 interface WarehousingRow {
   id: string;
@@ -53,22 +56,26 @@ interface SkuDetailDrawerProps {
   record: FinishedInventoryRow | null;
   /** 列表刷新回调（保存后调） */
   onRefresh: () => void | Promise<void>;
-  /** 顶部数据源（含当前 SKU 的实时库存/价格等，用于只读卡片） */
+  /** 顶部数据源（含当前 SKU 的实时库存/价格等，用于只读区） */
   rawDataSource: any[];
 }
 
 const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record, onRefresh, rawDataSource }) => {
   const [warehousingList, setWarehousingList] = useState<WarehousingRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingRow, setEditingRow] = useState<WarehousingRow | null>(null);
   const [editForm] = Form.useForm();
   const [editSaving, setEditSaving] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
+  const [inboundOpen, setInboundOpen] = useState(false);
 
   const skuCode = record?.__skuCode || '';
   const styleNo = record?.styleNo || '';
 
-  // 只读卡片：当前实时库存（来自 rawDataSource 的同 SKU 行）
+  // 编辑框里的库区下拉（成品仓 FINISHED，与自由入库同源）
+  const { selectOptions: areaOptions } = useWarehouseAreaOptions('FINISHED' as any);
+
+  // 只读区：当前实时库存（来自 rawDataSource 的同 SKU 行）
   const liveStock = useMemo(() => {
     if (!record) return null;
     return rawDataSource.find(
@@ -96,28 +103,30 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
   useEffect(() => {
     if (open && record) loadWarehousingList();
     if (!open) {
-      setEditingId(null);
+      setEditingRow(null);
       editForm.resetFields();
+      setInboundOpen(false);
     }
   }, [open, record, loadWarehousingList, editForm]);
 
+  /** 打开行编辑框（forceRender 保证 Form 已挂载，setFieldsValue 立即生效） */
   const startEdit = (row: WarehousingRow) => {
-    setEditingId(row.id);
+    setEditingRow(row);
     editForm.setFieldsValue({
       warehouse: row.warehouse || '',
-      warehouseAreaId: row.warehouseAreaId || '',
+      warehouseAreaId: row.warehouseAreaId || undefined,
       remark: row.defectRemark || '',
       unitPrice: row.unitPrice ?? null,
     });
   };
 
   const cancelEdit = () => {
-    setEditingId(null);
+    setEditingRow(null);
     editForm.resetFields();
   };
 
   const saveEdit = async () => {
-    if (!editingId) return;
+    if (!editingRow) return;
     try {
       const values = await editForm.validateFields();
       setEditSaving(true);
@@ -129,10 +138,11 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
       if (values.unitPrice !== undefined && values.unitPrice !== null && values.unitPrice !== '') {
         changes.unitPrice = Number(values.unitPrice);
       }
-      await api.post('/warehouse/finished-inventory/edit', { warehousingId: editingId, changes });
-      // 触发首页刷新（data:changed 已在 useSync 中订阅）
+      await api.post('/warehouse/finished-inventory/edit', { warehousingId: editingRow.id, changes });
+      // 触发全局刷新（data:changed 已在 useSync 中订阅），并刷新抽屉内入库记录
       try { window.dispatchEvent(new Event('data:changed')); } catch { /* noop */ }
       await onRefresh();
+      await loadWarehousingList();
       cancelEdit();
     } catch (e: any) {
       if (e?.errorFields) return; // 表单校验失败，组件已显示
@@ -148,9 +158,10 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
         open={open}
         onClose={onClose}
         title={record ? `商品编码详情 - ${skuCode}` : '商品编码详情'}
-        width={760}
+        width="85%"
         footer={(
           <Space>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setInboundOpen(true)}>入库登记</Button>
             <Button icon={<HistoryOutlined />} onClick={() => setLogOpen(true)}>操作日志</Button>
             <Button icon={<ReloadOutlined />} onClick={() => { void loadWarehousingList(); }}>刷新</Button>
             <Button onClick={onClose}>关闭</Button>
@@ -160,141 +171,143 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
         {!record ? (
           <Empty description="未选中商品编码" />
         ) : (
-          /*
-           * 用 <Form component={false}> 而非 Fragment：
-           * Table 单元格里的 Form.Item 靠 **React context** 拿 form 实例，
-           * 必须处在 <Form> 的子树内。早前把 <Form> 放在 Table 外面（兄弟节点、
-           * 还 display:none），Form.Item 拿不到 context → 输入框值不同步、
-           * validateFields() 取到 undefined，保存必然失败。
-           * component={false} = 只提供 context、不渲染任何 DOM，等价于 Fragment。
-           */
-          <Form form={editForm} component={false}>
-            <Card size="small" style={{ marginBottom: 12 }}>
-              <div className="u-d-flex u-fwrap-wrap u-gap-16" style={{ rowGap: 8 }}>
-                <div style={{ minWidth: 120 }}>
-                  <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>款号</div>
-                  <div className="u-fw-600">{record.styleNo || '-'}</div>
-                </div>
-                <div style={{ minWidth: 160 }}>
-                  <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>款名</div>
-                  <div className="u-fw-600">{record.styleName || '-'}</div>
-                </div>
-                <div style={{ minWidth: 200 }}>
-                  <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>商品编码</div>
-                  <div style={{ fontFamily: 'var(--font-family-mono, monospace)', fontWeight: 600 }}>{skuCode || '-'}</div>
-                </div>
-                <div style={{ minWidth: 80 }}>
-                  <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>颜色</div>
-                  <Tag color="blue" style={{ margin: 0 }}>{record.color || '-'}</Tag>
-                </div>
-                <div style={{ minWidth: 60 }}>
-                  <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>尺码</div>
-                  <Tag color="default" style={{ margin: 0 }}>{record.size || '-'}</Tag>
-                </div>
-                <div style={{ minWidth: 140 }}>
-                  <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>工厂</div>
-                  <div>{record.factoryName || '-'}</div>
-                </div>
-                <div style={{ minWidth: 100 }}>
-                  <div className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>当前库存</div>
-                  <div className="u-fw-600" style={{ color: 'var(--color-success)' }}>
-                    {liveStock?.availableQty ?? record.availableQty ?? 0} 件
-                  </div>
-                </div>
-              </div>
-            </Card>
+          <>
+            <Descriptions
+              bordered
+              column={{ xs: 1, sm: 2, md: 3, lg: 4 }}
+              size="middle"
+              style={{ marginBottom: 16 }}
+              items={[
+                { key: 'styleNo', label: '款号', children: <span style={{ fontWeight: 600 }}>{record.styleNo || '-'}</span> },
+                { key: 'styleName', label: '款名', children: <span style={{ fontWeight: 600 }}>{record.styleName || '-'}</span> },
+                {
+                  key: 'skuCode',
+                  label: '商品编码',
+                  children: <span style={{ fontFamily: 'var(--font-family-mono, monospace)', fontWeight: 600 }}>{skuCode || '-'}</span>,
+                },
+                { key: 'color', label: '颜色', children: record.color || '-' },
+                { key: 'size', label: '尺码', children: record.size || '-' },
+                { key: 'factory', label: '工厂', children: record.factoryName || '-' },
+                {
+                  key: 'stock',
+                  label: '当前库存',
+                  children: (
+                    <span style={{ fontWeight: 600, color: 'var(--color-success)', fontSize: 15 }}>
+                      {liveStock?.availableQty ?? record.availableQty ?? 0} 件
+                    </span>
+                  ),
+                },
+              ]}
+            />
 
-            <div className="u-fw-600 u-mb-8 u-fs-14">入库记录（{warehousingList.length} 条）</div>
+            <div style={{ fontWeight: 600, fontSize: 15, margin: '4px 0 10px' }}>
+              入库记录（{warehousingList.length} 条）
+            </div>
             {loading ? (
               <Skeleton active />
             ) : warehousingList.length === 0 ? (
               <Empty description="该商品编码暂无入库记录" />
             ) : (
               <Table
-                size="small"
+                size="middle"
                 rowKey="id"
                 dataSource={warehousingList}
                 pagination={false}
+                scroll={{ x: 'max-content' }}
                 columns={[
-                  { title: '入库单号', dataIndex: 'warehousingNo', width: 160, render: (v: string) => <span style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{v || '-'}</span> },
-                  { title: '入库日期', dataIndex: 'warehousingEndTime', width: 150, render: (v: string) => v || '-' },
+                  { title: '入库单号', dataIndex: 'warehousingNo', width: 180, render: (v: string) => <span style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{v || '-'}</span> },
+                  { title: '入库日期', dataIndex: 'warehousingEndTime', width: 170, render: (v: string) => v || '-' },
                   {
                     title: '数量',
-                    width: 90,
+                    width: 100,
                     align: 'right' as const,
                     render: (_: unknown, r: WarehousingRow) => (
                       <span>
-                        <span className="u-fw-600" style={{ color: 'var(--color-success)' }}>{r.qualifiedQuantity ?? r.warehousingQuantity ?? 0}</span>
-                        <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}> 件</span>
+                        <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>{r.qualifiedQuantity ?? r.warehousingQuantity ?? 0}</span>
+                        <span style={{ color: 'var(--color-text-tertiary)' }}> 件</span>
                       </span>
                     ),
                   },
                   {
                     title: '库位 / 库区',
-                    width: 160,
-                    render: (_: unknown, r: WarehousingRow) => editingId === r.id ? (
-                      <Space.Compact style={{ width: '100%' }}>
-                        <Form.Item name="warehouse" noStyle>
-                          <Input placeholder="库位" />
-                        </Form.Item>
-                        <Form.Item name="warehouseAreaId" noStyle>
-                          <Input placeholder="库区ID" />
-                        </Form.Item>
-                      </Space.Compact>
-                    ) : (
-                      <span>
-                        {r.warehouse || '-'}{r.warehouseAreaName ? ` · ${r.warehouseAreaName}` : ''}
-                      </span>
+                    width: 180,
+                    render: (_: unknown, r: WarehousingRow) => (
+                      <span>{r.warehouse || '-'}{r.warehouseAreaName ? ` · ${r.warehouseAreaName}` : ''}</span>
                     ),
                   },
                   {
                     title: '单价',
                     width: 110,
-                    render: (_: unknown, r: WarehousingRow) => editingId === r.id ? (
-                      <Form.Item name="unitPrice" noStyle>
-                        <InputNumber style={{ width: '100%' }} min={0} placeholder="单价" />
-                      </Form.Item>
-                    ) : (
+                    render: (_: unknown, r: WarehousingRow) => (
                       <span>{r.unitPrice != null ? `¥${Number(r.unitPrice).toFixed(2)}` : '-'}</span>
                     ),
                   },
-                  {
-                    title: '操作人',
-                    dataIndex: 'warehousingOperatorName',
-                    width: 90,
-                    render: (v: string) => v || '-',
-                  },
+                  { title: '操作人', dataIndex: 'warehousingOperatorName', width: 100, render: (v: string) => v || '-' },
                   {
                     title: '备注',
-                    render: (_: unknown, r: WarehousingRow) => editingId === r.id ? (
-                      <Form.Item name="remark" noStyle>
-                        <Input placeholder="备注 / 不合格原因" />
-                      </Form.Item>
-                    ) : (
+                    render: (_: unknown, r: WarehousingRow) => (
                       <span style={{ color: 'var(--color-text-tertiary)' }}>{r.defectRemark || '-'}</span>
                     ),
                   },
                   {
                     title: '操作',
-                    width: 110,
+                    width: 90,
                     fixed: 'right' as const,
-                    render: (_: unknown, r: WarehousingRow) => editingId === r.id ? (
-                      <Space>
-                        <Button size="small" type="primary" loading={editSaving} onClick={() => { void saveEdit(); }}>保存</Button>
-                        <Button size="small" onClick={cancelEdit} disabled={editSaving}>取消</Button>
-                      </Space>
-                    ) : (
-                      <Button size="small" type="link" icon={<EditOutlined />} style={{ padding: 0 }} onClick={() => startEdit(r)}>编辑</Button>
+                    render: (_: unknown, r: WarehousingRow) => (
+                      <Button
+                        size="small"
+                        type="link"
+                        icon={<EditOutlined />}
+                        style={{ padding: 0 }}
+                        onClick={() => startEdit(r)}
+                      >编辑</Button>
                     ),
                   },
                 ]}
               />
             )}
-          </Form>
+
+            {/*
+             * 编辑框（在抽屉之内弹出，不跳页）。forceRender 让 Form 随抽屉先挂载，
+             * startEdit 里的 setFieldsValue 立即生效（D-419 的 Form context 教训同样适用）。
+             */}
+            <Modal
+              title={editingRow ? `编辑入库记录 - ${editingRow.warehousingNo || ''}` : '编辑入库记录'}
+              open={!!editingRow}
+              forceRender
+              onCancel={cancelEdit}
+              onOk={() => { void saveEdit(); }}
+              confirmLoading={editSaving}
+              okText="保存"
+              cancelText="取消"
+              width={520}
+            >
+              <Form form={editForm} layout="vertical">
+                <Form.Item name="warehouse" label="库位" rules={[{ required: true, message: '请输入库位' }]}>
+                  <Input placeholder="如 A-002" />
+                </Form.Item>
+                <Form.Item name="warehouseAreaId" label="库区">
+                  <Select
+                    allowClear
+                    placeholder="选择库区"
+                    loading={false}
+                    options={areaOptions}
+                  />
+                </Form.Item>
+                <Form.Item name="unitPrice" label="单价（元）">
+                  <InputNumber style={{ width: '100%' }} min={0} precision={2} placeholder="入库单价" />
+                </Form.Item>
+                <Form.Item name="remark" label="备注">
+                  <Input.TextArea rows={2} placeholder="备注 / 不合格原因" />
+                </Form.Item>
+              </Form>
+            </Modal>
+          </>
         )}
       </SideDrawer>
 
       {/*
+       * 就地入库：复用成品仓库自由入库弹窗，带入当前商品编码自动添加一行（D-436）。
        * filter 取值依据（勿凭感觉改）：
        * - module='仓库管理'：AOP 的 resolveModule() 对 /api/warehouse/finished-inventory/*
        *   命中 u.contains("/warehouse/finished") 分支返回 "仓库管理"。
@@ -312,6 +325,17 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
           module: '仓库管理',
           targetIds: warehousingList.map((r) => r.id).filter(Boolean),
         }}
+      />
+
+      <FreeInboundModal
+        open={inboundOpen}
+        onClose={() => setInboundOpen(false)}
+        onSuccess={() => {
+          setInboundOpen(false);
+          void loadWarehousingList();
+          void onRefresh();
+        }}
+        presetSkuCode={skuCode}
       />
     </>
   );

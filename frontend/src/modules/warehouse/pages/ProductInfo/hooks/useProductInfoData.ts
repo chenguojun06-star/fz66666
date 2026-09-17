@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Form, App } from 'antd';
 import type { FormInstance } from 'antd';
-import { useNavigate } from 'react-router-dom';
 import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 import type { StatCard } from '@/components/common/PageStatCards';
@@ -40,6 +39,11 @@ interface UseProductInfoDataReturn {
   // nav
   handleInbound: (record: StyleInfo) => void;
   handlePrintTag: (record: StyleInfo) => void;
+  // D-436：入库/吊牌就地完成
+  inboundOpen: boolean;
+  setInboundOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  tagPrintOpen: boolean;
+  setTagPrintOpen: React.Dispatch<React.SetStateAction<boolean>>;
   // keyword
   localKeyword: string;
   handleKeywordChange: (v: string) => void;
@@ -49,7 +53,6 @@ interface UseProductInfoDataReturn {
 
 export const useProductInfoData = (): UseProductInfoDataReturn => {
   const { message } = App.useApp();
-  const navigate = useNavigate();
 
   const {
     loading,
@@ -72,6 +75,10 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [skuList, setSkuList] = useState<SkuRow[]>([]);
   const [skuLoading, _setSkuLoading] = useState(false);
+
+  // D-436：入库/吊牌在当前页就地完成（原实现 navigate 跳生产入库页/标签打印页）
+  const [inboundOpen, setInboundOpen] = useState(false);
+  const [tagPrintOpen, setTagPrintOpen] = useState(false);
 
   const [localKeyword, setLocalKeyword] = useState(queryParams.keyword || '');
   const keywordDebounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -162,6 +169,13 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
           message.success('更新成功');
           setModalOpen(false);
           fetchList();
+          // D-436：详情抽屉保持打开（编辑不再先关抽屉），保存后同步刷新避免展示旧数据
+          if (drawerOpen && editingItem?.id) {
+            try {
+              const detailRes = await api.get<any>(`/style/info/${editingItem.id}`);
+              if (detailRes.code === 200 && detailRes.data) setDrawerRecord(detailRes.data);
+            } catch { /* 拉取失败时保留旧数据 */ }
+          }
         } else {
           message.error((res as any).message || '更新失败');
         }
@@ -226,12 +240,14 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
     setSkuList([]);
   };
 
-  const handleInbound = (record: StyleInfo) => {
-    navigate(`/production/warehousing?styleNo=${encodeURIComponent(record.styleNo)}&styleId=${record.id}`);
+  // 就地入库：打开自由入库弹窗（复用成品仓库同款组件），不再跳转生产入库页
+  const handleInbound = (_record: StyleInfo) => {
+    setInboundOpen(true);
   };
 
-  const handlePrintTag = (record: StyleInfo) => {
-    navigate(`/warehouse/label-print?styleNo=${encodeURIComponent(record.styleNo)}`);
+  // 就地吊牌：抽屉内嵌完整标签打印页，不再跳转
+  const handlePrintTag = (_record: StyleInfo) => {
+    setTagPrintOpen(true);
   };
 
   return {
@@ -262,6 +278,10 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
     handleToggleStatus,
     handleInbound,
     handlePrintTag,
+    inboundOpen,
+    setInboundOpen,
+    tagPrintOpen,
+    setTagPrintOpen,
     localKeyword,
     handleKeywordChange,
     statCards,

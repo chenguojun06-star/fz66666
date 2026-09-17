@@ -45,7 +45,8 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
       extra={
         d ? (
           <Space>
-            <Button icon={<EditOutlined />} onClick={() => { onClose(); onEdit(d); }}>编辑</Button>
+            {/* D-436：编辑在当前抽屉之上弹编辑框完成，不再先关抽屉 */}
+            <Button icon={<EditOutlined />} onClick={() => { onEdit(d); }}>编辑</Button>
             <Button icon={<LoginOutlined />} onClick={() => onInbound(d)}>入库</Button>
             <Button icon={<PrinterOutlined />} onClick={() => onPrintTag(d)}>吊牌</Button>
             <Popconfirm

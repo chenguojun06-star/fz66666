@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Input, Select, Space } from 'antd';
+import { Button, Drawer, Input, Select, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import PageLayout from '@/components/common/PageLayout';
@@ -11,6 +11,9 @@ import { useProductInfoData } from './hooks/useProductInfoData';
 import { buildColumns } from './columns';
 import EditModal from './components/EditModal';
 import DetailDrawer from './components/DetailDrawer';
+// D-436：入库/吊牌就地完成 —— 复用成品仓库自由入库弹窗与标签打印页，不再路由跳转
+import FreeInboundModal from '../FinishedInventory/FreeInboundModal';
+import LabelPrint from '../LabelPrint';
 
 const ProductInfoPage: React.FC = () => {
   const { isMobile } = useViewport();
@@ -41,6 +44,10 @@ const ProductInfoPage: React.FC = () => {
     handleToggleStatus,
     handleInbound,
     handlePrintTag,
+    inboundOpen,
+    setInboundOpen,
+    tagPrintOpen,
+    setTagPrintOpen,
     localKeyword,
     handleKeywordChange,
     statCards,
@@ -148,6 +155,26 @@ const ProductInfoPage: React.FC = () => {
         onCancel={() => setModalOpen(false)}
         onSubmit={handleSubmit}
       />
+
+      {/* D-436：入库就地完成 —— 与成品仓库同一套自由入库弹窗 */}
+      <FreeInboundModal
+        open={inboundOpen}
+        onClose={() => setInboundOpen(false)}
+        onSuccess={() => setInboundOpen(false)}
+      />
+
+      {/* D-436：吊牌就地完成 —— 抽屉内嵌完整标签打印页（每次打开重新挂载，状态干净） */}
+      {tagPrintOpen && (
+        <Drawer
+          title="吊牌打印"
+          width="92%"
+          open
+          onClose={() => setTagPrintOpen(false)}
+          styles={{ body: { padding: 0 } }}
+        >
+          <LabelPrint />
+        </Drawer>
+      )}
     </>
   );
 };
