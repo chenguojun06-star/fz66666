@@ -19,6 +19,8 @@ Page({
     activeTab: 'tenant',
     showApprovalModal: false,
     showRejectModal: false,
+    // D-422：区分审批来源（system=租户员工 / tenant=外发工厂员工），两者调不同接口
+    approvalMode: 'system',
     currentUser: null,
     selectedRoleId: '',
     factorySelectedRole: '',
@@ -80,7 +82,11 @@ Page({
     this.setData({ roleLoading: true });
     try {
       const result = await api.system.listRoles({ page: 1, pageSize: 100 });
-      this.setData({ roleOptions: result?.records || [] });
+      // D-422：WXML 数据绑定不支持 String()/Number() 等内置函数调用，
+      // 原 wxml 里的 {{selectedRoleId === String(item.id)}} 属于非法表达式。
+      // 改为在 JS 侧预计算字符串 id，wxml 只做纯比较。
+      const records = (result?.records || []).map((r) => ({ ...r, _idStr: String(r.id) }));
+      this.setData({ roleOptions: records });
     } catch (e) {
       console.error('加载角色失败', e);
     } finally {
@@ -126,8 +132,10 @@ Page({
     this.setData({
       currentUser: user,
       selectedRoleId: user.roleId ? String(user.roleId) : '',
+      approvalMode: 'system',
       showApprovalModal: true,
     });
+    if (!this.data.roleOptions.length) this.loadRoleOptions();
   },
 
   onRoleSelect(e) {
@@ -137,7 +145,7 @@ Page({
   },
 
   async confirmApprove() {
-    const { currentUser, selectedRoleId } = this.data;
+    const { currentUser, selectedRoleId, approvalMode } = this.data;
     if (!selectedRoleId) {
       toast.error('请选择角色');
       return;
@@ -145,11 +153,22 @@ Page({
 
     wx.showLoading({ title: '处理中...', mask: true });
     try {
-      await api.system.approveUser(currentUser.id, { roleId: Number(selectedRoleId) });
+      // D-422：按审批来源分流到不同接口
+      //   system → /api/system/user/{id}/approval-action（租户员工）
+      //   tenant → /api/system/tenant/registrations/{id}/approve（外发工厂员工）
+      if (approvalMode === 'tenant') {
+        await api.tenant.approveRegistration(currentUser.id, { roleId: Number(selectedRoleId) });
+      } else {
+        await api.system.approveUser(currentUser.id, { roleId: Number(selectedRoleId) });
+      }
       wx.hideLoading();
       toast.success('已批准并分配角色');
       this.setData({ showApprovalModal: false, currentUser: null, selectedRoleId: '' });
-      this.loadPendingUsers(true);
+      if (approvalMode === 'tenant') {
+        this.loadTenantRegistrations();
+      } else {
+        this.loadPendingUsers(true);
+      }
     } catch (e) {
       wx.hideLoading();
       toast.error(e.errMsg || e.message || '审批失败');
@@ -204,34 +223,23 @@ Page({
     }
   },
 
+  /**
+   * D-422：批准外发工厂员工
+   * 原实现用 wx.showModal 并检查 this.data.factorySelectedRole，
+   * 但该字段在整份代码里从未被 setData 赋值（恒为 ''）→
+   * 用户点"通过"永远收到"请先选择角色"并直接 return，审批功能实际不可用。
+   * 现改为复用页内角色选择弹层（与租户员工审批同一套 UI），并标记 approvalMode='tenant'。
+   */
   onTenantApprove(e) {
     const { user } = e.currentTarget.dataset;
     if (!user) return;
-
-    wx.showModal({
-      title: '批准工人注册',
-      content: `确定批准"${user.name || user.username}"加入工厂吗？`,
-      confirmText: '批准',
-      cancelText: '取消',
-      success: async (res) => {
-        if (res.confirm) {
-          if (!this.data.factorySelectedRole) {
-            toast.info('请先选择角色');
-            return;
-          }
-          wx.showLoading({ title: '处理中...', mask: true });
-          try {
-            await api.tenant.approveRegistration(user.id, { roleId: this.data.factorySelectedRole });
-            wx.hideLoading();
-            toast.success('已批准');
-            this.loadTenantRegistrations();
-          } catch (error) {
-            wx.hideLoading();
-            toast.error(error?.message || '批准失败');
-          }
-        }
-      },
+    this.setData({
+      currentUser: user,
+      selectedRoleId: user.roleId ? String(user.roleId) : '',
+      approvalMode: 'tenant',
+      showApprovalModal: true,
     });
+    if (!this.data.roleOptions.length) this.loadRoleOptions();
   },
 
   onTenantReject(e) {
@@ -239,7 +247,7 @@ Page({
     if (!user) return;
 
     wx.showModal({
-      title: '拒绝工人注册',
+      title: '拒绝外发工厂员工',
       content: `确定拒绝"${user.name || user.username}"的注册申请吗？`,
       editable: true,
       placeholderText: '请输入拒绝原因',

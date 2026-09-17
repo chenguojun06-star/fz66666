@@ -159,22 +159,50 @@ Page({
     });
   },
 
-  onItemTap: function (e) {
-    const id = e.currentTarget.dataset.id;
-    const item = this.data.list.find(function (it) { return it.id === id; });
-    if (!item) return;
-
-    // 跳转到详情页
+  /**
+   * 构造详情页 URL（列表跳详情 / 列表直接出库 共用，避免参数拼接重复）
+   * @param {Object} item - 列表项
+   * @param {boolean} autoOutbound - 是否让详情页进入后自动弹出出库窗
+   * @returns {string} 详情页完整 URL
+   */
+  _buildDetailUrl: function (item, autoOutbound) {
     const params = [
       'styleNo=' + encodeURIComponent(item.styleNo || ''),
       'orderNo=' + encodeURIComponent(item.orderNo || ''),
       'styleName=' + encodeURIComponent(item.styleName || ''),
       'styleImage=' + encodeURIComponent(item._styleImage || item.styleImage || ''),
       'factoryName=' + encodeURIComponent(item.factoryName || ''),
-    ].join('&');
-    wx.navigateTo({
-      url: '/pages/warehouse/finished-inventory/detail/index?' + params,
-    });
+    ];
+    if (autoOutbound) params.push('autoOutbound=1');
+    return '/pages/warehouse/finished-inventory/detail/index?' + params.join('&');
+  },
+
+  onItemTap: function (e) {
+    const id = e.currentTarget.dataset.id;
+    const item = this.data.list.find(function (it) { return it.id === id; });
+    if (!item) return;
+    wx.navigateTo({ url: this._buildDetailUrl(item, false) });
+  },
+
+  /**
+   * 列表直接出库（D-418）
+   *
+   * 背景：出库原只能「列表 → 详情 → SKU 行」三级进入，用户以为成品没有出库功能。
+   * 做法：列表项直接给「出库」按钮，跳详情并带 autoOutbound=1，由详情页加载完 SKU 后
+   *      自动弹出第一个有可用库存的 SKU 出库窗 —— 完全复用详情页既有出库逻辑，不新增接口，零风险。
+   * 注意：用 catchtap 绑定，避免冒泡触发外层 onItemTap 造成跳转两次。
+   *
+   * @param {Object} e - 事件对象（dataset.id）
+   */
+  onOutboundTap: function (e) {
+    const id = e.currentTarget.dataset.id;
+    const item = this.data.list.find(function (it) { return it.id === id; });
+    if (!item) return;
+    if (!item._hasAvailable) {
+      wx.showToast({ title: '该款暂无可用库存', icon: 'none' });
+      return;
+    }
+    wx.navigateTo({ url: this._buildDetailUrl(item, true) });
   },
 
   preventTouchMove: function () {},

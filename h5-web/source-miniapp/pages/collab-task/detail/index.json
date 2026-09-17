@@ -1,0 +1,8 @@
+{
+  "usingComponents": {
+    "empty-state": "/components/empty-state/empty-state"
+  },
+  "navigationBarTitleText": "协作任务",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
+}

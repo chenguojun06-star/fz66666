@@ -1,0 +1,62 @@
+/**
+ * wxmlUtils.wxs — WXML 表达式辅助函数（微信 WXS 脚本模块）
+ *
+ * 背景（本项目重复踩过的坑）：
+ *   WXML 数据绑定**不支持** String() / Number() / indexOf() / substring() 等
+ *   JS 内置函数与方法调用，会报：
+ *     [ WXML 文件编译错误] Bad value with message: did you forget }}, ' or ".
+ *   需要函数调用时必须走 WXS —— 这是微信官方为 WXML 提供的脚本模块机制。
+ *
+ * 用法：
+ *   <wxs src="/utils/wxmlUtils.wxs" module="wxu" />
+ *   {{wxu.abbr(item.styleNo)}}          // 取前 2 字，空值给 '--'
+ *   {{wxu.has(actions, 'inbound')}}     // 等价 indexOf(x) !== -1
+ *
+ * 注意：WXS 是 ES5 子集（支持 var/function/for/if），
+ *       不支持 let/const/箭头函数/模板字符串。
+ */
+
+var wxu = {
+  /**
+   * 取字符串前 n 个字符（默认 2），用于封面占位缩写
+   * @param {*} s 源字符串
+   * @param {number} [n=2] 取几位
+   * @returns {string} 空值返回 '--'
+   */
+  abbr: function (s, n) {
+    if (s === undefined || s === null || s === '') return '--';
+    var str = '' + s;
+    var len = (n === undefined || n === null) ? 2 : n;
+    if (len <= 0) return '';
+    if (str.length <= len) return str;
+    var out = '';
+    // 用 charAt 逐字拼接（避免依赖 substring/slice 在 WXS 运行时的可用性）
+    for (var i = 0; i < len; i++) {
+      out += str.charAt(i);
+    }
+    return out;
+  },
+
+  /**
+   * 数组是否包含某值 —— 等价于 arr.indexOf(val) !== -1
+   * @param {Array} arr
+   * @param {*} val
+   * @returns {boolean}
+   */
+  has: function (arr, val) {
+    if (!arr || !arr.length) return false;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] === val) return true;
+    }
+    return false;
+  },
+
+  /**
+   * 安全取反（用于 wx:if 里表达"不包含"）
+   */
+  not: function (v) {
+    return !v;
+  },
+};
+
+module.exports = wxu;

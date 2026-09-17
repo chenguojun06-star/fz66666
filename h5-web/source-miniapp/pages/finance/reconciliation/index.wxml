@@ -1,0 +1,97 @@
+<view class="page">
+
+  <!-- 工厂（外部）账号拦截：对账属租户财务数据，外部账号不参与 -->
+  <view class="blocked-wrap" wx:if="{{blocked}}">
+    <view class="blocked-card">
+      <view class="blocked-icon"></view>
+      <text class="blocked-text">{{blockedMsg}}</text>
+    </view>
+  </view>
+
+  <block wx:else>
+    <!-- 搜索 + 状态筛选（sticky 吸顶，统一通用组件） -->
+    <sticky-search-bar
+      placeholder="搜索供应商 / 物料 / 单号"
+      value="{{keyword}}"
+      show-scan="{{false}}"
+      show-filter="{{true}}"
+      bind:input="onKeywordInput"
+      bind:confirm="onKeywordSearch"
+    >
+      <view slot="filter" class="filter-bar">
+        <view class="filter-item">
+          <picker mode="selector" range="{{STATUS_OPTIONS}}" range-key="label" bindchange="onStatusFilterChange">
+            <view class="picker-box">
+              <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : '全部状态'}}</text>
+              <view class="picker-chevron"></view>
+            </view>
+          </picker>
+        </view>
+      </view>
+    </sticky-search-bar>
+
+    <!-- 卡片列表 -->
+    <view class="card-list">
+      <empty-state wx:if="{{!loading && list.length === 0}}" text="暂无对账记录" />
+
+      <view
+        class="order-card {{item.statusCls === 'tag-orange' ? 'order-card--warn' : (item.statusCls === 'tag-red' ? 'order-card--danger' : '')}}"
+        wx:for="{{list}}"
+        wx:key="id"
+      >
+        <!-- 主行：封面 + 信息（点击进详情页） -->
+        <view class="order-main" data-item="{{item}}" data-index="{{index}}" catchtap="onTapItem">
+          <view class="order-cover">
+            <image wx:if="{{item._image}}" class="cover-pic" src="{{item._image}}" mode="aspectFill" lazy-load />
+            <view wx:else class="cover-placeholder"><view class="cover-ph-text">料</view></view>
+          </view>
+
+          <view class="order-info">
+            <view class="info-line1">
+              <text class="info-no">{{item.reconciliationNo || '—'}}</text>
+              <view class="info-badges">
+                <view class="source-chip source-chip--{{item._sourceKind}}" wx:if="{{item._sourceText}}">{{item._sourceText}}</view>
+                <view class="status-badge" style="background:{{item._statusColor}}">{{item.statusText}}</view>
+              </view>
+            </view>
+            <view class="info-line--strong">{{item.supplierName || '—'}}<text wx:if="{{item.materialName}}" class="info-sep">·</text><text wx:if="{{item.materialName}}">{{item.materialName}}</text></view>
+            <view class="info-line" wx:if="{{item.purchaserName}}">采购员 {{item.purchaserName}}</view>
+            <view class="info-line--weak" wx:if="{{item.reconciliationDate || item.createTime}}">对账 {{item.reconciliationDate || item.createTime}}</view>
+            <view class="info-line--weak" wx:if="{{item.purchaseNo || item.orderNo}}">来源 {{item.purchaseNo || item.orderNo}}</view>
+          </view>
+        </view>
+
+        <!-- 末行：金额（蓝）+ 数量×单价 + 操作 -->
+        <view class="card-bottom">
+          <view class="amount-left">
+            <text class="amount-currency">¥</text>
+            <text class="amount-num">{{item.amountStr}}</text>
+          </view>
+          <view class="amount-right" wx:if="{{item.quantityStr && item.quantityStr !== '—'}}">{{item.quantityStr}}{{item.unit || ''}} × ¥{{item.unitPriceStr}}<text wx:if="{{item.unit}}">/{{item.unit}}</text></view>
+          <view class="amount-right" wx:else></view>
+          <view class="bottom-actions">
+            <view
+              wx:if="{{canOperate && item.nextLabel}}"
+              class="action-btn action-btn--primary"
+              data-id="{{item.id}}"
+              data-index="{{index}}"
+              catchtap="onActionAdvanceInline"
+            >{{item.nextLabel}}</view>
+            <view
+              class="action-btn action-btn--ghost"
+              data-id="{{item.id}}"
+              data-index="{{index}}"
+              catchtap="onTapItem"
+            >详情</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="load-more {{!hasMore ? 'disabled' : ''}}" wx:if="{{loading || !hasMore}}">
+        <text>{{loading ? '加载中...' : '没有更多了'}}</text>
+      </view>
+    </view>
+  </block>
+
+  <ai-assistant id="ai-assistant" />
+</view>

@@ -1,3 +1,4 @@
+<wxs src="/utils/wxmlUtils.wxs" module="wxu" />
 <!-- 样衣仓库管理页 -->
 <view class="container">
   
@@ -263,7 +264,7 @@
         </view>
 
         <!-- 仓库区域选择（入库时显示） -->
-        <view wx:if="{{actions.indexOf('inbound') !== -1}}" class="warehouse-section">
+        <view wx:if="{{wxu.has(actions, 'inbound')}}" class="warehouse-section">
           <view class="warehouse-label">入库仓库：</view>
           <!-- D-171：仓库搜索（仓库较多时快速定位） -->
           <input
@@ -332,19 +333,19 @@
         <view class="action-btn-row">
           <view
             class="action-btn action-btn--inbound {{submitting ? 'action-btn--disabled' : ''}}"
-            wx:if="{{actions.indexOf('inbound') !== -1}}"
+            wx:if="{{wxu.has(actions, 'inbound')}}"
             bindtap="onInbound"
             hover-class="action-btn--hover"
           >入库</view>
           <view
             class="action-btn action-btn--loan {{submitting ? 'action-btn--disabled' : ''}}"
-            wx:if="{{actions.indexOf('loan') !== -1}}"
+            wx:if="{{wxu.has(actions, 'loan')}}"
             bindtap="onLoan"
             hover-class="action-btn--hover"
           >借调</view>
           <view
             class="action-btn action-btn--return {{submitting ? 'action-btn--disabled' : ''}}"
-            wx:if="{{actions.indexOf('return') !== -1}}"
+            wx:if="{{wxu.has(actions, 'return')}}"
             bindtap="onReturn"
             hover-class="action-btn--hover"
           >归还</view>

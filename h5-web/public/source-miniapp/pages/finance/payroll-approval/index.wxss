@@ -1,0 +1,122 @@
+@import '/styles/page-utils.wxss';
+@import '/styles/modal-form.wxss';
+/* D-421：卡片样式统一走公共文件（与对账/报销/协作任务同款） */
+@import '/styles/finance-card.wxss';
+
+.page {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  background: var(--color-bg-page);
+  min-height: 100vh;
+}
+
+/* ===== 工厂账号拦截 ===== */
+.blocked-wrap { padding: 48px 16px; }
+.blocked-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  padding: 32px 20px; text-align: center; box-shadow: var(--shadow-sm);
+}
+.blocked-icon {
+  width: 40px; height: 40px; margin: 0 auto 12px;
+  border: 2px solid var(--color-warning); border-radius: 50%; position: relative;
+}
+.blocked-icon::after {
+  content: '!'; position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%); font-size: var(--font-size-md);
+  font-weight: 700; color: var(--color-warning); line-height: 1;
+}
+.blocked-text {
+  display: block; font-size: var(--font-size-sm);
+  color: var(--color-text-secondary); line-height: 1.6;
+}
+
+/* ===== 顶部统计卡 ===== */
+.stat-card {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 12px 16px 4px; padding: 16px 8px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+.stat-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.stat-num { font-size: var(--font-size-lg); font-weight: 700; color: var(--color-text-primary); }
+.stat-num--warn { color: var(--color-warning); }
+.stat-num--ok { color: var(--color-success); }
+.stat-label { font-size: var(--font-size-xs); color: var(--color-text-tertiary); }
+.stat-divider { width: 1px; height: 24px; background: var(--color-border); }
+
+/* ===== Filter Bar ===== */
+.filter-bar { display: flex; gap: 8px; }
+.filter-item { flex: 1; min-width: 0; }
+.picker-box {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 4px; padding: 0 12px; height: 32px;
+  background: var(--color-bg-card); border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm); box-sizing: border-box;
+}
+/* D-427：筛选器选中态（有筛选条件时高亮，便于识别当前视图） */
+.picker-box--active {
+  background: var(--color-primary-bg);
+}
+.picker-box--active .picker-text {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+.picker-box--active .picker-chevron {
+  border-top-color: var(--color-primary);
+}
+
+.picker-text {
+  font-size: var(--font-size-sm); color: var(--color-text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.picker-chevron {
+  flex-shrink: 0; width: 0; height: 0;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 4px solid var(--color-text-tertiary);
+}
+
+/* 批量审核条按下态（其余样式见 finance-card.wxss 的 .batch-bar） */
+.batch-bar--pressed { opacity: 0.8; }
+
+/* ===== 操作面板（兼容旧路径） ===== */
+.inline-form-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  padding: 16px; margin: 12px 0; box-shadow: var(--shadow-sm);
+}
+.inline-form-title {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-bottom: 12px;
+  font-size: var(--font-size-lg); font-weight: 600; color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border);
+}
+.inline-form-body { padding: 0; }
+.action-item {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; padding: 14px 0; text-align: center;
+  font-size: var(--font-size-md-lg); font-weight: 500; border-radius: var(--radius-xl);
+}
+.action-icon { width: 18px; height: 18px; position: relative; flex-shrink: 0; }
+.action-icon-check::before {
+  content: ''; position: absolute; top: 2px; left: 5px;
+  width: 6px; height: 10px;
+  border-right: 2px solid var(--color-success);
+  border-bottom: 2px solid var(--color-success);
+  transform: rotate(45deg);
+}
+.action-approve { color: var(--color-success); }
+.action-blocked { padding: 14px 0; text-align: center; color: var(--color-text-tertiary); }
+.action-cancel { color: var(--color-text-secondary); padding: 14px 16px; margin: 0 16px 12px; }
+/* D-428：结算异常汇总条（醒目告知 + 引导核实） */
+.abnormal-bar {
+  margin: 8px 16px 0;
+  padding: 10px 12px;
+  background: var(--color-danger-bg);
+  border-radius: var(--radius-lg);
+}
+.abnormal-bar__text {
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+  line-height: 1.4;
+}

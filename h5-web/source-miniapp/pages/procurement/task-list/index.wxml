@@ -47,6 +47,7 @@
       data-style-no="{{item.styleNo}}"
       data-pattern-production-id="{{item.patternProductionId}}"
       data-source-type="{{item.sourceType}}"
+      data-material-code="{{item.materialCode}}"
       bindtap="onViewDetail"
     >
       <!-- 头部：款式图 + 款号信息 + 右侧状态/操作（对照裁剪卡片） -->
@@ -62,8 +63,8 @@
           <view wx:else class="media-placeholder line-icon icon-package"></view>
         </view>
         <view class="card-title-area procurement-card-title-area">
-          <text class="style-no">{{item.styleNo || '未知款号'}}</text>
-          <text class="style-name" wx:if="{{item.styleName}}">{{item.styleName}}</text>
+          <text class="style-no">{{item.titleText || item.styleNo || '物料采购'}}</text>
+          <text class="style-name" wx:if="{{item.subtitleText}}">{{item.subtitleText}}</text>
           <text class="order-no" wx:if="{{item.orderNo}}">{{item.orderNo}}</text>
         </view>
         <view class="procurement-card-right">

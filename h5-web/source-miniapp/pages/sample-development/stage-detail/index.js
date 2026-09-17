@@ -1550,18 +1550,6 @@ Page({
   },
 
   /* ============ 设计稿交互 ============ */
-  /** 修改信息 */
-  onEditInfo() {
-    var styleId = this.data.styleId;
-    if (styleId) {
-      wx.navigateTo({
-        url: '/pages/sample-development/edit/index?id=' + styleId,
-      });
-    } else {
-      wx.showToast({ title: '缺少款式信息', icon: 'none' });
-    }
-  },
-
   /** 提交审核 —— 展开页面内审核表单 */
   onSubmitReview() {
     this.setData({
@@ -1631,16 +1619,11 @@ Page({
     });
   },
 
-  /** 扫码更新 */
+  /** 扫码更新 —— 通用扫码页是 tabBar 页，只能 switchTab；样衣二维码扫出后由扫码页自带流程路由 */
   onScanUpdate() {
-    var patternId = this.data.patternId;
-    if (patternId) {
-      wx.navigateTo({
-        url: '/pages/scan/index?patternId=' + patternId,
-      });
-    } else {
-      wx.showToast({ title: '暂无可扫码任务', icon: 'none' });
-    }
+    wx.switchTab({
+      url: '/pages/scan/index',
+    });
   },
 
   /** 上传现场照片（复用附件上传） */

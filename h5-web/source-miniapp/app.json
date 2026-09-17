@@ -146,7 +146,8 @@
       "root": "pages/smart-ops",
       "name": "pkg-smart-ops",
       "pages": [
-        "index"
+        "index",
+        "exception-detail/index"
       ]
     },
     {
@@ -192,7 +193,12 @@
       "root": "pages/finance",
       "name": "pkg-finance",
       "pages": [
-        "payment/index"
+        "payment/index",
+        "reconciliation/index",
+        "reconciliation/detail/index",
+        "reimbursement/index",
+        "payroll-approval/index",
+        "payroll-approval/detail/index"
       ]
     },
     {
@@ -224,6 +230,21 @@
       "root": "pages/attendance",
       "name": "pkg-attendance",
       "pages": [
+        "detail/index"
+      ]
+    },
+    {
+      "root": "pages/todo-detail",
+      "name": "pkg-todo-detail",
+      "pages": [
+        "index"
+      ]
+    },
+    {
+      "root": "pages/collab-task",
+      "name": "pkg-collab-task",
+      "pages": [
+        "list/index",
         "detail/index"
       ]
     }

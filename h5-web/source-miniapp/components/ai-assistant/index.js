@@ -48,7 +48,29 @@ function describeTool(name) {
   return TOOL_NAMES[name] || (name || '').replace(/^tool_/, '').replace(/_/g, '');
 }
 
+// 模型偶尔把内部工具协议(<tool_think>/<tool_call>等XML)原样写进回答，展示前一律剔除
+function stripToolProtocol(text) {
+  var out = String(text || '')
+    .replace(/<tool_think>[\s\S]*?<\/tool_think>/gi, '')
+    .replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '')
+    .replace(/<tool_name>[\s\S]*?<\/tool_name>/gi, '')
+    .replace(/<param>[\s\S]*?<\/param>/gi, '')
+    .replace(/<\/?(?:tool_think|tool_call|tool_name|tool_result|param|params|invoke)>/gi, '');
+  // D-361b：deepseek-flash 新版 DSML 工具协议原文——从首个协议标记起整段截断
+  var dsml = out.match(/[｜|]{1,4}\s*DSML[｜|]{1,4}/i);
+  if (dsml && dsml.index != null) {
+    out = out.substring(0, dsml.index);
+  }
+  // 流式中途的未闭合协议开标签：从开标签起整段截断
+  var unclosed = out.match(/<tool_(?:think|call)[\s>]/i);
+  if (unclosed && unclosed.index != null) {
+    out = out.substring(0, unclosed.index);
+  }
+  return out;
+}
+
 function parseAiCards(text) {
+  text = stripToolProtocol(text);
   let actions = [];
   let insightCards = [];
   let clarificationHints = [];
@@ -183,6 +205,7 @@ Component({
     scrollTo: '',
     currentTab: 'chat',
     totalTasks: 0,
+    businessSections: [],
     qualityTasks: [], cuttingTasks: [],
     purchaseTasks: [], repairTasks: [], overdueOrders: [],
     overdueSummary: null, pendingUsers: [], pendingRegistrations: [],
@@ -440,18 +463,19 @@ Component({
         const data = res;
         if (!data) return;
         const suggestions = [];
+        // D-360t：真实数据的提醒 chips 点击直达真实页面（路径放 path，点 chips 即核验）
         if (data.overdueOrderCount > 0) {
-          suggestions.push({ icon: 'icon-alert', label: data.overdueOrderCount + '个逾期', question: '当前有哪些逾期订单？帮我分析一下' });
+          suggestions.push({ icon: 'icon-alert', label: data.overdueOrderCount + '个逾期', question: '当前有哪些逾期订单？帮我分析一下', path: '/pages/sales/order-list/index' });
         }
         if (data.qualityTaskCount > 0) {
-          suggestions.push({ icon: 'icon-clipboard', label: data.qualityTaskCount + '个待质检', question: '有哪些待质检的任务？' });
+          suggestions.push({ icon: 'icon-clipboard', label: data.qualityTaskCount + '个待质检', question: '有哪些待质检的任务？', path: '/pages/scan/index', tab: true });
         }
         // D-237：质检异常（不合格/次品）同步给小云，让用户一眼看到并可直接追问
         if (data.qualityDefectCount > 0) {
-          suggestions.push({ icon: 'icon-alert', label: data.qualityDefectCount + '件不合格', question: '最近有哪些质检不合格的记录？帮我分析原因' });
+          suggestions.push({ icon: 'icon-alert', label: data.qualityDefectCount + '件不合格', question: '最近有哪些质检不合格的记录？帮我分析原因', path: '/pages/defect/index', tab: true });
         }
         if (data.materialShortageCount > 0) {
-          suggestions.push({ icon: 'icon-alert', label: '面料缺口', question: '当前有哪些面料缺口预警？' });
+          suggestions.push({ icon: 'icon-alert', label: '面料缺口', question: '当前有哪些面料缺口预警？', path: '/pages/procurement/task-list/index' });
         }
         if (suggestions.length > 0) {
           self.setData({ dynamicSuggestions: suggestions });
@@ -519,14 +543,25 @@ Component({
     // 缓存链路与网络链路共用，保证两条路径的 dismissed 过滤逻辑完全一致。
     _applyTasksData(newData) {
       const dismissed = this._getDismissedKeys();
-      const q = (newData.qualityTasks || []).filter(function(t) { return dismissed.indexOf('quality:' + t.orderId) === -1; });
-      const c = (newData.cuttingTasks || []).filter(function(t) { return dismissed.indexOf('cutting:' + t.orderId) === -1; });
-      const p = (newData.procurementTasks || []).filter(function(t) { return dismissed.indexOf('purchase:' + t.id) === -1; });
-      const r = (newData.repairTasks || []).filter(function(t) { return dismissed.indexOf('repair:' + t.id) === -1; });
-      const o = (newData.overdueOrders || []).filter(function(t) { return dismissed.indexOf('overdue:' + t.id) === -1; });
-      const tm = (newData.timeoutReminders || []).filter(function(t) { return dismissed.indexOf('timeout:' + t.id) === -1; });
-      const total = q.length + c.length + p.length + r.length + o.length + tm.length + (newData.pendingUsers || []).length + (newData.pendingRegistrations || []).length;
+      // 统一业务待办：按分类分组渲染，本地仅做「今日已忽略」过滤（只读展示，不动后端数据）
+      const businessSections = (newData.businessSections || []).map(function (sec) {
+        const items = (sec.items || []).filter(function (t) {
+          return dismissed.indexOf(sec.taskType + ':' + t.id) === -1;
+        });
+        return { taskType: sec.taskType, label: sec.label, icon: sec.icon || '', count: items.length, items: items };
+      }).filter(function (sec) { return sec.count > 0; });
+
+      const tm = (newData.timeoutReminders || []).filter(function (t) { return dismissed.indexOf('timeout:' + t.id) === -1; });
+      const q = (newData.qualityTasks || []).filter(function (t) { return dismissed.indexOf('quality:' + t.orderId) === -1; });
+      const c = (newData.cuttingTasks || []).filter(function (t) { return dismissed.indexOf('cutting:' + t.orderId) === -1; });
+      const p = (newData.procurementTasks || []).filter(function (t) { return dismissed.indexOf('purchase:' + t.id) === -1; });
+      const r = (newData.repairTasks || []).filter(function (t) { return dismissed.indexOf('repair:' + t.id) === -1; });
+      const o = (newData.overdueOrders || []).filter(function (t) { return dismissed.indexOf('overdue:' + t.id) === -1; });
+      const businessCount = businessSections.reduce(function (s, sec) { return s + sec.count; }, 0);
+      const total = businessCount + tm.length + q.length + c.length + p.length + r.length + o.length +
+        (newData.pendingUsers || []).length + (newData.pendingRegistrations || []).length;
       this.setData({
+        businessSections: businessSections,
         qualityTasks: q,
         cuttingTasks: c,
         purchaseTasks: p,
@@ -547,7 +582,7 @@ Component({
     // 改为首次加载后写入缓存，5 分钟内打开直接读缓存渲染。
     _loadTasksFromCache() {
       try {
-        const cached = wx.getStorageSync('ai_tasks_cache');
+        const cached = wx.getStorageSync('ai_tasks_cache_v2');
         if (cached && cached.ts && (Date.now() - cached.ts < this._suggestionCacheTTL)) {
           this._applyTasksData(cached.data || {});
           return true;
@@ -567,7 +602,7 @@ Component({
           setData: (newData) => {
             if (newData.totalCount !== undefined) {
               self._applyTasksData(newData);
-              try { wx.setStorageSync('ai_tasks_cache', { ts: Date.now(), data: newData }); } catch (_e) { /* 写入失败忽略 */ }
+              try { wx.setStorageSync('ai_tasks_cache_v2', { ts: Date.now(), data: newData }); } catch (_e) { /* 写入失败忽略 */ }
             }
           },
         };
@@ -603,10 +638,12 @@ Component({
     },
 
     handleQualityTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleQualityTask(t); },
+    handleBusinessTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleBusinessTask(t); },
     handleCuttingTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleCuttingTask(t); },
     handleWarehouseTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleProcurementTask(t); },
     handlePurchaseTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleProcurementTask(t); },
     handleRepairTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleRepairTask(t); },
+    handleShipmentTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleShipmentTask(t); },
     handleOverdueOrder(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleOverdueOrder(t); },
     onApproveUser(e) { bellTaskActions.onApproveUser(this, e); },
     onApproveRegistration(e) { bellTaskActions.onApproveRegistration(this, e); },
@@ -620,7 +657,14 @@ Component({
       else { this._startIdleSnap(); }
     },
     autoAsk(e) {
-      const question = e.currentTarget.dataset.question;
+      // D-360t：真实数据的提醒 chips 优先直达真实页面（点击查看），无路径才问小云
+      const dataset = e.currentTarget.dataset || {};
+      if (dataset.path) {
+        if (dataset.tab) { wx.switchTab({ url: dataset.path }); }
+        else { wx.navigateTo({ url: dataset.path }); }
+        return;
+      }
+      const question = dataset.question;
       if (question) { this.setData({ inputValue: question }, () => { this.sendMessage(); }); }
     },
     onInput(e) { this.setData({ inputValue: e.detail.value }); },
@@ -673,13 +717,13 @@ Component({
               const chunk = String(event.data.chunk || '');
               if (chunk) {
                 accumulatedText += chunk;
-                self.setData({ streamingText: accumulatedText });
+                self.setData({ streamingText: stripToolProtocol(accumulatedText) });
               }
             } else if (event.type === 'answer') {
               const content = String(event.data.content || '');
               if (content) {
                 accumulatedText = content;
-                self.setData({ streamingText: accumulatedText });
+                self.setData({ streamingText: stripToolProtocol(accumulatedText) });
               }
               if (event.data.commandId) {
                 self._latestCommandId = String(event.data.commandId);
@@ -699,6 +743,7 @@ Component({
           function () {
             self._streamTask = null;
             const parsed = parseAiCards(accumulatedText || '抱歉，我现在无法回答这个问题。');
+            if (!parsed.text) parsed.text = '抱歉，我暂时没查到结果，请换个问法或稍后再试。';
             let recommendPills = [];
             if (parsed.text.includes('【推荐追问】：')) {
               const parts = parsed.text.split('【推荐追问】：');
@@ -744,7 +789,7 @@ Component({
             console.warn('[XiaoYun] SSE failed, fallback to sync:', err);
             self._streamTask = null;
             if (streamStarted && accumulatedText) {
-              const streamFallbackMsg = { id: aiMsgId, role: 'ai', content: accumulatedText };
+              const streamFallbackMsg = { id: aiMsgId, role: 'ai', content: stripToolProtocol(accumulatedText) || '抱歉，我暂时没查到结果，请换个问法或稍后再试。' };
               self._setMessages([].concat(self.data.messages, [streamFallbackMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
               self._saveChatHistory();
@@ -780,6 +825,7 @@ Component({
               if (!aiResponse) aiResponse = '抱歉，我现在无法回答这个问题。';
 
               const parsed = parseAiCards(aiResponse);
+              if (!parsed.text) parsed.text = '抱歉，我暂时没查到结果，请换个问法或稍后再试。';
               let recommendPills = syncSuggestions.length > 0 ? syncSuggestions : [];
               if (parsed.text.includes('【推荐追问】：')) {
                 const parts = parsed.text.split('【推荐追问】：');

@@ -294,6 +294,136 @@ function handleShipmentTask(task) {
 }
 
 /**
+ * 处理样衣开发任务 - 跳转样衣开发首页（列表态，便于继续处理）
+ * 注：统一接口下样衣待办按「环节」展开，暂无数值 styleId 可拼详情页，先落列表页
+ * @param {Object} _task - 任务对象
+ * @returns {void}
+ */
+function handleStyleDevTask(task) {
+  // D-416：样衣开发待办可解析出 styleId，改为直达详情页（原仅落列表，用户还要再找一遍）
+  //   id           = "STY_{styleId}_{stageKey}"
+  //   deepLinkPath = "/style-info/{styleId}?tab={tabKey}"
+  let styleId = '';
+  const dl = String((task && task.deepLinkPath) || '');
+  const m = dl.match(/\/style-info\/([^/?]+)/);
+  if (m) styleId = decodeURIComponent(m[1]);
+  if (!styleId && /^STY_/.test(String((task && task.id) || ''))) {
+    styleId = String(task.id).replace(/^STY_/, '').replace(/_[^_]*$/, '');
+  }
+  if (styleId) {
+    safeNavigate({ url: '/pages/sample-development/detail/index?styleId=' + encodeURIComponent(styleId) }, 'navigateTo').catch(() => {});
+  } else {
+    safeNavigate({ url: '/pages/sample-development/index/index' }, 'navigateTo').catch(() => {});
+  }
+}
+
+/**
+ * 缺口类型（手机端无独立业务处理页）→ 进入统一待办详情页（只读展示真实数据，布局清晰）
+ * 待办数据先写入本地 storage（URL 长度有限，不拼进 query），详情页 onLoad 读取
+ * @param {Object} task - 统一待办任务
+ * @returns {void}
+ */
+function openUnifiedDetail(task) {
+  try {
+    wx.setStorageSync('pending_unified_task', JSON.stringify(task));
+  } catch (e) {
+    console.error('存储统一待办失败', e);
+  }
+  safeNavigate({ url: '/pages/todo-detail/index' }, 'navigateTo').catch(() => {});
+}
+
+/**
+ * 统一业务待办点击路由：按 taskType 分发到对应落地页。
+ * - 已有业务页的类型 → 复用既有处理逻辑
+ * - 手机端无独立页的缺口类型 → 进统一待办详情页（只读展示，不自造写操作，避免数据异常）
+ * @param {Object} task - 统一待办任务（bellTaskLoader.normalizeBusinessTask 产物）
+ * @returns {void}
+ */
+function handleBusinessTask(task) {
+  if (!task) return;
+  switch (task.taskType) {
+    case 'CUTTING_TASK': handleCuttingTask(task); break;
+    case 'QUALITY_INSPECT': handleQualityTask(task); break;
+    case 'REPAIR': handleRepairTask(task); break;
+    case 'MATERIAL_PURCHASE': handleProcurementTask(task); break;
+    case 'OVERDUE_ORDER':
+      // 统一接口逾期项 id 带 "OVD_" 前缀，不能当真实 orderId 用；订单详情按 orderNo 直达
+      if (task.orderNo) {
+        safeNavigate({ url: '/pages/dashboard/order-detail/index?orderNo=' + encodeURIComponent(task.orderNo) }, 'navigateTo').catch(() => {});
+      } else {
+        handleOverdueOrder(task);
+      }
+      break;
+    case 'SHIPMENT': handleShipmentTask(task); break;
+    case 'STYLE_DEVELOPMENT': handleStyleDevTask(task); break;
+    // 缺口类型：点击直达最近真实业务页（与 PC 一致，不中转包装页）
+    // 只读展示逻辑已由后端按租户+角色过滤，这里仅做页面直达
+    case 'PAYROLL_SETTLEMENT': {
+      // D-430：待办 id = "PAY_{settlementId}"（见 PendingTaskOrchestrator.collectPayrollSettlementTasks）
+      // 带上 settlementId 让列表页精确筛出该结算单的明细；若只有一条明细，
+      // 列表页会自动直达详情页（用户要求"点击直达详情页，不要停在列表"）。
+      var paySid = String(task.id || '').replace(/^PAY_/, '');
+      var payParams = [];
+      if (paySid) payParams.push('settlementId=' + encodeURIComponent(paySid));
+      if (task.orderNo) payParams.push('orderNo=' + encodeURIComponent(task.orderNo));
+      safeNavigate({
+        url: '/pages/finance/payroll-approval/index' + (payParams.length ? '?' + payParams.join('&') : ''),
+      }, 'navigateTo').catch(() => {});
+      break;
+    }
+    case 'MATERIAL_RECON': {
+      // D-430：待办 id = "MRC_{reconciliationId}"，同上——带 id 精确筛选 + 单条自动直达详情
+      var mrcId = String(task.id || '').replace(/^MRC_/, '');
+      var mrcParams = [];
+      if (mrcId) mrcParams.push('reconciliationId=' + encodeURIComponent(mrcId));
+      if (task.orderNo) mrcParams.push('orderNo=' + encodeURIComponent(task.orderNo));
+      safeNavigate({
+        url: '/pages/finance/reconciliation/index' + (mrcParams.length ? '?' + mrcParams.join('&') : ''),
+      }, 'navigateTo').catch(() => {});
+      break;
+    }
+    case 'EXPENSE_REIMBURSE':
+      // D-416：直达费用报销审批页（此前与对账共用付款页）
+      safeNavigate({ url: '/pages/finance/reimbursement/index?status=pending' }, 'navigateTo').catch(() => {});
+      break;
+    case 'EXCEPTION_REPORT':
+      // D-416：异常报告已建独立处理页（标记已解决/重新打开）。
+      // 带单号时预置筛选，直达待处理列表；无单号则看全部待处理。
+      safeNavigate({
+        url: '/pages/smart-ops/exception-detail/index?status=PENDING'
+          + (task.orderNo ? '&keyword=' + encodeURIComponent(task.orderNo) : ''),
+      }, 'navigateTo').catch(() => {});
+      break;
+    case 'SAMPLE_LOAN':
+      safeNavigate({ url: '/pages/warehouse/sample/scan-action/index' }, 'navigateTo').catch(() => {});
+      break;
+    case 'MATERIAL_PICKING':
+      safeNavigate({ url: '/pages/warehouse/material/scan/index' }, 'navigateTo').catch(() => {});
+      break;
+    case 'COLLAB_TASK':
+      // D-416：协作任务已建独立处理页（领取/开始/完成）。待办 id = "COLLAB_{taskId}"，
+      // deepLinkPath = "xiaoyun://tasks?taskId={id}"，两种方式都可解析出 taskId
+      var collabId = '';
+      var dlMatch = String(task.deepLinkPath || '').match(/taskId=(\d+)/);
+      if (dlMatch) collabId = dlMatch[1];
+      if (!collabId) {
+        var idMatch = String(task.id || '').match(/^COLLAB_(\d+)/);
+        if (idMatch) collabId = idMatch[1];
+      }
+      if (collabId) {
+        safeNavigate({ url: '/pages/collab-task/detail/index?taskId=' + encodeURIComponent(collabId) }, 'navigateTo').catch(() => {});
+      } else {
+        // 解析不出 taskId 时兜底到统一待办详情页，避免白屏
+        openUnifiedDetail(task);
+      }
+      break;
+    default:
+      // 未识别类型 → 统一待办详情页（只读展示，不自造写操作）
+      openUnifiedDetail(task); break;
+  }
+}
+
+/**
  * 统一任务点击路由
  * @param {Object} ctx - Component 实例
  * @param {Object} e - 事件对象
@@ -350,6 +480,8 @@ module.exports = {
   handleQualityTask,
   handleRepairTask,
   handleApprovalTask,
+  handleStyleDevTask,
+  handleBusinessTask,
   onApproveUser,
   onApproveRegistration,
   handleReminderTask,

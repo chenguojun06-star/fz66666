@@ -862,6 +862,7 @@ Page({
           bundleNo: b.bundleNo || bid,
           color: b.color,
           size: b.size,
+          layerCount: b.layerCount,
           quantity: b.quantity,
           _disabled: completed,
           _partialScanned: partialScanned,

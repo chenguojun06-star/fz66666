@@ -97,21 +97,23 @@ Page({
   onLoad(options) {
     this.orderNo = decodeURIComponent(options.orderNo || '');
     this.patternProductionId = decodeURIComponent(options.patternProductionId || '');
+    this.materialCode = decodeURIComponent(options.materialCode || '');
     this.sourceType = decodeURIComponent(options.sourceType || '');
     const styleNo = decodeURIComponent(options.styleNo || '');
     const isSampleMode = this.sourceType === 'sample' || !!this.patternProductionId;
     this.setData({
       orderNo: this.orderNo,
       patternProductionId: this.patternProductionId,
+      materialCode: this.materialCode,
       sourceType: this.sourceType,
       styleNo,
       isSampleMode,
     });
-    if (this.orderNo || this.patternProductionId) this._loadDetail();
+    if (this.orderNo || this.patternProductionId || this.materialCode) this._loadDetail();
   },
 
   onShow() {
-    if (this.orderNo || this.patternProductionId) this._loadDetail();
+    if (this.orderNo || this.patternProductionId || this.materialCode) this._loadDetail();
     this._bindEvents();
   },
 
@@ -126,7 +128,7 @@ Page({
   _bindEvents() {
     this._onDataChanged = (data) => {
       if (data && (data.type === 'procurement' || data.type === 'purchase')) {
-        if (this.orderNo || this.patternProductionId) this._loadDetail();
+        if (this.orderNo || this.patternProductionId || this.materialCode) this._loadDetail();
       }
     };
     eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
@@ -145,7 +147,9 @@ Page({
     try {
       const params = this.orderNo
         ? { orderNo: this.orderNo }
-        : { patternProductionId: this.patternProductionId };
+        : this.patternProductionId
+          ? { patternProductionId: this.patternProductionId }
+          : { materialCode: this.materialCode };
       const res = await api.production.getMaterialPurchases(params);
       const list = this._normalizeToArray(res);
       const userInfo = getUserInfo() || {};
@@ -303,7 +307,8 @@ Page({
   onReturnConfirm(e) {
     const { id, name, arrived, purchase, unit } = e.currentTarget.dataset;
     if (!id) return;
-    const defaultQty = String((Number(arrived) > 0 ? Number(arrived) : Number(purchase)) || 0);
+    // D-308：回料默认=采购数（用户可改实际回货数；原实现到货数优先，与"默认填采购数"口径不符）
+    const defaultQty = String(Number(purchase) || Number(arrived) || 0);
     this.setData({
       showReturnConfirmModal: true,
       returnConfirmItem: { id, name, unit: unit || '' },

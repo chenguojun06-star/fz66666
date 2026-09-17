@@ -1,0 +1,8 @@
+{
+  "usingComponents": {
+    "empty-state": "/components/empty-state/empty-state"
+  },
+  "navigationBarTitleText": "工资明细",
+  "enablePullDownRefresh": false,
+  "backgroundTextStyle": "dark"
+}

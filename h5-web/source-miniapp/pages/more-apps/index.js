@@ -29,6 +29,12 @@ const APP_ID_TO_MENU_KEY = {
   'quality': 'miniprogram.menu.quality',
   'production': 'miniprogram.menu.production',
   'history': 'miniprogram.menu.history',
+  // D-417：手机端新增「可办事」独立页（按职务可控）
+  'materialRecon': 'miniprogram.menu.materialRecon',
+  'expenseReimburse': 'miniprogram.menu.expenseReimburse',
+  'payrollApproval': 'miniprogram.menu.payrollApproval',
+  'exceptionReport': 'miniprogram.menu.exceptionReport',
+  'collabTask': 'miniprogram.menu.collabTask',
 };
 
 // 所有应用配置（7大分类：开发/生产/物料/成品/财务/系统/其他，分组对齐PC端菜单）
@@ -44,10 +50,11 @@ const ALL_APPS = [
     { id: 'bundleSplit', name: '菲号管理', iconClass: 'icon-menu-cutting', circleClass: 'menu-icon-circle--red', route: '/pages/work/bundle-split/index' },
     { id: 'unitPrice', name: '资料单价', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--teal', route: '/pages/basic/unit-price/index' },
     { id: 'factoryShipment', name: '外发管理', iconClass: 'icon-menu-shipment', circleClass: 'menu-icon-circle--orange', route: '/pages/factory/shipment/index' },
+    { id: 'exceptionReport', name: '生产异常', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--orange', route: '/pages/smart-ops/exception-detail/index' },
   ]},
   { group: '物料', items: [
     { id: 'procurement', name: '采购任务', iconClass: 'icon-menu-cart', circleClass: 'menu-icon-circle--blue', route: '/pages/procurement/task-list/index' },
-    { id: 'materialScan', name: '物料入库', iconClass: 'icon-menu-warehouse', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material/scan/index' },
+    { id: 'materialScan', name: '料卷出库/退回', iconClass: 'icon-menu-warehouse', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material/scan/index' },
     { id: 'materialDatabase', name: '物料资料', iconClass: 'icon-menu-material', circleClass: 'menu-icon-circle--teal', route: '/pages/warehouse/material-database/index' },
   ]},
   { group: '成品', items: [
@@ -56,7 +63,10 @@ const ALL_APPS = [
   ]},
   { group: '财务', items: [
     { id: 'wagePayment', name: '工资查询', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--red', route: '/pages/payroll/payroll' },
+    { id: 'payrollApproval', name: '工资审批', iconClass: 'icon-menu-wage', circleClass: 'menu-icon-circle--red', route: '/pages/finance/payroll-approval/index' },
     { id: 'financePayment', name: '财务付款', iconClass: 'icon-menu-finance', circleClass: 'menu-icon-circle--green', route: '/pages/finance/payment/index' },
+    { id: 'materialRecon', name: '物料对账', iconClass: 'icon-menu-finance', circleClass: 'menu-icon-circle--green', route: '/pages/finance/reconciliation/index' },
+    { id: 'expenseReimburse', name: '费用报销', iconClass: 'icon-menu-advance', circleClass: 'menu-icon-circle--green', route: '/pages/finance/reimbursement/index' },
     { id: 'advance', name: '预付款', iconClass: 'icon-menu-advance', circleClass: 'menu-icon-circle--lightblue', route: '/pages/advance/list/index' },
     { id: 'salesOverview', name: '销售概览', iconClass: 'icon-menu-stats', circleClass: 'menu-icon-circle--violet', route: '/pages/sales/overview/index' },
   ]},
@@ -66,6 +76,7 @@ const ALL_APPS = [
   ]},
   { group: '其他', items: [
     { id: 'smartOps', name: '智能运营', iconClass: 'icon-menu-ai', circleClass: 'menu-icon-circle--purple', route: '/pages/smart-ops/index' },
+    { id: 'collabTask', name: '协作任务', iconClass: 'icon-menu-user', circleClass: 'menu-icon-circle--violet', route: '/pages/collab-task/list/index' },
     { id: 'returnList', name: '退货管理', iconClass: 'icon-menu-return', circleClass: 'menu-icon-circle--red', route: '/pages/return/list/index' },
   ]},
 ];

@@ -238,6 +238,8 @@ Page({
     var modifiedCount = 0;
     (stages || this.data.stages).forEach(function (st) {
       st.processes.forEach(function (p) {
+        // D-305：行单价统一两位小数（¥23.6→¥23.60），所有写点（新增/编辑/删除/重置）都经此处刷新
+        p.priceText = Number(p.price || 0).toFixed(2);
         totalCount++;
         totalPrice += Number(p.price || 0);
         if (p.modified) modifiedCount++;

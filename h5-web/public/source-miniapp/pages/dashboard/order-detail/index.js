@@ -550,6 +550,7 @@ Page({
             bundleNo: bundleDisplay,
             color: fmt(b.color, ''),
             size: fmt(b.size, ''),
+            layerCount: b.layerCount,
             quantity: fmtNum(b.quantity),
             status: st.text,
             statusCls: stCls,

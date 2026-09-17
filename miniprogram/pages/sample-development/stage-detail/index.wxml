@@ -4,7 +4,7 @@
   ② 当前阶段详情卡（详情网格+时间信息+现场照片+操作按钮）
   ③ 分阶段内容（BOM/纸样/尺码/工序/二次工艺/生产制单/码数单价）
   ④ 审核表单（页面内展开）
-  ⑤ 底部固定操作栏（修改信息 / 提交审核）
+  ⑤ 底部固定操作栏（提交审核；修改信息为 PC 端能力，手机端不提供）
 -->
 <view class="stage-detail-page">
 
@@ -577,9 +577,6 @@
   <!-- ══ ⑤ 底部固定操作栏 ══ -->
   <view wx:if="{{!loading && !showReviewForm}}" class="bottom-bar">
     <view class="bottom-bar-inner">
-      <view class="bb-btn bb-btn-secondary" bindtap="onEditInfo">
-        <text class="bb-btn-text">修改信息</text>
-      </view>
       <view class="bb-btn bb-btn-primary" bindtap="onSubmitReview">
         <text class="bb-btn-text">提交审核</text>
       </view>

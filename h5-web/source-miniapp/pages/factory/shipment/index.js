@@ -7,6 +7,7 @@ const { isFactoryOwner, getUserInfo } = require('../../../utils/storage');
 const { transformOrderData } = require('../utils/orderTransform');
 const { buildProcessNodesWithRates, calcOrderProgress } = require('../utils/progressNodes');
 const displayHelper = require('../../../utils/displayHelper');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 /**
  * displayHelper 颜色常量 → 小程序 tag-* 颜色类映射
@@ -332,6 +333,8 @@ Page({
       const enriched = records.map(function (r) {
         r.statusText = receiveStatusText(r.receiveStatus);
         r.statusCls = receiveStatusCls(r.receiveStatus);
+        // D-310：款式图（后端 enrich styleImage），经鉴权 URL 展示
+        if (r.styleImage) r.styleImageUrl = getAuthedImageUrl(r.styleImage);
         return r;
       });
       that.setData({

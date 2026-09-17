@@ -1,0 +1,91 @@
+<view class="page">
+
+  <!-- 状态筛选（sticky 吸顶） -->
+  <sticky-search-bar
+    placeholder="搜索协作任务"
+    value="{{keyword}}"
+    show-scan="{{false}}"
+    show-filter="{{true}}"
+    bind:input="onKeywordInput"
+    bind:confirm="onKeywordSearch"
+  >
+    <view slot="filter" class="filter-bar">
+      <view class="filter-item">
+        <picker mode="selector" range="{{STATUS_OPTIONS}}" range-key="label" bindchange="onStatusFilterChange">
+          <view class="picker-box">
+            <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : '全部状态'}}</text>
+            <view class="picker-chevron"></view>
+          </view>
+        </picker>
+      </view>
+    </view>
+  </sticky-search-bar>
+
+  <!-- 卡片列表 -->
+  <view class="card-list">
+    <empty-state wx:if="{{!loading && list.length === 0}}" text="暂无协作任务" />
+
+    <view
+      class="order-card {{item.statusCls === 'tag-orange' ? 'order-card--warn' : (item.statusCls === 'tag-red' ? 'order-card--danger' : (item.statusCls === 'tag-blue' ? 'order-card--primary' : ''))}}"
+      wx:for="{{list}}"
+      wx:key="id"
+      data-item="{{item}}"
+      data-index="{{index}}"
+      bindtap="onTapItem"
+    >
+      <!-- 主行：封面 + 信息 -->
+      <view class="order-main">
+        <view class="order-cover">
+          <view class="cover-placeholder"><view class="cover-ph-text">协</view></view>
+        </view>
+
+        <view class="order-info">
+          <view class="info-line1">
+            <text class="info-no">
+              <text wx:if="{{item.priorityText}}">[{{item.priorityText}}] </text>
+              <text wx:if="{{item.styleNo}}">{{item.styleNo}}</text>
+              <text wx:if="{{item.styleNo && item.orderNo}}" class="info-sep">·</text>
+              <text wx:if="{{item.orderNo}}">{{item.orderNo}}</text>
+              <text wx:if="{{!item.styleNo && !item.orderNo}}">—</text>
+            </text>
+            <view class="info-badges">
+              <view class="status-badge" style="background:{{item._statusColor}}">{{item.statusText}}</view>
+            </view>
+          </view>
+          <view class="info-line--strong">{{item.title}}</view>
+          <view class="info-line" wx:if="{{item.currentStage || item.nextStep}}">{{item.currentStage || ''}}{{item.nextStep ? ' → ' + item.nextStep : ''}}</view>
+          <view class="info-line--weak" wx:if="{{item.assigneeName || item.creatorName}}">
+            <text wx:if="{{item.assigneeName}}">负责人 {{item.assigneeName}}</text>
+            <text wx:elif="{{item.creatorName}}">创建 {{item.creatorName}}</text>
+          </view>
+          <view class="info-line--warn" wx:if="{{item.isOverdue}}">已逾期</view>
+        </view>
+      </view>
+
+      <!-- 末行：期限 + 操作（无分界线，不占额外行） -->
+      <view class="card-bottom">
+        <view class="amount-right" wx:if="{{item.dueHint}}">{{item.dueHint}}</view>
+        <view class="amount-right" wx:else></view>
+        <view class="bottom-actions">
+          <view
+            wx:if="{{item.statusCls === 'tag-orange'}}"
+            class="action-btn action-btn--primary"
+            data-item="{{item}}"
+            catchtap="onClaim"
+          >领取</view>
+          <view
+            class="action-btn action-btn--ghost"
+            data-item="{{item}}"
+            catchtap="onTapItem"
+          >详情</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="load-more {{!hasMore ? 'disabled' : ''}}" wx:if="{{loading || !hasMore}}">
+      <text>{{loading ? '加载中...' : '没有更多了'}}</text>
+    </view>
+  </view>
+
+  <ai-assistant id="ai-assistant" />
+</view>

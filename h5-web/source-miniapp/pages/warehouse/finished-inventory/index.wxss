@@ -327,6 +327,31 @@ page {
   color: var(--color-text-quaternary);
 }
 
+/* 右侧操作区（出库按钮 + 箭头） */
+.item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 列表直接出库按钮（D-418） */
+.outbound-btn {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--radius-lg);
+  color: var(--color-primary);
+  background: transparent;
+  border: 1.5px solid var(--color-primary);
+  line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.outbound-btn:active {
+  background: var(--color-primary-bg);
+}
+
 /* ============ 加载更多 ============ */
 .load-more {
   text-align: center;

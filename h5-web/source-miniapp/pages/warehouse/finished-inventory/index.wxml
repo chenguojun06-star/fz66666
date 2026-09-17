@@ -98,7 +98,10 @@
 
         <view class="item-meta">
           <text class="meta-text">最近入库：{{item._lastInboundDate}}</text>
-          <text class="meta-arrow">›</text>
+          <view class="item-actions">
+            <view wx:if="{{item._hasAvailable}}" class="outbound-btn" catchtap="onOutboundTap" data-id="{{item.id}}">出库</view>
+            <text class="meta-arrow">›</text>
+          </view>
         </view>
       </view>
     </view>

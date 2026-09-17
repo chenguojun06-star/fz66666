@@ -1,0 +1,169 @@
+<view class="page-root">
+
+  <!-- 加载态 -->
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 加载失败 -->
+  <view wx:elif="{{loadError}}" class="loading-wrap">
+    <text class="loading-text">{{loadError}}</text>
+  </view>
+
+  <block wx:elif="{{detail}}">
+
+    <!-- 顶部信息卡：封面 + 单号 + 状态（D-419） -->
+    <view class="header-card">
+      <view class="header-cover">
+        <image wx:if="{{detail._image}}" class="header-cover-pic" src="{{detail._image}}" mode="aspectFill" lazy-load />
+        <view wx:else class="header-cover-placeholder">
+          <text>料</text>
+        </view>
+      </view>
+      <view class="header-info">
+        <text class="header-no">{{detail.reconciliationNo || '—'}}</text>
+        <view class="info-badges">
+          <view class="source-chip source-chip--{{detail._sourceKind}}" wx:if="{{detail._sourceText}}">{{detail._sourceText}}</view>
+          <view class="status-badge" style="background:{{detail._statusColor}}">{{detail.statusText}}</view>
+        </view>
+        <text wx:if="{{detail.styleNo || detail.orderNo}}" class="header-meta">
+          <text wx:if="{{detail.styleNo}}">{{detail.styleNo}}</text>
+          <text wx:if="{{detail.styleNo && detail.orderNo}}" class="info-sep"> · </text>
+          <text wx:if="{{detail.orderNo}}">来源 {{detail.orderNo}}</text>
+        </text>
+        <text wx:if="{{detail.supplierName}}" class="header-meta">供应商：{{detail.supplierName}}</text>
+        <text wx:if="{{detail.materialName || detail.materialCode}}" class="header-meta">物料：{{detail.materialName || detail.materialCode}}</text>
+      </view>
+    </view>
+
+    <!-- 金额卡片：最终金额 + 扣减明细 + 单位单价 -->
+    <view class="amount-card">
+      <view class="amount-card-row">
+        <text class="amount-card-label">最终金额</text>
+        <view class="amount-card-final">
+          <text class="amount-card-currency">¥</text>
+          <text class="amount-card-num">{{detail.amountStr}}</text>
+        </view>
+      </view>
+      <view wx:if="{{detail._hasDeduction}}" class="amount-card-row amount-card-row--minor">
+        <text class="amount-card-sub-label">总金额 ¥{{detail.totalAmountStr}} · 扣减 ¥{{detail.deductionAmountStr}}</text>
+      </view>
+      <view class="amount-card-divider"></view>
+      <view class="amount-card-row">
+        <text class="amount-card-sub-label">单价</text>
+        <text class="amount-card-sub-val">¥{{detail.unitPriceStr}}<text wx:if="{{detail.unit}}">/{{detail.unit}}</text></text>
+      </view>
+      <view class="amount-card-row">
+        <text class="amount-card-sub-label">对账数量</text>
+        <text class="amount-card-sub-val">{{detail.quantityStr}}<text wx:if="{{detail.unit}}">{{detail.unit}}</text></text>
+      </view>
+      <view wx:if="{{detail.warehouseLocation}}" class="amount-card-row">
+        <text class="amount-card-sub-label">入库库位</text>
+        <text class="amount-card-sub-val">{{detail.warehouseLocation}}</text>
+      </view>
+    </view>
+
+    <!-- 时间线：状态流转（D-419：替代 PC 端的 activity log） -->
+    <view class="section-card">
+      <text class="section-title">状态流转</text>
+      <view class="timeline">
+        <view class="timeline-item">
+          <view class="tl-dot tl-dot--done"></view>
+          <view class="tl-body">
+            <text class="tl-name">创建</text>
+            <text wx:if="{{detail.createTime}}" class="tl-time">{{detail.createTime}}</text>
+            <text wx:if="{{detail.reconciliationOperatorName}}" class="tl-meta">经办：{{detail.reconciliationOperatorName}}</text>
+          </view>
+        </view>
+        <view wx:if="{{detail.verifiedAt || detail.status === 'verified' || detail.status === 'approved' || detail.status === 'paid'}}" class="timeline-item">
+          <view class="tl-dot {{detail.verifiedAt ? 'tl-dot--done' : 'tl-dot--todo'}}"></view>
+          <view class="tl-body">
+            <text class="tl-name">核实</text>
+            <text wx:if="{{detail.verifiedAt}}" class="tl-time">{{detail.verifiedAt}}</text>
+            <text wx:elif="{{detail.status === 'pending'}}" class="tl-time">待核实</text>
+            <text wx:if="{{detail.auditOperatorName}}" class="tl-meta">审核人：{{detail.auditOperatorName}}</text>
+          </view>
+        </view>
+        <view wx:if="{{detail.approvedAt || detail.status === 'approved' || detail.status === 'paid'}}" class="timeline-item">
+          <view class="tl-dot {{detail.approvedAt ? 'tl-dot--done' : 'tl-dot--todo'}}"></view>
+          <view class="tl-body">
+            <text class="tl-name">审批</text>
+            <text wx:if="{{detail.approvedAt}}" class="tl-time">{{detail.approvedAt}}</text>
+            <text wx:elif="{{detail.status === 'verified'}}" class="tl-time">待审批</text>
+          </view>
+        </view>
+        <view wx:if="{{detail.paidAt || detail.status === 'paid'}}" class="timeline-item">
+          <view class="tl-dot {{detail.paidAt ? 'tl-dot--done' : 'tl-dot--todo'}}"></view>
+          <view class="tl-body">
+            <text class="tl-name">付款</text>
+            <text wx:if="{{detail.paidAt}}" class="tl-time">{{detail.paidAt}}</text>
+            <text wx:elif="{{detail.status === 'approved'}}" class="tl-time">待付款</text>
+          </view>
+        </view>
+        <view wx:if="{{detail.reReviewAt || detail.status === 'rejected'}}" class="timeline-item">
+          <view class="tl-dot tl-dot--danger"></view>
+          <view class="tl-body">
+            <text class="tl-name">退回</text>
+            <text wx:if="{{detail.reReviewAt}}" class="tl-time">{{detail.reReviewAt}}</text>
+            <text wx:if="{{detail.reReviewReason}}" class="tl-meta">原因：{{detail.reReviewReason}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 关联信息 -->
+    <view class="section-card" wx:if="{{detail._sourceText || detail.supplierContactPerson || detail.purchaserName || detail.expectedArrivalDate || detail.actualArrivalDate || detail.inboundDate || detail.reconciliationDate}}">
+      <text class="section-title">关联信息</text>
+      <view wx:if="{{detail._sourceText}}" class="fact-row">
+        <text class="fact-label">来源</text>
+        <text class="fact-val fact-val--strong">{{detail._sourceText}}</text>
+      </view>
+      <view wx:if="{{detail.supplierContactPerson || detail.supplierContactPhone}}" class="fact-row">
+        <text class="fact-label">供应商联系人</text>
+        <text class="fact-val">{{detail.supplierContactPerson || '—'}}<text wx:if="{{detail.supplierContactPhone}}" class="fact-extra"> · {{detail.supplierContactPhone}}</text></text>
+      </view>
+      <view wx:if="{{detail.purchaserName}}" class="fact-row">
+        <text class="fact-label">采购员</text>
+        <text class="fact-val">{{detail.purchaserName}}</text>
+      </view>
+      <view wx:if="{{detail.purchaseNo}}" class="fact-row">
+        <text class="fact-label">采购单号</text>
+        <text class="fact-val">{{detail.purchaseNo}}</text>
+      </view>
+      <view wx:if="{{detail.reconciliationDate}}" class="fact-row">
+        <text class="fact-label">对账日期</text>
+        <text class="fact-val">{{detail.reconciliationDate}}</text>
+      </view>
+      <view wx:if="{{detail.expectedArrivalDate}}" class="fact-row">
+        <text class="fact-label">预计到货</text>
+        <text class="fact-val">{{detail.expectedArrivalDate}}</text>
+      </view>
+      <view wx:if="{{detail.actualArrivalDate}}" class="fact-row">
+        <text class="fact-label">实际到货</text>
+        <text class="fact-val">{{detail.actualArrivalDate}}</text>
+      </view>
+      <view wx:if="{{detail.inboundDate}}" class="fact-row">
+        <text class="fact-label">入库日期</text>
+        <text class="fact-val">{{detail.inboundDate}}</text>
+      </view>
+    </view>
+
+    <!-- 备注 -->
+    <view wx:if="{{detail.remark}}" class="section-card">
+      <text class="section-title">备注</text>
+      <text class="remark-text">{{detail.remark}}</text>
+    </view>
+
+    <!-- 底部操作（D-419：与卡片右侧按钮一致，单次确认即执行） -->
+    <view wx:if="{{canOperate}}" class="footer-actions">
+      <view wx:if="{{nextLabel}}" class="action-btn action-btn--primary" hover-class="action-btn--pressed" bindtap="onActionAdvance">{{nextLabel}}</view>
+      <view wx:if="{{canReturn}}" class="action-btn action-btn--ghost" hover-class="action-btn--pressed" bindtap="onActionReturn">退回</view>
+    </view>
+
+    <!-- 占位以免被 fixed footer 遮挡 -->
+    <view wx:if="{{canOperate}}" class="footer-spacer"></view>
+  </block>
+
+  <ai-assistant />
+</view>

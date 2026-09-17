@@ -119,9 +119,9 @@
   color: var(--color-text-tertiary);
 }
 .stage-total-price {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
 }
 .stage-actions {
@@ -192,11 +192,12 @@
   gap: 6px;
 }
 .process-code {
+  /* D-305：序号去灰底降噪，纯弱化文字 */
   font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary);
-  background: var(--color-bg-page);
-  padding: 1px 6px;
-  border-radius: var(--radius-xs);
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
@@ -250,7 +251,8 @@
 }
 .price-value {
   flex-shrink: 0;
-  min-width: 96rpx;
+  /* D-305：固定宽度对齐成列，金额两位小数后整列整齐 */
+  min-width: 128rpx;
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-size: var(--font-size-md);
@@ -264,25 +266,28 @@
 }
 .process-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 .pact-btn {
   font-size: var(--font-size-lg);
-  width: 28px;
-  height: var(--btn-height-xs);
+  /* D-305：浅底圆角方块+32px 热区，细线图标不再贴着金额、不再误触 */
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
+  background: var(--color-bg-page);
 }
 .pact-btn--edit {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 .pact-btn--move {
   color: var(--color-text-tertiary);
 }
 .pact-btn--del {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 
 /* ===== 编辑表单 ===== */

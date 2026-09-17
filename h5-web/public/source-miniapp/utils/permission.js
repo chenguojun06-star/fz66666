@@ -336,6 +336,14 @@ function hasFeaturePermission(feature) {
     approve_advance: [ROLES.ADMIN, ROLES.SUPERVISOR],
     // 收付款中心（仅管理员/主管）
     finance_center: [ROLES.ADMIN, ROLES.SUPERVISOR],
+    // D-417：物料对账状态流转（仅管理员/主管）
+    approve_reconciliation: [ROLES.ADMIN, ROLES.SUPERVISOR],
+    // D-417：费用报销审批（仅管理员/主管）
+    approve_expense: [ROLES.ADMIN, ROLES.SUPERVISOR],
+    // D-417：工资结算审批（仅管理员/主管）
+    approve_payroll: [ROLES.ADMIN, ROLES.SUPERVISOR],
+    // D-417：生产异常处理（仅管理员/主管）
+    handle_exception: [ROLES.ADMIN, ROLES.SUPERVISOR],
   };
 
   const allowedRoles = featurePermissions[feature] || [];

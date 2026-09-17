@@ -1030,3 +1030,29 @@
 .proc-tl-fill--done {
   background: var(--color-success);
 }
+
+/* D-310：发货记录卡片款式图 */
+.shipment-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+.shipment-cover {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 12rpx;
+  background: var(--color-bg-page, #f7f8fa);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.shipment-cover-img {
+  width: 100%;
+  height: 100%;
+}
+.shipment-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}

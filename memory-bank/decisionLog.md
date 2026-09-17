@@ -1,7 +1,36 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-17（新增 D-431 登录页「部署版本」unknown 根治——构建期注入 git commit）
+> 最后更新：2026-09-17（新增 D-432 手机端审计第一批——4 个必现死点修复 + 三副本重新同步）
+
+---
+
+## D-432：手机端全量审计第一批——死按钮/卡死/矛盾文案根治 + 三副本重同步（2026-09-17）
+
+**背景**：用户要求核实手机端"未闭环 + UI 统一 + 逻辑闭环"。双路审计（UI 令牌化 + 逻辑闭环）产出
+9 项未闭环 + 11 项 UI 债务 + 三副本 09-04 后漂移（public 副本缺 6 整页）。本批先修必现问题并同步副本。
+
+**修复（4 处，全在 miniprogram/）**：
+1. stage-detail「修改信息」死链根治——跳向从未存在的 `/pages/sample-development/edit/index`（git 全史确认从未建过）。
+   决策：**删按钮不补页**。手机端无款式编辑能力（detail 页只有进度编辑器），PC 才是编辑入口（D-181 PC=唯一流程模板），
+   留一个点了没反应的按钮是假信息。底部操作栏只剩「提交审核」。
+2. stage-detail「扫码更新」必败修复——`wx.navigateTo` 跳 tabBar 页 `/pages/scan/index` 必失败且 patternId 参数
+   永远传不进去（扫码页本就不读 URL 参数，数据走 `app.globalData.patternScanData`）。改 `wx.switchTab`。
+3. todo-detail「返回」卡死修复——直达打开（页面栈 1 层）时 `wx.navigateTo` 跳 home（tabBar）失败且 `fail(){}` 吞异常。
+   改 `wx.switchTab({url:'/pages/home/index'})`。
+4. COLLAB_TASK 矛盾文案根治——todo-detail 兜底写死"协作任务手机端无处理页请去 PC"，但 `collab-task/detail`
+   处理页早已上线。决策：兜底路由从 null 改为 `/pages/collab-task/list/index`（缺 taskId 时进列表自寻），
+   按钮文案「去协作任务」；`noRouteHint` 改为通用判定（显式 null 才提示去 PC），wxml 文案去"协作任务"专名。
+
+**三副本同步**：miniprogram → h5-web/source-miniapp + h5-web/public/source-miniapp，
+按 `_sync-meta.json` copiedEntries（app.* config pages components utils styles assets shared）rsync --delete，
+副本陈旧文件 stageBudget.js 一并清除（无引用），_sync-meta copiedAt 刷新；diff 验证字节一致。
+**坑**：macOS zsh 不做 `$VAR` 单词拆分，`for E in $ENTRIES` 整串当一个词导致首轮 rsync 静默失败——
+服务器 ubuntu bash 可用、本机 zsh 必须用字面列表。
+
+**遗留（已排期未修）**：②工资审批补终审/撤审/作废/整单通过入口；③四详情页样式令牌化
+（finished-inventory/detail 67 处硬编码双蓝、sample-development/detail 60 处、todo-detail 无字号令牌、scan/pattern 31 处）；
+④picker 筛选器样式 8 页复制上提共享；样衣状态映射 6+4 处收编；Backfill step 11 progress_nodes/complete_time 口径。
 
 ---
 

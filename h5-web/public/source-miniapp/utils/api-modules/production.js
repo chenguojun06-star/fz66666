@@ -513,6 +513,40 @@ const production = {
   cancelPickingPending(pickingId) {
     return ok(`/api/production/picking/${pickingId}/cancel-pending`, 'POST', {});
   },
+
+  /**
+   * 异常报告分页列表（D-417 手机端独立处理页）
+   * 后端：GET /api/production/exception/list?status&orderNo&keyword&page&pageSize
+   * 工厂账号后端自动只返回本工厂订单的异常。
+   * @param {Object} params - {status, orderNo, keyword, page, pageSize}
+   * @returns {Promise} 分页结果 {records, total, ...}
+   */
+  listExceptions(params) {
+    const p = params || {};
+    const qs = Object.keys(p)
+      .filter(function (k) {
+        const v = p[k];
+        return v !== undefined && v !== null && v !== '';
+      })
+      .map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(p[k]); })
+      .join('&');
+    return ok('/api/production/exception/list' + (qs ? '?' + qs : ''), 'GET', {});
+  },
+
+  /**
+   * 处理异常报告（D-417）
+   * 后端：POST /api/production/exception/{id}/handle?action=resolve|reopen&note=
+   * 权限：仅主管及以上（后端校验）
+   * @param {number|string} id - 异常报告 id
+   * @param {string} action - resolve=标记已解决 / reopen=重新打开
+   * @param {string} [note] - 处理说明
+   * @returns {Promise}
+   */
+  handleException(id, action, note) {
+    let qs = 'action=' + encodeURIComponent(action || 'resolve');
+    if (note) qs += '&note=' + encodeURIComponent(note);
+    return ok(`/api/production/exception/${id}/handle?` + qs, 'POST', {});
+  },
 };
 
 // 注：factoryShipment 已统一收敛至 ./finance.js（避免与 finance.factoryShipment 重复定义）

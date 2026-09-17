@@ -1,0 +1,9 @@
+{
+  "usingComponents": {
+    "empty-state": "/components/empty-state/empty-state",
+    "sticky-search-bar": "/components/sticky-search-bar/index"
+  },
+  "navigationBarTitleText": "工资结算审批",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
+}
