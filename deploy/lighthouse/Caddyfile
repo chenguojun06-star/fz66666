@@ -14,18 +14,18 @@ api.webyszl.cn {
 }
 
 db.webyszl.cn {
-	# D-461：CloudBeaver 崩溃循环暂退位，phpMyAdmin 轻量常驻（内存占用极小）
-	reverse_proxy phpmyadmin:80
-	# D-460：管理台不可用时给友好提示而非裸 502
+	# D-462 修复后回归 CloudBeaver（D-461 的 phpMyAdmin 留在 compose 里备用）
+	reverse_proxy cloudbeaver:8978
+	# 管理台不在运行时给友好提示而非裸 502
 	handle_errors {
 		respond <<HTML
 		<!DOCTYPE html>
-		<html lang="zh"><head><meta charset="utf-8"><title>数据库管理台不可用</title></head>
+		<html lang="zh"><head><meta charset="utf-8"><title>数据库管理台未运行</title></head>
 		<body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f5f5f7">
 		<div style="text-align:center">
-		<h2 style="color:#1d1d1f">数据库管理台暂时不可用</h2>
+		<h2 style="color:#1d1d1f">数据库管理台未运行</h2>
 		<p style="color:#6e6e73">在服务器执行以下命令启动，然后刷新本页：</p>
-		<code style="background:#1d1d1f;color:#fff;padding:10px 14px;border-radius:6px;display:inline-block">cd /opt/fz66666/deploy/lighthouse && sudo docker compose up -d phpmyadmin</code>
+		<code style="background:#1d1d1f;color:#fff;padding:10px 14px;border-radius:6px;display:inline-block">cd /opt/fz66666/deploy/lighthouse && sudo docker compose up -d cloudbeaver</code>
 		<p style="color:#8e8e93;font-size:13px">数据本身安然无恙——只是查看工具没在运行。</p>
 		</div>
 		</body></html>
