@@ -15,6 +15,21 @@ api.webyszl.cn {
 
 db.webyszl.cn {
 	reverse_proxy cloudbeaver:8978
+	# D-460：CloudBeaver 平时休眠（4G 机器带不动常驻），上游不在时给友好提示而非裸 502
+	handle_errors {
+		respond <<HTML
+		<!DOCTYPE html>
+		<html lang="zh"><head><meta charset="utf-8"><title>数据库管理台休眠中</title></head>
+		<body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f5f5f7">
+		<div style="text-align:center">
+		<h2 style="color:#1d1d1f">数据库管理台休眠中</h2>
+		<p style="color:#6e6e73">在服务器执行以下命令唤醒，然后刷新本页：</p>
+		<code style="background:#1d1d1f;color:#fff;padding:10px 14px;border-radius:6px;display:inline-block">sudo docker compose -f /opt/fz66666/deploy/lighthouse/docker-compose.yml up -d cloudbeaver</code>
+		<p style="color:#8e8e93;font-size:13px">数据本身安然无恙——只是查看工具在省内存休眠。</p>
+		</div>
+		</body></html>
+		HTML 503
+	}
 }
 
 www.webyszl.cn {
