@@ -2,6 +2,7 @@ import React from 'react';
 import { Form, Input, Select, InputNumber, Row, Col, Radio } from 'antd';
 import type { FormInstance } from 'antd';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import api from '@/utils/api';
 import { CATEGORY_CODE_OPTIONS, SEASON_CODE_OPTIONS } from '@/utils/styleCategory';
 import { StyleInfo } from '@/types/style';
@@ -56,17 +57,11 @@ export const ProductCoverUpload: React.FC<{
 
 /**
  * D-440：基础信息字段组（对齐参考竞品字段集）。
- * 款式编码/商品名称/商品分类/季节/颜色/尺码/U编码/基本售价/市场吊牌价/成本价/
- * 重量/单位/商品属性/长宽高(含体积联动)/品牌/虚拟分类/供应商/供应商款号/备注
+ * 款式编码/商品名称/商品品牌(theme,与样衣开发同字段同字典)/商品分类/虚拟分类/季节/
+ * 供应商/供应商款号/U编码/基本售价/市场吊牌价/成本价/客户/生产周期/备注
+ * （重量/单位/商品属性/长宽高/是否里布/打扮尺码/标签/数量 → ProductNatureFields）
  */
 export const ProductBaseFields: React.FC = () => {
-  const lengthCm = Form.useWatch('lengthCm');
-  const widthCm = Form.useWatch('widthCm');
-  const heightCm = Form.useWatch('heightCm');
-  const volume = [lengthCm, widthCm, heightCm].every((v) => v != null && v !== ('' as unknown))
-    ? (Number(lengthCm) * Number(widthCm) * Number(heightCm)).toFixed(1)
-    : null;
-
   return (
     <>
       <Row gutter={[12, 8]}>
@@ -81,8 +76,12 @@ export const ProductBaseFields: React.FC = () => {
           </Form.Item>
         </Col>
         <Col xs={24} sm={12} md={8}>
-          <Form.Item name="brand" label="商品品牌">
-            <Input placeholder="请输入商品品牌" />
+          <Form.Item name="theme" label="商品品牌">
+            <DictAutoComplete
+              dictType="style_theme"
+              quickManageTitle="商品品牌"
+              placeholder="请输入或选择商品品牌"
+            />
           </Form.Item>
         </Col>
       </Row>
@@ -147,56 +146,13 @@ export const ProductBaseFields: React.FC = () => {
       </Row>
       <Row gutter={[12, 8]}>
         <Col xs={24} sm={12} md={8}>
-          <Form.Item name="weightKg" label="重量(kg)">
-            <InputNumber placeholder="请输入重量" style={{ width: '100%' }} min={0} step={0.01} precision={2} />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={12} md={8}>
-          <Form.Item name="unit" label="单位">
-            <Input placeholder="如：件" maxLength={16} />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={12} md={8}>
           <Form.Item name="customer" label="客户">
             <Input placeholder="请输入客户" />
-          </Form.Item>
-        </Col>
-      </Row>
-      <Row gutter={[12, 8]}>
-        <Col xs={24} sm={12} md={8}>
-          <Form.Item name="productNature" label="商品属性">
-            <Radio.Group>
-              {PRODUCT_NATURE_OPTIONS.map(opt => (
-                <Radio key={opt.value} value={opt.value}>{opt.label}</Radio>
-              ))}
-            </Radio.Group>
           </Form.Item>
         </Col>
         <Col xs={24} sm={12} md={8}>
           <Form.Item name="cycle" label="生产周期(天)">
             <InputNumber placeholder="天数" style={{ width: '100%' }} min={0} />
-          </Form.Item>
-        </Col>
-      </Row>
-      <Row gutter={[12, 8]}>
-        <Col xs={8} sm={6} md={4}>
-          <Form.Item name="lengthCm" label="长(cm)">
-            <InputNumber style={{ width: '100%' }} min={0} precision={1} placeholder="长" />
-          </Form.Item>
-        </Col>
-        <Col xs={8} sm={6} md={4}>
-          <Form.Item name="widthCm" label="宽(cm)">
-            <InputNumber style={{ width: '100%' }} min={0} precision={1} placeholder="宽" />
-          </Form.Item>
-        </Col>
-        <Col xs={8} sm={6} md={4}>
-          <Form.Item name="heightCm" label="高(cm)">
-            <InputNumber style={{ width: '100%' }} min={0} precision={1} placeholder="高" />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={6} md={4}>
-          <Form.Item label="体积">
-            <Input value={volume ? `${volume} cm³` : ''} placeholder="自动计算" disabled />
           </Form.Item>
         </Col>
       </Row>
@@ -211,7 +167,93 @@ export const ProductBaseFields: React.FC = () => {
   );
 };
 
-/** D-439/D-440：类目属性字段组（成分/吊牌价/是否里布/打扮尺码/标签/数量 + 质检字段 + 描述） */
+/**
+ * D-440：商品属性与规格字段组（重量/单位/商品属性/长宽高(含体积联动)/是否里布/打扮尺码/标签/数量）。
+ * 商品资料抽屉「类目属性」区尾部 与 样衣开发表单「商品属性」分区共用。
+ */
+export const ProductNatureFields: React.FC<{ disabled?: boolean }> = ({ disabled = false }) => {
+  const lengthCm = Form.useWatch('lengthCm');
+  const widthCm = Form.useWatch('widthCm');
+  const heightCm = Form.useWatch('heightCm');
+  const volume = [lengthCm, widthCm, heightCm].every((v) => v != null && v !== ('' as unknown))
+    ? (Number(lengthCm) * Number(widthCm) * Number(heightCm)).toFixed(1)
+    : null;
+
+  return (
+    <>
+      <Row gutter={[12, 8]}>
+        <Col xs={24} sm={12} md={8}>
+          <Form.Item name="weightKg" label="重量(kg)">
+            <InputNumber placeholder="请输入重量" style={{ width: '100%' }} min={0} step={0.01} precision={2} disabled={disabled} />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <Form.Item name="unit" label="单位">
+            <Input placeholder="如：件" maxLength={16} disabled={disabled} />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <Form.Item name="productNature" label="商品属性">
+            <Radio.Group disabled={disabled}>
+              {PRODUCT_NATURE_OPTIONS.map(opt => (
+                <Radio key={opt.value} value={opt.value}>{opt.label}</Radio>
+              ))}
+            </Radio.Group>
+          </Form.Item>
+        </Col>
+      </Row>
+      <Row gutter={[12, 8]}>
+        <Col xs={8} sm={6} md={4}>
+          <Form.Item name="lengthCm" label="长(cm)">
+            <InputNumber style={{ width: '100%' }} min={0} precision={1} placeholder="长" disabled={disabled} />
+          </Form.Item>
+        </Col>
+        <Col xs={8} sm={6} md={4}>
+          <Form.Item name="widthCm" label="宽(cm)">
+            <InputNumber style={{ width: '100%' }} min={0} precision={1} placeholder="宽" disabled={disabled} />
+          </Form.Item>
+        </Col>
+        <Col xs={8} sm={6} md={4}>
+          <Form.Item name="heightCm" label="高(cm)">
+            <InputNumber style={{ width: '100%' }} min={0} precision={1} placeholder="高" disabled={disabled} />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={6} md={4}>
+          <Form.Item label="体积">
+            <Input value={volume ? `${volume} cm³` : ''} placeholder="自动计算" disabled />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={6} md={8}>
+          <Form.Item name="hasLining" label="是否里布">
+            <Select placeholder="请选择" allowClear disabled={disabled}>
+              <Select.Option value={true}>是</Select.Option>
+              <Select.Option value={false}>否</Select.Option>
+            </Select>
+          </Form.Item>
+        </Col>
+      </Row>
+      <Row gutter={[12, 8]}>
+        <Col xs={24} sm={12} md={8}>
+          <Form.Item name="printSize" label="打扮尺码">
+            <Input placeholder="请输入打扮尺码" maxLength={128} disabled={disabled} />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <Form.Item name="styleTags" label="标签">
+            <Input placeholder="请输入标签" maxLength={255} disabled={disabled} />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <Form.Item name="attrQuantity" label="数量">
+            <Input placeholder="请输入数量" maxLength={64} disabled={disabled} />
+          </Form.Item>
+        </Col>
+      </Row>
+    </>
+  );
+};
+
+/** D-439/D-440：类目属性字段组（成分/是否里布/打扮尺码/标签/数量 + 质检字段 + 描述） */
 export const ProductAttrFields: React.FC = () => (
   <>
     <Row gutter={[12, 8]}>
@@ -220,38 +262,6 @@ export const ProductAttrFields: React.FC = () => (
           <Input placeholder="如：100%棉" />
         </Form.Item>
       </Col>
-      <Col xs={24} sm={12} md={8}>
-        <Form.Item name="tagPrice" label="吊牌价">
-          <InputNumber placeholder="请输入吊牌价" style={{ width: '100%' }} min={0} step={0.01} precision={2} />
-        </Form.Item>
-      </Col>
-      <Col xs={24} sm={12} md={8}>
-        <Form.Item name="hasLining" label="是否里布">
-          <Select placeholder="请选择" allowClear>
-            <Select.Option value={true}>是</Select.Option>
-            <Select.Option value={false}>否</Select.Option>
-          </Select>
-        </Form.Item>
-      </Col>
-    </Row>
-    <Row gutter={[12, 8]}>
-      <Col xs={24} sm={12} md={8}>
-        <Form.Item name="printSize" label="打扮尺码">
-          <Input placeholder="请输入打扮尺码" maxLength={128} />
-        </Form.Item>
-      </Col>
-      <Col xs={24} sm={12} md={8}>
-        <Form.Item name="styleTags" label="标签">
-          <Input placeholder="请输入标签" maxLength={255} />
-        </Form.Item>
-      </Col>
-      <Col xs={24} sm={12} md={8}>
-        <Form.Item name="attrQuantity" label="数量">
-          <Input placeholder="请输入数量" maxLength={64} />
-        </Form.Item>
-      </Col>
-    </Row>
-    <Row gutter={[12, 8]}>
       <Col xs={24} sm={12} md={8}>
         <Form.Item name="qualityGrade" label="质量等级">
           <Input placeholder="如：合格品" />
@@ -262,13 +272,13 @@ export const ProductAttrFields: React.FC = () => (
           <Input placeholder="如：GB/T 2660-2017" />
         </Form.Item>
       </Col>
+    </Row>
+    <Row gutter={[12, 8]}>
       <Col xs={24} sm={12} md={8}>
         <Form.Item name="safetyCategory" label="安全类别">
           <Input placeholder="如：GB 18401 B类" />
         </Form.Item>
       </Col>
-    </Row>
-    <Row gutter={[12, 8]}>
       <Col xs={24} sm={12} md={8}>
         <Form.Item name="inspector" label="检验员">
           <Input placeholder="请输入检验员" />
@@ -279,7 +289,9 @@ export const ProductAttrFields: React.FC = () => (
           <Input.TextArea placeholder="请输入洗涤说明" rows={2} />
         </Form.Item>
       </Col>
-      <Col xs={24} sm={12} md={8}>
+    </Row>
+    <Row gutter={[12, 8]}>
+      <Col xs={24}>
         <Form.Item name="description" label="描述">
           <Input.TextArea placeholder="请输入描述" rows={2} />
         </Form.Item>
@@ -308,6 +320,7 @@ const ProductInfoForm: React.FC<ProductInfoFormProps> = ({ form, coverUrl, setCo
       <Form form={form} layout="vertical" size={isMobile ? 'small' : 'middle'}>
         <ProductCoverUpload coverUrl={coverUrl} setCoverUrl={setCoverUrl} editingItem={editingItem} />
         <ProductBaseFields />
+        <ProductNatureFields />
         <ProductAttrFields />
         <ProductStatusFields />
       </Form>

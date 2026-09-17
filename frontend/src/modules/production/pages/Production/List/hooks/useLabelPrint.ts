@@ -20,6 +20,8 @@ export interface LabelPrintStyleData {
   safetyCategory?: string;
   qualityGrade?: string;
   inspector?: string;
+  /** D-440：商品品牌（theme，合格证品牌行用） */
+  theme?: string;
 }
 
 export function useLabelPrint() {
@@ -51,6 +53,7 @@ export function useLabelPrint() {
         safetyCategory: d.safetyCategory,
         qualityGrade: d.qualityGrade,
         inspector: d.inspector,
+        theme: d.theme,
       });
     }
   }, []);

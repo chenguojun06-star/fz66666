@@ -1,7 +1,34 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-17（新增 D-440 t_style_info 补齐参考竞品字段集 14 列——表单/详情/查看态全线透出）
+> 最后更新：2026-09-17（新增 D-441 新字段全系统打通——样衣开发表单/吊牌打印/商品资料列表三线收口）
+
+---
+
+## D-441：新字段全系统打通——样衣开发/吊牌打印/列表三线收口（2026-09-17）
+
+**用户要求**："不仅仅是这个页面，全系统全部要核实清楚打通"。逐面核实后的打通与结论：
+
+**①样衣开发编辑表单（同表 t_style_info 的另一编辑面）**：
+- `buildNormalizedValues` 为通用透传（{...values}）——加 Form.Item 即自动保存，无白名单
+- BasicInfoSection 补 **虚拟分类/供应商款号**（紧邻商品品牌/供应商）
+- 新增「商品属性」SectionBox（StyleBasicInfoForm 区4前）：复用商品资料共享组 **ProductNatureFields**
+  （重量/单位/商品属性/长宽高体积/是否里布/打扮尺码/标签/数量），disabled={editLocked}
+- **统一商品品牌 = theme**：样衣开发的"商品品牌"字段本就是 `theme`（字典 style_theme）+ entity/theme 早有列，
+  商品资料改绑 theme + DictAutoComplete，弃用 D-440 新建的 brand 列（列保留无害，避免双品牌字段并存）
+- **顺手修潜伏 bug**：样衣开发表单的"备注"(remark)/"商品品牌"(theme) Form.Item 早已存在但实体无列
+  ——此前保存即静默丢失；D-440 加列后已能持久化
+
+**②吊牌打印两处实现都加"品牌"行**（仓库标签打印 hangtagCert + 订单管理 LabelPrintModal 合格证）：
+- 仓库版：OrderInfo 加 brand/tagPrice，/style/info 富化块带出 `theme/tagPrice`
+- 订单管理版：LabelStyleInfo/LabelPrintStyleData 加 theme，useLabelPrint 白名单映射补 theme
+  （此链路是显式字段映射——以后加字段记得三处同改：类型+映射+行定义）
+- 行规则：非空才自动勾选，与品名一致
+
+**③商品资料列表**：+品牌(theme)/供应商/市场|吊牌价 三列。
+
+**核实无需改动**：洗水唛（成分/洗涤本就同字段）、出库单打印（单据不含款式商务字段）、商品仓储列表
+（库存视角不含）、后端 GET/PUT（实体直传无白名单）、小程序（工厂用户场景不含商务字段，需要再加）。
 
 ---
 

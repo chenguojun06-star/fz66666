@@ -25,6 +25,16 @@ export const buildColumns = (handlers: ColumnHandlers) => [
   },
   { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120, ellipsis: true },
   { title: '款名', dataIndex: 'styleName', key: 'styleName', width: 140, ellipsis: true },
+  // D-440：品牌/供应商/吊牌价上列表（t_style_info.theme/supplier/tag_price）
+  { title: '品牌', dataIndex: 'theme', key: 'theme', width: 100, ellipsis: true, render: (v: unknown) => String(v ?? '-') },
+  {
+    title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 120, ellipsis: true,
+    render: (v: unknown) => String(v ?? '-'),
+  },
+  {
+    title: '市场|吊牌价', dataIndex: 'tagPrice', key: 'tagPrice', width: 100, align: 'right' as const,
+    render: (v: unknown) => v != null ? formatMoney(v as number | string) : '-',
+  },
   {
     title: '品类', dataIndex: 'category', key: 'category', width: 80,
     render: (v: unknown) => toCategoryCn(v),

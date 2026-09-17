@@ -8,6 +8,9 @@ import CustomerInfoSection from './StyleBasicInfoForm/CustomerInfoSection';
 import StyleFeatureSection from './StyleBasicInfoForm/StyleFeatureSection';
 import ColorSizeSkuSection from './StyleBasicInfoForm/ColorSizeSkuSection';
 import ExtFieldsSectionBlock from './StyleBasicInfoForm/ExtFieldsSectionBlock';
+import SectionBox from './StyleBasicInfoForm/SectionBox';
+// D-440：商品属性与规格字段组（与商品资料详情抽屉共用同一份定义）
+import { ProductNatureFields } from '@/modules/warehouse/pages/ProductInfo/components/ProductInfoForm';
 
 // 向后兼容：外部从本文件导入 StyleBasicInfoFormRef 类型
 export type { StyleBasicInfoFormRef } from './StyleBasicInfoForm/types';
@@ -116,6 +119,12 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
           <StyleFeatureSection {...sectionFormContext} isNewPage={isNewPage} />
         </Col>
       </Row>
+
+      {/* D-440：商品属性与规格（重量/单位/商品属性/长宽高/是否里布/打扮尺码/标签/数量）
+          与商品资料详情抽屉共用 ProductNatureFields 字段组，落 t_style_info 同名列 */}
+      <SectionBox title="商品属性">
+        <ProductNatureFields disabled={editLocked} />
+      </SectionBox>
 
       {/* 区4：颜色 / 尺码 / 商品编码 配置 */}
       <ColorSizeSkuSection

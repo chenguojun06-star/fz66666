@@ -19,6 +19,8 @@ export interface LabelStyleInfo {
   safetyCategory?: string;
   qualityGrade?: string;
   inspector?: string;
+  /** D-440：商品品牌（t_style_info.theme，合格证品牌行用） */
+  theme?: string;
 }
 
 /** D-221：合格证行配置（勾选显隐 + 左右文字可编辑） */

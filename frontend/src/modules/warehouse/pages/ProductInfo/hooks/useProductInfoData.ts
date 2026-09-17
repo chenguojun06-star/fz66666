@@ -156,8 +156,8 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
           cycle: d.cycle, customer: d.customer, description: d.description,
           qualityGrade: d.qualityGrade, executeStandard: d.executeStandard,
           safetyCategory: d.safetyCategory, inspector: d.inspector,
-          // D-440：参考竞品字段集
-          brand: d.brand, virtualCategory: d.virtualCategory,
+          // D-440：参考竞品字段集（商品品牌=theme，与样衣开发同字段同字典）
+          theme: d.theme, virtualCategory: d.virtualCategory,
           supplier: d.supplier, supplierStyleNo: d.supplierStyleNo,
           tagPrice: d.tagPrice, costPrice: d.costPrice,
           weightKg: d.weightKg, unit: d.unit, productNature: d.productNature || 'finished',

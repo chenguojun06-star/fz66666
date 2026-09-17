@@ -4,6 +4,10 @@ export interface OrderInfo {
   styleId: string;
   styleNo: string;
   styleName: string;
+  /** D-440：商品品牌（t_style_info.theme，吊牌打印行用） */
+  brand: string;
+  /** D-440：市场|吊牌价 */
+  tagPrice?: number;
   colors: string[];
   sizes: string[];
   cover: string;

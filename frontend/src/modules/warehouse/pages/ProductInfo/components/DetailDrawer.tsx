@@ -10,6 +10,7 @@ import { buildSkuColumns } from '../columns';
 import {
   ProductBaseFields,
   ProductAttrFields,
+  ProductNatureFields,
   ProductStatusFields,
   ProductCoverUpload,
 } from './ProductInfoForm';
@@ -186,7 +187,7 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
                   <Descriptions column={3} size="small" bordered>
                     <Descriptions.Item label="款式编码">{d.styleNo}</Descriptions.Item>
                     <Descriptions.Item label="商品名称">{d.styleName}</Descriptions.Item>
-                    <Descriptions.Item label="商品品牌">{String(d.brand ?? '-')}</Descriptions.Item>
+                    <Descriptions.Item label="商品品牌">{String(d.theme ?? '-')}</Descriptions.Item>
                     <Descriptions.Item label="商品分类">{toCategoryCn(d.category)}</Descriptions.Item>
                     <Descriptions.Item label="虚拟分类">{String(d.virtualCategory ?? '-')}</Descriptions.Item>
                     <Descriptions.Item label="季节">{toSeasonCn(d.season)}</Descriptions.Item>
@@ -222,19 +223,15 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
                 </Section>
 
                 <Section id="pinfo-sec-attrs" title="类目属性">
-                  <Descriptions column={3} size="small" bordered>
+                  <ProductAttrFields />
+                  <div className="u-fw-600 u-fs-13 u-mt-16 u-mb-8">商品属性与规格</div>
+                  <ProductNatureFields />
+                  <Descriptions column={3} size="small" bordered style={{ marginTop: 12 }}>
                     <Descriptions.Item label="成分">{String(d.fabricComposition ?? '-')}</Descriptions.Item>
-                    <Descriptions.Item label="吊牌价">{d.tagPrice != null ? formatMoney(d.tagPrice) : '-'}</Descriptions.Item>
                     <Descriptions.Item label="是否里布">{d.hasLining == null ? '-' : (d.hasLining ? '是' : '否')}</Descriptions.Item>
                     <Descriptions.Item label="打扮尺码">{String(d.printSize ?? '-')}</Descriptions.Item>
                     <Descriptions.Item label="标签">{String(d.styleTags ?? '-')}</Descriptions.Item>
                     <Descriptions.Item label="数量">{String(d.attrQuantity ?? '-')}</Descriptions.Item>
-                    <Descriptions.Item label="质量等级">{String(d.qualityGrade ?? '-')}</Descriptions.Item>
-                    <Descriptions.Item label="执行标准">{String(d.executeStandard ?? '-')}</Descriptions.Item>
-                    <Descriptions.Item label="安全类别">{String(d.safetyCategory ?? '-')}</Descriptions.Item>
-                    <Descriptions.Item label="检验员">{String(d.inspector ?? '-')}</Descriptions.Item>
-                    <Descriptions.Item label="洗涤说明">{String(d.washInstructions ?? '-')}</Descriptions.Item>
-                    <Descriptions.Item label="描述" span={3}>{String(d.description ?? '-')}</Descriptions.Item>
                     <Descriptions.Item label="备注" span={3}>{String(d.remark ?? '-')}</Descriptions.Item>
                   </Descriptions>
                 </Section>

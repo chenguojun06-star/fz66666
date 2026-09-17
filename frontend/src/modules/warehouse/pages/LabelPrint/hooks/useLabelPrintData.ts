@@ -146,7 +146,7 @@ export const useLabelPrintData = () => {
         const lines = parseProductionOrderLines(r).filter((l: any) => String(l?.color || '').trim() && String(l?.size || '').trim());
         const colors = Array.from(new Set(lines.map((l: any) => String(l.color || '').trim()).filter(Boolean)));
         const sizes = sortSizeNames(Array.from(new Set(lines.map((l: any) => String(l.size || '').trim()).filter(Boolean))));
-        const order: OrderInfo = { orderId: r.id, orderNo: r.orderNo || '', styleId: r.styleId || '', styleNo: r.styleNo || '', styleName: r.styleName || '', colors, sizes, cover: '', fabricComposition: '', fabricCompositionParts: '', washInstructions: '', uCode: '', washTempCode: '', bleachCode: '', tumbleDryCode: '', ironCode: '', dryCleanCode: '', careIconCodes: '', price: 0, qualityGrade: '', executeStandard: '', safetyCategory: '', inspector: '', inspectionDate: '' };
+        const order: OrderInfo = { orderId: r.id, orderNo: r.orderNo || '', styleId: r.styleId || '', styleNo: r.styleNo || '', styleName: r.styleName || '', brand: '', tagPrice: undefined, colors, sizes, cover: '', fabricComposition: '', fabricCompositionParts: '', washInstructions: '', uCode: '', washTempCode: '', bleachCode: '', tumbleDryCode: '', ironCode: '', dryCleanCode: '', careIconCodes: '', price: 0, qualityGrade: '', executeStandard: '', safetyCategory: '', inspector: '', inspectionDate: '' };
         orderList.push(order);
         if (r.styleId) {
           fetches.push((async () => {
@@ -154,6 +154,8 @@ export const useLabelPrintData = () => {
               const sr = await api.get(`/style/info/${r.styleId}`);
               const sd = sr?.data?.data || sr?.data || {};
               order.cover = sd.cover || '';
+              order.brand = sd.theme || '';
+              order.tagPrice = sd.tagPrice ?? undefined;
               order.fabricComposition = sd.fabricComposition || '';
               order.fabricCompositionParts = sd.fabricCompositionParts || '';
               order.washInstructions = sd.washInstructions || '';

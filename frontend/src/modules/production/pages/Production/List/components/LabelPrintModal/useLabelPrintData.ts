@@ -59,6 +59,7 @@ function buildDefaultCertSections(
   const inspector = (styleInfo?.inspector || '').trim();
   const defs: Array<{ key: string; label: string; value: string; remember?: boolean }> = [
     { key: 'pinming', label: '品名', value: (order?.styleName || '').trim() },
+    { key: 'pinpai', label: '品牌', value: (styleInfo?.theme || '').trim() },
     { key: 'kuanhao', label: '款号', value: (order?.styleNo || '').trim() },
     { key: 'guige', label: '规格', value: '{码数}' },
     { key: 'yanse', label: '颜色', value: '{颜色}' },

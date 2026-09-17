@@ -347,6 +347,26 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           </Form.Item>
         </Col>
 
+        {/* D-440：虚拟分类 / 供应商款号（与商品资料"商品属性"字段集打通，落 t_style_info 同名列） */}
+        <Col xs={24} md={12}>
+          <Form.Item
+            name="virtualCategory"
+            label="虚拟分类"
+            style={{ marginBottom: 8 }}
+          >
+            <Input placeholder="请输入虚拟分类" disabled={editLocked} />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={12}>
+          <Form.Item
+            name="supplierStyleNo"
+            label="供应商款号"
+            style={{ marginBottom: 8 }}
+          >
+            <Input placeholder="请输入供应商款号" maxLength={64} disabled={editLocked} />
+          </Form.Item>
+        </Col>
+
         {/* 备注（从 TimeRemarkSection 迁移至此，最多500字，showCount 显示计数）
             不用 autoSize（autoSize 会锁死高度导致拖拽失效），用固定 minRows + resize:vertical 让用户自由拉大缩小 */}
         <Col xs={24}>
