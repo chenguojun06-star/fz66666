@@ -12,6 +12,23 @@ cd /opt/fz66666
 git fetch origin main -q || exit 0
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/main)
+
+# ── phpMyAdmin 接管巡检（D-433，幂等）：历史手动 docker run 的容器由 compose 接管 ──
+# 放在版本判断前：接管未成功时每轮自动重试。顺序保证零风险——
+# 先起 compose 版（与手动容器并存，Caddy 对上游名轮询无感），启动成功后才移除手动容器；
+# 启动失败则保留手动容器继续服务，绝不先删后建。
+PMA_COMPOSE="deploy/lighthouse/docker-compose.yml"
+if [ -f "$PMA_COMPOSE" ] && grep -q '^  phpmyadmin:' "$PMA_COMPOSE" 2>/dev/null \
+   && ! sudo docker compose -f "$PMA_COMPOSE" ps -q phpmyadmin 2>/dev/null | grep -q .; then
+  echo "[$(date '+%F %T')] phpMyAdmin 尚未由 compose 管理，执行接管..."
+  if sudo docker compose -f "$PMA_COMPOSE" up -d phpmyadmin; then
+    sudo docker rm -f phpmyadmin 2>/dev/null || true
+    echo "[$(date '+%F %T')] ✅ phpMyAdmin 已由 compose 接管（手动容器已移除）"
+  else
+    echo "[$(date '+%F %T')] ⚠️ phpmyadmin compose 启动失败，保留现有容器，下轮重试"
+  fi
+fi
+
 [ "$LOCAL" = "$REMOTE" ] && exit 0
 
 CHANGED=$(git diff --name-only "$LOCAL" "$REMOTE" || true)

@@ -1,7 +1,7 @@
 # 轻量服务器迁移手册（云托管 → 腾讯云轻量 4核8G）
 
 > 目标成本：**约 52 元/月**（630 元/年）替代云托管每月数百元
-> 架构：一台服务器跑全栈 —— Caddy(HTTPS) + frontend + backend + MySQL + Redis + Qdrant
+> 架构：一台服务器跑全栈 —— Caddy(HTTPS) + frontend + backend + MySQL + Redis + Qdrant + phpMyAdmin
 > 已核实的前提：后端调微信全部**直连官方** api.weixin.qq.com，不依赖云托管任何专属能力 ✓
 
 ## 0. 购买服务器（你来操作，10 分钟）
@@ -125,6 +125,14 @@ Caddy 需要域名解析到服务器才能签证书。**先切 DNS 再启动 Cad
 
 - 云托管环境**先别删**；DNS 改回原记录即回滚，5 分钟内恢复
 - 观察一周稳定后：云托管删 backend/frontend/h5/my-qdrant/my-redis 服务（MySQL 导出留档后再退订）
+
+## 9. 数据库管理台（db.webyszl.cn）
+
+- phpMyAdmin 跑在 compose 里（`phpmyadmin` 服务），Caddy 反代对外提供 HTTPS 入口 db.webyszl.cn，**不直接开端口**
+- 只允许内网连库（`PMA_HOST=mysql`），phpMyAdmin → MySQL 流量不出服务器
+- 导入上限已放开到 512M（`UPLOAD_LIMIT`），日常全量备份约 45M 可直接网页导入
+- D-433 起容器收编进 docker-compose.yml；此前手动 `docker run` 起的旧容器由 autodeploy 巡检自动接管（先起 compose 版、成功后才移除旧容器，不中断服务）
+- 登录用 MySQL 的 root 账号（密码在服务器 `.env` 的 `MYSQL_ROOT_PASSWORD`）
 
 ## 迁移收益清单
 

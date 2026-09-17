@@ -8,7 +8,7 @@
 ## 🚚 生产环境已迁移至轻量服务器（2026-09-17 完成，本节为当前最高优先级上下文）
 
 - **新生产环境**：腾讯云轻量 2核4G（IP 106.55.12.216，广州），`deploy/lighthouse/docker-compose.yml`
-  跑全家桶：caddy(HTTPS自动签) + frontend + backend + mysql8 + redis7 + qdrant
+  跑全家桶：caddy(HTTPS自动签) + frontend + backend + mysql8 + redis7 + qdrant + phpmyadmin(D-433收编进compose,db.webyszl.cn管理台,autodeploy自动接管手动容器)
 - **数据已迁移**：438MB 整库（t_user=25 / t_production_order=114 / t_style_info=110 核对一致）
 - **自动部署**：服务器 cron 每 2 分钟 `autodeploy.sh` 检查 main 分支，backend/frontend 变动自动重建
 - **DNS 已切**：api / www.webyszl.cn → 106.55.12.216（DNSPod，A 记录）；Caddy 自动签 Let's Encrypt

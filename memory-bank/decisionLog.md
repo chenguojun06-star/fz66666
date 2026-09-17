@@ -1,7 +1,30 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-17（新增 D-432 手机端审计第一批——4 个必现死点修复 + 三副本重新同步）
+> 最后更新：2026-09-17（新增 D-433 db管理台phpMyAdmin收编进compose——手动容器自动接管）
+
+---
+
+## D-433：db管理台 phpMyAdmin 收编进 docker-compose——仓库可复原 + autodeploy 自动接管（2026-09-17）
+
+**背景**：db.webyszl.cn 的 phpMyAdmin 容器是当时在服务器上手动 `docker run` 起的（仓库 compose 无此服务），
+服务器重装/重建后管理台即失联，且配置无版本化。用户确认后收编进仓库。
+
+**决策与实现**（只动 deploy/lighthouse 三文件 + 文档）：
+1. `docker-compose.yml` 新增 `phpmyadmin` 服务：`phpmyadmin:5.2` + `PMA_HOST=mysql` +
+   `UPLOAD_LIMIT=512M`（日常备份约45M可网页导入）+ 仅 `expose: 80`（只经 Caddy 对外，不开公网端口）+
+   `depends_on: mysql(service_healthy)`。不设 `container_name`——服务名即网络别名，Caddy 无感。
+2. `autodeploy.sh` 新增接管巡检（放在版本判断**之前**：失败后每 2 分钟自动重试）：
+   `compose ps -q phpmyadmin` 为空（未接管/异常退出）才触发，`up -d` 成功**之后**才 `docker rm -f` 手动容器——
+   先起后删零中断，启动失败保留手动容器继续服务。
+3. `README.md` 补「9. 数据库管理台」章节（入口/隔离/导入上限/接管机制/登录密码位置）。
+
+**为什么这么接**：接管期间新旧容器在同一 compose 网络并存，`phpmyadmin` 域名短暂双 A 记录轮询，
+两边同镜像同配置，仅极端情况（接管瞬间正在用管理台）可能掉一次登录态，业务零影响。
+SSH 为密码登录无法自动化，接管逻辑必须由跑在服务器上的 autodeploy 自执行。
+
+**遗留观察**：推送后约 2-4 分钟看 autodeploy 日志应出现「✅ phpMyAdmin 已由 compose 接管」；
+`docker compose ps` 应有 lighthouse-phpmyadmin-1。
 
 ---
 
