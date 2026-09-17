@@ -5,18 +5,11 @@
 # miniprogram/文档类改动只拉代码不重建（省 7 分钟构建）
 # =====================================================================
 set -e
-exec 9>/tmp/autodeploy.lock
-flock -n 9 || exit 0   # 上一次还没跑完就静默退出，防重叠
-
-cd /opt/fz66666
-git fetch origin main -q || exit 0
-LOCAL=$(git rev-parse HEAD)
-REMOTE=$(git rev-parse origin/main)
 
 # ── 部署结果通知（D-456）──
-# 背景（2026-09-17 事故）：失败/跳过只写服务器本地日志，没人看就等于没有 ——
-# 当日实测内存守卫每轮跳过，**部署静默阻塞 20 分钟无人察觉**（站点正常、水印不变，
-# 从外部完全看不出异常）。故在关键节点加通知。
+# 必须**最先定义**：后面的单实例锁失败、git fetch 失败都要靠它报出去。
+# 背景（2026-09-17 事故）：失败只写服务器本地日志，没人看就等于没有 ——
+# 实测脚本因锁文件权限问题在第 8 行原地暴毙、每 2 分钟一次、持续数小时无人察觉。
 # 未配置 NOTIFY_WEBHOOK 时是 no-op；任何情况下都不影响部署流程（见 notify.sh）。
 # ⚠️ 必须用绝对路径：构建段执行前脚本已 `cd deploy/lighthouse`，
 #    相对路径会解析成 deploy/lighthouse/deploy/lighthouse/... 从而静默失效。
@@ -27,6 +20,36 @@ notify() {
   bash "$f" "$1" >/dev/null 2>&1 || true
   return 0
 }
+
+# ── 单实例锁（D-457）──
+# 修复历史故障（2026-09-17 实测）：原实现用固定路径 /tmp/autodeploy.lock，
+# 该文件一旦被**别的身份**创建（例如手动 `sudo bash autodeploy.sh`），
+# 之后的运行就 `exec 9>/tmp/autodeploy.lock` 报 Permission denied，
+# 配合 set -e → **脚本在第 8 行原地退出**，cron 每 2 分钟白跑一次，
+# 部署彻底停摆且只有一句 bash 错误、毫无可观测性。
+# 现在：① 锁名带 uid，不同身份各用各的，不再互相踩；
+#       ② 先探测可写性再打开，失败时明确报错并**发通知**。
+# ⚠️ 代价：不同身份不再互斥。手动验证请用同一身份跑，才能共享锁：
+#     sudo -u ubuntu bash /opt/fz66666/deploy/lighthouse/autodeploy.sh
+LOCK="${TMPDIR:-/tmp}/autodeploy.$(id -u).lock"
+if ! : >>"$LOCK" 2>/dev/null; then
+  echo "[$(date '+%F %T')] ❌ 锁文件不可写：$LOCK（执行身份 $(id -un)）—— 本轮跳过"
+  notify "❌ 服装66666 部署机器人无法启动：锁文件 $LOCK 不可写（执行身份 $(id -un)）。
+部署已停摆，请检查该文件属主/权限，或删除后等下一轮 cron。"
+  exit 1
+fi
+exec 9>>"$LOCK"
+flock -n 9 || exit 0   # 上一次还没跑完就静默退出，防重叠
+
+cd /opt/fz66666
+git fetch origin main -q || {
+  echo "[$(date '+%F %T')] ❌ git fetch 失败（检查服务器到 GitHub 的凭证）"
+  notify "❌ 服装66666 部署机器人 git fetch 失败 —— 服务器拉不到 GitHub，部署已停摆。
+排查：cd /opt/fz66666 && git fetch origin main（注意用 cron 同一身份：ubuntu）"
+  exit 0
+}
+LOCAL=$(git rev-parse HEAD)
+REMOTE=$(git rev-parse origin/main)
 
 # ── 全服务在场巡检（D-455，替换 D-433 已退役的 phpMyAdmin 接管逻辑）──
 # 背景：D-433 的接管块用 grep '^  phpmyadmin:' 判定，D-435 移除该服务后永久失配 →

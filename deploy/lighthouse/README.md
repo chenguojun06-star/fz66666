@@ -145,12 +145,23 @@ cd /opt/fz66666 && sudo bash -x deploy/lighthouse/autodeploy.sh 2>&1 | tail -60
 | # | 关卡 | 静默失败的表现 | 检查 |
 |---|---|---|---|
 | 1 | cron 是否在跑 | 脚本从未被调用 | `sudo crontab -l \| grep autodeploy` |
-| 2 | `flock -n 9` | 上一轮卡住持有锁 → 后续每轮立即退出 | `ps -ef \| grep autodeploy` |
-| 3 | `git fetch` | git 的 **dubious ownership** 校验（repo 属主≠执行身份）直接拒绝 | `sudo git -C /opt/fz66666 status` |
-| 4 | `git fetch origin main` | 网络/凭证问题 | 同上命令看报错 |
-| 5 | `git pull --ff-only` | **本地分叉**时失败 | `git -C /opt/fz66666 status -sb` |
-| 6 | 内存守卫 | available < 1200MB 跳过（**先量再说**） | `free -m` 看 available |
-| 7 | 本就无需重建 | 纯 `docs/`、`memory-bank/` 提交不重建，水印不变是正常的 | `git diff --name-only A B` |
+| 2 | **锁文件可写性** | **锁文件属主 ≠ 执行身份 → `exec 9>锁` 报 Permission denied，配合 `set -e` 脚本在第 8 行原地退出，每 2 分钟白跑一次** | `ls -la /tmp/autodeploy.*.lock` |
+| 3 | `flock -n 9` | 上一轮卡住持有锁 → 后续每轮立即退出 | `ps -ef \| grep autodeploy` |
+| 4 | `git fetch` | git 的 **dubious ownership** 校验（repo 属主≠执行身份）直接拒绝 | `sudo -u ubuntu git -C /opt/fz66666 status` |
+| 5 | `git fetch origin main` | 网络/凭证问题（注意用 **cron 同一身份**验证，`sudo` 走的是 root 的密钥） | `sudo -u ubuntu git -C /opt/fz66666 fetch origin main` |
+| 6 | `git pull --ff-only` | **本地分叉**时失败 | `git -C /opt/fz66666 status -sb` |
+| 7 | 内存守卫 | available < 1200MB 跳过（**先量再说**） | `free -m` 看 available |
+| 8 | 本就无需重建 | 纯 `docs/`、`memory-bank/` 提交不重建，水印不变是正常的 | `git diff --name-only A B` |
+
+**⚠️ 排查铁律：一切验证都要用 cron 的同一身份（`ubuntu`）。**
+用 `sudo` 跑会走 root 的密钥/家目录，得到的结论与 cron 实际路径**可能完全不同**——
+2026-09-17 就因此误判过一轮（`sudo git fetch` 报 publickey 失败，但那只是 root 没有密钥）。
+
+**手动跑部署脚本请用**：
+```bash
+sudo -u ubuntu bash /opt/fz66666/deploy/lighthouse/autodeploy.sh
+```
+（锁按 uid 隔离，用 `sudo` 会走 root 的锁，与 cron 不互斥）
 
 ### 🔔 部署结果通知（D-456，强烈建议开启）
 
