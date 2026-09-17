@@ -1,7 +1,30 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-17（新增 D-439 商品资料抽屉五分区锚点导航——颜色规格/图片附件直接复用样衣开发同源组件）
+> 最后更新：2026-09-17（新增 D-440 t_style_info 补齐参考竞品字段集 14 列——表单/详情/查看态全线透出）
+
+---
+
+## D-440：商品资料补齐参考竞品字段集——14 列迁移 + 全链路透出（2026-09-17）
+
+**用户拍板**：参考竞品"编辑商品(款)"缺的那些字段（品牌/虚拟分类/供应商款号/成本价/重量/单位/商品属性/长宽高/
+备注/是否里布/打扮尺码/标签/数量）——"能不能优化做好这些"。
+
+**核实结论**：一半字段已存在不用加——`tag_price`(市场吊牌价)、`supplier`(供应商)、成分/质量等级/执行标准/
+安全类别/检验员/洗涤说明/U编码 全在 t_style_info；PUT /api/style/info 是 `@RequestBody StyleInfo` 实体直传，
+加列+加实体字段即全链路通。
+
+**实施**：
+- 迁移 `V202709170100__style_info_reference_fields.sql`：幂等存储过程逐列判存在，新增 14 列——
+  brand/virtual_category/supplier_style_no/cost_price(款级)/weight_kg/unit/product_nature(finished等4值)/
+  length_cm/width_cm/height_cm/remark/has_lining/print_size/style_tags/attr_quantity
+- 实体 StyleInfo 加 15 个字段（camel↔snake 标准映射免 @TableField）
+- 前端 ProductBaseFields 补齐参考字段（price 标签改"基本售价"、tagPrice"市场|吊牌价"、长宽高+体积自动计算
+  Form.useWatch）、ProductAttrFields 补 是否里布(Select 是/否)/打扮尺码/标签/数量；查看态两分区同步透出
+- **平铺弹窗（列表行编辑/新增）改为组合共享字段组**——彻底消灭 D-438 起的双份字段定义漂移风险
+- openCreate 默认 productNature=finished、unit=件；openEdit 回填全部新字段
+- 刻意取舍：供应商名称用自由输入（联动供应商库下拉涉及选型，后续再说）；SKU 级重量/面料列在样衣开发
+  StyleSkuTab 内已有，不在款级重复
 
 ---
 

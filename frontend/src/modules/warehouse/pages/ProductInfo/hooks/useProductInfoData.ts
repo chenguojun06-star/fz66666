@@ -136,7 +136,7 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
   const openCreate = () => {
     setEditingItem(null);
     form.resetFields();
-    form.setFieldsValue({ status: 'ENABLED' });
+    form.setFieldsValue({ status: 'ENABLED', productNature: 'finished', unit: '件' });
     setCoverUrl(null);
     setModalOpen(true);
   };
@@ -156,6 +156,14 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
           cycle: d.cycle, customer: d.customer, description: d.description,
           qualityGrade: d.qualityGrade, executeStandard: d.executeStandard,
           safetyCategory: d.safetyCategory, inspector: d.inspector,
+          // D-440：参考竞品字段集
+          brand: d.brand, virtualCategory: d.virtualCategory,
+          supplier: d.supplier, supplierStyleNo: d.supplierStyleNo,
+          tagPrice: d.tagPrice, costPrice: d.costPrice,
+          weightKg: d.weightKg, unit: d.unit, productNature: d.productNature || 'finished',
+          lengthCm: d.lengthCm, widthCm: d.widthCm, heightCm: d.heightCm,
+          remark: d.remark, hasLining: d.hasLining,
+          printSize: d.printSize, styleTags: d.styleTags, attrQuantity: d.attrQuantity,
         });
         if (drawerOpen) {
           // D-438：详情抽屉内的编辑——表单融入抽屉本体，不弹第二个窗口

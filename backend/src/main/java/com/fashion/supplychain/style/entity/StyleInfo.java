@@ -604,6 +604,53 @@ public class StyleInfo {
     @TableField("inspection_date")
     private String inspectionDate;
 
+    // ===== D-440：参考竞品"编辑商品(款)"字段集（V202709170100） =====
+
+    /** 商品品牌 */
+    private String brand;
+
+    /** 虚拟分类 */
+    private String virtualCategory;
+
+    /** 供应商款号 */
+    private String supplierStyleNo;
+
+    /** 成本价（款级默认；SKU 级另有成本价） */
+    private BigDecimal costPrice;
+
+    /** 重量(kg) */
+    private BigDecimal weightKg;
+
+    /** 单位（如：件） */
+    private String unit;
+
+    /** 商品属性：finished成品/semi_finished半成品/raw_material原材料/packaging包材 */
+    private String productNature;
+
+    /** 长(cm) */
+    private BigDecimal lengthCm;
+
+    /** 宽(cm) */
+    private BigDecimal widthCm;
+
+    /** 高(cm) */
+    private BigDecimal heightCm;
+
+    /** 备注 */
+    private String remark;
+
+    /** 是否里布：true是/false否 */
+    private Boolean hasLining;
+
+    /** 打扮尺码 */
+    private String printSize;
+
+    /** 标签 */
+    private String styleTags;
+
+    /** 数量（类目属性自由数量） */
+    private String attrQuantity;
+
     /**
      * 租户ID（多租户隔离，自动填充）
      */

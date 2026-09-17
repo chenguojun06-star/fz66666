@@ -100,6 +100,35 @@ export interface StyleInfo extends Record<string, unknown> {
   /** 洗涤护理图标代码（JSON数组），格式：["wash_W30","bleach_NO"]，优先于旧5字段 */
   careIconCodes?: string;
 
+  // ===== D-440：参考竞品"编辑商品(款)"字段集 =====
+  /** 商品品牌 */
+  brand?: string;
+  /** 虚拟分类 */
+  virtualCategory?: string;
+  /** 供应商款号 */
+  supplierStyleNo?: string;
+  /** 成本价（款级默认） */
+  costPrice?: number | null;
+  /** 重量(kg) */
+  weightKg?: number | null;
+  /** 单位（如：件） */
+  unit?: string;
+  /** 商品属性：finished成品/semi_finished半成品/raw_material原材料/packaging包材 */
+  productNature?: string;
+  lengthCm?: number | null;
+  widthCm?: number | null;
+  heightCm?: number | null;
+  /** 备注 */
+  remark?: string;
+  /** 是否里布 */
+  hasLining?: boolean | null;
+  /** 打扮尺码 */
+  printSize?: string;
+  /** 标签 */
+  styleTags?: string;
+  /** 数量（类目属性） */
+  attrQuantity?: string;
+
   // 退回编辑锁定字段
   descriptionLocked?: number;
   descriptionReturnComment?: string;
