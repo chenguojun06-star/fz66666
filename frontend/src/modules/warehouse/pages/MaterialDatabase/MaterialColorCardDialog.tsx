@@ -1,13 +1,13 @@
 import React from 'react';
-import { Col, Form, Input, Row, Select } from 'antd';
+import { Button, Col, Form, Input, Row, Select, Space } from 'antd';
 import type { FormInstance } from 'antd';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import SupplierSelect from '@/components/common/SupplierSelect';
-import ResizableModal from '@/components/common/ResizableModal';
+import SideDrawer from '@/components/common/SideDrawer';
 import type { MaterialColorCard } from './types';
 import { MATERIAL_TYPE_OPTIONS } from './types';
 
-// ===== 物料色卡母卡新建/编辑弹窗（从 index.tsx 抽取） =====
+// ===== 物料色卡母卡新建/编辑（D-444：弹窗统一为侧滑抽屉） =====
 interface MaterialColorCardDialogProps {
   open: boolean;
   currentCard: MaterialColorCard | null;
@@ -23,14 +23,17 @@ const MaterialColorCardDialog: React.FC<MaterialColorCardDialogProps> = ({
   open, currentCard, cardForm, coverImageFiles, setCoverImageFiles, uploadCardImage, onCancel, onOk,
 }) => {
   return (
-    <ResizableModal
+    <SideDrawer
       title={currentCard?.id ? '编辑物料色卡' : '新建物料色卡'}
       open={open}
-      onCancel={onCancel}
-      onOk={onOk}
+      onClose={onCancel}
       width={760}
-      okText="保存"
-      cancelText="取消"
+      footer={(
+        <Space>
+          <Button onClick={onCancel}>取消</Button>
+          <Button type="primary" onClick={onOk}>保存</Button>
+        </Space>
+      )}
     >
       <Form form={cardForm} layout="vertical" size="middle">
         <Row gutter={12}>
@@ -116,7 +119,7 @@ const MaterialColorCardDialog: React.FC<MaterialColorCardDialogProps> = ({
           <Input.TextArea placeholder="备注信息" rows={2} />
         </Form.Item>
       </Form>
-    </ResizableModal>
+    </SideDrawer>
   );
 };
 

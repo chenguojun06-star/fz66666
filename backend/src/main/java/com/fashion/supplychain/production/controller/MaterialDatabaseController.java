@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.controller;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.production.dto.MaterialColorCardRecognitionResult;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
+import com.fashion.supplychain.production.helper.MaterialDatabaseLogAppendHelper;
 import com.fashion.supplychain.production.orchestration.MaterialColorCardOrchestrator;
 import com.fashion.supplychain.production.orchestration.MaterialDatabaseOrchestrator;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -21,6 +22,10 @@ public class MaterialDatabaseController {
 
     @Autowired(required = false)
     private MaterialColorCardOrchestrator materialColorCardOrchestrator;
+
+    // D-444：此前 Helper 定义了全套记录方法却无人调用（死代码），页面操作日志恒为空——此处接线
+    @Autowired
+    private MaterialDatabaseLogAppendHelper materialDatabaseLogAppendHelper;
 
     @GetMapping("/list")
     public Result<IPage<MaterialDatabase>> list(@RequestParam Map<String, Object> params) {
@@ -64,38 +69,67 @@ public class MaterialDatabaseController {
 
     @PostMapping
     public Result<Boolean> save(@RequestBody MaterialDatabase material) {
-        return Result.success(materialDatabaseOrchestrator.save(material));
+        Boolean ok = materialDatabaseOrchestrator.save(material);
+        if (Boolean.TRUE.equals(ok) && material.getId() != null) {
+            materialDatabaseLogAppendHelper.appendCreate(material.getId(),
+                    material.getMaterialName() != null ? material.getMaterialName() : null);
+        }
+        return Result.success(ok);
     }
 
     @PutMapping
     public Result<Boolean> update(@RequestBody MaterialDatabase material) {
-        return Result.success(materialDatabaseOrchestrator.update(material));
+        Boolean ok = materialDatabaseOrchestrator.update(material);
+        if (Boolean.TRUE.equals(ok) && material.getId() != null) {
+            materialDatabaseLogAppendHelper.appendUpdate(material.getId(), "资料更新");
+        }
+        return Result.success(ok);
     }
 
     @PutMapping("/{id}/complete")
     public Result<Boolean> complete(@PathVariable String id) {
-        return Result.success(materialDatabaseOrchestrator.complete(id));
+        Boolean ok = materialDatabaseOrchestrator.complete(id);
+        if (Boolean.TRUE.equals(ok)) {
+            materialDatabaseLogAppendHelper.appendComplete(id);
+        }
+        return Result.success(ok);
     }
 
     @PutMapping("/{id}/return")
     public Result<Boolean> returnToPending(@PathVariable String id, @RequestBody(required = false) Map<String, Object> body) {
         String reason = body == null ? null : String.valueOf(body.getOrDefault("reason", "")).trim();
-        return Result.success(materialDatabaseOrchestrator.returnToPending(id, reason));
+        Boolean ok = materialDatabaseOrchestrator.returnToPending(id, reason);
+        if (Boolean.TRUE.equals(ok)) {
+            materialDatabaseLogAppendHelper.appendReturnToPending(id, reason);
+        }
+        return Result.success(ok);
     }
 
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id, @RequestBody(required = false) Map<String, Object> body) {
         String reason = body == null ? null : String.valueOf(body.getOrDefault("reason", "")).trim();
-        return Result.success(materialDatabaseOrchestrator.delete(id, reason));
+        Boolean ok = materialDatabaseOrchestrator.delete(id, reason);
+        if (Boolean.TRUE.equals(ok)) {
+            materialDatabaseLogAppendHelper.appendDelete(id, reason);
+        }
+        return Result.success(ok);
     }
 
     @PutMapping("/{id}/disable")
     public Result<Boolean> disable(@PathVariable String id) {
-        return Result.success(materialDatabaseOrchestrator.disable(id));
+        Boolean ok = materialDatabaseOrchestrator.disable(id);
+        if (Boolean.TRUE.equals(ok)) {
+            materialDatabaseLogAppendHelper.appendDisable(id, null);
+        }
+        return Result.success(ok);
     }
 
     @PutMapping("/{id}/enable")
     public Result<Boolean> enable(@PathVariable String id) {
-        return Result.success(materialDatabaseOrchestrator.enable(id));
+        Boolean ok = materialDatabaseOrchestrator.enable(id);
+        if (Boolean.TRUE.equals(ok)) {
+            materialDatabaseLogAppendHelper.appendEnable(id);
+        }
+        return Result.success(ok);
     }
 }

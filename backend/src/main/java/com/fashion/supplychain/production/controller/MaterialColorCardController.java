@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.production.entity.MaterialColorCard;
 import com.fashion.supplychain.production.entity.MaterialColorCardItem;
+import com.fashion.supplychain.production.helper.MaterialDatabaseLogAppendHelper;
 import com.fashion.supplychain.production.orchestration.MaterialColorCardOrchestrator;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,11 @@ public class MaterialColorCardController {
     @Autowired
     private MaterialColorCardOrchestrator orchestrator;
 
+    // D-444：色卡操作此前从不写操作日志——复用物料日志 Helper（模块同为"物料数据库"，
+    // appendOperation 只写 t_operation_log 不查实体，传色卡 id 即可）
+    @Autowired
+    private MaterialDatabaseLogAppendHelper materialDatabaseLogAppendHelper;
+
     // ==================== 色卡 CRUD ====================
 
     @GetMapping("/list")
@@ -56,18 +62,32 @@ public class MaterialColorCardController {
 
     @PostMapping
     public Result<String> create(@RequestBody MaterialColorCard card) {
-        return Result.success(orchestrator.saveCard(card));
+        String id = orchestrator.saveCard(card);
+        if (id != null) {
+            materialDatabaseLogAppendHelper.appendOperation(id, "新建色卡本",
+                    card.getCardName() != null ? card.getCardName() : null);
+        }
+        return Result.success(id);
     }
 
     @PutMapping("/{id}")
     public Result<Boolean> update(@PathVariable String id, @RequestBody MaterialColorCard card) {
         if (card != null) card.setId(id);
-        return Result.success(orchestrator.updateCard(card));
+        Boolean ok = orchestrator.updateCard(card);
+        if (Boolean.TRUE.equals(ok)) {
+            materialDatabaseLogAppendHelper.appendOperation(id, "编辑色卡本",
+                    card.getCardName() != null ? card.getCardName() : null);
+        }
+        return Result.success(ok);
     }
 
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id) {
-        return Result.success(orchestrator.deleteCard(id));
+        Boolean ok = orchestrator.deleteCard(id);
+        if (Boolean.TRUE.equals(ok)) {
+            materialDatabaseLogAppendHelper.appendOperation(id, "删除色卡本", null);
+        }
+        return Result.success(ok);
     }
 
     // ==================== 子条目 CRUD ====================
@@ -77,34 +97,60 @@ public class MaterialColorCardController {
             @PathVariable String cardId,
             @RequestBody Map<String, List<MaterialColorCardItem>> body) {
         List<MaterialColorCardItem> items = body.get("items");
-        return Result.success(orchestrator.saveItems(cardId, items));
+        Boolean ok = orchestrator.saveItems(cardId, items);
+        if (Boolean.TRUE.equals(ok) && items != null) {
+            materialDatabaseLogAppendHelper.appendOperation(cardId, "保存颜色明细", items.size() + " 条");
+        }
+        return Result.success(ok);
     }
 
     @PostMapping("/{cardId}/items")
     public Result<String> addItem(@PathVariable String cardId, @RequestBody MaterialColorCardItem item) {
-        return Result.success(orchestrator.addItem(cardId, item));
+        String itemId = orchestrator.addItem(cardId, item);
+        if (itemId != null) {
+            materialDatabaseLogAppendHelper.appendOperation(cardId, "新增颜色明细",
+                    item.getMaterialName() != null ? item.getMaterialName() : null);
+        }
+        return Result.success(itemId);
     }
 
     @PostMapping("/{cardId}/items/from-material/{materialId}")
     public Result<String> addItemFromMaterial(@PathVariable String cardId, @PathVariable String materialId) {
-        return Result.success(orchestrator.addItemFromMaterial(cardId, materialId));
+        String itemId = orchestrator.addItemFromMaterial(cardId, materialId);
+        if (itemId != null) {
+            materialDatabaseLogAppendHelper.appendOperation(cardId, "从物料加入色卡", materialId);
+        }
+        return Result.success(itemId);
     }
 
     @PutMapping("/items/{itemId}")
     public Result<Boolean> updateItem(@PathVariable String itemId, @RequestBody MaterialColorCardItem item) {
-        return Result.success(orchestrator.updateItem(itemId, item));
+        Boolean ok = orchestrator.updateItem(itemId, item);
+        if (Boolean.TRUE.equals(ok)) {
+            materialDatabaseLogAppendHelper.appendOperation(itemId, "更新颜色明细",
+                    item.getMaterialName() != null ? item.getMaterialName() : null);
+        }
+        return Result.success(ok);
     }
 
     @DeleteMapping("/items/{itemId}")
     public Result<Boolean> deleteItem(@PathVariable String itemId) {
-        return Result.success(orchestrator.deleteItem(itemId));
+        Boolean ok = orchestrator.deleteItem(itemId);
+        if (Boolean.TRUE.equals(ok)) {
+            materialDatabaseLogAppendHelper.appendOperation(itemId, "删除颜色明细", null);
+        }
+        return Result.success(ok);
     }
 
     // ==================== 批量生成物料 ====================
 
     @PostMapping("/{cardId}/generate-materials")
     public Result<List<String>> generateMaterials(@PathVariable String cardId) {
-        return Result.success(orchestrator.generateMaterialsFromCard(cardId));
+        List<String> ids = orchestrator.generateMaterialsFromCard(cardId);
+        if (ids != null && !ids.isEmpty()) {
+            materialDatabaseLogAppendHelper.appendOperation(cardId, "从色卡生成物料", ids.size() + " 个");
+        }
+        return Result.success(ids);
     }
 
     // ==================== 编号生成 ====================

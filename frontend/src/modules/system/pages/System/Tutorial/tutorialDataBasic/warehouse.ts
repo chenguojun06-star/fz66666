@@ -119,7 +119,7 @@ export const tutorialsBasicWarehouse: Tutorial[] = [
       steps: [
         {
           title: '添加新物料',
-          description: '从「物料管理」→「物料新增」点击「新增物料」，填写物料基本信息。',
+          description: '从「物料管理」点击「新增物料」，填写物料基本信息。',
           tips: [
             '物料编号建议统一格式（如F001-面料，F002-辅料）',
             '详细填写规格参数便于后续查找',

@@ -10,7 +10,7 @@ import type { UploadFile } from 'antd/es/upload/interface';
 import type { MaterialDatabase } from '@/types/production';
 import { MATERIAL_TYPE_OPTIONS } from './types';
 
-// ===== 物料新增/编辑 Drawer（从 index.tsx 抽取） =====
+// ===== 物料管理/编辑 Drawer（从 index.tsx 抽取） =====
 interface MaterialFormDrawerProps {
   visible: boolean;
   currentMaterial?: MaterialDatabase | null;

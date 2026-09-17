@@ -274,7 +274,7 @@ const MaterialDatabasePage: React.FC = () => {
         </Card>
       )}
 
-      {/* ===== 物料新增/编辑抽屉（抽取为 MaterialFormDrawer） ===== */}
+      {/* ===== 物料管理/编辑抽屉（抽取为 MaterialFormDrawer） ===== */}
       <MaterialFormDrawer
         visible={visible}
         currentMaterial={currentMaterial}

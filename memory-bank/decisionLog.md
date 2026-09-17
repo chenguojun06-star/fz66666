@@ -1,7 +1,40 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-17（新增 D-442 交互细节五连修——下单表单竖排标签/出库工具条对齐/抽屉滚动联动/吊牌带款/附件上传标准化）
+> 最后更新：2026-09-17（新增 D-444 物料资料库——改名物料管理/三弹窗统一侧滑/操作日志接线/批量单价/色名色块）
+
+---
+
+## D-444：物料资料库五项优化——改名/侧滑统一/日志接线/批量单价/色名色块（2026-09-17）
+
+**①改名**：「物料新增」→「物料管理」（i18n materialDatabase 词条 + 租户模块配置 + 教程文案 + 注释 6 处）。
+
+**②弹窗统一侧滑**：物料色卡新建/编辑（MaterialColorCardDialog）、供应商色卡颜色详情（MaterialColorItemsModal）、
+色卡子物料管理（MaterialColorCardItemsModal，即"物料管理"弹窗）三个居中 Modal 全部转 SideDrawer
+（物料新增/编辑本就是 MaterialFormDrawer 抽屉）；760/720/960 宽，footer 按钮规格统一。
+
+**③操作日志恒空的根因**：`MaterialDatabaseLogAppendHelper` 定义了全套 append 方法但**全后端零调用**（死代码）。
+接线：MaterialDatabaseController 7 个写操作（save/update/delete/complete/return/disable/enable）逐个接
+appendCreate/Update/Delete/Complete/ReturnToPending/Disable/Enable；色卡侧复用同一 Helper——核实
+OperationLogAppendUtil.appendOperation **不查实体**（service/remark 参数是历史兼容摆设），直接传色卡 id 写
+t_operation_log（module=物料数据库，页面 filter 命中）。MaterialColorCardController 9 个写操作全部接线
+（新建/编辑/删除色卡本、保存明细/新增明细/从物料加入/更新明细/删除明细/生成物料）。
+
+**④批量单价处理**：色卡子物料管理抽屉工具条新增「统一单价 + 单价应用到全部」（与出库统一单价同款交互）。
+
+**⑤色名色块**：colorNameToHex（精确色名表 40+ 常用色 → 包含匹配 → 哈希兜底低饱和色）导出共用；
+供应商色卡详情与子物料管理两处，无图颜色按色名渲染 34px 色块（浅色系自动黑字）。
+
+**遗留（下一批）**：⑥拍照识别色卡——后端 `/material/database/recognize-color-card` 已存在（单图 imageUrl →
+MaterialColorCardRecognitionResult），待接前端：多图上传循环识别 + 结果去重合并 + 勾选确认 saveItemsBatch；
+⑦快速添加色卡：新建时记忆上次供应商预填 + 从物料行直接"加入色卡本"（addItemFromMaterial 接口已有）。
+
+---
+
+## D-443：u-lh-18行高笔误1.8px→1.8 — 全站16处叠字渲染根治（2026-09-17）
+
+商品仓储款号悬浮预测卡文字全部叠死：`.u-lh-18 { line-height: 1.8px }`（本意 1.8 倍，写成 1.8 像素），
+全站 16 处使用（智能搜索弹窗/AppStore/款式阶段抽屉/样衣复核区等）一并修复为 `line-height: 1.8`。
 
 ---
 
