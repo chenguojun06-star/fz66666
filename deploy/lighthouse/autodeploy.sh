@@ -43,7 +43,8 @@ notify() {
 #   故 CloudBeaver 改为按需启动：`docker compose up -d cloudbeaver`（用完 `stop`）。
 #   运维若手工 `docker compose stop <服务>`，也应把该服务名加到这里，否则会被自动拉起。
 SWEEP_SKIP="cloudbeaver"
-COMPOSE="deploy/lighthouse/docker-compose.yml"
+# 统一用绝对路径：脚本中段会 `cd deploy/lighthouse`，相对路径一旦被挪到 cd 之后就会静默失效
+COMPOSE="$REPO_ROOT/deploy/lighthouse/docker-compose.yml"
 if [ -f "$COMPOSE" ]; then
   DEFINED=$(sudo docker compose -f "$COMPOSE" config --services 2>/dev/null || true)
   RUNNING=$(sudo docker compose -f "$COMPOSE" ps --services --status running 2>/dev/null || true)
@@ -66,8 +67,10 @@ fi
 # 但服务器侧此前**没有任何东西产出备份** → 生产库长期零备份（2026-09-17 查清）。
 # backup-db.sh 内部自调度（每天 03:00 后首次执行，失败 30 分钟冷却），这里每轮无脑调用即可。
 # 必须 || true：备份失败绝不能连带把部署流程打断。
-[ -f deploy/lighthouse/backup-db.sh ] \
-  && { sudo bash deploy/lighthouse/backup-db.sh || echo "[$(date '+%F %T')] ⚠️ 备份脚本返回非零（已忽略，不影响部署）"; }
+# 同样用绝对路径（理由同上）。
+BACKUP_SH="$REPO_ROOT/deploy/lighthouse/backup-db.sh"
+[ -f "$BACKUP_SH" ] \
+  && { sudo bash "$BACKUP_SH" || echo "[$(date '+%F %T')] ⚠️ 备份脚本返回非零（已忽略，不影响部署）"; }
 
 [ "$LOCAL" = "$REMOTE" ] && exit 0
 
@@ -85,7 +88,7 @@ if [ "${AVAIL_MB:-9999}" -lt 1200 ]; then
     date +%s > "$NSTAMP" || true
     notify "⚠️ 服装66666 部署被跳过：可用内存仅 ${AVAIL_MB}MB（阈值 1200MB，防整机假死）。
 积压变更：${LOCAL} → ${REMOTE}，内存回落后每 2 分钟自动重试。
-常见原因：CloudBeaver 等常驻服务吃内存 → sudo docker compose -f deploy/lighthouse/docker-compose.yml stop cloudbeaver"
+常见原因：CloudBeaver 等常驻服务吃内存 → cd /opt/fz66666/deploy/lighthouse && sudo docker compose stop cloudbeaver"
   fi
   exit 0
 fi
