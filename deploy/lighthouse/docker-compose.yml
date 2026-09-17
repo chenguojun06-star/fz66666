@@ -86,8 +86,20 @@ services:
       timeout: 5s
       retries: 12
 
-  # ── CloudBeaver 数据库管理台（db.webyszl.cn；DBeaver 官方 Web 版，只经 Caddy 暴露）──
-  # 预置连接配置见 ./cloudbeaver/conf/initial-data-sources.conf（不含密码，首次打开库时输入一次）
+  # ── phpMyAdmin（db.webyszl.cn 常驻轻量门面，D-461 回归；内存占用极小）──
+  phpmyadmin:
+    image: phpmyadmin:5.2-alpine
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      UPLOAD_LIMIT: 512M
+    expose:
+      - "80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # ── CloudBeaver（DBeaver 官方 Web 版，功能强但吃内存 ~1G，当前版本崩溃循环待修，按需手动 up -d cloudbeaver）──
   cloudbeaver:
     image: dbeaver/cloudbeaver:latest
     restart: unless-stopped
