@@ -135,7 +135,7 @@ export function useMaterialColorCard() {
    * （编号 M-色号 / 名称 面料名-色号-颜色）→ 与存量去重 → 合并后立即自动保存落库。
    * 多张照片 AI 耗时较长，超时放宽到 3 分钟。
    */
-  const recognizeEntriesAndSave = useCallback(async (imageUrls: string[]): Promise<{ added: number; duplicated: number; failed: number }> => {
+  const recognizeEntriesAndSave = useCallback(async (imageUrls: string[]): Promise<{ added: number; duplicated: number; failed: number; visionError?: string }> => {
     if (!currentCardId) throw new Error('色卡未打开');
     const res = await api.post<{ code: number; data: any; message?: string }>(
       `/material-color-card/${currentCardId}/recognize-entries`,
@@ -154,7 +154,7 @@ export function useMaterialColorCard() {
       await reloadCurrentItems();
       fetchCardList();
     }
-    return { added: added.length, duplicated, failed };
+    return { added: added.length, duplicated, failed, visionError: res.data?.visionError };
   }, [currentCardId, currentItems, reloadCurrentItems, fetchCardList]);
 
   const handleGenerateCardMaterials = useCallback(async (card: MaterialColorCard) => {

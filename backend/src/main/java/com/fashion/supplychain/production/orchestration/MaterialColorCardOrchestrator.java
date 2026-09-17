@@ -49,6 +49,9 @@ import org.springframework.util.StringUtils;
 @Service
 public class MaterialColorCardOrchestrator {
 
+    /** D-454：整卡多色识别输出配额（实测 42 个条目 reasoning+正文需约 3200 tokens，留足余量） */
+    private static final int VISION_ENTRIES_MAX_TOKENS = 8192;
+
     @Autowired
     private MaterialColorCardMapper cardMapper;
 
@@ -562,7 +565,9 @@ public class MaterialColorCardOrchestrator {
             try {
                 String aiRaw;
                 if (inferenceOrchestrator != null && inferenceOrchestrator.isVisionEnabled()) {
-                    aiRaw = inferenceOrchestrator.chatWithVision(imageUrl, buildColorCardEntriesPrompt());
+                    // D-454：推理模型思考+大 JSON 输出，默认配额会 content 为空，整卡识别给 8192
+                    aiRaw = inferenceOrchestrator.chatWithVision(imageUrl, buildColorCardEntriesPrompt(),
+                            VISION_ENTRIES_MAX_TOKENS);
                 } else {
                     log.warn("[ColorCardEntries] 视觉识别未配置");
                     failedImages.add(imageUrl);
@@ -570,6 +575,9 @@ public class MaterialColorCardOrchestrator {
                 }
                 JsonNode root = parseJsonObject(aiRaw);
                 if (root == null) {
+                    log.warn("[ColorCardEntries] AI 返回无法解析为JSON imageUrl={} rawHead={}",
+                            imageUrl, aiRaw == null ? "<null>"
+                                    : aiRaw.substring(0, Math.min(200, aiRaw.length())));
                     failedImages.add(imageUrl);
                     continue;
                 }
@@ -582,6 +590,8 @@ public class MaterialColorCardOrchestrator {
 
                 JsonNode entries = root.get("entries");
                 if (entries == null || !entries.isArray() || entries.isEmpty()) {
+                    log.warn("[ColorCardEntries] entries 为空 imageUrl={} rawHead={}",
+                            imageUrl, aiRaw.substring(0, Math.min(200, aiRaw.length())));
                     failedImages.add(imageUrl);
                     continue;
                 }
@@ -630,6 +640,11 @@ public class MaterialColorCardOrchestrator {
         result.put("added", newItems.size());
         result.put("duplicated", duplicated);
         result.put("failedImages", failedImages);
+        // D-454：把视觉侧真实失败原因（如思考token耗尽配额）带给前端，不再笼统提示"图片不清晰"
+        if (!failedImages.isEmpty() && inferenceOrchestrator != null
+                && StringUtils.hasText(inferenceOrchestrator.getLastVisionError())) {
+            result.put("visionError", inferenceOrchestrator.getLastVisionError());
+        }
         log.info("[ColorCardEntries] cardId={} added={} duplicated={} failed={}",
                 cardId, newItems.size(), duplicated, failedImages.size());
         return result;
@@ -643,11 +658,22 @@ public class MaterialColorCardOrchestrator {
         return sanitizeCodePart(s);
     }
 
-    /** 整卡多色条目录入提示词：整卡通用信息 + entries[] 色号/颜色 */
+    /**
+     * 整卡多色条目录入提示词（D-454 实测迭代版）。
+     * 实测样本：一页色卡按竖列排布波浪边布样，每块旁是旋转90°的竖排"色号 NN"小字，且卡上无颜色名。
+     * 旧提示词未说明版式，模型漏读竖排字、误判"无颜色名标签"，故按本版式明确引导（2026-09-17 实测 41/42 准确）。
+     */
     private String buildColorCardEntriesPrompt() {
-        return "你是一名面料布行色卡识别专家。图片是面料供应商（布行）的色卡本/吊牌，一张图上通常有多个颜色色块，"
-                + "每个色块旁标注了布行自己的色号（如 A01、21#、M-12、8826）和颜色中文名（如 红色、藏青）。\n"
-                + "请严格按以下 JSON 返回（不要输出任何解释文字或 markdown 代码块）：\n"
+        return "你是一名面料布行色卡识别专家。图片是布行色卡本/吊牌的实拍图，请仔细观察版式：\n"
+                + "1) 图中通常是一页或多页色卡，每页按【竖列】排布多块布料小样（边缘呈锯齿/波浪形），每列从上到下一个颜色；\n"
+                + "2) 每个小样左侧或右侧的小字是【旋转了90度的竖排文字】，格式为“色号”加编号（纯数字如 84、105，"
+                + "或 A01、21#、M-12、8826 等）。请歪头逐个准确抄录编号，不得编造：确实看不清的编号 colorCode 留空；\n"
+                + "3) 卡片上通常【没有印刷颜色名称】，colorName 由你直接观察布料颜色，用简洁准确的中文填写"
+                + "（如：黑色、深灰、米白、宝蓝、酒红、姜黄、墨绿、豆沙粉、湖蓝、橘棕）；\n"
+                + "4) 一张图可能有两页、三四十个颜色，必须全部识别不得遗漏；特别注意【最右一列和最下面一块】容易因拍摄裁切漏掉；\n"
+                + "5) 自检：若色号为连续数字，返回前核对是否有跳号，发现跳号必须回到图片对应位置重新找一遍；\n"
+                + "6) 排序：先左页后右页，每页从左到右分列，每列从上到下。\n"
+                + "严格只返回一个合法 JSON 对象，不要输出解释文字或 markdown 代码块：\n"
                 + "{\n"
                 + "  \"materialName\": \"整卡通用的面料名称（如 真丝双绉），没有就留空\",\n"
                 + "  \"materialType\": \"fabric 或 lining 或 accessory\",\n"
@@ -656,15 +682,11 @@ public class MaterialColorCardOrchestrator {
                 + "  \"fabricComposition\": \"整卡通用成分，没有留空\",\n"
                 + "  \"unit\": \"默认单位，如 米\",\n"
                 + "  \"entries\": [\n"
-                + "    {\"colorName\": \"颜色中文名，如 红色\", \"colorCode\": \"布行色号原文，如 A01\", \"unitPrice\": 0, \"materialName\": \"\"}\n"
+                + "    {\"colorName\": \"该小样颜色的中文名\", \"colorCode\": \"竖排色号原文，如 84\", \"unitPrice\": 0, \"materialName\": \"\"}\n"
                 + "  ]\n"
                 + "}\n"
-                + "规则：\n"
-                + "1) 图上能看到几个色块就返回几个 entries，按从左到右、从上到下排序；\n"
-                + "2) colorCode 必须照抄图片原文（含 #、- 等符号），看不清或图上没有就留空，绝不允许编造；\n"
-                + "3) 某色块面料名与整卡通用名不同时才在该 entry 的 materialName 填写，否则留空；\n"
-                + "4) 找不到的字段一律留空；unitPrice 没有就给 0；\n"
-                + "5) 只返回一个合法 JSON 对象。";
+                + "某色块面料名与整卡通用名不同时才在该 entry 的 materialName 填写，否则留空；"
+                + "找不到的字段一律留空，unitPrice 没有就给 0。";
     }
 
     private JsonNode parseJsonObject(String aiRaw) {

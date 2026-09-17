@@ -95,7 +95,8 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.gateway.litellm.timeout-seconds:30}") private int gatewayTimeoutSeconds;
     @Value("${ai.fallback.keyword-enabled:true}") private boolean keywordFallbackEnabled;
     // 视觉模型请求参数（识别/质检类任务要稳，不要创意）
-    @Value("${ai.vision.max-tokens:2048}") private int visionMaxTokens;
+    // D-454：推理模型思考占 completion token，默认 2048 实测会被耗尽（content 空），提到 4096
+    @Value("${ai.vision.max-tokens:4096}") private int visionMaxTokens;
     @Value("${ai.vision.temperature:0.2}") private double visionTemperature;
 
     @Autowired private IntelligenceModelGatewayOrchestrator intelligenceModelGatewayOrchestrator;
@@ -265,6 +266,16 @@ public class IntelligenceInferenceOrchestrator {
     private record VisionModelConfig(String name, String apiKey, String apiUrl, String model, int timeoutSeconds) {}
 
     public String chatWithVision(String imageUrl, String textPrompt) {
+        // -1 = 使用全局默认 ai.vision.max-tokens
+        return chatWithVision(imageUrl, textPrompt, -1);
+    }
+
+    /**
+     * 视觉问答（可按调用覆盖 maxTokens）。
+     * D-454：deepseek-flash 为推理模型，复杂图片 reasoning_tokens 可达 2000+，
+     * 整卡多色识别等大 JSON 输出场景必须显式提到 8192，否则思考耗尽配额 content 为空。
+     */
+    public String chatWithVision(String imageUrl, String textPrompt, int maxTokensOverride) {
         if (!hasText(imageUrl)) {
             log.warn("[Vision] 缺少必要参数：imageUrl 为空");
             lastVisionError.set("imageUrl 为空");
@@ -307,9 +318,9 @@ public class IntelligenceInferenceOrchestrator {
             lastVisionError.set(null);
             // 根据策略选择执行方式
             String result = switch (visionModelStrategy.toLowerCase()) {
-                case "concurrent" -> chatWithVisionConcurrent(imageUrl, textPrompt);
-                case "round-robin" -> chatWithVisionRoundRobin(imageUrl, textPrompt);
-                default -> chatWithVisionFailover(imageUrl, textPrompt); // failover
+                case "concurrent" -> chatWithVisionConcurrent(imageUrl, textPrompt, maxTokensOverride);
+                case "round-robin" -> chatWithVisionRoundRobin(imageUrl, textPrompt, maxTokensOverride);
+                default -> chatWithVisionFailover(imageUrl, textPrompt, maxTokensOverride); // failover
             };
             if (result == null && lastVisionError.get() == null) {
                 lastVisionError.set("所有视觉模型均未返回有效结果");
@@ -330,7 +341,7 @@ public class IntelligenceInferenceOrchestrator {
     /**
      * 策略1: 故障转移（默认）- 逐个尝试，成功立即返回
      */
-    private String chatWithVisionFailover(String imageUrl, String textPrompt) {
+    private String chatWithVisionFailover(String imageUrl, String textPrompt, int maxTokensOverride) {
         for (int i = 0; i < visionModels.size(); i++) {
             VisionModelConfig model = visionModels.get(i);
             // 401 熔断检查：熔断期内直接跳过，不发请求不刷日志
@@ -341,7 +352,7 @@ public class IntelligenceInferenceOrchestrator {
             }
             try {
                 log.info("[Vision] 尝试视觉模型: {} ({}/{})", model.name, i + 1, visionModels.size());
-                String result = invokeVisionModel(model, imageUrl, textPrompt);
+                String result = invokeVisionModel(model, imageUrl, textPrompt, maxTokensOverride);
                 if (result != null) {
                     log.info("[Vision] 模型 {} 调用成功", model.name);
                     return result;
@@ -364,12 +375,12 @@ public class IntelligenceInferenceOrchestrator {
     /**
      * 策略2: 轮询 - 每次轮流转到下一个模型
      */
-    private String chatWithVisionRoundRobin(String imageUrl, String textPrompt) {
+    private String chatWithVisionRoundRobin(String imageUrl, String textPrompt, int maxTokensOverride) {
         int index = roundRobinIndex.getAndUpdate(i -> (i + 1) % visionModels.size());
         VisionModelConfig model = visionModels.get(index);
         try {
             log.info("[Vision] 轮询使用视觉模型: {} (index={})", model.name, index);
-            String result = invokeVisionModel(model, imageUrl, textPrompt);
+            String result = invokeVisionModel(model, imageUrl, textPrompt, maxTokensOverride);
             if (result != null) {
                 return result;
             }
@@ -378,19 +389,19 @@ public class IntelligenceInferenceOrchestrator {
             log.warn("[Vision] 轮询模型 {} 异常: {}", model.name, e.getMessage());
         }
         // 回退到故障转移
-        return chatWithVisionFailover(imageUrl, textPrompt);
+        return chatWithVisionFailover(imageUrl, textPrompt, maxTokensOverride);
     }
 
     /**
      * 策略3: 并发调用 - 同时调用所有模型，取最快成功的返回
      */
-    private String chatWithVisionConcurrent(String imageUrl, String textPrompt) {
+    private String chatWithVisionConcurrent(String imageUrl, String textPrompt, int maxTokensOverride) {
         List<CompletableFuture<String>> futures = new ArrayList<>();
         for (VisionModelConfig model : visionModels) {
             CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
                 try {
                     long start = System.currentTimeMillis();
-                    String result = invokeVisionModel(model, imageUrl, textPrompt);
+                    String result = invokeVisionModel(model, imageUrl, textPrompt, maxTokensOverride);
                     if (result != null) {
                         log.info("[Vision] 模型 {} 完成，耗时 {}ms", model.name, System.currentTimeMillis() - start);
                         return result;
@@ -419,11 +430,11 @@ public class IntelligenceInferenceOrchestrator {
 
         // 并发都没成功，回退到故障转移
         log.warn("[Vision] 并发调用无成功结果，回退到故障转移");
-        return chatWithVisionFailover(imageUrl, textPrompt);
+        return chatWithVisionFailover(imageUrl, textPrompt, maxTokensOverride);
     }
 
-    private String invokeVisionModel(VisionModelConfig model, String imageUrl, String textPrompt) throws Exception {
-        String payload = buildVisionPayload(model.model, imageUrl, textPrompt);
+    private String invokeVisionModel(VisionModelConfig model, String imageUrl, String textPrompt, int maxTokensOverride) throws Exception {
+        String payload = buildVisionPayload(model.model, imageUrl, textPrompt, maxTokensOverride);
         // 视觉调用加 1 次重试：仅对超时(IOException) 和 5xx 重试，4xx（鉴权/参数错）不重试
         int maxAttempts = 2;
         Exception lastException = null;
@@ -514,11 +525,13 @@ public class IntelligenceInferenceOrchestrator {
         authCircuitOpenSince.remove(modelName);
     }
 
-    private String buildVisionPayload(String modelName, String imageUrl, String textPrompt) throws Exception {
+    private String buildVisionPayload(String modelName, String imageUrl, String textPrompt, int maxTokensOverride) throws Exception {
         var root = MAPPER.createObjectNode();
         root.put("model", modelName);
         // 加 max_tokens：防超长返回省 token；加 temperature:0.2：识别/质检要稳不要创意
-        root.put("max_tokens", visionMaxTokens);
+        // D-454：推理模型(deepseek-flash)思考也占 completion token，默认 2048 会被思考耗尽，
+        // 复杂识别（整卡多色）允许调用方提升到 8192
+        root.put("max_tokens", maxTokensOverride > 0 ? maxTokensOverride : visionMaxTokens);
         root.put("temperature", visionTemperature);
         var messagesArr = root.putArray("messages");
         var userMsg = messagesArr.addObject();
@@ -538,8 +551,20 @@ public class IntelligenceInferenceOrchestrator {
         if (response.statusCode() == 200) {
             JsonNode root = MAPPER.readTree(body);
             if (root.has("choices") && root.get("choices").size() > 0) {
-                String content = root.get("choices").get(0).get("message").get("content").asText();
-                log.debug("[Vision] {} 调用成功，content长度={}", modelName, content.length());
+                JsonNode choice = root.get("choices").get(0);
+                String finishReason = choice.path("finish_reason").asText("");
+                String content = choice.path("message").path("content").asText("");
+                // D-454：推理模型把 max_tokens 全花在 reasoning_tokens 上时 content 为空、
+                // finish_reason=length。上层此前只能看到空字符串误判为"图片不清晰"，此处显式报错。
+                if (content == null || content.isBlank()) {
+                    String usage = root.path("usage").toString();
+                    log.warn("[Vision] {} 返回空内容 finish_reason={} usage={}（多为思考token耗尽max_tokens）",
+                            modelName, finishReason, usage);
+                    lastVisionError.set("视觉模型思考过程耗尽输出配额（finish_reason=" + finishReason
+                            + "），请调大该调用的 maxTokens 后重试");
+                    return null;
+                }
+                log.info("[Vision] {} 调用成功 content长度={} finish_reason={}", modelName, content.length(), finishReason);
                 return content;
             }
             log.warn("[Vision] {} 响应格式异常: {}", modelName, body);

@@ -19,7 +19,7 @@ interface MaterialColorCardItemsModalProps {
   removeCardItem: (idx: number) => void;
   uploadCardImage: (file: File) => Promise<string>;
   /** 整卡照片一键识别：多色号条目自动按命名规则生成并立即落库 */
-  recognizeEntriesAndSave: (imageUrls: string[]) => Promise<{ added: number; duplicated: number; failed: number }>;
+  recognizeEntriesAndSave: (imageUrls: string[]) => Promise<{ added: number; duplicated: number; failed: number; visionError?: string }>;
   /** 批量动作后全量覆盖并立即自动保存，返回是否成功 */
   replaceItemsAndAutosave: (nextItems: MaterialColorCardItem[], successText?: string) => Promise<boolean>;
 }
@@ -77,7 +77,7 @@ const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = 
     if (!guardBlankNames()) return;
     setGenerating(true);
     try {
-      const { added, duplicated, failed } = await recognizeEntriesAndSave(cardPhotoUrls);
+      const { added, duplicated, failed, visionError } = await recognizeEntriesAndSave(cardPhotoUrls);
       if (added > 0) {
         message.success(`一键生成完成：新增 ${added} 条${duplicated ? `，重复跳过 ${duplicated} 条` : ''}${failed ? `，${failed} 张照片识别失败` : ''}`);
         setCardPhotoUrls([]);
@@ -85,9 +85,15 @@ const MaterialColorCardItemsModal: React.FC<MaterialColorCardItemsModalProps> = 
       } else if (duplicated > 0) {
         message.warning('识别到的颜色均已存在，无需重复生成');
       } else if (failed > 0) {
-        message.warning('照片识别失败，请换更清晰的色卡照片重试');
+        // D-454：失败多为模型没读出条目，不一定是图片模糊；给出可操作建议而非笼统说"不清晰"
+        message.warning({
+          content: visionError
+            ? `识别未成功：${visionError}，请重试或分页拍摄`
+            : '这张照片没识别出颜色条目，请正对色卡、避免反光与边缘裁切后重试；色块过多建议分页拍摄',
+          duration: 6,
+        } as any);
       } else {
-        message.warning('未识别到颜色条目，请换更清晰的色卡照片');
+        message.warning('未识别到颜色条目，请正对色卡、避免反光与边缘裁切后重试');
       }
     } catch (e: any) {
       message.error(e?.message || '一键生成失败，请重试');

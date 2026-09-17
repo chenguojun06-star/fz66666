@@ -375,11 +375,15 @@ ai:
   # 原 agnes/agnes2 视觉兜底（频繁 401 熔断）已整体下线，视觉直接走 deepseek 多模态。
   # D-238：视觉配置保留独立 key/url 覆盖能力（VISION_API_URL / VISION_API_KEY），
   # 默认复用 DeepSeek 的 Key 与 endpoint；模型同为主模型 deepseek-flash。
+  # D-454：deepseek-flash 是推理模型，reasoning_tokens 与正文共享 max_tokens，
+  # 实测复杂图片仅思考就超过 2048（content 为空、finish_reason=length），默认提到 4096；
+  # 整卡多色识别等大 JSON 场景由调用方通过 chatWithVision(url,prompt,8192) 再单独提高
   vision:
     api-key: ${VISION_API_KEY:${DEEPSEEK_API_KEY:}}
     api-url: ${VISION_API_URL:https://api.deepseek.com/v1/chat/completions}
     model: ${VISION_MODEL:deepseek-flash}
     timeout-seconds: ${VISION_TIMEOUT_SECONDS:60}
+    max-tokens: ${VISION_MAX_TOKENS:4096}
   vision-models:
     strategy: ${VISION_MODEL_STRATEGY:failover}   # failover（故障转移）/ round-robin（轮询）/ concurrent（并发取最快）
     # 支持配置任意多个视觉模型（通过环境变量 VISION_MODEL_1_API_KEY, VISION_MODEL_2_API_KEY 等）
