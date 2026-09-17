@@ -1,7 +1,24 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-17（新增 D-434 审计②决策=工资结算单级动作保持 PC 专属 + ③四详情页样式令牌化）
+> 最后更新：2026-09-17（新增 D-435 db 管理台升级 CloudBeaver 替换 phpMyAdmin）
+
+---
+
+## D-435：db 管理台现代化——CloudBeaver 替换 phpMyAdmin（2026-09-17）
+
+**决策**：db.webyszl.cn 由 phpMyAdmin 5.2 换为 **CloudBeaver**（DBeaver 官方 Web 版，端口 8978）。
+用户动因：phpMyAdmin 界面老旧，要求"更现代化"。选型对比了 CloudBeaver（最现代/约 1G 内存/手机浏览器可用）、
+dbgate（轻量现代）、DBeaver 桌面版+SSH 隧道（服务器零负担）、保持 phpMyAdmin。
+
+**实施**：
+- compose：`phpmyadmin` 服务退役，`cloudbeaver` 服务上线（image 经腾讯内网镜像拉取后 tag 回 dbeaver/cloudbeaver）；
+  管理台设置持久化 `cloudbeaver-data` 卷；配置目录 `./cloudbeaver/conf` 只读挂载
+- 预置连接 `initial-data-sources.conf`：只含主机/库名/用户名，**刻意不含密码**——密码不入 git（红线：
+  此前密钥泄漏教训），MySQL root 密码由用户首次打开库时输入一次并保存；管理员账号也由用户首次访问向导自建
+- Caddyfile：db 路由 `phpmyadmin:80` → `cloudbeaver:8978`
+- D-433 的 autodeploy pma 接管巡检块保持原样（grep `^  phpmyadmin:` 失配后自动失效，自废弃零风险，不动脚本）
+- 首次打开库需下载 MySQL 驱动（10~30 秒），README 第 9 节已写明首次使用两步
 
 ---
 

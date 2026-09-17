@@ -1,6 +1,6 @@
 # =====================================================================
 # 轻量服务器一体化部署（D-386 迁移方案）
-# 一台 4核8G 轻量服务器承载：MySQL + Redis + Qdrant + backend + frontend + phpMyAdmin + Caddy(HTTPS边缘)
+# 一台 4核8G 轻量服务器承载：MySQL + Redis + Qdrant + backend + frontend + CloudBeaver + Caddy(HTTPS边缘)
 # 用法见同目录 README.md；所有密码/密钥放同目录 .env（不入库）
 # =====================================================================
 
@@ -85,15 +85,16 @@ services:
       timeout: 5s
       retries: 12
 
-  # ── phpMyAdmin（db.webyszl.cn 数据库管理台；只经 Caddy 暴露，不直接开端口）──
-  phpmyadmin:
-    image: phpmyadmin:5.2
+  # ── CloudBeaver 数据库管理台（db.webyszl.cn；DBeaver 官方 Web 版，只经 Caddy 暴露）──
+  # 预置连接配置见 ./cloudbeaver/conf/initial-data-sources.conf（不含密码，首次打开库时输入一次）
+  cloudbeaver:
+    image: dbeaver/cloudbeaver:latest
     restart: unless-stopped
-    environment:
-      PMA_HOST: mysql
-      UPLOAD_LIMIT: 512M   # 放开导入上限，日常库备份约 45M
+    volumes:
+      - ./cloudbeaver/conf:/opt/cloudbeaver/conf:ro
+      - cloudbeaver-data:/opt/cloudbeaver/workspace   # 管理台设置/连接持久化
     expose:
-      - "80"
+      - "8978"
     depends_on:
       mysql:
         condition: service_healthy
@@ -123,3 +124,4 @@ volumes:
   qdrant-data:
   caddy-data:
   caddy-config:
+  cloudbeaver-data:

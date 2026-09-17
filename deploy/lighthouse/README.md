@@ -128,11 +128,13 @@ Caddy 需要域名解析到服务器才能签证书。**先切 DNS 再启动 Cad
 
 ## 9. 数据库管理台（db.webyszl.cn）
 
-- phpMyAdmin 跑在 compose 里（`phpmyadmin` 服务），Caddy 反代对外提供 HTTPS 入口 db.webyszl.cn，**不直接开端口**
-- 只允许内网连库（`PMA_HOST=mysql`），phpMyAdmin → MySQL 流量不出服务器
-- 导入上限已放开到 512M（`UPLOAD_LIMIT`），日常全量备份约 45M 可直接网页导入
-- D-433 起容器收编进 docker-compose.yml；此前手动 `docker run` 起的旧容器由 autodeploy 巡检自动接管（先起 compose 版、成功后才移除旧容器，不中断服务）
-- 登录用 MySQL 的 root 账号（密码在服务器 `.env` 的 `MYSQL_ROOT_PASSWORD`）
+- **CloudBeaver**（DBeaver 官方 Web 版）跑在 compose 里（`cloudbeaver` 服务，端口 8978），Caddy 反代对外提供 HTTPS 入口 db.webyszl.cn，**不直接开端口**
+- 只允许内网连库（`jdbc:mysql://mysql:3306`），CloudBeaver → MySQL 流量不出服务器；管理台设置持久化在 `cloudbeaver-data` 卷
+- D-435 起替换原 phpMyAdmin（更现代：暗色模式/SQL 自动补全/手机浏览器可用）；phpMyAdmin 容器已退役
+- **首次使用**：① 打开 db.webyszl.cn → 按向导创建管理员账号（自己起，记住即可）→ ② 左侧点「服装66666 业务库」→ 输一次 MySQL root 密码（服务器 `.env` 的 `MYSQL_ROOT_PASSWORD`）并勾选保存
+- 预置连接配置：`cloudbeaver/conf/initial-data-sources.conf`（**不含密码**，密码首次连接时输入；若预置连接未出现，在界面里 Add Connection 选 MySQL 手动加一次：host 填 `mysql`）
+- 第一次打开库会下载 MySQL 驱动（约 10~30 秒），属正常
+- 导入大文件：CloudBeaver SQL 编辑器支持执行大 SQL；整库恢复仍建议命令行（见第 6 节迁移命令）
 
 ## 迁移收益清单
 
