@@ -1,7 +1,25 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-17（新增 D-459 色卡生成物料支持内部抬头命名 + 比价v2锚定主档分级匹配）
+> 最后更新：2026-09-18（新增 D-463/D-464 手机端收尾批——picker收编/emoji清零/quality-detail令牌化）
+
+---
+
+## D-463/D-464：手机端 UI 收尾批——picker 收编 + quality-detail 全量令牌化（2026-09-18）
+
+**D-463**：筛选器胶囊样式 8 页中 6 页收编共享 `styles/picker-filter.wxss`（payroll/reconciliation/
+reimbursement/collab-task/advance/exception-detail；D-427 高亮态全量生效）；payment 与 bundle-split 为
+表单下拉形态（48px/64rpx 带边框）刻意保留。unit-price 唯一 emoji 💰→¥；home 渐变 #66abff 令牌化。
+
+**D-464**：quality-detail（全站最大 UI 债 165 处）全量令牌化：剥 var 兜底 100 + 换色 ~55（#165DFF×25 双蓝
+清零/#F53F3F/#52C41A/#FF9F00/文字/边框/底色/purple 渐变）+ rgba 色族 4 组（danger/warning/success 底色、
+primary 走 --color-primary-rgb）+ **rpx 字号 61 处全令牌化**（20~48rpx→xxs~4xl 档）。三副本同步，
+hex 剩余 0、兜底剩余 0、括号平衡。python 批处理两处脚本级笔误（f-string 套 walrus、subn 返回值污染 s）
+均被断言/复查拦下——**批处理脚本必须先跑再写盘，残留清点不可省**。
+
+**剩余（已排期未做）**：①样衣状态映射收编（判定集合6处/颜色映射2份/操作类型4份→enumLabels.js）
+②Backfill step11 后端口径（progress_nodes 入库节点 100 + complete_time 实际时间）③成品扫码出库/调拨入口
+④按钮三轨/卡片图片位抽组件（低优）。quality-detail 特殊残留色（state 徽标紫渐变已令牌化）已清零。
 
 ---
 
