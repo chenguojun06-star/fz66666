@@ -99,13 +99,13 @@ services:
       mysql:
         condition: service_healthy
 
-  # ── CloudBeaver（DBeaver 官方 Web 版，功能强但吃内存 ~1G，当前版本崩溃循环待修，按需手动 up -d cloudbeaver）──
+  # ── CloudBeaver（DBeaver 官方 Web 版；D-461 修复：conf 目录不能只读挂载——首启要自己写 cloudbeaver.conf）──
   cloudbeaver:
     image: dbeaver/cloudbeaver:latest
     restart: unless-stopped
     volumes:
-      - ./cloudbeaver/conf:/opt/cloudbeaver/conf:ro
-      - cloudbeaver-data:/opt/cloudbeaver/workspace   # 管理台设置/连接持久化
+      - cloudbeaver-data:/opt/cloudbeaver/workspace
+      - cloudbeaver-conf:/opt/cloudbeaver/conf
     expose:
       - "8978"
     depends_on:
@@ -137,4 +137,5 @@ volumes:
   qdrant-data:
   caddy-data:
   caddy-config:
+  cloudbeaver-conf:
   cloudbeaver-data:
