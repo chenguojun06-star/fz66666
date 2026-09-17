@@ -1,7 +1,79 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-17（新增 D-453 自动部署并行构建内存耗尽 P0 事故）
+> 最后更新：2026-09-17（新增 D-454 色卡识别根治 + 轻量服务器部署链路事实核实）
+
+---
+
+## D-454：色卡整卡识别根治——推理模型思考吃满 max_tokens 致 content 为空（2026-09-17）
+
+**问题**：色卡「整卡拍照一键识别」识别不出条目，前端笼统提示「图片不清晰」。
+
+**根因**：`deepseek-flash` 是**推理模型**，`reasoning_tokens` 与正文**共享 `max_tokens`**。
+复杂色卡图仅思考就超过 2048 → `content` 为空、`finish_reason=length`，
+上层拿到空字符串误判为「图片不清晰」。整卡 42 条目实测 reasoning+正文约 3200 tokens。
+
+**决策**：
+1. `chatWithVision` 增加 `maxTokensOverride` 重载（`-1` = 用全局默认），贯通
+   failover / round-robin / concurrent 三条策略链
+2. 默认 `ai.vision.max-tokens` 2048→4096，并在 `application.yml` 补上该键
+   （此前只有代码里的 `@Value` 默认值，yml 里没有该键）
+3. 整卡多色识别专用配额 `VISION_ENTRIES_MAX_TOKENS = 8192`
+4. **空内容不再静默返回**：读 `finish_reason` + `usage`，写 `lastVisionError` 显式报错，
+   经 `recognize-entries` 响应体的 `visionError` 透出前端
+5. 色卡提示词按**竖排版式**重写：旋转 90° 色号须逐字抄录、卡片无印刷色名由模型观察填色、
+   最右列与最下块不得遗漏、连续编号跳号自检（实测 41/42 准确）
+6. 前端失败文案去掉误导性「图片不清晰」，改为带真实原因的可操作提示
+
+**长期规则**：
+- **推理模型（deepseek-flash 等）的 `max_tokens` 是「思考 + 正文」共享预算**，不能按传统
+  chat 模型估。凡「要求大 JSON 输出」的视觉任务，配额至少给 8192。
+- **模型返回空字符串不是「识别不出」，而是「配额被思考吃光」**。凡把 `content` 直接当结果的
+  调用点，都必须判 `finish_reason` 并显式报错，否则故障会被伪装成业务问题
+  （本例伪装成「图片不清晰」，直接误导排查方向）。
+
+**上线**：`237487e97`。19:56 推送 → 20:03:49 autodeploy 串行构建完成，**端到端 7 分钟**，
+构建期间 `www` 全程 200 —— 实测验证 D-453 的串行改造 + 内存守卫有效。
+
+---
+
+## 运维事实：`Deploy Lighthouse` workflow 是死的（2026-09-17 核实）
+
+`.github/workflows/deploy-lighthouse.yml` 依赖 `LIGHTHOUSE_HOST` / `LIGHTHOUSE_USER` /
+`LIGHTHOUSE_SSH_KEY`，但仓库 **secrets 里根本没有这三项**（现有仅
+`CLOUDBASE_ENV_ID/CLOUDBASE_SECRET_ID/CLOUDBASE_SECRET_KEY/SERPAPI_KEY/SMOKE_USERNAME/SMOKE_PASSWORD`），
+且无 environment、无 variable。即：**该 workflow 一旦手动触发必然失败**，
+`deploy/lighthouse/README.md` 第 7 节描述的密钥开通步骤从未完成。
+
+**真相**：生产上线**只**依赖服务器上的 `deploy/lighthouse/autodeploy.sh`（cron 每 2 分钟）。
+另据 D-433 记录，服务器 SSH 是**密码登录而非密钥** → 本机无法自动化登服务器，
+**一切服务器侧动作只能靠「改脚本 + push」让 autodeploy 自执行**。
+
+**待办（二选一）**：补齐这三个 secret 恢复手动部署能力，或删掉该 workflow + README 第 7 节避免误触发。
+
+**遗留未解**：`https://db.webyszl.cn`（CloudBeaver）持续 502，Caddy 反代 `cloudbeaver:8978` 不可达；
+`www`/`api` 均正常。
+
+**根因已定位（20:15 服务器实测）**：`docker compose up -d cloudbeaver` 的输出出现
+`Volume lighthouse_cloudbeaver-data Created` + `cloudbeaver Pulled (13.3s)` ——
+**卷与镜像都不存在 → 该容器从未启动过**。D-435（09:18）把它写进 compose，
+但 autodeploy 只执行 `up -d --build backend frontend`，**从不启动新增服务**，
+所以 db 管理台自 D-435 起就一直是 502，与 OOM 无关（我最初的 OOM 猜测是错的）。
+
+**⚠️ 运维缺口（待修）**：autodeploy 只保证 backend/frontend 两个服务在场，
+**任何新加入 compose 的服务永远不会被拉起**。修法：在 autodeploy 里加一个
+"确保 compose 全部服务在场"的幂等步骤（`docker compose up -d` 不带服务名，
+或按 `docker compose ps --services` 差集补齐）。按 D-453 规则，改动须在低峰期手动验证一轮。
+
+**修复进展**：容器已启动（`lighthouse-cloudbeaver-1`），但 `db.webyszl.cn` 仍 502 约 4 分钟。
+首要怀疑 **Caddy 上游解析缓存** —— Caddy 在 cloudbeaver 存在之前就启动了，
+upstream 主机名 `cloudbeaver` 在 provision 时解析失败并被缓存，需 `restart caddy` 强制重解析。
+诊断命令（注意容器名是 `lighthouse-cloudbeaver-1`，不是 `cloudbeaver`）：
+```bash
+sudo docker ps --filter name=cloudbeaver --format '{{.Names}}\t{{.Status}}'
+sudo docker logs --tail 100 lighthouse-cloudbeaver-1
+cd /opt/fz66666/deploy/lighthouse && sudo docker compose restart caddy
+```
 
 ---
 
