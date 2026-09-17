@@ -1,5 +1,5 @@
-import React from 'react';
-import { Button, Drawer, Descriptions, Divider, Space, Popconfirm, Table } from 'antd';
+import React, { useState } from 'react';
+import { Button, Drawer, Descriptions, Form, Space, Popconfirm, Table, Tag } from 'antd';
 import { EditOutlined, LoginOutlined, PrinterOutlined, SwapOutlined } from '@ant-design/icons';
 import AttachmentThumb from '@/components/common/AttachmentThumb';
 import { toCategoryCn, toSeasonCn } from '@/utils/styleCategory';
@@ -7,7 +7,15 @@ import { formatMoney } from '@/utils/format';
 import { StyleInfo } from '@/types/style';
 import { SkuRow } from '../types';
 import { buildSkuColumns } from '../columns';
-import ProductInfoForm from './ProductInfoForm';
+import {
+  ProductBaseFields,
+  ProductAttrFields,
+  ProductStatusFields,
+  ProductCoverUpload,
+} from './ProductInfoForm';
+// D-439：颜色规格 / 图片附件直接复用样衣开发（款式资料）同源组件，一套体验
+import StyleSkuTab from '@/modules/basic/pages/StyleInfo/components/StyleSkuTab';
+import StyleAttachmentTab from '@/modules/basic/pages/StyleInfo/components/StyleAttachmentTab';
 
 interface DetailDrawerProps {
   open: boolean;
@@ -29,7 +37,50 @@ interface DetailDrawerProps {
   isMobile?: boolean;
   onSave?: () => void;
   onCancelEdit?: () => void;
+  /** D-439：颜色规格（StyleSkuTab）内部保存后刷新 SKU 列表 */
+  onSkuRefresh?: () => void;
 }
+
+const SECTIONS = [
+  { key: 'base', label: '基础信息' },
+  { key: 'images', label: '图片附件' },
+  { key: 'attrs', label: '类目属性' },
+  { key: 'sku', label: '颜色规格' },
+  { key: 'misc', label: '其它设置' },
+] as const;
+
+const Section: React.FC<{ id: string; title: string; children: React.ReactNode }> = ({ id, title, children }) => (
+  <div id={id} style={{ marginBottom: 28, scrollMarginTop: 12 }}>
+    <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--color-border, #e5e5ea)' }}>
+      {title}
+    </div>
+    {children}
+  </div>
+);
+
+/** D-439：左侧锚点导航（对齐参考稿"编辑商品(款)"分区结构） */
+const SectionNav: React.FC<{ active: string; onGo: (key: string) => void }> = ({ active, onGo }) => (
+  <div style={{ width: 140, flexShrink: 0, position: 'sticky', top: 0, alignSelf: 'flex-start' }}>
+    {SECTIONS.map((s) => (
+      <div
+        key={s.key}
+        onClick={() => onGo(s.key)}
+        style={{
+          padding: '8px 12px',
+          marginBottom: 2,
+          borderRadius: 6,
+          cursor: 'pointer',
+          fontSize: 14,
+          fontWeight: active === s.key ? 600 : 400,
+          color: active === s.key ? 'var(--color-primary, #2D7FF9)' : 'var(--color-text-secondary, #6e6e73)',
+          background: active === s.key ? 'var(--color-primary-bg, #e8f2ff)' : 'transparent',
+        }}
+      >
+        {s.label}
+      </div>
+    ))}
+  </div>
+);
 
 const DetailDrawer: React.FC<DetailDrawerProps> = ({
   open,
@@ -50,8 +101,16 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
   isMobile = false,
   onSave,
   onCancelEdit,
+  onSkuRefresh,
 }) => {
   const d = drawerRecord;
+  const [activeSection, setActiveSection] = useState('base');
+
+  const goSection = (key: string) => {
+    setActiveSection(key);
+    const el = document.getElementById(`pinfo-sec-${key}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
     <Drawer
@@ -85,79 +144,113 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
       }
     >
       {d && (
-        editing && form ? (
-          <ProductInfoForm
-            form={form}
-            coverUrl={coverUrl ?? null}
-            setCoverUrl={setCoverUrl || (() => {})}
-            editingItem={d}
-            isMobile={isMobile}
-          />
-        ) : (
-          <>
-            {d.cover && (
-              <div className="u-ta-center u-mb-16">
-                <AttachmentThumb
-                  styleId={d.id!}
-                  cover={d.cover}
-                  width="100%"
-                  height={200}
-                  borderRadius={8}
-                  imageStyle={{ objectFit: 'contain' }}
-                />
-              </div>
-            )}
-
-            <Descriptions column={3} size="small" bordered>
-              <Descriptions.Item label="款号">{d.styleNo}</Descriptions.Item>
-              <Descriptions.Item label="款名">{d.styleName}</Descriptions.Item>
-              <Descriptions.Item label="品类">{toCategoryCn(d.category)}</Descriptions.Item>
-              <Descriptions.Item label="季节">{toSeasonCn(d.season)}</Descriptions.Item>
-              <Descriptions.Item label="SKC">{String(d.skc ?? '-')}</Descriptions.Item>
-              <Descriptions.Item label="U编码">{String(d.uCode ?? '-')}</Descriptions.Item>
-              <Descriptions.Item label="单价">{d.price != null ? formatMoney(d.price) : '-'}</Descriptions.Item>
-              <Descriptions.Item label="生产周期">{d.cycle ? `${d.cycle}天` : '-'}</Descriptions.Item>
-              <Descriptions.Item label="客户">{String(d.customer ?? '-')}</Descriptions.Item>
-              <Descriptions.Item label="面料成分" span={3}>{String(d.fabricComposition ?? '-')}</Descriptions.Item>
-              <Descriptions.Item label="状态">
-                <span style={{ color: d.status === 'ENABLED' ? 'var(--color-success)' : 'var(--color-text-tertiary)', fontWeight: 500 }}>
-                  {d.status === 'ENABLED' ? '启用' : d.status === 'DISABLED' ? '停用' : d.status === 'SCRAPPED' ? '已报废' : d.status || '-'}
-                </span>
-              </Descriptions.Item>
-              <Descriptions.Item label="下单次数">{d.orderCount != null ? `${d.orderCount}次` : '-'}</Descriptions.Item>
-              <Descriptions.Item label="入库总量">{d.totalWarehousedQuantity != null ? `${d.totalWarehousedQuantity}` : '-'}</Descriptions.Item>
-            </Descriptions>
-
-            <Divider style={{ fontSize: 14, marginTop: 20 }}>商品编码 规格明细</Divider>
-            {skuLoading ? (
-              <div className="u-ta-center u-p-24" style={{ color: 'var(--color-text-tertiary)' }}>加载中...</div>
-            ) : skuList.length > 0 ? (
-              <Table<SkuRow>
-                columns={buildSkuColumns()}
-                dataSource={skuList}
-                rowKey={(r) => String(r.id || r.skuCode)}
-                size="small"
-                pagination={false}
-                bordered
-                style={{ marginBottom: 16 }}
-              />
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+          <SectionNav active={activeSection} onGo={goSection} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {editing && form ? (
+              /* ===== 编辑态：五分区表单（对齐参考稿"编辑商品(款)"） ===== */
+              <Form form={form} layout="vertical" size={isMobile ? 'small' : 'middle'} component="div">
+                <Section id="pinfo-sec-base" title="基础信息">
+                  <ProductBaseFields />
+                </Section>
+                <Section id="pinfo-sec-images" title="图片附件">
+                  <ProductCoverUpload coverUrl={coverUrl ?? null} setCoverUrl={setCoverUrl || (() => {})} editingItem={d} />
+                  <div className="u-fw-600 u-fs-13 u-mb-8">款式附件</div>
+                  <StyleAttachmentTab styleId={d.id!} styleNo={d.styleNo} />
+                </Section>
+                <Section id="pinfo-sec-attrs" title="类目属性">
+                  <ProductAttrFields />
+                </Section>
+                <Section id="pinfo-sec-sku" title="颜色规格">
+                  <StyleSkuTab styleId={String(d.id)} styleNo={d.styleNo} onRefresh={onSkuRefresh} />
+                  <div className="u-fs-12 u-mt-8" style={{ color: 'var(--color-text-tertiary)' }}>
+                    颜色规格与样衣开发同源，此处编辑即时保存；「保存」按钮仅提交基础信息与类目属性
+                  </div>
+                </Section>
+                <Section id="pinfo-sec-misc" title="其它设置">
+                  <ProductStatusFields />
+                </Section>
+              </Form>
             ) : (
-              <div className="u-ta-center u-p-16 u-br-8" style={{ color: 'var(--color-text-tertiary)', background: 'var(--color-bg-subtle)' }}>
-                暂无商品编码数据，请在样衣开发页面配置颜色尺码后同步
-              </div>
-            )}
+              /* ===== 查看态：同结构五分区 ===== */
+              <>
+                <Section id="pinfo-sec-base" title="基础信息">
+                  <Descriptions column={3} size="small" bordered>
+                    <Descriptions.Item label="款号">{d.styleNo}</Descriptions.Item>
+                    <Descriptions.Item label="款名">{d.styleName}</Descriptions.Item>
+                    <Descriptions.Item label="品类">{toCategoryCn(d.category)}</Descriptions.Item>
+                    <Descriptions.Item label="季节">{toSeasonCn(d.season)}</Descriptions.Item>
+                    <Descriptions.Item label="SKC">{String(d.skc ?? '-')}</Descriptions.Item>
+                    <Descriptions.Item label="U编码">{String(d.uCode ?? '-')}</Descriptions.Item>
+                    <Descriptions.Item label="单价">{d.price != null ? formatMoney(d.price) : '-'}</Descriptions.Item>
+                    <Descriptions.Item label="生产周期">{d.cycle ? `${d.cycle}天` : '-'}</Descriptions.Item>
+                    <Descriptions.Item label="客户">{String(d.customer ?? '-')}</Descriptions.Item>
+                  </Descriptions>
+                </Section>
 
-            <Divider style={{ fontSize: 14, marginTop: 20 }}>吊牌信息</Divider>
-            <Descriptions column={3} size="small" bordered>
-              <Descriptions.Item label="质量等级">{String(d.qualityGrade ?? '-')}</Descriptions.Item>
-              <Descriptions.Item label="执行标准">{String(d.executeStandard ?? '-')}</Descriptions.Item>
-              <Descriptions.Item label="安全类别">{String(d.safetyCategory ?? '-')}</Descriptions.Item>
-              <Descriptions.Item label="检验员">{String(d.inspector ?? '-')}</Descriptions.Item>
-              <Descriptions.Item label="检验日期">{String(d.inspectionDate ?? '-')}</Descriptions.Item>
-              <Descriptions.Item label="洗涤说明">{String(d.washInstructions ?? '-')}</Descriptions.Item>
-            </Descriptions>
-          </>
-        )
+                <Section id="pinfo-sec-images" title="图片附件">
+                  {d.cover && (
+                    <div className="u-ta-center u-mb-16">
+                      <AttachmentThumb
+                        styleId={d.id!}
+                        cover={d.cover}
+                        width="100%"
+                        height={200}
+                        borderRadius={8}
+                        imageStyle={{ objectFit: 'contain' }}
+                      />
+                    </div>
+                  )}
+                  <StyleAttachmentTab styleId={d.id!} styleNo={d.styleNo} readOnly />
+                </Section>
+
+                <Section id="pinfo-sec-attrs" title="类目属性">
+                  <Descriptions column={3} size="small" bordered>
+                    <Descriptions.Item label="成分">{String(d.fabricComposition ?? '-')}</Descriptions.Item>
+                    <Descriptions.Item label="质量等级">{String(d.qualityGrade ?? '-')}</Descriptions.Item>
+                    <Descriptions.Item label="执行标准">{String(d.executeStandard ?? '-')}</Descriptions.Item>
+                    <Descriptions.Item label="安全类别">{String(d.safetyCategory ?? '-')}</Descriptions.Item>
+                    <Descriptions.Item label="检验员">{String(d.inspector ?? '-')}</Descriptions.Item>
+                    <Descriptions.Item label="洗涤说明">{String(d.washInstructions ?? '-')}</Descriptions.Item>
+                    <Descriptions.Item label="描述" span={3}>{String(d.description ?? '-')}</Descriptions.Item>
+                  </Descriptions>
+                </Section>
+
+                <Section id="pinfo-sec-sku" title="颜色规格">
+                  {skuLoading ? (
+                    <div className="u-ta-center u-p-24" style={{ color: 'var(--color-text-tertiary)' }}>加载中...</div>
+                  ) : skuList.length > 0 ? (
+                    <Table<SkuRow>
+                      columns={buildSkuColumns()}
+                      dataSource={skuList}
+                      rowKey={(r) => String(r.id || r.skuCode)}
+                      size="small"
+                      pagination={false}
+                      bordered
+                      style={{ marginBottom: 8 }}
+                    />
+                  ) : (
+                    <div className="u-ta-center u-p-16 u-br-8" style={{ color: 'var(--color-text-tertiary)', background: 'var(--color-bg-subtle)' }}>
+                      暂无商品编码数据，可在「编辑 → 颜色规格」中添加
+                    </div>
+                  )}
+                </Section>
+
+                <Section id="pinfo-sec-misc" title="其它设置">
+                  <Descriptions column={3} size="small" bordered>
+                    <Descriptions.Item label="商品状态">
+                      <span style={{ color: d.status === 'ENABLED' ? 'var(--color-success)' : 'var(--color-text-tertiary)', fontWeight: 500 }}>
+                        {d.status === 'ENABLED' ? '启用' : d.status === 'DISABLED' ? '停用' : d.status === 'SCRAPPED' ? '已报废' : d.status || '-'}
+                      </span>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="下单次数">{d.orderCount != null ? `${d.orderCount}次` : '-'}</Descriptions.Item>
+                    <Descriptions.Item label="入库总量">{d.totalWarehousedQuantity != null ? `${d.totalWarehousedQuantity}` : '-'}</Descriptions.Item>
+                  </Descriptions>
+                </Section>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </Drawer>
   );

@@ -47,6 +47,7 @@ interface UseProductInfoDataReturn {
   // D-438：抽屉编辑态
   drawerEditing: boolean;
   cancelDrawerEdit: () => void;
+  refreshSkuList: (styleId?: string) => Promise<void>;
   // keyword
   localKeyword: string;
   handleKeywordChange: (v: string) => void;
@@ -186,6 +187,7 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
               const detailRes = await api.get<any>(`/style/info/${editingItem.id}`);
               if (detailRes.code === 200 && detailRes.data) setDrawerRecord(detailRes.data);
             } catch { /* 拉取失败时保留旧数据 */ }
+            void refreshSkuList(String(editingItem.id));
           }
         } else {
           message.error((res as any).message || '更新失败');
@@ -220,6 +222,17 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
       message.error('操作失败');
     }
   };
+
+  /** D-439：颜色规格（StyleSkuTab）内部保存后刷新 SKU 列表 */
+  const refreshSkuList = useCallback(async (styleId?: string) => {
+    const targetId = styleId || drawerRecord?.id;
+    if (!targetId) return;
+    try {
+      const skuRes = await api.get<any>(`/style/sku/by-style/${targetId}`);
+      if (skuRes?.code === 200 && Array.isArray(skuRes.data)) setSkuList(skuRes.data);
+      else if (skuRes?.code === 200 && skuRes.data?.records) setSkuList(skuRes.data.records);
+    } catch { /* 保持旧列表 */ }
+  }, [drawerRecord]);
 
   const openDrawer = async (record: StyleInfo) => {
     setDrawerRecord(record);
@@ -302,6 +315,7 @@ export const useProductInfoData = (): UseProductInfoDataReturn => {
     setTagPrintOpen,
     drawerEditing,
     cancelDrawerEdit,
+    refreshSkuList,
     localKeyword,
     handleKeywordChange,
     statCards,

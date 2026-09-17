@@ -50,6 +50,7 @@ const ProductInfoPage: React.FC = () => {
     setTagPrintOpen,
     drawerEditing,
     cancelDrawerEdit,
+    refreshSkuList,
     localKeyword,
     handleKeywordChange,
     statCards,
@@ -152,6 +153,7 @@ const ProductInfoPage: React.FC = () => {
         isMobile={isMobile}
         onSave={handleSubmit}
         onCancelEdit={cancelDrawerEdit}
+        onSkuRefresh={() => { void refreshSkuList(); }}
       />
 
       <EditModal
