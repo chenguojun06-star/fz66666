@@ -13,6 +13,8 @@ import { formatMoney } from '@/utils/format';
  */
 interface PriceRow {
   source?: string;
+  /** D-447：匹配依据——本物料/同款同色/同名同规格/同名/同成分同规格 */
+  matchBasis?: string;
   supplierName?: string;
   cardName?: string;
   materialName?: string;
@@ -20,26 +22,28 @@ interface PriceRow {
   specifications?: string;
   fabricComposition?: string;
   unitPrice?: number;
-  purchaseQuantity?: number;
+  quantity?: number;
   purchaseNo?: string;
+  materialId?: string;
 }
 
 interface PriceComparisonDrawerProps {
   open: boolean;
-  keyword: string;
+  materialId: string;
+  materialName: string;
   onClose: () => void;
 }
 
-const PriceComparisonDrawer: React.FC<PriceComparisonDrawerProps> = ({ open, keyword, onClose }) => {
+const PriceComparisonDrawer: React.FC<PriceComparisonDrawerProps> = ({ open, materialId, materialName, onClose }) => {
   const [rows, setRows] = useState<PriceRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
-    if (!keyword.trim()) return;
+    if (!materialId) return;
     setLoading(true);
     try {
       const res = await api.get('/material-color-card/price-comparison', {
-        params: { keyword: keyword.trim() },
+        params: { materialId },
       });
       const data = res?.data || res;
       setRows(Array.isArray(data) ? data : []);
@@ -48,12 +52,12 @@ const PriceComparisonDrawer: React.FC<PriceComparisonDrawerProps> = ({ open, key
     } finally {
       setLoading(false);
     }
-  }, [keyword]);
+  }, [materialId]);
 
   useEffect(() => {
-    if (open && keyword) load();
+    if (open && materialId) load();
     if (!open) setRows([]);
-  }, [open, keyword, load]);
+  }, [open, materialId, load]);
 
   const prices = rows.map((r) => Number(r.unitPrice) || 0).filter((p) => p > 0);
   const lowest = prices.length ? Math.min(...prices) : null;
@@ -62,12 +66,15 @@ const PriceComparisonDrawer: React.FC<PriceComparisonDrawerProps> = ({ open, key
 
   return (
     <SideDrawer
-      title={`多供应商比价${keyword ? ` - ${keyword}` : ''}`}
+      title={`多供应商比价${materialName ? ` - ${materialName}` : ''}`}
       open={open}
       onClose={onClose}
       width="85%"
       footer={null}
     >
+      <div className="u-mb-8 u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
+        匹配依据分级：同款同色（最可信）＞ 同名同规格 ＞ 同名 ＞ 同成分同规格。价格按"依据可信度 → 单价"排序。
+      </div>
       {lowest != null && (
         <div
           className="u-mb-12 u-p-8px12px u-br-6 u-fs-13"
@@ -94,7 +101,16 @@ const PriceComparisonDrawer: React.FC<PriceComparisonDrawerProps> = ({ open, key
           columns={[
             {
               title: '价格来源', dataIndex: 'source', width: 100,
-              render: (v: string) => <Tag color={v === '色卡报价' ? 'blue' : 'green'}>{v || '-'}</Tag>,
+              render: (v: string) => <Tag color={v === '色卡报价' ? 'blue' : v === '采购成交' ? 'green' : 'cyan'}>{v || '-'}</Tag>,
+            },
+            {
+              title: '匹配依据', dataIndex: 'matchBasis', width: 130,
+              render: (v: string) => {
+                const map: Record<string, string> = {
+                  本物料: 'cyan', 同款同色: 'green', 同名同规格: 'blue', 同名: 'orange', 同成分同规格: 'default',
+                };
+                return <Tag color={map[v] || 'default'}>{v || '-'}</Tag>;
+              },
             },
             {
               title: '供应商', dataIndex: 'supplierName', width: 150, ellipsis: true,
@@ -122,8 +138,8 @@ const PriceComparisonDrawer: React.FC<PriceComparisonDrawerProps> = ({ open, key
               title: '数量 / 参考', key: 'ref', width: 170,
               render: (_: unknown, r: PriceRow) =>
                 r.source === '采购成交'
-                  ? <span>{r.purchaseQuantity != null ? `${r.purchaseQuantity} 件` : '-'}{r.purchaseNo ? ` · ${r.purchaseNo}` : ''}</span>
-                  : <span style={{ color: 'var(--color-text-tertiary)' }}>{r.cardName || '色卡报价'}</span>,
+                  ? <span>{r.quantity != null ? `${r.quantity} 件` : '-'}{r.purchaseNo ? ` · ${r.purchaseNo}` : ''}</span>
+                  : <span style={{ color: 'var(--color-text-tertiary)' }}>{r.materialId ? '物料档案' : '色卡报价'}</span>,
             },
           ]}
         />

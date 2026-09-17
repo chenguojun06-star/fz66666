@@ -39,7 +39,7 @@ const MaterialDatabasePage: React.FC = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [statusValue, setStatusValue] = useState('');
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
-  const { pagination, onChange } = useTablePagination(20);
+  const { pagination, onChange, setTotal } = useTablePagination(20);
   const currentPage = pagination.current;
   const currentPageSize = pagination.pageSize;
 
@@ -51,7 +51,8 @@ const MaterialDatabasePage: React.FC = () => {
     cardDataList, cardLoading, cardPage, cardPageSize, cardTotal, cardKeyword, cardMaterialType,
     setCardKeyword, setCardMaterialType, setCardPage, fetchCardList,
     itemVisible, setItemVisible, currentItems, currentCardName, currentCard,
-    openCardItemsDialog, addEmptyCardItem, appendRecognizedItems, updateCardItem, removeCardItem, saveCardItems,
+    openCardItemsDialog, addEmptyCardItem, updateCardItem, removeCardItem, saveCardItems,
+    recognizeEntriesAndSave, replaceItemsAndAutosave,
     handleGenerateCardMaterials,
     cardDialogVisible, setCardDialogVisible, cardForm, coverImageFiles, setCoverImageFiles,
     openCardEditDialog, openCardCreateDialog, handleCardSave, handleCardDelete, uploadCardImage,
@@ -77,7 +78,10 @@ const MaterialDatabasePage: React.FC = () => {
       const result = res as any;
       if (result.code === 200) {
         const data = result.data || {};
-        setDataList(Array.isArray(data) ? data : data.records || []);
+        const records = Array.isArray(data) ? data : data.records || [];
+        setDataList(records);
+        // 分页 total 必须回填，否则表格/卡片视图的翻页器会因 total=0 不渲染
+        setTotal(typeof data.total === 'number' ? data.total : records.length);
       }
     } catch {
     } finally {
@@ -123,10 +127,10 @@ const MaterialDatabasePage: React.FC = () => {
     }
   }, []);
 
-  // D-445：多供应商比价抽屉（色卡报价 + 采购成交价）
-  const [priceCompare, setPriceCompare] = useState<{ open: boolean; keyword: string }>({ open: false, keyword: '' });
+  // D-445/D-447：多供应商比价抽屉（锚定物料主档分级匹配：色卡报价 + 采购成交价）
+  const [priceCompare, setPriceCompare] = useState<{ open: boolean; materialId: string; materialName: string }>({ open: false, materialId: '', materialName: '' });
   const handlePriceCompare = React.useCallback((record: MaterialDatabase) => {
-    setPriceCompare({ open: true, keyword: String(record.materialName || record.materialCode || '') });
+    setPriceCompare({ open: true, materialId: String(record.id || ''), materialName: String(record.materialName || '') });
   }, []);
 
   const columns = getMaterialDatabaseColumns({
@@ -340,8 +344,9 @@ const MaterialDatabasePage: React.FC = () => {
       {/* ===== 色卡本颜色详情弹窗（抽取为 MaterialColorItemsModal） ===== */}
       <PriceComparisonDrawer
         open={priceCompare.open}
-        keyword={priceCompare.keyword}
-        onClose={() => setPriceCompare({ open: false, keyword: '' })}
+        materialId={priceCompare.materialId}
+        materialName={priceCompare.materialName}
+        onClose={() => setPriceCompare({ open: false, materialId: '', materialName: '' })}
       />
 
       <MaterialColorItemsModal
@@ -371,10 +376,11 @@ const MaterialDatabasePage: React.FC = () => {
         onCancel={() => setItemVisible(false)}
         onSave={saveCardItems}
         addEmptyCardItem={addEmptyCardItem}
-        appendRecognizedItems={appendRecognizedItems}
         updateCardItem={updateCardItem}
         removeCardItem={removeCardItem}
         uploadCardImage={uploadCardImage}
+        recognizeEntriesAndSave={recognizeEntriesAndSave}
+        replaceItemsAndAutosave={replaceItemsAndAutosave}
       />
     </>
   );

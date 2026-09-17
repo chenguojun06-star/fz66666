@@ -66,7 +66,7 @@ const MaterialColorItemsModal: React.FC<MaterialColorItemsModalProps> = ({
       }
       open={open}
       onClose={onCancel}
-      width={720}
+      width="85%"
     >
       {loading && <div className="u-ta-center" style={{ padding: 20, color: 'var(--color-text-secondary)' }}>加载中...</div>}
       {!loading && data?.card && (

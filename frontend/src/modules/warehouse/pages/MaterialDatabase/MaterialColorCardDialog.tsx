@@ -65,7 +65,7 @@ const MaterialColorCardDialog: React.FC<MaterialColorCardDialogProps> = ({
       title={currentCard?.id ? '编辑物料色卡' : '新建物料色卡'}
       open={open}
       onClose={onCancel}
-      width={760}
+      width="85%"
       footer={(
         <Space>
           <Button onClick={onCancel}>取消</Button>

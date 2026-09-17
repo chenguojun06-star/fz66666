@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Button, Space, Popover, Dropdown } from 'antd';
+import { Card, Button, Space, Popover, Dropdown, Pagination } from 'antd';
 import CardCoverSwitcher from '@/components/common/CardCoverSwitcher';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
@@ -73,6 +73,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   maxInlineActions = 3,
   coverPlaceholder = '暂无图片',
   onCardClick,
+  pagination,
   hoverRender,
   titleTags,
   getCardId,
@@ -122,6 +123,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   });
 
   return (
+    <>
     <div
       style={{
         display: 'grid',
@@ -307,6 +309,23 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
         );
       })}
     </div>
+    {pagination && (pagination.total ?? 0) > 0 && (
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+        <Pagination
+          current={pagination.current}
+          pageSize={pagination.pageSize}
+          total={pagination.total}
+          showSizeChanger={pagination.showSizeChanger}
+          showQuickJumper={pagination.showQuickJumper}
+          pageSizeOptions={pagination.pageSizeOptions}
+          showTotal={pagination.showTotal}
+          onChange={pagination.onChange}
+          onShowSizeChange={pagination.onChange}
+          size={pagination.size}
+        />
+      </div>
+    )}
+    </>
   );
 };
 

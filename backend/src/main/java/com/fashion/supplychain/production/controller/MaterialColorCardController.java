@@ -6,10 +6,12 @@ import com.fashion.supplychain.production.entity.MaterialColorCard;
 import com.fashion.supplychain.production.entity.MaterialColorCardItem;
 import com.fashion.supplychain.production.helper.MaterialDatabaseLogAppendHelper;
 import com.fashion.supplychain.production.orchestration.MaterialColorCardOrchestrator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -49,10 +51,10 @@ public class MaterialColorCardController {
         return Result.success(orchestrator.listCards(keyword, materialType, page, pageSize));
     }
 
-    /** D-445：多供应商比价（色卡报价 + 采购成交价，按单价升序） */
+    /** D-445/D-447：多供应商比价（锚定物料主档分级匹配：同款同色/同名同规格/同名/同成分同规格 + 色卡报价/采购成交） */
     @GetMapping("/price-comparison")
-    public Result<List<Map<String, Object>>> priceComparison(@RequestParam String keyword) {
-        return Result.success(orchestrator.priceComparison(keyword));
+    public Result<List<Map<String, Object>>> priceComparison(@RequestParam String materialId) {
+        return Result.success(orchestrator.priceComparison(materialId));
     }
 
     @GetMapping("/{id}")
@@ -108,6 +110,31 @@ public class MaterialColorCardController {
             materialDatabaseLogAppendHelper.appendOperation(cardId, "保存颜色明细", items.size() + " 条");
         }
         return Result.success(ok);
+    }
+
+    /**
+     * 整卡拍照一键识别：多张色卡照片 → 多条颜色条目（布行色号 + 颜色中文名）。
+     * 只识别 + 按命名规则拼装 + 与存量去重，不直接写库；
+     * 前端合并列表后调 items/batch 落库（命名规则：编号 M-色号，名称 供应商-面料名-色号-颜色）。
+     */
+    @PostMapping("/{cardId}/recognize-entries")
+    public Result<Map<String, Object>> recognizeEntries(
+            @PathVariable String cardId,
+            @RequestBody(required = false) Map<String, Object> body) {
+        List<String> imageUrls = new ArrayList<>();
+        if (body != null && body.get("imageUrls") instanceof List<?> list) {
+            for (Object o : list) {
+                if (o != null && StringUtils.hasText(String.valueOf(o))) {
+                    imageUrls.add(String.valueOf(o).trim());
+                }
+            }
+        }
+        Map<String, Object> resp = orchestrator.recognizeEntriesFromImages(cardId, imageUrls);
+        int added = resp.get("items") instanceof List<?> items ? items.size() : 0;
+        if (added > 0) {
+            materialDatabaseLogAppendHelper.appendOperation(cardId, "拍照识别色卡", added + " 条颜色");
+        }
+        return Result.success(resp);
     }
 
     @PostMapping("/{cardId}/items")

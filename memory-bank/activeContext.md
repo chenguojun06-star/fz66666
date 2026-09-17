@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-15（D-417 手机端财务三类独立处理页：物料对账/费用报销/工资结算审批）
+> 最后更新：2026-09-17（色卡拍照一键识别/批量传图/翻页器修复/85%大弹窗/hover书本预览）
 
 ---
 
@@ -18,6 +18,30 @@
   删 DNS 的 h5 两条记录；稳定一周后清理云托管
 - **Embedding 已切智谱**：ai.embedding.* 配置（embedding-3，1024 维），硅基流动已弃（余额402）；
   Qdrant 向量库本地持久化（服务器磁盘，不再随发版清零）
+
+---
+
+## 物料色卡体验优化（2026-09-17，未提交）
+
+**用户诉求**：拍照识别改用统一上传组件+一键生成（供应商/色号/颜色命名）、弹窗加大、色卡 hover 出预览、批量传图、卡片缺翻页器。
+
+- [x] **后端** `POST /api/material-color-card/{cardId}/recognize-entries`（Orchestrator.recognizeEntriesFromImages）：
+      多图多色号识别，只识别不写库；编号=`M/L/F-色号`（卡内唯一冲突加 -2/-3，缺色号用顺序号），
+      名称=`供应商-面料名-色号-颜色`（如 经典时尚-真丝双绉-A01-红色）；按"色号+颜色"与存量+本批去重；
+      租户隔离沿用 getCardById + selectByCardId(cardId, tenantId)
+- [x] **前端 hook**：`recognizeEntriesAndSave`（显式 timeout 180s，拦截器 recognize 60s 规则仅在未显式传值时生效）
+      → 合并后 items/batch 全量落库 → 重拉明细 → 刷卡片数量；`replaceItemsAndAutosave` 供批量传图/删除后立即保存
+- [x] **物料管理抽屉重写**（MaterialColorCardItemsModal）：宽 960 → 85%；去旧"拍照识别"裸 input，
+      改 MultiImageUploadBox（统一 /common/upload，本地服务器存储无微信云残留）+「一键识别生成」；
+      行复选框（WeakMap 稳定 key）+ 批量传图（1 张全部/多张按序对应）+ 批量删除（均自动保存）；
+      每行图片改 ImageUploadBox；未命名行拦截自动保存动作
+- [x] **翻页器根因修复**：UniversalCardView 收了 pagination 却从不渲染 → 补 antd Pagination；
+      MaterialDatabase/index fetchList 未回填 total → setTotal(data.total)（列表表格+物料卡片同受益）
+- [x] 色卡母卡弹窗 760 / 颜色详情 720 → SideDrawer 85%
+- [x] 新增 ColorCardHoverPreview：hover 卡片标题懒加载该卡前 8 条色块（图/色名色块+色号），模块级缓存
+- [x] 顺手补编译缺口：MaterialColorCardOrchestrator 缺 `import entity.MaterialPurchase`（比价存量代码）
+- [x] 验证：`mvn compile` BUILD SUCCESS；`npx tsc --noEmit` 0 errors
+- [ ] 待真机验证：多色色卡照片识别效果、hover 预览、翻页（编译通过≠运行正确，D-055 反思三问）
 
 ---
 

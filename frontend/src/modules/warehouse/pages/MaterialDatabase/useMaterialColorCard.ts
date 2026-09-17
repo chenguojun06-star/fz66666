@@ -106,6 +106,57 @@ export function useMaterialColorCard() {
     } catch (err: any) { message.error(err?.message || '保存失败'); }
   }, [currentCardId, currentItems, message, fetchCardList]);
 
+  /** 以服务端为准重新加载当前色卡明细 */
+  const reloadCurrentItems = useCallback(async () => {
+    if (!currentCardId) return;
+    try {
+      const res = await api.get<{ code: number; data: any }>(`/material-color-card/${currentCardId}`);
+      if (res.code === 200) setCurrentItems(res.data?.items || []);
+    } catch { /* 保留本地列表 */ }
+  }, [currentCardId]);
+
+  /**
+   * 批量动作（一键识别/批量传图/批量删除）后立即自动保存：
+   * 全量覆盖提交 → 重新拉取服务端明细 → 刷新卡片数量，刷新页面不丢。
+   */
+  const replaceItemsAndAutosave = useCallback(async (nextItems: MaterialColorCardItem[], successText?: string) => {
+    if (!currentCardId) throw new Error('色卡未打开');
+    const validItems = nextItems.filter((it) => it.materialName);
+    if (validItems.length === 0) { message.warning('至少保留一条有效物料'); return false; }
+    await api.post(`/material-color-card/${currentCardId}/items/batch`, { items: validItems });
+    await reloadCurrentItems();
+    fetchCardList();
+    if (successText) message.success(successText);
+    return true;
+  }, [currentCardId, message, reloadCurrentItems, fetchCardList]);
+
+  /**
+   * 整卡拍照一键识别生成：上传后的色卡照片 URL → 后端 AI 识别多色号条目
+   * （编号 M-色号 / 名称 面料名-色号-颜色）→ 与存量去重 → 合并后立即自动保存落库。
+   * 多张照片 AI 耗时较长，超时放宽到 3 分钟。
+   */
+  const recognizeEntriesAndSave = useCallback(async (imageUrls: string[]): Promise<{ added: number; duplicated: number; failed: number }> => {
+    if (!currentCardId) throw new Error('色卡未打开');
+    const res = await api.post<{ code: number; data: any; message?: string }>(
+      `/material-color-card/${currentCardId}/recognize-entries`,
+      { imageUrls },
+      { timeout: 180000 },
+    );
+    if (res.code !== 200) throw new Error(res.message || '识别失败');
+    const added: MaterialColorCardItem[] = res.data?.items || [];
+    const duplicated: number = res.data?.duplicated || 0;
+    const failed: number = Array.isArray(res.data?.failedImages) ? res.data.failedImages.length : 0;
+    if (added.length > 0) {
+      const merged = [...currentItems, ...added];
+      await api.post(`/material-color-card/${currentCardId}/items/batch`, {
+        items: merged.filter((it) => it.materialName),
+      });
+      await reloadCurrentItems();
+      fetchCardList();
+    }
+    return { added: added.length, duplicated, failed };
+  }, [currentCardId, currentItems, reloadCurrentItems, fetchCardList]);
+
   const handleGenerateCardMaterials = useCallback(async (card: MaterialColorCard) => {
     try {
       const res = await api.post<{ code: number; data: string[]; message?: string }>(
@@ -198,6 +249,8 @@ export function useMaterialColorCard() {
     updateCardItem,
     removeCardItem,
     saveCardItems,
+    recognizeEntriesAndSave,
+    replaceItemsAndAutosave,
     handleGenerateCardMaterials,
     // 母卡新建/编辑弹窗
     cardDialogVisible,

@@ -7,6 +7,7 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import type { MaterialColorCard } from './types';
 import { MATERIAL_TYPE_OPTIONS } from './types';
+import ColorCardHoverPreview from './ColorCardHoverPreview';
 
 // ===== 供应商色卡视图（renderCardView 抽取） =====
 interface MaterialCardViewProps {
@@ -115,14 +116,7 @@ const MaterialCardView: React.FC<MaterialCardViewProps> = ({
           onChange: (p) => setCardPage(p),
           showTotal: (t) => `共 ${t} 条`,
         }}
-        hoverRender={(record) => (
-          <div style={{ maxWidth: 400 }}>
-            {record.remark && <div className="u-mb-8" style={{ color: 'var(--color-text-secondary)' }}>备注：{record.remark}</div>}
-            {record.supplierContactPerson && <div>联系人：{record.supplierContactPerson}</div>}
-            {record.supplierContactPhone && <div>电话：{record.supplierContactPhone}</div>}
-            <div>创建时间：{record.createTime?.slice(0, 19).replace('T', ' ')}</div>
-          </div>
-        )}
+        hoverRender={(record) => <ColorCardHoverPreview card={record} />}
       />
 
       {/* 空状态 */}
