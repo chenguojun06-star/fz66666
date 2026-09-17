@@ -131,6 +131,27 @@ Caddy 需要域名解析到服务器才能签证书。**先切 DNS 再启动 Cad
 **判断是否上线**：登录页底部「部署版本：<7位短 commit>」。
 纯 `docs/` / `memory-bank/` 提交**不触发重建**，版本号不变是正常的。
 
+### 🔍 push 后长时间不上线？按执行顺序逐关卡查
+
+**注意**：登录页水印只能证明"最后一次成功构建"，**无法区分"没 pull"还是"pull 了但没构建"** ——
+所以从外部探测定位不了，必须登服务器看：
+
+```bash
+cd /opt/fz66666 && sudo bash -x deploy/lighthouse/autodeploy.sh 2>&1 | tail -60
+```
+
+按 autodeploy 的执行顺序逐关排查（**内存守卫排在第 6 位，不是第一嫌疑**）：
+
+| # | 关卡 | 静默失败的表现 | 检查 |
+|---|---|---|---|
+| 1 | cron 是否在跑 | 脚本从未被调用 | `sudo crontab -l \| grep autodeploy` |
+| 2 | `flock -n 9` | 上一轮卡住持有锁 → 后续每轮立即退出 | `ps -ef \| grep autodeploy` |
+| 3 | `git fetch` | git 的 **dubious ownership** 校验（repo 属主≠执行身份）直接拒绝 | `sudo git -C /opt/fz66666 status` |
+| 4 | `git fetch origin main` | 网络/凭证问题 | 同上命令看报错 |
+| 5 | `git pull --ff-only` | **本地分叉**时失败 | `git -C /opt/fz66666 status -sb` |
+| 6 | 内存守卫 | available < 1200MB 跳过（**先量再说**） | `free -m` 看 available |
+| 7 | 本就无需重建 | 纯 `docs/`、`memory-bank/` 提交不重建，水印不变是正常的 | `git diff --name-only A B` |
+
 ### 🔔 部署结果通知（D-456，强烈建议开启）
 
 autodeploy 的失败/跳过此前**只写服务器本地日志，没人看就等于没有** ——
@@ -180,12 +201,13 @@ NOTIFY_WEBHOOK=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx   # 企�
 - **CloudBeaver**（DBeaver 官方 Web 版）跑在 compose 里（`cloudbeaver` 服务，端口 8978），Caddy 反代对外提供 HTTPS 入口 db.webyszl.cn，**不直接开端口**
 - 只允许内网连库（`jdbc:mysql://mysql:3306`），CloudBeaver → MySQL 流量不出服务器；管理台设置持久化在 `cloudbeaver-data` 卷
 - D-435 起替换原 phpMyAdmin（更现代：暗色模式/SQL 自动补全/手机浏览器可用）；phpMyAdmin 容器已退役
-- ⚠️ **CloudBeaver 建议按需启动，不要常驻**：它是 Java 应用，在 2核4G 上会吃掉内存余量，
-  把 `autodeploy.sh` 的内存守卫（available <1200MB 跳过）顶到阈值以下 →
-  **autodeploy 每轮都跳过 → 所有部署被永久阻塞**（2026-09-17 实测：启动后 20 分钟无任何部署落地）。
+- ⚠️ **CloudBeaver 建议按需启动**：它是查库工具、不在业务链路上，常驻没有必要。
   按需启动：`sudo docker compose up -d cloudbeaver`；用完停掉：`sudo docker compose stop cloudbeaver`
 - 它已在 `autodeploy.sh` 的 `SWEEP_SKIP` 名单里，**不会被"全服务在场巡检"自动拉起**
   （否则会跟有意停掉它的操作形成每 2 分钟一次的拉锯）
+- 更正（2026-09-17）：曾把"部署被阻塞"归因于 CloudBeaver 触发内存守卫，
+  用户实测 `free -m` available **1913MB** 远高于 1200MB 阈值，**该归因已被推翻**。
+  排查部署不上线请走 §7 的逐关流程，不要先怀疑内存。
 - **首次使用**：① 打开 db.webyszl.cn → 按向导创建管理员账号（自己起，记住即可）→ ② 左侧点「服装66666 业务库」→ 输一次 MySQL root 密码（服务器 `.env` 的 `MYSQL_ROOT_PASSWORD`）并勾选保存
 - 预置连接配置：`cloudbeaver/conf/initial-data-sources.conf`（**不含密码**，密码首次连接时输入；若预置连接未出现，在界面里 Add Connection 选 MySQL 手动加一次：host 填 `mysql`）
 - 第一次打开库会下载 MySQL 驱动（约 10~30 秒），属正常

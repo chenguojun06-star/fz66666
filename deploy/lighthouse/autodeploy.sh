@@ -37,11 +37,13 @@ notify() {
 # 注意：backend/frontend 有独立的串行构建流程（见下方），此处跳过，避免无 --build 启动失败。
 #
 # ⚠️ 按需服务白名单（SWEEP_SKIP）—— 必须有，否则会跟"有意停掉的服务"打架：
-#   cloudbeaver 是查库工具、不在业务链路上。2核4G 上它常驻会吃掉内存余量，
-#   把下方内存守卫顶到阈值以下 → **autodeploy 每轮都跳过 → 部署被永久阻塞**
-#   （2026-09-17 实测：启动 CloudBeaver 后 20 分钟无任何部署落地）。
+#   cloudbeaver 是查库工具、不在业务链路上，运维可能**有意停掉它**（例如为省内存）。
+#   若不排除，本巡检会每 2 分钟把它重新拉起，与运维意图形成拉锯。
 #   故 CloudBeaver 改为按需启动：`docker compose up -d cloudbeaver`（用完 `stop`）。
 #   运维若手工 `docker compose stop <服务>`，也应把该服务名加到这里，否则会被自动拉起。
+#   （2026-09-17 更正：曾把"部署被阻塞"归因于 CloudBeaver 触发内存守卫，
+#     用户实测 available 1913MB 远高于 1200MB 阈值，该归因**已被推翻**；
+#     跳过名单的理由改为上面这条"不与运维意图拉锯"，与内存无关。）
 SWEEP_SKIP="cloudbeaver"
 # 统一用绝对路径：脚本中段会 `cd deploy/lighthouse`，相对路径一旦被挪到 cd 之后就会静默失效
 COMPOSE="$REPO_ROOT/deploy/lighthouse/docker-compose.yml"
