@@ -26,7 +26,7 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--color-primary), #66abff);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
   color: var(--color-text-white);
   font-size: var(--font-size-2xl);
   font-weight: 600;
@@ -242,7 +242,7 @@ page {
 }
 
 .menu-icon-circle--lightblue {
-  background: #66abff;
+  background: var(--color-primary-light);
 }
 
 .menu-icon-circle--red {

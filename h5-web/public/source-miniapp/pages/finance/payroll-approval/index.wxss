@@ -1,3 +1,6 @@
+/* D-463：筛选器胶囊样式已收编共享（含 D-427 选中态） */
+@import "../../styles/picker-filter.wxss";
+
 @import '/styles/page-utils.wxss';
 @import '/styles/modal-form.wxss';
 /* D-421：卡片样式统一走公共文件（与对账/报销/协作任务同款） */
@@ -46,26 +49,6 @@
 .stat-divider { width: 1px; height: 24px; background: var(--color-border); }
 
 /* ===== Filter Bar ===== */
-.filter-bar { display: flex; gap: 8px; }
-.filter-item { flex: 1; min-width: 0; }
-.picker-box {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 4px; padding: 0 12px; height: 32px;
-  background: var(--color-bg-card); border-radius: var(--radius-full);
-  box-shadow: var(--shadow-sm); box-sizing: border-box;
-}
-/* D-427：筛选器选中态（有筛选条件时高亮，便于识别当前视图） */
-.picker-box--active {
-  background: var(--color-primary-bg);
-}
-.picker-box--active .picker-text {
-  color: var(--color-primary);
-  font-weight: var(--font-weight-medium);
-}
-.picker-box--active .picker-chevron {
-  border-top-color: var(--color-primary);
-}
-
 .picker-text {
   font-size: var(--font-size-sm); color: var(--color-text-primary);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

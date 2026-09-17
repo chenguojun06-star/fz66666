@@ -1,3 +1,6 @@
+/* D-463：筛选器胶囊样式已收编共享（含 D-427 选中态） */
+@import "../../styles/picker-filter.wxss";
+
 @import '/styles/page-utils.wxss';
 /* D-421：卡片样式统一走公共文件（与对账/报销/工资审批同款） */
 @import '/styles/finance-card.wxss';
@@ -9,14 +12,6 @@
 }
 
 /* ===== Filter Bar ===== */
-.filter-bar { display: flex; gap: 8px; }
-.filter-item { flex: 1; min-width: 0; }
-.picker-box {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 4px; padding: 0 12px; height: 32px;
-  background: var(--color-bg-card); border-radius: var(--radius-full);
-  box-shadow: var(--shadow-sm); box-sizing: border-box;
-}
 .picker-text {
   font-size: var(--font-size-sm); color: var(--color-text-primary);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

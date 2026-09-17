@@ -42,7 +42,7 @@
 
   <!-- 空状态 -->
   <view wx:elif="{{!selectedStyleNo}}" class="empty-wrap">
-    <text class="empty-icon">💰</text>
+    <text class="empty-icon">¥</text>
     <text class="empty-text">请选择款式查看工序单价</text>
     <text class="empty-sub">支持按款号/款名搜索</text>
   </view>

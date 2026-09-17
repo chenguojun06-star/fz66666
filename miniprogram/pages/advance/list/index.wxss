@@ -1,3 +1,6 @@
+/* D-463：筛选器胶囊样式已收编共享（含 D-427 选中态） */
+@import "../../styles/picker-filter.wxss";
+
 @import '/styles/page-utils.wxss';
 @import '/styles/modal-form.wxss';
 
@@ -18,37 +21,8 @@
   min-width: 0;
 }
 
-.picker-box {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-  padding: 0 12px;
-  height: 32px;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-full);
-  box-shadow: var(--shadow-sm);
-  box-sizing: border-box;
-}
 
-.picker-text {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
-}
 
-.picker-chevron {
-  flex-shrink: 0;
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 4px solid var(--color-text-tertiary);
-}
 
 /* ===== 搜索行：已迁移到 sticky-search-bar ===== */
 
