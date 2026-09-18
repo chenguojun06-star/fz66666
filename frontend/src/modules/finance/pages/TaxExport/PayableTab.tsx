@@ -8,6 +8,7 @@ import SmallModal from '@/components/common/SmallModal';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { ModalFieldRow } from '@/components/common/ModalContentLayout';
 import payableApi from '@/services/finance/payableApi';
+import PayeeDetailDrawer from '@/modules/finance/pages/Finance/WagePayment/components/PayeeDetailDrawer';
 import type { PayableStatus } from '@/services/finance/payableApi';
 import { message } from '@/utils/antdStatic';
 import { PAYABLE_STATUS } from './taxExportConstants';
@@ -18,6 +19,9 @@ const PayableTab: React.FC = () => {
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
+  // D-468：供应商往来明细抽屉
+  const [payeeDetailOpen, setPayeeDetailOpen] = useState(false);
+  const [payeeTarget, setPayeeTarget] = useState<{ id: string; name?: string } | null>(null);
   const [page, setPage] = useState(1);
   const [stats, setStats] = useState<any>({ pendingAmount: 0, overdueAmount: 0, paidAmount: 0, overdueCount: 0, newThisMonth: 0 });
   const [filters, setFilters] = useState<{ status?: PayableStatus; keyword: string }>({ status: undefined, keyword: '' });
@@ -82,11 +86,22 @@ const PayableTab: React.FC = () => {
     {
       title: '供应商', dataIndex: 'supplierName', ellipsis: true,
       render: (_: unknown, record: any) => (
-        <SupplierNameTooltip
-          name={record.supplierName}
-          contactPerson={record.supplierContactPerson}
-          contactPhone={record.supplierContactPhone}
-        />
+        // D-468：点击供应商 → 查看其全部往来明细（保留悬浮提示contacts信息）
+        <span
+          onClick={() => {
+            if (record?.supplierId) {
+              setPayeeTarget({ id: record.supplierId, name: record.supplierName });
+              setPayeeDetailOpen(true);
+            }
+          }}
+          style={record?.supplierId ? { cursor: 'pointer' } : undefined}
+        >
+          <SupplierNameTooltip
+            name={record.supplierName}
+            contactPerson={record.supplierContactPerson}
+            contactPhone={record.supplierContactPhone}
+          />
+        </span>
       ),
     },
     { title: '来源单号', dataIndex: 'orderNo', width: 160, ellipsis: true, render: (v: string) => v || '-' },
@@ -222,6 +237,14 @@ const PayableTab: React.FC = () => {
           </div>
         </div>
       </SmallModal>
+
+      {/* D-468：供应商往来明细（点击供应商穿透） */}
+      <PayeeDetailDrawer
+        open={payeeDetailOpen}
+        payeeId={payeeTarget?.id}
+        payeeName={payeeTarget?.name}
+        onClose={() => { setPayeeDetailOpen(false); setPayeeTarget(null); }}
+      />
     </>
   );
 };

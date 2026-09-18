@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Card, Col, DatePicker, Row, Space, Statistic, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Col, DatePicker, Row, Space, Statistic, Tag, Typography } from 'antd';
 import {
   ClockCircleOutlined, DollarOutlined, ExclamationCircleOutlined, WarningOutlined,
 } from '@ant-design/icons';
@@ -10,6 +10,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import payableApi, { type Payable } from '@/services/finance/payableApi';
 import { message } from '@/utils/antdStatic';
+import PayeeDetailDrawer from '@/modules/finance/pages/Finance/WagePayment/components/PayeeDetailDrawer';
 import type { ApiResult } from '@/utils/api';
 import { toMoneyLocale } from '@/utils/format';
 
@@ -45,6 +46,9 @@ const PaymentSchedule: React.FC = () => {
   // 统计单独拉全量（不分页），否则"待付总额/7/14/30天"只算当前页20条是假数字
   const [allStats, setAllStats] = useState({ totalPending: 0, in7Days: 0, in14Days: 0, in30Days: 0 });
   const [noDueDateAll, setNoDueDateAll] = useState(0);
+  // D-468：供应商往来明细抽屉
+  const [payeeDetailOpen, setPayeeDetailOpen] = useState(false);
+  const [payeeTarget, setPayeeTarget] = useState<{ id: string; name?: string } | null>(null);
 
   const fetchPayables = useCallback(async () => {
     setLoading(true);
@@ -128,7 +132,23 @@ const PaymentSchedule: React.FC = () => {
       width: 160,
       render: v => <Text code style={{ fontSize: 14 }}>{v || '-'}</Text>,
     },
-    { title: '供应商', dataIndex: 'supplierName', width: 180 },
+    {
+      title: '供应商',
+      dataIndex: 'supplierName',
+      width: 180,
+      // D-468：点击供应商 → 查看其全部往来明细
+      render: (v: string, r: Payable) => (r.supplierId ? (
+        <Button
+          type="link"
+          size="small"
+          style={{ padding: 0, height: 'auto' }}
+          onClick={() => { setPayeeTarget({ id: r.supplierId as string, name: v }); setPayeeDetailOpen(true); }}
+          title="查看该供应商的全部往来明细"
+        >
+          {v || '-'}
+        </Button>
+      ) : <span>{v || '-'}</span>),
+    },
     {
       title: '应付金额', dataIndex: 'amount', width: 120, align: 'right',
       render: v => <Text strong>¥ {toMoneyLocale(v)}</Text>,
@@ -314,6 +334,14 @@ const PaymentSchedule: React.FC = () => {
           locale={{ emptyText: '暂无付款计划' }}
         />
       </Card>
+
+      {/* D-468：供应商往来明细（点击供应商穿透查看） */}
+      <PayeeDetailDrawer
+        open={payeeDetailOpen}
+        payeeId={payeeTarget?.id}
+        payeeName={payeeTarget?.name}
+        onClose={() => { setPayeeDetailOpen(false); setPayeeTarget(null); }}
+      />
     </div>
   );
 };

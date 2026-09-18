@@ -86,8 +86,11 @@ interface UsePaymentColumnsProps {
   fetchPayments: () => void;
   msg: { error: (s: string) => void; success: (s: string) => void };
   onAmountClick?: (record: PayableItem) => void;
-  /** D-468：点击收款方 → 查看该单位/员工的全部往来明细 */
-  onPayeeClick?: (record: PayableItem) => void;
+  /**
+   * D-468：点击收款方 → 查看该单位/员工的全部往来明细。
+   * 应收付款(PayableItem) 与 付款记录(WagePayment) 都带 payeeId/payeeName，故用宽松结构。
+   */
+  onPayeeClick?: (payee: { payeeId?: string; payeeName?: string }) => void;
 }
 
 // ============================================================
@@ -278,7 +281,20 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
           return (
             <Space size={4}>
               <Tag color={tag.color} style={{ fontSize: 14, margin: 0 }}>{tag.text}</Tag>
-              <span>{r.payeeName}</span>
+              {/* D-468：付款记录的收款方同样支持穿透 */}
+              {onPayeeClick ? (
+                <Button
+                  type="link"
+                  size="small"
+                  style={{ padding: 0, height: 'auto' }}
+                  onClick={() => onPayeeClick({ payeeId: r.payeeId, payeeName: r.payeeName })}
+                  title="查看该收款方的全部往来明细"
+                >
+                  {r.payeeName}
+                </Button>
+              ) : (
+                <span>{r.payeeName}</span>
+              )}
             </Space>
           );
         },
@@ -376,7 +392,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         },
       },
     ],
-    [fetchPayments, msg, openProofModal, handleCancel, openAccountModal, setDetailRecord, setDetailOpen],
+    [fetchPayments, msg, openProofModal, handleCancel, openAccountModal, setDetailRecord, setDetailOpen, onPayeeClick],
   );
 
   return { payableColumns, paymentColumns };
