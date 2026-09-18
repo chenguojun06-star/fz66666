@@ -77,8 +77,9 @@ public class MaterialQualityIssueOrchestrator {
             throw new NoSuchElementException("采购任务不存在");
         }
 
-        Integer issueQuantity = intOf(body.get("issueQuantity"));
-        if (issueQuantity == null || issueQuantity <= 0) {
+        // D-466：异常数量支持小数（面料按米计，1.5 米不能被截成 1）
+        BigDecimal issueQuantity = decimalOf(body.get("issueQuantity"));
+        if (issueQuantity == null || issueQuantity.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("异常数量必须大于0");
         }
         // D-410：到货量已是 BigDecimal，上限按小数比较，不要 intValue() 截断
@@ -86,7 +87,7 @@ public class MaterialQualityIssueOrchestrator {
         BigDecimal max = arrivedQty != null && arrivedQty.compareTo(BigDecimal.ZERO) > 0
                 ? arrivedQty
                 : (purchase.getPurchaseQuantity() == null ? BigDecimal.ZERO : purchase.getPurchaseQuantity());
-        if (max.compareTo(BigDecimal.ZERO) > 0 && BigDecimal.valueOf(issueQuantity).compareTo(max) > 0) {
+        if (max.compareTo(BigDecimal.ZERO) > 0 && issueQuantity.compareTo(max) > 0) {
             throw new IllegalArgumentException("异常数量不能大于到货数量或采购数量");
         }
 
@@ -189,8 +190,7 @@ public class MaterialQualityIssueOrchestrator {
     private void adjustPurchaseAfterIssue(MaterialPurchase purchase, MaterialQualityIssue issue,
                                           String resolutionRemark, boolean keepQuantity) {
         BigDecimal currentArrived = purchase.getArrivedQuantity() == null ? BigDecimal.ZERO : purchase.getArrivedQuantity();
-        BigDecimal issueQty = issue.getIssueQuantity() == null
-                ? BigDecimal.ZERO : BigDecimal.valueOf(issue.getIssueQuantity());
+        BigDecimal issueQty = issue.getIssueQuantity() == null ? BigDecimal.ZERO : issue.getIssueQuantity();
         BigDecimal targetArrived = keepQuantity ? currentArrived : currentArrived.subtract(issueQty).max(BigDecimal.ZERO);
 
         appendPurchaseRemark(purchase, buildImpactRemark(issue, resolutionRemark,
@@ -222,7 +222,7 @@ public class MaterialQualityIssueOrchestrator {
         replacement.setMaterialType(source.getMaterialType());
         replacement.setSpecifications(source.getSpecifications());
         replacement.setUnit(source.getUnit());
-        replacement.setPurchaseQuantity(BigDecimal.valueOf(issue.getIssueQuantity() == null ? 0 : issue.getIssueQuantity()));
+        replacement.setPurchaseQuantity(issue.getIssueQuantity() == null ? BigDecimal.ZERO : issue.getIssueQuantity());
         replacement.setArrivedQuantity(BigDecimal.ZERO);
         replacement.setSupplierId(source.getSupplierId());
         replacement.setSupplierName(source.getSupplierName());
@@ -269,7 +269,7 @@ public class MaterialQualityIssueOrchestrator {
             throw new IllegalStateException("该对账单已付款，不能再自动扣款");
         }
         BigDecimal unitPrice = purchase.getUnitPrice() == null ? BigDecimal.ZERO : purchase.getUnitPrice();
-        BigDecimal addition = unitPrice.multiply(BigDecimal.valueOf(issue.getIssueQuantity() == null ? 0 : issue.getIssueQuantity()))
+        BigDecimal addition = unitPrice.multiply(issue.getIssueQuantity() == null ? BigDecimal.ZERO : issue.getIssueQuantity())
                 .setScale(2, RoundingMode.HALF_UP);
         BigDecimal deduction = reconciliation.getDeductionAmount() == null ? BigDecimal.ZERO : reconciliation.getDeductionAmount();
         BigDecimal totalAmount = reconciliation.getTotalAmount() == null ? BigDecimal.ZERO : reconciliation.getTotalAmount();
@@ -335,6 +335,18 @@ public class MaterialQualityIssueOrchestrator {
         }
         try {
             return Integer.parseInt(String.valueOf(value).trim());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** D-466：异常数量按小数解析（intOf 会把 1.5 截成 1） */
+    private BigDecimal decimalOf(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return new BigDecimal(String.valueOf(value).trim());
         } catch (Exception e) {
             return null;
         }

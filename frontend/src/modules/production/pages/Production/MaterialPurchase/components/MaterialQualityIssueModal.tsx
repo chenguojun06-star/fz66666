@@ -190,7 +190,8 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
                   label="异常数量"
                   rules={[{ required: true, message: '请填写异常数量' }]}
                 >
-                  <InputNumber min={1} max={maxIssueQuantity > 0 ? maxIssueQuantity : undefined} precision={0} style={{ width: '100%' }} />
+                  {/* D-466：异常数量按米计，支持小数（后端已改 DECIMAL(12,4)） */}
+                  <InputNumber min={0.01} max={maxIssueQuantity > 0 ? maxIssueQuantity : undefined} precision={2} step={0.01} style={{ width: '100%' }} />
                 </Form.Item>
                 <Form.Item name="disposition" label="建议处理" rules={[{ required: true, message: '请选择建议处理' }]}>
                   <Select options={DISPOSITION_OPTIONS} showSearch optionFilterProp="label" />

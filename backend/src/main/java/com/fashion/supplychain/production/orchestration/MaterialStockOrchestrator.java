@@ -157,8 +157,8 @@ public class MaterialStockOrchestrator {
             dto.setUnit(stock.getUnit());
             dto.setColor(stock.getColor());
             dto.setSize(stock.getSize());
-            // D-410：DTO 仍为 Integer，按原语义截断取整（库存小数精度暂不外泄到此告警列表）
-            dto.setQuantity(quantity.intValue());
+            // D-466：告警列表的库存数量改为小数显示（375.5 米不该显示成 375）
+            dto.setQuantity(quantity);
             dto.setSafetyStock(safetyStock);
             // D-414：DTO 该字段仍是 Integer，按 CEILING 取整（1.32 米按 2 计，避免低估近期出库量）
             dto.setRecentOutQuantity((int) Math.ceil(recentOutQty));
@@ -375,9 +375,12 @@ public class MaterialStockOrchestrator {
         if (dto == null) {
             return 0;
         }
-        int qty = dto.getQuantity() == null ? 0 : dto.getQuantity();
+        // D-466：库存改小数后，缺口 = 建议安全库存 - 当前库存 也可能是小数；
+        // 补货场景向上取整（缺 0.5 米也得补 1 米），避免低估缺口。
+        BigDecimal qty = dto.getQuantity() == null ? BigDecimal.ZERO : dto.getQuantity();
         int suggested = dto.getSuggestedSafetyStock() == null ? 0 : dto.getSuggestedSafetyStock();
-        return Math.max(0, suggested - qty);
+        BigDecimal gap = BigDecimal.valueOf(suggested).subtract(qty).setScale(0, java.math.RoundingMode.CEILING);
+        return Math.max(0, gap.intValue());
     }
 
     private static String buildMaterialKey(String materialId, String color, String size) {

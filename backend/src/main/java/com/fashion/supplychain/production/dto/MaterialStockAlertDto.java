@@ -14,7 +14,8 @@ public class MaterialStockAlertDto {
     private String unit;
     private String color;
     private String size;
-    private Integer quantity;
+    /** 当前库存（D-466：改为小数，面料 375.5 米不应显示成 375） */
+    private BigDecimal quantity;
     private Integer safetyStock;
     private Integer recentOutQuantity;
     private Integer suggestedSafetyStock;

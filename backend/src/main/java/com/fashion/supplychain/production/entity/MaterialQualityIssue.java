@@ -42,7 +42,8 @@ public class MaterialQualityIssue {
 
     private String materialType;
 
-    private Integer issueQuantity;
+    /** 异常数量（D-466：支持小数，面料按米计可为 1.5；迁移 V202709181900 已改 DECIMAL(12,4)） */
+    private BigDecimal issueQuantity;
 
     private String issueType;
 
