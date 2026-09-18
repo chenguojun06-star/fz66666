@@ -579,7 +579,7 @@
   background: var(--color-warning-bg);
 }
 .act-btn--detail {
-  color: #7c5cfc;
+  color: var(--color-purple-light);
   background: rgba(124, 92, 252, 0.1);
   font-weight: 600;
 }

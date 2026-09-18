@@ -254,7 +254,7 @@ page {
 }
 
 .menu-icon-circle--teal {
-  background: var(--icon-color-teal, #14b8a6);
+  background: var(--icon-color-teal);
 }
 
 /* ============ 考勤打卡卡片 ============ */
@@ -301,7 +301,7 @@ page {
 }
 
 .attendance-status--working {
-  background: var(--color-success-bg, #e9f9ee);
+  background: var(--color-success-bg);
   color: var(--color-success);
 }
 
@@ -316,7 +316,7 @@ page {
   grid-template-columns: repeat(3, 1fr);
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid var(--color-border-light, var(--color-border));
+  border-top: 1px solid var(--color-border-light);
 }
 
 .attendance-stat-cell {
@@ -328,7 +328,7 @@ page {
 }
 
 .attendance-stat-cell + .attendance-stat-cell {
-  border-left: 1px solid var(--color-border-light, var(--color-border));
+  border-left: 1px solid var(--color-border-light);
 }
 
 .attendance-stat-key {

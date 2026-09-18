@@ -767,7 +767,7 @@
 .form-tip {
   margin-top: 4px;
   padding: 8px 10px;
-  background: var(--color-warning-bg, #fff7e6);
+  background: var(--color-warning-bg);
   border-radius: var(--radius-md);
 }
 

@@ -422,14 +422,14 @@
 
 /* 确认完成 — 蓝色镂空 */
 .btn-action-primary {
-  color: var(--color-primary, #007aff);
-  border: 1px solid var(--color-primary, #007aff);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
 }
 
 /* 撤回到货 — 红色镂空（危险操作） */
 .btn-action-danger {
-  color: var(--color-danger, #e74c3c);
-  border: 1px solid var(--color-danger, #e74c3c);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
 }
 
 /* ---- 需采购提示 ---- */

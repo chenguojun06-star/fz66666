@@ -1,6 +1,6 @@
 .page {
   min-height: 100vh;
-  background: #f4f5f7;
+  background: var(--color-bg-subtle);
   padding-bottom: 40rpx;
 }
 
@@ -26,19 +26,19 @@
 .page-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
 }
 
 .save-btn {
   padding: 8rpx 20rpx;
   border-radius: 8rpx;
-  border: 1rpx solid #2a5cff;
+  border: 1rpx solid var(--color-primary);
   background: transparent;
 }
 
 .save-btn text {
   font-size: 26rpx;
-  color: #2a5cff;
+  color: var(--color-primary);
   font-weight: 500;
 }
 
@@ -62,8 +62,8 @@
 .loading-spinner {
   width: 48rpx;
   height: 48rpx;
-  border: 4rpx solid #e8e8e8;
-  border-top-color: #2a5cff;
+  border: 4rpx solid var(--color-border);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -89,7 +89,7 @@
 .role-tab {
   padding: 12rpx 28rpx;
   border-radius: 32rpx;
-  background: #f4f5f7;
+  background: var(--color-bg-subtle);
   border: 1rpx solid transparent;
   transition: all 0.2s ease;
 }
@@ -100,12 +100,12 @@
 }
 
 .role-tab--active {
-  background: #e8f2ff;
-  border-color: #2a5cff;
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary);
 }
 
 .role-tab--active text {
-  color: #2a5cff;
+  color: var(--color-primary);
   font-weight: 600;
 }
 
@@ -132,7 +132,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 28rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid var(--color-bg-subtle);
 }
 
 .menu-item:last-child {
@@ -141,7 +141,7 @@
 
 .menu-name {
   font-size: 30rpx;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
 }
 
 /* 开关 */
@@ -159,7 +159,7 @@
 }
 
 .switch--on {
-  background: #2a5cff;
+  background: var(--color-primary);
 }
 
 .switch--off {

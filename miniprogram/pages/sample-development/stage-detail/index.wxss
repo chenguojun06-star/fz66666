@@ -772,7 +772,7 @@
   margin-top: 24rpx;
   margin-bottom: 12rpx;
   padding: 12rpx 20rpx;
-  background: var(--color-bg-secondary, #f4f5f7);
+  background: var(--color-bg-secondary);
   border-radius: var(--radius-xs);
   display: flex;
   align-items: center;

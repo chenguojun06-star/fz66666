@@ -1,6 +1,6 @@
 .page {
   padding: 40px 20px;
-  background: #ffffff;
+  background: var(--color-bg-card);
   box-sizing: border-box;
   height: 100vh;
 }

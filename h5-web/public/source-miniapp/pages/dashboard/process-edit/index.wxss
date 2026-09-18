@@ -3,7 +3,7 @@
 
 .page {
   padding: 0 var(--page-padding-x) 80px;
-  background: var(--color-bg-page, #f5f5f5);
+  background: var(--color-bg-page);
   min-height: 100vh;
 }
 
@@ -14,7 +14,7 @@
   gap: 8px;
   padding: 8px 16px;
   background: var(--color-bg-card);
-  border-bottom: 1px solid var(--color-border, #f0f0f0);
+  border-bottom: 1px solid var(--color-border);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
@@ -494,6 +494,6 @@
 }
 .page-hint-text {
   font-size: var(--font-size-xs, 11px);
-  color: var(--color-text-secondary, #86909c);
+  color: var(--color-text-secondary);
   line-height: 1.5;
 }

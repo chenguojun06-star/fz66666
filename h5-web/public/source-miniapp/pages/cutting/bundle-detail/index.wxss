@@ -1397,7 +1397,7 @@
 
 .cutting-summary-value.green  { color: var(--color-success); }
 .cutting-summary-value.orange { color: var(--color-warning); }
-.cutting-summary-value.purple { color: var(--color-purple, #9333ea); }
+.cutting-summary-value.purple { color: var(--color-purple); }
 
 .print-btn--generate {
   background: transparent;
@@ -1427,7 +1427,7 @@
   align-items: center;
   gap: 10px;
   padding: 8px 0;
-  border-top: 1px solid var(--color-border-light, var(--color-border));
+  border-top: 1px solid var(--color-border-light);
 }
 
 .pt-cover {

@@ -24,7 +24,7 @@ page {
   gap: var(--spacing-xs);
   padding: 0 12px;
   height: 36px;
-  background: #e5e5ea;
+  background: var(--color-border);
   border-radius: var(--radius-full);
 }
 .search-box:focus-within {
@@ -101,7 +101,7 @@ page {
 
 .section-count--blue {
   color: var(--color-primary);
-  background: #cfe5ff;
+  background: var(--color-primary-bg-dark);
 }
 
 .clear-btn {

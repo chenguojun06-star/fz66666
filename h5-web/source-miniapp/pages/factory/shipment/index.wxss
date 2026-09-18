@@ -826,7 +826,7 @@
   flex-wrap: wrap;
 }
 .act-btn--detail {
-  color: #7c5cfc;
+  color: var(--color-purple-light);
   background: rgba(124, 92, 252, 0.1);
   font-weight: 600;
 }
@@ -1041,7 +1041,7 @@
   width: 96rpx;
   height: 96rpx;
   border-radius: 12rpx;
-  background: var(--color-bg-page, #f7f8fa);
+  background: var(--color-bg-page);
   overflow: hidden;
   flex-shrink: 0;
 }

@@ -107,7 +107,7 @@
 
 /* ============================================================
  * 四、卡片通用样式
- * 设计: 白底, 1px边框(#e5e5ea), 圆角18px, 内边距16px, 无阴影
+ * 设计: 白底, 1px边框(var(--color-border)), 圆角18px, 内边距16px, 无阴影
  * ============================================================ */
 .payable-card,
 .payment-card {
@@ -511,7 +511,7 @@
   gap: 6px;
   height: var(--btn-height-md);
   padding: 0 12px;
-  border: 1px solid #e5e5ea;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-bg-card);
   color: var(--color-text-secondary);

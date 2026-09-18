@@ -80,8 +80,8 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: #cfe5ff;
-  color: #004fad;
+  background: var(--color-primary-bg-dark);
+  color: var(--color-primary-dark);
   font-size: var(--font-size-xl);
   font-weight: 600;
   display: flex;
@@ -185,7 +185,7 @@
   padding: 2px 8px;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
-  color: #0064d6;
+  color: var(--color-primary-dark);
   background: var(--color-primary-bg);
   border-radius: var(--radius-sm);
 }

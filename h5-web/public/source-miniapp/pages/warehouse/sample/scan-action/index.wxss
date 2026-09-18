@@ -5,7 +5,7 @@
 
 .container {
   padding: 12rpx var(--page-padding-x);
-  background: var(--color-bg-page, var(--color-bg-page));
+  background: var(--color-bg-page);
   min-height: 100vh;
 }
 
@@ -420,7 +420,7 @@
 
 /* 出库库位提示条（已入库时显示，让用户清楚样衣在哪里） */
 .stock-location-banner {
-  background: #e8f2ff;
+  background: var(--color-primary-bg);
   border-radius: var(--radius-md);
   padding: 10px 12px;
   margin-bottom: 10px;
@@ -528,21 +528,21 @@
   padding: 16rpx 0;
   font-size: 28rpx;
   color: #666;
-  border: 2rpx solid #e8e8e8;
+  border: 2rpx solid var(--color-border);
   border-radius: 12rpx;
-  background: #fafafa;
+  background: var(--color-bg-subtle);
 }
 .loan-type-tab--active {
-  color: #1890ff;
-  border-color: #1890ff;
-  background: #e8f2ff;
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
   font-weight: 500;
 }
 .loan-qty-row {
   display: flex;
   align-items: center;
   padding: 24rpx 32rpx;
-  border-bottom: 1rpx solid #f5f5f5;
+  border-bottom: 1rpx solid var(--color-bg-subtle);
 }
 .loan-qty-label {
   font-size: 28rpx;
@@ -552,7 +552,7 @@
 .loan-qty-input {
   flex: 1;
   height: 64rpx;
-  border: 2rpx solid #d9d9d9;
+  border: 2rpx solid var(--color-border);
   border-radius: 8rpx;
   padding: 0 16rpx;
   font-size: 28rpx;
@@ -573,9 +573,9 @@
   align-items: center;
   margin: 16rpx 32rpx 0;
   padding: 0 16rpx;
-  background: #f5f5f5;
+  background: var(--color-bg-subtle);
   border-radius: 12rpx;
-  border: 2rpx solid #e8e8e8;
+  border: 2rpx solid var(--color-border);
 }
 .loan-search-input {
   flex: 1;
@@ -592,7 +592,7 @@
   color: #999;
   font-size: 36rpx;
   border-radius: 50%;
-  background: #e0e0e0;
+  background: var(--color-border);
   margin-left: 8rpx;
 }
 .loan-loading,
@@ -612,12 +612,12 @@
   display: flex;
   align-items: center;
   padding: 24rpx 16rpx;
-  border-bottom: 1rpx solid #f5f5f5;
+  border-bottom: 1rpx solid var(--color-bg-subtle);
   position: relative;
 }
 .loan-target-item--active {
-  background: #e8f2ff;
-  border-color: #1890ff;
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary);
 }
 .loan-target-name {
   font-size: 28rpx;
@@ -630,7 +630,7 @@
   margin-left: 16rpx;
 }
 .loan-target-check {
-  color: #1890ff;
+  color: var(--color-primary);
   font-size: 32rpx;
   font-weight: bold;
   margin-left: 16rpx;
@@ -651,13 +651,13 @@
 }
 .loan-btn--cancel {
   color: #666;
-  border-color: #d9d9d9;
-  background: #fafafa;
+  border-color: var(--color-border);
+  background: var(--color-bg-subtle);
 }
 .loan-btn--confirm {
   color: #fff;
-  border-color: #faad14;
-  background: #faad14;
+  border-color: var(--color-warning);
+  background: var(--color-warning);
   font-weight: 500;
 }
 .loan-btn--disabled {

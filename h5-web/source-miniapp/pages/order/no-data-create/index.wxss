@@ -333,7 +333,7 @@
   width: 100%;
   height: 46px;
   line-height: 46px;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark, #0051d5) 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
   color: var(--color-text-white);
   border-radius: var(--radius-full);
   font-size: var(--font-size-lg);

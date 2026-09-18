@@ -482,13 +482,13 @@
 }
 .ss-row {
   display: flex;
-  border-bottom: 1rpx solid var(--color-border, #e5e7eb);
+  border-bottom: 1rpx solid var(--color-border);
 }
 .ss-row:last-child {
   border-bottom: none;
 }
 .ss-row--head {
-  background: var(--color-bg-page, #f7f8fa);
+  background: var(--color-bg-page);
 }
 .ss-cell {
   flex: 0 0 auto;
@@ -496,22 +496,22 @@
   padding: 12rpx 14rpx;
   text-align: center;
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-primary, #1f2937);
+  color: var(--color-text-primary);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 .ss-cell--part {
   min-width: 130rpx;
   text-align: left;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
 }
 .ss-cell--head {
   font-weight: 600;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
 }
 .ss-cell--cur {
   background: var(--color-primary-bg, rgba(45, 127, 249, 0.08));
-  color: var(--color-primary, #2d7ff9);
+  color: var(--color-primary);
   font-weight: 600;
 }
 .group-header-sub {
@@ -524,7 +524,7 @@
   min-width: 220rpx;
   max-width: 320rpx;
   text-align: left;
-  color: var(--color-text-secondary, #6b7280);
+  color: var(--color-text-secondary);
   white-space: normal;
   word-break: break-all;
 }
