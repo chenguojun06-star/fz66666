@@ -259,4 +259,34 @@ export const wagePaymentApi = {
 
   resolveFeedback: (id: string, action: string, resolveRemark?: string) =>
     api.post(`/finance/wage-settlement-feedback/${id}/resolve`, { action, resolveRemark }),
+
+  // ---- D-468：收款方往来明细（点收款方穿透） ----
+  /** 查询某收款方（员工/工厂/客户）的全部应付款明细 + 汇总 + 确认人 */
+  listPayableByCounterparty: (params: {
+    counterpartyId: string;
+    page?: number;
+    pageSize?: number;
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+  }) => api.post('/finance/payable/by-counterparty', params),
 };
+
+/** D-468：收款方往来明细返回结果 */
+export interface CounterpartyDetailResult {
+  records: PayableItem[];
+  total: number;
+  summary: {
+    billCount: number;
+    totalAmount: number;
+    paidAmount: number;
+    unpaidAmount: number;
+  };
+  /** 单据号 → 确认人/操作人/付款时间 */
+  confirmInfo: Record<string, {
+    confirmBy?: string | null;
+    operatorName?: string | null;
+    paymentTime?: string | null;
+    status?: string | null;
+  }>;
+}

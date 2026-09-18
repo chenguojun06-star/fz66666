@@ -86,6 +86,8 @@ interface UsePaymentColumnsProps {
   fetchPayments: () => void;
   msg: { error: (s: string) => void; success: (s: string) => void };
   onAmountClick?: (record: PayableItem) => void;
+  /** D-468：点击收款方 → 查看该单位/员工的全部往来明细 */
+  onPayeeClick?: (record: PayableItem) => void;
 }
 
 // ============================================================
@@ -96,7 +98,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
     openPayModal, handleRejectPayable, openAccountModal,
     setDetailRecord, setDetailOpen,
     openProofModal, handleCancel, fetchPayments, msg,
-    onAmountClick,
+    onAmountClick, onPayeeClick,
   } = props;
 
   // ---- 待收付款列 ----
@@ -133,7 +135,20 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
           return (
             <Space size={4}>
               <Tag color={tag.color} style={{ fontSize: 14, margin: 0 }}>{tag.text}</Tag>
-              <span className="u-fw-500">{r.payeeName}</span>
+              {/* D-468：收款方可点击，穿透查看该单位全部往来明细 */}
+              {onPayeeClick ? (
+                <Button
+                  type="link"
+                  size="small"
+                  style={{ padding: 0, height: 'auto', fontWeight: 500 }}
+                  onClick={() => onPayeeClick(r)}
+                  title="查看该收款方的全部往来明细"
+                >
+                  {r.payeeName}
+                </Button>
+              ) : (
+                <span className="u-fw-500">{r.payeeName}</span>
+              )}
             </Space>
           );
         },

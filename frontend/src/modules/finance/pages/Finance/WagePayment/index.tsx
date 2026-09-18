@@ -30,6 +30,7 @@ import { usePayModal } from './hooks/usePayModal';
 import { useAccountModal } from './hooks/useAccountModal';
 import { useProofModal } from './hooks/useProofModal';
 import { useWagePayment } from './useWagePayment';
+import PayeeDetailDrawer from './components/PayeeDetailDrawer';
 
 // ============================================================
 // 主组件 — 收付款中心
@@ -81,6 +82,9 @@ const PaymentCenterPage: React.FC = () => {
   );
 
   const [amountDetailOpen, setAmountDetailOpen] = React.useState(false);
+  // D-468：收款方往来明细抽屉
+  const [payeeDetailOpen, setPayeeDetailOpen] = React.useState(false);
+  const [payeeTarget, setPayeeTarget] = React.useState<{ id: string; name?: string } | null>(null);
   const [amountDetailTarget, setAmountDetailTarget] = React.useState<any>(null);
   const [paymentStatusTab, setPaymentStatusTab] = useState<string>('');
 
@@ -118,6 +122,15 @@ const PaymentCenterPage: React.FC = () => {
     fetchPayments: data.fetchPayments,
     msg,
     onAmountClick: (record) => { setAmountDetailTarget(record); setAmountDetailOpen(true); },
+    // D-468：点击收款方 → 打开往来明细抽屉
+    onPayeeClick: (record) => {
+      if (!record?.payeeId) {
+        msg.error('该记录缺少收款方信息，无法查看明细');
+        return;
+      }
+      setPayeeTarget({ id: record.payeeId, name: record.payeeName });
+      setPayeeDetailOpen(true);
+    },
   });
 
   // Tab 切换后的过滤数据
@@ -327,6 +340,14 @@ const PaymentCenterPage: React.FC = () => {
           open={amountDetailOpen}
           onClose={() => { setAmountDetailOpen(false); setAmountDetailTarget(null); }}
           target={amountDetailTarget}
+        />
+
+        {/* D-468：收款方往来明细（点击收款方穿透查看全部明细） */}
+        <PayeeDetailDrawer
+          open={payeeDetailOpen}
+          payeeId={payeeTarget?.id}
+          payeeName={payeeTarget?.name}
+          onClose={() => { setPayeeDetailOpen(false); setPayeeTarget(null); }}
         />
       </>
   );

@@ -42,6 +42,10 @@ public class PayableOrchestrator {
     @Autowired
     private PayableLogAppendHelper logAppendHelper;
 
+    /** D-468：查付款记录的确认人/操作人 */
+    @Autowired
+    private com.fashion.supplychain.finance.service.WagePaymentService wagePaymentService;
+
     /** 懒加载避免与 BillAggregationOrchestrator 循环依赖 */
     @Autowired
     @org.springframework.context.annotation.Lazy
@@ -110,6 +114,118 @@ public class PayableOrchestrator {
     private LocalDate parseLocalDate(String s) {
         if (!StringUtils.hasText(s)) return null;
         try { return LocalDate.parse(s); } catch (Exception e) { return null; }
+    }
+
+    // ==================== D-468：收款方往来明细（点收款方穿透） ====================
+
+    /**
+     * 按收款方查询其全部往来明细，供财务付款页「点击收款方 → 查看全部明细」使用。
+     *
+     * <p>与 {@link #list(Map)} 口径一致：租户隔离 + 工厂账号只能看自己的账（P0 铁律4）。
+     *
+     * @param params counterpartyId(必填) / page / pageSize / startDate / endDate / status
+     * @return records + total + summary(应付/已付/未付/笔数) + confirmInfo(单据号→确认人、付款时间)
+     */
+    public Map<String, Object> listByCounterparty(Map<String, Object> params) {
+        String counterpartyId = params.get("counterpartyId") == null
+                ? null : String.valueOf(params.get("counterpartyId")).trim();
+        if (!StringUtils.hasText(counterpartyId)) {
+            throw new IllegalArgumentException("收款方ID不能为空");
+        }
+        int page = parseInt(params.get("page"), 1);
+        int pageSize = Math.min(parseInt(params.get("pageSize"), 20), 200);
+
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+
+        // P0 铁律4：工厂账号只能查看自己的账目，防止越权看到其他往来单位
+        String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
+        boolean isFactoryAccount = com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount();
+        if (isFactoryAccount && StringUtils.hasText(ctxFactoryId) && !ctxFactoryId.equals(counterpartyId)) {
+            throw new IllegalStateException("无权查看其他往来单位的账目");
+        }
+
+        LambdaQueryWrapper<Payable> qw = buildCounterpartyWrapper(params, counterpartyId, tenantId);
+        IPage<Payable> paged = payableService.page(new Page<>(page, pageSize), qw);
+
+        // 汇总基于全量（不受分页影响）：复制一份不带分页的条件
+        LambdaQueryWrapper<Payable> sumQw = buildCounterpartyWrapper(params, counterpartyId, tenantId);
+        List<Payable> all = payableService.list(sumQw);
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        BigDecimal paidAmount = BigDecimal.ZERO;
+        for (Payable x : all) {
+            totalAmount = totalAmount.add(x.getAmount() != null ? x.getAmount() : BigDecimal.ZERO);
+            paidAmount = paidAmount.add(x.getPaidAmount() != null ? x.getPaidAmount() : BigDecimal.ZERO);
+        }
+
+        // 关联付款记录，补齐「确认人 / 付款时间」（Payable 本身没有审核人字段）
+        Map<String, Map<String, Object>> confirmInfo = new HashMap<>();
+        List<String> nos = paged.getRecords().stream()
+                .map(Payable::getPayableNo).filter(StringUtils::hasText).distinct().toList();
+        if (!nos.isEmpty()) {
+            try {
+                List<com.fashion.supplychain.finance.entity.WagePayment> pays = wagePaymentService.lambdaQuery()
+                        .eq(com.fashion.supplychain.finance.entity.WagePayment::getTenantId, tenantId)
+                        .in(com.fashion.supplychain.finance.entity.WagePayment::getBizNo, nos)
+                        .list();
+                for (com.fashion.supplychain.finance.entity.WagePayment wp : pays) {
+                    if (!StringUtils.hasText(wp.getBizNo())) continue;
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("confirmBy", wp.getConfirmBy());
+                    m.put("operatorName", wp.getOperatorName());
+                    m.put("paymentTime", wp.getPaymentTime());
+                    m.put("status", wp.getStatus());
+                    // 已确认的记录优先，避免草稿覆盖真实确认人
+                    Map<String, Object> exist = confirmInfo.get(wp.getBizNo());
+                    if (exist == null || wp.getConfirmBy() != null) {
+                        confirmInfo.put(wp.getBizNo(), m);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[D-468] 关联付款记录失败，确认人留空: {}", e.getMessage());
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("records", paged.getRecords());
+        result.put("total", paged.getTotal());
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("billCount", all.size());
+        summary.put("totalAmount", totalAmount);
+        summary.put("paidAmount", paidAmount);
+        summary.put("unpaidAmount", totalAmount.subtract(paidAmount).max(BigDecimal.ZERO));
+        result.put("summary", summary);
+        result.put("confirmInfo", confirmInfo);
+        return result;
+    }
+
+    private LambdaQueryWrapper<Payable> buildCounterpartyWrapper(Map<String, Object> params,
+                                                                 String counterpartyId,
+                                                                 Long tenantId) {
+        String startDate = (String) params.get("startDate");
+        String endDate = (String) params.get("endDate");
+        String status = (String) params.get("status");
+
+        LambdaQueryWrapper<Payable> qw = new LambdaQueryWrapper<Payable>()
+                .eq(Payable::getDeleteFlag, 0)
+                .eq(Payable::getTenantId, tenantId)
+                // 收款方可能记在 counterpartyId 或 supplierId 上，两者都认
+                .and(w -> w.eq(Payable::getCounterpartyId, counterpartyId)
+                        .or().eq(Payable::getSupplierId, counterpartyId))
+                .eq(StringUtils.hasText(status), Payable::getStatus, status);
+
+        if (StringUtils.hasText(startDate) || StringUtils.hasText(endDate)) {
+            qw.and(w -> {
+                if (StringUtils.hasText(startDate)) {
+                    w.ge(Payable::getCreateTime, startDate + " 00:00:00");
+                }
+                if (StringUtils.hasText(endDate)) {
+                    w.le(Payable::getCreateTime, endDate + " 23:59:59");
+                }
+            });
+        }
+        qw.orderByDesc(Payable::getCreateTime);
+        return qw;
     }
 
     public Payable getById(String id) {

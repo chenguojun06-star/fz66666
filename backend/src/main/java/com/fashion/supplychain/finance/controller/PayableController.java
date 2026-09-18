@@ -44,6 +44,17 @@ public class PayableController {
     }
 
     /**
+     * D-468：收款方往来明细 —— 财务付款页点击收款方时，查看该单位/员工的全部款项记录
+     * （来源、金额、状态、时间、确认人）。沿用菜单权限，不额外限制人员。
+     * 参数：counterpartyId(必填) / page / pageSize / startDate / endDate / status
+     */
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/by-counterparty")
+    public Result<Map<String, Object>> listByCounterparty(@RequestBody Map<String, Object> params) {
+        return Result.success(payableOrchestrator.listByCounterparty(params));
+    }
+
+    /**
      * @deprecated 使用 {@code POST /} 替代（计划于 2026-Q3 移除）
      */
     @Deprecated
