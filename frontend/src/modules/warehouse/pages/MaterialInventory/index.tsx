@@ -11,6 +11,13 @@ import {
   Badge,
 } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
+// D-470：列显隐/列顺序复用项目自带的 ColumnSettings（后端持久化 + localStorage 回退）
+import {
+  useColumnSettings,
+  ColumnSettingsModal,
+  ColumnSettingsButton,
+  type ColumnOption,
+} from '@/components/common/ColumnSettings';
 import MaterialAlertRanking from './components/MaterialAlertRanking';
 import MaterialInventoryAISummary from './components/MaterialInventoryAISummary';
 import './MaterialInventory.css';
@@ -98,6 +105,43 @@ const _MaterialInventory: React.FC = () => {
     handleEditSafetyStock,
     onPickStock: (record) => { setPickTarget(record); setPickModalOpen(true); },
   });
+
+  // D-470：主表列显隐/排序（列多时用户可自行精简，避免信息过载导致观感凌乱）
+  const columnOptions = React.useMemo<ColumnOption[]>(
+    () => columns.map((c) => ({
+      key: String(c.key),
+      label: typeof c.title === 'string' ? c.title : String(c.key),
+    })),
+    [columns],
+  );
+  const {
+    visibleColumns,
+    orderedVisibleColumns,
+    setVisible,
+    reset: resetColumns,
+    loaded: columnsLoaded,
+  } = useColumnSettings({
+    pageKey: 'material-inventory-main',
+    allColumns: columnOptions,
+    defaultVisible: React.useMemo(
+      () => Object.fromEntries(columnOptions.map((c) => [c.key, true])),
+      [columnOptions],
+    ),
+  });
+  const [columnSettingsOpen, setColumnSettingsOpen] = React.useState(false);
+
+  // 按用户配置过滤 + 排序；偏好未加载完时先展示全量，避免闪空
+  const shownColumns = React.useMemo(() => {
+    if (!columnsLoaded || orderedVisibleColumns.length === 0) return columns;
+    const orderIndex = new Map(orderedVisibleColumns.map((o, i) => [o.key, i]));
+    return columns
+      .filter((c) => visibleColumns[String(c.key)] !== false)
+      .slice()
+      .sort(
+        (a, b) =>
+          (orderIndex.get(String(a.key)) ?? 999) - (orderIndex.get(String(b.key)) ?? 999),
+      );
+  }, [columns, columnsLoaded, orderedVisibleColumns, visibleColumns]);
 
   const tabParam = searchParams.get('tab') || 'overview';
   const [activeTab, setActiveTab] = React.useState(tabParam);
@@ -247,6 +291,8 @@ const _MaterialInventory: React.FC = () => {
                     )}
                     right={(
                       <>
+                        {/* D-470：列设置入口 */}
+                        <ColumnSettingsButton onClick={() => setColumnSettingsOpen(true)} />
                         <Button onClick={openInstructionEmpty}>发出采购需求</Button>
                         <Button>导出</Button>
                         <Button type="primary" onClick={() => handleInbound()}>入库</Button>
@@ -256,7 +302,7 @@ const _MaterialInventory: React.FC = () => {
 
                   <ResizableTable
                     storageKey="material-inventory-main"
-                    columns={columns}
+                    columns={shownColumns}
                     dataSource={dataSource}
                     loading={loading}
                     rowKey="id"
@@ -407,6 +453,17 @@ const _MaterialInventory: React.FC = () => {
           onClose={pickupData.closePrint}
         />
       )}
+
+      {/* D-470：主表列显隐/排序 */}
+      <ColumnSettingsModal
+        open={columnSettingsOpen}
+        onClose={() => setColumnSettingsOpen(false)}
+        columnOptions={columnOptions}
+        visibleColumns={visibleColumns}
+        onToggle={setVisible}
+        onReset={resetColumns}
+        title="库存列表列设置"
+      />
     </>
   );
 };
