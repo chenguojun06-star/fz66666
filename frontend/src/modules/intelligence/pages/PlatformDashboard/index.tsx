@@ -190,7 +190,7 @@ export const PlatformDashboard: React.FC = () => {
             rowKey={r => String(r.toolName ?? Math.random())}
            
             pagination={{ pageSize: 15 }}
-            scroll={{ x: 600 }}
+            scroll={{ x: 'max-content' }}
             locale={{ emptyText: loaded ? '暂无数据' : '加载中…' }}
           />
         </Card>
@@ -206,7 +206,7 @@ export const PlatformDashboard: React.FC = () => {
                 rowKey={r => String(r.scene ?? Math.random())}
                
                 pagination={{ pageSize: 10 }}
-                scroll={{ x: 500 }}
+                scroll={{ x: 'max-content' }}
                 locale={{ emptyText: loaded ? '暂无数据' : '加载中…' }}
               />
             </Card>
@@ -220,7 +220,7 @@ export const PlatformDashboard: React.FC = () => {
                 rowKey={r => String(r.issueType ?? Math.random())}
                
                 pagination={{ pageSize: 10 }}
-                scroll={{ x: 600 }}
+                scroll={{ x: 'max-content' }}
                 locale={{ emptyText: loaded ? '暂无数据' : '加载中…' }}
               />
             </Card>

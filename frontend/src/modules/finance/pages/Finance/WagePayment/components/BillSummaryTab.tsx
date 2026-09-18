@@ -274,7 +274,7 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
         rowKey="id"
         loading={loading}
         emptyDescription="暂无账单"
-        scroll={{ x: 1600 }}
+        scroll={{ x: 'max-content' }}
        
         rowSelection={{
           selectedRowKeys: selectedKeys,

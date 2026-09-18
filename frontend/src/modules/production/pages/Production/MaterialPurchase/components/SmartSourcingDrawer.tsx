@@ -572,7 +572,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
           dataSource={detail}
           rowKey="materialCode"
           pagination={false}
-          scroll={{ x: 1250 }}
+          scroll={{ x: 'max-content' }}
           rowClassName={(record) => (record.needPurchase ?? false) ? '' : 'smart-sourcing-no-need'}
           columns={netDemandColumns}
         />
@@ -686,7 +686,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
         loading={listLoading}
         dataSource={visibleOrders}
         columns={columns}
-        scroll={{ x: 1250 }}
+        scroll={{ x: 'max-content' }}
         rowSelection={{
           selectedRowKeys: selectedOrderNos,
           onChange: (keys) => setSelectedOrderNos(keys.map(String)),
@@ -869,7 +869,7 @@ const SingleTab: React.FC<SingleTabProps> = ({
             dataSource={data}
             rowKey="materialCode"
             pagination={false}
-            scroll={{ x: 1300 }}
+            scroll={{ x: 'max-content' }}
             rowClassName={(r) => (r.needPurchase ?? false) ? '' : 'smart-sourcing-no-need'}
             columns={netDemandColumns}
           />
