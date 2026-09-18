@@ -1,7 +1,7 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-17（✅D-453 P0 已闭环：69d8c10 串行安全上线，站点全绿）
+> 最后更新：2026-09-18（✅D-464 采购金额口径统一为「实际到货数量 × 单价」，已上线）
 
 ---
 
@@ -15,6 +15,22 @@
 - **遗留建议**：升级 4核8G（630元/年）；繁忙时段 autodeploy 守卫可能跳过构建属有意设计，走低峰期
 
 ---
+
+## ✅ D-464 采购金额口径统一（2026-09-18，已推送 CI success 并上线）
+
+- **新口径（取代 D-076/D-129）**：`total_amount = 实际到货数量 × 单价`，未到货记 0（没到货不产生应付）
+- **唯一入口**：`MaterialPurchaseHelper.calcTotalAmountByArrived(...)`——任何写入点禁止再写
+  `unitPrice × purchaseQuantity`，否则又是一次口径分裂
+- 改写点：MaterialPurchaseServiceImpl(3) / StyleBomPurchaseHelper(2) / ProductionOrderServiceImpl /
+  MaterialPurchasePickingHelper(补采单) / MaterialPurchaseReturnHelper(回料) / 前端 3 处保存 payload
+- **易漏点**：`MaterialInboundOrchestrator` 走 `atomicAddArrivedQuantity` 绕开 service，金额不会自动
+  重算，已单独补上；对账 `resolvePrices` 无单价时反推单价的分母也必须同步改用「到货量」
+- 迁移 `V202709180100__recalc_material_purchase_total_amount.sql`：订正存量（幂等，按目标值不等式过滤）
+- **核实结论（更正早前误判）**：
+  - 采购单打印 `PurchasePrintModal` **早已是到货口径**（明细行 `arrived * price`，页脚文案
+    「合计金额（按实际到货）」），无需改动
+  - 对账单 `t_material_reconciliation.quantity` 存的是**对账数量**（封顶到货量），本就是到货口径，
+    存量**不需要**订正（pending 单据后续 upsert 会自然重算）
 
 ## 🚚 生产环境已迁移至轻量服务器（2026-09-17 完成，本节为当前最高优先级上下文）
 
@@ -34,8 +50,13 @@
 - **DNS 已切**：api / www.webyszl.cn → 106.55.12.216（DNSPod，A 记录）；Caddy 自动签 Let's Encrypt
 - **云开发体验版 2026-10-16 到期自然退役（不续费）**——期间老云托管 MySQL 保留作回滚保险
 - **⚠️ 切换后只在新系统录数据**（老库新库已分家；若老系统有增量→重跑 migrate-db.sh 覆盖式同步）
-- **⏳ 待办**：建 MySQL 定时备份（cron mysqldump 或轻量快照）；密钥轮换（微信MP Secret/DeepSeek/COS）；
-  删 DNS 的 h5 两条记录；稳定一周后清理云托管
+- **✅ MySQL 定时备份已完成（2026-09-18 核实，此前本条待办状态滞后）**：
+  - 服务器侧 `deploy/lighthouse/backup-db.sh`（D-455）：每天 03:00 后首次 autodeploy 轮次执行，
+    产出 `/opt/backups/fz66666-YYYY-MM-DD.sql.gz`，保留 14 份，失败 30 分钟冷却
+  - 本机侧 launchd `com.fz66666.db-backup`（每天 10:07）跑 `~/fz66666-backups/pull.sh` rsync 拉取异地副本
+  - 实测已工作：2026-09-17 23:30 成功拉取 `fz66666-2026-09-17.sql.gz`（45M），日志见 `~/fz66666-backups/pull.log`
+- **⏳ 待办**：密钥轮换（微信MP Secret/DeepSeek/COS）；删 DNS 的 h5 两条记录；稳定一周后清理云托管；
+  升配 4核8G（2核4G 发版仍偏紧）
 - **Embedding 已切智谱**：ai.embedding.* 配置（embedding-3，1024 维），硅基流动已弃（余额402）；
   Qdrant 向量库本地持久化（服务器磁盘，不再随发版清零）
 
