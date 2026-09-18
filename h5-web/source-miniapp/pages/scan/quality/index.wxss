@@ -28,7 +28,7 @@
 .card-header {
   display: flex;
   align-items: flex-start;
-  gap: var(--spacing-md);
+  gap: var(--space-24);
 }
 
 .cover-wrap {
@@ -43,7 +43,7 @@
 .header-info {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: var(--space-8);
   flex: 1;
   min-width: 0;
 }
@@ -65,7 +65,7 @@
 .info-divider {
   height: 1px;
   background: var(--color-border);
-  margin: var(--spacing-md) 0;
+  margin: var(--space-24) 0;
 }
 
 .kv-grid {
@@ -78,20 +78,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-xs) 0;
+  padding: var(--space-8) 0;
 }
 
 .kv-item.kv-item-border {
   border-left: 1px solid var(--color-border);
-  padding-left: var(--spacing-md);
+  padding-left: var(--space-24);
 }
 
 .kv-item:nth-child(-n+2) {
-  padding-bottom: var(--spacing-sm);
+  padding-bottom: var(--space-16);
 }
 
 .kv-item:nth-child(n+3) {
-  padding-top: var(--spacing-sm);
+  padding-top: var(--space-16);
   border-top: 1px solid var(--color-border);
 }
 
@@ -117,9 +117,9 @@
 .insight-card {
   display: flex;
   align-items: flex-start;
-  gap: var(--spacing-sm);
+  gap: var(--space-16);
   border-radius: var(--radius-2xl);
-  padding: var(--spacing-lg);
+  padding: var(--space-32);
   margin-bottom: var(--card-gap);
   background: var(--color-primary-bg);
   box-shadow: var(--shadow-sm);
@@ -136,7 +136,7 @@
 .insight-body {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: var(--space-8);
   flex: 1;
 }
 
@@ -153,7 +153,7 @@
   font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  margin-top: var(--spacing-xs);
+  margin-top: var(--space-8);
 }
 
 .insight-checkpoint {
@@ -165,7 +165,7 @@
 .insight-action {
   width: 100%;
   height: var(--btn-height-md);
-  margin-top: var(--spacing-sm);
+  margin-top: var(--space-16);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -211,14 +211,14 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-tertiary);
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--space-24);
   display: block;
 }
 
 /* ---- 质检结果选择 ---- */
 .result-group {
   display: flex;
-  gap: var(--spacing-sm);
+  gap: var(--space-16);
 }
 
 .result-btn {
@@ -271,7 +271,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-sm) 0;
+  padding: var(--space-16) 0;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -282,8 +282,8 @@
 .form-row-col {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) 0;
+  gap: var(--space-16);
+  padding: var(--space-16) 0;
 }
 
 .photo-title-row {
@@ -311,7 +311,7 @@
   text-align: right;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 0 var(--spacing-sm);
+  padding: 0 var(--space-16);
   font-size: var(--font-size-md);
   background: var(--input-bg);
   font-variant-numeric: tabular-nums;
@@ -320,7 +320,7 @@
 .form-picker {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: var(--space-8);
   font-size: var(--font-size-md);
   color: var(--color-text-primary);
 }
@@ -334,7 +334,7 @@
 .photo-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-sm);
+  gap: var(--space-16);
 }
 
 .photo-item {
@@ -352,8 +352,8 @@
 
 .photo-del {
   position: absolute;
-  top: var(--spacing-xs);
-  right: var(--spacing-xs);
+  top: var(--space-8);
+  right: var(--space-8);
   width: 20px;
   height: 20px;
   border-radius: var(--radius-full);
@@ -375,7 +375,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-xs);
+  gap: var(--space-8);
   background: transparent;
 }
 

@@ -12,8 +12,8 @@ page {
 .search-bar-page {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--page-padding-x);
+  gap: var(--space-16);
+  padding: var(--space-16) var(--page-padding-x);
   background: var(--color-bg-page);
 }
 
@@ -21,7 +21,7 @@ page {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: var(--space-8);
   padding: 0 12px;
   height: 36px;
   background: var(--color-border);
@@ -46,7 +46,7 @@ page {
 .search-clear {
   font-size: var(--font-size-md);
   color: var(--color-text-tertiary);
-  padding: 0 var(--spacing-xs);
+  padding: 0 var(--space-8);
 }
 
 .edit-btn {
@@ -54,7 +54,7 @@ page {
   color: var(--color-primary);
   font-weight: 500;
   flex-shrink: 0;
-  padding: 0 var(--spacing-xs);
+  padding: 0 var(--space-8);
 }
 
 .edit-btn-active {
@@ -63,7 +63,7 @@ page {
 
 /* -- 收藏区域 -- */
 .fav-section {
-  margin: var(--spacing-sm) var(--page-padding-x);
+  margin: var(--space-16) var(--page-padding-x);
   padding: 16px;
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
@@ -74,13 +74,13 @@ page {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--space-24);
 }
 
 .section-title-row {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: var(--space-8);
 }
 
 .section-title {
@@ -121,7 +121,7 @@ page {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: var(--space-8);
   position: relative;
 }
 
@@ -215,7 +215,7 @@ page {
 }
 
 .app-group {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--space-24);
   padding: 16px;
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
@@ -226,7 +226,7 @@ page {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--space-24);
   font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--color-text-primary);
@@ -243,8 +243,8 @@ page {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--spacing-xl) 0;
-  gap: var(--spacing-sm);
+  padding: var(--space-40) 0;
+  gap: var(--space-16);
 }
 
 .empty-icon {

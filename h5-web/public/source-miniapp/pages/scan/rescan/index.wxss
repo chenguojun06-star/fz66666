@@ -12,7 +12,7 @@
   
   
   box-shadow: var(--shadow-sm);
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--space-24);
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
@@ -85,7 +85,7 @@
   background: var(--color-bg-card);
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-sm);
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--space-24);
   overflow: hidden;
 }
 
@@ -93,7 +93,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-28) var(--spacing-lg);
+  padding: var(--space-28) var(--space-32);
   border-bottom: 1rpx solid var(--color-border);
 }
 
@@ -130,7 +130,7 @@
   
   
   
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--space-24);
   box-shadow: var(--shadow-sm);
 
   border: 1px solid var(--color-border);
@@ -172,8 +172,8 @@
   left: 0;
   right: 0;
   display: flex;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--page-padding-x) calc(var(--spacing-sm) + env(safe-area-inset-bottom));
+  gap: var(--space-16);
+  padding: var(--space-16) var(--page-padding-x) calc(var(--space-16) + env(safe-area-inset-bottom));
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);

@@ -28,13 +28,13 @@
   to { transform: rotate(360deg); }
 }
 .loading-text {
-  margin-top: var(--spacing-md);
+  margin-top: var(--space-24);
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
 
 .empty-state__text {
-  margin-top: var(--spacing-md);
+  margin-top: var(--space-24);
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
@@ -55,7 +55,7 @@
 
 .info-card__body {
   display: flex;
-  gap: var(--spacing-md);
+  gap: var(--space-24);
 }
 
 .info-card__cover {
@@ -150,7 +150,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: var(--spacing-md);
+  margin-top: var(--space-24);
   padding-top: 10px;
   border-top: 1px solid var(--color-primary-bg-dark);
 }
@@ -207,7 +207,7 @@
 .section-card__title-row {
   display: flex;
   align-items: baseline;
-  gap: var(--spacing-sm);
+  gap: var(--space-16);
 }
 .section-card__title {
   font-size: var(--font-size-md-lg);
@@ -256,7 +256,7 @@
 .receive-row {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--space-16);
 }
 .receive-btn {
   display: inline-flex;
@@ -285,7 +285,7 @@
 .sample-action-row {
   display: flex;
   gap: 8px;
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--space-16);
 }
 .sample-action-btn {
   flex: 1;
@@ -353,8 +353,8 @@
 
 /* 进度条 */
 .progress-bar-wrap {
-  margin-top: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
+  margin-top: var(--space-24);
+  margin-bottom: var(--space-24);
 }
 .progress-bar-track {
   height: 8px;
@@ -372,13 +372,13 @@
 /* 横向滚动阶段 */
 .stages-scroll {
   white-space: nowrap;
-  margin: 0 calc(-1 * var(--spacing-md));
-  padding: 0 var(--spacing-md);
+  margin: 0 calc(-1 * var(--space-24));
+  padding: 0 var(--space-24);
 }
 .stages-list {
   display: inline-flex;
   align-items: flex-start;
-  gap: var(--spacing-sm);
+  gap: var(--space-16);
   padding: 4px 0;
 }
 .stage-item {
@@ -459,8 +459,8 @@
 .stage-content__header {
   display: flex;
   align-items: baseline;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-md);
+  gap: var(--space-16);
+  margin-bottom: var(--space-24);
 }
 .stage-content__title {
   font-size: var(--font-size-md-lg);
@@ -478,7 +478,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: var(--spacing-sm);
+  padding-bottom: var(--space-16);
 }
 .sub-list-title {
   font-size: var(--font-size-sm);
@@ -760,8 +760,8 @@
 
 /* 扫码记录 */
 .scan-record-list {
-  margin-top: var(--spacing-lg);
-  padding-top: var(--spacing-md);
+  margin-top: var(--space-32);
+  padding-top: var(--space-24);
   border-top: 1px solid var(--color-border-light);
 }
 .scan-record-item {
@@ -907,7 +907,7 @@
 .attachment-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--space-24);
   padding: 10px 0;
   border-bottom: 1px solid var(--color-border-light);
 }
@@ -959,7 +959,7 @@
 }
 .attachment-item__actions {
   display: flex;
-  gap: var(--spacing-sm);
+  gap: var(--space-16);
   flex-shrink: 0;
 }
 .action-btn {
@@ -990,7 +990,7 @@
 .remarks-title-row {
   display: flex;
   align-items: baseline;
-  gap: var(--spacing-sm);
+  gap: var(--space-16);
   margin-bottom: 10px;
 }
 .remarks-title {
@@ -1016,15 +1016,15 @@
 .remark-input-bar {
   background: var(--color-bg-card);
   border-radius: var(--radius-card);
-  padding: var(--spacing-md);
+  padding: var(--space-24);
   box-shadow: var(--shadow-sm);
   margin-bottom: 10px;
 }
 .remark-input-top {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
+  gap: var(--space-16);
+  margin-bottom: var(--space-16);
 }
 .remark-role-picker {
   flex: 1;
@@ -1154,7 +1154,7 @@
 
 /* ========== 空提示 ========== */
 .empty-hint {
-  padding: var(--spacing-xl) 0;
+  padding: var(--space-40) 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1186,7 +1186,7 @@
   width: 100%;
   background: var(--color-bg-card);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  padding: var(--spacing-lg) var(--spacing-xl) calc(var(--spacing-xl) + env(safe-area-inset-bottom));
+  padding: var(--space-32) var(--space-40) calc(var(--space-40) + env(safe-area-inset-bottom));
   box-shadow: var(--shadow-xl);
   animation: progressSlideUp 0.25s ease;
 }
@@ -1198,7 +1198,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--space-40);
 }
 .progress-editor__title {
   font-size: var(--font-size-lg);
@@ -1218,13 +1218,13 @@
   line-height: 1;
 }
 .progress-editor__body {
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--space-40);
 }
 .progress-editor__value-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--space-32);
 }
 .progress-editor__step-btn {
   width: 52px;
@@ -1257,11 +1257,11 @@
   color: var(--color-text-secondary);
 }
 .progress-editor__slider {
-  margin: 0 4px var(--spacing-lg);
+  margin: 0 4px var(--space-32);
 }
 .progress-editor__quick-row {
   display: flex;
-  gap: var(--spacing-md);
+  gap: var(--space-24);
   justify-content: center;
 }
 .progress-editor__quick-btn {
@@ -1280,7 +1280,7 @@
 }
 .progress-editor__footer {
   display: flex;
-  gap: var(--spacing-md);
+  gap: var(--space-24);
 }
 .progress-editor__btn {
   flex: 1;

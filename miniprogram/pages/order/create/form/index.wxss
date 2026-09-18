@@ -5,7 +5,7 @@ page { background-color: var(--color-bg-page); }
 
 /* ══ 卡片 ══ */
 .sec {
-  margin: var(--card-gap) 0; padding: var(--card-padding) var(--spacing-lg);
+  margin: var(--card-gap) 0; padding: var(--card-padding) var(--space-32);
   background: var(--color-bg-card); border-radius: var(--radius-xl);
 }
 .sec-hd {
@@ -237,8 +237,8 @@ page { background-color: var(--color-bg-page); }
 .bar {
   position: fixed; bottom: 0; left: 0; right: 0;
   display: flex; align-items: center; gap: 12px;
-  padding: var(--spacing-sm) var(--page-padding-x);
-  padding-bottom: calc(var(--spacing-sm) + env(safe-area-inset-bottom));
+  padding: var(--space-16) var(--page-padding-x);
+  padding-bottom: calc(var(--space-16) + env(safe-area-inset-bottom));
   background: var(--color-bg-card); border-top: 1px solid var(--color-border);
   box-shadow: var(--shadow-sm);
 }
@@ -271,12 +271,12 @@ page { background-color: var(--color-bg-page); }
 }
 .sheet-hd {
   flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
-  padding: 14px var(--spacing-lg) 10px;
+  padding: 14px var(--space-32) 10px;
   border-bottom: 1px solid var(--color-border);
 }
 .sheet-t { font-size: var(--font-size-md); font-weight: 600; color: var(--color-text-primary); }
 .sheet-x { font-size: var(--font-size-sm); color: var(--color-text-secondary); padding: 4px 2px; }
-.sheet-bd { flex: 1; min-height: 0; padding: 12px var(--spacing-lg); box-sizing: border-box; }
+.sheet-bd { flex: 1; min-height: 0; padding: 12px var(--space-32); box-sizing: border-box; }
 .sheet-empty {
   font-size: var(--font-size-xs); color: var(--color-text-tertiary);
   text-align: center; padding: 36px 0;

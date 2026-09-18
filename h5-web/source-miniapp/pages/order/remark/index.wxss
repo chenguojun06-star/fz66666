@@ -21,13 +21,13 @@
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--space-24);
 }
 
 .form-row-col {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--space-16);
   padding: 4px 0;
 }
 
@@ -41,7 +41,7 @@
 .remark-area {
   width: 100%;
   min-height: 100px;
-  padding: var(--spacing-md);
+  padding: var(--space-24);
   font-size: var(--font-size-md);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -54,7 +54,7 @@
 .photo-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-md);
+  gap: var(--space-24);
 }
 .photo-item {
   position: relative;
@@ -82,8 +82,8 @@
 
 .action-bar {
   display: flex;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-md);
+  gap: var(--space-24);
+  margin-top: var(--space-24);
 }
 .act-btn {
   flex: 1;
@@ -111,7 +111,7 @@
 .remark-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--space-24);
 }
 .remark-card {
   
@@ -127,8 +127,8 @@
 .remark-header {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
+  gap: var(--space-16);
+  margin-bottom: var(--space-16);
 }
 .remark-author {
   font-weight: 600;
@@ -154,7 +154,7 @@
   line-height: 1.6;
   color: var(--color-text-primary);
 }
-.remark-images { margin-top: var(--spacing-sm); }
+.remark-images { margin-top: var(--space-16); }
 
 /* 本地覆盖：使用 text-align: center 而非全局 flex 布局，此页空状态为纯文本 */
 .empty-state { text-align: center; padding: 60px 0; }

@@ -283,9 +283,9 @@
   left: 0;
   right: 0;
   display: flex;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
-  padding-bottom: calc(var(--spacing-sm) + env(safe-area-inset-bottom));
+  gap: var(--space-16);
+  padding: var(--space-16) var(--space-24);
+  padding-bottom: calc(var(--space-16) + env(safe-area-inset-bottom));
   background: var(--color-bg-card);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
@@ -360,7 +360,7 @@
 .form-input {
   width: 100%;
   height: var(--input-height);
-  padding: 0 var(--spacing-md);
+  padding: 0 var(--space-24);
   font-size: var(--font-size-md);
   color: var(--color-text-primary);
   background: var(--color-bg-page);
@@ -371,7 +371,7 @@
 .form-textarea {
   width: 100%;
   min-height: 60px;
-  padding: 8px var(--spacing-md);
+  padding: 8px var(--space-24);
   font-size: var(--font-size-md);
   color: var(--color-text-primary);
   background: var(--color-bg-page);
@@ -384,7 +384,7 @@
   align-items: center;
   justify-content: space-between;
   height: var(--input-height);
-  padding: 0 var(--spacing-md);
+  padding: 0 var(--space-24);
   font-size: var(--font-size-md);
   color: var(--color-text-primary);
   background: var(--color-bg-page);

@@ -361,7 +361,7 @@
   font-weight: var(--font-weight-medium);
   color: var(--color-text-tertiary);
   padding: 0 var(--space-4);
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--space-16);
 }
 
 /* --- 工序选择器 --- */

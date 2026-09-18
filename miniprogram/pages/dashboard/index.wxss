@@ -437,7 +437,7 @@
 
 /* ============ 展开区功能 ============ */
 .expand-section {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--space-24);
 }
 .expand-section:last-child {
   margin-bottom: 0;
@@ -447,11 +447,11 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--space-16);
 }
 /* 工序节点 */
 .process-node {
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--space-16);
 }
 .process-node:last-child {
   margin-bottom: 0;
@@ -551,15 +551,15 @@
 /* 快捷操作 */
 .expand-actions {
   display: flex;
-  gap: var(--spacing-md);
-  padding: 2px 0 var(--spacing-md);
-  margin-bottom: var(--spacing-sm);
+  gap: var(--space-24);
+  padding: 2px 0 var(--space-24);
+  margin-bottom: var(--space-16);
   border-bottom: 1px solid var(--color-border-light);
   flex-wrap: wrap;
 }
 .act-btn {
   font-size: var(--font-size-xs);
-  padding: 3px var(--spacing-md);
+  padding: 3px var(--space-24);
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
   background: var(--color-bg-gray);

@@ -12,7 +12,7 @@ page {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 0 var(--page-padding-x) var(--spacing-md);
+  margin: 0 var(--page-padding-x) var(--space-24);
   padding: 16px;
   background: var(--color-bg-card);
   border-radius: var(--radius-2xl);
@@ -87,7 +87,7 @@ page {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 var(--page-padding-x) var(--spacing-md);
+  margin: 0 var(--page-padding-x) var(--space-24);
   background: var(--color-primary-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
@@ -141,7 +141,7 @@ page {
 
 /* -- 应用网格（按4大分类分组） -- */
 .menu-section {
-  margin: 0 var(--page-padding-x) var(--spacing-md);
+  margin: 0 var(--page-padding-x) var(--space-24);
   padding: 16px;
   background: var(--color-bg-card);
   border-radius: var(--radius-2xl);
@@ -259,7 +259,7 @@ page {
 
 /* ============ 考勤打卡卡片 ============ */
 .attendance-card {
-  margin: 0 var(--page-padding-x) var(--spacing-md);
+  margin: 0 var(--page-padding-x) var(--space-24);
   padding: 14px 16px;
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);

@@ -137,13 +137,13 @@
 .pc-divider {
   height: 1px;
   background: var(--color-bg-page);
-  margin: var(--spacing-md) 0;
+  margin: var(--space-24) 0;
 }
 .pc-body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-md);
+  gap: var(--space-24);
 }
 .pc-col {
   flex: 1;

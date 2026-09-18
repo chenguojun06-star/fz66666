@@ -699,7 +699,7 @@
 
 /* ============ 展开区功能 ============ */
 .expand-section {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--space-24);
 }
 .expand-section:last-child {
   margin-bottom: 0;
@@ -709,11 +709,11 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--space-16);
 }
 /* 工序节点 */
 .process-node {
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--space-16);
 }
 .process-node:last-child {
   margin-bottom: 0;
@@ -819,9 +819,9 @@
 /* D-228：对齐生产管理 dashboard —— 按钮组下方加分隔线，与后面的明细区形成视觉分区 */
 .expand-actions {
   display: flex;
-  gap: var(--spacing-md);
-  padding: 2px 0 var(--spacing-md);
-  margin-bottom: var(--spacing-sm);
+  gap: var(--space-24);
+  padding: 2px 0 var(--space-24);
+  margin-bottom: var(--space-16);
   border-bottom: 1px solid var(--color-border-light);
   flex-wrap: wrap;
 }

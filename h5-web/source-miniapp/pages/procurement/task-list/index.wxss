@@ -11,7 +11,7 @@
 .container {
   min-height: 100vh;
   background: var(--color-bg-page);
-  padding: 0 var(--page-padding-x) calc(var(--spacing-2xl) + env(safe-area-inset-bottom));
+  padding: 0 var(--page-padding-x) calc(var(--space-48) + env(safe-area-inset-bottom));
 }
 
 /* 空状态图标 — line-icon 需要额外居中（页面级修正，未抽入全局） */
