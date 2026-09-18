@@ -261,7 +261,8 @@ const _MaterialInventory: React.FC = () => {
                     loading={loading}
                     rowKey="id"
                     stickyHeader
-                    scroll={{ x: 1600 }}
+                    // D-470：原 x:1600 小于列宽合计(约1770)，antd 会压缩列宽导致文字挤压变形
+                    scroll={{ x: 'max-content' }}
                     pagination={false}
                     emptyDescription="暂无原料库存数据"
                     emptyActionText="去新增入库"

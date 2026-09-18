@@ -232,7 +232,8 @@ export function useMaterialInventoryColumns({
       key: 'price',
       width: 180,
       render: (_, record) => (
-        <Space orientation="vertical" size={10} style={{ width: '100%' }}>
+        // D-470：垂直间距统一为 4（原为 10），与其余列保持一致
+        <Space orientation="vertical" size={4} style={{ width: '100%' }}>
           <div>
             <div className="u-fs-var--font-size-sm u-mb-4 u-fw-500" style={{ color: 'var(--neutral-text-disabled)' }}>单价</div>
             <div className="u-fw-700" style={{ fontSize: "var(--font-size-lg)", color: 'var(--neutral-text)' }}>
@@ -271,7 +272,8 @@ export function useMaterialInventoryColumns({
       key: 'records',
       width: 200,
       render: (_, record) => (
-        <Space orientation="vertical" size={6} style={{ width: '100%' }}>
+        // D-470：垂直间距统一为 4（原为 6），与其余列保持一致
+        <Space orientation="vertical" size={4} style={{ width: '100%' }}>
           <div style={{ padding: '4px 8px', background: 'var(--color-bg-container)' }}>
             <div className="u-fs-var--font-size-xs u-mb-2" style={{ color: 'var(--neutral-text-secondary)' }}> 最后入库</div>
             <div className="u-fs-var--font-size-xs" style={{ color: 'var(--neutral-text-secondary)' }}>{record.lastInboundDate}</div>
