@@ -873,30 +873,35 @@ public class MaterialColorCardOrchestrator {
 
             MaterialDatabase md = new MaterialDatabase();
             md.setId(UUID.randomUUID().toString().replace("-", ""));
-            md.setMaterialCode(StringUtils.hasText(item.getMaterialCode())
+            // D-466：色卡条目字段比 t_material_database 宽（如 material_code 100 vs 50），
+            // 直接落库会触发 Data truncation。生成时按目标列宽截断，避免整批失败。
+            md.setMaterialCode(fit(StringUtils.hasText(item.getMaterialCode())
                     ? item.getMaterialCode()
-                    : materialDatabaseService.generateMaterialCode(item.getMaterialType()));
+                    : materialDatabaseService.generateMaterialCode(item.getMaterialType()), 50));
             if (StringUtils.hasText(header)) {
-                md.setMaterialName(header
+                md.setMaterialName(fit(header
                         + (StringUtils.hasText(item.getColor()) ? item.getColor() : "")
-                        + (StringUtils.hasText(item.getMaterialCode()) ? item.getMaterialCode() : ""));
+                        + (StringUtils.hasText(item.getMaterialCode()) ? item.getMaterialCode() : ""), 100));
             } else {
-                md.setMaterialName(item.getMaterialName());
+                md.setMaterialName(fit(item.getMaterialName(), 100));
             }
-            md.setMaterialType(item.getMaterialType());
-            md.setColor(item.getColor());
-            md.setFabricWidth(item.getFabricWidth());
-            md.setFabricWeight(item.getFabricWeight());
-            md.setFabricComposition(item.getFabricComposition());
-            md.setSpecifications(item.getSpecifications());
-            md.setUnit(item.getUnit());
+            md.setMaterialType(fit(item.getMaterialType(), 20));
+            md.setColor(fit(item.getColor(), 100));
+            md.setFabricWidth(fit(item.getFabricWidth(), 50));
+            md.setFabricWeight(fit(item.getFabricWeight(), 50));
+            md.setFabricComposition(fit(item.getFabricComposition(), 100));
+            md.setSpecifications(fit(item.getSpecifications(), 100));
+            // D-466（P0 根因）：t_material_database.unit 是 NOT NULL，而色卡条目（尤其 AI 整卡识别
+            // 生成的条目）常常没有单位 → 直接落库报 "Column 'unit' cannot be null" → 接口 500。
+            // 这里按物料类型兜底默认单位，用户可在物料库里再改。
+            md.setUnit(resolveUnit(item.getUnit(), item.getMaterialType()));
             md.setSupplierId(card.getSupplierId());
-            md.setSupplierName(card.getSupplierName());
-            md.setSupplierContactPerson(card.getSupplierContactPerson());
-            md.setSupplierContactPhone(card.getSupplierContactPhone());
+            md.setSupplierName(fit(card.getSupplierName(), 100));
+            md.setSupplierContactPerson(fit(card.getSupplierContactPerson(), 50));
+            md.setSupplierContactPhone(fit(card.getSupplierContactPhone(), 20));
             md.setUnitPrice(item.getUnitPrice());
-            md.setImage(item.getImage());
-            md.setRemark(item.getRemark());
+            md.setImage(fit(item.getImage(), 500));
+            md.setRemark(fit(item.getRemark(), 500));
             md.setStatus("pending");
             md.setTenantId(card.getTenantId());
             md.setDeleteFlag(0);
@@ -917,6 +922,37 @@ public class MaterialColorCardOrchestrator {
     }
 
     // ==================== 辅助 ====================
+
+    /**
+     * D-466：按目标列宽截断，null 原样返回。
+     * 色卡条目表比 t_material_database 宽松（如 material_code 100 vs 50），
+     * 不截断的话一条超长就会让整批生成 500。
+     */
+    private static String fit(String value, int maxLen) {
+        if (value == null || value.length() <= maxLen) {
+            return value;
+        }
+        return value.substring(0, maxLen);
+    }
+
+    /**
+     * D-466：单位兜底。t_material_database.unit 为 NOT NULL，
+     * 而色卡条目（AI 整卡识别/拍照建卡）经常没有单位，直接落库会 500。
+     * 面料/里料默认「米」，辅料默认「个」，其余留空串（与建表默认一致）。
+     */
+    private static String resolveUnit(String unit, String materialType) {
+        if (StringUtils.hasText(unit)) {
+            return fit(unit.trim(), 20);
+        }
+        String type = materialType == null ? "" : materialType.toLowerCase();
+        if ("fabric".equals(type) || "lining".equals(type)) {
+            return "米";
+        }
+        if ("accessory".equals(type)) {
+            return "个";
+        }
+        return "";
+    }
 
     /**
      * 自动同步供应商到工厂管理表
