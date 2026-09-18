@@ -57,9 +57,14 @@ REMOTE=$(git rev-parse origin/main)
 # 幂等：已启用且 ≥4G 就什么都不做；创建失败绝不阻断部署（|| true）。
 SWAP_FILE=/swapfile
 SWAP_TARGET_KB=4194304   # 4G
+# D-469：mkswap 会占用少量元数据，4G 文件实际可用约 4194300KB，永远比 4194304 小几 KB。
+# 直接与目标值比较会**每轮都误判为不足**，导致每 2 分钟 swapoff→rm→fallocate→mkswap→swapon
+# 一次（线上实测），swapoff 会把内容换回内存造成瞬间压力，纯粹自伤。故留 64MB 容差。
+SWAP_TOLERANCE_KB=65536
+SWAP_MIN_KB=$((SWAP_TARGET_KB - SWAP_TOLERANCE_KB))
 CUR_SWAP_KB=$(awk '/^\/swapfile/{print $3}' /proc/swaps 2>/dev/null | head -1)
 CUR_SWAP_KB=${CUR_SWAP_KB:-0}
-if [ "$CUR_SWAP_KB" -lt "$SWAP_TARGET_KB" ] 2>/dev/null; then
+if [ "$CUR_SWAP_KB" -lt "$SWAP_MIN_KB" ] 2>/dev/null; then
   echo "[$(date '+%F %T')] ℹ️ 当前 swapfile ${CUR_SWAP_KB}KB < 目标 ${SWAP_TARGET_KB}KB，尝试扩容"
   # ⚠️ 所有 sudo 都加 </dev/null：cron 下若 sudo 需密码会挂起等待输入，卡死整轮部署
   if [ -f "$SWAP_FILE" ]; then sudo swapoff "$SWAP_FILE" </dev/null >/dev/null 2>&1 || true; sudo rm -f "$SWAP_FILE" || true; fi
