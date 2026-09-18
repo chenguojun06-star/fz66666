@@ -766,7 +766,7 @@
 .proc-tl-item {
   display: flex;
   gap: 12px;
-  padding-bottom: 4rpx;
+  padding-bottom: var(--space-4);
 }
 /* 左侧轨道 */
 .proc-tl-rail {
@@ -843,7 +843,7 @@
   width: 2rpx;
   min-height: 32rpx;
   background: var(--color-border);
-  margin-top: 4rpx;
+  margin-top: var(--space-4);
 }
 /* 右侧内容区 */
 .proc-tl-body {
@@ -887,14 +887,14 @@
   color: var(--color-text-tertiary);
   background: var(--color-bg-hover);
   border-radius: var(--radius-full);
-  padding: 2rpx 12rpx;
+  padding: var(--space-2) var(--space-12);
   flex-shrink: 0;
 }
 .proc-tl-meta {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  margin-top: 8rpx;
+  margin-top: var(--space-8);
 }
 .proc-tl-meta-text {
   font-size: var(--font-size-2xs);

@@ -46,14 +46,14 @@
 }
 
 .qr-card-fail {
-  padding: 40rpx 32rpx;
+  padding: var(--space-40) var(--space-32);
 }
 
 .qr-fail-text {
   font-size: var(--font-size-md);
   color: var(--color-text-tertiary);
   display: block;
-  margin-bottom: 24rpx;
+  margin-bottom: var(--space-24);
 }
 
 .retry-btn {
@@ -75,7 +75,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80rpx 0;
+  padding: var(--space-80) 0;
   gap: 16rpx;
 }
 

@@ -4,7 +4,7 @@
 @import '/styles/order-card.wxss';
 
 .container {
-  padding: 12rpx var(--page-padding-x);
+  padding: var(--space-12) var(--page-padding-x);
   background: var(--color-bg-page);
   min-height: 100vh;
 }
@@ -16,7 +16,7 @@
 
 /* ==================== 列表 ==================== */
 .stock-list {
-  margin-top: 8rpx;
+  margin-top: var(--space-8);
 }
 
 .stock-item {
@@ -26,7 +26,7 @@
   background: var(--color-bg-card);
   
   
-  margin-bottom: 12rpx;
+  margin-bottom: var(--space-12);
   box-shadow: var(--shadow-sm);
 
   border: 1px solid var(--color-border);
@@ -39,7 +39,7 @@
   width: 100rpx;
   height: 100rpx;
   border-radius: var(--radius-xs);
-  margin-right: 16rpx;
+  margin-right: var(--space-16);
   flex-shrink: 0;
   background: var(--color-bg-page);
 }
@@ -48,7 +48,7 @@
   width: 100rpx;
   height: 100rpx;
   border-radius: var(--radius-xs);
-  margin-right: 16rpx;
+  margin-right: var(--space-16);
   flex-shrink: 0;
   background: var(--color-bg-page);
   display: flex;
@@ -64,7 +64,7 @@
 .stock-row {
   display: flex;
   align-items: center;
-  margin-bottom: 8rpx;
+  margin-bottom: var(--space-8);
 }
 
 .stock-row:last-child {
@@ -103,19 +103,19 @@
 .qty-unit {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  margin-left: 4rpx;
+  margin-left: var(--space-4);
 }
 
 .stock-loan {
   font-size: var(--font-size-2xs);
   color: var(--color-warning);
-  margin-top: 4rpx;
+  margin-top: var(--space-4);
 }
 
 .stock-arrow {
   font-size: var(--font-size-lg);
   color: var(--color-text-secondary);
-  margin-top: 4rpx;
+  margin-top: var(--space-4);
 }
 
 /* 空状态 */
@@ -123,12 +123,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 80rpx 0;
+  padding: var(--space-80) 0;
 }
 
 .empty-icon {
   font-size: 40px;
-  margin-bottom: 16rpx;
+  margin-bottom: var(--space-16);
   opacity: 0.6;
 }
 
@@ -140,7 +140,7 @@
 /* 加载更多 */
 .load-more {
   text-align: center;
-  padding: 24rpx 0;
+  padding: var(--space-24) 0;
 }
 
 .load-text {
@@ -151,7 +151,7 @@
 /* ==================== 详情页头部 ==================== */
 .header {
   position: relative;
-  margin-bottom: 12rpx;
+  margin-bottom: var(--space-12);
 }
 
 .header-back {
@@ -160,7 +160,7 @@
   top: 0;
   font-size: var(--font-size-md);
   color: var(--color-primary);
-  padding: 8rpx 0;
+  padding: var(--space-8) 0;
 }
 
 .header-title {
@@ -177,12 +177,12 @@
   top: 0;
   font-size: var(--font-size-sm);
   color: var(--color-primary);
-  padding: 8rpx 0;
+  padding: var(--space-8) 0;
 }
 
 .header-info {
   text-align: center;
-  margin-bottom: 16rpx;
+  margin-bottom: var(--space-16);
 }
 
 .header-sub {
@@ -256,7 +256,7 @@
   width: 100%;
   height: 220rpx;
   border-radius: var(--radius-xs);
-  margin-bottom: 10rpx;
+  margin-bottom: var(--space-10);
   background: var(--color-bg-page);
 }
 
@@ -266,7 +266,7 @@
   display: flex;
   gap: 8px;
   padding: 12px 0 4px;
-  margin-top: 8rpx;
+  margin-top: var(--space-8);
   border-top: 1rpx dashed var(--color-border);
 }
 .stat-card {
@@ -322,7 +322,7 @@
 
 /* 仓库选择区域 */
 .warehouse-section {
-  margin-bottom: 12rpx;
+  margin-bottom: var(--space-12);
   
   background: var(--color-bg-page);
   
@@ -379,7 +379,7 @@
 
 /* D-171：仓库/库位搜索框 */
 .warehouse-search-input {
-  margin: 8rpx 0 12rpx;
+  margin: var(--space-8) 0 var(--space-12);
 }
 
 /* D-171：库位chips显示已用/容量，避免超限 */
@@ -390,7 +390,7 @@
 }
 
 .warehouse-chip-qty {
-  font-size: var(--font-size-2xs, 20rpx);
+  font-size: var(--font-size-2xs, var(--fs-20));
   color: var(--color-text-tertiary);
   font-weight: var(--font-weight-regular, 400);
 }
@@ -494,7 +494,7 @@
   width: 100%;
   max-height: 80vh;
   background: #fff;
-  border-radius: 24rpx 24rpx 0 0;
+  border-radius: var(--radius-24) var(--radius-24) 0 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -503,33 +503,33 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24rpx 32rpx;
+  padding: var(--space-24) var(--space-32);
   border-bottom: 1rpx solid #eee;
 }
 .loan-picker-title {
-  font-size: 32rpx;
+  font-size: var(--fs-32);
   font-weight: bold;
   color: #333;
 }
 .loan-picker-close {
-  font-size: 48rpx;
+  font-size: var(--fs-48);
   color: #999;
-  padding: 0 8rpx;
+  padding: 0 var(--space-8);
   line-height: 1;
 }
 .loan-type-tabs {
   display: flex;
-  padding: 16rpx 32rpx 0;
+  padding: var(--space-16) var(--space-32) 0;
   gap: 16rpx;
 }
 .loan-type-tab {
   flex: 1;
   text-align: center;
-  padding: 16rpx 0;
-  font-size: 28rpx;
+  padding: var(--space-16) 0;
+  font-size: var(--fs-28);
   color: #666;
   border: 2rpx solid var(--color-border);
-  border-radius: 12rpx;
+  border-radius: var(--radius-12);
   background: var(--color-bg-subtle);
 }
 .loan-type-tab--active {
@@ -541,11 +541,11 @@
 .loan-qty-row {
   display: flex;
   align-items: center;
-  padding: 24rpx 32rpx;
+  padding: var(--space-24) var(--space-32);
   border-bottom: 1rpx solid var(--color-bg-subtle);
 }
 .loan-qty-label {
-  font-size: 28rpx;
+  font-size: var(--fs-28);
   color: #333;
   width: 160rpx;
 }
@@ -553,15 +553,15 @@
   flex: 1;
   height: 64rpx;
   border: 2rpx solid var(--color-border);
-  border-radius: 8rpx;
-  padding: 0 16rpx;
-  font-size: 28rpx;
+  border-radius: var(--radius-8);
+  padding: 0 var(--space-16);
+  font-size: var(--fs-28);
   background: #fff;
   text-align: center;
 }
 .loan-qty-max {
-  margin-left: 16rpx;
-  font-size: 24rpx;
+  margin-left: var(--space-16);
+  font-size: var(--fs-24);
   color: #999;
   width: 200rpx;
   text-align: right;
@@ -571,16 +571,16 @@
 .loan-search-row {
   display: flex;
   align-items: center;
-  margin: 16rpx 32rpx 0;
-  padding: 0 16rpx;
+  margin: var(--space-16) var(--space-32) 0;
+  padding: 0 var(--space-16);
   background: var(--color-bg-subtle);
-  border-radius: 12rpx;
+  border-radius: var(--radius-12);
   border: 2rpx solid var(--color-border);
 }
 .loan-search-input {
   flex: 1;
   height: 64rpx;
-  font-size: 28rpx;
+  font-size: var(--fs-28);
   color: #333;
   background: transparent;
 }
@@ -590,28 +590,28 @@
   line-height: 36rpx;
   text-align: center;
   color: #999;
-  font-size: 36rpx;
+  font-size: var(--fs-36);
   border-radius: 50%;
   background: var(--color-border);
-  margin-left: 8rpx;
+  margin-left: var(--space-8);
 }
 .loan-loading,
 .loan-empty {
-  padding: 60rpx 0;
+  padding: var(--space-60) 0;
   text-align: center;
   color: #999;
-  font-size: 28rpx;
+  font-size: var(--fs-28);
 }
 .loan-target-list {
   flex: 1;
   overflow-y: auto;
   max-height: 50vh;
-  padding: 8rpx 32rpx;
+  padding: var(--space-8) var(--space-32);
 }
 .loan-target-item {
   display: flex;
   align-items: center;
-  padding: 24rpx 16rpx;
+  padding: var(--space-24) var(--space-16);
   border-bottom: 1rpx solid var(--color-bg-subtle);
   position: relative;
 }
@@ -620,33 +620,33 @@
   border-color: var(--color-primary);
 }
 .loan-target-name {
-  font-size: 28rpx;
+  font-size: var(--fs-28);
   color: #333;
   flex: 1;
 }
 .loan-target-sub {
-  font-size: 24rpx;
+  font-size: var(--fs-24);
   color: #999;
-  margin-left: 16rpx;
+  margin-left: var(--space-16);
 }
 .loan-target-check {
   color: var(--color-primary);
-  font-size: 32rpx;
+  font-size: var(--fs-32);
   font-weight: bold;
-  margin-left: 16rpx;
+  margin-left: var(--space-16);
 }
 .loan-picker-footer {
   display: flex;
-  padding: 16rpx 32rpx 32rpx;
+  padding: var(--space-16) var(--space-32) var(--space-32);
   gap: 16rpx;
   border-top: 1rpx solid #eee;
 }
 .loan-btn {
   flex: 1;
   text-align: center;
-  padding: 20rpx 0;
-  font-size: 30rpx;
-  border-radius: 12rpx;
+  padding: var(--space-20) 0;
+  font-size: var(--fs-30);
+  border-radius: var(--radius-12);
   border: 2rpx solid;
 }
 .loan-btn--cancel {

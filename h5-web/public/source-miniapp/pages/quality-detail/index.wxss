@@ -5,7 +5,7 @@
   min-height: 100vh;
   background: var(--color-bg);
   padding: 0 var(--page-padding-x);
-  padding-bottom: 40rpx;
+  padding-bottom: var(--space-40);
   box-sizing: border-box;
 }
 
@@ -21,12 +21,12 @@
   to { transform: rotate(360deg); }
 }
 .loading-text {
-  margin-top: 24rpx;
+  margin-top: var(--space-24);
   font-size: var(--font-size-md);
   color: var(--color-text-tertiary);
 }
 .loading-inline {
-  padding: 40rpx 0;
+  padding: var(--space-40) 0;
   text-align: center;
 }
 
@@ -38,7 +38,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 32rpx;
+  margin-bottom: var(--space-32);
 }
 .empty-text {
   font-size: var(--font-size-lg);
@@ -46,12 +46,12 @@
   font-weight: 600;
 }
 .empty-hint {
-  margin-top: 12rpx;
+  margin-top: var(--space-12);
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
 .empty-inline {
-  padding: 60rpx 0;
+  padding: var(--space-60) 0;
   text-align: center;
 }
 .empty-text-inline {
@@ -78,7 +78,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24rpx;
+  margin-bottom: var(--space-24);
 }
 .card-title-with-tag {
   display: flex;
@@ -93,7 +93,7 @@
   font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-text-primary);
-  margin-bottom: 20rpx;
+  margin-bottom: var(--space-20);
   display: block;
 }
 .card-title-hint {
@@ -101,11 +101,11 @@
   color: var(--color-text-tertiary);
 }
 .card-badge {
-  margin-left: 16rpx;
+  margin-left: var(--space-16);
   min-width: 36rpx;
   height: 36rpx;
   line-height: 36rpx;
-  padding: 0 10rpx;
+  padding: 0 var(--space-10);
   text-align: center;
   font-size: var(--font-size-2xs);
   color: var(--color-text-white);
@@ -121,13 +121,13 @@
 .card-collapse-icon {
   font-size: var(--font-size-xs);
   color: var(--color-primary);
-  padding: 8rpx 16rpx;
+  padding: var(--space-8) var(--space-16);
 }
 
 /* ========== 1.5 页内 tab 栏（质检明细 / 尺寸表，对齐样衣开发详情页） ========== */
 .detail-tabs {
   display: flex;
-  margin: 0 24rpx;
+  margin: 0 var(--space-24);
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -136,7 +136,7 @@
 .detail-tab {
   flex: 1;
   text-align: center;
-  padding: 20rpx 0;
+  padding: var(--space-20) 0;
   font-size: var(--font-size-md);
   color: var(--color-text-secondary);
   position: relative;
@@ -153,7 +153,7 @@
   bottom: 0;
   width: 48rpx;
   height: 6rpx;
-  border-radius: 6rpx;
+  border-radius: var(--radius-6);
   background: var(--color-primary);
 }
 
@@ -186,7 +186,7 @@
   font-size: var(--font-size-xs);
 }
 .size-cell {
-  padding: 16rpx 12rpx;
+  padding: var(--space-16) var(--space-12);
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   white-space: nowrap;
@@ -210,7 +210,7 @@
   background: var(--color-bg-muted);
 }
 .basic-header-info {
-  margin-left: 24rpx;
+  margin-left: var(--space-24);
   flex: 1;
   min-width: 0;
 }
@@ -228,8 +228,8 @@
   color: var(--color-text-primary);
 }
 .status-pill {
-  margin-left: 16rpx;
-  padding: 4rpx 16rpx;
+  margin-left: var(--space-16);
+  padding: var(--space-4) var(--space-16);
   border-radius: var(--radius-md);
   font-size: var(--font-size-2xs);
   font-weight: 500;
@@ -239,18 +239,18 @@
 .status-pill.status-warning { background: rgba(255, 159, 0, 0.12); color: var(--color-warning); }
 .status-pill.status-info { background: rgba(var(--color-primary-rgb), 0.12); color: var(--color-primary); }
 .basic-style-no {
-  margin-top: 6rpx;
+  margin-top: var(--space-6);
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   display: block;
 }
 .basic-info-rows {
-  margin-top: 12rpx;
+  margin-top: var(--space-12);
 }
 .basic-info-row {
   display: flex;
   align-items: center;
-  padding: 12rpx 0;
+  padding: var(--space-12) 0;
   border-bottom: 1rpx solid var(--color-border-light);
   font-size: var(--font-size-sm);
 }
@@ -266,8 +266,8 @@
   word-break: break-all;
 }
 .remain-badge {
-  margin-left: 16rpx;
-  padding: 2rpx 12rpx;
+  margin-left: var(--space-16);
+  padding: var(--space-2) var(--space-12);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-2xs);
   font-weight: 600;
@@ -304,7 +304,7 @@
   font-size: var(--font-size-3xl);
   font-weight: 700;
   color: var(--color-text-primary);
-  margin-top: 8rpx;
+  margin-top: var(--space-8);
   display: block;
 }
 .qty-progress-value.qty-success { color: var(--color-success); }
@@ -312,12 +312,12 @@
 
 /* ========== 3/4. 信息行 / 质检明细 ========== */
 .info-rows {
-  margin-top: 4rpx;
+  margin-top: var(--space-4);
 }
 .info-row {
   display: flex;
   align-items: flex-start;
-  padding: 16rpx 0;
+  padding: var(--space-16) 0;
   border-bottom: 1rpx solid var(--color-border-light);
   font-size: var(--font-size-md);
 }
@@ -336,13 +336,13 @@
 .info-row-value.defect-value { color: var(--color-danger); font-weight: 500; }
 
 .defect-photo-section {
-  margin-top: 20rpx;
+  margin-top: var(--space-20);
 }
 .defect-photo-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16rpx;
+  margin-bottom: var(--space-16);
 }
 .defect-photo-title {
   font-size: var(--font-size-sm);
@@ -360,8 +360,8 @@
 .defect-photo-img {
   width: 200rpx;
   height: 200rpx;
-  margin-right: 12rpx;
-  margin-bottom: 12rpx;
+  margin-right: var(--space-12);
+  margin-bottom: var(--space-12);
   border-radius: var(--radius-sm);
   background: var(--color-bg-muted);
 }
@@ -369,7 +369,7 @@
 /* ========== 5. 质检概览（待质检/待入库/合格率，紧凑小卡片） ========== */
 .overview-grid {
   display: flex;
-  margin: 12rpx 0;
+  margin: var(--space-12) 0;
   gap: 12rpx;
 }
 .overview-card {
@@ -379,7 +379,7 @@
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.04);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: 16rpx 8rpx;
+  padding: var(--space-16) var(--space-8);
   box-sizing: border-box;
 }
 .overview-card--primary { border-top: 6rpx solid var(--color-primary); }
@@ -393,12 +393,12 @@
   line-height: 1.1;
 }
 .overview-label {
-  margin-top: 6rpx;
+  margin-top: var(--space-6);
   font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
 }
 .overview-hint {
-  margin-top: 8rpx;
+  margin-top: var(--space-8);
   font-size: var(--font-size-xxs);
   color: var(--color-primary);
 }
@@ -409,8 +409,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16rpx 0;
-  margin-bottom: 12rpx;
+  padding: var(--space-16) 0;
+  margin-bottom: var(--space-12);
   border-bottom: 1rpx solid var(--color-border-light);
 }
 .bundle-select-actions {
@@ -420,7 +420,7 @@
 .bundle-select-action {
   font-size: var(--font-size-sm);
   color: var(--color-primary);
-  padding: 8rpx 20rpx;
+  padding: var(--space-8) var(--space-20);
   border-right: 1rpx solid var(--color-border-light);
 }
 .bundle-select-action:last-child { border-right: none; }
@@ -437,7 +437,7 @@
 .bundle-select-item {
   display: flex;
   align-items: center;
-  padding: 20rpx;
+  padding: var(--space-20);
   background: var(--color-bg-muted);
   border-radius: var(--radius-sm);
   border: 2rpx solid transparent;
@@ -456,7 +456,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-right: 20rpx;
+  margin-right: var(--space-20);
   background: var(--color-bg-card);
   transition: all 0.15s ease;
 }
@@ -489,18 +489,18 @@
 .bundle-select-meta {
   display: flex;
   flex-wrap: wrap;
-  margin-top: 6rpx;
+  margin-top: var(--space-6);
 }
 .bundle-select-meta-item {
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
-  margin-right: 16rpx;
+  margin-right: var(--space-16);
 }
 .bundle-select-meta-item:last-child { margin-right: 0; }
 
 .tag {
   display: inline-block;
-  padding: 2rpx 12rpx;
+  padding: var(--space-2) var(--space-12);
   border-radius: var(--radius-xs);
   font-size: var(--font-size-2xs);
   line-height: 1.6;
@@ -518,8 +518,8 @@
 
 /* ========== 页面内质检表单（单选，原弹窗样式改为 .qc-form-*） ========== */
 .qc-form {
-  margin-top: 24rpx;
-  padding: 24rpx;
+  margin-top: var(--space-24);
+  padding: var(--space-24);
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
   border: 1rpx solid var(--color-border-light);
@@ -532,14 +532,14 @@
   font-size: var(--font-size-md-lg);
   font-weight: 600;
   color: var(--color-text-primary);
-  margin-bottom: 20rpx;
+  margin-bottom: var(--space-20);
 }
 .qc-form-info-card,
 .wh-form-info-card {
   background: var(--color-bg-muted);
   
   
-  margin-bottom: 20rpx;
+  margin-bottom: var(--space-20);
 
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
@@ -550,7 +550,7 @@
 .wh-form-info-row {
   display: flex;
   align-items: center;
-  padding: 10rpx 0;
+  padding: var(--space-10) 0;
   font-size: var(--font-size-sm);
 }
 .qc-form-info-label,
@@ -576,7 +576,7 @@
 .wh-form-row {
   display: flex;
   gap: 20rpx;
-  margin-bottom: 20rpx;
+  margin-bottom: var(--space-20);
 }
 .qc-form-col,
 .qc-form-col-full,
@@ -589,13 +589,13 @@
 .wh-form-label {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  margin-bottom: 12rpx;
+  margin-bottom: var(--space-12);
 }
 .qc-form-input {
   height: 80rpx;
   background: var(--color-bg-muted);
   border-radius: var(--radius-sm);
-  padding: 0 20rpx;
+  padding: 0 var(--space-20);
   font-size: var(--font-size-md-lg);
   color: var(--color-text-primary);
 }
@@ -606,12 +606,12 @@
   height: 80rpx;
   display: flex;
   align-items: center;
-  padding: 0 20rpx;
+  padding: 0 var(--space-20);
 }
 .qc-form-textarea {
   background: var(--color-bg-muted);
   border-radius: var(--radius-sm);
-  padding: 16rpx 20rpx;
+  padding: var(--space-16) var(--space-20);
   min-height: 120rpx;
   font-size: var(--font-size-md);
   color: var(--color-text-primary);
@@ -622,13 +622,13 @@
 .wh-form-divider {
   height: 1rpx;
   background: var(--color-border-light);
-  margin: 20rpx 0;
+  margin: var(--space-20) 0;
 }
 .qc-form-actions,
 .wh-form-actions {
   display: flex;
   gap: 20rpx;
-  margin-top: 8rpx;
+  margin-top: var(--space-8);
 }
 
 /* 图片上传（质检表单复用） */
@@ -657,7 +657,7 @@
   height: 36rpx;
   background: rgba(0, 0, 0, 0.5);
   color: var(--color-text-white);
-  border-radius: 0 0 0 12rpx;
+  border-radius: 0 0 0 var(--radius-12);
   font-size: var(--font-size-2xs);
   display: flex;
   align-items: center;
@@ -680,7 +680,7 @@
   line-height: 1;
 }
 .upload-add-text {
-  margin-top: 8rpx;
+  margin-top: var(--space-8);
   font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
 }
@@ -697,7 +697,7 @@
 
 /* 批量操作按钮区 */
 .batch-actions {
-  margin-top: 24rpx;
+  margin-top: var(--space-24);
   display: flex;
   flex-direction: column;
   gap: 20rpx;
@@ -732,7 +732,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16rpx;
+  margin-bottom: var(--space-16);
   flex-wrap: wrap;
   gap: 8rpx;
 }
@@ -754,7 +754,7 @@
 }
 .quality-status {
   font-size: var(--font-size-xs);
-  padding: 2rpx 12rpx;
+  padding: var(--space-2) var(--space-12);
   border-radius: var(--radius-sm);
   font-weight: 500;
 }
@@ -767,7 +767,7 @@
 }
 .qc-row {
   display: flex;
-  padding: 8rpx 0;
+  padding: var(--space-8) 0;
 }
 .qc-label {
   width: 140rpx;
@@ -782,14 +782,14 @@
 .qc-error-text { color: var(--color-danger); }
 .qc-qty-row {
   display: flex;
-  margin: 12rpx 0;
+  margin: var(--space-12) 0;
   gap: 12rpx;
   flex-wrap: wrap;
 }
 .qc-qty-item {
   background: var(--color-bg-card);
   border-radius: var(--radius-xs);
-  padding: 12rpx 16rpx;
+  padding: var(--space-12) var(--space-16);
   text-align: center;
 }
 .qc-qty-label {
@@ -807,20 +807,20 @@
 .qc-qty-value.qc-error { color: var(--color-danger); }
 .qc-qty-value.qc-info { color: var(--color-primary); }
 .qc-photos {
-  margin-top: 16rpx;
-  padding-top: 16rpx;
+  margin-top: var(--space-16);
+  padding-top: var(--space-16);
   border-top: 1rpx solid var(--color-border-light);
 }
 .qc-photos-title {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  margin-bottom: 12rpx;
+  margin-bottom: var(--space-12);
 }
 
 /* ========== 页面内入库表单（记录下方展开，原弹窗样式改为 .wh-form-*） ========== */
 .wh-form {
-  margin-top: 20rpx;
-  padding: 24rpx;
+  margin-top: var(--space-20);
+  padding: var(--space-24);
   background: var(--color-bg-card);
   border-radius: var(--radius-sm);
   border: 1rpx solid var(--color-border-light);
@@ -829,7 +829,7 @@
   font-size: var(--font-size-md-lg);
   font-weight: 600;
   color: var(--color-text-primary);
-  margin-bottom: 20rpx;
+  margin-bottom: var(--space-20);
 }
 
 /* ========== 8. AI 质检助手 ========== */
@@ -839,8 +839,8 @@
   align-items: center;
   background: var(--color-danger-bg);
   border-radius: var(--radius-sm);
-  padding: 16rpx 20rpx;
-  margin-bottom: 20rpx;
+  padding: var(--space-16) var(--space-20);
+  margin-bottom: var(--space-20);
 }
 .urgent-icon {
   width: 36rpx;
@@ -853,7 +853,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 16rpx;
+  margin-right: var(--space-16);
   flex-shrink: 0;
 }
 .urgent-text {
@@ -865,13 +865,13 @@
 .ai-history-row {
   display: flex;
   gap: 16rpx;
-  margin-bottom: 20rpx;
+  margin-bottom: var(--space-20);
 }
 .history-block {
   flex: 1;
   background: var(--color-bg-muted);
   border-radius: var(--radius-sm);
-  padding: 16rpx;
+  padding: var(--space-16);
   text-align: center;
 }
 .history-label {
@@ -882,18 +882,18 @@
 .history-value {
   font-size: var(--font-size-lg);
   font-weight: 700;
-  margin-top: 4rpx;
+  margin-top: var(--space-4);
   display: block;
 }
 .history-value.verdict-good { color: var(--color-success); }
 .history-value.verdict-warn { color: var(--color-warning); }
 .history-value.verdict-critical { color: var(--color-danger); }
-.ai-section { margin-bottom: 20rpx; }
+.ai-section { margin-bottom: var(--space-20); }
 .ai-section-title {
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-primary);
-  margin-bottom: 12rpx;
+  margin-bottom: var(--space-12);
 }
 .tips-list {
   display: flex;
@@ -909,7 +909,7 @@
 }
 .tip-bullet {
   color: var(--color-primary);
-  margin-right: 12rpx;
+  margin-right: var(--space-12);
   font-weight: 700;
 }
 .defect-advice-list {
@@ -920,13 +920,13 @@
 .defect-advice-item {
   background: var(--color-bg-muted);
   border-radius: var(--radius-sm);
-  padding: 16rpx 20rpx;
+  padding: var(--space-16) var(--space-20);
 }
 .defect-advice-label {
   font-size: var(--font-size-xs);
   color: var(--color-primary);
   font-weight: 600;
-  margin-bottom: 6rpx;
+  margin-bottom: var(--space-6);
 }
 .defect-advice-text {
   font-size: var(--font-size-sm);
@@ -954,7 +954,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6rpx;
+  margin-bottom: var(--space-6);
 }
 .bom-code {
   font-size: var(--font-size-sm);
@@ -965,14 +965,14 @@
   font-size: var(--font-size-xxs);
   color: var(--color-primary);
   background: rgba(var(--color-primary-rgb), 0.1);
-  padding: 2rpx 12rpx;
+  padding: var(--space-2) var(--space-12);
   border-radius: var(--radius-xs);
 }
 .bom-name {
   font-size: var(--font-size-md);
   color: var(--color-text-primary);
   display: block;
-  margin-bottom: 6rpx;
+  margin-bottom: var(--space-6);
 }
 .bom-meta {
   display: flex;
@@ -981,7 +981,7 @@
 .bom-meta-item {
   font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
-  margin-right: 16rpx;
+  margin-right: var(--space-16);
 }
 
 /* ========== 按钮通用样式 ========== */
@@ -990,7 +990,7 @@
   align-items: center;
   justify-content: center;
   height: 80rpx;
-  padding: 0 28rpx;
+  padding: 0 var(--space-28);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-md);
   font-weight: 500;
@@ -1001,7 +1001,7 @@
 .btn::after { border: none; }
 .btn-sm {
   height: 56rpx;
-  padding: 0 20rpx;
+  padding: 0 var(--space-20);
   font-size: var(--font-size-xs);
 }
 .btn-block {
@@ -1050,12 +1050,12 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12rpx;
-  margin-top: 10rpx;
+  margin-top: var(--space-10);
 }
 .wh-chip {
   display: inline-flex;
   align-items: center;
-  padding: 8rpx 24rpx;
+  padding: var(--space-8) var(--space-24);
   border-radius: var(--radius-full);
   font-size: var(--font-size-sm);
   border: 1px solid var(--color-border);
@@ -1076,7 +1076,7 @@
   border-style: dashed;
 }
 .wh-chip-qty {
-  margin-left: 6rpx;
+  margin-left: var(--space-6);
   font-size: var(--font-size-2xs);
   opacity: 0.85;
   font-variant-numeric: tabular-nums;
@@ -1084,5 +1084,5 @@
 .wh-chip-empty {
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
-  padding: 8rpx 0;
+  padding: var(--space-8) 0;
 }

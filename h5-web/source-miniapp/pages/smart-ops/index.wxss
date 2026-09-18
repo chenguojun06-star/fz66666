@@ -1,4 +1,4 @@
-.cockpit { min-height: 100vh; background: var(--color-bg-page); padding: 12px var(--page-padding-x) 20rpx; }
+.cockpit { min-height: 100vh; background: var(--color-bg-page); padding: 12px var(--page-padding-x) var(--space-20); }
 
 .status-bar { display: flex; align-items: center; justify-content: space-between; }
 .status-left { display: flex; align-items: center; gap: 6px; }

@@ -260,7 +260,7 @@
 
 .end-indicator {
   text-align: center;
-  padding: 24rpx 0;
+  padding: var(--space-24) 0;
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
@@ -269,7 +269,7 @@
 .loading-container {
   display: flex;
   justify-content: center;
-  padding: 60rpx 0;
+  padding: var(--space-60) 0;
 }
 
 .loading-dot {

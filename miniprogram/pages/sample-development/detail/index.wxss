@@ -500,7 +500,7 @@
 .proc-tl-item {
   display: flex;
   gap: 12px;
-  padding-bottom: 4rpx;
+  padding-bottom: var(--space-4);
 }
 .proc-tl-item--expanded .proc-tl-body {
   background: var(--color-bg-hover);
@@ -581,7 +581,7 @@
   width: 2rpx;
   min-height: 32rpx;
   background: var(--color-border);
-  margin-top: 4rpx;
+  margin-top: var(--space-4);
 }
 /* 右侧内容区 */
 .proc-tl-body {
@@ -628,7 +628,7 @@
   color: var(--color-text-tertiary);
   background: var(--color-bg-hover);
   border-radius: var(--radius-full);
-  padding: 2rpx 12rpx;
+  padding: var(--space-2) var(--space-12);
   flex-shrink: 0;
 }
 .proc-tl-qty {
@@ -660,7 +660,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  margin-top: 8rpx;
+  margin-top: var(--space-8);
 }
 .proc-tl-meta-text {
   font-size: var(--font-size-2xs);
@@ -1382,7 +1382,7 @@
   border: 1rpx solid var(--color-primary);
   color: var(--color-primary);
   background: transparent;
-  border-radius: 8rpx;
+  border-radius: var(--radius-8);
   font-size: var(--font-size-xs);
   line-height: 1.5;
 }
@@ -1675,9 +1675,9 @@
 
 /* D-182：未配置工序提示（替代固定父阶段假节点） */
 .stage-empty-hint {
-  padding: 20rpx 24rpx;
+  padding: var(--space-20) var(--space-24);
   background: var(--color-bg-page);
-  border-radius: var(--radius-sm, 8rpx);
+  border-radius: var(--radius-sm, var(--radius-8));
 }
 .stage-empty-hint__text {
   font-size: var(--font-size-xs, 12px);

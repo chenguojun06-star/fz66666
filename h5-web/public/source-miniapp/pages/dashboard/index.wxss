@@ -598,12 +598,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12rpx;
+  margin-bottom: var(--space-12);
 }
 .proc-meta-toggle {
   display: flex;
   align-items: center;
-  padding: 4rpx 20rpx;
+  padding: var(--space-4) var(--space-20);
   border-radius: var(--radius-full);
   border: 1px solid var(--color-border);
   background: var(--color-bg-card);
@@ -627,7 +627,7 @@
 .proc-tl-item {
   display: flex;
   gap: 12px;
-  padding-bottom: 4rpx;
+  padding-bottom: var(--space-4);
 }
 .proc-tl-rail {
   display: flex;
@@ -699,7 +699,7 @@
   width: 2rpx;
   min-height: 32rpx;
   background: var(--color-border);
-  margin-top: 4rpx;
+  margin-top: var(--space-4);
 }
 .proc-tl-body {
   flex: 1;
@@ -746,7 +746,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  margin-top: 8rpx;
+  margin-top: var(--space-8);
 }
 .proc-tl-meta-text {
   font-size: var(--font-size-2xs);

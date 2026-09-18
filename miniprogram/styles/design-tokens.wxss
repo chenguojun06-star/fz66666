@@ -249,3 +249,60 @@ page {
 .tag-size    { background: var(--color-bg-page); color: var(--color-text-secondary); }
 .tag-warn    { background: var(--color-warning-bg); color: var(--color-warning); }
 .tag-danger  { background: var(--color-danger-bg); color: var(--color-danger); }
+
+/* ============================================================
+   D-467：rpx 尺寸令牌（小程序专用）
+   ------------------------------------------------------------
+   背景：本文件原有的 --spacing-* / --radius-* / --font-size-* 均为 px 单位，
+        而小程序页面实际使用的是 rpx（1rpx = 0.5px @iPhone6）。
+        两套单位长期混用，导致同一属性取值相差一倍且无法统一调整。
+   方案：新增 rpx 原子令牌，采用「数值后缀」命名（--space-16 = 16rpx），
+        对所有既有取值做**等值映射** —— 替换后视觉 100% 不变，
+        但全部尺寸收口到令牌，日后要规整只需改这里一处。
+   ============================================================ */
+
+  /* 间距（覆盖页面实际用到的全部取值） */
+  --space-2: 2rpx;
+  --space-4: 4rpx;
+  --space-6: 6rpx;
+  --space-8: 8rpx;
+  --space-10: 10rpx;
+  --space-12: 12rpx;
+  --space-14: 14rpx;
+  --space-16: 16rpx;
+  --space-18: 18rpx;
+  --space-20: 20rpx;
+  --space-22: 22rpx;
+  --space-24: 24rpx;
+  --space-26: 26rpx;
+  --space-28: 28rpx;
+  --space-32: 32rpx;
+  --space-40: 40rpx;
+  --space-48: 48rpx;
+  --space-60: 60rpx;
+  --space-80: 80rpx;
+  --space-120: 120rpx;
+  --space-160: 160rpx;
+  --space-200: 200rpx;
+
+  /* 圆角 */
+  --radius-6: 6rpx;
+  --radius-8: 8rpx;
+  --radius-12: 12rpx;
+  --radius-16: 16rpx;
+  --radius-20: 20rpx;
+  --radius-24: 24rpx;
+  --radius-26: 26rpx;
+  --radius-32: 32rpx;
+  --radius-44: 44rpx;
+  --radius-999: 999rpx;   /* 胶囊/全圆 */
+
+  /* 字号 */
+  --fs-20: 20rpx;
+  --fs-24: 24rpx;
+  --fs-26: 26rpx;
+  --fs-28: 28rpx;
+  --fs-30: 30rpx;
+  --fs-32: 32rpx;
+  --fs-36: 36rpx;
+  --fs-48: 48rpx;

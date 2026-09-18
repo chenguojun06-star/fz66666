@@ -488,8 +488,8 @@
 
 /* D-192：单价口径说明 */
 .page-hint {
-  margin: 12rpx 24rpx 0;
-  padding: 10rpx 20rpx;
+  margin: var(--space-12) var(--space-24) 0;
+  padding: var(--space-10) var(--space-20);
   background: transparent;
 }
 .page-hint-text {

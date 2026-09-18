@@ -55,7 +55,7 @@
 
 .header-info {
   flex: 1;
-  padding-top: 2rpx;
+  padding-top: var(--space-2);
   display: flex;
   flex-direction: column;
 }
@@ -70,14 +70,14 @@
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
-  margin-top: 2rpx;
+  margin-top: var(--space-2);
 }
 
 .style-name {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  margin-top: 16rpx;
+  margin-top: var(--space-16);
 }
 
 /* ========= 字段列表卡片（独立卡片，匹配设计稿） ========= */
@@ -93,7 +93,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 28rpx var(--spacing-lg);
+  padding: var(--space-28) var(--spacing-lg);
   border-bottom: 1rpx solid var(--color-border);
 }
 
@@ -141,7 +141,7 @@
 
 .warning-icon {
   font-size: var(--font-size-xl);
-  margin-right: 16rpx;
+  margin-right: var(--space-16);
   flex-shrink: 0;
   color: var(--color-warning);
 }

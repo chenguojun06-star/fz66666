@@ -10,7 +10,7 @@ page { background-color: var(--color-bg-page); }
   display: flex;
   background: var(--color-border);
   padding: 4px;
-  margin: 0 var(--page-padding-x) 12rpx;
+  margin: 0 var(--page-padding-x) var(--space-12);
   border-radius: var(--radius-xl);
   position: relative;
 }
@@ -52,7 +52,7 @@ page { background-color: var(--color-bg-page); }
 
 .container { padding-top: env(safe-area-inset-top); min-height: 100vh; }
 
-.search-bar { padding: 0 var(--page-padding-x) 12rpx; }
+.search-bar { padding: 0 var(--page-padding-x) var(--space-12); }
 .search-box {
   display: flex; align-items: center;
   background: var(--color-bg-card); border-radius: var(--radius-sm);
@@ -69,11 +69,11 @@ page { background-color: var(--color-bg-page); }
 .state-wrap { display: flex; justify-content: center; padding-top: 120px; font-size: var(--font-size-md); color: var(--color-text-tertiary); }
 
 .grid-scroll { flex: 1; min-height: 0; -webkit-overflow-scrolling: touch; }
-.grid { display: flex; flex-wrap: wrap; padding: 8rpx var(--page-padding-x); box-sizing: border-box; }
+.grid { display: flex; flex-wrap: wrap; padding: var(--space-8) var(--page-padding-x); box-sizing: border-box; }
 
 .card {
   width: calc(50% - 12rpx);
-  margin: 0 24rpx 24rpx 0;
+  margin: 0 var(--space-24) var(--space-24) 0;
   background: var(--color-bg-card); border-radius: var(--radius-xl);
   overflow: hidden; border: 1px solid var(--color-border);
   box-shadow: var(--shadow-sm); box-sizing: border-box;

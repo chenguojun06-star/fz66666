@@ -19,7 +19,7 @@
 
 .loading {
   text-align: center;
-  padding: 80rpx 0;
+  padding: var(--space-80) 0;
   color: var(--color-text-tertiary);
   font-size: var(--font-size-md);
 }
@@ -28,7 +28,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 120rpx 0;
+  padding: var(--space-120) 0;
 }
 .empty-icon {
   font-size: 40px;
@@ -37,7 +37,7 @@
 .empty-text {
   font-size: var(--font-size-md);
   color: var(--color-text-secondary);
-  margin-top: 20rpx;
+  margin-top: var(--space-20);
 }
 
 .settlement-card {
@@ -175,7 +175,7 @@
 .form-input {
   border: 1rpx solid var(--input-border);
   border-radius: var(--radius-xl);
-  padding: 16rpx;
+  padding: var(--space-16);
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
   background: var(--input-bg);
@@ -225,7 +225,7 @@
 .form-actions {
   display: flex;
   gap: 24rpx;
-  margin-top: 32rpx;
+  margin-top: var(--space-32);
 }
 .btn-hover {
   opacity: 0.8;

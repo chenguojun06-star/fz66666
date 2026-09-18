@@ -196,8 +196,8 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-tertiary);
-  padding: 0 8rpx;
-  margin-bottom: 16rpx;
+  padding: 0 var(--space-8);
+  margin-bottom: var(--space-16);
 }
 .group-card {
   background: var(--color-bg-card);
@@ -265,7 +265,7 @@
 
 /* ---- 表单行 ---- */
 .group-field-list {
-  padding: 0 32rpx;
+  padding: 0 var(--space-32);
 }
 .form-row {
   display: flex;
@@ -290,8 +290,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16rpx;
-  padding: 0 8rpx;
+  margin-bottom: var(--space-16);
+  padding: 0 var(--space-8);
 }
 
 .photo-count-hint {
@@ -392,7 +392,7 @@
 .remark-area {
   width: 100%;
   min-height: 60px;
-  padding: 24rpx 32rpx;
+  padding: var(--space-24) var(--space-32);
   font-size: var(--font-size-md);
   background: transparent;
   border: none;
