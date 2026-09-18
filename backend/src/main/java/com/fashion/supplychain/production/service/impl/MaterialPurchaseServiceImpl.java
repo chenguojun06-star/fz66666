@@ -173,11 +173,12 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
 
         BigDecimal arrived = materialPurchase.getArrivedQuantity() == null ? BigDecimal.ZERO : materialPurchase.getArrivedQuantity();
-        // 口径统一（D-129）：totalAmount = 采购数 × 单价（与编辑/购物车/BOM推送一致）。
-        // 旧逻辑用已到量计算，新建采购单 arrived=0 → 落库即 0 元。
-        BigDecimal purchaseQtyForAmount = materialPurchase.getPurchaseQuantity() == null
-                ? BigDecimal.ZERO : materialPurchase.getPurchaseQuantity();
-        materialPurchase.setTotalAmount(materialPurchase.getUnitPrice().multiply(purchaseQtyForAmount));
+        // 口径统一（D-464，取代 D-129）：totalAmount = **实际到货数量** × 单价。
+        // 旧口径按采购数量算，导致到货 255.5 米却只记 255 米的钱、部分到货时金额虚高。
+        // 未到货（arrived=0）记 0 元是预期行为：没到货就不产生应付。
+        materialPurchase.setTotalAmount(
+                com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper
+                        .calcTotalAmountByArrived(materialPurchase));
 
         String status = materialPurchase.getStatus() == null ? "" : materialPurchase.getStatus().trim();
         if (!MaterialConstants.STATUS_CANCELLED.equalsIgnoreCase(status)) {
@@ -235,11 +236,12 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             materialPurchase.setUnitPrice(BigDecimal.ZERO);
         }
         BigDecimal arrived = materialPurchase.getArrivedQuantity() == null ? BigDecimal.ZERO : materialPurchase.getArrivedQuantity();
-        // 口径统一（D-129）：totalAmount = 采购数 × 单价（与编辑/购物车/BOM推送一致）。
-        // 旧逻辑用已到量计算，新建采购单 arrived=0 → 落库即 0 元。
-        BigDecimal purchaseQtyForAmount = materialPurchase.getPurchaseQuantity() == null
-                ? BigDecimal.ZERO : materialPurchase.getPurchaseQuantity();
-        materialPurchase.setTotalAmount(materialPurchase.getUnitPrice().multiply(purchaseQtyForAmount));
+        // 口径统一（D-464，取代 D-129）：totalAmount = **实际到货数量** × 单价。
+        // 旧口径按采购数量算，导致到货 255.5 米却只记 255 米的钱、部分到货时金额虚高。
+        // 未到货（arrived=0）记 0 元是预期行为：没到货就不产生应付。
+        materialPurchase.setTotalAmount(
+                com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper
+                        .calcTotalAmountByArrived(materialPurchase));
 
         String status = materialPurchase.getStatus() == null ? "" : materialPurchase.getStatus().trim();
         if (!MaterialConstants.STATUS_CANCELLED.equalsIgnoreCase(status)) {
@@ -467,12 +469,12 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             }
         }
 
-        // 口径统一（D-076 P2）：totalAmount = purchaseQuantity × unitPrice，
-        // 与建单/快速编辑/购物车/BOM推送/补采单全部写入点一致。
-        // 旧逻辑按到货量覆写，导致部分到货后总金额缩水、快速编辑数量后又跳回，三处口径互斥。
+        // 口径统一（D-464，取代 D-076 P2）：到货登记后金额按**实际到货数量**重算，
+        // 与建单/快速编辑/BOM推送/补采单全部写入点一致（全部走 MaterialPurchaseHelper）。
         if (mp.getUnitPrice() != null) {
-            BigDecimal qty = mp.getPurchaseQuantity() != null ? mp.getPurchaseQuantity() : BigDecimal.ZERO;
-            mp.setTotalAmount(mp.getUnitPrice().multiply(qty));
+            mp.setTotalAmount(
+                    com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper
+                            .calcTotalAmountByArrived(mp));
         }
 
         String currentStatus = mp.getStatus() == null ? "" : mp.getStatus().trim();

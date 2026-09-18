@@ -420,8 +420,11 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
             mp.setPurchaseQuantity(withLoss.setScale(4, RoundingMode.HALF_UP));
 
             mp.setUnitPrice(bom.getUnitPrice());
+            // D-464：新建采购任务尚未到货 → 金额 0（口径唯一：实际到货数量 × 单价）
             if (mp.getPurchaseQuantity() != null && mp.getUnitPrice() != null) {
-                mp.setTotalAmount(mp.getUnitPrice().multiply(mp.getPurchaseQuantity()));
+                mp.setTotalAmount(
+                        com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper
+                                .calcTotalAmountByArrived(mp));
             }
 
             // if (order.getPlannedEndDate() != null) {

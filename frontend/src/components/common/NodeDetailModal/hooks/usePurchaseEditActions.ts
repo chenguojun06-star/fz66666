@@ -108,9 +108,10 @@ export const usePurchaseEditActions = (params: UsePurchaseEditActionsParams) => 
     setSaving(true);
     try {
       for (const row of validRows) {
-        const purchaseQuantity = Number(row.purchaseQuantity || 0);
+        // D-464：金额口径 = 实际到货数量 × 单价（与后端一致，未到货为 0）
+        const arrivedQuantity = Number(row.arrivedQuantity || 0);
         const unitPrice = Number(row.unitPrice || 0);
-        const totalAmount = Number.isFinite(purchaseQuantity) && Number.isFinite(unitPrice) ? Number((purchaseQuantity * unitPrice).toFixed(2)) : 0;
+        const totalAmount = Number.isFinite(arrivedQuantity) && Number.isFinite(unitPrice) ? Number((arrivedQuantity * unitPrice).toFixed(2)) : 0;
         const resolvedSourceType = sourceType === 'sample' ? 'sample' : (order?.sourceBizType === 'SAMPLE' ? 'sample' : 'order');
         const payload = {
           ...row,

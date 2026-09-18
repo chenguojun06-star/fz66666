@@ -305,7 +305,10 @@ public class StyleBomPurchaseHelper {
 
         BigDecimal bomUnitPrice = bom.getUnitPrice();
         purchase.setUnitPrice(bomUnitPrice);
-        purchase.setTotalAmount(bomUnitPrice != null ? bomUnitPrice.multiply(purchaseQty) : BigDecimal.ZERO);
+        // D-464：BOM 推送建单时尚未到货（arrived=0）→ 金额 0，到货登记后按实际到货量重算
+        purchase.setTotalAmount(
+                com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper
+                        .calcTotalAmountByArrived(purchase));
 
         purchase.setStyleId(String.valueOf(styleInfo.getId()));
         purchase.setStyleNo(styleInfo.getStyleNo());
@@ -417,8 +420,11 @@ public class StyleBomPurchaseHelper {
             if (purchaseQty.compareTo(BigDecimal.ZERO) <= 0) return 0;
 
             mp.setPurchaseQuantity(purchaseQty);
+            // D-464：BOM 变更只改采购数量，金额仍按实际到货量重算（口径唯一：到货 × 单价）
             if (mp.getUnitPrice() != null) {
-                mp.setTotalAmount(mp.getUnitPrice().multiply(purchaseQty).setScale(2, RoundingMode.HALF_UP));
+                mp.setTotalAmount(
+                        com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper
+                                .calcTotalAmountByArrived(mp));
             }
             mp.setUpdateTime(LocalDateTime.now());
             materialPurchaseService.updateById(mp);

@@ -690,11 +690,12 @@ public class MaterialReconciliationOrchestrator {
     private BigDecimal[] resolvePrices(MaterialPurchase purchase, BigDecimal qty) {
         BigDecimal unitPrice = purchase.getUnitPrice();
         BigDecimal totalAmount = purchase.getTotalAmount();
-        BigDecimal pq = purchase.getPurchaseQuantity() == null ? BigDecimal.ZERO : purchase.getPurchaseQuantity();
+        // D-464：采购单 totalAmount 已改为「到货数量 × 单价」，反推单价必须同样用到货量作分母，
+        // 否则（用采购数量）部分到货时会被摊薄成错误单价。
+        BigDecimal aq = purchase.getArrivedQuantity() == null ? BigDecimal.ZERO : purchase.getArrivedQuantity();
         if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
-            // 无单价：按采购数量（而非到货量）从采购总额反推真实单价，避免部分到货时单价虚高
-            if (pq.compareTo(BigDecimal.ZERO) > 0 && totalAmount != null && totalAmount.compareTo(BigDecimal.ZERO) > 0) {
-                unitPrice = totalAmount.divide(pq, 2, RoundingMode.HALF_UP);
+            if (aq.compareTo(BigDecimal.ZERO) > 0 && totalAmount != null && totalAmount.compareTo(BigDecimal.ZERO) > 0) {
+                unitPrice = totalAmount.divide(aq, 2, RoundingMode.HALF_UP);
             } else {
                 unitPrice = BigDecimal.ZERO;
             }

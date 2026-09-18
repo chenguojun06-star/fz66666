@@ -180,6 +180,12 @@ public class MaterialInboundOrchestrator {
         // 部分到货的行 actual_arrival_date 永远为空 → 采购明细「最新到货日期」一片 "-"。
         purchase.setActualArrivalDate(LocalDateTime.now());
 
+        // D-464：本路径走 atomicAddArrivedQuantity 绕开了 service，金额不会自动重算，
+        // 必须按新到货量重算（否则「到货 255.5 米、金额仍按 255 米」的老账一直挂着）。
+        purchase.setTotalAmount(
+                com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper
+                        .calcTotalAmountByArrived(purchase));
+
         materialPurchaseService.updateById(purchase);
         log.info("采购单已更新: 到货数量={}/{}, 状态={}", totalArrived, purchase.getPurchaseQuantity(), purchase.getStatus());
 

@@ -303,7 +303,10 @@ public class MaterialPurchasePickingHelper {
         }
         if (original.getUnitPrice() != null) {
             deficitPurchase.setUnitPrice(original.getUnitPrice());
-            deficitPurchase.setTotalAmount(original.getUnitPrice().multiply(deficitQty));
+            // D-464：补采单尚未到货 → 金额 0（口径唯一：实际到货数量 × 单价）
+            deficitPurchase.setTotalAmount(
+                    com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper
+                            .calcTotalAmountByArrived(deficitPurchase));
         }
         materialPurchaseService.savePurchaseAndUpdateOrder(deficitPurchase);
     }

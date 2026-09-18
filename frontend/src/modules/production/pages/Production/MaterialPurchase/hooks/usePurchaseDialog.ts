@@ -140,9 +140,10 @@ export function usePurchaseDialog({
       const values = await form.validateFields();
       const purchaseQuantity = Number(values.purchaseQuantity || 0);
       const unitPrice = Number(values.unitPrice || 0);
-      const totalAmount = Number.isFinite(purchaseQuantity) && Number.isFinite(unitPrice)
-        ? Number((purchaseQuantity * unitPrice).toFixed(2)) : undefined;
       const arrivedQuantity = Number(values.arrivedQuantity || 0);
+      // D-464：金额口径 = 实际到货数量 × 单价（与后端一致，未到货为 0）
+      const totalAmount = Number.isFinite(arrivedQuantity) && Number.isFinite(unitPrice)
+        ? Number((arrivedQuantity * unitPrice).toFixed(2)) : undefined;
       const computedStatus = values.status === MATERIAL_PURCHASE_STATUS.CANCELLED
         ? MATERIAL_PURCHASE_STATUS.CANCELLED
         : arrivedQuantity <= 0 ? MATERIAL_PURCHASE_STATUS.PENDING

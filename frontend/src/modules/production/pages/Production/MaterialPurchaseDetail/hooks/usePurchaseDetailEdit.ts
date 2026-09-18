@@ -176,10 +176,11 @@ export function usePurchaseDetailEdit(params: PurchaseDetailEditParams): Purchas
     setSaving(true);
     try {
       const toSave = validRows.map((r) => {
-        const purchaseQuantity = Number(r.purchaseQuantity || 0);
+        // D-464：金额口径 = 实际到货数量 × 单价（与后端一致，未到货为 0）
+        const arrivedQuantity = Number(r.arrivedQuantity || 0);
         const unitPrice = Number(r.unitPrice || 0);
-        const totalAmount = Number.isFinite(purchaseQuantity) && Number.isFinite(unitPrice)
-          ? Number((purchaseQuantity * unitPrice).toFixed(2)) : 0;
+        const totalAmount = Number.isFinite(arrivedQuantity) && Number.isFinite(unitPrice)
+          ? Number((arrivedQuantity * unitPrice).toFixed(2)) : 0;
         const { id, ...rest } = r;
         const isTemp = id?.startsWith('tmp_');
         return {

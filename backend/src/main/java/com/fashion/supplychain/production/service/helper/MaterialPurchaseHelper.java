@@ -224,6 +224,37 @@ public class MaterialPurchaseHelper {
         return MaterialConstants.STATUS_AWAITING_CONFIRM;
     }
 
+    /**
+     * D-464：采购单金额唯一口径 —— **实际到货数量 × 单价**。
+     *
+     * <p>背景：此前 totalAmount 按「采购数量 × 单价」落库（D-076/D-129 口径），导致
+     * 到货 255.5 米却按 255 米记钱、部分到货时金额虚高，与对账/付款对不上。
+     * 用户明确要求：金额一律以「实际到货填写的数」核算。
+     *
+     * <p>全部写入点（建单 / 改单 / 到货登记 / 到货回退 / BOM 推送 / 补采单）都必须走这个方法，
+     * 禁止再出现 unitPrice × purchaseQuantity，否则又是一次口径分裂。
+     *
+     * @param unitPrice      单价（为空按 0 处理）
+     * @param arrivedQty     实际到货数量（为空按 0 处理 → 未到货金额为 0，符合"没到货就没钱"）
+     * @return 保留 2 位小数的金额（HALF_UP）
+     */
+    public static java.math.BigDecimal calcTotalAmountByArrived(java.math.BigDecimal unitPrice,
+                                                                java.math.BigDecimal arrivedQty) {
+        java.math.BigDecimal price = unitPrice == null ? java.math.BigDecimal.ZERO : unitPrice;
+        java.math.BigDecimal arrived = arrivedQty == null ? java.math.BigDecimal.ZERO : arrivedQty;
+        return price.multiply(arrived).setScale(2, java.math.RoundingMode.HALF_UP);
+    }
+
+    /**
+     * D-464：按采购单当前字段重算金额（见 {@link #calcTotalAmountByArrived}）。
+     */
+    public static java.math.BigDecimal calcTotalAmountByArrived(MaterialPurchase purchase) {
+        if (purchase == null) {
+            return java.math.BigDecimal.ZERO;
+        }
+        return calcTotalAmountByArrived(purchase.getUnitPrice(), purchase.getArrivedQuantity());
+    }
+
     public static boolean looksLikeImage(StyleAttachment a) {
         String t = a.getFileType() == null ? "" : a.getFileType().toLowerCase();
         if (t.contains("image")) {
