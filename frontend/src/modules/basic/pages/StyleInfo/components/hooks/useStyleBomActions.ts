@@ -219,24 +219,37 @@ const useStyleBomActions = ({
         return;
       }
 
-      const result = await api.delete(`/style/bom/${encodeURIComponent(deletingId)}`) as Record<string, unknown>;
-      if (result.code === 200 && result.data === true) {
-        message.success('删除成功');
-        if (tableEditable) {
-          setData((prev) => sortBomRows(prev.filter((item) => String(item.id) !== deletingId)));
+      // D-467：已保存的 BOM 行调用接口后立即生效、不可恢复，此处加二次确认防误点删除。
+      // （临时行 isTempId 分支尚未落库，直接移除无需确认）
+      confirmAction(
+        '删除物料清单',
+        '确定要删除这条物料吗？删除后将立即生效且不可恢复。',
+        async () => {
           try {
-            form.resetFields([deletingId]);
-          } catch {
-            // 忽略错误
-          }
-        } else {
-          void fetchBom();
-        }
-        return;
-      }
+            const result = await api.delete(`/style/bom/${encodeURIComponent(deletingId)}`) as Record<string, unknown>;
+            if (result.code === 200 && result.data === true) {
+              message.success('删除成功');
+              if (tableEditable) {
+                setData((prev) => sortBomRows(prev.filter((item) => String(item.id) !== deletingId)));
+                try {
+                  form.resetFields([deletingId]);
+                } catch {
+                  // 忽略错误
+                }
+              } else {
+                void fetchBom();
+              }
+              return;
+            }
 
-      const detail = `code:${debugValue(result?.code)}, data:${debugValue(result?.data)}`;
-      message.error(`${result?.message || '删除失败'}（${detail}）`);
+            const detail = `code:${debugValue(result?.code)}, data:${debugValue(result?.data)}`;
+            message.error(`${result?.message || '删除失败'}（${detail}）`);
+          } catch (error: unknown) {
+            message.error(`删除失败（${error instanceof Error ? error.message : '请求失败'}）`);
+          }
+        },
+        { okText: '删除', danger: true }
+      );
     } catch (error: unknown) {
       message.error(`删除失败（${error instanceof Error ? error.message : '请求失败'}）`);
     }
