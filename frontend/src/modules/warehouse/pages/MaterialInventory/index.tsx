@@ -9,12 +9,13 @@ import {
   Select,
   DatePicker,
   Badge,
+  Descriptions,
 } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 // D-470：列显隐/列顺序复用项目自带的 ColumnSettings（后端持久化 + localStorage 回退）
 import {
   useColumnSettings,
-  ColumnSettingsModal,
+  ColumnSettingsDrawer,
   ColumnSettingsButton,
   type ColumnOption,
 } from '@/components/common/ColumnSettings';
@@ -37,6 +38,12 @@ import { buildPickingColumns, buildItemColumns } from './columns';
 import MaterialOutboundPrintModal from './components/MaterialOutboundPrintModal';
 import StockPickModal from './components/StockPickModal';
 import MaterialInventoryModals from './MaterialInventoryModals';
+
+/**
+ * D-470：移入「展开区」的列（主表只留核心列，避免一屏塞 10 列导致观感凌乱）。
+ * 模块级常量，避免放进组件导致每次渲染都是新数组、触发 useMemo 依赖告警。
+ */
+const DETAIL_COLUMN_KEYS = ['fabricProperties', 'price', 'supplier', 'records', 'remark'];
 import { useSync } from '@/utils/syncManager';
 
 const { Option } = Select;
@@ -142,6 +149,18 @@ const _MaterialInventory: React.FC = () => {
           (orderIndex.get(String(a.key)) ?? 999) - (orderIndex.get(String(b.key)) ?? 999),
       );
   }, [columns, columnsLoaded, orderedVisibleColumns, visibleColumns]);
+
+  // D-470：主表一次塞 10 列、每列还叠 3~4 行，信息过载是"凌乱"的根源。
+  // 拆成「主表只留核心列 + 点开展开看详情」，主表宽度从约 1770px 降到 800px 以内，
+  // 一屏放得下、不用横向滚；细节（面料属性/金额/供应商/出入库/备注）按需展开。
+  const mainColumns = React.useMemo(
+    () => shownColumns.filter((c) => !DETAIL_COLUMN_KEYS.includes(String(c.key))),
+    [shownColumns],
+  );
+  const detailColumns = React.useMemo(
+    () => shownColumns.filter((c) => DETAIL_COLUMN_KEYS.includes(String(c.key))),
+    [shownColumns],
+  );
 
   const tabParam = searchParams.get('tab') || 'overview';
   const [activeTab, setActiveTab] = React.useState(tabParam);
@@ -302,13 +321,33 @@ const _MaterialInventory: React.FC = () => {
 
                   <ResizableTable
                     storageKey="material-inventory-main"
-                    columns={shownColumns}
+                    columns={mainColumns}
                     dataSource={dataSource}
                     loading={loading}
                     rowKey="id"
                     stickyHeader
                     // D-470：原 x:1600 小于列宽合计(约1770)，antd 会压缩列宽导致文字挤压变形
                     scroll={{ x: 'max-content' }}
+                    // D-470：详情列移入展开区，点击行前的箭头查看
+                    expandable={detailColumns.length > 0 ? {
+                      expandedRowRender: (record: any) => (
+                        <Descriptions
+                          size="small"
+                          column={2}
+                          bordered
+                          styles={{ label: { width: 96, color: 'var(--neutral-text-disabled)' } }}
+                        >
+                          {detailColumns.map((col: any) => (
+                            <Descriptions.Item key={String(col.key)} label={col.title}>
+                              {typeof col.render === 'function'
+                                ? col.render(undefined, record, 0)
+                                : (record[col.dataIndex] ?? '-')}
+                            </Descriptions.Item>
+                          ))}
+                        </Descriptions>
+                      ),
+                      rowExpandable: () => true,
+                    } : undefined}
                     pagination={false}
                     emptyDescription="暂无原料库存数据"
                     emptyActionText="去新增入库"
@@ -454,8 +493,8 @@ const _MaterialInventory: React.FC = () => {
         />
       )}
 
-      {/* D-470：主表列显隐/排序 */}
-      <ColumnSettingsModal
+      {/* D-470：主表列显隐/排序（侧滑抽屉，与项目其他页面一致） */}
+      <ColumnSettingsDrawer
         open={columnSettingsOpen}
         onClose={() => setColumnSettingsOpen(false)}
         columnOptions={columnOptions}

@@ -8,6 +8,13 @@ import {
   CalendarOutlined,
 } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
+// D-470：列显隐/排序
+import {
+  useColumnSettings,
+  ColumnSettingsDrawer,
+  ColumnSettingsButton,
+  type ColumnOption,
+} from '@/components/common/ColumnSettings';
 import {
   billAggregationApi,
   type BillAggregation,
@@ -123,7 +130,8 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
   }, [fetchBills]);
 
   // ---- 表格列 ----
-  const columns: ColumnsType<BillAggregation> = [
+  // D-470：包 useMemo，避免每次渲染产生新数组导致下游 useMemo/依赖失效
+  const columns = React.useMemo<ColumnsType<BillAggregation>>(() => [
     {
       title: '账单编号', dataIndex: 'billNo', key: 'billNo', width: 180,
       render: (v: string) => <span style={{ fontFamily: 'monospace' }}>{v}</span>,
@@ -194,7 +202,42 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
         return <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>;
       },
     },
-  ];
+  ], [handleCancel, handleConfirm, defaultBillType]);
+
+  // D-470：账单汇总 15 列，信息密度高，交给用户自行精简
+  const columnOptions = React.useMemo<ColumnOption[]>(
+    () => columns.map((c) => ({
+      key: String(c.key),
+      label: typeof c.title === 'string' ? c.title : String(c.key),
+    })),
+    [columns],
+  );
+  const {
+    visibleColumns,
+    orderedVisibleColumns,
+    setVisible,
+    reset: resetColumns,
+    loaded: columnsLoaded,
+  } = useColumnSettings({
+    pageKey: 'finance-bill-summary',
+    allColumns: columnOptions,
+    defaultVisible: React.useMemo(
+      () => Object.fromEntries(columnOptions.map((c) => [c.key, true])),
+      [columnOptions],
+    ),
+  });
+  const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
+  const shownColumns = React.useMemo(() => {
+    if (!columnsLoaded || orderedVisibleColumns.length === 0) return columns;
+    const orderIndex = new Map(orderedVisibleColumns.map((o, i) => [o.key, i]));
+    return columns
+      .filter((c) => visibleColumns[String(c.key)] !== false)
+      .slice()
+      .sort(
+        (a, b) =>
+          (orderIndex.get(String(a.key)) ?? 999) - (orderIndex.get(String(b.key)) ?? 999),
+      );
+  }, [columns, columnsLoaded, orderedVisibleColumns, visibleColumns]);
 
   return (
     <div>
@@ -265,11 +308,13 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
             批量确认({selectedKeys.length})
           </Button>
         )}
+        {/* D-470：列设置（侧滑抽屉，与项目其他页面一致） */}
+        <ColumnSettingsButton onClick={() => setColumnSettingsOpen(true)} />
       </div>
 
       {/* 表格 */}
       <ResizableTable
-        columns={columns}
+        columns={shownColumns}
         dataSource={bills}
         rowKey="id"
         loading={loading}
@@ -293,6 +338,17 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
             fetchBills(next);
           },
         }}
+      />
+
+      {/* D-470：列显隐/排序（侧滑抽屉） */}
+      <ColumnSettingsDrawer
+        open={columnSettingsOpen}
+        onClose={() => setColumnSettingsOpen(false)}
+        columnOptions={columnOptions}
+        visibleColumns={visibleColumns}
+        onToggle={setVisible}
+        onReset={resetColumns}
+        title="账单汇总列设置"
       />
     </div>
   );
