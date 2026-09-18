@@ -51,6 +51,52 @@ git fetch origin main -q || {
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/main)
 
+# ── D-465：确保 swap 存在且够大（2核4G 不升配方案的核心一环）──
+# 背景：D-453 事故中构建峰值把 available 打到 335M，靠 swap 才没 OOM kill。
+# 4G 物理内存 + 4G swap，等于给构建期多一倍缓冲，成本为零（用的是 SSD 空闲空间）。
+# 幂等：已启用且 ≥4G 就什么都不做；创建失败绝不阻断部署（|| true）。
+SWAP_FILE=/swapfile
+SWAP_TARGET_KB=4194304   # 4G
+CUR_SWAP_KB=$(awk '/^\/swapfile/{print $3}' /proc/swaps 2>/dev/null | head -1)
+CUR_SWAP_KB=${CUR_SWAP_KB:-0}
+if [ "$CUR_SWAP_KB" -lt "$SWAP_TARGET_KB" ] 2>/dev/null; then
+  echo "[$(date '+%F %T')] ℹ️ 当前 swapfile ${CUR_SWAP_KB}KB < 目标 ${SWAP_TARGET_KB}KB，尝试扩容"
+  if [ -f "$SWAP_FILE" ]; then sudo swapoff "$SWAP_FILE" >/dev/null 2>&1 || true; sudo rm -f "$SWAP_FILE" || true; fi
+  if sudo fallocate -l 4G "$SWAP_FILE" >/dev/null 2>&1 \
+     && sudo chmod 600 "$SWAP_FILE" >/dev/null 2>&1 \
+     && sudo mkswap "$SWAP_FILE" >/dev/null 2>&1 \
+     && sudo swapon "$SWAP_FILE" >/dev/null 2>&1; then
+    grep -q '^/swapfile' /etc/fstab 2>/dev/null || echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab >/dev/null 2>&1 || true
+    echo "[$(date '+%F %T')] ✅ swap 已扩容到 4G"
+  else
+    echo "[$(date '+%F %T')] ⚠️ swap 扩容失败（权限不足或磁盘不够），继续部署不影响"
+  fi
+fi
+
+# ── D-465：停掉已改为「按需」的遗留容器，释放内存 ──
+# docker compose 加 profiles 后，ups 不会主动停掉**之前已创建**的容器 ——
+# 不显式 stop 的话，这次优化等于没生效（内存照旧被占）。
+for S in phpmyadmin cloudbeaver; do
+  if sudo docker ps --format '{{.Names}}' 2>/dev/null | grep -q "$S"; then
+    echo "[$(date '+%F %T')] ℹ️ 停掉按需服务 $S（需查库时：docker compose --profile dbtools up -d $S）"
+    sudo docker stop "$S" >/dev/null 2>&1 || true
+  fi
+done
+
+# ── 内存快照（D-465）──
+# 没有 SSH 的远端机器做容量决策只能靠数据。每轮把 free + 容器占用写进备份目录，
+# 本机 launchd 拉备份时顺带拉回（pull.sh 已同步该目录），下次即可按真实数据调参。
+SNAP_DIR=/opt/backups
+mkdir -p "$SNAP_DIR" 2>/dev/null || true
+{
+  echo "=== $(date '+%F %T') ==="
+  free -m 2>/dev/null | head -2
+  sudo docker stats --no-stream --format '{{.Name}}\t{{.MemUsage}}' 2>/dev/null | sort -k2 -h -r | head -12
+} >>"$SNAP_DIR/memory-snapshot.log" 2>/dev/null || true
+# 只保留最近 3000 行，防止无限增长
+tail -3000 "$SNAP_DIR/memory-snapshot.log" >"$SNAP_DIR/.mem.tmp" 2>/dev/null \
+  && mv "$SNAP_DIR/.mem.tmp" "$SNAP_DIR/memory-snapshot.log" 2>/dev/null || true
+
 # ── 全服务在场巡检（D-455，替换 D-433 已退役的 phpMyAdmin 接管逻辑）──
 # 背景：D-433 的接管块用 grep '^  phpmyadmin:' 判定，D-435 移除该服务后永久失配 →
 # 死代码。但它暴露了真问题：autodeploy 只 up backend/frontend，
@@ -62,7 +108,8 @@ REMOTE=$(git rev-parse origin/main)
 # ⚠️ 按需服务白名单（SWEEP_SKIP）—— 必须有，否则会跟"有意停掉的服务"打架：
 #   cloudbeaver 是查库工具、不在业务链路上，运维可能**有意停掉它**（例如为省内存）。
 #   若不排除，本巡检会每 2 分钟把它重新拉起，与运维意图形成拉锯。
-#   故 CloudBeaver 改为按需启动：`docker compose up -d cloudbeaver`（用完 `stop`）。
+#   故 CloudBeaver 改为按需启动（D-465 起带 profile）：
+#   `docker compose --profile dbtools up -d cloudbeaver`（用完 `stop`）。
 #   运维若手工 `docker compose stop <服务>`，也应把该服务名加到这里，否则会被自动拉起。
 #   （2026-09-17 更正：曾把"部署被阻塞"归因于 CloudBeaver 触发内存守卫，
 #     用户实测 available 1913MB 远高于 1200MB 阈值，该归因**已被推翻**；

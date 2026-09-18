@@ -25,7 +25,8 @@ db.webyszl.cn {
 		<div style="text-align:center">
 		<h2 style="color:#1d1d1f">数据库管理台未运行</h2>
 		<p style="color:#6e6e73">在服务器执行以下命令启动，然后刷新本页：</p>
-		<code style="background:#1d1d1f;color:#fff;padding:10px 14px;border-radius:6px;display:inline-block">cd /opt/fz66666/deploy/lighthouse && sudo docker compose up -d cloudbeaver</code>
+		<code style="background:#1d1d1f;color:#fff;padding:10px 14px;border-radius:6px;display:inline-block">cd /opt/fz66666/deploy/lighthouse && sudo docker compose --profile dbtools up -d cloudbeaver</code>
+		<p style="color:#8e8e93;font-size:13px">（D-465：管理台改为按需启动以省内存，用完 sudo docker compose stop cloudbeaver）</p>
 		<p style="color:#8e8e93;font-size:13px">数据本身安然无恙——只是查看工具没在运行。</p>
 		</div>
 		</body></html>

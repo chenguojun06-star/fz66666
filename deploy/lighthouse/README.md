@@ -5,8 +5,28 @@
 > 详见 `memory-bank/optimization-log-2026-09-17-deploy-oom-freeze.md`。
 > 长期建议仍是升级 4核8G（约 630 元/年）。
 >
-> 架构：一台服务器跑全栈 —— Caddy(HTTPS) + frontend + backend + MySQL + Redis + Qdrant + CloudBeaver
-> （db.webyszl.cn 管理台，D-435 起由 CloudBeaver 提供，phpMyAdmin 已退役）
+> 架构：一台服务器跑全栈 —— Caddy(HTTPS) + frontend + backend + MySQL + Redis + Qdrant（常驻）
+> + CloudBeaver / phpMyAdmin（**按需**，D-465 起带 `dbtools` profile，默认不启动）
+>
+> ## 💾 2核4G 内存预算（D-465，不升配方案）
+>
+> 用户明确不走 4核8G 升级（开发阶段用不上），改为挤非业务占用：
+>
+> | 措施 | 预估释放 | 备注 |
+> |---|---|---|
+> | phpMyAdmin 停常驻（Caddy 从未路由到它，纯白吃） | ~30-50MB | 配置保留，profile 按需 |
+> | CloudBeaver 改按需（查库工具不在业务链路） | ~400-800MB | **最大头**，用完 `stop` |
+> | swap 自动扩容到 4G（autodeploy 幂等初始化） | 构建期缓冲翻倍 | 用 SSD 空闲空间，成本为零 |
+> | MySQL `performance-schema=OFF` + buffer pool 256M | ~100-200MB | 数据量小（整库 438MB） |
+> | backend `-Xmx` 1536m→1280m + 元空间封顶 256m | ~200MB | 见下方回滚指征 |
+> | Redis `maxmemory 128mb` + Qdrant `mem_limit 512m` | 防失控 | 原本无上限 |
+> | 全服务 `mem_limit` 兜底 | 防单服务拖垮整机 | D-453 事故的直接教训 |
+>
+> **回滚指征**：后端若 OOM 重启（`docker compose logs backend \| grep -i oom`），
+> 把 `JAVA_OPTS` 调回 `-Xmx1536m`；MySQL 若报 buffer pool 相关错误，去掉那三个参数即可。
+>
+> 📊 每轮 autodeploy 会把 `free -m` + 容器占用写进 `/opt/backups/memory-snapshot.log`，
+> 本机 launchd 拉备份时顺带拉回，可据此微调（文件保留最近 3000 行）。
 > 已核实的前提：后端调微信全部**直连官方** api.weixin.qq.com，不依赖云托管任何专属能力 ✓
 
 ## 0. 购买服务器（你来操作，10 分钟）

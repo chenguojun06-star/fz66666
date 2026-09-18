@@ -9,6 +9,9 @@ services:
   # ── HTTPS 边缘（自动申请/续期 Let's Encrypt 证书）──
   caddy:
     image: caddy:2-alpine
+    # D-465：2核4G 不升配方案 —— 给每个服务加内存上限，防单个服务失控拖垮整机
+    # （D-453 事故根因就是构件与运行抢内存；上限值按实测占用放宽，非实际用量）
+    mem_limit: 128m
     ports:
       - "80:80"
       - "443:443"
@@ -28,6 +31,7 @@ services:
       args:
         # GIT_COMMIT 由 autodeploy.sh 写入同目录 .env，登录页版本水印据此显示当前 commit
         GIT_COMMIT: ${GIT_COMMIT:-unknown}
+    mem_limit: 96m
     restart: unless-stopped
     environment:
       BACKEND_URL: "http://backend:8088"
@@ -50,7 +54,10 @@ services:
       APP_DB_PORT: "3306"
       QDRANT_URL: "http://qdrant:6333"
       # D-453：4G 内存机上 -Xmx3g 与 OS+MySQL+构建抢内存（事故根因之一），降到 1536m；当前实测 RSS 1.2G 足够
-      JAVA_OPTS: "-Xmx1536m -Xms512m"
+      # D-465：再降一档到 1280m 并封顶元空间（元空间不设限会随类加载持续增长）
+      # 回滚指征：若后端出现 OOM 重启（docker compose logs backend | grep -i oom），调回 -Xmx1536m
+      JAVA_OPTS: "-Xmx1280m -Xms384m -XX:MaxMetaspaceSize=256m"
+    mem_limit: 2048m
     expose:
       - "8088"
     depends_on:
@@ -76,6 +83,12 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --max_allowed_packet=256M
+      # D-465：开发阶段数据量小（整库 438MB），关掉性能_schema 省约 100MB；
+      # buffer pool 显式设 256M（够装热数据），避免 MySQL8 默认策略在 4G 机上贪内存
+      - --performance-schema=OFF
+      - --innodb-buffer-pool-size=256M
+      - --table-open-cache=400
+    mem_limit: 1024m
     volumes:
       - mysql-data:/var/lib/mysql
     expose:
@@ -86,9 +99,12 @@ services:
       timeout: 5s
       retries: 12
 
-  # ── phpMyAdmin（db.webyszl.cn 常驻轻量门面，D-461 回归；内存占用极小）──
+  # ── phpMyAdmin（D-465：Caddy 从未路由到它，db 域名指向 CloudBeaver → 常驻纯属白吃内存）──
+  # 配置保留备查，改为 profile 按需：sudo docker compose --profile dbtools up -d phpmyadmin
   phpmyadmin:
     image: phpmyadmin:5.2-alpine
+    profiles: ["dbtools"]
+    mem_limit: 128m
     restart: unless-stopped
     environment:
       PMA_HOST: mysql
@@ -102,6 +118,12 @@ services:
   # ── CloudBeaver（DBeaver 官方 Web 版；D-461 修复：conf 目录不能只读挂载——首启要自己写 cloudbeaver.conf）──
   cloudbeaver:
     image: dbeaver/cloudbeaver:latest
+    # D-465：查库工具不在业务链路上，却常驻吃掉几百 MB。改为按需：
+    #   启动：sudo docker compose --profile dbtools up -d cloudbeaver
+    #   用完：sudo docker compose stop cloudbeaver
+    # 未运行时 db.webyszl.cn 由 Caddy 返回友好提示页（不是裸 502）。
+    profiles: ["dbtools"]
+    mem_limit: 768m
     restart: unless-stopped
     volumes:
       - cloudbeaver-data:/opt/cloudbeaver/workspace
@@ -115,8 +137,10 @@ services:
   # ── Redis 7 ──
   redis:
     image: redis:7-alpine
+    mem_limit: 192m
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+    # D-465：不设上限时 Redis 只增不减（缓存键无 TTL 会一路吃满），开发阶段 128mb 足够
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
     volumes:
       - redis-data:/data
     expose:
@@ -125,6 +149,7 @@ services:
   # ── Qdrant 向量库（服务器本地磁盘 = 永久持久化，不再随发版清零）──
   qdrant:
     image: qdrant/qdrant:latest
+    mem_limit: 512m
     restart: unless-stopped
     volumes:
       - qdrant-data:/qdrant/storage
