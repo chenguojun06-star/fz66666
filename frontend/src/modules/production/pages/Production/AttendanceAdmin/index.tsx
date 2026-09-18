@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { App, Button, DatePicker, Form, Input, Select, Space, Tag, Tooltip } from 'antd';
+import { App, Button, DatePicker, Descriptions, Form, Input, Select, Space, Tag, Tooltip } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -12,6 +12,13 @@ import { exportTableToExcel } from '@/utils/exportExcel';
 import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
 import { readPageSize } from '@/utils/pageSizeStore';
+
+/**
+ * D-470：移入「展开区」的考勤列 —— 主表只留核心（员工/日期/上下班/工时/状态/操作），
+ * 扫描量、金额、操作人、操作时间、备注按需展开，降低一屏信息密度。
+ * 模块级常量，避免放进组件导致每次渲染都是新数组。
+ */
+const ATTENDANCE_DETAIL_KEYS = ['scanQty', 'scanAmount', 'operatorName', 'operateTime', 'remark'];
 import tenantService, { type TenantUser } from '@/services/tenantService';
 import attendanceApi, {
   type AdminListResp,
@@ -411,6 +418,20 @@ const AttendanceAdminPage: React.FC = () => {
     ];
   }, [stats, handleStatClick]);
 
+  // D-470：主表只留核心列，其余移入展开区（列标识用 dataIndex ?? key）
+  const colKeyOf = useCallback(
+    (c: Record<string, unknown>) => String(c.dataIndex ?? c.key ?? ''),
+    [],
+  );
+  const mainColumns = useMemo(
+    () => columns.filter((c) => !ATTENDANCE_DETAIL_KEYS.includes(colKeyOf(c as Record<string, unknown>))),
+    [columns, colKeyOf],
+  );
+  const detailColumns = useMemo(
+    () => columns.filter((c) => ATTENDANCE_DETAIL_KEYS.includes(colKeyOf(c as Record<string, unknown>))),
+    [columns, colKeyOf],
+  );
+
   // 导出 Excel（基于当前筛选条件下的全部数据）
   const [exporting, setExporting] = useState(false);
   const handleExport = useCallback(async () => {
@@ -509,12 +530,39 @@ const AttendanceAdminPage: React.FC = () => {
       <ResizableTable
         loading={loading}
         dataSource={records}
-        columns={columns}
+        columns={mainColumns}
         rowKey={(r) => String(r.id)}
         stickyHeader
         emptyDescription="暂无考勤记录"
         size="middle"
         scroll={{ x: 'max-content' }}
+        // D-470：扫描量/金额/操作人/操作时间/备注移入展开区
+        expandable={detailColumns.length > 0 ? {
+          expandedRowRender: (record: AttendanceRecord) => (
+            <Descriptions
+              size="small"
+              column={3}
+              bordered
+              styles={{ label: { width: 88, color: 'var(--color-text-tertiary)' } }}
+            >
+              {detailColumns.map((col: Record<string, unknown>, idx: number) => (
+                <Descriptions.Item
+                  key={String(col.dataIndex ?? col.key ?? idx)}
+                  label={typeof col.title === 'string' ? col.title : String(col.dataIndex ?? col.key ?? '')}
+                >
+                  {typeof col.render === 'function'
+                    ? (col.render as (v: unknown, r: unknown, i: number) => React.ReactNode)(
+                        (record as unknown as Record<string, unknown>)[String(col.dataIndex)],
+                        record,
+                        idx,
+                      )
+                    : String((record as unknown as Record<string, unknown>)[String(col.dataIndex)] ?? '-')}
+                </Descriptions.Item>
+              ))}
+            </Descriptions>
+          ),
+          rowExpandable: () => true,
+        } : undefined}
         pagination={{
           total,
           showTotal: (t) => `共 ${t} 条`,
