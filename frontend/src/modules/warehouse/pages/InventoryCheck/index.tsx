@@ -9,6 +9,17 @@ import { useInventoryCheck } from './useInventoryCheck';
 import { buildColumns, buildItemColumns, detailItemColumns } from './columns';
 import InventoryCheckGuide from './InventoryCheckGuide';
 
+/**
+ * D-470：移入「展开区」的盘点列 —— 主表只留核心（单号/类型/状态/项数/差异数/操作），
+ * 账面量、实盘量、差异数量、仓位、创建人、创建时间按需展开。
+ * 该表原总宽约 1890px，拆分后主表约 780px，一屏放得下。
+ * 模块级常量，避免放进组件导致每次渲染都是新数组。
+ */
+const INVENTORY_DETAIL_KEYS = [
+  'totalBookQty', 'totalActualQty', 'totalDiffQty',
+  'warehouseLocation', 'createdByName', 'createTime',
+];
+
 const InventoryCheck: React.FC = () => {
   const {
     list,
@@ -49,6 +60,15 @@ const InventoryCheck: React.FC = () => {
 
   const columns = buildColumns({ handleViewDetail, handleOpenFill, handleConfirm, handleCancel });
   const itemColumns = buildItemColumns(currentItems, setCurrentItems);
+
+  // D-470：主表只留核心列，次要列移入展开区（该表列用 dataIndex/key 标识）
+  const colKeyOf = (c: Record<string, unknown>) => String(c.key ?? c.dataIndex ?? '');
+  const mainColumns = columns.filter(
+    (c) => !INVENTORY_DETAIL_KEYS.includes(colKeyOf(c as unknown as Record<string, unknown>)),
+  );
+  const detailColumns = columns.filter(
+    (c) => INVENTORY_DETAIL_KEYS.includes(colKeyOf(c as unknown as Record<string, unknown>)),
+  );
 
   return (
     <div className="u-p-16">
@@ -96,7 +116,36 @@ const InventoryCheck: React.FC = () => {
         <ResizableTable
           size="small"
           rowKey="id"
-          columns={columns}
+          columns={mainColumns}
+          // D-470：账面量/实盘量/差异数量/仓位/创建人/创建时间移入展开区
+          expandable={detailColumns.length > 0 ? {
+            expandedRowRender: (record: Record<string, unknown>) => (
+              <Descriptions
+                size="small"
+                column={3}
+                bordered
+                styles={{ label: { width: 90, color: 'var(--color-text-tertiary)' } }}
+              >
+                {detailColumns.map((col: unknown, idx: number) => {
+                  const c = col as Record<string, unknown>;
+                  const ck = String(c.key ?? c.dataIndex ?? '');
+                  return (
+                    <Descriptions.Item
+                      key={ck || idx}
+                      label={typeof c.title === 'string' ? c.title : ck}
+                    >
+                      {typeof c.render === 'function'
+                        ? (c.render as (v: unknown, r: unknown, i: number) => React.ReactNode)(
+                            record[String(c.dataIndex)], record, idx,
+                          )
+                        : String(record[String(c.dataIndex)] ?? '-')}
+                    </Descriptions.Item>
+                  );
+                })}
+              </Descriptions>
+            ),
+            rowExpandable: () => true,
+          } : undefined}
           dataSource={list}
           loading={loading}
           pagination={{ current: page, pageSize, total, showSizeChanger: true, showTotal: t => `共 ${t} 条`, onChange: (p, ps) => { setPage(p); setPageSize(ps); } }}
