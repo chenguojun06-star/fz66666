@@ -87,13 +87,13 @@ const ThumbnailList: React.FC<ThumbnailListProps> = ({
               >
                 <Tooltip title="设为主图">
                   <StarFilled
-                    style={{ color: '#faad14', fontSize: 14, cursor: enabled ? 'pointer' : 'not-allowed' }}
+                    style={{ color: 'var(--color-warning)', fontSize: 14, cursor: enabled ? 'pointer' : 'not-allowed' }}
                     onClick={() => enabled && handleSetCover(index)}
                   />
                 </Tooltip>
                 <Tooltip title={isNewMode ? '移除' : '删除'}>
                   <DeleteOutlined
-                    style={{ color: '#ff7875', fontSize: 14, cursor: 'pointer' }}
+                    style={{ color: 'var(--color-error)', fontSize: 14, cursor: 'pointer' }}
                     onClick={() => handleDelete(img.id ?? '', index)}
                   />
                 </Tooltip>

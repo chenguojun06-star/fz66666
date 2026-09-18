@@ -29,8 +29,8 @@ export interface CashFlowPoint {
 // D-142：SVG fill 属性不支持 CSS var()（会渲染成黑色），必须具体色值；
 // 顺序与后端 buildCostStructure 一致：工资/物料/费用/借支，与现金流折线同色系
 export const PIE_COLORS = [
-  '#2d7ff9', // 工资支出
-  '#f59e0b', // 物料成本
-  '#ef4444', // 费用支出
-  '#722ed1', // 员工借支
+  'var(--color-primary)', // 工资支出
+  'var(--color-warning)', // 物料成本
+  'var(--color-error)', // 费用支出
+  'var(--color-info)', // 员工借支
 ];

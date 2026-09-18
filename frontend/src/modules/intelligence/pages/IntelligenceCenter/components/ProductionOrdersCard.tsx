@@ -13,7 +13,7 @@ const ProductionOrdersCard: React.FC<any> = ({
     <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['productionOrders'] ? 0 : 1200, transition: 'max-height 0.28s ease' }}>
     {/* 主数字 + 总件数 */}
     <div className="u-d-flex u-gap-8 u-mt-6" style={{ alignItems: 'baseline' }}>
-      <span style={{ color: 'var(--color-warning-deep)', fontSize: 42, fontWeight: 800, textShadow: '0 0 14px #f7a60088', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+      <span style={{ color: 'var(--color-warning-deep)', fontSize: 42, fontWeight: 800, textShadow: '0 0 14px var(--color-warning-deep)88', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
         <AnimatedNum val={currentKpiMetrics.productionOrderCount} />
       </span>
       <span className="u-fs-14 u-fw-600" style={{ color: 'var(--color-blue-300)' }}>单生产中</span>

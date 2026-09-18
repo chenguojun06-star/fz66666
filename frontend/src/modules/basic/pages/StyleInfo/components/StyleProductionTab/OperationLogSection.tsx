@@ -51,7 +51,7 @@ const OperationLogSection: React.FC<{ styleId?: string | number; styleNo?: strin
   const visibleLogs = showAll ? logs : logs.slice(0, 20);
 
   return (
-    <div className="u-br-8 u-mb-16" style={{ background: '#fff', padding: '16px 24px', border: '1px solid #f0f0f0' }}>
+    <div className="u-br-8 u-mb-16" style={{ background: '#fff', padding: '16px 24px', border: '1px solid var(--color-border-light)' }}>
       <div className="u-d-flex u-ai-center u-gap-8 u-mb-8">
         <Typography.Title level={5} style={{ margin: 0 }}>操作记录</Typography.Title>
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
@@ -71,7 +71,7 @@ const OperationLogSection: React.FC<{ styleId?: string | number; styleNo?: strin
               dataSource={visibleLogs}
               pagination={false}
               columns={[
-                { title: '操作时间', dataIndex: 'createTime', key: 'time', width: 150, render: (v: string) => <span className="u-fs-12" style={{ color: '#8c8c8c' }}>{v ?? '-'}</span> },
+                { title: '操作时间', dataIndex: 'createTime', key: 'time', width: 150, render: (v: string) => <span className="u-fs-12" style={{ color: 'var(--color-text-muted)' }}>{v ?? '-'}</span> },
                 { title: '操作类型', dataIndex: 'action', key: 'type', width: 150, render: (_: unknown, item) => {
                   const tag = BIZ_TAG[item.bizType ?? ''] ?? { color: 'default', text: item.bizType || '日志' };
                   return (

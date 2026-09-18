@@ -329,10 +329,10 @@ export const buildPurchaseSheetHtml = (
           .size-table .row-head{background:var(--color-bg-container)}
           .size-table .total-cell{min-width:140px;text-align:center;background:var(--color-bg-container)}
           .section{margin-top:18px}
-          .section h3{margin:0 0 0 0;font-size:13px;font-weight:700;background:#f0f0f0;padding:6px 10px;border-radius:2px;border:1px solid #d9d9d9;border-bottom:none}
-          .block-title{margin:14px 0 0 0;font-size:13px;font-weight:700;background:#f0f0f0;padding:6px 10px;border-radius:2px;border:1px solid #d9d9d9;border-bottom:none}
+          .section h3{margin:0 0 0 0;font-size:13px;font-weight:700;background:var(--color-border-light);padding:6px 10px;border-radius:2px;border:1px solid var(--color-border-antd);border-bottom:none}
+          .block-title{margin:14px 0 0 0;font-size:13px;font-weight:700;background:var(--color-border-light);padding:6px 10px;border-radius:2px;border:1px solid var(--color-border-antd);border-bottom:none}
           /* 打印人/打印时间 */
-          .print-footer{margin-top:18px;font-size:12px;color:#595959;display:flex;justify-content:space-between}
+          .print-footer{margin-top:18px;font-size:12px;color:var(--color-text-secondary);display:flex;justify-content:space-between}
           .data-table{width:100%;border-collapse:collapse;font-size:12px}
           .data-table th,.data-table td{border:1px solid var(--color-border);padding:6px 8px;vertical-align:middle;text-align:center}
           .data-table th{background:var(--color-bg-container);text-align:center}

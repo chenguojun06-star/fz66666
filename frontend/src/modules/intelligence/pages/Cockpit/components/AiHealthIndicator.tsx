@@ -102,7 +102,7 @@ const AiHealthIndicator: React.FC = () => {
         ))}
       </Space>
       {downCount > 0 && (
-        <div className="u-mt-8 u-br-4 u-fs-11" style={{ padding: '4px 8px', background: '#fff2f0', color: '#cf1322' }}>
+        <div className="u-mt-8 u-br-4 u-fs-11" style={{ padding: '4px 8px', background: '#fff2f0', color: 'var(--color-error)' }}>
           ⚠️ {downCount} 个组件异常，可能影响 AI 对话/视觉识别/向量搜索
         </div>
       )}
@@ -120,9 +120,9 @@ const AiHealthIndicator: React.FC = () => {
         <Button
           size="small"
           type="text"
-          icon={<ApiOutlined style={{ color: overallColor === 'red' ? '#cf1322' : overallColor === 'orange' ? '#fa8c16' : '#52c41a' }} />}
+          icon={<ApiOutlined style={{ color: overallColor === 'red' ? 'var(--color-error)' : overallColor === 'orange' ? 'var(--color-warning)' : 'var(--color-success)' }} />}
         >
-          <span style={{ fontSize: 11, color: overallColor === 'red' ? '#cf1322' : overallColor === 'orange' ? '#fa8c16' : '#52c41a' }}>
+          <span style={{ fontSize: 11, color: overallColor === 'red' ? 'var(--color-error)' : overallColor === 'orange' ? 'var(--color-warning)' : 'var(--color-success)' }}>
             AI {overallText}
           </span>
         </Button>

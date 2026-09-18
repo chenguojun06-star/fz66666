@@ -294,14 +294,14 @@ const ProductionRequirementsSection: React.FC<Props> = ({
           <ColorPicker
             disabledAlpha
             onChange={(c) => exec('foreColor', c.toHexString())}
-            presets={[{ label: '常用', colors: ['#000000', '#8c8c8c', '#f5222d', '#fa541c', '#faad14', '#52c41a', '#1677ff', '#722ed1'] }]}
+            presets={[{ label: '常用', colors: ['var(--color-text-primary)', 'var(--color-text-muted)', 'var(--color-error)', '#fa541c', 'var(--color-warning)', 'var(--color-success)', 'var(--color-primary)', 'var(--color-info)'] }]}
           >
-            <Tooltip title="文字颜色"><Button {...toolBtn} type="text">A<span style={{ color: '#f5222d' }}>▾</span></Button></Tooltip>
+            <Tooltip title="文字颜色"><Button {...toolBtn} type="text">A<span style={{ color: 'var(--color-error)' }}>▾</span></Button></Tooltip>
           </ColorPicker>
           <ColorPicker
             disabledAlpha
             onChange={(c) => exec('hiliteColor', c.toHexString())}
-            presets={[{ label: '底色', colors: ['#ffffff', '#fff1b8', '#ffd6e7', '#d6f0ff', '#d9f7be', '#efdbff'] }]}
+            presets={[{ label: '底色', colors: ['var(--color-bg-card)', '#fff1b8', '#ffd6e7', '#d6f0ff', '#d9f7be', '#efdbff'] }]}
           >
             <Tooltip title="背景色"><Button {...toolBtn} type="text">██<span>▾</span></Button></Tooltip>
           </ColorPicker>

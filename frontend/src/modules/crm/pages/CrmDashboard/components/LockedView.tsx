@@ -11,7 +11,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
     {/* 顶部 Hero 区：淡蓝背景 + 深色文字（高对比度，清晰可读） */}
     <Card
       style={{
-        background: '#e8f2ff', // 淡蓝 pastel 背景（项目规范色）
+        background: 'var(--color-primary-bg)', // 淡蓝 pastel 背景（项目规范色）
         border: 'none',
         marginBottom: 12,
         boxShadow: '0 2px 8px rgba(0,0,0,0.06)', // 阴影替代边框
@@ -56,7 +56,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
           <Card
             style={{
               height: '100%',
-              background: '#ffffff',
+              background: 'var(--color-bg-card)',
               boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
               border: 'none',
             }}
@@ -81,7 +81,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
     <Card
       style={{
         marginTop: 12,
-        background: '#f0effe', // 淡紫 pastel 背景（项目规范色）
+        background: 'var(--color-purple-50)', // 淡紫 pastel 背景（项目规范色）
         border: 'none',
         boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
       }}

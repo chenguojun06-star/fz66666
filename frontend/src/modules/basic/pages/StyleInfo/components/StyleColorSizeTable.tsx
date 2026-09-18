@@ -112,7 +112,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
     paddingInline: 8,
     borderRadius: 999,
     color: 'var(--color-primary, #2563eb)',
-    background: '#e8f2ff',
+    background: 'var(--color-primary-bg)',
     borderColor: 'var(--color-border-antd)',
     fontWeight: 500,
   };
