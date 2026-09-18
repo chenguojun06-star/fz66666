@@ -61,11 +61,12 @@ CUR_SWAP_KB=$(awk '/^\/swapfile/{print $3}' /proc/swaps 2>/dev/null | head -1)
 CUR_SWAP_KB=${CUR_SWAP_KB:-0}
 if [ "$CUR_SWAP_KB" -lt "$SWAP_TARGET_KB" ] 2>/dev/null; then
   echo "[$(date '+%F %T')] ℹ️ 当前 swapfile ${CUR_SWAP_KB}KB < 目标 ${SWAP_TARGET_KB}KB，尝试扩容"
-  if [ -f "$SWAP_FILE" ]; then sudo swapoff "$SWAP_FILE" >/dev/null 2>&1 || true; sudo rm -f "$SWAP_FILE" || true; fi
-  if sudo fallocate -l 4G "$SWAP_FILE" >/dev/null 2>&1 \
-     && sudo chmod 600 "$SWAP_FILE" >/dev/null 2>&1 \
-     && sudo mkswap "$SWAP_FILE" >/dev/null 2>&1 \
-     && sudo swapon "$SWAP_FILE" >/dev/null 2>&1; then
+  # ⚠️ 所有 sudo 都加 </dev/null：cron 下若 sudo 需密码会挂起等待输入，卡死整轮部署
+  if [ -f "$SWAP_FILE" ]; then sudo swapoff "$SWAP_FILE" </dev/null >/dev/null 2>&1 || true; sudo rm -f "$SWAP_FILE" || true; fi
+  if sudo fallocate -l 4G "$SWAP_FILE" </dev/null >/dev/null 2>&1 \
+     && sudo chmod 600 "$SWAP_FILE" </dev/null >/dev/null 2>&1 \
+     && sudo mkswap "$SWAP_FILE" </dev/null >/dev/null 2>&1 \
+     && sudo swapon "$SWAP_FILE" </dev/null >/dev/null 2>&1; then
     grep -q '^/swapfile' /etc/fstab 2>/dev/null || echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab >/dev/null 2>&1 || true
     echo "[$(date '+%F %T')] ✅ swap 已扩容到 4G"
   else
@@ -74,12 +75,17 @@ if [ "$CUR_SWAP_KB" -lt "$SWAP_TARGET_KB" ] 2>/dev/null; then
 fi
 
 # ── D-465：停掉已改为「按需」的遗留容器，释放内存 ──
-# docker compose 加 profiles 后，ups 不会主动停掉**之前已创建**的容器 ——
+# docker compose 加 profiles 后，up 不会主动停掉**之前已创建**的容器 ——
 # 不显式 stop 的话，这次优化等于没生效（内存照旧被占）。
+# ⚠️ 必须用 `docker compose stop`，不能 `docker stop cloudbeaver`：
+#    compose 生成的容器名是 lighthouse-cloudbeaver-1（带项目前缀和序号），
+#    用服务名 docker stop 会报 No such container 而静默失效（2026-09-18 实测踩坑）。
+# ⚠️ 必须带 --profile dbtools，否则 compose 解析不到带 profile 的服务。
 for S in phpmyadmin cloudbeaver; do
-  if sudo docker ps --format '{{.Names}}' 2>/dev/null | grep -q "$S"; then
+  if sudo docker ps --format '{{.Names}}' </dev/null 2>/dev/null | grep -q "$S"; then
     echo "[$(date '+%F %T')] ℹ️ 停掉按需服务 $S（需查库时：docker compose --profile dbtools up -d $S）"
-    sudo docker stop "$S" >/dev/null 2>&1 || true
+    sudo docker compose -f /opt/fz66666/deploy/lighthouse/docker-compose.yml \
+      --profile dbtools stop "$S" </dev/null >/dev/null 2>&1 || true
   fi
 done
 
@@ -114,7 +120,8 @@ tail -3000 "$SNAP_DIR/memory-snapshot.log" >"$SNAP_DIR/.mem.tmp" 2>/dev/null \
 #   （2026-09-17 更正：曾把"部署被阻塞"归因于 CloudBeaver 触发内存守卫，
 #     用户实测 available 1913MB 远高于 1200MB 阈值，该归因**已被推翻**；
 #     跳过名单的理由改为上面这条"不与运维意图拉锯"，与内存无关。）
-SWEEP_SKIP="cloudbeaver"
+# D-465：phpmyadmin 同样只在需要时手动拉起（Caddy 并未路由到它）
+SWEEP_SKIP="cloudbeaver phpmyadmin"
 # 统一用绝对路径：脚本中段会 `cd deploy/lighthouse`，相对路径一旦被挪到 cd 之后就会静默失效
 COMPOSE="$REPO_ROOT/deploy/lighthouse/docker-compose.yml"
 if [ -f "$COMPOSE" ]; then
