@@ -172,9 +172,12 @@ const PurchaseReturnModal: React.FC<PurchaseReturnModalProps> = ({
       key: 'quantity',
       width: 140,
       render: (val: number, record: ReturnItem) => (
+        // D-466：回料数量按米计，支持小数
         <InputNumber
           min={0}
           max={record.maxQuantity || undefined}
+          precision={2}
+          step={0.01}
           value={val}
           onChange={(num) => handleQuantityChange(record.purchaseId, num || 0)}
           addonAfter={record.unit || ''}

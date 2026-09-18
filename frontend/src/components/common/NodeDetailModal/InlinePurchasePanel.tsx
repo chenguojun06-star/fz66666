@@ -341,10 +341,12 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
             name="quantity"
             rules={[
               { required: true, message: '请输入实际到货数量' },
-              { type: 'number', min: 1, message: '数量必须大于 0' },
+              // D-466：面料按米计，允许 0.1 / 0.3 米；原 min:1 会把小数判为非法
+              { type: 'number', min: 0.01, message: '数量必须大于 0' },
             ]}
           >
-            <InputNumber style={{ width: '100%' }} min={1} precision={0} addonAfter={receiveModalRecord?.unit || ''} />
+            {/* D-466：原 precision={0} 会把 255.5 米抹成整数，金额核算随之失真 */}
+            <InputNumber style={{ width: '100%' }} min={0.01} step={0.01} precision={2} addonAfter={receiveModalRecord?.unit || ''} />
           </Form.Item>
         </Form>
       </ResizableModal>
@@ -466,7 +468,8 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
               { type: 'number', min: 0, message: '不能为负数' },
             ]}
           >
-            <InputNumber style={{ width: '100%' }} min={0} precision={0} addonAfter={returnModalRecord?.unit || ''} />
+            {/* D-466：回料数量同样按米计，支持小数 */}
+            <InputNumber style={{ width: '100%' }} min={0} step={0.01} precision={2} addonAfter={returnModalRecord?.unit || ''} />
           </Form.Item>
         </Form>
       </ResizableModal>

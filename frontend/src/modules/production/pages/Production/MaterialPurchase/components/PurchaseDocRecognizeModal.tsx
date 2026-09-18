@@ -147,9 +147,11 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, styleNo, on
       width: 110,
       render: (_: number, r: RecognizedItem) =>
         r.matched && r.purchaseId ? (
+          // D-466：识别数量可手工修正，支持小数（面料按米计）
           <InputNumber
-           
             min={0}
+            precision={2}
+            step={0.01}
             style={{ width: 90 }}
             value={editedQtys[r.purchaseId] ?? r.quantity}
             onChange={(v) =>
