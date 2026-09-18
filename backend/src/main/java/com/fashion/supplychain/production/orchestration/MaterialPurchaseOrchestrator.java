@@ -990,23 +990,25 @@ public class MaterialPurchaseOrchestrator {
         java.util.List<com.fashion.supplychain.production.entity.MaterialStock> stocks = materialStockService.list(wrapper);
 
         // 按物料编码聚合可用库存
-        java.util.Map<String, Integer> stockByCode = new java.util.HashMap<>();
+        // D-466：改 BigDecimal 汇总。此前 intValue 会让 0.5 米变 0 → hasStock=false，
+        // 明明有料却被判定"没货"，进而错误触发采购。
+        java.util.Map<String, BigDecimal> stockByCode = new java.util.HashMap<>();
         for (com.fashion.supplychain.production.entity.MaterialStock s : stocks) {
             if (s == null || s.getMaterialCode() == null) continue;
             BigDecimal qty = s.getQuantity() != null ? s.getQuantity() : BigDecimal.ZERO;
             int locked = s.getLockedQuantity() != null ? s.getLockedQuantity() : 0;
             BigDecimal available = qty.subtract(BigDecimal.valueOf(locked)).max(BigDecimal.ZERO);
-            // D-410：库存已是 BigDecimal，此 map 仍按 int 汇总（可用量用于前端判断是否"有货"）
-            stockByCode.merge(s.getMaterialCode().trim(), available.intValue(), Integer::sum);
+            stockByCode.merge(s.getMaterialCode().trim(), available, BigDecimal::add);
         }
 
         // 构建返回结果
         java.util.List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
         for (String code : codeList) {
             java.util.Map<String, Object> item = new java.util.HashMap<>();
+            BigDecimal avail = stockByCode.getOrDefault(code, BigDecimal.ZERO);
             item.put("materialCode", code);
-            item.put("availableStock", stockByCode.getOrDefault(code, 0));
-            item.put("hasStock", stockByCode.getOrDefault(code, 0) > 0);
+            item.put("availableStock", avail);
+            item.put("hasStock", avail.compareTo(BigDecimal.ZERO) > 0);
             result.add(item);
         }
         return result;

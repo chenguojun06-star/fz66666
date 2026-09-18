@@ -267,8 +267,10 @@ public class MaterialRollOrchestrator {
         }
         MaterialStock stock = findStockForRoll(roll);
         if (stock != null) {
-            int qty = roll.getQuantity().intValue();
-            if (qty > 0) {
+            // D-466：卷数量是 BigDecimal（按米），intValue() 会把 1.32 米截成 1，
+            // 更糟的是 <1 米时变 0 直接跳过扣减 → 库存一分不减、账实不符
+            java.math.BigDecimal qty = roll.getQuantity();
+            if (qty.compareTo(java.math.BigDecimal.ZERO) > 0) {
                 materialStockService.decreaseStockById(stock.getId(), qty);
                 log.info("发料扣减面辅料库存: stockId={}, materialCode={}, qty={}",
                         stock.getId(), roll.getMaterialCode(), qty);
@@ -286,8 +288,9 @@ public class MaterialRollOrchestrator {
         }
         MaterialStock stock = findStockForRoll(roll);
         if (stock != null) {
-            int qty = roll.getQuantity().intValue();
-            if (qty > 0) {
+            // D-466：同发料，退料归还也必须按小数，0.5 米不能被抹成 0
+            java.math.BigDecimal qty = roll.getQuantity();
+            if (qty.compareTo(java.math.BigDecimal.ZERO) > 0) {
                 materialStockService.updateStockQuantity(stock.getId(), qty);
                 log.info("退料归还面辅料库存: stockId={}, materialCode={}, qty={}",
                         stock.getId(), roll.getMaterialCode(), qty);

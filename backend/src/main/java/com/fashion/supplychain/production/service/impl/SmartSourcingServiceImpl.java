@@ -267,8 +267,10 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
     }
 
     /** 统一净需求公式：max(总需求 - 可用库存 - 在途, 0) */
-    private static BigDecimal calcNetDemand(BigDecimal demand, int availableStock, BigDecimal inTransit) {
-        return demand.subtract(BigDecimal.valueOf(availableStock))
+    /** D-466：可用库存改为 BigDecimal（intValue 会把 375.5 米算成 375，净需求凭空多出 0.5） */
+    private static BigDecimal calcNetDemand(BigDecimal demand, BigDecimal availableStock, BigDecimal inTransit) {
+        BigDecimal stock = availableStock != null ? availableStock : BigDecimal.ZERO;
+        return demand.subtract(stock)
                 .subtract(inTransit != null ? inTransit : BigDecimal.ZERO)
                 .max(BigDecimal.ZERO);
     }
@@ -300,7 +302,7 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
                 .collect(Collectors.toList());
 
         // ===== 批量预查询（与V2概览同源，保证数字一致） =====
-        Map<String, Integer> stockByCode = batchQueryAvailableStock(tenantId, materialCodes);
+        Map<String, BigDecimal> stockByCode = batchQueryAvailableStock(tenantId, materialCodes);
         Map<String, BigDecimal> inTransitByCode = batchQueryInTransit(tenantId, materialCodes);
         Map<String, MaterialPurchase> lastPurchaseByCode = batchQueryLastPurchase(tenantId, materialCodes);
         // 供应商：BOM指定批量查 + S/A级兜底（全体共享1次） + 任意活跃兜底（≤3次SQL）
@@ -314,7 +316,7 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
             BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
             BigDecimal demand = calcDemand(bom, orderQty);
 
-            int availableStock = stockByCode.getOrDefault(materialCode, 0);
+            BigDecimal availableStock = stockByCode.getOrDefault(materialCode, BigDecimal.ZERO);
             BigDecimal inTransit = inTransitByCode.getOrDefault(materialCode, BigDecimal.ZERO);
             // 统一 scale=4：needPurchase 标志、购物车推送、前端显示三处判定同一个值，
             // 消除"needPurchase=true 但净需求显示0"这类边界不一致
@@ -406,21 +408,23 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
     /**
      * 生成智能推荐理由（可解释性：为什么推荐买这个数量、为什么选这个供应商）
      */
-    private String buildRecommendReason(BigDecimal demand, int availableStock, BigDecimal inTransit,
+    // D-466：availableStock 改 BigDecimal，理由文案里的库存数字不再取整
+    private String buildRecommendReason(BigDecimal demand, BigDecimal availableStock, BigDecimal inTransit,
                                          BigDecimal netDemand, StyleBom bom, Factory supplier,
                                          Map<String, Object> lastPurchase) {
+        BigDecimal stockDesc = availableStock != null ? availableStock : BigDecimal.ZERO;
         if (netDemand == null || netDemand.compareTo(BigDecimal.ZERO) <= 0) {
-            return String.format("无需采购：库存%d + 在途%s 可覆盖需求%s",
-                    availableStock,
+            return String.format("无需采购：库存%s + 在途%s 可覆盖需求%s",
+                    stockDesc.setScale(2, RoundingMode.HALF_UP),
                     inTransit.setScale(2, RoundingMode.HALF_UP),
                     demand.setScale(2, RoundingMode.HALF_UP));
         }
 
         StringBuilder reason = new StringBuilder();
-        reason.append(String.format("需采购%s：需求%s - 库存%d - 在途%s = 净缺%s",
+        reason.append(String.format("需采购%s：需求%s - 库存%s - 在途%s = 净缺%s",
                 netDemand.setScale(2, RoundingMode.HALF_UP),
                 demand.setScale(2, RoundingMode.HALF_UP),
-                availableStock,
+                stockDesc.setScale(2, RoundingMode.HALF_UP),
                 inTransit.setScale(2, RoundingMode.HALF_UP),
                 netDemand.setScale(2, RoundingMode.HALF_UP)));
 
@@ -453,8 +457,8 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
      * 批量查询物料可用库存（quantity - lockedQuantity 聚合，1次SQL）
      * <p>与V2概览（computeOrderOverviews）共用同一SQL，口径严格一致
      */
-    private Map<String, Integer> batchQueryAvailableStock(Long tenantId, List<String> materialCodes) {
-        Map<String, Integer> stockByCode = new HashMap<>();
+    private Map<String, BigDecimal> batchQueryAvailableStock(Long tenantId, List<String> materialCodes) {
+        Map<String, BigDecimal> stockByCode = new HashMap<>();
         try {
             List<Map<String, Object>> rows = materialStockMapper.queryAvailableStockByMaterials(
                     tenantId, materialCodes);
@@ -462,7 +466,9 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
                 Object mc = r.get("materialCode");
                 Object qty = r.get("availableStock");
                 if (mc != null && qty != null) {
-                    stockByCode.put(String.valueOf(mc), ((Number) qty).intValue());
+                    // D-466：保留小数，0.5 米不能变 0
+                    stockByCode.put(String.valueOf(mc),
+                            qty instanceof BigDecimal bd ? bd : new BigDecimal(String.valueOf(qty)));
                 }
             }
         } catch (Exception ex) {
@@ -920,7 +926,7 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
         List<String> materialCodes = new ArrayList<>(materialCodeSet);
 
         // Step 3: 批量库存 → materialCode(String) -> availableStock  [1 SQL，聚合]
-        Map<String, Integer> stockByCode = new HashMap<>();
+        Map<String, BigDecimal> stockByCode = new HashMap<>();
         if (!materialCodes.isEmpty()) {
             try {
                 List<Map<String, Object>> rows = materialStockMapper.queryAvailableStockByMaterials(
@@ -929,7 +935,9 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
                     Object mc = r.get("materialCode");
                     Object qty = r.get("availableStock");
                     if (mc != null && qty != null) {
-                        stockByCode.put(String.valueOf(mc), ((Number) qty).intValue());
+                        // D-466：保留小数，0.5 米不能变 0
+                        stockByCode.put(String.valueOf(mc),
+                                qty instanceof BigDecimal bd ? bd : new BigDecimal(String.valueOf(qty)));
                     }
                 }
             } catch (Exception ex) {
@@ -987,7 +995,7 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
                 BigDecimal unitPrice = bom.getUnitPrice() == null ? BigDecimal.ZERO : bom.getUnitPrice();
 
                 String mc = bom.getMaterialCode();
-                int stock = stockByCode.getOrDefault(mc, 0);
+                BigDecimal stock = stockByCode.getOrDefault(mc, BigDecimal.ZERO);
                 BigDecimal inTransit = inTransitByCode.getOrDefault(mc, BigDecimal.ZERO);
                 BigDecimal netDemand = calcNetDemand(demand, stock, inTransit)
                         .setScale(DEMAND_SCALE, RoundingMode.HALF_UP);
@@ -1019,7 +1027,7 @@ public class SmartSourcingServiceImpl implements SmartSourcingService {
                     sufficient++;
                     // D-331：齐料也要说清"怎么齐的"——纯库存够 vs 靠在途采购到货
                     if (inTransit.compareTo(BigDecimal.ZERO) > 0
-                            && demand.compareTo(BigDecimal.valueOf(stock)) > 0) {
+                            && demand.compareTo(stock) > 0) {
                         inTransitCovered++;
                     } else {
                         stockCovered++;

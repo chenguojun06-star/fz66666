@@ -227,8 +227,9 @@ public class MaterialPurchaseDocOrchestrator {
                 skipped.add(copyExecutionItem(item, "skipped", "未匹配到采购单"));
                 continue;
             }
-            Integer qty = toInteger(item.get("quantity"));
-            if (qty == null || qty <= 0) {
+            // D-466：识别数量按小数保留（255.5 米不能被截成 255，否则到货量与金额同步失真）
+            java.math.BigDecimal qty = toDecimal(item.get("quantity"));
+            if (qty == null || qty.compareTo(java.math.BigDecimal.ZERO) <= 0) {
                 skipped.add(copyExecutionItem(item, "skipped", "识别数量为空或无效"));
                 continue;
             }
@@ -562,11 +563,11 @@ public class MaterialPurchaseDocOrchestrator {
         return row;
     }
 
-    private Integer toInteger(Object value) {
+    /** D-466：识别数量支持小数（原 toInteger 会把 255.5 截成 255） */
+    private java.math.BigDecimal toDecimal(Object value) {
         if (value == null) return null;
-        if (value instanceof Number number) return number.intValue();
         try {
-            return (int) Double.parseDouble(String.valueOf(value));
+            return new java.math.BigDecimal(String.valueOf(value).trim());
         } catch (Exception e) {
             return null;
         }

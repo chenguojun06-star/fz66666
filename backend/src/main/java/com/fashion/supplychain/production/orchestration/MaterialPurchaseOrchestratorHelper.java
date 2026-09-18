@@ -325,14 +325,15 @@ public class MaterialPurchaseOrchestratorHelper {
         // 库存状态 + 可用库存数（按 materialCode + color + size 匹配，与 StyleBom 逻辑一致）
         String stockKey = buildStockKey(record.getMaterialCode(), record.getColor(), record.getSize());
         List<MaterialStock> stockList = stockCache.getOrDefault(stockKey, Collections.emptyList());
-        int availableStock = calcAvailableStock(stockList);
+        // D-466：可用库存与需求量都按小数算（375.5 米曾被抹成 375，库存状态判定跟着错）
+        BigDecimal availableStock = calcAvailableStock(stockList);
         // 采购数量作为需求量（考虑已到货部分）
         BigDecimal purchaseQty = record.getPurchaseQuantity();
-        int requiredQty = purchaseQty != null ? purchaseQty.intValue() : 0;
+        BigDecimal requiredQty = purchaseQty != null ? purchaseQty : BigDecimal.ZERO;
         String stockStatus;
-        if (availableStock >= requiredQty && requiredQty > 0) {
+        if (requiredQty.compareTo(BigDecimal.ZERO) > 0 && availableStock.compareTo(requiredQty) >= 0) {
             stockStatus = "sufficient";
-        } else if (availableStock > 0) {
+        } else if (availableStock.compareTo(BigDecimal.ZERO) > 0) {
             stockStatus = "insufficient";
         } else {
             stockStatus = "none";
@@ -372,18 +373,18 @@ public class MaterialPurchaseOrchestratorHelper {
                 + (size == null ? "" : size);
     }
 
-    private int calcAvailableStock(List<MaterialStock> stockList) {
+    /** D-466：可用库存按 BigDecimal 汇总（此前 intValue 把 375.5 米算成 375） */
+    private BigDecimal calcAvailableStock(List<MaterialStock> stockList) {
         if (stockList == null || stockList.isEmpty()) {
-            return 0;
+            return BigDecimal.ZERO;
         }
         return stockList.stream()
-                .mapToInt(stock -> {
+                .map(stock -> {
                     BigDecimal qty = stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO;
                     int locked = stock.getLockedQuantity() != null ? stock.getLockedQuantity() : 0;
-                    // D-410：库存已是 BigDecimal；汇总口径仍为 int，故在此取整
-                    return qty.subtract(BigDecimal.valueOf(locked)).max(BigDecimal.ZERO).intValue();
+                    return qty.subtract(BigDecimal.valueOf(locked)).max(BigDecimal.ZERO);
                 })
-                .sum();
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private Map<String, Object> buildPageResult(Object records, IPage<?> page) {
