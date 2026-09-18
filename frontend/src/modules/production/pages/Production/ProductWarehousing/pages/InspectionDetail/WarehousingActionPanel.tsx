@@ -164,7 +164,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
           emptyDescription="暂无入库数据"
           dataSource={pendingRecords}
           resizableColumns={false}
-          scroll={{ x: 900 }}
+          scroll={{ x: 'max-content' }}
           style={{ fontSize: 12 }}
           columns={[
             {

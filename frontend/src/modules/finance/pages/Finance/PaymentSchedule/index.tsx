@@ -322,7 +322,7 @@ const PaymentSchedule: React.FC = () => {
           dataSource={records}
           loading={loading}
           stickyHeader
-          scroll={{ x: 1200 }}
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: page,
             pageSize,

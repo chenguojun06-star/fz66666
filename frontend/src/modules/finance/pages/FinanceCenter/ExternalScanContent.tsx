@@ -323,7 +323,7 @@ const ExternalScanContent: React.FC = () => {
             setPageSize(ps);
           },
         }}
-        scroll={{ x: 1300 }}
+        scroll={{ x: 'max-content' }}
         showExport={true}
         exportFilename="扫码记录.xlsx"
       />

@@ -187,7 +187,7 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName, 
           emptyDescription="暂无数据"
           pagination={false}
          
-          scroll={{ x: 900 }}
+          scroll={{ x: 'max-content' }}
         />
       </ResizableModal>
 

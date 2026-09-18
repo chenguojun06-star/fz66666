@@ -221,7 +221,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
               pagination={false}
               loading={loading}
               dataSource={issues}
-              scroll={{ x: 1100 }}
+              scroll={{ x: 'max-content' }}
               locale={{ emptyText: '暂无品质异常记录' }}
               columns={[
                 { title: '异常单号', dataIndex: 'issueNo', width: 180 },

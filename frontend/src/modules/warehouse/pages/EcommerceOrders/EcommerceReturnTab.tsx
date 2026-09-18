@@ -224,7 +224,7 @@ const EcommerceReturnTab: React.FC<EcommerceReturnTabProps> = ({ selectedOrder, 
         rowKey="id"
         loading={loading}
         emptyDescription="暂无退货记录"
-        scroll={{ x: 1300 }}
+        scroll={{ x: 'max-content' }}
         pagination={{
           current: page,
           pageSize,

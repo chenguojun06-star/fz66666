@@ -166,7 +166,7 @@ const PurchaseReturnTab: React.FC = () => {
         rowKey="id"
         loading={loading}
         emptyDescription="暂无采购退货记录"
-        scroll={{ x: 1400 }}
+        scroll={{ x: 'max-content' }}
         pagination={{
           current: page,
           pageSize,

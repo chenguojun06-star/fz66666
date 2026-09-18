@@ -62,7 +62,7 @@ const OrderPickerModal: React.FC<OrderPickerModalProps> = ({ open, isMobile, onC
           loading={loading}
           pagination={false}
           size="small"
-          scroll={{ x: 720, y: 400 }}
+          scroll={{ x: 'max-content', y: 400 }}
           emptyDescription="暂无生产订单"
           columns={[
             { title: '订单号', dataIndex: 'orderNo', width: 180 },

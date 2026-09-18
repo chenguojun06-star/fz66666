@@ -120,7 +120,7 @@ const QcRecordsPanel: React.FC<Props> = ({ qcRecords, qcStats, recordsLoading, h
         emptyDescription="暂无质检数据"
         dataSource={qcRecords}
         resizableColumns={false}
-        scroll={{ x: 1100 }}
+        scroll={{ x: 'max-content' }}
         style={{ fontSize: 14 }}
         rowClassName={(record) =>
           highlightWhNo && record.warehousingNo === highlightWhNo ? 'ant-table-row-selected' : ''

@@ -63,7 +63,7 @@ const MaterialSelectModal: React.FC<MaterialSelectModalProps> = ({
           size: 'small',
         }}
         size="small"
-        scroll={{ x: 800 }}
+        scroll={{ x: 'max-content' }}
         emptyDescription="暂无物料数据"
         columns={[
           { title: '物料编码', dataIndex: 'materialCode', width: 120 },

@@ -232,7 +232,7 @@ const ExpenseReimbursementPage: React.FC = () => {
             </Col>
           </Row>
         </Card>
-        <ResizableTable storageKey="expense-reimbursement" rowKey="id" columns={columns} dataSource={list} loading={loading} stickyHeader scroll={{ x: 1200 }}
+        <ResizableTable storageKey="expense-reimbursement" rowKey="id" columns={columns} dataSource={list} loading={loading} stickyHeader scroll={{ x: 'max-content' }}
           locale={{ emptyText: <Empty description="暂无记录" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
           pagination={{ current: page, pageSize, total, showSizeChanger: true, showTotal: (t) => `共 ${t} 条`, onChange: (p, s) => { setPage(p); setPageSize(s); } }}
           showExport={true}

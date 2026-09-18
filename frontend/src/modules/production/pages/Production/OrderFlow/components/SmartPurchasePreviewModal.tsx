@@ -191,7 +191,7 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
         dataSource={rows}
         rowKey={(r: any) => String(r.materialCode || r.materialName || Math.random())}
         pagination={false}
-        scroll={{ x: 720, y: 360 }}
+        scroll={{ x: 'max-content', y: 360 }}
         rowClassName={(r) => (r.needPurchase ? '' : 'smart-sourcing-no-need')}
         columns={[
           {

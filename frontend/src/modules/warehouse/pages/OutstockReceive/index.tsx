@@ -113,7 +113,7 @@ const OutstockReceive: React.FC = () => {
           dataSource={dataSource}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 1400 }}
+          scroll={{ x: 'max-content' }}
           pagination={false}
           emptyDescription="暂无数据"
         />

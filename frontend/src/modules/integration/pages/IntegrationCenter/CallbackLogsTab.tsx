@@ -145,7 +145,7 @@ const CallbackLogsTab: React.FC<Props> = ({ active }) => {
           onChange: (p: number, ps: number) => { setPage(p); setPageSize(ps); fetchData(p, ps, filters); },
         }}
         stickyHeader
-        scroll={{ x: 900 }}
+        scroll={{ x: 'max-content' }}
       />
 
       <ResizableModal

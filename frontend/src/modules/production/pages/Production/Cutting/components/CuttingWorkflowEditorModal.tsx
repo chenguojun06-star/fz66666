@@ -302,7 +302,7 @@ const CuttingWorkflowEditorModal: React.FC<CuttingWorkflowEditorModalProps> = ({
           dataSource={rows}
           rowKey="_key"
           pagination={false}
-          scroll={{ x: 700 }}
+          scroll={{ x: 'max-content' }}
           locale={{ emptyText: '暂无工序，点击上方按钮添加' }}
         />
       </Spin>

@@ -269,7 +269,7 @@ const ExceptionReport: React.FC = () => {
         loading={loading}
         columns={columns}
         dataSource={rows}
-        scroll={{ x: 1100 }}
+        scroll={{ x: 'max-content' }}
         pagination={{
           current: page,
           pageSize,

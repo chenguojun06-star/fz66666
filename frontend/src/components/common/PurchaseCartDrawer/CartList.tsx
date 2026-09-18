@@ -281,7 +281,7 @@ export const CartList: React.FC<CartListProps> = ({
         columns={columns}
         dataSource={items}
         pagination={false}
-        scroll={{ x: 1100, y: 'calc(100vh - 360px)' }}
+        scroll={{ x: 'max-content', y: 'calc(100vh - 360px)' }}
         rowClassName={(item) => selectedItems.has(item.id) ? 'row-selected' : ''}
         onRow={(item) => ({
           onClick: (e) => {

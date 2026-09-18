@@ -514,7 +514,7 @@ const AttendanceAdminPage: React.FC = () => {
         stickyHeader
         emptyDescription="暂无考勤记录"
         size="middle"
-        scroll={{ x: 1380 }}
+        scroll={{ x: 'max-content' }}
         pagination={{
           total,
           showTotal: (t) => `共 ${t} 条`,

@@ -327,7 +327,7 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
           pageSizeOptions: ['10', '20', '50', '100'],
           onChange: (page, pageSize) => setCostPagination({ current: page, pageSize }),
         } : false}
-        scroll={{ x: 800 }}
+        scroll={{ x: 'max-content' }}
         locale={{ emptyText: '暂无成本明细数据' }}
       />
       </Spin>
