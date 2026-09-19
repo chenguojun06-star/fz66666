@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   App,
   Button,
   DatePicker,
@@ -532,6 +533,17 @@ export default function CounterpartyBillDrawer({
           <Text type="secondary" style={{ fontSize: 12 }}>账单笔数</Text>
           <div><Title level={4} style={{ margin: 0 }}>{target?.billCount ?? '-'}</Title></div>
         </div>
+        {/* D-474：汇总为 0 时给原因提示，避免财务以为"坏了"——常见于付款记录存在
+            但上游单据尚未推送账单、或手工录入的付款记录等场景 */}
+        {(target?.billCount ?? 0) === 0 && (
+          <Alert
+            type="info"
+            showIcon
+            style={{ flex: 1, minWidth: 320 }}
+            message="该对象在账单汇总里没有往来记录"
+            description="可能原因：该对象只在付款记录里有手工录入或导入的流水，但上游单据（面料对账/工资结算/外发加工等）还没推送账单；下方如显示「历史付款记录」，说明确实有钱付出去但账单侧缺失。"
+          />
+        )}
         <div>
           <Text type="secondary" style={{ fontSize: 12 }}>累计金额</Text>
           <div><Title level={4} style={{ margin: 0 }}>{fmtMoney(target?.totalAmount)}</Title></div>
