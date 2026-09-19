@@ -973,6 +973,38 @@ public class BillAggregationOrchestrator {
      * 补记失败只告警，不回滚结清主流程。
      */
     /**
+     * D-474：作废某账单关联的所有付款记录（账单取消时用，保证账实一致）。
+     *
+     * @return 作废的条数
+     */
+    private int cancelPaymentRecordsByBill(BillAggregation bill) {
+        if (wagePaymentService == null) {
+            return 0;
+        }
+        try {
+            List<WagePayment> payments = wagePaymentService.lambdaQuery()
+                    .eq(WagePayment::getTenantId, TenantAssert.requireTenantId())
+                    .eq(WagePayment::getBizId, bill.getId())
+                    .ne(WagePayment::getStatus, "cancelled")
+                    .list();
+            if (payments == null || payments.isEmpty()) {
+                return 0;
+            }
+            for (WagePayment p : payments) {
+                p.setStatus("cancelled");
+                p.setPaymentRemark((p.getPaymentRemark() != null ? p.getPaymentRemark() + " | " : "")
+                        + "账单已取消，同步作废: " + bill.getBillNo());
+                p.setUpdateTime(LocalDateTime.now());
+                wagePaymentService.updateById(p);
+            }
+            return payments.size();
+        } catch (Exception e) {
+            log.warn("[BillAggregation] 作废付款记录失败: billNo={}, err={}", bill.getBillNo(), e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
      * D-474：付款后按实付金额生成付款凭证（失败不影响付款本身）。
      * 确认时已按全额挂"借成本/费用、贷应付"，这里再记"借应付、贷银行存款"。
      */
@@ -1091,9 +1123,28 @@ public class BillAggregationOrchestrator {
             throw new RuntimeException("已结清的账单不可取消");
         }
         bill.setStatus(BillConstants.STATUS_CANCELLED);
-        bill.setRemark(reason);
+        // D-474：账单付过一部分（结算中）也能取消，此时必须把已付的付款记录一并作废，
+        // 否则会出现"账单取消了、付款记录还显示已支付"的账实不符。
+        BigDecimal settled = bill.getSettledAmount() != null ? bill.getSettledAmount() : BigDecimal.ZERO;
+        if (settled.compareTo(BigDecimal.ZERO) > 0) {
+            int cancelled = cancelPaymentRecordsByBill(bill);
+            bill.setRemark((reason != null ? reason : "")
+                    + String.format(" | 取消时已付 %s 元，已同步作废 %d 条付款记录，请线下处理退款", settled, cancelled));
+        } else {
+            bill.setRemark(reason);
+        }
         billAggregationService.updateById(bill);
-        log.info("[BillAggregation] 取消账单: billNo={}, reason={}", bill.getBillNo(), reason);
+        log.info("[BillAggregation] 取消账单: billNo={}, reason={}, 已付={}", bill.getBillNo(), reason, settled);
+
+        // D-474：账单取消后冲销相关凭证（含已生成的付款凭证，避免账上留着已付记录）
+        try {
+            if (accountingVoucherOrchestrator != null) {
+                accountingVoucherOrchestrator.reverseByBillAggregationId(bill.getId());
+            }
+        } catch (Exception e) {
+            log.warn("[BillAggregation] 取消账单后冲销凭证失败（不影响取消）: billNo={}, err={}",
+                    bill.getBillNo(), e.getMessage());
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
