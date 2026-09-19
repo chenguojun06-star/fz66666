@@ -502,6 +502,12 @@ public class BillAggregationOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void settleBill(String billId, BigDecimal settledAmount) {
         BillAggregation bill = getBillOrThrow(billId);
+        // D-473：待确认账单允许直接付款——内部先自动确认（会同步生成结算任务与凭证），
+        // 避免财务必须"先点确认、再点付款"两步走，也避免直接付款被拒。
+        if (BillConstants.STATUS_PENDING.equals(bill.getStatus())) {
+            confirmBill(billId);
+            bill = getBillOrThrow(billId);
+        }
         if (!BillConstants.isConfirmedGroup(bill.getStatus())) {
             throw new RuntimeException("只有已确认/结算中的账单可以结清");
         }
