@@ -542,26 +542,48 @@ public class BillAggregationOrchestrator {
         if (thisTime.compareTo(BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("本次付款金额必须大于 0");
         }
-        BigDecimal newSettled = already.add(thisTime);
-        boolean fullyPaid = newSettled.compareTo(total) >= 0;
-        if (fullyPaid) {
-            newSettled = total; // 封顶，避免超额付款
-        }
+        SettlementResult result = resolveSettlement(total, already, thisTime);
+        boolean fullyPaid = result.isFullyPaid();
 
-        bill.setSettledAmount(newSettled);
+        bill.setSettledAmount(result.getNewSettled());
         bill.setStatus(fullyPaid ? BillConstants.STATUS_SETTLED : BillConstants.STATUS_SETTLING);
         bill.setSettledById(UserContext.userId());
         bill.setSettledByName(UserContext.username());
         bill.setSettledAt(LocalDateTime.now());
         billAggregationService.updateById(bill);
         log.info("[BillAggregation] 付款: billNo={}, 本次={}, 累计={}/{}, 状态={}",
-                bill.getBillNo(), thisTime, newSettled, total, bill.getStatus());
+                bill.getBillNo(), thisTime, result.getNewSettled(), total, bill.getStatus());
         // D-473：同步补记付款记录（记本次实付金额），打通总账与"付款记录"两套账
         ensurePaymentRecordFromBill(bill, thisTime);
         // D-474：付清后回写上游单据状态，避免"付款中心已付清、对账单还显示未付款"
         if (fullyPaid) {
             syncUpstreamPaid(bill);
         }
+    }
+
+    /** 部分付款结算结果（D-474，纯函数输出，便于单测） */
+    @Data
+    public static class SettlementResult {
+        /** 本次付款后的累计已付（付满时封顶到账单金额） */
+        private BigDecimal newSettled;
+        /** 是否已付满 */
+        private boolean fullyPaid;
+    }
+
+    /**
+     * D-474：计算本次付款后的累计已付与是否付满。
+     * 规则：累计 = 已付 + 本次；达到账单金额即付满并封顶（避免超额付款）；
+     * 未付满则该账单继续挂账（结算中），剩余下月可继续扣。
+     */
+    SettlementResult resolveSettlement(BigDecimal total, BigDecimal already, BigDecimal thisTime) {
+        BigDecimal t = total != null ? total : BigDecimal.ZERO;
+        BigDecimal a = already != null ? already : BigDecimal.ZERO;
+        BigDecimal sum = a.add(thisTime);
+        boolean fullyPaid = sum.compareTo(t) >= 0;
+        SettlementResult r = new SettlementResult();
+        r.setNewSettled(fullyPaid ? t : sum);
+        r.setFullyPaid(fullyPaid);
+        return r;
     }
 
     /**
