@@ -24,15 +24,10 @@ import CounterpartyBillDrawer from './CounterpartyBillDrawer';
 
 const { Text } = Typography;
 
-/** D-472 往来对象类型标签（员工/工厂/供应商/客户） */
-export const COUNTERPARTY_TYPE_MAP: Record<string, { text: string; color: string }> = {
-  WORKER: { text: '员工', color: 'blue' },
-  // D-473：历史数据里员工写作 EMPLOYEE，兼容显示（后端分组已归一到 WORKER）
-  EMPLOYEE: { text: '员工', color: 'blue' },
-  FACTORY: { text: '工厂', color: 'purple' },
-  SUPPLIER: { text: '供应商', color: 'cyan' },
-  CUSTOMER: { text: '客户', color: 'orange' },
-};
+// D-474：常量抽到 counterpartyConstants，避免与详情抽屉互相 import 形成循环依赖
+import { COUNTERPARTY_TYPE_MAP } from './counterpartyConstants';
+
+export { COUNTERPARTY_TYPE_MAP };
 
 const fmtMoney = (v?: number) => `¥${toMoneyLocale(v)}`;
 

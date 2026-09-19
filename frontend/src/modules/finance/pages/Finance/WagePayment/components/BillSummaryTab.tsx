@@ -16,7 +16,8 @@ import {
   ColumnSettingsButton,
   type ColumnOption,
 } from '@/components/common/ColumnSettings';
-import BillDetailDrawer, { SOURCE_TYPE_TEXT } from './BillDetailDrawer';
+import BillDetailDrawer from './BillDetailDrawer';
+import { SOURCE_TYPE_TEXT } from './counterpartyConstants';
 import {
   billAggregationApi,
   type BillAggregation,

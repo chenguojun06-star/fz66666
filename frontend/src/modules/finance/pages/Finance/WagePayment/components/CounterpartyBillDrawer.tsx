@@ -24,23 +24,12 @@ import {
 import { toMoneyLocale } from '@/utils/format';
 import { wagePaymentApi, type WagePayment } from '@/services/finance/wagePaymentApi';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
-import { COUNTERPARTY_TYPE_MAP } from './CounterpartyLedgerTab';
-import BillDetailDrawer, { SOURCE_TYPE_TEXT } from './BillDetailDrawer';
+import BillDetailDrawer from './BillDetailDrawer';
+import { COUNTERPARTY_TYPE_MAP, PAY_STATUS_TEXT, SOURCE_TYPE_TEXT } from './counterpartyConstants';
 
 const { Text, Title } = Typography;
 
 const fmtMoney = (v?: number) => `¥${toMoneyLocale(v)}`;
-
-/** D-473 兜底区块：付款记录状态文案（该对象没有账单时回退展示） */
-const PAY_STATUS_TEXT: Record<string, string> = {
-  pending: '待支付',
-  processing: '处理中',
-  success: '已支付',
-  paid: '已支付',
-  failed: '失败',
-  rejected: '已驳回',
-  cancelled: '已取消',
-};
 const fmtTime = (v?: string) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-');
 
 /** 可结清 / 可驳回 / 可确认 的状态集合（与后端 BillConstants 口径一致） */

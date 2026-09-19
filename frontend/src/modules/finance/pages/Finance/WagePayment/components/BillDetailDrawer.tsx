@@ -9,42 +9,14 @@ import {
 } from '@/services/finance/billAggregationApi';
 import { wagePaymentApi, type WagePayment } from '@/services/finance/wagePaymentApi';
 import { toMoneyLocale } from '@/utils/format';
-import { COUNTERPARTY_TYPE_MAP } from './CounterpartyLedgerTab';
+import { COUNTERPARTY_TYPE_MAP, PAY_STATUS_TEXT, SOURCE_TYPE_TEXT } from './counterpartyConstants';
 
 const { Text } = Typography;
 
 const fmtMoney = (v?: number) => `¥${toMoneyLocale(v)}`;
 const fmtTime = (v?: string) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-');
 
-/** 上游来源类型 → 中文（账单来自哪个模块推送；各列表共用，保持口径一致） */
-export const SOURCE_TYPE_TEXT: Record<string, string> = {
-  MATERIAL_RECONCILIATION: '面料对账',
-  QUALITY_DEDUCTION: '品质扣款',
-  SHIPMENT_RECONCILIATION: '出货对账',
-  SHIPMENT_RECONCILIATION_DEDUCTION: '出货对账扣款',
-  PAYROLL_SETTLEMENT: '工资结算',
-  SECONDARY_PROCESS: '外发二次工艺',
-  MATERIAL_PICKUP: '面料领用',
-  MATERIAL_OUTBOUND: '物料出库',
-  PRODUCT_OUTSTOCK: '成品出库',
-  EXPENSE_REIMBURSEMENT: '费用报销',
-  EMPLOYEE_ADVANCE: '员工借支',
-  PURCHASE_RETURN: '采购退货',
-  SALES_RETURN: '销售退货',
-  INVENTORY_CHECK: '库存盘点',
-  EC_SALES_REVENUE: '电商收入',
-  STYLE_DEVELOPMENT: '样衣开发',
-};
-
-const PAY_STATUS_TEXT: Record<string, string> = {
-  pending: '待支付',
-  processing: '处理中',
-  success: '已支付',
-  paid: '已支付',
-  failed: '失败',
-  rejected: '已驳回',
-  cancelled: '已取消',
-};
+// D-474：常量统一从 counterpartyConstants 引入（原来定义在本文件会造成组件循环依赖）
 
 interface BillDetailDrawerProps {
   open: boolean;
