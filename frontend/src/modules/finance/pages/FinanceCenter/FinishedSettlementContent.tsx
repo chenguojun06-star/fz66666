@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Card, Button, Input, Select, Empty, Space, Statistic, Timeline, Tabs, Table, InputNumber } from 'antd';
+import { Card, Button, Descriptions, Input, Select, Empty, Space, Statistic, Timeline, Tabs, Table, InputNumber } from 'antd';
 import { CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, DownloadOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -7,10 +7,21 @@ import PageLayout from '@/components/common/PageLayout';
 import StandardModal from '@/components/common/StandardModal';
 import SmallModal from '@/components/common/SmallModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import { useSettlementData, type PageParams } from './useSettlementData';
+import { useSettlementData, type PageParams, type FinishedSettlementRow } from './useSettlementData';
 import { getSettlementColumns } from './settlementColumns';
 import { isOrderFrozenByStatus } from '@/utils/api/production';
 import { usePersistentTab } from '@/hooks/usePersistentTab';
+
+/**
+ * D-471：移入「展开区」的结算列。
+ * 该表 18 列 / 约 2430px（全场最宽），主表只留订单·款号·工厂·状态·完成时间·总金额·利润，
+ * 数量与成本明细（颜色/下单/入库/次品/结算价/材料成本/生产成本/次品损耗）按需展开。
+ * 模块级常量，避免放进组件导致每次渲染都是新数组。
+ */
+const SETTLEMENT_DETAIL_KEYS = [
+  'colors', 'orderQuantity', 'warehousedQuantity', 'defectQuantity',
+  'styleFinalPrice', 'materialCost', 'productionCost', 'defectLoss',
+];
 
 interface Props {
   auditedOrderNos: Set<string>;
@@ -45,6 +56,17 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
   } = useSettlementData(auditedOrderNos, onAuditNosChange);
 
   const columns = getSettlementColumns(auditedOrderNos, handleAuditOrder, openRemarkModal, openLogModal, openDeductionModal);
+
+  // D-471：主表只留核心列，数量与成本明细移入展开区
+  const colKeyOf = (c: Record<string, unknown>) => String(c.key ?? c.dataIndex ?? '');
+  const mainColumns = useMemo(
+    () => columns.filter((c) => !SETTLEMENT_DETAIL_KEYS.includes(colKeyOf(c as unknown as Record<string, unknown>))),
+    [columns],
+  );
+  const detailColumns = useMemo(
+    () => columns.filter((c) => SETTLEMENT_DETAIL_KEYS.includes(colKeyOf(c as unknown as Record<string, unknown>))),
+    [columns],
+  );
 
   const filteredData = useMemo(() => {
     let result = data;
@@ -187,10 +209,42 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
 
         <ResizableTable
           storageKey="finance-finished-settlement"
-          columns={columns}
+          columns={mainColumns}
           dataSource={filteredData}
           loading={loading}
           rowKey="orderId"
+          // D-471：数量与成本明细移入展开区（该表原 18 列 / 2430px）
+          expandable={detailColumns.length > 0 ? {
+            expandedRowRender: (row: FinishedSettlementRow) => {
+              const record = row as unknown as Record<string, unknown>;
+              return (
+                <Descriptions
+                  size="small"
+                  column={4}
+                  bordered
+                  styles={{ label: { width: 88, color: 'var(--color-text-tertiary)' } }}
+                >
+                  {detailColumns.map((col: unknown, idx: number) => {
+                    const c = col as Record<string, unknown>;
+                    const ck = String(c.key ?? c.dataIndex ?? '');
+                    return (
+                      <Descriptions.Item
+                        key={ck || idx}
+                        label={typeof c.title === 'string' ? c.title : ck}
+                      >
+                        {typeof c.render === 'function'
+                          ? (c.render as (v: unknown, r: unknown, i: number) => React.ReactNode)(
+                              record[String(c.dataIndex)], row, idx,
+                            )
+                          : String(record[String(c.dataIndex)] ?? '-')}
+                      </Descriptions.Item>
+                    );
+                  })}
+                </Descriptions>
+              );
+            },
+            rowExpandable: () => true,
+          } : undefined}
           rowSelection={{ selectedRowKeys, onChange: (keys: React.Key[]) => setSelectedRowKeys(keys as string[]) }}
           scroll={{ x: 1800 }}
           pagination={{ current: pageParams.page, pageSize: pageParams.pageSize, total, showSizeChanger: true, showQuickJumper: true, showTotal: (t) => `共 ${t} 条`, pageSizeOptions: ['10', '20', '50', '100'] }}
