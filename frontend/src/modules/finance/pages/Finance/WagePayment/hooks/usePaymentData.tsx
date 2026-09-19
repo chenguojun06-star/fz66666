@@ -29,11 +29,12 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
   }, [showSmartErrorNotice]);
 
   // ---- Tab ----
-  // 支持 ?tab=pending|records|receivable|payable 直达（付款计划页"去付款"等入口跳转用）
+  // 支持 ?tab=ledger|pending|records|receivable|payable 直达（付款计划页"去付款"等入口跳转用）
+  // D-472：默认落在「往来总账」（银行账户视图，一行=一个往来对象）
   const [activeTab, setActiveTab] = usePersistentTab<string>(
     'tab',
-    'pending',
-    ['pending', 'records', 'receivable', 'payable'],
+    'ledger',
+    ['ledger', 'pending', 'records', 'receivable', 'payable'],
   );
 
   // ---- 待收付款列表 ----

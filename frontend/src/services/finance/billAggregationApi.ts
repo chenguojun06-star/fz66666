@@ -49,7 +49,19 @@ export interface BillQueryRequest {
   createTimeStart?: string;  // new: 创建时间范围 - 开始，格式 YYYY-MM-DD
   createTimeEnd?: string;    // new: 创建时间范围 - 结束，格式 YYYY-MM-DD
   counterpartyName?: string;
+  counterpartyId?: string;   // D-472：按往来对象精确过滤（往来总账详情页用）
   orderNo?: string;
+}
+
+/** D-472 往来总账：按对象聚合后的一行（一个员工/工厂/供应商/客户） */
+export interface CounterpartyGroup {
+  counterpartyType: string;  // WORKER / FACTORY / SUPPLIER / CUSTOMER
+  counterpartyId: string;
+  counterpartyName: string;
+  billCount: number;
+  totalAmount: number;
+  settledAmount: number;
+  unsettledAmount: number;
 }
 
 export interface BillStats {
@@ -153,4 +165,16 @@ export const billAggregationApi = {
   /** 取消账单 */
   cancelBill: (id: string, reason: string) =>
     api.post(`/finance/bill-aggregation/${id}/cancel`, null, { params: { reason } }),
+
+  /** D-472 往来总账：按对象聚合（主列表一行=一个对象） */
+  listCounterpartyGroups: (params: { billType?: string; settlementMonth?: string; keyword?: string }) =>
+    api.post('/finance/bill-aggregation/group-by-counterparty', params),
+
+  /** D-472 批量结清（批量付款 / 整月合并付款） */
+  batchSettle: (ids: string[]) =>
+    api.post('/finance/bill-aggregation/batch-settle', ids),
+
+  /** D-472 批量驳回（取消账单） */
+  batchCancel: (ids: string[], reason: string) =>
+    api.post('/finance/bill-aggregation/batch-cancel', { billIds: ids, reason }),
 };

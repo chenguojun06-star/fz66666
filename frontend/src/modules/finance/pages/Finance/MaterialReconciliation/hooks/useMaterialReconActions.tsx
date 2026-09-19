@@ -6,6 +6,7 @@ import type { MaterialReconType } from '@/types/finance';
 import materialReconciliationApi from '@/services/finance/materialReconciliationApi';
 import { getMaterialReconStatusConfig, materialReconStatusTransitions } from '@/constants/finance';
 import { isSupervisorOrAboveUser } from '@/utils/AuthContext';
+import { runInBatches } from '@/utils/batchRequest';
 
 export const useMaterialReconActions = (
   reconciliationList: MaterialReconType[],
@@ -44,7 +45,11 @@ export const useMaterialReconActions = (
     if (invalidTransitions.length) { message.error('存在不允许的状态转换，请检查后重试'); return; }
     setApprovalSubmitting(true);
     try {
-      const settled = await Promise.allSettled(normalized.map((p) => materialReconciliationApi.updateMaterialReconciliationStatus(p.id, p.status)));
+      // D-471：改成分批并发（原为一次性全发，勾选多时并发请求会打爆后端导致超时/500）
+      const settled = await runInBatches(
+        normalized,
+        (p) => materialReconciliationApi.updateMaterialReconciliationStatus(p.id, p.status),
+      );
       const okCount = settled.filter((r) => r.status === 'fulfilled' && (r.value as any)?.code === 200).length;
       const _failedIds = settled
         .map((r, i) => r.status === 'rejected' ? normalized[i].id : null)

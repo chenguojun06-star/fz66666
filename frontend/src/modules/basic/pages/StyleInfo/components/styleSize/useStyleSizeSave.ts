@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSize } from '@/types/style';
 import api, { toNumberSafe } from '@/utils/api';
+import { runInBatches } from '@/utils/batchRequest';
 import {
   MatrixRow,
   resolveGroupName,
@@ -134,7 +135,8 @@ export function useStyleSizeSave({
         ...obsoleteOriginalIds,
       ].filter(Boolean)));
       if (deleteIds.length) {
-        await Promise.allSettled(deleteIds.map((id) => api.delete(`/style/size/${id}`)));
+        // D-471：改成分批并发（原为一次性全发，尺码多时并发请求会打爆后端导致超时/500）
+        await runInBatches(deleteIds, (id) => api.delete(`/style/size/${id}`));
       }
 
       message.success('保存成功');

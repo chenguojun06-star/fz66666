@@ -15,11 +15,13 @@ import {
   DollarOutlined,
   PayCircleOutlined,
   AccountBookOutlined,
+  BankOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { formatMoney } from '@/utils/format';
+import CounterpartyLedgerTab from './components/CounterpartyLedgerTab';
 import {
   BIZ_TYPE_MAP,
   wagePaymentApi,
@@ -173,7 +175,7 @@ const PaymentCenterPage: React.FC = () => {
                 收付款中心
               </h2>
               <span className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
-                打款在「待付款」完成，自动留痕到「付款记录」；应收账单为客户款项、应付账单为供应商款项，确认后进入待付款
+                上游推送的每笔账单都按对象累计叠加（像存钱一样）；点击对象名进详情查看全部推送流水，付款与驳回在详情内完成
               </span>
             </div>
             <Button type="primary" ghost icon={<DollarOutlined />} onClick={handleOpenPayModal}>
@@ -198,6 +200,15 @@ const PaymentCenterPage: React.FC = () => {
             destroyOnHidden={false}
             size="small"
             items={[
+              {
+                key: 'ledger',
+                label: (
+                  <span>
+                    <BankOutlined /> 往来总账
+                  </span>
+                ),
+                children: <CounterpartyLedgerTab />,
+              },
               {
                 key: 'pending',
                 label: (

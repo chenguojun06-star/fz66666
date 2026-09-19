@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { App, Form } from 'antd';
 import { OPERATION_TYPE_MAP, type SubProcessRow } from './SampleProcessList.helpers';
+import { runInBatches } from '@/utils/batchRequest';
 import type { ProcessStageProgress } from './useSampleProcessProgress';
 import type { PatternProductionSnapshot } from './styleTableViewUtils.types';
 import type { BatchCompleteTarget } from './components/BatchCompleteModal';
@@ -210,7 +211,8 @@ export default function useSampleProcessListData(
     setBatchCompleteSubmitting(true);
     try {
       const { default: api } = await import('@/utils/api');
-      const results = await Promise.allSettled(targets.map((t) => api.post('/production/pattern/scan', {
+      // D-471：改成分批并发（原为一次性全发，批量完成工序时并发过多会打爆后端）
+      const results = await runInBatches(targets, (t) => api.post('/production/pattern/scan', {
         patternId: String(t.snapshot.id),
         operationType: opType,
         processName: rowName,
@@ -219,7 +221,7 @@ export default function useSampleProcessListData(
         quantity: t.quantity,
         operatorRole: 'PLATE_WORKER',
         remark: 'PC完成工序',
-      })));
+      }));
       const okCount = results.filter((r) => r.status === 'fulfilled').length;
       const failCount = results.length - okCount;
       if (okCount > 0) {
