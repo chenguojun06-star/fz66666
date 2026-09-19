@@ -69,16 +69,7 @@ const PaymentCenterPage: React.FC = () => {
   const [paymentStatusTab, setPaymentStatusTab] = useState<string>('');
 
   // ==================== 统计卡片 ====================
-  // 收支记录 (payments) 统计
-  const paymentStats = useMemo(() => {
-    const total = data.payments.length;
-    const pendingCount = data.payments.filter((p: any) => p.status === 'pending' || p.status === 'processing').length;
-    const successCount = data.payments.filter((p: any) => p.status === 'success').length;
-    const rejectedCount = data.payments.filter((p: any) => p.status === 'rejected' || p.status === 'failed' || p.status === 'cancelled').length;
-    const totalAmount = data.payments.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
-    const successAmount = data.payments.filter((p: any) => p.status === 'success').reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
-    return { total, pendingCount, successCount, rejectedCount, totalAmount, successAmount };
-  }, [data.payments]);
+  // D-474：顶部统计卡统一改用账单口径（billStats），不再单独算付款记录统计
 
   // ---- 表格列定义 ----
   const { paymentColumns } = usePaymentColumns({
@@ -149,7 +140,7 @@ const PaymentCenterPage: React.FC = () => {
         {/* ===== 统计卡片（顶部统一） ===== */}
         <StatsCards
           activeTab={data.activeTab}
-          paymentStats={paymentStats}
+          billStats={data.billStats}
         />
 
         {/* Tab 切换 */}

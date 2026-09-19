@@ -367,7 +367,8 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
               onClick: () => handleCancel(record),
             });
           }
-          if (record.status === 'success' && !record.confirmTime) {
+          // D-474：确认收款只对客户付款（CUSTOMER）才有意义——付出去的钱不需要"确认收款"
+          if (record.status === 'success' && !record.confirmTime && String(record.payeeType) === 'CUSTOMER') {
             actions.push({
               key: 'received',
               label: '确认收款',

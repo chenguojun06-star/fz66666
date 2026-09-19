@@ -7,6 +7,7 @@ import {
   type PaymentQueryRequest,
   type PayableItem,
 } from '@/services/finance/wagePaymentApi';
+import { billAggregationApi, type BillStats } from '@/services/finance/billAggregationApi';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { formatMoney } from '@/utils/format';
@@ -127,6 +128,33 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
     return { total, successCount, totalAmount, successAmount };
   }, [payments]);
 
+  // D-474：账单统计（口径统一，三个页面顶部卡都用这一套）
+  const [billStats, setBillStats] = useState<BillStats>({
+    pendingAmount: 0, pendingCount: 0,
+    confirmedAmount: 0, confirmedCount: 0,
+    settledAmount: 0, settledCount: 0,
+  });
+  const fetchBillStats = useCallback(async (billType?: 'PAYABLE' | 'RECEIVABLE') => {
+    try {
+      const res: any = await billAggregationApi.getStats(billType);
+      const d = res?.data ?? res ?? {};
+      setBillStats({
+        pendingAmount: Number(d.pendingAmount ?? 0),
+        pendingCount: Number(d.pendingCount ?? 0),
+        confirmedAmount: Number(d.confirmedAmount ?? 0),
+        confirmedCount: Number(d.confirmedCount ?? 0),
+        settledAmount: Number(d.settledAmount ?? 0),
+        settledCount: Number(d.settledCount ?? 0),
+      });
+    } catch {
+      // 静默失败：顶部卡是辅助信息，不影响主流程
+    }
+  }, []);
+  useEffect(() => {
+    // 按当前 Tab 的账单类型取统计：ledger 默认 PAYABLE；records 时仍是 PAYABLE（钱付出去）
+    fetchBillStats('PAYABLE');
+  }, [activeTab, fetchBillStats]);
+
   // ---- 批量付款 ----
   const handleBatchPay = () => {
     const selected = filteredPayables.filter(p => selectedPayableKeys.includes(`${p.bizType}-${p.bizId}`));
@@ -229,7 +257,7 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
     pendingRejectPayable, setPendingRejectPayable, rejectPayableLoading, handleRejectPayable, handleRejectPayableConfirm,
     payments, paymentsLoading, filterValuesRef,
     fetchPayables, fetchPayments,
-    filteredPayables, pendingStats, paymentStats,
+    filteredPayables, pendingStats, paymentStats, billStats,
     handleCancel,
   };
 }
