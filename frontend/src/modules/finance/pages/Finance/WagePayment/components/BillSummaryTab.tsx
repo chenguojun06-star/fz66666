@@ -181,11 +181,11 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
       ),
     },
     {
-      title: '已结算', dataIndex: 'settledAmount', key: 'settledAmount', width: 110, align: 'right',
+      title: '已结清', dataIndex: 'settledAmount', key: 'settledAmount', width: 110, align: 'right',
       render: (v: number) => `¥${(v ?? 0).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}`,
     },
     {
-      title: '还剩余', key: 'unsettledAmount', width: 110, align: 'right',
+      title: '未结清', key: 'unsettledAmount', width: 110, align: 'right',
       render: (_: unknown, r: BillAggregation) => {
         const rest = Number(r.amount ?? 0) - Number(r.settledAmount ?? 0);
         if (Number(r.amount ?? 0) < 0) {
