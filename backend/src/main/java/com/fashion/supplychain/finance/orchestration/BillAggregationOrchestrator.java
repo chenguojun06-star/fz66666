@@ -8,8 +8,10 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
 import com.fashion.supplychain.finance.constant.BillConstants;
 import com.fashion.supplychain.finance.entity.BillAggregation;
+import com.fashion.supplychain.finance.entity.ExpenseReimbursement;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.Payable;
+import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.entity.WagePayment;
 import com.fashion.supplychain.finance.service.WagePaymentService;
 import com.fashion.supplychain.finance.service.BillAggregationService;
@@ -74,6 +76,12 @@ public class BillAggregationOrchestrator {
     // D-474：付清后回写上游单据（可选注入，避免循环依赖与单元测试困扰）
     @Autowired(required = false)
     private com.fashion.supplychain.finance.service.MaterialReconciliationService materialReconciliationService;
+
+    @Autowired(required = false)
+    private com.fashion.supplychain.finance.service.ShipmentReconciliationService shipmentReconciliationService;
+
+    @Autowired(required = false)
+    private com.fashion.supplychain.finance.service.ExpenseReimbursementService expenseReimbursementService;
 
     /**
      * 获取当前工厂账号的订单ID列表（用于工厂账号数据隔离）
@@ -560,28 +568,89 @@ public class BillAggregationOrchestrator {
      * D-474：账单付清后回写上游单据为已付款。
      * 原先只有"上游置 PAID → 同步账单"一个方向，反向缺失，导致付款中心付完钱
      * 回到对账页那张单仍显示未付款，两边对不上。
-     * 这里只做面料对账（状态机清晰）；部分付款不回写（上游没有"部分付款"状态，
-     * 保持原状由财务在上游自行确认）。
+     * 覆盖三类：面料对账 / 出货对账 / 费用报销（状态机与付款字段明确）。
+     * 工资结算不回写——它的付款状态由付款记录动态聚合，结清补记付款记录后自动联动。
+     * 外发二次工艺没有付款状态字段，暂不回写。
+     * 部分付款不回写（上游没有"部分付款"状态，保持原状由财务在上游自行确认）。
+     * 状态值统一小写 paid，与上游状态流转（to=="paid"）保持一致。
      */
     private void syncUpstreamPaid(BillAggregation bill) {
-        if (materialReconciliationService == null || !"MATERIAL_RECONCILIATION".equals(bill.getSourceType())) {
+        String sourceType = bill.getSourceType();
+        if (sourceType == null) {
+            return;
+        }
+        if ("MATERIAL_RECONCILIATION".equals(sourceType)) {
+            markMaterialPaid(bill);
+        } else if ("SHIPMENT_RECONCILIATION".equals(sourceType)) {
+            markShipmentPaid(bill);
+        } else if ("EXPENSE_REIMBURSEMENT".equals(sourceType)) {
+            markExpensePaid(bill);
+        }
+    }
+
+    private void markMaterialPaid(BillAggregation bill) {
+        if (materialReconciliationService == null) {
             return;
         }
         try {
             MaterialReconciliation mr = materialReconciliationService.getById(bill.getSourceId());
-            if (mr == null || "PAID".equalsIgnoreCase(mr.getStatus())) {
+            if (mr == null || "paid".equalsIgnoreCase(mr.getStatus())) {
                 return;
             }
             MaterialReconciliation patch = new MaterialReconciliation();
             patch.setId(mr.getId());
-            patch.setStatus("PAID");
+            patch.setStatus("paid");
             patch.setPaidAt(LocalDateTime.now());
             patch.setPaidAmount(bill.getSettledAmount() != null ? bill.getSettledAmount() : bill.getAmount());
             materialReconciliationService.updateById(patch);
-            log.info("[BillAggregation] 付清回写上游对账单: billNo={}, reconId={}, amount={}",
-                    bill.getBillNo(), mr.getId(), patch.getPaidAmount());
+            log.info("[BillAggregation] 付清回写面料对账单: billNo={}, reconId={}", bill.getBillNo(), mr.getId());
         } catch (Exception e) {
-            log.warn("[BillAggregation] 付清回写上游对账单失败（不影响结清）: billNo={}, err={}",
+            log.warn("[BillAggregation] 回写面料对账单失败（不影响结清）: billNo={}, err={}",
+                    bill.getBillNo(), e.getMessage());
+        }
+    }
+
+    private void markShipmentPaid(BillAggregation bill) {
+        if (shipmentReconciliationService == null) {
+            return;
+        }
+        try {
+            ShipmentReconciliation sr = shipmentReconciliationService.getById(bill.getSourceId());
+            if (sr == null || "paid".equalsIgnoreCase(sr.getStatus())) {
+                return;
+            }
+            ShipmentReconciliation patch = new ShipmentReconciliation();
+            patch.setId(sr.getId());
+            patch.setStatus("paid");
+            patch.setPaidAt(LocalDateTime.now());
+            shipmentReconciliationService.updateById(patch);
+            log.info("[BillAggregation] 付清回写出货对账单: billNo={}, reconId={}", bill.getBillNo(), sr.getId());
+        } catch (Exception e) {
+            log.warn("[BillAggregation] 回写出货对账单失败（不影响结清）: billNo={}, err={}",
+                    bill.getBillNo(), e.getMessage());
+        }
+    }
+
+    private void markExpensePaid(BillAggregation bill) {
+        if (expenseReimbursementService == null) {
+            return;
+        }
+        try {
+            ExpenseReimbursement er = expenseReimbursementService.getById(bill.getSourceId());
+            if (er == null || "paid".equalsIgnoreCase(er.getStatus())) {
+                return;
+            }
+            ExpenseReimbursement patch = new ExpenseReimbursement();
+            patch.setId(er.getId());
+            patch.setStatus("paid");
+            patch.setPaymentTime(LocalDateTime.now());
+            patch.setPaymentBy(UserContext.username());
+            patch.setUpdateBy(UserContext.username());
+            patch.setUpdateTime(LocalDateTime.now());
+            expenseReimbursementService.updateById(patch);
+            log.info("[BillAggregation] 付清回写报销单: billNo={}, expenseId={}", bill.getBillNo(), er.getId());
+        } catch (Exception e) {
+            log.warn("[BillAggregation] 回写报销单失败（不影响结清）: billNo={}, err={}",
                     bill.getBillNo(), e.getMessage());
         }
     }
