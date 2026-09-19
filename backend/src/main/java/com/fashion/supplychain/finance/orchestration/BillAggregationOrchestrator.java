@@ -99,6 +99,9 @@ public class BillAggregationOrchestrator {
     @Autowired(required = false)
     private com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.production.service.ProductOutstockService productOutstockService;
+
     /**
      * 获取当前工厂账号的订单ID列表（用于工厂账号数据隔离）
      * 非工厂账号返回 null（表示不限制）
@@ -875,6 +878,8 @@ public class BillAggregationOrchestrator {
             markExpensePaid(bill);
         } else if ("SECONDARY_PROCESS".equals(sourceType)) {
             markSecondaryProcessPaid(bill);
+        } else if ("PRODUCT_OUTSTOCK".equals(sourceType)) {
+            markOutstockPaid(bill);
         }
     }
 
@@ -975,6 +980,33 @@ public class BillAggregationOrchestrator {
      * 幂等：initiatePayment 按 bizType+bizId+paymentMethod 去重；
      * 补记失败只告警，不回滚结清主流程。
      */
+    /**
+     * D-474：应收方向——客户付款到账后回写成品出库的收款状态，
+     * 避免"钱收到了、出库单还显示未收款"。
+     */
+    private void markOutstockPaid(BillAggregation bill) {
+        if (productOutstockService == null) {
+            return;
+        }
+        try {
+            com.fashion.supplychain.production.entity.ProductOutstock outstock =
+                    productOutstockService.getById(bill.getSourceId());
+            if (outstock == null || "paid".equalsIgnoreCase(outstock.getPaymentStatus())) {
+                return;
+            }
+            com.fashion.supplychain.production.entity.ProductOutstock patch =
+                    new com.fashion.supplychain.production.entity.ProductOutstock();
+            patch.setId(outstock.getId());
+            patch.setPaymentStatus("paid");
+            patch.setPaidAmount(bill.getSettledAmount() != null ? bill.getSettledAmount() : bill.getAmount());
+            productOutstockService.updateById(patch);
+            log.info("[BillAggregation] 收款回写成品出库: billNo={}, outstockId={}", bill.getBillNo(), outstock.getId());
+        } catch (Exception e) {
+            log.warn("[BillAggregation] 回写成品出库失败（不影响结清）: billNo={}, err={}",
+                    bill.getBillNo(), e.getMessage());
+        }
+    }
+
     /**
      * D-474：作废某账单关联的所有付款记录（账单取消时用，保证账实一致）。
      *
