@@ -137,6 +137,7 @@ public class FinanceDataConsistencyJob {
                 // D-474：收付款闭环自检——补推缺失的对账账单、已结清账单缺付款记录/上游未置已付款时自愈
                 if (billAggregationOrchestrator != null) {
                     fixedMissingReconBills += billAggregationOrchestrator.repairMissingReconciliationBills();
+                    fixedMissingReconBills += billAggregationOrchestrator.repairMissingSecondaryProcessBills();
                     fixedPaymentRecords += billAggregationOrchestrator.repairSettledBillsConsistency();
                 }
             } catch (Exception e) {

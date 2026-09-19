@@ -676,6 +676,68 @@ public class BillAggregationOrchestrator {
     }
 
     /**
+     * D-474 补推缺失的外发工艺账单（供定时任务调用）。
+     *
+     * 外发加工审批通过时应推送 FACTORY 账单；若当时推送失败（异常、服务重启），
+     * 这笔钱就永远不出现在总账里，财务也无从察觉。这里做幂等补推：
+     * 已审批 + 总价大于 0 + 还没有 SECONDARY_PROCESS 账单 → 补推一条（待确认）。
+     *
+     * @return 本次补推的笔数
+     */
+    public int repairMissingSecondaryProcessBills() {
+        if (secondaryProcessService == null) {
+            return 0;
+        }
+        Long tenantId = TenantAssert.requireTenantId();
+        List<com.fashion.supplychain.style.entity.SecondaryProcess> list =
+                secondaryProcessService.lambdaQuery()
+                        .eq(com.fashion.supplychain.style.entity.SecondaryProcess::getTenantId, tenantId)
+                        .eq(com.fashion.supplychain.style.entity.SecondaryProcess::getApprovalStatus, "approved")
+                        .list();
+        if (list == null || list.isEmpty()) {
+            return 0;
+        }
+        int fixed = 0;
+        for (com.fashion.supplychain.style.entity.SecondaryProcess sp : list) {
+            try {
+                if (sp.getTotalPrice() == null || sp.getTotalPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+                String sid = String.valueOf(sp.getId());
+                boolean hasBill = billAggregationService.lambdaQuery()
+                        .eq(BillAggregation::getTenantId, tenantId)
+                        .eq(BillAggregation::getSourceType, "SECONDARY_PROCESS")
+                        .eq(BillAggregation::getSourceId, sid)
+                        .eq(BillAggregation::getDeleteFlag, 0)
+                        .last("LIMIT 1")
+                        .one() != null;
+                if (hasBill) {
+                    continue;
+                }
+                BillPushRequest req = new BillPushRequest();
+                req.setBillType("PAYABLE");
+                req.setBillCategory("EXTERNAL_FACTORY");
+                req.setSourceType("SECONDARY_PROCESS");
+                req.setSourceId(sid);
+                req.setSourceNo("SP-" + sid);
+                req.setCounterpartyType("FACTORY");
+                req.setCounterpartyId(sp.getFactoryId());
+                req.setCounterpartyName(sp.getFactoryName());
+                req.setAmount(sp.getTotalPrice());
+                req.setSettlementMonth(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
+                req.setRemark("巡检补推：外发工艺已审批但缺失账单");
+                pushBill(req);
+                fixed++;
+                log.warn("[BillAggregation] 巡检补推外发工艺账单: processId={}, factory={}, amount={}",
+                        sid, sp.getFactoryName(), sp.getTotalPrice());
+            } catch (Exception e) {
+                log.warn("[BillAggregation] 巡检补推外发工艺账单失败: processId={}, err={}", sp.getId(), e.getMessage());
+            }
+        }
+        return fixed;
+    }
+
+    /**
      * D-474 收付款一致性自检与自愈（供定时任务 FinanceDataConsistencyJob 调用）。
      *
      * 背景：付款时会做两件跨表的事——补记付款记录、回写上游单据为已付款。
