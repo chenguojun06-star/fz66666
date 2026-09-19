@@ -61,6 +61,10 @@ public class BillAggregationOrchestrator {
     @Autowired(required = false)
     private AccountingVoucherOrchestrator accountingVoucherOrchestrator;
 
+    // D-473：结清时补记付款记录（可选注入，避免循环依赖与单元测试困扰）
+    @Autowired(required = false)
+    private WagePaymentOrchestrator wagePaymentOrchestrator;
+
     /**
      * 获取当前工厂账号的订单ID列表（用于工厂账号数据隔离）
      * 非工厂账号返回 null（表示不限制）
@@ -518,6 +522,77 @@ public class BillAggregationOrchestrator {
         bill.setSettledAt(LocalDateTime.now());
         billAggregationService.updateById(bill);
         log.info("[BillAggregation] 结清账单: billNo={}, amount={}", bill.getBillNo(), bill.getSettledAmount());
+        // D-473：同步补记付款记录，打通总账与"付款记录"两套账
+        ensurePaymentRecordFromBill(bill);
+    }
+
+    /**
+     * D-473：总账结清后补记一条付款记录（线下付款，直接 success），
+     * 避免财务在「付款记录」Tab 查不到已付出去的钱（原来两套账完全割裂）。
+     * 幂等：initiatePayment 按 bizType+bizId+paymentMethod 去重；
+     * 补记失败只告警，不回滚结清主流程。
+     */
+    private void ensurePaymentRecordFromBill(BillAggregation bill) {
+        if (wagePaymentOrchestrator == null || !StringUtils.hasText(bill.getCounterpartyId())) {
+            return;
+        }
+        try {
+            wagePaymentOrchestrator.initiatePayment(WagePaymentOrchestrator.WagePaymentRequest.builder()
+                    .payeeType(mapPayeeType(bill.getCounterpartyType()))
+                    .payeeId(bill.getCounterpartyId())
+                    .payeeName(bill.getCounterpartyName())
+                    .paymentMethod("OFFLINE")
+                    .amount(bill.getSettledAmount() != null ? bill.getSettledAmount() : bill.getAmount())
+                    .bizType(mapBizType(bill.getSourceType()))
+                    .bizId(bill.getId())
+                    .bizNo(bill.getBillNo())
+                    .remark("往来总账结清自动补记: " + bill.getBillNo())
+                    .build());
+            log.info("[BillAggregation] 结清补记付款记录: billNo={}, payee={}",
+                    bill.getBillNo(), bill.getCounterpartyName());
+        } catch (Exception e) {
+            log.warn("[BillAggregation] 结清补记付款记录失败（不影响结清）: billNo={}, err={}",
+                    bill.getBillNo(), e.getMessage());
+        }
+    }
+
+    /** 账单往来对象类型 → 付款记录 payee_type（沿用库中既有取值习惯） */
+    private String mapPayeeType(String counterpartyType) {
+        String u = normalizeCounterpartyType(counterpartyType);
+        if ("WORKER".equals(u)) {
+            return "employee";
+        }
+        if ("FACTORY".equals(u)) {
+            return "FACTORY";
+        }
+        if ("SUPPLIER".equals(u)) {
+            return "supplier";
+        }
+        if ("CUSTOMER".equals(u)) {
+            return "customer";
+        }
+        return u != null ? u.toLowerCase() : "supplier";
+    }
+
+    /** 账单来源类型 → 付款记录 biz_type（沿用库中既有取值习惯） */
+    private String mapBizType(String sourceType) {
+        if (!StringUtils.hasText(sourceType)) {
+            return "BILL_PAYABLE";
+        }
+        String s = sourceType.toUpperCase();
+        if ("PAYROLL_SETTLEMENT".equals(s)) {
+            return "PAYROLL_SETTLEMENT";
+        }
+        if (s.endsWith("RECONCILIATION")) {
+            return "material_reconciliation";
+        }
+        if ("EXPENSE_REIMBURSEMENT".equals(s)) {
+            return "expense_reimbursement";
+        }
+        if ("SECONDARY_PROCESS".equals(s)) {
+            return "ORDER_SETTLEMENT";
+        }
+        return "BILL_PAYABLE";
     }
 
     /**
