@@ -378,7 +378,9 @@ export default function CounterpartyBillDrawer({
     },
   ];
 
-  const typeTag = target ? COUNTERPARTY_TYPE_MAP[target.counterpartyType] ?? null : null;
+  const typeTag = target
+    ? COUNTERPARTY_TYPE_MAP[(target.counterpartyType || '').toUpperCase()] ?? null
+    : null;
 
   return (
     <Drawer

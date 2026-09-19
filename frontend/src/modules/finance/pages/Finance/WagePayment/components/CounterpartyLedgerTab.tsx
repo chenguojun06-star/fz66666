@@ -26,6 +26,8 @@ const { Text } = Typography;
 /** D-472 往来对象类型标签（员工/工厂/供应商/客户） */
 export const COUNTERPARTY_TYPE_MAP: Record<string, { text: string; color: string }> = {
   WORKER: { text: '员工', color: 'blue' },
+  // D-473：历史数据里员工写作 EMPLOYEE，兼容显示（后端分组已归一到 WORKER）
+  EMPLOYEE: { text: '员工', color: 'blue' },
   FACTORY: { text: '工厂', color: 'purple' },
   SUPPLIER: { text: '供应商', color: 'cyan' },
   CUSTOMER: { text: '客户', color: 'orange' },
@@ -108,7 +110,7 @@ export default function CounterpartyLedgerTab() {
       dataIndex: 'counterpartyType',
       width: 90,
       render: (v: string) => {
-        const t = COUNTERPARTY_TYPE_MAP[v] ?? { text: v || '-', color: 'default' };
+        const t = COUNTERPARTY_TYPE_MAP[(v || '').toUpperCase()] ?? { text: v || '-', color: 'default' };
         return <Tag color={t.color}>{t.text}</Tag>;
       },
     },

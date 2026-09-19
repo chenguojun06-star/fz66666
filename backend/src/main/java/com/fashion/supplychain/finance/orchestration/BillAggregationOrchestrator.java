@@ -207,7 +207,8 @@ public class BillAggregationOrchestrator {
         bill.setSourceType(request.getSourceType());
         bill.setSourceId(request.getSourceId());
         bill.setSourceNo(request.getSourceNo());
-        bill.setCounterpartyType(request.getCounterpartyType());
+        // D-473：类型归一化（EMPLOYEE 等同 WORKER），避免同一员工在总账里拆成两行
+        bill.setCounterpartyType(normalizeCounterpartyType(request.getCounterpartyType()));
         bill.setCounterpartyId(request.getCounterpartyId());
         bill.setCounterpartyName(request.getCounterpartyName());
         bill.setOrderId(request.getOrderId());
@@ -351,6 +352,18 @@ public class BillAggregationOrchestrator {
      * 点击对象进详情看全部流水（listBills + counterpartyId）。
      * 口径：排除已取消；累计=SUM(amount)，已结=SUM(settled_amount)，未结=累计-已结。
      */
+    /**
+     * D-473 往来对象类型归一化：历史数据里员工有 EMPLOYEE / WORKER 两种写法，
+     * 统一成 WORKER，保证"一个员工一行"不被拆成两行。
+     */
+    private String normalizeCounterpartyType(String type) {
+        if (!StringUtils.hasText(type)) {
+            return type;
+        }
+        String upper = type.trim().toUpperCase();
+        return "EMPLOYEE".equals(upper) ? "WORKER" : upper;
+    }
+
     public List<CounterpartyGroupDTO> listCounterpartyGroups(String billType, String settlementMonth, String keyword) {
         Long tenantId = TenantAssert.requireTenantId();
 
@@ -380,11 +393,13 @@ public class BillAggregationOrchestrator {
             if (StringUtils.hasText(keyword) && (name == null || !name.contains(keyword))) {
                 continue;
             }
-            String key = b.getCounterpartyType() + "|"
+            // D-473：分组键与展示类型统一走归一化（EMPLOYEE→WORKER）
+            String normalizedType = normalizeCounterpartyType(b.getCounterpartyType());
+            String key = normalizedType + "|"
                     + (StringUtils.hasText(b.getCounterpartyId()) ? b.getCounterpartyId() : name);
             CounterpartyGroupDTO g = grouped.computeIfAbsent(key, k -> {
                 CounterpartyGroupDTO dto = new CounterpartyGroupDTO();
-                dto.setCounterpartyType(b.getCounterpartyType());
+                dto.setCounterpartyType(normalizedType);
                 dto.setCounterpartyId(b.getCounterpartyId());
                 dto.setCounterpartyName(name);
                 dto.setBillCount(0);
