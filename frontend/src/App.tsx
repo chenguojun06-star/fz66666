@@ -27,7 +27,7 @@ import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage, FieldConfigPage, PrintTemplateList } from './modules/system';
 import { EcommerceCenter, PlatformDetail } from './modules/ecommerce';
 import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PatrolActionCenter, PlatformDashboard } from './modules/intelligence';
-import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory, AttendanceAdmin, ExceptionReport } from './modules/production';
+import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory, AttendanceAdmin, ExceptionReport, ScanRecordManage } from './modules/production';
 
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const ShareOrderPage = React.lazy(() => import('./modules/production/pages/ShareOrderPage/index'));
@@ -210,6 +210,16 @@ const AppRoutes: React.FC = () => {
               <RouteErrorBoundary pageName="工序跟进">
                 <Suspense fallback={routeFallback}>
                   <ProgressDetail />
+                </Suspense>
+              </RouteErrorBoundary>
+            }
+          />
+          <Route
+            path={paths.scanRecordManage}
+            element={
+              <RouteErrorBoundary pageName="录入记录">
+                <Suspense fallback={routeFallback}>
+                  <ScanRecordManage />
                 </Suspense>
               </RouteErrorBoundary>
             }

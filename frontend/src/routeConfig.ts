@@ -56,6 +56,7 @@ export const paths = {
   cutting: '/production/cutting',
   cuttingTask: '/production/cutting/task/:orderNo',
   progressDetail: '/production/progress-detail',
+  scanRecordManage: '/production/scan-records',
 
   externalFactory: '/production/external-factory',
   orderFlow: '/production/order-flow',
@@ -438,6 +439,7 @@ export const permissionCodes = {
   materialPurchase: 'MENU_MATERIAL_PURCHASE',
   cutting: 'MENU_CUTTING',
   progress: 'MENU_PROGRESS',
+  scanRecordManage: 'MENU_PROGRESS', // D-473：录入记录复用工序跟进权限码（权限矩阵无需新配）
   materialPicking: 'MENU_MATERIAL_PICKING',
   warehousing: 'MENU_WAREHOUSING',
   orderTransfer: 'MENU_ORDER_TRANSFER',
@@ -544,6 +546,7 @@ export const menuConfig: MenuSection[] = [
       { label: '生产订单', path: paths.productionList, icon: React.createElement(BuildOutlined) },
       { label: '裁剪管理', path: paths.cutting, icon: React.createElement(ScissorOutlined) },
       { label: '工序跟进', path: paths.progressDetail, icon: React.createElement(FileSearchOutlined) },
+      { label: '录入记录', path: paths.scanRecordManage, icon: React.createElement(FileTextOutlined) },
       { label: '外发管理', path: paths.externalFactory, icon: React.createElement(ThunderboltOutlined) },
       { label: '质检入库', path: paths.warehousing, icon: React.createElement(InboxOutlined) },
     ],

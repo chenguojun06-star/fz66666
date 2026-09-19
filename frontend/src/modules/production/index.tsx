@@ -11,6 +11,7 @@ export type { InspectionDetailProps } from './pages/Production/ProductWarehousin
 export const OrderTransfer = React.lazy(() => import('./pages/Production/OrderTransfer'));
 export const OrderFlow = React.lazy(() => import('./pages/Production/OrderFlow'));
 export const ProgressDetail = React.lazy(() => import('./pages/Production/ProgressDetail'));
+export const ScanRecordManage = React.lazy(() => import('./pages/Production/ScanRecordManage'));
 export const MaterialPicking = React.lazy(() => import('./pages/Production/MaterialPicking'));
 export const ExternalFactory = React.lazy(() => import('./pages/Production/ExternalFactory'));
 export const AttendanceAdmin = React.lazy(() => import('./pages/Production/AttendanceAdmin'));
