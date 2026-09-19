@@ -128,17 +128,31 @@ public class AccountingVoucherOrchestrator {
     }
 
     /**
-     * D-474 付款凭证的借贷科目（纯函数，便于单测）。
+     * D-474 收付款凭证的借贷科目（纯函数，便于单测）。
      *
-     * <p>借方 = 确认账单时挂的那个应付科目（2202 应付账款 / 2211 应付职工薪酬…），
-     * 付款时把它冲掉；贷方 = 银行存款 1002，现金付款记库存现金 1001。
+     * <p>两个方向完全不同，写反会导致账目反向：
+     * <ul>
+     *   <li>应付账单 PAYABLE（我们付钱给别人）：<b>借 应付科目、贷 银行/现金</b>——
+     *       把确认时挂的应付账款冲掉。应付科目取映射表的 credit 科目（2202/2211）。</li>
+     *   <li>应收账单 RECEIVABLE（客户付钱给我们）：<b>借 银行/现金、贷 应收科目</b>——
+     *       钱进账，同时冲掉确认时挂的应收账款（1122，取映射表的 debit 科目）。</li>
+     * </ul>
+     * 现金记 1001 库存现金，其余记 1002 银行存款。
      *
-     * @param payableSubjectCode 账单科目映射里的 credit 科目（应付科目）
-     * @param paymentMethod      支付方式，CASH 记现金，其余记银行存款
+     * @param billType           账单类型：PAYABLE / RECEIVABLE
+     * @param mappingDebitCode   科目映射的借方科目（应收方向用它做贷方）
+     * @param mappingCreditCode  科目映射的贷方科目（应付方向用它做借方）
+     * @param paymentMethod      支付方式
      */
-    static PaymentSubjects resolvePaymentSubjects(String payableSubjectCode, String paymentMethod) {
-        String credit = "CASH".equalsIgnoreCase(String.valueOf(paymentMethod)) ? "1001" : "1002";
-        return new PaymentSubjects(payableSubjectCode, credit);
+    static PaymentSubjects resolvePaymentSubjects(String billType, String mappingDebitCode,
+                                                  String mappingCreditCode, String paymentMethod) {
+        String cashOrBank = "CASH".equalsIgnoreCase(String.valueOf(paymentMethod)) ? "1001" : "1002";
+        boolean receivable = "RECEIVABLE".equalsIgnoreCase(String.valueOf(billType));
+        return receivable
+                // 收款：钱进银行，应收账款减少
+                ? new PaymentSubjects(cashOrBank, mappingDebitCode)
+                // 付款：应付账款减少，钱出银行
+                : new PaymentSubjects(mappingCreditCode, cashOrBank);
     }
 
     /** 付款凭证的借贷科目对（D-474） */
@@ -220,7 +234,8 @@ public class AccountingVoucherOrchestrator {
         }
         // 借方 = 确认时挂的应付科目（2202 应付账款 / 2211 应付职工薪酬）
         // 贷方 = 银行存款 1002（现金付款则 1001 库存现金）
-        PaymentSubjects subjects = resolvePaymentSubjects(mapping.getCreditSubjectCode(), paymentMethod);
+        PaymentSubjects subjects = resolvePaymentSubjects(
+                bill.getBillType(), mapping.getDebitSubjectCode(), mapping.getCreditSubjectCode(), paymentMethod);
         String debitCode = subjects.getDebit();
         String creditCode = subjects.getCredit();
         String summary = "付款: " + (bill.getBillNo() != null ? bill.getBillNo() : billAggregationId)
