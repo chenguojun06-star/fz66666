@@ -25,7 +25,7 @@ import { toMoneyLocale } from '@/utils/format';
 import { wagePaymentApi, type WagePayment } from '@/services/finance/wagePaymentApi';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import { COUNTERPARTY_TYPE_MAP } from './CounterpartyLedgerTab';
-import BillDetailDrawer from './BillDetailDrawer';
+import BillDetailDrawer, { SOURCE_TYPE_TEXT } from './BillDetailDrawer';
 
 const { Text, Title } = Typography;
 
@@ -333,6 +333,12 @@ export default function CounterpartyBillDrawer({
       },
     },
     {
+      title: '来源模块',
+      dataIndex: 'sourceType',
+      width: 120,
+      render: (v: string) => SOURCE_TYPE_TEXT[v] ?? v ?? '-',
+    },
+    {
       title: '来源单号',
       dataIndex: 'sourceNo',
       width: 150,
@@ -351,6 +357,18 @@ export default function CounterpartyBillDrawer({
       width: 120,
       align: 'right',
       render: (v: number) => fmtMoney(v),
+    },
+    {
+      title: '还剩余',
+      key: 'unsettled',
+      width: 120,
+      align: 'right',
+      render: (_: unknown, r: BillAggregation) => {
+        const rest = Number(r.amount ?? 0) - Number(r.settledAmount ?? 0);
+        return rest > 0
+          ? <Text strong style={{ color: 'var(--color-error)' }}>{fmtMoney(rest)}</Text>
+          : <Text type="secondary">已付清</Text>;
+      },
     },
     {
       title: '状态',
@@ -414,7 +432,8 @@ export default function CounterpartyBillDrawer({
               style={{ padding: 0 }}
               onClick={() => {
                 setSettleTarget(r);
-                setSettleAmount(Number(r.amount ?? 0));
+                // D-473：默认带出剩余未付（支持部分付款，付不满挂账下月继续扣）
+                setSettleAmount(Math.max(0, Number(r.amount ?? 0) - Number(r.settledAmount ?? 0)));
               }}
             >
               付款
@@ -604,7 +623,7 @@ export default function CounterpartyBillDrawer({
 
       {/* 单笔付款弹窗 */}
       <Modal
-        title="付款结清"
+        title="付款（可只付一部分）"
         open={!!settleTarget}
         onOk={() => void handleSettleOne()}
         confirmLoading={settleSubmitting}
@@ -614,20 +633,38 @@ export default function CounterpartyBillDrawer({
         {settleTarget && (
           <Space direction="vertical" style={{ width: '100%' }} size={8}>
             <Text type="secondary">
-              {settleTarget.billNo || '-'} · {BILL_CATEGORY_MAP[settleTarget.billCategory || '']?.text || '-'}
-              {' '}· 账单金额 {fmtMoney(settleTarget.amount)}
+              {settleTarget.billNo || '-'} · {SOURCE_TYPE_TEXT[settleTarget.sourceType] ?? settleTarget.sourceType ?? '-'}
+              {' · '}{BILL_CATEGORY_MAP[settleTarget.billCategory || '']?.text || '-'}
             </Text>
+            <Space size={24} wrap>
+              <Text type="secondary">
+                账单金额 <Text strong>{fmtMoney(settleTarget.amount)}</Text>
+              </Text>
+              <Text type="secondary">
+                已付 <Text style={{ color: 'var(--color-success)' }}>{fmtMoney(settleTarget.settledAmount)}</Text>
+              </Text>
+              <Text type="secondary">
+                剩余未付{' '}
+                <Text strong style={{ color: 'var(--color-error)' }}>
+                  {fmtMoney(Math.max(0, Number(settleTarget.amount ?? 0) - Number(settleTarget.settledAmount ?? 0)))}
+                </Text>
+              </Text>
+            </Space>
             <Space>
-              <Text>本次结清金额</Text>
+              <Text>本次付款金额</Text>
               <InputNumber
                 value={settleAmount}
                 onChange={(v) => setSettleAmount(v)}
                 min={0.01}
+                max={Math.max(0.01, Number(settleTarget.amount ?? 0) - Number(settleTarget.settledAmount ?? 0))}
                 precision={2}
                 style={{ width: 160 }}
                 addonBefore="¥"
               />
             </Space>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              可以只付一部分：付不满不会关闭这笔账，剩余金额继续挂在该对象名下，状态转为「结算中」，下个月可继续扣。
+            </Text>
           </Space>
         )}
       </Modal>

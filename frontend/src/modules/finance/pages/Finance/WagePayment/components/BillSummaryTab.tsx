@@ -16,7 +16,7 @@ import {
   ColumnSettingsButton,
   type ColumnOption,
 } from '@/components/common/ColumnSettings';
-import BillDetailDrawer from './BillDetailDrawer';
+import BillDetailDrawer, { SOURCE_TYPE_TEXT } from './BillDetailDrawer';
 import {
   billAggregationApi,
   type BillAggregation,
@@ -156,6 +156,10 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
       },
     },
     {
+      title: '来源模块', dataIndex: 'sourceType', key: 'sourceType', width: 120,
+      render: (v: string) => SOURCE_TYPE_TEXT[v] ?? v ?? '-',
+    },
+    {
       title: '对方名称', dataIndex: 'counterpartyName', key: 'counterpartyName', width: 140, ellipsis: true,
     },
     {
@@ -171,6 +175,15 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
     {
       title: '已结算', dataIndex: 'settledAmount', key: 'settledAmount', width: 110, align: 'right',
       render: (v: number) => `¥${(v ?? 0).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}`,
+    },
+    {
+      title: '还剩余', key: 'unsettledAmount', width: 110, align: 'right',
+      render: (_: unknown, r: BillAggregation) => {
+        const rest = Number(r.amount ?? 0) - Number(r.settledAmount ?? 0);
+        return rest > 0
+          ? <span style={{ color: 'var(--color-error)', fontWeight: 600 }}>¥{rest.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</span>
+          : <span style={{ color: 'var(--color-text-tertiary)' }}>已付清</span>;
+      },
     },
     {
       title: '状态', dataIndex: 'status', key: 'status', width: 90,

@@ -16,8 +16,8 @@ const { Text } = Typography;
 const fmtMoney = (v?: number) => `¥${toMoneyLocale(v)}`;
 const fmtTime = (v?: string) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-');
 
-/** 上游来源类型 → 中文（账单来自哪个模块推送） */
-const SOURCE_TYPE_TEXT: Record<string, string> = {
+/** 上游来源类型 → 中文（账单来自哪个模块推送；各列表共用，保持口径一致） */
+export const SOURCE_TYPE_TEXT: Record<string, string> = {
   MATERIAL_RECONCILIATION: '面料对账',
   SHIPMENT_RECONCILIATION: '出货对账',
   SHIPMENT_RECONCILIATION_DEDUCTION: '出货对账扣款',

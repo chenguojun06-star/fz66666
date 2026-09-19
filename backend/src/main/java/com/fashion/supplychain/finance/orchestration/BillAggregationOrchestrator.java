@@ -9,6 +9,8 @@ import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
 import com.fashion.supplychain.finance.constant.BillConstants;
 import com.fashion.supplychain.finance.entity.BillAggregation;
 import com.fashion.supplychain.finance.entity.Payable;
+import com.fashion.supplychain.finance.entity.WagePayment;
+import com.fashion.supplychain.finance.service.WagePaymentService;
 import com.fashion.supplychain.finance.service.BillAggregationService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -64,6 +66,9 @@ public class BillAggregationOrchestrator {
     // D-473：结清时补记付款记录（可选注入，避免循环依赖与单元测试困扰）
     @Autowired(required = false)
     private WagePaymentOrchestrator wagePaymentOrchestrator;
+
+    @Autowired(required = false)
+    private WagePaymentService wagePaymentService;
 
     /**
      * 获取当前工厂账号的订单ID列表（用于工厂账号数据隔离）
@@ -515,15 +520,31 @@ public class BillAggregationOrchestrator {
         if (!BillConstants.isConfirmedGroup(bill.getStatus())) {
             throw new RuntimeException("只有已确认/结算中的账单可以结清");
         }
-        bill.setSettledAmount(settledAmount != null ? settledAmount : bill.getAmount());
-        bill.setStatus(BillConstants.STATUS_SETTLED);
+        // D-473：支持部分付款（本月钱不够付一半、品质问题留一部分尾款）。
+        // 传入金额 = 本次付款额，在已结清基础上累加；未付满则保持"结算中"挂账，
+        // 剩余金额继续留在该对象账上，下个月可继续扣。付满才置已结清。
+        BigDecimal total = bill.getAmount() != null ? bill.getAmount() : BigDecimal.ZERO;
+        BigDecimal already = bill.getSettledAmount() != null ? bill.getSettledAmount() : BigDecimal.ZERO;
+        BigDecimal thisTime = settledAmount != null ? settledAmount : total.subtract(already);
+        if (thisTime.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("本次付款金额必须大于 0");
+        }
+        BigDecimal newSettled = already.add(thisTime);
+        boolean fullyPaid = newSettled.compareTo(total) >= 0;
+        if (fullyPaid) {
+            newSettled = total; // 封顶，避免超额付款
+        }
+
+        bill.setSettledAmount(newSettled);
+        bill.setStatus(fullyPaid ? BillConstants.STATUS_SETTLED : BillConstants.STATUS_SETTLING);
         bill.setSettledById(UserContext.userId());
         bill.setSettledByName(UserContext.username());
         bill.setSettledAt(LocalDateTime.now());
         billAggregationService.updateById(bill);
-        log.info("[BillAggregation] 结清账单: billNo={}, amount={}", bill.getBillNo(), bill.getSettledAmount());
-        // D-473：同步补记付款记录，打通总账与"付款记录"两套账
-        ensurePaymentRecordFromBill(bill);
+        log.info("[BillAggregation] 付款: billNo={}, 本次={}, 累计={}/{}, 状态={}",
+                bill.getBillNo(), thisTime, newSettled, total, bill.getStatus());
+        // D-473：同步补记付款记录（记本次实付金额），打通总账与"付款记录"两套账
+        ensurePaymentRecordFromBill(bill, thisTime);
     }
 
     /**
@@ -532,17 +553,39 @@ public class BillAggregationOrchestrator {
      * 幂等：initiatePayment 按 bizType+bizId+paymentMethod 去重；
      * 补记失败只告警，不回滚结清主流程。
      */
-    private void ensurePaymentRecordFromBill(BillAggregation bill) {
+    private void ensurePaymentRecordFromBill(BillAggregation bill, BigDecimal thisAmount) {
         if (wagePaymentOrchestrator == null || !StringUtils.hasText(bill.getCounterpartyId())) {
             return;
         }
         try {
+            // 该账单已补记过付款记录（部分付款第二次起）：累加金额，
+            // 保持"一笔账单 = 一条付款流水"，备注里记录每次付款。
+            WagePayment exist = wagePaymentService != null
+                    ? wagePaymentService.lambdaQuery()
+                            .eq(WagePayment::getTenantId, TenantAssert.requireTenantId())
+                            .eq(WagePayment::getBizId, bill.getId())
+                            .ne(WagePayment::getStatus, "cancelled")
+                            .last("LIMIT 1")
+                            .one()
+                    : null;
+            if (exist != null) {
+                BigDecimal oldAmount = exist.getAmount() != null ? exist.getAmount() : BigDecimal.ZERO;
+                exist.setAmount(oldAmount.add(thisAmount != null ? thisAmount : BigDecimal.ZERO));
+                exist.setPaymentRemark((exist.getPaymentRemark() != null ? exist.getPaymentRemark() + " | " : "")
+                        + "追加付款 +" + thisAmount + "，累计 " + exist.getAmount());
+                exist.setUpdateTime(LocalDateTime.now());
+                wagePaymentService.updateById(exist);
+                log.info("[BillAggregation] 付款记录累计: billNo={}, 本次={}, 累计={}",
+                        bill.getBillNo(), thisAmount, exist.getAmount());
+                return;
+            }
+
             wagePaymentOrchestrator.initiatePayment(WagePaymentOrchestrator.WagePaymentRequest.builder()
                     .payeeType(mapPayeeType(bill.getCounterpartyType()))
                     .payeeId(bill.getCounterpartyId())
                     .payeeName(bill.getCounterpartyName())
                     .paymentMethod("OFFLINE")
-                    .amount(bill.getSettledAmount() != null ? bill.getSettledAmount() : bill.getAmount())
+                    .amount(thisAmount != null ? thisAmount : bill.getSettledAmount())
                     .bizType(mapBizType(bill.getSourceType()))
                     .bizId(bill.getId())
                     .bizNo(bill.getBillNo())
