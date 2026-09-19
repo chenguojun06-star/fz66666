@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSync } from '@/utils/syncManager';
 import AccountManagementModal from './components/AccountManagementModal';
 import PayModal from './components/PayModal';
@@ -18,6 +18,7 @@ import {
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import CounterpartyLedgerTab from './components/CounterpartyLedgerTab';
 import { wagePaymentApi } from '@/services/finance/wagePaymentApi';
+import { billAggregationApi } from '@/services/finance/billAggregationApi';
 import { usePaymentColumns } from './hooks/usePaymentColumns';
 import { usePaymentData } from './hooks/usePaymentData';
 import { usePayModal } from './hooks/usePayModal';
@@ -70,6 +71,25 @@ const PaymentCenterPage: React.FC = () => {
 
   // ==================== 统计卡片 ====================
   // D-474：顶部统计卡统一改用账单口径（billStats），不再单独算付款记录统计
+
+  // D-474：数据自检状态——系统每 6 小时（及每次启动后）自动核对并修复账目，
+  // 这里把结果摆到页面上，财务不用翻服务器日志
+  const [selfCheck, setSelfCheck] = useState<any>(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res: any = await billAggregationApi.getConsistencyStatus();
+        const raw = res?.data ?? res;
+        if (alive && raw) setSelfCheck(typeof raw === 'string' ? JSON.parse(raw) : raw);
+      } catch {
+        // 自检状态是辅助信息，拉取失败不影响主流程
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // ---- 表格列定义 ----
   const { paymentColumns } = usePaymentColumns({
@@ -130,6 +150,19 @@ const PaymentCenterPage: React.FC = () => {
               <span className="u-fs-13" style={{ color: 'var(--color-text-tertiary)' }}>
                 上游推送的每笔账单都按对象累计叠加（像存钱一样）；点击对象名进详情查看全部推送流水，付款与驳回在详情内完成
               </span>
+              {selfCheck && (
+                <div className="u-fs-12" style={{ marginTop: 4, color: 'var(--color-text-tertiary)' }}>
+                  数据自检 {String(selfCheck.checkedAt || '').slice(11, 16) || '-'} ·{' '}
+                  {Number(selfCheck.fixedTotal ?? 0) > 0 ? (
+                    <span style={{ color: 'var(--color-warning)' }}>
+                      已自动修复 {selfCheck.fixedTotal} 项
+                    </span>
+                  ) : (
+                    <span style={{ color: 'var(--color-success)' }}>账目无异常</span>
+                  )}
+                  {Number(selfCheck.failedTenants ?? 0) > 0 && ' · 有租户自检失败'}
+                </div>
+              )}
             </div>
             <Button type="primary" ghost icon={<DollarOutlined />} onClick={handleOpenPayModal}>
               手动发起支付

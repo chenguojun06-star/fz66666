@@ -70,6 +70,13 @@ public class FinanceDataConsistencyJob {
     @Autowired(required = false)
     private org.springframework.scheduling.TaskScheduler taskScheduler;
 
+    // D-474：把最近一次自检结果存 Redis，供页面展示（财务看不到服务器日志）
+    @Autowired(required = false)
+    private org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
+
+    /** 最近一次一致性自检结果的 Redis key */
+    public static final String CONSISTENCY_LAST_KEY = "finance:consistency:last";
+
     /**
      * D-474：启动后延迟 3 分钟自检一次。
      * 背景：容器每次部署都会重建、日志随之清空，6 小时一次的 cron 在部署当天往往
@@ -155,6 +162,32 @@ public class FinanceDataConsistencyJob {
         long duration = System.currentTimeMillis() - start;
         log.info("[FinanceConsistency] 巡检完成: 补建对账单={}, 补推对账账单={}, 归集孤儿扣款={}, 修复扣款汇总={}, 补记付款记录={}, 失败租户={}, 耗时{}ms",
                 fixedMissingRecon, fixedMissingReconBills, fixedOrphanDeductions, fixedDeductionSum, fixedPaymentRecords, totalFailed, duration);
+        saveLastResult(fixedMissingRecon, fixedMissingReconBills, fixedOrphanDeductions,
+                fixedDeductionSum, fixedPaymentRecords, totalFailed, duration);
+    }
+
+    /**
+     * D-474：把自检结果写进 Redis，让前端能展示"最近一次数据自检"，
+     * 财务不用去翻服务器日志也能知道系统有没有自动修过数据。
+     */
+    private void saveLastResult(int missingRecon, int missingReconBills, int orphanDeductions,
+                                int deductionSum, int paymentRecords, int failedTenants, long durationMs) {
+        if (stringRedisTemplate == null) {
+            return;
+        }
+        try {
+            int fixedTotal = missingRecon + missingReconBills + orphanDeductions + deductionSum + paymentRecords;
+            String json = String.format(
+                    "{\"checkedAt\":\"%s\",\"fixedTotal\":%d,\"failedTenants\":%d,\"durationMs\":%d,"
+                            + "\"detail\":{\"missingRecon\":%d,\"missingReconBills\":%d,\"orphanDeductions\":%d,"
+                            + "\"deductionSum\":%d,\"paymentRecords\":%d}}",
+                    java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                    fixedTotal, failedTenants, durationMs,
+                    missingRecon, missingReconBills, orphanDeductions, deductionSum, paymentRecords);
+            stringRedisTemplate.opsForValue().set(CONSISTENCY_LAST_KEY, json, 7, java.util.concurrent.TimeUnit.DAYS);
+        } catch (Exception e) {
+            log.warn("[FinanceConsistency] 保存自检结果失败（不影响巡检）: {}", e.getMessage());
+        }
     }
 
     int fixMissingShipmentReconciliations() {

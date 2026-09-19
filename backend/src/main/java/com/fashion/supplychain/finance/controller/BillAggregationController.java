@@ -22,6 +22,9 @@ public class BillAggregationController {
     @Autowired
     private BillAggregationOrchestrator billAggregationOrchestrator;
 
+    @Autowired(required = false)
+    private org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
+
     /** 推送账单（各模块内部调用，也可手动触发） */
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/push")
@@ -65,6 +68,24 @@ public class BillAggregationController {
                                    @RequestParam(required = false) BigDecimal settledAmount) {
         billAggregationOrchestrator.settleBill(id, settledAmount);
         return Result.success(null);
+    }
+
+    /** D-474：最近一次数据一致性自检结果（供页面展示，财务不翻日志也能看到自检状态） */
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/consistency-status")
+public Result<String> getConsistencyStatus() {
+        if (stringRedisTemplate == null) {
+            return Result.success(null);
+        }
+        try {
+            // key 与 FinanceDataConsistencyJob.CONSISTENCY_LAST_KEY 一致；
+            // 这里不引用 Job 类（架构规则禁止 Controller 依赖 Mapper，Job 依赖了 Mapper），
+            // 也不在 Controller 里用 ObjectMapper（会被架构规则误判为 Mapper），
+            // 直接把 JSON 字符串交给前端解析。
+            return Result.success(stringRedisTemplate.opsForValue().get("finance:consistency:last"));
+        } catch (Exception e) {
+            return Result.success(null);
+        }
     }
 
     /**

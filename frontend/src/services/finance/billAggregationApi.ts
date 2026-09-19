@@ -181,4 +181,7 @@ export const billAggregationApi = {
   /** D-472 批量驳回（取消账单） */
   batchCancel: (ids: string[], reason: string) =>
     api.post('/finance/bill-aggregation/batch-cancel', { billIds: ids, reason }),
+  /** D-474：最近一次数据一致性自检结果（后端返回 JSON 字符串） */
+  getConsistencyStatus: () =>
+    api.get('/finance/bill-aggregation/consistency-status'),
 };
