@@ -30,16 +30,12 @@ miniprogram/node_modules/
 #   2026-04-11（56a5948c0）曾将 backend/src/test/ 排除，导致 CI checkout 后测试目录为空
 #   → ArchUnit 等门控在 CI 上必然空转，团队测试也无法共享。
 #   2026-09-15 改为入库，架构守护测试才能在 CI 真正生效。
-# Frontend / Miniprogram 测试仍按原策略本地保留（见下）。
+# Frontend 测试代码：**入库**（2026-09-19 起）
+#   原先只保留在本地，导致 447 个测试 CI 完全不执行、团队也拿不到，
+#   洗水唛打印模板的断言在实现重做后过期却无人发现。现改为入库并在 CI 执行 npm test。
+# Miniprogram 测试仍按原策略本地保留（见下）。
 
-# Frontend 测试代码
-frontend/src/**/*.test.ts
-frontend/src/**/*.test.tsx
-frontend/src/**/*.spec.ts
-frontend/src/**/*.spec.tsx
-frontend/src/**/*.test.js
-frontend/src/**/__tests__/
-frontend/src/**/tests/
+# Frontend 测试代码：已入库，不再排除
 
 # Miniprogram 测试代码
 miniprogram/test/

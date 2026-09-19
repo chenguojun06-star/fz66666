@@ -225,6 +225,12 @@ jobs:
       working-directory: ./frontend
       run: npx tsc --noEmit
 
+    # D-474：前端测试已入库（原被 .gitignore 排除，447 个测试 CI 完全没跑），
+    # 这里作为门禁执行，防止断言悄悄过期（本次就发现 2 个过期断言）。
+    - name: 前端单元测试（Vitest，门禁）
+      working-directory: ./frontend
+      run: npm test
+
     - name: UI 规范检查（字号/圆角/间距档位，不阻断，仅报告）
       continue-on-error: true
       run: |
