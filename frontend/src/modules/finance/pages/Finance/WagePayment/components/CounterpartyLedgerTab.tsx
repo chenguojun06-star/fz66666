@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   App,
   Button,
+  Checkbox,
   DatePicker,
   Input,
   Segmented,
@@ -48,6 +49,8 @@ export default function CounterpartyLedgerTab() {
   const [keyword, setKeyword] = useState('');
   const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState<CounterpartyGroup[]>([]);
+  // D-474：只看还没付完的（含部分付款后挂账的），财务不用在已两清的对象里翻找
+  const [onlyUnsettled, setOnlyUnsettled] = useState(false);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTarget, setDrawerTarget] = useState<CounterpartyGroup | null>(null);
@@ -73,17 +76,23 @@ export default function CounterpartyLedgerTab() {
     void fetchGroups();
   }, [fetchGroups]);
 
-  // 当前筛选下的汇总（前端对聚合行求和）
+  // 当前筛选下的展示行（只看未结清 时过滤掉已两清与扣款项净额为 0 的对象）
+  const shownGroups = useMemo(
+    () => (onlyUnsettled ? groups.filter((g) => Number(g.unsettledAmount ?? 0) > 0.005) : groups),
+    [groups, onlyUnsettled],
+  );
+
+  // 当前筛选下的汇总（前端对展示行求和）
   const summary = useMemo(() => {
-    return groups.reduce(
+    return shownGroups.reduce(
       (acc, g) => ({
         total: acc.total + Number(g.totalAmount ?? 0),
         settled: acc.settled + Number(g.settledAmount ?? 0),
         unsettled: acc.unsettled + Number(g.unsettledAmount ?? 0),
       }),
-      { total: 0, settled: 0, unsettled: 0 },
+        { total: 0, settled: 0, unsettled: 0 },
     );
-  }, [groups]);
+  }, [shownGroups]);
 
   const openDrawer = (g: CounterpartyGroup) => {
     if (!g.counterpartyId && !g.counterpartyName) {
@@ -188,6 +197,12 @@ export default function CounterpartyLedgerTab() {
           onChange={(e) => setKeyword(e.target.value)}
           onSearch={() => void fetchGroups()}
         />
+        <Checkbox
+          checked={onlyUnsettled}
+          onChange={(e) => setOnlyUnsettled(e.target.checked)}
+        >
+          只看未结清
+        </Checkbox>
         <Button icon={<ReloadOutlined />} onClick={() => void fetchGroups()}>
           刷新
         </Button>
@@ -196,7 +211,8 @@ export default function CounterpartyLedgerTab() {
       {/* 汇总条 */}
       <Space size={40} style={{ marginBottom: 12 }} wrap>
         <Text type="secondary">
-          共 <Text strong>{groups.length}</Text> 个对象
+          共 <Text strong>{shownGroups.length}</Text> 个对象
+          {onlyUnsettled ? `（全部 ${groups.length} 个）` : ''}
         </Text>
         <Text type="secondary">
           累计{billType === 'PAYABLE' ? '应付' : '应收'}：<Text strong>{fmtMoney(summary.total)}</Text>
@@ -215,7 +231,7 @@ export default function CounterpartyLedgerTab() {
           rowKey={(r) => `${r.counterpartyType}|${r.counterpartyId || r.counterpartyName}`}
           size="small"
           columns={columns}
-          dataSource={groups}
+          dataSource={shownGroups}
           pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `共 ${t} 个对象` }}
           onRow={(r) => ({
             onClick: () => openDrawer(r),
