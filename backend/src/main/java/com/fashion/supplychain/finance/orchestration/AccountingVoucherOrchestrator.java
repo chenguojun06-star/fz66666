@@ -298,19 +298,26 @@ public class AccountingVoucherOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void reverseByBillAggregationId(String billAggregationId) {
         Long tenantId = TenantAssert.requireTenantId();
-        AccountingVoucher voucher = voucherService.lambdaQuery()
+        // D-474：不再只冲销 JOURNAL——账单若已付过款还会有 PAYMENT 凭证，
+// 取消时必须一起冲销，否则账上会留着"钱付过了"的记录。
+        List<AccountingVoucher> vouchers = voucherService.lambdaQuery()
                 .eq(AccountingVoucher::getBillAggregationId, billAggregationId)
                 .eq(AccountingVoucher::getTenantId, tenantId)
                 .eq(AccountingVoucher::getDeleteFlag, 0)
-                .eq(AccountingVoucher::getVoucherType, VOUCHER_TYPE_JOURNAL)
                 .ne(AccountingVoucher::getStatus, STATUS_REVERSED)
-                .last("LIMIT 1")
-                .one();
-        if (voucher == null) {
+                .ne(AccountingVoucher::getVoucherType, VOUCHER_TYPE_REVERSAL)
+                .list();
+        if (vouchers == null || vouchers.isEmpty()) {
             log.info("[AccountingVoucher] 账单无对应凭证可冲销: billId={}", billAggregationId);
             return;
         }
-        reverseVoucher(voucher.getId());
+        for (AccountingVoucher voucher : vouchers) {
+            try {
+                reverseVoucher(voucher.getId());
+            } catch (Exception e) {
+                log.warn("[AccountingVoucher] 冲销失败: voucherNo={}, err={}", voucher.getVoucherNo(), e.getMessage());
+            }
+        }
     }
 
     // ==================== 3. 查询 ====================
