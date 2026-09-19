@@ -209,7 +209,27 @@ export default function CounterpartyBillDrawer({
     );
     modal.confirm({
       title: '批量付款',
-      content: `将把 ${rows.length} 笔账单按未结金额合计 ${fmtMoney(sum)} 一次性结清，确认付款？`,
+      // D-474：同样列出明细，付款前看清每一笔
+      content: (
+        <div>
+          <div>
+            将把 {rows.length} 笔账单按未结金额合计{' '}
+            <Text strong style={{ color: 'var(--color-error)' }}>{fmtMoney(sum)}</Text> 一次性结清。
+          </div>
+          <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 12, maxHeight: 200, overflow: 'auto' }}>
+            {rows.slice(0, 10).map((b) => (
+              <li key={b.id}>
+                {b.billNo || '-'} · {SOURCE_TYPE_TEXT[b.sourceType] ?? b.sourceType ?? '-'} · 剩余{' '}
+                {fmtMoney(Number(b.amount ?? 0) - Number(b.settledAmount ?? 0))}
+              </li>
+            ))}
+          </ul>
+          {rows.length > 10 && (
+            <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>…等共 {rows.length} 笔</div>
+          )}
+          <div style={{ marginTop: 8 }}>确认付款？</div>
+        </div>
+      ),
       okText: '确认付款',
       onOk: async () => {
         await billAggregationApi.batchSettle(rows.map((b) => b.id));
@@ -246,7 +266,28 @@ export default function CounterpartyBillDrawer({
       );
       modal.confirm({
         title: '合并付款',
-        content: `将把该对象${month ? ` ${month.format('YYYY-MM')}` : '（全部月份）'}共 ${rows.length} 笔未结账单一次性结清，合计 ${fmtMoney(sum)}，确认付款？`,
+        // D-474：列出将被结清的每一笔，避免把"打算留尾款"的账单一并付掉
+        content: (
+          <div>
+            <div>
+              将把该对象{month ? ` ${month.format('YYYY-MM')}` : '（全部月份）'}共 {rows.length} 笔未结账单一次性结清，
+              合计 <Text strong style={{ color: 'var(--color-error)' }}>{fmtMoney(sum)}</Text>。
+            </div>
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-tertiary)' }}>包含以下账单：</div>
+            <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, maxHeight: 200, overflow: 'auto' }}>
+              {rows.slice(0, 10).map((b) => (
+                <li key={b.id}>
+                  {b.billNo || '-'} · {SOURCE_TYPE_TEXT[b.sourceType] ?? b.sourceType ?? '-'} · 剩余{' '}
+                  {fmtMoney(Number(b.amount ?? 0) - Number(b.settledAmount ?? 0))}
+                </li>
+              ))}
+            </ul>
+            {rows.length > 10 && (
+              <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>…等共 {rows.length} 笔</div>
+            )}
+            <div style={{ marginTop: 8 }}>确认付款？</div>
+          </div>
+        ),
         okText: '确认付款',
         onOk: async () => {
           await billAggregationApi.batchSettle(rows.map((b) => b.id));
