@@ -62,6 +62,10 @@ export interface CounterpartyGroup {
   totalAmount: number;
   settledAmount: number;
   unsettledAmount: number;
+  /** D-474：部分付款后挂账（结算中）笔数 */
+  settlingCount?: number;
+  /** D-474：待确认笔数 */
+  pendingCount?: number;
 }
 
 export interface BillStats {

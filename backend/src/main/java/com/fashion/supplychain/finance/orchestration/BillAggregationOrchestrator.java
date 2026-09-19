@@ -402,9 +402,10 @@ public class BillAggregationOrchestrator {
                 .eq(StringUtils.hasText(settlementMonth), BillAggregation::getSettlementMonth, settlementMonth)
                 .ne(BillAggregation::getStatus, BillConstants.STATUS_CANCELLED)
                 .in(factoryOrderIds != null, BillAggregation::getOrderId, factoryOrderIds)
+                // D-474：多选 status，用于在汇总行上展示"结算中/待确认"笔数
                 .select(BillAggregation::getCounterpartyType, BillAggregation::getCounterpartyId,
                         BillAggregation::getCounterpartyName, BillAggregation::getAmount,
-                        BillAggregation::getSettledAmount)
+                        BillAggregation::getSettledAmount, BillAggregation::getStatus)
                 .last("LIMIT 5000")
                 .list();
 
@@ -430,6 +431,12 @@ public class BillAggregationOrchestrator {
                 return dto;
             });
             g.setBillCount(g.getBillCount() + 1);
+            // D-474：挂账（部分付款未付满）与待确认分别计数
+            if (BillConstants.STATUS_SETTLING.equals(b.getStatus())) {
+                g.setSettlingCount(g.getSettlingCount() + 1);
+            } else if (BillConstants.STATUS_PENDING.equals(b.getStatus())) {
+                g.setPendingCount(g.getPendingCount() + 1);
+            }
             BigDecimal amt = b.getAmount() != null ? b.getAmount() : BigDecimal.ZERO;
             g.setTotalAmount(g.getTotalAmount().add(amt));
             g.setSettledAmount(g.getSettledAmount()
@@ -1106,6 +1113,10 @@ public class BillAggregationOrchestrator {
         private BigDecimal totalAmount;     // 累计推送
         private BigDecimal settledAmount;   // 已结清
         private BigDecimal unsettledAmount; // 未结清 = 累计 - 已结
+        /** D-474：部分付款后挂账（结算中）的笔数——让财务一眼看出谁还有尾款没付完 */
+        private Integer settlingCount = 0;
+        /** D-474：待确认笔数（上游刚推过来、财务还没确认的） */
+        private Integer pendingCount = 0;
     }
 
     @Data

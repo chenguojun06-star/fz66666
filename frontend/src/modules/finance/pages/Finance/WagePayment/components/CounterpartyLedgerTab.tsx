@@ -133,6 +133,24 @@ export default function CounterpartyLedgerTab() {
       render: (v: number) => <Text type="secondary">{v ?? 0} 笔</Text>,
     },
     {
+      title: '挂账 / 待确认',
+      key: 'progress',
+      width: 150,
+      render: (_: unknown, r) => {
+        const settling = Number(r.settlingCount ?? 0);
+        const pending = Number(r.pendingCount ?? 0);
+        if (settling === 0 && pending === 0) {
+          return <Text type="secondary">-</Text>;
+        }
+        return (
+          <Space size={4}>
+            {settling > 0 && <Tag color="orange">{settling} 笔挂账</Tag>}
+            {pending > 0 && <Tag>{pending} 笔待确认</Tag>}
+          </Space>
+        );
+      },
+    },
+    {
       title: billType === 'PAYABLE' ? '累计应付' : '累计应收',
       dataIndex: 'totalAmount',
       width: 140,
