@@ -17,6 +17,8 @@ import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.common.lock.DistributedLockService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -64,6 +66,30 @@ public class FinanceDataConsistencyJob {
     // D-474：收付款闭环自检（补记付款记录 + 补回写上游已付款）
     @Autowired(required = false)
     private BillAggregationOrchestrator billAggregationOrchestrator;
+
+    @Autowired(required = false)
+    private org.springframework.scheduling.TaskScheduler taskScheduler;
+
+    /**
+     * D-474：启动后延迟 3 分钟自检一次。
+     * 背景：容器每次部署都会重建、日志随之清空，6 小时一次的 cron 在部署当天往往
+     * 还没触发就又重启了，自愈长期"看不见摸不着"。启动跑一次既让修复尽快生效，
+     * 也让巡检是否真的在工作能被立刻验证（日志里能查到 [FinanceConsistency]）。
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void runOnceAfterStartup() {
+        if (taskScheduler == null) {
+            return;
+        }
+        taskScheduler.schedule(() -> {
+            try {
+                log.info("[FinanceConsistency] 启动后自检开始");
+                checkAndFixFinanceConsistency();
+            } catch (Exception e) {
+                log.error("[FinanceConsistency] 启动后自检失败", e);
+            }
+        }, java.time.Instant.now().plusSeconds(180));
+    }
 
     @Scheduled(cron = "0 20 */6 * * ?")
     public void checkAndFixFinanceConsistency() {
