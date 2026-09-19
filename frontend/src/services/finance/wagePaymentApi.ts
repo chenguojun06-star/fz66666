@@ -132,6 +132,8 @@ export const BIZ_TYPE_MAP: Record<string, { text: string; color: string }> = {
   RECONCILIATION: { text: '工厂对账', color: 'orange' },
   material_reconciliation: { text: '工厂对账', color: 'orange' },
   REIMBURSEMENT: { text: '费用报销', color: 'purple' },
+  // D-471：库中实际存的是小写（实测 t_wage_payment.biz_type 全量取值）
+  expense_reimbursement: { text: '费用报销', color: 'purple' },
   BILL_RECEIVABLE: { text: '应收账款', color: 'green' },
   BILL_PAYABLE: { text: '应付账款', color: 'volcano' },
 };
