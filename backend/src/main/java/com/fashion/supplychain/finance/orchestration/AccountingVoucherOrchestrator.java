@@ -58,7 +58,14 @@ public class AccountingVoucherOrchestrator {
 
     // ==================== 1. 从账单生成凭证（幂等） ====================
 
-    @Transactional(rollbackFor = Exception.class)
+    /**
+     * REQUIRES_NEW：凭证生成必须跑在独立事务里。
+     * 账单确认（confirmBill）以 fail-safe 方式调用本方法——科目映射缺失等配置问题只降级不阻塞确认；
+     * 若加入外层事务，这里抛出的异常会把共享事务标记 rollback-only，外层 catch 也救不回，
+     * 提交时炸 UnexpectedRollbackException（实证：PAYABLE/EXPENSE 无科目映射时全部账单确认 500）。
+     * 对账单只做快照读，新事务不会与外层事务行锁互等。
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public AccountingVoucher generateVoucherFromBill(String billAggregationId) {
         Long tenantId = TenantAssert.requireTenantId();
         BillAggregation bill = billAggregationService.lambdaQuery()

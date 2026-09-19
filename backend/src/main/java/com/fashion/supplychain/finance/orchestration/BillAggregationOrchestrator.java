@@ -789,7 +789,8 @@ public class BillAggregationOrchestrator {
      * <ul>
      *   <li>幂等：generateVoucherFromBill 内部已做幂等（同一 billAggregationId 不重复生成 JOURNAL 凭证）</li>
      *   <li>fail-safe：科目映射缺失时只记日志不阻塞业务（凭证可在会计模块手动补录）</li>
-     *   <li>事务：generateVoucherFromBill 已有 @Transactional，加入 confirmBill 事务</li>
+     *   <li>事务：generateVoucherFromBill 为 REQUIRES_NEW 独立事务——失败只回滚凭证本身，
+     *       不会把本确认事务标记 rollback-only（否则外层 catch 无效，提交时炸 UnexpectedRollbackException）</li>
      * </ul>
      * </p>
      */
