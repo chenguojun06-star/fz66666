@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Descriptions, Drawer, Space, Table, Tag, Typography } from 'antd';
+import { Descriptions, Drawer, Progress, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import {
@@ -132,6 +132,30 @@ export default function BillDetailDrawer({ open, bill, onClose }: BillDetailDraw
                 </Text>
               )}
             </Descriptions.Item>
+            {/* D-474：付款进度——钱付了多少、还剩多少，一眼看全（扣款项不显示） */}
+            {Number(bill.amount ?? 0) > 0 && (
+              <Descriptions.Item label="付款进度" span={3}>
+                <Progress
+                  percent={Math.min(
+                    100,
+                    Math.round(((bill.settledAmount ?? 0) / (bill.amount || 1)) * 100),
+                  )}
+                  size="small"
+                  status={
+                    (bill.settledAmount ?? 0) >= (bill.amount ?? 0)
+                      ? 'success'
+                      : (bill.settledAmount ?? 0) > 0
+                        ? 'active'
+                        : 'normal'
+                  }
+                  format={() =>
+                    `已付 ${fmtMoney(bill.settledAmount)} / 共 ${fmtMoney(bill.amount)}，还剩 ${fmtMoney(
+                      (bill.amount ?? 0) - (bill.settledAmount ?? 0),
+                    )}`
+                  }
+                />
+              </Descriptions.Item>
+            )}
             <Descriptions.Item label="结算月份">{bill.settlementMonth || '-'}</Descriptions.Item>
             <Descriptions.Item label="推送人">{bill.creatorName || '-'}</Descriptions.Item>
             <Descriptions.Item label="推送时间">{fmtTime(bill.createTime)}</Descriptions.Item>

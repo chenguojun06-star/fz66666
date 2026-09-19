@@ -127,6 +127,93 @@ public class AccountingVoucherOrchestrator {
         return voucher;
     }
 
+    /**
+     * D-474 生成付款凭证（付出去的钱）。
+     *
+     * <p>会计口径：确认账单时已按全额"借成本/费用、贷应付账款"挂账（JOURNAL 凭证）；
+     * 实际付款时再记一笔"借应付账款、贷银行存款"，金额按**本次实付**。
+     * 分次付款就分次记，剩余未付的自然留在应付账款余额里，账实一致。
+     *
+     * <p>幂等：按 paymentId（一次付款一张凭证）；事务独立（REQUIRES_NEW），
+     * 凭证失败只回滚凭证本身，不影响付款主流程。
+     *
+     * @param billAggregationId 账单 ID
+     * @param paymentId         付款记录 ID（幂等键）
+     * @param payAmount         本次实付金额
+     * @param paymentMethod     支付方式（CASH=现金记 1001，其余记 1002 银行存款）
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW,
+            rollbackFor = Exception.class)
+    public AccountingVoucher generatePaymentVoucher(String billAggregationId, String paymentId,
+                                                    BigDecimal payAmount, String paymentMethod) {
+        Long tenantId = TenantAssert.requireTenantId();
+        if (payAmount == null || payAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        if (!StringUtils.hasText(paymentId)) {
+            return null;
+        }
+        // 幂等：同一笔付款只生成一张凭证
+        AccountingVoucher existing = voucherService.lambdaQuery()
+                .eq(AccountingVoucher::getTenantId, tenantId)
+                .eq(AccountingVoucher::getPaymentId, paymentId)
+                .eq(AccountingVoucher::getDeleteFlag, 0)
+                .last("LIMIT 1")
+                .one();
+        if (existing != null) {
+            log.info("[AccountingVoucher] 付款凭证已存在: paymentId={}, voucherNo={}", paymentId, existing.getVoucherNo());
+            return existing;
+        }
+        BillAggregation bill = billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getId, billAggregationId)
+                .eq(BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getDeleteFlag, 0)
+                .last("LIMIT 1")
+                .one();
+        if (bill == null) {
+            throw new RuntimeException("账单不存在: " + billAggregationId);
+        }
+        BillSubjectMapping mapping = mappingService.lambdaQuery()
+                .eq(BillSubjectMapping::getTenantId, tenantId)
+                .eq(BillSubjectMapping::getBillType, bill.getBillType())
+                .eq(BillSubjectMapping::getBillCategory, bill.getBillCategory())
+                .eq(BillSubjectMapping::getEnabled, 1)
+                .eq(BillSubjectMapping::getDeleteFlag, 0)
+                .last("LIMIT 1")
+                .one();
+        if (mapping == null || !StringUtils.hasText(mapping.getCreditSubjectCode())) {
+            throw new RuntimeException("未找到科目映射（无法确定应付科目）: "
+                    + bill.getBillType() + "/" + bill.getBillCategory());
+        }
+        // 借方 = 确认时挂的应付科目（2202 应付账款 / 2211 应付职工薪酬）
+        // 贷方 = 银行存款 1002（现金付款则 1001 库存现金）
+        String debitCode = mapping.getCreditSubjectCode();
+        String creditCode = "CASH".equalsIgnoreCase(String.valueOf(paymentMethod)) ? "1001" : "1002";
+        String summary = "付款: " + (bill.getBillNo() != null ? bill.getBillNo() : billAggregationId)
+                + " 本次支付 " + payAmount + " 元";
+        AccountingVoucher voucher = new AccountingVoucher();
+        voucher.setVoucherNo(generateVoucherNo());
+        voucher.setVoucherDate(LocalDate.now());
+        voucher.setBillAggregationId(billAggregationId);
+        voucher.setPaymentId(paymentId);
+        voucher.setSourceType(bill.getSourceType());
+        voucher.setSourceId(bill.getSourceId());
+        voucher.setSummary(summary);
+        voucher.setTotalAmount(payAmount);
+        voucher.setVoucherType("PAYMENT");
+        voucher.setStatus(STATUS_POSTED);
+        voucher.setAccountingStandard(STANDARD_CAS);
+        voucher.setCreateBy(UserContext.username());
+        voucher.setTenantId(tenantId);
+        voucher.setDeleteFlag(0);
+        voucherService.save(voucher);
+        saveEntry(voucher.getId(), 1, debitCode, payAmount, BigDecimal.ZERO, summary, tenantId);
+        saveEntry(voucher.getId(), 2, creditCode, BigDecimal.ZERO, payAmount, summary, tenantId);
+        log.info("[AccountingVoucher] 生成付款凭证: voucherNo={}, billNo={}, 借{}={}, 贷{}={}",
+                voucher.getVoucherNo(), bill.getBillNo(), debitCode, payAmount, creditCode, payAmount);
+        return voucher;
+    }
+
     // ==================== 2. 冲销凭证 ====================
 
     @Transactional(rollbackFor = Exception.class)

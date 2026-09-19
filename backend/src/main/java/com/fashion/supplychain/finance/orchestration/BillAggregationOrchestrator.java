@@ -604,7 +604,10 @@ public class BillAggregationOrchestrator {
         log.info("[BillAggregation] 付款: billNo={}, 本次={}, 累计={}/{}, 状态={}",
                 bill.getBillNo(), thisTime, result.getNewSettled(), total, bill.getStatus());
         // D-473：同步补记付款记录（记本次实付金额），打通总账与"付款记录"两套账
-        ensurePaymentRecordFromBill(bill, thisTime);
+        String paymentId = ensurePaymentRecordFromBill(bill, thisTime);
+        // D-474：按本次实付金额记一张付款凭证（借应付账款、贷银行存款）。
+        // 分次付款就分次记，剩下未付的自然留在应付账款余额里，与账单"未结清"一致。
+        generatePaymentVoucherSafely(bill, paymentId, thisTime, "OFFLINE");
         // D-474：付清后回写上游单据状态，避免"付款中心已付清、对账单还显示未付款"
         if (fullyPaid) {
             syncUpstreamPaid(bill);
@@ -969,9 +972,31 @@ public class BillAggregationOrchestrator {
      * 幂等：initiatePayment 按 bizType+bizId+paymentMethod 去重；
      * 补记失败只告警，不回滚结清主流程。
      */
-    private void ensurePaymentRecordFromBill(BillAggregation bill, BigDecimal thisAmount) {
-        if (wagePaymentOrchestrator == null || !StringUtils.hasText(bill.getCounterpartyId())) {
+    /**
+     * D-474：付款后按实付金额生成付款凭证（失败不影响付款本身）。
+     * 确认时已按全额挂"借成本/费用、贷应付"，这里再记"借应付、贷银行存款"。
+     */
+    private void generatePaymentVoucherSafely(BillAggregation bill, String paymentId,
+                                              BigDecimal thisAmount, String paymentMethod) {
+        if (accountingVoucherOrchestrator == null || !StringUtils.hasText(paymentId)) {
             return;
+        }
+        try {
+            accountingVoucherOrchestrator.generatePaymentVoucher(bill.getId(), paymentId, thisAmount, paymentMethod);
+        } catch (Exception e) {
+            log.warn("[BillAggregation] 生成付款凭证失败（不影响付款）: billNo={}, err={}",
+                    bill.getBillNo(), e.getMessage());
+        }
+    }
+
+    /**
+     * 付款成功时补记一条付款记录（一笔账单对应一条流水，分次付款累加金额）。
+     *
+     * @return 付款记录 ID（用于生成付款凭证时做幂等键）；未补记则返回 null
+     */
+    private String ensurePaymentRecordFromBill(BillAggregation bill, BigDecimal thisAmount) {
+        if (wagePaymentOrchestrator == null || !StringUtils.hasText(bill.getCounterpartyId())) {
+            return null;
         }
         try {
             // 该账单已补记过付款记录（部分付款第二次起）：累加金额，
@@ -993,10 +1018,10 @@ public class BillAggregationOrchestrator {
                 wagePaymentService.updateById(exist);
                 log.info("[BillAggregation] 付款记录累计: billNo={}, 本次={}, 累计={}",
                         bill.getBillNo(), thisAmount, exist.getAmount());
-                return;
+                return exist.getId();
             }
 
-            wagePaymentOrchestrator.initiatePayment(WagePaymentOrchestrator.WagePaymentRequest.builder()
+            WagePayment created = wagePaymentOrchestrator.initiatePayment(WagePaymentOrchestrator.WagePaymentRequest.builder()
                     .payeeType(mapPayeeType(bill.getCounterpartyType()))
                     .payeeId(bill.getCounterpartyId())
                     .payeeName(bill.getCounterpartyName())
@@ -1009,9 +1034,11 @@ public class BillAggregationOrchestrator {
                     .build());
             log.info("[BillAggregation] 结清补记付款记录: billNo={}, payee={}",
                     bill.getBillNo(), bill.getCounterpartyName());
+            return created != null ? created.getId() : null;
         } catch (Exception e) {
             log.warn("[BillAggregation] 结清补记付款记录失败（不影响结清）: billNo={}, err={}",
                     bill.getBillNo(), e.getMessage());
+            return null;
         }
     }
 

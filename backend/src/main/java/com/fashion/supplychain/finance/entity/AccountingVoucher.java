@@ -39,6 +39,12 @@ public class AccountingVoucher extends Model<AccountingVoucher> {
     /** 关联账单ID（BillAggregation.id，VARCHAR(64)） */
     private String billAggregationId;
 
+    /**
+     * D-474：关联的付款记录 ID（付款凭证专用）。
+     * 一笔账单可能分多次付款，每次付款一张凭证，靠这个 ID 精确幂等、可追溯。
+     */
+    private String paymentId;
+
     /** 来源类型 */
     private String sourceType;
 
