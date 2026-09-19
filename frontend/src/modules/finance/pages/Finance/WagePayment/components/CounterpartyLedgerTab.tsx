@@ -60,7 +60,9 @@ export default function CounterpartyLedgerTab() {
     try {
       const res: any = await billAggregationApi.listCounterpartyGroups({
         billType,
-        settlementMonth: month ? month.format('YYYY-MM') : undefined,
+        // D-474：只看未结清时不限月份——上月挂账的余额属于上月账单，
+        // 若按本月筛选就看不到它，跨月补扣会被挡住
+        settlementMonth: onlyUnsettled ? undefined : month ? month.format('YYYY-MM') : undefined,
         keyword: keyword.trim() || undefined,
       });
       setGroups(res?.data ?? res ?? []);
@@ -70,7 +72,7 @@ export default function CounterpartyLedgerTab() {
     } finally {
       setLoading(false);
     }
-  }, [billType, month, keyword, message]);
+  }, [billType, month, keyword, onlyUnsettled, message]);
 
   useEffect(() => {
     void fetchGroups();
@@ -187,7 +189,8 @@ export default function CounterpartyLedgerTab() {
           value={month}
           onChange={(v) => setMonth(v)}
           allowClear
-          placeholder="按月筛选"
+          disabled={onlyUnsettled}
+          placeholder={onlyUnsettled ? '未结清不限月份' : '按月筛选'}
         />
         <Input.Search
           allowClear
@@ -201,7 +204,7 @@ export default function CounterpartyLedgerTab() {
           checked={onlyUnsettled}
           onChange={(e) => setOnlyUnsettled(e.target.checked)}
         >
-          只看未结清
+          只看未结清（不限月份）
         </Checkbox>
         <Button icon={<ReloadOutlined />} onClick={() => void fetchGroups()}>
           刷新

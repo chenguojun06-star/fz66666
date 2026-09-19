@@ -99,6 +99,13 @@ export default function BillDetailDrawer({ open, bill, onClose }: BillDetailDraw
     },
     { title: '付款时间', dataIndex: 'paymentTime', width: 160, render: (v: string) => fmtTime(v) },
     { title: '操作人', dataIndex: 'operatorName', width: 120, render: (v: string) => v || '-' },
+    {
+      title: '备注（分次付款会记录每次追加）',
+      dataIndex: 'paymentRemark',
+      width: 260,
+      ellipsis: true,
+      render: (v: string) => v || '-',
+    },
   ];
 
   const statusCfg = bill ? BILL_STATUS_MAP[bill.status] ?? null : null;
@@ -170,7 +177,8 @@ export default function BillDetailDrawer({ open, bill, onClose }: BillDetailDraw
               size="small"
               loading={loading}
               pagination={false}
-              locale={{ emptyText: '暂无付款记录（结清后会自动补记）' }}
+              scroll={{ x: 920 }}
+              locale={{ emptyText: '暂无付款记录（付款后会自动补记）' }}
               columns={paymentColumns}
               dataSource={payments}
             />
