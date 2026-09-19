@@ -274,6 +274,10 @@ export const wagePaymentApi = {
 
 /** D-468：收款方往来明细返回结果 */
 export interface CounterpartyDetailResult {
+  /** 付款/支付记录（业务真实数据，主表展示） */
+  payments?: WagePayment[];
+  /** 应付款（应付未付视角，部分租户为空） */
+  payables?: PayableItem[];
   records: PayableItem[];
   total: number;
   summary: {

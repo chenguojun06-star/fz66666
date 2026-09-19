@@ -145,18 +145,50 @@ public class PayableOrchestrator {
             throw new IllegalStateException("无权查看其他往来单位的账目");
         }
 
+        String startDate = (String) params.get("startDate");
+        String endDate = (String) params.get("endDate");
+
+        // ① 付款/支付记录 —— 业务真实数据所在（工资结算、订单结算、对账等支付单）
+        // 实测：本租户 t_payable 为 0 条，数据全在 t_wage_payment，故以本表为准，
+        // 否则点收款方会出现"单据数 0 / 暂无数据"。
+        LambdaQueryWrapper<com.fashion.supplychain.finance.entity.WagePayment> pw =
+                new LambdaQueryWrapper<com.fashion.supplychain.finance.entity.WagePayment>()
+                        .eq(com.fashion.supplychain.finance.entity.WagePayment::getTenantId, tenantId)
+                        .eq(com.fashion.supplychain.finance.entity.WagePayment::getPayeeId, counterpartyId);
+        if (StringUtils.hasText(startDate)) {
+            pw.ge(com.fashion.supplychain.finance.entity.WagePayment::getCreateTime, startDate + " 00:00:00");
+        }
+        if (StringUtils.hasText(endDate)) {
+            pw.le(com.fashion.supplychain.finance.entity.WagePayment::getCreateTime, endDate + " 23:59:59");
+        }
+        pw.orderByDesc(com.fashion.supplychain.finance.entity.WagePayment::getCreateTime);
+        List<com.fashion.supplychain.finance.entity.WagePayment> payments = wagePaymentService.list(pw);
+
+        // ② 应付款 —— 应付未付视角（部分租户该表为空，属正常，不影响主流程）
         LambdaQueryWrapper<Payable> qw = buildCounterpartyWrapper(params, counterpartyId, tenantId);
         IPage<Payable> paged = payableService.page(new Page<>(page, pageSize), qw);
+        List<Payable> all = payableService.list(buildCounterpartyWrapper(params, counterpartyId, tenantId));
 
-        // 汇总基于全量（不受分页影响）：复制一份不带分页的条件
-        LambdaQueryWrapper<Payable> sumQw = buildCounterpartyWrapper(params, counterpartyId, tenantId);
-        List<Payable> all = payableService.list(sumQw);
+        // ③ 汇总：付款记录按状态分已付/待付，应付款另计应付与已付
         BigDecimal totalAmount = BigDecimal.ZERO;
         BigDecimal paidAmount = BigDecimal.ZERO;
-        for (Payable x : all) {
-            totalAmount = totalAmount.add(x.getAmount() != null ? x.getAmount() : BigDecimal.ZERO);
-            paidAmount = paidAmount.add(x.getPaidAmount() != null ? x.getPaidAmount() : BigDecimal.ZERO);
+        for (com.fashion.supplychain.finance.entity.WagePayment p : payments) {
+            BigDecimal amt = p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO;
+            totalAmount = totalAmount.add(amt);
+            String st = p.getStatus() == null ? "" : p.getStatus();
+            if ("success".equals(st) || "paid".equals(st)) {
+                paidAmount = paidAmount.add(amt);
+            }
         }
+        BigDecimal payableTotal = BigDecimal.ZERO;
+        BigDecimal payablePaid = BigDecimal.ZERO;
+        for (Payable x : all) {
+            payableTotal = payableTotal.add(x.getAmount() != null ? x.getAmount() : BigDecimal.ZERO);
+            payablePaid = payablePaid.add(x.getPaidAmount() != null ? x.getPaidAmount() : BigDecimal.ZERO);
+        }
+        // 应付款中尚未生成支付单的部分（应付-已付）计入总额
+        totalAmount = totalAmount.add(payableTotal.subtract(payablePaid).max(BigDecimal.ZERO));
+        paidAmount = paidAmount.add(payablePaid);
 
         // 关联付款记录，补齐「确认人 / 付款时间」（Payable 本身没有审核人字段）
         Map<String, Map<String, Object>> confirmInfo = new HashMap<>();
@@ -187,10 +219,14 @@ public class PayableOrchestrator {
         }
 
         Map<String, Object> result = new HashMap<>();
-        result.put("records", paged.getRecords());
-        result.put("total", paged.getTotal());
+        // 主数据：付款/支付记录（前端主表展示这个）
+        result.put("payments", payments);
+        // 补充：应付款（应付未付视角）
+        result.put("payables", paged.getRecords());
+        result.put("records", all);
+        result.put("total", payments.size() + all.size());
         Map<String, Object> summary = new HashMap<>();
-        summary.put("billCount", all.size());
+        summary.put("billCount", payments.size() + all.size());
         summary.put("totalAmount", totalAmount);
         summary.put("paidAmount", paidAmount);
         summary.put("unpaidAmount", totalAmount.subtract(paidAmount).max(BigDecimal.ZERO));

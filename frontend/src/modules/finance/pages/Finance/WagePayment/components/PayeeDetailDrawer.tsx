@@ -4,6 +4,7 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import {
   wagePaymentApi,
+  BIZ_TYPE_MAP,
   type CounterpartyDetailResult,
 } from '@/services/finance/wagePaymentApi';
 
@@ -46,6 +47,17 @@ const STATUS_MAP: Record<string, { text: string; color: string }> = {
   paid: { text: '已付清', color: 'green' },
   cancelled: { text: '已取消', color: 'default' },
   overdue: { text: '已逾期', color: 'red' },
+};
+
+/** D-471：付款/支付记录状态（t_wage_payment.status） */
+const PAY_STATUS_MAP: Record<string, { text: string; color: string }> = {
+  pending: { text: '待支付', color: 'orange' },
+  processing: { text: '处理中', color: 'blue' },
+  success: { text: '已支付', color: 'green' },
+  paid: { text: '已支付', color: 'green' },
+  failed: { text: '失败', color: 'red' },
+  rejected: { text: '已驳回', color: 'red' },
+  cancelled: { text: '已取消', color: 'default' },
 };
 
 const fmtMoney = (v?: number) =>
@@ -103,82 +115,62 @@ export default function PayeeDetailDrawer({ open, payeeId, payeeName, onClose }:
     };
   }, [open, payeeId, page, pageSize, range, status, message]);
 
-  const rows = useMemo(() => (data?.records ?? []) as unknown as PayableRow[], [data]);
+  // D-471：以「付款/支付记录」为主表数据（t_wage_payment 才是业务数据所在；
+  // t_payable 本租户为 0 条，早期版本只查它导致点开显示"暂无数据"）
+  const rows = useMemo(
+    () => (data?.payments ?? []) as unknown as PayableRow[],
+    [data],
+  );
+  // 应付款（应付未付视角），有则追加展示
+  const payableRows = useMemo(
+    () => (data?.payables ?? []) as unknown as PayableRow[],
+    [data],
+  );
 
+  // D-471：列对应「付款/支付记录」（paymentNo/bizType/amount/status/bizNo/operatorName/createTime）
   const columns: ColumnsType<PayableRow> = [
     {
-      title: '单据编号',
-      dataIndex: 'payableNo',
+      title: '支付单号',
+      dataIndex: 'paymentNo',
       width: 170,
       render: (v?: string) => <Text style={{ fontFamily: 'monospace' }}>{v || '-'}</Text>,
     },
     {
-      title: '来源',
-      key: 'source',
-      width: 200,
-      render: (_: unknown, r: PayableRow) => (
-        <Space direction="vertical" size={0}>
-          <Text style={{ fontSize: 12 }}>
-            {r.orderNo ? `订单 ${r.orderNo}` : r.sourceNo ? `来源 ${r.sourceNo}` : r.billType || r.sourceType || '-'}
-          </Text>
-          {r.styleNo ? <Text type="secondary" style={{ fontSize: 12 }}>款号 {r.styleNo}</Text> : null}
-        </Space>
-      ),
+      title: '业务类型',
+      dataIndex: 'bizType',
+      width: 110,
+      render: (v?: string) => {
+        const t = BIZ_TYPE_MAP[v || ''] ?? null;
+        return t ? <Tag color={t.color}>{t.text}</Tag> : <Text type="secondary">{v || '-'}</Text>;
+      },
     },
     {
-      title: '摘要',
-      dataIndex: 'description',
-      ellipsis: true,
-      render: (v?: string) => v || '-',
-    },
-    {
-      title: '应付金额',
+      title: '金额',
       dataIndex: 'amount',
       width: 120,
       align: 'right',
       render: (v?: number) => <Text strong>{fmtMoney(v)}</Text>,
     },
     {
-      title: '已付金额',
-      dataIndex: 'paidAmount',
-      width: 120,
-      align: 'right',
-      render: (v?: number) => fmtMoney(v),
-    },
-    {
-      title: '未付',
-      key: 'unpaid',
-      width: 120,
-      align: 'right',
-      render: (_: unknown, r: PayableRow) => {
-        const unpaid = Number(r.amount || 0) - Number(r.paidAmount || 0);
-        return <Text type={unpaid > 0 ? 'danger' : 'secondary'}>{fmtMoney(unpaid > 0 ? unpaid : 0)}</Text>;
-      },
-    },
-    {
       title: '状态',
       dataIndex: 'status',
       width: 100,
       render: (v?: string) => {
-        const s = STATUS_MAP[v || ''] ?? { text: v || '-', color: 'default' };
+        const s = PAY_STATUS_MAP[v || ''] ?? { text: v || '-', color: 'default' };
         return <Tag color={s.color}>{s.text}</Tag>;
       },
     },
     {
-      title: '提交人',
-      dataIndex: 'creatorName',
-      width: 100,
-      render: (v?: string) => v || '-',
+      title: '业务单号',
+      dataIndex: 'bizNo',
+      width: 170,
+      render: (v?: string) => <Text style={{ fontFamily: 'monospace' }}>{v || '-'}</Text>,
     },
     {
-      title: '审核/确认人',
-      key: 'confirmBy',
-      width: 120,
-      render: (_: unknown, r: PayableRow) => {
-        const info = r.payableNo ? data?.confirmInfo?.[r.payableNo] : undefined;
-        const name = info?.confirmBy || info?.operatorName;
-        return name ? <Text>{name}</Text> : <Text type="secondary">-</Text>;
-      },
+      title: '操作人',
+      dataIndex: 'operatorName',
+      width: 100,
+      render: (v?: string) => v || '-',
     },
     {
       title: '创建时间',
@@ -277,6 +269,20 @@ export default function PayeeDetailDrawer({ open, payeeId, payeeName, onClose }:
             },
           }}
         />
+
+        {/* 应付款（应付未付视角）：本租户 t_payable 通常为空，有数据时才展示 */}
+        {payableRows.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <Text strong style={{ fontSize: 13 }}>应付未付单据（{payableRows.length}）</Text>
+            <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--color-text-secondary)' }}>
+              {payableRows.map((r: PayableRow) => (
+                <li key={r.id}>
+                  {r.payableNo || '-'} · 应付 {fmtMoney(r.amount)} · 已付 {fmtMoney(r.paidAmount)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </Spin>
     </Drawer>
   );
