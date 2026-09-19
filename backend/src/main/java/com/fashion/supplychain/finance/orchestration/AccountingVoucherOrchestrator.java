@@ -128,6 +128,39 @@ public class AccountingVoucherOrchestrator {
     }
 
     /**
+     * D-474 付款凭证的借贷科目（纯函数，便于单测）。
+     *
+     * <p>借方 = 确认账单时挂的那个应付科目（2202 应付账款 / 2211 应付职工薪酬…），
+     * 付款时把它冲掉；贷方 = 银行存款 1002，现金付款记库存现金 1001。
+     *
+     * @param payableSubjectCode 账单科目映射里的 credit 科目（应付科目）
+     * @param paymentMethod      支付方式，CASH 记现金，其余记银行存款
+     */
+    static PaymentSubjects resolvePaymentSubjects(String payableSubjectCode, String paymentMethod) {
+        String credit = "CASH".equalsIgnoreCase(String.valueOf(paymentMethod)) ? "1001" : "1002";
+        return new PaymentSubjects(payableSubjectCode, credit);
+    }
+
+    /** 付款凭证的借贷科目对（D-474） */
+    static class PaymentSubjects {
+        private final String debit;
+        private final String credit;
+
+        PaymentSubjects(String debit, String credit) {
+            this.debit = debit;
+            this.credit = credit;
+        }
+
+        public String getDebit() {
+            return debit;
+        }
+
+        public String getCredit() {
+            return credit;
+        }
+    }
+
+    /**
      * D-474 生成付款凭证（付出去的钱）。
      *
      * <p>会计口径：确认账单时已按全额"借成本/费用、贷应付账款"挂账（JOURNAL 凭证）；
@@ -187,8 +220,9 @@ public class AccountingVoucherOrchestrator {
         }
         // 借方 = 确认时挂的应付科目（2202 应付账款 / 2211 应付职工薪酬）
         // 贷方 = 银行存款 1002（现金付款则 1001 库存现金）
-        String debitCode = mapping.getCreditSubjectCode();
-        String creditCode = "CASH".equalsIgnoreCase(String.valueOf(paymentMethod)) ? "1001" : "1002";
+        PaymentSubjects subjects = resolvePaymentSubjects(mapping.getCreditSubjectCode(), paymentMethod);
+        String debitCode = subjects.getDebit();
+        String creditCode = subjects.getCredit();
         String summary = "付款: " + (bill.getBillNo() != null ? bill.getBillNo() : billAggregationId)
                 + " 本次支付 " + payAmount + " 元";
         AccountingVoucher voucher = new AccountingVoucher();
