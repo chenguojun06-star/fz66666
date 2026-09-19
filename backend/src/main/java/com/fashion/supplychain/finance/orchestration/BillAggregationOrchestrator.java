@@ -604,7 +604,10 @@ public class BillAggregationOrchestrator {
         log.info("[BillAggregation] 付款: billNo={}, 本次={}, 累计={}/{}, 状态={}",
                 bill.getBillNo(), thisTime, result.getNewSettled(), total, bill.getStatus());
         // D-473：同步补记付款记录（记本次实付金额），打通总账与"付款记录"两套账
-        String paymentId = ensurePaymentRecordFromBill(bill, thisTime);
+        // D-474：付款记录表记的是"我们付出去的钱"，应收（客户付给我们）不往里记，
+        // 否则付款记录页会出现一条"付给客户"的假记录
+        boolean receivable = "RECEIVABLE".equalsIgnoreCase(String.valueOf(bill.getBillType()));
+        String paymentId = receivable ? null : ensurePaymentRecordFromBill(bill, thisTime);
         // D-474：按本次实付金额记一张付款凭证（借应付账款、贷银行存款）。
         // 分次付款就分次记，剩下未付的自然留在应付账款余额里，与账单"未结清"一致。
         generatePaymentVoucherSafely(bill, paymentId, thisTime, "OFFLINE");

@@ -197,16 +197,19 @@ public class AccountingVoucherOrchestrator {
         if (payAmount == null || payAmount.compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
-        if (!StringUtils.hasText(paymentId)) {
-            return null;
-        }
-        // 幂等：同一笔付款只生成一张凭证
-        AccountingVoucher existing = voucherService.lambdaQuery()
-                .eq(AccountingVoucher::getTenantId, tenantId)
-                .eq(AccountingVoucher::getPaymentId, paymentId)
+        // 幂等：有付款记录 ID 就按它查（分次付款每次一张）；
+        // 应收（客户付款给我们）没有付款记录，退化为"同账单同金额只一张"
+        LambdaQueryWrapper<AccountingVoucher> idempotentQuery = new LambdaQueryWrapper<>();
+        idempotentQuery.eq(AccountingVoucher::getTenantId, tenantId)
                 .eq(AccountingVoucher::getDeleteFlag, 0)
-                .last("LIMIT 1")
-                .one();
+                .eq(AccountingVoucher::getVoucherType, "PAYMENT");
+        if (StringUtils.hasText(paymentId)) {
+            idempotentQuery.eq(AccountingVoucher::getPaymentId, paymentId);
+        } else {
+            idempotentQuery.eq(AccountingVoucher::getBillAggregationId, billAggregationId)
+                    .eq(AccountingVoucher::getTotalAmount, payAmount);
+        }
+        AccountingVoucher existing = voucherService.getOne(idempotentQuery.last("LIMIT 1"));
         if (existing != null) {
             log.info("[AccountingVoucher] 付款凭证已存在: paymentId={}, voucherNo={}", paymentId, existing.getVoucherNo());
             return existing;
@@ -238,8 +241,11 @@ public class AccountingVoucherOrchestrator {
                 bill.getBillType(), mapping.getDebitSubjectCode(), mapping.getCreditSubjectCode(), paymentMethod);
         String debitCode = subjects.getDebit();
         String creditCode = subjects.getCredit();
-        String summary = "付款: " + (bill.getBillNo() != null ? bill.getBillNo() : billAggregationId)
-                + " 本次支付 " + payAmount + " 元";
+        // 应收是"客户付款给我们"，措辞与方向都要反过来
+        boolean receivable = "RECEIVABLE".equalsIgnoreCase(String.valueOf(bill.getBillType()));
+        String summary = (receivable ? "收款: " : "付款: ")
+                + (bill.getBillNo() != null ? bill.getBillNo() : billAggregationId)
+                + (receivable ? " 本次收款 " : " 本次支付 ") + payAmount + " 元";
         AccountingVoucher voucher = new AccountingVoucher();
         voucher.setVoucherNo(generateVoucherNo());
         voucher.setVoucherDate(LocalDate.now());
