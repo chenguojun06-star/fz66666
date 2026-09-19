@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.mapper;
 
+import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import java.time.LocalDateTime;
@@ -120,6 +121,15 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         @Param("period") String period,
                         @Param("tenantId") Long tenantId);
 
+        /**
+         * 按人员/订单聚合工资扫码（工资结算单生成唯一取数口）。
+         * tenantLine="true"：跳过 TenantInterceptor 自动拼接——SQL 含 sr LEFT JOIN pt
+         * 两张租户表，拦截器的裸 "AND tenant_id = X" 会因两表同名列报 ambiguous
+         * （实证：工资终审推送 finalize-for-operator 全量 500）。
+         * 本 SQL 已显式做租户隔离：主 WHERE sr.tenant_id = #{tenantId} + JOIN ON pt.tenant_id = sr.tenant_id，
+         * 与 MaterialOutboundLogMapper/ProductWarehousingMapper 的 JOIN 先例同款处理。
+         */
+        @InterceptorIgnore(tenantLine = "true")
         @Select({
                         "<script>",
                         "SELECT",
