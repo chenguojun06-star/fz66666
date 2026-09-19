@@ -760,10 +760,13 @@ public class BillAggregationOrchestrator {
      */
     public int repairSettledBillsConsistency() {
         Long tenantId = TenantAssert.requireTenantId();
+        // 按更新时间倒序：优先校验最近有变动的账单（新付的款才可能出问题），
+// 否则固定取前 500 条会反复查同一批老数据、把新数据漏在后面
         List<BillAggregation> settled = billAggregationService.lambdaQuery()
                 .eq(BillAggregation::getTenantId, tenantId)
                 .eq(BillAggregation::getDeleteFlag, 0)
                 .eq(BillAggregation::getStatus, BillConstants.STATUS_SETTLED)
+                .orderByDesc(BillAggregation::getUpdateTime)
                 .last("LIMIT 500")
                 .list();
         if (settled == null || settled.isEmpty()) {
