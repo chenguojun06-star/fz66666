@@ -349,7 +349,11 @@ export default function CounterpartyBillDrawer({
       dataIndex: 'amount',
       width: 120,
       align: 'right',
-      render: (v: number) => <Text strong>{fmtMoney(v)}</Text>,
+      render: (v: number) => (
+        <Text strong style={Number(v ?? 0) < 0 ? { color: 'var(--color-error)' } : undefined}>
+          {fmtMoney(v)}
+        </Text>
+      ),
     },
     {
       title: '已结清',
@@ -365,6 +369,9 @@ export default function CounterpartyBillDrawer({
       align: 'right',
       render: (_: unknown, r: BillAggregation) => {
         const rest = Number(r.amount ?? 0) - Number(r.settledAmount ?? 0);
+        if (Number(r.amount ?? 0) < 0) {
+          return <Text type="secondary">扣款项</Text>;
+        }
         return rest > 0
           ? <Text strong style={{ color: 'var(--color-error)' }}>{fmtMoney(rest)}</Text>
           : <Text type="secondary">已付清</Text>;
@@ -425,7 +432,8 @@ export default function CounterpartyBillDrawer({
               确认
             </Button>
           )}
-          {SETTLEABLE.includes(r.status) && (
+          {/* 扣款项（负数）与已付清的不提供付款入口 */}
+          {SETTLEABLE.includes(r.status) && Number(r.amount ?? 0) - Number(r.settledAmount ?? 0) > 0 && (
             <Button
               type="link"
               size="small"

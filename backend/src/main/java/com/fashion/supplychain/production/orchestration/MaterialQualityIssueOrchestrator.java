@@ -283,15 +283,56 @@ public class MaterialQualityIssueOrchestrator {
 
         if (billAggregationOrchestrator != null) {
             try {
-                billAggregationOrchestrator.syncAmountBySource("MATERIAL_RECONCILIATION", reconciliation.getId(), patch.getFinalAmount());
+                // D-474：账单已推送（金额已锁定）时，不再默默把原账单金额改小，
+                // 改为推一条负向「品质扣款」流水——扣了多少、因为什么扣都留痕可查；
+                // 账单尚未推送时，finalAmount 已含扣款，审批时以扣后金额入账即可。
+                if (billAggregationOrchestrator.billExists("MATERIAL_RECONCILIATION", reconciliation.getId())) {
+                    pushQualityDeductionBill(issue, reconciliation, addition, resolutionRemark);
+                } else {
+                    billAggregationOrchestrator.syncAmountBySource("MATERIAL_RECONCILIATION", reconciliation.getId(), patch.getFinalAmount());
+                }
             } catch (Exception e) {
-                log.warn("[QualityIssue] 扣款后同步账单金额失败: reconciliationId={}", reconciliation.getId(), e);
+                log.warn("[QualityIssue] 扣款联动账单失败: reconciliationId={}", reconciliation.getId(), e);
             }
         }
 
         issue.setDeductionAmount(addition);
         appendPurchaseRemark(purchase, buildImpactRemark(issue, resolutionRemark, "已联动物料对账扣款"));
         materialPurchaseService.updateById(purchase);
+    }
+
+    /**
+     * D-474：品质扣款独立入账（负向流水）。
+     * 原做法是把对账单金额悄悄改小，财务看不到"扣了多少、因为什么扣"；
+     * 现在保留原账单金额，另推一条负数扣款账单，总额一致且痕迹清晰。
+     */
+    private void pushQualityDeductionBill(MaterialQualityIssue issue, MaterialReconciliation reconciliation,
+                                          BigDecimal deduction, String resolutionRemark) {
+        if (deduction == null || deduction.compareTo(java.math.BigDecimal.ZERO) == 0) {
+            return;
+        }
+        com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator.BillPushRequest req =
+                new com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator.BillPushRequest();
+        req.setBillType("PAYABLE");
+        req.setBillCategory("DEDUCTION");
+        req.setSourceType("QUALITY_DEDUCTION");
+        req.setSourceId(issue.getId());
+        req.setSourceNo(issue.getIssueNo());
+        req.setCounterpartyType("SUPPLIER");
+        req.setCounterpartyId(reconciliation.getSupplierId());
+        req.setCounterpartyName(reconciliation.getSupplierName());
+        req.setOrderId(reconciliation.getOrderId());
+        req.setOrderNo(reconciliation.getOrderNo());
+        req.setStyleNo(reconciliation.getStyleNo());
+        // 负数：与对账主账单同向累加后即为扣减后的实际应付
+        req.setAmount(deduction.negate());
+        req.setRemark(String.format("品质异常扣款[%s] %s", issue.getIssueNo(),
+                resolutionRemark == null ? "" : resolutionRemark));
+        req.setSettlementMonth(java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")));
+        billAggregationOrchestrator.pushBill(req);
+        log.info("[QualityIssue] 品质扣款流水已推送: issueNo={}, amount={}, supplier={}",
+                issue.getIssueNo(), req.getAmount(), reconciliation.getSupplierName());
     }
 
     private void appendPurchaseRemark(MaterialPurchase purchase, String addition) {

@@ -170,7 +170,14 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
     },
     {
       title: '金额', dataIndex: 'amount', key: 'amount', width: 120, align: 'right',
-      render: (v: number) => <span className="u-fw-600">¥{(v ?? 0).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</span>,
+      render: (v: number) => (
+        <span
+          className="u-fw-600"
+          style={Number(v ?? 0) < 0 ? { color: 'var(--color-error)' } : undefined}
+        >
+          {Number(v ?? 0) < 0 ? '-' : ''}¥{Math.abs(v ?? 0).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}
+        </span>
+      ),
     },
     {
       title: '已结算', dataIndex: 'settledAmount', key: 'settledAmount', width: 110, align: 'right',
@@ -180,6 +187,9 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
       title: '还剩余', key: 'unsettledAmount', width: 110, align: 'right',
       render: (_: unknown, r: BillAggregation) => {
         const rest = Number(r.amount ?? 0) - Number(r.settledAmount ?? 0);
+        if (Number(r.amount ?? 0) < 0) {
+          return <span style={{ color: 'var(--color-text-tertiary)' }}>扣款项</span>;
+        }
         return rest > 0
           ? <span style={{ color: 'var(--color-error)', fontWeight: 600 }}>¥{rest.toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</span>
           : <span style={{ color: 'var(--color-text-tertiary)' }}>已付清</span>;

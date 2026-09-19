@@ -19,6 +19,7 @@ const fmtTime = (v?: string) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-');
 /** 上游来源类型 → 中文（账单来自哪个模块推送；各列表共用，保持口径一致） */
 export const SOURCE_TYPE_TEXT: Record<string, string> = {
   MATERIAL_RECONCILIATION: '面料对账',
+  QUALITY_DEDUCTION: '品质扣款',
   SHIPMENT_RECONCILIATION: '出货对账',
   SHIPMENT_RECONCILIATION_DEDUCTION: '出货对账扣款',
   PAYROLL_SETTLEMENT: '工资结算',
@@ -136,15 +137,21 @@ export default function BillDetailDrawer({ open, bill, onClose }: BillDetailDraw
             <Descriptions.Item label="订单号">{bill.orderNo || '-'}</Descriptions.Item>
             <Descriptions.Item label="款号">{bill.styleNo || '-'}</Descriptions.Item>
             <Descriptions.Item label="账单金额">
-              <Text strong>{fmtMoney(bill.amount)}</Text>
+              <Text strong style={Number(bill.amount ?? 0) < 0 ? { color: 'var(--color-error)' } : undefined}>
+                {fmtMoney(bill.amount)}
+              </Text>
             </Descriptions.Item>
             <Descriptions.Item label="已结清">
               <Text style={{ color: 'var(--color-success)' }}>{fmtMoney(bill.settledAmount)}</Text>
             </Descriptions.Item>
             <Descriptions.Item label="未结清">
-              <Text strong style={{ color: 'var(--color-error)' }}>
-                {fmtMoney((bill.amount ?? 0) - (bill.settledAmount ?? 0))}
-              </Text>
+              {Number(bill.amount ?? 0) < 0 ? (
+                <Text type="secondary">扣款项，无需付款</Text>
+              ) : (
+                <Text strong style={{ color: 'var(--color-error)' }}>
+                  {fmtMoney((bill.amount ?? 0) - (bill.settledAmount ?? 0))}
+                </Text>
+              )}
             </Descriptions.Item>
             <Descriptions.Item label="结算月份">{bill.settlementMonth || '-'}</Descriptions.Item>
             <Descriptions.Item label="推送人">{bill.creatorName || '-'}</Descriptions.Item>
