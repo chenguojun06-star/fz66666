@@ -31,6 +31,8 @@ import {
   BILL_STATUS_OPTIONS,
 } from '@/services/finance/billAggregationApi';
 import type { ColumnsType } from 'antd/es/table';
+import { DownloadOutlined } from '@ant-design/icons';
+import { exportToExcel } from '@/utils/excelExport';
 import dayjs from 'dayjs';
 
 interface BillSummaryTabProps {
@@ -53,6 +55,64 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
 
   // ---- 筛选（defaultBillType 锁定后不可切换）----
   const [query, setQuery] = useState<BillQueryRequest>({ pageNum: 1, pageSize: 20, billType: defaultBillType });
+
+  // D-474：导出当前筛选下的全部账单（Excel，发给对方或留底核对）
+  const handleExport = useCallback(async () => {
+    try {
+      const res: any = await billAggregationApi.listBills({ ...query, pageNum: 1, pageSize: 500 });
+      const rows: BillAggregation[] = (res?.data ?? res)?.records ?? [];
+      if (rows.length === 0) {
+        msg.warning('当前筛选条件下没有可导出的账单');
+        return;
+      }
+      const data = rows.map((b) => ({
+        billNo: b.billNo || '-',
+        billCategory: BILL_CATEGORY_MAP[b.billCategory || '']?.text ?? b.billCategory ?? '-',
+        sourceType: SOURCE_TYPE_TEXT[b.sourceType ?? ''] ?? b.sourceType ?? '-',
+        counterpartyName: b.counterpartyName || '-',
+        orderNo: b.orderNo || '-',
+        styleNo: b.styleNo || '-',
+        amount: Number(b.amount ?? 0),
+        settledAmount: Number(b.settledAmount ?? 0),
+        unpaid: Number(b.amount ?? 0) - Number(b.settledAmount ?? 0),
+        status: BILL_STATUS_MAP[b.status ?? '']?.text ?? b.status ?? '-',
+        settlementMonth: b.settlementMonth || '-',
+        sourceNo: b.sourceNo || '-',
+        createTime: b.createTime ? dayjs(b.createTime).format('YYYY-MM-DD HH:mm') : '-',
+      }));
+      // 合计行
+      const sum = (k: 'amount' | 'settledAmount' | 'unpaid') =>
+        data.reduce((s, r) => s + Number(r[k] ?? 0), 0);
+      data.push({
+        billNo: `合计（${rows.length} 笔）`,
+        billCategory: '', sourceType: '', counterpartyName: '', orderNo: '', styleNo: '',
+        amount: sum('amount'), settledAmount: sum('settledAmount'), unpaid: sum('unpaid'),
+        status: '', settlementMonth: '', sourceNo: '', createTime: '',
+      } as (typeof data)[number]);
+      await exportToExcel(
+        data as unknown as Record<string, unknown>[],
+        [
+          { header: '账单编号', key: 'billNo', width: 26 },
+          { header: '分类', key: 'billCategory', width: 10 },
+          { header: '来源模块', key: 'sourceType', width: 14 },
+          { header: '对方名称', key: 'counterpartyName', width: 16 },
+          { header: '订单号', key: 'orderNo', width: 18 },
+          { header: '款号', key: 'styleNo', width: 16 },
+          { header: '金额', key: 'amount', width: 12 },
+          { header: '已结清', key: 'settledAmount', width: 12 },
+          { header: '未结清', key: 'unpaid', width: 12 },
+          { header: '状态', key: 'status', width: 10 },
+          { header: '结算月', key: 'settlementMonth', width: 10 },
+          { header: '来源单号', key: 'sourceNo', width: 20 },
+          { header: '推送时间', key: 'createTime', width: 18 },
+        ],
+        `账单流水_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`,
+      );
+      msg.success(`已导出 ${rows.length} 条账单`);
+    } catch (e: unknown) {
+      msg.error(`导出失败: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }, [query, msg]);
 
   // ---- 数据加载 ----
   const fetchBills = useCallback(async (q?: BillQueryRequest) => {
@@ -337,6 +397,10 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
             批量确认({selectedKeys.length})
           </Button>
         )}
+        {/* D-474：导出当前筛选下的全部账单 */}
+        <Button icon={<DownloadOutlined />} onClick={handleExport}>
+          导出 Excel
+        </Button>
         {/* D-470：列设置（侧滑抽屉，与项目其他页面一致） */}
         <ColumnSettingsButton onClick={() => setColumnSettingsOpen(true)} />
       </div>
