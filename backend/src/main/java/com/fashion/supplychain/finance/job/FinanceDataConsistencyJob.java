@@ -125,6 +125,7 @@ public class FinanceDataConsistencyJob {
         int fixedOrphanDeductions = 0;
         int fixedDeductionSum = 0;
         int fixedPaymentRecords = 0;
+        int fixedMissingReconBills = 0;
         int totalFailed = 0;
 
         for (Long tenantId : tenantIds) {
@@ -133,8 +134,9 @@ public class FinanceDataConsistencyJob {
                 fixedMissingRecon += fixMissingShipmentReconciliations();
                 fixedOrphanDeductions += fixOrphanDeductions();
                 fixedDeductionSum += fixDeductionSumMismatch(tenantId);
-                // D-474：收付款闭环自检——已结清账单缺付款记录/上游未置已付款时自愈
+                // D-474：收付款闭环自检——补推缺失的对账账单、已结清账单缺付款记录/上游未置已付款时自愈
                 if (billAggregationOrchestrator != null) {
+                    fixedMissingReconBills += billAggregationOrchestrator.repairMissingReconciliationBills();
                     fixedPaymentRecords += billAggregationOrchestrator.repairSettledBillsConsistency();
                 }
             } catch (Exception e) {
@@ -150,8 +152,8 @@ public class FinanceDataConsistencyJob {
         }
 
         long duration = System.currentTimeMillis() - start;
-        log.info("[FinanceConsistency] 巡检完成: 补建对账单={}, 归集孤儿扣款={}, 修复扣款汇总={}, 补记付款记录={}, 失败租户={}, 耗时{}ms",
-                fixedMissingRecon, fixedOrphanDeductions, fixedDeductionSum, fixedPaymentRecords, totalFailed, duration);
+        log.info("[FinanceConsistency] 巡检完成: 补建对账单={}, 补推对账账单={}, 归集孤儿扣款={}, 修复扣款汇总={}, 补记付款记录={}, 失败租户={}, 耗时{}ms",
+                fixedMissingRecon, fixedMissingReconBills, fixedOrphanDeductions, fixedDeductionSum, fixedPaymentRecords, totalFailed, duration);
     }
 
     int fixMissingShipmentReconciliations() {

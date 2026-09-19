@@ -612,6 +612,70 @@ public class BillAggregationOrchestrator {
     }
 
     /**
+     * D-474 补推缺失的物料对账账单（供定时任务调用）。
+     *
+     * 背景：线上 27 张已审批的对账单里，有 3 张有金额（22/5/16 元）却从来没有账单——
+     * 多为推送功能上线前审批的历史单据，或当时推送失败。这里做幂等补推：
+     * 已审批 + 金额大于 0 + 还没有 MATERIAL_RECONCILIATION 账单 → 补推一条（待确认）。
+     *
+     * @return 本次补推的笔数
+     */
+    public int repairMissingReconciliationBills() {
+        if (materialReconciliationService == null) {
+            return 0;
+        }
+        Long tenantId = TenantAssert.requireTenantId();
+        List<MaterialReconciliation> list = materialReconciliationService.lambdaQuery()
+                .eq(MaterialReconciliation::getTenantId, tenantId)
+                .eq(MaterialReconciliation::getDeleteFlag, 0)
+                .in(MaterialReconciliation::getStatus, "approved", "paid", "confirmed")
+                .list();
+        if (list == null || list.isEmpty()) {
+            return 0;
+        }
+        int fixed = 0;
+        for (MaterialReconciliation r : list) {
+            try {
+                if (r.getFinalAmount() == null || r.getFinalAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                    continue; // 金额为 0 的对账单不推
+                }
+                boolean hasBill = billAggregationService.lambdaQuery()
+                        .eq(BillAggregation::getTenantId, tenantId)
+                        .eq(BillAggregation::getSourceType, "MATERIAL_RECONCILIATION")
+                        .eq(BillAggregation::getSourceId, r.getId())
+                        .eq(BillAggregation::getDeleteFlag, 0)
+                        .last("LIMIT 1")
+                        .one() != null;
+                if (hasBill) {
+                    continue;
+                }
+                BillPushRequest req = new BillPushRequest();
+                req.setBillType("PAYABLE");
+                req.setBillCategory("MATERIAL");
+                req.setSourceType("MATERIAL_RECONCILIATION");
+                req.setSourceId(r.getId());
+                req.setSourceNo(r.getReconciliationNo());
+                req.setCounterpartyType("SUPPLIER");
+                req.setCounterpartyId(r.getSupplierId());
+                req.setCounterpartyName(r.getSupplierName());
+                req.setOrderId(r.getOrderId());
+                req.setOrderNo(r.getOrderNo());
+                req.setStyleNo(r.getStyleNo());
+                req.setAmount(r.getFinalAmount());
+                req.setSettlementMonth(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
+                req.setRemark("巡检补推：对账单已审批但缺失账单");
+                pushBill(req);
+                fixed++;
+                log.warn("[BillAggregation] 巡检补推对账账单: reconNo={}, amount={}",
+                        r.getReconciliationNo(), r.getFinalAmount());
+            } catch (Exception e) {
+                log.warn("[BillAggregation] 巡检补推对账账单失败: reconId={}, err={}", r.getId(), e.getMessage());
+            }
+        }
+        return fixed;
+    }
+
+    /**
      * D-474 收付款一致性自检与自愈（供定时任务 FinanceDataConsistencyJob 调用）。
      *
      * 背景：付款时会做两件跨表的事——补记付款记录、回写上游单据为已付款。
