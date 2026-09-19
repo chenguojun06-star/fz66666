@@ -130,7 +130,9 @@ public class ScanRecordManageOrchestrator {
     }
 
     private String resolveSettlementStatus(ScanRecord r) {
-        if (StringUtils.hasText(r.getPayrollSettlementId()) || SETTLED_STATUSES.contains(r.getSettlementStatus())) {
+        // settlement_status 存量数据可能为 NULL——Set.of 的 contains(null) 会 NPE，必须先判空
+        if (StringUtils.hasText(r.getPayrollSettlementId())
+                || (r.getSettlementStatus() != null && SETTLED_STATUSES.contains(r.getSettlementStatus()))) {
             return "SETTLED";
         }
         return "UNSETTLED";
@@ -234,7 +236,8 @@ public class ScanRecordManageOrchestrator {
 
     /** 铁律①：已参与工资结算的记录不允许改/删——先到工资结算反向审核/撤销释放记录 */
     private void assertNotSettled(ScanRecord record) {
-        if (StringUtils.hasText(record.getPayrollSettlementId()) || SETTLED_STATUSES.contains(record.getSettlementStatus())) {
+        if (StringUtils.hasText(record.getPayrollSettlementId())
+                || (record.getSettlementStatus() != null && SETTLED_STATUSES.contains(record.getSettlementStatus()))) {
             throw new IllegalStateException("该录入记录已参与工资结算，请先在工资结算中反向审核/撤销后再操作");
         }
     }

@@ -546,7 +546,6 @@ export const menuConfig: MenuSection[] = [
       { label: '生产订单', path: paths.productionList, icon: React.createElement(BuildOutlined) },
       { label: '裁剪管理', path: paths.cutting, icon: React.createElement(ScissorOutlined) },
       { label: '工序跟进', path: paths.progressDetail, icon: React.createElement(FileSearchOutlined) },
-      { label: '录入记录', path: paths.scanRecordManage, icon: React.createElement(FileTextOutlined) },
       { label: '外发管理', path: paths.externalFactory, icon: React.createElement(ThunderboltOutlined) },
       { label: '质检入库', path: paths.warehousing, icon: React.createElement(InboxOutlined) },
     ],
@@ -623,6 +622,7 @@ export const menuConfig: MenuSection[] = [
       { label: '考勤管理', path: paths.attendanceAdmin, icon: React.createElement(ClockCircleOutlined) },
       { label: '岗位与权限', path: paths.role, icon: React.createElement(UserSwitchOutlined) },
       { label: '组织架构', path: paths.organization, icon: React.createElement(TeamOutlined) },
+      { label: '录入记录', path: paths.scanRecordManage, icon: React.createElement(FileTextOutlined) },
     ],
   },
   {
