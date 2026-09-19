@@ -15,6 +15,7 @@ import {
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { DownloadOutlined, PrinterOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
   billAggregationApi,
@@ -23,6 +24,10 @@ import {
   type BillAggregation,
 } from '@/services/finance/billAggregationApi';
 import { toMoneyLocale } from '@/utils/format';
+import { safePrint } from '@/utils/safePrint';
+import { exportToExcel } from '@/utils/excelExport';
+import { useUser } from '@/utils/AuthContext';
+import { buildCounterpartyStatementHtml } from '../utils/buildCounterpartyStatementHtml';
 import { wagePaymentApi, type WagePayment } from '@/services/finance/wagePaymentApi';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import BillDetailDrawer from './BillDetailDrawer';
@@ -77,6 +82,7 @@ export default function CounterpartyBillDrawer({
 }: CounterpartyBillDrawerProps) {
   const { message } = App.useApp();
   const { modal } = App.useApp();
+  const { user } = useUser();
 
   const [loading, setLoading] = useState(false);
   const [bills, setBills] = useState<BillAggregation[]>([]);
@@ -249,6 +255,89 @@ export default function CounterpartyBillDrawer({
   };
 
   /** 整月合并付款：当前月份筛选下该对象全部已确认未结清一键结清 */
+  /** D-474：打印/导出要拿该对象当前筛选下的全部账单，不能只用当前页 */
+  const fetchAllBillsForStatement = useCallback(async () => {
+    const useId = isRealCounterpartyId(target?.counterpartyId);
+    const res: any = await billAggregationApi.listBills({
+      pageNum: 1,
+      pageSize: 500,
+      counterpartyId: useId ? target?.counterpartyId : undefined,
+      counterpartyName: useId ? undefined : target?.counterpartyName,
+      settlementMonth: month ? month.format('YYYY-MM') : undefined,
+    });
+    return ((res?.data ?? res)?.records ?? []) as BillAggregation[];
+  }, [target, month]);
+
+  /** D-474：打印对账单（一个对象一张，可打印后发给对方确认） */
+  const handlePrint = useCallback(async () => {
+    if (!target) return;
+    setActionSubmitting(true);
+    try {
+      const rows = await fetchAllBillsForStatement();
+      const totalAmount = rows.reduce((s, b) => s + Number(b.amount ?? 0), 0);
+      const settledAmount = rows.reduce((s, b) => s + Number(b.settledAmount ?? 0), 0);
+      const html = buildCounterpartyStatementHtml({
+        counterpartyName: target.counterpartyName,
+        counterpartyTypeText: COUNTERPARTY_TYPE_MAP[(target.counterpartyType || '').toUpperCase()]?.text,
+        monthLabel: month ? month.format('YYYY-MM') : undefined,
+        rows,
+        totalAmount,
+        settledAmount,
+        unpaidAmount: totalAmount - settledAmount,
+        printedBy: user?.name || user?.username,
+      });
+      safePrint(html, `往来对账单-${target.counterpartyName || ''}`);
+    } catch (e: unknown) {
+      modal.error({ title: '打印失败', content: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setActionSubmitting(false);
+    }
+  }, [target, month, fetchAllBillsForStatement, modal, user]);
+
+  /** D-474：导出 Excel（发给对方核对用） */
+  const handleExport = useCallback(async () => {
+    if (!target) return;
+    setActionSubmitting(true);
+    try {
+      const rows = await fetchAllBillsForStatement();
+      if (rows.length === 0) {
+        message.warning('该对象当前期间没有可导出的账单');
+        return;
+      }
+      const data = rows.map((b) => ({
+        billNo: b.billNo || '-',
+        sourceType: SOURCE_TYPE_TEXT[b.sourceType ?? ''] ?? b.sourceType ?? '-',
+        sourceNo: b.sourceNo || b.orderNo || '-',
+        settlementMonth: b.settlementMonth || '-',
+        amount: Number(b.amount ?? 0),
+        settledAmount: Number(b.settledAmount ?? 0),
+        unpaid: Number(b.amount ?? 0) - Number(b.settledAmount ?? 0),
+        status: BILL_STATUS_MAP[b.status ?? '']?.text ?? b.status ?? '-',
+        createTime: b.createTime ? dayjs(b.createTime).format('YYYY-MM-DD HH:mm') : '-',
+      }));
+      await exportToExcel(
+        data as unknown as Record<string, unknown>[],
+        [
+          { header: '账单编号', key: 'billNo', width: 26 },
+          { header: '来源模块', key: 'sourceType', width: 14 },
+          { header: '来源单号', key: 'sourceNo', width: 22 },
+          { header: '结算月', key: 'settlementMonth', width: 10 },
+          { header: '金额', key: 'amount', width: 12 },
+          { header: '已付', key: 'settledAmount', width: 12 },
+          { header: '未付', key: 'unpaid', width: 12 },
+          { header: '状态', key: 'status', width: 10 },
+          { header: '推送时间', key: 'createTime', width: 18 },
+        ],
+        `对账单_${target.counterpartyName || '往来对象'}_${month ? month.format('YYYY-MM') : '全部'}.xlsx`,
+      );
+      message.success(`已导出 ${rows.length} 条账单`);
+    } catch (e: unknown) {
+      modal.error({ title: '导出失败', content: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setActionSubmitting(false);
+    }
+  }, [target, month, fetchAllBillsForStatement, modal, message]);
+
   const handleMergeSettle = async () => {
     if (!target) return;
     setActionSubmitting(true);
@@ -574,6 +663,16 @@ export default function CounterpartyBillDrawer({
             </Title>
           </div>
         </div>
+      </Space>
+
+      {/* D-474：一个对象一张对账单——打印后可直接给对方，或导出 Excel 发过去核对 */}
+      <Space style={{ marginBottom: 12 }}>
+        <Button icon={<PrinterOutlined />} loading={actionSubmitting} onClick={handlePrint}>
+          打印对账单
+        </Button>
+        <Button icon={<DownloadOutlined />} loading={actionSubmitting} onClick={handleExport}>
+          导出 Excel
+        </Button>
       </Space>
 
       {/* 筛选 + 操作区 */}

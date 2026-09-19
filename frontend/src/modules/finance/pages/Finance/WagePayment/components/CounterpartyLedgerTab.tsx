@@ -14,7 +14,11 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { ReloadOutlined } from '@ant-design/icons';
+import { PrinterOutlined, ReloadOutlined } from '@ant-design/icons';
+import { safePrint } from '@/utils/safePrint';
+import { buildCounterpartyStatementHtml } from '../utils/buildCounterpartyStatementHtml';
+import { isRealCounterpartyId } from './counterpartyConstants';
+import { useUser } from '@/utils/AuthContext';
 import {
   billAggregationApi,
   type CounterpartyGroup,
@@ -38,6 +42,7 @@ const fmtMoney = (v?: number) => `¥${toMoneyLocale(v)}`;
  */
 export default function CounterpartyLedgerTab() {
   const { message } = App.useApp();
+  const { user } = useUser();
 
   const [billType, setBillType] = useState<'PAYABLE' | 'RECEIVABLE'>('PAYABLE');
   const [month, setMonth] = useState<dayjs.Dayjs | null>(null);
@@ -99,6 +104,46 @@ export default function CounterpartyLedgerTab() {
     setDrawerTarget(g);
     setDrawerOpen(true);
   };
+
+  /** D-474：总账行直接打印该对象的对账单（拉该对象当前筛选下全部账单） */
+  const handlePrintRow = useCallback(
+    async (g: CounterpartyGroup) => {
+      if (!g.counterpartyId && !g.counterpartyName) {
+        message.error('该记录缺少往来对象信息');
+        return;
+      }
+      try {
+        const useId = isRealCounterpartyId(g.counterpartyId);
+        const res: any = await billAggregationApi.listBills({
+          pageNum: 1,
+          pageSize: 500,
+          counterpartyId: useId ? g.counterpartyId : undefined,
+          counterpartyName: useId ? undefined : g.counterpartyName,
+          settlementMonth: month && !onlyUnsettled ? month.format('YYYY-MM') : undefined,
+          billType,
+        });
+        const rows: any[] = (res?.data ?? res)?.records ?? [];
+        const totalAmount = rows.reduce((s, b) => s + Number(b.amount ?? 0), 0);
+        const settledAmount = rows.reduce((s, b) => s + Number(b.settledAmount ?? 0), 0);
+        safePrint(
+          buildCounterpartyStatementHtml({
+            counterpartyName: g.counterpartyName,
+            counterpartyTypeText: COUNTERPARTY_TYPE_MAP[(g.counterpartyType || '').toUpperCase()]?.text,
+            monthLabel: month && !onlyUnsettled ? month.format('YYYY-MM') : undefined,
+            rows,
+            totalAmount,
+            settledAmount,
+            unpaidAmount: totalAmount - settledAmount,
+            printedBy: user?.name || user?.username,
+          }),
+          `往来对账单-${g.counterpartyName || ''}`,
+        );
+      } catch (e: unknown) {
+        message.error(`打印失败: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    },
+    [month, onlyUnsettled, billType, message, user],
+  );
 
   const columns: ColumnsType<CounterpartyGroup> = [
     {
@@ -176,11 +221,23 @@ export default function CounterpartyLedgerTab() {
     {
       title: '操作',
       key: 'action',
-      width: 100,
+      width: 150,
       render: (_: unknown, r) => (
-        <Button type="link" size="small" style={{ padding: 0 }} onClick={() => openDrawer(r)}>
-          查看明细
-        </Button>
+        <Space size={4}>
+          <Button type="link" size="small" style={{ padding: 0 }} onClick={() => openDrawer(r)}>
+            查看明细
+          </Button>
+          {/* D-474：一行一个对象，直接打印该对象的对账单发给对方 */}
+          <Button
+            type="link"
+            size="small"
+            style={{ padding: 0 }}
+            icon={<PrinterOutlined />}
+            onClick={() => handlePrintRow(r)}
+          >
+            打印
+          </Button>
+        </Space>
       ),
     },
   ];
