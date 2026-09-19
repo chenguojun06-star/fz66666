@@ -83,6 +83,9 @@ public class BillAggregationOrchestrator {
     @Autowired(required = false)
     private com.fashion.supplychain.finance.service.ExpenseReimbursementService expenseReimbursementService;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
+
     /**
      * 获取当前工厂账号的订单ID列表（用于工厂账号数据隔离）
      * 非工厂账号返回 null（表示不限制）
@@ -614,6 +617,32 @@ public class BillAggregationOrchestrator {
             markShipmentPaid(bill);
         } else if ("EXPENSE_REIMBURSEMENT".equals(sourceType)) {
             markExpensePaid(bill);
+        } else if ("SECONDARY_PROCESS".equals(sourceType)) {
+            markSecondaryProcessPaid(bill);
+        }
+    }
+
+    private void markSecondaryProcessPaid(BillAggregation bill) {
+        if (secondaryProcessService == null) {
+            return;
+        }
+        try {
+            com.fashion.supplychain.style.entity.SecondaryProcess sp =
+                    secondaryProcessService.getById(bill.getSourceId());
+            if (sp == null || "paid".equalsIgnoreCase(sp.getPaymentStatus())) {
+                return;
+            }
+            com.fashion.supplychain.style.entity.SecondaryProcess patch =
+                    new com.fashion.supplychain.style.entity.SecondaryProcess();
+            patch.setId(sp.getId());
+            patch.setPaymentStatus("paid");
+            patch.setPaidAt(LocalDateTime.now());
+            patch.setPaidAmount(bill.getSettledAmount() != null ? bill.getSettledAmount() : bill.getAmount());
+            secondaryProcessService.updateById(patch);
+            log.info("[BillAggregation] 付清回写外发工艺单: billNo={}, processId={}", bill.getBillNo(), sp.getId());
+        } catch (Exception e) {
+            log.warn("[BillAggregation] 回写外发工艺单失败（不影响结清）: billNo={}, err={}",
+                    bill.getBillNo(), e.getMessage());
         }
     }
 

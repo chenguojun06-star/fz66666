@@ -108,6 +108,17 @@ public class SecondaryProcess {
      */
     private String remark;
 
+    // ===== D-474：付款状态（付款中心付清账单后回写）=====
+
+    /** 付款状态：unpaid=未付款 / paid=已付款 */
+    private String paymentStatus;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime paidAt;
+
+    /** 实付金额 */
+    private BigDecimal paidAmount;
+
     /**
      * 工艺图片URL列表（JSON数组，存储腾讯云COS URL）
      */

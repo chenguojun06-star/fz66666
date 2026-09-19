@@ -323,6 +323,10 @@ public final class DbColumnDefinitions {
         add("t_secondary_process", "description", "VARCHAR(255) DEFAULT NULL COMMENT '工艺描述'");
         add("t_secondary_process", "creator_id", "VARCHAR(64) DEFAULT NULL COMMENT '创建人ID'");
         add("t_secondary_process", "creator_name", "VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名'");
+        // D-474：付款中心付清账单后回写的外发工艺付款状态
+        add("t_secondary_process", "payment_status", "VARCHAR(20) DEFAULT NULL COMMENT '付款状态 unpaid/paid'");
+        add("t_secondary_process", "paid_at", "DATETIME DEFAULT NULL COMMENT '付款时间'");
+        add("t_secondary_process", "paid_amount", "DECIMAL(14,2) DEFAULT NULL COMMENT '实付金额'");
         add("t_process_price_adjustment", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
         add("t_process_price_adjustment", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
         add("t_process_price_adjustment", "adjustment_reason", "VARCHAR(500) DEFAULT NULL COMMENT '调价原因'");
