@@ -8,6 +8,7 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
 import com.fashion.supplychain.finance.constant.BillConstants;
 import com.fashion.supplychain.finance.entity.BillAggregation;
+import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.Payable;
 import com.fashion.supplychain.finance.entity.WagePayment;
 import com.fashion.supplychain.finance.service.WagePaymentService;
@@ -69,6 +70,10 @@ public class BillAggregationOrchestrator {
 
     @Autowired(required = false)
     private WagePaymentService wagePaymentService;
+
+    // D-474：付清后回写上游单据（可选注入，避免循环依赖与单元测试困扰）
+    @Autowired(required = false)
+    private com.fashion.supplychain.finance.service.MaterialReconciliationService materialReconciliationService;
 
     /**
      * 获取当前工厂账号的订单ID列表（用于工厂账号数据隔离）
@@ -545,6 +550,40 @@ public class BillAggregationOrchestrator {
                 bill.getBillNo(), thisTime, newSettled, total, bill.getStatus());
         // D-473：同步补记付款记录（记本次实付金额），打通总账与"付款记录"两套账
         ensurePaymentRecordFromBill(bill, thisTime);
+        // D-474：付清后回写上游单据状态，避免"付款中心已付清、对账单还显示未付款"
+        if (fullyPaid) {
+            syncUpstreamPaid(bill);
+        }
+    }
+
+    /**
+     * D-474：账单付清后回写上游单据为已付款。
+     * 原先只有"上游置 PAID → 同步账单"一个方向，反向缺失，导致付款中心付完钱
+     * 回到对账页那张单仍显示未付款，两边对不上。
+     * 这里只做面料对账（状态机清晰）；部分付款不回写（上游没有"部分付款"状态，
+     * 保持原状由财务在上游自行确认）。
+     */
+    private void syncUpstreamPaid(BillAggregation bill) {
+        if (materialReconciliationService == null || !"MATERIAL_RECONCILIATION".equals(bill.getSourceType())) {
+            return;
+        }
+        try {
+            MaterialReconciliation mr = materialReconciliationService.getById(bill.getSourceId());
+            if (mr == null || "PAID".equalsIgnoreCase(mr.getStatus())) {
+                return;
+            }
+            MaterialReconciliation patch = new MaterialReconciliation();
+            patch.setId(mr.getId());
+            patch.setStatus("PAID");
+            patch.setPaidAt(LocalDateTime.now());
+            patch.setPaidAmount(bill.getSettledAmount() != null ? bill.getSettledAmount() : bill.getAmount());
+            materialReconciliationService.updateById(patch);
+            log.info("[BillAggregation] 付清回写上游对账单: billNo={}, reconId={}, amount={}",
+                    bill.getBillNo(), mr.getId(), patch.getPaidAmount());
+        } catch (Exception e) {
+            log.warn("[BillAggregation] 付清回写上游对账单失败（不影响结清）: billNo={}, err={}",
+                    bill.getBillNo(), e.getMessage());
+        }
     }
 
     /**
