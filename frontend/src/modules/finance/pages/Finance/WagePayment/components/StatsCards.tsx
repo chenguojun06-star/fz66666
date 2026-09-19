@@ -17,7 +17,9 @@ interface StatsCardsProps {
 }
 
 const StatsCards: React.FC<StatsCardsProps> = ({ activeTab, billStats }) => {
-  if (activeTab === 'bills') {
+  // D-474：账单流水 Tab 自带统计卡、往来总账有自己的汇总条（且会随"应付/应收"切换），
+  // 顶层再叠一套会出现两套口径不同的数字——只在付款记录 Tab 展示。
+  if (activeTab === 'bills' || activeTab === 'ledger') {
     return null;
   }
 
