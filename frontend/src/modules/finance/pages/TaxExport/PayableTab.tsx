@@ -8,7 +8,7 @@ import SmallModal from '@/components/common/SmallModal';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { ModalFieldRow } from '@/components/common/ModalContentLayout';
 import payableApi from '@/services/finance/payableApi';
-import PayeeDetailDrawer from '@/modules/finance/pages/Finance/WagePayment/components/PayeeDetailDrawer';
+import CounterpartyDetailDrawer from '@/modules/finance/pages/Finance/WagePayment/components/CounterpartyDetailDrawer';
 import type { PayableStatus } from '@/services/finance/payableApi';
 import { message } from '@/utils/antdStatic';
 import { PAYABLE_STATUS } from './taxExportConstants';
@@ -238,8 +238,8 @@ const PayableTab: React.FC = () => {
         </div>
       </SmallModal>
 
-      {/* D-468：供应商往来明细（点击供应商穿透） */}
-      <PayeeDetailDrawer
+      {/* D-473：供应商往来明细（统一账单视角，与往来总账共用一套抽屉） */}
+      <CounterpartyDetailDrawer
         open={payeeDetailOpen}
         payeeId={payeeTarget?.id}
         payeeName={payeeTarget?.name}

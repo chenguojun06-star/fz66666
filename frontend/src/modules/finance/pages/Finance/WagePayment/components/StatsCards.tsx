@@ -4,16 +4,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   DollarOutlined,
-  WalletOutlined,
 } from '@ant-design/icons';
-
-export interface PendingStats {
-  total: number;
-  totalAmount: number;
-  reconCount: number;
-  reimbCount: number;
-  payrollCount: number;
-}
 
 export interface PaymentStats {
   total: number;
@@ -26,9 +17,7 @@ export interface PaymentStats {
 
 interface StatsCardsProps {
   activeTab: string;
-  pendingStats: PendingStats;
   paymentStats: PaymentStats;
-  selectedPayableKeysLength: number;
 }
 
 const CloseIcon = () => <span className="u-mr-4 u-fs-12">✕</span>;
@@ -40,24 +29,14 @@ const CloseIcon = () => <span className="u-mr-4 u-fs-12">✕</span>;
  */
 const StatsCards: React.FC<StatsCardsProps> = ({
   activeTab,
-  pendingStats,
   paymentStats,
-  selectedPayableKeysLength,
 }) => {
-  if (activeTab === 'receivable' || activeTab === 'payable') {
+  // 账单流水 Tab 自带统计卡，顶层不再渲染，避免一屏两套卡片
+  if (activeTab === 'bills') {
     return null;
   }
 
-  const isPendingTab = activeTab === 'pending';
-
-  const cards = isPendingTab
-    ? [
-        { title: '待付款笔数', icon: <ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />, value: pendingStats.total, suffix: '笔', color: 'var(--color-warning)' },
-        { title: '待付款金额', icon: <DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />, value: pendingStats.totalAmount, prefix: '¥', precision: 2, color: 'var(--color-text-primary)' },
-        { title: '其中工资结算', icon: <WalletOutlined style={{ marginRight: 4, fontSize: 12 }} />, value: pendingStats.payrollCount, suffix: '笔', color: 'var(--color-text-secondary)' },
-        { title: selectedPayableKeysLength > 0 ? '已勾选（可批量付款）' : '工厂对账 + 费用报销', icon: <CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />, value: selectedPayableKeysLength > 0 ? selectedPayableKeysLength : pendingStats.reconCount + pendingStats.reimbCount, suffix: selectedPayableKeysLength > 0 ? '笔' : '笔', color: selectedPayableKeysLength > 0 ? 'var(--color-primary)' : 'var(--color-text-secondary)' },
-      ]
-    : [
+  const cards = [
         { title: '付款笔数', icon: <DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />, value: paymentStats.total, suffix: '笔', color: 'var(--color-text-primary)' },
         { title: '处理中', icon: <ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />, value: paymentStats.pendingCount, suffix: '笔', color: 'var(--color-warning)' },
         { title: '已成功金额', icon: <CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />, value: paymentStats.successAmount, prefix: '¥', precision: 2, color: 'var(--color-success)' },

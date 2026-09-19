@@ -10,7 +10,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import payableApi, { type Payable } from '@/services/finance/payableApi';
 import { message } from '@/utils/antdStatic';
-import PayeeDetailDrawer from '@/modules/finance/pages/Finance/WagePayment/components/PayeeDetailDrawer';
+import CounterpartyDetailDrawer from '@/modules/finance/pages/Finance/WagePayment/components/CounterpartyDetailDrawer';
 import type { ApiResult } from '@/utils/api';
 import { toMoneyLocale } from '@/utils/format';
 
@@ -203,8 +203,8 @@ const PaymentSchedule: React.FC = () => {
             key: 'pay',
             label: '去付款',
             onClick: () => {
-              // 打款统一在收付款中心完成；?tab=pending 直达待付款页签
-              window.open('/finance/wage-payment?tab=pending', '_blank');
+              // 打款统一在收付款中心完成；?tab=ledger 直达往来总账（原待付款页签已收口）
+              window.open('/finance/wage-payment?tab=ledger', '_blank');
             },
           },
         ];
@@ -336,7 +336,7 @@ const PaymentSchedule: React.FC = () => {
       </Card>
 
       {/* D-468：供应商往来明细（点击供应商穿透查看） */}
-      <PayeeDetailDrawer
+      <CounterpartyDetailDrawer
         open={payeeDetailOpen}
         payeeId={payeeTarget?.id}
         payeeName={payeeTarget?.name}

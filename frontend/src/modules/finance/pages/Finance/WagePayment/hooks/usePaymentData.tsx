@@ -29,12 +29,14 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
   }, [showSmartErrorNotice]);
 
   // ---- Tab ----
-  // 支持 ?tab=ledger|pending|records|receivable|payable 直达（付款计划页"去付款"等入口跳转用）
+  // 支持 ?tab=ledger|bills|records 直达（付款计划页"去付款"等入口跳转用）
   // D-472：默认落在「往来总账」（银行账户视图，一行=一个往来对象）
+  // D-473：Tab 精简为 3 个——待付款（应付款表无数据）与应收账单已收口，
+  //        应收/应付流水合并进「账单流水」Tab 内部切换
   const [activeTab, setActiveTab] = usePersistentTab<string>(
     'tab',
     'ledger',
-    ['ledger', 'pending', 'records', 'receivable', 'payable'],
+    ['ledger', 'bills', 'records'],
   );
 
   // ---- 待收付款列表 ----

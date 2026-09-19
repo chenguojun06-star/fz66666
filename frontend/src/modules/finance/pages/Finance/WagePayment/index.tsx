@@ -1,38 +1,31 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useSync } from '@/utils/syncManager';
 import AccountManagementModal from './components/AccountManagementModal';
-import BillSummaryTab from './components/BillSummaryTab';
 import PayModal from './components/PayModal';
 import PaymentDetailModal from './components/PaymentDetailModal';
 import ProofUploadModal from './components/ProofUploadModal';
 import AmountDetailModal from './components/AmountDetailModal';
 import StatsCards from './components/StatsCards';
-import PendingTabContent from './components/PendingTabContent';
 import RecordsTabContent from './components/RecordsTabContent';
-import { App, Button, Card, Tabs, Tag } from 'antd';
+import { App, Button, Card, Tabs } from 'antd';
 import {
   CheckCircleOutlined,
   DollarOutlined,
   PayCircleOutlined,
-  AccountBookOutlined,
   BankOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
-import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import { formatMoney } from '@/utils/format';
 import CounterpartyLedgerTab from './components/CounterpartyLedgerTab';
-import {
-  BIZ_TYPE_MAP,
-  wagePaymentApi,
-} from '@/services/finance/wagePaymentApi';
+import { wagePaymentApi } from '@/services/finance/wagePaymentApi';
 import { usePaymentColumns } from './hooks/usePaymentColumns';
 import { usePaymentData } from './hooks/usePaymentData';
 import { usePayModal } from './hooks/usePayModal';
 import { useAccountModal } from './hooks/useAccountModal';
 import { useProofModal } from './hooks/useProofModal';
 import { useWagePayment } from './useWagePayment';
-import PayeeDetailDrawer from './components/PayeeDetailDrawer';
+import BillFlowPanel from './components/BillFlowPanel';
+import CounterpartyDetailDrawer from './components/CounterpartyDetailDrawer';
 
 // ============================================================
 // 主组件 — 收付款中心
@@ -50,34 +43,19 @@ const PaymentCenterPage: React.FC = () => {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleOpenPayModal = useCallback(() => pay.openPayModal(), [pay.openPayModal]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleClearSelectedPayableKeys = useCallback(() => data.setSelectedPayableKeys([]), [data.setSelectedPayableKeys]);
 
   // ---- 数据同步（45秒轮询，与 MaterialReconciliation 一致） ----
   useSync(
     'wage-payment-list',
     async () => {
       try {
-        if (data.activeTab === 'pending') {
-          const params: { bizType?: string; startDate?: string; endDate?: string } = {};
-          if (data.payableBizType) params.bizType = data.payableBizType;
-          if (data.payableDateRange?.[0]) params.startDate = data.payableDateRange[0].format('YYYY-MM-DD');
-          if (data.payableDateRange?.[1]) params.endDate = data.payableDateRange[1].format('YYYY-MM-DD');
-          const res: any = await wagePaymentApi.listPendingPayables(params);
-          return { records: res?.data ?? res ?? [], tab: 'pending' };
-        } else {
-          const res: any = await wagePaymentApi.listPayments(data.filterValuesRef.current);
-          return { records: res?.data ?? res ?? [], tab: 'records' };
-        }
+        const res: any = await wagePaymentApi.listPayments(data.filterValuesRef.current);
+        return { records: res?.data ?? res ?? [], tab: 'records' };
       } catch { return null; }
     },
     (newData, oldData) => {
       if (oldData !== null && newData) {
-        if (newData.tab === 'pending') {
-          void data.fetchPayables();
-        } else {
-          void data.fetchPayments();
-        }
+        void data.fetchPayments();
       }
     },
     { interval: 45000, enabled: !data.payablesLoading && !data.paymentsLoading && !pay.payModalOpen && !acct.accountModalOpen, pauseOnHidden: true },
@@ -91,16 +69,6 @@ const PaymentCenterPage: React.FC = () => {
   const [paymentStatusTab, setPaymentStatusTab] = useState<string>('');
 
   // ==================== 统计卡片 ====================
-  // 待收付款 (payables) 统计
-  const pendingStats = useMemo(() => {
-    const total = data.payables.length;
-    const totalAmount = data.payables.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
-    const reconCount = data.payables.filter((p: any) => p.bizType === 'RECONCILIATION').length;
-    const reimbCount = data.payables.filter((p: any) => p.bizType === 'REIMBURSEMENT').length;
-    const payrollCount = data.payables.filter((p: any) => p.bizType === 'PAYROLL' || p.bizType === 'PAYROLL_SETTLEMENT').length;
-    return { total, totalAmount, reconCount, reimbCount, payrollCount };
-  }, [data.payables]);
-
   // 收支记录 (payments) 统计
   const paymentStats = useMemo(() => {
     const total = data.payments.length;
@@ -113,7 +81,7 @@ const PaymentCenterPage: React.FC = () => {
   }, [data.payments]);
 
   // ---- 表格列定义 ----
-  const { payableColumns, paymentColumns } = usePaymentColumns({
+  const { paymentColumns } = usePaymentColumns({
     openPayModal: pay.openPayModal,
     handleRejectPayable: data.handleRejectPayable,
     openAccountModal: acct.openAccountModal,
@@ -136,8 +104,6 @@ const PaymentCenterPage: React.FC = () => {
   });
 
   // Tab 切换后的过滤数据
-  const statusFilteredPayables = useMemo(() => data.filteredPayables, [data.filteredPayables]);
-
   const statusFilteredPayments = useMemo(() => {
     if (!paymentStatusTab) return data.payments;
     if (paymentStatusTab === 'pending') return data.payments.filter((p: any) => p.status === 'pending' || p.status === 'processing');
@@ -156,11 +122,7 @@ const PaymentCenterPage: React.FC = () => {
             <SmartErrorNotice
               error={data.smartError}
               onFix={() => {
-                if (data.activeTab === 'pending') {
-                  void data.fetchPayables();
-                } else {
-                  void data.fetchPayments();
-                }
+                void data.fetchPayments();
               }}
             />
           </Card>
@@ -187,9 +149,7 @@ const PaymentCenterPage: React.FC = () => {
         {/* ===== 统计卡片（顶部统一） ===== */}
         <StatsCards
           activeTab={data.activeTab}
-          pendingStats={pendingStats}
           paymentStats={paymentStats}
-          selectedPayableKeysLength={data.selectedPayableKeys.length}
         />
 
         {/* Tab 切换 */}
@@ -208,31 +168,6 @@ const PaymentCenterPage: React.FC = () => {
                   </span>
                 ),
                 children: <CounterpartyLedgerTab />,
-              },
-              {
-                key: 'pending',
-                label: (
-                  <span>
-                    <AccountBookOutlined /> 待付款 {pendingStats.total > 0 && <Tag color="red">{pendingStats.total}</Tag>}
-                  </span>
-                ),
-                children: (
-                  <PendingTabContent
-                    payableColumns={payableColumns}
-                    statusFilteredPayables={statusFilteredPayables}
-                    payablesLoading={data.payablesLoading}
-                    payables={data.payables}
-                    payableBizType={data.payableBizType}
-                    setPayableBizType={data.setPayableBizType}
-                    payableDateRange={data.payableDateRange}
-                    setPayableDateRange={data.setPayableDateRange}
-                    selectedPayableKeys={data.selectedPayableKeys}
-                    setSelectedPayableKeys={data.setSelectedPayableKeys}
-                    batchPaySubmitting={data.batchPaySubmitting}
-                    handleBatchPay={data.handleBatchPay}
-                    handleClearSelectedPayableKeys={handleClearSelectedPayableKeys}
-                  />
-                ),
               },
               {
                 key: 'records',
@@ -255,22 +190,13 @@ const PaymentCenterPage: React.FC = () => {
                 ),
               },
               {
-                key: 'receivable',
+                key: 'bills',
                 label: (
                   <span>
-                    <FileTextOutlined /> 应收账单
+                    <FileTextOutlined /> 账单流水
                   </span>
                 ),
-                children: <BillSummaryTab defaultBillType="RECEIVABLE" />,
-              },
-              {
-                key: 'payable',
-                label: (
-                  <span>
-                    <FileTextOutlined /> 应付账单
-                  </span>
-                ),
-                children: <BillSummaryTab defaultBillType="PAYABLE" />,
+                children: <BillFlowPanel />,
               },
             ]}
           />
@@ -336,16 +262,6 @@ const PaymentCenterPage: React.FC = () => {
           uploadProofImage={proof.uploadProofImage}
         />
 
-        {/* ========================== 驳回待收付款弹窗 ========================== */}
-        <RejectReasonModal
-          open={!!data.pendingRejectPayable}
-          title="驳回待收付款"
-          description={data.pendingRejectPayable ? `确定驳回 ${data.pendingRejectPayable.payeeName} 的待收付款项？${BIZ_TYPE_MAP[data.pendingRejectPayable.bizType]?.text ? `\n${BIZ_TYPE_MAP[data.pendingRejectPayable.bizType].text} · ${formatMoney(data.pendingRejectPayable.amount)}` : ''}` : undefined}
-          onOk={data.handleRejectPayableConfirm}
-          onCancel={() => data.setPendingRejectPayable(null)}
-          loading={data.rejectPayableLoading}
-        />
-
         {/* ========================== 账单明细弹窗 ========================== */}
         <AmountDetailModal
           open={amountDetailOpen}
@@ -353,8 +269,8 @@ const PaymentCenterPage: React.FC = () => {
           target={amountDetailTarget}
         />
 
-        {/* D-468：收款方往来明细（点击收款方穿透查看全部明细） */}
-        <PayeeDetailDrawer
+        {/* D-473：收款方往来明细（统一账单视角，与往来总账共用一套抽屉） */}
+        <CounterpartyDetailDrawer
           open={payeeDetailOpen}
           payeeId={payeeTarget?.id}
           payeeName={payeeTarget?.name}
