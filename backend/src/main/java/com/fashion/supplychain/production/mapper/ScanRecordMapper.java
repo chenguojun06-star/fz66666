@@ -141,7 +141,10 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "  sr.cutting_bundle_no AS cuttingBundleNo,",
                         "  sr.process_code AS processCode,",
                         "  sr.operator_id AS operatorId,",
-                        "  sr.operator_name AS operatorName,",
+                        /* D-472e：同一账号历史数据 operator_name 存在不一致（username 与姓名混存，
+                         * 实证：lilb=李老板 同一 operator_id=1005 两种名字）——聚合只认 operator_id，
+                         * 名字取 MAX 兜底展示，避免同一人被拆成多行工资 */
+                        "  COALESCE(MAX(sr.operator_name), '') AS operatorName,",
                         "  COALESCE(NULLIF(TRIM(sr.process_name), ''), '未知工序') AS processName,",
                         "  sr.scan_type AS scanType,",
                         "  COALESCE(SUM(sr.quantity), 0) AS quantity,",
@@ -204,7 +207,6 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "  sr.cutting_bundle_no,",
                         "  sr.process_code,",
                         "  sr.operator_id,",
-                        "  sr.operator_name,",
                         "  processName,",
                         "  sr.scan_type",
                         "</script>"
