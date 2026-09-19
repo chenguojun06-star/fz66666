@@ -6,6 +6,7 @@ import {
   SearchOutlined,
   FileTextOutlined,
   CalendarOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 // D-470：列显隐/排序
@@ -15,6 +16,7 @@ import {
   ColumnSettingsButton,
   type ColumnOption,
 } from '@/components/common/ColumnSettings';
+import BillDetailDrawer from './BillDetailDrawer';
 import {
   billAggregationApi,
   type BillAggregation,
@@ -45,6 +47,8 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<BillStats>({ pendingAmount: 0, pendingCount: 0, confirmedAmount: 0, confirmedCount: 0, settledAmount: 0, settledCount: 0 });
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
+  // D-473：账单详情抽屉（一条流水点开看全部记录）
+  const [detailBill, setDetailBill] = useState<BillAggregation | null>(null);
 
   // ---- 筛选（defaultBillType 锁定后不可切换）----
   const [query, setQuery] = useState<BillQueryRequest>({ pageNum: 1, pageSize: 20, billType: defaultBillType });
@@ -189,18 +193,19 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
       render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-',
     },
     {
-      title: '操作', key: 'actions', width: 140, fixed: 'right',
-      render: (_: unknown, record: BillAggregation) => {
-        if (record.status === 'PENDING') {
-          return (
-            <Space size={4}>
+      title: '操作', key: 'actions', width: 200, fixed: 'right',
+      render: (_: unknown, record: BillAggregation) => (
+        <Space size={4}>
+          {/* D-473：一条流水点开看全部记录 */}
+          <Button type="link" icon={<EyeOutlined />} onClick={() => setDetailBill(record)}>详情</Button>
+          {record.status === 'PENDING' && (
+            <>
               <Button type="link" icon={<CheckCircleOutlined />} onClick={() => handleConfirm(record.id)}>确认</Button>
               <Button type="link" danger icon={<CloseCircleOutlined />} onClick={() => handleCancel(record)}>取消</Button>
-            </Space>
-          );
-        }
-        return <span style={{ color: 'var(--color-text-tertiary)' }}>-</span>;
-      },
+            </>
+          )}
+        </Space>
+      ),
     },
   ], [handleCancel, handleConfirm, defaultBillType]);
 
@@ -349,6 +354,13 @@ const BillSummaryTab: React.FC<BillSummaryTabProps> = ({ defaultBillType }) => {
         onToggle={setVisible}
         onReset={resetColumns}
         title="账单汇总列设置"
+      />
+
+      {/* D-473：账单详情（一条流水点开看全部记录） */}
+      <BillDetailDrawer
+        open={!!detailBill}
+        bill={detailBill}
+        onClose={() => setDetailBill(null)}
       />
     </div>
   );

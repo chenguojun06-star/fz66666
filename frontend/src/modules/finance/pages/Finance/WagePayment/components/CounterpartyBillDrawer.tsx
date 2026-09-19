@@ -25,6 +25,7 @@ import { toMoneyLocale } from '@/utils/format';
 import { wagePaymentApi, type WagePayment } from '@/services/finance/wagePaymentApi';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import { COUNTERPARTY_TYPE_MAP } from './CounterpartyLedgerTab';
+import BillDetailDrawer from './BillDetailDrawer';
 
 const { Text, Title } = Typography;
 
@@ -105,6 +106,9 @@ export default function CounterpartyBillDrawer({
   // D-473 兜底：该对象没有账单流水时（老数据只有付款记录），回退展示历史付款记录
   const [fbPayments, setFbPayments] = useState<WagePayment[]>([]);
   const [fbLoading, setFbLoading] = useState(false);
+
+  // D-473：单条账单详情（一条流水点开看全部记录）
+  const [detailBill, setDetailBill] = useState<BillAggregation | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -372,9 +376,18 @@ export default function CounterpartyBillDrawer({
     {
       title: '操作',
       key: 'action',
-      width: 150,
+      width: 200,
       render: (_: unknown, r) => (
         <Space size={4}>
+          {/* D-473：一条流水点开看全部记录 */}
+          <Button
+            type="link"
+            size="small"
+            style={{ padding: 0 }}
+            onClick={() => setDetailBill(r)}
+          >
+            详情
+          </Button>
           {CONFIRMABLE.includes(r.status) && (
             <Button
               type="link"
@@ -631,6 +644,13 @@ export default function CounterpartyBillDrawer({
         onOk={handleRejectOk}
         onCancel={() => setRejectTargets([])}
         loading={rejectSubmitting}
+      />
+
+      {/* D-473：账单详情（一条流水点开看全部记录） */}
+      <BillDetailDrawer
+        open={!!detailBill}
+        bill={detailBill}
+        onClose={() => setDetailBill(null)}
       />
     </Drawer>
   );
