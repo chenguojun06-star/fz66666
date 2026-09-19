@@ -167,6 +167,23 @@ export function useSecondaryProcessColumns(ctx: ColumnContext) {
       },
     },
     {
+      // D-474：付款中心付清外发工艺账单后回写，业务侧一眼看到钱付了没有
+      title: '付款状态',
+      dataIndex: 'paymentStatus',
+      key: 'paymentStatus',
+      width: 110,
+      render: (value: string, record: SecondaryProcess) => {
+        if ('paid' === value) {
+          return (
+            <Tag color="success" title={record.paidAt ? `付款时间 ${record.paidAt}` : undefined}>
+              已付款
+            </Tag>
+          );
+        }
+        return <Tag>未付款</Tag>;
+      },
+    },
+    {
       title: '备注',
       dataIndex: 'remark',
       key: 'remark',

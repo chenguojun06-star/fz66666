@@ -31,6 +31,12 @@ export interface SecondaryProcess {
   remark?: string;
   images?: string;
   attachments?: string;
+  /** D-474：付款状态（付款中心付清账单后回写）unpaid/paid */
+  paymentStatus?: string;
+  /** D-474：付款时间 */
+  paidAt?: string;
+  /** D-474：实付金额 */
+  paidAmount?: number;
 }
 
 export const statusOptions = [
