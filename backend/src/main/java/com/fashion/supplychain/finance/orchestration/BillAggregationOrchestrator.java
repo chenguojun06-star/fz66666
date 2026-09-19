@@ -27,6 +27,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -51,6 +52,14 @@ import java.util.stream.Collectors;
 @Service
 public class BillAggregationOrchestrator {
 
+    /**
+     * D-474：历史数据里的占位往来对象 ID（上游推送时拿不到真实供应商 ID 写死的）。
+     * 这些值不能作为分组依据，否则不同对象会被合并成一行。
+     */
+    private static final java.util.Set<String> PLACEHOLDER_COUNTERPARTY_IDS =
+            java.util.Collections.unmodifiableSet(new java.util.HashSet<>(java.util.Arrays.asList(
+                    "UNKNOWN_SUPPLIER", "UNKNOWN", "UNKNOWN_FACTORY", "UNKNOWN_CUSTOMER", "UNKNOWN_WORKER")));
+
     @Autowired
     private BillAggregationService billAggregationService;
 
@@ -72,6 +81,10 @@ public class BillAggregationOrchestrator {
 
     @Autowired(required = false)
     private WagePaymentService wagePaymentService;
+
+    // D-474：重复付款幂等（30 秒内同账单+同用户+同金额只执行一次，防止网络重试导致的重复记账）
+    @Autowired(required = false)
+    private org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
 
     // D-474：付清后回写上游单据（可选注入，避免循环依赖与单元测试困扰）
     @Autowired(required = false)
@@ -421,8 +434,12 @@ public class BillAggregationOrchestrator {
             }
             // D-473：分组键与展示类型统一走归一化（EMPLOYEE→WORKER）
             String normalizedType = normalizeCounterpartyType(b.getCounterpartyType());
-            String key = normalizedType + "|"
-                    + (StringUtils.hasText(b.getCounterpartyId()) ? b.getCounterpartyId() : name);
+            // D-474：占位符 ID（UNKNOWN_SUPPLIER）会让不同供应商被合并成同一个对象
+            // （例如"最美服装工厂"与"测试工厂_7C6RMQ"的 ID 都是 UNKNOWN_SUPPLIER）。
+            // 这里识别占位符/空 ID，改用名称分组，保证不同对象不会被错误合并。
+            String cid = b.getCounterpartyId();
+            boolean hasRealId = StringUtils.hasText(cid) && !PLACEHOLDER_COUNTERPARTY_IDS.contains(cid.trim().toUpperCase());
+            String key = normalizedType + "|" + (hasRealId ? cid : name);
             CounterpartyGroupDTO g = grouped.computeIfAbsent(key, k -> {
                 CounterpartyGroupDTO dto = new CounterpartyGroupDTO();
                 dto.setCounterpartyType(normalizedType);
@@ -551,6 +568,23 @@ public class BillAggregationOrchestrator {
         BigDecimal thisTime = settledAmount != null ? settledAmount : total.subtract(already);
         if (thisTime.compareTo(BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("本次付款金额必须大于 0");
+        }
+        // D-474：重复提交幂等——同一笔账单同一用户同一金额，30 秒内只处理一次。
+        // Redis 不可用时降级为无幂等（照付，但日志告警），避免阻塞付款主流程。
+        if (stringRedisTemplate != null) {
+            String idempotencyKey = "finance:settle:" + billId + ":"
+                    + UserContext.userId() + ":" + thisTime.toPlainString();
+            try {
+                Boolean firstTime = stringRedisTemplate.opsForValue()
+                        .setIfAbsent("idempotency:" + idempotencyKey, "1", 30, TimeUnit.SECONDS);
+                if (Boolean.FALSE.equals(firstTime)) {
+                    throw new RuntimeException("该付款请求刚刚已处理过（30 秒内不重复），请稍后再试");
+                }
+            } catch (RuntimeException re) {
+                throw re;
+            } catch (Exception e) {
+                log.warn("[BillAggregation] 幂等检查失败（降级放行，可能重复提交）: err={}", e.getMessage());
+            }
         }
         SettlementResult result = resolveSettlement(total, already, thisTime);
         boolean fullyPaid = result.isFullyPaid();

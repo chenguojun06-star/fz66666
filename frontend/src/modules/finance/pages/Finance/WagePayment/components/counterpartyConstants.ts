@@ -34,6 +34,22 @@ export const SOURCE_TYPE_TEXT: Record<string, string> = {
   STYLE_DEVELOPMENT: '样衣开发',
 };
 
+/**
+ * D-474：历史数据里的占位往来对象 ID（上游推送时拿不到真实供应商 ID 写死的）。
+ * 这些值不能作为对象身份依据，否则不同供应商会被当成同一个人合并。
+ */
+const PLACEHOLDER_COUNTERPARTY_IDS = new Set([
+  'UNKNOWN_SUPPLIER',
+  'UNKNOWN',
+  'UNKNOWN_FACTORY',
+  'UNKNOWN_CUSTOMER',
+  'UNKNOWN_WORKER',
+]);
+
+/** 是否为可用的真实对象 ID（空值与占位符都视为不可用，需改用名称匹配） */
+export const isRealCounterpartyId = (id?: string | null): boolean =>
+  !!id && id.trim() !== '' && !PLACEHOLDER_COUNTERPARTY_IDS.has(id.trim().toUpperCase());
+
 /** 付款记录状态文案 */
 export const PAY_STATUS_TEXT: Record<string, string> = {
   pending: '待支付',

@@ -26,7 +26,12 @@ import { toMoneyLocale } from '@/utils/format';
 import { wagePaymentApi, type WagePayment } from '@/services/finance/wagePaymentApi';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import BillDetailDrawer from './BillDetailDrawer';
-import { COUNTERPARTY_TYPE_MAP, PAY_STATUS_TEXT, SOURCE_TYPE_TEXT } from './counterpartyConstants';
+import {
+  COUNTERPARTY_TYPE_MAP,
+  PAY_STATUS_TEXT,
+  SOURCE_TYPE_TEXT,
+  isRealCounterpartyId,
+} from './counterpartyConstants';
 
 const { Text, Title } = Typography;
 
@@ -112,14 +117,17 @@ export default function CounterpartyBillDrawer({
     if (!open || !target) return;
     setLoading(true);
     try {
-      const res: any = await billAggregationApi.listBills({
-        pageNum: page,
-        pageSize,
-        counterpartyId: target.counterpartyId,
-        counterpartyName: target.counterpartyId ? undefined : target.counterpartyName,
-        settlementMonth: month ? month.format('YYYY-MM') : undefined,
-        status,
-      });
+      // D-474：ID 是占位符（UNKNOWN_SUPPLIER 等）时改用名称过滤，
+        // 否则会把同占位符的不同供应商的账单混在一起显示
+        const useId = isRealCounterpartyId(target.counterpartyId);
+        const res: any = await billAggregationApi.listBills({
+          pageNum: page,
+          pageSize,
+          counterpartyId: useId ? target.counterpartyId : undefined,
+          counterpartyName: useId ? undefined : target.counterpartyName,
+          settlementMonth: month ? month.format('YYYY-MM') : undefined,
+          status,
+        });
       const pageData = res?.data ?? res ?? {};
       setBills(pageData?.records ?? []);
       setTotal(pageData?.total ?? 0);
@@ -245,11 +253,13 @@ export default function CounterpartyBillDrawer({
     if (!target) return;
     setActionSubmitting(true);
     try {
+      // D-474：同上，占位符 ID 改用名称匹配
+      const mergeUseId = isRealCounterpartyId(target.counterpartyId);
       const res: any = await billAggregationApi.listBills({
         pageNum: 1,
         pageSize: 500,
-        counterpartyId: target.counterpartyId,
-        counterpartyName: target.counterpartyId ? undefined : target.counterpartyName,
+        counterpartyId: mergeUseId ? target.counterpartyId : undefined,
+        counterpartyName: mergeUseId ? undefined : target.counterpartyName,
         settlementMonth: month ? month.format('YYYY-MM') : undefined,
         status: 'CONFIRMED',
       });

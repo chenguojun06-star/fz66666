@@ -4,6 +4,7 @@ import {
   type CounterpartyGroup,
 } from '@/services/finance/billAggregationApi';
 import CounterpartyBillDrawer from './CounterpartyBillDrawer';
+import { isRealCounterpartyId } from './counterpartyConstants';
 
 interface CounterpartyDetailDrawerProps {
   open: boolean;
@@ -55,9 +56,11 @@ export default function CounterpartyDetailDrawer({
       try {
         const res: any = await billAggregationApi.listCounterpartyGroups({});
         const list: CounterpartyGroup[] = res?.data ?? res ?? [];
+        // D-474：占位符 ID（UNKNOWN_SUPPLIER）不参与匹配，否则会误命中别的对象
+        const useId = isRealCounterpartyId(payeeId);
         const hit = list.find(
           (g) =>
-            (payeeId && g.counterpartyId && g.counterpartyId === payeeId) ||
+            (useId && g.counterpartyId && g.counterpartyId === payeeId) ||
             (payeeName && g.counterpartyName && g.counterpartyName === payeeName),
         );
         if (!alive) return;
