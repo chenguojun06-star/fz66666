@@ -619,11 +619,45 @@ public class BillAggregationOrchestrator {
                 }
                 // 2) 上游未置已付款 → 补回写（内部幂等，已 paid 会跳过）
                 syncUpstreamPaid(bill);
+                // 3) 金额对账：付款记录合计 vs 账单已结清金额，对不上要暴露出来
+                checkPaymentAmountMatch(bill, tenantId);
             } catch (Exception e) {
                 log.warn("[BillAggregation] 巡检修复账单失败: billNo={}, err={}", bill.getBillNo(), e.getMessage());
             }
         }
         return fixed;
+    }
+
+    /**
+     * D-474 金额对账：一笔账单对应一条付款记录，两者金额必须一致。
+     * 不一致说明补记链路某一步丢了（并发、异常中断），这里只告警不改数——
+     * 金额的修正要人确认，自动改容易掩盖真实问题。
+     */
+    private void checkPaymentAmountMatch(BillAggregation bill, Long tenantId) {
+        if (wagePaymentService == null) {
+            return;
+        }
+        try {
+            List<WagePayment> payments = wagePaymentService.lambdaQuery()
+                    .eq(WagePayment::getTenantId, tenantId)
+                    .eq(WagePayment::getBizId, bill.getId())
+                    .ne(WagePayment::getStatus, "cancelled")
+                    .list();
+            if (payments == null || payments.isEmpty()) {
+                return;
+            }
+            BigDecimal sum = BigDecimal.ZERO;
+            for (WagePayment p : payments) {
+                sum = sum.add(p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO);
+            }
+            BigDecimal settled = bill.getSettledAmount() != null ? bill.getSettledAmount() : BigDecimal.ZERO;
+            if (sum.compareTo(settled) != 0) {
+                log.warn("[BillAggregation] ⚠ 账单与付款记录金额不一致: billNo={}, 账单已结={}, 付款记录合计={}, 付款记录数={}",
+                        bill.getBillNo(), settled, sum, payments.size());
+            }
+        } catch (Exception e) {
+            log.warn("[BillAggregation] 金额对账检查失败: billNo={}, err={}", bill.getBillNo(), e.getMessage());
+        }
     }
 
     /** 部分付款结算结果（D-474，纯函数输出，便于单测） */
