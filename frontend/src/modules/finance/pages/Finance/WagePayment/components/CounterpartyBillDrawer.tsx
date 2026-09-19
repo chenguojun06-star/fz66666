@@ -22,12 +22,24 @@ import {
   type BillAggregation,
 } from '@/services/finance/billAggregationApi';
 import { toMoneyLocale } from '@/utils/format';
+import { wagePaymentApi, type WagePayment } from '@/services/finance/wagePaymentApi';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import { COUNTERPARTY_TYPE_MAP } from './CounterpartyLedgerTab';
 
 const { Text, Title } = Typography;
 
 const fmtMoney = (v?: number) => `¥${toMoneyLocale(v)}`;
+
+/** D-473 兜底区块：付款记录状态文案（该对象没有账单时回退展示） */
+const PAY_STATUS_TEXT: Record<string, string> = {
+  pending: '待支付',
+  processing: '处理中',
+  success: '已支付',
+  paid: '已支付',
+  failed: '失败',
+  rejected: '已驳回',
+  cancelled: '已取消',
+};
 const fmtTime = (v?: string) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-');
 
 /** 可结清 / 可驳回 / 可确认 的状态集合（与后端 BillConstants 口径一致） */
@@ -90,6 +102,10 @@ export default function CounterpartyBillDrawer({
 
   const [actionSubmitting, setActionSubmitting] = useState(false);
 
+  // D-473 兜底：该对象没有账单流水时（老数据只有付款记录），回退展示历史付款记录
+  const [fbPayments, setFbPayments] = useState<WagePayment[]>([]);
+  const [fbLoading, setFbLoading] = useState(false);
+
   useEffect(() => {
     if (!open) return;
     setPage(1);
@@ -130,6 +146,35 @@ export default function CounterpartyBillDrawer({
     void fetchBills();
     onChanged?.();
   }, [fetchBills, onChanged]);
+
+  // D-473：账单为空时补拉该对象的历史付款记录，避免点开一片空白
+  useEffect(() => {
+    if (!open || !target) {
+      setFbPayments([]);
+      return;
+    }
+    if (loading || total !== 0 || !target.counterpartyId) {
+      return;
+    }
+    let alive = true;
+    setFbLoading(true);
+    (async () => {
+      try {
+        const res: any = await wagePaymentApi.listPayableByCounterparty({
+          counterpartyId: target.counterpartyId,
+        });
+        const d = res?.data ?? res ?? {};
+        if (alive) setFbPayments(d.payments ?? []);
+      } catch {
+        if (alive) setFbPayments([]);
+      } finally {
+        if (alive) setFbLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [open, target, loading, total]);
 
   // 勾选行按状态分组（批量动作只对合法状态的行生效）
   const selectedBills = useMemo(
@@ -378,6 +423,21 @@ export default function CounterpartyBillDrawer({
     },
   ];
 
+  /** D-473 兜底表格：无账单时展示的历史付款记录 */
+  const fallbackColumns: ColumnsType<WagePayment> = [
+    { title: '付款单号', dataIndex: 'paymentNo', width: 170, render: (v: string) => v || '-' },
+    { title: '业务类型', dataIndex: 'bizType', width: 120, render: (v: string) => v || '-' },
+    { title: '金额', dataIndex: 'amount', width: 120, align: 'right', render: (v: number) => fmtMoney(v) },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 90,
+      render: (v: string) => <Tag>{PAY_STATUS_TEXT[v] ?? v ?? '-'}</Tag>,
+    },
+    { title: '付款时间', dataIndex: 'paymentTime', width: 160, render: (v: string) => fmtTime(v) },
+    { title: '操作人', dataIndex: 'operatorName', width: 120, render: (v: string) => v || '-' },
+  ];
+
   const typeTag = target
     ? COUNTERPARTY_TYPE_MAP[(target.counterpartyType || '').toUpperCase()] ?? null
     : null;
@@ -505,6 +565,29 @@ export default function CounterpartyBillDrawer({
           }}
         />
       </Spin>
+
+      {/* D-473 兜底：该对象没有账单流水时，回退展示历史付款记录，避免点开一片空白 */}
+      {!loading && total === 0 && (
+        <div style={{ marginTop: 16 }}>
+          <Space direction="vertical" style={{ width: '100%' }} size={8}>
+            <Text type="secondary">
+              该对象暂无上游推送的账单流水
+              {fbPayments.length > 0 ? '，以下为其历史付款记录：' : '，也没有历史付款记录。'}
+            </Text>
+            {fbPayments.length > 0 && (
+              <Table<WagePayment>
+                rowKey="id"
+                size="small"
+                loading={fbLoading}
+                pagination={false}
+                scroll={{ x: 900 }}
+                columns={fallbackColumns}
+                dataSource={fbPayments}
+              />
+            )}
+          </Space>
+        </div>
+      )}
 
       {/* 单笔付款弹窗 */}
       <Modal
