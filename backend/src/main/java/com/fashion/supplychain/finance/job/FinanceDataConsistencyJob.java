@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.DeductionItem;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.mapper.DeductionItemMapper;
+import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -60,6 +61,10 @@ public class FinanceDataConsistencyJob {
     @Autowired(required = false)
     private DistributedLockService distributedLockService;
 
+    // D-474：收付款闭环自检（补记付款记录 + 补回写上游已付款）
+    @Autowired(required = false)
+    private BillAggregationOrchestrator billAggregationOrchestrator;
+
     @Scheduled(cron = "0 20 */6 * * ?")
     public void checkAndFixFinanceConsistency() {
         if (distributedLockService != null) {
@@ -93,6 +98,7 @@ public class FinanceDataConsistencyJob {
         int fixedMissingRecon = 0;
         int fixedOrphanDeductions = 0;
         int fixedDeductionSum = 0;
+        int fixedPaymentRecords = 0;
         int totalFailed = 0;
 
         for (Long tenantId : tenantIds) {
@@ -101,6 +107,10 @@ public class FinanceDataConsistencyJob {
                 fixedMissingRecon += fixMissingShipmentReconciliations();
                 fixedOrphanDeductions += fixOrphanDeductions();
                 fixedDeductionSum += fixDeductionSumMismatch(tenantId);
+                // D-474：收付款闭环自检——已结清账单缺付款记录/上游未置已付款时自愈
+                if (billAggregationOrchestrator != null) {
+                    fixedPaymentRecords += billAggregationOrchestrator.repairSettledBillsConsistency();
+                }
             } catch (Exception e) {
                 totalFailed++;
                 log.error("[FinanceConsistency] 租户 {} 财务巡检异常", tenantId, e);
@@ -114,8 +124,8 @@ public class FinanceDataConsistencyJob {
         }
 
         long duration = System.currentTimeMillis() - start;
-        log.info("[FinanceConsistency] 巡检完成: 补建对账单={}, 归集孤儿扣款={}, 修复扣款汇总={}, 失败租户={}, 耗时{}ms",
-                fixedMissingRecon, fixedOrphanDeductions, fixedDeductionSum, totalFailed, duration);
+        log.info("[FinanceConsistency] 巡检完成: 补建对账单={}, 归集孤儿扣款={}, 修复扣款汇总={}, 补记付款记录={}, 失败租户={}, 耗时{}ms",
+                fixedMissingRecon, fixedOrphanDeductions, fixedDeductionSum, fixedPaymentRecords, totalFailed, duration);
     }
 
     int fixMissingShipmentReconciliations() {

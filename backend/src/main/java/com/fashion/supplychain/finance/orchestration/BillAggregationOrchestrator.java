@@ -560,7 +560,13 @@ public class BillAggregationOrchestrator {
         bill.setSettledById(UserContext.userId());
         bill.setSettledByName(UserContext.username());
         bill.setSettledAt(LocalDateTime.now());
-        billAggregationService.updateById(bill);
+        // D-474：账单表开了 @Version 乐观锁，并发付款（两个人同时付同一笔）时
+        // 后一个请求会更新 0 行。MP 不会自动抛异常，若不判断就会"提示成功但实际没入账"，
+        // 这里显式拦截，让前端提示刷新重试，保证账实一致。
+        boolean updated = billAggregationService.updateById(bill);
+        if (!updated) {
+            throw new RuntimeException("该账单已被其他操作更新（可能存在并发付款），请刷新后重试");
+        }
         log.info("[BillAggregation] 付款: billNo={}, 本次={}, 累计={}/{}, 状态={}",
                 bill.getBillNo(), thisTime, result.getNewSettled(), total, bill.getStatus());
         // D-473：同步补记付款记录（记本次实付金额），打通总账与"付款记录"两套账
@@ -569,6 +575,55 @@ public class BillAggregationOrchestrator {
         if (fullyPaid) {
             syncUpstreamPaid(bill);
         }
+    }
+
+    /**
+     * D-474 收付款一致性自检与自愈（供定时任务 FinanceDataConsistencyJob 调用）。
+     *
+     * 背景：付款时会做两件跨表的事——补记付款记录、回写上游单据为已付款。
+     * 任一步失败（网络抖动、上游状态异常）都会造成"账单已结清但付款记录没有"
+     * 或"付清了但上游仍显示未付款"，而原巡检不覆盖这些，问题会一直藏着。
+     *
+     * 这里对已结清账单做幂等补偿：缺付款记录就补记，上游未置已付款就补回写。
+     *
+     * @return 本次修复的账单笔数
+     */
+    public int repairSettledBillsConsistency() {
+        Long tenantId = TenantAssert.requireTenantId();
+        List<BillAggregation> settled = billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getDeleteFlag, 0)
+                .eq(BillAggregation::getStatus, BillConstants.STATUS_SETTLED)
+                .last("LIMIT 500")
+                .list();
+        if (settled == null || settled.isEmpty()) {
+            return 0;
+        }
+        int fixed = 0;
+        for (BillAggregation bill : settled) {
+            try {
+                // 1) 缺付款记录 → 补记（内部按 bizId 幂等，已存在会累加/跳过）
+                if (wagePaymentService != null && StringUtils.hasText(bill.getCounterpartyId())) {
+                    boolean hasPayment = wagePaymentService.lambdaQuery()
+                            .eq(WagePayment::getTenantId, tenantId)
+                            .eq(WagePayment::getBizId, bill.getId())
+                            .ne(WagePayment::getStatus, "cancelled")
+                            .last("LIMIT 1")
+                            .one() != null;
+                    if (!hasPayment) {
+                        ensurePaymentRecordFromBill(bill,
+                                bill.getSettledAmount() != null ? bill.getSettledAmount() : bill.getAmount());
+                        fixed++;
+                        log.warn("[BillAggregation] 巡检补记付款记录: billNo={}", bill.getBillNo());
+                    }
+                }
+                // 2) 上游未置已付款 → 补回写（内部幂等，已 paid 会跳过）
+                syncUpstreamPaid(bill);
+            } catch (Exception e) {
+                log.warn("[BillAggregation] 巡检修复账单失败: billNo={}, err={}", bill.getBillNo(), e.getMessage());
+            }
+        }
+        return fixed;
     }
 
     /** 部分付款结算结果（D-474，纯函数输出，便于单测） */
