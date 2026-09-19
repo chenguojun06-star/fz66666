@@ -646,9 +646,8 @@ public class BillAggregationOrchestrator {
                         .eq(BillAggregation::getDeleteFlag, 0)
                         .last("LIMIT 1")
                         .one() != null;
-                if (hasBill) {
-                    continue;
-                }
+                // pushBill 幂等：不存在则补推；已存在且非终态（未结清/未取消）则同步金额，
+                // 这样对账单后续改过金额时，账单金额也会跟着纠正
                 BillPushRequest req = new BillPushRequest();
                 req.setBillType("PAYABLE");
                 req.setBillCategory("MATERIAL");
@@ -663,11 +662,13 @@ public class BillAggregationOrchestrator {
                 req.setStyleNo(r.getStyleNo());
                 req.setAmount(r.getFinalAmount());
                 req.setSettlementMonth(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
-                req.setRemark("巡检补推：对账单已审批但缺失账单");
+                req.setRemark(hasBill ? "巡检同步：对账单金额变更" : "巡检补推：对账单已审批但缺失账单");
                 pushBill(req);
-                fixed++;
-                log.warn("[BillAggregation] 巡检补推对账账单: reconNo={}, amount={}",
-                        r.getReconciliationNo(), r.getFinalAmount());
+                if (!hasBill) {
+                    fixed++;
+                    log.warn("[BillAggregation] 巡检补推对账账单: reconNo={}, amount={}",
+                            r.getReconciliationNo(), r.getFinalAmount());
+                }
             } catch (Exception e) {
                 log.warn("[BillAggregation] 巡检补推对账账单失败: reconId={}, err={}", r.getId(), e.getMessage());
             }
