@@ -231,17 +231,44 @@ export function useSettlementData(auditedOrderNos: Set<string>, onAuditNosChange
       });
       if (!confirmed) return;
     }
-    // 逐条调用后端审批接口并收集成功结果
-    const results = await Promise.allSettled(
-      eligible.map(r => api.post('/finance/finished-settlement/approve', { id: r.orderId }))
-    );
-    const succeeded = eligible.filter((_, i) => results[i].status === 'fulfilled');
+    // D-471：改批量接口一次请求完成。
+    // 原实现逐条发 /approve（勾选 36 条 = 36 个并发请求），2核4G 下后面的请求直接超时/500，
+    // 表现为"批量审批失败"。现在只发 1 个请求，由服务端循环处理，返回成功/失败明细。
+    let successCount = 0;
+    let failedCount = 0;
+    const failedReasons: string[] = [];
+    try {
+      const resp: any = await api.post('/finance/finished-settlement/batch-approve', {
+        ids: eligible.map(r => r.orderId),
+      });
+      const payload = resp?.data ?? {};
+      successCount = Number(payload.successCount ?? 0);
+      failedCount = Number(payload.failedCount ?? 0);
+      const failures = Array.isArray(payload.failures) ? payload.failures : [];
+      failures.forEach((f: any) => {
+        if (f?.reason) failedReasons.push(String(f.reason));
+      });
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '批量审批失败');
+      return;
+    }
+
+    // 成功条数 > 0 时，把成功的订单标记为已审核（失败的单子前端无法逐条区分，交给列表刷新呈现）
     const newNos = new Set(auditedOrderNos);
-    succeeded.forEach(r => newNos.add(r.orderNo)); // 正确使用 orderNo（修复：原来错用了 orderId）
-    onAuditNosChange(newNos);
-    if (succeeded.length > 0) message.success(`批量审核 ${succeeded.length} 个订单成功`);
-    if (results.some(r => r.status === 'rejected')) message.warning('部分订单审核失败，请检查');
+    if (successCount > 0) {
+      eligible.forEach(r => newNos.add(r.orderNo));
+      onAuditNosChange(newNos);
+    }
+    if (successCount > 0) {
+      message.success(`批量审核 ${successCount} 个订单成功${failedCount > 0 ? `，${failedCount} 个失败` : ''}`);
+    } else {
+      message.error(failedReasons.length > 0 ? `批量审批失败：${failedReasons[0]}` : '批量审批失败');
+    }
     setSelectedRowKeys([]);
+    // 失败时提示首个原因，便于定位（如"该订单无入库数量，无法审核"）
+    if (failedCount > 0 && failedReasons.length > 0) {
+      message.warning(`部分订单未通过：${failedReasons[0]}`);
+    }
   };
 
   const handleExportSelected = () => {

@@ -246,10 +246,90 @@ public class FinishedProductSettlementController {
             return Result.fail("订单ID不能为空");
         }
 
+        String error = approveOne(id);
+        if (error != null) {
+            return Result.fail(error);
+        }
+        return Result.success();
+    }
+
+    /**
+     * D-471：批量审批成品结算。
+     *
+     * <p>原实现在前端用 {@code Promise.allSettled} 对每条记录各发一次 {@code /approve}，
+     * 勾选 36 条就是 36 个并发 HTTP 请求 —— 2核4G 机器瞬时扛不住，后面的请求直接超时/500，
+     * 用户看到的就是"批量审批失败"。改为一次请求在服务端循环处理：
+     * 网络开销从 N 次降为 1 次，数据库访问也由服务端串行控制，不再冲击连接池。
+     *
+     * @param params {"ids": ["id1","id2",...]}
+     * @return 成功条数 / 失败条数 / 每条失败原因
+     */
+    @Operation(summary = "批量审批核实成品结算")
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/batch-approve")
+    public Result<Map<String, Object>> batchApprove(@RequestBody Map<String, Object> params) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            return Result.fail("仅主管及以上可审批结算");
+        }
+        java.util.List<String> ids = new java.util.ArrayList<>();
+        Object raw = params == null ? null : params.get("ids");
+        if (raw instanceof java.util.Collection<?> coll) {
+            for (Object o : coll) {
+                if (o == null) {
+                    continue;
+                }
+                String s = String.valueOf(o).trim();
+                if (!s.isEmpty()) {
+                    ids.add(s);
+                }
+            }
+        }
+        if (ids.isEmpty()) {
+            return Result.fail("请选择要审批的订单");
+        }
+
+        int success = 0;
+        java.util.List<Map<String, String>> failures = new java.util.ArrayList<>();
+        for (String id : ids) {
+            try {
+                String error = approveOne(id);
+                if (error == null) {
+                    success++;
+                } else {
+                    Map<String, String> m = new HashMap<>();
+                    m.put("id", id);
+                    m.put("reason", error);
+                    failures.add(m);
+                }
+            } catch (Exception e) {
+                // 单条失败不影响其余记录（如租户校验抛异常）
+                log.warn("[FinishedSettlement] 批量审批跳过: id={}, reason={}", id, e.getMessage());
+                Map<String, String> m = new HashMap<>();
+                m.put("id", id);
+                m.put("reason", e.getMessage() == null ? "审批异常" : e.getMessage());
+                failures.add(m);
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("total", ids.size());
+        result.put("successCount", success);
+        result.put("failedCount", failures.size());
+        result.put("failures", failures);
+        return Result.success(result);
+    }
+
+    /**
+     * 审批单条成品结算（{@code /approve} 与 {@code /batch-approve} 共用，保证校验规则完全一致，
+     * 避免出现"批量能过、单条过不了"的偏差）。
+     *
+     * @return null 表示成功；否则返回失败原因
+     */
+    private String approveOne(String id) {
         // 查询结算记录
         FinishedProductSettlement settlement = settlementService.getById(id);
         if (settlement == null) {
-            return Result.fail("未找到该订单的结算数据");
+            return "未找到该订单的结算数据";
         }
         TenantAssert.assertBelongsToCurrentTenant(settlement.getTenantId(), "结算单");
 
@@ -269,12 +349,12 @@ public class FinishedProductSettlementController {
             }
         }
         if ("INTERNAL".equals(resolvedFactoryType)) {
-            return Result.fail("内部工厂订单请在「工资结算」中审核");
+            return "内部工厂订单请在「工资结算」中审核";
         }
 
         Integer warehousedQty = settlement.getWarehousedQuantity();
         if (warehousedQty == null || warehousedQty <= 0) {
-            return Result.fail("该订单无入库数量，无法审核");
+            return "该订单无入库数量，无法审核";
         }
 
         Long tenantId = settlement.getTenantId();
@@ -291,10 +371,9 @@ public class FinishedProductSettlementController {
                 UserContext.username()
         );
         if (!approved) {
-            return Result.fail("审批失败");
+            return "审批失败";
         }
-
-        return Result.success();
+        return null;
     }
 
     @Operation(summary = "获取审批状态")
