@@ -67,6 +67,37 @@ public class BillAggregationController {
         return Result.success(null);
     }
 
+    /**
+     * D-472 往来总账：按往来对象聚合账单（付款中心主列表"一行=一个对象"）。
+     * 参数：billType(PAYABLE/RECEIVABLE，可空=全部) / settlementMonth(yyyy-MM，可空) / keyword(对象名模糊，可空)
+     */
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/group-by-counterparty")
+    public Result<List<BillAggregationOrchestrator.CounterpartyGroupDTO>> listCounterpartyGroups(
+            @RequestBody(required = false) Map<String, String> params) {
+        String billType = params != null ? params.get("billType") : null;
+        String settlementMonth = params != null ? params.get("settlementMonth") : null;
+        String keyword = params != null ? params.get("keyword") : null;
+        return Result.success(billAggregationOrchestrator.listCounterpartyGroups(billType, settlementMonth, keyword));
+    }
+
+    /** D-472 批量结清（详情页批量付款 / 整月合并付款），返回成功笔数 */
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/batch-settle")
+    public Result<Integer> batchSettle(@RequestBody List<String> billIds) {
+        return Result.success(billAggregationOrchestrator.batchSettle(billIds));
+    }
+
+    /** D-472 批量驳回（取消账单），返回成功笔数 */
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/batch-cancel")
+    public Result<Integer> batchCancel(@RequestBody Map<String, Object> params) {
+        @SuppressWarnings("unchecked")
+        List<String> billIds = (List<String>) params.get("billIds");
+        Object reason = params.get("reason");
+        return Result.success(billAggregationOrchestrator.batchCancel(billIds, reason != null ? reason.toString() : null));
+    }
+
     /** 取消账单 */
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/cancel")

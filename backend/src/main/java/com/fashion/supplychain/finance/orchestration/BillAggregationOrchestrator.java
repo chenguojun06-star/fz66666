@@ -22,8 +22,11 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -260,6 +263,7 @@ public class BillAggregationOrchestrator {
                     }
                 })
                 .eq(StringUtils.hasText(query.getSettlementMonth()), BillAggregation::getSettlementMonth, query.getSettlementMonth())
+                .eq(StringUtils.hasText(query.getCounterpartyId()), BillAggregation::getCounterpartyId, query.getCounterpartyId())
                 .like(StringUtils.hasText(query.getCounterpartyName()), BillAggregation::getCounterpartyName, query.getCounterpartyName())
                 .like(StringUtils.hasText(query.getOrderNo()), BillAggregation::getOrderNo, query.getOrderNo())
                 // 日期范围过滤：若传入创建时间范围，则过滤 createTime 在该范围内的账单
@@ -337,6 +341,106 @@ public class BillAggregationOrchestrator {
         stats.put("settledCount", settledCount);
         stats.put("totalCount", totalCount);
         return stats;
+    }
+
+    // ==================== 2.5 往来总账：按对象聚合（D-472） ====================
+
+    /**
+     * D-472 往来总账：按往来对象（员工/工厂/供应商/客户）聚合账单。
+     * 付款中心主列表"一行=一个对象"——不管上游推送多少笔，都累计到该对象名下；
+     * 点击对象进详情看全部流水（listBills + counterpartyId）。
+     * 口径：排除已取消；累计=SUM(amount)，已结=SUM(settled_amount)，未结=累计-已结。
+     */
+    public List<CounterpartyGroupDTO> listCounterpartyGroups(String billType, String settlementMonth, String keyword) {
+        Long tenantId = TenantAssert.requireTenantId();
+
+        // 工厂账号数据范围与 listBills/getStats 对齐（P0）
+        List<String> factoryOrderIds = getFactoryOrderIdsOrNull();
+        if (factoryOrderIds != null && factoryOrderIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<BillAggregation> all = billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getDeleteFlag, 0)
+                .eq(StringUtils.hasText(billType), BillAggregation::getBillType, billType)
+                .eq(StringUtils.hasText(settlementMonth), BillAggregation::getSettlementMonth, settlementMonth)
+                .ne(BillAggregation::getStatus, BillConstants.STATUS_CANCELLED)
+                .in(factoryOrderIds != null, BillAggregation::getOrderId, factoryOrderIds)
+                .select(BillAggregation::getCounterpartyType, BillAggregation::getCounterpartyId,
+                        BillAggregation::getCounterpartyName, BillAggregation::getAmount,
+                        BillAggregation::getSettledAmount)
+                .last("LIMIT 5000")
+                .list();
+
+        // 分组键：type + id（id 为空的历史数据用名字兜底），keyword 作用于对象名（整组显示）
+        Map<String, CounterpartyGroupDTO> grouped = new LinkedHashMap<>();
+        for (BillAggregation b : all) {
+            String name = b.getCounterpartyName();
+            if (StringUtils.hasText(keyword) && (name == null || !name.contains(keyword))) {
+                continue;
+            }
+            String key = b.getCounterpartyType() + "|"
+                    + (StringUtils.hasText(b.getCounterpartyId()) ? b.getCounterpartyId() : name);
+            CounterpartyGroupDTO g = grouped.computeIfAbsent(key, k -> {
+                CounterpartyGroupDTO dto = new CounterpartyGroupDTO();
+                dto.setCounterpartyType(b.getCounterpartyType());
+                dto.setCounterpartyId(b.getCounterpartyId());
+                dto.setCounterpartyName(name);
+                dto.setBillCount(0);
+                dto.setTotalAmount(BigDecimal.ZERO);
+                dto.setSettledAmount(BigDecimal.ZERO);
+                return dto;
+            });
+            g.setBillCount(g.getBillCount() + 1);
+            BigDecimal amt = b.getAmount() != null ? b.getAmount() : BigDecimal.ZERO;
+            g.setTotalAmount(g.getTotalAmount().add(amt));
+            g.setSettledAmount(g.getSettledAmount()
+                    .add(b.getSettledAmount() != null ? b.getSettledAmount() : BigDecimal.ZERO));
+        }
+
+        List<CounterpartyGroupDTO> result = new ArrayList<>(grouped.values());
+        for (CounterpartyGroupDTO g : result) {
+            g.setUnsettledAmount(g.getTotalAmount().subtract(g.getSettledAmount()));
+        }
+        result.sort(Comparator.comparing(CounterpartyGroupDTO::getTotalAmount).reversed());
+        return result;
+    }
+
+    /**
+     * D-472 批量结清（详情页"批量付款 / 整月合并付款"）：事务内逐笔按全额结清，
+     * 不可结清（待确认/已结清/已取消）的账单跳过并记日志，与 batchConfirm 容错模式一致。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public int batchSettle(List<String> billIds) {
+        int count = 0;
+        for (String id : billIds) {
+            try {
+                settleBill(id, null);
+                count++;
+            } catch (Exception e) {
+                log.warn("[BillAggregation] 批量结清跳过: id={}, reason={}", id, e.getMessage());
+            }
+        }
+        return count;
+    }
+
+    /**
+     * D-472 批量驳回（取消账单）：已结清的账单不可取消，跳过并记日志。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public int batchCancel(List<String> billIds, String reason) {
+        String safeReason = StringUtils.hasText(reason) ? reason : "批量驳回";
+        int count = 0;
+        for (String id : billIds) {
+            try {
+                cancelBill(id, safeReason);
+                count++;
+            } catch (Exception e) {
+                log.warn("[BillAggregation] 批量取消跳过: id={}, reason={}", id, e.getMessage());
+            }
+        }
+        return count;
     }
 
     // ==================== 3. 状态流转 ====================
@@ -724,6 +828,17 @@ public class BillAggregationOrchestrator {
     }
 
     @Data
+    public static class CounterpartyGroupDTO {
+        private String counterpartyType;    // WORKER / FACTORY / SUPPLIER / CUSTOMER
+        private String counterpartyId;
+        private String counterpartyName;
+        private Integer billCount;          // 该对象名下账单笔数
+        private BigDecimal totalAmount;     // 累计推送
+        private BigDecimal settledAmount;   // 已结清
+        private BigDecimal unsettledAmount; // 未结清 = 累计 - 已结
+    }
+
+    @Data
     public static class BillQueryRequest {
         private int pageNum = 1;
         private int pageSize = 20;
@@ -734,6 +849,7 @@ public class BillAggregationOrchestrator {
         private String createTimeStart;      // new：创建时间范围 - 开始（YYYY-MM-DD 或 YYYY-MM-DD HH:mm:ss）
         private String createTimeEnd;        // new：创建时间范围 - 结束（YYYY-MM-DD 或 YYYY-MM-DD HH:mm:ss）
         private String counterpartyName;
+        private String counterpartyId;       // D-472：按往来对象精确过滤（往来总账详情页用）
         private String orderNo;
     }
 }

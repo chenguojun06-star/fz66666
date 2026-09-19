@@ -1,7 +1,34 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-18（新增 D-463/D-464 手机端收尾批——picker收编/emoji清零/quality-detail令牌化）
+> 最后更新：2026-09-19（新增 D-472 付款中心往来总账——银行账户模型）
+
+---
+
+## D-472：付款中心「往来总账」——银行账户模型（2026-09-19）
+
+**用户拍板的模型**：付款中心主列表从"一笔推送一行"改成"**一个往来对象一行**"（员工/外发厂/供应商布行，
+应收侧=客户）。上游任何模块（物料对账/工资/外发/订单/报销/盘点）推送的账单像存钱一样累计叠加到对象名下，
+页面只显示一行汇总；点击对象名进详情看全部推送流水；**付款/驳回在详情内完成**（单笔/批量/整月合并付款均可）；
+应收应付同逻辑。驳回走账单取消（CANCELLED，已结清不可驳）。
+
+**锚定 t_bill_aggregation（账单汇总表）而非 t_wage_payment**：前者才是上游 pushBill 统一推送的"银行"本体
+（counterparty 三件套 + settlementMonth + amount/settledAmount），后者是付款执行层（打款/凭证/回写上游），
+待付款/付款记录 tab 原样保留不动。两套体系分工：总账=看账+结清（settleBill），待付款=执行打款（initiate/callback）。
+
+**后端**（BillAggregationOrchestrator/Controller）：新增 `POST /bill-aggregation/group-by-counterparty`
+（按 counterpartyType|counterpartyId 分组内存聚合，LIMIT 5000 惯例，排除 CANCELLED，keyword 作用于对象名整组显示，
+id 为空的历史数据用名字兜底分组；工厂账号数据范围与 listBills/getStats 对齐）+ `/batch-settle`（逐笔全额结清，
+容错跳过模式同 batchConfirm）+ `/batch-cancel`（驳回）；`BillQueryRequest` 加 counterpartyId 精确过滤（详情流水用）。
+
+**前端**：新增 `CounterpartyLedgerTab`（往来总账 tab，默认第一+默认选中：应付/应收 Segmented+月份 MonthPicker+
+搜索；类型标签 WORKER员工/FACTORY工厂/SUPPLIER供应商/CUSTOMER客户；行点击开详情）+ `CounterpartyBillDrawer`
+（头部汇总来自主列表聚合行不二次请求；流水表+行操作 确认/付款[金额默认全额可改]/驳回；批量确认/批量付款/批量驳回
+[RejectReasonModal 单笔批量共用]；「合并付款」=当前月份筛选下 CONFIRMED/SETTLING 全部一键结清，先拉后确认）。
+usePersistentTab 默认 'ledger'（白名单加 ledger，?tab 直达兼容保留）。
+
+**坑**：useSync 轮询分支"非 pending 一律拉 payments"不能收紧到 records——StatsCards 常驻顶部依赖 payments
+统计，ledger/receivable/payable tab 下也不例外（改了又回滚）。
 
 ---
 
