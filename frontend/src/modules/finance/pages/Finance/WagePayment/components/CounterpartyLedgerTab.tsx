@@ -16,7 +16,10 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { PrinterOutlined, ReloadOutlined } from '@ant-design/icons';
 import { safePrint } from '@/utils/safePrint';
-import { buildCounterpartyStatementHtml } from '../utils/buildCounterpartyStatementHtml';
+import {
+  buildCounterpartyStatementHtml,
+  buildMultiCounterpartyStatementHtml,
+} from '../utils/buildCounterpartyStatementHtml';
 import { isRealCounterpartyId } from './counterpartyConstants';
 import { useUser } from '@/utils/AuthContext';
 import {
@@ -54,6 +57,15 @@ export default function CounterpartyLedgerTab() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTarget, setDrawerTarget] = useState<CounterpartyGroup | null>(null);
+  // D-474：勾选多个对象 → 批量出对账单（月底一次性给所有工厂/员工打单）
+  const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
+  const [batchPrinting, setBatchPrinting] = useState(false);
+
+  /** 行唯一键：类型 +（ID 或名称），表格 rowKey 与勾选/批量打印共用 */
+  const rowKeyOf = useCallback(
+    (r: CounterpartyGroup) => `${r.counterpartyType}|${r.counterpartyId || r.counterpartyName}`,
+    [],
+  );
 
   const fetchGroups = useCallback(async () => {
     setLoading(true);
@@ -144,6 +156,54 @@ export default function CounterpartyLedgerTab() {
     },
     [month, onlyUnsettled, billType, message, user],
   );
+
+  /** D-474：批量打印——选中的每个对象各出一页对账单，一次打印完按对象分开 */
+  const handleBatchPrint = useCallback(async () => {
+    const picked = groups.filter((g) => selectedKeys.includes(rowKeyOf(g)));
+    if (picked.length === 0) {
+      message.warning('请先勾选要打印的对象');
+      return;
+    }
+    setBatchPrinting(true);
+    try {
+      const monthLabel = month && !onlyUnsettled ? month.format('YYYY-MM') : undefined;
+      const list = await Promise.all(
+        picked.map(async (g) => {
+          const useId = isRealCounterpartyId(g.counterpartyId);
+          const res: any = await billAggregationApi.listBills({
+            pageNum: 1,
+            pageSize: 500,
+            counterpartyId: useId ? g.counterpartyId : undefined,
+            counterpartyName: useId ? undefined : g.counterpartyName,
+            settlementMonth: monthLabel,
+            billType,
+          });
+          const rows: any[] = (res?.data ?? res)?.records ?? [];
+          const totalAmount = rows.reduce((s, b) => s + Number(b.amount ?? 0), 0);
+          const settledAmount = rows.reduce((s, b) => s + Number(b.settledAmount ?? 0), 0);
+          return {
+            counterpartyName: g.counterpartyName,
+            counterpartyTypeText: COUNTERPARTY_TYPE_MAP[(g.counterpartyType || '').toUpperCase()]?.text,
+            monthLabel,
+            rows,
+            totalAmount,
+            settledAmount,
+            unpaidAmount: totalAmount - settledAmount,
+            printedBy: user?.name || user?.username,
+          };
+        }),
+      );
+      safePrint(
+        buildMultiCounterpartyStatementHtml(list, `往来对账单（${list.length} 个对象）`),
+        `往来对账单-${list.length}个对象`,
+      );
+      message.success(`已生成 ${list.length} 个对象的对账单`);
+    } catch (e: unknown) {
+      message.error(`批量打印失败: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBatchPrinting(false);
+    }
+  }, [groups, selectedKeys, month, onlyUnsettled, billType, message, user, rowKeyOf]);
 
   const columns: ColumnsType<CounterpartyGroup> = [
     {
@@ -279,6 +339,16 @@ export default function CounterpartyLedgerTab() {
         <Button icon={<ReloadOutlined />} onClick={() => void fetchGroups()}>
           刷新
         </Button>
+        {/* D-474：勾选对象后批量出对账单（月底一次性给所有工厂/员工打单） */}
+        <Button
+          type="primary"
+          icon={<PrinterOutlined />}
+          loading={batchPrinting}
+          disabled={selectedKeys.length === 0}
+          onClick={handleBatchPrint}
+        >
+          批量打印{selectedKeys.length > 0 ? `(${selectedKeys.length})` : ''}
+        </Button>
       </Space>
 
       {/* 汇总条 */}
@@ -301,10 +371,14 @@ export default function CounterpartyLedgerTab() {
 
       <Spin spinning={loading}>
         <Table<CounterpartyGroup>
-          rowKey={(r) => `${r.counterpartyType}|${r.counterpartyId || r.counterpartyName}`}
+          rowKey={rowKeyOf}
           size="small"
           columns={columns}
           dataSource={shownGroups}
+          rowSelection={{
+            selectedRowKeys: selectedKeys,
+            onChange: setSelectedKeys,
+          }}
           pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `共 ${t} 个对象` }}
           onRow={(r) => ({
             onClick: () => openDrawer(r),

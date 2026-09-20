@@ -54,7 +54,8 @@ const num = (v?: number): number => Number(v ?? 0);
  * 用途：一个往来对象（员工/工厂/布行/客户）一张，打印或导出后发给对方对账确认。
  * 内容：对象信息 + 账单明细（含来源模块、金额、已付、未付）+ 合计 + 对方签字栏。
  */
-export const buildCounterpartyStatementHtml = (p: CounterpartyStatementParams): string => {
+/** 单个对象的对账单主体（不含 html/head 外壳，便于多对象拼接） */
+const buildStatementBody = (p: CounterpartyStatementParams, isLast: boolean): string => {
   const rows = p.rows ?? [];
   const rowsHtml = rows
     .map((b, idx) => {
@@ -85,8 +86,8 @@ export const buildCounterpartyStatementHtml = (p: CounterpartyStatementParams): 
   const printTime = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate())
     + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
 
-  return `<!DOCTYPE html>
-<html lang="zh-CN">
+  return `<div class="statement-page" style="${isLast ? '' : 'page-break-after: always;'}">
+${buildPrintHeader(p.tenantName, '往来对账单')}
 <head>
 <meta charset="utf-8" />
 <title>往来对账单 - ${esc(p.counterpartyName)}</title>
@@ -166,6 +167,57 @@ ${buildPrintHeader(p.tenantName, '往来对账单')}
     </td>
   </tr>
 </table>
+</div>`;
+};
+
+/** D-474：单个对象的对账单（完整 HTML，可直接打印） */
+export const buildCounterpartyStatementHtml = (p: CounterpartyStatementParams): string =>
+  wrapStatementsHtml([buildStatementBody(p, true)], `往来对账单 - ${p.counterpartyName || ''}`);
+
+/**
+ * D-474：批量打印——多个对象各出一页对账单，连续打印后按对象分开，
+ * 适合月底给所有工厂/员工一次性出单（每页底部都有对方签字栏）。
+ */
+export const buildMultiCounterpartyStatementHtml = (
+  list: CounterpartyStatementParams[],
+  title: string = '往来对账单',
+): string => {
+  const bodies = list.map((p, i) => buildStatementBody(p, i === list.length - 1)).join('\n');
+  return wrapStatementsHtml(bodies ? [bodies] : [], title);
+};
+
+function wrapStatementsHtml(parts: string[], title: string): string {
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>${title}</title>
+<style>
+  @page { size: A4; margin: 12mm; }
+  body { font-family: "Microsoft YaHei", SimSun, sans-serif; color: #000; font-size: 12px; margin: 0; padding: 12px; }
+  h1 { font-size: 18px; text-align: center; margin: 0 0 4px; }
+  .sub { text-align: center; color: #555; font-size: 12px; margin-bottom: 12px; }
+  .info { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+  .info td { border: 1px solid #333; padding: 5px 8px; font-size: 12px; }
+  .info td.k { background: #f2f2f2; width: 90px; font-weight: 600; }
+  table.bills { width: 100%; border-collapse: collapse; }
+  table.bills th, table.bills td { border: 1px solid #333; padding: 4px 6px; font-size: 11px; }
+  table.bills th { background: #f2f2f2; font-weight: 600; text-align: center; }
+  td.c { text-align: center; }
+  td.r { text-align: right; }
+  td.neg { color: #c00000; }
+  td.unpaid { color: #c00000; font-weight: 600; }
+  tfoot td { font-weight: 700; background: #fafafa; }
+  .sign { margin-top: 22px; width: 100%; }
+  .sign td { font-size: 12px; padding: 6px 4px; border: none; }
+  .line { display: inline-block; min-width: 160px; border-bottom: 1px solid #333; }
+  .print-btn { position: fixed; right: 16px; top: 16px; padding: 6px 14px; font-size: 13px; cursor: pointer; }
+  @media print { .print-btn { display: none; } }
+</style>
+</head>
+<body>
+<button class="print-btn" onclick="window.print()">打印</button>
+${parts.join('\n')}
 </body>
 </html>`;
-};
+}
