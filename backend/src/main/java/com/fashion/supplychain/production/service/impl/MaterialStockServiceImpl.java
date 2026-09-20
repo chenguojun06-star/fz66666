@@ -630,8 +630,16 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
                     .lt(MaterialInbound::getInboundTime, nextMonthStart));
             if (monthIns != null) {
                 for (MaterialInbound in : monthIns) {
-                    if (in.getTotalAmount() != null) {
-                        monthInAmount = monthInAmount.add(in.getTotalAmount());
+                    BigDecimal amount = in.getTotalAmount();
+                    // D-474：入库单经常没录金额（total_amount 为空），
+                    // 这时按"单价 × 入库数量"折算，否则本月入库金额恒为 0
+                    if (amount == null && in.getUnitPrice() != null) {
+                        BigDecimal qty = in.getInboundQuantity() != null
+                                ? in.getInboundQuantity() : BigDecimal.ZERO;
+                        amount = in.getUnitPrice().multiply(qty);
+                    }
+                    if (amount != null) {
+                        monthInAmount = monthInAmount.add(amount);
                     }
                 }
             }
