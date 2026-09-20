@@ -20,6 +20,14 @@
   ② 所有 usingComponents（全局 + 页面级）：路径可解析（组件路径**不带扩展名**）
   ③ tabBar 图标：iconPath / selectedIconPath 存在
   ④ 所有 .wxss 的 @import：目标存在（**先剥注释**再匹配，避免文档示例误报）
+  ⑤ 所有 .js 的 require()：目标存在（相对/绝对路径；常省略 .js，也可能是目录）
+     —— 裸模块名（npm 包、node: 内建）无法静态解析，跳过
+  ⑥ WXML 的 <import>/<include> src：目标存在
+
+编写注意（前两版都因这些误报过）：
+  - 匹配前**必须先剥注释**，否则文档注释里的使用示例会被当成真的引用
+  - 组件路径**不带扩展名**，要补 .js/.json/.wxml/.wxss 判断
+  - 页面 .json 在小程序里**可省略**（走全局默认），不能算错误
 """
 import json
 import os
@@ -46,6 +54,15 @@ def load_json(path):
 def strip_comments(text):
     """必须先剥注释：文档注释里的使用示例会被正则当成真的 @import。"""
     return re.sub(r'/\*.*?\*/', '', text, flags=re.S)
+
+
+def strip_js_comments(text):
+    """
+    剥 JS 注释。与 WXSS 同理 —— 注释里的示例代码会被正则当成真的 require。
+    只剥 /* */ 块 与 行首 // （行尾 // 不动，避免误伤字符串里的 "https://"）。
+    """
+    text = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
+    return re.sub(r'(?m)^\s*//.*$', '', text)
 
 
 def resolve(base_dir, spec):
@@ -144,11 +161,64 @@ def main():
                     errors.append('@import 目标不存在  %s → %s'
                                   % (os.path.relpath(wf, MP), spec))
 
+    # ── ⑤ JS require() 路径 ─────────────────────────────────────
+    # 只查相对/绝对路径；裸模块名（npm 包、node: 内建）无法静态解析，跳过。
+    require_count = 0
+    for dirpath, dirnames, filenames in os.walk(MP):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        for fn in filenames:
+            if not fn.endswith('.js'):
+                continue
+            jf = os.path.join(dirpath, fn)
+            try:
+                with open(jf, encoding='utf-8') as fh:
+                    text = strip_js_comments(fh.read())
+            except Exception:
+                continue
+            for m in re.finditer(r"""require\(\s*['"]([^'"]+)['"]\s*\)""", text):
+                spec = m.group(1)
+                if not (spec.startswith('.') or spec.startswith('/')):
+                    continue          # 裸模块名：npm / node: 内建
+                if spec.startswith('node:'):
+                    continue
+                require_count += 1
+                target = resolve(dirpath, spec)
+                # 小程序的 require 常省略扩展名，也可能指向目录
+                if (os.path.isfile(target)
+                        or os.path.isfile(target + '.js')
+                        or os.path.isfile(os.path.join(target, 'index.js'))):
+                    continue
+                errors.append('require 目标不存在  %s → %s'
+                              % (os.path.relpath(jf, MP), spec))
+
+    # ── ⑥ WXML <import>/<include> src ────────────────────────────
+    wxml_count = 0
+    for dirpath, dirnames, filenames in os.walk(MP):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        for fn in filenames:
+            if not fn.endswith('.wxml'):
+                continue
+            xf = os.path.join(dirpath, fn)
+            try:
+                with open(xf, encoding='utf-8') as fh:
+                    text = fh.read()
+            except Exception:
+                continue
+            for m in re.finditer(r'<(import|include)\s+src=["\']([^"\']+)["\']', text):
+                spec = m.group(2)
+                wxml_count += 1
+                target = resolve(dirpath, spec)
+                if not (os.path.isfile(target) or os.path.isfile(target + '.wxml')):
+                    errors.append('WXML <%s> 目标不存在  %s → %s'
+                                  % (m.group(1), os.path.relpath(xf, MP), spec))
+
     # ── 报告 ────────────────────────────────────────────────────
     print('小程序引用完整性检查')
     print('  页面 %d 个（主包+分包）' % len(pages))
     print('  组件引用 %d 处' % comp_count)
     print('  @import %d 处' % import_count)
+    print('  require %d 处（相对/绝对；裸模块名跳过）' % require_count)
+    print('  WXML import/include %d 处' % wxml_count)
     print()
 
     if errors:
