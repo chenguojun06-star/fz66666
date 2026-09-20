@@ -131,7 +131,9 @@ Page({
         queried: true,
         loading: false,
         selected: {},
-      }, this._refreshSelection);
+      });
+      // 直接调用，不用 setData 回调 —— 回调不绑定 this，会导致 _refreshSelection 内 this 丢失
+      this._refreshSelection();
     } catch (e) {
       this.setData({ loading: false, queried: true });
       wx.showToast({ title: (e && e.message) || '查询失败', icon: 'none' });
@@ -199,7 +201,8 @@ Page({
     var selected = this.data.selected;
     if (selected[id] != null) delete selected[id];
     else selected[id] = 1;
-    this.setData({ selected: selected }, this._refreshSelection);
+    this.setData({ selected: selected });
+    this._refreshSelection();
   },
 
   onToggleAll() {
@@ -208,7 +211,8 @@ Page({
       var list = this.data.skuList;
       for (var i = 0; i < list.length; i++) selected[list[i].id] = 1;
     }
-    this.setData({ selected: selected }, this._refreshSelection);
+    this.setData({ selected: selected });
+    this._refreshSelection();
   },
 
   onQtyMinus(e) {
@@ -217,14 +221,16 @@ Page({
     if (selected[id] == null) return;
     if (selected[id] <= 1) delete selected[id];
     else selected[id] = selected[id] - 1;
-    this.setData({ selected: selected }, this._refreshSelection);
+    this.setData({ selected: selected });
+    this._refreshSelection();
   },
 
   onQtyPlus(e) {
     var id = String(e.currentTarget.dataset.id);
     var selected = this.data.selected;
     selected[id] = (selected[id] || 0) + 1;
-    this.setData({ selected: selected }, this._refreshSelection);
+    this.setData({ selected: selected });
+    this._refreshSelection();
   },
 
   onQtyInput(e) {
@@ -233,7 +239,8 @@ Page({
     var selected = this.data.selected;
     if (isNaN(val) || val <= 0) delete selected[id];
     else selected[id] = val;
-    this.setData({ selected: selected }, this._refreshSelection);
+    this.setData({ selected: selected });
+    this._refreshSelection();
   },
 
   _refreshSelection() {

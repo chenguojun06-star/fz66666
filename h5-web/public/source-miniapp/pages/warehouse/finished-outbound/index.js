@@ -222,7 +222,8 @@ Page({
       }
       selected[id] = 1;
     }
-    this.setData({ selected: selected }, this._refreshSelection);
+    this.setData({ selected: selected });
+    this._refreshSelection();
   },
 
   onToggleAll() {
@@ -233,7 +234,8 @@ Page({
         if (list[i].availableQty > 0) selected[list[i].id] = 1;
       }
     }
-    this.setData({ selected: selected }, this._refreshSelection);
+    this.setData({ selected: selected });
+    this._refreshSelection();
   },
 
   onQtyMinus(e) {
@@ -245,7 +247,8 @@ Page({
     } else {
       selected[id] = selected[id] - 1;
     }
-    this.setData({ selected: selected }, this._refreshSelection);
+    this.setData({ selected: selected });
+    this._refreshSelection();
   },
 
   onQtyPlus(e) {
@@ -259,7 +262,8 @@ Page({
       return;
     }
     selected[id] = next;
-    this.setData({ selected: selected }, this._refreshSelection);
+    this.setData({ selected: selected });
+    this._refreshSelection();
   },
 
   onQtyInput(e) {
@@ -277,7 +281,8 @@ Page({
       }
       selected[id] = val;
     }
-    this.setData({ selected: selected }, this._refreshSelection);
+    this.setData({ selected: selected });
+    this._refreshSelection();
   },
 
   onRemarkInput(e) {
