@@ -168,17 +168,17 @@ export function useMaterialInventoryColumns({
           <div style={{ width: '100%' }}>
             {/* 主数据：可用库存（大号突出，低于安全库存标红）+ 右侧操作 */}
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}>
-              {/* D-474：「可用 X 米」必须一行（之前窄容器会被 inline-flex wrap 拆掉），
-                  白名单保留完整不让换行；「低于安全库存」Tag 另起一行 */}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, flexWrap: 'nowrap' }}>
-                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', flexShrink: 0 }}>可用</span>
+              {/* D-474：「可用 X 米」必须一行——之前用 flex 在 antd td 里被破坏成多行，
+                  改用 whiteSpace:nowrap + 纯文本 strong，浏览器无论如何都不换行 */}
+              <div style={{ whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>可用 </span>
                 <span style={{
-                  fontSize: 17, fontWeight: 600, lineHeight: 1.2,
+                  fontSize: 17, fontWeight: 600,
                   color: isLow ? 'var(--color-error)' : 'var(--color-success)',
                 }}>
                   {availableQty.toLocaleString()}
                 </span>
-                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{record.unit}</span>
+                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}> {record.unit}</span>
               </div>
               {isLow && <Tag color="error" style={{ marginTop: -2, alignSelf: 'flex-start' }}>低于安全库存</Tag>}
               {/* D-474：领取/出库按钮——纯文字蓝色，不带图标 */}
