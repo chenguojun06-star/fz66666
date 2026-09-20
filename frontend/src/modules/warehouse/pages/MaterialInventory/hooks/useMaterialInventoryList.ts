@@ -25,6 +25,7 @@ export function useMaterialInventoryList() {
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [stats, setStats] = useState({
     totalValue: 0, totalQty: 0, lowStockCount: 0, materialTypes: 0, todayInCount: 0, todayOutCount: 0,
+    monthInAmount: 0, monthOutAmount: 0,
   });
 
   const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
@@ -77,6 +78,9 @@ export function useMaterialInventoryList() {
           materialTypes: Number(res.data?.total) || list.length,
           todayInCount: res.data?.todayInCount || 0,
           todayOutCount: res.data?.todayOutCount || 0,
+          // D-474：本月出入库金额（后端已实现，之前前端没接收，页面恒显示 ¥0）
+          monthInAmount: res.data?.monthInAmount || 0,
+          monthOutAmount: res.data?.monthOutAmount || 0,
         });
 
         api.get('/dashboard/menu-badge-counts')

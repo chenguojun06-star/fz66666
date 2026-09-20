@@ -41,6 +41,10 @@ export interface MaterialStockListParams extends PageParams {
 }
 
 export interface MaterialStockListResponse {
+  /** D-474：本月入库金额（后端统计，入库单未录金额时为 0） */
+  monthInAmount?: number;
+  /** D-474：本月出库金额（按出库数量 × 物料库存单价折算） */
+  monthOutAmount?: number;
   records: MaterialStockRecord[];
   total: number;
   todayInCount?: number;
