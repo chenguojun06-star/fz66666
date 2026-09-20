@@ -258,20 +258,26 @@ Page({
     if (this.data.submitting) return;
     var selected = this.data.selected;
     var list = this.data.skuList;
-    var items = [];
-    for (var i = 0; i < list.length; i++) {
-      var v = selected[list[i].id];
-      if (v != null && v > 0) {
-        items.push({
-          skuCode: list[i].sku,
-          quantity: v,
-          styleNo: this.data.styleNo || '',
-          styleName: this.data.styleName || '',
-          color: list[i].color,
-          size: list[i].size,
-        });
+      var items = [];
+      for (var i = 0; i < list.length; i++) {
+        var v = selected[list[i].id];
+        if (v != null && v > 0) {
+          // ⚠️ 关键：batchInbound 只用 putIfAbsent 合并
+          // warehouseLocation / warehouseAreaId / sourceType / batchNo / traceId
+          // 这 5 个字段（FinishedWarehouseOperationOrchestrator line 203-207），
+          // 其余字段**必须逐条放进 item**，否则会被丢弃。
+          items.push({
+            skuCode: list[i].sku,
+            quantity: v,
+            styleNo: this.data.styleNo || '',
+            styleName: this.data.styleName || '',
+            color: list[i].color,
+            size: list[i].size,
+            supplierName: this.data.supplierName || '',
+            remark: this.data.remark || '',
+          });
+        }
       }
-    }
     if (!items.length) {
       wx.showToast({ title: '请至少选择一个规格', icon: 'none' });
       return;

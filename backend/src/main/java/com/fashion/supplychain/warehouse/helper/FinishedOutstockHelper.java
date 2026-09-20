@@ -123,6 +123,10 @@ public class FinishedOutstockHelper {
         String customerName = trimToNull(params.get("customerName"));
         String customerPhone = trimToNull(params.get("customerPhone"));
         String shippingAddress = trimToNull(params.get("shippingAddress"));
+        // D-483：出库备注（原后端把 remark 写死成「成品库存页面出库|sku=xxx」，
+        // 页面上填的备注根本存不进去）。此处读取调用方传入的 remark 并追加到固定前缀之后；
+        // 未传时行为与改动前完全一致。
+        String requestRemark = trimToNull(params.get("remark"));
         // D-360k：质检直发——不落成品库存直接发客户，跳过库存扣减但仍写销售出库记录
         boolean directShip = params.get("directShip") != null
                 && Boolean.parseBoolean(String.valueOf(params.get("directShip")));
@@ -223,8 +227,11 @@ public class FinishedOutstockHelper {
                 }
             }
 
+            // D-483：把调用方传入的备注追加到固定前缀之后（未传则保持原样）
+            String autoRemark = "成品库存页面出库|sku=" + skuCode;
+            String itemRemark = StringUtils.hasText(requestRemark) ? autoRemark + " | " + requestRemark : autoRemark;
             recordProductOutstock(batchOutstockNo, sku, quantity, requestOrderId, requestOrderNo, effectiveWarehouse,
-                    "成品库存页面出库|sku=" + skuCode, trackingNo, expressCompany,
+                    itemRemark, trackingNo, expressCompany,
                     customerName, customerPhone, shippingAddress, finalOutstockType,
                     effectiveAreaId, effectiveAreaName, overrideSalesPrice, priceAdjustmentReason, platformCode);
             totalItems++;
