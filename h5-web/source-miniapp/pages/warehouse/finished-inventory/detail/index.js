@@ -25,9 +25,7 @@ Page({
     inboundLoaded: false,   // 是否已加载过入库记录（避免重复请求）
     inboundTotalQty: 0,
     // 出库弹窗
-    showOutbound: false,
-    outboundSku: null,
-    outboundQty: 1,
+    // D-489：出库弹窗相关字段已移除（showOutbound / outboundSku / outboundQty）
   },
 
   onLoad(options) {
@@ -229,47 +227,8 @@ Page({
     }
   },
 
-  onOutboundQtyChange(e) {
-    this.setData({ outboundQty: e.detail.value });
-  },
-
-  onOutboundQtyMinus() {
-    if (this.data.outboundQty > 1) {
-      this.setData({ outboundQty: this.data.outboundQty - 1 });
-    }
-  },
-
-  onOutboundQtyPlus() {
-    var max = this.data.outboundSku ? this.data.outboundSku.availableQty : 99;
-    if (this.data.outboundQty < max) {
-      this.setData({ outboundQty: this.data.outboundQty + 1 });
-    }
-  },
-
-  async onConfirmOutbound() {
-    var sku = this.data.outboundSku;
-    if (!sku) return;
-    var qty = parseInt(this.data.outboundQty, 10) || 1;
-    if (qty <= 0) { uiHelper.toast('数量需大于0'); return; }
-    if (qty > sku.availableQty) { uiHelper.toast('超出可用库存'); return; }
-
-    try {
-      await api.warehouse.outbound({
-        items: [{ sku: sku.sku, quantity: qty }],
-        orderId: sku.orderId || '',
-        styleId: sku.styleId || '',
-      });
-      this.setData({ showOutbound: false, outboundSku: null });
-      uiHelper.toast('出库成功');
-      this.loadDetail();
-    } catch (e) {
-      uiHelper.toast(e && e.message ? e.message : '出库失败');
-    }
-  },
-
-  onCancelOutbound() {
-    this.setData({ showOutbound: false, outboundSku: null });
-  },
-
-  preventTouchMove() {},
+  // D-489：以下弹窗相关方法已随弹窗移除（出库改跳独立页面）：
+  //   onOutboundQtyChange / onOutboundQtyMinus / onOutboundQtyPlus /
+  //   onConfirmOutbound / onCancelOutbound / preventTouchMove
+  // 提交逻辑统一在 pages/warehouse/finished-outbound 里维护。
 });

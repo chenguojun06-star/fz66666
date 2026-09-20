@@ -164,29 +164,7 @@
     <text class="empty-text">暂无库存数据</text>
   </view>
 
-  <!-- 出库弹窗 -->
-  <view wx:if="{{showOutbound}}" class="modal-mask" bindtap="onCancelOutbound" catchtouchmove="preventTouchMove">
-    <view class="modal-content" catchtap="preventTouchMove">
-      <view class="modal-header">
-        <text class="modal-title">出库</text>
-        <view class="modal-close" bindtap="onCancelOutbound"><text>✕</text></view>
-      </view>
-      <view class="modal-body">
-        <view class="outbound-info">
-          <text class="outbound-sku">{{outboundSku.color}} / {{outboundSku.size}}</text>
-          <text class="outbound-available">可用库存 {{outboundSku.availableQty}} 件</text>
-        </view>
-        <view class="qty-picker">
-          <view class="qty-btn" bindtap="onOutboundQtyMinus">-</view>
-          <input class="qty-input" type="number" value="{{outboundQty}}" bindinput="onOutboundQtyChange" />
-          <view class="qty-btn" bindtap="onOutboundQtyPlus">+</view>
-        </view>
-      </view>
-      <view class="modal-footer">
-        <view class="modal-btn modal-btn--cancel" bindtap="onCancelOutbound">取消</view>
-        <view class="modal-btn modal-btn--confirm" bindtap="onConfirmOutbound">确认出库</view>
-      </view>
-    </view>
-  </view>
+  <!-- D-489：出库弹窗已移除 —— 出库改为跳独立页面 pages/warehouse/finished-outbound
+       （弹窗面积小、手机上难操作，且无法批量选择、缺类型/仓库/客户等必填字段） -->
   <ai-assistant />
 </view>
