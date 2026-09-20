@@ -29,8 +29,8 @@ Page({
   },
 
   onLoad(options) {
-    // D-418：列表「出库」按钮带 autoOutbound=1 进入时，加载完 SKU 后自动弹出出库窗
-    this._autoOutbound = options.autoOutbound === '1';
+    // D-494：移除 autoOutbound 处理 —— 出库已改为列表直接跳 finished-outbound，
+    // 不再经本页中转（原 D-418 逻辑随弹窗一起废弃）
     this.setData({
       styleNo: options.styleNo || '',
       orderNo: options.orderNo || '',
@@ -98,18 +98,7 @@ Page({
       });
 
       this.setData({ skuList: skuList, summary: summary, loading: false });
-
-      // D-418：从成品仓储列表点「出库」进入时（autoOutbound=1），
-      // 自动弹出第一个有可用库存的 SKU 出库窗，省去「再点一次 SKU 行」的步骤。
-      if (this._autoOutbound) {
-        this._autoOutbound = false;
-        var hasStock = skuList.some(function (s) { return Number(s.availableQty) > 0; });
-        if (hasStock) {
-          this._goOutboundPage();   // D-482：独立页面，不再自动开弹窗
-        } else {
-          uiHelper.toast('该款暂无可用库存');
-        }
-      }
+      // D-494：原 autoOutbound 自动跳转逻辑已移除（列表页直接跳出库页，不再经本页中转）
     } catch (e) {
       this.setData({ loading: false });
       uiHelper.toast(e && e.message ? e.message : '加载失败');
