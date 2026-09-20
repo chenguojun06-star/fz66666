@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.finance.entity.EmployeeSalaryConfig;
 import com.fashion.supplychain.finance.mapper.EmployeeSalaryConfigMapper;
 import com.fashion.supplychain.finance.util.SalaryCalculator;
+import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.production.entity.WorkAttendance;
 import com.fashion.supplychain.production.mapper.WorkAttendanceMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,9 @@ public class EmployeeSalaryConfigService extends ServiceImpl<EmployeeSalaryConfi
 
     @Autowired
     private WorkAttendanceMapper workAttendanceMapper;
+
+    @Autowired
+    private BillAggregationOrchestrator billAggregationOrchestrator;
 
     /** 配置列表 */
     public List<EmployeeSalaryConfig> listConfigs(Long tenantId) {
@@ -206,5 +210,66 @@ public class EmployeeSalaryConfigService extends ServiceImpl<EmployeeSalaryConfi
             return SalaryCalculator.SalaryType.HOURLY;
         }
         return SalaryCalculator.SalaryType.PIECE;
+    }
+
+    /**
+     * D-474：一键生成当月工资单 —— 给每个配了薪资规则的员工算工资，
+     * 并推送成应付账单（sourceType=SALARY，按「SALARY-员工-月份」幂等，重复点不会重复生成）。
+     * 生成后就能在收付款中心看到并付款核销，走的是和计件工资同一条路。
+     */
+    public Map<String, Object> generateMonthlyBills(String month, Long tenantId) {
+        List<EmployeeSalaryConfig> configs = listConfigs(tenantId);
+        int created = 0;
+        int skipped = 0;
+        BigDecimal total = BigDecimal.ZERO;
+        java.util.List<String> names = new java.util.ArrayList<>();
+
+        for (EmployeeSalaryConfig cfg : configs) {
+            Map<String, Object> calc = calculate(cfg.getUserId(), month, tenantId);
+            if (!Boolean.TRUE.equals(calc.get("configured"))) {
+                skipped++;
+                continue;
+            }
+            Object netObj = calc.get("netPay");
+            BigDecimal netPay = netObj == null
+                    ? BigDecimal.ZERO
+                    : new BigDecimal(String.valueOf(netObj));
+            if (netPay.compareTo(BigDecimal.ZERO) <= 0) {
+                skipped++;
+                continue;
+            }
+
+            BillAggregationOrchestrator.BillPushRequest req =
+                    new BillAggregationOrchestrator.BillPushRequest();
+            req.setBillType("PAYABLE");
+            req.setBillCategory("PAYROLL");
+            req.setSourceType("SALARY");
+            req.setSourceId("SALARY-" + cfg.getUserId() + "-" + month);
+            req.setSourceNo("SALARY-" + month);
+            req.setCounterpartyType("WORKER");
+            req.setCounterpartyId(cfg.getUserId());
+            req.setCounterpartyName(cfg.getUserName() != null ? cfg.getUserName() : cfg.getUserId());
+            req.setAmount(netPay);
+            req.setSettlementMonth(month);
+            req.setRemark(String.format("%s 工资：基本 %s + 加班 %s + 全勤 %s - 扣款 %s（出勤%s天/迟到%s次）",
+                    month,
+                    calc.get("baseWage"), calc.get("overtimePay"), calc.get("bonus"),
+                    new BigDecimal(String.valueOf(calc.get("lateDeduction") == null ? 0 : calc.get("lateDeduction")))
+                            .add(new BigDecimal(String.valueOf(calc.get("leaveDeduction") == null ? 0 : calc.get("leaveDeduction")))),
+                    calc.get("attendanceDays"), calc.get("lateCount")));
+
+            billAggregationOrchestrator.pushBill(req);
+            created++;
+            total = total.add(netPay);
+            names.add(req.getCounterpartyName());
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("month", month);
+        result.put("created", created);
+        result.put("skipped", skipped);
+        result.put("total", total);
+        result.put("names", names);
+        return result;
     }
 }

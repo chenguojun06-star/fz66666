@@ -40,6 +40,16 @@ public class EmployeeSalaryConfigController {
     }
 
     /**
+     * 一键生成当月工资单：给每个配了薪资规则的员工算工资并推送成应付账单。
+     * 幂等——重复调用不会重复生成（按 SALARY-员工-月份 去重）。
+     */
+    @PostMapping("/generate")
+    public Result<Map<String, Object>> generate(@RequestParam String month) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        return Result.success(salaryConfigService.generateMonthlyBills(month, tenantId));
+    }
+
+    /**
      * 试算某员工某月工资（汇总考勤后按配置计算，不落库，用于核对）
      * 例：GET /api/finance/salary-config/calculate?userId=xxx&month=2026-09
      */

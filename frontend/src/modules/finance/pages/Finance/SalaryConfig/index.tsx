@@ -120,6 +120,24 @@ const SalaryConfigPage: React.FC = () => {
     }
   };
 
+  /** D-474：一键生成当月工资单——算完直接推成应付账单，之后在收付款中心付款核销 */
+  const handleGenerate = async () => {
+    try {
+      const res: any = await api.post(
+        '/finance/salary-config/generate',
+        null,
+        { params: { month: calcMonth } },
+      );
+      const d = res?.data ?? {};
+      message.success(
+        `已生成 ${d.created ?? 0} 人工资单，合计 ¥${d.total ?? 0}` +
+          (d.skipped ? `（跳过 ${d.skipped} 人：无规则或金额为 0）` : ''),
+      );
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '生成工资单失败');
+    }
+  };
+
   const columns = [
     {
       title: '员工',
@@ -199,6 +217,9 @@ const SalaryConfigPage: React.FC = () => {
             placeholder="2026-09"
           />
           <Button onClick={handleCalc}>试算工资</Button>
+          <Button type="primary" onClick={handleGenerate}>
+            生成{calcMonth}工资单
+          </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => openEdit()}>
             新增规则
           </Button>
