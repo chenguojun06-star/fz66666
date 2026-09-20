@@ -69,6 +69,32 @@ else
   echo "[pre-push] ⚡ 无代码变更（文档/脚本/SQL）→ 快速模式（脚本检查仍全跑）"
 fi
 
+# ---- 小程序引用完整性检查（D-476）----
+# 背景：小程序改动此前**完全没有推送前校验**，导致两次事故都是推上去之后
+#   才在开发者工具编译阶段暴露：
+#     - design-tokens.wxss 自定义属性写在规则块外 → 整个 token 文件编译失败（D-468）
+#     - 6 个三层深页面 @import 路径写浅一层 → 文件找不到（D-475）
+#   小程序不走 CI 编译，故必须在这里拦。
+HAS_MINI=$(echo "$PUSHED_FILES" | grep -c '^miniprogram/' || true)
+if [[ "$HAS_MINI" -gt 0 ]]; then
+  echo "[pre-push] 🔍 检测到小程序变更 ${HAS_MINI} 个文件 → 引用完整性检查"
+  MINI_CHECK="$ROOT_DIR/scripts/check-miniprogram-refs.py"
+  if [[ -f "$MINI_CHECK" ]]; then
+    python3 "$MINI_CHECK"
+    MINI_CODE=$?
+    if [[ $MINI_CODE -ne 0 ]]; then
+      echo ""
+      echo "❌ 小程序引用完整性检查未通过，推送已阻止"
+      echo "   修复上述引用问题后重新 push，或紧急情况: git push --no-verify"
+      echo ""
+      echo "⚠️  小程序不走 CI 编译 —— 带病推送会直到开发者工具编译阶段才暴露。"
+      exit 1
+    fi
+  else
+    echo "[pre-push] ⚠️ 未找到 $MINI_CHECK，跳过小程序检查"
+  fi
+fi
+
 "$SAFE_PUSH" $ARGS
 EXIT_CODE=$?
 
