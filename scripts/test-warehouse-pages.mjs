@@ -372,12 +372,49 @@ function testPickerUsage() {
   }
 }
 
+/**
+ * 结构测试：入口按钮与跳转路径
+ * 防止「改了页面路径 / 删了按钮」却没人发现（这类问题真机上表现为点了没反应）
+ */
+function testEntryPoints() {
+  console.log('\n【结构：入口与跳转】');
+  const read = (rel) => stripComments(fs.readFileSync(path.join(MP, rel), 'utf8'));
+
+  // 成品详情页：入库按钮 + 出库跳 finished-outbound
+  const dW = read('pages/warehouse/finished-inventory/detail/index.wxml');
+  const dJ = read('pages/warehouse/finished-inventory/detail/index.js');
+  ok('详情页有「入库」按钮', /onGoInbound/.test(dW));
+  ok('详情页跳转成品入库页', /finished-inbound\/index/.test(dJ));
+  ok('详情页跳转成品出库页', /finished-outbound\/index/.test(dJ));
+
+  // 物料库页：入库 / 出库两个按钮
+  const mW = read('pages/warehouse/material-database/index.wxml');
+  const mJ = read('pages/warehouse/material-database/index.js');
+  ok('物料库有「入库」按钮', /onGoInbound/.test(mW));
+  ok('物料库有「出库」按钮', /onGoOutbound/.test(mW));
+  ok('物料库跳转物料入库页', /material-inbound\/index/.test(mJ));
+  ok('物料库跳转物料出库页', /material-outbound\/index/.test(mJ));
+
+  // 回退刷新：上一页必须真有这个刷新方法，否则操作完列表不更新
+  ok('物料库有 loadList 可刷新', /loadList\s*:\s*function/.test(mJ));
+  ok('成品详情有 loadDetail 可刷新', /loadDetail\s*[:(]/.test(dJ));
+
+  // 四个页面都已在 app.json 注册
+  const appJson = JSON.parse(fs.readFileSync(path.join(MP, 'app.json'), 'utf8'));
+  const sp = (appJson.subpackages || []).find(s => s.root === 'pages/warehouse');
+  for (const pg of ['finished-outbound/index', 'finished-inbound/index',
+                    'material-outbound/index', 'material-inbound/index']) {
+    ok(`app.json 已注册 ${pg}`, !!sp && sp.pages.includes(pg));
+  }
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
 
 try {
   testPickerUsage();
+  testEntryPoints();
   await testFinishedOutbound();
   await testFinishedInbound();
   await testMaterialInbound();
