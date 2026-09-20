@@ -328,6 +328,11 @@ async function testMaterialOutbound() {
   await page.onSubmit();
   const payload = api.calls.find(c => c[0] === 'manualOutbound');
   ok('7 项齐全后提交成功', !!payload);
+  // D-498：usageType 必须是后端存储约定值（STOCK/SAMPLE/BULK）
+  if (payload) {
+    ok('usageType 用后端约定值', ['BULK','SAMPLE','STOCK'].includes(payload[1].usageType),
+       '实际=' + payload[1].usageType);
+  }
   if (payload) {
     const d = payload[1];
     ok('含 stockId', d.stockId === 'stk-1');

@@ -14,9 +14,17 @@
  */
 const api = require('../../../utils/api');
 
+/**
+ * ⚠️ key 必须用**后端存储约定值**，不能用 PC 端列表的筛选值。
+ * 后端 MaterialInboundOrchestrator.resolveUsageType 生成的是 STOCK / SAMPLE / BULK；
+ * PC 端 MaterialTable 提交的也是 "BULK"。
+ * 而 PC 端 MaterialPicking 下拉里的 production / sample **只是列表筛选值**，不是存储值
+ * —— 我最初照抄了筛选值，导致出库记录的 usageType 与既有数据对不上（报表按值过滤会漏）。
+ */
 const USAGE_TYPES = [
-  { key: 'production', label: '生产领料' },
-  { key: 'sample', label: '样品领料' },
+  { key: 'BULK', label: '生产领料' },
+  { key: 'SAMPLE', label: '样品领料' },
+  { key: 'STOCK', label: '备货领料' },
 ];
 
 Page({
@@ -49,7 +57,7 @@ Page({
     receiverId: '',
     receiverName: '',
 
-    usageType: 'production',
+    usageType: 'BULK',
     usageTypeLabel: '生产领料',
     typeOptions: USAGE_TYPES,
 
