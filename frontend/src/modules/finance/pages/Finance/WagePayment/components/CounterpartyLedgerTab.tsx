@@ -271,6 +271,9 @@ export default function CounterpartyLedgerTab() {
       dataIndex: 'unsettledAmount',
       width: 140,
       align: 'right',
+      // D-474：可按未付金额排序，一眼看出欠谁最多、先付谁
+      sorter: (a, b) => Number(a.unsettledAmount ?? 0) - Number(b.unsettledAmount ?? 0),
+      defaultSortOrder: 'descend',
       render: (v: number, r) =>
         Number(r.settledAmount ?? 0) >= Number(r.totalAmount ?? 0) ? (
           <Text type="secondary">已清</Text>
