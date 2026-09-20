@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { App, Button, Card, Descriptions, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd';
+import { App, Button, Card, Checkbox, Descriptions, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
+import { safePrint } from '@/utils/safePrint';
 import api from '@/utils/api';
 
 /**
@@ -33,6 +34,20 @@ const TYPE_MAP: Record<string, { text: string; color: string }> = {
   PIECE: { text: '计件', color: 'green' },
 };
 
+/** D-474：工资条显示项——打印/展示时可勾选要出现哪些（比如不想让员工看到奖金就勾掉） */
+const SALARY_FIELDS = [
+  { key: 'attendanceDays', label: '出勤天数', suffix: ' 天' },
+  { key: 'totalHours', label: '总工时', suffix: ' 小时' },
+  { key: 'lateCount', label: '迟到次数', suffix: ' 次' },
+  { key: 'baseWage', label: '基本工资', prefix: '¥' },
+  { key: 'overtimePay', label: '加班费', prefix: '¥' },
+  { key: 'bonus', label: '全勤奖', prefix: '¥' },
+  { key: 'lateDeduction', label: '迟到扣款', prefix: '¥' },
+  { key: 'leaveDeduction', label: '请假扣款', prefix: '¥' },
+  { key: 'grossPay', label: '应发合计', prefix: '¥' },
+  { key: 'netPay', label: '实发工资', prefix: '¥' },
+];
+
 const SalaryConfigPage: React.FC = () => {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
@@ -46,6 +61,8 @@ const SalaryConfigPage: React.FC = () => {
   const [calcMonth, setCalcMonth] = useState<string>(
     new Date().toISOString().slice(0, 7),
   );
+  // D-474：工资条里要显示哪些项（打印时按这个来）
+  const [visibleFields, setVisibleFields] = useState<string[]>(SALARY_FIELDS.map((f) => f.key));
 
   const fetchList = async () => {
     setLoading(true);
@@ -170,6 +187,36 @@ const SalaryConfigPage: React.FC = () => {
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '生成工资单失败');
     }
+  };
+
+  /** D-474：打印工资条——只打印勾选的项 */
+  const printPayslip = () => {
+    if (!calcResult) return;
+    const rows = SALARY_FIELDS.filter((f) => visibleFields.includes(f.key))
+      .map((f) => {
+        const v = calcResult[f.key];
+        const text = `${f.prefix ?? ''}${v ?? 0}${f.suffix ?? ''}`;
+        const strong = f.key === 'netPay';
+        return `<tr><td style="padding:5px 10px;border:1px solid #333;">${f.label}</td>` +
+          `<td style="padding:5px 10px;border:1px solid #333;text-align:right;` +
+          `${strong ? 'font-weight:700;color:#c00000;' : ''}">${text}</td></tr>`;
+      })
+      .join('');
+    const html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"/>` +
+      `<title>工资条 - ${calcResult.userName || calcResult.userId} - ${calcResult.month}</title>` +
+      `<style>body{font-family:"Microsoft YaHei",sans-serif;font-size:13px;padding:20px;}` +
+      `h2{text-align:center;margin:0 0 10px;}table{border-collapse:collapse;width:320px;margin:0 auto;}` +
+      `.sign{margin-top:26px;width:320px;margin-left:auto;margin-right:auto;font-size:12px;}` +
+      `@media print{button{display:none;}}</style></head><body>` +
+      `<button onclick="window.print()" style="float:right;">打印</button>` +
+      `<h2>工资条</h2>` +
+      `<div style="text-align:center;margin-bottom:10px;">` +
+      `${calcResult.userName || calcResult.userId} · ${calcResult.month} · ` +
+      `${TYPE_MAP[calcResult.salaryType]?.text ?? calcResult.salaryType}</div>` +
+      `<table>${rows}</table>` +
+      `<div class="sign">员工签字：____________　　　日期：__________</div>` +
+      `</body></html>`;
+    safePrint(html, `工资条-${calcResult.userName || calcResult.userId}-${calcResult.month}`);
   };
 
   const columns = [
@@ -348,40 +395,49 @@ const SalaryConfigPage: React.FC = () => {
         </Form>
       </SideDrawer>
 
-      {/* 试算结果 */}
-      <Modal
-        title="工资试算结果"
+      {/* D-474：工资条——完整罗列工资组成，可勾选显示项并打印 */}
+      <SideDrawer
+        title={`工资条 · ${calcResult?.userName || calcResult?.userId || ''} · ${calcResult?.month || ''}`}
         open={calcOpen}
-        onCancel={() => setCalcOpen(false)}
-        footer={null}
+        onClose={() => setCalcOpen(false)}
         width={560}
+        footer={
+          <Space>
+            <Button onClick={() => setCalcOpen(false)}>关闭</Button>
+            <Button type="primary" onClick={printPayslip}>打印工资条</Button>
+          </Space>
+        }
       >
         {calcResult?.configured === false ? (
           <div>{calcResult.message || '该员工还没设置薪资规则'}</div>
         ) : calcResult ? (
-          <Descriptions column={2} bordered size="small">
-            <Descriptions.Item label="员工">{calcResult.userName || calcResult.userId}</Descriptions.Item>
-            <Descriptions.Item label="月份">{calcResult.month}</Descriptions.Item>
-            <Descriptions.Item label="薪资类型">
-              {TYPE_MAP[calcResult.salaryType]?.text ?? calcResult.salaryType}
-            </Descriptions.Item>
-            <Descriptions.Item label="出勤天数">{calcResult.attendanceDays} 天</Descriptions.Item>
-            <Descriptions.Item label="总工时">{calcResult.totalHours} 小时</Descriptions.Item>
-            <Descriptions.Item label="迟到次数">{calcResult.lateCount} 次</Descriptions.Item>
-            <Descriptions.Item label="事假">{calcResult.leaveDays} 天</Descriptions.Item>
-            <Descriptions.Item label="病假">{calcResult.sickLeaveDays} 天</Descriptions.Item>
-            <Descriptions.Item label="基本工资">¥{calcResult.baseWage}</Descriptions.Item>
-            <Descriptions.Item label="加班费">¥{calcResult.overtimePay}</Descriptions.Item>
-            <Descriptions.Item label="全勤奖">¥{calcResult.bonus}</Descriptions.Item>
-            <Descriptions.Item label="迟到扣款">¥{calcResult.lateDeduction}</Descriptions.Item>
-            <Descriptions.Item label="请假扣款">¥{calcResult.leaveDeduction}</Descriptions.Item>
-            <Descriptions.Item label="应发合计">¥{calcResult.grossPay}</Descriptions.Item>
-            <Descriptions.Item label="实发工资">
-              <strong style={{ color: 'var(--color-error)' }}>¥{calcResult.netPay}</strong>
-            </Descriptions.Item>
-          </Descriptions>
+          <>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, marginBottom: 6 }}>打印/显示哪些项（不想让员工看到的可以勾掉）：</div>
+              <Checkbox.Group
+                options={SALARY_FIELDS.map((f) => ({ label: f.label, value: f.key }))}
+                value={visibleFields}
+                onChange={(v) => setVisibleFields(v as string[])}
+              />
+            </div>
+            <Descriptions column={2} bordered size="small">
+              {SALARY_FIELDS.filter((f) => visibleFields.includes(f.key)).map((f) => (
+                <Descriptions.Item key={f.key} label={f.label}>
+                  {f.key === 'netPay' ? (
+                    <strong style={{ color: 'var(--color-error)' }}>
+                      {f.prefix ?? ''}{calcResult[f.key] ?? 0}{f.suffix ?? ''}
+                    </strong>
+                  ) : (
+                    `${f.prefix ?? ''}${calcResult[f.key] ?? 0}${f.suffix ?? ''}`
+                  )}
+                </Descriptions.Item>
+              ))}
+              <Descriptions.Item label="事假">{calcResult.leaveDays} 天</Descriptions.Item>
+              <Descriptions.Item label="病假">{calcResult.sickLeaveDays} 天</Descriptions.Item>
+            </Descriptions>
+          </>
         ) : null}
-      </Modal>
+      </SideDrawer>
     </Card>
   );
 };
