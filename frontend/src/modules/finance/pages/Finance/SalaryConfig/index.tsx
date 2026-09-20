@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { App, Button, Card, Checkbox, Descriptions, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd';
+import { App, Button, Card, Checkbox, Descriptions, Form, Input, InputNumber, Select, Space, Table, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
 import { safePrint } from '@/utils/safePrint';
@@ -214,7 +214,7 @@ const SalaryConfigPage: React.FC = () => {
       `${calcResult.userName || calcResult.userId} · ${calcResult.month} · ` +
       `${TYPE_MAP[calcResult.salaryType]?.text ?? calcResult.salaryType}</div>` +
       `<table>${rows}</table>` +
-      `<div class="sign">员工签字：____________　　　日期：__________</div>` +
+      `<div class="sign">员工签字：____________&nbsp;&nbsp;&nbsp;日期：__________</div>` +
       `</body></html>`;
     safePrint(html, `工资条-${calcResult.userName || calcResult.userId}-${calcResult.month}`);
   };
