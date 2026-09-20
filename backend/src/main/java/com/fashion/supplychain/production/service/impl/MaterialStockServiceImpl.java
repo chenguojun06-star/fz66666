@@ -630,20 +630,13 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
                     .lt(MaterialInbound::getInboundTime, nextMonthStart));
             if (monthIns != null) {
                 for (MaterialInbound in : monthIns) {
-                    BigDecimal amount = in.getTotalAmount();
                     BigDecimal qty = in.getInboundQuantity() != null ? in.getInboundQuantity() : BigDecimal.ZERO;
-                    if (amount == null && in.getUnitPrice() != null) {
-                        // 入库单自己录了单价：单价 × 入库数量
-                        amount = in.getUnitPrice().multiply(qty);
-                    }
-                    if (amount == null) {
-                        // D-474：入库单既没金额也没单价（只有数量），
-                        // 跟出库口径一致——按该物料当前库存单价折算，避免恒为 0
-                        amount = stockUnitPrice(tenantId, in.getMaterialCode()).multiply(qty);
-                    }
-                    if (amount != null) {
-                        monthInAmount = monthInAmount.add(amount);
-                    }
+                    BigDecimal amount = resolveInboundAmount(
+                            in.getTotalAmount(),
+                            in.getUnitPrice(),
+                            qty,
+                            stockUnitPrice(tenantId, in.getMaterialCode()));
+                    monthInAmount = monthInAmount.add(amount);
                 }
             }
 
@@ -693,5 +686,24 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
                 .last("LIMIT 1")
                 .one();
         return stock != null && stock.getUnitPrice() != null ? stock.getUnitPrice() : BigDecimal.ZERO;
+    }
+
+    /**
+     * D-474：入库金额取值（纯函数，便于单测）。
+     * 优先级：入库单金额 → 入库单单价×数量 → 物料库存单价×数量。
+     * 很多入库单只录了数量（金额、单价都空），最后兜底按库存单价折算，
+     * 否则"本月入库金额"永远是 0。
+     */
+    static BigDecimal resolveInboundAmount(
+            BigDecimal totalAmount, BigDecimal unitPrice, BigDecimal quantity, BigDecimal stockUnitPrice) {
+        if (totalAmount != null) {
+            return totalAmount;
+        }
+        BigDecimal qty = quantity != null ? quantity : BigDecimal.ZERO;
+        if (unitPrice != null) {
+            return unitPrice.multiply(qty);
+        }
+        BigDecimal price = stockUnitPrice != null ? stockUnitPrice : BigDecimal.ZERO;
+        return price.multiply(qty);
     }
 }
