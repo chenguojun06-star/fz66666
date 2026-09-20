@@ -1,4 +1,5 @@
 import React from 'react';
+import dayjs from 'dayjs';
 import { useSearchParams } from 'react-router-dom';
 import {
   Card,
@@ -54,6 +55,7 @@ const _MaterialInventory: React.FC = () => {
   const {
     loading, dataSource, smartError, showSmartErrorNotice, showMaterialAI,
     stats, pagination: _pagination, user,
+    lastUpdated,
     searchText, setSearchText, selectedType, setSelectedType, dateRange, setDateRange,
     disabledStatus, setDisabledStatus,
     detailModal: _detailModal, inboundModal: _inboundModal, outboundModal: _outboundModal, rollModal, rollForm, printModal: _printModal,
@@ -251,6 +253,13 @@ const _MaterialInventory: React.FC = () => {
           },
         ]}
       />
+
+      {/* D-474：数据更新时间戳——证明数字是刚算的不是写死的 */}
+      {lastUpdated && (
+        <div style={{ fontSize: 11, color: 'var(--color-text-quaternary)', marginBottom: 8, textAlign: 'right' }}>
+          数据更新于 {dayjs(lastUpdated).format('HH:mm:ss')}
+        </div>
+      )}
 
       <Tabs
         activeKey={activeTab}

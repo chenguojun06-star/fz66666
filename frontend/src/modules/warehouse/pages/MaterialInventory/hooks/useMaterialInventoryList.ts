@@ -27,6 +27,8 @@ export function useMaterialInventoryList() {
     totalValue: 0, totalQty: 0, lowStockCount: 0, materialTypes: 0, todayInCount: 0, todayOutCount: 0,
     monthInAmount: 0, monthOutAmount: 0,
   });
+  // D-474：数据新鲜度时间戳——用户问过"数据是不是虚拟的"，让他能直观看到刚刚才查过
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
@@ -71,6 +73,7 @@ export function useMaterialInventoryList() {
         }));
         setDataSource(list);
         setPaginationTotal(res.data.total);
+        setLastUpdated(new Date());
         setStats({
           totalValue: list.reduce((sum: number, i) => sum + (i.totalValue || 0), 0),
           totalQty: list.reduce((sum: number, i) => sum + (i.quantity || 0), 0),
@@ -112,7 +115,8 @@ export function useMaterialInventoryList() {
 
   return {
     loading, dataSource, smartError, showSmartErrorNotice, showMaterialAI,
-    stats, pagination, user,
+        stats, pagination, user,
+        lastUpdated,
     searchText, setSearchText,
     selectedType, setSelectedType,
     disabledStatus, setDisabledStatus,
