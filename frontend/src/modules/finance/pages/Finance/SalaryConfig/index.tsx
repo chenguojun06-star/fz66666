@@ -168,7 +168,9 @@ const SalaryConfigPage: React.FC = () => {
       setUserOptions(
         (Array.isArray(recs) ? recs : []).map((u: any) => ({
           // 薪资/考勤都以 username 作为 user_id，保持一致
-          value: u.username || u.id,
+          // D-474：考勤表 user_id 是数字 id（如 1005），不是 username（lilb）——
+          // 这里必须存 id，否则算工资时按 userId 去考勤表查不到记录，汇总全是 0
+          value: String(u.id ?? u.username),
           label: `${u.name || u.username}${u.employeeNo ? `（${u.employeeNo}）` : ''}`,
         })),
       );

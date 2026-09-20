@@ -3,6 +3,7 @@ package com.fashion.supplychain.finance.service;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.finance.entity.EmployeeSalaryConfig;
 import com.fashion.supplychain.finance.mapper.EmployeeSalaryConfigMapper;
+import com.fashion.supplychain.system.mapper.UserMapper;
 import com.fashion.supplychain.finance.util.SalaryCalculator;
 import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.production.entity.WorkAttendance;
@@ -35,6 +36,9 @@ public class EmployeeSalaryConfigService extends ServiceImpl<EmployeeSalaryConfi
 
     @Autowired
     private BillAggregationOrchestrator billAggregationOrchestrator;
+
+    @Autowired
+    private UserMapper userMapper;
 
     /** 配置列表 */
     public List<EmployeeSalaryConfig> listConfigs(Long tenantId) {
@@ -124,10 +128,12 @@ public class EmployeeSalaryConfigService extends ServiceImpl<EmployeeSalaryConfi
         // 汇总当月考勤
         LocalDate start = LocalDate.parse(month + "-01");
         LocalDate end = start.plusMonths(1);
+        // D-474：薪资配置里的 userId 可能是 username，考勤表要数字 id，这里做转换
+        String attendanceUserId = resolveAttendanceUserId(cfg.getUserId(), tenantId);
         List<WorkAttendance> attendanceList = workAttendanceMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<WorkAttendance>()
                         .eq(WorkAttendance::getTenantId, tenantId)
-                        .eq(WorkAttendance::getUserId, userId)
+                        .eq(WorkAttendance::getUserId, attendanceUserId)
                         .eq(WorkAttendance::getDeleteFlag, 0)
                         .ge(WorkAttendance::getWorkDate, start)
                         .lt(WorkAttendance::getWorkDate, end));
@@ -311,5 +317,32 @@ public class EmployeeSalaryConfigService extends ServiceImpl<EmployeeSalaryConfi
             }
         }
         return result;
+    }
+
+    /**
+     * D-474：考勤表 t_work_attendance.user_id 存的是**数字 id**（如 1005），
+     * 但历史薪资配置里可能存的是 username（如 lilb），两者对不上会导致算工资时
+     * 查不到考勤记录（汇总全 0）。这里做兼容：不是纯数字就按 username 查用户 id。
+     */
+    private String resolveAttendanceUserId(String userId, Long tenantId) {
+        if (userId == null || userId.isBlank()) {
+            return userId;
+        }
+        if (userId.matches("\\d+")) {
+            return userId; // 已经是数字 id
+        }
+        try {
+            com.fashion.supplychain.system.entity.User u = userMapper.selectOne(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.fashion.supplychain.system.entity.User>()
+                            .eq(com.fashion.supplychain.system.entity.User::getTenantId, tenantId)
+                            .eq(com.fashion.supplychain.system.entity.User::getUsername, userId)
+                            .last("LIMIT 1"));
+            if (u != null && u.getId() != null) {
+                return String.valueOf(u.getId());
+            }
+        } catch (Exception e) {
+            log.warn("[Salary] 按 username 反查用户 id 失败, userId=" + userId + ", err=" + e.getMessage());
+        }
+        return userId;
     }
 }
