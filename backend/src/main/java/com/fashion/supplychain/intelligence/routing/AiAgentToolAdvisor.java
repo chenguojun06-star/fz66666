@@ -184,26 +184,42 @@ public class AiAgentToolAdvisor {
             Map.entry("analysis_ai_accuracy", List.of("tool_ai_accuracy_query", "tool_think"))
     );
 
-    private static final Set<String> ALWAYS_INCLUDE = Set.of(
-            "tool_knowledge_search", "tool_think", "tool_team_dispatch"
-    );
+    /**
+     * D-469：原来固定带 3 个（knowledge_search / think / team_dispatch）。
+     * 每个工具定义约 200+ tokens（名称+描述+全部参数），这 3 个是**每次调用必付**的固定成本。
+     * 只保留 tool_think（模型推理沙箱，成本极低且高频需要），其余两个改由意图命中时再带。
+     */
+    private static final Set<String> ALWAYS_INCLUDE = Set.of("tool_think");
+
+    /**
+     * D-469：单次调用携带的工具数硬上限。
+     * 工具定义是 prompt token 的最大变量 —— 单工具约 200+ tokens，
+     * 20 个工具就能吃掉 4000+ tokens，远超问句与回复本身。
+     * 超出时按 PRM 排序截断（高分在前，保证不被截掉）。
+     */
+    private static final int MAX_TOOLS_PER_CALL = 12;
 
     public List<AgentTool> advise(List<AgentTool> domainFilteredTools, String userMessage) {
-        if (userMessage == null || userMessage.isBlank() || domainFilteredTools.size() <= 8) {
+        if (domainFilteredTools == null || domainFilteredTools.isEmpty()) {
             return domainFilteredTools;
         }
 
-        String text = userMessage.toLowerCase(Locale.ROOT);
+        // D-469：删掉原来的 `domainFilteredTools.size() <= 8 → 原样返回` 短路。
+        // 那条短路让意图过滤在绝大多数情况下形同虚设（普通租户有权限的领域工具通常就是 6-10 个），
+        // 结果每次都把全部领域工具连同它们的参数描述一起塞给模型。
+        String text = userMessage == null ? "" : userMessage.toLowerCase(Locale.ROOT);
         Set<String> advisedToolNames = new LinkedHashSet<>();
 
-        for (Map.Entry<String, List<Pattern>> entry : INTENT_TOOL_MAP.entrySet()) {
-            for (Pattern p : entry.getValue()) {
-                if (p.matcher(text).find()) {
-                    List<String> tools = INTENT_TO_TOOLS.get(entry.getKey());
-                    if (tools != null) {
-                        advisedToolNames.addAll(tools);
+        if (!text.isBlank()) {
+            for (Map.Entry<String, List<Pattern>> entry : INTENT_TOOL_MAP.entrySet()) {
+                for (Pattern p : entry.getValue()) {
+                    if (p.matcher(text).find()) {
+                        List<String> tools = INTENT_TO_TOOLS.get(entry.getKey());
+                        if (tools != null) {
+                            advisedToolNames.addAll(tools);
+                        }
+                        break;
                     }
-                    break;
                 }
             }
         }
@@ -211,8 +227,8 @@ public class AiAgentToolAdvisor {
         advisedToolNames.addAll(ALWAYS_INCLUDE);
 
         if (advisedToolNames.size() <= ALWAYS_INCLUDE.size()) {
-            log.debug("[ToolAdvisor] 未匹配到明确意图，保留全部领域工具 (匹配到: {})", advisedToolNames);
-            return domainFilteredTools;
+            log.debug("[ToolAdvisor] 未匹配到明确意图，使用领域工具集（受上限 {} 约束）", MAX_TOOLS_PER_CALL);
+            return capTools(applyPrmBoost(domainFilteredTools));
         }
 
         Set<String> finalNames = advisedToolNames;
@@ -222,16 +238,27 @@ public class AiAgentToolAdvisor {
 
         if (advised.size() <= ALWAYS_INCLUDE.size()) {
             log.debug("[ToolAdvisor] 预选工具过少({})，回退到领域工具集", advised.size());
-            return domainFilteredTools;
+            return capTools(applyPrmBoost(domainFilteredTools));
         }
 
         // ── P1: PRM 反馈闭环 ──
         // 用本租户过去 30 天的工具平均评分，将高分工具（avgScore > 0.5）提前到列表头部。
         // 原理：用户点赞越多的工具，在相同意图下越早被 LLM 看到并优先选用。
         advised = applyPrmBoost(advised);
+        advised = capTools(advised);
 
-        log.info("[ToolAdvisor] 工具预选(+PRM): {} → {} 个工具 (原 {} 个)", advisedToolNames, advised.size(), domainFilteredTools.size());
+        log.info("[ToolAdvisor] 工具预选(+PRM): {} → {} 个工具 (原 {} 个, 上限 {})",
+                advisedToolNames, advised.size(), domainFilteredTools.size(), MAX_TOOLS_PER_CALL);
         return advised;
+    }
+
+    /** 按硬上限截断（调用前应已按 PRM 排序，保证高分工具在头部不被截掉） */
+    private List<AgentTool> capTools(List<AgentTool> tools) {
+        if (tools == null || tools.size() <= MAX_TOOLS_PER_CALL) {
+            return tools;
+        }
+        log.debug("[ToolAdvisor] 工具数 {} 超过上限 {}，截断", tools.size(), MAX_TOOLS_PER_CALL);
+        return new ArrayList<>(tools.subList(0, MAX_TOOLS_PER_CALL));
     }
 
     /**

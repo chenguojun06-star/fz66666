@@ -55,8 +55,15 @@ public class AiAgentTokenBudgetService {
     // 2026-09-13：RAG 改造（召回3→20+rerank+多Agent分析）后每轮 token 暴涨。
     // 20万 → 50万 仍被秒烧穿（多Agent图单次问话 5-8 次 LLM），提到 200 万/日。
     // 配套 D-395 已收紧多Agent图闸门，从源头压低消耗。
-    // 仍可用环境变量 AI_BUDGET_TENANT_DAILY_TOKEN_LIMIT 覆盖（如需临时调整请改云托管环境变量）。
-    @Value("${ai.budget.tenant-daily-token-limit:2000000}")
+    //
+    // D-469（2026-09-20）：用户要求把上限压到 **50万/租户/日**。
+    // 注意：历史上 50 万被秒烧穿，所以本次**同时**做了降本改造，否则会撞墙：
+    //   ① AiAgentToolAdvisor 去掉「工具数<=8 就不过滤」的短路，意图过滤真正生效
+    //   ② 新增单次调用工具数硬上限 MAX_TOOLS_PER_CALL（工具定义是 prompt token 最大变量）
+    //   ③ ALWAYS_INCLUDE 从 3 个收到 1 个
+    //   ④ AiChatContextOrchestrator 各段 LIMIT 收紧
+    // 仍可用环境变量 AI_BUDGET_TENANT_DAILY_TOKEN_LIMIT 覆盖（临时调整请改环境变量）。
+    @Value("${ai.budget.tenant-daily-token-limit:500000}")
     private long dailyTokenLimit;
 
     @Value("${ai.budget.enabled:true}")

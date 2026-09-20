@@ -364,7 +364,11 @@ sto-express:
 ai:
   budget:
     enabled: ${AI_BUDGET_ENABLED:true}
-    tenant-daily-token-limit: ${AI_BUDGET_TENANT_DAILY_TOKEN_LIMIT:200000}
+    # D-469（2026-09-20）：设为 50 万/租户/日。
+    # ⚠️ 注意：本文件的值会**覆盖** AiAgentTokenBudgetService 里 @Value 的默认值，
+    #    两处必须保持一致，否则改 @Value 不生效（此前默认值 2000000 就是被这里覆盖成了 200000）。
+    # 该上限是**按租户**计的，多租户会累加。
+    tenant-daily-token-limit: ${AI_BUDGET_TENANT_DAILY_TOKEN_LIMIT:500000}
   deepseek:
     api-key: ${DEEPSEEK_API_KEY:}          # 生产/云端：在环境变量中设置
     api-url: https://api.deepseek.com/v1/chat/completions

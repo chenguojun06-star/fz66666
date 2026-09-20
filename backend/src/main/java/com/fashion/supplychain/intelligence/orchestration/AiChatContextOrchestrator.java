@@ -59,7 +59,7 @@ public class AiChatContextOrchestrator {
         appendSection(sb, "【当前高频痛点】",
                 "SELECT pain_name, pain_level, trigger_count, affected_order_count, affected_order_nos, root_reason_summary, current_status " +
                         "FROM t_intelligence_pain_point WHERE tenant_id = ? AND delete_flag = 0 " +
-                        "ORDER BY trigger_count DESC, update_time DESC LIMIT 6",
+                        "ORDER BY trigger_count DESC, update_time DESC LIMIT 4",
                 tenantId,
                 row -> String.format("- %s（级别:%s，触发:%s次，影响订单:%s，涉及单号:%s，状态:%s，根因:%s）",
                         value(row.get("pain_name")),
@@ -75,7 +75,7 @@ public class AiChatContextOrchestrator {
         appendSection(sb, "【最近反馈原因】",
                 "SELECT suggestion_type, accepted, reason_code, reason_text, operator_name " +
                         "FROM t_intelligence_feedback_reason WHERE tenant_id = ? AND delete_flag = 0 " +
-                        "ORDER BY id DESC LIMIT 5",
+                        "ORDER BY id DESC LIMIT 3",
                 tenantId,
                 row -> String.format("- %s：%s，原因=%s，补充=%s，操作人=%s",
                         value(row.get("suggestion_type")),
@@ -89,7 +89,7 @@ public class AiChatContextOrchestrator {
         appendSection(sb, "【可引用方案库】",
                 "SELECT pain_code, solution_title, owner_role, expected_days, effect_score, source_type " +
                         "FROM t_intelligence_solution_playbook WHERE (tenant_id = ? OR tenant_id = 0) AND enabled = 1 AND delete_flag = 0 " +
-                        "ORDER BY tenant_id DESC, effect_score DESC, id DESC LIMIT 5",
+                        "ORDER BY tenant_id DESC, effect_score DESC, id DESC LIMIT 3",
                 tenantId,
                 row -> String.format("- 痛点=%s，方案=%s，责任角色=%s，预计%s天见效，效果分=%s，来源=%s",
                         value(row.get("pain_code")),
@@ -104,7 +104,7 @@ public class AiChatContextOrchestrator {
         appendSection(sb, "【方案效果回流】",
                 "SELECT pain_code, solution_code, target_type, before_metric, after_metric, improved, evaluation_note " +
                         "FROM t_intelligence_solution_effect WHERE tenant_id = ? AND delete_flag = 0 " +
-                        "ORDER BY id DESC LIMIT 5",
+                        "ORDER BY id DESC LIMIT 3",
                 tenantId,
                 row -> String.format("- 痛点=%s，方案=%s，对象=%s，前=%s，后=%s，结果=%s，评价=%s",
                         value(row.get("pain_code")),
@@ -122,7 +122,7 @@ public class AiChatContextOrchestrator {
                         "m.delivery_score, m.quality_score, m.margin_score, m.efficiency_score, m.sample_count " +
                         "FROM t_factory_skill_matrix m LEFT JOIN t_factory f ON f.id = m.factory_id " +
                         "WHERE m.tenant_id = ? AND m.delete_flag = 0 " +
-                        "ORDER BY m.delivery_score DESC, m.quality_score DESC, m.efficiency_score DESC LIMIT 3",
+                        "ORDER BY m.delivery_score DESC, m.quality_score DESC, m.efficiency_score DESC LIMIT 2",
                 tenantId,
                 row -> String.format("- 工厂=%s，品类=%s，款式=%s，工序=%s，交期=%s，质量=%s，毛利=%s，效率=%s，样本=%s",
                         value(row.get("factory_name")),
@@ -139,7 +139,7 @@ public class AiChatContextOrchestrator {
                         "m.delivery_score, m.quality_score, m.margin_score, m.efficiency_score, m.sample_count " +
                         "FROM t_factory_skill_matrix m LEFT JOIN t_factory f ON f.id = m.factory_id " +
                         "WHERE m.tenant_id = ? AND m.delete_flag = 0 " +
-                        "ORDER BY m.efficiency_score ASC, m.quality_score ASC LIMIT 3",
+                        "ORDER BY m.efficiency_score ASC, m.quality_score ASC LIMIT 2",
                 tenantId,
                 row -> String.format("- 工厂=%s，品类=%s，工序=%s，交期=%s，质量=%s，效率=%s",
                         value(row.get("factory_name")),
@@ -154,7 +154,7 @@ public class AiChatContextOrchestrator {
         appendSection(sb, "【推送效果回看】",
                 "SELECT result_code, COUNT(*) AS cnt, SUM(CASE WHEN opened = 1 THEN 1 ELSE 0 END) AS opened_cnt, " +
                         "SUM(CASE WHEN handled = 1 THEN 1 ELSE 0 END) AS handled_cnt " +
-                        "FROM t_mind_push_effect WHERE tenant_id = ? AND delete_flag = 0 GROUP BY result_code ORDER BY cnt DESC LIMIT 3",
+                        "FROM t_mind_push_effect WHERE tenant_id = ? AND delete_flag = 0 GROUP BY result_code ORDER BY cnt DESC LIMIT 2",
                 tenantId,
                 row -> String.format("- 结果=%s，条数=%s，打开=%s，处理=%s",
                         value(row.get("result_code")),
@@ -169,7 +169,7 @@ public class AiChatContextOrchestrator {
                         "g.quality_score, g.stability_score, g.training_count, g.growth_trend " +
                         "FROM t_worker_skill_growth g LEFT JOIN t_factory_worker w ON w.id = g.worker_id " +
                         "WHERE g.tenant_id = ? AND g.delete_flag = 0 " +
-                        "ORDER BY g.stability_score DESC, g.quality_score DESC, g.speed_score DESC LIMIT 3",
+                        "ORDER BY g.stability_score DESC, g.quality_score DESC, g.speed_score DESC LIMIT 2",
                 tenantId,
                 row -> String.format("- 工人=%s，工序=%s，等级=%s，速度=%s，质量=%s，稳定=%s，趋势=%s",
                         value(row.get("worker_name")),
@@ -184,7 +184,7 @@ public class AiChatContextOrchestrator {
                         "g.quality_score, g.stability_score, g.training_count, g.growth_trend " +
                         "FROM t_worker_skill_growth g LEFT JOIN t_factory_worker w ON w.id = g.worker_id " +
                         "WHERE g.tenant_id = ? AND g.delete_flag = 0 " +
-                        "ORDER BY g.stability_score ASC, g.quality_score ASC LIMIT 3",
+                        "ORDER BY g.stability_score ASC, g.quality_score ASC LIMIT 2",
                 tenantId,
                 row -> String.format("- 工人=%s，工序=%s，等级=%s，速度=%s，质量=%s，稳定=%s，训练=%s次，趋势=%s",
                         value(row.get("worker_name")),
@@ -201,7 +201,7 @@ public class AiChatContextOrchestrator {
         appendSection(sb, "【工厂异常案例】",
                 "SELECT COALESCE(f.factory_name, c.factory_id) AS factory_name, c.case_type, c.order_no, c.reason_summary, c.action_taken, c.resolved " +
                         "FROM t_factory_exception_case c LEFT JOIN t_factory f ON f.id = c.factory_id " +
-                        "WHERE c.tenant_id = ? AND c.delete_flag = 0 ORDER BY c.id DESC LIMIT 5",
+                        "WHERE c.tenant_id = ? AND c.delete_flag = 0 ORDER BY c.id DESC LIMIT 3",
                 tenantId,
                 row -> String.format("- 工厂=%s，异常=%s，订单=%s，原因=%s，措施=%s，状态=%s",
                         value(row.get("factory_name")),
