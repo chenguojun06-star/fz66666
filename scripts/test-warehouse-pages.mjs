@@ -268,6 +268,16 @@ async function testMaterialInbound() {
   ok('查出物料', !!page.data.materialInfo);
   eq('带出单位', page.data.unit, '米');
 
+  // D-499：未查到库存记录时必须拦住（后端会抛「物料库存记录不存在」）
+  page.setData({ materialInfo: null });
+  await page.onSubmit();
+  let t0 = lastCall(wx, 'showToast');
+  ok('无库存记录时禁止入库', t0 && /库存记录|查询/.test(t0.title || ''), t0 && t0.title);
+  eq('被拦截时未调用接口', api.calls.length, 0);
+  // 恢复已查到的状态
+  await page.queryMaterial();
+  await new Promise(r => setTimeout(r, 30));
+
   // 数量校验
   await page.onSubmit();
   let t = lastCall(wx, 'showToast');

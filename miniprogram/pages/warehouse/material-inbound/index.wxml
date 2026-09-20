@@ -28,7 +28,9 @@
         <text class="mat-meta" wx:if="{{materialInfo.size}}">规格 {{materialInfo.size}}</text>
         <text class="mat-meta" wx:if="{{materialInfo.quantity != null}}">现有库存 {{materialInfo.quantity}}{{unit}}</text>
       </view>
-      <view wx:else class="empty">未查到该物料，可直接填写编码入库</view>
+      <!-- D-499：没查到库存记录时不能入库 —— 后端 freeInbound 在 stock==null 且未传
+           autoCreateStock=true 时会直接抛「物料库存记录不存在」。提示用户先建档，而非让他白填。 -->
+      <view wx:else class="empty">未查到该物料的库存记录，请先在 PC 端为其在物料库存中建档</view>
     </block>
   </view>
 

@@ -131,6 +131,12 @@ Page({
       wx.showToast({ title: '物料编码不能为空', icon: 'none' });
       return;
     }
+    // D-499：没有库存记录时后端会抛「物料库存记录不存在」（除非传 autoCreateStock=true
+    // 并补 materialName/color/size）。这里直接拦住，避免用户填完才报错。
+    if (!this.data.materialInfo) {
+      wx.showToast({ title: '请先查询到物料库存记录', icon: 'none' });
+      return;
+    }
     // ⚠️ 用 parseFloat 而非 parseInt：物料数量支持小数（如 1.32 米）
     var qty = parseFloat(this.data.quantity);
     if (isNaN(qty) || qty <= 0) {
