@@ -191,7 +191,7 @@ function wrapStatementsHtml(parts: string[], title: string): string {
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>${title}</title>
+<title>${esc(title)}</title>
 <style>
   @page { size: A4; margin: 12mm; }
   body { font-family: "Microsoft YaHei", SimSun, sans-serif; color: #000; font-size: 12px; margin: 0; padding: 12px; }
