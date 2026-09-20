@@ -49,7 +49,8 @@
         "material-database/index",
         "finished-outbound/index",
         "finished-inbound/index",
-        "material-inbound/index"
+        "material-inbound/index",
+        "material-outbound/index"
       ]
     },
     {

@@ -443,3 +443,9 @@ page {
   color: #fff;
   background: var(--color-primary, #2d7ff9);
 }
+
+.action-btn--plain {
+  margin-right: var(--space-8, 8rpx);
+  color: var(--color-text-secondary, #666);
+  background: var(--color-bg-page, #f5f5f5);
+}

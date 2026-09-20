@@ -212,6 +212,14 @@ const material = {
   scanQuery(materialCode) {
     return ok('/api/production/material/stock/scan-query', 'GET', { materialCode });
   },
+  /**
+   * D-486：物料手工出库（此前手机端从未封装，只有 PC 端在用）
+   * 后端 MaterialStockOrchestrator.manualOutbound —— 必填 stockId / quantity /
+   * receiverName / orderNo / styleNo / factoryName / usageType
+   */
+  manualOutbound(data) {
+    return ok('/api/production/material/stock/manual-outbound', 'POST', data || {});
+  },
   listDatabase(params) {
     return ok('/api/material/database/list', 'GET', params || {});
   },

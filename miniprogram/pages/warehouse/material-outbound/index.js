@@ -1,0 +1,295 @@
+/**
+ * 物料手工出库页（独立页面）
+ *
+ * 背景：手机端物料侧只有「扫码发料/退回」（material/scan，走 materialRoll.scan 改料卷状态），
+ * **没有手工出库** —— 而 PC 端 manualOutbound 已支持多年。
+ * 本次补上页面，并给 api.material 补上 manualOutbound 封装（此前手机端没有）。
+ *
+ * 后端契约（MaterialStockOrchestrator.manualOutbound）—— 7 个必填：
+ *   stockId / quantity(>0) / receiverName(领取人) / orderNo(关联订单) /
+ *   styleNo(关联款号) / factoryName(关联工厂) / usageType(用料场景)
+ * 可选：reason / pickupType / factoryId / factoryType / warehouseAreaId
+ *
+ * ⚠️ 数量用 parseFloat：物料按米/公斤计，后端 BigDecimal（D-414 修过 1.32→1 截断）
+ */
+const api = require('../../../utils/api');
+
+const USAGE_TYPES = [
+  { key: 'production', label: '生产领料' },
+  { key: 'sample', label: '样品领料' },
+];
+
+Page({
+  data: {
+    materialCode: '',
+    materialInfo: null,
+    stockId: '',
+    queried: false,
+    loading: false,
+    submitting: false,
+
+    quantity: '',
+    unit: '',
+
+    // 关联订单 / 款号
+    orderOptions: [],
+    orderNames: [],
+    orderNo: '',
+    styleNo: '',
+
+    // 关联工厂
+    factoryOptions: [],
+    factoryNames: [],
+    factoryId: '',
+    factoryName: '',
+
+    // 领料人
+    receiverOptions: [],
+    receiverNames: [],
+    receiverId: '',
+    receiverName: '',
+
+    usageType: 'production',
+    usageTypeLabel: '生产领料',
+    typeOptions: USAGE_TYPES,
+
+    areaOptions: [],
+    areaNames: [],
+    warehouseAreaId: '',
+    warehouseAreaName: '',
+
+    reason: '',
+  },
+
+  onLoad() {
+    wx.setNavigationBarTitle({ title: '物料出库' });
+    this.loadOrders();
+    this.loadFactories();
+    this.loadReceivers();
+    this.loadAreas();
+  },
+
+  // ────────── 物料查询 ──────────
+
+  onCodeInput(e) { this.setData({ materialCode: e.detail.value }); },
+
+  onScan() {
+    var self = this;
+    wx.scanCode({
+      success: function (res) {
+        var code = (res && res.result) || '';
+        if (!code) { wx.showToast({ title: '扫码失败', icon: 'none' }); return; }
+        self.setData({ materialCode: code }, function () { self.queryMaterial(); });
+      },
+      fail: function () {},
+    });
+  },
+
+  onQuery() {
+    if (!this.data.materialCode) {
+      wx.showToast({ title: '请输入物料编码', icon: 'none' });
+      return;
+    }
+    this.queryMaterial();
+  },
+
+  async queryMaterial() {
+    this.setData({ loading: true });
+    try {
+      var res = await api.material.scanQuery(this.data.materialCode);
+      var info = res && res.data ? res.data : res;
+      if (!info || info.found === false) {
+        this.setData({ queried: true, loading: false, materialInfo: null, stockId: '' });
+        wx.showToast({ title: (info && info.message) || '物料不存在', icon: 'none' });
+        return;
+      }
+      this.setData({
+        materialInfo: info,
+        stockId: String(info.stockId || ''),
+        unit: info.unit || '',
+        queried: true,
+        loading: false,
+      });
+    } catch (e) {
+      this.setData({ queried: true, loading: false, materialInfo: null, stockId: '' });
+      wx.showToast({ title: (e && e.message) || '查询失败', icon: 'none' });
+    }
+  },
+
+  // ────────── 下拉数据 ──────────
+
+  async loadOrders() {
+    try {
+      var res = await api.production.listOrders({ page: 1, pageSize: 100 });
+      var list = Array.isArray(res) ? res : (res && (res.records || res.list || res.items)) || [];
+      var options = list.map(function (o) {
+        return {
+          orderNo: String(o.orderNo || o.order_no || ''),
+          styleNo: String(o.styleNo || o.style_no || ''),
+          name: String(o.orderNo || o.order_no || '-'),
+        };
+      }).filter(function (o) { return !!o.orderNo; });
+      this.setData({
+        orderOptions: options,
+        orderNames: options.map(function (o) { return o.name; }),
+      });
+    } catch (e) {
+      console.warn('[物料出库] 加载订单失败', e);
+    }
+  },
+
+  async loadFactories() {
+    try {
+      var res = await api.factory.list({ page: 1, pageSize: 100 });
+      var list = Array.isArray(res) ? res : (res && (res.records || res.list || res.items)) || [];
+      var options = list.map(function (f) {
+        return {
+          id: String(f.id || ''),
+          name: f.factoryName || f.name || '-',
+          type: (f.factoryType || f.type || 'INTERNAL').toUpperCase(),
+        };
+      }).filter(function (f) { return !!f.name && f.name !== '-'; });
+      this.setData({
+        factoryOptions: options,
+        factoryNames: options.map(function (o) { return o.name; }),
+      });
+    } catch (e) {
+      console.warn('[物料出库] 加载工厂失败', e);
+    }
+  },
+
+  async loadReceivers() {
+    try {
+      var res = await api.system.listUsers({ page: 1, pageSize: 100 });
+      var list = Array.isArray(res) ? res : (res && (res.records || res.list || res.items)) || [];
+      var options = list.map(function (u) {
+        return {
+          id: String(u.id || u.userId || ''),
+          name: u.realName || u.name || u.username || u.nickname || '-',
+        };
+      }).filter(function (u) { return !!u.name && u.name !== '-'; });
+      this.setData({
+        receiverOptions: options,
+        receiverNames: options.map(function (o) { return o.name; }),
+      });
+    } catch (e) {
+      console.warn('[物料出库] 加载领料人失败', e);
+    }
+  },
+
+  async loadAreas() {
+    try {
+      var res = await api.warehouse.listWarehouseAreas('MATERIAL');
+      var list = Array.isArray(res) ? res : (res && (res.records || res.list || res.items)) || [];
+      var options = list.map(function (a) {
+        return { id: String(a.id || ''), name: a.areaName || a.name || '-' };
+      });
+      this.setData({
+        areaOptions: options,
+        areaNames: options.map(function (o) { return o.name; }),
+      });
+    } catch (e) {
+      console.warn('[物料出库] 加载仓库区域失败', e);
+    }
+  },
+
+  // ────────── 各项选择 ──────────
+
+  _pick(names, onPick) {
+    var self = this;
+    if (!names.length) {
+      wx.showToast({ title: '暂无可选项', icon: 'none' });
+      return;
+    }
+    wx.showActionSheet({
+      itemList: names,
+      success: function (r) { onPick.call(self, r.tapIndex); },
+      fail: function () {},
+    });
+  },
+
+  onPickOrder() {
+    this._pick(this.data.orderNames, function (i) {
+      var o = this.data.orderOptions[i];
+      if (o) this.setData({ orderNo: o.orderNo, styleNo: o.styleNo || this.data.styleNo });
+    });
+  },
+
+  onPickFactory() {
+    this._pick(this.data.factoryNames, function (i) {
+      var f = this.data.factoryOptions[i];
+      if (f) this.setData({ factoryId: f.id, factoryName: f.name, factoryType: f.type });
+    });
+  },
+
+  onPickReceiver() {
+    this._pick(this.data.receiverNames, function (i) {
+      var u = this.data.receiverOptions[i];
+      if (u) this.setData({ receiverId: u.id, receiverName: u.name });
+    });
+  },
+
+  onPickArea() {
+    this._pick(this.data.areaNames, function (i) {
+      var a = this.data.areaOptions[i];
+      if (a) this.setData({ warehouseAreaId: a.id, warehouseAreaName: a.name });
+    });
+  },
+
+  onSelectUsage(e) {
+    var key = e.currentTarget.dataset.key;
+    for (var i = 0; i < USAGE_TYPES.length; i++) {
+      if (USAGE_TYPES[i].key === key) {
+        this.setData({ usageType: key, usageTypeLabel: USAGE_TYPES[i].label });
+        return;
+      }
+    }
+  },
+
+  onQtyInput(e) { this.setData({ quantity: e.detail.value }); },
+  onReasonInput(e) { this.setData({ reason: e.detail.value }); },
+
+  // ────────── 提交 ──────────
+
+  async onSubmit() {
+    if (this.data.submitting) return;
+    var d = this.data;
+    // 逐项按后端必填校验，给出明确提示（避免只报一个笼统错误）
+    if (!d.stockId) { wx.showToast({ title: '请先查询物料', icon: 'none' }); return; }
+    var qty = parseFloat(d.quantity);
+    if (isNaN(qty) || qty <= 0) { wx.showToast({ title: '出库数量必须大于0', icon: 'none' }); return; }
+    if (!d.receiverName) { wx.showToast({ title: '请选择领料人', icon: 'none' }); return; }
+    if (!d.orderNo) { wx.showToast({ title: '请选择关联订单', icon: 'none' }); return; }
+    if (!d.styleNo) { wx.showToast({ title: '缺少关联款号', icon: 'none' }); return; }
+    if (!d.factoryName) { wx.showToast({ title: '请选择关联工厂', icon: 'none' }); return; }
+    if (!d.usageType) { wx.showToast({ title: '请选择用料场景', icon: 'none' }); return; }
+
+    this.setData({ submitting: true });
+    try {
+      await api.material.manualOutbound({
+        stockId: d.stockId,
+        quantity: qty,
+        receiverId: d.receiverId,
+        receiverName: d.receiverName,
+        orderNo: d.orderNo,
+        styleNo: d.styleNo,
+        factoryId: d.factoryId,
+        factoryName: d.factoryName,
+        factoryType: d.factoryType || 'INTERNAL',
+        usageType: d.usageType,
+        warehouseAreaId: d.warehouseAreaId,
+        reason: d.reason,
+      });
+      wx.showToast({ title: '出库成功', icon: 'success' });
+      setTimeout(function () {
+        var pages = getCurrentPages();
+        var prev = pages[pages.length - 2];
+        if (prev && typeof prev.loadList === 'function') prev.loadList(true);
+        wx.navigateBack();
+      }, 800);
+    } catch (e) {
+      wx.showToast({ title: (e && e.message) || '出库失败', icon: 'none' });
+      this.setData({ submitting: false });
+    }
+  },
+});

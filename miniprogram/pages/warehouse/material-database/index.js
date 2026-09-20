@@ -70,6 +70,11 @@ Page({
     wx.navigateTo({ url: '/pages/warehouse/material-inbound/index' });
   },
 
+  /** D-486：跳物料手工出库页（手机端此前无手工出库，只有扫码发料） */
+  onGoOutbound: function () {
+    wx.navigateTo({ url: '/pages/warehouse/material-outbound/index' });
+  },
+
   _bindEvents: function () {
     this._onDataChanged = function (data) {
       if (data && (data.type === 'warehouse' || data.type === 'materialStock' || data.type === 'material')) {

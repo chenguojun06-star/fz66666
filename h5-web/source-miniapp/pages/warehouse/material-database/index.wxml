@@ -25,9 +25,10 @@
     </view>
   </sticky-search-bar>
 
-  <!-- 操作：入库（D-485：手机端此前无物料手工入库入口，
+  <!-- 操作：入库 / 出库（D-485/486：手机端此前无物料手工出入库入口，
        仅有 pages/warehouse/material/scan 的扫码发料/退回） -->
   <view class="action-row">
+    <view class="action-btn action-btn--plain" bindtap="onGoOutbound">出库</view>
     <view class="action-btn action-btn--primary" bindtap="onGoInbound">入库</view>
   </view>
 
