@@ -199,8 +199,17 @@ const _MaterialInventory: React.FC = () => {
         </Card>
       ) : null}
 
-      {/* D-474：去掉「数据概览」小标题——它只是个名字，下面才是真正的统计卡片，
-          留着占一行还让人以为是另一块内容 */}
+      {/* D-474：面料预警提到页面顶部 —— 库存预警是风险的第一信号，不应埋在 Tab 内 */}
+      <div className="material-alerts-section" style={{ marginBottom: 12 }}>
+        {showMaterialAI && <MaterialInventoryAISummary stats={stats} alertList={alertList} />}
+        <MaterialAlertRanking
+          loading={alertLoading}
+          alerts={alertList}
+          onSendInstruction={openInstruction}
+        />
+      </div>
+
+      {/* D-474：统计卡片从页面顶部移到 Tab 前（跟具体表格数据强相关，挨着才合理） */}
       <PageStatCards
         activeKey={selectedType || 'all'}
         cards={[
@@ -261,15 +270,6 @@ const _MaterialInventory: React.FC = () => {
             ),
             children: (
               <>
-                <div className="material-alerts-section">
-                  {showMaterialAI && <MaterialInventoryAISummary stats={stats} alertList={alertList} />}
-                  <MaterialAlertRanking
-                    loading={alertLoading}
-                    alerts={alertList}
-                    onSendInstruction={openInstruction}
-                  />
-                </div>
-
                 <Card>
                   <div className="u-mb-16">
                     <h2 className="u-m-0"> 物料仓储</h2>
