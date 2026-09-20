@@ -284,16 +284,28 @@ export default function CounterpartyLedgerTab() {
       width: 150,
       render: (_: unknown, r) => (
         <Space size={4}>
-          <Button type="link" size="small" style={{ padding: 0 }} onClick={() => openDrawer(r)}>
+          <Button
+            type="link"
+            size="small"
+            style={{ padding: 0 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              openDrawer(r);
+            }}
+          >
             查看明细
           </Button>
-          {/* D-474：一行一个对象，直接打印该对象的对账单发给对方 */}
+          {/* D-474：一行一个对象，直接打印该对象的对账单发给对方。
+              注意阻止冒泡——整行 onClick 是"打开详情抽屉"，不拦会连抽屉一起弹出 */}
           <Button
             type="link"
             size="small"
             style={{ padding: 0 }}
             icon={<PrinterOutlined />}
-            onClick={() => handlePrintRow(r)}
+            onClick={(e) => {
+              e.stopPropagation();
+              void handlePrintRow(r);
+            }}
           >
             打印
           </Button>
