@@ -160,12 +160,13 @@ Page({
   },
 
   /**
-   * 构造详情页 URL（列表跳详情 / 列表直接出库 共用，避免参数拼接重复）
+   * 构造详情页 URL
+   * D-494：去掉原 autoOutbound 参数（出库已改为列表直接跳 finished-outbound，
+   *        不再经详情页中转，该参数已无人使用）
    * @param {Object} item - 列表项
-   * @param {boolean} autoOutbound - 是否让详情页进入后自动弹出出库窗
    * @returns {string} 详情页完整 URL
    */
-  _buildDetailUrl: function (item, autoOutbound) {
+  _buildDetailUrl: function (item) {
     const params = [
       'styleNo=' + encodeURIComponent(item.styleNo || ''),
       'orderNo=' + encodeURIComponent(item.orderNo || ''),
@@ -173,7 +174,6 @@ Page({
       'styleImage=' + encodeURIComponent(item._styleImage || item.styleImage || ''),
       'factoryName=' + encodeURIComponent(item.factoryName || ''),
     ];
-    if (autoOutbound) params.push('autoOutbound=1');
     return '/pages/warehouse/finished-inventory/detail/index?' + params.join('&');
   },
 
@@ -181,7 +181,7 @@ Page({
     const id = e.currentTarget.dataset.id;
     const item = this.data.list.find(function (it) { return it.id === id; });
     if (!item) return;
-    wx.navigateTo({ url: this._buildDetailUrl(item, false) });
+    wx.navigateTo({ url: this._buildDetailUrl(item) });
   },
 
   /**
@@ -194,6 +194,27 @@ Page({
    *
    * @param {Object} e - 事件对象（dataset.id）
    */
+  /**
+   * D-494：列表直接跳**成品出库页**（不再经详情页中转）
+   *
+   * 原 D-418 方案：列表 --(autoOutbound=1)--> 详情 --> 详情页自动开**弹窗**。
+   * 但 D-482 已把出库改成独立页面，若仍走详情中转就变成：
+   *     列表 → 详情 → 出库页（返回栈多一层，按返回会先回到详情，很绕）
+   * 故这里直接跳出库页：一步到位，返回即回列表。
+   *
+   * 注：详情页的 autoOutbound=1 兼容处理也已一并移除（D-494），目前无任何入口传该参数。
+   */
+  _buildOutboundUrl: function (item) {
+    const params = [
+      'styleNo=' + encodeURIComponent(item.styleNo || ''),
+      'orderNo=' + encodeURIComponent(item.orderNo || ''),
+      'styleName=' + encodeURIComponent(item.styleName || ''),
+      'styleImage=' + encodeURIComponent(item._styleImage || item.styleImage || ''),
+      'factoryName=' + encodeURIComponent(item.factoryName || ''),
+    ];
+    return '/pages/warehouse/finished-outbound/index?' + params.join('&');
+  },
+
   onOutboundTap: function (e) {
     const id = e.currentTarget.dataset.id;
     const item = this.data.list.find(function (it) { return it.id === id; });
@@ -202,7 +223,7 @@ Page({
       wx.showToast({ title: '该款暂无可用库存', icon: 'none' });
       return;
     }
-    wx.navigateTo({ url: this._buildDetailUrl(item, true) });
+    wx.navigateTo({ url: this._buildOutboundUrl(item) });
   },
 
   preventTouchMove: function () {},

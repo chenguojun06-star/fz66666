@@ -399,6 +399,12 @@ function testEntryPoints() {
   ok('物料库有 loadList 可刷新', /loadList\s*:\s*function/.test(mJ));
   ok('成品详情有 loadDetail 可刷新', /loadDetail\s*[:(]/.test(dJ));
 
+  // D-494：列表页「出库」应直接跳 finished-outbound，不再经详情页中转
+  const lJ = read('pages/warehouse/finished-inventory/index.js');
+  ok('列表页有出库按钮处理', /onOutboundTap/.test(lJ));
+  ok('列表页直接跳出库页(不经详情)', /finished-outbound\/index/.test(lJ));
+  ok('列表页出库不再用 autoOutbound 中转', !/autoOutbound=1/.test(lJ));
+
   // 四个页面都已在 app.json 注册
   const appJson = JSON.parse(fs.readFileSync(path.join(MP, 'app.json'), 'utf8'));
   const sp = (appJson.subpackages || []).find(s => s.root === 'pages/warehouse');
