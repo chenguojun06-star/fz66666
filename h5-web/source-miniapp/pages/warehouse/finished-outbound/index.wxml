@@ -31,22 +31,28 @@
 
   <!-- ③ 仓库区域 -->
   <view class="section">
-    <view class="row" bindtap="onPickArea">
-      <text class="row-label">仓库区域</text>
-      <text class="row-value {{warehouseAreaName ? '' : 'row-value--placeholder'}}">
-        {{warehouseAreaName || '请选择'}}
-      </text>
-      <text class="row-arrow">›</text>
-    </view>
+      <!-- ⚠️ 用 picker 而非 wx.showActionSheet：后者 itemList 最多 6 项，
+           仓库区域/客户可能超过 6 条，会直接失败 -->
+      <picker mode="selector" range="{{areaNames}}" bindchange="onAreaChange">
+        <view class="row">
+          <text class="row-label">仓库区域</text>
+          <text class="row-value {{warehouseAreaName ? '' : 'row-value--placeholder'}}">
+            {{warehouseAreaName || '请选择'}}
+          </text>
+          <text class="row-arrow">›</text>
+        </view>
+      </picker>
 
-    <!-- ④ 客户：仅销售类出库需要（后端 REQUIRES_CUSTOMER_TYPES） -->
-    <view class="row" wx:if="{{needsCustomer}}" bindtap="onPickCustomer">
-      <text class="row-label">客户 <text class="req">*</text></text>
-      <text class="row-value {{customerName ? '' : 'row-value--placeholder'}}">
-        {{customerName || '必选'}}
-      </text>
-      <text class="row-arrow">›</text>
-    </view>
+      <!-- ④ 客户：仅销售类出库需要（后端 REQUIRES_CUSTOMER_TYPES） -->
+      <picker mode="selector" range="{{customerNames}}" bindchange="onCustomerChange">
+        <view class="row" wx:if="{{needsCustomer}}">
+          <text class="row-label">客户 <text class="req">*</text></text>
+          <text class="row-value {{customerName ? '' : 'row-value--placeholder'}}">
+            {{customerName || '必选'}}
+          </text>
+          <text class="row-arrow">›</text>
+        </view>
+      </picker>
   </view>
 
   <!-- ⑤ SKU 明细多选 -->

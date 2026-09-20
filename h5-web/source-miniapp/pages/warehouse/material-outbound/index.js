@@ -195,45 +195,29 @@ Page({
 
   // ────────── 各项选择 ──────────
 
-  _pick(names, onPick) {
-    var self = this;
-    if (!names.length) {
-      wx.showToast({ title: '暂无可选项', icon: 'none' });
-      return;
-    }
-    wx.showActionSheet({
-      itemList: names,
-      success: function (r) { onPick.call(self, r.tapIndex); },
-      fail: function () {},
-    });
+  /**
+   * ⚠️ 统一用 <picker mode="selector"> 而非 wx.showActionSheet：
+   * 后者 itemList **最多 6 项**，而订单/工厂/领料人可能上百条，必然失败。
+   * picker 的 bindchange 回传 e.detail.value 为下标。
+   */
+  onOrderChange(e) {
+    var o = this.data.orderOptions[e.detail.value];
+    if (o) this.setData({ orderNo: o.orderNo, styleNo: o.styleNo || this.data.styleNo });
   },
 
-  onPickOrder() {
-    this._pick(this.data.orderNames, function (i) {
-      var o = this.data.orderOptions[i];
-      if (o) this.setData({ orderNo: o.orderNo, styleNo: o.styleNo || this.data.styleNo });
-    });
+  onFactoryChange(e) {
+    var f = this.data.factoryOptions[e.detail.value];
+    if (f) this.setData({ factoryId: f.id, factoryName: f.name, factoryType: f.type });
   },
 
-  onPickFactory() {
-    this._pick(this.data.factoryNames, function (i) {
-      var f = this.data.factoryOptions[i];
-      if (f) this.setData({ factoryId: f.id, factoryName: f.name, factoryType: f.type });
-    });
+  onReceiverChange(e) {
+    var u = this.data.receiverOptions[e.detail.value];
+    if (u) this.setData({ receiverId: u.id, receiverName: u.name });
   },
 
-  onPickReceiver() {
-    this._pick(this.data.receiverNames, function (i) {
-      var u = this.data.receiverOptions[i];
-      if (u) this.setData({ receiverId: u.id, receiverName: u.name });
-    });
-  },
-
-  onPickArea() {
-    this._pick(this.data.areaNames, function (i) {
-      var a = this.data.areaOptions[i];
-      if (a) this.setData({ warehouseAreaId: a.id, warehouseAreaName: a.name });
-    });
+  onAreaChange(e) {
+    var a = this.data.areaOptions[e.detail.value];
+    if (a) this.setData({ warehouseAreaId: a.id, warehouseAreaName: a.name });
   },
 
   onSelectUsage(e) {

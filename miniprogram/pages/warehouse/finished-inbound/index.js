@@ -168,20 +168,13 @@ Page({
     this.setData({ sourceType: hit.key, sourceTypeLabel: hit.label });
   },
 
-  onPickArea() {
-    var self = this;
-    if (!this.data.areaNames.length) {
-      wx.showToast({ title: '暂无可选仓库区域', icon: 'none' });
-      return;
-    }
-    wx.showActionSheet({
-      itemList: this.data.areaNames,
-      success: function (r) {
-        var opt = self.data.areaOptions[r.tapIndex];
-        if (opt) self.setData({ warehouseAreaId: opt.id, warehouseAreaName: opt.name });
-      },
-      fail: function () {},
-    });
+  /**
+   * ⚠️ 用 <picker mode="selector"> 而非 wx.showActionSheet ——
+   * 后者 itemList 最多 6 项，仓库区域可能超过，会直接失败。
+   */
+  onAreaChange(e) {
+    var opt = this.data.areaOptions[e.detail.value];
+    if (opt) this.setData({ warehouseAreaId: opt.id, warehouseAreaName: opt.name });
   },
 
   onLocationInput(e) {

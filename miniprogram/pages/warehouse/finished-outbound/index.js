@@ -174,36 +174,19 @@ Page({
 
   // ────────── 仓库区域 / 客户选择 ──────────
 
-  onPickArea() {
-    var self = this;
-    if (!this.data.areaNames.length) {
-      wx.showToast({ title: '暂无可选仓库区域', icon: 'none' });
-      return;
-    }
-    wx.showActionSheet({
-      itemList: this.data.areaNames,
-      success: function (r) {
-        var opt = self.data.areaOptions[r.tapIndex];
-        if (opt) self.setData({ warehouseAreaId: opt.id, warehouseAreaName: opt.name });
-      },
-      fail: function () {},
-    });
+  /**
+   * ⚠️ 用 <picker mode="selector"> 而非 wx.showActionSheet ——
+   * 后者 itemList 最多 6 项，仓库区域/客户很可能超过，会直接失败。
+   * picker 的 bindchange 回传 e.detail.value = 选中下标。
+   */
+  onAreaChange(e) {
+    var opt = this.data.areaOptions[e.detail.value];
+    if (opt) this.setData({ warehouseAreaId: opt.id, warehouseAreaName: opt.name });
   },
 
-  onPickCustomer() {
-    var self = this;
-    if (!this.data.customerNames.length) {
-      wx.showToast({ title: '暂无可选客户', icon: 'none' });
-      return;
-    }
-    wx.showActionSheet({
-      itemList: this.data.customerNames,
-      success: function (r) {
-        var opt = self.data.customerOptions[r.tapIndex];
-        if (opt) self.setData({ customerId: opt.id, customerName: opt.name });
-      },
-      fail: function () {},
-    });
+  onCustomerChange(e) {
+    var opt = this.data.customerOptions[e.detail.value];
+    if (opt) this.setData({ customerId: opt.id, customerName: opt.name });
   },
 
   // ────────── SKU 多选 ──────────

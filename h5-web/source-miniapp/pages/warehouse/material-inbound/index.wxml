@@ -49,13 +49,16 @@
         <text class="row-unit" wx:if="{{unit}}">{{unit}}</text>
       </view>
 
-      <view class="row" bindtap="onPickArea">
-        <text class="row-label">仓库区域</text>
-        <text class="row-value {{warehouseAreaName ? '' : 'row-value--placeholder'}}">
-          {{warehouseAreaName || '请选择'}}
-        </text>
-        <text class="row-arrow">›</text>
-      </view>
+      <!-- ⚠️ picker 而非 wx.showActionSheet（后者 itemList 最多 6 项） -->
+      <picker mode="selector" range="{{areaNames}}" bindchange="onAreaChange">
+        <view class="row">
+          <text class="row-label">仓库区域</text>
+          <text class="row-value {{warehouseAreaName ? '' : 'row-value--placeholder'}}">
+            {{warehouseAreaName || '请选择'}}
+          </text>
+          <text class="row-arrow">›</text>
+        </view>
+      </picker>
 
       <view class="row">
         <text class="row-label">库位</text>
