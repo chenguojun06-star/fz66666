@@ -70,6 +70,7 @@ export const paths = {
 
   materialReconciliation: '/finance/material-reconciliation',
   payrollOperatorSummary: '/finance/payroll-operator-summary',
+  salaryConfig: '/finance/salary-config',
   financeCenter: '/finance/center',
   expenseReimbursement: '/finance/expense-reimbursement',
   employeeAdvance: '/finance/employee-advance',
@@ -600,6 +601,7 @@ export const menuConfig: MenuSection[] = [
       // { label: '每日流水', path: paths.dailyFlow, icon: React.createElement(FileTextOutlined) },
       // ========== 内部结算 ==========
       { label: '工资结算', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
+      { label: '薪资配置', path: paths.salaryConfig, icon: React.createElement(AccountBookOutlined) },
       // ========== 外部结算 ==========
       { label: '外发结算', path: paths.financeCenter, icon: React.createElement(ShopOutlined) },
       { label: '物料对账', path: paths.materialReconciliation, icon: React.createElement(FileTextOutlined) },
@@ -703,7 +705,8 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.patternRevision]: permissionCodes.patternRevision,
 
   [paths.materialReconciliation]: permissionCodes.materialRecon,
-  [paths.payrollOperatorSummary]: permissionCodes.financeCenter, // 工资结算汇总，复用成品结算权限（MENU_FINISHED_SETTLEMENT）
+  [paths.payrollOperatorSummary]: permissionCodes.financeCenter,
+  [paths.salaryConfig]: permissionCodes.financeCenter, // 工资结算汇总，复用成品结算权限（MENU_FINISHED_SETTLEMENT）
   [paths.financeCenter]: permissionCodes.financeCenter,
   [paths.expenseReimbursement]: permissionCodes.expenseReimbursement,
   [paths.employeeAdvance]: permissionCodes.employeeAdvance,

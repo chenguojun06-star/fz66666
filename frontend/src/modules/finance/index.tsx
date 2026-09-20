@@ -2,6 +2,7 @@ import React from 'react';
 
 export const MaterialReconciliation = React.lazy(() => import('./pages/Finance/MaterialReconciliation'));
 export const PayrollOperatorSummary = React.lazy(() => import('./pages/Finance/PayrollOperatorSummary'));
+export const SalaryConfig = React.lazy(() => import('./pages/Finance/SalaryConfig'));
 export const FinanceDashboard = React.lazy(() => import('./pages/FinanceDashboard'));
 export const DailyFlow = React.lazy(() => import('./pages/Finance/DailyFlow'));
 export const FinanceCenter = React.lazy(() => import('./pages/FinanceCenter'));
