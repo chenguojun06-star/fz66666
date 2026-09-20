@@ -1,5 +1,5 @@
 /* 极简紧凑风格 */
-@import '../../styles/inline-selector.wxss';
+@import '/styles/inline-selector.wxss';
 
 page {
   background: var(--color-bg-page);

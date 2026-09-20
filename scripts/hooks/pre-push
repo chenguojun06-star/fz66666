@@ -104,6 +104,24 @@ if [[ "$HAS_MINI" -gt 0 ]]; then
     echo "[pre-push] ⚠️ 未找到 $MINI_CHECK，跳过小程序检查"
   fi
 
+  # ---- 三份副本一致性（D-492）----
+  # 引用完整性是**逐份独立**校验，查不出「源改了、镜像没改」—— 旧写法本身可能
+  # 照样能解析（如 pages/scan 两层深，'../../styles/x' 也合法）。
+  # 这个坑踩过两次：D-475（6 处 import 路径）、D-476（2 处路径归一化）都只改了源。
+  SYNC_CHECK="$ROOT_DIR/scripts/check-miniprogram-sync.py"
+  if [[ -f "$SYNC_CHECK" ]]; then
+    echo "[pre-push] 🔁 检查三份副本一致性"
+    python3 "$SYNC_CHECK"
+    SYNC_CODE=$?
+    if [[ $SYNC_CODE -ne 0 ]]; then
+      echo ""
+      echo "❌ 三份小程序副本不一致（多半是只改了 miniprogram/ 忘了同步镜像），推送已阻止"
+      echo "   把改动同步到 h5-web/source-miniapp 与 h5-web/public/source-miniapp 后重新 push"
+      echo "   紧急情况: git push --no-verify"
+      exit 1
+    fi
+  fi
+
   # ---- 小程序页面逻辑测试（D-490）----
   # 引用完整性查不出**运行时**问题。今晚实际踩到两个：
   #   - setData 回调不绑定 this（10 处，D-487）

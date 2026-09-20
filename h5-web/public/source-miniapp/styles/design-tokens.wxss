@@ -263,7 +263,7 @@ page {
 
 /* ⚠️ 自定义属性必须写在规则块内。裸写在文件顶层是**语法错误**，
    WXSS 编译会直接失败（报 "unexpected token"），整个文件失效 ——
-   与 miniprogram/styles/design-tokens.wxss 的 D-468 修复保持同步。 */
+   D-467 初次提交就是漏了这个 page 块（2026-09-19 修复）。 */
 page {
   /* 间距（覆盖页面实际用到的全部取值） */
   --space-2: 2rpx;
