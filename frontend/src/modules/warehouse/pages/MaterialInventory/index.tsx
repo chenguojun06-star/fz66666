@@ -250,18 +250,15 @@ const _MaterialInventory: React.FC = () => {
         items={[
           {
             key: 'overview',
+            // D-474：Tab 标题简化，只保留"物料仓储"+ 低库存徽章，
+            // 副标题"库存与预警"去掉（与卡片内"物料仓储"标题重复）
             label: (
-              <div>
-                {/* D-474：Tab 原来叫"库存总览"，与卡片内的"物料仓储"标题重复；
-                    改叫"物料仓储"，低库存数量仍以徽章跟在后面 */}
-                <Space size={4}>
-                  物料仓储
-                  {Number(stats.lowStockCount || 0) > 0 && (
-                    <Badge count={Number(stats.lowStockCount || 0)} />
-                  )}
-                </Space>
-                <div className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>库存与预警</div>
-              </div>
+              <Space size={4}>
+                物料仓储
+                {Number(stats.lowStockCount || 0) > 0 && (
+                  <Badge count={Number(stats.lowStockCount || 0)} />
+                )}
+              </Space>
             ),
             children: (
               <>
