@@ -11,6 +11,7 @@ import {
   Table,
   Tag,
   Typography,
+  Modal,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -19,6 +20,7 @@ import { safePrint } from '@/utils/safePrint';
 import {
   buildCounterpartyStatementHtml,
   buildMultiCounterpartyStatementHtml,
+  STATEMENT_COLUMNS,
 } from '../utils/buildCounterpartyStatementHtml';
 import { isRealCounterpartyId } from './counterpartyConstants';
 import { useUser } from '@/utils/AuthContext';
@@ -60,6 +62,10 @@ export default function CounterpartyLedgerTab() {
   // D-474：勾选多个对象 → 批量出对账单（月底一次性给所有工厂/员工打单）
   const [selectedKeys, setSelectedKeys] = useState<React.Key[]>([]);
   const [batchPrinting, setBatchPrinting] = useState(false);
+  // D-474：打印列勾选（不想让对方看到某列就勾掉）
+  const [printColumns, setPrintColumns] = useState<string[]>(STATEMENT_COLUMNS.map((c) => c.key));
+  const [printOptsOpen, setPrintOptsOpen] = useState(false);
+  const [printTarget, setPrintTarget] = useState<CounterpartyGroup | null>(null);
 
   /** 行唯一键：类型 +（ID 或名称），表格 rowKey 与勾选/批量打印共用 */
   const rowKeyOf = useCallback(
@@ -119,7 +125,7 @@ export default function CounterpartyLedgerTab() {
 
   /** D-474：总账行直接打印该对象的对账单（拉该对象当前筛选下全部账单） */
   const handlePrintRow = useCallback(
-    async (g: CounterpartyGroup) => {
+    async (g: CounterpartyGroup, columns?: string[]) => {
       if (!g.counterpartyId && !g.counterpartyName) {
         message.error('该记录缺少往来对象信息');
         return;
@@ -204,6 +210,12 @@ export default function CounterpartyLedgerTab() {
       setBatchPrinting(false);
     }
   }, [groups, selectedKeys, month, onlyUnsettled, billType, message, user, rowKeyOf]);
+
+  /** D-474：点打印先弹列勾选，确认后再打 */
+  const openPrintOpts = useCallback((g: CounterpartyGroup) => {
+    setPrintTarget(g);
+    setPrintOptsOpen(true);
+  }, []);
 
   const columns: ColumnsType<CounterpartyGroup> = [
     {
@@ -307,7 +319,7 @@ export default function CounterpartyLedgerTab() {
             icon={<PrinterOutlined />}
             onClick={(e) => {
               e.stopPropagation();
-              void handlePrintRow(r);
+              openPrintOpts(r);
             }}
           >
             打印
@@ -401,6 +413,26 @@ export default function CounterpartyLedgerTab() {
           })}
         />
       </Spin>
+
+      {/* D-474：打印前勾选要显示的列 */}
+      <Modal
+        title="打印选项"
+        open={printOptsOpen}
+        onCancel={() => setPrintOptsOpen(false)}
+        onOk={() => {
+          if (printTarget) void handlePrintRow(printTarget, printColumns);
+          setPrintOptsOpen(false);
+        }}
+        okText="打印"
+        cancelText="取消"
+      >
+        <div style={{ marginBottom: 8 }}>勾选要出现在对账单上的列（不想让对方看到的可以勾掉）：</div>
+        <Checkbox.Group
+          options={STATEMENT_COLUMNS.map((c) => ({ label: c.label, value: c.key }))}
+          value={printColumns}
+          onChange={(v) => setPrintColumns(v as string[])}
+        />
+      </Modal>
 
       <CounterpartyBillDrawer
         open={drawerOpen}

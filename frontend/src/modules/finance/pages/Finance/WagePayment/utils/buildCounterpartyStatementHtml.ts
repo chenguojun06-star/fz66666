@@ -25,7 +25,21 @@ export interface StatementBillRow {
   remark?: string;
 }
 
+/** D-474：对账单可勾选的列（打印时想隐藏某列就勾掉） */
+export const STATEMENT_COLUMNS = [
+  { key: 'billNo', label: '账单编号' },
+  { key: 'source', label: '来源模块' },
+  { key: 'sourceNo', label: '来源单号' },
+  { key: 'month', label: '结算月' },
+  { key: 'amount', label: '金额' },
+  { key: 'settled', label: '已结清' },
+  { key: 'unpaid', label: '未结清' },
+  { key: 'status', label: '状态' },
+];
+
 export interface CounterpartyStatementParams {
+  /** 打印时显示哪些列（不传=全部显示） */
+  columns?: string[];
   counterpartyName?: string;
   /** 类型文案（员工/工厂/供应商/客户） */
   counterpartyTypeText?: string;
@@ -57,6 +71,12 @@ const num = (v?: number): number => Number(v ?? 0);
 /** 单个对象的对账单主体（不含 html/head 外壳，便于多对象拼接） */
 const buildStatementBody = (p: CounterpartyStatementParams, isLast: boolean): string => {
   const rows = p.rows ?? [];
+  // D-474：列显示控制（打印时可勾掉不想出现的列）
+  const show = (key: string): boolean => !p.columns || p.columns.includes(key);
+  // 序号 + 非金额列（合计行 colspan 用）
+  const headColCount = 1 + ['billNo', 'source', 'sourceNo', 'month'].filter(show).length;
+  const amountColCount = ['amount', 'settled', 'unpaid'].filter(show).length + (show('status') ? 1 : 0);
+  const totalColCount = headColCount + amountColCount;
   const rowsHtml = rows
     .map((b, idx) => {
       const amount = num(b.amount);
@@ -69,14 +89,14 @@ const buildStatementBody = (p: CounterpartyStatementParams, isLast: boolean): st
       return `
       <tr>
         <td class="c">${idx + 1}</td>
-        <td>${esc(b.billNo)}</td>
-        <td>${esc(sourceText)}</td>
-        <td>${esc(b.sourceNo || b.orderNo || '-')}</td>
-        <td>${esc(b.settlementMonth || '-')}</td>
-        <td class="r${negCls}">${formatMoney(amount)}</td>
-        <td class="r">${formatMoney(settled)}</td>
-        <td class="r${unpaidCls}">${formatMoney(rest)}</td>
-        <td class="c">${esc(statusText)}</td>
+        ${show('billNo') ? `<td>${esc(b.billNo)}</td>` : ''}
+        ${show('source') ? `<td>${esc(sourceText)}</td>` : ''}
+        ${show('sourceNo') ? `<td>${esc(b.sourceNo || b.orderNo || '-')}</td>` : ''}
+        ${show('month') ? `<td>${esc(b.settlementMonth || '-')}</td>` : ''}
+        ${show('amount') ? `<td class="r${negCls}">${formatMoney(amount)}</td>` : ''}
+        ${show('settled') ? `<td class="r">${formatMoney(settled)}</td>` : ''}
+        ${show('unpaid') ? `<td class="r${unpaidCls}">${formatMoney(rest)}</td>` : ''}
+        ${show('status') ? `<td class="c">${esc(statusText)}</td>` : ''}
       </tr>`;
     })
     .join('');
@@ -142,15 +162,15 @@ ${buildPrintHeader(p.tenantName, '往来对账单')}
     </tr>
   </thead>
   <tbody>
-    ${rowsHtml || '<tr><td colspan="9" class="c">暂无账单明细</td></tr>'}
+    ${rowsHtml || `<tr><td colspan="${totalColCount}" class="c">暂无账单明细</td></tr>`}
   </tbody>
   <tfoot>
     <tr>
-      <td colspan="5" class="c">合计（${rows.length} 笔）</td>
-      <td class="r">${formatMoney(p.totalAmount)}</td>
-      <td class="r">${formatMoney(p.settledAmount)}</td>
-      <td class="r unpaid">${formatMoney(p.unpaidAmount)}</td>
-      <td></td>
+      <td colspan="${headColCount}" class="c">合计（${rows.length} 笔）</td>
+      ${show('amount') ? `<td class="r">${formatMoney(p.totalAmount)}</td>` : ''}
+      ${show('settled') ? `<td class="r">${formatMoney(p.settledAmount)}</td>` : ''}
+      ${show('unpaid') ? `<td class="r unpaid">${formatMoney(p.unpaidAmount)}</td>` : ''}
+      ${show('status') ? '<td></td>' : ''}
     </tr>
   </tfoot>
 </table>
