@@ -65,6 +65,11 @@ Page({
     this._unbindEvents();
   },
 
+  /** D-485：跳物料入库页（手机端此前只有扫码发料/退回，无手工入库入口） */
+  onGoInbound: function () {
+    wx.navigateTo({ url: '/pages/warehouse/material-inbound/index' });
+  },
+
   _bindEvents: function () {
     this._onDataChanged = function (data) {
       if (data && (data.type === 'warehouse' || data.type === 'materialStock' || data.type === 'material')) {

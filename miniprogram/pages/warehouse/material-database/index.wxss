@@ -426,3 +426,20 @@ page {
   font-size: var(--font-size-2xs);
   color: var(--color-text-quaternary);
 }
+
+/* ── D-485：入库操作按钮（手机端补上物料手工入库入口） ── */
+.action-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-8, 8rpx) var(--space-16, 16rpx) 0;
+}
+.action-btn {
+  padding: var(--space-8, 8rpx) var(--space-32, 32rpx);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-lg, 8px);
+}
+.action-btn--primary {
+  color: #fff;
+  background: var(--color-primary, #2d7ff9);
+}
