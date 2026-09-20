@@ -71,6 +71,7 @@ export const paths = {
   materialReconciliation: '/finance/material-reconciliation',
   payrollOperatorSummary: '/finance/payroll-operator-summary',
   salaryConfig: '/finance/salary-config',
+  deductionManage: '/finance/deduction-manage',
   financeCenter: '/finance/center',
   expenseReimbursement: '/finance/expense-reimbursement',
   employeeAdvance: '/finance/employee-advance',
@@ -453,6 +454,7 @@ export const permissionCodes = {
   wagePayment: 'MENU_PAYMENT_APPROVAL',
   // D-474：薪资配置独立权限（原来复用外发结算权限，无法单独控制谁可看）
   salaryConfig: 'MENU_SALARY_CONFIG',
+  deductionManage: 'MENU_DEDUCTION_MANAGE',
   payrollSummary: 'MENU_PAYROLL_OPERATOR_SUMMARY',
 
   materialInventory: 'MENU_MATERIAL_INVENTORY',
@@ -604,6 +606,7 @@ export const menuConfig: MenuSection[] = [
       // ========== 内部结算 ==========
       { label: '工资结算', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
       { label: '薪资配置', path: paths.salaryConfig, icon: React.createElement(AccountBookOutlined) },
+      { label: '扣款管理', path: paths.deductionManage, icon: React.createElement(AccountBookOutlined) },
       // ========== 外部结算 ==========
       { label: '外发结算', path: paths.financeCenter, icon: React.createElement(ShopOutlined) },
       { label: '物料对账', path: paths.materialReconciliation, icon: React.createElement(FileTextOutlined) },
@@ -709,6 +712,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.materialReconciliation]: permissionCodes.materialRecon,
   [paths.payrollOperatorSummary]: permissionCodes.financeCenter,
   [paths.salaryConfig]: permissionCodes.salaryConfig, // 薪资配置独立权限（MENU_SALARY_CONFIG）
+  [paths.deductionManage]: permissionCodes.deductionManage,
   [paths.financeCenter]: permissionCodes.financeCenter,
   [paths.expenseReimbursement]: permissionCodes.expenseReimbursement,
   [paths.employeeAdvance]: permissionCodes.employeeAdvance,

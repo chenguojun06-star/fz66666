@@ -64,6 +64,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
     [paths.materialReconciliation]: 'menu.items.materialReconciliation',
     [paths.payrollOperatorSummary]: 'menu.items.payrollOperatorSummary',
     [paths.salaryConfig]: 'menu.items.salaryConfig',
+    [paths.deductionManage]: 'menu.items.deductionManage',
     [paths.financeCenter]: 'menu.items.financeCenter',
     [paths.expenseReimbursement]: 'menu.items.expenseReimbursement',
     [paths.wagePayment]: 'menu.items.wagePayment',
