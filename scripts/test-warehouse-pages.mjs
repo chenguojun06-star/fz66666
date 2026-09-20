@@ -404,6 +404,10 @@ function testEntryPoints() {
   ok('列表页有出库按钮处理', /onOutboundTap/.test(lJ));
   ok('列表页直接跳出库页(不经详情)', /finished-outbound\/index/.test(lJ));
   ok('列表页出库不再用 autoOutbound 中转', !/autoOutbound=1/.test(lJ));
+  // D-496：入库也应从列表直达（与出库对称，原先只能点进详情再入库）
+  ok('列表页有入库直达', /onInboundTap/.test(lJ) && /finished-inbound\/index/.test(lJ));
+  const lW = read('pages/warehouse/finished-inventory/index.wxml');
+  ok('列表页有入库按钮', /onInboundTap/.test(lW));
 
   // 四个页面都已在 app.json 注册
   const appJson = JSON.parse(fs.readFileSync(path.join(MP, 'app.json'), 'utf8'));

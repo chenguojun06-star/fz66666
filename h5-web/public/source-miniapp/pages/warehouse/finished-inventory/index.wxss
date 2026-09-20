@@ -488,3 +488,13 @@ page {
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
+
+/* D-496：列表「入库」按钮（次要样式，与「出库」主色描边区分） */
+.outbound-btn--plain {
+  margin-right: 8px;
+  color: var(--color-text-secondary, #666);
+  border-color: var(--color-border-strong, #ccc);
+}
+.outbound-btn--plain:active {
+  background: var(--color-bg-page, #f5f5f5);
+}

@@ -99,6 +99,8 @@
         <view class="item-meta">
           <text class="meta-text">最近入库：{{item._lastInboundDate}}</text>
           <view class="item-actions">
+            <!-- D-496：入库按钮（原先只能「点进详情 → 入库」，与出库不对称） -->
+            <view class="outbound-btn outbound-btn--plain" catchtap="onInboundTap" data-id="{{item.id}}">入库</view>
             <view wx:if="{{item._hasAvailable}}" class="outbound-btn" catchtap="onOutboundTap" data-id="{{item.id}}">出库</view>
             <text class="meta-arrow">›</text>
           </view>

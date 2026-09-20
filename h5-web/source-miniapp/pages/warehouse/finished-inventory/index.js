@@ -226,5 +226,30 @@ Page({
     wx.navigateTo({ url: this._buildOutboundUrl(item) });
   },
 
+  /**
+   * D-496：列表直接入库（与出库对称）
+   * 原先入库只能「列表 → 点进详情 → 入库」，比出库多一层；出库已改为列表直达后，
+   * 这里同样直接跳 finished-inbound，返回即回列表。
+   *
+   * 注意：入库不限「有可用库存」—— 新到的款本来就没库存，也要能入库。
+   */
+  onInboundTap: function (e) {
+    const id = e.currentTarget.dataset.id;
+    const item = this.data.list.find(function (it) { return it.id === id; });
+    if (!item) return;
+    wx.navigateTo({ url: this._buildInboundUrl(item) });
+  },
+
+  _buildInboundUrl: function (item) {
+    const params = [
+      'styleNo=' + encodeURIComponent(item.styleNo || ''),
+      'orderNo=' + encodeURIComponent(item.orderNo || ''),
+      'styleName=' + encodeURIComponent(item.styleName || ''),
+      'styleImage=' + encodeURIComponent(item._styleImage || item.styleImage || ''),
+      'factoryName=' + encodeURIComponent(item.factoryName || ''),
+    ];
+    return '/pages/warehouse/finished-inbound/index?' + params.join('&');
+  },
+
   preventTouchMove: function () {},
 });
