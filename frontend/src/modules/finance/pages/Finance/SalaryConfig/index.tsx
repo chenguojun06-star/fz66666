@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { App, Button, Card, Descriptions, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import SideDrawer from '@/components/common/SideDrawer';
 import api from '@/utils/api';
 
 /**
@@ -85,8 +86,12 @@ const SalaryConfigPage: React.FC = () => {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      await api.post('/finance/salary-config/save', values);
-      message.success('薪资规则已保存');
+      const picked: string[] = Array.isArray(values.userId) ? values.userId : [values.userId];
+      // D-474：批量——给每个选中的员工各存一条规则
+      for (const uid of picked) {
+        await api.post('/finance/salary-config/save', { ...values, userId: uid });
+      }
+      message.success(picked.length > 1 ? `已为 ${picked.length} 名员工保存规则` : '薪资规则已保存');
       setEditOpen(false);
       void fetchList();
     } catch (e: unknown) {
@@ -119,6 +124,35 @@ const SalaryConfigPage: React.FC = () => {
       message.error(e instanceof Error ? e.message : '试算失败');
     }
   };
+
+  // D-474：员工选择器（远程搜索），支持单选与批量
+  const [userOptions, setUserOptions] = useState<{ label: string; value: string }[]>([]);
+  const [userLoading, setUserLoading] = useState(false);
+
+  const searchUsers = useCallback(async (kw: string) => {
+    setUserLoading(true);
+    try {
+      const res: any = await api.get('/system/user/list', {
+        params: { name: kw || undefined, pageSize: 50 },
+      });
+      const recs = res?.data?.records ?? res?.data ?? [];
+      setUserOptions(
+        (Array.isArray(recs) ? recs : []).map((u: any) => ({
+          // 薪资/考勤都以 username 作为 user_id，保持一致
+          value: u.username || u.id,
+          label: `${u.name || u.username}${u.employeeNo ? `（${u.employeeNo}）` : ''}`,
+        })),
+      );
+    } catch {
+      setUserOptions([]);
+    } finally {
+      setUserLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void searchUsers('');
+  }, [searchUsers]);
 
   /** D-474：一键生成当月工资单——算完直接推成应付账单，之后在收付款中心付款核销 */
   const handleGenerate = async () => {
@@ -235,20 +269,38 @@ const SalaryConfigPage: React.FC = () => {
         size="small"
       />
 
-      {/* 编辑/新增 */}
-      <Modal
+      {/* 编辑/新增：用侧滑（项目统一风格，表单项多时更好填） */}
+      <SideDrawer
         title={editing ? '编辑薪资规则' : '新增薪资规则'}
         open={editOpen}
-        onOk={handleSave}
-        onCancel={() => setEditOpen(false)}
+        onClose={() => setEditOpen(false)}
         width={640}
-        destroyOnHidden
+        footer={
+          <Space>
+            <Button onClick={() => setEditOpen(false)}>取消</Button>
+            <Button type="primary" onClick={handleSave}>保存</Button>
+          </Space>
+        }
       >
         <Form form={form} layout="vertical" initialValues={{ salaryType: 'HOURLY' }}>
-          <Form.Item name="userId" label="员工ID（系统用户ID）" rules={[{ required: true }]}>
-            <Input placeholder="如 lilb" disabled={!!editing} />
+          <Form.Item
+            name="userId"
+            label={editing ? '员工' : '员工（可多选，批量应用同一套规则）'}
+            rules={[{ required: true, message: '请选择员工' }]}
+          >
+            <Select
+              showSearch
+              allowClear
+              mode={editing ? undefined : 'multiple'}
+              disabled={!!editing}
+              loading={userLoading}
+              filterOption={false}
+              placeholder="输入姓名搜索，可直接多选"
+              onSearch={(v) => void searchUsers(v)}
+              options={userOptions}
+            />
           </Form.Item>
-          <Form.Item name="userName" label="员工姓名">
+          <Form.Item name="userName" label="员工姓名（显示用，留空自动取系统姓名）">
             <Input placeholder="如 李老板" />
           </Form.Item>
           <Form.Item name="salaryType" label="薪资类型" rules={[{ required: true }]}>
@@ -294,7 +346,7 @@ const SalaryConfigPage: React.FC = () => {
             </Form.Item>
           </Space>
         </Form>
-      </Modal>
+      </SideDrawer>
 
       {/* 试算结果 */}
       <Modal

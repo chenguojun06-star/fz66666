@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Button, ColorPicker, InputNumber, Popover, Select, Space, Tooltip, Dropdown } from 'antd';
 import {
   AlignCenterOutlined, AlignLeftOutlined, AlignRightOutlined, BoldOutlined,
@@ -20,7 +21,7 @@ interface Props {
   sheetUploading: boolean;
   /** 上传一张图片到附件库（bizType=workorder），返回 URL */
   onUploadSheetImage: (file: File) => Promise<string>;
-  onProductionReqSave: () => void;
+  onProductionReqSave: () => void | Promise<void>;
   onDownloadWorkorder: () => void;
   onPrintWorkorder: () => void;
   onOpenOcr: () => void;
@@ -212,8 +213,13 @@ const ProductionRequirementsSection: React.FC<Props> = ({
         currentStyleId={currentStyleId ?? ''}
         submitting={productionReqSaving}
         onConfirm={async (html) => {
-          onContentChange(html);
-          onProductionReqSave();
+          // D-474：原来先 onContentChange（异步 setState）再立刻保存，
+          // 保存函数读到的还是旧内容 → 拷贝进去的是空的。
+          // 用 flushSync 强制同步写入，保证保存时读到的就是刚拷进来的内容。
+          flushSync(() => {
+            onContentChange(html);
+          });
+          await onProductionReqSave();
           setCopyCraftOpen(false);
         }}
       />

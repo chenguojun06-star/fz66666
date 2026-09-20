@@ -519,6 +519,8 @@ public class SystemTableMigrator {
             ensurePermission("费用报销", "MENU_EXPENSE_REIMBURSEMENT", financeId, "财务管理", "menu", "/finance/expense-reimbursement", null, 36);
             ensurePermission("财税导出", "MENU_FINANCE_EXPORT", financeId, "财务管理", "menu", "/finance/tax-export", null, 37);
             ensurePermission("订单结算(外)", "MENU_FINISHED_SETTLEMENT", financeId, "财务管理", "menu", "/finance/center", null, 38);
+            // D-474：薪资配置（计时/计件/固定工资规则设定）——独立权限，可在权限管理里单独控制谁能看
+            ensurePermission("薪资配置", "MENU_SALARY_CONFIG", financeId, "财务管理", "menu", "/finance/salary-config", null, 39);
         }
         Long warehouseId = ensurePermission("仓库管理", "MENU_WAREHOUSE", 0L, null, "menu", null, null, 45);
         if (warehouseId != null) {

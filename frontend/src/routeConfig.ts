@@ -451,6 +451,8 @@ export const permissionCodes = {
   expenseReimbursement: 'MENU_EXPENSE_REIMBURSEMENT',
   employeeAdvance: 'MENU_EMPLOYEE_ADVANCE',
   wagePayment: 'MENU_PAYMENT_APPROVAL',
+  // D-474：薪资配置独立权限（原来复用外发结算权限，无法单独控制谁可看）
+  salaryConfig: 'MENU_SALARY_CONFIG',
   payrollSummary: 'MENU_PAYROLL_OPERATOR_SUMMARY',
 
   materialInventory: 'MENU_MATERIAL_INVENTORY',
@@ -706,7 +708,7 @@ export const routeToPermissionCode: Record<string, string> = {
 
   [paths.materialReconciliation]: permissionCodes.materialRecon,
   [paths.payrollOperatorSummary]: permissionCodes.financeCenter,
-  [paths.salaryConfig]: permissionCodes.financeCenter, // 工资结算汇总，复用成品结算权限（MENU_FINISHED_SETTLEMENT）
+  [paths.salaryConfig]: permissionCodes.salaryConfig, // 薪资配置独立权限（MENU_SALARY_CONFIG）
   [paths.financeCenter]: permissionCodes.financeCenter,
   [paths.expenseReimbursement]: permissionCodes.expenseReimbursement,
   [paths.employeeAdvance]: permissionCodes.employeeAdvance,
