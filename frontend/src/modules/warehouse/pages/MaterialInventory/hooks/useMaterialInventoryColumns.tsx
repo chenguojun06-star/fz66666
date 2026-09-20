@@ -1,5 +1,5 @@
 import React from 'react';
-import { Space, Image, Tag } from 'antd';
+import { Button, Space, Image, Tag } from 'antd';
 import { InboxOutlined , SendOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormInstance } from 'antd/es/form';
@@ -160,70 +160,60 @@ export function useMaterialInventoryColumns({
         const lockedQty = record.lockedQty ?? 0;
         const safetyStock = record.safetyStock ?? 0;
         const isLow = availableQty < safetyStock;
+        const suggestQty = Math.max(0, safetyStock * 2 - availableQty - inTransitQty);
         return (
-          <Space orientation="vertical" size={4} style={{ width: '100%' }}>
-            <div className="stock-grid">
-              <div
-                style={{ cursor: onPickStock ? 'pointer' : undefined }}
-                onClick={() => onPickStock?.(record)}
-                title={onPickStock ? '点击领取库存' : undefined}
-              >
-                <div className="stock-label">可用库存 <span className="u-fs-14 u-d-inline-flex u-ai-center" style={{ color: 'var(--color-info)', gap: 2 }}><InboxOutlined /> 领</span></div>
-                <div className="stock-value stock-value--ok">
+          /* D-474：原来是 4 格网格 + 2 行小字 + 1 行警示共 8 项堆在一起，
+             "领/出"两个操作还混在数据标签里（"可用库存 领""出库 出"），分不清哪个是数哪个是按钮。
+             改为主数据一行（可用库存突出）+ 操作按钮独立 + 次要信息一行小字。 */
+          <div style={{ width: '100%' }}>
+            {/* 主数据：可用库存（大号突出，低于安全库存标红）+ 右侧操作 */}
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4 }}>
+                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>可用</span>
+                <span style={{
+                  fontSize: 17, fontWeight: 600, lineHeight: 1.2,
+                  color: isLow ? 'var(--color-error)' : 'var(--color-success)',
+                }}>
                   {availableQty.toLocaleString()}
-                </div>
-                <div className="stock-unit">{record.unit}</div>
-              </div>
-              {/* D-360y：库存数量点击出库——出库弹窗默认带出全部可用量，可改 */}
-              <div
-                className="u-cur-pointer"
-                onClick={() => handleOutbound(record)}
-                title="点击出库（出库数量默认为当前可用量，可修改）"
-              >
-                <div className="stock-label">出库 <SendOutlined style={{ color: 'var(--color-warning)' }} /></div>
-                <div className="stock-value stock-value--warn" style={{ color: 'var(--color-warning)' }}>
-                  出
-                </div>
-                <div className="stock-unit">点击出库</div>
-              </div>
-              <div>
-                <div className="stock-label">在途</div>
-                <div className="stock-value stock-value--info">
-                  {inTransitQty.toLocaleString()}
-                </div>
-                <div className="stock-unit">{record.unit}</div>
-              </div>
-              <div>
-                <div className="stock-label">锁定</div>
-                <div className="stock-value stock-value--lock">
-                  {lockedQty.toLocaleString()}
-                </div>
-                <div className="stock-unit">{record.unit}</div>
-              </div>
+                </span>
+                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{record.unit}</span>
+                {isLow && <Tag color="error" style={{ marginInlineStart: 2 }}>低于安全库存</Tag>}
+              </span>
+              <Space size={0}>
+                {onPickStock && (
+                  <Button type="link" size="small" icon={<InboxOutlined />} style={{ padding: '0 4px' }}
+                    onClick={() => onPickStock?.(record)} title="领取库存">领</Button>
+                )}
+                <Button type="link" size="small" icon={<SendOutlined />} style={{ padding: '0 4px' }}
+                  onClick={() => handleOutbound(record)} title="点击出库（默认带出全部可用量，可修改）">出库</Button>
+              </Space>
             </div>
-            <div style={{
-              fontSize: "var(--font-size-xs)",
-              color: 'var(--neutral-text-disabled)',
-              paddingTop: 4,
-              borderTop: '1px solid var(--color-border-light)',
-            }}>
-              <span>安全库存:</span> {safetyStock} {record.unit}
-              <span style={{ margin: '0 6px', color: 'var(--neutral-border)' }}>|</span>
-              <span>库位:</span> {record.warehouseLocation || '-'}
+
+            {/* 次要信息：在途 / 锁定 / 安全库存 一行说完 */}
+            <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+              在途 {inTransitQty.toLocaleString()}
+              <span style={{ margin: '0 4px', opacity: 0.45 }}>·</span>
+              锁定 {lockedQty.toLocaleString()}
+              <span style={{ margin: '0 4px', opacity: 0.45 }}>·</span>
+              安全 {safetyStock.toLocaleString()} {record.unit}
             </div>
+
+            {/* 库位 */}
+            <div style={{ fontSize: 12, color: 'var(--color-text-quaternary)', marginTop: 2 }}>
+              库位：{record.warehouseLocation || '-'}
+            </div>
+
+            {/* 低库存：建议补货 */}
             {isLow && (
               <div style={{
-                background: 'var(--status-warning-bg)',
-                border: '1px solid var(--status-warning-border)',
-                borderRadius: 4,
-                padding: '2px 6px',
-                fontSize: "var(--font-size-xs)",
-                color: 'var(--color-warning)',
+                marginTop: 4, background: 'var(--status-warning-bg)',
+                border: '1px solid var(--status-warning-border)', borderRadius: 4,
+                padding: '2px 6px', fontSize: 'var(--font-size-xs)', color: 'var(--color-warning)',
               }}>
-                建议补货 <strong>{Math.max(0, safetyStock * 2 - availableQty - inTransitQty).toLocaleString()}</strong> {record.unit}
+                建议补货 <strong>{suggestQty.toLocaleString()}</strong> {record.unit}
               </div>
             )}
-          </Space>
+          </div>
         );
       },
     },
