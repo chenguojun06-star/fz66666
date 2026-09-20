@@ -199,9 +199,8 @@ const _MaterialInventory: React.FC = () => {
         </Card>
       ) : null}
 
-      <div className="u-mb-12">
-        <h2 className="u-m-0 u-fs-14">数据概览</h2>
-      </div>
+      {/* D-474：去掉「数据概览」小标题——它只是个名字，下面才是真正的统计卡片，
+          留着占一行还让人以为是另一块内容 */}
       <PageStatCards
         activeKey={selectedType || 'all'}
         cards={[
