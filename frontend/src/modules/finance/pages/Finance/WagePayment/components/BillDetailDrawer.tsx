@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Descriptions, Drawer, Progress, Space, Table, Tag, Typography } from 'antd';
+import { Descriptions, Drawer, Image, Progress, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import { QuestionCircleOutlined } from '@ant-design/icons';
+import { getStyleInfoByRef } from '@/services/style/styleApi';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import {
@@ -32,6 +34,27 @@ interface BillDetailDrawerProps {
 export default function BillDetailDrawer({ open, bill, onClose }: BillDetailDrawerProps) {
   const [payments, setPayments] = useState<WagePayment[]>([]);
   const [loading, setLoading] = useState(false);
+  // D-474：按款号带出款式封面与名称，方便核对"这笔钱是做哪个款产生的"
+  const [styleInfo, setStyleInfo] = useState<any>(null);
+
+  useEffect(() => {
+    if (!open || !bill?.styleNo) {
+      setStyleInfo(null);
+      return;
+    }
+    let alive = true;
+    (async () => {
+      try {
+        const info = await getStyleInfoByRef(bill.styleNo, bill.styleNo);
+        if (alive) setStyleInfo(info ?? null);
+      } catch {
+        if (alive) setStyleInfo(null);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [open, bill?.styleNo]);
 
   // 关联付款记录：结清时以 bill.id 作为 bizId 补记，这里按它过滤
   useEffect(() => {
@@ -99,11 +122,79 @@ export default function BillDetailDrawer({ open, bill, onClose }: BillDetailDraw
     >
       {bill && (
         <>
-          <Descriptions column={2} size="small" bordered style={{ marginBottom: 16 }}>
+          {/* D-474：带上款式的封面图与名称，核对这笔费用时一眼知道是哪个款 */}
+          {styleInfo && (
+            <Space
+              align="start"
+              style={{
+                marginBottom: 16,
+                padding: 12,
+                border: '1px solid var(--color-border-secondary)',
+                borderRadius: 6,
+                background: 'var(--color-fill-tertiary)',
+                width: '100%',
+              }}
+            >
+              {styleInfo.cover ? (
+                <Image
+                  src={String(styleInfo.cover)}
+                  width={96}
+                  height={96}
+                  style={{ objectFit: 'cover', borderRadius: 4 }}
+                  fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 96,
+                    height: 96,
+                    borderRadius: 4,
+                    background: 'var(--color-fill-secondary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--color-text-tertiary)',
+                    fontSize: 12,
+                  }}
+                >
+                  无图
+                </div>
+              )}
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{styleInfo.styleName || bill.styleNo}</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                  款号：{bill.styleNo || '-'}
+                </div>
+                {styleInfo.category && (
+                  <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                    品类：{styleInfo.category}
+                  </div>
+                )}
+              </div>
+            </Space>
+          )}
+          <Descriptions
+            column={2}
+            bordered
+            style={{ marginBottom: 16 }}
+            labelStyle={{ fontSize: 13, fontWeight: 500, width: 110 }}
+            contentStyle={{ fontSize: 13 }}
+          >
             <Descriptions.Item label="来源模块">
               {SOURCE_TYPE_TEXT[bill.sourceType] ?? bill.sourceType ?? '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="来源单号">{bill.sourceNo || '-'}</Descriptions.Item>
+            <Descriptions.Item
+              label={
+                <span>
+                  来源单号
+                  <Tooltip title="这张账单是上游哪个单据推送来的原始单号，例如 SD-146 表示第 146 号样衣开发单；点开来源模块里同名单据可看到明细。">
+                    <QuestionCircleOutlined style={{ marginLeft: 4, color: 'var(--color-text-tertiary)' }} />
+                  </Tooltip>
+                </span>
+              }
+            >
+              {bill.sourceNo || '-'}
+            </Descriptions.Item>
             <Descriptions.Item label="往来对象">
               <Space size={6}>
                 <Text strong>{bill.counterpartyName || '-'}</Text>
