@@ -342,11 +342,34 @@ const SalaryConfigPage: React.FC = () => {
               disabled={!!editing}
               loading={userLoading}
               filterOption={false}
-              placeholder="输入姓名搜索，可直接多选"
+              placeholder="输入姓名搜索，可多选（一次给多个人用同一套规则）"
               onSearch={(v) => void searchUsers(v)}
               options={userOptions}
+              maxTagCount="responsive"
             />
           </Form.Item>
+          {!editing && (
+            <div style={{ marginTop: -8, marginBottom: 12 }}>
+              <Space size={4}>
+                <Button
+                  type="link"
+                  size="small"
+                  style={{ padding: 0 }}
+                  onClick={() => form.setFieldValue('userId', userOptions.map((o) => o.value))}
+                >
+                  全选（{userOptions.length} 人）
+                </Button>
+                <Button
+                  type="link"
+                  size="small"
+                  style={{ padding: 0 }}
+                  onClick={() => form.setFieldValue('userId', [])}
+                >
+                  清空
+                </Button>
+              </Space>
+            </div>
+          )}
           <Form.Item name="userName" label="员工姓名（显示用，留空自动取系统姓名）">
             <Input placeholder="如 李老板" />
           </Form.Item>
