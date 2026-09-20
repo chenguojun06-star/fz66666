@@ -80,16 +80,23 @@ if [[ "$HAS_MINI" -gt 0 ]]; then
   echo "[pre-push] 🔍 检测到小程序变更 ${HAS_MINI} 个文件 → 引用完整性检查"
   MINI_CHECK="$ROOT_DIR/scripts/check-miniprogram-refs.py"
   if [[ -f "$MINI_CHECK" ]]; then
-    python3 "$MINI_CHECK"
-    MINI_CODE=$?
-    if [[ $MINI_CODE -ne 0 ]]; then
-      echo ""
-      echo "❌ 小程序引用完整性检查未通过，推送已阻止"
-      echo "   修复上述引用问题后重新 push，或紧急情况: git push --no-verify"
-      echo ""
-      echo "⚠️  小程序不走 CI 编译 —— 带病推送会直到开发者工具编译阶段才暴露。"
-      exit 1
-    fi
+    # 仓库里有**多份小程序副本**，必须都查 ——
+    # D-475 的 6 处路径错误当初只改了 miniprogram/，h5-web/source-miniapp 仍带着同样的 bug。
+    for MINI_DIR in miniprogram h5-web/source-miniapp; do
+      if [[ -d "$ROOT_DIR/$MINI_DIR" ]]; then
+        python3 "$MINI_CHECK" "$MINI_DIR"
+        MINI_CODE=$?
+        if [[ $MINI_CODE -ne 0 ]]; then
+          echo ""
+          echo "❌ 小程序引用完整性检查未通过（$MINI_DIR），推送已阻止"
+          echo "   修复上述引用问题后重新 push，或紧急情况: git push --no-verify"
+          echo ""
+          echo "⚠️  小程序不走 CI 编译 —— 带病推送会直到开发者工具编译阶段才暴露。"
+          echo "⚠️  注意：仓库有多份小程序副本，修复要同步到每一份，否则另一份仍会编译失败。"
+          exit 1
+        fi
+      fi
+    done
   else
     echo "[pre-push] ⚠️ 未找到 $MINI_CHECK，跳过小程序检查"
   fi

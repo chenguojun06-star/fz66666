@@ -35,7 +35,21 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MP = os.path.join(ROOT, 'miniprogram')
+
+
+def pick_root(argv):
+    """
+    小程序根目录。默认 miniprogram/，但仓库里存在**多份副本**
+    （如 h5-web/source-miniapp —— D-475 的 6 处路径错误就是只在一份里改了，
+     另一份仍带着同样的 bug）。故支持显式指定。
+    """
+    for a in argv[1:]:
+        if not a.startswith('-'):
+            return os.path.join(ROOT, a)
+    return os.path.join(ROOT, 'miniprogram')
+
+
+MP = pick_root(sys.argv)
 
 # 组件路径合法形态：目录（含 index.*）或 无扩展名的同名文件组
 COMP_EXTS = ('.js', '.json', '.wxml', '.wxss')
@@ -212,8 +226,32 @@ def main():
                     errors.append('WXML <%s> 目标不存在  %s → %s'
                                   % (m.group(1), os.path.relpath(xf, MP), spec))
 
+    # ── ⑦ WXSS 自定义属性必须位于规则块内 ───────────────────────
+    # 裸写在文件顶层的 `--x: v;` 是**语法错误**，会让 WXSS 编译直接失败
+    # （D-468：design-tokens.wxss 因此整个文件失效；同一问题在
+    #   h5-web/source-miniapp 副本里也存在，40 个 rpx 令牌写在块外）。
+    prop_count = 0
+    for dirpath, dirnames, filenames in os.walk(MP):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        for fn in filenames:
+            if not fn.endswith('.wxss'):
+                continue
+            wf = os.path.join(dirpath, fn)
+            try:
+                with open(wf, encoding='utf-8') as fh:
+                    text = strip_comments(fh.read())
+            except Exception:
+                continue
+            depth = 0
+            for lineno, line in enumerate(text.split('\n'), 1):
+                if depth == 0 and re.match(r'^\s*--[\w-]+\s*:', line):
+                    errors.append('自定义属性写在规则块外（WXSS 编译会失败）  %s:%d  %s'
+                                  % (os.path.relpath(wf, MP), lineno, line.strip()))
+                    prop_count += 1
+                depth += line.count('{') - line.count('}')
+
     # ── 报告 ────────────────────────────────────────────────────
-    print('小程序引用完整性检查')
+    print('小程序引用完整性检查 —— 目标: %s/' % os.path.relpath(MP, ROOT))
     print('  页面 %d 个（主包+分包）' % len(pages))
     print('  组件引用 %d 处' % comp_count)
     print('  @import %d 处' % import_count)
