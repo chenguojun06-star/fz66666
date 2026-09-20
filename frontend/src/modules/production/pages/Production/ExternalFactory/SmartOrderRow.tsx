@@ -82,8 +82,14 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
   ], [record]);
 
   const computedTimeline = useMemo(
-    () => computeStageTimeline(timelineItems, record.createTime, shipDate),
-    [timelineItems, record.createTime, shipDate],
+    () => computeStageTimeline(
+      timelineItems,
+      record.createTime,
+      shipDate,
+      // D-474：已完成/已报废/已取消的订单不再算"等待 N 天"
+      isScrapped || ['completed', 'closed', 'COMPLETED', 'CLOSED'].includes(String(record.status ?? '')),
+    ),
+    [timelineItems, record.createTime, shipDate, isScrapped, record.status],
   );
 
   const stagesWithGaps = useMemo(() => {

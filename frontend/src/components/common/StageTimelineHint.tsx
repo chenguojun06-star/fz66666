@@ -55,6 +55,12 @@ export function computeStageTimeline(
   stages: StageTimelineItem[],
   orderCreateTime: string | null | undefined,
   expectedShipDate: string | null | undefined,
+  /**
+   * D-474：订单已关闭（已完成/已报废/已取消）。
+   * 关闭的订单不会再推进，不能再用"当前时间"去算等待——否则 3 月报废的订单
+   * 到 9 月会显示"等待 200 天"，看着像时间还在跑。
+   */
+  orderClosed: boolean = false,
 ): ComputedStage[] {
   return stages.map((stage, i) => {
     const budget = computeStageBudgetHint({
@@ -81,7 +87,8 @@ export function computeStageTimeline(
       }
     }
 
-    if (!gapText && i > 0) {
+    // D-474：订单已关闭时不再计算"等待"（下面的逻辑用 dayjs() 当前时间，会一直增长）
+    if (!gapText && i > 0 && !orderClosed) {
       const prev = stages[i - 1];
       if (prev.endTime && !stage.startTime && !stage.isCompleted && !stage.endTime) {
         // 后续还有节点已开始/已结束 → 说明本阶段只是没有扫码记录（跳过/直裁等），
