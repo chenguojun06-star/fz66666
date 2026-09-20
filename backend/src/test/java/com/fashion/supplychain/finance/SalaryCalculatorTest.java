@@ -158,4 +158,20 @@ class SalaryCalculatorTest {
         assertEquals(0, cmp(new BigDecimal("1234.56"), r.baseWage));
         assertEquals(0, cmp(new BigDecimal("1234.56"), r.netPay));
     }
+
+    @Test
+    @DisplayName("零出勤（整月没打卡）不发全勤奖——不能白拿钱")
+    void noAttendanceNoBonus() {
+        SalaryCalculator.Input in = baseInput();
+        in.salaryType = SalaryCalculator.SalaryType.FIXED;
+        in.monthlySalary = new BigDecimal("5200");
+        in.attendanceDays = 26;
+        in.actualAttendanceDays = 0; // 没上班
+        in.fullAttendanceBonus = new BigDecimal("200");
+        SalaryCalculator.Result r = SalaryCalculator.calculate(in);
+        assertFalse(r.fullAttendance, "没出勤不该算全勤");
+        assertEquals(0, cmp(BigDecimal.ZERO, r.bonus));
+        assertEquals(0, cmp(BigDecimal.ZERO, r.baseWage));
+        assertEquals(0, cmp(BigDecimal.ZERO, r.netPay));
+    }
 }

@@ -117,8 +117,10 @@ public final class SalaryCalculator {
             r.overtimePay = BigDecimal.ZERO;
         }
 
-        // 2) 全勤奖：无迟到、无请假
-        r.fullAttendance = in.lateCount == 0
+        // 2) 全勤奖：必须真有出勤记录，且无迟到、无请假
+        // D-474：之前漏了"出勤天数>0"，导致整月没打卡的员工也能拿全勤奖（白拿钱）
+        r.fullAttendance = in.actualAttendanceDays > 0
+                && in.lateCount == 0
                 && nz(in.leaveDays).compareTo(BigDecimal.ZERO) == 0
                 && nz(in.sickLeaveDays).compareTo(BigDecimal.ZERO) == 0;
         r.bonus = r.fullAttendance ? nz(in.fullAttendanceBonus) : BigDecimal.ZERO;
