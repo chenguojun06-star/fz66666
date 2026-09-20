@@ -631,12 +631,15 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
             if (monthIns != null) {
                 for (MaterialInbound in : monthIns) {
                     BigDecimal amount = in.getTotalAmount();
-                    // D-474：入库单经常没录金额（total_amount 为空），
-                    // 这时按"单价 × 入库数量"折算，否则本月入库金额恒为 0
+                    BigDecimal qty = in.getInboundQuantity() != null ? in.getInboundQuantity() : BigDecimal.ZERO;
                     if (amount == null && in.getUnitPrice() != null) {
-                        BigDecimal qty = in.getInboundQuantity() != null
-                                ? in.getInboundQuantity() : BigDecimal.ZERO;
+                        // 入库单自己录了单价：单价 × 入库数量
                         amount = in.getUnitPrice().multiply(qty);
+                    }
+                    if (amount == null) {
+                        // D-474：入库单既没金额也没单价（只有数量），
+                        // 跟出库口径一致——按该物料当前库存单价折算，避免恒为 0
+                        amount = stockUnitPrice(tenantId, in.getMaterialCode()).multiply(qty);
                     }
                     if (amount != null) {
                         monthInAmount = monthInAmount.add(amount);
@@ -677,5 +680,18 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         result.put("monthInAmount", monthInAmount);
         result.put("monthOutAmount", monthOutAmount);
         return result;
+    }
+
+    /** D-474：按物料编码取当前库存单价（用于出入库金额折算），取不到返回 0 */
+    private BigDecimal stockUnitPrice(Long tenantId, String materialCode) {
+        if (materialCode == null) {
+            return BigDecimal.ZERO;
+        }
+        MaterialStock stock = this.lambdaQuery()
+                .eq(MaterialStock::getTenantId, tenantId)
+                .eq(MaterialStock::getMaterialCode, materialCode)
+                .last("LIMIT 1")
+                .one();
+        return stock != null && stock.getUnitPrice() != null ? stock.getUnitPrice() : BigDecimal.ZERO;
     }
 }
