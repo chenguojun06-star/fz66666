@@ -168,8 +168,10 @@ export function useMaterialInventoryColumns({
           <div style={{ width: '100%' }}>
             {/* 主数据：可用库存（大号突出，低于安全库存标红）+ 右侧操作 */}
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4 }}>
-                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>可用</span>
+              {/* D-474：「可用 X 米」必须一行（之前窄容器会被 inline-flex wrap 拆掉），
+                  白名单保留完整不让换行；「低于安全库存」Tag 另起一行 */}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, flexWrap: 'nowrap' }}>
+                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', flexShrink: 0 }}>可用</span>
                 <span style={{
                   fontSize: 17, fontWeight: 600, lineHeight: 1.2,
                   color: isLow ? 'var(--color-error)' : 'var(--color-success)',
@@ -177,15 +179,16 @@ export function useMaterialInventoryColumns({
                   {availableQty.toLocaleString()}
                 </span>
                 <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{record.unit}</span>
-                {isLow && <Tag color="error" style={{ marginInlineStart: 2 }}>低于安全库存</Tag>}
-              </span>
-              <Space size={0}>
+              </div>
+              {isLow && <Tag color="error" style={{ marginTop: -2, alignSelf: 'flex-start' }}>低于安全库存</Tag>}
+              {/* D-474：领取/出库按钮——纯文字蓝色，不带图标 */}
+              <Space size={4}>
                 {onPickStock && (
-                  <Button type="link" size="small" icon={<InboxOutlined />} style={{ padding: '0 4px' }}
-                    onClick={() => onPickStock?.(record)} title="领取库存">领</Button>
+                  <Button type="link" size="small" style={{ padding: 0 }}
+                    onClick={() => onPickStock?.(record)}>领取</Button>
                 )}
-                <Button type="link" size="small" icon={<SendOutlined />} style={{ padding: '0 4px' }}
-                  onClick={() => handleOutbound(record)} title="点击出库（默认带出全部可用量，可修改）">出库</Button>
+                <Button type="link" size="small" style={{ padding: 0 }}
+                  onClick={() => handleOutbound(record)}>出库</Button>
               </Space>
             </div>
 
