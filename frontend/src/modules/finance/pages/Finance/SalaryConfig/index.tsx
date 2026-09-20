@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { App, Button, Card, Checkbox, Descriptions, Form, Input, InputNumber, Select, Space, Table, Tag } from 'antd';
+import { App, Button, Card, Checkbox, Descriptions, Form, Input, InputNumber, Select, Space, Table, Tabs, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
 import { safePrint } from '@/utils/safePrint';
@@ -54,6 +54,12 @@ const SALARY_FIELDS = [
 const SalaryConfigPage: React.FC = () => {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
+  // D-474：考勤与工资 Tab
+  const [monthlyList, setMonthlyList] = useState<any[]>([]);
+  const [monthlyLoading, setMonthlyLoading] = useState(false);
+  const [attendanceMonth, setAttendanceMonth] = useState<string>(
+    new Date().toISOString().slice(0, 7),
+  );
   const [list, setList] = useState<SalaryConfig[]>([]);
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<SalaryConfig | null>(null);
@@ -225,6 +231,60 @@ const SalaryConfigPage: React.FC = () => {
     safePrint(html, `工资条-${calcResult.userName || calcResult.userId}-${calcResult.month}`);
   };
 
+  // D-474：考勤与工资 Tab 的列——打卡数据和算出来的工资放一起看
+  const monthlyColumns = [
+    { title: '员工', dataIndex: 'userName', width: 100 },
+    {
+      title: '类型',
+      dataIndex: 'salaryType',
+      width: 80,
+      render: (v: string) => <Tag color={TYPE_MAP[v]?.color}>{TYPE_MAP[v]?.text ?? v}</Tag>,
+    },
+    { title: '出勤(天)', dataIndex: 'attendanceDays', width: 80 },
+    { title: '工时(小时)', dataIndex: 'totalHours', width: 90 },
+    { title: '迟到(次)', dataIndex: 'lateCount', width: 80 },
+    { title: '事假', dataIndex: 'leaveDays', width: 70 },
+    { title: '病假', dataIndex: 'sickLeaveDays', width: 70 },
+    { title: '基本工资', dataIndex: 'baseWage', width: 100, render: (v: number) => `¥${v ?? 0}` },
+    { title: '加班费', dataIndex: 'overtimePay', width: 90, render: (v: number) => `¥${v ?? 0}` },
+    { title: '全勤奖', dataIndex: 'bonus', width: 90, render: (v: number) => `¥${v ?? 0}` },
+    {
+      title: '迟到扣款',
+      dataIndex: 'lateDeduction',
+      width: 100,
+      render: (v: number) => (v ? <span style={{ color: 'var(--color-error)' }}>-¥{v}</span> : '-'),
+    },
+    {
+      title: '请假扣款',
+      dataIndex: 'leaveDeduction',
+      width: 100,
+      render: (v: number) => (v ? <span style={{ color: 'var(--color-error)' }}>-¥{v}</span> : '-'),
+    },
+    { title: '应发', dataIndex: 'grossPay', width: 100, render: (v: number) => `¥${v ?? 0}` },
+    {
+      title: '实发',
+      dataIndex: 'netPay',
+      width: 100,
+      render: (v: number) => <strong style={{ color: 'var(--color-error)' }}>¥{v ?? 0}</strong>,
+    },
+  ];
+
+  const fetchMonthly = useCallback(async (month: string) => {
+    setMonthlyLoading(true);
+    try {
+      const res: any = await api.get('/finance/salary-config/monthly', { params: { month } });
+      setMonthlyList(res?.data ?? []);
+    } catch {
+      setMonthlyList([]);
+    } finally {
+      setMonthlyLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchMonthly(attendanceMonth);
+  }, [fetchMonthly, attendanceMonth]);
+
   const columns = [
     {
       title: '员工',
@@ -318,13 +378,56 @@ const SalaryConfigPage: React.FC = () => {
         </Space>
       }
     >
-      <Table
-        rowKey={(r) => r.id || r.userId}
-        loading={loading}
-        columns={columns}
-        dataSource={list}
-        pagination={false}
-        size="small"
+      <Tabs
+        defaultActiveKey="rules"
+        items={[
+          {
+            key: 'rules',
+            label: '薪资规则',
+            children: (
+              <Table
+                rowKey={(r) => r.id || r.userId}
+                loading={loading}
+                columns={columns}
+                dataSource={list}
+                pagination={false}
+                size="small"
+              />
+            ),
+          },
+          {
+            key: 'attendance',
+            label: '考勤与工资',
+            children: (
+              <>
+                <div style={{ marginBottom: 12 }}>
+                  <Space>
+                    <span>结算月份：</span>
+                    <Input
+                      style={{ width: 130 }}
+                      value={attendanceMonth}
+                      onChange={(e) => setAttendanceMonth(e.target.value)}
+                      placeholder="2026-09"
+                    />
+                    <Button onClick={() => void fetchMonthly(attendanceMonth)}>刷新</Button>
+                    <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                      数据来自考勤表自动汇总（打卡工时/出勤天数/迟到/请假），按该员工设定的规则算出工资
+                    </span>
+                  </Space>
+                </div>
+                <Table
+                  rowKey={(r) => r.userId}
+                  loading={monthlyLoading}
+                  columns={monthlyColumns}
+                  dataSource={monthlyList}
+                  pagination={false}
+                  size="small"
+                  scroll={{ x: 1200 }}
+                />
+              </>
+            ),
+          },
+        ]}
       />
 
       {/* 编辑/新增：用侧滑（项目统一风格，表单项多时更好填） */}

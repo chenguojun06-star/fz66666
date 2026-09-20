@@ -297,4 +297,19 @@ public class EmployeeSalaryConfigService extends ServiceImpl<EmployeeSalaryConfi
             return DEFAULT_WORK_START;
         }
     }
+
+    /**
+     * D-474：列出当月所有已配置员工的「考勤 + 工资」汇总（用于薪资配置页的考勤工资 Tab）。
+     * 复用 calculate()，把考勤汇总结果和工资明细一起返回，页面上能直接对账。
+     */
+    public java.util.List<Map<String, Object>> listMonthlySalary(String month, Long tenantId) {
+        java.util.List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (EmployeeSalaryConfig cfg : listConfigs(tenantId)) {
+            Map<String, Object> calc = calculate(cfg.getUserId(), month, tenantId);
+            if (Boolean.TRUE.equals(calc.get("configured"))) {
+                result.add(calc);
+            }
+        }
+        return result;
+    }
 }

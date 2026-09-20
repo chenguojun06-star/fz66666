@@ -40,6 +40,16 @@ public class EmployeeSalaryConfigController {
     }
 
     /**
+     * 当月所有员工的「考勤 + 工资」汇总（薪资配置页的考勤工资 Tab 用）
+     * 例：GET /api/finance/salary-config/monthly?month=2026-09
+     */
+    @GetMapping("/monthly")
+    public Result<java.util.List<Map<String, Object>>> monthly(@RequestParam String month) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        return Result.success(salaryConfigService.listMonthlySalary(month, tenantId));
+    }
+
+    /**
      * 一键生成当月工资单：给每个配了薪资规则的员工算工资并推送成应付账单。
      * 幂等——重复调用不会重复生成（按 SALARY-员工-月份 去重）。
      */
