@@ -121,4 +121,30 @@ class BillAggregationSettlementTest {
                     ReflectionTestUtils.invokeMethod(orchestrator, "mapBizType", "UNKNOWN_TYPE"));
         }
     }
+
+    // ==================== D-474 占位对象ID识别（防对象被合并） ====================
+
+    @Test
+    @DisplayName("UNKNOWN_SUPPLIER 等占位ID必须识别为占位，否则不同供应商会被合并成一行")
+    void placeholderIdsAreRecognized() {
+        assertTrue(BillAggregationOrchestrator.isPlaceholderCounterpartyId("UNKNOWN_SUPPLIER"));
+        assertTrue(BillAggregationOrchestrator.isPlaceholderCounterpartyId("unknown_supplier"), "大小写不敏感");
+        assertTrue(BillAggregationOrchestrator.isPlaceholderCounterpartyId("UNKNOWN"));
+        assertTrue(BillAggregationOrchestrator.isPlaceholderCounterpartyId("UNKNOWN_FACTORY"));
+    }
+
+    @Test
+    @DisplayName("空值与空白也算占位（按名称分组）")
+    void blankIdsArePlaceholder() {
+        assertTrue(BillAggregationOrchestrator.isPlaceholderCounterpartyId(null));
+        assertTrue(BillAggregationOrchestrator.isPlaceholderCounterpartyId(""));
+        assertTrue(BillAggregationOrchestrator.isPlaceholderCounterpartyId("   "));
+    }
+
+    @Test
+    @DisplayName("真实ID不是占位，按ID分组")
+    void realIdsAreNotPlaceholder() {
+        assertFalse(BillAggregationOrchestrator.isPlaceholderCounterpartyId("73d090ba3aee3191d1de4b56031a010f"));
+        assertFalse(BillAggregationOrchestrator.isPlaceholderCounterpartyId("李老板"));
+    }
 }

@@ -60,6 +60,17 @@ public class BillAggregationOrchestrator {
             java.util.Collections.unmodifiableSet(new java.util.HashSet<>(java.util.Arrays.asList(
                     "UNKNOWN_SUPPLIER", "UNKNOWN", "UNKNOWN_FACTORY", "UNKNOWN_CUSTOMER", "UNKNOWN_WORKER")));
 
+    /**
+     * D-474：是否为占位的往来对象 ID（上游推送时拿不到真实供应商编号写死的）。
+     * 这些值以及空值都不能作为分组依据，否则不同对象会被合并成同一行
+     * （"最美服装工厂"与"测试工厂_7C6RMQ"的 ID 都是 UNKNOWN_SUPPLIER）。
+     * 包级可见的纯函数，便于单测守护。
+     */
+    static boolean isPlaceholderCounterpartyId(String id) {
+        return !StringUtils.hasText(id)
+                || PLACEHOLDER_COUNTERPARTY_IDS.contains(id.trim().toUpperCase());
+    }
+
     @Autowired
     private BillAggregationService billAggregationService;
 
@@ -441,7 +452,7 @@ public class BillAggregationOrchestrator {
             // （例如"最美服装工厂"与"测试工厂_7C6RMQ"的 ID 都是 UNKNOWN_SUPPLIER）。
             // 这里识别占位符/空 ID，改用名称分组，保证不同对象不会被错误合并。
             String cid = b.getCounterpartyId();
-            boolean hasRealId = StringUtils.hasText(cid) && !PLACEHOLDER_COUNTERPARTY_IDS.contains(cid.trim().toUpperCase());
+            boolean hasRealId = !isPlaceholderCounterpartyId(cid);
             String key = normalizedType + "|" + (hasRealId ? cid : name);
             CounterpartyGroupDTO g = grouped.computeIfAbsent(key, k -> {
                 CounterpartyGroupDTO dto = new CounterpartyGroupDTO();
