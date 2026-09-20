@@ -105,9 +105,9 @@ Page({
       // 自动弹出第一个有可用库存的 SKU 出库窗，省去「再点一次 SKU 行」的步骤。
       if (this._autoOutbound) {
         this._autoOutbound = false;
-        var target = skuList.find(function (s) { return Number(s.availableQty) > 0; });
-        if (target) {
-          this.setData({ showOutbound: true, outboundSku: target, outboundQty: 1 });
+        var hasStock = skuList.some(function (s) { return Number(s.availableQty) > 0; });
+        if (hasStock) {
+          this._goOutboundPage();   // D-482：独立页面，不再自动开弹窗
         } else {
           uiHelper.toast('该款暂无可用库存');
         }
@@ -118,17 +118,32 @@ Page({
     }
   },
 
-  onOutbound(e) {
-    var sku = e.currentTarget.dataset.sku;
-    if (!sku || sku.availableQty <= 0) {
-      uiHelper.toast('可用库存不足');
+  /**
+   * D-482：出库改为**跳转独立页面**（不再是弹窗）。
+   * 原因：① 弹窗面积小，手机上键盘一弹就挤、不好操作；
+   *       ② 弹窗只能对单行触发，无法批量多选；
+   *       ③ 弹窗没有「出库类型 / 仓库区域 / 客户」选择，导致后端必填字段缺失
+   *          （后端默认 shipment 类型，shipment 必须带 customerName）。
+   */
+  _goOutboundPage() {
+    var d = this.data;
+    if (!d.styleNo) {
+      uiHelper.toast('缺少款号');
       return;
     }
-    this.setData({
-      showOutbound: true,
-      outboundSku: sku,
-      outboundQty: 1,
+    wx.navigateTo({
+      url: '/pages/warehouse/finished-outbound/index'
+        + '?styleNo=' + encodeURIComponent(d.styleNo)
+        + '&orderNo=' + encodeURIComponent(d.orderNo || '')
+        + '&styleName=' + encodeURIComponent(d.styleName || '')
+        + '&styleImage=' + encodeURIComponent(d.styleImage || '')
+        + '&factoryName=' + encodeURIComponent(d.factoryName || ''),
     });
+  },
+
+  onOutbound(e) {
+    // 兼容旧交互：行内「出库」按钮仍存在，但不再开弹窗，统一走独立页面
+    this._goOutboundPage();
   },
 
   // 切换 Tab：进入入库记录 Tab 时懒加载入库记录

@@ -46,7 +46,8 @@
         "location-scan/index",
         "finished-inventory/index",
         "finished-inventory/detail/index",
-        "material-database/index"
+        "material-database/index",
+        "finished-outbound/index"
       ]
     },
     {
