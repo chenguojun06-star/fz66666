@@ -142,9 +142,14 @@ public class EmployeeSalaryConfigService extends ServiceImpl<EmployeeSalaryConfi
             if (a.getWorkDate() != null) {
                 workDates.add(a.getWorkDate().toString());
             }
-            // 迟到：打卡时间晚于默认上班时间
+            // 迟到：优先用考勤里标记的状态（LATE / LATE_EARLY_LEAVE），
+            // 没标状态时才用"打卡晚于上班时间"兜底推算
+            String st = a.getStatus();
+            boolean lateByStatus = st != null
+                    && ("LATE".equalsIgnoreCase(st) || "LATE_EARLY_LEAVE".equalsIgnoreCase(st));
             LocalDateTime in = a.getClockInTime();
-            if (in != null && in.toLocalTime().isAfter(DEFAULT_WORK_START)) {
+            boolean lateByTime = in != null && in.toLocalTime().isAfter(DEFAULT_WORK_START);
+            if (lateByStatus || lateByTime) {
                 lateCount++;
             }
             // 请假：按 leave_type 区分事假/病假
