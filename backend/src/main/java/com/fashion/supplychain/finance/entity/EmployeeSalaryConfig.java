@@ -48,6 +48,9 @@ public class EmployeeSalaryConfig {
     /** 加班倍数（平时，如 1.5） */
     private BigDecimal overtimeRate;
 
+    /** 上班时间 HH:mm（考勤未标状态时用于判断迟到，默认 09:00） */
+    private String workStartTime;
+
     private String status;
     private Integer deleteFlag;
     private LocalDateTime createTime;

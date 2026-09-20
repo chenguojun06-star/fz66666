@@ -78,6 +78,9 @@ public class EmployeeSalaryConfigService extends ServiceImpl<EmployeeSalaryConfi
         if (config.getOvertimeEnabled() == null) {
             config.setOvertimeEnabled(1);
         }
+        if (config.getWorkStartTime() == null || config.getWorkStartTime().isBlank()) {
+            config.setWorkStartTime(DEFAULT_WORK_START.toString());
+        }
 
         EmployeeSalaryConfig exist = this.lambdaQuery()
                 .eq(EmployeeSalaryConfig::getTenantId, tenantId)
@@ -129,6 +132,9 @@ public class EmployeeSalaryConfigService extends ServiceImpl<EmployeeSalaryConfi
                         .ge(WorkAttendance::getWorkDate, start)
                         .lt(WorkAttendance::getWorkDate, end));
 
+        // 该员工的上班时间（配置项，默认 09:00）
+        LocalTime workStart = parseWorkStart(cfg.getWorkStartTime());
+
         long totalMinutes = 0;
         int lateCount = 0;
         BigDecimal leaveDays = BigDecimal.ZERO;
@@ -148,7 +154,8 @@ public class EmployeeSalaryConfigService extends ServiceImpl<EmployeeSalaryConfi
             boolean lateByStatus = st != null
                     && ("LATE".equalsIgnoreCase(st) || "LATE_EARLY_LEAVE".equalsIgnoreCase(st));
             LocalDateTime in = a.getClockInTime();
-            boolean lateByTime = in != null && in.toLocalTime().isAfter(DEFAULT_WORK_START);
+            // D-474：用该员工配置的上班时间判断（原来写死 9:00，实际上班时间不同会误判迟到）
+            boolean lateByTime = in != null && in.toLocalTime().isAfter(workStart);
             if (lateByStatus || lateByTime) {
                 lateCount++;
             }
@@ -276,5 +283,18 @@ public class EmployeeSalaryConfigService extends ServiceImpl<EmployeeSalaryConfi
         result.put("total", total);
         result.put("names", names);
         return result;
+    }
+
+    /** 解析上班时间配置（HH:mm），解析失败则回退到 09:00 */
+    private static LocalTime parseWorkStart(String v) {
+        if (v == null || v.isBlank()) {
+            return DEFAULT_WORK_START;
+        }
+        try {
+            String[] hm = v.trim().split(":");
+            return LocalTime.of(Integer.parseInt(hm[0]), hm.length > 1 ? Integer.parseInt(hm[1]) : 0);
+        } catch (Exception e) {
+            return DEFAULT_WORK_START;
+        }
     }
 }

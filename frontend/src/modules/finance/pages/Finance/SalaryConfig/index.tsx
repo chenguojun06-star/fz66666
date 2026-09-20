@@ -26,6 +26,7 @@ interface SalaryConfig {
   sickLeaveRatio?: number;
   overtimeEnabled?: number;
   overtimeRate?: number;
+  workStartTime?: string;
 }
 
 const TYPE_MAP: Record<string, { text: string; color: string }> = {
@@ -95,6 +96,7 @@ const SalaryConfigPage: React.FC = () => {
         sickLeaveRatio: 50,
         overtimeEnabled: 1,
         overtimeRate: 1.5,
+        workStartTime: '09:00',
       },
     );
     setEditOpen(true);
@@ -265,6 +267,11 @@ const SalaryConfigPage: React.FC = () => {
       render: (v: number) => (v ? `${v}倍` : '-'),
     },
     {
+      title: '上班时间',
+      dataIndex: 'workStartTime',
+      render: (v: string) => v || '09:00',
+    },
+    {
       title: '操作',
       render: (_: unknown, r: SalaryConfig) => (
         <Space size={4}>
@@ -413,6 +420,13 @@ const SalaryConfigPage: React.FC = () => {
             </Form.Item>
             <Form.Item name="overtimeRate" label="加班倍数">
               <InputNumber min={1} max={3} step={0.5} style={{ width: 160 }} />
+            </Form.Item>
+            <Form.Item
+              name="workStartTime"
+              label="上班时间（考勤未标状态时按此判断迟到）"
+              tooltip="填 24 小时制，如 08:30、09:00。考勤里已标「迟到」的以标记为准"
+            >
+              <Input placeholder="09:00" style={{ width: 160 }} />
             </Form.Item>
           </Space>
         </Form>
