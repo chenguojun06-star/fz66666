@@ -177,8 +177,10 @@ export default function BillDetailDrawer({ open, bill, onClose }: BillDetailDraw
             column={2}
             bordered
             style={{ marginBottom: 16 }}
-            labelStyle={{ fontSize: 13, fontWeight: 500, width: 110 }}
-            contentStyle={{ fontSize: 13 }}
+            styles={{
+              label: { fontSize: 14, fontWeight: 500, width: 110 },
+              content: { fontSize: 14 },
+            }}
           >
             <Descriptions.Item label="来源模块">
               {SOURCE_TYPE_TEXT[bill.sourceType] ?? bill.sourceType ?? '-'}
