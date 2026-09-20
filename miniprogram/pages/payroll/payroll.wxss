@@ -1,5 +1,5 @@
 /* pages/payroll/payroll.wxss */
-@import '../../styles/page-utils.wxss';
+@import '/styles/page-utils.wxss';
 
 .page {
   min-height: 100vh;
