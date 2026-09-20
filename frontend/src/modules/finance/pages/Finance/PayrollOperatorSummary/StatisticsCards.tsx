@@ -8,7 +8,14 @@ export interface StatisticsCardsProps {
     internalOrders: any[];
     rows: any[];
     totalAmount: number;
+    /** D-474：当前快捷筛选（待审批/已审批/已付款），null 表示不筛选 */
+    activeFilter?: StatusFilter;
+    /** D-474：点击统计卡切换筛选，传 null 表示取消筛选 */
+    onFilterChange?: (f: StatusFilter) => void;
 }
+
+/** 快捷筛选：审批状态 / 付款状态 */
+export type StatusFilter = 'pending' | 'approved' | 'paid' | null;
 
 const cardStyle: React.CSSProperties = {
     borderRadius: 6,
@@ -22,8 +29,34 @@ const bodyStyle = { padding: '5px 10px' as const };
  * 顶部统计卡片：根据 activeTab 切换两套指标
  * - internalOrders：订单数 / 生产中 / 已完成 / 合计金额
  * - 其他 tab：待审批 / 已审批 / 已付款 / 合计金额
+ *
+ * D-474：每张卡都可点击 —— 点了就按该状态筛选下方列表，再点一次取消，
+ * 省得财务自己去筛选框里找状态（原来点了没反应）。
  */
-const StatisticsCards: React.FC<StatisticsCardsProps> = ({ activeTab, internalOrders, rows, totalAmount }) => {
+const StatisticsCards: React.FC<StatisticsCardsProps> = ({
+    activeTab,
+    internalOrders,
+    rows,
+    totalAmount,
+    activeFilter = null,
+    onFilterChange,
+}) => {
+    /** 可点击卡片的公共属性：选中高亮 + 点击切换 */
+    const clickable = (key: StatusFilter) => {
+        if (!onFilterChange) return {};
+        const active = activeFilter === key;
+        return {
+            onClick: () => onFilterChange(active ? null : key),
+            style: {
+                ...cardStyle,
+                cursor: 'pointer',
+                borderColor: active ? 'var(--color-primary)' : 'var(--color-border-secondary)',
+                boxShadow: active ? '0 0 0 2px rgba(22,119,255,0.12)' : 'none',
+            } as React.CSSProperties,
+            hoverable: true,
+        };
+    };
+
     if (activeTab === 'internalOrders') {
         return (
             <>
@@ -44,13 +77,13 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({ activeTab, internalOr
     }
     return (
         <>
-            <Card size="small" style={cardStyle} styles={{ body: bodyStyle }}>
+            <Card size="small" {...clickable('pending')} styles={{ body: bodyStyle }}>
                 <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>} value={rows.filter((r: any) => !r.auditStatus || r.auditStatus === 'pending').length} suffix="条" valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 600 }} />
             </Card>
-            <Card size="small" style={cardStyle} styles={{ body: bodyStyle }}>
+            <Card size="small" {...clickable('approved')} styles={{ body: bodyStyle }}>
                 <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>} value={rows.filter((r: any) => r.auditStatus === 'approved' || r.auditStatus === 'audited').length} suffix="条" valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 600 }} />
             </Card>
-            <Card size="small" style={cardStyle} styles={{ body: bodyStyle }}>
+            <Card size="small" {...clickable('paid')} styles={{ body: bodyStyle }}>
                 <Statistic title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已付款</span>} value={rows.filter((r: any) => r.paymentStatus === 'paid' || r.status === 'paid').length} suffix="条" valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 600 }} />
             </Card>
             <Card size="small" style={cardStyle} styles={{ body: bodyStyle }}>
@@ -58,6 +91,14 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({ activeTab, internalOr
             </Card>
         </>
     );
+};
+
+/** D-474：按快捷筛选过滤行（与统计卡口径保持一致） */
+export const filterRowsByStatus = (rows: any[], f: StatusFilter): any[] => {
+    if (!f) return rows;
+    if (f === 'pending') return rows.filter((r: any) => !r.auditStatus || r.auditStatus === 'pending');
+    if (f === 'approved') return rows.filter((r: any) => r.auditStatus === 'approved' || r.auditStatus === 'audited');
+    return rows.filter((r: any) => r.paymentStatus === 'paid' || r.status === 'paid');
 };
 
 export default StatisticsCards;

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { App, Button, Card, Input, Select, Space, Switch, Tabs } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import PageLayout from '@/components/common/PageLayout';
@@ -15,7 +15,7 @@ import { isOrderFrozenByStatus } from '@/utils/api/production';
 import { SCAN_TYPE_OPTIONS } from '@/components/common/ScanTypeBadge';
 import { usePersistentSort } from '@/hooks/usePersistentSort';
 import { internalOrderColumns } from './internalOrderColumns';
-import StatisticsCards from './StatisticsCards';
+import StatisticsCards, { filterRowsByStatus, type StatusFilter } from './StatisticsCards';
 
 const PayrollOperatorSummary: React.FC = () => {
     const {
@@ -33,6 +33,13 @@ const PayrollOperatorSummary: React.FC = () => {
         internalOrders, internalOrdersLoading, fetchInternalOrders,
         doFetchData, fetchData, reset,
     } = usePayrollData();
+
+    // D-474：点顶部统计卡快捷筛选（待审批/已审批/已付款），再点一次取消
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>(null);
+    const shownRows = useMemo(
+        () => filterRowsByStatus(filteredRows ?? [], statusFilter),
+        [filteredRows, statusFilter],
+    );
 
     const { message } = App.useApp();
 
@@ -90,6 +97,8 @@ const PayrollOperatorSummary: React.FC = () => {
                         internalOrders={internalOrders}
                         rows={rows}
                         totalAmount={totalAmount}
+                        activeFilter={statusFilter}
+                        onFilterChange={setStatusFilter}
                     />
                 </div>
 
@@ -120,7 +129,7 @@ const PayrollOperatorSummary: React.FC = () => {
                             <>
                                 <Card className="mb-sm">
                                     <Space wrap>
-                                        <span style={{ color: 'var(--neutral-text-secondary)' }}>行数 {filteredRows.length}</span>
+                                        <span style={{ color: 'var(--neutral-text-secondary)' }}>行数 {shownRows.length}</span>
                                         <span style={{ color: 'var(--neutral-text-secondary)' }}>金额合计 {totalAmount.toFixed(2)}</span>
                                         <Select
                                             style={{ width: 120 }}
@@ -150,7 +159,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                             };
                                         },
                                     }}
-                                    columns={columns} dataSource={filteredRows as any} loading={loading}
+                                    columns={columns} dataSource={shownRows as any} loading={loading}
                                     pagination={{ showTotal: (total) => `共 ${total} 条`, showSizeChanger: true, pageSizeOptions: ['20', '50', '100', '200'], defaultPageSize: readPageSize(20) }}
                                     sticky scroll={{ x: 1600 }}
                                     emptyDescription="暂无工序数据"
