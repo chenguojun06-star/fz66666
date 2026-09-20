@@ -1,5 +1,5 @@
 /* D-463：筛选器胶囊样式已收编共享（含 D-427 选中态） */
-@import "../../styles/picker-filter.wxss";
+@import "/styles/picker-filter.wxss";
 
 @import '/styles/page-utils.wxss';
 @import '/styles/modal-form.wxss';
