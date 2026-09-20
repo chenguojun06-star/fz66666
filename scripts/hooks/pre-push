@@ -103,6 +103,27 @@ if [[ "$HAS_MINI" -gt 0 ]]; then
   else
     echo "[pre-push] ⚠️ 未找到 $MINI_CHECK，跳过小程序检查"
   fi
+
+  # ---- 小程序页面逻辑测试（D-490）----
+  # 引用完整性查不出**运行时**问题。今晚实际踩到两个：
+  #   - setData 回调不绑定 this（10 处，D-487）
+  #   - wx.showActionSheet itemList ≤6（9 处，D-488）
+  # 故再加一层：用 mock 的 wx/api 把页面逻辑在 Node 里真跑一遍（70 项断言）。
+  PAGE_TEST="$ROOT_DIR/scripts/test-warehouse-pages.mjs"
+  if command -v node >/dev/null 2>&1 && [[ -f "$PAGE_TEST" ]]; then
+    echo "[pre-push] 🧪 运行小程序页面逻辑测试"
+    node "$PAGE_TEST"
+    TEST_CODE=$?
+    if [[ $TEST_CODE -ne 0 ]]; then
+      echo ""
+      echo "❌ 小程序页面逻辑测试未通过，推送已阻止"
+      echo "   修复后重新 push，或紧急情况: git push --no-verify"
+      exit 1
+    fi
+    echo "[pre-push] ✅ 页面逻辑测试通过"
+  else
+    echo "[pre-push] ⚠️ 未找到 node 或 $PAGE_TEST，跳过页面逻辑测试"
+  fi
 fi
 
 "$SAFE_PUSH" $ARGS
