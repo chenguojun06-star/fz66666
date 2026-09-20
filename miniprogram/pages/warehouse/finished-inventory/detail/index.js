@@ -146,6 +146,20 @@ Page({
     this._goOutboundPage();
   },
 
+  /** D-482：跳成品入库页（手机端此前无入库入口） */
+  onGoInbound() {
+    var d = this.data;
+    if (!d.styleNo) {
+      uiHelper.toast('缺少款号');
+      return;
+    }
+    wx.navigateTo({
+      url: '/pages/warehouse/finished-inbound/index'
+        + '?styleNo=' + encodeURIComponent(d.styleNo)
+        + '&styleName=' + encodeURIComponent(d.styleName || ''),
+    });
+  },
+
   // 切换 Tab：进入入库记录 Tab 时懒加载入库记录
   onSwitchTab(e) {
     var tab = e.currentTarget.dataset.tab;

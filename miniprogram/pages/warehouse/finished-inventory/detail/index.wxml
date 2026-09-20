@@ -22,6 +22,11 @@
       </view>
     </view>
 
+    <!-- 操作：入库（D-482：手机端此前完全没有入库入口，只能回 PC 端操作） -->
+    <view class="action-row">
+      <view class="action-btn action-btn--primary" bindtap="onGoInbound">入库</view>
+    </view>
+
     <!-- 统计卡片 -->
     <view class="stats-row">
       <view class="stat-card">

@@ -1,0 +1,138 @@
+<!-- 成品入库页：手机端此前完全没有入库入口，现补为独立页面（不用弹窗） -->
+<view class="page">
+
+  <!-- ① 查询区：款号 / 扫码 -->
+  <view class="section">
+    <view class="section-hd"><text class="section-title">款号</text></view>
+    <view class="search-row">
+      <input
+        class="search-input"
+        placeholder="输入款号"
+        value="{{styleNo}}"
+        bindinput="onStyleNoInput"
+        confirm-type="search"
+        bindconfirm="onQuery"
+      />
+      <view class="search-btn search-btn--scan" bindtap="onScan">扫码</view>
+      <view class="search-btn search-btn--go" bindtap="onQuery">查询</view>
+    </view>
+    <text class="style-name" wx:if="{{styleName}}">{{styleName}}</text>
+  </view>
+
+  <block wx:if="{{queried}}">
+    <!-- ② 入库来源类型 -->
+    <view class="section">
+      <view class="section-hd"><text class="section-title">入库类型</text></view>
+      <view class="type-grid">
+        <view
+          wx:for="{{typeOptions}}"
+          wx:key="key"
+          class="type-chip {{sourceType === item.key ? 'type-chip--active' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="onSelectType"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
+    <!-- ③ 仓库 -->
+    <view class="section">
+      <view class="row" bindtap="onPickArea">
+        <text class="row-label">仓库区域</text>
+        <text class="row-value {{warehouseAreaName ? '' : 'row-value--placeholder'}}">
+          {{warehouseAreaName || '请选择'}}
+        </text>
+        <text class="row-arrow">›</text>
+      </view>
+      <view class="row">
+        <text class="row-label">库位</text>
+        <input
+          class="row-input"
+          placeholder="默认仓"
+          value="{{warehouseLocation}}"
+          bindinput="onLocationInput"
+        />
+      </view>
+      <view class="row">
+        <text class="row-label">供应商</text>
+        <input
+          class="row-input"
+          placeholder="选填"
+          value="{{supplierName}}"
+          bindinput="onSupplierInput"
+        />
+      </view>
+    </view>
+
+    <!-- ④ SKU 明细多选 -->
+    <view class="section">
+      <view class="section-hd">
+        <text class="section-title">入库明细</text>
+        <view class="select-all" bindtap="onToggleAll">
+          <view class="checkbox checkbox--sm">
+            <text wx:if="{{allSelected}}" class="check-mark">✓</text>
+          </view>
+          <text class="select-all-text">全选</text>
+        </view>
+      </view>
+
+      <view wx:if="{{loading}}" class="loading">加载中…</view>
+      <view wx:elif="{{!skuList.length}}" class="empty">该款暂无 SKU 数据</view>
+
+      <view wx:else class="sku-list">
+        <view
+          wx:for="{{skuList}}"
+          wx:key="id"
+          class="sku-item {{selected[item.id] ? 'sku-item--checked' : ''}}"
+        >
+          <view class="sku-main" data-id="{{item.id}}" bindtap="onToggleSku">
+            <view class="checkbox">
+              <text wx:if="{{selected[item.id]}}" class="check-mark">✓</text>
+            </view>
+            <view class="sku-text">
+              <text class="sku-name">{{item.color}} / {{item.size}}</text>
+              <text class="sku-meta">现有库存 {{item.availableQty}} 件</text>
+            </view>
+          </view>
+
+          <view class="stepper" wx:if="{{selected[item.id]}}">
+            <view class="stepper-btn" data-id="{{item.id}}" catchtap="onQtyMinus">−</view>
+            <input
+              class="stepper-input"
+              type="number"
+              value="{{selected[item.id]}}"
+              data-id="{{item.id}}"
+              bindinput="onQtyInput"
+            />
+            <view class="stepper-btn" data-id="{{item.id}}" catchtap="onQtyPlus">+</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ⑤ 备注 -->
+    <view class="section">
+      <view class="section-hd"><text class="section-title">备注</text></view>
+      <textarea
+        class="remark"
+        placeholder="选填"
+        value="{{remark}}"
+        bindinput="onRemarkInput"
+        maxlength="200"
+        auto-height
+      />
+    </view>
+  </block>
+
+  <view class="bottom-pad"></view>
+</view>
+
+<!-- ⑥ 底部固定提交栏 -->
+<view class="submit-bar" wx:if="{{queried}}">
+  <view class="submit-summary">
+    <text class="submit-count">已选 {{selectedCount}} 项</text>
+    <text class="submit-qty">合计 {{selectedQty}} 件</text>
+  </view>
+  <view class="submit-btn {{submitting ? 'submit-btn--disabled' : ''}}" bindtap="onSubmit">
+    {{submitting ? '提交中…' : '确认入库'}}
+  </view>
+</view>

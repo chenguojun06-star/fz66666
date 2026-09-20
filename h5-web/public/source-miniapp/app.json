@@ -47,7 +47,8 @@
         "finished-inventory/index",
         "finished-inventory/detail/index",
         "material-database/index",
-        "finished-outbound/index"
+        "finished-outbound/index",
+        "finished-inbound/index"
       ]
     },
     {
