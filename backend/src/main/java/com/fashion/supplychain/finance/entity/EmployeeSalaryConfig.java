@@ -51,6 +51,12 @@ public class EmployeeSalaryConfig {
     /** 上班时间 HH:mm（考勤未标状态时用于判断迟到，默认 09:00） */
     private String workStartTime;
 
+    /** 下班时间 HH:mm（默认 18:00，与上班时间一起算工时和加班） */
+    private String workEndTime;
+
+    /** 标准日工时（默认 8，超出算加班工时） */
+    private BigDecimal standardWorkHours;
+
     private String status;
     private Integer deleteFlag;
     private LocalDateTime createTime;

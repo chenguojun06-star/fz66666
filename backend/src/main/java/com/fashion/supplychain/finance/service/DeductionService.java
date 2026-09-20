@@ -74,7 +74,8 @@ public class DeductionService extends ServiceImpl<DeductionTypeConfigMapper, Ded
      */
     public Map<String, Object> createDeduction(Long tenantId, String targetType, String targetId,
                                                String targetName, String typeCode, BigDecimal amount,
-                                               BigDecimal baseAmount, String month, String remark) {
+                                               BigDecimal baseAmount, String month, String remark,
+                                               String orderNo) {
         Map<String, Object> result = new HashMap<>();
 
         DeductionTypeConfig type = null;
@@ -111,6 +112,9 @@ public class DeductionService extends ServiceImpl<DeductionTypeConfigMapper, Ded
         String stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         req.setSourceId("DEDUCT-" + targetId + "-" + (typeCode == null ? "OTHER" : typeCode) + "-" + stamp);
         req.setSourceNo(req.getSourceId());
+        if (orderNo != null && !orderNo.isBlank()) {
+            req.setOrderNo(orderNo);
+        }
         req.setCounterpartyType(targetType);
         req.setCounterpartyId(targetId);
         req.setCounterpartyName(targetName);

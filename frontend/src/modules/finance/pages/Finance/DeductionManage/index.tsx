@@ -30,6 +30,9 @@ const DeductionManagePage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
+  // D-474：扣谁（员工/工厂）的下拉选项
+  const [userOpts, setUserOpts] = useState<{ value: string; label: string; raw?: unknown }[]>([]);
+  const [factoryOpts, setFactoryOpts] = useState<{ value: string; label: string; raw?: unknown }[]>([]);
 
   const fetchTypes = useCallback(async () => {
     setLoading(true);
@@ -176,16 +179,59 @@ const DeductionManagePage: React.FC = () => {
                 <Form.Item name="targetType" label="扣谁的钱" rules={[{ required: true }]} initialValue="WORKER">
                   <Select
                     options={[
-                      { label: '员工', value: 'WORKER' },
-                      { label: '外发工厂', value: 'FACTORY' },
+                      { label: '员工（从系统用户选）', value: 'WORKER' },
+                      { label: '外发工厂（从工厂列表选）', value: 'FACTORY' },
                     ]}
                   />
                 </Form.Item>
-                <Form.Item name="targetId" label="对象ID（员工登录名 / 工厂ID）" rules={[{ required: true }]}>
-                  <Input placeholder="如 lilb" />
+                <Form.Item name="targetName" label="扣谁" shouldUpdate noStyle>
+                  {() => {
+                    const t = deductForm.getFieldValue('targetType');
+                    return (
+                      <Select
+                        showSearch
+                        allowClear
+                        placeholder={t === 'FACTORY' ? '搜索外发工厂名或编码' : '搜索员工姓名或登录名'}
+                        filterOption={false}
+                        onSearch={async (kw) => {
+                          if (t === 'FACTORY') {
+                            const r: any = await api.get('/system/factory/list', { params: { factoryName: kw || undefined, pageSize: 50 } });
+                            const recs = r?.data?.records || r?.data || [];
+                            setFactoryOpts(recs.map((f: any) => ({ value: f.id, label: f.factoryName || f.factoryCode, raw: f })));
+                          } else {
+                            const r: any = await api.get('/system/user/list', { params: { name: kw || undefined, pageSize: 50 } });
+                            const recs = r?.data?.records || r?.data || [];
+                            setUserOpts(recs.map((u: any) => ({ value: u.username || u.id, label: `${u.name || u.username}${u.employeeNo ? '（' + u.employeeNo + '）' : ''}`, raw: u })));
+                          }
+                        }}
+                        options={t === 'FACTORY' ? factoryOpts : userOpts}
+                        onChange={(_v: any, opt: any) => {
+                          deductForm.setFieldsValue({
+                            targetId: opt?.value,
+                            targetName: opt?.label,
+                          });
+                        }}
+                        onFocus={() => {
+                          const t2 = deductForm.getFieldValue('targetType');
+                          if (t2 === 'FACTORY' && factoryOpts.length === 0) {
+                            (api.get('/system/factory/list', { params: { pageSize: 50 } })).then((r: any) => {
+                              const recs = r?.data?.records || r?.data || [];
+                              setFactoryOpts(recs.map((f: any) => ({ value: f.id, label: f.factoryName || f.factoryCode, raw: f })));
+                            });
+                          } else if (t2 === 'WORKER' && userOpts.length === 0) {
+                            (api.get('/system/user/list', { params: { pageSize: 50 } })).then((r: any) => {
+                              const recs = r?.data?.records || r?.data || [];
+                              setUserOpts(recs.map((u: any) => ({ value: u.username || u.id, label: `${u.name || u.username}${u.employeeNo ? '（' + u.employeeNo + '）' : ''}`, raw: u })));
+                            });
+                          }
+                        }}
+                      />
+                    );
+                  }}
                 </Form.Item>
-                <Form.Item name="targetName" label="对象名称" rules={[{ required: true }]}>
-                  <Input placeholder="如 李老板 / 某某加工厂" />
+                <Form.Item name="targetId" hidden><Input /></Form.Item>
+                <Form.Item name="orderNo" label="关联订单号（可选）" tooltip="比如这次扣款是哪笔订单的次品，填上后对账单能看到">
+                  <Input placeholder="如 PO20260901172615" />
                 </Form.Item>
                 <Form.Item name="typeCode" label="扣款类型" rules={[{ required: true }]}>
                   <Select

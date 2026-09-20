@@ -54,9 +54,10 @@ public class DeductionController {
             @RequestParam(required = false) BigDecimal amount,
             @RequestParam(required = false) BigDecimal baseAmount,
             @RequestParam(required = false) String month,
-            @RequestParam(required = false) String remark) {
+            @RequestParam(required = false) String remark,
+            @RequestParam(required = false) String orderNo) {
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         return Result.success(deductionService.createDeduction(
-                tenantId, targetType, targetId, targetName, typeCode, amount, baseAmount, month, remark));
+                tenantId, targetType, targetId, targetName, typeCode, amount, baseAmount, month, remark, orderNo));
     }
 }

@@ -27,6 +27,8 @@ interface SalaryConfig {
   overtimeEnabled?: number;
   overtimeRate?: number;
   workStartTime?: string;
+  workEndTime?: string;
+  standardWorkHours?: number;
 }
 
 const TYPE_MAP: Record<string, { text: string; color: string }> = {
@@ -97,6 +99,8 @@ const SalaryConfigPage: React.FC = () => {
         overtimeEnabled: 1,
         overtimeRate: 1.5,
         workStartTime: '09:00',
+        workEndTime: '18:00',
+        standardWorkHours: 8,
       },
     );
     setEditOpen(true);
@@ -267,9 +271,9 @@ const SalaryConfigPage: React.FC = () => {
       render: (v: number) => (v ? `${v}倍` : '-'),
     },
     {
-      title: '上班时间',
+      title: '上班-下班',
       dataIndex: 'workStartTime',
-      render: (v: string) => v || '09:00',
+      render: (_: string, r: SalaryConfig) => `${r.workStartTime || '09:00'} ~ ${r.workEndTime || '18:00'}`,
     },
     {
       title: '操作',
@@ -421,12 +425,14 @@ const SalaryConfigPage: React.FC = () => {
             <Form.Item name="overtimeRate" label="加班倍数">
               <InputNumber min={1} max={3} step={0.5} style={{ width: 160 }} />
             </Form.Item>
-            <Form.Item
-              name="workStartTime"
-              label="上班时间（考勤未标状态时按此判断迟到）"
-              tooltip="填 24 小时制，如 08:30、09:00。考勤里已标「迟到」的以标记为准"
-            >
-              <Input placeholder="09:00" style={{ width: 160 }} />
+            <Form.Item name="workStartTime" label="上班时间" tooltip="考勤未标状态时按此判断迟到">
+              <Input placeholder="09:00" style={{ width: 110 }} />
+            </Form.Item>
+            <Form.Item name="workEndTime" label="下班时间" tooltip="和上班时间一起算日工时，超出标准工时算加班">
+              <Input placeholder="18:00" style={{ width: 110 }} />
+            </Form.Item>
+            <Form.Item name="standardWorkHours" label="日标准工时（小时）" tooltip="超出部分算加班工时，默认 8">
+              <InputNumber min={1} max={24} step={0.5} style={{ width: 130 }} />
             </Form.Item>
           </Space>
         </Form>
