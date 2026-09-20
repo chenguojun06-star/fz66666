@@ -9,6 +9,15 @@ import java.util.Map;
 
 public interface MaterialStockService extends IService<MaterialStock> {
 
+    /**
+     * D-474：统计本月出入库金额。
+     * 入库金额取入库单 total_amount；出库单表没有金额字段，
+     * 按"出库数量 × 该物料当前库存单价"折算。
+     *
+     * @return key: monthInAmount / monthOutAmount
+     */
+    java.util.Map<String, java.math.BigDecimal> getMonthInOutAmount(Long tenantId, java.time.LocalDate today);
+
     IPage<MaterialStock> queryPage(Map<String, Object> params);
 
     /**

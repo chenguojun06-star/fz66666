@@ -35,8 +35,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/production/material/stock")
 @PreAuthorize("isAuthenticated()")
@@ -120,6 +122,11 @@ public class MaterialStockController {
                 .ge(MaterialInbound::getInboundTime, today.atStartOfDay())
                 .lt(MaterialInbound::getInboundTime, today.plusDays(1).atStartOfDay()));
         result.put("todayInCount", (int) todayInCount);
+
+        // D-474：本月入库/出库金额（统计在 Service 层做，Controller 不直接依赖 Mapper）
+        java.util.Map<String, BigDecimal> monthAmount = materialStockService.getMonthInOutAmount(tenantId, today);
+        result.put("monthInAmount", monthAmount.getOrDefault("monthInAmount", BigDecimal.ZERO));
+        result.put("monthOutAmount", monthAmount.getOrDefault("monthOutAmount", BigDecimal.ZERO));
 
         return Result.success(result);
     }

@@ -9,9 +9,11 @@ import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.production.dto.MaterialBatchDetailDto;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.entity.MaterialInbound;
+import com.fashion.supplychain.production.entity.MaterialOutboundLog;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.mapper.MaterialInboundMapper;
+import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.mapper.MaterialStockMapper;
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
@@ -31,6 +33,9 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
     @Autowired
     private MaterialInboundMapper materialInboundMapper;
+
+    @Autowired
+    private MaterialOutboundLogMapper materialOutboundLogMapper;
 
     @Autowired
     private MaterialDatabaseService materialDatabaseService;
@@ -607,5 +612,62 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         }
         log.info("Updated stock on inbound: id={}, delta={}, location={}, unitPrice={}, supplier={}",
                 stockId, delta, location, unitPrice, supplierName);
+    }
+
+    @Override
+    public java.util.Map<String, java.math.BigDecimal> getMonthInOutAmount(Long tenantId, java.time.LocalDate today) {
+        java.math.BigDecimal monthInAmount = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal monthOutAmount = java.math.BigDecimal.ZERO;
+        java.util.Map<String, java.math.BigDecimal> result = new java.util.HashMap<>();
+        try {
+            java.time.LocalDateTime monthStart = today.withDayOfMonth(1).atStartOfDay();
+            java.time.LocalDateTime nextMonthStart = today.plusMonths(1).withDayOfMonth(1).atStartOfDay();
+
+            List<MaterialInbound> monthIns = materialInboundMapper.selectList(new LambdaQueryWrapper<MaterialInbound>()
+                    .eq(MaterialInbound::getTenantId, tenantId)
+                    .eq(MaterialInbound::getDeleteFlag, 0)
+                    .ge(MaterialInbound::getInboundTime, monthStart)
+                    .lt(MaterialInbound::getInboundTime, nextMonthStart));
+            if (monthIns != null) {
+                for (MaterialInbound in : monthIns) {
+                    if (in.getTotalAmount() != null) {
+                        monthInAmount = monthInAmount.add(in.getTotalAmount());
+                    }
+                }
+            }
+
+            List<MaterialOutboundLog> monthOuts = materialOutboundLogMapper.selectList(
+                    new LambdaQueryWrapper<MaterialOutboundLog>()
+                            .eq(MaterialOutboundLog::getTenantId, tenantId)
+                            .eq(MaterialOutboundLog::getDeleteFlag, 0)
+                            .ge(MaterialOutboundLog::getOutboundTime, monthStart)
+                            .lt(MaterialOutboundLog::getOutboundTime, nextMonthStart));
+            if (monthOuts != null && !monthOuts.isEmpty()) {
+                java.util.Map<String, java.math.BigDecimal> priceMap = new java.util.HashMap<>();
+                for (MaterialOutboundLog out : monthOuts) {
+                    String code = out.getMaterialCode();
+                    if (code == null || priceMap.containsKey(code)) {
+                        continue;
+                    }
+                    MaterialStock stock = this.lambdaQuery()
+                            .eq(MaterialStock::getTenantId, tenantId)
+                            .eq(MaterialStock::getMaterialCode, code)
+                            .last("LIMIT 1")
+                            .one();
+                    priceMap.put(code, stock != null && stock.getUnitPrice() != null
+                            ? stock.getUnitPrice() : java.math.BigDecimal.ZERO);
+                }
+                for (MaterialOutboundLog out : monthOuts) {
+                    java.math.BigDecimal unitPrice = priceMap.getOrDefault(out.getMaterialCode(), java.math.BigDecimal.ZERO);
+                    java.math.BigDecimal qty = out.getQuantity() != null ? out.getQuantity() : java.math.BigDecimal.ZERO;
+                    monthOutAmount = monthOutAmount.add(unitPrice.multiply(qty));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[MaterialStock] 统计本月出入库金额失败: {}", e.getMessage());
+        }
+        result.put("monthInAmount", monthInAmount);
+        result.put("monthOutAmount", monthOutAmount);
+        return result;
     }
 }
