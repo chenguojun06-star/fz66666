@@ -1,3 +1,11 @@
+/** 打印模板内插值转义（D-474：防止款号等字段带标签注入打印页） */
+const escHtml = (v: unknown): string =>
+  String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
 export interface PrintHtmlParams {
   headerInfo: string;
   printerInfo: string;
@@ -26,7 +34,7 @@ export function buildPrintHtml({
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>打印预览 - ${styleNo}</title>
+        <title>打印预览 - ${escHtml(styleNo)}</title>
         <style>
           /* 打印上下文 CSS 变量定义（iframe 是独立文档，不继承主页面变量，必须用具体值） */
           :root {
