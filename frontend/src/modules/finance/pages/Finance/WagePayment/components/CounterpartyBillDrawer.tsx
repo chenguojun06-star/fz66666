@@ -643,6 +643,32 @@ export default function CounterpartyBillDrawer({
             description="可能原因：该对象只在付款记录里有手工录入或导入的流水，但上游单据（面料对账/工资结算/外发加工等）还没推送账单；下方如显示「历史付款记录」，说明确实有钱付出去但账单侧缺失。"
           />
         )}
+        {/* D-474：账单侧没数据时，把付款记录里的"应付/待付"直接摆到汇总区，
+            财务不用翻到底部的兜底表格也能一眼看到这个对象现在欠多少 */}
+        {fbPayments.length > 0 && (
+          <>
+            <div>
+              <Text type="secondary" style={{ fontSize: 12 }}>付款记录合计</Text>
+              <div>
+                <Title level={4} style={{ margin: 0 }}>
+                  {fmtMoney(fbPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0))}
+                </Title>
+              </div>
+            </div>
+            <div>
+              <Text type="secondary" style={{ fontSize: 12 }}>当前待付</Text>
+              <div>
+                <Title level={4} style={{ margin: 0, color: 'var(--color-error)' }}>
+                  {fmtMoney(
+                    fbPayments
+                      .filter((p) => p.status !== 'success' && p.status !== 'cancelled')
+                      .reduce((s, p) => s + Number(p.amount ?? 0), 0),
+                  )}
+                </Title>
+              </div>
+            </div>
+          </>
+        )}
         <div>
           <Text type="secondary" style={{ fontSize: 12 }}>累计金额</Text>
           <div><Title level={4} style={{ margin: 0 }}>{fmtMoney(target?.totalAmount)}</Title></div>
