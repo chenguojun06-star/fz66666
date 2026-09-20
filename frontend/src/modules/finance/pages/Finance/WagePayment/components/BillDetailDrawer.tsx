@@ -122,6 +122,12 @@ export default function BillDetailDrawer({ open, bill, onClose }: BillDetailDraw
     >
       {bill && (
         <>
+          {/* D-474：详情字号偏小（antd 主题把内容压到 12px），这里直接覆盖到 14px 方便核对 */}
+          <style>{`
+            .bill-detail-desc .ant-descriptions-item-label,
+            .bill-detail-desc .ant-descriptions-item-content { font-size: 14px !important; line-height: 1.6 !important; }
+            .bill-detail-desc .ant-descriptions-item-label { width: 110px; font-weight: 500; }
+          `}</style>
           {/* D-474：带上款式的封面图与名称，核对这笔费用时一眼知道是哪个款 */}
           {styleInfo && (
             <Space
@@ -174,6 +180,7 @@ export default function BillDetailDrawer({ open, bill, onClose }: BillDetailDraw
             </Space>
           )}
           <Descriptions
+            className="bill-detail-desc"
             column={2}
             bordered
             style={{ marginBottom: 16 }}
