@@ -2013,11 +2013,10 @@ public class PatternProductionOrchestrator {
      */
     private boolean isAdminRole(UserContext ctx) {
         if (ctx == null) return false;
-        String role = ctx.getRole();
-        if (role == null) return false;
-        return role.contains("admin") || role.contains("ADMIN")
-                || role.contains("manager") || role.contains("supervisor")
-                || role.contains("主管") || role.contains("管理员");
+        // D-513 修复：原来只做 role.contains 模糊匹配，
+        //   漏掉「租户主账号」(isTenantOwner=true) 和「全能管理」等自定义角色名。
+        //   改用 UserContext 的精确判断（认 isTenantOwner / isSuperAdmin / roleId=1 / 精确角色白名单）。
+        return com.fashion.supplychain.common.UserContext.isSupervisorOrAbove();
     }
 
     /**

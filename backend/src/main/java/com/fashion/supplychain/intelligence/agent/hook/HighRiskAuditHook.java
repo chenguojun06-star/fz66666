@@ -45,10 +45,11 @@ public class HighRiskAuditHook implements ToolExecutionHook {
         }
 
         if (AgentModeContext.isYolo()) {
-            String role = String.valueOf(UserContext.role());
-            boolean isAdmin = role.contains("admin") || role.contains("ADMIN") || role.contains("manager")
-                    || role.contains("supervisor") || role.contains("主管") || role.contains("管理员");
-            if (isAdmin) {
+            // D-513 修复：原来用 role.contains("admin")/contains("主管") 模糊匹配，
+            //   漏掉「租户主账号」(isTenantOwner=true) 和「全能管理」等自定义角色名
+            //   → 老板开 YOLO 模式时仍被要求确认。
+            //   改用 UserContext.isSupervisorOrAbove()（认 isTenantOwner/roleId=1/精确角色白名单）。
+            if (UserContext.isSupervisorOrAbove()) {
                 log.warn("[OperationConfirm] YOLO 模式（管理员），跳过确认直接执行 tool={}", toolName);
                 return true;
             }

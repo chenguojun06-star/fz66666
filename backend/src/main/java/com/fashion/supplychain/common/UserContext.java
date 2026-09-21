@@ -121,11 +121,21 @@ public class UserContext {
         if (isTopAdmin()) {
             return true;
         }
-        String role = role();
-        if (role == null) {
+        return isSupervisorOrAboveRoleName(role());
+    }
+
+    /**
+     * 按角色名判断是否为主管或以上（D-513 提取，供只有 roleName 字符串的场景复用）。
+     *
+     * <p>⚠️ 局限：此方法只看角色名，**无法识别租户主账号**（isTenantOwner 是运行时上下文，
+     * 不是角色名）。如「全能管理」这类自定义角色名不在白名单里，仅靠角色名判不出来。
+     * 因此只要在请求上下文里，请优先用 {@link #isSupervisorOrAbove()}（它会先判 isTopAdmin）。
+     */
+    public static boolean isSupervisorOrAboveRoleName(String roleName) {
+        if (roleName == null) {
             return false;
         }
-        String r = role.trim();
+        String r = roleName.trim();
         if (r.isEmpty()) {
             return false;
         }
