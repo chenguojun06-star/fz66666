@@ -55,7 +55,7 @@
   <view wx:else class="list-wrap">
     <view wx:for="{{list}}" wx:key="groupKey" class="inventory-item" data-id="{{item.groupKey}}" bindtap="onItemTap" hover-class="inventory-item--hover" hover-stay-time="100">
       <view class="item-header">
-        <image wx:if="{{item.styleImage}}" src="{{item.styleImage}}" mode="aspectFit" class="item-image" />
+        <image wx:if="{{item._styleImage}}" src="{{item._styleImage}}" mode="aspectFit" class="item-image" />
         <view wx:else class="item-image item-image--placeholder">
           <text class="item-image-text">衣</text>
         </view>
@@ -96,22 +96,8 @@
           </view>
         </view>
 
-        <!-- D-513：SKU 明细列表（同一款的多 SKU 分开展示） -->
-        <view wx:if="{{item.skus.length > 0}}" class="sku-detail">
-          <view class="sku-detail-title">SKU 明细（{{item.skus.length}} 个）</view>
-          <view wx:for="{{item.skus}}" wx:for-item="sku" wx:key="id" class="sku-row">
-            <view class="sku-label">
-              <text class="sku-text" wx:if="{{sku.skuLabel}}">{{sku.skuLabel}}</text>
-              <text class="sku-text sku-text--empty" wx:else>未指定</text>
-            </view>
-            <view class="sku-numbers">
-              <text class="sku-num">{{sku.availableQty || 0}}</text>
-              <text class="sku-num-label">可用</text>
-              <text wx:if="{{sku.defectQty > 0}}" class="sku-num sku-num--danger">{{sku.defectQty}}</text>
-              <text wx:if="{{sku.defectQty > 0}}" class="sku-num-label">次品</text>
-            </view>
-          </view>
-        </view>
+        <!-- D-513：列表只显示款级卡片，SKU 明细去掉——避免一个款在列表里占大段空间；
+             需要看 SKU 点进详情页（按款号+订单号跳 detail）。 -->
 
         <view class="item-meta">
           <text class="meta-text">最近入库：{{item._lastInboundDate}}</text>

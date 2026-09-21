@@ -217,18 +217,41 @@ Page({
       // D-513：按款聚合（一条 records = 一个 SKU，同款多 SKU 合并为一张卡片）
       const styles = flattenByStyle(records);
 
-      // 总数量（按款汇总 = 按 SKU 汇总，金额相同）
-      const totalAvailableQty = records.reduce(function (sum, it) { return sum + (it.availableQty || 0); }, 0);
-      const totalDefectQty = records.reduce(function (sum, it) { return sum + (it.defectQty || 0); }, 0);
+      // 本页增量汇总（用于统计卡片）
+      const pageAvailableQty = records.reduce(function (sum, it) { return sum + (it.availableQty || 0); }, 0);
+      const pageDefectQty = records.reduce(function (sum, it) { return sum + (it.defectQty || 0); }, 0);
 
-      // hasMore 用 records.length 准确判断（分页按 SKU 算）
-      const newList = reset ? styles : that.data.list.concat(styles);
-      const newAvailable = reset ? totalAvailableQty : that.data.totalAvailableQty + totalAvailableQty;
-      const newDefect = reset ? totalDefectQty : that.data.totalDefectQty + totalDefectQty;
+      // D-513 修复：跨页**累积聚合**（同一款可能被分到多页 records，concat 会产生重复 groupKey → 触发 wx:key 警告且数量翻倍）
+      // 用 Map 按 groupKey 累积：已存在的款聚合数量、未存在的款直接加入
+      const accumMap = new Map();
+      const oldList = reset ? [] : that.data.list;
+      oldList.concat(styles).forEach(function (item) {
+        const existing = accumMap.get(item.groupKey);
+        if (existing) {
+          existing.totalAvailableQty += item.totalAvailableQty;
+          existing.totalLockedQty += item.totalLockedQty;
+          existing.totalDefectQty += item.totalDefectQty;
+          existing.totalInboundQty += item.totalInboundQty;
+          if (item.hasAvailable) existing.hasAvailable = true;
+          if (item.hasDefect) existing.hasDefect = true;
+          if (item.lastInboundDate && (!existing.lastInboundDate || item.lastInboundDate > existing.lastInboundDate)) {
+            existing.lastInboundDate = item.lastInboundDate;
+          }
+          if (item._lastInboundDate && (!existing._lastInboundDate || item._lastInboundDate > existing._lastInboundDate)) {
+            existing._lastInboundDate = item._lastInboundDate;
+          }
+        } else {
+          // 拷贝一份避免旧对象被复用修改
+          accumMap.set(item.groupKey, Object.assign({}, item));
+        }
+      });
+      const newList = Array.from(accumMap.values());
+      const newAvailable = reset ? pageAvailableQty : that.data.totalAvailableQty + pageAvailableQty;
+      const newDefect = reset ? pageDefectQty : that.data.totalDefectQty + pageDefectQty;
 
       that.setData({
         list: newList,
-        // 「款数」统计卡片 = 聚合后的款数（用户看到的）
+        // 「款数」统计卡片 = 累积后的款数
         total: newList.length,
         totalAvailableQty: newAvailable,
         totalDefectQty: newDefect,
