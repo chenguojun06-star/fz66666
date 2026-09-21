@@ -18,21 +18,54 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const TYPE_OPTIONS = [
   { label: '全部类型', value: '' },
   { label: '面料', value: 'fabric' },
+  { label: '面料', value: '面料' },
   { label: '里料', value: 'lining' },
+  { label: '里料', value: '里料' },
   { label: '辅料', value: 'accessory' },
+  { label: '辅料', value: '辅料' },
 ];
 
 const TYPE_COLOR_MAP = {
   fabric: '#2563eb',
   lining: '#f59e0b',
   accessory: '#10b981',
+  面料: '#2563eb',
+  里料: '#f59e0b',
+  辅料: '#10b981',
 };
 
 const TYPE_LABEL_MAP = {
   fabric: '面料',
   lining: '里料',
   accessory: '辅料',
+  面料: '面料',
+  里料: '里料',
+  辅料: '辅料',
 };
+
+/**
+ * D-513：物料类型在数据库里有三种存法：英文代码（fabric）/ 中文（面料）/ 业务编码（fabricA/B/C）。
+ * 用 startsWith 做前缀匹配，避免显示成原始字面值。
+ */
+function resolveTypeLabel(rawType) {
+  if (!rawType) return '-';
+  if (TYPE_LABEL_MAP[rawType]) return TYPE_LABEL_MAP[rawType];
+  const t = String(rawType).toLowerCase();
+  if (t.startsWith('fabric')) return '面料';
+  if (t.startsWith('lining')) return '里料';
+  if (t.startsWith('accessory')) return '辅料';
+  return rawType;
+}
+
+function resolveTypeColor(rawType) {
+  if (!rawType) return '#6b7280';
+  if (TYPE_COLOR_MAP[rawType]) return TYPE_COLOR_MAP[rawType];
+  const t = String(rawType).toLowerCase();
+  if (t.startsWith('fabric')) return '#2563eb';
+  if (t.startsWith('lining')) return '#f59e0b';
+  if (t.startsWith('accessory')) return '#10b981';
+  return '#6b7280';
+}
 
 Page({
   data: {
@@ -114,19 +147,18 @@ Page({
     const locked = Number(r.lockedQuantity || 0);
     const safety = Number(r.safetyStock || 0);
     const available = Math.max(0, qty - locked);
-    const inTransit = Number(r.inTransitQuantity || 0);
     return {
       id: r.id,
       materialCode: r.materialCode || '',
       materialName: r.materialName || r.materialCode || '',
       materialType: r.materialType || '',
-      typeLabel: TYPE_LABEL_MAP[r.materialType] || r.materialType || '-',
-      typeColor: TYPE_COLOR_MAP[r.materialType] || '#6b7280',
+      typeLabel: resolveTypeLabel(r.materialType),
+      typeColor: resolveTypeColor(r.materialType),
       unit: r.unit || '',
-      warehouseLocation: r.warehouseLocation || '-',
+      warehouseLocation: r.location || r.warehouseLocation || '-',
       availableQty: available,
       lockedQty: locked,
-      inTransitQty: inTransit,
+      inTransitQty: 0, // 当前实体无此字段，PC 端同样以 0 显示
       safetyStock: safety,
       lowStock: qty < safety,
       isZero: qty === 0,
