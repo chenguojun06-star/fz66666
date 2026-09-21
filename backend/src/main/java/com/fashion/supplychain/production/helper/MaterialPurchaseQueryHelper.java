@@ -409,12 +409,19 @@ public class MaterialPurchaseQueryHelper {
      * 与 service/impl/MaterialPurchaseQueryHelper.excludeScrappedOrders 逻辑保持一致。
      */
     private void excludeInvalidOrdersFromStats(LambdaQueryWrapper<MaterialPurchase> wrapper, Long tenantId) {
+        // D-513 修复：原来这里排除了 "completed"，而列表查询用的
+        // service/impl/MaterialPurchaseQueryHelper.excludeScrappedOrders **不含 completed**
+        //（注释明确写"已完成订单的采购记录需保留展示"）。
+        // 两边状态列表不一致 → 统计「全部」103 条 vs 列表 138 条，差 35 条正是已完成订单关联的采购，
+        // 用户看到"统计数≠列表数"以为数据错乱。
+        // 现与列表对齐：只排除 已删除/已关闭/已取消/已归档/已报废，保留已完成订单关联的采购记录，
+        // 保证「全部」卡片 = 列表条数。
         List<String> invalidOrderIds = productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .select(ProductionOrder::getId)
                         .eq(ProductionOrder::getTenantId, tenantId)
                         .and(w -> w.eq(ProductionOrder::getDeleteFlag, 1)
-                                .or().in(ProductionOrder::getStatus, "scrapped", "closed", "completed", "cancelled", "archived")))
+                                .or().in(ProductionOrder::getStatus, "scrapped", "closed", "cancelled", "archived")))
                 .stream().map(ProductionOrder::getId).filter(StringUtils::hasText).collect(Collectors.toList());
         if (!invalidOrderIds.isEmpty()) {
             wrapper.and(w -> w.isNull(MaterialPurchase::getOrderId).or().eq(MaterialPurchase::getOrderId, "").or().notIn(MaterialPurchase::getOrderId, invalidOrderIds));
