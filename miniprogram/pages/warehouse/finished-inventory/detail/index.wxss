@@ -45,8 +45,9 @@
   align-items: center;
 }
 .style-image {
-  width: 64px;
-  height: 64px;
+  /* D-513：原 64x64 偏大 → 降为 56x56（与列表页一致） */
+  width: 56px;
+  height: 56px;
   border-radius: var(--radius-sm);
   flex-shrink: 0;
   background: var(--color-bg-subtle);
@@ -57,7 +58,8 @@
   justify-content: center;
 }
 .style-image-text {
-  font-size: var(--font-size-4xl);
+  /* D-513：原 4xl(24px) 是全局最大的号，占位字太夸张 → 降为 xl(18px) */
+  font-size: var(--font-size-xl);
   color: var(--color-text-quaternary);
 }
 .style-info {
@@ -116,7 +118,8 @@
   box-sizing: border-box;
 }
 .stat-value {
-  font-size: var(--font-size-2xl);
+  /* D-513：原 2xl(20px) 偏大 → 降为 lg(16px) */
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--color-text-primary);
   display: block;
@@ -284,7 +287,8 @@
   height: var(--btn-height-sm);
   line-height: 34px;
   text-align: center;
-  font-size: var(--font-size-2xl);
+  /* D-513：原 2xl(20px) 在 36px 按钮里过满 → 降为 lg(16px)，+/- 更协调 */
+  font-size: var(--font-size-lg);
   color: var(--color-text-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
