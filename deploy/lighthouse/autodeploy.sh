@@ -162,19 +162,30 @@ CHANGED=$(git diff --name-only "$LOCAL" "$REMOTE" || true)
 
 # ── 资源守卫（D-453，2026-09-17 P0 事故教训）──
 # 构建极耗内存（Maven ~2G + Vite ~1.5G），而机器上还跑着全栈；可用内存不足时跳过本轮，防整机假死
+# D-514d：内存贴地死锁修复——机器常驻占用后 MemAvailable 长期停在 ~1185MB，旧口径"仅看内存"
+# 永远差十几 MB → 部署无限跳过（2026-09-21 实证停摆 1 小时+，用户线上一直旧包）。
+# 新增 swap 辅助口径：内存不足但 swap 空闲充裕时放行（串行+堆封顶已实证安全，D-453；
+# 构建期借 swap 变慢 1-3 分钟可接受，旧容器继续服务不中断）。
+# 双兜底：MemAvailable ≥500MB（别太见底）且「内存+swap 空闲」≥3000MB（≥构建峰值 2 倍余量）。
 AVAIL_MB=$(free -m 2>/dev/null | awk '/^Mem:/{print $7}')
+SWAP_FREE_MB=$(free -m 2>/dev/null | awk '/^Swap:/{print $4}')
+SWAP_FREE_MB=${SWAP_FREE_MB:-0}
 if [ "${AVAIL_MB:-9999}" -lt 1200 ]; then
-  echo "[$(date '+%F %T')] ⚠️ 可用内存仅 ${AVAIL_MB}MB < 1200MB，跳过本轮构建（防过载假死），下轮自动重试"
-  # 通知节流：每小时最多一次，否则每 2 分钟刷屏
-  NSTAMP=/tmp/autodeploy-skip-notify.stamp
-  NLAST=$(cat "$NSTAMP" 2>/dev/null || echo 0)
-  if [ $(( $(date +%s) - NLAST )) -ge 3600 ]; then
-    date +%s > "$NSTAMP" || true
-    notify "⚠️ 服装66666 部署被跳过：可用内存仅 ${AVAIL_MB}MB（阈值 1200MB，防整机假死）。
-积压变更：${LOCAL} → ${REMOTE}，内存回落后每 2 分钟自动重试。
+  if [ "${AVAIL_MB:-0}" -ge 500 ] && [ $(( ${AVAIL_MB:-0} + SWAP_FREE_MB )) -ge 3000 ]; then
+    echo "[$(date '+%F %T')] ℹ️ 内存 ${AVAIL_MB}MB<1200MB，但 swap 空闲 ${SWAP_FREE_MB}MB 充裕，按 D-514d 允许 swap 辅助构建"
+  else
+    echo "[$(date '+%F %T')] ⚠️ 可用内存仅 ${AVAIL_MB}MB、swap 空闲 ${SWAP_FREE_MB}MB，双双不足，跳过本轮构建（防过载假死），下轮自动重试"
+    # 通知节流：每小时最多一次，否则每 2 分钟刷屏
+    NSTAMP=/tmp/autodeploy-skip-notify.stamp
+    NLAST=$(cat "$NSTAMP" 2>/dev/null || echo 0)
+    if [ $(( $(date +%s) - NLAST )) -ge 3600 ]; then
+      date +%s > "$NSTAMP" || true
+      notify "⚠️ 服装66666 部署被跳过：可用内存仅 ${AVAIL_MB}MB、swap 空闲 ${SWAP_FREE_MB}MB（内存<1200 且 内存+swap<3000，防整机假死）。
+积压变更：${LOCAL} → ${REMOTE}，回落后每 2 分钟自动重试。
 常见原因：CloudBeaver 等常驻服务吃内存 → cd /opt/fz66666/deploy/lighthouse && sudo docker compose stop cloudbeaver"
+    fi
+    exit 0
   fi
-  exit 0
 fi
 
 # ── 拉取代码（D-458：失败必须可见）──
