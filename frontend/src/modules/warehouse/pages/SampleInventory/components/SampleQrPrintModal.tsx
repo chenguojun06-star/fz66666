@@ -125,30 +125,30 @@ const SampleQrPrintModal: React.FC<SampleQrPrintModalProps> = ({ open, stocks, o
     }
   };
 
-  // ── 生成单个标签 HTML（布局与现网标签打印同源，尺寸随宽高缩放） ──
+  // ── 生成单个标签 HTML：竖版=码上文下（竖排布局），横版=码左文右；不重复显示款号/颜色/码数大字行 ──
   const buildLabelHtml = useCallback(
     async (stock: SampleStock, qrUrls: Record<string, string>): Promise<string> => {
       const w = Math.max(20, Math.min(150, widthMm));
       const h = Math.max(20, Math.min(150, heightMm));
+      const isPortrait = h > w;
       const qrMm = Math.max(15, Math.min(32, Math.min(w, h) * 0.62));
-      const fs = h >= 48 ? 6.7 : h >= 38 ? 5.9 : 5.4;
-      const displayText = [stock.styleNo, stock.color, stock.size].filter(Boolean).join(' - ');
+      const fs = Math.min(w, h) >= 48 ? 6.7 : Math.min(w, h) >= 38 ? 5.9 : 5.4;
       const today = new Date();
       const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const infoRow = (lbl: string, val: string) =>
         val ? `<div class="info-row"><span class="lbl">${lbl}</span><span class="val">${escHtml(val)}</span></div>` : '';
-      return `<div class="page"><div class="label">
+      const infoHtml = [
+        infoRow('款号', stock.styleNo || ''),
+        infoRow('款名', stock.styleName || ''),
+        infoRow('颜色', stock.color || ''),
+        infoRow('码数', stock.size || ''),
+        infoRow('数量', Number(stock.quantity) > 0 ? `${Number(stock.quantity)}件` : ''),
+        infoRow('类型', SampleTypeMap[stock.sampleType] || '样衣'),
+        infoRow('库位', stock.location || ''),
+      ].join('');
+      return `<div class="page"><div class="label ${isPortrait ? 'v' : 'h'}">
         <div class="qr-col"><img src="${qrUrls[stock.id] || ''}" style="width:${qrMm}mm;height:${qrMm}mm;display:block;"/></div>
-        <div class="info-col">
-          <div class="ucode-row">${escHtml(displayText)}</div>
-          ${infoRow('款号', stock.styleNo || '')}
-          ${infoRow('款名', stock.styleName || '')}
-          ${infoRow('颜色', stock.color || '')}
-          ${infoRow('码数', stock.size || '')}
-          ${infoRow('类型', SampleTypeMap[stock.sampleType] || '样衣')}
-          ${infoRow('库位', stock.location || '')}
-          <div class="info-row date-row">${dateStr}</div>
-        </div>
+        <div class="info-col">${infoHtml}<div class="info-row date-row">${dateStr}</div></div>
       </div></div>`;
     },
     [widthMm, heightMm],
@@ -163,7 +163,7 @@ const SampleQrPrintModal: React.FC<SampleQrPrintModalProps> = ({ open, stocks, o
     try {
       const w = Math.max(20, Math.min(150, widthMm));
       const h = Math.max(20, Math.min(150, heightMm));
-      const fs = h >= 48 ? 6.7 : h >= 38 ? 5.9 : 5.4;
+      const fs = Math.min(w, h) >= 48 ? 6.7 : Math.min(w, h) >= 38 ? 5.9 : 5.4;
       // 每个库存行一个二维码（内容 = 该色码样衣生产记录），×份数
       const qrUrls: Record<string, string> = {};
       await Promise.all(
@@ -191,14 +191,21 @@ html,body{width:${w}mm;color:#000!important;background:#fff!important}
 body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial,serif}
 .page{width:${w}mm;height:${h}mm;display:flex;align-items:center;justify-content:center;page-break-after:always}
 .page:last-child{page-break-after:auto}
-.label{width:calc(${w}mm - 3mm);height:calc(${h}mm - 3mm);border:0.8pt solid #333;display:flex;flex-direction:row;align-items:stretch;padding:1.5mm 2.5mm;gap:1.5mm}
+.label{width:calc(${w}mm - 3mm);height:calc(${h}mm - 3mm);border:0.8pt solid #333;display:flex;padding:1.5mm 2.5mm;gap:1.5mm}
+.label.h{flex-direction:row;align-items:stretch}
+.label.v{flex-direction:column;align-items:center;justify-content:center;gap:1.2mm;text-align:center}
 .qr-col{flex:0 0 auto;display:flex;align-items:center;justify-content:center}
 .qr-col img{display:block;object-fit:contain}
-.info-col{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0;overflow:hidden;padding-left:0.5mm}
-.ucode-row{font-size:${fs + 0.9}pt;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-bottom:1mm;border-bottom:0.8pt dashed #999;margin-bottom:1.1mm}
+.info-col{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0;overflow:hidden}
+.label.h .info-col{padding-left:0.5mm}
+.label.v .info-col{width:100%;align-items:center}
 .info-row{font-size:${fs}pt;display:flex;align-items:baseline;flex-wrap:nowrap;min-width:0;margin-bottom:0.65mm}
-.lbl{color:#555!important;white-space:nowrap}.val{font-weight:600;margin-left:0.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.date-row{color:#777!important;font-size:${fs - 0.4}pt;margin-top:2mm;padding-top:0.4mm}
+.label.h .info-row{align-items:baseline}
+.label.v .info-row{justify-content:center}
+.lbl{color:#555!important;white-space:nowrap}
+.label.v .lbl{margin-right:0.8mm}
+.val{font-weight:600;margin-left:0.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.date-row{color:#777!important;font-size:${fs - 0.4}pt;margin-top:1.2mm;padding-top:0.4mm}
 </style></head><body>${labels.join('\n')}</body></html>`;
       safePrint(html, `样衣二维码-${printableStocks[0]?.styleNo || ''}`);
       message.success(`已发送 ${totalLabels} 张标签到打印机`);
@@ -302,18 +309,21 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           </div>
           {first && (
             <div>
-              <div style={{ marginBottom: 6, fontWeight: 500 }}>预览（第一张，按实际尺寸）：二维码内容与现网样衣扫码格式一致，可直接扫出入库</div>
+              <div style={{ marginBottom: 6, fontWeight: 500 }}>预览（第一张，按实际尺寸）：每张码含各自的款号+颜色+码数+生产记录，不同颜色/尺码的码各不相同，扫码直达对应库存办出入库/借调/归还</div>
               <div
                 style={{
                   width: `${widthMm}mm`,
                   height: `${heightMm}mm`,
                   border: '0.8pt solid #999',
                   display: 'flex',
-                  alignItems: 'center',
-                  padding: '1.5mm 2.5mm',
+                  flexDirection: heightMm > widthMm ? 'column' : 'row',
+                  alignItems: heightMm > widthMm ? 'center' : 'stretch',
+                  justifyContent: 'center',
                   gap: '1.5mm',
+                  padding: '1.5mm 2.5mm',
                   background: '#fff',
                   overflow: 'hidden',
+                  textAlign: heightMm > widthMm ? 'center' : 'left',
                 }}
               >
                 <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -321,14 +331,12 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                     ? <img src={previewQr} alt="二维码" style={{ width: `${Math.max(15, Math.min(32, Math.min(widthMm, heightMm) * 0.62))}mm`, objectFit: 'contain', display: 'block' }} />
                     : <span style={{ fontSize: 12, color: '#999' }}>二维码</span>}
                 </div>
-                <div style={{ flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.7 }}>
-                  <div style={{ fontWeight: 700, borderBottom: '1px dashed #bbb', paddingBottom: 4, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {[first.styleNo, first.color, first.size].filter(Boolean).join(' - ')}
-                  </div>
+                <div style={{ flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.7, width: heightMm > widthMm ? '100%' : undefined }}>
                   <div>款号：{first.styleNo}</div>
                   {first.styleName && <div>款名：{first.styleName}</div>}
                   {first.color && <div>颜色：{first.color}</div>}
                   {first.size && <div>码数：{first.size}</div>}
+                  {Number(first.quantity) > 0 && <div>数量：{Number(first.quantity)}件</div>}
                   <div>类型：{SampleTypeMap[first.sampleType] || '样衣'}</div>
                   {first.location && <div>库位：{first.location}</div>}
                 </div>
