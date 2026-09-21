@@ -6,6 +6,13 @@
 # =====================================================================
 set -e
 
+# ── D-514f：禁用 compose Bake 构建器 ──
+# 2026-09-21 实证：compose 新版默认走 Bake，`up -d --build frontend` 会把依赖图里的
+# backend 一起构建（Maven 全量 3 分钟+）并因镜像更新连带重建 backend 容器
+# ——前端部署变成后端也重启，API 白白中断约 3 分钟。
+# COMPOSE_BAKE=false 回到经典构建器：只构建点名的服务，绝不碰依赖。
+export COMPOSE_BAKE=false
+
 # ── 部署结果通知（D-456）──
 # 必须**最先定义**：后面的单实例锁失败、git fetch 失败都要靠它报出去。
 # 背景（2026-09-17 事故）：失败只写服务器本地日志，没人看就等于没有 ——
@@ -238,7 +245,8 @@ if [ -n "$SERVICES" ]; then
     case " $SERVICES " in
       *" $S "*)
         echo "[$(date '+%F %T')] 串行构建 $S ..."
-        if ! sudo docker compose up -d --build "$S"; then
+        # --no-deps：只动本服务，依赖(mysql等)已在跑，绝不连带重启（D-514f）
+        if ! sudo docker compose up -d --build --no-deps "$S"; then
           echo "[$(date '+%F %T')] ❌ $S 构建失败，中止本轮（后续轮次重试），旧容器继续服务"
           notify "❌ 服装66666 部署失败：${S} 构建失败，已中止本轮（旧容器继续服务）。
 目标版本 ${REMOTE}，下轮 cron 会自动重试。"
