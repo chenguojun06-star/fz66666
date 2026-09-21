@@ -137,6 +137,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               .pt .label-cell { background: var(--color-bg-subtle); font-weight: 500; color: var(--color-gray-800); width: 100px; white-space: nowrap; }
               .pt .total-row td { background: var(--color-bg-subtle); font-weight: 700; }
               .pt .highlight-cell { font-weight: 700; color: var(--color-primary-darker); }
+              /* D-514e：打印内所有图片一律完整显示——按原比例缩放，放不下就留白，禁止裁剪成方块 */
+              .style-print-content img, .print-sec img, .print-section img { object-fit: contain; max-width: 100%; }
             `}</style>
 
             {/* 基本信息 */}

@@ -62,7 +62,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', justifyContent: 'flex-start', width: 128 }}>
           {resolvedCover ? (
             <Image src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
-              style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--color-border-antd)' }} preview={{ cover: <span>预览</span> }} />
+              style={{ width: 120, height: 'auto', maxHeight: 200, objectFit: 'contain', borderRadius: 6, border: '1px solid var(--color-border-antd)', background: 'var(--color-bg-base)', display: 'block' }} preview={{ cover: <span>预览</span> }} />
           ) : (
             <div style={{ width: 120, height: 120, borderRadius: 6, border: '1px dashed var(--color-text-quaternary)', background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-label)', fontSize: 12 }}>无图片</div>
           )}

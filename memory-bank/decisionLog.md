@@ -17,6 +17,7 @@
 **修法**（全部纯前端）：
 - 带标题区块（尺寸表/BOM/工序表）包一层 `.print-sec { break-inside: avoid }`——标题+表格成为整体，当前页放不下整块挪下一页；超过一整页的长表从新页开始后再断行，行级 avoid + `thead { display: table-header-group }` 保证行不切半、表头续页重复。
 - 页脚取消 fixed，改文档末尾顺排一次（打印人+打印时间）。
+- **D-514e 图片禁裁剪（用户拍板：所有打印图片按比例完整显示，放不下留白）**：唯一裁剪点=基本信息主图 `objectFit:'cover'` 120×120 硬裁方形（竖版服装照上下被切）→ 改宽120/高自适应/max200/contain；打印 <style> 加全局兜底 `.style-print-content img{object-fit:contain;max-width:100%}`。尺寸表参考图/BOM缩略图/工艺说明内嵌图本就是 contain 未动。
 - 生产制单区块：**D-514b 勘误（57ae144e9）——用户本意是只删左列「工艺说明」标签字样，内容整宽保留，不是删内容**。已恢复勾选项/`PrintOptions.productionSheet`/ProductionSheetSection.tsx（重写为无标签单格表）；`data.productionSheet`（款式信息数据）始终保留，样衣审核/封面兜底/标签条目仍依赖。
 - **用户 10:49 打印截图仍是旧包实锤**：页脚夹在 BOM 表后 + 工序表标题切成细条贴页尾 = 旧 fixed 页脚逻辑特征（新逻辑页脚只在全文末尾出现一次）。
 - **⚠️ 后续勘误（11:30）：「D-514 10:38 已部署成功」是误判——CI success ≠ 服务器部署完成**。真实原因：服务器内存守卫死锁，autodeploy.sh 要求 MemAvailable ≥1200MB 才构建，而机器平时就停在 ~1185MB（backend 808M+mysql 494M 常驻），10:36 起每 2 分钟跳过一轮、永远差十几 MB，当天所有 frontend 变更（含上午 D-513 后的）全部没部署。11:35 手动串行构建 frontend 送包（swap 空闲 5.2G 兜底，全程后端 UP 无 OOM），线上到 6029272。**判部署是否真完成：看登录页「部署版本」水印或服务器 `git rev-parse HEAD`，别只看 CI 绿。守卫死锁已由 D-514d 根治（8512511b9，用户拍板测试期不升配）：内存<1200MB 但 MemAvailable≥500 且「内存+swap 空闲」≥3000 时放行 swap 辅助构建；构建期借 swap 变慢 1-3 分钟可接受，旧容器继续服务。**
