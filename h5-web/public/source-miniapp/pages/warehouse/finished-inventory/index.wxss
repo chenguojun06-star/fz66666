@@ -30,12 +30,14 @@ page {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 14px 8px;
+  /* D-513：原 14px 8px 偏松 → 降为 10px 6px */
+  padding: 10px 6px;
   box-sizing: border-box;
 }
 
 .stat-value {
-  font-size: var(--font-size-3xl);
+  /* D-513：原 3xl(22px) 偏大，用户反馈"卡片字太大"→ 降为 xl(18px) */
+  font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   line-height: 1.2;
@@ -125,7 +127,8 @@ page {
 }
 
 .empty-icon {
-  font-size: 48px;
+  /* D-513：原 48px 过大 → 降为 36px */
+  font-size: 36px;
   opacity: 0.3;
 }
 
@@ -152,9 +155,10 @@ page {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   overflow: hidden;
-  padding: 12px;
+  /* D-513：原 12px 偏松 → 降为 10px，卡片更紧凑 */
+  padding: 10px;
   box-sizing: border-box;
   transition: transform 0.18s ease, background-color 0.18s ease;
 }
@@ -170,8 +174,9 @@ page {
 }
 
 .item-image {
-  width: 80px;
-  height: 80px;
+  /* D-513：原 80x80 偏大，卡片显笨重 → 降为 56x56 */
+  width: 56px;
+  height: 56px;
   border-radius: var(--radius-lg);
   flex-shrink: 0;
   background: var(--color-bg-page);
@@ -186,7 +191,8 @@ page {
 }
 
 .item-image-text {
-  font-size: var(--font-size-3xl);
+  /* D-513：原 3xl(22px) 偏大（图缩到56后字更要跟上）→ 降为 xl(18px) */
+  font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   color: var(--color-primary);
 }
@@ -285,7 +291,8 @@ page {
 }
 
 .qty-value {
-  font-size: var(--font-size-xl);
+  /* D-513：原 xl(18px) 偏大 → 降为 lg(16px) */
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   line-height: 1.2;
