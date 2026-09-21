@@ -85,23 +85,8 @@ export function buildPrintHtml({
             white-space: nowrap;
           }
 
-          /* 打印时页脚固定到每页 */
-          @media print {
-            .print-footer {
-              position: fixed;
-              bottom: 0;
-              left: 0;
-              right: 0;
-              margin-top: 0;
-              height: 20px;
-              padding: 0 5mm;
-              z-index: 1000;
-            }
-            /* 内容区域留出页脚位置 */
-            .print-body {
-              margin-bottom: 30px;
-            }
-          }
+          /* D-514：页脚取消 position:fixed——fixed 页脚以不透明白底压在每页底部 20px 上，
+             正好盖住表格最后一行，表现为"内容被切一半"。改为文档末尾顺排一次。 */
 
           /* 基础样式 */
           body {

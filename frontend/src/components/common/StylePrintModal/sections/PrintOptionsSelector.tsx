@@ -41,18 +41,18 @@ const PrintOptionsSelector: React.FC<PrintOptionsSelectorProps> = ({
           <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', lineHeight: '32px' }}> 选择打印内容：</div>
             <Checkbox.Group
-              value={(['basicInfo', 'sizeTable', 'bomTable', 'processTable', 'productionSheet', 'sampleReview'] as const)
+              value={(['basicInfo', 'sizeTable', 'bomTable', 'processTable', 'sampleReview'] as const)
                 .filter(k => options[k])}
               onChange={(values) => {
-                // 只重置 6 个主项，保留子区块（styleInfoBlock 等）勾选状态，
+                // 只重置主项，保留子区块（styleInfoBlock 等）勾选状态，
                 // 修复：动任一主勾选导致子区块被全部清空的 bug
+                // D-514：生产制单（工艺说明）已从打印内容移除，选项同步摘除
                 onOptionsChange({
                   ...options,
                   basicInfo: values.includes('basicInfo'),
                   sizeTable: values.includes('sizeTable'),
                   bomTable: values.includes('bomTable'),
                   processTable: values.includes('processTable'),
-                  productionSheet: values.includes('productionSheet'),
                   sampleReview: values.includes('sampleReview'),
                 });
               }}
@@ -62,7 +62,6 @@ const PrintOptionsSelector: React.FC<PrintOptionsSelectorProps> = ({
               <Checkbox value="sizeTable">尺寸表</Checkbox>
               <Checkbox value="bomTable">物料清单</Checkbox>
               <Checkbox value="processTable">工序表</Checkbox>
-              <Checkbox value="productionSheet">生产制单</Checkbox>
               <Checkbox value="sampleReview">样衣审核</Checkbox>
             </Checkbox.Group>
           </div>

@@ -16,7 +16,6 @@ export interface PrintOptions {
   sizeTable: boolean;    // 尺寸表
   bomTable: boolean;     // BOM表
   processTable: boolean; // 工序表
-  productionSheet: boolean; // 生产制单
   sampleReview: boolean; // 样衣审核
   // 基本信息细分区块
   styleInfoBlock: boolean; // 款号信息
@@ -27,12 +26,12 @@ export interface PrintOptions {
 }
 
 // 默认打印选项
+// D-514：生产制单（工艺说明）选项已按需求移除
 export const DEFAULT_PRINT_OPTIONS: PrintOptions = {
   basicInfo: true,
   sizeTable: true,
   bomTable: true,
   processTable: true,
-  productionSheet: true,
   sampleReview: true,
   styleInfoBlock: true,
   customerInfoBlock: true,

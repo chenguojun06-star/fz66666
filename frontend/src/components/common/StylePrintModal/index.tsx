@@ -22,7 +22,6 @@ import BasicInfoSection from './sections/BasicInfoSection';
 import SizeColorMatrixSection from './sections/SizeColorMatrixSection';
 import SizeDetailsSection from './sections/SizeDetailsSection';
 import SampleReviewSection from './sections/SampleReviewSection';
-import ProductionSheetSection from './sections/ProductionSheetSection';
 import SizeTableSection from './sections/SizeTableSection';
 import BomTableSection from './sections/BomTableSection';
 import ProcessTableSection from './sections/ProcessTableSection';
@@ -122,6 +121,13 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             <style>{`
               .print-section { margin-bottom: 16px; }
               .print-section-title { font-size: 13px; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-radius: 2px; margin-bottom: 0; border: 1px solid #d9d9d9; border-bottom: none; }
+              /* D-514 打印分页：区块（标题+表格）放不下就整体挪到下一页，标题永不与表格分离 */
+              .print-sec { margin-bottom: 16px; break-inside: avoid; page-break-inside: avoid; }
+              .print-section-title { break-after: avoid; page-break-after: avoid; break-inside: avoid; page-break-inside: avoid; }
+              .pt tr { break-inside: avoid; page-break-inside: avoid; }
+              .pt thead { display: table-header-group; }
+              .ant-table-wrapper tr { break-inside: avoid; page-break-inside: avoid; }
+              .ant-table-wrapper thead { display: table-header-group; }
               /* 统一打印表格样式 */
               .pt { width: 100%; border-collapse: collapse; font-size: 12px; }
               .pt th, .pt td { border: 0.5px solid var(--color-zinc-300); padding: 5px 8px; vertical-align: middle; }
@@ -165,36 +171,30 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               <SampleReviewSection productionSheet={data.productionSheet} />
             )}
 
-            {/* 生产制单（生产要求） */}
-            {options.productionSheet &&  (
-              <>
-              <div className="print-section-title">生产制单</div>
-              <ProductionSheetSection productionSheet={data.productionSheet} />
-            </>
-            )}
+            {/* D-514 生产制单（工艺说明大段文本）已按需求从打印内容移除，选项同步摘除 */}
 
             {/* 尺寸表 */}
-            {options.sizeTable &&  (
-              <>
-              <div className="print-section-title">尺寸表</div>
-              <SizeTableSection sizes={data.sizes} />
-            </>
+            {options.sizeTable && (
+              <div className="print-sec">
+                <div className="print-section-title">尺寸表</div>
+                <SizeTableSection sizes={data.sizes} />
+              </div>
             )}
 
             {/* BOM表 */}
-            {options.bomTable &&  (
-              <>
-              <div className="print-section-title">物料明细（BOM）</div>
-              <BomTableSection bom={data.bom} showPrice={showPrice} />
-            </>
+            {options.bomTable && (
+              <div className="print-sec">
+                <div className="print-section-title">物料明细（BOM）</div>
+                <BomTableSection bom={data.bom} showPrice={showPrice} />
+              </div>
             )}
 
             {/* 工序表 */}
-            {options.processTable &&  (
-              <>
-              <div className="print-section-title">工序表</div>
-              <ProcessTableSection process={data.process} showPrice={showPrice} />
-            </>
+            {options.processTable && (
+              <div className="print-sec">
+                <div className="print-section-title">工序表</div>
+                <ProcessTableSection process={data.process} showPrice={showPrice} />
+              </div>
             )}
 
             {/* 无数据提示 */}

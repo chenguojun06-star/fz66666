@@ -1,7 +1,27 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-19（新增 D-472 付款中心往来总账——银行账户模型）
+> 最后更新：2026-09-21（新增 D-514 样衣打印分页治理——整块不拆页+页脚取消fixed+工艺说明行移除）
+
+---
+
+## D-514：样衣打印分页治理——整块不拆页 + 页脚取消 fixed + 工艺说明行移除（2026-09-21）
+
+**背景**：用户截图三连——①生产制单下「工艺说明」大段模板文本要删掉；②「物料明细（BOM）」标题孤留在上页尾、表格整块掉到下一页；③内容在页边界被"切一半"。涉及 StylePrintModal（样衣/下单/大货三模式共用打印预览）。
+
+**三个根因**：
+1. 区块标题与表格是散的兄弟节点：D-361e 的 `table { break-inside: avoid }` 把表格整体挪到下一页时，`.print-section-title` 留在上页尾 → 孤行标题（用户看到的"标题下面空白一整块"）。
+2. `.print-footer` 用 `position: fixed; bottom: 0` 打印到每页底部，带不透明白底，正好压住每页底部约 20px——表格最后一行被盖住，视觉上就是"内容切一半"。
+3. 工艺说明是单行超高大单元格，`tr { break-inside: avoid !important }`（safePrint PRINT_FIX_CSS）作用其上还会触发 Chrome 分页重影怪象（下一页重现文本尾部）。
+
+**修法**（全部纯前端）：
+- 带标题区块（尺寸表/BOM/工序表）包一层 `.print-sec { break-inside: avoid }`——标题+表格成为整体，当前页放不下整块挪下一页；超过一整页的长表从新页开始后再断行，行级 avoid + `thead { display: table-header-group }` 保证行不切半、表头续页重复。
+- 页脚取消 fixed，改文档末尾顺排一次（打印人+打印时间）。
+- 生产制单区块（内容仅工艺说明一行）整体移除：index.tsx 区块、PrintOptionsSelector 勾选项、`PrintOptions.productionSheet` 字段、删 ProductionSheetSection.tsx；`data.productionSheet`（款式信息数据）保留，样衣审核/封面兜底/标签条目仍依赖。
+
+**验证**：无头 Chrome 打 90 行 BOM 测试页成 PDF + PDFKit 渲染 4 页核对：p1 尺寸表整块+大留白、p2 BOM 标题随表起始、p4 表头重复+行完整+工序表整块+页脚在末尾不盖内容；`tsc --noEmit` 绿。
+
+**教训**：打印分页只加 `break-inside: avoid` 不够——要查"谁在拆它"：fixed 页脚盖内容、标题在 avoid 容器外面，都会让 avoid 形同虚设；超高大 tr 配 avoid 会触发 Chrome 分页重影。
 
 ---
 
