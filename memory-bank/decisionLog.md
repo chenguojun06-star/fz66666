@@ -21,6 +21,7 @@
 - 生产制单区块：**D-514b 勘误（57ae144e9）——用户本意是只删左列「工艺说明」标签字样，内容整宽保留，不是删内容**。已恢复勾选项/`PrintOptions.productionSheet`/ProductionSheetSection.tsx（重写为无标签单格表）；`data.productionSheet`（款式信息数据）始终保留，样衣审核/封面兜底/标签条目仍依赖。
 - **用户 10:49 打印截图仍是旧包实锤**：页脚夹在 BOM 表后 + 工序表标题切成细条贴页尾 = 旧 fixed 页脚逻辑特征（新逻辑页脚只在全文末尾出现一次）。
 - **⚠️ 后续勘误（11:30）：「D-514 10:38 已部署成功」是误判——CI success ≠ 服务器部署完成**。真实原因：服务器内存守卫死锁，autodeploy.sh 要求 MemAvailable ≥1200MB 才构建，而机器平时就停在 ~1185MB（backend 808M+mysql 494M 常驻），10:36 起每 2 分钟跳过一轮、永远差十几 MB，当天所有 frontend 变更（含上午 D-513 后的）全部没部署。11:35 手动串行构建 frontend 送包（swap 空闲 5.2G 兜底，全程后端 UP 无 OOM），线上到 6029272。**判部署是否真完成：看登录页「部署版本」水印或服务器 `git rev-parse HEAD`，别只看 CI 绿。守卫死锁已由 D-514d 根治（8512511b9，用户拍板测试期不升配）：内存<1200MB 但 MemAvailable≥500 且「内存+swap 空闲」≥3000 时放行 swap 辅助构建；构建期借 swap 变慢 1-3 分钟可接受，旧容器继续服务。**
+**D-514f（a4ee6d78f）连带发现并根治：compose 新版默认 Bake 构建器，`up -d --build frontend` 会把依赖图里的 backend 一起 Maven 全量构建（3分钟+）并因镜像更新连带重建 backend——前端部署变成后端 API 也中断约 3 分钟。修法=脚本 export COMPOSE_BAKE=false（回经典构建器只构建点名服务）+ 构建循环 up 加 --no-deps（绝不连带重启依赖）。**
 
 **验证**：无头 Chrome 打 90 行 BOM 测试页成 PDF + PDFKit 渲染逐页核对：p1 尺寸表整块+大留白、p2 BOM 标题随表起始、长表跨页表头重复+行完整；test2 场景（加生产制单 15 行文本区块）p4 BOM 尾后剩余空间不足 → 生产制单整块挪 p5（无标签、无重影），工序表完整随后，页脚在末尾。`tsc --noEmit` 绿。
 
