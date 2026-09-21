@@ -22,6 +22,7 @@ import BasicInfoSection from './sections/BasicInfoSection';
 import SizeColorMatrixSection from './sections/SizeColorMatrixSection';
 import SizeDetailsSection from './sections/SizeDetailsSection';
 import SampleReviewSection from './sections/SampleReviewSection';
+import ProductionSheetSection from './sections/ProductionSheetSection';
 import SizeTableSection from './sections/SizeTableSection';
 import BomTableSection from './sections/BomTableSection';
 import ProcessTableSection from './sections/ProcessTableSection';
@@ -171,7 +172,13 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               <SampleReviewSection productionSheet={data.productionSheet} />
             )}
 
-            {/* D-514 生产制单（工艺说明大段文本）已按需求从打印内容移除，选项同步摘除 */}
+            {/* 生产制单（生产要求）— D-514b 已去掉「工艺说明」左列标签，内容整宽保留 */}
+            {options.productionSheet && (
+              <div className="print-sec">
+                <div className="print-section-title">生产制单</div>
+                <ProductionSheetSection productionSheet={data.productionSheet} />
+              </div>
+            )}
 
             {/* 尺寸表 */}
             {options.sizeTable && (
