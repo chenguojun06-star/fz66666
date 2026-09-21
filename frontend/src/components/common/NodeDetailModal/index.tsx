@@ -36,6 +36,49 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   const [activeTab, setActiveTab] = useState('processTracking');
   const [adminUnlocked, setAdminUnlocked] = useState(false);
 
+  // D-518 环节核验：管理员判断口径与后端门禁豁免一致
+  const isAdminUser = (() => {
+    const roles = String((user as any)?.role || (user as any)?.roleName || '').toLowerCase();
+    return ['admin', 'manager', 'supervisor', '主管', '管理员'].some((k) => roles.includes(k));
+  })();
+
+  /** D-518 环节核验开关：即时保存到订单 nodeOperations 的节点对象（verifyPrevStage），后端扫码门禁即时生效 */
+  const handleToggleVerifyPrev = async (checked: boolean) => {
+    if (!orderId) return;
+    setSaving(true);
+    try {
+      const currentData = nodeOperations[nodeTypeKey] || {};
+      const existingHistory = currentData.history || [];
+      const updatedOperations = {
+        ...nodeOperations,
+        [nodeTypeKey]: {
+          ...currentData,
+          verifyPrevStage: checked,
+          history: [...existingHistory, {
+            time: new Date().toISOString(),
+            operatorName: user?.name || user?.username || '未知',
+            action: 'update',
+            changes: `环节核验: ${checked ? '开启（扫码核验上一环节子工序完成）' : '关闭（不核验直接放行）'}`,
+          }].slice(-20),
+        }
+      };
+      const res = await productionOrderApi.saveNodeOperations(orderId, JSON.stringify(updatedOperations));
+      if (res.code === 200) {
+        setNodeOperations(updatedOperations);
+        message.success(checked
+          ? '环节核验已开启：本环节扫码前核验上一环节子工序完成（对管理员同样生效）'
+          : '环节核验已关闭：本环节扫码不核验上一环节');
+      } else {
+        message.error(res.message || '环节核验保存失败');
+      }
+    } catch (err) {
+      message.error('环节核验保存失败');
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const {
     loading, factories, users, nodeOperations, setNodeOperations,
     orderSummary, orderDetail, orderLines, processTrackingRecords,
@@ -340,6 +383,9 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       handleRepairTracking={handleRepairTracking}
       handleUndoSuccess={handleUndoSuccess}
       onOpenInspectDrawer={onOpenInspectDrawer}
+      isAdminUser={isAdminUser}
+      verifyPrevStage={currentNodeData.verifyPrevStage === true}
+      onToggleVerifyPrev={handleToggleVerifyPrev}
     />
   );
 

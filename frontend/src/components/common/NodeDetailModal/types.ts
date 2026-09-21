@@ -32,6 +32,8 @@ export interface NodeOperationData {
   updatedBy?: string;
   updatedByName?: string;
   history?: HistoryItem[];
+  /** D-518 环节核验：开启后本环节扫码前核验上一父环节全部子工序已完成（对管理员同样生效） */
+  verifyPrevStage?: boolean;
 }
 
 /** 所有节点操作数据 */

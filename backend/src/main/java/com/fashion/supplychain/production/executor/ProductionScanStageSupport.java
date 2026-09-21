@@ -94,23 +94,30 @@ public class ProductionScanStageSupport {
             return;
         }
 
-        // 历史订单兼容：创建时间早于门禁生效日期的订单跳过门禁校验
-        if (order.getCreateTime() != null && order.getCreateTime().isBefore(GATE_EFFECTIVE_DATE)) {
+        String targetParent = normalizeFixedProductionNodeName(progressStage);
+
+        // D-518 环节核验：目标父节点在父节点弹窗显式开启「环节核验」时，
+        // 门禁对所有人生效（含管理员/主管），且不受历史订单豁免日期限制——显式开关优先级最高
+        boolean verifyExplicit = isVerifyPrevStageExplicitlyEnabled(order, targetParent);
+
+        // 历史订单兼容：创建时间早于门禁生效日期的订单跳过门禁校验（环节核验显式开启时不豁免）
+        if (!verifyExplicit && order.getCreateTime() != null && order.getCreateTime().isBefore(GATE_EFFECTIVE_DATE)) {
             log.debug("历史订单跳过子工序门禁: orderNo={}, createTime={}", order.getOrderNo(), order.getCreateTime());
             return;
         }
 
-        // 管理员跳过门禁校验
-        com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
-        if (ctx != null) {
-            String role = ctx.getRole();
-            if (role != null && (role.contains("admin") || role.contains("ADMIN") || role.contains("manager") || role.contains("supervisor") || role.contains("主管") || role.contains("管理员"))) {
-                log.debug("管理员跳过子工序门禁: orderNo={}, role={}", order.getOrderNo(), role);
-                return;
+        // 管理员跳过门禁校验（环节核验显式开启时不跳过）
+        if (!verifyExplicit) {
+            com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
+            if (ctx != null) {
+                String role = ctx.getRole();
+                if (role != null && (role.contains("admin") || role.contains("ADMIN") || role.contains("manager") || role.contains("supervisor") || role.contains("主管") || role.contains("管理员"))) {
+                    log.debug("管理员跳过子工序门禁: orderNo={}, role={}", order.getOrderNo(), role);
+                    return;
+                }
             }
         }
 
-        String targetParent = normalizeFixedProductionNodeName(progressStage);
         int currentIdx = indexOfFixedNode(targetParent);
         if (currentIdx <= 0) {
             if (targetParent == null && StringUtils.hasText(progressStage)) {
@@ -184,6 +191,37 @@ public class ProductionScanStageSupport {
         }
         log.debug("父节点顺序校验通过: orderNo={}, bundleNo={}, targetParent={}, prevParent={}, process={}",
                 order.getOrderNo(), bundle != null ? bundle.getBundleNo() : "无菲号", targetParent, prevParent, childProcessName);
+    }
+
+    /**
+     * D-518 环节核验：目标父节点是否在父节点弹窗显式开启「环节核验」。
+     * 配置存于订单 nodeOperations JSON 的节点对象字段 verifyPrevStage（true=开启核验）。
+     */
+    private boolean isVerifyPrevStageExplicitlyEnabled(ProductionOrder order, String parentStage) {
+        if (order == null || !StringUtils.hasText(parentStage) || !StringUtils.hasText(order.getNodeOperations())) {
+            return false;
+        }
+        try {
+            Map<String, Object> root = objectMapper.readValue(order.getNodeOperations(),
+                    new TypeReference<Map<String, Object>>() {});
+            for (Map.Entry<String, Object> entry : root.entrySet()) {
+                if ("subProcessRemap".equals(entry.getKey()) || !(entry.getValue() instanceof Map)) {
+                    continue;
+                }
+                String parent = STAGE_KEY_TO_PARENT.get(entry.getKey());
+                if (parent == null || !parent.equals(parentStage)) {
+                    continue;
+                }
+                Object flag = ((Map<String, Object>) entry.getValue()).get("verifyPrevStage");
+                if (flag == null) {
+                    return false;
+                }
+                return Boolean.TRUE.equals(flag) || "true".equalsIgnoreCase(String.valueOf(flag));
+            }
+        } catch (Exception e) {
+            log.warn("解析环节核验配置失败: orderNo={}, parentStage={}", order.getOrderNo(), parentStage, e);
+        }
+        return false;
     }
 
     public String resolveParentProgressStage(String styleNo, String processName) {

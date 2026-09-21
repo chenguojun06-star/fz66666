@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, Button, Spin, Tabs } from 'antd';
+import { Alert, Button, Spin, Tabs, Switch } from 'antd';
 import type { TabsProps } from 'antd';
 import { FileTextOutlined, ShoppingOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
@@ -69,6 +69,10 @@ interface NodeDetailBodyProps {
   handleRepairTracking: () => Promise<void>;
   handleUndoSuccess: () => void;
   onOpenInspectDrawer?: (orderId: string) => void;
+  /** D-518 环节核验 */
+  isAdminUser?: boolean;
+  verifyPrevStage?: boolean;
+  onToggleVerifyPrev?: (checked: boolean) => Promise<void> | void;
 }
 
 const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
@@ -113,6 +117,9 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
   handleRepairTracking,
   handleUndoSuccess,
   onOpenInspectDrawer,
+  isAdminUser,
+  verifyPrevStage,
+  onToggleVerifyPrev,
 }) => {
   const navigate = useNavigate();
 
@@ -135,6 +142,48 @@ const NodeDetailBody: React.FC<NodeDetailBodyProps> = ({
 
   return (
     <Spin spinning={loading}>
+      {/* D-518 环节核验：管理员可在父节点弹窗顶部直接开关——开启后本环节扫码核验上一环节子工序完成 */}
+      {isAdminUser && (
+        <div
+          className="u-mb-16"
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 16,
+            padding: '10px 14px',
+            border: '1px solid var(--color-border)',
+            borderRadius: 12,
+            background: 'var(--color-bg-container)',
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+              环节核验
+              <span
+                style={{
+                  marginLeft: 8,
+                  fontSize: 12,
+                  padding: '1px 8px',
+                  borderRadius: 10,
+                  border: '1px solid ' + (verifyPrevStage ? 'var(--color-success, #52c41a)' : 'var(--color-border)'),
+                  color: verifyPrevStage ? 'var(--color-success, #52c41a)' : 'var(--color-text-tertiary)',
+                }}
+              >
+                {verifyPrevStage ? '已开启·扫码会卡上一环节' : '已关闭·扫码不核验'}
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+              开启后，本环节扫码前核验上一环节的全部子工序已完成，未完成将拦截（对管理员同样生效）；关闭则直接放行。
+            </div>
+          </div>
+          <Switch
+            checked={!!verifyPrevStage}
+            loading={saving}
+            onChange={(checked) => void onToggleVerifyPrev?.(checked)}
+          />
+        </div>
+      )}
       {loadWarnings.length > 0 && (
         <Alert
           style={{ marginBottom: 8 }}
