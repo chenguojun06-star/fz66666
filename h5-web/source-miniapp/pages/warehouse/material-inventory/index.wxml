@@ -1,0 +1,69 @@
+<view class="page">
+  <!-- 顶部搜索 + 筛选 -->
+  <view class="filter-bar">
+    <view class="search-row">
+      <input class="search-input" placeholder="搜索物料编码或名称" value="{{keyword}}" bindinput="onSearchInput" bindconfirm="onSearchConfirm" confirm-type="search" />
+      <view class="search-btn" bindtap="onSearchConfirm">搜索</view>
+    </view>
+    <picker mode="selector" range="{{typeOptions}}" range-key="label" value="{{typeIndex}}" bindchange="onTypeChange">
+      <view class="picker-row">
+        <text class="picker-label">类型</text>
+        <text class="picker-value">{{typeOptions[typeIndex].label}}</text>
+      </view>
+    </picker>
+  </view>
+
+  <!-- 统计 -->
+  <view class="summary-row" wx:if="{{list.length > 0}}">
+    <text>共 {{total}} 条</text>
+    <text wx:if="{{list.length < total}}">· 已显示 {{list.length}}</text>
+  </view>
+
+  <!-- 加载中 -->
+  <view class="loading-state" wx:if="{{loading && list.length === 0}}">
+    <text>加载中…</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!loading && list.length === 0}}">
+    <text>暂无物料库存数据</text>
+    <text class="empty-hint">先在 PC 端物料仓储录入物料</text>
+  </view>
+
+  <!-- 列表 -->
+  <view class="card-list">
+    <view class="card" wx:for="{{list}}" wx:key="id" data-item="{{item}}" bindtap="onRowTap">
+      <view class="card-top">
+        <view class="type-tag" style="background: {{item.typeColor}};">{{item.typeLabel}}</view>
+        <view class="card-name">{{item.materialName}}</view>
+        <view wx:if="{{item.lowStock}}" class="low-tag">低于安全库存</view>
+      </view>
+      <view class="card-code">{{item.materialCode}}</view>
+
+      <!-- 主数据：可用库存 + 单位 -->
+      <view class="stock-main">
+        <text class="stock-label">可用</text>
+        <text class="stock-value {{item.isZero ? 'is-zero' : (item.lowStock ? 'is-low' : '')}}">{{item.availableQty}}</text>
+        <text class="stock-unit">{{item.unit}}</text>
+      </view>
+
+      <!-- 次要信息：在途/锁定/安全库存 -->
+      <view class="stock-sub">
+        <text wx:if="{{item.inTransitQty > 0}}">在途 {{item.inTransitQty}}</text>
+        <text wx:if="{{item.inTransitQty > 0 && item.lockedQty > 0}}"> · </text>
+        <text wx:if="{{item.lockedQty > 0}}">锁定 {{item.lockedQty}}</text>
+        <text wx:if="{{(item.inTransitQty > 0 || item.lockedQty > 0) && item.safetyStock > 0}}"> · </text>
+        <text wx:if="{{item.safetyStock > 0}}">安全 {{item.safetyStock}} {{item.unit}}</text>
+      </view>
+
+      <view class="stock-loc">库位：{{item.warehouseLocation}}</view>
+    </view>
+  </view>
+
+  <view class="loadmore" wx:if="{{loading && list.length > 0}}">
+    <text>加载中…</text>
+  </view>
+  <view class="loadmore" wx:if="{{!hasMore && list.length > 0}}">
+    <text>— 没有更多了 —</text>
+  </view>
+</view>
