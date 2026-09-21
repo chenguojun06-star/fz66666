@@ -594,14 +594,22 @@ Page({
   parseAndQuery(code) {
     try {
       const data = JSON.parse(code);
-      if (data.styleNo && data.color && data.size) {
+      const qrType = String(data.type || '').trim().toLowerCase();
+      const patternId = String(data.id || data.patternId || '').trim();
+      // 情况1：仓库二维码（styleNo 必带；color/size 缺省按空处理）——D-517
+      if (data.styleNo) {
         this.setData({
           viewMode: 'detail',
           styleNo: data.styleNo,
-          color: data.color,
-          size: data.size,
+          color: data.color || '',
+          size: data.size || '',
         });
-        this.querySample(data.styleNo, data.color, data.size);
+        this.querySample(data.styleNo, data.color || '', data.size || '');
+        return;
+      }
+      // 情况2：样衣生产码（历史标签只有 type+id）→ 反查款式信息再查库存出入库/借调/归还
+      if (patternId && ['pattern', 'sample', 'pattern_production', 'patternproduction'].includes(qrType)) {
+        this._resolvePatternAndQuery(patternId);
         return;
       }
     } catch (e) { /* 扫码解析异常，继续按空格分割逻辑 */ }
@@ -619,6 +627,28 @@ Page({
     }
     
     wx.showToast({ title: '无法识别的二维码', icon: 'none' });
+  },
+
+  // D-517：样衣生产码反查款式（GET /production/pattern/{id}）后按 styleNo+color+size 查库存
+  _resolvePatternAndQuery(patternId) {
+    this.setData({ viewMode: 'detail', loading: true, errorMsg: '', successMsg: '' });
+    api.production.getPatternDetail(patternId)
+      .then((detail) => {
+        const styleNo = String((detail && (detail.styleNo || detail.style_no)) || '').trim();
+        if (!styleNo) {
+          wx.showToast({ title: '未找到该样衣的款式信息', icon: 'none' });
+          this.setData({ viewMode: 'list', loading: false });
+          return;
+        }
+        const color = String((detail && detail.color) || '').trim();
+        const size = String((detail && detail.size) || '').trim();
+        this.setData({ styleNo, color, size, loading: false });
+        this.querySample(styleNo, color, size);
+      })
+      .catch(() => {
+        wx.showToast({ title: '样衣信息查询失败', icon: 'none' });
+        this.setData({ viewMode: 'list', loading: false });
+      });
   },
 
   onBackToList() {
