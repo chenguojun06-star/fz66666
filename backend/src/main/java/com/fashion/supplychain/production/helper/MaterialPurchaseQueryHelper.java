@@ -37,6 +37,15 @@ public class MaterialPurchaseQueryHelper {
     @Autowired(required = false)
     private com.fashion.supplychain.production.service.PatternProductionService patternProductionService;
 
+    /**
+     * D-513：列表的查询条件构建器（service/impl 包）。
+     * 统计（getStatusStats）复用它，保证「统计口径 = 列表口径」，
+     * 从根上避免"统计数≠列表数"（历史上两套条件各自演化导致 P0 bug 反复出现）。
+     * 注意：与当前类同名不同包，故用全限定类型声明。
+     */
+    @Autowired
+    private com.fashion.supplychain.production.service.impl.MaterialPurchaseQueryHelper listQueryHelper;
+
     public IPage<MaterialPurchase> list(Map<String, Object> params) {
         // 🔒 PC端默认隔离：未指定工厂类型时，跟单员/管理员只查内部工厂采购记录
         Map<String, Object> effectiveParams = params != null ? params : new java.util.HashMap<>();
@@ -378,25 +387,24 @@ public class MaterialPurchaseQueryHelper {
      * 支持按 materialType / sourceType / orderNo(keyword) 筛选
      */
     public Map<String, Object> getStatusStats(Map<String, Object> params) {
-        LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<MaterialPurchase>()
-                .eq(MaterialPurchase::getDeleteFlag, 0);
-
         // 🔒 多租户隔离：所有账号（含非工厂）都必须按 tenantId 过滤
         TenantAssert.assertTenantContext();
         String qFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         Long qTenantId = com.fashion.supplychain.common.UserContext.tenantId();
-        wrapper.eq(MaterialPurchase::getTenantId, qTenantId);
+
+        // D-513 统一口径：统计直接复用**列表的查询条件**（service/impl.buildQueryWrapper），
+        // 不再自己拼 applyStatusStatsFilters + excludeInvalidOrdersFromStats。
+        // 历史问题：两套条件各自演化（一个排除 completed、一个不排除；一个默认按 INTERNAL 工厂过滤、
+        // 一个不过滤），导致"统计数≠列表数"的 P0 bug 反复出现（用户实测 103 vs 138、红点 10 vs 1）。
+        // 共用同一套条件后，从根上不可能再不一致。
+        Map<String, Object> safeParams = params == null ? new java.util.HashMap<>() : params;
+        LambdaQueryWrapper<MaterialPurchase> wrapper = listQueryHelper.buildQueryWrapper(safeParams, qTenantId);
 
         // 工厂账号进一步隔离：只统计该工厂的采购记录
+        // （列表侧由 listWithEnrichment 注入 _factoryOrderIds 实现，统计侧沿用原逻辑）
         if (shouldReturnEmptyForFactory(wrapper, qTenantId, qFactoryId)) {
             return emptyStats();
         }
-
-        // 复用 queryPage 的筛选逻辑，但不分页
-        applyStatusStatsFilters(wrapper, params);
-
-        // 排除已关闭/已完成/已取消/已归档/已报废/已删除订单关联的采购记录
-        excludeInvalidOrdersFromStats(wrapper, qTenantId);
 
         wrapper.last("LIMIT 5000");
         List<MaterialPurchase> all = materialPurchaseService.list(wrapper);

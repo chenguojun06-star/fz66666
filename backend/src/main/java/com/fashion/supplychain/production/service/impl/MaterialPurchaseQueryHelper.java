@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 
 @Component("materialPurchaseQueryHelperImpl")
 @Slf4j
-class MaterialPurchaseQueryHelper {
+public class MaterialPurchaseQueryHelper {
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -51,7 +51,13 @@ class MaterialPurchaseQueryHelper {
     @Autowired
     private StyleAttachmentService styleAttachmentService;
 
-    LambdaQueryWrapper<MaterialPurchase> buildQueryWrapper(Map<String, Object> safeParams, Long tenantId) {
+    /**
+     * 构建采购列表查询条件。
+     *
+     * <p>D-513：改为 public，让统计（helper/MaterialPurchaseQueryHelper.getStatusStats）
+     * 与列表**共用同一套条件**，从根上避免"统计数≠列表数"（P0 类 bug）。
+     */
+    public LambdaQueryWrapper<MaterialPurchase> buildQueryWrapper(Map<String, Object> safeParams, Long tenantId) {
         String purchaseNo = (String) safeParams.getOrDefault("purchaseNo", "");
         String materialCode = (String) safeParams.getOrDefault("materialCode", "");
         String materialName = (String) safeParams.getOrDefault("materialName", "");
