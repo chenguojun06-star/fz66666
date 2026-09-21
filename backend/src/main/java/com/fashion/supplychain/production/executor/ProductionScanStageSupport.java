@@ -107,14 +107,16 @@ public class ProductionScanStageSupport {
         }
 
         // 管理员跳过门禁校验（环节核验显式开启时不跳过）
+        // D-513 修复：原来用 role.contains("admin")/contains("主管") 模糊匹配，
+        //   漏掉「租户主账号」(isTenantOwner=true) 和「全能管理」等自定义角色名
+        //   → 老板/主账号在未开启核验时反而被门禁拦住。
+        //   改用 UserContext.isSupervisorOrAbove()（认 isTenantOwner/roleId=1/精确角色白名单），
+        //   与 UserContext 里「禁止 contains 模糊匹配」的约定保持一致。
         if (!verifyExplicit) {
-            com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
-            if (ctx != null) {
-                String role = ctx.getRole();
-                if (role != null && (role.contains("admin") || role.contains("ADMIN") || role.contains("manager") || role.contains("supervisor") || role.contains("主管") || role.contains("管理员"))) {
-                    log.debug("管理员跳过子工序门禁: orderNo={}, role={}", order.getOrderNo(), role);
-                    return;
-                }
+            if (com.fashion.supplychain.common.UserContext.isSupervisorOrAbove()) {
+                log.debug("管理员跳过子工序门禁: orderNo={}, role={}",
+                        order.getOrderNo(), com.fashion.supplychain.common.UserContext.role());
+                return;
             }
         }
 

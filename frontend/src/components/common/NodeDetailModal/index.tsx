@@ -3,6 +3,7 @@ import { App, Space, Tag } from 'antd';
 import SideDrawer from '../SideDrawer';
 import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
 import { useUser } from '@/utils/AuthContext';
+import { isSupervisorOrAboveUser } from '@/utils/AuthContext.helpers';
 import { useNodeDetailData } from './useNodeDetailData';
 import { formatProcessDisplayName } from '@/utils/productionStage';
 import NodeDetailBody from './components/NodeDetailBody';
@@ -37,10 +38,12 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   const [adminUnlocked, setAdminUnlocked] = useState(false);
 
   // D-518 环节核验：管理员判断口径与后端门禁豁免一致
-  const isAdminUser = (() => {
-    const roles = String((user as any)?.role || (user as any)?.roleName || '').toLowerCase();
-    return ['admin', 'manager', 'supervisor', '主管', '管理员'].some((k) => roles.includes(k));
-  })();
+  // D-513 修复：原来用 ['admin','manager','supervisor','主管','管理员'].some(includes) 模糊匹配，
+  //   漏掉了「租户主账号」(isTenantOwner=true) 和「全能管理」等自定义角色名 ——
+  //   结果老板/主账号进来看不到「环节核验」开关（实测 lilb「全能管理」+ isTenantOwner=true 判为 false）。
+  //   改用项目统一判断 isSupervisorOrAboveUser：认 isTenantOwner / isSuperAdmin / roleId=1 /
+  //   主管·manager·supervisor·组长 / permissions 含 'all'。
+  const isAdminUser = isSupervisorOrAboveUser(user);
 
   /** D-518 环节核验开关：即时保存到订单 nodeOperations 的节点对象（verifyPrevStage），后端扫码门禁即时生效 */
   const handleToggleVerifyPrev = async (checked: boolean) => {
