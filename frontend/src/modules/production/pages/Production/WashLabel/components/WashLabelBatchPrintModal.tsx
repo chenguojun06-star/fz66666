@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Divider, InputNumber, Radio, Space, Tag } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
-import ResizableModal from '@/components/common/ResizableModal';
+import SideDrawer from '@/components/common/SideDrawer';
 import { safePrint } from '@/utils/safePrint';
 import {
   buildWashLabelMultiPageHtml,
@@ -151,11 +151,11 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-s
   };
 
   return (
-    <ResizableModal
+    <SideDrawer
       open={open}
       title={<Space><PrinterOutlined />批量打印（{items.length} 件）</Space>}
-      onCancel={onClose}
-      width="52vw"
+      onClose={onClose}
+      width="85%"
       footer={
         <Space>
           <Button onClick={onClose}>取消</Button>
@@ -232,7 +232,7 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-s
           </div>
         </div>
       </Space>
-    </ResizableModal>
+    </SideDrawer>
   );
 };
 

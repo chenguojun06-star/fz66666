@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { InputNumber, Button, Alert, Checkbox, Tag, Typography, Spin } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import QRCode from 'qrcode';
-import ResizableModal from '../../../../../../components/common/ResizableModal';
+import SideDrawer from '@/components/common/SideDrawer';
 import ResizableTable from '@/components/common/ResizableTable';
 import { parseProductionOrderLines } from '@/utils/api';
 import type { ProductionOrder } from '../../../../../../types/production';
@@ -322,13 +322,12 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
   ];
 
   return (
-    <ResizableModal
+    <SideDrawer
       title={`打印标签 — ${order?.orderNo ?? ''}`}
       open={open}
-      onCancel={onCancel}
-      width="40vw"
+      onClose={onCancel}
+      width="85%"
       footer={null}
-      destroyOnHidden
     >
       {order && (
         <div style={{ marginBottom: 10, color: 'var(--color-text-secondary)', fontSize: 15 }}>
@@ -376,6 +375,6 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
           </Button>
         </div>
       </div>
-    </ResizableModal>
+    </SideDrawer>
   );
 }

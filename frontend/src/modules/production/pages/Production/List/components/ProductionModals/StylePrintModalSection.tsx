@@ -38,6 +38,7 @@ const StylePrintModalSection: React.FC<StylePrintModalSectionProps> = ({
         '交期': printingRecord?.plannedEndDate,
       }}
       sizeDetails={printingRecord ? parseProductionOrderLines(printingRecord) : []}
+      enableLabelPrint
     />
   );
 };

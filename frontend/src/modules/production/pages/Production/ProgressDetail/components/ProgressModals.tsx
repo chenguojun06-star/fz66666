@@ -163,6 +163,7 @@ const ProgressModals: React.FC<ProgressModalsProps> = (props) => {
           '交期': printingRecord?.plannedEndDate,
         }}
         sizeDetails={printingRecord ? parseProductionOrderLines(printingRecord) : []}
+        enableLabelPrint
       />
 
       <NodeDetailModal

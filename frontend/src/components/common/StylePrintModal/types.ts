@@ -80,6 +80,8 @@ export interface StylePrintModalProps {
   sizeColorConfig?: string;
   /** 打开时直接进入标签打印模式（订单管理「打印标签」入口） */
   initialLabelMode?: boolean;
+  /** D-519 是否显示「打印标签」入口——仅样衣开发/大货页面开启，其它页面隐藏避免误导 */
+  enableLabelPrint?: boolean;
 }
 
 // 打印数据类型

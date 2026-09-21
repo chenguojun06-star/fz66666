@@ -32,6 +32,7 @@ const StylePrintPreviewModal: React.FC<StylePrintPreviewModalProps> = ({
       category={record?.category}
       season={record?.season}
       sizeColorConfig={(record as any)?.sizeColorConfig}
+      enableLabelPrint
     />
   );
 };

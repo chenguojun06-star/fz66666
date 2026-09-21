@@ -31,7 +31,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   visible, onClose, styleId, orderId, orderNo,
   styleNo = '', styleName = '', cover, color, quantity,
   category, season, mode = 'sample', patternProductionId: propPatternId, extraInfo = {}, sizeDetails = [],
-  sizes: _propSizes, sizeColorConfig, initialLabelMode = false,
+  sizes: _propSizes, sizeColorConfig, initialLabelMode = false, enableLabelPrint = false,
 }) => {
   // 注：_propSizes 当前未在本组件使用，保留以维持 props 接口稳定
   void _propSizes;
@@ -88,7 +88,9 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           }}>
             <div style={{ fontWeight: 600, color: 'var(--color-primary-darker)' }}> 打印预览</div>
             <Space>
-              <Button icon={<PrinterOutlined />} onClick={() => setLabelPrintMode(v => !v)}>打印标签</Button>
+              {enableLabelPrint && (
+                <Button icon={<PrinterOutlined />} onClick={() => setLabelPrintMode(v => !v)}>打印标签</Button>
+              )}
               <Button type="primary" onClick={() => void handlePrint()} loading={printLoading}>打印</Button>
             </Space>
           </div>

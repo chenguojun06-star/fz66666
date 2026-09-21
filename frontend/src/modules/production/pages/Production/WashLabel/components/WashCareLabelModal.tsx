@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button, Radio, Spin } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
-import ResizableModal from '@/components/common/ResizableModal';
+import SideDrawer from '@/components/common/SideDrawer';
 import type { ProductionOrder } from '@/types/production';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
 import { safePrint } from '@/utils/safePrint';
@@ -114,7 +114,7 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
   };
 
   return (
-    <ResizableModal title="打印洗水唛" open={open} onCancel={onCancel} width="46vw" footer={null} destroyOnHidden>
+    <SideDrawer title="打印洗水唛" open={open} onClose={onCancel} width="85%" footer={null}>
       <Spin spinning={loading}>
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 15, marginBottom: 8 }}>纸张规格</div>
@@ -137,6 +137,6 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
           打印标签
         </Button>
       </div>
-    </ResizableModal>
+    </SideDrawer>
   );
 }

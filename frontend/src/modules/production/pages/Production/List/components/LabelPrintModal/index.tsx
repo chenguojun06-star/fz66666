@@ -1,5 +1,5 @@
 import { Tabs } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
+import SideDrawer from '@/components/common/SideDrawer';
 import type { LabelPrintModalProps } from './types';
 import { useLabelPrintData } from './useLabelPrintData';
 import WashLabelTab from './WashLabelTab';
@@ -18,11 +18,11 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Lab
   } = useLabelPrintData({ open, order, styleInfo });
 
   return (
-    <ResizableModal
+    <SideDrawer
       title={`打印标签 — ${order?.orderNo ?? ''}`}
       open={open}
-      onCancel={onClose}
-      width="85vw"
+      onClose={onClose}
+      width="85%"
       footer={null}
       destroyOnHidden
     >
@@ -68,6 +68,6 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Lab
           },
         ]}
       />
-    </ResizableModal>
+    </SideDrawer>
   );
 }

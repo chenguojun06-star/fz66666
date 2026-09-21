@@ -19,6 +19,7 @@ import type { StyleBom } from '@/types/style';
 
 import OrderManagementHeader from './components/OrderManagementHeader';
 import OrderManagementModals from './components/OrderManagementModals';
+import CooperationContractModal from './components/CooperationContractModal';
 import OrderManagementTabs from './components/OrderManagementTabs';
 
 import { OrderLine, ProgressNode, defaultProgressNodes } from './types';
@@ -115,9 +116,23 @@ const OrderManagement: React.FC = () => {
 
   const [viewMode, setViewMode] = usePersistentState<'table' | 'card'>('order-management-view-mode', 'table');
 
-  const [printModalVisible, setPrintModalVisible] = useState(false);
-  const [printingRecord, setPrintingRecord] = useState<StyleInfo | null>(null);
-  const [printingMode, setPrintingMode] = useState<'order' | 'production' | 'label'>('order');
+  // D-519 打印合同：取该款最近一张生产订单填充《服装购销加工合同》
+  const [contractModalOpen, setContractModalOpen] = useState(false);
+  const [contractOrder, setContractOrder] = useState<Record<string, any> | null>(null);
+  const handlePrintContract = async (style: StyleInfo) => {
+    try {
+      const res = await api.get('/production/order/list', { params: { styleId: style.id, page: 1, pageSize: 1 } });
+      const rec = res?.data?.records?.[0];
+      if (!rec) {
+        message.warning('该款还没有生产订单，无法打印合同');
+        return;
+      }
+      setContractOrder({ ...rec, styleNo: rec.styleNo || style.styleNo, styleName: rec.styleName || style.styleName });
+      setContractModalOpen(true);
+    } catch {
+      message.error('获取订单信息失败，请重试');
+    }
+  };
   const [remarkModalOpen, setRemarkModalOpen] = useState(false);
   const [remarkStyleNo, setRemarkStyleNo] = useState('');
 
@@ -300,7 +315,7 @@ const OrderManagement: React.FC = () => {
     });
   };
 
-  const columns = useOrderColumns({ openCreate, setPrintModalVisible, setPrintingRecord, setPrintingMode, setRemarkStyleNo, setRemarkModalOpen, handleToggleStatus });
+  const columns = useOrderColumns({ openCreate, onPrintContract: handlePrintContract, setRemarkStyleNo, setRemarkModalOpen, handleToggleStatus });
 
   // ===== 统计卡片配置 =====
   const { cards, hints, onClearHints } = useStatCardsConfig({
@@ -408,13 +423,14 @@ const OrderManagement: React.FC = () => {
         remarkModalOpen={remarkModalOpen}
         setRemarkModalOpen={setRemarkModalOpen}
         remarkStyleNo={remarkStyleNo}
-        printModalVisible={printModalVisible}
-        setPrintModalVisible={setPrintModalVisible}
-        printingRecord={printingRecord}
-        setPrintingRecord={setPrintingRecord}
-        printingMode={printingMode}
         cuttingCreateTask={cuttingCreateTask}
       />
+
+        <CooperationContractModal
+          open={contractModalOpen}
+          onClose={() => setContractModalOpen(false)}
+          order={contractOrder}
+        />
     </>
   );
 };
