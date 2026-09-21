@@ -36,7 +36,7 @@ const ColorSizeMatrixEditor: React.FC<Props> = ({
             return (
               <tr key={idx} style={{ background: isOdd ? 'var(--color-bg-stripe, var(--color-bg-container))' : undefined }}>
                 <td style={{ padding: '5px 10px', borderBottom: '1px solid var(--color-border-light)' }}>
-                  <Tag style={{ margin: 0, fontSize: 12, borderRadius: 4 }}>{line.color || '-'}</Tag>
+                  <Tag style={{ margin: 0, fontSize: 13, borderRadius: 4 }}>{line.color || '-'}</Tag>
                 </td>
                 <td className="u-fw-500" style={{ padding: '5px 10px', borderBottom: '1px solid var(--color-border-light)' }}>{line.size || '-'}</td>
                 <td className="u-ta-center u-fw-500" style={{ padding: '5px 10px', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-info)' }}>{line.quantity}</td>
@@ -46,7 +46,7 @@ const ColorSizeMatrixEditor: React.FC<Props> = ({
                     value={skuVal}
                     onChange={e => setSkuEditMap(prev => ({ ...prev, [key]: e.target.value }))}
                     placeholder="输入商品编码"
-                    style={{ fontSize: 13, width: '100%' }}
+                    style={{ fontSize: 14, width: '100%' }}
                   />
                 </td>
               </tr>

@@ -243,15 +243,15 @@ const PlatformDetail: React.FC = () => {
           </span>
           <div>
             <div className="u-fw-600" style={{ fontSize: 18 }}>{platform.name}</div>
-            <Text type="secondary" style={{ fontSize: 14 }}>{platform.desc}</Text>
+            <Text type="secondary" style={{ fontSize: 15 }}>{platform.desc}</Text>
           </div>
           <div className="u-ml-auto">
             {!isAvailable ? (
-              <Tag icon={<ClockCircleOutlined />} color="default" style={{ fontSize: 14, padding: '2px 12px' }}>敬请期待</Tag>
+              <Tag icon={<ClockCircleOutlined />} color="default" style={{ fontSize: 15, padding: '2px 12px' }}>敬请期待</Tag>
             ) : configured ? (
-              <Tag icon={<CheckCircleOutlined />} color="success" style={{ fontSize: 14, padding: '2px 12px' }}>已连接</Tag>
+              <Tag icon={<CheckCircleOutlined />} color="success" style={{ fontSize: 15, padding: '2px 12px' }}>已连接</Tag>
             ) : (
-              <Tag icon={<CloseCircleOutlined />} color="default" style={{ fontSize: 14, padding: '2px 12px' }}>未配置</Tag>
+              <Tag icon={<CloseCircleOutlined />} color="default" style={{ fontSize: 15, padding: '2px 12px' }}>未配置</Tag>
             )}
           </div>
         </div>

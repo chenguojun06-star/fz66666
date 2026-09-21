@@ -17,7 +17,7 @@ function todayText(): string {
 export const generateBarcodeSvgString = (value: string): string => {
   try {
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    JsBarcode(svgEl, value, { format: 'CODE128', width: 1.5, height: 40, displayValue: true, fontSize: 10, margin: 0, background: 'transparent' });
+    JsBarcode(svgEl, value, { format: 'CODE128', width: 1.5, height: 40, displayValue: true, fontSize: 11, margin: 0, background: 'transparent' });
     return svgEl.outerHTML;
   } catch {
     return '';

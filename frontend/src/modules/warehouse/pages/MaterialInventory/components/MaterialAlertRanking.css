@@ -19,12 +19,12 @@
 }
 
 .ranking-icon {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-warning);
 }
 
 .ranking-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--neutral-text, var(--color-gray-800));
   margin-right: auto;
@@ -33,7 +33,7 @@
 .ranking-stats {
   display: flex;
   gap: 12px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--neutral-text-light, var(--color-text-muted));
 }
 
@@ -93,7 +93,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--color-bg-base);
   flex-shrink: 0;
@@ -109,7 +109,7 @@
 }
 
 .style-no {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--neutral-text, var(--color-gray-800));
   white-space: nowrap;
@@ -118,7 +118,7 @@
 }
 
 .ranking-info .ant-tag {
-  font-size: 14px;
+  font-size: 15px;
   padding: 0 4px;
   line-height: 14px;
   width: fit-content;
@@ -128,7 +128,7 @@
   grid-column: 1 / -1;
   text-align: center;
   color: var(--neutral-text-light, var(--color-text-muted));
-  font-size: 14px;
+  font-size: 15px;
   padding: 24px;
 }
 
@@ -138,12 +138,12 @@
 }
 
 .ranking-tooltip {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .ranking-tooltip .tooltip-title {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 15px;
   margin-bottom: 8px;
   padding-bottom: 8px;
   border-bottom: 1px solid rgba(255,255,255,0.2);
@@ -158,7 +158,7 @@
 }
 
 .ranking-tooltip .tooltip-item .anticon {
-  font-size: 14px;
+  font-size: 15px;
   opacity: 0.8;
 }
 
@@ -166,7 +166,7 @@
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid rgba(255,255,255,0.2);
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-success);
   display: flex;
   align-items: center;
@@ -187,7 +187,7 @@
 
   .ranking-stats {
     gap: 8px;
-    font-size: 14px;
+    font-size: 15px;
   }
 
   .ranking-stats span:nth-child(3) {
@@ -195,7 +195,7 @@
   }
 
   .style-no {
-    font-size: 14px;
+    font-size: 15px;
     position: relative;
     z-index: var(--z-local);
   }
@@ -214,7 +214,7 @@
 }
 
 .ranking-tag {
-  font-size: 14px;
+  font-size: 15px;
   line-height: 14px;
   padding: 0 4px;
 }

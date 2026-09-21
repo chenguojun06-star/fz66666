@@ -131,7 +131,7 @@ const SampleQrPrintModal: React.FC<SampleQrPrintModalProps> = ({ open, stocks, o
       const w = Math.max(20, Math.min(150, widthMm));
       const h = Math.max(20, Math.min(150, heightMm));
       const qrMm = Math.max(15, Math.min(32, Math.min(w, h) * 0.62));
-      const fs = h >= 48 ? 6.2 : h >= 38 ? 5.4 : 4.9;
+      const fs = h >= 48 ? 6.7 : h >= 38 ? 5.9 : 5.4;
       const displayText = [stock.styleNo, stock.color, stock.size].filter(Boolean).join(' - ');
       const today = new Date();
       const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -163,7 +163,7 @@ const SampleQrPrintModal: React.FC<SampleQrPrintModalProps> = ({ open, stocks, o
     try {
       const w = Math.max(20, Math.min(150, widthMm));
       const h = Math.max(20, Math.min(150, heightMm));
-      const fs = h >= 48 ? 6.2 : h >= 38 ? 5.4 : 4.9;
+      const fs = h >= 48 ? 6.7 : h >= 38 ? 5.9 : 5.4;
       // 每个库存行一个二维码（内容 = 该色码样衣生产记录），×份数
       const qrUrls: Record<string, string> = {};
       await Promise.all(
@@ -282,7 +282,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
           <div>
             <div style={{ marginBottom: 6, fontWeight: 500 }}>打印份数：</div>
             <InputNumber min={1} max={200} value={copies} onChange={(v) => setCopies(v || 1)} style={{ width: 120 }} />
-            <span style={{ marginLeft: 12, color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+            <span style={{ marginLeft: 12, color: 'var(--color-text-tertiary)', fontSize: 13 }}>
               共 {printableStocks.length} 款 × {copies} 份 = {totalLabels} 张
             </span>
           </div>
@@ -305,9 +305,9 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
                 <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {previewQr
                     ? <img src={previewQr} alt="二维码" style={{ width: `${Math.max(15, Math.min(32, Math.min(widthMm, heightMm) * 0.62))}mm`, objectFit: 'contain', display: 'block' }} />
-                    : <span style={{ fontSize: 11, color: '#999' }}>二维码</span>}
+                    : <span style={{ fontSize: 12, color: '#999' }}>二维码</span>}
                 </div>
-                <div style={{ flex: 1, minWidth: 0, fontSize: 12, lineHeight: 1.7 }}>
+                <div style={{ flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.7 }}>
                   <div style={{ fontWeight: 700, borderBottom: '1px dashed #bbb', paddingBottom: 4, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {[first.styleNo, first.color, first.size].filter(Boolean).join(' - ')}
                   </div>

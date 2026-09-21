@@ -87,7 +87,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
         </span>
         <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>分析对象：{subjectText}</span>
         <span className="u-ml-auto u-fs-14 u-d-flex u-ai-center u-gap-4" style={{ color: 'var(--color-warning-deep)' }}>
-          {expanded ? '收起' : '展开'} {expanded ? <DownOutlined style={{ fontSize: 12 }} /> : <RightOutlined style={{ fontSize: 12 }} />}
+          {expanded ? '收起' : '展开'} {expanded ? <DownOutlined style={{ fontSize: 13 }} /> : <RightOutlined style={{ fontSize: 13 }} />}
         </span>
       </div>
 
@@ -130,7 +130,7 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
                     }}
                   >
                     <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-text-tertiary)' }}>{item.label}</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: item.highlight ? 'var(--color-warning)' : 'var(--color-text-primary)' }}>{item.value}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: item.highlight ? 'var(--color-warning)' : 'var(--color-text-primary)' }}>{item.value}</div>
                   </div>
                 ))}
               </div>

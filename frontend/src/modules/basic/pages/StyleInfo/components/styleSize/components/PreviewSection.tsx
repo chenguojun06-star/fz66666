@@ -26,7 +26,7 @@ const PreviewSection: React.FC<Props> = ({ previewData, columns }) => {
           pagination={false}
           size="small"
           bordered
-          style={{ fontSize: 13 }}
+          style={{ fontSize: 14 }}
         />
       </div>
     </>

@@ -419,7 +419,7 @@ const AttributeGroupLibraryModal: React.FC<AttributeGroupLibraryModalProps> = ({
                     <span
                       style={{
                         fontWeight: 600,
-                        fontSize: 13,
+                        fontSize: 14,
                         color: active ? 'var(--color-primary)' : 'var(--color-text-primary)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',

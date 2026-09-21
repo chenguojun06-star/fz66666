@@ -111,7 +111,7 @@ export function buildInternalMemberColumns(params: BuildColumnParams): TableColu
           <Avatar size={24} icon={<UserOutlined />} style={{ backgroundColor: 'var(--primary-color, var(--color-primary))', flexShrink: 0, cursor: 'pointer' }} onClick={() => setProfileUser(r)} />
           {v || r.username}
           {selectedUnit?.managerUserId && String(r.id) === String(selectedUnit.managerUserId) && (
-            <Tag color="blue" style={{ fontSize: 14 }}>领取人</Tag>
+            <Tag color="blue" style={{ fontSize: 15 }}>领取人</Tag>
           )}
         </Space>
       ),

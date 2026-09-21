@@ -15,14 +15,14 @@
 }
 
 .miniChartTitle {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-blue-800);
   margin-bottom: 4px;
 }
 
 .miniChartSubtitle {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
   color: var(--color-text-tertiary);
 }
@@ -31,7 +31,7 @@
   text-align: center;
   padding: 20px;
   color: var(--color-text-quaternary);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* progress 纯 CSS 进度条 */
@@ -58,7 +58,7 @@
 }
 
 .progressLabel {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   text-align: right;
 }

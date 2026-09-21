@@ -268,7 +268,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
             <Dropdown menu={{ items: noRoleItems }} disabled={roleOptionsLoading} trigger={['click']}>
               <Button size="small" type="dashed">
                 <span className="u-fs-12" style={{ color: "var(--color-text-secondary, var(--color-gray-dark))" }}>
-                  <UserOutlined style={{ fontSize: 11 }} />
+                  <UserOutlined style={{ fontSize: 12 }} />
                   <span className="u-ml-4">点击设置角色</span>
                 </span>
               </Button>
@@ -284,7 +284,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
             label: (
               <span className="u-d-inline-block u-w-full">
                 {isCurrent && (
-                  <CheckOutlined style={{ fontSize: 10, marginRight: 4, color: 'var(--color-primary, var(--color-success))' }} />
+                  <CheckOutlined style={{ fontSize: 11, marginRight: 4, color: 'var(--color-primary, var(--color-success))' }} />
                 )}
                 {role.roleName}
                 {isCurrent && (
@@ -306,7 +306,7 @@ export function useUserListColumns(props: UseUserListColumnsProps) {
               style={{
                 cursor: 'pointer',
                 padding: '2px 10px',
-                fontSize: 12,
+                fontSize: 13,
                 border: `1px solid var(--color-border-antd, var(--color-border-antd))`,
                 borderRadius: 4,
               }}

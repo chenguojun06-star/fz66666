@@ -119,9 +119,9 @@ const MyModulesTab: React.FC = () => {
                     <Text strong style={{ fontSize: 15 }}>{m.name}</Text>
                     <Tag color="success" icon={<CheckCircleOutlined />}>随套餐开通</Tag>
                   </div>
-                  <Text type="secondary" style={{ fontSize: 14 }}>{m.desc}</Text>
+                  <Text type="secondary" style={{ fontSize: 15 }}>{m.desc}</Text>
                   <div className="u-mt-8">
-                    <Text style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                    <Text style={{ fontSize: 15, color: 'var(--text-secondary)' }}>
                       套餐费用：{formatPlanFee(overview)}
                     </Text>
                   </div>
@@ -163,24 +163,24 @@ const MyModulesTab: React.FC = () => {
                           <Tag color={sc.color} icon={sc.icon}>{sc.label}</Tag>
                         </div>
                           <div className="u-mb-6">
-                            <Text strong style={{ color: 'var(--primary-color)', fontSize: 14 }}>
+                            <Text strong style={{ color: 'var(--primary-color)', fontSize: 15 }}>
                               {formatSubscriptionPrice(app)}
                             </Text>
                           </div>
                         <Space size={4} wrap>
                           <Tag>{SUB_TYPE_LABELS[app.subscriptionType] || app.subscriptionType}</Tag>
                           {app.startTime && (
-                            <Text type="secondary" style={{ fontSize: 14 }}>
+                            <Text type="secondary" style={{ fontSize: 15 }}>
                               {dayjs(app.startTime).format('YYYY-MM-DD')} 开通
                             </Text>
                           )}
                           {daysLeft !== null && daysLeft >= 0 && (
-                            <Text type={daysLeft <= 7 ? 'danger' : 'secondary'} style={{ fontSize: 14 }}>
+                            <Text type={daysLeft <= 7 ? 'danger' : 'secondary'} style={{ fontSize: 15 }}>
                               · 剩余 {daysLeft} 天
                             </Text>
                           )}
                           {daysLeft === null && !app.endTime && (
-                            <Text type="success" style={{ fontSize: 14 }}>· 永久有效</Text>
+                            <Text type="success" style={{ fontSize: 15 }}>· 永久有效</Text>
                           )}
                         </Space>
                       </div>

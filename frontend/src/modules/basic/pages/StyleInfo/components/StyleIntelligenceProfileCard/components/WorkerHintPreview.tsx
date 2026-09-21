@@ -15,7 +15,7 @@ const WorkerHintPreview: React.FC<WorkerHintPreviewProps> = ({ workerHint, activ
       <div className="u-d-flex u-ai-center u-jc-between u-mb-6">
         <div className="u-d-flex u-ai-center u-gap-6">
           <span className="u-fs-12 u-fw-700 u-d-inline-flex u-ai-center u-gap-4" style={{ color: 'var(--color-amber-700)' }}><WarningOutlined /> 工人提示预览</span>
-          <Tag color="gold" style={{ margin: 0, fontSize: 11, lineHeight: '16px', padding: '0 5px' }}>工人扫码时可见</Tag>
+          <Tag color="gold" style={{ margin: 0, fontSize: 12, lineHeight: '16px', padding: '0 5px' }}>工人扫码时可见</Tag>
         </div>
       </div>
       <div className="u-d-flex u-fwrap-wrap u-gap-8 u-fs-12">

@@ -130,7 +130,7 @@ const PaymentSchedule: React.FC = () => {
       title: '应付单号',
       dataIndex: 'payableNo',
       width: 160,
-      render: v => <Text code style={{ fontSize: 14 }}>{v || '-'}</Text>,
+      render: v => <Text code style={{ fontSize: 15 }}>{v || '-'}</Text>,
     },
     {
       title: '供应商',

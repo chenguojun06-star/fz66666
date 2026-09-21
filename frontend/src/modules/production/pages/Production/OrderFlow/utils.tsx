@@ -40,7 +40,7 @@ const calculateDurationLabel = (record: FlowStage): React.ReactNode => {
   const color = hours > 336 ? 'var(--color-error)' : hours > 168 ? 'var(--color-warning)' : 'var(--color-gray-700)';
   return React.createElement(
     'span',
-    { style: { color, fontSize: 14, fontWeight: hours > 168 ? 600 : 400 } },
+    { style: { color, fontSize: 15, fontWeight: hours > 168 ? 600 : 400 } },
     record.status === 'in_progress' ? `⏳${label}` : label,
   );
 };

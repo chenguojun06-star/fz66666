@@ -15,9 +15,9 @@ const ActionRow: React.FC<{
     onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.background = 'var(--color-bg-highlight)')}
     onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = 'var(--color-bg-container)')}
   >
-    <span style={{ fontSize: 13, color }}>{icon}</span>
+    <span style={{ fontSize: 14, color }}>{icon}</span>
     <span className="u-flex-1 u-fs-14" style={{ color: 'var(--color-text)' }}>{title}</span>
-    <RightOutlined style={{ fontSize: 13, color: 'var(--color-text-quaternary)' }} />
+    <RightOutlined style={{ fontSize: 14, color: 'var(--color-text-quaternary)' }} />
   </div>
 );
 

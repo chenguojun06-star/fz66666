@@ -27,7 +27,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
           <Title level={3} style={{ color: 'var(--color-text-primary)', margin: '0 0 8px' }}>
             客户管理 CRM
           </Title>
-          <Paragraph style={{ color: 'var(--color-text-secondary)', margin: 0, fontSize: 14 }}>
+          <Paragraph style={{ color: 'var(--color-text-secondary)', margin: 0, fontSize: 15 }}>
             深度整合您的生产数据，让每位B端客户都能实时追踪到自己的订单进度。低价对标鼎普 CRM（¥3000+/月），专为中小服装工厂设计。
           </Paragraph>
         </Col>
@@ -67,7 +67,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
               <span className="u-fs-28" style={{ lineHeight: 1, color: 'var(--color-primary)' }}>{f.icon}</span>
               <div>
                 <Text strong style={{ color: 'var(--color-text-primary)', fontSize: 15 }}>{f.title}</Text>
-                <Paragraph style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--color-text-tertiary)' }}>
+                <Paragraph style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--color-text-tertiary)' }}>
                   {f.desc}
                 </Paragraph>
               </div>
@@ -92,7 +92,7 @@ const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (
           <Text strong style={{ color: 'var(--color-text-primary)', fontSize: 15 }}>
             为什么比鼎普便宜5倍？
           </Text>
-          <Paragraph style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--color-text-secondary)' }}>
+          <Paragraph style={{ margin: '4px 0 0', fontSize: 15, color: 'var(--color-text-secondary)' }}>
             鼎普 CRM 模块定价 ¥3000+/月，功能复杂适合大企业。本模块专注中小服装工厂核心需求：
             应收款追踪 + 客户门户查单，去掉80%用不上的功能，降到 ¥599/月，90天回本，开通当月即可用起来。
           </Paragraph>

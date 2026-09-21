@@ -22,7 +22,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
           <span className="u-fw-600" style={{ color: 'var(--color-primary)' }}>智能质检助手</span>
           {aiSuggestion?.historicalDefectRate !== undefined && (
             <span style={{
-              fontSize: 14, fontWeight: 400, padding: '1px 7px',
+              fontSize: 15, fontWeight: 400, padding: '1px 7px',
               borderRadius: 10, background:
                 aiSuggestion.historicalDefectRate > 0.05 ? 'var(--status-error-bg)'
                   : aiSuggestion.historicalDefectRate > 0.02 ? 'var(--status-warning-bg)' : 'var(--status-success-bg)',
@@ -48,7 +48,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
             <div style={{
               padding: '6px 12px', background: 'var(--status-warning-bg)',
               border: '1px solid var(--status-warning-border)', borderRadius: 6,
-              marginBottom: 10, color: 'var(--color-warning-deep)', fontWeight: 600, fontSize: 14,
+              marginBottom: 10, color: 'var(--color-warning-deep)', fontWeight: 600, fontSize: 15,
             }}>
               {aiSuggestion.urgentTip}
             </div>
@@ -64,7 +64,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
                   background: isRed ? 'var(--status-error-bg)' : isYellow ? 'var(--status-warning-bg)' : 'var(--status-success-bg)',
                   borderLeft: `3px solid ${isRed ? 'var(--color-danger)' : isYellow ? 'var(--color-warning)' : 'var(--color-success)'}`,
                   borderRadius: '0 4px 4px 0',
-                  color: 'var(--color-text-primary)', fontSize: 14,
+                  color: 'var(--color-text-primary)', fontSize: 15,
                 }}>
                   {cp}
                 </div>
@@ -97,7 +97,7 @@ const AiQualityHelperCard: React.FC<Props> = ({ aiSuggestion, aiLoading, actualD
                         {isActual && (
                           <span className="u-fs-14 u-fshrink-0" style={{ background: 'var(--color-danger)', color: 'var(--color-bg-base)', padding: '1px 5px', borderRadius: 2 }}>本批已发现</span>
                         )}
-                        <span style={{ fontWeight: 600, color: isActual ? 'var(--color-error)' : 'var(--color-text-secondary)', fontSize: 14 }}>
+                        <span style={{ fontWeight: 600, color: isActual ? 'var(--color-error)' : 'var(--color-text-secondary)', fontSize: 15 }}>
                           {getDefectCategoryLabel(defect)}
                         </span>
                       </div>

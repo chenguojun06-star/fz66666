@@ -193,7 +193,7 @@ const useStyleDevelopmentWorkbenchData = ({ record, initialSection, onSync }: Pi
               />
               <span style={{
                 display: 'inline-flex', alignItems: 'center',
-                padding: '0 11px', fontSize: 14,
+                padding: '0 11px', fontSize: 15,
                 background: 'var(--color-bg-subtle)',
                 border: '1px solid var(--color-border)',
                 borderLeft: 0, borderRadius: '0 6px 6px 0',
@@ -210,7 +210,7 @@ const useStyleDevelopmentWorkbenchData = ({ record, initialSection, onSync }: Pi
               />
               <span style={{
                 display: 'inline-flex', alignItems: 'center',
-                padding: '0 11px', fontSize: 14,
+                padding: '0 11px', fontSize: 15,
                 background: 'var(--color-bg-subtle)',
                 border: '1px solid var(--color-border)',
                 borderLeft: 0, borderRadius: '0 6px 6px 0',

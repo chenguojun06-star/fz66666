@@ -67,7 +67,7 @@
 }
 
 .headerSubtitle {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--xiaoyun-text-secondary, rgba(0, 0, 0, 0.55));
 }
 
@@ -79,7 +79,7 @@
 }
 
 .headerActionBtn {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--xiaoyun-text-secondary, rgba(0, 0, 0, 0.55));
   cursor: pointer;
   transition: all 0.2s;
@@ -149,13 +149,13 @@
   background: var(--xiaoyun-bg-page);
   padding: 12px 16px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   outline: none;
   transition: all 0.3s;
 }
 
 .chatInput::placeholder {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--xiaoyun-text-tertiary);
 }
 
@@ -177,7 +177,7 @@
   justify-content: center;
   gap: 4px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   transition: all 0.2s;
   flex-shrink: 0;
@@ -214,7 +214,7 @@
 .traceBtn {
   min-width: 42px;
   padding: 8px 8px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--xiaoyun-text-secondary);
   border-radius: 8px;
   background: var(--xiaoyun-bg-page);
@@ -233,7 +233,7 @@
   border: 1px solid var(--xiaoyun-border-card);
   border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--xiaoyun-text-secondary);
   transition: all 0.15s;
   flex-shrink: 0;
@@ -259,7 +259,7 @@
   border-radius: 6px;
   padding: 4px 12px;
   margin-bottom: 8px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--xiaoyun-primary-hover);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -267,7 +267,7 @@
 }
 
 .quickHint {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--xiaoyun-primary);
   margin-bottom: 12px;
 }
@@ -277,7 +277,7 @@
   border: none;
   cursor: pointer;
   color: var(--xiaoyun-text-secondary);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1;
   padding: 0 2px;
   flex-shrink: 0;
@@ -288,7 +288,7 @@
   border: none;
   border-radius: 6px;
   padding: 4px 12px;
-  font-size: 14px;
+  font-size: 15px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -344,7 +344,7 @@
 }
 
 .sidebarLabel {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
 }
 
@@ -357,7 +357,7 @@
   border-radius: 8px;
   background: var(--xiaoyun-danger);
   color: var(--color-bg-base);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 16px;
   text-align: center;
   padding: 0 4px;
@@ -409,7 +409,7 @@
   border-radius: 7px;
   background: var(--xiaoyun-danger);
   color: var(--color-bg-base);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 14px;
   text-align: center;
   padding: 0 4px;
@@ -432,7 +432,7 @@
 }
 
 .auxSectionTitle {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--xiaoyun-text-tertiary);
   font-weight: 500;
   margin-bottom: 12px;
@@ -443,7 +443,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 0;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--xiaoyun-text-primary);
   border-bottom: 1px solid var(--xiaoyun-border-card);
 }

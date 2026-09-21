@@ -132,7 +132,7 @@ export function ProgressNodeItem({
           gap: 2,
         }}>
           <div style={{
-            fontSize: 12,
+            fontSize: 13,
             color: 'var(--color-text-primary)',
             fontWeight: 600,
             lineHeight: 1.2,
@@ -143,7 +143,7 @@ export function ProgressNodeItem({
           </div>
           {(operatorDisplay || completionTimeDisplay) && (
             <div style={{
-              fontSize: 10,
+              fontSize: 11,
               color: 'var(--color-text-tertiary)',
               lineHeight: 1.3,
               textAlign: 'center',
@@ -159,7 +159,7 @@ export function ProgressNodeItem({
           )}
           {durationDisplay && (
             <div style={{
-              fontSize: 10,
+              fontSize: 11,
               lineHeight: 1.3,
               textAlign: 'center',
               color: durationOverThreshold ? 'var(--color-danger)' : 'var(--color-text-quaternary)',

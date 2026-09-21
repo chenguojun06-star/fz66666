@@ -41,7 +41,7 @@ const PatternRemarkPreview: React.FC<{ patternId: string }> = ({ patternId }) =>
             background: 'var(--color-bg-base)',
             border: '1px solid var(--color-border-light)',
             borderRadius: 6,
-            fontSize: 13,
+            fontSize: 14,
           }}
         >
           <div className="u-d-flex u-jc-between u-mb-4">

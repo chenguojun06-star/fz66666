@@ -53,7 +53,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({ imageStyles, activeIdx, setActive
                   <span
                     className={'cp-grid-card-badge' + (isHigh ? ' high' : '')}
                     style={{
-                      padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600,
+                      padding: '2px 8px', borderRadius: 12, fontSize: 12, fontWeight: 600,
                       background: isHigh ? 'rgba(34,197,94,0.12)' : 'rgba(14,165,233,0.12)',
                       color: isHigh ? 'var(--color-green-700)' : 'var(--color-sky-700)',
                     }}

@@ -89,11 +89,11 @@ const StyleQuotePopover: React.FC<{
   const content = loading ? (
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, textAlign: 'center', padding: 16, boxSizing: 'border-box' }}><Spin /></div>
   ) : !data ? (
-    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 14, color: 'var(--color-text-tertiary)', textAlign: 'center', padding: 12, boxSizing: 'border-box' }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 15, color: 'var(--color-text-tertiary)', textAlign: 'center', padding: 12, boxSizing: 'border-box' }}>
       暂无历史数据
     </div>
   ) : (
-    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 14, boxSizing: 'border-box' }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 15, boxSizing: 'border-box' }}>
       {/* 标题 */}
       <div className="u-fw-600 u-fs-14 u-mb-8">
          报价参考 <span className="u-fs-14 u-fw-400" style={{ color: 'var(--color-text-tertiary)' }}>{data.styleNo}</span>
@@ -149,7 +149,7 @@ const StyleQuotePopover: React.FC<{
                   </span>
                   <span>{o.quantity}件</span>
                   <span style={{ color: 'var(--color-warning)' }}>{fmt(o.unitPrice)}</span>
-                  <Tag color={st.color} style={{ fontSize: 14, lineHeight: '16px', padding: '0 4px', marginLeft: 'auto' }}>
+                  <Tag color={st.color} style={{ fontSize: 15, lineHeight: '16px', padding: '0 4px', marginLeft: 'auto' }}>
                     {st.text}
                   </Tag>
                 </div>

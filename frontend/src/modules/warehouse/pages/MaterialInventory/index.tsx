@@ -256,7 +256,7 @@ const _MaterialInventory: React.FC = () => {
 
       {/* D-474：数据更新时间戳——证明数字是刚算的不是写死的 */}
       {lastUpdated && (
-        <div style={{ fontSize: 11, color: 'var(--color-text-quaternary)', marginBottom: 8, textAlign: 'right' }}>
+        <div style={{ fontSize: 12, color: 'var(--color-text-quaternary)', marginBottom: 8, textAlign: 'right' }}>
           数据更新于 {dayjs(lastUpdated).format('HH:mm:ss')}
         </div>
       )}

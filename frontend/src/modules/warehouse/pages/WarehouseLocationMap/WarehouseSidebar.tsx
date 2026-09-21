@@ -54,7 +54,7 @@ const WarehouseSidebar: React.FC<Props> = ({
                     {area.areaName}
                     <Tag
                       color={area.warehouseType === 'FINISHED' ? 'blue' : area.warehouseType === 'MATERIAL' ? 'green' : 'orange'}
-                      style={{ marginLeft: 6, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}
+                      style={{ marginLeft: 6, fontSize: 11, lineHeight: '16px', padding: '0 4px' }}
                     >
                       {WAREHOUSE_TYPE_MAP[area.warehouseType] ?? '未知'}
                     </Tag>

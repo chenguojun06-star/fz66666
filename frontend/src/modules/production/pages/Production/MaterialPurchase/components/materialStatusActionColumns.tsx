@@ -174,9 +174,9 @@ export const buildStatusActionColumns = (params: UseMaterialColumnsParams): Colu
         }
         const daysLeft = Math.ceil((new Date(v).getTime() - Date.now()) / 86400000);
         const riskTag = isNaN(daysLeft) ? null
-          : daysLeft < 0 ? <Tag color="red" style={{ fontSize: 14, marginLeft: 4, lineHeight: '16px' }}>已延误{Math.abs(daysLeft)}天</Tag>
-          : daysLeft <= 3 ? <Tag color="orange" style={{ fontSize: 14, marginLeft: 4, lineHeight: '16px' }}>仅剩{daysLeft}天</Tag>
-          : daysLeft <= 7 ? <Tag color="gold" style={{ fontSize: 14, marginLeft: 4, lineHeight: '16px' }}>需关注</Tag>
+          : daysLeft < 0 ? <Tag color="red" style={{ fontSize: 15, marginLeft: 4, lineHeight: '16px' }}>已延误{Math.abs(daysLeft)}天</Tag>
+          : daysLeft <= 3 ? <Tag color="orange" style={{ fontSize: 15, marginLeft: 4, lineHeight: '16px' }}>仅剩{daysLeft}天</Tag>
+          : daysLeft <= 7 ? <Tag color="gold" style={{ fontSize: 15, marginLeft: 4, lineHeight: '16px' }}>需关注</Tag>
           : null;
         return <span>{dateStr}{riskTag}</span>;
       },

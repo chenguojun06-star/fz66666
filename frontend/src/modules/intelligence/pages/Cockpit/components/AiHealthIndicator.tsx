@@ -95,7 +95,7 @@ const AiHealthIndicator: React.FC = () => {
         {entries.map(([key, val]) => (
           <div key={key} className="u-d-flex u-jc-between u-ai-center">
             <span className="u-fs-12">{COMPONENT_LABELS[key] || key}</span>
-            <Tag color={STATUS_COLORS[val.status]} style={{ margin: 0, fontSize: 11 }}>
+            <Tag color={STATUS_COLORS[val.status]} style={{ margin: 0, fontSize: 12 }}>
               {STATUS_TEXT[val.status] || val.status}
             </Tag>
           </div>
@@ -122,7 +122,7 @@ const AiHealthIndicator: React.FC = () => {
           type="text"
           icon={<ApiOutlined style={{ color: overallColor === 'red' ? 'var(--color-error)' : overallColor === 'orange' ? 'var(--color-warning)' : 'var(--color-success)' }} />}
         >
-          <span style={{ fontSize: 11, color: overallColor === 'red' ? 'var(--color-error)' : overallColor === 'orange' ? 'var(--color-warning)' : 'var(--color-success)' }}>
+          <span style={{ fontSize: 12, color: overallColor === 'red' ? 'var(--color-error)' : overallColor === 'orange' ? 'var(--color-warning)' : 'var(--color-success)' }}>
             AI {overallText}
           </span>
         </Button>

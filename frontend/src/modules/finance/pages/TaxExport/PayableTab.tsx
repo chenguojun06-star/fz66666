@@ -115,10 +115,10 @@ const PayableTab: React.FC = () => {
         if (r.status === 'PAID') return <Text type="secondary">{v}</Text>;
         const days = getRemainDays(v);
         if (days === null) return <span>{v}</span>;
-        if (days < 0) return <span>{v} <Tag color="red" style={{ fontSize: 14 }}>逾期{Math.abs(days)}天</Tag></span>;
-        if (days === 0) return <span>{v} <Tag color="orange" style={{ fontSize: 14 }}>今日到期</Tag></span>;
-        if (days <= 3) return <span>{v} <Tag color="gold" style={{ fontSize: 14 }}>剩{days}天</Tag></span>;
-        return <span>{v} <Text type="secondary" style={{ fontSize: 14 }}>({days}天后)</Text></span>;
+        if (days < 0) return <span>{v} <Tag color="red" style={{ fontSize: 15 }}>逾期{Math.abs(days)}天</Tag></span>;
+        if (days === 0) return <span>{v} <Tag color="orange" style={{ fontSize: 15 }}>今日到期</Tag></span>;
+        if (days <= 3) return <span>{v} <Tag color="gold" style={{ fontSize: 15 }}>剩{days}天</Tag></span>;
+        return <span>{v} <Text type="secondary" style={{ fontSize: 15 }}>({days}天后)</Text></span>;
       },
     },
     {

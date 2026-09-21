@@ -42,14 +42,14 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
         color: 'var(--color-text-primary, var(--color-text-primary))',
       }}>
         物料明细
-        <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8, fontWeight: 400 }}>
+        <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginLeft: 8, fontWeight: 400 }}>
           共 {bomList.length} 项
         </span>
       </div>
 
       {bomColorCosts.colors.length > 1 && (
         <div style={{
-          display: 'flex', gap: 16, padding: '6px 10px', fontSize: 13, lineHeight: '20px',
+          display: 'flex', gap: 16, padding: '6px 10px', fontSize: 14, lineHeight: '20px',
           background: 'var(--color-bg-container)', border: '1px solid var(--color-border)', borderBottom: 'none',
         }}>
           <span style={{ color: 'var(--color-text-secondary)' }}>各颜色物料成本（单件）：</span>
@@ -86,7 +86,7 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
       <div style={{
         display: 'flex', justifyContent: 'flex-end', padding: '6px 10px',
         border: '1px solid var(--color-border, var(--color-border-light))', borderTop: '1px solid var(--color-border, var(--color-border-light))',
-        background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 14, color: 'var(--color-text-primary)',
+        background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 15, color: 'var(--color-text-primary)',
       }}>
         物料成本：{formatMoney(materialCost)}
       </div>

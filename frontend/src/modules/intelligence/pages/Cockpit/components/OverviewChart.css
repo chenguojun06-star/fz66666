@@ -11,7 +11,7 @@
 }
 
 .overview-sidebar-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--bi-accent, var(--color-secondary));
   margin-bottom: 8px;
@@ -21,7 +21,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--bi-text-secondary, var(--color-text-secondary));
 }
 
@@ -201,7 +201,7 @@
 }
 
 .chart-label {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-tertiary);
 }
 
@@ -216,7 +216,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-secondary);
 }
 

@@ -47,7 +47,7 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
       render: (_: unknown, r: EcOrder) => {
         const styleNo = (r.skuCode || '').split('-')[0];
         return styleNo
-          ? <Text strong style={{ fontSize: 14, fontFamily: 'monospace' }}>{styleNo}</Text>
+          ? <Text strong style={{ fontSize: 15, fontFamily: 'monospace' }}>{styleNo}</Text>
           : <Text type="secondary">-</Text>;
       },
     },
@@ -61,7 +61,7 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
               src={getFullAuthedFileUrl(imgUrl)}
               width={44} height={44}
               style={{ objectFit: 'cover', borderRadius: 4 }}
-              preview={{ cover: <EyeOutlined style={{ fontSize: 12 }} /> }}
+              preview={{ cover: <EyeOutlined style={{ fontSize: 13 }} /> }}
             />
           : <div style={{
               width: 44, height: 44, background: 'var(--color-bg-subtle)', borderRadius: 4,
@@ -170,7 +170,7 @@ export function buildPricingColumns(args: PricingColumnsArgs): ColumnsType<Sku> 
     { title: '尺码',   dataIndex: 'size',    width: 70 },
     {
       title: '商品编码', dataIndex: 'skuCode', width: 190,
-      render: v => <Text style={{ fontSize: 14, color: 'var(--color-success)' }}>{v}</Text>,
+      render: v => <Text style={{ fontSize: 15, color: 'var(--color-success)' }}>{v}</Text>,
     },
     {
       title: '库存', dataIndex: 'stockQuantity', width: 70,

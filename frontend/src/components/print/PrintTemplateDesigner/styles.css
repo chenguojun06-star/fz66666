@@ -47,12 +47,12 @@
 }
 
 .field-label {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
 }
 
 .field-category {
-  font-size: 11px;
+  font-size: 12px;
   margin-left: 4px;
 }
 
@@ -166,7 +166,7 @@
 }
 
 .property-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-secondary);
   min-width: 80px;
 }
@@ -207,7 +207,7 @@
   background: var(--color-info);
   color: var(--color-bg-base);
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }

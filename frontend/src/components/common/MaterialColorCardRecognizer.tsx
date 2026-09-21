@@ -366,7 +366,7 @@ export const MaterialColorCardRecognizer: React.FC<Props> = ({
                               {fv && (
                                 <Tag
                                   color={confidenceColor(conf)}
-                                  style={{ fontSize: 11, padding: '0 6px', marginRight: 0 }}
+                                  style={{ fontSize: 12, padding: '0 6px', marginRight: 0 }}
                                 >
                                   {confidenceLabel(conf)}
                                 </Tag>

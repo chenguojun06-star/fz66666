@@ -101,7 +101,7 @@ const QuotationCostPanel: React.FC<Props> = ({
             display: 'flex', gap: 12, marginTop: 8, padding: '6px 10px',
             border: '1px solid var(--color-border)', background: 'var(--color-bg-container)',
           }}>
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
               {totalQty} 件开发 · 单件成本为总成本÷{totalQty}件摊薄
             </span>
           </div>
@@ -120,7 +120,7 @@ const QuotationCostPanel: React.FC<Props> = ({
               canUnlock !== false ? (
                 <Button icon={<UnlockOutlined />} onClick={onUnlock}>解锁修改</Button>
               ) : (
-                <span style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>
                   <LockOutlined style={{ marginRight: 4 }} />已锁定，仅管理员可操作
                 </span>
               )

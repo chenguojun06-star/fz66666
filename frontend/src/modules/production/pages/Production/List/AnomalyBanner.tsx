@@ -41,7 +41,7 @@ const AnomalyBanner: React.FC<AnomalyBannerProps> = ({ visible, items, onClose, 
                   type="button"
                   onClick={() => onItemClick(item)}
                   style={{
-                    fontSize: 14,
+                    fontSize: 15,
                     color: 'var(--text-secondary)',
                     display: 'flex',
                     gap: 8,

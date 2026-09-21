@@ -259,7 +259,7 @@ const ExceptionReport: React.FC = () => {
       }
     >
       {!canHandle && (
-        <div style={{ marginBottom: 12, color: '#999', fontSize: 12 }}>
+        <div style={{ marginBottom: 12, color: '#999', fontSize: 13 }}>
           仅主管及以上可处理生产异常
         </div>
       )}

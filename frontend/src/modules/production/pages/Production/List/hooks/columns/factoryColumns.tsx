@@ -37,7 +37,7 @@ export function buildFactoryColumns({
               />
             </span>
             {bizType && (
-              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知'}</Tag>
+              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px' }}>{ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知'}</Tag>
             )}
           </Space>
         );

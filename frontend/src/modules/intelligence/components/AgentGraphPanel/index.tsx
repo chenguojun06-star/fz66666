@@ -63,7 +63,7 @@ const GraphPipeline: React.FC<{ events: NodeEvent[]; streaming: boolean }> = ({ 
               <div style={{
                 padding: '6px 14px',
                 borderRadius: 8,
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: 600,
                 border: `1.5px solid ${done ? color : active ? color : 'rgba(255,255,255,0.15)'}`,
                 background: done ? `${color}22` : active ? `${color}11` : 'transparent',
@@ -85,7 +85,7 @@ const GraphPipeline: React.FC<{ events: NodeEvent[]; streaming: boolean }> = ({ 
         <>
           <div style={{ width: 32, height: 2, background: 'var(--color-orange-500)' }} />
           <div style={{
-            padding: '6px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600,
+            padding: '6px 14px', borderRadius: 8, fontSize: 15, fontWeight: 600,
             border: '1.5px solid var(--color-orange-500)', background: '#f9731622', color: 'var(--color-orange-500)',
             whiteSpace: 'nowrap',
           }}> 重路由 </div>
@@ -150,7 +150,7 @@ const HistoryTable: React.FC = () => {
       render: (v: number, row: any) => (
         <Rate
           count={5} value={v ?? 0}
-          style={{ fontSize: 14 }}
+          style={{ fontSize: 15 }}
           onChange={(val) => submitFeedback(row.id, val).then(loadHistory).catch(console.error)}
         />
       ),
@@ -277,7 +277,7 @@ const AgentGraphPanel: React.FC = () => {
                     strokeColor={confColor(result.confidenceScore)}
                    
                     style={{ marginBottom: 0 }}
-                    format={v => <span style={{ fontSize: 14, color: confColor(v!) }}>{v} 分</span>}
+                    format={v => <span style={{ fontSize: 15, color: confColor(v!) }}>{v} 分</span>}
                   />
                 </div>
                 <span className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>{result.latencyMs} ms</span>
@@ -289,7 +289,7 @@ const AgentGraphPanel: React.FC = () => {
                   <span className="u-fs-14 u-mr-6" style={{ color: 'var(--color-text-muted)' }}>执行路径:</span>
                   {result.nodeTrace.map((n, i) => {
                     const [label] = NODE_LABELS[n] ?? ['未知', 'var(--color-gray-label)'];
-                    return <Tag key={i} style={{ fontSize: 14 }}>{label}</Tag>;
+                    return <Tag key={i} style={{ fontSize: 15 }}>{label}</Tag>;
                   })}
                 </div>
               )}
@@ -330,7 +330,7 @@ const AgentGraphPanel: React.FC = () => {
                      自我反思（置信评估）
                   </div>
                   <div style={{
-                    fontSize: 14, color: 'var(--color-slate-500)', fontFamily: 'monospace',
+                    fontSize: 15, color: 'var(--color-slate-500)', fontFamily: 'monospace',
                     background: 'rgba(0,0,0,0.22)',
                     padding: '6px 8px', borderRadius: 4, lineHeight: 1.5, whiteSpace: 'pre-wrap',
                   }}>
@@ -345,7 +345,7 @@ const AgentGraphPanel: React.FC = () => {
                   <span className="u-fs-14" style={{ color: 'var(--color-text-muted)' }}>结果评分:</span>
                   <Rate
                     count={5}
-                    style={{ fontSize: 14 }}
+                    style={{ fontSize: 15 }}
                     onChange={(val) => {
                       const store = useAgentGraphStore.getState();
                       store.submitFeedback(result.executionId!, val).catch(console.error);

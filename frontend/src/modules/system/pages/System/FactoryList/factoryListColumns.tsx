@@ -54,7 +54,7 @@ export const getFactoryColumns = (actions: FactoryColumnActions): ColumnsType<Fa
         ) : score ? (
           <div className="u-fs-14 u-lh-18" style={{ minWidth: 160 }}>
             <div className="u-mb-4">
-              <Tag color={tierColorMap[score.tier] ?? 'var(--color-text-muted)'} style={{ fontWeight: 700, fontSize: 14 }}>
+              <Tag color={tierColorMap[score.tier] ?? 'var(--color-text-muted)'} style={{ fontWeight: 700, fontSize: 15 }}>
                 {score.tier}级
               </Tag>
               <span style={{ color: tierColorMap[score.tier] ?? 'var(--color-text-quaternary)', fontWeight: 600 }}>

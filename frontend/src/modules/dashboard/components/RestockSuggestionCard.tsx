@@ -134,7 +134,7 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
           <div className="u-d-flex u-jc-between u-ai-center u-gap-12 u-fwrap-wrap">
             <div className="u-d-flex u-ai-center u-gap-8 u-fwrap-wrap">
               <Text strong style={{ color: 'var(--color-text-primary, var(--color-gray-800))' }}>{item.materialName}</Text>
-              <Text style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))', fontSize: 12 }}>({item.materialCode})</Text>
+              <Text style={{ color: 'var(--color-text-tertiary, var(--color-gray-label))', fontSize: 13 }}>({item.materialCode})</Text>
               <Tag color={cfg.color} style={{ color: cfg.color, borderColor: cfg.color, background: `${cfg.color}1A`, margin: 0 }}>
                 <span className="u-mr-4">{cfg.icon}</span>
                 {cfg.label}
@@ -305,15 +305,15 @@ const RestockSuggestionCard: React.FC<RestockSuggestionCardProps> = ({ topN = 10
       >
         {activeItem && (
           <div className="u-d-flex u-fd-column u-gap-12">
-            <Paragraph style={{ margin: 0, fontSize: 13 }}>
+            <Paragraph style={{ margin: 0, fontSize: 14 }}>
               <Text type="secondary">物料名称：</Text>
               <Text strong>{activeItem.materialName}</Text>
             </Paragraph>
-            <Paragraph style={{ margin: 0, fontSize: 13 }}>
+            <Paragraph style={{ margin: 0, fontSize: 14 }}>
               <Text type="secondary">物料编码：</Text>
               <Text>{activeItem.materialCode}</Text>
             </Paragraph>
-            <Paragraph style={{ margin: 0, fontSize: 13 }}>
+            <Paragraph style={{ margin: 0, fontSize: 14 }}>
               <Text type="secondary">当前库存：</Text>
               <Text strong>{formatNumber(activeItem.currentStock)}</Text>
               <span style={{ marginLeft: 16, color: 'var(--color-text-secondary, var(--color-gray-dark))' }}>

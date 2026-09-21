@@ -16,7 +16,7 @@ const directCardStyle = {
 const directStackStyle = { display: 'grid', gap: 10 } as const;
 
 const directTitleStyle = {
-  fontSize: 14,
+  fontSize: 15,
   fontWeight: 600,
   color: 'var(--color-text-primary)',
   lineHeight: 1.2,
@@ -24,7 +24,7 @@ const directTitleStyle = {
 
 const directFieldLabelStyle = {
   marginBottom: 4,
-  fontSize: 14,
+  fontSize: 15,
   fontWeight: 600,
   color: 'var(--neutral-text-secondary)',
 } as const;
@@ -40,7 +40,7 @@ const processingBannerStyle = {
 } as const;
 
 const directMetaStyle = {
-  fontSize: 14,
+  fontSize: 15,
   color: 'var(--neutral-text-secondary)',
   lineHeight: 1.4,
 } as const;

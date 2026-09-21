@@ -79,10 +79,10 @@ const WashLabelPanel: React.FC<Props> = ({
               <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 2 }}>
                 {selectedOrder.styleName || selectedOrder.styleNo}
               </div>
-              <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+              <div style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
                 款号：{selectedOrder.styleNo || '-'} · 订单号：{selectedOrder.orderNo || '-'}
               </div>
-              <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+              <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
                 {(selectedOrder.colors?.length ? `颜色：${selectedOrder.colors.join(' / ')}` : '') || '- '}
                 {selectedOrder.colors?.length && selectedOrder.sizes?.length ? ' · ' : ''}
                 {selectedOrder.sizes?.length ? `尺码：${selectedOrder.sizes.join(' / ')}` : ''}
@@ -127,20 +127,20 @@ const WashLabelPanel: React.FC<Props> = ({
       >
         <div style={{ marginBottom: 12 }}>
           <Space wrap align="center">
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>纸张宽</span>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 15 }}>纸张宽</span>
             <InputNumber
               min={20} max={200} value={wash.w}
               onChange={(v) => setWash((w) => ({ ...w, w: v ?? 30 }))}
               suffix="mm" style={{ width: 110 }}
             />
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>高</span>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 15 }}>高</span>
             <InputNumber
               min={30} max={400} value={wash.h}
               onChange={(v) => setWash((w) => ({ ...w, h: v ?? 80 }))}
               suffix="mm" style={{ width: 110 }}
             />
           </Space>
-          <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
             分区内容可自由开关与编辑；只打印你输入的内容，标准字体无加粗
           </div>
         </div>
@@ -160,7 +160,7 @@ const WashLabelPanel: React.FC<Props> = ({
         title="打印明细（颜色 × 尺码）"
         extra={
           <Space size="small">
-            <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>合计 {totalSheets} 张</span>
+            <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>合计 {totalSheets} 张</span>
             <Button
               type="primary"
               icon={<PrinterOutlined />}
@@ -199,7 +199,7 @@ const WashLabelPanel: React.FC<Props> = ({
                 title: '商品编码',
                 dataIndex: 'sku',
                 render: (v: string) => (
-                  <span style={{ fontSize: 13, fontFamily: 'var(--font-family-mono, monospace)' }}>{v}</span>
+                  <span style={{ fontSize: 14, fontFamily: 'var(--font-family-mono, monospace)' }}>{v}</span>
                 ),
               },
               {
@@ -221,7 +221,7 @@ const WashLabelPanel: React.FC<Props> = ({
           />
         )}
         {selectedOrder && washSkuRows.length > 0 && (
-          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+          <div style={{ marginTop: 8, fontSize: 13, color: 'var(--color-text-tertiary)' }}>
             款号 {selectedOrder.styleNo} · 共 {washSkuRows.length} 个颜色尺码组合，设置张数后点击右上角「打印洗水唛」
           </div>
         )}

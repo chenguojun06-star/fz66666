@@ -221,7 +221,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="header-user">
             <SmartAlertBell />
             {auth.isFactoryAccount && (
-              <Tag color="orange" style={{ marginLeft: 0, marginRight: 8, fontSize: 14 }}>
+              <Tag color="orange" style={{ marginLeft: 0, marginRight: 8, fontSize: 15 }}>
                  {auth.factoryName || '外发工厂'}
               </Tag>
             )}

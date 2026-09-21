@@ -13,7 +13,7 @@ export const getFactoryTypeConfig = (factoryType: string | undefined | null) => 
 
 const softTagStyle = (background: string, foreground: string): React.CSSProperties => ({
   margin: 0,
-  fontSize: 12,
+  fontSize: 13,
   lineHeight: '18px',
   padding: '0 4px',
   border: 'none',
@@ -31,7 +31,7 @@ const FactoryTypeTag: React.FC<{
   if (softStyle) {
     return <Tag style={{ ...softTagStyle(config.bg, config.fg), ...style }}>{config.label}</Tag>;
   }
-  return <Tag color={config.color} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px', height: 18, ...style }}>{config.label}</Tag>;
+  return <Tag color={config.color} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18, ...style }}>{config.label}</Tag>;
 };
 
 export default FactoryTypeTag;

@@ -254,7 +254,7 @@ const DeductionManagePage: React.FC = () => {
                   </Button>
                   <Button onClick={() => deductForm.resetFields()}>重置</Button>
                 </Space>
-                <div style={{ marginTop: 12, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                <div style={{ marginTop: 12, fontSize: 13, color: 'var(--color-text-tertiary)' }}>
                   录入后会自动生成一张账单（金额记负数），在收付款中心对账付款时自动冲减应付金额。
                 </div>
               </Form>

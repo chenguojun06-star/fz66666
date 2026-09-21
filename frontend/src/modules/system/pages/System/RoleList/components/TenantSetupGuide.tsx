@@ -121,11 +121,11 @@ const TenantSetupGuide: React.FC<TenantSetupGuideProps> = ({ visible, onComplete
                   />
                   <div className="u-flex-1">
                     <div className="u-fw-600 u-mb-4">{tpl.templateName}</div>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>
                       {tpl.templateDesc || '暂无描述'}
                     </Text>
                     <div className="u-mt-4">
-                      <Tag color="blue" style={{ fontSize: 11 }}>
+                      <Tag color="blue" style={{ fontSize: 12 }}>
                         {tpl.category}
                       </Tag>
                     </div>

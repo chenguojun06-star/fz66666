@@ -56,9 +56,9 @@ const columns: ColumnsType<SystemIssueItem> = [
     render: (_: unknown, record: SystemIssueItem) => (
       <Space orientation="vertical" size={2}>
         <Text strong>{record.title}</Text>
-        <Text type="secondary" style={{ fontSize: 14 }}>{record.description}</Text>
+        <Text type="secondary" style={{ fontSize: 15 }}>{record.description}</Text>
         {record.actionHint && (
-          <Text type="secondary" style={{ fontSize: 14, color: 'var(--primary-color)' }}>
+          <Text type="secondary" style={{ fontSize: 15, color: 'var(--primary-color)' }}>
              {record.actionHint}
           </Text>
         )}
@@ -85,7 +85,7 @@ const columns: ColumnsType<SystemIssueItem> = [
     key: 'lastSeen',
     width: 130,
     render: (t: string | null) =>
-      t ? <Text style={{ fontSize: 14 }}>{dayjs(t).format('MM-DD')}</Text> : <Text type="secondary">-</Text>,
+      t ? <Text style={{ fontSize: 15 }}>{dayjs(t).format('MM-DD')}</Text> : <Text type="secondary">-</Text>,
   },
 ];
 
@@ -164,7 +164,7 @@ export default function SystemIssueBoard() {
       render: (_: unknown, r: FrontendErrorRecord) => (
         <Space orientation="vertical" size={2} style={{ maxWidth: 500 }}>
           <Text strong style={{ wordBreak: 'break-all' }}>{r.message}</Text>
-          <Text type="secondary" style={{ fontSize: 14, wordBreak: 'break-all' }}>{r.url}</Text>
+          <Text type="secondary" style={{ fontSize: 15, wordBreak: 'break-all' }}>{r.url}</Text>
           {r.stack && (
             <pre className="u-fs-14 u-m-0 u-ov-auto u-ws-pre-wrap" style={{ color: 'var(--color-text-muted)', maxHeight: 80, wordBreak: 'break-all' }}>
               {r.stack.slice(0, 400)}
@@ -177,7 +177,7 @@ export default function SystemIssueBoard() {
       title: '发生时间',
       dataIndex: 'occurredAt',
       width: 130,
-      render: (t: string) => <Text style={{ fontSize: 14 }}>{dayjs(t).format('MM-DD')}</Text>,
+      render: (t: string) => <Text style={{ fontSize: 15 }}>{dayjs(t).format('MM-DD')}</Text>,
     },
   ];
 
@@ -271,7 +271,7 @@ export default function SystemIssueBoard() {
         </Title>
         <Space>
           {summary && (
-            <Text type="secondary" style={{ fontSize: 14 }}>
+            <Text type="secondary" style={{ fontSize: 15 }}>
               检查时间：{dayjs(summary.checkedAt).format('MM-DD')}
             </Text>
           )}

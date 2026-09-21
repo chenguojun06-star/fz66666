@@ -100,7 +100,7 @@ const OrderCuttingChart: React.FC = () => {
       data: ['下单数量', '裁剪数量'],
       top: 5,
       textStyle: {
-        fontSize: 14,
+        fontSize: 15,
         color: '#6b7280', // ECharts canvas 不支持 CSS 变量，必须用具体值
       },
     },
@@ -122,7 +122,7 @@ const OrderCuttingChart: React.FC = () => {
       },
       axisLabel: {
         color: '#9ca3af',
-        fontSize: 14,
+        fontSize: 15,
       },
     },
     yAxis: {
@@ -135,7 +135,7 @@ const OrderCuttingChart: React.FC = () => {
       },
       axisLabel: {
         color: '#9ca3af',
-        fontSize: 14,
+        fontSize: 15,
         formatter: (value: number) => value.toLocaleString(),
       },
       splitLine: {

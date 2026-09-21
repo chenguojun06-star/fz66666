@@ -53,7 +53,7 @@ const SystemStatusTab: React.FC = () => {
       <div className="u-d-flex u-jc-between u-ai-center u-mb-16">
         <Space>
           <Badge status={overview ? 'success' : 'default'} text={overview ? '系统运行中' : '加载中...'} />
-          {overview && <Text type="secondary" style={{ fontSize: 14 }}>运行时长：{overview.uptime}</Text>}
+          {overview && <Text type="secondary" style={{ fontSize: 15 }}>运行时长：{overview.uptime}</Text>}
         </Space>
         <Space>
           <Button onClick={() => setAutoRefresh(!autoRefresh)} type={autoRefresh ? 'primary' : 'default'}>
@@ -96,7 +96,7 @@ const SystemStatusTab: React.FC = () => {
                   value={dbUp ? '正常' : '异常'}
                   styles={{ content: { color: dbUp ? 'var(--color-success)' : 'var(--color-danger)', fontSize: 20 } }}
                 />
-                {dbUp && <Text type="secondary" style={{ fontSize: 14 }}>{overview.database.product} {overview.database.version?.split('-')[0]}</Text>}
+                {dbUp && <Text type="secondary" style={{ fontSize: 15 }}>{overview.database.product} {overview.database.version?.split('-')[0]}</Text>}
               </Card>
             </Col>
           </Row>
@@ -127,7 +127,7 @@ const SystemStatusTab: React.FC = () => {
 
       {/* 租户人员统计 */}
       <Card
-        title={<span>租户人员统计{tenantStats ? <Text type="secondary" style={{ fontSize: 14, marginLeft: 8 }}>共 {tenantStats.totalTenants} 个租户，{tenantStats.totalUsers} 名用户</Text> : null}</span>}
+        title={<span>租户人员统计{tenantStats ? <Text type="secondary" style={{ fontSize: 15, marginLeft: 8 }}>共 {tenantStats.totalTenants} 个租户，{tenantStats.totalUsers} 名用户</Text> : null}</span>}
         style={{ marginTop: 16 }}
         extra={<Button onClick={fetchTenantStats} loading={loadingTenantStats}>刷新</Button>}
       >
@@ -149,7 +149,7 @@ const SystemStatusTab: React.FC = () => {
                   <Space size={4}>
                     <Text strong style={{ color: r.userCount > 0 ? undefined : 'var(--color-gray-label)' }}>{r.userCount}</Text>
                     {(r.pendingUsers ?? 0) > 0 && (
-                      <Text type="secondary" style={{ fontSize: 14 }}>
+                      <Text type="secondary" style={{ fontSize: 15 }}>
                         （{r.activeUsers ?? 0} 活跃 + {r.pendingUsers} 待审）
                       </Text>
                     )}
@@ -181,7 +181,7 @@ const SystemStatusTab: React.FC = () => {
                         status={pct >= 100 ? 'exception' : pct >= 80 ? 'active' : undefined}
                         style={{ width: 80 }}
                       />
-                      <Text type="secondary" style={{ fontSize: 14 }}>{active}/{max}</Text>
+                      <Text type="secondary" style={{ fontSize: 15 }}>{active}/{max}</Text>
                     </Space>
                   );
                 },

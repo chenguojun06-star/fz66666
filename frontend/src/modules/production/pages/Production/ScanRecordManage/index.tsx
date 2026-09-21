@@ -188,7 +188,7 @@ export default function ScanRecordManage() {
         return (
           <Space size={4} direction="vertical">
             <Tag color={t.color} style={{ margin: 0 }}>{t.text}</Tag>
-            {r.processName && <Text type="secondary" style={{ fontSize: 12 }}>{r.processName}</Text>}
+            {r.processName && <Text type="secondary" style={{ fontSize: 13 }}>{r.processName}</Text>}
           </Space>
         );
       },
@@ -315,7 +315,7 @@ export default function ScanRecordManage() {
       <Space size={24} style={{ marginBottom: 12 }} wrap>
         <Text type="secondary">共 <Text strong>{total}</Text> 条（本页合计 {summary.qty} 件 / {fmtMoney(summary.amount)}）</Text>
         {canManage && (
-          <Text type="secondary" style={{ fontSize: 12 }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>
             修改/撤回后生产统计自动回流；已入工资的记录需先在工资结算中撤销
           </Text>
         )}
@@ -354,7 +354,7 @@ export default function ScanRecordManage() {
               <Text type="secondary">
                 {editTarget.orderNo || '-'} · {editTarget.styleNo || '-'} · {editTarget.processName || SCAN_TYPE_MAP[editTarget.scanType ?? '']?.text || '-'}
               </Text>
-              <Text type="secondary" style={{ fontSize: 12 }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>
                 修改数量后金额按原单价自动重算，所有生产统计自动回流；已入工资的记录不可修改
               </Text>
             </Space>
@@ -390,7 +390,7 @@ export default function ScanRecordManage() {
 
       {/* 操作日志 */}
       <Drawer
-        title={<Space><span>操作日志</span><Text type="secondary" style={{ fontWeight: 400, fontSize: 13 }}>{logTarget?.orderNo || '-'}</Text></Space>}
+        title={<Space><span>操作日志</span><Text type="secondary" style={{ fontWeight: 400, fontSize: 14 }}>{logTarget?.orderNo || '-'}</Text></Space>}
         width="60vw"
         open={logOpen}
         onClose={() => { setLogOpen(false); setLogTarget(null); setLogRows([]); }}
@@ -406,10 +406,10 @@ export default function ScanRecordManage() {
                   <Space>
                     <Tag color={l.operation === '撤回录入记录' ? 'red' : 'blue'}>{l.operation}</Tag>
                     <Text strong>{l.operatorName || '-'}</Text>
-                    <Text type="secondary" style={{ fontSize: 12 }}>{fmtTime(l.operationTime)}</Text>
+                    <Text type="secondary" style={{ fontSize: 13 }}>{fmtTime(l.operationTime)}</Text>
                   </Space>
                   <div style={{ marginTop: 4 }}>
-                    <Text style={{ fontSize: 13 }}>{l.details || '-'}</Text>
+                    <Text style={{ fontSize: 14 }}>{l.details || '-'}</Text>
                   </div>
                 </div>
               ))}

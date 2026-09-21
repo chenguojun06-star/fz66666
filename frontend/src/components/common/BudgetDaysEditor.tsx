@@ -119,7 +119,7 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
               />
               <span style={{
                 display: 'inline-flex', alignItems: 'center',
-                padding: '0 11px', fontSize: 14,
+                padding: '0 11px', fontSize: 15,
                 background: 'var(--color-bg-subtle)',
                 border: '1px solid var(--color-border)',
                 borderLeft: 0, borderRadius: '0 6px 6px 0',
@@ -166,7 +166,7 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
             />
             <span style={{
               display: 'inline-flex', alignItems: 'center',
-              padding: '0 11px', fontSize: 14,
+              padding: '0 11px', fontSize: 15,
               background: 'var(--color-bg-subtle)',
               border: '1px solid var(--color-border)',
               borderLeft: 0, borderRadius: '0 6px 6px 0',
@@ -237,7 +237,7 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
       {gapInfo && (
         <Tooltip title={`${gapInfo.from} → ${nodeName} ${gapInfo.text}`}>
           <div style={{
-            fontSize: 10,
+            fontSize: 11,
             color: gapInfo.color,
             fontWeight: 400,
             lineHeight: 1.2,
@@ -253,7 +253,7 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
         <Tooltip title={isReadOnly ? budgetText : (budgetHours != null && onBudgetHoursChange ? '点击调整预算工时' : '点击调整预算天数')}>
           <div
             style={{
-              fontSize: 10,
+              fontSize: 11,
               color: budgetColor,
               fontWeight: 400,
               lineHeight: 1.2,

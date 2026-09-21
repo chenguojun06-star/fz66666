@@ -30,7 +30,7 @@ const MaterialCardItem: React.FC<Props> = ({
     title={
       <div style={{ padding: '0 16px' }}>
         <div style={{
-          fontWeight: 600, fontSize: 14,
+          fontWeight: 600, fontSize: 15,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }} title={card.cardName}>
           {card.cardName}
@@ -91,7 +91,7 @@ const MaterialCardItem: React.FC<Props> = ({
       {(card.fabricWidth || card.fabricWeight || card.specifications || card.fabricComposition) && (
         <div style={{
           padding: 10, background: 'var(--color-bg-container)', borderRadius: 6, marginBottom: 12,
-          fontSize: 12, color: 'var(--color-text-secondary)',
+          fontSize: 13, color: 'var(--color-text-secondary)',
         }}>
           <div className="u-d-flex u-fwrap-wrap" style={{ gap: '6px 16px' }}>
             {card.fabricWidth && <span>幅宽：{card.fabricWidth}</span>}
@@ -120,7 +120,7 @@ const MaterialCardItem: React.FC<Props> = ({
         {card.remark && (
           <div style={{
             marginTop: 10, padding: 8, background: 'var(--color-bg-page)', borderRadius: 4,
-            fontSize: 12, color: 'var(--color-text-secondary)',
+            fontSize: 13, color: 'var(--color-text-secondary)',
           }}>
             备注：{card.remark}
           </div>

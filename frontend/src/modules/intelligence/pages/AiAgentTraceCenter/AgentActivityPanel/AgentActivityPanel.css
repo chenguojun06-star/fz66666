@@ -23,7 +23,7 @@
 }
 
 .office-toolbar-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--color-dark-bg-2);
   display: flex;
@@ -32,14 +32,14 @@
 }
 
 .office-toolbar-logo {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .office-toolbar-right {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-slate-500);
 }
 
@@ -77,7 +77,7 @@
   border-radius: 8px;
   border: 1px solid var(--color-slate-200);
   background: var(--color-bg-base);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--color-slate-500);
   cursor: pointer;
@@ -140,16 +140,16 @@
 }
 
 .dept-icon {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .dept-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .dept-count {
-  font-size: 14px;
+  font-size: 15px;
   background: rgba(255, 255, 255, 0.25);
   padding: 2px 8px;
   border-radius: 8px;
@@ -160,7 +160,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 15px;
   background: rgba(34, 197, 94, 0.3);
   padding: 2px 12px;
   border-radius: 8px;
@@ -288,7 +288,7 @@
 }
 
 .ws-screen-text {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-green-400);
   font-family: 'Courier New', monospace;
   white-space: nowrap;
@@ -353,7 +353,7 @@
 }
 
 .ws-screen-sleep {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 
@@ -379,7 +379,7 @@
   position: absolute;
   top: -6px;
   left: 2px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-slate-400);
   animation: steam 1.5s infinite;
 }
@@ -420,7 +420,7 @@
 }
 
 .ws-char-eyes {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-bg-base);
   letter-spacing: 2px;
   font-weight: 700;
@@ -515,7 +515,7 @@
 }
 
 .ws-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-dark-bg-2);
   margin-bottom: 2px;
@@ -542,12 +542,12 @@
 .ws-status-dot--unknown { background: var(--color-slate-300); }
 
 .ws-status-text {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-slate-500);
 }
 
 .ws-task-count {
-  font-size: 12px;
+  font-size: 13px;
   background: var(--color-slate-100);
   padding: 1px 8px;
   border-radius: 8px;
@@ -556,7 +556,7 @@
 }
 
 .ws-current-task {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--agent-color, var(--color-primary));
   background: color-mix(in srgb, var(--agent-color) 8%, var(--color-bg-base));
   padding: 4px 8px;
@@ -620,13 +620,13 @@
 }
 
 .agent-detail-dept {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-slate-400);
 }
 
 .agent-detail-status {
   margin-left: auto;
-  font-size: 14px;
+  font-size: 15px;
   padding: 4px 12px;
   border-radius: 8px;
   font-weight: 600;
@@ -638,7 +638,7 @@
 .agent-detail-status--sleeping { background: var(--color-slate-200); color: var(--color-slate-600); }
 
 .agent-detail-desc {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-slate-500);
   margin-bottom: 12px;
   line-height: 1.5;
@@ -659,7 +659,7 @@
 
 .agent-detail-stat-label {
   display: block;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-slate-400);
   margin-bottom: 2px;
 }
@@ -675,7 +675,7 @@
   background: color-mix(in srgb, var(--agent-color) 6%, var(--color-bg-base));
   border-radius: 8px;
   border-left: 4px solid;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--agent-color);
   font-weight: 500;
 }
@@ -687,7 +687,7 @@
 }
 
 .office-alert {
-  font-size: 14px;
+  font-size: 15px;
   padding: 8px 16px;
   border-radius: 8px;
   border-left: 3px solid;

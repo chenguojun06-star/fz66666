@@ -41,13 +41,13 @@ export const heroHeaderStyle: CSSProperties = {
 };
 
 export const brandTitleStyle: CSSProperties = {
-  fontSize: 13,
+  fontSize: 14,
   fontWeight: 700,
   color: 'var(--color-slate-900)',
 };
 
 export const brandSubtitleStyle: CSSProperties = {
-  fontSize: 14,
+  fontSize: 15,
   color: 'var(--color-text-tertiary)',
   marginTop: 2,
 };
@@ -68,7 +68,7 @@ export const customerCardStyle: CSSProperties = {
 };
 
 export const customerTitleStyle: CSSProperties = {
-  fontSize: 14,
+  fontSize: 15,
   fontWeight: 700,
   color: 'var(--color-slate-900)',
   marginBottom: 10,
@@ -123,7 +123,7 @@ export const tableWrapperStyle: CSSProperties = {
 export const tableStyle: CSSProperties = {
   width: '100%',
   borderCollapse: 'collapse',
-  fontSize: 14,
+  fontSize: 15,
   minWidth: 900,
 };
 
@@ -132,7 +132,7 @@ export const thStyle: CSSProperties = {
   padding: '10px 12px',
   fontWeight: 600,
   color: 'var(--color-text-tertiary)',
-  fontSize: 14,
+  fontSize: 15,
   borderBottom: '2px solid rgba(148,163,184,0.18)',
   whiteSpace: 'nowrap',
 };
@@ -153,7 +153,7 @@ export const totalRowStyle: CSSProperties = {
   justifyContent: 'space-between',
   alignItems: 'center',
   padding: '16px 12px 0',
-  fontSize: 14,
+  fontSize: 15,
   color: 'var(--color-text-tertiary)',
   borderTop: '2px solid rgba(148,163,184,0.18)',
   marginTop: 8,
@@ -164,7 +164,7 @@ export const bottomBrandLineStyle: CSSProperties = {
   justifyContent: 'center',
   gap: 16,
   flexWrap: 'wrap',
-  fontSize: 14,
+  fontSize: 15,
   color: 'var(--color-text-tertiary)',
   padding: '16px 0',
 };

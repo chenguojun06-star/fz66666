@@ -237,7 +237,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
         >
           <Button icon={<PlusOutlined />} disabled={disabled}>
             添加行
-            <DownOutlined style={{ fontSize: 10, marginLeft: 2 }} />
+            <DownOutlined style={{ fontSize: 11, marginLeft: 2 }} />
           </Button>
         </Dropdown>
       </div>
@@ -369,12 +369,12 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
                           onChange={(v) => updateRow(row.key, 'quantity', v ?? 0)}
                         />
                         {overOrder && (
-                          <Tag color="error" style={{ margin: 0, fontSize: 12, lineHeight: '20px' }}>超 {filledQty - orderQty}</Tag>
+                          <Tag color="error" style={{ margin: 0, fontSize: 13, lineHeight: '20px' }}>超 {filledQty - orderQty}</Tag>
                         )}
                       </Space>
                     </td>
                     <td className="u-p-6px12px u-ta-center">
-                      <Text style={{ color: orderQty > 0 ? 'var(--color-primary)' : 'var(--color-text-quaternary)', fontWeight: orderQty > 0 ? 500 : 400, fontSize: 14 }}>
+                      <Text style={{ color: orderQty > 0 ? 'var(--color-primary)' : 'var(--color-text-quaternary)', fontWeight: orderQty > 0 ? 500 : 400, fontSize: 15 }}>
                         {orderQty > 0 ? orderQty : '-'}
                       </Text>
                     </td>
@@ -397,7 +397,7 @@ const CuttingFreeBundlePanel: React.FC<CuttingFreeBundlePanelProps> = ({
       {summaryRows.length > 0 && (
         <div className="u-mb-12">
           <Space size={8} style={{ marginBottom: 6 }}>
-            <Text strong style={{ fontSize: 14 }}>码数汇总匹配</Text>
+            <Text strong style={{ fontSize: 15 }}>码数汇总匹配</Text>
             <Tooltip title="各码已填数量与下单数量对比：未填/未满/已满/超出，超出标红提醒">
               <QuestionCircleOutlined style={{ color: 'var(--color-text-tertiary)', cursor: 'help' }} />
             </Tooltip>

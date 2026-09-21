@@ -91,7 +91,7 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
         };
         const s = sm[status] || { color: 'var(--color-slate-500)', label: status || '-' };
         return (
-          <span style={{ fontSize: 13, color: s.color, fontWeight: 600 }}>
+          <span style={{ fontSize: 14, color: s.color, fontWeight: 600 }}>
             {s.label}
           </span>
         );
@@ -132,7 +132,7 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
         const settled = Boolean(isSettled);
         const style: React.CSSProperties = settled
           ? {
-              fontSize: 13,
+              fontSize: 14,
               color: 'var(--color-bg-base)',
               backgroundColor: 'var(--color-accent-emerald)',
               padding: '2px 10px',
@@ -141,7 +141,7 @@ export function useProcessTrackingColumns(options: ProcessTrackingColumnOptions 
               display: 'inline-block',
             }
           : {
-              fontSize: 13,
+              fontSize: 14,
               color: 'var(--color-slate-400)',
               backgroundColor: 'var(--color-slate-100)',
               padding: '2px 10px',

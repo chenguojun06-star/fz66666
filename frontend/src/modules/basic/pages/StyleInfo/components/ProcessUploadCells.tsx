@@ -65,7 +65,7 @@ export const ProcessImageCell: React.FC<{ record: any; readOnly?: boolean }> = (
       {imgs.length > 2 && <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>+{imgs.length - 2}</span>}
       {!readOnly && record.id && (
         <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
-          <CameraOutlined style={{ fontSize: 13, color: uploading ? 'var(--color-primary)' : 'var(--color-text-quaternary)', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
+          <CameraOutlined style={{ fontSize: 14, color: uploading ? 'var(--color-primary)' : 'var(--color-text-quaternary)', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
             onClick={() => fileInputRef.current?.click()} />
         </Tooltip>
       )}
@@ -115,7 +115,7 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
       {files.length === 0 && <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)', padding: '4px 0' }}>暂无附件</div>}
       {files.map((f, i) => (
         <div key={i} className="u-d-flex u-ai-center u-gap-6" style={{ padding: '3px 0' }}>
-          <PaperClipOutlined style={{ color: 'var(--color-primary)', flexShrink: 0, fontSize: 12 }} />
+          <PaperClipOutlined style={{ color: 'var(--color-primary)', flexShrink: 0, fontSize: 13 }} />
           <a onClick={(e) => { e.preventDefault(); downloadFile(f.url, f.name); }}
             href="#" className="u-flex-1 u-ov-hidden u-ws-nowrap u-fs-14 u-cur-pointer" style={{ textOverflow: 'ellipsis' }}>
             {f.name}
@@ -139,7 +139,7 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
     <Popover content={popoverContent} title="附件" trigger="click" placement="bottomRight">
       <div className="u-cur-pointer u-d-inline-flex u-ai-center u-gap-4 u-p-04px"
         onClick={(e) => e.stopPropagation()}>
-        <PaperClipOutlined style={{ fontSize: 12, color: files.length > 0 ? 'var(--color-primary)' : 'var(--color-text-quaternary)' }} />
+        <PaperClipOutlined style={{ fontSize: 13, color: files.length > 0 ? 'var(--color-primary)' : 'var(--color-text-quaternary)' }} />
         {files.length > 0 && <span className="u-fs-14" style={{ color: 'var(--color-primary)' }}>{files.length}</span>}
       </div>
     </Popover>
@@ -197,7 +197,7 @@ export const NewRowImageUpload: React.FC<{
       )}
       {value.length > 2 && <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>+{value.length - 2}</span>}
       <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
-        <CameraOutlined style={{ fontSize: 13, color: uploading ? 'var(--color-primary)' : 'var(--color-text-quaternary)', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
+        <CameraOutlined style={{ fontSize: 14, color: uploading ? 'var(--color-primary)' : 'var(--color-text-quaternary)', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }}
           onClick={() => fileInputRef.current?.click()} />
       </Tooltip>
     </div>
@@ -239,7 +239,7 @@ export const NewRowAttachmentUpload: React.FC<{
       {value.length === 0 && <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)', padding: '4px 0' }}>暂无附件</div>}
       {value.map((f, i) => (
         <div key={i} className="u-d-flex u-ai-center u-gap-6" style={{ padding: '3px 0' }}>
-          <PaperClipOutlined style={{ color: 'var(--color-primary)', flexShrink: 0, fontSize: 12 }} />
+          <PaperClipOutlined style={{ color: 'var(--color-primary)', flexShrink: 0, fontSize: 13 }} />
           <a onClick={(e) => { e.preventDefault(); downloadFile(f.url, f.name); }}
             href="#" className="u-flex-1 u-ov-hidden u-ws-nowrap u-fs-14 u-cur-pointer" style={{ textOverflow: 'ellipsis' }}>
             {f.name}
@@ -261,7 +261,7 @@ export const NewRowAttachmentUpload: React.FC<{
     <Popover content={popoverContent} title="附件" trigger="click" placement="bottomRight">
       <div className="u-cur-pointer u-d-inline-flex u-ai-center u-gap-4 u-p-04px"
         onClick={(e) => e.stopPropagation()}>
-        <PaperClipOutlined style={{ fontSize: 12, color: value.length > 0 ? 'var(--color-primary)' : 'var(--color-text-quaternary)' }} />
+        <PaperClipOutlined style={{ fontSize: 13, color: value.length > 0 ? 'var(--color-primary)' : 'var(--color-text-quaternary)' }} />
         {value.length > 0 && <span className="u-fs-14" style={{ color: 'var(--color-primary)' }}>{value.length}</span>}
       </div>
     </Popover>

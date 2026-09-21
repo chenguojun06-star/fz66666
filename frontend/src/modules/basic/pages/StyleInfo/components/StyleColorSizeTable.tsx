@@ -417,7 +417,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                           moveSize(sizeIndex, -1);
                         }}
                         style={{
-                          fontSize: 10,
+                          fontSize: 11,
                           color: sizeIndex === 0 ? 'var(--color-text-quaternary)' : 'var(--color-text-tertiary)',
                           cursor: sizeIndex === 0 ? 'not-allowed' : 'pointer',
                           pointerEvents: sizeIndex === 0 ? 'none' : 'auto',
@@ -432,7 +432,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                           moveSize(sizeIndex, 1);
                         }}
                         style={{
-                          fontSize: 10,
+                          fontSize: 11,
                           color: sizeIndex === selectedSizes.length - 1 ? 'var(--color-text-quaternary)' : 'var(--color-text-tertiary)',
                           cursor: sizeIndex === selectedSizes.length - 1 ? 'not-allowed' : 'pointer',
                           pointerEvents: sizeIndex === selectedSizes.length - 1 ? 'none' : 'auto',

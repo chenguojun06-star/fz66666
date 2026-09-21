@@ -13,7 +13,7 @@
   border: none;
   background: none;
   padding: 2px 4px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-primary);
   cursor: pointer;
   display: inline-flex;
@@ -68,7 +68,7 @@
 }
 
 .da-num-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
   white-space: nowrap;
 }
@@ -91,7 +91,7 @@
   border-radius: 6px;
   cursor: pointer;
   text-align: left;
-  font-size: 13px;
+  font-size: 14px;
   transition: background 0.15s ease;
 }
 
@@ -124,7 +124,7 @@
 
 .da-row-days {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-danger);
   background: rgba(239, 68, 68, 0.1);
@@ -150,13 +150,13 @@
 }
 
 .da-empty-text {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--color-text-primary);
 }
 
 .da-empty-hint {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-quaternary);
 }
 

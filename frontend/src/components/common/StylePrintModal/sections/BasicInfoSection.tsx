@@ -51,7 +51,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
       <div style={{ marginBottom: 10, breakInside: 'avoid' }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-gray-900)', lineHeight: '24px' }}>
           {mode === 'sample' ? '样衣资料单' : mode === 'order' ? '下单资料单' : '生产制单'}
-          <span style={{ marginLeft: 12, fontSize: 13, fontWeight: 500, color: 'var(--color-gray-600)' }}>
+          <span style={{ marginLeft: 12, fontSize: 14, fontWeight: 500, color: 'var(--color-gray-600)' }}>
             {styleNo}{styleName ? ` · ${styleName}` : ''}
           </span>
         </div>
@@ -64,7 +64,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             <Image src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
               style={{ width: 120, height: 'auto', maxHeight: 200, objectFit: 'contain', borderRadius: 6, border: '1px solid var(--color-border-antd)', background: 'var(--color-bg-base)', display: 'block' }} preview={{ cover: <span>预览</span> }} />
           ) : (
-            <div style={{ width: 120, height: 120, borderRadius: 6, border: '1px dashed var(--color-text-quaternary)', background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-label)', fontSize: 12 }}>无图片</div>
+            <div style={{ width: 120, height: 120, borderRadius: 6, border: '1px dashed var(--color-text-quaternary)', background: 'var(--color-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-label)', fontSize: 13 }}>无图片</div>
           )}
           {/* 二维码：主图下方，留足静区保证扫码识别 */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
@@ -74,7 +74,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                 : <QRCode value={qrValue} size={94} />}
               {user?.tenantLogo || user?.logo ? <img src={(user?.tenantLogo || user?.logo) as string} alt="logo" style={{ position: 'absolute', width: 16, height: 16, borderRadius: '50%', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', objectFit: 'contain', background: '#fff' }} /> : null}
             </div>
-            <span style={{ fontSize: 10, color: 'var(--color-gray-label)', textAlign: 'center' }}>扫码查看</span>
+            <span style={{ fontSize: 11, color: 'var(--color-gray-label)', textAlign: 'center' }}>扫码查看</span>
           </div>
         </div>
 
@@ -231,7 +231,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         </div>
       </div>
 
-      <div style={{ textAlign: 'right', marginTop: 8, color: 'var(--color-gray-label)', fontSize: 12 }}>
+      <div style={{ textAlign: 'right', marginTop: 8, color: 'var(--color-gray-label)', fontSize: 13 }}>
         打印时间：{formatDateTime(new Date())}
       </div>
     </div>

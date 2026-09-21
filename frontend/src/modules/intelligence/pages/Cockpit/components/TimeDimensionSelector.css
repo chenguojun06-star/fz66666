@@ -18,7 +18,7 @@
   background: transparent;
   color: var(--color-text-tertiary);
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -38,7 +38,7 @@
 }
 
 .time-dimension-range {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;

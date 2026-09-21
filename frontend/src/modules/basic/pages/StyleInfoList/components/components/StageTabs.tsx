@@ -28,7 +28,7 @@ const StageTabs: React.FC<StageTabsProps> = ({ stages, activeTab, onTabChange })
         style={{
           padding: '8px 14px',
           cursor: 'pointer',
-          fontSize: 13,
+          fontSize: 14,
           fontWeight: isActive ? 600 : 400,
           color: isActive ? c : isDone ? 'var(--color-success)' : 'var(--color-text-secondary)',
           borderBottom: isActive ? `2px solid ${c}` : '2px solid transparent',
@@ -39,13 +39,13 @@ const StageTabs: React.FC<StageTabsProps> = ({ stages, activeTab, onTabChange })
           gap: 4,
         }}
       >
-        {isDone && <CheckCircleOutlined style={{ fontSize: 11 }} />}
+        {isDone && <CheckCircleOutlined style={{ fontSize: 12 }} />}
         {stage.label}
         {isEmptyStage && (
           <span className="u-fs-10 u-fw-400" style={{ color: 'var(--color-text-quaternary)' }}>未配置</span>
         )}
         {stage.subProcesses.length > 0 && (
-          <Tag color={isActive ? 'blue' : 'default'} style={{ marginLeft: 2, fontSize: 10, padding: '0 4px', lineHeight: '16px' }}>
+          <Tag color={isActive ? 'blue' : 'default'} style={{ marginLeft: 2, fontSize: 11, padding: '0 4px', lineHeight: '16px' }}>
             {stage.subProcesses.length}
           </Tag>
         )}

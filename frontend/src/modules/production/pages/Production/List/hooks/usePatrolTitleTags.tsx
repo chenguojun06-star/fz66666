@@ -13,7 +13,7 @@ export function usePatrolTitleTags() {
     const label = RISK_TYPE_LABELS[risks[0]?.issueType] || 'AI巡检';
     const colorMap: Record<string, string> = { HIGH: 'red', MEDIUM: 'orange', LOW: 'gold' };
     return (
-      <Tag color={colorMap[severity] || 'orange'} style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 4px' }}>
+      <Tag color={colorMap[severity] || 'orange'} style={{ margin: 0, fontSize: 13, lineHeight: '18px', padding: '0 4px' }}>
         {label}
       </Tag>
     );

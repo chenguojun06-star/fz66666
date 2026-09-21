@@ -144,7 +144,7 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
         <span>
           {buildLendToDisplay(record)}
           {record.transferFromLoanId && (
-            <Tag color="purple" style={{ marginLeft: 4, fontSize: 11 }}>转借</Tag>
+            <Tag color="purple" style={{ marginLeft: 4, fontSize: 12 }}>转借</Tag>
           )}
         </span>
       ),

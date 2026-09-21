@@ -35,7 +35,7 @@ const QuotationProcessSection: React.FC<Props> = ({ processList, onRateChange, i
         borderBottom: '1px solid var(--color-border-light, var(--color-border-light))', marginBottom: 12, color: 'var(--color-text-primary, var(--color-text-primary))',
       }}>
         工序明细
-        <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8, fontWeight: 400 }}>
+        <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginLeft: 8, fontWeight: 400 }}>
           共 {processList.length} 项
         </span>
       </div>
@@ -57,7 +57,7 @@ const QuotationProcessSection: React.FC<Props> = ({ processList, onRateChange, i
               <div>
                 <div style={{ fontWeight: 500 }}>{String(v || '').trim() || '-'}</div>
                 {String(r?.progressStage || '').trim() && (
-                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
                     {String(r.progressStage).trim()}
                   </div>
                 )}
@@ -98,7 +98,7 @@ const QuotationProcessSection: React.FC<Props> = ({ processList, onRateChange, i
       <div style={{
         display: 'flex', justifyContent: 'flex-end', padding: '6px 10px',
         border: '1px solid var(--color-border, var(--color-border-light))', borderTop: '1px solid var(--color-border, var(--color-border-light))',
-        background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 14, color: 'var(--color-text-primary)',
+        background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 15, color: 'var(--color-text-primary)',
       }}>
         工序小计：¥{displayTotal.toFixed(2)}
       </div>

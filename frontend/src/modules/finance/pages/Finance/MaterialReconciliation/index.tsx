@@ -263,7 +263,7 @@ const MaterialReconciliation: React.FC = () => {
             styles={{ body: { padding: '5px 10px' } }}
           >
             <Statistic
-              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>}
+              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 13 }} />待审批</span>}
               value={stats.pendingCount}
               suffix="条"
               valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 500 }}
@@ -277,7 +277,7 @@ const MaterialReconciliation: React.FC = () => {
             styles={{ body: { padding: '5px 10px' } }}
           >
             <Statistic
-              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>}
+              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 13 }} />已审批</span>}
               value={stats.approvedCount}
               suffix="条"
               valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 500 }}
@@ -291,7 +291,7 @@ const MaterialReconciliation: React.FC = () => {
             styles={{ body: { padding: '5px 10px' } }}
           >
             <Statistic
-              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />已付款</span>}
+              title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined style={{ marginRight: 4, fontSize: 13 }} />已付款</span>}
               value={stats.paidCount}
               suffix="条"
               valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 500 }}

@@ -216,16 +216,16 @@ body{font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-s
         <Divider style={{ margin: '4px 0' }} />
 
         <div>
-          <div style={{ marginBottom: 6, fontWeight: 500, fontSize: 14 }}>待打印订单（{items.length} 条）</div>
+          <div style={{ marginBottom: 6, fontWeight: 500, fontSize: 15 }}>待打印订单（{items.length} 条）</div>
           <div style={{ maxHeight: 200, overflowY: 'auto' }}>
             {items.map(it => (
               <div key={it.orderNo} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '4px 0', borderBottom: '1px solid var(--color-border-light)' }}>
                 <Tag color="blue" style={{ minWidth: 100, textAlign: 'center' }}>{it.orderNo}</Tag>
-                <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
+                <span style={{ fontSize: 15, color: 'var(--color-text-secondary)' }}>
                   {it.styleNo}{it.color ? ' / ' + it.color : ''}{it.size ? ' / ' + it.size : ''}
                 </span>
                 {labelType === 'ucode' && it.uCode && (
-                  <Tag style={{ fontSize: 14, color: 'var(--color-text-muted)' }}>U: {it.uCode}</Tag>
+                  <Tag style={{ fontSize: 15, color: 'var(--color-text-muted)' }}>U: {it.uCode}</Tag>
                 )}
               </div>
             ))}

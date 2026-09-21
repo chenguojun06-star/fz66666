@@ -177,7 +177,7 @@ const WorkerPayrollAuditPopover: React.FC<{
   const insight = useMemo(() => buildWorkerInsight(record, analysis), [record, analysis]);
 
   const content = (
-    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 14, boxSizing: 'border-box' }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 15, boxSizing: 'border-box' }}>
       <div className="u-d-flex u-jc-between u-ai-center u-mb-8">
         <span className="u-fw-600 u-fs-14"> 工资审核</span>
         <Tag color={riskTagColor[analysis.risk]}>{suggestionLabel[analysis.suggestion]}</Tag>

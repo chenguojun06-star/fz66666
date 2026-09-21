@@ -22,14 +22,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 14px;
   flex-shrink: 0;
 }
 
 .messageBubble {
   padding: 12px 16px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
   word-break: break-word;
   position: relative;
@@ -52,7 +52,7 @@
 /* 气泡底部时间戳（HH:mm） */
 .messageTime {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
   text-align: right;
   color: var(--color-text-tertiary);
@@ -66,7 +66,7 @@
 
 .mdContent {
   line-height: 1.6;
-  font-size: 14px;
+  font-size: 15px;
 }
 .mdContent ul { margin: 4px 0; padding-left: 20px; }
 .mdContent li { margin: 2px 0; }
@@ -96,7 +96,7 @@
   background: linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%);
   border: 1px solid var(--status-warning-border);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-amber-700);
   cursor: pointer;
   transition: all 0.2s;
@@ -118,7 +118,7 @@
   color: var(--color-amber-700);
   opacity: 0;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1;
   padding: 1px 4px;
   border-radius: 4px;
@@ -136,7 +136,7 @@
 
 .pendingMoreBtn {
   text-align: center;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-info);
   cursor: pointer;
   padding: 8px 0 2px;
@@ -154,7 +154,7 @@
   background: var(--color-bg-base);
   border: 1px solid var(--status-processing-border);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.3;
   color: var(--color-info);
   cursor: pointer;
@@ -178,7 +178,7 @@
 }
 
 .reportDownloadLabel {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-success);
   font-weight: 600;
   margin-bottom: 8px;
@@ -199,7 +199,7 @@
   background: var(--color-bg-base);
   border: 1px solid var(--status-processing-border);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-info);
   cursor: pointer;
   transition: all 0.2s;
@@ -221,7 +221,7 @@
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px dashed rgba(24, 144, 255, 0.2);
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-info);
   display: flex;
   align-items: center;
@@ -240,7 +240,7 @@
 }
 
 .recommendTitle {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-secondary);
   margin-bottom: 8px;
 }
@@ -252,7 +252,7 @@
 }
 
 .recommendPill {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-info);
   background: rgba(24, 144, 255, 0.05);
   border: 1px solid rgba(24, 144, 255, 0.2);
@@ -275,7 +275,7 @@
 }
 .typingText {
   color: var(--color-slate-600);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.6;
   padding: 2px 0;
 }
@@ -299,7 +299,7 @@
   color: var(--color-text-tertiary);
   cursor: pointer;
   padding: 4px;
-  font-size: 13px;
+  font-size: 14px;
   margin-left: 8px;
 }
 .speechBtn:hover {
@@ -337,11 +337,11 @@
   font-weight: bold;
   color: var(--color-cyan-700);
   margin-bottom: 8px;
-  font-size: 14px;
+  font-size: 15px;
 }
 .adviceSummary {
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-secondary);
 }
 .adviceDetails {
@@ -361,7 +361,7 @@
 .adviceActionBtn {
   padding: 4px 12px;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 15px;
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.2s;

@@ -66,14 +66,14 @@ const UploadButton: React.FC<UploadButtonProps> = ({
         textAlign: 'center',
         cursor: readOnly ? 'default' : 'pointer',
         color: 'var(--color-text-secondary, #6e6e73)',
-        fontSize: 13,
+        fontSize: 14,
         background: 'var(--color-bg-subtle, #fafafa)',
         transition: 'border-color 0.2s',
       }}
     >
       <InboxOutlined style={{ fontSize: 22, color: 'var(--color-primary, #2D7FF9)', display: 'block', marginBottom: 4 }} />
       <div>{uploadText || '点击或拖拽文件到此处上传'}</div>
-      <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+      <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
         支持粘贴截图 · 单文件不超过 15MB · 一次最多 4 个
       </div>
       <input

@@ -12,7 +12,7 @@ const ExpandedDetail: React.FC<ExpandedDetailProps> = ({ details, loading }) => 
     return <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>无明细</span>;
   }
   return (
-    <table style={{ fontSize: 14, borderCollapse: 'collapse' as const }}>
+    <table style={{ fontSize: 15, borderCollapse: 'collapse' as const }}>
       <thead>
         <tr>
           <th style={{ padding: '2px 12px', borderBottom: '1px solid var(--color-border-light)' }}>颜色</th>

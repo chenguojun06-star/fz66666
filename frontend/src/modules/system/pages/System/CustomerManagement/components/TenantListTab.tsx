@@ -192,7 +192,7 @@ const TenantListTab: React.FC = () => {
       <div className="u-mb-12">
         <div className="u-d-flex u-gap-8 u-fwrap-wrap u-mb-10">
           {[{ key: '', label: '全部' }, { key: 'pending_review', label: '待审核', color: 'orange' }, { key: 'active', label: '正常', color: 'green' }, { key: 'disabled', label: '停用', color: 'red' }, { key: 'rejected', label: '已拒绝', color: 'default' }].map(tab => (
-            <Tag key={tab.key} color={statusTab === tab.key ? (tab.color || 'blue') : undefined} style={{ cursor: 'pointer', padding: '3px 12px', fontSize: 14, border: statusTab === tab.key ? undefined : '1px solid var(--color-border-antd)' }} onClick={() => { setStatusTab(tab.key); setQueryParams(p => ({ ...p, status: tab.key, page: 1 })); }}>{tab.label}</Tag>
+            <Tag key={tab.key} color={statusTab === tab.key ? (tab.color || 'blue') : undefined} style={{ cursor: 'pointer', padding: '3px 12px', fontSize: 15, border: statusTab === tab.key ? undefined : '1px solid var(--color-border-antd)' }} onClick={() => { setStatusTab(tab.key); setQueryParams(p => ({ ...p, status: tab.key, page: 1 })); }}>{tab.label}</Tag>
           ))}
         </div>
         <div className="u-d-flex u-jc-between">
@@ -230,7 +230,7 @@ const TenantListTab: React.FC = () => {
                 return null;
               }}
             </Form.Item>
-            <Alert type="success" showIcon style={{ fontSize: 13 }}
+            <Alert type="success" showIcon style={{ fontSize: 14 }}
               title="租户登录后即可使用全部 AI 功能（小云助手、智能巡检、交期预测等），无需自行注册任何 AI 服务平台。"
             />
           </div>
@@ -239,7 +239,7 @@ const TenantListTab: React.FC = () => {
       </ResizableModal>
 
       <ResizableModal open={qrModal.visible} title={`注册二维码 - ${qrModal.data?.tenantName || ''}`} onCancel={qrModal.close} width="40vw" footer={<Button onClick={qrModal.close}>关闭</Button>}>
-        {qrModal.data && (<div className="u-ta-center u-p-24px0"><div style={{ marginBottom: 20 }}><QRCode value={getRegisterUrl(qrModal.data)} size={240} style={{ margin: '0 auto' }} /></div><div className="u-mb-16"><Text type="secondary">员工扫码或打开链接即可注册到该工厂</Text></div><Card style={{ textAlign: 'left', maxWidth: 400, margin: '0 auto', background: 'var(--color-slate-50)', borderRadius: 8 }}><div className="u-mb-12"><Text strong>工厂名称：</Text><Text>{qrModal.data.tenantName}</Text></div><div className="u-mb-12"><Text strong>工厂编码：</Text><Text code copyable={{ text: qrModal.data.tenantCode }}>{qrModal.data.tenantCode}</Text></div><div className="u-mb-12"><Text strong>注册链接：</Text><div className="u-mt-4" style={{ wordBreak: 'break-all' }}><Text type="secondary" style={{ fontSize: 14 }}>{getRegisterUrl(qrModal.data)}</Text></div></div><Space><Button icon={<CopyOutlined />} onClick={() => handleCopyLink(qrModal.data!)}>复制链接</Button><Button icon={<QrcodeOutlined />} onClick={() => handleCopyCode(qrModal.data!.tenantCode)}>复制编码</Button></Space></Card><div className="u-mt-16"><Text type="secondary" style={{ fontSize: 14 }}>提示：员工注册后需要管理员在「注册审批」中审批通过后才能使用</Text></div></div>)}
+        {qrModal.data && (<div className="u-ta-center u-p-24px0"><div style={{ marginBottom: 20 }}><QRCode value={getRegisterUrl(qrModal.data)} size={240} style={{ margin: '0 auto' }} /></div><div className="u-mb-16"><Text type="secondary">员工扫码或打开链接即可注册到该工厂</Text></div><Card style={{ textAlign: 'left', maxWidth: 400, margin: '0 auto', background: 'var(--color-slate-50)', borderRadius: 8 }}><div className="u-mb-12"><Text strong>工厂名称：</Text><Text>{qrModal.data.tenantName}</Text></div><div className="u-mb-12"><Text strong>工厂编码：</Text><Text code copyable={{ text: qrModal.data.tenantCode }}>{qrModal.data.tenantCode}</Text></div><div className="u-mb-12"><Text strong>注册链接：</Text><div className="u-mt-4" style={{ wordBreak: 'break-all' }}><Text type="secondary" style={{ fontSize: 15 }}>{getRegisterUrl(qrModal.data)}</Text></div></div><Space><Button icon={<CopyOutlined />} onClick={() => handleCopyLink(qrModal.data!)}>复制链接</Button><Button icon={<QrcodeOutlined />} onClick={() => handleCopyCode(qrModal.data!.tenantCode)}>复制编码</Button></Space></Card><div className="u-mt-16"><Text type="secondary" style={{ fontSize: 15 }}>提示：员工注册后需要管理员在「注册审批」中审批通过后才能使用</Text></div></div>)}
       </ResizableModal>
 
       <SmallModal open={webhookModal.visible} title={`企业微信 Webhook - ${webhookModal.data?.tenantName || ''}`} onCancel={() => { webhookModal.close(); webhookForm.resetFields(); }} footer={<Space><Button onClick={() => { webhookModal.close(); webhookForm.resetFields(); }}>取消</Button><Button type="primary" loading={savingWebhook} onClick={async () => { const record = webhookModal.data; if (!record) return; try { setSavingWebhook(true); const values = webhookForm.getFieldsValue(); const res: any = await tenantService.updateTenant(record.id, { wechatWorkWebhookUrl: String(values.wechatWorkWebhookUrl || '').trim() }); if (res?.code === 200 || res?.data) { message.success('Webhook 已保存'); webhookModal.close(); webhookForm.resetFields(); } else { message.error(res?.message || '保存失败'); } } catch (e: unknown) { message.error(e instanceof Error ? e.message : '保存失败'); } finally { setSavingWebhook(false); } }}>保存</Button></Space>}>
@@ -273,7 +273,7 @@ const TenantListTab: React.FC = () => {
                         <div key={opt.value} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px', borderRadius: 6, marginBottom: 4, background: willGrant ? 'rgba(82,196,26,0.06)' : willRevoke ? 'rgba(255,77,79,0.06)' : 'transparent', border: willGrant ? '1px solid rgba(82,196,26,0.2)' : willRevoke ? '1px solid rgba(255,77,79,0.2)' : '1px solid transparent', transition: 'all 0.2s' }}>
                           <div className="u-d-flex u-ai-center u-gap-8">
                             <span className="u-fw-500">{opt.label}</span>
-                            {isActive ? <Tag color="green" style={{ margin: 0, fontSize: 14 }}>已开通</Tag> : <Tag style={{ margin: 0, fontSize: 14 }}>未开通</Tag>}
+                            {isActive ? <Tag color="green" style={{ margin: 0, fontSize: 15 }}>已开通</Tag> : <Tag style={{ margin: 0, fontSize: 15 }}>未开通</Tag>}
                             {sub?.end_time && isActive && <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>到期 {String(sub.end_time).substring(0, 10)}</span>}
                           </div>
                           <Space size={4}>

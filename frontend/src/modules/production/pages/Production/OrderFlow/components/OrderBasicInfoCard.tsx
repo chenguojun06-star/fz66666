@@ -46,11 +46,11 @@ const descLabelStyle: React.CSSProperties = {
   width: 88,
   flexShrink: 0,
   color: 'var(--color-text-tertiary)',
-  fontSize: 13,
+  fontSize: 14,
 };
 
 const descContentStyle: React.CSSProperties = {
-  fontSize: 13,
+  fontSize: 14,
   color: 'var(--color-text)',
 };
 

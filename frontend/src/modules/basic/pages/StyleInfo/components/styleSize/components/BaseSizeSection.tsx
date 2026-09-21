@@ -27,7 +27,7 @@ const BaseSizeSection: React.FC<Props> = ({
           style={{ width: 140 }}
         />
         {gradingDraftBaseSize && baseSizeValue !== null && (
-          <Tag color="blue" style={{ fontSize: 14, padding: '2px 10px' }}>
+          <Tag color="blue" style={{ fontSize: 15, padding: '2px 10px' }}>
             基准尺寸: {baseSizeValue}
           </Tag>
         )}

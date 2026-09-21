@@ -145,7 +145,7 @@ const OrphanDataPage: React.FC = () => {
             </Col>
             <Col span={8}>
               <Card>
-                <Statistic title="扫描时间" value={scanResult.scanTime ? new Date(scanResult.scanTime).toLocaleString('zh-CN') : '-'} styles={{ content: { fontSize: 14 } }} />
+                <Statistic title="扫描时间" value={scanResult.scanTime ? new Date(scanResult.scanTime).toLocaleString('zh-CN') : '-'} styles={{ content: { fontSize: 15 } }} />
               </Card>
             </Col>
           </Row>

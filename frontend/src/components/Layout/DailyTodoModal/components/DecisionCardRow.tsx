@@ -31,7 +31,7 @@ const DecisionCardRow: React.FC<{
         {card.summary}
       </div>
       {card.painPoint && (
-        <div style={{ fontSize: 14, color: accentColor, marginBottom: 6 }}>
+        <div style={{ fontSize: 15, color: accentColor, marginBottom: 6 }}>
           <BulbOutlined style={{ marginRight: 4 }} />
           建议：{card.painPoint}
         </div>
@@ -48,11 +48,11 @@ const DecisionCardRow: React.FC<{
           onClick={() => onNav(card.actionPath)}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 4,
-            fontSize: 14, color: 'var(--primary-color)', cursor: 'pointer',
+            fontSize: 15, color: 'var(--primary-color)', cursor: 'pointer',
             fontWeight: 500,
           }}
         >
-          {card.actionLabel} <RightOutlined style={{ fontSize: 12 }} />
+          {card.actionLabel} <RightOutlined style={{ fontSize: 13 }} />
         </div>
       )}
     </div>

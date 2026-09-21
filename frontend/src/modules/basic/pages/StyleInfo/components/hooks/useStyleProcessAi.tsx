@@ -97,7 +97,7 @@ export const useStyleProcessAi = ({ styleId, data, editMode, enterEdit }: UseSty
               {grouped.length > 0 ? grouped.map((g, gi) => (
                 <div key={gi} className="u-mb-12">
                   <Space style={{ marginBottom: 6 }}>
-                    <Tag color={STAGE_COLOR[g.parentNode] || 'default'} style={{ fontSize: 13, fontWeight: 600 }}>
+                    <Tag color={STAGE_COLOR[g.parentNode] || 'default'} style={{ fontSize: 14, fontWeight: 600 }}>
                       {g.parentNode}
                     </Tag>
                     <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>

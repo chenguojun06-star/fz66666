@@ -46,7 +46,7 @@
 }
 
 .qs-rate-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
   white-space: nowrap;
 }
@@ -72,7 +72,7 @@
 }
 
 .qs-rate-sub {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
 }
 
@@ -94,12 +94,12 @@
 }
 
 .qs-stat-label {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-tertiary);
 }
 
 .qs-stat-value {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;

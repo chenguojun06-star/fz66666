@@ -29,7 +29,7 @@ export const OrderScrollPanel: React.FC<{
         <span className="u-fs-14" style={{ color: 'var(--color-blue-400)', letterSpacing: 0 }}>悬停暂停 · 离开续滚 →</span>
         {onToggle && (
           <span
-            style={{ marginLeft: 'auto', cursor: 'pointer', color: collapsed ? 'var(--color-accent-purple)' : 'var(--color-blue-400)', fontSize: 14, padding: '0 4px', display: 'inline-flex', alignItems: 'center', flexShrink: 0, userSelect: 'none' }}
+            style={{ marginLeft: 'auto', cursor: 'pointer', color: collapsed ? 'var(--color-accent-purple)' : 'var(--color-blue-400)', fontSize: 15, padding: '0 4px', display: 'inline-flex', alignItems: 'center', flexShrink: 0, userSelect: 'none' }}
             title={collapsed ? '展开面板' : '收起面板'}
           >
             {collapsed ? <DownOutlined /> : <UpOutlined />}

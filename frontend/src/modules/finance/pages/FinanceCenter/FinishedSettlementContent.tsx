@@ -102,7 +102,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
           styles={{ body: { padding: '5px 10px' } }}
         >
           <Statistic
-            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />待审批</span>}
+            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><ClockCircleOutlined style={{ marginRight: 4, fontSize: 13 }} />待审批</span>}
             value={stats.pendingCount}
             suffix="条"
             valueStyle={{ color: 'var(--color-warning)', fontSize: 15, fontWeight: 500 }}
@@ -114,7 +114,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
           styles={{ body: { padding: '5px 10px' } }}
         >
           <Statistic
-            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />已审批</span>}
+            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><CheckCircleOutlined style={{ marginRight: 4, fontSize: 13 }} />已审批</span>}
             value={stats.approvedCount}
             suffix="条"
             valueStyle={{ color: 'var(--color-primary)', fontSize: 15, fontWeight: 500 }}
@@ -126,7 +126,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
           styles={{ body: { padding: '5px 10px' } }}
         >
           <Statistic
-            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined style={{ marginRight: 4, fontSize: 12 }} />订单数</span>}
+            title={<span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}><DollarOutlined style={{ marginRight: 4, fontSize: 13 }} />订单数</span>}
             value={total}
             suffix="条"
             valueStyle={{ color: 'var(--color-success)', fontSize: 15, fontWeight: 500 }}

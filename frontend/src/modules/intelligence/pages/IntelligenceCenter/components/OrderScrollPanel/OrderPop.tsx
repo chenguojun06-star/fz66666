@@ -65,7 +65,7 @@ export const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           {intel.riskItem && (() => {
             const b = risk2badge(intel.riskItem.riskLevel);
             return (
-              <span style={{ fontSize: 14, fontWeight: 700, color: b.color,
+              <span style={{ fontSize: 15, fontWeight: 700, color: b.color,
                 border: `1px solid ${b.color}55`, padding: '1px 6px', borderRadius: 3 }}>
                 {b.label}
               </span>
@@ -110,10 +110,10 @@ export const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           <div className="u-fs-14 u-fw-700" style={{ color: 'var(--color-danger)', marginBottom: 5, letterSpacing: 0.5 }}> 工序瓶颈 Top{intel.bottleneck.items.length > 1 ? '2' : '1'}</div>
           {intel.bottleneck.items.slice(0, 2).map((b, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center',
-              gap: 6, marginBottom: i < 1 ? 3 : 0, fontSize: 14 }}>
+              gap: 6, marginBottom: i < 1 ? 3 : 0, fontSize: 15 }}>
               <span style={{ color: sev2c(b.severity), fontWeight: 700, minWidth: 34 }}>{b.stageName}</span>
               <span className="u-flex-1" style={{ color: 'var(--color-blue-300)' }}>积压 {b.backlog} 件</span>
-              <span style={{ color: sev2c(b.severity), fontSize: 14,
+              <span style={{ color: sev2c(b.severity), fontSize: 15,
                 border: `1px solid ${sev2c(b.severity)}44`, padding: '0 4px', borderRadius: 3 }}>
                 {b.severity === 'critical' ? '严重' : b.severity === 'warning' ? '预警' : '正常'}
               </span>
@@ -132,7 +132,7 @@ export const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           background: `${risk2badge(intel.riskItem.riskLevel).color}08`,
           borderRadius: 5, border: `1px solid ${risk2badge(intel.riskItem.riskLevel).color}22` }}>
           <div className="u-d-flex u-jc-between u-ai-center u-mb-4">
-            <span style={{ fontSize: 14, color: risk2badge(intel.riskItem.riskLevel).color,
+            <span style={{ fontSize: 15, color: risk2badge(intel.riskItem.riskLevel).color,
               fontWeight: 700 }}> 交期风险评估</span>
             <span className="u-fs-14" style={{ color: 'var(--color-blue-300)' }}>
               预测: {intel.riskItem.predictedEndDate?.slice(0, 10) ?? '--'}
@@ -157,7 +157,7 @@ export const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           </div>
           {intel.anomalies.map((a, i) => (
             <div key={i} style={{
-              fontSize: 14, lineHeight: 1.5, marginBottom: i < intel.anomalies.length - 1 ? 3 : 0,
+              fontSize: 15, lineHeight: 1.5, marginBottom: i < intel.anomalies.length - 1 ? 3 : 0,
               color: ({ critical: 'var(--color-danger)', warning: 'var(--color-warning-deep)', info: 'var(--color-accent-cyan-bright)' } as Record<string, string>)[a.severity] ?? 'var(--color-text-muted)',
             }}>
               · <b>{a.title}</b>: {a.description}

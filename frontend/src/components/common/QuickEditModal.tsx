@@ -115,7 +115,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
               padding: '8px 12px',
               maxHeight: 120,
               overflowY: 'auto',
-              fontSize: 12,
+              fontSize: 13,
               lineHeight: '20px',
               color: 'var(--color-text-secondary, var(--color-gray-dark))',
               fontFamily: 'var(--font-family-mono, monospace)',
@@ -137,13 +137,13 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
               padding: '8px 12px',
               maxHeight: 120,
               overflowY: 'auto',
-              fontSize: 14,
+              fontSize: 15,
               lineHeight: '20px',
               color: 'var(--color-text-secondary, var(--color-gray-dark))',
             }}>
               {aiLogs.map((line, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: i < aiLogs.length - 1 ? 4 : 0 }}>
-                  <Tag color="orange" style={{ margin: 0, fontSize: 14, lineHeight: '18px', padding: '0 4px', flexShrink: 0 }}>AI</Tag>
+                  <Tag color="orange" style={{ margin: 0, fontSize: 15, lineHeight: '18px', padding: '0 4px', flexShrink: 0 }}>AI</Tag>
                   <span>{line.replace(/^\[AI巡检\]\s*/, '')}</span>
                 </div>
               ))}

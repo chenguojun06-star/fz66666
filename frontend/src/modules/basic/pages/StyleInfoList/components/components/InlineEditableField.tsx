@@ -59,7 +59,7 @@ const InlineEditableField: React.FC<{
             border: '1px solid var(--color-primary)',
             borderRadius: 4,
             padding: '2px 6px',
-            fontSize: 13,
+            fontSize: 14,
             outline: 'none',
           }}
         />
@@ -77,7 +77,7 @@ const InlineEditableField: React.FC<{
     <span
       onClick={() => setEditing(true)}
       style={{
-        fontSize: 13,
+        fontSize: 14,
         lineHeight: '22px',
         borderBottom: '1px dashed var(--color-primary)',
         cursor: 'pointer',

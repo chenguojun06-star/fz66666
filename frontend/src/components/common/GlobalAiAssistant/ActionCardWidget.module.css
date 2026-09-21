@@ -17,6 +17,6 @@
   background: var(--status-success-bg);
   border-color: var(--status-success-border);
 }
-.actionCardTitle { font-size: 13px; font-weight: 600; color: var(--color-amber-900); margin-bottom: 4px; }
-.actionCardDesc { font-size: 12px; color: var(--color-amber-700); margin-bottom: 8px; line-height: 1.5; }
+.actionCardTitle { font-size: 14px; font-weight: 600; color: var(--color-amber-900); margin-bottom: 4px; }
+.actionCardDesc { font-size: 13px; color: var(--color-amber-700); margin-bottom: 8px; line-height: 1.5; }
 .actionCardBtns { display: flex; gap: 8px; flex-wrap: wrap; }

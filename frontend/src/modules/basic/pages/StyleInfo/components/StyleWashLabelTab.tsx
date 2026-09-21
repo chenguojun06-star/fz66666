@@ -217,7 +217,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
   }, [compositionParts, initialComp, washInstructions, selectedIconCodes, manufacturingText, previewW, previewH, fontScale, lineHeightScale, topOffsetMm, sectionGapMm, showDate, dateText, buildOnePrintData]);
 
   const sectionTitleStyle: React.CSSProperties = {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 600,
     color: 'var(--color-text-primary, var(--color-gray-800))',
     marginBottom: 8,
@@ -249,7 +249,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
               <EyeOutlined style={{ color: 'var(--color-text-quaternary, var(--color-text-quaternary))' }} />
             )}
             <span style={{
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: 600,
               color: isEditing ? 'var(--color-primary, var(--color-primary))' : 'var(--color-text-tertiary, var(--color-text-muted))',
             }}>
@@ -299,7 +299,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
 
         <div style={{ marginBottom: 20, opacity: isEditing ? 1 : 0.6, pointerEvents: isEditing ? 'auto' : 'none' }}>
           <div style={sectionTitleStyle}>面料成分 / 洗涤说明</div>
-          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary, var(--color-text-muted))', marginBottom: 8 }}>
+          <div style={{ fontSize: 15, color: 'var(--color-text-tertiary, var(--color-text-muted))', marginBottom: 8 }}>
             每个部位可分别填写成分和洗涤说明，打印洗水唛时会自动按部位分段输出
           </div>
           <CompositionPartsEditor
@@ -318,7 +318,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
             placeholder="如：30°C水洗，不可漂白，低温熨烫，悬挂晾干"
             disabled={!isEditing}
           />
-          <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', marginTop: 4 }}>
+          <div style={{ fontSize: 15, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', marginTop: 4 }}>
             全局洗涤说明会显示在所有部位成分下方；如果某部位已单独填写洗涤说明，则优先使用部位说明
           </div>
         </div>
@@ -332,14 +332,14 @@ const StyleWashLabelTab: React.FC<Props> = ({
             maxLength={64}
             disabled={!isEditing}
           />
-          <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', marginTop: 4 }}>
+          <div style={{ fontSize: 15, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', marginTop: 4 }}>
             U编码是品质追溯的唯一标识，打印U码标签时会自动使用此编码
           </div>
         </div>
 
         <div style={{ marginBottom: 20, opacity: isEditing ? 1 : 0.6, pointerEvents: isEditing ? 'auto' : 'none' }}>
           <div style={sectionTitleStyle}>洗涤护理图标</div>
-          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary, var(--color-text-muted))', marginBottom: 12 }}>
+          <div style={{ fontSize: 15, color: 'var(--color-text-tertiary, var(--color-text-muted))', marginBottom: 12 }}>
             点击图标选择/取消，每个类别可选择多个图标；选中的图标将显示在洗水唛底部
           </div>
           <CareIconSelector
@@ -357,7 +357,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
             placeholder="MADE IN CHINA"
             disabled={!isEditing}
           />
-          <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', marginTop: 4 }}>
+          <div style={{ fontSize: 15, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', marginTop: 4 }}>
             只打印你输入的内容，留空则不显示该分区
           </div>
         </div>
@@ -375,7 +375,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
           borderBottom: '1px solid var(--color-border-light, var(--color-border-light))',
         }}>
           <Space size={16} wrap>
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               距剪口偏移
               <InputNumber
                 min={0} max={Math.max(0, previewH - 10)} value={topOffsetMm}
@@ -383,7 +383,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
                 suffix="mm" style={{ width: 100 }}
               />
             </span>
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               字体大小
               <Slider
                 min={0.5} max={1.6} step={0.05} value={fontScale}
@@ -391,9 +391,9 @@ const StyleWashLabelTab: React.FC<Props> = ({
                 style={{ width: 120, margin: 0 }}
                 tooltip={{ formatter: (v) => `${Math.round((v ?? 1) * 100)}%` }}
               />
-              <span style={{ fontSize: 13, color: 'var(--color-text-tertiary)', width: 40 }}>{Math.round(fontScale * 100)}%</span>
+              <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', width: 40 }}>{Math.round(fontScale * 100)}%</span>
             </span>
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               行距
               <Slider
                 min={0.7} max={1.8} step={0.05} value={lineHeightScale}
@@ -401,9 +401,9 @@ const StyleWashLabelTab: React.FC<Props> = ({
                 style={{ width: 100, margin: 0 }}
                 tooltip={{ formatter: (v) => `${Math.round((v ?? 1) * 100)}%` }}
               />
-              <span style={{ fontSize: 13, color: 'var(--color-text-tertiary)', width: 40 }}>{Math.round(lineHeightScale * 100)}%</span>
+              <span style={{ fontSize: 14, color: 'var(--color-text-tertiary)', width: 40 }}>{Math.round(lineHeightScale * 100)}%</span>
             </span>
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               成份-洗涤间隔
               <InputNumber
                 min={0} max={50} step={1} value={sectionGapMm}
@@ -411,7 +411,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
                 suffix="mm" style={{ width: 110 }}
               />
             </span>
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <Checkbox
                 checked={showDate}
                 onChange={e => {
@@ -430,13 +430,13 @@ const StyleWashLabelTab: React.FC<Props> = ({
                 />
               )}
             </span>
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>预览纸张宽</span>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 15 }}>预览纸张宽</span>
             <InputNumber
               min={20} max={200} value={previewW}
               onChange={v => setPreviewW(v ?? 30)}
               suffix="mm" style={{ width: 110 }}
             />
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>高</span>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: 15 }}>高</span>
             <InputNumber
               min={30} max={400} value={previewH}
               onChange={v => setPreviewH(v ?? 80)}
@@ -445,7 +445,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
           </Space>
           {/* D-411：内容放不下时明确告警——排版失败会静默表现为"多打一张空白页"或"本页被截断" */}
           {contentOverflow && (
-            <div style={{ width: '100%', marginTop: 6, fontSize: 13, color: 'var(--color-error, #ff4d4f)' }}>
+            <div style={{ width: '100%', marginTop: 6, fontSize: 14, color: 'var(--color-error, #ff4d4f)' }}>
               内容超出可打印区域：请加大「高」，或减小「距剪口偏移 / 字体大小 / 行距」，否则超出部分会被裁掉。
             </div>
           )}
@@ -454,7 +454,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
 
       <div style={{ flex: '0 0 38%', position: 'sticky', top: 0 }}>
         <div style={{
-          fontSize: 14,
+          fontSize: 15,
           fontWeight: 600,
           color: 'var(--color-text-primary, var(--color-gray-800))',
           marginBottom: 8,
@@ -465,7 +465,7 @@ const StyleWashLabelTab: React.FC<Props> = ({
           <EyeOutlined style={{ marginRight: 6 }} />
           洗水唛预览
         </div>
-        <div style={{ fontSize: 14, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', marginBottom: 8 }}>
+        <div style={{ fontSize: 15, color: 'var(--color-text-quaternary, var(--color-text-quaternary))', marginBottom: 8 }}>
           实时预览打印效果，修改左侧内容后自动更新
         </div>
         <WashLabelPreview

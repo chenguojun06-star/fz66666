@@ -45,10 +45,10 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
       width: 90,
       render: (val: string, record: SubProcessRow) => {
         const icon = record.status === 'completed'
-          ? <CheckCircleOutlined style={{ color: 'var(--color-success)', fontSize: 12, marginRight: 4 }} />
+          ? <CheckCircleOutlined style={{ color: 'var(--color-success)', fontSize: 13, marginRight: 4 }} />
           : record.status === 'in_progress'
-            ? <PlayCircleOutlined style={{ color: STAGE_COLORS[activeTab] || 'var(--color-info)', fontSize: 12, marginRight: 4 }} />
-            : <ClockCircleOutlined style={{ color: 'var(--color-text-quaternary)', fontSize: 12, marginRight: 4 }} />;
+            ? <PlayCircleOutlined style={{ color: STAGE_COLORS[activeTab] || 'var(--color-info)', fontSize: 13, marginRight: 4 }} />
+            : <ClockCircleOutlined style={{ color: 'var(--color-text-quaternary)', fontSize: 13, marginRight: 4 }} />;
         return <span>{icon}{val}</span>;
       },
     },
@@ -106,16 +106,16 @@ export function buildColumns(params: BuildColumnsParams): ColumnsType<SubProcess
           const doneColors = colorItems.filter((c) => c.completed).length;
           const allDone = doneColors >= colorItems.length;
           return (
-            <Tag color={allDone ? 'success' : 'processing'} style={{ fontSize: 11 }}>
+            <Tag color={allDone ? 'success' : 'processing'} style={{ fontSize: 12 }}>
               {allDone ? '已完成' : `${doneColors}/${colorItems.length} 色`}
             </Tag>
           );
         }
-        if (record.status === 'completed') return <Tag color="success" style={{ fontSize: 11 }}>已完成</Tag>;
-        if (record.status === 'in_progress') return <Tag color="processing" style={{ fontSize: 11 }}>{record.percent}%</Tag>;
+        if (record.status === 'completed') return <Tag color="success" style={{ fontSize: 12 }}>已完成</Tag>;
+        if (record.status === 'in_progress') return <Tag color="processing" style={{ fontSize: 12 }}>{record.percent}%</Tag>;
         // D-208：已领取未报工=生产中（与手机端 process-config 口径一致）
-        if (record.status === 'claimed') return <Tag color="processing" style={{ fontSize: 11 }}>生产中</Tag>;
-        return <Tag color="default" style={{ fontSize: 11 }}>待领取</Tag>;
+        if (record.status === 'claimed') return <Tag color="processing" style={{ fontSize: 12 }}>生产中</Tag>;
+        return <Tag color="default" style={{ fontSize: 12 }}>待领取</Tag>;
       },
     },
     {

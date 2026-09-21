@@ -65,14 +65,14 @@ const PlatformCard: React.FC<PlatformCardProps> = ({
             </Tag>
           </div>
 
-          <Paragraph type="secondary" style={{ fontSize: 14, marginBottom: 8, minHeight: 36 }}>{p.desc}</Paragraph>
+          <Paragraph type="secondary" style={{ fontSize: 15, marginBottom: 8, minHeight: 36 }}>{p.desc}</Paragraph>
           <div className="u-mb-8">{modeLabel(p.syncMode)}</div>
 
           {/* 功能标签 */}
           <div className="u-mb-8">
-            {p.features.slice(0, 3).map(f => (<Tag key={f} style={{ marginBottom: 4, fontSize: 14 }}>{f}</Tag>))}
+            {p.features.slice(0, 3).map(f => (<Tag key={f} style={{ marginBottom: 4, fontSize: 15 }}>{f}</Tag>))}
             {p.features.length > 3 && (
-              <Tooltip title={p.features.slice(3).join('、')}><Tag style={{ fontSize: 14 }}>+{p.features.length - 3}</Tag></Tooltip>
+              <Tooltip title={p.features.slice(3).join('、')}><Tag style={{ fontSize: 15 }}>+{p.features.length - 3}</Tag></Tooltip>
             )}
           </div>
 

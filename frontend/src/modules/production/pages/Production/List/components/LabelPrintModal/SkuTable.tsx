@@ -62,7 +62,7 @@ export default function SkuTable({ open, order, styleInfo, printColLabel, onPrin
     },
     {
       title: '商品编码', dataIndex: 'sku', key: 'sku', width: 160,
-      render: (v: string) => <span style={{ fontSize: 14 }}>{v || '-'}</span>,
+      render: (v: string) => <span style={{ fontSize: 15 }}>{v || '-'}</span>,
     },
     {
       title: '颜色', dataIndex: 'color', key: 'color', width: 100,

@@ -247,7 +247,7 @@
   border-radius: 6px;
   flex-shrink: 0;
   background: var(--color-bg-container);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-border-antd);
 }
 .ofh-info {
@@ -275,11 +275,11 @@
   text-overflow: ellipsis;
 }
 .ofh-inline-kv .ofh-kv-label {
-  font-size: 12px;
+  font-size: 13px;
   color: rgba(0, 0, 0, 0.42);
 }
 .ofh-inline-kv .ofh-kv-value {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.85);
 }
@@ -297,12 +297,12 @@
   min-width: 0;
 }
 .ofh-kv-label {
-  font-size: 12px;
+  font-size: 13px;
   color: rgba(0, 0, 0, 0.42);
   white-space: nowrap;
 }
 .ofh-kv-value {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.85);
   white-space: nowrap;
@@ -313,7 +313,7 @@
   color: var(--primary-color, var(--color-primary));
 }
 .ofh-kv-value--time {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
   color: rgba(0, 0, 0, 0.6);
 }
@@ -445,7 +445,7 @@
 .progress-row-actions .ant-btn {
   border-radius: 4px;
   padding-inline: 8px;
-  font-size: 12px;
+  font-size: 13px;
   min-width: 0;
 }
 
@@ -661,7 +661,7 @@
   border: none;
   background: transparent;
   color: var(--color-primary);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   padding: 4px 8px;
 }
@@ -672,7 +672,7 @@
 
 .order-flow-h-stage-meta {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 13px;
   color: rgba(0, 0, 0, 0.45);
   white-space: nowrap;
   overflow: hidden;
@@ -709,7 +709,7 @@
 }
 
 .order-flow-h-event-time {
-  font-size: 12px;
+  font-size: 13px;
   color: rgba(0, 0, 0, 0.45);
   white-space: nowrap;
 }
@@ -723,7 +723,7 @@
 }
 
 .order-flow-h-event-desc {
-  font-size: 12px;
+  font-size: 13px;
   color: rgba(0, 0, 0, 0.65);
 }
 

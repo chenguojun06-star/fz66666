@@ -70,7 +70,7 @@ const WorkerEfficiencyTab: React.FC<WorkerEfficiencyTabProps> = ({ list, loading
             title: '近7天', dataIndex: 'trend', key: 'trend', width: 70, align: 'center' as const,
             render: (v: string) => {
                 const t = TREND_ICON[v] ?? TREND_ICON.flat;
-                return <span style={{ color: t.color, fontWeight: 700, fontSize: 13 }}>{t.icon}</span>;
+                return <span style={{ color: t.color, fontWeight: 700, fontSize: 14 }}>{t.icon}</span>;
             },
         },
     ];

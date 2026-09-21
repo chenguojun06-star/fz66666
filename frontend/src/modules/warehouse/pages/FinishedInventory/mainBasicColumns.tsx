@@ -99,7 +99,7 @@ export function getMainBasicColumns(
             <StyleNoForecastHover styleNo={record.styleNo} />
             <div
               style={{
-                fontSize: 13,
+                fontSize: 14,
                 color: 'var(--neutral-text)',
                 fontWeight: 500,
                 maxWidth: '100%',
@@ -149,7 +149,7 @@ export function getMainBasicColumns(
               onClick={() => handlers?.handleViewSkuDetail(record)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlers?.handleViewSkuDetail(record); } }}
               style={{
-                fontSize: 13,
+                fontSize: 14,
                 fontFamily: 'var(--font-family-mono, monospace)',
                 color: 'var(--color-primary)',
                 cursor: 'pointer',

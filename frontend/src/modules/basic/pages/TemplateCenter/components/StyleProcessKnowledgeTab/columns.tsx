@@ -33,7 +33,7 @@ export const buildColumns = (): ColumnsType<ProcessKnowledgeItem> => [
     width: 80,
     render: (v) =>
       v ? (
-        <Tag color={STAGE_COLOR[v] || 'default'} style={{ fontSize: 14 }}>
+        <Tag color={STAGE_COLOR[v] || 'default'} style={{ fontSize: 15 }}>
           {v}
         </Tag>
       ) : (

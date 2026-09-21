@@ -117,7 +117,7 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
             if (!opts.length) return null;
             return (
               <div key={g.title}>
-                <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>
                   {g.title}
                 </Typography.Text>
                 <div className="u-d-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 16px' }}>
@@ -128,7 +128,7 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
           })}
           {others.length > 0 && (
             <div>
-              <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
+              <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>
                 其他
               </Typography.Text>
               <div className="u-d-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 16px' }}>
@@ -145,7 +145,7 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
     <Checkbox key={c.key} value={c.key} style={{ marginInlineStart: 0 }}>
       {c.label}
       {c.key.startsWith('ext_') && (
-        <Tag style={{ marginInlineStart: 6, fontSize: 11, lineHeight: '16px', padding: '0 4px' }}>自定义</Tag>
+        <Tag style={{ marginInlineStart: 6, fontSize: 12, lineHeight: '16px', padding: '0 4px' }}>自定义</Tag>
       )}
     </Checkbox>
   );
@@ -169,7 +169,7 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
         <Space>
           <SettingOutlined />
           <span>{title}</span>
-          <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 'normal' }}>
+          <Typography.Text type="secondary" style={{ fontSize: 13, fontWeight: 'normal' }}>
             已选 {visibleCount}/{columnOptions.length}
           </Typography.Text>
         </Space>
@@ -191,7 +191,7 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
     >
       {presets?.length ? (
         <>
-          <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+          <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
             推荐方案，一键套用：
           </Typography.Text>
           <Space wrap size={8} style={{ marginBottom: 4 }}>
@@ -216,7 +216,7 @@ export const ColumnSettingsDrawer: React.FC<ColumnSettingsDrawerProps> = ({
       {renderOptions()}
 
       <Divider style={{ margin: '12px 0' }} />
-      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+      <Typography.Text type="secondary" style={{ fontSize: 13 }}>
         勾选要显示的字段，取消勾选即隐藏。方案会自动保存到你的账号，换电脑也生效。
       </Typography.Text>
     </SideDrawer>

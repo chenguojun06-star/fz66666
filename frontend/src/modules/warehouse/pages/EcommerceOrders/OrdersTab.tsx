@@ -64,7 +64,7 @@ const OrdersTab: React.FC<Props> = ({ onInitReturn }) => {
                   {s.key === 'pending' && <Badge status="error" style={{ marginRight: 4 }} />}
                   {s.title}
                   {s.key === 'pending' && h.isFilteringPending && (
-                    <Tag color="red" style={{ marginLeft: 6, fontSize: 10 }}>筛选中</Tag>
+                    <Tag color="red" style={{ marginLeft: 6, fontSize: 11 }}>筛选中</Tag>
                   )}
                 </span>}
                 value={s.value} suffix={s.suffix}

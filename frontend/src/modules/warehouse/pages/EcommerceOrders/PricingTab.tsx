@@ -33,7 +33,7 @@ const PricingTab: React.FC = () => {
 
   return (
     <div>
-      <Alert style={{ marginBottom: 14, fontSize: 14 }} type="info" showIcon
+      <Alert style={{ marginBottom: 14, fontSize: 15 }} type="info" showIcon
         title="此处的【单价】和【成本价】将同步显示在商品仓储的单价列和毛利计算中。点击【定价】按钮直接修改，保存后实时生效。" />
       <Card style={{ marginBottom: 10 }}>
         <Space>

@@ -40,10 +40,10 @@ const HealingPanel: React.FC<HealingPanelProps> = ({
               <span className="c-heal-detail">{item.detail}</span>
               <span className="u-ml-auto u-fshrink-0">
                 {item.autoFixed
-                  ? <Tag style={{ fontSize: 14, background: 'rgba(45, 127, 249, 0.13)', color: 'var(--color-primary-light)', borderColor: 'var(--color-primary)55' }}>已自修</Tag>
+                  ? <Tag style={{ fontSize: 15, background: 'rgba(45, 127, 249, 0.13)', color: 'var(--color-primary-light)', borderColor: 'var(--color-primary)55' }}>已自修</Tag>
                   : item.status !== 'OK'
-                    ? <Tag style={{ fontSize: 14, background: 'var(--color-warning)22', color: 'var(--color-warning)', borderColor: 'var(--color-warning)55' }}>需处理</Tag>
-                    : <Tag style={{ fontSize: 14, background: 'rgba(82, 196, 26, 0.13)', color: 'var(--color-success)', borderColor: 'var(--color-success)55' }}>正常</Tag>
+                    ? <Tag style={{ fontSize: 15, background: 'var(--color-warning)22', color: 'var(--color-warning)', borderColor: 'var(--color-warning)55' }}>需处理</Tag>
+                    : <Tag style={{ fontSize: 15, background: 'rgba(82, 196, 26, 0.13)', color: 'var(--color-success)', borderColor: 'var(--color-success)55' }}>正常</Tag>
                 }
               </span>
             </div>
@@ -57,13 +57,13 @@ const HealingPanel: React.FC<HealingPanelProps> = ({
               style={{
                 background: 'transparent', color: 'var(--color-primary)',
                 border: '1px solid var(--color-primary)', borderRadius: 6, padding: '5px 16px', cursor: repairing ? 'wait' : 'pointer',
-                fontSize: 14, fontWeight: 600, opacity: repairing ? 0.6 : 1,
+                fontSize: 15, fontWeight: 600, opacity: repairing ? 0.6 : 1,
               }}
             >
               {repairing ? '修复中…' : ' 一键修复'}
             </button>
             {repairResult && (
-              <span style={{ fontSize: 14, color: repairResult.needManual < 0 ? 'var(--color-danger)' : 'var(--color-success)' }}>
+              <span style={{ fontSize: 15, color: repairResult.needManual < 0 ? 'var(--color-danger)' : 'var(--color-success)' }}>
                 {repairResult.needManual < 0 ? '修复失败' : `已修复 ${repairResult.autoFixed} 项，${repairResult.needManual} 项需人工`}
               </span>
             )}

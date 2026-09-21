@@ -51,7 +51,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   } = data;
 
   return (
-    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 11, lineHeight: 1.5, boxSizing: 'border-box' }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 12, lineHeight: 1.5, boxSizing: 'border-box' }}>
       <HeaderSection order={order} deadline={deadline} />
 
       <AlertsSection

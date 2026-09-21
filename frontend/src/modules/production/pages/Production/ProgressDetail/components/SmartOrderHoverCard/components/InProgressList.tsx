@@ -43,7 +43,7 @@ const InProgressList: React.FC<Props> = ({
           <React.Fragment key={s.label}>
             {showGroupHeader && (
               <div style={{
-                fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600,
+                fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 600,
                 marginTop: idx > 0 ? 6 : 0, marginBottom: 2,
                 display: 'flex', alignItems: 'center', gap: 4,
               }}>
@@ -61,7 +61,7 @@ const InProgressList: React.FC<Props> = ({
                 {progressInsight?.bottleneck?.stage === s.label && (
                   <span style={{
                     background: 'var(--status-success-bg)', color: 'var(--color-danger)',
-                    borderRadius: 8, padding: '0 5px', fontSize: 11, fontWeight: 700,
+                    borderRadius: 8, padding: '0 5px', fontSize: 12, fontWeight: 700,
                   }}>瓶颈</span>
                 )}
                 <div className="u-fshrink-0 u-ov-hidden" style={{ width: 60, height: 4, background: 'var(--color-bg-highlight)', borderRadius: 2 }}>
@@ -80,7 +80,7 @@ const InProgressList: React.FC<Props> = ({
                 {s.workerCount > 0 && (
                   <span style={{
                     color: 'var(--color-primary)', background: 'var(--status-processing-bg)',
-                    padding: '0px 5px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                    padding: '0px 5px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                   }}>
                      {s.workerCount}人
                   </span>

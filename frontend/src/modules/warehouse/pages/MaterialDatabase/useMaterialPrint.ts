@@ -66,30 +66,30 @@ const buildMaterialPrintHtml = (dataList: MaterialDatabase[]): string => {
   <title>物料资料库清单</title>
   <style>
     @page { margin: 12mm; }
-    body { font-family: system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; font-size: 13px; color: var(--color-text-primary); padding: 24px; background: var(--color-bg-base); line-height: 1.7; }
+    body { font-family: system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; font-size: 14px; color: var(--color-text-primary); padding: 24px; background: var(--color-bg-base); line-height: 1.7; }
     .title { text-align: center; font-size: 26px; font-weight: 700; margin-bottom: 6px; letter-spacing: 3px; }
-    .subtitle { text-align: center; font-size: 12px; color: var(--color-gray-label); margin-bottom: 20px; }
-    .info-bar { display: flex; justify-content: space-between; padding: 10px 16px; background: var(--color-slate-50); border: 1px solid var(--color-border-light); margin-bottom: 20px; font-size: 12px; }
+    .subtitle { text-align: center; font-size: 13px; color: var(--color-gray-label); margin-bottom: 20px; }
+    .info-bar { display: flex; justify-content: space-between; padding: 10px 16px; background: var(--color-slate-50); border: 1px solid var(--color-border-light); margin-bottom: 20px; font-size: 13px; }
     /* ---- 汇总区 ---- */
     .summary-section { margin-bottom: 24px; }
     .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
     .summary-card { padding: 14px 16px; background: var(--color-slate-100); border: 1px solid var(--color-border-light); text-align: center; border-radius: 6px; }
     .summary-card.highlight { background: linear-gradient(135deg, #F6FFED, #ffd4b8); border-color: #ff7a45; }
-    .summary-card-label { font-size: 11px; color: var(--color-gray-dark); margin-bottom: 6px; }
+    .summary-card-label { font-size: 12px; color: var(--color-gray-dark); margin-bottom: 6px; }
     .summary-card-value { font-size: 18px; font-weight: 700; color: var(--color-text-primary); }
     .summary-card.highlight .summary-card-value { color: var(--color-orange-700); font-size: 20px; }
     .type-stats { display: flex; flex-wrap: wrap; gap: 8px; }
-    .type-stat { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--status-processing-bg); border: 1px solid var(--status-processing-border); border-radius: 4px; font-size: 12px; }
+    .type-stat { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--status-processing-bg); border: 1px solid var(--status-processing-border); border-radius: 4px; font-size: 13px; }
     .type-name { font-weight: 600; color: var(--color-info); }
     .type-count, .type-qty { color: var(--color-gray-dark); }
     .section { page-break-inside: avoid; }
-    table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 16px; }
     th, td { border: 1px solid var(--color-zinc-300); padding: 6px 8px; vertical-align: middle; }
     th { background: var(--color-slate-100); font-weight: 600; color: var(--color-gray-800); text-align: center; }
     tbody tr:hover { background: var(--color-slate-50); }
-    .footer { margin-top: 30px; text-align: center; font-size: 11px; color: var(--color-gray-label); padding-top: 12px; border-top: 1px solid var(--color-zinc-200); }
+    .footer { margin-top: 30px; text-align: center; font-size: 12px; color: var(--color-gray-label); padding-top: 12px; border-top: 1px solid var(--color-zinc-200); }
     .print-btn-bar { position: fixed; top: 10px; right: 10px; z-index: 999; }
-    .print-btn { padding: 8px 16px; background: transparent; color: var(--color-primary); border: 1px solid var(--color-primary); border-radius: 4px; cursor: pointer; font-size: 13px; }
+    .print-btn { padding: 8px 16px; background: transparent; color: var(--color-primary); border: 1px solid var(--color-primary); border-radius: 4px; cursor: pointer; font-size: 14px; }
     @media print {
       .no-print { display: none !important; }
       .print-btn-bar { display: none; }

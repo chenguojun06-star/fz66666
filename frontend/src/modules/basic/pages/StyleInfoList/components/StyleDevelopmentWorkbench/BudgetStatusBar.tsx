@@ -46,7 +46,7 @@ const BudgetStatusBar: React.FC<BudgetStatusBarProps> = ({ stageCards, activeSec
         margin: '8px 0',
         background: 'var(--color-bg-subtle, var(--color-bg-container))',
         borderRadius: 6,
-        fontSize: 13,
+        fontSize: 14,
         border: '1px solid var(--color-border-light, var(--color-border-light))',
       }}
     >

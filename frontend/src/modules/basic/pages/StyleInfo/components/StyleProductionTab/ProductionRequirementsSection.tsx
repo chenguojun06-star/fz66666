@@ -382,7 +382,7 @@ const ProductionRequirementsSection: React.FC<Props> = ({
           border: '1px solid rgba(0,0,0,0.15)',
           background: '#fff',
           fontFamily: "'PingFang SC', 'Microsoft YaHei', monospace",
-          fontSize: 14,
+          fontSize: 15,
           lineHeight: '2',
           outline: 'none',
           whiteSpace: 'pre-wrap',

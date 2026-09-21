@@ -106,7 +106,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
   };
 
   return (
-    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 11, padding: '2px 0', boxSizing: 'border-box' }}>
+    <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 12, padding: '2px 0', boxSizing: 'border-box' }}>
       {/* 头部：款号 + 当前阶段 */}
       <div style={{
         display: 'flex',
@@ -117,7 +117,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
         borderBottom: '1px solid var(--color-border-light)',
       }}>
         <span className="u-fw-600 u-fs-12" style={{ color: 'var(--color-text-primary)' }}>{record.styleNo}</span>
-        <Tag color="blue" style={{ margin: 0, fontSize: 12, lineHeight: '18px' }}>{progressNode}</Tag>
+        <Tag color="blue" style={{ margin: 0, fontSize: 13, lineHeight: '18px' }}>{progressNode}</Tag>
       </div>
 
       <div className="u-mb-10">
@@ -141,7 +141,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
                 {s.label}
               </span>
               {isNext && !s.done && (
-                <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px', flexShrink: 0 }}>
+                <Tag color="blue" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', flexShrink: 0 }}>
                   下一步
                 </Tag>
               )}
@@ -170,7 +170,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
             : `${doneCount}/${STAGES.length} 进行中`}
         </span>
         {riskLabel && (
-          <span style={{ color: riskColor, fontWeight: 600, fontSize: 11 }}>
+          <span style={{ color: riskColor, fontWeight: 600, fontSize: 12 }}>
             {riskLabel}
           </span>
         )}

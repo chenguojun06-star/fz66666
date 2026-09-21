@@ -11,7 +11,7 @@ function TrendArrow({ trend }: { trend: TrendPoint[] }) {
   if (pct === 0) return null;
   const up = pct > 0;
   return (
-    <span style={{ fontSize: 14, color: up ? 'var(--color-success)' : 'var(--color-danger)', marginLeft: 6 }}>
+    <span style={{ fontSize: 15, color: up ? 'var(--color-success)' : 'var(--color-danger)', marginLeft: 6 }}>
       {up ? <ArrowUpOutlined /> : <ArrowDownOutlined />} {Math.abs(pct)}%
     </span>
   );

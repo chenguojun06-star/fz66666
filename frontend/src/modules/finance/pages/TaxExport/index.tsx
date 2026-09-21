@@ -138,12 +138,12 @@ const TaxExport: React.FC = () => {
                   <div className="u-d-flex u-ai-center u-gap-6 u-mb-4">
                     <Text strong style={{ color: locked ? 'var(--color-text-quaternary)' : undefined }}>{opt.label}</Text>
                     {opt.free
-                      ? <Tag color="green" style={{ fontSize: 14 }}>免费</Tag>
-                      : <Tag color={subscribed ? 'gold' : 'default'} icon={subscribed ? <CheckCircleOutlined /> : <LockOutlined />} style={{ fontSize: 14 }}>
+                      ? <Tag color="green" style={{ fontSize: 15 }}>免费</Tag>
+                      : <Tag color={subscribed ? 'gold' : 'default'} icon={subscribed ? <CheckCircleOutlined /> : <LockOutlined />} style={{ fontSize: 15 }}>
                           {subscribed ? '已解锁' : '付费'}
                         </Tag>}
                   </div>
-                  <Text type="secondary" style={{ fontSize: 14 }}>{opt.desc}</Text>
+                  <Text type="secondary" style={{ fontSize: 15 }}>{opt.desc}</Text>
                   {selected && <CheckCircleOutlined style={{ position: 'absolute', top: 10, right: 10, color: 'var(--color-info)' }} />}
                 </div>
               </Col>
@@ -173,7 +173,7 @@ const TaxExport: React.FC = () => {
                   <div style={{ fontSize: 32, lineHeight: 1 }}>{type.icon}</div>
                   <div className="u-flex-1">
                     <Text strong style={{ fontSize: 15, color: type.color }}>{type.title}</Text>
-                    <Paragraph type="secondary" style={{ margin: '4px 0 12px', fontSize: 14 }}>{type.desc}</Paragraph>
+                    <Paragraph type="secondary" style={{ margin: '4px 0 12px', fontSize: 15 }}>{type.desc}</Paragraph>
                     <Button type="primary" icon={<DownloadOutlined />} loading={loading[type.key]}
                       onClick={() => handleExport(type.key)} style={{ background: type.color, borderColor: type.color }}>
                       导出 Excel
@@ -187,7 +187,7 @@ const TaxExport: React.FC = () => {
         <Divider style={{ margin: '20px 0 12px' }} />
         <div className="u-d-flex u-gap-8 u-ai-center">
           <FileExcelOutlined style={{ color: 'var(--color-success)', fontSize: 16 }} />
-          <Text type="secondary" style={{ fontSize: 14 }}>导出文件为 .xlsx 格式 · 金蝶/用友格式当前为基础凭证导入列模板，如客户账套科目编码有差异，仍需按企业实际会计科目校准。</Text>
+          <Text type="secondary" style={{ fontSize: 15 }}>导出文件为 .xlsx 格式 · 金蝶/用友格式当前为基础凭证导入列模板，如客户账套科目编码有差异，仍需按企业实际会计科目校准。</Text>
         </div>
       </Card>
     </div>

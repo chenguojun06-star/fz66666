@@ -412,7 +412,7 @@ const SalaryConfigPage: React.FC = () => {
                       placeholder="2026-09"
                     />
                     <Button onClick={() => void fetchMonthly(attendanceMonth)}>刷新</Button>
-                    <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>
                       数据来自考勤表自动汇总（打卡工时/出勤天数/迟到/请假），按该员工设定的规则算出工资
                     </span>
                   </Space>
@@ -561,7 +561,7 @@ const SalaryConfigPage: React.FC = () => {
         ) : calcResult ? (
           <>
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 13, marginBottom: 6 }}>打印/显示哪些项（不想让员工看到的可以勾掉）：</div>
+              <div style={{ fontSize: 14, marginBottom: 6 }}>打印/显示哪些项（不想让员工看到的可以勾掉）：</div>
               <Checkbox.Group
                 options={SALARY_FIELDS.map((f) => ({ label: f.label, value: f.key }))}
                 value={visibleFields}

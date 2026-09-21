@@ -46,7 +46,7 @@ export const internalOrderColumns = [
         render: (status: string) => {
             const info = statusMap[status] || { text: '未知', color: 'var(--neutral-text-secondary)' };
             return (
-                <span style={{ padding: '2px 8px', fontSize: 14, backgroundColor: `${info.color}15`, color: info.color, fontWeight: 500 }}>
+                <span style={{ padding: '2px 8px', fontSize: 15, backgroundColor: `${info.color}15`, color: info.color, fontWeight: 500 }}>
                     {info.text}
                 </span>
             );

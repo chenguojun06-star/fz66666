@@ -10,7 +10,7 @@
   gap: 8px;
   padding: 8px 12px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
 }
 .riskCard.riskHigh {
@@ -27,7 +27,7 @@
 }
 .riskProb {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 15px;
   min-width: 42px;
   text-align: center;
 }
@@ -43,7 +43,7 @@
 }
 .riskDesc {
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
   margin-top: 2px;
 }
 
@@ -53,18 +53,18 @@
   border: 1px solid var(--color-blue-200);
   border-radius: 8px;
   padding: 12px 12px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .simulationTitle {
   font-weight: 600;
   color: var(--color-primary-darker);
   margin-bottom: 8px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .simulationTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 14px;
 }
 .simulationTable th,
 .simulationTable td {
@@ -80,7 +80,7 @@
 .simulationRec {
   margin-top: 8px;
   color: var(--color-purple-700);
-  font-size: 13px;
+  font-size: 14px;
   font-style: italic;
 }
 
@@ -90,13 +90,13 @@
   background: linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%);
   border: 1px solid var(--status-info-border);
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-purple-700);
 }
 .clarificationLabel {
   font-weight: 600;
   margin-bottom: 4px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .feedbackRow {
@@ -112,7 +112,7 @@
   border: 1px solid var(--color-border-antd);
   border-radius: 6px;
   padding: 4px 8px;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   color: var(--color-text-secondary);
   transition: all 0.2s;
@@ -130,7 +130,7 @@
   color: var(--color-info);
 }
 .feedbackLabel {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-tertiary);
   margin-left: auto;
 }

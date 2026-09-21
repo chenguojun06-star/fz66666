@@ -140,7 +140,7 @@ const FactoryInsightDrawer: React.FC<FactoryInsightDrawerProps> = ({
                     <div className="u-mt-6 u-fs-11 u-ta-center u-ws-nowrap" style={{ color: 'var(--color-text-secondary)' }}>
                       {n.label}
                     </div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color }}>
                       {n.daysFromToday >= 0 ? `+${n.daysFromToday}天` : `${n.daysFromToday}天`}
                     </div>
                   </div>

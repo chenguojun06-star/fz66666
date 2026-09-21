@@ -515,7 +515,7 @@
   margin-bottom: clamp(16px, 1.4vw, 22px);
 }
 
-.login-company-selected { color: var(--color-blue-500); font-size: 14px; }
+.login-company-selected { color: var(--color-blue-500); font-size: 15px; }
 
 .login-form-wrapper .ant-input-affix-wrapper,
 .login-form-wrapper .ant-auto-complete .ant-input-affix-wrapper,
@@ -664,7 +664,7 @@
   font-size: clamp(9px, 0.65vw, 11px);
 }
 
-.login-filing { margin-top: clamp(4px, 0.6vw, 12px); font-size: 12px; }
+.login-filing { margin-top: clamp(4px, 0.6vw, 12px); font-size: 13px; }
 
 .login-filing-row {
   display: flex;

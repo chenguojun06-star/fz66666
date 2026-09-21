@@ -166,7 +166,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
             />
           </Space>
           <span style={{
-            fontSize: 12, color: 'var(--color-text-tertiary)',
+            fontSize: 13, color: 'var(--color-text-tertiary)',
             padding: '2px 8px',
             background: isManual ? 'var(--color-warning-bg, #fffbe6)' : 'var(--color-primary-bg, #e6f4ff)',
             borderRadius: 10,
@@ -228,7 +228,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
       }}>
         <Space size="middle" align="center" wrap>
           <Space size={8} align="center">
-            <CheckCircleFilled style={{ color: 'var(--color-primary, #2563eb)', fontSize: 14 }} />
+            <CheckCircleFilled style={{ color: 'var(--color-primary, #2563eb)', fontSize: 15 }} />
             <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>SKC编号</span>
           </Space>
           {skcEditing ? (
@@ -248,7 +248,7 @@ const StyleSkuTab: React.FC<StyleSkuTabProps> = (props) => {
             <>
               <span style={{
                 fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
-                fontSize: 14, fontWeight: 600,
+                fontSize: 15, fontWeight: 600,
                 padding: '2px 8px',
                 background: '#fff',
                 border: '1px solid var(--color-border-light)',

@@ -53,13 +53,13 @@ const RoleListPanel: React.FC<RoleListPanelProps> = ({
           <Button
             type="text"
             size="small"
-            icon={<EditOutlined style={{ fontSize: 12 }} />}
+            icon={<EditOutlined style={{ fontSize: 13 }} />}
             onClick={() => onEdit(role as any)}
           />
           <Button
             type="text"
             size="small"
-            icon={<DeleteOutlined style={{ fontSize: 12 }} />}
+            icon={<DeleteOutlined style={{ fontSize: 13 }} />}
             onClick={() => onDelete(role.id)}
           />
         </span>

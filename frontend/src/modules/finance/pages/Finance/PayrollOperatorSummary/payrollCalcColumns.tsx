@@ -20,7 +20,7 @@ export function getSummaryPayrollColumns(deps: SummaryColumnDeps): any[] {
                     : 0;
                 const pct = avgQty > 0 ? Math.round((qty - avgQty) / avgQty * 100) : 0;
                 const trendEl = summaryRows.length > 1 && Math.abs(pct) > 5
-                    ? <span style={{ marginLeft: 6, fontSize: 14, color: pct > 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                    ? <span style={{ marginLeft: 6, fontSize: 15, color: pct > 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
                         {pct > 0 ? `↑${pct}%` : `↓${Math.abs(pct)}%`}
                       </span>
                     : null;

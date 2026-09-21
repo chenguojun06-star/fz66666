@@ -14,13 +14,13 @@
 
 .orphan-header h2 {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-gray-800);
 }
 
 .orphan-desc {
   color: var(--color-text-tertiary);
-  font-size: 14px;
+  font-size: 15px;
   margin-bottom: 16px;
 }
 
@@ -82,13 +82,13 @@
 }
 
 .orphan-category-label {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--color-gray-800);
 }
 
 .orphan-category-count {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-danger);
   font-weight: 500;
 }

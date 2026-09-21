@@ -56,7 +56,7 @@
 .ef-thumb-empty {
   background: var(--color-bg-subtle);
   color: var(--color-text-quaternary);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* ── 图片下方区域：标签 + 日期 ── */
@@ -77,7 +77,7 @@
 
 .ef-delivery-badge {
   display: inline-block;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
   padding: 2px 4px;
   border-radius: 4px;
@@ -118,13 +118,13 @@
 .ef-field-label {
   color: var(--color-text-tertiary);
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
 }
 
 .ef-field-value {
   color: var(--color-text-primary);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
   overflow: hidden;
@@ -135,7 +135,7 @@
 
 .ef-field-row .ant-tag {
   margin-inline-end: 0;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 14px;
   padding: 0 4px;
 }
@@ -163,7 +163,7 @@
   display: inline-block;
   min-width: 36px;
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--color-text-primary);
   font-weight: 500;
@@ -201,20 +201,20 @@
 }
 
 .ef-compact .style-smart-stage__time {
-  font-size: 12px;
+  font-size: 13px;
   min-height: 11px;
   color: var(--color-accent-emerald);
   font-weight: 600;
 }
 
 .ef-compact .style-smart-stage__time-start {
-  font-size: 12px;
+  font-size: 13px;
   min-height: 11px;
   color: var(--color-text-secondary);
 }
 
 .ef-compact .style-smart-stage__time-combined {
-  font-size: 12px;
+  font-size: 13px;
   min-height: 11px;
   max-width: 100%;
   overflow: hidden;
@@ -228,7 +228,7 @@
 }
 
 .ef-compact .style-smart-stage__label {
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* ─── 操作按钮区：常显（原 hover 显示导致用户找不到按钮） ─── */
@@ -263,7 +263,7 @@
 }
 
 .ef-compact .style-smart-row__overview-value {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-zinc-600);
   white-space: nowrap;

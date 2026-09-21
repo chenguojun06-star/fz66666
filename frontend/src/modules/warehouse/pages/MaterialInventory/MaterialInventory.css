@@ -54,7 +54,7 @@
 }
 
 .material-info-section-title {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--neutral-text);
   font-weight: 600;
   margin-bottom: 8px;
@@ -101,7 +101,7 @@
 }
 
 .fabric-properties-title {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--neutral-text);
   font-weight: 700;
   margin-bottom: 12px;
@@ -183,7 +183,7 @@
 }
 
 .stock-value {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
 }
 

@@ -187,7 +187,7 @@ const BatchCompleteModal: React.FC<BatchCompleteModalProps> = ({
                 </Checkbox>
                 <span className="u-ml-auto u-d-flex u-ai-center u-gap-6">
                   {row.completed
-                    ? <Tag color="success" style={{ fontSize: 11 }}>已完成</Tag>
+                    ? <Tag color="success" style={{ fontSize: 12 }}>已完成</Tag>
                     : (
                       <InputNumber
                         size="small"

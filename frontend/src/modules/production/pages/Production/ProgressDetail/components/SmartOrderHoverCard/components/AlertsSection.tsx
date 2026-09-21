@@ -36,7 +36,7 @@ const AlertsSection: React.FC<Props> = ({
     {predictHint && (
       <div style={{
         padding: '3px 10px', background: 'var(--color-bg-highlight)', borderRadius: 6,
-        marginBottom: 8, fontSize: 11, color: 'var(--color-primary)',
+        marginBottom: 8, fontSize: 12, color: 'var(--color-primary)',
         display: 'flex', alignItems: 'center', gap: 6,
       }}>
         <span></span>
@@ -50,7 +50,7 @@ const AlertsSection: React.FC<Props> = ({
     {risk && (
       <div style={{
         padding: '4px 10px', background: risk.bg, borderRadius: 6,
-        marginBottom: 8, fontSize: 11, color: risk.color, fontWeight: 700,
+        marginBottom: 8, fontSize: 12, color: risk.color, fontWeight: 700,
       }}>
         {risk.text}
         {speed > 0 && total > 0 && daysLeft !== null && daysLeft >= 0 && (
@@ -65,7 +65,7 @@ const AlertsSection: React.FC<Props> = ({
     {(order.unqualifiedQuantity ?? 0) > 0 && (
       <div style={{
         padding: '3px 10px', background: 'var(--status-success-bg)', borderRadius: 6,
-        marginBottom: 8, fontSize: 11, color: 'var(--color-danger)', fontWeight: 700,
+        marginBottom: 8, fontSize: 12, color: 'var(--color-danger)', fontWeight: 700,
         display: 'flex', alignItems: 'center', gap: 5,
       }}>
         <span></span>
@@ -77,11 +77,11 @@ const AlertsSection: React.FC<Props> = ({
     {(order.deliverySlaStatus || (order as any).cpk) && (
       <div style={{
         padding: '4px 10px', background: 'var(--color-bg-highlight)', borderRadius: 6,
-        marginBottom: 8, fontSize: 11, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center',
+        marginBottom: 8, fontSize: 12, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center',
       }}>
         {order.deliverySlaStatus && (
           <span style={{
-            padding: '1px 6px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+            padding: '1px 6px', borderRadius: 8, fontSize: 12, fontWeight: 600,
             background: order.deliverySlaStatus === 'completed' ? 'var(--status-success-bg)' :
                        order.deliverySlaStatus === 'on_track' ? 'var(--status-processing-bg)' :
                        order.deliverySlaStatus === 'at_risk' ? 'var(--status-warning-bg)' : 'var(--status-success-bg)',
@@ -97,7 +97,7 @@ const AlertsSection: React.FC<Props> = ({
         )}
         {(order as any).cpk != null && (
           <span style={{
-            padding: '1px 6px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+            padding: '1px 6px', borderRadius: 8, fontSize: 12, fontWeight: 600,
             background: (order as any).cpk >= 1.33 ? 'var(--status-success-bg)' : (order as any).cpk >= 1.0 ? 'var(--status-warning-bg)' : 'var(--status-success-bg)',
             color: (order as any).cpk >= 1.33 ? 'var(--color-success)' : (order as any).cpk >= 1.0 ? 'var(--color-warning)' : 'var(--color-danger)',
           }}>
@@ -112,7 +112,7 @@ const AlertsSection: React.FC<Props> = ({
       <div style={{
         padding: '3px 10px', borderRadius: 6, marginBottom: 8,
         background: todayTask.color + '14',
-        display: 'flex', alignItems: 'center', gap: 6, fontSize: 11,
+        display: 'flex', alignItems: 'center', gap: 6, fontSize: 12,
       }}>
         <span></span>
         <span style={{ fontWeight: 700, color: todayTask.color }}>
@@ -122,7 +122,7 @@ const AlertsSection: React.FC<Props> = ({
         <span style={{
           background: todayTask.color + '28',
           color: todayTask.color,
-          padding: '0 5px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+          padding: '0 5px', borderRadius: 8, fontSize: 12, fontWeight: 600,
         }}>
           {todayTask.label}
         </span>

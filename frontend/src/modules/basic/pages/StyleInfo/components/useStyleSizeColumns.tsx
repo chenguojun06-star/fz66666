@@ -110,7 +110,7 @@ export function useStyleSizeColumns({
                     {editableMode && (
                       <DeleteOutlined
                         onClick={() => setChunkImageUrls(record.chunkRowKeys, imgs.filter((_, ii) => ii !== i))}
-                        style={{ position: 'absolute', top: -4, right: -4, background: 'rgba(0,0,0,0.55)', color: 'var(--color-bg-base)', borderRadius: '50%', padding: 2, fontSize: 14, cursor: 'pointer' }}
+                        style={{ position: 'absolute', top: -4, right: -4, background: 'rgba(0,0,0,0.55)', color: 'var(--color-bg-base)', borderRadius: '50%', padding: 2, fontSize: 15, cursor: 'pointer' }}
                       />
                     )}
                   </div>
@@ -294,7 +294,7 @@ export function useStyleSizeColumns({
           return (
             <div className="u-d-flex u-fd-column u-gap-6">
               <Tooltip title={detail || undefined}>
-                <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--color-slate-700)', whiteSpace: 'pre-wrap', cursor: detail ? 'help' : 'default' }}>{summary || '-'}</div>
+                <div style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--color-slate-700)', whiteSpace: 'pre-wrap', cursor: detail ? 'help' : 'default' }}>{summary || '-'}</div>
               </Tooltip>
               {editableMode ? (
                 <Button onClick={() => openGradingConfig(record)}>

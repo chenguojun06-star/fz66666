@@ -181,7 +181,7 @@ const printCss = `
   }
   html, body {
     font-family: 'Heiti SC', 'Songti SC', 'Hiragino Sans GB', 'STSong', 'Arial Unicode MS', serif;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: normal;
     color: var(--color-black);
     background: white;
@@ -228,7 +228,7 @@ const printCss = `
     align-items: center;
     justify-content: center;
     color: var(--color-gray-label);
-    font-size: 11px;
+    font-size: 12px;
   }
   .header-right {
     flex: 1;
@@ -244,7 +244,7 @@ const printCss = `
   .info-item {
     display: flex;
     align-items: center;
-    font-size: 12px;
+    font-size: 13px;
   }
   .info-label {
     color: var(--color-gray-800);
@@ -259,13 +259,13 @@ const printCss = `
     margin: 8px 0 4px;
   }
   .block-title {
-    font-size: 12px;
+    font-size: 13px;
     margin-bottom: 4px;
   }
   .matrix-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 11px;
+    font-size: 12px;
   }
   .matrix-table th,
   .matrix-table td {
@@ -288,7 +288,7 @@ const printCss = `
     width: 100%;
     border-collapse: collapse;
     margin: 12px 0;
-    font-size: 11px;
+    font-size: 12px;
   }
   .detail-table th,
   .detail-table td {
@@ -315,7 +315,7 @@ const printCss = `
     align-items: center;
   }
   .signature-item {
-    font-size: 12px;
+    font-size: 13px;
   }
   .signature-line {
     display: inline-block;
@@ -335,7 +335,7 @@ const printCss = `
     padding-top: 6px;
     display: flex;
     justify-content: space-between;
-    font-size: 11px;
+    font-size: 12px;
   }
   .footer-item {
     display: inline-block;

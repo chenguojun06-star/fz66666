@@ -42,7 +42,7 @@ const FactoryLeaderboard: React.FC<Props> = ({ leaderboard, lbLoading, lbCollaps
                   {r.factoryName}
                 </span>
                 <Tooltip title={`质量${r.qualityScore} · 速度${r.speedScore} · 交期${r.deliveryScore} · 成本${r.costScore}`}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: scoreColor }}>{r.totalScore}</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: scoreColor }}>{r.totalScore}</span>
                 </Tooltip>
               </div>
             );

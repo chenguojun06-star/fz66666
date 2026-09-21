@@ -186,7 +186,7 @@ const OutboundDrawer: React.FC<Props> = ({
                     {/* 表头 */}
                     <div style={{
                       display: 'grid', gridTemplateColumns: '60px 1fr 80px 80px 100px 80px',
-                      padding: '6px 12px', fontSize: 12, color: 'var(--color-text-tertiary)',
+                      padding: '6px 12px', fontSize: 13, color: 'var(--color-text-tertiary)',
                       borderBottom: '1px solid var(--color-border-secondary, var(--color-border-light))',
                     }}>
                       <div>选择</div>

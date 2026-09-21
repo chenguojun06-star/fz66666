@@ -190,7 +190,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
       <div className="u-fw-600 u-mb-6 u-d-flex u-ai-center u-gap-6">
         <span> 智能采购分析</span>
         <span style={{
-          fontSize: 14, padding: '1px 6px', borderRadius: 4,
+          fontSize: 15, padding: '1px 6px', borderRadius: 4,
           background: VERDICT_COLOR[insight.verdict], color: 'var(--color-bg-base)',
         }}>{VERDICT_LABEL[insight.verdict]}</span>
       </div>

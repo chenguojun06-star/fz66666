@@ -54,7 +54,7 @@ const InlineEditableField: React.FC<InlineEditableFieldProps> = ({ label: _label
 
   if (!editable) {
     return (
-      <span style={{ fontSize: 14, lineHeight: '22px', fontWeight: bold ? 600 : 400 }}>
+      <span style={{ fontSize: 15, lineHeight: '22px', fontWeight: bold ? 600 : 400 }}>
         {value || '-'}
       </span>
     );
@@ -70,7 +70,7 @@ const InlineEditableField: React.FC<InlineEditableFieldProps> = ({ label: _label
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
         disabled={saving}
-        style={{ fontSize: 14, lineHeight: '22px' }}
+        style={{ fontSize: 15, lineHeight: '22px' }}
         onPressEnter={handleSave}
       />
     );
@@ -80,7 +80,7 @@ const InlineEditableField: React.FC<InlineEditableFieldProps> = ({ label: _label
     <span
       onClick={() => setEditing(true)}
       style={{
-        fontSize: 14, lineHeight: '22px', cursor: 'pointer',
+        fontSize: 15, lineHeight: '22px', cursor: 'pointer',
         fontWeight: bold ? 600 : 400,
         borderBottom: '1px dashed var(--color-text-quaternary)',
         padding: '0 2px',

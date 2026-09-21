@@ -126,7 +126,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr 1.2fr',
                 gap: 12,
-                fontSize: 14,
+                fontSize: 15,
                 color: 'var(--color-text-secondary)',
                 lineHeight: '20px',
               }}

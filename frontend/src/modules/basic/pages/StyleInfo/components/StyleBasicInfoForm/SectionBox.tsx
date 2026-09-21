@@ -36,7 +36,7 @@ const SectionBox: React.FC<SectionBoxProps> = ({
     >
       <div
         style={{
-          fontSize: 14,
+          fontSize: 15,
           fontWeight: 600,
           color: 'var(--color-bg-dark)',
           marginBottom: 12,

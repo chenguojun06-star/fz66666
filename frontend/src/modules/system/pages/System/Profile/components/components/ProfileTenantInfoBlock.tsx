@@ -22,7 +22,7 @@ const ProfileTenantInfoBlock: React.FC<ProfileTenantInfoBlockProps> = ({
     if (!tenantInfo?.tenantCode) return null;
 
     return (
-        <Card title={<>工厂信息 <Typography.Text type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>（如需修改请联系管理员）</Typography.Text></>} style={{ marginBottom: 16 }}>
+        <Card title={<>工厂信息 <Typography.Text type="secondary" style={{ fontSize: 14, fontWeight: 400 }}>（如需修改请联系管理员）</Typography.Text></>} style={{ marginBottom: 16 }}>
             <Form form={tenantForm} layout="vertical" requiredMark={false}>
                 <div className="u-d-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '0 16px' }}>
                     <Form.Item label="工厂名称" name="tenantName"><Input disabled autoComplete="organization" /></Form.Item>
@@ -49,7 +49,7 @@ const ProfileTenantInfoBlock: React.FC<ProfileTenantInfoBlockProps> = ({
                     </Form.Item>
                 </div>
             </Form>
-            <Typography.Text type="secondary" style={{ fontSize: 14 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 15 }}>
                 工厂码：<Typography.Text code copyable>{tenantInfo.tenantCode}</Typography.Text>（不可修改）
             </Typography.Text>
         </Card>

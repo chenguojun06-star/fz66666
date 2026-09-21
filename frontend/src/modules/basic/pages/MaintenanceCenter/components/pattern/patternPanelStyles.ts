@@ -8,20 +8,20 @@ export const directCardStyle = {
 export const directStackStyle = { display: 'grid', gap: 12 } as const;
 
 export const directTitleStyle = {
-  fontSize: 13,
+  fontSize: 14,
   fontWeight: 600,
   color: 'var(--color-text-primary)',
   lineHeight: 1.2,
 } as const;
 
 export const directMetaStyle = {
-  fontSize: 12,
+  fontSize: 13,
   color: 'var(--neutral-text-secondary)',
   lineHeight: 1.4,
 } as const;
 
 export const directValueStyle = {
-  fontSize: 14,
+  fontSize: 15,
   fontWeight: 600,
   color: 'var(--color-text-primary)',
   lineHeight: 1.35,
@@ -29,7 +29,7 @@ export const directValueStyle = {
 
 export const directFieldLabelStyle = {
   marginBottom: 4,
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 600,
   color: 'var(--neutral-text-secondary)',
 } as const;
@@ -90,13 +90,13 @@ export const statusPillBaseStyle = {
   minWidth: 68,
   padding: '2px 10px',
   borderRadius: 999,
-  fontSize: 12,
+  fontSize: 13,
   fontWeight: 600,
   lineHeight: 1.5,
 } as const;
 
 export const editorSectionTitleStyle = {
-  fontSize: 13,
+  fontSize: 14,
   fontWeight: 600,
   color: 'var(--color-text-primary)',
   lineHeight: 1.3,

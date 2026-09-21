@@ -154,7 +154,7 @@ const AssigneeModal: React.FC<AssigneeModalProps> = ({ open, assigningRow, loadi
         </Form.Item>
 
         {defaultQuantity != null && (
-          <Text type="secondary" style={{ fontSize: 12 }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>
             样板原数量：{defaultQuantity} 件{defaultQuantity !== form.getFieldValue('quantity') ? '（已调整）' : ''}
           </Text>
         )}

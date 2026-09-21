@@ -222,7 +222,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
             key: String(index),
             label: (
               <Space>
-                <Tag color={STAGE_COLOR[group.parentNode] || 'default'} style={{ fontSize: 14, fontWeight: 600 }}>
+                <Tag color={STAGE_COLOR[group.parentNode] || 'default'} style={{ fontSize: 15, fontWeight: 600 }}>
                   {group.parentNode}
                 </Tag>
                 <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>

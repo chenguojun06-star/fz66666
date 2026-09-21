@@ -38,7 +38,7 @@
 .kb-section {
   .kb-section-title {
     margin: 0 0 12px 0;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     color: var(--color-text-secondary);
     text-transform: uppercase;
@@ -73,7 +73,7 @@
 
 .kb-plus {
   color: var(--color-text-tertiary);
-  font-size: 12px;
+  font-size: 13px;
   margin: 0 2px;
 }
 
@@ -87,20 +87,20 @@
   background: linear-gradient(180deg, var(--color-bg-base) 0%, var(--color-bg-subtle) 100%);
   border: 1px solid var(--color-border);
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--color-slate-700);
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   .kb-cmd {
-    font-size: 14px;
+    font-size: 15px;
     color: var(--color-text-secondary);
   }
 }
 
 .kb-desc {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-slate-600);
   margin-left: 16px;
 }
@@ -112,7 +112,7 @@
   text-align: center;
 
   .kb-hint {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--color-text-tertiary);
   }
 }

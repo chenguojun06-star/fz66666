@@ -52,7 +52,7 @@ export default function SelectionCenter() {
             <Select placeholder="全部品类" value={categoryFilter || undefined} onChange={v => setCategoryFilter(v ?? '')} allowClear style={{ width: 120 }}
               options={categories.map(c => ({ value: c, label: c }))} />
           )}
-          <Text type="secondary" style={{ fontSize: 14 }}>共 {filtered.length} 款 · 鼠标悬停查看评分来源、分析依据与审核意见</Text>
+          <Text type="secondary" style={{ fontSize: 15 }}>共 {filtered.length} 款 · 鼠标悬停查看评分来源、分析依据与审核意见</Text>
         </Space>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>新增候选款</Button>
       </div>
@@ -92,7 +92,7 @@ export default function SelectionCenter() {
                               <div className="u-fs-14 u-mt-6">暂无参考图</div>
                             </div>
                           )}
-                          <div className="u-pos-absolute" style={{ top: 8, right: 8 }}><Tag color={color} style={{ margin: 0, fontSize: 14 }}>{label}</Tag></div>
+                          <div className="u-pos-absolute" style={{ top: 8, right: 8 }}><Tag color={color} style={{ margin: 0, fontSize: 15 }}>{label}</Tag></div>
                           {item.trendScore != null && (
                             <div className="u-pos-absolute u-br-4 u-fs-14 u-fw-700" style={{ top: 8, left: 8, background: 'rgba(114,46,209,0.88)', padding: '2px 8px', color: 'var(--color-bg-base)' }}>
                               <ThunderboltOutlined /> {item.trendScore}
@@ -110,22 +110,22 @@ export default function SelectionCenter() {
                             {item.status === 'REJECTED' && <Tag color="red" style={{ margin: 0 }}>未通过</Tag>}
                             {item.status === 'HOLD' && <Tag color="blue" style={{ margin: 0 }}>待定</Tag>}
                             {item.status === 'PENDING' && <Tag color="orange" style={{ margin: 0 }}>待评审</Tag>}
-                            {item.trendScore != null && <Tag color={scoreMeta.color} style={{ marginLeft: 6, fontSize: 14 }}>{scoreMeta.label}</Tag>}
+                            {item.trendScore != null && <Tag color={scoreMeta.color} style={{ marginLeft: 6, fontSize: 15 }}>{scoreMeta.label}</Tag>}
                           </div>
                           <div className="u-fs-14 u-mb-10" style={{ color: 'var(--color-text-secondary)', minHeight: 34, lineHeight: 1.5 }}>
                             {latestReview?.comment || item.rejectReason || item.trendScoreReason || '悬停查看 AI 分析、趋势与价值建议'}
                           </div>
                           <Space size={6} style={{ width: '100%' }}>
                             {(item.status === 'PENDING' || item.status === 'HOLD') && (
-                              <Tooltip title="填写审核结果：通过或不通过"><Button onClick={() => openReviewModal(item)} style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)', fontSize: 14 }}>审核</Button></Tooltip>
+                              <Tooltip title="填写审核结果：通过或不通过"><Button onClick={() => openReviewModal(item)} style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)', fontSize: 15 }}>审核</Button></Tooltip>
                             )}
                             {item.status === 'APPROVED' && !item.createdStyleId && (
-                              <Tooltip title="生成正式款式，进入样衣开发流程"><Button type="primary" icon={<SendOutlined />} onClick={() => handleCreateStyle(item.id, item.styleName)} style={{ fontSize: 14 }}>下版到样衣</Button></Tooltip>
+                              <Tooltip title="生成正式款式，进入样衣开发流程"><Button type="primary" icon={<SendOutlined />} onClick={() => handleCreateStyle(item.id, item.styleName)} style={{ fontSize: 15 }}>下版到样衣</Button></Tooltip>
                             )}
-                            {item.createdStyleId && <Tag color="green" style={{ fontSize: 14, margin: 0 }}> 已下版 {item.createdStyleNo}</Tag>}
+                            {item.createdStyleId && <Tag color="green" style={{ fontSize: 15, margin: 0 }}> 已下版 {item.createdStyleNo}</Tag>}
                             {canDeleteCandidate(item) && (
                               <Tooltip title={item.status === 'APPROVED' ? '审核通过满 10 天后可手动删除候选款' : '审核不通过可直接删除'}>
-                                <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteCandidate(item)} style={{ fontSize: 14 }}>删除</Button>
+                                <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteCandidate(item)} style={{ fontSize: 15 }}>删除</Button>
                               </Tooltip>
                             )}
                           </Space>

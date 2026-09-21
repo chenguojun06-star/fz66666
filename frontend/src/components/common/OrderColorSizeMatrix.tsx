@@ -237,7 +237,7 @@ export const ColorSizeMatrixPopoverContent: React.FC<{
         gridTemplateColumns: `max-content repeat(${model.sizes.length}, minmax(20px, max-content))`,
         columnGap: 6,
         rowGap: 2,
-        fontSize: 14,
+        fontSize: 15,
         textAlign: 'center',
       }}>
         <span className="u-fw-600" style={{ color: 'var(--color-slate-400)' }}>码</span>

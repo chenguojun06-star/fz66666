@@ -54,7 +54,7 @@ const MODE_META: Record<QuickManageMode, { defaultTitle: string; nameLabel: stri
 
 /** 右侧编辑表单字段布局（label宽 + 控件） */
 const FIELD_LABEL_STYLE: React.CSSProperties = {
-  width: 76, flexShrink: 0, fontSize: 13, color: 'var(--color-text-secondary, #595959)', paddingTop: 5,
+  width: 76, flexShrink: 0, fontSize: 14, color: 'var(--color-text-secondary, #595959)', paddingTop: 5,
 };
 const FIELD_ROW_STYLE: React.CSSProperties = { display: 'flex', gap: 8, marginBottom: 12, alignItems: 'flex-start' };
 
@@ -415,7 +415,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                       <div className="u-fw-600 u-fs-13 u-ov-hidden u-ws-nowrap u-d-flex u-ai-center u-gap-6" style={{ textOverflow: 'ellipsis' }}>
                         <span className="u-ov-hidden u-ws-nowrap" style={{ textOverflow: 'ellipsis' }}>{row.name}</span>
                         {mode === 'supplier' && row.supplierTag && (
-                          <Tag style={{ flexShrink: 0, fontSize: 10, lineHeight: '16px', padding: '0 6px', margin: 0 }}>{row.supplierTag}</Tag>
+                          <Tag style={{ flexShrink: 0, fontSize: 11, lineHeight: '16px', padding: '0 6px', margin: 0 }}>{row.supplierTag}</Tag>
                         )}
                       </div>
                       {meta.hasContact && (

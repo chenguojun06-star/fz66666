@@ -121,7 +121,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           >
             <style>{`
               .print-section { margin-bottom: 16px; }
-              .print-section-title { font-size: 13px; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-radius: 2px; margin-bottom: 0; border: 1px solid #d9d9d9; border-bottom: none; }
+              .print-section-title { font-size: 14px; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-radius: 2px; margin-bottom: 0; border: 1px solid #d9d9d9; border-bottom: none; }
               /* D-514 打印分页：区块（标题+表格）放不下就整体挪到下一页，标题永不与表格分离 */
               .print-sec { margin-bottom: 16px; break-inside: avoid; page-break-inside: avoid; }
               .print-section-title { break-after: avoid; page-break-after: avoid; break-inside: avoid; page-break-inside: avoid; }
@@ -130,7 +130,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               .ant-table-wrapper tr { break-inside: avoid; page-break-inside: avoid; }
               .ant-table-wrapper thead { display: table-header-group; }
               /* 统一打印表格样式 */
-              .pt { width: 100%; border-collapse: collapse; font-size: 12px; }
+              .pt { width: 100%; border-collapse: collapse; font-size: 13px; }
               .pt th, .pt td { border: 0.5px solid var(--color-zinc-300); padding: 5px 8px; vertical-align: middle; }
               .pt th { background: var(--color-bg-subtle); font-weight: 600; text-align: center; white-space: nowrap; }
               .pt td { color: var(--color-gray-800); }

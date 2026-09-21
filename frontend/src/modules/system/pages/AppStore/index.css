@@ -17,7 +17,7 @@
 }
 
 .app-store-container .page-header p {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-secondary);
 }
 
@@ -62,7 +62,7 @@
 
 .desc-text {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 15px;
   margin-bottom: 12px;
   line-height: 1.6;
 }
@@ -74,7 +74,7 @@
 }
 
 .price-label {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-tertiary);
   margin-right: 8px;
 }
@@ -86,7 +86,7 @@
 }
 
 .price-unit {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-tertiary);
   margin-left: 4px;
 }
@@ -117,7 +117,7 @@
 
 .feature-list li {
   padding: 8px 0;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-primary);
 }
 
@@ -142,7 +142,7 @@
 }
 
 .price-title {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-secondary);
   margin-bottom: 8px;
 }
@@ -155,13 +155,13 @@
 }
 
 .price-period {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-tertiary);
 }
 
 .price-save {
   margin-top: 8px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-success);
   font-weight: 600;
 }
@@ -175,7 +175,7 @@
   border: 1px solid var(--status-success-border);
   border-radius: 8px;
   color: var(--color-success);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   margin-bottom: 8px;
 }
@@ -188,7 +188,7 @@
 
 .trial-note {
   margin-top: 4px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-success);
   font-weight: 500;
 }

@@ -31,7 +31,7 @@
 
 /* 强制锁定根元素字体大小，防止浏览器自动缩放或rem计算异常 */
 html {
-  font-size: 13px;
+  font-size: 14px;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   scroll-behavior: smooth;
@@ -94,7 +94,7 @@ body {
   text-rendering: optimizeLegibility;
   background-color: var(--app-bg);
   color: var(--neutral-text);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
 }
 
@@ -225,7 +225,7 @@ input.ant-input,
 
 .ant-btn:not(.ant-btn-icon-only) {
   height: var(--control-height, 32px) !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
 }
 .ant-input-affix-wrapper-sm,
 .ant-input-number-sm {
@@ -893,12 +893,12 @@ input.ant-input,
 .resizable-table .ant-table-thead > tr > th {
   background: var(--color-bg-subtle);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-primary);
 }
 
 .resizable-table .ant-table-tbody > tr > td {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* U-1 续：分页吸底——填充模式之外（Tabs页签/包裹层/显式scroll.y）分页同样钉在滚动区底部。
@@ -936,7 +936,7 @@ input.ant-input,
 }
 
 .section-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1.35;
   margin: 0;
@@ -1146,12 +1146,12 @@ input.ant-input,
 }
 
 .cutting-active-task-tags {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.6;
 }
 
 .cutting-active-task-tags .ant-tag {
-  font-size: 13px;
+  font-size: 14px;
   padding: 4px 12px;
 }
 /* 表格容器样式 */
@@ -1332,13 +1332,13 @@ input.ant-input,
 /* ── 移动端表格紧凑模式 ── */
 @media (max-width: 768px) {
   .resizable-table .ant-table-tbody > tr > td .ant-tag {
-    font-size: 12px;
+    font-size: 13px;
     padding: 0 4px;
     line-height: 18px;
   }
 
   .resizable-table .ant-table-tbody > tr > td .ant-btn-link {
-    font-size: 14px;
+    font-size: 15px;
     padding: 0 4px;
   }
 
@@ -1349,7 +1349,7 @@ input.ant-input,
 
   .resizable-table-shell .ant-pagination {
     padding: 8px 12px;
-    font-size: 14px;
+    font-size: 15px;
   }
 
   .resizable-table-shell .ant-pagination .ant-pagination-item,
@@ -1358,7 +1358,7 @@ input.ant-input,
     min-width: 28px;
     height: 28px;
     line-height: 28px;
-    font-size: 14px;
+    font-size: 15px;
   }
 
   .resizable-table-shell .ant-pagination .ant-pagination-options {
@@ -1369,7 +1369,7 @@ input.ant-input,
 /* ── 平板端表格适配 ── */
 @media (max-width: 1024px) and (min-width: 769px) {
   .resizable-table .ant-table-tbody > tr > td .ant-tag {
-    font-size: 12px;
+    font-size: 13px;
     padding: 1px 8px;
   }
 
@@ -1496,19 +1496,19 @@ input.ant-input,
 /* 操作列文本按钮：统一小号 */
 .row-actions .ant-btn-link:not(.row-actions__btn--icon) {
   padding: 0 8px !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
 }
 
 /* 卡片视图操作按钮：超紧凑 */
 .table-action-compact .ant-btn:not(.ant-btn-icon-only),
 .table-action-compact .ant-btn-link:not(.ant-btn-icon-only) {
   padding: 0 8px !important;
-  font-size: 12px !important;
+  font-size: 13px !important;
 }
 
 .universal-card-actions .ant-btn.ant-btn-sm:not(.ant-btn-icon-only) {
   padding: 0 4px !important;
-  font-size: 12px !important;
+  font-size: 13px !important;
   height: 20px !important;
   line-height: 20px !important;
 }
@@ -1568,7 +1568,7 @@ input.ant-input,
 }
 
 .row-actions__btn--icon .anticon {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 /* 图标按钮禁用状态 */
@@ -1618,7 +1618,7 @@ input.ant-input,
   height: 28px !important;
   padding: 0 12px !important;
   text-align: center;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .ant-table-cell .ant-input-number .ant-input-number-handler-wrap {
@@ -1630,7 +1630,7 @@ input.ant-input,
   padding: 0 12px !important;
   border-radius: 4px !important;
   text-align: center;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .ant-table-cell .ant-select {
@@ -1815,7 +1815,7 @@ input.ant-input,
 }
 
 .cutting-qr-print-grid--screen .cutting-qr-label-text {
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.2;
 }
 
@@ -1970,7 +1970,7 @@ input.ant-input,
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-danger);
   background: rgba(255, 77, 79, 0.08);
@@ -2154,7 +2154,7 @@ input.ant-input,
 /* ── 6. 空表格提示更低调 ── */
 .ant-table-placeholder .ant-empty-description {
   color: rgba(0, 0, 0, 0.32) !important;
-  font-size: 13px;
+  font-size: 14px;
 }
 [data-theme="dark"] .ant-table-placeholder .ant-empty-description {
   color: rgba(255, 255, 255, 0.30) !important;
@@ -2200,7 +2200,7 @@ input.ant-input,
 
 /* ── 12. 面包屑字号微调 ── */
 .ant-breadcrumb {
-  font-size: 12px;
+  font-size: 13px;
   opacity: 0.80;
 }
 
@@ -2397,7 +2397,7 @@ img.img-cover {
   min-height: 40px;
 }
 .ant-card-head-title {
-  font-size: 13px !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
   color: var(--color-text-primary, var(--color-text-primary));
 }
@@ -2436,40 +2436,40 @@ img.img-cover {
 }
 
 .ant-descriptions-item-label {
-  font-size: 12px !important;
+  font-size: 13px !important;
   color: var(--color-text-secondary) !important;
 }
 .ant-descriptions-item-content {
-  font-size: 12px !important;
+  font-size: 13px !important;
   color: var(--color-text-primary) !important;
 }
 
 .ant-tag {
   height: auto !important;
   line-height: 18px !important;
-  font-size: 12px !important;
+  font-size: 13px !important;
   padding: 0 4px !important;
   border-radius: 4px !important;
 }
 
 .ant-table-cell .ant-btn-sm {
   height: 24px !important;
-  font-size: 12px !important;
+  font-size: 13px !important;
   padding: 0 8px !important;
 }
 
 .ant-form-item-label > label {
-  font-size: 12px !important;
+  font-size: 13px !important;
   color: #4a4a4a !important;
   font-weight: 500 !important;
 }
 
 .ant-typography h4 {
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 600 !important;
 }
 .ant-typography h5 {
-  font-size: 13px !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
 }
 

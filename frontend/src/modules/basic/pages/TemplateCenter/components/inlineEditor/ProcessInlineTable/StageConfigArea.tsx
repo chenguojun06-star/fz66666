@@ -171,9 +171,9 @@ export default function StageConfigArea({ readOnly = false, styleId }: Props) {
       width: 200,
       render: (name: string, row: RowData) => (
         <div className="u-d-flex u-fd-column" style={{ gap: 4 }}>
-          <Text style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>{name}</Text>
+          <Text style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text-primary)' }}>{name}</Text>
           {row.defaultStage === 1 && (
-            <Tag color="orange" style={{ width: 'fit-content', margin: 0, fontSize: 12 }}>
+            <Tag color="orange" style={{ width: 'fit-content', margin: 0, fontSize: 13 }}>
               默认环节 · 不属生产工序
             </Tag>
           )}

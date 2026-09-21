@@ -94,7 +94,7 @@ const MaterialColorItemsModal: React.FC<MaterialColorItemsModalProps> = ({
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: 12,
+                          fontSize: 13,
                           color: swatch && ['#ffffff', '#f5f0e6', '#f2f0eb', '#fbe8d3', '#f0e0b6', '#a7e8d0', '#d8c29d', '#c0c0c8', '#f48fb1', '#90caf9', '#81d4fa', '#b39ddb', '#a5d6a7', '#c7c7c7'].includes(swatch) ? '#1d1d1f' : '#ffffff',
                         }}
                       >
@@ -106,7 +106,7 @@ const MaterialColorItemsModal: React.FC<MaterialColorItemsModalProps> = ({
                     <Col xs={24} sm={5}>
                       {item.unitPrice != null && item.unitPrice !== undefined ? `单价：${item.unitPrice} 元` : '-'}
                     </Col>
-                    <Col xs={24} sm={6} style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+                    <Col xs={24} sm={6} style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>
                       {item.remark || ''}
                     </Col>
                   </Row>

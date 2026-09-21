@@ -281,7 +281,7 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
       title="拷贝其他款物料"
       footer={
         <Space>
-          <Text type="secondary" style={{ fontSize: 12, marginInlineEnd: 12 }}>
+          <Text type="secondary" style={{ fontSize: 13, marginInlineEnd: 12 }}>
             已选 <Text strong style={{ color: 'var(--color-primary)' }}>{selectedRows.length}</Text> 项，确认后追加到当前款物料清单
           </Text>
           <Button onClick={onClose}>取消</Button>
@@ -368,12 +368,12 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
                   >
                     <div className="u-fw-500 u-fs-13">{t.templateName || '-'}</div>
                     <Space size={4} wrap>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
+                      <Text type="secondary" style={{ fontSize: 13 }}>
                         {t.sourceStyleNo ? `来源款 ${t.sourceStyleNo}` : '未关联来源款'}
                       </Text>
                       {t.sourceStyleNo
-                        ? <Tag style={{ marginInlineEnd: 0, fontSize: 11 }}>款式沉淀</Tag>
-                        : <Tag color="blue" style={{ marginInlineEnd: 0, fontSize: 11 }}>通用</Tag>}
+                        ? <Tag style={{ marginInlineEnd: 0, fontSize: 12 }}>款式沉淀</Tag>
+                        : <Tag color="blue" style={{ marginInlineEnd: 0, fontSize: 12 }}>通用</Tag>}
                     </Space>
                   </div>
                 );
@@ -400,7 +400,7 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
                   <StyleCoverThumb src={s.cover || s.styleCover || null} styleId={s.id} styleNo={String(s.styleNo || '')} size={40} borderRadius={4} />
                   <div className="u-flex-1" style={{ minWidth: 0 }}>
                     <div className="u-fw-500 u-fs-13">{s.styleNo || '-'}</div>
-                    <Text type="secondary" style={{ fontSize: 12, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <Text type="secondary" style={{ fontSize: 13, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {s.styleName || '-'}
                     </Text>
                   </div>
@@ -454,7 +454,7 @@ const CopyStyleBomDrawer: React.FC<CopyStyleBomDrawerProps> = ({
                     { value: 'aux', label: '辅料' },
                   ]}
                 />
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" style={{ fontSize: 13 }}>
                   默认全选（拷贝所有）；取消勾选可只拷贝个别面料
                 </Text>
               </Space>

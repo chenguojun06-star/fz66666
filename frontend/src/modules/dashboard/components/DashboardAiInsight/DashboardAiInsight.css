@@ -32,7 +32,7 @@
 }
 
 .dai-loading-text {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-tertiary);
   z-index: 1;
   margin-left: 32px;
@@ -114,13 +114,13 @@
 }
 
 .dai-item-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text-primary);
 }
 
 .dai-item-desc {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-secondary);
   max-width: 300px;
   overflow: hidden;
@@ -128,7 +128,7 @@
 }
 
 .dai-item-desc-extra {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
   white-space: nowrap;
 }
@@ -142,7 +142,7 @@
   border: 1px solid rgba(45, 127, 249, 0.25);
   background: rgba(45, 127, 249, 0.04);
   color: var(--color-primary);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;

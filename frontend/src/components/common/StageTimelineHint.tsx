@@ -117,7 +117,7 @@ export function computeStageTimeline(
 }
 
 const hintStyle: React.CSSProperties = {
-  fontSize: 10,
+  fontSize: 11,
   fontWeight: 400,
   lineHeight: 1.2,
   textAlign: 'center',

@@ -17,7 +17,7 @@
   border: none;
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
-  font-size: 13px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -60,7 +60,7 @@
   transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.45);
   color: #fff;
-  font-size: 12px;
+  font-size: 13px;
   padding: 1px 8px;
   border-radius: 8px;
   line-height: 18px;
@@ -72,7 +72,7 @@
   position: absolute;
   top: 4px;
   left: 4px;
-  font-size: 12px;
+  font-size: 13px;
   padding: 0 4px;
   background: rgba(0, 0, 0, 0.5);
   color: #fff;

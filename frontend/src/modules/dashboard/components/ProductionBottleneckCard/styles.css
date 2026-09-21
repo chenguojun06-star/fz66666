@@ -20,7 +20,7 @@
 }
 
 .bn-total {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-danger);
   background: rgba(239, 68, 68, 0.08);
@@ -59,7 +59,7 @@
 .bn-bar-name {
   width: 76px;
   flex-shrink: 0;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -86,7 +86,7 @@
   width: 36px;
   flex-shrink: 0;
   text-align: right;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
@@ -117,7 +117,7 @@
 }
 
 .bn-empty-text {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-tertiary);
 }
 

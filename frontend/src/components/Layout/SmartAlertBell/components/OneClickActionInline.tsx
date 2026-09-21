@@ -60,7 +60,7 @@ const OneClickActionInline: React.FC<{
             onClick={() => void handleAction()}
             disabled={loading}
             style={{
-              fontSize: 12,
+              fontSize: 13,
               padding: '4px 12px',
               background: 'transparent',
               color: 'var(--color-primary)',

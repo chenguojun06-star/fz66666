@@ -49,7 +49,7 @@ const StyleImageCell: React.FC<StyleImageCellProps> = ({
         width={size}
         height={size}
         style={{ objectFit: 'contain', borderRadius: 4 }}
-        preview={preview ? { cover: <EyeOutlined style={{ fontSize: 12 }} /> } : false}
+        preview={preview ? { cover: <EyeOutlined style={{ fontSize: 13 }} /> } : false}
       />
     );
   }

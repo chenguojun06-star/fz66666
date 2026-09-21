@@ -48,7 +48,7 @@ const BatchSelectionPanel: React.FC<BatchSelectionPanelProps> = ({
         padding: '6px 12px', cursor: 'pointer', userSelect: 'none',
         border: '1px solid var(--color-border-antd)', borderRadius: 6,
         background: 'var(--color-bg-container, var(--color-bg-base))',
-        fontSize: 14,
+        fontSize: 15,
     };
 
     return (

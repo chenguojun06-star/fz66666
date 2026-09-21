@@ -59,10 +59,10 @@ const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
         {metrics.map((item) => (
           <div key={item.key} className="u-br-6" style={{ padding: '5px 7px', background: 'var(--color-bg-base)', border: '1px solid rgba(0,0,0,0.06)' }}>
             <div className="u-d-flex u-ai-center" style={{ gap: 3, marginBottom: 1 }}>
-              <span style={{ color: item.color, fontSize: 12 }}>{item.icon}</span>
+              <span style={{ color: item.color, fontSize: 13 }}>{item.icon}</span>
               <span className="u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>{item.title}</span>
             </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: item.color, lineHeight: 1.3 }}>{item.value}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: item.color, lineHeight: 1.3 }}>{item.value}</div>
             <div className="u-fs-11 u-ov-hidden u-ws-nowrap" style={{ color: 'var(--color-text-quaternary)', marginTop: 1, lineHeight: 1.3, textOverflow: 'ellipsis' }}>{item.extra}</div>
           </div>
         ))}
@@ -71,7 +71,7 @@ const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
       {/* 节点标签 */}
       <div className="u-d-flex u-fwrap-wrap" style={{ gap: 3 }}>
         {stageTags.map((item) => (
-          <Tag key={item.key} color={item.done ? 'success' : 'default'} style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 5px' }}>
+          <Tag key={item.key} color={item.done ? 'success' : 'default'} style={{ margin: 0, fontSize: 13, lineHeight: '18px', padding: '0 5px' }}>
             {item.label}{item.done ? ' ' : ''}
           </Tag>
         ))}

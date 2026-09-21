@@ -266,7 +266,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
             >
-              <LeftOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
+              <LeftOutlined style={{ color: 'var(--color-bg-base)', fontSize: 13 }} />
             </div>
             <div
               onClick={(e) => { e.stopPropagation(); goToNext(); }}
@@ -288,7 +288,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.55)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.35)'; }}
             >
-              <RightOutlined style={{ color: 'var(--color-bg-base)', fontSize: 12 }} />
+              <RightOutlined style={{ color: 'var(--color-bg-base)', fontSize: 13 }} />
             </div>
           </>
         )}
@@ -333,7 +333,7 @@ const StyleCoverGallery: React.FC<StyleCoverGalleryProps> = ({
                       inset: 0,
                       background: 'rgba(0, 0, 0, 0.45)',
                       color: 'var(--color-bg-base)',
-                      fontSize: 14,
+                      fontSize: 15,
                       fontWeight: 600,
                       display: 'flex',
                       alignItems: 'center',

@@ -95,7 +95,7 @@ interface Props {
 const sectionLabelStyle: React.CSSProperties = {
   width: 76,
   flexShrink: 0,
-  fontSize: 14,
+  fontSize: 15,
 };
 
 export default function WashLabelSectionConfigPanel({ value, onChange, width, height, previewSizeText }: Props) {
@@ -150,49 +150,49 @@ export default function WashLabelSectionConfigPanel({ value, onChange, width, he
       {/* 左：分区配置 */}
       <div style={{ flex: '1 1 0', minWidth: 0 }}>
         <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>距剪口偏移</span>
+          <span style={{ fontSize: 15, color: 'var(--color-text-secondary)' }}>距剪口偏移</span>
           <InputNumber
             min={0} max={Math.max(0, height - 10)} value={value.topOffsetMm}
             onChange={v => patch({ topOffsetMm: v ?? 0 })} suffix="mm" style={{ width: 110 }}
           />
-          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>内容从剪口下方此处开始打印</span>
+          <span style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>内容从剪口下方此处开始打印</span>
         </div>
 
         <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>字体大小</span>
+          <span style={{ fontSize: 15, color: 'var(--color-text-secondary)' }}>字体大小</span>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
             <Slider
               min={0.5} max={1.6} step={0.05} value={value.fontScale}
               onChange={v => patch({ fontScale: v })} style={{ flex: 1, margin: 0 }}
               tooltip={{ formatter: (v) => `${Math.round((v ?? 1) * 100)}%` }}
             />
-            <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', width: 52, flexShrink: 0 }}>
+            <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', width: 52, flexShrink: 0 }}>
               {Math.round(value.fontScale * 100)}%
             </span>
           </div>
         </div>
         <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14, color: 'var(--color-text-secondary)', width: 76, flexShrink: 0 }}>行距/上下间距</span>
+          <span style={{ fontSize: 15, color: 'var(--color-text-secondary)', width: 76, flexShrink: 0 }}>行距/上下间距</span>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
             <Slider
               min={0.7} max={1.8} step={0.05} value={value.lineHeightScale}
               onChange={v => patch({ lineHeightScale: v })} style={{ flex: 1, margin: 0 }}
               tooltip={{ formatter: (v) => `${Math.round((v ?? 1) * 100)}%` }}
             />
-            <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', width: 52, flexShrink: 0 }}>
+            <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', width: 52, flexShrink: 0 }}>
               {Math.round(value.lineHeightScale * 100)}%
             </span>
           </div>
         </div>
         <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14, color: 'var(--color-text-secondary)', width: 76, flexShrink: 0 }}>成份-洗涤间隔</span>
+          <span style={{ fontSize: 15, color: 'var(--color-text-secondary)', width: 76, flexShrink: 0 }}>成份-洗涤间隔</span>
           <InputNumber
             min={0} max={50} step={1} value={value.sectionGapMm}
             onChange={v => patch({ sectionGapMm: v ?? 0 })} suffix="mm" style={{ width: 110 }}
           />
-          <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>上部成份与洗涤图标之间的距离，0=紧凑</span>
+          <span style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>上部成份与洗涤图标之间的距离，0=紧凑</span>
         </div>
-        <div style={{ marginBottom: 12, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+        <div style={{ marginBottom: 12, fontSize: 13, color: 'var(--color-text-tertiary)' }}>
           当前打印字号 <span style={{ color: 'var(--color-text-secondary)' }}>{adaptedFs}pt</span>
           {isShrunk
             ? '（内容稍多已轻微调小以保证完整显示，可调小偏移或行距，或精简文字）'
@@ -273,13 +273,13 @@ export default function WashLabelSectionConfigPanel({ value, onChange, width, he
           </div>
           {value.showWash && (
             <div style={{ marginLeft: 84, marginTop: 8 }}>
-              <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>
+              <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>
                 洗涤图标（点击选择/取消，显示在文字上方一排）：
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {CARE_CATEGORIES.map(cat => (
                   <div key={cat.key} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 13, color: 'var(--color-text-muted)', width: 44, flexShrink: 0 }}>{cat.label}</span>
+                    <span style={{ fontSize: 14, color: 'var(--color-text-muted)', width: 44, flexShrink: 0 }}>{cat.label}</span>
                     <Space wrap size={4}>
                       {cat.codes.map(code => {
                         const icon = CARE_ICONS[code];
@@ -344,7 +344,7 @@ export default function WashLabelSectionConfigPanel({ value, onChange, width, he
 
       {/* 右：实时预览（与打印 HTML 一致） */}
       <div style={{ flexShrink: 0, textAlign: 'center' }}>
-        <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>打印预览</div>
+        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>打印预览</div>
         <iframe
           title="洗水唛预览"
           srcDoc={previewHtml}
@@ -354,7 +354,7 @@ export default function WashLabelSectionConfigPanel({ value, onChange, width, he
             background: '#fff',
           }}
         />
-        <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+        <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
           {width}×{height}mm · 偏移{value.topOffsetMm}mm · 字号{adaptedFs}pt · 行距{Math.round(value.lineHeightScale * 100)}%
         </div>
       </div>

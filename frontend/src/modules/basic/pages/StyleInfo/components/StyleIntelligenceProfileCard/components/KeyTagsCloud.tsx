@@ -19,7 +19,7 @@ const KeyTagsCloud: React.FC<KeyTagsCloudProps> = ({ style, activeDifficulty: _a
         {String(style?.category || '').trim() && (
           <Tag
             color="blue"
-            style={{ margin: 0, fontSize: 12, lineHeight: '20px', padding: '1px 8px', borderRadius: 10 }}
+            style={{ margin: 0, fontSize: 13, lineHeight: '20px', padding: '1px 8px', borderRadius: 10 }}
           >
             品类：{String(style!.category).trim()}
           </Tag>
@@ -28,7 +28,7 @@ const KeyTagsCloud: React.FC<KeyTagsCloudProps> = ({ style, activeDifficulty: _a
         {Number(style?.price) > 0 && (
           <Tag
             color="var(--color-warning)"
-            style={{ margin: 0, fontSize: 12, lineHeight: '20px', padding: '1px 8px', borderRadius: 10 }}
+            style={{ margin: 0, fontSize: 13, lineHeight: '20px', padding: '1px 8px', borderRadius: 10 }}
           >
             价格：{fmtMoney(Number(style!.price))}
           </Tag>

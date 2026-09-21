@@ -10,7 +10,7 @@
 
 .tabs :global(.ant-tabs-tab) {
   padding: 12px 20px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
 }
 
@@ -74,13 +74,13 @@
 }
 
 .cardTitle {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--neutral-text, var(--color-gray-800));
   font-weight: 600;
 }
 
 .infoIcon {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--neutral-text-lighter, var(--color-text-quaternary));
   cursor: pointer;
 }
@@ -128,13 +128,13 @@
 }
 
 .defectLabel {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--neutral-text-light, var(--color-gray-dark));
   font-weight: 500;
 }
 
 .defectValue {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -159,7 +159,7 @@
 /* 周同比/日同比变化 */
 .changeUp {
   color: var(--color-success);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -167,7 +167,7 @@
 
 .changeUp :global(.anticon) {
   margin-right: 2px;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .changeDown {
@@ -180,7 +180,7 @@
 
 .changeDown :global(.anticon) {
   margin-right: 2px;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 /* 图表卡片 */
@@ -201,7 +201,7 @@
 }
 
 .chartSummary :global(.ant-statistic-title) {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--neutral-text, var(--color-gray-800));
   font-weight: 500;
 }
@@ -243,7 +243,7 @@
 
 .timeOption {
   padding: 8px 16px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--neutral-text, var(--color-gray-800));
   cursor: pointer;
   border-radius: 8px;
@@ -275,7 +275,7 @@
 }
 
 .sectionTitle {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--neutral-text, var(--color-gray-800));
   margin-bottom: 16px;
@@ -298,7 +298,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--neutral-text-lighter, var(--color-text-muted));
   margin-right: 12px;
 }
@@ -311,12 +311,12 @@
 
 .rankName {
   flex: 1;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--neutral-text, var(--color-gray-800));
 }
 
 .rankValue {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--neutral-text, var(--color-gray-800));
   font-weight: 600;
 }

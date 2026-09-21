@@ -70,7 +70,7 @@ const PrintOptionsSelector: React.FC<PrintOptionsSelectorProps> = ({
         {/* 基本信息字段细化选择 */}
         {options.basicInfo && (
           <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--color-bg-base)', borderRadius: 8, border: '1px solid var(--color-border-light)' }}>
-            <div style={{ fontWeight: 500, color: 'var(--color-gray-dark)', marginBottom: 8, fontSize: 13 }}>基本信息区块（可多选）：</div>
+            <div style={{ fontWeight: 500, color: 'var(--color-gray-dark)', marginBottom: 8, fontSize: 14 }}>基本信息区块（可多选）：</div>
             <Checkbox.Group
               value={Object.keys(options).filter(k =>
                 ['styleInfoBlock', 'customerInfoBlock', 'patternInfoBlock', 'timeInfoBlock', 'remarkBlock'].includes(k) &&
@@ -113,7 +113,7 @@ const PrintOptionsSelector: React.FC<PrintOptionsSelectorProps> = ({
             </Button>
           </div>
           {labelItems.length > 0 && (
-            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-amber-700)' }}>
+            <div style={{ marginTop: 8, fontSize: 13, color: 'var(--color-amber-700)' }}>
               检测到 {[...new Set(labelItems.map(i => i.color))].length} 颜色
               {[...new Set(labelItems.map(i => i.size).filter(Boolean))].length > 0
                 ? ` × ${[...new Set(labelItems.map(i => i.size).filter(Boolean))].length} 码数`

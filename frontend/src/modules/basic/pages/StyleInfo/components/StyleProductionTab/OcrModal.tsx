@@ -124,7 +124,7 @@ const OcrModal: React.FC<Props> = ({
             value={text}
             readOnly
             rows={12}
-            style={{ marginTop: 12, fontFamily: "'PingFang SC', 'Microsoft YaHei', monospace", fontSize: 14, borderRadius: 6 }}
+            style={{ marginTop: 12, fontFamily: "'PingFang SC', 'Microsoft YaHei', monospace", fontSize: 15, borderRadius: 6 }}
           />
           <Space style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
             <Button onClick={onAppend}>追加到工艺说明</Button>

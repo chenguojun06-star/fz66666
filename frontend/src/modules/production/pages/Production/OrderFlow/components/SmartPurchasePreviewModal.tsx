@@ -251,7 +251,7 @@ const SmartPurchasePreviewModal: React.FC<SmartPurchasePreviewModalProps> = ({
             render: (s: any) => (s?.supplierName ? (
               <span>
                 {s.supplierName}
-                {s.isBomDesignated ? <Tag color="blue" style={{ marginLeft: 4, fontSize: 10 }}>清单指定</Tag> : null}
+                {s.isBomDesignated ? <Tag color="blue" style={{ marginLeft: 4, fontSize: 11 }}>清单指定</Tag> : null}
               </span>
             ) : <span style={{ color: 'var(--color-text-quaternary)' }}>暂无</span>),
           },

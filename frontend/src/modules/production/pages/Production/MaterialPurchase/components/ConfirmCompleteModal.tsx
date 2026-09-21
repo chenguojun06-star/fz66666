@@ -92,24 +92,24 @@ const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
           >
             <Radio value="inbound">
               <Text strong>入库到仓库</Text>
-              <Text type="secondary" style={{ display: 'block', fontSize: 12, marginLeft: 22 }}>
+              <Text type="secondary" style={{ display: 'block', fontSize: 13, marginLeft: 22 }}>
                 登记入库单并增加库存，之后领料出库时再扣减，出入库都有流水
               </Text>
             </Radio>
             <Radio value="direct_use">
               <Text strong>直接使用</Text>
-              <Text type="secondary" style={{ display: 'block', fontSize: 12, marginLeft: 22 }}>
+              <Text type="secondary" style={{ display: 'block', fontSize: 13, marginLeft: 22 }}>
                 到货即用不进仓库，记一条采购直用流水，库存不变
               </Text>
             </Radio>
             <Radio value="none">
               <Text strong>暂不登记</Text>
-              <Text type="secondary" style={{ display: 'block', fontSize: 12, marginLeft: 22 }}>
+              <Text type="secondary" style={{ display: 'block', fontSize: 13, marginLeft: 22 }}>
                 仅确认完成，不产生出入库记录
               </Text>
             </Radio>
           </Radio.Group>
-          <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 8, color: 'var(--color-text-tertiary)' }}>
+          <Text type="secondary" style={{ display: 'block', fontSize: 13, marginTop: 8, color: 'var(--color-text-tertiary)' }}>
             对账去向：选「入库到仓库」→ 账走物料仓库的出入库流水，不在物料对账页；选「直接使用 / 暂不登记」→ 采购款在物料对账页核销。
           </Text>
         </div>
@@ -153,7 +153,7 @@ const ConfirmCompleteModal: React.FC<ConfirmCompleteModalProps> = ({
         )}
 
         {movementAction !== 'none' && targets.length > 1 && (
-          <Text type="secondary" style={{ fontSize: 12 }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>
             多张采购单将按各自采购量全额登记，如需拆分请到单张采购单单独操作
           </Text>
         )}

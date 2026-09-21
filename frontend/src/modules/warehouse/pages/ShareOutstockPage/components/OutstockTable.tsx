@@ -60,7 +60,7 @@ const OutstockTable: React.FC<OutstockTableProps> = ({ items }) => (
               </td>
               <td style={tdStyle}>{formatDateTime(item.outstockTime)}</td>
               <td style={tdStyle}>
-                <span style={{ color: pay.color, fontWeight: 600, fontSize: 14 }}>● {pay.text}</span>
+                <span style={{ color: pay.color, fontWeight: 600, fontSize: 15 }}>● {pay.text}</span>
               </td>
             </tr>
           );

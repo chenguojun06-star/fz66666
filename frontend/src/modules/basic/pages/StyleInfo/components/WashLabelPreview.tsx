@@ -133,7 +133,7 @@ const WashLabelPreview: React.FC<Props> = ({
           {sections.map((section, idx) => (
             <div key={section.key} style={{ marginBottom: 16 }}>
               <div style={{
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: 600,
                 color: 'var(--color-primary, var(--color-primary))',
                 marginBottom: 6,
@@ -149,7 +149,7 @@ const WashLabelPreview: React.FC<Props> = ({
           ))}
           <div style={{
             marginTop: 8,
-            fontSize: 14,
+            fontSize: 15,
             color: 'var(--color-text-tertiary, var(--color-text-muted))',
             lineHeight: 1.8,
           }}>
@@ -174,7 +174,7 @@ const WashLabelPreview: React.FC<Props> = ({
           />
           <div style={{
             marginLeft: 16,
-            fontSize: 14,
+            fontSize: 15,
             color: 'var(--color-text-tertiary, var(--color-text-muted))',
             lineHeight: 1.8,
             alignSelf: 'center',

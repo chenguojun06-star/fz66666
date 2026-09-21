@@ -22,7 +22,7 @@ const ShipSummaryBar: React.FC<ShipSummaryBarProps> = ({
       <span>剩余可发：<b style={{ color: 'var(--color-success)' }}>{canShip}</b></span>
       {currentTotal > 0 && (
         <span>本次发货：<b style={{ color: currentTotal > canShip ? 'var(--color-error)' : 'var(--color-warning-deep)' }}>{currentTotal}</b>
-          {currentTotal > canShip && <Tag color="red" style={{ marginLeft: 6, fontSize: 14 }}>超出可发数量</Tag>}
+          {currentTotal > canShip && <Tag color="red" style={{ marginLeft: 6, fontSize: 15 }}>超出可发数量</Tag>}
         </span>
       )}
     </div>

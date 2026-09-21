@@ -217,7 +217,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
     return (
       <div style={{
         background: 'var(--color-bg-container)', borderRadius: 8, padding: '10px 14px',
-        fontSize: 14, color: 'var(--color-text-quaternary)', display: 'flex', alignItems: 'center', gap: 8,
+        fontSize: 15, color: 'var(--color-text-quaternary)', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <span></span>
         <span>{hasError ? '加载失败，请重试' : '该款暂无历史订单数据'}</span>
@@ -234,7 +234,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
       border: '1px solid var(--color-border)',
       borderRadius: 6,
       padding: '12px 14px',
-      fontSize: 14,
+      fontSize: 15,
       marginTop: 8,
     }}>
       <div onClick={() => setCollapsed(!collapsed)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: collapsed ? 0 : 8, cursor: 'pointer' }}>
@@ -244,13 +244,13 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
         <div className="u-d-flex u-ai-center u-gap-6">
           <Button
             type="link"
-            icon={<ReloadOutlined style={{ fontSize: 13 }} />}
+            icon={<ReloadOutlined style={{ fontSize: 14 }} />}
             onClick={(e) => { e.stopPropagation(); void calcInsight(); }}
-            style={{ padding: 0, height: 'auto', color: 'var(--color-text-tertiary)', fontSize: 14 }}
+            style={{ padding: 0, height: 'auto', color: 'var(--color-text-tertiary)', fontSize: 15 }}
           >
             刷新
           </Button>
-          {collapsed ? <RightOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} /> : <DownOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} />}
+          {collapsed ? <RightOutlined style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }} /> : <DownOutlined style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }} />}
         </div>
       </div>
 
@@ -263,7 +263,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
           marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6,
         }}>
           <WarningOutlined style={{ color: isFactoryHighRisk ? 'var(--color-danger)' : 'var(--color-warning)' }} />
-          <span style={{ color: isFactoryHighRisk ? 'var(--color-error)' : 'var(--color-warning)', fontSize: 14, flex: 1 }}>
+          <span style={{ color: isFactoryHighRisk ? 'var(--color-error)' : 'var(--color-warning)', fontSize: 15, flex: 1 }}>
             {isFactoryHighRisk
               ? `${factoryName} 当前接单紧张：${overdueCount > 0 ? `${overdueCount} 单逾期` : ''}${atRiskCount > 0 ? `、${atRiskCount} 单高风险` : ''}，建议提前沟通排期`
               : `${factoryName} 在产 ${factoryTotalOrders} 单${atRiskCount > 0 ? `，其中 ${atRiskCount} 单偏慢` : ''}，排产较满`}
@@ -275,7 +275,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
         {metricItems.map((item) => (
           <div key={item.label} style={{ background: 'var(--color-bg-base)', borderRadius: 7, padding: '7px 10px', border: '1px solid var(--status-processing-border)' }}>
             <div className="u-d-flex u-jc-between u-gap-8" style={{ alignItems: 'baseline' }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: item.color }}>{item.value}</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: item.color }}>{item.value}</span>
               <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{item.suffix}</span>
             </div>
             <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{item.label}</div>
@@ -285,7 +285,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
 
       <div className="u-d-flex u-fwrap-wrap u-mb-8" style={{ gap: 5 }}>
         {quickTags.map((text) => (
-          <Tag key={text} style={{ fontSize: 14, color: 'var(--color-text-secondary)', background: 'var(--color-bg-page)', border: '1px solid var(--color-border)', marginInlineEnd: 0 }}>
+          <Tag key={text} style={{ fontSize: 15, color: 'var(--color-text-secondary)', background: 'var(--color-bg-page)', border: '1px solid var(--color-border)', marginInlineEnd: 0 }}>
             {text}
           </Tag>
         ))}
@@ -298,7 +298,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
           onClick={() => setAiAdviceVisible(true)}
           type="primary"
           ghost
-          style={{ fontSize: 14 }}
+          style={{ fontSize: 15 }}
         >
           AI 下单建议
         </Button>
@@ -316,7 +316,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
               <Button
                 type="link"
                 onClick={() => setAiAdviceVisible(false)}
-                style={{ padding: 0, height: 'auto', fontSize: 14 }}
+                style={{ padding: 0, height: 'auto', fontSize: 15 }}
               >
                 关闭
               </Button>

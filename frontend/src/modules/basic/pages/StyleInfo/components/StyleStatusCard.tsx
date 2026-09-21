@@ -130,7 +130,7 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style, compact = fals
         borderRadius: compact ? 0 : 10,
         border: compact ? 'none' : '1px solid var(--color-border)',
         background: compact ? 'transparent' : 'var(--color-bg-container, var(--color-bg-base))',
-        fontSize: 12,
+        fontSize: 13,
         minWidth: 0,
         // 撑满外层剩余宽度：这样 overflowX 才有作用域，超出时是条内横向滚动而不是撑破布局
         ...(compact ? { width: '100%', overflowX: 'auto', whiteSpace: 'nowrap' } : null),
@@ -181,7 +181,7 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style, compact = fals
               label="当前操作人"
               value={currentOperator}
             />
-            <InfoCircleOutlined style={{ color: 'var(--color-text-quaternary)', fontSize: 11 }} />
+            <InfoCircleOutlined style={{ color: 'var(--color-text-quaternary)', fontSize: 12 }} />
           </span>
         </Tooltip>
       )}
@@ -212,7 +212,7 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style, compact = fals
           <span className="u-d-inline-flex u-ai-center u-gap-4 u-cur-pointer u-fshrink-0" style={{ color: 'var(--color-text-tertiary)' }}>
             <SyncOutlined />
             <span>{updateTime || createTime || ''}</span>
-            <InfoCircleOutlined style={{ fontSize: 11 }} />
+            <InfoCircleOutlined style={{ fontSize: 12 }} />
           </span>
         </Popover>
       )}

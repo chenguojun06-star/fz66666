@@ -237,7 +237,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
                             <Radio.Button value="simple">简版</Radio.Button>
                             <Radio.Button value="detail">明细版</Radio.Button>
                         </Radio.Group>
-                        <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 14 }}>
+                        <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 15 }}>
                             {printVersion === 'simple' ? '仅含订单号、订单数量、总价格' : '含完整结算明细信息'}
                         </span>
                     </div>
@@ -274,7 +274,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
                                 <div className="header" style={{ fontSize: 22, fontWeight: 700, textAlign: 'center', marginBottom: 4 }}>
                                     {factory.factoryName} - 加工费结算对账单{printVersion === 'simple' ? '（简版）' : ''}
                                 </div>
-                                <div className="sub-header" style={{ fontSize: 14, marginBottom: 16, paddingBottom: 12, borderBottom: '2px solid var(--color-black)' }}>
+                                <div className="sub-header" style={{ fontSize: 15, marginBottom: 16, paddingBottom: 12, borderBottom: '2px solid var(--color-black)' }}>
                                 </div>
                                 <div className="info-row">
                                     <span><strong>结算周期：</strong>{dateRange[0]} 至 {dateRange[1]}</span>

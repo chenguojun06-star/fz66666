@@ -29,7 +29,7 @@ const InsightPanel: React.FC<InsightPanelProps> = ({ loading, profile, quoteSugg
     <div className="u-mt-10 u-p-8px10px u-br-8" style={{ background: 'rgba(114,46,209,0.05)', border: '1px solid rgba(114,46,209,0.15)' }}>
       <div className="u-d-flex u-ai-center u-jc-between u-mb-6">
         <div className="u-d-flex u-ai-center u-gap-6">
-          <BulbOutlined style={{ color: 'var(--color-accent-purple)', fontSize: 14 }} />
+          <BulbOutlined style={{ color: 'var(--color-accent-purple)', fontSize: 15 }} />
           <span className="u-fs-13 u-fw-600" style={{ color: 'var(--color-text-primary)' }}>AI 洞察</span>
         </div>
         <Button
@@ -37,7 +37,7 @@ const InsightPanel: React.FC<InsightPanelProps> = ({ loading, profile, quoteSugg
           type="link"
           onClick={onRefresh}
           loading={loading}
-          style={{ padding: 0, fontSize: 12 }}
+          style={{ padding: 0, fontSize: 13 }}
         >
           刷新洞察
         </Button>
@@ -48,7 +48,7 @@ const InsightPanel: React.FC<InsightPanelProps> = ({ loading, profile, quoteSugg
             key={`${it.category}_${idx}`}
             style={{
               margin: 0,
-              fontSize: 12,
+              fontSize: 13,
               lineHeight: '18px',
               padding: '3px 8px',
               color: INSIGHT_COLOR[it.category],

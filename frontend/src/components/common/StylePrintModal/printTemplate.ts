@@ -74,7 +74,7 @@ export function buildPrintHtml({
             display: flex;
             justify-content: flex-end;
             align-items: center;
-            font-size: 11px;
+            font-size: 12px;
             color: var(--color-gray-label);
             padding: 6px 5mm;
             margin-top: 16px;
@@ -91,7 +91,7 @@ export function buildPrintHtml({
           /* 基础样式 */
           body {
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif;
-            font-size: 12px;
+            font-size: 13px;
             line-height: 1.6;
             color: var(--color-gray-800);
             padding: 20px;
@@ -106,14 +106,14 @@ export function buildPrintHtml({
             break-inside: avoid;
           }
           .print-section-title {
-            font-size: 13px; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-radius: 2px; margin-bottom: 0; border: 1px solid #d9d9d9; border-bottom: none;
+            font-size: 14px; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-radius: 2px; margin-bottom: 0; border: 1px solid #d9d9d9; border-bottom: none;
           }
 
           /* 表格样式 */
           table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 12px;
+            font-size: 13px;
             margin-bottom: 16px;
             /* D-361e：整表不拆页——放不下整体挪到下一页 */
             page-break-inside: avoid;

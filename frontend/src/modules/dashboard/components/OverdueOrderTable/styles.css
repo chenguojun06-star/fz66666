@@ -14,7 +14,7 @@
 }
 
 .overdue-order-table-card .ant-card-head-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-bg-dark);
 }
@@ -214,7 +214,7 @@
   background: var(--color-border-light);
   cursor: pointer;
   transition: background 0.18s, color 0.18s, border-color 0.18s;
-  font-size: 12px;
+  font-size: 13px;
   user-select: none;
   white-space: nowrap;
   border: 1px solid transparent;
@@ -266,7 +266,7 @@
 /* 跳转到生产列表的导航按钮 */
 .overdue-factory-nav-btn {
   margin-left: auto;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-primary);
   cursor: pointer;
   padding: 4px 8px;

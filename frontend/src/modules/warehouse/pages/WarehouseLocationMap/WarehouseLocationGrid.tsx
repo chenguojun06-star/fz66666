@@ -74,7 +74,7 @@ const WarehouseLocationGrid: React.FC<Props> = ({
                       <span className="wlm-empty-text">空闲</span>
                     ) : (
                       <>
-                        <InboxOutlined style={{ fontSize: 12, marginRight: 2 }} />
+                        <InboxOutlined style={{ fontSize: 13, marginRight: 2 }} />
                         {location.usedCapacity}
                       </>
                     )}

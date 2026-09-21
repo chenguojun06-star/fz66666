@@ -10,7 +10,7 @@
 }
 
 .order-cutting-chart-card .ant-card-head-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-bg-dark);
 }
@@ -32,7 +32,7 @@
   justify-content: center;
   height: 350px;
   color: var(--color-text-tertiary);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 /* 深色主题覆盖 */

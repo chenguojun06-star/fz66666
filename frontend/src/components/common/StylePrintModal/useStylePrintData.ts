@@ -236,7 +236,7 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
       const sName = styleName || '';
       const qrMm = 26;
       const qrPx = 480;
-      const fs = h >= 48 ? 6.2 : h >= 38 ? 5.4 : 4.9;
+      const fs = h >= 48 ? 6.7 : h >= 38 ? 5.9 : 5.4;
 
       // 如果 labelItems 为空则兜底单条
       const items = labelItems.length > 0

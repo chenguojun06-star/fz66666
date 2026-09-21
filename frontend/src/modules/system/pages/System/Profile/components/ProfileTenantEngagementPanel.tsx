@@ -61,7 +61,7 @@ const ProfileTenantEngagementPanel: React.FC<Props> = ({
               <Button icon={<LinkOutlined />} onClick={() => onCopyRegisterUrl(registerUrl)}>复制注册链接</Button>
               <Button icon={<QrcodeOutlined />} onClick={() => onCopyTenantCode(tenantInfo.tenantCode || '')}>复制工厂码</Button>
             </div>
-            <Typography.Text type="secondary" style={{ fontSize: 14, marginTop: 8, display: 'block', wordBreak: 'break-all' }}>
+            <Typography.Text type="secondary" style={{ fontSize: 15, marginTop: 8, display: 'block', wordBreak: 'break-all' }}>
               员工扫码二维码或输入工厂码即可申请加入
             </Typography.Text>
           </div>
@@ -74,7 +74,7 @@ const ProfileTenantEngagementPanel: React.FC<Props> = ({
           <span className="u-fw-600 u-fs-15">问题反馈</span>
         </div>
         <Card style={{ borderRadius: 10, background: 'var(--card-bg, var(--color-slate-50))' }}>
-          <Typography.Text type="secondary" style={{ fontSize: 14, display: 'block', marginBottom: 12 }}>
+          <Typography.Text type="secondary" style={{ fontSize: 15, display: 'block', marginBottom: 12 }}>
             遇到问题或有改进建议？提交反馈帮助我们优化系统
           </Typography.Text>
           <Space>

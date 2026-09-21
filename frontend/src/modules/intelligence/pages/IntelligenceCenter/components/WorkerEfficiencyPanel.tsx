@@ -41,7 +41,7 @@ const WorkerEfficiencyPanel: React.FC<WorkerEfficiencyPanelProps> = ({
                       : { g: 'D', c: 'var(--color-danger)' };
                     return (
                       <span className="u-d-inline-flex u-ai-center u-gap-4">
-                        <b style={{ color: grd.c, border: `1px solid ${grd.c}55`, padding: '0 3px', borderRadius: 3, fontSize: 14 }}>{grd.g}</b>
+                        <b style={{ color: grd.c, border: `1px solid ${grd.c}55`, padding: '0 3px', borderRadius: 3, fontSize: 15 }}>{grd.g}</b>
                         {w.trend === 'UP' ? '' : w.trend === 'DOWN' ? '' : ''}
                       </span>
                     );

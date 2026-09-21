@@ -50,7 +50,7 @@ interface PermissionMatrixProps {
 
 /** 关联人员预览表列（工号/姓名/团队/状态） */
 const MEMBER_PREVIEW_COLUMNS = [
-  { title: '工号', dataIndex: 'employeeNo', key: 'employeeNo', width: 110, render: (v: string) => v ? <Text code style={{ fontSize: 12 }}>{v}</Text> : <Text type="secondary">-</Text> },
+  { title: '工号', dataIndex: 'employeeNo', key: 'employeeNo', width: 110, render: (v: string) => v ? <Text code style={{ fontSize: 13 }}>{v}</Text> : <Text type="secondary">-</Text> },
   { title: '姓名', dataIndex: 'name', key: 'name', width: 120 },
   { title: '团队', dataIndex: 'orgUnitName', key: 'orgUnitName', ellipsis: true, render: (v: string) => v || '-' },
   {
@@ -92,7 +92,7 @@ const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
         description={
           <div className="u-ta-center">
             <Text strong style={{ fontSize: 15, display: 'block', marginBottom: 4 }}>请选择一个岗位</Text>
-            <Text type="secondary" style={{ fontSize: 12 }}>从左侧岗位列表中选择，查看或编辑它的权限配置</Text>
+            <Text type="secondary" style={{ fontSize: 13 }}>从左侧岗位列表中选择，查看或编辑它的权限配置</Text>
           </div>
         }
         style={{ padding: '80px 0' }}
@@ -119,7 +119,7 @@ const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
           >
             全选
           </Checkbox>
-          <Text type="secondary" style={{ fontSize: 12, marginLeft: 16 }}>
+          <Text type="secondary" style={{ fontSize: 13, marginLeft: 16 }}>
             已选 <Text strong style={{ color: 'var(--color-primary)' }}>{checkedPermIds.size}</Text> / {totalPermCount} 项
           </Text>
           <Input
@@ -221,7 +221,7 @@ const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
         <div className="role-perm-dual">
           <div className="role-perm-card role-perm-card-menu">
             <div className="role-perm-card-header">
-              <Text strong style={{ fontSize: 14 }}>菜单权限</Text>
+              <Text strong style={{ fontSize: 15 }}>菜单权限</Text>
             </div>
             <div className="role-perm-card-scroll perm-matrix-container">
               {renderPermCard()}
@@ -229,7 +229,7 @@ const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
           </div>
           <div className="role-perm-card role-perm-card-scope">
             <div className="role-perm-card-header">
-              <Text strong style={{ fontSize: 14 }}>数据权限（4 级）</Text>
+              <Text strong style={{ fontSize: 15 }}>数据权限（4 级）</Text>
             </div>
             <div className="role-perm-card-scroll">
               <Radio.Group
@@ -249,7 +249,7 @@ const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
         </div>
         <div className="role-perm-card role-perm-card-members">
           <div className="role-perm-card-header">
-            <Text strong style={{ fontSize: 14 }}>关联人员（{memberCount} 人{memberCount > 5 ? '，前 5' : ''}）</Text>
+            <Text strong style={{ fontSize: 15 }}>关联人员（{memberCount} 人{memberCount > 5 ? '，前 5' : ''}）</Text>
             <Button type="link" size="small" onClick={onOpenEmployeeList}>查看全部</Button>
           </div>
           <Table

@@ -101,7 +101,7 @@ const StageNode: React.FC<{
           {icon}
         </div>
         <div style={{
-          fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)',
+          fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)',
           textAlign: 'center', lineHeight: 1.2, whiteSpace: 'nowrap',
         }}>
           {name}
@@ -118,7 +118,7 @@ const StageNode: React.FC<{
         )}
         {assignee && (
           <div style={{
-            fontSize: 10, color: 'var(--color-text-quaternary)',
+            fontSize: 11, color: 'var(--color-text-quaternary)',
             textAlign: 'center', maxWidth: 80,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
@@ -270,7 +270,7 @@ const StyleProgressTab: React.FC<Props> = ({ styleId, styleNo }) => {
           </div>
         )}
         {pattern?.deliveryTime && (
-          <div style={{ fontSize: 13, color: overdueDays > 0 ? 'var(--color-danger)' : 'var(--color-text-secondary)' }}>
+          <div style={{ fontSize: 14, color: overdueDays > 0 ? 'var(--color-danger)' : 'var(--color-text-secondary)' }}>
             交期：{dayjs(String(pattern.deliveryTime)).format('YYYY-MM-DD')}
             {overdueDays > 0 && <span className="u-ml-4 u-fw-600" style={{ color: 'var(--color-danger)' }}>逾{overdueDays}天</span>}
           </div>

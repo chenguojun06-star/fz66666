@@ -34,7 +34,7 @@ export const buildBatchModalContent = (
 ): React.ReactElement =>
   React.createElement('div', null,
     React.createElement('p', null, `${titlePrefix} ${items.length} 项物料：`),
-    React.createElement('div', { style: { maxHeight: 320, overflowY: 'auto', marginTop: 8, fontSize: 13 } },
+    React.createElement('div', { style: { maxHeight: 320, overflowY: 'auto', marginTop: 8, fontSize: 14 } },
       items.map((item, idx) => {
         const { name, desc, qtyText } = renderItem(item, idx);
         return React.createElement('div', {

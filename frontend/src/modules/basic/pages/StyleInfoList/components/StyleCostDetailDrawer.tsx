@@ -228,7 +228,7 @@ const StyleCostDetailDrawer: React.FC<StyleCostDetailDrawerProps> = ({
                 type={rangeType === key ? 'primary' : 'text'}
                 size="small"
                 onClick={() => onRangeChange(key)}
-                style={{ minWidth: 40, fontSize: 12, height: 26, padding: '0 8px' }}
+                style={{ minWidth: 40, fontSize: 13, height: 26, padding: '0 8px' }}
               >
                 {label}
               </Button>

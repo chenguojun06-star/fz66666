@@ -141,7 +141,7 @@ const EcommerceCenter: React.FC = () => {
             </Col>
           </Row>
         ) : (
-          <Paragraph type="secondary" style={{ fontSize: 14, marginBottom: 0, minHeight: 50 }}>{p.desc}</Paragraph>
+          <Paragraph type="secondary" style={{ fontSize: 15, marginBottom: 0, minHeight: 50 }}>{p.desc}</Paragraph>
         )}
 
         {isAvailable && isConfigured && statsData && (
@@ -210,7 +210,7 @@ const EcommerceCenter: React.FC = () => {
           <Card style={{ marginBottom: 16, borderRadius: 8, border: '1px solid var(--status-error-border)', background: 'var(--color-bg-base)1F0' }} styles={{ body: { padding: '10px 16px' } }}>
             <Space>
               <WarningOutlined style={{ color: 'var(--color-danger)', fontSize: 18 }} />
-              <Text strong style={{ color: 'var(--color-danger)', fontSize: 14 }}>缺货预警：{globalStats.noStockWarn} 单未匹配到生产单，需人工确认库存或创建生产计划</Text>
+              <Text strong style={{ color: 'var(--color-danger)', fontSize: 15 }}>缺货预警：{globalStats.noStockWarn} 单未匹配到生产单，需人工确认库存或创建生产计划</Text>
               <Button type="link" size="small" onClick={() => navigate('/warehouse/ecommerce')}>查看详情 →</Button>
             </Space>
           </Card>

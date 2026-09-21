@@ -43,7 +43,7 @@ const ProductionSheetPanel: React.FC<Props> = ({
           border: '1px solid var(--neutral-border, var(--color-border-light))',
           borderRadius: 6,
           background: 'var(--neutral-bg, var(--color-bg-container))',
-          fontSize: 14,
+          fontSize: 15,
           lineHeight: '20px',
         }}>
           <div className="u-mb-4 u-fw-600">样衣审核</div>

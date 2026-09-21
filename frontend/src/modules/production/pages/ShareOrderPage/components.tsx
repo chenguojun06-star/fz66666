@@ -15,7 +15,7 @@ export const MetricCard: React.FC<InfoItemProps> = ({ icon, label, value, highli
     <span style={{ color: highlightColor || 'var(--color-primary)', marginRight: 6 }}>{icon}</span>
     <div>
       <div className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: highlightColor || 'var(--color-text-primary)' }}>{value}</div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: highlightColor || 'var(--color-text-primary)' }}>{value}</div>
     </div>
   </div>
 );

@@ -135,7 +135,7 @@ const SmartBubble: React.FC<SmartBubbleProps> = ({ onOpenTaskPanel, triggerEdge 
               {summary.highPriorityCount > 0 ? '有紧急待办！' : '你有新待办'}
             </span>
             <button type="button" className={styles.bubbleCloseBtn} onClick={handleDismiss}>
-              <CloseOutlined style={{ fontSize: 12 }} />
+              <CloseOutlined style={{ fontSize: 13 }} />
             </button>
           </div>
           {summary.topUrgentTitle && (

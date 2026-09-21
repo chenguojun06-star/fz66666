@@ -231,7 +231,7 @@ export default function CounterpartyBillDrawer({
             将把 {rows.length} 笔账单按未结金额合计{' '}
             <Text strong style={{ color: 'var(--color-error)' }}>{fmtMoney(sum)}</Text> 一次性结清。
           </div>
-          <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 12, maxHeight: 200, overflow: 'auto' }}>
+          <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13, maxHeight: 200, overflow: 'auto' }}>
             {rows.slice(0, 10).map((b) => (
               <li key={b.id}>
                 {b.billNo || '-'} · {SOURCE_TYPE_TEXT[b.sourceType] ?? b.sourceType ?? '-'} · 剩余{' '}
@@ -240,7 +240,7 @@ export default function CounterpartyBillDrawer({
             ))}
           </ul>
           {rows.length > 10 && (
-            <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>…等共 {rows.length} 笔</div>
+            <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>…等共 {rows.length} 笔</div>
           )}
           <div style={{ marginTop: 8 }}>确认付款？</div>
         </div>
@@ -373,8 +373,8 @@ export default function CounterpartyBillDrawer({
               将把该对象{month ? ` ${month.format('YYYY-MM')}` : '（全部月份）'}共 {rows.length} 笔未结账单一次性结清，
               合计 <Text strong style={{ color: 'var(--color-error)' }}>{fmtMoney(sum)}</Text>。
             </div>
-            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-tertiary)' }}>包含以下账单：</div>
-            <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12, maxHeight: 200, overflow: 'auto' }}>
+            <div style={{ marginTop: 8, fontSize: 13, color: 'var(--color-text-tertiary)' }}>包含以下账单：</div>
+            <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13, maxHeight: 200, overflow: 'auto' }}>
               {rows.slice(0, 10).map((b) => (
                 <li key={b.id}>
                   {b.billNo || '-'} · {SOURCE_TYPE_TEXT[b.sourceType] ?? b.sourceType ?? '-'} · 剩余{' '}
@@ -383,7 +383,7 @@ export default function CounterpartyBillDrawer({
               ))}
             </ul>
             {rows.length > 10 && (
-              <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>…等共 {rows.length} 笔</div>
+              <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>…等共 {rows.length} 笔</div>
             )}
             <div style={{ marginTop: 8 }}>确认付款？</div>
           </div>
@@ -629,7 +629,7 @@ export default function CounterpartyBillDrawer({
       {/* 汇总：对象整体口径（来自主列表聚合行） */}
       <Space size={32} style={{ marginBottom: 16, flexWrap: 'wrap' }}>
         <div>
-          <Text type="secondary" style={{ fontSize: 12 }}>账单笔数</Text>
+          <Text type="secondary" style={{ fontSize: 13 }}>账单笔数</Text>
           <div><Title level={4} style={{ margin: 0 }}>{target?.billCount ?? '-'}</Title></div>
         </div>
         {/* D-474：汇总为 0 时给原因提示，避免财务以为"坏了"——常见于付款记录存在
@@ -648,7 +648,7 @@ export default function CounterpartyBillDrawer({
         {fbPayments.length > 0 && (
           <>
             <div>
-              <Text type="secondary" style={{ fontSize: 12 }}>付款记录合计</Text>
+              <Text type="secondary" style={{ fontSize: 13 }}>付款记录合计</Text>
               <div>
                 <Title level={4} style={{ margin: 0 }}>
                   {fmtMoney(fbPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0))}
@@ -656,7 +656,7 @@ export default function CounterpartyBillDrawer({
               </div>
             </div>
             <div>
-              <Text type="secondary" style={{ fontSize: 12 }}>当前待付</Text>
+              <Text type="secondary" style={{ fontSize: 13 }}>当前待付</Text>
               <div>
                 <Title level={4} style={{ margin: 0, color: 'var(--color-error)' }}>
                   {fmtMoney(
@@ -670,11 +670,11 @@ export default function CounterpartyBillDrawer({
           </>
         )}
         <div>
-          <Text type="secondary" style={{ fontSize: 12 }}>累计金额</Text>
+          <Text type="secondary" style={{ fontSize: 13 }}>累计金额</Text>
           <div><Title level={4} style={{ margin: 0 }}>{fmtMoney(target?.totalAmount)}</Title></div>
         </div>
         <div>
-          <Text type="secondary" style={{ fontSize: 12 }}>已结清</Text>
+          <Text type="secondary" style={{ fontSize: 13 }}>已结清</Text>
           <div>
             <Title level={4} style={{ margin: 0, color: 'var(--color-success)' }}>
               {fmtMoney(target?.settledAmount)}
@@ -682,7 +682,7 @@ export default function CounterpartyBillDrawer({
           </div>
         </div>
         <div>
-          <Text type="secondary" style={{ fontSize: 12 }}>未结清</Text>
+          <Text type="secondary" style={{ fontSize: 13 }}>未结清</Text>
           <div>
             <Title level={4} style={{ margin: 0, color: 'var(--color-error)' }}>
               {fmtMoney(target?.unsettledAmount)}
@@ -847,7 +847,7 @@ export default function CounterpartyBillDrawer({
                 addonBefore="¥"
               />
             </Space>
-            <Text type="secondary" style={{ fontSize: 12 }}>
+            <Text type="secondary" style={{ fontSize: 13 }}>
               可以只付一部分：付不满不会关闭这笔账，剩余金额继续挂在该对象名下，状态转为「结算中」，下个月可继续扣。
             </Text>
           </Space>

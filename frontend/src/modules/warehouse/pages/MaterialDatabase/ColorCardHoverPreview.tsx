@@ -69,7 +69,7 @@ const ColorCardHoverPreview: React.FC<ColorCardHoverPreviewProps> = ({ card, lim
           borderBottom: '2px solid var(--color-border)',
         }}
       >
-        <span style={{ fontWeight: 600, fontSize: 14 }}>
+        <span style={{ fontWeight: 600, fontSize: 15 }}>
           <BookOutlined style={{ marginRight: 6, color: 'var(--color-primary)' }} />
           {card.supplierName || '色卡'} · 色卡速览
         </span>

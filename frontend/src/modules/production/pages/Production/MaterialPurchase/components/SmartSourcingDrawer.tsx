@@ -67,7 +67,7 @@ const SmartSourcingDrawer: React.FC<SmartSourcingDrawerProps> = ({
               label: (
                 <span>
                   <RobotOutlined /> 待采购订单列表
-                  <Tag color="blue" style={{ marginLeft: 6, fontSize: 11 }}>推荐</Tag>
+                  <Tag color="blue" style={{ marginLeft: 6, fontSize: 12 }}>推荐</Tag>
                 </span>
               ),
               children: <ListTab onPushedToCart={onPushedToCart} />,
@@ -330,7 +330,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
             <div className="u-fw-600">
               {v || '-'}
               {r.urgencyLevel === 'urgent' && (
-                <Tag color="red" style={{ marginLeft: 4, fontSize: 10 }}>急</Tag>
+                <Tag color="red" style={{ marginLeft: 4, fontSize: 11 }}>急</Tag>
               )}
             </div>
             <div className="u-fs-11" style={{ color: 'var(--color-text-secondary)', wordBreak: 'break-all' }}>
@@ -367,9 +367,9 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
         return (
           <Space direction="vertical" size={2}>
             <span>{d.format('YYYY-MM-DD')}</span>
-            {diffDay < 0 && <Tag color="red" style={{ fontSize: 10 }}>逾期 {-diffDay}天</Tag>}
+            {diffDay < 0 && <Tag color="red" style={{ fontSize: 11 }}>逾期 {-diffDay}天</Tag>}
             {diffDay >= 0 && diffDay <= 3 && (
-              <Tag color="orange" style={{ fontSize: 10 }}>剩 {diffDay}天</Tag>
+              <Tag color="orange" style={{ fontSize: 11 }}>剩 {diffDay}天</Tag>
             )}
           </Space>
         );
@@ -383,9 +383,9 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
         const ov = overviewMap[r.orderNo];
         // 物料全部充足（无缺料）时不展示刺眼的 0%——采购环节已完成，到位率无意义
         if (ov && (ov.shortageCount ?? 0) === 0 && (ov.sufficientCount ?? 0) > 0) {
-          return <Tag color="green" style={{ fontSize: 10 }}>已齐料</Tag>;
+          return <Tag color="green" style={{ fontSize: 11 }}>已齐料</Tag>;
         }
-        if (v == null) return <Tag style={{ fontSize: 10 }}>未维护</Tag>;
+        if (v == null) return <Tag style={{ fontSize: 11 }}>未维护</Tag>;
         const color = v >= 100 ? 'var(--color-success)'
           : v >= 60 ? 'var(--color-warning)' : 'var(--color-error)';
         return <span style={{ color, fontWeight: 600 }}>{v}%</span>;
@@ -410,7 +410,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
         if (failedReason) {
           return (
             <Tooltip title={failedReason}>
-              <Tag color="default" style={{ fontSize: 11 }}>计算失败</Tag>
+              <Tag color="default" style={{ fontSize: 12 }}>计算失败</Tag>
             </Tooltip>
           );
         }
@@ -422,19 +422,19 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
             <div className="u-fs-12 u-fw-500">{ov.criticalPath || '-'}</div>
             <Space size={4} wrap>
               {(ov.shortageCount ?? 0) > 0 && (
-                <Tag color="red" style={{ fontSize: 10 }}>缺{ov.shortageCount}种</Tag>
+                <Tag color="red" style={{ fontSize: 11 }}>缺{ov.shortageCount}种</Tag>
               )}
               {(ov.inTransitCoveredCount ?? 0) > 0 && (
                 <Tooltip title="这些物料当前库存不够，但已有采购在途，到货后即齐料（可点「展开明细」看每个物料的在途数量）">
-                  <Tag color="blue" style={{ fontSize: 10 }}>在途补{ov.inTransitCoveredCount}种</Tag>
+                  <Tag color="blue" style={{ fontSize: 11 }}>在途补{ov.inTransitCoveredCount}种</Tag>
                 </Tooltip>
               )}
               {(ov.stockCoveredCount ?? 0) > 0 && (
-                <Tag color="green" style={{ fontSize: 10 }}>库存够{ov.stockCoveredCount}种</Tag>
+                <Tag color="green" style={{ fontSize: 11 }}>库存够{ov.stockCoveredCount}种</Tag>
               )}
               {/* 兼容旧缓存（无覆盖数拆分字段时） */}
               {(ov.stockCoveredCount == null && ov.inTransitCoveredCount == null && (ov.sufficientCount ?? 0) > 0) && (
-                <Tag color="green" style={{ fontSize: 10 }}>齐{ov.sufficientCount}种</Tag>
+                <Tag color="green" style={{ fontSize: 11 }}>齐{ov.sufficientCount}种</Tag>
               )}
               {(ov.shortageAmount ?? 0) > 0 && (
                 <span className="u-fs-11" style={{ color: 'var(--color-text-secondary)' }}>
@@ -443,7 +443,7 @@ const ListTab: React.FC<ListTabProps> = ({ onPushedToCart }) => {
               )}
               {ov.fromCache && (
                 <Tooltip title={`缓存于 ${ov.computedAt ? dayjs(ov.computedAt).format('HH:mm') : '-'}，2小时内复用`}>
-                  <Tag style={{ fontSize: 10 }}>缓存</Tag>
+                  <Tag style={{ fontSize: 11 }}>缓存</Tag>
                 </Tooltip>
               )}
             </Space>
@@ -993,11 +993,11 @@ const netDemandColumns: ColumnsType<NetDemandDetail> = [
           <div className="u-fw-500">
             {s.supplierName}
             {s.isBomDesignated && (
-              <Tag color="blue" style={{ marginLeft: 4, fontSize: 10 }}>清单指定</Tag>
+              <Tag color="blue" style={{ marginLeft: 4, fontSize: 11 }}>清单指定</Tag>
             )}
           </div>
           <div className="u-fs-11">
-            {s.supplierTier && <Tag color={tierColor} style={{ fontSize: 10 }}>{s.supplierTier}级</Tag>}
+            {s.supplierTier && <Tag color={tierColor} style={{ fontSize: 11 }}>{s.supplierTier}级</Tag>}
             {s.overallScore != null && (
               <span className="u-ml-4" style={{ color: 'var(--color-text-secondary)' }}>
                 评分 {s.overallScore}
@@ -1027,7 +1027,7 @@ const netDemandColumns: ColumnsType<NetDemandDetail> = [
           </div>
         )}
         {typeof r.priceAlert === 'string' && r.priceAlert.trim() && (
-          <Tag color="orange" style={{ fontSize: 10, marginTop: 2 }}>{r.priceAlert}</Tag>
+          <Tag color="orange" style={{ fontSize: 11, marginTop: 2 }}>{r.priceAlert}</Tag>
         )}
       </div>
     ),

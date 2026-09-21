@@ -73,10 +73,10 @@ const HangtagCertPanel: React.FC<Props> = ({
               <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 2 }}>
                 {selectedOrder.styleName || selectedOrder.styleNo}
               </div>
-              <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+              <div style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
                 款号：{selectedOrder.styleNo || '-'} · 订单号：{selectedOrder.orderNo || '-'}
               </div>
-              <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+              <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
                 {(selectedOrder.colors?.length ? `颜色：${selectedOrder.colors.join(' / ')}` : '') || '- '}
                 {selectedOrder.colors?.length && selectedOrder.sizes?.length ? ' · ' : ''}
                 {selectedOrder.sizes?.length ? `尺码：${selectedOrder.sizes.join(' / ')}` : ''}
@@ -107,9 +107,9 @@ const HangtagCertPanel: React.FC<Props> = ({
         }
       >
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>宽</span>
+          <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>宽</span>
           <InputNumber min={20} max={200} value={certW} onChange={(v) => setCertW(Number(v) || 70)} suffix="mm" style={{ width: 104 }} size="small" />
-          <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>高</span>
+          <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>高</span>
           <InputNumber min={30} max={400} value={certH} onChange={(v) => setCertH(Number(v) || 100)} suffix="mm" style={{ width: 104 }} size="small" />
         </div>
 
@@ -133,7 +133,7 @@ const HangtagCertPanel: React.FC<Props> = ({
                 placeholder="合格证"
                 maxLength={10}
               />
-              <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 4 }}>字号</span>
+              <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginLeft: 4 }}>字号</span>
               <InputNumber
                 size="small"
                 min={0.5}
@@ -204,14 +204,14 @@ const HangtagCertPanel: React.FC<Props> = ({
                 条码下方显示商品编码
               </Checkbox>
             </div>
-            <div style={{ marginTop: 6, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+            <div style={{ marginTop: 6, fontSize: 13, color: 'var(--color-text-tertiary)' }}>
               勾选才打印；规格/颜色留空自动带该行的码数/颜色；条码码值支持 {'{款号}'} {'{颜色}'} {'{码数}'} {'{序号}'}
             </div>
           </div>
 
           {/* 实时预览 */}
           <div style={{ flexShrink: 0 }}>
-            <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
+            <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>
               预览（首张效果 · {certW}×{certH}mm）
             </div>
             {/* D-230b：预览放大到 4.5 倍，允许滚动，不再缩成一小块 */}
@@ -238,7 +238,7 @@ const HangtagCertPanel: React.FC<Props> = ({
         title="打印明细（颜色 × 尺码）"
         extra={
           <Space size="small">
-            <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>合计 {totalSheets} 张</span>
+            <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>合计 {totalSheets} 张</span>
             <Button
               type="primary"
               icon={<PrinterOutlined />}
@@ -277,7 +277,7 @@ const HangtagCertPanel: React.FC<Props> = ({
                 title: '商品编码',
                 dataIndex: 'sku',
                 render: (v: string) => (
-                  <span style={{ fontSize: 13, fontFamily: 'var(--font-family-mono, monospace)' }}>{v}</span>
+                  <span style={{ fontSize: 14, fontFamily: 'var(--font-family-mono, monospace)' }}>{v}</span>
                 ),
               },
               {
@@ -299,7 +299,7 @@ const HangtagCertPanel: React.FC<Props> = ({
           />
         )}
         {selectedOrder && hangSkuRows.length > 0 && (
-          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+          <div style={{ marginTop: 8, fontSize: 13, color: 'var(--color-text-tertiary)' }}>
             款号 {selectedOrder.styleNo} · 共 {hangSkuRows.length} 个颜色尺码组合，设置张数后点击右上角「打印」
           </div>
         )}

@@ -45,7 +45,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
       <div className="u-mb-16">
         <div className="u-d-flex u-ai-center u-jc-between u-mb-8">
           <Space>
-            <Text strong style={{ fontSize: 14 }}>菲号列表</Text>
+            <Text strong style={{ fontSize: 15 }}>菲号列表</Text>
             <Tag color={batchSelectedBundleQrs.length ? 'blue' : 'default'}>
               已选 {batchSelectedBundleQrs.length}/{batchSelectRows.length}
             </Tag>
@@ -100,7 +100,7 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
                   if (hints.length === 0) return tagEl;
                   return (
                     <Tooltip title={<div style={{ lineHeight: '22px' }}>{hints.map((h, i) => <div key={i}>{h}</div>)}</div>}>
-                      <Space size={4}>{tagEl}<InfoCircleOutlined style={{ color: 'var(--color-info)', fontSize: 12 }} /></Space>
+                      <Space size={4}>{tagEl}<InfoCircleOutlined style={{ color: 'var(--color-info)', fontSize: 13 }} /></Space>
                     </Tooltip>
                   );
                 },

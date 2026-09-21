@@ -47,7 +47,7 @@ const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
     legend: {
       data: ['营收', '成本'],
       top: 5,
-      textStyle: { fontSize: 13, color: '#6b7280' },
+      textStyle: { fontSize: 14, color: '#6b7280' },
     },
     grid: {
       left: '3%',
@@ -61,7 +61,7 @@ const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
       boundaryGap: false,
       data: data.map(d => d.label),
       axisLine: { lineStyle: { color: '#e5e7eb' } },
-      axisLabel: { color: '#9ca3af', fontSize: 12 },
+      axisLabel: { color: '#9ca3af', fontSize: 13 },
     },
     yAxis: {
       type: 'value',
@@ -69,7 +69,7 @@ const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
       axisTick: { show: false },
       axisLabel: {
         color: '#9ca3af',
-        fontSize: 12,
+        fontSize: 13,
         formatter: (value: number) => {
           if (Math.abs(value) >= 10000) return `${(value / 10000).toFixed(1)}万`;
           return value.toLocaleString();

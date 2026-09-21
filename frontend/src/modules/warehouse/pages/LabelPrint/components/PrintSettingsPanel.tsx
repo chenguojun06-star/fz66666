@@ -8,8 +8,8 @@ import type { OrderInfo } from '../types';
 /** D-230b：统一表单项布局：标签 + 说明 + 控件，让用户清楚每个输入框是干什么的 */
 const Field: React.FC<{ label: string; help?: string; children: React.ReactNode }> = ({ label, help, children }) => (
   <div style={{ marginBottom: 12 }}>
-    <div style={{ fontSize: 14, color: 'var(--color-text)', fontWeight: 500, marginBottom: 2 }}>{label}</div>
-    {help ? <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>{help}</div> : null}
+    <div style={{ fontSize: 15, color: 'var(--color-text)', fontWeight: 500, marginBottom: 2 }}>{label}</div>
+    {help ? <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>{help}</div> : null}
     {children}
   </div>
 );
@@ -66,7 +66,7 @@ const PrintSettingsPanel: React.FC<PrintSettingsPanelProps> = ({
     setter: (updater: (prev: T) => T) => void
   ) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <span style={{ fontSize: 14 }}>{label}</span>
+      <span style={{ fontSize: 15 }}>{label}</span>
       <Switch size="small" checked={checked} onChange={v => setter(prev => ({ ...prev, [field]: v }))} />
     </div>
   );
@@ -75,7 +75,7 @@ const PrintSettingsPanel: React.FC<PrintSettingsPanelProps> = ({
     <>
       <Card title="打印设置" size="small" style={{ marginBottom: 12 }}>
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>打印数量</div>
+          <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>打印数量</div>
           <InputNumber min={1} max={999} value={printCount} onChange={v => setPrintCount(v || 1)} style={{ width: '100%' }} />
         </div>
         <Button type="primary" icon={<PrinterOutlined />} loading={printing} onClick={() => void onPrint()} block>
@@ -110,7 +110,7 @@ const PrintSettingsPanel: React.FC<PrintSettingsPanelProps> = ({
         children: (
           <div style={{ padding: '2px 0' }}>
             <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>尺寸 (mm)</div>
+              <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 3 }}>尺寸 (mm)</div>
               <Space wrap size={4} style={{ marginBottom: 4 }}>
                 {/* D-232：本面板现在只服务条码（吊牌走 HangtagCertPanel、洗水唛走 WashLabelPanel） */}
                 {sizePresets[printType].map(p => (

@@ -158,7 +158,7 @@ const CallbackLogsTab: React.FC<Props> = ({ active }) => {
       >
         <pre style={{
           maxHeight: '60vh', overflow: 'auto', background: 'var(--color-slate-900)', color: 'var(--color-neutral-300)',
-          padding: 16, borderRadius: 8, fontSize: 14, fontFamily: 'monospace',
+          padding: 16, borderRadius: 8, fontSize: 15, fontFamily: 'monospace',
         }}>
           {formatRawBody(rawBodyModal.content)}
         </pre>

@@ -24,7 +24,7 @@ const FlowCard: React.FC<{ icon: React.ReactNode; title: string; desc: string; c
       <span style={{ color, fontSize: 20 }}>{icon}</span>
       <Text strong>{title}</Text>
     </div>
-    <Text type="secondary" style={{ fontSize: 14 }}>{desc}</Text>
+    <Text type="secondary" style={{ fontSize: 15 }}>{desc}</Text>
   </Card>
 );
 

@@ -44,18 +44,18 @@ const ProcessCostSummary: React.FC<Props> = ({ data }) => {
   };
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 14,
+    fontSize: 15,
     color: 'var(--color-text-tertiary)',
   };
 
   const valueStyle: React.CSSProperties = {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 600,
     color: 'var(--color-gray-800)',
   };
 
   const subStyle: React.CSSProperties = {
-    fontSize: 14,
+    fontSize: 15,
     color: 'var(--color-text-quaternary)',
     marginLeft: 'auto',
   };

@@ -97,7 +97,7 @@ const LabelPrint: React.FC<{ initialKeyword?: string }> = ({ initialKeyword }) =
           <Radio.Button value="barcode">条码</Radio.Button>
           <Radio.Button value="washlabel">洗水唛</Radio.Button>
         </Radio.Group>
-        <div style={{ marginTop: 8, fontSize: 13, color: 'var(--color-text-tertiary)' }}>
+        <div style={{ marginTop: 8, fontSize: 14, color: 'var(--color-text-tertiary)' }}>
           {PRINT_TYPE_HINT[printType]}
         </div>
       </Card>
@@ -106,7 +106,7 @@ const LabelPrint: React.FC<{ initialKeyword?: string }> = ({ initialKeyword }) =
         {!selectedOrder ? (
           orders.length > 0 ? (
             <Card>
-              <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 8 }}>
+              <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 8 }}>
                 搜索到 {orders.length} 个订单，请选择
               </div>
               <Space orientation="vertical" style={{ width: '100%' }}>
@@ -123,7 +123,7 @@ const LabelPrint: React.FC<{ initialKeyword?: string }> = ({ initialKeyword }) =
                     }}
                   >
                     <div style={{ fontWeight: 600 }}>{o.styleName || o.styleNo}</div>
-                    <div style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
+                    <div style={{ fontSize: 15, color: 'var(--color-text-secondary)' }}>
                       订单号: {o.orderNo} | {o.colors.join('/')} | {o.sizes.join('/')}
                     </div>
                   </Card>
@@ -132,7 +132,7 @@ const LabelPrint: React.FC<{ initialKeyword?: string }> = ({ initialKeyword }) =
             </Card>
           ) : (
             <Card style={{ textAlign: 'center', padding: 60 }}>
-              <div style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>
+              <div style={{ color: 'var(--color-text-quaternary)', fontSize: 15 }}>
                 请输入订单号或款号搜索
               </div>
             </Card>

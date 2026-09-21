@@ -129,7 +129,7 @@ export default function SampleProcessList({
         gap: 24,
         marginBottom: 8,
         padding: '4px 0',
-        fontSize: 13,
+        fontSize: 14,
         color: 'var(--color-text-secondary)',
       }}>
         <span>款号: <strong style={{ color: 'var(--color-text-primary)' }}>{styleNo || '-'}</strong></span>
@@ -171,7 +171,7 @@ export default function SampleProcessList({
           loading={loading}
           pagination={false}
           scroll={{ x: 700 }}
-          style={{ fontSize: 13 }}
+          style={{ fontSize: 14 }}
         />
       ) : null}
 

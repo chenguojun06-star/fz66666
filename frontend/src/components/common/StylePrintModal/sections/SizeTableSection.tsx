@@ -99,7 +99,7 @@ const SizeTableSection: React.FC<SizeTableSectionProps> = ({ sizes }) => {
                         <Image key={url} src={getFullAuthedFileUrl(url)} style={{ width: '100%', height: row.chunkImgs.length > 1 ? 120 : 220, objectFit: 'contain', borderRadius: 8, border: '1px solid var(--color-border-light)', background: 'var(--color-bg-base)', padding: 4, boxSizing: 'border-box' as const }} preview={{ cover: <span>预览</span> }} />
                       ))}
                     </div>
-                  : <span style={{ color: 'var(--color-text-quaternary)', fontSize: 12 }}>无图</span>
+                  : <span style={{ color: 'var(--color-text-quaternary)', fontSize: 13 }}>无图</span>
                 }
               </td>
             )}

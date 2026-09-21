@@ -17,7 +17,7 @@ const Section: React.FC<{ title: string; hint?: string; children: React.ReactNod
   <div className="u-d-flex u-fd-column u-h-full" style={{ minWidth: 0 }}>
     <div className="u-d-flex u-gap-6 u-mb-8" style={{ alignItems: 'baseline' }}>
       <span style={{
-        fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)',
+        fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)',
         paddingLeft: 8, borderLeft: '3px solid var(--color-primary)', lineHeight: '16px',
       }}>{title}</span>
       {hint ? <span className="u-fs-11" style={{ color: 'var(--color-text-tertiary)' }}>{hint}</span> : null}
@@ -102,7 +102,7 @@ const StyleIntelligenceProfileCard: React.FC<Props> = ({ style, onVisionAnalysis
           {/* 一行式关键信息条（节点 / 交期 / 最新订单进度） */}
           <div style={{
             display: 'flex', flexWrap: 'wrap', gap: '2px 14px',
-            fontSize: 12, color: 'var(--color-text-secondary)',
+            fontSize: 13, color: 'var(--color-text-secondary)',
             background: 'var(--color-bg-container)', borderRadius: 8, padding: '6px 10px',
           }}>
             <span>节点：<b style={{ color: 'var(--color-text-primary)' }}>{progressNode}</b></span>

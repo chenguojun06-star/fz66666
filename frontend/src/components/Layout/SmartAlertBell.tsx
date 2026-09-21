@@ -88,7 +88,7 @@ const SmartAlertBell: React.FC = () => {
             {brief?.date && <span className="sap-date">{brief.date}</span>}
           </div>
           <button className="sap-close" onClick={() => setOpen(false)}>
-            <CloseOutlined style={{ fontSize: 12 }} />
+            <CloseOutlined style={{ fontSize: 13 }} />
           </button>
         </div>
 
@@ -165,7 +165,7 @@ const SmartAlertBell: React.FC = () => {
                       {RISK_TYPE_LABELS[action.issueType] || action.issueType}: {action.detectedIssue}
                     </span>
                     <span style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       color: action.status === 'PENDING' ? 'var(--color-warning)' : 'var(--color-accent-purple)',
                       marginLeft: 'auto',
                       flexShrink: 0,
@@ -369,7 +369,7 @@ const SmartAlertBell: React.FC = () => {
                       />
                     )}
                     <div className="u-flex-1" style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: n.isRead ? 400 : 600, color: 'var(--color-text-primary)', lineHeight: 1.4 }}>
+                      <div style={{ fontSize: 15, fontWeight: n.isRead ? 400 : 600, color: 'var(--color-text-primary)', lineHeight: 1.4 }}>
                         {n.title}
                       </div>
                       <div className="u-fs-14" style={{ color: 'var(--color-text-muted)', marginTop: 1 }}>

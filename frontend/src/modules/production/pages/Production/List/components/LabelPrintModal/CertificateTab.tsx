@@ -68,12 +68,12 @@ export default function CertificateTab({
             <Radio.Button value="portrait">竖版</Radio.Button>
             <Radio.Button value="landscape">横版</Radio.Button>
           </Radio.Group>
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>宽</span>
+          <span style={{ color: 'var(--color-text-secondary)', fontSize: 15 }}>宽</span>
           <InputNumber min={20} max={200} value={certW} onChange={v => setCertW(v)} suffix="mm" style={{ width: 100 }} />
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>高</span>
+          <span style={{ color: 'var(--color-text-secondary)', fontSize: 15 }}>高</span>
           <InputNumber min={30} max={400} value={certH} onChange={v => setCertH(v)} suffix="mm" style={{ width: 100 }} />
         </Space>
-        <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+        <span style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>
           每行勾选才打印；左右文字均可编辑，规格/颜色可留空自动带；条码码值支持 {'{款号}'} {'{颜色}'} {'{码数}'} {'{序号}'}
         </span>
       </div>
@@ -96,7 +96,7 @@ export default function CertificateTab({
               placeholder="合格证"
               maxLength={10}
             />
-            <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8 }}>字号缩放</span>
+            <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginLeft: 8 }}>字号缩放</span>
             <InputNumber
               size="small" min={0.5} max={2} step={0.05}
               value={certSections.fontScale}
@@ -157,7 +157,7 @@ export default function CertificateTab({
 
         {/* 实时预览 */}
         <div style={{ flexShrink: 0 }}>
-          <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>预览（首件效果）</div>
+          <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>预览（首件效果）</div>
           <iframe
             title="合格证预览"
             srcDoc={previewHtml}

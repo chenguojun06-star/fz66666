@@ -99,20 +99,20 @@ const OrderAnalysisTab: React.FC = () => {
       borderColor: 'var(--color-border)',
       textStyle: { color: 'var(--color-text-primary)' },
     },
-    legend: { data: ['下单数', '下单件数'], top: 5, textStyle: { fontSize: 13, color: '#6b7280' } },
+    legend: { data: ['下单数', '下单件数'], top: 5, textStyle: { fontSize: 14, color: '#6b7280' } },
     grid: { left: '2%', right: '3%', bottom: '2%', top: 38, containLabel: true },
     xAxis: {
       type: 'category',
       boundaryGap: false,
       data: filledTrend.map((t) => t.date.slice(5)),
       axisLine: { lineStyle: { color: '#e5e7eb' } },
-      axisLabel: { color: '#9ca3af', fontSize: 11, interval: 4 },
+      axisLabel: { color: '#9ca3af', fontSize: 12, interval: 4 },
     },
     yAxis: {
       type: 'value',
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { color: '#9ca3af', fontSize: 11 },
+      axisLabel: { color: '#9ca3af', fontSize: 12 },
       splitLine: { lineStyle: { color: '#f0f0f0' } },
     },
     series: [
@@ -169,7 +169,7 @@ const OrderAnalysisTab: React.FC = () => {
         type: 'category',
         data: list.map((f) => f.factoryName),
         axisLine: { lineStyle: { color: '#e5e7eb' } },
-        axisLabel: { color: '#6b7280', fontSize: 11, interval: 0, rotate: 30 },
+        axisLabel: { color: '#6b7280', fontSize: 12, interval: 0, rotate: 30 },
       },
       yAxis: {
         type: 'value',
@@ -177,7 +177,7 @@ const OrderAnalysisTab: React.FC = () => {
         nameTextStyle: { color: '#9ca3af' },
         axisLine: { show: false },
         axisTick: { show: false },
-        axisLabel: { color: '#9ca3af', fontSize: 11 },
+        axisLabel: { color: '#9ca3af', fontSize: 12 },
         splitLine: { lineStyle: { color: '#f0f0f0' } },
       },
       series: [{
@@ -186,7 +186,7 @@ const OrderAnalysisTab: React.FC = () => {
         barMaxWidth: 28,
         data: list.map((f) => f.avgCompletionDays >= 0 ? f.avgCompletionDays : 0),
         itemStyle: { color: '#52c41a', borderRadius: [3, 3, 0, 0] },
-        label: { show: true, position: 'top', fontSize: 11, color: '#52c41a', formatter: (p: any) => (list[p.dataIndex].avgCompletionDays >= 0 ? list[p.dataIndex].avgCompletionDays.toFixed(1) : '-') },
+        label: { show: true, position: 'top', fontSize: 12, color: '#52c41a', formatter: (p: any) => (list[p.dataIndex].avgCompletionDays >= 0 ? list[p.dataIndex].avgCompletionDays.toFixed(1) : '-') },
       }],
     };
   }, [data?.factoryRanking]);

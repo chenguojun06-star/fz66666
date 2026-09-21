@@ -192,7 +192,7 @@ export default function SubProcessRemapModal({
         return (
           <>
             <div className="u-d-flex u-ai-center u-gap-4" style={{ paddingLeft: 8 }}>
-              <Text style={{ fontSize: 14, color: 'var(--color-text-tertiary)', width: 18, flexShrink: 0 }}>
+              <Text style={{ fontSize: 15, color: 'var(--color-text-tertiary)', width: 18, flexShrink: 0 }}>
                 {row.subIndex + 1}.
               </Text>
               <Input
@@ -235,7 +235,7 @@ export default function SubProcessRemapModal({
                   style={{ width: 130 }}
                   onChange={v => updateSubProcessUnitPrice(row.parentNode.stageKey, row.subprocess!.id, v ?? undefined)}
                 />
-                <Text style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>厂方内部参考，不参与结算</Text>
+                <Text style={{ fontSize: 15, color: 'var(--color-text-tertiary)' }}>厂方内部参考，不参与结算</Text>
               </div>
             )}
           </>
@@ -258,7 +258,7 @@ export default function SubProcessRemapModal({
       }),
       render: (_: unknown, row: TableRow) => (
         <div className="u-d-flex u-fd-column u-ai-center" style={{ gap: 5 }}>
-          <Tag style={{ background: ACCENT, color: 'var(--color-bg-base)', border: 'none', fontWeight: 600, fontSize: 14, margin: 0 }}>
+          <Tag style={{ background: ACCENT, color: 'var(--color-bg-base)', border: 'none', fontWeight: 600, fontSize: 15, margin: 0 }}>
             {row.parentNode.name}
           </Tag>
           <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>
@@ -267,7 +267,7 @@ export default function SubProcessRemapModal({
               : '未启用'}
           </span>
           <div className="u-d-flex u-ai-center u-gap-4">
-            <Text style={{ fontSize: 14, color: row.entry.enabled ? ACTIVE_COLOR : 'var(--color-text-tertiary)' }}>
+            <Text style={{ fontSize: 15, color: row.entry.enabled ? ACTIVE_COLOR : 'var(--color-text-tertiary)' }}>
               {row.entry.enabled ? '已启用' : '已关闭'}
             </Text>
             <Switch
@@ -279,7 +279,7 @@ export default function SubProcessRemapModal({
           {row.entry.enabled && (
             <Button type="link" icon={<PlusOutlined />}
               onClick={() => addSubProcess(row.parentNode.stageKey)}
-              style={{ fontSize: 14, padding: 0 }}
+              style={{ fontSize: 15, padding: 0 }}
             >
               添加
             </Button>

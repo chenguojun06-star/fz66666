@@ -84,8 +84,8 @@ const DecisionInsightCard: React.FC<{
           <span style={{ color: tone.title, fontSize: compact ? 12 : 13, fontWeight: 700 }}>{insight.title}</span>
         </div>
         <div className="u-d-flex u-ai-center u-gap-4 u-fshrink-0">
-          {insight.source ? <Tag color="default" style={{ margin: 0, fontSize: 14 }}>{insight.source}</Tag> : null}
-          {insight.confidence ? <Tag color="blue" style={{ margin: 0, fontSize: 14 }}>{insight.confidence}</Tag> : null}
+          {insight.source ? <Tag color="default" style={{ margin: 0, fontSize: 15 }}>{insight.source}</Tag> : null}
+          {insight.confidence ? <Tag color="blue" style={{ margin: 0, fontSize: 15 }}>{insight.confidence}</Tag> : null}
         </div>
       </div>
 
@@ -112,11 +112,11 @@ const DecisionInsightCard: React.FC<{
         <div className="u-mt-6" style={{ paddingLeft: 13 }}>
           {insight.onAction ? (
             <Button type="link" onClick={insight.onAction}
-              style={{ padding: 0, height: 'auto', fontSize: 14, justifyContent: 'flex-start' }}>
+              style={{ padding: 0, height: 'auto', fontSize: 15, justifyContent: 'flex-start' }}>
               {insight.actionLabel}
             </Button>
           ) : (
-            <span style={{ fontSize: 14, fontWeight: 600, color: tone.title }}>{insight.actionLabel}</span>
+            <span style={{ fontSize: 15, fontWeight: 600, color: tone.title }}>{insight.actionLabel}</span>
           )}
         </div>
       ) : null}

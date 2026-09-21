@@ -183,10 +183,10 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
         const stage = record.progressStage || '车缝';
         return (
           <div className="u-d-flex u-fd-column u-ai-center u-gap-4">
-            <Tag style={{ background: STAGE_ACCENT, color: 'var(--color-bg-base)', border: 'none', fontWeight: 600, fontSize: 14 }}>{stage}</Tag>
+            <Tag style={{ background: STAGE_ACCENT, color: 'var(--color-bg-base)', border: 'none', fontWeight: 600, fontSize: 15 }}>{stage}</Tag>
             <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{info.count} 个工序</span>
             {editableMode && (
-              <Button type="link" icon={<PlusOutlined />} onClick={() => handleAdd(stage)} style={{ fontSize: 14, padding: 0 }}>
+              <Button type="link" icon={<PlusOutlined />} onClick={() => handleAdd(stage)} style={{ fontSize: 15, padding: 0 }}>
                 添加
               </Button>
             )}
@@ -293,7 +293,7 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
             {/* AI 单价提示卡片 */}
             {loading && (
               <span className="u-fs-14 u-d-flex u-ai-center" style={{ color: 'var(--color-text-secondary)', gap: 3 }}>
-                <LoadingOutlined style={{ fontSize: 12 }} /> 查询历史...
+                <LoadingOutlined style={{ fontSize: 13 }} /> 查询历史...
               </span>
             )}
             {!loading && hint && (
@@ -308,13 +308,13 @@ export function buildProcessColumns(opts: BuildProcessColumnsOptions): any[] {
                     updateField(record.id!, 'price', hint.suggestedPrice);
                   }}
                 >
-                  <BulbOutlined style={{ fontSize: 13, color: 'var(--color-primary)' }} />
+                  <BulbOutlined style={{ fontSize: 14, color: 'var(--color-primary)' }} />
                   <span className="u-fs-14" style={{ color: 'var(--color-primary)' }}>
                     建议 ¥{Number(hint.suggestedPrice).toFixed(2)}
                   </span>
                   <Tag
                     color="blue"
-                    style={{ fontSize: 14, padding: '0 4px', lineHeight: '16px', margin: 0, cursor: 'pointer' }}
+                    style={{ fontSize: 15, padding: '0 4px', lineHeight: '16px', margin: 0, cursor: 'pointer' }}
                   >
                     采用
                   </Tag>

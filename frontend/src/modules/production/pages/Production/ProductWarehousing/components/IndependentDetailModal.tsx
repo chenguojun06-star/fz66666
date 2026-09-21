@@ -177,7 +177,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
                 dataSource={orderLineWarehousingRows}
                 sticky
                 scroll={{ x: 1040 }}
-                style={{ fontSize: 14 }}
+                style={{ fontSize: 15 }}
                 columns={[
                   { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 160 },
                   { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 130, ellipsis: true },

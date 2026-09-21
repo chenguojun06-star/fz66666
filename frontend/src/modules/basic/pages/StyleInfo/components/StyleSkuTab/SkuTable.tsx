@@ -80,7 +80,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
       render: (_: any, record: ProductSku) => (
         <HolderOutlined
           title="拖动调整顺序"
-          style={{ cursor: 'grab', color: 'var(--color-text-quaternary)', fontSize: 13 }}
+          style={{ cursor: 'grab', color: 'var(--color-text-quaternary)', fontSize: 14 }}
           onMouseDown={() => setDragArmed(getRowKey(record))}
           onMouseUp={() => setDragArmed(null)}
         />
@@ -139,7 +139,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
         ) : (
           <span style={{
             fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: 500,
             letterSpacing: 0.2,
             padding: '2px 6px',
@@ -175,7 +175,7 @@ const SkuTable: React.FC<SkuTableProps> = ({
             background: 'var(--color-bg-subtle)',
             borderRadius: 4, color: 'var(--color-text-quaternary)',
           }}>
-            <PictureOutlined style={{ fontSize: 14 }} />
+            <PictureOutlined style={{ fontSize: 15 }} />
           </div>
         );
       },

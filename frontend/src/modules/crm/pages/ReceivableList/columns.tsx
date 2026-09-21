@@ -24,7 +24,7 @@ export function buildColumns(handlers: ReceivableColumnHandlers): ColumnsType<Re
       width: 160,
       render: (v, record) => (
         <Button type="link" style={{ padding: 0 }} onClick={() => openReceivableDetail(record)}>
-          <Text code style={{ fontSize: 14 }}>{v}</Text>
+          <Text code style={{ fontSize: 15 }}>{v}</Text>
         </Button>
       ),
     },

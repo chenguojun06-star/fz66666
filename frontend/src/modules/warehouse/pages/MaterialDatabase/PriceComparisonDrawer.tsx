@@ -129,7 +129,7 @@ const PriceComparisonDrawer: React.FC<PriceComparisonDrawerProps> = ({ open, mat
             {
               title: '单价', dataIndex: 'unitPrice', width: 110, align: 'right' as const,
               render: (v: number, r: PriceRow) => (
-                <span className="u-fw-600" style={{ color: Number(v) === lowest ? 'var(--color-success)' : undefined, fontSize: 14 }}>
+                <span className="u-fw-600" style={{ color: Number(v) === lowest ? 'var(--color-success)' : undefined, fontSize: 15 }}>
                   {v != null ? formatMoney(v) : '-'}
                 </span>
               ),

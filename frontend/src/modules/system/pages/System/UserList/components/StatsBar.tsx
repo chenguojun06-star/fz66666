@@ -115,7 +115,7 @@ const StatsBar: React.FC<StatsBarProps> = ({
                 >
                   {item.value}
                 </span>
-                <Text type="secondary" style={{ fontSize: 11 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
                   {item.subtext}
                 </Text>
               </div>

@@ -257,7 +257,7 @@ const MaintenanceCenter: React.FC = () => {
                       borderRadius: 999,
                       background: 'rgba(45, 127, 249, 0.08)',
                       color: 'var(--primary-color)',
-                      fontSize: 14,
+                      fontSize: 15,
                       fontWeight: 700,
                     }}>
                       共 {total} 款

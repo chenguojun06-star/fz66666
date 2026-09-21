@@ -11,14 +11,14 @@ export const parseTemplateContent = (content: unknown) => {
 
 export const metaTextStyle = {
   color: 'var(--neutral-text-secondary)',
-  fontSize: 14,
+  fontSize: 15,
   lineHeight: 1.2,
 } as const;
 
 export const compactFieldLabelStyle = {
   marginBottom: 4,
   color: 'var(--neutral-text-secondary)',
-  fontSize: 14,
+  fontSize: 15,
   fontWeight: 600,
   lineHeight: 1.2,
 } as const;

@@ -271,7 +271,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                   size="small"
                   type="default"
                   onClick={() => setInsightOpen(true)}
-                  style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)', fontSize: 12 }}
+                  style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)', fontSize: 13 }}
                   icon={<RightOutlined />}
                   iconPosition="end"
                 >

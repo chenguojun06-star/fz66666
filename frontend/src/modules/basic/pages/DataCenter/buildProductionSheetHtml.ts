@@ -122,14 +122,14 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string, extr
     .cover { width: 220px; height: 220px; object-fit: cover; border-radius: 10px; border: 1px solid rgba(0,0,0,0.08); }
     .h1 { font-size: 22px; font-weight: 700; margin: 0 0 8px; }
     .meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; }
-    .meta div { font-size: 12px; color: rgba(0,0,0,0.85); }
+    .meta div { font-size: 13px; color: rgba(0,0,0,0.85); }
     .muted { color: rgba(0,0,0,0.55); }
-    .btn { height: 32px; padding: 4px 14px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.15); background: var(--color-bg-base); font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn { height: 32px; padding: 4px 14px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.15); background: var(--color-bg-base); font-size: 15px; font-weight: 600; cursor: pointer; }
     .btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
     .btn:active { transform: translateY(0.5px); }
     .section { margin-top: 18px; }
-    .section-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+    .section-title { font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
     th, td { border: 1px solid var(--color-border); padding: 6px 8px; vertical-align: middle; text-align: center; overflow-wrap: anywhere; word-break: break-word; }
     th { background: rgba(0,0,0,0.03); text-align: center; }
     .no { width: 60px; text-align: center; }

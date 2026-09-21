@@ -137,7 +137,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
       </div>
 
       <div className="u-br-6 u-ov-hidden" style={{ border: '1px solid var(--color-border)', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 900 + uniqueSizes.length * 90 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15, minWidth: 900 + uniqueSizes.length * 90 }}>
           <colgroup>
             <col style={{ width: 50 }} />
             <col style={{ width: 80 }} />
@@ -201,7 +201,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
                       }}
                     >
                       <div className="u-d-flex u-fd-column u-ai-center u-gap-4">
-                        <Tag style={{ background: STAGE_ACCENT, color: 'var(--color-bg-base)', border: 'none', fontWeight: 600, fontSize: 14 }}>
+                        <Tag style={{ background: STAGE_ACCENT, color: 'var(--color-bg-base)', border: 'none', fontWeight: 600, fontSize: 15 }}>
                           {spanInfo.stage}
                         </Tag>
                         <span className="u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>{spanInfo.count} 个工序</span>
@@ -210,7 +210,7 @@ const ProcessFlowCard: React.FC<Props> = ({ createTask, debouncedFetchStyleInfoO
 
                           icon={<PlusOutlined />}
                           onClick={() => handleAddToStage(spanInfo.stage)}
-                          style={{ fontSize: 14, padding: 0 }}
+                          style={{ fontSize: 15, padding: 0 }}
                         >
                           添加
                         </Button>

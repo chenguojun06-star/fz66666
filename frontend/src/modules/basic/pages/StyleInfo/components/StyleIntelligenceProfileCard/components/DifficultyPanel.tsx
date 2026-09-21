@@ -31,10 +31,10 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
         <div>
           <div className="u-d-flex u-ai-center u-jc-between" style={{ marginBottom: 3 }}>
             <div className="u-d-flex u-ai-center u-gap-4">
-              <Tag color={difficultyColor(activeDifficulty.difficultyLevel)} style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 5px' }}>{activeDifficulty.difficultyLabel}</Tag>
-              {activeDifficulty.assessmentSource === 'AI_ENHANCED' && <Tag color="purple" style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 5px' }}>AI增强</Tag>}
+              <Tag color={difficultyColor(activeDifficulty.difficultyLevel)} style={{ margin: 0, fontSize: 13, lineHeight: '18px', padding: '0 5px' }}>{activeDifficulty.difficultyLabel}</Tag>
+              {activeDifficulty.assessmentSource === 'AI_ENHANCED' && <Tag color="purple" style={{ margin: 0, fontSize: 13, lineHeight: '18px', padding: '0 5px' }}>AI增强</Tag>}
             </div>
-            <Button icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={onAiImageAnalysis} disabled={!styleId} style={{ fontSize: 12, height: 20, padding: '0 5px' }}>图像分析</Button>
+            <Button icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={onAiImageAnalysis} disabled={!styleId} style={{ fontSize: 13, height: 20, padding: '0 5px' }}>图像分析</Button>
           </div>
           <div className="u-d-flex u-ai-center u-gap-6 u-mb-4">
             <Progress percent={activeDifficulty.difficultyScore * 10} showInfo={false}
@@ -47,7 +47,7 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
             const insight = activeDifficulty.imageInsight as string;
             const isError = insight.includes('未开通') || insight.includes('读取失败') || insight.includes('未配置') || insight.includes('未上传');
             return (
-              <div style={{ fontSize: 12, color: isError ? 'var(--color-text-muted)' : 'var(--color-text-secondary)', marginTop: 3, lineHeight: 1.5, background: isError ? 'rgba(0,0,0,0.02)' : 'rgba(114,46,209,0.03)', borderRadius: 4, padding: '3px 5px' }}>
+              <div style={{ fontSize: 13, color: isError ? 'var(--color-text-muted)' : 'var(--color-text-secondary)', marginTop: 3, lineHeight: 1.5, background: isError ? 'rgba(0,0,0,0.02)' : 'rgba(114,46,209,0.03)', borderRadius: 4, padding: '3px 5px' }}>
                 {insight}
               </div>
             );
@@ -57,7 +57,7 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
               <div className="u-d-flex u-ai-center u-gap-4" style={{ marginBottom: 3 }}>
                 <span className="u-fs-12 u-fw-600" style={{ color: 'var(--color-accent-cyan)' }}>视觉AI</span>
                 {visualResult.severity && visualResult.severity !== 'NONE' && (
-                  <Tag style={{ margin: 0, fontSize: 11, lineHeight: '16px', padding: '0 4px' }} color={SEVERITY_COLOR[visualResult.severity] ?? 'default'}>{visualResult.severity}</Tag>
+                  <Tag style={{ margin: 0, fontSize: 12, lineHeight: '16px', padding: '0 4px' }} color={SEVERITY_COLOR[visualResult.severity] ?? 'default'}>{visualResult.severity}</Tag>
                 )}
                 <span className="u-fs-11 u-ml-auto" style={{ color: 'var(--color-text-tertiary)' }}>置信度 {Math.round(visualResult.confidence * 100)}%</span>
               </div>
@@ -77,7 +77,7 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
               {visualResult.styleFeatures && Object.keys(visualResult.styleFeatures).length > 0 && (
                 <div className="u-d-flex u-fwrap-wrap" style={{ gap: 3, marginTop: 3 }}>
                   {Object.entries(visualResult.styleFeatures).slice(0, 4).map(([k, v]) => (
-                    <Tag key={k} style={{ margin: 0, fontSize: 11, lineHeight: '16px', padding: '0 4px' }}>{k}: {v}</Tag>
+                    <Tag key={k} style={{ margin: 0, fontSize: 12, lineHeight: '16px', padding: '0 4px' }}>{k}: {v}</Tag>
                   ))}
                 </div>
               )}
@@ -89,7 +89,7 @@ const DifficultyPanel: React.FC<DifficultyPanelProps> = ({
         </div>
       ) : (
         <div className="u-ta-center" style={{ padding: '12px 0' }}>
-          <Button icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={onAiImageAnalysis} disabled={!styleId} style={{ fontSize: 12 }}>AI 难度分析</Button>
+          <Button icon={<ExperimentOutlined />} loading={difficultyLoading} onClick={onAiImageAnalysis} disabled={!styleId} style={{ fontSize: 13 }}>AI 难度分析</Button>
           <div className="u-fs-11 u-mt-4" style={{ color: 'var(--color-text-quaternary)' }}>分析款式图片，评估制作难度与定价倍率</div>
         </div>
       )}

@@ -193,7 +193,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
       title="拷贝其他款工艺说明"
       footer={
         <Space>
-          <Text type="secondary" style={{ fontSize: 12, marginInlineEnd: 12 }}>
+          <Text type="secondary" style={{ fontSize: 13, marginInlineEnd: 12 }}>
             确认后整篇替换当前工艺说明（当前内容会被覆盖，替换后自动保存）
           </Text>
           <Button onClick={onClose}>取消</Button>
@@ -254,7 +254,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
                       <StyleCoverThumb src={s.cover || s.styleCover || null} styleId={s.id} styleNo={String(s.styleNo || '')} size={40} borderRadius={4} />
                       <div className="u-flex-1" style={{ minWidth: 0 }}>
                         <div className="u-fw-500 u-fs-13">{s.styleNo || '-'}</div>
-                        <Text type="secondary" style={{ fontSize: 12, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <Text type="secondary" style={{ fontSize: 13, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {s.styleName || '-'}
                         </Text>
                       </div>
@@ -281,7 +281,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
               {templates.map((t) => (
                 <div key={String(t.id)} onClick={() => void handlePickTemplate(t)} style={itemStyle(Boolean(selectedTemplate && String(selectedTemplate.id) === String(t.id)))}>
                   <div className="u-fw-500 u-fs-13">{t.templateName || '-'}</div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
                     {t.sourceStyleNo ? `来源款 ${t.sourceStyleNo}` : '未关联来源款'}
                   </Text>
                 </div>
@@ -300,7 +300,7 @@ const CopyCraftNotesDrawer: React.FC<CopyCraftNotesDrawerProps> = ({
               工艺说明预览
               {selectedStyle ? `（${selectedStyle.styleNo || ''}）` : selectedTemplate ? `（${selectedTemplate.templateName || ''}）` : ''}
             </Text>
-            <Text type="secondary" style={{ fontSize: 12 }}>确认导入后整篇替换当前工艺说明</Text>
+            <Text type="secondary" style={{ fontSize: 13 }}>确认导入后整篇替换当前工艺说明</Text>
           </Space>
           {!selectedStyle && !selectedTemplate ? (
             <div className="u-ta-center u-fs-14" style={{ padding: '60px 0', color: 'var(--color-text-tertiary)' }}>

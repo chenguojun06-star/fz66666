@@ -137,7 +137,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
           const tag = resolvePayeeTag(r.bizType, r.payeeType);
           return (
             <Space size={4}>
-              <Tag color={tag.color} style={{ fontSize: 14, margin: 0 }}>{tag.text}</Tag>
+              <Tag color={tag.color} style={{ fontSize: 15, margin: 0 }}>{tag.text}</Tag>
               {/* D-468：收款方可点击，穿透查看该单位全部往来明细 */}
               {onPayeeClick ? (
                 <Button
@@ -205,7 +205,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
         render: (v: string, record: PayableItem) => {
           const count = record.billCount;
           if (count && count > 1) {
-            return <span>{v} <Tag color="blue" style={{ marginLeft: 4, fontSize: 14 }}>{count}笔合并</Tag></span>;
+            return <span>{v} <Tag color="blue" style={{ marginLeft: 4, fontSize: 15 }}>{count}笔合并</Tag></span>;
           }
           return v || '-';
         },
@@ -280,7 +280,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
           const tag = resolvePayeeTag(r.bizType, r.payeeType);
           return (
             <Space size={4}>
-              <Tag color={tag.color} style={{ fontSize: 14, margin: 0 }}>{tag.text}</Tag>
+              <Tag color={tag.color} style={{ fontSize: 15, margin: 0 }}>{tag.text}</Tag>
               {/* D-468：付款记录的收款方同样支持穿透 */}
               {onPayeeClick ? (
                 <Button

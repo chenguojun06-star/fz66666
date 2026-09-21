@@ -13,7 +13,7 @@
 }
 
 .overdueSummaryTitle {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--color-error);
   margin-bottom: 8px;
@@ -52,7 +52,7 @@
 }
 
 .overdueStatValue {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--color-gray-800);
   line-height: 1.2;
@@ -63,14 +63,14 @@
 }
 
 .overdueStatUnit {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
   color: var(--color-text-tertiary);
   margin-left: 1px;
 }
 
 .overdueStatLabel {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
   line-height: 1.3;
 }
@@ -91,7 +91,7 @@
 }
 
 .overdueFactoryName {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--color-gray-800);
   display: flex;
@@ -100,11 +100,11 @@
 }
 
 .overdueFactoryIcon {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .overdueFactoryBadge {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-tertiary);
   background: var(--color-bg-subtle);
   border-radius: 999px;
@@ -136,13 +136,13 @@
 }
 
 .overdueMetricRingValue {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--color-gray-800);
 }
 
 .overdueMetricRingUnit {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
 }
 
@@ -159,12 +159,12 @@
 }
 
 .overdueMetricLabel {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
 }
 
 .overdueMetricValue {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-gray-800);
 }
@@ -201,7 +201,7 @@
 }
 
 .overdueOrderNo {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-info);
   text-decoration: none;
@@ -212,12 +212,12 @@
 }
 
 .overdueOrderStyle {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-tertiary);
 }
 
 .overdueOrderStage {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 18px;
   padding: 0 8px;
   border-radius: 4px;
@@ -233,7 +233,7 @@
 }
 
 .overdueOrderProgress {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-warning);
 }
@@ -243,7 +243,7 @@
 }
 
 .overdueOrderDays {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-error);
   background: var(--color-bg-base)1f0;
   border-radius: 4px;

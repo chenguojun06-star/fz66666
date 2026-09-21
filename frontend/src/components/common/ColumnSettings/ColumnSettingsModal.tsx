@@ -40,7 +40,7 @@ export const ColumnSettingsModal: React.FC<ColumnSettingsModalProps> = ({
         <Space>
           <SettingOutlined />
           <span>{title}</span>
-          <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 'normal' }}>
+          <Typography.Text type="secondary" style={{ fontSize: 13, fontWeight: 'normal' }}>
             已选 {visibleCount}/{columnOptions.length}
           </Typography.Text>
         </Space>
@@ -75,7 +75,7 @@ export const ColumnSettingsModal: React.FC<ColumnSettingsModalProps> = ({
         </div>
       </Checkbox.Group>
       <Divider style={{ margin: '12px 0' }} />
-      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+      <Typography.Text type="secondary" style={{ fontSize: 13 }}>
         勾选要显示的列，取消勾选的列将隐藏。设置会自动保存到你的账号。
       </Typography.Text>
     </ResizableModal>

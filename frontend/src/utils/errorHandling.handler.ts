@@ -228,7 +228,7 @@ export class ErrorHandler {
       React.createElement('div', null, errorMsg),
       React.createElement(
         'div',
-        { style: { marginTop: 8, fontSize: 12, color: 'var(--color-gray-label)' } },
+        { style: { marginTop: 8, fontSize: 13, color: 'var(--color-gray-label)' } },
         '追踪ID: ',
         traceId
       )

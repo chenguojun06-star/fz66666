@@ -56,7 +56,7 @@ export const ClarificationCard: React.FC<{ missingInfo?: string[]; onAsk?: (ques
           <button
             key={idx}
             className={sharedStyles.actionBtn}
-            style={{ fontSize: 14, padding: '2px 10px' }}
+            style={{ fontSize: 15, padding: '2px 10px' }}
             onClick={() => onAsk?.(info)}
           >{info}</button>
         ))}

@@ -40,7 +40,7 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
           <span className="u-fs-14 u-fw-400" style={{ color: 'var(--color-text-tertiary)' }}>AI 学习建议</span>
           {loading && !expanded && (
             <span className="u-d-inline-flex u-ai-center u-gap-4 u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
-              <LoadingOutlined style={{ fontSize: 12 }} />
+              <LoadingOutlined style={{ fontSize: 13 }} />
               <span>分析中...</span>
             </span>
           )}
@@ -51,7 +51,7 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
           )}
         </div>
         <span className="u-d-flex u-ai-center">
-          {expanded ? <DownOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} /> : <RightOutlined style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }} />}
+          {expanded ? <DownOutlined style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }} /> : <RightOutlined style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }} />}
         </span>
       </div>
 

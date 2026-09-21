@@ -40,7 +40,7 @@ const ProcessKanbanDrawer: React.FC<ProcessKanbanDrawerProps> = ({
         <Space>
           <SafetyCertificateOutlined />
           <span>工序质检看板</span>
-          {orderNo && <Tag color="blue" style={{ fontSize: 14 }}>{orderNo}</Tag>}
+          {orderNo && <Tag color="blue" style={{ fontSize: 15 }}>{orderNo}</Tag>}
         </Space>
       }
       placement="right" size={Math.round(window.innerWidth * 0.85)} open={visible} onClose={onClose}

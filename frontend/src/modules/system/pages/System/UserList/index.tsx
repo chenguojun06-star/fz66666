@@ -194,7 +194,7 @@ const UserList: React.FC = () => {
                   }
                   right={
                     <Space size={8}>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
+                      <Text type="secondary" style={{ fontSize: 13 }}>
                         显示 {userList.length} / {total} 人
                       </Text>
                     </Space>

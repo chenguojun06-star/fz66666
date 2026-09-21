@@ -95,7 +95,7 @@ const IntegrationOverviewTab: React.FC = () => {
                  
                   icon={<EyeOutlined />}
                   onClick={() => navigate(mod.viewPath)}
-                  style={{ padding: 0, fontSize: 14 }}
+                  style={{ padding: 0, fontSize: 15 }}
                 >
                   查看数据：{mod.viewPage}
                 </Button>
@@ -118,12 +118,12 @@ const IntegrationOverviewTab: React.FC = () => {
                   {endpoints.map((ep, idx) => (
                     <div key={idx} className="u-d-flex u-gap-8 u-fs-14" style={{ padding: '2px 0' }}>
                       {ep.method !== '-' ? (
-                        <Tag color="blue" style={{ fontSize: 14, minWidth: 44, textAlign: 'center' }}>{ep.method}</Tag>
+                        <Tag color="blue" style={{ fontSize: 15, minWidth: 44, textAlign: 'center' }}>{ep.method}</Tag>
                       ) : (
-                        <Tag color="green" style={{ fontSize: 14, minWidth: 44, textAlign: 'center' }}>PUSH</Tag>
+                        <Tag color="green" style={{ fontSize: 15, minWidth: 44, textAlign: 'center' }}>PUSH</Tag>
                       )}
-                      <Text code style={{ fontSize: 14 }}>{ep.path}</Text>
-                      <Text type="secondary" style={{ fontSize: 14 }}>{ep.desc}</Text>
+                      <Text code style={{ fontSize: 15 }}>{ep.path}</Text>
+                      <Text type="secondary" style={{ fontSize: 15 }}>{ep.desc}</Text>
                     </div>
                   ))}
                 </div>
@@ -136,7 +136,7 @@ const IntegrationOverviewTab: React.FC = () => {
            
             title=" 最近 API 调用"
             style={{ minHeight: 360 }}
-            extra={<Text type="secondary" style={{ fontSize: 14 }}>最新10条</Text>}
+            extra={<Text type="secondary" style={{ fontSize: 15 }}>最新10条</Text>}
           >
             {allLogs.length === 0 ? (
               <Empty description="暂无调用记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -148,16 +148,16 @@ const IntegrationOverviewTab: React.FC = () => {
                   content: (
                     <div className="u-fs-14">
                       <div className="u-d-flex u-gap-6 u-ai-center u-fwrap-wrap">
-                        <Tag color={log.direction === 'INBOUND' ? 'blue' : 'green'} style={{ fontSize: 14 }}>
+                        <Tag color={log.direction === 'INBOUND' ? 'blue' : 'green'} style={{ fontSize: 15 }}>
                           {log.direction === 'INBOUND' ? '入站' : '出站'}
                         </Tag>
-                        <Tag style={{ fontSize: 14 }}>{log.httpMethod}</Tag>
-                        <Text code style={{ fontSize: 14 }}>{log.requestPath}</Text>
-                        <Tag color={log.result === 'SUCCESS' ? 'green' : 'red'} style={{ fontSize: 14 }}>
+                        <Tag style={{ fontSize: 15 }}>{log.httpMethod}</Tag>
+                        <Text code style={{ fontSize: 15 }}>{log.requestPath}</Text>
+                        <Tag color={log.result === 'SUCCESS' ? 'green' : 'red'} style={{ fontSize: 15 }}>
                           {log.responseCode} {log.costMs}ms
                         </Tag>
                       </div>
-                      <Text type="secondary" style={{ fontSize: 14 }}>{log.createTime}</Text>
+                      <Text type="secondary" style={{ fontSize: 15 }}>{log.createTime}</Text>
                     </div>
                   ),
                 }))}

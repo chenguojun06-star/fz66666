@@ -288,7 +288,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
           padding: '24px 0',
           textAlign: 'center',
           color: 'var(--neutral-text-light, var(--color-text-muted))',
-          fontSize: 14,
+          fontSize: 15,
         }}>
           订单明细中无颜色/尺码数据，请先在订单中维护颜色尺码信息，或手动录入后生成菲号
         </div>

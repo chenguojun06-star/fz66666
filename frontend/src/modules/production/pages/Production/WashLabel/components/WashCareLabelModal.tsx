@@ -117,7 +117,7 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
     <ResizableModal title="打印洗水唛" open={open} onCancel={onCancel} width="46vw" footer={null} destroyOnHidden>
       <Spin spinning={loading}>
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 14, marginBottom: 8 }}>纸张规格</div>
+          <div style={{ fontSize: 15, marginBottom: 8 }}>纸张规格</div>
           <Radio.Group value={paperSize} onChange={e => setPaperSize(e.target.value as PaperSize)}>
             {PAPER_OPTS.map(p => <Radio key={p.value} value={p.value}>{p.label}</Radio>)}
           </Radio.Group>

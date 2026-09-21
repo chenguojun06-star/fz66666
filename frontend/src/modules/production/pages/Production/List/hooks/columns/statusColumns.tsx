@@ -34,13 +34,13 @@ export function buildStatusColumns({
         return (
           <div className="u-d-flex u-fd-column" style={{ gap: 3, lineHeight: 1.4 }}>
             <div className="u-d-flex u-ai-center u-gap-4 u-fwrap-wrap">
-              <Tag color={color} style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 4px' }}>{text}</Tag>
+              <Tag color={color} style={{ margin: 0, fontSize: 13, lineHeight: '18px', padding: '0 4px' }}>{text}</Tag>
               <span style={{ ...CELL_CHIP_STYLE, color: 'var(--color-text-secondary)', fontWeight: 500 }}>{progress}%</span>
               {deliveryDate !== '-' && <span style={CELL_CHIP_STYLE}>{deliveryDate}</span>}
               {remain.text && remain.text !== '-' && (
                 <span style={{ ...CELL_CHIP_STYLE, fontWeight: 600, color: remain.color }}>{remain.text}</span>
               )}
-              {record.isQuickResponse && <Tag color="volcano" style={{ margin: 0, fontSize: 12, lineHeight: '18px', padding: '0 4px' }}>快反</Tag>}
+              {record.isQuickResponse && <Tag color="volcano" style={{ margin: 0, fontSize: 13, lineHeight: '18px', padding: '0 4px' }}>快反</Tag>}
             </div>
             {stagnantDays !== undefined && (
               <div className="u-d-flex u-ai-center" style={{ gap: 3 }}>

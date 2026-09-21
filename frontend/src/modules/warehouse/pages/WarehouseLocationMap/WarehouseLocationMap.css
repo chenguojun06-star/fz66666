@@ -28,12 +28,12 @@
 }
 
 .wlm-sidebar-icon {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-primary);
 }
 
 .wlm-sidebar-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text-primary);
   flex: 1;
@@ -46,7 +46,7 @@
 }
 
 .wlm-action-icon {
-  font-size: 14px;
+  font-size: 15px;
   cursor: pointer;
   transition: opacity 0.2s ease;
 }
@@ -90,7 +90,7 @@
 }
 
 .wlm-warehouse-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--color-text-primary);
   line-height: 1.4;
@@ -103,7 +103,7 @@
 .wlm-warehouse-meta {
   display: flex;
   gap: 12px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-tertiary);
 }
 
@@ -137,7 +137,7 @@
 }
 
 .wlm-header-subtitle {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-tertiary);
 }
 
@@ -162,7 +162,7 @@
   background: var(--color-bg-container);
   border: 1px solid var(--color-border-light);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-secondary);
   transition: all 0.2s ease;
   user-select: none;
@@ -234,7 +234,7 @@
 }
 
 .wlm-location-qty {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-secondary);
   display: flex;
   align-items: center;
@@ -243,12 +243,12 @@
 }
 
 .wlm-empty-text {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-quaternary);
 }
 
 .wlm-location-capacity {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-quaternary);
 }
 
@@ -256,7 +256,7 @@
   position: absolute;
   top: 4px;
   right: 4px;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-quaternary);
   cursor: pointer;
   opacity: 0;
@@ -295,7 +295,7 @@
 }
 
 .wlm-select-count {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-primary);
   font-weight: 500;
 }
@@ -321,7 +321,7 @@
 }
 
 .wlm-detail-label {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-tertiary);
   margin-bottom: 4px;
 }
@@ -372,7 +372,7 @@
   padding: 12px 12px;
   background: var(--color-bg-container);
   border-bottom: 1px solid var(--color-border-light);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--color-text-secondary);
 }
@@ -389,7 +389,7 @@
   gap: 8px;
   padding: 12px 12px;
   border-bottom: 1px solid var(--color-border-light);
-  font-size: 14px;
+  font-size: 15px;
   align-items: center;
   transition: background 0.15s ease;
 }

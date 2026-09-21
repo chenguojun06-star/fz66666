@@ -28,7 +28,7 @@ interface UseMaterialInventoryColumnsProps {
 
 const compactInfoRowStyle: React.CSSProperties = {
   display: 'flex',
-  fontSize: 14,
+  fontSize: 15,
   lineHeight: '22px',
   minHeight: '22px',
 };
@@ -171,14 +171,14 @@ export function useMaterialInventoryColumns({
               {/* D-474：「可用 X 米」必须一行——之前用 flex 在 antd td 里被破坏成多行，
                   改用 whiteSpace:nowrap + 纯文本 strong，浏览器无论如何都不换行 */}
               <div style={{ whiteSpace: 'nowrap', lineHeight: 1.3 }}>
-                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>可用 </span>
+                <span style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>可用 </span>
                 <span style={{
                   fontSize: 17, fontWeight: 600,
                   color: isLow ? 'var(--color-error)' : 'var(--color-success)',
                 }}>
                   {availableQty.toLocaleString()}
                 </span>
-                <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}> {record.unit}</span>
+                <span style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}> {record.unit}</span>
               </div>
               {isLow && <Tag color="error" style={{ marginTop: -2, alignSelf: 'flex-start' }}>低于安全库存</Tag>}
               {/* D-474：领取/出库按钮——纯文字蓝色，不带图标 */}
@@ -193,7 +193,7 @@ export function useMaterialInventoryColumns({
             </div>
 
             {/* 次要信息：在途 / 锁定 / 安全库存 一行说完 */}
-            <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+            <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
               在途 {inTransitQty.toLocaleString()}
               <span style={{ margin: '0 4px', opacity: 0.45 }}>·</span>
               锁定 {lockedQty.toLocaleString()}
@@ -202,7 +202,7 @@ export function useMaterialInventoryColumns({
             </div>
 
             {/* 库位 */}
-            <div style={{ fontSize: 12, color: 'var(--color-text-quaternary)', marginTop: 2 }}>
+            <div style={{ fontSize: 13, color: 'var(--color-text-quaternary)', marginTop: 2 }}>
               库位：{record.warehouseLocation || '-'}
             </div>
 

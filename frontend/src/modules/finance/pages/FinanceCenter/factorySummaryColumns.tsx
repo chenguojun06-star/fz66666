@@ -30,10 +30,10 @@ export function getFactorySummaryColumns(
               <span className="u-fw-500 u-cur-pointer" style={{ borderBottom: '1px dashed var(--primary-color)' }}>{text}</span>
               {record.factoryType === 'INTERNAL' && (
                 <Tooltip title="内部工厂——工人工资已通过「工资结算」按人员审核，无需在此推送订单结算">
-                  <Tag color="orange" style={{ margin: 0, fontSize: 14 }}>内部</Tag>
+                  <Tag color="orange" style={{ margin: 0, fontSize: 15 }}>内部</Tag>
                 </Tooltip>
               )}
-              {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 14 }}>外部</Tag>}
+              {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 15 }}>外部</Tag>}
             </Space>
             {record.orgPath || record.parentOrgUnitName ? (
               <div className="u-fs-14 u-mt-4" style={{ color: 'var(--neutral-text-secondary)' }}>

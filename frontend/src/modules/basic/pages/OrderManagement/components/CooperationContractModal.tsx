@@ -156,10 +156,10 @@ ${esc(clauses)}</div>
           value={clauses}
           onChange={(e) => setClauses(e.target.value)}
           autoSize={{ minRows: 10, maxRows: 20 }}
-          style={{ fontSize: 13, lineHeight: 1.9 }}
+          style={{ fontSize: 14, lineHeight: 1.9 }}
         />
         <div style={{ marginTop: 8 }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>
             打印为 A4 版式（宋体、编号居中、信息表格 + 条款 + 双方签章栏）；修改条款后直接打印即可。
           </Text>
         </div>

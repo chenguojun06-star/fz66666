@@ -18,7 +18,7 @@
 .user-dept-header {
   padding: 12px 12px;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 15px;
   border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
   color: var(--color-text-primary, var(--color-gray-800));
   flex-shrink: 0;
@@ -67,13 +67,13 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary, var(--color-gray-label));
   margin-right: 4px;
 }
 
 .user-dept-name {
-  font-size: 13px;
+  font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

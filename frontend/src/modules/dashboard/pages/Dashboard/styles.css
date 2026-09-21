@@ -152,7 +152,7 @@
 }
 
 .dashboard-page .card-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--color-text-primary);
   margin: 0;
@@ -177,7 +177,7 @@
 .dashboard-page .order-cutting-chart-card .ant-card-head-title,
 .dashboard-page .scan-count-chart-card .ant-card-head-title,
 .dashboard-page .overdue-order-table-card .ant-card-head-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--color-text-primary);
   position: relative;
@@ -488,12 +488,12 @@
 
 .dashboard-empty-state-text {
   color: var(--color-text-tertiary);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
 }
 
 .dashboard-empty-state-hint {
   color: var(--color-text-quaternary);
-  font-size: 14px;
+  font-size: 15px;
   margin-top: 8px;
 }

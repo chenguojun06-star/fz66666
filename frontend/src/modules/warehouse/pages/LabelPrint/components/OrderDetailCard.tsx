@@ -65,18 +65,18 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
                 preview={false}
               />
             ) : (
-              <div style={{ color: 'var(--color-text-quaternary)', fontSize: 14 }}>暂无图片</div>
+              <div style={{ color: 'var(--color-text-quaternary)', fontSize: 15 }}>暂无图片</div>
             )}
           </div>
         </Col>
         <Col span={17}>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{selectedOrder.styleName || selectedOrder.styleNo}</div>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{selectedOrder.styleName || selectedOrder.styleNo}</div>
           <div style={{ color: 'var(--color-text-secondary)', marginBottom: 4 }}>款号: <span style={{ color: 'var(--color-info)' }}>{selectedOrder.styleNo}</span></div>
           <div style={{ color: 'var(--color-text-secondary)', marginBottom: 12 }}>订单号: {selectedOrder.orderNo}</div>
           <Divider style={{ margin: '10px 0' }} />
           {selectedOrder.colors.length > 0 && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>颜色</div>
+              <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>颜色</div>
               <Space wrap>{selectedOrder.colors.map(c => (
                 <Button key={c} size="small" type={selectedColor === c ? 'primary' : 'default'} onClick={() => setSelectedColor(c)}>{c}</Button>
               ))}</Space>
@@ -84,13 +84,13 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
           )}
           {selectedOrder.sizes.length > 0 && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
                 尺码
                 {printType === 'barcode' && (
                   <Space size={4}>
                     <Button size="small" type="link" onClick={() => setSelectedSizes(selectedOrder.sizes)}>全选</Button>
                     <Button size="small" type="link" onClick={() => setSelectedSizes(selectedSize ? [selectedSize] : [])}>仅当前</Button>
-                    <span style={{ color: 'var(--color-primary)', fontSize: 12 }}>已选 {selectedSizes.length || 1} 个尺码批量打印</span>
+                    <span style={{ color: 'var(--color-primary)', fontSize: 13 }}>已选 {selectedSizes.length || 1} 个尺码批量打印</span>
                   </Space>
                 )}
               </div>
@@ -116,42 +116,42 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
             children: (
               <div style={{ padding: '2px 0' }}>
                 <div style={{ marginBottom: 6 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>成分</div>
+                  <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>成分</div>
                   <Input size="small" value={selectedOrder.fabricComposition} placeholder="如：100%棉"
                     onChange={e => setSelectedOrder(o => o ? { ...o, fabricComposition: e.target.value } : o)} />
                 </div>
                 <div style={{ marginBottom: 6 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>质量等级</div>
+                  <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>质量等级</div>
                   <Input size="small" value={selectedOrder.qualityGrade} placeholder="如：合格品"
                     onChange={e => setSelectedOrder(o => o ? { ...o, qualityGrade: e.target.value } : o)} />
                 </div>
                 <div style={{ marginBottom: 6 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>执行标准</div>
+                  <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>执行标准</div>
                   <Input size="small" value={selectedOrder.executeStandard} placeholder="如：GB/T 2660-2017"
                     onChange={e => setSelectedOrder(o => o ? { ...o, executeStandard: e.target.value } : o)} />
                 </div>
                 <div style={{ marginBottom: 6 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>安全类别</div>
+                  <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>安全类别</div>
                   <Input size="small" value={selectedOrder.safetyCategory} placeholder="如：GB 18401 B类"
                     onChange={e => setSelectedOrder(o => o ? { ...o, safetyCategory: e.target.value } : o)} />
                 </div>
                 <div style={{ marginBottom: 6 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>检验员</div>
+                  <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>检验员</div>
                   <Input size="small" value={selectedOrder.inspector} placeholder="检验员姓名"
                     onChange={e => setSelectedOrder(o => o ? { ...o, inspector: e.target.value } : o)} />
                 </div>
                 <div style={{ marginBottom: 6 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>检验日期</div>
+                  <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>检验日期</div>
                   <Input size="small" value={selectedOrder.inspectionDate} placeholder="如：2026-05-15"
                     onChange={e => setSelectedOrder(o => o ? { ...o, inspectionDate: e.target.value } : o)} />
                 </div>
                 <div style={{ marginBottom: 6 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>价格（元）</div>
+                  <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>价格（元）</div>
                   <InputNumber size="small" min={0} step={0.01} value={selectedOrder.price ?? undefined} placeholder="如：299.00"
                     onChange={v => setSelectedOrder(o => o ? { ...o, price: v ?? 0 } : o)} style={{ width: '100%' }} />
                 </div>
                 <div style={{ marginBottom: 6 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>商品编码（U码）</div>
+                  <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>商品编码（U码）</div>
                   <Input size="small" value={selectedOrder.uCode} placeholder="商品条码"
                     onChange={e => setSelectedOrder(o => o ? { ...o, uCode: e.target.value } : o)} />
                 </div>
@@ -165,19 +165,19 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
             children: (
               <div style={{ padding: '2px 0' }}>
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>① 面料成分</div>
-                  <Text style={{ fontSize: 14 }}>
+                  <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>① 面料成分</div>
+                  <Text style={{ fontSize: 15 }}>
                     {compositionFromSections(selectedOrder.fabricCompositionParts, selectedOrder.fabricComposition) || '未设定'}
                   </Text>
                 </div>
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>② 洗涤说明</div>
-                  <Text style={{ fontSize: 14, whiteSpace: 'pre-wrap' }}>
+                  <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>② 洗涤说明</div>
+                  <Text style={{ fontSize: 15, whiteSpace: 'pre-wrap' }}>
                     {washTextFromInstructions(selectedOrder.washInstructions, selectedOrder.fabricCompositionParts) || '未设定'}
                   </Text>
                 </div>
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>③ 护理图标</div>
+                  <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 4 }}>③ 护理图标</div>
                   {effectiveCareCodes.length > 0 ? (
                     <Space wrap size={6}>
                       {effectiveCareCodes.map(code => {
@@ -190,24 +190,24 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
                             background: 'var(--status-processing-bg)',
                           }}>
                             <span dangerouslySetInnerHTML={{ __html: icon?.svg || '' }} style={{ display: 'inline-block', width: 22, height: 22, flexShrink: 0 }} />
-                            <span style={{ fontSize: 14, color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>{icon?.label || code}</span>
+                            <span style={{ fontSize: 15, color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>{icon?.label || code}</span>
                           </div>
                         );
                       })}
                     </Space>
                   ) : (
-                    <Text style={{ fontSize: 14, color: 'var(--color-text-quaternary)' }}>未设定</Text>
+                    <Text style={{ fontSize: 15, color: 'var(--color-text-quaternary)' }}>未设定</Text>
                   )}
                 </div>
                 <div>
-                  <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>④ 生产制造</div>
+                  <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 2 }}>④ 生产制造</div>
                   {washManufacturingText?.trim() ? (
-                    <Text style={{ fontSize: 14 }}>{washManufacturingText.trim()}</Text>
+                    <Text style={{ fontSize: 15 }}>{washManufacturingText.trim()}</Text>
                   ) : (
-                    <Text style={{ fontSize: 14, color: 'var(--color-text-quaternary)' }}>未设定</Text>
+                    <Text style={{ fontSize: 15, color: 'var(--color-text-quaternary)' }}>未设定</Text>
                   )}
                   {washDateText?.trim() ? (
-                    <Text style={{ fontSize: 14, color: 'var(--color-text-muted)', marginLeft: 12 }}>{washDateText.trim()}</Text>
+                    <Text style={{ fontSize: 15, color: 'var(--color-text-muted)', marginLeft: 12 }}>{washDateText.trim()}</Text>
                   ) : null}
                 </div>
               </div>
@@ -215,7 +215,7 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
           }]} />
 
           <Divider style={{ margin: '10px 0' }} />
-          <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)' }}>
+          <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)' }}>
             当前打印: <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{ptLabel}</span>
             {' | '}商品编码: <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{selectedOrder.styleNo}-{selectedColor}-{selectedSize}</span>
             {selectedOrder.price ? ` | ${formatMoney(selectedOrder.price)}` : ''}
@@ -226,7 +226,7 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
       <Divider style={{ margin: '14px 0' }} />
 
       <div>
-        <div style={{ fontSize: 14, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>{ptLabel}预览（实时更新）</div>
+        <div style={{ fontSize: 15, color: 'var(--color-text-tertiary)', marginBottom: 6 }}>{ptLabel}预览（实时更新）</div>
         <div style={{ border: '1px solid var(--color-border-antd)', borderRadius: 8, overflow: 'hidden', background: 'var(--color-bg-base)' }}>
           {/* D-230b：预览区放大（350 → 520），洗水唛/条码也能看得清 */}
           <iframe srcDoc={previewHtml} style={{ width: '100%', height: 520, border: 'none' }} title="打印预览" />

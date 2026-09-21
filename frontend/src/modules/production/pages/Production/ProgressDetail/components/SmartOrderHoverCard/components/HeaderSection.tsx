@@ -23,7 +23,7 @@ const HeaderSection: React.FC<Props> = ({ order, deadline }) => (
       }}>
         {order.styleNo && (
           <span style={{
-            fontSize: 11, color: 'var(--color-text-secondary)', background: 'var(--color-bg-subtle)',
+            fontSize: 12, color: 'var(--color-text-secondary)', background: 'var(--color-bg-subtle)',
             padding: '1px 7px', borderRadius: 10, fontWeight: 600,
           }}>
             款号 {order.styleNo}
@@ -37,12 +37,12 @@ const HeaderSection: React.FC<Props> = ({ order, deadline }) => (
         {order.ecOrderNo && (
           <>
             {order.ecPlatform && (
-              <Tag color={getPlatformTag(order.ecPlatform).color} style={{ margin: 0, fontSize: 11, padding: '0 6px', lineHeight: '16px', borderRadius: 10 }}>
+              <Tag color={getPlatformTag(order.ecPlatform).color} style={{ margin: 0, fontSize: 12, padding: '0 6px', lineHeight: '16px', borderRadius: 10 }}>
                 {getPlatformTag(order.ecPlatform).label}
               </Tag>
             )}
             <span style={{
-              fontSize: 11, color: 'var(--color-primary)', background: 'var(--status-processing-bg)',
+              fontSize: 12, color: 'var(--color-primary)', background: 'var(--status-processing-bg)',
               padding: '1px 7px', borderRadius: 10, fontWeight: 600,
             }}>
               {order.ecOrderNo}
@@ -62,7 +62,7 @@ const HeaderSection: React.FC<Props> = ({ order, deadline }) => (
       </span>
       {deadline && (
         <span style={{
-          fontSize: 11, fontWeight: 700, color: deadline.color,
+          fontSize: 12, fontWeight: 700, color: deadline.color,
           background: deadline.color + '18', padding: '2px 8px', borderRadius: 10,
         }}>
           {deadline.text}

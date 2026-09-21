@@ -84,7 +84,7 @@ const renderChangeContent = (record: OperationLog): React.ReactNode => {
           backgroundColor: 'var(--color-bg-subtle)',
           padding: 12,
           fontFamily: 'monospace',
-          fontSize: 13,
+          fontSize: 14,
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
           borderRadius: 6,

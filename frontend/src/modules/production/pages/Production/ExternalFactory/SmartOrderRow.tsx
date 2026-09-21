@@ -172,11 +172,11 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
               </div>
             </div>
             <div className="u-d-flex u-fwrap-wrap u-ai-center" style={{ gap: 3 }}>
-              <Tag color={statusInfo.color} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{statusInfo.text}</Tag>
-              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>急单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>首单</Tag>}
-              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>翻单</Tag>}
-              <span className={`ef-delivery-badge ef-delivery-badge--${deliveryMeta.tone}`} style={{ fontSize: 12, fontWeight: 600 }}>
+              <Tag color={statusInfo.color} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px' }}>{statusInfo.text}</Tag>
+              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px' }}>急单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px' }}>首单</Tag>}
+              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px' }}>翻单</Tag>}
+              <span className={`ef-delivery-badge ef-delivery-badge--${deliveryMeta.tone}`} style={{ fontSize: 13, fontWeight: 600 }}>
                 {deliveryMeta.label}
               </span>
             </div>

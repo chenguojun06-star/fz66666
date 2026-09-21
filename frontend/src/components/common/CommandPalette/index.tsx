@@ -86,7 +86,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
           {(loading || imageSearchLoading) && <Spin style={{ marginRight: 8 }} size="small" />}
           {!loading && !imageSearchLoading && (query || imageSearchMode) && (
             <button type="button" className="cp-clear" onClick={() => { setQuery(''); setItems([]); setImageSearchMode(false); inputRef.current?.focus(); }}>
-              <CloseOutlined style={{ fontSize: 13 }} />
+              <CloseOutlined style={{ fontSize: 14 }} />
             </button>
           )}
 
@@ -97,7 +97,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ open, onClose }) => {
             beforeUpload={(file) => { handleImageSearch(file); return false; }}
           >
             <button type="button" className="cp-img-btn" title="上传图片搜款">
-              <UploadOutlined style={{ fontSize: 14 }} />
+              <UploadOutlined style={{ fontSize: 15 }} />
             </button>
           </Upload>
 

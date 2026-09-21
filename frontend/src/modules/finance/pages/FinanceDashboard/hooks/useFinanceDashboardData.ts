@@ -98,7 +98,7 @@ const buildCashFlowChartOption = (
     data: ['营收', '工资', '物料', '费用', '借支'],
     top: 5,
     textStyle: {
-      fontSize: 13,
+      fontSize: 14,
       color: '#6b7280', // canvas 不解析 CSS 变量
     },
   },
@@ -120,7 +120,7 @@ const buildCashFlowChartOption = (
     },
     axisLabel: {
       color: '#9ca3af',
-      fontSize: 12,
+      fontSize: 13,
     },
   },
   yAxis: {
@@ -133,7 +133,7 @@ const buildCashFlowChartOption = (
     },
     axisLabel: {
       color: '#9ca3af',
-      fontSize: 12,
+      fontSize: 13,
       formatter: (value: number) => {
         if (value >= 10000) return `${(value / 10000).toFixed(1)}万`;
         return value.toLocaleString();

@@ -38,7 +38,7 @@ const SheetRichViewer: React.FC<Props> = ({
         border: '1px solid var(--color-border-light, rgba(0,0,0,0.08))',
         borderRadius: 6,
         background: 'var(--color-bg-container, #fff)',
-        fontSize: 14,
+        fontSize: 15,
         lineHeight: 1.9,
         minHeight,
         overflowX: 'auto',

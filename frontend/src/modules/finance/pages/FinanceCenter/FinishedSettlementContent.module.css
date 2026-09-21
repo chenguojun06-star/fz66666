@@ -18,7 +18,7 @@
 }
 
 .modalFieldValue {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--neutral-text, var(--color-black));
 }
@@ -67,11 +67,11 @@
 
 .modalNoteTitle {
   color: var(--neutral-text-light, var(--color-gray-dark));
-  font-size: 12px;
+  font-size: 13px;
   margin-bottom: 4px;
 }
 
 .modalNoteText {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--neutral-text, var(--color-black));
 }

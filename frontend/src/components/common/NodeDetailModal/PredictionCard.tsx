@@ -24,7 +24,7 @@ const PredictionCard: React.FC<PredictionCardProps> = ({
       borderRadius: 6,
       padding: '8px 12px',
       marginBottom: 8,
-      fontSize: 14,
+      fontSize: 15,
     }}>
       <div className="u-d-flex u-ai-center u-gap-10 u-fwrap-wrap">
         <span className="u-fs-16"></span>

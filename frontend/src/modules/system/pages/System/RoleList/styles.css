@@ -30,7 +30,7 @@
   align-items: center;
   justify-content: space-between;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .role-list-items {
@@ -77,12 +77,12 @@
 }
 
 .role-card-icon {
-  font-size: 14px;
+  font-size: 15px;
   flex-shrink: 0;
 }
 
 .role-card-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--color-text-primary, var(--color-gray-800));
   overflow: hidden;
@@ -96,7 +96,7 @@
 
 .role-card-current {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 13px;
   padding: 1px 8px;
   border-radius: 4px;
   color: var(--color-primary);
@@ -120,7 +120,7 @@
   align-items: center;
   gap: 8px;
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary, var(--color-gray-label));
 }
 
@@ -159,7 +159,7 @@
 }
 
 .role-perm-title-sub {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary, var(--color-gray-label));
   white-space: nowrap;
 }
@@ -251,14 +251,14 @@
 }
 
 .data-scope-item-label {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--color-text-primary, var(--color-gray-800));
   display: block;
 }
 
 .data-scope-item-desc {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary, var(--color-gray-label));
   display: block;
   margin-top: 2px;
@@ -271,7 +271,7 @@
 }
 
 .role-perm-required-label {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-primary, var(--color-gray-800));
   font-weight: 500;
 }
@@ -337,7 +337,7 @@
   background: var(--color-bg-page);
   border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
   font-weight: 600;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-primary, var(--color-gray-800));
 }
 
@@ -364,7 +364,7 @@
 
 .perm-matrix-item-head .ant-checkbox-wrapper {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-primary, var(--color-gray-800));
 }
 
@@ -382,7 +382,7 @@
 }
 
 .perm-matrix-item .ant-checkbox-wrapper {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-text-primary, var(--color-gray-800));
   padding: 4px 0;
   margin-inline-start: 0;
@@ -408,16 +408,16 @@
   background: var(--color-bg-highlight, var(--color-slate-50));
   border-bottom: 1px solid var(--color-border-light, var(--color-border-light));
   font-weight: 600;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .perm-module-header .ant-checkbox-wrapper {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .perm-module-count {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary, var(--color-gray-label));
   font-weight: 400;
   margin-left: auto;
@@ -437,7 +437,7 @@
 
 .perm-group-row .ant-checkbox-wrapper {
   font-weight: 500;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-secondary, var(--color-gray-dark));
   white-space: nowrap;
   flex-shrink: 0;
@@ -456,7 +456,7 @@
   min-width: 90px;
   margin: 0;
   padding: 2px 8px 2px 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
   color: var(--color-text-primary, var(--color-gray-800));
 }

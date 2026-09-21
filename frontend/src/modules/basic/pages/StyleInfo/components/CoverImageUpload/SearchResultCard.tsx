@@ -38,7 +38,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
           alignItems: 'center',
           cursor: 'pointer',
           fontWeight: 600,
-          fontSize: 13,
+          fontSize: 14,
           userSelect: 'none',
         }}
       >
@@ -52,7 +52,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
         <RightOutlined
           style={{
             color: 'var(--color-text-tertiary)',
-            fontSize: 10,
+            fontSize: 11,
             transform: searchExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
             transition: 'transform 0.2s',
           }}
@@ -79,7 +79,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
                 </span>
               </div>
               <span style={{
-                padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600,
+                padding: '2px 8px', borderRadius: 4, fontSize: 13, fontWeight: 600,
                 background: parseInt(m.similarity) >= 72 ? 'var(--color-success-bg, var(--status-success-bg))' : 'var(--color-bg-container)',
                 color: parseInt(m.similarity) >= 72 ? 'var(--color-success, var(--color-success))' : 'var(--color-text-secondary)',
               }}>

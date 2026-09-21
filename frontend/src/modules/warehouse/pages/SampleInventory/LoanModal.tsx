@@ -256,7 +256,7 @@ const LoanModal: React.FC<LoanModalProps> = ({ visible, stock, onCancel, onSucce
         </Form.Item>
         {(stock?.warehouseAreaName || stock?.location) && (
           <div className="u-br-6 u-mb-8" style={{ background: 'var(--color-bg-stripe)', padding: '10px 12px' }}>
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 14 }}>
               出库仓库：{stock.warehouseAreaName || '-'}
               {stock?.location ? ` | 库位：${stock.location}` : ''}
             </Typography.Text>

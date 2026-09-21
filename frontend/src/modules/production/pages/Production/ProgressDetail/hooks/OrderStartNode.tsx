@@ -54,7 +54,7 @@ export function OrderStartNode({ record, totalQty, frozen, isCompletedOrClosed }
     display: 'flex',
     alignItems: 'center',
     gap: 6,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 1.5,
     color: 'var(--color-text-primary)',
     whiteSpace: 'nowrap',
@@ -124,7 +124,7 @@ export function OrderStartNode({ record, totalQty, frozen, isCompletedOrClosed }
             gap: 2,
           }}>
             <div style={{
-              fontSize: 12,
+              fontSize: 13,
               color: 'var(--color-text-primary)',
               fontWeight: 600,
               lineHeight: 1.2,
@@ -134,7 +134,7 @@ export function OrderStartNode({ record, totalQty, frozen, isCompletedOrClosed }
               下单
             </div>
             <div style={{
-              fontSize: 12,
+              fontSize: 13,
               color: 'var(--color-text-tertiary)',
               fontWeight: 400,
               lineHeight: 1.2,

@@ -197,7 +197,8 @@ const AppWrapper: React.FC = () => {
     const isBlue = currentTheme === 'blue';
     const isLightBlue = currentTheme === 'lightblue';
 
-    const baseToken = { fontSize: 12, fontSizeSM: 12, fontSizeLG: 13 };
+    // D-516：全局字号大一号（12/12/13 → 13/13/14）；页面主标题走 --font-size-title 不受影响
+    const baseToken = { fontSize: 13, fontSizeSM: 13, fontSizeLG: 14 };
 
     return {
       algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,

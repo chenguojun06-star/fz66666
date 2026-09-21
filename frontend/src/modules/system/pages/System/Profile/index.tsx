@@ -42,7 +42,7 @@ const Profile: React.FC = () => {
             <PageLayout
                 title="个人中心"
                 headerContent={
-                    <Typography.Text type="secondary" style={{ fontSize: 14 }}>
+                    <Typography.Text type="secondary" style={{ fontSize: 15 }}>
                         {canViewBilling ? '个人信息与模块账单管理' : '个人信息管理'}
                     </Typography.Text>
                 }

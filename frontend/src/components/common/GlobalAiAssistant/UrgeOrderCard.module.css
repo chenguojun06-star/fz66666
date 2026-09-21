@@ -6,7 +6,7 @@
   margin: 8px 0;
 }
 .urgeCardHeader {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-amber-700);
   margin-bottom: 4px;
@@ -14,15 +14,15 @@
 .urgeCardFactory {
   font-weight: 400;
   color: var(--color-amber-700);
-  font-size: 14px;
+  font-size: 15px;
 }
 .urgeCardPerson {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-amber-900);
   margin-bottom: 4px;
 }
 .urgeCardDesc {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-amber-700);
   margin-bottom: 12px;
   line-height: 1.5;
@@ -33,7 +33,7 @@
   gap: 4px;
 }
 .urgeFormLabel {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-amber-800);
   font-weight: 600;
   margin-top: 4px;
@@ -42,7 +42,7 @@
   border: 1px solid var(--color-amber-300);
   border-radius: 6px;
   padding: 8px 12px;
-  font-size: 14px;
+  font-size: 15px;
   background: var(--status-success-bg);
   color: var(--color-text-primary);
   outline: none;
@@ -57,7 +57,7 @@
   border: 1px solid var(--color-amber-300);
   border-radius: 6px;
   padding: 8px 12px;
-  font-size: 14px;
+  font-size: 15px;
   background: var(--status-success-bg);
   color: var(--color-text-primary);
   resize: none;
@@ -71,7 +71,7 @@
   box-shadow: 0 0 0 2px rgba(250, 140, 22, 0.2);
 }
 .urgeCardError {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-error);
   background: var(--color-bg-base)1F0;
   border: 1px solid var(--status-error-border);
@@ -85,7 +85,7 @@
   border: none;
   border-radius: 8px;
   padding: 8px 0;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
@@ -104,6 +104,6 @@
   border-radius: 8px;
   padding: 12px 16px;
   color: var(--color-success);
-  font-size: 14px;
+  font-size: 15px;
   margin: 8px 0;
 }

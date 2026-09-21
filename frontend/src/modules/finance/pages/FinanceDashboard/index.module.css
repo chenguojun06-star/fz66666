@@ -9,12 +9,12 @@
 }
 
 .filterLabel {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-secondary);
 }
 
 .filterHint {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
 }
 
@@ -38,7 +38,7 @@
 }
 
 .cardTitle {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-secondary);
   margin-bottom: 4px;
 }
@@ -70,7 +70,7 @@
 }
 
 .chartCard :global(.ant-card-head-title) {
-  font-size: 14px;
+  font-size: 15px;
   padding: 8px 0;
 }
 
@@ -80,7 +80,7 @@
   align-items: center;
   justify-content: center;
   color: var(--color-text-quaternary);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* 柱状图 */
@@ -98,7 +98,7 @@
 
 .barLabel {
   width: 50px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-secondary);
   flex-shrink: 0;
 }
@@ -121,7 +121,7 @@
 
 .barValue {
   width: 80px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-secondary);
   text-align: right;
   flex-shrink: 0;
@@ -152,13 +152,13 @@
 }
 
 .pieTotal {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: bold;
   color: var(--color-text-primary);
 }
 
 .pieLabel {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-secondary);
 }
 
@@ -182,12 +182,12 @@
 
 .legendText {
   flex: 1;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-secondary);
 }
 
 .legendValue {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-primary);
   font-weight: 500;
 }
@@ -211,17 +211,17 @@
 }
 
 .tableCard :global(.ant-card-head-title) {
-  font-size: 14px;
+  font-size: 15px;
   padding: 8px 0;
 }
 
 .tableCard :global(.ant-table-thead > tr > th) {
-  font-size: 12px;
+  font-size: 13px;
   padding: 8px 12px;
   background: var(--color-bg-light);
 }
 
 .tableCard :global(.ant-table-tbody > tr > td) {
-  font-size: 12px;
+  font-size: 13px;
   padding: 8px 12px;
 }

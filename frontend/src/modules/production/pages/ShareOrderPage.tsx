@@ -153,8 +153,8 @@ const ShareOrderPage: React.FC = () => {
     : ai?.riskLevel
       ? { label: RISK_LABEL[ai.riskLevel], color: RISK_COLOR[ai.riskLevel] }
       : { label: '跟踪中', color: 'var(--color-accent-cyan-bright)' };
-  const shareInfoLabelStyle: React.CSSProperties = { color: 'var(--color-blue-300)', fontSize: 14 };
-  const shareInfoValueStyle: React.CSSProperties = { color: 'var(--color-sky-50)', fontSize: 14, fontWeight: 600 };
+  const shareInfoLabelStyle: React.CSSProperties = { color: 'var(--color-blue-300)', fontSize: 15 };
+  const shareInfoValueStyle: React.CSSProperties = { color: 'var(--color-sky-50)', fontSize: 15, fontWeight: 600 };
 
   return (
     <div style={{
@@ -186,7 +186,7 @@ const ShareOrderPage: React.FC = () => {
               <div className="u-fs-14 u-mb-2" style={{ color: 'var(--color-blue-300)' }}>订单编号</div>
               <div className="u-fs-16 u-fw-700" style={{ color: 'var(--color-sky-50)', fontFamily: 'monospace' }}>{data.orderNo}</div>
             </div>
-            <Tag color={pageRiskTone.color} style={{ fontSize: 14, padding: '2px 10px', borderRadius: 20, border: 'none', color: 'var(--color-bg-base)', boxShadow: `0 0 18px ${pageRiskTone.color}33` }}>
+            <Tag color={pageRiskTone.color} style={{ fontSize: 15, padding: '2px 10px', borderRadius: 20, border: 'none', color: 'var(--color-bg-base)', boxShadow: `0 0 18px ${pageRiskTone.color}33` }}>
               {pageRiskTone.label}
             </Tag>
           </div>
@@ -265,7 +265,7 @@ const ShareOrderPage: React.FC = () => {
               </div>
               <div className="u-br-10" style={{ background: 'rgba(255,255,255,0.04)', padding: '12px 14px' }}>
                 <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-blue-300)' }}>预测置信度</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: riskColor }}>{ai.confidence ?? 0}%</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: riskColor }}>{ai.confidence ?? 0}%</div>
               </div>
             </div>
             {ai.riskReason && (

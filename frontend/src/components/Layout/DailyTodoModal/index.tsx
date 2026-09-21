@@ -111,14 +111,14 @@ const DailyTodoModal: React.FC = () => {
               <div className="u-fs-14 u-mt-2" style={{ color: 'var(--color-text-tertiary)' }}>
                 {brief.date} · 数据已实时同步
                 {brief.suggestionsSource === 'ai' && (
-                  <Tag color="purple" style={{ marginLeft: 8, fontSize: 14 }}>
+                  <Tag color="purple" style={{ marginLeft: 8, fontSize: 15 }}>
                     <RobotOutlined /> AI 增强
                   </Tag>
                 )}
               </div>
             </div>
             {health && (
-              <Tag color={health.tagColor} style={{ fontSize: 14, padding: '2px 12px' }}>
+              <Tag color={health.tagColor} style={{ fontSize: 15, padding: '2px 12px' }}>
                 {health.label}
               </Tag>
             )}
@@ -151,7 +151,7 @@ const DailyTodoModal: React.FC = () => {
               marginBottom: 16, border: '1px solid var(--color-border-light)',
             }}>
               <div style={{
-                fontSize: 14, fontWeight: 600, color: 'var(--color-gray-800)', marginBottom: 8,
+                fontSize: 15, fontWeight: 600, color: 'var(--color-gray-800)', marginBottom: 8,
                 display: 'flex', alignItems: 'center',
               }}>
                 📈 近7日生产趋势
@@ -207,7 +207,7 @@ const DailyTodoModal: React.FC = () => {
                (Number(brief.highRiskOrderCount) || 0) === 0 && (
                 <div style={{
                   padding: '12px 14px', borderRadius: 8, background: LEVEL_BG.success,
-                  border: '1px solid ' + LEVEL_BORDER.success, fontSize: 14, color: LEVEL_COLOR.success,
+                  border: '1px solid ' + LEVEL_BORDER.success, fontSize: 15, color: LEVEL_COLOR.success,
                 }}>
                   ✅ 当前订单健康度良好，保持日常巡检，重点关注新开单进度
                 </div>
@@ -222,14 +222,14 @@ const DailyTodoModal: React.FC = () => {
               border: '1px solid var(--status-info-border)', marginBottom: 4,
             }}>
               <div style={{
-                fontSize: 14, fontWeight: 600, color: 'var(--color-purple-700)', marginBottom: 6,
+                fontSize: 15, fontWeight: 600, color: 'var(--color-purple-700)', marginBottom: 6,
                 display: 'flex', alignItems: 'center', gap: 6,
               }}>
                 <RobotOutlined /> 智能运营建议
               </div>
               {suggestions.map((s, i) => (
                 <div key={i} style={{
-                  fontSize: 14, color: 'var(--color-text)', lineHeight: 1.7,
+                  fontSize: 15, color: 'var(--color-text)', lineHeight: 1.7,
                   paddingLeft: 12, position: 'relative',
                 }}>
                   <span style={{

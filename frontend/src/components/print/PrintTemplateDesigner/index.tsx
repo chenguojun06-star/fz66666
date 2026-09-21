@@ -213,7 +213,7 @@ const PrintTemplateDesigner: React.FC<PrintTemplateDesignerProps> = ({
           label: fieldData.label,
           x: 5,
           y: config.fields.length * 8 + 5,
-          fontSize: 12,
+          fontSize: 13,
           align: 'left',
           bold: false,
         };

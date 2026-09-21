@@ -58,7 +58,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
                       <InboxOutlined /> 链路一：成品仓（有生产单）
                     </div>
                     <div className="u-fs-14 u-lh-18" style={{ color: 'var(--color-text-secondary)' }}>
-                      订单 → 商品编码匹配款号 → <Tag color="blue" style={{ fontSize: 14 }}>关联生产单</Tag>
+                      订单 → 商品编码匹配款号 → <Tag color="blue" style={{ fontSize: 15 }}>关联生产单</Tag>
                       → 生产加工 → 完工入库 → 出库发货 → 物流回传
                     </div>
                     <div className="u-mt-6">
@@ -72,7 +72,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, activePlatform, activeSta
                       <ShoppingCartOutlined /> 链路二：电商仓（现货发货）
                     </div>
                     <div className="u-fs-14 u-lh-18" style={{ color: 'var(--color-text-secondary)' }}>
-                      订单 → <Tag color="orange" style={{ fontSize: 14 }}>待拣货</Tag>
+                      订单 → <Tag color="orange" style={{ fontSize: 15 }}>待拣货</Tag>
                       → 仓库拣货 → 复核包装 → 出库发货 → 物流回传
                     </div>
                     <div className="u-mt-6">

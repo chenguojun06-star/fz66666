@@ -41,7 +41,7 @@ export const useUsageColumns = ({
         render: (_: unknown, record: PatternMaterialRow) => (
           <div>
             <div>{record.bom.materialName}</div>
-            {record.bom.color && <Text type="secondary" style={{ fontSize: 14 }}>{record.bom.color}</Text>}
+            {record.bom.color && <Text type="secondary" style={{ fontSize: 15 }}>{record.bom.color}</Text>}
           </div>
         ),
       },
@@ -62,7 +62,7 @@ export const useUsageColumns = ({
           <span>
             平均值
             <br />
-            <Text type="secondary" style={{ fontSize: 14 }}>(按码均值)</Text>
+            <Text type="secondary" style={{ fontSize: 15 }}>(按码均值)</Text>
           </span>
         ),
         key: 'avgUsage',

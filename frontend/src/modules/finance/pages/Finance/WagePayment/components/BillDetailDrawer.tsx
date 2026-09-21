@@ -160,19 +160,19 @@ export default function BillDetailDrawer({ open, bill, onClose }: BillDetailDraw
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'var(--color-text-tertiary)',
-                    fontSize: 12,
+                    fontSize: 13,
                   }}
                 >
                   无图
                 </div>
               )}
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{styleInfo.styleName || bill.styleNo}</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>{styleInfo.styleName || bill.styleNo}</div>
+                <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>
                   款号：{bill.styleNo || '-'}
                 </div>
                 {styleInfo.category && (
-                  <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>
+                  <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>
                     品类：{styleInfo.category}
                   </div>
                 )}
@@ -185,8 +185,8 @@ export default function BillDetailDrawer({ open, bill, onClose }: BillDetailDraw
             bordered
             style={{ marginBottom: 16 }}
             styles={{
-              label: { fontSize: 14, fontWeight: 500, width: 110 },
-              content: { fontSize: 14 },
+              label: { fontSize: 15, fontWeight: 500, width: 110 },
+              content: { fontSize: 15 },
             }}
           >
             <Descriptions.Item label="来源模块">

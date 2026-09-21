@@ -79,7 +79,7 @@ const SectionNav: React.FC<{ active: string; onGo: (key: string) => void }> = ({
           marginBottom: 2,
           borderRadius: 6,
           cursor: 'pointer',
-          fontSize: 14,
+          fontSize: 15,
           fontWeight: active === s.key ? 600 : 400,
           color: active === s.key ? 'var(--color-primary, #2D7FF9)' : 'var(--color-text-secondary, #6e6e73)',
           background: active === s.key ? 'var(--color-primary-bg, #e8f2ff)' : 'transparent',

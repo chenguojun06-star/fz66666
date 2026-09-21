@@ -9,7 +9,7 @@
 .side-drawer .side-drawer-footer-extra {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-tertiary, #999);
 }
 

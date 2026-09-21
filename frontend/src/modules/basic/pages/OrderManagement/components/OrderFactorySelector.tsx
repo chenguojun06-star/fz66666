@@ -45,7 +45,7 @@ const FactoryStatBlock: React.FC<{
         background: 'var(--color-bg-container)',
         border: '1px solid var(--color-border)',
         borderRadius: 6,
-        fontSize: 14,
+        fontSize: 15,
         lineHeight: '20px',
         color: 'var(--color-text-secondary)',
       }}
@@ -59,7 +59,7 @@ const FactoryStatBlock: React.FC<{
           )}
           {stat.matchScore >= 70 && <span className="u-br-4 u-fs-14" style={{ background: 'var(--status-success-bg)', color: 'var(--color-success)', padding: '0 6px', border: '1px solid var(--status-success-border)' }}>推荐</span>}
           {stat.supplierTier && (
-            <span style={{ background: 'rgba(0,0,0,0.04)', color: tierColor, padding: '0 6px', borderRadius: 4, fontSize: 14, border: '1px solid var(--color-border)' }}>
+            <span style={{ background: 'rgba(0,0,0,0.04)', color: tierColor, padding: '0 6px', borderRadius: 4, fontSize: 15, border: '1px solid var(--color-border)' }}>
               历史评级 {stat.supplierTier}
             </span>
           )}
@@ -122,7 +122,7 @@ const FactoryStatBlock: React.FC<{
           size="small"
           type="default"
           onClick={onInsightClick}
-          style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)', fontSize: 12 }}
+          style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)', fontSize: 13 }}
           icon={<RightOutlined />}
           iconPosition="end"
         >

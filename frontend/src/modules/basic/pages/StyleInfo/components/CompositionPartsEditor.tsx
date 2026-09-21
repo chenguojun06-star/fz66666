@@ -99,7 +99,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
             <div style={{
               display: 'flex', gap: 8, padding: '2px 0 4px',
               borderBottom: '1px solid var(--color-border-light)',
-              color: 'var(--color-text-tertiary)', fontSize: 14,
+              color: 'var(--color-text-tertiary)', fontSize: 15,
             }}>
               <div className="u-fshrink-0" style={{ width: 72 }}>品类</div>
               <div style={{ flex: '1 1 160px' }}>成分</div>
@@ -118,7 +118,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
               >
                 {/* 品类 */}
                 <div className="u-fshrink-0" style={{ width: 72, paddingTop: 3 }}>
-                  <Tag color="blue" style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
+                  <Tag color="blue" style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>
                     {partLabel}
                   </Tag>
                 </div>

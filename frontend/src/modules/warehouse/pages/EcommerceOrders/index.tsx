@@ -16,7 +16,7 @@ const EcommerceOrders: React.FC = () => {
   return (
     <>
       <div style={{ padding: 20 }}>
-        <Alert style={{ marginBottom: 14, fontSize: 14 }} type="info" showIcon
+        <Alert style={{ marginBottom: 14, fontSize: 15 }} type="info" showIcon
           title="电商对接全流程"
           description={
             <Steps style={{ marginTop: 8 }}

@@ -116,25 +116,25 @@ const RoleTemplateSelector: React.FC<RoleTemplateSelectorProps> = ({ value, onCh
                   <div className="template-content">
                     <div className="template-header">
                       <div className="template-title-row">
-                        <Text strong style={{ fontSize: 14 }}>{template.templateName}</Text>
+                        <Text strong style={{ fontSize: 15 }}>{template.templateName}</Text>
                         {template.isDefault && (
-                          <Tag color="gold" style={{ fontSize: 10, marginLeft: 8 }}>默认</Tag>
+                          <Tag color="gold" style={{ fontSize: 11, marginLeft: 8 }}>默认</Tag>
                         )}
                       </div>
-                      <Tag color={categoryConfig.color} icon={categoryConfig.icon} style={{ fontSize: 11 }}>
+                      <Tag color={categoryConfig.color} icon={categoryConfig.icon} style={{ fontSize: 12 }}>
                         {categoryConfig.label}
                       </Tag>
                     </div>
 
-                    <Text type="secondary" className="template-desc" style={{ fontSize: 12 }}>
+                    <Text type="secondary" className="template-desc" style={{ fontSize: 13 }}>
                       {template.templateDesc || '暂无描述'}
                     </Text>
 
                     <div className="template-footer">
-                      <Badge count={permCount} showZero={false} style={{ fontSize: 11 }}>
-                        <Tag style={{ fontSize: 11 }}>权限</Tag>
+                      <Badge count={permCount} showZero={false} style={{ fontSize: 12 }}>
+                        <Tag style={{ fontSize: 12 }}>权限</Tag>
                       </Badge>
-                      <Tag style={{ fontSize: 11 }}>
+                      <Tag style={{ fontSize: 12 }}>
                         {PERMISSION_RANGE_LABEL[template.permissionRange] || template.permissionRange}
                       </Tag>
                     </div>

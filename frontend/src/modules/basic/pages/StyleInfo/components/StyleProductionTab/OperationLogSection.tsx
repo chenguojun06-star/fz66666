@@ -54,7 +54,7 @@ const OperationLogSection: React.FC<{ styleId?: string | number; styleNo?: strin
     <div className="u-br-8 u-mb-16" style={{ background: '#fff', padding: '16px 24px', border: '1px solid var(--color-border-light)' }}>
       <div className="u-d-flex u-ai-center u-gap-8 u-mb-8">
         <Typography.Title level={5} style={{ margin: 0 }}>操作记录</Typography.Title>
-        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+        <Typography.Text type="secondary" style={{ fontSize: 13 }}>
           （物料清单同步、库存检查、生成采购任务等款式级操作日志）
         </Typography.Text>
         <a className="u-ml-auto u-fs-12" onClick={load}>刷新</a>

@@ -13,7 +13,7 @@
 }
 
 .reportTitle {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-primary);
   display: flex;
@@ -23,7 +23,7 @@
 }
 
 .reportMeta {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-slate-600);
   line-height: 1.5;
 }
@@ -36,7 +36,7 @@
 }
 
 .sectionTitle {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--color-gray-800);
   margin-bottom: 8px;
@@ -59,26 +59,26 @@
 }
 
 .kpiName {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-tertiary);
   margin-bottom: 4px;
 }
 
 .kpiValue {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-info);
   line-height: 1.2;
 }
 
 .kpiUnit {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-gray-700);
   margin-left: 2px;
 }
 
 .kpiChange {
-  font-size: 12px;
+  font-size: 13px;
   margin-top: 2px;
   font-weight: 600;
 }
@@ -98,7 +98,7 @@
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 4px 8px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-gray-700);
 }
 
@@ -120,7 +120,7 @@
   padding: 4px 8px;
   background: var(--color-bg-container);
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .rankBadge {
@@ -131,7 +131,7 @@
   color: var(--color-bg-base);
   text-align: center;
   line-height: 18px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -151,7 +151,7 @@
 
 .rankMeta {
   color: var(--color-text-tertiary);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .riskGrid {
@@ -174,7 +174,7 @@
 }
 
 .riskValue {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--color-warning);
 }
@@ -182,7 +182,7 @@
 .riskChipDanger .riskValue { color: var(--color-error); }
 
 .riskLabel {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-gray-700);
   margin-top: 2px;
 }
@@ -194,7 +194,7 @@
 }
 
 .orderItem {
-  font-size: 13px;
+  font-size: 14px;
   padding: 4px 8px;
   background: var(--color-bg-container);
   border-radius: 6px;
@@ -212,12 +212,12 @@
 
 .orderMeta {
   color: var(--color-text-tertiary);
-  font-size: 12px;
+  font-size: 13px;
   margin-top: 2px;
 }
 
 .emptyHint {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-tertiary);
   text-align: center;
   padding: 8px 0;

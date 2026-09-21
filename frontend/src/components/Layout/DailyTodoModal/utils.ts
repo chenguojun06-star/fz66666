@@ -22,21 +22,21 @@ export function buildTrendOption(trend: TrendPoint[]) {
       trigger: 'axis' as const,
       backgroundColor: 'rgba(255,255,255,0.96)',
       borderColor: 'var(--color-border)',
-      textStyle: { fontSize: 14, color: 'var(--color-text-primary)' },
+      textStyle: { fontSize: 15, color: 'var(--color-text-primary)' },
     },
     legend: {
       data: ['扫码次数', '入库单数', '下单数'],
-      bottom: 0, textStyle: { fontSize: 14 }, itemWidth: 16, itemHeight: 8,
+      bottom: 0, textStyle: { fontSize: 15 }, itemWidth: 16, itemHeight: 8,
     },
     grid: { left: 36, right: 16, top: 10, bottom: 32, containLabel: false },
     xAxis: {
       type: 'category' as const, data: dates, boundaryGap: false,
       axisLine: { lineStyle: { color: 'var(--color-border-light)' } },
-      axisLabel: { fontSize: 14, color: 'var(--color-text-tertiary)' },
+      axisLabel: { fontSize: 15, color: 'var(--color-text-tertiary)' },
     },
     yAxis: {
       type: 'value' as const, splitLine: { lineStyle: { color: 'var(--color-bg-subtle)' } },
-      axisLabel: { fontSize: 14, color: 'var(--color-text-tertiary)' },
+      axisLabel: { fontSize: 15, color: 'var(--color-text-tertiary)' },
     },
     series: [
       {

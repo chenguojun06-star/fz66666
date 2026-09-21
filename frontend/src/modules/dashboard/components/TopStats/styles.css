@@ -54,13 +54,13 @@
 }
 
 .stat-icon {
-  font-size: 14px;
+  font-size: 15px;
   flex-shrink: 0;
   color: var(--neutral-text-secondary, var(--color-text-muted));
 }
 
 .stat-label {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   flex-shrink: 0;
   color: var(--neutral-text-secondary, var(--color-gray-700));
@@ -94,12 +94,12 @@
 }
 
 .stat-tag-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--neutral-text-light, var(--color-text-muted));
 }
 
 .stat-tag-value {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--neutral-text, var(--color-slate-700));
   font-variant-numeric: tabular-nums;

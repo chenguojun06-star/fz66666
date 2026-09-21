@@ -61,7 +61,7 @@ export function generateCertBarcodeSvg(value: string, height = 52): string {
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     JsBarcode(svgEl, ascii, {
       format: 'CODE128', width: 1.4, height, displayValue: true,
-      fontSize: 11, margin: 0, background: 'transparent',
+      fontSize: 12, margin: 0, background: 'transparent',
     });
     return svgEl.outerHTML;
   } catch {

@@ -85,7 +85,7 @@ export const buildBasicColumns = (params: UseMaterialColumnsParams): ColumnsType
           <Space size={4}>
             <FactoryTypeTag factoryType={type} />
             <SupplierNameTooltip name={name} />
-            {bizType && <Tag color={BIZ_TYPE_COLOR_MAP[bizType] ?? 'default'} style={{ margin: 0, fontSize: 12, padding: '0 4px', lineHeight: '18px' }}>{ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知'}</Tag>}
+            {bizType && <Tag color={BIZ_TYPE_COLOR_MAP[bizType] ?? 'default'} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px' }}>{ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知'}</Tag>}
           </Space>
         );
       },

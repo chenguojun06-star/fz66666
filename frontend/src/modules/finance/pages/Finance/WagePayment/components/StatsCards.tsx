@@ -26,14 +26,14 @@ const StatsCards: React.FC<StatsCardsProps> = ({ activeTab, billStats }) => {
   const cards = [
     {
       title: '账单笔数',
-      icon: <FileTextOutlined style={{ marginRight: 4, fontSize: 12 }} />,
+      icon: <FileTextOutlined style={{ marginRight: 4, fontSize: 13 }} />,
       value: billStats.pendingCount + billStats.confirmedCount + billStats.settledCount,
       suffix: '笔',
       color: 'var(--color-text-primary)',
     },
     {
       title: '待确认',
-      icon: <ClockCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />,
+      icon: <ClockCircleOutlined style={{ marginRight: 4, fontSize: 13 }} />,
       value: billStats.pendingAmount,
       prefix: '¥',
       precision: 2,
@@ -41,7 +41,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ activeTab, billStats }) => {
     },
     {
       title: '已确认',
-      icon: <CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />,
+      icon: <CheckCircleOutlined style={{ marginRight: 4, fontSize: 13 }} />,
       value: billStats.confirmedAmount,
       prefix: '¥',
       precision: 2,
@@ -49,7 +49,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ activeTab, billStats }) => {
     },
     {
       title: '已结清',
-      icon: <CheckCircleOutlined style={{ marginRight: 4, fontSize: 12 }} />,
+      icon: <CheckCircleOutlined style={{ marginRight: 4, fontSize: 13 }} />,
       value: billStats.settledAmount,
       prefix: '¥',
       precision: 2,

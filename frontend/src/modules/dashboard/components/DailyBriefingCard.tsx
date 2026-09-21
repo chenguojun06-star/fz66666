@@ -152,7 +152,7 @@ const DailyBriefingCard: React.FC = () => {
                           justifyContent: 'center',
                           background: `${metric.accent}1A`,
                           color: metric.accent,
-                          fontSize: 14,
+                          fontSize: 15,
                         }}
                       >
                         {metric.icon}

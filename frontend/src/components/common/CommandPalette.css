@@ -53,7 +53,7 @@
 }
 
 .cp-search-icon {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-tertiary);
   flex-shrink: 0;
 }
@@ -62,7 +62,7 @@
   flex: 1;
   border: none;
   outline: none;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-black);
   background: transparent;
   min-width: 0;
@@ -111,7 +111,7 @@
 }
 
 kbd.cp-kbd {
-  font-size: 12px;
+  font-size: 13px;
   font-family: inherit;
   background: var(--color-bg-stripe);
   border: 1px solid var(--color-border);
@@ -136,7 +136,7 @@ kbd.cp-kbd {
 .cp-quick-tags::-webkit-scrollbar { display: none; }
 
 .cp-quick-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
   white-space: nowrap;
   flex-shrink: 0;
@@ -148,7 +148,7 @@ kbd.cp-kbd {
   background: var(--color-bg-base);
   border-radius: 8px;
   padding: 4px 12px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-secondary);
   cursor: pointer;
   white-space: nowrap;
@@ -184,7 +184,7 @@ kbd.cp-kbd {
   justify-content: center;
   padding: 32px 20px 24px;
   color: var(--color-text-tertiary);
-  font-size: 13px;
+  font-size: 14px;
   gap: 4px;
   text-align: center;
 }
@@ -199,7 +199,7 @@ kbd.cp-kbd {
   border: 1px solid rgba(45, 127, 249, 0.3);
   background: rgba(45, 127, 249, 0.06);
   color: var(--color-primary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
@@ -214,7 +214,7 @@ kbd.cp-kbd {
   gap: 16px;
   margin-top: 12px;
   color: var(--color-slate-400);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .cp-hint-tips kbd {
@@ -223,7 +223,7 @@ kbd.cp-kbd {
   border-radius: 4px;
   padding: 0 4px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-secondary);
   margin: 0 1px;
 }
@@ -233,7 +233,7 @@ kbd.cp-kbd {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text-tertiary);
   text-transform: uppercase;
@@ -267,14 +267,14 @@ kbd.cp-kbd {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 15px;
   flex-shrink: 0;
 }
 
 .cp-icon-order  { background: var(--color-blue-50); color: var(--color-secondary); }
 .cp-icon-style  { background: var(--color-fuchsia-50); color: var(--color-purple-500); overflow: hidden; }
 .cp-icon-worker { background: var(--color-green-50); color: var(--color-success); }
-.cp-icon-menu   { background: var(--color-yellow-50); color: var(--color-amber-500); font-size: 13px; }
+.cp-icon-menu   { background: var(--color-yellow-50); color: var(--color-amber-500); font-size: 14px; }
 .cp-icon-image  { background: var(--color-purple-100); color: var(--color-purple-500); overflow: hidden; }
 
 .cp-cover {
@@ -303,7 +303,7 @@ kbd.cp-kbd {
 }
 
 .cp-item-sub {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
   white-space: nowrap;
   overflow: hidden;
@@ -340,7 +340,7 @@ kbd.cp-kbd {
 
 /* 相似度标签 */
 .cp-similarity {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-purple-500);
   background: var(--color-purple-100);
@@ -350,7 +350,7 @@ kbd.cp-kbd {
 }
 
 .cp-item-arrow {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-border);
   flex-shrink: 0;
   opacity: 0;
@@ -422,7 +422,7 @@ kbd.cp-kbd {
 }
 
 .cp-grid-card-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text-primary);
   white-space: nowrap;
@@ -471,7 +471,7 @@ kbd.cp-kbd {
 }
 
 .cp-drop-tip {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
 }
 

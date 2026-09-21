@@ -56,7 +56,7 @@ const UrgeReplyInline: React.FC<{
         onClick={() => void handleSubmit()}
         disabled={submitting || (!replyContent.trim() && !expectedShipDate)}
         style={{
-          fontSize: 11,
+          fontSize: 12,
           padding: '2px 8px',
           background: 'var(--color-error)',
           color: 'var(--color-bg-base)',

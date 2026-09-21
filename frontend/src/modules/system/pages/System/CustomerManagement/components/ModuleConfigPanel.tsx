@@ -57,7 +57,7 @@ const ModuleConfigPanel: React.FC<ModuleConfigPanelProps> = ({ selectedModules, 
                 <Checkbox
                   key={item.path}
                   checked={selectedModules !== null && selectedModules.includes(item.path)}
-                  style={{ fontSize: 14, marginLeft: 0, lineHeight: 1.6 }}
+                  style={{ fontSize: 15, marginLeft: 0, lineHeight: 1.6 }}
                   onChange={(e) => {
                     setSelectedModules(prev => {
                       const base = prev === null ? [] : [...prev];

@@ -9,7 +9,7 @@ const FactoryCapacityCard: React.FC<{ stat: FactoryCapacityItem }> = ({ stat }) 
       background: 'var(--color-bg-container, var(--color-bg-container))',
       border: '1px solid var(--color-border, var(--color-border-light))',
       borderRadius: 6,
-      fontSize: 14,
+      fontSize: 15,
       lineHeight: '20px',
       color: 'var(--color-text-secondary, var(--color-text-muted))',
     }}

@@ -25,14 +25,14 @@
 }
 
 .title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--primary-color, var(--color-blue-800));
   letter-spacing: 0.02em;
 }
 
 .desc {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--neutral-text-secondary, var(--color-slate-500));
   text-align: center;
   line-height: 1.7;

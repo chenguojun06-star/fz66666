@@ -224,7 +224,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = (props) => {
                   <div style={{
                     position: 'absolute', left: 0, top: 0, zIndex: 2,
                     background: 'var(--color-primary, #1677ff)', color: '#fff',
-                    fontSize: 10, lineHeight: '16px', padding: '0 5px', borderRadius: '0 0 6px 0',
+                    fontSize: 11, lineHeight: '16px', padding: '0 5px', borderRadius: '0 0 6px 0',
                   }}>
                     主图
                   </div>

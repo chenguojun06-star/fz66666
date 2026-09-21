@@ -311,7 +311,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
           {companyName ? (
             <div style={{ fontSize: 17, fontWeight: 700, letterSpacing: 2 }}>{companyName}</div>
           ) : null}
-          <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: 6, marginTop: 4, color: 'var(--color-text-secondary)' }}>
+          <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: 6, marginTop: 4, color: 'var(--color-text-secondary)' }}>
             {docTitle}
           </div>
         </div>
@@ -324,7 +324,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
           <div style={{ width: 80, height: 106, flexShrink: 0, background: '#fafafa', border: '1px solid var(--color-border)', borderRadius: 4, overflow: 'hidden' }}>
             {effectiveCover ? <img src={effectiveCover} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
           </div>
-          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '4px 16px', fontSize: 13 }}>
+          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '4px 16px', fontSize: 14 }}>
             <span><b>款号：</b>{styleNo || '-'}</span>
             <span><b>款名：</b>{styleName || '-'}</span>
             <span><b>颜色：</b>{color || '-'}</span>
@@ -336,8 +336,8 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
 
         {matrix && (
           <div style={{ marginBottom: 8 }}>
-            <Text strong style={{ fontSize: 13, display: 'block', marginBottom: 4 }}>下单明细</Text>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <Text strong style={{ fontSize: 14, display: 'block', marginBottom: 4 }}>下单明细</Text>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: 'var(--color-bg-subtle)' }}>
                   <th style={{ border: '1px solid var(--color-border)', padding: '4px 8px', textAlign: 'left' }}>颜色 \ 尺码</th>
@@ -361,8 +361,8 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
           </div>
         )}
 
-        <Text strong style={{ fontSize: 13, display: 'block', marginBottom: 4 }}>物料信息表（共 {purchaseList.length} 项）</Text>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        <Text strong style={{ fontSize: 14, display: 'block', marginBottom: 4 }}>物料信息表（共 {purchaseList.length} 项）</Text>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: 'var(--color-bg-subtle)' }}>
               {['序号', '物料类型', '物料编码', '物料名称', '颜色', '规格', '单位', '采购数量', '到货数量', '单价', '金额(按到货)', '供应商', '状态'].map((t) => (
@@ -411,7 +411,7 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
           </tfoot>
         </table>
 
-        <Text type="secondary" style={{ display: 'block', marginTop: 10, fontSize: 12 }}>
+        <Text type="secondary" style={{ display: 'block', marginTop: 10, fontSize: 13 }}>
           采购单数：{purchaseList.length} 个 · 采购总量：{totalPurchase} · 到货总量：{totalArrived} · 合计金额（按实际到货）：{money(totalAmount)}
         </Text>
       </div>

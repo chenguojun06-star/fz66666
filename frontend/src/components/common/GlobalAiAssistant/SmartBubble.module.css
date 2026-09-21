@@ -59,7 +59,7 @@
 }
 
 .bubbleGreeting {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-blue-800);
 }
@@ -99,13 +99,13 @@
 }
 
 .bubbleUrgentIcon {
-  font-size: 14px;
+  font-size: 15px;
   flex-shrink: 0;
 }
 
 .bubbleUrgentText {
   flex: 1;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--color-red-700);
   overflow: hidden;
@@ -114,7 +114,7 @@
 }
 
 .bubbleUrgentArrow {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-error);
   flex-shrink: 0;
 }
@@ -128,17 +128,17 @@
 }
 
 .bubbleStatTotal {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-gray-700);
 }
 
 .bubbleStatTotal strong {
   color: var(--color-info);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .bubbleStatHigh {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-danger);
   background: var(--color-bg-base)1F0;
   border: 1px solid var(--status-error-border);
@@ -149,7 +149,7 @@
 
 .bubbleViewAll {
   margin-left: auto;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-info);
   font-weight: 500;
   transition: color 0.2s;
@@ -166,7 +166,7 @@
 }
 
 .bubbleCategoryTag {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--color-gray-700);
   background: var(--color-bg-subtle);
   border-radius: 8px;

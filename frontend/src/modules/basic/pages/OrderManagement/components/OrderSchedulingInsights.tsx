@@ -34,7 +34,7 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
         <span className="u-fs-14 u-d-inline-flex u-ai-center u-gap-4" style={{ color: 'var(--color-text-tertiary)' }}>
           {loading ? (
             <>
-              <LoadingOutlined style={{ fontSize: 13 }} />
+              <LoadingOutlined style={{ fontSize: 14 }} />
               <span>分析中...</span>
             </>
           ) : (
@@ -83,7 +83,7 @@ const OrderSchedulingInsights: React.FC<OrderSchedulingInsightsProps> = ({
                   <div className="u-d-flex u-ai-center u-gap-6">
                     {item.pinned ? <Tag color="green" style={{ marginInlineEnd: 0 }}>当前</Tag> : null}
                     <Tag color="blue" style={{ marginInlineEnd: 0 }}>{item.score}分</Tag>
-                    <span style={{ fontSize: 14, color: item.sourceTone }}>{item.sourceLabel}</span>
+                    <span style={{ fontSize: 15, color: item.sourceTone }}>{item.sourceLabel}</span>
                   </div>
                 </div>
                 <div className="u-mt-8 u-d-grid u-gap-8" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>

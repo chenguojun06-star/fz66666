@@ -153,7 +153,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
             <span>待入库记录</span>
             <Checkbox indeterminate={indeterminate} checked={allChecked} onChange={handleToggleAll}>全选</Checkbox>
             {!allChecked && (
-              <Text type="secondary" style={{ fontSize: 12 }}>已选 {selectedIds.length}/{pendingRecords.length} 条</Text>
+              <Text type="secondary" style={{ fontSize: 13 }}>已选 {selectedIds.length}/{pendingRecords.length} 条</Text>
             )}
           </Space>
         }
@@ -165,7 +165,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
           dataSource={pendingRecords}
           resizableColumns={false}
           scroll={{ x: 'max-content' }}
-          style={{ fontSize: 12 }}
+          style={{ fontSize: 13 }}
           columns={[
             {
               title: '',
@@ -232,7 +232,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
         <Space>
           <span>批量设置库位</span>
           <Tooltip title="为已选中的记录统一设置仓库和库位">
-            <Text type="secondary" style={{ fontSize: 12 }}>(选中 {selectedIds.length} 条)</Text>
+            <Text type="secondary" style={{ fontSize: 13 }}>(选中 {selectedIds.length} 条)</Text>
           </Tooltip>
         </Space>
       }>
@@ -281,7 +281,7 @@ const WarehousingActionPanel: React.FC<Props> = ({
           {locationGroups.size > 0 && (
             <Space size={4} wrap>
               {Array.from(locationGroups.entries()).map(([loc, count]) => (
-                <Tag key={loc} color={loc === '(未选库位)' ? 'error' : 'blue'} style={{ fontSize: 12 }}>
+                <Tag key={loc} color={loc === '(未选库位)' ? 'error' : 'blue'} style={{ fontSize: 13 }}>
                   {loc}: {count}条
                 </Tag>
               ))}
