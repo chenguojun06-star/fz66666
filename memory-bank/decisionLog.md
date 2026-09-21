@@ -5,6 +5,20 @@
 
 ---
 
+## D-519：打印入口治理——下单只留合同、标签收敛、标签弹窗侧滑化（2026-09-21）
+
+**用户三连反馈**：①商品下单的打印菜单（下单单/生产单/标签）没用处，只要打印合同；②打印预览弹窗的「打印标签」按钮到处出现误导人；③大货打印标签/洗水唛/U码的居中弹窗换成标准大号侧滑。
+
+**实现（e91dfca60，12 文件）**：
+- 商品下单（OrderManagement）：更多菜单的打印子菜单三兄弟全删，换单项「打印合同」——`onPrintContract` 按 styleId 调 `/production/order/list?pageSize=1` 取最近一张生产订单，填 `CooperationContractModal`（D-212 购销加工合同，D-329 甲方=租户公司名）；未下单的款禁用。OrderManagementModals 摘除 StylePrintModal。
+- StylePrintModal 加 `enableLabelPrint`（默认 false）：「打印标签」按钮仅样衣开发（StylePrintPreviewModal）与大货（List StylePrintModalSection、ProgressDetail ProgressModals）开启；外发管理/维护中心等默认隐藏。initialLabelMode 全局仅剩 OrderManagementModals 一处（已随 A 移除）。
+- 侧滑化：`LabelPrintModal`（大货打印标签，含洗水唛/U码/合格证 Tab，ResizableModal 85vw）+ WashLabel 三弹窗（WashLabelPrintModal 40vw / WashCareLabelModal 46vw / WashLabelBatchPrintModal 52vw）全部换 `SideDrawer width="85%"`。
+- **坑**：useOrderColumns 的打印菜单有两处（表格操作列 + useMemo deps），只改菜单会漏 deps 里的旧 setter 引用（tsc 抓到）；ProgressModals 的锚点缩进是 8 空格 + `/>` 6 空格，锚点必须逐字对。
+
+**保留的打印标签入口**（大货链路）：大货列表操作列/卡片视图、进度详情卡片、外发管理 SmartOrderRow——均属"大货的页面"。
+
+---
+
 ## D-518：父节点弹窗「环节核验」开关——扫码门禁交还管理员控制（2026-09-21）
 
 **用户发现**：尾部子工序（整烫/剪线/包装）全没扫，入库却能直接扫码。核实：门禁 `ProductionScanStageSupport.validateParentStagePrerequisite` 早就存在，但**管理员/主管角色无条件豁免**（李老板=管理员所以永远不卡）+ 2026-04-01 前订单豁免。
