@@ -1,6 +1,5 @@
 import React from 'react';
 import { Button, Space, Image, Tag } from 'antd';
-import { InboxOutlined , SendOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormInstance } from 'antd/es/form';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';

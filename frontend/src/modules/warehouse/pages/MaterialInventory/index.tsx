@@ -374,13 +374,12 @@ const _MaterialInventory: React.FC = () => {
           {
             key: 'pickup',
             label: (
-              <div>
-                <Space size={4}>
-                  领取记录
-                  <Badge count={pickupData.pendingPickupCount || 0} />
-                </Space>
-                <div className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>领料确认与出库管理</div>
-              </div>
+              // D-513：去掉副标题「领料确认与出库管理」——Tab 内容里已有「领料记录」标题
+              // 和完整流程说明，副标题让 Tab 看起来像两个、且与内容重复。
+              <Space size={4}>
+                领取记录
+                <Badge count={pickupData.pendingPickupCount || 0} />
+              </Space>
             ),
             children: (
               <Card>
