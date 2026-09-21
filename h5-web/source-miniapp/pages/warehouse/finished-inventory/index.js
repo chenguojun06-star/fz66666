@@ -14,6 +14,85 @@ const FACTORY_TYPE_OPTIONS = [
   { label: '外发工厂', value: 'EXTERNAL' },
 ];
 
+/**
+ * D-513：把按 SKU 的记录（每条 = 一个 color/size 的库存行）聚合为按款（styleNo+orderNo）的卡片。
+ *
+ * 后端 `/warehouse/finished-inventory/list` 每条 records 是一个 SKU（不同 color/size 算多条）；
+ * 用户截图 BV26Q2C1216A 显示 3 条一模一样 = 同一款 3 个不同 SKU 的库存行。
+ * 改为按款聚合：一张卡片 = 一个款，卡片内列出该款的全部 SKU 明细。
+ * 与 PC 端的 `flattenBySku.ts` 思路一致，但小程序端用纯 JS（不依赖 React）。
+ */
+function flattenByStyle(records) {
+  if (!Array.isArray(records) || records.length === 0) return [];
+  const groupMap = new Map();
+  records.forEach(function (item) {
+    const key = (item.orderNo || '') + '||' + (item.styleNo || '');
+    let group = groupMap.get(key);
+    if (!group) {
+      group = {
+        groupKey: key,
+        orderNo: item.orderNo || '',
+        orderId: item.orderId || '',
+        styleNo: item.styleNo || '',
+        styleName: item.styleName || '',
+        styleImage: item.styleImage || '',
+        _styleImage: item._styleImage || (item.styleImage ? getAuthedImageUrl(item.styleImage) : ''),
+        factoryName: item.factoryName || '',
+        factoryType: item.factoryType || '',
+        warehouseLocation: item.warehouseLocation || '',
+        lastInboundDate: item.lastInboundDate || '',
+        _lastInboundDate: '',
+        // 聚合数量
+        totalAvailableQty: 0,
+        totalLockedQty: 0,
+        totalDefectQty: 0,
+        totalInboundQty: 0,
+        // 款级标志（任一 SKU 有库存 / 有次品）
+        hasAvailable: false,
+        hasDefect: false,
+        // 该款的所有 SKU 行
+        skus: [],
+      };
+      groupMap.set(key, group);
+    }
+    const av = Number(item.availableQty) || 0;
+    const lk = Number(item.lockedQty) || 0;
+    const df = Number(item.defectQty) || 0;
+    const ti = Number(item.totalInboundQty) || 0;
+    group.totalAvailableQty += av;
+    group.totalLockedQty += lk;
+    group.totalDefectQty += df;
+    group.totalInboundQty += ti;
+    if (av > 0) group.hasAvailable = true;
+    if (df > 0) group.hasDefect = true;
+    // 兼容 WXML 字段：聚合时取该款所有 SKU 中最晚的入库日期
+    const formattedDate = item.lastInboundDate ? String(item.lastInboundDate).replace('T', ' ').substring(0, 16) : '';
+    if (formattedDate && (!group._lastInboundDate || formattedDate > group._lastInboundDate)) {
+      group._lastInboundDate = formattedDate;
+    }
+    // SKU 标识：color + size（无则用 sku 编码）
+    const skuLabel = [item.color, item.size].filter(Boolean).join(' / ') || item.sku || '';
+    group.skus.push({
+      id: item.id,
+      sku: item.sku || '',
+      color: item.color || '',
+      size: item.size || '',
+      skuLabel: skuLabel,
+      availableQty: av,
+      lockedQty: lk,
+      defectQty: df,
+      totalInboundQty: ti,
+      lastInboundDate: item.lastInboundDate || '',
+    });
+  });
+  const result = Array.from(groupMap.values());
+  // 按最近入库时间倒序（最新入库在前面）
+  result.sort(function (a, b) {
+    return String(b.lastInboundDate || '').localeCompare(String(a.lastInboundDate || ''));
+  });
+  return result;
+}
+
 Page({
   data: {
     loading: true,
@@ -135,21 +214,27 @@ Page({
         };
       });
 
-      const total = Number(res.total) || 0;
+      // D-513：按款聚合（一条 records = 一个 SKU，同款多 SKU 合并为一张卡片）
+      const styles = flattenByStyle(records);
+
+      // 总数量（按款汇总 = 按 SKU 汇总，金额相同）
       const totalAvailableQty = records.reduce(function (sum, it) { return sum + (it.availableQty || 0); }, 0);
       const totalDefectQty = records.reduce(function (sum, it) { return sum + (it.defectQty || 0); }, 0);
 
-      const newList = reset ? records : that.data.list.concat(records);
+      // hasMore 用 records.length 准确判断（分页按 SKU 算）
+      const newList = reset ? styles : that.data.list.concat(styles);
       const newAvailable = reset ? totalAvailableQty : that.data.totalAvailableQty + totalAvailableQty;
       const newDefect = reset ? totalDefectQty : that.data.totalDefectQty + totalDefectQty;
 
       that.setData({
         list: newList,
-        total: total,
+        // 「款数」统计卡片 = 聚合后的款数（用户看到的）
+        total: newList.length,
         totalAvailableQty: newAvailable,
         totalDefectQty: newDefect,
         page: page + 1,
-        hasMore: newList.length < total,
+        // 按 SKU 判断是否还有更多
+        hasMore: records.length >= that.data.pageSize,
         loading: false,
       });
     }).catch(function (err) {
@@ -179,7 +264,7 @@ Page({
 
   onItemTap: function (e) {
     const id = e.currentTarget.dataset.id;
-    const item = this.data.list.find(function (it) { return it.id === id; });
+    const item = this.data.list.find(function (it) { return it.groupKey === id; });
     if (!item) return;
     wx.navigateTo({ url: this._buildDetailUrl(item) });
   },
@@ -217,9 +302,9 @@ Page({
 
   onOutboundTap: function (e) {
     const id = e.currentTarget.dataset.id;
-    const item = this.data.list.find(function (it) { return it.id === id; });
+    const item = this.data.list.find(function (it) { return it.groupKey === id; });
     if (!item) return;
-    if (!item._hasAvailable) {
+    if (!item.hasAvailable) {
       wx.showToast({ title: '该款暂无可用库存', icon: 'none' });
       return;
     }
@@ -235,7 +320,7 @@ Page({
    */
   onInboundTap: function (e) {
     const id = e.currentTarget.dataset.id;
-    const item = this.data.list.find(function (it) { return it.id === id; });
+    const item = this.data.list.find(function (it) { return it.groupKey === id; });
     if (!item) return;
     wx.navigateTo({ url: this._buildInboundUrl(item) });
   },

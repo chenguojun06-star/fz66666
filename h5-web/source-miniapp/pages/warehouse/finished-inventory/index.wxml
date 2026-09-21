@@ -53,9 +53,9 @@
   </view>
 
   <view wx:else class="list-wrap">
-    <view wx:for="{{list}}" wx:key="id" class="inventory-item" data-id="{{item.id}}" bindtap="onItemTap" hover-class="inventory-item--hover" hover-stay-time="100">
+    <view wx:for="{{list}}" wx:key="groupKey" class="inventory-item" data-id="{{item.groupKey}}" bindtap="onItemTap" hover-class="inventory-item--hover" hover-stay-time="100">
       <view class="item-header">
-        <image wx:if="{{item._styleImage}}" src="{{item._styleImage}}" mode="aspectFit" class="item-image" />
+        <image wx:if="{{item.styleImage}}" src="{{item.styleImage}}" mode="aspectFit" class="item-image" />
         <view wx:else class="item-image item-image--placeholder">
           <text class="item-image-text">衣</text>
         </view>
@@ -70,8 +70,8 @@
           </view>
           <view class="item-tags">
             <text wx:if="{{item.factoryName}}" class="item-tag item-tag--factory">{{item.factoryName}}</text>
-            <text wx:if="{{item._hasAvailable}}" class="item-tag item-tag--success">有库存</text>
-            <text wx:if="{{item._hasDefect}}" class="item-tag item-tag--danger">有次品</text>
+            <text wx:if="{{item.hasAvailable}}" class="item-tag item-tag--success">有库存</text>
+            <text wx:if="{{item.hasDefect}}" class="item-tag item-tag--danger">有次品</text>
           </view>
         </view>
       </view>
@@ -79,15 +79,15 @@
       <view class="item-body">
         <view class="item-qty-row">
           <view class="qty-block">
-            <text class="qty-value">{{item.availableQty || 0}}</text>
+            <text class="qty-value">{{item.totalAvailableQty || 0}}</text>
             <text class="qty-label">可用</text>
           </view>
           <view class="qty-block">
-            <text class="qty-value qty-value--muted">{{item.lockedQty || 0}}</text>
+            <text class="qty-value qty-value--muted">{{item.totalLockedQty || 0}}</text>
             <text class="qty-label">锁定</text>
           </view>
           <view class="qty-block">
-            <text class="qty-value qty-value--danger">{{item.defectQty || 0}}</text>
+            <text class="qty-value qty-value--danger">{{item.totalDefectQty || 0}}</text>
             <text class="qty-label">次品</text>
           </view>
           <view class="qty-block">
@@ -96,12 +96,29 @@
           </view>
         </view>
 
+        <!-- D-513：SKU 明细列表（同一款的多 SKU 分开展示） -->
+        <view wx:if="{{item.skus.length > 0}}" class="sku-detail">
+          <view class="sku-detail-title">SKU 明细（{{item.skus.length}} 个）</view>
+          <view wx:for="{{item.skus}}" wx:for-item="sku" wx:key="id" class="sku-row">
+            <view class="sku-label">
+              <text class="sku-text" wx:if="{{sku.skuLabel}}">{{sku.skuLabel}}</text>
+              <text class="sku-text sku-text--empty" wx:else>未指定</text>
+            </view>
+            <view class="sku-numbers">
+              <text class="sku-num">{{sku.availableQty || 0}}</text>
+              <text class="sku-num-label">可用</text>
+              <text wx:if="{{sku.defectQty > 0}}" class="sku-num sku-num--danger">{{sku.defectQty}}</text>
+              <text wx:if="{{sku.defectQty > 0}}" class="sku-num-label">次品</text>
+            </view>
+          </view>
+        </view>
+
         <view class="item-meta">
           <text class="meta-text">最近入库：{{item._lastInboundDate}}</text>
           <view class="item-actions">
             <!-- D-496：入库按钮（原先只能「点进详情 → 入库」，与出库不对称） -->
-            <view class="outbound-btn outbound-btn--plain" catchtap="onInboundTap" data-id="{{item.id}}">入库</view>
-            <view wx:if="{{item._hasAvailable}}" class="outbound-btn" catchtap="onOutboundTap" data-id="{{item.id}}">出库</view>
+            <view class="outbound-btn outbound-btn--plain" catchtap="onInboundTap" data-id="{{item.groupKey}}">入库</view>
+            <view wx:if="{{item.hasAvailable}}" class="outbound-btn" catchtap="onOutboundTap" data-id="{{item.groupKey}}">出库</view>
             <text class="meta-arrow">›</text>
           </view>
         </view>

@@ -498,3 +498,57 @@ page {
 .outbound-btn--plain:active {
   background: var(--color-bg-page, #f5f5f5);
 }
+
+/* D-513：SKU 明细列表（同一款的多 SKU 展开显示） */
+.sku-detail {
+  margin: 8rpx 0 12rpx;
+  padding: 12rpx 14rpx;
+  background: #fafbfc;
+  border-radius: 8rpx;
+  border: 1rpx solid #eef0f3;
+}
+.sku-detail-title {
+  font-size: 22rpx;
+  color: var(--color-text-secondary, #666);
+  margin-bottom: 8rpx;
+}
+.sku-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6rpx 0;
+  font-size: 24rpx;
+}
+.sku-label {
+  flex: 1;
+  min-width: 0;
+}
+.sku-text {
+  color: var(--color-text-primary, #333);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sku-text--empty {
+  color: var(--color-text-tertiary, #999);
+  font-style: italic;
+}
+.sku-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 6rpx;
+  flex-shrink: 0;
+}
+.sku-num {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--color-text-primary, #333);
+}
+.sku-num--danger {
+  color: var(--color-danger, #e54545);
+}
+.sku-num-label {
+  font-size: 20rpx;
+  color: var(--color-text-tertiary, #999);
+  margin-right: 10rpx;
+}
