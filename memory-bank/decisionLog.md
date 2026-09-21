@@ -5,6 +5,21 @@
 
 ---
 
+## D-518：父节点弹窗「环节核验」开关——扫码门禁交还管理员控制（2026-09-21）
+
+**用户发现**：尾部子工序（整烫/剪线/包装）全没扫，入库却能直接扫码。核实：门禁 `ProductionScanStageSupport.validateParentStagePrerequisite` 早就存在，但**管理员/主管角色无条件豁免**（李老板=管理员所以永远不卡）+ 2026-04-01 前订单豁免。
+
+**实现（零数据库迁移）**：
+- 配置存订单 `nodeOperations` JSON 的节点对象新字段 `verifyPrevStage`（如 `nodeOperations.warehousing.verifyPrevStage=true`）；节点弹窗已有 saveNodeOperations 读写链路，直接复用。
+- **开关语义**：开启=本环节扫码前核验上一父环节全部必做子工序已完成（缺哪个工序名直接报错提示），**对管理员同样生效**、且豁免历史订单日期限制（显式开关优先级最高）；关闭（默认）=维持原行为。
+- 后端 `validateParentStagePrerequisite` 开头计算 `verifyExplicit`，把历史豁免/管理员豁免包进 `!verifyExplicit`；新增 `isVerifyPrevStageExplicitlyEnabled` 解析（Boolean/"true" 双兼容，跳过 subProcessRemap 键）。门禁覆盖生产扫码/入库扫码（WarehouseScanExecutor）/质检转尾部三个入口。
+- 前端 NodeDetailModal 顶部新增管理员可见卡片（Switch+状态徽标+说明），切换即调 saveNodeOperations 即时生效并写 history 留痕；admin 判断口径与后端豁免一致（role 含 admin/manager/supervisor/主管/管理员）。
+- 采购作为前置按数据驱动跳过（NON_GATE_STAGES，看采购单完成），入库是末环节天然不会被"核验"要求。
+
+**坑（新发现）**：`git push` 被预推送钩子拦——仓库有三份小程序副本（miniprogram/ + h5-web/source-miniapp + h5-web/public/source-miniapp），改 miniprogram 必须同步两镜像，按钩子提示定向拷贝单文件比跑全量 sync 脚本安全。
+
+---
+
 ## D-517：样衣仓库扫码页「无法识别的二维码」根治——双格式二维码（2026-09-21）
 
 **用户实测打脸 D-515**：新打的样衣码在「样衣扫码」页（`pages/warehouse/sample/scan-action`，样衣库存列表+出入库/借调/归还）报"无法识别的二维码"。**该问题存在很久**：这页的 parseAndQuery 只认 ①JSON 带 styleNo+color+size 三字段（从来没有任何打印功能生成过这个格式）②空格分隔纯文本；而现网所有样衣码是 `{"type":"pattern","id"}`（生产扫码链路 PatternScanProcessor 专用）。D-515 核实时只验了生产链路，漏了这页——教训：**"扫码能用"必须按扫码入口逐一核实，一个系统里有多套 QR 解析器**。
