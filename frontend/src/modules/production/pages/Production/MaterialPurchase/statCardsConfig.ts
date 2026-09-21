@@ -18,6 +18,20 @@ export const buildStatCards = (
   overdueCount: number,
   handleStatClick: (key: string) => void,
 ): StatCard[] => [
+  // D-513：补「全部」卡片。
+  // 背景：菜单红点（/dashboard/menu-badge-counts → /production/material）只统计 status='pending'，
+  // 而本页默认 activeStatFilter='all' 显示全部，但卡片里原本没有「全部」这张卡，
+  // 导致用户看到"红点 10 条 / 列表 138 条"且页面上找不到 138 这个数字 → 以为数据对不上。
+  // 补上后：卡片「全部 138」= 列表条数，「待采购 10」= 菜单红点，每个数字都能对上。
+  {
+    key: 'all',
+    items: [
+      { label: '全部', value: purchaseStats.totalCount, unit: '条', color: 'var(--color-text-secondary)' },
+      { label: '数量', value: purchaseStats.totalQuantity, color: 'var(--color-success)' },
+    ],
+    onClick: () => handleStatClick('all'),
+    activeColor: 'var(--color-primary)',
+  },
   {
     key: 'pending',
     items: [
