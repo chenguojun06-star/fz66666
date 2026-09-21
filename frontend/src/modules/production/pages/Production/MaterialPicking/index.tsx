@@ -62,7 +62,7 @@ const MaterialPickingList: React.FC = () => {
           const id = queue.shift();
           if (!id) continue;
           try {
-            const res = await api.post(`/production/material-picking/${id}/confirm-outbound`);
+            const res = await api.post(`/production/picking/${id}/confirm-outbound`);
             if (res?.code === 200) success++; else fails.push(res?.message || id);
           } catch (e) { fails.push(e instanceof Error ? e.message : id); }
         }
@@ -201,7 +201,7 @@ const MaterialPickingList: React.FC = () => {
                   content: `领料单 ${record.pickingNo || ''} 将扣减库存并完成出库，是否继续？`,
                   okText: '确认出库',
                   onOk: async () => {
-                    const res = await api.post(`/production/material-picking/${record.id}/confirm-outbound`);
+                    const res = await api.post(`/production/picking/${record.id}/confirm-outbound`);
                     if (res?.code === 200) { message.success('出库成功'); fetchList(1, pageSize, { status: statusFilter }); }
                     else message.error(res?.message || '出库失败');
                   },
