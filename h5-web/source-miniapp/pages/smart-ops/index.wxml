@@ -214,13 +214,22 @@
       <view class="card-header">
         <view class="live-dot-sm green"></view>
         <text class="card-title">工厂全景</text>
-        <text class="card-badge">{{factoryList.length}} 家</text>
+        <text class="card-badge">{{factoryList.length}} / {{factoryTotalOrders}}单 家</text>
       </view>
       <view class="card-body">
         <view class="factory-summary">
           <text class="factory-summary-item">{{factoryOnline}} 在线</text>
           <text class="factory-summary-item warn" wx:if="{{factoryStagnant > 0}}">{{factoryStagnant}} 停滞</text>
           <text class="factory-summary-item">{{factoryTotalOrders}}单 {{factoryTotalQty}}件</text>
+        </view>
+        <!-- D-513：工厂筛选栏（名称搜索 + 在线/异常切换）-->
+        <view class="factory-filter-row">
+          <input class="factory-filter-input" placeholder="搜索工厂名称" value="{{factoryKeyword}}" bindinput="onFactoryKeywordInput" />
+          <view class="factory-filter-tabs">
+            <view class="filter-tab {{factoryStatusFilter === 'ALL' ? 'filter-tab--active' : ''}}" data-value="ALL" bindtap="onFactoryStatusChange">全部</view>
+            <view class="filter-tab {{factoryStatusFilter === 'ONLINE' ? 'filter-tab--active' : ''}}" data-value="ONLINE" bindtap="onFactoryStatusChange">仅在线</view>
+            <view class="filter-tab {{factoryStatusFilter === 'RISK' ? 'filter-tab--active' : ''}}" data-value="RISK" bindtap="onFactoryStatusChange">仅异常</view>
+          </view>
         </view>
         <view class="factory-row" wx:for="{{factoryList}}" wx:key="factoryName">
           <view class="factory-dot {{item.active ? 'dot-active' : 'dot-idle'}}"></view>
@@ -231,7 +240,8 @@
           <text class="factory-risk" wx:if="{{item.overdueCount > 0}}">{{item.overdueCount}}逾期</text>
           <text class="factory-time" wx:if="{{item.timeText}}">{{item.timeText}}</text>
         </view>
-        <view wx:if="{{factoryList.length === 0}}" class="empty-hint">暂无工厂数据</view>
+        <view wx:if="{{factoryList.length === 0 && factoryTotalOrders > 0}}" class="empty-hint">当前筛选下无工厂，试试切换筛选条件</view>
+        <view wx:if="{{factoryList.length === 0 && factoryTotalOrders === 0}}" class="empty-hint">暂无工厂数据</view>
       </view>
     </view>
   </view>

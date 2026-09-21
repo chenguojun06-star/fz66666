@@ -1,0 +1,145 @@
+/**
+ * 物料库存查询（手机端）
+ *
+ * 背景：用户反馈「手机端物料仓库没有出库动作」——查实后是首页没挂入库/出库入口，
+ * 但还有更深一层问题：**手机端根本没地方看当前库存**。能入库出库却看不到数，等于瞎操作。
+ *
+ * 因此补一个物料库存查询页：列表 + 筛选 + 点击进入出入库（连贯操作）。
+ * 复用 PC 端 MaterialStockController.getPage —— 接口本来就支持，无需后端改动。
+ *
+ * 字段映射（与 PC 端展示对齐）：
+ * - 可用库存 = quantity - locked_quantity（在途/锁定数显示在次要信息里）
+ * - 安全库存/低库存 标红提示
+ */
+
+const api = require('../../../utils/api');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+
+const TYPE_OPTIONS = [
+  { label: '全部类型', value: '' },
+  { label: '面料', value: 'fabric' },
+  { label: '里料', value: 'lining' },
+  { label: '辅料', value: 'accessory' },
+];
+
+const TYPE_COLOR_MAP = {
+  fabric: '#2563eb',
+  lining: '#f59e0b',
+  accessory: '#10b981',
+};
+
+const TYPE_LABEL_MAP = {
+  fabric: '面料',
+  lining: '里料',
+  accessory: '辅料',
+};
+
+Page({
+  data: {
+    loading: true,
+    list: [],
+    total: 0,
+    pageNum: 1,
+    pageSize: 20,
+    hasMore: true,
+
+    keyword: '',
+    typeValue: '',
+    typeOptions: TYPE_OPTIONS,
+    typeIndex: 0,
+  },
+
+  onLoad: function () {
+    this.loadData(true);
+  },
+
+  onPullDownRefresh: function () {
+    this.loadData(true).then(function () { wx.stopPullDownRefresh(); });
+  },
+
+  onReachBottom: function () {
+    if (this.data.hasMore && !this.data.loading) {
+      this.loadData(false);
+    }
+  },
+
+  onSearchInput: function (e) {
+    this.setData({ keyword: e.detail.value || '' });
+  },
+
+  onSearchConfirm: function () {
+    this.loadData(true);
+  },
+
+  onTypeChange: function (e) {
+    const idx = e.detail.value || 0;
+    this.setData({ typeIndex: idx, typeValue: TYPE_OPTIONS[idx].value }, function () {
+      this.loadData(true);
+    }.bind(this));
+  },
+
+  loadData: async function (reset) {
+    if (reset) {
+      this.setData({ loading: true, pageNum: 1, hasMore: true, list: [] });
+    } else {
+      if (!this.data.hasMore) return;
+      this.setData({ loading: true });
+    }
+    try {
+      const params = {
+        keyword: this.data.keyword || undefined,
+        materialType: this.data.typeValue || undefined,
+        pageNum: reset ? 1 : this.data.pageNum + 1,
+        pageSize: this.data.pageSize,
+      };
+      const res = await api.material.listStock(params);
+      const records = (res && res.data && res.data.records) || [];
+      const mapped = records.map(this._toRow.bind(this));
+      const nextList = reset ? mapped : this.data.list.concat(mapped);
+      this.setData({
+        list: nextList,
+        total: (res && res.data && res.data.total) || 0,
+        pageNum: params.pageNum,
+        hasMore: mapped.length >= this.data.pageSize && nextList.length < ((res && res.data && res.data.total) || 0),
+        loading: false,
+      });
+    } catch (e) {
+      this.setData({ loading: false });
+      wx.showToast({ title: '加载失败', icon: 'none' });
+    }
+  },
+
+  _toRow: function (r) {
+    const qty = Number(r.quantity || 0);
+    const locked = Number(r.lockedQuantity || 0);
+    const safety = Number(r.safetyStock || 0);
+    const available = Math.max(0, qty - locked);
+    const inTransit = Number(r.inTransitQuantity || 0);
+    return {
+      id: r.id,
+      materialCode: r.materialCode || '',
+      materialName: r.materialName || r.materialCode || '',
+      materialType: r.materialType || '',
+      typeLabel: TYPE_LABEL_MAP[r.materialType] || r.materialType || '-',
+      typeColor: TYPE_COLOR_MAP[r.materialType] || '#6b7280',
+      unit: r.unit || '',
+      warehouseLocation: r.warehouseLocation || '-',
+      availableQty: available,
+      lockedQty: locked,
+      inTransitQty: inTransit,
+      safetyStock: safety,
+      lowStock: qty < safety,
+      isZero: qty === 0,
+      image: r.materialImage ? getAuthedImageUrl(r.materialImage) : '',
+      unitPrice: r.unitPrice,
+    };
+  },
+
+  onRowTap: function (e) {
+    const item = e.currentTarget.dataset.item;
+    if (!item || !item.materialCode) return;
+    wx.navigateTo({
+      url: '/pages/warehouse/material-outbound/index?materialCode=' + encodeURIComponent(item.materialCode),
+    });
+  },
+});

@@ -191,6 +191,14 @@ const warehouse = {
 
 
 const material = {
+  /**
+   * D-513：物料库存列表（与 PC 端 MaterialInventory 共用接口）
+   * 后端：MaterialStockController.getPage
+   * 入参支持 keyword（编码/名称模糊）/ materialType（fabric/lining/accessory）/ status 等
+   */
+  listStock(params) {
+    return ok('/api/production/material/stock/list', 'GET', params || {});
+  },
   listStockAlerts(params) {
     return ok('/api/production/material/stock/alerts', 'GET', params || {});
   },

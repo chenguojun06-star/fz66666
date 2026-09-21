@@ -50,7 +50,8 @@
         "finished-outbound/index",
         "finished-inbound/index",
         "material-inbound/index",
-        "material-outbound/index"
+        "material-outbound/index",
+        "material-inventory/index"
       ]
     },
     {
