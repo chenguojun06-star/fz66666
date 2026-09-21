@@ -114,6 +114,8 @@ Page({
     activeMenu: '', activeMenuTitle: '', activeOrders: [],
     stageBuckets: [], activeStage: '', activeStageLabel: '', activeStageOrders: [],
     factoryList: [], factoryOnline: 0, factoryStagnant: 0, factoryTotalOrders: 0, factoryTotalQty: 0,
+    // D-513：工厂筛选（按名称搜索 + 仅在线/仅异常）
+    factoryKeyword: '', factoryStatusFilter: 'ALL', // ALL | ONLINE | RISK
     lastRefreshTime: '', loading: false,
     // _allOrders 已迁移到 this._allOrders 实例属性（在 onMenuTap 里过滤使用，不参与 WXML 渲染）
     // 避免 setData 传入未绑定 WXML 变量的性能告警，同时减少大数组序列化开销。
@@ -135,6 +137,34 @@ Page({
   onHide: function () { if (this._timer) { clearInterval(this._timer); this._timer = null; } },
   onPullDownRefresh: function () { this._refreshAll(); wx.stopPullDownRefresh(); },
   onUnload: function () { if (this._timer) clearInterval(this._timer); },
+
+  // D-513：工厂筛选（保存原始数据 + 计算展示）
+  _allFactories: [],
+
+  onFactoryKeywordInput: function (e) {
+    const kw = (e.detail.value || '').trim();
+    this.setData({ factoryKeyword: kw });
+    this._applyFactoryFilter();
+  },
+
+  onFactoryStatusChange: function (e) {
+    const v = e.currentTarget.dataset.value || 'ALL';
+    this.setData({ factoryStatusFilter: v });
+    this._applyFactoryFilter();
+  },
+
+  _applyFactoryFilter: function () {
+    const all = this._allFactories || [];
+    const kw = this.data.factoryKeyword;
+    const f = this.data.factoryStatusFilter;
+    const filtered = all.filter(function (it) {
+      if (kw && (it.factoryName || '').indexOf(kw) < 0) return false;
+      if (f === 'ONLINE' && !it.active) return false;
+      if (f === 'RISK' && !(it.atRiskCount > 0 || it.overdueCount > 0)) return false;
+      return true;
+    });
+    this.setData({ factoryList: filtered });
+  },
 
   onMenuTap: function (e) {
     const key = e.currentTarget.dataset.key;
@@ -347,6 +377,8 @@ Page({
         factoryTotalOrders: factoryTotalOrders, factoryTotalQty: factoryTotalQty,
         loading: false,
       });
+      // D-513：保存原始工厂列表（筛选时基于它过滤）
+      self._allFactories = factoryList;
       // 存为实例属性，不走 setData（不参与 WXML）
       self._allOrders = orders;
 

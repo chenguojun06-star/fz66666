@@ -12,7 +12,11 @@ const APP_ID_TO_MENU_KEY = {
   'bundleSplit': 'miniprogram.menu.bundleSplit',
   'unitPrice': 'miniprogram.menu.unitPrice',
   'procurement': 'miniprogram.menu.procurement',
+  'materialInbound': 'miniprogram.menu.materialInbound',
+  'materialOutbound': 'miniprogram.menu.materialOutbound',
   'materialScan': 'miniprogram.menu.materialScan',
+  'finishedInbound': 'miniprogram.menu.finishedInbound',
+  'finishedOutbound': 'miniprogram.menu.finishedOutbound',
   'locationScan': 'miniprogram.menu.locationScan',
   'factoryShipment': 'miniprogram.menu.factoryShipment',
   'materialDatabase': 'miniprogram.menu.materialDatabase',
@@ -54,11 +58,15 @@ const ALL_APPS = [
   ]},
   { group: '物料', items: [
     { id: 'procurement', name: '采购任务', iconClass: 'icon-menu-cart', circleClass: 'menu-icon-circle--blue', route: '/pages/procurement/task-list/index' },
+    { id: 'materialInbound', name: '物料入库', iconClass: 'icon-menu-inbound', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material-inbound/index' },
+    { id: 'materialOutbound', name: '物料出库', iconClass: 'icon-menu-outbound', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material-outbound/index' },
     { id: 'materialScan', name: '料卷出库/退回', iconClass: 'icon-menu-warehouse', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material/scan/index' },
     { id: 'materialDatabase', name: '物料资料', iconClass: 'icon-menu-material', circleClass: 'menu-icon-circle--teal', route: '/pages/warehouse/material-database/index' },
   ]},
   { group: '成品', items: [
+    { id: 'finishedInbound', name: '成品入库', iconClass: 'icon-menu-inbound', circleClass: 'menu-icon-circle--purple', route: '/pages/warehouse/finished-inbound/index' },
     { id: 'finishedInventory', name: '成品仓储', iconClass: 'icon-menu-stock-check', circleClass: 'menu-icon-circle--purple', route: '/pages/warehouse/finished-inventory/index' },
+    { id: 'finishedOutbound', name: '成品出库', iconClass: 'icon-menu-outbound', circleClass: 'menu-icon-circle--purple', route: '/pages/warehouse/finished-outbound/index' },
     { id: 'locationScan', name: '库位扫码', iconClass: 'icon-menu-location', circleClass: 'menu-icon-circle--green', route: '/pages/warehouse/location-scan/index' },
   ]},
   { group: '财务', items: [
