@@ -5,6 +5,18 @@
 
 ---
 
+## D-515：样衣仓库「打印样衣二维码」标签打印（2026-09-21）
+
+**需求**：样衣仓库（SampleInventory）行操作打印样衣二维码标签；可调横版/竖版 + 尺寸（默认 4×7cm 竖版，预设 4×6/4×7/5×8/5×10 + 自定义 mm）+ 份数；**二维码必须能扫出入库**。
+
+**可扫性核实链（全部与现网样衣码同源）**：内容固定 `{"type":"pattern","id":"<样衣生产记录ID>"}`——小程序 `JSONCodeParser.handleOrderTypeJSON`（type:'pattern' → scanCode=id，isPatternQR）→ `PatternScanProcessor.handlePatternScan` 按工序执行（入库=工序链末环），与 StylePrintModal 标签打印、StyleStageDrawer 的码完全一致；**已用小程序真实解析器 node 实测通过**。打印参数同现网：qrcode ECC 'M'、480px、打印 QR 边长 min(w,h)×0.62 夹 [15,32]mm。
+
+**坑**：SampleStock 库存行**没有 patternId**（只有 styleId）——打印前按 `/production/pattern/by-style/{styleId}` 反查样衣生产记录（同 useStylePrintData 用法），按库存行颜色匹配色码，匹配不到取第一条；无 styleId 或查无记录的款明确 Alert 提示且不计入打印。
+
+**实现**：`SampleInventory/components/SampleQrPrintModal.tsx`（横竖版=交换宽高；按实际 mm 屏幕预览含实时生成的真实二维码；safePrint @page w×h mm 每张一页）+ columns.tsx 加「打印二维码」行操作（销毁记录行不显示）。
+
+---
+
 ## D-514：样衣打印分页治理——整块不拆页 + 页脚取消 fixed + 工艺说明行移除（2026-09-21）
 
 **背景**：用户截图三连——①生产制单下「工艺说明」大段模板文本要删掉；②「物料明细（BOM）」标题孤留在上页尾、表格整块掉到下一页；③内容在页边界被"切一半"。涉及 StylePrintModal（样衣/下单/大货三模式共用打印预览）。

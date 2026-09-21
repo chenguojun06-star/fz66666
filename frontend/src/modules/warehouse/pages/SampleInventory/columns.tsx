@@ -12,10 +12,11 @@ interface BuildColumnsOptions {
   onTransfer: (record: SampleStock) => void;
   onHistory: (record: SampleStock) => void;
   onDestroy: (record: SampleStock) => void;
+  onPrintQr: (record: SampleStock) => void;
 }
 
 export const buildColumns = (options: BuildColumnsOptions): ColumnsType<SampleStock> => {
-  const { onLoan, onTransfer, onHistory, onDestroy } = options;
+  const { onLoan, onTransfer, onHistory, onDestroy, onPrintQr } = options;
   return [
     {
       title: '图片',
@@ -180,6 +181,11 @@ export const buildColumns = (options: BuildColumnsOptions): ColumnsType<SampleSt
                     label: '转成品出库',
                     disabled: record.inventoryStatus !== 'active' || record.quantity - record.loanedQuantity <= 0,
                     onClick: () => onTransfer(record),
+                  },
+                  {
+                    key: 'printQr',
+                    label: '打印二维码',
+                    onClick: () => onPrintQr(record),
                   },
                   {
                     key: 'history',

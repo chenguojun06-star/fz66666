@@ -4,12 +4,13 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import { SampleTypeMap } from './types';
+import { SampleStock, SampleTypeMap } from './types';
 import InboundModal from './InboundModal';
 import LoanModal from './LoanModal';
 import LoanHistoryModal from './LoanHistoryModal';
 import TransferToOutstockModal from './TransferToOutstockModal';
 import DestroyModal from './components/DestroyModal';
+import SampleQrPrintModal from './components/SampleQrPrintModal';
 import { buildColumns } from './columns';
 import {
   STYLE_INFO_LIST_REFRESH_KEY,
@@ -50,9 +51,12 @@ const SampleInventory: React.FC = () => {
     loadData,
   } = useSampleInventoryData();
 
+  const [qrPrintStock, setQrPrintStock] = React.useState<SampleStock | null>(null);
+
   const columns = React.useMemo(
     () =>
       buildColumns({
+        onPrintQr: (record) => setQrPrintStock(record),
         onLoan: (record) => loanModal.open(record),
         onTransfer: (record) => {
           setSelectedStock(record);
@@ -182,6 +186,12 @@ const SampleInventory: React.FC = () => {
           }}
         />
       </PageLayout>
+
+      <SampleQrPrintModal
+        open={!!qrPrintStock}
+        stocks={qrPrintStock ? [qrPrintStock] : []}
+        onClose={() => setQrPrintStock(null)}
+      />
 
       <InboundModal
         visible={inboundModal.visible}
