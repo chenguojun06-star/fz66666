@@ -168,8 +168,16 @@ const SampleQrPrintModal: React.FC<SampleQrPrintModalProps> = ({ open, stocks, o
       const qrUrls: Record<string, string> = {};
       await Promise.all(
         printableStocks.map(async (stock) => {
-          const payload = JSON.stringify({ type: 'pattern', id: patternIdMap[stock.id] });
-          qrUrls[stock.id] = await QRCodeLib.toDataURL(payload, { width: 480, margin: 0, errorCorrectionLevel: 'M' }).catch(() => '');
+          // 双格式兼容：type+id 供生产扫码链路（PatternScanProcessor），
+          // styleNo+color+size 供样衣仓库扫码页（sample/scan-action）识别出入库/借调/归还
+          const payload = JSON.stringify({
+            type: 'pattern',
+            id: patternIdMap[stock.id],
+            styleNo: stock.styleNo || '',
+            color: stock.color || '',
+            size: stock.size || '',
+          });
+          qrUrls[stock.id] = await QRCodeLib.toDataURL(payload, { width: 600, margin: 0, errorCorrectionLevel: 'M' }).catch(() => '');
         }),
       );
       const labels: string[] = [];
@@ -208,8 +216,14 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
     let cancelled = false;
     setPreviewQr('');
     if (!open || !first || !patternIdMap[first.id]) return;
-    const payload = JSON.stringify({ type: 'pattern', id: patternIdMap[first.id] });
-    QRCodeLib.toDataURL(payload, { width: 240, margin: 1, errorCorrectionLevel: 'M' })
+    const payload = JSON.stringify({
+      type: 'pattern',
+      id: patternIdMap[first.id],
+      styleNo: first.styleNo || '',
+      color: first.color || '',
+      size: first.size || '',
+    });
+    QRCodeLib.toDataURL(payload, { width: 300, margin: 1, errorCorrectionLevel: 'M' })
       .then((url) => { if (!cancelled) setPreviewQr(url); })
       .catch(() => { /* 预览失败不影响打印 */ });
     return () => { cancelled = true; };

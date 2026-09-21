@@ -5,6 +5,18 @@
 
 ---
 
+## D-517：样衣仓库扫码页「无法识别的二维码」根治——双格式二维码（2026-09-21）
+
+**用户实测打脸 D-515**：新打的样衣码在「样衣扫码」页（`pages/warehouse/sample/scan-action`，样衣库存列表+出入库/借调/归还）报"无法识别的二维码"。**该问题存在很久**：这页的 parseAndQuery 只认 ①JSON 带 styleNo+color+size 三字段（从来没有任何打印功能生成过这个格式）②空格分隔纯文本；而现网所有样衣码是 `{"type":"pattern","id"}`（生产扫码链路 PatternScanProcessor 专用）。D-515 核实时只验了生产链路，漏了这页——教训：**"扫码能用"必须按扫码入口逐一核实，一个系统里有多套 QR 解析器**。
+
+**修法（双格式兼容）**：
+1. PC 打印二维码 payload 扩为 `{type:'pattern', id, styleNo, color, size}`——生产链路照常识别（只读 type+id），仓库页直接读 styleNo 直查库存（现网已发布的小程序版即生效，无需发版）；QR 位图 480→600px 保证加密度后清晰；
+2. 小程序 scan-action 兜底：JSON 只有 type+id 的**历史老标签**走 `api.production.getPatternDetail`（GET /production/pattern/{id}）反查 styleNo/color/size 再查库存；styleNo 必带即可（color/size 可空）——**需小程序发版后生效**。
+
+**借调/归还链路**：识别→querySample(styleNo,color,size)→后端返回 actions（借调/归还，D-183 前端过滤在库误报 inbound）→借调选人/厂弹窗→api.sampleStock.loan/returnSample——页面逻辑原本完整，之前只因码不被识别而进不去。
+
+---
+
 ## D-516：全站字体大一号（含全部打印），页面主标题不动（2026-09-21）
 
 **需求**：全系统所有字体按现有字号调大一号，包含打印页；页面主标题不动。手机端不动（用户此前拍板 PC 为主）。
