@@ -515,13 +515,19 @@ public class MaterialPurchaseQueryHelper {
     // factoryType 过滤：通过子查询匹配关联订单工厂类型
     // 🔒 PC端默认隔离：未指定工厂类型时，跟单员/管理员只统计内部工厂采购数据
     private void applyFactoryTypeFilter(LambdaQueryWrapper<MaterialPurchase> wrapper, String factoryType) {
-        String effectiveFactoryType = StringUtils.hasText(factoryType) ? factoryType :
-                (!DataPermissionHelper.isFactoryAccount() ? "INTERNAL" : "");
-        if (StringUtils.hasText(effectiveFactoryType)) {
-            wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id IN " +
-                    "(SELECT id FROM t_production_order WHERE factory_type = {0} AND (delete_flag IS NULL OR delete_flag = 0)))",
-                    effectiveFactoryType.toUpperCase());
+        // D-513 修复：原来未传 factoryType 时，非工厂账号会被默认按 "INTERNAL" 过滤，
+        // 导致统计只算自有工厂订单的采购（实测 120 条），
+        // 而列表用的 service/impl.applyFactoryFilters 在未传参时**不过滤**（实测 138 条），
+        // 差的 18 条正是 factory_type=EXTERNAL 的采购记录 → 用户看到"统计数≠列表数"。
+        // 前端 fetchPurchaseStats 也从未传 factoryType，所以统计永远走默认 INTERNAL。
+        // 现改为：只有显式传了 factoryType 才过滤，与列表口径一致。
+        // 工厂账号的数据隔离不依赖此处（走 shouldReturnEmptyForFactory），不受影响。
+        if (!StringUtils.hasText(factoryType)) {
+            return;
         }
+        wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id IN " +
+                "(SELECT id FROM t_production_order WHERE factory_type = {0} AND (delete_flag IS NULL OR delete_flag = 0)))",
+                factoryType.toUpperCase());
     }
 
     private Map<String, Object> computeStatusStats(List<MaterialPurchase> all) {
