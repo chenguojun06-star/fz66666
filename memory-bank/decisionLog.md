@@ -5,6 +5,21 @@
 
 ---
 
+## D-516：全站字体大一号（含全部打印），页面主标题不动（2026-09-21）
+
+**需求**：全系统所有字体按现有字号调大一号，包含打印页；页面主标题不动。手机端不动（用户此前拍板 PC 为主）。
+
+**分层实施（83270bf05，391 文件 1744 处）**：
+1. **antd 主题总闸** AppProviders baseToken `{fontSize:12,fontSizeSM:12,fontSizeLG:13}` → `{13,13,14}`——全站 antd 组件被压在 12px 是视觉偏小的根因；
+2. **design-system 令牌全体 +1**（xs/sm/base/md/lg/subtitle/xl/xxl/display/table-header/table-cell）；**`--font-size-title:16px` 主标题令牌保持不动**（PageLayout 标题用它）；
+3. **全部 tsx 内联 `fontSize:10~14` → +1**（975 处，正则 `fontSize: (1[0-4])\b` 单遍替换防连环跳号；两位数边界保证 140/1.2 不误伤；AppProviders 排除后手工改）；
+4. **全部 CSS `font-size:10~14px` → +1**（723 处，负向断言避免误伤 `--font-size-*` 令牌行）+ 令牌行显式映射（16 处）；
+5. **打印模板**：18 个打印构建文件的 `font-size:10~14px` 全部 +1（36 处，含样衣打印/采购单/裁剪单/出库单/面单/洗水唛/合格证/工资单）；标签 pt 公式 +0.5（6.2/5.4/4.9→6.7/5.9/5.4，StylePrintModal 标签 + 样衣二维码标签两处）；条码 JsBarcode fontSize 10→11。打印大标题（22px）与 >14px 值天然不在改动范围=打印主标题不动。
+
+**验证**：tsc 绿；抽查 printTemplate（页脚11→12/正文表格12→13/区块标题13→14）、StylePrintModal .pt 13px。**已知边界**：ECharts canvas 图内文字有少量独立 fontSize 未全扫（canvas 不吃 CSS 变量，D-140 教训）；发现具体哪页还小再点状补。
+
+---
+
 ## D-515：样衣仓库「打印样衣二维码」标签打印（2026-09-21）
 
 **需求**：样衣仓库（SampleInventory）行操作打印样衣二维码标签；可调横版/竖版 + 尺寸（默认 4×7cm 竖版，预设 4×6/4×7/5×8/5×10 + 自定义 mm）+ 份数；**二维码必须能扫出入库**。
