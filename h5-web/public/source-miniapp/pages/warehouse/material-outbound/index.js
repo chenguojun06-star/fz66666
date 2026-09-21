@@ -69,8 +69,14 @@ Page({
     reason: '',
   },
 
-  onLoad() {
+  onLoad(options) {
     wx.setNavigationBarTitle({ title: '物料出库' });
+    // D-513：从物料库存页跳转过来时携带 materialCode，自动填入并查询
+    if (options && options.materialCode) {
+      this.setData({ materialCode: options.materialCode }, function () {
+        this.queryMaterial();
+      }.bind(this));
+    }
     this.loadOrders();
     this.loadFactories();
     this.loadReceivers();
