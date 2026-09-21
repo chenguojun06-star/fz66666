@@ -30,6 +30,10 @@ export interface StandardSearchBarProps {
   statusValue?: string;
   onStatusChange?: (value: string) => void;
   statusOptions?: StandardSearchOption[];
+  /** 状态筛选下拉的占位文案。默认「全部状态」；
+   *  当 statusOptions 表达的不是"状态"而是"类型"时（如物料仓储的面料/里料/辅料），
+   *  传「全部类型」避免与真正的状态筛选混淆。 */
+  statusPlaceholder?: string;
   showDate?: boolean;
   showDatePresets?: boolean;
   showStatus?: boolean;
@@ -58,6 +62,7 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
   statusValue = '',
   onStatusChange,
   statusOptions = [],
+  statusPlaceholder = '全部状态',
   showDate = true,
   showDatePresets = false,
   showStatus = true,
@@ -223,7 +228,7 @@ const StandardSearchBar: React.FC<StandardSearchBarProps> = ({
             onChange={(value) => onStatusChange?.(value || '')}
             options={statusOptions}
             className="standard-search-status-v2"
-            placeholder="全部状态"
+            placeholder={statusPlaceholder}
             allowClear
           />
         )}

@@ -293,11 +293,15 @@ const _MaterialInventory: React.FC = () => {
                           searchPlaceholder="搜索物料编号/名称"
                           statusValue={selectedType}
                           onStatusChange={setSelectedType}
+                          // D-513：这个下拉筛的是「物料类型」（面料/里料/辅料），
+                          // 不是启用状态。原来 StandardSearchBar 硬编码 placeholder「全部状态」，
+                          // 导致与右侧真正的「全部状态」（启用中/已停用）重名，用户看到两个"全部状态"。
+                          statusPlaceholder="全部类型"
                           showDate={true}
                           dateValue={dateRange}
                           onDateChange={setDateRange}
                           statusOptions={[
-                            { label: '全部', value: '' },
+                            { label: '全部类型', value: '' },
                             { label: '面料', value: 'fabric' },
                             { label: '辅料', value: 'accessory' },
                             { label: '里料', value: 'lining' },
