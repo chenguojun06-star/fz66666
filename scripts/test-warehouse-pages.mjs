@@ -222,7 +222,15 @@ function makeApi(overrides = {}) {
     material: {
       scanQuery: async (code) => ({
         found: true, stockId: 'stk-1', materialCode: code, materialName: '棉布',
-        materialType: '面料', color: '白', size: '1.5m', quantity: 20, unit: '米',
+        // ⚠️ 库里存的是**英文代码** fabric/lining/accessory（不是中文"面料"）
+        materialType: 'fabric', color: '白', size: '1.5m', quantity: 20, unit: '米',
+      }),
+      // 「物料资料」—— 幅宽/克重/成分 的真正来源
+      listDatabase: async () => ({
+        records: [
+          { materialCode: 'MC-OTHER', fabricWidth: '999cm' },   // 干扰项：编码不匹配，不能被选中
+          { materialCode: 'MC-1', fabricWidth: '150cm', fabricWeight: '200g/m²', fabricComposition: '100%棉' },
+        ],
       }),
       freeInbound: async (d) => { calls.push(['materialFreeInbound', d]); return {}; },
       manualOutbound: async (d) => { calls.push(['manualOutbound', d]); return {}; },
@@ -348,6 +356,14 @@ async function testMaterialInbound() {
   await new Promise(r => setTimeout(r, 30));
   ok('查出物料', !!page.data.materialInfo);
   eq('带出单位', page.data.unit, '米');
+
+  // ── D-514：面料属性只读展示，来源是「物料资料」而不是库存表 ──
+  await new Promise(r => setTimeout(r, 30));
+  eq('识别为面料', page.data.isFabric, true);
+  eq('类型显示中文标签', page.data.typeLabel, '面料');
+  eq('读到幅宽', page.data.fabricWidth, '150cm');
+  eq('读到克重', page.data.fabricWeight, '200g/m²');
+  eq('读到成分', page.data.fabricComposition, '100%棉');
 
   // D-499：未查到库存记录时必须拦住（后端会抛「物料库存记录不存在」）
   page.setData({ materialInfo: null });
