@@ -13,6 +13,7 @@
  *     内部逐条调 freeInbound，共用同一 batchNo/traceId
  */
 const api = require('../../../utils/api');
+const { decodeParam } = require('../../../utils/urlParams');
 
 const SOURCE_TYPES = [
   { key: 'free_inbound', label: '自由入库' },
@@ -57,7 +58,7 @@ Page({
 
   onLoad(options) {
     this.setData({
-      styleNo: options.styleNo || '',
+      styleNo: decodeParam(options.styleNo),
       styleName: decodeURIComponent(options.styleName || ''),
     });
     wx.setNavigationBarTitle({ title: '成品入库' });

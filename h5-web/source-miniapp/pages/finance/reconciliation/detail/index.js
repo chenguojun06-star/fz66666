@@ -8,6 +8,7 @@ const api = require('../../../../utils/api');
 const { toast } = require('../../../../utils/uiHelper');
 const { hasFeaturePermission, isFactoryAccount } = require('../../../../utils/permission');
 const { getAuthedImageUrl } = require('../../../../utils/fileUrl');
+const { decodeParam } = require('../../../../utils/urlParams');
 
 // 与列表页保持一致
 var STATUS_TEXT_MAP = {
@@ -66,7 +67,7 @@ Page({
       });
       return;
     }
-    var id = opts.id ? String(opts.id) : '';
+    var id = decodeParam(opts.id);
     if (!id) {
       this.setData({ loadError: '缺少对账记录ID', loading: false });
       return;
