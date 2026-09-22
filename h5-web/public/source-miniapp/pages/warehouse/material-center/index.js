@@ -28,14 +28,19 @@ const TABS = [
   { key: 'scan', label: '料卷' },
 ];
 
+// D-514 修 bug：类型值必须是英文代码（后端 material_type 存 fabric/lining/accessory），
+// 与 PC 端 MaterialInventory/index.tsx 的选项完全对齐。原先用中文值会导致筛选必空。
 const TYPE_OPTIONS = [
   { label: '全部类型', value: '' },
-  { label: '面料', value: '面料' },
-  { label: '里料', value: '里料' },
-  { label: '辅料', value: '辅料' },
+  { label: '面料', value: 'fabric' },
+  { label: '里料', value: 'lining' },
+  { label: '辅料', value: 'accessory' },
 ];
 
 const TYPE_COLOR_MAP = {
+  fabric: '#2563eb',
+  lining: '#f59e0b',
+  accessory: '#10b981',
   面料: '#2563eb',
   里料: '#f59e0b',
   辅料: '#10b981',
@@ -145,12 +150,15 @@ Page({
       this.setData({ loading: true });
     }
     try {
+      // D-514 修 bug：参数名对齐后端 MaterialStockController.getPage + PC 端 useMaterialInventoryList
+      //   - 分页是 page（不是 pageNum），ParamUtils.getPage 读 "page"
+      //   - 后端没有 keyword 参数，搜索走 materialCode（like），PC 端亦如此
       var params = {
-        keyword: this.data.keyword || undefined,
-        materialType: this.data.typeValue || undefined,
-        pageNum: 1,
+        page: 1,
         pageSize: 30,
       };
+      if (this.data.keyword) params.materialCode = this.data.keyword;
+      if (this.data.typeValue) params.materialType = this.data.typeValue;
       var res = await api.material.listStock(params);
       // D-514 修 bug：ok() 已剥掉 resp.data，这里 res 就是 data
       var records = (res && res.records) || [];
@@ -180,8 +188,10 @@ Page({
         loading: false,
       });
     } catch (e) {
+      // 保留错误到控制台，便于开发者工具里定位（原先只弹 toast，排查不到原因）
+      console.error('[material-center] 物料库存加载失败', e && (e.errMsg || e.message || e));
       this.setData({ loading: false });
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      wx.showToast({ title: (e && e.errMsg) || '加载失败', icon: 'none' });
     }
   },
 
