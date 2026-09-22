@@ -193,6 +193,15 @@
   text-align: center;
   flex-shrink: 0;
 }
+/* D-513：商品编码列（编码较长，给足宽度 + 省略号防溢出） */
+.sku-cell--code {
+  width: 130px;
+  text-align: left;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .sku-cell--color { width: 70px; text-align: left; }
 .sku-cell--size { width: 50px; }
 .sku-cell--qty { width: 56px; }

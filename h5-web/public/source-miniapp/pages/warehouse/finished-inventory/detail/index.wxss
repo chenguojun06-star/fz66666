@@ -32,22 +32,23 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 14px;
+  /* D-513：原 14px 偏大 → 降为 8px，卡片整体瘦身 */
+  padding: 8px;
   box-sizing: border-box;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   box-shadow: var(--shadow-sm);
 }
 
 /* 款式信息 */
 .style-card {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
 }
 .style-image {
-  /* D-513：原 64x64 偏大 → 降为 56x56（与列表页一致） */
-  width: 56px;
-  height: 56px;
+  /* D-513：再缩，56→40，详情页头部更紧凑 */
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-sm);
   flex-shrink: 0;
   background: var(--color-bg-subtle);
@@ -67,24 +68,29 @@
   min-width: 0;
 }
 .style-no {
-  font-size: var(--font-size-lg);
+  /* D-513：lg(16) → md(14)，头部更紧凑 */
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-text-primary);
   display: block;
+  line-height: 1.2;
 }
 .style-name {
-  font-size: var(--font-size-sm);
+  /* D-513：sm(13) → xs(12) */
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  margin-top: 2px;
+  margin-top: 1px;
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.3;
 }
 .style-meta {
   display: flex;
-  gap: 8px;
-  margin-top: 6px;
+  gap: 6px;
+  /* D-513：margin 6px → 4px */
+  margin-top: 4px;
   flex-wrap: wrap;
 }
 .meta-tag {
@@ -102,27 +108,26 @@
 /* 统计卡片 */
 .stats-row {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 .stat-card {
   flex: 1;
   background: var(--color-bg-card);
-  
-  
   text-align: center;
-
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: 14px;
+  border-radius: var(--radius-lg);
+  /* D-513：原 14px → 降为 8px */
+  padding: 8px 4px;
   box-sizing: border-box;
 }
 .stat-value {
-  /* D-513：原 2xl(20px) 偏大 → 降为 lg(16px) */
-  font-size: var(--font-size-lg);
+  /* D-513：再缩，lg(16) → md(14) */
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--color-text-primary);
   display: block;
+  line-height: 1.1;
 }
 .stat-value--muted { color: var(--color-text-tertiary); }
 .stat-value--danger { color: var(--color-danger); }
@@ -326,8 +331,9 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  padding: 4px;
-  margin-bottom: 12px;
+  padding: 3px;
+  /* D-513：margin 12px → 8px */
+  margin-bottom: 8px;
   box-shadow: var(--shadow-sm);
 }
 .tab-item {
@@ -335,7 +341,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 0;
+  /* D-513：padding 8px 0 → 6px 0 */
+  padding: 6px 0;
   font-size: var(--font-size-md);
   color: var(--color-text-secondary);
   border-radius: var(--radius-sm);
@@ -364,100 +371,71 @@
 }
 
 /* ============ 入库记录列表 ============ */
+/* ============ 入库记录（精简：D-513） ============ */
 .inbound-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
 }
 .inbound-item {
   background: var(--color-bg-muted);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  padding: 10px 12px;
+  /* D-513：原 10px 12px → 6px 8px，行高减半 */
+  padding: 6px 8px;
 }
-.inbound-item-header {
+.inbound-line {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding-bottom: 8px;
-  border-bottom: 1px dashed var(--color-border-light);
-  margin-bottom: 8px;
-}
-.inbound-date {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-text-primary);
+  /* D-513：单行紧凑布局：菲号|规格|数量|时间 */
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
 }
 .inbound-no {
   font-size: var(--font-size-xs);
-  color: var(--color-primary);
-  background: rgba(var(--color-primary-rgb), 0.08);
-  padding: 2px 8px;
-  border-radius: var(--radius-xs);
-}
-.inbound-item-body {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.inbound-row {
-  display: flex;
-  align-items: center;
-  font-size: var(--font-size-sm);
-}
-.inbound-label {
-  width: 60px;
-  color: var(--color-text-tertiary);
+  font-weight: 600;
+  color: var(--color-text-primary);
   flex-shrink: 0;
 }
-.inbound-value {
+.inbound-spec {
   flex: 1;
-  color: var(--color-text-primary);
-  word-break: break-all;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-2xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.inbound-value--qty {
+.inbound-qty {
   color: var(--color-primary);
   font-weight: 600;
+  font-size: var(--font-size-xs);
+  flex-shrink: 0;
 }
-.inbound-value--loc {
-  color: var(--color-success);
-  font-weight: 600;
+.inbound-time {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-2xs);
+  flex-shrink: 0;
 }
 
-/* ============ 对账卡片 ============ */
-.reconcile-card {
-  margin-top: 12px;
-  padding: 12px;
+/* ============ 对账信息（单行紧凑） ============ */
+.reconcile-summary {
+  margin-top: 8px;
+  padding: 8px 10px;
   background: rgba(var(--color-primary-rgb), 0.04);
   border: 1px solid var(--color-primary-bg-dark);
   border-radius: var(--radius-sm);
-}
-.reconcile-title {
-  font-size: var(--font-size-md);
-  font-weight: 600;
-  color: var(--color-primary);
-  margin-bottom: 8px;
-}
-.reconcile-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 0;
-  font-size: var(--font-size-sm);
-}
-.reconcile-label {
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
+  text-align: center;
+  line-height: 1.4;
 }
-.reconcile-value {
+.reconcile-strong {
   color: var(--color-text-primary);
-  font-weight: 600;
+  font-weight: 700;
 }
-.reconcile-value--success {
-  color: var(--color-success);
-}
-.reconcile-value--danger {
-  color: var(--color-danger);
-}
+.reconcile-strong--success { color: var(--color-success); }
+.reconcile-strong--danger { color: var(--color-danger); }
 
 /* ============ 辅助：小号加载/空状态 ============ */
 .loading-wrap--small {

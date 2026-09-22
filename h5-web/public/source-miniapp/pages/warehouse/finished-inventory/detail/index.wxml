@@ -112,50 +112,20 @@
 
       <view wx:else class="inbound-list">
         <view wx:for="{{inboundHistory}}" wx:key="id" class="inbound-item">
-          <view class="inbound-item-header">
-            <text class="inbound-date">{{item.inboundDate}}</text>
-            <text class="inbound-no">{{item.qualityInspectionNo}}</text>
-          </view>
-          <view class="inbound-item-body">
-            <view class="inbound-row">
-              <text class="inbound-label">菲号</text>
-              <text class="inbound-value">{{item.cuttingBundleNo}}</text>
-            </view>
-            <view class="inbound-row">
-              <text class="inbound-label">规格</text>
-              <text class="inbound-value">{{item.color}} / {{item.size}}</text>
-            </view>
-            <view class="inbound-row">
-              <text class="inbound-label">数量</text>
-              <text class="inbound-value inbound-value--qty">{{item.quantity}} 件</text>
-            </view>
-            <view class="inbound-row">
-              <text class="inbound-label">操作人</text>
-              <text class="inbound-value">{{item.operator}}</text>
-            </view>
-            <view class="inbound-row">
-              <text class="inbound-label">库位</text>
-              <text class="inbound-value inbound-value--loc">{{item.warehouseLocation}}</text>
-            </view>
+          <!-- D-513：用户反馈"信息没用砍掉一半高度" → 6 行字段合并成 1 行紧凑布局
+               只保留 4 个核心信息：菲号、规格、数量、时间（操作人/库位/质检单号去掉） -->
+          <view class="inbound-line">
+            <text class="inbound-no">{{item.cuttingBundleNo}}</text>
+            <text class="inbound-spec" wx:if="{{item.color || item.size}}">{{item.color}}/{{item.size}}</text>
+            <text class="inbound-qty">{{item.quantity}}件</text>
+            <text class="inbound-time">{{item.inboundDate}}</text>
           </view>
         </view>
       </view>
 
-      <!-- 对账信息 -->
-      <view wx:if="{{inboundHistory.length > 0}}" class="reconcile-card">
-        <view class="reconcile-title">对账信息</view>
-        <view class="reconcile-row">
-          <text class="reconcile-label">入库合计</text>
-          <text class="reconcile-value">{{inboundTotalQty}} 件 ({{inboundHistory.length}}条)</text>
-        </view>
-        <view class="reconcile-row">
-          <text class="reconcile-label">当前可用</text>
-          <text class="reconcile-value reconcile-value--success">{{summary.totalAvailable}} 件</text>
-        </view>
-        <view class="reconcile-row">
-          <text class="reconcile-label">次品</text>
-          <text class="reconcile-value reconcile-value--danger">{{summary.totalDefect}} 件</text>
-        </view>
+      <!-- 对账信息：一行紧凑展示 -->
+      <view wx:if="{{inboundHistory.length > 0}}" class="reconcile-summary">
+        <text>入库 <text class="reconcile-strong">{{inboundTotalQty}}</text>件 · 可用 <text class="reconcile-strong reconcile-strong--success">{{summary.totalAvailable}}</text> · 次品 <text class="reconcile-strong reconcile-strong--danger">{{summary.totalDefect}}</text></text>
       </view>
     </view>
   </block>
