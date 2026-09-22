@@ -11,9 +11,10 @@
  *   - 料卷   扫码入口
  *
  * 设计要点：
- *   - 顶部 搜索 + 扫码 + 类型筛选 tab 是所有页面的共享布局（避免每个 tab 内再做一次）
- *   - tab 切换不刷新整个页面，保留各自滚动位置
- *   - 库存 tab 走 inline（用户最常用），其余 tab 走「最近操作 + 跳转」，
+ *   - 顶部复用通用组件 sticky-search-bar（搜索 + 扫码 + 筛选器 slot），
+ *     与 material-database / defect / sales/order-list 等页面保持一致，不重复造轮子
+ *   - tab 切换沿用项目 tab-bar / tab-item / active 约定（与 order/create 一致）
+ *   - 库存 tab 走 inline（用户最常用），其余 tab 走「跳转卡片」，
  *     避免一次性把所有表单塞进一个页面造成首屏卡顿
  */
 const api = require('../../../utils/api');
@@ -133,8 +134,8 @@ Page({
     this.loadInventory(true);
   },
 
-  // ====== 共享 header：扫码（直接调起物料扫码页）======
-  onScanTap: function () {
+  // ====== 扫码（sticky-search-bar 的 bind:scan 触发，直接调起物料扫码页）======
+  onScan: function () {
     wx.navigateTo({ url: '/pages/warehouse/material/scan/index' });
   },
 
