@@ -15,14 +15,13 @@
 const api = require('../../../utils/api');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
+// D-514 修 bug：原先类型值是中文（面料/里料/辅料）且每项重复两次。
+// 后端 material_type 存英文代码（fabric/lining/accessory），与 PC 端 MaterialInventory 完全对齐。
 const TYPE_OPTIONS = [
   { label: '全部类型', value: '' },
   { label: '面料', value: 'fabric' },
-  { label: '面料', value: '面料' },
   { label: '里料', value: 'lining' },
-  { label: '里料', value: '里料' },
   { label: '辅料', value: 'accessory' },
-  { label: '辅料', value: '辅料' },
 ];
 
 const TYPE_COLOR_MAP = {
@@ -119,12 +118,15 @@ Page({
       this.setData({ loading: true });
     }
     try {
+      // D-514 修 bug：参数名对齐后端 MaterialStockController.getPage + PC 端 useMaterialInventoryList
+      //   - 分页是 page（不是 pageNum），ParamUtils.getPage 读 "page"
+      //   - 后端没有 keyword 参数，搜索走 materialCode（like），PC 端亦如此
       const params = {
-        keyword: this.data.keyword || undefined,
-        materialType: this.data.typeValue || undefined,
-        pageNum: reset ? 1 : this.data.pageNum + 1,
+        page: reset ? 1 : this.data.pageNum + 1,
         pageSize: this.data.pageSize,
       };
+      if (this.data.keyword) params.materialCode = this.data.keyword;
+      if (this.data.typeValue) params.materialType = this.data.typeValue;
       const res = await api.material.listStock(params);
       // D-514 修 bug：ok() 已剥掉 resp.data，这里 res 就是 data；之前误用 res.data.records 导致列表永远为空
       const records = (res && res.records) || [];
@@ -134,13 +136,15 @@ Page({
       this.setData({
         list: nextList,
         total,
-        pageNum: params.pageNum,
+        pageNum: params.page,
         hasMore: mapped.length >= this.data.pageSize && nextList.length < total,
         loading: false,
       });
     } catch (e) {
+      // 保留错误到控制台，便于开发者工具里定位（原先只弹 toast，排查不到原因）
+      console.error('[material-inventory] 加载失败', e && (e.errMsg || e.message || e));
       this.setData({ loading: false });
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      wx.showToast({ title: (e && e.errMsg) || '加载失败', icon: 'none' });
     }
   },
 
