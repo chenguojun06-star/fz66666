@@ -9,6 +9,7 @@ const { isAdminOrSupervisor } = require('../../../utils/permission');
 const { isFactoryOwner } = require('../../../utils/storage');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const displayHelper = require('../../../utils/displayHelper');
+const { decodeParam } = require('../../../utils/urlParams');
 
 /**
  * displayHelper 颜色常量 → 小程序 tag-* 颜色类映射
@@ -69,8 +70,8 @@ Page({
     if (options && options.tab === 'records') tab = 1;
     else if (options && options.tab === 'receive') tab = 2;
     this.setData({
-      orderId: (options && options.orderId) || '',
-      orderNo: (options && options.orderNo) || '',
+      orderId: decodeParam(options && options.orderId),
+      orderNo: decodeParam(options && options.orderNo),
       isFactory: factory,
       isTenantAdmin: admin,
       activeTab: tab,

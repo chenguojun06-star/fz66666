@@ -1,3 +1,4 @@
+const { decodeParam } = require('../../../utils/urlParams');
 /**
  * 物料出库（独立页 D-514）
  *
@@ -14,8 +15,11 @@ Page({
 
   onLoad(options) {
     wx.setNavigationBarTitle({ title: '物料出库' });
-    if (options && options.materialCode) {
-      this.setData({ materialCode: options.materialCode });
+    // ⚠️ decodeParam：跳转方用 encodeURIComponent 传参，小程序**不会**自动解码。
+    //    物料编码含中文（如 M棉布-140CM-粉色），漏解码会拿 %E6%A3%89… 去查 → 「未查到该物料」。
+    var code = decodeParam(options && options.materialCode);
+    if (code) {
+      this.setData({ materialCode: code });
     }
   },
 

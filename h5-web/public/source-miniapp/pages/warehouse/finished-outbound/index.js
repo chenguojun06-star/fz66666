@@ -12,6 +12,7 @@
  * 入口：库存详情页「出库」按钮 → wx.navigateTo 传 styleNo / orderNo / styleName 等
  */
 const api = require('../../../utils/api');
+const { decodeParam } = require('../../../utils/urlParams');
 
 /** 与后端 FinishedOutstockHelper.VALID_OUTSTOCK_TYPES 对齐（去掉扫码类型，扫码走单独入口） */
 const OUTSTOCK_TYPES = [
@@ -67,8 +68,8 @@ Page({
 
   onLoad(options) {
     this.setData({
-      styleNo: options.styleNo || '',
-      orderNo: options.orderNo || '',
+      styleNo: decodeParam(options.styleNo),
+      orderNo: decodeParam(options.orderNo),
       styleName: decodeURIComponent(options.styleName || ''),
       styleImage: decodeURIComponent(options.styleImage || ''),
       factoryName: decodeURIComponent(options.factoryName || ''),

@@ -1,4 +1,5 @@
 const api = require('../../../utils/api');
+const { decodeParam } = require('../../../utils/urlParams');
 
 // 与后端 ProductionConstants 对齐：
 // FIXED_PRODUCTION_NODES（6阶段）用于归类识别存量数据；
@@ -53,8 +54,8 @@ Page({
   },
 
   onLoad: function (options) {
-    const orderId = options.orderId || '';
-    const orderNo = options.orderNo || '';
+    const orderId = decodeParam(options.orderId);
+    const orderNo = decodeParam(options.orderNo);
     this.setData({ orderId: orderId, orderNo: orderNo });
     if (orderId) {
       this._loadOrderAndProcesses(orderId);

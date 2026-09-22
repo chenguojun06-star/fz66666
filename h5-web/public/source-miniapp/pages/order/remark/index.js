@@ -3,6 +3,7 @@ const { toast } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { getUserInfo } = require('../../../utils/storage');
 const { eventBus } = require('../../../utils/eventBus');
+const { decodeParam } = require('../../../utils/urlParams');
 
 Page({
   data: {
@@ -23,7 +24,7 @@ Page({
     const app = getApp();
     if (app.requireAuth && !app.requireAuth()) return;
     const targetType = options.targetType || 'order';
-    const targetNo = options.targetNo || '';
+    const targetNo = decodeParam(options.targetNo);
     if (!targetNo) {
       toast('参数错误');
       wx.navigateBack();
