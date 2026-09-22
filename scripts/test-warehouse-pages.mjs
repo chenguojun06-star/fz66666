@@ -106,6 +106,67 @@ function loadPage(jsPath, apiStub) {
   return { page, wx, cfg };
 }
 
+/**
+ * 加载一个**组件**（Component({...})），返回 { page, wx, cfg }
+ *
+ * D-514：入库/出库表单已抽成通用组件（物料中心 tab 内联复用同一份逻辑），
+ * 所以测试要能直接驱动组件。这里做三件事，让测试写法与页面完全一致：
+ *   ① properties 的默认值并入 data（组件里 this.data.xxx 才读得到）
+ *   ② methods 提升为顶层方法（page.onSubmit() 直接可调）
+ *   ③ 补 triggerEvent（收集到 page.events，用于断言 success 事件）
+ */
+function loadComponent(jsPath, apiStub) {
+  const src = fs.readFileSync(path.join(MP, jsPath), 'utf8');
+  const wx = makeWx();
+  let cfg = null;
+  const sandbox = {
+    Component: (c) => { cfg = c; },
+    wx,
+    getApp: () => ({}),
+    console,
+    setTimeout: (fn) => fn && fn(),
+    module: { exports: {} },
+    exports: {},
+  };
+  const patched = src.replace(/const\s+api\s*=\s*require\([^)]*\);/, 'const api = __api__;');
+  vm.createContext(sandbox);
+  sandbox.__api__ = apiStub;
+  vm.runInContext(patched, sandbox);
+
+  if (!cfg) throw new Error('未捕获到 Component 配置: ' + jsPath);
+
+  const initData = {};
+  for (const [k, def] of Object.entries(cfg.properties || {})) {
+    initData[k] = def && typeof def === 'object' && 'value' in def ? def.value : undefined;
+  }
+  Object.assign(initData, cfg.data || {});
+
+  const events = [];
+  const page = {
+    data: JSON.parse(JSON.stringify(initData)),
+    properties: Object.assign({}, initData),
+    events,
+    setData(obj, cb) {
+      Object.assign(this.data, obj);
+      // 组件里 setData 到 property 上时，properties 也要跟着变
+      for (const k of Object.keys(this.properties)) {
+        if (Object.prototype.hasOwnProperty.call(obj, k)) this.properties[k] = obj[k];
+      }
+      // ⚠️ 关键：不绑定 this，和小程序一致
+      if (typeof cb === 'function') cb();
+    },
+    triggerEvent(name, detail) { events.push([name, detail]); },
+    selectComponent() { return null; },
+    /** 模拟小程序生命周期 attached */
+    attached() {
+      const f = cfg.lifetimes && cfg.lifetimes.attached;
+      if (f) f.call(this);
+    },
+  };
+  for (const [k, fn] of Object.entries(cfg.methods || {})) page[k] = fn;
+  return { page, wx, cfg };
+}
+
 /** 取最后一次某类 wx 调用 */
 function lastCall(wx, name) {
   for (let i = wx.calls.length - 1; i >= 0; i--) if (wx.calls[i][0] === name) return wx.calls[i][1];
@@ -256,10 +317,10 @@ async function testFinishedInbound() {
 }
 
 async function testMaterialInbound() {
-  console.log('\n【物料入库页 material-inbound】');
+  console.log('\n【物料入库表单 material-inbound-form（通用组件）】');
   const api = makeApi();
-  const { page, wx } = loadPage('pages/warehouse/material-inbound/index.js', api);
-  await page.onLoad({});
+  const { page, wx } = loadComponent('components/material-inbound-form/index.js', api);
+  page.attached();
   await new Promise(r => setTimeout(r, 30));
 
   page.setData({ materialCode: 'MC-1' });
@@ -292,13 +353,15 @@ async function testMaterialInbound() {
     ok('数量保留小数 1.32', payload[1].quantity === 1.32, `实际 ${payload[1].quantity}`);
     ok('含 materialCode', payload[1].materialCode === 'MC-1');
   }
+  // D-514：成功后必须抛 success 事件 —— 物料中心 tab 靠它刷新库存列表
+  ok('成功后抛 success 事件', page.events.some(e => e[0] === 'success'));
 }
 
 async function testMaterialOutbound() {
-  console.log('\n【物料出库页 material-outbound】');
+  console.log('\n【物料出库表单 material-outbound-form（通用组件）】');
   const api = makeApi();
-  const { page, wx } = loadPage('pages/warehouse/material-outbound/index.js', api);
-  await page.onLoad({});
+  const { page, wx } = loadComponent('components/material-outbound-form/index.js', api);
+  page.attached();
   await new Promise(r => setTimeout(r, 30));
 
   eq('订单列表已加载', page.data.orderNames.length, 2);
@@ -352,6 +415,8 @@ async function testMaterialOutbound() {
     ok('含 factoryName', d.factoryName === '本厂');
     ok('含 usageType', !!d.usageType);
   }
+  // D-514：成功后必须抛 success 事件
+  ok('成功后抛 success 事件', page.events.some(e => e[0] === 'success'));
 }
 
 /**
@@ -371,8 +436,9 @@ function testPickerUsage() {
   const pages = [
     ['pages/warehouse/finished-outbound/index.wxml', 2],   // 仓库区域 + 客户
     ['pages/warehouse/finished-inbound/index.wxml', 1],    // 仓库区域
-    ['pages/warehouse/material-inbound/index.wxml', 1],    // 仓库区域
-    ['pages/warehouse/material-outbound/index.wxml', 4],   // 订单/工厂/领料人/仓库区域
+    // D-514：物料出入库表单已抽成通用组件，picker 随之搬进组件（页面只是壳）
+    ['components/material-inbound-form/index.wxml', 1],    // 仓库区域
+    ['components/material-outbound-form/index.wxml', 4],   // 订单/工厂/领料人/仓库区域
   ];
   for (const [rel, minPickers] of pages) {
     const s = stripComments(fs.readFileSync(path.join(MP, rel), 'utf8'));
@@ -413,6 +479,25 @@ function testEntryPoints() {
   // 回退刷新：上一页必须真有这个刷新方法，否则操作完列表不更新
   ok('物料库有 loadList 可刷新', /loadList\s*:\s*function/.test(mJ));
   ok('成品详情有 loadDetail 可刷新', /loadDetail\s*[:(]/.test(dJ));
+
+  // D-514：物料中心的入库/出库/领料 tab 必须是**内联组件**，不能退回「跳转卡片」
+  // （用户明确要求「一个页面切换标签处理对应的出入库数据」，退化成跳转就是回归）
+  const mcW = read('pages/warehouse/material-center/index.wxml');
+  const mcJ = read('pages/warehouse/material-center/index.js');
+  const mcJson = JSON.parse(fs.readFileSync(path.join(MP, 'pages/warehouse/material-center/index.json'), 'utf8'));
+  ok('物料中心「入库」tab 内联表单', /<material-inbound-form/.test(mcW));
+  ok('物料中心「出库」tab 内联表单', /<material-outbound-form/.test(mcW));
+  ok('物料中心「领料」tab 内联列表', /<material-picking-list/.test(mcW));
+  ok('物料中心已无 gotoInbound 跳转卡片', !/gotoInbound/.test(mcW) && !/gotoInbound/.test(mcJ));
+  ok('物料中心已无 gotoPicking 跳转卡片', !/gotoPicking/.test(mcW) && !/gotoPicking/.test(mcJ));
+  for (const c of ['material-inbound-form', 'material-outbound-form', 'material-picking-list']) {
+    ok(`物料中心已注册组件 ${c}`, !!mcJson.usingComponents[c]);
+  }
+  // 三个组件都要在 components 目录里真实存在（否则真机白屏）
+  for (const c of ['material-inbound-form', 'material-outbound-form', 'material-picking-list']) {
+    ok(`组件文件存在 ${c}`, fs.existsSync(path.join(MP, `components/${c}/index.wxml`))
+      && fs.existsSync(path.join(MP, `components/${c}/index.js`)));
+  }
 
   // D-494：列表页「出库」应直接跳 finished-outbound，不再经详情页中转
   const lJ = read('pages/warehouse/finished-inventory/index.js');

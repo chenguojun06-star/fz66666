@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "物料出库",
-  "enablePullDownRefresh": false
+  "enablePullDownRefresh": false,
+  "usingComponents": {
+    "material-outbound-form": "/components/material-outbound-form/index"
+  }
 }

@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "领料出库",
+  "enablePullDownRefresh": true,
   "usingComponents": {
-    "sticky-search-bar": "/components/sticky-search-bar/index"
+    "material-picking-list": "/components/material-picking-list/index"
   }
 }
