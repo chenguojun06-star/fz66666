@@ -119,6 +119,18 @@ Page({
     // 允许小数：不做 parseInt
     this.setData({ quantity: e.detail.value });
   },
+
+  // D-513：手机端步进器（避免小屏手动输入数字）
+  onQtyMinus() {
+    const q = parseFloat(this.data.quantity) || 0;
+    const next = +(q - 1).toFixed(2);
+    this.setData({ quantity: next > 0 ? String(next) : '' });
+  },
+
+  onQtyPlus() {
+    const q = parseFloat(this.data.quantity) || 0;
+    this.setData({ quantity: String(+(q + 1).toFixed(2)) });
+  },
   onLocationInput(e) { this.setData({ warehouseLocation: e.detail.value }); },
   onSupplierInput(e) { this.setData({ supplierName: e.detail.value }); },
   onPriceInput(e) { this.setData({ unitPrice: e.detail.value }); },

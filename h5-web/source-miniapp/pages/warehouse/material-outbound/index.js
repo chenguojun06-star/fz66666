@@ -245,6 +245,19 @@ Page({
   },
 
   onQtyInput(e) { this.setData({ quantity: e.detail.value }); },
+
+  // D-513：手机端步进器（避免小屏手动输入数字）
+  onQtyMinus() {
+    const q = parseFloat(this.data.quantity) || 0;
+    const next = +(q - 1).toFixed(2);
+    this.setData({ quantity: next > 0 ? String(next) : '' });
+  },
+
+  onQtyPlus() {
+    const q = parseFloat(this.data.quantity) || 0;
+    this.setData({ quantity: String(+(q + 1).toFixed(2)) });
+  },
+
   onReasonInput(e) { this.setData({ reason: e.detail.value }); },
 
   // ────────── 提交 ──────────

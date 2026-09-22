@@ -260,3 +260,32 @@
   color: var(--color-text-secondary, #666);
   flex-shrink: 0;
 }
+
+/* D-513 手机端数量步进器 - 小屏输入数字不便, 加减按钮更快 */
+.qty-stepper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.stepper-btn {
+  width: 60rpx;
+  height: 60rpx;
+  line-height: 56rpx;
+  text-align: center;
+  font-size: 36rpx;
+  color: var(--color-primary, #2563eb);
+  background: #f3f4f6;
+  border: 1rpx solid #e5e7eb;
+  flex-shrink: 0;
+}
+.stepper-btn:first-child {
+  border-radius: 8rpx 0 0 8rpx;
+}
+.stepper-btn:last-child {
+  border-radius: 0 8rpx 8rpx 0;
+}
+.row-input--center {
+  text-align: center;
+  min-width: 0;
+}

@@ -174,4 +174,22 @@ Page({
       url: '/pages/warehouse/material-outbound/index?materialCode=' + encodeURIComponent(item.materialCode),
     });
   },
+
+  // D-513：手机端快捷入库（原先列表页没有入库入口，只能点卡片出库）
+  onInboundTap: function (e) {
+    const code = e.currentTarget.dataset.code;
+    if (!code) return;
+    wx.navigateTo({
+      url: '/pages/warehouse/material-inbound/index?materialCode=' + encodeURIComponent(code),
+    });
+  },
+
+  // D-513：手机端快捷出库（与点卡片等效，但按钮更明确、不易误触）
+  onOutboundTap: function (e) {
+    const code = e.currentTarget.dataset.code;
+    if (!code) return;
+    wx.navigateTo({
+      url: '/pages/warehouse/material-outbound/index?materialCode=' + encodeURIComponent(code),
+    });
+  },
 });
