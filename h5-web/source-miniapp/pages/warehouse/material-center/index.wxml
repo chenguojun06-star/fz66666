@@ -49,7 +49,7 @@
     </view>
     <view class="card-list">
       <view class="card" wx:for="{{inventoryList}}" wx:key="id">
-        <view class="card-header" data-code="{{item.materialCode}}" bindtap="onInventoryDetail">
+        <view class="card-header" data-item="{{item}}" bindtap="onInventoryDetail">
           <!-- D-514：物料图片（后端 materialImage 已带 token，与成品库存同样式 44x44） -->
           <image wx:if="{{item.image}}" src="{{item.image}}" mode="aspectFit" class="item-image" />
           <view wx:else class="item-image item-image--placeholder">

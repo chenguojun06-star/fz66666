@@ -52,6 +52,7 @@
         "material-inbound/index",
         "material-outbound/index",
         "material-inventory/index",
+        "material-inventory/detail/index",
         "material-picking/index",
         "material-center/index"
       ]

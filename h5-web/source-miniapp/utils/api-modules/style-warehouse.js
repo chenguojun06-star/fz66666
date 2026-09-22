@@ -221,6 +221,16 @@ const material = {
     return ok('/api/production/material/stock/scan-query', 'GET', { materialCode });
   },
   /**
+   * D-514：面辅料出入库流水（合并入库+出库，按时间倒序）
+   * 后端 MaterialStockController.getTransactions
+   *   - 必填 materialCode；stockId 选填
+   *   - ⚠️ 工厂账号后端直接返回空数组（属租户级仓库数据）
+   * 返回 List<MaterialTransactionDto>：{type,typeLabel,operationTime,quantity,unit,operatorName,warehouseLocation,remark}
+   */
+  getTransactions(materialCode, stockId) {
+    return ok('/api/production/material/stock/transactions', 'GET', { materialCode, stockId });
+  },
+  /**
    * D-486：物料手工出库（此前手机端从未封装，只有 PC 端在用）
    * 后端 MaterialStockOrchestrator.manualOutbound —— 必填 stockId / quantity /
    * receiverName / orderNo / styleNo / factoryName / usageType
