@@ -10,6 +10,7 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { hasFeaturePermission, isFactoryAccount } = require('../../../utils/permission');
+const { decodeParam } = require('../../../utils/urlParams');
 
 // D-419：颜色统一为实底 status-badge 用色
 var STATUS_TEXT_MAP = {
@@ -87,7 +88,7 @@ Page({
     this.setData({
       canOperate: hasFeaturePermission('approve_expense'),
       statusFilter: opts.status || '',
-      keyword: opts.keyword ? decodeURIComponent(opts.keyword) : '',
+      keyword: decodeParam(opts.keyword),
     });
   },
 

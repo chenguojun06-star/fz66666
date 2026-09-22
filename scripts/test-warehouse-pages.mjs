@@ -65,6 +65,24 @@ function makeWx() {
  * @param {string} jsPath 页面 index.js 相对 miniprogram 的路径
  * @param {object} apiStub 接口桩
  */
+/**
+ * 沙箱内的 require 桩
+ *
+ * 页面除了 api 之外还可能 require 纯工具模块（如 utils/urlParams）。
+ * 这里**加载真实文件**（而不是在测试里复写一份实现），保证测的是线上同一份代码。
+ */
+function makeSandboxRequire() {
+  return function (p) {
+    if (/urlParams$/.test(p)) {
+      const real = fs.readFileSync(path.join(MP, 'utils/urlParams.js'), 'utf8');
+      const m = { exports: {} };
+      vm.runInNewContext(real, { module: m, exports: m.exports, console });
+      return m.exports;
+    }
+    throw new Error('测试未桩的 require: ' + p);
+  };
+}
+
 function loadPage(jsPath, apiStub) {
   const src = fs.readFileSync(path.join(MP, jsPath), 'utf8');
   const wx = makeWx();
@@ -77,9 +95,10 @@ function loadPage(jsPath, apiStub) {
     setTimeout: (fn) => fn && fn(),   // 立即执行，避免测试挂起
     module: { exports: {} },
     exports: {},
+    require: makeSandboxRequire(),
   };
-  // 把 require 替换成桩
-  const patched = src.replace(/const\s+api\s*=\s*require\([^)]*\);/, 'const api = __api__;');
+  // 把 require 替换成桩（兼容 const / var / let 三种声明写法）
+  const patched = src.replace(/(?:const|var|let)\s+api\s*=\s*require\([^)]*\);/, 'const api = __api__;');
   vm.createContext(sandbox);
   sandbox.__api__ = apiStub;
   vm.runInContext(patched, sandbox);
@@ -127,8 +146,9 @@ function loadComponent(jsPath, apiStub) {
     setTimeout: (fn) => fn && fn(),
     module: { exports: {} },
     exports: {},
+    require: makeSandboxRequire(),
   };
-  const patched = src.replace(/const\s+api\s*=\s*require\([^)]*\);/, 'const api = __api__;');
+  const patched = src.replace(/(?:const|var|let)\s+api\s*=\s*require\([^)]*\);/, 'const api = __api__;');
   vm.createContext(sandbox);
   sandbox.__api__ = apiStub;
   vm.runInContext(patched, sandbox);
@@ -534,6 +554,71 @@ function testEntryPoints() {
   }
 }
 
+/**
+ * 物料库存详情页 —— 重点回归「URL 参数解码」
+ *
+ * 真实事故（2026-09-22 用户截图）：详情页把 encodeURIComponent 后的编码
+ * 原样拿去查询，界面上编码显示成 M%E6%A3%89%E5%B8%83-140CM-%E7%B2%89%E8%89%B2，
+ * 并弹「物料不存在」，颜色/规格/库位/单价全空。
+ * 根因：列表页 encodeURIComponent 传参，详情页忘了 decodeURIComponent
+ *       （小程序 **不会**自动解码 —— finished-inventory/detail 也是自己解的）。
+ */
+async function testMaterialDetail() {
+  console.log('\n【物料详情页 material-inventory/detail】');
+  const api = makeApi();
+  const queried = [];
+  // 覆盖 scanQuery：既记录"用什么编码去查的"，也返回完整快照
+  // ⚠️ materialName 故意留空 —— loadDetail 里 `info.materialName || this.data.materialName`
+  //    会优先用接口值，留空才能验证"URL 带过来的名称被正确解码"这条路径
+  api.material.scanQuery = async (code) => {
+    queried.push(code);
+    return {
+      found: true, stockId: 'stk-1', materialCode: code, materialName: '',
+      materialType: 'fabric', color: '白', size: '1.5m',
+      quantity: 20, lockedQuantity: 5, unitPrice: 12.5, location: 'A-01', unit: '米',
+    };
+  };
+  api.material.getTransactions = async () => ([
+    { type: 'IN', typeLabel: '入库', operationTime: '2026-09-22 10:00:00', quantity: 20, unit: '米', operatorName: '张三', warehouseLocation: 'A-01', remark: '' },
+  ]);
+
+  const { page } = loadPage('pages/warehouse/material-inventory/detail/index.js', api);
+  // 物料编码本身含中文 —— 这正是踩坑的场景
+  const RAW = 'M棉布-140CM-粉色';
+  await page.onLoad({
+    materialCode: encodeURIComponent(RAW),
+    materialName: encodeURIComponent('棉布-140CM-粉色'),
+    materialType: 'fabric',
+    unit: encodeURIComponent('米'),
+    safetyStock: '100',
+    supplierName: encodeURIComponent('库存面料'),
+    image: encodeURIComponent('https://api.x/api/file/t.png?token=a&b=c'),
+  });
+  await new Promise(r => setTimeout(r, 30));
+
+  eq('materialCode 已解码（不能是 %E6%A3%89…）', page.data.materialCode, RAW);
+  eq('materialName 已解码', page.data.materialName, '棉布-140CM-粉色');
+  eq('unit 已解码', page.data.unit, '米');
+  eq('supplierName 已解码', page.data.supplierName, '库存面料');
+  // 图片 URL 里带 & —— 编码/解码必须成对，否则会被 query 截断
+  eq('image 已解码且 & 未被截断', page.data.image, 'https://api.x/api/file/t.png?token=a&b=c');
+  ok('按解码后的编码去查（否则必然「物料不存在」）',
+    queried.length === 1 && queried[0] === RAW, '实际=' + JSON.stringify(queried));
+  eq('类型标签', page.data.typeLabel, '面料');
+  eq('可用 = 数量 - 锁定', page.data.availableQty, 15);
+  eq('单价取到了', page.data.unitPrice, '12.5');
+  eq('库位取到了', page.data.location, 'A-01');
+  eq('流水加载成功', page.data.transactions.length, 1);
+
+  // 顺带验证工具本身的边界：裸 % 不能抛异常（否则整页崩）、null 不能炸
+  const { decodeParam } = makeSandboxRequire()('utils/urlParams');
+  eq('decodeParam 解中文编码', decodeParam('%E6%A3%89%E5%B8%83'), '棉布');
+  eq('decodeParam 无转义值原样返回', decodeParam('PO-001'), 'PO-001');
+  eq('decodeParam 裸 % 不抛异常', decodeParam('50%'), '50%');
+  eq('decodeParam null 返回空串', decodeParam(null), '');
+  eq('decodeParam undefined 返回空串', decodeParam(undefined), '');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -545,6 +630,7 @@ try {
   await testFinishedInbound();
   await testMaterialInbound();
   await testMaterialOutbound();
+  await testMaterialDetail();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);
