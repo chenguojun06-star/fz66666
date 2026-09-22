@@ -1,0 +1,187 @@
+/* 领料出库列表（通用组件 D-514）
+   页面背景由 app.wxss 的 page 提供，组件内不再重复设 min-height/background */
+.material-picking-list {
+  padding-bottom: 12px;
+}
+
+/* 搜索框由通用组件 sticky-search-bar 提供，这里只定义状态 tab（作为筛选器 slot 内容） */
+.tabs {
+  display: flex;
+  gap: 4px;
+}
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 5px 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  background: var(--color-border-light);
+  border-radius: 12px;
+}
+.tab--active {
+  color: var(--color-text-white);
+  background: var(--color-primary);
+  font-weight: 500;
+}
+
+/* 统计 */
+.summary-row {
+  padding: 7px 12px 3px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+/* 状态/空 */
+.state {
+  padding: 35px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.state.small {
+  padding: 11px;
+  font-size: 11px;
+}
+.state-hint {
+  font-size: 11px;
+  color: var(--color-text-placeholder);
+}
+
+/* 卡片 */
+/* D-513 手机端瘦身 */
+.card-list {
+  padding: 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.card {
+  background: var(--color-bg-card);
+  border-radius: 6px;
+  padding: 7px 10px;
+  box-shadow: var(--shadow-sm);
+}
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.card-no {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.status-tag {
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+/* 信息网格 */
+.info-row {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+}
+.info-item {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 45%;
+}
+.info-label {
+  font-size: 10.5px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+.info-value {
+  font-size: 11.5px;
+  color: var(--color-text-secondary);
+}
+
+/* 明细 */
+.detail {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px dashed var(--color-border);
+}
+.detail-hd {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-bottom: 5px;
+}
+.detail-row {
+  padding: 5px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.detail-name {
+  font-size: 12px;
+  color: var(--color-text-primary);
+}
+.detail-meta {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  margin-top: 1px;
+}
+.detail-qty {
+  font-size: 12px;
+  color: var(--color-primary);
+  font-weight: 600;
+  margin-top: 2px;
+}
+.detail-loc {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  margin-top: 1px;
+}
+.detail-empty {
+  font-size: 11px;
+  color: var(--color-text-placeholder);
+  padding: 6px 0;
+}
+
+/* 操作按钮 */
+.actions {
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid var(--color-border-light);
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+.btn {
+  padding: 6px 15px;
+  border-radius: 14px;
+  font-size: 12px;
+  text-align: center;
+}
+.btn--ghost {
+  color: var(--color-text-secondary);
+  background: var(--color-border-light);
+}
+.btn--primary {
+  color: var(--color-text-white);
+  background: var(--color-primary);
+}
+.btn.is-disabled {
+  opacity: 0.6;
+}
+
+/* ===== D-514 组件化新增：内联在 tab 里时的状态筛选行 ===== */
+.tabs--inline {
+  margin-top: 10px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+/* 组件内没有 onReachBottom（页面级生命周期），用按钮触发加载更多 */
+.loadmore-btn {
+  color: var(--color-primary);
+}

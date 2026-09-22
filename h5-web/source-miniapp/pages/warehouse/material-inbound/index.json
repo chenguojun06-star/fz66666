@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "物料入库",
-  "enablePullDownRefresh": false
+  "enablePullDownRefresh": false,
+  "usingComponents": {
+    "material-inbound-form": "/components/material-inbound-form/index"
+  }
 }

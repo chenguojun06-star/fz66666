@@ -49,7 +49,11 @@ Page({
     detailVisible: false,
   },
 
-  onLoad: function () {
+  onLoad: function (options) {
+    // D-514：支持 ?keyword=xxx 直接定位到某个物料（从物料中心点卡片进来时用）
+    if (options && options.keyword) {
+      this.setData({ searchText: String(options.keyword) });
+    }
     this.loadList(true);
   },
 

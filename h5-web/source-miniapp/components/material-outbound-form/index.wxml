@@ -1,0 +1,127 @@
+<!-- 物料出库表单（通用组件 D-514）
+     两个消费方：① 独立页 material-outbound ② 物料中心「出库」tab（内联） -->
+<view class="material-outbound-form">
+
+  <!-- ① 物料查询 -->
+  <view class="section">
+    <view class="section-hd"><text class="section-title">物料编码</text></view>
+    <view class="search-row">
+      <input
+        class="search-input"
+        placeholder="输入物料编码"
+        value="{{materialCode}}"
+        bindinput="onCodeInput"
+        confirm-type="search"
+        bindconfirm="onQuery"
+      />
+      <view wx:if="{{showScan}}" class="search-btn search-btn--scan" bindtap="onScan">扫码</view>
+      <view class="search-btn search-btn--go" bindtap="onQuery">查询</view>
+    </view>
+
+    <view wx:if="{{loading}}" class="loading">加载中…</view>
+    <block wx:if="{{queried && materialInfo}}">
+      <view class="mat-card">
+        <text class="mat-name">{{materialInfo.materialName || '—'}}</text>
+        <text class="mat-meta">编码 {{materialInfo.materialCode || materialCode}}</text>
+        <text class="mat-meta">可用 {{materialInfo.quantity}}{{unit}}</text>
+      </view>
+    </block>
+    <view wx:elif="{{queried}}" class="empty">未查到该物料</view>
+  </view>
+
+  <block wx:if="{{queried && materialInfo}}">
+    <!-- ② 数量与用途 -->
+    <view class="section">
+      <view class="section-hd"><text class="section-title">出库信息</text></view>
+
+      <view class="row">
+        <text class="row-label">数量 <text class="req">*</text></text>
+        <!-- D-513：手机端步进器（小屏输入数字不便，加减按钮更快） -->
+        <view class="qty-stepper">
+          <view class="stepper-btn" catchtap="onQtyMinus">-</view>
+          <input class="row-input row-input--center" type="digit" placeholder="支持小数" value="{{quantity}}" bindinput="onQtyInput" />
+          <view class="stepper-btn" catchtap="onQtyPlus">+</view>
+        </view>
+        <text class="row-unit" wx:if="{{unit}}">{{unit}}</text>
+      </view>
+
+      <view class="type-grid">
+        <view
+          wx:for="{{typeOptions}}"
+          wx:key="key"
+          class="type-chip {{usageType === item.key ? 'type-chip--active' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="onSelectUsage"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
+    <!-- ③ 必填关联项（后端 7 个必填里的其余 4 个） -->
+    <view class="section">
+      <view class="section-hd"><text class="section-title">关联信息</text></view>
+
+      <!-- ⚠️ 用 picker 而非 wx.showActionSheet：后者 itemList 最多 6 项，
+           而订单/工厂/领料人可能有上百条，必然失败 -->
+      <picker mode="selector" range="{{orderNames}}" bindchange="onOrderChange">
+        <view class="row">
+          <text class="row-label">关联订单 <text class="req">*</text></text>
+          <text class="row-value {{orderNo ? '' : 'row-value--placeholder'}}">{{orderNo || '请选择'}}</text>
+          <text class="row-arrow">›</text>
+        </view>
+      </picker>
+      <view class="row" wx:if="{{styleNo}}">
+        <text class="row-label">关联款号</text>
+        <text class="row-value">{{styleNo}}</text>
+      </view>
+      <picker mode="selector" range="{{factoryNames}}" bindchange="onFactoryChange">
+        <view class="row">
+          <text class="row-label">关联工厂 <text class="req">*</text></text>
+          <text class="row-value {{factoryName ? '' : 'row-value--placeholder'}}">{{factoryName || '请选择'}}</text>
+          <text class="row-arrow">›</text>
+        </view>
+      </picker>
+      <picker mode="selector" range="{{receiverNames}}" bindchange="onReceiverChange">
+        <view class="row">
+          <text class="row-label">领料人 <text class="req">*</text></text>
+          <text class="row-value {{receiverName ? '' : 'row-value--placeholder'}}">{{receiverName || '请选择'}}</text>
+          <text class="row-arrow">›</text>
+        </view>
+      </picker>
+      <picker mode="selector" range="{{areaNames}}" bindchange="onAreaChange">
+        <view class="row">
+          <text class="row-label">仓库区域</text>
+          <text class="row-value {{warehouseAreaName ? '' : 'row-value--placeholder'}}">
+            {{warehouseAreaName || '请选择'}}
+          </text>
+          <text class="row-arrow">›</text>
+        </view>
+      </picker>
+    </view>
+
+    <!-- ④ 原因 -->
+    <view class="section">
+      <view class="section-hd"><text class="section-title">出库原因</text></view>
+      <textarea
+        class="remark"
+        placeholder="选填"
+        value="{{reason}}"
+        bindinput="onReasonInput"
+        maxlength="200"
+        auto-height
+      />
+    </view>
+  </block>
+
+  <view class="bottom-pad"></view>
+</view>
+
+<!-- ⑤ 底部固定提交栏 -->
+<view class="submit-bar" wx:if="{{queried && materialInfo}}">
+  <view class="submit-summary">
+    <text class="submit-count">{{materialCode}}</text>
+    <text class="submit-qty">出库 {{quantity || 0}}{{unit}}</text>
+  </view>
+  <view class="submit-btn {{submitting ? 'submit-btn--disabled' : ''}}" bindtap="onSubmit">
+    {{submitting ? '提交中…' : '确认出库'}}
+  </view>
+</view>

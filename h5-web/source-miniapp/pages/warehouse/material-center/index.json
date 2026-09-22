@@ -2,6 +2,9 @@
   "navigationBarTitleText": "物料中心",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "sticky-search-bar": "/components/sticky-search-bar/index"
+    "sticky-search-bar": "/components/sticky-search-bar/index",
+    "material-inbound-form": "/components/material-inbound-form/index",
+    "material-outbound-form": "/components/material-outbound-form/index",
+    "material-picking-list": "/components/material-picking-list/index"
   }
 }

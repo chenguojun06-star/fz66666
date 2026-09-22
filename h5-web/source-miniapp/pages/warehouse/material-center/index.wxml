@@ -85,55 +85,29 @@
     </view>
   </view>
 
-  <!-- 入库 tab：操作面板（点击进入对应子页 / 顶部扫码） -->
+  <!-- 入库 tab：内联表单（D-514，不再跳页；从库存卡片点「入库」会带编码预填） -->
   <view class="tab-panel" wx:elif="{{activeTab === 'inbound'}}">
-    <view class="action-card" bindtap="gotoInbound">
-      <view class="action-icon action-icon--in">+</view>
-      <view class="action-info">
-        <view class="action-title">物料入库</view>
-        <view class="action-desc">扫码 / 输入编码 → 填数量 → 提交入库</view>
-      </view>
-      <view class="action-arrow">›</view>
-    </view>
-    <view class="action-tips">
-      <view>• 顶部 📷 扫码可快速进入</view>
-      <view>• 在「库存」tab 卡片上点「入库」也能跳转</view>
-      <view>• 入库后库存数量会实时更新</view>
-    </view>
+    <material-inbound-form
+      material-code="{{formCode}}"
+      bind:success="onFormSuccess"
+    />
   </view>
 
-  <!-- 出库 tab：操作面板 -->
+  <!-- 出库 tab：内联表单（D-514，不再跳页；从库存卡片点「出库」会带编码预填） -->
   <view class="tab-panel" wx:elif="{{activeTab === 'outbound'}}">
-    <view class="action-card" bindtap="gotoOutbound">
-      <view class="action-icon action-icon--out">−</view>
-      <view class="action-info">
-        <view class="action-title">物料出库</view>
-        <view class="action-desc">选物料 → 填数量 → 提交出库</view>
-      </view>
-      <view class="action-arrow">›</view>
-    </view>
-    <view class="action-tips">
-      <view>• 在「库存」tab 卡片上点「出库」也能跳转</view>
-      <view>• 领料出库走「领料」tab（按领料单统一出库）</view>
-      <view>• 出库会自动扣减可用库存</view>
-    </view>
+    <material-outbound-form
+      material-code="{{formCode}}"
+      bind:success="onFormSuccess"
+    />
   </view>
 
-  <!-- 领料 tab：操作面板 -->
+  <!-- 领料 tab：内联列表（D-514，不再跳页；tab 内已有筛选，关掉自带搜索栏） -->
   <view class="tab-panel" wx:elif="{{activeTab === 'picking'}}">
-    <view class="action-card" bindtap="gotoPicking">
-      <view class="action-icon action-icon--picking">≡</view>
-      <view class="action-info">
-        <view class="action-title">领料出库</view>
-        <view class="action-desc">查看待办领料通知 → 确认出库</view>
-      </view>
-      <view class="action-arrow">›</view>
-    </view>
-    <view class="action-tips">
-      <view>• 在「可办事」中带「领料」角标的会直接跳到此页</view>
-      <view>• 领料页支持状态筛选（待出库 / 已出库）</view>
-      <view>• 领料单会按领料人/订单号聚合</view>
-    </view>
+    <material-picking-list
+      status="pending"
+      show-search="{{false}}"
+      bind:success="onPickingSuccess"
+    />
   </view>
 
   <!-- 料卷 tab：扫码入口 -->
