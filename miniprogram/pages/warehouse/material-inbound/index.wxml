@@ -41,13 +41,18 @@
 
       <view class="row">
         <text class="row-label">数量 <text class="req">*</text></text>
-        <input
-          class="row-input"
-          type="digit"
-          placeholder="支持小数，如 1.32"
-          value="{{quantity}}"
-          bindinput="onQtyInput"
-        />
+        <!-- D-513：手机端步进器（小屏输入数字不便，加减按钮更快） -->
+        <view class="qty-stepper">
+          <view class="stepper-btn" catchtap="onQtyMinus">-</view>
+          <input
+            class="row-input row-input--center"
+            type="digit"
+            placeholder="支持小数，如 1.32"
+            value="{{quantity}}"
+            bindinput="onQtyInput"
+          />
+          <view class="stepper-btn" catchtap="onQtyPlus">+</view>
+        </view>
         <text class="row-unit" wx:if="{{unit}}">{{unit}}</text>
       </view>
 
