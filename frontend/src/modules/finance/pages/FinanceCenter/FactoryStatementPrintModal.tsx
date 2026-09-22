@@ -43,7 +43,7 @@ const PRINT_STYLES = `
     .sign-area { display: flex; justify-content: space-between; margin-top: 50px; font-size: 14px; }
     @media print {
         body { -webkit-print-color-adjust: exact; padding: 0; }
-        @page { margin: 5mm; }
+        @page { margin: 5mm 5mm 14mm 5mm; } /* D-520 底边距留出页码条 */
     }
 `;
 

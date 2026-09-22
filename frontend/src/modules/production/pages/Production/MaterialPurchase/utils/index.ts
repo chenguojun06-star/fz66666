@@ -315,6 +315,8 @@ export const buildPurchaseSheetHtml = (
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>${escapeHtml(purchaseNo || orderNo || '采购单')}</title>
         <style>
+          /* D-520 打印页码：只加底边距放页码条，其余边距保持浏览器默认不改动版 */
+          @page { size: A4; margin-bottom: 16mm; @bottom-center { content: "第 " counter(page) " 页 / 共 " counter(pages) " 页"; font-size: 10px; color: #999999; } }
           body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial,serif;margin:20px;color:var(--color-black)}
           .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
           .doc-head{text-align:center;margin:0 0 14px}

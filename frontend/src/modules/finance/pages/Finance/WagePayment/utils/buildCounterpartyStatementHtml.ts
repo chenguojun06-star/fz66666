@@ -112,7 +112,8 @@ ${buildPrintHeader(p.tenantName, '往来对账单')}
 <meta charset="utf-8" />
 <title>往来对账单 - ${esc(p.counterpartyName)}</title>
 <style>
-  @page { size: A4; margin: 12mm; }
+  /* D-520 打印页码：底边距区输出「第 X 页 / 共 Y 页」 */
+  @page { size: A4; margin: 12mm 12mm 16mm 12mm; @bottom-center { content: "第 " counter(page) " 页 / 共 " counter(pages) " 页"; font-size: 10px; color: #999999; } }
   body { font-family: "Microsoft YaHei", SimSun, sans-serif; color: #000; font-size: 12px; margin: 0; padding: 12px; }
   h1 { font-size: 18px; text-align: center; margin: 0 0 4px; }
   .sub { text-align: center; color: #555; font-size: 12px; margin-bottom: 12px; }
@@ -213,7 +214,8 @@ function wrapStatementsHtml(parts: string[], title: string): string {
 <meta charset="utf-8" />
 <title>${esc(title)}</title>
 <style>
-  @page { size: A4; margin: 12mm; }
+  /* D-520 打印页码：底边距区输出「第 X 页 / 共 Y 页」 */
+  @page { size: A4; margin: 12mm 12mm 16mm 12mm; @bottom-center { content: "第 " counter(page) " 页 / 共 " counter(pages) " 页"; font-size: 10px; color: #999999; } }
   body { font-family: "Microsoft YaHei", SimSun, sans-serif; color: #000; font-size: 12px; margin: 0; padding: 12px; }
   h1 { font-size: 18px; text-align: center; margin: 0 0 4px; }
   .sub { text-align: center; color: #555; font-size: 12px; margin-bottom: 12px; }

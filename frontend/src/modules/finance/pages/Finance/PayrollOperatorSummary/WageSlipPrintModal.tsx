@@ -279,7 +279,7 @@ const PRINT_STYLES = `
     }
     @media print {
         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 0; }
-        @page { margin: 10mm; }
+        @page { margin: 10mm 10mm 14mm 10mm; } /* D-520 底边距留出页码条 */
     }
 `;
 

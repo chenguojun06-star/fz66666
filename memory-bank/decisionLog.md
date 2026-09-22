@@ -1,7 +1,23 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-21（新增 D-514 样衣打印分页治理——整块不拆页+页脚取消fixed+工艺说明行移除）
+> 最后更新：2026-09-23（新增 D-520 全站打印页码——@page 边距盒统一注入，标签类 margin:0 自动隐藏）
+
+---
+
+## D-520：全站打印页码——「第 X 页 / 共 Y 页」统一进底边距区（2026-09-23）
+
+**用户反馈**：打印出来的多页单据没有页码，「一个文件几页都不知道」（截图=样衣开发单 Chrome 打印预览）。
+
+**方案**：CSS Paged Media `@page` 边距盒（Chrome 131+ 支持，2024-11 起）——`@bottom-center { content: "第 " counter(page) " 页 / 共 " counter(pages) " 页" }`，由打印管线在每页边距区绘制，总页数自动正确，不占内容区、不改 DOM。
+
+**实现（14 文件，打印面全量覆盖）**：
+- **safePrint 家族（27 处调用一处覆盖）**：`PRINT_FIX_CSS` 头部注入全局 `@page { @bottom-center {...} }`，**只声明边距盒、不声明 margin/size**——模板自带 @page（加载顺序在后）照常覆盖；标签类模板 margin:0 → 边距区高度为 0，页码自动被裁掉（Playwright 实测不漏）。
+- **A4 单据模板底边距 bump 到 14mm**（给页码条留高度）：StylePrintModal printTemplate（样衣开发单/下单单/大货单）、CuttingSheetPrintModal（裁剪单）、FactoryStatementPrintModal（对账单）、MaterialOutboundPrintModal（物料出库单）、LocationLabelPrintModal（库位贴 A4）、WageSlipPrintModal（工资条）。
+- **自开窗 window.print() 家族（6 模板自带 @bottom-center）**：SchemaPrint（自建 iframe 不走 safePrint）、buildProductionSheetHtml（生产制单）、buildQuotationPrintHtml（报价单）、MaterialPurchase utils（采购单）、PurchasePrintModal（采购单弹窗）、buildCounterpartyStatementHtml ×2（往来对账单）、useMaterialPrint（物料清单）。采购单两处原先无 @page，用 `margin-bottom: 16mm` 长边距只加底部，其余边距保持浏览器默认不改动版。
+- **验证**：Playwright page.pdf（preferCSSPageSize）按真实注入顺序合成实测——页脚出现「第 1 页 / 共 2 页」，counter(pages) 正确；10 个标签模板（吊牌/洗标/菲号/合格证/样衣二维码/快递单）margin:0 全部无页码泄漏。注意：Chrome 无头 CLI `--print-to-pdf` 与 CDP 打印管线不渲染边距盒，验证必须走 page.pdf 或真机打印对话框。
+
+**边界**：用户在打印对话框手动把「边距」选成「无」时边距区消失、页码随之裁掉——模板已声明边距，对话框默认会带上；Safari 暂不支持边距盒（用户用 Chrome 不受影响）。
 
 ---
 

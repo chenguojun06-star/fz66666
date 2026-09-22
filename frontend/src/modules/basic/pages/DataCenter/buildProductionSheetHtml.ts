@@ -115,7 +115,8 @@ export const buildProductionSheetHtml = (payload: any, tenantName?: string, extr
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>生产制单-${esc(style.styleNo || '')}</title>
   <style>
-    @page { margin: 5mm; }
+    /* D-520 打印页码：底边距区输出「第 X 页 / 共 Y 页」 */
+    @page { margin: 5mm 5mm 14mm 5mm; @bottom-center { content: "第 " counter(page) " 页 / 共 " counter(pages) " 页"; font-size: 10px; color: #999999; } }
     body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; color: var(--color-black); }
     .page { max-width: 980px; margin: 0 auto; padding: 0; }
     .header { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }

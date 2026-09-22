@@ -223,7 +223,12 @@ export const SchemaPrint: React.FC<SchemaPrintProps> = ({
         <title>${title}</title>
         <style>
           @media print {
-            @page { size: A4; margin: 10mm; }
+            /* D-520 打印页码：底边距区输出「第 X 页 / 共 Y 页」 */
+            @page {
+              size: A4;
+              margin: 10mm 10mm 14mm 10mm;
+              @bottom-center { content: "第 " counter(page) " 页 / 共 " counter(pages) " 页"; font-size: 10px; color: #999999; }
+            }
           }
         </style>
       </head>

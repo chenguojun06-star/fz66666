@@ -65,7 +65,8 @@ const buildMaterialPrintHtml = (dataList: MaterialDatabase[]): string => {
   <meta charset="UTF-8">
   <title>物料资料库清单</title>
   <style>
-    @page { margin: 12mm; }
+    /* D-520 打印页码：底边距区输出「第 X 页 / 共 Y 页」 */
+    @page { margin: 12mm 12mm 16mm 12mm; @bottom-center { content: "第 " counter(page) " 页 / 共 " counter(pages) " 页"; font-size: 10px; color: #999999; } }
     body { font-family: system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; font-size: 14px; color: var(--color-text-primary); padding: 24px; background: var(--color-bg-base); line-height: 1.7; }
     .title { text-align: center; font-size: 26px; font-weight: 700; margin-bottom: 6px; letter-spacing: 3px; }
     .subtitle { text-align: center; font-size: 13px; color: var(--color-gray-label); margin-bottom: 20px; }

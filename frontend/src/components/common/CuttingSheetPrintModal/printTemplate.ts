@@ -172,7 +172,8 @@ function buildSinglePageHtml(pageData: PrintPageData, companyName: string): stri
 const printCss = `
   @page {
     size: A4 {{ORIENTATION}};
-    margin: 5mm;
+    /* D-520 底边距留出页码条高度（页码由 safePrint 统一注入） */
+    margin: 5mm 5mm 14mm 5mm;
   }
   * {
     margin: 0;

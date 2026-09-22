@@ -146,7 +146,8 @@ export const buildQuotationPrintHtml = (params: BuildQuotationPrintHtmlParams): 
   <meta charset="UTF-8">
   <title>报价单 - ${esc(styleNo || '')}</title>
   <style>
-    @page { size: A4; margin: 10mm; }
+    /* D-520 打印页码：底边距区输出「第 X 页 / 共 Y 页」 */
+    @page { size: A4; margin: 10mm 10mm 14mm 10mm; @bottom-center { content: "第 " counter(page) " 页 / 共 " counter(pages) " 页"; font-size: 10px; color: #999999; } }
     * { box-sizing: border-box; }
     body { font-family: "Microsoft YaHei", "PingFang SC", "SimSun", sans-serif; font-size: ${FS}px; color: #1a1a1a; background: #fff; line-height: ${ROW_LH}; margin: 0; padding: 12px; }
     .title { text-align: center; font-size: 22px; font-weight: 700; letter-spacing: 6px; margin: 2px 0 2px; color: #1a1a1a; }

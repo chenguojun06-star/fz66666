@@ -100,7 +100,7 @@ const buildPrintHtml = (data: MaterialOutboundPrintPayload, tenantName?: string)
           @media print {
             body { padding: 0; }
             .page { border: 0; padding: 0; }
-            @page { margin: 5mm; }
+            @page { margin: 5mm 5mm 14mm 5mm; } /* D-520 底边距留出页码条 */
           }
         </style>
       </head>

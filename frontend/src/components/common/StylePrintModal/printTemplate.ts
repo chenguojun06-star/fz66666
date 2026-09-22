@@ -69,7 +69,8 @@ export function buildPrintHtml({
           }
 
           @page {
-            margin: 5mm 5mm 5mm 5mm;
+            /* D-520 底边距留出页码条高度（页码由 safePrint 统一注入） */
+            margin: 5mm 5mm 14mm 5mm;
             size: A4;
           }
 

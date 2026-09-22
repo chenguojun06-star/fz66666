@@ -185,6 +185,8 @@ const PurchasePrintModal: React.FC<PurchasePrintModalProps> = ({
     return `<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><title>采购单 ${orderNo || styleNo}</title>
 <style>
+  /* D-520 打印页码：只加底边距放页码条，其余边距保持浏览器默认不改动版 */
+  @page{size:A4;margin-bottom:16mm;@bottom-center{content:"第 " counter(page) " 页 / 共 " counter(pages) " 页";font-size:10px;color:#999999}}
   body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;color:#1f1f1f;padding:24px;font-size:13px}
   h1{text-align:center;font-size:20px;letter-spacing:8px;margin:0 0 16px;font-weight:600}
   .doc-head{text-align:center;margin:0 0 16px}

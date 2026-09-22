@@ -36,6 +36,16 @@ function escapeHtml(str: string): string {
 
 const PRINT_FIX_CSS = `
 <style>
+  /* D-520 全局打印页码：在底边距区输出「第 X 页 / 共 Y 页」。
+     只声明边距盒、不声明 margin/size——各模板自带 @page（加载顺序在后）照常生效；
+     标签类模板 margin:0 时边距区高度为 0，页码自动被裁掉不显示。 */
+  @page {
+    @bottom-center {
+      content: "第 " counter(page) " 页 / 共 " counter(pages) " 页";
+      font-size: 10px;
+      color: #999999;
+    }
+  }
   :root {
     color-scheme: light !important;
     /* 打印 iframe 是独立文档，不继承父页面 CSS 变量，必须用具体值（取自 design-system.css :root） */
