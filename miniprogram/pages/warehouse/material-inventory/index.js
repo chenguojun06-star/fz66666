@@ -162,6 +162,9 @@ Page({
       typeColor: resolveTypeColor(r.materialType),
       unit: r.unit || '',
       warehouseLocation: r.location || r.warehouseLocation || '-',
+      // D-514：详情页要显示仓库区域与供应商
+      warehouseAreaName: r.warehouseAreaName || '',
+      supplierName: r.supplierName || '',
       availableQty: available,
       lockedQty: locked,
       inTransitQty: 0, // 当前实体无此字段，PC 端同样以 0 显示
@@ -173,11 +176,24 @@ Page({
     };
   },
 
+  // 点卡片主体 → 物料库存详情页（D-514 修正）
+  // 原先点卡片直接跳出库页 —— 用户想「看一眼这个物料」却被推进出库流程，语义不对。
+  // 出库有明确的「出库」按钮，点卡片应该看详情。
   onRowTap: function (e) {
     const item = e.currentTarget.dataset.item;
     if (!item || !item.materialCode) return;
+    const params = [
+      'materialCode=' + encodeURIComponent(item.materialCode || ''),
+      'materialName=' + encodeURIComponent(item.materialName || ''),
+      'materialType=' + encodeURIComponent(item.materialType || ''),
+      'unit=' + encodeURIComponent(item.unit || ''),
+      'safetyStock=' + encodeURIComponent(String(item.safetyStock || 0)),
+      'warehouseAreaName=' + encodeURIComponent(item.warehouseAreaName || ''),
+      'supplierName=' + encodeURIComponent(item.supplierName || ''),
+      'image=' + encodeURIComponent(item.image || ''),
+    ];
     wx.navigateTo({
-      url: '/pages/warehouse/material-outbound/index?materialCode=' + encodeURIComponent(item.materialCode),
+      url: '/pages/warehouse/material-inventory/detail/index?' + params.join('&'),
     });
   },
 

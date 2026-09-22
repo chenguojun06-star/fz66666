@@ -174,10 +174,14 @@ Page({
           id: r.id,
           materialCode: r.materialCode || '',
           materialName: r.materialName || r.materialCode || '',
+          // D-514：详情页要按类型上色 / 显示仓库区域与供应商，这里一并带上
+          materialType: r.materialType || '',
           typeLabel: resolveTypeLabel(r.materialType),
           typeColor: resolveTypeColor(r.materialType),
           unit: r.unit || '',
           warehouseLocation: r.location || r.warehouseLocation || '-',
+          warehouseAreaName: r.warehouseAreaName || '',
+          supplierName: r.supplierName || '',
           availableQty: Math.max(0, qty - locked),
           lockedQty: locked,
           safetyStock: safety,
@@ -213,13 +217,29 @@ Page({
     this.setData({ activeTab: 'outbound', formCode: code });
   },
 
-  // 点卡片主体 → 看物料资料详情（原先误跳出库页，语义不对）
+  // 点卡片主体 → 物料库存详情页（D-514 修正）
+  // 原先我跳的是「物料资料」列表页 —— 那页自带搜索框，用户反馈
+  // 「点卡片不是详情页，里面还有搜索框，乱七八糟」。对标成品库存
+  // finished-inventory/detail：点卡片就该看这一个物料的详情。
   onInventoryDetail: function (e) {
-    var code = e.currentTarget.dataset.code;
-    if (!code) return;
-    wx.navigateTo({
-      url: '/pages/warehouse/material-database/index?keyword=' + encodeURIComponent(code),
-    });
+    var item = e.currentTarget.dataset.item;
+    if (!item || !item.materialCode) return;
+    wx.navigateTo({ url: this._buildDetailUrl(item) });
+  },
+
+  /** 组装详情页入参（图片是已带 token 的完整 URL，一并带过去省一次请求） */
+  _buildDetailUrl: function (item) {
+    var params = [
+      'materialCode=' + encodeURIComponent(item.materialCode || ''),
+      'materialName=' + encodeURIComponent(item.materialName || ''),
+      'materialType=' + encodeURIComponent(item.materialType || ''),
+      'unit=' + encodeURIComponent(item.unit || ''),
+      'safetyStock=' + encodeURIComponent(String(item.safetyStock || 0)),
+      'warehouseAreaName=' + encodeURIComponent(item.warehouseAreaName || ''),
+      'supplierName=' + encodeURIComponent(item.supplierName || ''),
+      'image=' + encodeURIComponent(item.image || ''),
+    ];
+    return '/pages/warehouse/material-inventory/detail/index?' + params.join('&');
   },
 
   // ====== 内联表单提交成功（入库/出库共用）======

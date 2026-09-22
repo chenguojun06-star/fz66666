@@ -499,6 +499,22 @@ function testEntryPoints() {
       && fs.existsSync(path.join(MP, `components/${c}/index.js`)));
   }
 
+  // D-514：点物料卡片必须进**详情页**
+  // 用户反馈「点卡片不是详情页，里面还有搜索框，乱七八糟」——
+  // 起因是我把卡片点击指向了「物料资料」列表页（自带搜索框）。
+  // 对标成品库存 finished-inventory/detail：点卡片就该看这一个物料。
+  const miJ = read('pages/warehouse/material-inventory/index.js');
+  const DETAIL = 'pages/warehouse/material-inventory/detail/index';
+  ok('物料中心点卡片进详情页', /material-inventory\/detail\/index/.test(mcJ));
+  ok('物料库存页点卡片进详情页', /material-inventory\/detail\/index/.test(miJ));
+  ok('物料中心点卡片不再跳物料资料列表页', !/material-database\/index\?keyword/.test(mcJ));
+  ok('物料库存点卡片不再直接跳出库页', !/onRowTap[\s\S]{0,500}material-outbound\/index/.test(miJ));
+  ok('详情页四件套齐全', ['js', 'wxml', 'json', 'wxss']
+    .every((ext) => fs.existsSync(path.join(MP, `${DETAIL}.${ext}`))));
+  const appJsonW = JSON.parse(fs.readFileSync(path.join(MP, 'app.json'), 'utf8'));
+  const spW = (appJsonW.subpackages || []).find((s) => s.root === 'pages/warehouse');
+  ok('app.json 已注册物料详情页', !!spW && spW.pages.includes('material-inventory/detail/index'));
+
   // D-494：列表页「出库」应直接跳 finished-outbound，不再经详情页中转
   const lJ = read('pages/warehouse/finished-inventory/index.js');
   ok('列表页有出库按钮处理', /onOutboundTap/.test(lJ));
