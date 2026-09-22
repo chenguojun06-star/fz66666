@@ -1,0 +1,37 @@
+<!-- 可搜索选择器（底部弹层）—— 通用组件 -->
+<view wx:if="{{visible}}" class="sp-mask" bindtap="onClose">
+  <view class="sp-panel" catchtap="noop">
+    <view class="sp-header">
+      <text class="sp-title">{{title}}</text>
+      <text class="sp-close" bindtap="onClose">✕</text>
+    </view>
+
+    <view class="sp-search">
+      <text class="sp-search-icon">🔍</text>
+      <input
+        class="sp-search-input"
+        value="{{keyword}}"
+        placeholder="{{placeholder}}"
+        confirm-type="search"
+        bindinput="onInput"
+      />
+      <text wx:if="{{keyword}}" class="sp-search-clear" bindtap="onClearKeyword">✕</text>
+    </view>
+
+    <scroll-view scroll-y class="sp-list" enhanced show-scrollbar="{{false}}">
+      <view wx:if="{{filtered.length === 0}}" class="sp-empty">
+        {{options.length === 0 ? '暂无可选项' : '没有匹配的选项'}}
+      </view>
+      <view
+        wx:for="{{filtered}}"
+        wx:key="value"
+        class="sp-item {{value === item.value ? 'sp-item--active' : ''}}"
+        data-index="{{index}}"
+        bindtap="onSelect"
+      >
+        <text class="sp-item-label">{{item.label}}</text>
+        <text wx:if="{{value === item.value}}" class="sp-item-check">✓</text>
+      </view>
+    </scroll-view>
+  </view>
+</view>

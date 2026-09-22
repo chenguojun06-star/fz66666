@@ -400,6 +400,21 @@ async function testMaterialInbound() {
   ok('满库位被拦截', tl && /已满/.test(tl.title || ''), tl && tl.title);
   eq('满库位未被选中', page.data.warehouseLocation, '');
 
+  // ── D-514：可搜索选择器（原生 picker 没有搜索，选项多时只能一路滚）──
+  page.openPicker({ currentTarget: { dataset: { key: 'area' } } });
+  eq('选择器已打开', page.data.pickerVisible, true);
+  eq('选择器标题正确', page.data.pickerTitle, '选择仓库区域');
+  ok('选择器带上了选项', page.data.pickerOptions.length > 0);
+  // 选中 → 必须复用 onAreaChange（换仓库 + 清库位 + 重拉库位）
+  page.setData({ warehouseLocation: 'X' });
+  const firstArea = page.data.pickerOptions[0];
+  page.onPickerSelect({ detail: { label: firstArea } });
+  await new Promise(r => setTimeout(r, 30));
+  eq('选中后回填仓库区域', page.data.warehouseAreaName, firstArea);
+  eq('选中后清空旧库位', page.data.warehouseLocation, '');
+  page.onPickerClose();
+  eq('选择器已关闭', page.data.pickerVisible, false);
+
   // ── 入库来源（对齐 PC 端 InboundDrawer，key 必须在后端白名单内）──
   page.onSelectSourceType({ currentTarget: { dataset: { key: 'external_purchase' } } });
   eq('入库来源已切换', page.data.sourceType, 'external_purchase');
@@ -496,21 +511,46 @@ function stripComments(s) {
 
 function testPickerUsage() {
   console.log('\n【结构：选择器实现】');
-  const pages = [
+  // ① 大货出入库仍用原生 picker（选项少，够用）
+  const nativePages = [
     ['pages/warehouse/finished-outbound/index.wxml', 2],   // 仓库区域 + 客户
     ['pages/warehouse/finished-inbound/index.wxml', 1],    // 仓库区域
-    // D-514：物料出入库表单已抽成通用组件，picker 随之搬进组件（页面只是壳）
-    ['components/material-inbound-form/index.wxml', 1],    // 仓库区域
-    ['components/material-outbound-form/index.wxml', 4],   // 订单/工厂/领料人/仓库区域
   ];
-  for (const [rel, minPickers] of pages) {
+  for (const [rel, minPickers] of nativePages) {
     const s = stripComments(fs.readFileSync(path.join(MP, rel), 'utf8'));
     const n = (s.match(/<picker\s/g) || []).length;
     ok(`${path.basename(path.dirname(rel))} 至少 ${minPickers} 个 picker`, n >= minPickers, `实际 ${n}`);
     ok(`${path.basename(path.dirname(rel))} 未使用 showActionSheet`, !/showActionSheet/.test(s));
   }
-  // 四个页面 JS 里也不该再有 showActionSheet
-  for (const rel of pages.map(p => p[0].replace('.wxml', '.js'))) {
+
+  // ② D-514：物料出入库表单的选项多（订单/工厂/领料人常有上百条），
+  //    而微信原生 picker **没有搜索**，只能一路滚 → 必须换成可搜索的 search-picker。
+  //    这条同时守住"别把可搜索选择器改回原生 picker"。
+  const searchPages = [
+    ['components/material-inbound-form/index.wxml', 2],   // 仓库区域 + 库位
+    ['components/material-outbound-form/index.wxml', 4],  // 订单/工厂/领料人/仓库区域
+  ];
+  for (const [rel, minRows] of searchPages) {
+    const name = path.basename(path.dirname(rel));
+    const s = stripComments(fs.readFileSync(path.join(MP, rel), 'utf8'));
+    eq(`${name} 已不再用原生 picker`, (s.match(/<picker\s/g) || []).length, 0);
+    const rows = (s.match(/bindtap="openPicker"/g) || []).length;
+    ok(`${name} 至少 ${minRows} 个可搜索选择入口`, rows >= minRows, `实际 ${rows}`);
+    ok(`${name} 已挂 search-picker`, /<search-picker/.test(s));
+    ok(`${name} 未使用 showActionSheet`, !/showActionSheet/.test(s));
+  }
+  // 组件必须在各自 json 里注册 search-picker，否则真机白屏
+  for (const rel of ['components/material-inbound-form/index.json', 'components/material-outbound-form/index.json']) {
+    const j = JSON.parse(fs.readFileSync(path.join(MP, rel), 'utf8'));
+    ok(`${path.basename(path.dirname(rel))} 已注册 search-picker`, !!j.usingComponents['search-picker']);
+  }
+  // search-picker 自身四件套要齐全
+  for (const ext of ['js', 'json', 'wxml', 'wxss']) {
+    ok(`search-picker 有 .${ext}`, fs.existsSync(path.join(MP, `components/search-picker/index.${ext}`)));
+  }
+  // 相关 JS 里也不该再有 showActionSheet
+  const allJs = nativePages.concat(searchPages).map((p) => p[0].replace('.wxml', '.js'));
+  for (const rel of allJs) {
     const s = stripComments(fs.readFileSync(path.join(MP, rel), 'utf8'));
     ok(`${path.basename(path.dirname(rel))} JS 无 showActionSheet`, !/showActionSheet/.test(s));
   }
@@ -687,6 +727,49 @@ async function testMaterialFormPagesDecode() {
   eq('物料出库页无参数时为空串', empty.data.materialCode, '');
 }
 
+/**
+ * 可搜索选择器 search-picker —— 通用组件
+ *
+ * 用户反馈：「这些选着 全部要支持搜索 固定的选着是最麻烦的 要找很久」。
+ * 微信原生 <picker mode="selector"> 没有搜索，本组件是全仓 53 个固定列表选择器的替代方案。
+ */
+async function testSearchPicker() {
+  console.log('\n【可搜索选择器 search-picker（通用组件）】');
+  const { page } = loadComponent('components/search-picker/index.js', makeApi());
+
+  page.setData({ options: ['北京仓', '广州仓', '上海仓'], keyword: '' });
+  page._filter();
+  eq('无关键字时全量展示', page.data.filtered.length, 3);
+
+  page.setData({ keyword: '广州' });
+  page._filter();
+  eq('按关键字过滤', page.data.filtered.length, 1);
+  eq('过滤结果正确', page.data.filtered[0].label, '广州仓');
+
+  // {label,value} 写法：value 也要参与匹配
+  page.setData({ options: [{ label: 'WH-Beijing', value: 'wh-1' }], keyword: 'wh-1' });
+  page._filter();
+  eq('按 value 也能搜到', page.data.filtered.length, 1);
+  eq('value 被正确带出', page.data.filtered[0].value, 'wh-1');
+
+  page.setData({ options: ['北京仓'], keyword: 'zzz' });
+  page._filter();
+  eq('无匹配时列表为空', page.data.filtered.length, 0);
+
+  // 选中要抛事件（父组件据此回填）
+  page.setData({ options: ['北京仓', '广州仓'], keyword: '' });
+  page._filter();
+  page.onSelect({ currentTarget: { dataset: { index: 1 } } });
+  const sel = page.events.find((e) => e[0] === 'select');
+  ok('选中抛 select 事件', !!sel && sel[1].label === '广州仓', sel && JSON.stringify(sel[1]));
+  ok('选中后同时抛 close', page.events.some((e) => e[0] === 'close'));
+
+  // 空选项不能炸
+  page.setData({ options: [], keyword: '' });
+  page._filter();
+  eq('空选项不报错', page.data.filtered.length, 0);
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -700,6 +783,7 @@ try {
   await testMaterialOutbound();
   await testMaterialDetail();
   await testMaterialFormPagesDecode();
+  await testSearchPicker();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

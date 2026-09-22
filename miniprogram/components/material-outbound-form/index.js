@@ -91,6 +91,14 @@ Component({
     warehouseAreaName: '',
 
     reason: '',
+
+    // 可搜索选择器（替代原生 picker —— 微信原生 picker **没有搜索**，
+    // 订单/工厂/领料人常有上百条，只能一路滚，用户反馈"要找很久"）
+    pickerVisible: false,
+    pickerTitle: '',
+    pickerOptions: [],
+    pickerKey: '',
+    pickerValue: '',
   },
 
   lifetimes: {
@@ -242,6 +250,52 @@ Component({
     },
 
     // ────────── 各项选择 ──────────
+
+    // ────────── 可搜索选择器 ──────────
+    // 把原来的 4 个原生 <picker> 统一换成底部可搜索弹层。
+    // 选中后仍复用原有的 onXxxChange 处理器（逻辑只保留一份）。
+
+    /** 打开某个字段的选择器 */
+    openPicker: function (e) {
+      var key = e.currentTarget.dataset.key;
+      var map = {
+        order: { title: '选择关联订单', names: this.data.orderNames, current: this.data.orderNo },
+        factory: { title: '选择关联工厂', names: this.data.factoryNames, current: this.data.factoryName },
+        receiver: { title: '选择领料人', names: this.data.receiverNames, current: this.data.receiverName },
+        area: { title: '选择仓库区域', names: this.data.areaNames, current: this.data.warehouseAreaName },
+      };
+      var cfg = map[key];
+      if (!cfg) return;
+      this.setData({
+        pickerKey: key,
+        pickerTitle: cfg.title,
+        pickerOptions: cfg.names || [],
+        pickerValue: cfg.current || '',
+        pickerVisible: true,
+      });
+    },
+
+    onPickerClose: function () {
+      this.setData({ pickerVisible: false });
+    },
+
+    /** 选中 → 按 label 反查下标 → 复用原有的 change 处理器 */
+    onPickerSelect: function (e) {
+      var key = this.data.pickerKey;
+      var label = (e.detail && e.detail.label) || '';
+      var names =
+        key === 'order' ? this.data.orderNames
+        : key === 'factory' ? this.data.factoryNames
+        : key === 'receiver' ? this.data.receiverNames
+        : this.data.areaNames;
+      var idx = (names || []).indexOf(label);
+      if (idx < 0) return;
+      var ev = { detail: { value: idx } };
+      if (key === 'order') this.onOrderChange(ev);
+      else if (key === 'factory') this.onFactoryChange(ev);
+      else if (key === 'receiver') this.onReceiverChange(ev);
+      else if (key === 'area') this.onAreaChange(ev);
+    },
 
     /**
      * ⚠️ 统一用 <picker mode="selector"> 而非 wx.showActionSheet：
