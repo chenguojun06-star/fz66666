@@ -95,6 +95,8 @@
               <text class="sku-name">{{item.color}} / {{item.size}}</text>
               <text class="sku-meta">现有库存 {{item.availableQty}} 件</text>
             </view>
+            <!-- D-513：成本价（PC 端入库有单价列，手机端原先没有） -->
+            <text class="sku-price">¥{{item.costPrice || 0}}</text>
           </view>
 
           <view class="stepper" wx:if="{{selected[item.id]}}">
@@ -107,6 +109,19 @@
               bindinput="onQtyInput"
             />
             <view class="stepper-btn" data-id="{{item.id}}" catchtap="onQtyPlus">+</view>
+          </view>
+
+          <!-- D-513：成本价可改（提交到 items[].unitPrice） -->
+          <view class="price-row" wx:if="{{selected[item.id]}}">
+            <text class="price-label">成本价</text>
+            <input
+              class="price-input"
+              type="digit"
+              value="{{item.costPrice}}"
+              data-id="{{item.id}}"
+              bindinput="onPriceInput"
+            />
+            <text class="price-unit">元</text>
           </view>
         </view>
       </view>

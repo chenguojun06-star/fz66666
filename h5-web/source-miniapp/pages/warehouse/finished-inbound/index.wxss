@@ -234,3 +234,38 @@
   border-radius: var(--radius-lg, 8px);
 }
 .submit-btn--disabled { opacity: 0.6; }
+
+/* D-513 成本价（PC 端入库有单价列，手机端补齐） */
+.sku-price {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary, #1d1d1f);
+  margin-left: var(--space-8, 8rpx);
+}
+.price-row {
+  display: flex;
+  align-items: center;
+  margin-top: var(--space-8, 8rpx);
+  padding-top: var(--space-8, 8rpx);
+  border-top: 1rpx dashed var(--color-border, #eee);
+}
+.price-label {
+  font-size: 12px;
+  color: var(--color-text-secondary, #666);
+  width: 100rpx;
+  flex-shrink: 0;
+}
+.price-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--color-text-primary, #1d1d1f);
+  text-align: right;
+}
+.price-unit {
+  font-size: 12px;
+  color: var(--color-text-secondary, #666);
+  margin-left: var(--space-8, 8rpx);
+  flex-shrink: 0;
+}
