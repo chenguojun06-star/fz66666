@@ -26,6 +26,10 @@
         <text class="mat-meta">编码 {{materialInfo.materialCode || materialCode}}</text>
         <text class="mat-meta" wx:if="{{typeLabel}}">类型 {{typeLabel}}</text>
         <text class="mat-meta" wx:if="{{materialInfo.color}}">颜色 {{materialInfo.color}}</text>
+        <!-- D-514：面料属性**只读展示**，从「物料资料」读取（手机端不需要填写） -->
+        <text class="mat-meta" wx:if="{{isFabric && fabricWidth}}">幅宽 {{fabricWidth}}</text>
+        <text class="mat-meta" wx:if="{{isFabric && fabricWeight}}">克重 {{fabricWeight}}</text>
+        <text class="mat-meta" wx:if="{{isFabric && fabricComposition}}">成分 {{fabricComposition}}</text>
         <!-- D-514：面料不显示「规格」—— 库里存的是服装码数(XS/S/M/L)，对 面料 没意义。
              PC 端对 面料 走的是「幅宽/克重/成分」，不问码数。 -->
         <text class="mat-meta" wx:if="{{materialInfo.size && !isFabric}}">规格 {{materialInfo.size}}</text>

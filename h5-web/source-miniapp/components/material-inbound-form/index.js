@@ -79,6 +79,10 @@ Component({
     // 面料/里料/辅料 —— 决定「规格(码数)」显不显示（面料不显示服装码数）
     isFabric: false,
     typeLabel: '',
+    // 面料属性：**只读展示**，从「物料资料」读取（手机端不填）
+    fabricWidth: '',
+    fabricWeight: '',
+    fabricComposition: '',
 
     // 入库来源（对齐 PC 端 InboundDrawer）
     sourceTypes: SOURCE_TYPES,
@@ -166,9 +170,45 @@ Component({
           queried: true,
           loading: false,
         });
+        // 面料额外读「物料资料」的幅宽/克重/成分（只读展示，手机端不需要填）
+        if (mtype === 'fabric') {
+          this.loadFabricInfo(this.data.materialCode);
+        } else {
+          this.setData({ fabricWidth: '', fabricWeight: '', fabricComposition: '' });
+        }
       } catch (e) {
         this.setData({ queried: true, loading: false, materialInfo: null });
         wx.showToast({ title: (e && e.message) || '查询失败', icon: 'none' });
+      }
+    },
+
+    /**
+     * 读取「物料资料」里的面料属性（幅宽 / 克重 / 成分）—— **只读展示，手机端不填**
+     *
+     * 为什么读物料资料、而不是读库存记录：
+     *   MaterialStock 和 MaterialDatabase 都有 fabricWidth/Weight/Composition，
+     *   但全仓搜 `setFabricWidth` 对 **MaterialStock 零命中** —— 库存表这三个字段
+     *   后端从来没有写入过，读它永远是空。
+     *   「物料资料」才是 PC 端维护它们的地方
+     *   （MaterialFormDrawer.tsx 的「幅宽 / 克重 / 成分」）。
+     */
+    loadFabricInfo: async function (code) {
+      if (!code) return;
+      try {
+        var res = await api.material.listDatabase({ keyword: code, page: 1, pageSize: 10 });
+        var list = (res && res.records) || (Array.isArray(res) ? res : []) || [];
+        var hit = null;
+        for (var i = 0; i < list.length; i++) {
+          if (list[i] && list[i].materialCode === code) { hit = list[i]; break; }
+        }
+        this.setData({
+          fabricWidth: (hit && hit.fabricWidth) || '',
+          fabricWeight: (hit && hit.fabricWeight) || '',
+          fabricComposition: (hit && hit.fabricComposition) || '',
+        });
+      } catch (e) {
+        // 读不到不影响入库主流程，只在控制台留痕
+        console.warn('[物料入库] 读取面料属性失败', e);
       }
     },
 
