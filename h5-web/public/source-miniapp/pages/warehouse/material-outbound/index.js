@@ -1,4 +1,3 @@
-const { decodeParam } = require('../../../utils/urlParams');
 /**
  * 物料出库（独立页 D-514）
  *
@@ -8,6 +7,7 @@ const { decodeParam } = require('../../../utils/urlParams');
  *   ① 从 URL 取 materialCode 传给组件（物料库存页点「出库」会带）
  *   ② 组件提交成功后刷新上一页列表并返回
  */
+const { decodeParam } = require('../../../utils/urlParams');
 Page({
   data: {
     materialCode: '',
