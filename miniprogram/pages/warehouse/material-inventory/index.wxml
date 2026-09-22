@@ -40,30 +40,39 @@
   <!-- 列表 -->
   <view class="card-list">
     <view class="card" wx:for="{{list}}" wx:key="id" data-item="{{item}}" bindtap="onRowTap">
-      <view class="card-top">
-        <view class="type-tag" style="background: {{item.typeColor}};">{{item.typeLabel}}</view>
-        <view class="card-name">{{item.materialName}}</view>
-        <view wx:if="{{item.lowStock}}" class="low-tag">低库存</view>
-      </view>
-
-      <!-- 主行：编码 + 可用库存（最大信息密度，一眼扫完） -->
-      <view class="card-main">
-        <text class="card-code">{{item.materialCode}}</text>
-        <view class="stock-main">
-          <text class="stock-label">可用</text>
-          <text class="stock-value {{item.isZero ? 'is-zero' : (item.lowStock ? 'is-low' : '')}}">{{item.availableQty}}</text>
-          <text class="stock-unit">{{item.unit}}</text>
+      <view class="card-header">
+        <!-- D-514：物料图片（后端 materialImage 已带 token，与成品库存同样式 44x44） -->
+        <image wx:if="{{item.image}}" src="{{item.image}}" mode="aspectFit" class="item-image" />
+        <view wx:else class="item-image item-image--placeholder">
+          <text class="item-image-text">料</text>
         </view>
-      </view>
+        <view class="item-info">
+          <view class="card-top">
+            <view class="type-tag" style="background: {{item.typeColor}};">{{item.typeLabel}}</view>
+            <view class="card-name">{{item.materialName}}</view>
+            <view wx:if="{{item.lowStock}}" class="low-tag">低库存</view>
+          </view>
 
-      <!-- 次要信息：在途/锁定/安全库存/库位 合并一行 -->
-      <view class="card-sub">
-        <text wx:if="{{item.inTransitQty > 0}}">在途 {{item.inTransitQty}}</text>
-        <text wx:if="{{item.inTransitQty > 0 && item.lockedQty > 0}}"> · </text>
-        <text wx:if="{{item.lockedQty > 0}}">锁定 {{item.lockedQty}}</text>
-        <text wx:if="{{(item.inTransitQty > 0 || item.lockedQty > 0) && item.safetyStock > 0}}"> · </text>
-        <text wx:if="{{item.safetyStock > 0}}">安全 {{item.safetyStock}}</text>
-        <text wx:if="{{item.warehouseLocation}}" class="card-loc">库位 {{item.warehouseLocation}}</text>
+          <!-- 主行：编码 + 可用库存（最大信息密度，一眼扫完） -->
+          <view class="card-main">
+            <text class="card-code">{{item.materialCode}}</text>
+            <view class="stock-main">
+              <text class="stock-label">可用</text>
+              <text class="stock-value {{item.isZero ? 'is-zero' : (item.lowStock ? 'is-low' : '')}}">{{item.availableQty}}</text>
+              <text class="stock-unit">{{item.unit}}</text>
+            </view>
+          </view>
+
+          <!-- 次要信息：在途/锁定/安全库存/库位 合并一行 -->
+          <view class="card-sub">
+            <text wx:if="{{item.inTransitQty > 0}}">在途 {{item.inTransitQty}}</text>
+            <text wx:if="{{item.inTransitQty > 0 && item.lockedQty > 0}}"> · </text>
+            <text wx:if="{{item.lockedQty > 0}}">锁定 {{item.lockedQty}}</text>
+            <text wx:if="{{(item.inTransitQty > 0 || item.lockedQty > 0) && item.safetyStock > 0}}"> · </text>
+            <text wx:if="{{item.safetyStock > 0}}">安全 {{item.safetyStock}}</text>
+            <text wx:if="{{item.warehouseLocation}}" class="card-loc">库位 {{item.warehouseLocation}}</text>
+          </view>
+        </view>
       </view>
 
       <!-- D-513：手机端快捷操作（原先点卡片直接跳出库，易误触） -->

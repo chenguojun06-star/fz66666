@@ -1,120 +1,154 @@
-/* 物料库存查询页 - 手机端 */
+/* 物料库存查询页 - 手机端（D-514）
+ * 视觉风格：与 material-center 的「库存」tab / material-database 完全同构
+ * - 全部使用 design-tokens，禁止硬编码颜色/尺寸（app.wxss 约定）
+ * - 尺寸由 rpx 改为 px + token，与同模块其它页保持同一渲染比例
+ * - 原 .act-btn--in 用的是旧主色 #2563eb，现改回 token 主色 #2D7FF9
+ */
+
 .page {
   min-height: 100vh;
-  background: #f5f6f8;
-  padding-bottom: 24rpx;
+  padding: var(--page-padding-y) var(--page-padding-x);
+  padding-bottom: calc(var(--spacing-xl) + env(safe-area-inset-bottom));
 }
 
 /* 搜索框 + 扫码 由通用组件 sticky-search-bar 提供，这里只定义筛选器 slot 内容 */
 .filter-pickers {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 .filter-picker {
   display: flex;
   align-items: center;
   gap: 2px;
-  background: var(--color-bg-card, #fff);
-  border-radius: var(--radius-sm, 4px);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-sm);
   padding: 0 10px;
   height: 32px;
   flex: 1;
-  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  box-shadow: var(--shadow-sm);
   box-sizing: border-box;
 }
 .filter-picker-text {
   flex: 1;
   min-width: 0;
-  font-size: var(--font-size-xs, 12px);
-  color: var(--color-text-secondary, #6b7280);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .filter-picker-arrow {
-  font-size: var(--font-size-xxs, 11px);
-  color: var(--color-text-tertiary, #9ca3af);
+  font-size: var(--font-size-xxs);
+  color: var(--color-text-tertiary);
   flex-shrink: 0;
 }
 
-/* 统计 */
+/* 统计（对齐 material-center 的 .total-bar） */
 .summary-row {
-  padding: 16rpx 24rpx 8rpx;
-  font-size: 24rpx;
-  color: #6b7280;
+  padding: var(--spacing-sm) 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
-/* 加载/空状态 */
+/* 加载/空状态（对齐 material-center 的 -wrap / -text / -sub） */
 .loading-state,
 .empty-state {
-  padding: 80rpx 24rpx;
-  text-align: center;
-  font-size: 26rpx;
-  color: #9ca3af;
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
+  align-items: center;
+  padding-top: 120px;
+  font-size: var(--font-size-md-lg);
+  color: var(--color-text-secondary);
 }
 .empty-hint {
-  font-size: 22rpx;
-  color: #c0c4cc;
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
 /* 卡片列表 */
 .card-list {
-  padding: 0 24rpx;
   display: flex;
   flex-direction: column;
-  gap: 12rpx;
-  margin-top: 8rpx;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
 }
 .card {
-  background: #fff;
-  border-radius: 12rpx;
-  padding: 14rpx 20rpx;
-  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  box-shadow: var(--shadow-sm);
+}
+/* D-514：卡片头 = 图片(44x44) + 右侧信息，与成品库存 / 物料中心同构 */
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+}
+.item-image {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  flex-shrink: 0;
+  background: var(--color-bg-page);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.item-image--placeholder {
+  background: var(--color-primary-bg);
+}
+.item-image-text {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+}
+.item-info {
+  flex: 1;
+  min-width: 0;
 }
 .card-top {
   display: flex;
   align-items: center;
-  gap: 12rpx;
+  gap: var(--spacing-sm);
 }
 .type-tag {
-  padding: 2rpx 12rpx;
-  border-radius: 8rpx;
-  font-size: 20rpx;
-  color: #fff;
+  padding: 2px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-white);
   flex-shrink: 0;
 }
 .card-name {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #111827;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .low-tag {
-  padding: 2rpx 10rpx;
-  background: #fef2f2;
-  color: #dc2626;
-  border-radius: 8rpx;
-  font-size: 20rpx;
+  padding: 2px 8px;
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-2xs);
   flex-shrink: 0;
 }
 /* D-513 手机端紧凑卡片: 编码与可用库存同一行, 次要信息合并一行 */
 .card-main {
-  margin-top: 8rpx;
+  margin-top: var(--spacing-sm);
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12rpx;
+  gap: var(--spacing-sm);
 }
 .card-code {
-  font-size: 22rpx;
-  color: #9ca3af;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -125,80 +159,80 @@
 .stock-main {
   display: flex;
   align-items: baseline;
-  gap: 6rpx;
+  gap: var(--spacing-xs);
   flex-shrink: 0;
 }
 .stock-label {
-  font-size: 22rpx;
-  color: #6b7280;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
 }
 .stock-value {
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #10b981;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success);
   font-variant-numeric: tabular-nums;
 }
 .stock-value.is-low {
-  color: #dc2626;
+  color: var(--color-danger);
 }
 .stock-value.is-zero {
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
 }
 .stock-unit {
-  font-size: 22rpx;
-  color: #6b7280;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
 }
 
 /* 次要信息: 在途/锁定/安全/库位 合并一行 */
 .card-sub {
-  margin-top: 6rpx;
-  font-size: 21rpx;
-  color: #6b7280;
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
   display: flex;
   align-items: baseline;
-  gap: 6rpx;
+  gap: var(--spacing-xs);
   flex-wrap: wrap;
 }
 .card-loc {
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
   margin-left: auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 240rpx;
+  max-width: 160px;
 }
 
-/* D-513 快捷操作按钮: 手机端手指点击友好(最小高度 56rpx) */
+/* D-513 快捷操作按钮: 手机端手指点击友好(最小高度 32px) */
 .card-actions {
-  margin-top: 12rpx;
-  padding-top: 12rpx;
-  border-top: 1rpx solid #f0f1f3;
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
   display: flex;
   justify-content: flex-end;
-  gap: 16rpx;
+  gap: var(--spacing-sm);
 }
 .act-btn {
-  min-height: 56rpx;
-  line-height: 54rpx;
-  padding: 0 32rpx;
-  border-radius: 28rpx;
-  font-size: 24rpx;
+  min-height: 32px;
+  line-height: 30px;
+  padding: 0 var(--spacing-lg);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
   text-align: center;
 }
 .act-btn--in {
-  color: #2563eb;
-  background: #eff6ff;
-  border: 1rpx solid #bfdbfe;
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-primary-border);
 }
 .act-btn--out {
-  color: #fff;
-  background: #2563eb;
+  color: var(--color-text-white);
+  background: var(--color-primary);
 }
 
 /* 加载更多 */
 .loadmore {
-  padding: 24rpx;
+  padding: var(--spacing-md);
   text-align: center;
-  font-size: 22rpx;
-  color: #9ca3af;
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-tertiary);
 }
