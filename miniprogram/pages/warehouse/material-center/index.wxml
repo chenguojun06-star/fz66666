@@ -1,0 +1,135 @@
+<view class="page">
+  <!-- 共享 header：搜索 + 扫码 + 类型筛选 -->
+  <view class="filter-bar">
+    <view class="search-row">
+      <input class="search-input" placeholder="搜索物料编码或名称" value="{{keyword}}" bindinput="onSearchInput" bindconfirm="onSearchConfirm" confirm-type="search" />
+      <view class="scan-btn" bindtap="onScanTap" hover-class="scan-btn--active">
+        <text class="scan-icon">📷</text>
+      </view>
+      <view class="search-btn" bindtap="onSearchConfirm">搜索</view>
+    </view>
+    <picker mode="selector" range="{{typeOptions}}" range-key="label" value="{{typeIndex}}" bindchange="onTypeChange">
+      <view class="picker-row">
+        <text class="picker-label">类型</text>
+        <text class="picker-value">{{typeOptions[typeIndex].label}}</text>
+      </view>
+    </picker>
+  </view>
+
+  <!-- 5 个 tab 切换 -->
+  <view class="tab-bar">
+    <view
+      wx:for="{{tabs}}"
+      wx:key="key"
+      class="tab-item {{activeTab === item.key ? 'tab-item--active' : ''}}"
+      data-key="{{item.key}}"
+      bindtap="onTabTap"
+    >
+      <text>{{item.label}}</text>
+    </view>
+  </view>
+
+  <!-- 库存 tab：inline 列表（用户最常用） -->
+  <view class="tab-body" wx:if="{{activeTab === 'inventory'}}">
+    <view class="summary-row" wx:if="{{inventoryList.length > 0}}">
+      <text>共 {{inventoryTotal}} 条</text>
+    </view>
+    <view class="loading-state" wx:if="{{loading && inventoryList.length === 0}}">
+      <text>加载中…</text>
+    </view>
+    <view class="empty-state" wx:if="{{!loading && inventoryList.length === 0}}">
+      <text>暂无物料库存数据</text>
+      <text class="empty-hint">先在 PC 端物料仓储录入物料</text>
+    </view>
+    <view class="card-list">
+      <view class="card" wx:for="{{inventoryList}}" wx:key="id">
+        <view class="card-top" data-code="{{item.materialCode}}" bindtap="onInventoryDetail">
+          <view class="type-tag" style="background: {{item.typeColor}};">{{item.typeLabel}}</view>
+          <view class="card-name">{{item.materialName}}</view>
+          <view wx:if="{{item.lowStock}}" class="low-tag">低库存</view>
+        </view>
+        <view class="card-main" data-code="{{item.materialCode}}" bindtap="onInventoryDetail">
+          <text class="card-code">{{item.materialCode}}</text>
+          <view class="stock-main">
+            <text class="stock-label">可用</text>
+            <text class="stock-value {{item.isZero ? 'is-zero' : (item.lowStock ? 'is-low' : '')}}">{{item.availableQty}}</text>
+            <text class="stock-unit">{{item.unit}}</text>
+          </view>
+        </view>
+        <view class="card-sub" data-code="{{item.materialCode}}" bindtap="onInventoryDetail">
+          <text wx:if="{{item.lockedQty > 0}}">锁定 {{item.lockedQty}}</text>
+          <text wx:if="{{item.lockedQty > 0 && item.safetyStock > 0}}"> · </text>
+          <text wx:if="{{item.safetyStock > 0}}">安全 {{item.safetyStock}}</text>
+          <text wx:if="{{item.warehouseLocation}}" class="card-loc">库位 {{item.warehouseLocation}}</text>
+        </view>
+        <view class="card-actions">
+          <view class="act-btn act-btn--in" catchtap="onInventoryInbound" data-code="{{item.materialCode}}">入库</view>
+          <view class="act-btn act-btn--out" catchtap="onInventoryOutbound" data-code="{{item.materialCode}}">出库</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 入库 tab：跳转卡片 -->
+  <view class="tab-body" wx:elif="{{activeTab === 'inbound'}}">
+    <view class="launcher" bindtap="gotoInbound">
+      <view class="launcher-icon launcher-icon--in">+</view>
+      <view class="launcher-info">
+        <view class="launcher-title">物料入库</view>
+        <view class="launcher-desc">扫码 / 选物料 → 填数量 → 提交入库</view>
+      </view>
+      <view class="launcher-arrow">›</view>
+    </view>
+    <view class="launcher-tips">
+      <view>• 支持从物料库存卡片直接「入库」</view>
+      <view>• 也可从顶部 📷扫码 进入</view>
+    </view>
+  </view>
+
+  <!-- 出库 tab：跳转卡片 -->
+  <view class="tab-body" wx:elif="{{activeTab === 'outbound'}}">
+    <view class="launcher" bindtap="gotoOutbound">
+      <view class="launcher-icon launcher-icon--out">−</view>
+      <view class="launcher-info">
+        <view class="launcher-title">物料出库</view>
+        <view class="launcher-desc">选物料 → 填数量 → 提交出库</view>
+      </view>
+      <view class="launcher-arrow">›</view>
+    </view>
+    <view class="launcher-tips">
+      <view>• 支持从物料库存卡片直接「出库」</view>
+      <view>• 领料出库走「领料」tab</view>
+    </view>
+  </view>
+
+  <!-- 领料 tab：跳转卡片 -->
+  <view class="tab-body" wx:elif="{{activeTab === 'picking'}}">
+    <view class="launcher" bindtap="gotoPicking">
+      <view class="launcher-icon launcher-icon--picking">≡</view>
+      <view class="launcher-info">
+        <view class="launcher-title">领料出库</view>
+        <view class="launcher-desc">查看待办领料通知 → 确认出库</view>
+      </view>
+      <view class="launcher-arrow">›</view>
+    </view>
+    <view class="launcher-tips">
+      <view>• 「可办事」中带 [领料] 角标的会直接跳到此页</view>
+    </view>
+  </view>
+
+  <!-- 料卷 tab：扫码入口 -->
+  <view class="tab-body" wx:elif="{{activeTab === 'scan'}}">
+    <view class="launcher" bindtap="gotoScan">
+      <view class="launcher-icon launcher-icon--scan">📷</view>
+      <view class="launcher-info">
+        <view class="launcher-title">料卷出库 / 退回</view>
+        <view class="launcher-desc">扫料卷二维码 → 选择出库或退回</view>
+      </view>
+      <view class="launcher-arrow">›</view>
+    </view>
+    <view class="launcher-tips">
+      <view>• 顶部搜索栏旁的 📷 也能直接跳到这</view>
+      <view>• 退回流程：扫料卷 → 选择「退回」</view>
+    </view>
+  </view>
+</view>
