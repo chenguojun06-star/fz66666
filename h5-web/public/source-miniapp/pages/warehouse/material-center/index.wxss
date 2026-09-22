@@ -141,6 +141,35 @@ page {
   padding: 12px;
   box-shadow: var(--shadow-sm);
 }
+/* D-514：卡片头 = 图片(44x44) + 右侧信息，与成品库存卡片同构 */
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+}
+.item-image {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  flex-shrink: 0;
+  background: var(--color-bg-page);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.item-image--placeholder {
+  background: var(--color-primary-bg);
+}
+.item-image-text {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+}
+.item-info {
+  flex: 1;
+  min-width: 0;
+}
 .card-top {
   display: flex;
   align-items: center;

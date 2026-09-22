@@ -49,24 +49,33 @@
     </view>
     <view class="card-list">
       <view class="card" wx:for="{{inventoryList}}" wx:key="id">
-        <view class="card-top" data-code="{{item.materialCode}}" bindtap="onInventoryDetail">
-          <view class="type-tag" style="background: {{item.typeColor}};">{{item.typeLabel}}</view>
-          <view class="card-name">{{item.materialName}}</view>
-          <view wx:if="{{item.lowStock}}" class="low-tag">低库存</view>
-        </view>
-        <view class="card-main" data-code="{{item.materialCode}}" bindtap="onInventoryDetail">
-          <text class="card-code">{{item.materialCode}}</text>
-          <view class="stock-main">
-            <text class="stock-label">可用</text>
-            <text class="stock-value {{item.isZero ? 'is-zero' : (item.lowStock ? 'is-low' : '')}}">{{item.availableQty}}</text>
-            <text class="stock-unit">{{item.unit}}</text>
+        <view class="card-header" data-code="{{item.materialCode}}" bindtap="onInventoryDetail">
+          <!-- D-514：物料图片（后端 materialImage 已带 token，与成品库存同样式 44x44） -->
+          <image wx:if="{{item.image}}" src="{{item.image}}" mode="aspectFit" class="item-image" />
+          <view wx:else class="item-image item-image--placeholder">
+            <text class="item-image-text">料</text>
           </view>
-        </view>
-        <view class="card-sub" data-code="{{item.materialCode}}" bindtap="onInventoryDetail">
-          <text wx:if="{{item.lockedQty > 0}}">锁定 {{item.lockedQty}}</text>
-          <text wx:if="{{item.lockedQty > 0 && item.safetyStock > 0}}"> · </text>
-          <text wx:if="{{item.safetyStock > 0}}">安全 {{item.safetyStock}}</text>
-          <text wx:if="{{item.warehouseLocation}}" class="card-loc">库位 {{item.warehouseLocation}}</text>
+          <view class="item-info">
+            <view class="card-top">
+              <view class="type-tag" style="background: {{item.typeColor}};">{{item.typeLabel}}</view>
+              <view class="card-name">{{item.materialName}}</view>
+              <view wx:if="{{item.lowStock}}" class="low-tag">低库存</view>
+            </view>
+            <view class="card-main">
+              <text class="card-code">{{item.materialCode}}</text>
+              <view class="stock-main">
+                <text class="stock-label">可用</text>
+                <text class="stock-value {{item.isZero ? 'is-zero' : (item.lowStock ? 'is-low' : '')}}">{{item.availableQty}}</text>
+                <text class="stock-unit">{{item.unit}}</text>
+              </view>
+            </view>
+            <view class="card-sub">
+              <text wx:if="{{item.lockedQty > 0}}">锁定 {{item.lockedQty}}</text>
+              <text wx:if="{{item.lockedQty > 0 && item.safetyStock > 0}}"> · </text>
+              <text wx:if="{{item.safetyStock > 0}}">安全 {{item.safetyStock}}</text>
+              <text wx:if="{{item.warehouseLocation}}" class="card-loc">库位 {{item.warehouseLocation}}</text>
+            </view>
+          </view>
         </view>
         <view class="card-actions">
           <view class="act-btn act-btn--in" catchtap="onInventoryInbound" data-code="{{item.materialCode}}">入库</view>
