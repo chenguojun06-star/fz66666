@@ -1,7 +1,5 @@
 {
   "navigationBarTitleText": "物料中心",
-  "navigationBarBackgroundColor": "#2563eb",
-  "navigationBarTextStyle": "white",
   "enablePullDownRefresh": true,
   "usingComponents": {
     "sticky-search-bar": "/components/sticky-search-bar/index"
