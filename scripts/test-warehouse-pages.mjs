@@ -619,6 +619,31 @@ async function testMaterialDetail() {
   eq('decodeParam undefined 返回空串', decodeParam(undefined), '');
 }
 
+/**
+ * 物料出入库**独立页**（薄壳）—— 回归 URL 参数解码
+ *
+ * 真实事故（2026-09-22 用户截图）：从详情页点「出库」跳到物料出库页，
+ * 输入框里显示 M%E6%A3%89%E5%B8%83-140CM-… 并提示「未查到该物料」。
+ * 根因同上：跳转方 encodeURIComponent，薄壳页 onLoad 忘了 decode。
+ */
+async function testMaterialFormPagesDecode() {
+  console.log('\n【物料出入库独立页：URL 参数解码】');
+  const RAW = 'M棉布-140CM-粉色';
+  const pages = [
+    ['pages/warehouse/material-inbound/index.js', '物料入库'],
+    ['pages/warehouse/material-outbound/index.js', '物料出库'],
+  ];
+  for (const [js, label] of pages) {
+    const { page } = loadPage(js, makeApi());
+    await page.onLoad({ materialCode: encodeURIComponent(RAW) });
+    eq(`${label}页 materialCode 已解码（否则查不到物料）`, page.data.materialCode, RAW);
+  }
+  // 不带参数时不能炸、也不能塞进乱码
+  const { page: empty } = loadPage('pages/warehouse/material-outbound/index.js', makeApi());
+  await empty.onLoad({});
+  eq('物料出库页无参数时为空串', empty.data.materialCode, '');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -631,6 +656,7 @@ try {
   await testMaterialInbound();
   await testMaterialOutbound();
   await testMaterialDetail();
+  await testMaterialFormPagesDecode();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

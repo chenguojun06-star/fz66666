@@ -13,6 +13,7 @@
  */
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const { decodeParam } = require('../../../utils/urlParams');
 
 var STATUS_TEXT = {
   PENDING: '待领取',
@@ -74,7 +75,7 @@ Page({
 
   onLoad: function (options) {
     var opts = options || {};
-    var taskId = opts.taskId ? String(opts.taskId) : '';
+    var taskId = decodeParam(opts.taskId);
     if (!taskId) {
       this.setData({ loading: false, notFound: true });
       return;

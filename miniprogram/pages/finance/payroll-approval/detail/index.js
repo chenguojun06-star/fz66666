@@ -13,6 +13,7 @@ const api = require('../../../../utils/api');
 const { toast } = require('../../../../utils/uiHelper');
 const { hasFeaturePermission, isFactoryAccount } = require('../../../../utils/permission');
 const fileUrl = require('../../../../utils/fileUrl');
+const { decodeParam } = require('../../../../utils/urlParams');
 
 // 订单终态（与 PC 端 production.order.ts TERMINAL_ORDER_STATUSES 对齐）
 var TERMINAL_ORDER_STATUSES = ['completed', 'closed', 'cancelled', 'scrapped', 'archived'];
@@ -116,7 +117,7 @@ Page({
       this.setData({ loadError: '工厂账号不可查看工资结算（属租户财务管理数据）', loading: false });
       return;
     }
-    var approvalId = opts.approvalId ? String(opts.approvalId) : '';
+    var approvalId = decodeParam(opts.approvalId);
     if (!approvalId) {
       this.setData({ loadError: '缺少明细标识', loading: false });
       return;

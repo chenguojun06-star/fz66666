@@ -11,6 +11,7 @@ const { displayCategory } = require('../../../utils/displayHelper');
 const { buildProcessTimeline, resolveSampleTotalQty } = require('../../../utils/sampleProcessTimeline');
 const { splitStyleOptions } = require('../../../utils/styleOptions');
 const { sortSizeNames } = require('../../../utils/sizeUtils');
+const { decodeParam } = require('../../../utils/urlParams');
 
 function formatFileSize(size) {
   if (!size) return '';
@@ -252,7 +253,7 @@ Page({
   },
 
   onLoad(options) {
-    const styleId = options.styleId || '';
+    const styleId = decodeParam(options.styleId);
     const patternId = options.id || options.patternId || '';
     if (!styleId && !patternId) {
       wx.showToast({ title: '缺少参数', icon: 'none' });
