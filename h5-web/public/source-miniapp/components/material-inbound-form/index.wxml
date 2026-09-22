@@ -1,0 +1,113 @@
+<!-- 物料入库表单（通用组件 D-514）
+     两个消费方：① 独立页 material-inbound ② 物料中心「入库」tab（内联） -->
+<view class="material-inbound-form">
+
+  <!-- ① 物料编码查询 -->
+  <view class="section">
+    <view class="section-hd"><text class="section-title">物料编码</text></view>
+    <view class="search-row">
+      <input
+        class="search-input"
+        placeholder="输入物料编码"
+        value="{{materialCode}}"
+        bindinput="onCodeInput"
+        confirm-type="search"
+        bindconfirm="onQuery"
+      />
+      <view wx:if="{{showScan}}" class="search-btn search-btn--scan" bindtap="onScan">扫码</view>
+      <view class="search-btn search-btn--go" bindtap="onQuery">查询</view>
+    </view>
+
+    <view wx:if="{{loading}}" class="loading">加载中…</view>
+
+    <block wx:if="{{queried}}">
+      <view wx:if="{{materialInfo}}" class="mat-card">
+        <text class="mat-name">{{materialInfo.materialName || materialInfo.name || '—'}}</text>
+        <text class="mat-meta">编码 {{materialInfo.materialCode || materialCode}}</text>
+        <text class="mat-meta" wx:if="{{materialInfo.materialType}}">类型 {{materialInfo.materialType}}</text>
+        <text class="mat-meta" wx:if="{{materialInfo.color}}">颜色 {{materialInfo.color}}</text>
+        <text class="mat-meta" wx:if="{{materialInfo.size}}">规格 {{materialInfo.size}}</text>
+        <text class="mat-meta" wx:if="{{materialInfo.quantity != null}}">现有库存 {{materialInfo.quantity}}{{unit}}</text>
+      </view>
+      <!-- D-499：没查到库存记录时不能入库 —— 后端 freeInbound 在 stock==null 且未传
+           autoCreateStock=true 时会直接抛「物料库存记录不存在」。提示用户先建档，而非让他白填。 -->
+      <view wx:else class="empty">未查到该物料的库存记录，请先在 PC 端为其在物料库存中建档</view>
+    </block>
+  </view>
+
+  <block wx:if="{{queried}}">
+    <!-- ② 入库信息 -->
+    <view class="section">
+      <view class="section-hd"><text class="section-title">入库信息</text></view>
+
+      <view class="row">
+        <text class="row-label">数量 <text class="req">*</text></text>
+        <!-- D-513：手机端步进器（小屏输入数字不便，加减按钮更快） -->
+        <view class="qty-stepper">
+          <view class="stepper-btn" catchtap="onQtyMinus">-</view>
+          <input
+            class="row-input row-input--center"
+            type="digit"
+            placeholder="支持小数，如 1.32"
+            value="{{quantity}}"
+            bindinput="onQtyInput"
+          />
+          <view class="stepper-btn" catchtap="onQtyPlus">+</view>
+        </view>
+        <text class="row-unit" wx:if="{{unit}}">{{unit}}</text>
+      </view>
+
+      <!-- ⚠️ picker 而非 wx.showActionSheet（后者 itemList 最多 6 项） -->
+      <picker mode="selector" range="{{areaNames}}" bindchange="onAreaChange">
+        <view class="row">
+          <text class="row-label">仓库区域</text>
+          <text class="row-value {{warehouseAreaName ? '' : 'row-value--placeholder'}}">
+            {{warehouseAreaName || '请选择'}}
+          </text>
+          <text class="row-arrow">›</text>
+        </view>
+      </picker>
+
+      <view class="row">
+        <text class="row-label">库位</text>
+        <input class="row-input" placeholder="选填" value="{{warehouseLocation}}" bindinput="onLocationInput" />
+      </view>
+
+      <view class="row">
+        <text class="row-label">供应商</text>
+        <input class="row-input" placeholder="选填" value="{{supplierName}}" bindinput="onSupplierInput" />
+      </view>
+
+      <view class="row">
+        <text class="row-label">单价</text>
+        <input class="row-input" type="digit" placeholder="选填" value="{{unitPrice}}" bindinput="onPriceInput" />
+      </view>
+    </view>
+
+    <!-- ③ 备注 -->
+    <view class="section">
+      <view class="section-hd"><text class="section-title">备注</text></view>
+      <textarea
+        class="remark"
+        placeholder="选填"
+        value="{{remark}}"
+        bindinput="onRemarkInput"
+        maxlength="200"
+        auto-height
+      />
+    </view>
+  </block>
+
+  <view class="bottom-pad"></view>
+</view>
+
+<!-- ④ 底部固定提交栏 -->
+<view class="submit-bar" wx:if="{{queried}}">
+  <view class="submit-summary">
+    <text class="submit-count">{{materialCode}}</text>
+    <text class="submit-qty">入库 {{quantity || 0}}{{unit}}</text>
+  </view>
+  <view class="submit-btn {{submitting ? 'submit-btn--disabled' : ''}}" bindtap="onSubmit">
+    {{submitting ? '提交中…' : '确认入库'}}
+  </view>
+</view>

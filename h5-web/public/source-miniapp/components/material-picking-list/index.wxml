@@ -1,0 +1,135 @@
+<!-- 领料出库列表（通用组件 D-514）
+     两个消费方：① 独立页 material-picking ② 物料中心「领料」tab（内联）
+     独立页带吸顶搜索栏；内联在 tab 里时父级已有搜索栏，只保留状态筛选 -->
+<view class="material-picking-list">
+  <!-- 独立页：搜索框 + 状态筛选（通用组件 sticky-search-bar） -->
+  <sticky-search-bar
+    wx:if="{{showSearch}}"
+    placeholder="搜索领料单号/订单号/款号/领取人"
+    value="{{keyword}}"
+    show-scan="{{false}}"
+    show-filter="{{true}}"
+    bind:input="onKeywordInput"
+    bind:confirm="onSearch"
+    bind:clear="onSearchClear"
+  >
+    <view slot="filter" class="tabs">
+      <view
+        wx:for="{{statusTabs}}"
+        wx:key="key"
+        class="tab {{status === item.key ? 'tab--active' : ''}}"
+        data-key="{{item.key}}"
+        bindtap="onStatusTap"
+      >{{item.label}}</view>
+    </view>
+  </sticky-search-bar>
+
+  <!-- 内联（tab 内）：只保留状态筛选，不重复搜索栏 -->
+  <view wx:else class="tabs tabs--inline">
+    <view
+      wx:for="{{statusTabs}}"
+      wx:key="key"
+      class="tab {{status === item.key ? 'tab--active' : ''}}"
+      data-key="{{item.key}}"
+      bindtap="onStatusTap"
+    >{{item.label}}</view>
+  </view>
+
+  <!-- 统计 -->
+  <view class="summary-row" wx:if="{{list.length > 0}}">
+    <text>共 {{total}} 张</text>
+    <text wx:if="{{list.length < total}}"> · 已显示 {{list.length}}</text>
+  </view>
+
+  <!-- 加载中 -->
+  <view class="state" wx:if="{{loading && list.length === 0}}"><text>加载中…</text></view>
+
+  <!-- 空状态 -->
+  <view class="state" wx:if="{{!loading && list.length === 0}}">
+    <text>{{status === 'pending' ? '暂无待出库领料单' : '暂无数据'}}</text>
+    <text class="state-hint" wx:if="{{status === 'pending'}}">采购员创建领料单后会显示在这里</text>
+  </view>
+
+  <!-- 列表 -->
+  <view class="card-list">
+    <view class="card" wx:for="{{list}}" wx:key="id">
+      <!-- 头部：单号 + 状态 -->
+      <view class="card-top" data-id="{{item.id}}" bindtap="onToggleDetail">
+        <view class="card-no">{{item.pickingNo}}</view>
+        <view class="status-tag" style="color: {{item.statusColor}}; background: {{item.statusBg}};">
+          {{item.statusLabel}}
+        </view>
+      </view>
+
+      <!-- 关键信息 -->
+      <view class="info-row" data-id="{{item.id}}" bindtap="onToggleDetail">
+        <view class="info-item">
+          <text class="info-label">订单</text>
+          <text class="info-value">{{item.orderNo}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">款号</text>
+          <text class="info-value">{{item.styleNo}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">领取人</text>
+          <text class="info-value">{{item.pickerName}}</text>
+        </view>
+        <view class="info-item" wx:if="{{item.factoryName}}">
+          <text class="info-label">工厂</text>
+          <text class="info-value">{{item.factoryName}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">用途</text>
+          <text class="info-value">{{item.usageLabel}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">时间</text>
+          <text class="info-value">{{item.createTime}}</text>
+        </view>
+      </view>
+
+      <!-- 明细（展开） -->
+      <view class="detail" wx:if="{{expandedId === item.id}}">
+        <view class="detail-hd">
+          <text>物料明细（{{item.itemCount}} 项）</text>
+        </view>
+        <view class="detail-row" wx:for="{{item.items}}" wx:for-item="it" wx:key="materialCode">
+          <view class="detail-name">{{it.materialName}}</view>
+          <view class="detail-meta">
+            <text>{{it.materialCode}}</text>
+            <text wx:if="{{it.color}}"> · {{it.color}}</text>
+            <text wx:if="{{it.size}}"> · {{it.size}}</text>
+          </view>
+          <view class="detail-qty">{{it.quantity}} {{it.unit}}</view>
+          <view class="detail-loc">库位：{{it.warehouseLocation}}</view>
+        </view>
+        <view class="detail-empty" wx:if="{{item.itemCount === 0}}">暂无明细</view>
+      </view>
+
+      <!-- 操作（仅待出库） -->
+      <view class="actions" wx:if="{{item.isPending}}">
+        <view
+          class="btn btn--ghost"
+          data-id="{{item.id}}"
+          data-no="{{item.pickingNo}}"
+          bindtap="onCancel"
+        >取消</view>
+        <view
+          class="btn btn--primary {{submittingId === item.id ? 'is-disabled' : ''}}"
+          data-id="{{item.id}}"
+          data-no="{{item.pickingNo}}"
+          bindtap="onConfirmOutbound"
+        >{{submittingId === item.id ? '处理中…' : '确认出库'}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="state small" wx:if="{{loading && list.length > 0}}"><text>加载中…</text></view>
+
+  <!-- ⚠️ 组件里没有 onReachBottom（页面级生命周期），故用按钮触发加载更多 -->
+  <view class="state small loadmore-btn" wx:if="{{!loading && hasMore && list.length > 0}}" bindtap="loadMore">
+    <text>加载更多</text>
+  </view>
+  <view class="state small" wx:if="{{!hasMore && list.length > 0}}"><text>— 没有更多了 —</text></view>
+</view>

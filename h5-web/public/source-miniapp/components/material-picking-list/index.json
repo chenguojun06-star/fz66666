@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "sticky-search-bar": "/components/sticky-search-bar/index"
+  }
+}

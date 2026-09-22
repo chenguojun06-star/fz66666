@@ -86,7 +86,9 @@ Page({
     inventoryList: [],
     inventoryTotal: 0,
 
-    // 入库/出库/领料 tab - 简化：显示一张跳转卡片，避免在 5-tab 单页里塞所有表单
+    // D-514：入库/出库 tab 的预填物料编码
+    // 从库存卡片点「入库/出库」时带过来，切 tab 后表单自动查询
+    formCode: '',
   },
 
   onLoad: function (options) {
@@ -103,8 +105,9 @@ Page({
   },
 
   onShow: function () {
-    // 从子页返回时刷新数据
-    if (this.data.activeTab === 'inventory') {
+    // 从子页返回 / 领料确认出库后库存已变 → 重新拉取
+    if (this.data.activeTab === 'inventory' || this._inventoryDirty) {
+      this._inventoryDirty = false;
       this.loadInventory(true);
     }
   },
@@ -113,7 +116,8 @@ Page({
   onTabTap: function (e) {
     var key = e.currentTarget.dataset.key;
     if (!key || key === this.data.activeTab) return;
-    this.setData({ activeTab: key });
+    // D-514：手动切 tab 时清掉卡片带过来的预填编码，避免表单残留上一次的物料
+    this.setData({ activeTab: key, formCode: '' });
     if (key === 'inventory') {
       this.loadInventory(true);
     }
@@ -196,43 +200,43 @@ Page({
   },
 
   // ====== 库存卡片：入库/出库快捷操作 ======
+  // D-514：不再跳独立页，改为切到对应 tab 并把物料编码预填给内联表单
   onInventoryInbound: function (e) {
     var code = e.currentTarget.dataset.code;
     if (!code) return;
-    wx.navigateTo({
-      url: '/pages/warehouse/material-inbound/index?materialCode=' + encodeURIComponent(code),
-    });
+    this.setData({ activeTab: 'inbound', formCode: code });
   },
 
   onInventoryOutbound: function (e) {
     var code = e.currentTarget.dataset.code;
     if (!code) return;
-    wx.navigateTo({
-      url: '/pages/warehouse/material-outbound/index?materialCode=' + encodeURIComponent(code),
-    });
+    this.setData({ activeTab: 'outbound', formCode: code });
   },
 
+  // 点卡片主体 → 看物料资料详情（原先误跳出库页，语义不对）
   onInventoryDetail: function (e) {
     var code = e.currentTarget.dataset.code;
     if (!code) return;
     wx.navigateTo({
-      url: '/pages/warehouse/material-outbound/index?materialCode=' + encodeURIComponent(code),
+      url: '/pages/warehouse/material-database/index?keyword=' + encodeURIComponent(code),
     });
   },
 
-  // ====== 非库存 tab：跳转到对应子页 ======
-  gotoInbound: function () {
-    wx.navigateTo({ url: '/pages/warehouse/material-inbound/index' });
+  // ====== 内联表单提交成功（入库/出库共用）======
+  onFormSuccess: function () {
+    // 库存变了，回「库存」tab 并刷新
+    var self = this;
+    this.setData({ activeTab: 'inventory', formCode: '' });
+    this.loadInventory(true);
   },
 
-  gotoOutbound: function () {
-    wx.navigateTo({ url: '/pages/warehouse/material-outbound/index' });
+  // ====== 领料确认出库/取消成功 ======
+  onPickingSuccess: function () {
+    // 领料确认出库会扣库存 → 库存 tab 数据已过期，下次进入时重拉
+    this._inventoryDirty = true;
   },
 
-  gotoPicking: function () {
-    wx.navigateTo({ url: '/pages/warehouse/material-picking/index' });
-  },
-
+  // ====== 料卷 tab：扫码入口（扫码天然要调相机，保留跳转）======
   gotoScan: function () {
     wx.navigateTo({ url: '/pages/warehouse/material/scan/index' });
   },
