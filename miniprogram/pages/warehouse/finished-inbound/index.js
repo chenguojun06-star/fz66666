@@ -120,6 +120,8 @@ Page({
           size: item.size || '-',
           availableQty: item.availableQty || 0,
           salesPrice: item.salesPrice || 0,
+          // D-513：成本价（PC 端 FreeInboundModal 有单价列，手机端原先没有）
+          costPrice: item.costPrice || 0,
         };
       });
       if (!styleName && records.length && records[0].styleName) {
@@ -236,6 +238,20 @@ Page({
     this._refreshSelection();
   },
 
+  // D-513：成本价可改（写回 skuList，提交时带到 items[].unitPrice）
+  onPriceInput(e) {
+    var id = String(e.currentTarget.dataset.id);
+    var list = this.data.skuList;
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].id) === id) {
+        var v = parseFloat(e.detail.value);
+        list[i].costPrice = isNaN(v) || v < 0 ? 0 : v;
+        break;
+      }
+    }
+    this.setData({ skuList: list });
+  },
+
   _refreshSelection() {
     var selected = this.data.selected;
     var list = this.data.skuList;
@@ -273,6 +289,9 @@ Page({
             styleName: this.data.styleName || '',
             color: list[i].color,
             size: list[i].size,
+            // D-513：成本价。batchInbound 逐条调 freeInbound，后者读 params.unitPrice，
+            // 所以放 item 里即可生效（后端无需改动）
+            unitPrice: list[i].costPrice || 0,
             supplierName: this.data.supplierName || '',
             remark: this.data.remark || '',
           });
