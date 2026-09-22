@@ -364,14 +364,41 @@ async function testMaterialInbound() {
   let t = lastCall(wx, 'showToast');
   ok('数量为0时被拦截', t && /数量/.test(t.title || ''), t && t.title);
 
+  // ── D-514：库位必须是「依赖仓库区域的下拉」（对齐 PC 端 InboundDrawer）──
+  api.warehouse.listLocations = async () => ([
+    { locationCode: 'A-01', usedCapacity: 1, capacity: 10 },
+    { locationCode: 'A-02', usedCapacity: 10, capacity: 10 },  // 满位
+  ]);
+  page.setData({ warehouseLocation: 'A-OLD' });
+  page.onAreaChange({ detail: { value: 0 } });
+  await new Promise(r => setTimeout(r, 30));
+  eq('换仓库后清空旧库位', page.data.warehouseLocation, '');
+  eq('库位下拉已按仓库加载', page.data.locationNames.length, 2);
+
+  page.onLocationChange({ detail: { value: 0 } });
+  eq('选中库位', page.data.warehouseLocation, 'A-01');
+
+  page.setData({ warehouseLocation: '' });
+  page.onLocationChange({ detail: { value: 1 } });
+  let tl = lastCall(wx, 'showToast');
+  ok('满库位被拦截', tl && /已满/.test(tl.title || ''), tl && tl.title);
+  eq('满库位未被选中', page.data.warehouseLocation, '');
+
+  // ── 入库来源（对齐 PC 端 InboundDrawer，key 必须在后端白名单内）──
+  page.onSelectSourceType({ currentTarget: { dataset: { key: 'external_purchase' } } });
+  eq('入库来源已切换', page.data.sourceType, 'external_purchase');
+  eq('入库来源标签已更新', page.data.sourceTypeLabel, '采购到货');
+
   // 小数数量（D-414 的坑：不能 parseInt）
-  page.setData({ quantity: '1.32' });
+  page.setData({ quantity: '1.32', warehouseLocation: 'A-01' });
   await page.onSubmit();
   const payload = api.calls.find(c => c[0] === 'materialFreeInbound');
   ok('调用了物料入库接口', !!payload);
   if (payload) {
     ok('数量保留小数 1.32', payload[1].quantity === 1.32, `实际 ${payload[1].quantity}`);
     ok('含 materialCode', payload[1].materialCode === 'MC-1');
+    ok('含 sourceType', payload[1].sourceType === 'external_purchase', payload[1].sourceType);
+    ok('含 warehouseLocation', payload[1].warehouseLocation === 'A-01', payload[1].warehouseLocation);
   }
   // D-514：成功后必须抛 success 事件 —— 物料中心 tab 靠它刷新库存列表
   ok('成功后抛 success 事件', page.events.some(e => e[0] === 'success'));

@@ -8,8 +8,11 @@
  *
  * 后端契约（MaterialWarehouseOperationOrchestrator.freeInbound）：
  *   - 必填：materialCode、quantity(>0)
- *   - warehouseLocation 缺省有兜底；sourceType 缺省有兜底
- *     ⚠️ 故本组件**不主动传 sourceType** —— 避免取值不在后端白名单而被拒
+ *   - warehouseLocation / sourceType 缺省有兜底
+ *   - sourceType 白名单（VALID_SOURCE_TYPES）：
+ *     external_purchase / free_inbound / transfer_in / return_in / other_in / scan_inbound
+ *     传白名单外的值后端会直接抛「不支持的入库来源类型」—— 故本组件的选项与
+ *     PC 端 InboundDrawer、大货入库 finished-inbound 用**同一套 key**
  *   - 可选：warehouseAreaId / supplierName / unitPrice / remark / purchaseOrderId
  *
  * ⚠️ 数量必须支持小数：物料常按米/公斤计（1.32 米）。
@@ -20,6 +23,27 @@
  *                   （跳转/刷新由父级决定：独立页 navigateBack，tab 内刷新列表）
  */
 const api = require('../../utils/api');
+
+/**
+ * 入库来源 —— 必须与 PC 端 InboundDrawer「入库来源」、大货入库 finished-inbound
+ * 的 SOURCE_TYPES 用**同一套 key**（后端 MaterialWarehouseOperationOrchestrator
+ * .VALID_SOURCE_TYPES 是白名单，传错直接抛「不支持的入库来源类型」）：
+ *   external_purchase / free_inbound / transfer_in / return_in / other_in / scan_inbound
+ */
+const SOURCE_TYPES = [
+  { key: 'free_inbound', label: '自由入库' },
+  { key: 'external_purchase', label: '采购到货' },
+  { key: 'transfer_in', label: '调拨入库' },
+  { key: 'return_in', label: '退货入库' },
+  { key: 'other_in', label: '其他入库' },
+];
+
+/** 物料类型中文标签（与 material-center / PC 端一致） */
+const TYPE_LABEL = {
+  fabric: '面料',
+  lining: '里料',
+  accessory: '辅料',
+};
 
 Component({
   options: {
@@ -52,6 +76,15 @@ Component({
     loading: false,
     submitting: false,
 
+    // 面料/里料/辅料 —— 决定「规格(码数)」显不显示（面料不显示服装码数）
+    isFabric: false,
+    typeLabel: '',
+
+    // 入库来源（对齐 PC 端 InboundDrawer）
+    sourceTypes: SOURCE_TYPES,
+    sourceType: 'free_inbound',
+    sourceTypeLabel: '自由入库',
+
     quantity: '',
     unit: '',
 
@@ -59,7 +92,13 @@ Component({
     areaNames: [],
     warehouseAreaId: '',
     warehouseAreaName: '',
+    // D-514：库位改为**依赖仓库区域的下拉选择**（对齐 PC 端 InboundDrawer
+    // 的 warehouseLocation Select —— PC 是「先选仓库，库位下拉才可用且必填」）
+    locationOptions: [],
+    locationNames: [],
+    locationItems: [],
     warehouseLocation: '',
+    locationLoading: false,
 
     supplierName: '',
     unitPrice: '',
@@ -117,9 +156,13 @@ Component({
         var res = await api.material.scanQuery(this.data.materialCode);
         // res 可能直接是对象，也可能包一层
         var info = res && res.data ? res.data : res;
+        var mtype = (info && info.materialType) || '';
         this.setData({
           materialInfo: info || null,
           unit: (info && (info.unit || info.materialUnit)) || '',
+          // 面料不显示服装码数（PC 端面料走「幅宽/克重/成分」，不问码数）
+          isFabric: mtype === 'fabric',
+          typeLabel: TYPE_LABEL[mtype] || mtype || '',
           queried: true,
           loading: false,
         });
@@ -151,7 +194,80 @@ Component({
      */
     onAreaChange: function (e) {
       var opt = this.data.areaOptions[e.detail.value];
-      if (opt) this.setData({ warehouseAreaId: opt.id, warehouseAreaName: opt.name });
+      if (!opt) return;
+      // 换仓库必须清空库位：库位从属于某个仓库，不清会提交到错误的库位
+      // （PC 端 InboundDrawer 的 onChange 同样先 setFieldValue('warehouseLocation', undefined)）
+      this.setData({
+        warehouseAreaId: opt.id,
+        warehouseAreaName: opt.name,
+        warehouseLocation: '',
+        locationOptions: [],
+        locationNames: [],
+        locationItems: [],
+      });
+      this.loadLocations(opt.id);
+    },
+
+    /** 加载该仓库下的库位（对齐 PC 端 useWarehouseLocationByArea('MATERIAL', areaId)） */
+    loadLocations: async function (areaId) {
+      if (!areaId) return;
+      this.setData({ locationLoading: true });
+      try {
+        var res = await api.warehouse.listLocations('MATERIAL', areaId);
+        var list = Array.isArray(res) ? res : (res && (res.records || res.list || res.items)) || [];
+        var names = [];
+        var items = [];
+        for (var i = 0; i < list.length; i++) {
+          var it = list[i] || {};
+          var label = it.locationCode || it.locationName || '';
+          if (!label) continue;
+          var capacity = Number(it.capacity || 0);
+          var used = Number(it.usedCapacity || 0);
+          names.push(label);
+          items.push({
+            label: label,
+            used: used,
+            capacity: capacity,
+            isFull: capacity > 0 && used >= capacity,
+          });
+        }
+        this.setData({
+          locationOptions: names,
+          locationNames: names,
+          locationItems: items,
+          locationLoading: false,
+        });
+      } catch (err) {
+        console.warn('[物料入库] 加载库位失败', err);
+        this.setData({ locationOptions: [], locationNames: [], locationItems: [], locationLoading: false });
+      }
+    },
+
+    onLocationChange: function (e) {
+      var label = this.data.locationNames[e.detail.value];
+      if (!label) return;
+      // 满库位拦截（与样衣扫码页一致，避免超限）
+      var items = this.data.locationItems || [];
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].label === label && items[i].isFull) {
+          wx.showToast({
+            title: '库位 ' + label + ' 已满（' + items[i].used + '/' + items[i].capacity + '），请选其他库位',
+            icon: 'none',
+          });
+          return;
+        }
+      }
+      this.setData({ warehouseLocation: label });
+    },
+
+    onSelectSourceType: function (e) {
+      var key = e.currentTarget.dataset.key;
+      for (var i = 0; i < SOURCE_TYPES.length; i++) {
+        if (SOURCE_TYPES[i].key === key) {
+          this.setData({ sourceType: key, sourceTypeLabel: SOURCE_TYPES[i].label });
+          return;
+        }
+      }
     },
 
     onQtyInput: function (e) {
@@ -171,7 +287,6 @@ Component({
       this.setData({ quantity: String(+(q + 1).toFixed(2)) });
     },
 
-    onLocationInput: function (e) { this.setData({ warehouseLocation: e.detail.value }); },
     onSupplierInput: function (e) { this.setData({ supplierName: e.detail.value }); },
     onPriceInput: function (e) { this.setData({ unitPrice: e.detail.value }); },
     onRemarkInput: function (e) { this.setData({ remark: e.detail.value }); },
@@ -201,6 +316,8 @@ Component({
         await api.material.freeInbound({
           materialCode: code,
           quantity: qty,
+          // 入库来源：key 已核对过后端白名单 VALID_SOURCE_TYPES，安全
+          sourceType: this.data.sourceType || 'free_inbound',
           warehouseLocation: this.data.warehouseLocation || '',
           warehouseAreaId: this.data.warehouseAreaId || '',
           supplierName: this.data.supplierName || '',

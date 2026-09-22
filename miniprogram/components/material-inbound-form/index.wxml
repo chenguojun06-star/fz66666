@@ -24,9 +24,11 @@
       <view wx:if="{{materialInfo}}" class="mat-card">
         <text class="mat-name">{{materialInfo.materialName || materialInfo.name || '—'}}</text>
         <text class="mat-meta">编码 {{materialInfo.materialCode || materialCode}}</text>
-        <text class="mat-meta" wx:if="{{materialInfo.materialType}}">类型 {{materialInfo.materialType}}</text>
+        <text class="mat-meta" wx:if="{{typeLabel}}">类型 {{typeLabel}}</text>
         <text class="mat-meta" wx:if="{{materialInfo.color}}">颜色 {{materialInfo.color}}</text>
-        <text class="mat-meta" wx:if="{{materialInfo.size}}">规格 {{materialInfo.size}}</text>
+        <!-- D-514：面料不显示「规格」—— 库里存的是服装码数(XS/S/M/L)，对 面料 没意义。
+             PC 端对 面料 走的是「幅宽/克重/成分」，不问码数。 -->
+        <text class="mat-meta" wx:if="{{materialInfo.size && !isFabric}}">规格 {{materialInfo.size}}</text>
         <text class="mat-meta" wx:if="{{materialInfo.quantity != null}}">现有库存 {{materialInfo.quantity}}{{unit}}</text>
       </view>
       <!-- D-499：没查到库存记录时不能入库 —— 后端 freeInbound 在 stock==null 且未传
@@ -36,7 +38,21 @@
   </view>
 
   <block wx:if="{{queried}}">
-    <!-- ② 入库信息 -->
+    <!-- ② 入库来源（对齐 PC 端 InboundDrawer 的「入库来源」+ 大货入库的 chips） -->
+    <view class="section">
+      <view class="section-hd"><text class="section-title">入库来源</text></view>
+      <view class="type-grid">
+        <view
+          wx:for="{{sourceTypes}}"
+          wx:key="key"
+          class="type-chip {{sourceType === item.key ? 'type-chip--active' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="onSelectSourceType"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
+    <!-- ③ 入库信息 -->
     <view class="section">
       <view class="section-hd"><text class="section-title">入库信息</text></view>
 
@@ -68,9 +84,25 @@
         </view>
       </picker>
 
-      <view class="row">
+      <!-- D-514：库位 = **依赖仓库区域的下拉选择**（对齐 PC 端 InboundDrawer：
+           先选仓库，库位下拉才可用；PC 上库位是必填项） -->
+      <picker
+        wx:if="{{warehouseAreaId}}"
+        mode="selector"
+        range="{{locationNames}}"
+        bindchange="onLocationChange"
+      >
+        <view class="row">
+          <text class="row-label">库位</text>
+          <text class="row-value {{warehouseLocation ? '' : 'row-value--placeholder'}}">
+            {{locationLoading ? '加载中…' : (warehouseLocation || (locationNames.length ? '请选择' : '该仓库暂无库位'))}}
+          </text>
+          <text class="row-arrow">›</text>
+        </view>
+      </picker>
+      <view wx:else class="row">
         <text class="row-label">库位</text>
-        <input class="row-input" placeholder="选填" value="{{warehouseLocation}}" bindinput="onLocationInput" />
+        <text class="row-value row-value--placeholder">请先选择仓库区域</text>
       </view>
 
       <view class="row">
