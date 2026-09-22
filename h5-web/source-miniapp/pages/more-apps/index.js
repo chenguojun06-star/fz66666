@@ -60,11 +60,9 @@ const ALL_APPS = [
   ]},
   { group: '物料', items: [
     { id: 'procurement', name: '采购任务', iconClass: 'icon-menu-cart', circleClass: 'menu-icon-circle--blue', route: '/pages/procurement/task-list/index' },
-    { id: 'materialInbound', name: '物料入库', iconClass: 'icon-menu-inbound', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material-inbound/index' },
-    { id: 'materialOutbound', name: '物料出库', iconClass: 'icon-menu-outbound', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material-outbound/index' },
-    { id: 'materialInventory', name: '物料库存', iconClass: 'icon-menu-warehouse', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material-inventory/index' },
-    { id: 'materialPicking', name: '领料出库', iconClass: 'icon-menu-outbound', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material-picking/index' },
-    { id: 'materialScan', name: '料卷出库/退回', iconClass: 'icon-menu-warehouse', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material/scan/index' },
+    // D-514 物料瘦身：物料入库/出库/领料/料卷/库存 5 个图标合并为 1 个「物料中心」
+    // 物料中心页内含 tab 切换（库存/入库/出库/领料/料卷），搜索栏带扫码按钮
+    { id: 'materialCenter', name: '物料中心', iconClass: 'icon-menu-warehouse', circleClass: 'menu-icon-circle--lightblue', route: '/pages/warehouse/material-center/index' },
     { id: 'materialDatabase', name: '物料资料', iconClass: 'icon-menu-material', circleClass: 'menu-icon-circle--teal', route: '/pages/warehouse/material-database/index' },
   ]},
   { group: '成品', items: [

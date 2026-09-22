@@ -1,8 +1,12 @@
 <view class="page">
-  <!-- 顶部搜索 + 筛选 -->
+  <!-- 顶部搜索 + 扫码 + 筛选 -->
   <view class="filter-bar">
     <view class="search-row">
       <input class="search-input" placeholder="搜索物料编码或名称" value="{{keyword}}" bindinput="onSearchInput" bindconfirm="onSearchConfirm" confirm-type="search" />
+      <!-- D-514 扫码后跳物料扫码页（料卷出库/退回），减少菜单图标 -->
+      <view class="scan-btn" bindtap="onScanTap" hover-class="scan-btn--active">
+        <text class="scan-icon">📷</text>
+      </view>
       <view class="search-btn" bindtap="onSearchConfirm">搜索</view>
     </view>
     <picker mode="selector" range="{{typeOptions}}" range-key="label" value="{{typeIndex}}" bindchange="onTypeChange">

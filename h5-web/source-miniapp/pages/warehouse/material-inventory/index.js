@@ -126,14 +126,16 @@ Page({
         pageSize: this.data.pageSize,
       };
       const res = await api.material.listStock(params);
-      const records = (res && res.data && res.data.records) || [];
+      // D-514 修 bug：ok() 已剥掉 resp.data，这里 res 就是 data；之前误用 res.data.records 导致列表永远为空
+      const records = (res && res.records) || [];
       const mapped = records.map(this._toRow.bind(this));
       const nextList = reset ? mapped : this.data.list.concat(mapped);
+      const total = (res && res.total) || 0;
       this.setData({
         list: nextList,
-        total: (res && res.data && res.data.total) || 0,
+        total,
         pageNum: params.pageNum,
-        hasMore: mapped.length >= this.data.pageSize && nextList.length < ((res && res.data && res.data.total) || 0),
+        hasMore: mapped.length >= this.data.pageSize && nextList.length < total,
         loading: false,
       });
     } catch (e) {
@@ -190,6 +192,13 @@ Page({
     if (!code) return;
     wx.navigateTo({
       url: '/pages/warehouse/material-outbound/index?materialCode=' + encodeURIComponent(code),
+    });
+  },
+
+  // D-514：搜索栏扫码按钮 → 跳物料扫码页（料卷出库/退回）
+  onScanTap: function () {
+    wx.navigateTo({
+      url: '/pages/warehouse/material/scan/index',
     });
   },
 });

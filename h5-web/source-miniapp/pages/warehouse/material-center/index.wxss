@@ -1,15 +1,18 @@
-/* 物料库存查询页 - 手机端 */
+/* 物料中心（D-514）：搜索+扫码+类型+5tab 统一布局 */
 .page {
   min-height: 100vh;
   background: #f5f6f8;
-  padding-bottom: 24rpx;
+  padding-bottom: 32rpx;
 }
 
-/* 筛选栏 */
+/* 共享 header：搜索 + 扫码 */
 .filter-bar {
   background: #fff;
   padding: 16rpx 24rpx 0;
   border-bottom: 1rpx solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 .search-row {
   display: flex;
@@ -33,8 +36,8 @@
   color: #fff;
   border-radius: 32rpx;
   font-size: 26rpx;
+  flex-shrink: 0;
 }
-/* D-514 搜索栏扫码按钮（统一物料相关页面顶部布局） */
 .scan-btn {
   width: 64rpx;
   height: 64rpx;
@@ -67,14 +70,50 @@
   color: #111827;
 }
 
-/* 统计 */
+/* 5 个 tab */
+.tab-bar {
+  display: flex;
+  background: #fff;
+  border-bottom: 1rpx solid #e5e7eb;
+  position: sticky;
+  top: 156rpx;
+  z-index: 9;
+}
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 24rpx 0;
+  font-size: 28rpx;
+  color: #6b7280;
+  position: relative;
+}
+.tab-item--active {
+  color: #2563eb;
+  font-weight: 600;
+}
+.tab-item--active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 48rpx;
+  height: 4rpx;
+  background: #2563eb;
+  border-radius: 2rpx;
+}
+
+/* tab body */
+.tab-body {
+  padding-top: 16rpx;
+}
+
+/* 库存 tab 列表 */
 .summary-row {
-  padding: 16rpx 24rpx 8rpx;
+  padding: 0 24rpx 12rpx;
   font-size: 24rpx;
   color: #6b7280;
 }
-
-/* 加载/空状态 */
 .loading-state,
 .empty-state {
   padding: 80rpx 24rpx;
@@ -89,14 +128,11 @@
   font-size: 22rpx;
   color: #c0c4cc;
 }
-
-/* 卡片列表 */
 .card-list {
   padding: 0 24rpx;
   display: flex;
   flex-direction: column;
   gap: 12rpx;
-  margin-top: 8rpx;
 }
 .card {
   background: #fff;
@@ -133,7 +169,6 @@
   font-size: 20rpx;
   flex-shrink: 0;
 }
-/* D-513 手机端紧凑卡片: 编码与可用库存同一行, 次要信息合并一行 */
 .card-main {
   margin-top: 8rpx;
   display: flex;
@@ -150,7 +185,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 .stock-main {
   display: flex;
   align-items: baseline;
@@ -177,8 +211,6 @@
   font-size: 22rpx;
   color: #6b7280;
 }
-
-/* 次要信息: 在途/锁定/安全/库位 合并一行 */
 .card-sub {
   margin-top: 6rpx;
   font-size: 21rpx;
@@ -196,8 +228,6 @@
   white-space: nowrap;
   max-width: 240rpx;
 }
-
-/* D-513 快捷操作按钮: 手机端手指点击友好(最小高度 56rpx) */
 .card-actions {
   margin-top: 12rpx;
   padding-top: 12rpx;
@@ -224,10 +254,70 @@
   background: #2563eb;
 }
 
-/* 加载更多 */
-.loadmore {
-  padding: 24rpx;
+/* 非库存 tab：跳转卡片 */
+.launcher {
+  margin: 24rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 32rpx 24rpx;
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+.launcher-icon {
+  width: 80rpx;
+  height: 80rpx;
+  line-height: 80rpx;
   text-align: center;
-  font-size: 22rpx;
-  color: #9ca3af;
+  background: #eff6ff;
+  border-radius: 16rpx;
+  font-size: 44rpx;
+  font-weight: 600;
+  color: #2563eb;
+  flex-shrink: 0;
+}
+.launcher-icon--in {
+  background: #ecfdf5;
+  color: #10b981;
+}
+.launcher-icon--out {
+  background: #fef2f2;
+  color: #dc2626;
+}
+.launcher-icon--picking {
+  background: #fef3c7;
+  color: #d97706;
+}
+.launcher-icon--scan {
+  background: #f3e8ff;
+  font-size: 36rpx;
+}
+.launcher-info {
+  flex: 1;
+  min-width: 0;
+}
+.launcher-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 6rpx;
+}
+.launcher-desc {
+  font-size: 24rpx;
+  color: #6b7280;
+}
+.launcher-arrow {
+  font-size: 40rpx;
+  color: #c0c4cc;
+  flex-shrink: 0;
+}
+.launcher-tips {
+  margin: 24rpx;
+  padding: 20rpx 24rpx;
+  background: #f9fafb;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  color: #6b7280;
+  line-height: 40rpx;
 }
