@@ -172,7 +172,7 @@
   flex-shrink: 0;
 }
 
-/* D-513：工厂筛选栏 */
+/* D-513 工厂筛选栏 */
 .factory-filter-row {
   display: flex;
   align-items: center;
@@ -207,3 +207,4 @@
   color: #fff;
   background: var(--color-primary, #2563eb);
   font-weight: 500;
+}

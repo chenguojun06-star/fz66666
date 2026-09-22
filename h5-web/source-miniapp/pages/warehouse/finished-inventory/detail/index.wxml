@@ -68,22 +68,28 @@
       <scroll-view scroll-x class="sku-scroll" enhanced show-scrollbar="{{false}}">
         <view class="sku-table">
           <view class="sku-row sku-row--header">
+            <!-- D-513：加「商品编码」列（用户要求必须列上） -->
+            <text class="sku-cell sku-cell--code">商品编码</text>
             <text class="sku-cell sku-cell--color">颜色</text>
             <text class="sku-cell sku-cell--size">尺码</text>
             <text class="sku-cell sku-cell--qty">可用</text>
             <text class="sku-cell sku-cell--qty">次品</text>
-            <text class="sku-cell sku-cell--qty">累计入库</text>
+            <!-- D-513：去掉「累计入库」列（顶部统计已有） -->
             <text class="sku-cell sku-cell--price">售价</text>
             <text class="sku-cell sku-cell--loc">库位</text>
             <text class="sku-cell sku-cell--action">操作</text>
           </view>
           <view wx:for="{{skuList}}" wx:key="id" class="sku-row">
+            <text class="sku-cell sku-cell--code">{{item.sku || '-'}}</text>
             <text class="sku-cell sku-cell--color">{{item.color}}</text>
             <text class="sku-cell sku-cell--size">{{item.size}}</text>
             <text class="sku-cell sku-cell--qty sku-cell--bold">{{item.availableQty}}</text>
             <text class="sku-cell sku-cell--qty sku-cell--danger">{{item.defectQty}}</text>
-            <text class="sku-cell sku-cell--qty">{{item.totalInboundQty}}</text>
-            <text class="sku-cell sku-cell--price">¥{{item.salesPrice}}</text>
+            <!-- D-513：售价为空显示"-"（实测一半 SKU 未定价，原来显示空白） -->
+            <text class="sku-cell sku-cell--price">
+              <block wx:if="{{item.salesPrice}}">¥{{item.salesPrice}}</block>
+              <block wx:else>-</block>
+            </text>
             <text class="sku-cell sku-cell--loc">{{item.warehouseLocation}}</text>
             <view class="sku-cell sku-cell--action">
               <view wx:if="{{item.availableQty > 0}}" class="outbound-btn" catchtap="onOutbound" data-sku="{{item}}">出库</view>
