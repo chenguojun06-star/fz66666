@@ -53,17 +53,32 @@
           <text class="row-arrow">›</text>
         </view>
       </picker>
+
+      <!-- ④-2 收货地址：PC 端有（CustomerInfoSection），手机端原先缺失 -->
+      <view class="row" wx:if="{{needsCustomer}}">
+        <text class="row-label">收货地址</text>
+        <input
+          class="row-input"
+          placeholder="选客户后自动带出，可修改"
+          value="{{shippingAddress}}"
+          bindinput="onAddressInput"
+        />
+      </view>
   </view>
 
   <!-- ⑤ SKU 明细多选 -->
   <view class="section">
     <view class="section-hd">
       <text class="section-title">选择明细</text>
-      <view class="select-all" bindtap="onToggleAll">
-        <view class="checkbox checkbox--sm">
-          <text wx:if="{{allSelected}}" class="check-mark">✓</text>
+      <view class="hd-actions">
+        <!-- D-513：一键把所有规格的数量填为可用库存 -->
+        <view class="hd-btn" bindtap="onFillAllQty">一键全部数量</view>
+        <view class="select-all" bindtap="onToggleAll">
+          <view class="checkbox checkbox--sm">
+            <text wx:if="{{allSelected}}" class="check-mark">✓</text>
+          </view>
+          <text class="select-all-text">全选</text>
         </view>
-        <text class="select-all-text">全选</text>
       </view>
     </view>
 
@@ -85,6 +100,8 @@
             <text class="sku-name">{{item.color}} / {{item.size}}</text>
             <text class="sku-meta">可用 {{item.availableQty}} 件 · {{item.warehouseLocation}}</text>
           </view>
+          <!-- D-513：单价（数据里一直有 salesPrice，原界面没显示） -->
+          <text class="sku-price">¥{{item.salesPrice || 0}}</text>
         </view>
 
         <!-- 数量步进器：仅选中后可用 -->
@@ -98,6 +115,19 @@
             bindinput="onQtyInput"
           />
           <view class="stepper-btn" data-id="{{item.id}}" catchtap="onQtyPlus">+</view>
+        </view>
+
+        <!-- D-513：单价可改，提交到 items[].salesPrice -->
+        <view class="price-row" wx:if="{{selected[item.id]}}">
+          <text class="price-label">单价</text>
+          <input
+            class="price-input"
+            type="digit"
+            value="{{item.salesPrice}}"
+            data-id="{{item.id}}"
+            bindinput="onPriceInput"
+          />
+          <text class="price-unit">元</text>
         </view>
       </view>
     </view>

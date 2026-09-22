@@ -59,6 +59,8 @@ Page({
     customerNames: [],
     customerId: '',
     customerName: '',
+    // D-513：收货地址（PC 端 CustomerInfoSection 有，手机端原先缺失）
+    shippingAddress: '',
 
     remark: '',
   },
@@ -142,6 +144,8 @@ Page({
         return {
           id: String(c.id || ''),
           name: c.companyName || c.customerName || c.name || '-',
+          // D-513：保留客户地址，选客户时自动带出收货地址
+          address: c.address || c.shippingAddress || c.companyAddress || '',
         };
       });
       this.setData({
@@ -186,7 +190,57 @@ Page({
 
   onCustomerChange(e) {
     var opt = this.data.customerOptions[e.detail.value];
-    if (opt) this.setData({ customerId: opt.id, customerName: opt.name });
+    if (!opt) return;
+    // 选客户自动带出收货地址（用户仍可手改，故直接覆盖为空地址的场景）
+    this.setData({
+      customerId: opt.id,
+      customerName: opt.name,
+      shippingAddress: opt.address || this.data.shippingAddress || '',
+    });
+  },
+
+  onAddressInput(e) {
+    this.setData({ shippingAddress: e.detail.value });
+  },
+
+  // D-513：单价可改（写回 skuList，提交时带到 items[].salesPrice）
+  onPriceInput(e) {
+    var id = String(e.currentTarget.dataset.id);
+    var list = this.data.skuList;
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].id) === id) {
+        var v = parseFloat(e.detail.value);
+        list[i].salesPrice = isNaN(v) || v < 0 ? 0 : v;
+        break;
+      }
+    }
+    this.setData({ skuList: list });
+  },
+
+  /**
+   * D-513：一键全部数量 —— 把所有有库存的规格按可用库存填满
+   * （原先要逐个点开再加减，手机上很费劲）
+   */
+  onFillAllQty() {
+    var list = this.data.skuList;
+    var selected = {};
+    var total = 0;
+    var count = 0;
+    for (var i = 0; i < list.length; i++) {
+      var qty = list[i].availableQty || 0;
+      if (qty > 0) {
+        selected[list[i].id] = qty;
+        total += qty;
+        count += 1;
+      }
+    }
+    if (!count) {
+      wx.showToast({ title: '没有可用库存', icon: 'none' });
+      return;
+    }
+    this.setData({ selected: selected });
+    this._refreshSelection();
+    wx.showToast({ title: '已填 ' + count + ' 个规格，共 ' + total + ' 件', icon: 'none' });
   },
 
   // ────────── SKU 多选 ──────────
@@ -312,7 +366,12 @@ Page({
     for (var i = 0; i < list.length; i++) {
       var v = selected[list[i].id];
       if (v != null && v > 0) {
-        items.push({ sku: list[i].sku, quantity: v });
+        // D-513：带上单价（后端 FinishedOutstockHelper 读 item.salesPrice）
+        items.push({
+          sku: list[i].sku,
+          quantity: v,
+          salesPrice: list[i].salesPrice || 0,
+        });
       }
     }
     if (!items.length) {
@@ -331,7 +390,10 @@ Page({
         orderNo: this.data.orderNo || '',
         outstockType: this.data.outstockType,
         warehouseAreaId: this.data.warehouseAreaId || '',
+        customerId: this.data.customerId || '',
         customerName: this.data.customerName || '',
+        // D-513：收货地址（后端 FinishedOutstockHelper 读 params.shippingAddress）
+        shippingAddress: this.data.shippingAddress || '',
         remark: this.data.remark || '',
       });
       wx.showToast({ title: '出库成功', icon: 'success' });

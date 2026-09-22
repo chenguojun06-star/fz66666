@@ -246,3 +246,56 @@
   border-radius: var(--radius-lg, 8px);
 }
 .submit-btn--disabled { opacity: 0.6; }
+
+/* D-513 补 PC 端有而手机端缺失的字段 + 批量填数量 */
+
+/* 明细标题右侧操作：一键全部数量 + 全选 */
+.hd-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12, 12rpx);
+}
+.hd-btn {
+  font-size: 12px;
+  color: var(--color-primary, #2d7ff9);
+  background: var(--color-primary-bg, #eef4ff);
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+}
+
+/* SKU 行右侧单价 */
+.sku-price {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary, #1d1d1f);
+  margin-left: var(--space-8, 8rpx);
+}
+
+/* 选中后的单价输入行 */
+.price-row {
+  display: flex;
+  align-items: center;
+  margin-top: var(--space-8, 8rpx);
+  padding-top: var(--space-8, 8rpx);
+  border-top: 1rpx dashed var(--color-border, #eee);
+}
+.price-label {
+  font-size: 12px;
+  color: var(--color-text-secondary, #666);
+  width: 80rpx;
+  flex-shrink: 0;
+}
+.price-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--color-text-primary, #1d1d1f);
+  text-align: right;
+}
+.price-unit {
+  font-size: 12px;
+  color: var(--color-text-secondary, #666);
+  margin-left: var(--space-8, 8rpx);
+  flex-shrink: 0;
+}
