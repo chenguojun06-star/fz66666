@@ -19,6 +19,7 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { hasFeaturePermission, isFactoryAccount } = require('../../../utils/permission');
 const fileUrl = require('../../../utils/fileUrl');
+const { decodeParam } = require('../../../utils/urlParams');
 
 // 订单终态（与 PC 端 production.order.ts TERMINAL_ORDER_STATUSES 对齐）
 var TERMINAL_ORDER_STATUSES = ['completed', 'closed', 'cancelled', 'scrapped', 'archived'];
@@ -158,9 +159,11 @@ Page({
     // D-430：小云待办直达参数（见 bellTaskActions.handleBusinessTask）
     //   settlementId —— 待办 id "PAY_{settlementId}" 解析而来，用于精确筛出该结算单的明细
     //   orderNo      —— 兜底筛选（结算单与明细未绑定时）
+    // ⚠️ 发送方用的是 encodeURIComponent（bellTaskActions 第 367-368 行），
+    //    小程序不会自动解码，这里必须 decodeParam —— 否则值含中文/空格时会查不到。
     this._incoming = {
-      settlementId: opts.settlementId ? String(opts.settlementId) : '',
-      orderNo: opts.orderNo ? String(opts.orderNo) : '',
+      settlementId: decodeParam(opts.settlementId),
+      orderNo: decodeParam(opts.orderNo),
     };
     this._autoOpened = false;
     if (isFactoryAccount()) {

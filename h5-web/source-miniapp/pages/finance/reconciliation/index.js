@@ -11,6 +11,7 @@ const api = require('../../../utils/api');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { hasFeaturePermission, isFactoryAccount } = require('../../../utils/permission');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { decodeParam } = require('../../../utils/urlParams');
 
 // 状态文案/配色（与 PC 端 MATERIAL_RECON_STATUS_MAP 对齐）
 // D-419：颜色统一为实底 status-badge 用色（直接走 var(--color-*)）
@@ -112,16 +113,18 @@ Page({
       return;
     }
     // D-430：小云待办直达参数（待办 id "MRC_{reconciliationId}"，见 bellTaskActions）
+    // ⚠️ 发送方用的是 encodeURIComponent（bellTaskActions 第 378-379 行），
+    //    小程序不会自动解码，这里必须 decodeParam。
     this._incoming = {
-      reconciliationId: opts.reconciliationId ? String(opts.reconciliationId) : '',
-      orderNo: opts.orderNo ? String(opts.orderNo) : '',
+      reconciliationId: decodeParam(opts.reconciliationId),
+      orderNo: decodeParam(opts.orderNo),
     };
     this._autoOpened = false;
     this.setData({
       canOperate: hasFeaturePermission('approve_reconciliation'),
       // 支持从待办直达并预置筛选（如 ?status=pending / ?keyword=xxx）
       statusFilter: opts.status || '',
-      keyword: opts.keyword ? decodeURIComponent(opts.keyword) : '',
+      keyword: decodeParam(opts.keyword),
     });
   },
 
