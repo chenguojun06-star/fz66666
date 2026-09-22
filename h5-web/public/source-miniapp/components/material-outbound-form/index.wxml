@@ -62,40 +62,36 @@
 
       <!-- ⚠️ 用 picker 而非 wx.showActionSheet：后者 itemList 最多 6 项，
            而订单/工厂/领料人可能有上百条，必然失败 -->
-      <picker mode="selector" range="{{orderNames}}" bindchange="onOrderChange">
-        <view class="row">
+      <view class="row" bindtap="openPicker" data-key="order">
           <text class="row-label">关联订单 <text class="req">*</text></text>
           <text class="row-value {{orderNo ? '' : 'row-value--placeholder'}}">{{orderNo || '请选择'}}</text>
           <text class="row-arrow">›</text>
         </view>
-      </picker>
+      
       <view class="row" wx:if="{{styleNo}}">
         <text class="row-label">关联款号</text>
         <text class="row-value">{{styleNo}}</text>
       </view>
-      <picker mode="selector" range="{{factoryNames}}" bindchange="onFactoryChange">
-        <view class="row">
+      <view class="row" bindtap="openPicker" data-key="factory">
           <text class="row-label">关联工厂 <text class="req">*</text></text>
           <text class="row-value {{factoryName ? '' : 'row-value--placeholder'}}">{{factoryName || '请选择'}}</text>
           <text class="row-arrow">›</text>
         </view>
-      </picker>
-      <picker mode="selector" range="{{receiverNames}}" bindchange="onReceiverChange">
-        <view class="row">
+      
+      <view class="row" bindtap="openPicker" data-key="receiver">
           <text class="row-label">领料人 <text class="req">*</text></text>
           <text class="row-value {{receiverName ? '' : 'row-value--placeholder'}}">{{receiverName || '请选择'}}</text>
           <text class="row-arrow">›</text>
         </view>
-      </picker>
-      <picker mode="selector" range="{{areaNames}}" bindchange="onAreaChange">
-        <view class="row">
+      
+      <view class="row" bindtap="openPicker" data-key="area">
           <text class="row-label">仓库区域</text>
           <text class="row-value {{warehouseAreaName ? '' : 'row-value--placeholder'}}">
             {{warehouseAreaName || '请选择'}}
           </text>
           <text class="row-arrow">›</text>
         </view>
-      </picker>
+      
     </view>
 
     <!-- ④ 原因 -->
@@ -125,3 +121,13 @@
     {{submitting ? '提交中…' : '确认出库'}}
   </view>
 </view>
+
+<!-- 可搜索选择器：替代原生 picker（原生没有搜索，选项多时只能一路滚） -->
+<search-picker
+  visible="{{pickerVisible}}"
+  title="{{pickerTitle}}"
+  options="{{pickerOptions}}"
+  value="{{pickerValue}}"
+  bind:select="onPickerSelect"
+  bind:close="onPickerClose"
+/>

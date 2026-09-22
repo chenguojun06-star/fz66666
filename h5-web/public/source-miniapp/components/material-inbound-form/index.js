@@ -107,6 +107,13 @@ Component({
     supplierName: '',
     unitPrice: '',
     remark: '',
+
+    // 可搜索选择器（替代原生 picker —— 微信原生 picker **没有搜索**）
+    pickerVisible: false,
+    pickerTitle: '',
+    pickerOptions: [],
+    pickerKey: '',
+    pickerValue: '',
   },
 
   lifetimes: {
@@ -226,6 +233,42 @@ Component({
       } catch (e) {
         console.warn('[物料入库] 加载仓库区域失败', e);
       }
+    },
+
+    // ────────── 可搜索选择器 ──────────
+    // 原来的原生 <picker> 没有搜索，仓库区域/库位一多就得一路滚 → 换成底部可搜索弹层。
+    // 选中后仍复用原有的 onAreaChange / onLocationChange（逻辑只保留一份）。
+
+    openPicker: function (e) {
+      var key = e.currentTarget.dataset.key;
+      var map = {
+        area: { title: '选择仓库区域', names: this.data.areaNames, current: this.data.warehouseAreaName },
+        location: { title: '选择库位', names: this.data.locationNames, current: this.data.warehouseLocation },
+      };
+      var cfg = map[key];
+      if (!cfg) return;
+      this.setData({
+        pickerKey: key,
+        pickerTitle: cfg.title,
+        pickerOptions: cfg.names || [],
+        pickerValue: cfg.current || '',
+        pickerVisible: true,
+      });
+    },
+
+    onPickerClose: function () {
+      this.setData({ pickerVisible: false });
+    },
+
+    onPickerSelect: function (e) {
+      var key = this.data.pickerKey;
+      var label = (e.detail && e.detail.label) || '';
+      var names = key === 'area' ? this.data.areaNames : this.data.locationNames;
+      var idx = (names || []).indexOf(label);
+      if (idx < 0) return;
+      var ev = { detail: { value: idx } };
+      if (key === 'area') this.onAreaChange(ev);
+      else if (key === 'location') this.onLocationChange(ev);
     },
 
     /**
