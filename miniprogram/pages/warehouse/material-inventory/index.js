@@ -195,10 +195,15 @@ Page({
     });
   },
 
-  // D-514：搜索栏扫码按钮 → 跳物料扫码页（料卷出库/退回）
-  onScanTap: function () {
+  // D-514：扫码（sticky-search-bar 的 bind:scan 触发）→ 跳物料扫码页（料卷出库/退回）
+  onScan: function () {
     wx.navigateTo({
       url: '/pages/warehouse/material/scan/index',
     });
+  },
+
+  onSearchClear: function () {
+    this.setData({ keyword: '' });
+    this.loadData(true);
   },
 });

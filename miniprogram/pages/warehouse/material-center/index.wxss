@@ -5,79 +5,44 @@
   padding-bottom: 32rpx;
 }
 
-/* 共享 header：搜索 + 扫码 */
-.filter-bar {
-  background: #fff;
-  padding: 16rpx 24rpx 0;
-  border-bottom: 1rpx solid #e5e7eb;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-.search-row {
+/* 搜索框 + 扫码 由通用组件 sticky-search-bar 提供，这里只定义筛选器 slot 内容 */
+.filter-pickers {
   display: flex;
   align-items: center;
-  gap: 12rpx;
-  margin-bottom: 16rpx;
+  gap: 8px;
 }
-.search-input {
+.filter-picker {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--color-bg-card, #fff);
+  border-radius: var(--radius-sm, 4px);
+  padding: 0 10px;
+  height: 32px;
   flex: 1;
-  height: 64rpx;
-  padding: 0 24rpx;
-  background: #f3f4f6;
-  border-radius: 32rpx;
-  font-size: 26rpx;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  box-sizing: border-box;
 }
-.search-btn {
-  height: 64rpx;
-  padding: 0 28rpx;
-  line-height: 64rpx;
-  background: #2563eb;
-  color: #fff;
-  border-radius: 32rpx;
-  font-size: 26rpx;
+.filter-picker-text {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-secondary, #6b7280);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.filter-picker-arrow {
+  font-size: var(--font-size-xxs, 11px);
+  color: var(--color-text-tertiary, #9ca3af);
   flex-shrink: 0;
-}
-.scan-btn {
-  width: 64rpx;
-  height: 64rpx;
-  line-height: 64rpx;
-  text-align: center;
-  background: #eff6ff;
-  border: 1rpx solid #bfdbfe;
-  border-radius: 32rpx;
-  flex-shrink: 0;
-}
-.scan-btn--active {
-  background: #dbeafe;
-}
-.scan-icon {
-  font-size: 32rpx;
-}
-.picker-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16rpx 0;
-  border-top: 1rpx solid #f3f4f6;
-}
-.picker-label {
-  font-size: 26rpx;
-  color: #6b7280;
-}
-.picker-value {
-  font-size: 26rpx;
-  color: #111827;
 }
 
-/* 5 个 tab */
+/* 5 个 tab（沿用项目 tab-bar / tab-item / active 约定） */
 .tab-bar {
   display: flex;
   background: #fff;
   border-bottom: 1rpx solid #e5e7eb;
-  position: sticky;
-  top: 156rpx;
-  z-index: 9;
 }
 .tab-item {
   flex: 1;
@@ -87,11 +52,11 @@
   color: #6b7280;
   position: relative;
 }
-.tab-item--active {
+.tab-item.active {
   color: #2563eb;
   font-weight: 600;
 }
-.tab-item--active::after {
+.tab-item.active::after {
   content: '';
   position: absolute;
   left: 50%;

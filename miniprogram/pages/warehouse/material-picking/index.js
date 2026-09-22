@@ -117,6 +117,11 @@ Page({
     this.loadList(true);
   },
 
+  onSearchClear() {
+    this.setData({ keyword: '' });
+    this.loadList(true);
+  },
+
   loadList: async function (reset) {
     if (reset) {
       this.setData({ loading: true, page: 1, hasMore: true, list: [] });
