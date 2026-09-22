@@ -23,6 +23,9 @@ interface PrintOptionsSelectorProps {
   labelPrinting: boolean;
   onLabelPrint: () => void;
   labelItems: LabelItem[];
+  /** D-513 主打印字体缩放，1 = 默认大小 */
+  fontScale?: number;
+  onFontScaleChange?: (n: number) => void;
 }
 
 const PrintOptionsSelector: React.FC<PrintOptionsSelectorProps> = ({
@@ -32,12 +35,33 @@ const PrintOptionsSelector: React.FC<PrintOptionsSelectorProps> = ({
   labelCount, onLabelCountChange,
   labelPrinting, onLabelPrint,
   labelItems,
+  fontScale = 1, onFontScaleChange,
 }) => {
   return (
     <>
       {/* 打印选项 */}
       <div style={{ marginBottom: 16, padding: '12px 16px', background: 'var(--color-bg-page)', borderRadius: 12, border: '1px solid var(--color-border)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+          {/* D-513：主打印字体大小（默认「标准」= 原大小 1）。
+              标签打印有自己的模板，不受此项影响，故标签模式下隐藏 */}
+          {!labelPrintMode && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>字体大小：</span>
+              <Radio.Group
+                value={fontScale}
+                onChange={(e) => onFontScaleChange?.(e.target.value)}
+                optionType="button"
+                buttonStyle="solid"
+                size="small"
+                options={[
+                  { label: '小', value: 0.85 },
+                  { label: '标准', value: 1 },
+                  { label: '大', value: 1.15 },
+                  { label: '特大', value: 1.3 },
+                ]}
+              />
+            </div>
+          )}
           <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', lineHeight: '32px' }}> 选择打印内容：</div>
             <Checkbox.Group

@@ -16,17 +16,30 @@ export interface PrintHtmlParams {
   tenantName?: string;
   /** 页面打印标题，如「样衣开发单」 */
   pageTitle?: string;
+  /** D-513 主打印字体缩放，1 = 默认大小（不传或非法值按 1 处理） */
+  fontScale?: number;
 }
 
 export function buildPrintHtml({
-  printerInfo, printDate, styleNo, bodyHtml, tenantName, pageTitle
+  printerInfo, printDate, styleNo, bodyHtml, tenantName, pageTitle, fontScale
 }: PrintHtmlParams): string {
+  // D-513 字体缩放：所有字号按同一比例缩放，默认 1（保持原大小）
+  const fs = Number(fontScale) > 0 ? Number(fontScale) : 1;
+  const px = (n: number) => `${+(n * fs).toFixed(1)}px`;
+
+  // 内容区来自页面 DOM 的 innerHTML，大量元素带内联 font-size（如 BasicInfoSection 的 16/14/13px），
+  // 内联样式优先级高于模板 body，不处理的话缩放对内容区无效。
+  // 这里按同一比例改写内联 px 值；fs === 1 时不改动，保持原样。
+  const scaledBodyHtml = fs === 1
+    ? bodyHtml
+    : bodyHtml.replace(/font-size:\s*([\d.]+)px/gi, (_m, n) => `font-size:${+(parseFloat(n) * fs).toFixed(1)}px`);
+
   const printHeader = (() => {
     const factory = tenantName?.trim() || '';
     const title = pageTitle?.trim() || '';
     if (!factory && !title) return '';
     const displayText = title ? (factory ? `${factory} - ${title}` : title) : factory;
-    return `<div style="text-align:center;font-size:22px;font-weight:700;color:var(--color-black);margin-bottom:14px;letter-spacing:1px;">${displayText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+    return `<div style="text-align:center;font-size:${px(22)};font-weight:700;color:var(--color-black);margin-bottom:14px;letter-spacing:1px;">${displayText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
   })();
 
   return `
@@ -74,7 +87,7 @@ export function buildPrintHtml({
             display: flex;
             justify-content: flex-end;
             align-items: center;
-            font-size: 12px;
+            font-size: ${px(12)};
             color: var(--color-gray-label);
             padding: 6px 5mm;
             margin-top: 16px;
@@ -91,7 +104,7 @@ export function buildPrintHtml({
           /* 基础样式 */
           body {
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif;
-            font-size: 13px;
+            font-size: ${px(13)};
             line-height: 1.6;
             color: var(--color-gray-800);
             padding: 20px;
@@ -106,14 +119,14 @@ export function buildPrintHtml({
             break-inside: avoid;
           }
           .print-section-title {
-            font-size: 14px; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-radius: 2px; margin-bottom: 0; border: 1px solid #d9d9d9; border-bottom: none;
+            font-size: ${px(14)}; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-radius: 2px; margin-bottom: 0; border: 1px solid #d9d9d9; border-bottom: none;
           }
 
           /* 表格样式 */
           table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
+            font-size: ${px(13)};
             margin-bottom: 16px;
             /* D-361e：整表不拆页——放不下整体挪到下一页 */
             page-break-inside: avoid;
@@ -196,7 +209,7 @@ export function buildPrintHtml({
         ${printHeader}
         <!-- 内容区域 -->
         <div class="print-body">
-          ${bodyHtml}
+          ${scaledBodyHtml}
         </div>
         <!-- 固定页脚：打印人 + 打印时间 -->
         <div class="print-footer">

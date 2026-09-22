@@ -59,6 +59,9 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
 
   // ───── 状态 ─────
   const [options, setOptions] = useState<PrintOptions>(DEFAULT_PRINT_OPTIONS);
+  // D-513 主打印字体缩放（1 = 默认大小）；独立 state，不并入 options，
+  // 否则 Object.values(options).some(v => v) 的「至少选一项」校验会被数字 1 恒定通过
+  const [fontScale, setFontScale] = useState<number>(1);
   // 注：basicInfoFields 状态当前未被读取，保留以维持原组件行为（不删功能）
   const [, setBasicInfoFields] = useState<Set<string>>(new Set([
     'category', 'season', 'price', 'colorSizeMatrix', 'description', 'fabricComposition', 'extraInfo'
@@ -220,6 +223,7 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
         headerInfo: '', printerInfo, printDate, styleNo, bodyHtml: printContent.innerHTML,
         tenantName: user?.tenantName,
         pageTitle: getModePageTitle(mode),
+        fontScale,
       });
       safePrint(htmlContent, `打印预览-${styleNo}`);
     } finally { setPrintLoading(false); }
@@ -313,6 +317,8 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
   return {
     // 状态
     options,
+    fontScale,
+    setFontScale,
     loading,
     resolvedCover,
     data,

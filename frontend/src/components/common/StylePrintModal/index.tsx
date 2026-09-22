@@ -45,6 +45,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   });
   const {
     options, setOptions,
+    fontScale, setFontScale,
     loading,
     resolvedCover,
     data,
@@ -106,6 +107,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             labelCount={labelCount}
             onLabelCountChange={setLabelCount}
             labelPrinting={labelPrinting}
+            fontScale={fontScale}
+            onFontScaleChange={setFontScale}
             onLabelPrint={handleLabelPrint}
             labelItems={labelItems}
           />
