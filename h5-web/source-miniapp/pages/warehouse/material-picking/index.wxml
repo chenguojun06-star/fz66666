@@ -1,7 +1,15 @@
 <view class="page">
-  <!-- 状态筛选 + 搜索 -->
-  <view class="filter-bar">
-    <view class="tabs">
+  <!-- 搜索框 + 状态筛选：统一使用通用组件 sticky-search-bar（与 material-database / material-center / material-inventory 一致） -->
+  <sticky-search-bar
+    placeholder="搜索领料单号/订单号/款号/领取人"
+    value="{{keyword}}"
+    show-scan="{{false}}"
+    show-filter="{{true}}"
+    bind:input="onKeywordInput"
+    bind:confirm="onSearch"
+    bind:clear="onSearchClear"
+  >
+    <view slot="filter" class="tabs">
       <view
         wx:for="{{statusTabs}}"
         wx:key="key"
@@ -10,18 +18,7 @@
         bindtap="onStatusTap"
       >{{item.label}}</view>
     </view>
-    <view class="search-row">
-      <input
-        class="search-input"
-        placeholder="搜索领料单号/订单号/款号/领取人"
-        value="{{keyword}}"
-        bindinput="onKeywordInput"
-        bindconfirm="onSearch"
-        confirm-type="search"
-      />
-      <view class="search-btn" bindtap="onSearch">搜索</view>
-    </view>
-  </view>
+  </sticky-search-bar>
 
   <!-- 统计 -->
   <view class="summary-row" wx:if="{{list.length > 0}}">

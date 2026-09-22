@@ -3,5 +3,7 @@
   "navigationBarBackgroundColor": "#2563eb",
   "navigationBarTextStyle": "white",
   "enablePullDownRefresh": true,
-  "usingComponents": {}
+  "usingComponents": {
+    "sticky-search-bar": "/components/sticky-search-bar/index"
+  }
 }

@@ -5,16 +5,10 @@
   padding-bottom: 24rpx;
 }
 
-/* 筛选栏 */
-.filter-bar {
-  background: #fff;
-  padding: 0 24rpx 16rpx;
-  border-bottom: 1rpx solid #e5e7eb;
-}
+/* 搜索框由通用组件 sticky-search-bar 提供，这里只定义状态 tab（作为筛选器 slot 内容） */
 .tabs {
   display: flex;
   gap: 8rpx;
-  padding: 16rpx 0 12rpx;
 }
 .tab {
   flex: 1;
@@ -29,27 +23,6 @@
   color: #fff;
   background: #2563eb;
   font-weight: 500;
-}
-.search-row {
-  display: flex;
-  gap: 12rpx;
-}
-.search-input {
-  flex: 1;
-  height: 60rpx;
-  padding: 0 20rpx;
-  background: #f3f4f6;
-  border-radius: 30rpx;
-  font-size: 24rpx;
-}
-.search-btn {
-  height: 60rpx;
-  padding: 0 26rpx;
-  line-height: 60rpx;
-  background: #2563eb;
-  color: #fff;
-  border-radius: 30rpx;
-  font-size: 24rpx;
 }
 
 /* 统计 */
