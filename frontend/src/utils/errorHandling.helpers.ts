@@ -6,7 +6,10 @@
  * 生成追踪 ID
  */
 export function generateTraceId(): string {
-  return `TRC-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  // D-513：Math.random().toString(36) 的位数不固定，substr(2, 9) 有时只取到 8 位，
+  // 导致 traceId 长度不稳定（单测断言 /^TRC-\d+-\w{9}$/ 偶发失败）。
+  // 补零到 9 位，保证定长。
+  return `TRC-${Date.now()}-${Math.random().toString(36).substr(2, 9).padEnd(9, '0')}`;
 }
 
 /**
