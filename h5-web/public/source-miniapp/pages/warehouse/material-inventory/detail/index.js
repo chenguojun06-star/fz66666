@@ -14,6 +14,7 @@
  * ⚠️ /scan-query 不返回 materialImage（图片由列表页富化），所以图片走 URL 参数传。
  */
 var api = require('../../../../utils/api');
+var decodeParam = require('../../../../utils/urlParams').decodeParam;
 
 /** 与 material-center / material-inventory / PC 端 MaterialInventory 保持同一套类型映射 */
 var TYPE_META = {
@@ -27,6 +28,7 @@ Page({
     materialCode: '',
     materialName: '',
     image: '',
+    materialType: '',
     typeLabel: '',
     typeColor: '',
 
@@ -50,22 +52,26 @@ Page({
 
   onLoad: function (options) {
     wx.setNavigationBarTitle({ title: '物料详情' });
-    var code = (options && options.materialCode) || '';
+    var opt = options || {};
+    // ⚠️ 全部走 decodeParam —— 列表页传过来的是 encodeURIComponent 后的值，
+    //    小程序不会自动解码。漏解码时编码会显示成 M%E6%A3%89… 并查不到物料。
+    var code = decodeParam(opt.materialCode);
     if (!code) {
       this.setData({ loading: false, txLoading: false });
       wx.showToast({ title: '缺少物料编码', icon: 'none' });
       return;
     }
-    var type = (options && options.materialType) || '';
+    var type = decodeParam(opt.materialType);
     var meta = TYPE_META[type] || { label: '', color: '' };
     this.setData({
       materialCode: code,
-      materialName: decodeURIComponent((options && options.materialName) || ''),
-      image: decodeURIComponent((options && options.image) || ''),
-      unit: decodeURIComponent((options && options.unit) || ''),
-      warehouseAreaName: decodeURIComponent((options && options.warehouseAreaName) || ''),
-      supplierName: decodeURIComponent((options && options.supplierName) || ''),
-      safetyStock: Number((options && options.safetyStock) || 0) || 0,
+      materialName: decodeParam(opt.materialName),
+      image: decodeParam(opt.image),
+      materialType: type,
+      unit: decodeParam(opt.unit),
+      warehouseAreaName: decodeParam(opt.warehouseAreaName),
+      supplierName: decodeParam(opt.supplierName),
+      safetyStock: Number(opt.safetyStock) || 0,
       typeLabel: meta.label,
       typeColor: meta.color,
     });
