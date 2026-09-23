@@ -1,6 +1,6 @@
 <!-- 领料出库列表（通用组件 D-514）
      两个消费方：① 独立页 material-picking ② 物料中心「领料」tab（内联）
-     独立页带吸顶搜索栏；内联在 tab 里时父级已有搜索栏，只保留状态筛选 -->
+     D-515：两处都用自己的搜索栏（含状态筛选），父级物料中心不再常驻顶部搜索栏，避免双重搜索框 -->
 <view class="material-picking-list">
   <!-- 独立页：搜索框 + 状态筛选（通用组件 sticky-search-bar） -->
   <sticky-search-bar

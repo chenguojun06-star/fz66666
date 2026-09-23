@@ -6600,3 +6600,33 @@ function toArray(res) {
 **决策**：merge 分支加 `hasExistingData` 判定——目标款**完全无尺寸行时跳过 canonical 过滤，整表按模板写入**；仅当目标款已有尺寸结构才用规范码数过滤（保留 D-264 防"拖入多余码列"）。改 `TemplateStyleOrchestrator.java` 1 处，mvn compile 通过。
 
 **下一步**：用户线上用「覆盖导入」可立即绕过（覆盖分支本就不做码数过滤）；修复需重新部署后端后生效。注意：若模板为简单码而款式配置为带型体 8 码，导入后 PC 会并列多出简单码列，建议同时把款式基础码数配置改成与实际样衣一致的码。
+
+## 2026-09-23 D-515 物料中心 tab 搜索栏去重 + 领料默认筛选（用户反馈"手机端领料没数据/搜索重复"）✅代码完成
+
+**反馈**：① 小程序物料中心「领料」tab 空白，怀疑与 PC 端不同步；② 顶部有搜索栏，切到各 tab 下面又有一套搜索+扫码，重复。
+
+**核实（先看清楚再改，别误判成不同步）**：两端同接口 `GET /api/production/picking/list` + 同表 `t_material_picking` + 同枚举，
+数据本就同步。**空是因为小程序默认 status=pending，而 D-099 后内部领料「领取即出库」直接落 completed**，
+只有 EXTERNAL 才产生 pending → 待出库天然空；PC 默认筛选 `''`（全部）所以能看到 → 观感上"不一致"。
+
+**决策（去重原则）**：一个页面同一时刻只保留一组搜索/扫码控件 —— 顶部常驻栏只服务「库存」列表，
+其余 tab 各用各的（表单自带编码+扫码+查询 / 领料列表自带搜索+状态筛选 / 料卷 tab 自身即扫码入口）。
+**通用反模式**：把父级搜索栏"常驻"再让子 tab 各自带一套 = 双重搜索框 + 双扫码入口，手机端尤其乱。
+
+**改动（4 文件，纯小程序前端）**：material-center/index.wxml（顶部栏 wx:if=inventory、领料 status=""+show-search）、
+material-center/index.js（切 tab 时把库存搜索词预填给入库/出库表单、删失效提示）、material-picking-list/index.js（默认 status ''）。
+
+**教训**：D-099「领取即出库」之后，任何"待出库/pending"默认筛选的入口（物料中心领料 tab、待办通知深链
+`?status=pending`）都会天然为空 —— 新做列表默认一律用「全部」，需要待办时再显式传 pending。
+
+### D-515 第二部分（同日）：删孤儿页 + 待办深链去 pending
+
+**决策**：删孤儿页前先"补平能力"再删 —— `material-inventory/index` 有分页而物料中心库存 tab 写死 pageSize:30，
+直接删等于功能倒退；故先给 tab 补 `inventoryPage/hasMore/loadMoreInventory`（底部按钮 + onReachBottom 仅库存 tab 生效），
+再删页 + 从 app.json 分包移除。
+
+**连带影响（易漏）**：`scripts/test-warehouse-pages.mjs` 直接 read 被删页面做断言 → 必须同步改，否则脚本直接抛错；
+已改为以物料中心为准并补 5 条 D-515 回归断言（顶部栏只在库存 tab / 领料默认全部 / 自带搜索栏 / 分页 / 深链不锁 pending）。
+**教训**：删任何小程序页面，自查三项 —— ①app.json（含分包）②全仓 navigateTo/url 字符串 ③scripts 下的静态检查脚本（会 read 文件）。
+
+**h5-web/source-miniapp 是生成物**（`h5-web/scripts/sync-miniprogram.mjs` 先清空再全量拷），源删了不用手改镜像。

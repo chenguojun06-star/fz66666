@@ -17,7 +17,10 @@ const HANDLE_ROUTE = {
   // D-513：原来是 /pages/warehouse/material/scan/index（扫码页），
   // 但扫码页只能「确认发料/退回」（改料卷状态），不是领料出库两步流——
   // 看不到待出库列表、也确认不了出库，闭环断了。改跳专门的领料出库页。
-  MATERIAL_PICKING: '/pages/warehouse/material-picking/index?status=pending',
+  // D-515：不再带 status=pending —— D-099 后内部领料是「领取即出库」直接落 completed，
+  // 只有 EXTERNAL 外发领用才产生 pending，带 pending 跳进去必然空白（用户以为没数据）。
+  // 改成默认「全部」，与 PC 端领料列表口径一致；真有待出库的直接在状态 tab 里点。
+  MATERIAL_PICKING: '/pages/warehouse/material-picking/index',
   COLLAB_TASK: '/pages/collab-task/list/index', // 缺 taskId 时兜底进协作任务列表，用户可在列表中找到对应任务
 };
 

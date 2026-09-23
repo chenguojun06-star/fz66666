@@ -606,14 +606,23 @@ function testEntryPoints() {
   // 用户反馈「点卡片不是详情页，里面还有搜索框，乱七八糟」——
   // 起因是我把卡片点击指向了「物料资料」列表页（自带搜索框）。
   // 对标成品库存 finished-inventory/detail：点卡片就该看这一个物料。
-  const miJ = read('pages/warehouse/material-inventory/index.js');
+  // D-515：原「物料库存列表独立页」已并入物料中心「库存」tab 并删除（孤儿页），断言改以物料中心为准。
   const DETAIL = 'pages/warehouse/material-inventory/detail/index';
   ok('物料中心点卡片进详情页', /material-inventory\/detail\/index/.test(mcJ));
-  ok('物料库存页点卡片进详情页', /material-inventory\/detail\/index/.test(miJ));
   ok('物料中心点卡片不再跳物料资料列表页', !/material-database\/index\?keyword/.test(mcJ));
-  ok('物料库存点卡片不再直接跳出库页', !/onRowTap[\s\S]{0,500}material-outbound\/index/.test(miJ));
+  ok('物料库存孤儿页已删除', !fs.existsSync(path.join(MP, 'pages/warehouse/material-inventory/index.js')));
   ok('详情页四件套齐全', ['js', 'wxml', 'json', 'wxss']
     .every((ext) => fs.existsSync(path.join(MP, `${DETAIL}.${ext}`))));
+
+  // D-515：一个页面同时只保留一组搜索/扫码控件
+  ok('顶部搜索栏只在库存 tab 显示',
+    /sticky-search-bar[\s\S]{0,400}wx:if="\{\{activeTab === 'inventory'\}\}"/.test(mcW));
+  ok('领料 tab 默认「全部」而不是待出库',
+    /<material-picking-list[\s\S]{0,200}status=""/.test(mcW));
+  ok('领料列表使用自带搜索栏', /<material-picking-list[\s\S]{0,300}show-search="\{\{true\}\}"/.test(mcW));
+  ok('库存 tab 有分页加载更多', /loadMoreInventory/.test(mcW) && /loadMoreInventory/.test(mcJ));
+  const todoJ = read('pages/todo-detail/index.js');
+  ok('待办领料深链不再锁死 pending', !/material-picking\/index\?status=pending/.test(todoJ));
   const appJsonW = JSON.parse(fs.readFileSync(path.join(MP, 'app.json'), 'utf8'));
   const spW = (appJsonW.subpackages || []).find((s) => s.root === 'pages/warehouse');
   ok('app.json 已注册物料详情页', !!spW && spW.pages.includes('material-inventory/detail/index'));

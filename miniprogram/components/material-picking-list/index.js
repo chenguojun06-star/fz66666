@@ -75,10 +75,12 @@ Component({
   },
 
   properties: {
-    /** 初始状态筛选（从待办通知跳过来时带 pending） */
+    /** 初始状态筛选（D-515：默认「全部」，与 PC 端一致）
+        不要默认 pending —— D-099 后内部领料是「领取即出库」直接落 completed，
+        默认只看待出库会一直空白。从待办通知跳过来时仍可显式传 pending。 */
     status: {
       type: String,
-      value: 'pending',
+      value: '',
     },
     /** 是否显示吸顶搜索栏（内联在 tab 里时父级已提供，可关掉） */
     showSearch: {
@@ -89,7 +91,7 @@ Component({
 
   data: {
     statusTabs: STATUS_TABS,
-    status: 'pending',
+    status: '',
     keyword: '',
     list: [],
     total: 0,

@@ -1,7 +1,37 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-21（✅D-514 样衣打印分页治理：区块整块不拆页+页脚取消fixed+生产制单工艺说明行移除，纯前端）
+> 最后更新：2026-09-23（✅D-515 物料中心 tab 去重 + 领料默认筛选改为「全部」，纯小程序前端）
+> 上一版：2026-09-21（✅D-514 样衣打印分页治理：区块整块不拆页+页脚取消fixed+生产制单工艺说明行移除，纯前端）
+
+---
+
+## ✅ D-515 物料中心：重复搜索栏治理 + 领料「无数据」误判（2026-09-23，已改代码未提交）
+
+**用户反馈**：① 手机端物料中心「领料」tab 空，怀疑与 PC 不同步；② 顶部一个搜索栏，切到各 tab 下面又一套搜索/扫码，重复太多。
+
+**核实结论（重要，别再误判为"不同步"）**：
+- 两端同接口 `GET /api/production/picking/list`、同表 `t_material_picking`、同枚举（pending/completed/cancelled），**数据是同步的**。
+- 空的原因是小程序「领料」tab 硬编码 `status="pending"`（wxml + 组件默认值都是 pending），
+  而 **D-099 之后内部领料是「领取即出库」**（`MaterialPurchaseOrchestrator.createPickingAndOutbound`
+  建单后同事务 `confirmPickingOutbound` 直接落 completed），**只有 EXTERNAL 外发领用才产生 pending** → 待出库天然为空。
+  PC 默认筛选是 `''`（全部）所以看得到记录 → 造成"两端不一致"的错觉。
+- 次因（若切「已完成」仍空再查）：后端 `DataPermissionHelper.getFactoryOrderIds` 对带 factoryId 的工厂账号做订单归属过滤。
+
+**已改（4 个文件，纯小程序）**：
+1. `material-center/index.wxml`：顶部 `sticky-search-bar` 加 `wx:if="{{activeTab === 'inventory'}}"`——只在库存 tab 显示（入库/出库表单自带"编码+扫码+查询"，领料列表自带"搜索+状态筛选"，料卷 tab 自身即扫码入口）。
+2. `material-center/index.wxml`：领料 tab `status=""` + `show-search="{{true}}"`（顶部栏不再常驻，组件用自己的搜索栏）。
+3. `material-picking-list/index.js`：properties/data 的 status 默认值 `pending` → `''`（全部），与 PC 对齐；独立页 `?status=pending` 深链不受影响。
+4. `material-center/index.js`：`onTabTap` 切到入库/出库时把库存搜索词当 `formCode` 预填（搜 M001→切入库直接带 M001，不重复输入）；删掉料卷 tab 里"顶部搜索栏旁的📷也能直接跳到这"这句失效提示。
+
+**遗留已处理（2026-09-23 同批完成）**：
+- `pages/warehouse/material-inventory/index`（物料库存列表独立页）确认是孤儿页（全仓无 navigateTo 指向）→ 已删 4 个文件 + 从 `app.json` 分包移除。
+  ⚠️ 删之前先补平能力：该页有「加载更多」分页，而物料中心库存 tab 原先写死 `pageSize:30` 只能看 30 条 →
+  已给 tab 补分页（`inventoryPage/hasMore/loadMoreInventory` + 底部「加载更多」+ `onReachBottom` 仅库存 tab 生效）。
+- 待办通知深链 `pages/todo-detail/index.js` 的 `MATERIAL_PICKING` 去掉 `?status=pending`（内部领料不产生 pending，跳过去必空）。
+- ⚠️ `scripts/test-warehouse-pages.mjs` 里读了该孤儿页做断言 → 已改为以物料中心为准，并补 5 条 D-515 回归断言；
+  跑 `node scripts/test-warehouse-pages.mjs` 全绿（172 项）。
+- `h5-web/source-miniapp` 是 `h5-web/scripts/sync-miniprogram.mjs` 的生成物（先清空再全量拷），下次跑同步自动跟上，不用手改。
 
 ---
 

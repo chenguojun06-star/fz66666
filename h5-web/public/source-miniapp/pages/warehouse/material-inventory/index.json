@@ -1,6 +1,0 @@
-{
-  "navigationBarTitleText": "物料库存",
-  "usingComponents": {
-    "sticky-search-bar": "/components/sticky-search-bar/index"
-  }
-}

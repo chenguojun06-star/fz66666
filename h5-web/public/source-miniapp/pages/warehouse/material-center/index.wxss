@@ -14,6 +14,18 @@ page {
   padding-bottom: calc(20px + env(safe-area-inset-bottom));
 }
 
+/* ===== D-515：列表底部分页 ===== */
+.loadmore {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-lg) 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+.loadmore-btn {
+  color: var(--color-primary);
+}
+
 /* ===== 筛选器 slot（sticky-search-bar 已含搜索框，此处只放 picker） ===== */
 .filter-pickers {
   display: flex;

@@ -85,6 +85,10 @@ Page({
     loading: true,
     inventoryList: [],
     inventoryTotal: 0,
+    // D-515：分页（原孤儿页 material-inventory 有「加载更多」，tab 只能看 30 条 → 先补平分页再删孤儿页）
+    inventoryPage: 1,
+    pageSize: 20,
+    hasMore: false,
 
     // D-514：入库/出库 tab 的预填物料编码
     // 从库存卡片点「入库/出库」时带过来，切 tab 后表单自动查询
@@ -104,6 +108,11 @@ Page({
     this.loadInventory(true).then(function () { wx.stopPullDownRefresh(); });
   },
 
+  // D-515：触底翻页只对库存 tab 生效（领料 tab 由列表组件自己的「加载更多」负责）
+  onReachBottom: function () {
+    this.loadMoreInventory();
+  },
+
   onShow: function () {
     // 从子页返回 / 领料确认出库后库存已变 → 重新拉取
     if (this.data.activeTab === 'inventory' || this._inventoryDirty) {
@@ -117,7 +126,13 @@ Page({
     var key = e.currentTarget.dataset.key;
     if (!key || key === this.data.activeTab) return;
     // D-514：手动切 tab 时清掉卡片带过来的预填编码，避免表单残留上一次的物料
-    this.setData({ activeTab: key, formCode: '' });
+    // D-515：顶部搜索栏只在库存 tab 显示，切走后搜索词不该丢失 —— 带进入库/出库表单当预填编码，
+    //       「搜 M001 → 切入库」直接就是 M001，不用再输入一遍（表单自带扫码，不重复入口）
+    var next = { activeTab: key, formCode: '' };
+    if ((key === 'inbound' || key === 'outbound') && this.data.keyword) {
+      next.formCode = this.data.keyword;
+    }
+    this.setData(next);
     if (key === 'inventory') {
       this.loadInventory(true);
     }
@@ -151,15 +166,19 @@ Page({
   // ====== 库存 tab 数据加载 ======
   loadInventory: async function (reset) {
     if (reset) {
+      this.setData({ loading: true, inventoryPage: 1, hasMore: false });
+    } else {
+      if (!this.data.hasMore) return;
       this.setData({ loading: true });
     }
     try {
       // D-514 修 bug：参数名对齐后端 MaterialStockController.getPage + PC 端 useMaterialInventoryList
       //   - 分页是 page（不是 pageNum），ParamUtils.getPage 读 "page"
       //   - 后端没有 keyword 参数，搜索走 materialCode（like），PC 端亦如此
+      var nextPage = reset ? 1 : this.data.inventoryPage + 1;
       var params = {
-        page: 1,
-        pageSize: 30,
+        page: nextPage,
+        pageSize: this.data.pageSize,
       };
       if (this.data.keyword) params.materialCode = this.data.keyword;
       if (this.data.typeValue) params.materialType = this.data.typeValue;
@@ -190,9 +209,13 @@ Page({
           image: r.materialImage ? getAuthedImageUrl(r.materialImage) : '',
         };
       });
+      var merged = reset ? list : this.data.inventoryList.concat(list);
+      var total = (res && res.total) || merged.length;
       this.setData({
-        inventoryList: list,
-        inventoryTotal: (res && res.total) || list.length,
+        inventoryList: merged,
+        inventoryTotal: total,
+        inventoryPage: nextPage,
+        hasMore: merged.length < total,
         loading: false,
       });
     } catch (e) {
@@ -201,6 +224,13 @@ Page({
       this.setData({ loading: false });
       wx.showToast({ title: (e && e.errMsg) || '加载失败', icon: 'none' });
     }
+  },
+
+  /** D-515：库存 tab 加载更多（列表底部按钮 + 页面触底都能触发） */
+  loadMoreInventory: function () {
+    if (this.data.activeTab !== 'inventory') return;
+    if (this.data.loading || !this.data.hasMore) return;
+    this.loadInventory(false);
   },
 
   // ====== 库存卡片：入库/出库快捷操作 ======

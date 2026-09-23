@@ -1,6 +1,9 @@
 <view class="container">
-  <!-- 搜索框 + 扫码 + 类型筛选：统一使用通用组件 sticky-search-bar（与 material-database / defect 等页面一致） -->
+  <!-- D-515：顶部搜索栏只服务「库存」列表，其余 tab 各用各的控件
+       （入库/出库表单自带「物料编码+扫码+查询」，领料列表自带「搜索+状态筛选」，料卷 tab 本身就是扫码入口）。
+       之前顶部栏常驻 → 出现「上面一个搜索框、下面又一个搜索框、两个扫码入口」的重复观感。 -->
   <sticky-search-bar
+    wx:if="{{activeTab === 'inventory'}}"
     placeholder="搜索物料编码或名称"
     value="{{keyword}}"
     show-scan="{{true}}"
@@ -83,6 +86,13 @@
         </view>
       </view>
     </view>
+
+    <!-- D-515：分页（补齐原 material-inventory 独立页的「加载更多」，删孤儿页前先补平能力） -->
+    <view class="loadmore" wx:if="{{inventoryList.length > 0}}">
+      <text wx:if="{{loading}}">加载中…</text>
+      <text wx:elif="{{hasMore}}" class="loadmore-btn" bindtap="loadMoreInventory">加载更多</text>
+      <text wx:else>— 没有更多了 —</text>
+    </view>
   </view>
 
   <!-- 入库 tab：内联表单（D-514，不再跳页；从库存卡片点「入库」会带编码预填） -->
@@ -101,11 +111,13 @@
     />
   </view>
 
-  <!-- 领料 tab：内联列表（D-514，不再跳页；tab 内已有筛选，关掉自带搜索栏） -->
+  <!-- 领料 tab：内联列表（D-514，不再跳页）
+       D-515：默认「全部」而不是「待出库」——D-099 后内部领料是「领取即出库」直接落 completed，
+       默认看 pending 会一直空白，用户以为数据没同步。搜索栏交给组件自己（顶部栏已不在本 tab 显示）。 -->
   <view class="tab-panel" wx:elif="{{activeTab === 'picking'}}">
     <material-picking-list
-      status="pending"
-      show-search="{{false}}"
+      status=""
+      show-search="{{true}}"
       bind:success="onPickingSuccess"
     />
   </view>
@@ -121,7 +133,6 @@
       <view class="action-arrow">›</view>
     </view>
     <view class="action-tips">
-      <view>• 顶部搜索栏旁的 📷 也能直接跳到这</view>
       <view>• 退回流程：扫料卷 → 选择「退回」</view>
       <view>• 扫码后会自动带出料卷关联的款号/订单</view>
     </view>
