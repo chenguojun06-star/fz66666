@@ -1,7 +1,56 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-23（新增 D-521 商品仓储单价口径统一——列表销售价进编码详情只读区，入库价全链改名「入库单价」）
+> 最后更新：2026-09-23（新增 D-523 库存重算补入口 + Flyway 失败迁移幂等化 + 入站 Webhook 假成功第二处；回填 D-522）
+
+---
+
+## D-523：把"接口在、界面点不到"和"每次启动刷 ERROR"一起收掉（2026-09-23）
+
+**来源**：D-522 上线后上服务器核查，发现 3 个**不是本次引入**的问题，本单修掉其中 2 个（第 3 个是磁盘 84%，暂不动）。
+
+**① Flyway 每次启动都失败 → 幂等化**
+- 现象：`V202709200001__add_salary_work_start_time.sql` 报 `Duplicate column name 'work_start_time'`，
+  `FlywayRepairConfig` 清理失败记录保证应用仍能启动，但每次重启都刷 ERROR 并多耗几秒。
+- 根因：该列已被 `V202709200000`（建表）或云端先行同步建好，而迁移脚本是**无条件 `ALTER TABLE ADD COLUMN`**。
+- 决策：改成 `information_schema.COLUMNS` 先判存在再决定是否 ALTER（与 `V45` 同一写法，PREPARE/EXECUTE 动态 SQL）。
+  **不删文件**：删了会破坏"Entity 字段 ↔ Flyway 脚本"一致性检查（`EmployeeSalaryConfig.workStartTime` 必须有对应迁移）。
+
+**② `POST /api/ec/stock/sync` 是孤儿接口 → 补前端入口**
+- 现象：全局搜 `syncAll` 只命中 `useStockBase.ts` / `useEcStock.ts` 两个 hook 定义，
+  `SmartStockTab.tsx` / `useSmartStockData.tsx` 从不调用 → **库存全量重算在界面上根本点不到**。
+- 这是 `t_ec_universal_stock` 长期 0 行的另一半原因（另一半是 D-522 修的入库/出库事件无发布方）。
+- 决策：
+  - 后端 `EcStockOrchestrator.syncAllStock` 由 `void` 改返回 `int`（实际重算 SKU 数），
+    Controller 返回 `{ skuCount }`，让前端能提示"已重算 N 个 SKU"，避免"点了没反应"；
+  - 前端 `useSmartStockData` 加 `stockSyncing` + `handleSyncStock`，`SmartStockTab` 的**库存明细 tab** 加「重算库存」按钮。
+  - 按钮文案与提示语写「重算」，**不写「同步到平台」**——该方法只重算本地，推平台是另一条受开关控制的通道（见铁律 4）。
+
+**③ 入站 Webhook 假成功（第二处）**
+- `PlatformWebhookController.receiveOrder`（`/api/webhook/ecommerce/{tenantId}/{platformCode}`）异常时返回
+  `200 + received:false`，平台会认为已送达不再重推 → 与 D-522 修的是**同一 bug 的另一个副本**。
+- 决策：对齐 D-522 的状态码约定 —— 平台未配置 401、异常 500；并新增 `PlatformWebhookControllerTest`（8 例，
+  含"异常必须 500"的回归断言，期望签名用 openssl 独立算出后硬编码，避免自证循环）。
+- 顺手澄清：`/api/ecommerce/webhook/{platform}`（靠 X-App-Key 反查租户）与本入口**是两条并存入口**，
+  签名头不同（`X-Signature` vs `X-Platform-Signature`），已写进类注释，暂不合并。
+
+**④ 认知更正：`t_ec_platform_config.callback_url` 不是我们的入站地址**
+- 该字段语义是**出站**"物流回传地址"（`PlatformNotifyService` 出库后 POST 物流信息到它），
+  把它填成 `https://api.webyszl.cn/api/ecommerce/webhook/{平台}` 是**错的**（会让系统把物流信息推给自己）。
+- 入站地址由连接器页面的 `webhookUrl` 展示，需商家在平台后台配置。
+- 线上 `t_ec_platform_config` 3 行凭证均为**占位值**（`app_key` 是 `admin`/`zhangwan` 这类用户名，
+  `app_secret` 6 位）→ 平台真实推单**不可能跑通**，需商家提供真实凭证。
+
+**新增铁律 14**：入站 Webhook 的失败必须体现在 HTTP 状态码上（禁止 200 + 业务失败）。
+
+---
+
+## D-522：电商↔生产↔仓库链路断点修复（2026-09-23，回填记录）
+
+一条链路上 5 个真断点：① `StockChangeEvent` 有监听器但**零发布方**（新建 `StockChangePublisher`，挂入库/出库出口，
+事务提交后发布）② 真实 SKU 编码无分隔符，四处 `-` 切分猜款号恒不命中 ③ 库存汇总把 N 个仓库行 + 1 个款级行
+重复计数 ④ webhook 失败返回 HTTP 200 ⑤ 物流回调"假成功"。详见 CLAUDE.md 铁律 11/12/13 与
+`StockChangePublisherTest` / `EcStockCalculatorTest` / `EcProductionLinkOrchestratorTest`。
 
 ---
 

@@ -1,9 +1,19 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-09-12（D-375 备注列错位根治；另更正多处滞后状态）
+> 最后更新：2026-09-23（D-523 库存重算补前端入口 + Flyway 失败迁移幂等化 + 入站 Webhook 假成功第二处）
 
 ## 已完成
+
+### 2026-09-23 D-523 电商库存入口补齐 + Flyway 幂等 + Webhook 状态码（mvn 编译过 / 5 个测试类全绿 / tsc 0 错，已推送）
+
+- [x] `V202709200001` 改幂等（information_schema 判列），消除每次启动的 Duplicate column ERROR
+- [x] `EcStockOrchestrator.syncAllStock` 返回重算 SKU 数；Controller 返回 `{skuCount}`
+- [x] 「电商中心 → 库存明细」新增「重算库存」按钮（此前接口无任何前端入口）
+- [x] `PlatformWebhookController` 异常→500、未配置→401（新增 8 例测试，含关键回归断言）
+- [x] CLAUDE.md 新增铁律 14（入站 Webhook 失败必须用非 2xx 表达）
+- [ ] 待上线后实测：界面点「重算库存」→ `t_ec_universal_stock` 是否有行
+- [ ] 未做：平台真实推单（线上凭证是占位值，需商家提供真实 AppKey/AppSecret）
 
 ### 2026-09-12 D-384 指派明细表 + 按人卡额度 ✅（mvn SUCCESS / tsc / eslint / build 全过，未推送）
 

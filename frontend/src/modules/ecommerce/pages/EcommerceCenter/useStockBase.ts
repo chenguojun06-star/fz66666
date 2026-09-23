@@ -61,9 +61,17 @@ export function useStockBase() {
     } catch { /* handled */ }
   }, []);
 
+  /**
+   * 库存全量重算（本地）。
+   *
+   * 注意：只重算本地 t_ec_universal_stock 并生成低库存预警，
+   * **不会把库存推到电商平台**（推平台走受开关控制的独立通道）。
+   * 返回实际重算的 SKU 数量，供调用方提示"已重算 N 个 SKU"。
+   */
   const syncAll = useCallback(async () => {
-    await api.post('/ec/stock/sync');
+    const res = await api.post<ApiResult<{ skuCount: number }>>('/ec/stock/sync');
     await fetchStock();
+    return res?.data?.skuCount ?? 0;
   }, [fetchStock]);
 
   const generateSuggestions = useCallback(async () => {

@@ -45,14 +45,18 @@ public class EcStockOrchestrator {
      * （以为点一次就能把库存同步到淘宝/京东）。
      *
      * <p>如需真正推送到平台，请调用 {@link #pushStockToPlatform}（受开关控制）。
+     *
+     * @return 本次实际重算的 SKU 数量（供前端提示"已重算 N 个 SKU"，
+     *         避免接口只返回成功却看不到到底算了几条）
      */
     @Transactional(rollbackFor = Exception.class)
-    public void syncAllStock(Long tenantId) {
+    public int syncAllStock(Long tenantId) {
         TenantAssert.requireTenantId();
-        productSkuService.listByTenantId(tenantId).stream()
-                .forEach(sku -> universalStockService.recalculateStock(tenantId, sku.getStyleId(), sku.getId()));
+        List<ProductSku> skus = productSkuService.listByTenantId(tenantId);
+        skus.forEach(sku -> universalStockService.recalculateStock(tenantId, sku.getStyleId(), sku.getId()));
         checkAndCreateAlerts(tenantId);
-        log.info("[EcStockOrchestrator] 本地库存重算完成: tenantId={}", tenantId);
+        log.info("[EcStockOrchestrator] 本地库存重算完成: tenantId={}, skuCount={}", tenantId, skus.size());
+        return skus.size();
     }
 
     /**

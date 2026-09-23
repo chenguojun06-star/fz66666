@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Button, Space } from 'antd';
-import { WarningOutlined, ShoppingCartOutlined, InboxOutlined, SwapOutlined, ThunderboltOutlined, RobotOutlined, MergeCellsOutlined, GiftOutlined, PlusOutlined, EnvironmentOutlined, AuditOutlined } from '@ant-design/icons';
+import { WarningOutlined, ShoppingCartOutlined, InboxOutlined, SwapOutlined, ThunderboltOutlined, RobotOutlined, MergeCellsOutlined, GiftOutlined, PlusOutlined, EnvironmentOutlined, AuditOutlined, SyncOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { UniversalStock, StockAlert, PurchaseSuggestion, WarehouseAllocation, MergeGroup, GiftRule, LogisticsAnomaly, PlatformBill } from './useEcStock';
 import { useSmartStockData } from './useSmartStockData';
@@ -24,8 +24,10 @@ const SmartStockTab: React.FC = () => {
     aiScanning,
     anomalyScanning,
     billReconciling,
+    stockSyncing,
     handleAiScan,
     handleSafeStock,
+    handleSyncStock,
     handleMergeOutbound,
     handleSaveGiftRule,
     handleScanAnomalies,
@@ -69,7 +71,23 @@ const SmartStockTab: React.FC = () => {
         </div>
       ),
     },
-    { key: 'stock', label: <span><InboxOutlined /> 库存明细</span>, children: <ResizableTable<UniversalStock> dataSource={st.stockList} columns={cols.stockCols} rowKey="id" size="small" loading={st.loading} emptyDescription="暂无库存数据" /> },
+    {
+      key: 'stock',
+      label: <span><InboxOutlined /> 库存明细</span>,
+      children: (
+        <div>
+          <div className="u-d-flex u-jc-between u-ai-center u-mb-12">
+            <span className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>
+              按仓库入库/出库数据重算本地可售库存，重算后自动生成低库存预警（只更新本系统，不推送到电商平台）
+            </span>
+            <Space>
+              <Button icon={<SyncOutlined />} loading={stockSyncing} onClick={handleSyncStock}>重算库存</Button>
+            </Space>
+          </div>
+          <ResizableTable<UniversalStock> dataSource={st.stockList} columns={cols.stockCols} rowKey="id" size="small" loading={st.loading} emptyDescription="暂无库存数据" />
+        </div>
+      ),
+    },
     { key: 'allocations', label: <span><SwapOutlined /> 分配记录</span>, children: <ResizableTable<WarehouseAllocation> dataSource={st.allocations} columns={cols.allocCols} rowKey="id" size="small" loading={st.loading} emptyDescription="暂无数据" /> },
     {
       key: 'merge',

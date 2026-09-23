@@ -22,12 +22,14 @@ export interface UseSmartStockDataReturn {
   aiScanning: boolean;
   anomalyScanning: boolean;
   billReconciling: boolean;
+  stockSyncing: boolean;
   // 事件处理
   handleResolve: (id: number) => Promise<void>;
   handleApprove: (id: number) => Promise<void>;
   handleReject: (id: number) => Promise<void>;
   handleAiScan: () => Promise<void>;
   handleSafeStock: (skuId: number, val: number) => Promise<void>;
+  handleSyncStock: () => Promise<void>;
   handleMergeOutbound: (orderIds: number[], trackingNo: string, expressCompany: string) => Promise<void>;
   handleSaveGiftRule: (rule: GiftRule) => Promise<void>;
   handleDeleteGiftRule: (id: number) => Promise<void>;
@@ -87,6 +89,25 @@ export function useSmartStockData(): UseSmartStockDataReturn {
 
   const handleSafeStock = useCallback(async (skuId: number, val: number) => {
     await st.updateSafeStock(skuId, val); message.success('已更新');
+  }, [st, message]);
+
+  // 库存全量重算：原来后端接口存在但界面上没有任何入口（孤儿接口），
+  // 导致 t_ec_universal_stock 只能靠入库/出库被动刷新，长期为空也无人能手动补齐。
+  const [stockSyncing, setStockSyncing] = useState(false);
+  const handleSyncStock = useCallback(async () => {
+    setStockSyncing(true);
+    try {
+      const skuCount = await st.syncAll();
+      if (skuCount > 0) {
+        message.success(`已重算 ${skuCount} 个 SKU 的库存`);
+      } else {
+        message.info('暂无 SKU 需要重算');
+      }
+    } catch {
+      message.error('库存重算失败，请稍后重试');
+    } finally {
+      setStockSyncing(false);
+    }
   }, [st, message]);
 
   const handleMergeOutbound = useCallback(async (orderIds: number[], trackingNo: string, expressCompany: string) => {
@@ -185,11 +206,13 @@ export function useSmartStockData(): UseSmartStockDataReturn {
     aiScanning,
     anomalyScanning,
     billReconciling,
+    stockSyncing,
     handleResolve,
     handleApprove,
     handleReject,
     handleAiScan,
     handleSafeStock,
+    handleSyncStock,
     handleMergeOutbound,
     handleSaveGiftRule,
     handleDeleteGiftRule,

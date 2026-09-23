@@ -1,8 +1,21 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-23（✅D-515 物料中心 tab 去重 + 领料默认筛选改为「全部」，纯小程序前端）
-> 上一版：2026-09-21（✅D-514 样衣打印分页治理：区块整块不拆页+页脚取消fixed+生产制单工艺说明行移除，纯前端）
+> 最后更新：2026-09-23（✅D-523 库存重算补前端入口 + Flyway 失败迁移幂等化 + 入站 Webhook 假成功第二处；D-522/D-516 已上线）
+> 上一版：2026-09-23（✅D-515 物料中心 tab 去重 + 领料默认筛选改为「全部」，纯小程序前端）
+
+---
+
+## ✅ D-523：电商库存"点不到"与启动刷 ERROR（2026-09-23，已推送待上线）
+
+- **库存全量重算补入口**：`POST /api/ec/stock/sync` 原本无任何前端调用方（孤儿接口）→
+  后端返回 `{skuCount}`，前端「电商中心 → 库存明细」tab 加「重算库存」按钮。
+- **Flyway 幂等化**：`V202709200001__add_salary_work_start_time.sql` 改 `information_schema` 判存在再 ALTER，
+  消除每次启动的 `Duplicate column name` ERROR。
+- **`PlatformWebhookController` 假成功修复**：异常 500 / 未配置 401（与 D-522 的 `EcommerceOrderController` 对齐）。
+- ⚠️ **`t_ec_platform_config.callback_url` 是出站物流回传地址**，不是我们的入站 webhook；
+  线上 3 行凭证是占位值（app_key=`admin`/`zhangwan`）→ 平台真实推单需商家提供真实凭证。
+- 服务器遗留（未处理）：磁盘 `/` 84%、`autodeploy.log` 29MB 无轮转。
 
 ---
 

@@ -205,6 +205,30 @@ Note: Java单元测试源码按项目P0铁律"测试代码隔离"从未提交到
    历史事故：`EcProductionLinkOrchestrator`、`EcommerceOrderOrchestrator`、
    `EcStockCalculator`、`ChannelSalesPredictor` 四处都用 `-` 切分猜款号，
    导致悬浮面板库存永远"暂无数据"、EC 单永远关联不上生产单、待发货占用恒为 0。
+14. **入站 Webhook 的失败必须体现在 HTTP 状态码上（禁止"200 + 业务失败"）**
+   平台侧（淘宝/京东/顺丰…）只看 **HTTP 状态码**决定是否重推。
+   若失败时返回 200、只把失败写进 JSON body，平台会认为"已送达"而**不再重试**，
+   订单/回调就被静默丢弃——线上现象是"平台说推送成功、系统里没有单"，极难排查。
+
+   状态码约定（**所有入站回调必须一致**）：
+   - `200` 处理成功 / 幂等命中重复推送
+   - `401` 配置类错误：未配置平台、缺 AppKey/AppSecret、缺签名头、签名不匹配
+     —— 重试无意义，需人工修配置
+   - `500` 处理异常（DB 抖动等）—— 平台可安全重推，落库侧按业务唯一键幂等去重
+
+   ```java
+   // ❌ 禁止：异常也返回 200
+   catch (Exception e) { return ResponseEntity.ok(Map.of("received", false)); }
+   // ✅ 正确
+   catch (Exception e) {
+       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+               .body(Map.of("received", false, "error", e.getMessage()));
+   }
+   ```
+
+   历史事故：`EcommerceOrderController.receiveWebhook`（D-522 修）与
+   `PlatformWebhookController.receiveOrder`（D-523 修）同一 bug 各写一遍；
+   物流回调也曾把未处理写成 `processed=true`。**改动任一回调时，顺手扫一遍同类入口。**
 
 ### 判断"链路是否打通"的三层验证法
 

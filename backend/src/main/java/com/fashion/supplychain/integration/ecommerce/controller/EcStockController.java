@@ -30,11 +30,20 @@ public class EcStockController {
     @Autowired private EcPurchaseSuggestionOrchestrator purchaseSuggestionOrchestrator;
     @Autowired private EcReplenishmentOrchestrator replenishmentOrchestrator;
 
+    /**
+     * 库存全量重算（本地）。
+     *
+     * <p><b>只重算本地 {@code t_ec_universal_stock}，不推送到电商平台</b>——
+     * 推送平台走 {@code EcStockOrchestrator#pushStockToPlatform}（受
+     * {@code AUTO_EC_STOCK_SYNC} 开关控制）。前端按钮文案据此写"重算"，不要写成"同步到平台"。
+     *
+     * <p>返回 {@code skuCount} 让调用方知道实际算了几条，避免"点了没反应"。
+     */
     @PostMapping("/sync")
-    public Result<Void> syncAllStock() {
+    public Result<Map<String, Object>> syncAllStock() {
         Long tenantId = UserContext.tenantId();
-        stockOrchestrator.syncAllStock(tenantId);
-        return Result.success();
+        int skuCount = stockOrchestrator.syncAllStock(tenantId);
+        return Result.success(Map.of("skuCount", skuCount));
     }
 
     @PostMapping("/sync/{skuId}")
