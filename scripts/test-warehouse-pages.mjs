@@ -552,6 +552,27 @@ function testPickerUsage() {
     const j = JSON.parse(fs.readFileSync(path.join(MP, rel), 'utf8'));
     ok(`${path.basename(path.dirname(rel))} 已注册 search-picker`, !!(j.usingComponents || {})['search-picker']);
   }
+
+  // D-517 第二批：库位/借调对象（这些页面还有其他原生 picker，只校验「已接入可搜索选择器」）
+  const loosePages = [
+    // 扫码主入口的库位选择在 sections/scan-area.wxml（被 index.wxml include），组件挂在 index.wxml
+    ['pages/scan/sections/scan-area.wxml', 1, 'pages/scan/index.wxml', 'pages/scan/index.json'],
+    ['pages/quality-detail/index.wxml', 1],                     // 质检入库：库位
+    ['pages/warehouse/sample/scan-action/index.wxml', 1],       // 样衣借调：员工/外发工厂
+  ];
+  for (const [rel, minRows, mountRel, jsonRel] of loosePages) {
+    const name = path.basename(path.dirname(rel));
+    const s = stripComments(fs.readFileSync(path.join(MP, rel), 'utf8'));
+    const rows = (s.match(/bindtap="openPicker"/g) || []).length;
+    ok(`${name} 至少 ${minRows} 个可搜索选择入口`, rows >= minRows, `实际 ${rows}`);
+    ok(`${name} 已挂 search-picker`,
+      /<search-picker/.test(stripComments(fs.readFileSync(path.join(MP, mountRel || rel), 'utf8'))));
+    const j = JSON.parse(fs.readFileSync(path.join(MP, jsonRel || rel.replace('.wxml', '.json')), 'utf8'));
+    ok(`${name} 已注册 search-picker`, !!(j.usingComponents || {})['search-picker']);
+  }
+  // 样衣借调的远程搜索必须接上（否则又变成"只搜前 200 条"）
+  const loanJs = fs.readFileSync(path.join(MP, 'pages/warehouse/sample/scan-action/index.js'), 'utf8');
+  ok('借调对象走远程搜索', /onPickerSearch/.test(loanJs) && /_fetchLoanOptions/.test(loanJs));
   // D-517：下单页的工厂/客户/纸样师/跟单员也必须可搜索（不再用原生 picker 选业务实体）
   const orderFormW = stripComments(fs.readFileSync(path.join(MP, 'pages/order/create/form/index.wxml'), 'utf8'));
   ok('下单页已挂 search-picker', /<search-picker/.test(orderFormW));

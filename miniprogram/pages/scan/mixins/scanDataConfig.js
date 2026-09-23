@@ -46,6 +46,12 @@ const scanPageData = {
     warehouseLocationCode: '',
     imageInsight: '',
     hasWarehouseSelected: false,
+    // D-517：可搜索选择器（库位量大，chip 平铺改可搜索弹层）
+    pickerVisible: false,
+    pickerKey: '',
+    pickerTitle: '',
+    pickerOptions: [],
+    pickerValue: '',
   },
 
   // 撤销功能

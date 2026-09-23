@@ -72,3 +72,13 @@
 
 <!-- 隐私保护授权弹窗（微信 2023-09-15 强制要求） -->
 <privacy-dialog id="privacyDialog" />
+
+<!-- D-517：通用可搜索选择器（目标库位） -->
+<search-picker
+  visible="{{pickerVisible}}"
+  title="{{pickerTitle}}"
+  options="{{pickerOptions}}"
+  value="{{pickerValue}}"
+  bind:select="onPickerSelect"
+  bind:close="onPickerClose"
+/>

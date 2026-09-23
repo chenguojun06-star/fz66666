@@ -4,6 +4,7 @@
   "backgroundTextStyle": "dark",
   "usingComponents": {
     "privacy-dialog": "/components/privacy-dialog/index",
-    "sticky-search-bar": "/components/sticky-search-bar/index"
+    "sticky-search-bar": "/components/sticky-search-bar/index",
+    "search-picker": "/components/search-picker/index"
   }
 }

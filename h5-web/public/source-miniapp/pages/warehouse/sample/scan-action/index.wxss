@@ -577,6 +577,26 @@
   border-radius: var(--radius-12);
   border: 2rpx solid var(--color-border);
 }
+/* D-517：借调对象选择行（替代「搜索框 + 长列表」） */
+.loan-picker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: var(--space-16) var(--space-32) 0;
+  padding: var(--space-16);
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-12);
+  border: 2rpx solid var(--color-border);
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+}
+.loan-picker-value.is-placeholder {
+  color: var(--color-text-tertiary);
+}
+.loan-picker-arrow {
+  color: var(--color-text-tertiary);
+  margin-left: var(--space-12);
+}
 .loan-search-input {
   flex: 1;
   height: 64rpx;

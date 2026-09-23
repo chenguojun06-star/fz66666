@@ -3,6 +3,7 @@
   "enablePullDownRefresh": true,
   "backgroundTextStyle": "dark",
   "usingComponents": {
-    "privacy-dialog": "/components/privacy-dialog/index"
+    "privacy-dialog": "/components/privacy-dialog/index",
+    "search-picker": "/components/search-picker/index"
   }
 }

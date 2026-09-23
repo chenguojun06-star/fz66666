@@ -388,49 +388,13 @@
         <text class="loan-qty-max">可用 {{stockInfo.availableQuantity}} 件</text>
       </view>
 
-      <!-- 搜索框：过滤员工/工厂列表 -->
-      <view class="loan-search-row">
-        <input
-          class="loan-search-input"
-          placeholder="{{loanTargetType === 'person' ? '搜索员工姓名' : '搜索工厂名称'}}"
-          value="{{loanSearchKeyword}}"
-          bindinput="onLoanSearchInput"
-          confirm-type="search"
-        />
-        <view wx:if="{{loanSearchKeyword}}" class="loan-search-clear" bindtap="onLoanSearchClear">×</view>
-      </view>
-
-      <!-- 借调对象列表（基于过滤后的列表渲染） -->
-      <view wx:if="{{loanPickerLoading}}" class="loan-loading">加载中...</view>
-      <view wx:elif="{{loanTargetType === 'person'}}" class="loan-target-list">
-        <view wx:if="{{filteredWorkerList.length === 0}}" class="loan-empty">{{loanSearchKeyword ? '未匹配到员工' : '暂无员工数据'}}</view>
-        <view
-          wx:for="{{filteredWorkerList}}"
-          wx:key="id"
-          class="loan-target-item {{loanTargetId === item.id ? 'loan-target-item--active' : ''}}"
-          bindtap="onLoanTargetSelect"
-          data-id="{{item.id}}"
-          data-name="{{item.name || item.workerName || item.username}}"
-        >
-          <text class="loan-target-name">{{item.name || item.workerName || item.username}}</text>
-          <text wx:if="{{item.factoryName}}" class="loan-target-sub">{{item.factoryName}}</text>
-          <text wx:if="{{loanTargetId === item.id}}" class="loan-target-check">✓</text>
-        </view>
-      </view>
-      <view wx:elif="{{loanTargetType === 'factory'}}" class="loan-target-list">
-        <view wx:if="{{filteredFactoryList.length === 0}}" class="loan-empty">{{loanSearchKeyword ? '未匹配到工厂' : '暂无外发工厂数据'}}</view>
-        <view
-          wx:for="{{filteredFactoryList}}"
-          wx:key="id"
-          class="loan-target-item {{loanTargetId === item.id ? 'loan-target-item--active' : ''}}"
-          bindtap="onLoanTargetSelect"
-          data-id="{{item.id}}"
-          data-name="{{item.factoryName || item.name}}"
-        >
-          <text class="loan-target-name">{{item.factoryName || item.name}}</text>
-          <text wx:if="{{item.contactPerson}}" class="loan-target-sub">联系人：{{item.contactPerson}}</text>
-          <text wx:if="{{loanTargetId === item.id}}" class="loan-target-check">✓</text>
-        </view>
+      <!-- D-517：借调对象改为可搜索选择器 —— 原先只拉前 200 条做本地过滤，
+           第 201 个员工/工厂永远搜不到；现在按关键字远程搜索 + 分页。 -->
+      <view class="loan-picker-row" bindtap="openPicker" data-key="loanTarget">
+        <text class="loan-picker-value {{loanTargetName ? '' : 'is-placeholder'}}">
+          {{loanTargetName || (loanTargetType === 'person' ? '选择员工（可搜索）' : '选择外发工厂（可搜索）')}}
+        </text>
+        <text class="loan-picker-arrow">›</text>
       </view>
 
       <!-- 确认按钮 -->
@@ -451,4 +415,19 @@
     bind:disagree="onPrivacyDisagree"
   />
   <ai-assistant />
+
+  <!-- D-517：通用可搜索选择器（借调对象：员工 / 外发工厂） -->
+  <search-picker
+    visible="{{pickerVisible}}"
+    title="{{pickerTitle}}"
+    options="{{pickerOptions}}"
+    value="{{pickerValue}}"
+    remote="{{pickerRemote}}"
+    loading="{{pickerLoading}}"
+    has-more="{{pickerHasMore}}"
+    bind:search="onPickerSearch"
+    bind:loadmore="onPickerLoadMore"
+    bind:select="onPickerSelect"
+    bind:close="onPickerClose"
+  />
 </view>

@@ -106,6 +106,9 @@ Page({
     loanTargetName: '',            // 选中目标名称
     loanQuantity: 1,               // 借调数量
     loanPickerLoading: false,
+    // D-517：可搜索选择器（借调对象：员工/外发工厂，远程搜索 + 分页）
+    pickerVisible: false, pickerKey: '', pickerTitle: '', pickerOptions: [], pickerValue: '',
+    pickerRemote: false, pickerKeyword: '', pickerPage: 1, pickerHasMore: false, pickerLoading: false,
   },
 
   onLoad(options) {
@@ -388,28 +391,10 @@ Page({
       loanTargetName: '',
       loanQuantity: 1,
       loanSearchKeyword: '',
-      loanPickerLoading: true,
+      loanPickerLoading: false,
     });
-    // 并行加载外发工厂列表和内部员工列表
-    // 注意：api.factory 和 api.system.listUsers 直接挂在 api 顶层（非 api.system.factory）
-    // - api.factory.list 返回 IPage<Factory>，取 records
-    // - api.system.listUsers 返回 Page<User>，取 records
-    Promise.all([
-      api.factory.list({ page: 1, pageSize: 200 }).catch(() => ({ records: [] })),
-      api.system.listUsers({ page: 1, pageSize: 200 }).catch(() => ({ records: [] })),
-    ]).then(([factoryRes, workerRes]) => {
-      const factoryList = (factoryRes && factoryRes.records) || [];
-      const workerList = (workerRes && workerRes.records) || [];
-      this.setData({
-        factoryList,
-        workerList,
-        filteredFactoryList: factoryList,
-        filteredWorkerList: workerList,
-        loanPickerLoading: false,
-      });
-    }).catch(() => {
-      this.setData({ loanPickerLoading: false });
-    });
+    // D-517：员工/工厂改为「点选择行 → 按关键字远程搜索 + 分页」，不再一次性拉 200 条
+    // （原先只能搜到前 200 条，第 201 个员工/工厂永远搜不到）
   },
 
   // 搜索过滤：员工/工厂
@@ -464,11 +449,83 @@ Page({
     });
   },
 
-  // 选择借调目标
+  // 选择借调目标（旧列表直选，D-517 后改由 onPickerSelect 走可搜索选择器）
   onLoanTargetSelect(e) {
     const { id, name } = e.currentTarget.dataset;
     if (!id) return;
     this.setData({ loanTargetId: id, loanTargetName: name });
+  },
+
+  /* ═══ D-517：借调对象可搜索选择器（远程关键字 + 分页） ═══
+     员工走 /api/system/user/list 的 name，工厂走 /api/system/factory/list 的 factoryName（后端均为 LIKE） */
+  openPicker(e) {
+    const key = (e.currentTarget.dataset && e.currentTarget.dataset.key) || '';
+    if (key !== 'loanTarget') return;
+    const isPerson = this.data.loanTargetType === 'person';
+    this.setData({
+      pickerKey: key,
+      pickerTitle: isPerson ? '选择借调员工' : '选择外发工厂',
+      pickerRemote: true,
+      pickerKeyword: '',
+      pickerPage: 1,
+      pickerHasMore: false,
+      pickerLoading: false,
+      pickerOptions: [],
+      pickerValue: this.data.loanTargetId ? String(this.data.loanTargetId) : '',
+      pickerVisible: true,
+    });
+  },
+
+  onPickerSearch(e) {
+    if (!this.data.pickerRemote) return;
+    const kw = ((e && e.detail && e.detail.keyword) || '').trim();
+    this.setData({ pickerKeyword: kw, pickerPage: 1 });
+    this._fetchLoanOptions(kw, 1, (list, hasMore) => {
+      this.setData({ pickerOptions: list, pickerHasMore: hasMore, pickerLoading: false });
+    });
+  },
+
+  onPickerLoadMore() {
+    if (!this.data.pickerRemote || !this.data.pickerHasMore || this.data.pickerLoading) return;
+    const next = (this.data.pickerPage || 1) + 1;
+    this.setData({ pickerPage: next });
+    this._fetchLoanOptions(this.data.pickerKeyword, next, (list, hasMore) => {
+      this.setData({
+        pickerOptions: (this.data.pickerOptions || []).concat(list),
+        pickerHasMore: hasMore,
+        pickerLoading: false,
+      });
+    });
+  },
+
+  _fetchLoanOptions(kw, page, cb) {
+    const SIZE = 20;
+    const isPerson = this.data.loanTargetType === 'person';
+    this.setData({ pickerLoading: true });
+    const params = { page, pageSize: SIZE };
+    if (kw) params[isPerson ? 'name' : 'factoryName'] = kw;
+    const req = isPerson ? api.system.listUsers(params) : api.factory.list(params);
+    req.then((res) => {
+      const list = ((res && res.records) || (Array.isArray(res) ? res : [])).map((r) => (isPerson
+        ? { label: r.name || r.workerName || r.username || '', value: String(r.id || '') }
+        : { label: r.factoryName || r.name || '', value: String(r.id || '') }
+      )).filter(o => o.label && o.value);
+      this.setData({ pickerLoading: false });
+      cb(list, ((res && res.records) || []).length >= SIZE);
+    }).catch(() => {
+      this.setData({ pickerLoading: false });
+      cb([], false);
+    });
+  },
+
+  onPickerClose() {
+    this.setData({ pickerVisible: false });
+  },
+
+  onPickerSelect(e) {
+    const d = (e && e.detail) || {};
+    if (this.data.pickerKey !== 'loanTarget') return;
+    this.setData({ loanTargetId: d.value || '', loanTargetName: d.label || '' });
   },
 
   // 借调数量输入

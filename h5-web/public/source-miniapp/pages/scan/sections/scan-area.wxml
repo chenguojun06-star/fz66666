@@ -39,17 +39,15 @@
       />
 
       <!-- 库位选择（仓库选择后出现） -->
-      <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-label" style="margin-top: 12rpx;">目标库位：</view>
+      <!-- D-517：库位改可搜索选择（库位几十上百个，chip 平铺只能一路滚） -->
+      <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-label" style="margin-top: 12rpx;">目标库位（{{locationOptions.length}} 个，可搜索）：</view>
       <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-option-row">
-        <view
-          wx:for="{{locationOptions}}"
-          wx:key="index"
-          class="warehouse-chip {{warehouseLocationCode === item ? 'warehouse-chip--active' : ''}}"
-          bindtap="onLocationChipTap"
-          data-value="{{item}}"
-          hover-class="warehouse-chip-hover"
-          hover-stay-time="100"
-        >{{item}}</view>
+        <view class="warehouse-picker-row" bindtap="openPicker" data-key="location">
+          <text class="warehouse-picker-value {{warehouseLocationCode ? '' : 'is-placeholder'}}">
+            {{warehouseLocationCode || '选择库位'}}
+          </text>
+          <text class="warehouse-picker-arrow">›</text>
+        </view>
         <view
           class="warehouse-chip warehouse-chip--clear {{warehouseLocationCode ? '' : 'warehouse-chip--disabled'}}"
           bindtap="onLocationClear"

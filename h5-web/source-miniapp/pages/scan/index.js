@@ -453,6 +453,33 @@ Page({
     }
   },
 
+  /* ═══ D-517：库位改可搜索选择器 ═══
+     库位常有几十上百个，chip 平铺只能一路滚 —— 改成底部可搜索弹层（本地过滤已加载库位） */
+  openPicker(e) {
+    const key = (e.currentTarget.dataset && e.currentTarget.dataset.key) || '';
+    if (key !== 'location') return;
+    this.setData({
+      pickerKey: key,
+      pickerTitle: '选择目标库位',
+      pickerValue: this.data.warehouseLocationCode || '',
+      pickerOptions: (this.data.locationOptions || []).map(function (v) {
+        return { label: String(v), value: String(v) };
+      }).filter(function (o) { return o.value; }),
+      pickerVisible: true,
+    });
+  },
+
+  onPickerClose() {
+    this.setData({ pickerVisible: false });
+  },
+
+  onPickerSelect(e) {
+    const d = (e && e.detail) || {};
+    if (this.data.pickerKey === 'location') {
+      this.setData({ warehouseLocationCode: d.value || '' });
+    }
+  },
+
   onLocationClear() {
     this.setData({ warehouseLocationCode: '' });
   },

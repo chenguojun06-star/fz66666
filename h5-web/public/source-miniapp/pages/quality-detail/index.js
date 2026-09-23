@@ -105,6 +105,8 @@ Page({
     // 仓库选项
     warehouseOptions: [],
     locationOptions: [],
+    // D-517：可搜索选择器（库位量大，chip 平铺改可搜索弹层）
+    pickerVisible: false, pickerKey: '', pickerTitle: '', pickerOptions: [], pickerValue: '',
     // 页面内质检表单（单选时显示，原弹窗内容）
     qcSheetData: {
       bundleId: '',
@@ -1285,7 +1287,41 @@ Page({
     this._loadLocationOptions(opt.id);
   },
 
-  // D-185：库位 chip 直选，满库位拦截
+  /* ═══ D-517：库位改可搜索选择器（满库位仍拦截） ═══ */
+  openPicker: function (e) {
+    var key = (e.currentTarget.dataset && e.currentTarget.dataset.key) || '';
+    if (key !== 'location') return;
+    this.setData({
+      pickerKey: key,
+      pickerTitle: '选择库位',
+      pickerValue: (this.data.whSheetData && this.data.whSheetData.warehouseLocationCode) || '',
+      pickerOptions: (this.data.locationOptions || []).map(function (o) {
+        // label 带容量（已用/容量），满库位标出来，让用户一眼避开
+        return {
+          label: String(o.label || o.code || '') + (o.capacityText ? '（' + o.capacityText + '）' : '') + (o.isFull ? ' · 已满' : ''),
+          value: String(o.code || ''),
+          isFull: !!o.isFull,
+        };
+      }).filter(function (o) { return o.value; }),
+      pickerVisible: true,
+    });
+  },
+
+  onPickerClose: function () {
+    this.setData({ pickerVisible: false });
+  },
+
+  onPickerSelect: function (e) {
+    var d = (e && e.detail) || {};
+    if (this.data.pickerKey !== 'location') return;
+    if (d.item && d.item.isFull) {
+      toast.error('该库位已满，请选择其他库位');
+      return;
+    }
+    this.setData({ 'whSheetData.warehouseLocationCode': d.value || '' });
+  },
+
+  // D-185：库位 chip 直选，满库位拦截（chip 已下线，保留兜底）
   onLocationChipTap: function (e) {
     var code = e.currentTarget.dataset.code;
     var isFull = e.currentTarget.dataset.full === true || e.currentTarget.dataset.full === 'true';

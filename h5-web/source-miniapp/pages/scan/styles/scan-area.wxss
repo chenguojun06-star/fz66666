@@ -110,6 +110,27 @@
   border-color: var(--color-primary);
 }
 
+/* D-517：库位可搜索选择行（替代一长条 chip 平铺） */
+.warehouse-picker-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+.warehouse-picker-value.is-placeholder {
+  color: var(--color-text-tertiary);
+}
+.warehouse-picker-arrow {
+  color: var(--color-text-tertiary);
+  margin-left: 6px;
+}
+
 .warehouse-chip--clear {
   background: var(--color-danger-bg);
   border-color: var(--color-danger-border, rgba(255, 59, 48, 0.3));

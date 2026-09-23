@@ -385,18 +385,16 @@
                   <text wx:if="{{warehouseOptions.length === 0}}" class="wh-chip-empty">暂无可用仓库</text>
                 </view>
               </view>
+              <!-- D-517：库位改可搜索选择（库位常几十上百个，chip 平铺只能一路滚；满库位仍会拦截） -->
               <view class="wh-form-col-full" wx:if="{{whSheetData.warehouseAreaId}}">
-                <text class="wh-form-label">选择库位（已用/容量）：</text>
+                <text class="wh-form-label">选择库位（{{locationOptions.length}} 个，可搜索）：</text>
                 <view class="wh-chip-row">
-                  <view
-                    wx:for="{{locationOptions}}"
-                    wx:key="code"
-                    class="wh-chip wh-chip--loc {{whSheetData.warehouseLocationCode === item.code ? 'wh-chip--active' : ''}} {{item.isFull ? 'wh-chip--full' : ''}}"
-                    data-code="{{item.code}}"
-                    data-full="{{item.isFull}}"
-                    bindtap="onLocationChipTap"
-                    hover-class="wh-chip--hover"
-                  >{{item.label}}<text wx:if="{{item.capacityText}}" class="wh-chip-qty">{{item.capacityText}}</text></view>
+                  <view class="wh-loc-picker" bindtap="openPicker" data-key="location">
+                    <text class="wh-loc-picker-value {{whSheetData.warehouseLocationCode ? '' : 'is-placeholder'}}">
+                      {{whSheetData.warehouseLocationCode || '选择库位'}}
+                    </text>
+                    <text class="wh-loc-picker-arrow">›</text>
+                  </view>
                   <text wx:if="{{locationOptions.length === 0}}" class="wh-chip-empty">该仓库暂无库位</text>
                 </view>
               </view>
@@ -522,4 +520,14 @@
   </block>
   <privacy-dialog id="privacyDialog" />
   <ai-assistant />
+
+  <!-- D-517：通用可搜索选择器（库位） -->
+  <search-picker
+    visible="{{pickerVisible}}"
+    title="{{pickerTitle}}"
+    options="{{pickerOptions}}"
+    value="{{pickerValue}}"
+    bind:select="onPickerSelect"
+    bind:close="onPickerClose"
+  />
 </view>

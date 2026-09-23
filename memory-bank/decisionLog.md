@@ -6777,3 +6777,12 @@ chip 可见人群对齐，否则"看得到点不进"。
 
 **验证**：`node scripts/test-warehouse-pages.mjs` → 190 项全通过（含新增 12 条 D-517 结构断言：远程回调/分页/加载态/
 各页注册/下单页 5 个入口）；refs 无错误；三份副本一致。
+
+### D-517 第二批（同日）：库位与借调对象搜索化
+- 扫码主入口 `scan/index` 目标库位：chip 平铺 → search-picker（本地过滤已加载库位，库位常几十上百个）
+  ⚠️ 坑：库位选择行写在 `sections/scan-area.wxml`（被 index.wxml include），组件却要挂在 index.wxml ——
+  写结构断言时两个文件都要查。
+- 质检详情 `quality-detail` 入库库位：chip 平铺 → search-picker，label 带「（已用/容量）」，满库位**在 onPickerSelect 里拦截**（不是靠 UI 禁用）
+- 样衣借调 `sample/scan-action`：员工/外发工厂 由「预拉 200 条 + 本地过滤」改为**远程关键字搜索 + 分页**，
+  并删掉 onLoan 里无用的 200+200 预加载（列表已不渲染）
+- 自检 200 项全通过

@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "扫码",
   "usingComponents": {
-    "privacy-dialog": "/components/privacy-dialog/index"
+    "privacy-dialog": "/components/privacy-dialog/index",
+    "search-picker": "/components/search-picker/index"
   }
 }
