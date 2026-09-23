@@ -1,9 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Input, InputNumber, Select, Space, Typography } from 'antd';
 import { ScanOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import CircleIconButton from '@/components/common/CircleIconButton';
+import { styleImageColumn } from '@/components/common/styleImageColumns';
+import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
 import api, { type ApiResult } from '@/utils/api';
 import CustomerInfoSection from './CustomerInfoSection';
 
@@ -59,6 +61,16 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [shippingAddress, setShippingAddress] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // 款式图：扫码清单每次增删后批量解析（款号维度，见 columns 里的说明）
+  const { imageMap: styleImageMap, fetchByStyleNos } = useStyleCoverImages();
+  const scannedStyleNos = useMemo(
+    () => items.map((it) => it.styleNo).filter(Boolean),
+    [items],
+  );
+  useEffect(() => {
+    if (scannedStyleNos.length > 0) fetchByStyleNos(scannedStyleNos);
+  }, [scannedStyleNos, fetchByStyleNos]);
 
   const handleAdd = async () => {
     const code = inputVal.trim();
@@ -181,6 +193,15 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
   };
 
   const columns = [
+    // 款式图：扫码清单以前只有编码/颜色/码数，看不出扫进来的到底是哪件货。
+    // 扫码码里的 skuCode 是「款号-颜色-尺码」（带分隔符的扫码格式），
+    // 与 t_product_sku.sku_code（款号直接拼颜色尺码、无分隔符）不同，
+    // 所以这里优先用扫码码里的款号去取款级封面。
+    styleImageColumn<QrcodeItem>({
+      imageMap: styleImageMap,
+      styleNo: (r) => r.styleNo,
+      skuCode: (r) => r.skuCode,
+    }),
     {
       title: '商品编码',
       dataIndex: 'skuCode',

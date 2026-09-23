@@ -255,7 +255,7 @@ const AppRoutes: React.FC = () => {
 
           <Route path={paths.materialInventory} element={<RouteErrorBoundary pageName="物料库存"><Suspense fallback={routeFallback}><MaterialInventory /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.materialDatabase} element={<RouteErrorBoundary pageName="物料库"><Suspense fallback={routeFallback}><MaterialDatabase /></Suspense></RouteErrorBoundary>} />
-          <Route path={paths.finishedInventory} element={<RouteErrorBoundary pageName="成品库存"><Suspense fallback={routeFallback}><FinishedInventory /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.finishedInventory} element={<RouteErrorBoundary pageName="商品仓储"><Suspense fallback={routeFallback}><FinishedInventory /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.sampleInventory} element={<RouteErrorBoundary pageName="样衣库存"><Suspense fallback={routeFallback}><SampleInventory /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.ecommerceOrders} element={<RouteErrorBoundary pageName="电商订单"><Suspense fallback={routeFallback}><EcommerceOrders /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.inventoryCheck} element={<RouteErrorBoundary pageName="库存盘点"><Suspense fallback={routeFallback}><InventoryCheck /></Suspense></RouteErrorBoundary>} />

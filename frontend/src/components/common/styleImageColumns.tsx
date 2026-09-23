@@ -30,7 +30,9 @@ type StyleNoGetter<T> = (record: T) => string | null | undefined;
 
 export interface StyleImageColumnArgs<T> {
   imageMap: StyleImageMap;
-  skuCode: SkuCodeGetter<T>;
+  /** 商品编码（与 styleNo 至少给一个） */
+  skuCode?: SkuCodeGetter<T>;
+  /** 款号（已确定款号时给，取款级封面；与 skuCode 可同时给，先查款号） */
   styleNo?: StyleNoGetter<T>;
   title?: string;
   width?: number;
@@ -45,7 +47,7 @@ export function styleImageColumn<T>(args: StyleImageColumnArgs<T>): ColumnsType<
     align: 'center' as const,
     render: (_: unknown, record: T) => (
       <StyleImageCell
-        skuCode={skuCode(record)}
+        skuCode={skuCode ? skuCode(record) : undefined}
         styleNo={styleNo ? styleNo(record) : undefined}
         imageMap={imageMap}
       />

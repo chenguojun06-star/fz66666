@@ -3,6 +3,7 @@ import { Button, Descriptions, Empty, Form, Input, InputNumber, Modal, Select, S
 import { EditOutlined, PlusOutlined, ReloadOutlined, HistoryOutlined } from '@ant-design/icons';
 import SideDrawer from '@/components/common/SideDrawer';
 import RecordLogDrawer from '@/components/common/RecordLogDrawer';
+import StyleCoverThumb from '@/components/StyleAssets/StyleCoverThumb';
 import FreeInboundModal from './FreeInboundModal';
 import { useWarehouseAreaOptions } from '../../../../hooks/useWarehouseAreaOptions';
 import api from '@/utils/api';
@@ -172,6 +173,22 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
           <Empty description="未选中商品编码" />
         ) : (
           <>
+            {/* 款式图：抽屉里原本一个图都没有，核对库存时看不出这是哪件货。
+                StyleCoverThumb 在 src 为空时会按款号自动兜底拉款图。 */}
+            <div className="u-d-flex u-ai-center u-gap-12 u-mb-12">
+              <StyleCoverThumb
+                styleNo={record.styleNo}
+                color={record.color}
+                src={(liveStock?.styleImage ?? record.styleImage) || null}
+                size={96}
+                borderRadius={8}
+              />
+              <div className="u-fs-13" style={{ color: 'var(--color-text-tertiary)', lineHeight: 1.6 }}>
+                <div>{record.styleNo || '-'} · {record.styleName || '-'}</div>
+                <div>{record.color || '-'} / {record.size || '-'}</div>
+                <div>库位：{record.warehouseLocation || '-'}</div>
+              </div>
+            </div>
             <Descriptions
               bordered
               column={{ xs: 1, sm: 2, md: 3, lg: 4 }}

@@ -1,6 +1,7 @@
 import type { ColumnsType } from 'antd/es/table';
 import type { SKUDetail, FinishedInventory } from './finishedInventoryTypes';
 import type { FinishedInventoryRow } from './flattenBySku';
+import type { StyleImageMap } from '@/hooks/useStyleCoverImages';
 import { getMainBasicColumns } from './mainBasicColumns';
 import { getMainInventoryColumns } from './mainInventoryColumns';
 import { getMainActionColumns } from './mainActionColumns';
@@ -28,9 +29,12 @@ export function getSkuColumns(handlers: {
   handleSKUQtyChange: (index: number, val: number | null) => void;
   handleSKUSalesPriceChange?: (index: number, val: number | null) => void;
   handleSKUPriceReasonChange?: (index: number, val: string) => void;
+}, appearance?: {
+  /** 款号/SKU → 图片 URL（本表已有颜色/尺码列，故只需要图片，不需要款号摘要） */
+  imageMap?: StyleImageMap;
 }): ColumnsType<SKUDetail> {
   return [
-    ...getSkuBasicColumns(),
+    ...getSkuBasicColumns({ imageMap: appearance?.imageMap }),
     ...getSkuInventoryColumns(handlers),
     ...getSkuActionColumns(handlers),
   ];

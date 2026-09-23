@@ -1,7 +1,64 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-23（新增 D-524 电商全站列表补「款式图 + 款号」列；D-523 库存重算补入口 + Flyway 失败迁移幂等化）
+> 最后更新：2026-09-23（新增 D-525 商品仓储/入库各处补款式图列 + 命名统一；D-524 电商全站补图）
+
+---
+
+## D-525：商品仓储（不是"成品库存"）与入库/收货各处补款式图列 + 命名统一（2026-09-23）
+
+**来源**：用户纠正 + 追加要求 ——「名字 不是叫商品仓储吗 现在的成品库存这些」、
+「商品仓储点开的弹窗 没有这个图片是吗 你看看这些 还有入库的这些地方 都核实一下 是不是都全齐了 要是没有 就补齐」。
+
+**命名纠正（我上一轮说错了）**
+- 菜单一级「成品管理」下的页面正式名是 **「商品仓储」**（`routeConfig.ts` 菜单项、
+  `tenantModuleConfig.ts`、i18n `finishedInventory: 商品仓储`、权限标签「商品仓储（含电商订单/库存盘点）」）。
+- 「成品库存」只是**代码目录名**（`FinishedInventory`）与部分内部文案的旧叫法。
+- 两处用户可见的残留已统一为「商品仓储」：`routeConfig.ts` 的智能场景 `label`、
+  `App.tsx` 的路由错误边界 `pageName`（原来会弹出"成品库存加载失败"）。
+- **保留**「成品库存」的地方：`tool_finished_product_stock` 的 AI 工具显示名
+  （有单测 `aiChatHelpers.test.ts` 断言，且它指的是"成品库存查询"这个动作，不是页面名）、
+  以及「不落成品库存」这类描述**库存概念本身**的注释/提示语。
+
+**核实结论（哪些本来就有图，哪些缺）**
+- 本来就有图 ✅：商品仓储**主表**（`mainBasicColumns` 用 `StyleCoverThumb` + 后端 DTO 的 `styleImage`）、
+  商品资料（`ProductInfo`）、物料库存、样衣库存、库存盘点、库位详情、标签打印；
+  生产入库侧 `WarehousingList` / `WarehousingTable/columnsBase` / `StyleInfoCard` /
+  `IndependentDetailModal` / `WarehousingFormFields`。
+- 缺图 ❌（本轮补齐，共 8 处）：
+  1. 商品仓储出库弹窗「商品编码明细」表（`skuBasicColumns`）
+  2. 商品仓储「入库记录」抽屉明细表（`index.tsx` 内联列）
+  3. 扫码出库弹窗明细（`QrcodeOutboundModal`）
+  4. 自由入库弹窗明细（`FreeInboundModal`）
+  5. 商品编码详情抽屉（`SkuDetailDrawer`，原来一个图都没有 → 顶部加 96px 大图 + 款号/颜色/库位摘要）
+  6. 出库记录主表（`getGroupedOutstockColumns`，聚合行取单内首个明细的图）
+  7. 出库单明细表（`getOutstockLineColumns`）
+  8. 出库接收（`OutstockReceive`，确认收货时看不出收的是哪件货）
+- 有意**不加**（避免冗余）：`InspectionDetail/OrderLinesTable` 与 `IndependentDetailModal` 的明细表
+  —— 都是同一个款的颜色尺码行，表头已有 160px 大图，再加一列纯噪声；
+  `QcRecordsPanel` 是质检记录行不是商品行。
+
+**实现（复用 D-524 的统一工厂，不新造轮子）**
+- 全部用 `useStyleCoverImages()` + `styleImageColumn`：
+  行里有真实 `skuCode` → `fetchBySkuCodes`；只有款号 → `fetchByStyleNos`；
+  两个都有就都传（`StyleImageCell` 先查款号、再查 skuCode）。
+- 顺手把 `StyleImageColumnArgs.skuCode` 改为**可选**（只要有 `styleNo` 也能出图），
+  之前强制要求 `skuCode` 逼着调用方传个用不上的字段。
+- 列工厂（`skuBasicColumns` / `outstockRecordColumns`）保持纯函数，
+  由父组件把 `imageMap` 透传进去（`getSkuColumns(handlers, { imageMap })`）。
+
+**关键区分（最容易搞错的一点，已写进 CLAUDE.md 铁律 15）**
+- `t_product_sku.sku_code` = 款号直接拼颜色尺码、**无分隔符** → `fetchBySkuCodes`。
+- 扫码/打印二维码 = `款号-颜色-尺码-序号`、**有分隔符** → 它拆出来的
+  "款号-颜色-尺码" **不等于** sku_code，这类清单必须走 `fetchByStyleNos` 按款号取款级封面。
+  （`QrcodeOutboundModal.parseOutboundQr` 的 `split('-')` 拆的是**二维码**，不是 SKU 编码，
+  不违反铁律 13，保留不动。）
+
+**验证**：`tsc --noEmit` 0 错；改动文件 ESLint 0 错。
+（本轮纯前端，后端无改动。）
+
+**遗留**：小程序端的入库/仓储页面未纳入本轮 —— 工作区里还有 D-517（可搜索选择器）在改，
+碰小程序会触发"三副本一致 + 172 项页面测试"门禁冲突，等 D-517 收尾后单独做。
 
 ---
 

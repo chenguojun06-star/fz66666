@@ -297,9 +297,11 @@ const pageMetaMap: Record<string, PageMeta> = {
     ],
   },
   [paths.finishedInventory]: {
-    label: '成品库存',
+    // 菜单/页面正式名是「商品仓储」（见下方菜单配置与 i18n）。
+    // 这里原来写「成品库存」是代码目录名（FinishedInventory）的旧叫法，已统一。
+    label: '商品仓储',
     suggestions: [
-      '📦 成品库存情况',
+      '📦 商品仓储库存情况',
       '🚚 待发货订单',
       '⚠️ 库存积压提醒',
       '📊 成品周转率',

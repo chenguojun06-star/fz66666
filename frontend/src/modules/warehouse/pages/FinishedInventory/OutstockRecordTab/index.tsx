@@ -11,6 +11,7 @@ import { useOutstockShare } from '../useOutstockShare';
 import MaterialWarehouseLocationPicker from '@/components/common/purchase/MaterialWarehouseLocationPicker';
 import RecordLogDrawer, { type RecordLogDrawerFilter } from '@/components/common/RecordLogDrawer';
 import ShareLinkModal from '../ShareLinkModal';
+import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
 import { getGroupedOutstockColumns, getOutstockLineColumns } from './outstockRecordColumns';
 import type { GroupedOutstock, OutstockRecord } from './outstockRecordTypes';
 import { groupOutstockByNo, isReturnedTransferLine } from './outstockRecordTypes';
@@ -233,7 +234,23 @@ const OutstockRecordTab: React.FC = () => {
 
   // ===== 单据详情抽屉 =====
   const [detailGroup, setDetailGroup] = useState<GroupedOutstock | null>(null);
-  const lineColumns = getOutstockLineColumns({ handleTransferInbound: (r) => { setTransferTarget(r); setTransferLocation(''); setTransferAreaId(''); } });
+
+  // 款式图：出库记录/明细都只有编码与款号文字，必须后端按 sku_code 权威解析出图
+  // （真实编码无分隔符，前端 split('-') 猜款号恒不命中）
+  const { imageMap: styleImageMap, fetchBySkuCodes, fetchByStyleNos } = useStyleCoverImages();
+  const outstockSkuCodes = useMemo(() => records.map((r) => r.skuCode).filter(Boolean) as string[], [records]);
+  const outstockStyleNos = useMemo(() => records.map((r) => r.styleNo).filter(Boolean) as string[], [records]);
+  useEffect(() => {
+    if (outstockSkuCodes.length > 0) fetchBySkuCodes(outstockSkuCodes);
+  }, [outstockSkuCodes, fetchBySkuCodes]);
+  useEffect(() => {
+    if (outstockStyleNos.length > 0) fetchByStyleNos(outstockStyleNos);
+  }, [outstockStyleNos, fetchByStyleNos]);
+
+  const lineColumns = getOutstockLineColumns(
+    { handleTransferInbound: (r) => { setTransferTarget(r); setTransferLocation(''); setTransferAreaId(''); } },
+    { imageMap: styleImageMap },
+  );
 
   const columns = getGroupedOutstockColumns({
     handleOpenDetail: setDetailGroup,
@@ -241,7 +258,7 @@ const OutstockRecordTab: React.FC = () => {
     handleShare: handleShareGroup,
     handleLog: openGroupLog,
     handlePrint,
-  });
+  }, { imageMap: styleImageMap });
 
   return (
     <Card

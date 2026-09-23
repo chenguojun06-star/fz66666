@@ -3,6 +3,8 @@ import { Button, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
+import { styleImageColumn } from '@/components/common/styleImageColumns';
+import type { StyleImageMap } from '@/hooks/useStyleCoverImages';
 import { formatDateTime } from '@/utils/datetime';
 import { formatMoney } from '@/utils/format';
 import { getPlatformTag } from '@/utils/platform';
@@ -28,7 +30,8 @@ export function getGroupedOutstockColumns(handlers: {
   handleShare: (group: GroupedOutstock) => void;
   handleLog: (group: GroupedOutstock) => void;
   handlePrint: (group: GroupedOutstock) => void;
-}): ColumnsType<GroupedOutstock> {
+}, appearance?: { imageMap?: StyleImageMap }): ColumnsType<GroupedOutstock> {
+  const imageMap = appearance?.imageMap ?? {};
   return [
     {
       title: '出库单号',
@@ -45,6 +48,12 @@ export function getGroupedOutstockColumns(handlers: {
         </Button>
       ),
     },
+    // 款式图：一行一张出库单，取单内第一个明细行的商品编码出图
+    styleImageColumn<GroupedOutstock>({
+      imageMap,
+      skuCode: (g) => g.lines[0]?.skuCode,
+      styleNo: (g) => g.lines[0]?.styleNo,
+    }),
     {
       title: '平台',
       dataIndex: 'platformCode',
@@ -191,8 +200,15 @@ export function getGroupedOutstockColumns(handlers: {
 /** 出库单明细行（详情抽屉内）：一码一行 + 回入库入口 */
 export function getOutstockLineColumns(handlers: {
   handleTransferInbound?: (record: OutstockRecord) => void;
-}): ColumnsType<OutstockRecord> {
+}, appearance?: { imageMap?: StyleImageMap }): ColumnsType<OutstockRecord> {
+  const imageMap = appearance?.imageMap ?? {};
   return [
+    // 款式图：出库单明细以前只有编码/款号文字，打印/核对时看不出是哪件货
+    styleImageColumn<OutstockRecord>({
+      imageMap,
+      skuCode: (r) => r.skuCode,
+      styleNo: (r) => r.styleNo,
+    }),
     {
       title: '商品编码',
       dataIndex: 'skuCode',

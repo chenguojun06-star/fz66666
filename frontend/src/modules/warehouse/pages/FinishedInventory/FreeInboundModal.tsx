@@ -1,8 +1,10 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Form, Input, InputNumber, Select, Button, Space, Row, Col, Alert, Switch, App, Divider, Drawer, AutoComplete } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import CircleIconButton from '@/components/common/CircleIconButton';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
+import { styleImageColumn } from '@/components/common/styleImageColumns';
+import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
 import { InboxOutlined } from '@ant-design/icons';
 import { finishedWarehouseApi } from '../../../../services/warehouse/inventoryCheckApi';
 import { useWarehouseAreaOptions, useWarehouseLocationByArea } from '../../../../hooks/useWarehouseAreaOptions';
@@ -74,6 +76,19 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
   const [selectedAreaId, setSelectedAreaId] = useState<string | undefined>(undefined);
   const [_quickCreating, _setQuickCreating] = useState(false);
   const [items, setItems] = useState<InboundItem[]>([]);
+
+  // 款式图：入库清单以前只有编码/款号/颜色/尺码，看不出正在入库的是哪件货。
+  // 同时按 skuCode 与款号取图——自由入库允许"自动建 SKU"，
+  // 此时编码可能还没进 t_product_sku，靠款号取款级封面兜底。
+  const { imageMap: styleImageMap, fetchBySkuCodes, fetchByStyleNos } = useStyleCoverImages();
+  const inboundSkuCodes = useMemo(() => items.map((it) => it.skuCode).filter(Boolean), [items]);
+  const inboundStyleNos = useMemo(() => items.map((it) => it.styleNo).filter(Boolean), [items]);
+  useEffect(() => {
+    if (inboundSkuCodes.length > 0) fetchBySkuCodes(inboundSkuCodes);
+  }, [inboundSkuCodes, fetchBySkuCodes]);
+  useEffect(() => {
+    if (inboundStyleNos.length > 0) fetchByStyleNos(inboundStyleNos);
+  }, [inboundStyleNos, fetchByStyleNos]);
 
 
   const sourceType = Form.useWatch('sourceType', form) || 'free_inbound';
@@ -279,6 +294,11 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
   const selectedArea = areas.find((a) => a.id === selectedAreaId);
 
   const columns = [
+    styleImageColumn<InboundItem>({
+      imageMap: styleImageMap,
+      styleNo: (r) => r.styleNo,
+      skuCode: (r) => r.skuCode,
+    }),
     { title: '商品编码', dataIndex: 'skuCode', key: 'skuCode', width: 160 },
     { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 100 },
     { title: '颜色', dataIndex: 'color', key: 'color', width: 80 },

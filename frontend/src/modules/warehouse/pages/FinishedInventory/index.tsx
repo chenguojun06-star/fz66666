@@ -12,6 +12,8 @@ import FreeInboundModal from './FreeInboundModal';
 import SkuDetailDrawer from './SkuDetailDrawer';
 import RecordLogDrawer from '@/components/common/RecordLogDrawer';
 import { getMainColumns, getSkuColumns } from './finishedInventoryColumns';
+import { styleImageColumn } from '@/components/common/styleImageColumns';
+import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
 import type { FinishedInventory } from './finishedInventoryTypes';
 import type { FinishedInventoryRow } from './finishedInventoryColumns';
 import { flattenInventoryBySku } from './flattenBySku';
@@ -87,6 +89,20 @@ const _FinishedInventory: React.FC = () => {
   // D-241：序号按「款」编号，翻页后要接续上一页，故传入分页偏移
   const indexOffset = ((pagination.pagination.current || 1) - 1) * (pagination.pagination.pageSize || 0);
   const columns = getMainColumns({ handleOutbound, handleViewInboundHistory, handleViewSkuDetail }, indexOffset);
+
+  // 款式图：出库弹窗明细、入库记录明细都只有商品编码，必须由后端按 sku_code
+  // 权威解析（真实编码无分隔符，前端 split('-') 猜款号恒不命中）。
+  const { imageMap: styleImageMap, fetchBySkuCodes } = useStyleCoverImages();
+  const coverSkuCodes = React.useMemo(() => {
+    const codes: Array<string | null | undefined> = [];
+    skuDetails.forEach((s) => codes.push(s.sku));
+    inboundHistory.forEach((r: any) => codes.push(r.skuCode));
+    return codes;
+  }, [skuDetails, inboundHistory]);
+  React.useEffect(() => {
+    if (coverSkuCodes.length > 0) fetchBySkuCodes(coverSkuCodes);
+  }, [coverSkuCodes, fetchBySkuCodes]);
+
   // D-363i：多款混出购物车——加款全库搜索（不受当前页限制），添加后可继续搜索，
   // 表格只显示已勾选进清单的款
   const cartStyleNos = Array.from(new Set(skuDetails.map(item => item.styleNo || outboundModal.data?.styleNo || '').filter(Boolean)));
@@ -277,7 +293,7 @@ const _FinishedInventory: React.FC = () => {
                     handleSKUQtyChange: (i, v) => handleSKUQtyChange(offset + i, v),
                     handleSKUSalesPriceChange: (i, v) => handleSKUSalesPriceChange(offset + i, v),
                     handleSKUPriceReasonChange: (i, v) => handleSKUPriceReasonChange(offset + i, v),
-                  });
+                  }, { imageMap: styleImageMap });
                   return (
                     <div key={sn} className="u-mb-12">
                       <div className="u-d-flex u-ai-center u-gap-8 u-mb-6">
@@ -348,6 +364,7 @@ const _FinishedInventory: React.FC = () => {
                   </div>
                 </Card>
                 <ResizableTable size="small" columns={[
+                  styleImageColumn<any>({ imageMap: styleImageMap, skuCode: (r) => r.skuCode }),
                   { title: '入库日期', dataIndex: 'inboundDate', key: 'inboundDate', width: 150 },
                   { title: '入库单号', dataIndex: 'qualityInspectionNo', key: 'qualityInspectionNo', width: 150, render: (v: string) => <span style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{v || '-'}</span> },
                   { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 130, render: (v: string) => v || '-' },

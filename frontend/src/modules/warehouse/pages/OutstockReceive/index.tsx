@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, Tag, App } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -7,6 +7,8 @@ import StandardPagination from '@/components/common/StandardPagination';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
+import { styleImageColumn } from '@/components/common/styleImageColumns';
+import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
 import { useTablePagination } from '@/hooks';
 import api from '@/utils/api';
 import type { ProductOutstock } from '@/types/production';
@@ -41,6 +43,16 @@ const OutstockReceive: React.FC = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // 款式图：本表只有款号，按款号批量取款级封面（后端权威口径）
+  const { imageMap: styleImageMap, fetchByStyleNos } = useStyleCoverImages();
+  const receiveStyleNos = useMemo(
+    () => dataSource.map((r) => r.styleNo).filter(Boolean) as string[],
+    [dataSource],
+  );
+  useEffect(() => {
+    if (receiveStyleNos.length > 0) fetchByStyleNos(receiveStyleNos);
+  }, [receiveStyleNos, fetchByStyleNos]);
+
   const handleReceive = useCallback((record: ProductOutstock) => {
     modal.confirm({
       title: '确认收货',
@@ -61,6 +73,8 @@ const OutstockReceive: React.FC = () => {
 
   const columns: ColumnsType<ProductOutstock> = [
     { title: '出库单号', dataIndex: 'outstockNo', width: 160 },
+    // 款式图：确认收货时"看不出收的是哪件货"，只有款号文字不够
+    styleImageColumn<ProductOutstock>({ imageMap: styleImageMap, styleNo: (r) => r.styleNo }),
     { title: '订单号', dataIndex: 'orderNo', width: 150 },
     { title: '款号', dataIndex: 'styleNo', width: 120 },
     { title: '款式名称', dataIndex: 'styleName', width: 140 },
