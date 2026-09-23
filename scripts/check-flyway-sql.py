@@ -15,6 +15,7 @@ Flyway SQL 迁移脚本校验（P0 强制门禁）
   8. 危险操作 — DROP TABLE 无 IF EXISTS / TRUNCATE / DELETE FROM 无 WHERE
   9. 修改已执行迁移 — 检测 git diff 中对 V*.sql 的修改（而非新增）
  10. INSERT 无列列表 — INSERT INTO t_xxx VALUES(...) 缺少列名
+ 11. 无条件 ADD COLUMN — 云端列已存在时每次启动报 Duplicate column，迁移永远修不好
 
 退出码：0 = 通过，1 = 违规（CI 阻断）
 
@@ -276,6 +277,56 @@ def check_content(fname: str, content: str, existing_file: bool = False) -> List
                 is_old,
             ))
 
+    # --- 11. 无条件 ADD COLUMN（非幂等）---
+    # 事故背景：云端 schema 常被 DbColumnDefinitions / 手工 SQL 先行同步，
+    # 于是"无条件 ADD COLUMN"的迁移每次都报 Duplicate column name。
+    # 更隐蔽的是：一条迁移里写多条 ALTER（DDL 不走事务），第一条成功、第二条失败时，
+    # 第一条的列会永久留在库里，而 Flyway 只标记整条失败；失败记录被清理后重试，
+    # 就变成"第一条必然重复"的死循环。历史事故：V202707272000、V202709200001、V202709200003。
+    # 正确写法：先查 information_schema 再决定是否 ADD COLUMN（见 V45 / V202709200001）。
+    results.extend(check_unconditional_add_column(cleaned, is_old))
+
+    return results
+
+
+# 字符串字面量（含 '' 转义）——用于把"动态 SQL 字符串里的 DDL"与"真的 DDL"区分开
+_STR_LITERAL_RE = re.compile(r"'(?:[^']|'')*'")
+
+
+def _blank_string_literals(sql: str) -> str:
+    """把字符串字面量替换成等长空格：既让其中的 DDL 不再被匹配，又保留原偏移量（便于报行号）。"""
+    return _STR_LITERAL_RE.sub(lambda m: ' ' * len(m.group(0)), sql)
+
+
+def check_unconditional_add_column(cleaned: str, is_old: bool) -> List[Tuple[str, bool]]:
+    """
+    检测未加存在性判断的 ALTER TABLE ... ADD COLUMN。
+
+    判定方式：先把字符串字面量抹掉再找 ADD COLUMN ——
+    幂等写法里 ALTER 是包在 SET @s = IF(...) 的字符串里的，抹掉后自然不会被匹配到；
+    同时再看原始文本中 ALTER 前一个非空白字符是否为引号，双保险避免误报。
+    """
+    results: List[Tuple[str, bool]] = []
+    blanked = _blank_string_literals(cleaned)
+    pattern = re.compile(
+        r'ALTER\s+TABLE\s+[`"\']?([\w.]+)[`"\']?\s+ADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"\']?(\w+)',
+        re.IGNORECASE,
+    )
+    for m in pattern.finditer(blanked):
+        matched = m.group(0)
+        if re.search(r'IF\s+NOT\s+EXISTS', matched, re.IGNORECASE):
+            continue  # MariaDB 风格写法，放行
+        prev = cleaned[:m.start()].rstrip()
+        if prev.endswith("'") or prev.endswith('"'):
+            continue  # 双保险：其实是动态 SQL 字符串里的 DDL
+        table, column = m.group(1), m.group(2)
+        lineno = cleaned[:m.start()].count('\n') + 1
+        results.append((
+            f"L{lineno}: 无条件 ADD COLUMN `{column}`（表 {table}）→ "
+            f"云端该列已存在时每次都报 Duplicate column name，且迁移永远无法成功；"
+            f"改为先查 information_schema.COLUMNS 再决定是否 ALTER（见 V45 / V202709200001）",
+            is_old,
+        ))
     return results
 
 
@@ -407,6 +458,7 @@ def main() -> int:
         print("  DEFAULT NULL → 动态SQL内去掉 DEFAULT NULL，MySQL默认即NULL")
         print("  括号不匹配 → 检查 ( ) 是否成对")
         print("  修改已执行  → ⚠️ 仅警告。本地执行 mvn flyway:repair 更新 checksum")
+        print("  无条件ADD COLUMN → 改为 SET @s = IF(查 information_schema = 0, 'ALTER ...', 'SELECT 1')")
         print("=" * 65)
         return 1
 
