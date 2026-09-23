@@ -230,6 +230,30 @@ Note: Java单元测试源码按项目P0铁律"测试代码隔离"从未提交到
    `PlatformWebhookController.receiveOrder`（D-523 修）同一 bug 各写一遍；
    物流回调也曾把未处理写成 `processed=true`。**改动任一回调时，顺手扫一遍同类入口。**
 
+15. **电商/仓库的每一张商品相关列表都必须带「款式图 + 款号」列**
+   用户原话：「所有的电商的这些 必须都要有图片列，不然看都不好看，还不知道是什么订单」。
+   只看一串 `skuCode` / 一个 `skuId` 数字，运营根本无法确认是不是那件货。
+
+   两条硬性要求：
+   - **列必须有**：新建任何电商/仓库列表（含 tab、弹窗里的明细）时，
+     「款式图」列是**默认项**，不是可选项；列宽、占位灰块、点击预览全站统一。
+   - **款号只能来自后端解析**：即铁律 13。前端一律走 `POST /api/style/sku/brief`
+     （或 `POST /api/ecommerce/orders/brief` 按订单号回查），**禁止任何 `split('-')` 猜测**。
+
+   统一实现（**照抄，不要各写各的**）：
+   | 场景 | 后端 | 前端列工厂 |
+   |------|------|-----------|
+   | 行里有 `skuCode` | `POST /api/style/sku/brief` | `styleImageColumn` / `styleNoColumn` |
+   | 行里只有订单号 | `POST /api/ecommerce/orders/brief` | `orderImageColumn` / `orderStyleNoColumn` |
+
+   - 数据源：`useStyleCoverImages()`（`imageMap` / `briefBySku` + `orderImageMap` / `briefByOrderNo`）；
+     接口自带摘要时用 `seedBriefs()` 省一次请求。
+   - 查不到就显示占位/退回编码，**不编造默认图或假款号**。
+   - 加新列表后自查：`grep -rn "split('-')\[0\]" frontend/src` 不应再出现商品相关命中。
+
+   历史事故：`skuCode.split('-')[0]` 使款式图列**永远是灰块**、款号列显示整串编码
+   （D-522 修后端四处，D-524 修前端全部列表）。
+
 ### 判断"链路是否打通"的三层验证法
 
 不要只看接口对不对得上就下结论，必须逐层验证：

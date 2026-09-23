@@ -1,6 +1,8 @@
 import React from 'react';
 import { Tag, Tooltip } from 'antd';
 import RowActions from '@/components/common/RowActions';
+import { styleImageColumn, styleNoColumn, orderImageColumn, orderStyleNoColumn } from '@/components/common/styleImageColumns';
+import type { StyleImageMap, SkuBriefMap, OrderBriefMap } from '@/hooks/useStyleCoverImages';
 import type { ColumnsType } from 'antd/es/table';
 import type { UniversalStock, StockAlert, PurchaseSuggestion, WarehouseAllocation, MergeGroup, GiftRule, LogisticsAnomaly, PlatformBill } from './useEcStock';
 import {
@@ -13,6 +15,14 @@ import {
 
 /** 列定义所需的上下文（来自 useSmartStockData） */
 export interface ColumnContext {
+  /** 款号/skuCode → 图片 URL（后端权威解析，禁止前端切字符串猜款号） */
+  imageMap: StyleImageMap;
+  /** skuCode → 款号/颜色/尺码摘要 */
+  briefBySku: SkuBriefMap;
+  /** 订单号 → 图片 URL（物流异常 / 平台账单这类订单级列表） */
+  orderImageMap: StyleImageMap;
+  /** 订单号 → 款号/颜色/尺码摘要（订单级列表） */
+  briefByOrderNo: OrderBriefMap;
   handleResolve: (id: number) => Promise<void>;
   generateSuggestions: () => void;
   handleApprove: (id: number) => Promise<void>;
@@ -31,7 +41,8 @@ export interface ColumnContext {
 
 export function buildAlertCols(ctx: ColumnContext): ColumnsType<StockAlert> {
   return [
-    { title: '商品编码', dataIndex: 'skuCode', width: 130 },
+    styleImageColumn<StockAlert>({ imageMap: ctx.imageMap, skuCode: r => r.skuCode }),
+    styleNoColumn<StockAlert>({ briefBySku: ctx.briefBySku, skuCode: r => r.skuCode }),
     { title: '预警类型', dataIndex: 'alertType', width: 100, render: (v: string) => <Tag color="red">{v}</Tag> },
     { title: '当前库存', dataIndex: 'currentStock', width: 90 },
     { title: '安全库存', dataIndex: 'safeStock', width: 90 },
@@ -47,7 +58,8 @@ export function buildAlertCols(ctx: ColumnContext): ColumnsType<StockAlert> {
 
 export function buildSuggestionCols(ctx: ColumnContext): ColumnsType<PurchaseSuggestion> {
   return [
-    { title: '商品编码', dataIndex: 'skuCode', width: 130 },
+    styleImageColumn<PurchaseSuggestion>({ imageMap: ctx.imageMap, skuCode: r => r.skuCode }),
+    styleNoColumn<PurchaseSuggestion>({ briefBySku: ctx.briefBySku, skuCode: r => r.skuCode }),
     {
       title: '建议类型', dataIndex: 'suggestionType', width: 100,
       render: (v?: string) => {
@@ -88,7 +100,8 @@ export function buildSuggestionCols(ctx: ColumnContext): ColumnsType<PurchaseSug
 
 export function buildStockCols(ctx: ColumnContext): ColumnsType<UniversalStock> {
   return [
-    { title: '商品编码', dataIndex: 'skuId', width: 100 },
+    styleImageColumn<UniversalStock>({ imageMap: ctx.imageMap, skuCode: r => r.skuCode }),
+    styleNoColumn<UniversalStock>({ briefBySku: ctx.briefBySku, skuCode: r => r.skuCode }),
     { title: '仓库', dataIndex: 'warehouse', width: 100 },
     { title: '总入库', dataIndex: 'totalWarehoused', width: 80 },
     { title: '总出库', dataIndex: 'totalOutstock', width: 80 },
@@ -105,7 +118,8 @@ export function buildStockCols(ctx: ColumnContext): ColumnsType<UniversalStock> 
 export function buildAllocCols(ctx: ColumnContext): ColumnsType<WarehouseAllocation> {
   return [
     { title: '订单号', dataIndex: 'orderNo', width: 140 },
-    { title: '商品编码', dataIndex: 'skuCode', width: 130 },
+    styleImageColumn<WarehouseAllocation>({ imageMap: ctx.imageMap, skuCode: r => r.skuCode }),
+    styleNoColumn<WarehouseAllocation>({ briefBySku: ctx.briefBySku, skuCode: r => r.skuCode }),
     { title: '仓库', dataIndex: 'warehouse', width: 100 },
     { title: '分配数量', dataIndex: 'allocatedQuantity', width: 90 },
     {
@@ -141,6 +155,14 @@ export function buildMergeCols(ctx: ColumnContext): ColumnsType<MergeGroup> {
   return [
     { title: '收货人', dataIndex: 'receiverName', width: 100 },
     { title: '电话', dataIndex: 'receiverPhone', width: 130 },
+    // 合单组里可能有多款，这里展示首个商品的图/款号，完整明细在「合单发货」弹窗里
+    styleImageColumn<MergeGroup>({ imageMap: ctx.imageMap, skuCode: r => r.orders?.[0]?.skuCode }),
+    styleNoColumn<MergeGroup>({
+      briefBySku: ctx.briefBySku,
+      skuCode: r => r.orders?.[0]?.skuCode,
+      title: '商品（首个）',
+      width: 160,
+    }),
     { title: '平台', dataIndex: 'platform', width: 100 },
     { title: '订单数', dataIndex: 'orderCount', width: 80 },
     { title: '总件数', dataIndex: 'totalQuantity', width: 80 },
@@ -153,7 +175,13 @@ export function buildMergeCols(ctx: ColumnContext): ColumnsType<MergeGroup> {
 export function buildGiftRuleCols(ctx: ColumnContext): ColumnsType<GiftRule> {
   return [
     { title: '规则名称', dataIndex: 'ruleName', width: 140 },
-    { title: '赠品商品编码', dataIndex: 'giftSkuCode', width: 130 },
+    styleImageColumn<GiftRule>({ imageMap: ctx.imageMap, skuCode: r => r.giftSkuCode }),
+    styleNoColumn<GiftRule>({
+      briefBySku: ctx.briefBySku,
+      skuCode: r => r.giftSkuCode,
+      title: '赠品款号',
+      width: 150,
+    }),
     { title: '赠品数量', dataIndex: 'giftQuantity', width: 80 },
     {
       title: '触发类型', dataIndex: 'triggerType', width: 120,
@@ -178,6 +206,14 @@ export function buildGiftRuleCols(ctx: ColumnContext): ColumnsType<GiftRule> {
 export function buildAnomalyCols(ctx: ColumnContext): ColumnsType<LogisticsAnomaly> {
   return [
     { title: '订单号', dataIndex: 'orderNo', width: 140 },
+    // 订单级列表：异常表只有 orderNo，图/款号由后端按订单号回查解析
+    orderImageColumn<LogisticsAnomaly>({ orderImageMap: ctx.orderImageMap, orderNo: r => r.orderNo }),
+    orderStyleNoColumn<LogisticsAnomaly>({
+      briefByOrderNo: ctx.briefByOrderNo,
+      orderNo: r => r.orderNo,
+      width: 130,
+      fallbackToSkuCode: false, // 退回订单号没有意义（左边已有一列），解析不到就显示 '-'
+    }),
     { title: '快递单号', dataIndex: 'trackingNo', width: 140 },
     { title: '快递公司', dataIndex: 'expressCompany', width: 90 },
     {
@@ -228,6 +264,14 @@ export function buildBillCols(ctx: ColumnContext): ColumnsType<PlatformBill> {
     { title: '平台', dataIndex: 'platform', width: 100 },
     { title: '账期', dataIndex: 'billPeriod', width: 100 },
     { title: '平台订单号', dataIndex: 'platformOrderNo', width: 160 },
+    // 订单级列表：账单表只有平台订单号，图/款号由后端按订单号回查解析
+    orderImageColumn<PlatformBill>({ orderImageMap: ctx.orderImageMap, orderNo: r => r.platformOrderNo }),
+    orderStyleNoColumn<PlatformBill>({
+      briefByOrderNo: ctx.briefByOrderNo,
+      orderNo: r => r.platformOrderNo,
+      width: 130,
+      fallbackToSkuCode: false,
+    }),
     {
       title: '差异类型', dataIndex: 'diffType', width: 120,
       render: (v: string) => {

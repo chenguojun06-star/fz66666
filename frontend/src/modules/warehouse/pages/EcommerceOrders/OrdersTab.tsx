@@ -24,13 +24,14 @@ const OrdersTab: React.FC<Props> = ({ onInitReturn }) => {
   const columns = useMemo(
     () => buildOrdersColumns({
       styleImageMap: h.styleImageMap,
+      briefBySku: h.briefBySku,
       onViewDetail: r => h.setDetail(r),
       onLink: r => h.setLinkTarget(r),
       onOutbound: r => h.setOutboundTarget(r),
       onInitReturn,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [h.styleImageMap, onInitReturn],
+    [h.styleImageMap, h.briefBySku, onInitReturn],
   );
 
   const stats = [

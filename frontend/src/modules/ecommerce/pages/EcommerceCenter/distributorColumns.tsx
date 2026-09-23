@@ -1,6 +1,8 @@
 import React from 'react';
 import { Tag, Tooltip } from 'antd';
 import RowActions from '@/components/common/RowActions';
+import { styleImageColumn, styleNoColumn, orderImageColumn, orderStyleNoColumn } from '@/components/common/styleImageColumns';
+import type { StyleImageMap, SkuBriefMap, OrderBriefMap } from '@/hooks/useStyleCoverImages';
 import type { ColumnsType } from 'antd/es/table';
 import type { RowAction } from '@/components/common/RowActions';
 import type {
@@ -21,6 +23,14 @@ import { BILL_DIFF_TYPE_MAP, getConfidenceColor } from './helpers';
 
 /** 列定义所需的上下文（来自 useDistributorTabData） */
 export interface DistributorColumnContext {
+  /** 款号/skuCode → 图片 URL（后端权威解析，禁止前端切字符串猜款号） */
+  imageMap: StyleImageMap;
+  /** skuCode → 款号/颜色/尺码摘要 */
+  briefBySku: SkuBriefMap;
+  /** 订单号 → 图片 URL（分销账单是订单级，只有 platformOrderNo） */
+  orderImageMap: StyleImageMap;
+  /** 订单号 → 款号/颜色/尺码摘要 */
+  briefByOrderNo: OrderBriefMap;
   setProfileModal: React.Dispatch<React.SetStateAction<{ open: boolean; record: DistributorProfile | null }>>;
   setLevelModal: React.Dispatch<React.SetStateAction<{ open: boolean; record: DistributorLevel | null }>>;
   setPolicyModal: React.Dispatch<React.SetStateAction<{ open: boolean; record: DistributorPricePolicy | null }>>;
@@ -82,7 +92,14 @@ export function buildPolicyCols(ctx: DistributorColumnContext): ColumnsType<Dist
       const it = v ? PolicyTypeMap[v] : null; return it ? <Tag color={it.color}>{it.label}</Tag> : '-';
     }},
     { title: '适用等级', dataIndex: 'distributorLevel', width: 100, render: (v?: string) => v ?? '全部' },
-    { title: '适用商品编码', dataIndex: 'skuCode', width: 120, render: (v?: string) => v ?? '全部' },
+    styleImageColumn<DistributorPricePolicy>({ imageMap: ctx.imageMap, skuCode: r => r.skuCode }),
+    styleNoColumn<DistributorPricePolicy>({
+      briefBySku: ctx.briefBySku,
+      skuCode: r => r.skuCode,
+      title: '适用款号',
+      width: 140,
+      fallbackToSkuCode: false, // 策略可以作用于"全部商品"，此时显示 '-' 而不是空编码
+    }),
     { title: '供货价', dataIndex: 'supplyPrice', width: 100, align: 'right' as const, render: (v?: number) => v != null ? `¥${v.toFixed(2)}` : '-' },
     { title: '最低零售价', dataIndex: 'minRetailPrice', width: 110, align: 'right' as const, render: (v?: number) => v != null ? `¥${v.toFixed(2)}` : '-' },
     { title: '操作', width: 150, render: (_: unknown, r: DistributorPricePolicy) => (
@@ -97,7 +114,8 @@ export function buildPolicyCols(ctx: DistributorColumnContext): ColumnsType<Dist
 export function buildB2bCols(ctx: DistributorColumnContext): ColumnsType<B2BOrder> {
   return [
     { title: '订单号', dataIndex: 'orderNo', width: 180 },
-    { title: '商品编码', dataIndex: 'skuCode', width: 130 },
+    styleImageColumn<B2BOrder>({ imageMap: ctx.imageMap, skuCode: r => r.skuCode }),
+    styleNoColumn<B2BOrder>({ briefBySku: ctx.briefBySku, skuCode: r => r.skuCode }),
     { title: '商品名称', dataIndex: 'productName', width: 160, ellipsis: true },
     { title: '数量', dataIndex: 'quantity', width: 70, align: 'right' as const },
     { title: '单价', dataIndex: 'unitPrice', width: 90, align: 'right' as const, render: (v?: number) => v != null ? `¥${v.toFixed(2)}` : '-' },
@@ -125,6 +143,14 @@ export function buildBillCols(ctx: DistributorColumnContext): ColumnsType<Distri
   return [
     { title: '账期', dataIndex: 'billPeriod', width: 90 },
     { title: '订单号', dataIndex: 'platformOrderNo', width: 150 },
+    // 订单级列表：分销账单只有平台订单号，图/款号由后端按订单号回查解析
+    orderImageColumn<DistributorBill>({ orderImageMap: ctx.orderImageMap, orderNo: r => r.platformOrderNo }),
+    orderStyleNoColumn<DistributorBill>({
+      briefByOrderNo: ctx.briefByOrderNo,
+      orderNo: r => r.platformOrderNo,
+      width: 130,
+      fallbackToSkuCode: false, // 左边已有订单号列，解析不到就显示 '-'
+    }),
     { title: '差异类型', dataIndex: 'diffType', width: 110, render: (v?: string) => {
       const it = v ? BILL_DIFF_TYPE_MAP[v] : null; return it ? <Tag color={it.color}>{it.label}</Tag> : <Tag>未知</Tag>;
     }},

@@ -2,6 +2,8 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button, Space, Tag, Tooltip, Statistic, Card, Row, Col, Input, Select, Modal, message } from 'antd';
 import { CreditCardOutlined, ClockCircleOutlined, CheckCircleOutlined, ThunderboltOutlined, RobotOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
+import { styleImageColumn, styleNoColumn } from '@/components/common/styleImageColumns';
+import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
 import type { ColumnsType } from 'antd/es/table';
 import { useRequest } from '@/hooks/useRequest';
 import api from '@/utils/api';
@@ -48,6 +50,12 @@ const SmartRefundTab: React.FC = () => {
     () => api.get('/ecommerce/refund/stats').then(res => (res as any)?.data || {}),
     { manual: false }
   );
+
+  // 款式图/款号：后端按 t_product_sku 权威解析（真实 SKU 编码无分隔符，前端不能切字符串）
+  const { imageMap, briefBySku, fetchBySkuCodes } = useStyleCoverImages();
+  useEffect(() => {
+    if (refunds?.length) fetchBySkuCodes(refunds.map(r => r.skuCode));
+  }, [refunds, fetchBySkuCodes]);
 
   useEffect(() => {
     fetchStats();
@@ -126,7 +134,8 @@ const SmartRefundTab: React.FC = () => {
     { title: '订单号', dataIndex: 'orderNo', width: 140 },
     { title: '平台订单号', dataIndex: 'platformOrderNo', width: 160 },
     { title: '平台', dataIndex: 'platform', width: 80, render: (v) => v ? <Tag color="blue">{v}</Tag> : '-' },
-    { title: '商品编码', dataIndex: 'skuCode', width: 130 },
+    styleImageColumn<RefundRequest>({ imageMap, skuCode: r => r.skuCode }),
+    styleNoColumn<RefundRequest>({ briefBySku, skuCode: r => r.skuCode }),
     { title: '数量', dataIndex: 'quantity', width: 70, align: 'center' as const },
     {
       title: '退款金额', dataIndex: 'payAmount', width: 100, align: 'right' as const,

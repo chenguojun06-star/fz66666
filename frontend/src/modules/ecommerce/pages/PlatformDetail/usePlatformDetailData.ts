@@ -28,6 +28,8 @@ export interface UsePlatformDetailDataReturn {
   expressOrderTarget: EcOrder | null;
   expressModalOpen: boolean;
   imageMap: ReturnType<typeof useStyleCoverImages>['imageMap'];
+  /** skuCode → 款号/颜色/尺码（后端权威解析） */
+  briefBySku: ReturnType<typeof useStyleCoverImages>['briefBySku'];
   configForm: ReturnType<typeof Form.useForm>[0];
   testResult: { success: boolean; message: string } | null;
   setActiveTab: (key: string) => void;
@@ -49,7 +51,7 @@ export interface UsePlatformDetailDataReturn {
 
 export function usePlatformDetailData(platformCode: string | undefined): UsePlatformDetailDataReturn {
   const { loading, testing, syncing, saveConfig, getStatus, getShopStats, testConnection, syncNow } = usePlatformConnector();
-  const { imageMap, fetchBySkuCodes } = useStyleCoverImages();
+  const { imageMap, briefBySku, fetchBySkuCodes } = useStyleCoverImages();
 
   const [stats, setStats] = useState<ShopStats | null>(null);
   const [configured, setConfigured] = useState(false);
@@ -165,6 +167,7 @@ export function usePlatformDetailData(platformCode: string | undefined): UsePlat
     filterStatus, keyword,
     expressOrderTarget, expressModalOpen,
     imageMap,
+    briefBySku,
     configForm, testResult,
     setActiveTab, setShowGuide, setFilterStatus, setKeyword,
     setOrderPage, setOrderPageSize,

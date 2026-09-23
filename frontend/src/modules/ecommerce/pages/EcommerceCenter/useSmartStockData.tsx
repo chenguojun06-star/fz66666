@@ -1,10 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { App, Modal, Input } from 'antd';
 import { useEcStock } from './useEcStock';
+import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
+import type { StyleImageMap, SkuBriefMap, OrderBriefMap } from '@/hooks/useStyleCoverImages';
 import type { UniversalStock, MergeGroup, GiftRule } from './useEcStock';
 
 export interface UseSmartStockDataReturn {
   st: ReturnType<typeof useEcStock>;
+  /** 款号/skuCode → 图片 URL（后端权威解析） */
+  imageMap: StyleImageMap;
+  /** skuCode → 款号/颜色/尺码摘要 */
+  briefBySku: SkuBriefMap;
+  /** 订单号 → 图片 URL（物流异常 / 平台账单等订单级列表） */
+  orderImageMap: StyleImageMap;
+  /** 订单号 → 款号/颜色/尺码摘要（订单级列表） */
+  briefByOrderNo: OrderBriefMap;
   // 弹窗状态
   safeStockRecord: UniversalStock | null;
   setSafeStockRecord: React.Dispatch<React.SetStateAction<UniversalStock | null>>;
@@ -43,6 +53,7 @@ export interface UseSmartStockDataReturn {
 export function useSmartStockData(): UseSmartStockDataReturn {
   const { message } = App.useApp();
   const st = useEcStock();
+  const { imageMap, briefBySku, orderImageMap, briefByOrderNo, fetchBySkuCodes, fetchByOrderNos } = useStyleCoverImages();
   const [safeStockRecord, setSafeStockRecord] = useState<UniversalStock | null>(null);
   const [splitVisible, setSplitVisible] = useState(false);
   const [mergeGroup, setMergeGroup] = useState<MergeGroup | null>(null);
@@ -56,6 +67,44 @@ export function useSmartStockData(): UseSmartStockDataReturn {
     st.fetchAnomalies(); st.fetchBills();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 款式图 / 款号：把各 tab 的 skuCode 汇总后一次性批量解析。
+  // 必须走后端 POST /style/sku/brief —— 真实 SKU 编码没有分隔符，
+  // 前端 split('-') 猜款号会恒不命中（这正是以前款式图永远空白的根因）。
+  const allSkuCodes = useMemo(() => {
+    const codes: Array<string | null | undefined> = [];
+    st.alerts.forEach(r => codes.push(r.skuCode));
+    st.suggestions.forEach(r => codes.push(r.skuCode));
+    st.stockList.forEach(r => codes.push(r.skuCode));
+    st.allocations.forEach(r => codes.push(r.skuCode));
+    st.mergeGroups.forEach(g => g.orders?.forEach(o => codes.push(o.skuCode)));
+    st.giftRules.forEach(r => codes.push(r.giftSkuCode));
+    return codes;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [st.alerts, st.suggestions, st.stockList, st.allocations, st.mergeGroups, st.giftRules]);
+
+  useEffect(() => {
+    if (allSkuCodes.length > 0) fetchBySkuCodes(allSkuCodes);
+  }, [allSkuCodes, fetchBySkuCodes]);
+
+  // 订单级列表（物流异常只有 orderNo、平台账单只有 platformOrderNo）本身不含 skuCode，
+  // 由后端 POST /ecommerce/orders/brief 回查订单表解析，这里汇总后一次性拉取。
+  const allOrderNos = useMemo(
+    () => st.anomalies.map(r => r.orderNo),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [st.anomalies],
+  );
+  const allPlatformOrderNos = useMemo(
+    () => st.bills.map(r => r.platformOrderNo),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [st.bills],
+  );
+
+  useEffect(() => {
+    if (allOrderNos.length > 0 || allPlatformOrderNos.length > 0) {
+      fetchByOrderNos(allOrderNos, allPlatformOrderNos);
+    }
+  }, [allOrderNos, allPlatformOrderNos, fetchByOrderNos]);
 
   const handleResolve = useCallback(async (id: number) => {
     await st.resolveAlert(id); message.success('已处理');
@@ -197,6 +246,10 @@ export function useSmartStockData(): UseSmartStockDataReturn {
 
   return {
     st,
+    imageMap,
+    briefBySku,
+    orderImageMap,
+    briefByOrderNo,
     safeStockRecord, setSafeStockRecord,
     splitVisible, setSplitVisible,
     mergeGroup, setMergeGroup,

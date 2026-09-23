@@ -1,6 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { App, Form, Input, Select } from 'antd';
 import { useDistributor } from './useDistributor';
+import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
+import type { StyleImageMap, SkuBriefMap, OrderBriefMap } from '@/hooks/useStyleCoverImages';
 import type {
   DistributorProfile,
   DistributorLevel,
@@ -13,6 +15,14 @@ import { B2B_EXPRESS_COMPANY_OPTIONS, getBillHandleLabel } from './distributorHe
 /** useDistributorTabData 返回值（供 DistributorTab 主组件消费） */
 export interface UseDistributorTabDataReturn {
   st: ReturnType<typeof useDistributor>;
+  /** 款号/skuCode → 图片 URL（后端权威解析） */
+  imageMap: StyleImageMap;
+  /** skuCode → 款号/颜色/尺码摘要 */
+  briefBySku: SkuBriefMap;
+  /** 订单号 → 图片 URL（分销账单是订单级的，只有 platformOrderNo） */
+  orderImageMap: StyleImageMap;
+  /** 订单号 → 款号/颜色/尺码摘要 */
+  briefByOrderNo: OrderBriefMap;
   // 弹窗状态
   profileModal: { open: boolean; record: DistributorProfile | null };
   setProfileModal: React.Dispatch<React.SetStateAction<{ open: boolean; record: DistributorProfile | null }>>;
@@ -47,6 +57,29 @@ export function useDistributorTabData(): UseDistributorTabDataReturn {
   const [policyModal, setPolicyModal] = useState<{ open: boolean; record: DistributorPricePolicy | null }>({ open: false, record: null });
   const [b2bModal, setB2bModal] = useState(false);
   const [reconciling, setReconciling] = useState(false);
+
+  // 款式图 / 款号：B2B 订单与价格策略都带 skuCode，统一批量解析
+  const { imageMap, briefBySku, orderImageMap, briefByOrderNo, fetchBySkuCodes, fetchByOrderNos } = useStyleCoverImages();
+  const allSkuCodes = useMemo(() => {
+    const codes: Array<string | null | undefined> = [];
+    st.b2bOrders.forEach(o => codes.push(o.skuCode));
+    st.policies.forEach(p => codes.push(p.skuCode));
+    return codes;
+  }, [st.b2bOrders, st.policies]);
+
+  useEffect(() => {
+    if (allSkuCodes.length > 0) fetchBySkuCodes(allSkuCodes);
+  }, [allSkuCodes, fetchBySkuCodes]);
+
+  // 分销账单只有 platformOrderNo（订单级），由后端回查订单表解析商品
+  const allBillOrderNos = useMemo(
+    () => st.bills.map(b => b.platformOrderNo),
+    [st.bills],
+  );
+
+  useEffect(() => {
+    if (allBillOrderNos.length > 0) fetchByOrderNos([], allBillOrderNos);
+  }, [allBillOrderNos, fetchByOrderNos]);
 
   const handleSaveProfile = useCallback(async (p: DistributorProfile) => {
     try { await st.saveProfile(p); message.success(p.id ? '已更新' : '已新增'); st.fetchProfiles(); }
@@ -199,6 +232,10 @@ export function useDistributorTabData(): UseDistributorTabDataReturn {
 
   return {
     st,
+    imageMap,
+    briefBySku,
+    orderImageMap,
+    briefByOrderNo,
     profileModal, setProfileModal,
     levelModal, setLevelModal,
     policyModal, setPolicyModal,

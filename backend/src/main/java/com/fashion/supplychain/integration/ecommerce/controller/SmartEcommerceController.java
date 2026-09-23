@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -39,18 +40,122 @@ public class SmartEcommerceController {
     @Autowired
     private EcStockDiscrepancyOrchestrator stockDiscrepancyOrchestrator;
 
+    /** 用于把 skuId 换出款号/颜色/款式图（定价建议只存了 skuId，列表否则"看不出是什么商品"） */
+    @Autowired
+    private com.fashion.supplychain.style.orchestration.ProductSkuOrchestrator productSkuOrchestrator;
+
+    /** 订单级列表（物流异常 / 平台账单）本身不含 skuCode，需按订单号回查 */
+    @Autowired
+    private com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService ecommerceOrderService;
+
+    /** 单次解析上限，防止前端一次传上千个订单号拖垮查询 */
+    private static final int BRIEF_MAX_ORDER_NOS = 500;
+
+    /**
+     * 按订单号批量解析商品摘要（款号/颜色/尺码/款式图）。
+     *
+     * <p>物流异常、平台账单这类"订单级"表里只有订单号，没有 {@code skuCode}，
+     * 列表因此显示不出是什么商品。这里用订单号回到 {@code t_ecommerce_order}
+     * 取 skuCode，再复用 {@code POST /api/style/sku/brief} 的口径解析。
+     *
+     * <p>请求体支持两种键（都可不传）：
+     * <ul>
+     *   <li>{@code orderNos} —— 内部订单号（物流异常表里的 {@code orderNo}）</li>
+     *   <li>{@code platformOrderNos} —— 平台订单号（账单表里的 {@code platformOrderNo}）</li>
+     * </ul>
+     * 返回 {@code 订单号 -> brief}：键就是传入的那个订单号（已 trim，与库中一致），
+     * 前端按行里的订单号直接取即可。查不到就不返回该键（不编造）。
+     */
+    @PostMapping("/orders/brief")
+    public Result<Map<String, Map<String, Object>>> briefByOrderNos(
+            @RequestBody(required = false) Map<String, List<String>> body) {
+        Long tenantId = UserContext.tenantId();
+        Map<String, Map<String, Object>> empty = new HashMap<>();
+        if (body == null) return Result.success(empty);
+
+        List<String> orderNos = normalizeOrderNos(body.get("orderNos"));
+        List<String> platformOrderNos = normalizeOrderNos(body.get("platformOrderNos"));
+        if (orderNos.isEmpty() && platformOrderNos.isEmpty()) return Result.success(empty);
+
+        // key（原样订单号） -> skuCode
+        Map<String, String> skuByKey = new HashMap<>();
+        if (!orderNos.isEmpty()) {
+            List<EcommerceOrder> orders = ecommerceOrderService.list(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<EcommerceOrder>()
+                            .eq(EcommerceOrder::getTenantId, tenantId)
+                            .in(EcommerceOrder::getOrderNo, orderNos));
+            for (EcommerceOrder o : orders) {
+                if (o.getOrderNo() != null && StringUtils.hasText(o.getSkuCode())) {
+                    skuByKey.putIfAbsent(o.getOrderNo(), o.getSkuCode());
+                }
+            }
+        }
+        if (!platformOrderNos.isEmpty()) {
+            List<EcommerceOrder> orders = ecommerceOrderService.list(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<EcommerceOrder>()
+                            .eq(EcommerceOrder::getTenantId, tenantId)
+                            .in(EcommerceOrder::getPlatformOrderNo, platformOrderNos));
+            for (EcommerceOrder o : orders) {
+                if (o.getPlatformOrderNo() != null && StringUtils.hasText(o.getSkuCode())) {
+                    skuByKey.putIfAbsent(o.getPlatformOrderNo(), o.getSkuCode());
+                }
+            }
+        }
+        if (skuByKey.isEmpty()) return Result.success(empty);
+
+        Map<String, Map<String, Object>> briefBySku =
+                productSkuOrchestrator.briefBySkuCodes(skuByKey.values());
+        Map<String, Map<String, Object>> result = new HashMap<>();
+        skuByKey.forEach((key, skuCode) -> {
+            Map<String, Object> brief = briefBySku.get(skuCode);
+            if (brief != null) result.put(key, brief);
+        });
+        return Result.success(result);
+    }
+
+    /** trim + 去空 + 去重 + 截断到上限 */
+    private List<String> normalizeOrderNos(List<String> raw) {
+        if (raw == null || raw.isEmpty()) return java.util.Collections.emptyList();
+        return raw.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .distinct()
+                .limit(BRIEF_MAX_ORDER_NOS)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     // ==================== 智能定价 ====================
 
-    /** 获取调价建议列表 */
+    /**
+     * 获取调价建议列表。
+     *
+     * <p>建议里原本只有 {@code skuId}（一个数字），前端列表只能显示数字，看不出是什么商品。
+     * 这里统一补上 {@code skuCode / styleNo / color / size / imageUrl}，
+     * 口径与 {@code POST /api/style/sku/brief} 一致（t_product_sku 权威解析）。
+     */
     @GetMapping("/price/suggestions")
     public Result<List<Map<String, Object>>> getPriceSuggestions() {
         Long tenantId = UserContext.tenantId();
         List<EcPriceSyncOrchestrator.PriceSuggestion> suggestions =
                 priceSyncOrchestrator.getPriceChangeSuggestions(tenantId);
+        Map<Long, Map<String, Object>> briefById = productSkuOrchestrator.briefBySkuIds(
+                suggestions.stream()
+                        .map(EcPriceSyncOrchestrator.PriceSuggestion::getSkuId)
+                        .collect(java.util.stream.Collectors.toList()));
         List<Map<String, Object>> result = new ArrayList<>();
         for (EcPriceSyncOrchestrator.PriceSuggestion s : suggestions) {
             Map<String, Object> map = new HashMap<>();
             map.put("skuId", s.getSkuId());
+            // 款号/颜色/尺码/款式图：解析不到就不放，前端据此显示占位（不编造）
+            Map<String, Object> brief = briefById.get(s.getSkuId());
+            if (brief != null) {
+                map.put("skuCode", brief.get("skuCode"));
+                map.put("styleNo", brief.get("styleNo"));
+                map.put("color", brief.get("color"));
+                map.put("size", brief.get("size"));
+                map.put("imageUrl", brief.get("imageUrl"));
+            }
             map.put("oldPrice", s.getOldPrice());
             map.put("newPrice", s.getNewPrice());
             BigDecimal change = s.getNewPrice().subtract(s.getOldPrice());

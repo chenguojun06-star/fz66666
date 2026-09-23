@@ -2,6 +2,8 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button, Space, Tag, Tooltip, Statistic, Card, Row, Col, Modal, message } from 'antd';
 import { DollarOutlined, ThunderboltOutlined, RobotOutlined, CheckCircleOutlined, ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
+import { styleImageColumn, styleNoColumn } from '@/components/common/styleImageColumns';
+import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
 import type { ColumnsType } from 'antd/es/table';
 import { useRequest } from '@/hooks/useRequest';
 import api, { type ApiResult } from '@/utils/api';
@@ -9,6 +11,12 @@ import { extractApiData } from './utils';
 
 interface PriceSuggestion {
   skuId: number;
+  /** 以下 5 个字段由后端一并返回（skuId 是数字，光看它看不出是什么商品） */
+  skuCode?: string | null;
+  styleNo?: string | null;
+  color?: string | null;
+  size?: string | null;
+  imageUrl?: string | null;
   oldPrice: number;
   newPrice: number;
   priceChange: number;
@@ -46,6 +54,13 @@ const SmartPriceTab: React.FC = () => {
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  // 款式图/款号：后端已在 /price/suggestions 里带上 skuCode/styleNo/imageUrl，
+  // 直接注入，不必再查一次（接口只给了 skuId 时列表只能显示一串数字）。
+  const { imageMap, briefBySku, seedBriefs } = useStyleCoverImages();
+  useEffect(() => {
+    if (suggestions?.length) seedBriefs(suggestions);
+  }, [suggestions, seedBriefs]);
 
   const handleGenerateSuggestions = useCallback(async () => {
     setGenerating(true);
@@ -106,7 +121,8 @@ const SmartPriceTab: React.FC = () => {
   }, [suggestions]);
 
   const columns: ColumnsType<PriceSuggestion> = [
-    { title: '商品编码', dataIndex: 'skuId', width: 100 },
+    styleImageColumn<PriceSuggestion>({ imageMap, skuCode: r => r.skuCode }),
+    styleNoColumn<PriceSuggestion>({ briefBySku, skuCode: r => r.skuCode }),
     {
       title: '当前价格', dataIndex: 'oldPrice', width: 110, align: 'right' as const,
       render: (v: number) => <span className="u-fw-500">¥{Number(v).toFixed(2)}</span>,

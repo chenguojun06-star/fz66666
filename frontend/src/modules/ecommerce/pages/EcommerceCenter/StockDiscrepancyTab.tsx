@@ -2,6 +2,8 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button, Space, Tag, Statistic, Card, Row, Col, Input, Select, Modal, message } from 'antd';
 import { StockOutlined, WarningOutlined, ReloadOutlined, SearchOutlined, ThunderboltOutlined, RobotOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
+import { styleImageColumn, styleNoColumn } from '@/components/common/styleImageColumns';
+import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
 import type { ColumnsType } from 'antd/es/table';
 import { useRequest } from '@/hooks/useRequest';
 import api from '@/utils/api';
@@ -47,6 +49,12 @@ const StockDiscrepancyTab: React.FC = () => {
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  // 款式图/款号：后端按 t_product_sku 权威解析（真实 SKU 编码无分隔符，前端不能切字符串）
+  const { imageMap, briefBySku, fetchBySkuCodes } = useStyleCoverImages();
+  useEffect(() => {
+    if (discrepancies?.length) fetchBySkuCodes(discrepancies.map(r => r.skuCode));
+  }, [discrepancies, fetchBySkuCodes]);
 
   const handleScanDiscrepancies = useCallback(async () => {
     setScanning(true);
@@ -103,7 +111,8 @@ const StockDiscrepancyTab: React.FC = () => {
   }, [discrepancies, searchSku, selectedType]);
 
   const columns: ColumnsType<StockDiscrepancy> = [
-    { title: '商品编码', dataIndex: 'skuCode', width: 160 },
+    styleImageColumn<StockDiscrepancy>({ imageMap, skuCode: r => r.skuCode }),
+    styleNoColumn<StockDiscrepancy>({ briefBySku, skuCode: r => r.skuCode, width: 160 }),
     {
       title: '本地库存', dataIndex: 'localStock', width: 100, align: 'right' as const,
       render: (v: number) => <span className="u-fw-500">{v}</span>,

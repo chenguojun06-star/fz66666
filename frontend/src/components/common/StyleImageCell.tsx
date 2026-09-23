@@ -1,25 +1,29 @@
 /**
- * StyleImageCell — 通用款号封面图单元格组件
+ * StyleImageCell — 通用款式图单元格组件
  *
- * 用于电商各表格的"款式图"列，根据 styleNo 从 imageMap 查找封面图并展示。
- * 无图时显示占位灰块。支持点击预览大图。
+ * 用于电商/仓库各表格的「款式图」列。
+ *
+ * 查图顺序（**不做任何字符串切分猜款号**，真实 SKU 编码没有分隔符）：
+ *   1. `styleNo` 命中 `imageMap[styleNo]`（款级封面）
+ *   2. `skuCode` 命中 `imageMap[skuCode]`（SKU 颜色图，更精确）
+ * 两处都没有 → 显示占位灰块。
  *
  * 用法：
- *   <StyleImageCell styleNo={styleNo} imageMap={imageMap} />
- *   <StyleImageCell skuCode={skuCode} imageMap={imageMap} />
+ *   <StyleImageCell skuCode={r.skuCode} imageMap={imageMap} />
+ *   <StyleImageCell styleNo={r.styleNo} imageMap={imageMap} />
  */
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Image } from 'antd';
 import { EyeOutlined } from '@ant-design/icons';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import { extractStyleNoFromSkuCode, type StyleImageMap } from '@/hooks/useStyleCoverImages';
+import type { StyleImageMap } from '@/hooks/useStyleCoverImages';
 
 export interface StyleImageCellProps {
-  /** 款号（优先使用） */
-  styleNo?: string;
-  /** 商品编码（如果没传 styleNo，则从 skuCode 拆分） */
-  skuCode?: string;
-  /** 款号 → cover URL 映射 */
+  /** 款号（有则优先按款号查图） */
+  styleNo?: string | null;
+  /** 商品编码（按 skuCode 查颜色图；与 styleNo 二选一或同时给） */
+  skuCode?: string | null;
+  /** 款号 / skuCode → 图片 URL 映射 */
   imageMap: StyleImageMap;
   /** 图片尺寸，默认 44 */
   size?: number;
@@ -34,13 +38,9 @@ const StyleImageCell: React.FC<StyleImageCellProps> = ({
   size = 44,
   preview = true,
 }) => {
-  const resolvedStyleNo = useMemo(() => {
-    const sn = (styleNo || '').trim();
-    if (sn) return sn;
-    return extractStyleNoFromSkuCode(skuCode);
-  }, [styleNo, skuCode]);
-
-  const imgUrl = resolvedStyleNo ? imageMap[resolvedStyleNo] : undefined;
+  const key1 = (styleNo || '').trim();
+  const key2 = (skuCode || '').trim();
+  const imgUrl = (key1 ? imageMap[key1] : undefined) ?? (key2 ? imageMap[key2] : undefined);
 
   if (imgUrl) {
     return (
@@ -48,7 +48,7 @@ const StyleImageCell: React.FC<StyleImageCellProps> = ({
         src={getFullAuthedFileUrl(imgUrl)}
         width={size}
         height={size}
-        style={{ objectFit: 'contain', borderRadius: 4 }}
+        style={{ objectFit: 'cover', borderRadius: 4 }}
         preview={preview ? { cover: <EyeOutlined style={{ fontSize: 13 }} /> } : false}
       />
     );

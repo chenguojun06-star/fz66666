@@ -1,8 +1,37 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-23（✅D-523 库存重算补前端入口 + Flyway 失败迁移幂等化 + 入站 Webhook 假成功第二处；D-522/D-516 已上线）
+> 最后更新：2026-09-23（✅D-524 电商全站列表补「款式图 + 款号」列；D-523 库存重算补入口 + Flyway 幂等化；D-522/D-516 已上线）
 > 上一版：2026-09-23（✅D-515 物料中心 tab 去重 + 领料默认筛选改为「全部」，纯小程序前端）
+
+---
+
+## ✅ D-524：电商所有列表补「款式图 + 款号」列（2026-09-23，已改代码待推送）
+
+**用户原话**：「还有所有的电商的这些 必须都要有图片列这些 不然看都不好看 还不知道是什么订单这些」。
+
+**根因两层**：① 前端 `skuCode.split('-')[0]` 猜款号恒不命中（真实编码无分隔符）→ 款式图列永远是灰块；
+② 电商中心 6 组列 + 退款/定价/库存差异 + 分销 2 组 + PlatformDetail 等**压根没有这一列**
+（`stockCols` 甚至标题写「商品编码」却绑的是数字 `skuId`）。
+
+**统一方案（照抄，不要各写各的）**
+| 场景 | 后端 | 前端列工厂 |
+|------|------|-----------|
+| 行里有 `skuCode` | `POST /api/style/sku/brief` | `styleImageColumn` / `styleNoColumn` |
+| 行里只有订单号 | `POST /api/ecommerce/orders/brief` | `orderImageColumn` / `orderStyleNoColumn` |
+
+- 数据源统一 `useStyleCoverImages()`（`imageMap`/`briefBySku` + `orderImageMap`/`briefByOrderNo`），
+  接口自带摘要时用 `seedBriefs()`。
+- 都以 `t_product_sku` 为权威口径，单次上限 500，**查不到就不返回该键（不编造默认图/假款号）**；
+  颜色图优先，缺则退回 `t_style_info.cover`。
+- 列工厂集中在 `frontend/src/components/common/styleImageColumns.tsx`（列宽 68 / 占位灰块 / 点击预览全站一致）。
+- **新增铁律 15**：电商/仓库每张商品相关列表都必须带「款式图 + 款号」列，款号只能来自后端解析。
+
+**验证**：`mvn -DskipTests compile` 过；新增 `SmartEcommerceControllerBriefTest` 9 例全绿（+3 个既有测试类无回归）；
+`tsc --noEmit` 0 错；改动文件 ESLint 0 错；`grep "split('-')[0]" frontend/src` 已无商品相关命中。
+
+**待上线实测**：进电商中心各 tab（库存预警/补货建议/库存明细/调拨/合单/赠品/物流异常/平台账单）、
+退款、定价、库存差异、分销、仓库-电商订单，确认款式图出图且款号显示为 `BR24XQ0098E` 这种真实款号。
 
 ---
 

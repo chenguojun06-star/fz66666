@@ -4,9 +4,9 @@ import {
   CheckCircleOutlined, EyeOutlined, LinkOutlined, CarOutlined, SendOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import StyleImageCell from '@/components/common/StyleImageCell';
+import { styleImageColumn, styleNoColumn } from '@/components/common/styleImageColumns';
 import ProductionProgressHoverCard from '@/components/common/ProductionProgressHoverCard';
-import type { StyleImageMap } from '@/hooks/useStyleCoverImages';
+import type { StyleImageMap, SkuBriefMap } from '@/hooks/useStyleCoverImages';
 import { STATUS_MAP, WH_MAP } from './helpers';
 import type { EcOrder } from './types';
 
@@ -22,10 +22,12 @@ export interface OrderColumnsHandlers {
 
 export interface OrderColumnsArgs extends OrderColumnsHandlers {
   imageMap: StyleImageMap;
+  /** skuCode → 款号/颜色/尺码（后端权威解析；不要再用 skuCode.split('-') 猜） */
+  briefBySku: SkuBriefMap;
 }
 
 export function buildOrderColumns(args: OrderColumnsArgs): ColumnsType<EcOrder> {
-  const { imageMap, setDetail, setLinkTarget, setOutboundTarget, setExpressOrderTarget, setExpressModalOpen } = args;
+  const { imageMap, briefBySku, setDetail, setLinkTarget, setOutboundTarget, setExpressOrderTarget, setExpressModalOpen } = args;
   return [
     {
       title: '订单号', dataIndex: 'platformOrderNo', width: 160,
@@ -36,20 +38,8 @@ export function buildOrderColumns(args: OrderColumnsArgs): ColumnsType<EcOrder> 
         </div>
       ),
     },
-    {
-      title: '款号', width: 110,
-      render: (_: unknown, r: EcOrder) => {
-        const styleNo = (r.skuCode || '').split('-')[0];
-        return styleNo ? <Text strong style={{ fontFamily: 'monospace' }}>{styleNo}</Text> : <Text type="secondary">-</Text>;
-      },
-    },
-    {
-      title: '款式图', width: 68, align: 'center' as const,
-      render: (_: unknown, r: EcOrder) => {
-        const styleNo = (r.skuCode || '').split('-')[0];
-        return <StyleImageCell styleNo={styleNo} imageMap={imageMap} />;
-      },
-    },
+    styleImageColumn<EcOrder>({ imageMap, skuCode: r => r.skuCode }),
+    styleNoColumn<EcOrder>({ briefBySku, skuCode: r => r.skuCode, width: 130 }),
     {
       title: '商品 / 买家', width: 200,
       render: (_: unknown, r: EcOrder) => (

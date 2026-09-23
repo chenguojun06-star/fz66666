@@ -34,6 +34,7 @@ const PlatformDetail: React.FC = () => {
     filterStatus,
     expressOrderTarget, expressModalOpen,
     imageMap,
+    briefBySku,
     configForm, testResult,
     setActiveTab, setShowGuide, setFilterStatus, setKeyword,
     setOrderPage, setOrderPageSize,
@@ -54,6 +55,7 @@ const PlatformDetail: React.FC = () => {
 
   const orderColumns = buildOrderColumns({
     imageMap,
+    briefBySku,
     setDetail, setLinkTarget, setOutboundTarget,
     setExpressOrderTarget, setExpressModalOpen,
   });

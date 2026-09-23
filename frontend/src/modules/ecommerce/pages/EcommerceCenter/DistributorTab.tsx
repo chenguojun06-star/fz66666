@@ -27,6 +27,10 @@ const DistributorTab: React.FC = () => {
   } = data;
 
   const cols = useMemo(() => buildAllDistributorColumns({
+    imageMap: data.imageMap,
+    briefBySku: data.briefBySku,
+    orderImageMap: data.orderImageMap,
+    briefByOrderNo: data.briefByOrderNo,
     setProfileModal,
     setLevelModal,
     setPolicyModal,
@@ -39,6 +43,7 @@ const DistributorTab: React.FC = () => {
     handleHandleBill,
     handleChangeProfileStatus,
   }), [
+    data.imageMap, data.briefBySku, data.orderImageMap, data.briefByOrderNo,
     setProfileModal, setLevelModal, setPolicyModal,
     handleDeleteProfile, handleDeleteLevel, handleDeletePolicy,
     handleShipB2B, handleConfirmB2B, handleCancelB2B,

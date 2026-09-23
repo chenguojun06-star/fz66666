@@ -1,7 +1,57 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-23（新增 D-523 库存重算补入口 + Flyway 失败迁移幂等化 + 入站 Webhook 假成功第二处；回填 D-522）
+> 最后更新：2026-09-23（新增 D-524 电商全站列表补「款式图 + 款号」列；D-523 库存重算补入口 + Flyway 失败迁移幂等化）
+
+---
+
+## D-524：电商所有列表补「款式图 + 款号」列，并把"猜款号"从前后端一起拔掉（2026-09-23）
+
+**来源**：用户原话「还有所有的电商的这些 必须都要有图片列这些 不然看都不好看 还不知道是什么订单这些，理解吗」。
+D-522 只修了**后端四处** `split('-')[0]` 猜款号，前端仍然照猜，且部分列表**根本没有图片列**。
+
+**根因（两层，缺一不可）**
+1. **前端猜款号恒不命中**：真实 SKU 编码是「款号直接拼颜色尺码、没有分隔符」
+   （`BR24XQ0098E草绿色L(170/84A)`），`skuCode.split('-')[0]` 得到的是**整串编码**，
+   拿去查款图必然落空 → 款式图列永远是灰块、款号列显示一大串编码。
+2. **不少列表压根没这一列**：电商中心 `columns.tsx` 的 alert/suggestion/stock/alloc/merge/giftRule
+   六组列全无图片列（`stockCols` 甚至标题写「商品编码」却绑的是数字 `skuId`）；
+   `SmartRefundTab` / `SmartPriceTab` / `StockDiscrepancyTab` / 分销 `policyCols`、`b2bCols` 同样没有；
+   `PlatformDetail/orderColumns.tsx` 与 `warehouse/EcommerceOrders/columns.tsx` 有列但款号靠猜。
+
+**为什么不给每张表加图片列**：`EcommerceOrder`、`EcUniversalStock`、`EcStockAlert`、`PurchaseSuggestion`
+等实体**都不含图片字段**；只有 `ProductSku.sku_color_image`（SKU 颜色图）与 `StyleInfo.cover`（款图）有图。
+所以只能"列表渲染时按编码反查"，而不是加冗余列（加了也会立刻不一致）。
+
+**决策（统一架构，全站照抄）**
+- 后端新增两个批量解析接口，都以 `t_product_sku` 为**权威口径**，单次上限 500，**查不到就不返回该键（不编造）**：
+  - `POST /api/style/sku/brief` ← `{skuCodes:[…]}` → `{skuCode: {skuCode,skuId,styleId,styleNo,color,size,imageUrl,salesPrice,costPrice}}`
+    （`imageUrl` 取 SKU 颜色图，缺则退回 `t_style_info.cover`）；
+  - `POST /api/ecommerce/orders/brief` ← `{orderNos:[…], platformOrderNos:[…]}` → `{订单号: 同结构}`
+    —— 给**订单级**列表用（物流异常只有 `orderNo`、平台账单只有 `platformOrderNo`，表里没有 skuCode，
+    必须回查 `t_ecommerce_order` 再解析）。两种键各查一次，返回的 key 就是传入的那个订单号（已 trim）。
+- 前端 `useStyleCoverImages` 重写：`imageMap`（键可为 styleNo 或 skuCode）+ `briefBySku` +
+  `orderImageMap` + `briefByOrderNo` + `seedBriefs()`（接口自带摘要时注入，省一次请求）；
+  **删掉 `extractStyleNoFromSkuCode`**。
+- 新增列工厂 `frontend/src/components/common/styleImageColumns.tsx`，全站统一列宽(68)/占位/预览/降级口径：
+  `styleImageColumn` / `styleNoColumn`（skuCode 维度）、`orderImageColumn` / `orderStyleNoColumn`（订单号维度）。
+  `styleNoColumn` 解析不到款号时**退回显示原始编码（灰字）**，绝不字符串猜测。
+- 逐列表接入（14 处）：电商中心 8 组列 + SmartRefund/SmartPrice/StockDiscrepancy + 分销 2 组列 +
+  `PlatformDetail/orderColumns` + `warehouse/EcommerceOrders/columns`（顺手删掉其未使用的 `Image`/`getFileUrl` 导入）。
+- 「合单发货」弹窗补商品明细缩略图（此前只有收货人 + 数量，看不出要发哪些货）。
+- `SmartEcommerceController /price/suggestions` 补 `skuCode/styleNo/color/size/imageUrl`
+  （原来只有 `skuId` 数字，前端只能显示数字）。
+
+**新增铁律 15**：电商/仓库每一张商品相关列表都必须带「款式图 + 款号」列，且款号只能来自后端解析。
+
+**验证**：`mvn -DskipTests compile` 过；新增 `SmartEcommerceControllerBriefTest`（9 例：
+null body / 空列表 / 内部单号命中 / 平台单号命中 / 两键各查一次 / 订单不存在 / skuCode 为空 / 摘要解析不到 /
+首尾空格 trim）全绿，与 `PlatformWebhookControllerTest`、`EcStockCalculatorTest`、
+`EcProductionLinkOrchestratorTest` 一起跑无回归；`tsc --noEmit` 0 错；改动文件 ESLint 0 错。
+
+**自查**：`grep -rn "split('-')\[0\]" frontend/src` 已无商品相关命中（剩余两处是打印字段 key 与 DB 版本号，无关）。
+
+**遗留**：`MergeOutboundModal` 的明细依赖 `imageMap`；`SplitDetailModal` 传的是空数组（死代码，未动）。
 
 ---
 

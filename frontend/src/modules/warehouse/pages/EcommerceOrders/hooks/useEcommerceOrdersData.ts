@@ -5,6 +5,7 @@ import type { ApiResult } from '@/utils/api';
 import api from '@/utils/api';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { useStyleCoverImages } from '@/hooks/useStyleCoverImages';
 import type { EcOrder } from '../types';
 
 export function useEcommerceOrdersData() {
@@ -30,29 +31,10 @@ export function useEcommerceOrdersData() {
   const [outboundTarget, setOutboundTarget] = useState<EcOrder | null>(null);
   const [outboundForm] = Form.useForm();
   const [outbounding, setOutbounding] = useState(false);
-  const [styleImageMap, setStyleImageMap] = useState<Record<string, string>>({});
-
-  const fetchStyleImages = useCallback(async (orders: EcOrder[]) => {
-    const styleNos = [...new Set(
-      orders.map(o => (o.skuCode || '').split('-')[0]).filter(Boolean)
-    )];
-    if (styleNos.length === 0) return;
-    const results = await Promise.allSettled(
-      styleNos.map(sn =>
-        api.get('/style/info/list', { params: { styleNo: sn, pageSize: 5 } })
-      )
-    );
-    const map: Record<string, string> = {};
-    results.forEach((res, i) => {
-      if (res.status === 'fulfilled') {
-        const records: Array<{ styleNo: string; cover?: string }> =
-          (res.value as any)?.data?.records ?? [];
-        const exact = records.find(s => s.styleNo === styleNos[i]);
-        if (exact?.cover) map[styleNos[i]] = exact.cover;
-      }
-    });
-    setStyleImageMap(prev => ({ ...prev, ...map }));
-  }, []);
+  // 款式图 / 款号：交给后端 POST /style/sku/brief 权威解析。
+  // 原来这里用 `skuCode.split('-')[0]` 猜款号 —— 真实编码没有分隔符
+  // （如 BR24XQ0098E草绿色L(170/84A)），猜出来的"款号"是整串，查图必然落空。
+  const { imageMap: styleImageMap, briefBySku, fetchBySkuCodes } = useStyleCoverImages();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -67,11 +49,11 @@ export function useEcommerceOrdersData() {
       const records: EcOrder[] = (d.records as EcOrder[]) ?? [];
       setData(records);
       setTotal((d.total as number) ?? 0);
-      // 异步加载款式图片，不阻塞主流程
-      fetchStyleImages(records);
+      // 异步加载款式图/款号，不阻塞主流程
+      fetchBySkuCodes(records.map(r => r.skuCode));
     } catch (err: unknown) { message.error(err instanceof Error ? err.message : '加载失败'); }
     finally { setLoading(false); }
-  }, [page, pageSize, filterPlatform, filterStatus, filterLinked, debouncedKeyword, fetchStyleImages]);
+  }, [page, pageSize, filterPlatform, filterStatus, filterLinked, debouncedKeyword, fetchBySkuCodes]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -129,6 +111,7 @@ export function useEcommerceOrdersData() {
     outboundTarget, setOutboundTarget,
     outboundForm, outbounding, handleDirectOutbound,
     styleImageMap,
+    briefBySku,
     fetchData,
     pendingShip, shipped, linked, pendingHandle, totalRevenue,
     isFilteringPending,

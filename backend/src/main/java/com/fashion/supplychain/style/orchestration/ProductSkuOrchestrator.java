@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +67,128 @@ public class ProductSkuOrchestrator {
                     .list();
         }
         return skus;
+    }
+
+    /** 单次批量解析上限：列表页一页通常 20~100 行，500 足够且能防住恶意大请求 */
+    private static final int BRIEF_MAX_CODES = 500;
+
+    /**
+     * 批量解析 SKU 摘要（款号 / 颜色 / 尺码 / 图片 / 价格），供电商各列表的「款式图」「款号」列使用。
+     *
+     * <p><b>为什么必须由后端解析，而不是前端从 skuCode 里切字符串：</b>
+     * 真实 SKU 编码是「<b>款号直接拼颜色尺码、没有分隔符</b>」，
+     * 例如 {@code BR24XQ0098E草绿色L(170/84A)}（款号 {@code BR24XQ0098E}）。
+     * 前端任何 {@code split('-')[0]} / {@code indexOf('-')} 都恒不命中，
+     * 表现就是「款号列显示整串编码、款式图列永远空白」——这正是电商列表"看不出是什么订单"的根因。
+     * 此处以 {@code t_product_sku} 为权威口径（sku_code → style_id / style_no / color / sku_color_image），
+     * 款图用 {@code t_style_info.cover} 兜底。
+     *
+     * @param skuCodes 待解析的商品编码，可含 null/空串（会被过滤），去重后最多 {@value #BRIEF_MAX_CODES} 个
+     * @return skuCode → { skuCode, skuId, styleId, styleNo, color, size, imageUrl, salesPrice, costPrice }
+     *         查不到的编码不会出现在结果里（**不编造默认值**，前端据此显示占位）
+     */
+    public Map<String, Map<String, Object>> briefBySkuCodes(Collection<String> skuCodes) {
+        if (skuCodes == null || skuCodes.isEmpty()) {
+            return Map.of();
+        }
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            throw new IllegalArgumentException("缺少租户上下文，无法解析 SKU 摘要");
+        }
+        List<String> codes = skuCodes.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .limit(BRIEF_MAX_CODES)
+                .collect(Collectors.toList());
+        if (codes.isEmpty()) {
+            return Map.of();
+        }
+
+        List<ProductSku> skus = productSkuService.lambdaQuery()
+                .eq(ProductSku::getTenantId, tenantId)
+                .in(ProductSku::getSkuCode, codes)
+                .list();
+        if (skus.isEmpty()) {
+            return Map.of();
+        }
+
+        // 款图兜底：SKU 没有颜色图时用款级封面
+        Set<Long> styleIds = skus.stream()
+                .map(ProductSku::getStyleId)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, StyleInfo> styleById = styleIds.isEmpty()
+                ? Map.of()
+                : styleInfoService.listByIds(styleIds).stream()
+                        .collect(Collectors.toMap(StyleInfo::getId, s -> s, (a, b) -> a));
+
+        Map<String, Map<String, Object>> result = new HashMap<>();
+        for (ProductSku sku : skus) {
+            StyleInfo style = sku.getStyleId() == null ? null : styleById.get(sku.getStyleId());
+            Map<String, Object> brief = new HashMap<>();
+            brief.put("skuCode", sku.getSkuCode());
+            brief.put("skuId", sku.getId());
+            brief.put("styleId", sku.getStyleId());
+            brief.put("styleNo", StringUtils.hasText(sku.getStyleNo())
+                    ? sku.getStyleNo()
+                    : (style != null ? style.getStyleNo() : null));
+            brief.put("color", sku.getColor());
+            brief.put("size", sku.getSize());
+            // 颜色图优先（订单买的正是这个颜色），没有则退回款图
+            brief.put("imageUrl", StringUtils.hasText(sku.getSkuColorImage())
+                    ? sku.getSkuColorImage()
+                    : (style != null ? style.getCover() : null));
+            brief.put("salesPrice", sku.getSalesPrice());
+            brief.put("costPrice", sku.getCostPrice());
+            result.put(sku.getSkuCode(), brief);
+        }
+        log.debug("[SkuBrief] 解析 {} 个编码，命中 {} 条", codes.size(), result.size());
+        return result;
+    }
+
+    /**
+     * 按 skuId 批量解析 SKU 摘要。
+     *
+     * <p>有些列表只存了 {@code sku_id}（例如智能定价建议），要显示款号/款式图就得先换出 skuCode。
+     * 复用 {@link #briefBySkuCodes} 的口径，保证两处结果一致。
+     *
+     * @param skuIds 主键集合，null/空返回空 Map
+     * @return skuId → 同 {@link #briefBySkuCodes} 的摘要结构
+     */
+    public Map<Long, Map<String, Object>> briefBySkuIds(Collection<Long> skuIds) {
+        if (skuIds == null || skuIds.isEmpty()) {
+            return Map.of();
+        }
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            throw new IllegalArgumentException("缺少租户上下文，无法解析 SKU 摘要");
+        }
+        List<Long> ids = skuIds.stream()
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .limit(BRIEF_MAX_CODES)
+                .collect(Collectors.toList());
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        List<ProductSku> skus = productSkuService.lambdaQuery()
+                .eq(ProductSku::getTenantId, tenantId)
+                .in(ProductSku::getId, ids)
+                .list();
+        if (skus.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, Map<String, Object>> byCode = briefBySkuCodes(
+                skus.stream().map(ProductSku::getSkuCode).collect(Collectors.toList()));
+        Map<Long, Map<String, Object>> byId = new HashMap<>();
+        for (ProductSku sku : skus) {
+            Map<String, Object> brief = byCode.get(sku.getSkuCode());
+            if (brief != null) {
+                byId.put(sku.getId(), brief);
+            }
+        }
+        return byId;
     }
 
     private void tryAutoGenerateOnEmptyList(Long styleId) {

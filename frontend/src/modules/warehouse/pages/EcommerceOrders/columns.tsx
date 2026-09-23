@@ -1,14 +1,13 @@
 import React from 'react';
-import { Tag, Space, Button, Tooltip, Image, InputNumber, Badge, Typography, Popover } from 'antd';
+import { Tag, Space, Button, Tooltip, InputNumber, Badge, Typography, Popover } from 'antd';
 import {
   CarOutlined, CheckCircleOutlined, EditOutlined, EyeOutlined,
   LinkOutlined, RollbackOutlined, SaveOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getPlatformTag } from '@/utils/platform';
-import StyleImageCell from '@/components/common/StyleImageCell';
-import type { StyleImageMap } from '@/hooks/useStyleCoverImages';
+import { styleImageColumn, styleNoColumn } from '@/components/common/styleImageColumns';
+import type { StyleImageMap, SkuBriefMap } from '@/hooks/useStyleCoverImages';
 import { STATUS_MAP, WH_MAP } from './helpers';
 import ProductionProgressHoverCard from '@/components/common/ProductionProgressHoverCard';
 import type { EcOrder, Sku } from './types';
@@ -17,7 +16,9 @@ import type { EditRow } from './hooks/usePricingData';
 const { Text } = Typography;
 
 export interface OrdersColumnsArgs {
-  styleImageMap: Record<string, string>;
+  styleImageMap: StyleImageMap;
+  /** skuCode → 款号/颜色/尺码（后端权威解析；不要再用 skuCode.split('-') 猜） */
+  briefBySku: SkuBriefMap;
   onViewDetail: (r: EcOrder) => void;
   onLink: (r: EcOrder) => void;
   onOutbound: (r: EcOrder) => void;
@@ -25,7 +26,7 @@ export interface OrdersColumnsArgs {
 }
 
 export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder> {
-  const { styleImageMap, onViewDetail, onLink, onOutbound, onInitReturn } = args;
+  const { styleImageMap, briefBySku, onViewDetail, onLink, onOutbound, onInitReturn } = args;
   return [
     {
       title: '平台', dataIndex: 'sourcePlatformCode', width: 88,
@@ -43,34 +44,8 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
         </div>
       ),
     },
-    {
-      title: '款号', width: 110,
-      render: (_: unknown, r: EcOrder) => {
-        const styleNo = (r.skuCode || '').split('-')[0];
-        return styleNo
-          ? <Text strong style={{ fontSize: 15, fontFamily: 'monospace' }}>{styleNo}</Text>
-          : <Text type="secondary">-</Text>;
-      },
-    },
-    {
-      title: '款式图', width: 68, align: 'center' as const,
-      render: (_: unknown, r: EcOrder) => {
-        const styleNo = (r.skuCode || '').split('-')[0];
-        const imgUrl = styleNo ? styleImageMap[styleNo] : undefined;
-        return imgUrl
-          ? <Image
-              src={getFullAuthedFileUrl(imgUrl)}
-              width={44} height={44}
-              style={{ objectFit: 'cover', borderRadius: 4 }}
-              preview={{ cover: <EyeOutlined style={{ fontSize: 13 }} /> }}
-            />
-          : <div style={{
-              width: 44, height: 44, background: 'var(--color-bg-subtle)', borderRadius: 4,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 16, color: 'var(--color-text-quaternary)',
-            }}></div>;
-      },
-    },
+    styleNoColumn<EcOrder>({ briefBySku, skuCode: r => r.skuCode }),
+    styleImageColumn<EcOrder>({ imageMap: styleImageMap, skuCode: r => r.skuCode }),
     {
       title: '商品 / 买家', width: 190,
       render: (_: unknown, r: EcOrder) => (
@@ -174,10 +149,7 @@ export interface PricingColumnsArgs {
 export function buildPricingColumns(args: PricingColumnsArgs): ColumnsType<Sku> {
   const { editRow, saving, imageMap, onEdit, onCancelEdit, onSave, onCostChange, onSalesChange } = args;
   return [
-    {
-      title: '款式图', width: 68, align: 'center' as const,
-      render: (_: unknown, r: Sku) => <StyleImageCell styleNo={r.styleNo} imageMap={imageMap} />,
-    },
+    styleImageColumn<Sku>({ imageMap, styleNo: r => r.styleNo, skuCode: r => r.skuCode }),
     { title: '款式号', dataIndex: 'styleNo', width: 130, render: v => <Text strong>{v}</Text> },
     { title: '颜色',   dataIndex: 'color',   width: 80 },
     { title: '尺码',   dataIndex: 'size',    width: 70 },

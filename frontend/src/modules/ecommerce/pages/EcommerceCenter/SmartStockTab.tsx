@@ -35,6 +35,10 @@ const SmartStockTab: React.FC = () => {
   } = data;
 
   const cols = useMemo(() => buildAllColumns({
+    imageMap: data.imageMap,
+    briefBySku: data.briefBySku,
+    orderImageMap: data.orderImageMap,
+    briefByOrderNo: data.briefByOrderNo,
     handleResolve: data.handleResolve,
     generateSuggestions: st.generateSuggestions,
     handleApprove: data.handleApprove,
@@ -155,7 +159,9 @@ const SmartStockTab: React.FC = () => {
       <PersistentTabs paramName="stockTab" defaultKey="alerts" items={tabItems} />
       <SafeStockModal open={!!safeStockRecord} record={safeStockRecord} onClose={() => setSafeStockRecord(null)} onOk={handleSafeStock} />
       <SplitDetailModal open={splitVisible} splits={[]} onClose={() => setSplitVisible(false)} />
-      <MergeOutboundModal open={mergeModalOpen} group={mergeGroup} onClose={() => setMergeModalOpen(false)} onOk={handleMergeOutbound} />
+      <MergeOutboundModal open={mergeModalOpen} group={mergeGroup}
+        imageMap={data.imageMap} briefBySku={data.briefBySku}
+        onClose={() => setMergeModalOpen(false)} onOk={handleMergeOutbound} />
       <GiftRuleModal open={giftRuleModalOpen} record={giftRuleRecord} onClose={() => setGiftRuleModalOpen(false)} onOk={handleSaveGiftRule} />
     </>
   );

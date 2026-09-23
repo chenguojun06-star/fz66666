@@ -202,6 +202,21 @@ public class ProductSkuController {
     }
 
     /**
+     * 批量解析 SKU 摘要（款号 / 颜色 / 尺码 / 图片 / 价格），供电商各列表的「款式图」「款号」列使用。
+     *
+     * <p>body: {@code {"skuCodes": ["BR24XQ0098E草绿色L(170/84A)", ...]}}，单次上限 500 个编码。
+     *
+     * <p>为什么不让前端自己从 skuCode 切字符串：真实 SKU 编码没有分隔符
+     * （款号直接拼颜色尺码），前端 {@code split('-')} 恒不命中，款式图永远空白。
+     * 详见 {@link ProductSkuOrchestrator#briefBySkuCodes}。
+     */
+    @PostMapping("/brief")
+    public Result<Map<String, Map<String, Object>>> briefBySkuCodes(@RequestBody Map<String, List<String>> body) {
+        TenantAssert.assertTenantContext();
+        return Result.success(productSkuOrchestrator.briefBySkuCodes(body == null ? null : body.get("skuCodes")));
+    }
+
+    /**
      * 获取指定款号所有颜色的图片映射
      */
     @GetMapping("/color-images/{styleNo}")

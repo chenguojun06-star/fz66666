@@ -1,9 +1,26 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-09-23（D-523 库存重算补前端入口 + Flyway 失败迁移幂等化 + 入站 Webhook 假成功第二处）
+> 最后更新：2026-09-23（D-524 电商全站列表补「款式图 + 款号」列；D-523 库存重算补入口 + Flyway 幂等化）
 
 ## 已完成
+
+### 2026-09-23 D-524 电商所有列表补「款式图 + 款号」列（mvn 编译过 / 新增 9 例测试全绿 / tsc 0 错 / eslint 0 错）
+
+- [x] 后端 `POST /api/style/sku/brief`（skuCode 维度）与 `POST /api/ecommerce/orders/brief`（订单号维度）
+      —— 都以 `t_product_sku` 为权威口径，单次上限 500，**查不到不返回该键**
+- [x] `ProductSkuOrchestrator.briefBySkuCodes` / `briefBySkuIds`；`SmartEcommerceController /price/suggestions`
+      补 `skuCode/styleNo/color/size/imageUrl`（原来只有 skuId 数字）
+- [x] 前端 `useStyleCoverImages` 重写（`briefBySku` / `orderImageMap` / `briefByOrderNo` / `seedBriefs`），
+      **删除 `extractStyleNoFromSkuCode`（就是那个 `split('-')[0]`）**
+- [x] 新增列工厂 `styleImageColumns.tsx`（`styleImageColumn`/`styleNoColumn`/`orderImageColumn`/`orderStyleNoColumn`）
+- [x] 14 处列表接入图片列：电商中心 8 组列 + SmartRefund/SmartPrice/StockDiscrepancy + 分销 2 组 +
+      PlatformDetail/orderColumns + warehouse/EcommerceOrders/columns
+- [x] 「合单发货」弹窗补商品明细缩略图
+- [x] CLAUDE.md 新增铁律 15（电商/仓库列表必须带款式图列，款号只能来自后端解析）
+- [x] 新增 `SmartEcommerceControllerBriefTest` 9 例（含"查不到不编造""两种键各查一次""租户过滤"）
+- [ ] 待上线后实测：进电商中心各 tab 看款式图是否出图（线上 `t_product_sku` 206 行 / `t_style_info` 110 行，应有图）
+- [ ] 未做：平台真实推单（线上凭证是占位值，需商家提供真实 AppKey/AppSecret）
 
 ### 2026-09-23 D-523 电商库存入口补齐 + Flyway 幂等 + Webhook 状态码（mvn 编译过 / 5 个测试类全绿 / tsc 0 错，已推送）
 
