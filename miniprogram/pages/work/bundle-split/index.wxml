@@ -87,23 +87,20 @@ module.exports = { abbr: abbr };
               <text class="form-label">转出数量</text>
               <input class="form-input" type="number" placeholder="输入件数" value="{{splitQty}}" bindinput="onQtyInput" />
             </view>
+            <!-- D-517：工序/工人改可搜索选择器（工厂工人几十上百人，原生 picker 只能一路滚） -->
             <view class="form-row">
               <text class="form-label">当前工序</text>
-              <picker mode="selector" range="{{processes}}" range-key="processName" value="{{processIdx}}" bindchange="onProcessChange">
-                <view class="picker-box">
-                  <text class="{{processIdx >= 0 ? '' : 'placeholder'}}">{{processIdx >= 0 ? processes[processIdx].processName : '选择工序'}}</text>
-                  <view class="arrow icon-arrow-right-sm"></view>
-                </view>
-              </picker>
+              <view class="picker-box" bindtap="openPicker" data-key="process">
+                <text class="{{processIdx >= 0 ? '' : 'placeholder'}}">{{processIdx >= 0 ? processes[processIdx].processName : '选择工序'}}</text>
+                <view class="arrow icon-arrow-right-sm"></view>
+              </view>
             </view>
             <view class="form-row">
               <text class="form-label">接手工人</text>
-              <picker mode="selector" range="{{workers}}" range-key="workerName" value="{{workerIdx}}" bindchange="onWorkerChange">
-                <view class="picker-box">
-                  <text class="{{workerIdx >= 0 ? '' : 'placeholder'}}">{{workerIdx >= 0 ? workers[workerIdx].workerName : '选择工人'}}</text>
-                  <view class="arrow icon-arrow-right-sm"></view>
-                </view>
-              </picker>
+              <view class="picker-box" bindtap="openPicker" data-key="worker">
+                <text class="{{workerIdx >= 0 ? '' : 'placeholder'}}">{{workerIdx >= 0 ? workers[workerIdx].workerName : '选择工人'}}</text>
+                <view class="arrow icon-arrow-right-sm"></view>
+              </view>
             </view>
             <view class="split-summary" wx:if="{{processIdx >= 0 && splitQty}}">
               <text>剩余 {{(bundles[selectedIdx].quantity || 0) - splitQty}} 件保留，{{splitQty}} 件转给 {{workers[workerIdx].workerName || '--'}}</text>
@@ -253,4 +250,14 @@ module.exports = { abbr: abbr };
 
   <!-- 小云 AI 助手浮动入口 -->
   <ai-assistant id="bundleSplitAiAssistant" notice-count="{{unreadNoticeCount}}" />
+
+  <!-- D-517：通用可搜索选择器（当前工序 / 接手工人） -->
+  <search-picker
+    visible="{{pickerVisible}}"
+    title="{{pickerTitle}}"
+    options="{{pickerOptions}}"
+    value="{{pickerValue}}"
+    bind:select="onPickerSelect"
+    bind:close="onPickerClose"
+  />
 </view>

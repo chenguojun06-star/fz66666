@@ -442,9 +442,24 @@ async function testMaterialOutbound() {
   page.attached();
   await new Promise(r => setTimeout(r, 30));
 
-  eq('订单列表已加载', page.data.orderNames.length, 2);
-  eq('工厂列表已加载', page.data.factoryNames.length, 1);
-  eq('领料人列表已加载', page.data.receiverNames.length, 2);
+  // D-517：订单/工厂/领料人改为「打开选择器 → 远程关键字搜索」按需加载，
+  // 不再预拉前 100 条（预拉只能搜到第一页）。这里走真实交互链路验证。
+  const pickBySearch = async (key, idx) => {
+    page.openPicker({ currentTarget: { dataset: { key } } });
+    await page.onPickerSearch({ detail: { keyword: '' } });
+    await new Promise(r => setTimeout(r, 10));
+    const opt = (page.data.pickerOptions || [])[idx || 0];
+    if (!opt) return null;
+    page.onPickerSelect({ detail: { label: opt.label, value: opt.value, item: opt } });
+    return opt;
+  };
+
+  eq('订单可远程搜索', (await pickBySearch('order', 0)) ? page.data.pickerOptions.length : 0, 2);
+  eq('工厂可远程搜索', ((await pickBySearch('factory', 0)), page.data.pickerOptions.length), 1);
+  eq('领料人可远程搜索', ((await pickBySearch('receiver', 0)), page.data.pickerOptions.length), 2);
+  eq('选中领料人（按 ID 不按名称）', page.data.receiverName, '张三');
+  eq('选中订单带出款号', page.data.styleNo, 'ST-9');
+  eq('选中工厂', page.data.factoryName, '本厂');
 
   page.setData({ materialCode: 'MC-1' });
   await page.onQuery();
@@ -457,24 +472,24 @@ async function testMaterialOutbound() {
   ok('缺数量被拦截', t && /数量/.test(t.title || ''), t && t.title);
 
   page.setData({ quantity: '2' });
+  // 上面已通过远程搜索选好人/订单/工厂，这里清空领料人验证拦截链路仍然有效
+  page.setData({ receiverName: '', receiverId: '' });
   await page.onSubmit();
   t = lastCall(wx, 'showToast');
   ok('缺领料人被拦截', t && /领料人/.test(t.title || ''), t && t.title);
+  await pickBySearch('receiver', 0);
 
-  page.onReceiverChange({ detail: { value: 0 } });
-  eq('选中领料人', page.data.receiverName, '张三');
+  page.setData({ orderNo: '', styleNo: '' });
   await page.onSubmit();
   t = lastCall(wx, 'showToast');
   ok('缺关联订单被拦截', t && /订单/.test(t.title || ''), t && t.title);
+  await pickBySearch('order', 0);
 
-  page.onOrderChange({ detail: { value: 0 } });
-  eq('选中订单带出款号', page.data.styleNo, 'ST-9');
+  page.setData({ factoryName: '', factoryId: '' });
   await page.onSubmit();
   t = lastCall(wx, 'showToast');
   ok('缺关联工厂被拦截', t && /工厂/.test(t.title || ''), t && t.title);
-
-  page.onFactoryChange({ detail: { value: 0 } });
-  eq('选中工厂', page.data.factoryName, '本厂');
+  await pickBySearch('factory', 0);
 
   await page.onSubmit();
   const payload = api.calls.find(c => c[0] === 'manualOutbound');
@@ -511,24 +526,17 @@ function stripComments(s) {
 
 function testPickerUsage() {
   console.log('\n【结构：选择器实现】');
-  // ① 大货出入库仍用原生 picker（选项少，够用）
-  const nativePages = [
-    ['pages/warehouse/finished-outbound/index.wxml', 2],   // 仓库区域 + 客户
-    ['pages/warehouse/finished-inbound/index.wxml', 1],    // 仓库区域
-  ];
-  for (const [rel, minPickers] of nativePages) {
-    const s = stripComments(fs.readFileSync(path.join(MP, rel), 'utf8'));
-    const n = (s.match(/<picker\s/g) || []).length;
-    ok(`${path.basename(path.dirname(rel))} 至少 ${minPickers} 个 picker`, n >= minPickers, `实际 ${n}`);
-    ok(`${path.basename(path.dirname(rel))} 未使用 showActionSheet`, !/showActionSheet/.test(s));
-  }
-
+  // ① D-517：成品出入库的仓库区域/客户**也**改成可搜索选择器（客户几十上百个，原生 picker 只能一路滚）
+  //    原生 picker 现在只允许留在"固定枚举（<20 项）"场景，业务实体一律走 search-picker。
   // ② D-514：物料出入库表单的选项多（订单/工厂/领料人常有上百条），
   //    而微信原生 picker **没有搜索**，只能一路滚 → 必须换成可搜索的 search-picker。
   //    这条同时守住"别把可搜索选择器改回原生 picker"。
   const searchPages = [
-    ['components/material-inbound-form/index.wxml', 2],   // 仓库区域 + 库位
-    ['components/material-outbound-form/index.wxml', 4],  // 订单/工厂/领料人/仓库区域
+    ['pages/warehouse/finished-outbound/index.wxml', 2],  // 仓库区域 + 客户
+    ['pages/warehouse/finished-inbound/index.wxml', 1],   // 仓库区域
+    ['pages/work/bundle-split/index.wxml', 2],            // 当前工序 + 接手工人
+    ['components/material-inbound-form/index.wxml', 3],   // 物料 + 仓库区域 + 库位
+    ['components/material-outbound-form/index.wxml', 5],  // 物料/订单/工厂/领料人/仓库区域
   ];
   for (const [rel, minRows] of searchPages) {
     const name = path.basename(path.dirname(rel));
@@ -540,16 +548,29 @@ function testPickerUsage() {
     ok(`${name} 未使用 showActionSheet`, !/showActionSheet/.test(s));
   }
   // 组件必须在各自 json 里注册 search-picker，否则真机白屏
-  for (const rel of ['components/material-inbound-form/index.json', 'components/material-outbound-form/index.json']) {
+  for (const rel of searchPages.map((p) => p[0].replace('.wxml', '.json'))) {
     const j = JSON.parse(fs.readFileSync(path.join(MP, rel), 'utf8'));
-    ok(`${path.basename(path.dirname(rel))} 已注册 search-picker`, !!j.usingComponents['search-picker']);
+    ok(`${path.basename(path.dirname(rel))} 已注册 search-picker`, !!(j.usingComponents || {})['search-picker']);
   }
+  // D-517：下单页的工厂/客户/纸样师/跟单员也必须可搜索（不再用原生 picker 选业务实体）
+  const orderFormW = stripComments(fs.readFileSync(path.join(MP, 'pages/order/create/form/index.wxml'), 'utf8'));
+  ok('下单页已挂 search-picker', /<search-picker/.test(orderFormW));
+  ok('下单页至少 5 个可搜索选择入口',
+    (orderFormW.match(/bindtap="openPicker"/g) || []).length >= 5,
+    `实际 ${(orderFormW.match(/bindtap="openPicker"/g) || []).length}`);
+  const orderFormJ = JSON.parse(fs.readFileSync(path.join(MP, 'pages/order/create/form/index.json'), 'utf8'));
+  ok('下单页已注册 search-picker', !!(orderFormJ.usingComponents || {})['search-picker']);
+  // D-517：通用组件必须支持远程搜索（否则大数据只能搜到第一页）
+  const spW = stripComments(fs.readFileSync(path.join(MP, 'components/search-picker/index.wxml'), 'utf8'));
+  ok('search-picker 支持远程搜索回调', /bind:search="onPickerSearch"/.test(fs.readFileSync(path.join(MP, 'components/material-outbound-form/index.wxml'), 'utf8')));
+  ok('search-picker 支持分页加载更多', /onLoadMore/.test(fs.readFileSync(path.join(MP, 'components/search-picker/index.js'), 'utf8')));
+  ok('search-picker 有加载态', /sp-loading/.test(spW));
   // search-picker 自身四件套要齐全
   for (const ext of ['js', 'json', 'wxml', 'wxss']) {
     ok(`search-picker 有 .${ext}`, fs.existsSync(path.join(MP, `components/search-picker/index.${ext}`)));
   }
   // 相关 JS 里也不该再有 showActionSheet
-  const allJs = nativePages.concat(searchPages).map((p) => p[0].replace('.wxml', '.js'));
+  const allJs = searchPages.map((p) => p[0].replace('.wxml', '.js'));
   for (const rel of allJs) {
     const s = stripComments(fs.readFileSync(path.join(MP, rel), 'utf8'));
     ok(`${path.basename(path.dirname(rel))} JS 无 showActionSheet`, !/showActionSheet/.test(s));

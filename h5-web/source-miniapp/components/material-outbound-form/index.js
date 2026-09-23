@@ -94,9 +94,15 @@ Component({
 
     // 可搜索选择器（替代原生 picker —— 微信原生 picker **没有搜索**，
     // 订单/工厂/领料人常有上百条，只能一路滚，用户反馈"要找很久"）
+    // D-517：remote=true 时按关键字远程搜索 + 分页，不再只搜已加载的第一页
     pickerVisible: false,
     pickerTitle: '',
     pickerOptions: [],
+    pickerRemote: false,
+    pickerKeyword: '',
+    pickerPage: 1,
+    pickerHasMore: false,
+    pickerLoading: false,
     pickerKey: '',
     pickerValue: '',
   },
@@ -104,9 +110,8 @@ Component({
   lifetimes: {
     attached: function () {
       this._lastCode = '';
-      this.loadOrders();
-      this.loadFactories();
-      this.loadReceivers();
+      // D-517：订单/工厂/领料人改为**打开选择器时按关键字远程搜索**，不再预拉前 100 条
+      // （预拉只能搜到第一页，用户搜第 101 条永远搜不到）。仓库区域量小，仍走本地。
       this.loadAreas();
       var code = this.properties.materialCode;
       if (code) this._applyCode(code);
@@ -255,21 +260,29 @@ Component({
     // 把原来的 4 个原生 <picker> 统一换成底部可搜索弹层。
     // 选中后仍复用原有的 onXxxChange 处理器（逻辑只保留一份）。
 
-    /** 打开某个字段的选择器 */
+    /** 打开某个字段的选择器（D-517：order/factory/receiver 走远程关键字搜索 + 分页） */
     openPicker: function (e) {
       var key = e.currentTarget.dataset.key;
       var map = {
-        order: { title: '选择关联订单', names: this.data.orderNames, current: this.data.orderNo },
-        factory: { title: '选择关联工厂', names: this.data.factoryNames, current: this.data.factoryName },
-        receiver: { title: '选择领料人', names: this.data.receiverNames, current: this.data.receiverName },
-        area: { title: '选择仓库区域', names: this.data.areaNames, current: this.data.warehouseAreaName },
+        // D-517：物料/面料也能「选」，不再只能手输编码或扫码
+        material: { title: '选择物料（编码/名称搜索）', remote: true, current: this.data.materialCode },
+        order: { title: '选择关联订单', remote: true, current: this.data.orderNo },
+        factory: { title: '选择关联工厂', remote: true, current: this.data.factoryId },
+        receiver: { title: '选择领料人', remote: true, current: this.data.receiverId },
+        area: { title: '选择仓库区域', remote: false, names: this.data.areaNames, current: this.data.warehouseAreaName },
       };
       var cfg = map[key];
       if (!cfg) return;
       this.setData({
         pickerKey: key,
         pickerTitle: cfg.title,
-        pickerOptions: cfg.names || [],
+        pickerRemote: !!cfg.remote,
+        pickerKeyword: '',
+        pickerPage: 1,
+        pickerHasMore: false,
+        pickerLoading: false,
+        // 远程：打开后由组件以空关键字触发 search 拉第一页；本地：直接给全量
+        pickerOptions: cfg.remote ? [] : (cfg.names || []),
         pickerValue: cfg.current || '',
         pickerVisible: true,
       });
@@ -279,22 +292,117 @@ Component({
       this.setData({ pickerVisible: false });
     },
 
-    /** 选中 → 按 label 反查下标 → 复用原有的 change 处理器 */
+    /** 远程搜索（组件已防抖）→ 第 1 页 */
+    onPickerSearch: function (e) {
+      if (!this.data.pickerRemote) return;
+      var kw = (e && e.detail && e.detail.keyword) || '';
+      var self = this;
+      this.setData({ pickerKeyword: kw, pickerPage: 1 });
+      this._fetchPickerOptions(this.data.pickerKey, kw, 1, function (list, hasMore) {
+        self.setData({ pickerOptions: list, pickerHasMore: hasMore, pickerLoading: false });
+      });
+    },
+
+    /** 滚到底 → 追加下一页 */
+    onPickerLoadMore: function () {
+      if (!this.data.pickerRemote || !this.data.pickerHasMore || this.data.pickerLoading) return;
+      var self = this;
+      var next = (this.data.pickerPage || 1) + 1;
+      this.setData({ pickerPage: next });
+      this._fetchPickerOptions(this.data.pickerKey, this.data.pickerKeyword, next, function (list, hasMore) {
+        self.setData({
+          pickerOptions: (self.data.pickerOptions || []).concat(list),
+          pickerHasMore: hasMore,
+          pickerLoading: false,
+        });
+      });
+    },
+
+    _PICKER_SIZE: 20,
+
+    /**
+     * 远程取数：订单按 orderNo、工厂按 factoryName、人员按 name（后端均为 LIKE）
+     * @param {Function} cb (list, hasMore)
+     */
+    _fetchPickerOptions: function (key, kw, page, cb) {
+      var SIZE = this._PICKER_SIZE;
+      var self = this;
+      this.setData({ pickerLoading: true });
+      var params = { page: page, pageSize: SIZE };
+      if (kw) {
+        if (key === 'order') params.orderNo = kw;
+        else if (key === 'factory') params.factoryName = kw;
+        else if (key === 'material') params.keyword = kw;
+        else params.name = kw;
+      }
+      var req = key === 'order'
+        ? api.production.listOrders(params)
+        : (key === 'factory' ? api.factory.list(params)
+          : (key === 'material' ? api.material.listStock(params) : api.system.listUsers(params)));
+      req.then(function (res) {
+        var records = Array.isArray(res) ? res : ((res && (res.records || res.list || res.items)) || []);
+        var list = records.map(function (r) {
+          if (key === 'material') {
+            var code = String(r.materialCode || '');
+            // label = "编码 · 名称"，value = 物料编码（唯一）
+            return {
+              label: code + (r.materialName ? ' · ' + r.materialName : ''),
+              value: code,
+              stockId: String(r.stockId || r.id || ''),
+            };
+          }
+          if (key === 'order') {
+            var no = String(r.orderNo || r.order_no || '');
+            // label 带上款号，同名/近名订单一眼可辨；value 用订单号（唯一）
+            return { label: no + (r.styleNo ? ' · ' + r.styleNo : ''), value: no, styleNo: String(r.styleNo || '') };
+          }
+          if (key === 'factory') {
+            return {
+              label: r.factoryName || r.name || '',
+              value: String(r.id || ''),
+              type: (r.factoryType || r.type || 'INTERNAL').toUpperCase(),
+            };
+          }
+          return {
+            label: r.realName || r.name || r.username || r.nickname || '',
+            value: String(r.id || r.userId || ''),
+          };
+        }).filter(function (o) { return o.label && o.value; });
+        self.setData({ pickerLoading: false });
+        cb(list, records.length >= SIZE);
+      }).catch(function (err) {
+        console.warn('[物料出库] 选择器加载失败', key, err);
+        self.setData({ pickerLoading: false });
+        cb([], false);
+      });
+    },
+
+    /**
+     * 选中：直接用组件回传的 value/item 写入，**不再按名称 indexOf 反查**
+     * （同名工厂/同名员工会选中错误的一条 —— D-517 修掉的隐性 bug）
+     */
     onPickerSelect: function (e) {
       var key = this.data.pickerKey;
-      var label = (e.detail && e.detail.label) || '';
-      var names =
-        key === 'order' ? this.data.orderNames
-        : key === 'factory' ? this.data.factoryNames
-        : key === 'receiver' ? this.data.receiverNames
-        : this.data.areaNames;
-      var idx = (names || []).indexOf(label);
-      if (idx < 0) return;
-      var ev = { detail: { value: idx } };
-      if (key === 'order') this.onOrderChange(ev);
-      else if (key === 'factory') this.onFactoryChange(ev);
-      else if (key === 'receiver') this.onReceiverChange(ev);
-      else if (key === 'area') this.onAreaChange(ev);
+      var d = (e && e.detail) || {};
+      var label = d.label || '';
+      var value = d.value || '';
+      var item = d.item || {};
+      if (key === 'material') {
+        // 选中即按编码查询（与手输/扫码同一条链路）
+        this.setData({ materialCode: value });
+        if (typeof this._applyCode === 'function') this._applyCode(value);
+        else this.queryMaterial();
+      } else if (key === 'order') {
+        this.setData({ orderNo: value, styleNo: item.styleNo || this.data.styleNo });
+      } else if (key === 'factory') {
+        this.setData({ factoryId: value, factoryName: label, factoryType: item.type || '' });
+      } else if (key === 'receiver') {
+        this.setData({ receiverId: value, receiverName: label });
+      } else if (key === 'area') {
+        // 仓库区域仍是本地列表（量小），沿用按名称反查
+        var idx = (this.data.areaNames || []).indexOf(label);
+        if (idx >= 0) this.onAreaChange({ detail: { value: idx } });
+      }
     },
 
     /**

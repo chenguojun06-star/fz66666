@@ -109,11 +109,17 @@ Component({
     remark: '',
 
     // 可搜索选择器（替代原生 picker —— 微信原生 picker **没有搜索**）
+    // D-517：remote=true 时按关键字远程搜索 + 分页（物料/面料）
     pickerVisible: false,
     pickerTitle: '',
     pickerOptions: [],
     pickerKey: '',
     pickerValue: '',
+    pickerRemote: false,
+    pickerKeyword: '',
+    pickerPage: 1,
+    pickerHasMore: false,
+    pickerLoading: false,
   },
 
   lifetimes: {
@@ -242,6 +248,8 @@ Component({
     openPicker: function (e) {
       var key = e.currentTarget.dataset.key;
       var map = {
+        // D-517：物料/面料也能「选」，不再只能手输编码或扫码
+        material: { title: '选择物料（编码/名称搜索）', remote: true, current: this.data.materialCode },
         area: { title: '选择仓库区域', names: this.data.areaNames, current: this.data.warehouseAreaName },
         location: { title: '选择库位', names: this.data.locationNames, current: this.data.warehouseLocation },
       };
@@ -250,9 +258,62 @@ Component({
       this.setData({
         pickerKey: key,
         pickerTitle: cfg.title,
-        pickerOptions: cfg.names || [],
+        pickerRemote: !!cfg.remote,
+        pickerKeyword: '',
+        pickerPage: 1,
+        pickerHasMore: false,
+        pickerLoading: false,
+        pickerOptions: cfg.remote ? [] : (cfg.names || []),
         pickerValue: cfg.current || '',
         pickerVisible: true,
+      });
+    },
+
+    /** D-517：远程搜索（物料走库存列表 keyword 模糊匹配 + 分页） */
+    onPickerSearch: function (e) {
+      if (!this.data.pickerRemote) return;
+      var kw = (e && e.detail && e.detail.keyword) || '';
+      var self = this;
+      this.setData({ pickerKeyword: kw, pickerPage: 1 });
+      this._fetchPickerOptions(this.data.pickerKey, kw, 1, function (list, hasMore) {
+        self.setData({ pickerOptions: list, pickerHasMore: hasMore, pickerLoading: false });
+      });
+    },
+
+    onPickerLoadMore: function () {
+      if (!this.data.pickerRemote || !this.data.pickerHasMore || this.data.pickerLoading) return;
+      var self = this;
+      var next = (this.data.pickerPage || 1) + 1;
+      this.setData({ pickerPage: next });
+      this._fetchPickerOptions(this.data.pickerKey, this.data.pickerKeyword, next, function (list, hasMore) {
+        self.setData({
+          pickerOptions: (self.data.pickerOptions || []).concat(list),
+          pickerHasMore: hasMore,
+          pickerLoading: false,
+        });
+      });
+    },
+
+    _PICKER_SIZE: 20,
+
+    _fetchPickerOptions: function (key, kw, page, cb) {
+      var SIZE = this._PICKER_SIZE;
+      var self = this;
+      this.setData({ pickerLoading: true });
+      var params = { page: page, pageSize: SIZE };
+      if (kw) params.keyword = kw;
+      api.material.listStock(params).then(function (res) {
+        var records = Array.isArray(res) ? res : ((res && (res.records || res.list || res.items)) || []);
+        var list = records.map(function (r) {
+          var code = String(r.materialCode || '');
+          return { label: code + (r.materialName ? ' · ' + r.materialName : ''), value: code };
+        }).filter(function (o) { return o.value; });
+        self.setData({ pickerLoading: false });
+        cb(list, records.length >= SIZE);
+      }).catch(function (err) {
+        console.warn('[物料入库] 物料搜索失败', err);
+        self.setData({ pickerLoading: false });
+        cb([], false);
       });
     },
 
@@ -263,6 +324,12 @@ Component({
     onPickerSelect: function (e) {
       var key = this.data.pickerKey;
       var label = (e.detail && e.detail.label) || '';
+      if (key === 'material') {
+        // 选中即按编码查询（与手输/扫码同一条链路）
+        this.setData({ materialCode: (e.detail && e.detail.value) || '' });
+        this._applyCode((e.detail && e.detail.value) || '');
+        return;
+      }
       var names = key === 'area' ? this.data.areaNames : this.data.locationNames;
       var idx = (names || []).indexOf(label);
       if (idx < 0) return;

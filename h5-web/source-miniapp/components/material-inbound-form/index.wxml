@@ -14,6 +14,7 @@
         confirm-type="search"
         bindconfirm="onQuery"
       />
+      <view class="search-btn search-btn--scan" wx:if="{{showScan}}" bindtap="openPicker" data-key="material">选择</view>
       <view wx:if="{{showScan}}" class="search-btn search-btn--scan" bindtap="onScan">扫码</view>
       <view class="search-btn search-btn--go" bindtap="onQuery">查询</view>
     </view>
@@ -145,6 +146,11 @@
   title="{{pickerTitle}}"
   options="{{pickerOptions}}"
   value="{{pickerValue}}"
+  remote="{{pickerRemote}}"
+  loading="{{pickerLoading}}"
+  has-more="{{pickerHasMore}}"
+  bind:search="onPickerSearch"
+  bind:loadmore="onPickerLoadMore"
   bind:select="onPickerSelect"
   bind:close="onPickerClose"
 />

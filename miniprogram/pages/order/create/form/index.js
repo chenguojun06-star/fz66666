@@ -140,6 +140,10 @@ Page({
     bizTypeLabels: BIZ_TYPE_LABELS,
     factoryList: [], orgUnitList: [], categoryOptions: [], userOptions: [],
     quickFillQty: 1, submitting: false,
+    // D-517：通用可搜索选择器状态
+    pickerVisible: false, pickerKey: '', pickerTitle: '', pickerRemote: false,
+    pickerOptions: [], pickerValue: '', pickerKeyword: '',
+    pickerPage: 1, pickerHasMore: false, pickerLoading: false,
   },
 
   onLoad: function (opts) {
@@ -426,14 +430,141 @@ Page({
     this.setData({ factoryMode: e.currentTarget.dataset.v, orgUnitId: '', orgUnitName: '', factoryId: '', factoryName: '' });
   },
 
-  onOrgUnitChange: function (e) {
-    const item = this.data.orgUnitList[e.detail.value];
-    if (item) this.setData({ orgUnitId: item.id, orgUnitName: item.name || '' });
+  /* ═══ D-517：通用可搜索选择器 ═══
+     原先是原生 <picker>：没有搜索框，工厂/人员/客户一多只能一路滚，
+     而且人员只加载前 200 条 —— 现在工厂/人员走**远程关键字搜索 + 分页**，部门/客户本地搜索。 */
+  _PICKER_CONF: {
+    orgUnit: { title: '选择部门', remote: false },
+    factory: { title: '选择工厂', remote: true },
+    customer: { title: '选择客户', remote: false },
+    patternMaker: { title: '选择纸样师', remote: true },
+    merchandiser: { title: '选择跟单员', remote: true },
+  },
+  _PICKER_SIZE: 20,
+
+  openPicker: function (e) {
+    var key = (e.currentTarget.dataset && e.currentTarget.dataset.key) || '';
+    var conf = this._PICKER_CONF[key];
+    if (!conf) return;
+    var value = '';
+    if (key === 'orgUnit') value = this.data.orgUnitId || '';
+    else if (key === 'factory') value = this.data.factoryId || '';
+    else if (key === 'customer') value = this.data.customerId || '';
+    else if (key === 'patternMaker') value = this._patternMakerId || '';
+    else if (key === 'merchandiser') value = this._merchandiserId || '';
+    this.setData({
+      pickerKey: key,
+      pickerTitle: conf.title,
+      pickerRemote: conf.remote,
+      pickerValue: value,
+      pickerKeyword: '',
+      pickerPage: 1,
+      pickerHasMore: false,
+      pickerLoading: false,
+      // 本地模式直接给全量（远程模式打开时组件会以空关键字触发 search 拉第一页）
+      pickerOptions: conf.remote ? [] : this._localPickerOptions(key),
+      pickerVisible: true,
+    });
   },
 
-  onFactoryChange: function (e) {
-    const item = this.data.factoryList[e.detail.value];
-    if (item) this.setData({ factoryId: item.id, factoryName: item.factoryName || '' });
+  _localPickerOptions: function (key) {
+    if (key === 'orgUnit') {
+      return (this.data.orgUnitList || []).map(function (d) {
+        return { label: d.name || '', value: String(d.id || '') };
+      }).filter(function (o) { return o.value; });
+    }
+    if (key === 'customer') {
+      // 「（不选）」的 id 为空 → 选中即清空客户
+      return (this.data.customerList || []).map(function (c) {
+        return { label: c.companyName || '', value: String(c.id || '') };
+      }).filter(function (o) { return o.label; });
+    }
+    return [];
+  },
+
+  /** 远程搜索：关键字变化（组件内已防抖），拉第 1 页 */
+  onPickerSearch: function (e) {
+    if (!this.data.pickerRemote) return;
+    var kw = (e && e.detail && e.detail.keyword) || '';
+    var self = this;
+    this.setData({ pickerKeyword: kw, pickerPage: 1 });
+    this._fetchPickerOptions(this.data.pickerKey, kw, 1, function (list, hasMore) {
+      self.setData({ pickerOptions: list, pickerHasMore: hasMore, pickerLoading: false });
+    });
+  },
+
+  /** 远程分页：滚到底追加下一页 */
+  onPickerLoadMore: function () {
+    if (!this.data.pickerRemote || !this.data.pickerHasMore || this.data.pickerLoading) return;
+    var self = this;
+    var next = (this.data.pickerPage || 1) + 1;
+    this.setData({ pickerPage: next });
+    this._fetchPickerOptions(this.data.pickerKey, this.data.pickerKeyword, next, function (list, hasMore) {
+      self.setData({
+        pickerOptions: (self.data.pickerOptions || []).concat(list),
+        pickerHasMore: hasMore,
+        pickerLoading: false,
+      });
+    });
+  },
+
+  /**
+   * 远程取数：工厂走 factoryName 关键字；人员走 name 关键字（后端均为 LIKE）
+   * @param {Function} cb (list, hasMore)
+   */
+  _fetchPickerOptions: function (key, kw, page, cb) {
+    var SIZE = this._PICKER_SIZE;
+    var self = this;
+    this.setData({ pickerLoading: true });
+    var fail = function (err) {
+      console.error('[order-create] 选择器加载失败', key, err && (err.errMsg || err.message || err));
+      self.setData({ pickerLoading: false });
+      cb([], false);
+    };
+    var params = { page: page, pageSize: SIZE };
+    if (kw) {
+      if (key === 'factory') params.factoryName = kw;
+      else params.name = kw;
+    }
+    var req = (key === 'factory')
+      ? api.factory.list(params)
+      : api.system.listUsers(params);
+    req.then(function (res) {
+      var records = (res && res.records) || (Array.isArray(res) ? res : []);
+      var list = records.map(function (r) {
+        if (key === 'factory') {
+          return { label: r.factoryName || r.name || '', value: String(r.id || '') };
+        }
+        return { label: r.name || r.username || '', value: String(r.id || '') };
+      }).filter(function (o) { return o.label && o.value; });
+      self.setData({ pickerLoading: false });
+      cb(list, records.length >= SIZE);
+    }).catch(fail);
+  },
+
+  onPickerSelect: function (e) {
+    var key = this.data.pickerKey;
+    var d = (e && e.detail) || {};
+    var value = d.value || '';
+    var label = d.label || '';
+    if (key === 'orgUnit') {
+      this.setData({ orgUnitId: value, orgUnitName: label });
+    } else if (key === 'factory') {
+      this.setData({ factoryId: value, factoryName: label });
+    } else if (key === 'customer') {
+      // value 为空 = 选中「（不选）」→ 清空
+      this.setData({ customerId: value, company: value ? label : '' });
+    } else if (key === 'patternMaker') {
+      this._patternMakerId = value;
+      this.setData({ patternMaker: label });
+    } else if (key === 'merchandiser') {
+      this._merchandiserId = value;
+      this.setData({ merchandiser: label });
+    }
+  },
+
+  onPickerClose: function () {
+    this.setData({ pickerVisible: false });
   },
 
   onStartDateChange: function (e) { this.setData({ plannedStartDate: e.detail.value }); },
@@ -443,12 +574,10 @@ Page({
 
   onCompanyInput: function (e) { this.setData({ company: e.detail.value }); },
 
-  onCustomerChange: function (e) {
-    const item = this.data.customerList[e.detail.value];
-    if (!item) return;
-    // 选中「（不选）」时 id 为空 → 清空客户
-    this.setData({ customerId: item.id || '', company: item.id ? item.companyName : '' });
-  },
+  // D-517：原 onCustomerChange / onPatternMakerChange / onMerchandiserChange
+  // 随原生 <picker> 一并下线（改由 onPickerSelect 统一处理），保留手输兜底可能用到的输入回调
+
+  onMerchandiserInput: function (e) { this.setData({ merchandiser: e.detail.value }); },
 
   onCategoryChange: function (e) {
     const item = this.data.categoryOptions[e.detail.value];
@@ -468,17 +597,7 @@ Page({
     });
   },
 
-  onPatternMakerChange: function (e) {
-    const item = this.data.userOptions[e.detail.value];
-    this.setData({ patternMaker: item || '' });
-  },
   onPatternMakerInput: function (e) { this.setData({ patternMaker: e.detail.value }); },
-
-  onMerchandiserChange: function (e) {
-    const item = this.data.userOptions[e.detail.value];
-    this.setData({ merchandiser: item || '' });
-  },
-  onMerchandiserInput: function (e) { this.setData({ merchandiser: e.detail.value }); },
 
   /* ═══ 颜色 / 码数 ═══ */
   onColorInput: function (e) { this.setData({ colorInput: e.detail.value }); },

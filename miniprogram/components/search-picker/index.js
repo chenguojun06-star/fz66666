@@ -41,8 +41,13 @@ Component({
       type: Boolean,
       value: false,
       observer: function (v) {
-        // 每次打开都清空搜索词，避免上次的残留把列表过滤空了
-        if (v) this._setKeyword('');
+        if (v) {
+          // 每次打开都清空搜索词，避免上次的残留把列表过滤空了
+          // D-517：远程模式打开即以空关键字触发一次 search，父级负责拉第一页
+          this._setKeyword('', true);
+        } else {
+          this._clearTimer();
+        }
       },
     },
     title: { type: String, value: '请选择' },
@@ -56,6 +61,14 @@ Component({
     /** 当前已选值（用于高亮打勾） */
     value: { type: String, value: '' },
     placeholder: { type: String, value: '输入关键字搜索' },
+    /** D-517：true = 由父级按关键字请求接口（大数据量）；false = 本地过滤已加载数组 */
+    remote: { type: Boolean, value: false },
+    /** 父级请求中 → 显示加载态，并抑制重复 loadmore */
+    loading: { type: Boolean, value: false },
+    /** 是否还有下一页（remote 模式分页） */
+    hasMore: { type: Boolean, value: false },
+    /** 远程搜索防抖毫秒 */
+    debounce: { type: Number, value: 300 },
   },
 
   data: {
@@ -64,10 +77,34 @@ Component({
   },
 
   methods: {
-    _setKeyword: function (kw) {
-      this.setData({ keyword: kw || '' }, function () {
-        this._filter();
-      }.bind(this));
+    _clearTimer: function () {
+      if (this._timer) {
+        clearTimeout(this._timer);
+        this._timer = null;
+      }
+    },
+
+    /**
+     * @param {string} kw 关键字
+     * @param {boolean} immediate true = 跳过防抖立刻触发（打开弹层时）
+     */
+    _setKeyword: function (kw, immediate) {
+      this._clearTimer();
+      var next = kw || '';
+      this.setData({ keyword: next });
+      if (this.data.remote) {
+        var self = this;
+        if (immediate) {
+          this.triggerEvent('search', { keyword: next });
+          return;
+        }
+        this._timer = setTimeout(function () {
+          self._timer = null;
+          self.triggerEvent('search', { keyword: next });
+        }, Number(self.data.debounce) || 300);
+        return;
+      }
+      this._filter();
     },
 
     /** 归一化 + 按关键字过滤（label 和 value 都参与匹配） */
@@ -81,7 +118,8 @@ Component({
         var val = (o && typeof o === 'object') ? String(o.value == null ? label : o.value) : label;
         if (!label) continue;
         if (!kw || label.toLowerCase().indexOf(kw) >= 0 || val.toLowerCase().indexOf(kw) >= 0) {
-          out.push({ label: label, value: val });
+          // _key 保证 wx:key 唯一（同名选项不会互相顶掉）
+          out.push({ label: label, value: val, _key: val + '#' + i, _index: i });
         }
       }
       this.setData({ filtered: out });
@@ -96,10 +134,25 @@ Component({
     },
 
     onSelect: function (e) {
-      var item = this.data.filtered[e.currentTarget.dataset.index];
+      var idx = Number(e.currentTarget.dataset.index);
+      var item = this.data.filtered[idx];
       if (!item) return;
-      this.triggerEvent('select', { label: item.label, value: item.value });
+      // D-517：回传原始项（raw），父级可直接拿到 id/订单号等附加字段，不必再按名称反查
+      var raw = (this.data.options || [])[item._index];
+      this.triggerEvent('select', {
+        label: item.label,
+        value: item.value,
+        index: idx,
+        item: raw || item,
+      });
       this.triggerEvent('close');
+    },
+
+    /** D-517：列表滚到底 → 父级追加下一页（仅远程模式） */
+    onLoadMore: function () {
+      if (!this.data.remote) return;
+      if (this.data.loading || !this.data.hasMore) return;
+      this.triggerEvent('loadmore', { keyword: this.data.keyword || '' });
     },
 
     onClose: function () {

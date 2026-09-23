@@ -20,6 +20,8 @@ Page({
     splitQty: '',
     workers: [],
     workerIdx: -1,
+    // D-517：可搜索选择器
+    pickerVisible: false, pickerKey: '', pickerTitle: '', pickerOptions: [], pickerValue: '',
     loading: false,
     orderStyleCover: '',
     submitting: false,
@@ -268,6 +270,47 @@ Page({
 
   onWorkerChange(e) {
     this.setData({ workerIdx: Number(e.detail.value) });
+  },
+
+  /* ═══ D-517：工序 / 工人改可搜索选择器 ═══
+     value 用数组下标（与原有 workerIdx / processIdx 语义一致，下游逻辑不用改） */
+  openPicker(e) {
+    const key = (e.currentTarget.dataset && e.currentTarget.dataset.key) || '';
+    if (key === 'worker') {
+      this.setData({
+        pickerKey: key,
+        pickerTitle: '选择接手工人',
+        pickerValue: this.data.workerIdx >= 0 ? String(this.data.workerIdx) : '',
+        pickerOptions: (this.data.workers || []).map(function (w, i) {
+          return { label: w.workerName || w.name || '', value: String(i) };
+        }).filter(function (o) { return o.label; }),
+        pickerVisible: true,
+      });
+      return;
+    }
+    if (key === 'process') {
+      this.setData({
+        pickerKey: key,
+        pickerTitle: '选择工序',
+        pickerValue: this.data.processIdx >= 0 ? String(this.data.processIdx) : '',
+        pickerOptions: (this.data.processes || []).map(function (p, i) {
+          return { label: p.processName || p.name || '', value: String(i) };
+        }).filter(function (o) { return o.label; }),
+        pickerVisible: true,
+      });
+    }
+  },
+
+  onPickerClose() {
+    this.setData({ pickerVisible: false });
+  },
+
+  onPickerSelect(e) {
+    const key = this.data.pickerKey;
+    const idx = Number((e && e.detail && e.detail.value) || -1);
+    if (idx < 0) return;
+    if (key === 'worker') this.setData({ workerIdx: idx });
+    else if (key === 'process') this.setData({ processIdx: idx });
   },
 
   onProcessChange(e) {

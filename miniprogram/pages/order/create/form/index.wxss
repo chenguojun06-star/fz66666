@@ -83,6 +83,12 @@ page { background-color: var(--color-bg-page); }
   box-sizing: border-box;
 }
 .ph { color: var(--color-text-placeholder); }
+/* D-517：可搜索选择器的右侧箭头 */
+.f-pv-arrow {
+  float: right;
+  color: var(--color-text-tertiary);
+  margin-left: 4px;
+}
 
 /* 按钮：项目规范为蓝色镂空（透明底+蓝边+蓝字，对齐 app.wxss .btn-primary），禁止实心 */
 .f-btn {

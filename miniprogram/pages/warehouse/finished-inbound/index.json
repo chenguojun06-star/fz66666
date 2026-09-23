@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "成品入库",
-  "enablePullDownRefresh": false
+  "enablePullDownRefresh": false,
+  "usingComponents": {
+    "search-picker": "/components/search-picker/index"
+  }
 }

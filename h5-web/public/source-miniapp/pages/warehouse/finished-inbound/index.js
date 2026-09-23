@@ -51,6 +51,8 @@ Page({
     warehouseAreaId: '',
     warehouseAreaName: '',
     warehouseLocation: '默认仓',
+    // D-517：可搜索选择器
+    pickerVisible: false, pickerKey: '', pickerTitle: '', pickerOptions: [], pickerValue: '',
 
     supplierName: '',
     remark: '',
@@ -178,6 +180,32 @@ Page({
   onAreaChange(e) {
     var opt = this.data.areaOptions[e.detail.value];
     if (opt) this.setData({ warehouseAreaId: opt.id, warehouseAreaName: opt.name });
+  },
+
+  /* ═══ D-517：仓库区域改可搜索选择器（原生 picker 无搜索） ═══ */
+  openPicker(e) {
+    var key = (e.currentTarget.dataset && e.currentTarget.dataset.key) || '';
+    if (key !== 'area') return;
+    this.setData({
+      pickerKey: key,
+      pickerTitle: '选择仓库区域',
+      pickerValue: this.data.warehouseAreaId || '',
+      pickerOptions: (this.data.areaOptions || []).map(function (o) {
+        return { label: o.name || '', value: String(o.id || '') };
+      }).filter(function (o) { return o.label && o.value; }),
+      pickerVisible: true,
+    });
+  },
+
+  onPickerClose() {
+    this.setData({ pickerVisible: false });
+  },
+
+  onPickerSelect(e) {
+    var d = (e && e.detail) || {};
+    if (this.data.pickerKey === 'area') {
+      this.setData({ warehouseAreaId: d.value || '', warehouseAreaName: d.label || '' });
+    }
   },
 
   onLocationInput(e) {

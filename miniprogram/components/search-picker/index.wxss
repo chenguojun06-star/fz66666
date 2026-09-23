@@ -111,3 +111,14 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
 }
+
+/* D-517：加载中 / 加载更多（远程分页） */
+.sp-loading {
+  padding: var(--spacing-md) 0;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+}
+.sp-loading--end {
+  color: var(--color-text-tertiary);
+}

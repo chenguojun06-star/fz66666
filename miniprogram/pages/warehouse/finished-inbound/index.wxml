@@ -36,16 +36,14 @@
 
     <!-- ③ 仓库 -->
     <view class="section">
-      <!-- ⚠️ picker 而非 wx.showActionSheet（后者 itemList 最多 6 项） -->
-      <picker mode="selector" range="{{areaNames}}" bindchange="onAreaChange">
-        <view class="row">
-          <text class="row-label">仓库区域</text>
-          <text class="row-value {{warehouseAreaName ? '' : 'row-value--placeholder'}}">
-            {{warehouseAreaName || '请选择'}}
-          </text>
-          <text class="row-arrow">›</text>
-        </view>
-      </picker>
+      <!-- D-517：仓库区域改可搜索选择器 -->
+      <view class="row" bindtap="openPicker" data-key="area">
+        <text class="row-label">仓库区域</text>
+        <text class="row-value {{warehouseAreaName ? '' : 'row-value--placeholder'}}">
+          {{warehouseAreaName || '请选择'}}
+        </text>
+        <text class="row-arrow">›</text>
+      </view>
       <view class="row">
         <text class="row-label">库位</text>
         <input
@@ -154,3 +152,13 @@
     {{submitting ? '提交中…' : '确认入库'}}
   </view>
 </view>
+
+<!-- D-517：通用可搜索选择器（仓库区域） -->
+<search-picker
+  visible="{{pickerVisible}}"
+  title="{{pickerTitle}}"
+  options="{{pickerOptions}}"
+  value="{{pickerValue}}"
+  bind:select="onPickerSelect"
+  bind:close="onPickerClose"
+/>

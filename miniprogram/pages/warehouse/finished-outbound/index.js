@@ -60,6 +60,8 @@ Page({
     customerNames: [],
     customerId: '',
     customerName: '',
+    // D-517：可搜索选择器
+    pickerVisible: false, pickerKey: '', pickerTitle: '', pickerOptions: [], pickerValue: '',
     // D-513：收货地址（PC 端 CustomerInfoSection 有，手机端原先缺失）
     shippingAddress: '',
 
@@ -179,11 +181,46 @@ Page({
 
   // ────────── 仓库区域 / 客户选择 ──────────
 
-  /**
-   * ⚠️ 用 <picker mode="selector"> 而非 wx.showActionSheet ——
-   * 后者 itemList 最多 6 项，仓库区域/客户很可能超过，会直接失败。
-   * picker 的 bindchange 回传 e.detail.value = 选中下标。
-   */
+  /* ═══ D-517：可搜索选择器（仓库区域 / 客户） ═══
+     原生 <picker> 没有搜索框，客户几十上百个时只能一路滚。 */
+  openPicker(e) {
+    var key = (e.currentTarget.dataset && e.currentTarget.dataset.key) || '';
+    var map = {
+      area: { title: '选择仓库区域', options: this.data.areaOptions, current: this.data.warehouseAreaId },
+      customer: { title: '选择客户', options: this.data.customerOptions, current: this.data.customerId },
+    };
+    var cfg = map[key];
+    if (!cfg) return;
+    this.setData({
+      pickerKey: key,
+      pickerTitle: cfg.title,
+      pickerValue: cfg.current || '',
+      pickerOptions: (cfg.options || []).map(function (o) {
+        return { label: o.name || '', value: String(o.id || ''), address: o.address || '' };
+      }).filter(function (o) { return o.label && o.value; }),
+      pickerVisible: true,
+    });
+  },
+
+  onPickerClose() {
+    this.setData({ pickerVisible: false });
+  },
+
+  onPickerSelect(e) {
+    var key = this.data.pickerKey;
+    var d = (e && e.detail) || {};
+    if (key === 'area') {
+      this.setData({ warehouseAreaId: d.value || '', warehouseAreaName: d.label || '' });
+    } else if (key === 'customer') {
+      // 选客户自动带出收货地址（用户仍可手改）
+      this.setData({
+        customerId: d.value || '',
+        customerName: d.label || '',
+        shippingAddress: (d.item && d.item.address) || this.data.shippingAddress || '',
+      });
+    }
+  },
+
   onAreaChange(e) {
     var opt = this.data.areaOptions[e.detail.value];
     if (opt) this.setData({ warehouseAreaId: opt.id, warehouseAreaName: opt.name });

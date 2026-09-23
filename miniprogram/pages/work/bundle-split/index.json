@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "裁剪分菲",
-  "usingComponents": {}
+  "usingComponents": {
+    "search-picker": "/components/search-picker/index"
+  }
 }

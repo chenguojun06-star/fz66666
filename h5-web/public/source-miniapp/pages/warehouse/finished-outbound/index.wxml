@@ -31,28 +31,23 @@
 
   <!-- ③ 仓库区域 -->
   <view class="section">
-      <!-- ⚠️ 用 picker 而非 wx.showActionSheet：后者 itemList 最多 6 项，
-           仓库区域/客户可能超过 6 条，会直接失败 -->
-      <picker mode="selector" range="{{areaNames}}" bindchange="onAreaChange">
-        <view class="row">
-          <text class="row-label">仓库区域</text>
-          <text class="row-value {{warehouseAreaName ? '' : 'row-value--placeholder'}}">
-            {{warehouseAreaName || '请选择'}}
-          </text>
-          <text class="row-arrow">›</text>
-        </view>
-      </picker>
+      <!-- D-517：仓库区域改为可搜索选择器（原生 picker 无搜索，区域一多只能一路滚） -->
+      <view class="row" bindtap="openPicker" data-key="area">
+        <text class="row-label">仓库区域</text>
+        <text class="row-value {{warehouseAreaName ? '' : 'row-value--placeholder'}}">
+          {{warehouseAreaName || '请选择'}}
+        </text>
+        <text class="row-arrow">›</text>
+      </view>
 
       <!-- ④ 客户：仅销售类出库需要（后端 REQUIRES_CUSTOMER_TYPES） -->
-      <picker mode="selector" range="{{customerNames}}" bindchange="onCustomerChange">
-        <view class="row" wx:if="{{needsCustomer}}">
-          <text class="row-label">客户 <text class="req">*</text></text>
-          <text class="row-value {{customerName ? '' : 'row-value--placeholder'}}">
-            {{customerName || '必选'}}
-          </text>
-          <text class="row-arrow">›</text>
-        </view>
-      </picker>
+      <view class="row" wx:if="{{needsCustomer}}" bindtap="openPicker" data-key="customer">
+        <text class="row-label">客户 <text class="req">*</text></text>
+        <text class="row-value {{customerName ? '' : 'row-value--placeholder'}}">
+          {{customerName || '必选'}}
+        </text>
+        <text class="row-arrow">›</text>
+      </view>
 
       <!-- ④-2 收货地址：PC 端有（CustomerInfoSection），手机端原先缺失 -->
       <view class="row" wx:if="{{needsCustomer}}">
@@ -159,3 +154,13 @@
     {{submitting ? '提交中…' : '确认出库'}}
   </view>
 </view>
+
+<!-- D-517：通用可搜索选择器（仓库区域 / 客户） -->
+<search-picker
+  visible="{{pickerVisible}}"
+  title="{{pickerTitle}}"
+  options="{{pickerOptions}}"
+  value="{{pickerValue}}"
+  bind:select="onPickerSelect"
+  bind:close="onPickerClose"
+/>

@@ -42,18 +42,19 @@
         </view>
       </view>
 
+      <!-- D-517：部门/工厂改为可搜索选择器（原生 picker 没有搜索，工厂上百个只能一路滚） -->
       <view wx:if="{{factoryMode==='INTERNAL'}}" class="f-row">
         <text class="f-lbl"><text class="req">*</text>部门</text>
-        <picker range="{{orgUnitList}}" range-key="name" bindchange="onOrgUnitChange" class="flex-1">
-          <view class="f-pv {{orgUnitId?'':'ph'}}">{{orgUnitName || '选择部门'}}</view>
-        </picker>
+        <view class="flex-1" bindtap="openPicker" data-key="orgUnit">
+          <view class="f-pv {{orgUnitId?'':'ph'}}">{{orgUnitName || '选择部门'}}<text class="f-pv-arrow">›</text></view>
+        </view>
       </view>
 
       <view wx:if="{{factoryMode==='EXTERNAL'}}" class="f-row">
         <text class="f-lbl"><text class="req">*</text>工厂</text>
-        <picker range="{{factoryList}}" range-key="factoryName" bindchange="onFactoryChange" class="flex-1">
-          <view class="f-pv {{factoryId?'':'ph'}}">{{factoryName || '选择工厂'}}</view>
-        </picker>
+        <view class="flex-1" bindtap="openPicker" data-key="factory">
+          <view class="f-pv {{factoryId?'':'ph'}}">{{factoryName || '选择工厂（可搜索）'}}<text class="f-pv-arrow">›</text></view>
+        </view>
       </view>
     </view>
 
@@ -92,9 +93,10 @@
       <view class="f-row-row">
         <view class="f-col">
           <text class="f-lbl-blk">客户</text>
-          <picker wx:if="{{customerList.length > 0}}" range="{{customerList}}" range-key="companyName" bindchange="onCustomerChange">
-            <view class="f-pv {{company?'':'ph'}}">{{company || '选填'}}</view>
-          </picker>
+          <!-- D-517：客户列表可搜索（含「（不选）」清空项） -->
+          <view wx:if="{{customerList.length > 0}}" bindtap="openPicker" data-key="customer">
+            <view class="f-pv {{company?'':'ph'}}">{{company || '选填'}}<text class="f-pv-arrow">›</text></view>
+          </view>
           <input wx:else class="f-inp" value="{{company}}" bindinput="onCompanyInput" placeholder="选填" />
         </view>
         <view class="f-col">
@@ -123,17 +125,16 @@
       <view class="f-row-row">
         <view class="f-col">
           <text class="f-lbl-blk">纸样师</text>
-          <picker wx:if="{{userOptions.length > 0}}" range="{{userOptions}}" bindchange="onPatternMakerChange">
-            <view class="f-pv {{patternMaker?'':'ph'}}">{{patternMaker || '选填'}}</view>
-          </picker>
-          <input wx:else class="f-inp" value="{{patternMaker}}" bindinput="onPatternMakerInput" placeholder="选填" />
+          <!-- D-517：人员走远程搜索（后端 name 关键字 + 分页），不再只加载前 200 人 -->
+          <view bindtap="openPicker" data-key="patternMaker">
+            <view class="f-pv {{patternMaker?'':'ph'}}">{{patternMaker || '选填（可搜索）'}}<text class="f-pv-arrow">›</text></view>
+          </view>
         </view>
         <view class="f-col">
           <text class="f-lbl-blk">跟单员</text>
-          <picker wx:if="{{userOptions.length > 0}}" range="{{userOptions}}" bindchange="onMerchandiserChange">
-            <view class="f-pv {{merchandiser?'':'ph'}}">{{merchandiser || '选填'}}</view>
-          </picker>
-          <input wx:else class="f-inp" value="{{merchandiser}}" bindinput="onMerchandiserInput" placeholder="选填" />
+          <view bindtap="openPicker" data-key="merchandiser">
+            <view class="f-pv {{merchandiser?'':'ph'}}">{{merchandiser || '选填（可搜索）'}}<text class="f-pv-arrow">›</text></view>
+          </view>
         </view>
       </view>
     </view>
@@ -298,4 +299,19 @@
     </view>
   </view>
   <ai-assistant />
+
+  <!-- D-517：通用可搜索选择器（部门/工厂/客户/纸样师/跟单员共用） -->
+  <search-picker
+    visible="{{pickerVisible}}"
+    title="{{pickerTitle}}"
+    options="{{pickerOptions}}"
+    value="{{pickerValue}}"
+    remote="{{pickerRemote}}"
+    loading="{{pickerLoading}}"
+    has-more="{{pickerHasMore}}"
+    bind:search="onPickerSearch"
+    bind:loadmore="onPickerLoadMore"
+    bind:select="onPickerSelect"
+    bind:close="onPickerClose"
+  />
 </view>
