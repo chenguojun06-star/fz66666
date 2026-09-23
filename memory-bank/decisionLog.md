@@ -6630,3 +6630,24 @@ material-center/index.js（切 tab 时把库存搜索词预填给入库/出库�
 **教训**：删任何小程序页面，自查三项 —— ①app.json（含分包）②全仓 navigateTo/url 字符串 ③scripts 下的静态检查脚本（会 read 文件）。
 
 **h5-web/source-miniapp 是生成物**（`h5-web/scripts/sync-miniprogram.mjs` 先清空再全量拷），源删了不用手改镜像。
+
+## 2026-09-23 D-516 小云逾期提醒跳错页 + 物料详情面料"规格"误显（用户截图反馈）✅代码完成
+
+**反馈1**：早上点小云帮助中心的延期提示，"莫名其妙跳到运营中心还是别的地方"。
+**根因**：`ai-assistant/index.js _loadDynamicSuggestions` 里 overdueOrderCount>0 的提醒 chip 写死
+`path: '/pages/sales/order-list/index'` —— 那是**销售/电商订单列表**，生产订单延期跟它毫无关系；
+`autoAsk` 见 path 直接 navigateTo，用户就被带去了陌生页面。（辅助疑点：bellTaskActions.handleOverdueOrder
+的兜底 `/pages/smart-ops/index` 也是"看起来莫名其妙"的落点，本次一并知晓。）
+**决策**：chip 改为直达生产看板「延期」筛选 `/pages/dashboard/index?filter=overdue`，
+dashboard onLoad 新增 filter 参数校验；看板仅 isAdminOrSupervisor 可进 → 其余角色**不带 path**，
+点击走 autoAsk 由小云作答（question 兜底），绝不落错误页面。
+**教训**：提醒类 chip 的 path 必须与**业务域**严格对齐（生产延期≠销售订单），且目标页的权限口径要和
+chip 可见人群对齐，否则"看得到点不进"。
+
+**反馈2**：物料详情（棉布-140CM-粉色）基本信息里「规格 XS(155/80A)/S(160/84A)...」——服装码数出现在面料上。
+**根因**：D-514 只在**入库表单**对 fabric 隐藏了规格行（size 存的是款式码数，面料应看幅宽/克重/成分），
+`material-inventory/detail` 漏了同口径。
+**决策**：详情页加 `isFabric`（/^fabric/i 前缀识别，兼容 fabricA/B/C 业务编码），面料隐藏「规格」行。
+
+**附带核实**：用户截图物料中心领料 tab 仍是「待出库」默认 → 是**旧包**（D-515 已改为默认全部），
+小程序不随 autodeploy 更新，需微信开发者工具重新上传。

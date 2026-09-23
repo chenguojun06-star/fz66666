@@ -6110,3 +6110,11 @@ WXML 表达式方法调用扫描 0；残留引用扫描仅剩注释。
 **验证**：`npm run sync:miniapp` 三副本（miniprogram + h5-web/source-miniapp + h5-web/public/source-miniapp）一致；node --check 通过。
 **已知**：同步时把先前未同步的小程序提交一并带到了 h5-web 镜像（order/create/form 等），属正常镜像跟踪。
 **下一步**：真机验收——①质检详情页选缺陷类别显示中文 ②拍照/相册可正常拉起并上传 ③提交质检后照片正常展示。
+
+## ✅ D-516 小云逾期提醒跳错页 + 物料详情面料规格误显（2026-09-23，代码完成待上传）
+- 小云帮助中心「N个逾期」chip：path 由 /pages/sales/order-list/index（销售订单，跳错域）改为
+  /pages/dashboard/index?filter=overdue；非 isAdminOrSupervisor 不带 path，走小云作答兜底
+- dashboard/index.js onLoad 支持 ?filter= 深链（校验合法 key）
+- material-inventory/detail：面料（/^^fabric/i）隐藏「规格」行，对齐 D-514 入库表单口径
+- 已 sync h5-web 镜像；refs/一致性/172 项页面自检全绿。**未推送**，等用户确认一起推
+- 用户领料 tab 旧包问题：提醒其重新上传小程序（D-515 的"默认全部"在旧包里看不到）

@@ -1,6 +1,7 @@
 const api = require('../../utils/api.js');
 const bellTaskLoader = require('./bellTaskLoader.js');
 const bellTaskActions = require('./bellTaskActions.js');
+const { isAdminOrSupervisor } = require('../../utils/permission.js');
 
 const TOOL_NAMES = {
   tool_query_production_progress: '生产进度', tool_order_edit: '订单编辑',
@@ -465,7 +466,13 @@ Component({
         const suggestions = [];
         // D-360t：真实数据的提醒 chips 点击直达真实页面（路径放 path，点 chips 即核验）
         if (data.overdueOrderCount > 0) {
-          suggestions.push({ icon: 'icon-alert', label: data.overdueOrderCount + '个逾期', question: '当前有哪些逾期订单？帮我分析一下', path: '/pages/sales/order-list/index' });
+          // D-516：逾期提醒直达**生产看板**的「延期」筛选。
+          // 原先 path=/pages/sales/order-list/index（销售/电商订单列表），用户反馈
+          // 「点延期的提示莫名其妙跳到运营中心还是别的地方」——生产延期和销售订单是两码事。
+          // 看板仅管理员/主管可进（isAdminOrSupervisor 口径），其余角色不带 path，
+          // 点击走 autoAsk 让小云直接作答，不再落错误页面。
+          var overduePath = isAdminOrSupervisor() ? '/pages/dashboard/index?filter=overdue' : '';
+          suggestions.push({ icon: 'icon-alert', label: data.overdueOrderCount + '个逾期', question: '当前有哪些逾期订单？帮我分析一下', path: overduePath });
         }
         if (data.qualityTaskCount > 0) {
           suggestions.push({ icon: 'icon-clipboard', label: data.qualityTaskCount + '个待质检', question: '有哪些待质检的任务？', path: '/pages/scan/index', tab: true });

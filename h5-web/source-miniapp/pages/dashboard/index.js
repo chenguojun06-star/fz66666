@@ -72,7 +72,13 @@ Page({
       return;
     }
     this._pendingOrderId = (options && options.orderId) ? decodeURIComponent(options.orderId) : '';
-    this.setData({ priceVisible: getTenantPriceVisible() });
+    // D-516：支持 ?filter=overdue 直达「延期」筛选（小云帮助中心的逾期提醒 chip 等深链入口）
+    var filterKey = (options && options.filter) || '';
+    var filterValid = STATUS_FILTERS.some(function (f) { return f.key === filterKey; });
+    this.setData({
+      priceVisible: getTenantPriceVisible(),
+      activeFilter: filterValid ? filterKey : 'all',
+    });
     this.loadTenantPriceFlag();
     this.refreshCards();
     this.loadOrders(true);

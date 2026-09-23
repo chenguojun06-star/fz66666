@@ -3187,3 +3187,12 @@ D-065 修复后领取成功，但 /picking/list 500。根因：43192e735 给 Mat
 - [x] PendingTaskOrchestrator 新增 collectCollaborationTasks：我创建/我领取+未完成并入全域待办，深链 xiaoyun://tasks（前端 TaskAggregationPanel 识别协议打开任务面板）
 - [x] TaskListView 新增「全部/我创建的/我领取的」筛选 + 卡片创建人徽标；TaskItem 补 creatorName/creatorId
 - [x] 验证：mvn compile EXIT=0 + tsc 0 错误
+
+## 2026-09-23 D-515 物料中心 tab 去重（小程序）✅ 已推送 c514e7dcc
+- [x] 顶部 sticky-search-bar 只在「库存」tab 显示（消除双重搜索框/双扫码入口）
+- [x] 领料默认状态 pending → 全部（D-099 后内部领料领取即出库，默认待出库恒空）
+- [x] 库存 tab 补分页（加载更多 + onReachBottom）→ 删除孤儿页 material-inventory/index + app.json 摘除
+- [x] 待办领料深链去掉 ?status=pending
+- [x] h5-web 两份镜像已 sync；test-warehouse-pages.mjs 补 5 条回归断言（172 项全通过）
+- [ ] 待用户：微信开发者工具上传小程序后真机验收（服务器 autodeploy 只重建 backend/frontend，
+      小程序改动不会触发服务器构建，登录页部署版本号也不会变，属正常）

@@ -31,6 +31,9 @@ Page({
     materialType: '',
     typeLabel: '',
     typeColor: '',
+    // D-516：面料不显示「规格」—— 后端 size 字段对面料存的是服装码数（XS/S/M...），
+    // 对棉布/里料无意义（与 D-514 入库表单口径一致：面料展示幅宽/克重/成分，不问码数）
+    isFabric: false,
 
     loading: true,
 
@@ -68,6 +71,7 @@ Page({
       materialName: decodeParam(opt.materialName),
       image: decodeParam(opt.image),
       materialType: type,
+      isFabric: /^fabric/i.test(String(type || '')),
       unit: decodeParam(opt.unit),
       warehouseAreaName: decodeParam(opt.warehouseAreaName),
       supplierName: decodeParam(opt.supplierName),
@@ -97,6 +101,8 @@ Page({
         materialName: info.materialName || this.data.materialName || this.data.materialCode,
         typeLabel: meta.label || this.data.typeLabel,
         typeColor: meta.color || this.data.typeColor,
+        // 快照接口返回的类型更准（fabricA/B/C 等业务编码也按前缀识别）
+        isFabric: /^fabric/i.test(String(info.materialType || this.data.materialType || '')),
         unit: info.unit || this.data.unit,
         color: info.color || '',
         size: info.size || '',

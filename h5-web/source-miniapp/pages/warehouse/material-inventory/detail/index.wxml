@@ -66,7 +66,8 @@
         <text class="info-label">颜色</text>
         <text class="info-value">{{color || '-'}}</text>
       </view>
-      <view class="info-row">
+      <!-- D-516：面料不显示「规格」—— 面料的 size 字段存的是服装码数（XS/S/M...），对面料无意义 -->
+      <view class="info-row" wx:if="{{!isFabric}}">
         <text class="info-label">规格</text>
         <text class="info-value">{{size || '-'}}</text>
       </view>
