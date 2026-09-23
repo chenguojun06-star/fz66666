@@ -370,7 +370,8 @@ const _FinishedInventory: React.FC = () => {
                     ),
                   },
                   {
-                    title: '单价',
+                    // D-521：叫「入库单价」与列表销售「单价」列区分（入库时未填显示 '-'）
+                    title: '入库单价',
                     dataIndex: 'unitPrice',
                     key: 'unitPrice',
                     width: 90,

@@ -292,7 +292,8 @@ const FreeInboundModal: React.FC<FreeInboundModalProps> = ({ open, onClose, onSu
       ),
     },
     {
-      title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100,
+      // D-521：叫「入库单价」与列表/详情的销售「单价」区分（不填则入库记录单价为空）
+      title: '入库单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100,
       render: (val: number | null, record: InboundItem) => (
         <InputNumber min={0} precision={2} value={val} size="small" style={{ width: 90 }}
           onChange={(v) => setItems(prev => prev.map(i => i.key === record.key ? { ...i, unitPrice: v } : i))} />

@@ -197,6 +197,21 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
                     </span>
                   ),
                 },
+                {
+                  // D-521：与列表「单价」列同源（款级销售单价）。此前只读区没有该字段，
+                  // 用户看到列表 ¥168 而详情里只有入库单价（常为空），误以为数据丢了。
+                  key: 'salesPrice',
+                  label: '单价',
+                  children: (
+                    (liveStock?.salesPrice ?? record.salesPrice) != null ? (
+                      <span style={{ fontWeight: 700, color: 'var(--color-error)', fontSize: 15 }}>
+                        {`¥${Number(liveStock?.salesPrice ?? record.salesPrice).toFixed(2)}`}
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>
+                    )
+                  ),
+                },
               ]}
             />
 
@@ -236,7 +251,8 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
                     ),
                   },
                   {
-                    title: '单价',
+                    // D-521：改名「入库单价」——与只读区的销售「单价」区分（入库时未填就显示 '-'）
+                    title: '入库单价',
                     width: 110,
                     render: (_: unknown, r: WarehousingRow) => (
                       <span>{r.unitPrice != null ? `¥${Number(r.unitPrice).toFixed(2)}` : '-'}</span>
@@ -294,7 +310,7 @@ const SkuDetailDrawer: React.FC<SkuDetailDrawerProps> = ({ open, onClose, record
                     options={areaOptions}
                   />
                 </Form.Item>
-                <Form.Item name="unitPrice" label="单价（元）">
+                <Form.Item name="unitPrice" label="入库单价（元）">
                   <InputNumber style={{ width: '100%' }} min={0} precision={2} placeholder="入库单价" />
                 </Form.Item>
                 <Form.Item name="remark" label="备注">
