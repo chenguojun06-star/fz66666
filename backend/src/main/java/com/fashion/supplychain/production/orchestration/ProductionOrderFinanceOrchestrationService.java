@@ -69,6 +69,13 @@ public class ProductionOrderFinanceOrchestrationService {
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.service.ClosedOrderAiDataCleanupService closedOrderAiDataCleanupService;
 
+    /**
+     * 电商补货编排器（可选依赖）：生产单关单入库后，解除由「电商缺货补货」生成的缺货预警。
+     * 用 required=false 避免在未启用电商模块时启动失败。
+     */
+    @Autowired(required = false)
+    private com.fashion.supplychain.integration.ecommerce.orchestration.EcReplenishmentOrchestrator ecReplenishmentOrchestrator;
+
     // 事务由调用方 ProductionOrderOrchestrator.completeProduction() 提供（P0铁律#2）
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
         assertCompletePermission();
@@ -86,6 +93,7 @@ public class ProductionOrderFinanceOrchestrationService {
 
         markOrderCompleted(oid, qualifiedSum, order.getStatus());
         pushCompletionWebhook(order, qualifiedSum, orderQty);
+        releaseEcShortageAlertAfterInbound(oid, order.getTenantId());
         backfillPredictionLogs(oid);
         triggerPayrollSettlementGeneration(oid);
 
@@ -425,6 +433,33 @@ public class ProductionOrderFinanceOrchestrationService {
             });
         } catch (Exception e) {
             log.error("[计件薪资] 注册后置任务失败 订单 {}", orderId, e);
+        }
+    }
+
+    /**
+     * 生产单关单（入库完成）后，解除由电商补货建议生成的缺货预警
+     *
+     * <p>这条链路此前是断的：{@code EcReplenishmentOrchestrator.onProductionInbound} 已实现，
+     * 但没有任何调用方，导致「电商缺货 → 转生产 → 生产入库」闭环的最后一跳没有触发。
+     *
+     * <p>放在 afterCommit 执行：解除预警失败不应回滚关单主流程（关单是财务/交付的关键动作）。
+     */
+    private void releaseEcShortageAlertAfterInbound(String orderId, Long tenantId) {
+        if (ecReplenishmentOrchestrator == null || tenantId == null) return;
+        try {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        ecReplenishmentOrchestrator.onProductionInbound(tenantId, orderId);
+                        log.info("[电商补货] 生产单 {} 关单入库，已触发缺货预警解除", orderId);
+                    } catch (Exception e) {
+                        log.warn("[电商补货] 生产单 {} 解除缺货预警失败: {}", orderId, e.getMessage());
+                    }
+                }
+            });
+        } catch (Exception e) {
+            log.warn("[电商补货] 注册缺货预警解除任务失败 订单 {}", orderId, e);
         }
     }
 }

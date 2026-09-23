@@ -1,10 +1,11 @@
 import React from 'react';
-import { Button, Space, Tag, Typography } from 'antd';
+import { Button, Space, Tag, Typography, Popover } from 'antd';
 import {
   CheckCircleOutlined, EyeOutlined, LinkOutlined, CarOutlined, SendOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import StyleImageCell from '@/components/common/StyleImageCell';
+import ProductionProgressHoverCard from '@/components/common/ProductionProgressHoverCard';
 import type { StyleImageMap } from '@/hooks/useStyleCoverImages';
 import { STATUS_MAP, WH_MAP } from './helpers';
 import type { EcOrder } from './types';
@@ -78,7 +79,21 @@ export function buildOrderColumns(args: OrderColumnsArgs): ColumnsType<EcOrder> 
     },
     {
       title: '关联生产单', dataIndex: 'productionOrderNo', width: 140,
-      render: v => v ? <Tag color="blue" icon={<CheckCircleOutlined />}>{v}</Tag> : <Text type="secondary">未关联</Text>,
+      render: v => v
+        ? (
+          <Popover
+            placement="right"
+            mouseEnterDelay={0.3}
+            content={
+              <div style={{ width: 260 }}>
+                <ProductionProgressHoverCard productionOrderNo={v} />
+              </div>
+            }
+          >
+            <Tag color="blue" icon={<CheckCircleOutlined />} style={{ cursor: 'help' }}>{v}</Tag>
+          </Popover>
+        )
+        : <Text type="secondary">未关联</Text>,
     },
     {
       title: '快递', dataIndex: 'trackingNo', width: 130,

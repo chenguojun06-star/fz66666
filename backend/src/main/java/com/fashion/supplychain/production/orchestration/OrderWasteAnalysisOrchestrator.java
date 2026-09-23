@@ -374,16 +374,20 @@ public class OrderWasteAnalysisOrchestrator {
             Map<String, BigDecimal> materialCostMap,
             Map<String, BigDecimal> processCostMap) {
 
+        // 分组键用不可见分隔符，避免"款号+款名"拼接后与另一组撞键（款名里带 "-" 时尤其危险）
         Map<String, List<ProductionOrder>> grouped = orders.stream()
                 .filter(o -> o.getStyleNo() != null && !o.getStyleNo().isEmpty())
-                .collect(Collectors.groupingBy(o -> o.getStyleNo() + "-" + o.getStyleName()));
+                .collect(Collectors.groupingBy(o ->
+                        o.getStyleNo() + "\u0000" + (o.getStyleName() == null ? "" : o.getStyleName())));
 
         return grouped.entrySet().stream()
                 .map(entry -> {
-                    String key = entry.getKey();
-                    String styleNo = key.split("-")[0];
-                    String styleName = key.substring(key.indexOf("-") + 1);
                     List<ProductionOrder> styleOrders = entry.getValue();
+                    // 直接从实体取款号/款名，不用"拼接再 split"反解
+                    // （款号或款名里含 "-" 时反解会错位）
+                    ProductionOrder first = styleOrders.get(0);
+                    String styleNo = first.getStyleNo();
+                    String styleName = first.getStyleName();
 
                     int oq = 0, waste = 0;
                     for (ProductionOrder order : styleOrders) {

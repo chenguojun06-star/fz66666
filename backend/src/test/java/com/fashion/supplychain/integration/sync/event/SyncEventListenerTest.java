@@ -5,6 +5,8 @@ import com.fashion.supplychain.integration.sync.orchestration.ProductSyncOrchest
 import com.fashion.supplychain.integration.sync.service.EcProductMappingService;
 import com.fashion.supplychain.integration.sync.service.EcSyncConfigService;
 import com.fashion.supplychain.integration.sync.entity.EcSyncConfig;
+import com.fashion.supplychain.system.service.BackendActionFlagService;
+import com.fashion.supplychain.system.service.BackendActionFlagService.BackendActionKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -36,8 +38,17 @@ class SyncEventListenerTest {
     @Mock
     private EcProductMappingService mappingService;
 
+    @Mock
+    private BackendActionFlagService backendActionFlagService;
+
     @InjectMocks
     private SyncEventListener listener;
+
+    @BeforeEach
+    void setUp() {
+        // 默认开启"电商库存自动同步"开关，覆盖原有推送行为用例
+        when(backendActionFlagService.isEnabled(anyLong(), any(BackendActionKey.class))).thenReturn(true);
+    }
 
     private EcProductMapping buildMapping() {
         EcProductMapping mapping = new EcProductMapping();
@@ -152,6 +163,23 @@ class SyncEventListenerTest {
             verify(syncOrchestrator).pushStockToPlatform(100L, "TAOBAO", 1L);
             verify(syncOrchestrator).pushStockToPlatform(100L, "JD", 1L);
             verify(syncOrchestrator).pushStockToPlatform(100L, "PDD", 1L);
+        }
+
+        @Test
+        @DisplayName("自动同步开关关闭-只重算本地库存不推送平台")
+        void autoSyncFlagDisabled_doesNotPush() {
+            EcSyncConfig config = new EcSyncConfig();
+            config.setId(1L);
+            config.setPlatformCode("TAOBAO");
+            config.setEnabled(true);
+
+            when(backendActionFlagService.isEnabled(1L, BackendActionKey.AUTO_EC_STOCK_SYNC)).thenReturn(false);
+            when(syncConfigService.listEnabledByTenant(1L)).thenReturn(List.of(config));
+            when(mappingService.listByStyleAndPlatform(100L, "TAOBAO", 1L)).thenReturn(List.of(buildMapping()));
+
+            listener.onStockChange(new StockChangeEvent(this, 100L, 200L, 1L, "OUTBOUND"));
+
+            verify(syncOrchestrator, never()).pushStockToPlatform(anyLong(), anyString(), anyLong());
         }
     }
 

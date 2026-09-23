@@ -109,6 +109,125 @@ Note: Java单元测试源码按项目P0铁律"测试代码隔离"从未提交到
 6. **SKU system**: 款号+颜色+尺码 三维统一，三端共享
 7. **Full copilot instructions** at `.github/copilot-instructions.md` — read it for complete P0/P1 rules
 
+## 第三方平台对接与集成规范（P0 铁律）
+
+本节来自电商模块对接的真实事故复盘，违反任一条都可能造成"看起来成功、实际没生效"的静默故障。
+
+### 禁止模式（Code Review 必查）
+
+1. **禁止"HTTP 200 即成功"**
+   调用第三方 API 后**必须解析业务响应**再判定成败。平台普遍会在 HTTP 200 里返回
+   `error_response`，只看状态码会把失败当成成功。
+   ```java
+   // ❌ 禁止：发完就计数成功
+   httpClient.postJson(url, payload, Map.class);
+   synced++;
+   // ✅ 正确：先校验再计数
+   Map<String,Object> resp = httpClient.postJson(url, payload, Map.class);
+   if (EcPlatformApiSupport.isSuccess(resp)) synced++; else failed++;
+   ```
+2. **禁止无签名直连第三方 API**
+   淘宝/京东/拼多多等强制校验 `sign`。签名统一用 `SignatureUtils.buildSortedSign()`
+   （参数按 key 排序 + 密钥包裹 + MD5 大写，三平台规则一致），**不要自己再写一遍**。
+   签名规则**必须以官方文档的代码示例为准**，并写单测守护拼接内容与顺序。
+   历史教训：顺丰签名曾多拼了 `appKey`，导致**密钥完全正确也会被拒**，
+   现象极像"密钥填错了"，排查成本很高。厂商文档的示例输出有时与自身示例矛盾，
+   以代码示例为准，并在拿到账号后用官方签名测试工具实测确认。
+3. **禁止桩实现混入主干**
+   不允许出现 `return null` / 仅打日志的"占位方法"来冒充已实现功能。
+   确实做不了要显式返回失败（如 `-1`、`false`）并让调用方感知，**不能假装成功**。
+4. **方法名必须与行为一致**
+   名为 `syncXxx` / `pushXxx` 的方法必须真的对外同步；只做本地计算就别叫 sync
+   （历史教训：`EcStockOrchestrator.syncAllStock` 只本地重算，从未推送平台）。
+5. **禁止同一能力在两处各写一套**
+   同一能力只保留一个实现出口，其余处透传调用。历史教训：平台库存拉取在
+   `PlatformNotifyService` 与 `EcStockDiscrepancyOrchestrator` 各写一份，
+   一边修成真实现、另一边仍是桩。
+6. **造轮子前先搜现有工具**
+   新增签名/HTTP/加解密能力前，先查 `integration/util/`（已有 `SignatureUtils`、
+   `IntegrationHttpClient`、`JstApiGuard`）。
+7. **禁止用随机数/常量伪造业务数据**
+   财务对账严禁 `Math.random()` 编造差异，物流严禁 `"SF"+时间戳` 编造运单号。
+   宁可返回"不可用"，也不能编造——假数据会被当真使用（财务据此申诉核账、
+   假运单号被回传电商平台污染真实订单），比功能缺失严重得多。
+   ```java
+   // ❌ 禁止：伪造差异 / 伪造运单号
+   double diff = amount * (Math.random() * 0.1);
+   String mockNo = "SF" + System.currentTimeMillis();
+   // ✅ 正确：做不了就显式返回不可用，让调用方走人工流程
+   return List.of();               // 平台账单拉不到 → 空，不编造
+   throw new LogisticsException("渠道尚未接入真实API，无法自动下单");
+   ```
+8. **Mock/降级实现必须可被识别并拦截**
+   适配器要显式声明自己是否已接入真实 API（参考 `LogisticsService.isRealImplementation()`）。
+   未接入的渠道，其"成功返回"必须被管理器拦截（参考 `LogisticsManager.requireRealChannel`），
+   **不得让编造数据流向下游**。将来真接入后，只需 override 该标识返回 `true` 即自动放行。
+9. **只读接口禁止"缺失即兜底"**
+   看板/悬浮面板/详情这类只读查询，字段查不到就返回 `null` 或 `linked=false` + `reason`，
+   由前端显示"—/暂无数据"。**严禁把缺失写成 0、把未知进度写成 0%、把无交期写成"正常"**——
+   0 和"无数据"在业务上是两回事，兜底会让人把缺失当成真实经营结果。
+   参考 `EcProductionLinkOrchestrator`：`belowSafeStock` 仅在安全库存 >0 时才判定，
+   销量趋势的 0 必须来自真实流水为空，而不是默认值。
+10. **关联字段必须成对写入（id + 单号）**
+   建立跨模块关联时，`xxxId` 与 `xxxNo` 必须同时落库。只写单号会导致
+   `isNull(xxxId)` 这类 SQL 判空条件**静默失效**（条件恒为真）。
+   历史事故：`EcommerceOrder.productionOrderId` 从未赋值，
+   使仓库"待发货需求"把已投产订单重复计入，库存欠数虚高。
+   另外：新增 `xxxId` 字段后要全局搜一次"谁在用 `isNull(xxxId)` 判空"。
+11. **事件类必须有真实发布方（禁止"孤儿监听器"）**
+   定义了 `XxxEvent` + `@EventListener` 监听器，但**生产代码里没有任何
+   `publishEvent`** —— 这条链路就是死代码，且极难发现（编译通过、测试通过、
+   监听器单测也通过，因为测试里自己 `new` 了事件）。
+   自查命令：`grep -rn "publishEvent" backend/src/main` 与
+   `grep -rn "new XxxEvent(" backend/src/main` 必须都能命中。
+   历史事故：`StockChangeEvent` 有两个监听器却无发布方，
+   导致"入库/出库 → 电商库存重算"从未触发，`t_ec_universal_stock` 长期不刷新。
+   修复方式见 `StockChangePublisher`（事务提交后发布 + 解析不到 SKU 就跳过）。
+12. **自动动作事件要过开关，不得绕过"智能化不自动执行"原则**
+   监听器里做**外部**写操作（推平台、发通知）前，必须查
+   `BackendActionFlagService.isEnabled(tenantId, BackendActionKey.XXX)`，
+   与手动入口保持同一开关。只做**本地重算**的分支不受开关限制。
+13. **禁止用字符串切分猜款号（SKU 编码的真实格式）**
+   真实 SKU 编码是「**款号直接拼颜色尺码，没有分隔符**」，
+   例如 `BR24XQ0098E草绿色L(170/84A)`（款号 `BR24XQ0098E`，颜色 `草绿色`，尺码 `L(170/84A)`）。
+   因此下面这些写法在真实数据上**恒不命中**，属于隐性 P0：
+   - `skuCode.split("-")[0]`
+   - `skuCode.indexOf('-')` 取前缀
+   - `likeRight(skuCode, styleNo + "-")`
+   - `eq(skuCode, styleNo)`
+
+   正确做法（按优先级）：
+   1. 有 `style_id` 就用 `style_id` 精确等值（`t_ec_universal_stock` 等表都有该列）；
+   2. 只有 `sku_code` 时，先由 `t_product_sku`（sku_code → style_id）+ `t_style_info`
+      解析出权威款号，再用 `IN (该款全部 sku_code)` 或前缀匹配；
+   3. 解析不到就返回 `null` / 不匹配，**不要退回字符串猜测**。
+
+   历史事故：`EcProductionLinkOrchestrator`、`EcommerceOrderOrchestrator`、
+   `EcStockCalculator`、`ChannelSalesPredictor` 四处都用 `-` 切分猜款号，
+   导致悬浮面板库存永远"暂无数据"、EC 单永远关联不上生产单、待发货占用恒为 0。
+
+### 判断"链路是否打通"的三层验证法
+
+不要只看接口对不对得上就下结论，必须逐层验证：
+
+| 层级 | 验证内容 | 方法 |
+|------|---------|------|
+| 1. 接口层 | 前端调用 ↔ 后端接口是否一一对应 | 静态比对 |
+| 2. 实现层 | 后端方法是真实现还是桩 | **读方法体**：有没有签名、看没看响应、是不是 `return null` |
+| 3. 数据层 | 线上是否真跑通过 | SSH 查库看各表 `COUNT`、看凭证真假、看日志 |
+
+历史教训：电商模块第 1 层全通就误判"链路打通"，实际第 2 层是桩、
+第 3 层订单 0 条且配置凭证为 `admin` 类占位值，从未真实跑通过。
+
+### 新增平台适配器的检查清单
+
+- [ ] 签名已接入（`SignatureUtils`），未自研算法
+- [ ] 每个写操作都校验业务响应，失败计入 `failed` 并回传 `errorMessage`
+- [ ] `pullStock` 等拉取方法有真实实现，失败返回 `-1` 而非一律 `-1`
+- [ ] 无 `success(true)` 硬编码，无"按入参数量填充 null"的占位返回
+- [ ] 已补单元测试覆盖：签名正确性（用真实 MD5 向量）、错误响应判失败
+- [ ] 若为 Mock/降级实现：`isRealImplementation()` 返回 `false`，且其返回值被上游拦截、不外流
+
 ## Auto-Invocation Skills
 
 根据当前任务类型**自动调用**对应技能，无需等待用户指令：

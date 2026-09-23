@@ -16,6 +16,7 @@ import java.util.Base64;
  * - WechatPay V3 (HMAC-SHA256) → buildWechatPaySignMessage() / verifyWechatV3Callback()
  * - SF Express (MD5) → buildSFSignature()
  * - STO Express (MD5) → buildSTOSignature()
+ * - 淘宝TOP / 京东宙斯 / 拼多多 (MD5) → buildSortedSign()
  */
 @Slf4j
 public class SignatureUtils {
@@ -39,6 +40,58 @@ public class SignatureUtils {
         } catch (Exception e) {
             throw new RuntimeException("MD5计算失败", e);
         }
+    }
+
+    // =====================================================
+    // 电商平台通用签名（淘宝TOP / 京东宙斯 / 拼多多）
+    // =====================================================
+
+    /**
+     * 构建「参数排序 + 密钥包裹 + MD5」型签名，大写十六进制。
+     *
+     * <p>淘宝开放平台(TOP)、京东宙斯(routerjson)、拼多多开放平台三者的签名规则
+     * 本质一致，只是参数名不同（淘宝 method/app_key、京东 method/app_key、
+     * 拼多多 type/client_id），故此处提供统一实现：
+     * <pre>
+     *   sign = MD5( secret + k1v1 + k2v2 + ... + secret ).toUpperCase()
+     * </pre>
+     * 其中参数按 key 字典序升序排列，key 与 value 直接拼接（无分隔符），
+     * 首尾各拼一次 appSecret。
+     *
+     * <p><b>注意</b>：调用方需自行排除 sign 字段本身，并已注入 method/app_key/
+     * timestamp/format 等公共参数。嵌套结构（Map/List）会被 JSON 序列化后参与签名，
+     * 与平台对嵌套参数的约定保持一致。
+     *
+     * @param params 待签名参数（不含 sign）
+     * @param secret 平台分配的 AppSecret
+     * @return 大写 MD5 签名
+     */
+    public static String buildSortedSign(java.util.Map<String, Object> params, String secret) {
+        if (params == null) params = java.util.Collections.emptyMap();
+        if (secret == null) secret = "";
+        java.util.TreeMap<String, Object> sorted = new java.util.TreeMap<>(params);
+        StringBuilder sb = new StringBuilder();
+        sb.append(secret);
+        for (java.util.Map.Entry<String, Object> e : sorted.entrySet()) {
+            if (e.getKey() == null || "sign".equals(e.getKey())) continue;
+            sb.append(e.getKey()).append(stringify(e.getValue()));
+        }
+        sb.append(secret);
+        return md5(sb.toString());
+    }
+
+    /** 参数值转字符串：嵌套结构走 JSON 序列化，其余走 String.valueOf */
+    private static String stringify(Object value) {
+        if (value == null) return "";
+        if (value instanceof java.util.Map || value instanceof java.util.Collection) {
+            try {
+                return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(value);
+            } catch (Exception e) {
+                log.warn("[签名] 嵌套参数序列化失败，降级为String.valueOf: {}", e.getMessage());
+                return String.valueOf(value);
+            }
+        }
+        return String.valueOf(value);
     }
 
     // =====================================================
@@ -69,24 +122,40 @@ public class SignatureUtils {
     // =====================================================
 
     /**
-     * 构建顺丰API签名
-     * 规则：Base64(MD5(requestBody + timestamp + AppKey + AppSecret))
+     * 构建顺丰（丰桥/LaaS）API 签名 msgDigest。
      *
-     * @param requestBody JSON请求体（msgData字段内容）
-     * @param timestamp   时间戳（秒级）
-     * @param appKey      顺丰分配的AppKey
-     * @param appSecret   顺丰分配的AppSecret
-     * @return 签名字符串
+     * <p><b>官方规则（简易MD5）</b>：
+     * <pre>
+     *   msgDigest = Base64( MD5( msgData + timestamp + checkWord ) )   // UTF-8
+     * </pre>
+     * 其中 {@code checkWord} 为顺丰分配的「客户校验码」。
      *
-     * 使用示例（在 SFExpressAdapter 中）：
-     *   String msgDigest = SignatureUtils.buildSFSignature(msgData, timestamp, appKey, appSecret);
+     * <p><b>注意：appKey / 顾客编码不参与签名</b>——只拼接 msgData、timestamp、checkWord 三者，
+     * 且顺序固定。历史上本方法曾把 appKey 一并拼入，导致签名与官方规则不符，
+     * 即便填了正确密钥也会被顺丰拒绝（已修正，见 {@code SignatureUtilsTest} 中的官方测试向量）。
+     *
+     * <p>官方文档：https://open.sf-express.com/developSupport/195960 （鉴权方式-数字签名-简易MD5）
+     * <p>官方测试向量（务必保持一致）：
+     * <pre>
+     *   msgData   = {"language":"zh-CN","orderId":"QIAO-20200618-004"}
+     *   timestamp = 12312334453453
+     *   checkWord = fjcg5PGKaNpPSHFAZ4QsCOkV71R3zVci
+     *   msgDigest = IIKJtuLVzoFTu4kHI8M8vA==
+     * </pre>
+     *
+     * @param msgData   JSON业务报文（msgData字段原文，不做URL编码）
+     * @param timestamp 时间戳（与报文中的 timestamp 一致）
+     * @param checkWord 顺丰分配的客户校验码
+     * @return Base64 编码的签名（msgDigest）
      */
-    public static String buildSFSignature(String requestBody, String timestamp,
-                                          String appKey, String appSecret) {
-        // 顺丰签名规则
-        String toSign = requestBody + timestamp + appKey + appSecret;
-        byte[] md5Bytes = md5Raw(toSign);
-        return Base64.getEncoder().encodeToString(md5Bytes);
+    public static String buildSFSignature(String msgData, String timestamp, String checkWord) {
+        String toSign = nullToEmpty(msgData) + nullToEmpty(timestamp) + nullToEmpty(checkWord);
+        return Base64.getEncoder().encodeToString(md5Raw(toSign));
+    }
+
+    /** null 安全：参与签名拼接时 null 视为空串 */
+    private static String nullToEmpty(String s) {
+        return s == null ? "" : s;
     }
 
     private static byte[] md5Raw(String content) {

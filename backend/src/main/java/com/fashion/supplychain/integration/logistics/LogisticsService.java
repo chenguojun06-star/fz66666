@@ -78,6 +78,23 @@ public interface LogisticsService {
     boolean validateAddress(String province, String city, String district);
 
     /**
+     * 该渠道是否已接入真实第三方 API。
+     *
+     * <p><b>为什么需要它</b>：目前 8 家快递适配器均为 Mock 实现——运单号是
+     * {@code "SF" + 时间戳} 拼的、轨迹是编造的、运费是写死的常量。
+     * 若把这些假运单号回传给真实电商平台，会污染平台侧的真实订单。
+     * 因此需要一个显式标识来区分"真接入"与"Mock"。
+     *
+     * <p><b>默认返回 false</b>：未接入的适配器无需改动；将来某家真正接入 API 后，
+     * 在其适配器内 override 本方法返回 {@code true} 即可，阻断逻辑会自动放行该渠道。
+     *
+     * @return true=已接入真实API；false=Mock/降级实现（其运单号不可信、不得外传）
+     */
+    default boolean isRealImplementation() {
+        return false;
+    }
+
+    /**
      * 物流公司类型枚举
      */
     enum LogisticsType {

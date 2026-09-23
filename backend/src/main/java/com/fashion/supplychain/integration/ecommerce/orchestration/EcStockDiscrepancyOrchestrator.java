@@ -5,20 +5,13 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
 import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
 import com.fashion.supplychain.integration.ecommerce.service.PlatformNotifyService;
-import com.fashion.supplychain.integration.sync.adapter.EcPlatformAdapter;
-import com.fashion.supplychain.integration.sync.adapter.EcPlatformAdapterRegistry;
-import com.fashion.supplychain.integration.sync.dto.EcStockPullResult;
-import com.fashion.supplychain.integration.sync.dto.EcSyncContext;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.service.ProductSkuService;
-import com.fashion.supplychain.system.entity.EcPlatformConfig;
-import com.fashion.supplychain.system.service.EcPlatformConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -37,12 +30,6 @@ public class EcStockDiscrepancyOrchestrator {
 
     @Autowired(required = false)
     private PlatformNotifyService platformNotifyService;
-
-    @Autowired(required = false)
-    private EcPlatformAdapterRegistry platformAdapterRegistry;
-
-    @Autowired(required = false)
-    private EcPlatformConfigService ecPlatformConfigService;
 
     private static final int DISCREPANCY_THRESHOLD_QTY = 5;
     private static final double DISCREPANCY_THRESHOLD_RATIO = 0.10;
@@ -255,62 +242,44 @@ public class EcStockDiscrepancyOrchestrator {
     }
 
     /**
-     * 真实拉取平台库存。
+     * 拉取平台真实库存。
      *
-     * <p>优先走 {@link EcPlatformAdapterRegistry} 真实适配器（如聚水潭 OpenAPI）。
-     * 适配器不可用或平台未配置凭证时返回 -1（标记为"平台库存不可用"），
-     * 差异检测将跳过该 SKU，避免用随机数产生假差异。
+     * <p>实现下沉到 {@link PlatformNotifyService#fetchPlatformStock}，此处仅做透传，
+     * 避免在两处各写一套"遍历适配器"的逻辑（此前正是这种重复导致一边修了另一边还是桩）。
+     *
+     * @return 平台库存；-1 表示平台库存不可用，差异检测会跳过该 SKU，不产生假差异
      */
     private int fetchPlatformStock(Long tenantId, String skuCode) {
-        if (!StringUtils.hasText(skuCode)) {
+        if (platformNotifyService == null) {
             return -1;
         }
-        // 优先走真实适配器
-        if (platformAdapterRegistry != null && ecPlatformConfigService != null) {
-            try {
-                // 遍历该租户已配置的所有平台，找到第一个能拉到库存的
-                for (String platformCode : platformAdapterRegistry.getSupportedPlatforms()) {
-                    EcPlatformConfig cfg = ecPlatformConfigService.getByTenantAndPlatform(tenantId, platformCode);
-                    if (cfg == null || !"ACTIVE".equals(cfg.getStatus())) continue;
-                    if (!StringUtils.hasText(cfg.getAppKey()) || !StringUtils.hasText(cfg.getAppSecret())) continue;
-
-                    Optional<EcPlatformAdapter> adapterOpt = platformAdapterRegistry.findAdapter(platformCode);
-                    if (adapterOpt.isEmpty()) continue;
-
-                    EcSyncContext ctx = EcSyncContext.builder()
-                            .tenantId(tenantId)
-                            .platformCode(platformCode)
-                            .appId(cfg.getAppKey())
-                            .appSecret(cfg.getAppSecret())
-                            .build();
-                    EcStockPullResult pullResult = adapterOpt.get().pullStock(ctx, Collections.singletonList(skuCode));
-                    if (pullResult != null && pullResult.getStockMap() != null) {
-                        Integer qty = pullResult.getStockMap().get(skuCode);
-                        if (qty != null && qty >= 0) {
-                            return qty;
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("[EcStockDiscrepancy] 真实拉取平台库存失败 tenantId={} skuCode={} 原因={}",
-                        tenantId, skuCode, e.getMessage());
-            }
-        }
-        // 平台库存不可用，返回 -1 标记（不再用随机数模拟）
-        log.debug("[EcStockDiscrepancy] 平台库存不可用 tenantId={} skuCode={} 返回-1跳过差异检测", tenantId, skuCode);
-        return -1;
+        return platformNotifyService.fetchPlatformStock(tenantId, skuCode);
     }
 
+    /**
+     * 以本地库存为准同步到平台。
+     *
+     * <p>此前 updatePlatformStock 是"只打日志"的空壳，这里即便推送失败也照常打
+     * "同步完成"，属于假成功。现在依据真实返回值记录成功/失败。
+     */
     private void syncLocalToPlatform(Long tenantId, EcUniversalStock stock) {
-        if (platformNotifyService != null) {
-            try {
-                platformNotifyService.updatePlatformStock(tenantId, stock.getSkuCode(), stock.getAvailableStock());
-            } catch (Exception e) {
-                log.warn("[EcStockDiscrepancy] 同步本地库存到平台失败: {}", e.getMessage());
-            }
+        if (platformNotifyService == null) {
+            log.warn("[EcStockDiscrepancy] 平台通知服务未装配，库存未同步 skuCode={}", stock.getSkuCode());
+            return;
         }
-        log.info("[EcStockDiscrepancy] 同步本地库存到平台: skuCode={}, stock={}",
-                stock.getSkuCode(), stock.getAvailableStock());
+        try {
+            boolean ok = platformNotifyService.updatePlatformStock(
+                    tenantId, stock.getSkuCode(), stock.getAvailableStock());
+            if (ok) {
+                log.info("[EcStockDiscrepancy] 本地库存已同步到平台 skuCode={} stock={}",
+                        stock.getSkuCode(), stock.getAvailableStock());
+            } else {
+                log.warn("[EcStockDiscrepancy] 本地库存同步到平台失败 skuCode={} stock={}（平台未配置凭证或适配器不可用）",
+                        stock.getSkuCode(), stock.getAvailableStock());
+            }
+        } catch (Exception e) {
+            log.warn("[EcStockDiscrepancy] 同步本地库存到平台异常: {}", e.getMessage());
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)

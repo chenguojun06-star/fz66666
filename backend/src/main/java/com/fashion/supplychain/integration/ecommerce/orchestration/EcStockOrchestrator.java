@@ -8,8 +8,11 @@ import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
 import com.fashion.supplychain.integration.ecommerce.service.EcPurchaseSuggestionService;
 import com.fashion.supplychain.integration.ecommerce.service.EcStockAlertService;
 import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
+import com.fashion.supplychain.integration.ecommerce.service.PlatformNotifyService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.service.ProductSkuService;
+import com.fashion.supplychain.system.service.BackendActionFlagService;
+import com.fashion.supplychain.system.service.BackendActionFlagService.BackendActionKey;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -28,13 +31,66 @@ public class EcStockOrchestrator {
     @Autowired private EcPurchaseSuggestionService purchaseSuggestionService;
     @Autowired private ProductSkuService productSkuService;
 
+    /** 平台库存推送（真实推送到电商平台的唯一出口），集成模块未启用时可缺省 */
+    @Autowired(required = false) private PlatformNotifyService platformNotifyService;
+    /** 后端动作开关：控制是否自动推送库存到平台 */
+    @Autowired(required = false) private BackendActionFlagService backendActionFlagService;
+
+    /**
+     * 全量重算本地电商库存并生成预警。
+     *
+     * <p><b>语义澄清</b>：本方法名含"同步"，但历史上<b>只做本地重算</b>——
+     * 依据生产/入库数据重算 EcUniversalStock 并触发低库存预警，
+     * <b>不会把库存推到任何电商平台</b>。这个名实不符曾导致误判
+     * （以为点一次就能把库存同步到淘宝/京东）。
+     *
+     * <p>如需真正推送到平台，请调用 {@link #pushStockToPlatform}（受开关控制）。
+     */
     @Transactional(rollbackFor = Exception.class)
     public void syncAllStock(Long tenantId) {
         TenantAssert.requireTenantId();
         productSkuService.listByTenantId(tenantId).stream()
                 .forEach(sku -> universalStockService.recalculateStock(tenantId, sku.getStyleId(), sku.getId()));
         checkAndCreateAlerts(tenantId);
-        log.info("[EcStockOrchestrator] 全量库存同步完成: tenantId={}", tenantId);
+        log.info("[EcStockOrchestrator] 本地库存重算完成: tenantId={}", tenantId);
+    }
+
+    /**
+     * 将本地库存真正推送到电商平台。
+     *
+     * <p>与 {@link #syncAllStock}（仅本地重算）区分开，本方法才是对外同步。
+     * 遵循"智能化不自动执行，让用户可以设置"的原则，受
+     * {@link BackendActionKey#AUTO_EC_STOCK_SYNC} 开关控制：关闭时只记录日志、不推送。
+     *
+     * @return 成功推送的 SKU 数量
+     */
+    public int pushStockToPlatform(Long tenantId) {
+        TenantAssert.requireTenantId();
+        if (platformNotifyService == null) {
+            log.warn("[EcStockOrchestrator] 平台通知服务未装配，无法推送库存 tenantId={}", tenantId);
+            return 0;
+        }
+        boolean enabled = backendActionFlagService != null
+                && backendActionFlagService.isEnabled(tenantId, BackendActionKey.AUTO_EC_STOCK_SYNC);
+        if (!enabled) {
+            log.info("[EcStockOrchestrator] 电商库存自动同步开关未开启，仅本地库存不推送平台 tenantId={}", tenantId);
+            return 0;
+        }
+        List<EcUniversalStock> stocks = universalStockService.listByTenant(tenantId);
+        int pushed = 0, failed = 0;
+        for (EcUniversalStock stock : stocks) {
+            if (stock.getSkuCode() == null) continue;
+            boolean ok = platformNotifyService.updatePlatformStock(
+                    tenantId, stock.getSkuCode(), stock.getAvailableStock());
+            if (ok) {
+                pushed++;
+            } else {
+                failed++;
+            }
+        }
+        log.info("[EcStockOrchestrator] 库存推送平台完成: tenantId={}, 成功={}, 失败={}",
+                tenantId, pushed, failed);
+        return pushed;
     }
 
     @Transactional(rollbackFor = Exception.class)

@@ -82,6 +82,8 @@ public class ExpressOrderOrchestrator {
                 .paymentMethod(ShippingRequest.PaymentMethod.SENDER_PAY)
                 .build();
 
+        // 注意：若该渠道尚未接入真实第三方 API，LogisticsManager 会直接抛异常，
+        // 绝不会返回 Mock 运单号——避免假运单号落库后被回传到真实电商平台。
         ShippingResponse resp = logisticsManager.createShipment(request);
 
         ExpressOrder expressOrder = new ExpressOrder();

@@ -76,7 +76,12 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
       });
       if (res.data) {
         setFeeMap(res.data);
-        message.success('运费估算完成');
+        const usable = Object.values(res.data as Record<string, number>).some(v => typeof v === 'number' && v >= 0);
+        if (usable) {
+          message.success('运费估算完成');
+        } else {
+          message.warning('各快递渠道均未接入真实API，暂无法比价');
+        }
       }
     } catch {
       message.warning('运费估算失败，请稍后重试');
@@ -128,13 +133,16 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
       const res = await api.get(`/express-order/track/${result.trackingNo}`, {
         params: { companyCode: result.companyCode || 1 },
       });
-      if (res.data && Array.isArray(res.data)) {
+      // 只展示后端真实返回的轨迹；拉不到就明确提示，不编造"已揽收"等假轨迹
+      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
         setTrackList(res.data);
       } else {
-        setTrackList([{ time: new Date().toLocaleString(), status: '已揽收', desc: '运单已创建，等待快递员揽收' }]);
+        setTrackList([]);
+        message.info('暂未查询到物流轨迹，请稍后在快递公司官网核实');
       }
     } catch {
-      setTrackList([{ time: new Date().toLocaleString(), status: '已揽收', desc: '运单已创建，物流信息稍后更新' }]);
+      setTrackList([]);
+      message.warning('物流轨迹查询失败，请稍后重试');
     } finally {
       setTracking(false);
     }
@@ -143,7 +151,9 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
   const selectedCompany = Form.useWatch('expressCompany', form);
   const _selectedWeight = Form.useWatch('weight', form);
   const companyShort = EXPRESS_COMPANIES.find(c => c.code === selectedCompany)?.short || 'SF';
-  const currentFee = feeMap[companyShort] ?? null;
+  // 后端对未接入真实API的渠道返回 -1（不可用），不能当成 0 元或负运费展示
+  const rawFee = feeMap[companyShort];
+  const currentFee = typeof rawFee === 'number' && rawFee >= 0 ? rawFee : null;
 
   if (!order) return null;
 
@@ -220,6 +230,15 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
         />
       ) : (
         <Form form={form} layout="vertical">
+          {/* 提示：8家快递渠道尚未接入真实第三方API，自动下单会被后端拦截。
+              待某渠道真实接入后，后端放行，此处提示可移除。 */}
+          <Alert
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+            title="自动下单暂不可用"
+            description="当前快递渠道均未接入真实第三方API，系统不会生成运单号。请先在快递公司后台人工下单，再到出库环节填写真实运单号。"
+          />
           <Descriptions column={2} size="small" bordered style={{ marginBottom: 16 }}>
             <Descriptions.Item label="订单号">{order.orderNo}</Descriptions.Item>
             <Descriptions.Item label="平台单号">{order.platformOrderNo}</Descriptions.Item>

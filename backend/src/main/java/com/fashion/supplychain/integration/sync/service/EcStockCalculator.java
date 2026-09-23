@@ -40,7 +40,7 @@ public class EcStockCalculator {
         }
         int warehousedQty = sumWarehousedByStyle(styleId);
         int outstockedQty = sumOutstockedByStyle(styleId);
-        int pendingShipQty = sumPendingShipByStyle(sku.getStyleNo());
+        int pendingShipQty = sumPendingShipByStyle(styleId);
         int buffer = DEFAULT_BUFFER;
         return Math.max(0, warehousedQty - outstockedQty - pendingShipQty - buffer);
     }
@@ -75,23 +75,38 @@ public class EcStockCalculator {
                 .sum();
     }
 
-    private int sumPendingShipByStyle(String styleNo) {
-        if (styleNo == null) {
+    /**
+     * 待发货占用量：按该款下<b>真实 SKU 编码</b>精确匹配电商订单。
+     *
+     * <p>不要用 {@code indexOf('-')} 之类的字符串切分去猜款号：真实 SKU 编码是
+     * "款号直接拼颜色尺码"（如 {@code BR24XQ0098E草绿色L(170/84A)}），不含分隔符，
+     * 切分结果恒等于整串，会导致待发货占用永远统计为 0（可售库存虚高）。
+     */
+    private int sumPendingShipByStyle(Long styleId) {
+        List<String> skuCodes = skuCodesOfStyle(styleId);
+        if (skuCodes.isEmpty()) {
             return 0;
         }
         List<EcommerceOrder> orders = ecommerceOrderService.list(new QueryWrapper<EcommerceOrder>()
-                .eq("status", 1));
+                .eq("status", 1)
+                .in("sku_code", skuCodes));
         return orders.stream()
-                .filter(o -> styleNo.equals(extractStyleNo(o.getSkuCode())))
                 .mapToInt(o -> o.getQuantity() != null ? o.getQuantity() : 0)
                 .sum();
     }
 
-    private String extractStyleNo(String skuCode) {
-        if (skuCode == null) {
-            return null;
+    /** 该款下的全部内部 SKU 编码（用于精确匹配只有 sku_code 的电商订单表） */
+    private List<String> skuCodesOfStyle(Long styleId) {
+        if (styleId == null) {
+            return List.of();
         }
-        int dashIdx = skuCode.indexOf('-');
-        return dashIdx > 0 ? skuCode.substring(0, dashIdx) : skuCode;
+        return productSkuService.list(new QueryWrapper<ProductSku>()
+                        .select("sku_code")
+                        .eq("style_id", styleId))
+                .stream()
+                .map(ProductSku::getSkuCode)
+                .filter(c -> c != null && !c.isBlank())
+                .distinct()
+                .toList();
     }
 }

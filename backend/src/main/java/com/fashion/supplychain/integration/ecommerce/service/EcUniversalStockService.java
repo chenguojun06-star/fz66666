@@ -96,7 +96,9 @@ public class EcUniversalStockService extends ServiceImpl<EcUniversalStockMapper,
         int totalOut = hasAnyWarehouseData ? sumOutstocked(tenantId, safeStyleId, skuCode, null) : 0;
         int pending = sumPendingShip(tenantId, skuCode);
         int onWayProd = calculateOnWayProduction(tenantId, safeStyleId, sku);
-        int buffer = 5;
+        // 缓冲库存读取列值（新建行为 5），与 recalculateSingle 口径一致；
+        // 原实现硬编码 5，会让"可售库存"恒定比 入库-出库-待发 少 5 件且不可配置
+        int buffer = total.getBufferStock() != null ? total.getBufferStock() : 5;
         total.setTotalWarehoused(totalIn);
         total.setTotalOutstock(totalOut);
         total.setPendingOrders(pending);

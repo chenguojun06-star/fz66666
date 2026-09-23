@@ -18,6 +18,7 @@ import type { ProductionOrder } from '@/types/production';
 
 import { useSmartOrderHoverCardData } from './SmartOrderHoverCard/useSmartOrderHoverCardData';
 import HeaderSection from './SmartOrderHoverCard/components/HeaderSection';
+import EcDynamicsSection from './SmartOrderHoverCard/components/EcDynamicsSection';
 import AlertsSection from './SmartOrderHoverCard/components/AlertsSection';
 import InProgressList from './SmartOrderHoverCard/components/InProgressList';
 import NextList from './SmartOrderHoverCard/components/NextList';
@@ -53,6 +54,9 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   return (
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 12, lineHeight: 1.5, boxSizing: 'border-box' }}>
       <HeaderSection order={order} deadline={deadline} />
+
+      {/* 电商动态：关联了电商单才渲染，让生产端直接看到销售侧状态/销量/库存联动 */}
+      <EcDynamicsSection order={order} />
 
       <AlertsSection
         order={order}

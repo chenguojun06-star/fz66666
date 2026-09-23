@@ -11,7 +11,10 @@ import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderServi
 import com.fashion.supplychain.integration.ecommerce.service.PlatformNotifyService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.style.entity.ProductSku;
+import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.ProductSkuService;
+import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -45,6 +48,9 @@ public class EcommerceOrderOrchestrator {
 
     @Autowired
     private ProductSkuService productSkuService;
+
+    @Autowired
+    private StyleInfoService styleInfoService;
 
     @Autowired
     private EcOrderProcessOrchestrator orderProcessOrchestrator;
@@ -112,11 +118,13 @@ public class EcommerceOrderOrchestrator {
         log.info("[EC接入] 平台={} 平台单号={} 内部单号={} tenantId={}", platformCode, platformOrderNo, order.getOrderNo(), tenantId);
 
         try {
-            // 优先用 body 里的 styleNo（聚水潭 i_id 直接=款号），
-            // 没有则从 skuCode 提取第一段（shop_sku_id 格式 = 款号-颜色-尺码）
+            // 优先用 body 里的 styleNo（聚水潭 i_id 直接=款号）；
+            // 没有则按 skuCode 查 t_product_sku → t_style_info 权威解析款号。
+            // 注意：真实 SKU 编码是"款号直接拼颜色尺码"（如 BR24XQ0098E草绿色L(170/84A)），
+            // 曾用 split("-")[0] 猜款号，对真实数据恒等于整串，导致 EC↔生产 关联全部匹配不上。
             String styleNo = (String) body.getOrDefault("styleNo", "");
             if (!StringUtils.hasText(styleNo) && StringUtils.hasText(order.getSkuCode())) {
-                styleNo = order.getSkuCode().split("-")[0];
+                styleNo = resolveStyleNoBySkuCode(tenantId, order.getSkuCode());
             }
             if (StringUtils.hasText(styleNo)) {
                 ProductionOrder matched = productionOrderService.getOne(
@@ -128,6 +136,7 @@ public class EcommerceOrderOrchestrator {
                                 .orderByAsc(ProductionOrder::getCreateTime)
                                 .last("LIMIT 1"), false);
                 if (matched != null) {
+                    order.setProductionOrderId(matched.getId());
                     order.setProductionOrderNo(matched.getOrderNo());
                     order.setWarehouseStatus(1);
                     ecOrderService.updateById(order);
@@ -163,6 +172,33 @@ public class EcommerceOrderOrchestrator {
         }
 
         return Map.of("id", order.getId(), "orderNo", order.getOrderNo(), "duplicate", false);
+    }
+
+    /**
+     * 按 SKU 编码解析款号（权威口径：t_product_sku → t_style_info）。
+     *
+     * <p>不要用字符串切分猜款号：真实 SKU 编码是"款号直接拼颜色尺码"，
+     * 例如 {@code BR24XQ0098E草绿色L(170/84A)}，不含分隔符。
+     * 解析不到时返回 null，由调用方决定是否跳过匹配（不编造款号）。
+     */
+    private String resolveStyleNoBySkuCode(Long tenantId, String skuCode) {
+        if (!StringUtils.hasText(skuCode) || productSkuService == null || styleInfoService == null) {
+            return null;
+        }
+        try {
+            ProductSku sku = productSkuService.getOne(new LambdaQueryWrapper<ProductSku>()
+                    .eq(ProductSku::getSkuCode, skuCode)
+                    .eq(ProductSku::getTenantId, tenantId)
+                    .last("LIMIT 1"), false);
+            if (sku == null || sku.getStyleId() == null) {
+                return null;
+            }
+            StyleInfo style = styleInfoService.getById(sku.getStyleId());
+            return style == null ? null : style.getStyleNo();
+        } catch (Exception e) {
+            log.warn("[EC自动匹配] SKU→款号解析失败 skuCode={}: {}", skuCode, e.getMessage());
+            return null;
+        }
     }
 
     public IPage<EcommerceOrder> listOrders(Map<String, Object> params) {
@@ -316,23 +352,35 @@ public class EcommerceOrderOrchestrator {
         if (order == null) throw new IllegalArgumentException("电商订单不存在或无权操作: " + ecOrderId);
         order.setProductionOrderNo(productionOrderNo);
         order.setWarehouseStatus(1);
+
+        // 先查出生产订单：既用于回填 productionOrderId（保证「是否已关联生产」可被 SQL 直接判定），
+        // 也用于回写 platformCode（仅在未设置时，避免覆盖人工设置）
+        ProductionOrder prodOrder = null;
+        try {
+            prodOrder = productionOrderService.getOne(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .eq(ProductionOrder::getOrderNo, productionOrderNo)
+                            .eq(ProductionOrder::getTenantId, tenantId));
+        } catch (Exception e) {
+            log.warn("[EC关联] 查询生产订单失败，仅写入单号: prodOrderNo={} {}", productionOrderNo, e.getMessage());
+        }
+        if (prodOrder != null) {
+            order.setProductionOrderId(prodOrder.getId());
+        } else {
+            log.warn("[EC关联] 未找到生产订单 {}，productionOrderId 将保持为空", productionOrderNo);
+        }
         ecOrderService.updateById(order);
-        // 回写 platformCode 到生产订单（仅在未设置时，避免覆盖人工设置）
-        if (StringUtils.hasText(order.getPlatform())) {
+
+        if (prodOrder != null && StringUtils.hasText(order.getPlatform())
+                && !StringUtils.hasText(prodOrder.getPlatformCode())) {
             try {
-                ProductionOrder prodOrder = productionOrderService.getOne(
-                        new LambdaQueryWrapper<ProductionOrder>()
-                                .eq(ProductionOrder::getOrderNo, productionOrderNo)
-                                .eq(ProductionOrder::getTenantId, tenantId));
-                if (prodOrder != null && !StringUtils.hasText(prodOrder.getPlatformCode())) {
-                    productionOrderService.lambdaUpdate()
-                            .eq(ProductionOrder::getId, prodOrder.getId())
-                            .eq(ProductionOrder::getTenantId, tenantId)
-                            .set(ProductionOrder::getPlatformCode, order.getPlatform())
-                            .update();
-                    log.info("[EC关联] 回写 platformCode 到生产订单: prodOrderNo={} platform={}",
-                            productionOrderNo, order.getPlatform());
-                }
+                productionOrderService.lambdaUpdate()
+                        .eq(ProductionOrder::getId, prodOrder.getId())
+                        .eq(ProductionOrder::getTenantId, tenantId)
+                        .set(ProductionOrder::getPlatformCode, order.getPlatform())
+                        .update();
+                log.info("[EC关联] 回写 platformCode 到生产订单: prodOrderNo={} platform={}",
+                        productionOrderNo, order.getPlatform());
             } catch (Exception e) {
                 log.warn("[EC关联] 回写 platformCode 失败，不阻断关联: prodOrderNo={} {}", productionOrderNo, e.getMessage());
             }

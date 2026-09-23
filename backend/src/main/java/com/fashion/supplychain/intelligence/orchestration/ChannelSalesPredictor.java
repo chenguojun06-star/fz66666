@@ -97,15 +97,22 @@ public class ChannelSalesPredictor {
         Long tenantId = UserContext.tenantId();
         List<EcSalesRevenue> allRecords = querySalesRevenue(tenantId, null);
 
-        // 按 styleNo 分组（从 skuCode 前缀提取）
+        // 按 styleNo 分组：真实 SKU 编码是"款号直接拼颜色尺码"（无分隔符），
+        // 不能用 indexOf('-') 猜款号；改为"按请求款号做最长前缀匹配"，
+        // 长款号优先，避免 A100 抢走 A1001 的记录
+        List<String> sortedStyleNos = styleNos.stream()
+                .filter(StringUtils::hasText)
+                .sorted(Comparator.comparingInt(String::length).reversed())
+                .toList();
         Map<String, List<EcSalesRevenue>> byStyle = new HashMap<>();
         for (EcSalesRevenue r : allRecords) {
             String sku = r.getSkuCode();
             if (!StringUtils.hasText(sku)) continue;
-            int dash = sku.indexOf('-');
-            String style = dash > 0 ? sku.substring(0, dash) : sku;
-            if (styleNos.contains(style)) {
-                byStyle.computeIfAbsent(style, k -> new ArrayList<>()).add(r);
+            for (String style : sortedStyleNos) {
+                if (sku.startsWith(style)) {
+                    byStyle.computeIfAbsent(style, k -> new ArrayList<>()).add(r);
+                    break;
+                }
             }
         }
 
@@ -249,9 +256,10 @@ public class ChannelSalesPredictor {
             // 限制近2年数据，避免大数据量租户全表扫描导致 OOM
             // 渠道预测/绩效分析只关注近期数据，历史数据无预测价值
             wrapper.ge(EcSalesRevenue::getCreateTime, LocalDateTime.now().minusYears(2));
-            // 按款号过滤：skuCode 格式为 "款号-颜色-尺码"，用 likeRight 前缀匹配
+            // 按款号过滤：真实 SKU 编码是"款号直接拼颜色尺码"（如 BR24XQ0098E草绿色L(170/84A)），
+            // 不含分隔符，前缀匹配即可。曾写成 styleNo + "-"，对真实数据恒不命中。
             if (StringUtils.hasText(styleNo)) {
-                wrapper.likeRight(EcSalesRevenue::getSkuCode, styleNo + "-");
+                wrapper.likeRight(EcSalesRevenue::getSkuCode, styleNo);
             }
             return ecSalesRevenueService.list(wrapper);
         } catch (Exception e) {

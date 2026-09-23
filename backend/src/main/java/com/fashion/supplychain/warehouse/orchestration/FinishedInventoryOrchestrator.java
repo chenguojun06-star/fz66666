@@ -209,7 +209,10 @@ public class FinishedInventoryOrchestrator {
             List<EcommerceOrder> pendingOrders = ecommerceOrderService.list(new LambdaQueryWrapper<EcommerceOrder>()
                     .eq(EcommerceOrder::getTenantId, tenantId)
                     .eq(EcommerceOrder::getStatus, 1) // 待发货
-                    .isNull(EcommerceOrder::getProductionOrderId)
+                    // 仅统计「尚未关联生产单」的待发货订单，避免同一批需求既算在途生产、又算待发货（重复计数）。
+                    // 同时判空 id 与单号：老数据只写了 productionOrderNo、没写 productionOrderId。
+                    .and(w -> w.isNull(EcommerceOrder::getProductionOrderId)
+                               .isNull(EcommerceOrder::getProductionOrderNo))
                     .in(EcommerceOrder::getSkuCode, styleNos) // skuCode 包含 styleNo
                     .isNotNull(EcommerceOrder::getSkuCode));
             for (EcommerceOrder order : pendingOrders) {

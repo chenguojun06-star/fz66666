@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * B2B 分销订单 Orchestrator（Phase 4）
@@ -38,6 +39,15 @@ public class B2BOrderOrchestrator {
     private final EcommerceOrderService orderService;
     private final DistributorProfileService profileService;
     private final DistributorOrchestrator distributorOrchestrator;
+
+    /**
+     * 订单号序号发生器。
+     *
+     * <p>此前订单号后缀用 {@code (int)(Math.random()*1000)}，同一秒内创建多单会以约
+     * 1/1000 的概率撞号，且不可重放、不利于排查。改为"毫秒时间戳 + 进程内自增序号"，
+     * 冲突概率降到可忽略；序号取模 10000 循环使用（毫秒级已足够分散）。
+     */
+    private static final AtomicInteger ORDER_NO_SEQ = new AtomicInteger(0);
 
     /** B2B 订单列表 */
     public List<EcommerceOrder> listB2BOrders(String keyword, String distributorLevel, Integer status) {
@@ -110,8 +120,7 @@ public class B2BOrderOrchestrator {
         order.setTenantId(tenantId);
         order.setOrderType("B2B");
         if (order.getOrderNo() == null || order.getOrderNo().isBlank()) {
-            order.setOrderNo("B2B-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-                    + "-" + (int) (Math.random() * 1000));
+            order.setOrderNo(generateOrderNo());
         }
         if (order.getPlatform() == null) order.setPlatform("B2B");
         if (order.getStatus() == null) order.setStatus(1); // 待发货
@@ -121,6 +130,18 @@ public class B2BOrderOrchestrator {
         log.info("[B2BOrder] 创建 B2B 订单 tenantId={} orderNo={} distributorId={} supplyPrice={} total={}",
                 tenantId, order.getOrderNo(), order.getDistributorId(), supplyPrice, order.getTotalAmount());
         return order;
+    }
+
+    /**
+     * 生成 B2B 订单号：B2B + 毫秒时间戳 + 4 位自增序号
+     *
+     * <p>替代原 {@code Math.random()*1000} 方案——随机数后缀在并发下单时会撞号，
+     * 且订单号不可追溯。现方案在单JVM内保证序号递增，配合毫秒时间戳实际不会重复。
+     */
+    private String generateOrderNo() {
+        String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+        int seq = ORDER_NO_SEQ.incrementAndGet() % 10000;
+        return "B2B-" + ts + "-" + String.format("%04d", seq);
     }
 
     /**

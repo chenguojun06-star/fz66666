@@ -8,6 +8,7 @@ import com.fashion.supplychain.integration.config.AlipayProperties;
 import com.fashion.supplychain.integration.config.SFExpressProperties;
 import com.fashion.supplychain.integration.config.STOProperties;
 import com.fashion.supplychain.integration.config.WechatPayProperties;
+import com.fashion.supplychain.integration.logistics.LogisticsService;
 import com.fashion.supplychain.integration.record.entity.IntegrationCallbackLog;
 import com.fashion.supplychain.integration.record.entity.IntegrationChannelConfig;
 import com.fashion.supplychain.integration.record.entity.LogisticsRecord;
@@ -45,12 +46,27 @@ public class IntegrationDashboardController {
     private final IntegrationRecordService recordService;
     private final com.fashion.supplychain.integration.orchestration.ChannelConfigOrchestrator channelConfigOrchestrator;
 
-    /** 渠道元数据定义 */
+    /** 物流渠道实现（用于判断该渠道是否已真正接入第三方API） */
+    private final List<LogisticsService> logisticsServices;
+
+    /**
+     * 渠道元数据定义。
+     *
+     * <p>物流渠道的 {@code webhook} 只有在<b>回调端点真实存在</b>时才填写——
+     * 未建端点却对外展示回调地址，会让运营误以为配好地址就能收到推送。
+     */
     private static final List<Map<String, String>> CHANNEL_META = List.of(
             Map.of("name", "支付宝", "category", "PAYMENT", "code", "ALIPAY", "webhook", "/api/webhook/payment/alipay"),
             Map.of("name", "微信支付", "category", "PAYMENT", "code", "WECHAT_PAY", "webhook", "/api/webhook/payment/wechat"),
             Map.of("name", "顺丰速运", "category", "LOGISTICS", "code", "SF", "webhook", "/api/webhook/logistics/sf"),
-            Map.of("name", "申通快递", "category", "LOGISTICS", "code", "STO", "webhook", "/api/webhook/logistics/sto")
+            Map.of("name", "申通快递", "category", "LOGISTICS", "code", "STO", "webhook", "/api/webhook/logistics/sto"),
+            // 以下 6 家尚未建回调端点，webhook 留空；接入时补端点再填地址
+            Map.of("name", "圆通速递", "category", "LOGISTICS", "code", "YTO", "webhook", ""),
+            Map.of("name", "中通快递", "category", "LOGISTICS", "code", "ZTO", "webhook", ""),
+            Map.of("name", "中国邮政", "category", "LOGISTICS", "code", "EMS", "webhook", ""),
+            Map.of("name", "京东物流", "category", "LOGISTICS", "code", "JD", "webhook", ""),
+            Map.of("name", "韵达快递", "category", "LOGISTICS", "code", "YD", "webhook", ""),
+            Map.of("name", "极兔速递", "category", "LOGISTICS", "code", "JT", "webhook", "")
     );
 
     // =============================================
@@ -80,13 +96,30 @@ public class IntegrationDashboardController {
             }
 
             channels.add(buildChannel(meta.get("name"), meta.get("category"), code,
-                    enabled, configured, meta.get("webhook"), dbCfg != null));
+                    enabled, configured, meta.get("webhook"), dbCfg != null,
+                    isLogisticsImplemented(code)));
         }
 
         Map<String, Object> result = new HashMap<>();
         result.put("channels", channels);
         result.put("stats", recordService.getDashboardStats());
         return Result.success(result);
+    }
+
+    /**
+     * 物流渠道是否已真正接入第三方 API。
+     *
+     * <p>非物流渠道返回 {@code true}（不受此维度约束）；物流渠道以适配器的
+     * {@code isRealImplementation()} 为准——它表示"真实调用代码是否已写好"，
+     * 与"密钥是否填了"是两件事。
+     */
+    private boolean isLogisticsImplemented(String code) {
+        if (logisticsServices == null) return false;
+        return logisticsServices.stream()
+                .filter(s -> s.getLogisticsType() != null && code.equals(s.getLogisticsType().name()))
+                .findFirst()
+                .map(LogisticsService::isRealImplementation)
+                .orElse(true); // 未登记为物流渠道 → 不适用该维度
     }
 
     private boolean isYmlEnabled(String code) {
@@ -129,7 +162,7 @@ public class IntegrationDashboardController {
 
     private Map<String, Object> buildChannel(String name, String category, String code,
                                               boolean enabled, boolean configured, String webhookPath,
-                                              boolean hasDbConfig) {
+                                              boolean hasDbConfig, boolean implemented) {
         Map<String, Object> ch = new HashMap<>();
         ch.put("name", name);
         ch.put("category", category);
@@ -138,14 +171,34 @@ public class IntegrationDashboardController {
         ch.put("configured", configured);
         ch.put("webhookPath", webhookPath);
         ch.put("hasDbConfig", hasDbConfig);
-        if (!enabled) {
-            ch.put("mode", "DISABLED");
-        } else if (!configured) {
-            ch.put("mode", "MOCK");
-        } else {
-            ch.put("mode", "LIVE");
-        }
+        ch.put("implemented", implemented);
+        ch.put("mode", resolveMode(category, enabled, configured, implemented));
         return ch;
+    }
+
+    /**
+     * 渠道状态判定。
+     *
+     * <p><b>关键点</b>：物流渠道"填了密钥"≠"能用"。适配器没实现真实调用时，
+     * 调用会被 {@code LogisticsManager} 守卫拒绝——所以物流渠道必须先看 {@code implemented}，
+     * 且该判断优先于 enabled（即便渠道是禁用的，"接口未接入"也是更重要的信息，
+     * 否则运营会以为"开启开关就能用"）。
+     *
+     * <p>支付渠道保留了真实的 Mock 模式（密钥未配置时返回 MOCK_ 前缀的模拟响应），
+     * 故沿用 DISABLED / MOCK / LIVE 三态。
+     */
+    private static String resolveMode(String category, boolean enabled, boolean configured, boolean implemented) {
+        boolean logistics = "LOGISTICS".equals(category);
+        if (logistics && !implemented) {
+            return "NOT_IMPLEMENTED";
+        }
+        if (!enabled) {
+            return "DISABLED";
+        }
+        if (!configured) {
+            return logistics ? "NOT_CONFIGURED" : "MOCK";
+        }
+        return "LIVE";
     }
 
     // =============================================

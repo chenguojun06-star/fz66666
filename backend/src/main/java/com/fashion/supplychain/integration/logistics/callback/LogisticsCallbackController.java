@@ -91,7 +91,8 @@ public class LogisticsCallbackController {
             String appKey = sfExpressProperties != null ? sfExpressProperties.getAppKey() : null;
             String appSecret = sfExpressProperties != null ? sfExpressProperties.getAppSecret() : null;
             if (appKey != null && appSecret != null && !appKey.isEmpty() && !appSecret.isEmpty()) {
-                String expectedDigest = SignatureUtils.buildSFSignature(msgData, timestamp, appKey, appSecret);
+                // 顺丰签名 = Base64(MD5(msgData + timestamp + 客户校验码))，appKey 不参与
+                String expectedDigest = SignatureUtils.buildSFSignature(msgData, timestamp, appSecret);
                 if (!expectedDigest.equals(msgDigest)) {
                     log.warn("[顺丰回调] 签名验证失败");
                     recordService.updateCallbackResult(cbLog.getId(), false, false, null, "签名验证失败");
@@ -106,17 +107,28 @@ public class LogisticsCallbackController {
             }
 
             // Step 2: 解析推送类型
+            // handled=false 表示"报文收到且签名通过，但没有真正处理业务"——必须如实标记，
+            // 否则 processed=1 会让这条回调日志看起来一切正常，掩盖"轨迹从未更新"的事实，
+            // 也剥夺了 IntegrationCallbackLog 设计的"processed=0 可人工补跑"能力。
+            boolean handled;
             if ("EXP_RECE_PUSH_ROUTE_EVNET".equals(msgType)) {
-                handleSFRouteEvent(msgData);
+                handled = handleSFRouteEvent(msgData);
             } else if ("EXP_RECE_WAYBILL_CANCEL".equals(msgType)) {
-                handleSFCancelEvent(msgData);
+                handled = handleSFCancelEvent(msgData);
             } else {
                 log.info("[顺丰回调] 未处理的消息类型: {}", msgType);
+                handled = false;
             }
 
-            // trackingNumber 藏在加密的 msgData 里，SDK 接入前暂时无法提取，传 null
-            // SDK 接入后从 handleSFRouteEvent 解析的运单号传进来
-            recordService.updateCallbackResult(cbLog.getId(), true, true, null, null);
+            if (handled) {
+                recordService.updateCallbackResult(cbLog.getId(), true, true, null, null);
+            } else {
+                log.warn("[顺丰回调] 报文已接收但未产生业务处理 | msgType={}（需接入顺丰SDK后补跑）", msgType);
+                recordService.updateCallbackResult(cbLog.getId(), true, false, null,
+                        "处理器未接入（顺丰SDK），本次未更新任何物流状态");
+            }
+            // 无论是否处理，都回 "success"：顺丰以响应体判定成败，
+            // 回 error 会触发无意义的重推；未处理的记录已落库待人工补跑。
             return "success";
         } catch (Exception e) {
             log.error("[顺丰回调] 处理异常 | msgType={}", msgType, e);
@@ -164,9 +176,16 @@ public class LogisticsCallbackController {
             }
 
             // Step 2: 处理状态更新
-            handleSTOStatusUpdate(trackingNumber, status, body);
+            // 返回 null = 完整处理；返回字符串 = 未完整处理的原因（verified=true 但 processed=false）
+            String unhandledReason = handleSTOStatusUpdate(trackingNumber, status, body);
 
-            recordService.updateCallbackResult(cbLog.getId(), true, true, trackingNumber, null);
+            if (unhandledReason == null) {
+                recordService.updateCallbackResult(cbLog.getId(), true, true, trackingNumber, null);
+            } else {
+                log.warn("[申通回调] 报文已接收但未完整处理 | trackingNo={} status={} reason={}",
+                        trackingNumber, status, unhandledReason);
+                recordService.updateCallbackResult(cbLog.getId(), true, false, trackingNumber, unhandledReason);
+            }
             return Map.of("code", "SUCCESS", "message", "OK");
         } catch (Exception e) {
             log.error("[申通回调] 处理异常 | trackingNo={}", trackingNumber, e);
@@ -194,15 +213,20 @@ public class LogisticsCallbackController {
      * 36 = 到达目的地
      * 40 = 投递中
      * 80 = 已签收
+     *
+     * @return 是否真正完成了业务处理。当前<b>恒为 false</b>：顺丰 SDK 未接入，
+     *         msgData 无法解密，拿不到运单号与状态码，因此不做任何状态更新，
+     *         也不把回调日志标成"已处理"。
      */
-    private void handleSFRouteEvent(String msgData) {
-        log.info("[顺丰路由事件] msgData={}", msgData);
+    private boolean handleSFRouteEvent(String msgData) {
+        log.warn("[顺丰路由事件] 收到推送但处理器未接入，未更新任何物流状态 | msgDataLength={}",
+                msgData == null ? 0 : msgData.length());
         // 接入顺丰OpenAPI SDK 后，替换以下占位逻辑：
         // 1. 用 SF SDK 解密 msgData，获取 waybillNo（运单号）、opCode（状态码）、opTime
         // 2. 将 opCode 映射为系统状态（1=IN_TRANSIT, 40=IN_TRANSIT, 80=DELIVERED）
         // 3. 调用 updateLogisticsStatus 写 DB
         //
-        // 示例骨架（SDK 接入后取消注释）：
+        // 示例骨架（SDK 接入后取消注释，并把本方法改为 return true）：
         // SFRouteEventData event = SFSdkUtils.decryptRouteEvent(msgData, sfExpressProperties.getAppSecret());
         // String trackingNumber = event.getWaybillNo();
         // String status = event.getOpCode() == 80 ? "DELIVERED" : "IN_TRANSIT";
@@ -211,14 +235,19 @@ public class LogisticsCallbackController {
         // if ("DELIVERED".equals(status)) {
         //     ecommerceOrderOrchestrator.onLogisticsDelivered(trackingNumber, "SF", eventTime);
         // }
+        // return true;
+        return false;
     }
 
     /**
      * 处理顺丰取消事件
+     *
+     * @return 是否真正完成了业务处理。当前恒为 false（同上，SDK 未接入）。
      */
-    private void handleSFCancelEvent(String msgData) {
-        log.info("[顺丰取消事件] msgData={}", msgData);
-        // 接入后实现：标记运单为已取消
+    private boolean handleSFCancelEvent(String msgData) {
+        log.warn("[顺丰取消事件] 收到推送但处理器未接入，未标记任何运单取消 | msgDataLength={}",
+                msgData == null ? 0 : msgData.length());
+        return false;
     }
 
     /**
@@ -230,8 +259,12 @@ public class LogisticsCallbackController {
      * DELIVERING   = 派送中
      * SIGNED       = 已签收
      * REJECTED     = 拒收
+     *
+     * @return {@code null} 表示已完整处理（运单状态已写、签收时电商侧也已回写）；
+     *         非 null 表示未完整处理的原因——调用方据此把回调日志标为 processed=false，
+     *         保留人工补跑的可能，而不是假装成功。
      */
-    private void handleSTOStatusUpdate(String trackingNumber, String status,
+    private String handleSTOStatusUpdate(String trackingNumber, String status,
                                         Map<String, Object> rawData) {
         log.info("[申通状态] trackingNo={} status={}", trackingNumber, status);
         // 将申通状态码映射为系统状态并保存
@@ -243,19 +276,26 @@ public class LogisticsCallbackController {
             case "REJECTED" -> "CANCELLED";
             default -> null;
         };
-        if (mappedStatus != null && trackingNumber != null && !trackingNumber.isEmpty()) {
-            recordService.updateLogisticsStatus(
-                    trackingNumber, mappedStatus, "申通状态: " + status, LocalDateTime.now());
-            if ("DELIVERED".equals(mappedStatus)) {
-                try {
-                    int updated = ecommerceOrderOrchestrator.onLogisticsDeliveredByTrackingNo(
-                            trackingNumber, "STO", LocalDateTime.now());
-                    log.info("[申通签收] 已更新 {} 个电商订单状态", updated);
-                } catch (Exception e) {
-                    log.error("[申通签收] 回写电商订单状态失败 | trackingNo={}", trackingNumber, e);
-                }
+        if (mappedStatus == null) {
+            return "未识别的申通状态码: " + status;
+        }
+        if (trackingNumber == null || trackingNumber.isEmpty()) {
+            return "报文缺少运单号(billCode)";
+        }
+        recordService.updateLogisticsStatus(
+                trackingNumber, mappedStatus, "申通状态: " + status, LocalDateTime.now());
+        if ("DELIVERED".equals(mappedStatus)) {
+            try {
+                int updated = ecommerceOrderOrchestrator.onLogisticsDeliveredByTrackingNo(
+                        trackingNumber, "STO", LocalDateTime.now());
+                log.info("[申通签收] 已更新 {} 个电商订单状态", updated);
+            } catch (Exception e) {
+                // 运单状态已写入，但电商侧回写失败——链路只走了一半，必须如实上报
+                log.error("[申通签收] 回写电商订单状态失败 | trackingNo={}", trackingNumber, e);
+                return "运单状态已更新，但电商订单回写失败: " + e.getMessage();
             }
         }
+        return null;
     }
 
     private boolean isProdProfile() {

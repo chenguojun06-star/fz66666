@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag, Space, Button, Tooltip, Image, InputNumber, Badge, Typography } from 'antd';
+import { Tag, Space, Button, Tooltip, Image, InputNumber, Badge, Typography, Popover } from 'antd';
 import {
   CarOutlined, CheckCircleOutlined, EditOutlined, EyeOutlined,
   LinkOutlined, RollbackOutlined, SaveOutlined,
@@ -10,6 +10,7 @@ import { getPlatformTag } from '@/utils/platform';
 import StyleImageCell from '@/components/common/StyleImageCell';
 import type { StyleImageMap } from '@/hooks/useStyleCoverImages';
 import { STATUS_MAP, WH_MAP } from './helpers';
+import ProductionProgressHoverCard from '@/components/common/ProductionProgressHoverCard';
 import type { EcOrder, Sku } from './types';
 import type { EditRow } from './hooks/usePricingData';
 
@@ -101,7 +102,19 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
     {
       title: '关联生产单', dataIndex: 'productionOrderNo', width: 140,
       render: v => v
-        ? <Tag color="blue" icon={<CheckCircleOutlined />}>{v}</Tag>
+        ? (
+          <Popover
+            placement="right"
+            mouseEnterDelay={0.3}
+            content={
+              <div style={{ width: 260 }}>
+                <ProductionProgressHoverCard productionOrderNo={v} />
+              </div>
+            }
+          >
+            <Tag color="blue" icon={<CheckCircleOutlined />} style={{ cursor: 'help' }}>{v}</Tag>
+          </Popover>
+        )
         : <Tag color="orange" style={{ cursor: 'pointer' }}>待处理</Tag>,
     },
     {

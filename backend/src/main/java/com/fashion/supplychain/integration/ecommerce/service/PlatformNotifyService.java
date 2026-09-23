@@ -1,6 +1,12 @@
 package com.fashion.supplychain.integration.ecommerce.service;
 
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
+import com.fashion.supplychain.integration.sync.adapter.EcPlatformAdapter;
+import com.fashion.supplychain.integration.sync.adapter.EcPlatformAdapterRegistry;
+import com.fashion.supplychain.integration.sync.dto.EcStockPullResult;
+import com.fashion.supplychain.integration.sync.dto.EcStockSyncItem;
+import com.fashion.supplychain.integration.sync.dto.EcStockSyncResult;
+import com.fashion.supplychain.integration.sync.dto.EcSyncContext;
 import com.fashion.supplychain.integration.util.IntegrationHttpClient;
 import com.fashion.supplychain.system.entity.EcPlatformConfig;
 import com.fashion.supplychain.system.service.EcPlatformConfigService;
@@ -9,8 +15,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -22,11 +30,21 @@ public class PlatformNotifyService {
     @Autowired
     private IntegrationHttpClient httpClient;
 
+    /**
+     * 平台适配器注册表（用于真实拉取/推送库存）。
+     * required=false：集成模块未启用时本服务仍需可装配，不阻断主流程。
+     */
+    @Autowired(required = false)
+    private EcPlatformAdapterRegistry platformAdapterRegistry;
+
     public void notifyShipped(EcommerceOrder order) {
         if (order == null || order.getTrackingNo() == null) {
             log.debug("[物流回调] 快递单号为空，跳过 ecOrderNo={}", order != null ? order.getOrderNo() : null);
             return;
         }
+        // 说明：本方法只负责回传「调用方传入的运单号」，该运单号来自人工录入或真实渠道。
+        // 系统自动下单产生的 Mock 运单号已在 LogisticsManager.createShipment 源头拦截，
+        // 不会流入此处——故这里不做渠道级拦截，避免误伤人工录入的真实运单号。
         String platform = order.getSourcePlatformCode();
         if (!StringUtils.hasText(platform)) {
             log.info("[物流回调] 平台为空，跳过 ecOrderNo={}", order.getOrderNo());
@@ -238,13 +256,108 @@ public class PlatformNotifyService {
         }
     }
 
-    public Integer fetchPlatformStock(Long tenantId, String skuCode) {
-        log.debug("[库存同步] 查询平台库存 tenantId={} skuCode={}", tenantId, skuCode);
-        return null;
+    /**
+     * 拉取平台真实库存。
+     *
+     * <p><b>修订说明</b>：此前该方法直接 {@code return null}，本类另一处
+     * updatePlatformStock 更是只打一行日志——等于"库存双向同步"完全是空壳，
+     * 调用方（库存差异检测、差异处理）拿着 null 只能跳过或产生假结果。
+     * 现改为走 {@link EcPlatformAdapterRegistry} 的真实适配器。
+     *
+     * @return 平台库存；拉不到返回 -1（调用方据此跳过，不产生假差异）
+     */
+    public int fetchPlatformStock(Long tenantId, String skuCode) {
+        if (tenantId == null || !StringUtils.hasText(skuCode)) {
+            return -1;
+        }
+        if (platformAdapterRegistry == null || ecPlatformConfigService == null) {
+            log.debug("[库存同步] 平台适配器未装配，无法拉取库存 skuCode={}", skuCode);
+            return -1;
+        }
+        try {
+            for (String platformCode : platformAdapterRegistry.getSupportedPlatforms()) {
+                EcPlatformConfig cfg = ecPlatformConfigService.getByTenantAndPlatform(tenantId, platformCode);
+                if (cfg == null || !"ACTIVE".equals(cfg.getStatus())) continue;
+                if (!StringUtils.hasText(cfg.getAppKey()) || !StringUtils.hasText(cfg.getAppSecret())) continue;
+
+                Optional<EcPlatformAdapter> adapterOpt = platformAdapterRegistry.findAdapter(platformCode);
+                if (adapterOpt.isEmpty()) continue;
+
+                EcSyncContext ctx = buildContext(tenantId, platformCode, cfg);
+                EcStockPullResult pull = adapterOpt.get().pullStock(ctx, Collections.singletonList(skuCode));
+                if (pull != null && pull.getStockMap() != null) {
+                    Integer qty = pull.getStockMap().get(skuCode);
+                    if (qty != null && qty >= 0) {
+                        return qty;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[库存同步] 拉取平台库存失败 tenantId={} skuCode={} 原因={}",
+                    tenantId, skuCode, e.getMessage());
+        }
+        log.debug("[库存同步] 平台库存不可用 tenantId={} skuCode={} 返回-1", tenantId, skuCode);
+        return -1;
     }
 
-    public void updatePlatformStock(Long tenantId, String skuCode, Integer quantity) {
-        log.info("[库存同步] 更新平台库存 tenantId={} skuCode={} quantity={}", tenantId, skuCode, quantity);
+    /**
+     * 推送本地库存到平台。
+     *
+     * <p><b>修订说明</b>：此前只打日志什么都不做。现走真实适配器 pushStock，
+     * 并把结果如实返回——推送失败时调用方可以感知，而不是以为同步成功了。
+     *
+     * @return 是否推送成功（无可用平台适配器时返回 false，而非假装成功）
+     */
+    public boolean updatePlatformStock(Long tenantId, String skuCode, Integer quantity) {
+        if (tenantId == null || !StringUtils.hasText(skuCode) || quantity == null) {
+            return false;
+        }
+        if (platformAdapterRegistry == null || ecPlatformConfigService == null) {
+            log.info("[库存同步] 平台适配器未装配，库存未推送到平台 skuCode={} qty={}", skuCode, quantity);
+            return false;
+        }
+        try {
+            for (String platformCode : platformAdapterRegistry.getSupportedPlatforms()) {
+                EcPlatformConfig cfg = ecPlatformConfigService.getByTenantAndPlatform(tenantId, platformCode);
+                if (cfg == null || !"ACTIVE".equals(cfg.getStatus())) continue;
+                if (!StringUtils.hasText(cfg.getAppKey()) || !StringUtils.hasText(cfg.getAppSecret())) continue;
+
+                Optional<EcPlatformAdapter> adapterOpt = platformAdapterRegistry.findAdapter(platformCode);
+                if (adapterOpt.isEmpty()) continue;
+
+                EcStockSyncItem item = EcStockSyncItem.builder()
+                        .skuCode(skuCode)
+                        .platformSkuId(skuCode)
+                        .quantity(quantity)
+                        .build();
+
+                EcSyncContext ctx = buildContext(tenantId, platformCode, cfg);
+                EcStockSyncResult result = adapterOpt.get().pushStock(ctx, Collections.singletonList(item));
+                if (result != null && result.isSuccess()) {
+                    log.info("[库存同步] 库存已推送到平台 platform={} skuCode={} qty={}",
+                            platformCode, skuCode, quantity);
+                    return true;
+                }
+                log.warn("[库存同步] 平台推送失败 platform={} skuCode={} 原因={}",
+                        platformCode, skuCode, result != null ? result.getErrorMessage() : "无响应");
+            }
+        } catch (Exception e) {
+            log.warn("[库存同步] 推送库存到平台失败 tenantId={} skuCode={} 原因={}",
+                    tenantId, skuCode, e.getMessage());
+        }
+        return false;
+    }
+
+    /** 依据平台凭证构建同步上下文 */
+    private EcSyncContext buildContext(Long tenantId, String platformCode, EcPlatformConfig cfg) {
+        return EcSyncContext.builder()
+                .tenantId(tenantId)
+                .platformCode(platformCode)
+                .appId(cfg.getAppKey())
+                .appSecret(cfg.getAppSecret())
+                .accessToken(cfg.getExtraField())
+                .callbackUrl(cfg.getCallbackUrl())
+                .build();
     }
 
     /**

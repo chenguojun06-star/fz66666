@@ -1,53 +1,34 @@
 package com.fashion.supplychain.integration.logistics.impl;
 
-import com.fashion.supplychain.integration.config.STOProperties;
 import com.fashion.supplychain.integration.logistics.LogisticsService;
-import com.fashion.supplychain.integration.logistics.ShippingRequest;
-import com.fashion.supplychain.integration.logistics.ShippingResponse;
-import com.fashion.supplychain.integration.logistics.TrackingInfo;
-import com.fashion.supplychain.integration.util.IntegrationHttpClient;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * 申通快递适配器
+ * 申通快递适配器（<b>待接入真实 API</b>，回调链路已可用）
  *
- * ============================================================
- * 接入只需 3 步（拿到密钥就能上线）：
- * ============================================================
- * Step 1. 在 application.yml 填入密钥：
- *   sto-express:
- *     enabled: true
- *     app-key: "你的AppKey"
- *     app-secret: "你的AppSecret"
- *     partner-id: "你的partnerId"  # 可选
- *     sandbox: true
- *     notify-url: "https://你的域名/api/webhook/logistics/sto"
+ * <p>开放平台：https://open.sto.cn
+ * <p>配置项：{@code sto-express.*}（见 {@code STOProperties}）
+ * <p>回调地址：{@code https://{域名}/api/webhook/logistics/sto}
+ * <p>签名：{@code SignatureUtils.buildSTOSignature(content, appKey, appSecret)}
  *
- * Step 2. 无需额外 SDK，已内置 IntegrationHttpClient（基于 RestTemplate）。
- *         签名算法已实现：SignatureUtils.buildSTOSignature()
+ * <p><b>已可用部分</b>：回调控制器 {@code LogisticsCallbackController.stoCallback} 已完整实现
+ * （验签 → 状态码映射 → 写库 → 签收时回写电商订单），配好密钥即可接收申通推送。
  *
- * Step 3. 在每个方法中，删除 "if (!stoConfig.isConfigured())" 的 mock 分支，
- *         取消注释 "=== 真实接入 ===" 块内的代码。
+ * <p><b>接入步骤</b>：
+ * <ol>
+ *   <li>注入 {@code STOProperties} 与 {@code IntegrationHttpClient}；</li>
+ *   <li>实现下单/取消/查轨迹/运费四个方法，走真实 HTTP 并校验业务响应；</li>
+ *   <li>覆写 {@link #isRealImplementation()} 返回 {@code true} 放行。</li>
+ * </ol>
  *
- * 申通开放平台：https://open.sto.cn
- * ============================================================
+ * <p>⚠️ {@code buildSTOSignature} 的签名规则本次未在官方文档查到明确说明，
+ * 拿到账号后须逐字核对——签名不对会被静默拒绝。
+ *
+ * <p>当前继承 {@link AbstractLogisticsAdapter} 的 fail-closed 默认实现：
+ * 下单/取消/查轨迹/运费一律抛"未接入"异常，不会返回任何编造数据。
  */
-@Slf4j
 @Service
-@RequiredArgsConstructor
-public class STOAdapter implements LogisticsService {
-
-    /** 配置属性（application.yml 中 sto-express.* 自动映射） */
-    private final STOProperties stoConfig;
-
-    /** 统一 HTTP 客户端（含超时/重试配置） */
-    private final IntegrationHttpClient httpClient;
+public class STOAdapter extends AbstractLogisticsAdapter {
 
     @Override
     public String getCompanyName() {
@@ -62,91 +43,5 @@ public class STOAdapter implements LogisticsService {
     @Override
     public LogisticsType getLogisticsType() {
         return LogisticsType.STO;
-    }
-
-    @Override
-    public ShippingResponse createShipment(ShippingRequest request) throws LogisticsException {
-        log.info("[申通] 创建运单 | orderId={}", request.getOrderId());
-
-        if (!stoConfig.isConfigured()) {
-            String mockNo = "STO" + System.currentTimeMillis();
-            log.info("[申通] Mock模式 | orderId={} trackingNo={}", request.getOrderId(), mockNo);
-            return ShippingResponse.success(request.getOrderId(), mockNo, "STO");
-        }
-
-        log.warn("[申通] 密钥已配置但真实API代码待实现，降级使用Mock模式 | orderId={}", request.getOrderId());
-        String mockNo = "STO" + System.currentTimeMillis();
-        return ShippingResponse.success(request.getOrderId(), mockNo, "STO");
-    }
-
-    @Override
-    public boolean cancelShipment(String trackingNumber, String reason) throws LogisticsException {
-        log.info("[申通] 取消运单 | trackingNumber={}", trackingNumber);
-
-        if (!stoConfig.isConfigured()) {
-            return true;
-        }
-
-        log.warn("[申通] 密钥已配置但真实API代码待实现，取消运单降级Mock | trackingNumber={}", trackingNumber);
-        return true;
-    }
-
-    @Override
-    public List<TrackingInfo> trackShipment(String trackingNumber) throws LogisticsException {
-        log.info("[申通] 查询轨迹 | trackingNumber={}", trackingNumber);
-
-        if (!stoConfig.isConfigured()) {
-            return mockTrackingData("上海转运→杭州");
-        }
-
-        log.warn("[申通] 密钥已配置但真实API代码待实现，轨迹查询降级Mock | trackingNumber={}", trackingNumber);
-        return mockTrackingData("上海转运→杭州");
-    }
-
-    @Override
-    public Long estimateShippingFee(ShippingRequest request) throws LogisticsException {
-        log.info("[申通] 运费估算 | orderId={}", request.getOrderId());
-
-        if (!stoConfig.isConfigured()) {
-            return 1000L;
-        }
-
-        log.warn("[申通] 密钥已配置但真实API代码待实现，运费估算降级Mock | orderId={}", request.getOrderId());
-        return 1000L;
-    }
-
-    @Override
-    public boolean validateAddress(String province, String city, String district) {
-        if (!stoConfig.isConfigured()) {
-            return true;
-        }
-
-        // ============================================================
-        // === 真实接入 ===
-        // 申通暂不提供公开地址验证接口，可维护内部区域表
-        // ============================================================
-
-        return true;
-    }
-
-    // -----------------------------------------------
-    // 私有辅助：Mock 轨迹数据
-    // -----------------------------------------------
-
-    private List<TrackingInfo> mockTrackingData(String route) {
-        List<TrackingInfo> tracks = new ArrayList<>();
-        tracks.add(TrackingInfo.builder()
-                .time(LocalDateTime.now().minusHours(3))
-                .description("您的快件已由转运中心发出，路线：" + route)
-                .location("上海市")
-                .status(TrackingInfo.TrackingStatus.IN_TRANSIT)
-                .build());
-        tracks.add(TrackingInfo.builder()
-                .time(LocalDateTime.now().minusHours(1))
-                .description("快件已到达分拨中心，等待派送")
-                .location("杭州市")
-                .status(TrackingInfo.TrackingStatus.ARRIVED_AT_STATION)
-                .build());
-        return tracks;
     }
 }

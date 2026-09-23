@@ -11,6 +11,7 @@ import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrde
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcOrderMergeOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcLogisticsAnomalyOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcBillReconciliationOrchestrator;
+import com.fashion.supplychain.integration.ecommerce.orchestration.EcProductionLinkOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.service.EcGiftRuleService;
 import com.fashion.supplychain.integration.ecommerce.service.EcLogisticsAnomalyService;
 import com.fashion.supplychain.integration.ecommerce.service.EcPlatformBillService;
@@ -18,6 +19,8 @@ import com.fashion.supplychain.system.service.EcPlatformConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -61,12 +64,47 @@ public class EcommerceOrderController {
     @Autowired
     private EcPlatformBillService platformBillService;
 
+    @Autowired
+    private EcProductionLinkOrchestrator linkOrchestrator;
+
+    /**
+     * 联动面板：按生产单号取电商动态（生产端悬浮面板调用）
+     *
+     * <p>只读接口，返回 {@code linked=false} 表示该生产单尚未关联电商订单——
+     * 前端据此显示"暂无关联"，不做任何数值兜底。
+     */
+    @GetMapping("/orders/brief-by-production")
+    public Result<Map<String, Object>> briefByProductionOrder(@RequestParam String productionOrderNo) {
+        try {
+            return Result.success(linkOrchestrator.ecBriefByProductionOrderNo(productionOrderNo));
+        } catch (Exception e) {
+            log.error("[联动面板] 查询电商动态失败 productionOrderNo={}", productionOrderNo, e);
+            return Result.fail("查询电商动态失败: " + e.getMessage());
+        }
+    }
+
     private static final long WEBHOOK_TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000;
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     * 电商平台订单推送入口（被动接收）
+     *
+     * <p><b>为什么返回 {@link ResponseEntity} 而不是裸 {@code Result}：</b>
+     * 平台侧只看 <b>HTTP 状态码</b>决定是否重推。若失败时仍返回 HTTP 200
+     * （{@code Result.fail} 只把 500 写进 JSON body），平台会认为"已送达"而<b>不再重试</b>，
+     * 订单就被静默丢弃了——线上真实表现是"平台说推送成功、系统里没有单"。
+     *
+     * <p>状态码约定：
+     * <ul>
+     *   <li>200 处理成功（含重复推送幂等命中）</li>
+     *   <li>401 AppKey 缺失/未配置/签名不通过 —— 属配置错误，重试无意义，需人工修配置</li>
+     *   <li>500 处理异常（DB 抖动等）—— 平台可安全重推，落库侧按
+     *       (platformOrderNo, sourcePlatformCode, tenantId) 幂等去重</li>
+     * </ul>
+     */
     @PostMapping("/webhook/{platform}")
     @PreAuthorize("permitAll")
-    public Result<Map<String, Object>> receiveWebhook(
+    public ResponseEntity<Result<Map<String, Object>>> receiveWebhook(
             @PathVariable String platform,
             @RequestHeader(value = "X-Timestamp", required = false) String timestamp,
             @RequestHeader(value = "X-Signature", required = false) String signature,
@@ -75,23 +113,30 @@ public class EcommerceOrderController {
         try {
             if (appKey == null || appKey.isBlank()) {
                 log.warn("[EC Webhook] 拒绝缺少 X-App-Key 的请求: platform={}", platform);
-                return Result.fail("缺少 X-App-Key");
+                return unauthorized("缺少 X-App-Key");
             }
             Long tenantId = resolveTenantFromConfig(platform, appKey);
             if (tenantId == null) {
                 log.warn("[EC Webhook] 无法识别平台来源: platform={}, appKey={}", platform, appKey);
-                return Result.fail("未配置的平台或无效的AppKey");
+                return unauthorized("未配置的平台或无效的AppKey");
             }
             if (!verifyWebhookSignature(platform, tenantId, timestamp, signature, body)) {
                 log.warn("[EC Webhook] 签名验证失败: platform={}, appKey={}", platform, appKey);
-                return Result.fail("签名验证失败");
+                return unauthorized("签名验证失败");
             }
             Map<String, Object> result = orchestrator.receiveOrder(platform, body, tenantId);
-            return Result.success(result);
+            return ResponseEntity.ok(Result.success(result));
         } catch (Exception e) {
-            log.error("[EC Webhook 失败] platform={} err={}", platform, e.getMessage());
-            return Result.fail("接收失败: " + e.getMessage());
+            log.error("[EC Webhook 失败] platform={} err={}", platform, e.getMessage(), e);
+            // 500 → 平台会重推；落库侧幂等，重复推送不会产生重复订单
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Result.fail("接收失败: " + e.getMessage()));
         }
+    }
+
+    /** 平台侧配置错误：重试无意义，但必须让平台/运维看得见（不能伪装成 200 成功） */
+    private ResponseEntity<Result<Map<String, Object>>> unauthorized(String message) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Result.fail(401, message));
     }
 
     @PostMapping("/orders/list")

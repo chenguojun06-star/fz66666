@@ -28,7 +28,8 @@ import java.util.Map;
  *
  * <p>核心能力：
  * <ol>
- *   <li>拉取平台账单（当前 mock，留 fetchPlatformBills 扩展点对接真实平台 API）</li>
+ *   <li>拉取平台账单（真实平台 API 未接入前返回空，<b>严禁伪造数据</b>，
+ *       扩展点为 fetchPlatformBills）</li>
  *   <li>与本地 EcSalesRevenue 按 platformOrderNo 比对</li>
  *   <li>差异分类：NONE/MISSING_LOCAL/MISSING_PLATFORM/AMOUNT_MISMATCH</li>
  *   <li>AI 差异分析（技术性差异/真实差异/申诉候选），AI 失败走规则兜底</li>
@@ -74,13 +75,21 @@ public class EcBillReconciliationOrchestrator {
             throw new IllegalArgumentException("账期格式不合法，应为 yyyy-MM 或 yyyy-Www：" + billPeriod);
         }
 
-        // 1. 拉取平台账单（mock，基于本地 EcSalesRevenue 生成模拟账单）
+        // 1. 拉取平台账单（真实平台API未接入时返回空，不伪造）
         List<PlatformBillItem> platformBills = fetchPlatformBills(tenantId, platform, billPeriod);
         if (platformBills.isEmpty()) {
-            log.info("[BillReconcile] 无账单数据 tenantId={} platform={} period={}", tenantId, platform, billPeriod);
+            log.info("[BillReconcile] 无平台账单数据 tenantId={} platform={} period={}", tenantId, platform, billPeriod);
             ReconcileResult r = new ReconcileResult();
             r.setBillPeriod(billPeriod);
             r.setTotalBills(0);
+            // 本地确有收入但平台侧拉不到账单 → 属于"平台账单源不可用"，需明确告知，
+            // 不能让财务误以为"对过了、没有差异"
+            Map<String, EcSalesRevenue> localCheck = queryLocalRevenueMap(tenantId, platform, billPeriod);
+            if (!localCheck.isEmpty()) {
+                r.setUnavailable(true);
+                r.setMessage("平台账单接口未接入，无法拉取平台侧账单，本次未产生对账结果"
+                        + "（本地有 " + localCheck.size() + " 条收入流水待核对，请人工核账）");
+            }
             return r;
         }
 
@@ -249,38 +258,24 @@ public class EcBillReconciliationOrchestrator {
     }
 
     /**
-     * 拉取平台账单（mock 实现）
-     * <p>当前基于本地 EcSalesRevenue 生成模拟账单，故意引入少量差异以演示对账能力。
-     * <p>后续对接真实平台 API 时，替换此方法实现即可。
+     * 拉取平台账单。
+     *
+     * <p><b>重要修订（严禁回退）</b>：此前本方法用 {@code Math.random()} 在本地收入金额上
+     * 随机加减几元来"模拟平台账单差异"（10% 概率 ±几元、5% 概率完全不同）。
+     * 后果是：财务在平台账单对账页看到的每一条差异都是<b>编造的随机数</b>，
+     * 却会据此去申诉、核账——这属于财务数据造假，比功能缺失严重得多。
+     *
+     * <p>现改为：真实平台账单 API 尚未接入，一律返回空列表，由调用方明确标记
+     * "无法对账"。<b>宁可显示不可用，也不能伪造财务数据。</b>
+     *
+     * <p>接入真实平台 API（如淘宝账单类接口）时，在此方法内实现拉取即可，
+     * 后续对账比对逻辑无需改动。
      */
     private List<PlatformBillItem> fetchPlatformBills(Long tenantId, String platform, String billPeriod) {
-        // mock：取本地收入流水作为账单基础数据，模拟 10% 概率金额差异 + 5% 概率完全不同
-        String periodPrefix = safeYearMonthPrefix(billPeriod);
-        List<EcSalesRevenue> revenues = revenueService.list(new LambdaQueryWrapper<EcSalesRevenue>()
-                .eq(EcSalesRevenue::getTenantId, tenantId)
-                .eq(platform != null, EcSalesRevenue::getPlatform, platform)
-                .likeRight(EcSalesRevenue::getShipTime, periodPrefix));
-        return revenues.stream()
-                .map(r -> {
-                    PlatformBillItem item = new PlatformBillItem();
-                    item.platform = r.getPlatform();
-                    item.shopName = r.getShopName();
-                    item.billNo = "PL-" + billPeriod + "-" + r.getPlatformOrderNo();
-                    item.platformOrderNo = r.getPlatformOrderNo();
-                    // mock：模拟 10% 概率金额差异（±5 元）、5% 概率完全不同
-                    int rand = (int) (Math.random() * 100);
-                    if (rand < 5) {
-                        item.amount = r.getPayAmount() != null
-                                ? r.getPayAmount().add(new BigDecimal("3.50")) : new BigDecimal("3.50");
-                    } else if (rand < 10) {
-                        item.amount = r.getPayAmount() != null
-                                ? r.getPayAmount().subtract(new BigDecimal("2.00")) : new BigDecimal("0");
-                    } else {
-                        item.amount = r.getPayAmount() != null ? r.getPayAmount() : BigDecimal.ZERO;
-                    }
-                    return item;
-                })
-                .toList();
+        log.warn("[BillReconcile] 平台账单API尚未接入，本次不拉取平台账单（不会伪造数据）"
+                        + " tenantId={} platform={} period={}",
+                tenantId, platform, billPeriod);
+        return List.of();
     }
 
     /** 查本地收入流水，按 platformOrderNo 建立 Map */
@@ -338,5 +333,9 @@ public class EcBillReconciliationOrchestrator {
         private int mismatched;
         private int missingLocal;
         private int newBills;
+        /** true=平台账单源不可用，本次未真正对账（区别于"对账后无差异"） */
+        private boolean unavailable;
+        /** 不可用原因，供前端直接展示 */
+        private String message;
     }
 }

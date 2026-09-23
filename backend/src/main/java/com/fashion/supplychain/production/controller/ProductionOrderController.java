@@ -55,6 +55,7 @@ public class ProductionOrderController {
     private final StyleInfoService styleInfoService;
     private final com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final com.fashion.supplychain.integration.ecommerce.orchestration.EcProductionLinkOrchestrator ecProductionLinkOrchestrator;
 
     /**
      * 工厂协作账号（factoryId 非空）价格后端脱敏：前端隐藏只是展示层，接口/导出必须兜底。
@@ -297,6 +298,18 @@ public class ProductionOrderController {
             TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
         }
         return Result.success(productionOrderOrchestrator.getOrderFlow(id));
+    }
+
+    /**
+     * 联动面板：按生产单号取生产动态（销售端/电商端悬浮面板调用）
+     *
+     * <p>只读接口。返回 {@code linked=false} 表示未找到该生产单——
+     * 前端据此显示"暂无数据"，不做任何数值兜底。
+     * 同时附带按款号汇总的电商库存联动快照（可用库存/在途生产/待发货占用）。
+     */
+    @GetMapping("/brief")
+    public Result<?> brief(@RequestParam String orderNo) {
+        return Result.success(ecProductionLinkOrchestrator.productionBriefByOrderNo(orderNo));
     }
 
     /**

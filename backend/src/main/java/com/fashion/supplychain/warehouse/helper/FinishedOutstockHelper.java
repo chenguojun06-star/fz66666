@@ -9,6 +9,7 @@ import com.fashion.supplychain.finance.entity.BillAggregation;
 import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.finance.service.BillAggregationService;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrderOrchestrator;
+import com.fashion.supplychain.integration.sync.event.StockChangePublisher;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -93,6 +94,10 @@ public class FinishedOutstockHelper {
 
     @Autowired
     private OrderRemarkHelper orderRemarkHelper;
+
+    /** 成品出库后通知电商库存链路重算（仓库 → 电商 联动） */
+    @Autowired
+    private StockChangePublisher stockChangePublisher;
 
     public FinishedOutstockHelper(ProductSkuService productSkuService,
                                   ProductOutstockService productOutstockService,
@@ -428,6 +433,11 @@ public class FinishedOutstockHelper {
         outstock.setUpdateTime(now);
         outstock.setDeleteFlag(0);
         productOutstockService.save(outstock);
+
+        // 仓库 → 电商 联动：出库流水落库后重算电商可售库存，联动面板才能实时看到变化
+        // 事务提交后触发（无事务则立即），避免下游读到未提交的出库记录
+        Long changeTenantId = sku.getTenantId() != null ? sku.getTenantId() : UserContext.tenantId();
+        stockChangePublisher.publishAfterCommit(changeTenantId, sku.getSkuCode(), "OUTBOUND");
     }
 
     public IPage<ProductOutstock> listOutstockRecords(Map<String, Object> params) {

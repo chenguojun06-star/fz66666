@@ -20,7 +20,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 补货建议编排器（Phase 1）
@@ -50,6 +50,9 @@ public class EcReplenishmentOrchestrator {
     @Autowired @Lazy private ProductionOrderService productionOrderService;
     @Autowired @Lazy private StyleInfoService styleInfoService;
     @Autowired @Lazy private SmartReplenishmentAdvisor advisor;
+
+    /** 单号序号（毫秒时间戳 + 4位递增序号，替代原 ThreadLocalRandom 随机数，避免并发撞号） */
+    private static final AtomicInteger ORDER_NO_SEQ = new AtomicInteger(0);
 
     /**
      * 人工确认建议 → 按类型转采购/转生产
@@ -150,10 +153,9 @@ public class EcReplenishmentOrchestrator {
     /** 转生产：创建最小化生产订单 */
     private String convertToProduction(Long tenantId, EcPurchaseSuggestion suggestion) {
         ProductionOrder order = new ProductionOrder();
-        // 生成订单号：EC+日期+随机数
-        String orderNo = "EC" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"))
-                + String.format("%04d", ThreadLocalRandom.current().nextInt(10000));
-        order.setOrderNo(orderNo);
+        // 生成订单号：EC + yyyyMMddHHmmssSSS + 4位递增序号
+        // （替代原 ThreadLocalRandom 随机数：随机后缀在并发补货时会撞号，且不可追溯）
+        order.setOrderNo(generateOrderNo());
         order.setStyleId(suggestion.getStyleId() != null ? String.valueOf(suggestion.getStyleId()) : null);
         order.setStyleNo(suggestion.getStyleNo());
         order.setSku(suggestion.getSkuCode());
@@ -188,8 +190,21 @@ public class EcReplenishmentOrchestrator {
 
         productionOrderService.save(order);
         log.info("[EcReplenishment] 已创建生产订单 orderNo={} styleNo={} qty={}",
-                orderNo, suggestion.getStyleNo(), suggestion.getSuggestQuantity());
+                order.getOrderNo(), suggestion.getStyleNo(), suggestion.getSuggestQuantity());
         return order.getId();
+    }
+
+    /**
+     * 生成生产单号：EC + yyyyMMddHHmmssSSS + 4位递增序号
+     *
+     * <p>与 {@code B2BOrderOrchestrator#generateOrderNo} 同思路：毫秒时间戳保证跨秒唯一，
+     * 单 JVM 内递增序号保证同毫秒不重复。原实现用 {@code ThreadLocalRandom} 拼 4 位随机数，
+     * 并发补货时会撞号且无法追溯。
+     */
+    private String generateOrderNo() {
+        String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+        int seq = ORDER_NO_SEQ.incrementAndGet() % 10000;
+        return "EC" + ts + String.format("%04d", seq);
     }
 
     private Long parseLong(String s) {

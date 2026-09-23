@@ -185,56 +185,22 @@ public class DistributorBillReconciliationOrchestrator {
         return true;
     }
 
-    /** mock：拉取分销商账单（基于 EcSalesRevenue 中 revenue_source=DISTRIBUTOR） */
+    /**
+     * 拉取分销商账单（基于 EcSalesRevenue 中 revenue_source=DISTRIBUTOR）
+     *
+     * <p><b>重要修订（严禁回退）</b>：此前本方法用 {@code Math.random()} 复制流水并随机
+     * 加减金额来"模拟账单差异"，导致分销对账出现的差异是编造的。财务据此核账、
+     * 结算会产生错误结果。现改为直接返回真实查询到的分销收入流水，不再伪造。
+     */
     private List<EcSalesRevenue> fetchDistributorBills(Long tenantId, Long distributorId, String billPeriod) {
         String prefix = billPeriod.length() >= 7 ? billPeriod.substring(0, 7) : billPeriod;
         // 查 revenue_source=DISTRIBUTOR 且关联 EcommerceOrder.distributor_id 的流水
         // 这里简化：直接查 EcSalesRevenue 中 shipTime like 'yyyy-MM' 且 revenue_source=DISTRIBUTOR
         // 实际分销商维度通过 ec_order_id 关联 EcommerceOrder.distributor_id
-        List<EcSalesRevenue> all = revenueService.list(new LambdaQueryWrapper<EcSalesRevenue>()
+        return revenueService.list(new LambdaQueryWrapper<EcSalesRevenue>()
                 .eq(EcSalesRevenue::getTenantId, tenantId)
                 .eq(EcSalesRevenue::getRevenueSource, "DISTRIBUTOR")
                 .likeRight(EcSalesRevenue::getShipTime, prefix));
-        // mock：模拟 10% 概率金额差异
-        return all.stream()
-                .map(r -> {
-                    int rand = (int) (Math.random() * 100);
-                    if (rand < 5) {
-                        EcSalesRevenue mock = copyRevenue(r);
-                        mock.setPayAmount(r.getPayAmount() != null
-                                ? r.getPayAmount().add(new BigDecimal("3.50")) : new BigDecimal("3.50"));
-                        return mock;
-                    } else if (rand < 10) {
-                        EcSalesRevenue mock = copyRevenue(r);
-                        mock.setPayAmount(r.getPayAmount() != null
-                                ? r.getPayAmount().subtract(new BigDecimal("2.00")) : BigDecimal.ZERO);
-                        return mock;
-                    }
-                    return r;
-                })
-                .toList();
-    }
-
-    private EcSalesRevenue copyRevenue(EcSalesRevenue src) {
-        EcSalesRevenue dst = new EcSalesRevenue();
-        dst.setId(src.getId());
-        dst.setRevenueNo(src.getRevenueNo());
-        dst.setEcOrderId(src.getEcOrderId());
-        dst.setEcOrderNo(src.getEcOrderNo());
-        dst.setPlatformOrderNo(src.getPlatformOrderNo());
-        dst.setPlatform(src.getPlatform());
-        dst.setShopName(src.getShopName());
-        dst.setSkuCode(src.getSkuCode());
-        dst.setQuantity(src.getQuantity());
-        dst.setUnitPrice(src.getUnitPrice());
-        dst.setTotalAmount(src.getTotalAmount());
-        dst.setPayAmount(src.getPayAmount());
-        dst.setFreight(src.getFreight());
-        dst.setDiscount(src.getDiscount());
-        dst.setStatus(src.getStatus());
-        dst.setRevenueSource(src.getRevenueSource());
-        dst.setShipTime(src.getShipTime());
-        return dst;
     }
 
     /** 查本地出库流水，按 platformOrderNo 建立 Map */

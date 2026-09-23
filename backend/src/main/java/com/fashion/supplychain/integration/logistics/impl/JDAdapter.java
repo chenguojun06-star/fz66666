@@ -1,19 +1,24 @@
 package com.fashion.supplychain.integration.logistics.impl;
 
 import com.fashion.supplychain.integration.logistics.LogisticsService;
-import com.fashion.supplychain.integration.logistics.ShippingRequest;
-import com.fashion.supplychain.integration.logistics.ShippingResponse;
-import com.fashion.supplychain.integration.logistics.TrackingInfo;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
-@Slf4j
+/**
+ * 京东物流适配器（<b>待接入真实 API</b>）
+ *
+ * <p>开放平台：https://open.jdl.com （= cloud.jdl.com）
+ * <p>接入指引：https://iopen.jdl.com/#/open-business-document/access-guide/82
+ * <p>资质三选一：ISV（须有限责任公司且有软件著作权）/ 自研商家（须已签约且有 KH 合同号）/ 合作伙伴
+ *
+ * <p>⚠️ 勿与 {@code JdPlatformAdapter} 混淆：那个走的是<b>京东商家开放平台</b>
+ * （https://open.jd.com ，原宙斯，商品/库存/订单），本类走的是<b>京东物流</b>开放平台。
+ *
+ * <p>当前继承 {@link AbstractLogisticsAdapter} 的 fail-closed 默认实现：
+ * 下单/取消/查轨迹/运费一律抛"未接入"异常，不会返回任何编造数据。
+ * 接入步骤见基类注释（实现真实调用 + 覆写 {@code isRealImplementation()} 返回 true）。
+ */
 @Service
-public class JDAdapter implements LogisticsService {
+public class JDAdapter extends AbstractLogisticsAdapter {
 
     @Override
     public String getCompanyName() {
@@ -28,52 +33,5 @@ public class JDAdapter implements LogisticsService {
     @Override
     public LogisticsType getLogisticsType() {
         return LogisticsType.JD;
-    }
-
-    @Override
-    public ShippingResponse createShipment(ShippingRequest request) throws LogisticsException {
-        String mockNo = "JD" + System.currentTimeMillis();
-        log.info("[京东] Mock模式 创建运单 | orderId={} trackingNo={}", request.getOrderId(), mockNo);
-        return ShippingResponse.success(request.getOrderId(), mockNo, "JD");
-    }
-
-    @Override
-    public boolean cancelShipment(String trackingNumber, String reason) throws LogisticsException {
-        log.info("[京东] Mock模式 取消运单 | trackingNumber={}", trackingNumber);
-        return true;
-    }
-
-    @Override
-    public List<TrackingInfo> trackShipment(String trackingNumber) throws LogisticsException {
-        log.info("[京东] Mock模式 查询轨迹 | trackingNumber={}", trackingNumber);
-        return mockTrackingData("北京亚洲一号→广州黄埔");
-    }
-
-    @Override
-    public Long estimateShippingFee(ShippingRequest request) throws LogisticsException {
-        log.info("[京东] Mock模式 运费估算 | orderId={}", request.getOrderId());
-        return 1600L;
-    }
-
-    @Override
-    public boolean validateAddress(String province, String city, String district) {
-        return true;
-    }
-
-    private List<TrackingInfo> mockTrackingData(String route) {
-        List<TrackingInfo> tracks = new ArrayList<>();
-        tracks.add(TrackingInfo.builder()
-                .time(LocalDateTime.now().minusHours(2))
-                .description("包裹已从仓库出库，路线：" + route)
-                .location("北京市")
-                .status(TrackingInfo.TrackingStatus.IN_TRANSIT)
-                .build());
-        tracks.add(TrackingInfo.builder()
-                .time(LocalDateTime.now().minusHours(1))
-                .description("包裹已到达配送站，快递员正在派送")
-                .location("广州市")
-                .status(TrackingInfo.TrackingStatus.OUT_FOR_DELIVERY)
-                .build());
-        return tracks;
     }
 }

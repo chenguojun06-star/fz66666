@@ -2,6 +2,7 @@ package com.fashion.supplychain.production.helper;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
+import com.fashion.supplychain.integration.sync.event.StockChangePublisher;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -33,6 +34,8 @@ public class WarehousingWriteHelper {
     private final CuttingBundleService cuttingBundleService;
     private final ProductWarehousingHelper helper;
     private final StockChangeLogService stockChangeLogService;
+    /** 成品入库后通知电商库存链路重算（仓库 → 电商 联动） */
+    private final StockChangePublisher stockChangePublisher;
 
     public ProductionOrder validateOrderForSave(ProductWarehousing pw) {
         if (!StringUtils.hasText(pw.getOrderId())) {
@@ -269,6 +272,9 @@ public class WarehousingWriteHelper {
             } catch (Exception e) {
                 log.warn("记录库存变动日志失败（不阻断入库）: orderId={}", pw.getOrderId(), e);
             }
+            // 仓库 → 电商 联动：入库完成后重算电商可售库存并刷新联动面板
+            // 事务提交后触发（无事务则立即），避免下游读到未提交数据
+            stockChangePublisher.publishAfterCommit(UserContext.tenantId(), pw.getSkuCode(), "INBOUND");
         }
     }
 

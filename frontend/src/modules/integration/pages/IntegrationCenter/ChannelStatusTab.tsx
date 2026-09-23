@@ -18,7 +18,9 @@ interface ChannelInfo {
   code: string;
   enabled: boolean;
   configured: boolean;
-  mode: 'LIVE' | 'MOCK' | 'DISABLED';
+  /** 该渠道是否已真正接入第三方API（与"是否填了密钥"是两件事） */
+  implemented?: boolean;
+  mode: 'LIVE' | 'MOCK' | 'DISABLED' | 'NOT_IMPLEMENTED' | 'NOT_CONFIGURED';
   webhookPath: string;
 }
 
@@ -34,14 +36,22 @@ interface Props { active: boolean; }
 const CONFIG_HINTS: Record<string, string> = {
   ALIPAY: 'alipay.enabled=true\nalipay.app-id=\nalipay.private-key=\nalipay.public-key=\nalipay.notify-url=',
   WECHAT_PAY: 'wechat-pay.enabled=true\nwechat-pay.app-id=\nwechat-pay.mch-id=\nwechat-pay.api-v3-key=\nwechat-pay.notify-url=',
-  SF: 'sf-express.enabled=true\nsf-express.app-key=\nsf-express.app-secret=\nsf-express.notify-url=',
-  STO: 'sto-express.enabled=true\nsto-express.app-key=\nsto-express.app-secret=\nsto-express.notify-url=',
+  SF: 'sf-express.enabled=true\nsf-express.app-key=\nsf-express.app-secret=\nsf-express.customer-code=\nsf-express.notify-url=',
+  STO: 'sto-express.enabled=true\nsto-express.app-key=\nsto-express.app-secret=\nsto-express.partner-id=\nsto-express.notify-url=',
+  YTO: 'yto-express.enabled=true\nyto-express.app-key=\nyto-express.app-secret=\nyto-express.customer-code=\nyto-express.notify-url=',
+  ZTO: 'zto-express.enabled=true\nzto-express.app-key=\nzto-express.app-secret=\nzto-express.notify-url=',
+  EMS: 'ems-express.enabled=true\nems-express.app-key=\nems-express.app-secret=\nems-express.customer-code=\nems-express.notify-url=',
+  JD: 'jd-express.enabled=true\njd-express.app-key=\njd-express.app-secret=\njd-express.access-token=\njd-express.notify-url=',
+  YD: 'yd-express.enabled=true\nyd-express.app-key=\nyd-express.app-secret=\nyd-express.notify-url=',
+  JT: 'jt-express.enabled=true\njt-express.app-key=\njt-express.app-secret=\njt-express.notify-url=',
 };
 
 const MODE_CONFIG = {
-  LIVE:     { color: 'success', icon: <CheckCircleOutlined />, text: '已接入（生产模式）', tagColor: 'green' },
-  MOCK:     { color: 'warning', icon: <WarningOutlined />,     text: '模拟模式',  tagColor: 'orange' },
-  DISABLED: { color: 'default', icon: <StopOutlined />,        text: '未启用',     tagColor: 'default' },
+  LIVE:            { color: 'success', icon: <CheckCircleOutlined />, text: '已接入（生产模式）', tagColor: 'green' },
+  MOCK:            { color: 'warning', icon: <WarningOutlined />,     text: '模拟模式',          tagColor: 'orange' },
+  DISABLED:        { color: 'default', icon: <StopOutlined />,        text: '未启用',            tagColor: 'default' },
+  NOT_IMPLEMENTED: { color: 'error',   icon: <StopOutlined />,        text: '接口未接入',        tagColor: 'red' },
+  NOT_CONFIGURED:  { color: 'warning', icon: <WarningOutlined />,     text: '未配置密钥',        tagColor: 'orange' },
 } as const;
 
 const WEBHOOK_BASE = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8088` : '';
@@ -131,22 +141,37 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
                   {ch.mode === 'DISABLED' && (
                     <p style={{ color: 'var(--color-text-tertiary)', margin: '0 0 8px' }}>配置文件中已禁用（enabled=false）</p>
                   )}
+                  {ch.mode === 'NOT_IMPLEMENTED' && (
+                    <p style={{ color: 'var(--color-danger)', margin: '0 0 8px' }}>
+                      该渠道尚未接入真实第三方API，下单/取消/查轨迹等调用会被直接拒绝（系统不会生成假数据）
+                    </p>
+                  )}
+                  {ch.mode === 'NOT_CONFIGURED' && (
+                    <p style={{ color: 'var(--color-warning)', margin: '0 0 8px' }}>接口已接入，但尚未填写密钥，功能不可用</p>
+                  )}
 
                   <Divider style={{ margin: '8px 0' }} />
 
                   <div className="u-fs-14" style={{ color: 'var(--color-text-secondary)' }}>
-                    <div className="u-mb-4">
-                      <strong>回调地址：</strong>
-                      <Tooltip title={webhookUrl}>
-                        <span className="u-mr-6" style={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                          ...{ch.webhookPath}
-                        </span>
-                      </Tooltip>
-                      <Button type="link" icon={<CopyOutlined />}
-                        onClick={() => copyText(webhookUrl)} style={{ padding: 0 }}>
-                        复制
-                      </Button>
-                    </div>
+                    {ch.webhookPath ? (
+                      <div className="u-mb-4">
+                        <strong>回调地址：</strong>
+                        <Tooltip title={webhookUrl}>
+                          <span className="u-mr-6" style={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                            ...{ch.webhookPath}
+                          </span>
+                        </Tooltip>
+                        <Button type="link" icon={<CopyOutlined />}
+                          onClick={() => copyText(webhookUrl)} style={{ padding: 0 }}>
+                          复制
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="u-mb-4">
+                        <strong>回调地址：</strong>
+                        <span style={{ color: 'var(--color-text-tertiary)' }}>待接入时创建</span>
+                      </div>
+                    )}
 
                     {ch.mode !== 'LIVE' && hint && (
                       <div className="u-mt-8">
@@ -165,18 +190,26 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
 
                   <Divider style={{ margin: '8px 0' }} />
 
-                  <Button
-                    type="primary"
-                    ghost
-                    icon={<SettingOutlined />}
-                    block
-                    onClick={() => {
-                      setConfigChannel(ch.code);
-                      setConfigModalOpen(true);
-                    }}
-                  >
-                    {ch.mode === 'LIVE' ? '修改配置' : '立即配置'}
-                  </Button>
+                  {ch.mode === 'NOT_IMPLEMENTED' ? (
+                    <Tooltip title="接口尚未接入，此时填写密钥不会生效；接入完成后此处自动可配置">
+                      <Button type="primary" ghost icon={<SettingOutlined />} block disabled>
+                        接口未接入
+                      </Button>
+                    </Tooltip>
+                  ) : (
+                    <Button
+                      type="primary"
+                      ghost
+                      icon={<SettingOutlined />}
+                      block
+                      onClick={() => {
+                        setConfigChannel(ch.code);
+                        setConfigModalOpen(true);
+                      }}
+                    >
+                      {ch.mode === 'LIVE' ? '修改配置' : '立即配置'}
+                    </Button>
+                  )}
                 </Card>
               </Badge.Ribbon>
             </Col>
