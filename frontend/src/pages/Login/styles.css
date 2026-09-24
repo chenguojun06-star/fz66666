@@ -76,7 +76,7 @@
   --rot: -15deg;
   --fall-delay: 0.15s;
   --fd: 11s;
-  color: rgba(45, 127, 249, 0.40);
+  color: rgba(40, 52, 78, 0.44);
   filter: url(#pencil-texture);
 }
 
@@ -87,7 +87,7 @@
   --rot: 14deg;
   --fall-delay: 0.05s;
   --fd: 13s;
-  color: rgba(31, 117, 234, 0.36);
+  color: rgba(40, 52, 78, 0.4);
   filter: url(#pencil-texture);
 }
 
@@ -98,7 +98,7 @@
   --rot: -6deg;
   --fall-delay: 0s;
   --fd: 9.5s;
-  color: rgba(45, 127, 249, 0.34);
+  color: rgba(40, 52, 78, 0.38);
   filter: url(#pencil-texture);
 }
 
@@ -109,7 +109,7 @@
   --rot: 6deg;
   --fall-delay: 0.1s;
   --fd: 12s;
-  color: rgba(45, 127, 249, 0.38);
+  color: rgba(40, 52, 78, 0.42);
   filter: url(#pencil-texture);
 }
 
@@ -120,7 +120,7 @@
   --rot: 12deg;
   --fall-delay: 0.25s;
   --fd: 10.5s;
-  color: rgba(31, 117, 234, 0.34);
+  color: rgba(40, 52, 78, 0.38);
   filter: url(#pencil-texture);
 }
 
@@ -131,7 +131,7 @@
   --rot: -8deg;
   --fall-delay: 0.2s;
   --fd: 14s;
-  color: rgba(45, 127, 249, 0.38);
+  color: rgba(40, 52, 78, 0.42);
   filter: url(#pencil-texture);
 }
 
@@ -142,7 +142,7 @@
   --rot: 5deg;
   --fall-delay: 0.3s;
   --fd: 11.5s;
-  color: rgba(31, 117, 234, 0.40);
+  color: rgba(40, 52, 78, 0.44);
   filter: url(#pencil-texture);
 }
 
@@ -153,7 +153,7 @@
   --rot: -10deg;
   --fall-delay: 0.35s;
   --fd: 13.5s;
-  color: rgba(45, 127, 249, 0.44);
+  color: rgba(40, 52, 78, 0.5);
   filter: url(#pencil-texture);
 }
 
@@ -165,7 +165,7 @@
   --offset-x: -50%;
   --fall-delay: 0.4s;
   --fd: 15s;
-  color: rgba(31, 117, 234, 0.46);
+  color: rgba(40, 52, 78, 0.5);
   filter: url(#pencil-texture);
 }
 
@@ -181,7 +181,7 @@
   --rot: 22deg;
   --fall-delay: 0.18s;
   --fd: 10s;
-  color: rgba(45, 127, 249, 0.34);
+  color: rgba(40, 52, 78, 0.38);
 
 }
 
@@ -205,15 +205,6 @@
 
 @keyframes threadMarch {
   to { stroke-dashoffset: -14; }
-}
-
-.thread-dot {
-  fill: rgba(45, 127, 249, 0.6);
-  filter: drop-shadow(0 0 2px rgba(45, 127, 249, 0.55));
-}
-
-.thread-dot--slow {
-  fill: rgba(31, 117, 234, 0.45);
 }
 
 .tech-grid {
@@ -506,7 +497,7 @@
   right: 5%;
   --rot: 15deg;
   --fd: 12s;
-  color: rgba(45, 127, 249, 0.34);
+  color: rgba(40, 52, 78, 0.38);
   pointer-events: none;
   z-index: 0;
   animation: garmentFloat var(--fd) ease-in-out infinite alternate;
@@ -519,7 +510,7 @@
   left: 5%;
   --rot: -10deg;
   --fd: 14s;
-  color: rgba(31, 117, 234, 0.44);
+  color: rgba(40, 52, 78, 0.34);
   pointer-events: none;
   z-index: 0;
   animation: garmentFloat var(--fd) ease-in-out 1.2s infinite alternate;
