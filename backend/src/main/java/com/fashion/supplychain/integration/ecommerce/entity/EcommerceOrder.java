@@ -54,6 +54,17 @@ public class EcommerceOrder {
     private String skuCode;
     private Integer quantity;
 
+    // ==================== 组合套装（D-532）====================
+
+    /**
+     * 组合商品ID——平台侧组合商品的商品编码 = t_combo_product.combo_code，
+     * 接单识别后回填；现货直发时按子SKU逐个扣库存出库
+     */
+    private Long comboId;
+
+    /** 组合商品编码（=订单 skuCode 字段值，冗余落库便于列表直显） */
+    private String comboCode;
+
     /** 关联生产订单 */
     private String productionOrderId;
     private String productionOrderNo;

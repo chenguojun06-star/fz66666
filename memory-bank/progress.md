@@ -1,9 +1,19 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-09-24（D-529 组合商品/套装——组合SKU销售、子SKU出库）
+> 最后更新：2026-09-24（D-532 组合商品接入电商 + D-529 组合商品套装）
 
 ## 已完成
+
+### 2026-09-24 D-532 组合商品接入电商——平台套装订单按子SKU出库（本地全链路实测）
+
+- [x] V202709240002：t_ecommerce_order 加 combo_id/combo_code
+- [x] receiveOrder 组合识别（comboCode→回填组合名/售价、跳过款式匹配与智能分仓）
+- [x] directOutbound 组合分支→FinishedOutstockHelper.comboOutbound（子SKU扣减/共单号/分摊/溯源）
+- [x] GET /api/ec/stock/combo-list + pushStockToPlatform 推组合可售套数
+- [x] 前端：订单列表/详情/直发弹窗套装展示与提示、智能库存「组合商品库存」面板
+- [x] 顺手修既有 P0×2：匿名请求空上下文致 webhook 恒 401；webhook 无租户上下文致接单回滚
+- [x] 本地实测：webhook 签名推单→识别→直发 2 套（79.88+40.12=120 精确）→ combo-list 27 套
 
 ### 2026-09-24 D-529 组合商品（套装）——组合SKU销售、实际按子SKU出库（双端编译绿 + 本地全链路实测）
 

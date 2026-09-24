@@ -30,6 +30,9 @@ public class EcStockOrchestrator {
     @Autowired private EcStockAlertService stockAlertService;
     @Autowired private EcPurchaseSuggestionService purchaseSuggestionService;
     @Autowired private ProductSkuService productSkuService;
+    /** D-532：组合商品（套装）——组合可售库存随 SKU 一并推送平台 */
+    @Autowired(required = false) private com.fashion.supplychain.warehouse.service.ComboProductService comboProductService;
+    @Autowired(required = false) private com.fashion.supplychain.warehouse.service.ComboProductItemService comboProductItemService;
 
     /** 平台库存推送（真实推送到电商平台的唯一出口），集成模块未启用时可缺省 */
     @Autowired(required = false) private PlatformNotifyService platformNotifyService;
@@ -92,8 +95,64 @@ public class EcStockOrchestrator {
                 failed++;
             }
         }
+
+        // D-532：组合商品（套装）可售库存一并推送——组合在平台侧是独立商品（编码=comboCode），
+        // 可售(套)=min(子SKU可用库存/单套数量)，任一子SKU缺货即套数为0
+        pushed += pushComboStockToPlatform(tenantId, platformNotifyService);
+
         log.info("[EcStockOrchestrator] 库存推送平台完成: tenantId={}, 成功={}, 失败={}",
                 tenantId, pushed, failed);
+        return pushed;
+    }
+
+    /**
+     * D-532：推送组合商品（套装）可售库存到平台。失败不阻断 SKU 推送主流程。
+     */
+    private int pushComboStockToPlatform(Long tenantId, PlatformNotifyService notifyService) {
+        if (comboProductService == null || comboProductItemService == null) {
+            return 0;
+        }
+        int pushed = 0;
+        try {
+            List<com.fashion.supplychain.warehouse.entity.ComboProduct> combos = comboProductService.lambdaQuery()
+                    .eq(com.fashion.supplychain.warehouse.entity.ComboProduct::getTenantId, tenantId)
+                    .eq(com.fashion.supplychain.warehouse.entity.ComboProduct::getStatus, "ENABLED")
+                    .list();
+            for (com.fashion.supplychain.warehouse.entity.ComboProduct combo : combos) {
+                List<com.fashion.supplychain.warehouse.entity.ComboProductItem> items =
+                        comboProductItemService.lambdaQuery()
+                                .eq(com.fashion.supplychain.warehouse.entity.ComboProductItem::getComboId, combo.getId())
+                                .list();
+                if (items.isEmpty()) continue;
+                java.util.Set<String> codes = new java.util.HashSet<>();
+                for (com.fashion.supplychain.warehouse.entity.ComboProductItem it : items) {
+                    if (it.getSkuCode() != null) codes.add(it.getSkuCode());
+                }
+                if (codes.isEmpty()) continue;
+                java.util.Map<String, Integer> stockByCode = new java.util.HashMap<>();
+                for (ProductSku sku : productSkuService.lambdaQuery()
+                        .eq(ProductSku::getTenantId, tenantId)
+                        .in(ProductSku::getSkuCode, codes)
+                        .list()) {
+                    stockByCode.put(sku.getSkuCode(), sku.getStockQuantity() != null ? Math.max(0, sku.getStockQuantity()) : 0);
+                }
+                int available = Integer.MAX_VALUE;
+                for (com.fashion.supplychain.warehouse.entity.ComboProductItem it : items) {
+                    int stock = stockByCode.getOrDefault(it.getSkuCode(), 0);
+                    int perSet = it.getQuantity() != null && it.getQuantity() > 0 ? it.getQuantity() : 1;
+                    available = Math.min(available, stock / perSet);
+                }
+                if (available == Integer.MAX_VALUE) continue;
+                boolean ok = notifyService.updatePlatformStock(tenantId, combo.getComboCode(), available);
+                if (ok) {
+                    pushed++;
+                } else {
+                    log.warn("[EcStockOrchestrator] 组合库存推送失败: combo={} 可用={}套", combo.getComboCode(), available);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[EcStockOrchestrator] 组合库存推送异常（不影响SKU推送）: tenantId={} err={}", tenantId, e.getMessage());
+        }
         return pushed;
     }
 

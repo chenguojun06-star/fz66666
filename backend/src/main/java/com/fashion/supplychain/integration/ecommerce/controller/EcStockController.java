@@ -29,6 +29,20 @@ public class EcStockController {
     @Autowired private EcStockOrchestrator stockOrchestrator;
     @Autowired private EcPurchaseSuggestionOrchestrator purchaseSuggestionOrchestrator;
     @Autowired private EcReplenishmentOrchestrator replenishmentOrchestrator;
+    /** D-532：组合商品（套装）——智能库存面板显示组合可售库存 */
+    @Autowired private com.fashion.supplychain.warehouse.orchestration.ComboProductOrchestrator comboProductOrchestrator;
+
+    /**
+     * D-532：组合商品（套装）可售库存列表——availableStock(套)=min(子SKU可用/单套数量)。
+     * 智能库存 Tab 的「组合商品库存」区块用，与 SKU 库存明细并列展示。
+     */
+    @GetMapping("/combo-list")
+    public Result<List<com.fashion.supplychain.warehouse.dto.ComboProductVO>> comboStockList() {
+        Map<String, Object> params = new java.util.HashMap<>();
+        params.put("page", 1);
+        params.put("pageSize", 200);
+        return Result.success(comboProductOrchestrator.pageList(params).getRecords());
+    }
 
     /**
      * 库存全量重算（本地）。

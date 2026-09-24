@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import { Button, Space } from 'antd';
-import { WarningOutlined, ShoppingCartOutlined, InboxOutlined, SwapOutlined, ThunderboltOutlined, RobotOutlined, MergeCellsOutlined, GiftOutlined, PlusOutlined, EnvironmentOutlined, AuditOutlined, SyncOutlined } from '@ant-design/icons';
+import { WarningOutlined, ShoppingCartOutlined, DeploymentUnitOutlined, InboxOutlined, SwapOutlined, ThunderboltOutlined, RobotOutlined, MergeCellsOutlined, GiftOutlined, PlusOutlined, EnvironmentOutlined, AuditOutlined, SyncOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { UniversalStock, StockAlert, PurchaseSuggestion, WarehouseAllocation, MergeGroup, GiftRule, LogisticsAnomaly, PlatformBill } from './useEcStock';
 import { useSmartStockData } from './useSmartStockData';
 import { buildAllColumns } from './columns';
+import ComboStockPanel from './components/ComboStockPanel';
 import SafeStockModal from './components/SafeStockModal';
 import SplitDetailModal from './components/SplitDetailModal';
 import MergeOutboundModal from './components/MergeOutboundModal';
@@ -89,6 +90,10 @@ const SmartStockTab: React.FC = () => {
             </Space>
           </div>
           <ResizableTable<UniversalStock> dataSource={st.stockList} columns={cols.stockCols} rowKey="id" size="small" loading={st.loading} emptyDescription="暂无库存数据" />
+          <div className="u-fw-600 u-mt-16 u-mb-8 u-fs-14">
+            <DeploymentUnitOutlined style={{ marginRight: 6, color: 'var(--color-primary)' }} />组合商品库存（套装可售 = 最紧缺子SKU库存 ÷ 单套数量）
+          </div>
+          <ComboStockPanel />
         </div>
       ),
     },

@@ -378,6 +378,12 @@ public class SecurityConfig implements WebMvcConfigurer {
                 }
             }
 
+            // D-532：匿名请求（无token/header认证，如平台webhook回调）不注入空上下文——
+            // 空ctx（tenantId=null）会被 TenantInterceptor 判为超管隔离（tenant_id IS NULL），
+            // 导致 webhook 的平台配置查询与订单幂等查询恒空、接单永远失败
+            if (ctx.getUserId() == null && !org.springframework.util.StringUtils.hasText(ctx.getUsername())) {
+                return true;
+            }
             UserContext.set(ctx);
             return true;
         }

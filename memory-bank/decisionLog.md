@@ -1,7 +1,28 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-24（新增 D-531 登录页「蓝色织线·蓝图」动态化——灰稿线稿改蓝调+悬浮呼吸+缝纫线流光点巡游）
+> 最后更新：2026-09-24（新增 D-532 组合商品接入电商——平台套装订单按子SKU出库）
+
+---
+
+## D-532：组合商品接入电商——平台套装订单按子SKU出库（2026-09-24，本地全链路验证通过）
+
+**需求**：组合商品（D-529）接入电商模块——平台侧把套装作为独立商品上架（商品编码=comboCode），订单进来后按套装口径发货、按子SKU出库。
+
+**核心实现**：
+- `t_ecommerce_order` 加 `combo_id/combo_code`（V202709240002）；`receiveOrder` 按 `combo_code=平台商品编码` 识别套装订单：productName 回填组合名、unitPrice 缺省用组合售价、**跳过款式匹配与智能分仓**（套装无生产单、无单一SKU可分仓）。
+- `directOutbound` 组合分支：调 `FinishedOutstockHelper.comboOutbound`（复用 D-529 链路：原子扣减/共单号/分摊/溯源三列），套数=订单数量、套装价=订单单价、客户=收件人、remark 带电商单号；后沿用原直发后处理（状态2/2+收入流水+物流回传）。
+- `GET /api/ec/stock/combo-list`：智能库存 Tab「组合商品库存」区块（可售=最紧缺子SKU÷单套数量，显示瓶颈子SKU）。
+- `EcStockOrchestrator.pushStockToPlatform` 尾部追加组合库存推送（comboCode→可售套数，随 AUTO_EC_STOCK_SYNC 开关）。
+- 前端：订单列表套装 Tag+套装图标列、详情抽屉「组合套装构成」（子SKU构成+实时库存）、直发弹窗套装提示、智能库存组合面板。
+
+**顺手修复的既有 P0（webhook 链路本来就是坏的）**：
+1. `UserContextInterceptor` 对每个请求都 `new UserContext()` 并 set——匿名 webhook 得到全空 ctx（tenantId=null），被 TenantInterceptor 判为超管隔离（tenant_id IS NULL），平台配置查询/订单幂等查询恒空 → webhook 永远 401 not configured。修：匿名请求（无 userId 无 username）不注入上下文。
+2. webhook 接单前注入系统租户上下文（path tenantId），否则 receiveOrder 内 TenantAssert/智能分仓全部异常 → 整单 rollback-only。
+
+**教训**：本地 lilb 是租户 2 不是租户 1——测试时租户对不上会误判"识别失效"，先核对数据归属再怀疑代码；编号 531 又被并行会话（登录页）抢号，动手前 grep decisionLog。
+
+**验证**（本地 3308/8088 实测）：webhook 推组合订单（HMAC 签名）→ combo 字段回填+产品名+跳过分仓 → 直发出库 2 套价 60：L 58→54(-4=2×2套)、白M -2、分摊 79.88+40.12=120.00 精确、共单号、remark 带电商单号、订单 2/2+快递 → /ec/stock/combo-list 可售 27 套=min(27,28)。
 
 ---
 

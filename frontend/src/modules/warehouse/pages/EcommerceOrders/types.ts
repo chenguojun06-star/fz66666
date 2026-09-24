@@ -10,6 +10,8 @@ export interface EcOrder {
   buyerRemark: string; sellerRemark: string;
   status: number; warehouseStatus: number;
   productionOrderId: string; productionOrderNo: string; createTime: string;
+  /** D-532：组合套装订单——平台商品编码=comboCode，出库按子SKU逐个扣减 */
+  comboId?: number; comboCode?: string;
 }
 
 export interface Sku {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, Input, Select, Alert } from 'antd';
+import { Form, Input, Select, Alert, Tag } from 'antd';
 import { CarOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import { EXPRESS_COMPANIES } from '../helpers';
@@ -22,9 +22,16 @@ const DirectOutboundModal: React.FC<Props> = ({ open, target, outbounding, form,
       {target && (
         <div className="u-mb-12 u-p-8px12px u-br-6 u-fs-14" style={{ background: 'var(--color-bg-stripe)' }}>
           <div>平台订单: <b>{target.platformOrderNo || target.orderNo}</b></div>
-          <div>商品: {target.productName} × {target.quantity}</div>
+          <div>
+            {target.comboCode && <Tag color="geekblue" style={{ marginRight: 4 }}>套装</Tag>}
+            商品: {target.productName} × {target.quantity}
+          </div>
           <div>收件人: {target.receiverName} &nbsp;{target.receiverPhone}</div>
         </div>
+      )}
+      {target?.comboCode && (
+        <Alert style={{ marginBottom: 12 }} type="info" showIcon
+          title={`套装订单：出库将按组合「${target.comboCode}」的子SKU逐个扣减库存（每子SKU一行出库记录、共一张出库单号），销售按套装单价分摊`} />
       )}
       <Alert style={{ marginBottom: 12, fontSize: 15 }} type="success" showIcon
         title="出库后自动扣减商品编码库存、更新订单状态为【已出库】、生成销售收入流水、回传物流信息到平台" />

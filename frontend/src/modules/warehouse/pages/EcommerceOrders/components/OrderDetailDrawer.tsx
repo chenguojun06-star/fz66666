@@ -1,7 +1,9 @@
 import React from 'react';
-import { Drawer, Descriptions, Divider, Tag, Typography } from 'antd';
-import { CheckCircleOutlined } from '@ant-design/icons';
+import { Drawer, Descriptions, Divider, Spin, Tag, Typography } from 'antd';
+import { CheckCircleOutlined, DeploymentUnitOutlined } from '@ant-design/icons';
+import ResizableTable from '@/components/common/ResizableTable';
 import { getPlatformTag } from '@/utils/platform';
+import { comboProductApi, type ComboProductVO } from '@/services/warehouse/comboProductApi';
 import { STATUS_MAP, WH_MAP } from '../helpers';
 import type { EcOrder } from '../types';
 
@@ -12,6 +14,54 @@ interface Props {
   detail: EcOrder | null;
   onClose: () => void;
 }
+
+/** D-532：套装订单的子商品构成（按组合编码实时查组合商品） */
+const ComboSection: React.FC<{ comboCode: string }> = ({ comboCode }) => {
+  const [combo, setCombo] = React.useState<ComboProductVO | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  React.useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    comboProductApi.list({ page: 1, pageSize: 1, keyword: comboCode })
+      .then((data) => { if (!cancelled) setCombo(data?.records?.[0] || null); })
+      .catch(() => { if (!cancelled) setCombo(null); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [comboCode]);
+
+  return (
+    <Spin spinning={loading}>
+      <Descriptions column={2} bordered size="small" style={{ marginBottom: 8 }}>
+        <Descriptions.Item label="组合编码"><Tag color="geekblue" style={{ margin: 0 }}><DeploymentUnitOutlined /> {comboCode}</Tag></Descriptions.Item>
+        <Descriptions.Item label="组合可售">
+          <span className="u-fw-600" style={{ color: (combo?.availableStock || 0) > 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+            {combo?.availableStock ?? '-'} 套
+          </span>
+        </Descriptions.Item>
+      </Descriptions>
+      <ResizableTable
+        size="small"
+        columns={[
+          { title: '商品编码', dataIndex: 'skuCode', width: 190, render: (v: string) => <span style={{ fontFamily: 'var(--font-family-mono, monospace)' }}>{v}</span> },
+          { title: '款号', dataIndex: 'styleNo', width: 120, render: (v: string) => v || '-' },
+          { title: '颜色及规格', key: 'cs', width: 120, render: (_: unknown, r: ComboProductVO['items'][number]) => [r.color, r.size].filter(Boolean).join('/') || '-' },
+          { title: '单套数量', dataIndex: 'quantity', width: 80, align: 'right' as const },
+          {
+            title: '子SKU可用', dataIndex: 'availableQty', width: 90, align: 'right' as const,
+            render: (v: number | undefined) => <span style={{ color: (v || 0) > 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>{v ?? 0}</span>,
+          },
+        ] as never}
+        dataSource={(combo?.items || []) as never}
+        rowKey="skuCode"
+        pagination={false}
+        emptyDescription="未找到组合商品定义（可能已删除）"
+      />
+      <div className="u-fs-12 u-mt-8" style={{ color: 'var(--color-text-tertiary)' }}>
+        出库时按上方子SKU逐个扣减库存，每个子SKU生成一行出库记录（共用一张出库单号），销售金额按套装单价分摊。
+      </div>
+    </Spin>
+  );
+};
 
 const OrderDetailDrawer: React.FC<Props> = ({ open, detail, onClose }) => {
   return (
@@ -33,6 +83,12 @@ const OrderDetailDrawer: React.FC<Props> = ({ open, detail, onClose }) => {
               <Tag color={WH_MAP[detail.warehouseStatus]?.color}>{WH_MAP[detail.warehouseStatus]?.label}</Tag>
             </Descriptions.Item>
           </Descriptions>
+          {detail.comboCode && (
+            <>
+              <Divider style={{ margin: '12px 0' }}>组合套装构成</Divider>
+              <ComboSection comboCode={detail.comboCode} />
+            </>
+          )}
           <Divider style={{ margin: '12px 0' }}>商品 &amp; 金额</Divider>
           <Descriptions column={2} bordered>
             <Descriptions.Item label="商品名" span={2}>{detail.productName || '-'}</Descriptions.Item>

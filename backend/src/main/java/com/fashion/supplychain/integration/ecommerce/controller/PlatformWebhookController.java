@@ -79,14 +79,27 @@ public class PlatformWebhookController {
 
         try {
             Map<String, Object> orderBody = dataMapper.mapToGeneric(code, body);
-            Map<String, Object> result = ecommerceOrderOrchestrator.receiveOrder(code, orderBody, config.getTenantId());
+            // D-532：webhook 免登录但带 path tenantId——注入系统租户上下文，
+            // 否则 UserContext 为空，receiveOrder 内依赖租户上下文的子调用
+            // （TenantAssert/智能分仓/组合识别）全部异常导致整单回滚
+            com.fashion.supplychain.common.UserContext webhookCtx = new com.fashion.supplychain.common.UserContext();
+            webhookCtx.setTenantId(config.getTenantId());
+            webhookCtx.setUserId("webhook-system");
+            webhookCtx.setUsername("webhook:" + code);
+            webhookCtx.setPermissionRange("all");
+            com.fashion.supplychain.common.UserContext.set(webhookCtx);
+            try {
+                Map<String, Object> result = ecommerceOrderOrchestrator.receiveOrder(code, orderBody, config.getTenantId());
 
-            if (Boolean.TRUE.equals(result.get("duplicate"))) {
-                return ResponseEntity.ok(Map.of("received", true, "duplicate", true,
-                        "orderNo", result.get("orderNo")));
+                if (Boolean.TRUE.equals(result.get("duplicate"))) {
+                    return ResponseEntity.ok(Map.of("received", true, "duplicate", true,
+                            "orderNo", result.get("orderNo")));
+                }
+                return ResponseEntity.ok(Map.of("received", true, "duplicate", false,
+                        "orderNo", result.get("orderNo"), "id", result.get("id")));
+            } finally {
+                com.fashion.supplychain.common.UserContext.clear();
             }
-            return ResponseEntity.ok(Map.of("received", true, "duplicate", false,
-                    "orderNo", result.get("orderNo"), "id", result.get("id")));
         } catch (Exception e) {
             log.error("[Webhook] 平台{}订单处理失败: {}", code, e.getMessage(), e);
             // 500 → 平台会重推；落库侧按 (platformOrderNo, sourcePlatformCode, tenantId) 幂等去重。

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tag, Space, Button, Tooltip, InputNumber, Badge, Typography, Popover } from 'antd';
 import {
-  CarOutlined, CheckCircleOutlined, EditOutlined, EyeOutlined,
+  CarOutlined, CheckCircleOutlined, DeploymentUnitOutlined, EditOutlined, EyeOutlined,
   LinkOutlined, RollbackOutlined, SaveOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -27,6 +27,9 @@ export interface OrdersColumnsArgs {
 
 export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder> {
   const { styleImageMap, briefBySku, onViewDetail, onLink, onOutbound, onInitReturn } = args;
+  // D-532：组合套装订单——款号/款式图列对套装行改显组合编码+套装图标（briefBySku 查不到组合）
+  const baseStyleNo = styleNoColumn<EcOrder>({ briefBySku, skuCode: r => r.skuCode })[0];
+  const baseStyleImg = styleImageColumn<EcOrder>({ imageMap: styleImageMap, skuCode: r => r.skuCode })[0];
   return [
     {
       title: '平台', dataIndex: 'sourcePlatformCode', width: 88,
@@ -44,14 +47,32 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
         </div>
       ),
     },
-    styleNoColumn<EcOrder>({ briefBySku, skuCode: r => r.skuCode }),
-    styleImageColumn<EcOrder>({ imageMap: styleImageMap, skuCode: r => r.skuCode }),
+    {
+      ...baseStyleNo,
+      title: '款号 / 套装',
+      render: (v: unknown, r: EcOrder, i: number) => r.comboCode
+        ? <Tag color="geekblue" style={{ margin: 0 }}>套装 {r.comboCode}</Tag>
+        : baseStyleNo.render?.(v, r, i),
+    },
+    {
+      ...baseStyleImg,
+      render: (v: unknown, r: EcOrder, i: number) => r.comboCode
+        ? (
+          <div style={{ width: 40, height: 40, borderRadius: 6, background: 'var(--color-bg-page)', border: '1px dashed var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <DeploymentUnitOutlined style={{ fontSize: 20, color: 'var(--color-primary)' }} />
+          </div>
+        )
+        : baseStyleImg.render?.(v, r, i),
+    },
     {
       title: '商品 / 买家', width: 190,
       render: (_: unknown, r: EcOrder) => (
         <div>
-          <div className="u-fs-14">{r.productName || '-'} <Text type="secondary">×{r.quantity}</Text></div>
-          {r.skuCode && <div className="u-fs-14" style={{ color: 'var(--color-success)' }}>SKU {r.skuCode}</div>}
+          <div className="u-fs-14">
+            {r.comboCode && <Tag color="geekblue" style={{ margin: '0 4px 0 0' }}>套装</Tag>}
+            {r.productName || '-'} <Text type="secondary">×{r.quantity}</Text>
+          </div>
+          {r.skuCode && <div className="u-fs-14" style={{ color: r.comboCode ? 'var(--color-primary)' : 'var(--color-success)' }}>{r.comboCode ? '组合编码 ' : 'SKU '}{r.skuCode}</div>}
           <div className="u-fs-14" style={{ color: 'var(--color-text-muted)' }}>{r.buyerNick || r.receiverName}</div>
         </div>
       ),
@@ -112,9 +133,9 @@ export function buildOrdersColumns(args: OrdersColumnsArgs): ColumnsType<EcOrder
           <Tooltip title="查看详情">
             <Button type="text" icon={<EyeOutlined />} onClick={() => onViewDetail(r)} />
           </Tooltip>
-          <Tooltip title={r.productionOrderNo ? '已关联' : '关联排产'}>
+          <Tooltip title={r.comboCode ? '套装订单无需关联生产单' : (r.productionOrderNo ? '已关联' : '关联排产')}>
             <Button type="text" icon={<LinkOutlined />}
-              disabled={!!r.productionOrderNo}
+              disabled={!!r.productionOrderNo || !!r.comboCode}
               onClick={() => onLink(r)} />
           </Tooltip>
           {(r.warehouseStatus ?? 0) < 2 && (

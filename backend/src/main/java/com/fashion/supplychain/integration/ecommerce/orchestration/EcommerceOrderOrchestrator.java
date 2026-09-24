@@ -55,6 +55,18 @@ public class EcommerceOrderOrchestrator {
     @Autowired
     private EcOrderProcessOrchestrator orderProcessOrchestrator;
 
+    /** D-532：组合商品（套装）——平台订单的商品编码=combo_code 时识别为套装订单 */
+    @Autowired
+    private com.fashion.supplychain.warehouse.service.ComboProductService comboProductService;
+
+    /**
+     * D-532：套装出库链路（组合订单直发时按子SKU扣库存）。
+     * FinishedOutstockHelper 已 @Lazy 注入本类，这里同样 @Lazy 打破循环依赖。
+     */
+    @org.springframework.context.annotation.Lazy
+    @Autowired
+    private com.fashion.supplychain.warehouse.helper.FinishedOutstockHelper finishedOutstockHelper;
+
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> receiveOrder(String platformCode, Map<String, Object> body) {
         Long tenantId = UserContext.tenantId();
@@ -114,10 +126,29 @@ public class EcommerceOrderOrchestrator {
             order.setDiscount(new java.math.BigDecimal(body.get("discount").toString()));
         }
         order.setPayType((String) body.get("payType"));
+
+        // D-532：组合套装识别——平台商品编码命中 t_combo_product.combo_code 即套装订单。
+        // skuCode 字段仍存 comboCode（保持"订单唯一商品编码"语义），销售/出库按组合口径处理
+        com.fashion.supplychain.warehouse.entity.ComboProduct combo = resolveCombo(tenantId, order.getSkuCode());
+        if (combo != null) {
+            order.setComboId(combo.getId());
+            order.setComboCode(combo.getComboCode());
+            if (!StringUtils.hasText(order.getProductName())) {
+                order.setProductName(combo.getComboName());
+            }
+            if (order.getUnitPrice() == null && combo.getSalePrice() != null) {
+                order.setUnitPrice(combo.getSalePrice());
+            }
+        }
+
         ecOrderService.save(order);
         log.info("[EC接入] 平台={} 平台单号={} 内部单号={} tenantId={}", platformCode, platformOrderNo, order.getOrderNo(), tenantId);
 
         try {
+            // D-532：组合套装订单没有款式/生产单，跳过款式匹配（套装按子SKU库存直接发货）
+            if (combo != null) {
+                log.info("[EC接入] 套装订单: orderNo={} combo={}({})", order.getOrderNo(), combo.getComboName(), combo.getComboCode());
+            } else {
             // 优先用 body 里的 styleNo（聚水潭 i_id 直接=款号）；
             // 没有则按 skuCode 查 t_product_sku → t_style_info 权威解析款号。
             // 注意：真实 SKU 编码是"款号直接拼颜色尺码"（如 BR24XQ0098E草绿色L(170/84A)），
@@ -156,22 +187,45 @@ public class EcommerceOrderOrchestrator {
                             order.getOrderNo(), matched.getOrderNo(), styleNo);
                 }
             }
+            }
         } catch (Exception e) {
             log.warn("[EC自动匹配] SKU匹配异常，不阻断接单: {}", e.getMessage());
         }
 
-        // 智能仓库分配
-        try {
-            EcOrderProcessOrchestrator.OrderProcessResult result = orderProcessOrchestrator.processOrder(
-                    tenantId, order.getId(), order.getOrderNo(),
-                    null, null, order.getSkuCode(), order.getQuantity() != null ? order.getQuantity() : 0);
-            log.info("[EcommerceOrderOrchestrator] 订单处理结果: orderNo={}, fullyAllocated={}, unfulfilled={}",
-                    order.getOrderNo(), result.fullyAllocated(), result.unfulfilledQty());
-        } catch (Exception e) {
-            log.warn("[EcommerceOrderOrchestrator] 仓库分配失败，订单仍保留: orderNo={}", order.getOrderNo(), e);
+        // 智能仓库分配（D-532：组合套装订单无单一SKU可分配，跳过智能分仓）
+        if (combo == null) {
+            try {
+                EcOrderProcessOrchestrator.OrderProcessResult result = orderProcessOrchestrator.processOrder(
+                        tenantId, order.getId(), order.getOrderNo(),
+                        null, null, order.getSkuCode(), order.getQuantity() != null ? order.getQuantity() : 0);
+                log.info("[EcommerceOrderOrchestrator] 订单处理结果: orderNo={}, fullyAllocated={}, unfulfilled={}",
+                        order.getOrderNo(), result.fullyAllocated(), result.unfulfilledQty());
+            } catch (Exception e) {
+                log.warn("[EcommerceOrderOrchestrator] 仓库分配失败，订单仍保留: orderNo={}", order.getOrderNo(), e);
+            }
         }
 
         return Map.of("id", order.getId(), "orderNo", order.getOrderNo(), "duplicate", false);
+    }
+
+    /**
+     * D-532：按平台商品编码识别组合商品（套装）。
+     * 平台侧把套装作为独立商品上架时，商品编码 = t_combo_product.combo_code。
+     */
+    private com.fashion.supplychain.warehouse.entity.ComboProduct resolveCombo(Long tenantId, String skuCode) {
+        if (!StringUtils.hasText(skuCode) || comboProductService == null) {
+            return null;
+        }
+        try {
+            return comboProductService.lambdaQuery()
+                    .eq(com.fashion.supplychain.warehouse.entity.ComboProduct::getTenantId, tenantId)
+                    .eq(com.fashion.supplychain.warehouse.entity.ComboProduct::getComboCode, skuCode)
+                    .last("LIMIT 1")
+                    .one();
+        } catch (Exception e) {
+            log.warn("[EC接入] 组合商品识别失败 skuCode={}: {}", skuCode, e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -401,7 +455,27 @@ public class EcommerceOrderOrchestrator {
         }
         String skuCode = order.getSkuCode();
         int quantity = order.getQuantity() != null ? order.getQuantity() : 1;
-        if (StringUtils.hasText(skuCode)) {
+        if (order.getComboId() != null) {
+            // D-532：组合套装订单——按子SKU逐个扣库存出库（复用套装出库链路：
+            // 原子扣减防超卖、每子SKU一行出库记录、共一张出库单号、行挂组合溯源）
+            Map<String, Object> comboParams = new java.util.HashMap<>();
+            comboParams.put("comboId", order.getComboId());
+            comboParams.put("quantity", quantity);
+            if (order.getUnitPrice() != null) {
+                comboParams.put("salesPrice", order.getUnitPrice());
+            }
+            String customer = StringUtils.hasText(order.getReceiverName()) ? order.getReceiverName() : order.getBuyerNick();
+            if (StringUtils.hasText(customer)) comboParams.put("customerName", customer);
+            if (StringUtils.hasText(order.getReceiverPhone())) comboParams.put("customerPhone", order.getReceiverPhone());
+            if (StringUtils.hasText(order.getReceiverAddress())) comboParams.put("shippingAddress", order.getReceiverAddress());
+            if (StringUtils.hasText(trackingNo)) comboParams.put("trackingNo", trackingNo);
+            if (StringUtils.hasText(expressCompany)) comboParams.put("expressCompany", expressCompany);
+            comboParams.put("outstockType", "shipment");
+            comboParams.put("remark", "电商订单发货 " + order.getOrderNo());
+            Map<String, Object> comboResult = finishedOutstockHelper.comboOutbound(comboParams);
+            log.info("[EC现货出库] 套装订单出库完成: orderNo={}, combo={}, 套数={}, 出库单号={}",
+                    order.getOrderNo(), order.getComboCode(), quantity, comboResult.get("outstockNo"));
+        } else if (StringUtils.hasText(skuCode)) {
             boolean deducted = productSkuService.decreaseStockBySkuCode(skuCode, quantity);
             if (!deducted) {
                 throw new IllegalStateException(
