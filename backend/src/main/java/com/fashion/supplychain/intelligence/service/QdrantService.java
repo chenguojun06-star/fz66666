@@ -136,6 +136,32 @@ public class QdrantService {
     private final java.util.concurrent.atomic.AtomicBoolean embeddingKeyFingerprintLogged =
             new java.util.concurrent.atomic.AtomicBoolean(false);
 
+    /**
+     * Embedding **限流（429）熔断**：连续被限流达到阈值后，在冷却期内**完全跳过远端调用**，
+     * 直接走伪向量；冷却期结束后放行一次探测（半开），成功即恢复。
+     *
+     * <p>必要性（2026-09-24 实测）：智谱 embedding-3 打满配额后，24h 内产生 **122 次 429**、
+     * **62 次降级为伪向量**，且每次仍要白等 2.9~4.4 秒才走兜底 ——
+     * 配额照耗、时间照花、结果一模一样还是伪向量。
+     * 原实现只对 404/401/402 熔断（那类不会自愈），**429 不熔断**，于是限流期间每次请求都在空转。
+     *
+     * <p>与 {@link #embeddingRemoteBroken} 的区别：后者是「本次运行内永久熔断」（配置类错误，不会自愈）；
+     * 限流会自愈，所以必须带冷却期和半开探测，不能在进程生命周期内一刀切死。
+     */
+    private final java.util.concurrent.atomic.AtomicInteger embeddingRateLimitHits =
+            new java.util.concurrent.atomic.AtomicInteger(0);
+
+    /** 限流熔断截止时间戳（epoch millis）；0 表示未熔断 */
+    private volatile long embeddingRateLimitedUntil = 0L;
+
+    /** 连续多少次限流才触发熔断（默认 3） */
+    @Value("${ai.embedding.rate-limit-threshold:3}")
+    private int embeddingRateLimitThreshold;
+
+    /** 限流熔断冷却时长（毫秒，默认 10 分钟） */
+    @Value("${ai.embedding.rate-limit-cooldown-ms:600000}")
+    private long embeddingRateLimitCooldownMs;
+
     @Value("${intelligence.qdrant.enabled:false}")
     private boolean qdrantEnabled;
 
@@ -627,7 +653,7 @@ public class QdrantService {
         }
         if (missIdx.isEmpty()) return result;
 
-        if (!embeddingRemoteBroken && !embeddingBatchBroken && hasRealEmbeddingProvider()) {
+        if (!isEmbeddingRemoteUnavailable() && !embeddingBatchBroken && hasRealEmbeddingProvider()) {
             List<String> missTexts = new ArrayList<>(missIdx.size());
             for (int idx : missIdx) missTexts.add(texts.get(idx));
             try {
@@ -641,17 +667,14 @@ public class QdrantService {
                     result.set(idx, vecs.get(k));
                     embeddingCache.put(cacheKeys[idx], new EmbeddingCacheEntry(vecs.get(k)));
                 }
+                onEmbeddingSuccess();
                 evictCacheIfNeeded();
                 return result;
             } catch (Exception e) {
                 log.warn("[Qdrant] 批量Embedding API 调用失败，回退逐条: {}", e.getMessage());
                 // 批量一旦失败就本次运行内不再试：否则每批都要先白等一次超时再回退，比重灌前更慢
                 embeddingBatchBroken = true;
-                String msg = String.valueOf(e.getMessage());
-                if (msg.contains("404") || msg.contains("401") || msg.contains("402")) {
-                    embeddingRemoteBroken = true;
-                    log.warn("[Qdrant] Embedding 接口不可用({})，已熔断：本次运行内直接使用伪向量。404=接口不存在，401=检查 AI_EMBEDDING_API_KEY 密钥", msg);
-                }
+                onEmbeddingFailure(e.getMessage());
             }
         }
         for (int idx : missIdx) {
@@ -1347,20 +1370,17 @@ public class QdrantService {
         if (cached != null && !cached.isExpired()) {
             return cached.vector;
         }
-        if (!embeddingRemoteBroken && hasRealEmbeddingProvider()) {
+        if (!isEmbeddingRemoteUnavailable() && hasRealEmbeddingProvider()) {
             try {
                 float[] vector = callEmbeddingApi(text);
+                onEmbeddingSuccess();
                 embeddingCache.put(cacheKey, new EmbeddingCacheEntry(vector));
                 evictCacheIfNeeded();
                 return vector;
             } catch (Exception e) {
                 log.warn("[Qdrant] Embedding API 调用失败，降级为伪向量: {}", e.getMessage());
-                // 404=接口不存在（DeepSeek）；401=密钥被拒（配错/失效）——都不会自愈，本次运行内熔断不再重试
-                String msg = String.valueOf(e.getMessage());
-                if (msg.contains("404") || msg.contains("401") || msg.contains("402")) {
-                    embeddingRemoteBroken = true;
-                    log.warn("[Qdrant] Embedding 接口不可用({})，已熔断：本次运行内直接使用伪向量。404=接口不存在，401=检查 AI_EMBEDDING_API_KEY 密钥", msg);
-                }
+                // 404/401/403 → 永久熔断；429/配额 → 连续 N 次后冷却熔断（见 onEmbeddingFailure）
+                onEmbeddingFailure(e.getMessage());
             }
         }
         return pseudoEmbedding(text);
@@ -1370,6 +1390,98 @@ public class QdrantService {
     private boolean hasRealEmbeddingProvider() {
         return (embeddingApiKey != null && !embeddingApiKey.isEmpty())
                 || (deepseekApiKey != null && !deepseekApiKey.isEmpty());
+    }
+
+    // ==================== Embedding 远端熔断（永久 / 限流两类） ====================
+
+    /** Embedding 远端调用失败的类型，决定要不要熔断、熔断多久 */
+    enum EmbeddingFailureKind {
+        /** 非失败，或看不出类型的普通失败（超时、连接重置…）——重试有意义，不熔断 */
+        NONE,
+        /** 配置/接口类错误（404/401/403）：不会自愈，本次运行内永久熔断 */
+        PERMANENT,
+        /** 限流/配额（429、Too Many Requests、quota）：会自愈，按「连续 N 次 → 冷却」处理 */
+        RATE_LIMITED
+    }
+
+    /**
+     * 把一次 Embedding 失败归类（**纯函数，不碰状态**，便于单测）。
+     *
+     * @param rawMsg 异常消息，允许为 null
+     */
+    static EmbeddingFailureKind classifyEmbeddingFailure(String rawMsg) {
+        if (rawMsg == null) return EmbeddingFailureKind.NONE;
+        String msg = rawMsg.trim();
+        if (msg.isEmpty()) return EmbeddingFailureKind.NONE;
+        // 401=密钥被拒/失效，403=无权限，402=欠费，404=接口不存在 —— 都不会自愈
+        if (msg.contains("404") || msg.contains("401") || msg.contains("402") || msg.contains("403")) {
+            return EmbeddingFailureKind.PERMANENT;
+        }
+        String lower = msg.toLowerCase(java.util.Locale.ROOT);
+        if (msg.contains("429")
+                || lower.contains("too many requests")
+                || lower.contains("rate limit")
+                || lower.contains("rate-limit")
+                || lower.contains("quota")
+                || lower.contains("throttl")
+                || lower.contains("exceeded")) {
+            return EmbeddingFailureKind.RATE_LIMITED;
+        }
+        return EmbeddingFailureKind.NONE;
+    }
+
+    /**
+     * 是否处于限流熔断冷却期内。
+     *
+     * <p>冷却期结束时会**清空熔断状态并放行一次探测**（半开）：
+     * 成功则 {@link #onEmbeddingSuccess()} 彻底复位，失败则重新累积、再次熔断。
+     */
+    private boolean isEmbeddingRateLimited() {
+        long until = embeddingRateLimitedUntil;
+        if (until == 0L) return false;
+        if (System.currentTimeMillis() >= until) {
+            embeddingRateLimitedUntil = 0L;
+            embeddingRateLimitHits.set(0);
+            log.info("[Qdrant] Embedding 限流冷却结束，放行一次探测请求（成功即恢复远端调用）");
+            return false;
+        }
+        return true;
+    }
+
+    /** 远端 Embedding 当前是否完全不可用（永久熔断 or 限流冷却中） */
+    private boolean isEmbeddingRemoteUnavailable() {
+        return embeddingRemoteBroken || isEmbeddingRateLimited();
+    }
+
+    /** 记录一次 Embedding 失败并按需熔断 */
+    private void onEmbeddingFailure(String rawMsg) {
+        EmbeddingFailureKind kind = classifyEmbeddingFailure(rawMsg);
+        if (kind == EmbeddingFailureKind.PERMANENT) {
+            embeddingRemoteBroken = true;
+            log.warn("[Qdrant] Embedding 接口不可用({})，已永久熔断：本次运行内直接使用伪向量。"
+                    + "404=接口不存在，401/403=检查 AI_EMBEDDING_API_KEY 密钥，402=账户欠费", rawMsg);
+            return;
+        }
+        if (kind != EmbeddingFailureKind.RATE_LIMITED) return;
+        int hits = embeddingRateLimitHits.incrementAndGet();
+        int threshold = Math.max(1, embeddingRateLimitThreshold);
+        long cooldown = Math.max(1000L, embeddingRateLimitCooldownMs);
+        if (hits >= threshold) {
+            embeddingRateLimitedUntil = System.currentTimeMillis() + cooldown;
+            // 不足 1 分钟时按秒输出，避免出现"已熔断：0 分钟内"这种读不懂的日志
+            String duration = cooldown < 60_000L
+                    ? (cooldown / 1000L) + " 秒"
+                    : (cooldown / 60000L) + " 分钟";
+            log.warn("[Qdrant] Embedding 被限流连续 {} 次（{}），已熔断：{}内不再请求远端、直接走伪向量。"
+                            + "长期如此请扩容配额或换提供方（配置 ai.embedding.*）",
+                    hits, rawMsg, duration);
+        }
+    }
+
+    /** 远端 Embedding 调用成功：复位限流计数与熔断（半开探测成功后彻底恢复） */
+    private void onEmbeddingSuccess() {
+        if (embeddingRateLimitHits.get() != 0) embeddingRateLimitHits.set(0);
+        if (embeddingRateLimitedUntil != 0L) embeddingRateLimitedUntil = 0L;
     }
 
     /**
@@ -1546,15 +1658,24 @@ public class QdrantService {
     /** 文本语义向量（供"以图搜款描述→向量"等场景复用 embedding 通道）。失败返回 null。 */
     public float[] embedText(String text) {
         if (!qdrantActive() || text == null || text.isBlank()) return null;
+        // 熔断/冷却期内不再打远端：原实现每次都照发请求、白等超时后才返回 null
+        if (isEmbeddingRemoteUnavailable()) {
+            log.debug("[Qdrant] Embedding 远端不可用（熔断/冷却中），跳过文本向量化");
+            return null;
+        }
         try {
-            return callEmbeddingApi(text);
+            float[] vec = callEmbeddingApi(text);
+            onEmbeddingSuccess();
+            return vec;
         } catch (Exception e) {
             log.warn("[Qdrant] 文本向量化失败: {}", e.getMessage());
+            onEmbeddingFailure(e.getMessage());
             return null;
         }
     }
 
-    public float[] computeMultimodalEmbedding(String imageUrl) {        if (!qdrantActive()) return null;
+    public float[] computeMultimodalEmbedding(String imageUrl) {
+        if (!qdrantActive()) return null;
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new IllegalArgumentException("imageUrl 不能为空");
         }
@@ -1563,47 +1684,58 @@ public class QdrantService {
         // 只配 standalone key 时同样能出真实向量。原判定会让它静默降级伪向量（搜索质量掉地上无感知）。
         boolean hasRealEmbedding = hasRealEmbeddingProvider();
         boolean hasInferenceOrch = inferenceOrchestrator != null;
-        log.info("[Qdrant] 向量生成启动 imageUrlLen={} hasRealEmbedding={} hasInferenceOrch={} embedding={}",
-                imageUrl.length(), hasRealEmbedding, hasInferenceOrch, activeEmbeddingLabel());
+        // 远端是否**值得一试**：没配 Key、永久熔断、限流冷却中 → 都直接走第 3 级，
+        // 不再白等 3~4 秒外部调用（2026-09-24：限流期每次都空转，24h 空耗 122 次）。
+        boolean embeddingAvailable = hasRealEmbedding && !isEmbeddingRemoteUnavailable();
+        log.info("[Qdrant] 向量生成启动 imageUrlLen={} hasRealEmbedding={} hasInferenceOrch={} embedding={} 远端可用={}",
+                imageUrl.length(), hasRealEmbedding, hasInferenceOrch, activeEmbeddingLabel(), embeddingAvailable);
 
         // ========== 第 1 级：主模型（多模态）视觉分析 → 文字描述 → Embedding ==========
-        if (hasInferenceOrch) {
+        // 注意：视觉描述**只有在能转向量时才有意义**（描述本身不会落库）。
+        // 没配 Key / 已熔断时再调一次多模态大模型纯属浪费（既慢又费钱，结果仍是伪向量）。
+        if (hasInferenceOrch && embeddingAvailable) {
             try {
                 log.info("[Qdrant] 尝试方案1: 主模型视觉描述 + Embedding({})", activeEmbeddingLabel());
                 String visualDescription = describeImageWithVision(imageUrl);
                 if (visualDescription != null && !visualDescription.isBlank()) {
                     log.info("[Qdrant] 视觉描述成功 descLen={}", visualDescription.length());
-                    if (hasRealEmbedding) {
-                        float[] vec = callEmbeddingApi(visualDescription);
-                        log.info("[Qdrant] ✓ 方案1成功 视觉描述+Embedding({}) 维度={}", activeEmbeddingLabel(), vec.length);
-                        return vec;
-                    }
-                    log.warn("[Qdrant] 已获取视觉描述但未配置任何 Embedding Key（ai.embedding.api-key 或 DEEPSEEK_API_KEY），无法生成向量");
-                } else {
-                    log.warn("[Qdrant] 视觉描述返回空");
+                    float[] vec = callEmbeddingApi(visualDescription);
+                    onEmbeddingSuccess();
+                    log.info("[Qdrant] ✓ 方案1成功 视觉描述+Embedding({}) 维度={}", activeEmbeddingLabel(), vec.length);
+                    return vec;
                 }
+                log.warn("[Qdrant] 视觉描述返回空");
             } catch (Exception e) {
                 log.warn("[Qdrant] 视觉描述+Embedding 失败: {}", e.getMessage());
+                onEmbeddingFailure(e.getMessage());
             }
+        } else if (hasInferenceOrch && !hasRealEmbedding) {
+            log.warn("[Qdrant] 未配置任何 Embedding Key（ai.embedding.api-key 或 DEEPSEEK_API_KEY），"
+                    + "跳过视觉描述——没有 Key 时描述也转不成向量，调用纯属浪费");
         }
 
         // ========== 第 2 级：纯文本 Embedding（用图片 URL 文本生成向量） ==========
-        if (hasRealEmbedding) {
+        if (embeddingAvailable) {
             log.info("[Qdrant] 尝试方案2: 文本 Embedding({})（用 imageUrl 文本）", activeEmbeddingLabel());
             try {
                 float[] vec = callEmbeddingApi(imageUrl);
+                onEmbeddingSuccess();
                 log.info("[Qdrant] ✓ 方案2成功 文本 Embedding({}) 维度={}", activeEmbeddingLabel(), vec.length);
                 return vec;
             } catch (Exception e) {
                 log.warn("[Qdrant] Embedding({}) 失败: {}", activeEmbeddingLabel(), e.getMessage());
+                onEmbeddingFailure(e.getMessage());
             }
         }
 
         // ========== 第 3 级：伪向量兜底 ==========
-        log.warn("[Qdrant] Embedding 降级为伪向量（搜索质量降低但不影响功能）" +
-                "当前配置: hasRealEmbedding={}。" +
-                "如需高质量向量搜索：请配置 ai.embedding.api-key（推荐硅基流动 bge-m3）或 DEEPSEEK_API_KEY",
-                hasRealEmbedding);
+        String reason = !hasRealEmbedding ? "未配置 Embedding Key"
+                : embeddingRemoteBroken ? "远端永久熔断（配置类错误）"
+                : isEmbeddingRateLimited() ? "远端限流熔断冷却中"
+                : "远端调用失败";
+        log.warn("[Qdrant] Embedding 降级为伪向量（搜索质量降低但不影响功能）原因={} hasRealEmbedding={}。"
+                        + "如需高质量向量搜索：请配置 ai.embedding.api-key（推荐硅基流动 bge-m3）或 DEEPSEEK_API_KEY",
+                reason, hasRealEmbedding);
         return pseudoEmbedding(imageUrl);
     }
 
