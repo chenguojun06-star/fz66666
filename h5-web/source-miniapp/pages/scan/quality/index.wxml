@@ -79,22 +79,22 @@
 
         <view class="form-row">
           <text class="form-label">缺陷类别</text>
-          <picker range="{{defectCategories}}" value="{{defectCategoryIndex}}" bindchange="onDefectCategoryChange">
-            <view class="form-picker">
+          
+            <view bindtap="openPicker" data-handler="onDefectCategoryChange" data-names="defectCategories" class="form-picker">
               {{defectCategoryIndex >= 0 ? defectCategories[defectCategoryIndex] : '请选择'}}
               <view class="picker-arrow"><view class="icon-chevron-down-sm"></view></view>
             </view>
-          </picker>
+          
         </view>
 
         <view class="form-row">
           <text class="form-label">处理方式</text>
-          <picker range="{{handleMethods}}" value="{{handleMethodIndex}}" bindchange="onHandleMethodChange">
-            <view class="form-picker">
+          
+            <view bindtap="openPicker" data-handler="onHandleMethodChange" data-names="handleMethods" class="form-picker">
               {{handleMethodIndex >= 0 ? handleMethods[handleMethodIndex] : '请选择'}}
               <view class="picker-arrow"><view class="icon-chevron-down-sm"></view></view>
             </view>
-          </picker>
+          
         </view>
       </view>
     </view>
@@ -137,3 +137,13 @@
   <privacy-dialog id="privacyDialog" />
   <ai-assistant />
 </view>
+
+<!-- 可搜索选择器：替代原生 picker（原生没有搜索，选项多时只能一路滚） -->
+<search-picker
+  visible="{{pickerVisible}}"
+  title="{{pickerTitle}}"
+  options="{{pickerOptions}}"
+  value="{{pickerValue}}"
+  bind:select="onPickerSelect"
+  bind:close="onPickerClose"
+/>

@@ -101,24 +101,24 @@
         </view>
         <view class="f-col">
           <text class="f-lbl-blk">品类</text>
-          <picker range="{{categoryOptions}}" range-key="dictLabel" bindchange="onCategoryChange">
-            <view class="f-pv {{productCategory?'':'ph'}}">{{productCategory || '选填'}}</view>
-          </picker>
+          
+            <view bindtap="openPicker" data-handler="onCategoryChange" data-names="categoryOptions" data-range-key="dictLabel" class="f-pv {{productCategory?'':'ph'}}">{{productCategory || '选填'}}</view>
+          
         </view>
       </view>
 
       <view class="f-row-row">
         <view class="f-col">
           <text class="f-lbl-blk">首翻单</text>
-          <picker range="{{plateTypeOptions}}" bindchange="onPlateTypeChange">
-            <view class="f-pv {{plateTypeLabel?'':'ph'}}">{{plateTypeLabel || '自动判断'}}</view>
-          </picker>
+          
+            <view bindtap="openPicker" data-handler="onPlateTypeChange" data-names="plateTypeOptions" class="f-pv {{plateTypeLabel?'':'ph'}}">{{plateTypeLabel || '自动判断'}}</view>
+          
         </view>
         <view class="f-col">
           <text class="f-lbl-blk">下单类型</text>
-          <picker range="{{bizTypeLabels}}" bindchange="onBizTypeChange">
-            <view class="f-pv {{orderBizTypeLabel?'':'ph'}}">{{orderBizTypeLabel || '选填'}}</view>
-          </picker>
+          
+            <view bindtap="openPicker" data-handler="onBizTypeChange" data-names="bizTypeLabels" class="f-pv {{orderBizTypeLabel?'':'ph'}}">{{orderBizTypeLabel || '选填'}}</view>
+          
         </view>
       </view>
 
@@ -244,9 +244,9 @@
 
       <view class="f-row">
         <text class="f-lbl">模式</text>
-        <picker range="{{pricingModeLabels}}" bindchange="onPricingModeChange" class="flex-1">
-          <view class="f-pv">{{pricingModeLabels[pricingModeIdx]}}</view>
-        </picker>
+        
+          <view bindtap="openPicker" data-handler="onPricingModeChange" data-names="pricingModeLabels" class="f-pv">{{pricingModeLabels[pricingModeIdx]}}</view>
+        
       </view>
 
       <!-- 系统算出的单价 -->

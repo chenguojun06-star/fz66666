@@ -6,15 +6,15 @@
 
   <view wx:if="{{activeTab === 'submit'}}" class="form-card">
     <view class="form-row">
-      <picker mode="selector" range="{{categoryList}}" range-key="label" value="{{categoryIndex}}" bindchange="onCategoryChange">
-        <view class="form-row-inner">
+      
+        <view bindtap="openPicker" data-handler="onCategoryChange" data-names="categoryList" data-range-key="label" class="form-row-inner">
           <text class="form-row-label">反馈类型</text>
           <view class="form-row-value">
             <text class="form-row-text">{{categoryList[categoryIndex].label}}</text>
             <view class="picker-arrow icon-arrow-right-sm"></view>
           </view>
         </view>
-      </picker>
+      
     </view>
     <view class="form-divider"></view>
     <view class="form-row">
@@ -53,3 +53,13 @@
   </view>
   <ai-assistant />
 </view>
+
+<!-- 可搜索选择器：替代原生 picker（原生没有搜索，选项多时只能一路滚） -->
+<search-picker
+  visible="{{pickerVisible}}"
+  title="{{pickerTitle}}"
+  options="{{pickerOptions}}"
+  value="{{pickerValue}}"
+  bind:select="onPickerSelect"
+  bind:close="onPickerClose"
+/>

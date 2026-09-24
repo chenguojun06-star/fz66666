@@ -126,12 +126,12 @@
         <view class="mf-item">
           <text class="mf-label">收款账户</text>
           <block wx:if="{{payeeAccounts.length > 0}}">
-            <picker mode="selector" range="{{payeeAccounts}}" range-key="accountName" bindchange="onSelectAccount">
-              <view class="picker-box">
+            
+              <view bindtap="openPicker" data-handler="onSelectAccount" data-names="payeeAccounts" data-range-key="accountName" class="picker-box">
                 <text class="picker-text {{selectedAccountId ? '' : 'placeholder'}}">{{selectedAccountId ? selectedAccountName : '选择收款账户'}}</text>
                 <view class="arrow icon-arrow-right-sm"></view>
               </view>
-            </picker>
+            
           </block>
           <view class="picker-box" wx:else bindtap="onAddAccount">
             <text class="picker-text placeholder">选择收款账户</text>
@@ -218,3 +218,13 @@
   </view>
   <ai-assistant />
 </view>
+
+<!-- 可搜索选择器：替代原生 picker（原生没有搜索，选项多时只能一路滚） -->
+<search-picker
+  visible="{{pickerVisible}}"
+  title="{{pickerTitle}}"
+  options="{{pickerOptions}}"
+  value="{{pickerValue}}"
+  bind:select="onPickerSelect"
+  bind:close="onPickerClose"
+/>

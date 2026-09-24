@@ -139,9 +139,9 @@
         <view class="mf-field">
           <text class="mf-field-label">工序名称</text>
           <view class="mf-field-ctrl">
-            <picker mode="selector" range="{{processDict}}" range-key="dictLabel" bindchange="onDictPickProcess">
-              <view class="mf-input mf-input--picker">{{addForm.processName || '选择/输入工序'}}</view>
-            </picker>
+            
+              <view bindtap="openPicker" data-handler="onDictPickProcess" data-names="processDict" data-range-key="dictLabel" class="mf-input mf-input--picker">{{addForm.processName || '选择/输入工序'}}</view>
+            
             <input class="mf-input mf-input--manual" value="{{addForm.processName}}" bindinput="onAddFormInput" data-field="processName" placeholder="或手动输入" />
           </view>
         </view>
@@ -166,3 +166,13 @@
   </view>
   <ai-assistant />
 </view>
+
+<!-- 可搜索选择器：替代原生 picker（原生没有搜索，选项多时只能一路滚） -->
+<search-picker
+  visible="{{pickerVisible}}"
+  title="{{pickerTitle}}"
+  options="{{pickerOptions}}"
+  value="{{pickerValue}}"
+  bind:select="onPickerSelect"
+  bind:close="onPickerClose"
+/>

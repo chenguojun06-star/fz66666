@@ -25,18 +25,18 @@
     bind:confirm="onSearchConfirm"
   >
     <view slot="filter" class="filter-pickers">
-      <picker mode="selector" range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onStatusChange">
-        <view class="filter-picker">
+      
+        <view bindtap="openPicker" data-handler="onStatusChange" data-names="statusOptions" data-range-key="label" class="filter-picker">
           <text class="filter-picker-text">{{statusOptions[statusIndex].label}}</text>
           <text class="filter-picker-arrow">▾</text>
         </view>
-      </picker>
-      <picker mode="selector" range="{{factoryTypeOptions}}" range-key="label" value="{{factoryTypeIndex}}" bindchange="onFactoryTypeChange">
-        <view class="filter-picker">
+      
+      
+        <view bindtap="openPicker" data-handler="onFactoryTypeChange" data-names="factoryTypeOptions" data-range-key="label" class="filter-picker">
           <text class="filter-picker-text">{{factoryTypeOptions[factoryTypeIndex].label}}</text>
           <text class="filter-picker-arrow">▾</text>
         </view>
-      </picker>
+      
     </view>
   </sticky-search-bar>
 
@@ -120,3 +120,13 @@
   </view>
   <ai-assistant />
 </view>
+
+<!-- 可搜索选择器：替代原生 picker（原生没有搜索，选项多时只能一路滚） -->
+<search-picker
+  visible="{{pickerVisible}}"
+  title="{{pickerTitle}}"
+  options="{{pickerOptions}}"
+  value="{{pickerValue}}"
+  bind:select="onPickerSelect"
+  bind:close="onPickerClose"
+/>

@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "意见反馈",
   "usingComponents": {
-    "empty-state": "/components/empty-state/empty-state"
+    "empty-state": "/components/empty-state/empty-state",
+    "search-picker": "/components/search-picker/index"
   }
 }

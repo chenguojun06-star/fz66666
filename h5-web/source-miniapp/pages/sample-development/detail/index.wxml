@@ -403,13 +403,13 @@
       </view>
       <view class="remark-input-bar">
         <view class="remark-input-top">
-          <picker class="remark-role-picker" range="{{remarkRoles}}" range-key="label" value="{{remarkRoleIndex}}" bindchange="onRemarkRoleChange">
-            <view class="remark-role-trigger">
+          
+            <view bindtap="openPicker" data-handler="onRemarkRoleChange" data-names="remarkRoles" data-range-key="label" class="remark-role-trigger">
               <view class="icon-user" style="width:14px;height:14px;flex-shrink:0;"></view>
               <text class="remark-role-text">{{remarkRoles[remarkRoleIndex].label}}</text>
               <view class="remark-role-chevron"></view>
             </view>
-          </picker>
+          
           <view class="outline-btn outline-btn--sm {{(submittingRemark || !remarkInput) ? 'is-disabled' : ''}}" bindtap="onSubmitRemark">
             <text class="outline-btn__text">{{submittingRemark ? '提交中' : '提交'}}</text>
           </view>
@@ -511,3 +511,13 @@
     </view>
   </view>
 </view>
+
+<!-- 可搜索选择器：替代原生 picker（原生没有搜索，选项多时只能一路滚） -->
+<search-picker
+  visible="{{pickerVisible}}"
+  title="{{pickerTitle}}"
+  options="{{pickerOptions}}"
+  value="{{pickerValue}}"
+  bind:select="onPickerSelect"
+  bind:close="onPickerClose"
+/>

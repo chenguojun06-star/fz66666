@@ -261,7 +261,7 @@ Component({
     // 选中后仍复用原有的 onXxxChange 处理器（逻辑只保留一份）。
 
     /** 打开某个字段的选择器（D-517：order/factory/receiver 走远程关键字搜索 + 分页） */
-    openPicker: function (e) {
+    _openPickerByKey: function (e) {
       var key = e.currentTarget.dataset.key;
       var map = {
         // D-517：物料/面料也能「选」，不再只能手输编码或扫码
@@ -286,10 +286,6 @@ Component({
         pickerValue: cfg.current || '',
         pickerVisible: true,
       });
-    },
-
-    onPickerClose: function () {
-      this.setData({ pickerVisible: false });
     },
 
     /** 远程搜索（组件已防抖）→ 第 1 页 */
@@ -381,7 +377,7 @@ Component({
      * 选中：直接用组件回传的 value/item 写入，**不再按名称 indexOf 反查**
      * （同名工厂/同名员工会选中错误的一条 —— D-517 修掉的隐性 bug）
      */
-    onPickerSelect: function (e) {
+    _onPickerSelectByKey: function (e) {
       var key = this.data.pickerKey;
       var d = (e && e.detail) || {};
       var label = d.label || '';
@@ -495,5 +491,68 @@ Component({
         this.setData({ submitting: false });
       }
     },
+    /* ── D-533：可搜索选择器的**统一入口** ─────────────────────────────────
+     全仓只有这一个 openPicker / onPickerSelect，不再"东一个西一个"。
+     两条分支（UI 与交互完全一致，都是同一个 search-picker 弹层）：
+       · 行上带 data-handler → 通用式：选项数组名/range-key 由 data-* 传入
+       · 行上只有 data-key  → 委托给本页原有的 _openPickerByKey，行为一字不变 */
+
+  /* ── D-533：可搜索选择器的**统一入口** ─────────────────────────────────
+     全仓只有这一个 openPicker / onPickerSelect，不再"东一个西一个"。
+     两条分支（UI 与交互完全一致，都是同一个 search-picker 弹层）：
+       · 行上带 data-handler → 通用式：选项数组名/range-key 由 data-* 传入
+       · 行上只有 data-key  → 委托给本页原有的 _openPickerByKey，行为一字不变 */
+
+  /* ── D-533：可搜索选择器的**统一入口** ─────────────────────────────────
+     全仓只有这一个 openPicker / onPickerSelect，不再"东一个西一个"。
+     两条分支（UI 与交互完全一致，都是同一个 search-picker 弹层）：
+       · 行上带 data-handler → 通用式：选项数组名/range-key 由 data-* 传入
+       · 行上只有 data-key  → 委托给本页原有的 _openPickerByKey，行为一字不变 */
+  openPicker: function (e) {
+    var ds = e.currentTarget.dataset || {};
+    if (!ds.handler && typeof this._openPickerByKey === 'function') {
+      return this._openPickerByKey(e);
+    }
+    var arr = this.data[ds.names] || [];
+    var rangeKey = ds.rangeKey || '';
+    var opts = [];
+    for (var i = 0; i < arr.length; i++) {
+      var it = arr[i];
+      var label;
+      if (rangeKey) {
+        label = it ? it[rangeKey] : '';
+      } else if (it && typeof it === 'object') {
+        label = it.label != null ? it.label : (it.name != null ? it.name : '');
+      } else {
+        label = it;
+      }
+      label = String(label == null ? '' : label);
+      if (!label) continue;
+      opts.push({ label: label, value: String(i) });
+    }
+    this._pickerHandler = ds.handler || '';
+    this.setData({
+      pickerTitle: ds.title || '请选择',
+      pickerOptions: opts,
+      pickerValue: '',
+      pickerVisible: true,
+    });
   },
+
+  onPickerSelect: function (e) {
+    var handler = this._pickerHandler;
+    if (handler && typeof this[handler] === 'function') {
+      this[handler]({ detail: { value: Number(e.detail.value) } });
+      return;
+    }
+    if (typeof this._onPickerSelectByKey === 'function') {
+      return this._onPickerSelectByKey(e);
+    }
+  },
+
+  onPickerClose: function () {
+    this.setData({ pickerVisible: false });
+  },
+  },
+
 });
