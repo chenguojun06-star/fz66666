@@ -173,4 +173,15 @@ public final class SecurityConstants {
             "/api/system/operation-log/list",
             "/api/system/operation-log/by-target",
     };
+
+    /**
+     * D-527：用户反馈提交/我的反馈放开到所有登录用户。
+     * 背景：/api/system/** 整体要求租户主账号，而 UserFeedbackController 的注释与
+     * 个人中心「我的反馈」面板都按「所有登录用户可用」设计——工人提交反馈会被 403。
+     * 只放行 submit / my-list 两个端点；reply/status/list/stats 仍走主账号门槛。
+     */
+    public static final String[] USER_FEEDBACK_AUTH_ENDPOINTS = {
+            "/api/system/feedback/submit",
+            "/api/system/feedback/my-list",
+    };
 }

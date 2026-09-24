@@ -1,7 +1,21 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-24（新增 D-526 首页聚水潭化——宫格前置+流程引导+服务栏，数据区折叠下移）
+> 最后更新：2026-09-24（新增 D-527 首页二次优化——去重、业务全流程条、右栏意见反馈接入现有 UserFeedback 体系）
+
+---
+
+## D-527：首页二次优化——去重 + 业务全流程 + 意见反馈（2026-09-24）
+
+**用户四点反馈**：①宫格与流程引导大面积重复；②「店铺/电商」这类没有的功能不要上首页；③右栏要在产品更新下面有意见反馈；④布局左右上下再打磨专业。红线重申：**必须对应系统真实功能，不放没有的东西**。
+
+**实现**：
+- **去重**：删掉流程引导 4×4 链接堆（与宫格重复 ~9 项），换「业务全流程」一行条（FlowGuideCard 重写）：打样→下单→采购→裁剪→工序→质检→仓储→对账 8 节点+箭头，流程语境命名（裁剪生产/工序跟进，与宫格入口名区分），权限过滤同宫格。
+- **宫格定版**：14 入口固定 7 列×2 整行（auto-fill 的残行不专业），<1200px 5 列/<900px 4 列。电商订单/店铺类不上首页（系统里只有电商订单模块，无店铺概念且非核心）。
+- **右栏意见反馈**：**发现系统已有完整 UserFeedback 链路**（/api/system/feedback/submit + t_user_feedback + 个人中心「我的反馈」+ 客户管理 FeedbackTab），**删掉刚重复造的后端四件套**（SystemFeedbackController 等 5 文件），首页反馈卡直接接 feedbackService.submit。补一个真 bug：`/api/system/**` 整体被租户主账号门槛拦住，控制器注释"所有登录用户可用"实际工人 403——照 D-362i 先例在 SecurityConstants 加 USER_FEEDBACK_AUTH_ENDPOINTS（仅 submit/my-list 两个端点 authenticated 放行）。
+- 首页提交后进展在哪看：提交人=个人中心「我的反馈」；管理端=客户管理-反馈Tab。本地验证提交 E2E 全通后已删除测试记录（该表此前为空，首页反馈是第一个真实入口）。
+
+**坑（大）**：首页右栏 TextArea+showCount 的外层 `.ant-input-textarea-affix-wrapper` 被压成 32px，内层 rows=4 textarea（99px）溢出框外盖住下方字段、拦截按钮点击。排查两小时：flex 压缩链已修（`.home-side-stack > .dashboard-card, .home-feedback, .home-feedback > * { flex-shrink: 0 }`——.home-layout 在可滚容器内被视口余量压缩会沿 flex 链传导）但 wrapper 仍 32px；样式表遍历匹配不到任何 height 规则（antd v6 嵌套规则 `rule.cssRules` 遍历会漏，CSSStyleRule 带嵌套时外层样式被 continue 跳过）。最终 `.home-feedback .ant-input-textarea-affix-wrapper { height: auto !important; }` 作用域强杀。**教训：TextArea+showCount 布局异常先怀疑全局 32px 控件高度规则（global.css 有同款前科记录），修复用作用域 height:auto !important 最快。**
 
 ---
 

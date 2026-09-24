@@ -1,17 +1,33 @@
-import React from 'react';
-import { Button } from 'antd';
-import { BookOutlined, NotificationOutlined, RightOutlined, RobotOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { App, Button, Input, Select } from 'antd';
+import { BookOutlined, NotificationOutlined, RightOutlined } from '@ant-design/icons';
 import { paths } from '@/routeConfig';
 import { useLayoutAuth } from '@/components/Layout/useLayoutAuth';
+import { useUser } from '@/utils/AuthContext';
+import feedbackService from '@/services/feedbackService';
 import { HOME_CHANGELOG } from './homeChangelog';
 
 /**
- * D-526 首页聚水潭化：右侧常驻服务栏（对齐参考稿「产品更新/新手入门」形态）。
- * 只放真实内容：更新公告（静态配置 homeChangelog.ts）+ 教程 + 小云入口，
- * 不放假客服电话/假二维码。
+ * D-527 首页右栏服务栏（对齐参考稿「产品更新 → 意见反馈 → 新手入门」一列服务）。
+ * 反馈走系统现成的 UserFeedback 链路（/system/feedback/submit，个人中心看进展，
+ * 客户管理-反馈Tab 管理端查看）；不放假客服电话/假二维码。
  */
+const FEEDBACK_CATEGORY_OPTIONS = [
+  { value: 'SUGGESTION', label: '意见建议' },
+  { value: 'BUG', label: '问题缺陷' },
+  { value: 'QUESTION', label: '使用提问' },
+  { value: 'OTHER', label: '其他' },
+];
+
 const ServiceSidebar: React.FC = () => {
+  const { message } = App.useApp();
+  const { user } = useUser();
   const { hasPermissionForPath, isFactoryAccount, factoryVisiblePaths, isTenantModuleEnabled } = useLayoutAuth();
+
+  const [category, setCategory] = useState<string>('SUGGESTION');
+  const [content, setContent] = useState('');
+  const [contact, setContact] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const canGo = (path: string) => {
     if (isFactoryAccount && !factoryVisiblePaths.has(path)) return false;
@@ -19,7 +35,35 @@ const ServiceSidebar: React.FC = () => {
   };
 
   const showTutorial = canGo(paths.tutorial);
-  const showXiaoyun = canGo(paths.intelligenceCenter);
+
+  const submitFeedback = async () => {
+    const text = content.trim();
+    if (!text) {
+      message.warning('请先填写反馈内容');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res: any = await feedbackService.submit({
+        title: text.slice(0, 30),
+        content: text,
+        category,
+        contact: contact.trim(),
+        userName: (user as any)?.name || (user as any)?.username || '',
+      } as any);
+      if (res?.code === 200) {
+        message.success('反馈已提交，感谢！可在「个人中心」查看进展');
+        setContent('');
+        setContact('');
+      } else {
+        message.error(res?.message || '提交失败，请稍后再试');
+      }
+    } catch {
+      message.error('提交失败，请稍后再试');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="home-side-stack">
@@ -40,6 +84,47 @@ const ServiceSidebar: React.FC = () => {
         </div>
       </div>
 
+      <div className="dashboard-card">
+        <div className="card-header">
+          <h3 className="card-title">意见反馈</h3>
+        </div>
+        <div className="card-content home-feedback">
+          <Select
+            size="small"
+            value={category}
+            onChange={setCategory}
+            options={FEEDBACK_CATEGORY_OPTIONS}
+            style={{ width: '100%' }}
+          />
+          <Input.TextArea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="写下你想说的：功能不够用、哪里不顺手、想要什么新功能"
+            rows={4}
+            maxLength={500}
+            showCount
+            style={{ marginTop: 8 }}
+          />
+          <Input
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+            placeholder="联系方式（选填，方便回访）"
+            maxLength={100}
+            style={{ marginTop: 8 }}
+          />
+          <Button
+            type="primary"
+            size="small"
+            block
+            loading={submitting}
+            onClick={() => void submitFeedback()}
+            style={{ marginTop: 8 }}
+          >
+            提交反馈
+          </Button>
+        </div>
+      </div>
+
       {showTutorial && (
         <div className="dashboard-card">
           <div className="card-content home-side-entry">
@@ -49,21 +134,6 @@ const ServiceSidebar: React.FC = () => {
               <div className="home-side-entry-desc">功能引导与常见操作教程</div>
             </div>
             <Button type="link" size="small" href={paths.tutorial} style={{ padding: 0 }}>
-              去看看<RightOutlined style={{ fontSize: 10, marginLeft: 2 }} />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {showXiaoyun && (
-        <div className="dashboard-card">
-          <div className="card-content home-side-entry">
-            <span className="home-side-entry-icon home-side-entry-icon--ai"><RobotOutlined /></span>
-            <div className="home-side-entry-body">
-              <div className="home-side-entry-title">问小云</div>
-              <div className="home-side-entry-desc">AI 助手：查数据、追生产、盯异常</div>
-            </div>
-            <Button type="link" size="small" href={paths.intelligenceCenter} style={{ padding: 0 }}>
               去看看<RightOutlined style={{ fontSize: 10, marginLeft: 2 }} />
             </Button>
           </div>
