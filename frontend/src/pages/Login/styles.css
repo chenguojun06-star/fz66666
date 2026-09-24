@@ -31,7 +31,7 @@
   overflow: hidden;
 }
 
-/* ---------- Garment Silhouettes ---------- */
+/* ---------- Garment Silhouettes（D-531 蓝色织线·蓝图：灰稿改蓝调，静态改呼吸动态） ---------- */
 .login-garments {
   position: absolute;
   inset: 0;
@@ -43,19 +43,29 @@
 .garment, .hanger {
   position: absolute;
   opacity: 0;
+  /* 入场=错峰上浮淡入；随后转「悬浮呼吸」慢速循环（错峰时长/相位，避免齐刷刷） */
+  animation:
+    garmentRiseIn 0.7s ease-out both var(--fall-delay, 0s),
+    garmentFloat var(--fd, 12s) ease-in-out calc(var(--fall-delay, 0s) + 0.7s) infinite alternate;
 }
 
-@keyframes fallFromTop {
+@keyframes garmentRiseIn {
   0% {
     opacity: 0;
-    transform: translateY(var(--fall-from, -300px)) translateX(var(--offset-x, 0)) rotate(calc(var(--rot, 0deg) * 0.5));
-  }
-  60% {
-    opacity: 1;
+    transform: translateY(18px) translateX(var(--offset-x, 0)) rotate(var(--rot, 0deg));
   }
   100% {
     opacity: 1;
     transform: translateY(0) translateX(var(--offset-x, 0)) rotate(var(--rot, 0deg));
+  }
+}
+
+@keyframes garmentFloat {
+  0% {
+    transform: translateY(0) translateX(var(--offset-x, 0)) rotate(var(--rot, 0deg));
+  }
+  100% {
+    transform: translateY(-8px) translateX(var(--offset-x, 0)) rotate(calc(var(--rot, 0deg) + 1.4deg));
   }
 }
 
@@ -65,9 +75,8 @@
   left: 42%;
   --rot: -18deg;
   --fall-delay: 0.15s;
-  --fall-from: -280px;
-  animation: fallFromTop 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
-  color: rgba(130, 142, 162, 0.25);
+  --fd: 11s;
+  color: rgba(45, 127, 249, 0.30);
   filter: url(#pencil-texture);
 }
 
@@ -77,9 +86,8 @@
   left: 32%;
   --rot: 14deg;
   --fall-delay: 0.05s;
-  --fall-from: -320px;
-  animation: fallFromTop 1s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
-  color: rgba(122, 134, 155, 0.28);
+  --fd: 13s;
+  color: rgba(31, 117, 234, 0.32);
   filter: url(#pencil-texture);
 }
 
@@ -89,9 +97,8 @@
   left: 24%;
   --rot: -5deg;
   --fall-delay: 0s;
-  --fall-from: -240px;
-  animation: fallFromTop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
-  color: rgba(150, 158, 175, 0.24);
+  --fd: 9.5s;
+  color: rgba(45, 127, 249, 0.28);
   filter: url(#pencil-texture);
 }
 
@@ -101,9 +108,8 @@
   right: 14%;
   --rot: 6deg;
   --fall-delay: 0.1s;
-  --fall-from: -260px;
-  animation: fallFromTop 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
-  color: rgba(144, 154, 172, 0.24);
+  --fd: 12s;
+  color: rgba(45, 127, 249, 0.30);
   filter: url(#pencil-texture);
 }
 
@@ -113,9 +119,8 @@
   right: 26%;
   --rot: 12deg;
   --fall-delay: 0.25s;
-  --fall-from: -300px;
-  animation: fallFromTop 0.95s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
-  color: rgba(145, 154, 170, 0.22);
+  --fd: 10.5s;
+  color: rgba(31, 117, 234, 0.26);
   filter: url(#pencil-texture);
 }
 
@@ -125,9 +130,8 @@
   right: 7%;
   --rot: -8deg;
   --fall-delay: 0.2s;
-  --fall-from: -340px;
-  animation: fallFromTop 1.05s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
-  color: rgba(125, 136, 158, 0.26);
+  --fd: 14s;
+  color: rgba(45, 127, 249, 0.30);
   filter: url(#pencil-texture);
 }
 
@@ -137,9 +141,8 @@
   left: 2%;
   --rot: 5deg;
   --fall-delay: 0.3s;
-  --fall-from: -360px;
-  animation: fallFromTop 1.1s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
-  color: rgba(105, 116, 140, 0.28);
+  --fd: 11.5s;
+  color: rgba(31, 117, 234, 0.32);
   filter: url(#pencil-texture);
 }
 
@@ -149,9 +152,8 @@
   right: 3%;
   --rot: -10deg;
   --fall-delay: 0.35s;
-  --fall-from: -400px;
-  animation: fallFromTop 1.15s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
-  color: rgba(115, 126, 148, 0.30);
+  --fd: 13.5s;
+  color: rgba(45, 127, 249, 0.36);
   filter: url(#pencil-texture);
 }
 
@@ -162,9 +164,8 @@
   --rot: -3deg;
   --offset-x: -50%;
   --fall-delay: 0.4s;
-  --fall-from: -440px;
-  animation: fallFromTop 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
-  color: rgba(88, 100, 128, 0.36);
+  --fd: 15s;
+  color: rgba(31, 117, 234, 0.38);
   filter: url(#pencil-texture);
 }
 
@@ -179,9 +180,39 @@
   left: 14%;
   --rot: 25deg;
   --fall-delay: 0.18s;
-  --fall-from: -300px;
-  animation: fallFromTop 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) var(--fall-delay) forwards;
-  color: rgba(145, 154, 172, 0.22);
+  --fd: 10s;
+  color: rgba(45, 127, 249, 0.26);
+}
+
+/* ── 缝纫线流：一条蓝色虚线串起衣片，虚线缓慢行进 + 光点沿线巡游（唯一的"科技"主视觉） ── */
+.thread-flow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.thread-path {
+  fill: none;
+  stroke: rgba(45, 127, 249, 0.28);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  animation: threadMarch 2.8s linear infinite;
+}
+
+@keyframes threadMarch {
+  to { stroke-dashoffset: -14; }
+}
+
+.thread-dot {
+  fill: rgba(45, 127, 249, 0.6);
+  filter: drop-shadow(0 0 2px rgba(45, 127, 249, 0.55));
+}
+
+.thread-dot--slow {
+  fill: rgba(31, 117, 234, 0.45);
 }
 
 .tech-grid {
@@ -203,6 +234,24 @@
   border-radius: 50%;
   background: radial-gradient(circle, rgba(31, 117, 234, 0.07), transparent 55%);
   filter: blur(clamp(40px, 5vw, 80px));
+  animation: glowBreath 8s ease-in-out infinite;
+}
+
+@keyframes glowBreath {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+/* 无障碍：偏好减少动效时全部静态呈现 */
+@media (prefers-reduced-motion: reduce) {
+  .garment, .hanger, .garment-accessory,
+  .thread-path, .thread-dot, .tech-glow-center,
+  .right-pane-hanger, .right-pane-garment {
+    animation: none !important;
+  }
+  .garment, .hanger, .garment-accessory {
+    opacity: 1 !important;
+  }
 }
 
 /* ---------- Brand Mark → removed, now tag below cloud ---------- */
@@ -454,10 +503,12 @@
   width: clamp(56px, 5.5vw, 90px);
   bottom: 6%;
   right: 5%;
-  transform: rotate(15deg);
-  color: rgba(140, 150, 172, 0.35);
+  --rot: 15deg;
+  --fd: 12s;
+  color: rgba(45, 127, 249, 0.34);
   pointer-events: none;
   z-index: 0;
+  animation: garmentFloat var(--fd) ease-in-out infinite alternate;
 }
 
 .right-pane-garment {
@@ -465,10 +516,12 @@
   width: clamp(44px, 4.5vw, 72px);
   top: 8%;
   left: 5%;
-  transform: rotate(-10deg);
-  color: rgba(140, 150, 172, 0.30);
+  --rot: -10deg;
+  --fd: 14s;
+  color: rgba(31, 117, 234, 0.30);
   pointer-events: none;
   z-index: 0;
+  animation: garmentFloat var(--fd) ease-in-out 1.2s infinite alternate;
 }
 
 /* ---------- Form ---------- */

@@ -6,6 +6,32 @@ const LoginLeftPane: React.FC = () => {
       <div className="tech-bg" aria-hidden="true">
         <div className="tech-grid" />
         <div className="tech-glow-center" />
+        {/* D-531 缝纫线流：蓝色虚线缓行 + 光点沿线巡游（隐喻多厂协同流水线，克制的科技感） */}
+        <svg className="thread-flow" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path
+            className="thread-path"
+            d="M26 12 C 16 18, 12 24, 16 30 C 22 40, 32 46, 34 54 C 36 64, 40 78, 50 90 C 56 96, 74 92, 84 78 C 92 66, 92 54, 86 46 C 80 38, 70 40, 70 34 C 70 26, 76 20, 80 14"
+            vectorEffect="non-scaling-stroke"
+          />
+          <circle className="thread-dot" r="0.6">
+            <animateMotion
+              dur="16s"
+              repeatCount="indefinite"
+              path="M26 12 C 16 18, 12 24, 16 30 C 22 40, 32 46, 34 54 C 36 64, 40 78, 50 90 C 56 96, 74 92, 84 78 C 92 66, 92 54, 86 46 C 80 38, 70 40, 70 34 C 70 26, 76 20, 80 14"
+            />
+          </circle>
+          <circle className="thread-dot thread-dot--slow" r="0.45">
+            <animateMotion
+              dur="23s"
+              begin="-9s"
+              repeatCount="indefinite"
+              keyPoints="1;0"
+              keyTimes="0;1"
+              calcMode="linear"
+              path="M26 12 C 16 18, 12 24, 16 30 C 22 40, 32 46, 34 54 C 36 64, 40 78, 50 90 C 56 96, 74 92, 84 78 C 92 66, 92 54, 86 46 C 80 38, 70 40, 70 34 C 70 26, 76 20, 80 14"
+            />
+          </circle>
+        </svg>
       </div>
       <svg className="pencil-filters u-pos-absolute u-ov-hidden" aria-hidden="true" style={{ width: 0, height: 0 }}>
         <defs>
