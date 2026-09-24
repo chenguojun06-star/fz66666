@@ -2,6 +2,7 @@
   "navigationBarTitleText": "质检扫码",
   "usingComponents": {
     "image-preview": "/components/common/image-preview/index",
-    "privacy-dialog": "/components/privacy-dialog/index"
+    "privacy-dialog": "/components/privacy-dialog/index",
+    "search-picker": "/components/search-picker/index"
   }
 }

@@ -1,5 +1,7 @@
 {
   "navigationBarTitleText": "工序模板",
   "enablePullDownRefresh": false,
-  "usingComponents": {}
+  "usingComponents": {
+    "search-picker": "/components/search-picker/index"
+  }
 }

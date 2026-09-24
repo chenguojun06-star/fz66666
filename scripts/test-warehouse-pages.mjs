@@ -834,6 +834,102 @@ async function testSearchPicker() {
   eq('空选项不报错', page.data.filtered.length, 0);
 }
 
+/**
+ * 可搜索选择器「全仓一致性」守护
+ *
+ * 背景（2026-09-24）：仓里一度出现两套 search-picker 用法 ——
+ *   A. D-517 时期：bindtap="openPicker" data-key="X" + 页面自写 openPicker switch
+ *   B. 通用式：bindtap="openPicker" data-handler="onXChange" data-names="xOptions"
+ * 同一个文件里混用时，B 的行会调到 A 的实现（switch 不到）→ 点了没反应。
+ * 现已统一为「一个入口 + 同一套 search-picker UI」，本测试守住这个结论。
+ */
+function testSearchPickerConvention() {
+  console.log('\n【结构：可搜索选择器全仓一致性】');
+  const allJs = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (e.name === 'node_modules') continue;
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) walk(full);
+      else if (e.name.endsWith('.js')) allJs.push(full);
+    }
+  };
+  walk(MP);
+
+  // ① 每个文件 openPicker / onPickerSelect / onPickerClose 各只能有 1 个定义
+  let dup = 0;
+  for (const f of allJs) {
+    if (f.includes('components/search-picker')) continue;
+    const s = stripComments(fs.readFileSync(f, 'utf8'));
+    for (const nm of ['openPicker', 'onPickerSelect', 'onPickerClose']) {
+      const n = (s.match(new RegExp(`\\n\\s*${nm}\\s*[:(]`, 'g')) || []).length;
+      if (n > 1) {
+        ok(`${path.relative(MP, f)} ${nm} 只有 1 个定义`, false, `实际 ${n} 个`);
+        dup++;
+      }
+    }
+  }
+  ok('无重复的 openPicker/onPickerSelect/onPickerClose 定义', dup === 0, `${dup} 处重复`);
+
+  // ② 每个 data-handler 都要在对应 js 里真实存在
+  let missing = 0;
+  const allWxml = [];
+  const walkW = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (e.name === 'node_modules') continue;
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) walkW(full);
+      else if (e.name.endsWith('.wxml')) allWxml.push(full);
+    }
+  };
+  walkW(MP);
+  for (const f of allWxml) {
+    const s = stripComments(fs.readFileSync(f, 'utf8'));
+    if (!s.includes('data-handler=')) continue;
+    const js = f.replace(/\.wxml$/, '.js');
+    const j = fs.existsSync(js) ? fs.readFileSync(js, 'utf8') : '';
+    for (const h of new Set([...s.matchAll(/data-handler="([^"]+)"/g)].map((m) => m[1]))) {
+      if (!j.includes(h)) {
+        ok(`${path.relative(MP, f)} 的 data-handler=${h} 存在`, false);
+        missing++;
+      }
+    }
+  }
+  ok('所有 data-handler 都能在对应 js 里找到', missing === 0, `${missing} 处缺失`);
+
+  // ③ 用旧约定（data-key）的文件必须有 _openPickerByKey 兜底，否则点了没反应
+  let noFallback = 0;
+  for (const f of allWxml) {
+    const s = fs.readFileSync(f, 'utf8');
+    if (!/bindtap="openPicker"\s+data-key=/.test(s)) continue;
+    const js = f.replace(/\.wxml$/, '.js');
+    if (!fs.existsSync(js)) continue; // wxml 片段，handler 在父页
+    if (!fs.readFileSync(js, 'utf8').includes('_openPickerByKey')) {
+      ok(`${path.relative(MP, f)} 有 _openPickerByKey 兜底`, false);
+      noFallback++;
+    }
+  }
+  ok('data-key 行都有 _openPickerByKey 兜底', noFallback === 0, `${noFallback} 处缺失`);
+
+  // ④ 不再有新的原生 selector picker（白名单：date-picker 本体 + 死代码页）
+  const ALLOW = [
+    'components/common/date-picker/index.wxml',   // 年月日选择器本体，换搜索反而更差
+    'pages/order/no-data-create/index.wxml',      // 死代码页：onLoad 直接 redirect 走人
+  ];
+  const offenders = [];
+  for (const f of allWxml) {
+    const rel = path.relative(MP, f).replace(/\\/g, '/');
+    if (ALLOW.includes(rel)) continue;
+    const s = stripComments(fs.readFileSync(f, 'utf8'));
+    for (const m of s.matchAll(/<picker([^>]*)>/g)) {
+      const mode = (m[1].match(/mode\s*=\s*"([^"]+)"/) || [, 'selector'])[1];
+      if (mode === 'selector') offenders.push(rel);
+    }
+  }
+  ok('除白名单外不再有原生 selector picker', offenders.length === 0,
+    offenders.length ? offenders.join(', ') : '');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -848,6 +944,7 @@ try {
   await testMaterialDetail();
   await testMaterialFormPagesDecode();
   await testSearchPicker();
+  testSearchPickerConvention();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);
