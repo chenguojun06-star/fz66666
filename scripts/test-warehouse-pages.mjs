@@ -573,6 +573,19 @@ function testPickerUsage() {
   // 样衣借调的远程搜索必须接上（否则又变成"只搜前 200 条"）
   const loanJs = fs.readFileSync(path.join(MP, 'pages/warehouse/sample/scan-action/index.js'), 'utf8');
   ok('借调对象走远程搜索', /onPickerSearch/.test(loanJs) && /_fetchLoanOptions/.test(loanJs));
+
+  // D-517 第三批：三类"截断式本地搜索"必须改成后端关键字 / 可搜索列表
+  const attJs = fs.readFileSync(path.join(MP, 'pages/attendance/detail/index.js'), 'utf8');
+  ok('考勤员工搜索走后端关键字', /onInputEmployeeSearch[\s\S]{0,900}listUsers\(\{[^}]*name: key/.test(attJs));
+  const orderJs = fs.readFileSync(path.join(MP, 'pages/order/create/index.js'), 'utf8');
+  ok('下单选款式走后端 keyword', /onStyleSearchInput[\s\S]{0,900}keyword: kw/.test(orderJs));
+  ok('下单款式展示映射存在', /_decorateStyles/.test(orderJs));
+  const qcJs = fs.readFileSync(path.join(MP, 'pages/quality-detail/index.js'), 'utf8');
+  const qcW = fs.readFileSync(path.join(MP, 'pages/quality-detail/index.wxml'), 'utf8');
+  ok('质检待检菲号可搜索', /onBundleSearchInput/.test(qcJs) && /filteredPendingBundles/.test(qcW));
+  const cutJs = fs.readFileSync(path.join(MP, 'pages/cutting/bundle-detail/index.js'), 'utf8');
+  const cutW = fs.readFileSync(path.join(MP, 'pages/cutting/bundle-detail/index.wxml'), 'utf8');
+  ok('裁剪转单菲号可搜索', /onTfBundleSearchInput/.test(cutJs) && /_tfBundlesFiltered/.test(cutW));
   // D-517：下单页的工厂/客户/纸样师/跟单员也必须可搜索（不再用原生 picker 选业务实体）
   const orderFormW = stripComments(fs.readFileSync(path.join(MP, 'pages/order/create/form/index.wxml'), 'utf8'));
   ok('下单页已挂 search-picker', /<search-picker/.test(orderFormW));

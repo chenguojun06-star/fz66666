@@ -54,6 +54,8 @@ Page({
           var l = d.dictLabel || d.label || '';
           if (v) catMap[v] = l;
         });
+        // D-517：缓存品类字典，供「后端关键字搜索」分支复用同一套展示映射
+        self._catMap = catMap;
       })
       .catch(function () {})
       .then(function () {
@@ -109,20 +111,57 @@ Page({
       });
   },
 
+  /**
+   * D-517：款式搜索改走**后端关键字**（后端支持 keyword 参数，覆盖款号/款名）
+   * 原先只拉 500 条后本地过滤 —— 款式超过 500 个时后面的永远搜不到。
+   */
   onStyleSearchInput: function (e) {
-    var kw = (e.detail.value || '').trim().toLowerCase();
+    var raw = e.detail.value || '';
+    var kw = raw.trim();
+    var self = this;
     var isNoData = this.data.activeTab === 'noData';
     var sourceList = isNoData ? this._allStyles : this._styles;
-    
-    this.setData({ styleKeyword: kw });
-    if (!kw) { 
-      this.setData({ styleFilteredStyles: sourceList }); 
-      return; 
-    }
-    var list = (sourceList || []).filter(function (s) {
-      return (s.styleNo + '|' + s.styleName + '|' + (s.displayCategory || '')).toLowerCase().indexOf(kw) !== -1;
+
+    this.setData({ styleKeyword: raw });
+    if (this._styleSearchTimer) clearTimeout(this._styleSearchTimer);
+    this._styleSearchTimer = setTimeout(function () {
+      self._styleSearchTimer = null;
+      if (!kw) {
+        self.setData({ styleFilteredStyles: sourceList });
+        return;
+      }
+      self.setData({ styleLoading: true });
+      var params = { page: 1, pageSize: 50, keyword: kw };
+      if (!isNoData) params.sampleStatus = 'COMPLETED';
+      api.style.listStyles(params).then(function (res) {
+        var list = (res && res.records) || (Array.isArray(res) ? res : []) || [];
+        self.setData({ styleFilteredStyles: self._decorateStyles(list), styleLoading: false });
+      }).catch(function (err) {
+        console.warn('[下单管理] 款式搜索失败', err && (err.errMsg || err));
+        self.setData({ styleLoading: false });
+      });
+    }, 300);
+  },
+
+  /**
+   * D-517：款式展示字段统一装饰（搜索结果与首屏列表口径一致）
+   * 与 loadStyles 里的映射保持一致：品类中文名 / 封面鉴权 URL / 最近下单日期 / 下单数
+   */
+  _decorateStyles: function (list) {
+    var catMap = this._catMap || {};
+    var arr = Array.isArray(list) ? list : [];
+    arr.forEach(function (s) {
+      s.displayCategory = catMap[s.category] || s.category || '';
+      s.displayCover = getAuthedImageUrl(s.cover || '');
+      if (s.latestOrderTime) {
+        var t = s.latestOrderTime;
+        if (typeof t === 'string' && t.indexOf('T') !== -1) t = t.split('T')[0];
+        if (typeof t === 'string' && t.length >= 10) t = t.substring(0, 10);
+        s.latestOrderDate = t;
+      }
+      s.orderCount = s.orderCount || 0;
     });
-    this.setData({ styleFilteredStyles: list });
+    return arr;
   },
 
   onStyleSearchClear: function () {

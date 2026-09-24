@@ -111,6 +111,9 @@ Page({
     transferMode: 'whole',
     transferModes: [{ id: 'whole', name: '整单转' }, { id: 'bundle', name: '菲号裁片转' }],
     _tfBundles: [],
+    // D-517：菲号搜索（渲染用过滤结果，选中状态仍写回 selectedBundles）
+    _tfBundlesFiltered: [],
+    tfBundleSearchKey: '',
     _tfBundlesLoading: false,
     selectedBundles: {},
     allSelected: false,
@@ -869,9 +872,42 @@ Page({
           _statusCn: completed ? '已完成' : (partialScanned ? '部分已扫' : ''),
         };
       });
-      that.setData({ _tfBundles: list, _tfBundlesLoading: false });
+      // D-517：同步过滤结果（新数据默认无关键字 → 全量）
+      that.setData({
+        _tfBundles: list,
+        _tfBundlesFiltered: list,
+        tfBundleSearchKey: '',
+        _tfBundlesLoading: false,
+      });
     }).catch(function () {
       that.setData({ _tfBundlesLoading: false });
+    });
+  },
+
+  /* ═══ D-517：转单菲号可搜索 ═══
+     一个订单可能有几百扎，一次转几扎要一路翻 —— 加关键字过滤（菲号/颜色/码数） */
+  onTfBundleSearchInput(e) {
+    this.setData({ tfBundleSearchKey: e.detail.value || '' });
+    this._tfRefreshBundleFilter();
+  },
+
+  onTfBundleSearchClear() {
+    this.setData({ tfBundleSearchKey: '' });
+    this._tfRefreshBundleFilter();
+  },
+
+  _tfRefreshBundleFilter() {
+    const kw = String(this.data.tfBundleSearchKey || '').trim().toLowerCase();
+    const all = this.data._tfBundles || [];
+    if (!kw) {
+      this.setData({ _tfBundlesFiltered: all });
+      return;
+    }
+    this.setData({
+      _tfBundlesFiltered: all.filter(function (b) {
+        const hay = [b.bundleLabel, b.color, b.size].join('|').toLowerCase();
+        return hay.indexOf(kw) !== -1;
+      }),
     });
   },
 

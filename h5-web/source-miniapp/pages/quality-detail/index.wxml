@@ -194,9 +194,24 @@
         </text>
       </view>
 
+      <!-- D-517：菲号多时加关键字搜索（菲号/二维码/颜色/码数） -->
+      <view class="bundle-search-row">
+        <input
+          class="bundle-search-input"
+          placeholder="搜索菲号 / 二维码 / 颜色 / 码数"
+          value="{{bundleSearchKey}}"
+          bindinput="onBundleSearchInput"
+          confirm-type="search"
+        />
+        <text wx:if="{{bundleSearchKey}}" class="bundle-search-clear" bindtap="onBundleSearchClear">×</text>
+      </view>
+
       <!-- 菲号多选列表 -->
       <view class="bundle-select-list">
-        <view wx:for="{{pendingBundles}}" wx:key="bundleId"
+        <view wx:if="{{filteredPendingBundles.length === 0}}" class="bundle-select-empty">
+          {{bundleSearchKey ? '未匹配到菲号' : '暂无待质检菲号'}}
+        </view>
+        <view wx:for="{{filteredPendingBundles}}" wx:key="bundleId"
               class="bundle-select-item {{item.selected ? 'bundle-select-item--active' : ''}}"
               data-key="{{item.selectKey}}" bindtap="onToggleBundle">
           <view class="bundle-checkbox {{item.selected ? 'bundle-checkbox--checked' : ''}}">

@@ -52,6 +52,8 @@ Page({
     employeeSearchKey: '',
     filteredEmployeeList: [],
     employeePickerSource: 'top',  // 'top'=顶部员工选择, 'supplement'=补卡弹窗员工选择
+    // D-517：远程搜索加载态
+    employeePickerLoading: false,
     // 管理员补卡弹窗
     adminSupplementOpen: false,
     adminSupplementSubmitting: false,
@@ -426,10 +428,11 @@ Page({
     });
   },
 
-  // 加载员工列表
+  // 加载员工列表（D-517：只拉首屏，全量靠关键字远程搜索 —— 原先拉 200 条后本地过滤，
+  // 第 201 个员工永远搜不到；后端 name 是 LIKE，按关键字搜可覆盖全员）
   _loadEmployees: function () {
     const self = this;
-    api.system.listUsers({ pageSize: 200 }).then(function (res) {
+    api.system.listUsers({ page: 1, pageSize: 20 }).then(function (res) {
       const list = (res && res.records) || (res && res.list) || (res && Array.isArray(res) ? res : []) || [];
       // 格式化为 picker 选项
       const employeeList = list.map(function (u) {
@@ -481,16 +484,42 @@ Page({
     this.setData({ employeePickerOpen: false });
   },
 
-  // 搜索输入
+  /**
+   * 搜索输入（D-517：改为**后端关键字搜索**）
+   * 原先只对本地已加载的 200 条做过滤，超过 200 人时后面的员工永远搜不到。
+   * 后端 /api/system/user/list 的 name 是 LIKE 匹配，按关键字搜可命中全员。
+   */
   onInputEmployeeSearch: function (e) {
-    const key = (e.detail.value || '').trim().toLowerCase();
-    const list = this.data.employeeList;
-    const filtered = key ? list.filter(function (emp) {
-      const name = String(emp.userName || '').toLowerCase();
-      const id = String(emp.userId || '').toLowerCase();
-      return name.indexOf(key) >= 0 || id.indexOf(key) >= 0;
-    }) : list;
-    this.setData({ employeeSearchKey: e.detail.value, filteredEmployeeList: filtered });
+    const raw = e.detail.value || '';
+    const key = raw.trim();
+    this.setData({ employeeSearchKey: raw });
+    const self = this;
+    if (this._empSearchTimer) clearTimeout(this._empSearchTimer);
+    this._empSearchTimer = setTimeout(function () {
+      self._empSearchTimer = null;
+      if (!key) {
+        // 清空关键字 → 回到首屏列表
+        self.setData({ filteredEmployeeList: self.data.employeeList });
+        return;
+      }
+      self.setData({ employeePickerLoading: true });
+      api.system.listUsers({ page: 1, pageSize: 50, name: key }).then(function (res) {
+        const list = (res && res.records) || (res && res.list) || [];
+        self.setData({
+          employeePickerLoading: false,
+          filteredEmployeeList: list.map(function (u) {
+            return {
+              userId: String(u.id || u.userId || ''),
+              userName: u.realName || u.username || u.name || u.nickname || '未知',
+              deptName: u.deptName || u.departmentName || '',
+            };
+          }).filter(function (o) { return o.userId; }),
+        });
+      }).catch(function (err) {
+        console.warn('[attendance.detail] 员工搜索失败:', err && err.errMsg);
+        self.setData({ employeePickerLoading: false });
+      });
+    }, 300);
   },
 
   // 从搜索弹窗选择员工（根据 source 来源回填不同字段）

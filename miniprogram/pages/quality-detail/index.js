@@ -102,6 +102,9 @@ Page({
     },
     // 待质检菲号列表（从 pendingBundles 过滤当前订单）
     pendingBundles: [],
+    // D-517：菲号搜索（渲染用过滤结果，选中状态仍写回 pendingBundles）
+    bundleSearchKey: '',
+    filteredPendingBundles: [],
     // 仓库选项
     warehouseOptions: [],
     locationOptions: [],
@@ -547,6 +550,9 @@ Page({
         });
         self.setData({
           pendingBundles: bundles,
+          // D-517：同步过滤结果（新数据默认无关键字 → 全量）
+          filteredPendingBundles: bundles,
+          bundleSearchKey: '',
           selectedBundleQrs: [],
           selectedBundleTotalQty: 0,
           batchUnqualFormVisible: false,
@@ -724,6 +730,7 @@ Page({
     if (idx < 0) return;
     bundles[idx].selected = !bundles[idx].selected;
     this.setData({ pendingBundles: bundles });
+    this._refreshBundleFilter();
     this._recomputeSelection();
   },
 
@@ -734,6 +741,7 @@ Page({
     var bundles = this.data.pendingBundles.slice();
     for (var i = 0; i < bundles.length; i++) bundles[i].selected = true;
     this.setData({ pendingBundles: bundles });
+    this._refreshBundleFilter();
     this._recomputeSelection();
   },
 
@@ -744,6 +752,7 @@ Page({
     var bundles = this.data.pendingBundles.slice();
     for (var i = 0; i < bundles.length; i++) bundles[i].selected = !bundles[i].selected;
     this.setData({ pendingBundles: bundles });
+    this._refreshBundleFilter();
     this._recomputeSelection();
   },
 
@@ -754,7 +763,35 @@ Page({
     var bundles = this.data.pendingBundles.slice();
     for (var i = 0; i < bundles.length; i++) bundles[i].selected = false;
     this.setData({ pendingBundles: bundles });
+    this._refreshBundleFilter();
     this._recomputeSelection();
+  },
+
+  /* ═══ D-517：待质检菲号可搜索 ═══
+     待检菲号多时（一个订单几十上百扎）只能一路翻，加关键字过滤（菲号/二维码/颜色/码数） */
+  onBundleSearchInput: function (e) {
+    // setData 后 this.data 已同步更新，直接刷新过滤结果（不依赖 setData 回调的 this）
+    this.setData({ bundleSearchKey: e.detail.value || '' });
+    this._refreshBundleFilter();
+  },
+
+  onBundleSearchClear: function () {
+    this.setData({ bundleSearchKey: '' });
+    this._refreshBundleFilter();
+  },
+
+  _refreshBundleFilter: function () {
+    var kw = String(this.data.bundleSearchKey || '').trim().toLowerCase();
+    var all = this.data.pendingBundles || [];
+    if (!kw) {
+      this.setData({ filteredPendingBundles: all });
+      return;
+    }
+    var out = all.filter(function (b) {
+      var hay = [b.bundleNoShort, b.bundleNo, b.qrCode, b.color, b.size].join('|').toLowerCase();
+      return hay.indexOf(kw) !== -1;
+    });
+    this.setData({ filteredPendingBundles: out });
   },
 
   /**

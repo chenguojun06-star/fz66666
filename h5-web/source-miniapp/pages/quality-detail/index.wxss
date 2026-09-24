@@ -1052,6 +1052,33 @@
   gap: 12rpx;
   margin-top: var(--space-10);
 }
+/* D-517：菲号搜索框 */
+.bundle-search-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+  padding: 0 20rpx;
+  height: 64rpx;
+  background: var(--color-bg-page);
+  border-radius: 32rpx;
+  border: 2rpx solid var(--color-border);
+}
+.bundle-search-input {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+.bundle-search-clear {
+  color: var(--color-text-tertiary);
+  padding: 0 8rpx;
+}
+.bundle-select-empty {
+  padding: 40rpx 0;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
 /* D-517：库位可搜索选择行 */
 .wh-loc-picker {
   display: flex;

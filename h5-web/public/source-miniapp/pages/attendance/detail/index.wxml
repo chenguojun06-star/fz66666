@@ -621,12 +621,16 @@
           <text class="modal-close-text">×</text>
         </view>
       </view>
+      <!-- D-517：搜索走后端全量（不再只过滤已加载的 200 条） -->
       <view class="employee-picker-search">
-        <input class="employee-picker-input" type="text" placeholder="搜索姓名 / 工号" value="{{employeeSearchKey}}" bindinput="onInputEmployeeSearch" confirm-type="search" />
+        <input class="employee-picker-input" type="text" placeholder="输入姓名搜索（全员）" value="{{employeeSearchKey}}" bindinput="onInputEmployeeSearch" confirm-type="search" />
       </view>
       <scroll-view scroll-y class="employee-picker-list">
-        <view wx:if="{{filteredEmployeeList.length === 0}}" class="employee-picker-empty">
-          <text class="employee-picker-empty-text">未找到匹配员工</text>
+        <view wx:if="{{employeePickerLoading}}" class="employee-picker-empty">
+          <text class="employee-picker-empty-text">搜索中…</text>
+        </view>
+        <view wx:elif="{{filteredEmployeeList.length === 0}}" class="employee-picker-empty">
+          <text class="employee-picker-empty-text">{{employeeSearchKey ? '未找到匹配员工' : '输入姓名搜索员工'}}</text>
         </view>
         <view wx:for="{{filteredEmployeeList}}" wx:key="userId"
               class="employee-picker-item {{(employeePickerSource === 'top' && selectedEmployee.userId === item.userId) || (employeePickerSource === 'supplement' && adminSupplementForm.targetUserId === item.userId) ? 'employee-picker-item--active' : ''}}"

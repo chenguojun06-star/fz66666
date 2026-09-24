@@ -945,6 +945,27 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* D-517：转单菲号搜索框 */
+.tf-bundle-search {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+  padding: 0 20rpx;
+  height: 60rpx;
+  background: var(--color-bg-page);
+  border-radius: 30rpx;
+  border: 2rpx solid var(--color-border);
+}
+.tf-bundle-search-input {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+.tf-bundle-search-clear {
+  color: var(--color-text-tertiary);
+  padding: 0 8rpx;
+}
+
 .tf-bundle-item {
   display: flex;
   align-items: center;
