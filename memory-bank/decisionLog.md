@@ -1,7 +1,59 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-24（新增 D-533 套装定价口径——行单价=套装单价，原价留痕，推翻按子SKU售价比例分摊）
+> 最后更新：2026-09-24（新增 D-538 磁盘 85% 根因定位 + Docker 构建缓存每日自动回收；D-533 套装定价口径）
+
+---
+
+## D-538：磁盘 85% 的根因不是数据库也不是日志，是 Docker 构建缓存（2026-09-24）
+
+**现象**：服务器 `/` 50G 用了 40G，**85%、仅剩 7.4G**。前面几轮一直记为"遗留项：磁盘 84%"，
+但没人查过到底是什么在吃盘。
+
+**排查过程（关键在"别停在第一层"）**
+1. `du -sh /var/lib/docker` → 只有 **1.8G**。到这一步很容易得出"docker 没占多少"的错误结论。
+2. 继续下钻 `du -xh --max-depth=1 /var/lib` → **`/var/lib/containerd` = 28G**。
+   本机存储驱动是 **overlayfs**（`docker info` 确认），镜像层与构建缓存实际落在
+   **containerd 目录**，不是 `/var/lib/docker`。
+3. 再拆：`io.containerd.snapshotter.v1.overlayfs/snapshots` **21G** +
+   `io.containerd.content.v1.content/blobs` **7.1G**。
+4. `docker system df` 佐证：**Build Cache 25.32GB（可回收 24.56GB）**、
+   Images 22.84GB。但镜像列表里实际镜像加起来只有约 5.5G ——
+   22.84G 里大量是**与构建缓存共享的层**，所以"镜像 22G"这个数字本身有误导性。
+
+**根因**：每次部署都会产生新的依赖层缓存（backend `mvn package`、frontend `vite build`），
+缓存**只增不减**。9-24 一天 24 个提交触发 12 次前端构建，约两个月就堆到 25G。
+更危险的是：构建中途磁盘写满会**直接失败**，而报错信息与磁盘毫无关系，极难定位。
+
+**处置**
+1. 立即清理：`docker builder prune -af` → **一次回收 25.32GB**，磁盘 **85% → 36%（可用 31G）**。
+   清理后逐项复验：6 个容器全在、backend healthy、`www` 200、`api/actuator/health` 200、
+   后端日志 0 ERROR。
+2. 根治：`deploy/lighthouse/autodeploy.sh` 新增「每日 Docker 磁盘回收」段：
+   - 常态每天一次：`builder prune -f --filter until=720h`（只清 30 天未用的缓存）
+     + `image prune -f`（只清 dangling）；
+   - 兜底：磁盘 ≥85% 时无视每日限制，立即 `builder prune -af` 全清；
+   - 每轮把磁盘水位追加进 `/opt/backups/disk-snapshot.log`（本机 launchd 会拉回），
+     容量趋势像内存快照一样可回溯；
+   - 靠 `/opt/backups/.docker-prune-date` stamp 保证每天只跑一次。
+   写法在 `set -e` 下安全（全 `if` / `|| true`），已在服务器上用临时目录隔离跑了
+   三种分支（每日 / 已做过跳过 / 磁盘告急）验证不会意外退出。
+
+**为什么刻意不用 `docker image prune -a`**
+`-a` 会把 **maven / node / temurin 等构建基础镜像**一并删掉（它们不被任何容器引用），
+下次构建要重新拉取 1~2G，构建时间明显变长。而清理目标（腾磁盘）已经达成，
+再删只是把代价从"磁盘"换成"构建时间"，不划算。
+
+**教训（值得记住的排查姿势）**
+- **磁盘排查必须下钻两层以上**：`/var/lib/docker` 小 ≠ docker 没占盘；
+  overlayfs 存储驱动下真正的数据在 `/var/lib/containerd`。
+- `docker system df` 的 "Images 22.84GB" 会把**与构建缓存共享的层**算进去，
+  别直接当"镜像占这么多"读。
+- 构建缓存是**只增不减**的；部署越频繁增长越快，必须主动回收，不能等它撑爆磁盘。
+- 修改 `autodeploy.sh` 本身**不会触发重建**（脚本里 D-455 已明确：只认
+  `.env.backend` / `docker-compose.yml` / `Caddyfile`），所以这类运维改动是低风险的。
+
+**遗留**：`/opt/fz66666/autodeploy.log` 32MB 且无轮转（本次未处理，影响远小于磁盘问题）。
 
 ---
 

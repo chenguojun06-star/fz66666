@@ -115,6 +115,47 @@ mkdir -p "$SNAP_DIR" 2>/dev/null || true
 tail -3000 "$SNAP_DIR/memory-snapshot.log" >"$SNAP_DIR/.mem.tmp" 2>/dev/null \
   && mv "$SNAP_DIR/.mem.tmp" "$SNAP_DIR/memory-snapshot.log" 2>/dev/null || true
 
+# ── 每日 Docker 磁盘回收（D-538）──
+# 2026-09-24 实测：磁盘 85%、仅剩 7.4G。排查后确认大头**既不是数据库也不是日志**，
+# 而是 **Docker 构建缓存**：本机存储驱动是 overlayfs，镜像层与构建缓存落在
+# `/var/lib/containerd`（实测 28G = overlay 快照 21G + 内容 blob 7.1G），
+# 而 `/var/lib/docker` 只有 1.8G —— 只盯后者会误判成"没占多少"。
+# 每次部署都会新增依赖层缓存，一天十几次构建 → 缓存只增不减，约两个月就吃掉 25G。
+# 更麻烦的是：构建中途磁盘写满会直接失败，而报错跟磁盘毫无关系，极难定位。
+# 手动清一次（`docker builder prune -af`）当天就回收了 25.32G，85% → 36%。
+#
+# 策略（保守，尽量不拖慢构建）：
+#   1) 常态：每天清一次「30 天未被使用」的构建缓存 + dangling（无标签）镜像。
+#      **刻意不用 `docker image prune -a`** —— 那会把 maven / node / temurin
+#      等构建基础镜像一并删掉，下次构建要重新拉取，得不偿失。
+#   2) 兜底：磁盘 ≥85% 时无视每日限制，立即 `builder prune -af` 全清。
+#      宁可某次构建慢几分钟，也不能因磁盘不足构建失败。
+#   3) 每轮把磁盘水位追加进 disk-snapshot.log（本机 launchd 会拉回），
+#      容量趋势和内存快照一样可回溯，便于下次调参。
+# 自调度：靠 stamp 文件保证每天只做一次，避免每 2 分钟都跑一遍。
+PRUNE_STAMP="$SNAP_DIR/.docker-prune-date"
+TODAY_DATE=$(date '+%F')
+DISK_PCT=$(df --output=pcent / 2>/dev/null | tr -dc '0-9' || true)
+[ -n "$DISK_PCT" ] || DISK_PCT=0
+
+if [ "$DISK_PCT" -ge 85 ]; then
+  echo "[$(date '+%F %T')] ⚠️ 磁盘 ${DISK_PCT}%（≥85%）→ 立即全清 Docker 构建缓存"
+  sudo docker builder prune -af >/dev/null 2>&1 || true
+  sudo docker image prune -f >/dev/null 2>&1 || true
+  echo "$TODAY_DATE" >"$PRUNE_STAMP" 2>/dev/null || true
+  echo "[$(date '+%F %T')] 回收后：$(df -h / | tail -1)"
+elif [ "$(cat "$PRUNE_STAMP" 2>/dev/null || true)" != "$TODAY_DATE" ]; then
+  echo "[$(date '+%F %T')] 每日 Docker 回收（清 30 天前构建缓存 + dangling 镜像）"
+  sudo docker builder prune -f --filter until=720h >/dev/null 2>&1 \
+    || echo "[$(date '+%F %T')] ⚠️ 构建缓存回收失败（明天再试，不影响部署）"
+  sudo docker image prune -f >/dev/null 2>&1 || true
+  echo "$TODAY_DATE" >"$PRUNE_STAMP" 2>/dev/null || true
+fi
+
+df -h / 2>/dev/null | tail -1 >>"$SNAP_DIR/disk-snapshot.log" 2>/dev/null || true
+tail -1000 "$SNAP_DIR/disk-snapshot.log" >"$SNAP_DIR/.disk.tmp" 2>/dev/null \
+  && mv "$SNAP_DIR/.disk.tmp" "$SNAP_DIR/disk-snapshot.log" 2>/dev/null || true
+
 # ── 全服务在场巡检（D-455，替换 D-433 已退役的 phpMyAdmin 接管逻辑）──
 # 背景：D-433 的接管块用 grep '^  phpmyadmin:' 判定，D-435 移除该服务后永久失配 →
 # 死代码。但它暴露了真问题：autodeploy 只 up backend/frontend，
