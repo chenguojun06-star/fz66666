@@ -100,18 +100,29 @@ jobs:
           echo "⚠️  生产配置中存在'你的域名'占位符"
         fi
 
-        # 7. 检查 cloudbaserc.json 探针配置（P0：INC-20260612-001）
+        # 7. 检查启动探针宽限期（P0：INC-20260612-001 —— 探针秒判导致容器反复重启）
+        #
+        # 2026-09-24 修正：本项原来查的是 `cloudbaserc.json` 的 initialDelaySeconds，
+        # 那是**微信云托管时代**的配置。生产环境 2026-09-17 已迁到自建轻量服务器
+        # （Docker Compose + Caddy），cloudbaserc.json 已成历史遗留文件，
+        # 继续拿它当门禁有两个问题：① 守着不生效的配置 ② 一旦清理掉该文件 CI 就会红。
+        # 真正的等价保护现在是 compose 里的 `start_period`（应用启动约 40~90s，需留足宽限），
+        # 所以检查目标改为它 —— 保护不变，指向真正生效的地方。
         echo ""
-        echo "🔍 检查 cloudbaserc.json 探针配置..."
-        INITIAL_DELAY=$(grep -oE '"initialDelaySeconds"[[:space:]]*:[[:space:]]*[0-9]+' cloudbaserc.json | grep -oE '[0-9]+' | head -1)
-        if [ -z "$INITIAL_DELAY" ]; then
-          echo "❌ cloudbaserc.json 缺少 initialDelaySeconds 配置"
-          ERRORS=$((ERRORS + 1))
-        elif [ "$INITIAL_DELAY" -lt 200 ]; then
-          echo "❌ initialDelaySeconds=$INITIAL_DELAY 太小（应用启动需 90s+，建议 ≥300）"
-          ERRORS=$((ERRORS + 1))
+        echo "🔍 检查后端启动探针宽限期（deploy/lighthouse/docker-compose.yml start_period）..."
+        COMPOSE_FILE="deploy/lighthouse/docker-compose.yml"
+        if [ ! -f "$COMPOSE_FILE" ]; then
+          echo "⚠️  未找到 $COMPOSE_FILE，跳过该项（不阻断）"
         else
-          echo "✅ initialDelaySeconds=$INITIAL_DELAY"
+          START_PERIOD=$(grep -oE 'start_period:[[:space:]]*[0-9]+s' "$COMPOSE_FILE" | grep -oE '[0-9]+' | head -1)
+          if [ -z "$START_PERIOD" ]; then
+            echo "⚠️  compose 未显式设置 start_period（应用启动约 40~90s，建议 ≥200s，不阻断）"
+          elif [ "$START_PERIOD" -lt 200 ]; then
+            echo "❌ start_period=${START_PERIOD}s 太小（应用启动需 90s+，建议 ≥300s，防容器被误判不健康而反复重启）"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ start_period=${START_PERIOD}s"
+          fi
         fi
 
         # 8. 检查前端是否有生产环境不应有的console.log

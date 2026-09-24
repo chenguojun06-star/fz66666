@@ -274,7 +274,7 @@ cd frontend && npx tsc --noEmit         # ✅ 前端类型检查
 1. 会话开始先读 `memory-bank/quick-start-5min.md` + `activeContext.md` + `decisionLog.md`（至少这三份）
 2. 涉及部署/CI 时再读 `anti-patterns.md` + `change-impact-matrix.md`
 3. 不知道部署流就去查 Memory Bank，不要凭空让用户"刷新页面"
-**历史教训**：2026-07-09 WS token 修复，AI 没加载 Memory Bank，不知道"GitHub push → 微信云自动拉取"的部署流，让用户"刷新页面"被骂
+**历史教训**：2026-07-09 WS token 修复，AI 没加载 Memory Bank，不知道"push 后服务器会自动拉取部署"的部署流，让用户"刷新页面"被骂
 
 ---
 
@@ -282,9 +282,14 @@ cd frontend && npx tsc --noEmit         # ✅ 前端类型检查
 **识别信号**：用户反馈云端控制台报错，AI 改完代码后说"刷新页面后即可生效"
 **错误做法**：改完代码不 push，让用户"刷新浏览器"或"手动部署"
 **正确做法**：
-1. 本项目部署流：`git commit` → `git push origin main` → 微信云自动拉取部署
+1. 本项目部署流（**2026-09-17 起，已从微信云托管迁到自建轻量服务器**）：
+   `git commit` → `git push origin main` → 服务器上的 `deploy/lighthouse/autodeploy.sh`
+   由 cron **每 2 分钟**拉取，按变更目录重建 backend / frontend（约 3~5 分钟生效）。
+   ⚠️ 微信云托管已**不再部署**，`cloudbaserc.json` 等云托管配置是历史遗留，别再照着它操作。
 2. 改完代码直接 commit + push，不要等用户问"怎么部署"
-3. push 后告知用户"已推送，微信云会自动拉取"，而不是"请刷新页面"
+3. push 后告知用户"已推送，服务器会自动拉取部署"，而不是"请刷新页面"
+   —— 更稳的说法：**验证服务器 HEAD 与容器重建时间后再报"已上线"**，
+   因为 `push 成功 ≠ 已上线`（中间可能有别的提交、也可能被内存守卫跳过）。
 **触发P0铁律**：无（部署流程规范，但严重影响用户体验）
 **历史教训**：2026-07-09 WS token 修复后让用户"刷新页面"，被用户怒斥"云端部署的代码，本地刷新没用"
 

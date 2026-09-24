@@ -1281,11 +1281,21 @@ grep "ADD COLUMN\|CREATE TABLE\|ALTER TABLE" \
 
 ## 🔄 CI/CD 与日志管理
 
-### ☁️ 云端自动部署（已配置，重要！）
+### ☁️ 服务器自动部署（已配置，重要！）
 
-**部署方式：微信云托管控制台持续部署（已绑定 GitHub repo）**
+**部署方式：`git push origin main` → 自建腾讯云轻量服务器上的 autodeploy 自动拉取重建**
 
-> ⚠️ **AI 必读**：部署通过 `.github/workflows/ci.yml` 的 `deploy` job 触发（使用 `CLOUDBASE_SECRET_ID`/`CLOUDBASE_SECRET_KEY`/`CLOUDBASE_ENV_ID` 三个 Secrets，已在仓库 Settings 中配置）。只要推送到 main 分支，CI 自动触发云端容器重建，无需手动上传 JAR。
+> ⚠️ **2026-09-17 起生产环境已从微信云托管迁到自建轻量服务器，微信云托管不再部署。**
+> `cloudbaserc.json`、`check-run-health.sh` 均为**历史遗留**，别再照着它们操作；
+> `ci.yml` 里的 CloudBase deploy job 与 `ci.yml.bak` 已清理/仅存历史。
+> ⚠️ `.github/workflows/deploy-lighthouse.yml` **不要放开 push 触发** ——
+> 它会与服务器 cron 抢部署，且并行构建 backend+frontend 会绕过防 OOM 的串行约束（见该文件顶部注释）。
+>
+> ⚠️ **AI 必读**：部署靠服务器上的 `deploy/lighthouse/autodeploy.sh`，由 cron **每 2 分钟**
+> 执行一次 `git pull --ff-only`，**只有 backend/ 或 frontend/ 有变更才重建**对应容器
+> （miniprogram/文档类改动只拉代码、不重建）。完整说明见 `deploy/lighthouse/README.md`。
+>
+> ⚠️ **`push 成功 ≠ 已上线`**：报"已上线"之前必须验证服务器的 HEAD 与容器重建时间。
 
 ```bash
 # 部署到云端：正确流程（绝对禁止直接 git add .）
@@ -1300,14 +1310,24 @@ git diff --stat HEAD
 # ③ 精确 add，不用 git add .
 git add backend/src/... frontend/src/...
 git commit -m "fix: 你的修改描述"
-git push upstream main
-# → 微信云托管自动拉取代码，重建容器，通常 3~5 分钟后生效
+git push origin main
+# → 服务器 autodeploy 每 2 分钟拉取，重建 backend/frontend，通常 3~5 分钟后生效
 ```
 
-**云端环境信息**（微信云托管控制台截图确认）：
+**线上环境信息**（自建轻量服务器）：
 
-- **云后端地址**：`backend-226678-6-1405390085.sh.run.tcloudbase.com`
-- **数据库**：`jdbc:mysql://10.1.104.42:3306/...`（VPC 内网，仅容器内可访问）
+- **前端**：`https://www.webyszl.cn`
+- **后端 API**：`https://api.webyszl.cn`（健康检查 `https://api.webyszl.cn/actuator/health`）
+- **部署目录**：服务器 `/opt/fz66666`，部署脚本 `deploy/lighthouse/autodeploy.sh`
+- 数据库 / Redis / Qdrant 均为同机 Docker Compose 服务（见 `deploy/lighthouse/docker-compose.yml`）
+
+<details>
+<summary>历史信息（微信云托管，已停用，仅备查）</summary>
+
+- 云后端地址：`backend-226678-6-1405390085.sh.run.tcloudbase.com`
+- 数据库：`jdbc:mysql://10.1.104.42:3306/...`（VPC 内网，仅容器内可访问）
+
+</details>
 - **`FLYWAY_ENABLED=true`** ← ⚠️ **Flyway 实际在云端运行（cloudbaserc.json 配置）！**
 
 ### ⚠️ FLYWAY\_ENABLED=true — 云端 Flyway 自动执行，脚本必须幂等
@@ -1398,7 +1418,7 @@ CREATE INDEX idx_production_order_status_flag ON t_production_order (status, del
 - ✅ **多环境支持**：MySQL 8.0 服务容器（端口 3308）
 - ✅ **覆盖率报告**：自动生成 Jacoco 覆盖率报告
 - ✅ **前端构建**：检查 TypeScript 编译和 ESLint 规则
-- ✅ **自动部署**：push 到 main → 微信云托管持续部署（控制台绑定，非 Actions Secrets）
+- ✅ **自动部署**：push 到 main → **自建轻量服务器** `deploy/lighthouse/autodeploy.sh` 每 2 分钟拉取重建（2026-09-17 起；微信云托管已停用）
 
 **测试选择器**：
 

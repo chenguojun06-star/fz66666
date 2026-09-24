@@ -1,7 +1,63 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-24（新增 D-539 Embedding 限流熔断；D-538 磁盘 85% 根因 + 构建缓存自动回收）
+> 最后更新：2026-09-24（新增 D-540 微信云托管残留清理——修正会误导后续工作的过时知识；D-539 Embedding 限流熔断）
+
+---
+
+## D-540：微信云托管残留清理 —— 只修「会误导后续工作」的知识，不删任何东西（2026-09-24）
+
+**来源**：用户告知「我们现在都不部署到微信云了」，并要求「**不废弃**，后续可能需要升级的这些」。
+所以本轮**不删文件、不删接口、不删历史记录**，只修正**会主动把人带错方向**的过时知识。
+
+**顺带闭环一个悬案**：`cloudbaserc.json` 显示微信云上原有 3 个服务 ——
+`fashion-backend`(/api)、`fashion-admin`(/)、**`fashion-h5`(/h5，localPath=`./h5-web`)**。
+→ **h5-web 的部署目标就是微信云**。之前一直问"h5-web 是不是废弃了"，答案是：
+不是代码废弃，是**部署出口没了**。它现在在 compose/Caddy 里都没有位置。
+
+**修了什么（按危害排序）**
+1. ⚠️ **`memory-bank/anti-patterns.md` AP-WF-03 / AP-WF-04** —— 最危险的一条。
+   它写在"**正确做法**"里，说「本项目部署流：git push → 微信云自动拉取部署」。
+   memory-bank 每次会话开始都会加载，下一个 AI/人会直接判断错。
+   已改为「push → 自建轻量服务器 `autodeploy.sh` 每 2 分钟拉取重建」，
+   并补上「**push 成功 ≠ 已上线**，报已上线前必须验证服务器 HEAD 与容器重建时间」
+   （这条是今天实际踩到的：中途别的会话推了新提交，我的提交晚了一轮才生效）。
+2. ⚠️ **`deployment/上线部署指南.md`** —— 运维手册，标题就是"（微信云托管）"，
+   最容易被照着做。已加显著停用横幅指向 `deploy/lighthouse/README.md`；
+   并标注其 `git add -A` 示例在本仓库是**禁止**的（工作区常有别人未提交的活）。
+3. ⚠️ **`.github/copilot-instructions.md`** —— 驱动 AI 行为的指令文件。
+   已把"部署方式：微信云托管控制台持续部署"改为自建服务器 autodeploy，
+   线上地址改为 `www.webyszl.cn` / `api.webyszl.cn`，云托管信息折叠进"历史备查"。
+4. **`.github/workflows/deploy-lighthouse.yml`** —— 加**风险警告**（未删）。
+   这个 workflow 是迁移过渡期的冗余通道，`push` 触发已被注释掉。
+   **不能放开**：① 会与服务器 cron 抢部署；② 它用
+   `docker compose up -d --build backend frontend` **并行构建**，
+   而 autodeploy 是**串行**构建 —— 那是 2026-09-17 P0 事故（并行构建把 2核4G 打到假死）后的硬约束，
+   放开等于把事故条件装回去；③ 还绕过 autodeploy 的内存守卫。
+5. **`.github/workflows/ci.yml` 第 7 项检查** —— 原来查 `cloudbaserc.json` 的
+   `initialDelaySeconds`，是**云托管时代**的门禁，守着不生效的配置，且一旦清理该文件 CI 就会红。
+   已改为查真正生效的 `deploy/lighthouse/docker-compose.yml` 的 `start_period`
+   （**保护不变，指向真正生效的地方**）。
+6. **`check-run-health.sh`** —— 云托管版健康速查，已加"已过时"标注，
+   并说明它本质是打 actuator 的只读检查、可用环境变量指向自建服务器复用。
+   （这已是第二次同类问题：`check-cloud-health.sh` 曾因迁移失效，本脚本是它的替代品，现在同样失效
+   —— **部署方式一变，健康检查脚本必须同步改**。）
+7. 其他零散：`系统定位与领域说明.md` 部署模式、`系统状态.md` 网络行、
+   `docs/CODE_WIKI.md` 部署方式与文件说明、`模块与职责快速查询表.md`
+   （`CloudBaseOrchestrator` 类**已删除**，标记删除线）、
+   `docs/客户傻瓜式开通与数据迁移SOP.md`（环境变量位置改为 `.env.backend`）、
+   `test-multi-agent-graph.sh` 示例地址。
+
+**刻意没动**
+- `docs/archive/**`、`memory-bank/decisionLog.md` / `activeContext.md` 里的云托管内容
+  —— 那些是**历史记录**，记录当时确实那样做过，改了反而是篡改。
+- `cloudbaserc.json`、`sql/cloud_*.sql` 等文件本体 —— 用户明确要求不废弃。
+- `.github/workflows/ci.yml.bak`（2026-07-09 的备份）—— 无害，仅在报告里提一句。
+
+**验证**：两个 workflow YAML 用 node 的 yaml 解析器校验通过；两个 shell 脚本 `bash -n` 通过；
+新检查的 grep 能正确取到 `start_period: 300s`。
+
+**待用户拍板**：`t_ai_job_run_log`（221.9 万行/329MB）的保留期清理 —— 见下一节。
 
 ---
 

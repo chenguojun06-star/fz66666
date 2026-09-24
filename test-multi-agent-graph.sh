@@ -4,7 +4,9 @@
 #
 # 示例（本地）：
 #   ./test-multi-agent-graph.sh http://localhost:8088 "Bearer eyJxxxx"
-# 示例（云端）：
+# 示例（线上，2026-09-17 起为自建轻量服务器）：
+#   ./test-multi-agent-graph.sh https://api.webyszl.cn "Bearer eyJxxxx"
+# 示例（历史，微信云托管已停用）：
 #   ./test-multi-agent-graph.sh https://backend-xxx.sh.run.tcloudbase.com "Bearer eyJxxxx"
 
 set -euo pipefail

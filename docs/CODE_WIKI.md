@@ -59,7 +59,7 @@
 ├── rag/              # RAG 索引构建与查询脚本
 ├── .trae/            # Trae IDE 配置（MCP 服务器 / Rules / Skills）
 ├── .github/          # CI/CD workflows + Agent 定义
-├── cloudbaserc.json  # 微信云托管部署配置
+├── cloudbaserc.json  # ⚠️ 微信云托管部署配置（历史遗留，2026-09-17 起已停用，勿据此操作）
 └── dev-public.sh     # 一键启动脚本
 ```
 
@@ -617,7 +617,7 @@ python3 scripts/check-flyway-sql.py        # Flyway 校验
 
 ### 10.5 云端部署
 
-**当前部署方式**：GitHub 推送 → 微信云托管自动构建
+**当前部署方式**（2026-09-17 起）：GitHub 推送 → 自建腾讯云轻量服务器 `deploy/lighthouse/autodeploy.sh` 每 2 分钟拉取重建（微信云托管已停用）
 
 ```bash
 git add -A && git commit -m "描述" && git push

@@ -1,8 +1,18 @@
 #!/bin/bash
-# 云托管（微信 CloudRun）健康速查 —— 只读脚本，不修改任何数据
+# ⚠️ 已过时（2026-09-24 标注）：这是**微信云托管时代**的健康速查脚本。
 #
-# 背景：原来的 check-cloud-health.sh 是 ssh 老 VM（106.53.5.62）看 docker 容器的，
-#       后端早已迁到云托管，那个脚本对现在这套部署无效，别再拿它判断线上。
+# 现状：生产环境 **2026-09-17 已从微信云托管迁到自建腾讯云轻量服务器**
+#       （见 deploy/lighthouse/README.md），微信云托管不再部署。
+#       本脚本默认指向的云托管地址已不可用。
+#
+# 仍可复用的一点：它本质是「打 /actuator/health + liveness + readiness」的只读检查，
+#       用环境变量覆盖地址仍能用于自建服务器，例如：
+#         API_BASE=https://api.webyszl.cn  FE_BASE=https://www.webyszl.cn  ./check-run-health.sh
+#       但更推荐直接用 `ssh` 看容器：`docker ps` / `docker logs lighthouse-backend-1`。
+#
+# 历史：更早的 check-cloud-health.sh 是 ssh 老 VM（106.53.5.62）看 docker 容器的，
+#       迁移后失效；本脚本是它的云托管替代品，现在同样失效 —— 又一次印证
+#       「部署方式一变，健康检查脚本必须同步改，否则会误导排查方向」。
 #
 # 用法：在项目根目录执行  ./check-run-health.sh
 #       （可用环境变量覆盖地址：API_BASE / FE_BASE）

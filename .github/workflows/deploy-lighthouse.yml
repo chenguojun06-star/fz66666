@@ -1,6 +1,23 @@
 name: Deploy Lighthouse
 
-# 轻量服务器自动部署：推送后 SSH 到服务器 → 拉代码 → 重建容器
+# ⚠️⚠️ 已不需要，且**启用会有风险** —— 2026-09-24 标注，请先读完再用。
+#
+# 现状：生产部署**已经由服务器自己负责** —— cron 每 2 分钟执行
+#       `/opt/fz66666/deploy/lighthouse/autodeploy.sh`（git pull --ff-only + 按变更目录重建）。
+#       本 workflow 自迁移完成后**从未作为主通道使用**，属于冗余通道。
+#
+# 为什么不建议放开下面被注释掉的 push 触发：
+#   1. **会与服务器 cron 打架**：两条通道同时 git pull + 重建，可能互相覆盖/抢锁。
+#   2. **会绕过防 OOM 的串行构建保护**：autodeploy 是**串行**构建（backend 先、健康后再 frontend），
+#      这是 2026-09-17 P0 事故（Maven 与 Vite 并行把 2核4G 机器打到假死）之后的硬性约束；
+#      而本 workflow 用 `docker compose up -d --build backend frontend` **并行构建两个服务**，
+#      等于把那个事故的触发条件重新装回去。
+#   3. 它还绕过了 autodeploy 里的内存守卫（可用内存不足时跳过本轮，防整机假死）。
+#
+# 结论：**保留仅作应急手动通道**（workflow_dispatch），不要恢复 push 触发；
+#       真要手动部署，优先直接 SSH 跑 autodeploy.sh，行为与 cron 完全一致。
+#
+# 轻量服务器自动部署：SSH 到服务器 → 拉代码 → 重建容器
 # 迁移过渡期用 workflow_dispatch 手动触发；DNS 切换后可放开 push 触发（见注释）
 
 on:
