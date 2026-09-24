@@ -474,8 +474,10 @@
   }
 }
 
-/* 用户手动切换深色模式 */
-html.dark-mode {
+/* 用户手动切换深色模式（D-533：限定「未显式设定主题」时才生效。
+   全仓没有任何 JS 会加 dark-mode 类，但该选择器特异性 (0,1,1) 高于 :root，
+   一旦被任何方式置上就会把 --color-text-primary 翻成近白 —— 与白/浅色主题组合成「浅底白字」） */
+html.dark-mode:not([data-theme]) {
   --color-text-primary: #f5f5f5;
   --color-text-secondary: #a8a8a8;
   --color-text-tertiary: #707070;

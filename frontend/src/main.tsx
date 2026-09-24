@@ -62,12 +62,16 @@ try {
       // 忽略错误
 }
 
+// D-533：data-theme 必须无条件写入 —— 原先整体包在 try 里，localStorage 抛错（隐私模式/配额）
+// 时 data-theme 永不写入，`@media (prefers-color-scheme: dark) :root:not([data-theme])` 就会命中，
+// 把 --color-text-primary 翻成近白 → 浅色主题下侧边栏浮层「浅底白字」（文字看不见）
+let storedTheme: string | null = null;
 try {
-  applyTheme(localStorage.getItem(themeStorageKey));
+  storedTheme = localStorage.getItem(themeStorageKey);
 } catch {
-    // Intentionally empty
-      // 忽略错误
+  storedTheme = null;
 }
+applyTheme(storedTheme);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

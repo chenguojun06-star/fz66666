@@ -308,6 +308,12 @@ input.ant-input,
   /* 侧边栏 - 纯色深蓝背景（禁止渐变） */
   --sidebar-bg: #0b2d5c; /* @design-system: 纯色深蓝 */
   --sidebar-text: rgba(255, 255, 255, 0.95);
+
+  /* D-533：折叠浮层专用令牌——前景/背景成对声明，禁止再引用 --color-text-primary
+     （该令牌会被 OS 深色媒体查询 / 暗色类劫持成近白 → 浅底白字 = 悬停浮层"文字看不见"） */
+  --sidebar-popup-bg: #0b2d5c;
+  --sidebar-popup-text: rgba(255, 255, 255, 0.95);
+  --sidebar-popup-text-strong: #ffffff;
   --sidebar-text-strong: var(--color-bg-base);
   --sidebar-text-active: #ffd700;
   --sidebar-text-muted: rgba(255, 255, 255, 0.75);
@@ -405,6 +411,12 @@ input.ant-input,
   /* 侧边栏 - 纯色深蓝 */
   --sidebar-bg: #0b2d5c;
   --sidebar-text: rgba(255, 255, 255, 0.95);
+
+  /* D-533：折叠浮层专用令牌——前景/背景成对声明，禁止再引用 --color-text-primary
+     （该令牌会被 OS 深色媒体查询 / 暗色类劫持成近白 → 浅底白字 = 悬停浮层"文字看不见"） */
+  --sidebar-popup-bg: #0b2d5c;
+  --sidebar-popup-text: rgba(255, 255, 255, 0.95);
+  --sidebar-popup-text-strong: #ffffff;
   --sidebar-text-strong: var(--color-bg-base);
   --sidebar-text-active: #ffd700;
   --sidebar-text-muted: rgba(255, 255, 255, 0.75);
@@ -453,6 +465,12 @@ input.ant-input,
   /* 侧边栏 - 纯色浅蓝 */
   --sidebar-bg: #e0f2fe;
   --sidebar-text: #000000;
+
+  /* D-533：折叠浮层专用令牌——前景/背景成对声明，禁止再引用 --color-text-primary
+     （该令牌会被 OS 深色媒体查询 / 暗色类劫持成近白 → 浅底白字 = 悬停浮层"文字看不见"） */
+  --sidebar-popup-bg: #ffffff;
+  --sidebar-popup-text: #000000;
+  --sidebar-popup-text-strong: #000000;
   --sidebar-text-strong: #000000;
   --sidebar-text-active: var(--color-primary);
   --sidebar-text-muted: rgba(0, 0, 0, 0.7);
@@ -508,6 +526,12 @@ input.ant-input,
   --table-border-color: #e0e4ea;
   /* 侧边栏 - 浅灰底色，与页面主体区分 */
   --sidebar-bg: #f0f1f3;
+
+  /* D-533：折叠浮层专用令牌——前景/背景成对声明，禁止再引用 --color-text-primary
+     （该令牌会被 OS 深色媒体查询 / 暗色类劫持成近白 → 浅底白字 = 悬停浮层"文字看不见"） */
+  --sidebar-popup-bg: #ffffff;
+  --sidebar-popup-text: #1f2937;
+  --sidebar-popup-text-strong: #111827;
 
   /* 字体渲染优化 */
   -webkit-font-smoothing: antialiased;
@@ -567,6 +591,12 @@ input.ant-input,
   /* 侧边栏 - 纯色深灰 */
   --sidebar-bg: #1a1d24;
   --sidebar-text: rgba(240, 242, 245, 0.9);
+
+  /* D-533：折叠浮层专用令牌——前景/背景成对声明，禁止再引用 --color-text-primary
+     （该令牌会被 OS 深色媒体查询 / 暗色类劫持成近白 → 浅底白字 = 悬停浮层"文字看不见"） */
+  --sidebar-popup-bg: #1a1d24;
+  --sidebar-popup-text: rgba(240, 242, 245, 0.9);
+  --sidebar-popup-text-strong: #ffffff;
   --sidebar-text-strong: #f0f2f5;
   --sidebar-text-active: #6ba3ff;
   --sidebar-text-muted: rgba(240, 242, 245, 0.72);

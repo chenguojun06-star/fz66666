@@ -486,7 +486,7 @@
 }
 
 .ant-menu-submenu-popup .ant-menu {
-  background: var(--neutral-white);
+  background: var(--sidebar-popup-bg, #ffffff);
 }
 
 .layout-sidebar-submenu-popup.ant-menu-submenu-popup,
@@ -499,7 +499,7 @@
 }
 
 .layout-sidebar-submenu-popup.ant-menu-submenu-popup .ant-menu {
-  background: var(--sidebar-bg, #ffffff);
+  background: var(--sidebar-popup-bg, #ffffff) !important;
   border: 1px solid var(--sidebar-item-border-hover);
   border-radius: 8px;
   box-shadow: var(--shadow-xl);
@@ -508,7 +508,7 @@
 
 .layout-sidebar-submenu-popup.ant-menu-submenu-popup .ant-menu-item,
 .layout-sidebar-submenu-popup.ant-menu-submenu-popup .ant-menu-submenu-title {
-  color: var(--sidebar-text, #1f2937);
+  color: var(--sidebar-popup-text, #1f2937) !important;
   border-radius: 8px;
   margin: 2px 0;
 }
@@ -524,7 +524,7 @@
 .layout-sidebar-submenu-popup.ant-menu-submenu-popup .ant-menu-item-active,
 .layout-sidebar-submenu-popup.ant-menu-submenu-popup .ant-menu-item-selected {
   background: transparent;
-  color: var(--sidebar-text-strong, #111827);
+  color: var(--sidebar-popup-text-strong, #111827) !important;
 }
 
 /* D-333c：弹出层文字可见性硬保险——优先级压过一切（antd 折叠动画残留/新旧样式混包/缓存），
@@ -547,8 +547,9 @@
 }
 
 .ant-tooltip.ant-menu-inline-collapsed-tooltip .ant-tooltip-inner {
-  background: var(--sidebar-bg);
-  color: var(--sidebar-text);
+  /* D-533：收起态单项 tooltip 与浮层共用同一对「成对」令牌，避免浅底白字 */
+  background: var(--sidebar-popup-bg, #ffffff) !important;
+  color: var(--sidebar-popup-text, #1f2937) !important;
   border: 1px solid var(--sidebar-item-border-hover);
   border-radius: 8px;
   box-shadow: var(--shadow-xl);
@@ -556,19 +557,19 @@
 
 .ant-tooltip.ant-menu-inline-collapsed-tooltip .ant-tooltip-arrow::before,
 .ant-tooltip.ant-menu-inline-collapsed-tooltip .ant-tooltip-arrow-content {
-  background: var(--sidebar-bg) !important;
+  background: var(--sidebar-popup-bg, #ffffff) !important;
 }
 
 .ant-menu-submenu-popup .ant-menu-item,
 .ant-menu-submenu-popup .ant-menu-submenu-title {
-  color: var(--neutral-text);
+  color: var(--sidebar-popup-text, #1f2937) !important;
 }
 
 .ant-menu-submenu-popup .ant-menu-item:hover,
 .ant-menu-submenu-popup .ant-menu-submenu-title:hover,
 .ant-menu-submenu-popup .ant-menu-item-active,
 .ant-menu-submenu-popup .ant-menu-item-selected {
-  color: var(--neutral-text);
+  color: var(--sidebar-popup-text, #1f2937) !important;
 }
 
 .sidebar-tools {
