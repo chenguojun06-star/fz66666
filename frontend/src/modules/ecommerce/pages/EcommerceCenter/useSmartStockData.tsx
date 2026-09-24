@@ -80,7 +80,6 @@ export function useSmartStockData(): UseSmartStockDataReturn {
     st.mergeGroups.forEach(g => g.orders?.forEach(o => codes.push(o.skuCode)));
     st.giftRules.forEach(r => codes.push(r.giftSkuCode));
     return codes;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [st.alerts, st.suggestions, st.stockList, st.allocations, st.mergeGroups, st.giftRules]);
 
   useEffect(() => {
@@ -91,12 +90,10 @@ export function useSmartStockData(): UseSmartStockDataReturn {
   // 由后端 POST /ecommerce/orders/brief 回查订单表解析，这里汇总后一次性拉取。
   const allOrderNos = useMemo(
     () => st.anomalies.map(r => r.orderNo),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [st.anomalies],
   );
   const allPlatformOrderNos = useMemo(
     () => st.bills.map(r => r.platformOrderNo),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [st.bills],
   );
 
