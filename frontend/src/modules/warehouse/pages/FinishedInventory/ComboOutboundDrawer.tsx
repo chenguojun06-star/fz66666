@@ -194,7 +194,7 @@ const ComboOutboundDrawer: React.FC<ComboOutboundDrawerProps> = ({ open, onClose
               placeholder="默认按组合基本售价"
               disabled={!combo}
             />
-            <div className="u-fs-12 u-mt-4" style={{ color: 'var(--color-text-tertiary)' }}>按子SKU售价比例分摊到出库明细</div>
+            <div className="u-fs-12 u-mt-4" style={{ color: 'var(--color-text-tertiary)' }}>出库明细单价按套装单价记录，子SKU原价留痕仅供参考</div>
           </Col>
         </Row>
       </Card>

@@ -31,7 +31,7 @@ const DirectOutboundModal: React.FC<Props> = ({ open, target, outbounding, form,
       )}
       {target?.comboCode && (
         <Alert style={{ marginBottom: 12 }} type="info" showIcon
-          title={`套装订单：出库将按组合「${target.comboCode}」的子SKU逐个扣减库存（每子SKU一行出库记录、共一张出库单号），销售按套装单价分摊`} />
+          title={`套装订单：出库将按组合「${target.comboCode}」的子SKU逐个扣减库存（每子SKU一行出库记录、共一张出库单号），销售按套装单价走（子SKU原价留痕）`} />
       )}
       <Alert style={{ marginBottom: 12, fontSize: 15 }} type="success" showIcon
         title="出库后自动扣减商品编码库存、更新订单状态为【已出库】、生成销售收入流水、回传物流信息到平台" />

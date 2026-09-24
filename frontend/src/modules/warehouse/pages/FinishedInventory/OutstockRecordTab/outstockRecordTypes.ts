@@ -30,6 +30,8 @@ export interface OutstockRecord {
   /** D-529：套装出库溯源——销售记录关联的组合SKU */
   comboCode?: string;
   comboName?: string;
+  /** D-533：套装出库时行单价记套装单价，子SKU原售价留痕于此（仅供参考） */
+  originalSalesPrice?: number | null;
 }
 
 export const outstockTypeMap: Record<string, { label: string; color: string }> = {

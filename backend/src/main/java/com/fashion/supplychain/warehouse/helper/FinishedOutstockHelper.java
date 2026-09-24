@@ -374,10 +374,11 @@ public class FinishedOutstockHelper {
      * 销售的是"组合SKU"（套装），但库存实际扣在组成它的子SKU上：
      * 每个子SKU展开成 quantity(单套数量)×套数，逐个原子扣减（复用 outbound 的防超卖），
      * 每个子SKU一行出库记录、共用一张出库单号，行上挂 combo_id/combo_code/combo_name 溯源。
-     * 套装价按子SKU售价权重分摊到各行（最大余数法，精确到分，各行合计=套装价×套数）；
-     * 未设套装价或子SKU均无售价时，按子SKU原售价出库。
+     * D-533 定价口径（用户拍板）：行单价直接记套装单价，子SKU原售价落 original_sales_price 仅供参考；
+     * 行金额按件数占比平账（各行合计=套装价×套数，收款总额与实收一致）。
+     * 未设套装价时，按子SKU原售价出库。
      *
-     * @param params comboId、quantity(套数，默认1)、customerName/Phone/Address、outstockType(默认shipment)、remark 等
+     * @param params comboId、quantity(套数，默认1)、salesPrice(套装单价，缺省用组合设定售价)、customerName/Phone/Address、outstockType(默认shipment)、remark 等
      * @return outstockNo + 套数 + 明细
      */
     public Map<String, Object> comboOutbound(Map<String, Object> params) {
@@ -415,10 +416,11 @@ public class FinishedOutstockHelper {
             stdItems.add(m);
         }
 
-        // 套装价分摊：权重 = 子SKU售价 × 单套数量；最大余数法保证各行总额合计 = 套装价 × 套数
+        // D-533 定价口径：行单价=套装单价（出库时传了 salesPrice 用传入值，否则用组合设定售价）；
+        // 行金额按件数占比平账，子SKU原价自动落 original_sales_price
         BigDecimal comboPrice = params.get("salesPrice") != null ? toBigDecimalOrNull(params.get("salesPrice")) : combo.getSalePrice();
         if (comboPrice != null && comboPrice.compareTo(BigDecimal.ZERO) > 0) {
-            allocateComboPrice(stdItems, comboItems, comboPrice, sets);
+            allocateComboPrice(stdItems, comboPrice, sets);
         }
 
         params.put("items", stdItems);
@@ -446,36 +448,36 @@ public class FinishedOutstockHelper {
     }
 
     /**
-     * 套装价分摊（最大余数法，单位：分）。
-     * 行总额按 权重(子SKU售价×单套数量) 占比切分套装价×套数，舍入余额给小数部分最大的行；
-     * 行单价 = 行总额/行数量（2位小数，仅展示），行总额随 items["totalAmount"] 透传精确落库。
+     * D-533（用户拍板口径）：套装设定的价格就是出货价。
+     * <ul>
+     *   <li>每行 salesPrice 直接记套装单价——出库记录上看到的单价就是"这套卖多少钱"，不再按子SKU原价折算；</li>
+     *   <li>子SKU原售价由 recordProductOutstock 的改价逻辑自动落入 original_sales_price，仅供参考；</li>
+     *   <li>行金额按件数占比切分套装总价（最大余数法，精确到分），保证各行金额合计 = 套装单价 × 套数
+     *       ——账单/收款按行走，总额必须与实收一致。</li>
+     * </ul>
      */
     private void allocateComboPrice(List<Map<String, Object>> stdItems,
-                                    List<ComboProductItem> comboItems,
                                     BigDecimal comboPrice,
                                     int sets) {
-        int n = comboItems.size();
-        long[] weights = new long[n];
-        long weightSum = 0;
+        int n = stdItems.size();
+        long[] qty = new long[n];
+        long qtySum = 0;
         for (int i = 0; i < n; i++) {
-            BigDecimal price = loadSkuSalePrice(comboItems.get(i).getSkuCode());
-            long qty = stdItems.get(i) != null ? parseIntOr(stdItems.get(i).get("quantity"), 0) : 0;
-            long w = price != null ? price.movePointRight(2).longValue() * qty : 0L;
-            weights[i] = w;
-            weightSum += w;
+            qty[i] = parseIntOr(stdItems.get(i).get("quantity"), 0);
+            qtySum += qty[i];
         }
-        if (weightSum <= 0) {
-            return; // 子SKU均无售价——不诱导分摊，按子SKU原价（可能为空）出库
+        if (qtySum <= 0) {
+            return;
         }
         long totalCents = comboPrice.movePointRight(2).multiply(BigDecimal.valueOf(sets)).longValue();
         long[] rowCents = new long[n];
         java.util.NavigableMap<Long, Integer> remainderOrder = new java.util.TreeMap<>();
         for (int i = 0; i < n; i++) {
-            long exact = BigDecimal.valueOf(totalCents).multiply(BigDecimal.valueOf(weights[i]))
-                    .divide(BigDecimal.valueOf(weightSum), 0, java.math.RoundingMode.FLOOR)
+            long exact = BigDecimal.valueOf(totalCents).multiply(BigDecimal.valueOf(qty[i]))
+                    .divide(BigDecimal.valueOf(qtySum), 0, java.math.RoundingMode.FLOOR)
                     .longValue();
             rowCents[i] = exact;
-            long remainder = totalCents * weights[i] - exact * weightSum;
+            long remainder = totalCents * qty[i] - exact * qtySum;
             remainderOrder.put(remainder * 1000L + (n - i), i); // 同余数按行序稳定
         }
         long distributed = 0;
@@ -486,22 +488,12 @@ public class FinishedOutstockHelper {
             Map.Entry<Long, Integer> e = remainderOrder.pollLastEntry();
             rowCents[e.getValue()] += 1;
         }
+        BigDecimal unitPrice = comboPrice.setScale(2, java.math.RoundingMode.HALF_UP);
         for (int i = 0; i < n; i++) {
-            BigDecimal rowTotal = BigDecimal.valueOf(rowCents[i]).movePointLeft(2);
-            int rowQty = parseIntOr(stdItems.get(i).get("quantity"), 1);
-            stdItems.get(i).put("totalAmount", rowTotal);
-            stdItems.get(i).put("salesPrice", rowTotal.divide(BigDecimal.valueOf(rowQty), 2, java.math.RoundingMode.HALF_UP));
-            stdItems.get(i).put("priceAdjustmentReason", "组合套装售价分摊(" + comboPrice + "×" + sets + "套)");
+            stdItems.get(i).put("salesPrice", unitPrice);
+            stdItems.get(i).put("totalAmount", BigDecimal.valueOf(rowCents[i]).movePointLeft(2));
+            stdItems.get(i).put("priceAdjustmentReason", "套装单价" + unitPrice + "元/套×" + sets + "套");
         }
-    }
-
-    /** 子SKU售价缓存（分摊权重用，避免逐个回查） */
-    private BigDecimal loadSkuSalePrice(String skuCode) {
-        ProductSku sku = productSkuService.lambdaQuery()
-                .eq(ProductSku::getSkuCode, skuCode)
-                .eq(ProductSku::getTenantId, UserContext.tenantId())
-                .one();
-        return sku != null ? sku.getSalesPrice() : null;
     }
 
     private void recordProductOutstock(String outstockNo,

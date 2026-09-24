@@ -269,6 +269,16 @@ export function getOutstockLineColumns(handlers: {
       render: (val: number) => <span className="u-fw-600" style={{ color: 'var(--color-error)' }}>{formatMoney(Number(val) || 0)}</span>,
     },
     {
+      // D-533：套装出库行单价=套装单价，子SKU原售价留痕仅供参考
+      title: '子SKU原价',
+      dataIndex: 'originalSalesPrice',
+      width: 100,
+      align: 'center' as const,
+      render: (val: number | null | undefined) => val != null
+        ? <span style={{ color: 'var(--color-text-tertiary)', textDecoration: 'line-through' }}>{formatMoney(Number(val))}</span>
+        : <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>,
+    },
+    {
       title: '出库金额',
       dataIndex: 'totalAmount',
       width: 110,
