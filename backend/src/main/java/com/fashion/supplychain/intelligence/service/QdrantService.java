@@ -154,6 +154,12 @@ public class QdrantService {
     /** 限流熔断截止时间戳（epoch millis）；0 表示未熔断 */
     private volatile long embeddingRateLimitedUntil = 0L;
 
+    /**
+     * 上次熔断是否由「账户余额不足」引起。
+     * 仅用于日志/降级原因，让运维一眼看到该"充值"而不是"查限流"。
+     */
+    private volatile boolean embeddingBillingExhausted = false;
+
     /** 连续多少次限流才触发熔断（默认 3） */
     @Value("${ai.embedding.rate-limit-threshold:3}")
     private int embeddingRateLimitThreshold;
@@ -1431,6 +1437,29 @@ public class QdrantService {
     }
 
     /**
+     * 失败消息是否表示「账户余额不足 / 无可用资源包」（**计费问题，不是限流**）。
+     *
+     * <p>为什么要单独识别：2026-09-24 线上实测发现，智谱在余额耗尽时返回的是
+     * **HTTP 429 + {@code {"error":{"code":"1113","message":"余额不足或无可用资源包,请充值。"}}}**。
+     * 如果只按"429 = 限流"记录日志，运维会去排查限流策略，而实际该做的是**充值** ——
+     * 日志文案必须指向正确的处置动作。
+     *
+     * <p>归类上仍按"会自愈"处理（走冷却 + 半开）：充值后最迟一个冷却周期就自动恢复，无需重启。
+     */
+    static boolean isBillingExhausted(String rawMsg) {
+        if (rawMsg == null) return false;
+        String msg = rawMsg.toLowerCase(java.util.Locale.ROOT);
+        return msg.contains("余额不足")
+                || msg.contains("无可用资源包")
+                || msg.contains("欠费")
+                || msg.contains("insufficient balance")
+                || msg.contains("insufficient_quota")
+                || msg.contains("no available resource")
+                || msg.contains("payment required")
+                || msg.contains("please recharge");
+    }
+
+    /**
      * 是否处于限流熔断冷却期内。
      *
      * <p>冷却期结束时会**清空熔断状态并放行一次探测**（半开）：
@@ -1468,13 +1497,22 @@ public class QdrantService {
         long cooldown = Math.max(1000L, embeddingRateLimitCooldownMs);
         if (hits >= threshold) {
             embeddingRateLimitedUntil = System.currentTimeMillis() + cooldown;
+            embeddingBillingExhausted = isBillingExhausted(rawMsg);
             // 不足 1 分钟时按秒输出，避免出现"已熔断：0 分钟内"这种读不懂的日志
             String duration = cooldown < 60_000L
                     ? (cooldown / 1000L) + " 秒"
                     : (cooldown / 60000L) + " 分钟";
-            log.warn("[Qdrant] Embedding 被限流连续 {} 次（{}），已熔断：{}内不再请求远端、直接走伪向量。"
-                            + "长期如此请扩容配额或换提供方（配置 ai.embedding.*）",
-                    hits, rawMsg, duration);
+            if (isBillingExhausted(rawMsg)) {
+                // 智谱余额耗尽时返回的就是 429 + code 1113，文案必须指向"充值"而不是"查限流"
+                log.warn("[Qdrant] Embedding 账户余额不足/无可用资源包（{}），已熔断：{}内不再请求远端、直接走伪向量。"
+                                + "⚠️ 这是**计费问题不是限流**：请到提供方后台充值或购买资源包，"
+                                + "充值后最迟 {} 自动恢复（无需重启，冷却结束会自行探测）",
+                        rawMsg, duration, duration);
+            } else {
+                log.warn("[Qdrant] Embedding 被限流连续 {} 次（{}），已熔断：{}内不再请求远端、直接走伪向量。"
+                                + "长期如此请扩容配额或换提供方（配置 ai.embedding.*）",
+                        hits, rawMsg, duration);
+            }
         }
     }
 
@@ -1482,6 +1520,7 @@ public class QdrantService {
     private void onEmbeddingSuccess() {
         if (embeddingRateLimitHits.get() != 0) embeddingRateLimitHits.set(0);
         if (embeddingRateLimitedUntil != 0L) embeddingRateLimitedUntil = 0L;
+        if (embeddingBillingExhausted) embeddingBillingExhausted = false;
     }
 
     /**
@@ -1731,6 +1770,7 @@ public class QdrantService {
         // ========== 第 3 级：伪向量兜底 ==========
         String reason = !hasRealEmbedding ? "未配置 Embedding Key"
                 : embeddingRemoteBroken ? "远端永久熔断（配置类错误）"
+                : embeddingBillingExhausted ? "远端账户余额不足（需充值）"
                 : isEmbeddingRateLimited() ? "远端限流熔断冷却中"
                 : "远端调用失败";
         log.warn("[Qdrant] Embedding 降级为伪向量（搜索质量降低但不影响功能）原因={} hasRealEmbedding={}。"

@@ -90,6 +90,33 @@ class QdrantServiceEmbeddingCircuitBreakerTest {
                 .isEqualTo(EmbeddingFailureKind.NONE);
     }
 
+    @Test
+    @DisplayName("余额不足识别 —— 智谱用 429+code1113 表达欠费，文案必须指向「充值」而不是「查限流」")
+    void billingExhaustionIsRecognised() {
+        // 线上真实响应体
+        String real = "429 Too Many Requests on POST request for \"https://open.bigmodel.cn/api/paas/v4/embeddings\": "
+                + "\"{\"error\":{\"code\":\"1113\",\"message\":\"余额不足或无可用资源包,请充值。\"}}\"";
+        assertThat(QdrantService.isBillingExhausted(real)).isTrue();
+        assertThat(QdrantService.isBillingExhausted("insufficient_quota")).isTrue();
+        assertThat(QdrantService.isBillingExhausted("insufficient balance")).isTrue();
+        assertThat(QdrantService.isBillingExhausted("402 Payment Required")).isTrue();
+        // 普通限流不能误判成欠费
+        assertThat(QdrantService.isBillingExhausted("429 Too Many Requests (rate limit)")).isFalse();
+        assertThat(QdrantService.isBillingExhausted(null)).isFalse();
+        // 但欠费仍要能触发限流熔断（会自愈：充值后自动恢复，无需重启）
+        assertThat(QdrantService.classifyEmbeddingFailure(real)).isEqualTo(EmbeddingFailureKind.RATE_LIMITED);
+    }
+
+    @Test
+    @DisplayName("欠费熔断会打上 billing 标记，成功探测后清除")
+    void billingFlagIsSetAndCleared() {
+        QdrantService svc = newService(1, 600_000L);
+        fail(svc, "429 ... 余额不足或无可用资源包,请充值。");
+        assertThat(ReflectionTestUtils.getField(svc, "embeddingBillingExhausted")).isEqualTo(true);
+        ReflectionTestUtils.invokeMethod(svc, "onEmbeddingSuccess");
+        assertThat(ReflectionTestUtils.getField(svc, "embeddingBillingExhausted")).isEqualTo(false);
+    }
+
     // ==================== 熔断状态机 ====================
 
     @Test
