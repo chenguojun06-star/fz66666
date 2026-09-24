@@ -63,6 +63,19 @@ public class IntelligenceInferenceOrchestrator {
     private static final int NL_INTENT_MAX_TIMEOUT_SECONDS = 12;
     private static final int DAILY_BRIEF_MAX_TIMEOUT_SECONDS = 5;
     private static final int CRITIC_REVIEW_MAX_TIMEOUT_SECONDS = 30;
+    /**
+     * 模型保活探针（scene=model-warmup）的超时封顶。
+     *
+     * <p>保活探针只要 1 token 的响应，**等久了就完全失去意义** ——
+     * 用户早就不耐烦了，探针再"保活成功"也没用。
+     *
+     * <p>实测（2026-09-24 查 t_ai_job_run_log）：上游模型故障时，
+     * {@code XiaoyunModelWarmup.warmup} 单次耗时达 **900 秒**（= 3 × 默认封顶 300s，
+     * 多级调用累加），且 2026-09-15 凌晨 02:33~05:18 连续 11 次如此 ——
+     * 既浪费线程，又在运行日志里留下"看起来卡死"的记录。
+     * 封顶到 10 秒后，上游不可用时最多白等十几秒即放弃，等下一轮 fixedDelay 再试。
+     */
+    private static final int WARMUP_MAX_TIMEOUT_SECONDS = 10;
 
     @Value("${ai.deepseek.api-key:}") private String directApiKey;
     @Value("${ai.deepseek.api-url:https://api.deepseek.com/v1/chat/completions}") private String directApiUrl;
@@ -943,6 +956,8 @@ public class IntelligenceInferenceOrchestrator {
         else if ("nl-intent".equals(scene)) cap = NL_INTENT_MAX_TIMEOUT_SECONDS;
         else if ("daily-brief".equals(scene)) cap = DAILY_BRIEF_MAX_TIMEOUT_SECONDS;
         else if ("critic_review".equals(scene)) cap = CRITIC_REVIEW_MAX_TIMEOUT_SECONDS;
+        // 保活探针不需要长时间等待：等久了它已经失去意义（详见常量注释）
+        else if ("model-warmup".equals(scene)) cap = WARMUP_MAX_TIMEOUT_SECONDS;
         int effective = Math.min(raw, cap);
         if (effective != raw) log.info("[IntelligenceInference] 场景={} 超时封顶: {}s -> {}s", scene, raw, effective);
         return effective;
