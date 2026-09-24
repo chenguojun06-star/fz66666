@@ -247,14 +247,14 @@
             <view class="qc-form-divider"></view>
             <view class="qc-form-row">
               <view class="qc-form-col"><text class="qc-form-label">缺陷类别</text>
-                <picker class="qc-form-picker" mode="selector" range="{{defectCategoryOptions}}" range-key="label" bindchange="onDefectCategoryChange">
-                  <view class="picker-value {{qcSheetData.defectCategoryLabel ? '' : 'picker-placeholder'}}">{{qcSheetData.defectCategoryLabel ? qcSheetData.defectCategoryLabel : '请选择缺陷类别'}}</view>
-                </picker>
+                
+                  <view bindtap="openPicker" data-handler="onDefectCategoryChange" data-names="defectCategoryOptions" data-range-key="label" class="picker-value {{qcSheetData.defectCategoryLabel ? '' : 'picker-placeholder'}}">{{qcSheetData.defectCategoryLabel ? qcSheetData.defectCategoryLabel : '请选择缺陷类别'}}</view>
+                
               </view>
               <view class="qc-form-col"><text class="qc-form-label">处理方式</text>
-                <picker class="qc-form-picker" mode="selector" range="{{defectRemarkOptions}}" range-key="label" bindchange="onDefectRemarkChange">
-                  <view class="picker-value {{qcSheetData.defectRemark ? '' : 'picker-placeholder'}}">{{qcSheetData.defectRemark ? qcSheetData.defectRemark : '请选择处理方式'}}</view>
-                </picker>
+                
+                  <view bindtap="openPicker" data-handler="onDefectRemarkChange" data-names="defectRemarkOptions" data-range-key="label" class="picker-value {{qcSheetData.defectRemark ? '' : 'picker-placeholder'}}">{{qcSheetData.defectRemark ? qcSheetData.defectRemark : '请选择处理方式'}}</view>
+                
               </view>
             </view>
             <view class="qc-form-row">
@@ -291,14 +291,14 @@
             <view class="qc-form-title">批量不合格质检</view>
             <view class="qc-form-row">
               <view class="qc-form-col"><text class="qc-form-label">缺陷类别</text>
-                <picker class="qc-form-picker" mode="selector" range="{{defectCategoryOptions}}" range-key="label" bindchange="onBatchUnqualDefectCategoryChange">
-                  <view class="picker-value {{batchUnqualData.defectCategoryLabel ? '' : 'picker-placeholder'}}">{{batchUnqualData.defectCategoryLabel ? batchUnqualData.defectCategoryLabel : '请选择缺陷类别'}}</view>
-                </picker>
+                
+                  <view bindtap="openPicker" data-handler="onBatchUnqualDefectCategoryChange" data-names="defectCategoryOptions" data-range-key="label" class="picker-value {{batchUnqualData.defectCategoryLabel ? '' : 'picker-placeholder'}}">{{batchUnqualData.defectCategoryLabel ? batchUnqualData.defectCategoryLabel : '请选择缺陷类别'}}</view>
+                
               </view>
               <view class="qc-form-col"><text class="qc-form-label">处理方式</text>
-                <picker class="qc-form-picker" mode="selector" range="{{defectRemarkOptions}}" range-key="label" bindchange="onBatchUnqualDefectRemarkChange">
-                  <view class="picker-value {{batchUnqualData.defectRemark ? '' : 'picker-placeholder'}}">{{batchUnqualData.defectRemark ? batchUnqualData.defectRemark : '请选择处理方式'}}</view>
-                </picker>
+                
+                  <view bindtap="openPicker" data-handler="onBatchUnqualDefectRemarkChange" data-names="defectRemarkOptions" data-range-key="label" class="picker-value {{batchUnqualData.defectRemark ? '' : 'picker-placeholder'}}">{{batchUnqualData.defectRemark ? batchUnqualData.defectRemark : '请选择处理方式'}}</view>
+                
               </view>
             </view>
             <view class="qc-form-actions">

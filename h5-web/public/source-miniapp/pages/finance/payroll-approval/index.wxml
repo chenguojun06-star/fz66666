@@ -47,12 +47,12 @@
         </view>
         <!-- D-427：结算类型筛选（自己完成 / 内部指派 / 外发工厂） -->
         <view class="filter-item">
-          <picker mode="selector" range="{{FACTORY_FILTER_OPTIONS}}" range-key="label" bindchange="onFactoryFilterChange">
-            <view class="picker-box {{factoryFilter ? 'picker-box--active' : ''}}">
+          
+            <view bindtap="openPicker" data-handler="onFactoryFilterChange" data-names="FACTORY_FILTER_OPTIONS" data-range-key="label" class="picker-box {{factoryFilter ? 'picker-box--active' : ''}}">
               <text class="picker-text">{{factoryFilterLabel}}</text>
               <view class="picker-chevron"></view>
             </view>
-          </picker>
+          
         </view>
       </view>
     </sticky-search-bar>
@@ -147,3 +147,13 @@
 
   <ai-assistant id="ai-assistant" />
 </view>
+
+<!-- 可搜索选择器：替代原生 picker（原生没有搜索，选项多时只能一路滚） -->
+<search-picker
+  visible="{{pickerVisible}}"
+  title="{{pickerTitle}}"
+  options="{{pickerOptions}}"
+  value="{{pickerValue}}"
+  bind:select="onPickerSelect"
+  bind:close="onPickerClose"
+/>

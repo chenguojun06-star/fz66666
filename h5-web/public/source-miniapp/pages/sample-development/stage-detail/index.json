@@ -2,5 +2,8 @@
   "navigationBarTitleText": "阶段详情",
   "navigationBarBackgroundColor": "#ffffff",
   "navigationBarTextStyle": "black",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "search-picker": "/components/search-picker/index"
+  }
 }

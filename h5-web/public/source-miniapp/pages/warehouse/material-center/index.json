@@ -5,6 +5,7 @@
     "sticky-search-bar": "/components/sticky-search-bar/index",
     "material-inbound-form": "/components/material-inbound-form/index",
     "material-outbound-form": "/components/material-outbound-form/index",
-    "material-picking-list": "/components/material-picking-list/index"
+    "material-picking-list": "/components/material-picking-list/index",
+    "search-picker": "/components/search-picker/index"
   }
 }

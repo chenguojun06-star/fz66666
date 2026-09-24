@@ -20,12 +20,12 @@
     >
       <view slot="filter" class="filter-bar">
         <view class="filter-item">
-          <picker mode="selector" range="{{STATUS_OPTIONS}}" range-key="label" bindchange="onStatusFilterChange">
-            <view class="picker-box">
+          
+            <view bindtap="openPicker" data-handler="onStatusFilterChange" data-names="STATUS_OPTIONS" data-range-key="label" class="picker-box">
               <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : '全部状态'}}</text>
               <view class="picker-chevron"></view>
             </view>
-          </picker>
+          
         </view>
       </view>
     </sticky-search-bar>
@@ -95,3 +95,13 @@
 
   <ai-assistant id="ai-assistant" />
 </view>
+
+<!-- 可搜索选择器：替代原生 picker（原生没有搜索，选项多时只能一路滚） -->
+<search-picker
+  visible="{{pickerVisible}}"
+  title="{{pickerTitle}}"
+  options="{{pickerOptions}}"
+  value="{{pickerValue}}"
+  bind:select="onPickerSelect"
+  bind:close="onPickerClose"
+/>

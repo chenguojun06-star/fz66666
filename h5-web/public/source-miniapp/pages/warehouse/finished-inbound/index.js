@@ -183,7 +183,7 @@ Page({
   },
 
   /* ═══ D-517：仓库区域改可搜索选择器（原生 picker 无搜索） ═══ */
-  openPicker(e) {
+  _openPickerByKey(e) {
     var key = (e.currentTarget.dataset && e.currentTarget.dataset.key) || '';
     if (key !== 'area') return;
     this.setData({
@@ -197,11 +197,7 @@ Page({
     });
   },
 
-  onPickerClose() {
-    this.setData({ pickerVisible: false });
-  },
-
-  onPickerSelect(e) {
+  _onPickerSelectByKey(e) {
     var d = (e && e.detail) || {};
     if (this.data.pickerKey === 'area') {
       this.setData({ warehouseAreaId: d.value || '', warehouseAreaName: d.label || '' });
@@ -354,4 +350,67 @@ Page({
       this.setData({ submitting: false });
     }
   },
+  /* ── D-533：可搜索选择器的**统一入口** ─────────────────────────────────
+     全仓只有这一个 openPicker / onPickerSelect，不再"东一个西一个"。
+     两条分支（UI 与交互完全一致，都是同一个 search-picker 弹层）：
+       · 行上带 data-handler → 通用式：选项数组名/range-key 由 data-* 传入
+       · 行上只有 data-key  → 委托给本页原有的 _openPickerByKey，行为一字不变 */
+
+  /* ── D-533：可搜索选择器的**统一入口** ─────────────────────────────────
+     全仓只有这一个 openPicker / onPickerSelect，不再"东一个西一个"。
+     两条分支（UI 与交互完全一致，都是同一个 search-picker 弹层）：
+       · 行上带 data-handler → 通用式：选项数组名/range-key 由 data-* 传入
+       · 行上只有 data-key  → 委托给本页原有的 _openPickerByKey，行为一字不变 */
+
+  /* ── D-533：可搜索选择器的**统一入口** ─────────────────────────────────
+     全仓只有这一个 openPicker / onPickerSelect，不再"东一个西一个"。
+     两条分支（UI 与交互完全一致，都是同一个 search-picker 弹层）：
+       · 行上带 data-handler → 通用式：选项数组名/range-key 由 data-* 传入
+       · 行上只有 data-key  → 委托给本页原有的 _openPickerByKey，行为一字不变 */
+  openPicker: function (e) {
+    var ds = e.currentTarget.dataset || {};
+    if (!ds.handler && typeof this._openPickerByKey === 'function') {
+      return this._openPickerByKey(e);
+    }
+    var arr = this.data[ds.names] || [];
+    var rangeKey = ds.rangeKey || '';
+    var opts = [];
+    for (var i = 0; i < arr.length; i++) {
+      var it = arr[i];
+      var label;
+      if (rangeKey) {
+        label = it ? it[rangeKey] : '';
+      } else if (it && typeof it === 'object') {
+        label = it.label != null ? it.label : (it.name != null ? it.name : '');
+      } else {
+        label = it;
+      }
+      label = String(label == null ? '' : label);
+      if (!label) continue;
+      opts.push({ label: label, value: String(i) });
+    }
+    this._pickerHandler = ds.handler || '';
+    this.setData({
+      pickerTitle: ds.title || '请选择',
+      pickerOptions: opts,
+      pickerValue: '',
+      pickerVisible: true,
+    });
+  },
+
+  onPickerSelect: function (e) {
+    var handler = this._pickerHandler;
+    if (handler && typeof this[handler] === 'function') {
+      this[handler]({ detail: { value: Number(e.detail.value) } });
+      return;
+    }
+    if (typeof this._onPickerSelectByKey === 'function') {
+      return this._onPickerSelectByKey(e);
+    }
+  },
+
+  onPickerClose: function () {
+    this.setData({ pickerVisible: false });
+  },
+
 });

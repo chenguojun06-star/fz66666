@@ -543,14 +543,12 @@
     <view class="rf-body">
       <view class="rf-row">
         <text class="rf-label">审核结论</text>
-        <picker mode="selector" range="{{['通过','需修改','不通过']}}" value="{{reviewFormStatus === 'PASS' ? 0 : reviewFormStatus === 'REWORK' ? 1 : 2}}" bindchange="onReviewStatusChange">
-          <view class="rf-picker">
-            <text class="rf-picker-text {{reviewFormStatus === 'PASS' ? 'rf-pass' : reviewFormStatus === 'REWORK' ? 'rf-rework' : 'rf-reject'}}">
-              {{reviewFormStatus === 'PASS' ? '通过' : reviewFormStatus === 'REWORK' ? '需修改' : '不通过'}}
-            </text>
-            <view class="line-icon line-icon--sm icon-arrow-right-sm"></view>
-          </view>
-        </picker>
+        <view class="rf-picker" bindtap="openPicker" data-handler="onReviewStatusChange" data-names="reviewStatusOptions">
+          <text class="rf-picker-text {{reviewFormStatus === 'PASS' ? 'rf-pass' : reviewFormStatus === 'REWORK' ? 'rf-rework' : 'rf-reject'}}">
+            {{reviewFormStatus === 'PASS' ? '通过' : reviewFormStatus === 'REWORK' ? '需修改' : '不通过'}}
+          </text>
+          <view class="line-icon line-icon--sm icon-arrow-right-sm"></view>
+        </view>
       </view>
       <view class="rf-row">
         <text class="rf-label">审核评语</text>
@@ -585,3 +583,13 @@
 
   <ai-assistant />
 </view>
+
+<!-- 可搜索选择器：替代原生 picker（原生没有搜索） -->
+<search-picker
+  visible="{{pickerVisible}}"
+  title="{{pickerTitle}}"
+  options="{{pickerOptions}}"
+  value="{{pickerValue}}"
+  bind:select="onPickerSelect"
+  bind:close="onPickerClose"
+/>
