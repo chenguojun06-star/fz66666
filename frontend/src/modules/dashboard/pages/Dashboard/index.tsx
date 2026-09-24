@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AutoComplete, Button, Space } from 'antd';
-import { WarningOutlined, ReloadOutlined, SettingOutlined } from '@ant-design/icons';
+import { DownOutlined, UpOutlined, WarningOutlined, ReloadOutlined, SettingOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
 import TopStats from '../../components/TopStats';
 import DashboardAiInsight from '../../components/DashboardAiInsight';
@@ -16,9 +16,14 @@ import { useDashboardStats } from './useDashboardStats';
 import { useDashboardSearch } from './useDashboardSearch';
 import { useQuickEntries } from './useQuickEntries';
 import RecentActivityCard from './RecentActivityCard';
-import QuickEntryCard from './QuickEntryCard';
+import HomeQuickGrid from './HomeQuickGrid';
+import FlowGuideCard from './FlowGuideCard';
+import ServiceSidebar from './ServiceSidebar';
 import QuickEntrySettingsModal from './QuickEntrySettingsModal';
 import './styles.css';
+
+/** D-526：经营数据区折叠记忆（默认展开，收过一次就记住） */
+const DATA_COLLAPSE_KEY = 'dashboard_data_collapsed';
 
 const Dashboard: React.FC = () => {
   const {
@@ -40,6 +45,7 @@ const Dashboard: React.FC = () => {
   } = useDashboardSearch();
 
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [dataCollapsed, setDataCollapsed] = useState(() => localStorage.getItem(DATA_COLLAPSE_KEY) === '1');
 
   const {
     quickEntries,
@@ -54,6 +60,13 @@ const Dashboard: React.FC = () => {
       document.body.classList.remove('dashboard-page');
     };
   }, []);
+
+  const toggleDataSection = () => {
+    setDataCollapsed((prev) => {
+      localStorage.setItem(DATA_COLLAPSE_KEY, prev ? '0' : '1');
+      return !prev;
+    });
+  };
 
   const handleSaveSettingsAndClose = () => {
     handleSaveSettings(() => setSettingsVisible(false));
@@ -114,7 +127,7 @@ const Dashboard: React.FC = () => {
                 icon={<SettingOutlined />}
                 onClick={() => setSettingsVisible(true)}
               >
-                配置快捷入口
+                配置常用功能
               </Button>
               <Button
                 icon={<ReloadOutlined />}
@@ -127,30 +140,64 @@ const Dashboard: React.FC = () => {
           )}
         />
 
-        <TopStats />
-
-        <DashboardAiInsight />
-
-        <div className="dashboard-insight-grid">
-          <DeliveryAlertCard />
-          <QualityStatsCard />
-          <ProductionBottleneckCard />
-        </div>
-
-        <div className="dashboard-analysis-section">
-          <OrderCuttingChart />
-          <ScanCountChart />
-        </div>
-
-        <div className="dashboard-bottom-grid">
-          <OverdueOrderTable />
-          <div className="dashboard-side-stack">
-            <RecentActivityCard activities={recentActivities} />
-            <QuickEntryCard
+        {/*
+         * D-526 首页聚水潭化：左主栏（常用功能宫格 → 流程引导 → 经营数据）+ 右服务栏。
+         * 「先办事、再看数」——宫格提到首屏主视觉，数据区整体下移且可折叠。
+         */}
+        <div className="home-layout">
+          <div className="home-main">
+            <HomeQuickGrid
               entries={quickEntries}
               onOpenSettings={() => setSettingsVisible(true)}
             />
+
+            <FlowGuideCard />
+
+            <div className="home-data-section">
+              <div className="home-section-header">
+                <span className="home-section-title">经营数据</span>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={dataCollapsed ? <DownOutlined /> : <UpOutlined />}
+                  onClick={toggleDataSection}
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                >
+                  {dataCollapsed ? '展开' : '收起'}
+                </Button>
+              </div>
+
+              {!dataCollapsed && (
+                <>
+                  <TopStats />
+
+                  <DashboardAiInsight />
+
+                  <div className="dashboard-insight-grid">
+                    <DeliveryAlertCard />
+                    <QualityStatsCard />
+                    <ProductionBottleneckCard />
+                  </div>
+
+                  <div className="dashboard-analysis-section">
+                    <OrderCuttingChart />
+                    <ScanCountChart />
+                  </div>
+
+                  <div className="dashboard-bottom-grid">
+                    <OverdueOrderTable />
+                    <div className="dashboard-side-stack">
+                      <RecentActivityCard activities={recentActivities} />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
+
+          <aside className="home-side">
+            <ServiceSidebar />
+          </aside>
         </div>
       </PageLayout>
 
