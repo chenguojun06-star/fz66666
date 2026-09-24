@@ -70,102 +70,102 @@
 }
 
 .garment-dress {
-  width: clamp(70px, 8vw, 130px);
-  top: 40%;
-  left: 36%;
-  --rot: -18deg;
+    width: clamp(58px, 6.5vw, 105px);
+  top: 52%;
+  left: 8%;
+  --rot: -15deg;
   --fall-delay: 0.15s;
   --fd: 11s;
-  color: rgba(45, 127, 249, 0.46);
-  filter: url(#pencil-texture);
-}
-
-.garment-coat {
-  width: clamp(84px, 9vw, 150px);
-  top: 52%;
-  left: 32%;
-  --rot: 14deg;
-  --fall-delay: 0.05s;
-  --fd: 13s;
-  color: rgba(31, 117, 234, 0.44);
-  filter: url(#pencil-texture);
-}
-
-.hanger-1 {
-  width: clamp(110px, 12vw, 200px);
-  top: 8%;
-  left: 24%;
-  --rot: -5deg;
-  --fall-delay: 0s;
-  --fd: 9.5s;
   color: rgba(45, 127, 249, 0.40);
   filter: url(#pencil-texture);
 }
 
+.garment-coat {
+    width: clamp(68px, 7.5vw, 125px);
+  top: 34%;
+  left: 26%;
+  --rot: 14deg;
+  --fall-delay: 0.05s;
+  --fd: 13s;
+  color: rgba(31, 117, 234, 0.36);
+  filter: url(#pencil-texture);
+}
+
+.hanger-1 {
+    width: clamp(92px, 10vw, 170px);
+  top: 6%;
+  left: 18%;
+  --rot: -6deg;
+  --fall-delay: 0s;
+  --fd: 9.5s;
+  color: rgba(45, 127, 249, 0.34);
+  filter: url(#pencil-texture);
+}
+
 .garment-shirt {
-  width: clamp(72px, 8vw, 130px);
-  top: 10%;
-  right: 14%;
+    width: clamp(60px, 6.8vw, 110px);
+  top: 9%;
+  right: 12%;
   --rot: 6deg;
   --fall-delay: 0.1s;
   --fd: 12s;
-  color: rgba(45, 127, 249, 0.46);
+  color: rgba(45, 127, 249, 0.38);
   filter: url(#pencil-texture);
 }
 
 .hanger-3 {
-  width: clamp(100px, 11vw, 180px);
-  top: 24%;
-  right: 10%;
+    width: clamp(82px, 9vw, 150px);
+  top: 27%;
+  right: 7%;
   --rot: 12deg;
   --fall-delay: 0.25s;
   --fd: 10.5s;
-  color: rgba(31, 117, 234, 0.44);
+  color: rgba(31, 117, 234, 0.34);
   filter: url(#pencil-texture);
 }
 
 .garment-vest {
-  width: clamp(64px, 7vw, 115px);
+    width: clamp(52px, 5.8vw, 95px);
   top: 48%;
-  right: 7%;
+  right: 5%;
   --rot: -8deg;
   --fall-delay: 0.2s;
   --fd: 14s;
-  color: rgba(45, 127, 249, 0.46);
+  color: rgba(45, 127, 249, 0.38);
   filter: url(#pencil-texture);
 }
 
 .garment-tshirt {
-  width: clamp(110px, 12vw, 200px);
-  bottom: 18%;
-  left: 2%;
+    width: clamp(92px, 10vw, 165px);
+  bottom: 6%;
+  left: 3%;
   --rot: 5deg;
   --fall-delay: 0.3s;
   --fd: 11.5s;
-  color: rgba(31, 117, 234, 0.44);
+  color: rgba(31, 117, 234, 0.40);
   filter: url(#pencil-texture);
 }
 
 .hanger-2 {
-  width: clamp(120px, 13vw, 220px);
-  bottom: 26%;
-  right: 3%;
+    width: clamp(100px, 11vw, 185px);
+  bottom: 25%;
+  right: 6%;
   --rot: -10deg;
   --fall-delay: 0.35s;
   --fd: 13.5s;
-  color: rgba(45, 127, 249, 0.48);
+  color: rgba(45, 127, 249, 0.44);
   filter: url(#pencil-texture);
 }
 
 .garment-skirt {
-  width: clamp(150px, 16vw, 280px);
-  bottom: 3%;
-  left: 50%;
+    width: clamp(122px, 13vw, 230px);
+  bottom: 2%;
+  left: 58%;
   --rot: -3deg;
   --offset-x: -50%;
   --fall-delay: 0.4s;
   --fd: 15s;
-  color: rgba(31, 117, 234, 0.44);
+  color: rgba(31, 117, 234, 0.46);
   filter: url(#pencil-texture);
 }
 
@@ -175,13 +175,14 @@
 }
 
 .scissors {
-  width: clamp(46px, 5vw, 80px);
-  top: 22%;
-  left: 14%;
-  --rot: 25deg;
+    width: clamp(38px, 4.2vw, 65px);
+  top: 21%;
+  left: 8%;
+  --rot: 22deg;
   --fall-delay: 0.18s;
   --fd: 10s;
-  color: rgba(45, 127, 249, 0.38);
+  color: rgba(45, 127, 249, 0.34);
+
 }
 
 /* ── 缝纫线流：一条蓝色虚线串起衣片，虚线缓慢行进 + 光点沿线巡游（唯一的"科技"主视觉） ── */
