@@ -181,10 +181,37 @@ public class IntelligenceAdminController {
         return Result.success(observabilityOrchestrator.getRecentInvocations(UserContext.tenantId(), limit));
     }
 
+    /**
+     * 最近 N 条 AI 定时任务执行记录。
+     *
+     * <p>2026-09-24（D-542）修正：原来内部按 {@code UserContext.tenantId()} 过滤，
+     * 但定时任务是后台线程、无用户上下文 → 表里 tenant_id 全为 NULL → **永远返回空**。
+     * 本表是系统级作业日志（非租户业务数据），且本接口仅限超管，故改为查全量。
+     *
+     * @param limit  条数上限（1~500，默认 100）
+     * @param status 可选：SUCCESS / FAILED / SKIPPED，不传为全部
+     */
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @GetMapping("/jobs/recent")
-    public Result<?> recentJobRuns(@RequestParam(defaultValue = "50") int limit) {
-        return Result.success(jobRunLogService.queryRecent(limit));
+    public Result<?> recentJobRuns(@RequestParam(defaultValue = "100") int limit,
+                                   @RequestParam(required = false) String status) {
+        return Result.success(jobRunLogService.queryRecent(limit, status));
+    }
+
+    /**
+     * AI 定时任务运行概览 + 最慢任务 + 失败 TOP，供页面顶部卡片与两个榜单使用。
+     *
+     * @param days 统计天数（1~365，默认 7）
+     */
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @GetMapping("/jobs/overview")
+    public Result<Map<String, Object>> jobRunOverview(@RequestParam(defaultValue = "7") int days) {
+        Map<String, Object> overview = new java.util.LinkedHashMap<>();
+        overview.put("days", days);
+        overview.put("stats", jobRunLogService.queryStats(days));
+        overview.put("slowestJobs", jobRunLogService.querySlowestJobs(days, 10));
+        overview.put("failureTop", jobRunLogService.queryFailureTop(days, 10));
+        return Result.success(overview);
     }
 
     // ── Qdrant 向量库补刷 ──

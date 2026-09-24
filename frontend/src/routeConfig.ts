@@ -31,6 +31,7 @@ import {
   ProfileOutlined,
   ClockCircleOutlined,
   PrinterOutlined,
+  FieldTimeOutlined,
 } from '@ant-design/icons';
 
 export const paths = {
@@ -106,6 +107,7 @@ export const paths = {
   factoryWorkers: '/system/factory-workers',
   loginLog: '/system/login-log',
   systemLogs: '/system/logs',
+  jobRunLog: '/system/job-run-log',
   dict: '/system/dict',
   tutorial: '/system/tutorial',
   tenantManagement: '/system/tenant',
@@ -480,6 +482,7 @@ export const permissionCodes = {
   factoryWorkers: 'MENU_FACTORY', // 复用供应商管理权限，无需新增 DB 迁移
   loginLog: 'MENU_LOGIN_LOG',
   systemLogs: 'MENU_LOGIN_LOG', // 使用相同的权限码，兼容旧数据
+  jobRunLog: 'MENU_LOGIN_LOG', // 定时任务运行记录同属"系统运维日志"，复用系统日志权限码，无需新增 DB 迁移
   dict: 'MENU_DICT',
   printTemplate: 'MENU_DICT', // 打印模板复用字典管理权限码
   tutorial: 'MENU_TUTORIAL',
@@ -648,6 +651,7 @@ export const menuConfig: MenuSection[] = [
       { label: '字段配置', path: paths.fieldConfig, icon: React.createElement(SettingOutlined) },
       { label: '打印模板', path: paths.printTemplate, icon: React.createElement(PrinterOutlined) },
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
+      { label: '定时任务运行记录', path: paths.jobRunLog, icon: React.createElement(FieldTimeOutlined) },
       { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },
       { label: '异常数据清理', path: paths.orphanData, icon: React.createElement(DeleteOutlined) },
     ],

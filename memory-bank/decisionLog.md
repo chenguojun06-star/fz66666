@@ -1,7 +1,84 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-24（新增 D-541 AI任务日志保留期清理 + 连带修两个 bug；D-540 微信云残留清理）
+> 最后更新：2026-09-24（新增 D-542 定时任务运行记录接口打通 + 前端页面；D-541 AI任务日志保留期清理）
+
+---
+
+## D-542：定时任务运行记录「接通」——一个静默失效 5 个多月的接口 + 补上从来没有过的页面（2026-09-24）
+
+**用户提问**：「这个接口是查什么的啊 这些都没有用了吗」→ 解释后用户拍板「**那就全部接通啊**」。
+
+### 先回答"之前不是通的吗"：**是通的，被一次顺手的合规改动打断了**
+`AiJobRunLogMapper.selectRecent` 的 git 演变史：
+```java
+// 原始（通的）
+@Select("SELECT * FROM t_ai_job_run_log ORDER BY start_time DESC LIMIT #{limit}")
+List<AiJobRunLog> selectRecent(int limit);
+
+// 2026-04-14 11:45 的 4ae80d5d9（提交说明是"fix: ...和其他改动补齐"，38 个文件的杂项提交）
+List<AiJobRunLog> selectRecent(@Param("limit") int limit, @Param("tenantId") Long tenantId);
+```
+—— 那是一次**顺手的多租户合规改动**，混在一个大杂项提交里，没有任何针对性验证。
+
+**为什么加上过滤就永久查不到了**：
+写入方 `JobRunObservabilityAspect` 取 `UserContext.tenantId()`，而
+**定时任务是后台线程、没有 HTTP 请求上下文** → ThreadLocal 为空 → 该值恒为 `null`
+→ 表里 221.9 万行 `tenant_id` **全部为 NULL**。
+而 SQL 里 `WHERE tenant_id = NULL` **恒为 unknown、永不成立** → 查询永远返回空。
+再叠加"前端从未接入"，于是**静默失效 5 个多月无人发现**（2026-04-14 → 2026-09-24）。
+
+**关键判断：这不是"漏了租户隔离"，而是"根本不该有租户过滤"**
+定时任务（AI 巡检、数据一致性、电商同步…）是**系统级作业**，不属于任何租户；
+写入侧记录 `tenant_id = NULL` 恰恰是**正确**的（忠实反映"无租户归属"）。
+错的是读取侧套用了"租户业务数据"的口径。且该接口仅限 `ROLE_SUPER_ADMIN`，
+超管本就该看全量。→ 因此修复方式是**去掉过滤**，而不是"补上 tenant_id"。
+
+### 做了什么
+
+**后端**
+- `AiJobRunLogMapper`：`selectRecent(limit)` 去掉租户过滤；新增
+  `selectRecentByStatus(limit, status)`（用 `(#{status} IS NULL OR status = #{status})` 实现可选筛选，
+  不用动态 SQL，便于审计脚本静态检查）、`selectStats(days)`、`selectSlowestJobs(days, limit)`、
+  `selectFailureTop(days, limit)`。别名统一 **camelCase** ——
+  MyBatis 的 map-underscore-to-camel-case **只作用于 Bean 映射、不影响 Map 结果**，
+  不显式起别名前端就会面对两套命名。
+- `AiJobRunLogService`：`queryRecent(limit, status)`（limit 夹到 [1,500]）+ `queryStats` /
+  `querySlowestJobs` / `queryFailureTop`，全部沿用既有的"表不可写就静默返回空"熔断。
+- `IntelligenceAdminController`：`/jobs/recent` 支持 `status` 参数（limit 默认 100）；
+  新增 `/jobs/overview?days=` 一次性返回 `{days, stats, slowestJobs, failureTop}`，
+  避免页面为顶部卡片与两个榜单打三次请求。
+
+**前端（这个页面此前根本不存在）**
+新增「工具 → 定时任务运行记录」(`/system/job-run-log`)：
+- 顶部 5 张概览卡：运行次数 / 失败次数 / 涉及任务数 / 平均耗时 / 最大耗时
+- 三个 Tab：运行记录（可按状态筛选，最多 200 条，可导出）/ 最慢任务 / 失败任务（带失败数角标）
+- 耗时按 分/秒/毫秒 分级显示，**超过 5 秒标黄** ——
+  因为实测 `XiaoyunModelWarmup.warmup` 平均 874ms 但**最大 290242ms**，
+  直接显示 "290242" 没人看得出那是近 5 分钟
+- 权限码复用 `MENU_LOGIN_LOG`（与"系统日志"同属系统运维日志），
+  **无需新增 t_permission 迁移**，与 `systemLogs` 的既有做法一致
+- 注册 5 处：`paths.jobRunLog`、权限码、工具菜单项、`modules/system/index.tsx`、`App.tsx` 路由
+
+### 验证
+- 三个统计 SQL 先在**线上库只读跑通**（近 7 天：32,618 次运行 / 0 失败 / 18 个任务 /
+  平均 221ms / 最大 290242ms），确认别名与聚合正确后才写进代码
+- `mvn compile` 通过；`python3 scripts/audit-tenant-id.py` **0 违规**
+  （审计脚本对"Entity 有 tenantId 字段"的 Mapper 会跳过，所以去掉过滤不会失败）
+- 新增 `AiJobRunLogMapperSqlTest`（4 例）——**读注解 SQL 做断言**，
+  钉死"这几个查询不得含 tenant_id"。这是少数几个「删掉一个条件才是正确行为」的场景，
+  不写测试极容易被后人以"补多租户隔离"为名改回去
+- 前端 `tsc --noEmit` 0 错、改动文件 ESLint 0 错
+
+### 教训
+1. **顺手做的合规改动最危险**：它藏在"杂项补齐"提交里，没有针对性验证，
+   而失败形态是"静默返回空"（不报错、不抛异常），没人用就永远不会暴露。
+2. **判断"该不该加租户过滤"要看数据归属**，不能一律套用：
+   系统级表（登录日志/操作日志/定时任务日志）本就没有租户维度，
+   硬加过滤 = 把查询变成永假条件。`scripts/audit-tenant-id.py` 的
+   `EXEMPT_TABLE_PATTERNS` 正是为这类表准备的清单。
+3. **"接口存在"≠"功能可用"**：接口写了、能编译、能返回 200，但结果永远是空数组 ——
+   这种"安静的坏掉"只有靠"真的去调用一次并看返回内容"才能发现。
 
 ---
 

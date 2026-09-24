@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Lazy;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * AI 定时任务执行日志服务
@@ -106,17 +107,76 @@ public class AiJobRunLogService extends ServiceImpl<AiJobRunLogMapper, AiJobRunL
     }
 
     /**
-     * 查询最近 N 条任务日志（默认 50 条）
+     * 查询最近 N 条任务日志（默认 50 条）。
+     *
+     * <p>⚠️ **不再按 tenant_id 过滤**（2026-09-24 修正）：定时任务是后台线程、无用户上下文，
+     * 写入时 tenantId 恒为 null → 表里 tenant_id 全为 NULL，
+     * 原先的 {@code WHERE tenant_id = ?} 使本方法**永远返回空**（详见 Mapper 注释与 D-542）。
+     * 本表是系统级作业日志，调用方仅限超管，查全量是正确的。
+     *
+     * @param limit  条数上限，内部夹到 [1, 500]
+     * @param status 可选状态筛选（SUCCESS/FAILED/SKIPPED），null 或空表示不筛选
      */
-    public List<AiJobRunLog> queryRecent(int limit) {
+    public List<AiJobRunLog> queryRecent(int limit, String status) {
         if (!tableWritable) {
             return Collections.emptyList();
         }
         try {
-            int safeLimit = Math.min(Math.max(limit, 1), 200);
-            return getBaseMapper().selectRecent(safeLimit, com.fashion.supplychain.common.UserContext.tenantId());
+            int safeLimit = Math.min(Math.max(limit, 1), 500);
+            String safeStatus = (status == null || status.isBlank()) ? null : status.trim();
+            return getBaseMapper().selectRecentByStatus(safeLimit, safeStatus);
         } catch (Exception e) {
             onWriteFailure(e, "查询日志失败");
+            return Collections.emptyList();
+        }
+    }
+
+    /** 兼容旧签名：不筛选状态 */
+    public List<AiJobRunLog> queryRecent(int limit) {
+        return queryRecent(limit, null);
+    }
+
+    /**
+     * 近 N 天运行概览（总次数 / 失败次数 / 平均与最大耗时 / 涉及任务数）。
+     *
+     * @param days 统计天数，内部夹到 [1, 365]
+     */
+    public Map<String, Object> queryStats(int days) {
+        if (!tableWritable) {
+            return Collections.emptyMap();
+        }
+        try {
+            return getBaseMapper().selectStats(Math.min(Math.max(days, 1), 365));
+        } catch (Exception e) {
+            onWriteFailure(e, "查询运行统计失败");
+            return Collections.emptyMap();
+        }
+    }
+
+    /** 近 N 天最慢的任务 TOP N（按平均耗时倒序） */
+    public List<Map<String, Object>> querySlowestJobs(int days, int limit) {
+        if (!tableWritable) {
+            return Collections.emptyList();
+        }
+        try {
+            return getBaseMapper().selectSlowestJobs(
+                    Math.min(Math.max(days, 1), 365), Math.min(Math.max(limit, 1), 50));
+        } catch (Exception e) {
+            onWriteFailure(e, "查询最慢任务失败");
+            return Collections.emptyList();
+        }
+    }
+
+    /** 近 N 天失败任务 TOP N */
+    public List<Map<String, Object>> queryFailureTop(int days, int limit) {
+        if (!tableWritable) {
+            return Collections.emptyList();
+        }
+        try {
+            return getBaseMapper().selectFailureTop(
+                    Math.min(Math.max(days, 1), 365), Math.min(Math.max(limit, 1), 50));
+        } catch (Exception e) {
+            onWriteFailure(e, "查询失败任务失败");
             return Collections.emptyList();
         }
     }

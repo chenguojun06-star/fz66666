@@ -24,7 +24,7 @@ import { CrmDashboard, ReceivableList as CrmReceivableList } from './modules/crm
 import { SelectionCenter } from './modules/selection';
 import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap, CombinedProduct } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
-import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage, FieldConfigPage, PrintTemplateList } from './modules/system';
+import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, JobRunLog, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage, FieldConfigPage, PrintTemplateList } from './modules/system';
 import { EcommerceCenter, PlatformDetail } from './modules/ecommerce';
 import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter, PatrolActionCenter, PlatformDashboard } from './modules/intelligence';
 import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory, AttendanceAdmin, ExceptionReport, ScanRecordManage } from './modules/production';
@@ -279,6 +279,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.factoryWorkers} element={<RouteErrorBoundary pageName="工厂员工"><Suspense fallback={routeFallback}><FactoryWorkerList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.loginLog} element={<RouteErrorBoundary pageName="登录日志"><Suspense fallback={routeFallback}><LoginLogList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.systemLogs} element={<RouteErrorBoundary pageName="系统日志"><Suspense fallback={routeFallback}><SystemLogs /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.jobRunLog} element={<RouteErrorBoundary pageName="定时任务运行记录"><Suspense fallback={routeFallback}><JobRunLog /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.profile} element={<RouteErrorBoundary pageName="个人设置"><Suspense fallback={routeFallback}><Profile /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.tenantManagement} element={<RouteErrorBoundary pageName="租户管理"><Suspense fallback={routeFallback}><TenantManagement /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.customerManagement} element={<RouteErrorBoundary pageName="客户管理"><Suspense fallback={routeFallback}><CustomerManagement /></Suspense></RouteErrorBoundary>} />
