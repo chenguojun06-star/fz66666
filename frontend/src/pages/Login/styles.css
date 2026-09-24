@@ -397,7 +397,6 @@
   background: rgba(255, 255, 255, 0.96);
   top: 2px;
   left: 2px;
-  animation: eyeHighlightTwinkle 4.2s ease-in-out infinite;
 }
 
 .tech-cloud__smile {
@@ -783,10 +782,6 @@
 @keyframes cloudBlink {
   0%, 91%, 96%, 100% { transform: scaleY(1); }
   93.5% { transform: scaleY(0.08); }
-}
-@keyframes eyeHighlightTwinkle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
 }
 @keyframes cloudSmileTalk {
   0%, 100% { transform: translateX(-50%) scaleY(1); }
