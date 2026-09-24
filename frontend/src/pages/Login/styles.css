@@ -71,8 +71,8 @@
 
 .garment-dress {
     width: clamp(58px, 6.5vw, 105px);
-  top: 52%;
-  left: 8%;
+  top: 47%;
+  left: 9%;
   --rot: -15deg;
   --fall-delay: 0.15s;
   --fd: 11s;
@@ -82,8 +82,8 @@
 
 .garment-coat {
     width: clamp(68px, 7.5vw, 125px);
-  top: 34%;
-  left: 26%;
+  top: 26%;
+  left: 38%;
   --rot: 14deg;
   --fall-delay: 0.05s;
   --fd: 13s;
@@ -93,8 +93,8 @@
 
 .hanger-1 {
     width: clamp(92px, 10vw, 170px);
-  top: 6%;
-  left: 18%;
+  top: 5%;
+  left: 30%;
   --rot: -6deg;
   --fall-delay: 0s;
   --fd: 9.5s;
@@ -104,8 +104,8 @@
 
 .garment-shirt {
     width: clamp(60px, 6.8vw, 110px);
-  top: 9%;
-  right: 12%;
+  top: 7%;
+  right: 25%;
   --rot: 6deg;
   --fall-delay: 0.1s;
   --fd: 12s;
@@ -115,8 +115,8 @@
 
 .hanger-3 {
     width: clamp(82px, 9vw, 150px);
-  top: 27%;
-  right: 7%;
+  top: 62%;
+  right: 26%;
   --rot: 12deg;
   --fall-delay: 0.25s;
   --fd: 10.5s;
@@ -126,8 +126,8 @@
 
 .garment-vest {
     width: clamp(52px, 5.8vw, 95px);
-  top: 48%;
-  right: 5%;
+  top: 40%;
+  right: 6%;
   --rot: -8deg;
   --fall-delay: 0.2s;
   --fd: 14s;
@@ -137,8 +137,8 @@
 
 .garment-tshirt {
     width: clamp(92px, 10vw, 165px);
-  bottom: 6%;
-  left: 3%;
+  bottom: 8%;
+  left: 5%;
   --rot: 5deg;
   --fall-delay: 0.3s;
   --fd: 11.5s;
@@ -148,8 +148,8 @@
 
 .hanger-2 {
     width: clamp(100px, 11vw, 185px);
-  bottom: 25%;
-  right: 6%;
+  top: 74%;
+  right: 14%;
   --rot: -10deg;
   --fall-delay: 0.35s;
   --fd: 13.5s;
@@ -160,7 +160,7 @@
 .garment-skirt {
     width: clamp(122px, 13vw, 230px);
   bottom: 2%;
-  left: 58%;
+  left: 50%;
   --rot: -3deg;
   --offset-x: -50%;
   --fall-delay: 0.4s;
@@ -176,8 +176,8 @@
 
 .scissors {
     width: clamp(38px, 4.2vw, 65px);
-  top: 21%;
-  left: 8%;
+  top: 44%;
+  left: 33%;
   --rot: 22deg;
   --fall-delay: 0.18s;
   --fd: 10s;
