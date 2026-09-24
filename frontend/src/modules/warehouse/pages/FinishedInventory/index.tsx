@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Card, Button, Space, Input, InputNumber, Select, Row, Col, Drawer, Tag } from 'antd';
-import { HistoryOutlined, ScanOutlined, InboxOutlined } from '@ant-design/icons';
+import { HistoryOutlined, ScanOutlined, InboxOutlined, DeploymentUnitOutlined } from '@ant-design/icons';
 import QrcodeOutboundModal from './QrcodeOutboundModal';
 import OutstockRecordTab from './OutstockRecordTab';
 import CustomerInfoSection from './CustomerInfoSection';
+import ComboOutboundDrawer from './ComboOutboundDrawer';
 import StyleCoverThumb from '@/components/StyleAssets/StyleCoverThumb';
 import { App } from 'antd';
 import api from '@/utils/api';
@@ -32,6 +33,8 @@ import { useSearchParams } from 'react-router-dom';
 
 const _FinishedInventory: React.FC = () => {
   const [qrcodeOutboundOpen, setQrcodeOutboundOpen] = useState(false);
+  // D-529：套装出库侧滑——组合商品销售，销售记录挂组合SKU、实际按子SKU出库
+  const [comboOutboundOpen, setComboOutboundOpen] = useState(false);
   const [scanOperationOpen, setScanOperationOpen] = useState(false);
   const [freeInboundOpen, setFreeInboundOpen] = useState(false);
   // D-362i：商品仓储全页日志侧滑看板（含出库/入库/扫码流水）
@@ -178,7 +181,7 @@ const _FinishedInventory: React.FC = () => {
     <>
       {showSmartErrorNotice && smartError && <Card style={{ marginBottom: 12 }}><SmartErrorNotice error={smartError} onFix={() => { void loadData(); }} /></Card>}
       <Card style={{ marginBottom: 0, border: 'none', boxShadow: 'none', background: 'transparent' }}>
-        <StandardToolbar left={<StandardSearchBar searchValue={searchText} onSearchChange={setSearchText} searchPlaceholder="搜索订单号/款号/商品编码" statusValue={statusValue} onStatusChange={setStatusValue} statusOptions={[{ label: '全部', value: '' }, { label: '有库存', value: 'available' }, { label: '有次品', value: 'defect' }]} />} right={<Space wrap><Select style={{ width: 140 }} placeholder="工厂类型" allowClear value={selectedFactoryType || undefined} onChange={setSelectedFactoryType} options={factoryTypeOptions} /><Button icon={<InboxOutlined />} onClick={() => setFreeInboundOpen(true)}>无采购单入库</Button><Button icon={<ScanOutlined />} onClick={() => setScanOperationOpen(true)}>扫码出入库</Button><Button icon={<ScanOutlined />} onClick={() => setQrcodeOutboundOpen(true)}>扫码出库</Button><Button icon={<HistoryOutlined />} onClick={() => setPageLogOpen(true)}>操作日志</Button></Space>} />
+        <StandardToolbar left={<StandardSearchBar searchValue={searchText} onSearchChange={setSearchText} searchPlaceholder="搜索订单号/款号/商品编码" statusValue={statusValue} onStatusChange={setStatusValue} statusOptions={[{ label: '全部', value: '' }, { label: '有库存', value: 'available' }, { label: '有次品', value: 'defect' }]} />} right={<Space wrap><Select style={{ width: 140 }} placeholder="工厂类型" allowClear value={selectedFactoryType || undefined} onChange={setSelectedFactoryType} options={factoryTypeOptions} /><Button icon={<DeploymentUnitOutlined />} onClick={() => setComboOutboundOpen(true)}>套装出库</Button><Button icon={<InboxOutlined />} onClick={() => setFreeInboundOpen(true)}>无采购单入库</Button><Button icon={<ScanOutlined />} onClick={() => setScanOperationOpen(true)}>扫码出入库</Button><Button icon={<ScanOutlined />} onClick={() => setQrcodeOutboundOpen(true)}>扫码出库</Button><Button icon={<HistoryOutlined />} onClick={() => setPageLogOpen(true)}>操作日志</Button></Space>} />
       </Card>
       <PageStatCards cards={[{ key: 'total', items: [{ label: '成品总数', value: totalRecords, unit: '款', color: 'var(--color-primary)' }] }, { key: 'available', items: [{ label: '可用库存', value: totalAvailableQty, unit: '件', color: 'var(--color-success)' }] }, { key: 'defect', items: [{ label: '次品数量', value: totalDefectQty, unit: '件', color: 'var(--color-danger)' }] }]} activeKey="" />
       <PersistentTabs paramName="invTab" defaultKey="inventory" style={{ marginTop: 12 }} items={[
@@ -423,6 +426,7 @@ const _FinishedInventory: React.FC = () => {
             )}
           </Drawer>
           <QrcodeOutboundModal open={qrcodeOutboundOpen} onClose={() => setQrcodeOutboundOpen(false)} onSuccess={() => { setQrcodeOutboundOpen(false); loadData(); }} />
+          <ComboOutboundDrawer open={comboOutboundOpen} onClose={() => setComboOutboundOpen(false)} onSuccess={() => { setComboOutboundOpen(false); loadData(); }} />
           <ScanOperationModal open={scanOperationOpen} onClose={() => setScanOperationOpen(false)} onSuccess={() => { setScanOperationOpen(false); loadData(); }} />
           <FreeInboundModal open={freeInboundOpen} onClose={() => setFreeInboundOpen(false)} onSuccess={() => { setFreeInboundOpen(false); loadData(); }} /></>),
         },

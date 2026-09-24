@@ -77,6 +77,12 @@ export function getGroupedOutstockColumns(handlers: {
           <div className="u-fs-12" style={{ color: 'var(--neutral-text-disabled)' }}>
             {group.styleNames[0] || ''} · 共 {group.skuCount} 个商品编码
           </div>
+          {/* D-529：套装出库——显示所属组合商品 */}
+          {group.comboCodes.length > 0 ? (
+            <div className="u-fs-12 u-mt-4">
+              <Tag color="geekblue" style={{ margin: 0 }}>套装 {group.comboCodes.join('、')}</Tag>
+            </div>
+          ) : null}
         </div>
       ),
     },
@@ -236,6 +242,17 @@ export function getOutstockLineColumns(handlers: {
       dataIndex: 'size',
       width: 80,
       render: (text) => text ? <Tag color="green">{text}</Tag> : '-',
+    },
+    {
+      // D-529：套装出库的明细行标注所属组合商品（销售关联组合SKU，库存按子SKU扣）
+      title: '套装',
+      dataIndex: 'comboName',
+      width: 140,
+      render: (_, record) => record.comboCode ? (
+        <Tag color="geekblue" style={{ margin: 0 }} title={`${record.comboName || ''}(${record.comboCode})`}>
+          {record.comboName || record.comboCode}
+        </Tag>
+      ) : '-',
     },
     {
       title: '出库数量',

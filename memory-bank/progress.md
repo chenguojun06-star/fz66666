@@ -1,9 +1,25 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-09-23（D-525 商品仓储/入库各处补款式图列 + 命名统一；D-524 电商全站补图）
+> 最后更新：2026-09-24（D-529 组合商品/套装——组合SKU销售、子SKU出库）
 
 ## 已完成
+
+### 2026-09-24 D-529 组合商品（套装）——组合SKU销售、实际按子SKU出库（双端编译绿 + 本地全链路实测）
+
+- [x] Flyway V202709240001：`t_combo_product` + `t_combo_product_item` 两新表、
+      `t_product_outstock` 加 combo_id/combo_code/combo_name 溯源三列、MENU_COMBINED_PRODUCT 菜单+full_admin 授权
+- [x] 后端 `/api/combo-product`：list/detail/create/update/delete/set-status/options
+      （CRUD 走 Orchestrator 事务；子项快照服务端权威回填；编码 ZH+日期+序号自动生成；可用库存=min 子SKU）
+- [x] 套装出库 `POST /api/warehouse/finished-inventory/combo-outbound`：复用 outbound() 主链路
+      （原子扣减防超卖/共单号/审批/收款/账单推送全继承），套装价最大余数法分摊精确到分
+- [x] 前端「组合商品」页 `/warehouse/combined-product`（成品管理组菜单）：
+      列表 + SideDrawer 三态（新建/编辑/详情，分区锚点，子商品远程搜索添加+可编辑数量）
+- [x] 商品仓储工具条「套装出库」SideDrawer（选组合→套数→客户/物流→确认）；
+      出库记录 Tab 聚合行「套装」标记 + 明细行「套装」列
+- [x] 本地实测：建组合→出2套价60→子SKU各-2、分摊 59.86+60.14=120 精确、共单号、combo三列有值、
+      超卖拦截回滚、更新数量重算
+- [ ] 待办：推送后线上验收；「组合商品上架电商店铺」属电商模块本期未接
 
 ### 2026-09-23 D-525 商品仓储（旧称"成品库存"）与入库/收货各处补款式图列（tsc 0 错 / eslint 0 错）
 

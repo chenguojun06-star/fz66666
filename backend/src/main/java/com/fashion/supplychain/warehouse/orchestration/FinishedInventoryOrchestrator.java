@@ -614,6 +614,14 @@ public class FinishedInventoryOrchestrator {
     }
 
     /**
+     * D-529：组合套装出库——销售记录挂组合SKU，实际按子SKU逐个扣库存、每子SKU一行出库记录
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> comboOutbound(Map<String, Object> params) {
+        return finishedOutstockHelper.comboOutbound(params);
+    }
+
+    /**
      * 分页查询出库记录
      */
     public IPage<ProductOutstock> listOutstockRecords(Map<String, Object> params) {

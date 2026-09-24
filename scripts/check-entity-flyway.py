@@ -107,7 +107,9 @@ def extract_entity_fields(java_text: str) -> List[Tuple[str, str]]:
             pending_annotation = None
             is_virtual = False
         else:
-            if not stripped.startswith("@"):
+            # 空行（Javadoc 剔除后残留）与 // 行注释不重置 virtual 状态，
+            # 否则 @TableField(exist=false) 与字段之间隔着注释/空行时会被误判为真实 DB 字段
+            if stripped and not stripped.startswith("@") and not stripped.startswith("//"):
                 pending_annotation = None
                 is_virtual = False
         i += 1

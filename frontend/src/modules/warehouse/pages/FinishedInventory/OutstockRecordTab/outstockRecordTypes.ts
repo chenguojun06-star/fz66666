@@ -27,6 +27,9 @@ export interface OutstockRecord {
   approveByName?: string;
   approveTime?: string;
   platformCode?: string;
+  /** D-529：套装出库溯源——销售记录关联的组合SKU */
+  comboCode?: string;
+  comboName?: string;
 }
 
 export const outstockTypeMap: Record<string, { label: string; color: string }> = {
@@ -49,6 +52,8 @@ export interface GroupedOutstock {
   platformCode?: string;
   styleNos: string[];
   styleNames: string[];
+  /** D-529：该单命中的组合商品（套装出库时非空） */
+  comboCodes: string[];
   skuCount: number;
   totalQuantity: number;
   totalAmount?: number;
@@ -83,6 +88,7 @@ export function groupOutstockByNo(records: OutstockRecord[]): GroupedOutstock[] 
         platformCode: r.platformCode,
         styleNos: [],
         styleNames: [],
+        comboCodes: [],
         skuCount: 0,
         totalQuantity: 0,
         totalAmount: undefined,
@@ -104,6 +110,7 @@ export function groupOutstockByNo(records: OutstockRecord[]): GroupedOutstock[] 
     if (r.totalAmount != null) g.totalAmount = (g.totalAmount || 0) + Number(r.totalAmount);
     if (r.styleNo && !g.styleNos.includes(r.styleNo)) g.styleNos.push(r.styleNo);
     if (r.styleName && !g.styleNames.includes(r.styleName)) g.styleNames.push(r.styleName);
+    if (r.comboCode && !g.comboCodes.includes(r.comboCode)) g.comboCodes.push(r.comboCode);
     if (!g.customerName && r.customerName) g.customerName = r.customerName;
     if (!g.customerPhone && r.customerPhone) g.customerPhone = r.customerPhone;
     if (!g.trackingNo && r.trackingNo) g.trackingNo = r.trackingNo;

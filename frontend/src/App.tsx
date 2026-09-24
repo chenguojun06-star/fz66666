@@ -22,7 +22,7 @@ import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, 
 import { MaterialReconciliation, PayrollOperatorSummary, SalaryConfig, DeductionManage, FinanceCenter, ExpenseAdvanceCenter, WagePayment, EcSalesRevenue, TaxExport, FinanceDashboard, PaymentSchedule, DailyFlow } from './modules/finance';
 import { CrmDashboard, ReceivableList as CrmReceivableList } from './modules/crm';
 import { SelectionCenter } from './modules/selection';
-import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap } from './modules/warehouse';
+import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders, InventoryCheck, LabelPrint, ProductInfo, WarehouseLocationMap, CombinedProduct } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, PartnerManagement, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage, FieldConfigPage, PrintTemplateList } from './modules/system';
 import { EcommerceCenter, PlatformDetail } from './modules/ecommerce';
@@ -255,6 +255,7 @@ const AppRoutes: React.FC = () => {
 
           <Route path={paths.materialInventory} element={<RouteErrorBoundary pageName="物料库存"><Suspense fallback={routeFallback}><MaterialInventory /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.materialDatabase} element={<RouteErrorBoundary pageName="物料库"><Suspense fallback={routeFallback}><MaterialDatabase /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.combinedProduct} element={<RouteErrorBoundary pageName="组合商品"><Suspense fallback={routeFallback}><CombinedProduct /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.finishedInventory} element={<RouteErrorBoundary pageName="商品仓储"><Suspense fallback={routeFallback}><FinishedInventory /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.sampleInventory} element={<RouteErrorBoundary pageName="样衣库存"><Suspense fallback={routeFallback}><SampleInventory /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.ecommerceOrders} element={<RouteErrorBoundary pageName="电商订单"><Suspense fallback={routeFallback}><EcommerceOrders /></Suspense></RouteErrorBoundary>} />

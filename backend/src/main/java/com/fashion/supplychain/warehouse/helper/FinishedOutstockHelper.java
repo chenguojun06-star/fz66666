@@ -21,6 +21,10 @@ import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fashion.supplychain.warehouse.entity.ComboProduct;
+import com.fashion.supplychain.warehouse.entity.ComboProductItem;
+import com.fashion.supplychain.warehouse.service.ComboProductItemService;
+import com.fashion.supplychain.warehouse.service.ComboProductService;
 import com.fashion.supplychain.warehouse.entity.WarehouseArea;
 import com.fashion.supplychain.warehouse.service.WarehouseAreaService;
 import lombok.extern.slf4j.Slf4j;
@@ -94,6 +98,13 @@ public class FinishedOutstockHelper {
 
     @Autowired
     private OrderRemarkHelper orderRemarkHelper;
+
+    /** D-529 组合商品：套装出库时按子SKU展开扣库存、行上挂组合溯源 */
+    @Autowired
+    private ComboProductService comboProductService;
+
+    @Autowired
+    private ComboProductItemService comboProductItemService;
 
     /** 成品出库后通知电商库存链路重算（仓库 → 电商 联动） */
     @Autowired
@@ -175,6 +186,11 @@ public class FinishedOutstockHelper {
             }
         }
 
+        // D-529：组合套装出库——行上挂组合溯源（销售记录关联组合SKU，实际按子SKU逐个扣库存）
+        Long comboId = parseLongOrNull(params.get("comboId"));
+        String comboCode = trimToNull(params.get("comboCode"));
+        String comboName = trimToNull(params.get("comboName"));
+
         int totalItems = 0;
         int totalQty = 0;
 
@@ -219,6 +235,8 @@ public class FinishedOutstockHelper {
                 }
             }
             String priceAdjustmentReason = trimToNull(item.get("priceAdjustmentReason"));
+            // D-529：组合套装分摊——行总额以分摊结果为准（精确到分），单价仅为展示
+            BigDecimal overrideTotalAmount = toBigDecimalOrNull(item.get("totalAmount"));
 
             String effectiveWarehouse = requestWarehouse;
             String effectiveAreaId = warehouseAreaId;
@@ -233,12 +251,15 @@ public class FinishedOutstockHelper {
             }
 
             // D-483：把调用方传入的备注追加到固定前缀之后（未传则保持原样）
-            String autoRemark = "成品库存页面出库|sku=" + skuCode;
+            String autoRemark = StringUtils.hasText(comboCode)
+                    ? "组合套装出库|套装=" + comboName + "(" + comboCode + ")|sku=" + skuCode
+                    : "成品库存页面出库|sku=" + skuCode;
             String itemRemark = StringUtils.hasText(requestRemark) ? autoRemark + " | " + requestRemark : autoRemark;
             recordProductOutstock(batchOutstockNo, sku, quantity, requestOrderId, requestOrderNo, effectiveWarehouse,
                     itemRemark, trackingNo, expressCompany,
                     customerName, customerPhone, shippingAddress, finalOutstockType,
-                    effectiveAreaId, effectiveAreaName, overrideSalesPrice, priceAdjustmentReason, platformCode);
+                    effectiveAreaId, effectiveAreaName, overrideSalesPrice, priceAdjustmentReason, platformCode,
+                    comboId, comboCode, comboName, overrideTotalAmount);
             totalItems++;
             totalQty += quantity;
         }
@@ -348,6 +369,141 @@ public class FinishedOutstockHelper {
         outbound(outboundParams);
     }
 
+    /**
+     * D-529：组合套装出库。
+     * 销售的是"组合SKU"（套装），但库存实际扣在组成它的子SKU上：
+     * 每个子SKU展开成 quantity(单套数量)×套数，逐个原子扣减（复用 outbound 的防超卖），
+     * 每个子SKU一行出库记录、共用一张出库单号，行上挂 combo_id/combo_code/combo_name 溯源。
+     * 套装价按子SKU售价权重分摊到各行（最大余数法，精确到分，各行合计=套装价×套数）；
+     * 未设套装价或子SKU均无售价时，按子SKU原售价出库。
+     *
+     * @param params comboId、quantity(套数，默认1)、customerName/Phone/Address、outstockType(默认shipment)、remark 等
+     * @return outstockNo + 套数 + 明细
+     */
+    public Map<String, Object> comboOutbound(Map<String, Object> params) {
+        Long tenantId = UserContext.tenantId();
+        Long comboId = parseLongOrNull(params.get("comboId"));
+        if (comboId == null) {
+            throw new IllegalArgumentException("缺少组合商品ID");
+        }
+        ComboProduct combo = comboProductService.getById(comboId);
+        if (combo == null || !tenantId.equals(combo.getTenantId())) {
+            throw new IllegalArgumentException("组合商品不存在或无权访问");
+        }
+        if (!"ENABLED".equals(combo.getStatus())) {
+            throw new IllegalArgumentException("组合商品已停用: " + combo.getComboName());
+        }
+        int sets = parseIntOr(params.get("quantity"), 1);
+        if (sets <= 0) {
+            throw new IllegalArgumentException("出库套数必须大于0");
+        }
+        List<ComboProductItem> comboItems = comboProductItemService.lambdaQuery()
+                .eq(ComboProductItem::getComboId, comboId)
+                .orderByAsc(ComboProductItem::getSort)
+                .list();
+        if (comboItems.isEmpty()) {
+            throw new IllegalArgumentException("组合商品未配置子商品，无法出库: " + combo.getComboName());
+        }
+
+        // 展开成子SKU行：quantity = 单套数量 × 套数
+        List<Map<String, Object>> stdItems = new ArrayList<>();
+        for (ComboProductItem ci : comboItems) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("sku", ci.getSkuCode());
+            int perSet = ci.getQuantity() != null && ci.getQuantity() > 0 ? ci.getQuantity() : 1;
+            m.put("quantity", perSet * sets);
+            stdItems.add(m);
+        }
+
+        // 套装价分摊：权重 = 子SKU售价 × 单套数量；最大余数法保证各行总额合计 = 套装价 × 套数
+        BigDecimal comboPrice = params.get("salesPrice") != null ? toBigDecimalOrNull(params.get("salesPrice")) : combo.getSalePrice();
+        if (comboPrice != null && comboPrice.compareTo(BigDecimal.ZERO) > 0) {
+            allocateComboPrice(stdItems, comboItems, comboPrice, sets);
+        }
+
+        params.put("items", stdItems);
+        params.put("comboId", combo.getId());
+        params.put("comboCode", combo.getComboCode());
+        params.put("comboName", combo.getComboName());
+        if (trimToNull(params.get("outstockType")) == null && trimToNull(params.get("outboundType")) == null) {
+            params.put("outstockType", "shipment");
+        }
+        outbound(params);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("outstockNo", params.get("outstockNo"));
+        result.put("comboId", combo.getId());
+        result.put("comboCode", combo.getComboCode());
+        result.put("comboName", combo.getComboName());
+        result.put("sets", sets);
+        result.put("lines", stdItems.size());
+        result.put("totalQty", stdItems.stream()
+                .mapToInt(m -> parseIntOr(m.get("quantity"), 0))
+                .sum());
+        log.info("[组合套装出库] operator={}, combo={}({}), 套数={}, 子SKU行数={}",
+                UserContext.username(), combo.getComboName(), combo.getComboCode(), sets, stdItems.size());
+        return result;
+    }
+
+    /**
+     * 套装价分摊（最大余数法，单位：分）。
+     * 行总额按 权重(子SKU售价×单套数量) 占比切分套装价×套数，舍入余额给小数部分最大的行；
+     * 行单价 = 行总额/行数量（2位小数，仅展示），行总额随 items["totalAmount"] 透传精确落库。
+     */
+    private void allocateComboPrice(List<Map<String, Object>> stdItems,
+                                    List<ComboProductItem> comboItems,
+                                    BigDecimal comboPrice,
+                                    int sets) {
+        int n = comboItems.size();
+        long[] weights = new long[n];
+        long weightSum = 0;
+        for (int i = 0; i < n; i++) {
+            BigDecimal price = loadSkuSalePrice(comboItems.get(i).getSkuCode());
+            long qty = stdItems.get(i) != null ? parseIntOr(stdItems.get(i).get("quantity"), 0) : 0;
+            long w = price != null ? price.movePointRight(2).longValue() * qty : 0L;
+            weights[i] = w;
+            weightSum += w;
+        }
+        if (weightSum <= 0) {
+            return; // 子SKU均无售价——不诱导分摊，按子SKU原价（可能为空）出库
+        }
+        long totalCents = comboPrice.movePointRight(2).multiply(BigDecimal.valueOf(sets)).longValue();
+        long[] rowCents = new long[n];
+        java.util.NavigableMap<Long, Integer> remainderOrder = new java.util.TreeMap<>();
+        for (int i = 0; i < n; i++) {
+            long exact = BigDecimal.valueOf(totalCents).multiply(BigDecimal.valueOf(weights[i]))
+                    .divide(BigDecimal.valueOf(weightSum), 0, java.math.RoundingMode.FLOOR)
+                    .longValue();
+            rowCents[i] = exact;
+            long remainder = totalCents * weights[i] - exact * weightSum;
+            remainderOrder.put(remainder * 1000L + (n - i), i); // 同余数按行序稳定
+        }
+        long distributed = 0;
+        for (long c : rowCents) distributed += c;
+        long leftover = totalCents - distributed;
+        // 从余数最大的行开始补 1 分
+        for (int done = 0; done < leftover && !remainderOrder.isEmpty(); done++) {
+            Map.Entry<Long, Integer> e = remainderOrder.pollLastEntry();
+            rowCents[e.getValue()] += 1;
+        }
+        for (int i = 0; i < n; i++) {
+            BigDecimal rowTotal = BigDecimal.valueOf(rowCents[i]).movePointLeft(2);
+            int rowQty = parseIntOr(stdItems.get(i).get("quantity"), 1);
+            stdItems.get(i).put("totalAmount", rowTotal);
+            stdItems.get(i).put("salesPrice", rowTotal.divide(BigDecimal.valueOf(rowQty), 2, java.math.RoundingMode.HALF_UP));
+            stdItems.get(i).put("priceAdjustmentReason", "组合套装售价分摊(" + comboPrice + "×" + sets + "套)");
+        }
+    }
+
+    /** 子SKU售价缓存（分摊权重用，避免逐个回查） */
+    private BigDecimal loadSkuSalePrice(String skuCode) {
+        ProductSku sku = productSkuService.lambdaQuery()
+                .eq(ProductSku::getSkuCode, skuCode)
+                .eq(ProductSku::getTenantId, UserContext.tenantId())
+                .one();
+        return sku != null ? sku.getSalesPrice() : null;
+    }
+
     private void recordProductOutstock(String outstockNo,
                                        ProductSku sku,
                                        int quantity,
@@ -365,7 +521,11 @@ public class FinishedOutstockHelper {
                                        String warehouseAreaName,
                                        BigDecimal overrideSalesPrice,
                                        String priceAdjustmentReason,
-                                       String platformCode) {
+                                       String platformCode,
+                                       Long comboId,
+                                       String comboCode,
+                                       String comboName,
+                                       BigDecimal overrideTotalAmount) {
         ProductOutstock outstock = new ProductOutstock();
         LocalDateTime now = LocalDateTime.now();
         StyleInfo styleInfo = sku.getStyleId() == null ? null : styleInfoService.getById(sku.getStyleId());
@@ -390,26 +550,35 @@ public class FinishedOutstockHelper {
         outstock.setSize(sku.getSize());
         outstock.setCostPrice(sku.getCostPrice());
 
-        // 价格逻辑：支持改价
+        // 价格逻辑：支持改价（D-529：组合套装分摊单价时子SKU可能无原价，改价直接生效）
         BigDecimal effectiveSalesPrice = sku.getSalesPrice();
-        if (overrideSalesPrice != null && sku.getSalesPrice() != null) {
-            BigDecimal originalPrice = sku.getSalesPrice();
-            if (overrideSalesPrice.compareTo(originalPrice) != 0) {
-                // 价格有变化，记录原始价格
-                outstock.setOriginalSalesPrice(originalPrice);
-                if (priceAdjustmentReason == null || priceAdjustmentReason.isBlank()) {
-                    // 价格偏差超过10%必须填原因
-                    BigDecimal diff = overrideSalesPrice.subtract(originalPrice).abs();
-                    if (diff.compareTo(originalPrice.multiply(BigDecimal.valueOf(0.1))) > 0) {
-                        throw new IllegalArgumentException("价格调整超过10%，必须填写价格调整原因");
+        if (overrideSalesPrice != null) {
+            if (sku.getSalesPrice() != null) {
+                BigDecimal originalPrice = sku.getSalesPrice();
+                if (overrideSalesPrice.compareTo(originalPrice) != 0) {
+                    // 价格有变化，记录原始价格
+                    outstock.setOriginalSalesPrice(originalPrice);
+                    if (priceAdjustmentReason == null || priceAdjustmentReason.isBlank()) {
+                        // 价格偏差超过10%必须填原因
+                        BigDecimal diff = overrideSalesPrice.subtract(originalPrice).abs();
+                        if (diff.compareTo(originalPrice.multiply(BigDecimal.valueOf(0.1))) > 0) {
+                            throw new IllegalArgumentException("价格调整超过10%，必须填写价格调整原因");
+                        }
                     }
+                    outstock.setPriceAdjustmentReason(priceAdjustmentReason);
+                    log.info("[出库改价] sku={} 原价={} 改价={} 原因={}", sku.getSkuCode(), originalPrice, overrideSalesPrice, priceAdjustmentReason);
                 }
+            } else if (StringUtils.hasText(priceAdjustmentReason)) {
                 outstock.setPriceAdjustmentReason(priceAdjustmentReason);
-                log.info("[出库改价] sku={} 原价={} 改价={} 原因={}", sku.getSkuCode(), originalPrice, overrideSalesPrice, priceAdjustmentReason);
             }
             effectiveSalesPrice = overrideSalesPrice;
         }
         outstock.setSalesPrice(effectiveSalesPrice);
+
+        // D-529：组合套装溯源三列——销售记录关联组合SKU，实际按子SKU出库
+        outstock.setComboId(comboId);
+        outstock.setComboCode(comboCode);
+        outstock.setComboName(comboName);
 
         outstock.setTrackingNo(trackingNo);
         outstock.setExpressCompany(expressCompany);
@@ -417,7 +586,10 @@ public class FinishedOutstockHelper {
         outstock.setCustomerName(customerName);
         outstock.setCustomerPhone(customerPhone);
         outstock.setShippingAddress(shippingAddress);
-        if (effectiveSalesPrice != null) {
+        if (overrideTotalAmount != null) {
+            // 组合套装分摊：行总额精确到分（各行合计=套装价×套数）
+            outstock.setTotalAmount(overrideTotalAmount);
+        } else if (effectiveSalesPrice != null) {
             outstock.setTotalAmount(effectiveSalesPrice.multiply(BigDecimal.valueOf(quantity)));
         }
         outstock.setPaidAmount(BigDecimal.ZERO);
@@ -757,6 +929,39 @@ public class FinishedOutstockHelper {
         }
         String text = String.valueOf(value).trim();
         return StringUtils.hasText(text) ? text : null;
+    }
+
+    private Long parseLongOrNull(Object value) {
+        if (value == null || !StringUtils.hasText(String.valueOf(value))) {
+            return null;
+        }
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private BigDecimal toBigDecimalOrNull(Object value) {
+        if (value == null || !StringUtils.hasText(String.valueOf(value))) {
+            return null;
+        }
+        try {
+            return new BigDecimal(String.valueOf(value));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private int parseIntOr(Object value, int defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     private String resolveWarehouseAreaName(String areaId) {

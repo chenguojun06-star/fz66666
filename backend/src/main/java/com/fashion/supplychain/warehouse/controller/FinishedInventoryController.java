@@ -75,6 +75,15 @@ public class FinishedInventoryController {
     }
 
     /**
+     * D-529：组合套装出库——传 comboId + quantity(套数)，销售记录挂组合SKU，
+     * 实际按子SKU逐个扣库存，每个子SKU一行出库记录（共一张出库单号）
+     */
+    @PostMapping("/combo-outbound")
+    public Result<Map<String, Object>> comboOutbound(@RequestBody Map<String, Object> params) {
+        return Result.success(finishedInventoryOrchestrator.comboOutbound(params));
+    }
+
+    /**
      * 分页查询出库记录
      */
     @PostMapping("/outstock-records")

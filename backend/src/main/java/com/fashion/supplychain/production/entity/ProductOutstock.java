@@ -97,6 +97,20 @@ public class ProductOutstock {
     /** 调拨回入库状态（D-360n）：INBOUND=已回入 */
     private String transferInboundStatus;
 
+    // ==================== 组合套装溯源（D-529）====================
+
+    /** 组合商品ID——套装出库时销售记录关联组合SKU，实际按子SKU出库 */
+    @TableField("combo_id")
+    private Long comboId;
+
+    /** 组合商品编码 */
+    @TableField("combo_code")
+    private String comboCode;
+
+    /** 组合商品名称 */
+    @TableField("combo_name")
+    private String comboName;
+
     // ==================== 收货字段（历史遗留，不再在出库流程使用）====================
 
     private String receiveStatus;
