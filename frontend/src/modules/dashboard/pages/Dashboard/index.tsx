@@ -15,7 +15,7 @@ import ProductionBottleneckCard from '../../components/ProductionBottleneckCard'
 import { useDashboardStats } from './useDashboardStats';
 import { useDashboardSearch } from './useDashboardSearch';
 import RecentActivityCard from './RecentActivityCard';
-import ModuleDirectory from './ModuleDirectory';
+import FlowGuideCard from './FlowGuideCard';
 import ServiceSidebar from './ServiceSidebar';
 import './styles.css';
 
@@ -120,12 +120,12 @@ const Dashboard: React.FC = () => {
         />
 
         {/*
-         * D-528 首页定版：主栏 = 功能导航（menuConfig 驱动的全模块分组目录，
-         * 用户拍板用流程引导形态替代图标宫格）+ 经营数据；右栏 = 服务栏。
+         * D-530 首页定版：主栏 = 流程引导面板（可配置添加全系统模块，
+         * 用户拍板：流程引导形态+可配置全系统模块）+ 经营数据；右栏 = 服务栏。
          */}
         <div className="home-layout">
           <div className="home-main">
-            <ModuleDirectory />
+            <FlowGuideCard />
 
             <div className="home-data-section">
               <div className="home-section-header">

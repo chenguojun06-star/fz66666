@@ -531,21 +531,14 @@
   gap: 16px;
 }
 
-/* ── 功能导航（D-528：menuConfig 全模块分组目录，多列瀑布，用户拍板替代图标宫格） ── */
-.module-directory-grid {
-  columns: 4 240px;
-  column-gap: 32px;
+/* ── 流程引导面板（D-530：分组+名称+说明+跳页，可配置添加全系统模块） ── */
+.flow-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 4px 28px;
 }
 
-.module-group {
-  break-inside: avoid;
-  padding-bottom: 10px;
-}
-
-.module-group-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.flow-guide-group-title {
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-secondary);
@@ -554,36 +547,36 @@
   margin-bottom: 4px;
 }
 
-.module-item {
+.flow-guide-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 6px 8px;
+  padding: 7px 8px;
   margin: 0 -8px;
   border-radius: 6px;
   text-decoration: none;
   transition: background-color 0.15s ease;
 }
 
-.module-item:hover {
+.flow-guide-item:hover {
   background: var(--color-bg-subtle);
 }
 
-.module-item-text {
+.flow-guide-item-text {
   display: flex;
   flex-direction: column;
   gap: 1px;
   min-width: 0;
 }
 
-.module-item-name {
+.flow-guide-item-name {
   font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--color-text-primary);
 }
 
-.module-item-desc {
+.flow-guide-item-desc {
   font-size: var(--font-size-xs, 12px);
   color: var(--color-text-tertiary);
   white-space: nowrap;
@@ -591,15 +584,67 @@
   text-overflow: ellipsis;
 }
 
-.module-item-go {
+.flow-guide-item-link {
   flex-shrink: 0;
-  font-size: 10px;
-  color: var(--color-text-quaternary);
-  transition: color 0.15s ease;
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-primary, #2d7ff9);
 }
 
-.module-item:hover .module-item-go {
-  color: var(--color-primary, #2d7ff9);
+.flow-guide-empty {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  padding: 12px 0;
+  text-align: center;
+}
+
+/* ── 流程引导配置弹窗（D-530） ── */
+.fgc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 24px;
+}
+
+@media (max-width: 720px) {
+  .fgc-grid { grid-template-columns: 1fr; }
+}
+
+.fgc-group-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding: 8px 0 4px;
+  border-bottom: 1px solid var(--color-border-light);
+  margin-bottom: 6px;
+}
+
+.fgc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.fgc-item-name {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fgc-empty {
+  color: var(--color-text-quaternary);
+  font-size: var(--font-size-xs, 12px);
+  padding: 4px 0;
+}
+
+.fgc-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-light);
 }
 
 /* ── 意见反馈卡（D-527） ── */
@@ -715,11 +760,11 @@
 }
 
 /* ── 主题适配 ── */
-:root[data-theme="dark"] .module-item:hover {
+:root[data-theme="dark"] .flow-guide-item:hover {
   background: rgba(255, 255, 255, 0.06);
 }
 
-:root[data-theme="dark"] .module-group-title {
+:root[data-theme="dark"] .flow-guide-group-title {
   border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
