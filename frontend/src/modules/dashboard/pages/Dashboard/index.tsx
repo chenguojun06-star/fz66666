@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AutoComplete, Button, Space } from 'antd';
-import { DownOutlined, UpOutlined, WarningOutlined, ReloadOutlined, SettingOutlined } from '@ant-design/icons';
+import { DownOutlined, UpOutlined, WarningOutlined, ReloadOutlined } from '@ant-design/icons';
 import PageLayout from '@/components/common/PageLayout';
 import TopStats from '../../components/TopStats';
 import DashboardAiInsight from '../../components/DashboardAiInsight';
@@ -14,12 +14,9 @@ import ProductionBottleneckCard from '../../components/ProductionBottleneckCard'
 
 import { useDashboardStats } from './useDashboardStats';
 import { useDashboardSearch } from './useDashboardSearch';
-import { useQuickEntries } from './useQuickEntries';
 import RecentActivityCard from './RecentActivityCard';
-import HomeQuickGrid from './HomeQuickGrid';
-import FlowGuideCard from './FlowGuideCard';
+import ModuleDirectory from './ModuleDirectory';
 import ServiceSidebar from './ServiceSidebar';
-import QuickEntrySettingsModal from './QuickEntrySettingsModal';
 import './styles.css';
 
 /** D-526：经营数据区折叠记忆（默认展开，收过一次就记住） */
@@ -44,15 +41,7 @@ const Dashboard: React.FC = () => {
     handleSearchSelect,
   } = useDashboardSearch();
 
-  const [settingsVisible, setSettingsVisible] = useState(false);
   const [dataCollapsed, setDataCollapsed] = useState(() => localStorage.getItem(DATA_COLLAPSE_KEY) === '1');
-
-  const {
-    quickEntries,
-    handleToggleEntry,
-    handleSaveSettings,
-    handleResetSettings,
-  } = useQuickEntries();
 
   useEffect(() => {
     document.body.classList.add('dashboard-page');
@@ -66,10 +55,6 @@ const Dashboard: React.FC = () => {
       localStorage.setItem(DATA_COLLAPSE_KEY, prev ? '0' : '1');
       return !prev;
     });
-  };
-
-  const handleSaveSettingsAndClose = () => {
-    handleSaveSettings(() => setSettingsVisible(false));
   };
 
   return (
@@ -124,12 +109,6 @@ const Dashboard: React.FC = () => {
           right={(
             <Space>
               <Button
-                icon={<SettingOutlined />}
-                onClick={() => setSettingsVisible(true)}
-              >
-                配置常用功能
-              </Button>
-              <Button
                 icon={<ReloadOutlined />}
                 onClick={handleRetry}
                 loading={retryCount > 0 && hasError}
@@ -141,17 +120,12 @@ const Dashboard: React.FC = () => {
         />
 
         {/*
-         * D-526 首页聚水潭化：左主栏（常用功能宫格 → 流程引导 → 经营数据）+ 右服务栏。
-         * 「先办事、再看数」——宫格提到首屏主视觉，数据区整体下移且可折叠。
+         * D-528 首页定版：主栏 = 功能导航（menuConfig 驱动的全模块分组目录，
+         * 用户拍板用流程引导形态替代图标宫格）+ 经营数据；右栏 = 服务栏。
          */}
         <div className="home-layout">
           <div className="home-main">
-            <HomeQuickGrid
-              entries={quickEntries}
-              onOpenSettings={() => setSettingsVisible(true)}
-            />
-
-            <FlowGuideCard />
+            <ModuleDirectory />
 
             <div className="home-data-section">
               <div className="home-section-header">
@@ -200,15 +174,6 @@ const Dashboard: React.FC = () => {
           </aside>
         </div>
       </PageLayout>
-
-      <QuickEntrySettingsModal
-        open={settingsVisible}
-        quickEntries={quickEntries}
-        onToggle={handleToggleEntry}
-        onSave={handleSaveSettingsAndClose}
-        onReset={handleResetSettings}
-        onCancel={() => setSettingsVisible(false)}
-      />
       </div>
     </>
   );

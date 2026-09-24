@@ -9,7 +9,7 @@ export interface HomeChangelogItem {
 }
 
 export const HOME_CHANGELOG: HomeChangelogItem[] = [
-  { date: '09-24', text: '首页全新改版：常用功能宫格、业务全流程、意见反馈直达' },
+  { date: '09-24', text: '首页全新改版：全模块功能导航、业务全流程、意见反馈直达' },
   { date: '09-23', text: '打印升级：多页单据每页带页码（第 X 页 / 共 Y 页）' },
   { date: '09-23', text: '商品仓储：编码详情补显销售单价，入库价统一叫「入库单价」' },
   { date: '09-21', text: '打印入口治理：下单打印只留「打印合同」，标签入口收敛' },

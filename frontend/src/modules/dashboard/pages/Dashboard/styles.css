@@ -531,112 +531,75 @@
   gap: 16px;
 }
 
-/* ── 首屏快捷宫格（D-527：固定 7 列，14 入口 = 整 2 行，不再随宽度出现残行） ── */
-.home-quick-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 8px 6px;
+/* ── 功能导航（D-528：menuConfig 全模块分组目录，多列瀑布，用户拍板替代图标宫格） ── */
+.module-directory-grid {
+  columns: 4 240px;
+  column-gap: 32px;
 }
 
-@media (max-width: 1200px) {
-  .home-quick-grid { grid-template-columns: repeat(5, 1fr); }
+.module-group {
+  break-inside: avoid;
+  padding-bottom: 10px;
 }
 
-@media (max-width: 900px) {
-  .home-quick-grid { grid-template-columns: repeat(4, 1fr); }
-}
-
-@media (max-width: 640px) {
-  .home-quick-grid { grid-template-columns: repeat(3, 1fr); }
-}
-
-.home-quick-item {
+.module-group-title {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 14px 4px 12px;
-  border-radius: 8px;
-  text-decoration: none;
-  /* 只过渡背景/阴影：同旧宫格，禁位移防光标闪烁 */
-  transition: background-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.home-quick-item:hover {
-  background: var(--color-bg-subtle);
-  box-shadow: var(--shadow-md);
-}
-
-.home-quick-icon {
-  font-size: 20px;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-bg-subtle);
-  color: var(--color-primary, #2d7ff9);
-}
-
-.home-quick-label {
+  gap: 6px;
   font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  text-align: center;
-  line-height: 1.3;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding: 8px 0 6px;
+  border-bottom: 1px solid var(--color-border-light);
+  margin-bottom: 4px;
 }
 
-/* ── 业务全流程条（D-527：一行读完整条业务链，替代原 4×4 链接堆） ── */
-.home-flow-strip {
+.module-item {
   display: flex;
-  align-items: stretch;
-  gap: 4px;
-  overflow-x: auto;
-  padding: 4px 2px;
-}
-
-.home-flow-node {
-  flex: 1 0 auto;
-  min-width: 88px;
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 12px 6px;
-  border-radius: 8px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px;
+  margin: 0 -8px;
+  border-radius: 6px;
   text-decoration: none;
   transition: background-color 0.15s ease;
 }
 
-.home-flow-node:hover {
+.module-item:hover {
   background: var(--color-bg-subtle);
 }
 
-.home-flow-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  background: var(--color-bg-subtle);
-  color: var(--color-primary, #2d7ff9);
+.module-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 
-.home-flow-label {
-  font-size: var(--font-size-xs, 12px);
+.module-item-name {
+  font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--color-text-primary);
-  white-space: nowrap;
 }
 
-.home-flow-arrow {
-  align-self: center;
+.module-item-desc {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.module-item-go {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--color-text-quaternary);
+  transition: color 0.15s ease;
+}
+
+.module-item:hover .module-item-go {
+  color: var(--color-primary, #2d7ff9);
 }
 
 /* ── 意见反馈卡（D-527） ── */
@@ -752,23 +715,11 @@
 }
 
 /* ── 主题适配 ── */
-:root[data-theme="dark"] .home-quick-item:hover {
+:root[data-theme="dark"] .module-item:hover {
   background: rgba(255, 255, 255, 0.06);
 }
 
-:root[data-theme="dark"] .home-quick-icon {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-:root[data-theme="dark"] .home-flow-node:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-:root[data-theme="dark"] .home-flow-icon {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-:root[data-theme="dark"] .flow-guide-group-title {
+:root[data-theme="dark"] .module-group-title {
   border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -778,14 +729,6 @@
 
 :root[data-theme="dark"] .home-side-entry-icon {
   background: rgba(255, 255, 255, 0.06);
-}
-
-:root[data-theme="white"] .home-quick-item:hover {
-  background: var(--color-slate-50);
-}
-
-:root[data-theme="white"] .home-quick-icon {
-  background: var(--color-slate-100);
 }
 
 /* ── 窄屏：服务栏落到主栏下方，横向铺开 ── */

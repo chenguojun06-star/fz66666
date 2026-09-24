@@ -1,7 +1,21 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-24（新增 D-527 首页二次优化——去重、业务全流程条、右栏意见反馈接入现有 UserFeedback 体系）
+> 最后更新：2026-09-24（新增 D-528 首页功能导航——menuConfig 驱动全模块分组目录，替代图标宫格与流程条）
+
+---
+
+## D-528：首页「功能导航」定版——menuConfig 驱动全模块分组目录（2026-09-24）
+
+**用户拍板**：更喜欢「流程引导」的分组+名称+一句话+跳页形态，要求把「常用功能」宫格换成这种形态，且**覆盖全系统所有模块**（红线依旧：不放不存在的东西）。
+
+**实现**：
+- 新建 `ModuleDirectory.tsx`：**数据源 = routeConfig.menuConfig（与左侧菜单完全同源）**，菜单有什么首页就有什么，新模块自动出现；可见性过滤与 SideMenu 同规则（hasPermissionForPath + 工厂账号 FACTORY_VISIBLE_SECTIONS/PATHS + 租户模块开关 + superAdminOnly）。
+- 分区布局：CSS 多列瀑布（`columns: 4 240px` + `break-inside: avoid`），组头=分区图标+标题，条目=名称+一句话说明+右箭头，整行可点；说明文案维护在 DESC_BY_PATH（按 path 键），没写说明的模块只显示名称不编造。
+- **宫格、业务全流程条、快捷入口机制全部退役删除**（HomeQuickGrid/FlowGuideCard/QuickEntrySettingsModal/useQuickEntries/quickEntryConfig 5 文件），工具条只剩搜索+刷新数据。
+- 首页定版结构：功能导航（可收起记忆）→ 经营数据（可折叠）｜右栏：产品更新→意见反馈→新手入门。
+
+**验证**：menuConfig 驱动的效果实测——「组合商品」等我未手写说明的模块自动带出（仅名称无说明），证明同源机制生效。tsc 绿。
 
 ---
 
