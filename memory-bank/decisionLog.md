@@ -1,7 +1,67 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-24（新增 D-540 微信云托管残留清理——修正会误导后续工作的过时知识；D-539 Embedding 限流熔断）
+> 最后更新：2026-09-24（新增 D-541 AI任务日志保留期清理 + 连带修两个 bug；D-540 微信云残留清理）
+
+---
+
+## D-541：t_ai_job_run_log 保留期清理（90 天 / 失败记录 365 天）+ 连带修两个 bug（2026-09-24）
+
+**用户拍板**：保留 **90 天**；并明确「**不废弃**，后续可能需要升级」→ 不删表、不删接口、不删失败记录。
+
+**这张表是什么**：`JobRunObservabilityAspect` 用 `@Around("@annotation(Scheduled)")`
+切住全项目所有 `@Scheduled` 方法（约 80~100 个），每次任务跑完自动写一行
+（任务名/耗时/状态/租户数/结果摘要/错误信息）。设计意图"运营排障与健康监控"。
+
+**实测现状**：221.9 万行 / 329MB（数据 221MB + 索引 108MB），全库最大表，跨 162 天，
+当前仍以 ~4,450 行/天增长。**只写不读** —— 唯一读它的接口限超管，前端零调用。
+
+**两级保留（关键决策）**
+| 类别 | 保留 | 依据 |
+|------|------|------|
+| 成功/跳过流水 | **90 天** | 占 99.98%，无排障价值，占绝大部分空间 |
+| **失败记录** | **365 天** | 全表只有 340 条，**且这 340 条全在 90 天以前** —— 一刀切会清空失败记录，而那是本表唯一的排障价值。340 条体量极小，多留一年几乎不占空间 |
+
+**为什么按时间删、不按租户循环**（与审计日志不同）：实测该表 **tenant_id 全为 NULL**
+（写入侧只在 tenantId != null 时 set，切面一直传 null），且记的是**系统级任务**、非租户业务数据。
+按租户循环会一条都删不掉。
+
+### 连带修的两个 bug
+
+**bug 1：「保留天数可配」是双重失效，一直写死 90 天**
+`AuditLogCleanupJob` 读参数的 SQL 是
+`SELECT config_value FROM t_param_config WHERE config_key = ? AND delete_flag = 0`，
+但该表真实列名是 **`param_key` / `param_value`**，且**没有 delete_flag 列** →
+每次抛 "Unknown column" 被 catch 成 debug 吞掉 → 静默回落默认值。
+而且 `system.auditLog.retentionDays` 这个键**在库里也不存在**
+（实测 t_param_config 只有 system.name / system.version / upload.path 三行）。
+→ 已修：抽出 `readRetentionDays(paramKey, defaultDays)` 用真实列名，
+并由 `V202709240003` 补齐三个参数行（`system.auditLog.retentionDays` 90、
+`system.jobRunLog.retentionDays` 90、`system.jobRunLog.failedRetentionDays` 365）。
+
+**bug 2：表上缺少能服务「按时间范围」查询的索引**
+排查时发现按 `start_time` 过滤的 EXPLAIN 是 `type=index, rows=2180211` —— **全索引扫描**。
+根因：`V202706260006__cleanup_redundant_indexes_v2.sql` 以「idx_start_time 与 idx_job_start
+部分重叠」为由把单列索引删了，**这个判断是错的** ——
+留下的 `idx_ajrl_job_time (job_name, start_time)` 以 job_name 打头，
+按最左前缀原则 `WHERE start_time < X` **用不上它**，只能退化成全扫。
+后果：本清理若按那种状态跑会「越删越慢」（183 万条要 3,660 批，每批全扫一遍）。
+→ 已修：`V202709240004` 补回 `idx_start_time`（幂等，ONLINE DDL 不阻塞读写）。
+
+**实现**：`AuditLogCleanupJob` 复用既有分批删除范式（每批 500、`LIMIT` + 循环防锁表），
+抽出 `batchDelete(sql, days)` 与 `DELETE_BATCH_SIZE` 常量（避免 SQL 里的 LIMIT 与批大小各写一份而失步）。
+
+**验证**：新增 `AuditLogCleanupJobTest`（8 例全绿），含一条**专门的回归断言**：
+读参数的 SQL 必须含 `param_key`/`param_value`、**不得再出现 config_key/config_value/delete_flag**；
+另覆盖参数缺失/非法/非正数/查库异常一律回落默认值（防止脏配置把保留期变 0 而删光）、
+分批循环的满批继续与不满批停止。
+
+**已知副作用**：首次清理会删约 183 万行（占 83%），InnoDB **不会把空间还给操作系统**
+（文件仍是 ~221MB），但腾出的空间会被后续插入复用，因此不必急着 `OPTIMIZE TABLE`
+（那是重建整表的重量级操作，需要单独安排维护窗口）。
+
+**未做**：`GET /api/intelligence/jobs/recent` 的 tenant_id 过滤 bug（表里全 NULL → 接口永远返回空）。
+用户要求不废弃该接口，但修它属于功能变更，留待后续单独评估。
 
 ---
 
