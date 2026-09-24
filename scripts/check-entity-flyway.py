@@ -232,23 +232,34 @@ def get_added_fields(since_sha: Optional[str] = None) -> List[Tuple[str, str, st
     results: List[Tuple[str, str, str]] = []
     current_file = ""
     current_table = None
-    current_hunk_added_lines = []
+    # 注解连续性记忆：diff 里 @TableField(exist=false)/@Transient 与字段行之间
+    # 可能隔着 Javadoc/空行/行注释，必须记住"上一条注解是虚拟字段"才能正确跳过
+    pending_annotation = False
+    pending_virtual = False
 
     for line in diff_text.splitlines():
         if line.startswith("+++ b/"):
             current_file = line[6:]
             current_table = None
-            current_hunk_added_lines = []
+            pending_annotation = False
+            pending_virtual = False
             continue
         if not line.startswith("+") or line.startswith("+++"):
             continue
 
         added_line = line[1:]
+        stripped = added_line.strip()
 
         if "@TableName" in added_line:
             m = re.search(r'@TableName\s*\(\s*["\']([a-z][a-z0-9_]*)["\']', added_line, re.IGNORECASE)
             if m:
                 current_table = m.group(1).lower()
+
+        if "@TableField" in stripped or "@Transient" in stripped:
+            pending_annotation = True
+            pending_virtual = bool(re.search(r"exist\s*=\s*false", stripped, re.IGNORECASE)) or "@Transient" in stripped
+            if pending_virtual:
+                continue
 
         # 跳过虚拟字段
         if re.search(r"exist\s*=\s*false", added_line, re.IGNORECASE):
@@ -262,9 +273,21 @@ def get_added_fields(since_sha: Optional[str] = None) -> List[Tuple[str, str, st
             java_field = fm.group(2)
             if java_field == "serialVersionUID" or java_field.startswith("log"):
                 continue
+            if pending_annotation and pending_virtual:
+                # exist=false/@Transient 所修饰的字段：不入库，不要求 Flyway
+                pending_annotation = False
+                pending_virtual = False
+                continue
+            pending_annotation = False
+            pending_virtual = False
             col = camel_to_snake(java_field)
             if col not in SKIP_COLUMNS:
                 results.append((current_file, current_table, col))
+        else:
+            # 空行/Javadoc/行注释不打断注解连续性；其余真实代码行打断
+            if stripped and not stripped.startswith(("@", "/", "*")):
+                pending_annotation = False
+                pending_virtual = False
 
     return results
 
