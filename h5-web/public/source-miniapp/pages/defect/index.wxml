@@ -1,7 +1,7 @@
 <view class="container">
   <!-- 吸顶区：搜索栏 + 扫码 + 筛选器（统一使用通用组件 sticky-search-bar） -->
   <sticky-search-bar
-    placeholder="搜索订单号/款号/工厂"
+    placeholder="{{t.searchPlaceholder}}"
     value="{{keyword}}"
     show-scan="{{true}}"
     show-filter="{{true}}"
@@ -13,19 +13,19 @@
     <view slot="filter" class="filter-row-wrap">
       <scroll-view scroll-x class="filter-row" enhanced enable-flex show-scrollbar="{{false}}">
         <view class="filter-pill {{activeFilter === 'all' ? 'filter-pill-active' : ''}}" data-filter="all" bindtap="onFilter">
-          <text>全部</text><text class="filter-count">({{filterCounts.all}})</text>
+          <text>{{t.all}}</text><text class="filter-count">({{filterCounts.all}})</text>
         </view>
         <view class="filter-pill {{activeFilter === 'pending' ? 'filter-pill-active' : ''}}" data-filter="pending" bindtap="onFilter">
-          <text>待检</text><text class="filter-count">({{filterCounts.pending}})</text>
+          <text>{{t.statusPending}}</text><text class="filter-count">({{filterCounts.pending}})</text>
         </view>
         <view class="filter-pill filter-pill-success {{activeFilter === 'qualified' ? 'filter-pill-active' : ''}}" data-filter="qualified" bindtap="onFilter">
-          <text>合格</text><text class="filter-count">({{filterCounts.qualified}})</text>
+          <text>{{t.statusPass}}</text><text class="filter-count">({{filterCounts.qualified}})</text>
         </view>
         <view class="filter-pill filter-pill-error {{activeFilter === 'unqualified' ? 'filter-pill-active' : ''}}" data-filter="unqualified" bindtap="onFilter">
-          <text>不合格</text><text class="filter-count">({{filterCounts.unqualified}})</text>
+          <text>{{t.statusFail}}</text><text class="filter-count">({{filterCounts.unqualified}})</text>
         </view>
         <view class="filter-pill filter-pill-warning {{activeFilter === 'repair' ? 'filter-pill-active' : ''}}" data-filter="repair" bindtap="onFilter">
-          <text>返修</text><text class="filter-count">({{filterCounts.repair}})</text>
+          <text>{{t.statusRepair}}</text><text class="filter-count">({{filterCounts.repair}})</text>
         </view>
       </scroll-view>
     </view>
@@ -38,35 +38,35 @@
         <view class="stats-arrow-up"></view>
         <text class="stats-value stats-success">{{stats.passRate}}</text>
       </view>
-      <text class="stats-label">合格率</text>
+      <text class="stats-label">{{t.passRate}}</text>
     </view>
     <view class="stats-item stats-item--bordered">
       <view class="stats-value-row">
         <view class="stats-arrow-down"></view>
         <text class="stats-value stats-error">{{stats.unqualifiedCount}}</text>
       </view>
-      <text class="stats-label">不合格</text>
+      <text class="stats-label">{{t.statusFail}}</text>
     </view>
     <view class="stats-item">
       <view class="stats-value-row">
         <view class="stats-minus-circle"></view>
         <text class="stats-value stats-warning">{{stats.repairCount}}</text>
       </view>
-      <text class="stats-label">返修中</text>
+      <text class="stats-label">{{t.repairing}}</text>
     </view>
   </view>
 
   <!-- 加载态 -->
   <view wx:if="{{loading && list.length === 0}}" class="loading-state">
     <view class="loading-spinner"></view>
-    <text class="loading-text">加载中...</text>
+    <text class="loading-text">{{t.loading}}</text>
   </view>
 
   <!-- 空状态 -->
   <view wx:elif="{{list.length === 0}}" class="empty-state">
     <view class="empty-icon"><view class="line-icon line-icon--xl icon-clipboard"></view></view>
-    <text class="empty-text">暂无质检记录</text>
-    <text class="empty-hint">扫码质检后记录会出现在这里</text>
+    <text class="empty-text">{{t.noRecords}}</text>
+    <text class="empty-hint">{{t.noRecordsHint}}</text>
   </view>
 
   <!-- 质检记录列表 -->
@@ -118,9 +118,9 @@
                 <text class="card-operator">{{item.operatorName}}</text>
               </view>
               <text class="card-time">{{item.displayTime || ''}}</text>
-              <text class="card-qty" wx:if="{{item.unqualifiedQuantity}}">{{item.unqualifiedQuantity}}/{{item.quantity}}件</text>
-              <text class="card-qty" wx:elif="{{item.quantity}}">{{item.quantity}}件</text>
-              <text class="card-qty" wx:else>待检</text>
+              <text class="card-qty" wx:if="{{item.unqualifiedQuantity}}">{{item.unqualifiedQuantity}}/{{item.quantity}}{{t.pieceUnit}}</text>
+              <text class="card-qty" wx:elif="{{item.quantity}}">{{item.quantity}}{{t.pieceUnit}}</text>
+              <text class="card-qty" wx:else>{{t.statusPending}}</text>
             </view>
           </view>
         </view>
@@ -129,20 +129,20 @@
       <!-- 操作按钮（返修/报废等）— 订单终态时不显示 -->
       <view class="card-actions" wx:if="{{!item.orderTerminal && (item.repairStatus === 'pending' || item.repairStatus === 'pending_repair' || item.repairStatus === 'repairing' || item.repairStatus === 'repair_done')}}" catchtap="">
         <view wx:if="{{item.repairStatus === 'pending' || item.repairStatus === 'pending_repair'}}" class="action-row">
-          <view class="action-btn action-btn-primary" data-index="{{index}}" catchtap="onStartRepair">开始返修</view>
-          <view class="action-btn action-btn-danger" data-index="{{index}}" catchtap="onScrap">报废</view>
+          <view class="action-btn action-btn-primary" data-index="{{index}}" catchtap="onStartRepair">{{t.repairStartBtn}}</view>
+          <view class="action-btn action-btn-danger" data-index="{{index}}" catchtap="onScrap">{{t.scrapBtn}}</view>
         </view>
         <view wx:elif="{{item.repairStatus === 'repairing'}}" class="action-row">
-          <view class="action-btn action-btn-primary" data-index="{{index}}" catchtap="onCompleteRepair">返修完成</view>
+          <view class="action-btn action-btn-primary" data-index="{{index}}" catchtap="onCompleteRepair">{{t.repairDoneBtn}}</view>
         </view>
         <view wx:elif="{{item.repairStatus === 'repair_done'}}" class="action-row">
-          <view class="action-btn action-btn-primary" data-index="{{index}}" catchtap="onGoQuality">去复检</view>
+          <view class="action-btn action-btn-primary" data-index="{{index}}" catchtap="onGoQuality">{{t.goRecheck}}</view>
         </view>
       </view>
       <!-- 订单已关单/已完成时显示提示 -->
       <view class="card-actions" wx:elif="{{item.orderTerminal}}" catchtap="">
         <view class="action-row">
-          <view class="action-btn action-btn-disabled">订单已关闭</view>
+          <view class="action-btn action-btn-disabled">{{t.orderClosed}}</view>
         </view>
       </view>
     </view>
@@ -151,7 +151,7 @@
   <!-- 加载更多 -->
   <view wx:if="{{list.length > 0}}" class="load-more">
     <view class="load-more-btn" bindtap="onLoadMore">
-      {{loadingMore ? '加载中...' : (hasMore ? '加载更多' : '没有更多了')}}
+      {{loadingMore ? t.loading : (hasMore ? t.loadMore : t.noMore)}}
     </view>
   </view>
 

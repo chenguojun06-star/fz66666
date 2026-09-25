@@ -5,6 +5,10 @@ const { eventBus, Events } = require('../../utils/eventBus');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
 const qualityHelper = require('../../utils/quality-helper');
 const displayHelper = require('../../utils/displayHelper');
+const i18n = require('../../utils/i18n/index');
+
+/** 本页 i18n 命名空间前缀 */
+const NS = 'mp.defect.';
 
 const getQualityCategory = qualityHelper.getQualityCategory;
 const CATEGORY_TEXT = qualityHelper.CATEGORY_TEXT;
@@ -70,6 +74,7 @@ Page({
     }
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
+    this.applyLanguage(i18n.getLanguage());
     if (this._dataLoaded && !this._needsRefresh) {
       this._bindWsEvents();
       return;
@@ -83,6 +88,48 @@ Page({
 
   onHide: function () {
     this._unbindWsEvents();
+  },
+
+  /**
+   * 写入本页静态文案表（wxml 用 {{t.xxx}}），并按需重载已渲染的列表——
+   * onShow 在 _dataLoaded 时会直接 return，切语言后必须在这里主动刷，
+   * 否则卡片上的状态/生产方/交期文案留在旧语言。
+   */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        all: i18n.t('common.all', lang),
+        statusPending: i18n.t(NS + 'statusPending', lang),
+        statusPass: i18n.t(NS + 'statusPass', lang),
+        statusFail: i18n.t(NS + 'statusFail', lang),
+        statusRepair: i18n.t(NS + 'statusRepair', lang),
+        passRate: i18n.t(NS + 'passRate', lang),
+        repairing: i18n.t(NS + 'repairing', lang),
+        loading: i18n.t('common.loading', lang),
+        loadMore: i18n.t('common.loadMore', lang),
+        noMore: i18n.t('common.noMore', lang),
+        noRecords: i18n.t(NS + 'noRecords', lang),
+        noRecordsHint: i18n.t(NS + 'noRecordsHint', lang),
+        repairStartBtn: i18n.t(NS + 'repairStart', lang),
+        scrapBtn: i18n.t(NS + 'scrapBtn', lang),
+        repairDoneBtn: i18n.t(NS + 'repairDoneBtn', lang),
+        goRecheck: i18n.t(NS + 'goRecheck', lang),
+        orderClosed: i18n.t(NS + 'orderClosed', lang),
+        searchPlaceholder: i18n.t(NS + 'searchPlaceholder', lang),
+        pieceUnit: i18n.t('common.piece', lang),
+      },
+    });
+    // 底栏四语言（质检 tab 自己也要保证进入时底栏是对的）
+    i18n.applyTabBar(lang);
+    // 导航标题复用 tabbar.quality
+    wx.setNavigationBarTitle({ title: i18n.t('tabbar.quality', lang) });
+    // 已渲染过的列表/统计按新语言重算
+    if (this._dataLoaded) {
+      this.loadQualityList(true);
+      this.loadStats();
+    }
   },
 
   onUnload: function () {
@@ -135,7 +182,7 @@ Page({
     scanInPage((parsed, raw) => {
       if (!parsed) return; // 用户取消
       if (!parsed.success || !parsed.data) {
-        toast.error('无法识别：' + (raw || ''));
+        toast.error(i18n.tf(NS + 'scanUnrecognized', { raw: raw || '' }, this._lang));
         return;
       }
       const { orderNo, styleNo } = parsed.data;
@@ -151,7 +198,7 @@ Page({
           currentTarget: { dataset: { index: matchedIdx } },
         });
       } else {
-        toast.error('未匹配到瑕疵记录');
+        toast.error(i18n.t(NS + 'noMatchRecord', this._lang));
       }
     });
   },
@@ -164,7 +211,7 @@ Page({
     var orderId = item.orderId || '';
     var warehousingNo = item.warehousingNo || '';
     if (!orderId && !warehousingNo) {
-      toast.info('该记录缺少订单信息');
+      toast.info(i18n.t(NS + 'missingOrderInfo', this._lang));
       return;
     }
     var params = [];
@@ -326,7 +373,7 @@ Page({
     item.defectCategoryText = DEFECT_CATEGORY_MAP[item.defectCategory] || '';
     item.repairStatusText = REPAIR_STATUS_MAP[item.repairStatus] || '';
     item.qualityCategory = getQualityCategory(item);
-    item.qualityCategoryText = CATEGORY_TEXT[item.qualityCategory] || '待检';
+    item.qualityCategoryText = CATEGORY_TEXT[item.qualityCategory] || i18n.t(NS + 'statusPending', this._lang);
     item.qualityTagClass = CATEGORY_TAG_CLASS[item.qualityCategory] || 'tag-default';
 
     // 订单终态判断：已关单/已完成/已取消/已报废/已归档 → 不再显示返修按钮
@@ -373,7 +420,7 @@ Page({
     // 生产方显示（内部/外部标签）
     if (item.factoryName) {
       item.factoryText = item.factoryName;
-      item.factoryTypeText = item.factoryType === 'INTERNAL' ? '内部' : (item.factoryType === 'EXTERNAL' ? '外部' : '');
+      item.factoryTypeText = item.factoryType === 'INTERNAL' ? i18n.t(NS + 'factoryInternal', this._lang) : (item.factoryType === 'EXTERNAL' ? i18n.t(NS + 'factoryExternal', this._lang) : '');
     } else {
       item.factoryText = '';
       item.factoryTypeText = '';
@@ -425,9 +472,9 @@ Page({
     if (s === 'closed' || s === 'archived') return { text: displayHelper.displayStatusText(s), cls: 'delivery-muted' };
     if (s === 'completed') return { text: displayHelper.displayStatusText(s), cls: 'delivery-success' };
     if (s === 'cancelled' || s === 'canceled') return { text: displayHelper.displayStatusText(s), cls: 'delivery-muted' };
-    if (actualEndDate) return { text: '已关单', cls: 'delivery-muted' };
+    if (actualEndDate) return { text: i18n.t(NS + 'closed', this._lang), cls: 'delivery-muted' };
     var p = Number(productionProgress);
-    if (!isNaN(p) && p >= 100) return { text: '已完成', cls: 'delivery-success' };
+    if (!isNaN(p) && p >= 100) return { text: i18n.t(NS + 'completed', this._lang), cls: 'delivery-success' };
 
     var dateStr = String(endDate).replace(/-/g, '/');
     var deadline = new Date(dateStr);
@@ -439,11 +486,11 @@ Page({
     dStart.setHours(0, 0, 0, 0);
     var diff = Math.ceil((dStart.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (diff < 0) return { text: '逾' + Math.abs(diff) + '天', cls: 'delivery-danger' };
-    if (diff === 0) return { text: '今天', cls: 'delivery-danger' };
-    if (diff <= 3) return { text: diff + '天', cls: 'delivery-danger' };
-    if (diff <= 7) return { text: diff + '天', cls: 'delivery-warning' };
-    return { text: diff + '天', cls: 'delivery-success' };
+    if (diff < 0) return { text: i18n.tf(NS + 'overdueDays', { days: Math.abs(diff) }, this._lang), cls: 'delivery-danger' };
+    if (diff === 0) return { text: i18n.t(NS + 'today', this._lang), cls: 'delivery-danger' };
+    if (diff <= 3) return { text: i18n.tf(NS + 'days', { days: diff }, this._lang), cls: 'delivery-danger' };
+    if (diff <= 7) return { text: i18n.tf(NS + 'days', { days: diff }, this._lang), cls: 'delivery-warning' };
+    return { text: i18n.tf(NS + 'days', { days: diff }, this._lang), cls: 'delivery-success' };
   },
 
   _formatTime: function (t) {
@@ -462,30 +509,31 @@ Page({
 
   onStartRepair: function (e) {
     var self = this;
+    var lang = this._lang;
     var index = e.currentTarget.dataset.index;
     var item = self.data.list[index];
     if (!item || !item.bundleId) return;
 
     wx.showModal({
-      title: '开始返修',
-      content: '确认开始返修菲号 ' + (item.bundleNo || '') + '？',
-      confirmText: '确认',
-      cancelText: '取消',
+      title: i18n.t(NS + 'repairStart', lang),
+      content: i18n.tf(NS + 'repairStartConfirm', { code: item.bundleNo || '' }, lang),
+      confirmText: i18n.t('common.confirm', lang),
+      cancelText: i18n.t('common.cancel', lang),
       success: function (res) {
         if (!res.confirm) return;
         var userInfo = getUserInfo() || {};
         api.production.startBundleRepair(item.bundleId, userInfo.name || userInfo.username || '')
           .then(function () {
-            toast.success('已开始返修');
+            toast.success(i18n.t(NS + 'repairStarted', lang));
             self.loadQualityList(true);
             self.loadStats();
           })
           .catch(function (err) {
             wx.showModal({
-              title: '操作失败',
-              content: err.message || err.errMsg || '请稍后重试',
+              title: i18n.t('common.operationFailed', lang),
+              content: err.message || err.errMsg || i18n.t(NS + 'retryLater', lang),
               showCancel: false,
-              confirmText: '知道了',
+              confirmText: i18n.t(NS + 'gotIt', lang),
             });
           });
       },
@@ -494,29 +542,30 @@ Page({
 
   onCompleteRepair: function (e) {
     var self = this;
+    var lang = this._lang;
     var index = e.currentTarget.dataset.index;
     var item = self.data.list[index];
     if (!item || !item.bundleId) return;
 
     wx.showModal({
-      title: '返修完成',
-      content: '确认菲号 ' + (item.bundleNo || '') + ' 返修完成？',
-      confirmText: '确认完成',
-      cancelText: '取消',
+      title: i18n.t(NS + 'repairDoneBtn', lang),
+      content: i18n.tf(NS + 'repairDoneConfirm', { code: item.bundleNo || '' }, lang),
+      confirmText: i18n.t(NS + 'confirmComplete', lang),
+      cancelText: i18n.t('common.cancel', lang),
       success: function (res) {
         if (!res.confirm) return;
         api.production.completeBundleRepair(item.bundleId)
           .then(function () {
-            toast.success('返修已完成');
+            toast.success(i18n.t(NS + 'repairDone', lang));
             self.loadQualityList(true);
             self.loadStats();
           })
           .catch(function (err) {
             wx.showModal({
-              title: '操作失败',
-              content: err.message || err.errMsg || '请稍后重试',
+              title: i18n.t('common.operationFailed', lang),
+              content: err.message || err.errMsg || i18n.t(NS + 'retryLater', lang),
               showCancel: false,
-              confirmText: '知道了',
+              confirmText: i18n.t(NS + 'gotIt', lang),
             });
           });
       },
@@ -525,30 +574,31 @@ Page({
 
   onScrap: function (e) {
     var self = this;
+    var lang = this._lang;
     var index = e.currentTarget.dataset.index;
     var item = self.data.list[index];
     if (!item || !item.bundleId) return;
 
     wx.showModal({
-      title: '报废确认',
-      content: '确认报废菲号 ' + (item.bundleNo || '') + '？此操作不可撤销。',
-      confirmText: '确认报废',
+      title: i18n.t(NS + 'scrapTitle', lang),
+      content: i18n.tf(NS + 'scrapConfirm', { code: item.bundleNo || '' }, lang),
+      confirmText: i18n.t(NS + 'scrapConfirmBtn', lang),
       confirmColor: '#ff3b30',
-      cancelText: '取消',
+      cancelText: i18n.t('common.cancel', lang),
       success: function (res) {
         if (!res.confirm) return;
         api.production.scrapBundle(item.bundleId)
           .then(function () {
-            toast.success('已报废');
+            toast.success(i18n.t(NS + 'scrapped', lang));
             self.loadQualityList(true);
             self.loadStats();
           })
           .catch(function (err) {
             wx.showModal({
-              title: '操作失败',
-              content: err.message || err.errMsg || '请稍后重试',
+              title: i18n.t('common.operationFailed', lang),
+              content: err.message || err.errMsg || i18n.t(NS + 'retryLater', lang),
               showCancel: false,
-              confirmText: '知道了',
+              confirmText: i18n.t(NS + 'gotIt', lang),
             });
           });
       },

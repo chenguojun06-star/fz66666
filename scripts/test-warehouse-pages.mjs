@@ -2421,6 +2421,8 @@ const MORE_APPS_JS = 'pages/more-apps/index.js';
 const MORE_APPS_WXML = 'pages/more-apps/index.wxml';
 const ADMIN_JS = 'pages/admin/index.js';
 const ADMIN_WXML = 'pages/admin/index.wxml';
+const DEFECT_JS = 'pages/defect/index.js';
+const DEFECT_WXML = 'pages/defect/index.wxml';
 
 /** 把 menuRows / filteredApps 拍平成 [分组名, 应用名...] */
 function flattenMenuNames(rows) {
@@ -2658,6 +2660,65 @@ function testI18nAdmin() {
   ok('开审批/邀请入口后仍是英文', enAll.includes('User Approval') && enAll.includes('Invite Staff'), enAll.join('|'));
 }
 
+/** 质检 tab 页（D-554）—— 筛选chips/统计/卡片文案/交期倒计时/返修报废弹窗 */
+async function testI18nDefect() {
+  testPageI18n(DEFECT_JS, DEFECT_WXML, '质检页');
+
+  const { page: zhP, wx: zhWx } = loadPage(DEFECT_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(DEFECT_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  // 筛选 chips + 统计标签
+  eq('zh 筛选chips', [zhP.data.t.all, zhP.data.t.statusPending, zhP.data.t.statusPass, zhP.data.t.statusFail, zhP.data.t.statusRepair].join('|'),
+    '全部|待检|合格|不合格|返修');
+  eq('en 筛选chips', [enP.data.t.all, enP.data.t.statusPending, enP.data.t.statusPass, enP.data.t.statusFail, enP.data.t.statusRepair].join('|'),
+    'All|Pending|Pass|Fail|Repair');
+  eq('en 合格率', enP.data.t.passRate, 'Pass Rate');
+  ok('en 搜索占位无中文', !CJK_RE.test(String(enP.data.t.searchPlaceholder)), enP.data.t.searchPlaceholder);
+
+  // 卡片数据处理文案：qualityCategory 会走 qualityHelper 静态映射（utils 批次收编），
+  // 这里只测页面级兜底与生产方标签——factoryTypeText 渲染前提是 factoryText 非空
+  const proc2 = enP._processQualityItem({ qualityCategory: '', factoryName: 'Factory A', factoryType: 'INTERNAL' });
+  eq('en 生产方内部', proc2.factoryTypeText, 'In-house');
+  const proc3 = enP._processQualityItem({ qualityCategory: '', factoryName: 'Factory A', factoryType: 'EXTERNAL' });
+  eq('en 生产方外部', proc3.factoryTypeText, 'Outsourced');
+
+  // 交期倒计时三态（相对今天构造日期，避开共享 displayHelper 的静态状态分支）
+  const dstr = (offset) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    const p2 = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+  };
+  eq('en 逾期', enP._calcDeliveryDisplay(dstr(-3), 'in_production').text, '3d overdue');
+  eq('en 今天', enP._calcDeliveryDisplay(dstr(0), 'in_production').text, 'Today');
+  eq('en 5天后', enP._calcDeliveryDisplay(dstr(5), 'in_production').text, '5d');
+  eq('zh 逾期', zhP._calcDeliveryDisplay(dstr(-3), 'in_production').text, '逾3天');
+
+  // 开始返修：弹窗正文带菲号 + 确认后 toast
+  // （stub 掉刷新链路，否则 api 缺口把 catch 的 showModal 顶成 lastCall）
+  const rpApi = makeApi();
+  rpApi.production.startBundleRepair = async () => ({});
+  const rp = loadPage(DEFECT_JS, rpApi);
+  rp.page.applyLanguage('en-US');
+  rp.page.loadQualityList = () => Promise.resolve();
+  rp.page.loadStats = () => {};
+  rp.page.data.list = [{ bundleId: 'B1', bundleNo: 'BJ26-1', repairStatus: 'pending' }];
+  rp.page.onStartRepair({ currentTarget: { dataset: { index: 0 } } });
+  await new Promise(r => setTimeout(r, 0));
+  const modal = lastCall(rp.wx, 'showModal');
+  eq('en 返修弹窗正文带菲号', modal && modal.content, 'Start repair for bundle BJ26-1?');
+  const toast = lastCall(rp.wx, 'showToast');
+  eq('en 返修成功 toast', toast && toast.title, 'Repair started');
+
+  // 导航标题复用 tabbar.quality + 底栏
+  eq('质检页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Quality');
+  eq('质检页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '质检');
+  const enTabs = enWx.calls.filter(c => c[0] === 'setTabBarItem').map(c => c[1]);
+  eq('质检页底栏第 3 项 Quality', (enTabs[2] || {}).text, 'Quality');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -2699,6 +2760,7 @@ try {
   await testI18nHomeActions();
   testI18nMoreApps();
   testI18nAdmin();
+  await testI18nDefect();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);
