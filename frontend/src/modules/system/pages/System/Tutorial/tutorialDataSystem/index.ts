@@ -5,6 +5,7 @@ import { tutorialsProduction } from './production';
 import { tutorialsWarehouse } from './warehouse';
 import { tutorialsFinance } from './finance';
 import { tutorialsSystem as systemTutorials } from './system';
+import { tutorialsIntelligence } from './intelligence';
 
 export const tutorialsSystem: Tutorial[] = [
   ...tutorialsGettingStarted,
@@ -12,4 +13,6 @@ export const tutorialsSystem: Tutorial[] = [
   ...tutorialsWarehouse,
   ...tutorialsFinance,
   ...systemTutorials,
+  // D-513：新增智能运营（AI 巡检）与组合商品教程
+  ...tutorialsIntelligence,
 ];

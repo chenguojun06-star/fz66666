@@ -22,7 +22,6 @@ const FlowGuideCard: React.FC = () => {
     hasPermissionForPath,
     isFactoryAccount,
     factoryVisiblePaths,
-    isSuperAdmin,
     isTenantModuleEnabled,
   } = useLayoutAuth();
 

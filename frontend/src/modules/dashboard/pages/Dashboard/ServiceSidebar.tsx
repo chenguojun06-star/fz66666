@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { App, Button, Input, Select } from 'antd';
+import React, { useCallback, useEffect, useState } from 'react';
+import { App, Button, Input, Modal, Radio, Select, Tooltip } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import {
   BookOutlined,
   NotificationOutlined,
@@ -15,6 +16,8 @@ import { paths } from '@/routeConfig';
 import { useLayoutAuth } from '@/components/Layout/useLayoutAuth';
 import { useUser } from '@/utils/AuthContext';
 import feedbackService from '@/services/feedbackService';
+import { announcementApi, PlatformAnnouncement } from '@/services/system/announcementApi';
+import { isSupervisorOrAboveUser } from '@/utils/AuthContext.helpers';
 import { HOME_CHANGELOG } from './homeChangelog';
 
 /**
@@ -40,6 +43,13 @@ const FEEDBACK_CATEGORY_OPTIONS = [
   { value: 'OTHER', label: '其他' },
 ];
 
+/** 公告类型文案（与后端 type: info/warning/important 对应） */
+const ANNOUNCEMENT_TYPE_TEXT: Record<string, string> = {
+  info: '通知',
+  warning: '提醒',
+  important: '重要',
+};
+
 const ServiceSidebar: React.FC = () => {
   const { message } = App.useApp();
   const { user } = useUser();
@@ -49,6 +59,58 @@ const ServiceSidebar: React.FC = () => {
   const [content, setContent] = useState('');
   const [contact, setContact] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  /*
+   * D-513 平台更新通知（常驻小模块）
+   * 原「产品更新」是 homeChangelog.ts 的纯前端静态配置，需要人工加条目且容易忘记同步；
+   * 现接系统公告链路（t_platform_announcement）：
+   *   - 展示：未读公告优先，无公告时回退到静态产品更新列表（保证不空）
+   *   - 发布：管理员可在卡片右上角直接发布，发布后全系统顶栏 AnnouncementBanner 同步可见
+   * 说明：顶栏常驻通知栏（AnnouncementBanner）早已存在，之前不显示是因为
+   *       公告表为空 + 创建接口权限写错（hasRole('ADMIN') 与本项目 SUPER_ADMIN/TENANT_OWNER
+   *       角色体系不匹配）导致没人能发。后端权限已一并修正。
+   */
+  const [announcements, setAnnouncements] = useState<PlatformAnnouncement[]>([]);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [pubTitle, setPubTitle] = useState('');
+  const [pubContent, setPubContent] = useState('');
+  const [pubType, setPubType] = useState<'info' | 'warning' | 'important'>('info');
+
+  const canPublish = isSupervisorOrAboveUser(user);
+
+  const loadAnnouncements = useCallback(async () => {
+    try {
+      const res = await announcementApi.getActive();
+      const data = (res as any)?.data;
+      if (Array.isArray(data)) setAnnouncements(data);
+    } catch { /* 拉取失败时保持静态更新列表，不影响页面 */ }
+  }, []);
+
+  useEffect(() => { void loadAnnouncements(); }, [loadAnnouncements]);
+
+  const submitAnnouncement = async () => {
+    if (!pubTitle.trim()) {
+      message.warning('请填写通知标题');
+      return;
+    }
+    setPublishing(true);
+    try {
+      await announcementApi.create({
+        title: pubTitle.trim(),
+        content: pubContent.trim() || undefined,
+        type: pubType,
+      });
+      message.success('已发布，全系统用户都会收到这条通知');
+      setPublishOpen(false);
+      setPubTitle(''); setPubContent(''); setPubType('info');
+      void loadAnnouncements();
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '发布失败');
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   const canGo = (path: string) => {
     if (isFactoryAccount && !factoryVisiblePaths.has(path)) return false;
@@ -89,21 +151,45 @@ const ServiceSidebar: React.FC = () => {
   };
 
   return (
+    <>
     <div className="home-side-stack">
       <div className="dashboard-card">
-        <div className="card-header">
+        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h3 className="card-title">
             <NotificationOutlined style={{ marginRight: 6 }} />
-            产品更新
+            平台通知
           </h3>
+          {canPublish && (
+            <Tooltip title="发布后全系统用户都会在顶部通知栏看到">
+              <Button
+                type="link"
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={() => setPublishOpen(true)}
+                style={{ padding: 0 }}
+              >
+                发布
+              </Button>
+            </Tooltip>
+          )}
         </div>
         <div className="card-content home-changelog">
-          {HOME_CHANGELOG.map((item) => (
-            <div key={`${item.date}-${item.text}`} className="home-changelog-item">
-              <span className="home-changelog-date">{item.date}</span>
-              <span className="home-changelog-text">{item.text}</span>
-            </div>
-          ))}
+          {announcements.length > 0 ? (
+            announcements.map((a) => (
+              <div key={a.id} className="home-changelog-item">
+                <span className="home-changelog-date">{ANNOUNCEMENT_TYPE_TEXT[a.type] || '通知'}</span>
+                <span className="home-changelog-text" title={a.content || a.title}>{a.title}</span>
+              </div>
+            ))
+          ) : (
+            // 无未读公告时回退到静态产品更新，保证这一栏不空
+            HOME_CHANGELOG.map((item) => (
+              <div key={`${item.date}-${item.text}`} className="home-changelog-item">
+                <span className="home-changelog-date">{item.date}</span>
+                <span className="home-changelog-text">{item.text}</span>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -186,6 +272,52 @@ const ServiceSidebar: React.FC = () => {
         </div>
       </div>
     </div>
+
+    {/* D-513 发布平台通知：发布后顶栏 AnnouncementBanner（60s 轮询）全系统可见 */}
+    <Modal
+      title="发布平台通知"
+      open={publishOpen}
+      onCancel={() => setPublishOpen(false)}
+      onOk={() => void submitAnnouncement()}
+      confirmLoading={publishing}
+      okText="发布"
+      cancelText="取消"
+      destroyOnHidden
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+        <Input
+          placeholder="通知标题（必填）"
+          value={pubTitle}
+          onChange={(e) => setPubTitle(e.target.value)}
+          maxLength={60}
+          showCount
+        />
+        <Input.TextArea
+          placeholder="通知内容（选填，顶部通知栏展开后可见）"
+          value={pubContent}
+          onChange={(e) => setPubContent(e.target.value)}
+          rows={4}
+          maxLength={500}
+          showCount
+        />
+        <div>
+          <div style={{ marginBottom: 6, fontSize: 13, color: 'var(--color-text-secondary)' }}>通知类型</div>
+          <Radio.Group
+            value={pubType}
+            onChange={(e) => setPubType(e.target.value)}
+            optionType="button"
+            buttonStyle="solid"
+            size="small"
+            options={[
+              { label: '普通通知', value: 'info' },
+              { label: '提醒', value: 'warning' },
+              { label: '重要', value: 'important' },
+            ]}
+          />
+        </div>
+      </div>
+    </Modal>
+    </>
   );
 };
 

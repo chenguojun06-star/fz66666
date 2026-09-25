@@ -122,6 +122,8 @@ const SystemTutorial: React.FC = () => {
     { key: 'mobile', label: '小程序操作', icon: <VideoCameraOutlined /> },
     { key: 'finance', label: '财务管理', icon: <FileTextOutlined /> },
     { key: 'system', label: '系统设置', icon: <ThunderboltOutlined /> },
+    // D-513：新增智能运营分类（AI 巡检工单中心等）
+    { key: 'intelligence', label: '智能运营', icon: <ThunderboltOutlined /> },
   ];
 
   // 难度标签样式
