@@ -9,6 +9,7 @@
  */
 const api = require('../../../../utils/api');
 const { eventBus, Events } = require('../../../../utils/eventBus');
+const i18n = require('../../../../utils/i18n/index');
 
 /**
  * 调用料卷扫码接口（封装，使用统一 api.js）
@@ -35,6 +36,9 @@ Page({
     cuttingOrderNo: '',    // 关联裁剪单号（可选）
     errorMsg: '',          // 错误信息
     successMsg: '',        // 成功信息
+
+    /** i18n 文案表（applyLanguage 里填充，wxml 用 {{t.xxx}}） */
+    t: {},
   },
 
   onLoad(options) {
@@ -58,6 +62,49 @@ Page({
     }
   },
 
+  onShow() {
+    // 每次回到页面都按当前语言重刷文案（用户可能在「我的」里切了语言）
+    this.applyLanguage(i18n.getLanguage());
+  },
+
+  /**
+   * 刷新本页全部文案（wxml 静态文案 + 状态标签）。
+   *
+   * ⚠️ 本页 json 的 navigationBarTitleText 是**空字符串**（页面自带大标题
+   *    「面辅料料卷发料/退回」），所以这里**故意不**调 wx.setNavigationBarTitle，
+   *    保持原有视觉不变。
+   */
+  applyLanguage(language) {
+    var lang = language || i18n.getLanguage();
+    this._lang = lang;
+    this.setData({
+      t: {
+        headerTitle: i18n.t('mp.warehouse.materialScan.headerTitle', lang),
+        headerSub: i18n.t('mp.warehouse.materialScan.headerSub', lang),
+        scanTap: i18n.t('mp.warehouse.materialScan.scanTap', lang),
+        scanHint: i18n.t('mp.warehouse.materialScan.scanHint', lang),
+        rollCodeLabel: i18n.t('mp.warehouse.materialScan.rollCodeLabel', lang),
+        rescan: i18n.t('common.rescan', lang),
+        querying: i18n.t('mp.warehouse.materialScan.querying', lang),
+        materialLabel: i18n.t('mp.warehouse.materialScan.materialLabel', lang),
+        codeLabel: i18n.t('mp.warehouse.materialScan.codeLabel', lang),
+        color: i18n.t('common.color', lang),
+        quantity: i18n.t('common.quantity', lang),
+        location: i18n.t('common.location', lang),
+        inboundNoLabel: i18n.t('mp.warehouse.materialScan.inboundNoLabel', lang),
+        currentStatusLabel: i18n.t('mp.warehouse.materialScan.currentStatusLabel', lang),
+        statusInStock: i18n.t('mp.warehouse.materialScan.statusInStock', lang),
+        statusIssued: i18n.t('mp.warehouse.materialScan.statusIssued', lang),
+        cuttingOrderLabel: i18n.t('mp.warehouse.materialScan.cuttingOrderLabel', lang),
+        cuttingOrderPlaceholder: i18n.t('mp.warehouse.materialScan.cuttingOrderPlaceholder', lang),
+        processing: i18n.t('mp.warehouse.materialScan.processing', lang),
+        confirmIssue: i18n.t('mp.warehouse.materialScan.confirmIssue', lang),
+        confirmReturnAction: i18n.t('mp.warehouse.materialScan.confirmReturnAction', lang),
+        scanNext: i18n.t('mp.warehouse.materialScan.scanNext', lang),
+      },
+    });
+  },
+
   onUnload() {
     if (this._unsubPrivacy) {
       this._unsubPrivacy();
@@ -75,7 +122,7 @@ Page({
           this.setData({ rollCode: code, rollInfo: null, errorMsg: '', successMsg: '' });
           this.queryRoll(code);
         } else {
-          wx.showToast({ title: '不是料卷二维码', icon: 'none' });
+          wx.showToast({ title: i18n.t('mp.warehouse.materialScan.notRollQr', this._lang), icon: 'none' });
         }
       },
     });
@@ -88,7 +135,7 @@ Page({
       const info = await scanRollApi(rollCode, 'query', {});
       this.setData({ rollInfo: info, loading: false });
     } catch (e) {
-      this.setData({ loading: false, errorMsg: e.message || '查询失败' });
+      this.setData({ loading: false, errorMsg: e.message || i18n.t('mp.warehouse.materialScan.queryFailed', this._lang) });
     }
   },
 
@@ -101,15 +148,20 @@ Page({
   async onIssueTap() {
     const { rollCode, rollInfo, cuttingOrderNo, submitting } = this.data;
     if (submitting || !rollCode) return;
-    if (!rollInfo) return wx.showToast({ title: '请先扫码', icon: 'none' });
+    if (!rollInfo) return wx.showToast({ title: i18n.t('mp.warehouse.materialScan.scanFirst', this._lang), icon: 'none' });
     if (rollInfo.currentStatus !== 'IN_STOCK') {
-      return wx.showToast({ title: '该料卷不在库，无法发料', icon: 'none' });
+      return wx.showToast({ title: i18n.t('mp.warehouse.materialScan.notInStock', this._lang), icon: 'none' });
     }
 
     wx.showModal({
-      title: '确认发料',
-      content: `确认将「${rollInfo.materialName}」× ${rollInfo.quantity}${rollInfo.unit} 从 ${rollInfo.warehouseLocation} 发出？`,
-      confirmText: '确认发料',
+      title: i18n.t('mp.warehouse.materialScan.confirmIssueTitle', this._lang),
+      content: i18n.tf('mp.warehouse.materialScan.issueConfirmText', {
+        name: rollInfo.materialName,
+        qty: rollInfo.quantity,
+        unit: rollInfo.unit,
+        loc: rollInfo.warehouseLocation,
+      }, this._lang),
+      confirmText: i18n.t('mp.warehouse.materialScan.confirmIssueTitle', this._lang),
       success: async (res) => {
         if (!res.confirm) return;
         this.setData({ submitting: true, errorMsg: '', successMsg: '' });
@@ -117,13 +169,13 @@ Page({
           const result = await scanRollApi(rollCode, 'issue', { cuttingOrderNo });
           this.setData({
             submitting: false,
-            successMsg: result.message || '发料成功！',
+            successMsg: result.message || i18n.t('mp.warehouse.materialScan.issueSuccess', this._lang),
             rollInfo: { ...rollInfo, currentStatus: 'ISSUED' },
           });
           eventBus.emit(Events.DATA_CHANGED, { type: 'materialStock' });
           wx.vibrateShort({ type: 'heavy' });
         } catch (e) {
-          this.setData({ submitting: false, errorMsg: e.message || '发料失败' });
+          this.setData({ submitting: false, errorMsg: e.message || i18n.t('mp.warehouse.materialScan.issueFailed', this._lang) });
         }
       },
     });
@@ -133,15 +185,18 @@ Page({
   async onReturnTap() {
     const { rollCode, rollInfo, submitting } = this.data;
     if (submitting || !rollCode) return;
-    if (!rollInfo) return wx.showToast({ title: '请先扫码', icon: 'none' });
+    if (!rollInfo) return wx.showToast({ title: i18n.t('mp.warehouse.materialScan.scanFirst', this._lang), icon: 'none' });
     if (rollInfo.currentStatus !== 'ISSUED') {
-      return wx.showToast({ title: '该料卷尚未发料，无需退回', icon: 'none' });
+      return wx.showToast({ title: i18n.t('mp.warehouse.materialScan.notIssued', this._lang), icon: 'none' });
     }
 
     wx.showModal({
-      title: '确认退回',
-      content: `将「${rollInfo.materialName}」退回仓库（${rollInfo.warehouseLocation}）？`,
-      confirmText: '确认退回',
+      title: i18n.t('mp.warehouse.materialScan.confirmReturnTitle', this._lang),
+      content: i18n.tf('mp.warehouse.materialScan.returnConfirmText', {
+        name: rollInfo.materialName,
+        loc: rollInfo.warehouseLocation,
+      }, this._lang),
+      confirmText: i18n.t('mp.warehouse.materialScan.confirmReturnTitle', this._lang),
       success: async (res) => {
         if (!res.confirm) return;
         this.setData({ submitting: true, errorMsg: '', successMsg: '' });
@@ -149,13 +204,13 @@ Page({
           const result = await scanRollApi(rollCode, 'return', {});
           this.setData({
             submitting: false,
-            successMsg: result.message || '退回成功！',
+            successMsg: result.message || i18n.t('mp.warehouse.materialScan.returnSuccess', this._lang),
             rollInfo: { ...rollInfo, currentStatus: 'IN_STOCK' },
           });
           eventBus.emit(Events.DATA_CHANGED, { type: 'materialStock' });
           wx.vibrateShort({ type: 'heavy' });
         } catch (e) {
-          this.setData({ submitting: false, errorMsg: e.message || '退回失败' });
+          this.setData({ submitting: false, errorMsg: e.message || i18n.t('mp.warehouse.materialScan.returnFailed', this._lang) });
         }
       },
     });
