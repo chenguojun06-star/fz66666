@@ -113,6 +113,30 @@ public class TenantInterceptor implements InnerInterceptor {
             return;
         }
 
+        /*
+         * D-513 修复：平台超管「带着租户 ID 登录」时，查「超管可管理表」不应被租户过滤。
+         *
+         * 问题：isSuperAdmin 的判定是 tenantId == null，但平台超管账号
+         * （t_user.is_super_admin=1）在库里是有 tenant_id 的（实测 admin.tenant_id=106
+         * 云裳智链），登录后 tenantId 非 null → 走本分支 → 被追加 tenant_id = 106。
+         * 后果：平台方【收不到任何租户提交的意见反馈】——
+         * t_user_feedback 属 SUPERADMIN_MANAGED_TABLES，其豁免只在超管分支（第 102 行）
+         * 生效，本分支没有对应豁免。实测该表已有 tenant_id=2（东方制衣厂）的反馈，
+         * 但平台方查 /system/feedback/list 会因 tenant_id=106 过滤而返回空。
+         *
+         * 修复：当账号带 is_super_admin 标志、且本次 SQL 只涉及
+         * SUPERADMIN_MANAGED_TABLES / SHARED_TENANT_TABLES / EXCLUDED_TABLES 时放行。
+         *
+         * 安全性：① 仅对 is_super_admin=1 的账号生效；
+         *        ② 仅对超管本就该跨租户管理的表（客户应用管理模块）生效；
+         *        ③ 生产订单/款式/财务等业务表不在其中，仍按 tenant_id 正常隔离——
+         *           平台方在租户下办公时依然只能看到该租户的业务数据。
+         */
+        if (Boolean.TRUE.equals(ctx.getSuperAdmin()) && involvesOnlySuperAdminTables(originalSql)) {
+            log.debug("[TenantInterceptor] 超管账号查询超管可管理表，放行租户过滤: tenantId={}", tenantId);
+            return;
+        }
+
         // 检查是否涉及混合表（需要 OR tenant_id IS NULL）
         boolean isSharedTable = involvesSharedTable(originalSql);
         String newSql = addWhereCondition(originalSql, tenantId, isSharedTable);
