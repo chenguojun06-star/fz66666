@@ -123,7 +123,12 @@ const BACKEND_ACTION_LABELS: Record<string, { title: string; desc: string }> = {
   },
   'backend.action.auto_patrol_exec': {
     title: '巡检自动执行',
-    desc: '系统巡检发现风险后自动创建跟进任务并推送微信通知。关闭后仅生成巡检记录，不自动派发任务。',
+    // D-513 描述订正：原写「关闭后仅生成巡检记录，不自动派发任务」，与代码不符。
+    // 实际 AiPatrolJob.scanProductionAnomaliesForTenant 用 if (actionEnabled) 包住了
+    // patrolOrchestrator.createAction(...)，即关闭时连巡检工单都不创建
+    // （t_ai_patrol_action 自 2026-06-13 起再无新增正是此故）。
+    // 开启后才会：创建巡检工单 + riskLevel=NEED_APPROVAL 时通知跟单员审批。
+    desc: '系统巡检发现风险后自动创建巡检工单并推送微信通知。关闭后不生成任何巡检记录（巡检工单中心将为空），需保持开启才能持续巡检。',
   },
   'backend.action.auto_task_escalation': {
     title: '协作任务逾期自动升级',

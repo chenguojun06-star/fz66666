@@ -683,6 +683,9 @@ export const menuConfig: MenuSection[] = [
     items: [
       { label: 'AI功能中心', path: paths.intelligenceCenter, icon: React.createElement(ThunderboltOutlined) },
       { label: '智能驾驶舱', path: paths.cockpit, icon: React.createElement(RadarChartOutlined) },
+      // D-513：巡检工单中心——页面/路由/权限码(intelligenceCenter)一直都在，
+      // 但从未挂到菜单上，用户根本点不到，以为"AI 巡检不见了"。
+      { label: '巡检工单中心', path: paths.intelligencePatrol, icon: React.createElement(SafetyCertificateOutlined) },
     ],
   },
 ];
