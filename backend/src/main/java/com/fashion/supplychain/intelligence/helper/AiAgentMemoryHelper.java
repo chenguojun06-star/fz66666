@@ -40,7 +40,6 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
-@Lazy
 public class AiAgentMemoryHelper {
 
     /**

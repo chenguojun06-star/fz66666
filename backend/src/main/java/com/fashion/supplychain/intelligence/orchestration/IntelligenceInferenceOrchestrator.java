@@ -36,7 +36,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
 
 @Service
-@Lazy
 @Slf4j
 public class IntelligenceInferenceOrchestrator {
 

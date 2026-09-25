@@ -49,7 +49,6 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-@Lazy
 public class SiliconFlowRerankService {
 
     @Value("${ai.rerank.api-key:${AI_EMBEDDING_API_KEY:}}")

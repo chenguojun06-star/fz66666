@@ -20,6 +20,7 @@
 
 import { formatDate, formatDateTime, formatDateTimeSecond, formatDateTimeCompact } from './datetime';
 import { toMoney, toMoneyLocale, toPercent, toPercentRaw } from './format';
+import { t } from '@/i18n';
 import {
   ORDER_STATUS_MAP,
   MATERIAL_PURCHASE_STATUS_MAP,
@@ -126,10 +127,19 @@ export const displayPercent = (value: unknown, decimals = 1, isRatio = true): st
 
 export type DisplayStatusItem = { text: string; color: string };
 
+/**
+ * 从状态映射表中查找配置，并把 text 当作 i18n key 翻译为当前语言。
+ *
+ * D-520：statusMaps 中每条 text 已改为 i18n key（如 `status.order.production`），
+ * 在此统一翻译 —— 全站状态显示因此随语言切换自动生效，无需改动各调用方。
+ * 未命中 i18n key 时 t() 原样返回，故对普通中文文案也安全。
+ */
 const findInMap = (map: Record<string, DisplayStatusItem>, key: string): DisplayStatusItem | null => {
   const k = key.trim();
   if (!k) return null;
-  return map[k] ?? map[k.toLowerCase()] ?? map[k.toUpperCase()] ?? null;
+  const item = map[k] ?? map[k.toLowerCase()] ?? map[k.toUpperCase()] ?? null;
+  if (!item) return null;
+  return { text: t(item.text), color: item.color };
 };
 
 /**
@@ -138,104 +148,104 @@ const findInMap = (map: Record<string, DisplayStatusItem>, key: string): Display
 export const displayOrderStatus = (status: unknown): DisplayStatusItem => {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(ORDER_STATUS_MAP, String(status));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 export const displayMaterialPurchaseStatus = (status: unknown): DisplayStatusItem => {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(MATERIAL_PURCHASE_STATUS_MAP, String(status))
              ?? findInMap(ORDER_STATUS_MAP, String(status));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 export const displaySettlementStatus = (status: unknown): DisplayStatusItem => {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(SETTLEMENT_STATUS_MAP, String(status))
              ?? findInMap(ORDER_STATUS_MAP, String(status));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 export const displayPaymentStatus = (status: unknown): DisplayStatusItem => {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(PAYMENT_STATUS_MAP, String(status));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 export const displayPayrollPaymentStatus = (status: unknown): DisplayStatusItem => {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(PAYROLL_PAYMENT_STATUS_MAP, String(status));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 export const displayFactoryStatus = (status: unknown): DisplayStatusItem => {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(FACTORY_STATUS_MAP, String(status))
              ?? findInMap(ORDER_STATUS_MAP, String(status));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 export const displayFactoryType = (t: unknown): DisplayStatusItem => {
   if (isEmpty(t)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(FACTORY_TYPE_MAP, String(t));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 export const displayMaterialStatus = (status: unknown): DisplayStatusItem => {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(MATERIAL_STATUS_MAP, String(status));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 export const displaySecondaryProcessStatus = (status: unknown): DisplayStatusItem => {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(SECONDARY_PROCESS_STATUS_MAP, String(status));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 export const displayFactoryShipmentStatus = (status: unknown): DisplayStatusItem => {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(FACTORY_SHIPMENT_STATUS_MAP, String(status))
              ?? findInMap(ORDER_STATUS_MAP, String(status));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 export const displayStyleOrderStatus = (status: unknown): DisplayStatusItem => {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(STYLE_ORDER_STATUS_MAP, String(status))
              ?? findInMap(ORDER_STATUS_MAP, String(status));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 export const displayCuttingBundleStatus = (status: unknown): DisplayStatusItem => {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(CUTTING_BUNDLE_STATUS_MAP, String(status))
              ?? findInMap(ORDER_STATUS_MAP, String(status));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 export const displayCuttingTaskStatus = (status: unknown): DisplayStatusItem => {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(CUTTING_TASK_STATUS_MAP, String(status))
              ?? findInMap(ORDER_STATUS_MAP, String(status));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 export const displayAgentExecutionStatus = (status: unknown): DisplayStatusItem => {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(AGENT_EXECUTION_STATUS_MAP, String(status));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 export const displayBizType = (status: unknown): DisplayStatusItem => {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(BIZ_TYPE_MAP, String(status));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 export const displayReviewStatus = (status: unknown): DisplayStatusItem => {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: 'default' };
   const found = findInMap(REVIEW_STATUS_MAP, String(status));
-  return found ?? { text: '未知', color: 'default' };
+  return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
 /* ============================================================

@@ -12,7 +12,6 @@ import java.util.List;
 
 @Slf4j
 @Component
-@Lazy
 @RequiredArgsConstructor
 public class AgentCardAutoRegistrar {
 

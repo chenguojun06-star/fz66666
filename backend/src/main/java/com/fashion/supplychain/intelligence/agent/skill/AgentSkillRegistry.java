@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-@Lazy
 public class AgentSkillRegistry {
 
     private final Map<String, AgentSkill> skills = new ConcurrentHashMap<>();

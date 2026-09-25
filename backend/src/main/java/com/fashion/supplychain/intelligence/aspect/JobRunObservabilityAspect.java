@@ -16,7 +16,6 @@ import java.util.Set;
 @Slf4j
 @Aspect
 @Component
-@Lazy
 public class JobRunObservabilityAspect {
 
     @Autowired

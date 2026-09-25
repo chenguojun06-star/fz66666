@@ -26,7 +26,6 @@ import java.util.Arrays;
  *   4. 支持置信区间输出（基于残差标准差）
  */
 @Service
-@Lazy
 @Slf4j
 public class OnnxModelService {
 

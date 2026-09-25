@@ -15,7 +15,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
-@Lazy
 @RequiredArgsConstructor
 public class SpecialistPersonaService {
 

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>多语言（i18n）现状评估清单</title>
+<style>
+  :root{
+    --primary:#2D7FF9; --primary-dark:#185FA5; --primary-light:#E6F1FB;
+    --ink:#0B2D5C; --text:#1F2937; --muted:#6B7280; --line:#E5E7EB;
+    --bg:#F7F8FA; --card:#FFFFFF;
+    --red:#DC2626; --red-bg:#FEF2F2;
+    --amber:#B45309; --amber-bg:#FFFBEB;
+    --green:#15803D; --green-bg:#F0FDF4;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    font-size:14px;line-height:1.7;}
+  .wrap{max-width:960px;margin:0 auto;padding:40px 24px 80px;}
+  header{border-bottom:2px solid var(--ink);padding-bottom:20px;margin-bottom:32px;}
+  h1{font-size:26px;font-weight:600;color:var(--ink);margin:0 0 8px;}
+  .sub{color:var(--muted);font-size:13px;}
+  h2{font-size:18px;font-weight:600;color:var(--ink);margin:40px 0 16px;
+    padding-left:12px;border-left:4px solid var(--primary);}
+  h3{font-size:15px;font-weight:600;color:var(--ink);margin:24px 0 10px;}
+  p{margin:10px 0;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:20px 22px;margin:16px 0;}
+  .hero{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:24px 0;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:16px 18px;text-align:center;}
+  .kpi .n{font-size:26px;font-weight:600;color:var(--primary);line-height:1.2;}
+  .kpi .n.warn{color:var(--amber);}
+  .kpi .n.bad{color:var(--red);}
+  .kpi .l{font-size:12px;color:var(--muted);margin-top:6px;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;
+    background:var(--card);border-radius:8px;overflow:hidden;}
+  th{background:#F1F5F9;color:var(--ink);font-weight:600;text-align:left;
+    padding:10px 12px;border-bottom:1px solid var(--line);font-size:12.5px;}
+  td{padding:9px 12px;border-bottom:1px solid #F3F4F6;}
+  tr:last-child td{border-bottom:none;}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .bar{display:inline-block;height:8px;border-radius:4px;background:var(--primary);
+    vertical-align:middle;margin-right:8px;}
+  .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11.5px;
+    font-weight:500;white-space:nowrap;}
+  .t-ok{background:var(--green-bg);color:var(--green);}
+  .t-no{background:var(--red-bg);color:var(--red);}
+  .t-part{background:var(--amber-bg);color:var(--amber);}
+  .t-info{background:var(--primary-light);color:var(--primary-dark);}
+  .note{background:var(--amber-bg);border-left:3px solid var(--amber);
+    padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0;font-size:13px;}
+  .danger{background:var(--red-bg);border-left:3px solid var(--red);
+    padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0;font-size:13px;}
+  .good{background:var(--green-bg);border-left:3px solid var(--green);
+    padding:12px 16px;border-radius:0 8px 8px 0;margin:14px 0;font-size:13px;}
+  code{background:#F1F5F9;padding:1.5px 6px;border-radius:4px;
+    font-family:"SF Mono",Menlo,Consolas,monospace;font-size:12.5px;color:var(--primary-dark);}
+  ul,ol{margin:10px 0;padding-left:22px;}
+  li{margin:5px 0;}
+  .phase{display:flex;gap:14px;align-items:flex-start;padding:14px 0;
+    border-bottom:1px dashed var(--line);}
+  .phase:last-child{border-bottom:none;}
+  .phase .idx{flex:0 0 34px;height:34px;border-radius:8px;background:var(--primary);
+    color:#fff;display:flex;align-items:center;justify-content:center;
+    font-weight:600;font-size:14px;}
+  .phase.gray .idx{background:#94A3B8;}
+  .phase .body{flex:1;}
+  .phase .ttl{font-weight:600;color:var(--ink);font-size:14px;margin-bottom:3px;}
+  .phase .desc{font-size:13px;color:var(--muted);}
+  footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);
+    font-size:12px;color:var(--muted);text-align:center;}
+  .small{font-size:12px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>多语言（i18n）现状评估清单</h1>
+  <div class="sub">服装供应链系统 · 云裳智链 &nbsp;|&nbsp; 评估日期：2026-09-25 &nbsp;|&nbsp; 评估范围：PC 端 / 小程序 / h5-web / 后端</div>
+</header>
+
+<h2>一、结论先说</h2>
+<div class="card">
+  <p style="margin-top:0"><strong>框架已就绪，但只接了约 1% 的界面。</strong>当年搭好的多语言地基是完好的、可用的，不需要推倒重来；真正缺的是「把 1.3 万条中文文案搬进语言包」这件体力活，以及几个前置决策。</p>
+  <p style="margin-bottom:0"><strong>关键结论：后端不用改。</strong>状态值和字典值在数据库里本来就是<strong>英文 code</strong>（<code>not_started</code> / <code>WOMAN</code> / <code>BLACK</code>），中文只是前端的展示映射。这意味着多语言是纯前端工程，风险比预想的小得多。</p>
+  <p style="margin:14px 0 0;padding-top:14px;border-top:1px dashed var(--line)"><strong>工期结论：全量上线约需 172 人天（≈8 人月）。但不必等全部做完 —— 分 4 个里程碑交付，最快 2–3 周内部可试用，约 1.5–2 个月工厂端就能真正用起来。</strong></p>
+</div>
+
+<div class="hero">
+  <div class="kpi"><div class="n">4</div><div class="l">已支持语言</div></div>
+  <div class="kpi"><div class="n bad">1%</div><div class="l">当前界面覆盖率</div></div>
+  <div class="kpi"><div class="n warn">13,726</div><div class="l">去重待翻译文案</div></div>
+  <div class="kpi"><div class="n warn">41,178</div><div class="l">总翻译条目（×3 语言）</div></div>
+</div>
+
+<h2>二、现状核实：有的 vs 缺的</h2>
+
+<h3>✅ 已经具备（2026-03 建成，之后未再改动）</h3>
+<table>
+  <tr><th style="width:150px">组件</th><th>位置 / 说明</th></tr>
+  <tr><td>语言包唯一真源</td><td><code>shared-locales/source/{zh-CN,en-US,vi-VN,km-KH}.json</code></td></tr>
+  <tr><td>一键同步脚本</td><td><code>node scripts/sync-locales.js</code> → 自动生成前端与小程序两份产物</td></tr>
+  <tr><td>前端取词 API</td><td><code>frontend/src/i18n/index.ts</code> 提供 <code>t()</code> / <code>tf()</code>（支持插值）</td></tr>
+  <tr><td>小程序取词 API</td><td><code>miniprogram/utils/i18n/index.js</code> 提供 <code>t()</code> / <code>getLanguage()</code> / <code>setLanguage()</code></td></tr>
+  <tr><td>语言状态管理</td><td><code>languagePreference.ts</code> + <code>useAppLanguage.ts</code>（localStorage 持久化 + 跨组件事件同步）</td></tr>
+  <tr><td>Antd 组件库语言</td><td><code>AppProviders.tsx</code> 已接 <code>ConfigProvider locale</code>（日期选择器等内置控件会跟着切）</td></tr>
+  <tr><td>已支持语言</td><td>中文 / English / Tiếng Việt / ខ្មែរ（中文、英文、越南语、高棉语）</td></tr>
+</table>
+
+<h3>❌ 缺失 / 未完成</h3>
+<table>
+  <tr><th style="width:150px">项目</th><th>现状</th><th style="width:90px">严重度</th></tr>
+  <tr><td>PC 端切换入口</td><td>完全没有。全仓<strong>没有任何地方调用 <code>setLanguage</code></strong>，用户无从切换</td><td><span class="tag t-no">阻塞</span></td></tr>
+  <tr><td>小程序切换入口</td><td>已有（「我的」页 → 切换语言）</td><td><span class="tag t-ok">可用</span></td></tr>
+  <tr><td>语言包内容</td><td>仅 7 个命名空间、约 90 个 key，只覆盖登录页 + 菜单</td><td><span class="tag t-no">严重不足</span></td></tr>
+  <tr><td>业务页面</td><td>1,370 个文件硬编码中文，几乎全未接入</td><td><span class="tag t-no">主体工作量</span></td></tr>
+  <tr><td>h5-web</td><td>完全未接入，无 i18n 目录</td><td><span class="tag t-part">待定</span></td></tr>
+  <tr><td>后端</td><td>无 <code>messages*.properties</code>；但状态/字典用英文 code，<strong>前端可自行翻译</strong></td><td><span class="tag t-info">不阻塞</span></td></tr>
+</table>
+
+<h2>三、工作量清单（实测数据）</h2>
+<p class="small">统计口径：剥离代码注释、剔除 <code>console.*</code> 开发者文案后的<strong>业务文案</strong>。「去重」= 同一句文案只算一次，这是翻译工作量的下限。</p>
+
+<div class="hero" style="grid-template-columns:repeat(3,1fr)">
+  <div class="kpi"><div class="n">1,829</div><div class="l">PC 端源文件（1,370 个含中文）</div></div>
+  <div class="kpi"><div class="n">367</div><div class="l">小程序源文件（298 个含中文）</div></div>
+  <div class="kpi"><div class="n">1,182</div><div class="l">两端重复文案（可共用）</div></div>
+</div>
+
+<h3>PC 端 · 按业务模块</h3>
+<table>
+  <tr><th>模块</th><th class="num">文件</th><th class="num">含中文</th><th class="num">去重文案</th><th style="width:210px">占比</th></tr>
+  <tr><td>system · 系统设置</td><td class="num">191</td><td class="num">174</td><td class="num">2,905</td><td><span class="bar" style="width:200px"></span></td></tr>
+  <tr><td>production · 生产管理</td><td class="num">383</td><td class="num">295</td><td class="num">2,351</td><td><span class="bar" style="width:162px"></span></td></tr>
+  <tr><td>basic · 样衣与基础资料</td><td class="num">333</td><td class="num">279</td><td class="num">2,171</td><td><span class="bar" style="width:149px"></span></td></tr>
+  <tr><td>components · 公共组件</td><td class="num">263</td><td class="num">176</td><td class="num">1,574</td><td><span class="bar" style="width:108px"></span></td></tr>
+  <tr><td>warehouse · 仓库管理</td><td class="num">164</td><td class="num">140</td><td class="num">1,477</td><td><span class="bar" style="width:102px"></span></td></tr>
+  <tr><td>finance · 财务管理</td><td class="num">95</td><td class="num">83</td><td class="num">1,291</td><td><span class="bar" style="width:89px"></span></td></tr>
+  <tr><td>intelligence · 智能中心</td><td class="num">61</td><td class="num">42</td><td class="num">548</td><td><span class="bar" style="width:38px"></span></td></tr>
+  <tr><td>ecommerce · 电商</td><td class="num">35</td><td class="num">26</td><td class="num">486</td><td><span class="bar" style="width:33px"></span></td></tr>
+  <tr><td>dashboard · 数据看板</td><td class="num">22</td><td class="num">20</td><td class="num">251</td><td><span class="bar" style="width:17px"></span></td></tr>
+  <tr><td>integration · 集成对接</td><td class="num">18</td><td class="num">15</td><td class="num">239</td><td><span class="bar" style="width:16px"></span></td></tr>
+  <tr><td>selection · 选品</td><td class="num">9</td><td class="num">7</td><td class="num">186</td><td><span class="bar" style="width:13px"></span></td></tr>
+  <tr><td>crm · 客户管理</td><td class="num">18</td><td class="num">14</td><td class="num">135</td><td><span class="bar" style="width:9px"></span></td></tr>
+  <tr><td>utils / services / constants / 其他</td><td class="num">213</td><td class="num">67</td><td class="num">625</td><td><span class="bar" style="width:43px"></span></td></tr>
+  <tr style="background:#FAFAFA"><td class="small">__tests__ · 测试文件（<strong>不需翻译</strong>）</td><td class="num small">24</td><td class="num small">24</td><td class="num small">464</td><td class="small">—</td></tr>
+</table>
+
+<h3>小程序 · 按页面组</h3>
+<table>
+  <tr><th>页面组</th><th class="num">文件</th><th class="num">去重文案</th><th>说明</th></tr>
+  <tr><td>scan · 扫码</td><td class="num">57</td><td class="num">485</td><td>一线最高频</td></tr>
+  <tr><td>sample-development · 样衣开发</td><td class="num">9</td><td class="num">319</td><td></td></tr>
+  <tr><td>warehouse · 仓库</td><td class="num">39</td><td class="num">268</td><td>出入库</td></tr>
+  <tr><td>dashboard · 工作台</td><td class="num">16</td><td class="num">243</td><td></td></tr>
+  <tr><td>finance · 财务</td><td class="num">18</td><td class="num">227</td><td></td></tr>
+  <tr><td>order · 订单</td><td class="num">12</td><td class="num">188</td><td></td></tr>
+  <tr><td>admin · 我的</td><td class="num">23</td><td class="num">162</td><td>已有语言入口</td></tr>
+  <tr><td>cutting · 裁剪</td><td class="num">5</td><td class="num">150</td><td></td></tr>
+  <tr><td>quality-detail · 质检</td><td class="num">3</td><td class="num">146</td><td></td></tr>
+  <tr><td>procurement · 采购</td><td class="num">6</td><td class="num">127</td><td></td></tr>
+  <tr><td>attendance · 考勤</td><td class="num">3</td><td class="num">113</td><td></td></tr>
+  <tr><td>factory · 工厂</td><td class="num">10</td><td class="num">112</td><td></td></tr>
+  <tr><td>其余 10+ 页面组</td><td class="num">163</td><td class="num">450</td><td>work / home / smart-ops / return / sales / defect 等</td></tr>
+</table>
+
+<h3>集中式映射（最高杠杆）</h3>
+<table>
+  <tr><th>对象</th><th class="num">条目</th><th>说明</th></tr>
+  <tr><td><code>frontend/src/constants/statusMaps.ts</code></td><td class="num">175</td><td>19 个状态映射表，一处改动 → 全站状态标签生效</td></tr>
+  <tr><td><code>t_dict</code> 字典（category/season/color/size/style_type…）</td><td class="num">—</td><td>结构与状态一致：<strong>英文 code + 中文 label</strong>，同样可 i18n</td></tr>
+</table>
+<div class="good">
+<strong>这是本次评估最重要的发现：</strong>状态与字典都是「英文 code 存库、中文前端展示」。改造时只需把映射表里的 <code>text: '生产中'</code> 换成 <code>text: t('status.production')</code>，<strong>数据库和后端接口一行都不用动</strong>。
+</div>
+
+<h2>四、优先级分层建议</h2>
+<table>
+  <tr><th style="width:70px">层级</th><th>范围</th><th class="num">预估 key</th><th>理由</th></tr>
+  <tr><td><span class="tag t-info">P0</span></td><td>通用词（common）+ 状态映射 + 登录/导航</td><td class="num">约 400</td><td>复用率最高，做完立刻有「真的在切换」的观感</td></tr>
+  <tr><td><span class="tag t-info">P1</span></td><td>小程序一线高频：scan / warehouse / cutting / quality / order</td><td class="num">约 1,600</td><td>工厂端才是真正需要外语的人，收益最直接</td></tr>
+  <tr><td><span class="tag t-info">P1</span></td><td>PC 端核心：warehouse / production / basic</td><td class="num">约 6,000</td><td>与小程序形成业务闭环</td></tr>
+  <tr><td><span class="tag t-info">P2</span></td><td>finance / system / intelligence / ecommerce / crm</td><td class="num">约 5,700</td><td>管理层与后台，优先级可后置</td></tr>
+</table>
+<p class="small">P0 之所以划算：前 100 个高频词（取消 / 操作 / 状态 / 颜色 / 款号 / 备注 / 供应商…）覆盖了全部文案出现次数的三成以上。</p>
+
+<h2>五、高风险术语清单（<span style="color:var(--red)">不可直译</span>）</h2>
+<p>以下为服装行业专有说法，机器翻译必然出错，<strong>必须由业务人员确认后再交付翻译</strong>：</p>
+<table>
+  <tr><th style="width:150px">中文术语</th><th>含义 / 翻译风险</th></tr>
+  <tr><td>菲号</td><td>行业黑话，指裁片捆号（bundle no.），直译成 "Philippines" 之类的笑话</td></tr>
+  <tr><td>大烫</td><td>成衣最终整烫（final pressing），非普通 ironing</td></tr>
+  <tr><td>车缝</td><td>缝制工序（sewing），不是「车 + 缝」</td></tr>
+  <tr><td>二次工艺</td><td>印花/绣花/水洗等后道工艺（secondary process）</td></tr>
+  <tr><td>洗水唛</td><td>洗涤标识（wash label / care label）</td></tr>
+  <tr><td>尾部</td><td>后整车间（finishing dept.），不是「尾巴」</td></tr>
+  <tr><td>裁床</td><td>裁剪台/裁剪组（cutting table）</td></tr>
+  <tr><td>款号 / 款名</td><td>style no. / style name，与「订单号」区分</td></tr>
+  <tr><td>次品 / 报废</td><td>defective / scrapped，质检口径需与业务对齐</td></tr>
+  <tr><td>来料加工 / 包工包料</td><td>CMT / FOB，贸易术语必须用行业标准译法</td></tr>
+</table>
+
+<h2>六、必须提前决策的 4 件事</h2>
+<div class="danger">
+<strong>1. 打印模板印什么语言？</strong><br>
+标签、洗水唛、U 码、购销合同都要印刷。工人看不懂英文标签 = 整个多语言白做。这是项目红线文件（打印样式不可擅动），必须业务先定：是随界面语言走，还是固定印中文/英文。
+</div>
+<div class="note">
+<strong>2. 高棉语找谁翻？</strong><br>
+英、越可 AI 初翻 + 业务校对；高棉语（柬埔寨）机器翻译质量差且缺乏服装行业语料，<strong>建议直接外包给专业翻译</strong>，否则宁可不做这一种语言。
+</div>
+<div class="note">
+<strong>3. 字典项要不要一起翻译？</strong><br>
+字典（颜色、尺码、季节、款式类型）由业务自己在「字典管理」里维护。若翻译，需给 <code>t_dict</code> 加多语言列或建立 code→译文映射，会改变业务人员的维护习惯。
+</div>
+<div class="note">
+<strong>4. h5-web 是否纳入？</strong><br>
+h5-web 完全未接入，且它是小程序源码的镜像宿主。若不对外投放，可暂不纳入，避免工作量翻倍。
+</div>
+
+<h2>七、建议推进路径</h2>
+<div class="card">
+  <div class="phase">
+    <div class="idx">0</div>
+    <div class="body">
+      <div class="ttl">地基补齐</div>
+      <div class="desc">补 PC 端语言切换入口（侧边栏 / 个人中心）+ 建立 <code>common.*</code> 通用词库 + 定 key 命名规范。</div>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="idx">1</div>
+    <div class="body">
+      <div class="ttl">集中式映射改造 <span class="tag t-ok">杠杆最高</span></div>
+      <div class="desc">改造 19 个状态映射表 + 收拢散落的内联 statusMap + 小程序建同构映射。一次投入，全站状态标签长期受益。</div>
+    </div>
+  </div>
+  <div class="phase gray">
+    <div class="idx">2</div>
+    <div class="body">
+      <div class="ttl">按模块铺开（主体工作量）</div>
+      <div class="desc">按 P1 → P2 顺序分批，每批独立提交、独立验收。建议从小程序扫码/仓库这条闭环开始验证。</div>
+    </div>
+  </div>
+  <div class="phase gray">
+    <div class="idx">3</div>
+    <div class="body">
+      <div class="ttl">翻译与校对</div>
+      <div class="desc">英/越 AI 初翻 + 业务校对术语；高棉语专业外包。翻译可并行于阶段 2，不阻塞开发。</div>
+    </div>
+  </div>
+</div>
+
+<div class="danger" style="margin-top:24px">
+<strong>⚠️ 一个必须避免的做法：</strong>只做阶段 0 就上线。用户切了英文会看到「菜单英文、内容全中文」，观感<strong>比纯中文更差</strong>，容易得出「多语言做不了」的错误结论。阶段 0 与阶段 1 应成对交付。
+</div>
+
+<h2>八、全量上线的完整工作包</h2>
+<p>「全部做完并上线可用」<strong>不等于只改文案</strong>。核实后共 <strong>11 个工作包</strong>，其中 4 个是容易被漏算的隐性成本：</p>
+<table>
+  <tr><th style="width:40px">#</th><th>工作包</th><th>规模（实测）</th><th style="width:150px">性质</th></tr>
+  <tr><td>A</td><td>基础设施</td><td>PC 切换入口 + key 命名规范 + <code>common.*</code> 通用词库</td><td>一次性</td></tr>
+  <tr><td>B</td><td>状态映射改造</td><td>19 个映射表 / 175 条 + 收拢散落的内联 statusMap</td><td><span class="tag t-ok">杠杆最高</span></td></tr>
+  <tr><td>C</td><td>业务页面改造</td><td>1,370 个 PC 文件 + 298 个小程序文件 / 13,726 条文案</td><td>主体工作量</td></tr>
+  <tr><td>D</td><td>字典多语言</td><td><code>t_dict</code> 加语言列 + 后端接口 + 维护界面 + 业务培训</td><td><span class="tag t-no">漏算过</span></td></tr>
+  <tr><td>E</td><td>语言包加载策略</td><td>按需加载 / 分包（见下方体积风险）</td><td><span class="tag t-no">漏算过</span></td></tr>
+  <tr><td>F</td><td>翻译与校对</td><td>13,726 条 × 3 种语言 = 41,178 条</td><td>外部依赖</td></tr>
+  <tr><td>G</td><td>布局适配</td><td>3 种语言 × 全站页面（文本膨胀 30–50%）</td><td><span class="tag t-no">漏算过</span></td></tr>
+  <tr><td>H</td><td>打印模板</td><td><strong>47 个文件</strong>：标签 / 洗水唛 / 裁床单 / 工资条 / 对账单 / 吊牌证书…</td><td><span class="tag t-no">红线 + 漏算过</span></td></tr>
+  <tr><td>I</td><td>测试回归</td><td>3 种语言 × 核心业务流程走查</td><td>必须</td></tr>
+  <tr><td>J</td><td>上线发布</td><td>PC 端 CI 自动部署；小程序上传→审核→发布</td><td>时间不可控</td></tr>
+  <tr><td>K</td><td>防回退机制</td><td>CI 加检查：禁止新增硬编码中文</td><td>长期</td></tr>
+</table>
+
+<h2>九、工期估算</h2>
+<div class="card">
+  <p style="margin-top:0"><strong>估算前提</strong>：1 名熟悉本项目的工程师投入 + AI 辅助批量改造；翻译与开发并行；不含业务方决策等待时间。</p>
+  <table style="margin-bottom:0">
+    <tr><th>工作包</th><th class="num" style="width:120px">估算</th><th>说明</th></tr>
+    <tr><td>A 基础设施</td><td class="num">3 人天</td><td></td></tr>
+    <tr><td>B 状态映射</td><td class="num">8 人天</td><td>含收拢散落内联映射</td></tr>
+    <tr><td>C 业务页面</td><td class="num">35–45 人天</td><td>AI 批量辅助后的估算；纯手工约 86 人天</td></tr>
+    <tr><td>D 字典多语言</td><td class="num">10 人天</td><td>含后端 + 数据迁移 + 维护界面</td></tr>
+    <tr><td>E 加载策略</td><td class="num">5 人天</td><td></td></tr>
+    <tr><td>F 翻译校对</td><td class="num">23 人天</td><td>+ 高棉语外包周期 1–2 周（不占人力）</td></tr>
+    <tr><td>G 布局适配</td><td class="num">30 人天</td><td>最容易被低估的一块</td></tr>
+    <tr><td>H 打印模板</td><td class="num">25 人天</td><td>47 个文件 + 真机打印验证</td></tr>
+    <tr><td>I 测试回归</td><td class="num">20 人天</td><td></td></tr>
+    <tr><td>J 上线发布</td><td class="num">10 人天</td><td>不含微信审核等待</td></tr>
+    <tr><td>K 防回退</td><td class="num">3 人天</td><td></td></tr>
+    <tr style="background:#F8FAFC"><td><strong>合计</strong></td><td class="num"><strong>约 172 人天</strong></td><td><strong>≈ 8 人月（单人全职）</strong></td></tr>
+  </table>
+</div>
+
+<h3>但不必等全部做完才上线 —— 建议 4 个里程碑分批交付</h3>
+<div class="card">
+  <div class="phase">
+    <div class="idx">M1</div>
+    <div class="body">
+      <div class="ttl">内部可试用 <span class="tag t-ok">约 2–3 周</span></div>
+      <div class="desc">完成 A + B + P0 通用词。切换语言后，登录页、菜单、全站状态标签均正确变化。可请内部同事先体验，验证方向是否正确。</div>
+    </div>
+  </div>
+  <div class="phase">
+    <div class="idx">M2</div>
+    <div class="body">
+      <div class="ttl">工厂端真正可用 <span class="tag t-ok">约 1.5–2 个月</span></div>
+      <div class="desc">小程序一线闭环（扫码 / 仓库 / 裁剪 / 质检 / 订单）+ PC 端仓库与生产核心。东南亚工厂工人可实际使用 —— <strong>这是价值最早兑现的节点</strong>。</div>
+    </div>
+  </div>
+  <div class="phase gray">
+    <div class="idx">M3</div>
+    <div class="body">
+      <div class="ttl">全量界面可用 <span class="tag t-part">约 3–4 个月</span></div>
+      <div class="desc">补齐剩余模块（财务 / 系统 / 智能 / 电商 / CRM）+ 字典多语言 + 三语言布局适配。</div>
+    </div>
+  </div>
+  <div class="phase gray">
+    <div class="idx">M4</div>
+    <div class="body">
+      <div class="ttl">完全上线 <span class="tag t-part">约 5–6 个月</span></div>
+      <div class="desc">打印模板改造 + 真机验证 + 高棉语上线 + 全量回归测试。至此才算「全部做到上线可用」。</div>
+    </div>
+  </div>
+</div>
+<p class="small">以上为估算值，实际工期受下方三项风险影响最大；若只做 M1+M2（覆盖一线工厂场景），投入可压缩到约 1.5–2 个月。</p>
+
+<h2>十、三大工期风险</h2>
+<div class="danger">
+<strong>风险 1 · 打印模板（47 个文件）—— 最容易失控</strong><br>
+涉及标签、洗水唛、裁床单、工资条、工厂对账单、吊牌证书、报价单、生产制单等。这些文件是<strong>项目红线</strong>（打印样式不可擅动），且必须<strong>真机打印</strong>才能验证。更关键的是：业务方必须先决定「标签印哪种语言」——这个决策一旦延后，整块工作无法启动。
+</div>
+<div class="danger">
+<strong>风险 2 · 文本膨胀撑破布局</strong><br>
+英文比中文长 <strong>30–50%</strong>，越南语带声调符号更宽更高，高棉语字符结构复杂。所有按钮、标签、表格列宽、卡片高度都可能溢出。<strong>这不是改文案，是重新做一遍视觉走查</strong>，覆盖全部 1,370 个 PC 页面 + 72 个小程序页面。最容易被低估，也最容易导致「翻译完了但界面不能看」。
+</div>
+<div class="note">
+<strong>风险 3 · 语言包体积撞上小程序主包上限</strong><br>
+13,726 个 key × 4 种语言，未压缩约 <strong>2 MB+</strong>；而微信小程序<strong>主包上限为 2 MB</strong>。语言包一旦全量塞进主包，其他功能将被挤爆。必须提前设计按需加载或分包策略（工作包 E），否则后期返工代价极大。
+</div>
+
+<h2>十一、其他提示</h2>
+<ul>
+  <li><strong>小程序改动需发版才生效</strong>（CI 不构建小程序），语言包更新同样要走上传→审核→发布流程。</li>
+  <li><strong>三份副本必须同步</strong>：<code>miniprogram/</code> 是唯一源，改完需同步 <code>h5-web/source-miniapp/</code> 与 <code>h5-web/public/source-miniapp/</code>，仓库有 pre-push 校验会拦截不一致。</li>
+  <li><strong>提交纪律</strong>：本工作区多会话并发，795+ 文件改造必须按模块分批 <code>git commit -o -- &lt;path&gt;</code>，禁止 <code>git add -A</code>。</li>
+  <li><strong>语言包增长可控</strong>：语言包从当前 118 行增至约 1.4 万 key 后，前端产物体积约增加数百 KB（gzip 后更小），需留意小程序主包体积上限（2MB）。建议小程序语言包按需分包或只保留所需命名空间。</li>
+</ul>
+
+<footer>
+  本报告由代码静态扫描生成（剥离注释与开发者文案），数据口径为「去重业务文案」下限值；<br>
+  实际 i18n key 数量会因上下文拆分略高于此值。评估脚本未写入仓库。
+</footer>
+
+</div>
+</body>
+</html>

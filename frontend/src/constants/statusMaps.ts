@@ -26,75 +26,75 @@ export type StatusMap = Record<string, StatusMapItem>;
 /* =========================== 通用主状态映射（ORDER_STATUS_MAP）=========================== */
 export const ORDER_STATUS_MAP: StatusMap = {
   // 基础状态
-  not_started:    { text: '未开始',      color: 'default' },
-  pending:        { text: '待生产',      color: 'default' },
-  production:     { text: '生产中',      color: 'processing' },
-  in_progress:    { text: '生产中',      color: 'processing' },
-  paused:         { text: '已暂停',      color: 'warning' },
+  not_started: { text: 'status.order.not_started', color: 'default' },
+  pending: { text: 'status.order.pending', color: 'default' },
+  production: { text: 'status.order.production', color: 'processing' },
+  in_progress: { text: 'status.order.in_progress', color: 'processing' },
+  paused: { text: 'status.order.paused', color: 'warning' },
   // 工序阶段
-  procurement:    { text: '物料采购',    color: 'processing' },
-  cutting:        { text: '裁剪中',      color: 'processing' },
-  sewing:         { text: '车缝中',      color: 'processing' },
-  ironing:        { text: '大烫',        color: 'processing' },
-  secondary_process: { text: '二次工艺', color: 'info' },
-  quality_check:  { text: '质检中',      color: 'processing' },
-  warehousing:    { text: '入库中',      color: 'processing' },
-  packaging:      { text: '包装',        color: 'processing' },
+  procurement: { text: 'status.order.procurement', color: 'processing' },
+  cutting: { text: 'status.order.cutting', color: 'processing' },
+  sewing: { text: 'status.order.sewing', color: 'processing' },
+  ironing: { text: 'status.order.ironing', color: 'processing' },
+  secondary_process: { text: 'status.order.secondary_process', color: 'info' },
+  quality_check: { text: 'status.order.quality_check', color: 'processing' },
+  warehousing: { text: 'status.order.warehousing', color: 'processing' },
+  packaging: { text: 'status.order.packaging', color: 'processing' },
   // 终止/异常
-  completed:      { text: '已完成',      color: 'success' },
-  delayed:        { text: '已逾期',      color: 'warning' },
-  scrapped:       { text: '已报废',      color: 'error' },
-  cancelled:      { text: '已取消',      color: 'default' },
-  canceled:       { text: '已取消',      color: 'default' },
-  returned:       { text: '已退回',      color: 'error' },
-  closed:         { text: '已关单',      color: 'processing' },
-  archived:       { text: '已归档',      color: 'default' },
+  completed: { text: 'status.order.completed', color: 'success' },
+  delayed: { text: 'status.order.delayed', color: 'warning' },
+  scrapped: { text: 'status.order.scrapped', color: 'error' },
+  cancelled: { text: 'status.order.cancelled', color: 'default' },
+  canceled: { text: 'status.order.canceled', color: 'default' },
+  returned: { text: 'status.order.returned', color: 'error' },
+  closed: { text: 'status.order.closed', color: 'processing' },
+  archived: { text: 'status.order.archived', color: 'default' },
   // 辅助状态
-  confirmed:      { text: '已确认',      color: 'processing' },
-  draft:          { text: '草稿',       color: 'default' },
-  produced:       { text: '已生产',      color: 'processing' },
-  warehoused:     { text: '已入库',      color: 'success' },
-  received:       { text: '已领取',      color: 'processing' },
-  partial:        { text: '部分到货',    color: 'processing' },
-  partial_arrival:{ text: '部分到货',    color: 'processing' },
-  awaiting_confirm:{ text: '待确认',     color: 'processing' },
-  warehouse_pending:{ text: '待入库',    color: 'processing' },
-  pending_audit:  { text: '待初审',     color: 'processing' },
-  passed:         { text: '初审通过',    color: 'success' },
-  bundled:        { text: '已成菲',      color: 'processing' },
-  created:        { text: '已创建',      color: 'default' },
-  material_preparation: { text: '备料中', color: 'processing' },
+  confirmed: { text: 'status.order.confirmed', color: 'processing' },
+  draft: { text: 'status.order.draft', color: 'default' },
+  produced: { text: 'status.order.produced', color: 'processing' },
+  warehoused: { text: 'status.order.warehoused', color: 'success' },
+  received: { text: 'status.order.received', color: 'processing' },
+  partial: { text: 'status.order.partial', color: 'processing' },
+  partial_arrival: { text: 'status.order.partial_arrival', color: 'processing' },
+  awaiting_confirm: { text: 'status.order.awaiting_confirm', color: 'processing' },
+  warehouse_pending: { text: 'status.order.warehouse_pending', color: 'processing' },
+  pending_audit: { text: 'status.order.pending_audit', color: 'processing' },
+  passed: { text: 'status.order.passed', color: 'success' },
+  bundled: { text: 'status.order.bundled', color: 'processing' },
+  created: { text: 'status.order.created', color: 'default' },
+  material_preparation: { text: 'status.order.material_preparation', color: 'processing' },
   // 通用大写
-  OPEN:           { text: '待处理',      color: 'processing' },
-  RESOLVED:       { text: '已解决',     color: 'success' },
-  REWORK:         { text: '返工中',      color: 'warning' },
-  WAREHOUSE_OUT:  { text: '已出仓',      color: 'processing' },
-  PRODUCTION_COMPLETED: { text: '生产完成', color: 'success' },
-  IN_STOCK:       { text: '在库',        color: 'success' },
-  ISSUED:         { text: '已发料',      color: 'processing' },
-  RETURNED:       { text: '已退回',      color: 'error' },
-  ENABLED:        { text: '已启用',      color: 'success' },
-  active:         { text: '正常',        color: 'success' },
-  inactive:       { text: '已停用',      color: 'default' },
-  PARTIAL:        { text: '部分付款',    color: 'processing' },
-  OVERDUE:        { text: '已逾期',      color: 'warning' },
-  SETTLING:       { text: '结算中',      color: 'processing' },
-  SETTLED:        { text: '已结算',      color: 'success' },
-  ISSUED_INVOICE: { text: '已开具',      color: 'success' },
-  processing:     { text: '处理中',      color: 'processing' },
-  refunded:       { text: '已退款',      color: 'success' },
-  borrowed:       { text: '借出中',      color: 'processing' },
-  lost:           { text: '已丢失',      color: 'error' },
-  accepted:       { text: '已接受',      color: 'success' },
-  verified:       { text: '已验证',      color: 'success' },
-  repaired_waiting_qc: { text: '返修待质检', color: 'warning' },
-  CREATED:        { text: '已创建',      color: 'default' },
-  DISCONNECTED:   { text: '未连接',      color: 'error' },
-  unpaid:         { text: '未付款',      color: 'error' },
-  partially_paid: { text: '部分已付',    color: 'processing' },
-  fully_paid:    { text: '已付清',      color: 'success' },
-  unrepaid:       { text: '未还款',      color: 'warning' },
-  repaid:         { text: '已还清',      color: 'success' },
+  OPEN: { text: 'status.order.open', color: 'processing' },
+  RESOLVED: { text: 'status.order.resolved', color: 'success' },
+  REWORK: { text: 'status.order.rework', color: 'warning' },
+  WAREHOUSE_OUT: { text: 'status.order.warehouse_out', color: 'processing' },
+  PRODUCTION_COMPLETED: { text: 'status.order.production_completed', color: 'success' },
+  IN_STOCK: { text: 'status.order.in_stock', color: 'success' },
+  ISSUED: { text: 'status.order.issued', color: 'processing' },
+  RETURNED: { text: 'status.order.returned', color: 'error' },
+  ENABLED: { text: 'status.order.enabled', color: 'success' },
+  active: { text: 'status.order.active', color: 'success' },
+  inactive: { text: 'status.order.inactive', color: 'default' },
+  PARTIAL: { text: 'status.order.partial', color: 'processing' },
+  OVERDUE: { text: 'status.order.overdue', color: 'warning' },
+  SETTLING: { text: 'status.order.settling', color: 'processing' },
+  SETTLED: { text: 'status.order.settled', color: 'success' },
+  ISSUED_INVOICE: { text: 'status.order.issued_invoice', color: 'success' },
+  processing: { text: 'status.order.processing', color: 'processing' },
+  refunded: { text: 'status.order.refunded', color: 'success' },
+  borrowed: { text: 'status.order.borrowed', color: 'processing' },
+  lost: { text: 'status.order.lost', color: 'error' },
+  accepted: { text: 'status.order.accepted', color: 'success' },
+  verified: { text: 'status.order.verified', color: 'success' },
+  repaired_waiting_qc: { text: 'status.order.repaired_waiting_qc', color: 'warning' },
+  CREATED: { text: 'status.order.created', color: 'default' },
+  DISCONNECTED: { text: 'status.order.disconnected', color: 'error' },
+  unpaid: { text: 'status.order.unpaid', color: 'error' },
+  partially_paid: { text: 'status.order.partially_paid', color: 'processing' },
+  fully_paid: { text: 'status.order.fully_paid', color: 'success' },
+  unrepaid: { text: 'status.order.unrepaid', color: 'warning' },
+  repaid: { text: 'status.order.repaid', color: 'success' },
 };
 
 /* =========================== 物料采购状态 ============================
@@ -104,19 +104,19 @@ export const ORDER_STATUS_MAP: StatusMap = {
  * 小程序/H5 引用 h5-web/source-miniapp/shared/statusMap.js 中的 MATERIAL_PURCHASE_STATUS_LABELS/COLORS
  */
 export const MATERIAL_PURCHASE_STATUS_MAP: StatusMap = {
-  pending:            { text: '待采购',      color: 'warning' },
-  procurement:        { text: '采购中',      color: 'processing' },
-  purchasing:         { text: '采购中',      color: 'processing' },
-  material_preparation: { text: '备料中',    color: 'processing' },
-  received:           { text: '已到货',      color: 'success' },
-  partial:            { text: '部分到货',    color: 'warning' },
-  partial_arrival:    { text: '部分到货',    color: 'warning' },
-  partial_arrived:    { text: '部分到货',    color: 'warning' },
-  awaiting_confirm:   { text: '待确认',      color: 'processing' },
-  warehouse_pending:  { text: '待仓库出库',  color: 'processing' },
-  completed:          { text: '已完成',      color: 'success' },
-  cancelled:          { text: '已取消',      color: 'default' },
-  canceled:           { text: '已取消',      color: 'default' },
+  pending: { text: 'status.purchase.pending', color: 'warning' },
+  procurement: { text: 'status.purchase.procurement', color: 'processing' },
+  purchasing: { text: 'status.purchase.purchasing', color: 'processing' },
+  material_preparation: { text: 'status.purchase.material_preparation', color: 'processing' },
+  received: { text: 'status.purchase.received', color: 'success' },
+  partial: { text: 'status.purchase.partial', color: 'warning' },
+  partial_arrival: { text: 'status.purchase.partial_arrival', color: 'warning' },
+  partial_arrived: { text: 'status.purchase.partial_arrived', color: 'warning' },
+  awaiting_confirm: { text: 'status.purchase.awaiting_confirm', color: 'processing' },
+  warehouse_pending: { text: 'status.purchase.warehouse_pending', color: 'processing' },
+  completed: { text: 'status.purchase.completed', color: 'success' },
+  cancelled: { text: 'status.purchase.cancelled', color: 'default' },
+  canceled: { text: 'status.purchase.canceled', color: 'default' },
 };
 
 /* =========================== 纸样生产状态（PatternProduction）============================
@@ -138,165 +138,165 @@ export const MATERIAL_PURCHASE_STATUS_MAP: StatusMap = {
  *     在 SAMPLE_REVIEW_STATUS_MAP 中定义。
  */
 export const PATTERN_STATUS_MAP: StatusMap = {
-  PENDING:               { text: '未开始',    color: 'default' },
-  NOT_STARTED:           { text: '未开始',    color: 'default' },
-  RECEIVED:              { text: '已领取',    color: 'processing' },
-  IN_PROGRESS:           { text: '进行中',    color: 'processing' },
-  PRODUCTION_COMPLETED:  { text: '生产完成',  color: 'success' },
-  COMPLETED:             { text: '已完成',    color: 'success' },
-  WAREHOUSE_IN:          { text: '已入库',    color: 'success' },
-  WAREHOUSE_OUT:         { text: '已出库',    color: 'processing' },
-  WAREHOUSE_RETURN:      { text: '已归还',    color: 'default' },
-  SCRAPPED:              { text: '已报废',    color: 'error' },
-  RETURNED:              { text: '已退回',    color: 'error' },
-  LOCKED:                { text: '已锁定',    color: 'processing' },
-  UNLOCKED:              { text: '未锁定',    color: 'default' },
+  PENDING: { text: 'status.pattern.pending', color: 'default' },
+  NOT_STARTED: { text: 'status.pattern.not_started', color: 'default' },
+  RECEIVED: { text: 'status.pattern.received', color: 'processing' },
+  IN_PROGRESS: { text: 'status.pattern.in_progress', color: 'processing' },
+  PRODUCTION_COMPLETED: { text: 'status.pattern.production_completed', color: 'success' },
+  COMPLETED: { text: 'status.pattern.completed', color: 'success' },
+  WAREHOUSE_IN: { text: 'status.pattern.warehouse_in', color: 'success' },
+  WAREHOUSE_OUT: { text: 'status.pattern.warehouse_out', color: 'processing' },
+  WAREHOUSE_RETURN: { text: 'status.pattern.warehouse_return', color: 'default' },
+  SCRAPPED: { text: 'status.pattern.scrapped', color: 'error' },
+  RETURNED: { text: 'status.pattern.returned', color: 'error' },
+  LOCKED: { text: 'status.pattern.locked', color: 'processing' },
+  UNLOCKED: { text: 'status.pattern.unlocked', color: 'default' },
 };
 
 /* =========================== 物料对账状态 ============================ */
 export const MATERIAL_RECON_STATUS_MAP: StatusMap = {
-  pending:   { text: '待核实', color: 'default' },
-  verified:  { text: '已核实', color: 'processing' },
-  approved:  { text: '已审批', color: 'success' },
-  paid:      { text: '已付款', color: 'success' },
-  rejected: { text: '已驳回', color: 'error' },
+  pending: { text: 'status.recon.pending', color: 'default' },
+  verified: { text: 'status.recon.verified', color: 'processing' },
+  approved: { text: 'status.recon.approved', color: 'success' },
+  paid: { text: 'status.recon.paid', color: 'success' },
+  rejected: { text: 'status.recon.rejected', color: 'error' },
 };
 
 /* =========================== 工资/结算状态 ============================ */
 export const SETTLEMENT_STATUS_MAP: StatusMap = {
-  pending:     { text: '待生产', color: 'default' },
-  confirmed:   { text: '已确认', color: 'processing' },
-  production:  { text: '生产中', color: 'processing' },
-  in_progress: { text: '生产中', color: 'processing' },
-  completed:   { text: '已完成', color: 'success' },
-  cancelled:   { text: '已取消', color: 'default' },
-  canceled:    { text: '已取消', color: 'default' },
-  closed:     { text: '已关单', color: 'processing' },
-  scrapped:   { text: '已报废', color: 'error' },
-  archived:   { text: '已归档', color: 'default' },
-  paused:     { text: '已暂停', color: 'warning' },
-  returned:   { text: '已退回', color: 'error' },
-  delayed:    { text: '已逾期', color: 'warning' },
+  pending: { text: 'status.settlement.pending', color: 'default' },
+  confirmed: { text: 'status.settlement.confirmed', color: 'processing' },
+  production: { text: 'status.settlement.production', color: 'processing' },
+  in_progress: { text: 'status.settlement.in_progress', color: 'processing' },
+  completed: { text: 'status.settlement.completed', color: 'success' },
+  cancelled: { text: 'status.settlement.cancelled', color: 'default' },
+  canceled: { text: 'status.settlement.canceled', color: 'default' },
+  closed: { text: 'status.settlement.closed', color: 'processing' },
+  scrapped: { text: 'status.settlement.scrapped', color: 'error' },
+  archived: { text: 'status.settlement.archived', color: 'default' },
+  paused: { text: 'status.settlement.paused', color: 'warning' },
+  returned: { text: 'status.settlement.returned', color: 'error' },
+  delayed: { text: 'status.settlement.delayed', color: 'warning' },
 };
 
 /* =========================== 支付状态 ============================ */
 export const PAYMENT_STATUS_MAP: StatusMap = {
-  pending:    { text: '待支付',   color: 'warning' },
-  processing: { text: '支付中',   color: 'processing' },
-  success:    { text: '已支付',   color: 'success' },
-  failed:     { text: '支付失败', color: 'error' },
-  cancelled:  { text: '已取消',   color: 'default' },
-  rejected:   { text: '已驳回',   color: 'error' },
-  refunded:   { text: '已退回',   color: 'error' },
+  pending: { text: 'status.payment.pending', color: 'warning' },
+  processing: { text: 'status.payment.processing', color: 'processing' },
+  success: { text: 'status.payment.success', color: 'success' },
+  failed: { text: 'status.payment.failed', color: 'error' },
+  cancelled: { text: 'status.payment.cancelled', color: 'default' },
+  rejected: { text: 'status.payment.rejected', color: 'error' },
+  refunded: { text: 'status.payment.refunded', color: 'error' },
 };
 
 /* =========================== 工资条支付状态 ============================ */
 export const PAYROLL_PAYMENT_STATUS_MAP: StatusMap = {
-  unpaid:         { text: '未付',   color: 'error' },
-  partially_paid: { text: '部分已付', color: 'warning' },
-  fully_paid:    { text: '已付清', color: 'success' },
+  unpaid: { text: 'status.payrollPayment.unpaid', color: 'error' },
+  partially_paid: { text: 'status.payrollPayment.partially_paid', color: 'warning' },
+  fully_paid: { text: 'status.payrollPayment.fully_paid', color: 'success' },
 };
 
 /* =========================== 工厂状态 ============================ */
 export const FACTORY_STATUS_MAP: StatusMap = {
-  active:   { text: '启用',   color: 'success' },
-  inactive: { text: '停用',   color: 'default' },
+  active: { text: 'status.factory.active', color: 'success' },
+  inactive: { text: 'status.factory.inactive', color: 'default' },
 };
 
 export const FACTORY_TYPE_MAP: StatusMap = {
-  INTERNAL:  { text: '内部', color: 'processing' },
-  EXTERNAL:  { text: '外部', color: 'info' },
+  INTERNAL: { text: 'status.factoryType.internal', color: 'processing' },
+  EXTERNAL: { text: 'status.factoryType.external', color: 'info' },
 };
 
 /* =========================== 物料/仓库状态 ============================ */
 export const MATERIAL_STATUS_MAP: StatusMap = {
-  completed: { text: '已完成', color: 'default' },
-  pending:   { text: '待完成', color: 'warning' },
-  disabled:  { text: '已停用', color: 'error' },
+  completed: { text: 'status.material.completed', color: 'default' },
+  pending: { text: 'status.material.pending', color: 'warning' },
+  disabled: { text: 'status.material.disabled', color: 'error' },
 };
 
 export const SECONDARY_PROCESS_STATUS_MAP: StatusMap = {
-  pending:    { text: '待处理', color: 'default' },
-  processing: { text: '处理中', color: 'processing' },
-  completed:  { text: '已完成', color: 'success' },
-  cancelled:  { text: '已取消', color: 'error' },
+  pending: { text: 'status.secondary.pending', color: 'default' },
+  processing: { text: 'status.secondary.processing', color: 'processing' },
+  completed: { text: 'status.secondary.completed', color: 'success' },
+  cancelled: { text: 'status.secondary.cancelled', color: 'error' },
 };
 
 /* =========================== 裁剪菲状态 ============================ */
 export const CUTTING_BUNDLE_STATUS_MAP: StatusMap = {
-  created:     { text: '已创建',    color: 'default' },
-  active:      { text: '有效',      color: 'success' },
-  qualified:   { text: '合格',      color: 'success' },
-  unqualified: { text: '不合格',    color: 'error' },
-  inactive:    { text: '无效',      color: 'default' },
-  split:       { text: '已拆分',    color: 'processing' },
-  pending:     { text: '待处理',    color: 'default' },
-  in_progress: { text: '进行中',    color: 'processing' },
-  completed:   { text: '已完成',    color: 'success' },
-  bundled:     { text: '已成菲',    color: 'processing' },
+  created: { text: 'status.bundle.created', color: 'default' },
+  active: { text: 'status.bundle.active', color: 'success' },
+  qualified: { text: 'status.bundle.qualified', color: 'success' },
+  unqualified: { text: 'status.bundle.unqualified', color: 'error' },
+  inactive: { text: 'status.bundle.inactive', color: 'default' },
+  split: { text: 'status.bundle.split', color: 'processing' },
+  pending: { text: 'status.bundle.pending', color: 'default' },
+  in_progress: { text: 'status.bundle.in_progress', color: 'processing' },
+  completed: { text: 'status.bundle.completed', color: 'success' },
+  bundled: { text: 'status.bundle.bundled', color: 'processing' },
 };
 
 /* =========================== 裁剪任务状态 ============================ */
 export const CUTTING_TASK_STATUS_MAP: StatusMap = {
-  pending:     { text: '待裁剪',    color: 'default' },
-  in_progress: { text: '裁剪中',    color: 'processing' },
-  completed:   { text: '已完成',    color: 'success' },
-  bundled:     { text: '已成菲',    color: 'processing' },
+  pending: { text: 'status.task.pending', color: 'default' },
+  in_progress: { text: 'status.task.in_progress', color: 'processing' },
+  completed: { text: 'status.task.completed', color: 'success' },
+  bundled: { text: 'status.task.bundled', color: 'processing' },
 };
 
 /* =========================== 外发工厂发货状态 ============================ */
 export const FACTORY_SHIPMENT_STATUS_MAP: StatusMap = {
-  pending:           { text: '待收货',       color: 'warning' },
+  pending: { text: 'status.shipment.pending', color: 'warning' },
   // D-242：分批收货中间态——已收部分、仍有在途未收
-  partial:           { text: '部分收货',     color: 'warning' },
-  received:          { text: '已收货',       color: 'processing' },
-  quality_checked:   { text: '已质检',       color: 'info' },
-  partially_returned:{ text: '部分退回返修', color: 'error' },
+  partial: { text: 'status.shipment.partial', color: 'warning' },
+  received: { text: 'status.shipment.received', color: 'processing' },
+  quality_checked: { text: 'status.shipment.quality_checked', color: 'info' },
+  partially_returned: { text: 'status.shipment.partially_returned', color: 'error' },
 };
 
 /* =========================== 款式订单状态 ============================ */
 export const STYLE_ORDER_STATUS_MAP: StatusMap = {
-  COMPLETED:   { text: '已完成', color: 'success' },
-  WAREHOUSED:  { text: '已入库', color: 'success' },
-  IN_PROGRESS: { text: '生产中', color: 'processing' },
-  DRAFT:       { text: '草稿',   color: 'default' },
-  CANCELLED:   { text: '已取消', color: 'error' },
+  COMPLETED: { text: 'status.styleOrder.completed', color: 'success' },
+  WAREHOUSED: { text: 'status.styleOrder.warehoused', color: 'success' },
+  IN_PROGRESS: { text: 'status.styleOrder.in_progress', color: 'processing' },
+  DRAFT: { text: 'status.styleOrder.draft', color: 'default' },
+  CANCELLED: { text: 'status.styleOrder.cancelled', color: 'error' },
 };
 
 /* =========================== AI Agent 状态 ============================ */
 export const AGENT_EXECUTION_STATUS_MAP: StatusMap = {
-  SUCCESS:    { text: '成功',   color: 'success' },
-  FAILED:     { text: '失败',   color: 'error' },
-  EXECUTING:  { text: '执行中', color: 'processing' },
-  TIMEOUT:    { text: '超时',   color: 'warning' },
-  PENDING:    { text: '待执行', color: 'default' },
-  UNKNOWN:    { text: '未知',   color: 'default' },
+  SUCCESS: { text: 'status.agent.success', color: 'success' },
+  FAILED: { text: 'status.agent.failed', color: 'error' },
+  EXECUTING: { text: 'status.agent.executing', color: 'processing' },
+  TIMEOUT: { text: 'status.agent.timeout', color: 'warning' },
+  PENDING: { text: 'status.agent.pending', color: 'default' },
+  UNKNOWN: { text: 'status.agent.unknown', color: 'default' },
 };
 
 /* =========================== 业务类型 ============================ */
 export const BIZ_TYPE_MAP: StatusMap = {
-  PAYROLL:               { text: '员工工资',   color: 'processing' },
-  PAYROLL_SETTLEMENT:    { text: '工资结算',   color: 'processing' },
-  ORDER_SETTLEMENT:     { text: '订单结算',   color: 'processing' },
-  RECONCILIATION:       { text: '工厂对账',   color: 'warning' },
-  material_reconciliation: { text: '工厂对账', color: 'warning' },
-  REIMBURSEMENT:        { text: '费用报销',   color: 'info' },
-  BILL_RECEIVABLE:      { text: '应收账款',   color: 'success' },
-  BILL_PAYABLE:         { text: '应付账款',   color: 'error' },
+  PAYROLL: { text: 'status.biz.payroll', color: 'processing' },
+  PAYROLL_SETTLEMENT: { text: 'status.biz.payroll_settlement', color: 'processing' },
+  ORDER_SETTLEMENT: { text: 'status.biz.order_settlement', color: 'processing' },
+  RECONCILIATION: { text: 'status.biz.reconciliation', color: 'warning' },
+  material_reconciliation: { text: 'status.biz.material_reconciliation', color: 'warning' },
+  REIMBURSEMENT: { text: 'status.biz.reimbursement', color: 'info' },
+  BILL_RECEIVABLE: { text: 'status.biz.bill_receivable', color: 'success' },
+  BILL_PAYABLE: { text: 'status.biz.bill_payable', color: 'error' },
 };
 
 export const ORDER_BIZ_TYPE_MAP: StatusMap = {
-  FOB:  { text: 'FOB 离岸价', color: 'processing' },
-  ODM:  { text: 'ODM 原厂设计', color: 'info' },
-  OEM:  { text: 'OEM 代工生产', color: 'processing' },
-  CMT:  { text: 'CMT 来料加工', color: 'warning' },
+  FOB: { text: 'status.orderBiz.fob', color: 'processing' },
+  ODM: { text: 'status.orderBiz.odm', color: 'info' },
+  OEM: { text: 'status.orderBiz.oem', color: 'processing' },
+  CMT: { text: 'status.orderBiz.cmt', color: 'warning' },
 };
 
 /* =========================== 审核状态 ============================ */
 export const REVIEW_STATUS_MAP: StatusMap = {
-  PASS:   { text: '通过',   color: 'success' },
-  REWORK: { text: '需修改', color: 'warning' },
-  REJECT: { text: '不通过', color: 'error' },
+  PASS: { text: 'status.review.pass', color: 'success' },
+  REWORK: { text: 'status.review.rework', color: 'warning' },
+  REJECT: { text: 'status.review.reject', color: 'error' },
 };
 
 /* =========================== 通用辅助函数 ============================ */
@@ -313,6 +313,6 @@ export function resolveStatus(key: string, fallback?: StatusMapItem): StatusMapI
     ORDER_STATUS_MAP[k.toLowerCase()] ??
     ORDER_STATUS_MAP[k.toUpperCase()] ??
     fallback ??
-    { text: '未知', color: 'default' }
+    { text: 'common.unknown', color: 'default' }
   );
 }

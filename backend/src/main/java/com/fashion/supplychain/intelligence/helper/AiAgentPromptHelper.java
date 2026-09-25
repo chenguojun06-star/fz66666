@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 @Component
-@Lazy
 @Slf4j
 public class AiAgentPromptHelper {
 

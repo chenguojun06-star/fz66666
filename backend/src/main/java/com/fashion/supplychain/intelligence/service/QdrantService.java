@@ -58,7 +58,6 @@ import org.springframework.context.annotation.Lazy;
  * </pre>
  */
 @Service
-@Lazy
 @Slf4j
 public class QdrantService {
 

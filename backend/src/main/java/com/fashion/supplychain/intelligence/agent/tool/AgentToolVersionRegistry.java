@@ -36,7 +36,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Service
-@Lazy
 public class AgentToolVersionRegistry {
 
     @Autowired

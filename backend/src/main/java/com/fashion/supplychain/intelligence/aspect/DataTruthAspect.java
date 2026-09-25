@@ -16,7 +16,6 @@ import java.util.Map;
 @Slf4j
 @Aspect
 @Component
-@Lazy
 public class DataTruthAspect {
 
     private final DataTruthGuard dataTruthGuard;

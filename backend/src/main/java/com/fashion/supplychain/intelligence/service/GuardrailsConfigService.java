@@ -18,7 +18,6 @@ import java.util.regex.Pattern;
  * 引擎：{@link EvolutionSafetyGuard} 的补充，专注于输出内容过滤。
  */
 @Service
-@Lazy
 @Slf4j
 public class GuardrailsConfigService {
 

@@ -23,7 +23,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
-@Lazy
 @RequiredArgsConstructor
 public class McpToolScanner {
 

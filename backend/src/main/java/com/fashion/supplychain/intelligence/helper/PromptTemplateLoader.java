@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
-@Lazy
 public class PromptTemplateLoader {
 
     private final Map<String, Map<String, Object>> templates = new ConcurrentHashMap<>();

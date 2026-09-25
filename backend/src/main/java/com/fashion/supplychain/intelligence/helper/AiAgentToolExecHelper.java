@@ -34,7 +34,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-@Lazy
 public class AiAgentToolExecHelper {
 
     private static final int STUCK_MAX_REPEAT = 3;

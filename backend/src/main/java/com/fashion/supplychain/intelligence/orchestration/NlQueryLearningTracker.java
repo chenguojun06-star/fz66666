@@ -17,7 +17,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
-@Lazy
 @Slf4j
 @RequiredArgsConstructor
 public class NlQueryLearningTracker {

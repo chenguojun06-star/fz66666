@@ -20,7 +20,6 @@ import java.util.Map;
  * <p>配置项：{@code intelligence.qdrant.*}（已在 application.yml 定义）
  */
 @Service
-@Lazy
 @Slf4j
 public class QdrantAdminOrchestrator {
 
