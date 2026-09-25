@@ -231,7 +231,28 @@
   "admin": {
     "language": "ភាសា",
     "switchLanguage": "ប្តូរភាសា",
-    "languageSwitched": "បានប្តូរភាសា"
+    "languageSwitched": "បានប្តូរភាសា",
+    "menuApproval": "User Approval",
+    "menuPassword": "Change Password",
+    "menuFeedback": "Feedback",
+    "menuInvite": "Invite Staff",
+    "menuPrivacy": "Privacy Policy",
+    "menuAbout": "About Us",
+    "unknownUser": "Unknown",
+    "defaultRole": "User",
+    "onlineCount": "{count} online",
+    "statHours": "Monthly Hours",
+    "statWage": "Monthly Pay",
+    "statScans": "Scans",
+    "logout": "Log Out",
+    "menuManage": "Menu Management",
+    "noFactoryCode": "No factory code",
+    "factoryCodeCopied": "Factory code copied",
+    "registerLinkCopied": "Registration link copied",
+    "uploading": "Uploading...",
+    "uploadFailed": "Upload failed",
+    "avatarUpdated": "Avatar updated",
+    "saveFailed": "Save failed"
   },
   "status": {
     "order": {

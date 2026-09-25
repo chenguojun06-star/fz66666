@@ -16,23 +16,24 @@ function buildMenuItems(opts) {
   const showInviteSection = opts.showInviteSection || false;
   const showApprovalEntry = opts.showApprovalEntry || false;
   const pendingCount = opts.pendingCount || '';
+  const lang = opts.lang;
   const items = [];
 
-  // Group 0: 管理功能
+  // Group 0: 管理功能（label 跟随传入的语言，refreshMenuItems 在 applyLanguage 后重跑）
   if (showApprovalEntry) {
-    items.push({ id: 'approval', label: '用户审批', iconClass: 'icon-menu-user', iconBg: 'var(--color-primary)', url: '/pages/admin/user-approval/index', group: 0, badge: pendingCount });
+    items.push({ id: 'approval', label: i18n.t('admin.menuApproval', lang), iconClass: 'icon-menu-user', iconBg: 'var(--color-primary)', url: '/pages/admin/user-approval/index', group: 0, badge: pendingCount });
   }
-  items.push({ id: 'password', label: '修改密码', iconClass: 'icon-menu-password', iconBg: 'var(--color-success)', url: '/pages/admin/misc/change-password/index', group: 0 });
+  items.push({ id: 'password', label: i18n.t('admin.menuPassword', lang), iconClass: 'icon-menu-password', iconBg: 'var(--color-success)', url: '/pages/admin/misc/change-password/index', group: 0 });
 
   // Group 1: 其他设置
-  items.push({ id: 'feedback', label: '意见反馈', iconClass: 'icon-menu-feedback', iconBg: 'var(--color-warning)', url: '/pages/admin/misc/feedback/index', group: 1 });
+  items.push({ id: 'feedback', label: i18n.t('admin.menuFeedback', lang), iconClass: 'icon-menu-feedback', iconBg: 'var(--color-warning)', url: '/pages/admin/misc/feedback/index', group: 1 });
   if (showInviteSection) {
-    items.push({ id: 'invite', label: '邀请员工', iconClass: 'icon-menu-invite', iconBg: 'var(--color-purple)', url: '/pages/admin/misc/invite/index', group: 1 });
+    items.push({ id: 'invite', label: i18n.t('admin.menuInvite', lang), iconClass: 'icon-menu-invite', iconBg: 'var(--color-purple)', url: '/pages/admin/misc/invite/index', group: 1 });
   }
 
   // Group 2: 关于
-  items.push({ id: 'privacy', label: '隐私政策', iconClass: 'icon-menu-privacy', iconBg: 'var(--color-text-tertiary)', url: '/pages/privacy/index', group: 2 });
-  items.push({ id: 'about', label: '关于我们', iconClass: 'icon-menu-confirm', iconBg: 'var(--color-text-tertiary)', url: '/pages/admin/misc/about/index', group: 2 });
+  items.push({ id: 'privacy', label: i18n.t('admin.menuPrivacy', lang), iconClass: 'icon-menu-privacy', iconBg: 'var(--color-text-tertiary)', url: '/pages/privacy/index', group: 2 });
+  items.push({ id: 'about', label: i18n.t('admin.menuAbout', lang), iconClass: 'icon-menu-confirm', iconBg: 'var(--color-text-tertiary)', url: '/pages/admin/misc/about/index', group: 2 });
 
   return items;
 }
@@ -59,6 +60,7 @@ Page({
     avatarLetter: '',
     avatarImgUrl: '',
     onlineCount: 0,
+    onlineText: '',
     showApprovalEntry: false,
     currentLanguage: 'zh-CN',
     currentLanguageName: '中文',
@@ -92,6 +94,7 @@ Page({
   },
 
   applyLanguage: function (language) {
+    this._lang = language;
     const languageNameMap = {
       'zh-CN': i18n.t('language.names.zh-CN', language),
       'en-US': i18n.t('language.names.en-US', language),
@@ -101,15 +104,28 @@ Page({
     this._languageNameMap = languageNameMap;
     this.setData({
       currentLanguage: language,
-      currentLanguageName: languageNameMap[language] || '中文',
+      currentLanguageName: languageNameMap[language] || language,
+      // 「我的」页静态文案（wxml 用 {{t.xxx}}）
+      t: {
+        unknownUser: i18n.t('admin.unknownUser', language),
+        defaultRole: i18n.t('admin.defaultRole', language),
+        statHours: i18n.t('admin.statHours', language),
+        statWage: i18n.t('admin.statWage', language),
+        statScans: i18n.t('admin.statScans', language),
+        logout: i18n.t('admin.logout', language),
+      },
+      onlineText: i18n.tf('admin.onlineCount', { count: this._onlineCount || 0 }, language),
     });
     // 语言切换就在本页发生，底栏必须立刻跟着变（不能等用户切到别的 tab）
     i18n.applyTabBar(language);
+    // 导航栏标题复用 tabbar.admin（与 more-apps 复用 home.appMoreApps 同先例）
+    wx.setNavigationBarTitle({ title: i18n.t('tabbar.admin', language) });
     this.refreshMenuItems();
   },
 
   refreshMenuItems: function () {
     const menuItems = buildMenuItems({
+      lang: this._lang,
       showInviteSection: this._showInviteSection || false,
       showApprovalEntry: this.data.showApprovalEntry,
       pendingCount: this.data.pendingCount || '',
@@ -214,7 +230,7 @@ Page({
   loadUserInfo: function (showApprovalEntry) {
     const userInfo = getUserInfo();
     const roleDisplayName = getRoleDisplayName();
-    const userName = (userInfo && userInfo.name) || (userInfo && userInfo.username) || '未知';
+    const userName = (userInfo && userInfo.name) || (userInfo && userInfo.username) || i18n.t('admin.unknownUser');
     const avatarLetter = userName.charAt(0);
 
     let avatarImgUrl = '';
@@ -291,7 +307,11 @@ Page({
       }
       return onlineCount;
     }).then(function (onlineCount) {
-      self.setData({ onlineCount: Number(onlineCount) || 0 });
+      self._onlineCount = Number(onlineCount) || 0;
+      self.setData({
+        onlineCount: self._onlineCount,
+        onlineText: i18n.tf('admin.onlineCount', { count: self._onlineCount }),
+      });
     }).catch(function (e) {
       console.error('加载系统信息失败', e);
     }).finally(function () {
@@ -302,12 +322,12 @@ Page({
   onCopyRecruitCode: function () {
     const code = (this._recruitInfo && this._recruitInfo.tenantCode) || '';
     if (!code) {
-      wx.showToast({ title: '暂无工厂码', icon: 'none' });
+      wx.showToast({ title: i18n.t('admin.noFactoryCode'), icon: 'none' });
       return;
     }
     wx.setClipboardData({
       data: code,
-      success: function () { wx.showToast({ title: '工厂码已复制', icon: 'success' }); },
+      success: function () { wx.showToast({ title: i18n.t('admin.factoryCodeCopied'), icon: 'success' }); },
     });
   },
 
@@ -346,7 +366,7 @@ Page({
     const tenantCode = recruitInfo.tenantCode || '';
     const tenantName = recruitInfo.tenantName || '';
     if (!tenantCode) {
-      wx.showToast({ title: '暂无工厂码', icon: 'none' });
+      wx.showToast({ title: i18n.t('admin.noFactoryCode'), icon: 'none' });
       return;
     }
     let baseUrl = '';
@@ -361,7 +381,7 @@ Page({
       + '&tenantName=' + encodeURIComponent(tenantName || '');
     wx.setClipboardData({
       data: url,
-      success: function () { wx.showToast({ title: '注册链接已复制', icon: 'success' }); },
+      success: function () { wx.showToast({ title: i18n.t('admin.registerLinkCopied'), icon: 'success' }); },
     });
   },
 
@@ -399,7 +419,7 @@ Page({
 
   _uploadAvatar: function (filePath) {
     const that = this;
-    wx.showLoading({ title: '上传中...' });
+    wx.showLoading({ title: i18n.t('admin.uploading'), mask: true });
     const auth_token = getToken() || '';
     const baseUrl = getBaseUrl();
 
@@ -414,7 +434,7 @@ Page({
           const data = JSON.parse(res.data);
           const url = data.data || data.url || data.fileUrl || '';
           if (!url) {
-            wx.showToast({ title: '上传失败', icon: 'none' });
+            wx.showToast({ title: i18n.t('admin.uploadFailed'), icon: 'none' });
             return;
           }
           // 调用 PUT /api/system/user/me 持久化到后端
@@ -427,18 +447,18 @@ Page({
               cached.avatarUrl = url;
               wx.setStorageSync('user_info', cached);
             } catch (e) { /* ignore */ }
-            wx.showToast({ title: '头像已更新', icon: 'success' });
+            wx.showToast({ title: i18n.t('admin.avatarUpdated'), icon: 'success' });
           }).catch(function (err) {
             console.warn('[admin] updateMe avatar failed:', err);
-            wx.showToast({ title: '保存失败', icon: 'none' });
+            wx.showToast({ title: i18n.t('admin.saveFailed'), icon: 'none' });
           });
         } catch (e) {
-          wx.showToast({ title: '上传失败', icon: 'none' });
+          wx.showToast({ title: i18n.t('admin.uploadFailed'), icon: 'none' });
         }
       },
       fail: function () {
         wx.hideLoading();
-        wx.showToast({ title: '上传失败', icon: 'none' });
+        wx.showToast({ title: i18n.t('admin.uploadFailed'), icon: 'none' });
       },
     });
   },

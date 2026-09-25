@@ -14,14 +14,14 @@
       </view>
       <view class="profile-info">
         <view class="profile-name-row">
-          <text class="profile-name">{{userInfo.name || userInfo.username || '未知用户'}}</text>
-          <view class="role-badge">{{roleDisplayName || '普通用户'}}</view>
+          <text class="profile-name">{{userInfo.name || userInfo.username || t.unknownUser}}</text>
+          <view class="role-badge">{{roleDisplayName || t.defaultRole}}</view>
         </view>
         <view wx:if="{{tenantName}}" class="profile-sub">{{tenantName}}</view>
         <view wx:if="{{phoneText}}" class="profile-sub profile-sub--phone">{{phoneText}}</view>
         <view wx:if="{{showApprovalEntry}}" class="profile-online">
           <view class="line-icon line-icon--sm icon-user-group online-icon"></view>
-          <text>{{onlineCount}}人在线</text>
+          <text>{{onlineText}}</text>
         </view>
       </view>
     </view>
@@ -31,15 +31,15 @@
   <view class="stats-row">
     <view class="stats-item">
       <text class="stats-value">{{stats.workHours}}</text>
-      <text class="stats-label">本月工时</text>
+      <text class="stats-label">{{t.statHours}}</text>
     </view>
     <view class="stats-item stats-item--divider">
       <text class="stats-value">{{stats.wageText}}</text>
-      <text class="stats-label">本月工资</text>
+      <text class="stats-label">{{t.statWage}}</text>
     </view>
     <view class="stats-item">
       <text class="stats-value">{{stats.scanCount}}</text>
-      <text class="stats-label">扫码次数</text>
+      <text class="stats-label">{{t.statScans}}</text>
     </view>
   </view>
 
@@ -60,46 +60,11 @@
   <!-- 退出登录 -->
   <view class="logout-section">
     <view class="logout-btn-full" hover-class="logout-btn-full-hover" hover-stay-time="100" bindtap="onLogout">
-      <text class="logout-btn-text">退出登录</text>
+      <text class="logout-btn-text">{{t.logout}}</text>
     </view>
   </view>
 
-</view>
-
-<!-- 菜单管理弹窗 -->
-<view wx:if="{{menuManageVisible}}" class="mm-overlay" bindtap="closeMenuManage"></view>
-<view wx:if="{{menuManageVisible}}" class="mm-panel">
-  <view class="mm-header">
-    <text class="mm-title">菜单管理</text>
-    <view class="mm-close" hover-class="mm-close-hover" bindtap="closeMenuManage">
-      <view class="mm-close-text icon-close"></view>
-    </view>
-  </view>
-  <view class="mm-desc">按角色控制首页各功能入口的显示与隐藏，关闭后该角色用户首页不可见。</view>
-  <scroll-view scroll-y class="mm-scroll">
-    <view class="mm-role-group" wx:for="{{menuManageGroups}}" wx:key="role" wx:for-item="group" wx:for-index="roleIdx">
-      <view class="mm-role-header">
-        <text class="mm-role-label">{{group.roleLabel}}</text>
-      </view>
-      <view class="mm-list">
-        <view class="mm-item" wx:for="{{group.menus}}" wx:key="shortKey" wx:for-item="menu" wx:for-index="menuIdx">
-          <text class="mm-item-label">{{menu.label}}</text>
-          <view class="mm-switch {{menu.enabled ? 'mm-switch-on' : 'mm-switch-off'}}" data-role-idx="{{roleIdx}}" data-menu-idx="{{menuIdx}}" bindtap="onMenuSwitch">
-            <view class="mm-switch-dot"></view>
-          </view>
-        </view>
-      </view>
-    </view>
-  </scroll-view>
-  <view class="mm-footer">
-    <view class="mm-btn mm-btn-cancel" hover-class="mm-btn-hover" bindtap="closeMenuManage">
-      <text>取消</text>
-    </view>
-    <view class="mm-btn mm-btn-save {{savingMenuConfig ? 'mm-btn-disabled' : ''}}" bindtap="saveMenuConfig">
-      <text>{{savingMenuConfig ? '保存中...' : '保存'}}</text>
-    </view>
-  </view>
 </view>
 
 <!-- 小云 AI 助手（全页面悬浮） -->
-<ai-assistant visible="{{!menuManageVisible}}" />
+<ai-assistant />

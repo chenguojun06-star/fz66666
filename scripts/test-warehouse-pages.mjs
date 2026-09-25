@@ -2419,6 +2419,8 @@ const HOME_JS = 'pages/home/index.js';
 const HOME_WXML = 'pages/home/index.wxml';
 const MORE_APPS_JS = 'pages/more-apps/index.js';
 const MORE_APPS_WXML = 'pages/more-apps/index.wxml';
+const ADMIN_JS = 'pages/admin/index.js';
+const ADMIN_WXML = 'pages/admin/index.wxml';
 
 /** 把 menuRows / filteredApps 拍平成 [分组名, 应用名...] */
 function flattenMenuNames(rows) {
@@ -2613,6 +2615,49 @@ function testI18nMoreApps() {
   eq('收藏项名字随语言重算', zhP.data.favoriteApps[0].name, 'Material Center');
 }
 
+/** 「我的」页（D-553-B）—— 菜单/统计标签/在线人数/退出登录/底栏 */
+function testI18nAdmin() {
+  testPageI18n(ADMIN_JS, ADMIN_WXML, '我的页');
+
+  const { page: zhP, wx: zhWx } = loadPage(ADMIN_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(ADMIN_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  // 菜单项（默认权限：审批/邀请不显示 → 5 项）
+  const zhLabels = zhP.data.menuItems.map(i => i.label);
+  const enLabels = enP.data.menuItems.map(i => i.label);
+  ok('zh 菜单含修改密码/意见反馈', zhLabels.includes('修改密码') && zhLabels.includes('意见反馈'), zhLabels.join('|'));
+  ok('en 菜单无中文残留', !enLabels.some(n => CJK_RE.test(String(n))), enLabels.join('|'));
+  ok('en 菜单含 Change Password / Privacy Policy',
+    enLabels.includes('Change Password') && enLabels.includes('Privacy Policy'), enLabels.join('|'));
+  ok('菜单项数量一致（语言切换不改变结构）', zhLabels.length === enLabels.length,
+    `zh=${zhLabels.length} en=${enLabels.length}`);
+
+  // 统计标签 / 退出登录 / 在线人数整句
+  eq('zh 统计标签', [zhP.data.t.statHours, zhP.data.t.statWage, zhP.data.t.statScans].join('|'),
+    '本月工时|本月工资|扫码次数');
+  eq('en 统计标签', [enP.data.t.statHours, enP.data.t.statWage, enP.data.t.statScans].join('|'),
+    'Monthly Hours|Monthly Pay|Scans');
+  eq('en 退出登录', enP.data.t.logout, 'Log Out');
+  eq('zh 在线人数整句', zhP.data.onlineText, '0人在线');
+  eq('en 在线人数整句（无占位符残留）', enP.data.onlineText, '0 online');
+
+  // 导航标题复用 tabbar.admin；底栏在语言切换时同步重设
+  eq('我的页导航标题随语言变化', lastCall(enWx, 'setNavigationBarTitle').title, 'Me');
+  eq('我的页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '我的');
+  const enTabs = enWx.calls.filter(c => c[0] === 'setTabBarItem').map(c => c[1]);
+  ok('我的页切语言重设底栏 4 项', enTabs.length === 4, `实际 ${enTabs.length} 项`);
+  eq('我的页底栏第 4 项是 Me', (enTabs[3] || {}).text, 'Me');
+
+  // 开审批/邀请权限后菜单仍然键化（zhP 已切 en，正好验证全量形态）
+  zhP._showInviteSection = true;
+  zhP.data.showApprovalEntry = true;
+  zhP.applyLanguage('en-US');
+  const enAll = zhP.data.menuItems.map(i => i.label);
+  ok('开审批/邀请入口后仍是英文', enAll.includes('User Approval') && enAll.includes('Invite Staff'), enAll.join('|'));
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -2653,6 +2698,7 @@ try {
   testI18nHome();
   await testI18nHomeActions();
   testI18nMoreApps();
+  testI18nAdmin();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

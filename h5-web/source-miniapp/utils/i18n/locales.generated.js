@@ -238,7 +238,28 @@ module.exports = {
     "admin": {
       "language": "语言",
       "switchLanguage": "切换语言",
-      "languageSwitched": "语言已切换"
+      "languageSwitched": "语言已切换",
+      "menuApproval": "用户审批",
+      "menuPassword": "修改密码",
+      "menuFeedback": "意见反馈",
+      "menuInvite": "邀请员工",
+      "menuPrivacy": "隐私政策",
+      "menuAbout": "关于我们",
+      "unknownUser": "未知用户",
+      "defaultRole": "普通用户",
+      "onlineCount": "{count}人在线",
+      "statHours": "本月工时",
+      "statWage": "本月工资",
+      "statScans": "扫码次数",
+      "logout": "退出登录",
+      "menuManage": "菜单管理",
+      "noFactoryCode": "暂无工厂码",
+      "factoryCodeCopied": "工厂码已复制",
+      "registerLinkCopied": "注册链接已复制",
+      "uploading": "上传中...",
+      "uploadFailed": "上传失败",
+      "avatarUpdated": "头像已更新",
+      "saveFailed": "保存失败"
     },
     "status": {
       "order": {
@@ -1148,7 +1169,28 @@ module.exports = {
     "admin": {
       "language": "Language",
       "switchLanguage": "Switch Language",
-      "languageSwitched": "Language switched"
+      "languageSwitched": "Language switched",
+      "menuApproval": "User Approval",
+      "menuPassword": "Change Password",
+      "menuFeedback": "Feedback",
+      "menuInvite": "Invite Staff",
+      "menuPrivacy": "Privacy Policy",
+      "menuAbout": "About Us",
+      "unknownUser": "Unknown",
+      "defaultRole": "User",
+      "onlineCount": "{count} online",
+      "statHours": "Monthly Hours",
+      "statWage": "Monthly Pay",
+      "statScans": "Scans",
+      "logout": "Log Out",
+      "menuManage": "Menu Management",
+      "noFactoryCode": "No factory code",
+      "factoryCodeCopied": "Factory code copied",
+      "registerLinkCopied": "Registration link copied",
+      "uploading": "Uploading...",
+      "uploadFailed": "Upload failed",
+      "avatarUpdated": "Avatar updated",
+      "saveFailed": "Save failed"
     },
     "status": {
       "order": {
@@ -2058,7 +2100,28 @@ module.exports = {
     "admin": {
       "language": "Ngôn ngữ",
       "switchLanguage": "Đổi ngôn ngữ",
-      "languageSwitched": "Đã đổi ngôn ngữ"
+      "languageSwitched": "Đã đổi ngôn ngữ",
+      "menuApproval": "Phê duyệt người dùng",
+      "menuPassword": "Đổi mật khẩu",
+      "menuFeedback": "Phản hồi",
+      "menuInvite": "Mời nhân viên",
+      "menuPrivacy": "Chính sách bảo mật",
+      "menuAbout": "Về chúng tôi",
+      "unknownUser": "Không rõ",
+      "defaultRole": "Người dùng",
+      "onlineCount": "{count} đang online",
+      "statHours": "Giờ công tháng",
+      "statWage": "Lương tháng",
+      "statScans": "Số lần quét",
+      "logout": "Đăng xuất",
+      "menuManage": "Quản lý menu",
+      "noFactoryCode": "Chưa có mã nhà máy",
+      "factoryCodeCopied": "Đã sao chép mã nhà máy",
+      "registerLinkCopied": "Đã sao chép liên kết đăng ký",
+      "uploading": "Đang tải lên...",
+      "uploadFailed": "Tải lên thất bại",
+      "avatarUpdated": "Đã cập nhật ảnh đại diện",
+      "saveFailed": "Lưu thất bại"
     },
     "status": {
       "order": {
@@ -2968,7 +3031,28 @@ module.exports = {
     "admin": {
       "language": "ភាសា",
       "switchLanguage": "ប្តូរភាសា",
-      "languageSwitched": "បានប្តូរភាសា"
+      "languageSwitched": "បានប្តូរភាសា",
+      "menuApproval": "User Approval",
+      "menuPassword": "Change Password",
+      "menuFeedback": "Feedback",
+      "menuInvite": "Invite Staff",
+      "menuPrivacy": "Privacy Policy",
+      "menuAbout": "About Us",
+      "unknownUser": "Unknown",
+      "defaultRole": "User",
+      "onlineCount": "{count} online",
+      "statHours": "Monthly Hours",
+      "statWage": "Monthly Pay",
+      "statScans": "Scans",
+      "logout": "Log Out",
+      "menuManage": "Menu Management",
+      "noFactoryCode": "No factory code",
+      "factoryCodeCopied": "Factory code copied",
+      "registerLinkCopied": "Registration link copied",
+      "uploading": "Uploading...",
+      "uploadFailed": "Upload failed",
+      "avatarUpdated": "Avatar updated",
+      "saveFailed": "Save failed"
     },
     "status": {
       "order": {

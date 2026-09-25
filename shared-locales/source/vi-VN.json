@@ -231,7 +231,28 @@
   "admin": {
     "language": "Ngôn ngữ",
     "switchLanguage": "Đổi ngôn ngữ",
-    "languageSwitched": "Đã đổi ngôn ngữ"
+    "languageSwitched": "Đã đổi ngôn ngữ",
+    "menuApproval": "Phê duyệt người dùng",
+    "menuPassword": "Đổi mật khẩu",
+    "menuFeedback": "Phản hồi",
+    "menuInvite": "Mời nhân viên",
+    "menuPrivacy": "Chính sách bảo mật",
+    "menuAbout": "Về chúng tôi",
+    "unknownUser": "Không rõ",
+    "defaultRole": "Người dùng",
+    "onlineCount": "{count} đang online",
+    "statHours": "Giờ công tháng",
+    "statWage": "Lương tháng",
+    "statScans": "Số lần quét",
+    "logout": "Đăng xuất",
+    "menuManage": "Quản lý menu",
+    "noFactoryCode": "Chưa có mã nhà máy",
+    "factoryCodeCopied": "Đã sao chép mã nhà máy",
+    "registerLinkCopied": "Đã sao chép liên kết đăng ký",
+    "uploading": "Đang tải lên...",
+    "uploadFailed": "Tải lên thất bại",
+    "avatarUpdated": "Đã cập nhật ảnh đại diện",
+    "saveFailed": "Lưu thất bại"
   },
   "status": {
     "order": {

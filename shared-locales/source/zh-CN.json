@@ -231,7 +231,28 @@
   "admin": {
     "language": "语言",
     "switchLanguage": "切换语言",
-    "languageSwitched": "语言已切换"
+    "languageSwitched": "语言已切换",
+    "menuApproval": "用户审批",
+    "menuPassword": "修改密码",
+    "menuFeedback": "意见反馈",
+    "menuInvite": "邀请员工",
+    "menuPrivacy": "隐私政策",
+    "menuAbout": "关于我们",
+    "unknownUser": "未知用户",
+    "defaultRole": "普通用户",
+    "onlineCount": "{count}人在线",
+    "statHours": "本月工时",
+    "statWage": "本月工资",
+    "statScans": "扫码次数",
+    "logout": "退出登录",
+    "menuManage": "菜单管理",
+    "noFactoryCode": "暂无工厂码",
+    "factoryCodeCopied": "工厂码已复制",
+    "registerLinkCopied": "注册链接已复制",
+    "uploading": "上传中...",
+    "uploadFailed": "上传失败",
+    "avatarUpdated": "头像已更新",
+    "saveFailed": "保存失败"
   },
   "status": {
     "order": {
