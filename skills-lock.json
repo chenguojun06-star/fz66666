@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "java-springboot": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/java-springboot/SKILL.md",
+      "computedHash": "f1b9c6b1277178fc33e5a612761c1cd1cf6ab5f946d05d69d52026d142c0a0c1"
+    },
     "lark-approval": {
       "source": "open.feishu.cn",
       "sourceType": "well-known",
@@ -120,6 +126,18 @@
       "source": "open.feishu.cn",
       "sourceType": "well-known",
       "computedHash": "37664a511e12ecab3fb8eba7a27a42ca35170668b5eaec6b5798229cdebb98a0"
+    },
+    "mysql-best-practices": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "skillPath": "mysql-best-practices/SKILL.md",
+      "computedHash": "02283efa91864ce6f56f542415bd69d9855be1ea33847987b15040394e828c23"
+    },
+    "sql-optimization": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/sql-optimization/SKILL.md",
+      "computedHash": "47c930907f25d67454ac8c2d155785eae3dce72242960d0c0e9ebf2ced9cd231"
     }
   }
 }
