@@ -531,9 +531,9 @@ Page({
           .catch(function (err) {
             wx.showModal({
               title: i18n.t('common.operationFailed', lang),
-              content: err.message || err.errMsg || i18n.t(NS + 'retryLater', lang),
+              content: err.message || err.errMsg || i18n.t('common.retryLater', lang),
               showCancel: false,
-              confirmText: i18n.t(NS + 'gotIt', lang),
+              confirmText: i18n.t('common.gotIt', lang),
             });
           });
       },
@@ -563,9 +563,9 @@ Page({
           .catch(function (err) {
             wx.showModal({
               title: i18n.t('common.operationFailed', lang),
-              content: err.message || err.errMsg || i18n.t(NS + 'retryLater', lang),
+              content: err.message || err.errMsg || i18n.t('common.retryLater', lang),
               showCancel: false,
-              confirmText: i18n.t(NS + 'gotIt', lang),
+              confirmText: i18n.t('common.gotIt', lang),
             });
           });
       },
@@ -596,9 +596,9 @@ Page({
           .catch(function (err) {
             wx.showModal({
               title: i18n.t('common.operationFailed', lang),
-              content: err.message || err.errMsg || i18n.t(NS + 'retryLater', lang),
+              content: err.message || err.errMsg || i18n.t('common.retryLater', lang),
               showCancel: false,
-              confirmText: i18n.t(NS + 'gotIt', lang),
+              confirmText: i18n.t('common.gotIt', lang),
             });
           });
       },

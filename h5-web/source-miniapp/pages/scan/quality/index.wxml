@@ -6,26 +6,26 @@
       <image-preview class="cover-wrap" src="{{coverImage || ''}}" mode="aspectFit" />
       <view class="header-info">
         <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
-        <text class="sub-info">订单 {{detail.orderNo}}</text>
-        <text wx:if="{{detail.bundleNo}}" class="sub-info">菲号 {{detail.bundleNo}}</text>
+        <text class="sub-info">{{t.orderWord}} {{detail.orderNo}}</text>
+        <text wx:if="{{detail.bundleNo}}" class="sub-info">{{t.bundleWord}} {{detail.bundleNo}}</text>
       </view>
     </view>
     <view class="info-divider"></view>
     <view class="kv-grid">
       <view class="kv-item">
-        <text class="kv-label">颜色</text>
+        <text class="kv-label">{{t.color}}</text>
         <text class="kv-value">{{detail.color || '-'}}</text>
       </view>
       <view class="kv-item kv-item-border">
-        <text class="kv-label">码数</text>
+        <text class="kv-label">{{t.size}}</text>
         <text class="kv-value">{{detail.size || '-'}}</text>
       </view>
       <view class="kv-item">
-        <text class="kv-label">数量</text>
-        <text class="kv-value">{{detail.quantity}}件</text>
+        <text class="kv-label">{{t.quantity}}</text>
+        <text class="kv-value">{{detail.quantity}}{{t.pieceUnit}}</text>
       </view>
       <view class="kv-item kv-item-border">
-        <text class="kv-label">工序</text>
+        <text class="kv-label">{{t.processLabel}}</text>
         <text class="kv-value">{{detail.processName || '-'}}</text>
       </view>
     </view>
@@ -35,63 +35,63 @@
   <view wx:if="{{aiSuggestion}}" class="insight-card">
     <view class="line-icon icon-ai insight-icon"></view>
     <view class="insight-body">
-      <text wx:if="{{historicalDefectRate}}" class="insight-text">历史不良率 {{historicalDefectRate}}</text>
+      <text wx:if="{{historicalDefectRate}}" class="insight-text">{{t.defectRateWord}} {{historicalDefectRate}}</text>
       <view wx:if="{{aiSuggestion.urgentTip}}" class="insight-text insight-urgent"><view class="icon-warning-orange"></view> {{aiSuggestion.urgentTip}}</view>
       <block wx:if="{{aiSuggestion.checkpoints && aiSuggestion.checkpoints.length > 0}}">
-        <text class="insight-label">质检要点：</text>
+        <text class="insight-label">{{t.checkpointsLabel}}</text>
         <text wx:for="{{aiSuggestion.checkpoints}}" wx:key="*this" class="insight-checkpoint">• {{item}}</text>
       </block>
       <block wx:if="{{aiSuggestionList.length > 0}}">
-        <text class="insight-label">缺陷提示：</text>
+        <text class="insight-label">{{t.defectHintsLabel}}</text>
         <text wx:for="{{aiSuggestionList}}" wx:key="category" class="insight-checkpoint">【{{item.label}}】{{item.text}}</text>
       </block>
-      <view wx:if="{{aiSuggestionList.length > 0}}" class="insight-action" bindtap="onAdoptAiSuggestion">采纳建议</view>
+      <view wx:if="{{aiSuggestionList.length > 0}}" class="insight-action" bindtap="onAdoptAiSuggestion">{{t.adoptSuggestion}}</view>
     </view>
   </view>
 
   <!-- 质检结果选择 -->
   <view class="section-group">
-    <text class="section-group-title">质检结果</text>
+    <text class="section-group-title">{{t.resultTitle}}</text>
     <view class="result-group">
       <view class="result-btn {{result === 'qualified' ? 'active-pass' : ''}}"
             bindtap="onSelectResult" data-value="qualified">
         <view class="result-icon"><view class="icon-check-green"></view></view>
-        <text>合格</text>
+        <text>{{t.pass}}</text>
       </view>
       <view class="result-btn {{result === 'unqualified' ? 'active-fail' : ''}}"
             bindtap="onSelectResult" data-value="unqualified">
         <view class="line-icon icon-close result-icon"></view>
-        <text>不合格</text>
+        <text>{{t.fail}}</text>
       </view>
     </view>
   </view>
 
   <!-- 不合格详情 -->
   <view wx:if="{{result === 'unqualified'}}" class="section-group">
-    <text class="section-group-title">不良品详情</text>
+    <text class="section-group-title">{{t.defectDetail}}</text>
     <view class="group-card">
       <view class="group-field-list">
         <view class="form-row">
-          <text class="form-label">不良数量</text>
+          <text class="form-label">{{t.defectQty}}</text>
           <input class="form-input" type="number" value="{{defectQuantity}}"
-                 bindinput="onDefectQuantityInput" placeholder="请输入不良数量" />
+                 bindinput="onDefectQuantityInput" placeholder="{{t.defectQtyPh}}" />
         </view>
 
         <view class="form-row">
-          <text class="form-label">缺陷类别</text>
+          <text class="form-label">{{t.defectCategory}}</text>
           
             <view bindtap="openPicker" data-handler="onDefectCategoryChange" data-names="defectCategories" class="form-picker">
-              {{defectCategoryIndex >= 0 ? defectCategories[defectCategoryIndex] : '请选择'}}
+              {{defectCategoryIndex >= 0 ? defectCategories[defectCategoryIndex] : t.pleaseSelect}}
               <view class="picker-arrow"><view class="icon-chevron-down-sm"></view></view>
             </view>
           
         </view>
 
         <view class="form-row">
-          <text class="form-label">处理方式</text>
+          <text class="form-label">{{t.handleMethod}}</text>
           
             <view bindtap="openPicker" data-handler="onHandleMethodChange" data-names="handleMethods" class="form-picker">
-              {{handleMethodIndex >= 0 ? handleMethods[handleMethodIndex] : '请选择'}}
+              {{handleMethodIndex >= 0 ? handleMethods[handleMethodIndex] : t.pleaseSelect}}
               <view class="picker-arrow"><view class="icon-chevron-down-sm"></view></view>
             </view>
           
@@ -102,8 +102,8 @@
     <!-- 图片上传 -->
     <view class="section-group" style="margin-top: 20rpx;">
       <view class="photo-title-row">
-        <text class="section-group-title" style="margin-bottom: 0;">不良品照片</text>
-        <text class="photo-count-hint">最多 5 张</text>
+        <text class="section-group-title" style="margin-bottom: 0;">{{t.defectPhotos}}</text>
+        <text class="photo-count-hint">{{t.maxPhotos}}</text>
       </view>
       <view class="photo-grid">
         <view wx:for="{{images}}" wx:key="*this" class="photo-item">
@@ -112,7 +112,7 @@
         </view>
         <view wx:if="{{images.length < 5}}" class="photo-add" bindtap="onUploadImage">
           <view class="add-icon"><view class="line-icon icon-camera"></view></view>
-          <text class="add-text">拍照/选图</text>
+          <text class="add-text">{{t.takePhoto}}</text>
         </view>
       </view>
     </view>
@@ -120,17 +120,17 @@
 
   <!-- 备注 -->
   <view class="section-group">
-    <text class="section-group-title">质检备注</text>
+    <text class="section-group-title">{{t.remarkTitle}}</text>
     <view class="group-card">
       <textarea class="remark-area" value="{{remark}}" bindinput="onRemarkInput"
-                placeholder="可填写质检备注" maxlength="500" auto-height />
+                placeholder="{{t.remarkPh}}" maxlength="500" auto-height />
     </view>
   </view>
 
   <view class="footer-bar">
-    <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+    <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">{{t.cancel}}</view>
     <view class="btn-submit {{loading ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitQuality">
-      {{loading ? '提交中...' : '提交质检'}}
+      {{loading ? t.submitting : t.submitQuality}}
     </view>
   </view>
 

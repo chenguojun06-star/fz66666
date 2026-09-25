@@ -7,10 +7,16 @@ const { getUserInfo } = require('../../../utils/storage');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, triggerDataRefresh } = require('../../../utils/eventBus');
 const { normalizeProcessName } = require('../../../utils/displayHelper');
+const i18n = require('../../../utils/i18n/index');
 
+/** 本页 i18n 命名空间前缀 */
+const NS = 'mp.scanQuality.';
+
+/** ⚠️ 处理方式作为后端载荷（defectRemark）落库，保持中文原文；展示层用 applyLanguage 里的键化数组 */
 const HANDLE_METHODS = ['返修', '报废'];
 
-const DEFECT_CATEGORIES = ['外观完整性问题', '尺寸精度问题', '工艺规范性问题', '功能有效性问题', '其他问题'];
+/** 缺陷类别只作展示（载荷走 CATEGORY_VALUE_MAP 英文码），i18n 键后缀在 applyLanguage 里取文案 */
+const DEFECT_CATEGORY_KEYS = ['catAppearance', 'catSize', 'catProcess', 'catFunction', 'catOther'];
 
 const CATEGORY_VALUE_MAP = [
   'appearance_integrity', 'size_accuracy', 'process_compliance', 'functional_effectiveness', 'other',
@@ -35,8 +41,8 @@ Page({
     defectCategoryIndex: -1,
     remark: '',
     images: [],
-    handleMethods: HANDLE_METHODS,
-    defectCategories: DEFECT_CATEGORIES,
+    handleMethods: [],
+    defectCategories: [],
     aiSuggestion: null,
     aiSuggestionList: [],
     historicalDefectRate: '',
@@ -44,7 +50,53 @@ Page({
     coverImage: '',
   },
 
+  /**
+   * 静态文案 + picker 选项数组按语言构建。
+   * handleMethods 展示键化、载荷(HANDLE_METHODS)保留中文原文，两者下标一一对应。
+   */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        orderWord: i18n.t(NS + 'orderWord', lang),
+        bundleWord: i18n.t(NS + 'bundleWord', lang),
+        color: i18n.t('common.color', lang),
+        size: i18n.t('common.size', lang),
+        quantity: i18n.t('common.quantity', lang),
+        pieceUnit: i18n.t('common.piece', lang),
+        processLabel: i18n.t(NS + 'processLabel', lang),
+        defectRateWord: i18n.t(NS + 'defectRateWord', lang),
+        checkpointsLabel: i18n.t(NS + 'checkpointsLabel', lang),
+        defectHintsLabel: i18n.t(NS + 'defectHintsLabel', lang),
+        adoptSuggestion: i18n.t(NS + 'adoptSuggestion', lang),
+        resultTitle: i18n.t(NS + 'resultTitle', lang),
+        pass: i18n.t('common.pass', lang),
+        fail: i18n.t('common.fail', lang),
+        defectDetail: i18n.t(NS + 'defectDetail', lang),
+        defectQty: i18n.t(NS + 'defectQty', lang),
+        defectQtyPh: i18n.t(NS + 'defectQtyPh', lang),
+        defectCategory: i18n.t(NS + 'defectCategory', lang),
+        handleMethod: i18n.t(NS + 'handleMethod', lang),
+        pleaseSelect: i18n.t('common.pleaseSelect', lang),
+        defectPhotos: i18n.t(NS + 'defectPhotos', lang),
+        maxPhotos: i18n.t(NS + 'maxPhotos', lang),
+        takePhoto: i18n.t(NS + 'takePhoto', lang),
+        submitting: i18n.t('common.submitting', lang),
+        submitQuality: i18n.t(NS + 'submitQuality', lang),
+        remarkTitle: i18n.t(NS + 'remarkTitle', lang),
+        remarkPh: i18n.t(NS + 'remarkPh', lang),
+        cancel: i18n.t('common.cancel', lang),
+      },
+      defectCategories: DEFECT_CATEGORY_KEYS.map(function (k) { return i18n.t(NS + k, lang); }),
+      handleMethods: HANDLE_METHODS.map(function () { return null; })
+        .map(function (_, i) { return i18n.t(NS + (i === 0 ? 'handleRepair' : 'handleScrap'), lang); }),
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad() {
+    this.applyLanguage(i18n.getLanguage());
     // 隐私授权弹窗监听（拍照需隐私授权）
     if (eventBus && typeof eventBus.on === 'function') {
       this._unsubPrivacy = eventBus.on('showPrivacyDialog', resolve => {
@@ -57,7 +109,7 @@ Page({
     const app = getApp();
     const raw = app.globalData.qualityData;
     if (!raw) {
-      toast.error('数据异常');
+      toast.error(i18n.t(NS + 'dataError', this._lang));
       wx.navigateBack();
       return;
     }
@@ -112,7 +164,7 @@ Page({
           const catIdx = CATEGORY_VALUE_MAP.indexOf(catVal);
           suggestionList.push({
             category: catVal,
-            label: catIdx >= 0 ? DEFECT_CATEGORIES[catIdx] : catVal,
+            label: catIdx >= 0 ? self.data.defectCategories[catIdx] : catVal,
             text: defectSuggestions[catVal],
           });
         }
@@ -175,9 +227,9 @@ Page({
     }
     if (Object.keys(updates).length > 0) {
       this.setData(updates);
-      toast.success('已采纳建议');
+      toast.success(i18n.t(NS + 'suggestionAdopted', this._lang));
     } else {
-      toast.error('暂无可采纳的建议');
+      toast.error(i18n.t(NS + 'noSuggestion', this._lang));
     }
   },
 
@@ -186,7 +238,7 @@ Page({
   onUploadImage() {
     const self = this;
     if (self.data.images.length >= 5) {
-      toast.error('最多上传5张');
+      toast.error(i18n.t(NS + 'maxFivePhotos', this._lang));
       return;
     }
     self._doChooseMedia();
@@ -209,18 +261,19 @@ Page({
           const authedUrls = urls.filter(Boolean).map(function (u) { return getAuthedImageUrl(u); });
           self.setData({ images: self.data.images.concat(authedUrls) });
         }).catch(function () {
-          toast.error('图片上传失败');
+          toast.error(i18n.t(NS + 'photoUploadFailed', this._lang));
         });
       },
       fail: function (err) {
         console.warn('[Quality] chooseMedia fail:', err);
         if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
           // 权限被拒绝时引导用户去设置页
+          var lang = this._lang || i18n.getLanguage();
           wx.showModal({
-            title: '相机/相册权限',
-            content: '需要相机或相册权限才能上传照片，请在设置中允许',
-            confirmText: '去设置',
-            cancelText: '取消',
+            title: i18n.t(NS + 'cameraPermission', lang),
+            content: i18n.t(NS + 'cameraPermissionMsg', lang),
+            confirmText: i18n.t(NS + 'goSettings', lang),
+            cancelText: i18n.t('common.cancel', lang),
             success: function (modalRes) {
               if (modalRes.confirm) wx.openSetting({ success: function () {} });
             },
@@ -252,7 +305,7 @@ Page({
     const raw = this._rawDetail;
 
     if (!d.result) {
-      toast.error('请选择质检结果');
+      toast.error(i18n.t(NS + 'selectQualityResult', this._lang));
       return;
     }
 
@@ -295,7 +348,7 @@ Page({
       // 被其他人领取 → 不允许继续
       if (recvMsg.indexOf('已被') >= 0 && recvMsg.indexOf('领取') >= 0) {
         this.setData({ loading: false });
-        wx.showModal({ title: '无法质检', content: recvMsg, showCancel: false, confirmText: '知道了' });
+        wx.showModal({ title: i18n.t(NS + 'cannotQuality', this._lang), content: recvMsg, showCancel: false, confirmText: i18n.t('common.gotIt', this._lang) });
         return;
       }
       // 其他错误（如已领取/网络异常）继续尝试 confirm
@@ -305,7 +358,7 @@ Page({
       const qty = parseInt(d.defectQuantity, 10);
       if (!qty || qty <= 0) {
         this.setData({ loading: false });
-        toast.error('请输入不良数量');
+        toast.error(i18n.t(NS + 'qtyRequired', this._lang));
         return;
       }
       payload.defectQuantity = qty;
@@ -325,7 +378,7 @@ Page({
 
     try {
       const res = await api.production.executeScan(payload);
-      toast.success(d.result === 'qualified' ? '质检合格，已记录' : '已记录不良品');
+      toast.success(d.result === 'qualified' ? i18n.t(NS + 'passRecorded', this._lang) : i18n.t(NS + 'defectRecorded', this._lang));
       const hints = (res && res.bundleStatusHints) || [];
       const statusText = (res && res.bundleStatusText) || '';
       if (hints.length > 0) {
@@ -338,10 +391,10 @@ Page({
     } catch (e) {
       this.setData({ loading: false });
       wx.showModal({
-        title: '提交失败',
-        content: e.message || e.errMsg || '请稍后重试',
+        title: i18n.t(NS + 'submitFailed', this._lang),
+        content: e.message || e.errMsg || i18n.t('common.retryLater', this._lang),
         showCancel: false,
-        confirmText: '知道了',
+        confirmText: i18n.t('common.gotIt', this._lang),
       });
     }
   },
@@ -395,7 +448,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect'),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

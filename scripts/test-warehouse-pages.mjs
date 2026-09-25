@@ -2423,6 +2423,8 @@ const ADMIN_JS = 'pages/admin/index.js';
 const ADMIN_WXML = 'pages/admin/index.wxml';
 const DEFECT_JS = 'pages/defect/index.js';
 const DEFECT_WXML = 'pages/defect/index.wxml';
+const SCAN_QUALITY_JS = 'pages/scan/quality/index.js';
+const SCAN_QUALITY_WXML = 'pages/scan/quality/index.wxml';
 
 /** 把 menuRows / filteredApps 拍平成 [分组名, 应用名...] */
 function flattenMenuNames(rows) {
@@ -2719,6 +2721,41 @@ async function testI18nDefect() {
   eq('质检页底栏第 3 项 Quality', (enTabs[2] || {}).text, 'Quality');
 }
 
+/** 质检录入页（D-555）—— info卡/AI建议/不良品详情/picker选项数组/提交按钮 */
+function testI18nScanQuality() {
+  testPageI18n(SCAN_QUALITY_JS, SCAN_QUALITY_WXML, '质检录入页');
+
+  const { page: zhP, wx: zhWx } = loadPage(SCAN_QUALITY_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(SCAN_QUALITY_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  // t 表
+  eq('zh 结果二选一', zhP.data.t.pass + '|' + zhP.data.t.fail, '合格|不合格');
+  eq('en 结果二选一', enP.data.t.pass + '|' + enP.data.t.fail, 'Pass|Fail');
+  eq('en 提交按钮', enP.data.t.submitQuality, 'Submit QC');
+  ok('en 备注占位无中文', !CJK_RE.test(String(enP.data.t.remarkPh)), enP.data.t.remarkPh);
+
+  // picker 选项数组按语言重建
+  eq('zh 缺陷类别首位', zhP.data.defectCategories[0], '外观完整性问题');
+  eq('en 缺陷类别首位', enP.data.defectCategories[0], 'Appearance integrity issue');
+  eq('en 处理方式数组', enP.data.handleMethods.join('|'), 'Repair|Scrap');
+  ok('数组长度与载荷常量一致', enP.data.handleMethods.length === 2 && enP.data.defectCategories.length === 5,
+    `${enP.data.handleMethods.length}/${enP.data.defectCategories.length}`);
+
+  // 导航标题
+  eq('录入页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'QC Scan');
+  eq('录入页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '质检扫码');
+
+  // 超五张 toast
+  const up = loadPage(SCAN_QUALITY_JS, makeApi());
+  up.page.applyLanguage('en-US');
+  up.page.data.images = ['1', '2', '3', '4', '5'];
+  up.page.onUploadImage();
+  const toast = lastCall(up.wx, 'showToast');
+  eq('en 超五张 toast', toast && toast.title, 'Up to 5 photos allowed');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -2761,6 +2798,7 @@ try {
   testI18nMoreApps();
   testI18nAdmin();
   await testI18nDefect();
+  testI18nScanQuality();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);
