@@ -60,6 +60,11 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [shippingAddress, setShippingAddress] = useState('');
+  // D-513 物流信息：主页面（成品库存页）已有「发货信息（选填）」卡片，
+  // 扫码出库弹窗原先没有，补齐以对齐手机端。
+  // 后端 qrcodeOutbound 会把 params 透传给 outbound()，故这两个字段会被保存。
+  const [expressCompany, setExpressCompany] = useState('');
+  const [trackingNo, setTrackingNo] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // 款式图：扫码清单每次增删后批量解析（款号维度，见 columns 里的说明）
@@ -163,6 +168,8 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
         ...(outboundType === 'sales' ? { customerName: customerName.trim() } : {}),
         ...(customerPhone.trim() ? { customerPhone: customerPhone.trim() } : {}),
         ...(shippingAddress.trim() ? { shippingAddress: shippingAddress.trim() } : {}),
+        ...(expressCompany.trim() ? { expressCompany: expressCompany.trim() } : {}),
+        ...(trackingNo.trim() ? { trackingNo: trackingNo.trim() } : {}),
         items: items.map(it => ({ qrCode: it.qrCode, quantity: it.quantity })),
       });
       message.success(`出库成功，共 ${items.length} 项`);
@@ -366,6 +373,10 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
         onCustomerPhoneChange={setCustomerPhone}
         shippingAddress={shippingAddress}
         onShippingAddressChange={setShippingAddress}
+        expressCompany={expressCompany}
+        onExpressCompanyChange={setExpressCompany}
+        trackingNo={trackingNo}
+        onTrackingNoChange={setTrackingNo}
       />
       )}
 

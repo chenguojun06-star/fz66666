@@ -10,6 +10,16 @@ interface CustomerInfoSectionProps {
   onCustomerPhoneChange: (value: string) => void;
   shippingAddress: string;
   onShippingAddressChange: (value: string) => void;
+  /**
+   * D-513 物流信息（可选）。
+   * 主页面（成品库存页）已有独立的「发货信息（选填）」卡片承载这两项，
+   * 不传即不渲染，避免同一份信息出现两处输入框。
+   * 扫码出库弹窗没有该卡片，故需要传入以补齐。
+   */
+  expressCompany?: string;
+  onExpressCompanyChange?: (value: string) => void;
+  trackingNo?: string;
+  onTrackingNoChange?: (value: string) => void;
   variant: 'card' | 'inline';
 }
 
@@ -20,8 +30,14 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
   onCustomerPhoneChange,
   shippingAddress,
   onShippingAddressChange,
+  expressCompany,
+  onExpressCompanyChange,
+  trackingNo,
+  onTrackingNoChange,
   variant,
 }) => {
+  // 只有调用方传了物流字段才渲染（主页面有自己的发货信息卡片，避免重复）
+  const showLogistics = onExpressCompanyChange !== undefined || onTrackingNoChange !== undefined;
 
   const handleCustomerSelect = (_value: string, option?: { customerId: string; customer: Customer }) => {
     if (option?.customer) {
@@ -66,6 +82,28 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
               style={{ width: 200 }}
             />
           </span>
+          {showLogistics && (
+            <>
+              <span>
+                快递公司：
+                <Input
+                  value={expressCompany}
+                  onChange={e => onExpressCompanyChange?.(e.target.value)}
+                  placeholder="选填，如顺丰"
+                  style={{ width: 130 }}
+                />
+              </span>
+              <span>
+                快递单号：
+                <Input
+                  value={trackingNo}
+                  onChange={e => onTrackingNoChange?.(e.target.value)}
+                  placeholder="选填"
+                  style={{ width: 150 }}
+                />
+              </span>
+            </>
+          )}
         </Space>
       </div>
     );
@@ -103,6 +141,26 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({
             onChange={(e) => onShippingAddressChange(e.target.value)}
           />
         </Col>
+        {showLogistics && (
+          <>
+            <Col span={8}>
+              <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-text-muted)' }}>快递公司</div>
+              <Input
+                placeholder="选填，如顺丰"
+                value={expressCompany}
+                onChange={(e) => onExpressCompanyChange?.(e.target.value)}
+              />
+            </Col>
+            <Col span={8}>
+              <div className="u-fs-14 u-mb-4" style={{ color: 'var(--color-text-muted)' }}>快递单号</div>
+              <Input
+                placeholder="选填"
+                value={trackingNo}
+                onChange={(e) => onTrackingNoChange?.(e.target.value)}
+              />
+            </Col>
+          </>
+        )}
       </Row>
     </Card>
   );
