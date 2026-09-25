@@ -299,18 +299,3 @@
   margin-left: var(--space-8, 8rpx);
   flex-shrink: 0;
 }
-
-/* D-513 直发开关行 */
-.row--switch {
-  justify-content: space-between;
-}
-.row--switch .row-label {
-  flex: 1;
-  min-width: 0;
-}
-.row-hint {
-  display: block;
-  font-size: 12px;
-  color: var(--color-text-secondary, #666);
-  margin-top: 4rpx;
-}
