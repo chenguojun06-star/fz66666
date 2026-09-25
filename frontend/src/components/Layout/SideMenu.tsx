@@ -169,6 +169,9 @@ const SideMenu: React.FC<SideMenuProps> = ({
             key: section.key,
             icon: section.icon,
             label: section.title,
+            // antd collapsed 模式下用 title 作为 tooltip 文本；
+            // 给每个顶层项都加，确保悬停提示一致（之前只有部分项有，体验割裂）
+            title: sidebarIsCollapsed ? section.title : undefined,
             children: children.length > 0 ? children : undefined,
             popupClassName: 'layout-sidebar-submenu-popup',
           };
@@ -178,11 +181,13 @@ const SideMenu: React.FC<SideMenuProps> = ({
               key: `${section.key}__collapsed_group`,
               icon: section.icon,
               label: section.title,
+              title: section.title,
               children: [
                 {
                   key: section.path!,
                   icon: section.icon,
                   label: <Link to={section.path!}>{section.title}</Link>,
+                  title: section.title,
                 },
               ],
               popupClassName: 'layout-sidebar-submenu-popup',
@@ -192,6 +197,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
             key: section.path!,
             icon: section.icon,
             label: <Link to={section.path!}>{section.title}</Link>,
+            title: sidebarIsCollapsed ? section.title : undefined,
           };
         }
       });

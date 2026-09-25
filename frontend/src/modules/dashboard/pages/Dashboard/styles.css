@@ -1,6 +1,13 @@
 /* ============= 仪表盘页面样式 ============= */
 /* 布局节奏：区块间距统一 20px；层级：TopStats大数字 → AI洞察条 → 专业指标三卡 → 趋势双图 → 执行区 */
 
+/* 显式给 body.dashboard-page 设不透明背景，防止页面比视口短时桌面壁纸透出
+   （用户反馈首页右下角底部出现一条绿带，即此问题） */
+body.dashboard-page {
+  background: var(--color-bg-page);
+  min-height: 100vh;
+}
+
 .dashboard-container {
   animation: dashFadeIn 0.4s ease;
 }
@@ -288,6 +295,12 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
+}
+
+/* 首页右栏宽度只有 272px，4 列会被挤成 3 字一行；这里覆盖为 2 列更易读 */
+.home-side-quick-entries {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
 }
 
 .quick-entry-item {

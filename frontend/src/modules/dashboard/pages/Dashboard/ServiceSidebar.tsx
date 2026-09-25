@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { App, Button, Input, Select } from 'antd';
-import { BookOutlined, NotificationOutlined, RightOutlined } from '@ant-design/icons';
+import {
+  BookOutlined,
+  NotificationOutlined,
+  RightOutlined,
+  RocketOutlined,
+  ScanOutlined,
+  ScissorOutlined,
+  ShopOutlined,
+  WalletOutlined,
+} from '@ant-design/icons';
+import { Link } from 'react-router-dom';
 import { paths } from '@/routeConfig';
 import { useLayoutAuth } from '@/components/Layout/useLayoutAuth';
 import { useUser } from '@/utils/AuthContext';
@@ -12,6 +22,17 @@ import { HOME_CHANGELOG } from './homeChangelog';
  * 反馈走系统现成的 UserFeedback 链路（/system/feedback/submit，个人中心看进展，
  * 客户管理-反馈Tab 管理端查看）；不放假客服电话/假二维码。
  */
+
+/** 首页右栏快捷入口：只列最常用的 6 项。`canGo` 会按权限/模块开关隐去无权限项 */
+const QUICK_ENTRIES: Array<{ icon: React.ComponentType; label: string; path: string }> = [
+  { icon: ScissorOutlined, label: '扫码录入', path: paths.cutting },
+  { icon: ShopOutlined,    label: '生产订单', path: paths.productionList },
+  { icon: WalletOutlined,  label: '工资结算', path: paths.payrollOperatorSummary },
+  { icon: RocketOutlined,  label: '电商订单', path: paths.ecommerceCenter },
+  { icon: ScanOutlined,    label: '库存盘点', path: paths.finishedInventory },
+  { icon: NotificationOutlined, label: '客户管理', path: paths.customerManagement },
+];
+
 const FEEDBACK_CATEGORY_OPTIONS = [
   { value: 'SUGGESTION', label: '意见建议' },
   { value: 'BUG', label: '问题缺陷' },
@@ -35,6 +56,8 @@ const ServiceSidebar: React.FC = () => {
   };
 
   const showTutorial = canGo(paths.tutorial);
+
+  const quickEntries = QUICK_ENTRIES;
 
   const submitFeedback = async () => {
     const text = content.trim();
@@ -139,6 +162,29 @@ const ServiceSidebar: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/*
+       * 快捷入口 —— 把右栏撑起来，免除大片空白；同时也是真正的"常用功能"
+       * 一键直达。放在服务栏最后，超管看全系统，员工只看到自己有权限的几项。
+       */}
+      <div className="dashboard-card">
+        <div className="card-header">
+          <h3 className="card-title">快捷入口</h3>
+        </div>
+        <div className="card-content">
+          <div className="quick-entry-grid home-side-quick-entries">
+            {quickEntries.map((entry) => {
+              if (!canGo(entry.path)) return null;
+              return (
+                <Link key={entry.path} to={entry.path} className="quick-entry-item">
+                  <span className="entry-icon"><entry.icon /></span>
+                  <span className="entry-label">{entry.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
