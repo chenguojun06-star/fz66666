@@ -547,7 +547,14 @@ body.dashboard-page {
   position: sticky;
   top: 16px;
   align-self: start;
-  max-height: calc(100vh - 32px);
+  /*
+   * 高度上限必须小于「滚动容器」的可视高度，否则 sticky 元素比 scrollport 还高，
+   * 吸附会失效（实测：max-height 用 100vh-32px = 968px，而真正滚动的祖先
+   * .page-layout-body 可视高度仅 845px → 滚动时右栏跟着内容跑，没吸附住）。
+   * 这里按 .page-layout-body 高度（视口 - 顶部工具栏约 155px）留出余量取 200px，
+   * 得 800px < 845px，吸附方可生效。
+   */
+  max-height: calc(100vh - 200px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
