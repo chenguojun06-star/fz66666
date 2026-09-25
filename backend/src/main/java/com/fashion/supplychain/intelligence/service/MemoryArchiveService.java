@@ -46,7 +46,6 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Service
-@Lazy
 public class MemoryArchiveService {
 
     private static final int ARCHIVE_BATCH_SIZE = 200;

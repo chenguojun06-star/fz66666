@@ -19,7 +19,6 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-@Lazy
 @RequiredArgsConstructor
 public class MemoryNudgeOrchestrator {
 

@@ -47,7 +47,6 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Service
-@Lazy
 public class GepaPromptOptimizer {
 
     private static final int POPULATION_SIZE = 10;

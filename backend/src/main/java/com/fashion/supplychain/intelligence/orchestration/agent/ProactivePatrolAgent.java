@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
-@Lazy
 @Slf4j
 public class ProactivePatrolAgent {
 

@@ -28,7 +28,6 @@ import org.springframework.context.annotation.Lazy;
  * </p>
  */
 @Service
-@Lazy
 @Slf4j
 public class WorkerProfileOrchestrator {
 

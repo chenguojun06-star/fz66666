@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-@Lazy
 public class MaterialBuyerPatrolJob extends AbstractPatrolJob {
 
     /** 物料到货率异常阈值（< 此值视为物料短缺） */

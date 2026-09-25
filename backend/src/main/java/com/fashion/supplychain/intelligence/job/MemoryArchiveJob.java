@@ -50,7 +50,6 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@Lazy
 public class MemoryArchiveJob {
 
     /** 单租户单次最多归档条数（容量保护） */

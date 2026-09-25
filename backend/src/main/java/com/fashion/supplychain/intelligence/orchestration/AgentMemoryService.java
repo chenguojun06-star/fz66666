@@ -18,7 +18,6 @@ import java.util.List;
 
 @Slf4j
 @Service
-@Lazy
 @RequiredArgsConstructor
 public class AgentMemoryService {
 

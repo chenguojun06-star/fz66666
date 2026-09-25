@@ -45,7 +45,6 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Service
-@Lazy
 public class KnowledgeGraphBuildJob {
 
     /** 单次最多处理的租户数（容量保护，避免单次任务过长） */

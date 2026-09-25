@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-@Lazy
 public class FinanceSettlerPatrolJob extends AbstractPatrolJob {
 
     /** 工资异常倍率阈值（> 平均工资 * 此倍率 视为异常） */

@@ -28,7 +28,6 @@ import org.springframework.context.annotation.Lazy;
  */
 @Slf4j
 @Component
-@Lazy
 public class IntelligenceLearningJob {
 
     private static final int HIGH_BIAS_THRESHOLD_MINUTES = 60;

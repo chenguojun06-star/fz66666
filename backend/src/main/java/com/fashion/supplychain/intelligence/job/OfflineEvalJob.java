@@ -31,7 +31,6 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@Lazy
 public class OfflineEvalJob {
 
     /** 单租户采样条数 */

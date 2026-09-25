@@ -59,7 +59,6 @@ import org.springframework.context.annotation.Lazy;
  */
 @Slf4j
 @Component
-@Lazy
 public class AiPatrolJob {
 
     /** 工具失败率阈值：超过此值视为异常 */

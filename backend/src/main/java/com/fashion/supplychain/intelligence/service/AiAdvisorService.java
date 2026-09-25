@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 不影响任何现有功能。
  */
 @Service
-@Lazy
 @Slf4j
 public class AiAdvisorService {
 

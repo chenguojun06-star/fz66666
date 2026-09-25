@@ -22,7 +22,6 @@ import org.springframework.context.annotation.Lazy;
  * <p>需要为每个租户模拟 UserContext（因为 collectAndAnalyze 依赖 UserContext.tenantId()）。
  */
 @Component
-@Lazy
 @Slf4j
 public class IntelligenceSignalCollectionJob {
 

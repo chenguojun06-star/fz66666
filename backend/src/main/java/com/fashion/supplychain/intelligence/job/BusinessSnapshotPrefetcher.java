@@ -27,7 +27,6 @@ import java.util.Map;
  * </ul>
  */
 @Component
-@Lazy
 @Slf4j
 public class BusinessSnapshotPrefetcher {
 

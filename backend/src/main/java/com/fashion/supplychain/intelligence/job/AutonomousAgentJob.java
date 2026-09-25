@@ -17,7 +17,6 @@ import org.springframework.context.annotation.Lazy;
  */
 @Slf4j
 @Component
-@Lazy
 public class AutonomousAgentJob {
 
     @Autowired private PatternDiscoveryOrchestrator patternOrchestrator;

@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@Lazy
 public class EvolutionPipeline {
 
     @Autowired

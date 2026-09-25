@@ -9,7 +9,6 @@ import java.util.List;
 
 @Slf4j
 @Component
-@Lazy
 public class SmartAdvisorPatrolJob extends AbstractPatrolJob {
 
     @Scheduled(cron = "0 5 */3 * * ?")

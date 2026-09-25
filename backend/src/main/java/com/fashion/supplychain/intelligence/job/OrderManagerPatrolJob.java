@@ -13,7 +13,6 @@ import java.util.List;
 
 @Slf4j
 @Component
-@Lazy
 public class OrderManagerPatrolJob extends AbstractPatrolJob {
 
     @Autowired

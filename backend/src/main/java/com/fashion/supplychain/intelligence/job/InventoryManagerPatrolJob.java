@@ -9,7 +9,6 @@ import java.util.List;
 
 @Slf4j
 @Component
-@Lazy
 public class InventoryManagerPatrolJob extends AbstractPatrolJob {
 
     @Scheduled(cron = "0 50 */6 * * ?")

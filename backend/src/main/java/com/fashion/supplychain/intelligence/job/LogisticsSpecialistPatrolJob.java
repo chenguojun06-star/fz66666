@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-@Lazy
 public class LogisticsSpecialistPatrolJob extends AbstractPatrolJob {
 
     /** 外发无响应超时阈值（小时） */

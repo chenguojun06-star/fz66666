@@ -19,7 +19,6 @@ import java.util.Map;
 
 @Slf4j
 @Component
-@Lazy
 public class AnomalyDetectorPatrolJob extends AbstractPatrolJob {
 
     @Autowired

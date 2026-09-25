@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-@Lazy
 public class WarehouseKeeperPatrolJob extends AbstractPatrolJob {
 
     /** 入库差异率阈值（|diffQuantity| / bookQuantity > 此值 视为差异异常） */

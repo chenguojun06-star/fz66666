@@ -28,7 +28,6 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@Lazy
 public class MemoryConsolidationJob {
 
     /** 单次最多处理的租户数（容量保护） */

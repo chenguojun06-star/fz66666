@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-@Lazy
 public class DataAnalystPatrolJob extends AbstractPatrolJob {
 
     @Autowired

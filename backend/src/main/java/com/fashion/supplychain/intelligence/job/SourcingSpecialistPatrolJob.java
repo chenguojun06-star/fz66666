@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-@Lazy
 public class SourcingSpecialistPatrolJob extends AbstractPatrolJob {
 
     @Autowired

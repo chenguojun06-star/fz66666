@@ -28,7 +28,6 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-@Lazy
 public class SelfHealingPatrolJob extends AbstractPatrolJob {
 
     private final ParallelRiskDetector riskDetector;

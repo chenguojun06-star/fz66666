@@ -20,7 +20,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
-@Lazy
 @Slf4j
 public class SelfDrillOrchestrator {
 

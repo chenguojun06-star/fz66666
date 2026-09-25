@@ -32,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
-@Lazy
 @Slf4j
 public class SmartRemarkAgent {
 

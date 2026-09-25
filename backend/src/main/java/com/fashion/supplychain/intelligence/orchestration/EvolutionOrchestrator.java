@@ -37,7 +37,6 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-@Lazy
 public class EvolutionOrchestrator {
 
     @Autowired private ObjectProvider<EvolutionPipeline> evolutionPipelineProvider;

@@ -19,7 +19,6 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@Lazy
 public class SharedAgentMemoryCleanupJob {
 
     @Autowired

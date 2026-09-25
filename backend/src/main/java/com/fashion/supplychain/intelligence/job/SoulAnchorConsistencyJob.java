@@ -46,7 +46,6 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Component
-@Lazy
 public class SoulAnchorConsistencyJob {
 
     @Autowired private SoulAnchorRebuildService soulAnchorRebuildService;

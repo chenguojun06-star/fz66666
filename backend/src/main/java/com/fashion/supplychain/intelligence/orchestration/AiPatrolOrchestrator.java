@@ -34,7 +34,6 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@Lazy
 public class AiPatrolOrchestrator {
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("MM-dd");

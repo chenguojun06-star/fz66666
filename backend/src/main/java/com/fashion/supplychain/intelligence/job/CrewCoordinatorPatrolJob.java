@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-@Lazy
 public class CrewCoordinatorPatrolJob extends AbstractPatrolJob {
 
     /** 工时异常倍率阈值（实际工时 > 标准工时 * 此倍率 视为成本超支） */

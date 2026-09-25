@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 @Service
-@Lazy
 @Slf4j
 public class AsyncIntelligenceAuditService {
 

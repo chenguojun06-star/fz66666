@@ -9,7 +9,6 @@ import java.util.List;
 
 @Slf4j
 @Component
-@Lazy
 public class ProductionSchedulerPatrolJob extends AbstractPatrolJob {
 
     @Scheduled(cron = "0 25 */4 * * ?")

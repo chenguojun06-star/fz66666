@@ -25,7 +25,6 @@ import org.springframework.context.annotation.Lazy;
 
 @Slf4j
 @Component
-@Lazy
 public class XiaoyunDailyInsightJob {
 
     @Autowired private DailyBriefOrchestrator dailyBriefOrchestrator;

@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@Lazy
 public class IntelligenceScheduledTasks {
 
     @Autowired private DailyBriefingService dailyBriefingService;

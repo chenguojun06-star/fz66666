@@ -13,7 +13,6 @@ import java.util.Map;
 
 @Slf4j
 @Component
-@Lazy
 public class DatabaseHealthCheckJob {
 
     /**

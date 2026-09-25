@@ -18,7 +18,6 @@ import java.util.List;
 
 @Slf4j
 @Component
-@Lazy
 public class DataConsistencyPatrolJob {
 
     /** P0 修复：3 个 @Scheduled 方法均加 enabled 开关，避免误触发污染数据 */

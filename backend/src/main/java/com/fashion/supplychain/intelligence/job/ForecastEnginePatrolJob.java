@@ -16,7 +16,6 @@ import java.util.List;
 
 @Slf4j
 @Component
-@Lazy
 public class ForecastEnginePatrolJob extends AbstractPatrolJob {
 
     @Autowired
