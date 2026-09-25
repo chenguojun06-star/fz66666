@@ -4,41 +4,73 @@
  */
 const api = require('../../../../utils/api');
 const { getAuthedImageUrl } = require('../../../../utils/fileUrl');
+const i18n = require('../../../../utils/i18n/index');
 
-const SAMPLE_TYPE_MAP = {
-  'development': '开发样',
-  'pre_production': '产前样',
-  'shipment': '大货样',
-  'sales': '销售样',
-  'reference': '参考样',
-  'photo': '拍照样',
-  'confirmation': '确认样',
-  'pattern': '纸样',
-  'fitting': '试穿样',
-  'showroom': '展厅样',
-  'top': '齐色样',
-  'size_set': '套码样',
-  'seal': '封样',
-  'BODY_SAMPLE': '大货样',
-  'FITTING_SAMPLE': '试穿样',
-  'SALES_SAMPLE': '销售样',
-  'REFERENCE_SAMPLE': '参考样',
-  'DEVELOPMENT_SAMPLE': '开发样',
-  'PRODUCTION_SAMPLE': '生产样',
-  'PHOTO_SAMPLE': '拍照样',
-  'SHOWROOM_SAMPLE': '展厅样',
-  'PATTERN_SAMPLE': '纸样样衣',
-  'CONFIRMATION_SAMPLE': '确认样',
-  'PRE_PRODUCTION_SAMPLE': '产前样',
-  'SHIPPING_SAMPLE': '船样',
-  'TOP_SAMPLE': '齐色样',
-  'SIZE_SET_SAMPLE': '套码样',
-  'SEAL_SAMPLE': '封样',
+/** 本页 i18n 命名空间前缀 */
+const NS = 'mp.warehouse.sampleScanAction.';
+
+/**
+ * 样衣类型 → i18n 键后缀。
+ * ⚠️ 左侧的 key（development / BODY_SAMPLE …）是**后端契约**，绝不能翻；
+ *    只把展示文案换成键，运行时按当前语言取值。
+ */
+const SAMPLE_TYPE_KEYS = {
+  'development': 'sampleTypeDevelopment',
+  'pre_production': 'sampleTypePreProduction',
+  'shipment': 'sampleTypeShipment',
+  'sales': 'sampleTypeSales',
+  'reference': 'sampleTypeReference',
+  'photo': 'sampleTypePhoto',
+  'confirmation': 'sampleTypeConfirmation',
+  'pattern': 'sampleTypePattern',
+  'fitting': 'sampleTypeFitting',
+  'showroom': 'sampleTypeShowroom',
+  'top': 'sampleTypeTop',
+  'size_set': 'sampleTypeSizeSet',
+  'seal': 'sampleTypeSeal',
+  'BODY_SAMPLE': 'sampleTypeShipment',
+  'FITTING_SAMPLE': 'sampleTypeFitting',
+  'SALES_SAMPLE': 'sampleTypeSales',
+  'REFERENCE_SAMPLE': 'sampleTypeReference',
+  'DEVELOPMENT_SAMPLE': 'sampleTypeDevelopment',
+  'PRODUCTION_SAMPLE': 'sampleTypeProduction',
+  'PHOTO_SAMPLE': 'sampleTypePhoto',
+  'SHOWROOM_SAMPLE': 'sampleTypeShowroom',
+  'PATTERN_SAMPLE': 'sampleTypePatternGarment',
+  'CONFIRMATION_SAMPLE': 'sampleTypeConfirmation',
+  'PRE_PRODUCTION_SAMPLE': 'sampleTypePreProduction',
+  'SHIPPING_SAMPLE': 'sampleTypeShipping',
+  'TOP_SAMPLE': 'sampleTypeTop',
+  'SIZE_SET_SAMPLE': 'sampleTypeSizeSet',
+  'SEAL_SAMPLE': 'sampleTypeSeal',
 };
 
-function translateSampleType(type) {
+function translateSampleType(type, lang) {
   if (!type) return '-';
-  return SAMPLE_TYPE_MAP[type] || type;
+  const key = SAMPLE_TYPE_KEYS[type];
+  return key ? i18n.t(NS + key, lang) : type;
+}
+
+/** 库存状态筛选页签定义（label 运行时按语言展开，key 是本地筛选标识不是后端契约） */
+const STATUS_TAB_DEFS = [
+  { key: 'all',        labelKey: 'statusAll' },
+  { key: 'in_stock',   labelKey: 'statusInStock' },
+  { key: 'loaned_out', labelKey: 'statusLoanedOut' },
+];
+
+function localizeStatusTabs(lang, counts) {
+  const c = counts || {};
+  return STATUS_TAB_DEFS.map(function (d) {
+    return { key: d.key, label: i18n.t(NS + d.labelKey, lang), pillClass: '', count: c[d.key] };
+  });
+}
+
+/** 操作名 → i18n 键（用于「入库成功」这类拼接文案） */
+const ACTION_LABEL_KEYS = { inbound: 'actionInbound', loan: 'actionLoan', return: 'actionReturn' };
+
+function actionLabel(actionName, lang) {
+  const key = ACTION_LABEL_KEYS[actionName];
+  return key ? i18n.t(NS + key, lang) : actionName;
 }
 
 function buildImageUrl(url) {
@@ -54,11 +86,7 @@ Page({
     searchKeyword: '',
 
     // 筛选器：库存状态 tabs（与 cutting/bundle-detail 等页面统一 filter-pill 风格）
-    statusTabs: [
-      { key: 'all',        label: '全部',   pillClass: '' },
-      { key: 'in_stock',   label: '在库',   pillClass: '' },
-      { key: 'loaned_out', label: '已借出', pillClass: '' },
-    ],
+    statusTabs: localizeStatusTabs(i18n.getLanguage()),
     activeStatus: 'all',
 
     // 列表数据
@@ -109,9 +137,13 @@ Page({
     // D-517：可搜索选择器（借调对象：员工/外发工厂，远程搜索 + 分页）
     pickerVisible: false, pickerKey: '', pickerTitle: '', pickerOptions: [], pickerValue: '',
     pickerRemote: false, pickerKeyword: '', pickerPage: 1, pickerHasMore: false, pickerLoading: false,
+
+    // i18n：当前语言文案（由 applyLanguage 一次性写入，wxml 用 {{t.xxx}}）
+    t: {},
   },
 
   onLoad(options) {
+    this.applyLanguage(i18n.getLanguage());
     const styleNo = decodeURIComponent(options.styleNo || '');
     const color = decodeURIComponent(options.color || '');
     const size = decodeURIComponent(options.size || '');
@@ -145,9 +177,90 @@ Page({
   },
 
   onShow() {
+    this.applyLanguage(i18n.getLanguage());
     if (this.data.viewMode === 'list') {
       this.loadStockList(true);
     }
+  },
+
+  // ==================== 语言 ====================
+
+  /**
+   * 应用语言：一次性写入 t（wxml 用 {{t.xxx}}），并重算所有与语言相关的派生数据。
+   * ⚠️ 导航标题只能运行时设置（app.json/页面 json 的静态值仅作首屏兜底）。
+   */
+  applyLanguage(language) {
+    const lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'title', lang) });
+
+    this.setData({
+      t: {
+        // ── 列表视图 ──
+        listSearchPlaceholder: i18n.t(NS + 'listSearchPlaceholder', lang),
+        loading: i18n.t('common.loading', lang),
+        loadFailedRetry: i18n.t(NS + 'loadFailedRetry', lang),
+        retry: i18n.t('common.retry', lang),
+        noStock: i18n.t(NS + 'noStock', lang),
+        noFilterResult: i18n.t(NS + 'noFilterResult', lang),
+        loadMore: i18n.t('common.loadMore', lang),
+        noMore: i18n.t('common.noMore', lang),
+        styleNoLabel: i18n.t('common.styleNo', lang),
+        colorLabel: i18n.t('common.color', lang),
+        sizeLabel: i18n.t('common.size', lang),
+        typeLabel: i18n.t('common.type', lang),
+        piece: i18n.t('common.piece', lang),
+        // ── 详情视图 ──
+        detailTitle: i18n.t(NS + 'detailTitle', lang),
+        scan: i18n.t('common.scan', lang),
+        querying: i18n.t(NS + 'querying', lang),
+        statusLabel: i18n.t(NS + 'statusLabel', lang),
+        notInStock: i18n.t(NS + 'notInStock', lang),
+        inStockTag: i18n.t(NS + 'statusInStock', lang),
+        allLoanedOut: i18n.t(NS + 'allLoanedOut', lang),
+        styleName: i18n.t(NS + 'styleName', lang),
+        binLocation: i18n.t(NS + 'binLocation', lang),
+        stockQty: i18n.t(NS + 'stockQty', lang),
+        availableLabel: i18n.t('common.available', lang),
+        loanedLabel: i18n.t(NS + 'loanedLabel', lang),
+        totalQty: i18n.t(NS + 'totalQty', lang),
+        loanedQty: i18n.t(NS + 'loanedQty', lang),
+        pendingReturnQty: i18n.t(NS + 'pendingReturnQty', lang),
+        scrappedQty: i18n.t(NS + 'scrappedQty', lang),
+        activeLoans: i18n.t(NS + 'activeLoans', lang),
+        borrower: i18n.t(NS + 'borrower', lang),
+        quantityLabel: i18n.t('common.quantity', lang),
+        timeLabel: i18n.t('common.time', lang),
+        outboundLocationLabel: i18n.t(NS + 'outboundLocationLabel', lang),
+        inboundWarehouseLabel: i18n.t(NS + 'inboundWarehouseLabel', lang),
+        inboundLocationLabel: i18n.t(NS + 'inboundLocationLabel', lang),
+        clear: i18n.t(NS + 'clear', lang),
+        warehouseSearchPlaceholder: i18n.t(NS + 'warehouseSearchPlaceholder', lang),
+        warehouseCodePlaceholder: i18n.t(NS + 'warehouseCodePlaceholder', lang),
+        locationSearchPlaceholder: i18n.t(NS + 'locationSearchPlaceholder', lang),
+        locationCodePlaceholder: i18n.t(NS + 'locationCodePlaceholder', lang),
+        actionInbound: i18n.t(NS + 'actionInbound', lang),
+        actionLoan: i18n.t(NS + 'actionLoan', lang),
+        actionReturn: i18n.t(NS + 'actionReturn', lang),
+        // ── 借调弹窗 ──
+        loanPickerTitle: i18n.t(NS + 'loanPickerTitle', lang),
+        loanToPerson: i18n.t(NS + 'loanToPerson', lang),
+        loanToFactory: i18n.t(NS + 'loanToFactory', lang),
+        loanQtyLabel: i18n.t(NS + 'loanQtyLabel', lang),
+        loanSelectPerson: i18n.t(NS + 'loanSelectPerson', lang),
+        loanSelectFactory: i18n.t(NS + 'loanSelectFactory', lang),
+        cancel: i18n.t('common.cancel', lang),
+        confirmLoan: i18n.t(NS + 'confirmLoan', lang),
+      },
+      // 派生数据（含文案）按新语言重算
+      statusTabs: localizeStatusTabs(lang, this._countStatuses(this.data.stockList)),
+      stockList: this._decorateStockList(this.data.stockList, lang),
+      filteredStockList: this._decorateStockList(this.data.filteredStockList, lang),
+      stockListError: this.data.stockListError ? i18n.t(NS + 'loadFailedRetry', lang) : '',
+      stockInfo: this._decorateStockInfo(this.data.stockInfo, lang),
+    });
+    this._refreshDerivedTexts(lang);
   },
 
   onPullDownRefresh() {
@@ -186,11 +299,7 @@ Page({
       .then((res) => {
         const data = res || {};
 
-        const records = (data?.records || []).map(item => ({
-          ...item,
-          _imageUrl: buildImageUrl(item.imageUrl || item.coverImage || ''),
-          _sampleTypeLabel: translateSampleType(item.sampleType || ''),
-        }));
+        const records = this._decorateStockList(data?.records || [], this._lang);
         const total = data?.total || records.length;
 
         const newStockList = refresh ? records : [...this.data.stockList, ...records];
@@ -210,10 +319,23 @@ Page({
       .catch((err) => {
         console.error('[SampleStock] 加载列表失败', err);
         this.setData({
-          stockListError: '加载失败，请重试',
+          stockListError: i18n.t(NS + 'loadFailedRetry', this._lang),
           stockListLoading: false,
         });
       });
+  },
+
+  /** 列表项装饰：图片 URL + 样衣类型文案 + 「借出 N」（语言相关，切语言时需重算） */
+  _decorateStockList(list, lang) {
+    return (list || []).map((item) => {
+      const decorated = Object.assign({}, item);
+      decorated._imageUrl = buildImageUrl(item.imageUrl || item.coverImage || '');
+      decorated._sampleTypeLabel = translateSampleType(item.sampleType || '', lang);
+      decorated._loanedText = item.loanedQuantity > 0
+        ? i18n.tf(NS + 'loanedText', { qty: item.loanedQuantity }, lang)
+        : '';
+      return decorated;
+    });
   },
 
   onSearchInput(e) {
@@ -258,22 +380,21 @@ Page({
     return true;
   },
 
-  // 计算每个筛选 tab 的数量统计
+  // 计算每个筛选 tab 的数量统计（label 按当前语言展开）
   _computeStatusTabs(list) {
-    let allCount = 0, inStockCount = 0, loanedOutCount = 0;
+    return localizeStatusTabs(this._lang, this._countStatuses(list));
+  },
+
+  /** 统计各状态条数（不产生文案，供 _computeStatusTabs / applyLanguage 共用） */
+  _countStatuses(list) {
+    const counts = { 'all': 0, 'in_stock': 0, 'loaned_out': 0 };
     (list || []).forEach(s => {
-      allCount++;
-      const qty = s.quantity || 0;
-      const loaned = s.loanedQuantity || 0;
-      const available = qty - loaned;
-      if (available > 0) inStockCount++;
-      else if (loaned > 0) loanedOutCount++;
+      counts['all']++;
+      const available = (s.quantity || 0) - (s.loanedQuantity || 0);
+      if (available > 0) counts['in_stock']++;
+      else if ((s.loanedQuantity || 0) > 0) counts['loaned_out']++;
     });
-    return [
-      { key: 'all',        label: '全部',   pillClass: '', count: allCount },
-      { key: 'in_stock',   label: '在库',   pillClass: '', count: inStockCount },
-      { key: 'loaned_out', label: '已借出', pillClass: '', count: loanedOutCount },
-    ];
+    return counts;
   },
 
   onStockItemTap(e) {
@@ -301,12 +422,6 @@ Page({
     return api.sampleStock.scanQuery({ styleNo, color, size })
       .then((res) => {
         const d = res || {};
-        if (d.stock && d.stock.sampleType) {
-          d.stock._sampleTypeLabel = translateSampleType(d.stock.sampleType);
-        }
-        if (d.stock) {
-          d.stock._imageUrl = buildImageUrl(d.stock.imageUrl || d.stock.coverImage || '');
-        }
         // 计算统计：待归还数（未归还的借调单数） + 报废数（inventoryStatus=SCRAPPED 或 destroyTime 非空）
         const activeLoans = d.activeLoans || [];
         d.pendingReturnCount = activeLoans.length;
@@ -323,15 +438,51 @@ Page({
           ? (d.actions || []).filter(function (a) { return a !== 'inbound'; })
           : (d.actions || []);
         this.setData({
-          stockInfo: d,
+          stockInfo: this._decorateStockInfo(d, this._lang),
           actions: displayActions,
           loading: false,
         });
+        this._refreshDerivedTexts(this._lang);
       })
       .catch((err) => {
         console.error('[SampleScanAction] querySample error', err);
-        this.setData({ errorMsg: (err && (err.errMsg || err.message)) || '网络异常，请重试', loading: false });
+        this.setData({
+          errorMsg: (err && (err.errMsg || err.message)) || i18n.t(NS + 'networkError', this._lang),
+          loading: false,
+        });
       });
+  },
+
+  /**
+   * 详情装饰：图片 URL、样衣类型文案、各类「N 件」计数文案。
+   * 这些字段都与语言相关，切语言时必须重算（applyLanguage 会再调一次）。
+   */
+  _decorateStockInfo(info, lang) {
+    if (!info) return info;
+    const out = Object.assign({}, info);
+    if (out.stock) {
+      const st = Object.assign({}, out.stock);
+      st._imageUrl = buildImageUrl(st.imageUrl || st.coverImage || '');
+      st._sampleTypeLabel = translateSampleType(st.sampleType || '', lang);
+      st._qtyText = i18n.tf(NS + 'pcsText', { qty: st.quantity || 0 }, lang);
+      st._loanedQtyText = i18n.tf(NS + 'pcsText', { qty: st.loanedQuantity || 0 }, lang);
+      out.stock = st;
+    }
+    out._availableText = i18n.tf(NS + 'pcsText', { qty: out.availableQuantity || 0 }, lang);
+    out.activeLoans = (out.activeLoans || []).map(function (ln) {
+      return Object.assign({}, ln, {
+        _qtyText: i18n.tf(NS + 'pcsText', { qty: ln.quantity || 0 }, lang),
+      });
+    });
+    return out;
+  },
+
+  /** 依赖当前数据的带参文案（库存变化 / 切语言时都要刷新） */
+  _refreshDerivedTexts(lang) {
+    const available = (this.data.stockInfo && this.data.stockInfo.availableQuantity) || 0;
+    this.setData({
+      't.loanAvailableText': i18n.tf(NS + 'loanAvailableText', { qty: available }, lang),
+    });
   },
 
   // 空操作：仅用于阻止事件冒泡（如弹窗内层 catchtap）
@@ -348,16 +499,22 @@ Page({
     if (this.data.submitting) return;
     const { warehouseAreaId, warehouseLocationCode } = this.data;
     if (!warehouseAreaId) {
-      wx.showToast({ title: '请先选择仓库区域', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'areaRequired', this._lang), icon: 'none' });
       return;
     }
     if (!warehouseLocationCode) {
-      wx.showToast({ title: '请先选择库位', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'locationRequired', this._lang), icon: 'none' });
       return;
     }
     wx.showModal({
-      title: '确认入库',
-      content: `将 ${this.data.styleNo} ${this.data.color} ${this.data.size} 入库到 ${this.data.warehouse} / ${warehouseLocationCode}，确认？`,
+      title: i18n.t(NS + 'confirmInbound', this._lang),
+      content: i18n.tf(NS + 'confirmInboundText', {
+        style: this.data.styleNo,
+        color: this.data.color,
+        size: this.data.size,
+        warehouse: this.data.warehouse,
+        location: warehouseLocationCode,
+      }, this._lang),
       success: (modal) => {
         if (!modal.confirm) return;
         this._doAction('inbound', () =>
@@ -380,7 +537,7 @@ Page({
     const availableQty = this.data.stockInfo && this.data.stockInfo.availableQuantity
       ? this.data.stockInfo.availableQuantity : 0;
     if (availableQty <= 0) {
-      wx.showToast({ title: '可用库存为0，无法借调', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'noAvailableForLoan', this._lang), icon: 'none' });
       return;
     }
     // 打开借调目标选择弹窗
@@ -464,7 +621,9 @@ Page({
     const isPerson = this.data.loanTargetType === 'person';
     this.setData({
       pickerKey: key,
-      pickerTitle: isPerson ? '选择借调员工' : '选择外发工厂',
+      pickerTitle: isPerson
+        ? i18n.t(NS + 'selectLoanEmployee', this._lang)
+        : i18n.t(NS + 'selectOutsourceFactory', this._lang),
       pickerRemote: true,
       pickerKeyword: '',
       pickerPage: 1,
@@ -544,13 +703,13 @@ Page({
     if (this.data.submitting) return;
     const { loanTargetType, loanTargetId, loanTargetName, loanQuantity } = this.data;
     if (!loanTargetId || !loanTargetName) {
-      wx.showToast({ title: '请选择借调对象', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'selectLoanTargetRequired', this._lang), icon: 'none' });
       return;
     }
     const availableQty = this.data.stockInfo && this.data.stockInfo.availableQuantity
       ? this.data.stockInfo.availableQuantity : 0;
     if (loanQuantity > availableQty) {
-      wx.showToast({ title: `借调数量不能超过可用库存(${availableQty})`, icon: 'none' });
+      wx.showToast({ title: i18n.tf(NS + 'loanExceedText', { qty: availableQty }, this._lang), icon: 'none' });
       return;
     }
     const stock = (this.data.stockInfo && this.data.stockInfo.stock) || {};
@@ -569,8 +728,8 @@ Page({
     };
 
     wx.showModal({
-      title: '确认借调',
-      content: `借调给「${loanTargetName}」，数量 ${loanQuantity} 件，确认？`,
+      title: i18n.t(NS + 'confirmLoan', this._lang),
+      content: i18n.tf(NS + 'confirmLoanText', { name: loanTargetName, qty: loanQuantity }, this._lang),
       success: (modal) => {
         if (!modal.confirm) return;
         this.setData({ showLoanPicker: false });
@@ -583,13 +742,17 @@ Page({
     if (this.data.submitting) return;
     const loans = (this.data.stockInfo && this.data.stockInfo.activeLoans) || [];
     if (!loans.length) {
-      wx.showToast({ title: '无借调记录', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'noLoanRecord', this._lang), icon: 'none' });
       return;
     }
     const loan = loans[0];
     wx.showModal({
-      title: '确认归还',
-      content: `归还 ${this.data.styleNo} ${this.data.color} ${this.data.size}，确认？`,
+      title: i18n.t(NS + 'confirmReturn', this._lang),
+      content: i18n.tf(NS + 'confirmReturnText', {
+        style: this.data.styleNo,
+        color: this.data.color,
+        size: this.data.size,
+      }, this._lang),
       success: (modal) => {
         if (!modal.confirm) return;
         this._doAction('return', () =>
@@ -604,18 +767,20 @@ Page({
 
   _doAction(actionName, apiFn) {
     this.setData({ submitting: true, errorMsg: '', successMsg: '' });
-    const labelMap = { inbound: '入库', loan: '借调', return: '归还' };
+    const lang = this._lang;
+    const label = actionLabel(actionName, lang);
+    const successText = i18n.tf(NS + 'actionSuccess', { action: label }, lang);
     return apiFn()
       .then(() => {
         wx.vibrateShort({ type: 'heavy' });
         wx.showToast({
-          title: `${labelMap[actionName] || actionName}成功`,
+          title: successText,
           icon: 'success',
           duration: 2000,
         });
         this.setData({
           submitting: false,
-          successMsg: `${labelMap[actionName] || actionName}成功`,
+          successMsg: successText,
         });
         setTimeout(() => {
           this.querySample(this.data.styleNo, this.data.color, this.data.size);
@@ -625,7 +790,8 @@ Page({
         console.error(`[SampleScanAction] ${actionName} error`, err);
         this.setData({
           submitting: false,
-          errorMsg: (err && (err.errMsg || err.message)) || `${labelMap[actionName] || actionName}失败`,
+          errorMsg: (err && (err.errMsg || err.message))
+            || i18n.tf(NS + 'actionFailed', { action: label }, lang),
         });
       });
   },
@@ -679,7 +845,7 @@ Page({
       return;
     }
     
-    wx.showToast({ title: '无法识别的二维码', icon: 'none' });
+    wx.showToast({ title: i18n.t(NS + 'unrecognizedQr', this._lang), icon: 'none' });
   },
 
   // D-517：样衣生产码反查款式（GET /production/pattern/{id}）后按 styleNo+color+size 查库存
@@ -689,7 +855,7 @@ Page({
       .then((detail) => {
         const styleNo = String((detail && (detail.styleNo || detail.style_no)) || '').trim();
         if (!styleNo) {
-          wx.showToast({ title: '未找到该样衣的款式信息', icon: 'none' });
+          wx.showToast({ title: i18n.t(NS + 'styleInfoNotFound', this._lang), icon: 'none' });
           this.setData({ viewMode: 'list', loading: false });
           return;
         }
@@ -699,7 +865,7 @@ Page({
         this.querySample(styleNo, color, size);
       })
       .catch(() => {
-        wx.showToast({ title: '样衣信息查询失败', icon: 'none' });
+        wx.showToast({ title: i18n.t(NS + 'sampleQueryFailed', this._lang), icon: 'none' });
         this.setData({ viewMode: 'list', loading: false });
       });
   },
@@ -849,7 +1015,14 @@ Page({
     const items = this.data.locationItems || [];
     for (let i = 0; i < items.length; i++) {
       if (items[i].label === value && items[i].isFull) {
-        wx.showToast({ title: '库位 ' + value + ' 已满（' + items[i].used + '/' + items[i].capacity + '），请选其他库位', icon: 'none' });
+        wx.showToast({
+          title: i18n.tf(NS + 'locationFull', {
+            code: value,
+            used: items[i].used,
+            capacity: items[i].capacity,
+          }, this._lang),
+          icon: 'none',
+        });
         return;
       }
     }
@@ -928,7 +1101,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

@@ -175,7 +175,9 @@ function loadPage(jsPath, apiStub) {
   const sandbox = {
     Page: (c) => { cfg = c; },
     wx,
-    getApp: () => ({}),
+    // ⚠️ 必须带 globalData：真实 getApp() 返回 App 实例，`getApp().globalData.userInfo`
+    //    是页面里常见的读法（如样衣借调取操作人）。给 {} 会在那里直接 TypeError。
+    getApp: () => ({ globalData: {} }),
     console,
     setTimeout: (fn) => fn && fn(),   // 立即执行，避免测试挂起
     module: { exports: {} },
@@ -226,7 +228,7 @@ function loadComponent(jsPath, apiStub) {
   const sandbox = {
     Component: (c) => { cfg = c; },
     wx,
-    getApp: () => ({}),
+    getApp: () => ({ globalData: {} }),
     console,
     setTimeout: (fn) => fn && fn(),
     module: { exports: {} },
@@ -2174,6 +2176,224 @@ function testI18nShellPages() {
   ok('薄壳页 data.t 为空（文案都在组件里）', Object.keys(ib.data.t || {}).length === 0);
 }
 
+// ────────────────────────── 样衣扫码页 i18n（D-552 批 B） ──────────────────────────
+/**
+ * 样衣扫码页接口桩（默认桩里**没有** sampleStock）
+ *
+ * ⚠️ 刻意造出边界：
+ *   ss1 在库（借出 2）/ ss2 全部借出（库存 0、借出 3）/ ss3 在库且未借出
+ *   sampleType 同时覆盖**小写 key**（development）与**大写 key**（BODY_SAMPLE / SEAL_SAMPLE）
+ *   两种历史写法 —— 少写一种就会漏翻一类真实数据。
+ */
+function makeSampleScanApi() {
+  const api = makeApi();
+  api.sampleStock = {
+    list: async () => ({
+      records: [
+        { id: 'ss1', styleNo: 'ST-1', color: '白色', size: 'S', quantity: 10, loanedQuantity: 2,
+          sampleType: 'development', imageUrl: '' },
+        { id: 'ss2', styleNo: 'ST-2', color: '黑色', size: 'M', quantity: 0, loanedQuantity: 3,
+          sampleType: 'BODY_SAMPLE', imageUrl: '' },
+        { id: 'ss3', styleNo: 'ST-3', color: '红色', size: 'L', quantity: 5, loanedQuantity: 0,
+          sampleType: 'SEAL_SAMPLE', imageUrl: '' },
+      ],
+      total: 3,
+    }),
+    scanQuery: async () => ({
+      found: true,
+      actions: ['inbound', 'loan', 'return'],
+      availableQuantity: 8,
+      stock: {
+        id: 'stk-9', styleNo: 'ST-1', color: '白色', size: 'S', quantity: 10,
+        loanedQuantity: 2, sampleType: 'development', warehouseAreaName: '样衣A区', location: 'A-01',
+      },
+      activeLoans: [{ id: 'ln1', borrower: '张三', quantity: 2, createTime: '2026-09-01 10:00' }],
+    }),
+    inbound: async () => ({}),
+    loan: async () => ({}),
+    returnSample: async () => ({}),
+  };
+  api.production.getPatternDetail = async () => ({ styleNo: 'ST-7', color: '红', size: 'L' });
+  return api;
+}
+
+const SAMPLE_SCAN_JS = 'pages/warehouse/sample/scan-action/index.js';
+const SAMPLE_SCAN_WXML = 'pages/warehouse/sample/scan-action/index.wxml';
+
+function testI18nSampleScanAction() {
+  testPageI18n(SAMPLE_SCAN_JS, SAMPLE_SCAN_WXML, '样衣扫码页');
+
+  // json 的静态标题是首屏兜底，运行时由 applyLanguage 覆盖 —— 把这个既定做法锁住
+  const navJson = readSiblingJson(SAMPLE_SCAN_JS);
+  eq('json 导航标题仍是静态中文兜底', navJson && navJson.navigationBarTitleText, '样衣扫码');
+
+  // 样衣类型：库里存英文 code，前端映射（小写 / 大写两套历史写法都要覆盖）
+  const { page: enP } = loadPage(SAMPLE_SCAN_JS, makeSampleScanApi());
+  enP.applyLanguage('en-US');
+  const rows = enP._decorateStockList([
+    { sampleType: 'development' }, { sampleType: 'BODY_SAMPLE' }, { sampleType: 'SEAL_SAMPLE' },
+    { sampleType: 'weird' }, {},
+  ], 'en-US');
+  eq('样衣类型（小写 key）已本地化', rows[0]._sampleTypeLabel, 'Development Sample');
+  eq('样衣类型（大写 key）已本地化', rows[1]._sampleTypeLabel, 'Bulk Sample');
+  eq('样衣类型（封样）已本地化', rows[2]._sampleTypeLabel, 'Seal Sample');
+  eq('未知样衣类型原样回落（不能变空）', rows[3]._sampleTypeLabel, 'weird');
+  eq('空样衣类型回落为 -', rows[4]._sampleTypeLabel, '-');
+
+  // 状态页签的 label 不能写死在 data 里
+  const { page: zhP } = loadPage(SAMPLE_SCAN_JS, makeSampleScanApi());
+  zhP.applyLanguage('zh-CN');
+  eq('zh 状态页签是中文', zhP.data.statusTabs.map(t => t.label), ['全部', '在库', '已借出']);
+  enP.applyLanguage('en-US');
+  eq('en 状态页签是英文', enP.data.statusTabs.map(t => t.label), ['All', 'In Stock', 'Loaned Out']);
+  ok('中英状态页签确实不同',
+    JSON.stringify(zhP.data.statusTabs.map(t => t.label))
+      !== JSON.stringify(enP.data.statusTabs.map(t => t.label)));
+}
+
+async function testI18nSampleScanActionData() {
+  console.log('\n【i18n：样衣扫码页 · 数据与交互】');
+  const { page: p, wx } = loadPage(SAMPLE_SCAN_JS, makeSampleScanApi());
+  wx.setStorageSync('app.language', 'en-US');
+  p.applyLanguage('en-US');
+
+  // ── 列表 ──
+  await p.loadStockList(true);
+  eq('列表加载到 3 条', p.data.stockList.length, 3);
+  eq('状态页签计数正确', p.data.statusTabs.map(t => t.count), [3, 2, 1]);
+  eq('列表样衣类型已本地化', p.data.stockList[0]._sampleTypeLabel, 'Development Sample');
+  eq('列表「借出 N」已本地化', p.data.stockList[0]._loanedText, 'Loaned 2');
+  eq('未借出时不产生「借出 N」文案', p.data.stockList[2]._loanedText, '');
+
+  // ── 详情：类型 + 各类「N 件」 ──
+  // 模拟 onLoad / onStockItemTap 的既有行为：进详情前先把款号/颜色/尺码写进 data
+  // （确认弹窗的文案要用它们，不写就是三个空串）
+  p.setData({ viewMode: 'detail', styleNo: 'ST-1', color: '白色', size: 'S' });
+  await p.querySample('ST-1', '白色', 'S');
+  const st = p.data.stockInfo.stock;
+  eq('详情样衣类型已本地化', st._sampleTypeLabel, 'Development Sample');
+  eq('详情库存件数已本地化', st._qtyText, '10 pcs');
+  eq('详情借出件数已本地化', st._loanedQtyText, '2 pcs');
+  eq('详情可用件数已本地化', p.data.stockInfo._availableText, '8 pcs');
+  eq('借调记录件数已本地化', p.data.stockInfo.activeLoans[0]._qtyText, '2 pcs');
+  eq('借调弹窗可用量文案已本地化', p.data.t.loanAvailableText, 'Available 8 pcs');
+  ok('详情装饰未破坏原有字段', p.data.stockInfo.availableQuantity === 8
+    && p.data.stockInfo.stock.id === 'stk-9'
+    && p.data.stockInfo.activeLoans[0].borrower === '张三',
+    JSON.stringify({ a: p.data.stockInfo.availableQuantity, i: p.data.stockInfo.stock.id }));
+
+  // ── 入库确认弹窗（5 个占位符，最容易漏替换）──
+  p.data.warehouseAreaId = 'a1';
+  p.data.warehouse = '样衣A区';
+  p.data.warehouseLocationCode = 'A-01';
+  p.onInbound();
+  const inModal = lastCall(wx, 'showModal');
+  ok('入库弹窗已弹出', !!inModal);
+  ok('入库弹窗标题已本地化', !!inModal && !CJK_RE.test(inModal.title), inModal && inModal.title);
+  ok('入库弹窗正文已本地化', !!inModal && String(inModal.content).startsWith('Inbound'), inModal && inModal.content);
+  ok('入库弹窗无未替换占位符',
+    !!inModal && !/\{(style|color|size|warehouse|location)\}/.test(inModal.content), inModal && inModal.content);
+  ok('入库弹窗带出款号与库位',
+    !!inModal && String(inModal.content).includes('ST-1') && String(inModal.content).includes('A-01'),
+    inModal && inModal.content);
+
+  await new Promise(r => setTimeout(r, 0));
+  eq('入库成功 toast 已本地化', (lastCall(wx, 'showToast') || {}).title, 'Inbound successful');
+
+  // ⚠️ _doAction 成功后会自动重查（setTimeout 在桩里立即执行），此处显式再查一次
+  //    把详情拉回稳定态 —— 否则下一步读到的是「正在加载、stockInfo 已清空」的中间态。
+  await p.querySample('ST-1', '白色', 'S');
+  eq('重查后详情回到稳定态', p.data.stockInfo && p.data.stockInfo.availableQuantity, 8);
+
+  // ── 借调确认弹窗 ──
+  p.data.loanTargetId = 'u1';
+  p.data.loanTargetName = '张三';
+  p.data.loanQuantity = 2;
+  p.onLoanConfirm();
+  const loanModal = lastCall(wx, 'showModal');
+  ok('借调弹窗标题已本地化', !!loanModal && !CJK_RE.test(loanModal.title), loanModal && loanModal.title);
+  ok('借调弹窗正文已本地化', !!loanModal && String(loanModal.content).startsWith('Loan 2 pcs to'),
+    loanModal && loanModal.content);
+  ok('借调弹窗无未替换占位符', !!loanModal && !/\{(name|qty)\}/.test(loanModal.content),
+    loanModal && loanModal.content);
+  await new Promise(r => setTimeout(r, 0));
+  eq('借调成功 toast 已本地化', (lastCall(wx, 'showToast') || {}).title, 'Loan successful');
+
+  // ── 归还确认弹窗 ──
+  await p.querySample('ST-1', '白色', 'S');
+  p.onReturn();
+  const retModal = lastCall(wx, 'showModal');
+  ok('归还弹窗标题已本地化', !!retModal && !CJK_RE.test(retModal.title), retModal && retModal.title);
+  ok('归还弹窗正文已本地化', !!retModal && String(retModal.content).startsWith('Return ST-1'),
+    retModal && retModal.content);
+  await new Promise(r => setTimeout(r, 0));
+  eq('归还成功 toast 已本地化', (lastCall(wx, 'showToast') || {}).title, 'Return successful');
+
+  // ── 守卫提示（未选仓库 / 未选库位 / 可用为 0 / 无借调记录）──
+  const { page: gp, wx: gwx } = loadPage(SAMPLE_SCAN_JS, makeSampleScanApi());
+  gwx.setStorageSync('app.language', 'en-US');
+  gp.applyLanguage('en-US');
+  gp.onInbound();
+  const g1 = lastCall(gwx, 'showToast');
+  eq('未选仓库区域提示已本地化', g1 && g1.title, 'Please select warehouse area first');
+  gp.data.warehouseAreaId = 'a1';
+  gp.onInbound();
+  eq('未选库位提示已本地化', lastCall(gwx, 'showToast').title, 'Please select a location first');
+  gp.onLoan();
+  eq('可用为 0 时提示已本地化', lastCall(gwx, 'showToast').title, 'No available stock, cannot loan');
+  gp.onReturn();
+  eq('无借调记录提示已本地化', lastCall(gwx, 'showToast').title, 'No loan records');
+  gp.onLoanConfirm();
+  eq('未选借调对象提示已本地化', lastCall(gwx, 'showToast').title, 'Please select a loan target');
+
+  // ── 满库位拦截（带 code/used/capacity 三个参数）──
+  const { page: fp, wx: fwx } = loadPage(SAMPLE_SCAN_JS, makeSampleScanApi());
+  fwx.setStorageSync('app.language', 'en-US');
+  fp.applyLanguage('en-US');
+  fp.data.locationItems = [{ code: 'A-01', label: 'A-01', used: 5, capacity: 5, isFull: true }];
+  fp.onLocationChipTap({ currentTarget: { dataset: { value: 'A-01' } } });
+  const fullToast = lastCall(fwx, 'showToast');
+  ok('满库位提示已本地化', !!fullToast && String(fullToast.title).startsWith('Location A-01 is full'),
+    fullToast && fullToast.title);
+  ok('满库位提示无未替换占位符', !!fullToast && !/\{(code|used|capacity)\}/.test(fullToast.title),
+    fullToast && fullToast.title);
+  eq('满库位不写入选中值（拦截生效）', fp.data.warehouseLocationCode, '');
+
+  // ── 扫码解析失败 + 借调选择器标题 ──
+  const { page: qp, wx: qwx } = loadPage(SAMPLE_SCAN_JS, makeSampleScanApi());
+  qwx.setStorageSync('app.language', 'en-US');
+  qp.applyLanguage('en-US');
+  qp.parseAndQuery('完全不是二维码');
+  eq('无法识别二维码提示已本地化', lastCall(qwx, 'showToast').title, 'Unrecognized QR code');
+
+  qp.data.loanTargetType = 'person';
+  qp._openPickerByKey({ currentTarget: { dataset: { key: 'loanTarget' } } });
+  eq('借调选择器标题（员工）已本地化', qp.data.pickerTitle, 'Select Loan Employee');
+  qp.data.loanTargetType = 'factory';
+  qp._openPickerByKey({ currentTarget: { dataset: { key: 'loanTarget' } } });
+  eq('借调选择器标题（工厂）已本地化', qp.data.pickerTitle, 'Select Outsource Factory');
+  // ⚠️ openPicker 在「行上只有 data-key」时会先委托给 _openPickerByKey；
+  //    要测通用分支必须带上 data-handler，否则根本走不到兜底标题那一行。
+  qp.openPicker({ currentTarget: { dataset: { names: 'locationItems', handler: 'noop' } } });
+  eq('通用选择器兜底标题已本地化', qp.data.pickerTitle, 'Please select');
+
+  // ── 切语言：已加载的列表/详情必须重算，不能只在加载时算一次 ──
+  const { page: swP } = loadPage(SAMPLE_SCAN_JS, makeSampleScanApi());
+  swP.applyLanguage('zh-CN');
+  await swP.loadStockList(true);
+  eq('zh 列表样衣类型是中文', swP.data.stockList[0]._sampleTypeLabel, '开发样');
+  await swP.querySample('ST-1', '白色', 'S');
+  eq('zh 详情件数文案是中文', swP.data.stockInfo.stock._qtyText, '10 件');
+  swP.applyLanguage('en-US');
+  eq('切语言后列表类型自动变英文', swP.data.stockList[0]._sampleTypeLabel, 'Development Sample');
+  eq('切语言后状态页签自动变英文', swP.data.statusTabs[0].label, 'All');
+  eq('切语言后详情件数文案自动变英文', swP.data.stockInfo.stock._qtyText, '10 pcs');
+  eq('切语言后详情可用量文案自动变英文', swP.data.stockInfo._availableText, '8 pcs');
+  eq('切语言后借调弹窗可用量文案自动变英文', swP.data.t.loanAvailableText, 'Available 8 pcs');
+  eq('切语言后列表「借出 N」自动变英文', swP.data.stockList[0]._loanedText, 'Loaned 2');
+  ok('切语言后详情仍保留原字段', swP.data.stockInfo.stock.id === 'stk-9');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -2209,6 +2429,8 @@ try {
   testI18nMaterialOutboundForm();
   testI18nMaterialPickingList();
   testI18nShellPages();
+  testI18nSampleScanAction();
+  await testI18nSampleScanActionData();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

@@ -8,7 +8,7 @@
     <view class="ssb-wrap">
       <sticky-search-bar
         sticky="{{false}}"
-        placeholder="搜索款号/颜色/尺码"
+        placeholder="{{t.listSearchPlaceholder}}"
         value="{{searchKeyword}}"
         show-scan="{{true}}"
         show-filter="{{true}}"
@@ -37,23 +37,23 @@
     <!-- 列表 -->
     <view class="stock-list">
       <view wx:if="{{stockListLoading && stockList.length === 0}}" class="loading-wrap">
-        <text class="loading-text">加载中...</text>
+        <text class="loading-text">{{t.loading}}</text>
       </view>
       
       <view wx:elif="{{stockListError}}" class="error-card">
         <view class="line-icon icon-alert error-icon"></view>
         <text class="error-msg">{{stockListError}}</text>
-        <view class="btn-retry" bindtap="loadStockList" data-refresh="true">重试</view>
+        <view class="btn-retry" bindtap="loadStockList" data-refresh="true">{{t.retry}}</view>
       </view>
       
       <view wx:elif="{{stockList.length === 0}}" class="empty-wrap">
         <view class="line-icon icon-shirt empty-icon"></view>
-        <text class="empty-text">暂无样衣库存</text>
+        <text class="empty-text">{{t.noStock}}</text>
       </view>
 
       <view wx:elif="{{filteredStockList.length === 0}}" class="empty-wrap">
         <view class="line-icon icon-shirt empty-icon"></view>
-        <text class="empty-text">当前筛选下无数据</text>
+        <text class="empty-text">{{t.noFilterResult}}</text>
       </view>
 
       <block wx:else>
@@ -69,28 +69,28 @@
         </view>
         <view class="stock-info">
           <view class="stock-row">
-            <text class="stock-label">款号</text>
+            <text class="stock-label">{{t.styleNoLabel}}</text>
             <text class="stock-value">{{item.styleNo || '-'}}</text>
           </view>
           <view class="stock-row">
-            <text class="stock-label">颜色</text>
+            <text class="stock-label">{{t.colorLabel}}</text>
             <text class="stock-value">{{item.color || '-'}}</text>
           </view>
           <view class="stock-row">
-            <text class="stock-label">尺码</text>
+            <text class="stock-label">{{t.sizeLabel}}</text>
             <text class="stock-value">{{item.size || '-'}}</text>
           </view>
           <view class="stock-row" wx:if="{{item._sampleTypeLabel}}">
-            <text class="stock-label">类型</text>
+            <text class="stock-label">{{t.typeLabel}}</text>
             <text class="stock-value">{{item._sampleTypeLabel}}</text>
           </view>
         </view>
         <view class="stock-status">
           <view class="stock-quantity">
             <text class="qty-num">{{item.quantity || 0}}</text>
-            <text class="qty-unit">件</text>
+            <text class="qty-unit">{{t.piece}}</text>
           </view>
-          <text class="stock-loan" wx:if="{{item.loanedQuantity > 0}}">借出 {{item.loanedQuantity}}</text>
+          <text class="stock-loan" wx:if="{{item._loanedText}}">{{item._loanedText}}</text>
           <text class="stock-arrow">›</text>
         </view>
       </view>
@@ -98,9 +98,9 @@
 
       <!-- 加载更多：仅在"全部"tab下显示，本地过滤时不显示（避免误以为还有数据） -->
       <view class="load-more" wx:if="{{activeStatus === 'all' && stockList.length > 0}}">
-        <text wx:if="{{stockListLoading}}" class="load-text">加载中...</text>
-        <text wx:elif="{{hasMore}}" class="load-text" bindtap="loadStockList">加载更多</text>
-        <text wx:else class="load-text">— 没有更多了 —</text>
+        <text wx:if="{{stockListLoading}}" class="load-text">{{t.loading}}</text>
+        <text wx:elif="{{hasMore}}" class="load-text" bindtap="loadStockList">{{t.loadMore}}</text>
+        <text wx:else class="load-text">{{t.noMore}}</text>
       </view>
     </view>
   </view>
@@ -109,8 +109,8 @@
   <view wx:if="{{viewMode === 'detail'}}">
     <!-- 头部 -->
     <view class="header">
-      <text class="header-title">样衣详情</text>
-      <view class="header-scan" bindtap="onScanCode">扫码</view>
+      <text class="header-title">{{t.detailTitle}}</text>
+      <view class="header-scan" bindtap="onScanCode">{{t.scan}}</view>
     </view>
     
     <view class="header-info">
@@ -119,14 +119,14 @@
     
     <!-- 加载中 -->
     <view class="loading-wrap" wx:if="{{loading}}">
-      <text class="loading-text">查询中...</text>
+      <text class="loading-text">{{t.querying}}</text>
     </view>
     
     <!-- 错误提示 -->
     <view class="error-card" wx:elif="{{errorMsg}}">
       <view class="line-icon icon-alert error-icon"></view>
       <text class="error-msg">{{errorMsg}}</text>
-      <view class="btn-retry" bindtap="onRetry">重试</view>
+      <view class="btn-retry" bindtap="onRetry">{{t.retry}}</view>
     </view>
     
     <!-- 成功提示 -->
@@ -140,21 +140,21 @@
       <!-- 未找到库存记录 -->
       <view class="info-card" wx:if="{{!stockInfo.found}}">
         <view class="info-row">
-          <text class="info-label">状态</text>
+          <text class="info-label">{{t.statusLabel}}</text>
           <text class="info-value">
-            <text class="status-tag tag-orange">未入库</text>
+            <text class="status-tag tag-orange">{{t.notInStock}}</text>
           </text>
         </view>
         <view class="info-row">
-          <text class="info-label">款号</text>
+          <text class="info-label">{{t.styleNoLabel}}</text>
           <text class="info-value bold">{{styleNo}}</text>
         </view>
         <view class="info-row">
-          <text class="info-label">颜色</text>
+          <text class="info-label">{{t.colorLabel}}</text>
           <text class="info-value">{{color}}</text>
         </view>
         <view class="info-row">
-          <text class="info-label">尺码</text>
+          <text class="info-label">{{t.sizeLabel}}</text>
           <text class="info-value">{{size}}</text>
         </view>
       </view>
@@ -170,66 +170,66 @@
           data-src="{{stockInfo.stock._imageUrl}}"
         />
         <view class="info-row">
-          <text class="info-label">状态</text>
+          <text class="info-label">{{t.statusLabel}}</text>
           <text class="info-value">
-            <text class="status-tag tag-green" wx:if="{{stockInfo.availableQuantity > 0}}">在库</text>
-            <text class="status-tag tag-orange" wx:else>全部借出</text>
+            <text class="status-tag tag-green" wx:if="{{stockInfo.availableQuantity > 0}}">{{t.inStockTag}}</text>
+            <text class="status-tag tag-orange" wx:else>{{t.allLoanedOut}}</text>
           </text>
         </view>
         <view class="info-row">
-          <text class="info-label">款号</text>
+          <text class="info-label">{{t.styleNoLabel}}</text>
           <text class="info-value bold">{{stockInfo.stock.styleNo}}</text>
         </view>
         <view class="info-row" wx:if="{{stockInfo.stock.styleName}}">
-          <text class="info-label">款名</text>
+          <text class="info-label">{{t.styleName}}</text>
           <text class="info-value">{{stockInfo.stock.styleName}}</text>
         </view>
         <view class="info-row">
-          <text class="info-label">颜色</text>
+          <text class="info-label">{{t.colorLabel}}</text>
           <text class="info-value">{{stockInfo.stock.color}}</text>
         </view>
         <view class="info-row">
-          <text class="info-label">尺码</text>
+          <text class="info-label">{{t.sizeLabel}}</text>
           <text class="info-value">{{stockInfo.stock.size}}</text>
         </view>
         <view class="info-row" wx:if="{{stockInfo.stock.sampleType}}">
-          <text class="info-label">类型</text>
+          <text class="info-label">{{t.typeLabel}}</text>
           <text class="info-value">{{stockInfo.stock._sampleTypeLabel || stockInfo.stock.sampleType}}</text>
         </view>
         <view class="info-row" wx:if="{{stockInfo.stock.location}}">
-          <text class="info-label">仓位</text>
+          <text class="info-label">{{t.binLocation}}</text>
           <text class="info-value">{{stockInfo.stock.location}}</text>
         </view>
         <view class="info-row">
-          <text class="info-label">库存</text>
-          <text class="info-value bold">{{stockInfo.stock.quantity}} 件</text>
+          <text class="info-label">{{t.stockQty}}</text>
+          <text class="info-value bold">{{stockInfo.stock._qtyText}}</text>
         </view>
         <view class="info-row">
-          <text class="info-label">可用</text>
-          <text class="info-value bold">{{stockInfo.availableQuantity}} 件</text>
+          <text class="info-label">{{t.availableLabel}}</text>
+          <text class="info-value bold">{{stockInfo._availableText}}</text>
         </view>
         <view class="info-row" wx:if="{{stockInfo.stock.loanedQuantity > 0}}">
-          <text class="info-label">借出</text>
-          <text class="info-value">{{stockInfo.stock.loanedQuantity}} 件</text>
+          <text class="info-label">{{t.loanedLabel}}</text>
+          <text class="info-value">{{stockInfo.stock._loanedQtyText}}</text>
         </view>
 
         <!-- 库存统计：总数量/已借调/待归还/报废（复用项目统一 stats-row/stat-card 样式） -->
         <view class="stats-row">
           <view class="stat-card">
             <text class="stat-value">{{stockInfo.stock.quantity || 0}}</text>
-            <text class="stat-label">总数量</text>
+            <text class="stat-label">{{t.totalQty}}</text>
           </view>
           <view class="stat-card">
             <text class="stat-value stat-value--warning">{{stockInfo.stock.loanedQuantity || 0}}</text>
-            <text class="stat-label">已借调</text>
+            <text class="stat-label">{{t.loanedQty}}</text>
           </view>
           <view class="stat-card">
             <text class="stat-value stat-value--danger">{{stockInfo.pendingReturnCount || 0}}</text>
-            <text class="stat-label">待归还</text>
+            <text class="stat-label">{{t.pendingReturnQty}}</text>
           </view>
           <view class="stat-card">
             <text class="stat-value stat-value--secondary">{{stockInfo.scrappedCount || 0}}</text>
-            <text class="stat-label">报废</text>
+            <text class="stat-label">{{t.scrappedQty}}</text>
           </view>
         </view>
       </view>
@@ -237,19 +237,19 @@
       <!-- 借调记录 -->
       <view class="info-card" wx:if="{{stockInfo.activeLoans && stockInfo.activeLoans.length > 0}}">
         <view class="info-row">
-          <text class="info-label bold" style="width:auto">当前借调记录</text>
+          <text class="info-label bold" style="width:auto">{{t.activeLoans}}</text>
         </view>
         <view class="loan-item" wx:for="{{stockInfo.activeLoans}}" wx:key="id">
           <view class="info-row">
-            <text class="info-label">借调人</text>
+            <text class="info-label">{{t.borrower}}</text>
             <text class="info-value">{{item.borrower}}</text>
           </view>
           <view class="info-row">
-            <text class="info-label">数量</text>
-            <text class="info-value">{{item.quantity}} 件</text>
+            <text class="info-label">{{t.quantityLabel}}</text>
+            <text class="info-value">{{item._qtyText}}</text>
           </view>
           <view class="info-row">
-            <text class="info-label">时间</text>
+            <text class="info-label">{{t.timeLabel}}</text>
             <text class="info-value">{{item.createTime}}</text>
           </view>
         </view>
@@ -259,18 +259,18 @@
       <view class="action-area" wx:if="{{!successMsg}}">
         <!-- 出库库位提示（已入库时显示，让用户清楚样衣在哪里） -->
         <view wx:if="{{stockInfo.found && stockInfo.stock && (stockInfo.stock.warehouseAreaName || stockInfo.stock.location)}}" class="stock-location-banner">
-          <text class="stock-location-label">出库库位：</text>
+          <text class="stock-location-label">{{t.outboundLocationLabel}}</text>
           <text class="stock-location-value">{{stockInfo.stock.warehouseAreaName || '-'}}{{stockInfo.stock.location ? ' / ' + stockInfo.stock.location : ''}}</text>
         </view>
 
         <!-- 仓库区域选择（入库时显示） -->
         <view wx:if="{{wxu.has(actions, 'inbound')}}" class="warehouse-section">
-          <view class="warehouse-label">入库仓库：</view>
+          <view class="warehouse-label">{{t.inboundWarehouseLabel}}</view>
           <!-- D-171：仓库搜索（仓库较多时快速定位） -->
           <input
             wx:if="{{warehouseOptions.length > 2}}"
             class="input-box warehouse-search-input"
-            placeholder="搜索仓库..."
+            placeholder="{{t.warehouseSearchPlaceholder}}"
             value="{{warehouseSearchKey}}"
             bindinput="onWarehouseSearchInput"
           />
@@ -287,21 +287,21 @@
               class="warehouse-chip warehouse-chip--clear {{warehouse ? '' : 'warehouse-chip--disabled'}}"
               bindtap="onWarehouseClear"
               hover-class="warehouse-chip-hover"
-            >清除</view>
+            >{{t.clear}}</view>
           </view>
           <input
             class="input-box"
-            placeholder="或手动输入仓库编号"
+            placeholder="{{t.warehouseCodePlaceholder}}"
             value="{{warehouse}}"
             bindinput="onWarehouseCodeInput"
           />
 
           <!-- 库位选择（显示已用/容量避免超限） -->
-          <view wx:if="{{warehouse && locationItems.length > 0}}" class="warehouse-label" style="margin-top: 12rpx;">入库库位：</view>
+          <view wx:if="{{warehouse && locationItems.length > 0}}" class="warehouse-label" style="margin-top: 12rpx;">{{t.inboundLocationLabel}}</view>
           <input
             wx:if="{{warehouse && locationItems.length > 4}}"
             class="input-box warehouse-search-input"
-            placeholder="搜索库位编号..."
+            placeholder="{{t.locationSearchPlaceholder}}"
             value="{{locationSearchKey}}"
             bindinput="onLocationSearchInput"
           />
@@ -318,12 +318,12 @@
               class="warehouse-chip warehouse-chip--clear {{warehouseLocationCode ? '' : 'warehouse-chip--disabled'}}"
               bindtap="onLocationClear"
               hover-class="warehouse-chip-hover"
-            >清除</view>
+            >{{t.clear}}</view>
           </view>
           <input
             wx:if="{{warehouse}}"
             class="input-box"
-            placeholder="或手动输入库位编号"
+            placeholder="{{t.locationCodePlaceholder}}"
             value="{{warehouseLocationCode}}"
             bindinput="onLocationCodeInput"
           />
@@ -336,19 +336,19 @@
             wx:if="{{wxu.has(actions, 'inbound')}}"
             bindtap="onInbound"
             hover-class="action-btn--hover"
-          >入库</view>
+          >{{t.actionInbound}}</view>
           <view
             class="action-btn action-btn--loan {{submitting ? 'action-btn--disabled' : ''}}"
             wx:if="{{wxu.has(actions, 'loan')}}"
             bindtap="onLoan"
             hover-class="action-btn--hover"
-          >借调</view>
+          >{{t.actionLoan}}</view>
           <view
             class="action-btn action-btn--return {{submitting ? 'action-btn--disabled' : ''}}"
             wx:if="{{wxu.has(actions, 'return')}}"
             bindtap="onReturn"
             hover-class="action-btn--hover"
-          >归还</view>
+          >{{t.actionReturn}}</view>
         </view>
       </view>
     </block>
@@ -358,7 +358,7 @@
   <view wx:if="{{showLoanPicker}}" class="loan-picker-mask" catchtap="onLoanCancel">
     <view class="loan-picker" catchtap="noop">
       <view class="loan-picker-header">
-        <text class="loan-picker-title">选择借调对象</text>
+        <text class="loan-picker-title">{{t.loanPickerTitle}}</text>
         <view class="loan-picker-close" bindtap="onLoanCancel">×</view>
       </view>
 
@@ -368,42 +368,42 @@
           class="loan-type-tab {{loanTargetType === 'person' ? 'loan-type-tab--active' : ''}}"
           bindtap="onLoanTargetTypeChange"
           data-type="person"
-        >借给员工</view>
+        >{{t.loanToPerson}}</view>
         <view
           class="loan-type-tab {{loanTargetType === 'factory' ? 'loan-type-tab--active' : ''}}"
           bindtap="onLoanTargetTypeChange"
           data-type="factory"
-        >借给外发工厂</view>
+        >{{t.loanToFactory}}</view>
       </view>
 
       <!-- 借调数量 -->
       <view class="loan-qty-row">
-        <text class="loan-qty-label">借调数量</text>
+        <text class="loan-qty-label">{{t.loanQtyLabel}}</text>
         <input
           class="loan-qty-input"
           type="number"
           value="{{loanQuantity}}"
           bindinput="onLoanQuantityInput"
         />
-        <text class="loan-qty-max">可用 {{stockInfo.availableQuantity}} 件</text>
+        <text class="loan-qty-max">{{t.loanAvailableText}}</text>
       </view>
 
       <!-- D-517：借调对象改为可搜索选择器 —— 原先只拉前 200 条做本地过滤，
            第 201 个员工/工厂永远搜不到；现在按关键字远程搜索 + 分页。 -->
       <view class="loan-picker-row" bindtap="openPicker" data-key="loanTarget">
         <text class="loan-picker-value {{loanTargetName ? '' : 'is-placeholder'}}">
-          {{loanTargetName || (loanTargetType === 'person' ? '选择员工（可搜索）' : '选择外发工厂（可搜索）')}}
+          {{loanTargetName || (loanTargetType === 'person' ? t.loanSelectPerson : t.loanSelectFactory)}}
         </text>
         <text class="loan-picker-arrow">›</text>
       </view>
 
       <!-- 确认按钮 -->
       <view class="loan-picker-footer">
-        <view class="loan-btn loan-btn--cancel" bindtap="onLoanCancel">取消</view>
+        <view class="loan-btn loan-btn--cancel" bindtap="onLoanCancel">{{t.cancel}}</view>
         <view
           class="loan-btn loan-btn--confirm {{(!loanTargetId || submitting) ? 'loan-btn--disabled' : ''}}"
           bindtap="onLoanConfirm"
-        >确认借调</view>
+        >{{t.confirmLoan}}</view>
       </view>
     </view>
   </view>
