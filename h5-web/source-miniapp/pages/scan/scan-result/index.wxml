@@ -7,11 +7,11 @@
       <view class="line-icon line-icon--lg icon-check-white success-check"></view>
     </view>
     <view class="success-content">
-      <text class="success-title">扫描成功</text>
+      <text class="success-title">{{t.scanSuccess}}</text>
       <text class="success-subtitle">{{detail.styleNo || detail.bundleNo || '-'}}</text>
     </view>
     <view wx:if="{{detail.deliveryDateDisplay}}" class="success-date">
-      <text class="success-date-label">交期</text>
+      <text class="success-date-label">{{t.deliveryLabel}}</text>
       <text class="success-date-value">{{detail.deliveryDateDisplay}}</text>
     </view>
   </view>
@@ -19,32 +19,32 @@
   <!-- 菲号信息（对齐设计稿：分区头 + 字段列表） -->
   <view class="group-section">
     <view class="group-header">
-      <text class="group-header-title">菲号信息</text>
+      <text class="group-header-title">{{t.bundleInfoTitle}}</text>
     </view>
     <view class="group-body">
       <view wx:if="{{detail.bundleNo}}" class="group-field-row">
-        <text class="group-field-label">菲号</text>
+        <text class="group-field-label">{{t.bundleWord}}</text>
         <!-- D-185：展示短版菲号，长按复制完整编号 -->
         <text class="group-field-value" bindlongpress="onCopyFullBundleNo" data-full="{{detail.bundleNo}}">{{detail.bundleNoDisplay || detail.bundleNo}}</text>
       </view>
       <view wx:if="{{detail.color}}" class="group-field-row">
-        <text class="group-field-label">颜色</text>
+        <text class="group-field-label">{{t.color}}</text>
         <text class="group-field-value">{{detail.color}}</text>
       </view>
       <view wx:if="{{detail.size}}" class="group-field-row">
-        <text class="group-field-label">码数</text>
+        <text class="group-field-label">{{t.size}}</text>
         <text class="group-field-value">{{detail.size}}</text>
       </view>
       <view wx:if="{{detail.displayQuantity}}" class="group-field-row">
-        <text class="group-field-label">数量</text>
-        <text class="group-field-value group-field-value--bold">{{detail.displayQuantity}} 件</text>
+        <text class="group-field-label">{{t.quantity}}</text>
+        <text class="group-field-value group-field-value--bold">{{detail.displayQuantity}}{{t.pieceUnit}}</text>
       </view>
       <view wx:if="{{detail.bedNo}}" class="group-field-row">
-        <text class="group-field-label">床号</text>
+        <text class="group-field-label">{{t.bedNo}}</text>
         <text class="group-field-value">{{detail.bedNo}}</text>
       </view>
       <view wx:if="{{detail.cuttingDateDisplay}}" class="group-field-row">
-        <text class="group-field-label">裁床日期</text>
+        <text class="group-field-label">{{t.cutDate}}</text>
         <text class="group-field-value">{{detail.cuttingDateDisplay}}</text>
       </view>
     </view>
@@ -53,7 +53,7 @@
   <!-- 款式信息（对齐设计稿：缩略图 + 品名 + 标签） -->
   <view class="group-section">
     <view class="group-header">
-      <text class="group-header-title">款式信息</text>
+      <text class="group-header-title">{{t.styleInfoTitle}}</text>
     </view>
     <view class="group-body style-body">
       <view class="style-header">
@@ -79,30 +79,30 @@
   <!-- 生产提示（对齐设计稿：分区头 + 字段列表） -->
   <view wx:if="{{productionHints}}" class="group-section">
     <view class="group-header">
-      <text class="group-header-title">生产提示</text>
+      <text class="group-header-title">{{t.productionTips}}</text>
     </view>
     <view class="group-body">
       <view wx:if="{{productionHints.difficultyLabel}}" class="group-field-row">
-        <text class="group-field-label">难度</text>
+        <text class="group-field-label">{{t.difficulty}}</text>
         <view class="hint-value-wrap">
           <text class="hint-badge hint-badge--{{productionHints.difficultySeverity}}">{{productionHints.difficultyLabel}}</text>
           <text wx:if="{{productionHints.difficultyScore}}" class="hint-score">{{productionHints.difficultyScore}}/10</text>
         </view>
       </view>
       <view wx:if="{{productionHints.fabricComposition}}" class="group-field-row">
-        <text class="group-field-label">面料</text>
+        <text class="group-field-label">{{t.fabricWord}}</text>
         <text class="group-field-value">{{productionHints.fabricComposition}}</text>
       </view>
       <view wx:if="{{productionHints.needleHint}}" class="group-field-row">
-        <text class="group-field-label">针号</text>
+        <text class="group-field-label">{{t.needleNo}}</text>
         <text class="group-field-value">{{productionHints.needleHint}}</text>
       </view>
       <view wx:if="{{productionHints.craftNotes}}" class="group-field-row group-field-row--block">
-        <text class="group-field-label">工艺要点</text>
+        <text class="group-field-label">{{t.craftPoints}}</text>
         <text class="group-field-value group-field-value--block">{{productionHints.craftNotes}}</text>
       </view>
       <view wx:if="{{productionHints.secondaryProcessText}}" class="group-field-row">
-        <text class="group-field-label">二次工艺</text>
+        <text class="group-field-label">{{t.secondCraft}}</text>
         <text class="group-field-value">{{productionHints.secondaryProcessText}}</text>
       </view>
     </view>
@@ -111,14 +111,14 @@
   <!-- D-185：尺寸表（质检对照标准尺寸，当前码数列高亮） -->
   <view wx:if="{{sizeSpec}}" class="group-section">
     <view class="group-header">
-      <text class="group-header-title">尺寸表</text>
-      <text wx:if="{{sizeSpec.currentIdx >= 0}}" class="group-header-sub">已高亮当前码数</text>
+      <text class="group-header-title">{{t.sizeTableTitle}}</text>
+      <text wx:if="{{sizeSpec.currentIdx >= 0}}" class="group-header-sub">{{t.sizeHighlighted}}</text>
     </view>
     <scroll-view scroll-x class="size-spec-scroll" enhanced show-scrollbar="{{false}}">
       <view class="size-spec-table">
         <view class="ss-row ss-row--head">
-          <text class="ss-cell ss-cell--part">部位</text>
-          <text class="ss-cell ss-cell--measure">度量方式</text>
+          <text class="ss-cell ss-cell--part">{{t.partHeader}}</text>
+          <text class="ss-cell ss-cell--measure">{{t.measureMethod}}</text>
           <text
             wx:for="{{sizeSpec.sizeCols}}"
             wx:for-index="colIdx"
@@ -144,7 +144,7 @@
   <!-- 菲号工序进度（保留生产功能） -->
   <view wx:if="{{detail.bundleStatusHints.length > 0}}" class="group-section">
     <view class="group-header">
-      <text class="group-header-title">菲号工序进度</text>
+      <text class="group-header-title">{{t.progressTitle}}</text>
     </view>
     <view class="group-body">
       <view wx:for="{{detail.bundleStatusHints}}" wx:key="index" class="stage-hint-item">
@@ -156,7 +156,7 @@
   <!-- 选择工序（对齐设计稿：分区头 + 多选 + 汇总） -->
   <view class="group-section">
     <view class="group-header">
-      <text class="group-header-title">选择工序（可多选）</text>
+      <text class="group-header-title">{{t.selectProcesses}}</text>
     </view>
     <view class="group-body">
       <scroll-view class="process-scroll" scroll-y style="max-height:600rpx">
@@ -175,26 +175,26 @@
       </scroll-view>
     </view>
     <view class="summary-bar" wx:if="{{selectedCount > 0}}">
-      <text class="summary-text">已选 {{selectedCount}} 个工序</text>
-      <text wx:if="{{selectedAmount > 0}}" class="summary-amount">合计 ¥{{money.toFixed2(selectedAmount)}}</text>
+      <text class="summary-text">{{t.selectedWord}} {{selectedCount}} {{t.processUnit}}</text>
+      <text wx:if="{{selectedAmount > 0}}" class="summary-amount">{{t.totalWord}} ¥{{money.toFixed2(selectedAmount)}}</text>
     </view>
   </view>
 
   <!-- 目标仓库（保留生产功能） -->
   <view wx:if="{{showWarehouse}}" class="group-section">
     <view class="group-header">
-      <text class="group-header-title">目标仓库</text>
+      <text class="group-header-title">{{t.targetWarehouse}}</text>
     </view>
     <view class="group-body">
       <view class="warehouse-row">
         <view class="warehouse-name">
-          <text class="warehouse-name-label">仓库：</text>
+          <text class="warehouse-name-label">{{t.warehousePrefix}}</text>
           <text class="warehouse-name-value">{{warehouseName}}</text>
         </view>
         <input
           wx:if="{{warehouseOptions.length > 2}}"
           class="input-box warehouse-search-input"
-          placeholder="搜索仓库..."
+          placeholder="{{t.searchWarehousePh}}"
           value="{{warehouseSearchKey}}"
           bindinput="onWarehouseSearchInput"
         />
@@ -213,11 +213,11 @@
             bindtap="onWarehouseClear"
             hover-class="warehouse-chip-hover"
             hover-stay-time="100"
-          >清除</view>
+          >{{t.clearText}}</view>
         </view>
         <input
           class="input-box"
-          placeholder="{{warehouseOptions.length > 0 ? '或手动输入仓库编号' : '请输入仓库编号'}}"
+          placeholder="{{warehouseOptions.length > 0 ? t.manualWarehousePh : t.warehouseCodePh}}"
           value="{{warehouseCode}}"
           bindinput="onWarehouseInput"
         />
@@ -226,7 +226,7 @@
         <input
           wx:if="{{warehouseCode && locationItems.length > 4}}"
           class="input-box warehouse-search-input"
-          placeholder="搜索库位编号..."
+          placeholder="{{t.searchLocationPh}}"
           value="{{locationSearchKey}}"
           bindinput="onLocationSearchInput"
         />
@@ -245,12 +245,12 @@
             bindtap="onLocationClear"
             hover-class="warehouse-chip-hover"
             hover-stay-time="100"
-          >清除</view>
+          >{{t.clearText}}</view>
         </view>
         <input
           wx:if="{{warehouseCode}}"
           class="input-box"
-          placeholder="或手动输入库位编号"
+          placeholder="{{t.manualLocationPh}}"
           value="{{warehouseLocationCode}}"
           bindinput="onLocationInput"
         />
@@ -259,9 +259,9 @@
   </view>
 
   <view class="footer-bar">
-    <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+    <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">{{t.cancel}}</view>
     <view class="btn-submit {{loading || selectedCount === 0 ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitScanResult">
-      {{loading ? '提交中...' : (isQualityReceive ? '质检录入' : '确认提交')}}
+      {{loading ? t.submitting : (isQualityReceive ? t.qualityEntry : t.confirmSubmit)}}
     </view>
   </view>
   <ai-assistant />

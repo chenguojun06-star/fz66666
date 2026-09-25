@@ -6,6 +6,10 @@ const { normalizeScanType } = require('../handlers/helpers/ScanModeResolver');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 const { normalizeProcessName } = require('../../../utils/displayHelper');
+const i18n = require('../../../utils/i18n/index');
+
+/** 本页 i18n 命名空间前缀 */
+const NS = 'mp.scanResult.';
 
 function normalizePositiveInt(value, fallback) {
   fallback = (fallback === undefined) ? 1 : fallback;
@@ -41,11 +45,61 @@ Page({
     loading: false,
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}） */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        scanSuccess: i18n.t(NS + 'scanSuccess', lang),
+        deliveryLabel: i18n.t(NS + 'deliveryLabel', lang),
+        bundleInfoTitle: i18n.t(NS + 'bundleInfoTitle', lang),
+        bundleWord: i18n.t(NS + 'bundleWord', lang),
+        color: i18n.t('common.color', lang),
+        size: i18n.t('common.size', lang),
+        quantity: i18n.t('common.quantity', lang),
+        pieceUnit: i18n.t('common.piece', lang),
+        bedNo: i18n.t(NS + 'bedNo', lang),
+        cutDate: i18n.t(NS + 'cutDate', lang),
+        styleInfoTitle: i18n.t(NS + 'styleInfoTitle', lang),
+        productionTips: i18n.t(NS + 'productionTips', lang),
+        difficulty: i18n.t(NS + 'difficulty', lang),
+        fabricWord: i18n.t(NS + 'fabricWord', lang),
+        needleNo: i18n.t(NS + 'needleNo', lang),
+        craftPoints: i18n.t(NS + 'craftPoints', lang),
+        secondCraft: i18n.t(NS + 'secondCraft', lang),
+        sizeTableTitle: i18n.t(NS + 'sizeTableTitle', lang),
+        sizeHighlighted: i18n.t(NS + 'sizeHighlighted', lang),
+        partHeader: i18n.t(NS + 'partHeader', lang),
+        measureMethod: i18n.t(NS + 'measureMethod', lang),
+        progressTitle: i18n.t(NS + 'progressTitle', lang),
+        selectProcesses: i18n.t(NS + 'selectProcesses', lang),
+        selectedWord: i18n.t(NS + 'selectedWord', lang),
+        processUnit: i18n.t(NS + 'processUnit', lang),
+        totalWord: i18n.t(NS + 'totalWord', lang),
+        targetWarehouse: i18n.t(NS + 'targetWarehouse', lang),
+        warehousePrefix: i18n.t(NS + 'warehousePrefix', lang),
+        searchWarehousePh: i18n.t(NS + 'searchWarehousePh', lang),
+        clearText: i18n.t(NS + 'clearText', lang),
+        manualWarehousePh: i18n.t(NS + 'manualWarehousePh', lang),
+        warehouseCodePh: i18n.t(NS + 'warehouseCodePh', lang),
+        searchLocationPh: i18n.t(NS + 'searchLocationPh', lang),
+        manualLocationPh: i18n.t(NS + 'manualLocationPh', lang),
+        cancel: i18n.t('common.cancel', lang),
+        submitting: i18n.t('common.submitting', lang),
+        qualityEntry: i18n.t(NS + 'qualityEntry', lang),
+        confirmSubmit: i18n.t(NS + 'confirmSubmit', lang),
+      },
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad() {
+    this.applyLanguage(i18n.getLanguage());
     const app = getApp();
     const raw = app.globalData.scanResultData;
     if (!raw) {
-      toast.error('数据异常');
+      toast.error(i18n.t('common.dataError', this._lang));
       wx.navigateBack();
       return;
     }
@@ -321,7 +375,7 @@ Page({
     wx.setClipboardData({
       data: full,
       success: function () {
-        wx.showToast({ title: '完整菲号已复制', icon: 'none' });
+        wx.showToast({ title: i18n.t(NS + 'bundleCopied', this._lang), icon: 'none' });
       },
     });
   },
@@ -369,7 +423,7 @@ Page({
     const LOG_RE = /^\s*[【[]\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?[】\]]\s/;
     return s
       .replace(/<\s*(script|style|iframe|object|embed)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
-      .replace(/<img[^>]*>/gi, '[图片]')
+      .replace(/<img[^>]*>/gi, i18n.t(NS + 'imgPlaceholder', this._lang))
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<\/(p|div|h[1-6]|li|tr|table)>/gi, '\n')
       .replace(/<[^>]+>/g, '')
@@ -587,7 +641,7 @@ Page({
     const items = this.data.locationItems || [];
     for (let i = 0; i < items.length; i++) {
       if (items[i].label === val && items[i].isFull) {
-        wx.showToast({ title: '库位 ' + val + ' 已满（' + items[i].used + '/' + items[i].capacity + '），请选其他库位', icon: 'none' });
+        wx.showToast({ title: i18n.tf(NS + 'locationFull', { code: val, used: items[i].used, cap: items[i].capacity }, this._lang), icon: 'none' });
         return;
       }
     }
@@ -648,15 +702,15 @@ Page({
     const warehouseCode = this.data.warehouseCode;
 
     if (!raw || selectedNames.length === 0) {
-      toast.error('请至少选择一个工序');
+      toast.error(i18n.t(NS + 'selectProcessFirst', this._lang));
       return;
     }
     if (quantity <= 0) {
-      toast.error('数量必须大于0');
+      toast.error(i18n.t(NS + 'qtyMustPositive', this._lang));
       return;
     }
     if (this.data.showWarehouse && !warehouseCode.trim()) {
-      toast.error('请输入仓库编号');
+      toast.error(i18n.t(NS + 'warehouseCodePh', this._lang));
       return;
     }
 
@@ -725,7 +779,7 @@ Page({
             successCount++;
           }
         } catch (itemErr) {
-          failedItems.push({ processName: option.value, error: itemErr.message || itemErr.errMsg || '提交失败' });
+          failedItems.push({ processName: option.value, error: itemErr.message || itemErr.errMsg || i18n.t('common.submitFailed', this._lang) });
         }
       }
 
@@ -742,21 +796,21 @@ Page({
       }
 
       if (failedItems.length === 0) {
-        toast.success('已完成 ' + successCount + ' 个工序扫码');
+        toast.success(i18n.tf(NS + 'doneProcesses', { count: successCount }, this._lang));
         wx.navigateBack();
       } else if (successCount > 0) {
         this.setData({ loading: false });
         const failNames = failedItems.map(function(f) { return f.processName; }).join('、');
         wx.showModal({
-          title: '部分工序提交失败',
-          content: '成功 ' + successCount + ' 个，失败：' + failNames + '。请稍后重新扫码提交失败工序。',
+          title: i18n.t(NS + 'partialFailTitle', this._lang),
+          content: i18n.tf(NS + 'partialFailContent', { ok: successCount, names: failNames }, this._lang),
           showCancel: false,
-          confirmText: '知道了',
+          confirmText: i18n.t('common.gotIt', this._lang),
           success: function() { wx.navigateBack(); },
         });
       } else {
         this.setData({ loading: false });
-        const msg = failedItems[0].error || '提交失败，请稍后重试';
+        const msg = failedItems[0].error || i18n.t(NS + 'submitFailRetry', this._lang);
         getApp().globalData.lastScanResult = {
           orderNo: raw.orderNo || '',
           processCode: raw.processCode || '',
@@ -764,7 +818,7 @@ Page({
           quantity: quantity || 0,
           success: false,
         };
-        wx.showModal({ title: '扫码失败', content: msg, showCancel: false, confirmText: '知道了' });
+        wx.showModal({ title: i18n.t(NS + 'scanFailTitle', this._lang), content: msg, showCancel: false, confirmText: i18n.t('common.gotIt', this._lang) });
       }
     } catch (e) {
       this.setData({ loading: false });
@@ -776,18 +830,18 @@ Page({
         quantity: quantity || 0,
         success: false,
       };
-      wx.showModal({ title: '扫码失败', content: errMsg, showCancel: false, confirmText: '知道了' });
+      wx.showModal({ title: i18n.t(NS + 'scanFailTitle', this._lang), content: errMsg, showCancel: false, confirmText: i18n.t('common.gotIt', this._lang) });
     }
   },
 
   _buildFriendlyError(error) {
-    if (!error) return '未知错误';
-    if (!error.response && !error.status) return '网络不稳定，请检查网络后重试';
+    if (!error) return i18n.t(NS + 'unknownError', this._lang);
+    if (!error.response && !error.status) return i18n.t(NS + 'networkError', this._lang);
     const status = error.status || (error.response && error.response.status);
-    if (status === 401) return '登录已过期，请重新登录';
-    if (status === 403) return '没有操作权限';
-    if (status === 409) return '该记录已提交，请勿重复操作';
-    return error.message || error.errMsg || (error.data && error.data.message) || '提交失败，请稍后重试';
+    if (status === 401) return i18n.t(NS + 'loginExpired', this._lang);
+    if (status === 403) return i18n.t(NS + 'noPermission', this._lang);
+    if (status === 409) return i18n.t(NS + 'duplicateSubmit', this._lang);
+    return error.message || error.errMsg || (error.data && error.data.message) || i18n.t(NS + 'submitFailRetry', this._lang);
   },
 
   _emitRefresh() {

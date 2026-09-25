@@ -2425,6 +2425,8 @@ const DEFECT_JS = 'pages/defect/index.js';
 const DEFECT_WXML = 'pages/defect/index.wxml';
 const SCAN_QUALITY_JS = 'pages/scan/quality/index.js';
 const SCAN_QUALITY_WXML = 'pages/scan/quality/index.wxml';
+const SCAN_RESULT_JS = 'pages/scan/scan-result/index.js';
+const SCAN_RESULT_WXML = 'pages/scan/scan-result/index.wxml';
 
 /** 把 menuRows / filteredApps 拍平成 [分组名, 应用名...] */
 function flattenMenuNames(rows) {
@@ -2756,6 +2758,32 @@ function testI18nScanQuality() {
   eq('en 超五张 toast', toast && toast.title, 'Up to 5 photos allowed');
 }
 
+/** 扫码结果页（D-556）—— 信息卡/尺寸表/工序选择/仓库库位/提交反馈 */
+function testI18nScanResult() {
+  testPageI18n(SCAN_RESULT_JS, SCAN_RESULT_WXML, '扫码结果页');
+
+  const { page: zhP, wx: zhWx } = loadPage(SCAN_RESULT_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(SCAN_RESULT_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  // t 表关键值
+  eq('zh 扫描成功', zhP.data.t.scanSuccess, '扫描成功');
+  eq('en 扫描成功', enP.data.t.scanSuccess, 'Scan Successful');
+  eq('en 菲号信息', enP.data.t.bundleInfoTitle, 'Bundle Info');
+  eq('en 提交按钮', enP.data.t.confirmSubmit, 'Confirm Submit');
+  eq('en 质检录入按钮', enP.data.t.qualityEntry, 'QC Entry');
+  ok('en 仓库搜索占位无中文', !CJK_RE.test(String(enP.data.t.searchWarehousePh)), enP.data.t.searchWarehousePh);
+
+  // 工序选择的拆词拼装（已选 N 个工序）
+  eq('zh 已选拆词', zhP.data.t.selectedWord + ' 3 ' + zhP.data.t.processUnit, '已选 3 个工序');
+  eq('en 已选拆词', enP.data.t.selectedWord + ' 3 ' + enP.data.t.processUnit, 'Selected 3 process(es)');
+
+  // 导航标题
+  eq('扫码结果页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan Result');
+  eq('扫码结果页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码结果');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -2799,6 +2827,7 @@ try {
   testI18nAdmin();
   await testI18nDefect();
   testI18nScanQuality();
+  testI18nScanResult();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);
