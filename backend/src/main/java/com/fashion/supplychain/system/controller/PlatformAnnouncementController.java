@@ -48,17 +48,24 @@ public class PlatformAnnouncementController {
     /**
      * 创建公告
      *
-     * <p>D-513 权限修正：原为 {@code hasRole('ADMIN')}，但本项目角色体系是
-     * SUPER_ADMIN（平台超管）/ TENANT_OWNER（租户主账号），并不存在 ROLE_ADMIN，
-     * 导致租户主账号【发不了公告】——「常驻通知栏」因此始终无数据。
-     * 现按项目惯例（见 ScanRecordController）放开为二者之一。
+     * <p>D-513 权限修正（二次）：
+     * ① 原为 {@code hasRole('ADMIN')}——本项目不存在 ROLE_ADMIN，租户主账号发不了公告；
+     * ② 改为 {@code hasRole('TENANT_OWNER')} 后实测仍 403：Spring 的 hasRole('TENANT_OWNER')
+     *    校验的是 authority <b>ROLE_TENANT_OWNER（大写）</b>，而项目
+     *    {@code SecurityConstants.TENANT_OWNER_ROLES} 中登记的是小写 {@code ROLE_tenant_owner}，
+     *    大小写不匹配 → 拒绝。
      *
-     * <p>同时补租户隔离：非平台超管强制归属自己的租户，
-     * 防止伪造 tenantId 向其他租户发布公告。
+     * <p>最终方案：<b>不再在方法级重复声明角色</b>——
+     * {@code SecurityConstants.TENANT_OWNER_ENDPOINTS} 已包含 {@code /api/system/**}，
+     * 由 SecurityConfig 的 URL 级规则统一把关（等价于 SUPER_ADMIN 或租户主账号）；
+     * 方法内再用 UserContext 做一次业务层保险，避免依赖脆弱的角色名映射。
      */
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('TENANT_OWNER')")
     @PostMapping("/")
     public Result<PlatformAnnouncement> createAnnouncement(@RequestBody Map<String, Object> params) {
+        // 业务层保险：仅平台超管或租户主账号可发布
+        if (!UserContext.isSuperAdmin() && !UserContext.isTenantOwner()) {
+            return Result.fail("无权发布公告");
+        }
         String title = params.get("title") != null ? params.get("title").toString() : null;
         if (!StringUtils.hasText(title)) {
             return Result.fail("公告标题不能为空");
@@ -99,12 +106,14 @@ public class PlatformAnnouncementController {
     /**
      * 下架公告
      *
-     * <p>D-513：权限同创建；并补租户归属校验——原实现直接按 id 下架，
-     * 放开权限后租户主账号将可下架他人/全局公告（越权）。
+     * <p>D-513：权限同创建（交由 URL 级规则）；并补租户归属校验——
+     * 原实现直接按 id 下架，租户主账号将可下架他人/全局公告（越权）。
      */
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('TENANT_OWNER')")
     @PutMapping("/{id}/deactivate")
     public Result<Void> deactivateAnnouncement(@PathVariable Long id) {
+        if (!UserContext.isSuperAdmin() && !UserContext.isTenantOwner()) {
+            return Result.fail("无权下架公告");
+        }
         PlatformAnnouncement existing = platformAnnouncementService.getById(id);
         if (existing == null) {
             return Result.fail("公告不存在");
@@ -121,9 +130,8 @@ public class PlatformAnnouncementController {
     }
 
     /**
-     * 查看所有公告（管理端）
+     * 查看所有公告（管理端）——权限交由 URL 级规则（/api/system/**）
      */
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('TENANT_OWNER')")
     @PostMapping("/list")
     public Result<List<PlatformAnnouncement>> listAll() {
         Long tenantId = TenantAssert.requireTenantId();
