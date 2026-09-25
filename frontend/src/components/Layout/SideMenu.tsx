@@ -10,7 +10,8 @@ import { normalizePath } from './useLayoutAuth';
 
 interface SideMenuProps {
   sidebarIsCollapsed: boolean;
-  isMobile: boolean;
+  /** 设备是否有鼠标/触控板（决定「悬停展开」还是「点击展开」） */
+  hasHoverPointer: boolean;
   selectedKeys: string[];
   menuOpenKeys: string[];
   activeSectionKey: string | null;
@@ -23,7 +24,7 @@ interface SideMenuProps {
 
 const SideMenu: React.FC<SideMenuProps> = ({
   sidebarIsCollapsed,
-  isMobile,
+  hasHoverPointer,
   selectedKeys,
   menuOpenKeys,
   activeSectionKey: _activeSectionKey,
@@ -190,10 +191,11 @@ const SideMenu: React.FC<SideMenuProps> = ({
             popupClassName: 'layout-sidebar-submenu-popup',
           };
         } else {
-          if (sidebarIsCollapsed && !isMobile) {
-            // 折叠态下，无子菜单的顶层项包一层假 SubMenu，悬停时弹出该项本身。
-            // 注意：这里**不要**加 title —— rc-menu 的 nodeUtil 会把 label 覆盖到 title 上
-            // （`{...restProps, title: label}`），加了也是无效值，反而误导后人。
+          // 折叠态下，无子菜单的顶层项包一层假 SubMenu，悬停时弹出该项本身。
+          // 注意：这里**不要**加 title —— rc-menu 的 nodeUtil 会把 label 覆盖到 title 上
+          // （`{...restProps, title: label}`），加了也是无效值，反而误导后人。
+          // 判据用 sidebarIsCollapsed 本身（而非 isMobile），窄窗口的桌面端才能拿到一致的悬停体验
+          if (sidebarIsCollapsed) {
             return {
               key: `${section.key}__collapsed_group`,
               icon: section.icon,
@@ -220,16 +222,23 @@ const SideMenu: React.FC<SideMenuProps> = ({
       })
       // 丢掉「子项全被过滤」的 section（map 里对空 children 返回了 null）
       .filter((node): node is NonNullable<typeof node> => node !== null);
-  }, [localizedMenuConfig, isSuperAdmin, isFactoryAccount, sidebarIsCollapsed, isMobile, alwaysVisiblePaths, factoryVisiblePaths, factoryVisibleSections, hasPermissionForPath, isTenantModuleEnabled, tenantModules, badgeCounts, onMenuClick, isItemVisible]);
+  }, [localizedMenuConfig, isSuperAdmin, isFactoryAccount, sidebarIsCollapsed, alwaysVisiblePaths, factoryVisiblePaths, factoryVisibleSections, hasPermissionForPath, isTenantModuleEnabled, tenantModules, badgeCounts, onMenuClick, isItemVisible]);
 
   const handleMenuOpenChange = (openKeys: string[]) => {
     if (sidebarIsCollapsed) return;
     onMenuOpenChange(openKeys);
   };
 
+  /**
+   * 折叠态下子菜单的展开方式。
+   *
+   * ⚠️ 原来用 `isMobile`（窗口宽度 < 768）判断，导致桌面用户把窗口拉窄后
+   * 悬停失效、必须点击才能展开子菜单（2026-09-25 用户报障）。
+   * 正确信号是**有没有鼠标**：有鼠标就悬停展开，触摸屏才用点击。
+   */
   const menuInteractionProps = sidebarIsCollapsed
     ? {
-        triggerSubMenuAction: (isMobile ? 'click' : 'hover') as 'click' | 'hover',
+        triggerSubMenuAction: (hasHoverPointer ? 'hover' : 'click') as 'click' | 'hover',
         subMenuOpenDelay: 0,
         subMenuCloseDelay: 0.08,
       }
@@ -241,15 +250,16 @@ const SideMenu: React.FC<SideMenuProps> = ({
 
   return (
     <AntLayout.Sider
-      collapsible={!isMobile}
+      collapsible={hasHoverPointer}
       collapsed={sidebarIsCollapsed}
-      onCollapse={isMobile ? undefined : (v: boolean) => onSidebarCollapse(v)}
+      onCollapse={hasHoverPointer ? (v: boolean) => onSidebarCollapse(v) : undefined}
       width={window.innerWidth >= 3840 ? 320 : window.innerWidth >= 2560 ? 280 : 210}
       collapsedWidth={window.innerWidth >= 2560 ? 72 : 64}
       trigger={null}
       className="layout-sidebar"
     >
-      {!isMobile ? (
+      {/* 折叠开关：有鼠标就给（含窗口较窄的桌面场景），触摸屏才隐藏 */}
+      {hasHoverPointer ? (
         <div className="sidebar-tools">
           <Button
             type="text"
@@ -269,7 +279,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
         {...menuInteractionProps}
         className="sidebar-menu"
       />
-      {sidebarIsCollapsed && !isMobile ? (
+      {sidebarIsCollapsed ? (
         <div className="sidebar-icp-collapsed">
           <Tooltip
             placement="rightBottom"
@@ -292,7 +302,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
           </Tooltip>
         </div>
       ) : null}
-      {!sidebarIsCollapsed && !isMobile && (
+      {!sidebarIsCollapsed && (
         <div className="sidebar-icp">
           <div className="sidebar-icp-links">
             <div className="sidebar-icp-link-row">

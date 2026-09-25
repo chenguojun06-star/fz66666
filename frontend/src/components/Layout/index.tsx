@@ -36,7 +36,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { logout } = useAuthState();
   const { language } = useAppLanguage();
   const { message } = App.useApp();
-  const { isMobile } = useViewport();
+  const { isMobile, hasHoverPointer } = useViewport();
   const auth = useLayoutAuth();
   const { badgeCounts, getVisibleCount, markViewed, viewVersion } = useMenuBadgeCounts();
 
@@ -71,7 +71,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
   const collapsed = sidebarCollapsed;
-  const sidebarIsCollapsed = isMobile ? true : collapsed;
+  /**
+   * 侧边栏是否折叠。
+   *
+   * 原来写的是 `isMobile ? true : collapsed` —— 用**窗口宽度**决定，导致桌面用户把窗口
+   * 拉窄（<768px）时侧边栏被强制折叠、且折叠开关也被隐藏，连展开都做不到。
+   * 改为看**输入能力**：有鼠标就尊重用户自己的折叠偏好（默认值仍取 isMobile，行为不变），
+   * 只有真正的触摸设备才强制折叠。
+   */
+  const sidebarIsCollapsed = hasHoverPointer ? collapsed : true;
   const [menuOpenKeys, setMenuOpenKeys] = useState<string[]>(() => (activeSectionKey ? [activeSectionKey] : []));
   const [factoryModalOpen, setFactoryModalOpen] = useState(false);
 
@@ -260,7 +268,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="layout-main">
         <SideMenu
           sidebarIsCollapsed={sidebarIsCollapsed}
-          isMobile={isMobile}
+          hasHoverPointer={hasHoverPointer}
           selectedKeys={selectedKeys}
           menuOpenKeys={menuOpenKeys}
           activeSectionKey={activeSectionKey}
