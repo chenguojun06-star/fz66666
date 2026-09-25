@@ -8,19 +8,40 @@
  *   ② 组件提交成功后刷新上一页列表并返回
  */
 const { decodeParam } = require('../../../utils/urlParams');
+const i18n = require('../../../utils/i18n/index');
 Page({
   data: {
     materialCode: '',
+    /** i18n 文案表（applyLanguage 里填充，wxml 用 {{t.xxx}}） */
+    t: {},
   },
 
   onLoad(options) {
-    wx.setNavigationBarTitle({ title: '物料出库' });
+    this.applyLanguage(i18n.getLanguage());
     // ⚠️ decodeParam：跳转方用 encodeURIComponent 传参，小程序**不会**自动解码。
     //    物料编码含中文（如 M棉布-140CM-粉色），漏解码会拿 %E6%A3%89… 去查 → 「未查到该物料」。
     var code = decodeParam(options && options.materialCode);
     if (code) {
       this.setData({ materialCode: code });
     }
+  },
+
+  onShow() {
+    // 从「我的 → 语言」切回时导航栏标题要跟着变，故每次显示都重刷
+    this.applyLanguage(i18n.getLanguage());
+  },
+
+  /**
+   * 按当前语言刷新文案。
+   *
+   * ⚠️ json 里的 navigationBarTitleText 是**静态**的，不会跟着语言变 ——
+   *    要让它跟着切，只能在这里调 wx.setNavigationBarTitle。
+   *    （本页表单本体在通用组件 material-outbound-form 里，组件自己也会刷文案）
+   */
+  applyLanguage(language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    wx.setNavigationBarTitle({ title: i18n.t('mp.warehouse.materialOutbound.title', lang) });
   },
 
   /** 组件提交成功 → 刷新上一页并返回 */

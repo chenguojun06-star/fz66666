@@ -17,6 +17,7 @@
  *   bind:success → 提交成功，detail = { materialCode, quantity }
  */
 const api = require('../../utils/api');
+const i18n = require('../../utils/i18n/index');
 
 /**
  * ⚠️ key 必须用**后端存储约定值**，不能用 PC 端列表的筛选值。
@@ -24,12 +25,29 @@ const api = require('../../utils/api');
  * PC 端 MaterialTable 提交的也是 "BULK"。
  * 而 PC 端 MaterialPicking 下拉里的 production / sample **只是列表筛选值**，不是存储值
  * —— 我最初照抄了筛选值，导致出库记录的 usageType 与既有数据对不上（报表按值过滤会漏）。
+ *
+ * `key` 是**后端契约**，绝不能跟着语言变；label 由 applyLanguage 展开。
  */
 const USAGE_TYPES = [
-  { key: 'BULK', label: '生产领料' },
-  { key: 'SAMPLE', label: '样品领料' },
-  { key: 'STOCK', label: '备货领料' },
+  { key: 'BULK', labelKey: 'common.usageProduction' },
+  { key: 'SAMPLE', labelKey: 'common.usageSample' },
+  { key: 'STOCK', labelKey: 'common.usageStock' },
 ];
+
+/** 把「只带 labelKey 的用料场景」按当前语言展开成 wxml 需要的 {key, label} */
+function localizeUsageTypes(lang) {
+  return USAGE_TYPES.map(function (o) {
+    return { key: o.key, label: i18n.t(o.labelKey, lang) };
+  });
+}
+
+/** 按 key 找用料场景 */
+function findUsageType(key) {
+  for (var i = 0; i < USAGE_TYPES.length; i++) {
+    if (USAGE_TYPES[i].key === key) return USAGE_TYPES[i];
+  }
+  return null;
+}
 
 Component({
   options: {
@@ -82,8 +100,8 @@ Component({
     receiverName: '',
 
     usageType: 'BULK',
-    usageTypeLabel: '生产领料',
-    typeOptions: USAGE_TYPES,
+    usageTypeLabel: i18n.t('common.usageProduction', i18n.getLanguage()),
+    typeOptions: localizeUsageTypes(i18n.getLanguage()),
 
     areaOptions: [],
     areaNames: [],
@@ -105,6 +123,9 @@ Component({
     pickerLoading: false,
     pickerKey: '',
     pickerValue: '',
+
+    /** i18n 文案表（applyLanguage 里填充，wxml 用 {{t.xxx}}） */
+    t: {},
   },
 
   lifetimes: {
@@ -112,6 +133,7 @@ Component({
       this._lastCode = '';
       // D-517：订单/工厂/领料人改为**打开选择器时按关键字远程搜索**，不再预拉前 100 条
       // （预拉只能搜到第一页，用户搜第 101 条永远搜不到）。仓库区域量小，仍走本地。
+      this.applyLanguage(i18n.getLanguage());
       this.loadAreas();
       var code = this.properties.materialCode;
       if (code) this._applyCode(code);
@@ -119,7 +141,66 @@ Component({
     },
   },
 
+  pageLifetimes: {
+    show: function () {
+      // 用户可能在「我的 → 语言」里切了语言，回到本页时重刷（组件拿不到 onShow）
+      this.applyLanguage(i18n.getLanguage());
+    },
+  },
+
   methods: {
+    /**
+     * 按当前语言刷新全部文案。
+     *
+     * ⚠️ 组件里没有 json 导航栏标题（标题在宿主页的 json 里），故这里不设标题。
+     */
+    applyLanguage: function (language) {
+      var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+      this._lang = lang;
+      var hit = findUsageType(this.data.usageType);
+      this.setData({
+        t: {
+          materialCode: i18n.t('common.materialCode', lang),
+          inputCodePlaceholder: i18n.t('common.inputMaterialCode', lang),
+          select: i18n.t('common.select', lang),
+          scan: i18n.t('common.scan', lang),
+          query: i18n.t('common.query', lang),
+          loading: i18n.t('common.loading', lang),
+          noMaterial: i18n.t('mp.warehouse.materialOutbound.noMaterial', lang),
+          outboundInfo: i18n.t('mp.warehouse.materialOutbound.outboundInfo', lang),
+          relatedInfo: i18n.t('mp.warehouse.materialOutbound.relatedInfo', lang),
+          relatedOrder: i18n.t('mp.warehouse.materialOutbound.relatedOrder', lang),
+          relatedStyleNo: i18n.t('mp.warehouse.materialOutbound.relatedStyleNo', lang),
+          relatedFactory: i18n.t('mp.warehouse.materialOutbound.relatedFactory', lang),
+          receiver: i18n.t('mp.warehouse.materialOutbound.receiver', lang),
+          outboundReason: i18n.t('mp.warehouse.materialOutbound.outboundReason', lang),
+          quantity: i18n.t('common.quantity', lang),
+          qtyPlaceholder: i18n.t('mp.warehouse.materialOutbound.qtyPlaceholder', lang),
+          warehouseArea: i18n.t('common.warehouseArea', lang),
+          pleaseSelect: i18n.t('common.pleaseSelect', lang),
+          optional: i18n.t('common.optional', lang),
+          submitting: i18n.t('common.submitting', lang),
+          confirmOutbound: i18n.t('mp.warehouse.materialOutbound.confirmOutbound', lang),
+        },
+        typeOptions: localizeUsageTypes(lang),
+        usageTypeLabel: hit ? i18n.t(hit.labelKey, lang) : '',
+      });
+      this._refreshTexts(lang);
+    },
+
+    /** 重算「带参文案」（编码 X / 可用 X / 出库 X） */
+    _refreshTexts: function (lang) {
+      var l = lang || this._lang;
+      var info = this.data.materialInfo || {};
+      this.setData({
+        't.codeText': i18n.tf('mp.warehouse.materialOutbound.codeText',
+          { code: info.materialCode || this.data.materialCode || '' }, l),
+        't.availableText': i18n.tf('mp.warehouse.materialOutbound.availableText',
+          { qty: info.quantity != null ? info.quantity : '', unit: this.data.unit || '' }, l),
+        't.outboundQtyText': i18n.tf('mp.warehouse.materialOutbound.outboundQtyText',
+          { qty: this.data.quantity || 0, unit: this.data.unit || '' }, l),
+      });
+    },
     /** 统一入口：设置编码并查询（带去重） */
     _applyCode: function (code) {
       if (!code || code === this._lastCode) return;
@@ -138,7 +219,10 @@ Component({
       wx.scanCode({
         success: function (res) {
           var code = (res && res.result) || '';
-          if (!code) { wx.showToast({ title: '扫码失败', icon: 'none' }); return; }
+          if (!code) {
+            wx.showToast({ title: i18n.t('mp.warehouse.materialOutbound.scanFailed', self._lang), icon: 'none' });
+            return;
+          }
           self._lastCode = '';
           self._applyCode(code);
         },
@@ -148,7 +232,7 @@ Component({
 
     onQuery: function () {
       if (!this.data.materialCode) {
-        wx.showToast({ title: '请输入物料编码', icon: 'none' });
+        wx.showToast({ title: i18n.t('common.pleaseInputMaterialCode', this._lang), icon: 'none' });
         return;
       }
       this.queryMaterial();
@@ -161,7 +245,7 @@ Component({
         var info = res && res.data ? res.data : res;
         if (!info || info.found === false) {
           this.setData({ queried: true, loading: false, materialInfo: null, stockId: '' });
-          wx.showToast({ title: (info && info.message) || '物料不存在', icon: 'none' });
+          wx.showToast({ title: (info && info.message) || i18n.t('mp.warehouse.materialOutbound.materialNotFound', this._lang), icon: 'none' });
           return;
         }
         this.setData({
@@ -171,9 +255,10 @@ Component({
           queried: true,
           loading: false,
         });
+        this._refreshTexts();
       } catch (e) {
         this.setData({ queried: true, loading: false, materialInfo: null, stockId: '' });
-        wx.showToast({ title: (e && e.message) || '查询失败', icon: 'none' });
+        wx.showToast({ title: (e && e.message) || i18n.t('mp.warehouse.materialOutbound.queryFailed', this._lang), icon: 'none' });
       }
     },
 
@@ -265,17 +350,17 @@ Component({
       var key = e.currentTarget.dataset.key;
       var map = {
         // D-517：物料/面料也能「选」，不再只能手输编码或扫码
-        material: { title: '选择物料（编码/名称搜索）', remote: true, current: this.data.materialCode },
-        order: { title: '选择关联订单', remote: true, current: this.data.orderNo },
-        factory: { title: '选择关联工厂', remote: true, current: this.data.factoryId },
-        receiver: { title: '选择领料人', remote: true, current: this.data.receiverId },
-        area: { title: '选择仓库区域', remote: false, names: this.data.areaNames, current: this.data.warehouseAreaName },
+        material: { title: 'common.selectMaterial', remote: true, current: this.data.materialCode },
+        order: { title: 'mp.warehouse.materialOutbound.selectOrder', remote: true, current: this.data.orderNo },
+        factory: { title: 'mp.warehouse.materialOutbound.selectFactory', remote: true, current: this.data.factoryId },
+        receiver: { title: 'mp.warehouse.materialOutbound.selectReceiver', remote: true, current: this.data.receiverId },
+        area: { title: 'common.selectWarehouseArea', remote: false, names: this.data.areaNames, current: this.data.warehouseAreaName },
       };
       var cfg = map[key];
       if (!cfg) return;
       this.setData({
         pickerKey: key,
-        pickerTitle: cfg.title,
+        pickerTitle: i18n.t(cfg.title, this._lang),
         pickerRemote: !!cfg.remote,
         pickerKeyword: '',
         pickerPage: 1,
@@ -428,26 +513,28 @@ Component({
 
     onSelectUsage: function (e) {
       var key = e.currentTarget.dataset.key;
-      for (var i = 0; i < USAGE_TYPES.length; i++) {
-        if (USAGE_TYPES[i].key === key) {
-          this.setData({ usageType: key, usageTypeLabel: USAGE_TYPES[i].label });
-          return;
-        }
-      }
+      var hit = findUsageType(key);
+      if (!hit) return;
+      this.setData({ usageType: key, usageTypeLabel: i18n.t(hit.labelKey, this._lang) });
     },
 
-    onQtyInput: function (e) { this.setData({ quantity: e.detail.value }); },
+    onQtyInput: function (e) {
+      this.setData({ quantity: e.detail.value });
+      this._refreshTexts();
+    },
 
     // D-513：手机端步进器（避免小屏手动输入数字）
     onQtyMinus: function () {
       var q = parseFloat(this.data.quantity) || 0;
       var next = +(q - 1).toFixed(2);
       this.setData({ quantity: next > 0 ? String(next) : '' });
+      this._refreshTexts();
     },
 
     onQtyPlus: function () {
       var q = parseFloat(this.data.quantity) || 0;
       this.setData({ quantity: String(+(q + 1).toFixed(2)) });
+      this._refreshTexts();
     },
 
     onReasonInput: function (e) { this.setData({ reason: e.detail.value }); },
@@ -458,14 +545,14 @@ Component({
       if (this.data.submitting) return;
       var d = this.data;
       // 逐项按后端必填校验，给出明确提示（避免只报一个笼统错误）
-      if (!d.stockId) { wx.showToast({ title: '请先查询物料', icon: 'none' }); return; }
+      if (!d.stockId) { wx.showToast({ title: i18n.t('mp.warehouse.materialOutbound.queryFirst', this._lang), icon: 'none' }); return; }
       var qty = parseFloat(d.quantity);
-      if (isNaN(qty) || qty <= 0) { wx.showToast({ title: '出库数量必须大于0', icon: 'none' }); return; }
-      if (!d.receiverName) { wx.showToast({ title: '请选择领料人', icon: 'none' }); return; }
-      if (!d.orderNo) { wx.showToast({ title: '请选择关联订单', icon: 'none' }); return; }
-      if (!d.styleNo) { wx.showToast({ title: '缺少关联款号', icon: 'none' }); return; }
-      if (!d.factoryName) { wx.showToast({ title: '请选择关联工厂', icon: 'none' }); return; }
-      if (!d.usageType) { wx.showToast({ title: '请选择用料场景', icon: 'none' }); return; }
+      if (isNaN(qty) || qty <= 0) { wx.showToast({ title: i18n.t('mp.warehouse.materialOutbound.qtyRequired', this._lang), icon: 'none' }); return; }
+      if (!d.receiverName) { wx.showToast({ title: i18n.t('mp.warehouse.materialOutbound.selectReceiverRequired', this._lang), icon: 'none' }); return; }
+      if (!d.orderNo) { wx.showToast({ title: i18n.t('mp.warehouse.materialOutbound.selectOrderRequired', this._lang), icon: 'none' }); return; }
+      if (!d.styleNo) { wx.showToast({ title: i18n.t('mp.warehouse.materialOutbound.missingStyleNo', this._lang), icon: 'none' }); return; }
+      if (!d.factoryName) { wx.showToast({ title: i18n.t('mp.warehouse.materialOutbound.selectFactoryRequired', this._lang), icon: 'none' }); return; }
+      if (!d.usageType) { wx.showToast({ title: i18n.t('mp.warehouse.materialOutbound.selectUsageRequired', this._lang), icon: 'none' }); return; }
 
       this.setData({ submitting: true });
       try {
@@ -483,11 +570,11 @@ Component({
           warehouseAreaId: d.warehouseAreaId,
           reason: d.reason,
         });
-        wx.showToast({ title: '出库成功', icon: 'success' });
+        wx.showToast({ title: i18n.t('mp.warehouse.materialOutbound.outboundSuccess', this._lang), icon: 'success' });
         this.triggerEvent('success', { materialCode: d.materialCode, quantity: qty });
         this.setData({ submitting: false });
       } catch (e) {
-        wx.showToast({ title: (e && e.message) || '出库失败', icon: 'none' });
+        wx.showToast({ title: (e && e.message) || i18n.t('mp.warehouse.materialOutbound.outboundFailed', this._lang), icon: 'none' });
         this.setData({ submitting: false });
       }
     },
@@ -532,7 +619,7 @@ Component({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

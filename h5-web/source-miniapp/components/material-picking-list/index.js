@@ -30,35 +30,47 @@
  */
 
 const api = require('../../utils/api');
+const i18n = require('../../utils/i18n/index');
 
+/**
+ * ⚠️ `key` 是**后端契约**（后端 status 存 pending/completed/cancelled），
+ *    绝不能跟着语言变；label 由 applyLanguage 展开。
+ */
 const STATUS_TABS = [
-  { key: '', label: '全部' },
-  { key: 'pending', label: '待出库' },
-  { key: 'completed', label: '已完成' },
-  { key: 'cancelled', label: '已取消' },
+  { key: '', labelKey: 'mp.warehouse.materialPicking.statusAll' },
+  { key: 'pending', labelKey: 'mp.warehouse.materialPicking.statusPending' },
+  { key: 'completed', labelKey: 'mp.warehouse.materialPicking.statusCompleted' },
+  { key: 'cancelled', labelKey: 'mp.warehouse.materialPicking.statusCancelled' },
 ];
 
 const STATUS_META = {
-  pending: { label: '待出库', color: '#f59e0b', bg: '#fffbeb' },
-  completed: { label: '已完成', color: '#10b981', bg: '#ecfdf5' },
-  cancelled: { label: '已取消', color: '#9ca3af', bg: '#f3f4f6' },
+  pending: { labelKey: 'mp.warehouse.materialPicking.statusPending', color: '#f59e0b', bg: '#fffbeb' },
+  completed: { labelKey: 'mp.warehouse.materialPicking.statusCompleted', color: '#10b981', bg: '#ecfdf5' },
+  cancelled: { labelKey: 'mp.warehouse.materialPicking.statusCancelled', color: '#9ca3af', bg: '#f3f4f6' },
 };
 
-/** 用途：production=生产领料 sample=样品领料（与 PC 端一致） */
-const USAGE_LABEL = {
-  production: '生产领料',
-  sample: '样品领料',
-  BULK: '生产领料',
-  SAMPLE: '样品领料',
-  STOCK: '备货领料',
+/** 用途：production=生产领料 sample=样品领料（与 PC 端一致）；key 是后端契约 */
+const USAGE_LABEL_KEYS = {
+  production: 'common.usageProduction',
+  sample: 'common.usageSample',
+  BULK: 'common.usageProduction',
+  SAMPLE: 'common.usageSample',
+  STOCK: 'common.usageStock',
 };
 
 /** 领取方式：SELF=自领 DELIVERY=配送 等，未知时原样显示 */
-const PICKUP_LABEL = {
-  SELF: '自领',
-  DELIVERY: '配送',
-  PICKUP: '自领',
+const PICKUP_LABEL_KEYS = {
+  SELF: 'mp.warehouse.materialPicking.pickupSelf',
+  DELIVERY: 'mp.warehouse.materialPicking.pickupDelivery',
+  PICKUP: 'mp.warehouse.materialPicking.pickupSelf',
 };
+
+/** 把「只带 labelKey 的状态页签」按当前语言展开成 wxml 需要的 {key, label} */
+function localizeStatusTabs(lang) {
+  return STATUS_TABS.map(function (o) {
+    return { key: o.key, label: i18n.t(o.labelKey, lang) };
+  });
+}
 
 function fmtTime(v) {
   if (!v) return '';
@@ -90,7 +102,7 @@ Component({
   },
 
   data: {
-    statusTabs: STATUS_TABS,
+    statusTabs: localizeStatusTabs(i18n.getLanguage()),
     status: '',
     keyword: '',
     list: [],
@@ -102,10 +114,14 @@ Component({
     // 展开明细的领料单 id
     expandedId: '',
     submittingId: '',
+
+    /** i18n 文案表（applyLanguage 里填充，wxml 用 {{t.xxx}}） */
+    t: {},
   },
 
   lifetimes: {
     attached: function () {
+      this.applyLanguage(i18n.getLanguage());
       const st = this.properties.status || '';
       const valid = STATUS_TABS.some((t) => t.key === st);
       if (valid && st) {
@@ -116,7 +132,68 @@ Component({
     },
   },
 
+  pageLifetimes: {
+    show: function () {
+      // 用户可能在「我的 → 语言」里切了语言，回到本页时重刷（组件拿不到 onShow）
+      this.applyLanguage(i18n.getLanguage());
+    },
+  },
+
   methods: {
+    /**
+     * 按当前语言刷新全部文案。
+     *
+     * ⚠️ 组件里没有 json 导航栏标题（标题在宿主页的 json 里），故这里不设标题。
+     */
+    applyLanguage(language) {
+      const lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+      this._lang = lang;
+      this.setData({
+        t: {
+          searchPlaceholder: i18n.t('mp.warehouse.materialPicking.searchPlaceholder', lang),
+          loading: i18n.t('common.loading', lang),
+          noData: i18n.t('common.noData', lang),
+          emptyPending: i18n.t('mp.warehouse.materialPicking.emptyPending', lang),
+          emptyPendingHint: i18n.t('mp.warehouse.materialPicking.emptyPendingHint', lang),
+          order: i18n.t('common.order', lang),
+          styleNo: i18n.t('common.styleNo', lang),
+          pickerLabel: i18n.t('mp.warehouse.materialPicking.pickerLabel', lang),
+          factory: i18n.t('common.factory', lang),
+          usageLabel: i18n.t('mp.warehouse.materialPicking.usageLabel', lang),
+          time: i18n.t('common.time', lang),
+          detailEmpty: i18n.t('mp.warehouse.materialPicking.detailEmpty', lang),
+          cancel: i18n.t('common.cancel', lang),
+          confirmOutbound: i18n.t('mp.warehouse.materialPicking.confirmOutbound', lang),
+          processing: i18n.t('mp.warehouse.materialPicking.processing', lang),
+          loadMore: i18n.t('common.loadMore', lang),
+          noMore: i18n.t('common.noMore', lang),
+        },
+        statusTabs: localizeStatusTabs(lang),
+        list: this._decorateList(this.data.list, lang),
+      });
+      this._refreshSummaryTexts(lang);
+    },
+
+    /** 列表里每条都有「共 N 张 / 已显示 N / 物料明细（N 项）」这类带参文案 → 逐条生成 */
+    _decorateList(list, lang) {
+      return (list || []).map((item) => {
+        const decorated = Object.assign({}, item);
+        decorated._detailTitle = i18n.tf('mp.warehouse.materialPicking.detailTitle', { count: item.itemCount }, lang);
+        decorated.items = (item.items || []).map((it) => Object.assign({}, it, {
+          _locationText: i18n.tf('mp.warehouse.materialPicking.locationText', { loc: it.warehouseLocation }, lang),
+        }));
+        return decorated;
+      });
+    },
+
+    /** 顶部统计（共 N 张 / · 已显示 N）—— 条数在 data 里，语言切换时要重算 */
+    _refreshSummaryTexts(lang) {
+      const l = lang || this._lang;
+      this.setData({
+        't.totalText': i18n.tf('mp.warehouse.materialPicking.totalText', { total: this.data.total }, l),
+        't.shownText': i18n.tf('mp.warehouse.materialPicking.shownText', { count: (this.data.list || []).length }, l),
+      });
+    },
     onStatusTap(e) {
       const key = e.currentTarget.dataset.key || '';
       if (key === this.data.status) return;
@@ -163,7 +240,7 @@ Component({
         // 兼容 IPage 与裸数组两种返回
         const records = (res && res.records) || (res && res.data && res.data.records) || [];
         const total = (res && res.total) || (res && res.data && res.data.total) || 0;
-        const mapped = records.map(this._toRow, this);
+        const mapped = records.map((r) => this._toRow(r, this._lang));
         const next = reset ? mapped : this.data.list.concat(mapped);
         this.setData({
           list: next,
@@ -172,15 +249,16 @@ Component({
           hasMore: next.length < total,
           loading: false,
         });
+        this._refreshSummaryTexts();
       } catch (e) {
         this.setData({ loading: false });
-        wx.showToast({ title: (e && e.message) || '加载失败', icon: 'none' });
+        wx.showToast({ title: (e && e.message) || i18n.t('common.loadFailed', this._lang), icon: 'none' });
       }
     },
 
-    _toRow(r) {
+    _toRow(r, lang) {
       const st = r.status || '';
-      const meta = STATUS_META[st] || { label: st || '-', color: '#6b7280', bg: '#f3f4f6' };
+      const meta = STATUS_META[st];
       const items = Array.isArray(r.items) ? r.items : [];
       return {
         id: r.id,
@@ -189,12 +267,16 @@ Component({
         styleNo: r.styleNo || '-',
         pickerName: r.pickerName || '-',
         factoryName: r.factoryName || '',
-        usageLabel: USAGE_LABEL[r.usageType] || r.usageType || '-',
-        pickupLabel: PICKUP_LABEL[r.pickupType] || r.pickupType || '',
+        usageLabel: USAGE_LABEL_KEYS[r.usageType]
+          ? i18n.t(USAGE_LABEL_KEYS[r.usageType], lang)
+          : (r.usageType || '-'),
+        pickupLabel: PICKUP_LABEL_KEYS[r.pickupType]
+          ? i18n.t(PICKUP_LABEL_KEYS[r.pickupType], lang)
+          : (r.pickupType || ''),
         status: st,
-        statusLabel: meta.label,
-        statusColor: meta.color,
-        statusBg: meta.bg,
+        statusLabel: meta ? i18n.t(meta.labelKey, lang) : (st || '-'),
+        statusColor: meta ? meta.color : '#6b7280',
+        statusBg: meta ? meta.bg : '#f3f4f6',
         isPending: st === 'pending',
         createTime: fmtTime(r.createTime || r.pickTime),
         itemCount: items.length,
@@ -224,8 +306,8 @@ Component({
       if (!id) return;
       const self = this;
       wx.showModal({
-        title: '确认出库',
-        content: `确认领料单 ${no} 出库？将扣减对应库存。`,
+        title: i18n.t('mp.warehouse.materialPicking.confirmOutbound', this._lang),
+        content: i18n.tf('mp.warehouse.materialPicking.confirmOutboundText', { no: no }, this._lang),
         success: function (res) {
           if (!res.confirm) return;
           self._doConfirmOutbound(id);
@@ -237,11 +319,11 @@ Component({
       this.setData({ submittingId: id });
       try {
         await api.production.confirmPickingOutbound(id);
-        wx.showToast({ title: '出库成功', icon: 'success' });
+        wx.showToast({ title: i18n.t('mp.warehouse.materialPicking.outboundSuccess', this._lang), icon: 'success' });
         await this.loadList(true);
         this.triggerEvent('success', { action: 'confirm', id: id });
       } catch (e) {
-        wx.showToast({ title: (e && e.message) || '出库失败', icon: 'none' });
+        wx.showToast({ title: (e && e.message) || i18n.t('mp.warehouse.materialPicking.outboundFailed', this._lang), icon: 'none' });
       } finally {
         this.setData({ submittingId: '' });
       }
@@ -254,8 +336,8 @@ Component({
       if (!id) return;
       const self = this;
       wx.showModal({
-        title: '取消领料单',
-        content: `取消 ${no}？库存将回退。`,
+        title: i18n.t('mp.warehouse.materialPicking.cancelTitle', this._lang),
+        content: i18n.tf('mp.warehouse.materialPicking.cancelText', { no: no }, this._lang),
         confirmColor: '#dc2626',
         success: function (res) {
           if (!res.confirm) return;
@@ -268,11 +350,11 @@ Component({
       this.setData({ submittingId: id });
       try {
         await api.production.cancelPickingPending(id);
-        wx.showToast({ title: '已取消', icon: 'success' });
+        wx.showToast({ title: i18n.t('mp.warehouse.materialPicking.cancelSuccess', this._lang), icon: 'success' });
         await this.loadList(true);
         this.triggerEvent('success', { action: 'cancel', id: id });
       } catch (e) {
-        wx.showToast({ title: (e && e.message) || '取消失败', icon: 'none' });
+        wx.showToast({ title: (e && e.message) || i18n.t('mp.warehouse.materialPicking.cancelFailed', this._lang), icon: 'none' });
       } finally {
         this.setData({ submittingId: '' });
       }

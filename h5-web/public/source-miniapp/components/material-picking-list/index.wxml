@@ -5,7 +5,7 @@
   <!-- 独立页：搜索框 + 状态筛选（通用组件 sticky-search-bar） -->
   <sticky-search-bar
     wx:if="{{showSearch}}"
-    placeholder="搜索领料单号/订单号/款号/领取人"
+    placeholder="{{t.searchPlaceholder}}"
     value="{{keyword}}"
     show-scan="{{false}}"
     show-filter="{{true}}"
@@ -37,17 +37,17 @@
 
   <!-- 统计 -->
   <view class="summary-row" wx:if="{{list.length > 0}}">
-    <text>共 {{total}} 张</text>
-    <text wx:if="{{list.length < total}}"> · 已显示 {{list.length}}</text>
+    <text>{{t.totalText}}</text>
+    <text wx:if="{{list.length < total}}">{{t.shownText}}</text>
   </view>
 
   <!-- 加载中 -->
-  <view class="state" wx:if="{{loading && list.length === 0}}"><text>加载中…</text></view>
+  <view class="state" wx:if="{{loading && list.length === 0}}"><text>{{t.loading}}</text></view>
 
   <!-- 空状态 -->
   <view class="state" wx:if="{{!loading && list.length === 0}}">
-    <text>{{status === 'pending' ? '暂无待出库领料单' : '暂无数据'}}</text>
-    <text class="state-hint" wx:if="{{status === 'pending'}}">采购员创建领料单后会显示在这里</text>
+    <text>{{status === 'pending' ? t.emptyPending : t.noData}}</text>
+    <text class="state-hint" wx:if="{{status === 'pending'}}">{{t.emptyPendingHint}}</text>
   </view>
 
   <!-- 列表 -->
@@ -64,27 +64,27 @@
       <!-- 关键信息 -->
       <view class="info-row" data-id="{{item.id}}" bindtap="onToggleDetail">
         <view class="info-item">
-          <text class="info-label">订单</text>
+          <text class="info-label">{{t.order}}</text>
           <text class="info-value">{{item.orderNo}}</text>
         </view>
         <view class="info-item">
-          <text class="info-label">款号</text>
+          <text class="info-label">{{t.styleNo}}</text>
           <text class="info-value">{{item.styleNo}}</text>
         </view>
         <view class="info-item">
-          <text class="info-label">领取人</text>
+          <text class="info-label">{{t.pickerLabel}}</text>
           <text class="info-value">{{item.pickerName}}</text>
         </view>
         <view class="info-item" wx:if="{{item.factoryName}}">
-          <text class="info-label">工厂</text>
+          <text class="info-label">{{t.factory}}</text>
           <text class="info-value">{{item.factoryName}}</text>
         </view>
         <view class="info-item">
-          <text class="info-label">用途</text>
+          <text class="info-label">{{t.usageLabel}}</text>
           <text class="info-value">{{item.usageLabel}}</text>
         </view>
         <view class="info-item">
-          <text class="info-label">时间</text>
+          <text class="info-label">{{t.time}}</text>
           <text class="info-value">{{item.createTime}}</text>
         </view>
       </view>
@@ -92,7 +92,7 @@
       <!-- 明细（展开） -->
       <view class="detail" wx:if="{{expandedId === item.id}}">
         <view class="detail-hd">
-          <text>物料明细（{{item.itemCount}} 项）</text>
+          <text>{{item._detailTitle}}</text>
         </view>
         <view class="detail-row" wx:for="{{item.items}}" wx:for-item="it" wx:key="materialCode">
           <view class="detail-name">{{it.materialName}}</view>
@@ -102,9 +102,9 @@
             <text wx:if="{{it.size}}"> · {{it.size}}</text>
           </view>
           <view class="detail-qty">{{it.quantity}} {{it.unit}}</view>
-          <view class="detail-loc">库位：{{it.warehouseLocation}}</view>
+          <view class="detail-loc">{{it._locationText}}</view>
         </view>
-        <view class="detail-empty" wx:if="{{item.itemCount === 0}}">暂无明细</view>
+        <view class="detail-empty" wx:if="{{item.itemCount === 0}}">{{t.detailEmpty}}</view>
       </view>
 
       <!-- 操作（仅待出库） -->
@@ -114,22 +114,22 @@
           data-id="{{item.id}}"
           data-no="{{item.pickingNo}}"
           bindtap="onCancel"
-        >取消</view>
+        >{{t.cancel}}</view>
         <view
           class="btn btn--primary {{submittingId === item.id ? 'is-disabled' : ''}}"
           data-id="{{item.id}}"
           data-no="{{item.pickingNo}}"
           bindtap="onConfirmOutbound"
-        >{{submittingId === item.id ? '处理中…' : '确认出库'}}</view>
+        >{{submittingId === item.id ? t.processing : t.confirmOutbound}}</view>
       </view>
     </view>
   </view>
 
-  <view class="state small" wx:if="{{loading && list.length > 0}}"><text>加载中…</text></view>
+  <view class="state small" wx:if="{{loading && list.length > 0}}"><text>{{t.loading}}</text></view>
 
   <!-- ⚠️ 组件里没有 onReachBottom（页面级生命周期），故用按钮触发加载更多 -->
   <view class="state small loadmore-btn" wx:if="{{!loading && hasMore && list.length > 0}}" bindtap="loadMore">
-    <text>加载更多</text>
+    <text>{{t.loadMore}}</text>
   </view>
-  <view class="state small" wx:if="{{!hasMore && list.length > 0}}"><text>— 没有更多了 —</text></view>
+  <view class="state small" wx:if="{{!hasMore && list.length > 0}}"><text>{{t.noMore}}</text></view>
 </view>

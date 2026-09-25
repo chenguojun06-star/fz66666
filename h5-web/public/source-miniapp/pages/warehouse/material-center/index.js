@@ -19,46 +19,63 @@
  */
 const api = require('../../../utils/api');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const i18n = require('../../../utils/i18n/index');
 
+/**
+ * ⚠️ `key` 是页面内部/深链契约（?tab=xxx），**绝不能跟着语言变**；
+ *    `label` 由 applyLanguage 按当前语言展开。
+ */
 const TABS = [
-  { key: 'inventory', label: '库存' },
-  { key: 'inbound', label: '入库' },
-  { key: 'outbound', label: '出库' },
-  { key: 'picking', label: '领料' },
-  { key: 'scan', label: '料卷' },
+  { key: 'inventory', labelKey: 'mp.warehouse.materialCenter.tabInventory' },
+  { key: 'inbound', labelKey: 'common.inbound' },
+  { key: 'outbound', labelKey: 'common.outbound' },
+  { key: 'picking', labelKey: 'mp.warehouse.materialCenter.tabPicking' },
+  { key: 'scan', labelKey: 'mp.warehouse.materialCenter.tabScan' },
 ];
 
 // D-514 修 bug：类型值必须是英文代码（后端 material_type 存 fabric/lining/accessory），
 // 与 PC 端 MaterialInventory/index.tsx 的选项完全对齐。原先用中文值会导致筛选必空。
+// ⚠️ value 是**后端契约**，绝不能翻译。
 const TYPE_OPTIONS = [
-  { label: '全部类型', value: '' },
-  { label: '面料', value: 'fabric' },
-  { label: '里料', value: 'lining' },
-  { label: '辅料', value: 'accessory' },
+  { labelKey: 'common.allTypes', value: '' },
+  { labelKey: 'common.materialFabric', value: 'fabric' },
+  { labelKey: 'common.materialLining', value: 'lining' },
+  { labelKey: 'common.materialAccessory', value: 'accessory' },
 ];
+
+/** 把「只带 labelKey 的选项」按当前语言展开成 wxml 需要的 {label, value/key} */
+function localizeOptions(options, lang) {
+  return options.map(function (o) {
+    var out = { label: i18n.t(o.labelKey, lang) };
+    if (o.value !== undefined) out.value = o.value;
+    if (o.key !== undefined) out.key = o.key;
+    return out;
+  });
+}
 
 const TYPE_COLOR_MAP = {
   fabric: '#2563eb',
   lining: '#f59e0b',
   accessory: '#10b981',
+  // 历史数据兼容：早期版本 material_type 曾存中文，保留别名以免老记录掉成灰色
   面料: '#2563eb',
   里料: '#f59e0b',
   辅料: '#10b981',
 };
 
-const TYPE_LABEL_MAP = {
-  面料: '面料',
-  里料: '里料',
-  辅料: '辅料',
+/** 类型码 → i18n 键（后端存 fabric/lining/accessory 英文码） */
+const TYPE_LABEL_KEYS = {
+  fabric: 'common.materialFabric',
+  lining: 'common.materialLining',
+  accessory: 'common.materialAccessory',
 };
 
-function resolveTypeLabel(rawType) {
+function resolveTypeLabel(rawType, lang) {
   if (!rawType) return '-';
-  if (TYPE_LABEL_MAP[rawType]) return TYPE_LABEL_MAP[rawType];
   const t = String(rawType).toLowerCase();
-  if (t.startsWith('fabric')) return '面料';
-  if (t.startsWith('lining')) return '里料';
-  if (t.startsWith('accessory')) return '辅料';
+  if (t.startsWith('fabric')) return i18n.t(TYPE_LABEL_KEYS.fabric, lang);
+  if (t.startsWith('lining')) return i18n.t(TYPE_LABEL_KEYS.lining, lang);
+  if (t.startsWith('accessory')) return i18n.t(TYPE_LABEL_KEYS.accessory, lang);
   return rawType;
 }
 
@@ -84,12 +101,15 @@ Page({
     pickerOptions: [],
 
     pickerValue: '',
-    tabs: TABS,
+    tabs: localizeOptions(TABS, i18n.getLanguage()),
     activeTab: 'inventory',
     keyword: '',
     typeValue: '',
     typeIndex: 0,
-    typeOptions: TYPE_OPTIONS,
+    typeOptions: localizeOptions(TYPE_OPTIONS, i18n.getLanguage()),
+
+    /** i18n 文案表（applyLanguage 里填充，wxml 用 {{t.xxx}}） */
+    t: {},
 
     // 库存 tab 数据
     loading: true,
@@ -110,7 +130,62 @@ Page({
     if (options && options.tab && TABS.some(function (t) { return t.key === options.tab; })) {
       this.setData({ activeTab: options.tab });
     }
+    this.applyLanguage(i18n.getLanguage());
     this.loadInventory(true);
+  },
+
+  /**
+   * 按当前语言刷新全部文案。
+   *
+   * ⚠️ json 里的 navigationBarTitleText 是**静态**的，不会跟着语言变 ——
+   *    要让它跟着切，只能在这里调 wx.setNavigationBarTitle。
+   */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    wx.setNavigationBarTitle({ title: i18n.t('mp.warehouse.materialCenter.title', lang) });
+    this.setData({
+      t: {
+        searchPlaceholder: i18n.t('mp.warehouse.materialCenter.searchPlaceholder', lang),
+        loading: i18n.t('common.loading', lang),
+        emptyText: i18n.t('mp.warehouse.materialCenter.emptyText', lang),
+        emptySub: i18n.t('mp.warehouse.materialCenter.emptySub', lang),
+        lowStock: i18n.t('common.lowStock', lang),
+        available: i18n.t('common.available', lang),
+        inbound: i18n.t('common.inbound', lang),
+        outbound: i18n.t('common.outbound', lang),
+        loadMore: i18n.t('common.loadMore', lang),
+        noMore: i18n.t('common.noMore', lang),
+        actionCardTitle: i18n.t('mp.warehouse.materialCenter.actionCardTitle', lang),
+        actionCardDesc: i18n.t('mp.warehouse.materialCenter.actionCardDesc', lang),
+        tipReturnFlow: i18n.t('mp.warehouse.materialCenter.tipReturnFlow', lang),
+        tipAutoFill: i18n.t('mp.warehouse.materialCenter.tipAutoFill', lang),
+      },
+      tabs: localizeOptions(TABS, lang),
+      typeOptions: localizeOptions(TYPE_OPTIONS, lang),
+      inventoryList: this._decorateList(this.data.inventoryList, lang),
+    });
+    this._refreshTotalText(lang);
+  },
+
+  /** 列表里每条都有「锁定 N / 安全 N / 库位 X / 类型」这类带参文案 → 逐条生成 */
+  _decorateList: function (list, lang) {
+    return (list || []).map(function (item) {
+      var decorated = Object.assign({}, item);
+      decorated.typeLabel = resolveTypeLabel(item.materialType, lang);
+      decorated._lockedText = i18n.tf('mp.warehouse.materialCenter.lockedText', { qty: item.lockedQty }, lang);
+      decorated._safetyText = i18n.tf('mp.warehouse.materialCenter.safetyText', { qty: item.safetyStock }, lang);
+      decorated._locationText = i18n.tf('mp.warehouse.materialCenter.locationText', { loc: item.warehouseLocation }, lang);
+      return decorated;
+    });
+  },
+
+  /** 「共 N 条」——条数在 data 里，语言切换时要重算 */
+  _refreshTotalText: function (lang) {
+    var l = lang || this._lang;
+    this.setData({
+      't.totalText': i18n.tf('common.totalCount', { count: this.data.inventoryTotal }, l),
+    });
   },
 
   onPullDownRefresh: function () {
@@ -124,6 +199,8 @@ Page({
   },
 
   onShow: function () {
+    // 从「我的 → 语言」切回时文案要跟着变，故每次显示都重刷
+    this.applyLanguage(i18n.getLanguage());
     // 从子页返回 / 领料确认出库后库存已变 → 重新拉取
     if (this.data.activeTab === 'inventory' || this._inventoryDirty) {
       this._inventoryDirty = false;
@@ -205,7 +282,6 @@ Page({
           materialName: r.materialName || r.materialCode || '',
           // D-514：详情页要按类型上色 / 显示仓库区域与供应商，这里一并带上
           materialType: r.materialType || '',
-          typeLabel: resolveTypeLabel(r.materialType),
           typeColor: resolveTypeColor(r.materialType),
           unit: r.unit || '',
           warehouseLocation: r.location || r.warehouseLocation || '-',
@@ -222,17 +298,19 @@ Page({
       var merged = reset ? list : this.data.inventoryList.concat(list);
       var total = (res && res.total) || merged.length;
       this.setData({
-        inventoryList: merged,
+        // 逐条文案（类型标签 / 锁定 N / 安全 N / 库位 X）在这里统一生成
+        inventoryList: this._decorateList(merged, this._lang),
         inventoryTotal: total,
         inventoryPage: nextPage,
         hasMore: merged.length < total,
         loading: false,
       });
+      this._refreshTotalText();
     } catch (e) {
       // 保留错误到控制台，便于开发者工具里定位（原先只弹 toast，排查不到原因）
       console.error('[material-center] 物料库存加载失败', e && (e.errMsg || e.message || e));
       this.setData({ loading: false });
-      wx.showToast({ title: (e && e.errMsg) || '加载失败', icon: 'none' });
+      wx.showToast({ title: (e && e.errMsg) || i18n.t('common.loadFailed', this._lang), icon: 'none' });
     }
   },
 
@@ -346,7 +424,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

@@ -3,7 +3,7 @@
   <!-- 加载 -->
   <view wx:if="{{loading}}" class="loading-wrap">
     <view class="loading-spinner"></view>
-    <text class="loading-text">加载中...</text>
+    <text class="loading-text">{{t.loading}}</text>
   </view>
 
   <block wx:else>
@@ -16,7 +16,7 @@
       <view class="material-info">
         <view class="material-top">
           <text wx:if="{{typeLabel}}" class="type-tag" style="background: {{typeColor}};">{{typeLabel}}</text>
-          <text wx:if="{{lowStock}}" class="low-tag">低库存</text>
+          <text wx:if="{{lowStock}}" class="low-tag">{{t.lowStock}}</text>
         </view>
         <text class="material-name">{{materialName || '-'}}</text>
         <text class="material-code">{{materialCode}}</text>
@@ -25,62 +25,62 @@
 
     <!-- ② 操作：直接带着物料编码进表单，落地就能填数量 -->
     <view class="action-row">
-      <view class="action-btn action-btn--primary" bindtap="onGoInbound">入库</view>
-      <view class="action-btn action-btn--ghost" bindtap="onGoOutbound">出库</view>
+      <view class="action-btn action-btn--primary" bindtap="onGoInbound">{{t.inbound}}</view>
+      <view class="action-btn action-btn--ghost" bindtap="onGoOutbound">{{t.outbound}}</view>
     </view>
 
     <!-- ③ 库存概览 -->
     <view class="stats-row">
       <view class="stat-card">
         <text class="stat-value">{{availableQty}}</text>
-        <text class="stat-label">可用</text>
+        <text class="stat-label">{{t.available}}</text>
       </view>
       <view class="stat-card">
         <text class="stat-value stat-value--muted">{{lockedQty}}</text>
-        <text class="stat-label">锁定</text>
+        <text class="stat-label">{{t.locked}}</text>
       </view>
       <view class="stat-card">
         <text class="stat-value {{lowStock ? 'stat-value--danger' : 'stat-value--muted'}}">{{safetyStock}}</text>
-        <text class="stat-label">安全库存</text>
+        <text class="stat-label">{{t.safetyStock}}</text>
       </view>
       <view class="stat-card">
         <text class="stat-value stat-value--muted">{{unitPrice || '-'}}</text>
-        <text class="stat-label">单价</text>
+        <text class="stat-label">{{t.price}}</text>
       </view>
     </view>
 
     <!-- ④ 基本信息 -->
     <view class="section-card">
       <view class="card-header">
-        <text class="card-title">基本信息</text>
+        <text class="card-title">{{t.basicInfo}}</text>
       </view>
       <view class="info-row">
-        <text class="info-label">物料编码</text>
+        <text class="info-label">{{t.materialCode}}</text>
         <text class="info-value">{{materialCode || '-'}}</text>
       </view>
       <view class="info-row">
-        <text class="info-label">单位</text>
+        <text class="info-label">{{t.unit}}</text>
         <text class="info-value">{{unit || '-'}}</text>
       </view>
       <view class="info-row">
-        <text class="info-label">颜色</text>
+        <text class="info-label">{{t.color}}</text>
         <text class="info-value">{{color || '-'}}</text>
       </view>
       <!-- D-516：面料不显示「规格」—— 面料的 size 字段存的是服装码数（XS/S/M...），对面料无意义 -->
       <view class="info-row" wx:if="{{!isFabric}}">
-        <text class="info-label">规格</text>
+        <text class="info-label">{{t.spec}}</text>
         <text class="info-value">{{size || '-'}}</text>
       </view>
       <view class="info-row">
-        <text class="info-label">库位</text>
+        <text class="info-label">{{t.location}}</text>
         <text class="info-value">{{location || '-'}}</text>
       </view>
       <view class="info-row">
-        <text class="info-label">仓库区域</text>
+        <text class="info-label">{{t.warehouseArea}}</text>
         <text class="info-value">{{warehouseAreaName || '-'}}</text>
       </view>
       <view class="info-row">
-        <text class="info-label">供应商</text>
+        <text class="info-label">{{t.supplier}}</text>
         <text class="info-value">{{supplierName || '-'}}</text>
       </view>
     </view>
@@ -88,29 +88,29 @@
     <!-- ⑤ 出入库流水 -->
     <view class="section-card">
       <view class="card-header">
-        <text class="card-title">出入库流水</text>
-        <text class="card-count">{{transactions.length}}条</text>
+        <text class="card-title">{{t.transactions}}</text>
+        <text class="card-count">{{t.txCount}}</text>
       </view>
 
       <view wx:if="{{txLoading}}" class="loading-wrap loading-wrap--small">
         <view class="loading-spinner loading-spinner--small"></view>
-        <text class="loading-text">加载中...</text>
+        <text class="loading-text">{{t.loading}}</text>
       </view>
 
       <view wx:elif="{{transactions.length === 0}}" class="empty-wrap empty-wrap--small">
-        <text class="empty-text">暂无出入库记录</text>
+        <text class="empty-text">{{t.noTransactions}}</text>
       </view>
 
       <view wx:else class="tx-list">
         <view wx:for="{{transactions}}" wx:key="index" class="tx-item">
           <view class="tx-line">
-            <text class="tx-type tx-type--{{item.type}}">{{item.typeLabel}}</text>
+            <text class="tx-type tx-type--{{item.type}}">{{item._typeLabel}}</text>
             <text class="tx-qty">{{item.quantity}}{{unit}}</text>
             <text class="tx-time">{{item.operationTime}}</text>
           </view>
           <view class="tx-sub" wx:if="{{item.operatorName || item.warehouseLocation || item.remark}}">
-            <text wx:if="{{item.operatorName}}">操作人：{{item.operatorName}}</text>
-            <text wx:if="{{item.warehouseLocation}}"> · 库位：{{item.warehouseLocation}}</text>
+            <text wx:if="{{item.operatorName}}">{{item._operatorText}}</text>
+            <text wx:if="{{item.warehouseLocation}}">{{item._locationText}}</text>
             <text wx:if="{{item.remark}}"> · {{item.remark}}</text>
           </view>
         </view>

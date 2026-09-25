@@ -4,48 +4,48 @@
 
   <!-- ① 物料编码查询 -->
   <view class="section">
-    <view class="section-hd"><text class="section-title">物料编码</text></view>
+    <view class="section-hd"><text class="section-title">{{t.materialCode}}</text></view>
     <view class="search-row">
       <input
         class="search-input"
-        placeholder="输入物料编码"
+        placeholder="{{t.inputCodePlaceholder}}"
         value="{{materialCode}}"
         bindinput="onCodeInput"
         confirm-type="search"
         bindconfirm="onQuery"
       />
-      <view class="search-btn search-btn--scan" wx:if="{{showScan}}" bindtap="openPicker" data-key="material">选择</view>
-      <view wx:if="{{showScan}}" class="search-btn search-btn--scan" bindtap="onScan">扫码</view>
-      <view class="search-btn search-btn--go" bindtap="onQuery">查询</view>
+      <view class="search-btn search-btn--scan" wx:if="{{showScan}}" bindtap="openPicker" data-key="material">{{t.select}}</view>
+      <view wx:if="{{showScan}}" class="search-btn search-btn--scan" bindtap="onScan">{{t.scan}}</view>
+      <view class="search-btn search-btn--go" bindtap="onQuery">{{t.query}}</view>
     </view>
 
-    <view wx:if="{{loading}}" class="loading">加载中…</view>
+    <view wx:if="{{loading}}" class="loading">{{t.loading}}</view>
 
     <block wx:if="{{queried}}">
       <view wx:if="{{materialInfo}}" class="mat-card">
         <text class="mat-name">{{materialInfo.materialName || materialInfo.name || '—'}}</text>
-        <text class="mat-meta">编码 {{materialInfo.materialCode || materialCode}}</text>
-        <text class="mat-meta" wx:if="{{typeLabel}}">类型 {{typeLabel}}</text>
-        <text class="mat-meta" wx:if="{{materialInfo.color}}">颜色 {{materialInfo.color}}</text>
+        <text class="mat-meta">{{t.codeText}}</text>
+        <text class="mat-meta" wx:if="{{typeLabel}}">{{t.typeText}}</text>
+        <text class="mat-meta" wx:if="{{materialInfo.color}}">{{t.colorText}}</text>
         <!-- D-514：面料属性**只读展示**，从「物料资料」读取（手机端不需要填写） -->
-        <text class="mat-meta" wx:if="{{isFabric && fabricWidth}}">幅宽 {{fabricWidth}}</text>
-        <text class="mat-meta" wx:if="{{isFabric && fabricWeight}}">克重 {{fabricWeight}}</text>
-        <text class="mat-meta" wx:if="{{isFabric && fabricComposition}}">成分 {{fabricComposition}}</text>
+        <text class="mat-meta" wx:if="{{isFabric && fabricWidth}}">{{t.fabricWidthText}}</text>
+        <text class="mat-meta" wx:if="{{isFabric && fabricWeight}}">{{t.fabricWeightText}}</text>
+        <text class="mat-meta" wx:if="{{isFabric && fabricComposition}}">{{t.compositionText}}</text>
         <!-- D-514：面料不显示「规格」—— 库里存的是服装码数(XS/S/M/L)，对 面料 没意义。
              PC 端对 面料 走的是「幅宽/克重/成分」，不问码数。 -->
-        <text class="mat-meta" wx:if="{{materialInfo.size && !isFabric}}">规格 {{materialInfo.size}}</text>
-        <text class="mat-meta" wx:if="{{materialInfo.quantity != null}}">现有库存 {{materialInfo.quantity}}{{unit}}</text>
+        <text class="mat-meta" wx:if="{{materialInfo.size && !isFabric}}">{{t.specText}}</text>
+        <text class="mat-meta" wx:if="{{materialInfo.quantity != null}}">{{t.existingStockText}}</text>
       </view>
       <!-- D-499：没查到库存记录时不能入库 —— 后端 freeInbound 在 stock==null 且未传
            autoCreateStock=true 时会直接抛「物料库存记录不存在」。提示用户先建档，而非让他白填。 -->
-      <view wx:else class="empty">未查到该物料的库存记录，请先在 PC 端为其在物料库存中建档</view>
+      <view wx:else class="empty">{{t.noStockRecord}}</view>
     </block>
   </view>
 
   <block wx:if="{{queried}}">
     <!-- ② 入库来源（对齐 PC 端 InboundDrawer 的「入库来源」+ 大货入库的 chips） -->
     <view class="section">
-      <view class="section-hd"><text class="section-title">入库来源</text></view>
+      <view class="section-hd"><text class="section-title">{{t.sourceType}}</text></view>
       <view class="type-grid">
         <view
           wx:for="{{sourceTypes}}"
@@ -59,17 +59,17 @@
 
     <!-- ③ 入库信息 -->
     <view class="section">
-      <view class="section-hd"><text class="section-title">入库信息</text></view>
+      <view class="section-hd"><text class="section-title">{{t.inboundInfo}}</text></view>
 
       <view class="row">
-        <text class="row-label">数量 <text class="req">*</text></text>
+        <text class="row-label">{{t.quantity}} <text class="req">*</text></text>
         <!-- D-513：手机端步进器（小屏输入数字不便，加减按钮更快） -->
         <view class="qty-stepper">
           <view class="stepper-btn" catchtap="onQtyMinus">-</view>
           <input
             class="row-input row-input--center"
             type="digit"
-            placeholder="支持小数，如 1.32"
+            placeholder="{{t.qtyPlaceholder}}"
             value="{{quantity}}"
             bindinput="onQtyInput"
           />
@@ -80,9 +80,9 @@
 
       <!-- ⚠️ picker 而非 wx.showActionSheet（后者 itemList 最多 6 项） -->
       <view class="row" bindtap="openPicker" data-key="area">
-        <text class="row-label">仓库区域</text>
+        <text class="row-label">{{t.warehouseArea}}</text>
         <text class="row-value {{warehouseAreaName ? '' : 'row-value--placeholder'}}">
-          {{warehouseAreaName || '请选择'}}
+          {{warehouseAreaName || t.pleaseSelect}}
         </text>
         <text class="row-arrow">›</text>
       </view>
@@ -90,34 +90,34 @@
       <!-- D-514：库位 = **依赖仓库区域的下拉选择**（对齐 PC 端 InboundDrawer：
            先选仓库，库位下拉才可用；PC 上库位是必填项） -->
       <view wx:if="{{warehouseAreaId}}" class="row" bindtap="openPicker" data-key="location">
-        <text class="row-label">库位</text>
+        <text class="row-label">{{t.location}}</text>
         <text class="row-value {{warehouseLocation ? '' : 'row-value--placeholder'}}">
-          {{locationLoading ? '加载中…' : (warehouseLocation || (locationNames.length ? '请选择' : '该仓库暂无库位'))}}
+          {{locationLoading ? t.loading : (warehouseLocation || (locationNames.length ? t.pleaseSelect : t.noLocationInArea))}}
         </text>
         <text class="row-arrow">›</text>
       </view>
       <view wx:else class="row">
-        <text class="row-label">库位</text>
-        <text class="row-value row-value--placeholder">请先选择仓库区域</text>
+        <text class="row-label">{{t.location}}</text>
+        <text class="row-value row-value--placeholder">{{t.selectAreaFirst}}</text>
       </view>
 
       <view class="row">
-        <text class="row-label">供应商</text>
-        <input class="row-input" placeholder="选填" value="{{supplierName}}" bindinput="onSupplierInput" />
+        <text class="row-label">{{t.supplier}}</text>
+        <input class="row-input" placeholder="{{t.optional}}" value="{{supplierName}}" bindinput="onSupplierInput" />
       </view>
 
       <view class="row">
-        <text class="row-label">单价</text>
-        <input class="row-input" type="digit" placeholder="选填" value="{{unitPrice}}" bindinput="onPriceInput" />
+        <text class="row-label">{{t.price}}</text>
+        <input class="row-input" type="digit" placeholder="{{t.optional}}" value="{{unitPrice}}" bindinput="onPriceInput" />
       </view>
     </view>
 
     <!-- ③ 备注 -->
     <view class="section">
-      <view class="section-hd"><text class="section-title">备注</text></view>
+      <view class="section-hd"><text class="section-title">{{t.remark}}</text></view>
       <textarea
         class="remark"
-        placeholder="选填"
+        placeholder="{{t.optional}}"
         value="{{remark}}"
         bindinput="onRemarkInput"
         maxlength="200"
@@ -133,10 +133,10 @@
 <view class="submit-bar" wx:if="{{queried}}">
   <view class="submit-summary">
     <text class="submit-count">{{materialCode}}</text>
-    <text class="submit-qty">入库 {{quantity || 0}}{{unit}}</text>
+    <text class="submit-qty">{{t.inboundQtyText}}</text>
   </view>
   <view class="submit-btn {{submitting ? 'submit-btn--disabled' : ''}}" bindtap="onSubmit">
-    {{submitting ? '提交中…' : '确认入库'}}
+    {{submitting ? t.submitting : t.confirmInbound}}
   </view>
 </view>
 

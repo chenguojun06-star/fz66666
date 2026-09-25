@@ -4,7 +4,7 @@
        之前顶部栏常驻 → 出现「上面一个搜索框、下面又一个搜索框、两个扫码入口」的重复观感。 -->
   <sticky-search-bar
     wx:if="{{activeTab === 'inventory'}}"
-    placeholder="搜索物料编码或名称"
+    placeholder="{{t.searchPlaceholder}}"
     value="{{keyword}}"
     show-scan="{{true}}"
     show-filter="{{true}}"
@@ -39,16 +39,16 @@
   <!-- 库存 tab：inline 列表（用户最常用） -->
   <view class="tab-body" wx:if="{{activeTab === 'inventory'}}">
     <view class="total-bar" wx:if="{{inventoryList.length > 0}}">
-      <text class="total-text">共 {{inventoryTotal}} 条</text>
+      <text class="total-text">{{t.totalText}}</text>
     </view>
     <view class="loading-wrap" wx:if="{{loading && inventoryList.length === 0}}">
       <view class="loading-spinner"></view>
-      <text class="loading-text">加载中…</text>
+      <text class="loading-text">{{t.loading}}</text>
     </view>
     <view class="empty-wrap" wx:if="{{!loading && inventoryList.length === 0}}">
       <text class="empty-icon">📦</text>
-      <text class="empty-text">暂无物料库存数据</text>
-      <text class="empty-sub">先在 PC 端物料仓储录入物料</text>
+      <text class="empty-text">{{t.emptyText}}</text>
+      <text class="empty-sub">{{t.emptySub}}</text>
     </view>
     <view class="card-list">
       <view class="card" wx:for="{{inventoryList}}" wx:key="id">
@@ -62,36 +62,36 @@
             <view class="card-top">
               <view class="type-tag" style="background: {{item.typeColor}};">{{item.typeLabel}}</view>
               <view class="card-name">{{item.materialName}}</view>
-              <view wx:if="{{item.lowStock}}" class="low-tag">低库存</view>
+              <view wx:if="{{item.lowStock}}" class="low-tag">{{t.lowStock}}</view>
             </view>
             <view class="card-main">
               <text class="card-code">{{item.materialCode}}</text>
               <view class="stock-main">
-                <text class="stock-label">可用</text>
+                <text class="stock-label">{{t.available}}</text>
                 <text class="stock-value {{item.isZero ? 'is-zero' : (item.lowStock ? 'is-low' : '')}}">{{item.availableQty}}</text>
                 <text class="stock-unit">{{item.unit}}</text>
               </view>
             </view>
             <view class="card-sub">
-              <text wx:if="{{item.lockedQty > 0}}">锁定 {{item.lockedQty}}</text>
+              <text wx:if="{{item.lockedQty > 0}}">{{item._lockedText}}</text>
               <text wx:if="{{item.lockedQty > 0 && item.safetyStock > 0}}"> · </text>
-              <text wx:if="{{item.safetyStock > 0}}">安全 {{item.safetyStock}}</text>
-              <text wx:if="{{item.warehouseLocation}}" class="card-loc">库位 {{item.warehouseLocation}}</text>
+              <text wx:if="{{item.safetyStock > 0}}">{{item._safetyText}}</text>
+              <text wx:if="{{item.warehouseLocation}}" class="card-loc">{{item._locationText}}</text>
             </view>
           </view>
         </view>
         <view class="card-actions">
-          <view class="act-btn act-btn--in" catchtap="onInventoryInbound" data-code="{{item.materialCode}}">入库</view>
-          <view class="act-btn act-btn--out" catchtap="onInventoryOutbound" data-code="{{item.materialCode}}">出库</view>
+          <view class="act-btn act-btn--in" catchtap="onInventoryInbound" data-code="{{item.materialCode}}">{{t.inbound}}</view>
+          <view class="act-btn act-btn--out" catchtap="onInventoryOutbound" data-code="{{item.materialCode}}">{{t.outbound}}</view>
         </view>
       </view>
     </view>
 
     <!-- D-515：分页（补齐原 material-inventory 独立页的「加载更多」，删孤儿页前先补平能力） -->
     <view class="loadmore" wx:if="{{inventoryList.length > 0}}">
-      <text wx:if="{{loading}}">加载中…</text>
-      <text wx:elif="{{hasMore}}" class="loadmore-btn" bindtap="loadMoreInventory">加载更多</text>
-      <text wx:else>— 没有更多了 —</text>
+      <text wx:if="{{loading}}">{{t.loading}}</text>
+      <text wx:elif="{{hasMore}}" class="loadmore-btn" bindtap="loadMoreInventory">{{t.loadMore}}</text>
+      <text wx:else>{{t.noMore}}</text>
     </view>
   </view>
 
@@ -127,14 +127,14 @@
     <view class="action-card" bindtap="gotoScan">
       <view class="action-icon action-icon--scan">📷</view>
       <view class="action-info">
-        <view class="action-title">料卷出库 / 退回</view>
-        <view class="action-desc">扫料卷二维码 → 选择出库或退回</view>
+        <view class="action-title">{{t.actionCardTitle}}</view>
+        <view class="action-desc">{{t.actionCardDesc}}</view>
       </view>
       <view class="action-arrow">›</view>
     </view>
     <view class="action-tips">
-      <view>• 退回流程：扫料卷 → 选择「退回」</view>
-      <view>• 扫码后会自动带出料卷关联的款号/订单</view>
+      <view>{{t.tipReturnFlow}}</view>
+      <view>{{t.tipAutoFill}}</view>
     </view>
   </view>
 </view>

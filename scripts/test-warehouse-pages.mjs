@@ -1103,28 +1103,89 @@ function testPageI18n(jsPath, wxmlPath, label) {
   }
 
   // 导航栏标题 —— 通用检查最容易漏的一处
-  //
-  // 页面 json 的 `navigationBarTitleText` **只能写死**（微信不支持在 json 里写 {{t.x}}），
-  // 所以标题要跟着语言变，**唯一**办法是在 applyLanguage 里调 wx.setNavigationBarTitle。
-  // 这条是行为级断言：只看「标题有没有真的随语言变」，不看代码长什么样。
-  // （D-550 补：此前 location-scan / finished-inventory 两个已「完成」的页面就漏了这处）
+  testNavTitleI18n(jsPath, label);
+}
+
+/**
+ * 导航栏标题随语言变化的**行为级**断言（单独抽出来给薄壳页复用）
+ *
+ * 页面 json 的 `navigationBarTitleText` **只能写死**（微信不支持在 json 里写 {{t.x}}），
+ * 所以标题要跟着语言变，**唯一**办法是在 applyLanguage 里调 wx.setNavigationBarTitle。
+ * 只看「标题有没有真的随语言变」，不看代码长什么样。
+ * （D-550 补：此前 location-scan / finished-inventory 两个已「完成」的页面就漏了这处）
+ *
+ * ⚠️ json 里 `navigationBarTitleText` 为**空串**的页面（如 material/scan 自带大标题）
+ *    故意不设标题 —— 那种页面调用方要显式跳过本函数，别在这里放宽判据。
+ *
+ * @param {string} jsPath 页面 js 相对 miniprogram 的路径
+ * @param {string} label 报告用的页面名
+ */
+function testNavTitleI18n(jsPath, label) {
   const navJson = readSiblingJson(jsPath);
-  if (navJson && navJson.navigationBarTitleText) {
-    const seen = [];
-    for (const lang of LANGS) {
-      const { page: np, wx: nwx } = loadPage(jsPath, makeApi());
-      np.applyLanguage(lang);
-      const call = lastCall(nwx, 'setNavigationBarTitle');
-      const title = call && call.title;
-      seen.push(`${lang}=${title || '<未设置>'}`);
-      if (title && lang !== 'zh-CN' && CJK_RE.test(title)) {
-        ok(`${lang} 导航栏标题无中文残留`, false, title);
-      }
+  if (!navJson || !navJson.navigationBarTitleText) return;
+
+  const seen = [];
+  for (const lang of LANGS) {
+    const { page: np, wx: nwx } = loadPage(jsPath, makeApi());
+    np.applyLanguage(lang);
+    const call = lastCall(nwx, 'setNavigationBarTitle');
+    const title = call && call.title;
+    seen.push(`${lang}=${title || '<未设置>'}`);
+    if (title && lang !== 'zh-CN' && CJK_RE.test(title)) {
+      ok(`${lang} 导航栏标题无中文残留`, false, title);
     }
-    ok(`${label} 导航栏标题随语言设置（不能只靠 json 写死）`,
-      !seen.some(s => s.includes('<未设置>')), seen.join(' | '));
-    const vals = seen.map(s => s.slice(s.indexOf('=') + 1));
-    ok(`${label} 导航栏标题确实随语言变化`, new Set(vals).size > 1, seen.join(' | '));
+  }
+  ok(`${label} 导航栏标题随语言设置（不能只靠 json 写死）`,
+    !seen.some(s => s.includes('<未设置>')), seen.join(' | '));
+  const vals = seen.map(s => s.slice(s.indexOf('=') + 1));
+  ok(`${label} 导航栏标题确实随语言变化`, new Set(vals).size > 1, seen.join(' | '));
+}
+
+/**
+ * 通用的「**组件** i18n 接入」检查 —— 与 testPageI18n 同判据，只换加载方式
+ *
+ * 为什么必须单独一份：组件用 Component({...})，方法在 cfg.methods 里，
+ * testPageI18n 的 loadPage 拿不到（会报「未捕获到 Page 配置」）。
+ *
+ * ⚠️ 组件**没有** json 导航栏标题（标题在宿主页的 json 里），故这里不查标题。
+ */
+function testComponentI18n(jsPath, wxmlPath, label) {
+  console.log(`\n【i18n：${label}（组件）】`);
+
+  for (const lang of LANGS) {
+    const { page } = loadComponent(jsPath, makeApi());
+    page.applyLanguage(lang);
+    const vals = Object.entries(page.data.t || {});
+
+    ok(`${lang} 文案表非空`, vals.length > 0, `keys=${vals.length}`);
+
+    const empties = vals.filter(([, v]) => !v || !String(v).trim()).map(([k]) => k);
+    ok(`${lang} 无空文案`, empties.length === 0, empties.join(','));
+
+    const bare = vals.filter(([, v]) => KEYLIKE_RE.test(String(v))).map(([k, v]) => `${k}=${v}`);
+    ok(`${lang} 无裸键名`, bare.length === 0, bare.join(', '));
+
+    if (lang !== 'zh-CN') {
+      const cjk = vals.filter(([, v]) => CJK_RE.test(String(v))).map(([k, v]) => `${k}=${v}`);
+      ok(`${lang} 无中文残留（缺键回落的信号）`, cjk.length === 0, cjk.join(', '));
+    }
+  }
+
+  // 占位符必须被替换（tf 传参正确）
+  const { page: zhP } = loadComponent(jsPath, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const unresolved = Object.entries(zhP.data.t || {})
+    .filter(([, v]) => /\{[a-zA-Z]+\}/.test(String(v)))
+    .map(([k, v]) => `${k}=${v}`);
+  ok('无未替换的 {占位符}', unresolved.length === 0, unresolved.join(', '));
+
+  if (wxmlPath) {
+    const raw = stripComments(fs.readFileSync(path.join(MP, wxmlPath), 'utf8'));
+    const decor = raw.match(DECOR_PLACEHOLDER_RE) || [];
+    const wxml = raw.replace(DECOR_PLACEHOLDER_RE, '');
+    ok(`${label} 装饰性占位字符数量正常`, decor.length <= 3, `stripped=${decor.length}`);
+    const leftovers = (wxml.match(/[\u4e00-\u9fff]+/g) || []);
+    ok(`${label} wxml 无硬编码中文`, leftovers.length === 0, leftovers.join(' / '));
   }
 }
 
@@ -1726,6 +1787,393 @@ async function testI18nMaterialScanActions() {
     !!badToast && !CJK_RE.test(badToast.title), badToast && badToast.title);
 }
 
+// ────────────────────────── 物料中心簇 i18n（D-552） ──────────────────────────
+/**
+ * 物料中心列表接口桩
+ *
+ * ⚠️ 默认桩 makeApi().material 里**没有** listStock / getTransactions ——
+ * 缺了会让 `records` 变成 undefined，断言拿到 undefined 也算「通过」→ 假绿。
+ * 这里给回真实结构，并刻意造出边界：
+ *   r1 正常面料（锁定>0、安全库存>0、有库位）/ r2 零库存+低库存 / r3 类型为空
+ */
+function makeMaterialCenterApi() {
+  const api = makeApi();
+  api.material = Object.assign({}, api.material, {
+    listStock: async () => ({
+      records: [
+        { id: 'r1', materialCode: 'MC-1', materialName: '棉布', materialType: 'fabric',
+          unit: '米', quantity: 20, lockedQuantity: 3, safetyStock: 5, location: 'A区' },
+        { id: 'r2', materialCode: 'MC-2', materialName: '衬布', materialType: 'accessory',
+          unit: '', quantity: 0, lockedQuantity: 0, safetyStock: 2, location: 'B区' },
+        { id: 'r3', materialCode: 'MC-3', materialName: '散料', materialType: '',
+          unit: 'kg', quantity: 7, lockedQuantity: 0, safetyStock: 0, location: 'C区' },
+      ],
+      total: 3,
+    }),
+  });
+  return api;
+}
+
+/**
+ * 物料中心（D-552）
+ *
+ * 文案分四处：① t.*（wxml 静态）② 5 个 tab 的 label（模块级常量 TABS）
+ * ③ 类型筛选器 label（模块级常量 TYPE_OPTIONS）④ 列表项带参文案（「锁定 N」「安全 N」「库位 X」）
+ */
+function testI18nMaterialCenter() {
+  const js = 'pages/warehouse/material-center/index.js';
+  testPageI18n(js, 'pages/warehouse/material-center/index.wxml', '物料中心');
+
+  const { page: zhP } = loadPage(js, makeMaterialCenterApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP } = loadPage(js, makeMaterialCenterApi());
+  enP.applyLanguage('en-US');
+
+  // ② tab 的 label 在 data 数组里 → 通用检查覆盖不到
+  ok('zh-CN 库存 tab 是中文', CJK_RE.test(zhP.data.tabs[0].label), zhP.data.tabs[0].label);
+  ok('en-US 库存 tab 是英文', !CJK_RE.test(enP.data.tabs[0].label), enP.data.tabs[0].label);
+  ok('中英 tab label 确实不同', zhP.data.tabs[0].label !== enP.data.tabs[0].label);
+
+  // 🔴 key 是页面内部/深链契约（?tab=xxx），绝不能跟着语言变
+  eq('tabs 的 key 未受翻译影响',
+    zhP.data.tabs.map(o => o.key), ['inventory', 'inbound', 'outbound', 'picking', 'scan']);
+  eq('typeOptions 的 value 未受翻译影响',
+    zhP.data.typeOptions.map(o => o.value), ['', 'fabric', 'lining', 'accessory']);
+
+  // ③ 类型筛选器（把常量从 {label} 改成 {labelKey} 最容易在 onTypeChange 里踩空）
+  const { page: chgP } = loadPage(js, makeMaterialCenterApi());
+  chgP.applyLanguage('en-US');
+  chgP.onTypeChange({ detail: { value: 2 } });
+  eq('切换类型后 value 正确', chgP.data.typeValue, 'lining');
+
+  // tab 切换的 key 是后端/深链契约，不能被翻译带偏
+  const { page: tabP } = loadPage(js, makeMaterialCenterApi());
+  tabP.applyLanguage('en-US');
+  tabP.onTabTap({ currentTarget: { dataset: { key: 'picking' } } });
+  eq('切 tab 后 activeTab 仍是英文 key', tabP.data.activeTab, 'picking');
+
+  // 深链 ?tab=xxx 用 TABS 做白名单，改成 labelKey 后不能失配
+  const { page: deepP } = loadPage(js, makeMaterialCenterApi());
+  deepP.onLoad({ tab: 'inbound' });
+  eq('深链 ?tab=inbound 生效', deepP.data.activeTab, 'inbound');
+
+  // 搜索框 placeholder 走 sticky-search-bar 的 property
+  ok('搜索占位符已本地化', !CJK_RE.test(enP.data.t.searchPlaceholder), enP.data.t.searchPlaceholder);
+
+  // 空列表时 applyLanguage 不能炸（onShow 会在数据到达前先跑一次）
+  const { page: emptyP } = loadPage(js, makeMaterialCenterApi());
+  emptyP.applyLanguage('vi-VN');
+  ok('空列表 applyLanguage 不报错', Array.isArray(emptyP.data.inventoryList) && emptyP.data.inventoryList.length === 0);
+}
+
+async function testI18nMaterialCenterData() {
+  const js = 'pages/warehouse/material-center/index.js';
+
+  const { page: p } = loadPage(js, makeMaterialCenterApi());
+  p.applyLanguage('en-US');
+  await p.loadInventory(true);
+  eq('加载后拿到 3 条库存', p.data.inventoryList.length, 3);
+
+  // ④ 列表项带参文案（逐条不同）→ _decorateList 生成
+  const it0 = p.data.inventoryList[0];
+  ok('锁定文案前缀已本地化', String(it0._lockedText).startsWith('Locked '), it0._lockedText);
+  ok('安全文案前缀已本地化', String(it0._safetyText).startsWith('Safety '), it0._safetyText);
+  ok('库位文案前缀已本地化', String(it0._locationText).startsWith('Location '), it0._locationText);
+  ok('带参文案带出真实数值',
+    String(it0._lockedText).includes('3') && String(it0._safetyText).includes('5')
+    && String(it0._locationText).includes('A区'), [it0._lockedText, it0._safetyText, it0._locationText].join('|'));
+  ok('带参文案无未替换占位符',
+    !/\{(qty|loc)\}/.test([it0._lockedText, it0._safetyText, it0._locationText].join('|')));
+
+  // 类型标签由 materialType（后端英文码）派生
+  eq('类型标签已本地化（fabric）', it0.typeLabel, 'Fabric');
+  eq('类型标签已本地化（accessory）', p.data.inventoryList[1].typeLabel, 'Accessory');
+  eq('类型为空时回落原值', p.data.inventoryList[2].typeLabel, '-');
+
+  // 总条数文案（点路径 setData）
+  ok('总条数文案插值正确', String(p.data.t.totalText).includes('3'), p.data.t.totalText);
+  ok('点路径 setData 未污染 data 顶层',
+    !Object.prototype.hasOwnProperty.call(p.data, 't.totalText'));
+
+  // 切语言后 ①②③④ 都要跟着变（用「确实变了 + 不再以旧语言前缀开头」而不是「含中文」——
+  // 库位 A区 是**业务数据**，任何语言下都含中文，用「含中文」会恒真 → 假绿）
+  const enLocked = it0._lockedText;
+  const enType = it0.typeLabel;
+  const enTab = p.data.tabs[0].label;
+  const enTotal = p.data.t.totalText;
+  p.applyLanguage('zh-CN');
+  ok('切回中文后带参文案同步变化',
+    p.data.inventoryList[0]._lockedText !== enLocked
+    && !String(p.data.inventoryList[0]._lockedText).startsWith('Locked'),
+    `en=${enLocked} zh=${p.data.inventoryList[0]._lockedText}`);
+  ok('切回中文后类型标签同步变化',
+    p.data.inventoryList[0].typeLabel !== enType && CJK_RE.test(p.data.inventoryList[0].typeLabel),
+    `en=${enType} zh=${p.data.inventoryList[0].typeLabel}`);
+  ok('切回中文后 tab label 同步变化',
+    p.data.tabs[0].label !== enTab && CJK_RE.test(p.data.tabs[0].label),
+    `en=${enTab} zh=${p.data.tabs[0].label}`);
+  ok('切回中文后总条数文案同步变化',
+    p.data.t.totalText !== enTotal && CJK_RE.test(p.data.t.totalText),
+    `en=${enTotal} zh=${p.data.t.totalText}`);
+
+  // 翻页时不能把已渲染的带参文案丢掉
+  const { page: moreP } = loadPage(js, makeMaterialCenterApi());
+  moreP.applyLanguage('en-US');
+  await moreP.loadInventory(true);
+  const first = moreP.data.inventoryList[0]._lockedText;
+  await moreP.loadInventory(false);
+  ok('翻页后已有行仍保留带参文案',
+    moreP.data.inventoryList[0]._lockedText === first && moreP.data.inventoryList.length === 3,
+    `${first} → ${moreP.data.inventoryList[0]._lockedText}`);
+}
+
+/** 物料库存详情接口桩：scanQuery 快照 + getTransactions 流水 */
+function makeMaterialDetailApi() {
+  const api = makeApi();
+  api.material = Object.assign({}, api.material, {
+    scanQuery: async (code) => ({
+      found: true, materialCode: code, materialName: '棉布', materialType: 'fabric',
+      color: '白色', size: '150cm', location: 'A区', unit: '米',
+      quantity: 20, lockedQuantity: 3, unitPrice: 12.5,
+    }),
+    getTransactions: async () => ([
+      // ⚠️ 后端 typeLabel 是**写死的中文**（MaterialStockController），type 才是英文码。
+      //    前端必须按 type 自行派生，不能直接用后端 typeLabel（否则永远中文）。
+      { type: 'IN', typeLabel: '入库', quantity: 20, operationTime: '2026-09-20 10:00',
+        operatorName: '张三', warehouseLocation: 'A区', remark: '首入库' },
+      { type: 'OUT', typeLabel: '出库', quantity: 5, operationTime: '2026-09-21 11:00',
+        operatorName: '李四', warehouseLocation: 'B区', remark: '' },
+    ]),
+  });
+  return api;
+}
+
+/**
+ * 物料库存详情（D-552）
+ *
+ * 🔴 本页最隐蔽的一处：`item.typeLabel` 是**后端返回的中文**，前端要用 item.type
+ *    （IN/OUT 英文码）自己派生 —— 只看「有没有值」会漏掉这个 bug。
+ */
+function testI18nMaterialInventoryDetail() {
+  const js = 'pages/warehouse/material-inventory/detail/index.js';
+  testPageI18n(js, 'pages/warehouse/material-inventory/detail/index.wxml', '物料详情');
+
+  const { page: p } = loadPage(js, makeMaterialDetailApi());
+  p.onLoad({ materialCode: 'MC-1', materialType: 'fabric', unit: '米' });
+  p.applyLanguage('en-US');
+  eq('类型标签已本地化', p.data.typeLabel, 'Fabric');
+  ok('类型标签不是中文', !CJK_RE.test(p.data.typeLabel), p.data.typeLabel);
+}
+
+async function testI18nMaterialInventoryDetailData() {
+  const js = 'pages/warehouse/material-inventory/detail/index.js';
+
+  const { page: p } = loadPage(js, makeMaterialDetailApi());
+  p.applyLanguage('en-US');
+  await p.loadTransactions();
+  eq('加载后拿到 2 条流水', p.data.transactions.length, 2);
+
+  // 🔴 核心：按 type 英文码派生，而不是沿用后端写死的中文 typeLabel
+  eq('入库流水标签已本地化', p.data.transactions[0]._typeLabel, 'Inbound');
+  eq('出库流水标签已本地化', p.data.transactions[1]._typeLabel, 'Outbound');
+
+  const tx0 = p.data.transactions[0];
+  ok('操作人文案前缀已本地化', String(tx0._operatorText).startsWith('Operator: '), tx0._operatorText);
+  ok('库位文案前缀已本地化', String(tx0._locationText).startsWith('· Location: '), tx0._locationText);
+  ok('带参文案带出真实值',
+    String(tx0._operatorText).includes('张三') && String(tx0._locationText).includes('A区'),
+    [tx0._operatorText, tx0._locationText].join('|'));
+  ok('带参文案无未替换占位符', !/\{(name|loc)\}/.test([tx0._operatorText, tx0._locationText].join('|')));
+
+  // 流水条数文案
+  ok('流水条数文案插值正确', String(p.data.t.txCount).includes('2'), p.data.t.txCount);
+  ok('点路径 setData 未污染 data 顶层',
+    !Object.prototype.hasOwnProperty.call(p.data, 't.txCount'));
+
+  // 切语言后流水文案与条数文案都要跟着变（业务数据 A区 恒含中文 → 用变化检测）
+  const enOp = tx0._operatorText;
+  const enType = tx0._typeLabel;
+  const enCount = p.data.t.txCount;
+  p.applyLanguage('zh-CN');
+  ok('切回中文后流水标签同步变化',
+    p.data.transactions[0]._typeLabel !== enType && CJK_RE.test(p.data.transactions[0]._typeLabel),
+    `en=${enType} zh=${p.data.transactions[0]._typeLabel}`);
+  ok('切回中文后操作人文案同步变化',
+    p.data.transactions[0]._operatorText !== enOp
+    && !String(p.data.transactions[0]._operatorText).startsWith('Operator'),
+    `en=${enOp} zh=${p.data.transactions[0]._operatorText}`);
+  ok('切回中文后流水条数文案同步变化',
+    p.data.t.txCount !== enCount && CJK_RE.test(p.data.t.txCount),
+    `en=${enCount} zh=${p.data.t.txCount}`);
+}
+
+/**
+ * 物料入库表单组件（D-552）
+ *
+ * 🔴 「入库来源」的 key 是**后端白名单契约**（VALID_SOURCE_TYPES），
+ *    传错直接抛「不支持的入库来源类型」→ 必须断言 key 没被翻译带偏。
+ */
+function testI18nMaterialInboundForm() {
+  const js = 'components/material-inbound-form/index.js';
+  testComponentI18n(js, 'components/material-inbound-form/index.wxml', '物料入库表单');
+
+  const { page: zhP } = loadComponent(js, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP } = loadComponent(js, makeApi());
+  enP.applyLanguage('en-US');
+
+  ok('zh-CN 入库来源是中文', CJK_RE.test(zhP.data.sourceTypes[0].label), zhP.data.sourceTypes[0].label);
+  ok('en-US 入库来源是英文', !CJK_RE.test(enP.data.sourceTypes[0].label), enP.data.sourceTypes[0].label);
+  eq('入库来源的 key 未受翻译影响',
+    zhP.data.sourceTypes.map(o => o.key),
+    ['free_inbound', 'external_purchase', 'transfer_in', 'return_in', 'other_in']);
+
+  // 选中来源后 label 要跟着语言（不是把 key 当 label）
+  const { page: selP } = loadComponent(js, makeApi());
+  selP.applyLanguage('en-US');
+  selP.onSelectSourceType({ currentTarget: { dataset: { key: 'transfer_in' } } });
+  eq('选中来源后 sourceType 正确', selP.data.sourceType, 'transfer_in');
+  ok('选中来源后 label 已本地化', !CJK_RE.test(selP.data.sourceTypeLabel), selP.data.sourceTypeLabel);
+  // 切语言后已选来源的 label 要重算（applyLanguage 里按 sourceType 反查）
+  const enSel = selP.data.sourceTypeLabel;
+  selP.applyLanguage('zh-CN');
+  ok('切回中文后已选来源 label 同步变化',
+    selP.data.sourceTypeLabel !== enSel && CJK_RE.test(selP.data.sourceTypeLabel),
+    `en=${enSel} zh=${selP.data.sourceTypeLabel}`);
+
+  // 类型标签由后端英文码派生
+  //
+  // ⚠️ 顺序要紧：attached() 内部会**按 storage 里的语言**再刷一次文案，
+  //    先 applyLanguage('en-US') 再 attached() 会被打回 zh-CN（storage 为空 → 默认中文）。
+  const { page: qP } = loadComponent(js, makeApi());
+  qP.attached();
+  qP.applyLanguage('en-US');
+  qP.setData({ materialCode: 'MC-1' });
+  qP.queryMaterial();
+  return new Promise((resolve) => setTimeout(() => {
+    eq('入库表单类型标签已本地化', qP.data.typeLabel, 'Fabric');
+    ok('带参文案已随查询结果刷新',
+      String(qP.data.t.existingStockText).includes('20'), qP.data.t.existingStockText);
+    ok('带参文案无未替换占位符', !/\{(code|value|qty|unit|label)\}/.test(
+      [qP.data.t.codeText, qP.data.t.typeText, qP.data.t.colorText,
+        qP.data.t.fabricWidthText, qP.data.t.specText, qP.data.t.existingStockText].join('|')));
+    resolve();
+  }, 30));
+}
+
+/** 物料出库表单组件（D-552） */
+function testI18nMaterialOutboundForm() {
+  const js = 'components/material-outbound-form/index.js';
+  testComponentI18n(js, 'components/material-outbound-form/index.wxml', '物料出库表单');
+
+  const { page: zhP } = loadComponent(js, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP } = loadComponent(js, makeApi());
+  enP.applyLanguage('en-US');
+
+  // 🔴 key 是**后端存储约定值**（MaterialInboundOrchestrator.resolveUsageType → BULK/SAMPLE/STOCK）
+  eq('用料场景的 key 未受翻译影响',
+    zhP.data.typeOptions.map(o => o.key), ['BULK', 'SAMPLE', 'STOCK']);
+  ok('zh-CN 用料场景是中文', CJK_RE.test(zhP.data.typeOptions[0].label), zhP.data.typeOptions[0].label);
+  ok('en-US 用料场景是英文', !CJK_RE.test(enP.data.typeOptions[0].label), enP.data.typeOptions[0].label);
+
+  const { page: selP } = loadComponent(js, makeApi());
+  selP.applyLanguage('en-US');
+  selP.onSelectUsage({ currentTarget: { dataset: { key: 'STOCK' } } });
+  eq('选中用料场景后 usageType 正确', selP.data.usageType, 'STOCK');
+  ok('选中用料场景后 label 已本地化', !CJK_RE.test(selP.data.usageTypeLabel), selP.data.usageTypeLabel);
+
+  // 校验提示必须走 i18n（7 个必填逐项拦截）
+  const { page: badP, wx: badWx } = loadComponent(js, makeApi());
+  badP.applyLanguage('en-US');
+  badP.data.stockId = '';
+  badP.onSubmit();
+  const toast = lastCall(badWx, 'showToast');
+  ok('未查物料时提交被拦截且提示已本地化', !!toast && !CJK_RE.test(toast.title), toast && toast.title);
+}
+
+/**
+ * 领料出库列表组件（D-552）
+ *
+ * 🔴 状态 key（pending/completed/cancelled）与用途 key（BULK/SAMPLE/STOCK）都是后端契约。
+ */
+function testI18nMaterialPickingList() {
+  const js = 'components/material-picking-list/index.js';
+  testComponentI18n(js, 'components/material-picking-list/index.wxml', '领料出库列表');
+
+  const { page: zhP } = loadComponent(js, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP } = loadComponent(js, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('状态页签的 key 未受翻译影响',
+    zhP.data.statusTabs.map(o => o.key), ['', 'pending', 'completed', 'cancelled']);
+  ok('zh-CN 状态页签是中文', CJK_RE.test(zhP.data.statusTabs[1].label), zhP.data.statusTabs[1].label);
+  ok('en-US 状态页签是英文', !CJK_RE.test(enP.data.statusTabs[1].label), enP.data.statusTabs[1].label);
+
+  // _toRow 里状态/用途/领取方式三张映射表都要跟着语言
+  const row = enP._toRow({
+    id: 'k1', pickingNo: 'PK-1', orderNo: 'PO-1', styleNo: 'ST-1', pickerName: '张三',
+    factoryName: '本厂', usageType: 'BULK', pickupType: 'DELIVERY', status: 'pending',
+    createTime: '2026-09-20 10:00',
+    items: [{ materialCode: 'MC-1', materialName: '棉布', quantity: 2, unit: '米', warehouseLocation: 'A区' }],
+  }, 'en-US');
+  eq('行状态标签已本地化', row.statusLabel, 'Pending Outbound');
+  eq('行用途标签已本地化', row.usageLabel, 'Production Picking');
+  eq('行领取方式已本地化', row.pickupLabel, 'Delivery');
+  ok('行状态颜色/底色未受翻译影响',
+    row.statusColor === '#f59e0b' && row.statusBg === '#fffbeb', JSON.stringify(row));
+
+  // 未知枚举值要原样回落，不能变空
+  const unk = enP._toRow({ id: 'k2', status: 'weird', usageType: 'weird', pickupType: 'weird' }, 'en-US');
+  eq('未知状态原样回落', unk.statusLabel, 'weird');
+  eq('未知用途原样回落', unk.usageLabel, 'weird');
+  eq('未知领取方式原样回落', unk.pickupLabel, 'weird');
+
+  // 列表项的带参文案（物料明细（N 项）/ 库位：X）
+  const { page: decP } = loadComponent(js, makeApi());
+  decP.applyLanguage('en-US');
+  decP.setData({ list: [row], total: 1 });
+  decP.applyLanguage('en-US');
+  const it = decP.data.list[0];
+  ok('明细标题已本地化', String(it._detailTitle).includes('1'), it._detailTitle);
+  ok('明细标题无未替换占位符', !/\{count\}/.test(String(it._detailTitle)), it._detailTitle);
+  ok('明细库位文案已本地化', String(it.items[0]._locationText).startsWith('Location: '), it.items[0]._locationText);
+  ok('统计文案已本地化', String(decP.data.t.totalText).includes('1'), decP.data.t.totalText);
+}
+
+/**
+ * 三个薄壳页（material-inbound / outbound / picking，D-552）
+ *
+ * 这三页**没有自己的文案**（表单/列表都在通用组件里），只有 json 写死的导航栏标题。
+ * 所以不能套 testPageI18n（它要求 data.t 非空），只查标题。
+ */
+function testI18nShellPages() {
+  console.log('\n【i18n：物料薄壳页导航栏标题】');
+  testNavTitleI18n('pages/warehouse/material-inbound/index.js', '物料入库页');
+  testNavTitleI18n('pages/warehouse/material-outbound/index.js', '物料出库页');
+  testNavTitleI18n('pages/warehouse/material-picking/index.js', '领料出库页');
+
+  // 薄壳页的标题必须与组件/列表的文案来自**同一个键**，否则同一功能两种说法
+  const { page: ib, wx: ibWx } = loadPage('pages/warehouse/material-inbound/index.js', makeApi());
+  ib.applyLanguage('en-US');
+  eq('物料入库页标题取自 mp.warehouse.materialInbound.title',
+    lastCall(ibWx, 'setNavigationBarTitle').title, 'Material Inbound');
+
+  const { page: ob, wx: obWx } = loadPage('pages/warehouse/material-outbound/index.js', makeApi());
+  ob.applyLanguage('en-US');
+  eq('物料出库页标题取自 mp.warehouse.materialOutbound.title',
+    lastCall(obWx, 'setNavigationBarTitle').title, 'Material Outbound');
+
+  const { page: pk, wx: pkWx } = loadPage('pages/warehouse/material-picking/index.js', makeApi());
+  pk.applyLanguage('en-US');
+  eq('领料出库页标题取自 mp.warehouse.materialPicking.title',
+    lastCall(pkWx, 'setNavigationBarTitle').title, 'Material Picking');
+
+  // 三页都不该在 data.t 里堆无用键（文案全在组件里）
+  ok('薄壳页 data.t 为空（文案都在组件里）', Object.keys(ib.data.t || {}).length === 0);
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -1753,6 +2201,14 @@ try {
   await testI18nMaterialDatabaseData();
   testI18nMaterialScan();
   await testI18nMaterialScanActions();
+  testI18nMaterialCenter();
+  await testI18nMaterialCenterData();
+  testI18nMaterialInventoryDetail();
+  await testI18nMaterialInventoryDetailData();
+  await testI18nMaterialInboundForm();
+  testI18nMaterialOutboundForm();
+  testI18nMaterialPickingList();
+  testI18nShellPages();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);
