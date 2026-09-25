@@ -218,7 +218,16 @@ public class PatrolClosedLoopOrchestrator {
 
     public void markExecuted(Long actionId, boolean autoExecuted, String executionResult,
                              String linkedAuditId) {
-        assertStatusTransition(actionId, Set.of("PENDING", "APPROVED"), "执行");
+        // D-513 修复：原 allowedFrom = {PENDING, APPROVED}，但自动执行流程是
+        //   markAutoRunning(id) → PENDING 转 AUTO_RUNNING
+        //   performAutoAction(action)
+        //   markExecuted(id, true, ...)  ← 此时状态已是 AUTO_RUNNING，被原集合拒绝
+        // 结果：AiPatrolJob 的自动执行【必然抛异常】，catch 后 markFailed 把工单打成 FAILED。
+        // 实测 2026-09-25 14:30 一批工单全部 FAILED，execution_result 为
+        // 「工单当前状态为AUTO_RUNNING，不允许执行「执行」操作」，即此矛盾所致。
+        // 之前因 @Lazy 导致 Job 不执行而未暴露，修复 @Lazy 后立即显形。
+        // AUTO_RUNNING 只能由 markAutoRunning 从 PENDING 转入，故允许其转出是安全的。
+        assertStatusTransition(actionId, Set.of("PENDING", "APPROVED", "AUTO_RUNNING"), "执行");
         AiPatrolAction a = new AiPatrolAction();
         a.setId(actionId);
         a.setStatus(autoExecuted ? "AUTO_EXECUTED" : "EXECUTED");
