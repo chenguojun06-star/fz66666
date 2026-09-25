@@ -3,7 +3,7 @@
  *
  * 【设计原则】
  * - 所有状态值统一为小写英文（与后端数据库一致）
- * - 【D-520】text 字段存 i18n key（如 `status.order.production`），
+ * - 【D-546】text 字段存 i18n key（如 `status.order.production`），
  *   渲染侧统一用 t() 翻译后再展示；禁止直接把 text 渲染到界面。
  *   映射定义见 shared-locales/source/*.json 的 status.* 节点。
  * - 同一状态值在所有域（生产/采购/质检/工资/财务）的文字/颜色必须一致
@@ -319,6 +319,6 @@ export function resolveStatus(key: string, fallback?: StatusMapItem): StatusMapI
     ORDER_STATUS_MAP[k.toUpperCase()] ??
     fallback ??
     { text: 'common.unknown', color: 'default' };
-  // D-520：text 为 i18n key，统一在此翻译后返回
+  // D-546：text 为 i18n key，统一在此翻译后返回
   return { text: t(found.text), color: found.color };
 }

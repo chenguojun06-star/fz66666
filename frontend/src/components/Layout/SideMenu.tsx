@@ -7,6 +7,7 @@ import { useAppLanguage } from '../../i18n/useAppLanguage';
 import { t } from '../../i18n';
 import type { LayoutAuthResult } from './useLayoutAuth';
 import { normalizePath } from './useLayoutAuth';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface SideMenuProps {
   sidebarIsCollapsed: boolean;
@@ -279,6 +280,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
         {...menuInteractionProps}
         className="sidebar-menu"
       />
+      <LanguageSwitcher collapsed={sidebarIsCollapsed} />
       {sidebarIsCollapsed ? (
         <div className="sidebar-icp-collapsed">
           <Tooltip

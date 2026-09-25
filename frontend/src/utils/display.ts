@@ -130,7 +130,7 @@ export type DisplayStatusItem = { text: string; color: string };
 /**
  * 从状态映射表中查找配置，并把 text 当作 i18n key 翻译为当前语言。
  *
- * D-520：statusMaps 中每条 text 已改为 i18n key（如 `status.order.production`），
+ * D-546：statusMaps 中每条 text 已改为 i18n key（如 `status.order.production`），
  * 在此统一翻译 —— 全站状态显示因此随语言切换自动生效，无需改动各调用方。
  * 未命中 i18n key 时 t() 原样返回，故对普通中文文案也安全。
  */
@@ -184,9 +184,9 @@ export const displayFactoryStatus = (status: unknown): DisplayStatusItem => {
   return found ?? { text: t('common.unknown'), color: 'default' };
 };
 
-export const displayFactoryType = (t: unknown): DisplayStatusItem => {
-  if (isEmpty(t)) return { text: EMPTY_TEXT, color: 'default' };
-  const found = findInMap(FACTORY_TYPE_MAP, String(t));
+export const displayFactoryType = (value: unknown): DisplayStatusItem => {
+  if (isEmpty(value)) return { text: EMPTY_TEXT, color: 'default' };
+  const found = findInMap(FACTORY_TYPE_MAP, String(value));
   return found ?? { text: t('common.unknown'), color: 'default' };
 };
 

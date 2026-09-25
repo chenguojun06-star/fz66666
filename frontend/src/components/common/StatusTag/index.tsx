@@ -14,7 +14,7 @@ interface StatusTagProps {
  * 状态标签组件
  * 大小写兼容：优先精确匹配 → 小写 → 大写 → fallback
  *
- * D-520：statusMap 中每条 text 已改为 i18n key，此处统一翻译。
+ * D-546：statusMap 中每条 text 已改为 i18n key，此处统一翻译。
  * 组件被 React.memo 包裹，props 不变时不会随父组件重渲染，
  * 故显式订阅语言变化，确保切换语言后标签即时更新。
  */

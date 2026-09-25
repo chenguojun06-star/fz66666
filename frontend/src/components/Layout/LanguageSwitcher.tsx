@@ -15,7 +15,7 @@ interface LanguageSwitcherProps {
 /**
  * 语言切换器（PC 端）
  *
- * D-520：补齐 PC 端语言切换入口 —— 此前 i18n 基础设施齐备但全仓无任何
+ * D-546：补齐 PC 端语言切换入口 —— 此前 i18n 基础设施齐备但全仓无任何
  * setLanguage 调用方，用户实际无法切换语言。
  *
  * 切换后 setStoredAppLanguage 会派发 APP_LANGUAGE_EVENT，
@@ -52,7 +52,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ collapsed = false, 
     <div className={['sidebar-lang', className].filter(Boolean).join(' ')}>
       <Dropdown
         menu={menuProps}
-        placement={collapsed ? 'rightBottom' : 'topLeft'}
+        placement="topRight"
         trigger={['click']}
       >
         {collapsed ? (

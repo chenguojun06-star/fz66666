@@ -620,6 +620,37 @@
   padding: 0 12px 8px;
 }
 
+/* D-546：侧边栏语言切换（PC 端多语言入口）
+ * margin-top:auto 让语言切换与备案区一起贴底；备案区自身的 auto 由下方
+ * 相邻兄弟选择器归零，避免两个 auto 平分剩余空间导致中间出现空隙。 */
+.sidebar-lang {
+  margin-top: auto;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding: 0 12px 8px;
+}
+
+.sidebar-lang-btn.ant-btn {
+  color: var(--sidebar-text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  height: auto;
+  border-radius: 8px;
+}
+
+.sidebar-lang-btn.ant-btn:hover {
+  color: var(--sidebar-text, #fff);
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.sidebar-lang + .sidebar-icp,
+.sidebar-lang + .sidebar-icp-collapsed {
+  margin-top: 0;
+}
+
 .sidebar-icp-collapsed {
   margin-top: auto;
   display: flex;

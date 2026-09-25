@@ -31,7 +31,7 @@ export interface HookState {
 }
 
 // 引用统一映射表（与小程序/H5 一致），见 frontend/src/constants/statusMaps.ts
-// D-520：映射表中 text 已改为 i18n key，消费方需用 t() 翻译后再渲染。
+// D-546：映射表中 text 已改为 i18n key，消费方需用 t() 翻译后再渲染。
 const STATUS_LABELS: Record<string, string> = Object.fromEntries(
   Object.entries(MATERIAL_PURCHASE_STATUS_MAP).map(([k, v]) => [k, v.text]),
 );
