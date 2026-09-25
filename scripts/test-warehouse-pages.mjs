@@ -2427,6 +2427,8 @@ const SCAN_QUALITY_JS = 'pages/scan/quality/index.js';
 const SCAN_QUALITY_WXML = 'pages/scan/quality/index.wxml';
 const SCAN_RESULT_JS = 'pages/scan/scan-result/index.js';
 const SCAN_RESULT_WXML = 'pages/scan/scan-result/index.wxml';
+const SCAN_CONFIRM_JS = 'pages/scan/confirm/index.js';
+const SCAN_CONFIRM_WXML = 'pages/scan/confirm/index.wxml';
 
 /** 把 menuRows / filteredApps 拍平成 [分组名, 应用名...] */
 function flattenMenuNames(rows) {
@@ -2784,6 +2786,30 @@ function testI18nScanResult() {
   eq('扫码结果页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码结果');
 }
 
+/** 扫码确认页（D-557）—— 采购/裁剪双形态 + 状态兜底 + 领取/提交反馈 */
+function testI18nScanConfirm() {
+  testPageI18n(SCAN_CONFIRM_JS, SCAN_CONFIRM_WXML, '扫码确认页');
+
+  const { page: zhP, wx: zhWx } = loadPage(SCAN_CONFIRM_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(SCAN_CONFIRM_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  // t 表关键值
+  eq('zh 双 tab', zhP.data.t.tabPurchase + '|' + zhP.data.t.tabCutting, '面辅料采购|裁剪领取');
+  eq('en 双 tab', enP.data.t.tabPurchase + '|' + enP.data.t.tabCutting, 'Material Purchase|Cutting Claim');
+  eq('en 确认按钮兜底', enP.data.t.btnConfirmScan, 'Confirm Scan');
+  ok('en 领取提示无中文', !CJK_RE.test(String(enP.data.t.claimHint)), enP.data.t.claimHint);
+
+  // 裁剪状态兜底键（模块级函数不可从页面实例直接测，t 表覆盖其键）
+  eq('zh 状态键 t 表', zhP.data.t.statusPending, '待领取');
+  eq('en 状态键 t 表', enP.data.t.statusPending, 'Pending Claim');
+
+  // 导航标题
+  eq('确认页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan Confirm');
+  eq('确认页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码确认');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -2828,6 +2854,7 @@ try {
   await testI18nDefect();
   testI18nScanQuality();
   testI18nScanResult();
+  testI18nScanConfirm();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

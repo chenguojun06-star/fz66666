@@ -8,33 +8,39 @@ const { triggerDataRefresh } = require('../../../utils/eventBus');
 const { sortSizeNames } = require('../../../utils/orderParser');
 const { normalizeProcessName, displayPurchaseStatusText, displayStatusText } = require('../../../utils/displayHelper');
 const { calcDeliveryInfo } = require('../../../utils/deliveryHelper');
+const i18n = require('../../../utils/i18n/index');
+
+/** 本页 i18n 命名空间前缀 */
+const NS = 'mp.scanConfirm.';
 
 // 裁剪任务状态：displayPurchaseStatus 共享映射 + 本地兜底
+// 兜底映射只存 i18n 键后缀，文案按语言取（displayHelper 共享映射待 utils 批次收编）
 const LOCAL_CUTTING_STATUS_FALLBACK = {
-  not_started: '待领取',
-  in_progress: '已领取',
-  bundled: '已分扎',
-  done: '已完成',
+  not_started: 'statusPending',
+  in_progress: 'statusClaimed',
+  bundled: 'statusBundled',
+  done: 'statusDone',
 };
 
-function getCuttingTaskStatusLabel(status) {
-  if (!status) return '待领取';
+function getCuttingTaskStatusLabel(status, lang) {
+  var fallbackKey = 'statusPending';
+  if (!status) return i18n.t(NS + fallbackKey, lang);
   var key = String(status).trim().toLowerCase();
-  if (LOCAL_CUTTING_STATUS_FALLBACK[key]) return LOCAL_CUTTING_STATUS_FALLBACK[key];
+  if (LOCAL_CUTTING_STATUS_FALLBACK[key]) return i18n.t(NS + LOCAL_CUTTING_STATUS_FALLBACK[key], lang);
   var label = displayPurchaseStatusText(key);
-  return (label && label !== key) ? label : (status || '待领取');
+  return (label && label !== key) ? label : (status || i18n.t(NS + fallbackKey, lang));
 }
 
 // 二次工艺状态：displayStatus 共享映射 + 本地兜底
 const LOCAL_PROCESS_STATUS_FALLBACK = {
-  pending: '待处理',
-  processing: '进行中',
+  pending: 'statusTodo',
+  processing: 'statusDoing',
 };
 
-function getSecondaryProcessStatusLabel(status) {
+function getSecondaryProcessStatusLabel(status, lang) {
   if (!status) return '';
   var key = String(status).trim().toLowerCase();
-  if (LOCAL_PROCESS_STATUS_FALLBACK[key]) return LOCAL_PROCESS_STATUS_FALLBACK[key];
+  if (LOCAL_PROCESS_STATUS_FALLBACK[key]) return i18n.t(NS + LOCAL_PROCESS_STATUS_FALLBACK[key], lang);
   var label = displayStatusText(key);
   return (label && label !== key) ? label : (status || '');
 }
@@ -60,11 +66,72 @@ Page({
     deliveryInfo: {},
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}） */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        tabPurchase: i18n.t(NS + 'tabPurchase', lang),
+        tabCutting: i18n.t(NS + 'tabCutting', lang),
+        deliveryLabel: i18n.t('mp.scanResult.deliveryLabel', lang),
+        orderDetailTitle: i18n.t(NS + 'orderDetailTitle', lang),
+        importantTip: i18n.t(NS + 'importantTip', lang),
+        normalTip: i18n.t(NS + 'normalTip', lang),
+        craftSheetTitle: i18n.t(NS + 'craftSheetTitle', lang),
+        secondaryWord: i18n.t(NS + 'secondaryWord', lang),
+        estPriceLabel: i18n.t(NS + 'estPriceLabel', lang),
+        claimHint: i18n.t(NS + 'claimHint', lang),
+        statusPending: i18n.t(NS + 'statusPending', lang),
+        unitMeter: i18n.t(NS + 'unitMeter', lang),
+        allColors: i18n.t(NS + 'allColors', lang),
+        submitting: i18n.t('common.submitting', lang),
+        purchaseWord: i18n.t(NS + 'purchaseWord', lang),
+        scanWord: i18n.t(NS + 'scanWord', lang),
+        qtyPrefix: i18n.t(NS + 'qtyPrefix', lang),
+        pricePrefix: i18n.t(NS + 'pricePrefix', lang),
+        factoryPrefix: i18n.t(NS + 'factoryPrefix', lang),
+        remarkPrefix: i18n.t(NS + 'remarkPrefix', lang),
+        noPurchaseOrder: i18n.t(NS + 'noPurchaseOrder', lang),
+        codePrefix: i18n.t(NS + 'codePrefix', lang),
+        specPrefix: i18n.t(NS + 'specPrefix', lang),
+        unitPrefix: i18n.t(NS + 'unitPrefix', lang),
+        compPrefix: i18n.t(NS + 'compPrefix', lang),
+        weightPrefix: i18n.t(NS + 'weightPrefix', lang),
+        widthPrefix: i18n.t(NS + 'widthPrefix', lang),
+        demandLabel: i18n.t(NS + 'demandLabel', lang),
+        arrivedLabel: i18n.t(NS + 'arrivedLabel', lang),
+        pendingArrival: i18n.t(NS + 'pendingArrival', lang),
+        totalDemand: i18n.t(NS + 'totalDemand', lang),
+        totalArrived: i18n.t(NS + 'totalArrived', lang),
+        totalPendingArr: i18n.t(NS + 'totalPendingArr', lang),
+        orderInfoTitle: i18n.t(NS + 'orderInfoTitle', lang),
+        orderNoLabel: i18n.t(NS + 'orderNoLabel', lang),
+        styleNoLabel: i18n.t(NS + 'styleNoLabel', lang),
+        colorLabel: i18n.t(NS + 'colorLabel', lang),
+        orderQtyLabel: i18n.t(NS + 'orderQtyLabel', lang),
+        taskStatusLabel: i18n.t(NS + 'taskStatusLabel', lang),
+        claimantLabel: i18n.t(NS + 'claimantLabel', lang),
+        noMaterialPrice: i18n.t(NS + 'noMaterialPrice', lang),
+        qtyPh: i18n.t(NS + 'qtyPrefix', lang),
+        pieceUnit: i18n.t('common.piece', lang),
+        totalQtyLabel: i18n.t(NS + 'totalQtyLabel', lang),
+        cuttingUnitPrice: i18n.t(NS + 'cuttingUnitPrice', lang),
+        cancel: i18n.t('common.cancel', lang),
+        submitting: i18n.t('common.submitting', lang),
+        btnConfirmScan: i18n.t(NS + 'btnConfirmScan', lang),
+      },
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad() {
+    var lang = i18n.getLanguage();
+    this.applyLanguage(lang);
     const app = getApp();
     const raw = app.globalData.confirmScanData;
     if (!raw) {
-      toast.error('数据异常');
+      toast.error(i18n.t('common.dataError', this._lang));
       wx.navigateBack();
       return;
     }
@@ -75,9 +142,9 @@ Page({
     const isCutting = raw.progressStage === '裁剪';
 
     if (isProcurement) {
-      wx.setNavigationBarTitle({ title: '面辅料采购确认' });
+      wx.setNavigationBarTitle({ title: i18n.t(NS + 'procTitle', lang) });
     } else if (isCutting) {
-      wx.setNavigationBarTitle({ title: '裁剪任务领取' });
+      wx.setNavigationBarTitle({ title: i18n.t(NS + 'cuttingTitle', lang) });
     }
 
     const skuItems = raw.skuItems || orderDetail.orderItems || [];
@@ -93,9 +160,9 @@ Page({
     const materialSummary = { totalDemand: 0, totalArrived: 0, totalPending: 0 };
     if (isProcurement && Array.isArray(raw.materialPurchases)) {
       const MATERIAL_TYPE_MAP = {
-        fabricA: '主面料', fabricB: '辅面料',
-        liningA: '里料', liningB: '夹里', liningC: '衬布/粘合衬',
-        accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件',
+        fabricA: i18n.t(NS + 'matMain', lang), fabricB: i18n.t(NS + 'matAux', lang),
+        liningA: i18n.t(NS + 'matLining', lang), liningB: i18n.t(NS + 'matJia', lang), liningC: i18n.t(NS + 'matInter', lang),
+        accessoryA: i18n.t(NS + 'matZipper', lang), accessoryB: i18n.t(NS + 'matButton', lang), accessoryC: i18n.t(NS + 'matAccessory', lang),
       };
       materialPurchases = raw.materialPurchases.map(function(item) {
         return Object.assign({}, item, {
@@ -112,29 +179,29 @@ Page({
     let cuttingTask = null;
     if (isCutting && raw.cuttingTask) {
       cuttingTask = raw.cuttingTask;
-      cuttingTask.statusText = getCuttingTaskStatusLabel(cuttingTask.status);
+      cuttingTask.statusText = getCuttingTaskStatusLabel(cuttingTask.status, lang);
     }
 
-    let btnText = '确认扫码';
-    if (isProcurement) btnText = '一键领取';
+    let btnText = i18n.t(NS + 'btnConfirmScan', lang);
+    if (isProcurement) btnText = i18n.t(NS + 'btnClaimAll', lang);
     else if (isCutting) {
       if (cuttingTask && ['completed', 'done'].includes(cuttingTask.status)) {
-        btnText = '裁剪已完成';
+        btnText = i18n.t(NS + 'btnCuttingDone', lang);
       } else {
-        btnText = cuttingTask ? '领取任务' : '返回';
+        btnText = cuttingTask ? i18n.t(NS + 'btnClaimTask', lang) : i18n.t(NS + 'btnBack', lang);
       }
     }
 
     const PROCESS_TYPE_MAP = {
-      embroidery: '绣花', printing: '印花', washing: '洗水',
-      dyeing: '染色', ironing: '整烫', pleating: '压褶',
-      beading: '钉珠', other: '其他',
+      embroidery: i18n.t(NS + 'procEmbroidery', lang), printing: i18n.t(NS + 'procPrinting', lang), washing: i18n.t(NS + 'procWashing', lang),
+      dyeing: i18n.t(NS + 'procDyeing', lang), ironing: i18n.t(NS + 'procIroning', lang), pleating: i18n.t(NS + 'procPleating', lang),
+      beading: i18n.t(NS + 'procBeading', lang), other: i18n.t(NS + 'procOther', lang),
     };
     const rawProcesses = orderDetail.secondaryProcesses || raw.secondaryProcesses || [];
     const secondaryProcesses = rawProcesses.map(function(item) {
       return Object.assign({}, item, {
         processTypeCN: PROCESS_TYPE_MAP[item.processType] || item.processType || '',
-        statusCN: getSecondaryProcessStatusLabel(item.status),
+        statusCN: getSecondaryProcessStatusLabel(item.status, lang),
       });
     });
 
@@ -192,7 +259,7 @@ Page({
 
     // 防御性检查：裁剪已完成 → 自动提示并返回
     if (isCutting && cuttingTask && ['completed', 'done'].includes(cuttingTask.status)) {
-      wx.showToast({ title: '裁剪任务已完成', icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'cuttingClaimed', this._lang), icon: 'success' });
       setTimeout(function() { wx.navigateBack(); }, 1500);
       return;
     }
@@ -287,7 +354,7 @@ Page({
   async _confirmProcurement() {
     const materialPurchases = this.data.materialPurchases;
     if (!materialPurchases || materialPurchases.length === 0) {
-      toast.error('无采购物料');
+      toast.error(i18n.t(NS + 'noMaterial', this._lang));
       return;
     }
 
@@ -296,7 +363,7 @@ Page({
     const receiverName = String(userInfo.name || userInfo.username || '').trim();
 
     if (!receiverId && !receiverName) {
-      toast.error('领取人信息缺失，请重新登录');
+      toast.error(i18n.t(NS + 'claimantMissing', this._lang));
       return;
     }
 
@@ -306,14 +373,14 @@ Page({
     });
 
     if (pendingItems.length === 0) {
-      toast.success('所有物料均已领取');
+      toast.success(i18n.t(NS + 'allClaimed', this._lang));
       this._emitRefresh();
       wx.navigateBack();
       return;
     }
 
     this.setData({ loading: true });
-    wx.showLoading({ title: '领取中...', mask: true });
+    wx.showLoading({ title: i18n.t(NS + 'claiming', this._lang), mask: true });
 
     try {
       await Promise.all(pendingItems.map(function(item) {
@@ -326,27 +393,27 @@ Page({
 
       wx.hideLoading();
       this.setData({ loading: false });
-      toast.success('已领取 ' + pendingItems.length + ' 项物料');
+      toast.success(i18n.tf(NS + 'itemsClaimed', { count: pendingItems.length }, this._lang));
 
       this._emitRefresh();
       wx.navigateBack();
     } catch (e) {
       wx.hideLoading();
       this.setData({ loading: false });
-      toast.error(e.errMsg || e.message || '领取失败');
+      toast.error(e.errMsg || e.message || i18n.t(NS + 'claimFailed', this._lang));
     }
   },
 
   async _confirmCutting() {
     const cuttingTask = this.data.cuttingTask;
     if (!cuttingTask || !cuttingTask.id) {
-      toast.error('无裁剪任务可领取');
+      toast.error(i18n.t(NS + 'noCuttingTask', this._lang));
       return;
     }
 
     const status = String(cuttingTask.status || '').trim().toLowerCase();
     if (status === 'received' || status === 'in_progress' || status === 'completed' || status === 'done') {
-      toast.info('该任务已被领取');
+      toast.info(i18n.t(NS + 'taskClaimed', this._lang));
       wx.navigateBack();
       return;
     }
@@ -356,19 +423,19 @@ Page({
     const receiverName = String(userInfo.name || userInfo.username || '').trim();
 
     if (!receiverId && !receiverName) {
-      toast.error('领取人信息缺失，请重新登录');
+      toast.error(i18n.t(NS + 'claimantMissing', this._lang));
       return;
     }
 
     this.setData({ loading: true });
-    wx.showLoading({ title: '领取中...', mask: true });
+    wx.showLoading({ title: i18n.t(NS + 'claiming', this._lang), mask: true });
 
     try {
       await api.production.receiveCuttingTaskById(cuttingTask.id, receiverId, receiverName);
 
       wx.hideLoading();
       this.setData({ loading: false });
-      toast.success('裁剪任务已领取');
+      toast.success(i18n.t(NS + 'cuttingClaimed', this._lang));
       this._emitRefresh();
 
       wx.redirectTo({
@@ -377,18 +444,18 @@ Page({
     } catch (e) {
       wx.hideLoading();
       this.setData({ loading: false });
-      toast.error(e.errMsg || e.message || '领取失败');
+      toast.error(e.errMsg || e.message || i18n.t(NS + 'claimFailed', this._lang));
     }
   },
 
   async _confirmNormalScan() {
     var raw = this._scanContext;
-    if (!raw) { toast.error('数据异常'); return; }
+    if (!raw) { toast.error(i18n.t('common.dataError', this._lang)); return; }
 
     const skuList = this.data.skuList;
     const validation = SKUProcessor.validateSKUInputBatch(skuList);
     if (!validation.valid) {
-      toast.error((validation.errors && validation.errors[0]) || '请检查输入');
+      toast.error((validation.errors && validation.errors[0]) || i18n.t(NS + 'checkInput', this._lang));
       return;
     }
 
@@ -404,7 +471,7 @@ Page({
       );
 
       if (requests.length === 0) {
-        throw new Error('请至少输入一个数量');
+        throw new Error(i18n.t(NS + 'checkInput', this._lang));
       }
 
       const tasks = requests.map(function (req) {
@@ -418,12 +485,11 @@ Page({
       if (approvalResult) {
         this.setData({ loading: false });
         wx.showModal({
-          title: '已提交主管审批',
-          content: '入库数量超出限制，已记录并提交主管【' +
-                         (approvalResult.approverName || '') + '】审批，审批通过后自动完成入库。\n' +
-                         (approvalResult.overQuantityDetail || ''),
+          title: i18n.t(NS + 'submittedApproval', this._lang),
+          content: i18n.tf(NS + 'overLimitContent', { name: approvalResult.approverName || '' }, this._lang) +
+                         '\n' + (approvalResult.overQuantityDetail || ''),
           showCancel: false,
-          confirmText: '知道了',
+          confirmText: i18n.t('common.gotIt', this._lang),
           success: function () { wx.navigateBack(); },
         });
         return;
@@ -432,11 +498,11 @@ Page({
         return !(r && r.scanRecord && (r.scanRecord.id || r.scanRecord.recordId));
       });
       if (invalid) {
-        const msg = (invalid && invalid.message) ? String(invalid.message) : '部分扫码未落库，请重试';
+        const msg = (invalid && invalid.message) ? String(invalid.message) : i18n.t(NS + 'partialNotSaved', this._lang);
         throw new Error(msg);
       }
 
-      toast.success('批量提交成功（' + tasks.length + '条）');
+      toast.success(i18n.tf(NS + 'batchSubmitted', { count: tasks.length }, this._lang));
       getApp().globalData.lastScanResult = {
         orderNo: raw.orderNo || '',
         processCode: raw.processCode || '',
@@ -457,10 +523,10 @@ Page({
         success: false,
       };
       wx.showModal({
-        title: '扫码失败',
-        content: e.message || e.errMsg || '提交失败，请稍后重试',
+        title: i18n.t(NS + 'scanFailTitle', this._lang),
+        content: e.message || e.errMsg || i18n.t(NS + 'submitFailRetry', this._lang),
         showCancel: false,
-        confirmText: '知道了',
+        confirmText: i18n.t('common.gotIt', this._lang),
       });
     }
   },
