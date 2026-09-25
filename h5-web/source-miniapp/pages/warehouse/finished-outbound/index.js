@@ -64,6 +64,14 @@ Page({
     pickerVisible: false, pickerKey: '', pickerTitle: '', pickerOptions: [], pickerValue: '',
     // D-513：收货地址（PC 端 CustomerInfoSection 有，手机端原先缺失）
     shippingAddress: '',
+    // D-513：联系电话（PC 端 CustomerInfoSection 也有，手机端原先缺失）
+    customerPhone: '',
+
+    // D-513：物流信息（后端 FinishedOutstockHelper 支持，两端原先都没做）
+    expressCompany: '',
+    trackingNo: '',
+    /** 直发：不经仓库、供应商直接发给客户 */
+    directShip: false,
 
     remark: '',
   },
@@ -149,6 +157,8 @@ Page({
           name: c.companyName || c.customerName || c.name || '-',
           // D-513：保留客户地址，选客户时自动带出收货地址
           address: c.address || c.shippingAddress || c.companyAddress || '',
+          // D-513：保留客户电话（t_customer.contact_phone），选客户时自动带出
+          phone: c.contactPhone || c.phone || c.contact_phone || c.mobile || '',
         };
       });
       this.setData({
@@ -225,12 +235,30 @@ Page({
   onCustomerChange(e) {
     var opt = this.data.customerOptions[e.detail.value];
     if (!opt) return;
-    // 选客户自动带出收货地址（用户仍可手改，故直接覆盖为空地址的场景）
+    // 选客户自动带出收货地址 + 联系电话（用户仍可手改）
     this.setData({
       customerId: opt.id,
       customerName: opt.name,
       shippingAddress: opt.address || this.data.shippingAddress || '',
+      customerPhone: opt.phone || this.data.customerPhone || '',
     });
+  },
+
+  onPhoneInput(e) {
+    this.setData({ customerPhone: e.detail.value });
+  },
+
+  onExpressInput(e) {
+    this.setData({ expressCompany: e.detail.value });
+  },
+
+  onTrackingInput(e) {
+    this.setData({ trackingNo: e.detail.value });
+  },
+
+  /** D-513：直发开关——不经仓库，供应商直接发给客户 */
+  onDirectShipChange(e) {
+    this.setData({ directShip: !!e.detail.value });
   },
 
   onAddressInput(e) {
@@ -428,6 +456,11 @@ Page({
         customerName: this.data.customerName || '',
         // D-513：收货地址（后端 FinishedOutstockHelper 读 params.shippingAddress）
         shippingAddress: this.data.shippingAddress || '',
+        // D-513：联系电话 / 物流信息（后端均支持，手机端原先没传）
+        customerPhone: this.data.customerPhone || '',
+        expressCompany: this.data.expressCompany || '',
+        trackingNo: this.data.trackingNo || '',
+        directShip: !!this.data.directShip,
         remark: this.data.remark || '',
       });
       wx.showToast({ title: '出库成功', icon: 'success' });

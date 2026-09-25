@@ -59,6 +59,49 @@
           bindinput="onAddressInput"
         />
       </view>
+
+      <!-- ④-3 联系电话：PC 端 CustomerInfoSection 也有，手机端原先缺失 -->
+      <view class="row" wx:if="{{needsCustomer}}">
+        <text class="row-label">联系电话</text>
+        <input
+          class="row-input"
+          type="number"
+          placeholder="选客户后自动带出，可修改"
+          value="{{customerPhone}}"
+          bindinput="onPhoneInput"
+        />
+      </view>
+
+      <!-- ④-4 物流信息：后端 FinishedOutstockHelper 支持，手机端/PC端原先都没做 -->
+      <view class="row">
+        <text class="row-label">快递公司</text>
+        <input
+          class="row-input"
+          placeholder="选填，如顺丰、德邦"
+          value="{{expressCompany}}"
+          bindinput="onExpressInput"
+        />
+      </view>
+      <view class="row">
+        <text class="row-label">物流单号</text>
+        <input
+          class="row-input"
+          placeholder="选填"
+          value="{{trackingNo}}"
+          bindinput="onTrackingInput"
+        />
+      </view>
+      <view class="row row--switch">
+        <view class="row-label">
+          直发给客户
+          <text class="row-hint">不经仓库，供应商直发</text>
+        </view>
+        <switch
+          checked="{{directShip}}"
+          bindchange="onDirectShipChange"
+          color="#2d7ff9"
+        />
+      </view>
   </view>
 
   <!-- ⑤ SKU 明细多选 -->
@@ -133,7 +176,7 @@
     <view class="section-hd"><text class="section-title">备注</text></view>
     <textarea
       class="remark"
-      placeholder="选填，如物流单号、特殊说明"
+      placeholder="选填，特殊说明（物流单号请填上方）"
       value="{{remark}}"
       bindinput="onRemarkInput"
       maxlength="200"
