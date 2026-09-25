@@ -533,9 +533,51 @@
 .ant-menu-submenu-popup .ant-menu-title-content {
   opacity: 1 !important;
   visibility: visible !important;
+  display: inline-block !important;
   width: auto !important;
   max-width: none !important;
   transform: none !important;
+}
+
+/*
+ * D-544：弹出层「背景 + 文字」成对加固（用户反复报障：弹层里只看得到图标、没有文字）
+ *
+ * 为什么原来还会漏：
+ *   原来的成对令牌规则写成 `.layout-sidebar-submenu-popup.ant-menu-submenu-popup .xxx`，
+ *   只在「我们的 popupClassName 生效 且 弹层挂在 body 下」时命中。
+ *   一旦弹层被渲染进 `.sidebar-menu` 内部（getPopupContainer 变化、antd 版本差异、
+ *   或 portal 失效），侧边栏自身的
+ *     `.sidebar-menu.ant-menu .ant-menu-item { color: var(--sidebar-text) }`
+ *   就会命中弹层里的菜单项 —— 而白主题的 `--sidebar-text` 指向 `--color-text-primary`，
+ *   该令牌会被 OS 深色媒体查询 / html.dark-mode 劫持成近白 → **浅底白字，字就"消失"了**。
+ *   这正是 D-533 记录的根因，但当时的写法只覆盖了「挂在 body」这一种情况。
+ *
+ * 这里改为**两种挂载位置都覆盖**，且背景与文字始终取自同一对令牌
+ * （--sidebar-popup-bg / --sidebar-popup-text），从机制上杜绝「白底白字」。
+ */
+/* 背景：弹层根 + 内层 ul 都要设，避免某一层被 antd 默认白底接管 */
+.sidebar-menu.ant-menu .ant-menu-submenu-popup,
+.sidebar-menu.ant-menu .ant-menu-submenu-popup .ant-menu,
+.layout-sidebar-submenu-popup,
+.layout-sidebar-submenu-popup .ant-menu,
+.ant-menu-submenu-popup .ant-menu {
+  background: var(--sidebar-popup-bg, #ffffff) !important;
+}
+
+/* 文字：覆盖「弹层在侧边栏内」与「弹层在 body 下」两种挂载，且连 a / title-content 一起钉死 */
+.sidebar-menu.ant-menu .ant-menu-submenu-popup .ant-menu-item,
+.sidebar-menu.ant-menu .ant-menu-submenu-popup .ant-menu-submenu-title,
+.sidebar-menu.ant-menu .ant-menu-submenu-popup .ant-menu-item a,
+.sidebar-menu.ant-menu .ant-menu-submenu-popup .ant-menu-title-content,
+.layout-sidebar-submenu-popup .ant-menu-item,
+.layout-sidebar-submenu-popup .ant-menu-submenu-title,
+.layout-sidebar-submenu-popup .ant-menu-item a,
+.layout-sidebar-submenu-popup .ant-menu-title-content,
+.ant-menu-submenu-popup .ant-menu-item,
+.ant-menu-submenu-popup .ant-menu-submenu-title,
+.ant-menu-submenu-popup .ant-menu-item a,
+.ant-menu-submenu-popup .ant-menu-title-content {
+  color: var(--sidebar-popup-text, #1f2937) !important;
 }
 
 .layout-sidebar-submenu-popup .ant-menu-item a,
