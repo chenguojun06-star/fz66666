@@ -136,7 +136,9 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               .ant-table-wrapper thead { display: table-header-group; }
               /* 统一打印表格样式 */
               .pt { width: 100%; border-collapse: collapse; font-size: 13px; }
-              .pt th, .pt td { border: 0.5px solid var(--color-zinc-300); padding: 5px 8px; vertical-align: middle; }
+              /* D-513：原 0.5px + 浅灰，预览和打印都看不清；改为 1px 纯黑，
+                 与 printTemplate.ts 的 th,td 保持一致（预览所见即打印所得） */
+              .pt th, .pt td { border: 1px solid #000; padding: 5px 8px; vertical-align: middle; }
               .pt th { background: var(--color-bg-subtle); font-weight: 600; text-align: center; white-space: nowrap; }
               .pt td { color: var(--color-gray-800); }
               .pt .label-cell { background: var(--color-bg-subtle); font-weight: 500; color: var(--color-gray-800); width: 100px; white-space: nowrap; }

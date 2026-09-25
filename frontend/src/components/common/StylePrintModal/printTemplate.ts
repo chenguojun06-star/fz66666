@@ -93,7 +93,7 @@ export function buildPrintHtml({
             padding: 6px 5mm;
             margin-top: 16px;
             background: var(--color-bg-base);
-            border-top: 0.5px solid var(--color-zinc-300);
+            border-top: 1px solid #666;
           }
           .print-footer-right {
             white-space: nowrap;
@@ -120,7 +120,7 @@ export function buildPrintHtml({
             break-inside: avoid;
           }
           .print-section-title {
-            font-size: ${px(14)}; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-radius: 2px; margin-bottom: 0; border: 1px solid #d9d9d9; border-bottom: none;
+            font-size: ${px(14)}; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-radius: 2px; margin-bottom: 0; border: 1px solid #333; border-bottom: none;
           }
 
           /* 表格样式 */
@@ -143,8 +143,10 @@ export function buildPrintHtml({
             page-break-inside: avoid;
             break-inside: avoid;
           }
+          /* D-513：原 0.5px + #d4d4d8 极浅灰，打印出来几乎看不见；
+             改为 1px 纯黑实线（0.5px 在多数打印机上会被吞掉或直接不印） */
           th, td {
-            border: 0.5px solid var(--color-zinc-300);
+            border: 1px solid #000;
             padding: 5px 7px;
             text-align: left;
             vertical-align: top;
@@ -182,7 +184,8 @@ export function buildPrintHtml({
           .attachment-image {
             max-width: 200px;
             max-height: 200px;
-            border: 1px solid var(--color-border-light);
+            /* D-513：原 #f0f0f0 太淡，打印看不清边框 */
+            border: 1px solid #999;
             border-radius: 4px;
             margin: 4px;
           }

@@ -57,7 +57,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
         </div>
       </div>
       {/* 主体：左列（图片+二维码） + 右列（信息表格） */}
-      <div style={{ display: 'flex', gap: 20, padding: 16, border: '0.5px solid var(--color-zinc-300)', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid' }}>
+      <div style={{ display: 'flex', gap: 20, padding: 16, border: '1px solid #666', background: 'var(--color-bg-base)', borderRadius: 8, breakInside: 'avoid' }}>
         {/* 左侧：主图（D-085 放大）+ 二维码（图片下方） */}
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', justifyContent: 'flex-start', width: 128 }}>
           {resolvedCover ? (
