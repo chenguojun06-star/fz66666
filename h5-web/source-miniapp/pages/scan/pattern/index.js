@@ -1114,7 +1114,7 @@ Page({
         await this._refreshProcessList();
       } catch (e) {
         console.error('[样板页] 工序扫码提交失败:', e);
-        toast.error(e.errMsg || e.message || '工序扫码失败');
+        toast.error(e.errMsg || e.message || i18n.t(NS + 'processScanFailed', this._lang));
       } finally {
         this.setData({ loading: false });
       }
@@ -1125,7 +1125,7 @@ Page({
       }
       const maxQty = d.maxQuantity || d.quantity || 999999;
       if (qty > maxQty) {
-        toast.error('数量不能超过最大数量 ' + maxQty + ' 件');
+        toast.error(i18n.t(NS + 'maxQtyExceed', this._lang) + ' ' + maxQty + i18n.t('common.piece', this._lang));
         return;
       }
 
@@ -1156,13 +1156,13 @@ Page({
 
         await api.production.executeScan(scanData);
         toast.success(claimMode
-          ? '已领取工序【' + processName + '】，完成后请及时报工'
-          : ((selectedOption && selectedOption.label) || processName + ' 完成'));
+          ? i18n.tf(NS + 'claimedReportHint', { proc: processName }, this._lang)
+          : ((selectedOption && selectedOption.label) || processName + ' ' + i18n.t(NS + 'submitComplete', this._lang)));
         this._emitRefresh();
         await this._refreshProcessList();
       } catch (e) {
         console.error('[样板页] 工序扫码提交失败:', e);
-        toast.error(e.errMsg || e.message || '工序扫码失败');
+        toast.error(e.errMsg || e.message || i18n.t(NS + 'processScanFailed', this._lang));
       } finally {
         this.setData({ loading: false });
       }
