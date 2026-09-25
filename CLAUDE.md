@@ -33,6 +33,11 @@ Controller → Orchestrator → Service → Mapper
 - **Services must NOT call each other** — all cross-service orchestration goes through Orchestrator.
 - **Controllers must NOT call multiple services** — delegate to Orchestrator.
 - **@Transactional only in Orchestrator layer** — never in Service or Controller.
+- **按"层"分包是本项目的既定架构，不要改** — 各模块一律按 `controller / orchestration / service / mapper`（+ `entity`）分层组织，
+  **不要**照搬通用 Spring Boot 最佳实践里"按功能/领域分包"（package-by-feature）的建议去重构包结构
+  （例如仓库里的 `java-springboot` skill 就写了这条）。
+  ArchUnit 架构守护会在 pre-push 每轮校验分层依赖，改成非分层结构会**直接卡住推送**。
+  同理，本项目普遍使用字段注入（`@Autowired` 字段），改成构造器注入属大范围重构，需单独排期，不是随手可改项。
 - **Java unit test sources stay local only** — per P0 policy, Java test sources (*Test.java in src/test/) are gitignored and never committed. Shell integration tests (scripts/test/) and Playwright E2E tests (frontend/e2e/) ARE committed.
 
 ## Backend Module Structure (14 modules)
