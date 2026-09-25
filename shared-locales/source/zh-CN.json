@@ -68,7 +68,10 @@
     "yes": "是",
     "no": "否",
     "totalCount": "共 {count} 条",
-    "selectedCount": "已选 {count} 项"
+    "selectedCount": "已选 {count} 项",
+    "query": "查询",
+    "retry": "重试",
+    "piece": "件"
   },
   "login": {
     "brand": "云裳智链",
@@ -385,6 +388,25 @@
       "pass": "通过",
       "rework": "需修改",
       "reject": "不通过"
+    }
+  },
+  "mp": {
+    "warehouse": {
+      "locationScan": {
+        "scanTitle": "点击扫码查询库位库存",
+        "scanSub": "扫描库位二维码查看库存明细",
+        "manualPlaceholder": "或输入库位编码",
+        "rescan": "重新扫码",
+        "warehouseName": "仓库名称",
+        "locationName": "库位名称",
+        "capacity": "容量",
+        "stockDetail": "库存明细",
+        "itemCount": "{count} 件",
+        "emptyStock": "该库位暂无库存",
+        "noContent": "未识别到内容",
+        "loadFailed": "加载库位库存失败",
+        "shareTitle": "库位 {code} 库存详情"
+      }
     }
   }
 }

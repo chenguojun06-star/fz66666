@@ -68,7 +68,10 @@
     "yes": "Có",
     "no": "Không",
     "totalCount": "{count} mục",
-    "selectedCount": "Đã chọn {count}"
+    "selectedCount": "Đã chọn {count}",
+    "query": "Truy vấn",
+    "retry": "Thử lại",
+    "piece": "cái"
   },
   "login": {
     "brand": "Chuỗi Cung Ứng Yunshang",
@@ -385,6 +388,25 @@
       "pass": "Thông qua",
       "rework": "Cần sửa",
       "reject": "Không thông qua"
+    }
+  },
+  "mp": {
+    "warehouse": {
+      "locationScan": {
+        "scanTitle": "Nhấn để quét tồn kho vị trí",
+        "scanSub": "Quét mã QR vị trí để xem chi tiết tồn kho",
+        "manualPlaceholder": "Hoặc nhập mã vị trí",
+        "rescan": "Quét lại",
+        "warehouseName": "Tên kho",
+        "locationName": "Tên vị trí",
+        "capacity": "Sức chứa",
+        "stockDetail": "Chi tiết tồn kho",
+        "itemCount": "{count} cái",
+        "emptyStock": "Vị trí này chưa có tồn kho",
+        "noContent": "Không nhận diện được nội dung",
+        "loadFailed": "Không tải được tồn kho vị trí",
+        "shareTitle": "Chi tiết tồn kho vị trí {code}"
+      }
     }
   }
 }

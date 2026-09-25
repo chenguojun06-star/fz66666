@@ -68,7 +68,10 @@
     "yes": "Yes",
     "no": "No",
     "totalCount": "{count} items",
-    "selectedCount": "{count} selected"
+    "selectedCount": "{count} selected",
+    "query": "Query",
+    "retry": "Retry",
+    "piece": "pcs"
   },
   "login": {
     "brand": "Yunshang SCM",
@@ -385,6 +388,25 @@
       "pass": "Passed",
       "rework": "Needs Revision",
       "reject": "Rejected"
+    }
+  },
+  "mp": {
+    "warehouse": {
+      "locationScan": {
+        "scanTitle": "Tap to scan location stock",
+        "scanSub": "Scan the location QR code to view stock details",
+        "manualPlaceholder": "Or enter location code",
+        "rescan": "Scan again",
+        "warehouseName": "Warehouse",
+        "locationName": "Location",
+        "capacity": "Capacity",
+        "stockDetail": "Stock Details",
+        "itemCount": "{count} pcs",
+        "emptyStock": "No stock at this location",
+        "noContent": "Nothing recognized",
+        "loadFailed": "Failed to load location stock",
+        "shareTitle": "Location {code} stock details"
+      }
     }
   }
 }

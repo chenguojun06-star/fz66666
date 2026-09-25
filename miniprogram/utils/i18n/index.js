@@ -58,11 +58,33 @@ function t(keyPath, lang) {
   return fallback !== undefined && fallback !== null ? String(fallback) : String(keyPath || '');
 }
 
+/**
+ * 带参数的翻译。语言包里用 {name} 占位，例如
+ *   "mp.warehouse.locationScan.itemCount": "{count} 件"
+ *   tf('mp.warehouse.locationScan.itemCount', { count: 3 })  → "3 件"
+ *
+ * ⚠️ 与前端 `frontend/src/i18n` 的 tf 保持同签名，两边语言包共用同一份源。
+ * @param {string} keyPath 文案 key 路径
+ * @param {Record<string, string|number>} params 占位符参数
+ * @param {string=} lang 可选语言代码
+ * @returns {string} 替换后的文案
+ */
+function tf(keyPath, params, lang) {
+  let result = t(keyPath, lang);
+  const p = params || {};
+  Object.keys(p).forEach((key) => {
+    // 用 split/join 而不是 RegExp —— 参数值里若含正则元字符（如 . * ( )）会炸
+    result = result.split('{' + key + '}').join(String(p[key]));
+  });
+  return result;
+}
+
 module.exports = {
   STORAGE_KEY,
   DEFAULT_LANG,
   getLanguage,
   setLanguage,
   t,
+  tf,
   locales,
 };

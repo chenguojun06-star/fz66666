@@ -38,8 +38,15 @@ function eq(name, actual, expected) {
 /** 记录 wx 调用 */
 function makeWx() {
   const calls = [];
+  // 内存版 storage：i18n 的 getLanguage()/setLanguage() 依赖它，
+  // 测试里靠 wx.setStorageSync('app.language', 'en-US') 切语言
+  const store = {};
   const wx = {
     calls,
+    store,
+    getStorageSync: (k) => (Object.prototype.hasOwnProperty.call(store, k) ? store[k] : ''),
+    setStorageSync: (k, v) => { store[k] = v; },
+    removeStorageSync: (k) => { delete store[k]; },
     navigateTo: (o) => { calls.push(['navigateTo', o]); },
     navigateBack: () => calls.push(['navigateBack']),
     showToast: (o) => calls.push(['showToast', o]),
@@ -66,21 +73,78 @@ function makeWx() {
  * @param {object} apiStub 接口桩
  */
 /**
+ * 加载 miniprogram 下的**真实模块**（含递归 require 解析）
+ *
+ * 为什么要递归：页面除了 api 还会 require 工具模块，工具模块又 require 别的
+ * （eventBus → config/debug）。逐个写桩会在每次新增依赖时炸掉，
+ * 且**测的就不是线上那份代码了**。这里统一解析相对路径，一劳永逸。
+ *
+ * @param {string} relFromMP 相对 miniprogram 的路径，如 'utils/eventBus.js'
+ * @param {object=} wx 与页面共用的 wx 桩
+ */
+function loadRealModule(relFromMP, wx) {
+  const key = relFromMP.replace(/\\/g, '/');
+  const full = path.join(MP, key);
+  const src = fs.readFileSync(full, 'utf8');
+  const m = { exports: {} };
+  const dir = path.posix.dirname(key);
+  vm.runInNewContext(src, {
+    module: m,
+    exports: m.exports,
+    console,
+    wx: wx || makeWx(),
+    require: (q) => {
+      if (!q.startsWith('.')) throw new Error('裸模块名未支持: ' + q);
+      const base = path.posix.normalize(path.posix.join(dir, q));
+      for (const cand of [base, base + '.js', base + '/index.js']) {
+        if (fs.existsSync(path.join(MP, cand))) return loadRealModule(cand, wx);
+      }
+      throw new Error(`无法解析 require('${q}') from ${key}`);
+    },
+  });
+  return m.exports;
+}
+
+/**
  * 沙箱内的 require 桩
  *
- * 页面除了 api 之外还可能 require 纯工具模块（如 utils/urlParams）。
- * 这里**加载真实文件**（而不是在测试里复写一份实现），保证测的是线上同一份代码。
+ * 页面 require 的工具模块（urlParams / i18n / eventBus）**加载真实文件**，
+ * 保证测的是线上同一份代码，而不是测试里复写的一份实现。
+ * @param {object=} wx 页面用的 wx 桩；i18n 的语言读写要与页面共用同一份 storage
  */
-function makeSandboxRequire() {
+function makeSandboxRequire(wx) {
   return function (p) {
-    if (/urlParams$/.test(p)) {
-      const real = fs.readFileSync(path.join(MP, 'utils/urlParams.js'), 'utf8');
-      const m = { exports: {} };
-      vm.runInNewContext(real, { module: m, exports: m.exports, console });
-      return m.exports;
-    }
+    const norm = p.replace(/\\/g, '/');
+    if (/utils\/urlParams$/.test(norm)) return loadRealModule('utils/urlParams.js', wx);
+    if (/utils\/i18n(\/index)?$/.test(norm)) return loadRealModule('utils/i18n/index.js', wx);
+    if (/utils\/eventBus$/.test(norm)) return loadRealModule('utils/eventBus.js', wx);
     throw new Error('测试未桩的 require: ' + p);
   };
+}
+
+/**
+ * 忠实还原 setData 的**点路径**语义
+ *
+ * 真实小程序支持 `setData({ 'a.b.c': v })` 只改深层字段。
+ * 如果桩里用 Object.assign，会写成字面量键 `data['a.b.c']` ——
+ * 页面读 `data.a.b.c` 拿不到新值，而测试却「通过」→ **假绿**。
+ * （D-548 引入 `setData({'t.itemCount': ...})` 时踩到）
+ */
+function applySetData(target, obj) {
+  for (const key of Object.keys(obj)) {
+    if (!key.includes('.')) {
+      target[key] = obj[key];
+      continue;
+    }
+    const parts = key.split('.');
+    let node = target;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const p = parts[i];
+      if (node[p] == null || typeof node[p] !== 'object') node[p] = {};
+      node = node[p];
+    }
+    node[parts[parts.length - 1]] = obj[key];
+  }
 }
 
 function loadPage(jsPath, apiStub) {
@@ -95,7 +159,7 @@ function loadPage(jsPath, apiStub) {
     setTimeout: (fn) => fn && fn(),   // 立即执行，避免测试挂起
     module: { exports: {} },
     exports: {},
-    require: makeSandboxRequire(),
+    require: makeSandboxRequire(wx),
   };
   // 把 require 替换成桩（兼容 const / var / let 三种声明写法）
   const patched = src.replace(/(?:const|var|let)\s+api\s*=\s*require\([^)]*\);/, 'const api = __api__;');
@@ -109,7 +173,7 @@ function loadPage(jsPath, apiStub) {
   const page = {
     data: JSON.parse(JSON.stringify(cfg.data || {})),
     setData(obj, cb) {
-      Object.assign(this.data, obj);
+      applySetData(this.data, obj);
       // ⚠️ 关键：不绑定 this，和小程序一致
       if (typeof cb === 'function') cb();
     },
@@ -146,7 +210,7 @@ function loadComponent(jsPath, apiStub) {
     setTimeout: (fn) => fn && fn(),
     module: { exports: {} },
     exports: {},
-    require: makeSandboxRequire(),
+    require: makeSandboxRequire(wx),
   };
   const patched = src.replace(/(?:const|var|let)\s+api\s*=\s*require\([^)]*\);/, 'const api = __api__;');
   vm.createContext(sandbox);
@@ -167,7 +231,7 @@ function loadComponent(jsPath, apiStub) {
     properties: Object.assign({}, initData),
     events,
     setData(obj, cb) {
-      Object.assign(this.data, obj);
+      applySetData(this.data, obj);
       // 组件里 setData 到 property 上时，properties 也要跟着变
       for (const k of Object.keys(this.properties)) {
         if (Object.prototype.hasOwnProperty.call(obj, k)) this.properties[k] = obj[k];
@@ -930,6 +994,88 @@ function testSearchPickerConvention() {
     offenders.length ? offenders.join(', ') : '');
 }
 
+// ────────────────────────── i18n 接入（D-548） ──────────────────────────
+const LANGS = ['zh-CN', 'en-US', 'vi-VN', 'km-KH'];
+const CJK_RE = /[\u4e00-\u9fff]/;
+/** 长得像 i18n 键的值 —— 出现它说明 t() 没查到（回落成键名） */
+const KEYLIKE_RE = /^[a-z][A-Za-z0-9]*(\.[A-Za-z][A-Za-z0-9]*)+$/;
+
+function testI18nLocationScan() {
+  console.log('\n【i18n：库位扫码页】');
+  const js = 'pages/warehouse/location-scan/index.js';
+
+  for (const lang of LANGS) {
+    const { page } = loadPage(js, makeApi());
+    page.applyLanguage(lang);
+    const t = page.data.t || {};
+    const vals = Object.entries(t);
+
+    ok(`${lang} 文案表非空`, vals.length > 0, `keys=${vals.length}`);
+
+    // ① 没有空值
+    const empties = vals.filter(([, v]) => !v || !String(v).trim()).map(([k]) => k);
+    ok(`${lang} 无空文案`, empties.length === 0, empties.join(','));
+
+    // ② 没有回落成键名（D-547 线上事故的形态）
+    const bare = vals.filter(([, v]) => KEYLIKE_RE.test(String(v))).map(([k, v]) => `${k}=${v}`);
+    ok(`${lang} 无裸键名`, bare.length === 0, bare.join(', '));
+
+    // ③ 非中文语言里不得出现中日韩字符 ——
+    //    缺键时 t() 会回落到 zh-CN，所以这条能直接抓出「某语言漏了键」
+    if (lang !== 'zh-CN') {
+      const cjk = vals.filter(([, v]) => CJK_RE.test(String(v))).map(([k, v]) => `${k}=${v}`);
+      ok(`${lang} 无中文残留（缺键回落的信号）`, cjk.length === 0, cjk.join(', '));
+    }
+  }
+
+  // ④ 中英真的不同（防止「接了 i18n 但其实是同一份文案」）
+  const { page: zhPage } = loadPage(js, makeApi());
+  zhPage.applyLanguage('zh-CN');
+  const { page: enPage } = loadPage(js, makeApi());
+  enPage.applyLanguage('en-US');
+  ok('zh-CN 的扫码标题是中文', CJK_RE.test(zhPage.data.t.scanTitle), zhPage.data.t.scanTitle);
+  ok('en-US 的扫码标题是英文', /scan/i.test(enPage.data.t.scanTitle), enPage.data.t.scanTitle);
+  ok('中英标题确实不同', zhPage.data.t.scanTitle !== enPage.data.t.scanTitle);
+
+  // ⑤ 走 storage 的语言（不传参）也要生效
+  const { page: viaStore, wx: wxStore } = loadPage(js, makeApi());
+  wxStore.setStorageSync('app.language', 'vi-VN');
+  viaStore.applyLanguage();
+  ok('按 storage 语言生效（vi-VN）', !CJK_RE.test(viaStore.data.t.scanTitle), viaStore.data.t.scanTitle);
+
+  // ⑥ 带参文案 tf()：{count} 占位符必须被替换
+  const { page: countPage, wx: countWx } = loadPage(js, makeApi());
+  countPage.data.items = [{}, {}, {}];
+  countPage.applyLanguage('zh-CN');
+  ok('中文条数文案插值正确', countPage.data.t.itemCount === '3 件', countPage.data.t.itemCount);
+  countPage.applyLanguage('en-US');
+  ok('英文条数文案插值正确', countPage.data.t.itemCount === '3 pcs', countPage.data.t.itemCount);
+  ok('条数文案不含未替换的占位符', !/\{count\}/.test(countPage.data.t.itemCount), countPage.data.t.itemCount);
+
+  // ⑦ 列表刷新后条数要跟着变（否则会一直显示首次的条数）
+  //    _refreshItemCount 不带语言参数 → 走 storage，所以先把语言落到 storage
+  countWx.setStorageSync('app.language', 'en-US');
+  countPage.data.items = [{}, {}];
+  countPage._refreshItemCount();
+  ok('列表变化后条数重算', countPage.data.t.itemCount === '2 pcs', countPage.data.t.itemCount);
+  // 点路径 setData 必须真的改到 data.t 里（而不是写成字面量键）
+  ok('点路径 setData 未污染 data 顶层',
+    !Object.prototype.hasOwnProperty.call(countPage.data, 't.itemCount'));
+
+  // ⑧ 分享标题本地化 + 传参
+  const { page: sharePage } = loadPage(js, makeApi());
+  sharePage.data.locationCode = 'A-01-02';
+  const zhShare = sharePage.onShareAppMessage();
+  ok('分享标题含库位号', zhShare.title.includes('A-01-02'), zhShare.title);
+  ok('分享标题无未替换占位符', !/\{code\}/.test(zhShare.title), zhShare.title);
+
+  // ⑨ 结构守护：wxml 里不许再留硬编码中文（防止回退）
+  const wxml = stripComments(fs.readFileSync(
+    path.join(MP, 'pages/warehouse/location-scan/index.wxml'), 'utf8'));
+  const leftovers = (wxml.match(/[\u4e00-\u9fff]+/g) || []);
+  ok('location-scan.wxml 无硬编码中文', leftovers.length === 0, leftovers.join(' / '));
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -945,6 +1091,7 @@ try {
   await testMaterialFormPagesDecode();
   await testSearchPicker();
   testSearchPickerConvention();
+  testI18nLocationScan();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

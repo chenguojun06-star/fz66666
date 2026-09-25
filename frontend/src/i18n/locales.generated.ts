@@ -75,7 +75,10 @@ export const LOCALES = {
       "yes": "是",
       "no": "否",
       "totalCount": "共 {count} 条",
-      "selectedCount": "已选 {count} 项"
+      "selectedCount": "已选 {count} 项",
+      "query": "查询",
+      "retry": "重试",
+      "piece": "件"
     },
     "login": {
       "brand": "云裳智链",
@@ -393,6 +396,25 @@ export const LOCALES = {
         "rework": "需修改",
         "reject": "不通过"
       }
+    },
+    "mp": {
+      "warehouse": {
+        "locationScan": {
+          "scanTitle": "点击扫码查询库位库存",
+          "scanSub": "扫描库位二维码查看库存明细",
+          "manualPlaceholder": "或输入库位编码",
+          "rescan": "重新扫码",
+          "warehouseName": "仓库名称",
+          "locationName": "库位名称",
+          "capacity": "容量",
+          "stockDetail": "库存明细",
+          "itemCount": "{count} 件",
+          "emptyStock": "该库位暂无库存",
+          "noContent": "未识别到内容",
+          "loadFailed": "加载库位库存失败",
+          "shareTitle": "库位 {code} 库存详情"
+        }
+      }
     }
   },
   "en-US": {
@@ -465,7 +487,10 @@ export const LOCALES = {
       "yes": "Yes",
       "no": "No",
       "totalCount": "{count} items",
-      "selectedCount": "{count} selected"
+      "selectedCount": "{count} selected",
+      "query": "Query",
+      "retry": "Retry",
+      "piece": "pcs"
     },
     "login": {
       "brand": "Yunshang SCM",
@@ -783,6 +808,25 @@ export const LOCALES = {
         "rework": "Needs Revision",
         "reject": "Rejected"
       }
+    },
+    "mp": {
+      "warehouse": {
+        "locationScan": {
+          "scanTitle": "Tap to scan location stock",
+          "scanSub": "Scan the location QR code to view stock details",
+          "manualPlaceholder": "Or enter location code",
+          "rescan": "Scan again",
+          "warehouseName": "Warehouse",
+          "locationName": "Location",
+          "capacity": "Capacity",
+          "stockDetail": "Stock Details",
+          "itemCount": "{count} pcs",
+          "emptyStock": "No stock at this location",
+          "noContent": "Nothing recognized",
+          "loadFailed": "Failed to load location stock",
+          "shareTitle": "Location {code} stock details"
+        }
+      }
     }
   },
   "vi-VN": {
@@ -855,7 +899,10 @@ export const LOCALES = {
       "yes": "Có",
       "no": "Không",
       "totalCount": "{count} mục",
-      "selectedCount": "Đã chọn {count}"
+      "selectedCount": "Đã chọn {count}",
+      "query": "Truy vấn",
+      "retry": "Thử lại",
+      "piece": "cái"
     },
     "login": {
       "brand": "Chuỗi Cung Ứng Yunshang",
@@ -1173,6 +1220,25 @@ export const LOCALES = {
         "rework": "Cần sửa",
         "reject": "Không thông qua"
       }
+    },
+    "mp": {
+      "warehouse": {
+        "locationScan": {
+          "scanTitle": "Nhấn để quét tồn kho vị trí",
+          "scanSub": "Quét mã QR vị trí để xem chi tiết tồn kho",
+          "manualPlaceholder": "Hoặc nhập mã vị trí",
+          "rescan": "Quét lại",
+          "warehouseName": "Tên kho",
+          "locationName": "Tên vị trí",
+          "capacity": "Sức chứa",
+          "stockDetail": "Chi tiết tồn kho",
+          "itemCount": "{count} cái",
+          "emptyStock": "Vị trí này chưa có tồn kho",
+          "noContent": "Không nhận diện được nội dung",
+          "loadFailed": "Không tải được tồn kho vị trí",
+          "shareTitle": "Chi tiết tồn kho vị trí {code}"
+        }
+      }
     }
   },
   "km-KH": {
@@ -1245,7 +1311,10 @@ export const LOCALES = {
       "yes": "Yes",
       "no": "No",
       "totalCount": "{count} items",
-      "selectedCount": "{count} selected"
+      "selectedCount": "{count} selected",
+      "query": "Query",
+      "retry": "Retry",
+      "piece": "pcs"
     },
     "login": {
       "brand": "Yunshang SCM",
@@ -1562,6 +1631,25 @@ export const LOCALES = {
         "pass": "Passed",
         "rework": "Needs Revision",
         "reject": "Rejected"
+      }
+    },
+    "mp": {
+      "warehouse": {
+        "locationScan": {
+          "scanTitle": "Tap to scan location stock",
+          "scanSub": "Scan the location QR code to view stock details",
+          "manualPlaceholder": "Or enter location code",
+          "rescan": "Scan again",
+          "warehouseName": "Warehouse",
+          "locationName": "Location",
+          "capacity": "Capacity",
+          "stockDetail": "Stock Details",
+          "itemCount": "{count} pcs",
+          "emptyStock": "No stock at this location",
+          "noContent": "Nothing recognized",
+          "loadFailed": "Failed to load location stock",
+          "shareTitle": "Location {code} stock details"
+        }
       }
     }
   }

@@ -1,5 +1,6 @@
 const api = require('../../../utils/api');
 const { eventBus, Events } = require('../../../utils/eventBus');
+const i18n = require('../../../utils/i18n/index');
 
 Page({
   data: {
@@ -9,6 +10,8 @@ Page({
     locationInfo: null,
     items: [],
     error: '',
+    /** 页面文案（由 applyLanguage 填充，wxml 用 {{t.xxx}} 读取） */
+    t: {},
   },
 
   onLoad(options) {
@@ -28,6 +31,8 @@ Page({
   },
 
   onShow() {
+    // 每次回到页面都按当前语言重刷文案（用户可能在「我的」里切了语言）
+    this.applyLanguage(i18n.getLanguage());
     this._bindEvents();
   },
 
@@ -40,6 +45,41 @@ Page({
     if (this._autoScanTimer) { clearTimeout(this._autoScanTimer); this._autoScanTimer = null; }
   },
 
+  /**
+   * 应用指定语言的页面文案。
+   * @param {string=} language 语言代码，缺省取当前语言
+   */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this.setData({
+      t: {
+        scanTitle: i18n.t('mp.warehouse.locationScan.scanTitle', lang),
+        scanSub: i18n.t('mp.warehouse.locationScan.scanSub', lang),
+        manualPlaceholder: i18n.t('mp.warehouse.locationScan.manualPlaceholder', lang),
+        query: i18n.t('common.query', lang),
+        loading: i18n.t('common.loading', lang),
+        rescan: i18n.t('mp.warehouse.locationScan.rescan', lang),
+        retry: i18n.t('common.retry', lang),
+        warehouseName: i18n.t('mp.warehouse.locationScan.warehouseName', lang),
+        locationName: i18n.t('mp.warehouse.locationScan.locationName', lang),
+        capacity: i18n.t('mp.warehouse.locationScan.capacity', lang),
+        stockDetail: i18n.t('mp.warehouse.locationScan.stockDetail', lang),
+        emptyStock: i18n.t('mp.warehouse.locationScan.emptyStock', lang),
+        piece: i18n.t('common.piece', lang),
+        itemCount: i18n.tf('mp.warehouse.locationScan.itemCount', { count: (this.data.items || []).length }, lang),
+      },
+    });
+  },
+
+  /** 列表条数变化后只需重算「N 件」这一条带参文案 */
+  _refreshItemCount() {
+    this.setData({
+      't.itemCount': i18n.tf('mp.warehouse.locationScan.itemCount', {
+        count: (this.data.items || []).length,
+      }),
+    });
+  },
+
   /** 调起微信扫码 */
   onStartScan() {
     this.setData({ error: '' });
@@ -49,7 +89,7 @@ Page({
       scanType: ['qrCode', 'barCode'],
       success(res) {
         var code = res.result || '';
-        if (!code) { that.setData({ error: '未识别到内容' }); return; }
+        if (!code) { that.setData({ error: i18n.t('mp.warehouse.locationScan.noContent') }); return; }
         // 解析 LOC: 前缀
         if (code.startsWith('LOC:')) { code = code.substring(4); }
         that.setData({ locationCode: code });
@@ -111,9 +151,11 @@ Page({
         items: data.items || [],
         loading: false,
       });
+      this._refreshItemCount();
     } catch (err) {
       this.setData({
-        error: err?.message || '加载库位库存失败',
+        // ⚠️ 后端目前零 i18n，err.message 是中文；仅在无 message 时才用本地化兜底
+        error: err?.message || i18n.t('mp.warehouse.locationScan.loadFailed'),
         loading: false,
       });
     }
@@ -127,7 +169,7 @@ Page({
 
   onShareAppMessage() {
     return {
-      title: `库位 ${this.data.locationCode} 库存详情`,
+      title: i18n.tf('mp.warehouse.locationScan.shareTitle', { code: this.data.locationCode }),
       path: `/pages/warehouse/location-scan/index?locationCode=${this.data.locationCode}`,
     };
   },

@@ -4,26 +4,26 @@
     <view class="scan-entry__icon">
       <view class="line-icon icon-scan" style="width:48px;height:48px;"></view>
     </view>
-    <text class="scan-entry__title">点击扫码查询库位库存</text>
-    <text class="scan-entry__sub">扫描库位二维码查看库存明细</text>
+    <text class="scan-entry__title">{{t.scanTitle}}</text>
+    <text class="scan-entry__sub">{{t.scanSub}}</text>
   </view>
 
   <!-- 手动输入 -->
   <view wx:if="{{!locationInfo && !loading && !error}}" class="manual-input-wrap">
-    <input class="manual-input" placeholder="或输入库位编码" value="{{manualCode}}" bindinput="onManualInput" confirm-type="search" bindconfirm="onManualSearch" />
-    <view class="manual-btn" bindtap="onManualSearch">查询</view>
+    <input class="manual-input" placeholder="{{t.manualPlaceholder}}" value="{{manualCode}}" bindinput="onManualInput" confirm-type="search" bindconfirm="onManualSearch" />
+    <view class="manual-btn" bindtap="onManualSearch">{{t.query}}</view>
   </view>
 
   <view wx:if="{{loading}}" class="loading-container">
     <view class="loading-spinner"></view>
-    <text>加载中...</text>
+    <text>{{t.loading}}</text>
   </view>
 
   <view wx:if="{{error}}" class="error-container">
     <text class="error-text">{{error}}</text>
     <view class="error-actions">
-      <view class="retry-btn" bindtap="onStartScan">重新扫码</view>
-      <view wx:if="{{locationCode}}" class="retry-btn retry-btn--outline" bindtap="onRetry">重试</view>
+      <view class="retry-btn" bindtap="onStartScan">{{t.rescan}}</view>
+      <view wx:if="{{locationCode}}" class="retry-btn retry-btn--outline" bindtap="onRetry">{{t.retry}}</view>
     </view>
   </view>
 
@@ -33,17 +33,17 @@
       <view class="zone-name" wx:if="{{locationInfo.zoneName}}">{{locationInfo.zoneName}}</view>
     </view>
     <view class="info-row">
-      <text class="label">仓库名称</text>
+      <text class="label">{{t.warehouseName}}</text>
       <text class="value">{{locationInfo.warehouseTypeLabel || '-'}}</text>
     </view>
     <view class="info-divider"></view>
     <view class="info-row">
-      <text class="label">库位名称</text>
+      <text class="label">{{t.locationName}}</text>
       <text class="value">{{locationInfo.locationName || '-'}}</text>
     </view>
     <view class="info-divider"></view>
     <view class="info-row capacity-row">
-      <text class="label">容量</text>
+      <text class="label">{{t.capacity}}</text>
       <text class="value"><text class="capacity-used">{{locationInfo.usedCapacity}}</text> / {{locationInfo.capacity || '∞'}}</text>
     </view>
     <view class="capacity-bar" wx:if="{{locationInfo.capacity}}">
@@ -53,8 +53,8 @@
 
   <view wx:if="{{!loading && !error && items.length > 0}}" class="items-section">
     <view class="list-header">
-      <text class="list-title">库存明细</text>
-      <text class="count">{{items.length}} 件</text>
+      <text class="list-title">{{t.stockDetail}}</text>
+      <text class="count">{{t.itemCount}}</text>
     </view>
     <view class="items-list">
       <view class="item-card" wx:for="{{items}}" wx:key="skuCode">
@@ -67,14 +67,14 @@
         </view>
         <view class="item-qty">
           <text class="qty">{{item.stockQuantity}}</text>
-          <text class="qty-unit">件</text>
+          <text class="qty-unit">{{t.piece}}</text>
         </view>
       </view>
     </view>
   </view>
 
   <view wx:if="{{!loading && !error && locationInfo && items.length === 0}}" class="empty-container">
-    <text>该库位暂无库存</text>
+    <text>{{t.emptyStock}}</text>
   </view>
   <ai-assistant />
 </view>
