@@ -144,6 +144,35 @@ if [[ "$HAS_MINI" -gt 0 ]]; then
   fi
 fi
 
+# ---- i18n 键守卫（D-547）----
+# 背景：2026-09-25 线上真实事故 —— shared-locales/source/*.json 里 status 树
+#   被多嵌套了一层（status.status.order.*），而代码取 status.order.*。
+#   t() 找不到键时**回落成键名本身** → 线上状态标签直接显示
+#   "status.order.accepted" 这种裸键名。全程不报错、tsc 通过、build 通过。
+# 检查：① 代码引用的键是否都存在（逐语言）② 命名空间自我嵌套
+#       ③ 值本身是不是键（二次包装）④ 四语言键集合是否一致
+# 触发范围：语言包 / 生成物 / i18n 相关代码有变更时才跑
+#   （脚本要遍历全仓源码，在外接卷上约 100s，不宜无条件执行）
+HAS_I18N=$(echo "$PUSHED_FILES" | grep -cE 'shared-locales/|locales\.generated|/i18n/|statusMaps|utils/display\.ts|StatusTag' || true)
+if [[ "$HAS_I18N" -gt 0 ]]; then
+  I18N_CHECK="$ROOT_DIR/scripts/check-i18n-keys.py"
+  if [[ -f "$I18N_CHECK" ]]; then
+    echo "[pre-push] 🌐 检测到 i18n 相关变更 ${HAS_I18N} 个文件 → 键完整性检查"
+    python3 "$I18N_CHECK"
+    I18N_CODE=$?
+    if [[ $I18N_CODE -ne 0 ]]; then
+      echo ""
+      echo "❌ i18n 键检查未通过，推送已阻止"
+      echo "   缺键会导致界面直接显示 'status.order.xxx' 这种裸键名（且不报错）。"
+      echo "   修复后重新 push，或紧急情况: git push --no-verify"
+      exit 1
+    fi
+    echo "[pre-push] ✅ i18n 键检查通过"
+  else
+    echo "[pre-push] ⚠️ 未找到 $I18N_CHECK，跳过 i18n 检查"
+  fi
+fi
+
 "$SAFE_PUSH" $ARGS
 EXIT_CODE=$?
 

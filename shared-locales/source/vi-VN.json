@@ -120,6 +120,7 @@
     "sections": {
       "dashboard": "Bảng điều khiển",
       "basic": "Quản lý mẫu",
+      "procurement": "Quản lý vật tư",
       "production": "Quản lý sản xuất",
       "warehouse": "Quản lý kho",
       "finance": "Quản lý tài chính",
@@ -139,6 +140,7 @@
       "materialPurchase": "Mua vật tư",
       "cutting": "Quản lý cắt",
       "progressDetail": "Tiến độ sản xuất",
+      "externalFactory": "Gia công ngoài",
       "warehousing": "QC & Nhập kho",
       "warehouseDashboard": "Bảng dữ liệu",
       "materialInventory": "Tồn kho nguyên phụ liệu",
@@ -147,6 +149,7 @@
       "sampleInventory": "Xuất nhập mẫu",
       "materialReconciliation": "Đối soát vật tư",
       "payrollOperatorSummary": "Tính lương (nội bộ)",
+      "salaryConfig": "Cấu hình lương",
       "financeCenter": "Quyết toán đơn (bên ngoài)",
       "expenseReimbursement": "Hoàn ứng chi phí",
       "wagePayment": "Trung tâm thanh toán",
@@ -157,7 +160,8 @@
       "dict": "Quản lý từ điển",
       "systemLogs": "Nhật ký hệ thống",
       "tutorial": "Hướng dẫn hệ thống",
-      "dataImport": "Nhập dữ liệu"
+      "dataImport": "Nhập dữ liệu",
+      "deductionManage": "Quản lý khấu trừ"
     }
   },
   "tabbar": {
@@ -172,217 +176,215 @@
     "languageSwitched": "Đã đổi ngôn ngữ"
   },
   "status": {
-    "status": {
-      "order": {
-        "not_started": "Chưa bắt đầu",
-        "pending": "Chờ sản xuất",
-        "production": "Đang sản xuất",
-        "in_progress": "Đang sản xuất",
-        "paused": "Đã tạm dừng",
-        "procurement": "Mua nguyên liệu",
-        "cutting": "Đang cắt",
-        "sewing": "Đang may",
-        "ironing": "Ủi hoàn thiện",
-        "secondary_process": "Công đoạn phụ",
-        "quality_check": "Đang kiểm tra chất lượng",
-        "warehousing": "Đang nhập kho",
-        "packaging": "Đóng gói",
-        "completed": "Đã hoàn thành",
-        "delayed": "Đã quá hạn",
-        "scrapped": "Đã hủy bỏ",
-        "cancelled": "Đã hủy",
-        "canceled": "Đã hủy",
-        "returned": "Đã trả lại",
-        "closed": "Đã đóng đơn",
-        "archived": "Đã lưu trữ",
-        "confirmed": "Đã xác nhận",
-        "draft": "Bản nháp",
-        "produced": "Đã sản xuất",
-        "warehoused": "Đã nhập kho",
-        "received": "Đã nhận",
-        "partial": "Thanh toán một phần",
-        "partial_arrival": "Đến một phần",
-        "awaiting_confirm": "Chờ xác nhận",
-        "warehouse_pending": "Chờ nhập kho",
-        "pending_audit": "Chờ duyệt sơ bộ",
-        "passed": "Đã duyệt sơ bộ",
-        "bundled": "Đã thành bó",
-        "created": "Đã tạo",
-        "material_preparation": "Đang chuẩn bị nguyên liệu",
-        "open": "Chờ xử lý",
-        "resolved": "Đã giải quyết",
-        "rework": "Đang làm lại",
-        "warehouse_out": "Đã xuất kho",
-        "production_completed": "Sản xuất hoàn tất",
-        "in_stock": "Trong kho",
-        "issued": "Đã phát nguyên liệu",
-        "enabled": "Đã kích hoạt",
-        "active": "Bình thường",
-        "inactive": "Đã ngừng",
-        "overdue": "Đã quá hạn",
-        "settling": "Đang quyết toán",
-        "settled": "Đã quyết toán",
-        "issued_invoice": "Đã phát hành",
-        "processing": "Đang xử lý",
-        "refunded": "Đã hoàn tiền",
-        "borrowed": "Đang cho mượn",
-        "lost": "Đã mất",
-        "accepted": "Đã chấp nhận",
-        "verified": "Đã xác minh",
-        "repaired_waiting_qc": "Chờ kiểm tra sửa lại",
-        "disconnected": "Chưa kết nối",
-        "unpaid": "Chưa thanh toán",
-        "partially_paid": "Đã trả một phần",
-        "fully_paid": "Đã trả đủ",
-        "unrepaid": "Chưa hoàn trả",
-        "repaid": "Đã trả hết"
-      },
-      "purchase": {
-        "pending": "Chờ mua",
-        "procurement": "Đang mua",
-        "purchasing": "Đang mua",
-        "material_preparation": "Đang chuẩn bị nguyên liệu",
-        "received": "Đã đến",
-        "partial": "Đến một phần",
-        "partial_arrival": "Đến một phần",
-        "partial_arrived": "Đến một phần",
-        "awaiting_confirm": "Chờ xác nhận",
-        "warehouse_pending": "Chờ xuất kho",
-        "completed": "Đã hoàn thành",
-        "cancelled": "Đã hủy",
-        "canceled": "Đã hủy"
-      },
-      "pattern": {
-        "pending": "Chưa bắt đầu",
-        "not_started": "Chưa bắt đầu",
-        "received": "Đã nhận",
-        "in_progress": "Đang tiến hành",
-        "production_completed": "Sản xuất hoàn tất",
-        "completed": "Đã hoàn thành",
-        "warehouse_in": "Đã nhập kho",
-        "warehouse_out": "Đã xuất kho",
-        "warehouse_return": "Đã trả lại",
-        "scrapped": "Đã hủy bỏ",
-        "returned": "Đã trả lại",
-        "locked": "Đã khóa",
-        "unlocked": "Chưa khóa"
-      },
-      "recon": {
-        "pending": "Chờ xác minh",
-        "verified": "Đã xác minh",
-        "approved": "Đã phê duyệt",
-        "paid": "Đã thanh toán",
-        "rejected": "Đã từ chối"
-      },
-      "settlement": {
-        "pending": "Chờ sản xuất",
-        "confirmed": "Đã xác nhận",
-        "production": "Đang sản xuất",
-        "in_progress": "Đang sản xuất",
-        "completed": "Đã hoàn thành",
-        "cancelled": "Đã hủy",
-        "canceled": "Đã hủy",
-        "closed": "Đã đóng đơn",
-        "scrapped": "Đã hủy bỏ",
-        "archived": "Đã lưu trữ",
-        "paused": "Đã tạm dừng",
-        "returned": "Đã trả lại",
-        "delayed": "Đã quá hạn"
-      },
-      "payment": {
-        "pending": "Chờ thanh toán",
-        "processing": "Đang thanh toán",
-        "success": "Đã thanh toán",
-        "failed": "Thanh toán thất bại",
-        "cancelled": "Đã hủy",
-        "rejected": "Đã từ chối",
-        "refunded": "Đã trả lại"
-      },
-      "payrollPayment": {
-        "unpaid": "Chưa trả",
-        "partially_paid": "Đã trả một phần",
-        "fully_paid": "Đã trả đủ"
-      },
-      "factory": {
-        "active": "Đang dùng",
-        "inactive": "Ngừng dùng"
-      },
-      "factoryType": {
-        "internal": "Nội bộ",
-        "external": "Bên ngoài"
-      },
-      "material": {
-        "completed": "Đã hoàn thành",
-        "pending": "Chờ hoàn thành",
-        "disabled": "Đã ngừng"
-      },
-      "secondary": {
-        "pending": "Chờ xử lý",
-        "processing": "Đang xử lý",
-        "completed": "Đã hoàn thành",
-        "cancelled": "Đã hủy"
-      },
-      "bundle": {
-        "created": "Đã tạo",
-        "active": "Hợp lệ",
-        "qualified": "Đạt",
-        "unqualified": "Không đạt",
-        "inactive": "Không hợp lệ",
-        "split": "Đã tách",
-        "pending": "Chờ xử lý",
-        "in_progress": "Đang tiến hành",
-        "completed": "Đã hoàn thành",
-        "bundled": "Đã thành bó"
-      },
-      "task": {
-        "pending": "Chờ cắt",
-        "in_progress": "Đang cắt",
-        "completed": "Đã hoàn thành",
-        "bundled": "Đã thành bó"
-      },
-      "shipment": {
-        "pending": "Chờ nhận hàng",
-        "partial": "Nhận một phần",
-        "received": "Đã nhận hàng",
-        "quality_checked": "Đã kiểm tra chất lượng",
-        "partially_returned": "Trả lại một phần"
-      },
-      "styleOrder": {
-        "completed": "Đã hoàn thành",
-        "warehoused": "Đã nhập kho",
-        "in_progress": "Đang sản xuất",
-        "draft": "Bản nháp",
-        "cancelled": "Đã hủy"
-      },
-      "agent": {
-        "success": "Thành công",
-        "failed": "Thất bại",
-        "executing": "Đang thực hiện",
-        "timeout": "Quá thời gian",
-        "pending": "Chờ thực hiện",
-        "unknown": "Không rõ"
-      },
-      "biz": {
-        "payroll": "Lương nhân viên",
-        "payroll_settlement": "Quyết toán lương",
-        "order_settlement": "Quyết toán đơn hàng",
-        "reconciliation": "Đối chiếu nhà máy",
-        "material_reconciliation": "Đối chiếu nhà máy",
-        "reimbursement": "Hoàn ứng chi phí",
-        "bill_receivable": "Phải thu",
-        "bill_payable": "Phải trả"
-      },
-      "orderBiz": {
-        "fob": "FOB",
-        "odm": "ODM",
-        "oem": "OEM",
-        "cmt": "Gia công CMT"
-      },
-      "review": {
-        "pass": "Thông qua",
-        "rework": "Cần sửa",
-        "reject": "Không thông qua"
-      }
+    "order": {
+      "not_started": "Chưa bắt đầu",
+      "pending": "Chờ sản xuất",
+      "production": "Đang sản xuất",
+      "in_progress": "Đang sản xuất",
+      "paused": "Đã tạm dừng",
+      "procurement": "Mua nguyên liệu",
+      "cutting": "Đang cắt",
+      "sewing": "Đang may",
+      "ironing": "Ủi hoàn thiện",
+      "secondary_process": "Công đoạn phụ",
+      "quality_check": "Đang kiểm tra chất lượng",
+      "warehousing": "Đang nhập kho",
+      "packaging": "Đóng gói",
+      "completed": "Đã hoàn thành",
+      "delayed": "Đã quá hạn",
+      "scrapped": "Đã hủy bỏ",
+      "cancelled": "Đã hủy",
+      "canceled": "Đã hủy",
+      "returned": "Đã trả lại",
+      "closed": "Đã đóng đơn",
+      "archived": "Đã lưu trữ",
+      "confirmed": "Đã xác nhận",
+      "draft": "Bản nháp",
+      "produced": "Đã sản xuất",
+      "warehoused": "Đã nhập kho",
+      "received": "Đã nhận",
+      "partial": "Thanh toán một phần",
+      "partial_arrival": "Đến một phần",
+      "awaiting_confirm": "Chờ xác nhận",
+      "warehouse_pending": "Chờ nhập kho",
+      "pending_audit": "Chờ duyệt sơ bộ",
+      "passed": "Đã duyệt sơ bộ",
+      "bundled": "Đã thành bó",
+      "created": "Đã tạo",
+      "material_preparation": "Đang chuẩn bị nguyên liệu",
+      "open": "Chờ xử lý",
+      "resolved": "Đã giải quyết",
+      "rework": "Đang làm lại",
+      "warehouse_out": "Đã xuất kho",
+      "production_completed": "Sản xuất hoàn tất",
+      "in_stock": "Trong kho",
+      "issued": "Đã phát nguyên liệu",
+      "enabled": "Đã kích hoạt",
+      "active": "Bình thường",
+      "inactive": "Đã ngừng",
+      "overdue": "Đã quá hạn",
+      "settling": "Đang quyết toán",
+      "settled": "Đã quyết toán",
+      "issued_invoice": "Đã phát hành",
+      "processing": "Đang xử lý",
+      "refunded": "Đã hoàn tiền",
+      "borrowed": "Đang cho mượn",
+      "lost": "Đã mất",
+      "accepted": "Đã chấp nhận",
+      "verified": "Đã xác minh",
+      "repaired_waiting_qc": "Chờ kiểm tra sửa lại",
+      "disconnected": "Chưa kết nối",
+      "unpaid": "Chưa thanh toán",
+      "partially_paid": "Đã trả một phần",
+      "fully_paid": "Đã trả đủ",
+      "unrepaid": "Chưa hoàn trả",
+      "repaid": "Đã trả hết"
+    },
+    "purchase": {
+      "pending": "Chờ mua",
+      "procurement": "Đang mua",
+      "purchasing": "Đang mua",
+      "material_preparation": "Đang chuẩn bị nguyên liệu",
+      "received": "Đã đến",
+      "partial": "Đến một phần",
+      "partial_arrival": "Đến một phần",
+      "partial_arrived": "Đến một phần",
+      "awaiting_confirm": "Chờ xác nhận",
+      "warehouse_pending": "Chờ xuất kho",
+      "completed": "Đã hoàn thành",
+      "cancelled": "Đã hủy",
+      "canceled": "Đã hủy"
+    },
+    "pattern": {
+      "pending": "Chưa bắt đầu",
+      "not_started": "Chưa bắt đầu",
+      "received": "Đã nhận",
+      "in_progress": "Đang tiến hành",
+      "production_completed": "Sản xuất hoàn tất",
+      "completed": "Đã hoàn thành",
+      "warehouse_in": "Đã nhập kho",
+      "warehouse_out": "Đã xuất kho",
+      "warehouse_return": "Đã trả lại",
+      "scrapped": "Đã hủy bỏ",
+      "returned": "Đã trả lại",
+      "locked": "Đã khóa",
+      "unlocked": "Chưa khóa"
+    },
+    "recon": {
+      "pending": "Chờ xác minh",
+      "verified": "Đã xác minh",
+      "approved": "Đã phê duyệt",
+      "paid": "Đã thanh toán",
+      "rejected": "Đã từ chối"
+    },
+    "settlement": {
+      "pending": "Chờ sản xuất",
+      "confirmed": "Đã xác nhận",
+      "production": "Đang sản xuất",
+      "in_progress": "Đang sản xuất",
+      "completed": "Đã hoàn thành",
+      "cancelled": "Đã hủy",
+      "canceled": "Đã hủy",
+      "closed": "Đã đóng đơn",
+      "scrapped": "Đã hủy bỏ",
+      "archived": "Đã lưu trữ",
+      "paused": "Đã tạm dừng",
+      "returned": "Đã trả lại",
+      "delayed": "Đã quá hạn"
+    },
+    "payment": {
+      "pending": "Chờ thanh toán",
+      "processing": "Đang thanh toán",
+      "success": "Đã thanh toán",
+      "failed": "Thanh toán thất bại",
+      "cancelled": "Đã hủy",
+      "rejected": "Đã từ chối",
+      "refunded": "Đã trả lại"
+    },
+    "payrollPayment": {
+      "unpaid": "Chưa trả",
+      "partially_paid": "Đã trả một phần",
+      "fully_paid": "Đã trả đủ"
+    },
+    "factory": {
+      "active": "Đang dùng",
+      "inactive": "Ngừng dùng"
+    },
+    "factoryType": {
+      "internal": "Nội bộ",
+      "external": "Bên ngoài"
+    },
+    "material": {
+      "completed": "Đã hoàn thành",
+      "pending": "Chờ hoàn thành",
+      "disabled": "Đã ngừng"
+    },
+    "secondary": {
+      "pending": "Chờ xử lý",
+      "processing": "Đang xử lý",
+      "completed": "Đã hoàn thành",
+      "cancelled": "Đã hủy"
+    },
+    "bundle": {
+      "created": "Đã tạo",
+      "active": "Hợp lệ",
+      "qualified": "Đạt",
+      "unqualified": "Không đạt",
+      "inactive": "Không hợp lệ",
+      "split": "Đã tách",
+      "pending": "Chờ xử lý",
+      "in_progress": "Đang tiến hành",
+      "completed": "Đã hoàn thành",
+      "bundled": "Đã thành bó"
+    },
+    "task": {
+      "pending": "Chờ cắt",
+      "in_progress": "Đang cắt",
+      "completed": "Đã hoàn thành",
+      "bundled": "Đã thành bó"
+    },
+    "shipment": {
+      "pending": "Chờ nhận hàng",
+      "partial": "Nhận một phần",
+      "received": "Đã nhận hàng",
+      "quality_checked": "Đã kiểm tra chất lượng",
+      "partially_returned": "Trả lại một phần"
+    },
+    "styleOrder": {
+      "completed": "Đã hoàn thành",
+      "warehoused": "Đã nhập kho",
+      "in_progress": "Đang sản xuất",
+      "draft": "Bản nháp",
+      "cancelled": "Đã hủy"
+    },
+    "agent": {
+      "success": "Thành công",
+      "failed": "Thất bại",
+      "executing": "Đang thực hiện",
+      "timeout": "Quá thời gian",
+      "pending": "Chờ thực hiện",
+      "unknown": "Không rõ"
+    },
+    "biz": {
+      "payroll": "Lương nhân viên",
+      "payroll_settlement": "Quyết toán lương",
+      "order_settlement": "Quyết toán đơn hàng",
+      "reconciliation": "Đối chiếu nhà máy",
+      "material_reconciliation": "Đối chiếu nhà máy",
+      "reimbursement": "Hoàn ứng chi phí",
+      "bill_receivable": "Phải thu",
+      "bill_payable": "Phải trả"
+    },
+    "orderBiz": {
+      "fob": "FOB",
+      "odm": "ODM",
+      "oem": "OEM",
+      "cmt": "Gia công CMT"
+    },
+    "review": {
+      "pass": "Thông qua",
+      "rework": "Cần sửa",
+      "reject": "Không thông qua"
     }
   }
 }

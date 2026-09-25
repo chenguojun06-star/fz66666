@@ -120,6 +120,7 @@
     "sections": {
       "dashboard": "仪表盘",
       "basic": "样衣管理",
+      "procurement": "物料管理",
       "production": "生产管理",
       "warehouse": "仓库管理",
       "finance": "财务管理",
@@ -139,6 +140,7 @@
       "materialPurchase": "物料采购",
       "cutting": "裁剪管理",
       "progressDetail": "工序跟进",
+      "externalFactory": "外发管理",
       "warehousing": "质检入库",
       "warehouseDashboard": "数据看板",
       "materialInventory": "面辅料出入库",
@@ -147,6 +149,7 @@
       "sampleInventory": "样衣出入库",
       "materialReconciliation": "物料对账",
       "payrollOperatorSummary": "工资结算(内)",
+      "salaryConfig": "薪资配置",
       "financeCenter": "订单结算(外)",
       "expenseReimbursement": "费用报销",
       "wagePayment": "付款中心",
@@ -157,7 +160,8 @@
       "dict": "字典管理",
       "systemLogs": "系统日志",
       "tutorial": "系统教学",
-      "dataImport": "数据导入"
+      "dataImport": "数据导入",
+      "deductionManage": "扣款管理"
     }
   },
   "tabbar": {
@@ -172,217 +176,215 @@
     "languageSwitched": "语言已切换"
   },
   "status": {
-    "status": {
-      "order": {
-        "not_started": "未开始",
-        "pending": "待生产",
-        "production": "生产中",
-        "in_progress": "生产中",
-        "paused": "已暂停",
-        "procurement": "物料采购",
-        "cutting": "裁剪中",
-        "sewing": "车缝中",
-        "ironing": "大烫",
-        "secondary_process": "二次工艺",
-        "quality_check": "质检中",
-        "warehousing": "入库中",
-        "packaging": "包装",
-        "completed": "已完成",
-        "delayed": "已逾期",
-        "scrapped": "已报废",
-        "cancelled": "已取消",
-        "canceled": "已取消",
-        "returned": "已退回",
-        "closed": "已关单",
-        "archived": "已归档",
-        "confirmed": "已确认",
-        "draft": "草稿",
-        "produced": "已生产",
-        "warehoused": "已入库",
-        "received": "已领取",
-        "partial": "部分付款",
-        "partial_arrival": "部分到货",
-        "awaiting_confirm": "待确认",
-        "warehouse_pending": "待入库",
-        "pending_audit": "待初审",
-        "passed": "初审通过",
-        "bundled": "已成菲",
-        "created": "已创建",
-        "material_preparation": "备料中",
-        "open": "待处理",
-        "resolved": "已解决",
-        "rework": "返工中",
-        "warehouse_out": "已出仓",
-        "production_completed": "生产完成",
-        "in_stock": "在库",
-        "issued": "已发料",
-        "enabled": "已启用",
-        "active": "正常",
-        "inactive": "已停用",
-        "overdue": "已逾期",
-        "settling": "结算中",
-        "settled": "已结算",
-        "issued_invoice": "已开具",
-        "processing": "处理中",
-        "refunded": "已退款",
-        "borrowed": "借出中",
-        "lost": "已丢失",
-        "accepted": "已接受",
-        "verified": "已验证",
-        "repaired_waiting_qc": "返修待质检",
-        "disconnected": "未连接",
-        "unpaid": "未付款",
-        "partially_paid": "部分已付",
-        "fully_paid": "已付清",
-        "unrepaid": "未还款",
-        "repaid": "已还清"
-      },
-      "purchase": {
-        "pending": "待采购",
-        "procurement": "采购中",
-        "purchasing": "采购中",
-        "material_preparation": "备料中",
-        "received": "已到货",
-        "partial": "部分到货",
-        "partial_arrival": "部分到货",
-        "partial_arrived": "部分到货",
-        "awaiting_confirm": "待确认",
-        "warehouse_pending": "待仓库出库",
-        "completed": "已完成",
-        "cancelled": "已取消",
-        "canceled": "已取消"
-      },
-      "pattern": {
-        "pending": "未开始",
-        "not_started": "未开始",
-        "received": "已领取",
-        "in_progress": "进行中",
-        "production_completed": "生产完成",
-        "completed": "已完成",
-        "warehouse_in": "已入库",
-        "warehouse_out": "已出库",
-        "warehouse_return": "已归还",
-        "scrapped": "已报废",
-        "returned": "已退回",
-        "locked": "已锁定",
-        "unlocked": "未锁定"
-      },
-      "recon": {
-        "pending": "待核实",
-        "verified": "已核实",
-        "approved": "已审批",
-        "paid": "已付款",
-        "rejected": "已驳回"
-      },
-      "settlement": {
-        "pending": "待生产",
-        "confirmed": "已确认",
-        "production": "生产中",
-        "in_progress": "生产中",
-        "completed": "已完成",
-        "cancelled": "已取消",
-        "canceled": "已取消",
-        "closed": "已关单",
-        "scrapped": "已报废",
-        "archived": "已归档",
-        "paused": "已暂停",
-        "returned": "已退回",
-        "delayed": "已逾期"
-      },
-      "payment": {
-        "pending": "待支付",
-        "processing": "支付中",
-        "success": "已支付",
-        "failed": "支付失败",
-        "cancelled": "已取消",
-        "rejected": "已驳回",
-        "refunded": "已退回"
-      },
-      "payrollPayment": {
-        "unpaid": "未付",
-        "partially_paid": "部分已付",
-        "fully_paid": "已付清"
-      },
-      "factory": {
-        "active": "启用",
-        "inactive": "停用"
-      },
-      "factoryType": {
-        "internal": "内部",
-        "external": "外部"
-      },
-      "material": {
-        "completed": "已完成",
-        "pending": "待完成",
-        "disabled": "已停用"
-      },
-      "secondary": {
-        "pending": "待处理",
-        "processing": "处理中",
-        "completed": "已完成",
-        "cancelled": "已取消"
-      },
-      "bundle": {
-        "created": "已创建",
-        "active": "有效",
-        "qualified": "合格",
-        "unqualified": "不合格",
-        "inactive": "无效",
-        "split": "已拆分",
-        "pending": "待处理",
-        "in_progress": "进行中",
-        "completed": "已完成",
-        "bundled": "已成菲"
-      },
-      "task": {
-        "pending": "待裁剪",
-        "in_progress": "裁剪中",
-        "completed": "已完成",
-        "bundled": "已成菲"
-      },
-      "shipment": {
-        "pending": "待收货",
-        "partial": "部分收货",
-        "received": "已收货",
-        "quality_checked": "已质检",
-        "partially_returned": "部分退回返修"
-      },
-      "styleOrder": {
-        "completed": "已完成",
-        "warehoused": "已入库",
-        "in_progress": "生产中",
-        "draft": "草稿",
-        "cancelled": "已取消"
-      },
-      "agent": {
-        "success": "成功",
-        "failed": "失败",
-        "executing": "执行中",
-        "timeout": "超时",
-        "pending": "待执行",
-        "unknown": "未知"
-      },
-      "biz": {
-        "payroll": "员工工资",
-        "payroll_settlement": "工资结算",
-        "order_settlement": "订单结算",
-        "reconciliation": "工厂对账",
-        "material_reconciliation": "工厂对账",
-        "reimbursement": "费用报销",
-        "bill_receivable": "应收账款",
-        "bill_payable": "应付账款"
-      },
-      "orderBiz": {
-        "fob": "FOB 离岸价",
-        "odm": "ODM 原厂设计",
-        "oem": "OEM 代工生产",
-        "cmt": "CMT 来料加工"
-      },
-      "review": {
-        "pass": "通过",
-        "rework": "需修改",
-        "reject": "不通过"
-      }
+    "order": {
+      "not_started": "未开始",
+      "pending": "待生产",
+      "production": "生产中",
+      "in_progress": "生产中",
+      "paused": "已暂停",
+      "procurement": "物料采购",
+      "cutting": "裁剪中",
+      "sewing": "车缝中",
+      "ironing": "大烫",
+      "secondary_process": "二次工艺",
+      "quality_check": "质检中",
+      "warehousing": "入库中",
+      "packaging": "包装",
+      "completed": "已完成",
+      "delayed": "已逾期",
+      "scrapped": "已报废",
+      "cancelled": "已取消",
+      "canceled": "已取消",
+      "returned": "已退回",
+      "closed": "已关单",
+      "archived": "已归档",
+      "confirmed": "已确认",
+      "draft": "草稿",
+      "produced": "已生产",
+      "warehoused": "已入库",
+      "received": "已领取",
+      "partial": "部分付款",
+      "partial_arrival": "部分到货",
+      "awaiting_confirm": "待确认",
+      "warehouse_pending": "待入库",
+      "pending_audit": "待初审",
+      "passed": "初审通过",
+      "bundled": "已成菲",
+      "created": "已创建",
+      "material_preparation": "备料中",
+      "open": "待处理",
+      "resolved": "已解决",
+      "rework": "返工中",
+      "warehouse_out": "已出仓",
+      "production_completed": "生产完成",
+      "in_stock": "在库",
+      "issued": "已发料",
+      "enabled": "已启用",
+      "active": "正常",
+      "inactive": "已停用",
+      "overdue": "已逾期",
+      "settling": "结算中",
+      "settled": "已结算",
+      "issued_invoice": "已开具",
+      "processing": "处理中",
+      "refunded": "已退款",
+      "borrowed": "借出中",
+      "lost": "已丢失",
+      "accepted": "已接受",
+      "verified": "已验证",
+      "repaired_waiting_qc": "返修待质检",
+      "disconnected": "未连接",
+      "unpaid": "未付款",
+      "partially_paid": "部分已付",
+      "fully_paid": "已付清",
+      "unrepaid": "未还款",
+      "repaid": "已还清"
+    },
+    "purchase": {
+      "pending": "待采购",
+      "procurement": "采购中",
+      "purchasing": "采购中",
+      "material_preparation": "备料中",
+      "received": "已到货",
+      "partial": "部分到货",
+      "partial_arrival": "部分到货",
+      "partial_arrived": "部分到货",
+      "awaiting_confirm": "待确认",
+      "warehouse_pending": "待仓库出库",
+      "completed": "已完成",
+      "cancelled": "已取消",
+      "canceled": "已取消"
+    },
+    "pattern": {
+      "pending": "未开始",
+      "not_started": "未开始",
+      "received": "已领取",
+      "in_progress": "进行中",
+      "production_completed": "生产完成",
+      "completed": "已完成",
+      "warehouse_in": "已入库",
+      "warehouse_out": "已出库",
+      "warehouse_return": "已归还",
+      "scrapped": "已报废",
+      "returned": "已退回",
+      "locked": "已锁定",
+      "unlocked": "未锁定"
+    },
+    "recon": {
+      "pending": "待核实",
+      "verified": "已核实",
+      "approved": "已审批",
+      "paid": "已付款",
+      "rejected": "已驳回"
+    },
+    "settlement": {
+      "pending": "待生产",
+      "confirmed": "已确认",
+      "production": "生产中",
+      "in_progress": "生产中",
+      "completed": "已完成",
+      "cancelled": "已取消",
+      "canceled": "已取消",
+      "closed": "已关单",
+      "scrapped": "已报废",
+      "archived": "已归档",
+      "paused": "已暂停",
+      "returned": "已退回",
+      "delayed": "已逾期"
+    },
+    "payment": {
+      "pending": "待支付",
+      "processing": "支付中",
+      "success": "已支付",
+      "failed": "支付失败",
+      "cancelled": "已取消",
+      "rejected": "已驳回",
+      "refunded": "已退回"
+    },
+    "payrollPayment": {
+      "unpaid": "未付",
+      "partially_paid": "部分已付",
+      "fully_paid": "已付清"
+    },
+    "factory": {
+      "active": "启用",
+      "inactive": "停用"
+    },
+    "factoryType": {
+      "internal": "内部",
+      "external": "外部"
+    },
+    "material": {
+      "completed": "已完成",
+      "pending": "待完成",
+      "disabled": "已停用"
+    },
+    "secondary": {
+      "pending": "待处理",
+      "processing": "处理中",
+      "completed": "已完成",
+      "cancelled": "已取消"
+    },
+    "bundle": {
+      "created": "已创建",
+      "active": "有效",
+      "qualified": "合格",
+      "unqualified": "不合格",
+      "inactive": "无效",
+      "split": "已拆分",
+      "pending": "待处理",
+      "in_progress": "进行中",
+      "completed": "已完成",
+      "bundled": "已成菲"
+    },
+    "task": {
+      "pending": "待裁剪",
+      "in_progress": "裁剪中",
+      "completed": "已完成",
+      "bundled": "已成菲"
+    },
+    "shipment": {
+      "pending": "待收货",
+      "partial": "部分收货",
+      "received": "已收货",
+      "quality_checked": "已质检",
+      "partially_returned": "部分退回返修"
+    },
+    "styleOrder": {
+      "completed": "已完成",
+      "warehoused": "已入库",
+      "in_progress": "生产中",
+      "draft": "草稿",
+      "cancelled": "已取消"
+    },
+    "agent": {
+      "success": "成功",
+      "failed": "失败",
+      "executing": "执行中",
+      "timeout": "超时",
+      "pending": "待执行",
+      "unknown": "未知"
+    },
+    "biz": {
+      "payroll": "员工工资",
+      "payroll_settlement": "工资结算",
+      "order_settlement": "订单结算",
+      "reconciliation": "工厂对账",
+      "material_reconciliation": "工厂对账",
+      "reimbursement": "费用报销",
+      "bill_receivable": "应收账款",
+      "bill_payable": "应付账款"
+    },
+    "orderBiz": {
+      "fob": "FOB 离岸价",
+      "odm": "ODM 原厂设计",
+      "oem": "OEM 代工生产",
+      "cmt": "CMT 来料加工"
+    },
+    "review": {
+      "pass": "通过",
+      "rework": "需修改",
+      "reject": "不通过"
     }
   }
 }

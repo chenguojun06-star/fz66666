@@ -127,6 +127,7 @@ export const LOCALES = {
       "sections": {
         "dashboard": "仪表盘",
         "basic": "样衣管理",
+        "procurement": "物料管理",
         "production": "生产管理",
         "warehouse": "仓库管理",
         "finance": "财务管理",
@@ -146,6 +147,7 @@ export const LOCALES = {
         "materialPurchase": "物料采购",
         "cutting": "裁剪管理",
         "progressDetail": "工序跟进",
+        "externalFactory": "外发管理",
         "warehousing": "质检入库",
         "warehouseDashboard": "数据看板",
         "materialInventory": "面辅料出入库",
@@ -154,6 +156,7 @@ export const LOCALES = {
         "sampleInventory": "样衣出入库",
         "materialReconciliation": "物料对账",
         "payrollOperatorSummary": "工资结算(内)",
+        "salaryConfig": "薪资配置",
         "financeCenter": "订单结算(外)",
         "expenseReimbursement": "费用报销",
         "wagePayment": "付款中心",
@@ -164,7 +167,8 @@ export const LOCALES = {
         "dict": "字典管理",
         "systemLogs": "系统日志",
         "tutorial": "系统教学",
-        "dataImport": "数据导入"
+        "dataImport": "数据导入",
+        "deductionManage": "扣款管理"
       }
     },
     "tabbar": {
@@ -179,217 +183,215 @@ export const LOCALES = {
       "languageSwitched": "语言已切换"
     },
     "status": {
-      "status": {
-        "order": {
-          "not_started": "未开始",
-          "pending": "待生产",
-          "production": "生产中",
-          "in_progress": "生产中",
-          "paused": "已暂停",
-          "procurement": "物料采购",
-          "cutting": "裁剪中",
-          "sewing": "车缝中",
-          "ironing": "大烫",
-          "secondary_process": "二次工艺",
-          "quality_check": "质检中",
-          "warehousing": "入库中",
-          "packaging": "包装",
-          "completed": "已完成",
-          "delayed": "已逾期",
-          "scrapped": "已报废",
-          "cancelled": "已取消",
-          "canceled": "已取消",
-          "returned": "已退回",
-          "closed": "已关单",
-          "archived": "已归档",
-          "confirmed": "已确认",
-          "draft": "草稿",
-          "produced": "已生产",
-          "warehoused": "已入库",
-          "received": "已领取",
-          "partial": "部分付款",
-          "partial_arrival": "部分到货",
-          "awaiting_confirm": "待确认",
-          "warehouse_pending": "待入库",
-          "pending_audit": "待初审",
-          "passed": "初审通过",
-          "bundled": "已成菲",
-          "created": "已创建",
-          "material_preparation": "备料中",
-          "open": "待处理",
-          "resolved": "已解决",
-          "rework": "返工中",
-          "warehouse_out": "已出仓",
-          "production_completed": "生产完成",
-          "in_stock": "在库",
-          "issued": "已发料",
-          "enabled": "已启用",
-          "active": "正常",
-          "inactive": "已停用",
-          "overdue": "已逾期",
-          "settling": "结算中",
-          "settled": "已结算",
-          "issued_invoice": "已开具",
-          "processing": "处理中",
-          "refunded": "已退款",
-          "borrowed": "借出中",
-          "lost": "已丢失",
-          "accepted": "已接受",
-          "verified": "已验证",
-          "repaired_waiting_qc": "返修待质检",
-          "disconnected": "未连接",
-          "unpaid": "未付款",
-          "partially_paid": "部分已付",
-          "fully_paid": "已付清",
-          "unrepaid": "未还款",
-          "repaid": "已还清"
-        },
-        "purchase": {
-          "pending": "待采购",
-          "procurement": "采购中",
-          "purchasing": "采购中",
-          "material_preparation": "备料中",
-          "received": "已到货",
-          "partial": "部分到货",
-          "partial_arrival": "部分到货",
-          "partial_arrived": "部分到货",
-          "awaiting_confirm": "待确认",
-          "warehouse_pending": "待仓库出库",
-          "completed": "已完成",
-          "cancelled": "已取消",
-          "canceled": "已取消"
-        },
-        "pattern": {
-          "pending": "未开始",
-          "not_started": "未开始",
-          "received": "已领取",
-          "in_progress": "进行中",
-          "production_completed": "生产完成",
-          "completed": "已完成",
-          "warehouse_in": "已入库",
-          "warehouse_out": "已出库",
-          "warehouse_return": "已归还",
-          "scrapped": "已报废",
-          "returned": "已退回",
-          "locked": "已锁定",
-          "unlocked": "未锁定"
-        },
-        "recon": {
-          "pending": "待核实",
-          "verified": "已核实",
-          "approved": "已审批",
-          "paid": "已付款",
-          "rejected": "已驳回"
-        },
-        "settlement": {
-          "pending": "待生产",
-          "confirmed": "已确认",
-          "production": "生产中",
-          "in_progress": "生产中",
-          "completed": "已完成",
-          "cancelled": "已取消",
-          "canceled": "已取消",
-          "closed": "已关单",
-          "scrapped": "已报废",
-          "archived": "已归档",
-          "paused": "已暂停",
-          "returned": "已退回",
-          "delayed": "已逾期"
-        },
-        "payment": {
-          "pending": "待支付",
-          "processing": "支付中",
-          "success": "已支付",
-          "failed": "支付失败",
-          "cancelled": "已取消",
-          "rejected": "已驳回",
-          "refunded": "已退回"
-        },
-        "payrollPayment": {
-          "unpaid": "未付",
-          "partially_paid": "部分已付",
-          "fully_paid": "已付清"
-        },
-        "factory": {
-          "active": "启用",
-          "inactive": "停用"
-        },
-        "factoryType": {
-          "internal": "内部",
-          "external": "外部"
-        },
-        "material": {
-          "completed": "已完成",
-          "pending": "待完成",
-          "disabled": "已停用"
-        },
-        "secondary": {
-          "pending": "待处理",
-          "processing": "处理中",
-          "completed": "已完成",
-          "cancelled": "已取消"
-        },
-        "bundle": {
-          "created": "已创建",
-          "active": "有效",
-          "qualified": "合格",
-          "unqualified": "不合格",
-          "inactive": "无效",
-          "split": "已拆分",
-          "pending": "待处理",
-          "in_progress": "进行中",
-          "completed": "已完成",
-          "bundled": "已成菲"
-        },
-        "task": {
-          "pending": "待裁剪",
-          "in_progress": "裁剪中",
-          "completed": "已完成",
-          "bundled": "已成菲"
-        },
-        "shipment": {
-          "pending": "待收货",
-          "partial": "部分收货",
-          "received": "已收货",
-          "quality_checked": "已质检",
-          "partially_returned": "部分退回返修"
-        },
-        "styleOrder": {
-          "completed": "已完成",
-          "warehoused": "已入库",
-          "in_progress": "生产中",
-          "draft": "草稿",
-          "cancelled": "已取消"
-        },
-        "agent": {
-          "success": "成功",
-          "failed": "失败",
-          "executing": "执行中",
-          "timeout": "超时",
-          "pending": "待执行",
-          "unknown": "未知"
-        },
-        "biz": {
-          "payroll": "员工工资",
-          "payroll_settlement": "工资结算",
-          "order_settlement": "订单结算",
-          "reconciliation": "工厂对账",
-          "material_reconciliation": "工厂对账",
-          "reimbursement": "费用报销",
-          "bill_receivable": "应收账款",
-          "bill_payable": "应付账款"
-        },
-        "orderBiz": {
-          "fob": "FOB 离岸价",
-          "odm": "ODM 原厂设计",
-          "oem": "OEM 代工生产",
-          "cmt": "CMT 来料加工"
-        },
-        "review": {
-          "pass": "通过",
-          "rework": "需修改",
-          "reject": "不通过"
-        }
+      "order": {
+        "not_started": "未开始",
+        "pending": "待生产",
+        "production": "生产中",
+        "in_progress": "生产中",
+        "paused": "已暂停",
+        "procurement": "物料采购",
+        "cutting": "裁剪中",
+        "sewing": "车缝中",
+        "ironing": "大烫",
+        "secondary_process": "二次工艺",
+        "quality_check": "质检中",
+        "warehousing": "入库中",
+        "packaging": "包装",
+        "completed": "已完成",
+        "delayed": "已逾期",
+        "scrapped": "已报废",
+        "cancelled": "已取消",
+        "canceled": "已取消",
+        "returned": "已退回",
+        "closed": "已关单",
+        "archived": "已归档",
+        "confirmed": "已确认",
+        "draft": "草稿",
+        "produced": "已生产",
+        "warehoused": "已入库",
+        "received": "已领取",
+        "partial": "部分付款",
+        "partial_arrival": "部分到货",
+        "awaiting_confirm": "待确认",
+        "warehouse_pending": "待入库",
+        "pending_audit": "待初审",
+        "passed": "初审通过",
+        "bundled": "已成菲",
+        "created": "已创建",
+        "material_preparation": "备料中",
+        "open": "待处理",
+        "resolved": "已解决",
+        "rework": "返工中",
+        "warehouse_out": "已出仓",
+        "production_completed": "生产完成",
+        "in_stock": "在库",
+        "issued": "已发料",
+        "enabled": "已启用",
+        "active": "正常",
+        "inactive": "已停用",
+        "overdue": "已逾期",
+        "settling": "结算中",
+        "settled": "已结算",
+        "issued_invoice": "已开具",
+        "processing": "处理中",
+        "refunded": "已退款",
+        "borrowed": "借出中",
+        "lost": "已丢失",
+        "accepted": "已接受",
+        "verified": "已验证",
+        "repaired_waiting_qc": "返修待质检",
+        "disconnected": "未连接",
+        "unpaid": "未付款",
+        "partially_paid": "部分已付",
+        "fully_paid": "已付清",
+        "unrepaid": "未还款",
+        "repaid": "已还清"
+      },
+      "purchase": {
+        "pending": "待采购",
+        "procurement": "采购中",
+        "purchasing": "采购中",
+        "material_preparation": "备料中",
+        "received": "已到货",
+        "partial": "部分到货",
+        "partial_arrival": "部分到货",
+        "partial_arrived": "部分到货",
+        "awaiting_confirm": "待确认",
+        "warehouse_pending": "待仓库出库",
+        "completed": "已完成",
+        "cancelled": "已取消",
+        "canceled": "已取消"
+      },
+      "pattern": {
+        "pending": "未开始",
+        "not_started": "未开始",
+        "received": "已领取",
+        "in_progress": "进行中",
+        "production_completed": "生产完成",
+        "completed": "已完成",
+        "warehouse_in": "已入库",
+        "warehouse_out": "已出库",
+        "warehouse_return": "已归还",
+        "scrapped": "已报废",
+        "returned": "已退回",
+        "locked": "已锁定",
+        "unlocked": "未锁定"
+      },
+      "recon": {
+        "pending": "待核实",
+        "verified": "已核实",
+        "approved": "已审批",
+        "paid": "已付款",
+        "rejected": "已驳回"
+      },
+      "settlement": {
+        "pending": "待生产",
+        "confirmed": "已确认",
+        "production": "生产中",
+        "in_progress": "生产中",
+        "completed": "已完成",
+        "cancelled": "已取消",
+        "canceled": "已取消",
+        "closed": "已关单",
+        "scrapped": "已报废",
+        "archived": "已归档",
+        "paused": "已暂停",
+        "returned": "已退回",
+        "delayed": "已逾期"
+      },
+      "payment": {
+        "pending": "待支付",
+        "processing": "支付中",
+        "success": "已支付",
+        "failed": "支付失败",
+        "cancelled": "已取消",
+        "rejected": "已驳回",
+        "refunded": "已退回"
+      },
+      "payrollPayment": {
+        "unpaid": "未付",
+        "partially_paid": "部分已付",
+        "fully_paid": "已付清"
+      },
+      "factory": {
+        "active": "启用",
+        "inactive": "停用"
+      },
+      "factoryType": {
+        "internal": "内部",
+        "external": "外部"
+      },
+      "material": {
+        "completed": "已完成",
+        "pending": "待完成",
+        "disabled": "已停用"
+      },
+      "secondary": {
+        "pending": "待处理",
+        "processing": "处理中",
+        "completed": "已完成",
+        "cancelled": "已取消"
+      },
+      "bundle": {
+        "created": "已创建",
+        "active": "有效",
+        "qualified": "合格",
+        "unqualified": "不合格",
+        "inactive": "无效",
+        "split": "已拆分",
+        "pending": "待处理",
+        "in_progress": "进行中",
+        "completed": "已完成",
+        "bundled": "已成菲"
+      },
+      "task": {
+        "pending": "待裁剪",
+        "in_progress": "裁剪中",
+        "completed": "已完成",
+        "bundled": "已成菲"
+      },
+      "shipment": {
+        "pending": "待收货",
+        "partial": "部分收货",
+        "received": "已收货",
+        "quality_checked": "已质检",
+        "partially_returned": "部分退回返修"
+      },
+      "styleOrder": {
+        "completed": "已完成",
+        "warehoused": "已入库",
+        "in_progress": "生产中",
+        "draft": "草稿",
+        "cancelled": "已取消"
+      },
+      "agent": {
+        "success": "成功",
+        "failed": "失败",
+        "executing": "执行中",
+        "timeout": "超时",
+        "pending": "待执行",
+        "unknown": "未知"
+      },
+      "biz": {
+        "payroll": "员工工资",
+        "payroll_settlement": "工资结算",
+        "order_settlement": "订单结算",
+        "reconciliation": "工厂对账",
+        "material_reconciliation": "工厂对账",
+        "reimbursement": "费用报销",
+        "bill_receivable": "应收账款",
+        "bill_payable": "应付账款"
+      },
+      "orderBiz": {
+        "fob": "FOB 离岸价",
+        "odm": "ODM 原厂设计",
+        "oem": "OEM 代工生产",
+        "cmt": "CMT 来料加工"
+      },
+      "review": {
+        "pass": "通过",
+        "rework": "需修改",
+        "reject": "不通过"
       }
     }
   },
@@ -515,6 +517,7 @@ export const LOCALES = {
       "sections": {
         "dashboard": "Dashboard",
         "basic": "Sample Management",
+        "procurement": "Material Management",
         "production": "Production",
         "warehouse": "Warehouse",
         "finance": "Finance",
@@ -534,6 +537,7 @@ export const LOCALES = {
         "materialPurchase": "Material Purchase",
         "cutting": "Cutting",
         "progressDetail": "Production Progress",
+        "externalFactory": "Outsourcing",
         "warehousing": "Quality & Warehousing",
         "warehouseDashboard": "Dashboard",
         "materialInventory": "Material Inventory",
@@ -542,6 +546,7 @@ export const LOCALES = {
         "sampleInventory": "Sample In/Out",
         "materialReconciliation": "Material Reconciliation",
         "payrollOperatorSummary": "Payroll (Internal)",
+        "salaryConfig": "Salary Config",
         "financeCenter": "Order Settlement (External)",
         "expenseReimbursement": "Expense Reimbursement",
         "wagePayment": "Payment Center",
@@ -552,7 +557,8 @@ export const LOCALES = {
         "dict": "Dictionary",
         "systemLogs": "System Logs",
         "tutorial": "Tutorial",
-        "dataImport": "Data Import"
+        "dataImport": "Data Import",
+        "deductionManage": "Deduction Management"
       }
     },
     "tabbar": {
@@ -567,217 +573,215 @@ export const LOCALES = {
       "languageSwitched": "Language switched"
     },
     "status": {
-      "status": {
-        "order": {
-          "not_started": "Not Started",
-          "pending": "Pending Production",
-          "production": "In Production",
-          "in_progress": "In Production",
-          "paused": "Paused",
-          "procurement": "Material Purchase",
-          "cutting": "Cutting",
-          "sewing": "Sewing",
-          "ironing": "Final Pressing",
-          "secondary_process": "Secondary Process",
-          "quality_check": "Quality Check",
-          "warehousing": "Warehousing",
-          "packaging": "Packaging",
-          "completed": "Completed",
-          "delayed": "Overdue",
-          "scrapped": "Scrapped",
-          "cancelled": "Cancelled",
-          "canceled": "Cancelled",
-          "returned": "Returned",
-          "closed": "Closed",
-          "archived": "Archived",
-          "confirmed": "Confirmed",
-          "draft": "Draft",
-          "produced": "Produced",
-          "warehoused": "Warehoused",
-          "received": "Received",
-          "partial": "Partially Paid",
-          "partial_arrival": "Partially Arrived",
-          "awaiting_confirm": "Pending Confirmation",
-          "warehouse_pending": "Pending Warehousing",
-          "pending_audit": "Pending Review",
-          "passed": "Pre-approved",
-          "bundled": "Bundled",
-          "created": "Created",
-          "material_preparation": "Preparing Materials",
-          "open": "Pending",
-          "resolved": "Resolved",
-          "rework": "Reworking",
-          "warehouse_out": "Shipped Out",
-          "production_completed": "Production Completed",
-          "in_stock": "In Stock",
-          "issued": "Issued",
-          "enabled": "Enabled",
-          "active": "Normal",
-          "inactive": "Disabled",
-          "overdue": "Overdue",
-          "settling": "Settling",
-          "settled": "Settled",
-          "issued_invoice": "Issued",
-          "processing": "Processing",
-          "refunded": "Refunded",
-          "borrowed": "Lent Out",
-          "lost": "Lost",
-          "accepted": "Accepted",
-          "verified": "Verified",
-          "repaired_waiting_qc": "Rework Pending QC",
-          "disconnected": "Disconnected",
-          "unpaid": "Unpaid",
-          "partially_paid": "Partially Paid",
-          "fully_paid": "Fully Paid",
-          "unrepaid": "Unrepaid",
-          "repaid": "Repaid"
-        },
-        "purchase": {
-          "pending": "Pending Purchase",
-          "procurement": "Purchasing",
-          "purchasing": "Purchasing",
-          "material_preparation": "Preparing Materials",
-          "received": "Arrived",
-          "partial": "Partially Arrived",
-          "partial_arrival": "Partially Arrived",
-          "partial_arrived": "Partially Arrived",
-          "awaiting_confirm": "Pending Confirmation",
-          "warehouse_pending": "Pending Warehouse Out",
-          "completed": "Completed",
-          "cancelled": "Cancelled",
-          "canceled": "Cancelled"
-        },
-        "pattern": {
-          "pending": "Not Started",
-          "not_started": "Not Started",
-          "received": "Received",
-          "in_progress": "In Progress",
-          "production_completed": "Production Completed",
-          "completed": "Completed",
-          "warehouse_in": "Warehoused",
-          "warehouse_out": "Out of Stock",
-          "warehouse_return": "Returned",
-          "scrapped": "Scrapped",
-          "returned": "Returned",
-          "locked": "Locked",
-          "unlocked": "Unlocked"
-        },
-        "recon": {
-          "pending": "Pending Verification",
-          "verified": "Verified",
-          "approved": "Approved",
-          "paid": "Paid",
-          "rejected": "Rejected"
-        },
-        "settlement": {
-          "pending": "Pending Production",
-          "confirmed": "Confirmed",
-          "production": "In Production",
-          "in_progress": "In Production",
-          "completed": "Completed",
-          "cancelled": "Cancelled",
-          "canceled": "Cancelled",
-          "closed": "Closed",
-          "scrapped": "Scrapped",
-          "archived": "Archived",
-          "paused": "Paused",
-          "returned": "Returned",
-          "delayed": "Overdue"
-        },
-        "payment": {
-          "pending": "Pending Payment",
-          "processing": "Processing",
-          "success": "Paid",
-          "failed": "Payment Failed",
-          "cancelled": "Cancelled",
-          "rejected": "Rejected",
-          "refunded": "Returned"
-        },
-        "payrollPayment": {
-          "unpaid": "Unpaid",
-          "partially_paid": "Partially Paid",
-          "fully_paid": "Fully Paid"
-        },
-        "factory": {
-          "active": "Enabled",
-          "inactive": "Disabled"
-        },
-        "factoryType": {
-          "internal": "Internal",
-          "external": "External"
-        },
-        "material": {
-          "completed": "Completed",
-          "pending": "Pending",
-          "disabled": "Disabled"
-        },
-        "secondary": {
-          "pending": "Pending",
-          "processing": "Processing",
-          "completed": "Completed",
-          "cancelled": "Cancelled"
-        },
-        "bundle": {
-          "created": "Created",
-          "active": "Valid",
-          "qualified": "Qualified",
-          "unqualified": "Unqualified",
-          "inactive": "Invalid",
-          "split": "Split",
-          "pending": "Pending",
-          "in_progress": "In Progress",
-          "completed": "Completed",
-          "bundled": "Bundled"
-        },
-        "task": {
-          "pending": "Pending Cutting",
-          "in_progress": "Cutting",
-          "completed": "Completed",
-          "bundled": "Bundled"
-        },
-        "shipment": {
-          "pending": "Pending Receipt",
-          "partial": "Partially Received",
-          "received": "Received",
-          "quality_checked": "Quality Checked",
-          "partially_returned": "Partially Returned"
-        },
-        "styleOrder": {
-          "completed": "Completed",
-          "warehoused": "Warehoused",
-          "in_progress": "In Production",
-          "draft": "Draft",
-          "cancelled": "Cancelled"
-        },
-        "agent": {
-          "success": "Success",
-          "failed": "Failed",
-          "executing": "Executing",
-          "timeout": "Timeout",
-          "pending": "Pending",
-          "unknown": "Unknown"
-        },
-        "biz": {
-          "payroll": "Employee Payroll",
-          "payroll_settlement": "Payroll Settlement",
-          "order_settlement": "Order Settlement",
-          "reconciliation": "Factory Reconciliation",
-          "material_reconciliation": "Factory Reconciliation",
-          "reimbursement": "Expense Reimbursement",
-          "bill_receivable": "Accounts Receivable",
-          "bill_payable": "Accounts Payable"
-        },
-        "orderBiz": {
-          "fob": "FOB",
-          "odm": "ODM",
-          "oem": "OEM",
-          "cmt": "CMT Processing"
-        },
-        "review": {
-          "pass": "Passed",
-          "rework": "Needs Revision",
-          "reject": "Rejected"
-        }
+      "order": {
+        "not_started": "Not Started",
+        "pending": "Pending Production",
+        "production": "In Production",
+        "in_progress": "In Production",
+        "paused": "Paused",
+        "procurement": "Material Purchase",
+        "cutting": "Cutting",
+        "sewing": "Sewing",
+        "ironing": "Final Pressing",
+        "secondary_process": "Secondary Process",
+        "quality_check": "Quality Check",
+        "warehousing": "Warehousing",
+        "packaging": "Packaging",
+        "completed": "Completed",
+        "delayed": "Overdue",
+        "scrapped": "Scrapped",
+        "cancelled": "Cancelled",
+        "canceled": "Cancelled",
+        "returned": "Returned",
+        "closed": "Closed",
+        "archived": "Archived",
+        "confirmed": "Confirmed",
+        "draft": "Draft",
+        "produced": "Produced",
+        "warehoused": "Warehoused",
+        "received": "Received",
+        "partial": "Partially Paid",
+        "partial_arrival": "Partially Arrived",
+        "awaiting_confirm": "Pending Confirmation",
+        "warehouse_pending": "Pending Warehousing",
+        "pending_audit": "Pending Review",
+        "passed": "Pre-approved",
+        "bundled": "Bundled",
+        "created": "Created",
+        "material_preparation": "Preparing Materials",
+        "open": "Pending",
+        "resolved": "Resolved",
+        "rework": "Reworking",
+        "warehouse_out": "Shipped Out",
+        "production_completed": "Production Completed",
+        "in_stock": "In Stock",
+        "issued": "Issued",
+        "enabled": "Enabled",
+        "active": "Normal",
+        "inactive": "Disabled",
+        "overdue": "Overdue",
+        "settling": "Settling",
+        "settled": "Settled",
+        "issued_invoice": "Issued",
+        "processing": "Processing",
+        "refunded": "Refunded",
+        "borrowed": "Lent Out",
+        "lost": "Lost",
+        "accepted": "Accepted",
+        "verified": "Verified",
+        "repaired_waiting_qc": "Rework Pending QC",
+        "disconnected": "Disconnected",
+        "unpaid": "Unpaid",
+        "partially_paid": "Partially Paid",
+        "fully_paid": "Fully Paid",
+        "unrepaid": "Unrepaid",
+        "repaid": "Repaid"
+      },
+      "purchase": {
+        "pending": "Pending Purchase",
+        "procurement": "Purchasing",
+        "purchasing": "Purchasing",
+        "material_preparation": "Preparing Materials",
+        "received": "Arrived",
+        "partial": "Partially Arrived",
+        "partial_arrival": "Partially Arrived",
+        "partial_arrived": "Partially Arrived",
+        "awaiting_confirm": "Pending Confirmation",
+        "warehouse_pending": "Pending Warehouse Out",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "canceled": "Cancelled"
+      },
+      "pattern": {
+        "pending": "Not Started",
+        "not_started": "Not Started",
+        "received": "Received",
+        "in_progress": "In Progress",
+        "production_completed": "Production Completed",
+        "completed": "Completed",
+        "warehouse_in": "Warehoused",
+        "warehouse_out": "Out of Stock",
+        "warehouse_return": "Returned",
+        "scrapped": "Scrapped",
+        "returned": "Returned",
+        "locked": "Locked",
+        "unlocked": "Unlocked"
+      },
+      "recon": {
+        "pending": "Pending Verification",
+        "verified": "Verified",
+        "approved": "Approved",
+        "paid": "Paid",
+        "rejected": "Rejected"
+      },
+      "settlement": {
+        "pending": "Pending Production",
+        "confirmed": "Confirmed",
+        "production": "In Production",
+        "in_progress": "In Production",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "canceled": "Cancelled",
+        "closed": "Closed",
+        "scrapped": "Scrapped",
+        "archived": "Archived",
+        "paused": "Paused",
+        "returned": "Returned",
+        "delayed": "Overdue"
+      },
+      "payment": {
+        "pending": "Pending Payment",
+        "processing": "Processing",
+        "success": "Paid",
+        "failed": "Payment Failed",
+        "cancelled": "Cancelled",
+        "rejected": "Rejected",
+        "refunded": "Returned"
+      },
+      "payrollPayment": {
+        "unpaid": "Unpaid",
+        "partially_paid": "Partially Paid",
+        "fully_paid": "Fully Paid"
+      },
+      "factory": {
+        "active": "Enabled",
+        "inactive": "Disabled"
+      },
+      "factoryType": {
+        "internal": "Internal",
+        "external": "External"
+      },
+      "material": {
+        "completed": "Completed",
+        "pending": "Pending",
+        "disabled": "Disabled"
+      },
+      "secondary": {
+        "pending": "Pending",
+        "processing": "Processing",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      },
+      "bundle": {
+        "created": "Created",
+        "active": "Valid",
+        "qualified": "Qualified",
+        "unqualified": "Unqualified",
+        "inactive": "Invalid",
+        "split": "Split",
+        "pending": "Pending",
+        "in_progress": "In Progress",
+        "completed": "Completed",
+        "bundled": "Bundled"
+      },
+      "task": {
+        "pending": "Pending Cutting",
+        "in_progress": "Cutting",
+        "completed": "Completed",
+        "bundled": "Bundled"
+      },
+      "shipment": {
+        "pending": "Pending Receipt",
+        "partial": "Partially Received",
+        "received": "Received",
+        "quality_checked": "Quality Checked",
+        "partially_returned": "Partially Returned"
+      },
+      "styleOrder": {
+        "completed": "Completed",
+        "warehoused": "Warehoused",
+        "in_progress": "In Production",
+        "draft": "Draft",
+        "cancelled": "Cancelled"
+      },
+      "agent": {
+        "success": "Success",
+        "failed": "Failed",
+        "executing": "Executing",
+        "timeout": "Timeout",
+        "pending": "Pending",
+        "unknown": "Unknown"
+      },
+      "biz": {
+        "payroll": "Employee Payroll",
+        "payroll_settlement": "Payroll Settlement",
+        "order_settlement": "Order Settlement",
+        "reconciliation": "Factory Reconciliation",
+        "material_reconciliation": "Factory Reconciliation",
+        "reimbursement": "Expense Reimbursement",
+        "bill_receivable": "Accounts Receivable",
+        "bill_payable": "Accounts Payable"
+      },
+      "orderBiz": {
+        "fob": "FOB",
+        "odm": "ODM",
+        "oem": "OEM",
+        "cmt": "CMT Processing"
+      },
+      "review": {
+        "pass": "Passed",
+        "rework": "Needs Revision",
+        "reject": "Rejected"
       }
     }
   },
@@ -903,6 +907,7 @@ export const LOCALES = {
       "sections": {
         "dashboard": "Bảng điều khiển",
         "basic": "Quản lý mẫu",
+        "procurement": "Quản lý vật tư",
         "production": "Quản lý sản xuất",
         "warehouse": "Quản lý kho",
         "finance": "Quản lý tài chính",
@@ -922,6 +927,7 @@ export const LOCALES = {
         "materialPurchase": "Mua vật tư",
         "cutting": "Quản lý cắt",
         "progressDetail": "Tiến độ sản xuất",
+        "externalFactory": "Gia công ngoài",
         "warehousing": "QC & Nhập kho",
         "warehouseDashboard": "Bảng dữ liệu",
         "materialInventory": "Tồn kho nguyên phụ liệu",
@@ -930,6 +936,7 @@ export const LOCALES = {
         "sampleInventory": "Xuất nhập mẫu",
         "materialReconciliation": "Đối soát vật tư",
         "payrollOperatorSummary": "Tính lương (nội bộ)",
+        "salaryConfig": "Cấu hình lương",
         "financeCenter": "Quyết toán đơn (bên ngoài)",
         "expenseReimbursement": "Hoàn ứng chi phí",
         "wagePayment": "Trung tâm thanh toán",
@@ -940,7 +947,8 @@ export const LOCALES = {
         "dict": "Quản lý từ điển",
         "systemLogs": "Nhật ký hệ thống",
         "tutorial": "Hướng dẫn hệ thống",
-        "dataImport": "Nhập dữ liệu"
+        "dataImport": "Nhập dữ liệu",
+        "deductionManage": "Quản lý khấu trừ"
       }
     },
     "tabbar": {
@@ -955,217 +963,215 @@ export const LOCALES = {
       "languageSwitched": "Đã đổi ngôn ngữ"
     },
     "status": {
-      "status": {
-        "order": {
-          "not_started": "Chưa bắt đầu",
-          "pending": "Chờ sản xuất",
-          "production": "Đang sản xuất",
-          "in_progress": "Đang sản xuất",
-          "paused": "Đã tạm dừng",
-          "procurement": "Mua nguyên liệu",
-          "cutting": "Đang cắt",
-          "sewing": "Đang may",
-          "ironing": "Ủi hoàn thiện",
-          "secondary_process": "Công đoạn phụ",
-          "quality_check": "Đang kiểm tra chất lượng",
-          "warehousing": "Đang nhập kho",
-          "packaging": "Đóng gói",
-          "completed": "Đã hoàn thành",
-          "delayed": "Đã quá hạn",
-          "scrapped": "Đã hủy bỏ",
-          "cancelled": "Đã hủy",
-          "canceled": "Đã hủy",
-          "returned": "Đã trả lại",
-          "closed": "Đã đóng đơn",
-          "archived": "Đã lưu trữ",
-          "confirmed": "Đã xác nhận",
-          "draft": "Bản nháp",
-          "produced": "Đã sản xuất",
-          "warehoused": "Đã nhập kho",
-          "received": "Đã nhận",
-          "partial": "Thanh toán một phần",
-          "partial_arrival": "Đến một phần",
-          "awaiting_confirm": "Chờ xác nhận",
-          "warehouse_pending": "Chờ nhập kho",
-          "pending_audit": "Chờ duyệt sơ bộ",
-          "passed": "Đã duyệt sơ bộ",
-          "bundled": "Đã thành bó",
-          "created": "Đã tạo",
-          "material_preparation": "Đang chuẩn bị nguyên liệu",
-          "open": "Chờ xử lý",
-          "resolved": "Đã giải quyết",
-          "rework": "Đang làm lại",
-          "warehouse_out": "Đã xuất kho",
-          "production_completed": "Sản xuất hoàn tất",
-          "in_stock": "Trong kho",
-          "issued": "Đã phát nguyên liệu",
-          "enabled": "Đã kích hoạt",
-          "active": "Bình thường",
-          "inactive": "Đã ngừng",
-          "overdue": "Đã quá hạn",
-          "settling": "Đang quyết toán",
-          "settled": "Đã quyết toán",
-          "issued_invoice": "Đã phát hành",
-          "processing": "Đang xử lý",
-          "refunded": "Đã hoàn tiền",
-          "borrowed": "Đang cho mượn",
-          "lost": "Đã mất",
-          "accepted": "Đã chấp nhận",
-          "verified": "Đã xác minh",
-          "repaired_waiting_qc": "Chờ kiểm tra sửa lại",
-          "disconnected": "Chưa kết nối",
-          "unpaid": "Chưa thanh toán",
-          "partially_paid": "Đã trả một phần",
-          "fully_paid": "Đã trả đủ",
-          "unrepaid": "Chưa hoàn trả",
-          "repaid": "Đã trả hết"
-        },
-        "purchase": {
-          "pending": "Chờ mua",
-          "procurement": "Đang mua",
-          "purchasing": "Đang mua",
-          "material_preparation": "Đang chuẩn bị nguyên liệu",
-          "received": "Đã đến",
-          "partial": "Đến một phần",
-          "partial_arrival": "Đến một phần",
-          "partial_arrived": "Đến một phần",
-          "awaiting_confirm": "Chờ xác nhận",
-          "warehouse_pending": "Chờ xuất kho",
-          "completed": "Đã hoàn thành",
-          "cancelled": "Đã hủy",
-          "canceled": "Đã hủy"
-        },
-        "pattern": {
-          "pending": "Chưa bắt đầu",
-          "not_started": "Chưa bắt đầu",
-          "received": "Đã nhận",
-          "in_progress": "Đang tiến hành",
-          "production_completed": "Sản xuất hoàn tất",
-          "completed": "Đã hoàn thành",
-          "warehouse_in": "Đã nhập kho",
-          "warehouse_out": "Đã xuất kho",
-          "warehouse_return": "Đã trả lại",
-          "scrapped": "Đã hủy bỏ",
-          "returned": "Đã trả lại",
-          "locked": "Đã khóa",
-          "unlocked": "Chưa khóa"
-        },
-        "recon": {
-          "pending": "Chờ xác minh",
-          "verified": "Đã xác minh",
-          "approved": "Đã phê duyệt",
-          "paid": "Đã thanh toán",
-          "rejected": "Đã từ chối"
-        },
-        "settlement": {
-          "pending": "Chờ sản xuất",
-          "confirmed": "Đã xác nhận",
-          "production": "Đang sản xuất",
-          "in_progress": "Đang sản xuất",
-          "completed": "Đã hoàn thành",
-          "cancelled": "Đã hủy",
-          "canceled": "Đã hủy",
-          "closed": "Đã đóng đơn",
-          "scrapped": "Đã hủy bỏ",
-          "archived": "Đã lưu trữ",
-          "paused": "Đã tạm dừng",
-          "returned": "Đã trả lại",
-          "delayed": "Đã quá hạn"
-        },
-        "payment": {
-          "pending": "Chờ thanh toán",
-          "processing": "Đang thanh toán",
-          "success": "Đã thanh toán",
-          "failed": "Thanh toán thất bại",
-          "cancelled": "Đã hủy",
-          "rejected": "Đã từ chối",
-          "refunded": "Đã trả lại"
-        },
-        "payrollPayment": {
-          "unpaid": "Chưa trả",
-          "partially_paid": "Đã trả một phần",
-          "fully_paid": "Đã trả đủ"
-        },
-        "factory": {
-          "active": "Đang dùng",
-          "inactive": "Ngừng dùng"
-        },
-        "factoryType": {
-          "internal": "Nội bộ",
-          "external": "Bên ngoài"
-        },
-        "material": {
-          "completed": "Đã hoàn thành",
-          "pending": "Chờ hoàn thành",
-          "disabled": "Đã ngừng"
-        },
-        "secondary": {
-          "pending": "Chờ xử lý",
-          "processing": "Đang xử lý",
-          "completed": "Đã hoàn thành",
-          "cancelled": "Đã hủy"
-        },
-        "bundle": {
-          "created": "Đã tạo",
-          "active": "Hợp lệ",
-          "qualified": "Đạt",
-          "unqualified": "Không đạt",
-          "inactive": "Không hợp lệ",
-          "split": "Đã tách",
-          "pending": "Chờ xử lý",
-          "in_progress": "Đang tiến hành",
-          "completed": "Đã hoàn thành",
-          "bundled": "Đã thành bó"
-        },
-        "task": {
-          "pending": "Chờ cắt",
-          "in_progress": "Đang cắt",
-          "completed": "Đã hoàn thành",
-          "bundled": "Đã thành bó"
-        },
-        "shipment": {
-          "pending": "Chờ nhận hàng",
-          "partial": "Nhận một phần",
-          "received": "Đã nhận hàng",
-          "quality_checked": "Đã kiểm tra chất lượng",
-          "partially_returned": "Trả lại một phần"
-        },
-        "styleOrder": {
-          "completed": "Đã hoàn thành",
-          "warehoused": "Đã nhập kho",
-          "in_progress": "Đang sản xuất",
-          "draft": "Bản nháp",
-          "cancelled": "Đã hủy"
-        },
-        "agent": {
-          "success": "Thành công",
-          "failed": "Thất bại",
-          "executing": "Đang thực hiện",
-          "timeout": "Quá thời gian",
-          "pending": "Chờ thực hiện",
-          "unknown": "Không rõ"
-        },
-        "biz": {
-          "payroll": "Lương nhân viên",
-          "payroll_settlement": "Quyết toán lương",
-          "order_settlement": "Quyết toán đơn hàng",
-          "reconciliation": "Đối chiếu nhà máy",
-          "material_reconciliation": "Đối chiếu nhà máy",
-          "reimbursement": "Hoàn ứng chi phí",
-          "bill_receivable": "Phải thu",
-          "bill_payable": "Phải trả"
-        },
-        "orderBiz": {
-          "fob": "FOB",
-          "odm": "ODM",
-          "oem": "OEM",
-          "cmt": "Gia công CMT"
-        },
-        "review": {
-          "pass": "Thông qua",
-          "rework": "Cần sửa",
-          "reject": "Không thông qua"
-        }
+      "order": {
+        "not_started": "Chưa bắt đầu",
+        "pending": "Chờ sản xuất",
+        "production": "Đang sản xuất",
+        "in_progress": "Đang sản xuất",
+        "paused": "Đã tạm dừng",
+        "procurement": "Mua nguyên liệu",
+        "cutting": "Đang cắt",
+        "sewing": "Đang may",
+        "ironing": "Ủi hoàn thiện",
+        "secondary_process": "Công đoạn phụ",
+        "quality_check": "Đang kiểm tra chất lượng",
+        "warehousing": "Đang nhập kho",
+        "packaging": "Đóng gói",
+        "completed": "Đã hoàn thành",
+        "delayed": "Đã quá hạn",
+        "scrapped": "Đã hủy bỏ",
+        "cancelled": "Đã hủy",
+        "canceled": "Đã hủy",
+        "returned": "Đã trả lại",
+        "closed": "Đã đóng đơn",
+        "archived": "Đã lưu trữ",
+        "confirmed": "Đã xác nhận",
+        "draft": "Bản nháp",
+        "produced": "Đã sản xuất",
+        "warehoused": "Đã nhập kho",
+        "received": "Đã nhận",
+        "partial": "Thanh toán một phần",
+        "partial_arrival": "Đến một phần",
+        "awaiting_confirm": "Chờ xác nhận",
+        "warehouse_pending": "Chờ nhập kho",
+        "pending_audit": "Chờ duyệt sơ bộ",
+        "passed": "Đã duyệt sơ bộ",
+        "bundled": "Đã thành bó",
+        "created": "Đã tạo",
+        "material_preparation": "Đang chuẩn bị nguyên liệu",
+        "open": "Chờ xử lý",
+        "resolved": "Đã giải quyết",
+        "rework": "Đang làm lại",
+        "warehouse_out": "Đã xuất kho",
+        "production_completed": "Sản xuất hoàn tất",
+        "in_stock": "Trong kho",
+        "issued": "Đã phát nguyên liệu",
+        "enabled": "Đã kích hoạt",
+        "active": "Bình thường",
+        "inactive": "Đã ngừng",
+        "overdue": "Đã quá hạn",
+        "settling": "Đang quyết toán",
+        "settled": "Đã quyết toán",
+        "issued_invoice": "Đã phát hành",
+        "processing": "Đang xử lý",
+        "refunded": "Đã hoàn tiền",
+        "borrowed": "Đang cho mượn",
+        "lost": "Đã mất",
+        "accepted": "Đã chấp nhận",
+        "verified": "Đã xác minh",
+        "repaired_waiting_qc": "Chờ kiểm tra sửa lại",
+        "disconnected": "Chưa kết nối",
+        "unpaid": "Chưa thanh toán",
+        "partially_paid": "Đã trả một phần",
+        "fully_paid": "Đã trả đủ",
+        "unrepaid": "Chưa hoàn trả",
+        "repaid": "Đã trả hết"
+      },
+      "purchase": {
+        "pending": "Chờ mua",
+        "procurement": "Đang mua",
+        "purchasing": "Đang mua",
+        "material_preparation": "Đang chuẩn bị nguyên liệu",
+        "received": "Đã đến",
+        "partial": "Đến một phần",
+        "partial_arrival": "Đến một phần",
+        "partial_arrived": "Đến một phần",
+        "awaiting_confirm": "Chờ xác nhận",
+        "warehouse_pending": "Chờ xuất kho",
+        "completed": "Đã hoàn thành",
+        "cancelled": "Đã hủy",
+        "canceled": "Đã hủy"
+      },
+      "pattern": {
+        "pending": "Chưa bắt đầu",
+        "not_started": "Chưa bắt đầu",
+        "received": "Đã nhận",
+        "in_progress": "Đang tiến hành",
+        "production_completed": "Sản xuất hoàn tất",
+        "completed": "Đã hoàn thành",
+        "warehouse_in": "Đã nhập kho",
+        "warehouse_out": "Đã xuất kho",
+        "warehouse_return": "Đã trả lại",
+        "scrapped": "Đã hủy bỏ",
+        "returned": "Đã trả lại",
+        "locked": "Đã khóa",
+        "unlocked": "Chưa khóa"
+      },
+      "recon": {
+        "pending": "Chờ xác minh",
+        "verified": "Đã xác minh",
+        "approved": "Đã phê duyệt",
+        "paid": "Đã thanh toán",
+        "rejected": "Đã từ chối"
+      },
+      "settlement": {
+        "pending": "Chờ sản xuất",
+        "confirmed": "Đã xác nhận",
+        "production": "Đang sản xuất",
+        "in_progress": "Đang sản xuất",
+        "completed": "Đã hoàn thành",
+        "cancelled": "Đã hủy",
+        "canceled": "Đã hủy",
+        "closed": "Đã đóng đơn",
+        "scrapped": "Đã hủy bỏ",
+        "archived": "Đã lưu trữ",
+        "paused": "Đã tạm dừng",
+        "returned": "Đã trả lại",
+        "delayed": "Đã quá hạn"
+      },
+      "payment": {
+        "pending": "Chờ thanh toán",
+        "processing": "Đang thanh toán",
+        "success": "Đã thanh toán",
+        "failed": "Thanh toán thất bại",
+        "cancelled": "Đã hủy",
+        "rejected": "Đã từ chối",
+        "refunded": "Đã trả lại"
+      },
+      "payrollPayment": {
+        "unpaid": "Chưa trả",
+        "partially_paid": "Đã trả một phần",
+        "fully_paid": "Đã trả đủ"
+      },
+      "factory": {
+        "active": "Đang dùng",
+        "inactive": "Ngừng dùng"
+      },
+      "factoryType": {
+        "internal": "Nội bộ",
+        "external": "Bên ngoài"
+      },
+      "material": {
+        "completed": "Đã hoàn thành",
+        "pending": "Chờ hoàn thành",
+        "disabled": "Đã ngừng"
+      },
+      "secondary": {
+        "pending": "Chờ xử lý",
+        "processing": "Đang xử lý",
+        "completed": "Đã hoàn thành",
+        "cancelled": "Đã hủy"
+      },
+      "bundle": {
+        "created": "Đã tạo",
+        "active": "Hợp lệ",
+        "qualified": "Đạt",
+        "unqualified": "Không đạt",
+        "inactive": "Không hợp lệ",
+        "split": "Đã tách",
+        "pending": "Chờ xử lý",
+        "in_progress": "Đang tiến hành",
+        "completed": "Đã hoàn thành",
+        "bundled": "Đã thành bó"
+      },
+      "task": {
+        "pending": "Chờ cắt",
+        "in_progress": "Đang cắt",
+        "completed": "Đã hoàn thành",
+        "bundled": "Đã thành bó"
+      },
+      "shipment": {
+        "pending": "Chờ nhận hàng",
+        "partial": "Nhận một phần",
+        "received": "Đã nhận hàng",
+        "quality_checked": "Đã kiểm tra chất lượng",
+        "partially_returned": "Trả lại một phần"
+      },
+      "styleOrder": {
+        "completed": "Đã hoàn thành",
+        "warehoused": "Đã nhập kho",
+        "in_progress": "Đang sản xuất",
+        "draft": "Bản nháp",
+        "cancelled": "Đã hủy"
+      },
+      "agent": {
+        "success": "Thành công",
+        "failed": "Thất bại",
+        "executing": "Đang thực hiện",
+        "timeout": "Quá thời gian",
+        "pending": "Chờ thực hiện",
+        "unknown": "Không rõ"
+      },
+      "biz": {
+        "payroll": "Lương nhân viên",
+        "payroll_settlement": "Quyết toán lương",
+        "order_settlement": "Quyết toán đơn hàng",
+        "reconciliation": "Đối chiếu nhà máy",
+        "material_reconciliation": "Đối chiếu nhà máy",
+        "reimbursement": "Hoàn ứng chi phí",
+        "bill_receivable": "Phải thu",
+        "bill_payable": "Phải trả"
+      },
+      "orderBiz": {
+        "fob": "FOB",
+        "odm": "ODM",
+        "oem": "OEM",
+        "cmt": "Gia công CMT"
+      },
+      "review": {
+        "pass": "Thông qua",
+        "rework": "Cần sửa",
+        "reject": "Không thông qua"
       }
     }
   },
@@ -1291,6 +1297,7 @@ export const LOCALES = {
       "sections": {
         "dashboard": "ផ្ទាំងស្ថានភាព",
         "basic": "គ្រប់គ្រងគំរូ",
+        "procurement": "Material Management",
         "production": "គ្រប់គ្រងផលិតកម្ម",
         "warehouse": "គ្រប់គ្រងឃ្លាំង",
         "finance": "គ្រប់គ្រងហិរញ្ញវត្ថុ",
@@ -1310,6 +1317,7 @@ export const LOCALES = {
         "materialPurchase": "ទិញវត្ថុធាតុ",
         "cutting": "គ្រប់គ្រងការកាត់",
         "progressDetail": "វឌ្ឍនភាពផលិតកម្ម",
+        "externalFactory": "Outsourcing",
         "warehousing": "ត្រួតពិនិត្យគុណភាព & ចូលឃ្លាំង",
         "warehouseDashboard": "ផ្ទាំងទិន្នន័យ",
         "materialInventory": "ស្តុកវត្ថុធាតុ",
@@ -1318,6 +1326,7 @@ export const LOCALES = {
         "sampleInventory": "ចូលចេញគំរូ",
         "materialReconciliation": "ផ្ទៀងផ្ទាត់វត្ថុធាតុ",
         "payrollOperatorSummary": "បើកប្រាក់ខែ (ខាងក្នុង)",
+        "salaryConfig": "Salary Config",
         "financeCenter": "ទូទាត់បញ្ជាទិញ (ខាងក្រៅ)",
         "expenseReimbursement": "សំណងចំណាយ",
         "wagePayment": "មជ្ឈមណ្ឌលទូទាត់",
@@ -1328,7 +1337,8 @@ export const LOCALES = {
         "dict": "គ្រប់គ្រងវចនានុក្រម",
         "systemLogs": "កំណត់ហេតុប្រព័ន្ធ",
         "tutorial": "មេរៀនប្រព័ន្ធ",
-        "dataImport": "នាំចូលទិន្នន័យ"
+        "dataImport": "នាំចូលទិន្នន័យ",
+        "deductionManage": "Deduction Management"
       }
     },
     "tabbar": {
@@ -1343,217 +1353,215 @@ export const LOCALES = {
       "languageSwitched": "បានប្តូរភាសា"
     },
     "status": {
-      "status": {
-        "order": {
-          "not_started": "Not Started",
-          "pending": "Pending Production",
-          "production": "In Production",
-          "in_progress": "In Production",
-          "paused": "Paused",
-          "procurement": "Material Purchase",
-          "cutting": "Cutting",
-          "sewing": "Sewing",
-          "ironing": "Final Pressing",
-          "secondary_process": "Secondary Process",
-          "quality_check": "Quality Check",
-          "warehousing": "Warehousing",
-          "packaging": "Packaging",
-          "completed": "Completed",
-          "delayed": "Overdue",
-          "scrapped": "Scrapped",
-          "cancelled": "Cancelled",
-          "canceled": "Cancelled",
-          "returned": "Returned",
-          "closed": "Closed",
-          "archived": "Archived",
-          "confirmed": "Confirmed",
-          "draft": "Draft",
-          "produced": "Produced",
-          "warehoused": "Warehoused",
-          "received": "Received",
-          "partial": "Partially Paid",
-          "partial_arrival": "Partially Arrived",
-          "awaiting_confirm": "Pending Confirmation",
-          "warehouse_pending": "Pending Warehousing",
-          "pending_audit": "Pending Review",
-          "passed": "Pre-approved",
-          "bundled": "Bundled",
-          "created": "Created",
-          "material_preparation": "Preparing Materials",
-          "open": "Pending",
-          "resolved": "Resolved",
-          "rework": "Reworking",
-          "warehouse_out": "Shipped Out",
-          "production_completed": "Production Completed",
-          "in_stock": "In Stock",
-          "issued": "Issued",
-          "enabled": "Enabled",
-          "active": "Normal",
-          "inactive": "Disabled",
-          "overdue": "Overdue",
-          "settling": "Settling",
-          "settled": "Settled",
-          "issued_invoice": "Issued",
-          "processing": "Processing",
-          "refunded": "Refunded",
-          "borrowed": "Lent Out",
-          "lost": "Lost",
-          "accepted": "Accepted",
-          "verified": "Verified",
-          "repaired_waiting_qc": "Rework Pending QC",
-          "disconnected": "Disconnected",
-          "unpaid": "Unpaid",
-          "partially_paid": "Partially Paid",
-          "fully_paid": "Fully Paid",
-          "unrepaid": "Unrepaid",
-          "repaid": "Repaid"
-        },
-        "purchase": {
-          "pending": "Pending Purchase",
-          "procurement": "Purchasing",
-          "purchasing": "Purchasing",
-          "material_preparation": "Preparing Materials",
-          "received": "Arrived",
-          "partial": "Partially Arrived",
-          "partial_arrival": "Partially Arrived",
-          "partial_arrived": "Partially Arrived",
-          "awaiting_confirm": "Pending Confirmation",
-          "warehouse_pending": "Pending Warehouse Out",
-          "completed": "Completed",
-          "cancelled": "Cancelled",
-          "canceled": "Cancelled"
-        },
-        "pattern": {
-          "pending": "Not Started",
-          "not_started": "Not Started",
-          "received": "Received",
-          "in_progress": "In Progress",
-          "production_completed": "Production Completed",
-          "completed": "Completed",
-          "warehouse_in": "Warehoused",
-          "warehouse_out": "Out of Stock",
-          "warehouse_return": "Returned",
-          "scrapped": "Scrapped",
-          "returned": "Returned",
-          "locked": "Locked",
-          "unlocked": "Unlocked"
-        },
-        "recon": {
-          "pending": "Pending Verification",
-          "verified": "Verified",
-          "approved": "Approved",
-          "paid": "Paid",
-          "rejected": "Rejected"
-        },
-        "settlement": {
-          "pending": "Pending Production",
-          "confirmed": "Confirmed",
-          "production": "In Production",
-          "in_progress": "In Production",
-          "completed": "Completed",
-          "cancelled": "Cancelled",
-          "canceled": "Cancelled",
-          "closed": "Closed",
-          "scrapped": "Scrapped",
-          "archived": "Archived",
-          "paused": "Paused",
-          "returned": "Returned",
-          "delayed": "Overdue"
-        },
-        "payment": {
-          "pending": "Pending Payment",
-          "processing": "Processing",
-          "success": "Paid",
-          "failed": "Payment Failed",
-          "cancelled": "Cancelled",
-          "rejected": "Rejected",
-          "refunded": "Returned"
-        },
-        "payrollPayment": {
-          "unpaid": "Unpaid",
-          "partially_paid": "Partially Paid",
-          "fully_paid": "Fully Paid"
-        },
-        "factory": {
-          "active": "Enabled",
-          "inactive": "Disabled"
-        },
-        "factoryType": {
-          "internal": "Internal",
-          "external": "External"
-        },
-        "material": {
-          "completed": "Completed",
-          "pending": "Pending",
-          "disabled": "Disabled"
-        },
-        "secondary": {
-          "pending": "Pending",
-          "processing": "Processing",
-          "completed": "Completed",
-          "cancelled": "Cancelled"
-        },
-        "bundle": {
-          "created": "Created",
-          "active": "Valid",
-          "qualified": "Qualified",
-          "unqualified": "Unqualified",
-          "inactive": "Invalid",
-          "split": "Split",
-          "pending": "Pending",
-          "in_progress": "In Progress",
-          "completed": "Completed",
-          "bundled": "Bundled"
-        },
-        "task": {
-          "pending": "Pending Cutting",
-          "in_progress": "Cutting",
-          "completed": "Completed",
-          "bundled": "Bundled"
-        },
-        "shipment": {
-          "pending": "Pending Receipt",
-          "partial": "Partially Received",
-          "received": "Received",
-          "quality_checked": "Quality Checked",
-          "partially_returned": "Partially Returned"
-        },
-        "styleOrder": {
-          "completed": "Completed",
-          "warehoused": "Warehoused",
-          "in_progress": "In Production",
-          "draft": "Draft",
-          "cancelled": "Cancelled"
-        },
-        "agent": {
-          "success": "Success",
-          "failed": "Failed",
-          "executing": "Executing",
-          "timeout": "Timeout",
-          "pending": "Pending",
-          "unknown": "Unknown"
-        },
-        "biz": {
-          "payroll": "Employee Payroll",
-          "payroll_settlement": "Payroll Settlement",
-          "order_settlement": "Order Settlement",
-          "reconciliation": "Factory Reconciliation",
-          "material_reconciliation": "Factory Reconciliation",
-          "reimbursement": "Expense Reimbursement",
-          "bill_receivable": "Accounts Receivable",
-          "bill_payable": "Accounts Payable"
-        },
-        "orderBiz": {
-          "fob": "FOB",
-          "odm": "ODM",
-          "oem": "OEM",
-          "cmt": "CMT Processing"
-        },
-        "review": {
-          "pass": "Passed",
-          "rework": "Needs Revision",
-          "reject": "Rejected"
-        }
+      "order": {
+        "not_started": "Not Started",
+        "pending": "Pending Production",
+        "production": "In Production",
+        "in_progress": "In Production",
+        "paused": "Paused",
+        "procurement": "Material Purchase",
+        "cutting": "Cutting",
+        "sewing": "Sewing",
+        "ironing": "Final Pressing",
+        "secondary_process": "Secondary Process",
+        "quality_check": "Quality Check",
+        "warehousing": "Warehousing",
+        "packaging": "Packaging",
+        "completed": "Completed",
+        "delayed": "Overdue",
+        "scrapped": "Scrapped",
+        "cancelled": "Cancelled",
+        "canceled": "Cancelled",
+        "returned": "Returned",
+        "closed": "Closed",
+        "archived": "Archived",
+        "confirmed": "Confirmed",
+        "draft": "Draft",
+        "produced": "Produced",
+        "warehoused": "Warehoused",
+        "received": "Received",
+        "partial": "Partially Paid",
+        "partial_arrival": "Partially Arrived",
+        "awaiting_confirm": "Pending Confirmation",
+        "warehouse_pending": "Pending Warehousing",
+        "pending_audit": "Pending Review",
+        "passed": "Pre-approved",
+        "bundled": "Bundled",
+        "created": "Created",
+        "material_preparation": "Preparing Materials",
+        "open": "Pending",
+        "resolved": "Resolved",
+        "rework": "Reworking",
+        "warehouse_out": "Shipped Out",
+        "production_completed": "Production Completed",
+        "in_stock": "In Stock",
+        "issued": "Issued",
+        "enabled": "Enabled",
+        "active": "Normal",
+        "inactive": "Disabled",
+        "overdue": "Overdue",
+        "settling": "Settling",
+        "settled": "Settled",
+        "issued_invoice": "Issued",
+        "processing": "Processing",
+        "refunded": "Refunded",
+        "borrowed": "Lent Out",
+        "lost": "Lost",
+        "accepted": "Accepted",
+        "verified": "Verified",
+        "repaired_waiting_qc": "Rework Pending QC",
+        "disconnected": "Disconnected",
+        "unpaid": "Unpaid",
+        "partially_paid": "Partially Paid",
+        "fully_paid": "Fully Paid",
+        "unrepaid": "Unrepaid",
+        "repaid": "Repaid"
+      },
+      "purchase": {
+        "pending": "Pending Purchase",
+        "procurement": "Purchasing",
+        "purchasing": "Purchasing",
+        "material_preparation": "Preparing Materials",
+        "received": "Arrived",
+        "partial": "Partially Arrived",
+        "partial_arrival": "Partially Arrived",
+        "partial_arrived": "Partially Arrived",
+        "awaiting_confirm": "Pending Confirmation",
+        "warehouse_pending": "Pending Warehouse Out",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "canceled": "Cancelled"
+      },
+      "pattern": {
+        "pending": "Not Started",
+        "not_started": "Not Started",
+        "received": "Received",
+        "in_progress": "In Progress",
+        "production_completed": "Production Completed",
+        "completed": "Completed",
+        "warehouse_in": "Warehoused",
+        "warehouse_out": "Out of Stock",
+        "warehouse_return": "Returned",
+        "scrapped": "Scrapped",
+        "returned": "Returned",
+        "locked": "Locked",
+        "unlocked": "Unlocked"
+      },
+      "recon": {
+        "pending": "Pending Verification",
+        "verified": "Verified",
+        "approved": "Approved",
+        "paid": "Paid",
+        "rejected": "Rejected"
+      },
+      "settlement": {
+        "pending": "Pending Production",
+        "confirmed": "Confirmed",
+        "production": "In Production",
+        "in_progress": "In Production",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "canceled": "Cancelled",
+        "closed": "Closed",
+        "scrapped": "Scrapped",
+        "archived": "Archived",
+        "paused": "Paused",
+        "returned": "Returned",
+        "delayed": "Overdue"
+      },
+      "payment": {
+        "pending": "Pending Payment",
+        "processing": "Processing",
+        "success": "Paid",
+        "failed": "Payment Failed",
+        "cancelled": "Cancelled",
+        "rejected": "Rejected",
+        "refunded": "Returned"
+      },
+      "payrollPayment": {
+        "unpaid": "Unpaid",
+        "partially_paid": "Partially Paid",
+        "fully_paid": "Fully Paid"
+      },
+      "factory": {
+        "active": "Enabled",
+        "inactive": "Disabled"
+      },
+      "factoryType": {
+        "internal": "Internal",
+        "external": "External"
+      },
+      "material": {
+        "completed": "Completed",
+        "pending": "Pending",
+        "disabled": "Disabled"
+      },
+      "secondary": {
+        "pending": "Pending",
+        "processing": "Processing",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      },
+      "bundle": {
+        "created": "Created",
+        "active": "Valid",
+        "qualified": "Qualified",
+        "unqualified": "Unqualified",
+        "inactive": "Invalid",
+        "split": "Split",
+        "pending": "Pending",
+        "in_progress": "In Progress",
+        "completed": "Completed",
+        "bundled": "Bundled"
+      },
+      "task": {
+        "pending": "Pending Cutting",
+        "in_progress": "Cutting",
+        "completed": "Completed",
+        "bundled": "Bundled"
+      },
+      "shipment": {
+        "pending": "Pending Receipt",
+        "partial": "Partially Received",
+        "received": "Received",
+        "quality_checked": "Quality Checked",
+        "partially_returned": "Partially Returned"
+      },
+      "styleOrder": {
+        "completed": "Completed",
+        "warehoused": "Warehoused",
+        "in_progress": "In Production",
+        "draft": "Draft",
+        "cancelled": "Cancelled"
+      },
+      "agent": {
+        "success": "Success",
+        "failed": "Failed",
+        "executing": "Executing",
+        "timeout": "Timeout",
+        "pending": "Pending",
+        "unknown": "Unknown"
+      },
+      "biz": {
+        "payroll": "Employee Payroll",
+        "payroll_settlement": "Payroll Settlement",
+        "order_settlement": "Order Settlement",
+        "reconciliation": "Factory Reconciliation",
+        "material_reconciliation": "Factory Reconciliation",
+        "reimbursement": "Expense Reimbursement",
+        "bill_receivable": "Accounts Receivable",
+        "bill_payable": "Accounts Payable"
+      },
+      "orderBiz": {
+        "fob": "FOB",
+        "odm": "ODM",
+        "oem": "OEM",
+        "cmt": "CMT Processing"
+      },
+      "review": {
+        "pass": "Passed",
+        "rework": "Needs Revision",
+        "reject": "Rejected"
       }
     }
   }
