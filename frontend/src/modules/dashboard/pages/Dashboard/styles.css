@@ -536,6 +536,30 @@ body.dashboard-page {
   flex-direction: column;
   gap: 16px;
   min-width: 0;
+  /*
+   * D-513 右栏吸附（对齐参考稿的"信息栏常驻"体验）：
+   * 主栏（流程引导 + 经营数据展开）实测约 2269px，右栏服务栏约 1167px，
+   * 两者相差近一倍 —— 首屏右栏能填满视口，但往下滚动时右侧就露出大片空白，
+   * 用户反馈"右边看着空空的"。
+   * 处理：整列吸附，滚动时随视口跟随；内容高于视口时右栏内部滚动，
+   * 保证「产品更新 / 意见反馈 / 快捷入口」始终可达。
+   */
+  position: sticky;
+  top: 16px;
+  align-self: start;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+/* 小屏下两栏退化为单栏，吸附无意义且会限制高度 */
+@media (max-width: 1200px) {
+  .home-side {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
 }
 
 .home-side-stack {
