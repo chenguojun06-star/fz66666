@@ -9,42 +9,64 @@ const { triggerDataRefresh } = require('../../../utils/eventBus');
 const SKUProcessor = require('../processors/SKUProcessor');
 const { PATTERN_STATUS_MAP } = require('../../../shared/enumLabels');
 const { displayCategory } = require('../../../utils/displayHelper');
+const i18n = require('../../../utils/i18n/index');
+
+/** 本页 i18n 命名空间前缀 */
+const NS = 'mp.pattern.';
 
 // ---- 常量（样板操作类型定义） ----
+// ⚠️ 只存 i18n 键后缀；值按语言取（opLabel helper）。这些是展示标签，
+//    工序与后端的匹配走英文码（operationType），不受语言影响。
 const OPERATION_LABELS = {
-  RECEIVE: '领取样板',
-  PLATE: '车板扫码',
-  FOLLOW_UP: '跟单确认',
-  COMPLETE: '完成确认',
-  REWORK: '返修完成',
-  PROCUREMENT: '采购',
-  CUTTING: '裁剪',
-  SECONDARY: '二次工艺',
-  SEWING: '车缝',
-  TAIL: '尾部',
-  REVIEW: '样衣审核',
-  WAREHOUSE_IN: '样衣入库',
-  WAREHOUSE_OUT: '样衣出库',
-  WAREHOUSE_RETURN: '样衣归还',
+  RECEIVE: 'opReceive',
+  PLATE: 'opPlate',
+  FOLLOW_UP: 'opFollowUp',
+  COMPLETE: 'opComplete',
+  REWORK: 'opRework',
+  PROCUREMENT: 'opProcurement',
+  CUTTING: 'opCutting',
+  SECONDARY: 'opSecondary',
+  SEWING: 'opSewing',
+  TAIL: 'opTail',
+  REVIEW: 'opReview',
+  WAREHOUSE_IN: 'opWhIn',
+  WAREHOUSE_OUT: 'opWhOut',
+  WAREHOUSE_RETURN: 'opWhReturn',
+};
+
+/** 按语言取操作类型展示名 */
+function opLabel(type, lang) {
+  var key = OPERATION_LABELS[String(type || '').toUpperCase()];
+  return key ? i18n.t(NS + key, lang) : i18n.t(NS + 'opFallback', lang);
+}
+
+/** ⚠️ 载荷专用：processName 提交后端是中文工序名域，回退值必须保持中文原文 */
+const OPERATION_LABELS_ZH = {
+  RECEIVE: '领取样板', PLATE: '车板扫码', FOLLOW_UP: '跟单确认', COMPLETE: '完成确认',
+  REWORK: '返修完成', PROCUREMENT: '采购', CUTTING: '裁剪', SECONDARY: '二次工艺',
+  SEWING: '车缝', TAIL: '尾部', REVIEW: '样衣审核', WAREHOUSE_IN: '样衣入库',
+  WAREHOUSE_OUT: '样衣出库', WAREHOUSE_RETURN: '样衣归还',
 };
 const WAREHOUSE_OPERATIONS = new Set(['WAREHOUSE_IN', 'WAREHOUSE_OUT', 'WAREHOUSE_RETURN']);
 
 // 样衣状态标签：优先使用共享映射 enumLabels.PATTERN_STATUS_MAP，本地兜底未覆盖的状态
 const LOCAL_STATUS_FALLBACK = {
-  RELEASED: '已发放',
+  RELEASED: 'statusReleased',
 };
 
-function getPatternStatusLabel(status) {
+function getPatternStatusLabel(status, lang) {
   if (!status) return '-';
   var upper = String(status).trim().toUpperCase();
-  return PATTERN_STATUS_MAP[upper] || LOCAL_STATUS_FALLBACK[upper] || status;
+  if (PATTERN_STATUS_MAP[upper]) return PATTERN_STATUS_MAP[upper];
+  if (LOCAL_STATUS_FALLBACK[upper]) return i18n.t(NS + LOCAL_STATUS_FALLBACK[upper], lang);
+  return status;
 }
 
 const SOURCE_LABELS = {
-  SELF_DEVELOPED: '自主开发',
-  OEM: '来料加工',
-  CUSTOMER: '客供',
-  LICENSED: '授权款',
+  SELF_DEVELOPED: 'srcSelfDev',
+  OEM: 'srcOEM',
+  CUSTOMER: 'srcCustomer',
+  LICENSED: 'srcLicensed',
 };
 function normalizePositiveInt(value, fallback) {
   const num = parseInt(value, 10);
@@ -79,11 +101,84 @@ Page({
     locationSearchKey: '',
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}） */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        deliveryLabel: i18n.t('mp.scanResult.deliveryLabel', lang),
+        styleQtyTitle: i18n.t(NS + 'styleQtyTitle', lang),
+        styleNoPrefix: i18n.t(NS + 'styleNoPrefix', lang),
+        sourceLabel: i18n.t(NS + 'sourceLabel', lang),
+        categoryLabel: i18n.t(NS + 'categoryLabel', lang),
+        customerLabel: i18n.t(NS + 'customerLabel', lang),
+        designerLabel: i18n.t(NS + 'designerLabel', lang),
+        patternMakerLabel: i18n.t(NS + 'patternMakerLabel', lang),
+        deliveryBoardLabel: i18n.t(NS + 'deliveryBoardLabel', lang),
+        color: i18n.t('common.color', lang),
+        size: i18n.t('common.size', lang),
+        quantity: i18n.t('common.quantity', lang),
+        pieceUnit: i18n.t('common.piece', lang),
+        totalPrefix: i18n.t(NS + 'totalPrefix', lang),
+        claimReportTitle: i18n.t(NS + 'claimReportTitle', lang),
+        psPending: i18n.t(NS + 'psPending', lang),
+        psDone: i18n.t(NS + 'psDone', lang),
+        claimedCanReport: i18n.t(NS + 'claimedCanReport', lang),
+        producingSuffix: i18n.t(NS + 'producingSuffix', lang),
+        btnClaim: i18n.t(NS + 'submitReceive', lang),
+        btnClaimMore: i18n.t(NS + 'btnClaimMore', lang),
+        reportComplete: i18n.t(NS + 'reportComplete', lang),
+        goInbound: i18n.t(NS + 'goInbound', lang),
+        goReview: i18n.t(NS + 'goReview', lang),
+        claimPrefix: i18n.t(NS + 'claimPrefix', lang),
+        reportPrefix: i18n.t(NS + 'reportPrefix', lang),
+        processWord: i18n.t(NS + 'processWord', lang),
+        reviewFirstHint: i18n.t(NS + 'reviewFirstHint', lang),
+        reviewConclusion: i18n.t(NS + 'reviewConclusion', lang),
+        pass: i18n.t('common.pass', lang),
+        reworkWord: i18n.t(NS + 'reworkWord', lang),
+        fail: i18n.t('common.fail', lang),
+        scanWord: i18n.t('mp.scanConfirm.scanWord', lang),
+        orderWord: i18n.t(NS + 'orderWord', lang),
+        thisQtyPh: i18n.t(NS + 'thisQtyPh', lang),
+        totalQtyLabel: i18n.t('mp.scanConfirm.totalQtyLabel', lang),
+        claimColorsTitle: i18n.t(NS + 'claimColorsTitle', lang),
+        selectAll: i18n.t('common.selectAll', lang),
+        clearText: i18n.t('common.clear', lang),
+        qtyPrefix: i18n.t('mp.scanConfirm.qtyPrefix', lang),
+        qtyInputPh: i18n.t(NS + 'qtyInputPh', lang),
+        maxWord: i18n.t(NS + 'maxWord', lang),
+        planQtyLabel: i18n.t(NS + 'planQtyLabel', lang),
+        inboundWarehouse: i18n.t(NS + 'inboundWarehouse', lang),
+        noSampleWarehouse: i18n.t(NS + 'noSampleWarehouse', lang),
+        searchWarehousePh: i18n.t('mp.scanResult.searchWarehousePh', lang),
+        clearWord: i18n.t('mp.scanResult.clearText', lang),
+        manualWarehousePh: i18n.t('mp.scanResult.manualWarehousePh', lang),
+        warehouseCodePh: i18n.t('mp.scanResult.warehouseCodePh', lang),
+        inboundLocation: i18n.t(NS + 'inboundLocation', lang),
+        searchLocationPh: i18n.t('mp.scanResult.searchLocationPh', lang),
+        manualLocationPh: i18n.t('mp.scanResult.manualLocationPh', lang),
+        remark: i18n.t('common.remark', lang),
+        matrixSizeHeader: i18n.t(NS + 'matrixSizeHeader', lang),
+        remarkPh: i18n.t(NS + 'remarkPh', lang),
+        selectedWord: i18n.t('mp.scanResult.selectedWord', lang),
+        colorUnitWord: i18n.t(NS + 'claimColorsTitle', lang),
+        cancel: i18n.t('common.cancel', lang),
+        submitting: i18n.t('common.submitting', lang),
+      },
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad() {
+    var lang = i18n.getLanguage();
+    this.applyLanguage(lang);
     const app = getApp();
     const data = app.globalData && app.globalData.patternScanData;
     if (!data) {
-      toast.error('缺少样板数据');
+      toast.error(i18n.t(NS + 'missingData', this._lang));
       setTimeout(() => wx.navigateBack(), 300);
       return;
     }
@@ -96,17 +191,18 @@ Page({
     const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();
     const reviewApproved = reviewStatus === 'APPROVED' || reviewResult === 'APPROVED';
 
+    // 只存 i18n 键后缀，文案按语言取
     const SUBMIT_LABEL_MAP = {
-      RECEIVE: '领取', COMPLETE: '完成', REWORK: '返修完成', REVIEW: '审核',
-      WAREHOUSE_IN: '入库', WAREHOUSE_OUT: '出库', WAREHOUSE_RETURN: '归还',
-      PROCUREMENT: '采购', CUTTING: '裁剪', SECONDARY: '二次工艺',
-      SEWING: '车缝', TAIL: '尾部',
+      RECEIVE: 'submitReceive', COMPLETE: 'submitComplete', REWORK: 'opRework', REVIEW: 'submitReview',
+      WAREHOUSE_IN: 'submitWhIn', WAREHOUSE_OUT: 'submitWhOut', WAREHOUSE_RETURN: 'submitWhReturn',
+      PROCUREMENT: 'opProcurement', CUTTING: 'opCutting', SECONDARY: 'opSecondary',
+      SEWING: 'opSewing', TAIL: 'opTail',
     };
     const operationType = String(data.operationType || '').toUpperCase() || 'RECEIVE';
-    const operationLabel = OPERATION_LABELS[operationType] || '操作';
+    const operationLabel = opLabel(operationType, lang);
     const requiresWarehouseInput = WAREHOUSE_OPERATIONS.has(operationType);
     const requiresReviewBeforeInbound = operationType === 'WAREHOUSE_IN' && !reviewApproved;
-    const submitLabel = SUBMIT_LABEL_MAP[operationType] || operationLabel;
+    const submitLabel = SUBMIT_LABEL_MAP[operationType] ? i18n.t(NS + SUBMIT_LABEL_MAP[operationType], lang) : operationLabel;
     const sizes = patternDetail.sizes || [];
 
     // MES 报工模型：hasProcessSystem 时构建工序列表
@@ -114,7 +210,7 @@ Page({
 
     // D-181：入库/审核不再是工序——全部完成后指引用户回样衣详情完成（与 PC 流程一致）
     const allProcessesDone = processList.length > 0 && processList.every(p => p.status === 'COMPLETED');
-    const processNextHint = allProcessesDone ? '工序已全部完成，请返回样衣详情完成样衣审核与入库' : '';
+    const processNextHint = allProcessesDone ? i18n.t(NS + 'allDoneHint', this._lang) : '';
 
     this.setData({
       processNextHint: processNextHint,
@@ -127,7 +223,7 @@ Page({
         maxQuantity: normalizePositiveInt(data.quantity, 1),
         warehouseCode: '',
         status: status,
-        statusLabel: getPatternStatusLabel(status) || data.statusLabel || status || '-',
+        statusLabel: getPatternStatusLabel(status, lang) || data.statusLabel || status || '-',
         statusType: status.toLowerCase().replace('_', ''),
         sizes: sizes,
         sizesText: patternDetail.size || (sizes.length ? sizes.join('、') : '-'),
@@ -148,7 +244,7 @@ Page({
         customer: patternDetail.customer || data.customer || '',
         source: patternDetail.developmentSourceType || data.developmentSourceType || '',
         categoryLabel: displayCategory(patternDetail.category || data.category || '') || patternDetail.category || data.category || '',
-        sourceLabel: SOURCE_LABELS[patternDetail.developmentSourceType || data.developmentSourceType || ''] || patternDetail.developmentSourceType || data.developmentSourceType || '',
+        sourceLabel: (function(){ var k = SOURCE_LABELS[patternDetail.developmentSourceType || data.developmentSourceType || '']; return k ? i18n.t(NS + k, lang) : (patternDetail.developmentSourceType || data.developmentSourceType || ''); })(),
         submitLabel: submitLabel,
         remark: '',
         reviewResult: 'PASS',
@@ -292,8 +388,8 @@ Page({
         scanType: opt.scanType || 'production',
         unitPrice: opt.unitPrice != null ? opt.unitPrice : (opt.price != null ? opt.price : null),
         status: procStatus,
-        statusLabel: procStatus === 'COMPLETED' ? '已完成'
-          : procStatus === 'CLAIMED' ? (opt.claimedByMe ? '生产中(我)' : '生产中') : '待领取',
+        statusLabel: procStatus === 'COMPLETED' ? i18n.t(NS + 'psDone', " + L + ")
+          : procStatus === 'CLAIMED' ? (opt.claimedByMe ? i18n.t(NS + 'psMine', " + L + ") : i18n.t(NS + 'psProducing', " + L + ")) : i18n.t(NS + 'psPending', " + L + "),
         claimedBy: opt.claimedBy || '',
         claimedByMe: !!opt.claimedByMe,
         isWarehouse: opt.value === 'WAREHOUSE_IN',
@@ -318,7 +414,7 @@ Page({
           processList: newList,
           selectedProcess: null,
           claimMode: false,
-          processNextHint: allDone ? '工序已全部完成，请返回样衣详情完成样衣审核与入库' : '',
+          processNextHint: allDone ? i18n.t(NS + 'allDoneHint', this._lang) : '',
         });
       }
     } catch (e) {
@@ -344,27 +440,27 @@ Page({
     if (!proc || this.data.loading) return;
 
     if (proc.status === 'COMPLETED') {
-      toast.info('该工序已完成');
+      toast.info(i18n.t(NS + 'toastProcessDone', this._lang));
       return;
     }
     if (proc.status === 'CLAIMED' && !proc.claimedByMe) {
       // D-312：多色样衣他人已领某色，仍可进入领取表单选择其他颜色（单色时后端兜底拦截）
       const colorOpts = this.data.detail.colorOptions || [];
       if (colorOpts.length <= 1) {
-        toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取生产中');
+        toast.warning(i18n.tf(NS + 'claimedOtherFmt', { proc: proc.processName }, this._lang));
         return;
       }
-      toast.info('该工序已有他人领取，请选择其他颜色领取');
+      toast.info(i18n.t(NS + 'otherColorHint', this._lang));
     }
     if (proc.status === 'CLAIMED' && proc.claimedByMe) {
       // D-379：多色样衣可能只领了部分颜色，允许继续加领其他颜色
       // （重复勾选已领颜色时后端按「工序+颜色」幂等短路，直接返回既有记录，不会产生重复 CLAIM）
       const claimedColorOpts = this.data.detail.colorOptions || [];
       if (claimedColorOpts.length <= 1) {
-        toast.info('你已领取该工序，请完成报工');
+        toast.info(i18n.t(NS + 'alreadyReport', this._lang));
         return;
       }
-      toast.info('你已领取部分颜色，可继续勾选其他颜色加领');
+      toast.info(i18n.t(NS + 'partialColorHint', this._lang));
     }
 
     // 进入领取表单：D-379 改为按颜色勾选（每色一行：勾选 + 数量），不再只有一个总数
@@ -375,7 +471,7 @@ Page({
       'detail.operationType': 'CLAIM',
       'detail.processName': proc.processName,
       'detail.operationLabel': proc.processName,
-      'detail.submitLabel': '领取工序',
+      'detail.submitLabel': i18n.t(NS + 'claimProcessTitle', this._lang),
       'detail.requiresWarehouseInput': false,
       'detail.requiresReviewBeforeInbound': false,
       'detail.quantity': 1,
@@ -462,20 +558,20 @@ Page({
     if (!proc) return;
 
     if (proc.status === 'COMPLETED') {
-      toast.info('该工序已完成');
+      toast.info(i18n.t(NS + 'toastProcessDone', this._lang));
       return;
     }
     if (proc.status === 'CLAIMED' && !proc.claimedByMe) {
       // D-312：多色样衣他人已领某色，报工时可选择自己领取的其他颜色（后端按色绑定领取人兜底）
       const colorOpts = this.data.detail.colorOptions || [];
       if (colorOpts.length <= 1) {
-        toast.warning('工序【' + proc.processName + '】已由 ' + (proc.claimedBy || '他人') + ' 领取生产中，不能报工');
+        toast.warning(i18n.tf(NS + 'claimedNoReport', { proc: proc.processName }, this._lang));
         return;
       }
-      toast.info('该工序已有他人领取，请选择自己领取的颜色报工');
+      toast.info(i18n.t(NS + 'otherColorHint', this._lang));
     }
     if (proc.status === 'PENDING' && !proc.isWarehouse && !proc.isReview) {
-      toast.warning('请先领取工序【' + proc.processName + '】，领取后才能报工');
+      toast.warning(i18n.tf(NS + 'claimFirstFmt', { proc: proc.processName }, this._lang));
       return;
     }
 
@@ -487,7 +583,7 @@ Page({
       'detail.operationType': opType,
       'detail.processName': proc.processName,
       'detail.operationLabel': proc.processName,
-      'detail.submitLabel': proc.isWarehouse ? '入库' : (proc.isReview ? '审核' : '完成报工'),
+      'detail.submitLabel': proc.isWarehouse ? i18n.t(NS + 'submitWhIn', this._lang) : (proc.isReview ? i18n.t(NS + 'submitReview', this._lang) : i18n.t(NS + 'reportComplete', this._lang)),
       'detail.requiresWarehouseInput': proc.isWarehouse,
       'detail.requiresReviewBeforeInbound': false,
     });
@@ -509,8 +605,8 @@ Page({
 
     this.setData({
       'detail.operationType': type,
-      'detail.operationLabel': (selected && selected.label) || OPERATION_LABELS[type] || '操作',
-      'detail.submitLabel': (selected && selected.label) || OPERATION_LABELS[type] || '操作',
+      'detail.operationLabel': (selected && selected.label) || opLabel(type, this._lang),
+      'detail.submitLabel': (selected && selected.label) || opLabel(type, this._lang),
       'detail.requiresWarehouseInput': WAREHOUSE_OPERATIONS.has(type),
       'detail.requiresReviewBeforeInbound': type === 'WAREHOUSE_IN' && !reviewApproved,
     });
@@ -531,7 +627,7 @@ Page({
     const procName = proc ? (proc.processName || '') : (d.processName || '');
     const key = procName || String(d.operationType || '').toUpperCase();
     const scanned = Math.min((d.scannedQtyMap || {})[key] || 0, taskQty);
-    this.setData({ qtyHint: '已报 ' + scanned + ' 件 / 任务 ' + taskQty + ' 件 · 可报 ' + remain + ' 件' });
+    this.setData({ qtyHint: i18n.tf(NS + 'reportStats', { done: scanned, total: taskQty, left: remain }, this._lang) });
   },
 
   _remainingQty() {
@@ -551,7 +647,7 @@ Page({
     const inputQty = parseInt(e.detail.value, 10) || 0;
     // 如果输入超过剩余可报数量，自动修正
     if (inputQty > maxQty) {
-      toast.warning(maxQty <= 0 ? '该工序任务数量已报满' : '数量不能超过剩余可报数量 ' + maxQty + ' 件');
+      toast.warning(maxQty <= 0 ? i18n.t(NS + 'taskFull', this._lang) : i18n.t(NS + 'exceedLeft', this._lang) + ' ' + maxQty + i18n.t('common.piece', this._lang));
       this.setData({ 'detail.quantity': maxQty });
     } else {
       this.setData({ 'detail.quantity': e.detail.value });
@@ -724,7 +820,7 @@ Page({
     const items = this.data.locationItems || [];
     for (let i = 0; i < items.length; i++) {
       if (items[i].label === value && items[i].isFull) {
-        toast('库位 ' + value + ' 已满（' + items[i].used + '/' + items[i].capacity + '），请选其他库位');
+        toast(i18n.tf('mp.scanResult.locationFull', { code: value, used: items[i].used, cap: items[i].capacity }, this._lang));
         return;
       }
     }
@@ -770,7 +866,7 @@ Page({
     if (this.data.loading) return;
 
     if (!d.operationType) {
-      toast.error('请选择操作工序');
+      toast.error(i18n.t(NS + 'selectProcess', this._lang));
       return;
     }
     const operationType = String(d.operationType).toUpperCase();
@@ -778,7 +874,7 @@ Page({
     const remark = String(d.remark || '').trim();
 
     if (operationType === 'ALL_COMPLETED') {
-      toast.info('全部工序已完成');
+      toast.info(i18n.t(NS + 'allDoneToast', this._lang));
       return;
     }
 
@@ -789,7 +885,7 @@ Page({
       if (operationType !== 'CLAIM' && qty > 0) {
         const remain = this._remainingQty();
         if (qty > remain) {
-          toast.error(remain <= 0 ? '该工序任务数量已报满' : '数量超过剩余可报数量 ' + remain + ' 件');
+          toast.error(remain <= 0 ? i18n.t(NS + 'taskFull', this._lang) : i18n.t(NS + 'exceedLeft', this._lang) + ' ' + remain + i18n.t('common.piece', this._lang));
           return;
         }
       }
@@ -798,29 +894,29 @@ Page({
 
     // 传统样衣流程：领取 → 完成 → 审核 → 入库
     if (operationType !== 'REVIEW' && operationType !== 'COMPLETE' && qty <= 0) {
-      toast.error('请输入正确数量');
+      toast.error(i18n.t(NS + 'correctQty', this._lang));
       return;
     }
     const maxQty = operationType === 'RECEIVE' ? this._remainingQty() : (d.maxQuantity || d.quantity || 999999);
     if (operationType !== 'REVIEW' && operationType !== 'COMPLETE' && qty > maxQty) {
-      toast.error(maxQty <= 0 ? '任务数量已报满' : '数量不能超过剩余可报数量 ' + maxQty + ' 件');
+      toast.error(maxQty <= 0 ? i18n.t(NS + 'taskFullShort', this._lang) : i18n.t(NS + 'exceedLeft', this._lang) + ' ' + maxQty + i18n.t('common.piece', this._lang));
       return;
     }
     if (operationType === 'REVIEW' && !remark) {
-      toast.error('请填写审核备注');
+      toast.error(i18n.t(NS + 'reviewRemarkReq', this._lang));
       return;
     }
     if (WAREHOUSE_OPERATIONS.has(operationType)) {
       if (!String(d.warehouseCode || '').trim()) {
-        toast.error('请选择入库仓库');
+        toast.error(i18n.t(NS + 'selectWarehouse', this._lang));
         return;
       }
       if (!this.data.warehouseAreaId) {
-        toast.error('请选择仓库区域');
+        toast.error(i18n.t(NS + 'selectWhArea', this._lang));
         return;
       }
       if (!this.data.warehouseLocationCode) {
-        toast.error('请选择库位');
+        toast.error(i18n.t(NS + 'selectLocation', this._lang));
         return;
       }
     }
@@ -832,18 +928,18 @@ Page({
       if (operationType === 'REVIEW') {
         const reviewResult = d.reviewResult || 'PASS';
         const res = await api.production.reviewPattern(d.patternId, reviewResult, remark);
-        const resultMsg = reviewResult === 'PASS' ? '审核通过' : reviewResult === 'REWORK' ? '审核返修，请扫码返修' : '审核已驳回';
-        result = res ? { success: true, message: resultMsg } : { success: false, message: '审核提交失败' };
+        const resultMsg = reviewResult === 'PASS' ? i18n.t(NS + 'reviewApprovedT', this._lang) : reviewResult === 'REWORK' ? i18n.t(NS + 'reviewReworkT', this._lang) : i18n.t(NS + 'reviewRejectedT', this._lang);
+        result = res ? { success: true, message: resultMsg } : { success: false, message: i18n.t(NS + 'reviewSubmitFail', this._lang) };
 
       } else if (operationType === 'COMPLETE') {
         const res = await api.production.completePatternByTask(d.patternId);
-        result = res ? { success: true, message: '制作完成' } : { success: false, message: '完成操作失败' };
+        result = res ? { success: true, message: i18n.t(NS + 'madeCompleteT', this._lang) } : { success: false, message: i18n.t(NS + 'completeOpFail', this._lang) };
 
       } else if (operationType === 'WAREHOUSE_IN') {
         // 入库操作，不再自动审核
         const wiRes = await api.production.warehouseIn(d.patternId, d.warehouseCode || '',
           this.data.warehouseAreaId, this.data.warehouseLocationCode, remark);
-        result = wiRes ? { success: true, message: '样衣入库成功' } : { success: false, message: '入库失败' };
+        result = wiRes ? { success: true, message: i18n.t(NS + 'inboundSuccess', this._lang) } : { success: false, message: i18n.t(NS + 'inboundFailed', this._lang) };
 
       } else if (operationType === 'RECEIVE') {
         // 工序级扫码领取（旧的 receivePattern 端点已删除，统一走 submitPatternScan）
@@ -852,8 +948,8 @@ Page({
         const selectedOpt = options.find(function(o) { return o.value === 'RECEIVE'; });
         const scanUnitPrice = selectedOpt && (selectedOpt.unitPrice != null || selectedOpt.price != null)
           ? (selectedOpt.unitPrice != null ? selectedOpt.unitPrice : selectedOpt.price) : null;
-        const scanProcessName = selectedOpt && selectedOpt.processName ? selectedOpt.processName : '领取样板';
-        const scanProgressStage = selectedOpt && selectedOpt.progressStage ? selectedOpt.progressStage : '领取';
+        const scanProcessName = selectedOpt && selectedOpt.processName ? selectedOpt.processName : OPERATION_LABELS_ZH.RECEIVE;
+        const scanProgressStage = selectedOpt && selectedOpt.progressStage ? selectedOpt.progressStage : 'RECEIVE';
         const scanRes = await api.production.submitPatternScan({
           patternId: d.patternId,
           operationType: 'RECEIVE',
@@ -867,7 +963,7 @@ Page({
         });
         result = {
           success: true,
-          message: (scanRes && scanRes.message) || '领取成功',
+          message: (scanRes && scanRes.message) || i18n.t(NS + 'claimSuccess', this._lang),
           data: scanRes,
         };
 
@@ -879,7 +975,7 @@ Page({
           ? (selectedOpt.unitPrice != null ? selectedOpt.unitPrice : selectedOpt.price) : null;
         const scanProcessName = selectedOpt && selectedOpt.processName
           ? selectedOpt.processName
-          : (OPERATION_LABELS[operationType] || operationType);
+          : (OPERATION_LABELS_ZH[operationType] || operationType);
         const scanProgressStage = selectedOpt && selectedOpt.progressStage ? selectedOpt.progressStage : operationType;
         const scanRes = await api.production.submitPatternScan({
           patternId: d.patternId,
@@ -896,21 +992,21 @@ Page({
         });
         result = {
           success: true,
-          message: (scanRes && scanRes.message) || `${d.operationLabel || '操作'}成功`,
+          message: (scanRes && scanRes.message) || i18n.tf(NS + 'opSuccessFmt', { op: d.operationLabel || i18n.t(NS + 'opFallback', this._lang) }, this._lang),
           data: scanRes,
         };
       }
 
       if (result && result.success) {
-        toast.success(result.message || '操作成功');
+        toast.success(result.message || i18n.t('common.operationSuccess', this._lang));
         this._emitRefresh();
         wx.navigateBack();
       } else {
-        toast.error((result && result.message) || '操作失败');
+        toast.error((result && result.message) || i18n.t('common.operationFailed', this._lang));
       }
     } catch (e) {
       console.error('[样板页] 提交失败:', e);
-      toast.error(e.errMsg || e.message || '提交失败');
+      toast.error(e.errMsg || e.message || i18n.t('common.submitFailed', this._lang));
     } finally {
       this.setData({ loading: false });
     }
@@ -935,7 +1031,7 @@ Page({
         return c.checked && Number(c.qty) > 0;
       });
       if (picked.length === 0) {
-        toast.error('请至少勾选一个颜色并填写数量');
+        toast.error(i18n.t(NS + 'colorQtyRequired', this._lang));
         return;
       }
       this.setData({ loading: true });
@@ -959,13 +1055,13 @@ Page({
         });
         const names = [];
         for (let j = 0; j < picked.length; j++) names.push(picked[j].name);
-        toast.success('已领取【' + processName + '】' + names.join('、'));
+        toast.success(i18n.tf(NS + 'claimedListFmt', { names: names.join('、') }, this._lang) );
         this.setData({ claimColors: [] });
         this._emitRefresh();
         await this._refreshProcessList();
       } catch (e) {
         console.error('[样板页] 多色领取提交失败:', e);
-        toast.error((e && (e.errMsg || e.message)) || '领取失败');
+        toast.error((e && (e.errMsg || e.message)) || i18n.t(NS + 'claimFailed', this._lang));
       } finally {
         this.setData({ loading: false });
       }
@@ -978,11 +1074,11 @@ Page({
     if (hasSkuList) {
       const validation = SKUProcessor.validateSKUInputBatch(this.data.skuList);
       if (!validation.valid) {
-        toast.error((validation.errors && validation.errors[0]) || '请检查输入');
+        toast.error((validation.errors && validation.errors[0]) || i18n.t('common.checkInput', this._lang));
         return;
       }
       if (validation.validList.length === 0) {
-        toast.error('请至少输入一个数量');
+        toast.error(i18n.t(NS + 'atLeastOneQty', this._lang));
         return;
       }
 
@@ -997,7 +1093,7 @@ Page({
           });
         // D-383：数量不再预设默认值，未填数量的行会被跳过；全都没填时给出明确提示
         if (items.length === 0) {
-          toast.error('请至少填写一个「本次件数」');
+          toast.error(i18n.t(NS + 'atLeastOneThisQty', this._lang));
           return;
         }
         const batchRes = await api.production.submitPatternScanBatch({
@@ -1013,7 +1109,7 @@ Page({
           items: items,
         });
         const savedCount = (batchRes && batchRes.savedCount) || items.length;
-        toast.success(((selectedOption && selectedOption.label) || processName) + ' 完成（' + savedCount + '项）');
+        toast.success(((selectedOption && selectedOption.label) || processName) + ' ' + i18n.tf(NS + 'doneCountFmt', { count: savedCount }, this._lang));
         this._emitRefresh();
         await this._refreshProcessList();
       } catch (e) {
@@ -1024,7 +1120,7 @@ Page({
       }
     } else {
       if (qty <= 0) {
-        toast.error('请输入正确数量');
+        toast.error(i18n.t(NS + 'correctQty', this._lang));
         return;
       }
       const maxQty = d.maxQuantity || d.quantity || 999999;

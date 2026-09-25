@@ -2429,6 +2429,8 @@ const SCAN_RESULT_JS = 'pages/scan/scan-result/index.js';
 const SCAN_RESULT_WXML = 'pages/scan/scan-result/index.wxml';
 const SCAN_CONFIRM_JS = 'pages/scan/confirm/index.js';
 const SCAN_CONFIRM_WXML = 'pages/scan/confirm/index.wxml';
+const PATTERN_JS = 'pages/scan/pattern/index.js';
+const PATTERN_WXML = 'pages/scan/pattern/index.wxml';
 
 /** 把 menuRows / filteredApps 拍平成 [分组名, 应用名...] */
 function flattenMenuNames(rows) {
@@ -2810,6 +2812,28 @@ function testI18nScanConfirm() {
   eq('确认页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码确认');
 }
 
+/** 扫码制单页（D-558）—— 操作类型映射/工序列表/审核审批/入库仓库库位 */
+function testI18nPattern() {
+  testPageI18n(PATTERN_JS, PATTERN_WXML, '扫码制单页');
+
+  const { page: zhP, wx: zhWx } = loadPage(PATTERN_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(PATTERN_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  // t 表关键值
+  eq('zh 制单标题', zhP.data.t.navTitle, '样衣扫码');
+  eq('en 制单标题', enP.data.t.navTitle, 'Sample Scan');
+  eq('en 完成报工', enP.data.t.reportComplete, 'Finish Report');
+  eq('en 审批结论', enP.data.t.reviewConclusion, 'Review Conclusion');
+  eq('en 工序状态', enP.data.t.psPending + '|' + enP.data.t.psDone, 'Pending Claim|Completed');
+  ok('en 仓库空提示无中文', !CJK_RE.test(String(enP.data.t.noSampleWarehouse)), enP.data.t.noSampleWarehouse);
+
+  // 导航标题
+  eq('制单页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Sample Scan');
+  eq('制单页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '样衣扫码');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -2855,6 +2879,7 @@ try {
   testI18nScanQuality();
   testI18nScanResult();
   testI18nScanConfirm();
+  testI18nPattern();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);
