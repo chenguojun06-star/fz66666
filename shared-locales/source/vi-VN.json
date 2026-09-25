@@ -71,7 +71,22 @@
     "selectedCount": "Đã chọn {count}",
     "query": "Truy vấn",
     "retry": "Thử lại",
-    "piece": "cái"
+    "piece": "cái",
+    "loadFailed": "Tải thất bại",
+    "inbound": "Nhập kho",
+    "outbound": "Xuất kho",
+    "available": "Khả dụng",
+    "locked": "Đã khóa",
+    "defective": "Hàng lỗi",
+    "salesPrice": "Giá bán",
+    "location": "Vị trí",
+    "color": "Màu sắc",
+    "size": "Kích cỡ",
+    "sku": "Mã hàng",
+    "totalInbound": "Tổng nhập kho",
+    "noStock": "Hết hàng",
+    "itemCount": "{count} mục",
+    "recordCount": "{count} bản ghi"
   },
   "login": {
     "brand": "Chuỗi Cung Ứng Yunshang",
@@ -406,6 +421,35 @@
         "noContent": "Không nhận diện được nội dung",
         "loadFailed": "Không tải được tồn kho vị trí",
         "shareTitle": "Chi tiết tồn kho vị trí {code}"
+      },
+      "finishedInventoryDetail": {
+        "title": "Chi tiết tồn kho",
+        "missingStyleNo": "Thiếu mã hàng",
+        "loadInboundFailed": "Không tải được lịch sử nhập kho",
+        "availableStock": "Tồn khả dụng",
+        "skuDetail": "Chi tiết mã hàng",
+        "inboundRecords": "Lịch sử nhập kho",
+        "noInboundRecords": "Chưa có lịch sử nhập kho",
+        "noStockData": "Chưa có dữ liệu tồn kho",
+        "orderNo": "Đơn hàng: {no}"
+      },
+      "finishedInventory": {
+        "styleCount": "Số mã hàng",
+        "availableStockPcs": "Tồn khả dụng (cái)",
+        "defectPcs": "Hàng lỗi (cái)",
+        "searchPlaceholder": "Tìm đơn hàng / mã hàng / SKU",
+        "noData": "Chưa có dữ liệu tồn thành phẩm",
+        "scanFirst": "Vui lòng quét mã nhập kho trước",
+        "orderPrefix": "Đơn hàng: ",
+        "tagAvailable": "Còn tồn",
+        "tagDefect": "Có hàng lỗi",
+        "lastInbound": "Nhập kho gần nhất: {date}",
+        "pullMore": "Kéo lên để tải thêm",
+        "noMore": "— Hết dữ liệu —",
+        "allFactoryTypes": "Tất cả loại xưởng",
+        "factoryOwn": "Xưởng tự có",
+        "factoryExternal": "Xưởng gia công ngoài",
+        "noAvailableStock": "Mã hàng này chưa có tồn khả dụng"
       }
     }
   }

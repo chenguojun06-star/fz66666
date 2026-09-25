@@ -1,6 +1,7 @@
 var api = require('../../../../utils/api');
 var fileUrl = require('../../../../utils/fileUrl');
 var uiHelper = require('../../../../utils/uiHelper');
+var i18n = require('../../../../utils/i18n/index');
 
 Page({
   data: {
@@ -26,6 +27,8 @@ Page({
     inboundTotalQty: 0,
     // 出库弹窗
     // D-489：出库弹窗相关字段已移除（showOutbound / outboundSku / outboundQty）
+    /** 页面文案（由 applyLanguage 填充，wxml 用 {{t.xxx}} 读取） */
+    t: {},
   },
 
   onLoad(options) {
@@ -38,14 +41,64 @@ Page({
       styleImage: decodeURIComponent(options.styleImage || ''),
       factoryName: decodeURIComponent(options.factoryName || ''),
     });
-    wx.setNavigationBarTitle({ title: '库存详情' });
+    this.applyLanguage(i18n.getLanguage());
     this.loadDetail();
+  },
+
+  onShow() {
+    // 每次回到页面都按当前语言重刷（用户可能在别处切了语言）
+    this.applyLanguage(i18n.getLanguage());
+  },
+
+  /**
+   * 应用指定语言的页面文案。
+   * @param {string=} language 语言代码，缺省取当前语言
+   */
+  applyLanguage(language) {
+    var lang = language || i18n.getLanguage();
+    wx.setNavigationBarTitle({ title: i18n.t('mp.warehouse.finishedInventoryDetail.title', lang) });
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        inbound: i18n.t('common.inbound', lang),
+        outbound: i18n.t('common.outbound', lang),
+        available: i18n.t('common.available', lang),
+        locked: i18n.t('common.locked', lang),
+        defective: i18n.t('common.defective', lang),
+        salesPrice: i18n.t('common.salesPrice', lang),
+        location: i18n.t('common.location', lang),
+        color: i18n.t('common.color', lang),
+        size: i18n.t('common.size', lang),
+        sku: i18n.t('common.sku', lang),
+        totalInbound: i18n.t('common.totalInbound', lang),
+        noStock: i18n.t('common.noStock', lang),
+        operation: i18n.t('common.operation', lang),
+        piece: i18n.t('common.piece', lang),
+        availableStock: i18n.t('mp.warehouse.finishedInventoryDetail.availableStock', lang),
+        skuDetail: i18n.t('mp.warehouse.finishedInventoryDetail.skuDetail', lang),
+        inboundRecords: i18n.t('mp.warehouse.finishedInventoryDetail.inboundRecords', lang),
+        noInboundRecords: i18n.t('mp.warehouse.finishedInventoryDetail.noInboundRecords', lang),
+        noStockData: i18n.t('mp.warehouse.finishedInventoryDetail.noStockData', lang),
+        orderNoText: i18n.tf('mp.warehouse.finishedInventoryDetail.orderNo', { no: this.data.orderNo }, lang),
+        skuCountText: i18n.tf('common.itemCount', { count: (this.data.skuList || []).length }, lang),
+        recordCountText: i18n.tf('common.recordCount', { count: (this.data.inboundHistory || []).length }, lang),
+      },
+    });
+  },
+
+  /** 列表长度变化后重算带参文案（否则会停在上次的条数） */
+  _refreshCounts() {
+    var lang = i18n.getLanguage();
+    this.setData({
+      't.skuCountText': i18n.tf('common.itemCount', { count: (this.data.skuList || []).length }, lang),
+      't.recordCountText': i18n.tf('common.recordCount', { count: (this.data.inboundHistory || []).length }, lang),
+    });
   },
 
   async loadDetail() {
     if (!this.data.styleNo) {
       this.setData({ loading: false });
-      uiHelper.toast('缺少款号');
+      uiHelper.toast(i18n.t('mp.warehouse.finishedInventoryDetail.missingStyleNo'));
       return;
     }
     this.setData({ loading: true });
@@ -98,10 +151,11 @@ Page({
       });
 
       this.setData({ skuList: skuList, summary: summary, loading: false });
+      this._refreshCounts();
       // D-494：原 autoOutbound 自动跳转逻辑已移除（列表页直接跳出库页，不再经本页中转）
     } catch (e) {
       this.setData({ loading: false });
-      uiHelper.toast(e && e.message ? e.message : '加载失败');
+      uiHelper.toast(e && e.message ? e.message : i18n.t('common.loadFailed'));
     }
   },
 
@@ -115,7 +169,7 @@ Page({
   _goOutboundPage() {
     var d = this.data;
     if (!d.styleNo) {
-      uiHelper.toast('缺少款号');
+      uiHelper.toast(i18n.t('mp.warehouse.finishedInventoryDetail.missingStyleNo'));
       return;
     }
     wx.navigateTo({
@@ -137,7 +191,7 @@ Page({
   onGoInbound() {
     var d = this.data;
     if (!d.styleNo) {
-      uiHelper.toast('缺少款号');
+      uiHelper.toast(i18n.t('mp.warehouse.finishedInventoryDetail.missingStyleNo'));
       return;
     }
     wx.navigateTo({
@@ -161,7 +215,7 @@ Page({
   // 调用 /api/production/warehousing/list?styleNo=xxx&page=1&pageSize=500
   async loadInboundHistory() {
     if (!this.data.styleNo) {
-      uiHelper.toast('缺少款号');
+      uiHelper.toast(i18n.t('mp.warehouse.finishedInventoryDetail.missingStyleNo'));
       return;
     }
     this.setData({ inboundLoading: true });
@@ -210,9 +264,10 @@ Page({
         inboundLoaded: true,
         inboundLoading: false,
       });
+      this._refreshCounts();
     } catch (e) {
       this.setData({ inboundLoading: false, inboundLoaded: true });
-      uiHelper.toast(e && e.message ? e.message : '加载入库记录失败');
+      uiHelper.toast(e && e.message ? e.message : i18n.t('mp.warehouse.finishedInventoryDetail.loadInboundFailed'));
     }
   },
 

@@ -1,18 +1,32 @@
 const api = require('../../../utils/api');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus, Events } = require('../../../utils/eventBus');
+const i18n = require('../../../utils/i18n/index');
 
+/**
+ * 筛选项：**只放 value，label 在 applyLanguage 里按当前语言生成**。
+ *
+ * 早期这里是硬编码中文 label，导致切语言后筛选器还是中文。
+ * 保留 `value`（后端契约，不能翻），`labelKey` 指向语言包。
+ */
 const STATUS_OPTIONS = [
-  { label: '全部', value: '' },
-  { label: '有库存', value: 'available' },
-  { label: '有次品', value: 'defect' },
+  { labelKey: 'common.all', value: '' },
+  { labelKey: 'mp.warehouse.finishedInventory.tagAvailable', value: 'available' },
+  { labelKey: 'mp.warehouse.finishedInventory.tagDefect', value: 'defect' },
 ];
 
 const FACTORY_TYPE_OPTIONS = [
-  { label: '全部工厂类型', value: '' },
-  { label: '自有工厂', value: 'OWN' },
-  { label: '外发工厂', value: 'EXTERNAL' },
+  { labelKey: 'mp.warehouse.finishedInventory.allFactoryTypes', value: '' },
+  { labelKey: 'mp.warehouse.finishedInventory.factoryOwn', value: 'OWN' },
+  { labelKey: 'mp.warehouse.finishedInventory.factoryExternal', value: 'EXTERNAL' },
 ];
+
+/** 把「只带 labelKey 的选项」按当前语言展开成 picker 需要的 {label, value} */
+function localizeOptions(options, lang) {
+  return options.map(function (o) {
+    return { label: i18n.t(o.labelKey, lang), value: o.value };
+  });
+}
 
 /**
  * D-513：把按 SKU 的记录（每条 = 一个 color/size 的库存行）聚合为按款（styleNo+orderNo）的卡片。
@@ -118,14 +132,18 @@ Page({
     searchText: '',
     statusValue: '',
     factoryTypeValue: '',
-    statusOptions: STATUS_OPTIONS,
-    factoryTypeOptions: FACTORY_TYPE_OPTIONS,
+    // 初始就按当前语言展开，避免首屏筛选器闪一下空白（onShow 里还会再刷一次）
+    statusOptions: localizeOptions(STATUS_OPTIONS, i18n.getLanguage()),
+    factoryTypeOptions: localizeOptions(FACTORY_TYPE_OPTIONS, i18n.getLanguage()),
     statusIndex: 0,
     factoryTypeIndex: 0,
 
     selectedItem: null,
     detailVisible: false,
     skuList: [],
+
+    /** i18n 文案表（applyLanguage 里填充，wxml 用 {{t.xxx}}） */
+    t: {},
   },
 
   onLoad: function () {
@@ -133,7 +151,62 @@ Page({
   },
 
   onShow: function () {
+    // 每次回到页面都按当前语言重刷文案（用户可能在「我的」里切了语言）
+    this.applyLanguage(i18n.getLanguage());
     this._bindEvents();
+  },
+
+  /**
+   * 刷新本页全部文案。三处都要更新：
+   *   ① t.*（wxml 静态文案）
+   *   ② 筛选器选项 label（它们在 data 里，不是 wxml 字面量）
+   *   ③ 列表项的带参文案（「最近入库：{date}」逐条不同，不能放在 t 里）
+   */
+  applyLanguage: function (language) {
+    var lang = language || i18n.getLanguage();
+    // 记住当前语言：loadList 里的 _decorateList 要用**同一个**语言，
+    // 否则两处各自读一次 storage，中间被切语言就会不一致。
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        styleCount: i18n.t('mp.warehouse.finishedInventory.styleCount', lang),
+        availableStockPcs: i18n.t('mp.warehouse.finishedInventory.availableStockPcs', lang),
+        defectPcs: i18n.t('mp.warehouse.finishedInventory.defectPcs', lang),
+        searchPlaceholder: i18n.t('mp.warehouse.finishedInventory.searchPlaceholder', lang),
+        noData: i18n.t('mp.warehouse.finishedInventory.noData', lang),
+        scanFirst: i18n.t('mp.warehouse.finishedInventory.scanFirst', lang),
+        orderPrefix: i18n.t('mp.warehouse.finishedInventory.orderPrefix', lang),
+        tagAvailable: i18n.t('mp.warehouse.finishedInventory.tagAvailable', lang),
+        tagDefect: i18n.t('mp.warehouse.finishedInventory.tagDefect', lang),
+        available: i18n.t('common.available', lang),
+        locked: i18n.t('common.locked', lang),
+        defective: i18n.t('common.defective', lang),
+        totalInbound: i18n.t('common.totalInbound', lang),
+        inbound: i18n.t('common.inbound', lang),
+        outbound: i18n.t('common.outbound', lang),
+        pullMore: i18n.t('mp.warehouse.finishedInventory.pullMore', lang),
+        noMore: i18n.t('mp.warehouse.finishedInventory.noMore', lang),
+      },
+      statusOptions: localizeOptions(STATUS_OPTIONS, lang),
+      factoryTypeOptions: localizeOptions(FACTORY_TYPE_OPTIONS, lang),
+      list: this._decorateList(this.data.list, lang),
+    });
+  },
+
+  /**
+   * 给列表项补上带参文案（「最近入库：{date}」）。
+   * 语言变了、列表变了都要重算 —— 放在 t 里做不到，因为每条日期不同。
+   */
+  _decorateList: function (list, lang) {
+    var l = lang || this._lang || i18n.getLanguage();
+    return (list || []).map(function (item) {
+      return Object.assign({}, item, {
+        _lastInboundText: i18n.tf('mp.warehouse.finishedInventory.lastInbound', {
+          date: item._lastInboundDate || '--',
+        }, l),
+      });
+    });
   },
 
   onHide: function () {
@@ -260,7 +333,7 @@ Page({
       const newDefect = reset ? pageDefectQty : that.data.totalDefectQty + pageDefectQty;
 
       that.setData({
-        list: newList,
+        list: that._decorateList(newList),
         // 「款数」统计卡片 = 累积后的款数
         total: newList.length,
         totalAvailableQty: newAvailable,
@@ -273,7 +346,7 @@ Page({
     }).catch(function (err) {
       console.warn('[finished-inventory] loadList failed:', err);
       that.setData({ loading: false });
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      wx.showToast({ title: i18n.t('common.loadFailed'), icon: 'none' });
     });
   },
 
@@ -338,7 +411,7 @@ Page({
     const item = this.data.list.find(function (it) { return it.groupKey === id; });
     if (!item) return;
     if (!item.hasAvailable) {
-      wx.showToast({ title: '该款暂无可用库存', icon: 'none' });
+      wx.showToast({ title: i18n.t('mp.warehouse.finishedInventory.noAvailableStock'), icon: 'none' });
       return;
     }
     wx.navigateTo({ url: this._buildOutboundUrl(item) });
@@ -416,7 +489,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect'),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

@@ -58,6 +58,35 @@ def strip_comments_wxml(text):
     return text
 
 
+# 装饰性图片占位块：`<view class="...--placeholder"><text ...>衣</text></view>`
+#
+# 图片缺失时灰底方块里的那个汉字（「衣」/「料」）**是图形占位，不是文案** ——
+# 全项目 material-database / material-center / material-inventory/detail /
+# finished-inventory 等 5+ 个页面都这么硬编码，不参与 i18n。
+# 若不跳过，每个带占位图的页面都会多出一条假文案。
+#
+# ⚠️ 与 `scripts/test-warehouse-pages.mjs` 的 `DECOR_PLACEHOLDER_RE` 是**同一条规则**，
+#    两处必须保持一致，否则抽取器说「有」、测试说「不该有」，互相打架。
+DECOR_PLACEHOLDER = re.compile(
+    r'<view[^>]*class="[^"]*--placeholder[^"]*"[^>]*>\s*'
+    r'(?:<!--[\s\S]*?-->\s*)?'
+    r'<text[^>]*>[^<]*</text>\s*</view>',
+    re.S)
+
+# 被跳过的装饰占位符 (文件, 内层文本)，供汇总时展示，避免「静默跳过」
+DECOR_SKIPPED = []
+
+_DECOR_INNER = re.compile(r'<text[^>]*>([^<]*)</text>')
+
+
+def strip_decor_placeholders(text, rel=''):
+    def _sub(m):
+        inner = _DECOR_INNER.search(m.group(0))
+        DECOR_SKIPPED.append((rel, inner.group(1) if inner else '?'))
+        return ''
+    return DECOR_PLACEHOLDER.sub(_sub, text)
+
+
 def has_interp(s):
     """含插值 —— 需要 tf() 传参，不能当纯静态文案替换。
     wxml 用 {{}}；js 模板串用 ${}。两种都要认（只认 {{}} 会漏掉模板串）。"""
@@ -80,7 +109,7 @@ def context_of_wxml(text, pos):
 def scan_wxml(path, rel):
     out = []
     raw = open(path, encoding='utf-8', errors='ignore').read()
-    text = strip_comments_wxml(raw)
+    text = strip_decor_placeholders(strip_comments_wxml(raw), rel)
     # 静态文本：>xxx<
     # ⚠️ 这里必须用 [^<>]+ 而不是 [^<>{}]+ —— 含 {{}} 插值的文案（如「共 {{n}} 条」）
     #    恰恰是最需要人工处理的（要换成 tf() 传参），用 [^<>{}] 会把它们**整条静默跳过**。
@@ -243,6 +272,9 @@ def main():
             '',
             '含插值（需 tf() 传参，不能直接替换）:',
             *[f'  {i["file"]}:{i["line"]}  {i["text"]!r}' for i in items if i['interp']][:15],
+            '',
+            '已跳过（装饰性图片占位符，非文案）:',
+            *[f'  {rel}: {txt!r}' for rel, txt in DECOR_SKIPPED][:15],
         ])
 
     if args.out:

@@ -82,6 +82,28 @@ function makeWx() {
  * @param {string} relFromMP 相对 miniprogram 的路径，如 'utils/eventBus.js'
  * @param {object=} wx 与页面共用的 wx 桩
  */
+/**
+ * 把 require 参数解析成 miniprogram 下的**真实文件**路径，解析不到返回 null。
+ *
+ * ⚠️ 必须用 `isFile()` 而不是 `existsSync()` —— 目录也 existsSync 为真，
+ * 会把 `utils/i18n` 这种**目录**当成模块去 readFileSync → EISDIR。
+ */
+function resolveModuleFile(spec, fromDir) {
+  const norm = String(spec).replace(/\\/g, '/');
+  // 项目里两种写法并存：相对路径（'../../utils/x'）与从 miniprogram 根写起（'utils/x'）。
+  // 旧白名单用 `$` 结尾匹配，恰好把两种都吃下了，改成通用解析后必须显式兼容。
+  const base = norm.startsWith('.')
+    ? path.posix.normalize(path.posix.join(fromDir || '', norm))
+    : path.posix.normalize(norm);
+  for (const cand of [base, base + '.js', base + '/index.js']) {
+    const abs = path.join(MP, cand);
+    try {
+      if (fs.statSync(abs).isFile()) return cand;
+    } catch (_) { /* 不存在，试下一个候选 */ }
+  }
+  return null;
+}
+
 function loadRealModule(relFromMP, wx) {
   const key = relFromMP.replace(/\\/g, '/');
   const full = path.join(MP, key);
@@ -94,11 +116,8 @@ function loadRealModule(relFromMP, wx) {
     console,
     wx: wx || makeWx(),
     require: (q) => {
-      if (!q.startsWith('.')) throw new Error('裸模块名未支持: ' + q);
-      const base = path.posix.normalize(path.posix.join(dir, q));
-      for (const cand of [base, base + '.js', base + '/index.js']) {
-        if (fs.existsSync(path.join(MP, cand))) return loadRealModule(cand, wx);
-      }
+      const hit = resolveModuleFile(q, dir);
+      if (hit) return loadRealModule(hit, wx);
       throw new Error(`无法解析 require('${q}') from ${key}`);
     },
   });
@@ -106,19 +125,21 @@ function loadRealModule(relFromMP, wx) {
 }
 
 /**
- * 沙箱内的 require 桩
+ * 沙箱内的 require 桩 —— **通用路径解析，不维护白名单**
  *
- * 页面 require 的工具模块（urlParams / i18n / eventBus）**加载真实文件**，
- * 保证测的是线上同一份代码，而不是测试里复写的一份实现。
+ * 页面 require 的工具模块一律**加载真实文件**，保证测的是线上同一份代码。
+ *
+ * ⚠️ 早期这里是「urlParams / i18n / eventBus」三条正则白名单，
+ * 结果每给页面加一个新依赖就炸一次（`测试未桩的 require: utils/fileUrl`）。
+ * 白名单**必然滞后**于业务代码，所以改成按发起目录解析。
  * @param {object=} wx 页面用的 wx 桩；i18n 的语言读写要与页面共用同一份 storage
+ * @param {string=} fromDir 发起 require 的模块所在目录（相对 miniprogram），页面就是 dirname(jsPath)
  */
-function makeSandboxRequire(wx) {
+function makeSandboxRequire(wx, fromDir) {
   return function (p) {
-    const norm = p.replace(/\\/g, '/');
-    if (/utils\/urlParams$/.test(norm)) return loadRealModule('utils/urlParams.js', wx);
-    if (/utils\/i18n(\/index)?$/.test(norm)) return loadRealModule('utils/i18n/index.js', wx);
-    if (/utils\/eventBus$/.test(norm)) return loadRealModule('utils/eventBus.js', wx);
-    throw new Error('测试未桩的 require: ' + p);
+    const hit = resolveModuleFile(p, fromDir);
+    if (hit) return loadRealModule(hit, wx);
+    throw new Error(`无法解析 require('${p}') from ${fromDir || '<root>'}`);
   };
 }
 
@@ -159,7 +180,7 @@ function loadPage(jsPath, apiStub) {
     setTimeout: (fn) => fn && fn(),   // 立即执行，避免测试挂起
     module: { exports: {} },
     exports: {},
-    require: makeSandboxRequire(wx),
+    require: makeSandboxRequire(wx, path.posix.dirname(jsPath)),
   };
   // 把 require 替换成桩（兼容 const / var / let 三种声明写法）
   const patched = src.replace(/(?:const|var|let)\s+api\s*=\s*require\([^)]*\);/, 'const api = __api__;');
@@ -210,7 +231,7 @@ function loadComponent(jsPath, apiStub) {
     setTimeout: (fn) => fn && fn(),
     module: { exports: {} },
     exports: {},
-    require: makeSandboxRequire(wx),
+    require: makeSandboxRequire(wx, path.posix.dirname(jsPath)),
   };
   const patched = src.replace(/(?:const|var|let)\s+api\s*=\s*require\([^)]*\);/, 'const api = __api__;');
   vm.createContext(sandbox);
@@ -1000,35 +1021,79 @@ const CJK_RE = /[\u4e00-\u9fff]/;
 /** 长得像 i18n 键的值 —— 出现它说明 t() 没查到（回落成键名） */
 const KEYLIKE_RE = /^[a-z][A-Za-z0-9]*(\.[A-Za-z][A-Za-z0-9]*)+$/;
 
-function testI18nLocationScan() {
-  console.log('\n【i18n：库位扫码页】');
-  const js = 'pages/warehouse/location-scan/index.js';
+/**
+ * 装饰性图片占位块：`<view class="...--placeholder"><text ...>衣</text></view>`
+ *
+ * 图片缺失时灰底方块里的那个汉字（「衣」/「料」）**不是文案，是图形占位** ——
+ * 全项目 material-database / material-center / material-inventory/detail /
+ * finished-inventory 等 5+ 个页面都这么硬编码，不参与 i18n。
+ * 所以 wxml 的中文扫描要先把它摘掉，否则每个页面都会误报。
+ *
+ * ⚠️ 只放行「class 带 `--placeholder` 的元素里那个短文本」，且调用处有数量护栏，
+ * 防止这条规则被误用成「整页中文都能藏进来」。
+ */
+const DECOR_PLACEHOLDER_RE =
+  /<view[^>]*class="[^"]*--placeholder[^"]*"[^>]*>\s*(?:<!--[\s\S]*?-->\s*)?<text[^>]*>[^<]*<\/text>\s*<\/view>/g;
+
+/**
+ * 通用的「页面 i18n 接入」检查 —— 每个改造过的页面都套这个
+ *
+ * 关键断言是「非中文语言下不得出现中日韩字符」：
+ * t() 缺键时会回落到 zh-CN，所以这条能**直接抓出「某语言漏了键」**，
+ * 比「有值就算过」强得多。
+ *
+ * @param {string} jsPath 页面 js 相对 miniprogram 的路径
+ * @param {string} wxmlPath 页面 wxml 相对 miniprogram 的路径（可为空则跳过结构守护）
+ * @param {string} label 报告用的页面名
+ */
+function testPageI18n(jsPath, wxmlPath, label) {
+  console.log(`\n【i18n：${label}】`);
 
   for (const lang of LANGS) {
-    const { page } = loadPage(js, makeApi());
+    const { page } = loadPage(jsPath, makeApi());
     page.applyLanguage(lang);
-    const t = page.data.t || {};
-    const vals = Object.entries(t);
+    const vals = Object.entries(page.data.t || {});
 
     ok(`${lang} 文案表非空`, vals.length > 0, `keys=${vals.length}`);
 
-    // ① 没有空值
     const empties = vals.filter(([, v]) => !v || !String(v).trim()).map(([k]) => k);
     ok(`${lang} 无空文案`, empties.length === 0, empties.join(','));
 
-    // ② 没有回落成键名（D-547 线上事故的形态）
     const bare = vals.filter(([, v]) => KEYLIKE_RE.test(String(v))).map(([k, v]) => `${k}=${v}`);
     ok(`${lang} 无裸键名`, bare.length === 0, bare.join(', '));
 
-    // ③ 非中文语言里不得出现中日韩字符 ——
-    //    缺键时 t() 会回落到 zh-CN，所以这条能直接抓出「某语言漏了键」
     if (lang !== 'zh-CN') {
       const cjk = vals.filter(([, v]) => CJK_RE.test(String(v))).map(([k, v]) => `${k}=${v}`);
       ok(`${lang} 无中文残留（缺键回落的信号）`, cjk.length === 0, cjk.join(', '));
     }
   }
 
-  // ④ 中英真的不同（防止「接了 i18n 但其实是同一份文案」）
+  // 占位符必须被替换（tf 传参正确）
+  const { page: zhP } = loadPage(jsPath, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const unresolved = Object.entries(zhP.data.t || {})
+    .filter(([, v]) => /\{[a-zA-Z]+\}/.test(String(v)))
+    .map(([k, v]) => `${k}=${v}`);
+  ok('无未替换的 {占位符}', unresolved.length === 0, unresolved.join(', '));
+
+  // 结构守护：wxml 里不许再留硬编码中文（防回退）
+  if (wxmlPath) {
+    const raw = stripComments(fs.readFileSync(path.join(MP, wxmlPath), 'utf8'));
+    const decor = raw.match(DECOR_PLACEHOLDER_RE) || [];
+    const wxml = raw.replace(DECOR_PLACEHOLDER_RE, '');
+    // 护栏：装饰占位符只该有 0~2 个，多了说明规则被滥用
+    ok(`${label} 装饰性占位字符数量正常`, decor.length <= 3, `stripped=${decor.length}`);
+    const leftovers = (wxml.match(/[\u4e00-\u9fff]+/g) || []);
+    ok(`${label} wxml 无硬编码中文`, leftovers.length === 0, leftovers.join(' / '));
+  }
+}
+
+function testI18nLocationScan() {
+  testPageI18n('pages/warehouse/location-scan/index.js',
+    'pages/warehouse/location-scan/index.wxml', '库位扫码页');
+
+  // 该页专有的交互断言
+  const js = 'pages/warehouse/location-scan/index.js';
   const { page: zhPage } = loadPage(js, makeApi());
   zhPage.applyLanguage('zh-CN');
   const { page: enPage } = loadPage(js, makeApi());
@@ -1037,43 +1102,140 @@ function testI18nLocationScan() {
   ok('en-US 的扫码标题是英文', /scan/i.test(enPage.data.t.scanTitle), enPage.data.t.scanTitle);
   ok('中英标题确实不同', zhPage.data.t.scanTitle !== enPage.data.t.scanTitle);
 
-  // ⑤ 走 storage 的语言（不传参）也要生效
   const { page: viaStore, wx: wxStore } = loadPage(js, makeApi());
   wxStore.setStorageSync('app.language', 'vi-VN');
   viaStore.applyLanguage();
   ok('按 storage 语言生效（vi-VN）', !CJK_RE.test(viaStore.data.t.scanTitle), viaStore.data.t.scanTitle);
 
-  // ⑥ 带参文案 tf()：{count} 占位符必须被替换
   const { page: countPage, wx: countWx } = loadPage(js, makeApi());
   countPage.data.items = [{}, {}, {}];
   countPage.applyLanguage('zh-CN');
   ok('中文条数文案插值正确', countPage.data.t.itemCount === '3 件', countPage.data.t.itemCount);
   countPage.applyLanguage('en-US');
   ok('英文条数文案插值正确', countPage.data.t.itemCount === '3 pcs', countPage.data.t.itemCount);
-  ok('条数文案不含未替换的占位符', !/\{count\}/.test(countPage.data.t.itemCount), countPage.data.t.itemCount);
 
-  // ⑦ 列表刷新后条数要跟着变（否则会一直显示首次的条数）
-  //    _refreshItemCount 不带语言参数 → 走 storage，所以先把语言落到 storage
   countWx.setStorageSync('app.language', 'en-US');
   countPage.data.items = [{}, {}];
   countPage._refreshItemCount();
   ok('列表变化后条数重算', countPage.data.t.itemCount === '2 pcs', countPage.data.t.itemCount);
-  // 点路径 setData 必须真的改到 data.t 里（而不是写成字面量键）
   ok('点路径 setData 未污染 data 顶层',
     !Object.prototype.hasOwnProperty.call(countPage.data, 't.itemCount'));
 
-  // ⑧ 分享标题本地化 + 传参
   const { page: sharePage } = loadPage(js, makeApi());
   sharePage.data.locationCode = 'A-01-02';
   const zhShare = sharePage.onShareAppMessage();
   ok('分享标题含库位号', zhShare.title.includes('A-01-02'), zhShare.title);
   ok('分享标题无未替换占位符', !/\{code\}/.test(zhShare.title), zhShare.title);
+}
 
-  // ⑨ 结构守护：wxml 里不许再留硬编码中文（防止回退）
-  const wxml = stripComments(fs.readFileSync(
-    path.join(MP, 'pages/warehouse/location-scan/index.wxml'), 'utf8'));
-  const leftovers = (wxml.match(/[\u4e00-\u9fff]+/g) || []);
-  ok('location-scan.wxml 无硬编码中文', leftovers.length === 0, leftovers.join(' / '));
+/**
+ * 成品库存列表页的接口桩
+ *
+ * ⚠️ 默认桩返回的是**裸数组**，而本页读 `res.records` → 会拿到空列表，
+ * 导致「列表项带参文案」这类断言静默失效。这里给回真实结构。
+ * 两条记录故意是**同一个款的两个 SKU**，用来顺带验证按款聚合。
+ */
+function makeFinishedInventoryApi() {
+  const api = makeApi();
+  api.warehouse = Object.assign({}, api.warehouse, {
+    listFinishedInventory: async () => ({
+      records: [
+        { id: 'r1', orderNo: 'PO-1', styleNo: 'ST-1', styleName: 'A款', factoryName: '甲厂',
+          availableQty: 10, lockedQty: 1, defectQty: 0, totalInboundQty: 20,
+          lastInboundDate: '2026-09-20T10:00:00' },
+        { id: 'r2', orderNo: 'PO-1', styleNo: 'ST-1', styleName: 'A款', factoryName: '甲厂',
+          availableQty: 5, lockedQty: 0, defectQty: 2, totalInboundQty: 8,
+          lastInboundDate: '2026-09-21T09:00:00' },
+      ],
+    }),
+  });
+  return api;
+}
+
+function testI18nFinishedInventoryList() {
+  const js = 'pages/warehouse/finished-inventory/index.js';
+  testPageI18n(js, 'pages/warehouse/finished-inventory/index.wxml', '成品库存列表页');
+
+  // 筛选器选项的 label 在 data 数组里（不是 wxml 字面量），通用检查覆盖不到 → 单独断言
+  const { page: zhP } = loadPage(js, makeFinishedInventoryApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP } = loadPage(js, makeFinishedInventoryApi());
+  enP.applyLanguage('en-US');
+  ok('zh-CN 筛选项是中文', CJK_RE.test(zhP.data.statusOptions[1].label), zhP.data.statusOptions[1].label);
+  ok('en-US 筛选项是英文', !CJK_RE.test(enP.data.statusOptions[1].label), enP.data.statusOptions[1].label);
+  ok('中英筛选项确实不同', zhP.data.statusOptions[1].label !== enP.data.statusOptions[1].label);
+
+  // 🔴 筛选项的 value 是**后端契约**，绝不能跟着语言变
+  eq('statusOptions 的 value 未受翻译影响',
+    zhP.data.statusOptions.map(o => o.value), ['', 'available', 'defect']);
+  eq('factoryTypeOptions 的 value 未受翻译影响',
+    zhP.data.factoryTypeOptions.map(o => o.value), ['', 'OWN', 'EXTERNAL']);
+
+  // onStatusChange 仍要取到正确 value（把常量从 {label} 改成 {labelKey} 最容易在这里踩空）
+  const { page: chgP } = loadPage(js, makeFinishedInventoryApi());
+  chgP.applyLanguage('en-US');
+  chgP.onStatusChange({ detail: { value: 1 } });
+  eq('切换筛选后 value 正确', chgP.data.statusValue, 'available');
+  chgP.onFactoryTypeChange({ detail: { value: 2 } });
+  eq('切换工厂类型后 value 正确', chgP.data.factoryTypeValue, 'EXTERNAL');
+
+  // 搜索框 placeholder 走 sticky-search-bar 的 property
+  const { page: phP } = loadPage(js, makeFinishedInventoryApi());
+  phP.applyLanguage('en-US');
+  ok('搜索占位符已本地化', !CJK_RE.test(phP.data.t.searchPlaceholder), phP.data.t.searchPlaceholder);
+}
+
+async function testI18nFinishedInventoryListData() {
+  const js = 'pages/warehouse/finished-inventory/index.js';
+
+  // 列表项的带参文案（「最近入库：{date}」逐条不同 → 不能放在 t 里，必须逐项生成）
+  const { page: p } = loadPage(js, makeFinishedInventoryApi());
+  p.applyLanguage('en-US');
+  await p.loadList(true);
+  eq('同款两个 SKU 聚合成一张卡片', p.data.list.length, 1);
+  const item = p.data.list[0];
+  ok('列表项带参文案已生成', /Last inbound: /.test(item._lastInboundText), item._lastInboundText);
+  ok('列表项文案无未替换 {date}', !/\{date\}/.test(item._lastInboundText), item._lastInboundText);
+  ok('日期取该款最晚的入库时间',
+    String(item._lastInboundText).includes('2026-09-21'), item._lastInboundText);
+
+  // 切语言后列表项文案要跟着变（applyLanguage 里会重算 list）
+  p.applyLanguage('zh-CN');
+  ok('切回中文后列表项文案同步变化',
+    CJK_RE.test(p.data.list[0]._lastInboundText), p.data.list[0]._lastInboundText);
+
+  // 空列表时 applyLanguage 不能炸（onShow 会在数据到达前先跑一次）
+  const { page: emptyP } = loadPage(js, makeFinishedInventoryApi());
+  emptyP.applyLanguage('vi-VN');
+  ok('空列表 applyLanguage 不报错', Array.isArray(emptyP.data.list) && emptyP.data.list.length === 0);
+}
+
+function testI18nFinishedInventoryDetail() {
+  const js = 'pages/warehouse/finished-inventory/detail/index.js';
+  testPageI18n(js, 'pages/warehouse/finished-inventory/detail/index.wxml', '成品库存详情页');
+
+  // 导航栏标题要跟着语言走
+  const { page: zhP } = loadPage(js, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP } = loadPage(js, makeApi());
+  enP.applyLanguage('en-US');
+  ok('zh-CN 标题是中文', CJK_RE.test(zhP.data.t.availableStock), zhP.data.t.availableStock);
+  ok('en-US 标题是英文', !CJK_RE.test(enP.data.t.availableStock), enP.data.t.availableStock);
+
+  // 订单号带参文案
+  const { page: orderP } = loadPage(js, makeApi());
+  orderP.data.orderNo = 'PO-2026-001';
+  orderP.applyLanguage('en-US');
+  ok('订单号文案插值正确', orderP.data.t.orderNoText === 'Order: PO-2026-001', orderP.data.t.orderNoText);
+
+  // 条数跟着列表长度重算（点路径 setData）
+  const { page: cntP, wx: cntWx } = loadPage(js, makeApi());
+  cntWx.setStorageSync('app.language', 'en-US');
+  cntP.data.skuList = [{}, {}];
+  cntP.data.inboundHistory = [{}];
+  cntP._refreshCounts();
+  ok('SKU 条数重算', cntP.data.t.skuCountText === '2 items', cntP.data.t.skuCountText);
+  ok('入库记录条数重算', cntP.data.t.recordCountText === '1 records', cntP.data.t.recordCountText);
 }
 
 // ────────────────────────── 执行 ──────────────────────────
@@ -1092,6 +1254,9 @@ try {
   await testSearchPicker();
   testSearchPickerConvention();
   testI18nLocationScan();
+  testI18nFinishedInventoryList();
+  await testI18nFinishedInventoryListData();
+  testI18nFinishedInventoryDetail();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

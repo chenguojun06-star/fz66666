@@ -78,7 +78,22 @@ export const LOCALES = {
       "selectedCount": "已选 {count} 项",
       "query": "查询",
       "retry": "重试",
-      "piece": "件"
+      "piece": "件",
+      "loadFailed": "加载失败",
+      "inbound": "入库",
+      "outbound": "出库",
+      "available": "可用",
+      "locked": "锁定",
+      "defective": "次品",
+      "salesPrice": "售价",
+      "location": "库位",
+      "color": "颜色",
+      "size": "尺码",
+      "sku": "商品编码",
+      "totalInbound": "累计入库",
+      "noStock": "无库存",
+      "itemCount": "{count}个",
+      "recordCount": "{count}条"
     },
     "login": {
       "brand": "云裳智链",
@@ -413,6 +428,35 @@ export const LOCALES = {
           "noContent": "未识别到内容",
           "loadFailed": "加载库位库存失败",
           "shareTitle": "库位 {code} 库存详情"
+        },
+        "finishedInventoryDetail": {
+          "title": "库存详情",
+          "missingStyleNo": "缺少款号",
+          "loadInboundFailed": "加载入库记录失败",
+          "availableStock": "可用库存",
+          "skuDetail": "商品编码明细",
+          "inboundRecords": "入库记录",
+          "noInboundRecords": "暂无入库记录",
+          "noStockData": "暂无库存数据",
+          "orderNo": "订单：{no}"
+        },
+        "finishedInventory": {
+          "styleCount": "款数",
+          "availableStockPcs": "可用库存(件)",
+          "defectPcs": "次品数(件)",
+          "searchPlaceholder": "搜索订单号/款号/商品编码",
+          "noData": "暂无成品库存数据",
+          "scanFirst": "请先扫码入库",
+          "orderPrefix": "订单：",
+          "tagAvailable": "有库存",
+          "tagDefect": "有次品",
+          "lastInbound": "最近入库：{date}",
+          "pullMore": "上拉加载更多",
+          "noMore": "— 没有更多了 —",
+          "allFactoryTypes": "全部工厂类型",
+          "factoryOwn": "自有工厂",
+          "factoryExternal": "外发工厂",
+          "noAvailableStock": "该款暂无可用库存"
         }
       }
     }
@@ -490,7 +534,22 @@ export const LOCALES = {
       "selectedCount": "{count} selected",
       "query": "Query",
       "retry": "Retry",
-      "piece": "pcs"
+      "piece": "pcs",
+      "loadFailed": "Load failed",
+      "inbound": "Inbound",
+      "outbound": "Outbound",
+      "available": "Available",
+      "locked": "Locked",
+      "defective": "Defective",
+      "salesPrice": "Price",
+      "location": "Location",
+      "color": "Color",
+      "size": "Size",
+      "sku": "SKU",
+      "totalInbound": "Total Inbound",
+      "noStock": "No stock",
+      "itemCount": "{count} items",
+      "recordCount": "{count} records"
     },
     "login": {
       "brand": "Yunshang SCM",
@@ -825,6 +884,35 @@ export const LOCALES = {
           "noContent": "Nothing recognized",
           "loadFailed": "Failed to load location stock",
           "shareTitle": "Location {code} stock details"
+        },
+        "finishedInventoryDetail": {
+          "title": "Stock Details",
+          "missingStyleNo": "Style No. is required",
+          "loadInboundFailed": "Failed to load inbound records",
+          "availableStock": "Available Stock",
+          "skuDetail": "SKU Details",
+          "inboundRecords": "Inbound Records",
+          "noInboundRecords": "No inbound records",
+          "noStockData": "No stock data",
+          "orderNo": "Order: {no}"
+        },
+        "finishedInventory": {
+          "styleCount": "Styles",
+          "availableStockPcs": "Available (pcs)",
+          "defectPcs": "Defects (pcs)",
+          "searchPlaceholder": "Search order / style / SKU",
+          "noData": "No finished goods stock",
+          "scanFirst": "Scan to receive stock first",
+          "orderPrefix": "Order: ",
+          "tagAvailable": "In Stock",
+          "tagDefect": "Has Defects",
+          "lastInbound": "Last inbound: {date}",
+          "pullMore": "Pull up to load more",
+          "noMore": "— No more —",
+          "allFactoryTypes": "All factory types",
+          "factoryOwn": "Own Factory",
+          "factoryExternal": "External Factory",
+          "noAvailableStock": "No available stock for this style"
         }
       }
     }
@@ -902,7 +990,22 @@ export const LOCALES = {
       "selectedCount": "Đã chọn {count}",
       "query": "Truy vấn",
       "retry": "Thử lại",
-      "piece": "cái"
+      "piece": "cái",
+      "loadFailed": "Tải thất bại",
+      "inbound": "Nhập kho",
+      "outbound": "Xuất kho",
+      "available": "Khả dụng",
+      "locked": "Đã khóa",
+      "defective": "Hàng lỗi",
+      "salesPrice": "Giá bán",
+      "location": "Vị trí",
+      "color": "Màu sắc",
+      "size": "Kích cỡ",
+      "sku": "Mã hàng",
+      "totalInbound": "Tổng nhập kho",
+      "noStock": "Hết hàng",
+      "itemCount": "{count} mục",
+      "recordCount": "{count} bản ghi"
     },
     "login": {
       "brand": "Chuỗi Cung Ứng Yunshang",
@@ -1237,6 +1340,35 @@ export const LOCALES = {
           "noContent": "Không nhận diện được nội dung",
           "loadFailed": "Không tải được tồn kho vị trí",
           "shareTitle": "Chi tiết tồn kho vị trí {code}"
+        },
+        "finishedInventoryDetail": {
+          "title": "Chi tiết tồn kho",
+          "missingStyleNo": "Thiếu mã hàng",
+          "loadInboundFailed": "Không tải được lịch sử nhập kho",
+          "availableStock": "Tồn khả dụng",
+          "skuDetail": "Chi tiết mã hàng",
+          "inboundRecords": "Lịch sử nhập kho",
+          "noInboundRecords": "Chưa có lịch sử nhập kho",
+          "noStockData": "Chưa có dữ liệu tồn kho",
+          "orderNo": "Đơn hàng: {no}"
+        },
+        "finishedInventory": {
+          "styleCount": "Số mã hàng",
+          "availableStockPcs": "Tồn khả dụng (cái)",
+          "defectPcs": "Hàng lỗi (cái)",
+          "searchPlaceholder": "Tìm đơn hàng / mã hàng / SKU",
+          "noData": "Chưa có dữ liệu tồn thành phẩm",
+          "scanFirst": "Vui lòng quét mã nhập kho trước",
+          "orderPrefix": "Đơn hàng: ",
+          "tagAvailable": "Còn tồn",
+          "tagDefect": "Có hàng lỗi",
+          "lastInbound": "Nhập kho gần nhất: {date}",
+          "pullMore": "Kéo lên để tải thêm",
+          "noMore": "— Hết dữ liệu —",
+          "allFactoryTypes": "Tất cả loại xưởng",
+          "factoryOwn": "Xưởng tự có",
+          "factoryExternal": "Xưởng gia công ngoài",
+          "noAvailableStock": "Mã hàng này chưa có tồn khả dụng"
         }
       }
     }
@@ -1314,7 +1446,22 @@ export const LOCALES = {
       "selectedCount": "{count} selected",
       "query": "Query",
       "retry": "Retry",
-      "piece": "pcs"
+      "piece": "pcs",
+      "loadFailed": "Load failed",
+      "inbound": "Inbound",
+      "outbound": "Outbound",
+      "available": "Available",
+      "locked": "Locked",
+      "defective": "Defective",
+      "salesPrice": "Price",
+      "location": "Location",
+      "color": "Color",
+      "size": "Size",
+      "sku": "SKU",
+      "totalInbound": "Total Inbound",
+      "noStock": "No stock",
+      "itemCount": "{count} items",
+      "recordCount": "{count} records"
     },
     "login": {
       "brand": "Yunshang SCM",
@@ -1649,6 +1796,35 @@ export const LOCALES = {
           "noContent": "Nothing recognized",
           "loadFailed": "Failed to load location stock",
           "shareTitle": "Location {code} stock details"
+        },
+        "finishedInventoryDetail": {
+          "title": "Stock Details",
+          "missingStyleNo": "Style No. is required",
+          "loadInboundFailed": "Failed to load inbound records",
+          "availableStock": "Available Stock",
+          "skuDetail": "SKU Details",
+          "inboundRecords": "Inbound Records",
+          "noInboundRecords": "No inbound records",
+          "noStockData": "No stock data",
+          "orderNo": "Order: {no}"
+        },
+        "finishedInventory": {
+          "styleCount": "Styles",
+          "availableStockPcs": "Available (pcs)",
+          "defectPcs": "Defects (pcs)",
+          "searchPlaceholder": "Search order / style / SKU",
+          "noData": "No finished goods stock",
+          "scanFirst": "Scan to receive stock first",
+          "orderPrefix": "Order: ",
+          "tagAvailable": "In Stock",
+          "tagDefect": "Has Defects",
+          "lastInbound": "Last inbound: {date}",
+          "pullMore": "Pull up to load more",
+          "noMore": "— No more —",
+          "allFactoryTypes": "All factory types",
+          "factoryOwn": "Own Factory",
+          "factoryExternal": "External Factory",
+          "noAvailableStock": "No available stock for this style"
         }
       }
     }

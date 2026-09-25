@@ -71,7 +71,22 @@
     "selectedCount": "{count} selected",
     "query": "Query",
     "retry": "Retry",
-    "piece": "pcs"
+    "piece": "pcs",
+    "loadFailed": "Load failed",
+    "inbound": "Inbound",
+    "outbound": "Outbound",
+    "available": "Available",
+    "locked": "Locked",
+    "defective": "Defective",
+    "salesPrice": "Price",
+    "location": "Location",
+    "color": "Color",
+    "size": "Size",
+    "sku": "SKU",
+    "totalInbound": "Total Inbound",
+    "noStock": "No stock",
+    "itemCount": "{count} items",
+    "recordCount": "{count} records"
   },
   "login": {
     "brand": "Yunshang SCM",
@@ -406,6 +421,35 @@
         "noContent": "Nothing recognized",
         "loadFailed": "Failed to load location stock",
         "shareTitle": "Location {code} stock details"
+      },
+      "finishedInventoryDetail": {
+        "title": "Stock Details",
+        "missingStyleNo": "Style No. is required",
+        "loadInboundFailed": "Failed to load inbound records",
+        "availableStock": "Available Stock",
+        "skuDetail": "SKU Details",
+        "inboundRecords": "Inbound Records",
+        "noInboundRecords": "No inbound records",
+        "noStockData": "No stock data",
+        "orderNo": "Order: {no}"
+      },
+      "finishedInventory": {
+        "styleCount": "Styles",
+        "availableStockPcs": "Available (pcs)",
+        "defectPcs": "Defects (pcs)",
+        "searchPlaceholder": "Search order / style / SKU",
+        "noData": "No finished goods stock",
+        "scanFirst": "Scan to receive stock first",
+        "orderPrefix": "Order: ",
+        "tagAvailable": "In Stock",
+        "tagDefect": "Has Defects",
+        "lastInbound": "Last inbound: {date}",
+        "pullMore": "Pull up to load more",
+        "noMore": "— No more —",
+        "allFactoryTypes": "All factory types",
+        "factoryOwn": "Own Factory",
+        "factoryExternal": "External Factory",
+        "noAvailableStock": "No available stock for this style"
       }
     }
   }
