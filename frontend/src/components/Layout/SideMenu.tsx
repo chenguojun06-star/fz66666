@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Button, Layout as AntLayout, Menu, Tooltip } from 'antd';
 import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
@@ -114,6 +114,26 @@ const SideMenu: React.FC<SideMenuProps> = ({
     });
   }, [language, menuI18nMapByPath, menuI18nMapBySectionKey]);
 
+  /**
+   * 单个菜单项是否对当前用户可见。
+   *
+   * ⚠️ 必须**同时**用于「section 是否保留」和「子项是否保留」两处判断。
+   *
+   * 原来的 bug（2026-09-25 修）：外层用宽松条件（factoryVisible || hasPermission），
+   * 内层用严格条件（额外还有 isTenantModuleEnabled）→ 某些 section 外层通过、
+   * 内层子项被全部过滤 → 渲染出**没有子菜单的空 SubMenu**。
+   * 折叠态下悬停这种空 SubMenu 弹层是空的，表现为"有的菜单悬停看得到文字、有的看不到"。
+   * 统一成一个判定后，子项为空的 section 会被整体丢弃，不会再产生空弹层。
+   */
+  const isItemVisible = useCallback((item: { path: string; superAdminOnly?: boolean }) => {
+    if (item.superAdminOnly && !isSuperAdmin) return false;
+    if (isFactoryAccount && !factoryVisiblePaths.has(normalizePath(item.path))) return false;
+    if (!isTenantModuleEnabled(item.path)) return false;
+    // 工厂账号的可见路径是白名单制，直接放行；其余按权限码判定
+    if (isFactoryAccount && factoryVisiblePaths.has(normalizePath(item.path))) return true;
+    return hasPermissionForPath(item.path);
+  }, [isSuperAdmin, isFactoryAccount, factoryVisiblePaths, isTenantModuleEnabled, hasPermissionForPath]);
+
   const menuItems = useMemo(() => {
     return localizedMenuConfig
       .filter((section) => {
@@ -123,10 +143,9 @@ const SideMenu: React.FC<SideMenuProps> = ({
           if (section.items && !section.items.some(item => isTenantModuleEnabled(item.path))) return false;
         }
         if (section.superAdminOnly && !isSuperAdmin) return false;
+        // 与子项过滤用同一判定，避免"外层保留、内层全空"→ 空 SubMenu
         if (section.items) {
-          return section.items.some((item) =>
-            (isFactoryAccount && factoryVisiblePaths.has(normalizePath(item.path))) || hasPermissionForPath(item.path)
-          );
+          return section.items.some(isItemVisible);
         }
         if (isFactoryAccount && factoryVisiblePaths.has(normalizePath(section.path!))) return true;
         return hasPermissionForPath(section.path!);
@@ -134,13 +153,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
       .map((section) => {
         if (section.items) {
           const children = section.items
-            .filter((item) => {
-              if ((item as any).superAdminOnly && !isSuperAdmin) return false;
-              if (isFactoryAccount && !factoryVisiblePaths.has(normalizePath(item.path))) return false;
-              if (!isTenantModuleEnabled(item.path)) return false;
-              if (isFactoryAccount && factoryVisiblePaths.has(normalizePath(item.path))) return true;
-              return hasPermissionForPath(item.path);
-            })
+            .filter(isItemVisible)
             .map((item) => {
               const itemPath = item.path;
               const badgeCount = badgeCounts[itemPath] || 0;
@@ -165,29 +178,31 @@ const SideMenu: React.FC<SideMenuProps> = ({
               };
             });
 
+          // 子项全被过滤掉时整体丢弃该 section —— 否则会渲染出空 SubMenu，
+          // 折叠态悬停时弹层为空（就是"有的菜单悬停看不到文字"的直接原因）
+          if (children.length === 0) return null;
+
           return {
             key: section.key,
             icon: section.icon,
             label: section.title,
-            // antd collapsed 模式下用 title 作为 tooltip 文本；
-            // 给每个顶层项都加，确保悬停提示一致（之前只有部分项有，体验割裂）
-            title: sidebarIsCollapsed ? section.title : undefined,
-            children: children.length > 0 ? children : undefined,
+            children,
             popupClassName: 'layout-sidebar-submenu-popup',
           };
         } else {
           if (sidebarIsCollapsed && !isMobile) {
+            // 折叠态下，无子菜单的顶层项包一层假 SubMenu，悬停时弹出该项本身。
+            // 注意：这里**不要**加 title —— rc-menu 的 nodeUtil 会把 label 覆盖到 title 上
+            // （`{...restProps, title: label}`），加了也是无效值，反而误导后人。
             return {
               key: `${section.key}__collapsed_group`,
               icon: section.icon,
               label: section.title,
-              title: section.title,
               children: [
                 {
                   key: section.path!,
                   icon: section.icon,
                   label: <Link to={section.path!}>{section.title}</Link>,
-                  title: section.title,
                 },
               ],
               popupClassName: 'layout-sidebar-submenu-popup',
@@ -197,11 +212,15 @@ const SideMenu: React.FC<SideMenuProps> = ({
             key: section.path!,
             icon: section.icon,
             label: <Link to={section.path!}>{section.title}</Link>,
+            // 真·顶层 MenuItem 才吃 title：antd MenuItem 在折叠态用它作 tooltip 文案
+            // （不传时回退为 children，即 label）。显式传字符串可避免 tooltip 里渲染 <Link> 节点
             title: sidebarIsCollapsed ? section.title : undefined,
           };
         }
-      });
-  }, [localizedMenuConfig, isSuperAdmin, isFactoryAccount, sidebarIsCollapsed, isMobile, alwaysVisiblePaths, factoryVisiblePaths, factoryVisibleSections, hasPermissionForPath, isTenantModuleEnabled, tenantModules, badgeCounts, onMenuClick]);
+      })
+      // 丢掉「子项全被过滤」的 section（map 里对空 children 返回了 null）
+      .filter((node): node is NonNullable<typeof node> => node !== null);
+  }, [localizedMenuConfig, isSuperAdmin, isFactoryAccount, sidebarIsCollapsed, isMobile, alwaysVisiblePaths, factoryVisiblePaths, factoryVisibleSections, hasPermissionForPath, isTenantModuleEnabled, tenantModules, badgeCounts, onMenuClick, isItemVisible]);
 
   const handleMenuOpenChange = (openKeys: string[]) => {
     if (sidebarIsCollapsed) return;
