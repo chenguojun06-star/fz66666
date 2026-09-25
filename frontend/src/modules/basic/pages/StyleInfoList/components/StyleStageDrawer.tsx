@@ -4,6 +4,7 @@ import SampleProcessList from './SampleProcessList';
 import SampleScanRecordsTable from './SampleScanRecordsTable';
 import PatternRemarkPreview from './PatternRemarkPreview';
 import { STATUS_COLORS, STATUS_LABELS } from './useSampleProcurementQuickActions';
+import { t } from '@/i18n';
 import type { UseStyleTableViewDataReturn } from './useStyleTableViewData';
 import ProductionOrderHeader from '@/components/StyleAssets/ProductionOrderHeader';
 
@@ -273,7 +274,7 @@ const StyleStageDrawer: React.FC<StyleStageDrawerProps> = ({
                               <td className="u-p-8px12px u-ta-right">{item.purchaseQuantity} {item.unit}</td>
                               <td className="u-p-8px12px" style={{ color: 'var(--color-text-secondary)' }}>{item.supplierName || '-'}</td>
                               <td className="u-p-8px12px u-ta-center">
-                                <Tag color={STATUS_COLORS[item.status] ?? 'default'}>{STATUS_LABELS[item.status] ?? '未知'}</Tag>
+                                <Tag color={STATUS_COLORS[item.status] ?? 'default'}>{t(STATUS_LABELS[item.status] ?? 'common.unknown')}</Tag>
                               </td>
                               <td className="u-p-8px12px u-ta-center">
                                 {item.status === 'pending' ? (

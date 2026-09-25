@@ -4,6 +4,7 @@ import type { ProductionOrder } from '@/types/production';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import FactoryTypeTag from '@/components/common/FactoryTypeTag';
 import { ORDER_BIZ_TYPE_MAP } from '@/constants/statusMaps';
+import { t } from '@/i18n';
 import { safeString } from '../../utils';
 import { displayAmount } from '@/utils/display';
 import { renderMerchandiserCell, CELL_CHIP_STYLE } from '../riskBadgeRenderers';
@@ -37,7 +38,7 @@ export function buildFactoryColumns({
               />
             </span>
             {bizType && (
-              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px' }}>{ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知'}</Tag>
+              <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px' }}>{t(ORDER_BIZ_TYPE_MAP[bizType]?.text ?? 'common.unknown')}</Tag>
             )}
           </Space>
         );

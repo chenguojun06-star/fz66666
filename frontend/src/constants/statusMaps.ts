@@ -3,6 +3,9 @@
  *
  * 【设计原则】
  * - 所有状态值统一为小写英文（与后端数据库一致）
+ * - 【D-520】text 字段存 i18n key（如 `status.order.production`），
+ *   渲染侧统一用 t() 翻译后再展示；禁止直接把 text 渲染到界面。
+ *   映射定义见 shared-locales/source/*.json 的 status.* 节点。
  * - 同一状态值在所有域（生产/采购/质检/工资/财务）的文字/颜色必须一致
  * - 状态色严格限制为6种：success(绿)/processing(蓝)/warning(黄)/error(红)/default(灰)/info(紫)
  * - 各组件/页面内联 statusMap 暂不改动（改动面太大），在新增代码中强制引用本文件
@@ -15,6 +18,8 @@
  *   default    → 灰色：默认/草稿/取消/停用/归档
  *   info       → 紫色：信息/次要状态/类型标签
  */
+
+import { t } from '@/i18n';
 
 export type StatusMapItem = {
   text: string;
@@ -308,11 +313,12 @@ export const REVIEW_STATUS_MAP: StatusMap = {
 export function resolveStatus(key: string, fallback?: StatusMapItem): StatusMapItem {
   const k = String(key ?? '').trim();
   if (!k) return fallback ?? { text: '-', color: 'default' };
-  return (
+  const found =
     ORDER_STATUS_MAP[k] ??
     ORDER_STATUS_MAP[k.toLowerCase()] ??
     ORDER_STATUS_MAP[k.toUpperCase()] ??
     fallback ??
-    { text: 'common.unknown', color: 'default' }
-  );
+    { text: 'common.unknown', color: 'default' };
+  // D-520：text 为 i18n key，统一在此翻译后返回
+  return { text: t(found.text), color: found.color };
 }

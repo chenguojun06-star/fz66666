@@ -5,6 +5,7 @@ import type { PatternRevision } from '@/types/patternRevision';
 import { formatDateTime } from '@/utils/datetime';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { PATTERN_STATUS_MAP } from '@/constants/statusMaps';
+import { t } from '@/i18n';
 import { AttachmentThumb } from './AttachmentThumb';
 import {
   heroStyle, heroThumbStyle, heroHeadlineStyle, directTitleStyle,
@@ -18,7 +19,7 @@ type PatternAttachment = StyleAttachment & { versionRemark?: string | null };
 const toPatternStatusLabel = (value?: string | null) => {
   const normalized = String(value || '').trim().toUpperCase();
   if (!normalized) return '未记录';
-  return PATTERN_STATUS_MAP[normalized]?.text ?? String(value);
+  return t(PATTERN_STATUS_MAP[normalized]?.text ?? String(value));
 };
 
 interface PatternSummaryProps {

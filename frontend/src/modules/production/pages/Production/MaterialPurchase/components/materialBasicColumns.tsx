@@ -10,6 +10,7 @@ import { formatMaterialSpecWidth } from '@/utils/materialType';
 import { analyzePurchase, renderPurchaseTooltip } from '../utils/purchaseIntelligence';
 import { formatMaterialQuantityWithUnit } from '../utils';
 import { ORDER_BIZ_TYPE_MAP } from '@/constants/statusMaps';
+import { t } from '@/i18n';
 import { BIZ_TYPE_COLOR_MAP } from './MaterialTable.helpers';
 import type { UseMaterialColumnsParams } from './useMaterialColumns';
 
@@ -85,7 +86,7 @@ export const buildBasicColumns = (params: UseMaterialColumnsParams): ColumnsType
           <Space size={4}>
             <FactoryTypeTag factoryType={type} />
             <SupplierNameTooltip name={name} />
-            {bizType && <Tag color={BIZ_TYPE_COLOR_MAP[bizType] ?? 'default'} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px' }}>{ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知'}</Tag>}
+            {bizType && <Tag color={BIZ_TYPE_COLOR_MAP[bizType] ?? 'default'} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px' }}>{t(ORDER_BIZ_TYPE_MAP[bizType]?.text ?? 'common.unknown')}</Tag>}
           </Space>
         );
       },

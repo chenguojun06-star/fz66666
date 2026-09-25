@@ -7,6 +7,7 @@ import { getMaterialTypeLabel } from '@/utils/materialType';
 import { compareSizeAsc } from '@/utils/api/size';
 import { displayAmount } from '@/utils/display';
 import { MATERIAL_PURCHASE_STATUS_MAP } from '@/constants/statusMaps';
+import { t } from '@/i18n';
 import { getBomColumns } from '../helpers/bomColumns';
 import SmartPurchasePreviewModal from './SmartPurchasePreviewModal';
 import { PurchaseGenerateDropdown, PURCHASE_ACTION_LABELS } from '@/components/common/purchase/PurchaseActionBar';
@@ -166,7 +167,7 @@ const MaterialTabContent: React.FC<MaterialTabContentProps> = ({
               // D-138：状态中文化（复用全系统统一的采购状态映射）
               render: (v: any) => {
                 const item = MATERIAL_PURCHASE_STATUS_MAP[String(v || '').toLowerCase()];
-                return item ? <Tag color={item.color} style={{ margin: 0 }}>{item.text}</Tag> : (v || '-');
+                return item ? <Tag color={item.color} style={{ margin: 0 }}>{t(item.text)}</Tag> : (v || '-');
               },
             },
           ]}

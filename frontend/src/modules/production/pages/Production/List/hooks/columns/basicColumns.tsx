@@ -7,6 +7,7 @@ import { withQuery } from '@/utils/api';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getPlatformTag } from '@/utils/platform';
 import { ORDER_BIZ_TYPE_MAP } from '@/constants/statusMaps';
+import { t } from '@/i18n';
 import { safeString } from '../../utils';
 import SmartOrderHoverCard from '../../../ProgressDetail/components/SmartOrderHoverCard';
 import type { UseProductionColumnsProps } from './types';
@@ -72,7 +73,7 @@ export function buildBasicColumns({
             {(record as any).orderBizType && (() => {
               const bizType = String((record as any).orderBizType);
               const colorMap: Record<string, string> = { FOB: 'processing', ODM: 'info', OEM: 'processing', CMT: 'warning' };
-              const bizLabel = ORDER_BIZ_TYPE_MAP[bizType]?.text ?? '未知';
+              const bizLabel = t(ORDER_BIZ_TYPE_MAP[bizType]?.text ?? 'common.unknown');
               return <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px' }}>{bizLabel}</Tag>;
             })()}
             {record.ecPlatform && (
