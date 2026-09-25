@@ -3,11 +3,11 @@
   <view class="header">
     <view class="header-avatar">
       <image wx:if="{{avatarImgUrl}}" src="{{avatarImgUrl}}" mode="aspectFill" class="header-avatar-img" binderror="onAvatarError" />
-      <text wx:else class="header-avatar-letter">{{userName ? userName[0] : '用'}}</text>
+      <text wx:else class="header-avatar-letter">{{userName ? userName[0] : t.defaultAvatarLetter}}</text>
     </view>
     <view class="header-info">
-      <text class="greeting-name">{{greeting}}，{{userName}}</text>
-      <text class="greeting-sub">{{orgName || '欢迎使用衣智链'}}</text>
+      <text class="greeting-name">{{greetingText}}</text>
+      <text class="greeting-sub">{{orgName || t.welcomeFallback}}</text>
       <text class="greeting-date">{{dateInfo.date}} {{dateInfo.day}}</text>
     </view>
   </view>
@@ -18,7 +18,7 @@
       <text class="tip-icon-text">i</text>
     </view>
     <view class="tip-content">
-      <text class="tip-title">今日小贴士</text>
+      <text class="tip-title">{{t.dailyTipTitle}}</text>
       <text class="tip-text">{{dateInfo.dailyTip}}</text>
     </view>
   </view>
@@ -28,36 +28,36 @@
     <!-- 第1行：标题+状态 + 时间信息 + 查看明细 -->
     <view class="attendance-top-row">
       <view class="attendance-title-wrap">
-        <text class="attendance-title">考勤打卡</text>
+        <text class="attendance-title">{{t.attendanceTitle}}</text>
         <text class="attendance-status {{attendanceStatusClass}}">{{attendanceStatusText}}</text>
       </view>
       <view class="attendance-detail-link" hover-class="attendance-detail-link-hover" hover-stay-time="100" bindtap="onViewAttendance">
-        <text class="attendance-detail-link-text">明细</text>
+        <text class="attendance-detail-link-text">{{t.detailLink}}</text>
         <text class="attendance-detail-link-arrow">›</text>
       </view>
     </view>
     <!-- 三格时间区：上班/下班/本月 -->
     <view class="attendance-stats">
       <view class="attendance-stat-cell">
-        <text class="attendance-stat-key">上班</text>
+        <text class="attendance-stat-key">{{t.clockInLabel}}</text>
         <text class="attendance-stat-val">{{attendanceClockInText}}</text>
       </view>
       <view class="attendance-stat-cell">
-        <text class="attendance-stat-key">下班</text>
+        <text class="attendance-stat-key">{{t.clockOutLabel}}</text>
         <text class="attendance-stat-val">{{attendanceClockOutText}}</text>
       </view>
       <view class="attendance-stat-cell">
-        <text class="attendance-stat-key">本月</text>
-        <text class="attendance-stat-val">{{monthlyHoursText}}h/{{monthlyDaysText}}天</text>
+        <text class="attendance-stat-key">{{t.thisMonthLabel}}</text>
+        <text class="attendance-stat-val">{{t.monthlyStatsText}}</text>
       </view>
     </view>
     <!-- 打卡按钮 -->
     <view class="attendance-actions">
       <view class="attendance-btn {{clockInBtnActive ? 'attendance-btn--active' : 'attendance-btn--idle'}}" hover-class="attendance-btn-hover" hover-stay-time="100" bindtap="onClockIn">
-        <text class="attendance-btn-text">上班打卡</text>
+        <text class="attendance-btn-text">{{t.clockInBtn}}</text>
       </view>
       <view class="attendance-btn {{clockOutBtnActive ? 'attendance-btn--active' : 'attendance-btn--idle'}}" hover-class="attendance-btn-hover" hover-stay-time="100" bindtap="onClockOut">
-        <text class="attendance-btn-text">下班打卡</text>
+        <text class="attendance-btn-text">{{t.clockOutBtn}}</text>
       </view>
     </view>
   </view>
@@ -66,10 +66,10 @@
   <view class="menu-section">
     <view class="menu-row {{row.layout === 'pair' ? 'menu-row--pair' : ''}}"
           wx:for="{{menuRows}}" wx:for-item="row" wx:key="key">
-      <view class="menu-group" wx:for="{{row.groups}}" wx:for-item="item" wx:key="group">
+      <view class="menu-group" wx:for="{{row.groups}}" wx:for-item="item" wx:key="groupKey">
         <view class="menu-group-title">
           <text>{{item.group}}</text>
-          <text class="menu-group-count">{{item.items.length}}个</text>
+          <text class="menu-group-count">{{item._countText}}</text>
         </view>
         <view class="menu-grid {{row.layout === 'pair' ? 'menu-grid--half' : ''}}">
           <view

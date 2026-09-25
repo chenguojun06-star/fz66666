@@ -79,6 +79,30 @@ function tf(keyPath, params, lang) {
   return result;
 }
 
+// app.json 的 tabBar 文字是静态中文兜底，四语言靠这里运行时改。
+// 顺序必须与 app.json tabBar.list 一致：首页 / 扫码 / 质检 / 我的
+const TAB_ITEMS = [
+  { index: 0, key: 'tabbar.home' },
+  { index: 1, key: 'tabbar.scan' },
+  { index: 2, key: 'tabbar.quality' },
+  { index: 3, key: 'tabbar.admin' },
+];
+
+/**
+ * 按当前语言重设底部 tabBar 文字。
+ * 只在 tabBar 页面上下文生效；从非 tab 页调用时微信只回调 fail 不会抛错。
+ * 在各 tab 页的 applyLanguage 里调用。
+ */
+function applyTabBar(lang) {
+  TAB_ITEMS.forEach(function (item) {
+    try {
+      wx.setTabBarItem({ index: item.index, text: t(item.key, lang), fail: function () {} });
+    } catch (e) {
+      // 测试环境/异常宿主：静默跳过
+    }
+  });
+}
+
 module.exports = {
   STORAGE_KEY,
   DEFAULT_LANG,
@@ -86,5 +110,6 @@ module.exports = {
   setLanguage,
   t,
   tf,
+  applyTabBar,
   locales,
 };

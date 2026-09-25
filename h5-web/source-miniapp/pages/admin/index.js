@@ -103,6 +103,8 @@ Page({
       currentLanguage: language,
       currentLanguageName: languageNameMap[language] || '中文',
     });
+    // 语言切换就在本页发生，底栏必须立刻跟着变（不能等用户切到别的 tab）
+    i18n.applyTabBar(language);
     this.refreshMenuItems();
   },
 

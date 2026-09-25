@@ -2,20 +2,20 @@
   <view class="search-bar-page">
     <view class="search-box">
       <view class="search-icon line-icon icon-search"></view>
-      <input class="search-input" placeholder="搜索应用名称" value="{{searchKeyword}}" bindinput="onSearchInput" />
+      <input class="search-input" placeholder="{{t.searchPlaceholder}}" value="{{searchKeyword}}" bindinput="onSearchInput" />
       <view class="search-clear icon-close" wx:if="{{searchKeyword}}" catchtap="onSearchInput" data-clear="true"></view>
     </view>
-    <text class="edit-btn {{editing ? 'edit-btn-active' : ''}}" bindtap="onEditToggle">{{editing ? '完成' : '编辑'}}</text>
-    <text class="edit-btn" wx:if="{{isAdmin && !editing}}" bindtap="onGotoRoleConfig">权限配置</text>
+    <text class="edit-btn {{editing ? 'edit-btn-active' : ''}}" bindtap="onEditToggle">{{editing ? t.done : t.edit}}</text>
+    <text class="edit-btn" wx:if="{{isAdmin && !editing}}" bindtap="onGotoRoleConfig">{{t.roleConfig}}</text>
   </view>
 
   <view class="fav-section" wx:if="{{favoriteApps.length > 0}}">
     <view class="section-header">
       <view class="section-title-row">
-        <text class="section-title">我的收藏</text>
+        <text class="section-title">{{t.myFavorites}}</text>
         <text class="section-count section-count--blue">{{favoriteApps.length}}</text>
       </view>
-      <text class="clear-btn" wx:if="{{editing}}" bindtap="onClearFavorites">清空</text>
+      <text class="clear-btn" wx:if="{{editing}}" bindtap="onClearFavorites">{{t.clear}}</text>
     </view>
     <view class="app-grid">
       <view class="app-item" wx:for="{{favoriteApps}}" wx:key="id" data-route="{{item.route}}" data-id="{{item.id}}" bindtap="onAppTap">
@@ -35,13 +35,13 @@
   <view class="all-apps-section">
     <view class="empty-result" wx:if="{{filteredApps.length === 0 && searchKeyword}}">
       <view class="empty-icon line-icon icon-search"></view>
-      <text class="empty-text">未找到"{{searchKeyword}}"相关应用</text>
+      <text class="empty-text">{{t.noResultText}}</text>
     </view>
 
-    <view class="app-group" wx:for="{{filteredApps}}" wx:key="group">
+    <view class="app-group" wx:for="{{filteredApps}}" wx:key="groupKey">
       <view class="group-title">
         <text>{{item.group}}</text>
-        <text class="group-count">{{item.items.length}}个</text>
+        <text class="group-count">{{item._countText}}</text>
       </view>
       <view class="app-grid">
         <view class="app-item" wx:for="{{item.items}}" wx:for-item="app" wx:key="id" data-route="{{app.route}}" data-id="{{app.id}}" bindtap="onAppTap">

@@ -50,8 +50,13 @@ function makeWx() {
     navigateTo: (o) => { calls.push(['navigateTo', o]); },
     navigateBack: () => calls.push(['navigateBack']),
     showToast: (o) => calls.push(['showToast', o]),
+    // 首页打卡流程会调（onClockIn/onClockOut），缺失会直接抛 TypeError
+    showLoading: (o) => calls.push(['showLoading', o]),
+    hideLoading: () => calls.push(['hideLoading']),
     showModal: (o) => { calls.push(['showModal', o]); o.success && o.success({ confirm: true }); },
     setNavigationBarTitle: (o) => calls.push(['setNavigationBarTitle', o]),
+    // 底栏四语言（i18n.applyTabBar），index 对齐 app.json tabBar.list
+    setTabBarItem: (o) => calls.push(['setTabBarItem', o]),
     scanCode: (o) => calls.push(['scanCode', o]),
     vibrateShort: () => {},
     // ⚠️ 忠实还原：itemList 最多 6 项
@@ -2394,6 +2399,220 @@ async function testI18nSampleScanActionData() {
   ok('切语言后详情仍保留原字段', swP.data.stockInfo.stock.id === 'stk-9');
 }
 
+// ────────────────────────── 首页菜单 + 更多应用 i18n（D-553） ──────────────────────────
+/** 首页接口桩：默认桩没有 getFavoriteApps / attendance */
+function makeHomeApi() {
+  const api = makeApi();
+  api.system.getFavoriteApps = async () => ({ favoriteData: '[]' });
+  api.system.getMiniprogramMenuConfig = async () => ({});
+  api.system.getMe = async () => ({ realName: '张三' });
+  api.attendance = {
+    todayStatus: async () => ({ hasClockedIn: true, hasClockedOut: false, clockInTime: '2026-09-25T09:12:34' }),
+    monthlyStats: async () => ({ workHours: 168.5, workDays: 21 }),
+    clockIn: async () => ({}),
+    clockOut: async () => ({}),
+  };
+  return api;
+}
+
+const HOME_JS = 'pages/home/index.js';
+const HOME_WXML = 'pages/home/index.wxml';
+const MORE_APPS_JS = 'pages/more-apps/index.js';
+const MORE_APPS_WXML = 'pages/more-apps/index.wxml';
+
+/** 把 menuRows / filteredApps 拍平成 [分组名, 应用名...] */
+function flattenMenuNames(rows) {
+  const out = [];
+  (rows || []).forEach((r) => (r.groups || r.items ? (r.groups || [r]) : []).forEach((g) => {
+    if (g.group) out.push(g.group);
+    (g.items || []).forEach((a) => out.push(a.name));
+  }));
+  return out;
+}
+
+/**
+ * 首页（D-553）
+ *
+ * 本页是工厂端第一屏，菜单名 / 日期 / 星期 / 问候语 / 打卡状态**全是派生文案**，
+ * 不能只靠 testPageI18n（它只查 data.t）—— 每一项都要单独断言。
+ */
+function testI18nHome() {
+  testPageI18n(HOME_JS, HOME_WXML, '首页');
+
+  const { page: zhP, wx: zhWx } = loadPage(HOME_JS, makeHomeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(HOME_JS, makeHomeApi());
+  enP.applyLanguage('en-US');
+
+  // ── 菜单名（默认应用 = 每个分组取第一项，末尾固定「更多应用」）──
+  const zhNames = flattenMenuNames(zhP.data.menuRows);
+  const enNames = flattenMenuNames(enP.data.menuRows);
+  eq('zh 菜单含中文应用名', zhNames.includes('样衣开发') && zhNames.includes('更多应用'), true);
+  eq('en 菜单含英文应用名', enNames.includes('Sample Development') && enNames.includes('More Apps'), true);
+  ok('菜单项数量一致（语言切换不改变结构）', zhNames.length === enNames.length,
+    `zh=${zhNames.length} en=${enNames.length}`);
+  ok('英文菜单无中文残留', !enNames.some(n => CJK_RE.test(String(n))),
+    enNames.filter(n => CJK_RE.test(String(n))).join(','));
+  eq('zh 分组标题是中文', zhNames[0], '开发');
+  eq('en 分组标题是英文', enNames[0], 'Development');
+  // 「更多应用」所在的「管理」分组
+  ok('zh 含管理分组', zhNames.includes('管理'), zhNames.join('|'));
+  ok('en 含管理分组', enNames.includes('Management'), enNames.join('|'));
+
+  // ── 分组计数「N个」──
+  const zhCount = zhP.data.menuRows[0].groups[0]._countText;
+  const enCount = enP.data.menuRows[0].groups[0]._countText;
+  eq('zh 分组计数带「个」', zhCount, '1个');
+  eq('en 分组计数无「个」', enCount, '1');
+
+  // ── 日期 / 星期（中英文结构完全不同）──
+  ok('zh 日期是「年月日」格式', /^\d+年\d+月\d+日$/.test(zhP.data.dateInfo.date), zhP.data.dateInfo.date);
+  ok('en 日期是数字斜杠格式', /^\d+\/\d+\/\d+$/.test(enP.data.dateInfo.date), enP.data.dateInfo.date);
+  ok('zh 星期带「星期」前缀', /^星期[日一二三四五六]$/.test(zhP.data.dateInfo.day), zhP.data.dateInfo.day);
+  ok('en 星期是英文整词', ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    .includes(enP.data.dateInfo.day), enP.data.dateInfo.day);
+  ok('季节已本地化', !CJK_RE.test(enP.data.dateInfo.season), enP.data.dateInfo.season);
+
+  // ── 今日小贴士 ──
+  ok('zh 小贴士是中文', CJK_RE.test(zhP.data.dateInfo.dailyTip), zhP.data.dateInfo.dailyTip);
+  ok('en 小贴士是英文', !CJK_RE.test(enP.data.dateInfo.dailyTip) && enP.data.dateInfo.dailyTip.length > 10,
+    enP.data.dateInfo.dailyTip);
+
+  // ── 问候语 ──
+  ok('zh 问候语是中文', ['上午好', '下午好', '晚上好'].includes(zhP.data.greeting), zhP.data.greeting);
+  ok('en 问候语是英文',
+    ['Good morning', 'Good afternoon', 'Good evening'].includes(enP.data.greeting), enP.data.greeting);
+  // 整句：中文用全角逗号，英文用半角
+  ok('zh 问候整句用全角逗号', String(zhP.data.greetingText).includes('，'), zhP.data.greetingText);
+  ok('en 问候整句用半角逗号', String(enP.data.greetingText).includes(', ') && !CJK_RE.test(enP.data.greetingText),
+    enP.data.greetingText);
+
+  // ── 打卡状态与统计 ──
+  eq('zh 打卡状态是中文', zhP.data.attendanceStatusText, '今日未打卡');
+  eq('en 打卡状态是英文', enP.data.attendanceStatusText, 'Not clocked in today');
+  eq('zh 本月统计带「天」', zhP.data.t.monthlyStatsText, '0.0h/0天');
+  eq('en 本月统计用 d', enP.data.t.monthlyStatsText, '0.0h / 0d');
+
+  // ── 导航栏标题 ──
+  eq('首页导航标题随语言变化', lastCall(enWx, 'setNavigationBarTitle').title, 'Yizhilian');
+  eq('首页 zh 导航标题是品牌中文名', lastCall(zhWx, 'setNavigationBarTitle').title, '衣智链');
+
+  // ── 底栏 tabBar 四语言（applyTabBar：index 2 是质检页，历史上错挂过「生产」）──
+  const zhTabs = zhWx.calls.filter(c => c[0] === 'setTabBarItem').map(c => c[1]);
+  const enTabs = enWx.calls.filter(c => c[0] === 'setTabBarItem').map(c => c[1]);
+  ok('zh 底栏 4 项全部重设', zhTabs.length === 4, `实际 ${zhTabs.length} 项`);
+  eq('zh 底栏第 3 项是质检（不是生产）', (zhTabs[2] || {}).text, '质检');
+  eq('en 底栏第 3 项是 Quality', (enTabs[2] || {}).text, 'Quality');
+  eq('en 底栏第 1 项是 Home', (enTabs[0] || {}).text, 'Home');
+  eq('en 底栏第 4 项是 Me', (enTabs[3] || {}).text, 'Me');
+}
+
+async function testI18nHomeActions() {
+  console.log('\n【i18n：首页 · 交互与切语言】');
+
+  // ── 切语言：已渲染的菜单/日期必须重算，不能只在加载时算一次 ──
+  const { page: p } = loadPage(HOME_JS, makeHomeApi());
+  p.applyLanguage('zh-CN');
+  const zhDate = p.data.dateInfo.date;
+  const zhTip = p.data.dateInfo.dailyTip;
+  eq('切语言前是中文菜单', flattenMenuNames(p.data.menuRows)[1], '样衣开发');
+  p.applyLanguage('en-US');
+  eq('切语言后菜单自动变英文', flattenMenuNames(p.data.menuRows)[1], 'Sample Development');
+  ok('切语言后日期格式变英文', /^\d+\/\d+\/\d+$/.test(p.data.dateInfo.date), p.data.dateInfo.date);
+  ok('中文日期与英文日期不同', zhDate !== p.data.dateInfo.date, `${zhDate} vs ${p.data.dateInfo.date}`);
+  ok('切语言后小贴士变英文', zhTip !== p.data.dateInfo.dailyTip && !CJK_RE.test(p.data.dateInfo.dailyTip),
+    p.data.dateInfo.dailyTip);
+  eq('切语言后打卡状态变英文', p.data.attendanceStatusText, 'Not clocked in today');
+
+  // ── 收藏里的 name 是「存进去那一刻的语言」，必须按 id 反查重新翻译 ──
+  const { page: fvP } = loadPage(HOME_JS, makeHomeApi());
+  fvP.applyLanguage('en-US');
+  fvP._lastFavorites = [
+    { id: 'materialCenter', name: '物料中心', iconClass: 'x', circleClass: 'y', route: '/pages/warehouse/material-center/index' },
+    { id: 'unknownApp', name: '某个新应用', iconClass: 'x', circleClass: 'y', route: '/pages/x/index' },
+  ];
+  const names = flattenMenuNames(fvP._buildMenuGroups(fvP._lastFavorites, {}));
+  ok('收藏项按 id 反查已翻译成英文', names.includes('Material Center'), names.join('|'));
+  ok('收藏项不再残留中文', !names.includes('物料中心'), names.join('|'));
+  ok('未知 id 原样回落（不显示空串/键名）', names.includes('某个新应用'), names.join('|'));
+  ok('未知 id 未渲染成键名', !names.some(n => KEYLIKE_RE.test(String(n))), names.join('|'));
+
+  // ── 打卡：加载真实考勤状态后状态文案要跟着语言 ──
+  const { page: atP } = loadPage(HOME_JS, makeHomeApi());
+  atP.applyLanguage('en-US');
+  await atP._loadAttendance();
+  eq('上班中状态已本地化', atP.data.attendanceStatusText, 'Working');
+  eq('上班时间被格式化', atP.data.attendanceClockInText, '09:12');
+  eq('本月统计已本地化', atP.data.t.monthlyStatsText, '168.5h / 21d');
+  atP.applyLanguage('zh-CN');
+  eq('切回中文后状态跟着变', atP.data.attendanceStatusText, '上班中');
+  eq('切回中文后统计跟着变', atP.data.t.monthlyStatsText, '168.5h/21天');
+
+  // ── 打卡 toast ──
+  const { page: ckP, wx: ckWx } = loadPage(HOME_JS, makeHomeApi());
+  ckWx.setStorageSync('app.language', 'en-US');
+  ckP.applyLanguage('en-US');
+  ckP.onClockIn();
+  await new Promise(r => setTimeout(r, 0));
+  const toast = lastCall(ckWx, 'showToast');
+  eq('上班打卡成功 toast 已本地化', toast && toast.title, 'Clock-in successful');
+
+  // ── 用户名兜底进问候整句 ──
+  const { page: nmP } = loadPage(HOME_JS, makeHomeApi());
+  nmP.applyLanguage('en-US');
+  ok('无用户名时用 User 兜底', String(nmP.data.greetingText).includes('User'), nmP.data.greetingText);
+  ok('兜底整句无中文', !CJK_RE.test(nmP.data.greetingText), nmP.data.greetingText);
+}
+
+/** 更多应用页（D-553）—— 与首页共用同一套菜单键 */
+function testI18nMoreApps() {
+  testPageI18n(MORE_APPS_JS, MORE_APPS_WXML, '更多应用页');
+
+  const { page: zhP, wx: zhWx } = loadPage(MORE_APPS_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(MORE_APPS_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  const zhNames = flattenMenuNames(enP.data.filteredApps.map(g => ({ group: g.group, items: g.items })));
+  eq('zh 应用名是中文', zhP.data.filteredApps[0].items[0].name, '样衣开发');
+  eq('en 应用名是英文', enP.data.filteredApps[0].items[0].name, 'Sample Development');
+  eq('zh 分组标题是中文', zhP.data.filteredApps[0].group, '开发');
+  eq('en 分组标题是英文', enP.data.filteredApps[0].group, 'Development');
+  eq('en 分组计数无「个」', enP.data.filteredApps[0]._countText, '3');
+  eq('zh 分组计数带「个」', zhP.data.filteredApps[0]._countText, '3个');
+  ok('英文应用名无中文残留', !zhNames.some(n => CJK_RE.test(String(n))),
+    zhNames.filter(n => CJK_RE.test(String(n))).join(','));
+
+  // 导航标题复用首页的 appMoreApps
+  eq('更多应用页导航标题随语言变化', lastCall(enWx, 'setNavigationBarTitle').title, 'More Apps');
+  eq('更多应用页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '更多应用');
+
+  // 🔴 搜索必须能命中**任一语言**（否则用户切语言后搜原语言搜不到）
+  enP.filterApps('material');
+  ok('英文下用英文关键词能搜到', enP.data.filteredApps.some(g => g.items.some(i => i.id === 'materialCenter')),
+    JSON.stringify(enP.data.filteredApps.map(g => g.items.map(i => i.id))));
+  enP.filterApps('物料');
+  ok('英文下用中文关键词也能搜到（四语言搜索源）',
+    enP.data.filteredApps.some(g => g.items.some(i => i.id === 'materialCenter')),
+    JSON.stringify(enP.data.filteredApps.map(g => g.items.map(i => i.id))));
+  // 无结果提示：用**非中文关键词**搜不到时断言——关键词本身是用户输入，
+  // 中文词搜出来的提示 `No apps found for "物料"` 含 CJK 是正常的，不能算没翻译
+  enP.filterApps('zzzz-no-match');
+  ok('无结果提示已本地化', !CJK_RE.test(String(enP.data.t.noResultText)), enP.data.t.noResultText);
+  ok('无结果提示无未替换占位符', !/\{kw\}/.test(String(enP.data.t.noResultText)), enP.data.t.noResultText);
+
+  // 清空收藏确认弹窗
+  enP.onClearFavorites();
+  const modal = lastCall(enWx, 'showModal');
+  eq('清空弹窗标题已本地化', modal && modal.title, 'Confirm Clear');
+  eq('清空弹窗正文已本地化', modal && modal.content, 'Clear all favorites?');
+
+  // 收藏项的名字也要按 id 反查翻译
+  zhP.data.favoriteApps = [{ id: 'materialCenter', name: '物料中心', iconClass: 'x', circleClass: 'y', route: '/r' }];
+  zhP.applyLanguage('en-US');
+  eq('收藏项名字随语言重算', zhP.data.favoriteApps[0].name, 'Material Center');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -2431,6 +2650,9 @@ try {
   testI18nShellPages();
   testI18nSampleScanAction();
   await testI18nSampleScanActionData();
+  testI18nHome();
+  await testI18nHomeActions();
+  testI18nMoreApps();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);
