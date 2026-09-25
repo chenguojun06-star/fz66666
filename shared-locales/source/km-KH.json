@@ -133,7 +133,8 @@
     "fail": "Fail",
     "dataError": "Data error",
     "submitFailed": "Submit failed",
-    "checkInput": "Please check input"
+    "checkInput": "Please check input",
+    "completed": "Completed"
   },
   "login": {
     "brand": "Yunshang SCM",
@@ -1255,6 +1256,39 @@
       "remarkPh": "Enter remark...",
       "claimSummaryFmt": "{c} colors · {q} pcs",
       "maxWord": "max"
+    },
+    "sampleDev": {
+      "navTitle": "Sample Development",
+      "statusRework": "Reworking",
+      "seasonSpring": "Spring",
+      "seasonSummer": "Summer",
+      "seasonAutumn": "Autumn",
+      "seasonWinter": "Winter",
+      "seasonSpringSummer": "Spring/Summer",
+      "seasonFallWinter": "Autumn/Winter",
+      "filterDeveloping": "In Development",
+      "filterOverdue": "Overdue",
+      "filterNearDue": "Near Due",
+      "delayedDays": "{days}d overdue",
+      "todayBoard": "Due today",
+      "daysLeft": "{days}d left",
+      "merchandiserPrefix": "Merch:",
+      "loadingProcess": "Loading processes...",
+      "cannotOpenProcess": "Cannot open process claim",
+      "openFailed": "Open failed",
+      "noSampleMatch": "No matching sample",
+      "searching": "Searching sample...",
+      "noStyleSample": "No sample for style {no}",
+      "queryFailed": "Query failed, please retry",
+      "searchPh": "Search style no. / name",
+      "noRecords": "No development records",
+      "collapseText": "Collapse",
+      "expandText": "Expand",
+      "noStyleName": "No style name",
+      "sizeColorHeader": "Size & Color",
+      "subProcessProgress": "Sub-process Progress",
+      "noProcessConfigured": "No processes configured; add them in style process config first",
+      "noSubProcess": "No sub-processes"
     }
   }
 }

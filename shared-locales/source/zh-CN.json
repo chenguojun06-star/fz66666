@@ -133,7 +133,8 @@
     "fail": "不合格",
     "dataError": "数据异常",
     "submitFailed": "提交失败",
-    "checkInput": "请检查输入"
+    "checkInput": "请检查输入",
+    "completed": "已完成"
   },
   "login": {
     "brand": "云裳智链",
@@ -1255,6 +1256,39 @@
       "remarkPh": "请输入备注信息...",
       "claimSummaryFmt": "已选 {c} 个颜色 · 共 {q} 件",
       "maxWord": "最多"
+    },
+    "sampleDev": {
+      "navTitle": "样衣开发跟进",
+      "statusRework": "返工中",
+      "seasonSpring": "春季",
+      "seasonSummer": "夏季",
+      "seasonAutumn": "秋季",
+      "seasonWinter": "冬季",
+      "seasonSpringSummer": "春夏",
+      "seasonFallWinter": "秋冬",
+      "filterDeveloping": "开发中",
+      "filterOverdue": "已延期",
+      "filterNearDue": "临近交期",
+      "delayedDays": "延期{days}天",
+      "todayBoard": "今天交板",
+      "daysLeft": "剩{days}天",
+      "merchandiserPrefix": "跟单:",
+      "loadingProcess": "加载工序...",
+      "cannotOpenProcess": "无法打开工序领取",
+      "openFailed": "打开失败",
+      "noSampleMatch": "未匹配到样衣",
+      "searching": "查找样衣...",
+      "noStyleSample": "未找到款号 {no} 对应的样衣",
+      "queryFailed": "查询样衣失败，请重试",
+      "searchPh": "搜索款号/款式名",
+      "noRecords": "暂无样衣开发记录",
+      "collapseText": "收起",
+      "expandText": "展开",
+      "noStyleName": "暂无款名",
+      "sizeColorHeader": "码数颜色",
+      "subProcessProgress": "子工序进度",
+      "noProcessConfigured": "该款号尚未配置工序，请先在款式工序配置中添加",
+      "noSubProcess": "暂无子工序"
     }
   }
 }

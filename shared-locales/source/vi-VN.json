@@ -133,7 +133,8 @@
     "fail": "Không đạt",
     "dataError": "Lỗi dữ liệu",
     "submitFailed": "Gửi thất bại",
-    "checkInput": "Kiểm tra input"
+    "checkInput": "Kiểm tra input",
+    "completed": "Hoàn thành"
   },
   "login": {
     "brand": "Chuỗi Cung Ứng Yunshang",
@@ -1255,6 +1256,39 @@
       "remarkPh": "Nhập ghi chú...",
       "claimSummaryFmt": "Đã chọn {c} màu · {q} cái",
       "maxWord": "tối đa"
+    },
+    "sampleDev": {
+      "navTitle": "Theo dõi phát triển mẫu",
+      "statusRework": "Đang làm lại",
+      "seasonSpring": "Xuân",
+      "seasonSummer": "Hè",
+      "seasonAutumn": "Thu",
+      "seasonWinter": "Đông",
+      "seasonSpringSummer": "Xuân Hè",
+      "seasonFallWinter": "Thu Đông",
+      "filterDeveloping": "Đang phát triển",
+      "filterOverdue": "Quá hạn",
+      "filterNearDue": "Gần hạn",
+      "delayedDays": "Trễ {days} ngày",
+      "todayBoard": "Hôm nay giao",
+      "daysLeft": "Còn {days} ngày",
+      "merchandiserPrefix": "NC:",
+      "loadingProcess": "Đang tải công đoạn...",
+      "cannotOpenProcess": "Không mở được nhận công đoạn",
+      "openFailed": "Mở thất bại",
+      "noSampleMatch": "Không khớp mẫu",
+      "searching": "Đang tìm mẫu...",
+      "noStyleSample": "Không có mẫu cho mã {no}",
+      "queryFailed": "Truy vấn lỗi, thử lại",
+      "searchPh": "Tìm mã / tên kiểu",
+      "noRecords": "Chưa có bản ghi phát triển",
+      "collapseText": "Thu gọn",
+      "expandText": "Mở rộng",
+      "noStyleName": "Chưa có tên kiểu",
+      "sizeColorHeader": "Size & Màu",
+      "subProcessProgress": "Tiến độ công đoạn con",
+      "noProcessConfigured": "Chưa cấu hình công đoạn, thêm trong cấu hình kiểu",
+      "noSubProcess": "Chưa có công đoạn con"
     }
   }
 }

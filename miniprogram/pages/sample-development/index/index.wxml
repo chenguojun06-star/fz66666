@@ -1,7 +1,7 @@
 <view class="page">
   <!-- 吸顶区：搜索栏 + 状态统计标签 -->
   <sticky-search-bar
-    placeholder="搜索款号/款式名"
+    placeholder="{{t.searchPh}}"
     value="{{keyword}}"
     show-scan="{{true}}"
     show-filter="{{true}}"
@@ -30,13 +30,13 @@
   <!-- 加载中 -->
   <view wx:if="{{loading}}" class="state-wrap">
     <view class="loading-spinner"></view>
-    <text class="state-text">加载中...</text>
+    <text class="state-text">{{t.loading}}</text>
   </view>
 
   <!-- 空状态 -->
   <view wx:elif="{{list.length === 0}}" class="state-wrap state-wrap--empty">
     <view class="line-icon line-icon--lg icon-inbox state-icon"></view>
-    <text class="state-text">暂无样衣开发记录</text>
+    <text class="state-text">{{t.noRecords}}</text>
   </view>
 
   <!-- 卡片列表（布局与生产管理 dashboard 完全一致） -->
@@ -64,7 +64,7 @@
           <view class="info-line1">
             <text class="order-no">{{item.styleNo || '-'}}</text>
             <view class="expand-mini-btn" data-index="{{cardIdx}}" catchtap="onCardToggle">
-              <text class="expand-mini-text">{{item.expanded ? '收起' : '展开'}}</text>
+              <text class="expand-mini-text">{{item.expanded ? t.collapseText : t.expandText}}</text>
               <view class="expand-mini-arrow {{item.expanded ? 'expand-mini-arrow--up' : ''}}"><view class="icon-chevron-down-sm"></view></view>
             </view>
             <view class="info-badges">
@@ -72,7 +72,7 @@
             </view>
           </view>
           <!-- 行2：款名 -->
-          <view class="info-style">{{item.styleName || item.styleNo || '暂无款名'}}</view>
+          <view class="info-style">{{item.styleName || item.styleNo || t.noStyleName}}</view>
           <!-- 行3：客户名 -->
           <view class="info-customer" wx:if="{{item._customer}}">{{item._customer}}</view>
           <!-- 行4：跟单 · 品类 · 季节 -->
@@ -83,9 +83,9 @@
       <!-- 进度行：数量·交板 + 进度条 + 百分比 + 剩余天数（同一行，与生产管理一致） -->
       <view class="info-progress">
         <view class="ip-left">
-          <text class="ip-qty">{{item._quantity || 0}}件</text>
+          <text class="ip-qty">{{item._quantity || 0}}{{t.pieceUnit}}</text>
           <text class="ip-dot">·</text>
-          <text class="ip-delivery" wx:if="{{item._deliveryTag}}">交板 {{item._deliveryTag}}</text>
+          <text class="ip-delivery" wx:if="{{item._deliveryTag}}">{{t.deliveryBoard}} {{item._deliveryTag}}</text>
         </view>
         <view class="ip-bar">
           <view
@@ -104,13 +104,13 @@
       <view class="card-expand-area" wx:if="{{item.expanded}}">
         <!-- 多码多色矩阵（如有） -->
         <view wx:if="{{item._matrix.sizes.length > 0}}" class="expand-section">
-          <text class="section-title">码数颜色</text>
+          <text class="section-title">{{t.sizeColorHeader}}</text>
           <scroll-view scroll-x class="matrix-scroll" enhanced show-scrollbar="{{false}}">
             <view class="matrix-table">
               <view class="matrix-row matrix-row--head">
-                <text class="matrix-cell matrix-cell--color">颜色</text>
+                <text class="matrix-cell matrix-cell--color">{{t.color}}</text>
                 <text wx:for="{{item._matrix.sizes}}" wx:for-item="sz" wx:key="*this" class="matrix-cell">{{sz}}</text>
-                <text class="matrix-cell matrix-cell--total">合计</text>
+                <text class="matrix-cell matrix-cell--total">{{t.total}}</text>
               </view>
               <view wx:for="{{item._matrix.rows}}" wx:for-item="row" wx:key="color" class="matrix-row">
                 <text class="matrix-cell matrix-cell--color">{{row.color}}</text>
@@ -123,10 +123,10 @@
 
         <!-- D-257：子工序进度与详情页完全同源（款式工序列表+扫码记录），含领取人/时间/单价 -->
         <view class="expand-section">
-          <text class="section-title">子工序进度</text>
-          <view wx:if="{{item._configLoading}}" class="state-hint">加载中...</view>
-          <view wx:elif="{{item._needsConfig}}" class="state-hint">该款号尚未配置工序，请先在款式工序配置中添加</view>
-          <view wx:elif="{{item._processes.length === 0}}" class="state-hint">暂无子工序</view>
+          <text class="section-title">{{t.subProcessProgress}}</text>
+          <view wx:if="{{item._configLoading}}" class="state-hint">{{t.loadingProcess}}</view>
+          <view wx:elif="{{item._needsConfig}}" class="state-hint">{{t.noProcessConfigured}}</view>
+          <view wx:elif="{{item._processes.length === 0}}" class="state-hint">{{t.noSubProcess}}</view>
           <view wx:else class="proc-timeline">
             <view
               wx:for="{{item._processes}}"
@@ -159,7 +159,7 @@
                   <text wx:if="{{p._claimBy && p._lastTime}}" class="proc-tl-meta-sep"> · </text>
                   <text wx:if="{{p._lastTime}}" class="proc-tl-meta-text">{{p._lastTime}}</text>
                   <text wx:if="{{p._price}}" class="proc-tl-meta-sep"> · </text>
-                  <text wx:if="{{p._price}}" class="proc-tl-meta-text">¥{{p._price}}/件</text>
+                  <text wx:if="{{p._price}}" class="proc-tl-meta-text">¥{{p._price}}/{{t.pieceUnit}}</text>
                 </view>
               </view>
             </view>
@@ -170,7 +170,7 @@
 
     <!-- 加载更多 -->
     <view wx:if="{{hasMore}}" class="load-more">
-      <text>{{loadingMore ? '加载中...' : '加载更多'}}</text>
+      <text>{{loadingMore ? t.loading : t.loadMore}}</text>
     </view>
   </view>
   <ai-assistant />

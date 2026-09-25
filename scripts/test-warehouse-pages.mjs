@@ -2431,6 +2431,8 @@ const SCAN_CONFIRM_JS = 'pages/scan/confirm/index.js';
 const SCAN_CONFIRM_WXML = 'pages/scan/confirm/index.wxml';
 const PATTERN_JS = 'pages/scan/pattern/index.js';
 const PATTERN_WXML = 'pages/scan/pattern/index.wxml';
+const SAMPLE_DEV_JS = 'pages/sample-development/index/index.js';
+const SAMPLE_DEV_WXML = 'pages/sample-development/index/index.wxml';
 
 /** 把 menuRows / filteredApps 拍平成 [分组名, 应用名...] */
 function flattenMenuNames(rows) {
@@ -2834,6 +2836,31 @@ function testI18nPattern() {
   eq('制单页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '样衣扫码');
 }
 
+/** 样衣开发跟进页（D-559）—— 状态tabs/交期倒计时/季节标签/子工序进度 */
+function testI18nSampleDev() {
+  testPageI18n(SAMPLE_DEV_JS, SAMPLE_DEV_WXML, '样衣开发跟进页');
+
+  const { page: zhP, wx: zhWx } = loadPage(SAMPLE_DEV_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(SAMPLE_DEV_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  // 筛选 tabs 按语言重建
+  const zhTabs = zhP.data.statusTabs.map(t2 => t2.label).join('|');
+  const enTabs = enP.data.statusTabs.map(t2 => t2.label).join('|');
+  eq('zh 筛选tabs', zhTabs, '全部|开发中|已完成|已延期|临近交期');
+  eq('en 筛选tabs', enTabs, 'All|In Development|Completed|Overdue|Near Due');
+  ok('tabs 数量不随语言变', zhP.data.statusTabs.length === enP.data.statusTabs.length);
+
+  // 交期倒计时文案走 _daysLeftText（tf 键化），t 表覆盖其键
+  eq('zh 交板标签', zhP.data.t.deliveryBoard, '交板');
+  eq('en 交板标签', enP.data.t.deliveryBoard, 'Delivery Board');
+
+  // 导航标题
+  eq('跟进页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Sample Development');
+  eq('跟进页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '样衣开发跟进');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -2880,6 +2907,7 @@ try {
   testI18nScanResult();
   testI18nScanConfirm();
   testI18nPattern();
+  testI18nSampleDev();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

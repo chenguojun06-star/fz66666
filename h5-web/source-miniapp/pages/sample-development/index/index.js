@@ -110,23 +110,25 @@ function parseMatrix(item) {
 
 // 样衣状态标签：优先使用共享映射 enumLabels.PATTERN_STATUS_MAP，本地兜底未覆盖的状态
 const LOCAL_STATUS_FALLBACK = {
-  REWORK: '返工中',
-  CLOSED: '已关单',
+  REWORK: 'statusRework',
+  CLOSED: 'mp.defect.closed',
 };
 
-function getPatternStatusLabel(status) {
+function getPatternStatusLabel(status, lang) {
   if (!status) return '-';
   var upper = String(status).trim().toUpperCase();
-  return PATTERN_STATUS_MAP[upper] || LOCAL_STATUS_FALLBACK[upper] || status;
+  if (PATTERN_STATUS_MAP[upper]) return PATTERN_STATUS_MAP[upper];
+  var fb = LOCAL_STATUS_FALLBACK[upper];
+  return fb ? i18n.t(fb, lang) : status;
 }
 
 const SEASON_MAP = {
-  SPRING: '春季',
-  SUMMER: '夏季',
-  AUTUMN: '秋季',
-  WINTER: '冬季',
-  SPRING_SUMMER: '春夏',
-  AUTUMN_WINTER: '秋冬',
+  SPRING: 'seasonSpring',
+  SUMMER: 'seasonSummer',
+  AUTUMN: 'seasonAutumn',
+  WINTER: 'seasonWinter',
+  SPRING_SUMMER: 'seasonSpringSummer',
+  AUTUMN_WINTER: 'seasonFallWinter',
 };
 
 // 完成态状态集合（与后端 calcSampleStats 对齐）
@@ -227,6 +229,9 @@ function filterByTab(allList, tabKey) {
   return allList;
 }
 
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.sampleDev.';
+
 Page({
   data: {
     loading: true,
@@ -247,7 +252,42 @@ Page({
     loadingMore: false,
   },
 
+  /** 静态文案 + 筛选 tabs 按语言写入（wxml 用 {{t.xxx}}） */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        noRecords: i18n.t(NS + 'noRecords', lang),
+        collapseText: i18n.t(NS + 'collapseText', lang),
+        expandText: i18n.t(NS + 'expandText', lang),
+        noStyleName: i18n.t(NS + 'noStyleName', lang),
+        sizeColorHeader: i18n.t(NS + 'sizeColorHeader', lang),
+        color: i18n.t('common.color', lang),
+        total: i18n.t('common.total', lang),
+        subProcessProgress: i18n.t(NS + 'subProcessProgress', lang),
+        loadingProcess: i18n.t(NS + 'loadingProcess', lang),
+        noProcessConfigured: i18n.t(NS + 'noProcessConfigured', lang),
+        noSubProcess: i18n.t(NS + 'noSubProcess', lang),
+        deliveryBoard: i18n.t('mp.pattern.deliveryBoardLabel', lang),
+        pieceUnit: i18n.t('common.piece', lang),
+        loadMore: i18n.t('common.loadMore', lang),
+        searchPh: i18n.t(NS + 'searchPh', lang),
+      },
+      statusTabs: [
+        { key: '', label: i18n.t('common.all', lang), color: 'primary', count: this.data.statusTabs[0].count },
+        { key: 'IN_PROGRESS', label: i18n.t(NS + 'filterDeveloping', lang), color: 'primary', count: this.data.statusTabs[1].count },
+        { key: 'COMPLETED', label: i18n.t('common.completed', lang), color: 'success', count: this.data.statusTabs[2].count },
+        { key: 'OVERDUE', label: i18n.t(NS + 'filterOverdue', lang), color: 'danger', count: this.data.statusTabs[3].count },
+        { key: 'WARNING', label: i18n.t(NS + 'filterNearDue', lang), color: 'warning', isSmart: true, count: this.data.statusTabs[4].count },
+      ],
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function () {
+    this.applyLanguage(i18n.getLanguage());
     this._allList = [];
     this._filteredList = [];
     this.loadData(true);
@@ -383,7 +423,7 @@ Page({
           item._styleNo = item.styleNo || si.styleNo || '';
           item._styleName = item.styleName || si.styleName || '';
           item._cover = getAuthedImageUrl(item.coverImage || si.cover || '');
-          item._statusLabel = getPatternStatusLabel(item.status);
+          item._statusLabel = getPatternStatusLabel(item.status, this._lang);
           item._statusColor = that.getStatusColorClass(item.status);
           item._deliveryDate = formatDate(item.deliveryTime);
           item._createDate = formatDate(item.releaseTime || item.createTime);
@@ -413,15 +453,15 @@ Page({
               var diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
               if (diffDays < 0) {
                 item._overdue = true;
-                item._daysLeftText = '延期' + Math.abs(diffDays) + '天';
+                item._daysLeftText = i18n.tf(NS + 'delayedDays', { days: Math.abs(diffDays) }, this._lang);
               } else if (diffDays === 0) {
                 item._nearDue = true;
-                item._daysLeftText = '今天交板';
+                item._daysLeftText = i18n.t(NS + 'todayBoard', this._lang);
               } else if (diffDays <= 3) {
                 item._nearDue = true;
-                item._daysLeftText = '剩' + diffDays + '天';
+                item._daysLeftText = i18n.tf(NS + 'daysLeft', { days: diffDays }, this._lang);
               } else {
-                item._daysLeftText = '剩' + diffDays + '天';
+                item._daysLeftText = i18n.tf(NS + 'daysLeft', { days: diffDays }, this._lang);
               }
             }
           }
@@ -432,17 +472,17 @@ Page({
           if (customer) meta1Parts.push(customer);
           item._customer = customer;
           var merchandiser = item.merchandiser || item.merchandiserName || si.merchandiser || '';
-          if (merchandiser) meta1Parts.push('跟单: ' + merchandiser);
+          if (merchandiser) meta1Parts.push(i18n.t(NS + 'merchandiserPrefix', this._lang) + ' ' + merchandiser);
           var category = item.category || si.category || '';
           category = displayCategory(category);
           if (category) meta1Parts.push(category);
           var season = item.season || si.season || '';
-          if (season && SEASON_MAP[season]) season = SEASON_MAP[season];
+          if (season && SEASON_MAP[season]) season = i18n.t(NS + SEASON_MAP[season], this._lang);
           if (season) meta1Parts.push(season);
           item._metaLine1 = meta1Parts.join(' · ');
           // 生产管理同款卡片：行4 = 跟单 · 品类 · 季节（客户单独占行3）
           var metaShortParts = [];
-          if (merchandiser) metaShortParts.push('跟单 ' + merchandiser);
+          if (merchandiser) metaShortParts.push(i18n.t(NS + 'merchandiserPrefix', this._lang).replace(':', '') + ' ' + merchandiser);
           if (category) metaShortParts.push(category);
           if (season) metaShortParts.push(season);
           item._metaShort = metaShortParts.join(' · ');
@@ -495,7 +535,7 @@ Page({
       })
       .catch(function () {
         that.setData({ loading: false, loadingMore: false });
-        if (reset) toast.error('加载失败');
+        if (reset) toast.error(i18n.t('common.loadFailed', this._lang));
       });
   },
 
@@ -642,7 +682,7 @@ Page({
    * 复用主扫码页同一 PatternScanProcessor 流水线（详情+扫码记录+工序配置→操作选项）
    */
   async _openPatternProcessPage(patternId) {
-    wx.showLoading({ title: '加载工序...' });
+    wx.showLoading({ title: i18n.t(NS + 'loadingProcess', this._lang) });
     try {
       const handler = {
         api: { production },
@@ -652,14 +692,14 @@ Page({
       const result = await PatternScanProcessor.handlePatternScan(handler, { patternId: String(patternId) }, null);
       wx.hideLoading();
       if (!result || !result.success || !result.data) {
-        wx.showToast({ title: (result && result.message) || '无法打开工序领取', icon: 'none' });
+        wx.showToast({ title: (result && result.message) || i18n.t(NS + 'cannotOpenProcess', this._lang), icon: 'none' });
         return;
       }
       getApp().globalData.patternScanData = result.data;
       wx.navigateTo({ url: '/pages/scan/pattern/index' });
     } catch (e) {
       wx.hideLoading();
-      wx.showToast({ title: (e && (e.message || e.errMsg)) || '打开失败', icon: 'none' });
+      wx.showToast({ title: (e && (e.message || e.errMsg)) || i18n.t(NS + 'openFailed', this._lang), icon: 'none' });
     }
   },
 
@@ -675,7 +715,7 @@ Page({
     scanInPage((parsed, raw) => {
       if (!parsed) return; // 用户取消
       if (!parsed.success || !parsed.data) {
-        toast.error('无法识别：' + (raw || ''));
+        toast.error(i18n.tf('mp.defect.scanUnrecognized', { raw: raw || '' }, this._lang));
         return;
       }
       const d = parsed.data;
@@ -705,10 +745,10 @@ Page({
 
       // ③ 本地未命中（翻页/筛选/未加载）→ 后端按款号查样衣生产记录
       if (!styleNo) {
-        toast.error('未匹配到样衣');
+        toast.error(i18n.t(NS + 'noSampleMatch', this._lang));
         return;
       }
-      wx.showLoading({ title: '查找样衣...' });
+      wx.showLoading({ title: i18n.t(NS + 'searching', this._lang) });
       api.production.listPatterns({ page: 1, size: 20, keyword: styleNo })
         .then(function (res) {
           wx.hideLoading();
@@ -718,7 +758,7 @@ Page({
             return (item.styleNo || (item.styleInfo || {}).styleNo) === styleNo;
           }) || records[0];
           if (!hit) {
-            toast.error('未找到款号 ' + styleNo + ' 对应的样衣');
+            toast.error(i18n.tf(NS + 'noStyleSample', { no: styleNo }, this._lang));
             return;
           }
           that.onCardTap({
@@ -727,7 +767,7 @@ Page({
         })
         .catch(function () {
           wx.hideLoading();
-          toast.error('查询样衣失败，请重试');
+          toast.error(i18n.t(NS + 'queryFailed', this._lang));
         });
     });
   },

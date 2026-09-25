@@ -140,7 +140,8 @@ module.exports = {
       "fail": "不合格",
       "dataError": "数据异常",
       "submitFailed": "提交失败",
-      "checkInput": "请检查输入"
+      "checkInput": "请检查输入",
+      "completed": "已完成"
     },
     "login": {
       "brand": "云裳智链",
@@ -1262,6 +1263,39 @@ module.exports = {
         "remarkPh": "请输入备注信息...",
         "claimSummaryFmt": "已选 {c} 个颜色 · 共 {q} 件",
         "maxWord": "最多"
+      },
+      "sampleDev": {
+        "navTitle": "样衣开发跟进",
+        "statusRework": "返工中",
+        "seasonSpring": "春季",
+        "seasonSummer": "夏季",
+        "seasonAutumn": "秋季",
+        "seasonWinter": "冬季",
+        "seasonSpringSummer": "春夏",
+        "seasonFallWinter": "秋冬",
+        "filterDeveloping": "开发中",
+        "filterOverdue": "已延期",
+        "filterNearDue": "临近交期",
+        "delayedDays": "延期{days}天",
+        "todayBoard": "今天交板",
+        "daysLeft": "剩{days}天",
+        "merchandiserPrefix": "跟单:",
+        "loadingProcess": "加载工序...",
+        "cannotOpenProcess": "无法打开工序领取",
+        "openFailed": "打开失败",
+        "noSampleMatch": "未匹配到样衣",
+        "searching": "查找样衣...",
+        "noStyleSample": "未找到款号 {no} 对应的样衣",
+        "queryFailed": "查询样衣失败，请重试",
+        "searchPh": "搜索款号/款式名",
+        "noRecords": "暂无样衣开发记录",
+        "collapseText": "收起",
+        "expandText": "展开",
+        "noStyleName": "暂无款名",
+        "sizeColorHeader": "码数颜色",
+        "subProcessProgress": "子工序进度",
+        "noProcessConfigured": "该款号尚未配置工序，请先在款式工序配置中添加",
+        "noSubProcess": "暂无子工序"
       }
     }
   },
@@ -1400,7 +1434,8 @@ module.exports = {
       "fail": "Fail",
       "dataError": "Data error",
       "submitFailed": "Submit failed",
-      "checkInput": "Please check input"
+      "checkInput": "Please check input",
+      "completed": "Completed"
     },
     "login": {
       "brand": "Yunshang SCM",
@@ -2522,6 +2557,39 @@ module.exports = {
         "remarkPh": "Enter remark...",
         "claimSummaryFmt": "{c} colors · {q} pcs",
         "maxWord": "max"
+      },
+      "sampleDev": {
+        "navTitle": "Sample Development",
+        "statusRework": "Reworking",
+        "seasonSpring": "Spring",
+        "seasonSummer": "Summer",
+        "seasonAutumn": "Autumn",
+        "seasonWinter": "Winter",
+        "seasonSpringSummer": "Spring/Summer",
+        "seasonFallWinter": "Autumn/Winter",
+        "filterDeveloping": "In Development",
+        "filterOverdue": "Overdue",
+        "filterNearDue": "Near Due",
+        "delayedDays": "{days}d overdue",
+        "todayBoard": "Due today",
+        "daysLeft": "{days}d left",
+        "merchandiserPrefix": "Merch:",
+        "loadingProcess": "Loading processes...",
+        "cannotOpenProcess": "Cannot open process claim",
+        "openFailed": "Open failed",
+        "noSampleMatch": "No matching sample",
+        "searching": "Searching sample...",
+        "noStyleSample": "No sample for style {no}",
+        "queryFailed": "Query failed, please retry",
+        "searchPh": "Search style no. / name",
+        "noRecords": "No development records",
+        "collapseText": "Collapse",
+        "expandText": "Expand",
+        "noStyleName": "No style name",
+        "sizeColorHeader": "Size & Color",
+        "subProcessProgress": "Sub-process Progress",
+        "noProcessConfigured": "No processes configured; add them in style process config first",
+        "noSubProcess": "No sub-processes"
       }
     }
   },
@@ -2660,7 +2728,8 @@ module.exports = {
       "fail": "Không đạt",
       "dataError": "Lỗi dữ liệu",
       "submitFailed": "Gửi thất bại",
-      "checkInput": "Kiểm tra input"
+      "checkInput": "Kiểm tra input",
+      "completed": "Hoàn thành"
     },
     "login": {
       "brand": "Chuỗi Cung Ứng Yunshang",
@@ -3782,6 +3851,39 @@ module.exports = {
         "remarkPh": "Nhập ghi chú...",
         "claimSummaryFmt": "Đã chọn {c} màu · {q} cái",
         "maxWord": "tối đa"
+      },
+      "sampleDev": {
+        "navTitle": "Theo dõi phát triển mẫu",
+        "statusRework": "Đang làm lại",
+        "seasonSpring": "Xuân",
+        "seasonSummer": "Hè",
+        "seasonAutumn": "Thu",
+        "seasonWinter": "Đông",
+        "seasonSpringSummer": "Xuân Hè",
+        "seasonFallWinter": "Thu Đông",
+        "filterDeveloping": "Đang phát triển",
+        "filterOverdue": "Quá hạn",
+        "filterNearDue": "Gần hạn",
+        "delayedDays": "Trễ {days} ngày",
+        "todayBoard": "Hôm nay giao",
+        "daysLeft": "Còn {days} ngày",
+        "merchandiserPrefix": "NC:",
+        "loadingProcess": "Đang tải công đoạn...",
+        "cannotOpenProcess": "Không mở được nhận công đoạn",
+        "openFailed": "Mở thất bại",
+        "noSampleMatch": "Không khớp mẫu",
+        "searching": "Đang tìm mẫu...",
+        "noStyleSample": "Không có mẫu cho mã {no}",
+        "queryFailed": "Truy vấn lỗi, thử lại",
+        "searchPh": "Tìm mã / tên kiểu",
+        "noRecords": "Chưa có bản ghi phát triển",
+        "collapseText": "Thu gọn",
+        "expandText": "Mở rộng",
+        "noStyleName": "Chưa có tên kiểu",
+        "sizeColorHeader": "Size & Màu",
+        "subProcessProgress": "Tiến độ công đoạn con",
+        "noProcessConfigured": "Chưa cấu hình công đoạn, thêm trong cấu hình kiểu",
+        "noSubProcess": "Chưa có công đoạn con"
       }
     }
   },
@@ -3920,7 +4022,8 @@ module.exports = {
       "fail": "Fail",
       "dataError": "Data error",
       "submitFailed": "Submit failed",
-      "checkInput": "Please check input"
+      "checkInput": "Please check input",
+      "completed": "Completed"
     },
     "login": {
       "brand": "Yunshang SCM",
@@ -5042,6 +5145,39 @@ module.exports = {
         "remarkPh": "Enter remark...",
         "claimSummaryFmt": "{c} colors · {q} pcs",
         "maxWord": "max"
+      },
+      "sampleDev": {
+        "navTitle": "Sample Development",
+        "statusRework": "Reworking",
+        "seasonSpring": "Spring",
+        "seasonSummer": "Summer",
+        "seasonAutumn": "Autumn",
+        "seasonWinter": "Winter",
+        "seasonSpringSummer": "Spring/Summer",
+        "seasonFallWinter": "Autumn/Winter",
+        "filterDeveloping": "In Development",
+        "filterOverdue": "Overdue",
+        "filterNearDue": "Near Due",
+        "delayedDays": "{days}d overdue",
+        "todayBoard": "Due today",
+        "daysLeft": "{days}d left",
+        "merchandiserPrefix": "Merch:",
+        "loadingProcess": "Loading processes...",
+        "cannotOpenProcess": "Cannot open process claim",
+        "openFailed": "Open failed",
+        "noSampleMatch": "No matching sample",
+        "searching": "Searching sample...",
+        "noStyleSample": "No sample for style {no}",
+        "queryFailed": "Query failed, please retry",
+        "searchPh": "Search style no. / name",
+        "noRecords": "No development records",
+        "collapseText": "Collapse",
+        "expandText": "Expand",
+        "noStyleName": "No style name",
+        "sizeColorHeader": "Size & Color",
+        "subProcessProgress": "Sub-process Progress",
+        "noProcessConfigured": "No processes configured; add them in style process config first",
+        "noSubProcess": "No sub-processes"
       }
     }
   }
