@@ -122,13 +122,17 @@ const BACKEND_ACTION_LABELS: Record<string, { title: string; desc: string }> = {
     desc: '工序长时间无扫码进度时自动通知跟单员。关闭后仅在前端展示停滞标记，不推送通知。',
   },
   'backend.action.auto_patrol_exec': {
-    title: '巡检自动执行',
-    // D-513 描述订正：原写「关闭后仅生成巡检记录，不自动派发任务」，与代码不符。
-    // 实际 AiPatrolJob.scanProductionAnomaliesForTenant 用 if (actionEnabled) 包住了
-    // patrolOrchestrator.createAction(...)，即关闭时连巡检工单都不创建
-    // （t_ai_patrol_action 自 2026-06-13 起再无新增正是此故）。
-    // 开启后才会：创建巡检工单 + riskLevel=NEED_APPROVAL 时通知跟单员审批。
-    desc: '系统巡检发现风险后自动创建巡检工单并推送微信通知。关闭后不生成任何巡检记录（巡检工单中心将为空），需保持开启才能持续巡检。',
+    // D-513 描述订正：原写「关闭后仅生成巡检记录，不自动派发任务」严重误导——
+    // 该开关实际是 **AI 巡检总开关**：
+    //   AbstractPatrolJob.isPatrolEnabledForTenant() 用同一个 key 做总闸，
+    //   所有 *PatrolJob（AiPatrolJob / RiskSentinel / AnomalyDetector / CrewCoordinator …）
+    //   在开关未开启时【整个任务都不执行】；AiPatrolJob 内部还用 if (actionEnabled)
+    //   包住了 createAction(...)，即连工单都不创建。
+    // 实测后果：t_ai_patrol_action 自 2026-06-13 起再无新增（827 条全为旧数据），
+    //   各类 *PatrolJob 运行记录同日停止，而开关「默认全部关闭」且未给存量租户补记录
+    //   → 静默失效 3 个多月，巡检工单中心一片空白。
+    title: 'AI 巡检总开关',
+    desc: '开启后系统按计划自动巡检：发现风险创建巡检工单，需要人工处理的会通知跟单员。关闭后所有 AI 巡检任务停止运行，巡检工单中心不再产生新记录（历史记录仍在）。建议保持开启。',
   },
   'backend.action.auto_task_escalation': {
     title: '协作任务逾期自动升级',
