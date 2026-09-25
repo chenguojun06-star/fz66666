@@ -11,7 +11,6 @@ import { useLayoutAuth } from '@/components/Layout/useLayoutAuth';
 import { useUser } from '@/utils/AuthContext';
 import feedbackService from '@/services/feedbackService';
 import { announcementApi, PlatformAnnouncement } from '@/services/system/announcementApi';
-import { isSupervisorOrAboveUser } from '@/utils/AuthContext.helpers';
 import { HOME_CHANGELOG } from './homeChangelog';
 
 /**
@@ -61,7 +60,12 @@ const ServiceSidebar: React.FC = () => {
   const [pubContent, setPubContent] = useState('');
   const [pubType, setPubType] = useState<'info' | 'warning' | 'important'>('info');
 
-  const canPublish = isSupervisorOrAboveUser(user);
+  /*
+   * 仅平台超管（云裳智链）可发布平台通知 ——
+   * 这是平台方面向所有租户发布的更新通知，租户侧只能查看，不提供发布入口。
+   * （user.isSuperAdmin 由 AuthContext 依据登录返回的 superAdmin 标志得出）
+   */
+  const canPublish = user?.isSuperAdmin === true;
 
   const loadAnnouncements = useCallback(async () => {
     try {

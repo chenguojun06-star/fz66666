@@ -48,23 +48,19 @@ public class PlatformAnnouncementController {
     /**
      * 创建公告
      *
-     * <p>D-513 权限修正（二次）：
-     * ① 原为 {@code hasRole('ADMIN')}——本项目不存在 ROLE_ADMIN，租户主账号发不了公告；
-     * ② 改为 {@code hasRole('TENANT_OWNER')} 后实测仍 403：Spring 的 hasRole('TENANT_OWNER')
-     *    校验的是 authority <b>ROLE_TENANT_OWNER（大写）</b>，而项目
-     *    {@code SecurityConstants.TENANT_OWNER_ROLES} 中登记的是小写 {@code ROLE_tenant_owner}，
-     *    大小写不匹配 → 拒绝。
+     * <p>D-513 权限修正（最终）：<b>仅平台超管（云裳智链）可发布</b>。
+     * 上一版误开放给租户主账号，属于需求理解错误——「平台通知」是平台方
+     * 面向所有租户发布的更新通知，租户侧只能查看，不应有发布入口。
      *
-     * <p>最终方案：<b>不再在方法级重复声明角色</b>——
-     * {@code SecurityConstants.TENANT_OWNER_ENDPOINTS} 已包含 {@code /api/system/**}，
-     * 由 SecurityConfig 的 URL 级规则统一把关（等价于 SUPER_ADMIN 或租户主账号）；
-     * 方法内再用 UserContext 做一次业务层保险，避免依赖脆弱的角色名映射。
+     * <p>实现选择 UserContext.isSuperAdmin() 业务判断而非注解角色名：
+     * 本项目角色名字符串映射不可靠（存在 {@code ROLE_tenant_owner} 小写、
+     * {@code ROLE_1} 数字角色等），且 hasRole 大小写敏感已踩过 403 的坑。
+     * UserContext.isSuperAdmin() 依赖登录时写入的 superAdmin 标志，稳定可靠。
      */
     @PostMapping("/")
     public Result<PlatformAnnouncement> createAnnouncement(@RequestBody Map<String, Object> params) {
-        // 业务层保险：仅平台超管或租户主账号可发布
-        if (!UserContext.isSuperAdmin() && !UserContext.isTenantOwner()) {
-            return Result.fail("无权发布公告");
+        if (!UserContext.isSuperAdmin()) {
+            return Result.fail("仅平台方可以发布平台通知");
         }
         String title = params.get("title") != null ? params.get("title").toString() : null;
         if (!StringUtils.hasText(title)) {
@@ -77,19 +73,13 @@ public class PlatformAnnouncementController {
         announcement.setType(params.get("type") != null ? params.get("type").toString() : "info");
         announcement.setCreatedBy(UserContext.userId());
 
-        // tenantId: 不传或传null表示全局公告，传具体值表示租户级公告
-        if (UserContext.isSuperAdmin()) {
-            // 平台超管：可发全局（tenantId=null）或指定租户
-            if (params.containsKey("tenantId") && params.get("tenantId") != null) {
-                announcement.setTenantId(Long.parseLong(params.get("tenantId").toString()));
-            }
-        } else {
-            // 租户主账号：只能发本租户公告，忽略入参中的 tenantId（防越权）
-            Long ownTenantId = UserContext.tenantId();
-            if (ownTenantId == null) {
-                return Result.fail("无法确定所属租户，禁止发布公告");
-            }
-            announcement.setTenantId(ownTenantId);
+        /*
+         * tenantId：不传或传 null = 全局公告（所有租户可见）——
+         * 平台发布更新通知的场景默认就是全局，因此保持不设值即可。
+         * 如需定向到某个租户，才传 tenantId。
+         */
+        if (params.containsKey("tenantId") && params.get("tenantId") != null) {
+            announcement.setTenantId(Long.parseLong(params.get("tenantId").toString()));
         }
 
         if (params.containsKey("startTime") && params.get("startTime") != null) {
@@ -104,26 +94,16 @@ public class PlatformAnnouncementController {
     }
 
     /**
-     * 下架公告
-     *
-     * <p>D-513：权限同创建（交由 URL 级规则）；并补租户归属校验——
-     * 原实现直接按 id 下架，租户主账号将可下架他人/全局公告（越权）。
+     * 下架公告（仅平台超管）
      */
     @PutMapping("/{id}/deactivate")
     public Result<Void> deactivateAnnouncement(@PathVariable Long id) {
-        if (!UserContext.isSuperAdmin() && !UserContext.isTenantOwner()) {
-            return Result.fail("无权下架公告");
+        if (!UserContext.isSuperAdmin()) {
+            return Result.fail("仅平台方可以下架平台通知");
         }
         PlatformAnnouncement existing = platformAnnouncementService.getById(id);
         if (existing == null) {
             return Result.fail("公告不存在");
-        }
-        if (!UserContext.isSuperAdmin()) {
-            Long ownTenantId = UserContext.tenantId();
-            // 全局公告（tenantId=null）仅平台超管可下架
-            if (ownTenantId == null || !ownTenantId.equals(existing.getTenantId())) {
-                return Result.fail("无权操作该公告");
-            }
         }
         platformAnnouncementService.deactivateAnnouncement(id);
         return Result.success();
