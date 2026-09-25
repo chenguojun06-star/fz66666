@@ -91,17 +91,10 @@
           bindinput="onTrackingInput"
         />
       </view>
-      <view class="row row--switch">
-        <view class="row-label">
-          直发给客户
-          <text class="row-hint">不经仓库，供应商直发</text>
-        </view>
-        <switch
-          checked="{{directShip}}"
-          bindchange="onDirectShipChange"
-          color="#2d7ff9"
-        />
-      </view>
+      <!-- 直发开关已撤回：后端 directShip 语义是「质检直发」（D-360k，不落成品库存、
+           跳过库存扣减，且仅允许销售出库，其他类型直接抛异常），不是可随手勾选的普通开关。
+           误触会导致「记了出库单但库存没扣」或出库直接失败。PC 端也只通过 URL 入口
+           (?directShip=1) 进入该模式，不做开关。 -->
   </view>
 
   <!-- ⑤ SKU 明细多选 -->

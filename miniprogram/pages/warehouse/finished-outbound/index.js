@@ -67,11 +67,11 @@ Page({
     // D-513：联系电话（PC 端 CustomerInfoSection 也有，手机端原先缺失）
     customerPhone: '',
 
-    // D-513：物流信息（后端 FinishedOutstockHelper 支持，两端原先都没做）
+    // D-513：物流信息（后端 FinishedOutstockHelper 支持）
     expressCompany: '',
     trackingNo: '',
-    /** 直发：不经仓库、供应商直接发给客户 */
-    directShip: false,
+    // 注：不做 directShip 开关。后端该字段语义是「质检直发」（不落成品库存、跳过库存
+    // 扣减、仅限销售出库），误触会造成幽灵出库单。PC 端也只走 URL 入口。参见 WXML 注释。
 
     remark: '',
   },
@@ -256,10 +256,6 @@ Page({
     this.setData({ trackingNo: e.detail.value });
   },
 
-  /** D-513：直发开关——不经仓库，供应商直接发给客户 */
-  onDirectShipChange(e) {
-    this.setData({ directShip: !!e.detail.value });
-  },
 
   onAddressInput(e) {
     this.setData({ shippingAddress: e.detail.value });
@@ -460,7 +456,6 @@ Page({
         customerPhone: this.data.customerPhone || '',
         expressCompany: this.data.expressCompany || '',
         trackingNo: this.data.trackingNo || '',
-        directShip: !!this.data.directShip,
         remark: this.data.remark || '',
       });
       wx.showToast({ title: '出库成功', icon: 'success' });
