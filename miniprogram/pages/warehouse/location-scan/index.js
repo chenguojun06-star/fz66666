@@ -51,6 +51,8 @@ Page({
    */
   applyLanguage(language) {
     const lang = language || i18n.getLanguage();
+    // 导航栏标题：json 里的 navigationBarTitleText 只能写死，必须在这里覆盖才会跟着语言变
+    wx.setNavigationBarTitle({ title: i18n.t('mp.warehouse.locationScan.title', lang) });
     this.setData({
       t: {
         scanTitle: i18n.t('mp.warehouse.locationScan.scanTitle', lang),

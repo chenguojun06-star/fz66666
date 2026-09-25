@@ -278,6 +278,21 @@ function lastCall(wx, name) {
   return null;
 }
 
+/**
+ * 读页面同目录的 index.json（解析失败或不存在返回 null）
+ *
+ * 用途：json 里的 `navigationBarTitleText` 是**静态写死**的，
+ * 抽取器扫不到、wxml 扫描也扫不到，必须单独守。
+ */
+function readSiblingJson(jsPath) {
+  const p = path.join(MP, path.posix.dirname(jsPath), 'index.json');
+  try {
+    return JSON.parse(fs.readFileSync(p, 'utf8'));
+  } catch (_) {
+    return null;
+  }
+}
+
 // ────────────────────────── 接口桩 ──────────────────────────
 const SKUS = [
   { id: 's1', sku: 'SKU-A-S', color: '白色', size: 'S', availableQty: 10, warehouseLocation: 'A区', salesPrice: 0 },
@@ -1086,6 +1101,31 @@ function testPageI18n(jsPath, wxmlPath, label) {
     const leftovers = (wxml.match(/[\u4e00-\u9fff]+/g) || []);
     ok(`${label} wxml 无硬编码中文`, leftovers.length === 0, leftovers.join(' / '));
   }
+
+  // 导航栏标题 —— 通用检查最容易漏的一处
+  //
+  // 页面 json 的 `navigationBarTitleText` **只能写死**（微信不支持在 json 里写 {{t.x}}），
+  // 所以标题要跟着语言变，**唯一**办法是在 applyLanguage 里调 wx.setNavigationBarTitle。
+  // 这条是行为级断言：只看「标题有没有真的随语言变」，不看代码长什么样。
+  // （D-550 补：此前 location-scan / finished-inventory 两个已「完成」的页面就漏了这处）
+  const navJson = readSiblingJson(jsPath);
+  if (navJson && navJson.navigationBarTitleText) {
+    const seen = [];
+    for (const lang of LANGS) {
+      const { page: np, wx: nwx } = loadPage(jsPath, makeApi());
+      np.applyLanguage(lang);
+      const call = lastCall(nwx, 'setNavigationBarTitle');
+      const title = call && call.title;
+      seen.push(`${lang}=${title || '<未设置>'}`);
+      if (title && lang !== 'zh-CN' && CJK_RE.test(title)) {
+        ok(`${lang} 导航栏标题无中文残留`, false, title);
+      }
+    }
+    ok(`${label} 导航栏标题随语言设置（不能只靠 json 写死）`,
+      !seen.some(s => s.includes('<未设置>')), seen.join(' | '));
+    const vals = seen.map(s => s.slice(s.indexOf('=') + 1));
+    ok(`${label} 导航栏标题确实随语言变化`, new Set(vals).size > 1, seen.join(' | '));
+  }
 }
 
 function testI18nLocationScan() {
@@ -1238,6 +1278,218 @@ function testI18nFinishedInventoryDetail() {
   ok('入库记录条数重算', cntP.data.t.recordCountText === '1 records', cntP.data.t.recordCountText);
 }
 
+/**
+ * 成品入库页（D-550）
+ *
+ * 该页与列表页不同：文案分三处 —— ① `t.*`（wxml 静态文案）② 入库类型 chips 的 label
+ * （在模块级常量 `SOURCE_TYPES` 里，wxml 只渲染 `{{typeOptions[i].label}}`）
+ * ③ SKU 行的「现有库存 N 件」（逐条不同）。通用检查只能覆盖 ①，②③ 必须单独断言。
+ */
+function testI18nFinishedInbound() {
+  const js = 'pages/warehouse/finished-inbound/index.js';
+  testPageI18n(js, 'pages/warehouse/finished-inbound/index.wxml', '成品入库页');
+
+  // ② 入库类型 chips 的 label 在 data 数组里 → 通用检查覆盖不到
+  const { page: zhP } = loadPage(js, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP } = loadPage(js, makeApi());
+  enP.applyLanguage('en-US');
+  ok('zh-CN 入库类型是中文', CJK_RE.test(zhP.data.typeOptions[0].label), zhP.data.typeOptions[0].label);
+  ok('en-US 入库类型是英文', !CJK_RE.test(enP.data.typeOptions[0].label), enP.data.typeOptions[0].label);
+  ok('中英入库类型确实不同', zhP.data.typeOptions[0].label !== enP.data.typeOptions[0].label);
+
+  // 🔴 key 是**后端契约**（FinishedWarehouseOperationOrchestrator.VALID_SOURCE_TYPES），
+  //    把常量从 {label} 改成 {labelKey} 时最容易连 key 一起改错 → 单独锁死
+  eq('入库类型的 key 未受翻译影响', zhP.data.typeOptions.map(o => o.key),
+    ['free_inbound', 'external_purchase', 'transfer_in', 'return_in', 'other_in']);
+
+  // 改成 {labelKey} 后 onSelectType 仍要取到正确 key（这里最容易踩空）
+  const { page: selP } = loadPage(js, makeApi());
+  selP.applyLanguage('en-US');
+  selP.onSelectType({ currentTarget: { dataset: { key: 'transfer_in' } } });
+  eq('切换入库类型后 key 正确', selP.data.sourceType, 'transfer_in');
+  ok('切换后类型标签是英文', !CJK_RE.test(selP.data.sourceTypeLabel), selP.data.sourceTypeLabel);
+  selP.onSelectType({ currentTarget: { dataset: { key: '不存在的类型' } } });
+  eq('未知类型不改变当前选择', selP.data.sourceType, 'transfer_in');
+
+  // ⚠️ '默认仓' 是**数据值**不是文案（后端 / DB 的 warehouse_location 默认值）——
+  //    翻译了会写进数据库、导致按库位查不到数据，所以任何语言下都必须保持原样
+  eq('zh-CN 库位默认值保持数据原值', zhP.data.warehouseLocation, '默认仓');
+  eq('en-US 库位默认值也保持数据原值', enP.data.warehouseLocation, '默认仓');
+
+  // 空列表时 applyLanguage 不能炸（onShow 会在数据到达前先跑一次）
+  const { page: emptyP } = loadPage(js, makeApi());
+  emptyP.applyLanguage('vi-VN');
+  ok('空列表 applyLanguage 不报错', Array.isArray(emptyP.data.skuList) && emptyP.data.skuList.length === 0);
+
+  // toast 文案也要跟着语言走（onQuery 里的 t() 没传 lang → 读 storage，必须一起设）
+  const { page: toastP, wx: toastWx } = loadPage(js, makeApi());
+  toastWx.setStorageSync('app.language', 'en-US');
+  toastP.applyLanguage('en-US');
+  toastP.onQuery();
+  const toast = lastCall(toastWx, 'showToast');
+  ok('缺款号提示已本地化', !!toast && !CJK_RE.test(toast.title), toast && toast.title);
+}
+
+async function testI18nFinishedInboundData() {
+  const js = 'pages/warehouse/finished-inbound/index.js';
+
+  // ③ SKU 行的「现有库存 N 件」逐条不同 → 不能放在 t 里，必须 _decorateSkus 逐项生成
+  const { page: p } = loadPage(js, makeApi());
+  p.applyLanguage('en-US');
+  p.data.styleNo = 'ST-1';
+  await p.querySkus();
+  eq('查询后拿到 3 个 SKU', p.data.skuList.length, 3);
+  const it = p.data.skuList[0];
+  ok('SKU 现有库存文案已生成', /10/.test(it.existingStockText), it.existingStockText);
+  ok('SKU 文案无未替换 {qty}', !/\{qty\}/.test(it.existingStockText), it.existingStockText);
+  ok('SKU 文案是英文', !CJK_RE.test(it.existingStockText), it.existingStockText);
+
+  // 底部提交栏的带参文案（已选 N 项 / 合计 N 件）
+  p.onToggleAll();
+  eq('全选后已选 3 项', p.data.selectedCount, 3);
+  eq('底部已选文案插值正确', p.data.t.selectedItemsText, '3 selected');
+  eq('底部合计文案插值正确', p.data.t.totalQtyText, 'Total 3 pcs');
+  ok('点路径 setData 未污染 data 顶层',
+    !Object.prototype.hasOwnProperty.call(p.data, 't.selectedItemsText'));
+
+  // 切语言后 ① t ② 类型 chips ③ SKU 行文案 三处都要跟着变
+  const enSkuText = p.data.skuList[0].existingStockText;
+  const enTypeLabel = p.data.typeOptions[0].label;
+  p.applyLanguage('zh-CN');
+  ok('切回中文后底部文案同步变化', CJK_RE.test(p.data.t.selectedItemsText), p.data.t.selectedItemsText);
+  // ⚠️ 必须用「文案确实变了」而不是只看「含中文」—— 见出库页同处的注释
+  ok('切回中文后 SKU 行文案同步变化',
+    p.data.skuList[0].existingStockText !== enSkuText &&
+    CJK_RE.test(p.data.skuList[0].existingStockText),
+    `en=${enSkuText} zh=${p.data.skuList[0].existingStockText}`);
+  ok('切回中文后类型 chips 同步变化',
+    p.data.typeOptions[0].label !== enTypeLabel && CJK_RE.test(p.data.typeOptions[0].label),
+    `en=${enTypeLabel} zh=${p.data.typeOptions[0].label}`);
+
+  // 选中数变化后带参文案要**重算**，不能停在上一次的值
+  p.onToggleSku({ currentTarget: { dataset: { id: 's2' } } });
+  eq('取消一个后已选 2 项', p.data.selectedCount, 2);
+  ok('底部文案跟着重算', /2/.test(p.data.t.selectedItemsText), p.data.t.selectedItemsText);
+}
+
+/**
+ * 成品出库页（D-550）
+ *
+ * 比入库页多两处：① 顶部「款号/订单/工厂」带参文案 ② needsCustomer 是**后端规则**
+ * （FinishedOutstockHelper.REQUIRES_CUSTOMER_TYPES），本地化不能动到它。
+ */
+function testI18nFinishedOutbound() {
+  const js = 'pages/warehouse/finished-outbound/index.js';
+  testPageI18n(js, 'pages/warehouse/finished-outbound/index.wxml', '成品出库页');
+
+  const { page: zhP } = loadPage(js, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP } = loadPage(js, makeApi());
+  enP.applyLanguage('en-US');
+  ok('zh-CN 出库类型是中文', CJK_RE.test(zhP.data.typeOptions[0].label), zhP.data.typeOptions[0].label);
+  ok('en-US 出库类型是英文', !CJK_RE.test(enP.data.typeOptions[0].label), enP.data.typeOptions[0].label);
+  ok('中英出库类型确实不同', zhP.data.typeOptions[0].label !== enP.data.typeOptions[0].label);
+
+  // 🔴 key 是后端契约（FinishedOutstockHelper.VALID_OUTSTOCK_TYPES）
+  eq('出库类型的 key 未受翻译影响', zhP.data.typeOptions.map(o => o.key),
+    ['shipment', 'transfer_out', 'damage_out', 'sample_out', 'other_out']);
+
+  // needsCustomer 是后端规则，本地化不能动到它；切到不需要客户的类型要清空已选客户
+  const { page: selP } = loadPage(js, makeApi());
+  selP.applyLanguage('en-US');
+  selP.data.customerId = 'c1';
+  selP.data.customerName = '客户甲';
+  selP.onSelectType({ currentTarget: { dataset: { key: 'transfer_out' } } });
+  eq('切换出库类型后 key 正确', selP.data.outstockType, 'transfer_out');
+  eq('needsCustomer 跟着类型变', selP.data.needsCustomer, false);
+  eq('不需要客户的类型会清空已选客户', selP.data.customerName, '');
+  ok('切换后类型标签是英文', !CJK_RE.test(selP.data.outstockTypeLabel), selP.data.outstockTypeLabel);
+  selP.onSelectType({ currentTarget: { dataset: { key: 'shipment' } } });
+  eq('切回销售出库后又需要客户', selP.data.needsCustomer, true);
+
+  // ① 顶部「款号 / 订单 / 工厂」是带参文案（值来自 URL 参数，不是文案）
+  const { page: topP } = loadPage(js, makeApi());
+  topP.data.styleNo = 'ST-2026-001';
+  topP.data.orderNo = 'PO-1';
+  topP.data.factoryName = 'FAC-1';
+  topP.applyLanguage('en-US');
+  eq('款号文案插值正确', topP.data.t.styleNoText, 'Style ST-2026-001');
+  eq('订单号文案插值正确', topP.data.t.orderNoText, 'Order PO-1');
+  eq('工厂文案插值正确', topP.data.t.factoryText, 'Factory FAC-1');
+  ok('无未替换的 {no}/{name}', !/\{(no|name)\}/.test(
+    [topP.data.t.styleNoText, topP.data.t.orderNoText, topP.data.t.factoryText].join('|')));
+
+  // 空列表 applyLanguage 不能炸
+  const { page: emptyP } = loadPage(js, makeApi());
+  emptyP.applyLanguage('km-KH');
+  ok('空列表 applyLanguage 不报错', Array.isArray(emptyP.data.skuList) && emptyP.data.skuList.length === 0);
+
+  // toast 本地化（onSubmit 里的 t() 没传 lang → 读 storage，必须一起设）
+  const { page: toastP, wx: toastWx } = loadPage(js, makeApi());
+  toastWx.setStorageSync('app.language', 'en-US');
+  toastP.applyLanguage('en-US');
+  toastP.onSubmit();
+  const toast = lastCall(toastWx, 'showToast');
+  ok('未选 SKU 提示已本地化', !!toast && !CJK_RE.test(toast.title), toast && toast.title);
+}
+
+async function testI18nFinishedOutboundData() {
+  const js = 'pages/warehouse/finished-outbound/index.js';
+
+  // SKU 行的「可用 N 件 · 库位」逐条不同 → 必须 _decorateSkus 逐项生成
+  // ⚠️ 库位（'A区'）是**业务数据**不是文案，所以这里不能断言「整串无中文」
+  const { page: p } = loadPage(js, makeApi());
+  p.applyLanguage('en-US');
+  p.data.styleNo = 'ST-1';
+  await p.loadSkus();
+  eq('加载后拿到 3 个 SKU', p.data.skuList.length, 3);
+  const it = p.data.skuList[0];
+  ok('SKU 可用库存文案已生成', /10/.test(it.availableText), it.availableText);
+  ok('SKU 文案带出库位', String(it.availableText).includes('A区'), it.availableText);
+  ok('SKU 文案无未替换 {qty}/{loc}', !/\{(qty|loc)\}/.test(it.availableText), it.availableText);
+  ok('SKU 文案前缀是英文', String(it.availableText).startsWith('Available'), it.availableText);
+
+  // 底部提交栏带参文案（可用库存 10 / 0 / 5 → 只有 2 个可选）
+  p.onToggleAll();
+  eq('全选只选中有库存的 2 项', p.data.selectedCount, 2);
+  eq('底部已选文案插值正确', p.data.t.selectedItemsText, '2 selected');
+  eq('底部合计文案插值正确', p.data.t.totalQtyText, 'Total 2 pcs');
+  ok('点路径 setData 未污染 data 顶层',
+    !Object.prototype.hasOwnProperty.call(p.data, 't.selectedItemsText'));
+
+  // 切语言后 ① t ② 类型 chips ③ SKU 行文案 三处都要跟着变
+  //
+  // ⚠️ 这里**不能**只断言「切中文后含中文字符」—— `{loc}` 填的是库位（桩里是 'A区'），
+  //    本来就是中文**业务数据**，所以英文文案 `Available 10 pcs · A区` 也含中文 → 假绿。
+  //    （变异验证 M4 实测漏检，故改成「文案确实变了」+「不再以英文前缀开头」。）
+  const enSkuText = p.data.skuList[0].availableText;
+  const enTypeLabel = p.data.typeOptions[0].label;
+  p.applyLanguage('zh-CN');
+  ok('切回中文后底部文案同步变化', CJK_RE.test(p.data.t.selectedItemsText), p.data.t.selectedItemsText);
+  ok('切回中文后 SKU 行文案同步变化',
+    p.data.skuList[0].availableText !== enSkuText &&
+    !String(p.data.skuList[0].availableText).startsWith('Available'),
+    `en=${enSkuText} zh=${p.data.skuList[0].availableText}`);
+  ok('切回中文后类型 chips 同步变化',
+    p.data.typeOptions[0].label !== enTypeLabel && CJK_RE.test(p.data.typeOptions[0].label),
+    `en=${enTypeLabel} zh=${p.data.typeOptions[0].label}`);
+
+  // D-513 一键填满：带两个参数的文案（{count} / {qty}），最容易漏替换
+  const { page: fillP, wx: fillWx } = loadPage(js, makeApi());
+  fillWx.setStorageSync('app.language', 'en-US');
+  fillP.applyLanguage('en-US');
+  fillP.data.styleNo = 'ST-1';
+  await fillP.loadSkus();
+  fillP.onFillAllQty();
+  eq('一键填满后已选 2 项', fillP.data.selectedCount, 2);
+  eq('一键填满后合计 15 件', fillP.data.selectedQty, 15);
+  const fillToast = lastCall(fillWx, 'showToast');
+  ok('一键填满提示已本地化', !!fillToast && !CJK_RE.test(fillToast.title), fillToast && fillToast.title);
+  ok('一键填满提示两个占位符都已替换',
+    !!fillToast && !/\{(count|qty)\}/.test(fillToast.title), fillToast && fillToast.title);
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -1257,6 +1509,10 @@ try {
   testI18nFinishedInventoryList();
   await testI18nFinishedInventoryListData();
   testI18nFinishedInventoryDetail();
+  testI18nFinishedInbound();
+  await testI18nFinishedInboundData();
+  testI18nFinishedOutbound();
+  await testI18nFinishedOutboundData();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

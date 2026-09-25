@@ -167,6 +167,8 @@ Page({
     // 记住当前语言：loadList 里的 _decorateList 要用**同一个**语言，
     // 否则两处各自读一次 storage，中间被切语言就会不一致。
     this._lang = lang;
+    // 导航栏标题：json 里的 navigationBarTitleText 只能写死，必须在这里覆盖才会跟着语言变
+    wx.setNavigationBarTitle({ title: i18n.t('mp.warehouse.finishedInventory.title', lang) });
     this.setData({
       t: {
         loading: i18n.t('common.loading', lang),

@@ -13,15 +13,28 @@
  */
 const api = require('../../../utils/api');
 const { decodeParam } = require('../../../utils/urlParams');
+const i18n = require('../../../utils/i18n/index');
 
-/** 与后端 FinishedOutstockHelper.VALID_OUTSTOCK_TYPES 对齐（去掉扫码类型，扫码走单独入口） */
+/**
+ * 与后端 FinishedOutstockHelper.VALID_OUTSTOCK_TYPES 对齐（去掉扫码类型，扫码走单独入口）
+ *
+ * ⚠️ key 是**后端契约**，绝不能跟着语言变；needsCustomer 也是后端规则
+ *    （REQUIRES_CUSTOMER_TYPES）。label 由 applyLanguage 按当前语言展开。
+ */
 const OUTSTOCK_TYPES = [
-  { key: 'shipment', label: '销售出货', needsCustomer: true },
-  { key: 'transfer_out', label: '调拨出库', needsCustomer: false },
-  { key: 'damage_out', label: '报废出库', needsCustomer: false },
-  { key: 'sample_out', label: '样衣出库', needsCustomer: false },
-  { key: 'other_out', label: '其他出库', needsCustomer: false },
+  { key: 'shipment', labelKey: 'mp.warehouse.finishedOutbound.typeShipment', needsCustomer: true },
+  { key: 'transfer_out', labelKey: 'mp.warehouse.finishedOutbound.typeTransferOut', needsCustomer: false },
+  { key: 'damage_out', labelKey: 'mp.warehouse.finishedOutbound.typeDamageOut', needsCustomer: false },
+  { key: 'sample_out', labelKey: 'mp.warehouse.finishedOutbound.typeSampleOut', needsCustomer: false },
+  { key: 'other_out', labelKey: 'mp.warehouse.finishedOutbound.typeOtherOut', needsCustomer: false },
 ];
+
+/** 把「只带 labelKey 的选项」按当前语言展开成 wxml 需要的 {key, label} */
+function localizeTypeOptions(lang) {
+  return OUTSTOCK_TYPES.map(function (o) {
+    return { key: o.key, label: i18n.t(o.labelKey, lang) };
+  });
+}
 
 Page({
   data: {
@@ -44,10 +57,14 @@ Page({
     allSelected: false,
 
     // ── 出库类型 ──
-    typeOptions: OUTSTOCK_TYPES,
+    // 初始就按当前语言展开，避免首屏闪一下空白（onShow 里还会再刷一次）
+    typeOptions: localizeTypeOptions(i18n.getLanguage()),
     outstockType: 'shipment',
-    outstockTypeLabel: '销售出货',
+    outstockTypeLabel: '',
     needsCustomer: true,
+
+    /** i18n 文案表（applyLanguage 里填充，wxml 用 {{t.xxx}}） */
+    t: {},
 
     // ── 仓库区域 ──
     areaOptions: [],
@@ -84,10 +101,91 @@ Page({
       styleImage: decodeURIComponent(options.styleImage || ''),
       factoryName: decodeURIComponent(options.factoryName || ''),
     });
-    wx.setNavigationBarTitle({ title: '成品出库' });
+    // 导航栏标题改在 applyLanguage 里设（json 里那个是写死的，不会跟着语言变）
     this.loadSkus();
     this.loadAreas();
     this.loadCustomers();
+  },
+
+  onShow() {
+    // 每次回到页面都按当前语言重刷文案（用户可能在「我的」里切了语言）
+    this.applyLanguage(i18n.getLanguage());
+  },
+
+  /**
+   * 刷新本页全部文案。三处都要更新：
+   *   ① t.*（wxml 静态文案）
+   *   ② 出库类型 chips 的 label（在 data 数组里，不是 wxml 字面量）
+   *   ③ SKU 行的「可用 N 件 · 库位」与顶部「款号/订单/工厂」（带参，逐条或逐页不同）
+   */
+  applyLanguage(language) {
+    var lang = language || i18n.getLanguage();
+    // 记住当前语言：loadSkus 里的 _decorateSkus 要用同一个语言，
+    // 否则两处各读一次 storage，中间被切语言就会不一致。
+    this._lang = lang;
+    // 导航栏标题：json 里的 navigationBarTitleText 只能写死，必须在这里覆盖才会跟着语言变
+    wx.setNavigationBarTitle({ title: i18n.t('mp.warehouse.finishedOutbound.title', lang) });
+    var current = null;
+    for (var i = 0; i < OUTSTOCK_TYPES.length; i++) {
+      if (OUTSTOCK_TYPES[i].key === this.data.outstockType) { current = OUTSTOCK_TYPES[i]; break; }
+    }
+    this.setData({
+      t: {
+        noImage: i18n.t('mp.warehouse.finishedOutbound.noImage', lang),
+        styleNoText: i18n.tf('mp.warehouse.finishedOutbound.styleNoText', { no: this.data.styleNo || '—' }, lang),
+        orderNoText: i18n.tf('mp.warehouse.finishedOutbound.orderNoText', { no: this.data.orderNo || '' }, lang),
+        factoryText: i18n.tf('mp.warehouse.finishedOutbound.factoryText', { name: this.data.factoryName || '' }, lang),
+        outboundType: i18n.t('mp.warehouse.finishedOutbound.outboundType', lang),
+        warehouseArea: i18n.t('common.warehouseArea', lang),
+        pleaseSelect: i18n.t('common.pleaseSelect', lang),
+        customer: i18n.t('mp.warehouse.finishedOutbound.customer', lang),
+        requiredCustomer: i18n.t('mp.warehouse.finishedOutbound.requiredCustomer', lang),
+        shippingAddress: i18n.t('mp.warehouse.finishedOutbound.shippingAddress', lang),
+        autoFillEditable: i18n.t('mp.warehouse.finishedOutbound.autoFillEditable', lang),
+        contactPhone: i18n.t('mp.warehouse.finishedOutbound.contactPhone', lang),
+        expressCompany: i18n.t('mp.warehouse.finishedOutbound.expressCompany', lang),
+        expressPlaceholder: i18n.t('mp.warehouse.finishedOutbound.expressPlaceholder', lang),
+        trackingNo: i18n.t('mp.warehouse.finishedOutbound.trackingNo', lang),
+        optional: i18n.t('common.optional', lang),
+        selectDetail: i18n.t('mp.warehouse.finishedOutbound.selectDetail', lang),
+        fillAllQty: i18n.t('mp.warehouse.finishedOutbound.fillAllQty', lang),
+        selectAll: i18n.t('common.selectAll', lang),
+        loading: i18n.t('common.loading', lang),
+        noStockData: i18n.t('mp.warehouse.finishedOutbound.noStockData', lang),
+        price: i18n.t('common.price', lang),
+        yuan: i18n.t('common.yuan', lang),
+        remark: i18n.t('common.remark', lang),
+        remarkPlaceholder: i18n.t('mp.warehouse.finishedOutbound.remarkPlaceholder', lang),
+        submitting: i18n.t('common.submitting', lang),
+        confirmOutbound: i18n.t('mp.warehouse.finishedOutbound.confirmOutbound', lang),
+      },
+      typeOptions: localizeTypeOptions(lang),
+      outstockTypeLabel: current ? i18n.t(current.labelKey, lang) : '',
+      skuList: this._decorateSkus(this.data.skuList, lang),
+    });
+    this._refreshSummaryTexts(lang);
+  },
+
+  /** SKU 行的带参文案（「可用 N 件 · 库位」逐条不同 → 不能放在 t 里） */
+  _decorateSkus(list, lang) {
+    var l = lang || this._lang || i18n.getLanguage();
+    return (list || []).map(function (it) {
+      return Object.assign({}, it, {
+        availableText: i18n.tf('mp.warehouse.finishedOutbound.availableQtyText', {
+          qty: it.availableQty || 0,
+          loc: it.warehouseLocation || '-',
+        }, l),
+      });
+    });
+  },
+
+  /** 底部提交栏的带参文案（已选 N 项 / 合计 N 件） */
+  _refreshSummaryTexts(lang) {
+    var l = lang || this._lang || i18n.getLanguage();
+    this.setData({
+      't.selectedItemsText': i18n.tf('common.selectedItems', { count: this.data.selectedCount }, l),
+      't.totalQtyText': i18n.tf('common.totalQty', { count: this.data.selectedQty }, l),
+    });
   },
 
   // ────────── 数据加载 ──────────
@@ -95,7 +193,7 @@ Page({
   async loadSkus() {
     if (!this.data.styleNo) {
       this.setData({ loading: false });
-      wx.showToast({ title: '缺少款号', icon: 'none' });
+      wx.showToast({ title: i18n.t('mp.warehouse.finishedOutbound.missingStyleNo'), icon: 'none' });
       return;
     }
     this.setData({ loading: true });
@@ -123,10 +221,10 @@ Page({
           salesPrice: item.salesPrice || 0,
         };
       });
-      this.setData({ skuList: skuList, loading: false });
+      this.setData({ skuList: this._decorateSkus(skuList), loading: false });
     } catch (e) {
       this.setData({ loading: false });
-      wx.showToast({ title: (e && e.message) || '加载失败', icon: 'none' });
+      wx.showToast({ title: (e && e.message) || i18n.t('common.loadFailed'), icon: 'none' });
     }
   },
 
@@ -181,7 +279,7 @@ Page({
     if (!hit) return;
     this.setData({
       outstockType: hit.key,
-      outstockTypeLabel: hit.label,
+      outstockTypeLabel: i18n.t(hit.labelKey, this._lang || i18n.getLanguage()),
       needsCustomer: hit.needsCustomer,
       // 切到不需要客户的类型时清掉已选客户，避免提交脏数据
       customerId: hit.needsCustomer ? this.data.customerId : '',
@@ -196,8 +294,8 @@ Page({
   _openPickerByKey(e) {
     var key = (e.currentTarget.dataset && e.currentTarget.dataset.key) || '';
     var map = {
-      area: { title: '选择仓库区域', options: this.data.areaOptions, current: this.data.warehouseAreaId },
-      customer: { title: '选择客户', options: this.data.customerOptions, current: this.data.customerId },
+      area: { title: i18n.t('common.selectWarehouseArea'), options: this.data.areaOptions, current: this.data.warehouseAreaId },
+      customer: { title: i18n.t('mp.warehouse.finishedOutbound.selectCustomer'), options: this.data.customerOptions, current: this.data.customerId },
     };
     var cfg = map[key];
     if (!cfg) return;
@@ -293,12 +391,15 @@ Page({
       }
     }
     if (!count) {
-      wx.showToast({ title: '没有可用库存', icon: 'none' });
+      wx.showToast({ title: i18n.t('mp.warehouse.finishedOutbound.noAvailableStock'), icon: 'none' });
       return;
     }
     this.setData({ selected: selected });
     this._refreshSelection();
-    wx.showToast({ title: '已填 ' + count + ' 个规格，共 ' + total + ' 件', icon: 'none' });
+    wx.showToast({
+      title: i18n.tf('mp.warehouse.finishedOutbound.filledSummary', { count: count, qty: total }),
+      icon: 'none',
+    });
   },
 
   // ────────── SKU 多选 ──────────
@@ -312,7 +413,7 @@ Page({
       // 默认带 1 件；若可用库存不足 1 件则不允许选
       var sku = this._findSku(id);
       if (!sku || sku.availableQty <= 0) {
-        wx.showToast({ title: '该规格无可用库存', icon: 'none' });
+        wx.showToast({ title: i18n.t('mp.warehouse.finishedOutbound.skuNoStock'), icon: 'none' });
         return;
       }
       selected[id] = 1;
@@ -353,7 +454,7 @@ Page({
     var max = sku ? sku.availableQty : 0;
     var next = (selected[id] || 0) + 1;
     if (next > max) {
-      wx.showToast({ title: '超出可用库存', icon: 'none' });
+      wx.showToast({ title: i18n.t('mp.warehouse.finishedOutbound.exceedStock'), icon: 'none' });
       return;
     }
     selected[id] = next;
@@ -372,7 +473,7 @@ Page({
     } else {
       if (val > max) {
         val = max;
-        wx.showToast({ title: '最多 ' + max + ' 件', icon: 'none' });
+        wx.showToast({ title: i18n.tf('mp.warehouse.finishedOutbound.maxQty', { qty: max }), icon: 'none' });
       }
       selected[id] = val;
     }
@@ -412,6 +513,8 @@ Page({
       selectedQty: qty,
       allSelected: selectable > 0 && count === selectable,
     });
+    // 底部「已选 N 项 / 合计 N 件」是带参文案，选中数一变就得重算
+    this._refreshSummaryTexts();
   },
 
   // ────────── 提交 ──────────
@@ -433,11 +536,11 @@ Page({
       }
     }
     if (!items.length) {
-      wx.showToast({ title: '请至少选择一个规格', icon: 'none' });
+      wx.showToast({ title: i18n.t('common.selectSkuFirst'), icon: 'none' });
       return;
     }
     if (this.data.needsCustomer && !this.data.customerName) {
-      wx.showToast({ title: '该出库类型必须选择客户', icon: 'none' });
+      wx.showToast({ title: i18n.t('mp.warehouse.finishedOutbound.needCustomer'), icon: 'none' });
       return;
     }
 
@@ -458,7 +561,7 @@ Page({
         trackingNo: this.data.trackingNo || '',
         remark: this.data.remark || '',
       });
-      wx.showToast({ title: '出库成功', icon: 'success' });
+      wx.showToast({ title: i18n.t('mp.warehouse.finishedOutbound.outboundSuccess'), icon: 'success' });
       var self = this;
       setTimeout(function () {
         // 回上一页并让它刷新（详情页 onShow 会重新加载）
@@ -468,7 +571,7 @@ Page({
         wx.navigateBack();
       }, 800);
     } catch (e) {
-      wx.showToast({ title: (e && e.message) || '出库失败', icon: 'none' });
+      wx.showToast({ title: (e && e.message) || i18n.t('mp.warehouse.finishedOutbound.outboundFailed'), icon: 'none' });
       this.setData({ submitting: false });
     }
   },
@@ -513,7 +616,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect'),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

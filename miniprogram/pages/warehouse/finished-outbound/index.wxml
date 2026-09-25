@@ -4,19 +4,19 @@
   <!-- ① 顶部款号信息 -->
   <view class="header-card">
     <image wx:if="{{styleImage}}" class="header-img" src="{{styleImage}}" mode="aspectFill" />
-    <view wx:else class="header-img header-img--empty">无图</view>
+    <view wx:else class="header-img header-img--empty">{{t.noImage}}</view>
     <view class="header-info">
       <text class="header-name">{{styleName || '—'}}</text>
-      <text class="header-sub">款号 {{styleNo || '—'}}</text>
-      <text class="header-sub" wx:if="{{orderNo}}">订单 {{orderNo}}</text>
-      <text class="header-sub" wx:if="{{factoryName}}">工厂 {{factoryName}}</text>
+      <text class="header-sub">{{t.styleNoText}}</text>
+      <text class="header-sub" wx:if="{{orderNo}}">{{t.orderNoText}}</text>
+      <text class="header-sub" wx:if="{{factoryName}}">{{t.factoryText}}</text>
     </view>
   </view>
 
   <!-- ② 出库类型（决定后续必填项） -->
   <view class="section">
     <view class="section-hd">
-      <text class="section-title">出库类型</text>
+      <text class="section-title">{{t.outboundType}}</text>
     </view>
     <view class="type-grid">
       <view
@@ -33,28 +33,28 @@
   <view class="section">
       <!-- D-517：仓库区域改为可搜索选择器（原生 picker 无搜索，区域一多只能一路滚） -->
       <view class="row" bindtap="openPicker" data-key="area">
-        <text class="row-label">仓库区域</text>
+        <text class="row-label">{{t.warehouseArea}}</text>
         <text class="row-value {{warehouseAreaName ? '' : 'row-value--placeholder'}}">
-          {{warehouseAreaName || '请选择'}}
+          {{warehouseAreaName || t.pleaseSelect}}
         </text>
         <text class="row-arrow">›</text>
       </view>
 
       <!-- ④ 客户：仅销售类出库需要（后端 REQUIRES_CUSTOMER_TYPES） -->
       <view class="row" wx:if="{{needsCustomer}}" bindtap="openPicker" data-key="customer">
-        <text class="row-label">客户 <text class="req">*</text></text>
+        <text class="row-label">{{t.customer}} <text class="req">*</text></text>
         <text class="row-value {{customerName ? '' : 'row-value--placeholder'}}">
-          {{customerName || '必选'}}
+          {{customerName || t.requiredCustomer}}
         </text>
         <text class="row-arrow">›</text>
       </view>
 
       <!-- ④-2 收货地址：PC 端有（CustomerInfoSection），手机端原先缺失 -->
       <view class="row" wx:if="{{needsCustomer}}">
-        <text class="row-label">收货地址</text>
+        <text class="row-label">{{t.shippingAddress}}</text>
         <input
           class="row-input"
-          placeholder="选客户后自动带出，可修改"
+          placeholder="{{t.autoFillEditable}}"
           value="{{shippingAddress}}"
           bindinput="onAddressInput"
         />
@@ -62,11 +62,11 @@
 
       <!-- ④-3 联系电话：PC 端 CustomerInfoSection 也有，手机端原先缺失 -->
       <view class="row" wx:if="{{needsCustomer}}">
-        <text class="row-label">联系电话</text>
+        <text class="row-label">{{t.contactPhone}}</text>
         <input
           class="row-input"
           type="number"
-          placeholder="选客户后自动带出，可修改"
+          placeholder="{{t.autoFillEditable}}"
           value="{{customerPhone}}"
           bindinput="onPhoneInput"
         />
@@ -74,19 +74,19 @@
 
       <!-- ④-4 物流信息：后端 FinishedOutstockHelper 支持，手机端/PC端原先都没做 -->
       <view class="row">
-        <text class="row-label">快递公司</text>
+        <text class="row-label">{{t.expressCompany}}</text>
         <input
           class="row-input"
-          placeholder="选填，如顺丰、德邦"
+          placeholder="{{t.expressPlaceholder}}"
           value="{{expressCompany}}"
           bindinput="onExpressInput"
         />
       </view>
       <view class="row">
-        <text class="row-label">物流单号</text>
+        <text class="row-label">{{t.trackingNo}}</text>
         <input
           class="row-input"
-          placeholder="选填"
+          placeholder="{{t.optional}}"
           value="{{trackingNo}}"
           bindinput="onTrackingInput"
         />
@@ -100,22 +100,22 @@
   <!-- ⑤ SKU 明细多选 -->
   <view class="section">
     <view class="section-hd">
-      <text class="section-title">选择明细</text>
+      <text class="section-title">{{t.selectDetail}}</text>
       <view class="hd-actions">
         <!-- D-513：一键把所有规格的数量填为可用库存 -->
-        <view class="hd-btn" bindtap="onFillAllQty">一键全部数量</view>
+        <view class="hd-btn" bindtap="onFillAllQty">{{t.fillAllQty}}</view>
         <view class="select-all" bindtap="onToggleAll">
           <view class="checkbox checkbox--sm">
             <text wx:if="{{allSelected}}" class="check-mark">✓</text>
           </view>
-          <text class="select-all-text">全选</text>
+          <text class="select-all-text">{{t.selectAll}}</text>
         </view>
       </view>
     </view>
 
-    <view wx:if="{{loading}}" class="loading">加载中…</view>
+    <view wx:if="{{loading}}" class="loading">{{t.loading}}</view>
 
-    <view wx:elif="{{!skuList.length}}" class="empty">暂无库存数据</view>
+    <view wx:elif="{{!skuList.length}}" class="empty">{{t.noStockData}}</view>
 
     <view wx:else class="sku-list">
       <view
@@ -129,7 +129,7 @@
           </view>
           <view class="sku-text">
             <text class="sku-name">{{item.color}} / {{item.size}}</text>
-            <text class="sku-meta">可用 {{item.availableQty}} 件 · {{item.warehouseLocation}}</text>
+            <text class="sku-meta">{{item.availableText}}</text>
           </view>
           <!-- D-513：单价（数据里一直有 salesPrice，原界面没显示） -->
           <text class="sku-price">¥{{item.salesPrice || 0}}</text>
@@ -150,7 +150,7 @@
 
         <!-- D-513：单价可改，提交到 items[].salesPrice -->
         <view class="price-row" wx:if="{{selected[item.id]}}">
-          <text class="price-label">单价</text>
+          <text class="price-label">{{t.price}}</text>
           <input
             class="price-input"
             type="digit"
@@ -158,7 +158,7 @@
             data-id="{{item.id}}"
             bindinput="onPriceInput"
           />
-          <text class="price-unit">元</text>
+          <text class="price-unit">{{t.yuan}}</text>
         </view>
       </view>
     </view>
@@ -166,10 +166,10 @@
 
   <!-- ⑥ 备注 -->
   <view class="section">
-    <view class="section-hd"><text class="section-title">备注</text></view>
+    <view class="section-hd"><text class="section-title">{{t.remark}}</text></view>
     <textarea
       class="remark"
-      placeholder="选填，特殊说明（物流单号请填上方）"
+      placeholder="{{t.remarkPlaceholder}}"
       value="{{remark}}"
       bindinput="onRemarkInput"
       maxlength="200"
@@ -183,11 +183,11 @@
 <!-- ⑦ 底部固定提交栏 -->
 <view class="submit-bar">
   <view class="submit-summary">
-    <text class="submit-count">已选 {{selectedCount}} 项</text>
-    <text class="submit-qty">合计 {{selectedQty}} 件</text>
+    <text class="submit-count">{{t.selectedItemsText}}</text>
+    <text class="submit-qty">{{t.totalQtyText}}</text>
   </view>
   <view class="submit-btn {{submitting ? 'submit-btn--disabled' : ''}}" bindtap="onSubmit">
-    {{submitting ? '提交中…' : '确认出库'}}
+    {{submitting ? t.submitting : t.confirmOutbound}}
   </view>
 </view>
 

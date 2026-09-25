@@ -44,6 +44,24 @@ NON_TRANSLATABLE = re.compile(
     r'|^[\d.]+\s*(CM|MM|KG|G|PCS|M|㎡|米|码)$'        # 140CM
 )
 
+# 看起来像文案、其实是**数据值**的字面量 —— 翻译了会写进数据库 / 查不到数据。
+#
+# 例：「默认仓」是后端与 DB 共用的 `warehouse_location` 默认值
+#     （`FinishedWarehouseOperationOrchestrator:91`、迁移脚本
+#      `V20260223.02__remaining_tables_and_operator_fields.sql` 的 DEFAULT '默认仓'），
+#     前端 PC 端也是直接传这个字面量（`FreeInboundModal.tsx:223`）。
+#
+# ⚠️ 只放"确实是数据"的。放进来 = 宣布它不需要翻译，**加之前先查后端/DB 确认**。
+DATA_LITERALS = {
+    '默认仓',
+    '默认仓库',
+}
+
+
+def skip_literal(t):
+    """该文案是否应跳过：纯符号/尺寸码，或已知的数据字面量"""
+    return bool(NON_TRANSLATABLE.match(t)) or t in DATA_LITERALS
+
 
 def strip_comments_js(text):
     """剥掉 js/ts 注释。顺序很重要：先块注释，再整行注释，再行尾注释。"""
@@ -120,7 +138,7 @@ def scan_wxml(path, rel):
         t = s.strip()
         if not t:
             continue
-        if NON_TRANSLATABLE.match(t):
+        if skip_literal(t):
             continue
         out.append({
             'kind': 'wxml-text-interp' if has_interp(s) else 'wxml-text',
@@ -137,7 +155,7 @@ def scan_wxml(path, rel):
         if not CJK.search(val):
             continue
         v = val.strip()
-        if not v or NON_TRANSLATABLE.match(v):
+        if not v or skip_literal(v):
             continue
         out.append({
             'kind': f'wxml-attr:{attr}',
@@ -161,7 +179,7 @@ def scan_js(path, rel):
         if not CJK.search(s):
             continue
         t = s.strip()
-        if not t or NON_TRANSLATABLE.match(t):
+        if not t or skip_literal(t):
             continue
         # 判断用途：toast/报错 vs 展示文案
         head = text[max(0, m.start() - 90):m.start()]
@@ -185,6 +203,33 @@ def scan_js(path, rel):
     return out
 
 
+def scan_json(path, rel):
+    """
+    扫页面 json 的 `navigationBarTitleText`。
+
+    ⚠️ 这个字段**只能静态写死**（微信不支持在 json 里写 {{t.x}}），
+    要跟着语言变必须在 `applyLanguage` 里调 `wx.setNavigationBarTitle`。
+    早期抽取器只扫 .js/.wxml，把这一整类漏掉了 ——
+    全仓 70 个页面的中文标题因此「看着已接入、实际没接入」。
+    """
+    out = []
+    raw = open(path, encoding='utf-8', errors='ignore').read()
+    for m in re.finditer(r'"navigationBarTitleText"\s*:\s*"([^"]*)"', raw):
+        t = m.group(1).strip()
+        if not t or not CJK.search(t):
+            continue
+        out.append({
+            'kind': 'json-navtitle',
+            'file': rel,
+            'line': line_of(raw, m.start(1)),
+            'text': t,
+            'raw': t,
+            'tag': '',
+            'interp': False,
+        })
+    return out
+
+
 def scan(target, skip_print=True):
     base = os.path.join(ROOT, target) if not os.path.isabs(target) else target
     if not os.path.exists(base):
@@ -198,7 +243,7 @@ def scan(target, skip_print=True):
             if 'node_modules' in dp or '/dist' in dp:
                 continue
             for fn in fns:
-                if fn.endswith(('.wxml', '.js', '.ts', '.tsx')):
+                if fn.endswith(('.wxml', '.js', '.ts', '.tsx', '.json')):
                     files.append(os.path.join(dp, fn))
     items = []
     for fp in sorted(files):
@@ -208,6 +253,8 @@ def scan(target, skip_print=True):
             continue
         if fp.endswith('.wxml'):
             items += scan_wxml(fp, rel)
+        elif fp.endswith('.json'):
+            items += scan_json(fp, rel)
         else:
             items += scan_js(fp, rel)
     return items, skipped

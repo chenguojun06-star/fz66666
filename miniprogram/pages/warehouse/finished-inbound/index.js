@@ -14,14 +14,24 @@
  */
 const api = require('../../../utils/api');
 const { decodeParam } = require('../../../utils/urlParams');
+const i18n = require('../../../utils/i18n/index');
 
+// ⚠️ key 是**后端契约**（FinishedWarehouseOperationOrchestrator.VALID_SOURCE_TYPES），
+//    绝不能跟着语言变；label 由 applyLanguage 按当前语言展开。
 const SOURCE_TYPES = [
-  { key: 'free_inbound', label: '自由入库' },
-  { key: 'external_purchase', label: '外购入库' },
-  { key: 'transfer_in', label: '调拨入库' },
-  { key: 'return_in', label: '退货入库' },
-  { key: 'other_in', label: '其他入库' },
+  { key: 'free_inbound', labelKey: 'mp.warehouse.finishedInbound.typeFreeInbound' },
+  { key: 'external_purchase', labelKey: 'mp.warehouse.finishedInbound.typeExternalPurchase' },
+  { key: 'transfer_in', labelKey: 'mp.warehouse.finishedInbound.typeTransferIn' },
+  { key: 'return_in', labelKey: 'mp.warehouse.finishedInbound.typeReturnIn' },
+  { key: 'other_in', labelKey: 'mp.warehouse.finishedInbound.typeOtherIn' },
 ];
+
+/** 把「只带 labelKey 的选项」按当前语言展开成 wxml 需要的 {key, label} */
+function localizeTypeOptions(lang) {
+  return SOURCE_TYPES.map(function (o) {
+    return { key: o.key, label: i18n.t(o.labelKey, lang) };
+  });
+}
 
 Page({
   data: {
@@ -41,15 +51,22 @@ Page({
     allSelected: false,
 
     // ── 入库来源类型 ──
-    typeOptions: SOURCE_TYPES,
+    // 初始就按当前语言展开，避免首屏闪一下空白（onShow 里还会再刷一次）
+    typeOptions: localizeTypeOptions(i18n.getLanguage()),
     sourceType: 'free_inbound',
-    sourceTypeLabel: '自由入库',
+    sourceTypeLabel: '',
+
+    /** i18n 文案表（applyLanguage 里填充，wxml 用 {{t.xxx}}） */
+    t: {},
 
     // ── 仓库 ──
     areaOptions: [],
     areaNames: [],
     warehouseAreaId: '',
     warehouseAreaName: '',
+    // ⚠️ '默认仓' 是**数据值**不是文案：后端与 DB 的 warehouse_location 默认值就是它
+    //    （FinishedWarehouseOperationOrchestrator:91 / 迁移脚本 DEFAULT '默认仓'）。
+    //    翻译了会写进数据库、导致按库位查不到数据，所以这里保持原样。
     warehouseLocation: '默认仓',
     // D-517：可搜索选择器
     pickerVisible: false, pickerKey: '', pickerTitle: '', pickerOptions: [], pickerValue: '',
@@ -63,9 +80,81 @@ Page({
       styleNo: decodeParam(options.styleNo),
       styleName: decodeURIComponent(options.styleName || ''),
     });
-    wx.setNavigationBarTitle({ title: '成品入库' });
+    // 导航栏标题改在 applyLanguage 里设（json 里那个是写死的，不会跟着语言变）
     this.loadAreas();
     if (this.data.styleNo) this.querySkus();
+  },
+
+  onShow() {
+    // 每次回到页面都按当前语言重刷文案（用户可能在「我的」里切了语言）
+    this.applyLanguage(i18n.getLanguage());
+  },
+
+  /**
+   * 刷新本页全部文案。三处都要更新：
+   *   ① t.*（wxml 静态文案）
+   *   ② 入库类型 chips 的 label（在 data 数组里，不是 wxml 字面量）
+   *   ③ SKU 行的「现有库存 N 件」（逐条不同，不能放在 t 里）
+   */
+  applyLanguage(language) {
+    var lang = language || i18n.getLanguage();
+    // 记住当前语言：querySkus 里的 _decorateSkus 要用同一个语言，
+    // 否则两处各读一次 storage，中间被切语言就会不一致。
+    this._lang = lang;
+    // 导航栏标题：json 里的 navigationBarTitleText 只能写死，必须在这里覆盖才会跟着语言变
+    wx.setNavigationBarTitle({ title: i18n.t('mp.warehouse.finishedInbound.title', lang) });
+    var current = null;
+    for (var i = 0; i < SOURCE_TYPES.length; i++) {
+      if (SOURCE_TYPES[i].key === this.data.sourceType) { current = SOURCE_TYPES[i]; break; }
+    }
+    this.setData({
+      t: {
+        styleNoLabel: i18n.t('common.styleNo', lang),
+        inputStyleNo: i18n.t('mp.warehouse.finishedInbound.inputStyleNo', lang),
+        scan: i18n.t('common.scan', lang),
+        query: i18n.t('common.query', lang),
+        inboundType: i18n.t('mp.warehouse.finishedInbound.inboundType', lang),
+        warehouseArea: i18n.t('common.warehouseArea', lang),
+        pleaseSelect: i18n.t('common.pleaseSelect', lang),
+        location: i18n.t('common.location', lang),
+        supplier: i18n.t('common.supplier', lang),
+        optional: i18n.t('common.optional', lang),
+        inboundDetail: i18n.t('mp.warehouse.finishedInbound.inboundDetail', lang),
+        selectAll: i18n.t('common.selectAll', lang),
+        loading: i18n.t('common.loading', lang),
+        noSkuData: i18n.t('mp.warehouse.finishedInbound.noSkuData', lang),
+        costPrice: i18n.t('common.costPrice', lang),
+        yuan: i18n.t('common.yuan', lang),
+        remark: i18n.t('common.remark', lang),
+        submitting: i18n.t('common.submitting', lang),
+        confirmInbound: i18n.t('mp.warehouse.finishedInbound.confirmInbound', lang),
+      },
+      typeOptions: localizeTypeOptions(lang),
+      sourceTypeLabel: current ? i18n.t(current.labelKey, lang) : '',
+      skuList: this._decorateSkus(this.data.skuList, lang),
+    });
+    this._refreshSummaryTexts(lang);
+  },
+
+  /** SKU 行的带参文案（「现有库存 N 件」逐条不同 → 不能放在 t 里） */
+  _decorateSkus(list, lang) {
+    var l = lang || this._lang || i18n.getLanguage();
+    return (list || []).map(function (it) {
+      return Object.assign({}, it, {
+        existingStockText: i18n.tf('mp.warehouse.finishedInbound.existingStock', {
+          qty: it.availableQty || 0,
+        }, l),
+      });
+    });
+  },
+
+  /** 底部提交栏的带参文案（已选 N 项 / 合计 N 件） */
+  _refreshSummaryTexts(lang) {
+    var l = lang || this._lang || i18n.getLanguage();
+    this.setData({
+      't.selectedItemsText': i18n.tf('common.selectedItems', { count: this.data.selectedCount }, l),
+      't.totalQtyText': i18n.tf('common.totalQty', { count: this.data.selectedQty }, l),
+    });
   },
 
   // ────────── 查询 ──────────
@@ -76,7 +165,7 @@ Page({
 
   onQuery() {
     if (!this.data.styleNo) {
-      wx.showToast({ title: '请输入款号', icon: 'none' });
+      wx.showToast({ title: i18n.t('mp.warehouse.finishedInbound.styleNoRequired'), icon: 'none' });
       return;
     }
     this.querySkus();
@@ -91,7 +180,7 @@ Page({
         // 扫码串可能是「款号-颜色-尺码-序号」，款号是第一段
         var styleNo = String(raw).split('-')[0];
         if (!styleNo) {
-          wx.showToast({ title: '无法识别款号', icon: 'none' });
+          wx.showToast({ title: i18n.t('mp.warehouse.finishedInbound.styleNoNotFound'), icon: 'none' });
           return;
         }
         self.setData({ styleNo: styleNo }, function () { self.querySkus(); });
@@ -131,7 +220,7 @@ Page({
         styleName = records[0].styleName;
       }
       this.setData({
-        skuList: skuList,
+        skuList: this._decorateSkus(skuList),
         styleName: styleName,
         queried: true,
         loading: false,
@@ -141,7 +230,7 @@ Page({
       this._refreshSelection();
     } catch (e) {
       this.setData({ loading: false, queried: true });
-      wx.showToast({ title: (e && e.message) || '查询失败', icon: 'none' });
+      wx.showToast({ title: (e && e.message) || i18n.t('mp.warehouse.finishedInbound.queryFailed'), icon: 'none' });
     }
   },
 
@@ -170,7 +259,10 @@ Page({
       if (SOURCE_TYPES[i].key === key) { hit = SOURCE_TYPES[i]; break; }
     }
     if (!hit) return;
-    this.setData({ sourceType: hit.key, sourceTypeLabel: hit.label });
+    this.setData({
+      sourceType: hit.key,
+      sourceTypeLabel: i18n.t(hit.labelKey, this._lang || i18n.getLanguage()),
+    });
   },
 
   /**
@@ -188,7 +280,7 @@ Page({
     if (key !== 'area') return;
     this.setData({
       pickerKey: key,
-      pickerTitle: '选择仓库区域',
+      pickerTitle: i18n.t('common.selectWarehouseArea', this._lang || i18n.getLanguage()),
       pickerValue: this.data.warehouseAreaId || '',
       pickerOptions: (this.data.areaOptions || []).map(function (o) {
         return { label: o.name || '', value: String(o.id || '') };
@@ -291,6 +383,8 @@ Page({
       selectedQty: qty,
       allSelected: list.length > 0 && count === list.length,
     });
+    // 底部「已选 N 项 / 合计 N 件」是带参文案，选中数一变就得重算
+    this._refreshSummaryTexts();
   },
 
   // ────────── 提交 ──────────
@@ -323,7 +417,7 @@ Page({
         }
       }
     if (!items.length) {
-      wx.showToast({ title: '请至少选择一个规格', icon: 'none' });
+      wx.showToast({ title: i18n.t('common.selectSkuFirst'), icon: 'none' });
       return;
     }
 
@@ -337,7 +431,7 @@ Page({
         supplierName: this.data.supplierName || '',
         remark: this.data.remark || '',
       });
-      wx.showToast({ title: '入库成功', icon: 'success' });
+      wx.showToast({ title: i18n.t('mp.warehouse.finishedInbound.inboundSuccess'), icon: 'success' });
       var self = this;
       setTimeout(function () {
         var pages = getCurrentPages();
@@ -346,7 +440,7 @@ Page({
         wx.navigateBack();
       }, 800);
     } catch (e) {
-      wx.showToast({ title: (e && e.message) || '入库失败', icon: 'none' });
+      wx.showToast({ title: (e && e.message) || i18n.t('mp.warehouse.finishedInbound.inboundFailed'), icon: 'none' });
       this.setData({ submitting: false });
     }
   },
@@ -391,7 +485,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect'),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

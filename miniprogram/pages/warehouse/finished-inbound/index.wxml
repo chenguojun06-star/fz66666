@@ -3,18 +3,18 @@
 
   <!-- ① 查询区：款号 / 扫码 -->
   <view class="section">
-    <view class="section-hd"><text class="section-title">款号</text></view>
+    <view class="section-hd"><text class="section-title">{{t.styleNoLabel}}</text></view>
     <view class="search-row">
       <input
         class="search-input"
-        placeholder="输入款号"
+        placeholder="{{t.inputStyleNo}}"
         value="{{styleNo}}"
         bindinput="onStyleNoInput"
         confirm-type="search"
         bindconfirm="onQuery"
       />
-      <view class="search-btn search-btn--scan" bindtap="onScan">扫码</view>
-      <view class="search-btn search-btn--go" bindtap="onQuery">查询</view>
+      <view class="search-btn search-btn--scan" bindtap="onScan">{{t.scan}}</view>
+      <view class="search-btn search-btn--go" bindtap="onQuery">{{t.query}}</view>
     </view>
     <text class="style-name" wx:if="{{styleName}}">{{styleName}}</text>
   </view>
@@ -22,7 +22,7 @@
   <block wx:if="{{queried}}">
     <!-- ② 入库来源类型 -->
     <view class="section">
-      <view class="section-hd"><text class="section-title">入库类型</text></view>
+      <view class="section-hd"><text class="section-title">{{t.inboundType}}</text></view>
       <view class="type-grid">
         <view
           wx:for="{{typeOptions}}"
@@ -38,26 +38,25 @@
     <view class="section">
       <!-- D-517：仓库区域改可搜索选择器 -->
       <view class="row" bindtap="openPicker" data-key="area">
-        <text class="row-label">仓库区域</text>
+        <text class="row-label">{{t.warehouseArea}}</text>
         <text class="row-value {{warehouseAreaName ? '' : 'row-value--placeholder'}}">
-          {{warehouseAreaName || '请选择'}}
+          {{warehouseAreaName || t.pleaseSelect}}
         </text>
         <text class="row-arrow">›</text>
       </view>
       <view class="row">
-        <text class="row-label">库位</text>
+        <text class="row-label">{{t.location}}</text>
         <input
           class="row-input"
-          placeholder="默认仓"
           value="{{warehouseLocation}}"
           bindinput="onLocationInput"
         />
       </view>
       <view class="row">
-        <text class="row-label">供应商</text>
+        <text class="row-label">{{t.supplier}}</text>
         <input
           class="row-input"
-          placeholder="选填"
+          placeholder="{{t.optional}}"
           value="{{supplierName}}"
           bindinput="onSupplierInput"
         />
@@ -67,17 +66,17 @@
     <!-- ④ SKU 明细多选 -->
     <view class="section">
       <view class="section-hd">
-        <text class="section-title">入库明细</text>
+        <text class="section-title">{{t.inboundDetail}}</text>
         <view class="select-all" bindtap="onToggleAll">
           <view class="checkbox checkbox--sm">
             <text wx:if="{{allSelected}}" class="check-mark">✓</text>
           </view>
-          <text class="select-all-text">全选</text>
+          <text class="select-all-text">{{t.selectAll}}</text>
         </view>
       </view>
 
-      <view wx:if="{{loading}}" class="loading">加载中…</view>
-      <view wx:elif="{{!skuList.length}}" class="empty">该款暂无 SKU 数据</view>
+      <view wx:if="{{loading}}" class="loading">{{t.loading}}</view>
+      <view wx:elif="{{!skuList.length}}" class="empty">{{t.noSkuData}}</view>
 
       <view wx:else class="sku-list">
         <view
@@ -91,7 +90,7 @@
             </view>
             <view class="sku-text">
               <text class="sku-name">{{item.color}} / {{item.size}}</text>
-              <text class="sku-meta">现有库存 {{item.availableQty}} 件</text>
+              <text class="sku-meta">{{item.existingStockText}}</text>
             </view>
             <!-- D-513：成本价（PC 端入库有单价列，手机端原先没有） -->
             <text class="sku-price">¥{{item.costPrice || 0}}</text>
@@ -111,7 +110,7 @@
 
           <!-- D-513：成本价可改（提交到 items[].unitPrice） -->
           <view class="price-row" wx:if="{{selected[item.id]}}">
-            <text class="price-label">成本价</text>
+            <text class="price-label">{{t.costPrice}}</text>
             <input
               class="price-input"
               type="digit"
@@ -119,7 +118,7 @@
               data-id="{{item.id}}"
               bindinput="onPriceInput"
             />
-            <text class="price-unit">元</text>
+            <text class="price-unit">{{t.yuan}}</text>
           </view>
         </view>
       </view>
@@ -127,10 +126,10 @@
 
     <!-- ⑤ 备注 -->
     <view class="section">
-      <view class="section-hd"><text class="section-title">备注</text></view>
+      <view class="section-hd"><text class="section-title">{{t.remark}}</text></view>
       <textarea
         class="remark"
-        placeholder="选填"
+        placeholder="{{t.optional}}"
         value="{{remark}}"
         bindinput="onRemarkInput"
         maxlength="200"
@@ -145,11 +144,11 @@
 <!-- ⑥ 底部固定提交栏 -->
 <view class="submit-bar" wx:if="{{queried}}">
   <view class="submit-summary">
-    <text class="submit-count">已选 {{selectedCount}} 项</text>
-    <text class="submit-qty">合计 {{selectedQty}} 件</text>
+    <text class="submit-count">{{t.selectedItemsText}}</text>
+    <text class="submit-qty">{{t.totalQtyText}}</text>
   </view>
   <view class="submit-btn {{submitting ? 'submit-btn--disabled' : ''}}" bindtap="onSubmit">
-    {{submitting ? '提交中…' : '确认入库'}}
+    {{submitting ? t.submitting : t.confirmInbound}}
   </view>
 </view>
 
