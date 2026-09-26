@@ -1,3 +1,5 @@
+const i18n = require('../../../../utils/i18n/index');
+const NS = 'mp.orderForm.';
 const api = require('../../../../utils/api');
 const { splitStyleOptions, mergeDistinctOptions } = require('../../../../utils/styleOptions');
 const { sortSizeNames } = require('../../../../utils/sizeUtils');
@@ -14,7 +16,7 @@ function daysLater(n) {
 
 const PLATE_MAP = ['', 'FIRST', 'REORDER'];
 const BIZ_TYPES = ['FOB', 'ODM', 'OEM', 'CMT'];
-const BIZ_TYPE_LABELS = ['FOB 离岸价', 'ODM 原厂设计', 'OEM 代工生产', 'CMT 来料加工'];
+const BIZ_TYPE_LABELS = ['fobLabel', 'odmLabel', 'oemLabel', 'cmtLabel'];  // i18n 键后缀，applyLanguage 重建
 const PRICING_MODES = ['PROCESS', 'SIZE', 'COST', 'QUOTE', 'MANUAL'];
 const PROD_DEPT_KEYWORDS = ['生产', '车间', '裁剪', '缝制', '后整', '工序', '车缝', '尾部', '整烫', '包装', '质检', '工艺', '班组', '产线', '绣花', '印花', '洗水', '组'];
 
@@ -49,10 +51,10 @@ Page({
       if (msg.indexOf('cancel') !== -1) return;
       if (msg.indexOf('auth') !== -1 || msg.indexOf('deny') !== -1 || msg.indexOf('permission') !== -1) {
         wx.showModal({
-          title: '相机/相册权限',
-          content: '需要相机或相册权限才能上传款式图片，请在设置中允许',
-          confirmText: '去设置',
-          cancelText: '取消',
+          title: i18n.t(NS + 'cameraPermission', this._lang),
+          content: i18n.t(NS + 'cameraPermMsg', this._lang),
+          confirmText: i18n.t(NS + 'goSettings', this._lang),
+          cancelText: i18n.t('common.cancel', this._lang),
           success: function (r) {
             if (r.confirm) wx.openSetting({});
           },
@@ -60,7 +62,7 @@ Page({
         return;
       }
       // 真机可见：给出具体失败原因，便于定位
-      wx.showToast({ title: '选择图片失败：' + (msg || '未知原因'), icon: 'none', duration: 3000 });
+      wx.showToast({ title: i18n.t(NS + 'pickImageFailedPrefix', this._lang) + (msg || i18n.t(NS + 'unknownReason', this._lang)), icon: 'none', duration: 3000 });
       // 其他失败：降级 wx.chooseImage 再试一次（真机调试模式等兼容场景）
       if (wx.chooseImage) {
         wx.chooseImage({
@@ -73,7 +75,7 @@ Page({
           fail: function (err2) {
             const msg2 = (err2 && err2.errMsg) || '';
             if (msg2.indexOf('cancel') !== -1) return;
-            wx.showToast({ title: '选择图片失败', icon: 'none' });
+            wx.showToast({ title: i18n.t(NS + 'pickImageFailed', this._lang), icon: 'none' });
           },
         });
         return;
@@ -120,7 +122,7 @@ Page({
     orderBizType: '', orderBizTypeLabel: '',
     patternMaker: '', merchandiser: '',
     pricingMode: 'PROCESS', pricingModeIdx: 0,
-    pricingModeLabels: ['工序单价', '尺码单价', '外发整件', '报价单价', '手动单价'],
+    pricingModeLabels: [],  // applyLanguage 重建
     manualOrderUnitPrice: '',
     orderQuantity: 0, computedUnitPrice: 0,
     selectedColors: [], selectedSizes: [],
@@ -136,7 +138,7 @@ Page({
     colorChips: [], sizeChips: [],
     // 基础属性库（成组预设，读 t_dict 的 color_group / size_group）
     attrLibOpen: false, attrLibTarget: '', attrLibTitle: '', attrLibGroups: [],
-    plateTypeOptions: ['自动判断', '首单', '翻单'],
+    plateTypeOptions: [],  // applyLanguage 重建
     bizTypeLabels: BIZ_TYPE_LABELS,
     factoryList: [], orgUnitList: [], categoryOptions: [], userOptions: [],
     quickFillQty: 1, submitting: false,
@@ -146,7 +148,98 @@ Page({
     pickerPage: 1, pickerHasMore: false, pickerLoading: false,
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}），标签数组重建 */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        urgentTag: i18n.t(NS + 'urgentTag', lang),
+        colorLabel: i18n.t(NS + 'colorW', lang),
+        sizeLabel: i18n.t(NS + 'sizeWord', lang),
+        selectAll: i18n.t(NS + 'selectAll', lang),
+        addWord: i18n.t(NS + 'addWord', lang),
+        uploadStyleImg: i18n.t(NS + 'uploadStyleImg', lang),
+        orderInfoTitle: i18n.t(NS + 'orderInfoTitle', lang),
+        orderNoLabel: i18n.t(NS + 'orderNoLabel', lang),
+        genBtn: i18n.t(NS + 'genBtn', lang),
+        producerLabel: i18n.t(NS + 'producerLabel', lang),
+        internalFactory: i18n.t(NS + 'internalFactory', lang),
+        outsourceFactory: i18n.t(NS + 'outsourceFactory', lang),
+        deptLabel: i18n.t(NS + 'deptLabel', lang),
+        factoryLabel: i18n.t(NS + 'factoryLabel', lang),
+        timeDelivery: i18n.t(NS + 'timeDelivery', lang),
+        orderTimeLabel: i18n.t(NS + 'orderTimeLabel', lang),
+        deliveryTimeLabel: i18n.t(NS + 'deliveryTimeLabel', lang),
+        normalWord: i18n.t(NS + 'normalWord', lang),
+        bizInfoTitle: i18n.t(NS + 'bizInfoTitle', lang),
+        customerLabel: i18n.t(NS + 'customerLabel', lang),
+        categoryLabel: i18n.t(NS + 'categoryLabel', lang),
+        firstRepeatLabel: i18n.t(NS + 'firstRepeatLabel', lang),
+        orderTypeLabel: i18n.t(NS + 'orderTypeLabel', lang),
+        patternMakerLabel: i18n.t(NS + 'patternMakerLabel', lang),
+        merchLabel: i18n.t(NS + 'merchLabel', lang),
+        orderQtyLabel: i18n.t(NS + 'orderQtyLabel', lang),
+        devColorsLabel: i18n.t(NS + 'devColorsLabel', lang),
+        devSizesLabel: i18n.t(NS + 'devSizesLabel', lang),
+        selectedWord: i18n.t(NS + 'selectedWord', lang),
+        colorUnit: i18n.t(NS + 'colorUnit', lang),
+        sizeUnit: i18n.t(NS + 'sizeUnit', lang),
+        comboWord: i18n.t(NS + 'comboWord', lang),
+        noColorHint: i18n.t(NS + 'noColorHint', lang),
+        sizeWord: i18n.t(NS + 'sizeWord', lang),
+        noSizeHint: i18n.t(NS + 'noSizeHint', lang),
+        batchFill: i18n.t(NS + 'batchFill', lang),
+        matrixHint: i18n.t(NS + 'matrixHint', lang),
+        fillAllBtn: i18n.t(NS + 'fillAllBtn', lang),
+        clearBtn: i18n.t(NS + 'clearBtn', lang),
+        sizeTotalLabel: i18n.t(NS + 'sizeTotalLabel', lang),
+        pickSizeFirst: i18n.t(NS + 'pickSizeFirst', lang),
+        pickColorFirst: i18n.t(NS + 'pickColorFirst', lang),
+        pricingLabel: i18n.t(NS + 'pricingLabel', lang),
+        modeLabel: i18n.t(NS + 'modeLabel', lang),
+        unitPriceLabel: i18n.t(NS + 'unitPriceLabel', lang),
+        totalQtyLabel: i18n.t(NS + 'totalQtyLabel', lang),
+        closeBtn: i18n.t(NS + 'closeBtn', lang),
+        noSavedCombo: i18n.t(NS + 'noSavedCombo', lang),
+        coverBtn: i18n.t(NS + 'coverBtn', lang),
+        appendBtn: i18n.t(NS + 'appendBtn', lang),
+        cancel: i18n.t('common.cancel', lang),
+        submitting: i18n.t('common.submitting', lang),
+        styleChar: i18n.t(NS + 'styleChar', lang),
+        noStyleNo: i18n.t(NS + 'noStyleNo', lang),
+        noProfileOrder: i18n.t(NS + 'noProfileOrder', lang),
+        inputStyleNoPh: i18n.t(NS + 'inputStyleNoPh', lang),
+        inputStyleNmPh: i18n.t(NS + 'inputStyleNmPh', lang),
+        autoGenPh: i18n.t(NS + 'autoGenPh', lang),
+        pickDeptPh: i18n.t(NS + 'pickDeptPh', lang),
+        pickFactoryPh: i18n.t(NS + 'pickFactoryPh', lang),
+        pickDatePh: i18n.t(NS + 'pickDatePh', lang),
+        optionalPh: i18n.t(NS + 'optionalPh', lang),
+        optionalSearch: i18n.t(NS + 'optionalSearch', lang),
+        autoJudgeW: i18n.t(NS + 'autoJudgeW', lang),
+        colorPastePh: i18n.t(NS + 'colorPastePh', lang),
+        sizePastePh: i18n.t(NS + 'sizePastePh', lang),
+        notFetched: i18n.t(NS + 'notFetched', lang),
+        countUnit2: i18n.t(NS + 'countUnit2', lang),
+        libWord: i18n.t(NS + 'libWord', lang),
+        pieceW3: i18n.t(NS + 'pieceW3', lang),
+        confirmOrderW: i18n.t(NS + 'confirmOrderBtn', lang),
+        totalLabelW: i18n.t(NS + 'totalLabelW', lang),
+      },
+      bizTypeLabels: BIZ_TYPE_LABELS.map(function (k) { return i18n.t(NS + k, lang); }),
+      pricingModeLabels: [
+        i18n.t(NS + 'priceProcess', lang), i18n.t(NS + 'priceSize', lang),
+        i18n.t(NS + 'priceOutWhole', lang), i18n.t(NS + 'priceQuote', lang), i18n.t(NS + 'priceManual', lang)
+      ],
+      plateTypeOptions: [i18n.t(NS + 'priceAuto', lang), i18n.t(NS + 'firstOrder', lang), i18n.t(NS + 'repeatOrder', lang)],
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function (opts) {
+    this.applyLanguage(i18n.getLanguage());
     var isNoData = opts.noData === 'true';
     var colors = [];
     var sizes = [];
@@ -333,7 +426,7 @@ Page({
         if (name) opts.push({ id: c.id, companyName: name });
       });
       // 小程序 picker 没有 allowClear，插入「（不选）」让用户能清空已选客户
-      if (opts.length) opts.unshift({ id: '', companyName: '（不选）' });
+      if (opts.length) opts.unshift({ id: '', companyName: i18n.t(NS + 'noneOption', this._lang) });
       self.setData({ customerList: opts });
     }).catch(function () {});
 
@@ -434,11 +527,11 @@ Page({
      原先是原生 <picker>：没有搜索框，工厂/人员/客户一多只能一路滚，
      而且人员只加载前 200 条 —— 现在工厂/人员走**远程关键字搜索 + 分页**，部门/客户本地搜索。 */
   _PICKER_CONF: {
-    orgUnit: { title: '选择部门', remote: false },
-    factory: { title: '选择工厂', remote: true },
-    customer: { title: '选择客户', remote: false },
-    patternMaker: { title: '选择纸样师', remote: true },
-    merchandiser: { title: '选择跟单员', remote: true },
+    orgUnit: { title: i18n.t(NS + 'pickDept', this._lang), remote: false },
+    factory: { title: i18n.t(NS + 'pickFactory', this._lang), remote: true },
+    customer: { title: i18n.t(NS + 'pickCustomer', this._lang), remote: false },
+    patternMaker: { title: i18n.t(NS + 'pickPatternMaker', this._lang), remote: true },
+    merchandiser: { title: i18n.t(NS + 'pickMerch', this._lang), remote: true },
   },
   _PICKER_SIZE: 20,
 
@@ -657,7 +750,7 @@ Page({
     this.setData({
       attrLibOpen: true,
       attrLibTarget: target,
-      attrLibTitle: target === 'color' ? '颜色组合' : '码数组合',
+      attrLibTitle: target === 'color' ? i18n.t(NS + 'colorComboLabel', this._lang) : i18n.t(NS + 'sizeComboLabel', this._lang),
       attrLibGroups: [],
     });
     api.system.getDictList(dictType).then(function (res) {
@@ -675,7 +768,7 @@ Page({
           values = String(d.dictValue || '').split(/[,，、]/).map(function (v) { return v.trim(); }).filter(Boolean);
         }
         if (values.length) {
-          groups.push({ id: d.id, name: d.dictLabel || d.dictCode || '未命名', values: values });
+          groups.push({ id: d.id, name: d.dictLabel || d.dictCode || i18n.t(NS + 'unnamedWord', this._lang), values: values });
         }
       });
       self.setData({ attrLibGroups: groups });
@@ -713,7 +806,7 @@ Page({
     this.setData({ attrLibOpen: false });
     this._rebuildLines();
     wx.showToast({
-      title: (mode === 'replace' ? '已覆盖为 ' : '已追加 ') + values.length + ' 项',
+      title: (mode === 'replace' ? i18n.t(NS + 'coveredFmt', { n: values.length }, this._lang) : i18n.t(NS + 'appendedFmt', { n: values.length }, this._lang)),
       icon: 'none',
     });
   },
@@ -738,40 +831,40 @@ Page({
   /** 全部铺量：所有已选色×已选码填同一数量 */
   onQuickFill: function () {
     const q = this.data.quickFillQty;
-    if (q <= 0) return wx.showToast({ title: '铺量需大于 0', icon: 'none' });
+    if (q <= 0) return wx.showToast({ title: i18n.t(NS + 'needPositiveQty', this._lang), icon: 'none' });
     const lines = this.data.orderLines.map(function (l) { return { color: l.color, size: l.size, quantity: q }; });
     this.setData({ orderLines: lines });
     this._recalcTotal();
     this._rebuildGrid();
-    wx.showToast({ title: '已铺量 ' + lines.length + ' 个组合', icon: 'none' });
+    wx.showToast({ title: i18n.tf(NS + 'filledFmt', { n: lines.length }, this._lang), icon: 'none' });
   },
 
   /** 按行铺量：点左侧颜色格 → 该颜色所有码数填同一数量 */
   onRowFill: function (e) {
     const color = e.currentTarget.dataset.color;
     const q = this.data.quickFillQty;
-    if (q <= 0) return wx.showToast({ title: '铺量需大于 0', icon: 'none' });
+    if (q <= 0) return wx.showToast({ title: i18n.t(NS + 'needPositiveQty', this._lang), icon: 'none' });
     const lines = this.data.orderLines.map(function (l) {
       return l.color === color ? { color: l.color, size: l.size, quantity: q } : l;
     });
     this.setData({ orderLines: lines });
     this._recalcTotal();
     this._rebuildGrid();
-    wx.showToast({ title: color + ' 已铺 ' + q, icon: 'none' });
+    wx.showToast({ title: color + ' ' + i18n.t(NS + 'filledWord', this._lang) + ' ' + q, icon: 'none' });
   },
 
   /** 按列铺量：点表头码数格 → 该码数所有颜色填同一数量 */
   onColFill: function (e) {
     const size = e.currentTarget.dataset.size;
     const q = this.data.quickFillQty;
-    if (q <= 0) return wx.showToast({ title: '铺量需大于 0', icon: 'none' });
+    if (q <= 0) return wx.showToast({ title: i18n.t(NS + 'needPositiveQty', this._lang), icon: 'none' });
     const lines = this.data.orderLines.map(function (l) {
       return l.size === size ? { color: l.color, size: l.size, quantity: q } : l;
     });
     this.setData({ orderLines: lines });
     this._recalcTotal();
     this._rebuildGrid();
-    wx.showToast({ title: size + ' 已铺 ' + q, icon: 'none' });
+    wx.showToast({ title: size + ' ' + i18n.t(NS + 'filledWord', this._lang) + ' ' + q, icon: 'none' });
   },
 
   onGridQtyInput: function (e) {
@@ -812,30 +905,30 @@ Page({
     if (this.data.submitting) return;
     const d = this.data;
 
-    if (!(d.orderNo || '').trim()) return wx.showToast({ title: '请输入订单号', icon: 'none' });
-    if (d.factoryMode === 'INTERNAL' && !d.orgUnitId) return wx.showToast({ title: '请选择部门', icon: 'none' });
-    if (d.factoryMode === 'EXTERNAL' && !d.factoryId) return wx.showToast({ title: '请选择工厂', icon: 'none' });
-    if (!d.plannedStartDate) return wx.showToast({ title: '请选下单时间', icon: 'none' });
-    if (!d.plannedEndDate) return wx.showToast({ title: '请选订单交期', icon: 'none' });
+    if (!(d.orderNo || '').trim()) return wx.showToast({ title: i18n.t(NS + 'inputOrderNo', this._lang), icon: 'none' });
+    if (d.factoryMode === 'INTERNAL' && !d.orgUnitId) return wx.showToast({ title: i18n.t(NS + 'pickDeptReq', this._lang), icon: 'none' });
+    if (d.factoryMode === 'EXTERNAL' && !d.factoryId) return wx.showToast({ title: i18n.t(NS + 'pickFactoryReq', this._lang), icon: 'none' });
+    if (!d.plannedStartDate) return wx.showToast({ title: i18n.t(NS + 'pickOrderTime', this._lang), icon: 'none' });
+    if (!d.plannedEndDate) return wx.showToast({ title: i18n.t(NS + 'pickDeliveryTime', this._lang), icon: 'none' });
 
     let hasQ = false;
     for (let i = 0; i < d.orderLines.length; i++) {
       if (d.orderLines[i].quantity > 0) { hasQ = true; break; }
     }
-    if (!hasQ) return wx.showToast({ title: '请填写下单数量', icon: 'none' });
+    if (!hasQ) return wx.showToast({ title: i18n.t(NS + 'fillOrderQty', this._lang), icon: 'none' });
 
     let up = parseFloat(d.computedUnitPrice) || 0;
     if (d.pricingMode === 'MANUAL') {
       const mup = parseFloat(d.manualOrderUnitPrice) || 0;
-      if (mup <= 0) return wx.showToast({ title: '请输入单价', icon: 'none' });
+      if (mup <= 0) return wx.showToast({ title: i18n.t(NS + 'inputPrice', this._lang), icon: 'none' });
       up = mup;
     }
-    if (up <= 0) return wx.showToast({ title: '请选择定价方式', icon: 'none' });
+    if (up <= 0) return wx.showToast({ title: i18n.t(NS + 'pickPricing', this._lang), icon: 'none' });
 
     const self = this;
     wx.showModal({
-      title: '确认下单',
-      content: '款号：' + d.styleNo + '\n数量：' + d.orderQuantity + '\n单价：¥' + up + '\n确认提交？',
+      title: i18n.t(NS + 'confirmOrderBtn', this._lang),
+      content: i18n.tf(NS + 'confirmFmt', { style: d.styleNo, qty: d.orderQuantity, price: up }, this._lang),
       success: function (r) { if (r.confirm) self._doSubmit(up); },
     });
   },
@@ -852,7 +945,7 @@ Page({
     });
 
     const details = valid.map(function (l) {
-      return { color: l.color, size: l.size, quantity: l.quantity, materialPriceSource: '物料采购系统', materialPriceAcquiredAt: new Date().toISOString(), materialPriceVersion: 'purchase.v1' };
+      return { color: l.color, size: l.size, quantity: l.quantity, materialPriceSource: i18n.t(NS + 'materialSysName', this._lang), materialPriceAcquiredAt: new Date().toISOString(), materialPriceVersion: 'purchase.v1' };
     });
 
     const pricingObj = {
@@ -892,7 +985,7 @@ Page({
     const self = this;
     api.production.createOrder(payload).then(function () {
       self.setData({ submitting: false });
-      wx.showToast({ title: '下单成功', icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'orderOk', this._lang), icon: 'success' });
       // ★ 图片是建单后才上传的（wxfile 临时文件 → /api/common/upload → t_order_image），
       //   必须等上传完成再返回列表——原 1.5s 定时返回会在网络稍慢时销毁页面、
       //   中断 wx.uploadFile，导致用户上传的款式图丢失（"看起来传了其实没传上"）。
@@ -904,7 +997,7 @@ Page({
       });
     }).catch(function (err) {
       self.setData({ submitting: false });
-      wx.showToast({ title: (err && err.message) || '下单失败', icon: 'none', duration: 3000 });
+      wx.showToast({ title: (err && err.message) || i18n.t(NS + 'orderFail', this._lang), icon: 'none', duration: 3000 });
     });
   },
 
@@ -937,7 +1030,7 @@ Page({
         return null;
       });
     }).catch(function () {
-      wx.showToast({ title: '订单已创建，款式图保存失败，可在订单详情补传', icon: 'none', duration: 3000 });
+      wx.showToast({ title: i18n.t(NS + 'coverSaveFail', this._lang), icon: 'none', duration: 3000 });
       return null;
     });
   },
@@ -982,7 +1075,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t(NS + 'pleaseSelectW', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

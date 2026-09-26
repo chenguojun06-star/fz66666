@@ -2472,6 +2472,8 @@ const RECON_JS = 'pages/finance/reconciliation/index.js';
 const RECON_WXML = 'pages/finance/reconciliation/index.wxml';
 const RECON_DETAIL_JS = 'pages/finance/reconciliation/detail/index.js';
 const RECON_DETAIL_WXML = 'pages/finance/reconciliation/detail/index.wxml';
+const ORDER_FORM_JS = 'pages/order/create/form/index.js';
+const ORDER_FORM_WXML = 'pages/order/create/form/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3233,6 +3235,26 @@ function testI18nReconciliation() {
   eq('对账列表页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '物料对账');
 }
 
+/** 下单表单页（D-573）—— 色码矩阵/批量铺量/定价方式/确认下单 */
+function testI18nOrderForm() {
+  testPageI18n(ORDER_FORM_JS, ORDER_FORM_WXML, '下单表单页');
+
+  const { page: zhP, wx: zhWx } = loadPage(ORDER_FORM_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(ORDER_FORM_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 定价方式数组', zhP.data.pricingModeLabels.join('|'), '工序单价|尺码单价|外发整件|报价单价|手动单价');
+  ok('en 定价方式数组无中文', !CJK_RE.test(enP.data.pricingModeLabels.join('|')), enP.data.pricingModeLabels.join('|'));
+  eq('zh 首翻单数组', zhP.data.plateTypeOptions.join('|'), '自动判断|首单|翻单');
+  ok('en 首翻单数组无中文', !CJK_RE.test(enP.data.plateTypeOptions.join('|')), enP.data.plateTypeOptions.join('|'));
+  ok('en 色码提示无中文', !CJK_RE.test(String(enP.data.t.matrixHint)), enP.data.t.matrixHint);
+  ok('en 确认下单无中文', !CJK_RE.test(String(enP.data.t.confirmOrderW)), enP.data.t.confirmOrderW);
+
+  eq('下单表单导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Order Info');
+  eq('下单表单 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '订单信息');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3292,6 +3314,7 @@ try {
   testI18nPayrollApproval();
   testI18nReimbursement();
   testI18nReconciliation();
+  testI18nOrderForm();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
