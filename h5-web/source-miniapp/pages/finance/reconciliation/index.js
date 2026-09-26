@@ -7,6 +7,8 @@
  *
  * 权限：仅内部管理员/主管可操作；工厂（外部）账号不参与租户财务，直接拦截。
  */
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.reconciliation.';
 const api = require('../../../utils/api');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { hasFeaturePermission, isFactoryAccount } = require('../../../utils/permission');
@@ -16,11 +18,8 @@ const { decodeParam } = require('../../../utils/urlParams');
 // 状态文案/配色（与 PC 端 MATERIAL_RECON_STATUS_MAP 对齐）
 // D-419：颜色统一为实底 status-badge 用色（直接走 var(--color-*)）
 var STATUS_TEXT_MAP = {
-  pending: '待核实',
-  verified: '已核实',
-  approved: '已审批',
-  paid: '已付款',
-  rejected: '已驳回',
+  pending: 'stPending', verified: 'stVerified', approved: 'stApproved',
+  paid: 'stPaid', rejected: 'stRejected',
 };
 var STATUS_CLS_MAP = {
   pending: 'tag-orange',
@@ -40,27 +39,34 @@ var STATUS_COLOR_MAP = {
 // 采购来源映射（D-421：用户要求卡片上明确区分「样衣 / 大货」）
 // 后端 MaterialPurchase.sourceType: order=批量订单(大货) / sample=样衣开发
 var SOURCE_TYPE_MAP = {
-  sample: { kind: 'sample', text: '样衣' },
-  order: { kind: 'bulk', text: '大货' },
+  sample: { kind: 'sample', key: 'srcSample' },
+  order: { kind: 'bulk', key: 'srcBulk' },
 };
-var SOURCE_TYPE_FALLBACK = { kind: 'bulk', text: '大货' };
+var SOURCE_TYPE_FALLBACK = { kind: 'bulk', key: 'srcBulk' };
 
 // 状态推进链：当前状态 → 下一步动作（对齐 PC 端 status-action: action=update + status）
 var NEXT_STEP = {
-  pending: { status: 'verified', label: '核实通过' },
-  verified: { status: 'approved', label: '审批通过' },
-  approved: { status: 'paid', label: '标记已付款' },
+  pending: { status: 'verified', key: 'actVerify' },
+  verified: { status: 'approved', key: 'actApprove' },
+  approved: { status: 'paid', key: 'actMarkPaid' },
 };
 
-function statusText(s) { return STATUS_TEXT_MAP[s] || s || '—'; }
+function statusText(s, lang) {
+  var key = STATUS_TEXT_MAP[s];
+  return key ? i18n.t(NS + key, lang) : (s || '—');
+}
 function statusCls(s) { return STATUS_CLS_MAP[s] || 'tag-gray'; }
 function statusColor(s) { return STATUS_COLOR_MAP[s] || 'var(--color-text-tertiary)'; }
 
 // wxml 筛选用：{status: {text, cls}}
-var STATUS_MAP = {};
-Object.keys(STATUS_TEXT_MAP).forEach(function (k) {
-  STATUS_MAP[k] = { text: STATUS_TEXT_MAP[k], cls: STATUS_CLS_MAP[k] };
-});
+function buildStatusMap(lang) {
+  var m = {};
+  Object.keys(STATUS_TEXT_MAP).forEach(function (k) {
+    m[k] = { text: i18n.t(NS + STATUS_TEXT_MAP[k], lang), cls: STATUS_CLS_MAP[k] };
+  });
+  return m;
+}
+var STATUS_MAP = buildStatusMap('zh-CN');
 
 Page({
   data: {
@@ -93,31 +99,54 @@ Page({
     currentNextLabel: '',
     currentCanAdvance: false,
     currentCanReturn: false,
-    STATUS_OPTIONS: [
-      { value: '', label: '全部状态' },
-      { value: 'pending', label: '待核实' },
-      { value: 'verified', label: '已核实' },
-      { value: 'approved', label: '已审批' },
-      { value: 'paid', label: '已付款' },
-    ],
-    STATUS_MAP: STATUS_MAP,
+    STATUS_OPTIONS: [],  // applyLanguage 重建
+    STATUS_MAP: {},      // applyLanguage 重建
   },
 
   _STATUS_OPTIONS: [
-    { value: '', label: '全部状态' },
-    { value: 'pending', label: '待核实' },
-    { value: 'verified', label: '已核实' },
-    { value: 'approved', label: '已审批' },
-    { value: 'paid', label: '已付款' },
+    { value: '', key: 'filterAllStatus' },
+    { value: 'pending', key: 'stPending' },
+    { value: 'verified', key: 'stVerified' },
+    { value: 'approved', key: 'stApproved' },
+    { value: 'paid', key: 'stPaid' },
   ],
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}），筛选/映射重建 */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        noMoreW: i18n.t(NS + 'noMoreW', lang),
+        detailBtn: i18n.t(NS + 'detailBtn', lang),
+        returnBtn: i18n.t(NS + 'returnBtn', lang),
+        sourceLabel: i18n.t(NS + 'sourceLabel', lang),
+        searchPhW: i18n.t(NS + 'searchPhW', lang),
+        filterAllW: i18n.t(NS + 'filterAllStatus', lang),
+        noRecords: i18n.t(NS + 'noRecords', lang),
+        matChar: i18n.t(NS + 'matChar', lang),
+        buyerLabelW: i18n.t(NS + 'buyerLabelW', lang),
+        reconDateW: i18n.t(NS + 'reconDateW', lang),
+        noMoreW: i18n.t(NS + 'noMoreW', lang),
+      },
+      STATUS_OPTIONS: this._STATUS_OPTIONS.map(function (o) {
+        return { value: o.value, label: i18n.t(NS + o.key, lang) };
+      }),
+      STATUS_MAP: buildStatusMap(lang),
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function (options) {
+    this.applyLanguage(i18n.getLanguage());
     var opts = options || {};
     // 外部（工厂）账号不参与租户财务对账，直接拦截，避免误操作越权
     if (isFactoryAccount()) {
       this.setData({
         blocked: true,
-        blockedMsg: '工厂账号不可查看物料对账（属租户财务数据）',
+        blockedMsg: i18n.t(NS + 'factoryPermHint', this._lang || i18n.getLanguage()),
         canOperate: false,
       });
       return;
@@ -198,10 +227,10 @@ Page({
         // D-421：来源标注（样衣 / 大货）
         var src = SOURCE_TYPE_MAP[String(r.sourceType || '').toLowerCase()] || SOURCE_TYPE_FALLBACK;
         r._sourceKind = src.kind;
-        r._sourceText = src.text;
+        r._sourceText = i18n.t(NS + src.key, lang);
         // 下一步可推进的文案（无下一步则不显示操作）
         var next = NEXT_STEP[r.status];
-        r.nextLabel = next ? next.label : '';
+        r.nextLabel = next ? i18n.t(NS + next.key, lang) : '';
         return r;
       });
       that.setData({
@@ -221,7 +250,7 @@ Page({
       }
     }).catch(function (e) {
       that.setData({ loading: false });
-      toast('加载失败: ' + (e.errMsg || e.message || e));
+      toast(i18n.t(NS + 'loadFailPrefix', this._lang) + (e.errMsg || e.message || e));
     });
   },
 
@@ -247,7 +276,7 @@ Page({
     var item = this.data.list[idx];
     if (!item) return;
     var id = item.id !== undefined && item.id !== null ? String(item.id) : '';
-    if (!id) { toast('记录ID缺失'); return; }
+    if (!id) { toast(i18n.t(NS + 'recordMissing', this._lang)); return; }
     safeNavigate({
       url: this.data.detailUrl + '?id=' + encodeURIComponent(id),
     }).catch(function () {});
@@ -262,20 +291,20 @@ Page({
     var item = this.data.list[idx];
     if (!item) return;
     var next = NEXT_STEP[item.status];
-    if (!next) { toast('当前状态无可执行操作'); return; }
+    if (!next) { toast(i18n.t(NS + 'noStateAction', this._lang)); return; }
     wx.showModal({
-      title: '确认' + next.label,
-      content: next.label + '单号 ' + (item.reconciliationNo || '—') + '？',
+      title: i18n.t(NS + 'confirmOpTitle', this._lang),
+      content: i18n.tf(NS + 'confirmOpFmt', { act: i18n.t(NS + next.key, this._lang), no: item.reconciliationNo || '—' }, this._lang),
       success: function (res) {
         if (!res.confirm) return;
-        wx.showLoading({ title: '处理中...', mask: true });
+        wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.materialReconciliation.statusAction(item.id, 'update', next.status, '').then(function () {
           wx.hideLoading();
-          toast('已' + next.label);
+          toast(i18n.t(NS + next.key, this._lang));
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast('操作失败: ' + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'opFailPrefix', this._lang) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -290,22 +319,22 @@ Page({
     var item = this.data.list[idx];
     if (!item) return;
     wx.showModal({
-      title: '退回',
+      title: i18n.t(NS + 'returnBtn', this._lang),
       content: '',
       editable: true,
-      placeholderText: '请填写退回原因',
+      placeholderText: i18n.t(NS + 'rejectReasonReq', this._lang),
       success: function (res) {
         if (!res.confirm) return;
         var reason = (res.content || '').trim();
-        if (!reason) { toast('请填写退回原因'); return; }
-        wx.showLoading({ title: '处理中...', mask: true });
+        if (!reason) { toast(i18n.t(NS + 'rejectReasonReq', this._lang)); return; }
+        wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.materialReconciliation.statusAction(item.id, 'return', '', reason).then(function () {
           wx.hideLoading();
-          toast('已退回');
+          toast(i18n.t(NS + 'returnedW', this._lang));
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast('退回失败: ' + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'returnFailPrefix', this._lang) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -319,21 +348,21 @@ Page({
     var item = this.data.current;
     if (!item) return;
     var next = NEXT_STEP[item.status];
-    if (!next) { toast('当前状态无可执行操作'); return; }
+    if (!next) { toast(i18n.t(NS + 'noStateAction', this._lang)); return; }
     wx.showModal({
-      title: '确认操作',
-      content: '确认「' + next.label + '」？单号 ' + (item.reconciliationNo || '—'),
+      title: i18n.t(NS + 'confirmOpTitle', this._lang),
+      content: i18n.tf(NS + 'confirmOpFmt', { act: i18n.t(NS + next.key, this._lang), no: item.reconciliationNo || '—' }, this._lang),
       success: function (res) {
         if (!res.confirm) return;
-        wx.showLoading({ title: '处理中...', mask: true });
+        wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.materialReconciliation.statusAction(item.id, 'update', next.status, '').then(function () {
           wx.hideLoading();
-          toast('已' + next.label);
+          toast(i18n.t(NS + next.key, this._lang));
           that.setData({ showActionSheet: false, current: null });
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast('操作失败: ' + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'opFailPrefix', this._lang) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -347,23 +376,23 @@ Page({
     var item = this.data.current;
     if (!item) return;
     wx.showModal({
-      title: '退回',
+      title: i18n.t(NS + 'returnBtn', this._lang),
       content: '',
       editable: true,
-      placeholderText: '请填写退回原因',
+      placeholderText: i18n.t(NS + 'rejectReasonReq', this._lang),
       success: function (res) {
         if (!res.confirm) return;
         var reason = (res.content || '').trim();
-        if (!reason) { toast('请填写退回原因'); return; }
-        wx.showLoading({ title: '处理中...', mask: true });
+        if (!reason) { toast(i18n.t(NS + 'rejectReasonReq', this._lang)); return; }
+        wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.materialReconciliation.statusAction(item.id, 'return', '', reason).then(function () {
           wx.hideLoading();
-          toast('已退回');
+          toast(i18n.t(NS + 'returnedW', this._lang));
           that.setData({ showActionSheet: false, current: null });
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast('退回失败: ' + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'returnFailPrefix', this._lang) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -418,7 +447,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

@@ -11,7 +11,7 @@
   <block wx:else>
     <!-- 搜索 + 状态筛选（sticky 吸顶，统一通用组件） -->
     <sticky-search-bar
-      placeholder="搜索供应商 / 物料 / 单号"
+      placeholder="{{t.searchPhW}}"
       value="{{keyword}}"
       show-scan="{{false}}"
       show-filter="{{true}}"
@@ -22,7 +22,7 @@
         <view class="filter-item">
           
             <view bindtap="openPicker" data-handler="onStatusFilterChange" data-names="STATUS_OPTIONS" data-range-key="label" class="picker-box">
-              <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : '全部状态'}}</text>
+              <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : t.filterAllW}}</text>
               <view class="picker-chevron"></view>
             </view>
           
@@ -32,7 +32,7 @@
 
     <!-- 卡片列表 -->
     <view class="card-list">
-      <empty-state wx:if="{{!loading && list.length === 0}}" text="暂无对账记录" />
+      <empty-state wx:if="{{!loading && list.length === 0}}" text="{{t.noRecords}}" />
 
       <view
         class="order-card {{item.statusCls === 'tag-orange' ? 'order-card--warn' : (item.statusCls === 'tag-red' ? 'order-card--danger' : '')}}"
@@ -43,7 +43,7 @@
         <view class="order-main" data-item="{{item}}" data-index="{{index}}" catchtap="onTapItem">
           <view class="order-cover">
             <image wx:if="{{item._image}}" class="cover-pic" src="{{item._image}}" mode="aspectFill" lazy-load />
-            <view wx:else class="cover-placeholder"><view class="cover-ph-text">料</view></view>
+            <view wx:else class="cover-placeholder"><view class="cover-ph-text">{{t.matChar}}</view></view>
           </view>
 
           <view class="order-info">
@@ -55,9 +55,9 @@
               </view>
             </view>
             <view class="info-line--strong">{{item.supplierName || '—'}}<text wx:if="{{item.materialName}}" class="info-sep">·</text><text wx:if="{{item.materialName}}">{{item.materialName}}</text></view>
-            <view class="info-line" wx:if="{{item.purchaserName}}">采购员 {{item.purchaserName}}</view>
-            <view class="info-line--weak" wx:if="{{item.reconciliationDate || item.createTime}}">对账 {{item.reconciliationDate || item.createTime}}</view>
-            <view class="info-line--weak" wx:if="{{item.purchaseNo || item.orderNo}}">来源 {{item.purchaseNo || item.orderNo}}</view>
+            <view class="info-line" wx:if="{{item.purchaserName}}">{{t.buyerLabelW}} {{item.purchaserName}}</view>
+            <view class="info-line--weak" wx:if="{{item.reconciliationDate || item.createTime}}">{{t.reconDateW}} {{item.reconciliationDate || item.createTime}}</view>
+            <view class="info-line--weak" wx:if="{{item.purchaseNo || item.orderNo}}">{{t.sourceLabelW}} {{item.purchaseNo || item.orderNo}}</view>
           </view>
         </view>
 
@@ -82,13 +82,13 @@
               data-id="{{item.id}}"
               data-index="{{index}}"
               catchtap="onTapItem"
-            >详情</view>
+            >{{t.detailBtn}}</view>
           </view>
         </view>
       </view>
 
       <view class="load-more {{!hasMore ? 'disabled' : ''}}" wx:if="{{loading || !hasMore}}">
-        <text>{{loading ? '加载中...' : '没有更多了'}}</text>
+        <text>{{loading ? t.loading : t.noMoreW}}</text>
       </view>
     </view>
   </block>

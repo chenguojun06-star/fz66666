@@ -2468,6 +2468,10 @@ const PAYROLL_JS = 'pages/finance/payroll-approval/index.js';
 const PAYROLL_WXML = 'pages/finance/payroll-approval/index.wxml';
 const REIMB_JS = 'pages/finance/reimbursement/index.js';
 const REIMB_WXML = 'pages/finance/reimbursement/index.wxml';
+const RECON_JS = 'pages/finance/reconciliation/index.js';
+const RECON_WXML = 'pages/finance/reconciliation/index.wxml';
+const RECON_DETAIL_JS = 'pages/finance/reconciliation/detail/index.js';
+const RECON_DETAIL_WXML = 'pages/finance/reconciliation/detail/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3202,6 +3206,33 @@ function testI18nReimbursement() {
   eq('报销页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '费用报销');
 }
 
+/** 物料对账列表+详情页（D-571）—— 状态推进/退回/时间线 */
+function testI18nReconciliation() {
+  testPageI18n(RECON_JS, RECON_WXML, '物料对账列表页');
+  testPageI18n(RECON_DETAIL_JS, RECON_DETAIL_WXML, '对账详情页');
+
+  const { page: zhP, wx: zhWx } = loadPage(RECON_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(RECON_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  const zhOpts = zhP.data.STATUS_OPTIONS.map(o => o.label).join('|');
+  const enOpts = enP.data.STATUS_OPTIONS.map(o => o.label).join('|');
+  eq('zh 状态筛选', zhOpts, '全部状态|待核实|已核实|已审批|已付款');
+  ok('en 状态筛选无中文', !CJK_RE.test(enOpts), enOpts);
+  eq('en 状态映射', enP.data.STATUS_MAP.verified.text, 'Verified');
+
+  const { page: zhD } = loadPage(RECON_DETAIL_JS, makeApi());
+  zhD.applyLanguage('zh-CN');
+  const { page: enD, wx: enDw } = loadPage(RECON_DETAIL_JS, makeApi());
+  enD.applyLanguage('en-US');
+  eq('en 详情时间线', enD.data.t.createdW + '|' + enD.data.t.verifyW + '|' + enD.data.t.approveW + '|' + enD.data.t.payW,
+    'Created|Verify|Approve|Pay');
+  eq('对账详情页导航标题随语言', lastCall(enDw, 'setNavigationBarTitle').title, 'Material Reconciliation');
+  eq('对账列表页导航标题', lastCall(enWx, 'setNavigationBarTitle').title, 'Material Reconciliation');
+  eq('对账列表页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '物料对账');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3260,6 +3291,7 @@ try {
   testI18nPayment();
   testI18nPayrollApproval();
   testI18nReimbursement();
+  testI18nReconciliation();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
