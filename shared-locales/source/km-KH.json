@@ -2057,7 +2057,8 @@
       "matInterW": "Interlining",
       "matZipW": "Zipper",
       "matBtnW": "Button",
-      "matAccW": "Accessory"
+      "matAccW": "Accessory",
+      "handlingTxt": "Processing..."
     },
     "bundleDetail": {
       "navTitle": "Bundle Details",
@@ -2370,6 +2371,37 @@
       "noMoreW2": "No more",
       "wordRecords": " records",
       "abnormalFmt": "{n} abnormal settlements"
+    },
+    "reimbursement": {
+      "navTitle": "Reimbursement",
+      "stPending": "Pending",
+      "stApproved": "Approved",
+      "stRejected": "Rejected",
+      "stPaid": "Paid",
+      "filterAllStatus": "All Status",
+      "factoryPermHint": "Factory accounts cannot view reimbursements (tenant finance data)",
+      "rejectReasonReq": "Enter reject reason",
+      "approveTitle": "Confirm Approve",
+      "approveFmt": "Approve this reimbursement of ¥{amount}?",
+      "approveFailPrefix": "Approve failed: ",
+      "payTitle": "Confirm Payment",
+      "payFmt": "Confirm ¥{amount} paid to \"{name}\"?",
+      "payConfirmed": "Payment confirmed",
+      "opFailPrefix": "Operation failed: ",
+      "applicantLabel": "Applicant",
+      "loadFailPrefix": "Load failed: ",
+      "detailBtn": "Details",
+      "approveBtn": "Approve",
+      "rejectBtn": "Reject",
+      "payBtn": "Pay",
+      "searchPhW": "Search",
+      "filterAllW": "All",
+      "noSheets": "No reimbursements",
+      "approveText": "EX",
+      "auditedPrefix": "Audited: ",
+      "linkedPrefix": "Linked ",
+      "noMoreW": "No more",
+      "opTitle": "Reimbursement"
     }
   }
 }

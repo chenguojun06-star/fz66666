@@ -2057,7 +2057,8 @@
       "matInterW": "衬布/粘合衬",
       "matZipW": "拉链",
       "matBtnW": "纽扣",
-      "matAccW": "配件"
+      "matAccW": "配件",
+      "handlingTxt": "处理中..."
     },
     "bundleDetail": {
       "navTitle": "菲号明细",
@@ -2370,6 +2371,37 @@
       "noMoreW2": "没有更多了",
       "wordRecords": "条",
       "abnormalFmt": "有 {n} 条结算数据异常，已标红，请点开详情核实"
+    },
+    "reimbursement": {
+      "navTitle": "费用报销",
+      "stPending": "待审批",
+      "stApproved": "已批准",
+      "stRejected": "已驳回",
+      "stPaid": "已付款",
+      "filterAllStatus": "全部状态",
+      "factoryPermHint": "工厂账号不可查看费用报销（属租户财务数据）",
+      "rejectReasonReq": "请填写驳回理由",
+      "approveTitle": "确认批准",
+      "approveFmt": "批准该报销单 ¥{amount}？",
+      "approveFailPrefix": "批准失败: ",
+      "payTitle": "确认付款",
+      "payFmt": "确认已向「{name}」支付 ¥{amount}？",
+      "payConfirmed": "已确认付款",
+      "opFailPrefix": "操作失败: ",
+      "applicantLabel": "申请人",
+      "loadFailPrefix": "加载失败: ",
+      "detailBtn": "详情",
+      "approveBtn": "批准",
+      "rejectBtn": "驳回",
+      "payBtn": "付款",
+      "searchPhW": "搜索申请人 / 事由 / 单号",
+      "filterAllW": "全部状态",
+      "noSheets": "暂无报销单",
+      "approveText": "报",
+      "auditedPrefix": "审批 ",
+      "linkedPrefix": "关联 ",
+      "noMoreW": "没有更多了",
+      "opTitle": "报销操作"
     }
   }
 }

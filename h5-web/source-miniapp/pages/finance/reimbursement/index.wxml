@@ -10,7 +10,7 @@
 
   <block wx:else>
     <sticky-search-bar
-      placeholder="搜索申请人 / 事由 / 单号"
+      placeholder="{{t.searchPhW}}"
       value="{{keyword}}"
       show-scan="{{false}}"
       show-filter="{{true}}"
@@ -21,7 +21,7 @@
         <view class="filter-item">
           
             <view bindtap="openPicker" data-handler="onStatusFilterChange" data-names="STATUS_OPTIONS" data-range-key="label" class="picker-box">
-              <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : '全部状态'}}</text>
+              <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : t.filterAllW}}</text>
               <view class="picker-chevron"></view>
             </view>
           
@@ -31,7 +31,7 @@
 
     <!-- 卡片列表 -->
     <view class="card-list">
-      <empty-state wx:if="{{!loading && list.length === 0}}" text="暂无报销单" />
+      <empty-state wx:if="{{!loading && list.length === 0}}" text="{{t.noSheets}}" />
 
       <view
         class="order-card {{item.statusCls === 'tag-orange' ? 'order-card--warn' : (item.statusCls === 'tag-red' ? 'order-card--danger' : '')}}"
@@ -41,7 +41,7 @@
         <!-- 主行：封面 + 信息（点击进详情/操作） -->
         <view class="order-main" data-item="{{item}}" data-index="{{index}}" catchtap="onTapItem">
           <view class="order-cover">
-            <view class="cover-placeholder"><view class="cover-ph-text">报</view></view>
+            <view class="cover-placeholder"><view class="cover-ph-text">{{t.approveText}}</view></view>
           </view>
 
           <view class="order-info">
@@ -53,8 +53,8 @@
             </view>
             <view class="info-line--strong">{{item.applicantName || '—'}}<text wx:if="{{item.expenseType}}" class="info-sep">·</text><text wx:if="{{item.expenseType}}">{{item.expenseType}}</text></view>
             <view class="info-line" wx:if="{{item.title || item.description}}">{{item.title || item.description}}</view>
-            <view class="info-line--weak" wx:if="{{item.approverName}}">审批 {{item.approverName}}</view>
-            <view class="info-line--weak" wx:if="{{item.orderNo}}">关联 {{item.orderNo}}</view>
+            <view class="info-line--weak" wx:if="{{item.approverName}}">{{t.auditedPrefix}}{{item.approverName}}</view>
+            <view class="info-line--weak" wx:if="{{item.orderNo}}">{{t.linkedPrefix}}{{item.orderNo}}</view>
           </view>
         </view>
 
@@ -73,57 +73,57 @@
               data-id="{{item.id}}"
               data-index="{{index}}"
               catchtap="onActionApproveInline"
-            >批准</view>
+            >{{t.approveBtn}}</view>
             <view
               wx:if="{{canOperate && item.status === 'pending'}}"
               class="action-btn action-btn--ghost"
               data-id="{{item.id}}"
               data-index="{{index}}"
               catchtap="onActionRejectInline"
-            >驳回</view>
+            >{{t.rejectBtn}}</view>
             <view
               wx:if="{{canOperate && item.status === 'approved'}}"
               class="action-btn action-btn--primary"
               data-id="{{item.id}}"
               data-index="{{index}}"
               catchtap="onActionPayInline"
-            >付款</view>
+            >{{t.payBtn}}</view>
             <view
               class="action-btn action-btn--ghost"
               data-id="{{item.id}}"
               data-index="{{index}}"
               catchtap="onTapItem"
-            >详情</view>
+            >{{t.detailBtn}}</view>
           </view>
         </view>
       </view>
 
       <view class="load-more {{!hasMore ? 'disabled' : ''}}" wx:if="{{loading || !hasMore}}">
-        <text>{{loading ? '加载中...' : '没有更多了'}}</text>
+        <text>{{loading ? t.loading : t.noMoreW}}</text>
       </view>
     </view>
 
     <!-- 操作面板（保留兼容） -->
     <view class="inline-form-card" wx:if="{{showActionSheet}}">
       <view class="inline-form-title">
-        <text>{{current.reimbursementNo || '报销操作'}}</text>
+        <text>{{current.reimbursementNo || t.opTitle}}</text>
         <text class="status-tag {{current.statusCls}}">{{current.statusText}}</text>
       </view>
       <view class="inline-form-body">
         <view class="action-item action-approve" wx:if="{{currentCanApprove}}" bindtap="onActionApprove">
           <view class="action-icon action-icon-check"></view>
-          <text>批准</text>
+          <text>{{t.approveBtn}}</text>
         </view>
         <view class="action-item action-reject" wx:if="{{currentCanApprove}}" bindtap="onActionReject">
           <view class="action-icon action-icon-warn"></view>
-          <text>驳回</text>
+          <text>{{t.rejectBtn}}</text>
         </view>
         <view class="action-item action-pay" wx:if="{{currentCanPay}}" bindtap="onActionPay">
           <view class="action-icon action-icon-check"></view>
-          <text>确认付款</text>
+          <text>{{t.payTitle}}</text>
         </view>
         <view class="action-item action-cancel" bindtap="onCloseActionSheet">
-          <text>取消</text>
+          <text>{{t.cancel}}</text>
         </view>
       </view>
     </view>

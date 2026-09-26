@@ -2466,6 +2466,8 @@ const PAYMENT_JS = 'pages/finance/payment/index.js';
 const PAYMENT_WXML = 'pages/finance/payment/index.wxml';
 const PAYROLL_JS = 'pages/finance/payroll-approval/index.js';
 const PAYROLL_WXML = 'pages/finance/payroll-approval/index.wxml';
+const REIMB_JS = 'pages/finance/reimbursement/index.js';
+const REIMB_WXML = 'pages/finance/reimbursement/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3180,6 +3182,26 @@ function testI18nPayrollApproval() {
   eq('工资审批页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '工资审批');
 }
 
+/** 费用报销页（D-570）—— 状态筛选/批准驳回付款三动作 */
+function testI18nReimbursement() {
+  testPageI18n(REIMB_JS, REIMB_WXML, '费用报销页');
+
+  const { page: zhP, wx: zhWx } = loadPage(REIMB_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(REIMB_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  const zhOpts = zhP.data.STATUS_OPTIONS.map(o => o.label).join('|');
+  const enOpts = enP.data.STATUS_OPTIONS.map(o => o.label).join('|');
+  eq('zh 状态筛选', zhOpts, '全部状态|待审批|已批准|已付款|已驳回');
+  ok('en 状态筛选无中文', !CJK_RE.test(enOpts), enOpts);
+  eq('en 状态映射', enP.data.STATUS_MAP.pending.text, 'Pending');
+  ok('en 批准弹窗文案键存在', enP.data.t.approveBtn === 'Approve', enP.data.t.approveBtn);
+
+  eq('报销页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Reimbursement');
+  eq('报销页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '费用报销');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3237,6 +3259,7 @@ try {
   testI18nBundleSplit();
   testI18nPayment();
   testI18nPayrollApproval();
+  testI18nReimbursement();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));

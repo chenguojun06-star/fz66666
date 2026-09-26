@@ -2064,7 +2064,8 @@ export const LOCALES = {
         "matInterW": "衬布/粘合衬",
         "matZipW": "拉链",
         "matBtnW": "纽扣",
-        "matAccW": "配件"
+        "matAccW": "配件",
+        "handlingTxt": "处理中..."
       },
       "bundleDetail": {
         "navTitle": "菲号明细",
@@ -2377,6 +2378,37 @@ export const LOCALES = {
         "noMoreW2": "没有更多了",
         "wordRecords": "条",
         "abnormalFmt": "有 {n} 条结算数据异常，已标红，请点开详情核实"
+      },
+      "reimbursement": {
+        "navTitle": "费用报销",
+        "stPending": "待审批",
+        "stApproved": "已批准",
+        "stRejected": "已驳回",
+        "stPaid": "已付款",
+        "filterAllStatus": "全部状态",
+        "factoryPermHint": "工厂账号不可查看费用报销（属租户财务数据）",
+        "rejectReasonReq": "请填写驳回理由",
+        "approveTitle": "确认批准",
+        "approveFmt": "批准该报销单 ¥{amount}？",
+        "approveFailPrefix": "批准失败: ",
+        "payTitle": "确认付款",
+        "payFmt": "确认已向「{name}」支付 ¥{amount}？",
+        "payConfirmed": "已确认付款",
+        "opFailPrefix": "操作失败: ",
+        "applicantLabel": "申请人",
+        "loadFailPrefix": "加载失败: ",
+        "detailBtn": "详情",
+        "approveBtn": "批准",
+        "rejectBtn": "驳回",
+        "payBtn": "付款",
+        "searchPhW": "搜索申请人 / 事由 / 单号",
+        "filterAllW": "全部状态",
+        "noSheets": "暂无报销单",
+        "approveText": "报",
+        "auditedPrefix": "审批 ",
+        "linkedPrefix": "关联 ",
+        "noMoreW": "没有更多了",
+        "opTitle": "报销操作"
       }
     }
   },
@@ -4439,7 +4471,8 @@ export const LOCALES = {
         "matInterW": "Interlining",
         "matZipW": "Zipper",
         "matBtnW": "Button",
-        "matAccW": "Accessory"
+        "matAccW": "Accessory",
+        "handlingTxt": "Processing..."
       },
       "bundleDetail": {
         "navTitle": "Bundle Details",
@@ -4752,6 +4785,37 @@ export const LOCALES = {
         "noMoreW2": "No more",
         "wordRecords": " records",
         "abnormalFmt": "{n} abnormal settlements (red); tap details to verify"
+      },
+      "reimbursement": {
+        "navTitle": "Reimbursement",
+        "stPending": "Pending",
+        "stApproved": "Approved",
+        "stRejected": "Rejected",
+        "stPaid": "Paid",
+        "filterAllStatus": "All Status",
+        "factoryPermHint": "Factory accounts cannot view reimbursements (tenant finance data)",
+        "rejectReasonReq": "Enter reject reason",
+        "approveTitle": "Confirm Approve",
+        "approveFmt": "Approve this reimbursement of ¥{amount}?",
+        "approveFailPrefix": "Approve failed: ",
+        "payTitle": "Confirm Payment",
+        "payFmt": "Confirm ¥{amount} paid to \"{name}\"?",
+        "payConfirmed": "Payment confirmed",
+        "opFailPrefix": "Operation failed: ",
+        "applicantLabel": "Applicant",
+        "loadFailPrefix": "Load failed: ",
+        "detailBtn": "Details",
+        "approveBtn": "Approve",
+        "rejectBtn": "Reject",
+        "payBtn": "Pay",
+        "searchPhW": "Search applicant / reason / no.",
+        "filterAllW": "All Status",
+        "noSheets": "No reimbursements",
+        "approveText": "EX",
+        "auditedPrefix": "Audited by ",
+        "linkedPrefix": "Linked ",
+        "noMoreW": "No more",
+        "opTitle": "Reimbursement Ops"
       }
     }
   },
@@ -6814,7 +6878,8 @@ export const LOCALES = {
         "matInterW": "Keo dán",
         "matZipW": "Khóa kéo",
         "matBtnW": "Nút",
-        "matAccW": "Phụ kiện"
+        "matAccW": "Phụ kiện",
+        "handlingTxt": "Đang xử lý..."
       },
       "bundleDetail": {
         "navTitle": "Chi tiết phiếu",
@@ -7127,6 +7192,37 @@ export const LOCALES = {
         "noMoreW2": "Hết rồi",
         "wordRecords": " bản ghi",
         "abnormalFmt": "{n} mục bất thường (đỏ), mở chi tiết để kiểm tra"
+      },
+      "reimbursement": {
+        "navTitle": "Hoàn phí",
+        "stPending": "Chờ duyệt",
+        "stApproved": "Đã duyệt",
+        "stRejected": "Đã từ chối",
+        "stPaid": "Đã trả",
+        "filterAllStatus": "Mọi trạng thái",
+        "factoryPermHint": "Tài khoản xưởng không xem được hoàn phí",
+        "rejectReasonReq": "Nhập lý do từ chối",
+        "approveTitle": "Xác nhận duyệt",
+        "approveFmt": "Duyệt hoàn phí ¥{amount}?",
+        "approveFailPrefix": "Duyệt lỗi: ",
+        "payTitle": "Xác nhận trả",
+        "payFmt": "Xác nhận đã trả ¥{amount} cho \"{name}\"?",
+        "payConfirmed": "Đã xác nhận trả",
+        "opFailPrefix": "Thao tác lỗi: ",
+        "applicantLabel": "Người xin",
+        "loadFailPrefix": "Tải lỗi: ",
+        "detailBtn": "Chi tiết",
+        "approveBtn": "Duyệt",
+        "rejectBtn": "Từ chối",
+        "payBtn": "Trả",
+        "searchPhW": "Tìm người / lý do / số",
+        "filterAllW": "Mọi trạng thái",
+        "noSheets": "Chưa có đơn hoàn phí",
+        "approveText": "HP",
+        "auditedPrefix": "Duyệt: ",
+        "linkedPrefix": "Liên kết ",
+        "noMoreW": "Hết rồi",
+        "opTitle": "Thao tác hoàn phí"
       }
     }
   },
@@ -9189,7 +9285,8 @@ export const LOCALES = {
         "matInterW": "Interlining",
         "matZipW": "Zipper",
         "matBtnW": "Button",
-        "matAccW": "Accessory"
+        "matAccW": "Accessory",
+        "handlingTxt": "Processing..."
       },
       "bundleDetail": {
         "navTitle": "Bundle Details",
@@ -9502,6 +9599,37 @@ export const LOCALES = {
         "noMoreW2": "No more",
         "wordRecords": " records",
         "abnormalFmt": "{n} abnormal settlements"
+      },
+      "reimbursement": {
+        "navTitle": "Reimbursement",
+        "stPending": "Pending",
+        "stApproved": "Approved",
+        "stRejected": "Rejected",
+        "stPaid": "Paid",
+        "filterAllStatus": "All Status",
+        "factoryPermHint": "Factory accounts cannot view reimbursements (tenant finance data)",
+        "rejectReasonReq": "Enter reject reason",
+        "approveTitle": "Confirm Approve",
+        "approveFmt": "Approve this reimbursement of ¥{amount}?",
+        "approveFailPrefix": "Approve failed: ",
+        "payTitle": "Confirm Payment",
+        "payFmt": "Confirm ¥{amount} paid to \"{name}\"?",
+        "payConfirmed": "Payment confirmed",
+        "opFailPrefix": "Operation failed: ",
+        "applicantLabel": "Applicant",
+        "loadFailPrefix": "Load failed: ",
+        "detailBtn": "Details",
+        "approveBtn": "Approve",
+        "rejectBtn": "Reject",
+        "payBtn": "Pay",
+        "searchPhW": "Search",
+        "filterAllW": "All",
+        "noSheets": "No reimbursements",
+        "approveText": "EX",
+        "auditedPrefix": "Audited: ",
+        "linkedPrefix": "Linked ",
+        "noMoreW": "No more",
+        "opTitle": "Reimbursement"
       }
     }
   }

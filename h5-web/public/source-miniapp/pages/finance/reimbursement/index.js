@@ -7,6 +7,8 @@
  *
  * 权限：仅内部管理员/主管可审批；工厂（外部）账号不参与租户财务，直接拦截。
  */
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.reimbursement.';
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { hasFeaturePermission, isFactoryAccount } = require('../../../utils/permission');
@@ -14,10 +16,8 @@ const { decodeParam } = require('../../../utils/urlParams');
 
 // D-419：颜色统一为实底 status-badge 用色
 var STATUS_TEXT_MAP = {
-  pending: '待审批',
-  approved: '已批准',
-  rejected: '已驳回',
-  paid: '已付款',
+  pending: 'stPending', approved: 'stApproved',
+  rejected: 'stRejected', paid: 'stPaid',
 };
 var STATUS_CLS_MAP = {
   pending: 'tag-orange',
@@ -37,7 +37,10 @@ Object.keys(STATUS_TEXT_MAP).forEach(function (k) {
   STATUS_MAP[k] = { text: STATUS_TEXT_MAP[k], cls: STATUS_CLS_MAP[k] };
 });
 
-function statusText(s) { return STATUS_TEXT_MAP[s] || s || '—'; }
+function statusText(s, lang) {
+  var key = STATUS_TEXT_MAP[s];
+  return key ? i18n.t(NS + key, lang) : (s || '—');
+}
 function statusCls(s) { return STATUS_CLS_MAP[s] || 'tag-gray'; }
 function statusColor(s) { return STATUS_COLOR_MAP[s] || 'var(--color-text-tertiary)'; }
 
@@ -67,30 +70,62 @@ Page({
     current: null,
     currentCanApprove: false,
     currentCanPay: false,
-    STATUS_MAP: STATUS_MAP,
-    STATUS_OPTIONS: [
-      { value: '', label: '全部状态' },
-      { value: 'pending', label: '待审批' },
-      { value: 'approved', label: '已批准' },
-      { value: 'paid', label: '已付款' },
-      { value: 'rejected', label: '已驳回' },
-    ],
+    STATUS_MAP: {},  // applyLanguage 重建（text 已解析为语言文案）
+    STATUS_OPTIONS: [],  // applyLanguage 重建
   },
 
   _STATUS_OPTIONS: [
-    { value: '', label: '全部状态' },
-    { value: 'pending', label: '待审批' },
-    { value: 'approved', label: '已批准' },
-    { value: 'paid', label: '已付款' },
-    { value: 'rejected', label: '已驳回' },
+    { value: '', key: 'filterAllStatus' },
+    { value: 'pending', key: 'stPending' },
+    { value: 'approved', key: 'stApproved' },
+    { value: 'paid', key: 'stPaid' },
+    { value: 'rejected', key: 'stRejected' },
   ],
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}），状态筛选重建 */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        applicantLabel: i18n.t(NS + 'applicantLabel', lang),
+        approveBtn: i18n.t(NS + 'approveBtn', lang),
+        rejectBtn: i18n.t(NS + 'rejectBtn', lang),
+        payBtn: i18n.t(NS + 'payBtn', lang),
+        detailBtn: i18n.t(NS + 'detailBtn', lang),
+        payTitle: i18n.t(NS + 'payTitle', lang),
+        searchPhW: i18n.t(NS + 'searchPhW', lang),
+        filterAllW: i18n.t(NS + 'filterAllStatus', lang),
+        noSheets: i18n.t(NS + 'noSheets', lang),
+        approveText: i18n.t(NS + 'approveText', lang),
+        auditedPrefix: i18n.t(NS + 'auditedPrefix', lang),
+        linkedPrefix: i18n.t(NS + 'linkedPrefix', lang),
+        noMoreW: i18n.t(NS + 'noMoreW', lang),
+        opTitle: i18n.t(NS + 'opTitle', lang),
+      },
+      STATUS_OPTIONS: this._STATUS_OPTIONS.map(function (o) {
+        return { value: o.value, label: i18n.t(NS + o.key, lang) };
+      }),
+      STATUS_MAP: (function () {
+        var m = {};
+        Object.keys(STATUS_TEXT_MAP).forEach(function (k) {
+          m[k] = { text: i18n.t(NS + STATUS_TEXT_MAP[k], lang), cls: STATUS_CLS_MAP[k] };
+        });
+        return m;
+      })(),
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function (options) {
+    this.applyLanguage(i18n.getLanguage());
     var opts = options || {};
     if (isFactoryAccount()) {
       this.setData({
         blocked: true,
-        blockedMsg: '工厂账号不可查看费用报销（属租户财务数据）',
+        blockedMsg: i18n.t(NS + 'factoryPermHint', this._lang || i18n.getLanguage()),
         canOperate: false,
       });
       return;
@@ -149,7 +184,7 @@ Page({
       });
     }).catch(function (e) {
       that.setData({ loading: false });
-      toast('加载失败: ' + (e.errMsg || e.message || e));
+      toast(i18n.t(NS + 'loadFailPrefix', this._lang) + (e.errMsg || e.message || e));
     });
   },
 
@@ -191,18 +226,18 @@ Page({
     var item = this.data.list[idx];
     if (!item) return;
     wx.showModal({
-      title: '确认批准',
-      content: '批准该报销单 ¥' + Number(item.amount || 0).toFixed(2) + '？',
+      title: i18n.t(NS + 'approveTitle', this._lang),
+      content: i18n.tf(NS + 'approveFmt', { amount: Number(item.amount || 0).toFixed(2) }, this._lang),
       success: function (res) {
         if (!res.confirm) return;
-        wx.showLoading({ title: '处理中...', mask: true });
+        wx.showLoading({ title: i18n.t('mp.taskDetail.handlingTxt', this._lang), mask: true });
         api.expenseReimbursement.approve(item.id, 'approve', '').then(function () {
           wx.hideLoading();
-          toast('已批准');
+          toast(i18n.t(NS + 'stApproved', this._lang));
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast('批准失败: ' + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'approveFailPrefix', this._lang) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -217,22 +252,22 @@ Page({
     var item = this.data.list[idx];
     if (!item) return;
     wx.showModal({
-      title: '驳回',
+      title: i18n.t(NS + 'rejectBtn', this._lang),
       content: '',
       editable: true,
-      placeholderText: '请填写驳回理由',
+      placeholderText: i18n.t(NS + 'rejectReasonReq', this._lang),
       success: function (res) {
         if (!res.confirm) return;
         var remark = (res.content || '').trim();
-        if (!remark) { toast('请填写驳回理由'); return; }
-        wx.showLoading({ title: '处理中...', mask: true });
+        if (!remark) { toast(i18n.t(NS + 'rejectReasonReq', this._lang)); return; }
+        wx.showLoading({ title: i18n.t('mp.taskDetail.handlingTxt', this._lang), mask: true });
         api.expenseReimbursement.approve(item.id, 'reject', remark).then(function () {
           wx.hideLoading();
-          toast('已驳回');
+          toast(i18n.t(NS + 'stRejected', this._lang));
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast('驳回失败: ' + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'opFailPrefix', this._lang) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -247,18 +282,18 @@ Page({
     var item = this.data.list[idx];
     if (!item) return;
     wx.showModal({
-      title: '确认付款',
-      content: '确认已向「' + (item.applicantName || '申请人') + '」支付 ¥' + Number(item.amount || 0).toFixed(2) + '？',
+      title: i18n.t(NS + 'payTitle', this._lang),
+      content: i18n.tf(NS + 'payFmt', { name: item.applicantName || i18n.t(NS + 'applicantLabel', this._lang), amount: Number(item.amount || 0).toFixed(2) }, this._lang),
       success: function (res) {
         if (!res.confirm) return;
-        wx.showLoading({ title: '处理中...', mask: true });
+        wx.showLoading({ title: i18n.t('mp.taskDetail.handlingTxt', this._lang), mask: true });
         api.expenseReimbursement.pay(item.id, '').then(function () {
           wx.hideLoading();
-          toast('已确认付款');
+          toast(i18n.t(NS + 'payConfirmed', this._lang));
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast('操作失败: ' + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'opFailPrefix', this._lang) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -272,19 +307,19 @@ Page({
     var item = this.data.current;
     if (!item) return;
     wx.showModal({
-      title: '确认批准',
-      content: '批准该报销单 ¥' + Number(item.amount || 0).toFixed(2) + '？',
+      title: i18n.t(NS + 'approveTitle', this._lang),
+      content: i18n.tf(NS + 'approveFmt', { amount: Number(item.amount || 0).toFixed(2) }, this._lang),
       success: function (res) {
         if (!res.confirm) return;
-        wx.showLoading({ title: '处理中...', mask: true });
+        wx.showLoading({ title: i18n.t('mp.taskDetail.handlingTxt', this._lang), mask: true });
         api.expenseReimbursement.approve(item.id, 'approve', '').then(function () {
           wx.hideLoading();
-          toast('已批准');
+          toast(i18n.t(NS + 'stApproved', this._lang));
           that.setData({ showActionSheet: false, current: null });
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast('批准失败: ' + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'approveFailPrefix', this._lang) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -294,23 +329,23 @@ Page({
     var item = this.data.current;
     if (!item) return;
     wx.showModal({
-      title: '驳回',
+      title: i18n.t(NS + 'rejectBtn', this._lang),
       content: '',
       editable: true,
-      placeholderText: '请填写驳回理由',
+      placeholderText: i18n.t(NS + 'rejectReasonReq', this._lang),
       success: function (res) {
         if (!res.confirm) return;
         var remark = (res.content || '').trim();
-        if (!remark) { toast('请填写驳回理由'); return; }
-        wx.showLoading({ title: '处理中...', mask: true });
+        if (!remark) { toast(i18n.t(NS + 'rejectReasonReq', this._lang)); return; }
+        wx.showLoading({ title: i18n.t('mp.taskDetail.handlingTxt', this._lang), mask: true });
         api.expenseReimbursement.approve(item.id, 'reject', remark).then(function () {
           wx.hideLoading();
-          toast('已驳回');
+          toast(i18n.t(NS + 'stRejected', this._lang));
           that.setData({ showActionSheet: false, current: null });
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast('驳回失败: ' + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'opFailPrefix', this._lang) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -320,19 +355,19 @@ Page({
     var item = this.data.current;
     if (!item) return;
     wx.showModal({
-      title: '确认付款',
-      content: '确认已向「' + (item.applicantName || '申请人') + '」支付 ¥' + Number(item.amount || 0).toFixed(2) + '？',
+      title: i18n.t(NS + 'payTitle', this._lang),
+      content: i18n.tf(NS + 'payFmt', { name: item.applicantName || i18n.t(NS + 'applicantLabel', this._lang), amount: Number(item.amount || 0).toFixed(2) }, this._lang),
       success: function (res) {
         if (!res.confirm) return;
-        wx.showLoading({ title: '处理中...', mask: true });
+        wx.showLoading({ title: i18n.t('mp.taskDetail.handlingTxt', this._lang), mask: true });
         api.expenseReimbursement.pay(item.id, '').then(function () {
           wx.hideLoading();
-          toast('已确认付款');
+          toast(i18n.t(NS + 'payConfirmed', this._lang));
           that.setData({ showActionSheet: false, current: null });
           that._resetAndLoad();
         }).catch(function (e) {
           wx.hideLoading();
-          toast('操作失败: ' + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'opFailPrefix', this._lang) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -386,7 +421,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

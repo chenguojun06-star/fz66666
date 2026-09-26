@@ -2057,7 +2057,8 @@
       "matInterW": "Keo dán",
       "matZipW": "Khóa kéo",
       "matBtnW": "Nút",
-      "matAccW": "Phụ kiện"
+      "matAccW": "Phụ kiện",
+      "handlingTxt": "Đang xử lý..."
     },
     "bundleDetail": {
       "navTitle": "Chi tiết phiếu",
@@ -2370,6 +2371,37 @@
       "noMoreW2": "Hết rồi",
       "wordRecords": " bản ghi",
       "abnormalFmt": "{n} mục bất thường (đỏ), mở chi tiết để kiểm tra"
+    },
+    "reimbursement": {
+      "navTitle": "Hoàn phí",
+      "stPending": "Chờ duyệt",
+      "stApproved": "Đã duyệt",
+      "stRejected": "Đã từ chối",
+      "stPaid": "Đã trả",
+      "filterAllStatus": "Mọi trạng thái",
+      "factoryPermHint": "Tài khoản xưởng không xem được hoàn phí",
+      "rejectReasonReq": "Nhập lý do từ chối",
+      "approveTitle": "Xác nhận duyệt",
+      "approveFmt": "Duyệt hoàn phí ¥{amount}?",
+      "approveFailPrefix": "Duyệt lỗi: ",
+      "payTitle": "Xác nhận trả",
+      "payFmt": "Xác nhận đã trả ¥{amount} cho \"{name}\"?",
+      "payConfirmed": "Đã xác nhận trả",
+      "opFailPrefix": "Thao tác lỗi: ",
+      "applicantLabel": "Người xin",
+      "loadFailPrefix": "Tải lỗi: ",
+      "detailBtn": "Chi tiết",
+      "approveBtn": "Duyệt",
+      "rejectBtn": "Từ chối",
+      "payBtn": "Trả",
+      "searchPhW": "Tìm người / lý do / số",
+      "filterAllW": "Mọi trạng thái",
+      "noSheets": "Chưa có đơn hoàn phí",
+      "approveText": "HP",
+      "auditedPrefix": "Duyệt: ",
+      "linkedPrefix": "Liên kết ",
+      "noMoreW": "Hết rồi",
+      "opTitle": "Thao tác hoàn phí"
     }
   }
 }
