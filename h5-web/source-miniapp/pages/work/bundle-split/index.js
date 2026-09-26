@@ -1,3 +1,5 @@
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.bundleSplit.';
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { displaySplitStatus } = require('../../../utils/displayHelper');
@@ -59,7 +61,70 @@ Page({
     this.loadPendingSplits();
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}） */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        statusPendingCfm: i18n.t(NS + 'statusPendingCfm', lang),
+        priceAdjustTitle: i18n.t(NS + 'priceAdjustTitle', lang),
+        scanDirectTab: i18n.t(NS + 'scanDirectTab', lang),
+        scanBundleTab: i18n.t(NS + 'scanBundleTab', lang),
+        switchOrderTab: i18n.t(NS + 'switchOrderTab', lang),
+        loadingBundles: i18n.t(NS + 'loadingBundles', lang),
+        holdingLabel: i18n.t(NS + 'holdingLabel', lang),
+        transferQtyLabel: i18n.t(NS + 'transferQtyLabel', lang),
+        currentProcess: i18n.t(NS + 'currentProcess', lang),
+        nextWorkerLabel: i18n.t(NS + 'nextWorkerLabel', lang),
+        noBundlesOrder: i18n.t(NS + 'noBundlesOrder', lang),
+        checkOrderHint: i18n.t(NS + 'checkOrderHint', lang),
+        splitRecordsTab: i18n.t(NS + 'splitRecordsTab', lang),
+        clearBtn: i18n.t('common.clear', lang),
+        splitRequestTab: i18n.t(NS + 'splitRequestTab', lang),
+        fromLabel: i18n.t(NS + 'fromLabel', lang),
+        noPendingSplits: i18n.t(NS + 'noPendingSplits', lang),
+        splitHintEmpty: i18n.t(NS + 'splitHintEmpty', lang),
+        loadingProcess: i18n.t(NS + 'loadingProcess', lang),
+        adminOnlyPrice: i18n.t(NS + 'adminOnlyPrice', lang),
+        newPriceYuan: i18n.t(NS + 'newPriceYuan', lang),
+        adjustReasonReq: i18n.t(NS + 'adjustReasonReq', lang),
+        noProcessData: i18n.t(NS + 'noProcessData', lang),
+        checkOrderStages: i18n.t(NS + 'checkOrderStages', lang),
+        adjustRecordsTab: i18n.t(NS + 'adjustRecordsTab', lang),
+        inputOrderNo: i18n.t(NS + 'inputOrderNo', lang),
+        queryBtn: i18n.t(NS + 'queryBtn', lang),
+        bundleWord: i18n.t('mp.scanResult.bundleWord', lang),
+        processWord: i18n.t('mp.pattern.processWord', lang),
+        qtyLabel: i18n.t('common.quantity', lang),
+        cancel: i18n.t('common.cancel', lang),
+        submitWord: i18n.t('common.submitting', lang),
+        searchOrderPhW: i18n.t(NS + 'searchOrderPhW', lang),
+        inputQtyPh: i18n.t(NS + 'inputQtyPh', lang),
+        pickProcessPh: i18n.t(NS + 'pickProcessPh', lang),
+        pickWorkerPh: i18n.t(NS + 'pickWorkerPh', lang),
+        remainFmt: i18n.t(NS + 'remainFmt', lang),
+        keepUnit: i18n.t(NS + 'keepUnit', lang),
+        transferTo: i18n.t(NS + 'transferTo', lang),
+        confirmSplit: i18n.t(NS + 'confirmSplit', lang),
+        confirmingW: i18n.t(NS + 'confirmingW', lang),
+        receiveConfirm: i18n.t(NS + 'receiveConfirm', lang),
+        orderNoLabel: i18n.t(NS + 'orderNoLabel', lang),
+        searchProcessPh: i18n.t(NS + 'searchProcessPh', lang),
+        bundleCountW: i18n.t(NS + 'bundleCountW', lang),
+        newPricePh: i18n.t(NS + 'newPricePh', lang),
+        adjustReasonPh: i18n.t(NS + 'adjustReasonPh', lang),
+        confirmAdjustBtn: i18n.t(NS + 'confirmAdjustBtn', lang),
+        reasonPrefix: i18n.t(NS + 'reasonPrefix', lang),
+      },
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad(options) {
+    this.applyLanguage(i18n.getLanguage());
     const orderNo = decodeURIComponent(options.orderNo || '');
     this.loadSplitRecords();
     this._checkAdmin();
@@ -88,7 +153,7 @@ Page({
 
   doSearch() {
     const orderNo = (this.data.searchOrderNo || '').trim();
-    if (!orderNo) return showTip('请输入订单号');
+    if (!orderNo) return showTip(i18n.t(NS + 'inputOrderNo', this._lang));
     this.setData({ orderNo, needSearch: false });
     this.fetchBundles();
     this.fetchProcesses(orderNo);
@@ -100,13 +165,13 @@ Page({
       onlyFromCamera: false,
       success: (res) => {
         const code = (res.result || '').trim();
-        if (!code) return showTip('未识别到内容');
+        if (!code) return showTip(i18n.t(NS + 'unrecognized', this._lang));
         this.setData({ orderNo: code, needSearch: false, searchOrderNo: code });
         this.fetchBundles();
         this.fetchProcesses(code);
         this.fetchOrderCover(code);
       },
-      fail: () => showTip('扫码取消'),
+      fail: () => showTip(i18n.t(NS + 'scanCancelled', this._lang)),
     });
   },
 
@@ -115,10 +180,10 @@ Page({
       onlyFromCamera: false,
       success: (res) => {
         const code = (res.result || '').trim();
-        if (!code) return showTip('未识别到内容');
+        if (!code) return showTip(i18n.t(NS + 'unrecognized', this._lang));
         this._handleBundleScan(code);
       },
-      fail: () => showTip('扫码取消'),
+      fail: () => showTip(i18n.t(NS + 'scanCancelled', this._lang)),
     });
   },
 
@@ -128,7 +193,7 @@ Page({
       const bundle = await api.production.getBundleByCode(qrCode);
       const data = bundle || {};
       if (!data || !data.id) {
-        showTip('未找到该菲号，请确认扫的是菲号二维码');
+        showTip(i18n.t(NS + 'notBundleQr', this._lang));
         this.setData({ loading: false });
         return;
       }
@@ -151,12 +216,13 @@ Page({
       this.fetchProcesses(orderNo, data.splitProcessName || data.currentProcess || '');
     } catch (e) {
       console.error('[bundle-split] scanBundle fail', e);
-      let msg = '扫码识别失败，请重试';
+      let msg = i18n.t(NS + 'scanFailRetry', this._lang);
       if (e && e.message) {
-        if (e.message.indexOf('不存在') >= 0) msg = '未找到该菲号，请确认二维码正确';
-        else if (e.message.indexOf('400') >= 0 || e.message.indexOf('参数') >= 0) msg = '二维码格式不正确，请确认扫的是菲号';
-        else if (e.message.indexOf('网络') >= 0 || e.message.indexOf('timeout') >= 0) msg = '网络连接失败，请检查网络后重试';
-        else msg = e.message.length > 30 ? '扫码识别失败' : e.message;
+        // ⚠️ indexOf 匹配的是后端中文错误消息，关键词保持中文原文
+        if (e.message.indexOf('不存在') >= 0) msg = i18n.t(NS + 'bundleNotFound', this._lang);
+        else if (e.message.indexOf('400') >= 0 || e.message.indexOf('参数') >= 0) msg = i18n.t(NS + 'qrFormatWrong', this._lang);
+        else if (e.message.indexOf('网络') >= 0 || e.message.indexOf('timeout') >= 0) msg = i18n.t(NS + 'networkFail', this._lang);
+        else msg = e.message.length > 30 ? i18n.t(NS + 'scanFailW', this._lang) : e.message;
       }
       showTip(msg);
       this.setData({ loading: false });
@@ -194,10 +260,10 @@ Page({
       // 仅一条菲号时自动选中，直接展示表单
       const autoIdx = list.length === 1 ? 0 : -1;
       this.setData({ bundles: list, selectedIdx: autoIdx, loading: false });
-      if (!list.length) showTip('该订单暂无菲号');
+      if (!list.length) showTip(i18n.t(NS + 'noBundleInOrder', this._lang));
     } catch (e) {
       console.error('[bundle-split] fetch fail', e);
-      let msg = '加载菲号列表失败';
+      let msg = i18n.t(NS + 'loadBundlesFail', this._lang);
       if (e && e.message) msg = e.message.length > 20 ? msg : e.message;
       showTip(msg);
       this.setData({ loading: false });
@@ -279,7 +345,7 @@ Page({
     if (key === 'worker') {
       this.setData({
         pickerKey: key,
-        pickerTitle: '选择接手工人',
+        pickerTitle: i18n.t(NS + 'pickWorkerTitle', this._lang),
         pickerValue: this.data.workerIdx >= 0 ? String(this.data.workerIdx) : '',
         pickerOptions: (this.data.workers || []).map(function (w, i) {
           return { label: w.workerName || w.name || '', value: String(i) };
@@ -291,7 +357,7 @@ Page({
     if (key === 'process') {
       this.setData({
         pickerKey: key,
-        pickerTitle: '选择工序',
+        pickerTitle: i18n.t(NS + 'pickProcessTitle', this._lang),
         pickerValue: this.data.processIdx >= 0 ? String(this.data.processIdx) : '',
         pickerOptions: (this.data.processes || []).map(function (p, i) {
           return { label: p.processName || p.name || '', value: String(i) };
@@ -332,8 +398,8 @@ Page({
 
   clearRecords() {
     wx.showModal({
-      title: '确认清空',
-      content: '清空所有拆分记录？',
+      title: i18n.t(NS + 'confirmClear', this._lang),
+      content: i18n.t(NS + 'clearAllRecords', this._lang),
       success: (res) => {
         if (!res.confirm) return;
         this.setData({ splitRecords: [] });
@@ -345,17 +411,17 @@ Page({
   async submitSplit() {
     const { bundles, selectedIdx, splitQty, workers, workerIdx, processes, processIdx } = this.data;
     const bundle = bundles[selectedIdx];
-    if (!bundle) return showTip('请先选择菲号');
+    if (!bundle) return showTip(i18n.t(NS + 'pickBundleFirst', this._lang));
 
     const qty = parseInt(splitQty, 10);
-    if (!qty || qty <= 0) return showTip('请输入转出数量');
-    if (qty >= (bundle.quantity || 0)) return showTip('转出数量需小于总数');
+    if (!qty || qty <= 0) return showTip(i18n.t(NS + 'inputTransferQty', this._lang));
+    if (qty >= (bundle.quantity || 0)) return showTip(i18n.t(NS + 'qtyLessThanTotal', this._lang));
 
     const worker = workers[workerIdx];
-    if (!worker) return showTip('请选择接手工人');
+    if (!worker) return showTip(i18n.t(NS + 'pickNextWorker', this._lang));
 
     const process = processes[processIdx];
-    if (!process) return showTip('请选择当前工序');
+    if (!process) return showTip(i18n.t(NS + 'pickCurProcess', this._lang));
 
     this.setData({ submitting: true });
     try {
@@ -373,13 +439,13 @@ Page({
       };
       const res = await api.production.requestSplit(body);
       const data = res || {};
-      showTip(data.message || '已发送拆菲请求，等待 ' + worker.workerName + ' 确认');
+      showTip(data.message || i18n.tf(NS + 'splitSentFmt', { name: worker.workerName }, this._lang));
       this.saveSplitRecord(body.orderNo, bundle.bundleNo || bundle.bundleLabel, qty, worker.workerName);
       this.setData({ submitting: false, selectedIdx: -1, splitQty: '', workerIdx: -1, processIdx: -1 });
       this.fetchBundles();
     } catch (e) {
       console.error('[bundle-split] request fail', e);
-      let msg = '拆菲请求失败';
+      let msg = i18n.t(NS + 'splitFail', this._lang);
       if (e && e.message) {
         if (e.message.indexOf('关单') >= 0 || e.message.indexOf('关闭') >= 0) msg = e.message;
         else if (e.message.indexOf('已完成') >= 0 || e.message.indexOf('取消') >= 0) msg = e.message;
@@ -416,16 +482,16 @@ Page({
 
   async confirmPendingSplit(e) {
     const splitLogId = e.currentTarget.dataset.id;
-    if (!splitLogId) return showTip('请求记录无效');
+    if (!splitLogId) return showTip(i18n.t(NS + 'recordInvalidW', this._lang));
     this.setData({ confirmingId: splitLogId });
     try {
       const res = await api.production.confirmSplit(splitLogId);
       const data = res || {};
-      showTip(data.message || '已确认接收，菲号已转到你的名下');
+      showTip(data.message || i18n.t(NS + 'receiveOk', this._lang));
       this.loadPendingSplits();
     } catch (err) {
       console.error('[bundle-split] confirmPendingSplit fail', err);
-      let msg = '确认失败，请重试';
+      let msg = i18n.t(NS + 'receiveFail', this._lang);
       if (err && err.message) msg = err.message.length > 30 ? msg : err.message;
       showTip(msg);
     } finally {
@@ -447,7 +513,7 @@ Page({
 
   doPriceSearch() {
     const orderNo = (this.data.priceSearchInput || '').trim();
-    if (!orderNo) return showTip('请输入订单号');
+    if (!orderNo) return showTip(i18n.t(NS + 'inputOrderNo', this._lang));
     this.setData({ priceOrderNo: orderNo, selectedProcessIdx: -1, adjustPrice: '', adjustReason: '' });
     this.fetchPriceProcesses();
     this.fetchAdjustHistory();
@@ -458,12 +524,12 @@ Page({
       onlyFromCamera: false,
       success: (res) => {
         const code = (res.result || '').trim();
-        if (!code) return showTip('未识别到内容');
+        if (!code) return showTip(i18n.t(NS + 'unrecognized', this._lang));
         this.setData({ priceOrderNo: code, priceSearchInput: code, selectedProcessIdx: -1, adjustPrice: '', adjustReason: '' });
         this.fetchPriceProcesses();
         this.fetchAdjustHistory();
       },
-      fail: () => showTip('扫码取消'),
+      fail: () => showTip(i18n.t(NS + 'scanCancelled', this._lang)),
     });
   },
 
@@ -475,10 +541,10 @@ Page({
       const res = await api.production.queryOrderProcesses(orderNo);
       const list = Array.isArray(res) ? res : (res || []);
       this.setData({ priceProcesses: Array.isArray(list) ? list : [], priceLoading: false });
-      if (!list.length) showTip('该订单暂无工序数据');
+      if (!list.length) showTip(i18n.t(NS + 'noProcessData', this._lang));
     } catch (e) {
       console.error('[price-adjust] fetchPriceProcesses fail', e);
-      showTip('加载工序失败');
+      showTip(i18n.t(NS + 'loadingProcess', this._lang));
       this.setData({ priceLoading: false });
     }
   },
@@ -514,15 +580,15 @@ Page({
   },
 
   async submitAdjust() {
-    if (!this.data.isAdmin) return showTip('仅管理员可调整单价');
+    if (!this.data.isAdmin) return showTip(i18n.t(NS + 'adminOnlyPrice', this._lang));
 
     const { priceProcesses, selectedProcessIdx, adjustPrice, adjustReason, priceOrderNo } = this.data;
     const proc = priceProcesses[selectedProcessIdx];
-    if (!proc) return showTip('请先选择工序');
+    if (!proc) return showTip(i18n.t(NS + 'pickProcessFirst', this._lang));
 
     const price = parseFloat(adjustPrice);
-    if (isNaN(price) || price < 0) return showTip('请输入有效单价');
-    if (!adjustReason || !adjustReason.trim()) return showTip('请填写调整原因');
+    if (isNaN(price) || price < 0) return showTip(i18n.t(NS + 'inputValidPrice', this._lang));
+    if (!adjustReason || !adjustReason.trim()) return showTip(i18n.t(NS + 'adjustReasonReq', this._lang));
 
     this.setData({ adjustSubmitting: true });
     try {
@@ -532,13 +598,13 @@ Page({
         newPrice: price,
         reason: adjustReason.trim(),
       });
-      showTip('调整成功');
+      showTip(i18n.t(NS + 'adjustOk', this._lang));
       this.setData({ adjustSubmitting: false, selectedProcessIdx: -1, adjustPrice: '', adjustReason: '' });
       this.fetchPriceProcesses();
       this.fetchAdjustHistory();
     } catch (e) {
       console.error('[price-adjust] submit fail', e);
-      const msg = (e && e.message) || '调整失败';
+      const msg = (e && e.message) || i18n.t(NS + 'adjustFail', this._lang);
       showTip(msg);
       this.setData({ adjustSubmitting: false });
     }
@@ -593,7 +659,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

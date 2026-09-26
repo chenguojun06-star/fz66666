@@ -2460,6 +2460,8 @@ const TASK_DETAIL_JS = 'pages/procurement/task-detail/index.js';
 const TASK_DETAIL_WXML = 'pages/procurement/task-detail/index.wxml';
 const BUNDLE_DETAIL_JS = 'pages/cutting/bundle-detail/index.js';
 const BUNDLE_DETAIL_WXML = 'pages/cutting/bundle-detail/index.wxml';
+const BUNDLE_SPLIT_JS = 'pages/work/bundle-split/index.js';
+const BUNDLE_SPLIT_WXML = 'pages/work/bundle-split/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3115,6 +3117,25 @@ function testI18nBundleDetail() {
   eq('菲号明细页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '菲号明细');
 }
 
+/** 拆菲号页（D-567）—— 扫码拆/换单/拆菲请求/单价调整 */
+function testI18nBundleSplit() {
+  testPageI18n(BUNDLE_SPLIT_JS, BUNDLE_SPLIT_WXML, '拆菲号页');
+
+  const { page: zhP, wx: zhWx } = loadPage(BUNDLE_SPLIT_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(BUNDLE_SPLIT_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 拆菲标题', zhP.data.t.navTitle, '拆菲号');
+  eq('en 拆菲标题', enP.data.t.navTitle, 'Split Bundle');
+  eq('en 转出数量', enP.data.t.transferQtyLabel, 'Transfer Qty');
+  ok('en 拆菲提示无中文', !CJK_RE.test(String(enP.data.t.splitHintEmpty)), enP.data.t.splitHintEmpty);
+  ok('en 调整原因占位无中文', !CJK_RE.test(String(enP.data.t.adjustReasonPh)), enP.data.t.adjustReasonPh);
+
+  eq('拆菲页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Split Bundle');
+  eq('拆菲页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '拆菲号');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3169,6 +3190,7 @@ try {
   testI18nOrderDetail();
   testI18nTaskDetail();
   testI18nBundleDetail();
+  testI18nBundleSplit();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));

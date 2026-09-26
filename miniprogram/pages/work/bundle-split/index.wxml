@@ -8,9 +8,9 @@ module.exports = { abbr: abbr };
 <view class="container">
   <!-- ======== Tab 切换栏 ======== -->
   <view class="tab-bar">
-    <view class="tab-item {{activeTab === 0 ? 'tab-active' : ''}}" data-tab="0" bindtap="switchTab">拆菲号</view>
-    <view class="tab-item {{activeTab === 1 ? 'tab-active' : ''}}" data-tab="1" bindtap="switchTab">待确认</view>
-    <view class="tab-item {{activeTab === 2 ? 'tab-active' : ''}}" data-tab="2" bindtap="switchTab">单价调整</view>
+    <view class="tab-item {{activeTab === 0 ? 'tab-active' : ''}}" data-tab="0" bindtap="switchTab">{{t.navTitle}}</view>
+    <view class="tab-item {{activeTab === 1 ? 'tab-active' : ''}}" data-tab="1" bindtap="switchTab">{{t.statusPendingCfm}}</view>
+    <view class="tab-item {{activeTab === 2 ? 'tab-active' : ''}}" data-tab="2" bindtap="switchTab">{{t.priceAdjustTitle}}</view>
   </view>
 
   <!-- ======== Panel 0: 拆菲号 ======== -->
@@ -19,13 +19,13 @@ module.exports = { abbr: abbr };
     <!-- 搜索订单 -->
     <view wx:if="{{needSearch}}" class="search-bar-wrap">
       <view class="search-bar-row">
-        <input class="search-bar-input" placeholder="输入订单号或扫码查单" value="{{searchOrderNo}}" bindinput="onSearchInput" confirm-type="search" bindconfirm="doSearch" />
-        <view class="search-bar-btn" bindtap="doSearch" hover-class="search-bar-btn-hover">查询</view>
+        <input class="search-bar-input" placeholder="{{t.searchOrderPhW}}" value="{{searchOrderNo}}" bindinput="onSearchInput" confirm-type="search" bindconfirm="doSearch" />
+        <view class="search-bar-btn" bindtap="doSearch" hover-class="search-bar-btn-hover">{{t.queryBtn}}</view>
       </view>
       <view class="scan-bundle-bar">
         <view class="scan-bundle-btn" bindtap="scanBundleQr" hover-class="scan-bundle-btn-hover">
           <view class="scan-icon line-icon icon-camera"></view>
-          <text>扫码菲号直接拆</text>
+          <text>{{t.scanDirectTab}}</text>
         </view>
       </view>
     </view>
@@ -34,16 +34,16 @@ module.exports = { abbr: abbr };
     <block wx:else>
       <view class="order-bar">
         <view class="order-bar-left">
-          <text class="order-label">订单号</text>
+          <text class="order-label">{{t.orderNoLabel}}</text>
           <text class="order-no">{{orderNo}}</text>
         </view>
         <view class="order-bar-actions">
-          <view class="scan-bundle-btn-inline" bindtap="scanBundleQr" hover-class="change-btn-hover"><view class="line-icon icon-camera"></view><text>扫菲号</text></view>
-          <view class="change-btn" bindtap="changeOrder" hover-class="change-btn-hover">换单</view>
+          <view class="scan-bundle-btn-inline" bindtap="scanBundleQr" hover-class="change-btn-hover"><view class="line-icon icon-camera"></view><text>{{t.scanBundleTab}}</text></view>
+          <view class="change-btn" bindtap="changeOrder" hover-class="change-btn-hover">{{t.switchOrderTab}}</view>
         </view>
       </view>
 
-      <view wx:if="{{loading}}" class="loading-state"><text>加载菲号中...</text></view>
+      <view wx:if="{{loading}}" class="loading-state"><text>{{t.loadingBundles}}</text></view>
 
       <view wx:elif="{{bundles.length}}" class="bundle-list">
         <view wx:for="{{bundles}}" wx:key="id" class="bundle-card {{selectedIdx === index ? 'selected' : ''}}" bindtap="selectBundle" data-idx="{{index}}">
@@ -60,7 +60,7 @@ module.exports = { abbr: abbr };
             <view class="bundle-info">
               <!-- 第 1 行：订单号 -->
               <view class="bundle-info-row">
-                <text class="bi-label">订单号</text>
+                <text class="bi-label">{{t.orderNoLabel}}</text>
                 <text class="bi-val bi-order-no">{{item.productionOrderNo || orderNo}}</text>
               </view>
               <!-- 第 2 行：款号 · 颜色 -->
@@ -71,11 +71,11 @@ module.exports = { abbr: abbr };
               </view>
               <!-- 第 3 行：菲号 + 数量徽章 + 持有人 -->
               <view class="bundle-info-row">
-                <text class="bi-label">菲号</text>
+                <text class="bi-label">{{t.bundleWord}}</text>
                 <text class="bi-val bi-bundle-label">{{item.bundleLabel || item.bundleNo}}</text>
-                <text class="bi-badge">{{item.quantity}}件</text>
+                <text class="bi-badge">{{item.quantity}}{{t.qtyLabel}}</text>
                 <text wx:if="{{item.operatorName}}" class="bi-dot">·</text>
-                <text wx:if="{{item.operatorName}}" class="bi-holder-label">持有</text>
+                <text wx:if="{{item.operatorName}}" class="bi-holder-label">{{t.holdingLabel}}</text>
                 <text wx:if="{{item.operatorName}}" class="bi-holder-name">{{item.operatorName}}</text>
               </view>
             </view>
@@ -84,44 +84,44 @@ module.exports = { abbr: abbr };
           <view wx:if="{{selectedIdx === index}}" class="split-divider" catchtap=""></view>
           <view wx:if="{{selectedIdx === index}}" class="split-form" catchtap="">
             <view class="form-row">
-              <text class="form-label">转出数量</text>
-              <input class="form-input" type="number" placeholder="输入件数" value="{{splitQty}}" bindinput="onQtyInput" />
+              <text class="form-label">{{t.transferQtyLabel}}</text>
+              <input class="form-input" type="number" placeholder="{{t.inputQtyPh}}" value="{{splitQty}}" bindinput="onQtyInput" />
             </view>
             <!-- D-517：工序/工人改可搜索选择器（工厂工人几十上百人，原生 picker 只能一路滚） -->
             <view class="form-row">
-              <text class="form-label">当前工序</text>
+              <text class="form-label">{{t.currentProcess}}</text>
               <view class="picker-box" bindtap="openPicker" data-key="process">
-                <text class="{{processIdx >= 0 ? '' : 'placeholder'}}">{{processIdx >= 0 ? processes[processIdx].processName : '选择工序'}}</text>
+                <text class="{{processIdx >= 0 ? '' : 'placeholder'}}">{{processIdx >= 0 ? processes[processIdx].processName : t.pickProcessPh}}</text>
                 <view class="arrow icon-arrow-right-sm"></view>
               </view>
             </view>
             <view class="form-row">
-              <text class="form-label">接手工人</text>
+              <text class="form-label">{{t.nextWorkerLabel}}</text>
               <view class="picker-box" bindtap="openPicker" data-key="worker">
-                <text class="{{workerIdx >= 0 ? '' : 'placeholder'}}">{{workerIdx >= 0 ? workers[workerIdx].workerName : '选择工人'}}</text>
+                <text class="{{workerIdx >= 0 ? '' : 'placeholder'}}">{{workerIdx >= 0 ? workers[workerIdx].workerName : t.pickWorkerPh}}</text>
                 <view class="arrow icon-arrow-right-sm"></view>
               </view>
             </view>
             <view class="split-summary" wx:if="{{processIdx >= 0 && splitQty}}">
-              <text>剩余 {{(bundles[selectedIdx].quantity || 0) - splitQty}} 件保留，{{splitQty}} 件转给 {{workers[workerIdx].workerName || '--'}}</text>
+              <text>{{t.remainFmt}}{{(bundles[selectedIdx].quantity || 0) - splitQty}}{{t.keepUnit}}{{splitQty}}{{t.transferTo}}{{workers[workerIdx].workerName || '--'}}</text>
             </view>
-            <view class="submit-btn {{submitting ? 'disabled' : ''}}" bindtap="submitSplit" hover-class="submit-hover">{{submitting ? '提交中...' : '确认拆分'}}</view>
+            <view class="submit-btn {{submitting ? 'disabled' : ''}}" bindtap="submitSplit" hover-class="submit-hover">{{submitting ? t.submitWord : t.confirmSplit}}</view>
           </view>
         </view>
       </view>
 
       <view wx:else class="empty-state empty-state-card">
         <view class="empty-icon line-icon line-icon--xl icon-package"></view>
-        <text class="empty-text">该订单暂无菲号</text>
-        <text class="empty-hint">请确认订单号是否正确，或扫码菲号直接拆</text>
+        <text class="empty-text">{{t.noBundlesOrder}}</text>
+        <text class="empty-hint">{{t.checkOrderHint}}</text>
       </view>
     </block>
 
     <!-- 拆分记录 -->
     <view wx:if="{{splitRecords.length}}" class="records-section">
       <view class="records-header">
-        <text class="records-title">拆分记录</text>
-        <text class="records-clear" bindtap="clearRecords">清空</text>
+        <text class="records-title">{{t.splitRecordsTab}}</text>
+        <text class="records-clear" bindtap="clearRecords">{{t.clearBtn}}</text>
       </view>
       <view class="record-item" wx:for="{{splitRecords}}" wx:key="time">
         <view class="record-top">
@@ -130,7 +130,7 @@ module.exports = { abbr: abbr };
         </view>
         <view class="record-bottom">
           <text class="record-bundle">{{item.bundleNo}}</text>
-          <text class="record-detail">{{item.qty}}件 → {{item.workerName}}</text>
+          <text class="record-detail">{{item.qty}}{{t.qtyLabel}} → {{item.workerName}}</text>
         </view>
       </view>
     </view>
@@ -138,44 +138,44 @@ module.exports = { abbr: abbr };
 
   <!-- ======== Panel 1: 待确认 ======== -->
   <view wx:if="{{activeTab === 1}}">
-    <view wx:if="{{pendingLoading}}" class="loading-state"><text>加载中...</text></view>
+    <view wx:if="{{pendingLoading}}" class="loading-state"><text>{{t.loading}}</text></view>
 
     <view wx:elif="{{pendingSplits.length}}" class="pending-list">
       <view wx:for="{{pendingSplits}}" wx:key="id" class="pending-card">
         <view class="pending-header">
-          <text class="pending-label">拆菲请求</text>
+          <text class="pending-label">{{t.splitRequestTab}}</text>
           <text class="pending-status pending">{{item.splitStatusText}}</text>
         </view>
         <view class="pending-row">
-          <text class="pending-key">订单号</text>
+          <text class="pending-key">{{t.orderNoLabel}}</text>
           <text class="pending-val">{{item.orderNo || '-'}}</text>
         </view>
         <view class="pending-row">
-          <text class="pending-key">菲号</text>
+          <text class="pending-key">{{t.bundleWord}}</text>
           <text class="pending-val">{{item.sourceBundleName || item.sourceBundleLabel || '-'}}</text>
         </view>
         <view class="pending-row">
-          <text class="pending-key">工序</text>
+          <text class="pending-key">{{t.processWord}}</text>
           <text class="pending-val">{{item.currentProcessName || '-'}}</text>
         </view>
         <view class="pending-row">
-          <text class="pending-key">数量</text>
-          <text class="pending-val highlight">{{item.transferQuantity || 0}} 件</text>
+          <text class="pending-key">{{t.qtyLabel}}</text>
+          <text class="pending-val highlight">{{item.transferQuantity || 0}}{{t.qtyLabel}}</text>
         </view>
         <view class="pending-row">
-          <text class="pending-key">来自</text>
+          <text class="pending-key">{{t.fromLabel}}</text>
           <text class="pending-val">{{item.fromWorkerName || '-'}}</text>
         </view>
         <view class="confirm-btn {{confirmingId === item.id ? 'disabled' : ''}}" data-id="{{item.id}}" bindtap="confirmPendingSplit" hover-class="submit-hover">
-          {{confirmingId === item.id ? '确认中...' : '接收并确认'}}
+          {{confirmingId === item.id ? t.confirmingW : t.receiveConfirm}}
         </view>
       </view>
     </view>
 
     <view wx:else class="empty-state empty-state-card">
       <view class="empty-icon line-icon line-icon--xl icon-inbox"></view>
-      <text class="empty-text">暂无待确认的拆菲请求</text>
-      <text class="empty-hint">当有工友向你拆菲转派时会显示在这里</text>
+      <text class="empty-text">{{t.noPendingSplits}}</text>
+      <text class="empty-hint">{{t.splitHintEmpty}}</text>
     </view>
   </view>
 
@@ -185,13 +185,13 @@ module.exports = { abbr: abbr };
     <!-- 搜索订单 -->
     <view class="search-bar-wrap">
       <view class="search-bar-row">
-        <input class="search-bar-input" placeholder="输入订单号查询工序" value="{{priceSearchInput}}" bindinput="onPriceSearchInput" confirm-type="search" bindconfirm="doPriceSearch" />
-        <view class="search-bar-btn" bindtap="doPriceSearch" hover-class="search-bar-btn-hover">查询</view>
+        <input class="search-bar-input" placeholder="{{t.searchProcessPh}}" value="{{priceSearchInput}}" bindinput="onPriceSearchInput" confirm-type="search" bindconfirm="doPriceSearch" />
+        <view class="search-bar-btn" bindtap="doPriceSearch" hover-class="search-bar-btn-hover">{{t.queryBtn}}</view>
       </view>
     </view>
 
     <!-- 工序列表 -->
-    <view wx:if="{{priceLoading}}" class="loading-state"><text>加载工序中...</text></view>
+    <view wx:if="{{priceLoading}}" class="loading-state"><text>{{t.loadingProcess}}</text></view>
 
     <view wx:elif="{{priceProcesses.length}}" class="process-list">
       <view wx:for="{{priceProcesses}}" wx:key="processName" class="process-card {{selectedProcessIdx === index ? 'selected' : ''}}" bindtap="selectPriceProcess" data-idx="{{index}}">
@@ -202,35 +202,35 @@ module.exports = { abbr: abbr };
         <view class="process-meta">
           <text wx:if="{{item.progressStage}}">{{item.progressStage}}</text>
           <text class="meta-sep" wx:if="{{item.progressStage}}">/</text>
-          <text>{{item.bundleCount || 0}} 个菲号</text>
+          <text>{{item.bundleCount || 0}}{{t.bundleCountW}}</text>
         </view>
 
         <!-- 展开的调整表单 -->
         <view wx:if="{{selectedProcessIdx === index}}" class="adjust-form" catchtap="">
-          <view wx:if="{{!isAdmin}}" class="admin-tip"><view class="icon-warning-orange"></view><text> 仅管理员可调整单价</text></view>
+          <view wx:if="{{!isAdmin}}" class="admin-tip"><view class="icon-warning-orange"></view><text> {{t.adminOnlyPrice}}</text></view>
           <view class="form-row">
-            <text class="form-label">新单价（元）</text>
-            <input class="form-input" type="digit" placeholder="输入新单价" value="{{adjustPrice}}" bindinput="onAdjustPriceInput" />
+            <text class="form-label">{{t.newPriceYuan}}</text>
+            <input class="form-input" type="digit" placeholder="{{t.newPricePh}}" value="{{adjustPrice}}" bindinput="onAdjustPriceInput" />
           </view>
           <view class="form-row form-row-full">
-            <text class="form-label">调整原因（必填）</text>
-            <textarea class="reason-textarea" placeholder="请输入调整原因，如：面料加厚工艺变复杂" value="{{adjustReason}}" bindinput="onAdjustReasonInput" maxlength="200" />
+            <text class="form-label">{{t.adjustReasonReq}}</text>
+            <textarea class="reason-textarea" placeholder="{{t.adjustReasonPh}}" value="{{adjustReason}}" bindinput="onAdjustReasonInput" maxlength="200" />
           </view>
-          <view class="submit-btn {{adjustSubmitting || !isAdmin ? 'disabled' : ''}}" bindtap="submitAdjust" hover-class="submit-hover">{{adjustSubmitting ? '提交中...' : '确认调整'}}</view>
+          <view class="submit-btn {{adjustSubmitting || !isAdmin ? 'disabled' : ''}}" bindtap="submitAdjust" hover-class="submit-hover">{{adjustSubmitting ? t.submitWord : t.confirmAdjustBtn}}</view>
         </view>
       </view>
     </view>
 
     <view wx:elif="{{priceOrderNo && !priceLoading}}" class="empty-state empty-state-card">
       <view class="empty-icon line-icon line-icon--xl icon-clipboard"></view>
-      <text class="empty-text">该订单暂无工序数据</text>
-      <text class="empty-hint">请确认订单已分配工序</text>
+      <text class="empty-text">{{t.noProcessData}}</text>
+      <text class="empty-hint">{{t.checkOrderStages}}</text>
     </view>
 
     <!-- 调整历史 -->
     <view wx:if="{{adjustHistory.length}}" class="records-section">
       <view class="records-header">
-        <text class="records-title">调整记录</text>
+        <text class="records-title">{{t.adjustRecordsTab}}</text>
       </view>
       <view class="record-item" wx:for="{{adjustHistory}}" wx:key="id">
         <view class="record-top">
@@ -242,7 +242,7 @@ module.exports = { abbr: abbr };
           <text class="record-detail adjust-by">{{item.adjustedByName}}</text>
         </view>
         <view wx:if="{{item.reason}}" class="record-reason">
-          <text>原因：{{item.reason}}</text>
+          <text>{{t.reasonPrefix}}{{item.reason}}</text>
         </view>
       </view>
     </view>
