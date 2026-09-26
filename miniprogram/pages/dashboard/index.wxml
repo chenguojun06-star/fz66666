@@ -2,7 +2,7 @@
 <view class="page">
   <!-- 吸顶区：搜索 + 扫码 + 筛选器（统一使用通用组件 sticky-search-bar） -->
   <sticky-search-bar
-    placeholder="搜索订单号/款号/工厂"
+    placeholder="{{t.searchPhW}}"
     value="{{searchKey}}"
     show-scan="{{true}}"
     show-filter="{{true}}"
@@ -40,12 +40,12 @@
           <view class="info-line1">
             <text class="order-no">{{item.orderNo}}</text>
             <view class="info-badges">
-              <text wx:if="{{item.isUrgent}}" class="urgent-badge">急</text>
+              <text wx:if="{{item.isUrgent}}" class="urgent-badge">{{t.urgentTag}}</text>
               <text wx:if="{{item.statusText}}" class="status-badge status-badge--{{item.statusClass}}">{{item.statusText}}</text>
             </view>
           </view>
           <!-- 行2：款名 -->
-          <view class="info-style">{{item.styleName || item.styleNo || '暂无款名'}}</view>
+          <view class="info-style">{{item.styleName || item.styleNo || t.noStyleNameW}}</view>
           <!-- 行3：客户名 -->
           <view class="info-customer" wx:if="{{item.customerName}}">{{item.customerName}}</view>
           <!-- 行4：工厂名 -->
@@ -56,9 +56,9 @@
       <!-- 进度行：数量·交期 + 进度条 + 百分比 + 剩余天数（同一行） -->
       <view class="info-progress">
         <view class="ip-left">
-          <text class="ip-qty">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}件</text>
+          <text class="ip-qty">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}{{t.pieceUnit2}}</text>
           <text class="ip-dot">·</text>
-          <text class="ip-delivery" wx:if="{{item.deliveryDateStr}}">交期 {{item.deliveryDateStr}}</text>
+          <text class="ip-delivery" wx:if="{{item.deliveryDateStr}}">{{t.deliveryPrefix}} {{item.deliveryDateStr}}</text>
         </view>
         <view class="ip-bar">
           <view class="ip-fill {{item.remainDaysClass === 'days-overdue' ? 'ip-fill--overdue' : ''}} {{item.isClosed ? 'ip-fill--done' : ''}}" style="width:{{item.calculatedProgress > 100 ? 100 : item.calculatedProgress}}%"></view>
@@ -69,7 +69,7 @@
 
       <!-- 展开按钮：多菲才显示折叠切换，单菲直接展示 -->
       <view class="order-expand-btn" wx:if="{{item.colorGroups.length > 1}}" data-index="{{index}}" catchtap="onCardToggle">
-        <text class="expand-btn-text">{{item.expanded ? '收起菲号明细' : '展开菲号明细'}}</text>
+        <text class="expand-btn-text">{{item.expanded ? t.collapseBundle : t.expandBundle}}</text>
         <view class="expand-btn-arrow {{item.expanded ? 'expand-btn-arrow--up' : ''}}"><view class="icon-chevron-down-sm"></view></view>
       </view>
 
@@ -77,25 +77,25 @@
       <view class="order-expand" wx:if="{{item.expanded}}">
         <!-- D-197：快捷操作上移到展开区顶部，先给动作再看明细 -->
         <view class="expand-actions">
-          <view class="act-btn act-btn--detail" catchtap="onViewDetail" data-order-no="{{item.orderNo}}" data-index="{{index}}">详情</view>
-          <view class="act-btn act-btn--primary" catchtap="onGoProcurement" data-index="{{index}}">采购</view>
-          <view class="act-btn act-btn--primary" catchtap="onViewCuttingBundles" data-order-no="{{item.orderNo}}">裁剪</view>
-          <view class="act-btn act-btn--primary" catchtap="onEditProcess" data-order-id="{{item.id}}" data-order-no="{{item.orderNo}}" data-status="{{item.status}}" wx:if="{{item.status === 'production'}}">工序</view>
-          <view class="act-btn act-btn--warn" catchtap="onTransferOrder" data-order-id="{{item.id}}" data-order-no="{{item.orderNo}}">转单</view>
-          <view class="act-btn act-btn--remark" catchtap="onOpenRemark" data-index="{{index}}">备注</view>
-          <view class="act-btn" catchtap="onCopyOrderNo" data-order-no="{{item.orderNo}}">复制单号</view>
+          <view class="act-btn act-btn--detail" catchtap="onViewDetail" data-order-no="{{item.orderNo}}" data-index="{{index}}">{{t.detailBtn}}</view>
+          <view class="act-btn act-btn--primary" catchtap="onGoProcurement" data-index="{{index}}">{{t.actPurchase}}</view>
+          <view class="act-btn act-btn--primary" catchtap="onViewCuttingBundles" data-order-no="{{item.orderNo}}">{{t.actCutting}}</view>
+          <view class="act-btn act-btn--primary" catchtap="onEditProcess" data-order-id="{{item.id}}" data-order-no="{{item.orderNo}}" data-status="{{item.status}}" wx:if="{{item.status === 'production'}}">{{t.actProcess}}</view>
+          <view class="act-btn act-btn--warn" catchtap="onTransferOrder" data-order-id="{{item.id}}" data-order-no="{{item.orderNo}}">{{t.transferTab}}</view>
+          <view class="act-btn act-btn--remark" catchtap="onOpenRemark" data-index="{{index}}">{{t.actRemark}}</view>
+          <view class="act-btn" catchtap="onCopyOrderNo" data-order-no="{{item.orderNo}}">{{t.copyNoBtn}}</view>
         </view>
 
         <!-- 菲号明细 -->
         <view class="detail-head">
-          <text class="detail-title">菲号明细</text>
-          <text class="detail-count">共{{item.colorGroups.length || 0}}菲</text>
+          <text class="detail-title">{{t.bundleDetailBtn}}</text>
+          <text class="detail-count">{{t.detailCountFmt}}{{item.colorGroups.length || 0}}{{t.phUnit}}</text>
         </view>
         <view class="detail-table">
           <view class="detail-row detail-row--head">
-            <view class="detail-cell detail-cell--no">菲号</view>
-            <view class="detail-cell detail-cell--proc">工序明细</view>
-            <view class="detail-cell detail-cell--qty">数量</view>
+            <view class="detail-cell detail-cell--no">{{t.bundleWord}}</view>
+            <view class="detail-cell detail-cell--proc">{{t.processDetailBtn}}</view>
+            <view class="detail-cell detail-cell--qty">{{t.qtyLabel}}</view>
           </view>
           <block wx:if="{{item.colorGroups && item.colorGroups.length > 0}}">
             <view class="detail-row" wx:for="{{item.colorGroups}}" wx:for-item="cg" wx:key="color">
@@ -103,18 +103,18 @@
               <view class="detail-cell detail-cell--proc">
                 <text wx:for="{{item.processNodes}}" wx:for-item="pn" wx:for-index="pni" wx:key="name" class="proc-node">{{pn.name}}<text wx:if="{{pni < item.processNodes.length - 1}}" class="proc-sep">→</text></text>
               </view>
-              <view class="detail-cell detail-cell--qty">{{cg.total}}件</view>
+              <view class="detail-cell detail-cell--qty">{{cg.total}}{{t.pieceUnit2}}</view>
             </view>
           </block>
           <view class="detail-row detail-row--empty" wx:else>
-            <view class="detail-cell detail-cell--empty">暂无菲号明细</view>
+            <view class="detail-cell detail-cell--empty">{{t.noBundleDetail}}</view>
           </view>
         </view>
 
         <!-- 工序进度明细（D-280：时间线布局/动画对齐样衣开发跟进） -->
         <view class="expand-section" wx:if="{{item.processNodes && item.processNodes.length > 0}}">
           <view class="proc-head">
-            <text class="expand-title">工序进度</text>
+            <text class="expand-title">{{t.processProgress}}</text>
           </view>
           <view class="proc-timeline">
             <view wx:for="{{item.processNodes}}" wx:for-item="node" wx:key="name" class="proc-tl-item">
@@ -132,17 +132,17 @@
                   <view class="proc-tl-name-row">
                     <text class="proc-tl-name {{node._status === 'pending' ? 'proc-tl-name--pending' : ''}}">{{node.name}}</text>
                   </view>
-                  <text wx:if="{{node.qtyInfo}}" class="proc-tl-qty">{{node.qtyInfo.completed}}/{{node.qtyInfo.total}}件</text>
+                  <text wx:if="{{node.qtyInfo}}" class="proc-tl-qty">{{node.qtyInfo.completed}}/{{node.qtyInfo.total}}{{t.pieceUnit2}}</text>
                   <text wx:else class="proc-tl-qty">{{node.percent > 0 ? node.percent : 0}}%</text>
                 </view>
                 <view class="proc-tl-bar">
                   <view class="proc-tl-fill {{node._status === 'completed' ? 'proc-tl-fill--done' : ''}}" style="width:{{node.percent > 100 ? 100 : (node.percent > 0 ? node.percent : 0)}}%"></view>
                 </view>
                 <view class="proc-tl-meta" wx:if="{{node.bundleInfo || node.startTime || node.endTime || node.durationText || node.gapText || node.priceText}}">
-                  <text wx:if="{{node.bundleInfo}}" class="proc-tl-meta-text">{{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}菲</text>
-                  <text wx:if="{{node.startTime}}" class="proc-tl-meta-text">{{node.bundleInfo ? ' · ' : ''}}开始 {{node.startTime}}</text>
+                  <text wx:if="{{node.bundleInfo}}" class="proc-tl-meta-text">{{node.bundleInfo.scanned}}/{{node.bundleInfo.total}}{{t.phUnit}}</text>
+                  <text wx:if="{{node.startTime}}" class="proc-tl-meta-text">{{node.bundleInfo ? ' · ' : ''}}{{t.startPrefix}} {{node.startTime}}</text>
                   <text wx:if="{{node.endTime}}" class="proc-tl-meta-text"> · {{node.endLabel}} {{node.endTime}}</text>
-                  <text wx:if="{{node.durationText}}" class="{{node.durationClass}}"> · 耗时 {{node.durationText}}</text>
+                  <text wx:if="{{node.durationText}}" class="{{node.durationClass}}">{{t.durationPrefix}}{{node.durationText}}</text>
                   <text wx:if="{{node.gapText}}" class="{{node.gapClass}}"> · {{node.gapText}}</text>
                   <text wx:if="{{node.priceText}}" class="proc-tl-meta-text"> · {{node.priceText}}</text>
                 </view>
@@ -153,13 +153,13 @@
 
         <!-- 颜色尺码矩阵 -->
         <view class="expand-section" wx:if="{{item.colorGroups && item.colorGroups.length > 0}}">
-          <text class="expand-title">颜色尺码</text>
+          <text class="expand-title">{{t.colorSizeLabel}}</text>
           <scroll-view scroll-x class="sku-scroll" enhanced show-scrollbar="{{false}}">
             <view class="sku-table">
               <view class="sku-row sku-row--head">
-                <text class="sku-cell sku-cell--color">颜色</text>
+                <text class="sku-cell sku-cell--color">{{t.colorLabel}}</text>
                 <text class="sku-cell" wx:for="{{item.allSizes}}" wx:for-item="sz" wx:key="*this">{{sz}}</text>
-                <text class="sku-cell sku-cell--total">合计</text>
+                <text class="sku-cell sku-cell--total">{{t.totalLabel}}</text>
               </view>
               <view class="sku-row" wx:for="{{item.colorGroups}}" wx:for-item="cg" wx:key="color">
                 <text class="sku-cell sku-cell--color">{{cg.color}}</text>
@@ -175,13 +175,13 @@
   </view>
 
   <!-- 加载更多 -->
-  <view class="load-tip" wx:if="{{orders.loading}}">加载中…</view>
-  <view class="load-tip load-tip--end" wx:if="{{!orders.loading && !orders.hasMore && orders.list.length > 0}}">— 没有更多了 —</view>
+  <view class="load-tip" wx:if="{{orders.loading}}">{{t.loadingTxt}}</view>
+  <view class="load-tip load-tip--end" wx:if="{{!orders.loading && !orders.hasMore && orders.list.length > 0}}">{{t.noMoreW}}</view>
 
   <!-- 空状态 -->
   <view class="empty" wx:if="{{!loading && !orders.loading && orders.list.length === 0}}">
     <view class="empty-icon"><view class="line-icon line-icon--xl icon-clipboard"></view></view>
-    <text class="empty-text">暂无订单数据</text>
+    <text class="empty-text">{{t.noOrdersW}}</text>
   </view>
 
   <!-- 小云 AI 助手 -->

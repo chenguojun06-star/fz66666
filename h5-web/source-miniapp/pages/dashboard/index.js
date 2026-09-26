@@ -11,6 +11,8 @@
  *   production.orderStats()    → 订单统计（与H5进度看板一致）
  *   production.listOrders      → 订单列表 + 状态计数
  */
+const i18n = require('../../utils/i18n/index');
+const NS = 'mp.dashboard.';
 const api = require('../../utils/api');
 const { transformOrderData } = require('./utils/orderTransform');
 const { buildProcessNodesWithRates, calcOrderProgress } = require('./utils/progressNodes');
@@ -25,10 +27,10 @@ const app = getApp();
 
 /* 状态过滤映射（值 = 后端 status 字段；overdue 为客户端筛选） */
 const STATUS_FILTERS = [
-  { key: 'all',           label: '全部',   value: '' },
-  { key: 'in_production', label: '生产中', value: 'production' },
-  { key: 'completed',     label: '已完成', value: 'completed' },
-  { key: 'overdue',       label: '延期',   value: '' },
+  { key: 'all', i18nKey: 'stAll', value: '' },
+  { key: 'in_production', i18nKey: 'stProducing', value: 'production' },
+  { key: 'completed', i18nKey: 'stCompleted', value: 'completed' },
+  { key: 'overdue', i18nKey: 'stDelayed', value: '' },
 ];
 
 function buildProcessNodes(order) {
@@ -53,7 +55,7 @@ Page({
     loading: true,
     unreadNoticeCount: 0,
     /* 状态过滤 */
-    statFilters: STATUS_FILTERS,
+    statFilters: [],  // applyLanguage 重建
     activeFilter: 'all',
     statCounts: { all: 0, in_production: 0, completed: 0, overdue: 0 },
     searchKey: '',
@@ -63,11 +65,57 @@ Page({
     priceVisible: true,
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}），状态 tabs 重建 */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        urgentTag: i18n.t(NS + 'urgentTag', lang),
+        detailBtn: i18n.t(NS + 'detailBtn', lang),
+        actPurchase: i18n.t(NS + 'actPurchase', lang),
+        actCutting: i18n.t(NS + 'actCutting', lang),
+        actProcess: i18n.t(NS + 'actProcess', lang),
+        transferTab: i18n.t(NS + 'transferTab', lang),
+        actRemark: i18n.t(NS + 'actRemark', lang),
+        copyNoBtn: i18n.t(NS + 'copyNoBtn', lang),
+        bundleDetailBtn: i18n.t(NS + 'bundleDetailBtn', lang),
+        bundleWord: i18n.t('mp.scanResult.bundleWord', lang),
+        processDetailBtn: i18n.t(NS + 'processDetailBtn', lang),
+        qtyLabel: i18n.t(NS + 'qtyLabel', lang),
+        noBundleDetail: i18n.t(NS + 'noBundleDetail', lang),
+        processProgress: i18n.t(NS + 'processProgress', lang),
+        colorSizeLabel: i18n.t(NS + 'colorSizeLabel', lang),
+        colorLabel: i18n.t(NS + 'colorLabel', lang),
+        totalLabel: i18n.t(NS + 'totalLabel', lang),
+        loadingTxt: i18n.t(NS + 'loadingTxt', lang),
+        noMoreW: i18n.t(NS + 'noMoreW', lang),
+        noOrdersW: i18n.t(NS + 'noOrdersW', lang),
+        pieceUnit: i18n.t(NS + 'pieceUnit', lang),
+        deliveryPrefix: i18n.t(NS + 'deliveryPrefix', lang),
+        searchPhW: i18n.t(NS + 'searchPhW', lang),
+        noStyleNameW: i18n.t(NS + 'noStyleNameW', lang),
+        collapseBundle: i18n.t(NS + 'collapseBundle', lang),
+        expandBundle: i18n.t(NS + 'expandBundle', lang),
+        detailCountFmt: i18n.t(NS + 'detailCountFmt', lang),
+        phUnit: i18n.t(NS + 'phUnit', lang),
+        pieceUnit2: i18n.t(NS + 'pieceUnit2', lang),
+        startPrefix: i18n.t(NS + 'startPrefix', lang),
+        durationPrefix: i18n.t(NS + 'durationPrefix', lang),
+      },
+      statFilters: STATUS_FILTERS.map(function (f) { return { key: f.key, label: i18n.t(NS + f.i18nKey, lang), value: f.value }; }),
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function (options) {
+    this.applyLanguage(i18n.getLanguage());
     const app = getApp();
     if (app.requireAuth && !app.requireAuth()) return;
     if (!isTenantOwner() && !isAdminOrSupervisor()) {
-      wx.showToast({ title: '无权限访问', icon: 'none', duration: 1500 });
+      wx.showToast({ title: i18n.t(NS + 'noPermission', this._lang), icon: 'none', duration: 1500 });
       wx.navigateBack({ delta: 1, fail: function () { wx.switchTab({ url: '/pages/home/index' }); } });
       return;
     }
@@ -183,9 +231,9 @@ Page({
         loading: false,
       });
       if (apiFailCount >= 3) {
-        wx.showToast({ title: '数据加载失败，请下拉刷新', icon: 'none', duration: 2500 });
+        wx.showToast({ title: i18n.t(NS + 'loadFailRefresh', this._lang), icon: 'none', duration: 2500 });
       } else if (apiFailCount > 0) {
-        wx.showToast({ title: '部分数据加载失败', icon: 'none', duration: 2000 });
+        wx.showToast({ title: i18n.t(NS + 'partialFail', this._lang), icon: 'none', duration: 2000 });
       }
     }).catch(function (err) {
       console.error('[Dashboard] refreshCards error:', err);
@@ -358,16 +406,16 @@ Page({
 
   onCopyOrderNo: function (e) {
     const orderNo = e.currentTarget.dataset.orderNo;
-    if (!orderNo) { wx.showToast({ title: '订单号缺失', icon: 'none' }); return; }
+    if (!orderNo) { wx.showToast({ title: i18n.t(NS + 'orderNoMissing', this._lang), icon: 'none' }); return; }
     // D-211：补 fail 提示——此前静默失败时用户以为按钮坏了
     wx.setClipboardData({
       data: orderNo,
       success: function () {
-        wx.showToast({ title: '已复制', icon: 'success', duration: 1000 });
+        wx.showToast({ title: i18n.t(NS + 'copiedW', this._lang), icon: 'success', duration: 1000 });
       },
       fail: function (err) {
         console.error('[copy] setClipboardData fail', err);
-        wx.showToast({ title: '复制失败：' + ((err && err.errMsg) || '未知错误'), icon: 'none', duration: 2500 });
+        wx.showToast({ title: i18n.t(NS + 'copyFailPrefix', this._lang) + ((err && err.errMsg) || i18n.t(NS + 'unknownError', this._lang)), icon: 'none', duration: 2500 });
       },
     });
   },
@@ -402,7 +450,7 @@ Page({
     const status = e.currentTarget.dataset.status;
     if (!orderId) return;
     if (status !== 'production') {
-      wx.showToast({ title: '仅生产中的订单可编辑工序', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'onlyProdEdit', this._lang), icon: 'none' });
       return;
     }
     safeNavigate({ url: '/pages/dashboard/process-edit/index?orderId=' + encodeURIComponent(orderId) + '&orderNo=' + encodeURIComponent(orderNo || '') }).catch(() => {});
@@ -427,7 +475,7 @@ Page({
     scanInPage(function (parsed, raw) {
       if (!parsed) return; // 用户取消
       if (!parsed.success) {
-        toast(parsed.message || ('无法识别：' + raw));
+        toast(parsed.message || i18n.tf('mp.defect.scanUnrecognized', { raw: raw }, this._lang));
         return;
       }
       // 原地解析 + 工序检测，直接跳领取/报工/质检/入库等最终页面

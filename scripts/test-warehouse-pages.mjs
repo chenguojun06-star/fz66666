@@ -2494,6 +2494,8 @@ const ADVANCE_JS = 'pages/advance/list/index.js';
 const ADVANCE_WXML = 'pages/advance/list/index.wxml';
 const TASK_LIST_JS = 'pages/procurement/task-list/index.js';
 const TASK_LIST_WXML = 'pages/procurement/task-list/index.wxml';
+const DASH_JS = 'pages/dashboard/index.js';
+const DASH_WXML = 'pages/dashboard/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3416,6 +3418,25 @@ function testI18nTaskList() {
   eq('采购任务列表 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '物料采购');
 }
 
+/** 生产管理仪表盘（D-581）—— 状态过滤/订单卡/时间线/操作按钮 */
+function testI18nDashboard() {
+  testPageI18n(DASH_JS, DASH_WXML, '生产管理仪表盘');
+
+  const { page: zhP, wx: zhWx } = loadPage(DASH_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(DASH_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  const zhFilters = zhP.data.statFilters.map(f => f.label).join('|');
+  const enFilters = enP.data.statFilters.map(f => f.label).join('|');
+  eq('zh 状态过滤', zhFilters, '全部|生产中|已完成|延期');
+  ok('en 状态过滤无中文', !CJK_RE.test(enFilters), enFilters);
+  ok('en 复制失败提示键无中文', !CJK_RE.test(String(enP.data.t.copyFailPrefix)), enP.data.t.copyFailPrefix);
+
+  eq('仪表盘导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Production');
+  eq('仪表盘 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '生产管理');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3483,6 +3504,7 @@ try {
   testI18nUserApproval();
   testI18nAdvance();
   testI18nTaskList();
+  testI18nDashboard();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
