@@ -1,3 +1,5 @@
+const i18n = require('../../utils/i18n/index');
+const NS = 'mp.smartOps.';
 const api = require('../../utils/api');
 const { isTenantOwner, isSuperAdmin } = require('../../utils/storage');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
@@ -5,18 +7,19 @@ const { safeNavigate } = require('../../utils/uiHelper');
 
 const REFRESH_INTERVAL = 30;
 
+// label 存键后缀，applyLanguage 重建
 const STAGE_LIST = [
-  { key: 'procurement', label: '采购' },
-  { key: 'cutting', label: '裁剪' },
-  { key: 'secondaryProcess', label: '二次工艺' },
-  { key: 'sewing', label: '车缝' },
-  { key: 'tailProcess', label: '尾部' },
-  { key: 'warehousing', label: '入库' },
+  { key: 'procurement', i18nKey: 'stageProcure' },
+  { key: 'cutting', i18nKey: 'stageCutting' },
+  { key: 'secondaryProcess', i18nKey: 'stageSecondary' },
+  { key: 'sewing', i18nKey: 'stageSewing' },
+  { key: 'tailProcess', i18nKey: 'stageTail' },
+  { key: 'warehousing', i18nKey: 'stageWh' },
 ];
 
 const MENU_TITLES = {
-  inProduction: '生产中订单', todayOrders: '今日下单', todayInbound: '今日入库',
-  todayOutbound: '今日出库', delayedOrders: '延期订单', riskOrders: '风险订单',
+  inProduction: 'inProdOrders', todayOrders: 'todayOrder', todayInbound: 'todayInbound',
+  todayOutbound: 'todayOutbound', delayedOrders: 'delayedOrders', riskOrders: 'riskOrders',
 };
 
 function safeDate(s) {
@@ -123,9 +126,59 @@ Page({
 
   _timer: null, _countdown: REFRESH_INTERVAL,
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}），阶段列表重建 */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this._stageLabels = {};
+    STAGE_LIST.forEach(function (st) { this._stageLabels[st.key] = i18n.t(NS + st.i18nKey, lang); }.bind(this));
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        todayScanQty: i18n.t(NS + 'todayScanQty', lang),
+        pieceUnit: i18n.t(NS + 'pieceUnit', lang),
+        doingOrders: i18n.t(NS + 'doingOrders', lang),
+        partnerFactories: i18n.t(NS + 'partnerFactories', lang),
+        orderOverview: i18n.t(NS + 'orderOverview', lang),
+        producingW: i18n.t(NS + 'producingW', lang),
+        delayedOrders2: i18n.t(NS + 'delayedOrders2', lang),
+        noOrders: i18n.t(NS + 'noOrders', lang),
+        progressNodes: i18n.t(NS + 'progressNodes', lang),
+        tapExpand: i18n.t(NS + 'tapExpand', lang),
+        noneWord: i18n.t(NS + 'noneWord', lang),
+        noWipInStage: i18n.t(NS + 'noWipInStage', lang),
+        allWord: i18n.t(NS + 'allWord', lang),
+        onlyOnline: i18n.t(NS + 'onlyOnline', lang),
+        onlyAbnormal: i18n.t(NS + 'onlyAbnormal', lang),
+        noFactoryFilter: i18n.t(NS + 'noFactoryFilter', lang),
+        noFactoryData: i18n.t(NS + 'noFactoryData', lang),
+        orderUnit: i18n.t(NS + 'orderUnit', lang),
+        riskOrdersW: i18n.t(NS + 'riskOrders', lang),
+        todayOrderW: i18n.t(NS + 'todayOrder', lang),
+        todayInboundW: i18n.t(NS + 'todayInbound', lang),
+        todayOutboundW: i18n.t(NS + 'todayOutbound', lang),
+        delayedW: i18n.t(NS + 'delayedOrders', lang),
+        orderUnitW: i18n.t(NS + 'orderUnit', lang),
+        sysNormal: i18n.t(NS + 'sysNormal', lang),
+        riskOrdersW2: i18n.t(NS + 'riskOrders', lang),
+        deliveryPrefix: i18n.t(NS + 'deliveryPrefix', lang),
+        onlineW: i18n.t(NS + 'onlineW', lang),
+        stagnantW: i18n.t(NS + 'stagnantW', lang),
+        riskSuffix: i18n.t(NS + 'riskSuffix', lang),
+        overdueSuffix: i18n.t(NS + 'overdueSuffix', lang),
+        searchFactoryPh: i18n.t(NS + 'searchFactoryPh', lang),
+        autoRefreshFmt: i18n.t(NS + 'autoRefreshFmt', lang),
+      },
+      stageList: STAGE_LIST.map(function (st) { return { key: st.key, label: i18n.t(NS + st.i18nKey, lang) }; }),
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function () {
+    this.applyLanguage(i18n.getLanguage());
     if (!isTenantOwner() && !isSuperAdmin()) {
-      wx.showModal({ title: '权限不足', content: '运营看板仅限租户主账号使用', showCancel: false, complete: function () { wx.navigateBack(); } });
+      wx.showModal({ title: i18n.t(NS + 'permDenied', this._lang || i18n.getLanguage()), content: i18n.t(NS + 'ownerOnlyHint', this._lang || i18n.getLanguage()), showCancel: false, complete: function () { wx.navigateBack(); } });
       return;
     }
     const self = this;
@@ -177,7 +230,7 @@ Page({
     else if (key === 'todayOutbound') filtered = orders.filter(function(o) { return o._isTodayOutbound; });
     else if (key === 'delayedOrders') filtered = orders.filter(isDelayed);
     else if (key === 'riskOrders') filtered = orders.filter(isRisk);
-    this.setData({ activeMenu: key, activeMenuTitle: MENU_TITLES[key] || key, activeOrders: filtered.map(toOrderRow) });
+    this.setData({ activeMenu: key, activeMenuTitle: i18n.t(NS + MENU_TITLES[key], this._lang || i18n.getLanguage()) || key, activeOrders: filtered.map(toOrderRow) });
   },
 
   closeMenu: function () { this.setData({ activeMenu: '', activeOrders: [] }); },
@@ -189,7 +242,7 @@ Page({
     let bucket = null;
     for (let i = 0; i < buckets.length; i++) { if (buckets[i].key === key) { bucket = buckets[i]; break; } }
     if (!bucket) return;
-    this.setData({ activeStage: key, activeStageLabel: bucket.label, activeStageOrders: bucket.orders });
+    this.setData({ activeStage: key, activeStageLabel: i18n.t(NS + (bucket.i18nKey || ''), this._lang), activeStageOrders: bucket.orders });
   },
 
   closeStage: function () { this.setData({ activeStage: '', activeStageLabel: '', activeStageOrders: [] }); },
@@ -308,13 +361,15 @@ Page({
         riskOrdersQty: toNum(statsData && statsData.riskQuantity) || riskQty,
       };
       const totalWarn = menuData.delayedOrders + menuData.riskOrders;
+      var langZ = this._lang || i18n.getLanguage();
+      var alertText = totalWarn > 0 ? i18n.tf(NS + 'warnFmt', { n: totalWarn }, langZ) : i18n.t(NS + 'sysNormal', langZ);
 
       const stageBuckets = STAGE_LIST.map(function(stage) {
         const bucketOrders = inProd.filter(function(o) { return detectStage(o) === stage.key; });
         const qty = bucketOrders.reduce(function(s, o) { return s + toNum(o.orderQuantity); }, 0);
         const leadOrder = bucketOrders.length > 0 ? bucketOrders[0] : null;
         return {
-          key: stage.key, label: stage.label, count: bucketOrders.length, quantity: qty,
+          key: stage.key, label: i18n.t(NS + stage.i18nKey, lang), count: bucketOrders.length, quantity: qty,
           leadOrderNo: leadOrder ? leadOrder.orderNo : '',
           leadProgress: leadOrder ? calcProgress(leadOrder) : 0,
           orders: bucketOrders.map(toOrderRow),
@@ -351,7 +406,7 @@ Page({
             if (factoryList[i].factoryName === fa.factoryName) {
               factoryList[i].active = !!fa.active;
               factoryList[i].mins = fa.minutesSinceLastScan || 999;
-              factoryList[i].timeText = fa.minutesSinceLastScan < 1 ? '刚刚' : fa.minutesSinceLastScan < 60 ? fa.minutesSinceLastScan + '分钟前' : Math.floor(fa.minutesSinceLastScan / 60) + 'h前';
+              factoryList[i].timeText = fa.minutesSinceLastScan < 1 ? i18n.t(NS + 'justNow', this._lang) : fa.minutesSinceLastScan < 60 ? fa.minutesSinceLastScan + i18n.t(NS + 'minAgo', this._lang) : Math.floor(fa.minutesSinceLastScan / 60) + i18n.t(NS + 'hourSuffix', this._lang);
               factoryList[i].todayQty = fa.todayQty || 0;
               found = true;
               break;
@@ -361,7 +416,7 @@ Page({
             const mins = fa.minutesSinceLastScan || 999;
             factoryList.push({
               factoryName: fa.factoryName, active: !!fa.active, mins: mins,
-              timeText: mins < 1 ? '刚刚' : mins < 60 ? mins + '分钟前' : Math.floor(mins / 60) + 'h前',
+              timeText: mins < 1 ? i18n.t(NS + 'justNow', lang) : mins < 60 ? mins + i18n.t(NS + 'minAgo', lang) : Math.floor(mins / 60) + i18n.t(NS + 'hourSuffix', lang),
               todayQty: fa.todayQty || 0, activeOrders: 0, totalQty: 0, highRiskCount: 0, overdueCount: 0,
             });
           }
@@ -372,6 +427,8 @@ Page({
         menuData: menuData, menuExtra: menuExtra, totalWarn: totalWarn,
         heroScanQty: (menuExtra.todayInboundQty || 0) + (menuExtra.todayOutboundQty || 0),
         heroScanCount: (menuData.todayInbound || 0) + (menuData.todayOutbound || 0) + (menuData.todayOrders || 0),
+        alertText: alertText,
+        scanSubText: i18n.tf(NS + 'scanTimesFmt', { n: (menuData.todayInbound || 0) + (menuData.todayOutbound || 0) + (menuData.todayOrders || 0) }, langZ),
         stageBuckets: stageBuckets,
         factoryList: factoryList, factoryOnline: factoryOnline, factoryStagnant: factoryStagnant,
         factoryTotalOrders: factoryTotalOrders, factoryTotalQty: factoryTotalQty,

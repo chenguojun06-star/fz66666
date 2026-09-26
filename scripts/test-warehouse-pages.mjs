@@ -2474,6 +2474,8 @@ const RECON_DETAIL_JS = 'pages/finance/reconciliation/detail/index.js';
 const RECON_DETAIL_WXML = 'pages/finance/reconciliation/detail/index.wxml';
 const ORDER_FORM_JS = 'pages/order/create/form/index.js';
 const ORDER_FORM_WXML = 'pages/order/create/form/index.wxml';
+const SMART_OPS_JS = 'pages/smart-ops/index.js';
+const SMART_OPS_WXML = 'pages/smart-ops/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3255,6 +3257,26 @@ function testI18nOrderForm() {
   eq('下单表单 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '订单信息');
 }
 
+/** 运营看板页（D-574）—— 阶段切换/统计卡/工厂全景/自动刷新 */
+function testI18nSmartOps() {
+  testPageI18n(SMART_OPS_JS, SMART_OPS_WXML, '运营看板页');
+
+  const { page: zhP, wx: zhWx } = loadPage(SMART_OPS_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(SMART_OPS_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  const zhStages = zhP.data.stageList.map(s2 => s2.label).join('|');
+  const enStages = enP.data.stageList.map(s2 => s2.label).join('|');
+  eq('zh 阶段列表', zhStages, '采购|裁剪|二次工艺|车缝|尾部|入库');
+  ok('en 阶段列表无中文', !CJK_RE.test(enStages), enStages);
+  ok('en 自动刷新提示无中文', !CJK_RE.test(String(enP.data.t.autoRefreshFmt)), enP.data.t.autoRefreshFmt);
+  ok('en 权限提示无中文', !CJK_RE.test(String(enP.data.t.ownerOnlyHint)), enP.data.t.ownerOnlyHint);
+
+  eq('运营看板导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Factory Panorama');
+  eq('运营看板 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '工厂全景');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3315,6 +3337,7 @@ try {
   testI18nReimbursement();
   testI18nReconciliation();
   testI18nOrderForm();
+  testI18nSmartOps();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
