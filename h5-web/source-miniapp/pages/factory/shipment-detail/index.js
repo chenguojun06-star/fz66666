@@ -3,6 +3,8 @@
  * 关键修复：发货明细使用 order.colorGroups 的 sizeMap 展开，
  * 不再依赖列表接口不返回的 order.orderDetails 字段
  */
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.shipment.';
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
@@ -63,7 +65,62 @@ Page({
     receiveForms: {},
   },
 
+    /** 静态文案按语言写入（wxml 用 {{t.xxx}}） */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        bundleDetailBtn: i18n.t(NS + 'bundleDetailBtn', lang),
+        processDetailBtn: i18n.t(NS + 'processDetailBtn', lang),
+        noBundleDetail: i18n.t(NS + 'noBundleDetail', lang),
+        processProgress: i18n.t(NS + 'processProgress', lang),
+        colorSizeLabel: i18n.t(NS + 'colorSizeLabel', lang),
+        remarkLabel: i18n.t(NS + 'remarkLabel', lang),
+        shippableLabel: i18n.t(NS + 'shippableLabel', lang),
+        pieceUnit: i18n.t(NS + 'pieceUnit', lang),
+        shipDetailTitle: i18n.t(NS + 'shipDetailTitle', lang),
+        orderedLabel: i18n.t(NS + 'orderedLabel', lang),
+        shippedLabel: i18n.t(NS + 'shippedLabel', lang),
+        noColorSizeDetail: i18n.t(NS + 'noColorSizeDetail', lang),
+        shipModeLabel: i18n.t(NS + 'shipModeLabel', lang),
+        selfDelivery: i18n.t(NS + 'selfDelivery', lang),
+        expressDelivery: i18n.t(NS + 'expressDelivery', lang),
+        expressCompany: i18n.t(NS + 'expressCompany', lang),
+        expressNoLabel: i18n.t(NS + 'expressNoLabel', lang),
+        deleteBtn: i18n.t(NS + 'deleteBtn', lang),
+        noPendingReceive: i18n.t(NS + 'noPendingReceive', lang),
+        arrivalQtyLabel: i18n.t(NS + 'arrivalQtyLabel', lang),
+        confirmReceiveBtn: i18n.t(NS + 'confirmReceiveBtn', lang),
+        receiveTitle: i18n.t(NS + 'receiveTitle', lang),
+        cancel: i18n.t('common.cancel', lang),
+        submitWord: i18n.t('common.submitting', lang),
+        colorLabel: i18n.t(NS + 'colorLabel', lang),
+        sizeLabel2: i18n.t(NS + 'sizeLabel2', lang),
+        qtyLabel: i18n.t(NS + 'qtyLabel', lang),
+        totalLabel: i18n.t(NS + 'totalLabel', lang),
+        orderQtyLabel: i18n.t('mp.orderDetail.orderQtyLabel', lang),
+        shipTab: i18n.t(NS + 'shipTab', lang),
+        styleNoPrefixW: i18n.t(NS + 'styleNoPrefixW', lang),
+        expressCoPh: i18n.t(NS + 'expressCoPh', lang),
+        expressNoPh: i18n.t(NS + 'expressNoPh', lang),
+        noStyleNameW: i18n.t(NS + 'noStyleNameW', lang),
+        pieceUnit2: i18n.t(NS + 'pieceUnit2', lang),
+        shipPrefix: i18n.t(NS + 'shipPrefix', lang),
+        expressPrefix: i18n.t(NS + 'expressPrefix', lang),
+        shipNoPrefix: i18n.t(NS + 'shipNoPrefix', lang),
+        continueReceive: i18n.t(NS + 'continueReceive', lang),
+        submittingW2: i18n.t(NS + 'submittingW2', lang),
+        confirmShipW: i18n.t(NS + 'confirmShipBtn', lang),
+      },
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function (options) {
+    this.applyLanguage(i18n.getLanguage());
     var factory = isFactoryOwner();
     var admin = isAdminOrSupervisor();
     var tab = 0;
@@ -114,11 +171,11 @@ Page({
           that._initWithOrder(records[0]);
         } else {
           that.setData({ loading: false });
-          toast.error('订单不存在');
+          toast.error(i18n.t(NS + 'orderMissing', this._lang));
         }
       }).catch(function () {
         that.setData({ loading: false });
-        toast.error('加载订单失败');
+        toast.error(i18n.t(NS + 'orderLoadFail', this._lang));
       });
     }
   },
@@ -254,11 +311,11 @@ Page({
   onSubmitShip: function () {
     if (this.data.submitting) return;
     var details = this.data.shipDetails.filter(function (d) { return d.quantity > 0; });
-    if (details.length === 0) { toast.error('请填写发货数量'); return; }
+    if (details.length === 0) { toast.error(i18n.t(NS + 'fillShipQty', this._lang)); return; }
     var totalQty = details.reduce(function (sum, d) { return sum + d.quantity; }, 0);
     var info = this.data.shippableInfo;
     if (info && info.remaining > 0 && totalQty > info.remaining) {
-      toast.error('超过剩余可发数量(' + info.remaining + ')');
+      toast.error(i18n.tf(NS + 'overRemainFmt', { n: info.remaining }, this._lang));
       return;
     }
     var order = this.data.order;
@@ -274,13 +331,13 @@ Page({
     };
     var that = this;
     wx.showModal({
-      title: '确认发货',
-      content: '确认发货 ' + totalQty + ' 件？',
+      title: i18n.t(NS + 'confirmShipTitle', this._lang),
+      content: i18n.tf(NS + 'shipConfirmFmt', { n: totalQty }, this._lang),
       success: function (res) {
         if (!res.confirm) return;
         that.setData({ submitting: true });
         api.factoryShipment.ship(payload).then(function () {
-          toast.success('发货成功');
+          toast.success(i18n.t(NS + 'shipOk', this._lang));
           eventBus.emit(Events.DATA_CHANGED, { type: 'factoryShipment' });
           that.setData({
             submitting: false,
@@ -290,7 +347,7 @@ Page({
           that._loadShipmentRecords();
         }).catch(function (e) {
           that.setData({ submitting: false });
-          toast.error('发货失败: ' + (e.message || e));
+          toast.error(i18n.t(NS + 'shipFailPrefix', this._lang) + (e.message || e));
         });
       },
     });
@@ -305,19 +362,19 @@ Page({
   onDeleteShipment: function (e) {
     var id = e.currentTarget.dataset.id;
     var item = this.data.shipmentRecords.filter(function (s) { return String(s.id) === String(id); })[0];
-    if (!item || item.receiveStatus !== 'pending') { toast.error('仅待收货状态可删除'); return; }
+    if (!item || item.receiveStatus !== 'pending') { toast.error(i18n.t(NS + 'onlyPendingDel', this._lang)); return; }
     var that = this;
     wx.showModal({
-      title: '确认删除',
-      content: '确认删除该发货记录？',
+      title: i18n.t(NS + 'confirmDelTitle', this._lang),
+      content: i18n.t(NS + 'delShipConfirm', this._lang),
       success: function (res) {
         if (!res.confirm) return;
         api.factoryShipment.remove(id).then(function () {
-          toast.success('删除成功');
+          toast.success(i18n.t(NS + 'delOk', this._lang));
           eventBus.emit(Events.DATA_CHANGED, { type: 'factoryShipment' });
           that._loadShippableInfo();
           that._loadShipmentRecords();
-        }).catch(function () { toast.error('删除失败'); });
+        }).catch(function () { toast.error(i18n.t(NS + 'delFail', this._lang)); });
       },
     });
   },
@@ -347,24 +404,24 @@ Page({
     var shipmentId = e.currentTarget.dataset.id;
     var rows = this.data.receiveForms[shipmentId] || [];
     var totalReceived = rows.reduce(function (s, d) { return s + (d.receivedQuantity || 0); }, 0);
-    if (totalReceived <= 0) { toast.error('请填写收货数量'); return; }
+    if (totalReceived <= 0) { toast.error(i18n.t(NS + 'fillReceiveQty', this._lang)); return; }
     var payload = {
       receivedQuantity: totalReceived,
       details: rows.map(function (d) { return { color: d.color, sizeName: d.sizeName, quantity: d.receivedQuantity }; }),
     };
     var that = this;
     wx.showModal({
-      title: '确认收货',
-      content: '确认收货 ' + totalReceived + ' 件？',
+      title: i18n.t(NS + 'receiveTitle', this._lang),
+      content: i18n.tf(NS + 'receiveConfirmFmt', { n: totalReceived }, this._lang),
       success: function (res) {
         if (!res.confirm) return;
         api.factoryShipment.receive(shipmentId, payload).then(function () {
-          toast.success('收货确认成功');
+          toast.success(i18n.t(NS + 'receiveOk', this._lang));
           eventBus.emit(Events.DATA_CHANGED, { type: 'factoryShipment' });
           that._loadShippableInfo();
           that._loadShipmentRecords();
         }).catch(function (err) {
-          toast.error('收货确认失败: ' + (err && err.message ? err.message : ''));
+          toast.error(i18n.t(NS + 'receiveFailPrefix', this._lang) + (err && err.message ? err.message : ''));
         });
       },
     });
