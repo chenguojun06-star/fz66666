@@ -1,3 +1,5 @@
+const i18n = require('../../utils/i18n/index');
+const NS = 'mp.qualityDetail.';
 const api = require('../../utils/api');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
@@ -13,22 +15,24 @@ const getQualityCategory = qualityHelper.getQualityCategory;
 const DEFECT_CATEGORY_MAP = qualityHelper.DEFECT_CATEGORY_MAP;
 
 /**
- * 缺陷类别（与 PC 端 DEFECT_CATEGORY_OPTIONS 对齐）
+ * 缺陷类别（与 PC 端 DEFECT_CATEGORY_KEYS 对齐）
  */
-const DEFECT_CATEGORY_OPTIONS = [
-  { value: 'appearance_integrity', label: '外观完整性' },
-  { value: 'size_accuracy', label: '尺寸精度' },
-  { value: 'process_compliance', label: '工艺规范性' },
-  { value: 'functional_effectiveness', label: '功能有效性' },
-  { value: 'other', label: '其他' },
+// 缺陷类别：value 是载荷英文码，label 走 i18n（applyLanguage 里重建）
+const DEFECT_CATEGORY_KEYS = [
+  { value: 'appearance_integrity', nameKey: 'catAppearance' },
+  { value: 'size_accuracy', nameKey: 'catSize' },
+  { value: 'process_compliance', nameKey: 'catProcess' },
+  { value: 'functional_effectiveness', nameKey: 'catFunction' },
+  { value: 'other', nameKey: 'mp.stageDetail.otherWord' },
 ];
 
 /**
  * 处理方式（与 PC 端 DEFECT_REMARK_OPTIONS 对齐）
  */
+// ⚠️ value 是后端载荷（defectRemark）保持中文；label 走 i18n（applyLanguage 重建）
 const DEFECT_REMARK_OPTIONS = [
-  { value: '返修', label: '返修' },
-  { value: '报废', label: '报废' },
+  { value: '返修', nameKey: 'mp.defect.handleRepair' },
+  { value: '报废', nameKey: 'mp.defect.handleScrap' },
 ];
 
 // 质检状态 CSS 类映射（displayHelper 提供 text，cls 本地维护与 PC 端对齐）
@@ -64,10 +68,10 @@ const QUALITY_STATUS_MAP = (function () {
 })();
 
 const MATERIAL_TYPE_MAP = {
-  fabric: '面料',
-  accessory: '辅料',
-  lining: '里布',
-  other: '其他',
+  fabric: 'matFabricW',
+  accessory: 'matAuxW',
+  lining: 'matLiningW',
+  other: 'mp.stageDetail.otherWord',
 };
 
 Page({
@@ -124,8 +128,8 @@ Page({
       remark: '',
       imageUrls: [],
     },
-    defectCategoryOptions: DEFECT_CATEGORY_OPTIONS,
-    defectRemarkOptions: DEFECT_REMARK_OPTIONS,
+    defectCategoryOptions: [],  // applyLanguage 重建
+    defectRemarkOptions: [],  // applyLanguage 重建
     // 已选菲号二维码列表（多选）
     selectedBundleQrs: [],
     selectedBundleTotalQty: 0,
@@ -158,7 +162,116 @@ Page({
     images: [],
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}），缺陷类别选项数组重建 */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        bundleWord: i18n.t('mp.scanResult.bundleWord', lang),
+        defectCategory: i18n.t('mp.scanQuality.defectCategory', lang),
+        handleMethod: i18n.t('mp.scanQuality.handleMethod', lang),
+        cancel: i18n.t('common.cancel', lang),
+        colorLabel: i18n.t('common.color', lang),
+        sizeLabel: i18n.t('common.size', lang),
+        qtyLabel: i18n.t('common.quantity', lang),
+        deliveryLabel: i18n.t('mp.scanResult.deliveryLabel', lang),
+        sizeTableTitle: i18n.t('mp.sampleDetail.tabSize', lang),
+        qcPersonLabel: i18n.t(NS + 'qcPersonLabel', lang),
+        qcTimeLabel: i18n.t(NS + 'qcTimeLabel', lang),
+        remarkLabel: i18n.t('common.remark', lang),
+        passQtyLabel: i18n.t(NS + 'passQtyLabel', lang),
+        batchFailBtn: i18n.t(NS + 'batchFailBtn', lang),
+        inboundNoLabel: i18n.t(NS + 'inboundNoLabel', lang),
+        qcTitle: i18n.t('mp.defect.navTitleX', lang),
+        pass: i18n.t('common.pass', lang),
+        fail: i18n.t('common.fail', lang),
+        merchLabel: i18n.t(NS + 'merchLabel', lang),
+        producerLabel: i18n.t(NS + 'producerLabel', lang),
+        styleNameLabel: i18n.t(NS + 'styleNameLabel', lang),
+        qcInfoTitle: i18n.t(NS + 'qcInfoTitle', lang),
+        scanModeLabel: i18n.t(NS + 'scanModeLabel', lang),
+        processWord: i18n.t('mp.pattern.processWord', lang),
+        defectPhotos: i18n.t('mp.scanQuality.defectPhotos', lang),
+        pendingQcTab: i18n.t(NS + 'pendingQcTab', lang),
+        startQcHint: i18n.t(NS + 'startQcHint', lang),
+        noPendingTab: i18n.t(NS + 'noPendingTab', lang),
+        pendingInboundTab: i18n.t(NS + 'pendingInboundTab', lang),
+        goInboundHint: i18n.t(NS + 'goInboundHint', lang),
+        noInboundTab: i18n.t(NS + 'noInboundTab', lang),
+        passRateLabel: i18n.t('mp.defect.passRate', lang),
+        pendingQcBundles: i18n.t(NS + 'pendingQcTab', lang),
+        selectAll: i18n.t('common.selectAll', lang),
+        invertSel: i18n.t(NS + 'invertSelW', lang),
+        clearText: i18n.t('common.clear', lang),
+        qualityEntry: i18n.t('mp.scanResult.qualityEntry', lang),
+        qrWord: i18n.t(NS + 'qrWord', lang),
+        qcTotalLabel: i18n.t(NS + 'qcTotalLabel', lang),
+        defectQtyLabel: i18n.t(NS + 'defectQtyLabel', lang),
+        remarkOptional: i18n.t(NS + 'remarkOptional', lang),
+        photoOptionalHint: i18n.t(NS + 'photoOptionalHint', lang),
+        addPhoto: i18n.t(NS + 'addPhoto', lang),
+        submitQc: i18n.t('mp.scanQuality.submitQuality', lang),
+        qcRecordsTitle: i18n.t(NS + 'qcRecordsTitle', lang),
+        noRecordsW: i18n.t(NS + 'noRecordsW', lang),
+        noQcRecordsW: i18n.t(NS + 'noQcRecordsW', lang),
+        currentWord: i18n.t(NS + 'currentWord', lang),
+        startRepairBtn: i18n.t('mp.defect.repairStart', lang),
+        finishRepairBtn: i18n.t(NS + 'finishRepairBtn', lang),
+        scrapBtn: i18n.t('mp.defect.scrapBtn', lang),
+        orderClosed: i18n.t('mp.defect.orderClosed', lang),
+        colorSizeLabel: i18n.t(NS + 'colorSizeLabel', lang),
+        warehouseLabel: i18n.t('mp.scanResult.warehousePrefix', lang).replace(':', ''),
+        inboundOpTitle: i18n.t(NS + 'inboundOpTitle', lang),
+        selectWhPrefix: i18n.t(NS + 'selectWhPrefix', lang),
+        noWhAvailable: i18n.t(NS + 'noWhAvailable', lang),
+        noLocationInWh: i18n.t(NS + 'noLocationInWh', lang),
+        confirmInbound: i18n.t(NS + 'confirmInbound', lang),
+        aiAssistantTitle: i18n.t(NS + 'aiAssistantTitle', lang),
+        aiAnalyzing: i18n.t(NS + 'aiAnalyzing', lang),
+        histDefectRate: i18n.t(NS + 'histDefectRate', lang),
+        riskLevelLabel: i18n.t(NS + 'riskLevelLabel', lang),
+        qcPointsLabel: i18n.t(NS + 'qcPointsLabel', lang),
+        defectSuggestion: i18n.t(NS + 'defectSuggestion', lang),
+        tabBom: i18n.t('mp.sampleDetail.tabBom', lang),
+        partHeader: i18n.t('mp.sampleDetail.partHeader', lang),
+        noSizeHint: i18n.t('mp.sampleDetail.noSizeHint', lang),
+        submitting: i18n.t('common.submitting', lang),
+        checkedWord: i18n.t(NS + 'checkedWord', lang),
+        checkedTimesW: i18n.t(NS + 'checkedTimesW', lang),
+        searchBundlePhW: i18n.t(NS + 'searchBundlePhW', lang),
+        cuttingLabelW: i18n.t(NS + 'cuttingLabelW', lang),
+        qcLabelW: i18n.t(NS + 'qcLabelW', lang),
+        remarkPhW: i18n.t(NS + 'remarkPhW', lang),
+        usageLabelW: i18n.t(NS + 'usageLabelW', lang),
+        lossLabelW: i18n.t(NS + 'lossLabelW', lang),
+        collapseTextW: i18n.t('mp.sampleDev.collapseText', lang),
+        expandTextW: i18n.t('mp.sampleDev.expandText', lang),
+        scanModePiece: i18n.t(NS + 'scanModePieceW', lang),
+        qcBeforePack: i18n.t(NS + 'qcBeforePackW', lang),
+        noBundleMatch: i18n.t(NS + 'noSampleMatchX', lang),
+        noPendingQcW: i18n.t(NS + 'noPendingQc', lang),
+        selectDefectCatW: i18n.t(NS + 'selectDefectCat', lang),
+        selectHandleMW: i18n.t(NS + 'selectHandleM', lang),
+        batchFailTitleW: i18n.t(NS + 'batchFailTitle', lang),
+        inboundBtnW: i18n.t('mp.pattern.submitWhIn', lang),
+        pickLocationW: i18n.t(NS + 'pickLocation', lang),
+        expandTextC: i18n.t('mp.sampleDev.expandText', lang),
+        pieceUnit: i18n.t('common.piece', lang),
+      },
+      defectCategoryOptions: DEFECT_CATEGORY_KEYS.map(function (c) {
+        return { value: c.value, label: i18n.t(c.nameKey.indexOf('.') >= 0 ? c.nameKey : NS + c.nameKey, lang) };
+      }),
+      defectRemarkOptions: DEFECT_REMARK_OPTIONS.map(function (c) {
+        return { value: c.value, label: i18n.t(c.nameKey, lang) };
+      }),
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function (options) {
+    this.applyLanguage(i18n.getLanguage());
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
 
@@ -187,7 +300,7 @@ Page({
     }
 
     if (!orderId) {
-      toast.error('缺少订单ID');
+      toast.error(i18n.t('mp.sampleDetail.missingStyleId', this._lang));
       this.setData({ loading: false });
       return;
     }
@@ -234,6 +347,7 @@ Page({
    */
   fetchBriefing: function () {
     var self = this;
+    var lang = self._lang || i18n.getLanguage();
     var orderId = this.data.orderId;
     if (!orderId) return Promise.resolve();
 
@@ -270,7 +384,8 @@ Page({
         var styleId = (style && (style.styleId || style.id)) || order.styleId || '';
 
         bom = bom.map(function (b) {
-          b.materialTypeText = MATERIAL_TYPE_MAP[b.materialType] || b.materialType || '-';
+          var mtKey = MATERIAL_TYPE_MAP[b.materialType];
+          b.materialTypeText = mtKey ? i18n.t(mtKey.indexOf('.') >= 0 ? mtKey : NS + mtKey, lang) : (b.materialType || '-');
           return b;
         });
 
@@ -295,7 +410,7 @@ Page({
           self.setData({ loading: false });
         } else {
           self.setData({ loading: false });
-          toast.error('加载质检简报失败');
+          toast.error(i18n.t(NS + 'briefLoadFailed', this._lang));
         }
       });
   },
@@ -449,13 +564,13 @@ Page({
         var verdictText = '';
         var verdictCls = '';
         if (historicalVerdict === 'good') {
-          verdictText = '良好';
+          verdictText = i18n.t(NS + 'verdictGood', this._lang);
           verdictCls = 'verdict-good';
         } else if (historicalVerdict === 'warn') {
-          verdictText = '需关注';
+          verdictText = i18n.t(NS + 'verdictWarn', this._lang);
           verdictCls = 'verdict-warn';
         } else if (historicalVerdict === 'critical') {
-          verdictText = '高风险';
+          verdictText = i18n.t(NS + 'verdictCritical', this._lang);
           verdictCls = 'verdict-critical';
         }
 
@@ -524,7 +639,7 @@ Page({
       .catch(function (err) {
         console.error('[QualityDetail] fetchQcRecords failed:', err);
         self.setData({ recordsLoading: false });
-        toast.error('质检记录加载失败');
+        toast.error(i18n.t(NS + 'recordsLoadFailed', this._lang));
       });
   },
 
@@ -707,7 +822,7 @@ Page({
     if (ord && bundleSeq) {
       var label = ord + '-' + bundleSeq;
       if (bedNo) {
-        label += '-床' + bedNo + (bedSubNo ? '-' + bedSubNo : '');
+        label += i18n.tf(NS + 'bedSuffix', { n: bedNo + (bedSubNo ? '-' + bedSubNo : '') });
       }
       return label;
     }
@@ -915,7 +1030,7 @@ Page({
     var self = this;
     var current = this.data.qcSheetData.imageUrls || [];
     if (current.length >= 5) {
-      toast.info('最多上传 5 张照片');
+      toast.info(i18n.t(NS + 'maxFivePhotoW', this._lang));
       return;
     }
     // 与全站其他选图入口一致：调用 chooseMedia 前清除残留 toast/loading，
@@ -939,17 +1054,17 @@ Page({
             'qcSheetData.imageUrls': current.concat(authedUrls),
           });
         }).catch(function () {
-          toast.error('图片上传失败');
+          toast.error(i18n.t('mp.scanQuality.photoUploadFailed', this._lang));
         });
       },
       fail: function (err) {
         console.warn('[QualityDetail] chooseMedia fail:', err);
         if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
           wx.showModal({
-            title: '相机/相册权限',
-            content: '需要相机或相册权限才能上传照片，请在设置中允许',
-            confirmText: '去设置',
-            cancelText: '取消',
+            title: i18n.t('mp.scanQuality.cameraPermission', this._lang),
+            content: i18n.t('mp.scanQuality.cameraPermissionMsg', this._lang),
+            confirmText: i18n.t('mp.scanQuality.goSettings', this._lang),
+            cancelText: i18n.t('common.cancel', this._lang),
             success: function (modalRes) {
               if (modalRes.confirm) wx.openSetting({ success: function () {} });
             },
@@ -984,7 +1099,7 @@ Page({
 
     var d = this.data.qcSheetData;
     if (!d.bundleId) {
-      toast.error('菲号信息缺失');
+      toast.error(i18n.t(NS + 'bundleMissing', this._lang));
       return;
     }
 
@@ -993,11 +1108,11 @@ Page({
 
     if (unqualifiedQty > 0) {
       if (!d.defectCategory) {
-        toast.error('请选择缺陷类别');
+        toast.error(i18n.t(NS + 'selectDefectCat', this._lang));
         return;
       }
       if (!d.defectRemark) {
-        toast.error('请选择处理方式');
+        toast.error(i18n.t(NS + 'selectHandleM', this._lang));
         return;
       }
     }
@@ -1028,7 +1143,7 @@ Page({
     api.production
       .saveWarehousing(payload)
       .then(function () {
-        toast.success('质检已提交');
+        toast.success(i18n.t(NS + 'qcSubmitted', this._lang));
         self.setData({ submitting: false });
         self.fetchQcRecords();
         self.fetchPendingBundles();
@@ -1039,10 +1154,10 @@ Page({
         console.error('[QualityDetail] submitQc failed:', err);
         self.setData({ submitting: false });
         wx.showModal({
-          title: '提交失败',
-          content: err.message || err.errMsg || '请稍后重试',
+          title: i18n.t('common.submitFailed', this._lang),
+          content: err.message || err.errMsg || i18n.t('common.retryLater', this._lang),
           showCancel: false,
-          confirmText: '知道了',
+          confirmText: i18n.t('common.gotIt', this._lang),
         });
       });
   },
@@ -1058,7 +1173,7 @@ Page({
     if (this.data.submitting) return;
     var selected = this._getSelectedBundles();
     if (selected.length === 0) {
-      toast.info('请先选择菲号');
+      toast.info(i18n.t(NS + 'selectBundleFirst', this._lang));
       return;
     }
     var items = [];
@@ -1069,14 +1184,14 @@ Page({
       }
     }
     if (items.length === 0) {
-      toast.error('没有可批量提交的菲号');
+      toast.error(i18n.t(NS + 'noBatchBundles', this._lang));
       return;
     }
     wx.showModal({
-      title: '批量合格质检',
-      content: '确认对 ' + items.length + ' 个菲号执行批量合格质检？',
-      confirmText: '确认',
-      cancelText: '取消',
+      title: i18n.t(NS + 'batchPassTitle', this._lang),
+      content: i18n.tf(NS + 'batchPassConfirm', { count: items.length }, this._lang),
+      confirmText: i18n.t('common.confirm', this._lang),
+      cancelText: i18n.t('common.cancel', this._lang),
       success: function (res) {
         if (!res.confirm) return;
         self.setData({ submitting: true });
@@ -1087,7 +1202,7 @@ Page({
             items: items,
           })
           .then(function () {
-            toast.success('批量合格质检成功');
+            toast.success(i18n.t(NS + 'batchPassOk', this._lang));
             self.setData({ submitting: false });
             self.fetchQcRecords();
             self.fetchPendingBundles();
@@ -1098,10 +1213,10 @@ Page({
             console.error('[QualityDetail] batchQualified failed:', err);
             self.setData({ submitting: false });
             wx.showModal({
-              title: '批量合格失败',
-              content: err.message || err.errMsg || '请稍后重试',
+              title: i18n.t(NS + 'batchPassFail', this._lang),
+              content: err.message || err.errMsg || i18n.t('common.retryLater', this._lang),
               showCancel: false,
-              confirmText: '知道了',
+              confirmText: i18n.t('common.gotIt', this._lang),
             });
           });
       },
@@ -1115,7 +1230,7 @@ Page({
   onBatchUnqualified: function () {
     var selected = this._getSelectedBundles();
     if (selected.length === 0) {
-      toast.info('请先选择菲号');
+      toast.info(i18n.t(NS + 'selectBundleFirst', this._lang));
       return;
     }
     this.setData({
@@ -1150,8 +1265,8 @@ Page({
     var self = this;
     if (this.data.submitting) return;
     var d = this.data.batchUnqualData;
-    if (!d.defectCategory) { toast.error('请选择缺陷类别'); return; }
-    if (!d.defectRemark) { toast.error('请选择处理方式'); return; }
+    if (!d.defectCategory) { toast.error(i18n.t(NS + 'selectDefectCat', this._lang)); return; }
+    if (!d.defectRemark) { toast.error(i18n.t(NS + 'selectHandleM', this._lang)); return; }
     var selected = this._getSelectedBundles();
     if (selected.length === 0) return;
     var userInfo = getUserInfo() || {};
@@ -1177,7 +1292,7 @@ Page({
       });
     }
     if (tasks.length === 0) {
-      toast.error('没有可批量提交的菲号');
+      toast.error(i18n.t(NS + 'noBatchBundles', this._lang));
       return;
     }
     this.setData({ submitting: true });
@@ -1186,7 +1301,7 @@ Page({
     });
     Promise.all(promises)
       .then(function () {
-        toast.success('批量不合格质检成功');
+        toast.success(i18n.t(NS + 'batchFailOk', this._lang));
         self.setData({ submitting: false, batchUnqualFormVisible: false });
         self.fetchQcRecords();
         self.fetchPendingBundles();
@@ -1197,10 +1312,10 @@ Page({
         console.error('[QualityDetail] batchUnqualified failed:', err);
         self.setData({ submitting: false });
         wx.showModal({
-          title: '批量不合格失败',
-          content: err.message || err.errMsg || '请稍后重试',
+          title: i18n.t(NS + 'batchFailFail', this._lang),
+          content: err.message || err.errMsg || i18n.t('common.retryLater', this._lang),
           showCancel: false,
-          confirmText: '知道了',
+          confirmText: i18n.t('common.gotIt', this._lang),
         });
       });
   },
@@ -1293,7 +1408,7 @@ Page({
           var capacity = Number(item.capacity || 0);
           var isFull = capacity > 0 && used >= capacity;
           // D-171：库位显示已用/容量，满库位标注，避免超限
-          var qty = capacity > 0 ? '（' + used + '/' + capacity + (isFull ? ' 已满' : '') + '）' : '';
+          var qty = capacity > 0 ? '（' + used + '/' + capacity + (isFull ? ' ' + i18n.t(NS + 'fullSuffix', this._lang) : '') + '）' : '';
           return {
             code: code,
             name: (code || item.locationName || item.name || '-') + qty,
@@ -1330,12 +1445,12 @@ Page({
     if (key !== 'location') return;
     this.setData({
       pickerKey: key,
-      pickerTitle: '选择库位',
+      pickerTitle: i18n.t(NS + 'pickLocation', this._lang),
       pickerValue: (this.data.whSheetData && this.data.whSheetData.warehouseLocationCode) || '',
       pickerOptions: (this.data.locationOptions || []).map(function (o) {
         // label 带容量（已用/容量），满库位标出来，让用户一眼避开
         return {
-          label: String(o.label || o.code || '') + (o.capacityText ? '（' + o.capacityText + '）' : '') + (o.isFull ? ' · 已满' : ''),
+          label: String(o.label || o.code || '') + (o.capacityText ? '（' + o.capacityText + '）' : '') + (o.isFull ? ' ' + i18n.t(NS + 'fullDotSuffix', this._lang) : ''),
           value: String(o.code || ''),
           isFull: !!o.isFull,
         };
@@ -1348,7 +1463,7 @@ Page({
     var d = (e && e.detail) || {};
     if (this.data.pickerKey !== 'location') return;
     if (d.item && d.item.isFull) {
-      toast.error('该库位已满，请选择其他库位');
+      toast.error(i18n.t(NS + 'locationFullT', this._lang));
       return;
     }
     this.setData({ 'whSheetData.warehouseLocationCode': d.value || '' });
@@ -1359,7 +1474,7 @@ Page({
     var code = e.currentTarget.dataset.code;
     var isFull = e.currentTarget.dataset.full === true || e.currentTarget.dataset.full === 'true';
     if (isFull) {
-      toast.error('该库位已满，请选择其他库位');
+      toast.error(i18n.t(NS + 'locationFullT', this._lang));
       return;
     }
     if (!code) return;
@@ -1372,7 +1487,7 @@ Page({
     if (!opt) return;
     // D-171：满库位拦截
     if (opt.isFull) {
-      toast.error('该库位已满，请选择其他库位');
+      toast.error(i18n.t(NS + 'locationFullT', this._lang));
       return;
     }
     this.setData({ 'whSheetData.warehouseLocationCode': opt.code });
@@ -1389,15 +1504,15 @@ Page({
 
     var d = this.data.whSheetData;
     if (!d.recordId) {
-      toast.error('记录ID缺失');
+      toast.error(i18n.t(NS + 'recordMissing', this._lang));
       return;
     }
     if (!d.warehouseAreaId) {
-      toast.error('请选择仓库');
+      toast.error(i18n.t(NS + 'selectWarehouse', this._lang));
       return;
     }
     if (!d.warehouseLocationCode) {
-      toast.error('请选择库位');
+      toast.error(i18n.t(NS + 'selectLocationW', this._lang));
       return;
     }
 
@@ -1411,7 +1526,7 @@ Page({
     api.production
       .updateWarehousing(payload)
       .then(function () {
-        toast.success('入库成功');
+        toast.success(i18n.t(NS + 'inboundOk', this._lang));
         self.setData({ submitting: false, whExpandIndex: -1 });
         self.fetchQcRecords();
         self.fetchBriefing();
@@ -1421,10 +1536,10 @@ Page({
         console.error('[QualityDetail] submitWarehouse failed:', err);
         self.setData({ submitting: false });
         wx.showModal({
-          title: '入库失败',
-          content: err.message || err.errMsg || '请稍后重试',
+          title: i18n.t(NS + 'inboundFail', this._lang),
+          content: err.message || err.errMsg || i18n.t('common.retryLater', this._lang),
           showCancel: false,
-          confirmText: '知道了',
+          confirmText: i18n.t('common.gotIt', this._lang),
         });
       });
   },
@@ -1442,31 +1557,31 @@ Page({
 
     var bundleId = record.cuttingBundleId || record.bundleId;
     if (!bundleId) {
-      toast.error('菲号信息缺失');
+      toast.error(i18n.t(NS + 'bundleMissing', this._lang));
       return;
     }
 
     wx.showModal({
-      title: '开始返修',
+      title: i18n.t('mp.defect.repairStart', this._lang),
       content: '确认菲号 ' + (record.bundleNoShort || record.bundleNo || '') + ' 开始返修？',
-      confirmText: '确认',
-      cancelText: '取消',
+      confirmText: i18n.t('common.confirm', this._lang),
+      cancelText: i18n.t('common.cancel', this._lang),
       success: function (res) {
         if (!res.confirm) return;
         var userInfo = getUserInfo() || {};
         api.production
           .startBundleRepair(bundleId, userInfo.name || userInfo.username || '')
           .then(function () {
-            toast.success('已开始返修');
+            toast.success(i18n.t('mp.defect.repairStarted', this._lang));
             self.fetchQcRecords();
             eventBus.emit(Events.DATA_CHANGED, { type: 'repair' });
           })
           .catch(function (err) {
             wx.showModal({
-              title: '操作失败',
-              content: err.message || err.errMsg || '请稍后重试',
+              title: i18n.t('common.operationFailed', this._lang),
+              content: err.message || err.errMsg || i18n.t('common.retryLater', this._lang),
               showCancel: false,
-              confirmText: '知道了',
+              confirmText: i18n.t('common.gotIt', this._lang),
             });
           });
       },
@@ -1486,25 +1601,25 @@ Page({
     if (!bundleId) return;
 
     wx.showModal({
-      title: '返修完成',
+      title: i18n.t('mp.defect.repairDoneBtn', this._lang),
       content: '确认菲号 ' + (record.bundleNoShort || record.bundleNo || '') + ' 返修完成？',
-      confirmText: '确认完成',
-      cancelText: '取消',
+      confirmText: i18n.t('mp.defect.confirmComplete', this._lang),
+      cancelText: i18n.t('common.cancel', this._lang),
       success: function (res) {
         if (!res.confirm) return;
         api.production
           .completeBundleRepair(bundleId)
           .then(function () {
-            toast.success('返修已完成');
+            toast.success(i18n.t('mp.defect.repairDone', this._lang));
             self.fetchQcRecords();
             eventBus.emit(Events.DATA_CHANGED, { type: 'repair' });
           })
           .catch(function (err) {
             wx.showModal({
-              title: '操作失败',
-              content: err.message || err.errMsg || '请稍后重试',
+              title: i18n.t('common.operationFailed', this._lang),
+              content: err.message || err.errMsg || i18n.t('common.retryLater', this._lang),
               showCancel: false,
-              confirmText: '知道了',
+              confirmText: i18n.t('common.gotIt', this._lang),
             });
           });
       },
@@ -1524,26 +1639,26 @@ Page({
     if (!bundleId) return;
 
     wx.showModal({
-      title: '报废确认',
+      title: i18n.t('mp.defect.scrapTitle', this._lang),
       content: '确认报废菲号 ' + (record.bundleNoShort || record.bundleNo || '') + '？此操作不可撤销。',
-      confirmText: '确认报废',
+      confirmText: i18n.t('mp.defect.scrapConfirmBtn', this._lang),
       confirmColor: '#ff3b30',
-      cancelText: '取消',
+      cancelText: i18n.t('common.cancel', this._lang),
       success: function (res) {
         if (!res.confirm) return;
         api.production
           .scrapBundle(bundleId)
           .then(function () {
-            toast.success('已报废');
+            toast.success(i18n.t('mp.defect.scrapped', this._lang));
             self.fetchQcRecords();
             eventBus.emit(Events.DATA_CHANGED, { type: 'scrap' });
           })
           .catch(function (err) {
             wx.showModal({
-              title: '操作失败',
-              content: err.message || err.errMsg || '请稍后重试',
+              title: i18n.t('common.operationFailed', this._lang),
+              content: err.message || err.errMsg || i18n.t('common.retryLater', this._lang),
               showCancel: false,
-              confirmText: '知道了',
+              confirmText: i18n.t('common.gotIt', this._lang),
             });
           });
       },
@@ -1590,7 +1705,7 @@ Page({
    */
   onScrollToPending: function () {
     if (this.data.pendingBundles.length === 0) {
-      toast.info('暂无待质检菲号');
+      toast.info(i18n.t(NS + 'noPendingQc', this._lang));
       return;
     }
     var query = wx.createSelectorQuery();
@@ -1611,7 +1726,7 @@ Page({
    */
   onScrollToRecords: function () {
     if (this.data.qcStats.pendingWarehouse === 0) {
-      toast.info('暂无待入库记录');
+      toast.info(i18n.t(NS + 'noPendingInbound', this._lang));
       return;
     }
     var query = wx.createSelectorQuery();
@@ -1700,7 +1815,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

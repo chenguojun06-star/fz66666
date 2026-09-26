@@ -2442,6 +2442,8 @@ const SAMPLE_DETAIL_JS = 'pages/sample-development/detail/index.js';
 const SAMPLE_DETAIL_WXML = 'pages/sample-development/detail/index.wxml';
 const STAGE_DETAIL_JS = 'pages/sample-development/stage-detail/index.js';
 const STAGE_DETAIL_WXML = 'pages/sample-development/stage-detail/index.wxml';
+const QUALITY_DETAIL_JS = 'pages/quality-detail/index.js';
+const QUALITY_DETAIL_WXML = 'pages/quality-detail/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -2997,6 +2999,27 @@ function testI18nStageDetail() {
   ok('en PC 配置提示无中文', !CJK_RE.test(String(enP.data.t.configOnPcHint)), enP.data.t.configOnPcHint);
 }
 
+/** 质检明细页（D-562）—— 简报/双tab/批量质检/入库操作/AI助手 */
+function testI18nQualityDetail() {
+  testPageI18n(QUALITY_DETAIL_JS, QUALITY_DETAIL_WXML, '质检明细页');
+
+  const { page: zhP, wx: zhWx } = loadPage(QUALITY_DETAIL_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(QUALITY_DETAIL_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 缺陷类别选项', zhP.data.defectCategoryOptions[0].label, '外观完整性');
+  eq('en 缺陷类别选项', enP.data.defectCategoryOptions[0].label, 'Appearance');
+  ok('en 处理方式 value 保持中文载荷', enP.data.defectRemarkOptions[0].value === '返修'
+    && enP.data.defectRemarkOptions[0].label === 'Repair',
+    JSON.stringify(enP.data.defectRemarkOptions[0]));
+  eq('en AI 助手标题', enP.data.t.aiAssistantTitle, 'AI QC Assistant');
+  ok('en 入库提示无中文', !CJK_RE.test(String(enP.data.t.noWhAvailable)), enP.data.t.noWhAvailable);
+
+  eq('质检明细页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'QC Detail');
+  eq('质检明细页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '质检明细');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3046,6 +3069,7 @@ try {
   testI18nSampleDev();
   testI18nSampleDetail();
   testI18nStageDetail();
+  testI18nQualityDetail();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
