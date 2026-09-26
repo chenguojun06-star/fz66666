@@ -2492,6 +2492,8 @@ const USER_APPROVAL_JS = 'pages/admin/user-approval/index.js';
 const USER_APPROVAL_WXML = 'pages/admin/user-approval/index.wxml';
 const ADVANCE_JS = 'pages/advance/list/index.js';
 const ADVANCE_WXML = 'pages/advance/list/index.wxml';
+const TASK_LIST_JS = 'pages/procurement/task-list/index.js';
+const TASK_LIST_WXML = 'pages/procurement/task-list/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3395,6 +3397,25 @@ function testI18nAdvance() {
   eq('预付款 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '申请借支');
 }
 
+/** 采购任务列表页（D-580）—— 筛选tabs/任务卡/领取 */
+function testI18nTaskList() {
+  testPageI18n(TASK_LIST_JS, TASK_LIST_WXML, '采购任务列表页');
+
+  const { page: zhP, wx: zhWx } = loadPage(TASK_LIST_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(TASK_LIST_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  const zhTabs = zhP.data.statusTabs.map(t2 => t2.label).join('|');
+  const enTabs = enP.data.statusTabs.map(t2 => t2.label).join('|');
+  eq('zh 采购tabs', zhTabs, '全部|待采购|已领取|部分到货|已完成|已取消|已延期');
+  ok('en 采购tabs无中文', !CJK_RE.test(enTabs), enTabs);
+  ok('en 空提示无中文', !CJK_RE.test(String(enP.data.t.emptyHint)), enP.data.t.emptyHint);
+
+  eq('采购任务列表导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Material Purchase');
+  eq('采购任务列表 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '物料采购');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3461,6 +3482,7 @@ try {
   testI18nProcessEdit();
   testI18nUserApproval();
   testI18nAdvance();
+  testI18nTaskList();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));

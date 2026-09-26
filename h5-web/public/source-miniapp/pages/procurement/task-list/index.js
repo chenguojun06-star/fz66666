@@ -1,3 +1,5 @@
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.taskList.';
 const api = require('../../../utils/api');
 const { toast, safeNavigate, scanInPage } = require('../../../utils/uiHelper');
 const { eventBus, Events, triggerDataRefresh } = require('../../../utils/eventBus');
@@ -11,13 +13,13 @@ const displayHelper = require('../../../utils/displayHelper');
  * pillClass 对应 dashboard 的 filter-pill--* 颜色类
  */
 const STATUS_TABS = [
-  { key: '', label: '全部', pillClass: '' },
-  { key: 'pending', label: '待采购', pillClass: '' },
-  { key: 'received', label: '已领取', pillClass: 'filter-pill--prod' },
-  { key: 'partial', label: '部分到货', pillClass: 'filter-pill--prod' },
-  { key: 'completed', label: '已完成', pillClass: 'filter-pill--done' },
-  { key: 'cancelled', label: '已取消', pillClass: '' },
-  { key: 'delayed', label: '已延期', pillClass: 'filter-pill--danger' },
+  { key: '', i18nKey: 'tabAll', pillClass: '' },
+  { key: 'pending', i18nKey: 'tabPending', pillClass: '' },
+  { key: 'received', i18nKey: 'tabReceived', pillClass: 'filter-pill--prod' },
+  { key: 'partial', i18nKey: 'tabPartial', pillClass: 'filter-pill--prod' },
+  { key: 'completed', i18nKey: 'tabCompleted', pillClass: 'filter-pill--done' },
+  { key: 'cancelled', i18nKey: 'tabCancelled', pillClass: '' },
+  { key: 'delayed', i18nKey: 'tabDelayed', pillClass: 'filter-pill--danger' },
 ];
 
 /**
@@ -43,12 +45,12 @@ const COLOR_TO_TAG_CLASS = {
  * 文案对齐 displayHelper 语义
  */
 const LOCAL_STATUS_FALLBACK = {
-  procuring: { label: '采购中', color: displayHelper.STATUS_COLOR_BLUE },
-  waiting_procurement: { label: '待采购', color: displayHelper.STATUS_COLOR_WARNING },
-  procurement_in_progress: { label: '采购中', color: displayHelper.STATUS_COLOR_BLUE },
-  material_preparation: { label: '物料准备中', color: displayHelper.STATUS_COLOR_BLUE },
-  procurement_completed: { label: '采购完成', color: displayHelper.STATUS_COLOR_SUCCESS },
-  delayed: { label: '已延期', color: displayHelper.STATUS_COLOR_ERROR },
+  procuring: { i18nKey: 'stProcuring', color: displayHelper.STATUS_COLOR_BLUE },
+  waiting_procurement: { i18nKey: 'tabPending', color: displayHelper.STATUS_COLOR_WARNING },
+  procurement_in_progress: { i18nKey: 'stProcuring', color: displayHelper.STATUS_COLOR_BLUE },
+  material_preparation: { i18nKey: 'stPreparing', color: displayHelper.STATUS_COLOR_BLUE },
+  procurement_completed: { i18nKey: 'stPurchased', color: displayHelper.STATUS_COLOR_SUCCESS },
+  delayed: { i18nKey: 'tabDelayed', color: displayHelper.STATUS_COLOR_ERROR },
 };
 
 /**
@@ -56,7 +58,7 @@ const LOCAL_STATUS_FALLBACK = {
  * @param {string} status - 已小写归一的状态值
  * @returns {{label:string, tagClass:string}|null}
  */
-function resolveStatusDisplay(status) {
+function resolveStatusDisplay(status, lang) {
   if (!status) return null;
   const result = displayHelper.displayPurchaseStatus(status);
   if (result.text !== status) {
@@ -64,7 +66,7 @@ function resolveStatusDisplay(status) {
   }
   const fb = LOCAL_STATUS_FALLBACK[status];
   if (fb) {
-    return { label: fb.label, tagClass: COLOR_TO_TAG_CLASS[fb.color] || 'tag-gray' };
+    return { label: i18n.t(NS + fb.i18nKey, lang), tagClass: COLOR_TO_TAG_CLASS[fb.color] || 'tag-gray' };
   }
   return null;
 }
@@ -88,12 +90,42 @@ Page({
     loading: false,
     activeFilter: '',
     keyword: '',
-    statusTabs: STATUS_TABS,
+    statusTabs: [],  // applyLanguage 重建
     items: [],         // 按款聚合后的卡片列表
     filteredItems: [],
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}），筛选 tabs 重建 */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        loadingTxt: i18n.t(NS + 'loadingTxt', lang),
+        noTasks: i18n.t(NS + 'noTasks', lang),
+        emptyHint: i18n.t(NS + 'emptyHint', lang),
+        detailArrow: i18n.t(NS + 'detailArrow', lang),
+        materialLabel: i18n.t(NS + 'materialLabel', lang),
+        totalLabel: i18n.t(NS + 'totalLabel', lang),
+        deliveryLabel: i18n.t(NS + 'deliveryLabel', lang),
+        allShown: i18n.t(NS + 'allShown', lang),
+        pendingClaimW: i18n.t(NS + 'pendingClaimW', lang),
+        searchPhW: i18n.t(NS + 'searchPhW', lang),
+        claimBtn: i18n.t('mp.pattern.submitReceive', lang),
+        countUnitW: i18n.t(NS + 'countUnitW', lang),
+        titleFallback: i18n.t(NS + 'titleFallback', lang),
+        delayedW: i18n.t(NS + 'delayedW', lang),
+        daysUnitW: i18n.t(NS + 'daysUnitW', lang),
+      },
+      statusTabs: STATUS_TABS.map(function (t2) { return { key: t2.key, label: i18n.t(NS + t2.i18nKey, lang), pillClass: t2.pillClass }; }),
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad(options) {
+    this.applyLanguage(i18n.getLanguage());
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     // D-306：支持 ?keyword= 预置搜索（小云待办兜底跳转带款号直达，不再让用户进列表再找）
@@ -145,7 +177,7 @@ Page({
     } catch (err) {
       console.error('[ProcurementTaskList] loadData error', err);
       this.setData({ loading: false });
-      toast.error('加载采购任务失败');
+      toast.error(i18n.t(NS + 'loadFail', this._lang));
     }
   },
 
@@ -168,7 +200,7 @@ Page({
     scanInPage((parsed, raw) => {
       if (!parsed) return; // 用户取消
       if (!parsed.success || !parsed.data) {
-        toast.error('无法识别：' + (raw || ''));
+        toast.error(i18n.tf('mp.defect.scanUnrecognized', { raw: raw || '' }, this._lang));
         return;
       }
       const { orderNo, styleNo } = parsed.data;
@@ -198,7 +230,7 @@ Page({
             },
           });
         } else {
-          toast.error('未匹配到采购任务');
+          toast.error(i18n.t(NS + 'noMatchTask', this._lang));
         }
       }
     });
@@ -222,6 +254,7 @@ Page({
       );
     }
 
+    var lang = this._lang || i18n.getLanguage();
     const statusTabs = STATUS_TABS.map(tab => {
       let count = 0;
       if (!tab.key) {
@@ -229,7 +262,7 @@ Page({
       } else {
         count = items.filter(item => item.displayStatus === tab.key).length;
       }
-      return { ...tab, count };
+      return { key: tab.key, label: i18n.t(NS + tab.i18nKey, lang), pillClass: tab.pillClass, count };
     });
 
     this.setData({ filteredItems: filtered, statusTabs });
@@ -264,7 +297,7 @@ Page({
     // 找出所有待领取的物料
     const pendingItems = (item.items || []).filter(it => it.displayStatus === 'pending');
     if (pendingItems.length === 0) {
-      toast.error('没有待领取的物料');
+      toast.error(i18n.t(NS + 'nothingToClaim', this._lang));
       return;
     }
 
@@ -293,11 +326,11 @@ Page({
     const receiverName = String(userInfo.name || userInfo.username || '').trim();
 
     if (!receiverId && !receiverName) {
-      toast.error('采购人信息缺失，请重新登录');
+      toast.error(i18n.t(NS + 'purchaserMissing', this._lang));
       return;
     }
 
-    wx.showLoading({ title: '领取中...', mask: true });
+    wx.showLoading({ title: i18n.t(NS + 'claimingTxt', this._lang), mask: true });
     try {
       await api.production.receivePurchase({
         purchaseId: purchaseItem.id,
@@ -305,12 +338,12 @@ Page({
         receiverName,
       });
       wx.hideLoading();
-      toast.success('领取成功');
+      toast.success(i18n.t(NS + 'claimOk', this._lang));
       triggerDataRefresh('procurement');
       this.loadData();
     } catch (err) {
       wx.hideLoading();
-      toast.error(err.errMsg || err.message || '领取失败');
+      toast.error(err.errMsg || err.message || i18n.t(NS + 'claimFail', this._lang));
     }
   },
 
@@ -365,7 +398,7 @@ Page({
 
     // 计算整体状态（取最差状态）
     const displayStatus = this._computeGroupStatus(items);
-    const statusConfig = resolveStatusDisplay(displayStatus) || { label: '待处理', tagClass: 'tag-gray' };
+    const statusConfig = resolveStatusDisplay(displayStatus, lang) || { label: i18n.t(NS + 'stTodoW', lang), tagClass: 'tag-gray' };
 
     // 物料数量
     const materialCount = items.length;
@@ -397,7 +430,7 @@ Page({
         today.setHours(0, 0, 0, 0);
         const days = Math.round((today - d) / 86400000);
         overdue = true;
-        overdueText = days > 0 ? '延期' + days + '天' : '已延期';
+        overdueText = days > 0 ? i18n.t(NS + 'delayedW', i18n.getLanguage()) + days + i18n.t(NS + 'daysUnitW', i18n.getLanguage()) : i18n.t(NS + 'tabDelayed', i18n.getLanguage());
       }
     }
 
@@ -408,7 +441,7 @@ Page({
 
     // 无款号的任务卡（如物料仓储下发的采购指令）标题兜底到物料名，副标题带物料编码，让用户知道这是什么
     const firstItem = items[0] || {};
-    const titleText = group.styleNo || firstItem.materialName || '物料采购';
+    const titleText = group.styleNo || firstItem.materialName || i18n.t(NS + 'navTitle', this._lang);
     const subtitleText = group.styleName
       || (!group.styleNo && firstItem.materialCode ? firstItem.materialCode + (firstItem.color ? ' · ' + firstItem.color : '') : '');
 
@@ -467,7 +500,7 @@ Page({
   _normalizeItem(item) {
     const rawStatus = String(item.status || '').trim().toLowerCase();
     const displayStatus = this._computeDisplayStatus(item);
-    const statusConfig = resolveStatusDisplay(rawStatus) || resolveStatusDisplay(displayStatus) || { label: '待领取', tagClass: 'tag-orange' };
+    const statusConfig = resolveStatusDisplay(rawStatus, lang) || resolveStatusDisplay(displayStatus, lang) || { label: i18n.t(NS + 'pendingClaimW', lang), tagClass: 'tag-orange' };
 
     const styleCoverUrl = getAuthedImageUrl(item.styleCover || '');
 

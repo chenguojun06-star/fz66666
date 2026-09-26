@@ -1,7 +1,7 @@
 <view class="container">
   <!-- 吸顶区：搜索 + 扫码 + 筛选器（与 dashboard 一致的通用组件） -->
   <sticky-search-bar
-    placeholder="搜索款号/订单号"
+    placeholder="{{t.searchPhW}}"
     value="{{keyword}}"
     show-scan="{{true}}"
     show-filter="{{true}}"
@@ -27,14 +27,14 @@
   <!-- 加载中 -->
   <view wx:if="{{loading && !filteredItems.length}}" class="loading-state">
     <view class="loading-spinner"></view>
-    <text class="loading-text">加载采购任务中…</text>
+    <text class="loading-text">{{t.loadingTxt}}</text>
   </view>
 
   <!-- 空状态 -->
   <view wx:elif="{{filteredItems.length === 0}}" class="empty-state">
     <view class="empty-icon line-icon icon-package"></view>
-    <text class="empty-text">暂无采购任务</text>
-    <text class="empty-hint">当有物料需要采购时，任务将出现在这里</text>
+    <text class="empty-text">{{t.noTasks}}</text>
+    <text class="empty-hint">{{t.emptyHint}}</text>
   </view>
 
   <!-- 任务列表（按款聚合卡片：与裁剪管理页同款紧凑布局） -->
@@ -63,7 +63,7 @@
           <view wx:else class="media-placeholder line-icon icon-package"></view>
         </view>
         <view class="card-title-area procurement-card-title-area">
-          <text class="style-no">{{item.titleText || item.styleNo || '物料采购'}}</text>
+          <text class="style-no">{{item.titleText || item.styleNo || t.titleFallback}}</text>
           <text class="style-name" wx:if="{{item.subtitleText}}">{{item.subtitleText}}</text>
           <text class="order-no" wx:if="{{item.orderNo}}">{{item.orderNo}}</text>
         </view>
@@ -76,34 +76,34 @@
             catchtap="onClaimPurchase"
             hover-class="btn-claim-sm-hover"
             hover-stay-time="100"
-          >{{item.pendingCount > 1 ? '领取(' + item.pendingCount + '项)' : '领取'}}</view>
-          <view wx:else class="btn-detail-inline">详情 ›</view>
+          >{{item.pendingCount > 1 ? t.claimBtn + "(" + item.pendingCount + t.countUnitW + ")" : t.claimBtn}}</view>
+          <view wx:else class="btn-detail-inline">{{t.detailArrow}}</view>
         </view>
       </view>
 
       <!-- 紧凑统计条：物料 / 总量 / 交货日期 / 是否延期（供应商、采购员、到货明细等进详情页看） -->
       <view class="card-body procurement-card-body">
         <view class="stat-cell">
-          <text class="stat-cell-label">物料</text>
-          <text class="stat-cell-value">{{item.materialCount}}项</text>
+          <text class="stat-cell-label">{{t.materialLabel}}</text>
+          <text class="stat-cell-value">{{item.materialCount}}{{t.countUnitW}}</text>
         </view>
         <view class="stat-cell">
-          <text class="stat-cell-label">总量</text>
+          <text class="stat-cell-label">{{t.totalLabel}}</text>
           <text class="stat-cell-value">{{item.quantityText}}</text>
         </view>
         <view class="stat-cell">
-          <text class="stat-cell-label">交货日期</text>
+          <text class="stat-cell-label">{{t.deliveryLabel}}</text>
           <text class="stat-cell-value">{{item.dateText || '-'}}</text>
         </view>
         <view class="stat-cell">
-          <text class="stat-cell-label">延期</text>
+          <text class="stat-cell-label">{{t.delayedW}}</text>
           <text class="stat-cell-value {{item.overdue ? 'stat-cell-value--danger' : ''}}">{{item.overdueText}}</text>
         </view>
       </view>
     </view>
 
     <!-- 底部提示 -->
-    <view class="no-more">已显示全部任务</view>
+    <view class="no-more">{{t.allShown}}</view>
   </block>
   <ai-assistant />
 </view>
