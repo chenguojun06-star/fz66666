@@ -2,19 +2,19 @@
 
   <!-- 加载中 -->
   <view class="loading-wrap" wx:if="{{loading}}">
-    <text class="loading-text">加载中...</text>
+    <text class="loading-text">{{t.loadingDots}}</text>
   </view>
 
   <!-- 无数据 -->
   <view class="loading-wrap" wx:elif="{{notFound}}">
-    <empty-state text="任务不存在或无权访问" />
+    <empty-state text="{{t.taskGone}}" />
   </view>
 
   <block wx:else>
     <!-- 主卡：指令 + 状态 -->
     <view class="detail-card">
       <view class="card-row1">
-        <text class="task-title">{{detail.instruction || detail.nextStep || '协作任务'}}</text>
+        <text class="task-title">{{detail.instruction || detail.nextStep || t.collabWord}}</text>
         <text class="status-tag {{statusCls}}">{{statusText}}</text>
       </view>
       <view class="card-row2">
@@ -22,66 +22,66 @@
         <text class="row-separator">·</text>
         <text class="meta-text">{{detail.styleNo || '—'}}</text>
         <text class="row-separator">·</text>
-        <text class="meta-text">优先级 {{priorityText}}</text>
+        <text class="meta-text">{{t.priorityPrefix}}{{priorityText}}</text>
       </view>
       <view class="card-footer">
-        <text class="time-text" wx:if="{{createdAtText}}">创建 {{createdAtText}}</text>
-        <text class="overdue-text" wx:if="{{detail.overdue}}">已逾期</text>
+        <text class="time-text" wx:if="{{createdAtText}}">{{t.createdPrefix}}{{createdAtText}}</text>
+        <text class="overdue-text" wx:if="{{detail.overdue}}">{{t.overdueW}}</text>
       </view>
     </view>
 
     <!-- 字段区 -->
     <view class="detail-card">
       <view class="field-row" wx:if="{{detail.targetRole}}">
-        <text class="field-label">目标角色</text>
+        <text class="field-label">{{t.targetRoleLabel}}</text>
         <text class="field-value">{{detail.targetRole}}</text>
       </view>
       <view class="field-row" wx:if="{{detail.currentStage}}">
-        <text class="field-label">当前阶段</text>
+        <text class="field-label">{{t.currentStage}}</text>
         <text class="field-value">{{detail.currentStage}}</text>
       </view>
       <view class="field-row" wx:if="{{detail.nextStep}}">
-        <text class="field-label">下一步</text>
+        <text class="field-label">{{t.nextStepLabel}}</text>
         <text class="field-value">{{detail.nextStep}}</text>
       </view>
       <view class="field-row" wx:if="{{dueAtText}}">
-        <text class="field-label">截止时间</text>
+        <text class="field-label">{{t.deadlineLabel}}</text>
         <text class="field-value">{{dueAtText}}</text>
       </view>
       <view class="field-row" wx:if="{{detail.dueHint}}">
-        <text class="field-label">时限说明</text>
+        <text class="field-label">{{t.timeLimitLabel}}</text>
         <text class="field-value">{{detail.dueHint}}</text>
       </view>
       <view class="field-row" wx:if="{{detail.assigneeName}}">
-        <text class="field-label">负责人</text>
+        <text class="field-label">{{t.assigneeLabel}}</text>
         <text class="field-value">{{detail.assigneeName}}</text>
       </view>
       <view class="field-row" wx:if="{{detail.creatorName}}">
-        <text class="field-label">创建人</text>
+        <text class="field-label">{{t.creatorLabel}}</text>
         <text class="field-value">{{detail.creatorName}}</text>
       </view>
       <view class="field-row" wx:if="{{detail.sourceType}}">
-        <text class="field-label">来源</text>
+        <text class="field-label">{{t.sourceLabel}}</text>
         <text class="field-value">{{detail.sourceType}}</text>
       </view>
     </view>
 
     <!-- 验收标准 -->
     <view class="detail-card" wx:if="{{detail.acceptanceCriteria}}">
-      <text class="block-title">验收标准</text>
+      <text class="block-title">{{t.acceptanceLabel}}</text>
       <text class="block-text">{{detail.acceptanceCriteria}}</text>
     </view>
 
     <!-- 完成说明 -->
     <view class="detail-card" wx:if="{{detail.completionNote}}">
-      <text class="block-title">完成说明</text>
+      <text class="block-title">{{t.completeNoteLabel}}</text>
       <text class="block-text">{{detail.completionNote}}</text>
       <text class="block-time" wx:if="{{completedAtText}}">{{completedAtText}}</text>
     </view>
 
     <!-- 升级信息 -->
     <view class="detail-card" wx:if="{{detail.escalatedTo}}">
-      <text class="block-title">已升级至</text>
+      <text class="block-title">{{t.escalatedTo}}</text>
       <text class="block-text">{{detail.escalatedTo}}</text>
     </view>
   </block>
@@ -89,8 +89,8 @@
   <!-- 底部固定操作栏 -->
   <view class="action-bar" wx:if="{{!loading && !notFound}}">
     <view class="btn btn-primary" wx:if="{{canAct}}" bindtap="onActionPrimary">{{actionLabel}}</view>
-    <view class="btn btn-ghost" wx:if="{{canCancel}}" bindtap="onActionCancel">取消任务</view>
-    <view class="btn btn-ghost" wx:if="{{!canAct && !canCancel}}" bindtap="onCopyInstruction">复制内容</view>
+    <view class="btn btn-ghost" wx:if="{{canCancel}}" bindtap="onActionCancel">{{t.cancelTaskLabel}}</view>
+    <view class="btn btn-ghost" wx:if="{{!canAct && !canCancel}}" bindtap="onCopyInstruction">{{t.copyContentBtn}}</view>
   </view>
 
   <ai-assistant />

@@ -8,14 +8,16 @@
  */
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.collabTask.';
 
 var STATUS_TEXT = {
-  PENDING: '待领取',
-  ACCEPTED: '已领取',
-  IN_PROGRESS: '处理中',
-  COMPLETED: '已完成',
-  ESCALATED: '已升级',
-  CANCELLED: '已取消',
+  PENDING: 'stPending',
+  ACCEPTED: 'stAccepted',
+  IN_PROGRESS: 'stInProgress',
+  COMPLETED: 'stCompleted',
+  ESCALATED: 'stEscalated',
+  CANCELLED: 'stCancelled',
 };
 var STATUS_CLS = {
   PENDING: 'tag-orange',
@@ -34,16 +36,21 @@ var STATUS_COLOR = {
   ESCALATED: 'var(--color-danger)',
   CANCELLED: 'var(--color-text-tertiary)',
 };
-var STATUS_MAP = {};
-Object.keys(STATUS_TEXT).forEach(function (k) {
-  STATUS_MAP[k] = { text: STATUS_TEXT[k], cls: STATUS_CLS[k] };
-});
+function buildStatusMap(lang) {
+  var m = {};
+  Object.keys(STATUS_TEXT).forEach(function (k) {
+    m[k] = { text: i18n.t(NS + STATUS_TEXT[k], lang), cls: STATUS_CLS[k] };
+  });
+  return m;
+}
+var STATUS_MAP = {};  // applyLanguage 重建
 
-var PRIORITY_TEXT = { CRITICAL: '紧急', HIGH: '高', MEDIUM: '中', LOW: '低' };
+var PRIORITY_TEXT = { CRITICAL: 'prCritical', HIGH: 'prHigh', MEDIUM: 'prMedium', LOW: 'prLow' };
 
-function statusText(s) {
+function statusText(s, lang) {
   var k = String(s || '').toUpperCase();
-  return STATUS_TEXT[k] || s || '—';
+  var key = STATUS_TEXT[k];
+  return key ? i18n.t(NS + key, lang) : (s || '—');
 }
 function statusCls(s) {
   var k = String(s || '').toUpperCase();
@@ -73,25 +80,46 @@ Page({
     hasMore: true,
     statusFilter: '',
     keyword: '',
-    STATUS_MAP: STATUS_MAP,
-    STATUS_OPTIONS: [
-      { value: '', label: '全部状态' },
-      { value: 'PENDING', label: '待领取' },
-      { value: 'ACCEPTED', label: '已领取' },
-      { value: 'IN_PROGRESS', label: '处理中' },
-      { value: 'COMPLETED', label: '已完成' },
-    ],
+    STATUS_MAP: {},  // applyLanguage 重建
+    STATUS_OPTIONS: [],  // applyLanguage 重建
   },
 
   _STATUS_OPTIONS: [
-    { value: '', label: '全部状态' },
-    { value: 'PENDING', label: '待领取' },
-    { value: 'ACCEPTED', label: '已领取' },
-    { value: 'IN_PROGRESS', label: '处理中' },
-    { value: 'COMPLETED', label: '已完成' },
+    { value: '', key: 'filterAllStatus' },
+    { value: 'PENDING', key: 'stPending' },
+    { value: 'ACCEPTED', key: 'stAccepted' },
+    { value: 'IN_PROGRESS', key: 'stInProgress' },
+    { value: 'COMPLETED', key: 'stCompleted' },
   ],
 
+  /** 静态文案按语言写入，状态映射/筛选重建 */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        filterAllStatus: i18n.t(NS + 'filterAllStatus', lang),
+        detailBtn: i18n.t(NS + 'detailBtn', lang),
+        searchPhW: i18n.t(NS + 'searchPhW', lang),
+        noRecords: i18n.t(NS + 'noRecords', lang),
+        assigneePrefix: i18n.t(NS + 'assigneePrefix', lang),
+        createdPrefix: i18n.t(NS + 'createdPrefix', lang),
+        noMoreW: i18n.t(NS + 'noMoreW', lang),
+        claimChar: i18n.t(NS + 'claimChar', lang),
+        overdueW: i18n.t(NS + 'overdueW', lang),
+      },
+      STATUS_MAP: buildStatusMap(lang),
+      STATUS_OPTIONS: this._STATUS_OPTIONS.map(function (o) {
+        return { value: o.value, label: i18n.t(NS + o.key, lang) };
+      }),
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function () {
+    this.applyLanguage(i18n.getLanguage());
     var app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this._resetAndLoad();
@@ -119,6 +147,7 @@ Page({
   _loadData: function () {
     if (this.data.loading) return Promise.resolve();
     var that = this;
+        var lang = this._lang || i18n.getLanguage();
     this.setData({ loading: true });
     var params = { page: this.data.page, size: this.data.pageSize };
     if (this.data.statusFilter) params.status = this.data.statusFilter;
@@ -128,12 +157,13 @@ Page({
       var records = (res && (res.rows || res.records)) || [];
       var total = (res && res.total) || records.length;
       var enriched = records.map(function (r) {
-        r.statusText = statusText(r.taskStatus);
+        r.statusText = statusText(r.taskStatus, lang);
         r.statusCls = statusCls(r.taskStatus);
         // D-419：实底 status-badge 用色
         r._statusColor = statusColor(r.taskStatus);
-        r.priorityText = PRIORITY_TEXT[String(r.priority || '').toUpperCase()] || '中';
-        r.title = r.instruction || r.nextStep || '协作任务';
+        var pk = PRIORITY_TEXT[String(r.priority || '').toUpperCase()];
+        r.priorityText = pk ? i18n.t(NS + pk, lang) : i18n.t(NS + 'prMedium', lang);
+        r.title = r.instruction || r.nextStep || i18n.t(NS + 'collabWord', lang);
         r.isOverdue = !!r.overdue;
         return r;
       });
@@ -145,7 +175,7 @@ Page({
       });
     }).catch(function (e) {
       that.setData({ loading: false });
-      toast('加载失败: ' + (e.errMsg || e.message || e));
+      toast(i18n.t(NS + 'loadFailPrefix', this._lang) + (e.errMsg || e.message || e));
     });
   },
 
@@ -168,7 +198,7 @@ Page({
     var item = this.data.list[idx];
     if (!item) return;
     var id = item.id !== undefined && item.id !== null ? String(item.id) : '';
-    if (!id) { toast('任务ID缺失'); return; }
+    if (!id) { toast(i18n.t(NS + 'taskIdMissing', this._lang)); return; }
     wx.navigateTo({ url: '/pages/collab-task/detail/index?taskId=' + encodeURIComponent(id) });
   },
 
@@ -217,7 +247,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t(NS + 'selectW', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

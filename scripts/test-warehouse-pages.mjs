@@ -2496,6 +2496,10 @@ const TASK_LIST_JS = 'pages/procurement/task-list/index.js';
 const TASK_LIST_WXML = 'pages/procurement/task-list/index.wxml';
 const DASH_JS = 'pages/dashboard/index.js';
 const DASH_WXML = 'pages/dashboard/index.wxml';
+const COLLAB_DETAIL_JS = 'pages/collab-task/detail/index.js';
+const COLLAB_DETAIL_WXML = 'pages/collab-task/detail/index.wxml';
+const COLLAB_LIST_JS = 'pages/collab-task/list/index.js';
+const COLLAB_LIST_WXML = 'pages/collab-task/list/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3437,6 +3441,32 @@ function testI18nDashboard() {
   eq('仪表盘 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '生产管理');
 }
 
+/** 协作任务两页（D-582）—— 状态/优先级/四步动作/列表筛选 */
+function testI18nCollabTask() {
+  testPageI18n(COLLAB_DETAIL_JS, COLLAB_DETAIL_WXML, '协作任务详情页');
+  testPageI18n(COLLAB_LIST_JS, COLLAB_LIST_WXML, '协作任务列表页');
+
+  const { page: zhP, wx: zhWx } = loadPage(COLLAB_LIST_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(COLLAB_LIST_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  const zhOpts = zhP.data.STATUS_OPTIONS.map(o => o.label).join('|');
+  const enOpts = enP.data.STATUS_OPTIONS.map(o => o.label).join('|');
+  eq('zh 状态筛选', zhOpts, '全部状态|待领取|已领取|处理中|已完成');
+  ok('en 状态筛选无中文', !CJK_RE.test(enOpts), enOpts);
+  eq('en 优先级', enP.data.STATUS_MAP.PENDING.text, 'Pending Claim');
+
+  const { page: zhD, wx: zhDw } = loadPage(COLLAB_DETAIL_JS, makeApi());
+  zhD.applyLanguage('zh-CN');
+  const { page: enD, wx: enDw } = loadPage(COLLAB_DETAIL_JS, makeApi());
+  enD.applyLanguage('en-US');
+  eq('en 详情验收标准', enD.data.t.acceptanceLabel, 'Acceptance Criteria');
+  eq('协作详情导航标题随语言', lastCall(enDw, 'setNavigationBarTitle').title, 'Collab Task');
+  eq('协作列表导航标题', lastCall(enWx, 'setNavigationBarTitle').title, 'Collab Task');
+  eq('协作列表 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '协作任务');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3505,6 +3535,7 @@ try {
   testI18nAdvance();
   testI18nTaskList();
   testI18nDashboard();
+  testI18nCollabTask();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
