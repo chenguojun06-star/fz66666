@@ -2488,6 +2488,8 @@ const RETURN_DETAIL_JS = 'pages/return/detail/index.js';
 const RETURN_DETAIL_WXML = 'pages/return/detail/index.wxml';
 const PROC_EDIT_JS = 'pages/dashboard/process-edit/index.js';
 const PROC_EDIT_WXML = 'pages/dashboard/process-edit/index.wxml';
+const USER_APPROVAL_JS = 'pages/admin/user-approval/index.js';
+const USER_APPROVAL_WXML = 'pages/admin/user-approval/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3352,6 +3354,25 @@ function testI18nProcessEdit() {
   eq('工序编辑 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '工序编辑');
 }
 
+/** 用户审批页（D-578）—— 双tab/批准分配角色/拒绝 */
+function testI18nUserApproval() {
+  testPageI18n(USER_APPROVAL_JS, USER_APPROVAL_WXML, '用户审批页');
+
+  const { page: zhP, wx: zhWx } = loadPage(USER_APPROVAL_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(USER_APPROVAL_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 双tab', zhP.data.t.externalTab + '|' + zhP.data.t.tenantTab, '外发工厂员工|租户员工');
+  ok('en 双tab无中文', !CJK_RE.test(enP.data.t.externalTab + '|' + enP.data.t.tenantTab),
+    enP.data.t.externalTab + '|' + enP.data.t.tenantTab);
+  ok('en 分享提示无中文', !CJK_RE.test(String(enP.data.t.shareQrHint)), enP.data.t.shareQrHint);
+  ok('en 拒绝登录提示无中文', !CJK_RE.test(String(enP.data.t.rejectLoginHintW)), enP.data.t.rejectLoginHintW);
+
+  eq('用户审批导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'User Approval');
+  eq('用户审批 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '用户审批');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3416,6 +3437,7 @@ try {
   testI18nShipment();
   testI18nReturnDetail();
   testI18nProcessEdit();
+  testI18nUserApproval();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
