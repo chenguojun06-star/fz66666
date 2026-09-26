@@ -6,6 +6,8 @@
  * 附件功能：所有阶段通用，支持上传+查看PC端同步的文件
  */
 const { style: styleApi } = require('../../../utils/api-modules/style-warehouse');
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.stageDetail.';
 const production = require('../../../utils/api-modules/production');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
@@ -14,11 +16,12 @@ const { PATTERN_STATUS_MAP } = require('../../../shared/enumLabels');
 const { STAGE_NAMES, getStageName } = require('../../../utils/sampleHelper');
 
 // 样衣扫码操作类型中文映射（与PC端一致）
+// 操作类型：键后缀（展示用，工序匹配走 progressStage 原值不受影响）
 const OPERATION_TYPE_LABELS = {
-  RECEIVE: '领取样板', PLATE: '车板', FOLLOW_UP: '跟单', COMPLETE: '完成确认',
-  PROCUREMENT: '采购', CUTTING: '裁剪', SECONDARY: '二次工艺', SEWING: '车缝',
-  TAIL: '尾部', REVIEW: '审核', WAREHOUSE_IN: '入库', WAREHOUSE_OUT: '出库',
-  WAREHOUSE_RETURN: '归还', REWORK: '返修完成',
+  RECEIVE: 'mp.pattern.opReceive', PLATE: 'mp.pattern.opPlate', FOLLOW_UP: 'mp.pattern.opFollowUp', COMPLETE: 'mp.pattern.opComplete',
+  PROCUREMENT: 'mp.pattern.opProcurement', CUTTING: 'mp.pattern.opCutting', SECONDARY: 'mp.pattern.opSecondary', SEWING: 'mp.pattern.opSewing',
+  TAIL: 'mp.pattern.opTail', REVIEW: 'mp.pattern.submitReview', WAREHOUSE_IN: 'mp.pattern.submitWhIn', WAREHOUSE_OUT: 'mp.pattern.submitWhOut',
+  WAREHOUSE_RETURN: 'mp.pattern.submitWhReturn', REWORK: 'mp.pattern.opRework',
 };
 
 /**
@@ -63,21 +66,21 @@ function buildSheetRichHtml(raw) {
 
 // 二次工艺类型映射
 const PROCESS_TYPE_MAP = {
-  embroidery: '绣花', printing: '印花', washing: '洗水',
-  dyeing: '染色', ironing: '整烫', pleating: '压褶',
-  beading: '钉珠', other: '其他',
+  embroidery: 'mp.scanConfirm.procEmbroidery', printing: 'mp.scanConfirm.procPrinting', washing: 'mp.scanConfirm.procWashing',
+  dyeing: 'mp.scanConfirm.procDyeing', ironing: 'mp.scanConfirm.procIroning', pleating: 'mp.scanConfirm.procPleating',
+  beading: 'mp.scanConfirm.procBeading', other: 'mp.stageDetail.otherWord',
 };
 
 // 二次工艺状态：displayStatus 共享映射 + 本地兜底（语义不同/未覆盖的值）
 const LOCAL_PROCESS_STATUS_FALLBACK = {
-  pending: '待处理',
-  processing: '处理中',
+  pending: 'mp.scanConfirm.statusTodo',
+  processing: 'mp.scanConfirm.statusDoing',
 };
 
-function getProcessStatusLabel(status) {
+function getProcessStatusLabel(status, lang) {
   if (!status) return '';
   var key = String(status).trim().toLowerCase();
-  if (LOCAL_PROCESS_STATUS_FALLBACK[key]) return LOCAL_PROCESS_STATUS_FALLBACK[key];
+  if (LOCAL_PROCESS_STATUS_FALLBACK[key]) return i18n.t(LOCAL_PROCESS_STATUS_FALLBACK[key], lang);
   var label = displayStatusText(key);
   return (label && label !== key) ? label : (status || '');
 }
@@ -85,18 +88,19 @@ function getProcessStatusLabel(status) {
 // 纸样状态（PatternRevision）：PATTERN_STATUS_MAP 共享映射 + 本地兜底
 // 注：PATTERN_STATUS_MAP 为 PatternProduction 状态，PatternRevision 部分状态语义不同，需本地兜底
 const LOCAL_PATTERN_REVISION_FALLBACK = {
-  PENDING: '未开始',
-  IN_PROGRESS: '进行中',
-  RETURNED: '已退回',
-  LOCKED: '已锁定',
-  UNLOCKED: '未锁定',
-  NOT_STARTED: '未开始',
+  PENDING: 'mp.stageDetail.statusNotStarted',
+  IN_PROGRESS: 'mp.scanConfirm.statusDoing',
+  RETURNED: 'mp.stageDetail.statusReworked',
+  LOCKED: 'mp.stageDetail.statusLocked',
+  UNLOCKED: 'mp.stageDetail.statusUnlocked',
+  NOT_STARTED: 'mp.stageDetail.statusNotStarted',
 };
 
-function getPatternRevisionLabel(status) {
-  if (!status) return '其他';
+function getPatternRevisionLabel(status, lang) {
+  if (!status) return i18n.t(NS + 'otherWord', lang);
   var upper = String(status).trim().toUpperCase();
-  return LOCAL_PATTERN_REVISION_FALLBACK[upper] || PATTERN_STATUS_MAP[upper] || '其他';
+  var fb = LOCAL_PATTERN_REVISION_FALLBACK[upper];
+  return (fb ? i18n.t(fb, lang) : '') || PATTERN_STATUS_MAP[upper] || i18n.t(NS + 'otherWord', lang);
 }
 
 /* ========== 公共辅助：鉴权 + 上传/下载（消除 token/baseUrl 重复） ========== */
@@ -123,19 +127,19 @@ function _uploadFileWithAuth(filePath, formData, callback, pageCtx) {
         const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
         if (data.code === 200) {
           if (!callback) {
-            wx.showToast({ title: '上传成功', icon: 'success' });
+            wx.showToast({ title: i18n.t('mp.sampleDetail.uploadOk', this._lang), icon: 'success' });
             pageCtx && pageCtx.loadAttachments && pageCtx.loadAttachments();
           }
         } else {
-          wx.showToast({ title: data.message || '上传失败', icon: 'none' });
+          wx.showToast({ title: data.message || i18n.t('common.uploadFailed', this._lang), icon: 'none' });
         }
       } catch (e) {
-        wx.showToast({ title: '上传失败', icon: 'none' });
+        wx.showToast({ title: i18n.t('common.uploadFailed', this._lang), icon: 'none' });
       }
       if (callback) callback();
     },
     fail: () => {
-      wx.showToast({ title: '上传失败', icon: 'none' });
+      wx.showToast({ title: i18n.t('common.uploadFailed', this._lang), icon: 'none' });
       if (callback) callback();
     },
   });
@@ -164,7 +168,7 @@ function _downloadWithAuth(url, onSuccess, onFail) {
       if (onFail) {
         onFail(err);
       } else {
-        wx.showToast({ title: '下载失败', icon: 'none' });
+        wx.showToast({ title: i18n.t('mp.sampleDetail.downloadFailed', this._lang), icon: 'none' });
       }
     },
   });
@@ -173,7 +177,7 @@ function _downloadWithAuth(url, onSuccess, onFail) {
 Page({
   data: {
 
-    reviewStatusOptions: ['通过', '需修改', '不通过'],
+    reviewStatusOptions: [i18n.t('common.pass', this._lang), i18n.t(NS + 'needModify', this._lang), i18n.t(NS + 'failWord', this._lang)],
     stageKey: '',
     styleId: '',
     patternId: '',
@@ -217,11 +221,121 @@ Page({
     devStages: [],
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}）；标题在 onLoad 按 STAGE_NAMES 设置 */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        loading: i18n.t('common.loading', lang),
+        sampleDevWord: i18n.t('mp.pattern.opReceive', lang),
+        stageSubtitle: i18n.t(NS + 'stageSubtitle', lang),
+        assigneeLabel: i18n.t(NS + 'assigneeLabel', lang),
+        plannedQtyLabel: i18n.t(NS + 'plannedQtyLabel', lang),
+        completedLabel: i18n.t('common.completed', lang),
+        remainingQtyLabel: i18n.t(NS + 'remainingQtyLabel', lang),
+        pieceUnit: i18n.t('common.piece', lang),
+        deliveryLabel: i18n.t('mp.scanResult.deliveryLabel', lang),
+        startTimeLabel: i18n.t(NS + 'startTimeLabelW', lang),
+        completeTimeLabel: i18n.t(NS + 'completeTimeLabel', lang),
+        stagePhotosLabel: i18n.t(NS + 'stagePhotosLabel', lang),
+        photosUnit: i18n.t(NS + 'photosUnit', lang),
+        processScanUpdate: i18n.t(NS + 'processScanUpdate', lang),
+        uploadPhoto: i18n.t(NS + 'uploadPhoto', lang),
+        markComplete: i18n.t(NS + 'markComplete', lang),
+        stageDoneHint: i18n.t(NS + 'stageDoneHint', lang),
+        tabBom: i18n.t('mp.sampleDetail.tabBom', lang),
+        matMainLabel: i18n.t(NS + 'matMainLabel', lang),
+        matAuxLabel: i18n.t(NS + 'matAuxLabel', lang),
+        costLabel: i18n.t(NS + 'costLabel', lang),
+        specLabel: i18n.t(NS + 'specLabel', lang),
+        usageLabel: i18n.t(NS + 'usageLabel', lang),
+        unitPriceLabel: i18n.t('mp.sampleDetail.unitPrice', lang),
+        supplierLabel: i18n.t(NS + 'supplierLabel', lang),
+        patternInfoTitle: i18n.t(NS + 'patternInfoTitle', lang),
+        noPatternData: i18n.t(NS + 'noPatternData', lang),
+        roleMakerLabel: i18n.t('mp.sampleDetail.roleMaker', lang),
+        versionLabel: i18n.t(NS + 'versionLabel', lang),
+        remarkLabel: i18n.t('common.remark', lang),
+        sizeInfoTitle: i18n.t(NS + 'sizeInfoTitle', lang),
+        noSizeData: i18n.t(NS + 'noSizeData', lang),
+        partHeader: i18n.t('mp.sampleDetail.partHeader', lang),
+        measureMethodLabel: i18n.t(NS + 'measureMethodLabel', lang),
+        toleranceLabel: i18n.t(NS + 'toleranceLabel', lang),
+        baseSizeLabel: i18n.t(NS + 'baseSizeLabel', lang),
+        processListTitle: i18n.t(NS + 'processListTitle', lang),
+        noProcessConfigT: i18n.t(NS + 'noProcessConfigT', lang),
+        configOnPcHint: i18n.t(NS + 'configOnPcHint', lang),
+        claimantLabel: i18n.t('mp.scanConfirm.claimantLabel', lang),
+        scanTimeLabel: i18n.t(NS + 'scanTimeLabel', lang),
+        scanCountLabel: i18n.t(NS + 'scanCountLabel', lang),
+        scanRecordsFmtW: i18n.t(NS + 'scanRecordsFmtW', lang),
+        warehouseLabel: i18n.t(NS + 'warehouseLabel', lang),
+        machineTypeLabel: i18n.t(NS + 'machineTypeLabel', lang),
+        difficultyLabel: i18n.t(NS + 'difficultyLabel', lang),
+        undoBtn: i18n.t(NS + 'undoBtn', lang),
+        noScanRecordsT: i18n.t(NS + 'noScanRecordsT', lang),
+        collapseText: i18n.t('mp.sampleDev.collapseText', lang),
+        viewDetailText: i18n.t('mp.sampleDetail.tabBom', lang),
+        tabSecondary: i18n.t('mp.sampleDetail.tabSecondary', lang),
+        noSecondaryData: i18n.t(NS + 'secondaryNoData', lang),
+        typeLabel: i18n.t(NS + 'typeLabel', lang),
+        qtyLabel: i18n.t('common.quantity', lang),
+        totalPriceLabel: i18n.t(NS + 'totalPriceLabel', lang),
+        processorLabel: i18n.t(NS + 'processorLabel', lang),
+        completeTimeLabel2: i18n.t(NS + 'completeTimeLabel', lang),
+        descLabel: i18n.t(NS + 'descLabel', lang),
+        craftSheetTitle: i18n.t('mp.scanConfirm.craftSheetTitle', lang),
+        noCraftSheet: i18n.t(NS + 'noCraftSheet', lang),
+        noCraftData: i18n.t(NS + 'noCraftData', lang),
+        styleInfoTitle: i18n.t(NS + 'styleInfoTitle2', lang),
+        styleNoLabel: i18n.t(NS + 'styleNoLabel2', lang),
+        styleNameLabel: i18n.t(NS + 'styleNameLabel', lang),
+        categoryLabel: i18n.t('mp.pattern.categoryLabel', lang),
+        seasonLabel: i18n.t('mp.pattern.seasonWord', lang),
+        customerLabel: i18n.t('mp.pattern.customerLabel', lang),
+        channelLabel: i18n.t(NS + 'channelLabel', lang),
+        colorLabel: i18n.t('common.color', lang),
+        sizeLabel: i18n.t('common.size', lang),
+        qtyLabel2: i18n.t('common.quantity', lang),
+        tagPriceLabel: i18n.t(NS + 'tagPriceLabel', lang),
+        salePriceLabel: i18n.t(NS + 'salePriceLabel', lang),
+        patternPriceLabel: i18n.t(NS + 'patternPriceLabel', lang),
+        sizeTableTitle: i18n.t('mp.sampleDetail.tabSize', lang),
+        noSizeData2: i18n.t(NS + 'noSizeData', lang),
+        measureMethodLabel2: i18n.t('mp.scanResult.measureMethod', lang),
+        sizePriceTitle: i18n.t(NS + 'tabSizePrice', lang),
+        noSizePriceData: i18n.t(NS + 'noSizePriceData', lang),
+        processWord: i18n.t('mp.pattern.processWord', lang),
+        sampleReviewTitle: i18n.t('mp.sampleDetail.sampleReview', lang),
+        reviewConclusionWord: i18n.t(NS + 'reviewConclusionWord', lang),
+        reviewerLabel: i18n.t(NS + 'reviewerLabel', lang),
+        reviewTimeLabel: i18n.t(NS + 'reviewTimeLabel', lang),
+        reviewComment: i18n.t(NS + 'reviewComment', lang),
+        reviewCommentPh: i18n.t(NS + 'reviewCommentPh', lang),
+        cancel: i18n.t('common.cancel', lang),
+        needModifyW: i18n.t(NS + 'needModifyW', lang),
+        noAssigneeW: i18n.t(NS + 'noAssigneeW', lang),
+        noClaimW: i18n.t(NS + 'noClaimW', lang),
+        secondaryWordW: i18n.t(NS + 'secondaryWordW', lang),
+        partsCountW: i18n.t(NS + 'partsCountW', lang),
+        materialCountW: i18n.t(NS + 'materialCountW', lang),
+        confirmSubmit: i18n.t('mp.scanResult.confirmSubmit', lang),
+        submitReviewBtn: i18n.t('mp.sampleDetail.tabProcess', lang),
+      },
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad(options) {
+    this.applyLanguage(i18n.getLanguage());
     const stageKey = options.key || '';
     const styleId = options.styleId || '';
     const patternId = options.patternId || '';
-    const stageName = STAGE_NAMES[stageKey] || '阶段详情';
+    var lang = i18n.getLanguage();
+    this._lang = lang;
+    const stageName = STAGE_NAMES[stageKey] || i18n.t(NS + 'navTitle', lang);
 
     // 从全局缓存读取stage和styleInfo
     const app = getApp();
@@ -236,7 +350,7 @@ Page({
     this.setData({
       stageKey, styleId: finalStyleId, patternId: finalPatternId, stageName,
       stage, styleInfo,
-      navTitle: stageName || '阶段详情',
+      navTitle: stageName || i18n.t(NS + 'navTitle', lang),
       patternSnapshot: cache.snapshot || null,
     });
     wx.setNavigationBarTitle({ title: stageName });
@@ -323,14 +437,15 @@ Page({
   buildTimeline(styleInfo) {
     if (!styleInfo) return;
     var that = this;
+    var lang = this._lang || i18n.getLanguage();
     var snapshot = this.data.patternSnapshot || styleInfo.snapshot || {};
     var stageConfig = [
-      { key: 'procurement', name: '物料采购' },
-      { key: 'cutting', name: '裁剪' },
-      { key: 'secondary', name: '二次工艺' },
-      { key: 'sewing', name: '车缝' },
-      { key: 'tail', name: '尾部' },
-      { key: 'warehousing', name: '入库' },
+      { key: 'procurement', name: i18n.t(NS + 'matPurchaseW', lang) },
+      { key: 'cutting', name: i18n.t('mp.pattern.opCutting', lang) },
+      { key: 'secondary', name: i18n.t('mp.pattern.opSecondary', lang) },
+      { key: 'sewing', name: i18n.t('mp.pattern.opSewing', lang) },
+      { key: 'tail', name: i18n.t('mp.pattern.opTail', lang) },
+      { key: 'warehousing', name: i18n.t('mp.pattern.submitWhIn', lang) },
     ];
 
     // 从 snapshot.progressNodes 获取阶段进度（与 detail 页面 getSampleNodeProgress 逻辑一致）
@@ -368,14 +483,14 @@ Page({
       }
       totalPercent += percent;
       var status = percent >= 100 ? 'completed' : (percent > 0 ? 'in_progress' : 'not_started');
-      var statusText = percent >= 100 ? '已完成' : (percent > 0 ? percent + '%' : '待开始');
+      var statusText = percent >= 100 ? i18n.t('common.completed', this._lang) : (percent > 0 ? percent + '%' : i18n.t('mp.sampleDetail.stageTodo', this._lang));
 
       // 时间标签从 snapshot 获取
       var timeLabel = '';
       var deliveryShort = styleInfo._deliveryTime
         ? that._fmtDate(styleInfo._deliveryTime) : '';
       if (deliveryShort) {
-        timeLabel = '交期 ' + deliveryShort;
+        timeLabel = i18n.t('mp.scanResult.deliveryLabel', lang) + ' ' + deliveryShort;
       }
 
       // 延时提示
@@ -383,10 +498,10 @@ Page({
       var delayTone = '';
       if (status === 'in_progress' && snapshot._countdownDays != null) {
         if (snapshot._countdownDays < 0) {
-          delayText = '已逾期' + Math.abs(snapshot._countdownDays) + '天';
+          delayText = i18n.t(NS + 'overdueLabel', this._lang) + Math.abs(snapshot._countdownDays) + i18n.t(NS + 'daysWord', this._lang);
           delayTone = 'danger';
         } else if (snapshot._countdownDays <= 3) {
-          delayText = '临近交期' + snapshot._countdownDays + '天';
+          delayText = i18n.t('mp.sampleDev.filterNearDue', this._lang) + snapshot._countdownDays + i18n.t(NS + 'daysWord', this._lang);
           delayTone = 'warning';
         }
       }
@@ -395,11 +510,11 @@ Page({
       var description = '';
       var stageProgress = percent;
       if (status === 'completed') {
-        description = s.name + '已完成';
+        description = s.name + i18n.t('common.completed', this._lang);
       } else if (status === 'in_progress') {
-        description = s.name + '进行中 ' + percent + '%';
+        description = s.name + i18n.t('mp.scanConfirm.statusDoing', this._lang) + ' ' + percent + '%';
       } else {
-        description = '待开始';
+        description = i18n.t('mp.sampleDetail.stageTodo', this._lang);
       }
 
       return {
@@ -442,20 +557,20 @@ Page({
     var countdownTone = 'normal';
     if (countdownDays != null) {
       if (countdownDays < 0) {
-        countdownText = '已逾期' + Math.abs(countdownDays) + '天';
+        countdownText = i18n.t(NS + 'overdueLabel', this._lang) + Math.abs(countdownDays) + i18n.t(NS + 'daysWord', this._lang);
         countdownTone = 'danger';
       } else if (countdownDays === 0) {
-        countdownText = '今日到期';
+        countdownText = i18n.t(NS + 'todayDue', this._lang);
         countdownTone = 'danger';
       } else {
-        countdownText = '剩余' + countdownDays + '天';
+        countdownText = i18n.t(NS + 'remainingPrefix', this._lang) + countdownDays + i18n.t(NS + 'daysWord', this._lang);
         countdownTone = countdownDays <= 3 ? 'danger' : (countdownDays <= 7 ? 'warning' : 'normal');
       }
     }
     var sampleCard = {
       styleNo: info.styleNo || info.styleCode || '',
       styleName: info.styleName || info.name || '',
-      statusText: info._mainStatus || '开发中',
+      statusText: info._mainStatus || i18n.t('mp.sampleDev.filterDeveloping', this._lang),
       customer: info.customer || info.customerName || '',
       patternMaker: info.patternMaker || info.patternDeveloper || info.receiver || '',
       category: displayCategory(info.category || info.productCategory || ''),
@@ -491,23 +606,23 @@ Page({
 
     // 开发阶段快捷入口数据（从 snapshot 或 styleInfo 推导状态）
     var devStageConfig = [
-      { key: 'bom', name: '物料清单', iconClass: 'icon-bom' },
-      { key: 'pattern', name: '纸样', iconClass: 'icon-pattern' },
-      { key: 'size', name: '尺码', iconClass: 'icon-size' },
-      { key: 'process', name: '工序', iconClass: 'icon-process' },
-      { key: 'secondary', name: '二次工艺', iconClass: 'icon-secondary' },
-      { key: 'production', name: '制单', iconClass: 'icon-production' },
-      { key: 'sizePrice', name: '码价', iconClass: 'icon-price' },
+      { key: 'bom', name: i18n.t('mp.sampleDetail.tabBom', lang), iconClass: 'icon-bom' },
+      { key: 'pattern', name: i18n.t('mp.sampleDetail.tabPattern', lang), iconClass: 'icon-pattern' },
+      { key: 'size', name: i18n.t(NS + 'tabSizeWord', lang), iconClass: 'icon-size' },
+      { key: 'process', name: i18n.t('mp.sampleDetail.tabProcess', lang), iconClass: 'icon-process' },
+      { key: 'secondary', name: i18n.t('mp.sampleDetail.tabSecondary', lang), iconClass: 'icon-secondary' },
+      { key: 'production', name: i18n.t(NS + 'tabSheet', lang), iconClass: 'icon-production' },
+      { key: 'sizePrice', name: i18n.t(NS + 'tabSizePrice', lang), iconClass: 'icon-price' },
     ];
     var devStages = devStageConfig.map(function (s) {
       // 从 progressNodes 取进度，优先用 snapshot 数据
       var percent = getNodeProgress(snapshot, s.key);
       var status = percent >= 100 ? 'completed' : (percent > 0 ? 'in_progress' : 'not_started');
-      var statusText = percent >= 100 ? '已完成' : (percent > 0 ? '进行中' : '');
+      var statusText = percent >= 100 ? i18n.t('common.completed', this._lang) : (percent > 0 ? i18n.t('mp.scanConfirm.statusDoing', this._lang) : '');
       //  fallback：从 styleInfo 直接字段判断（如 patternStatus）
       if (status === 'not_started' && s.key === 'pattern' && styleInfo.patternStatus) {
         status = styleInfo.patternStatus === 'COMPLETED' ? 'completed' : 'in_progress';
-        statusText = styleInfo.patternStatus === 'COMPLETED' ? '已完成' : '进行中';
+        statusText = styleInfo.patternStatus === 'COMPLETED' ? i18n.t('common.completed', this._lang) : i18n.t('mp.scanConfirm.statusDoing', this._lang);
       }
       return {
         key: s.key,
@@ -606,9 +721,9 @@ Page({
         it._specLabel = [it.spec, it.specification, it.color].filter(v => v).join(' ');
         // 部位标签：未指定部位时显示"整件"，与后端兜底一致
         var partName = (it.partName || '').toString().trim();
-        if (!partName) partName = '整件';
+        if (!partName) partName = i18n.t(NS + 'wholePiece', this._lang);
         it._partLabel = partName;
-        it._isWholePart = partName === '整件';
+        it._isWholePart = partName === i18n.t(NS + 'wholePiece', this._lang);
         // 子部位标签：未指定则为空（不展示），与后端逻辑一致
         var subPartName = (it.subPartName || '').toString().trim();
         it._subPartLabel = subPartName;
@@ -624,9 +739,9 @@ Page({
       const groups = { main: [], accessory: [], other: [] };
       list.forEach(it => { groups[it._category].push(it); });
       const bomGroups = [
-        { key: 'main', name: '主料', count: groups.main.length, items: groups.main },
-        { key: 'accessory', name: '辅料', count: groups.accessory.length, items: groups.accessory },
-        { key: 'other', name: '其他', count: groups.other.length, items: groups.other },
+        { key: 'main', name: i18n.t(NS + 'matMainLabel', this._lang), count: groups.main.length, items: groups.main },
+        { key: 'accessory', name: i18n.t(NS + 'matAuxLabel', this._lang), count: groups.accessory.length, items: groups.accessory },
+        { key: 'other', name: i18n.t(NS + 'otherWord', this._lang), count: groups.other.length, items: groups.other },
       ].filter(g => g.count > 0);
       let totalAmount = 0;
       list.forEach(it => { totalAmount += Number(it._amount || 0); });
@@ -653,7 +768,7 @@ Page({
       const res = await styleApi.getPatternRevision(this.data.styleId);
       const patternData = res ? Object.assign({}, res) : null;
       if (patternData && patternData.status) {
-        patternData.statusText = getPatternRevisionLabel(patternData.status);
+        patternData.statusText = getPatternRevisionLabel(patternData.status, this._lang);
       }
       this.setData({ patternData });
     } catch (e) {
@@ -688,7 +803,7 @@ Page({
       const sizeSet = {};
       const partMap = {};
       (list || []).forEach(function (it) {
-        const part = String(it.partName || '未命名部位').trim();
+        const part = String(it.partName || i18n.t(NS + 'unnamedPart', this._lang)).trim();
         if (!partMap[part]) partMap[part] = {};
         // 尺码可能是组合尺码 "S,M,L"，拆分后每个尺码都关联同一条记录
         var sizeNames = splitSizeNames(it.sizeName);
@@ -809,7 +924,7 @@ Page({
     });
     return config.map((c, idx) => {
       const key = c.id || c.processId || ('p_' + idx);
-      const processName = c.processName || c.name || ('工序' + (idx + 1));
+      const processName = c.processName || c.name || (i18n.t('mp.pattern.processWord', this._lang) + (idx + 1));
       const processCode = c.processCode || c.operationType || '';
       // 该工序的所有扫码记录
       const allRecords = recordMap[key] || recordMap[processName] || recordMap[processCode] || [];
@@ -830,7 +945,7 @@ Page({
       // 构建该工序的扫码记录列表（与PC端6列对齐）
       const scanList = sortedRecords.map(r => {
         const opType = String(r.operationType || '').toUpperCase();
-        const opLabel = OPERATION_TYPE_LABELS[opType] || opType || '未知';
+        const opLabel = OPERATION_TYPE_LABELS[opType] ? i18n.t(OPERATION_TYPE_LABELS[opType], this._lang) : (opType || i18n.t(NS + 'unknownWord', this._lang));
         const rScanTime = r.scanTime ? new Date(String(r.scanTime).replace(/-/g, '/')).getTime() : 0;
         const rCanUndo = rScanTime > 0 && (now - rScanTime) < 30 * 60 * 1000;
         // P1 修复（手机端同步）：补 unitPrice / scanCost，与 PC 端扫码记录表对齐
@@ -841,7 +956,7 @@ Page({
           : (rPrice > 0 ? rPrice * rQty : 0);
         return {
           id: r.id || '',
-          operatorName: r.operatorName || r.operator || '未知',
+          operatorName: r.operatorName || r.operator || i18n.t(NS + 'unknownWord', this._lang),
           operationLabel: opLabel,
           scanTimeText: this._fmtDateTime(r.scanTime),
           warehouse: r.warehouse || r.warehouseName || '-',
@@ -852,6 +967,7 @@ Page({
           size: r.size || '',
           unitPrice: rPrice > 0 ? rPrice.toFixed(2) : '',
           scanCost: rScanCostNum > 0 ? rScanCostNum.toFixed(2) : '',
+          wageText: rScanCostNum > 0 ? i18n.tf(NS + 'wageFmt', { cost: rScanCostNum.toFixed(2) }, " + L + ") : '',
         };
       });
 
@@ -864,7 +980,7 @@ Page({
         completed,
         inProgress,
         status: completed ? 'completed' : (inProgress ? 'in_progress' : 'not_started'),
-        statusText: completed ? '已完成' : (inProgress ? '进行中' : '未开始'),
+        statusText: completed ? i18n.t('common.completed', this._lang) : (inProgress ? i18n.t('mp.scanConfirm.statusDoing', this._lang) : i18n.t(NS + 'statusNotStarted', this._lang)),
         warehouse: (latest && (latest.warehouse || latest.warehouseName)) || '',
         remark: (latest && latest.remark) || '',
         unitPrice: price > 0 ? price.toFixed(2) : '',
@@ -875,6 +991,7 @@ Page({
         // 展开相关
         expanded: false,
         scanCount: scanList.length,
+        scanTitle: i18n.t(NS + 'scanRecordsFmtW', " + L + ") + '（' + scanList.length + '）',
         scanList: scanList,
         // 工序额外信息（与PC端列对齐）
         processCode: processCode,
@@ -908,7 +1025,7 @@ Page({
 
     function resolveStageName(progressStage) {
       var ps = String(progressStage || '').trim();
-      if (!ps) return '其他';
+      if (!ps) return i18n.t(NS + 'otherWord', this._lang);
       if (STAGE_MAP[ps]) return STAGE_MAP[ps];
       var lowerPs = ps.toLowerCase();
       for (var k in STAGE_MAP) {
@@ -990,7 +1107,7 @@ Page({
     const now = Date.now();
     const list = (records || []).map(r => {
       const opType = String(r.operationType || '').toUpperCase();
-      const opLabel = OPERATION_TYPE_LABELS[opType] || '未知';
+      const opLabel = OPERATION_TYPE_LABELS[opType] ? i18n.t(OPERATION_TYPE_LABELS[opType], this._lang) : i18n.t(NS + 'unknownWord', this._lang);
       const scanTime = r.scanTime ? new Date(String(r.scanTime).replace(/-/g, '/')).getTime() : 0;
       const canUndo = scanTime > 0 && (now - scanTime) < 30 * 60 * 1000;
       // 颜色/码数/数量展示
@@ -1001,10 +1118,10 @@ Page({
       else if (colorVal) colorSizeText = colorVal;
       else if (sizeVal) colorSizeText = sizeVal;
       const qtyVal = Number(r.quantity || 0);
-      const qtyText = qtyVal > 0 ? qtyVal + '件' : '';
+      const qtyText = qtyVal > 0 ? qtyVal + i18n.t('common.piece', this._lang) : '';
       return Object.assign({}, r, {
         _operationLabel: opLabel,
-        _operatorName: r.operatorName || r.operator || '未知',
+        _operatorName: r.operatorName || r.operator || i18n.t(NS + 'unknownWord', this._lang),
         _scanTimeText: this._fmtDateTime(r.scanTime),
         _warehouse: r.warehouse || r.warehouseName || '-',
         _remark: r.remark || '',
@@ -1022,7 +1139,7 @@ Page({
     const groups = [];
     const dateMap = {};
     list.forEach(item => {
-      const dateStr = item._scanTimeText ? item._scanTimeText.substring(0, 10) : '未知日期';
+      const dateStr = item._scanTimeText ? item._scanTimeText.substring(0, 10) : i18n.t(NS + 'unknownDate', this._lang);
       const timeStr = item._scanTimeText && item._scanTimeText.length > 10
         ? item._scanTimeText.substring(11, 16) : '';
       item._timeOnly = timeStr;
@@ -1043,8 +1160,8 @@ Page({
       (yesterday.getDate() < 10 ? '0' : '') + yesterday.getDate();
     groups.forEach(g => {
       g.count = g.items.length;
-      if (g.date === todayStr) g._dateLabel = '今天 · ' + g.date;
-      else if (g.date === yestStr) g._dateLabel = '昨天 · ' + g.date;
+      if (g.date === todayStr) g._dateLabel = i18n.t(NS + 'todayPrefix', this._lang) + g.date;
+      else if (g.date === yestStr) g._dateLabel = i18n.t(NS + 'yesterdayPrefix', this._lang) + g.date;
       else g._dateLabel = g.date;
     });
     this.setData({ patternScanRecords: list, patternScanGroups: groups });
@@ -1074,22 +1191,22 @@ Page({
     const patternId = this.data.patternId;
     if (!scanRecordId || !patternId) return;
     wx.showModal({
-      title: '确认撤回',
-      content: '撤回后该扫码记录将被删除，是否继续？',
-      confirmText: '撤回',
+      title: i18n.t(NS + 'undoTitle', this._lang),
+      content: i18n.t(NS + 'undoContent', this._lang),
+      confirmText: i18n.t(NS + 'undoBtn', this._lang),
       confirmColor: '#ff3b30',
       success: async (res) => {
         if (!res.confirm) return;
-        wx.showLoading({ title: '撤回中...', mask: true });
+        wx.showLoading({ title: i18n.t(NS + 'undoing', this._lang), mask: true });
         try {
           await production.undoPatternScanRecord(patternId, scanRecordId);
           wx.hideLoading();
-          wx.showToast({ title: '已撤销', icon: 'success' });
+          wx.showToast({ title: i18n.t(NS + 'undone', this._lang), icon: 'success' });
           // 刷新数据
           this.loadProcessAndScans();
         } catch (err) {
           wx.hideLoading();
-          const msg = err && err.message ? err.message : '撤销失败';
+          const msg = err && err.message ? err.message : i18n.t(NS + 'undoFailed', this._lang);
           wx.showToast({ title: msg, icon: 'none' });
         }
       },
@@ -1104,9 +1221,9 @@ Page({
       const list = _unwrapList(res);
       list.forEach(s => {
         const rawType = s.type || s.processType || '';
-        s.typeText = rawType ? (PROCESS_TYPE_MAP[rawType] || '未知') : '';
+        s.typeText = rawType ? (PROCESS_TYPE_MAP[rawType] ? i18n.t(PROCESS_TYPE_MAP[rawType], lang) : i18n.t(NS + 'unknownWord', lang)) : '';
         const statusKey = String(s.status || '').toLowerCase();
-        s._statusText = getProcessStatusLabel(statusKey);
+        s._statusText = getProcessStatusLabel(statusKey, lang);
         s.status = statusKey || s.status;
         const qty = Number(s.quantity || 0);
         const price = Number(s.unitPrice || s.price || 0);
@@ -1170,9 +1287,9 @@ Page({
       });
       // 样衣审核
       var reviewStatusMap = {
-        PASS: { text: '通过', tone: 'success' },
-        REWORK: { text: '需修改', tone: 'warning' },
-        REJECT: { text: '不通过', tone: 'danger' },
+        PASS: { text: i18n.t('common.pass', this._lang), tone: 'success' },
+        REWORK: { text: i18n.t(NS + 'needModify', this._lang), tone: 'warning' },
+        REJECT: { text: i18n.t(NS + 'failWord', this._lang), tone: 'danger' },
       };
       var reviewStatus = style.sampleReviewStatus || '';
       var reviewInfo = reviewStatusMap[reviewStatus] || { text: '未审核', tone: 'default' };
@@ -1223,7 +1340,7 @@ Page({
       (list || []).forEach(function (it) {
         var pc = String(it.processCode || '').trim();
         var pn = String(it.processName || '').trim();
-        var key = pc || pn || '未命名工序';
+        var key = pc || pn || i18n.t(NS + 'unnamedProcess', this._lang);
         var sn = String(it.size || '').trim();
         if (sn) sizeSet[sn] = true;
         if (!processMap[key]) {
@@ -1279,7 +1396,7 @@ Page({
   /** 上传附件 */
   onUploadAttachment() {
     wx.showActionSheet({
-      itemList: ['拍照上传', '从相册选择', '选择文件（PDF/文档/CAD等）'],
+      itemList: [i18n.t(NS + 'photoUploadTitle', this._lang), i18n.t(NS + 'albumPick', this._lang), i18n.t(NS + 'filePick', this._lang)],
       success: (res) => {
         if (res.tapIndex === 0) this.chooseImage('camera');
         else if (res.tapIndex === 1) this.chooseImage('album');
@@ -1300,14 +1417,14 @@ Page({
         if (tempFiles.length === 1) {
           that.uploadImage(tempFiles[0]);
         } else {
-          wx.showLoading({ title: '上传中...', mask: true });
+          wx.showLoading({ title: i18n.t('common.uploading', this._lang), mask: true });
           let count = 0;
           tempFiles.forEach(tf => {
             that.uploadImage(tf, () => {
               count++;
               if (count === tempFiles.length) {
                 wx.hideLoading();
-                wx.showToast({ title: '上传完成', icon: 'success' });
+                wx.showToast({ title: i18n.t('mp.sampleDetail.uploadOk', this._lang), icon: 'success' });
                 that.loadAttachments();
               }
             });
@@ -1336,14 +1453,14 @@ Page({
       success: (res) => {
         const tempFiles = res.tempFiles;
         if (!tempFiles || tempFiles.length === 0) return;
-        wx.showLoading({ title: '上传中...', mask: true });
+        wx.showLoading({ title: i18n.t('common.uploading', this._lang), mask: true });
         let count = 0;
         tempFiles.forEach(tf => {
           that.uploadFileAttachment(tf, () => {
             count++;
             if (count === tempFiles.length) {
               wx.hideLoading();
-              wx.showToast({ title: '上传完成', icon: 'success' });
+              wx.showToast({ title: i18n.t('mp.sampleDetail.uploadOk', this._lang), icon: 'success' });
               that.loadAttachments();
             }
           });
@@ -1351,7 +1468,7 @@ Page({
       },
       fail: (err) => {
         if (err.errMsg && err.errMsg.includes('cancel')) return;
-        wx.showToast({ title: '选择失败', icon: 'none' });
+        wx.showToast({ title: i18n.t(NS + 'pickFailed', this._lang), icon: 'none' });
       },
     });
   },
@@ -1360,7 +1477,7 @@ Page({
     const filePath = tempFile.path || tempFile.tempFilePath;
     const fileSize = tempFile.size;
     if (fileSize > 15 * 1024 * 1024) {
-      wx.showToast({ title: '文件不能超过15MB', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'fileMax15', this._lang), icon: 'none' });
       if (callback) callback();
       return;
     }
@@ -1390,7 +1507,7 @@ Page({
       return;
     }
     wx.showActionSheet({
-      itemList: ['下载到本地', '复制链接'],
+      itemList: [i18n.t(NS + 'downloadLocal', this._lang), i18n.t(NS + 'copyLink', this._lang)],
       success: (res) => {
         if (res.tapIndex === 0) this.downloadFile(url);
         else if (res.tapIndex === 1) wx.setClipboardData({ data: url });
@@ -1404,7 +1521,7 @@ Page({
         filePath: tempFilePath,
         fileType: 'pdf',
         success: () => {},
-        fail: () => wx.showToast({ title: '无法打开PDF', icon: 'none' }),
+        fail: () => wx.showToast({ title: i18n.t(NS + 'cannotOpenPdf', this._lang), icon: 'none' }),
       });
     });
   },
@@ -1418,7 +1535,7 @@ Page({
         filePath: tempFilePath,
         fileType: fileType,
         success: () => {},
-        fail: () => wx.showToast({ title: '无法打开文档', icon: 'none' }),
+        fail: () => wx.showToast({ title: i18n.t(NS + 'cannotOpenDoc', this._lang), icon: 'none' }),
       });
     });
   },
@@ -1427,8 +1544,8 @@ Page({
     _downloadWithAuth(url, (tempFilePath) => {
       wx.saveFileToDisk({
         tempFilePath: tempFilePath,
-        success: () => wx.showToast({ title: '已保存', icon: 'success' }),
-        fail: () => wx.showToast({ title: '保存失败', icon: 'none' }),
+        success: () => wx.showToast({ title: i18n.t(NS + 'saved', this._lang), icon: 'success' }),
+        fail: () => wx.showToast({ title: i18n.t(NS + 'saveFailedWord', this._lang), icon: 'none' }),
       });
     });
   },
@@ -1439,18 +1556,18 @@ Page({
     if (!id) return;
     const that = this;
     wx.showModal({
-      title: '确认删除',
-      content: '删除后不可恢复，是否继续？',
-      confirmText: '删除',
+      title: i18n.t(NS + 'confirmDeleteT', this._lang),
+      content: i18n.t(NS + 'deleteConfirmMsg', this._lang),
+      confirmText: i18n.t(NS + 'deleteBtn', this._lang),
       confirmColor: '#ff3b30',
       success: async (res) => {
         if (!res.confirm) return;
         try {
           await styleApi.deleteAttachment(id);
-          wx.showToast({ title: '已删除', icon: 'success' });
+          wx.showToast({ title: i18n.t('mp.sampleDetail.deleted', this._lang), icon: 'success' });
           that.loadAttachments();
         } catch (err) {
-          wx.showToast({ title: '删除失败', icon: 'none' });
+          wx.showToast({ title: i18n.t('common.deleteFailed', this._lang), icon: 'none' });
         }
       },
     });
@@ -1531,22 +1648,22 @@ Page({
     const styleNo = (this.data.styleInfo && this.data.styleInfo.styleNo) || this.data.styleNo;
     const role = (this.data.remarkRoleInput || '').trim();
     if (!content) {
-      wx.showToast({ title: '请输入备注内容', icon: 'none' });
+      wx.showToast({ title: i18n.t('mp.sampleDetail.remarkRequired', this._lang), icon: 'none' });
       return;
     }
     if (!styleNo) {
-      wx.showToast({ title: '缺少款式信息', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'missingStyleInfo', this._lang), icon: 'none' });
       return;
     }
     this.setData({ remarkSubmitting: true });
     try {
       await production.addOrderRemark('style', styleNo, content, role || undefined);
-      wx.showToast({ title: '备注已添加', icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'remarkAdded', this._lang), icon: 'success' });
       this.setData({ remarkInput: '', remarkRoleInput: '' });
       this.loadRemarks();
     } catch (e) {
       console.error('添加备注失败', e);
-      wx.showToast({ title: '添加失败', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'remarkAddFailed', this._lang), icon: 'none' });
     }
     this.setData({ remarkSubmitting: false });
   },
@@ -1586,19 +1703,19 @@ Page({
     var comment = (this.data.reviewFormComment || '').trim();
 
     if (!styleId) {
-      wx.showToast({ title: '缺少款式信息', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'missingStyleInfo', this._lang), icon: 'none' });
       return;
     }
 
-    var statusLabels = { PASS: '通过', REWORK: '需修改', REJECT: '不通过' };
+    var statusLabels = { PASS: i18n.t('common.pass', this._lang), REWORK: i18n.t(NS + 'needModify', this._lang), REJECT: i18n.t(NS + 'failWord', this._lang) };
     wx.showModal({
-      title: '确认提交审核',
-      content: '审核结论：' + statusLabels[status] + (comment ? '\n评语：' + comment : ''),
-      confirmText: '确认提交',
+      title: i18n.t(NS + 'reviewSubmitTitle', this._lang),
+      content: i18n.t(NS + 'reviewConclPrefix', this._lang) + statusLabels[status] + (comment ? i18n.t(NS + 'reviewCommentIn', this._lang) + comment : ''),
+      confirmText: i18n.t(NS + 'confirmComplete', this._lang),
       confirmColor: status === 'PASS' ? '#1677ff' : (status === 'REWORK' ? '#faad14' : '#ff4d4f'),
       success: function (res) {
         if (res.confirm) {
-          wx.showLoading({ title: '提交中...', mask: true });
+          wx.showLoading({ title: i18n.t('common.submitting', this._lang), mask: true });
           styleApi.saveSampleReview(styleId, {
             reviewStatus: status,
             reviewComment: comment,
@@ -1606,14 +1723,14 @@ Page({
           })
             .then(function () {
               wx.hideLoading();
-              wx.showToast({ title: '审核提交成功', icon: 'success' });
+              wx.showToast({ title: i18n.t(NS + 'reviewSubmitOk', this._lang), icon: 'success' });
               that.setData({ showReviewForm: false });
               // 刷新生产制单数据
               that.loadProduction();
             })
             .catch(function (err) {
               wx.hideLoading();
-              var msg = (err && err.message) || '审核提交失败，请重试';
+              var msg = (err && err.message) || i18n.t(NS + 'reviewSubmitFail', this._lang);
               wx.showToast({ title: msg, icon: 'none' });
             });
         }
@@ -1669,26 +1786,26 @@ Page({
     var stage = STAGE_KEY_MAP[stageKey];
 
     if (!stage) {
-      wx.showToast({ title: '该阶段暂不支持移动端标记完成', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'noMobileComplete', this._lang), icon: 'none' });
       return;
     }
     if (!styleId) {
-      wx.showToast({ title: '缺少款式信息', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'missingStyleInfo', this._lang), icon: 'none' });
       return;
     }
 
     wx.showModal({
-      title: '标记完成',
-      content: '确定要将「' + stageName + '」标记为完成吗？完成后不可撤销。',
+      title: i18n.t(NS + 'markComplete', this._lang),
+      content: i18n.tf(NS + 'markConfirmFmt', { name: stageName }, this._lang),
       confirmText: '确认完成',
       confirmColor: '#1677ff',
       success: function (res) {
         if (res.confirm) {
-          wx.showLoading({ title: '提交中...', mask: true });
+          wx.showLoading({ title: i18n.t('common.submitting', this._lang), mask: true });
           styleApi.stageAction(styleId, stage, 'complete')
             .then(function () {
               wx.hideLoading();
-              wx.showToast({ title: '标记成功', icon: 'success' });
+              wx.showToast({ title: i18n.t(NS + 'markSuccess', this._lang), icon: 'success' });
               // 刷新页面数据
               that.loadStageData();
               if (that.data.styleInfo) {
@@ -1697,7 +1814,7 @@ Page({
             })
             .catch(function (err) {
               wx.hideLoading();
-              var msg = (err && err.message) || '标记失败，请重试';
+              var msg = (err && err.message) || i18n.t(NS + 'markFailedRetry', this._lang);
               wx.showToast({ title: msg, icon: 'none' });
             });
         }

@@ -2440,6 +2440,8 @@ const SAMPLE_DEV_JS = 'pages/sample-development/index/index.js';
 const SAMPLE_DEV_WXML = 'pages/sample-development/index/index.wxml';
 const SAMPLE_DETAIL_JS = 'pages/sample-development/detail/index.js';
 const SAMPLE_DETAIL_WXML = 'pages/sample-development/detail/index.wxml';
+const STAGE_DETAIL_JS = 'pages/sample-development/stage-detail/index.js';
+const STAGE_DETAIL_WXML = 'pages/sample-development/stage-detail/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -2977,6 +2979,24 @@ function testI18nSampleDetail() {
   eq('详情页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '样衣详情');
 }
 
+/** 阶段详情页（D-561）—— 快捷入口/阶段卡/工序组/审核表单 */
+function testI18nStageDetail() {
+  testPageI18n(STAGE_DETAIL_JS, STAGE_DETAIL_WXML, '阶段详情页');
+
+  const { page: zhP, wx: zhWx } = loadPage(STAGE_DETAIL_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(STAGE_DETAIL_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  // t 表关键值
+  eq('zh 阶段标题', zhP.data.t.navTitle, '阶段详情');
+  eq('en 阶段标题', enP.data.t.navTitle, 'Stage Detail');
+  eq('en 标记完成', enP.data.t.markComplete, 'Mark Complete');
+  eq('en 需修改', enP.data.t.needModifyW, 'Needs Changes');
+  ok('en 审核评语占位无中文', !CJK_RE.test(String(enP.data.t.reviewCommentPh)), enP.data.t.reviewCommentPh);
+  ok('en PC 配置提示无中文', !CJK_RE.test(String(enP.data.t.configOnPcHint)), enP.data.t.configOnPcHint);
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3025,6 +3045,7 @@ try {
   testI18nPattern();
   testI18nSampleDev();
   testI18nSampleDetail();
+  testI18nStageDetail();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
