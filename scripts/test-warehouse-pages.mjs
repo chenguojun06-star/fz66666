@@ -2456,6 +2456,8 @@ const ATTENDANCE_JS = 'pages/attendance/detail/index.js';
 const ATTENDANCE_WXML = 'pages/attendance/detail/index.wxml';
 const ORDER_DETAIL_JS = 'pages/dashboard/order-detail/index.js';
 const ORDER_DETAIL_WXML = 'pages/dashboard/order-detail/index.wxml';
+const TASK_DETAIL_JS = 'pages/procurement/task-detail/index.js';
+const TASK_DETAIL_WXML = 'pages/procurement/task-detail/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3071,6 +3073,25 @@ function testI18nOrderDetail() {
   eq('订单详情页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '订单详情');
 }
 
+/** 采购任务详情页（D-565）—— 到货率/回料确认/到货登记/领料/撤回 */
+function testI18nTaskDetail() {
+  testPageI18n(TASK_DETAIL_JS, TASK_DETAIL_WXML, '采购任务详情页');
+
+  const { page: zhP, wx: zhWx } = loadPage(TASK_DETAIL_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(TASK_DETAIL_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 一键采购', zhP.data.t.buyAllBtn, '一键采购');
+  eq('en 一键采购', enP.data.t.buyAllBtn, 'Purchase All');
+  eq('en 提交到货', enP.data.t.submitArrivalBtn, 'Submit Arrivals');
+  ok('en 领料提示无中文', !CJK_RE.test(String(enP.data.t.pickupHint)), enP.data.t.pickupHint);
+  ok('en 低到货率占位无中文', !CJK_RE.test(String(enP.data.t.lowRateRemark)), enP.data.t.lowRateRemark);
+
+  eq('采购任务页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Purchase Task');
+  eq('采购任务页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '采购任务详情');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3123,6 +3144,7 @@ try {
   testI18nQualityDetail();
   testI18nAttendance();
   testI18nOrderDetail();
+  testI18nTaskDetail();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));

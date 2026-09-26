@@ -1,3 +1,5 @@
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.taskDetail.';
 const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
@@ -6,9 +8,9 @@ const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const displayHelper = require('../../../utils/displayHelper');
 
 const MATERIAL_TYPE_MAP = {
-  fabricA: '主面料', fabricB: '辅面料',
-  liningA: '里料', liningB: '夹里', liningC: '衬布/粘合衬',
-  accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件',
+  fabricA: 'matMainW', fabricB: 'matAuxW',
+  liningA: 'matLiningW', liningB: 'matJiaW', liningC: 'matInterW',
+  accessoryA: 'matZipW', accessoryB: 'matBtnW', accessoryC: 'matAccW',
 };
 
 /**
@@ -34,24 +36,24 @@ const COLOR_TO_NAME = {
  * 文案对齐 displayHelper 语义
  */
 const LOCAL_PURCHASE_FALLBACK = {
-  procuring: { text: '采购中', color: displayHelper.STATUS_COLOR_BLUE },
-  waiting_procurement: { text: '待采购', color: displayHelper.STATUS_COLOR_WARNING },
-  procurement_in_progress: { text: '采购中', color: displayHelper.STATUS_COLOR_BLUE },
-  material_preparation: { text: '物料准备中', color: displayHelper.STATUS_COLOR_BLUE },
-  procurement_completed: { text: '采购完成', color: displayHelper.STATUS_COLOR_SUCCESS },
-  partial_arrived: { text: '部分到货', color: displayHelper.STATUS_COLOR_CYAN },
-  canceled: { text: '已取消', color: displayHelper.STATUS_COLOR_DEFAULT },
+  procuring: { key: 'purchasingW', color: displayHelper.STATUS_COLOR_BLUE },
+  waiting_procurement: { key: 'stPendingBuy', color: displayHelper.STATUS_COLOR_WARNING },
+  procurement_in_progress: { key: 'purchasingW', color: displayHelper.STATUS_COLOR_BLUE },
+  material_preparation: { key: 'stPreparing', color: displayHelper.STATUS_COLOR_BLUE },
+  procurement_completed: { key: 'stPurchased', color: displayHelper.STATUS_COLOR_SUCCESS },
+  partial_arrived: { key: 'stPartial', color: displayHelper.STATUS_COLOR_CYAN },
+  canceled: { key: 'stCancelled', color: displayHelper.STATUS_COLOR_DEFAULT },
 };
 
 /**
  * 统一采购状态文案：优先 displayHelper，未命中查本地兜底
  */
-function resolvePurchaseText(status) {
+function resolvePurchaseText(status, lang) {
   if (!status) return '';
   const text = displayHelper.displayPurchaseStatusText(status);
   if (text !== status) return text;
   const fb = LOCAL_PURCHASE_FALLBACK[status];
-  return fb ? fb.text : text;
+  return fb ? i18n.t(NS + fb.key, lang) : text;
 }
 
 /**
@@ -94,7 +96,68 @@ Page({
     returnConfirmSubmitting: false,
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}） */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        noMaterials: i18n.t(NS + 'noMaterials', lang),
+        wordTotal: i18n.t(NS + 'wordTotal', lang),
+        wordItems: i18n.t(NS + 'wordItems', lang),
+        itemCountLabel: i18n.t(NS + 'itemCountLabel', lang),
+        overallArrival: i18n.t(NS + 'overallArrival', lang),
+        arrivalRateLabel: i18n.t(NS + 'arrivalRateLabel', lang),
+        returnStatusLabel: i18n.t(NS + 'returnStatusLabel', lang),
+        purchaseStage: i18n.t(NS + 'purchaseStage', lang),
+        arrivalProgress: i18n.t(NS + 'arrivalProgress', lang),
+        returnedLabel: i18n.t(NS + 'returnedLabel', lang),
+        demandLabel: i18n.t(NS + 'demandLabel', lang),
+        arrivedShort: i18n.t(NS + 'arrivedShort', lang),
+        pendingShort: i18n.t(NS + 'pendingShort', lang),
+        confirmCompleteBtn: i18n.t(NS + 'confirmCompleteBtn', lang),
+        confirmReturnBtn: i18n.t(NS + 'confirmReturnBtn', lang),
+        withdrawArrival: i18n.t(NS + 'withdrawArrival', lang),
+        needPurchaseHint: i18n.t(NS + 'needPurchaseHint', lang),
+        remarkNote: i18n.t(NS + 'remarkNote', lang),
+        buyAllBtn: i18n.t(NS + 'buyAllBtn', lang),
+        submitArrivalBtn: i18n.t(NS + 'submitArrivalBtn', lang),
+        completeAllBtn: i18n.t(NS + 'completeAllBtn', lang),
+        pickupHint: i18n.t(NS + 'pickupHint', lang),
+        noPickupShort: i18n.t(NS + 'noPickupShort', lang),
+        submitPickupBtn: i18n.t(NS + 'submitPickupBtn', lang),
+        returnQtyLabel: i18n.t(NS + 'returnQtyLabel', lang),
+        returnVoucher: i18n.t(NS + 'returnVoucher', lang),
+        uploadVoucher: i18n.t(NS + 'uploadVoucher', lang),
+        pickupOutbound: i18n.t(NS + 'pickupOutbound', lang),
+        cancel: i18n.t('common.cancel', lang),
+        submitting: i18n.t('common.submitting', lang),
+        samplePurchaseW: i18n.t(NS + 'samplePurchaseW', lang),
+        styleNoPrefix: i18n.t(NS + 'styleNoPrefix', lang),
+        unknownMatW: i18n.t(NS + 'unknownMatW', lang),
+        codePrefix: i18n.t(NS + 'codePrefix', lang),
+        specPrefix: i18n.t(NS + 'specPrefix', lang),
+        unitPrefix: i18n.t(NS + 'unitPrefix', lang),
+        meterWord: i18n.t(NS + 'meterWord', lang),
+        creatorPrefix: i18n.t(NS + 'creatorPrefix', lang),
+        pickupPrefix: i18n.t(NS + 'pickupPrefix', lang),
+        returnPrefix: i18n.t(NS + 'returnPrefix', lang),
+        arrivalQtyPh: i18n.t(NS + 'arrivalQtyPh', lang),
+        lowRateRemark: i18n.t(NS + 'lowRateRemark', lang),
+        pickupQtyPh: i18n.t(NS + 'pickupQtyPh', lang),
+        availableArrival: i18n.t(NS + 'availableArrival', lang),
+        returnQtyPh: i18n.t(NS + 'returnQtyPh', lang),
+        statusDoingW: i18n.t(NS + 'statusDoingW', lang),
+        pieceUnit: i18n.t('common.piece', lang),
+      },
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad(options) {
+    this.applyLanguage(i18n.getLanguage());
     this.orderNo = decodeURIComponent(options.orderNo || '');
     this.patternProductionId = decodeURIComponent(options.patternProductionId || '');
     this.materialCode = decodeURIComponent(options.materialCode || '');
@@ -188,8 +251,8 @@ Page({
 
         return {
           ...item,
-          materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || item.materialType || '',
-          statusText: resolvePurchaseText(status),
+          materialTypeCN: (function(){ var k = MATERIAL_TYPE_MAP[item.materialType]; return k ? i18n.t(NS + k, lang) : (item.materialType || ''); })(),
+          statusText: resolvePurchaseText(status, lang),
           statusColor: resolvePurchaseColor(status),
           isActionable,
           needsReceive,
@@ -244,7 +307,7 @@ Page({
     } catch (e) {
       console.error('加载采购详情失败:', e);
       this.setData({ loading: false });
-      toast.error('加载失败');
+      toast.error(i18n.t('common.loadFailed', this._lang));
     }
   },
 
@@ -267,7 +330,7 @@ Page({
 
   async onReceiveAll() {
     if (this.data.hasReturnConfirmed) {
-      toast.warning('已有物料完成回料确认，无法继续采购');
+      toast.warning(i18n.t(NS + 'blockPurchasing', this._lang));
       return;
     }
 
@@ -276,17 +339,17 @@ Page({
     const receiverName = String(userInfo.name || userInfo.username || '').trim();
 
     if (!receiverId && !receiverName) {
-      toast.error('采购人信息缺失，请重新登录');
+      toast.error(i18n.t(NS + 'purchaserMissing', this._lang));
       return;
     }
 
     const pendingItems = this.data.materialPurchases.filter(item => item.needsReceive);
     if (pendingItems.length === 0) {
-      toast.success('所有物料均已领取');
+      toast.success(i18n.t(NS + 'allClaimedW', this._lang));
       return;
     }
 
-    wx.showLoading({ title: '采购中...', mask: true });
+    wx.showLoading({ title: i18n.t(NS + 'purchasingTxt', this._lang), mask: true });
     try {
       await Promise.all(pendingItems.map(item =>
         api.production.receivePurchase({
@@ -296,11 +359,11 @@ Page({
         }),
       ));
       wx.hideLoading();
-      toast.success(`已领取 ${pendingItems.length} 项`);
+      toast.success(i18n.tf('mp.scanConfirm.itemsClaimed', { count: pendingItems.length }, this._lang));
       this._loadDetail();
     } catch (e) {
       wx.hideLoading();
-      toast.error(e.errMsg || e.message || '采购失败');
+      toast.error(e.errMsg || e.message || i18n.t(NS + 'purchasingFail', this._lang));
     }
   },
 
@@ -329,7 +392,7 @@ Page({
   onUploadReturnImage() {
     const self = this;
     if (self.data.returnConfirmImages.length >= 5) {
-      toast.error('最多上传5张');
+      toast.error(i18n.t('mp.scanQuality.maxFivePhotos', this._lang));
       return;
     }
     wx.chooseMedia({
@@ -342,15 +405,15 @@ Page({
         Promise.all(tasks).then(urls => {
           const newImages = urls.filter(Boolean).map(raw => ({ raw, authed: getAuthedImageUrl(raw) }));
           self.setData({ returnConfirmImages: self.data.returnConfirmImages.concat(newImages) });
-        }).catch(() => toast.error('图片上传失败'));
+        }).catch(() => toast.error(i18n.t('mp.scanQuality.photoUploadFailed', this._lang)));
       },
       fail(err) {
         if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
           wx.showModal({
-            title: '相机/相册权限',
-            content: '需要相机或相册权限才能上传照片，请在设置中允许',
-            confirmText: '去设置',
-            cancelText: '取消',
+            title: i18n.t('mp.scanQuality.cameraPermission', this._lang),
+            content: i18n.t('mp.scanQuality.cameraPermissionMsg', this._lang),
+            confirmText: i18n.t('mp.scanQuality.goSettings', this._lang),
+            cancelText: i18n.t('common.cancel', this._lang),
             success(modalRes) { if (modalRes.confirm) wx.openSetting({ success() {} }); },
           });
         }
@@ -375,7 +438,7 @@ Page({
     const { returnConfirmItem, returnConfirmQty, returnConfirmImages } = this.data;
     const qty = Number(returnConfirmQty);
     if (isNaN(qty) || qty < 0) {
-      toast.error('请输入有效的回料数量');
+      toast.error(i18n.t('mp.scanQuality.qtyRequired', this._lang));
       return;
     }
     const userInfo = getUserInfo() || {};
@@ -384,7 +447,7 @@ Page({
     const evidenceImageUrls = returnConfirmImages.map(i => i.raw).join(',') || undefined;
 
     this.setData({ returnConfirmSubmitting: true });
-    wx.showLoading({ title: '确认中...', mask: true });
+    wx.showLoading({ title: i18n.t(NS + 'confirmingTxt', this._lang), mask: true });
     try {
       await api.production.confirmReturnPurchase({
         purchaseId: returnConfirmItem.id,
@@ -394,13 +457,13 @@ Page({
         ...(evidenceImageUrls ? { evidenceImageUrls } : {}),
       });
       wx.hideLoading();
-      toast.success('回料确认成功');
+      toast.success(i18n.t(NS + 'returnOk', this._lang));
       this.setData({ showReturnConfirmModal: false, returnConfirmImages: [] });
       triggerDataRefresh('procurement');
       this._loadDetail();
     } catch (err) {
       wx.hideLoading();
-      toast.error(err.errMsg || err.message || '确认失败');
+      toast.error(err.errMsg || err.message || i18n.t(NS + 'confirmFail', this._lang));
     } finally {
       this.setData({ returnConfirmSubmitting: false });
     }
@@ -410,7 +473,7 @@ Page({
     // 样衣场景无订单流转，按钮已隐藏，此处防御性返回
     if (this.data.isSampleMode) return;
     if (this.data.hasReturnConfirmed) {
-      toast.warning('已有物料完成回料确认，无需再次确认');
+      toast.warning(i18n.t(NS + 'returnAlready', this._lang));
       return;
     }
 
@@ -418,16 +481,16 @@ Page({
     if (!orderNo) return;
 
     wx.showModal({
-      title: '确认回料完成',
-      content: `当前到货率 ${overallArrivalRate}%，确认后采购阶段将流转到裁剪环节。确定？`,
-      confirmText: '确认完成',
+      title: i18n.t(NS + 'returnConfirmTitle', this._lang),
+      content: i18n.tf(NS + 'completeStageFmt', { rate: overallArrivalRate }, this._lang),
+      confirmText: i18n.t(NS + 'confirmCompleteBtn', this._lang),
       confirmColor: '#007aff',
       editable: true,
-      placeholderText: '备注（选填）',
+      placeholderText: i18n.t(NS + 'remarkOptional', this._lang),
       success: async (res) => {
         if (!res.confirm) return;
 
-        wx.showLoading({ title: '确认中...', mask: true });
+        wx.showLoading({ title: i18n.t(NS + 'confirmingTxt', this._lang), mask: true });
         try {
           const remark = (res.content || '').trim();
           await api.production.confirmProcurementComplete({
@@ -436,14 +499,14 @@ Page({
             remark,
           });
           wx.hideLoading();
-          toast.success('采购阶段已完成，已流转到裁剪');
+          toast.success(i18n.t(NS + 'stageDoneNotice', this._lang));
 
           triggerDataRefresh('procurement');
 
           setTimeout(() => wx.navigateBack(), 1000);
         } catch (err) {
           wx.hideLoading();
-          toast.error(err.errMsg || err.message || '确认失败');
+          toast.error(err.errMsg || err.message || i18n.t(NS + 'confirmFail', this._lang));
         }
       },
     });
@@ -458,16 +521,16 @@ Page({
     if (!id) return;
 
     wx.showModal({
-      title: '撤回到货',
-      content: `确认撤回「${name || '该物料'}」的到货登记？到货数量将清零，状态恢复为待采购。`,
-      confirmText: '确认撤回',
+      title: i18n.t(NS + 'withdrawArrival', this._lang),
+      content: i18n.tf(NS + 'withdrawFmt', { name: name || i18n.t(NS + 'thisMaterial', this._lang) }, this._lang),
+      confirmText: i18n.t(NS + 'withdrawConfirm', this._lang),
       confirmColor: '#e74c3c',
       editable: true,
-      placeholderText: '撤回原因（选填）',
+      placeholderText: i18n.t(NS + 'withdrawReason', this._lang),
       success: async (res) => {
         if (!res.confirm) return;
 
-        wx.showLoading({ title: '撤回中...', mask: true });
+        wx.showLoading({ title: i18n.t(NS + 'withdrawingTxt', this._lang), mask: true });
         try {
           const reason = (res.content || '').trim();
           await api.production.cancelReceivePurchase({
@@ -475,12 +538,12 @@ Page({
             reason,
           });
           wx.hideLoading();
-          toast.success('已撤回到货');
+          toast.success(i18n.t(NS + 'withdrawn', this._lang));
           triggerDataRefresh('procurement');
           this._loadDetail();
         } catch (err) {
           wx.hideLoading();
-          toast.error(err.errMsg || err.message || '撤回失败');
+          toast.error(err.errMsg || err.message || i18n.t(NS + 'withdrawFail', this._lang));
         }
       },
     });
@@ -495,23 +558,23 @@ Page({
     if (!id) return;
 
     wx.showModal({
-      title: '确认完成',
-      content: `确认「${name || '该物料'}」采购已完成？`,
-      confirmText: '确认完成',
+      title: i18n.t(NS + 'confirmCompleteBtn', this._lang),
+      content: i18n.tf(NS + 'completeFmt', { name: name || i18n.t(NS + 'thisMaterial', this._lang) }, this._lang),
+      confirmText: i18n.t(NS + 'confirmCompleteBtn', this._lang),
       confirmColor: '#007aff',
       success: async (res) => {
         if (!res.confirm) return;
 
-        wx.showLoading({ title: '确认中...', mask: true });
+        wx.showLoading({ title: i18n.t(NS + 'confirmingTxt', this._lang), mask: true });
         try {
           await api.production.confirmPurchaseComplete({ purchaseId: id });
           wx.hideLoading();
-          toast.success('已确认完成');
+          toast.success(i18n.t(NS + 'confirmDoneTxt', this._lang));
           triggerDataRefresh('procurement');
           this._loadDetail();
         } catch (err) {
           wx.hideLoading();
-          toast.error(err.errMsg || err.message || '确认失败');
+          toast.error(err.errMsg || err.message || i18n.t(NS + 'confirmFail', this._lang));
         }
       },
     });
@@ -519,7 +582,7 @@ Page({
 
   async onSubmit() {
     if (this.data.hasReturnConfirmed) {
-      toast.warning('已有物料完成回料确认，无法继续到货登记');
+      toast.warning(i18n.t(NS + 'blockArrival', this._lang));
       return;
     }
 
@@ -527,7 +590,7 @@ Page({
 
     const hasAny = materialPurchases.some(m => m.inputQuantity && Number(m.inputQuantity) > 0);
     if (!hasAny) {
-      toast.error('请至少填写一种物料的到货数量');
+      toast.error(i18n.t(NS + 'needOneQty', this._lang));
       return;
     }
 
@@ -535,17 +598,17 @@ Page({
     try {
       updates = this._buildUpdates(materialPurchases, remark);
     } catch (e) {
-      toast.error(e.message || '校验失败');
+      toast.error(e.message || i18n.t(NS + 'validateFailed', this._lang));
       return;
     }
 
     if (updates.length === 0) {
-      toast.error('没有有效的到货数据');
+      toast.error(i18n.t(NS + 'noValidArrival', this._lang));
       return;
     }
 
     this.setData({ submitting: true });
-    wx.showLoading({ title: '提交中...', mask: true });
+    wx.showLoading({ title: i18n.t('common.submitting', this._lang), mask: true });
     try {
       await Promise.all(updates.map(u => api.production.updateArrivedQuantity(u)));
 
@@ -553,12 +616,12 @@ Page({
 
       wx.hideLoading();
       this.setData({ submitting: false });
-      toast.success('到货登记成功');
+      toast.success(i18n.t(NS + 'arrivalOk', this._lang));
       setTimeout(() => wx.navigateBack(), 800);
     } catch (e) {
       wx.hideLoading();
       this.setData({ submitting: false });
-      toast.error(e.errMsg || e.message || '提交失败');
+      toast.error(e.errMsg || e.message || i18n.t('common.submitFailed', this._lang));
     }
   },
 
@@ -591,12 +654,9 @@ Page({
 
     const remark = globalRemark || '';
     if (!remark.trim()) {
-      const materialName = item.materialName || '未知物料';
+      const materialName = item.materialName || i18n.t(NS + 'noValidMaterial', this._lang);
       const shortageQty = purchaseQty - newArrived;
-      throw new Error(
-        `「${materialName}」到货率仅${arrivalRate}%（${newArrived}/${purchaseQty}），` +
-        `还差${shortageQty}，请填写备注说明原因`,
-      );
+      throw new Error(i18n.tf(NS + 'lowArrivalFmt', { name: materialName, rate: arrivalRate, arrived: newArrived, total: purchaseQty, short: shortageQty }, this._lang));
     }
     return remark;
   },
@@ -648,7 +708,7 @@ Page({
         && Number(m.arrivedQuantity || 0) > 0;
     });
     if (pickableItems.length === 0) {
-      toast.warning('暂无可领料的物料（需先采购到货）');
+      toast.warning(i18n.t(NS + 'noPickupMaterial', this._lang));
       return;
     }
     const pickingItems = pickableItems.map(m => ({
@@ -694,7 +754,7 @@ Page({
       }));
 
     if (items.length === 0) {
-      toast.error('请至少填写一种物料的领料数量');
+      toast.error(i18n.t(NS + 'needOnePickupQty', this._lang));
       return;
     }
 
@@ -702,7 +762,7 @@ Page({
     for (const it of items) {
       const src = pickingItems.find(m => m.id === it.purchaseId);
       if (src && it.quantity > src.arrivedQuantity) {
-        toast.error(`「${it.materialName}」领料数量不能超过到货数量(${src.arrivedQuantity})`);
+        toast.error(i18n.tf(NS + 'qtyOverFmt', { name: it.materialName, qty: src.arrivedQuantity }, this._lang));
         return;
       }
     }
@@ -726,12 +786,12 @@ Page({
         || (pickingStyleNo && String(pickingStyleNo).trim());
       if (!hasAnyAnchor) {
         wx.hideLoading ? null : null;
-        toast.error('样衣领料缺少任务关联信息，请返回上一页重试');
+        toast.error(i18n.t(NS + 'missingTaskLink', this._lang));
         return;
       }
     }
 
-    wx.showLoading({ title: '提交领料...', mask: true });
+    wx.showLoading({ title: i18n.t(NS + 'submittingPickup', this._lang), mask: true });
     try {
       await api.production.createPickingPending({
         picking: {
@@ -747,13 +807,13 @@ Page({
         items,
       });
       wx.hideLoading();
-      toast.success('领料申请已提交，等待仓库确认出库');
+      toast.success(i18n.t(NS + 'pickupSubmitted', this._lang));
       this.setData({ showPickingModal: false, pickingItems: [] });
       triggerDataRefresh('procurement');
       this._loadDetail();
     } catch (err) {
       wx.hideLoading();
-      toast.error(err.errMsg || err.message || '领料提交失败');
+      toast.error(err.errMsg || err.message || i18n.t(NS + 'pickupFail', this._lang));
     }
   },
 
