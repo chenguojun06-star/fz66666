@@ -9,6 +9,8 @@
  * 内外部规则（与列表页/PC 端一致）：
  *   内部工厂 → 可直接审核；外部工厂 → 订单需进入终态（已关单等）才可审核
  */
+const i18n = require('../../../../utils/i18n/index');
+const NS = 'mp.payrollApproval.';
 const api = require('../../../../utils/api');
 const { toast } = require('../../../../utils/uiHelper');
 const { hasFeaturePermission, isFactoryAccount } = require('../../../../utils/permission');
@@ -19,19 +21,12 @@ const { decodeParam } = require('../../../../utils/urlParams');
 var TERMINAL_ORDER_STATUSES = ['completed', 'closed', 'cancelled', 'scrapped', 'archived'];
 
 var ORDER_STATUS_TEXT = {
-  pending: '待生产',
-  confirmed: '已确认',
-  production: '生产中',
-  in_progress: '生产中',
-  completed: '已完成',
-  closed: '已关单',
-  cancelled: '已取消',
-  canceled: '已取消',
-  scrapped: '已报废',
-  archived: '已归档',
-  paused: '已暂停',
-  returned: '已退回',
-  delayed: '已逾期',
+  pending: 'stPendingProd', confirmed: 'stConfirmed',
+  production: 'mp.pattern.psProducing', in_progress: 'mp.pattern.psProducing',
+  completed: 'common.completed', closed: 'stClosed',
+  cancelled: 'common.cancelled', canceled: 'common.cancelled',
+  scrapped: 'stScrapped', archived: 'stArchived', paused: 'stPaused',
+  returned: 'stReturned', delayed: 'stOverdue',
 };
 
 function isOrderFrozenByStatus(status) {
@@ -41,39 +36,33 @@ function isOrderFrozenByStatus(status) {
 // D-421：来源标注（用户要求明确区分样衣 / 大货）
 // scanType 取值来源：PayrollSettlementOrchestrator.PAYROLL_SCAN_TYPES
 var SCAN_TYPE_MAP = {
-  pattern: { kind: 'sample', text: '样衣' },
-  production: { kind: 'bulk', text: '大货' },
-  cutting: { kind: 'cutting', text: '裁床' },
+  pattern: { kind: 'sample', key: 'srcSample' },
+  production: { kind: 'bulk', key: 'srcBulk' },
+  cutting: { kind: 'cutting', key: 'srcCutting' },
 };
 
 // D-429：扫码类型中文映射 —— 与 PC 端 components/common/ScanTypeBadge.tsx 的
 // SCAN_TYPE_LABEL 完全一致（此前详情页直接显示英文原值，用户反馈"为什么是英文"）
 var SCAN_TYPE_LABEL = {
-  production: '生产',
-  cutting: '裁剪',
-  procurement: '采购',
-  quality: '质检',
-  pressing: '大烫',
-  packaging: '包装',
-  warehouse: '入库',
-  warehousing: '入库',
-  sewing: '车缝',
-  carSewing: '车缝',
-  pattern: '样衣',
+  production: 'scanProduction', cutting: 'scanCutting', procurement: 'scanProcurement',
+  quality: 'scanQuality', pressing: 'scanPressing', packaging: 'scanPackaging',
+  warehouse: 'scanWarehouse', warehousing: 'scanWarehouse', sewing: 'scanSewing',
+  carSewing: 'scanSewing', pattern: 'scanPattern',
 };
-function scanTypeLabel(v) {
+function scanTypeLabel(v, lang) {
   var key = String(v || '').trim();
   if (!key) return '-';
-  return SCAN_TYPE_LABEL[key] || '未知';
+  var sk = SCAN_TYPE_LABEL[key];
+  return sk ? i18n.t(NS + sk, lang) : i18n.t(NS + 'unknownWord2', lang || i18n.DEFAULT_LANG);
 }
 
 // D-426：结算类型（字段为 delegateTargetType，与 PC 端「结算类型」列一致）
 //   none/空 → 自己完成   internal → 内部指派   external → 外发工厂
 // 只有**明确外发工厂**的订单才要求已关单才能审核。
 var DELEGATE_TYPE_MAP = {
-  none: { kind: 'self', text: '自己完成' },
-  internal: { kind: 'internal', text: '内部指派' },
-  external: { kind: 'external', text: '外发工厂' },
+  none: { kind: 'self', key: 'delegateSelf' },
+  internal: { kind: 'internal', key: 'delegateInternal' },
+  external: { kind: 'external', key: 'delegateExternal' },
   factory: { kind: 'external', text: '外发工厂' },  // 后端实际写入值（大写 FACTORY）
 };
 function isExternalDelegateType(v) {
@@ -111,15 +100,63 @@ Page({
     canOperate: false,
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}） */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        wordStyles: i18n.t(NS + 'wordStyles', lang),
+        settleAmount: i18n.t(NS + 'settleAmountW', lang),
+        pieceQtyLabel: i18n.t(NS + 'pieceQtyLabel', lang),
+        priceProcess: i18n.t('mp.orderDetail.priceProcess', lang),
+        formulaLabel: i18n.t(NS + 'formulaLabel', lang),
+        timeLabel: i18n.t('common.time', lang),
+        startTimeLabel: i18n.t(NS + 'startTimeLabelW', lang),
+        completeTimeLabel: i18n.t(NS + 'completeTimeLabel', lang),
+        scanCountLabel: i18n.t(NS + 'scanCountLabel', lang),
+        linkedInfo: i18n.t('mp.reconciliation.linkedInfo', lang),
+        personnelLabel: i18n.t(NS + 'personnelLabel', lang),
+        processWord: i18n.t('mp.pattern.processWord', lang),
+        sourceLabel: i18n.t('mp.reconciliation.sourceLabel', lang),
+        settleTypeLabel: i18n.t('mp.orderDetail.priceMethodLabel', lang),
+        orderNoLabel: i18n.t(NS + 'orderNoLabelW', lang),
+        orderStatusLabel: i18n.t(NS + 'orderStatusLabelW', lang),
+        actualOperator: i18n.t(NS + 'actualOperator', lang),
+        auditBtn: i18n.t(NS + 'auditBtn', lang),
+        statusAudited: i18n.t(NS + 'statusAudited', lang),
+        statusAuditing: i18n.t(NS + 'statusAuditing', lang),
+        settleTypeLabel2: i18n.t(NS + 'settleTypeLabel2', lang),
+        styleNoLabelW2: i18n.t(NS + 'styleNoLabelW2', lang),
+        unitPiece: i18n.t(NS + 'unitPiece', lang),
+        perPiece: i18n.t(NS + 'perPiece', lang),
+        timesUnit: i18n.t(NS + 'timesUnit', lang),
+        processCodeLabel: i18n.t(NS + 'processCodeLabel', lang),
+        colorSizeLabel2: i18n.t(NS + 'colorSizeLabel2', lang),
+        scanTypeLabel2: i18n.t(NS + 'scanTypeLabel2', lang),
+        settlementSheet: i18n.t(NS + 'settlementSheet', lang),
+        auditPassBtn: i18n.t(NS + 'auditPassBtn', lang),
+        auditedNoRepeat: i18n.t(NS + 'auditedNoRepeat', lang),
+        styleNoLabel: i18n.t('mp.scanResult.styleNoLabel', lang),
+        colorLabel: i18n.t('common.color', lang),
+        sizeLabel: i18n.t('common.size', lang),
+      },
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function (options) {
+    this.applyLanguage(i18n.getLanguage());
     var opts = options || {};
     if (isFactoryAccount()) {
-      this.setData({ loadError: '工厂账号不可查看工资结算（属租户财务管理数据）', loading: false });
+      this.setData({ loadError: i18n.t(NS + 'factoryPermHint', this._lang), loading: false });
       return;
     }
     var approvalId = decodeParam(opts.approvalId);
     if (!approvalId) {
-      this.setData({ loadError: '缺少明细标识', loading: false });
+      this.setData({ loadError: i18n.t(NS + 'missingItemKey', this._lang), loading: false });
       return;
     }
     var now = new Date();
@@ -153,12 +190,12 @@ Page({
         if (rows[i] && String(rows[i].approvalId || '') === targetId) { hit = rows[i]; break; }
       }
       if (!hit) {
-        that.setData({ loading: false, loadError: '该明细已不存在或已变更，请返回列表刷新' });
+        that.setData({ loading: false, loadError: i18n.t(NS + 'itemGoneMsg', this._lang) });
         return;
       }
       that.setData({ detail: that._enrich(hit), loading: false });
     }).catch(function (e) {
-      that.setData({ loading: false, loadError: '加载失败：' + (e.errMsg || e.message || e) });
+      that.setData({ loading: false, loadError: i18n.t(NS + 'loadFailColon', this._lang) + (e.errMsg || e.message || e) });
     });
   },
 
@@ -176,9 +213,9 @@ Page({
     var eligible = canOperate && hasApproval && !audited && canAudit;
 
     var blockReason = '';
-    if (!hasApproval) blockReason = '缺少审批标识';
-    else if (audited) blockReason = '该明细已审核';
-    else if (!canAudit) blockReason = '外发工厂订单尚未关单，只有已关单的订单才能审核';
+    if (!hasApproval) blockReason = i18n.t(NS + 'missingAuditId', lang);
+    else if (audited) blockReason = i18n.t(NS + 'itemAuditedMsg', lang);
+    else if (!canAudit) blockReason = i18n.t(NS + 'factoryNotClosed', lang);
 
     // D-428：结算异常判定（与列表页同一套规则）
     var amtNum = Number(r.totalAmount || 0);
@@ -186,9 +223,9 @@ Page({
     var priceNum = Number(r.unitPrice || 0);
     var abnormalText = '';
     if (!hasApproval) {
-      abnormalText = '缺少审批标识，数据可能未同步，请核实';
+      abnormalText = i18n.t(NS + 'missingAuditIdLong', lang);
     } else if (qtyNum > 0 && (amtNum <= 0 || priceNum <= 0)) {
-      abnormalText = '结算金额或工序单价为 0，请核实';
+      abnormalText = i18n.t(NS + 'zeroAmountWarn', lang);
     }
 
     r.audited = audited;
@@ -198,7 +235,7 @@ Page({
     r.blockReason = blockReason;
     r._abnormalText = abnormalText;
     r._isAbnormal = !!abnormalText;
-    r.auditText = audited ? '已审核' : '待审核';
+    r.auditText = audited ? i18n.t(NS + 'statusAudited', lang) : i18n.t(NS + 'statusAuditing', lang);
     r._statusColor = audited ? 'var(--color-success)' : 'var(--color-warning)';
     r.orderStatusText = ORDER_STATUS_TEXT[String(r.orderStatus || '').toLowerCase()] || (r.orderStatus || '—');
     r.amountStr = r.totalAmount != null ? Number(r.totalAmount).toFixed(2) : '0.00';
@@ -230,20 +267,20 @@ Page({
     var that = this;
     var item = this.data.detail;
     if (!item) return;
-    if (!item.eligible) { toast(item.blockReason || '当前不可审核'); return; }
+    if (!item.eligible) { toast(item.blockReason || i18n.t(NS + 'cannotAuditNow', this._lang)); return; }
     wx.showModal({
-      title: '确认审核',
-      content: '审核 ' + (item.operatorName || '') + ' - ' + (item.processName || '') + ' ¥' + item.amountStr + '？',
+      title: i18n.t(NS + 'auditConfirmTitle', this._lang),
+      content: i18n.t(NS + 'auditFmt', this._lang) + (item.operatorName || '') + ' - ' + (item.processName || '') + ' ¥' + item.amountStr + '？',
       success: function (res) {
         if (!res.confirm) return;
-        wx.showLoading({ title: '处理中...', mask: true });
+        wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.payrollSettlement.approveDetail(item.approvalId).then(function () {
           wx.hideLoading();
-          toast('已审核');
+          toast(i18n.t(NS + 'statusAudited', this._lang));
           that._loadDetail();
         }).catch(function (e) {
           wx.hideLoading();
-          toast('审核失败: ' + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'auditFailPrefix', this._lang) + (e.errMsg || e.message || e));
         });
       },
     });

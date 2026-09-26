@@ -2,7 +2,7 @@
 
   <view wx:if="{{loading}}" class="loading-wrap">
     <view class="loading-spinner"></view>
-    <text class="loading-text">加载中...</text>
+    <text class="loading-text">{{t.loading}}</text>
   </view>
 
   <view wx:elif="{{loadError}}" class="loading-wrap">
@@ -15,7 +15,7 @@
     <view class="header-card">
       <view class="header-cover">
         <image wx:if="{{detail._image}}" class="header-cover-pic" src="{{detail._image}}" mode="aspectFill" lazy-load />
-        <view wx:else class="header-cover-placeholder"><text>款</text></view>
+        <view wx:else class="header-cover-placeholder"><text>{{t.wordStyles}}</text></view>
       </view>
       <view class="header-info">
         <text class="header-no">{{detail.styleNo || detail.orderNo || '—'}}</text>
@@ -32,7 +32,7 @@
     <!-- 金额卡：本次结算金额 + 数量 × 单价 -->
     <view class="amount-card">
       <view class="amount-card-row">
-        <text class="amount-card-label">结算金额</text>
+        <text class="amount-card-label">{{t.settleAmount}}</text>
         <view class="amount-card-final">
           <text class="amount-card-currency">¥</text>
           <text class="amount-card-num">{{detail.amountStr}}</text>
@@ -40,90 +40,90 @@
       </view>
       <view class="amount-card-divider"></view>
       <view class="amount-card-row">
-        <text class="amount-card-sub-label">计件数量</text>
-        <text class="amount-card-sub-val">{{detail.quantityStr}} 件</text>
+        <text class="amount-card-sub-label">{{t.pieceQtyLabel}}</text>
+        <text class="amount-card-sub-val">{{detail.quantityStr}}{{t.unitPiece}}</text>
       </view>
       <view class="amount-card-row">
-        <text class="amount-card-sub-label">工序单价</text>
-        <text class="amount-card-sub-val">¥{{detail.unitPriceStr}}/件</text>
+        <text class="amount-card-sub-label">{{t.priceProcess}}</text>
+        <text class="amount-card-sub-val">¥{{detail.unitPriceStr}}{{t.perPiece}}</text>
       </view>
       <view class="amount-card-row">
-        <text class="amount-card-sub-label">计算式</text>
+        <text class="amount-card-sub-label">{{t.formulaLabel}}</text>
         <text class="amount-card-sub-val">{{detail.quantityStr}} × ¥{{detail.unitPriceStr}} = ¥{{detail.amountStr}}</text>
       </view>
     </view>
 
     <!-- 完成时间（用户明确要求：什么时候完成的） -->
     <view class="section-card">
-      <text class="section-title">时间</text>
+      <text class="section-title">{{t.timeLabel}}</text>
       <view class="fact-row">
-        <text class="fact-label">开始时间</text>
+        <text class="fact-label">{{t.startTimeLabel}}</text>
         <text class="fact-val">{{detail._startText || '—'}}</text>
       </view>
       <view class="fact-row">
-        <text class="fact-label">完成时间</text>
+        <text class="fact-label">{{t.completeTimeLabel}}</text>
         <text class="fact-val fact-val--strong">{{detail._endText || '—'}}</text>
       </view>
       <view wx:if="{{detail.recordCount}}" class="fact-row">
-        <text class="fact-label">扫码笔数</text>
-        <text class="fact-val">{{detail.recordCount}} 笔</text>
+        <text class="fact-label">{{t.scanCountLabel}}</text>
+        <text class="fact-val">{{detail.recordCount}}{{t.timesUnit}}</text>
       </view>
     </view>
 
     <!-- 关联信息 -->
     <view class="section-card">
-      <text class="section-title">关联信息</text>
+      <text class="section-title">{{t.linkedInfo}}</text>
       <!-- D-429：人员（用户反馈"谁做的这些全部都没有"） -->
       <view class="fact-row">
-        <text class="fact-label">人员</text>
+        <text class="fact-label">{{t.personnelLabel}}</text>
         <text class="fact-val fact-val--strong">{{detail._operatorText}}</text>
       </view>
       <view wx:if="{{detail.processName}}" class="fact-row">
-        <text class="fact-label">工序</text>
+        <text class="fact-label">{{t.processWord}}</text>
         <text class="fact-val">{{detail.processName}}</text>
       </view>
       <view wx:if="{{detail._showActual}}" class="fact-row">
-        <text class="fact-label">实际操作人</text>
+        <text class="fact-label">{{t.actualOperator}}</text>
         <text class="fact-val">{{detail.actualOperatorName}}</text>
       </view>
       <view wx:if="{{detail._sourceText}}" class="fact-row">
-        <text class="fact-label">来源</text>
+        <text class="fact-label">{{t.sourceLabel}}</text>
         <text class="fact-val fact-val--strong">{{detail._sourceText}}</text>
       </view>
       <view class="fact-row">
-        <text class="fact-label">结算类型</text>
-        <text class="fact-val fact-val--strong">{{detail._factoryText}}{{detail.isExternalFactory ? '（订单须关单后可审核）' : '（可直接审核）'}}</text>
+        <text class="fact-label">{{t.settleTypeLabel2}}</text>
+        <text class="fact-val fact-val--strong">{{detail._factoryText}}{{detail.isExternalFactory ? t.extAuditHint : t.directAuditHint}}</text>
       </view>
       <view wx:if="{{detail.orderNo}}" class="fact-row">
-        <text class="fact-label">订单号</text>
+        <text class="fact-label">{{t.orderNoLabel}}</text>
         <text class="fact-val">{{detail.orderNo}}</text>
       </view>
       <view wx:if="{{detail.orderStatusText}}" class="fact-row">
-        <text class="fact-label">订单状态</text>
+        <text class="fact-label">{{t.orderStatusLabel}}</text>
         <text class="fact-val">{{detail.orderStatusText}}</text>
       </view>
       <view wx:if="{{detail.styleNo}}" class="fact-row">
-        <text class="fact-label">款号</text>
+        <text class="fact-label">{{t.styleNoLabelW2}}</text>
         <text class="fact-val">{{detail.styleNo}}</text>
       </view>
       <view wx:if="{{detail.processCode}}" class="fact-row">
-        <text class="fact-label">工序编码</text>
+        <text class="fact-label">{{t.processCodeLabel}}</text>
         <text class="fact-val">{{detail.processCode}}</text>
       </view>
       <view wx:if="{{detail.color || detail.size}}" class="fact-row">
-        <text class="fact-label">颜色 / 码数</text>
+        <text class="fact-label">{{t.colorSizeLabel2}}</text>
         <text class="fact-val">{{detail.color || '—'}} / {{detail.size || '—'}}</text>
       </view>
       <view class="fact-row">
-        <text class="fact-label">扫码类型</text>
+        <text class="fact-label">{{t.scanTypeLabel2}}</text>
         <text class="fact-val">{{detail._scanTypeText}}</text>
       </view>
       <view wx:if="{{detail.actualOperatorName && detail.actualOperatorName !== detail.operatorName}}" class="fact-row">
-        <text class="fact-label">实际操作人</text>
+        <text class="fact-label">{{t.actualOperator}}</text>
         <text class="fact-val">{{detail.actualOperatorName}}</text>
       </view>
       <view wx:if="{{detail.settlementId}}" class="fact-row">
-        <text class="fact-label">结算单</text>
+        <text class="fact-label">{{t.settlementSheet}}</text>
         <text class="fact-val">{{detail.settlementId}}</text>
       </view>
     </view>
@@ -135,9 +135,9 @@
 
     <!-- 底部操作：三态与 PC 端 actionColumns 对齐（可审核 / 已审核 / 未关单） -->
     <view wx:if="{{canOperate && !detail.audited && detail.eligible}}" class="footer-actions">
-      <view class="action-btn action-btn--primary" hover-class="action-btn--pressed" bindtap="onAudit">审核通过</view>
+      <view class="action-btn action-btn--primary" hover-class="action-btn--pressed" bindtap="onAudit">{{t.auditPassBtn}}</view>
     </view>
-    <view wx:elif="{{detail.audited}}" class="blocked-hint blocked-hint--ok">该明细已审核，无需重复操作</view>
+    <view wx:elif="{{detail.audited}}" class="blocked-hint blocked-hint--ok">{{t.auditedNoRepeat}}</view>
     <view wx:elif="{{detail.blockReason}}" class="blocked-hint">{{detail.blockReason}}</view>
 
     <view wx:if="{{canOperate && !detail.audited && detail.eligible}}" class="footer-spacer"></view>
