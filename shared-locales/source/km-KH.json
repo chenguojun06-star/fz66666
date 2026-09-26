@@ -2886,7 +2886,10 @@
       "manualInputPh": "Or type",
       "totalWordW": "Total",
       "modifiedW": " · edited",
-      "machineFlatPh": "e.g. machine"
+      "machineFlatPh": "e.g. machine",
+      "diffEasy": "Easy",
+      "diffMedium": "Medium",
+      "diffHard": "Hard"
     }
   }
 }

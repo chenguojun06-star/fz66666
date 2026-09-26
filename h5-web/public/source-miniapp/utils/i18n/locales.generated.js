@@ -2893,7 +2893,10 @@ module.exports = {
         "manualInputPh": "或手动输入",
         "totalWordW": "共",
         "modifiedW": " · 已修改",
-        "machineFlatPh": "如：平车"
+        "machineFlatPh": "如：平车",
+        "diffEasy": "易",
+        "diffMedium": "中",
+        "diffHard": "难"
       }
     }
   },
@@ -5785,7 +5788,10 @@ module.exports = {
         "manualInputPh": "Or type manually",
         "totalWordW": "Total",
         "modifiedW": " · edited",
-        "machineFlatPh": "e.g. flat machine"
+        "machineFlatPh": "e.g. flat machine",
+        "diffEasy": "Easy",
+        "diffMedium": "Medium",
+        "diffHard": "Hard"
       }
     }
   },
@@ -8677,7 +8683,10 @@ module.exports = {
         "manualInputPh": "Hoặc nhập tay",
         "totalWordW": "Tổng",
         "modifiedW": " · đã sửa",
-        "machineFlatPh": "VD: máy bàn"
+        "machineFlatPh": "VD: máy bàn",
+        "diffEasy": "Dễ",
+        "diffMedium": "Trung bình",
+        "diffHard": "Khó"
       }
     }
   },
@@ -11569,7 +11578,10 @@ module.exports = {
         "manualInputPh": "Or type",
         "totalWordW": "Total",
         "modifiedW": " · edited",
-        "machineFlatPh": "e.g. machine"
+        "machineFlatPh": "e.g. machine",
+        "diffEasy": "Easy",
+        "diffMedium": "Medium",
+        "diffHard": "Hard"
       }
     }
   }

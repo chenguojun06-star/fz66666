@@ -2886,7 +2886,10 @@
       "manualInputPh": "或手动输入",
       "totalWordW": "共",
       "modifiedW": " · 已修改",
-      "machineFlatPh": "如：平车"
+      "machineFlatPh": "如：平车",
+      "diffEasy": "易",
+      "diffMedium": "中",
+      "diffHard": "难"
     }
   }
 }

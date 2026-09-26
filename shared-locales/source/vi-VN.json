@@ -2886,7 +2886,10 @@
       "manualInputPh": "Hoặc nhập tay",
       "totalWordW": "Tổng",
       "modifiedW": " · đã sửa",
-      "machineFlatPh": "VD: máy bàn"
+      "machineFlatPh": "VD: máy bàn",
+      "diffEasy": "Dễ",
+      "diffMedium": "Trung bình",
+      "diffHard": "Khó"
     }
   }
 }
