@@ -1110,7 +1110,11 @@ function testPageI18n(jsPath, wxmlPath, label) {
     const wxml = raw.replace(DECOR_PLACEHOLDER_RE, '');
     // 护栏：装饰占位符只该有 0~2 个，多了说明规则被滥用
     ok(`${label} 装饰性占位字符数量正常`, decor.length <= 3, `stripped=${decor.length}`);
-    const leftovers = (wxml.match(/[\u4e00-\u9fff]+/g) || []);
+    // 豁免：wx:if 里的 === '中文' 是**后端历史数据值匹配**（如 urgencyLevel === '急'），
+    // 不是显示文案；剥掉比较表达式后再扫显示文本
+    const scanTarget = wxml.replace(/===\s*'[^']*'[\u4e00-\u9fff][^']*'|==='[^']*'/g, '')
+      .replace(/[=!]==?\s*'[^']*'/g, '');
+    const leftovers = (scanTarget.match(/[\u4e00-\u9fff]+/g) || []);
     ok(`${label} wxml 无硬编码中文`, leftovers.length === 0, leftovers.join(' / '));
   }
 
@@ -1196,7 +1200,11 @@ function testComponentI18n(jsPath, wxmlPath, label) {
     const decor = raw.match(DECOR_PLACEHOLDER_RE) || [];
     const wxml = raw.replace(DECOR_PLACEHOLDER_RE, '');
     ok(`${label} 装饰性占位字符数量正常`, decor.length <= 3, `stripped=${decor.length}`);
-    const leftovers = (wxml.match(/[\u4e00-\u9fff]+/g) || []);
+    // 豁免：wx:if 里的 === '中文' 是**后端历史数据值匹配**（如 urgencyLevel === '急'），
+    // 不是显示文案；剥掉比较表达式后再扫显示文本
+    const scanTarget = wxml.replace(/===\s*'[^']*'[\u4e00-\u9fff][^']*'|==='[^']*'/g, '')
+      .replace(/[=!]==?\s*'[^']*'/g, '');
+    const leftovers = (scanTarget.match(/[\u4e00-\u9fff]+/g) || []);
     ok(`${label} wxml 无硬编码中文`, leftovers.length === 0, leftovers.join(' / '));
   }
 }
@@ -2446,6 +2454,8 @@ const QUALITY_DETAIL_JS = 'pages/quality-detail/index.js';
 const QUALITY_DETAIL_WXML = 'pages/quality-detail/index.wxml';
 const ATTENDANCE_JS = 'pages/attendance/detail/index.js';
 const ATTENDANCE_WXML = 'pages/attendance/detail/index.wxml';
+const ORDER_DETAIL_JS = 'pages/dashboard/order-detail/index.js';
+const ORDER_DETAIL_WXML = 'pages/dashboard/order-detail/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3042,6 +3052,25 @@ function testI18nAttendance() {
   eq('考勤页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '考勤明细');
 }
 
+/** 订单详情页（D-564）—— 进度/尺寸表/裁剪/物料/报价/报废关闭流程 */
+function testI18nOrderDetail() {
+  testPageI18n(ORDER_DETAIL_JS, ORDER_DETAIL_WXML, '订单详情页');
+
+  const { page: zhP, wx: zhWx } = loadPage(ORDER_DETAIL_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(ORDER_DETAIL_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 报废订单按钮', zhP.data.t.scrapOrderBtn, '报废订单');
+  eq('en 报废订单按钮', enP.data.t.scrapOrderBtn, 'Scrap Order');
+  eq('en 计价方式', enP.data.t.priceMethodLabel, 'Pricing Method');
+  ok('en 无尺寸表提示无中文', !CJK_RE.test(String(enP.data.t.noSizeNoStyle)), enP.data.t.noSizeNoStyle);
+  ok('en 点击重试无中文', !CJK_RE.test(String(enP.data.t.tapRetry)), enP.data.t.tapRetry);
+
+  eq('订单详情页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Order Detail');
+  eq('订单详情页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '订单详情');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3093,6 +3122,7 @@ try {
   testI18nStageDetail();
   testI18nQualityDetail();
   testI18nAttendance();
+  testI18nOrderDetail();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));

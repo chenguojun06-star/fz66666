@@ -29,7 +29,7 @@
             </swiper-item>
           </swiper>
           <view wx:else class="cover-placeholder">
-            <text class="cover-placeholder-text">暂无图片</text>
+            <text class="cover-placeholder-text">{{t.noImageW}}</text>
           </view>
         </view>
         <view class="top-right">
@@ -40,36 +40,36 @@
           <text class="top-style-name" wx:if="{{order.styleName}}">{{order.styleName}}</text>
           <!-- 标签行：首单 → 翻单 → 急（圆角胶囊，浅底深字） -->
           <view class="top-tags" wx:if="{{order.urgencyLevel === 'urgent' || order.urgencyLevel === '急' || order.plateType === 'FIRST' || order.plateType === 'REORDER' || order.plateType === '翻单'}}">
-            <text wx:if="{{order.plateType === 'FIRST'}}" class="flag-tag flag-tag--blue">首单</text>
-            <text wx:if="{{order.plateType === 'REORDER' || order.plateType === '翻单'}}" class="flag-tag flag-tag--blue">翻单</text>
-            <text wx:if="{{order.urgencyLevel === 'urgent' || order.urgencyLevel === '急'}}" class="flag-tag flag-tag--orange">急</text>
+            <text wx:if="{{order.plateType === 'FIRST'}}" class="flag-tag flag-tag--blue">{{t.firstOrder}}</text>
+            <text wx:if="{{order.plateType === 'REORDER' || order.plateType === '翻单'}}" class="flag-tag flag-tag--blue">{{t.repeatOrder}}</text>
+            <text wx:if="{{order.urgencyLevel === 'urgent' || order.urgencyLevel === '急'}}" class="flag-tag flag-tag--orange">{{t.urgentTag}}</text>
           </view>
         </view>
       </view>
       <!-- 信息网格 2列5行：款号|业务员、客户、工厂、颜色|尺码、下单数|交期 -->
       <view class="info-grid">
         <view class="info-cell">
-          <text class="info-label">款号</text>
+          <text class="info-label">{{t.styleNoLabel}}</text>
           <text class="info-value">{{order.styleNo || '-'}}</text>
         </view>
         <view class="info-cell" wx:if="{{order.salesman || order.merchandiser}}">
-          <text class="info-label">业务员</text>
+          <text class="info-label">{{t.salesmanLabel}}</text>
           <text class="info-value">{{order.salesman || order.merchandiser}}</text>
         </view>
         <view class="info-cell info-cell--full" wx:if="{{order.customerName}}">
-          <text class="info-label">客户</text>
+          <text class="info-label">{{t.customerLabel}}</text>
           <text class="info-value">{{order.customerName}}</text>
         </view>
         <view class="info-cell info-cell--full" wx:if="{{order.factoryName}}">
-          <text class="info-label">工厂</text>
+          <text class="info-label">{{t.factoryLabel}}</text>
           <text class="info-value">{{order.factoryName}}</text>
         </view>
         <view class="info-cell" wx:if="{{specSummary.hasSpec}}">
-          <text class="info-label">颜色</text>
+          <text class="info-label">{{t.colorLabel}}</text>
           <text class="info-value info-value--strong">{{specSummary.colorText}}</text>
         </view>
         <view class="info-cell info-cell--full info-cell--stack" wx:if="{{specSummary.hasSpec}}">
-          <text class="info-label">尺码</text>
+          <text class="info-label">{{t.sizeLabel}}</text>
           <scroll-view scroll-x class="size-chip-scroll" enhanced show-scrollbar="{{false}}">
             <view class="size-chip-row">
               <text class="size-chip" wx:for="{{specSummary.sizeList}}" wx:key="*this">{{item}}</text>
@@ -77,11 +77,11 @@
           </scroll-view>
         </view>
         <view class="info-cell" wx:if="{{specSummary.hasSpec}}">
-          <text class="info-label">下单数</text>
+          <text class="info-label">{{t.orderQtyLabel}}</text>
           <text class="info-value info-value--strong">{{specSummary.qtyText}}</text>
         </view>
         <view class="info-cell" wx:if="{{deliveryDateStr}}">
-          <text class="info-label">交期</text>
+          <text class="info-label">{{t.deliveryLabel}}</text>
           <view class="info-value-row">
             <text class="info-value">{{deliveryDateStr}}</text>
             <text class="remain-badge {{remainDaysClass}}" wx:if="{{remainDaysText}}">{{remainDaysText}}</text>
@@ -94,19 +94,19 @@
     <view class="qty-card">
       <view class="qty-row">
         <view class="qty-col">
-          <text class="qty-label">总数量</text>
+          <text class="qty-label">{{t.totalQtyLabel}}</text>
           <text class="qty-num">{{totalQuantity}}</text>
         </view>
         <view class="qty-col">
-          <text class="qty-label">已完成</text>
+          <text class="qty-label">{{t.completedLabel}}</text>
           <text class="qty-num qty-done">{{completedQuantity}}</text>
         </view>
         <view class="qty-col">
-          <text class="qty-label">剩余</text>
+          <text class="qty-label">{{t.remainingLabel}}</text>
           <text class="qty-num qty-remain">{{remainQuantity}}</text>
         </view>
         <view class="qty-col">
-          <text class="qty-label">进度</text>
+          <text class="qty-label">{{t.progressLabel}}</text>
           <text class="qty-num qty-pct">{{progressPct}}%</text>
         </view>
       </view>
@@ -116,7 +116,7 @@
           <view class="progress-fill" style="width:{{progressPct > 100 ? 100 : progressPct}}%"></view>
         </view>
         <view class="progress-info">
-          <text class="progress-qty">{{completedQuantity}}/{{totalQuantity}}件</text>
+          <text class="progress-qty">{{completedQuantity}}/{{totalQuantity}}{{t.pieceUnit}}</text>
           <text class="progress-pct">{{progressPct}}%</text>
         </view>
       </view>
@@ -126,53 +126,53 @@
     <view class="action-bar {{isEditable ? '' : 'action-bar--disabled'}}">
       <view class="action-btn" bindtap="onActionProcurement" data-editable="{{isEditable}}">
         <view class="action-icon action-icon--procurement"></view>
-        <text class="action-text">采购</text>
+        <text class="action-text">{{t.purchaseLabel}}</text>
         <!-- D-184：阶段完成状态联动——一眼看出采购/裁剪/工序是否已完成 -->
         <text class="action-status action-status--{{procurementBadge.cls}}">{{procurementBadge.text}}</text>
       </view>
       <view class="action-btn" bindtap="onActionCutting" data-editable="{{isEditable}}">
         <view class="action-icon action-icon--cutting"></view>
-        <text class="action-text">裁剪</text>
+        <text class="action-text">{{t.cuttingLabel}}</text>
         <text class="action-status action-status--{{cuttingBadge.cls}}">{{cuttingBadge.text}}</text>
       </view>
       <view class="action-btn" wx:if="{{isEditable && order.status === 'production'}}" bindtap="onActionProcessEdit">
         <view class="action-icon action-icon--process"></view>
-        <text class="action-text">工序</text>
+        <text class="action-text">{{t.processWord}}</text>
         <text class="action-status action-status--{{overallBadge.cls}}">{{overallBadge.text}}</text>
       </view>
       <view class="action-btn" bindtap="onActionTransfer" data-editable="{{isEditable}}">
         <view class="action-icon action-icon--transfer"></view>
-        <text class="action-text">转单</text>
+        <text class="action-text">{{t.transferLabel}}</text>
       </view>
       <view class="action-btn" bindtap="onActionRemark" data-editable="{{isEditable}}">
         <view class="action-icon action-icon--remark"></view>
-        <text class="action-text">备注</text>
+        <text class="action-text">{{t.remarkLabel}}</text>
       </view>
       <!-- D-303：尺寸表入口——点击滚动到尺寸表区块（度量数据查看） -->
       <view class="action-btn" bindtap="onJumpSizeSpec">
         <view class="action-icon action-icon--remark"></view>
-        <text class="action-text">尺寸表</text>
+        <text class="action-text">{{t.sizeTableTitle}}</text>
       </view>
     </view>
 
     <!-- ══ ③-bis 订单生命周期操作（仅主管以上可见，与后端 ProductionOrderOperationController 对齐） ══ -->
     <view class="lifecycle-bar" wx:if="{{isSupervisor && isEditable}}">
       <view class="lifecycle-btn lifecycle-btn--complete" bindtap="onActionComplete">
-        <text class="lifecycle-text">完成生产</text>
+        <text class="lifecycle-text">{{t.completeProdBtn}}</text>
       </view>
       <view class="lifecycle-btn lifecycle-btn--close" bindtap="onActionClose">
-        <text class="lifecycle-text">关闭订单</text>
+        <text class="lifecycle-text">{{t.closeOrderBtn}}</text>
       </view>
       <view class="lifecycle-btn lifecycle-btn--scrap" bindtap="onActionScrap">
-        <text class="lifecycle-text">报废订单</text>
+        <text class="lifecycle-text">{{t.scrapOrderBtn}}</text>
       </view>
     </view>
 
     <!-- ══ ④ 工序进度时间线 ══ -->
     <view class="section-card" wx:if="{{stages.length > 0}}">
       <view class="section-hd">
-        <text class="section-title">工序进度</text>
-        <text class="section-count">{{stages.length}}个工序</text>
+        <text class="section-title">{{t.processProgress}}</text>
+        <text class="section-count">{{stages.length}}{{t.processCountW}}</text>
       </view>
       <view class="stage-list">
         <view class="stage-item" wx:for="{{stages}}" wx:key="name">
@@ -211,16 +211,16 @@
     <!-- ══ ⑤ 下单明细矩阵表（CSS Grid） ══ -->
     <view class="section-card" wx:if="{{matrixModel && matrixModel.hasData}}">
       <view class="section-hd">
-        <text class="section-title">下单明细</text>
-        <text class="section-count">共 {{matrixModel.total}} 件 / {{matrixModel.colors.length}} 色 × {{matrixModel.allSizes.length}} 码</text>
+        <text class="section-title">{{t.orderDetailTitle}}</text>
+        <text class="section-count">{{t.totalLabel}} {{matrixModel.total}}{{t.pieceUnit}} / {{matrixModel.colors.length}}{{t.colorUnitW}} × {{matrixModel.allSizes.length}}{{t.sizeUnitW}}</text>
       </view>
       <!-- D-184：横向滚动+固定列宽——码数多/标签长时不再挤压竖排、看不全 -->
       <scroll-view scroll-x class="matrix-scroll" enhanced show-scrollbar="{{false}}">
         <view class="matrix-table" style="grid-template-columns: 96rpx repeat({{matrixModel.allSizes.length}}, 150rpx) 88rpx;">
           <!-- 表头行 -->
-          <text class="matrix-cell matrix-cell--head matrix-cell--color">颜色</text>
+          <text class="matrix-cell matrix-cell--head matrix-cell--color">{{t.colorLabel}}</text>
           <text class="matrix-cell matrix-cell--head" wx:for="{{matrixModel.allSizes}}" wx:for-item="sz" wx:key="*this">{{sz}}</text>
-          <text class="matrix-cell matrix-cell--head matrix-cell--total">小计</text>
+          <text class="matrix-cell matrix-cell--head matrix-cell--total">{{t.subtotalLabel}}</text>
           <!-- 数据行 -->
           <block wx:for="{{matrixModel.rows}}" wx:key="label">
             <text class="matrix-cell matrix-cell--color">{{item.label}}</text>
@@ -228,7 +228,7 @@
             <text class="matrix-cell matrix-cell--total">{{item.rowTotal}}</text>
           </block>
           <!-- 合计行 -->
-          <text class="matrix-cell matrix-cell--color matrix-cell--foot">合计</text>
+          <text class="matrix-cell matrix-cell--color matrix-cell--foot">{{t.totalLabel}}</text>
           <text class="matrix-cell matrix-cell--foot" wx:for="{{matrixModel.sizeSummary}}" wx:for-item="szSum" wx:key="size">{{szSum.qty > 0 ? szSum.qty : '-'}}</text>
           <text class="matrix-cell matrix-cell--total matrix-cell--foot">{{matrixModel.total}}</text>
         </view>
@@ -238,8 +238,8 @@
     <!-- ══ ⑥ 尺寸表（只读查看，D-252：行=部位 / 列=尺码，横滚；D-303 缺数据给提示不再静默隐藏） ══ -->
     <view class="section-card" id="sizeSpecSection" wx:if="{{sizeSpec || sizeSpecHint}}">
       <view class="section-hd">
-        <text class="section-title">尺寸表</text>
-        <text class="section-count" wx:if="{{sizeSpec}}">{{sizeSpec.rows.length}} 个部位 × {{sizeSpec.sizeCols.length}} 个尺码</text>
+        <text class="section-title">{{t.sizeTableTitle}}</text>
+        <text class="section-count" wx:if="{{sizeSpec}}">{{sizeSpec.rows.length}}{{t.partsUnitW}} × {{sizeSpec.sizeCols.length}}{{t.sizeUnitW}}</text>
       </view>
       <view class="size-spec-hint" wx:if="{{!sizeSpec && sizeSpecHint}}">
         <text>{{sizeSpecHint}}</text>
@@ -247,8 +247,8 @@
       <scroll-view wx:if="{{sizeSpec}}" scroll-x class="size-spec-scroll" enhanced show-scrollbar="{{false}}">
         <view class="size-spec-table">
           <view class="ss-row ss-row--head">
-            <text class="ss-cell ss-cell--part">部位</text>
-            <text class="ss-cell ss-cell--measure">度量方式</text>
+            <text class="ss-cell ss-cell--part">{{t.partHeader}}</text>
+            <text class="ss-cell ss-cell--measure">{{t.measureMethod}}</text>
             <text class="ss-cell ss-cell--head" wx:for="{{sizeSpec.sizeCols}}" wx:key="*this">{{item}}</text>
           </view>
           <view class="ss-row" wx:for="{{sizeSpec.rows}}" wx:for-item="row" wx:key="part">
@@ -263,10 +263,10 @@
     <!-- 裁剪明细（业务需要，设计稿无） -->
     <view class="section-card" wx:if="{{cuttingBundleList.length > 0}}">
       <view class="section-hd">
-        <text class="section-title">裁剪明细</text>
+        <text class="section-title">{{t.cuttingDetailTitle}}</text>
         <view class="section-hd-right">
-          <text class="status-tag tag tag-success" wx:if="{{cuttingAllDone}}">已完成</text>
-          <text class="section-count">{{bundleSummary.totalBundles}}扎 / {{bundleSummary.totalQty}}件</text>
+          <text class="status-tag tag tag-success" wx:if="{{cuttingAllDone}}">{{t.completedLabel}}</text>
+          <text class="section-count">{{bundleSummary.totalBundles}}{{t.bundleUnitW}} / {{bundleSummary.totalQty}}{{t.pieceUnit}}</text>
         </view>
       </view>
       <view class="cut-list">
@@ -276,44 +276,44 @@
               <text class="cut-no">#{{item.bundleNo}}</text>
               <text class="status-tag tag {{item.statusCls}}">{{item.status}}</text>
               <view class="claim-btn-inline" bindtap="onClaimCutting" data-bundle="{{item}}" wx:if="{{item.isClaimable && isEditable}}">
-                <text>领取</text>
+                <text>{{t.claimBtn}}</text>
               </view>
             </view>
             <view class="cut-right">
-              <text class="cut-qty">{{item.quantity}}件</text>
+              <text class="cut-qty">{{item.quantity}}{{t.pieceUnit}}</text>
             </view>
           </view>
           <view class="cut-detail-row">
             <view class="cut-detail-cell" wx:if="{{item.color}}">
-              <text class="cut-detail-label">颜色</text>
+              <text class="cut-detail-label">{{t.colorLabel}}</text>
               <text class="cut-detail-value">{{item.color}}</text>
             </view>
             <view class="cut-detail-cell" wx:if="{{item.size}}">
-              <text class="cut-detail-label">尺码</text>
+              <text class="cut-detail-label">{{t.sizeLabel}}</text>
               <text class="cut-detail-value">{{item.size}}</text>
             </view>
             <view class="cut-detail-cell" wx:if="{{item.layerCount > 0}}">
-              <text class="cut-detail-label">层数</text>
+              <text class="cut-detail-label">{{t.layersLabel}}</text>
               <text class="cut-detail-value">{{item.layerCount}}</text>
             </view>
           </view>
           <view class="cut-receiver" wx:if="{{item.receiverName}}">
-            <text class="cut-receiver-text">裁剪人：{{item.receiverName}}</text>
+            <text class="cut-receiver-text">{{t.cutByPrefix}}{{item.receiverName}}</text>
           </view>
         </view>
       </view>
       <view class="see-all-link" bindtap="onSeeAllBundles" wx:if="{{bundleSummary.totalBundles > cuttingBundleList.length}}">
-        <text>查看全部 {{bundleSummary.totalBundles}} 扎 →</text>
+        <text>{{t.viewAllW}} {{bundleSummary.totalBundles}}{{t.bundleUnitW}} →</text>
       </view>
     </view>
 
     <!-- 物料采购（业务需要，设计稿无） -->
     <view class="section-card" wx:if="{{hasMaterialPurchases}}">
       <view class="section-hd">
-        <text class="section-title">物料采购</text>
+        <text class="section-title">{{t.matPurchaseTitle}}</text>
         <view class="section-hd-right">
-          <text class="status-tag tag tag-success" wx:if="{{procurementAllDone}}">已完成</text>
-          <text class="section-count">{{materialPurchases.length}}项</text>
+          <text class="status-tag tag tag-success" wx:if="{{procurementAllDone}}">{{t.completedLabel}}</text>
+          <text class="section-count">{{materialPurchases.length}}{{t.countUnitW}}</text>
         </view>
       </view>
       <view class="mat-list">
@@ -326,27 +326,27 @@
             <view class="mat-actions">
               <text class="status-tag tag {{item.statusCls}}">{{item.status}}</text>
               <view class="claim-btn-inline" bindtap="onClaimMaterial" data-item="{{item}}" wx:if="{{item.isClaimable && isEditable}}">
-                <text>领取</text>
+                <text>{{t.claimBtn}}</text>
               </view>
             </view>
           </view>
           <view class="mat-detail-row">
             <view class="mat-detail-cell">
-              <text class="mat-detail-label">采购数</text>
+              <text class="mat-detail-label">{{t.purchaseQtyLabel}}</text>
               <text class="mat-detail-value">{{item.quantity}}{{item.unit}}</text>
             </view>
             <view class="mat-detail-cell">
-              <text class="mat-detail-label">已到货</text>
+              <text class="mat-detail-label">{{t.arrivedLabel}}</text>
               <text class="mat-detail-value mat-detail-value--highlight" wx:if="{{item.arrivedQuantity > 0}}">{{item.arrivedQuantity}}{{item.unit}}</text>
               <text class="mat-detail-value mat-detail-value--gray" wx:else>-</text>
             </view>
             <view class="mat-detail-cell">
-              <text class="mat-detail-label">预计到货</text>
+              <text class="mat-detail-label">{{t.expectArrival}}</text>
               <text class="mat-detail-value">{{item.expectedArrivalDate || '-'}}</text>
             </view>
           </view>
           <view class="mat-receiver" wx:if="{{item.receiverName}}">
-            <text class="mat-receiver-text">采购人：{{item.receiverName}}</text>
+            <text class="mat-receiver-text">{{t.buyByPrefix}}{{item.receiverName}}</text>
           </view>
         </view>
       </view>
@@ -355,8 +355,8 @@
     <!-- BOM 物料清单 -->
     <view class="section-card" wx:if="{{hasBomList}}">
       <view class="section-hd">
-        <text class="section-title">物料清单</text>
-        <text class="section-count">{{bomList.length}}项</text>
+        <text class="section-title">{{t.tabBom}}</text>
+        <text class="section-count">{{bomList.length}}{{t.countUnitW}}</text>
       </view>
       <view class="bom-group" wx:for="{{bomList}}" wx:key="index">
         <view class="bom-item">
@@ -375,19 +375,19 @@
     <!-- 款式报价 -->
     <view class="section-card" wx:if="{{quotation}}">
       <view class="section-hd">
-        <text class="section-title">款式报价</text>
+        <text class="section-title">{{t.quoteTitle}}</text>
       </view>
       <view class="quotation-grid">
         <view class="qt-cell" wx:if="{{quotation.totalPrice}}">
-          <text class="qt-label">总价</text>
+          <text class="qt-label">{{t.totalPriceLabel}}</text>
           <text class="qt-value qt-price">¥{{quotation.totalPrice}}</text>
         </view>
         <view class="qt-cell" wx:if="{{quotation.unitPrice}}">
-          <text class="qt-label">单价</text>
+          <text class="qt-label">{{t.unitPriceLabel}}</text>
           <text class="qt-value">¥{{quotation.unitPrice}}</text>
         </view>
         <view class="qt-cell" wx:if="{{quotation.pricingModeText}}">
-          <text class="qt-label">计价方式</text>
+          <text class="qt-label">{{t.priceMethodLabel}}</text>
           <text class="qt-value">{{quotation.pricingModeText}}</text>
         </view>
       </view>
@@ -396,8 +396,8 @@
     <!-- ══ ⑥ 操作记录区 ══ -->
     <view class="section-card" wx:if="{{records.length > 0}}">
       <view class="section-hd">
-        <text class="section-title">操作记录</text>
-        <text class="section-count">{{records.length}}条</text>
+        <text class="section-title">{{t.opRecordsTitle}}</text>
+        <text class="section-count">{{records.length}}{{t.recordUnitW}}</text>
       </view>
       <view class="record-list">
         <view class="record-item" wx:for="{{records}}" wx:key="index">
@@ -420,8 +420,8 @@
 
   <!-- 加载失败/空数据兜底（独立 wx:if，不与上面的 block wx:if 关联） -->
   <view class="detail-empty-state" wx:if="{{!loading && !order}}">
-    <text class="detail-empty-text">{{loadError || '订单数据加载失败'}}</text>
-    <view class="detail-empty-retry" bindtap="onRetryLoad">点击重试</view>
+    <text class="detail-empty-text">{{loadError || t.orderLoadFailedW}}</text>
+    <view class="detail-empty-retry" bindtap="onRetryLoad">{{t.tapRetry}}</view>
   </view>
 
   <!-- ══ 自定义确认弹窗（替代 wx.showModal editable，规避基础库 3.17.0 灰度版 bug） ══ -->
@@ -440,7 +440,7 @@
         auto-height
       />
       <view class="am-btns">
-        <view class="am-btn am-btn-cancel" hover-class="am-btn-hover" hover-stay-time="100" bindtap="onActionModalCancel">取消</view>
+        <view class="am-btn am-btn-cancel" hover-class="am-btn-hover" hover-stay-time="100" bindtap="onActionModalCancel">{{t.cancel}}</view>
         <view class="am-btn am-btn-confirm" hover-class="am-btn-hover" hover-stay-time="100" style="color: {{actionModal.confirmColor}};" bindtap="onActionModalConfirm">{{actionModal.confirmText}}</view>
       </view>
     </view>

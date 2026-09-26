@@ -14,6 +14,8 @@
  *   orderId  - 订单 ID（UUID，优先使用）
  *   orderNo  - 订单号（备用）
  */
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.orderDetail.';
 const production = require('../../../utils/api-modules/production');
 // D-303：尺寸表 listSizes / fallbackToDetail 走全局 api（此前 _loadSizeSpec/fallbackToDetail 引用 api 但未导入，点击尺寸表即抛 api is not defined）
 const api = require('../../../utils/api.js');
@@ -28,9 +30,9 @@ const { eventBus, Events } = require('../../../utils/eventBus');
 const permission = require('../../../utils/permission');
 
 /* ========== 业务类型 / 物料类型 / 计价方式 中文化 ========== */
-var BIZ_TYPE_LABELS = { FOB: 'FOB 离岸价', ODM: 'ODM 原厂设计', OEM: 'OEM 代工生产', CMT: 'CMT 来料加工' };
-var MATERIAL_TYPE_LABELS = { fabricA: '主面料', fabricB: '副面料', liningA: '里料A', liningB: '里料B', liningC: '里料C', accessoryA: '辅料A', accessoryB: '辅料B', accessoryC: '辅料C' };
-var PRICING_MODE_LABELS = { PROCESS: '工序单价', SIZE: '尺码单价', COST: '外发整件单价', QUOTE: '报价单价', MANUAL: '手动单价' };
+var BIZ_TYPE_LABELS = { FOB: 'fobLabel', ODM: 'odmLabel', OEM: 'oemLabel', CMT: 'cmtLabel' };
+var MATERIAL_TYPE_LABELS = { fabricA: 'matMainA', fabricB: 'matMainB', liningA: 'matLiningA', liningB: 'matLiningB', liningC: 'matLiningC', accessoryA: 'matAccA', accessoryB: 'matAccB', accessoryC: 'matAccC' };
+var PRICING_MODE_LABELS = { PROCESS: 'priceProcess', SIZE: 'priceSize', COST: 'priceOutWhole', QUOTE: 'priceQuote', MANUAL: 'priceManual' };
 
 /* ========== 工具函数 ========== */
 function fmt(val, fallback) { return (val != null && val !== '') ? val : (fallback || '-'); }
@@ -76,14 +78,14 @@ function getStageStatus(row) {
 }
 
 /* 扫码记录类型文本 */
-function getScanTypeText(r) {
+function getScanTypeText(r, lang) {
   const t = String(r && r.scanType || '');
-  if (t === 'cutting') return '裁剪';
-  if (t === 'quality' || t === 'quality_check') return '质检';
-  if (t === 'warehousing') return '入库';
-  if (t === 'secondary_process') return '二次工艺';
-  if (t === 'car_sewing' || t === 'sewing') return '车缝';
-  return t || '扫码';
+  if (t === 'cutting') return i18n.t(NS + 'scanTypeCutting', lang);
+  if (t === 'quality' || t === 'quality_check') return i18n.t(NS + 'scanTypeQuality', lang);
+  if (t === 'warehousing') return i18n.t(NS + 'scanTypeWh', lang);
+  if (t === 'secondary_process') return i18n.t(NS + 'scanTypeSecond', lang);
+  if (t === 'car_sewing' || t === 'sewing') return i18n.t(NS + 'scanTypeSewing', lang);
+  return t || i18n.t(NS + 'scanTypeScan', lang);
 }
 function getScanTypeClass(r) {
   const t = String(r && r.scanType || '');
@@ -229,7 +231,95 @@ Page({
     loadError: '',
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}） */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        coverLabel: i18n.t(NS + 'coverLabel', lang),
+        styleWord: i18n.t(NS + 'styleWord', lang),
+        colorLabel: i18n.t('common.color', lang),
+        sizeLabel: i18n.t('common.size', lang),
+        qtyLabel: i18n.t('common.quantity', lang),
+        firstOrder: i18n.t(NS + 'firstOrder', lang),
+        repeatOrder: i18n.t(NS + 'repeatOrder', lang),
+        urgentTag: i18n.t(NS + 'urgentTag', lang),
+        styleNoLabel: i18n.t('mp.scanResult.styleNoLabel', lang),
+        salesmanLabel: i18n.t(NS + 'salesmanLabel', lang),
+        customerLabel: i18n.t('mp.pattern.customerLabel', lang),
+        factoryLabel: i18n.t('mp.scanConfirm.factoryPrefix', lang).replace(':', ''),
+        orderQtyLabel: i18n.t(NS + 'orderQtyLabel', lang),
+        deliveryLabel: i18n.t('mp.scanResult.deliveryLabel', lang),
+        totalQtyLabel: i18n.t('mp.scanConfirm.totalQtyLabel', lang),
+        remainingLabel: i18n.t(NS + 'remainingLabel', lang),
+        progressLabel: i18n.t(NS + 'progressLabel', lang),
+        purchaseLabel: i18n.t('mp.pattern.opProcurement', lang),
+        cuttingLabel: i18n.t(NS + 'scanTypeCutting', lang),
+        processWord: i18n.t('mp.pattern.processWord', lang),
+        transferLabel: i18n.t(NS + 'transferLabel', lang),
+        remarkLabel: i18n.t('common.remark', lang),
+        completeProdBtn: i18n.t(NS + 'completeProdBtn', lang),
+        closeOrderBtn: i18n.t(NS + 'closeOrderBtn', lang),
+        scrapOrderBtn: i18n.t(NS + 'scrapOrderBtn', lang),
+        processProgress: i18n.t('mp.sampleDetail.processProgress', lang),
+        orderDetailTitle: i18n.t('mp.scanConfirm.orderDetailTitle', lang),
+        subtotalLabel: i18n.t(NS + 'subtotalLabel', lang),
+        totalLabel: i18n.t('common.total', lang),
+        partHeader: i18n.t('mp.sampleDetail.partHeader', lang),
+        measureMethod: i18n.t('mp.scanResult.measureMethod', lang),
+        cuttingDetailTitle: i18n.t(NS + 'scanTypeCutting', lang),
+        layersLabel: i18n.t(NS + 'layersLabel', lang),
+        matPurchaseTitle: i18n.t('mp.stageDetail.matPurchaseW', lang),
+        purchaseQtyLabel: i18n.t(NS + 'purchaseQtyLabel', lang),
+        arrivedLabel: i18n.t(NS + 'arrivedLabel', lang),
+        expectArrival: i18n.t(NS + 'expectArrival', lang),
+        tabBom: i18n.t('mp.sampleDetail.tabBom', lang),
+        quoteTitle: i18n.t(NS + 'quoteTitle', lang),
+        totalPriceLabel: i18n.t('mp.stageDetail.totalPriceLabel', lang),
+        unitPriceLabel: i18n.t('mp.sampleDetail.unitPrice', lang),
+        priceMethodLabel: i18n.t(NS + 'priceMethodLabel', lang),
+        opRecordsTitle: i18n.t(NS + 'opRecordsTitle', lang),
+        tapRetry: i18n.t(NS + 'tapRetry', lang),
+        cancel: i18n.t('common.cancel', lang),
+        pieceUnit: i18n.t('common.piece', lang),
+        daysUnit: i18n.t(NS + 'daysUnitW', lang),
+        pass: i18n.t('common.pass', lang),
+        fail: i18n.t('common.fail', lang),
+        pendingClaimW: i18n.t(NS + 'pendingClaimW', lang),
+        noImageW: i18n.t(NS + 'noImageW', lang),
+        countUnitW: i18n.t(NS + 'countUnitW', lang),
+        recordUnitW: i18n.t(NS + 'recordUnitW', lang),
+        processCountW: i18n.t(NS + 'processCountW', lang),
+        sizeUnitW: i18n.t(NS + 'sizeUnitW', lang),
+        colorUnitW: i18n.t(NS + 'colorUnitW', lang),
+        partsUnitW: i18n.t(NS + 'partsUnitW', lang),
+        bundleUnitW: i18n.t(NS + 'bundleUnitW', lang),
+        claimBtn: i18n.t(NS + 'claimBtn', lang),
+        cutByPrefix: i18n.t(NS + 'cutByPrefix', lang),
+        buyByPrefix: i18n.t(NS + 'buyByPrefix', lang),
+        orderLoadFailedW: i18n.t(NS + 'orderLoadFailed', lang),
+        viewAllW: i18n.t(NS + 'viewAllW', lang),
+        cuttingWord: i18n.t(NS + 'cuttingWord', lang),
+        statusDoing: i18n.t('mp.scanConfirm.statusDoing', lang),
+        statusNotStarted: i18n.t('mp.stageDetail.statusNotStarted', lang),
+        completedLabel: i18n.t('common.completed', lang),
+        noSizeNoStyle: i18n.t(NS + 'noSizeNoStyle', lang),
+        noSizeDataHint: i18n.t(NS + 'noSizeDataHint', lang),
+        sizeLoadFailed: i18n.t(NS + 'sizeLoadFailed', lang),
+        noSizeLinked: i18n.t(NS + 'noSizeLinked', lang),
+      },
+    });
+    // 兜底标题（_loadFlow 拿到订单号后会覆盖为「订单详情 + 单号」）
+    if (!this.data.orderNo) {
+      wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+    }
+  },
+
   onLoad: function (options) {
+    this.applyLanguage(i18n.getLanguage());
     const opts = options || {};
     const orderId = opts.orderId ? decodeURIComponent(opts.orderId) : '';
     const orderNo = opts.orderNo ? decodeURIComponent(opts.orderNo) : '';
@@ -276,7 +366,7 @@ Page({
     const styleId = order.styleId || order.style_id;
     if (!styleId) {
       // 无资料下单：订单未关联款式档案
-      this.setData({ sizeSpec: null, sizeSpecHint: '该订单未关联款式资料（无资料下单），无尺寸表' });
+      this.setData({ sizeSpec: null, sizeSpecHint: i18n.t(NS + 'noSizeNoStyle', lang) });
       return;
     }
     if (this._sizeSpecLoadedFor === styleId && (this.data.sizeSpec || this.data.sizeSpecHint)) return;
@@ -287,11 +377,11 @@ Page({
         const spec = buildSizeSpec(Array.isArray(list) ? list : (list.records || []));
         self.setData({
           sizeSpec: spec,
-          sizeSpecHint: spec ? '' : '该款式档案尚未录入尺寸表数据，可在 PC 端款式详情「尺寸表」中维护',
+          sizeSpecHint: spec ? '' : i18n.t(NS + 'noSizeDataHint', lang),
         });
       }).catch(function (err) {
       console.warn('[order-detail] 加载尺寸表失败:', err);
-      self.setData({ sizeSpec: null, sizeSpecHint: '尺寸表加载失败，下拉刷新重试' });
+      self.setData({ sizeSpec: null, sizeSpecHint: i18n.t(NS + 'sizeLoadFailed', lang) });
     });
   },
 
@@ -302,7 +392,7 @@ Page({
     const order = this.data.order || {};
     const styleId = order.styleId || order.style_id;
     if (!styleId) {
-      wx.showToast({ title: '该订单未关联款式资料，无尺寸表', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'noSizeLinked', this._lang), icon: 'none' });
       return;
     }
     if (!this.data.sizeSpec && !this.data.sizeSpecHint) {
@@ -337,6 +427,7 @@ Page({
 
   /* ======== 加载完整流程数据 ======== */
   _loadFlow: function () {
+    var lang = this._lang || i18n.getLanguage();
     const that = this;
     this.setData({ loading: true });
 
@@ -345,7 +436,7 @@ Page({
 
     // 兼容性：没有 orderId 但有 orderNo，也可以继续
     if (!orderId && !orderNo) {
-      toast.error('缺少订单参数');
+      toast.error(i18n.t(NS + 'orderMissingParams', this._lang));
       this.setData({ loading: false });
       return;
     }
@@ -376,7 +467,7 @@ Page({
       // 构建图片列表（封面图 + 款式附件图 + 订单备注图）
       const imageList = [];
       if (coverUrl) {
-        imageList.push({ url: coverUrl, type: 'cover', label: '封面' });
+        imageList.push({ url: coverUrl, type: 'cover', label: i18n.t(NS + 'coverLabel', lang) });
       }
       // 款式附件图（从 styleImages 或 attachments 解析）
       const styleAttachments = order.styleImages || order.styleAttachmentList || order.attachments || [];
@@ -385,7 +476,7 @@ Page({
           const url = att.fileUrl || att.imageUrl || att.url || att;
           if (url && typeof url === 'string') {
             const fullUrl = url.startsWith('http') ? url : getAuthedImageUrl(url);
-            imageList.push({ url: fullUrl, type: 'style', label: '款式' });
+            imageList.push({ url: fullUrl, type: 'style', label: i18n.t(NS + 'styleWord', lang) });
           }
         });
       }
@@ -396,7 +487,7 @@ Page({
           const url = img.imageUrl || img.fileUrl || img.url || img;
           if (url && typeof url === 'string') {
             const fullUrl = url.startsWith('http') ? url : getAuthedImageUrl(url);
-            imageList.push({ url: fullUrl, type: 'order', label: '备注', id: img.id });
+            imageList.push({ url: fullUrl, type: 'order', label: i18n.t('common.remark', lang), id: img.id });
           }
         });
       }
@@ -413,13 +504,13 @@ Page({
         const target = new Date(deliveryDateStr.replace(/-/g, '/'));
         const diff = Math.ceil((target.getTime() - today.getTime()) / 86400000);
         if (diff < 0) {
-          remainDaysText = '逾' + Math.abs(diff) + '天';
+          remainDaysText = i18n.t(NS + 'overdueChar', this._lang) + Math.abs(diff) + i18n.t(NS + 'daysUnitW', this._lang);
           remainDaysClass = 'days-overdue';
         } else if (diff === 0) {
-          remainDaysText = '今天';
+          remainDaysText = i18n.t(NS + 'todayWord', this._lang);
           remainDaysClass = 'days-urgent';
         } else {
-          remainDaysText = diff + '天';
+          remainDaysText = diff + i18n.t(NS + 'daysUnitW', lang);
           remainDaysClass = diff <= 3 ? 'days-urgent' : (diff <= 7 ? 'days-warn' : 'days-safe');
         }
       }
@@ -438,7 +529,7 @@ Page({
       const stages = rawStages.map(function (s) {
         const st = getStageStatus(s);
         return {
-          name: fmt(s.processName || s.name, '未知工序'),
+          name: fmt(s.processName || s.name, i18n.t(NS + 'unknownProcess', lang)),
           status: st.text,
           statusCls: st.cls,
           totalQty: fmtNum(s.totalQuantity),
@@ -457,7 +548,7 @@ Page({
           scanTime: formatDateTime(r.scanTime || r.createTime),
           operatorName: fmt(r.operatorName || r.operator, '-'),
           processName: fmt(r.processName || r.progressStage, '-'),
-          scanType: getScanTypeText(r),
+          scanType: getScanTypeText(r, lang),
           scanTypeClass: getScanTypeClass(r),
           quantity: fmtNum(r.quantity),
         };
@@ -470,7 +561,7 @@ Page({
         // 统一走 displayHelper.displayPurchaseStatus；'arrived' 不在采购映射表，保留本地兜底
         let st = displayPurchaseStatus(rawStatus);
         if (rawStatus === 'arrived') {
-          st = { text: '已到货', color: STATUS_COLOR_SUCCESS };
+          st = { text: i18n.t(NS + 'arrivedLabel', lang), color: STATUS_COLOR_SUCCESS };
         }
         const stCls = colorToCls(st.color);
         const isClaimable = (rawStatus === 'pending' || rawStatus === '');
@@ -480,7 +571,7 @@ Page({
           materialCode: fmt(mp.materialCode, '-'),
           quantity: fmtNum(mp.quantity),
           arrivedQuantity: fmtNum(mp.arrivedQuantity),
-          unit: fmt(mp.unit, '件'),
+          unit: fmt(mp.unit, i18n.t('common.piece', lang)),
           status: st.text,
           statusCls: stCls,
           expectedArrivalDate: formatDate(mp.expectedArrivalDate || mp.planDate),
@@ -493,7 +584,7 @@ Page({
       const rawBom = Array.isArray(ctx.bomList) ? ctx.bomList : (ctx.bomList && Array.isArray(ctx.bomList.records)) ? ctx.bomList.records : [];
       const bomList = rawBom.map(function (b) {
         return {
-          groupName: fmt(b.groupName, '未分组'),
+          groupName: fmt(b.groupName, i18n.t(NS + 'ungroupedWord', lang)),
           materialType: fmt(b.materialType, '-'),
           materialName: fmt(b.materialName, '-'),
           materialCode: fmt(b.materialCode, '-'),
@@ -530,11 +621,11 @@ Page({
           // displayHelper 没有这俩/仨 key，保留本地兜底
           let st = displayPurchaseStatus(rawStatus);
           if (rawStatus === 'not_started') {
-            st = { text: '待领取', color: STATUS_COLOR_WARNING };
+            st = { text: i18n.t(NS + 'pendingClaimW', lang), color: STATUS_COLOR_WARNING };
           } else if (rawStatus === 'done') {
-            st = { text: '已完成', color: STATUS_COLOR_SUCCESS };
+            st = { text: i18n.t('common.completed', lang), color: STATUS_COLOR_SUCCESS };
           } else if (rawStatus === 'in_progress') {
-            st = { text: '裁剪中', color: STATUS_COLOR_PROCESSING };
+            st = { text: i18n.t(NS + 'cuttingWord', lang), color: STATUS_COLOR_PROCESSING };
           }
           const stCls = colorToCls(st.color);
           var rawBundleNo = b.bundleNo || b.bundleLabel || b.bundle_no || '-';
@@ -582,14 +673,15 @@ Page({
         }
         var colorText = matrixModel.colors.length ? matrixModel.colors.join(' / ') : '';
         var sizeText = matrixModel.allSizes.length ? matrixModel.allSizes.join(' / ') : '';
-        var qtyText = matrixModel.total + '件';
+        var qtyText = matrixModel.total + i18n.t('common.piece', lang);
         // D-198：尺码拆数组供横向滑动标签渲染，长码数不再挤成换行长串
         return { colorText: colorText, sizeText: sizeText, sizeList: matrixModel.allSizes.slice(), qtyText: qtyText, hasSpec: true };
       })();
 
       // BOM 物料类型中文化
       bomList.forEach(function (b) {
-        b.materialTypeText = b.materialType && b.materialType !== '-' ? (MATERIAL_TYPE_LABELS[b.materialType] || '其他') : '-';
+        var mk = MATERIAL_TYPE_LABELS[b.materialType];
+        b.materialTypeText = b.materialType && b.materialType !== '-' ? (mk ? i18n.t(NS + mk, lang) : b.materialType) : '-';
       });
 
       // 款式报价计价方式中文化
@@ -598,16 +690,17 @@ Page({
       if (rawQuotation) {
         quotation = Object.assign({}, rawQuotation);
         if (quotation.pricingMode) {
-          quotation.pricingModeText = PRICING_MODE_LABELS[quotation.pricingMode] || '未知';
+          var pk = PRICING_MODE_LABELS[quotation.pricingMode];
+          quotation.pricingModeText = pk ? i18n.t(NS + pk, lang) : i18n.t('mp.stageDetail.unknownWord', lang);
         }
       }
 
       // D-184：采购/裁剪/整体完成状态徽章——与完成率联动，让用户一眼看清各阶段是否已完成
       const stageBadge = function (rate) {
         const r = Number(rate) || 0;
-        if (r >= 100) return { text: '已完成', cls: 'done' };
-        if (r > 0) return { text: '进行中', cls: 'doing' };
-        return { text: '未开始', cls: 'todo' };
+        if (r >= 100) return { text: i18n.t('common.completed', lang), cls: 'done' };
+        if (r > 0) return { text: i18n.t('mp.scanConfirm.statusDoing', lang), cls: 'doing' };
+        return { text: i18n.t('mp.stageDetail.statusNotStarted', lang), cls: 'todo' };
       };
 
       that.setData({
@@ -651,7 +744,7 @@ Page({
       const realOrderNo = order.orderNo || order.order_no;
       if (realOrderNo) {
         if (!that.data.orderNo) that.setData({ orderNo: realOrderNo });
-        wx.setNavigationBarTitle({ title: '订单详情 ' + realOrderNo });
+        wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) + ' ' + realOrderNo });
       }
     }
 
@@ -660,7 +753,7 @@ Page({
     const timeoutTimer = setTimeout(function () {
       console.warn('[order-detail] 请求超时，关闭 loading');
       if (that.data.loading) {
-        toast.error('加载超时，请重试');
+        toast.error(i18n.t(NS + 'loadTimeout', this._lang));
         that.setData({ loading: false });
       }
     }, 10000);
@@ -669,7 +762,7 @@ Page({
     function fallbackToDetail(key) {
       if (!key) {
         console.warn('[order-detail] fallback 缺少 key');
-        that.setData({ loading: false, loadError: '缺少订单参数' });
+        that.setData({ loading: false, loadError: i18n.t(NS + 'orderMissingParams', that._lang) });
         return Promise.resolve();
       }
       console.log('[order-detail] 启动 fallback orderDetail, key:', key);
@@ -689,13 +782,13 @@ Page({
         }
         if (!order || !order.id) {
           console.warn('[order-detail] detail fallback 也无法解析 order:', JSON.stringify(payload).substring(0, 300));
-          throw new Error('订单数据不存在');
+          throw new Error(i18n.t(NS + 'orderMissing', lang));
         }
         render(order, {});
       }).catch(function (detailErr) {
         const detailMsg = (detailErr && detailErr.message) || String(detailErr || '');
         console.warn('[order-detail] detail fallback 失败:', detailMsg);
-        that.setData({ loading: false, loadError: detailMsg || '订单数据加载失败' });
+        that.setData({ loading: false, loadError: detailMsg || i18n.t(NS + 'orderLoadFailed', that._lang) });
       });
     }
 
@@ -742,12 +835,12 @@ Page({
   onCopyOrderNo: function () {
     const no = this.data.orderNo || (this.data.order && this.data.order.orderNo);
     if (!no) return;
-    wx.setClipboardData({ data: no, success: function () { toast.success('已复制'); } });
+    wx.setClipboardData({ data: no, success: function () { toast.success(i18n.t(NS + 'copied', this._lang)); } });
   },
 
   /* ======== 操作：裁剪分扎 ======== */
   onActionCutting: function () {
-    if (!this.data.isEditable) { toast.error('已完成的订单不可操作'); return; }
+    if (!this.data.isEditable) { toast.error(i18n.t(NS + 'doneOrderNoOp', this._lang)); return; }
     const order = this.data.order;
     if (!order) return;
     const params = [];
@@ -758,7 +851,7 @@ Page({
 
   /* ======== 操作：采购任务 ======== */
   onActionProcurement: function () {
-    if (!this.data.isEditable) { toast.error('已完成的订单不可操作'); return; }
+    if (!this.data.isEditable) { toast.error(i18n.t(NS + 'doneOrderNoOp', this._lang)); return; }
     const order = this.data.order;
     if (!order) return;
     safeNavigate({
@@ -769,12 +862,12 @@ Page({
 
   /* ======== 操作：工序编辑 ======== */
   onActionProcessEdit: function () {
-    if (!this.data.isEditable) { toast.error('已完成的订单不可操作'); return; }
+    if (!this.data.isEditable) { toast.error(i18n.t(NS + 'doneOrderNoOp', this._lang)); return; }
     const order = this.data.order;
     if (!order) return;
     const status = String(order.status || '').toLowerCase();
     if (status !== 'production' && status !== 'in_progress' && status !== 'active') {
-      wx.showToast({ title: '仅生产中的订单可编辑工序', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'onlyProdEdit', this._lang), icon: 'none' });
       return;
     }
     safeNavigate({
@@ -785,7 +878,7 @@ Page({
 
   /* ======== 操作：转单 ======== */
   onActionTransfer: function () {
-    if (!this.data.isEditable) { toast.error('已完成的订单不可操作'); return; }
+    if (!this.data.isEditable) { toast.error(i18n.t(NS + 'doneOrderNoOp', this._lang)); return; }
     const order = this.data.order;
     if (!order) return;
     const params = [];
@@ -798,7 +891,7 @@ Page({
 
   /* ======== 操作：备注 ======== */
   onActionRemark: function () {
-    if (!this.data.isEditable) { toast.error('已完成的订单不可操作'); return; }
+    if (!this.data.isEditable) { toast.error(i18n.t(NS + 'doneOrderNoOp', this._lang)); return; }
     const order = this.data.order;
     if (!order || !order.orderNo) return;
     safeNavigate({
@@ -811,19 +904,19 @@ Page({
    * 报废订单：POST /api/production/order/scrap  body: { id, remark }
    */
   onActionScrap: function () {
-    if (!this.data.isEditable) { toast.error('已完成的订单不可操作'); return; }
-    if (!permission.isAdminOrSupervisor()) { toast.error('仅主管以上可报废订单'); return; }
+    if (!this.data.isEditable) { toast.error(i18n.t(NS + 'doneOrderNoOp', this._lang)); return; }
+    if (!permission.isAdminOrSupervisor()) { toast.error(i18n.t(NS + 'onlySupScrap', this._lang)); return; }
     const order = this.data.order;
-    if (!order || !order.id) { toast.error('订单数据缺失'); return; }
+    if (!order || !order.id) { toast.error(i18n.t(NS + 'orderDataMissing', this._lang)); return; }
     this.setData({
       actionModal: {
         visible: true,
         type: 'scrap',
-        title: '报废订单',
-        desc: '确认报废订单 ' + (order.orderNo || '') + '？此操作不可恢复',
-        confirmText: '确认报废',
+        title: i18n.t(NS + 'scrapOrderBtn', this._lang),
+        desc: i18n.tf(NS + 'scrapConfirmFmt', { no: order.orderNo || '' }, this._lang),
+        confirmText: i18n.t(NS + 'scrapConfirmBtn', this._lang),
         confirmColor: 'var(--color-danger, #dc2626)',
-        placeholder: '请输入报废原因（必填）',
+        placeholder: i18n.t(NS + 'scrapReasonPh', this._lang),
         inputVal: '',
         inputRequired: true,
       },
@@ -834,17 +927,17 @@ Page({
    * 完成生产：POST /api/production/order/complete  body: { id, tolerancePercent? }
    */
   onActionComplete: function () {
-    if (!this.data.isEditable) { toast.error('已完成的订单不可操作'); return; }
-    if (!permission.isAdminOrSupervisor()) { toast.error('仅主管以上可完成生产'); return; }
+    if (!this.data.isEditable) { toast.error(i18n.t(NS + 'doneOrderNoOp', this._lang)); return; }
+    if (!permission.isAdminOrSupervisor()) { toast.error(i18n.t(NS + 'onlySupComplete', this._lang)); return; }
     const order = this.data.order;
-    if (!order || !order.id) { toast.error('订单数据缺失'); return; }
+    if (!order || !order.id) { toast.error(i18n.t(NS + 'orderDataMissing', this._lang)); return; }
     this.setData({
       actionModal: {
         visible: true,
         type: 'complete',
-        title: '完成生产',
-        desc: '确认完成订单 ' + (order.orderNo || '') + ' 的生产？将触发后续入库流程',
-        confirmText: '确认完成',
+        title: i18n.t(NS + 'completeProdBtn', this._lang),
+        desc: i18n.tf(NS + 'completeConfirmFmt', { no: order.orderNo || '' }, this._lang),
+        confirmText: i18n.t(NS + 'confirmCompleteW', this._lang),
         confirmColor: 'var(--color-success, #38b000)',
         placeholder: '',
         inputVal: '',
@@ -858,19 +951,19 @@ Page({
    * sourceModule 固定为 'miniprogram_order_detail'，便于后端审计
    */
   onActionClose: function () {
-    if (!this.data.isEditable) { toast.error('已完成的订单不可操作'); return; }
-    if (!permission.isAdminOrSupervisor()) { toast.error('仅主管以上可关闭订单'); return; }
+    if (!this.data.isEditable) { toast.error(i18n.t(NS + 'doneOrderNoOp', this._lang)); return; }
+    if (!permission.isAdminOrSupervisor()) { toast.error(i18n.t(NS + 'onlySupClose', this._lang)); return; }
     const order = this.data.order;
-    if (!order || !order.id) { toast.error('订单数据缺失'); return; }
+    if (!order || !order.id) { toast.error(i18n.t(NS + 'orderDataMissing', this._lang)); return; }
     this.setData({
       actionModal: {
         visible: true,
         type: 'close',
-        title: '关闭订单',
-        desc: '确认关闭订单 ' + (order.orderNo || '') + '？关闭后将无法继续操作',
-        confirmText: '确认关闭',
+        title: i18n.t(NS + 'closeOrderBtn', this._lang),
+        desc: i18n.tf(NS + 'closeConfirmFmt', { no: order.orderNo || '' }, this._lang),
+        confirmText: i18n.t(NS + 'confirmClose', this._lang),
         confirmColor: 'var(--color-danger, #dc2626)',
-        placeholder: '可输入关闭原因（选填）',
+        placeholder: i18n.t(NS + 'closeReasonPh', this._lang),
         inputVal: '',
         inputRequired: false,
       },
@@ -891,43 +984,43 @@ Page({
     const order = this.data.order;
     if (!order || !order.id) { this.setData({ 'actionModal.visible': false }); return; }
     const remark = String(m.inputVal || '').trim();
-    if (m.inputRequired && !remark) { toast.error('请输入' + (m.placeholder || '').replace(/（.*$/, '')); return; }
+    if (m.inputRequired && !remark) { toast.error((m.placeholder || '').replace(/（.*$/, '').replace(/\(.*$/, '')); return; }
 
     this.setData({ 'actionModal.visible': false });
 
     if (m.type === 'scrap') {
-      wx.showLoading({ title: '报废中...', mask: true });
+      wx.showLoading({ title: i18n.t(NS + 'scrapingTxt', this._lang), mask: true });
       production.scrapOrder({ id: order.id, remark: remark }).then(function () {
         wx.hideLoading();
-        toast.success('报废成功');
+        toast.success(i18n.t(NS + 'scrapOk', this._lang));
         that._loadFlow();
       }).catch(function (err) {
         wx.hideLoading();
-        toast.error(err.errMsg || err.message || '报废失败');
+        toast.error(err.errMsg || err.message || i18n.t(NS + 'scrapFail', this._lang));
       });
     } else if (m.type === 'complete') {
-      wx.showLoading({ title: '处理中...', mask: true });
+      wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
       production.completeOrder({ id: order.id }).then(function () {
         wx.hideLoading();
-        toast.success('已完成生产');
+        toast.success(i18n.t(NS + 'prodCompleted', this._lang));
         that._loadFlow();
       }).catch(function (err) {
         wx.hideLoading();
-        toast.error(err.errMsg || err.message || '完成失败');
+        toast.error(err.errMsg || err.message || i18n.t(NS + 'completeFail', this._lang));
       });
     } else if (m.type === 'close') {
-      wx.showLoading({ title: '处理中...', mask: true });
+      wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
       production.closeOrder({
         id: order.id,
         sourceModule: 'myOrders',
         remark: remark,
       }).then(function () {
         wx.hideLoading();
-        toast.success('已关闭订单');
+        toast.success(i18n.t(NS + 'orderClosed', this._lang));
         that._loadFlow();
       }).catch(function (err) {
         wx.hideLoading();
-        toast.error(err.errMsg || err.message || '关闭失败');
+        toast.error(err.errMsg || err.message || i18n.t(NS + 'closeFail', this._lang));
       });
     }
   },
@@ -944,51 +1037,51 @@ Page({
 
   /* ======== 领取采购物料 ======== */
   onClaimMaterial: function (e) {
-    if (!this.data.isEditable) { toast.error('已完成的订单不可操作'); return; }
+    if (!this.data.isEditable) { toast.error(i18n.t(NS + 'doneOrderNoOp', this._lang)); return; }
     const item = e.currentTarget.dataset.item;
-    if (!item || !item.id) { toast.error('物料数据缺失'); return; }
+    if (!item || !item.id) { toast.error(i18n.t(NS + 'materialMissing', this._lang)); return; }
     const userInfo = getUserInfo();
     const receiverId = String(userInfo && (userInfo.id || userInfo.userId) || '').trim();
     const receiverName = String(userInfo && (userInfo.name || userInfo.username || userInfo.nickName) || '').trim();
     if (!receiverId && !receiverName) {
-      toast.error('请先登录');
+      toast.error(i18n.t(NS + 'loginFirst', this._lang));
       return;
     }
-    wx.showLoading({ title: '领取中...', mask: true });
+    wx.showLoading({ title: i18n.t(NS + 'claimingTxt', this._lang), mask: true });
     production.receivePurchase({
       purchaseId: item.id,
       receiverId: receiverId,
       receiverName: receiverName,
     }).then(function () {
       wx.hideLoading();
-      toast.success('领取成功');
+      toast.success(i18n.t(NS + 'claimOk', this._lang));
       this._loadFlow();
     }.bind(this)).catch(function (err) {
       wx.hideLoading();
-      toast.error(err.errMsg || err.message || '领取失败');
+      toast.error(err.errMsg || err.message || i18n.t(NS + 'claimFail', this._lang));
     });
   },
 
   /* ======== 领取裁剪任务 ======== */
   onClaimCutting: function (e) {
-    if (!this.data.isEditable) { toast.error('已完成的订单不可操作'); return; }
+    if (!this.data.isEditable) { toast.error(i18n.t(NS + 'doneOrderNoOp', this._lang)); return; }
     const bundle = e.currentTarget.dataset.bundle;
-    if (!bundle || !bundle.taskId) { toast.error('裁剪数据缺失'); return; }
+    if (!bundle || !bundle.taskId) { toast.error(i18n.t(NS + 'cuttingMissing', this._lang)); return; }
     const userInfo = getUserInfo();
     const receiverId = String(userInfo && (userInfo.id || userInfo.userId) || '').trim();
     const receiverName = String(userInfo && (userInfo.name || userInfo.username || userInfo.nickName) || '').trim();
     if (!receiverId && !receiverName) {
-      toast.error('请先登录');
+      toast.error(i18n.t(NS + 'loginFirst', this._lang));
       return;
     }
-    wx.showLoading({ title: '领取中...', mask: true });
+    wx.showLoading({ title: i18n.t(NS + 'claimingTxt', this._lang), mask: true });
     production.receiveCuttingTaskById(bundle.taskId, receiverId, receiverName).then(function () {
       wx.hideLoading();
-      toast.success('领取成功');
+      toast.success(i18n.t(NS + 'claimOk', this._lang));
       this._loadFlow();
     }.bind(this)).catch(function (err) {
       wx.hideLoading();
-      toast.error(err.errMsg || err.message || '领取失败');
+      toast.error(err.errMsg || err.message || i18n.t(NS + 'claimFail', this._lang));
     });
   },
 });
