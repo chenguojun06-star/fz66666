@@ -2,7 +2,7 @@
 
   <!-- 搜索 + 筛选器（sticky 吸顶，统一通用组件） -->
   <sticky-search-bar
-    placeholder="搜索员工姓名"
+    placeholder="{{t.searchEmpPh}}"
     value="{{keyword}}"
     show-scan="{{false}}"
     show-filter="{{true}}"
@@ -13,7 +13,7 @@
       <view class="filter-item">
         
           <view bindtap="openPicker" data-handler="onStatusFilterChange" data-names="STATUS_OPTIONS" data-range-key="label" class="picker-box">
-            <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : '全部状态'}}</text>
+            <text class="picker-text">{{statusFilter ? STATUS_MAP[statusFilter].text : t.filterAllStatus}}</text>
             <view class="picker-chevron"></view>
           </view>
         
@@ -21,7 +21,7 @@
       <view class="filter-item">
         
           <view bindtap="openPicker" data-handler="onRepayFilterChange" data-names="REPAY_OPTIONS" data-range-key="label" class="picker-box">
-            <text class="picker-text">{{repayFilter ? DEDUCT_MAP[repayFilter].text : '全部扣款'}}</text>
+            <text class="picker-text">{{repayFilter ? DEDUCT_MAP[repayFilter].text : t.filterAllDeduct}}</text>
             <view class="picker-chevron"></view>
           </view>
         
@@ -31,7 +31,7 @@
 
   <!-- List -->
   <view class="list-section">
-    <empty-state wx:if="{{!loading && list.length === 0}}" text="暂无借支记录" />
+    <empty-state wx:if="{{!loading && list.length === 0}}" text="{{t.noRecords}}" />
 
     <view class="advance-card {{item.statusCls}}" wx:for="{{list}}" wx:key="id" data-index="{{index}}" bindtap="onTapItem" hover-class="card-hover" hover-stay-time="50">
       <!-- Row 1: order# + status tag -->
@@ -52,16 +52,16 @@
         <text class="deduct-tag {{item.repayCls}}">{{item.repayText}}</text>
       </view>
       <!-- Row 4: remaining (if approved) -->
-      <text class="remaining-text" wx:if="{{item.status === 'approved' && item.remainingStr}}">剩余 ¥{{item.remainingStr}}</text>
+      <text class="remaining-text" wx:if="{{item.status === 'approved' && item.remainingStr}}">{{t.remainingW}}¥{{item.remainingStr}}</text>
       <!-- Footer: border-top, time + click hint -->
       <view class="card-footer">
         <text class="time-text">{{item.createTime || ''}}</text>
-        <text class="click-hint" wx:if="{{item.status === 'pending'}}">点击审批</text>
+        <text class="click-hint" wx:if="{{item.status === 'pending'}}">{{t.tapToAudit}}</text>
       </view>
     </view>
 
     <view class="load-more {{!hasMore ? 'disabled' : ''}}" wx:if="{{loading || !hasMore}}">
-      <text>{{loading ? '加载中...' : '没有更多了'}}</text>
+      <text>{{loading ? t.loading : t.noMoreW}}</text>
     </view>
   </view>
 
@@ -76,19 +76,19 @@
   <!-- Action Sheet (inline expandable) -->
   <view class="inline-form-card" wx:if="{{showActionSheet}}">
     <view class="inline-form-title">
-      <text>{{currentAdvance.advanceNo || '操作'}}</text>
+      <text>{{currentAdvance.advanceNo || t.opTitle}}</text>
     </view>
     <view class="inline-form-body">
       <view class="action-item action-approve" wx:if="{{canApprove && currentAdvance.status === 'pending'}}" bindtap="onActionApprove">
         <view class="action-icon action-icon-check"></view>
-        <text>审批通过</text>
+        <text>{{t.approvePassW}}</text>
       </view>
       <view class="action-item action-reject" wx:if="{{canApprove && currentAdvance.status === 'pending'}}" bindtap="onActionReject">
         <view class="action-icon action-icon-warn"></view>
-        <text>驳回</text>
+        <text>{{t.rejectBtn}}</text>
       </view>
       <view class="action-item action-cancel" bindtap="onCloseActionSheet">
-        <text>取消</text>
+        <text>{{t.cancelBtn}}</text>
       </view>
     </view>
   </view>
@@ -96,7 +96,7 @@
   <!-- Create Form (inline expandable) -->
   <view class="inline-form-card" wx:if="{{showCreateModal}}">
     <view class="inline-form-title">
-      <text class="modal-title">申请借支</text>
+      <text class="modal-title">{{t.applyBtn}}</text>
       <view class="modal-close" bindtap="onCancelCreate">
         <view class="modal-close-line1"></view>
         <view class="modal-close-line2"></view>
@@ -104,28 +104,28 @@
     </view>
     <view class="inline-form-body">
       <view class="mf-item">
-        <text class="mf-label mf-required">员工姓名</text>
-        <input class="mf-input" placeholder="请输入员工姓名" value="{{createForm.employeeName}}" data-field="employeeName" bindinput="onCreateFieldInput" />
+        <text class="mf-label mf-required">{{t.employeeLabel}}</text>
+        <input class="mf-input" placeholder="{{t.empNamePh}}" value="{{createForm.employeeName}}" data-field="employeeName" bindinput="onCreateFieldInput" />
       </view>
       <view class="mf-item">
-        <text class="mf-label mf-required">借支金额</text>
+        <text class="mf-label mf-required">{{t.amountLabel}}</text>
         <view class="mf-amount-wrap">
           <text class="mf-amount-prefix">¥</text>
-          <input class="mf-amount-input" type="digit" placeholder="请输入金额" value="{{createForm.amount}}" data-field="amount" bindinput="onCreateFieldInput" />
+          <input class="mf-amount-input" type="digit" placeholder="{{t.amountPh}}" value="{{createForm.amount}}" data-field="amount" bindinput="onCreateFieldInput" />
         </view>
       </view>
       <view class="mf-item">
-        <text class="mf-label mf-required">借支事由</text>
-        <textarea class="mf-textarea" placeholder="请输入借支事由" value="{{createForm.reason}}" data-field="reason" bindinput="onCreateFieldInput" maxlength="200" />
+        <text class="mf-label mf-required">{{t.reasonLabel}}</text>
+        <textarea class="mf-textarea" placeholder="{{t.reasonPh}}" value="{{createForm.reason}}" data-field="reason" bindinput="onCreateFieldInput" maxlength="200" />
       </view>
       <view class="mf-item">
-        <text class="mf-label">关联订单号</text>
-        <input class="mf-input" placeholder="选填" value="{{createForm.orderNo}}" data-field="orderNo" bindinput="onCreateFieldInput" />
+        <text class="mf-label">{{t.orderNoLabel}}</text>
+        <input class="mf-input" placeholder="{{t.optionalPh}}" value="{{createForm.orderNo}}" data-field="orderNo" bindinput="onCreateFieldInput" />
       </view>
     </view>
     <view class="inline-form-actions">
-      <view class="modal-btn cancel" bindtap="onCancelCreate">取消</view>
-      <view class="modal-btn confirm" bindtap="onSubmitCreate">提交</view>
+      <view class="modal-btn cancel" bindtap="onCancelCreate">{{t.cancelBtn}}</view>
+      <view class="modal-btn confirm" bindtap="onSubmitCreate">{{t.submitBtn}}</view>
     </view>
   </view>
 

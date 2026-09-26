@@ -1,3 +1,5 @@
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.advance.';
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor, hasFeaturePermission } = require('../../../utils/permission');
@@ -79,7 +81,65 @@ Page({
     { value: 'repaid', label: displayHelper.ADVANCE_DEDUCT_LABEL.repaid },
   ],
 
+  /** 静态文案按语言写入；状态/扣款映射与筛选选项按语言重建 */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    var statusMap = {};
+    Object.keys(STATUS_MAP).forEach(function (k) {
+      statusMap[k] = { text: i18n.t(NS + 'adv' + k.charAt(0).toUpperCase() + k.slice(1), lang), cls: STATUS_MAP[k].cls };
+    });
+    var deductMap = {};
+    Object.keys(DEDUCT_MAP).forEach(function (k) {
+      var keyMap = { unrepaid: 'deductUnrepaid', partial: 'deductPartial', repaid: 'deductRepaid' };
+      deductMap[k] = { text: i18n.t(NS + keyMap[k], lang), cls: DEDUCT_MAP[k].cls };
+    });
+    var statusOpts = [{ value: '', label: i18n.t(NS + 'filterAllStatus', lang) }].concat(
+      ['pending', 'approved', 'rejected'].map(function (k) {
+        return { value: k, label: statusMap[k].text };
+      })
+    );
+    var repayOpts = [{ value: '', label: i18n.t(NS + 'filterAllDeduct', lang) }].concat(
+      ['unrepaid', 'partial', 'repaid'].map(function (k) {
+        return { value: k, label: deductMap[k].text };
+      })
+    );
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        tapToAudit: i18n.t(NS + 'tapToAudit', lang),
+        approvePassW: i18n.t(NS + 'approvePassW', lang),
+        rejectBtn: i18n.t(NS + 'rejectBtn', lang),
+        applyBtn: i18n.t(NS + 'applyBtn', lang),
+        employeeLabel: i18n.t(NS + 'employeeLabel', lang),
+        amountLabel: i18n.t(NS + 'amountLabel', lang),
+        reasonLabel: i18n.t(NS + 'reasonLabel', lang),
+        orderNoLabel: i18n.t(NS + 'orderNoLabel', lang),
+        submitBtn: i18n.t(NS + 'submitBtn', lang),
+        cancelBtn: i18n.t(NS + 'cancelBtn', lang),
+        searchEmpPh: i18n.t(NS + 'searchEmpPh', lang),
+        noRecords: i18n.t(NS + 'noRecords', lang),
+        remainingW: i18n.t(NS + 'remainingW', lang),
+        noMoreW: i18n.t(NS + 'noMoreW', lang),
+        opTitle: i18n.t(NS + 'opTitle', lang),
+        empNamePh: i18n.t(NS + 'empNamePh', lang),
+        amountPh: i18n.t(NS + 'amountPh', lang),
+        reasonPh: i18n.t(NS + 'reasonPh', lang),
+        optionalPh: i18n.t(NS + 'optionalPh', lang),
+        filterAllStatus: i18n.t(NS + 'filterAllStatus', lang),
+        filterAllDeduct: i18n.t(NS + 'filterAllDeduct', lang),
+      },
+      STATUS_MAP: statusMap,
+      DEDUCT_MAP: deductMap,
+      STATUS_OPTIONS: statusOpts,
+      REPAY_OPTIONS: repayOpts,
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function () {
+    this.applyLanguage(i18n.getLanguage());
     this.setData({ canApprove: isAdminOrSupervisor() });
   },
 
@@ -135,7 +195,7 @@ Page({
       });
     }).catch(function (e) {
       that.setData({ loading: false });
-      toast('加载失败: ' + (e.message || e));
+      toast(i18n.t(NS + 'loadFailPrefix', this._lang) + (e.message || e));
     });
   },
 
@@ -177,9 +237,9 @@ Page({
 
   onSubmitCreate: function () {
     const form = this.data.createForm;
-    if (!form.employeeName || !form.employeeName.trim()) { toast('请输入员工姓名'); return; }
-    if (!form.amount || Number(form.amount) <= 0) { toast('请输入有效金额'); return; }
-    if (!form.reason || !form.reason.trim()) { toast('请输入借支事由'); return; }
+    if (!form.employeeName || !form.employeeName.trim()) { toast(i18n.t(NS + 'employeeNameReq', this._lang)); return; }
+    if (!form.amount || Number(form.amount) <= 0) { toast(i18n.t(NS + 'invalidAmount', this._lang)); return; }
+    if (!form.reason || !form.reason.trim()) { toast(i18n.t(NS + 'reasonReq', this._lang)); return; }
     const that = this;
     api.employeeAdvance.create({
       employeeName: form.employeeName.trim(),
@@ -187,10 +247,10 @@ Page({
       reason: form.reason.trim(),
       orderNo: (form.orderNo || '').trim(),
     }).then(function () {
-      toast('申请成功');
+      toast(i18n.t(NS + 'applyOk', this._lang));
       that.setData({ showCreateModal: false });
       that._resetAndLoad();
-    }).catch(function (e) { toast('申请失败: ' + (e.message || e)); });
+    }).catch(function (e) { toast(i18n.t(NS + 'applyFailPrefix', this._lang) + (e.message || e)); });
   },
 
   onCancelCreate: function () {
@@ -205,17 +265,17 @@ Page({
   },
 
   onActionApprove: function () {
-    if (!hasFeaturePermission('approve_advance')) { toast('您没有审批借支的权限'); return; }
+    if (!hasFeaturePermission('approve_advance')) { toast(i18n.t(NS + 'noApprovePerm', this._lang)); return; }
     const item = this.data.currentAdvance;
     if (!item || item.status !== 'pending') return;
     const that = this;
-    wx.showModal({ title: '确认审批', content: '确认通过该借支申请？', success: function (res) {
+    wx.showModal({ title: i18n.t(NS + 'approveTitle', this._lang), content: i18n.t(NS + 'approveConfirm', this._lang), success: function (res) {
       if (!res.confirm) return;
       api.employeeAdvance.approve(item.id).then(function () {
-        toast('审批通过');
+        toast(i18n.t(NS + 'approveOk', this._lang));
         that.setData({ showActionSheet: false, currentAdvance: null });
         that._resetAndLoad();
-      }).catch(function (e) { toast('审批失败: ' + (e.message || e)); });
+      }).catch(function (e) { toast(i18n.t(NS + 'approveFailPrefix', this._lang) + (e.message || e)); });
     }});
   },
 
@@ -223,13 +283,13 @@ Page({
     const item = this.data.currentAdvance;
     if (!item || item.status !== 'pending') return;
     const that = this;
-    wx.showModal({ title: '确认驳回', content: '确认驳回该借支申请？', editable: true, placeholderText: '驳回原因（可选）', success: function (res) {
+    wx.showModal({ title: i18n.t(NS + 'rejectTitle', this._lang), content: i18n.t(NS + 'rejectConfirm', this._lang), editable: true, placeholderText: i18n.t(NS + 'rejectReasonOpt', this._lang), success: function (res) {
       if (!res.confirm) return;
       api.employeeAdvance.reject(item.id, res.content || '').then(function () {
-        toast('已驳回');
+        toast(i18n.t(NS + 'rejected', this._lang));
         that.setData({ showActionSheet: false, currentAdvance: null });
         that._resetAndLoad();
-      }).catch(function (e) { toast('驳回失败: ' + (e.message || e)); });
+      }).catch(function (e) { toast(i18n.t(NS + 'rejectFailPrefix', this._lang) + (e.message || e)); });
     }});
   },
 
@@ -282,7 +342,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

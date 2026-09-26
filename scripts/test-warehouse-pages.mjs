@@ -2490,6 +2490,8 @@ const PROC_EDIT_JS = 'pages/dashboard/process-edit/index.js';
 const PROC_EDIT_WXML = 'pages/dashboard/process-edit/index.wxml';
 const USER_APPROVAL_JS = 'pages/admin/user-approval/index.js';
 const USER_APPROVAL_WXML = 'pages/admin/user-approval/index.wxml';
+const ADVANCE_JS = 'pages/advance/list/index.js';
+const ADVANCE_WXML = 'pages/advance/list/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3373,6 +3375,26 @@ function testI18nUserApproval() {
   eq('用户审批 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '用户审批');
 }
 
+/** 预付款页（D-579）—— 状态/扣款映射重建/申请审批驳回 */
+function testI18nAdvance() {
+  testPageI18n(ADVANCE_JS, ADVANCE_WXML, '预付款页');
+
+  const { page: zhP, wx: zhWx } = loadPage(ADVANCE_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(ADVANCE_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  const zhOpts = zhP.data.STATUS_OPTIONS.map(o => o.label).join('|');
+  const enOpts = enP.data.STATUS_OPTIONS.map(o => o.label).join('|');
+  eq('zh 状态筛选', zhOpts, '全部状态|待审批|已批准|已驳回');
+  ok('en 状态筛选无中文', !CJK_RE.test(enOpts), enOpts);
+  eq('en 扣款映射', enP.data.DEDUCT_MAP.repaid.text, 'Fully Deducted');
+  ok('en 申请表单占位无中文', !CJK_RE.test(String(enP.data.t.empNamePh)), enP.data.t.empNamePh);
+
+  eq('预付款导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Advance Request');
+  eq('预付款 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '申请借支');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3438,6 +3460,7 @@ try {
   testI18nReturnDetail();
   testI18nProcessEdit();
   testI18nUserApproval();
+  testI18nAdvance();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
