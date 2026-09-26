@@ -2476,6 +2476,10 @@ const ORDER_FORM_JS = 'pages/order/create/form/index.js';
 const ORDER_FORM_WXML = 'pages/order/create/form/index.wxml';
 const SMART_OPS_JS = 'pages/smart-ops/index.js';
 const SMART_OPS_WXML = 'pages/smart-ops/index.wxml';
+const SHIPMENT_JS = 'pages/factory/shipment/index.js';
+const SHIPMENT_WXML = 'pages/factory/shipment/index.wxml';
+const SHIPMENT_DETAIL_JS = 'pages/factory/shipment-detail/index.js';
+const SHIPMENT_DETAIL_WXML = 'pages/factory/shipment-detail/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3277,6 +3281,32 @@ function testI18nSmartOps() {
   eq('运营看板 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '工厂全景');
 }
 
+/** 外发管理两页（D-575）—— 发货记录tab/发货·收货流程 */
+function testI18nShipment() {
+  testPageI18n(SHIPMENT_JS, SHIPMENT_WXML, '外发发货列表页');
+  testPageI18n(SHIPMENT_DETAIL_JS, SHIPMENT_DETAIL_WXML, '外发发货详情页');
+
+  const { page: zhP, wx: zhWx } = loadPage(SHIPMENT_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(SHIPMENT_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  const zhTabs = zhP.data.t.stAll + '|' + zhP.data.t.stProducing + '|' + zhP.data.t.stCompleted;
+  const enTabs = enP.data.t.stAll + '|' + enP.data.t.stProducing + '|' + enP.data.t.stCompleted;
+  eq('zh 订单筛选', zhTabs, '全部|生产中|已完成');
+  ok('en 订单筛选无中文', !CJK_RE.test(enTabs), enTabs);
+
+  const { page: zhD, wx: zhDw } = loadPage(SHIPMENT_DETAIL_JS, makeApi());
+  zhD.applyLanguage('zh-CN');
+  const { page: enD, wx: enDw } = loadPage(SHIPMENT_DETAIL_JS, makeApi());
+  enD.applyLanguage('en-US');
+  eq('en 发货方式', enD.data.t.selfDelivery + '|' + enD.data.t.expressDelivery, 'Self Delivery|Express');
+  ok('en 快递占位无中文', !CJK_RE.test(String(enD.data.t.expressCoPh)), enD.data.t.expressCoPh);
+  eq('外发详情导航标题随语言', lastCall(enDw, 'setNavigationBarTitle').title, 'Shipments');
+  eq('外发列表导航标题', lastCall(enWx, 'setNavigationBarTitle').title, 'Shipments');
+  eq('外发列表 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '发货记录');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3338,6 +3368,7 @@ try {
   testI18nReconciliation();
   testI18nOrderForm();
   testI18nSmartOps();
+  testI18nShipment();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));

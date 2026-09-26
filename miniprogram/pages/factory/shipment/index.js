@@ -1,3 +1,5 @@
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.shipment.';
 const api = require('../../../utils/api');
 const { toast, safeNavigate, scanInPage } = require('../../../utils/uiHelper');
 const { dispatchInlineScanCode } = require('../../scan/handlers/InlineScanDispatcher');
@@ -76,7 +78,63 @@ Page({
     priceVisible: true,
   },
 
+    /** 静态文案按语言写入（wxml 用 {{t.xxx}}） */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        myOrdersTab: i18n.t(NS + 'myOrdersTab', lang),
+        stAll: i18n.t(NS + 'stAll', lang),
+        stProducing: i18n.t(NS + 'stProducing', lang),
+        stCompleted: i18n.t(NS + 'stCompleted', lang),
+        stOverdue: i18n.t(NS + 'stOverdue', lang),
+        stNearDue: i18n.t(NS + 'stNearDue', lang),
+        noOrdersW: i18n.t(NS + 'noOrdersW', lang),
+        urgentTag: i18n.t(NS + 'urgentTag', lang),
+        detailBtn: i18n.t(NS + 'detailBtn', lang),
+        copyNoBtn: i18n.t(NS + 'copyNoBtn', lang),
+        colorLabel: i18n.t(NS + 'colorLabel', lang),
+        sizeLabel2: i18n.t(NS + 'sizeLabel2', lang),
+        qtyLabel: i18n.t(NS + 'qtyLabel', lang),
+        pieceUnit: i18n.t(NS + 'pieceUnit', lang),
+        noMoreW: i18n.t(NS + 'noMoreW', lang),
+        loadingTxt: i18n.t(NS + 'loadingTxt', lang),
+        factoryOrderFmt: i18n.t(NS + 'factoryOrderFmt', lang),
+        pieceUnit2: i18n.t(NS + 'pieceUnit2', lang),
+        overdueTitle: i18n.t(NS + 'overdueTitle', lang),
+        warnTitle: i18n.t(NS + 'warnTitle', lang),
+        inProgressTitle: i18n.t(NS + 'inProgressTitle', lang),
+        searchOrderPhW: i18n.t(NS + 'searchOrderPhW', lang),
+        deliveryPrefixW: i18n.t(NS + 'deliveryPrefixW', lang),
+        collapseBundle: i18n.t(NS + 'collapseBundle', lang),
+        expandBundle: i18n.t(NS + 'expandBundle', lang),
+        actPurchase: i18n.t(NS + 'actPurchase', lang),
+        actCutting: i18n.t(NS + 'actCutting', lang),
+        actProcess: i18n.t(NS + 'actProcess', lang),
+        actShip: i18n.t(NS + 'actShip', lang),
+        actRemark: i18n.t(NS + 'actRemark', lang),
+        detailCountFmt: i18n.t(NS + 'detailCountFmt', lang),
+        phUnit: i18n.t(NS + 'phUnit', lang),
+        bundleWord: i18n.t('mp.scanResult.bundleWord', lang),
+        processDetailBtn: i18n.t(NS + 'processDetailBtn', lang),
+        processProgress: i18n.t(NS + 'processProgress', lang),
+        colorSizeLabel: i18n.t(NS + 'colorSizeLabel', lang),
+        startPrefix: i18n.t(NS + 'startPrefix', lang),
+        durationPrefix: i18n.t(NS + 'durationPrefix', lang),
+        totalLabel: i18n.t(NS + 'totalLabel', lang),
+        shipPrefixW: i18n.t(NS + 'shipPrefixW', lang),
+        pieceUnitW2: i18n.t(NS + 'pieceUnit2', lang),
+        noStyleNameW: i18n.t(NS + 'noStyleNameW', lang),
+      },
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function () {
+    this.applyLanguage(i18n.getLanguage());
     const factory = isFactoryOwner();
     const admin = isAdminOrSupervisor();
     const userInfo = getUserInfo();
@@ -84,7 +142,7 @@ Page({
     this.loadTenantPriceFlag();
     // 工厂账号必须绑定 factoryId，否则后端无法做数据隔离，可能看到全租户数据
     if (factory && !(userInfo && userInfo.factoryId)) {
-      toast.info('当前工厂账号未绑定工厂，请联系管理员处理');
+      toast.info(i18n.t(NS + 'factoryUnbound', this._lang));
     }
   },
 
@@ -108,7 +166,7 @@ Page({
     for (var i = 0; i < orders.length; i++) {
       var o = orders[i];
       var fid = o.factoryId || o.outsourceFactoryId || 0;
-      var fname = o.factoryName || o.outsourceFactoryName || '未知工厂';
+      var fname = o.factoryName || o.outsourceFactoryName || i18n.t(NS + 'unknownFactory', this._lang);
       if (!statsMap[fid]) {
         statsMap[fid] = {
           factoryId: fid,
@@ -356,7 +414,7 @@ Page({
     scanInPage(function (parsed, raw) {
       if (!parsed) return; // 用户取消
       if (!parsed.success) {
-        toast(parsed.message || ('无法识别：' + raw));
+        toast(parsed.message || i18n.tf('mp.defect.scanUnrecognized', { raw: raw }, this._lang));
         return;
       }
       dispatchInlineScanCode(raw);
@@ -437,16 +495,16 @@ Page({
 
   onCopyOrderNo: function (e) {
     const orderNo = e.currentTarget.dataset.orderNo;
-    if (!orderNo) { wx.showToast({ title: '订单号缺失', icon: 'none' }); return; }
+    if (!orderNo) { wx.showToast({ title: i18n.t(NS + 'orderNoMissing', this._lang), icon: 'none' }); return; }
     // D-211：补 fail 提示——此前静默失败时用户以为按钮坏了
     wx.setClipboardData({
       data: orderNo,
       success: function () {
-        wx.showToast({ title: '已复制', icon: 'success', duration: 1000 });
+        wx.showToast({ title: i18n.t(NS + 'copiedW', this._lang), icon: 'success', duration: 1000 });
       },
       fail: function (err) {
         console.error('[copy] setClipboardData fail', err);
-        wx.showToast({ title: '复制失败：' + ((err && err.errMsg) || '未知错误'), icon: 'none', duration: 2500 });
+        wx.showToast({ title: i18n.t(NS + 'copyFailPrefix', this._lang) + ((err && err.errMsg) || i18n.t(NS + 'unknownError', this._lang)), icon: 'none', duration: 2500 });
       },
     });
   },
