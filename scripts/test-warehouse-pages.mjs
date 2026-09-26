@@ -2462,6 +2462,8 @@ const BUNDLE_DETAIL_JS = 'pages/cutting/bundle-detail/index.js';
 const BUNDLE_DETAIL_WXML = 'pages/cutting/bundle-detail/index.wxml';
 const BUNDLE_SPLIT_JS = 'pages/work/bundle-split/index.js';
 const BUNDLE_SPLIT_WXML = 'pages/work/bundle-split/index.wxml';
+const PAYMENT_JS = 'pages/finance/payment/index.js';
+const PAYMENT_WXML = 'pages/finance/payment/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3136,6 +3138,27 @@ function testI18nBundleSplit() {
   eq('拆菲页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '拆菲号');
 }
 
+/** 付款页（D-568）—— 待付/已付双tab/发起支付/取消确认/收款账户 */
+function testI18nPayment() {
+  testPageI18n(PAYMENT_JS, PAYMENT_WXML, '付款页');
+
+  const { page: zhP, wx: zhWx } = loadPage(PAYMENT_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(PAYMENT_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 三tab', zhP.data.t.tabPending + '|' + zhP.data.t.tabPaid + '|' + zhP.data.t.tabRecords,
+    '待付款|已付款|收支记录');
+  eq('en 三tab', enP.data.t.tabPending + '|' + enP.data.t.tabPaid + '|' + enP.data.t.tabRecords,
+    'Pending|Paid|Records');
+  ok('en 支付方式选项无中文', !enP.data.paymentMethods.some(m => CJK_RE.test(String(m.label))),
+    enP.data.paymentMethods.map(m => m.label).join('|'));
+  ok('en 账户占位无中文', !CJK_RE.test(String(enP.data.t.accountNamePh)), enP.data.t.accountNamePh);
+
+  eq('付款页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Payments');
+  eq('付款页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '付款');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3191,6 +3214,7 @@ try {
   testI18nTaskDetail();
   testI18nBundleDetail();
   testI18nBundleSplit();
+  testI18nPayment();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));

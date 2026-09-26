@@ -1,31 +1,34 @@
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.payment.';
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { isAdminOrSupervisor, hasFeaturePermission } = require('../../../utils/permission');
 const displayHelper = require('../../../utils/displayHelper');
 
 var PAYMENT_METHOD_MAP = {
-  OFFLINE: '线下付款',
-  BANK: '银行卡',
-  WECHAT: '微信',
-  ALIPAY: '支付宝',
+  OFFLINE: 'payMethodOffline',
+  BANK: 'payMethodBank',
+  WECHAT: 'payMethodWechat',
+  ALIPAY: 'payMethodAlipay',
 };
 
+// label 由 applyLanguage 重建（PAYMENT_METHOD_MAP 存键后缀）
 var PAYMENT_METHODS = [
-  { value: 'OFFLINE', label: '线下付款' },
-  { value: 'BANK', label: '银行卡' },
-  { value: 'WECHAT', label: '微信' },
-  { value: 'ALIPAY', label: '支付宝' },
+  { value: 'OFFLINE' },
+  { value: 'BANK' },
+  { value: 'WECHAT' },
+  { value: 'ALIPAY' },
 ];
 
 var BIZ_TYPE_MAP = {
-  PURCHASE: { text: '采购款', cls: 'tag-blue' },
-  PROCESSING: { text: '加工费', cls: 'tag-orange' },
-  LOGISTICS: { text: '物流费', cls: 'tag-green' },
-  PAYROLL_SETTLEMENT: { text: '工资结算', cls: 'tag-blue' },
-  ORDER_SETTLEMENT: { text: '订单结算', cls: 'tag-green' },
-  RECONCILIATION: { text: '工厂对账', cls: 'tag-orange' },
-  REIMBURSEMENT: { text: '费用报销', cls: 'tag-gray' },
-  PAYROLL: { text: '工资', cls: 'tag-blue' },
+  PURCHASE: { key: 'bizPurchase', cls: 'tag-blue' },
+  PROCESSING: { key: 'bizProcessing', cls: 'tag-orange' },
+  LOGISTICS: { key: 'bizLogistics', cls: 'tag-green' },
+  PAYROLL_SETTLEMENT: { key: 'bizPayrollSettle', cls: 'tag-blue' },
+  ORDER_SETTLEMENT: { key: 'bizOrderSettle', cls: 'tag-green' },
+  RECONCILIATION: { key: 'bizReconciliation', cls: 'tag-orange' },
+  REIMBURSEMENT: { key: 'bizReimbursement', cls: 'tag-gray' },
+  PAYROLL: { key: 'bizPayroll', cls: 'tag-blue' },
 };
 
 // wxml 模板依赖 tag-* CSS 类名（如 tag-orange），displayHelper 仅提供 CSS 变量颜色值，
@@ -39,7 +42,10 @@ var PAYMENT_STATUS_CLS = {
   refunded: 'tag-orange',
 };
 
-function bizTypeText(s) { return (BIZ_TYPE_MAP[s] || {}).text || s || ''; }
+function bizTypeText(s, lang) {
+  var fb = BIZ_TYPE_MAP[s];
+  return fb ? i18n.t(NS + fb.key, lang) : (s || '');
+}
 function bizTypeCls(s) { return (BIZ_TYPE_MAP[s] || {}).cls || 'tag-gray'; }
 function paymentStatusText(s) { if (!s) return ''; return displayHelper.displayPaymentStatusText(s); }
 function paymentStatusCls(s) { return PAYMENT_STATUS_CLS[s] || 'tag-gray'; }
@@ -81,7 +87,61 @@ Page({
     newAccountForm: { accountName: '', accountNumber: '', bankName: '' },
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}），支付方式选项重建 */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        tabPending: i18n.t(NS + 'tabPending', lang),
+        tabPaid: i18n.t(NS + 'tabPaid', lang),
+        tabRecords: i18n.t(NS + 'tabRecords', lang),
+        payableAmount: i18n.t(NS + 'payableAmount', lang),
+        paidAmount: i18n.t(NS + 'paidAmount', lang),
+        pendingAmount: i18n.t(NS + 'pendingAmount', lang),
+        payBtnWord: i18n.t(NS + 'payBtnWord', lang),
+        initiatePay: i18n.t(NS + 'initiatePay', lang),
+        payeeLabel: i18n.t(NS + 'payeeLabel', lang),
+        bizTypeLabel: i18n.t(NS + 'bizTypeLabel', lang),
+        payAmountLabel: i18n.t(NS + 'payAmountLabel', lang),
+        payMethodLabel: i18n.t(NS + 'payMethodLabel', lang),
+        payAccountLabel: i18n.t(NS + 'payAccountLabel', lang),
+        pickPayAccount: i18n.t(NS + 'pickPayAccount', lang),
+        searchPayee: i18n.t(NS + 'searchPayee', lang),
+        newAccountBtn: i18n.t(NS + 'newAccountBtn', lang),
+        noPayeeMatch: i18n.t(NS + 'noPayeeMatch', lang),
+        searchingTxt: i18n.t(NS + 'searchingTxt', lang),
+        accountNameLabel: i18n.t(NS + 'accountNameLabel', lang),
+        accountNoLabel: i18n.t(NS + 'accountNoLabel', lang),
+        bankBranchLabel: i18n.t(NS + 'bankBranchLabel', lang),
+        remarkLabel: i18n.t('common.remark', lang),
+        confirmTextW: i18n.t(NS + 'confirmTextW', lang),
+        searchWord: i18n.t('common.search', lang),
+        saveWord: i18n.t('common.save', lang),
+        cancel: i18n.t('common.cancel', lang),
+        pieceUnit: i18n.t('common.piece', lang),
+        noPendingPayable: i18n.t(NS + 'noPendingPayable', lang),
+        linkedOrderPrefix: i18n.t(NS + 'linkedOrderPrefix', lang),
+        noRecordsW: i18n.t(NS + 'noRecordsW', lang),
+        payAmountPh: i18n.t(NS + 'payAmountPh', lang),
+        payeeNamePh: i18n.t(NS + 'payeeNamePh', lang),
+        accountNamePh: i18n.t(NS + 'accountNamePh', lang),
+        accountNoPh: i18n.t(NS + 'accountNoPh', lang),
+        bankBranchPh: i18n.t(NS + 'bankBranchPh', lang),
+        noMoreW: i18n.t(NS + 'noMoreW', lang),
+        optionalW: i18n.t('common.optional', lang),
+      },
+      paymentMethods: PAYMENT_METHODS.map(function (m) {
+        return { value: m.value, label: i18n.t(NS + PAYMENT_METHOD_MAP[m.value], lang) };
+      }),
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function () {
+    this.applyLanguage(i18n.getLanguage());
     this.setData({ canPay: isAdminOrSupervisor() });
   },
 
@@ -130,12 +190,13 @@ Page({
   _loadPending: function () {
     if (this.data.loading) return Promise.resolve();
     const that = this;
+    var lang = this._lang || i18n.getLanguage();
     this.setData({ loading: true });
     return api.wagePayment.listPendingPayables({ page: this.data.pendingPage, pageSize: this.data.pageSize }).then(function (res) {
       const records = (res && res.records) || res || [];
       const total = (res && res.total) || records.length;
       const enriched = records.map(function (r) {
-        r.bizTypeText = bizTypeText(r.bizType);
+        r.bizTypeText = bizTypeText(r.bizType, lang);
         r.bizTypeCls = bizTypeCls(r.bizType);
         r.remainingAmount = (r.amount || 0) - (r.paidAmount || 0);
         return r;
@@ -159,7 +220,8 @@ Page({
       const enriched = records.map(function (r) {
         r.statusText = paymentStatusText(r.status);
         r.statusCls = paymentStatusCls(r.status);
-        r.paymentMethodText = PAYMENT_METHOD_MAP[r.paymentMethod] || r.paymentMethod || '';
+        var pmKey = PAYMENT_METHOD_MAP[r.paymentMethod];
+        r.paymentMethodText = pmKey ? i18n.t(NS + pmKey, this._lang || i18n.getLanguage()) : (r.paymentMethod || '');
         return r;
       });
       that.setData({
@@ -221,13 +283,13 @@ Page({
   },
 
   onSubmitPay: function () {
-    if (!hasFeaturePermission('initiate_payment')) { toast('您没有发起支付的权限'); return; }
+    if (!hasFeaturePermission('initiate_payment')) { toast(i18n.t(NS + 'noPayPerm', this._lang)); return; }
     const item = this.data.currentPayable;
     if (!item) return;
     const amount = Number(this.data.payForm.amount);
-    if (!amount || amount <= 0) { toast('请输入有效金额'); return; }
+    if (!amount || amount <= 0) { toast(i18n.t(NS + 'invalidAmount', this._lang)); return; }
     const remaining = item.remainingAmount || item.amount || 0;
-    if (amount > remaining) { toast('支付金额不能超过待付金额'); return; }
+    if (amount > remaining) { toast(i18n.t(NS + 'amountOverLimit', this._lang)); return; }
     const form = this.data.payForm;
     const payload = {
       payeeType: item.payeeType,
@@ -244,14 +306,14 @@ Page({
       payload.paymentAccountId = this.data.selectedAccountId;
     }
     const that = this;
-    wx.showModal({ title: '确认支付', content: '确认支付 ¥' + amount.toFixed(2) + ' 给 ' + (item.payeeName || '') + '？', success: function (res) {
+    wx.showModal({ title: i18n.t(NS + 'confirmTextW', this._lang), content: i18n.tf(NS + 'payConfirmFmt', { amount: amount.toFixed(2), name: item.payeeName || '' }, this._lang), success: function (res) {
       if (!res.confirm) return;
       api.wagePayment.initiatePayment(payload).then(function () {
-        toast('支付成功');
+        toast(i18n.t(NS + 'payOk', this._lang));
         that.setData({ showPayModal: false, currentPayable: null });
         that._loadStats();
         that._resetAndLoad();
-      }).catch(function (e) { toast('支付失败: ' + (e.message || e)); });
+      }).catch(function (e) { toast(i18n.t(NS + 'payFailPrefix', this._lang) + (e.message || e)); });
     }});
   },
 
@@ -265,7 +327,7 @@ Page({
 
   onPayeeSearch: function () {
     var keyword = (this.data.searchKeyword || '').trim();
-    if (!keyword) { toast('请输入收款人名称'); return; }
+    if (!keyword) { toast(i18n.t(NS + 'payeeNameReq', this._lang)); return; }
     this.setData({ searching: true });
     var that = this;
     api.wagePayment.searchPayee({ keyword: keyword }).then(function (res) {
@@ -312,10 +374,10 @@ Page({
 
   onSaveAccount: function () {
     var form = this.data.newAccountForm;
-    if (!form.accountName) { toast('请输入账户名称'); return; }
-    if (!form.accountNumber) { toast('请输入账号'); return; }
+    if (!form.accountName) { toast(i18n.t(NS + 'accountNameReq', this._lang)); return; }
+    if (!form.accountNumber) { toast(i18n.t(NS + 'accountNoReq', this._lang)); return; }
     var item = this.data.currentPayable;
-    if (!item || !item.payeeId) { toast('请先选择收款人'); return; }
+    if (!item || !item.payeeId) { toast(i18n.t(NS + 'pickPayeeFirst', this._lang)); return; }
     var payload = {
       payeeId: item.payeeId,
       payeeType: item.payeeType,
@@ -325,55 +387,55 @@ Page({
     };
     var that = this;
     api.wagePayment.saveAccount(payload).then(function () {
-      toast('账户添加成功');
+      toast(i18n.t(NS + 'accountAdded', this._lang));
       that.setData({ modalView: 'form' });
       that._loadPayeeAccounts(item);
-    }).catch(function (e) { toast('添加失败: ' + (e.message || e)); });
+    }).catch(function (e) { toast(i18n.t(NS + 'addFailPrefix', this._lang) + (e.message || e)); });
   },
 
   onCancelRecord: function (e) {
-    if (!hasFeaturePermission('cancel_payment')) { toast('您没有取消支付的权限'); return; }
+    if (!hasFeaturePermission('cancel_payment')) { toast(i18n.t(NS + 'noCancelPerm', this._lang)); return; }
     var id = e.currentTarget.dataset.id;
     var that = this;
     wx.showModal({
-      title: '确认取消',
-      content: '确认取消此笔支付？',
+      title: i18n.t(NS + 'cancelTitle', this._lang),
+      content: i18n.t(NS + 'cancelConfirm', this._lang),
       editable: true,
-      placeholderText: '请输入取消原因（可选）',
+      placeholderText: i18n.t(NS + 'cancelReasonPh', this._lang),
       success: function (res) {
         if (!res.confirm) return;
         var reason = (res.content || '').trim();
         api.wagePayment.cancelPayment(id, reason ? { reason: reason } : {}).then(function () {
-          toast('已取消');
+          toast(i18n.t(NS + 'cancelled', this._lang));
           that._resetAndLoad();
-        }).catch(function (err) { toast('取消失败: ' + (err && err.message ? err.message : String(err))); });
+        }).catch(function (err) { toast(i18n.t(NS + 'cancelFailPrefix', this._lang) + (err && err.message ? err.message : String(err))); });
       }
     });
   },
 
   onConfirmRecord: function (e) {
-    if (!hasFeaturePermission('initiate_payment')) { toast('您没有确认支付的权限'); return; }
+    if (!hasFeaturePermission('initiate_payment')) { toast(i18n.t(NS + 'noConfirmPerm', this._lang)); return; }
     var id = e.currentTarget.dataset.id;
     var that = this;
     wx.showModal({
-      title: '确认',
-      content: '确认此笔支付已完成？',
+      title: i18n.t(NS + 'confirmTextW', this._lang),
+      content: i18n.t(NS + 'confirmPayMsg', this._lang),
       editable: true,
-      placeholderText: '请输入备注（可选）',
+      placeholderText: i18n.t(NS + 'confirmRemarkPh', this._lang),
       success: function (res) {
         if (!res.confirm) return;
         var remark = (res.content || '').trim();
         api.wagePayment.confirmOffline(id, remark ? { remark: remark } : {}).then(function () {
-          toast('已确认');
+          toast(i18n.t(NS + 'confirmed', this._lang));
           that._loadStats();
           that._resetAndLoad();
-        }).catch(function (err) { toast('确认失败: ' + (err && err.message ? err.message : String(err))); });
+        }).catch(function (err) { toast(i18n.t(NS + 'confirmFailPrefix', this._lang) + (err && err.message ? err.message : String(err))); });
       }
     });
   },
 
   onCancelPay: function () {
-    if (!hasFeaturePermission('cancel_payment')) { toast('您没有取消支付的权限'); return; }
+    if (!hasFeaturePermission('cancel_payment')) { toast(i18n.t(NS + 'noCancelPerm', this._lang)); return; }
     this.setData({ showPayModal: false, currentPayable: null });
   },
 
@@ -422,7 +484,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

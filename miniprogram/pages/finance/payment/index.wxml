@@ -2,62 +2,62 @@
   <!-- Stats bar -->
   <view class="stats-bar" wx:if="{{stats}}">
     <view class="stat-card">
-      <text class="stat-label">待付款</text>
+      <text class="stat-label">{{t.tabPending}}</text>
       <text class="stat-value stat-warning">¥{{stats.totalPendingAmount || '0.00'}}</text>
     </view>
     <view class="stat-card">
-      <text class="stat-label">已付款</text>
+      <text class="stat-label">{{t.tabPaid}}</text>
       <text class="stat-value stat-success">¥{{stats.totalPaidAmount || '0.00'}}</text>
     </view>
   </view>
 
   <!-- Tab bar -->
   <view class="tab-bar">
-    <view class="tab-item {{activeTab === 0 ? 'tab-active' : ''}}" data-tab="0" bindtap="switchTab">待付款</view>
-    <view class="tab-item {{activeTab === 1 ? 'tab-active' : ''}}" data-tab="1" bindtap="switchTab">收支记录</view>
+    <view class="tab-item {{activeTab === 0 ? 'tab-active' : ''}}" data-tab="0" bindtap="switchTab">{{t.tabPending}}</view>
+    <view class="tab-item {{activeTab === 1 ? 'tab-active' : ''}}" data-tab="1" bindtap="switchTab">{{t.tabRecords}}</view>
   </view>
 
   <!-- Tab 1: 待付款 -->
   <view wx:if="{{activeTab === 0}}" class="tab-panel">
-    <empty-state wx:if="{{!loading && pendingList.length === 0}}" text="暂无待付款项" />
+    <empty-state wx:if="{{!loading && pendingList.length === 0}}" text="{{t.noPendingPayable}}" />
     <view class="payable-card" wx:for="{{pendingList}}" wx:key="bizId">
       <view class="card-header">
         <text class="card-tag {{item.bizTypeCls}}">{{item.bizTypeText}}</text>
         <text class="card-biz-no">{{item.bizNo || '—'}}</text>
       </view>
       <text class="payee-name">{{item.payeeName || '—'}}</text>
-      <text class="card-order-no" wx:if="{{item.orderNo}}">关联订单 {{item.orderNo}}</text>
+      <text class="card-order-no" wx:if="{{item.orderNo}}">{{t.linkedOrderPrefix}}{{item.orderNo}}</text>
       <view class="amount-row">
         <view class="amount-col">
-          <text class="amount-label">应付金额</text>
+          <text class="amount-label">{{t.payableAmount}}</text>
           <text class="amount-val-main">¥{{item.amount || 0}}</text>
         </view>
         <block wx:if="{{item.paidAmount > 0}}">
           <view class="amount-divider"></view>
           <view class="amount-col amount-col-padded">
-            <text class="amount-label">已付金额</text>
+            <text class="amount-label">{{t.paidAmount}}</text>
             <text class="amount-val-paid">¥{{item.paidAmount}}</text>
           </view>
         </block>
         <view class="amount-divider"></view>
         <view class="amount-col amount-col-padded">
-          <text class="amount-label">待付金额</text>
+          <text class="amount-label">{{t.pendingAmount}}</text>
           <text class="amount-val-remaining">¥{{item.remainingAmount || item.amount || 0}}</text>
         </view>
       </view>
       <view class="card-footer" wx:if="{{canPay}}">
         <text class="card-desc">{{item.description || '—'}}</text>
-        <view class="pay-btn" data-index="{{index}}" bindtap="onOpenPayModal">付款</view>
+        <view class="pay-btn" data-index="{{index}}" bindtap="onOpenPayModal">{{t.payBtnWord}}</view>
       </view>
     </view>
     <view class="load-more {{!pendingHasMore ? 'disabled' : ''}}" wx:if="{{loading || !pendingHasMore}}">
-      <text>{{loading ? '加载中...' : '没有更多了'}}</text>
+      <text>{{loading ? t.loading : t.noMoreW}}</text>
     </view>
   </view>
 
   <!-- Tab 2: 收支记录 -->
   <view wx:if="{{activeTab === 1}}" class="tab-panel">
-    <empty-state wx:if="{{!loading && paymentList.length === 0}}" text="暂无收支记录" />
+    <empty-state wx:if="{{!loading && paymentList.length === 0}}" text="{{t.noRecordsW}}" />
     <view class="payment-card" wx:for="{{paymentList}}" wx:key="id">
       <view class="card-header">
         <text class="card-tag {{item.statusCls}}">{{item.statusText}}</text>
@@ -70,13 +70,13 @@
           <text class="method-val">{{item.paymentMethodText || '—'}}</text>
         </view>
         <view class="record-actions" wx:if="{{canPay && item.status === 'processing'}}">
-          <view class="record-btn record-btn-cancel" data-id="{{item.id}}" bindtap="onCancelRecord">取消</view>
-          <view class="record-btn record-btn-confirm" data-id="{{item.id}}" bindtap="onConfirmRecord">确认</view>
+          <view class="record-btn record-btn-cancel" data-id="{{item.id}}" bindtap="onCancelRecord">{{t.cancel}}</view>
+          <view class="record-btn record-btn-confirm" data-id="{{item.id}}" bindtap="onConfirmRecord">{{t.confirmTextW}}</view>
         </view>
       </view>
     </view>
     <view class="load-more {{!paymentHasMore ? 'disabled' : ''}}" wx:if="{{loading || !paymentHasMore}}">
-      <text>{{loading ? '加载中...' : '没有更多了'}}</text>
+      <text>{{loading ? t.loading : t.noMoreW}}</text>
     </view>
   </view>
 
@@ -87,35 +87,35 @@
     <block wx:if="{{modalView === 'form'}}">
       <!-- Header -->
       <view class="inline-form-title">
-        <text class="modal-title">发起支付</text>
+        <text class="modal-title">{{t.initiatePay}}</text>
         <view class="modal-close icon-close" bindtap="onCancelPay"></view>
       </view>
       <!-- KV list -->
       <view class="modal-kv-list" wx:if="{{currentPayable}}">
         <view class="modal-kv">
-          <text class="modal-kv-key">收款方</text>
+          <text class="modal-kv-key">{{t.payeeLabel}}</text>
           <text class="modal-kv-val">{{currentPayable.payeeName}}</text>
         </view>
         <view class="modal-kv">
-          <text class="modal-kv-key">业务类型</text>
+          <text class="modal-kv-key">{{t.bizTypeLabel}}</text>
           <text class="modal-kv-val">{{currentPayable.bizTypeText}}</text>
         </view>
         <view class="modal-kv">
-          <text class="modal-kv-key">待付金额</text>
+          <text class="modal-kv-key">{{t.pendingAmount}}</text>
           <text class="modal-kv-val modal-kv-amount">¥{{currentPayable.remainingAmount || currentPayable.amount || 0}}</text>
         </view>
       </view>
       <!-- Form fields -->
       <view class="modal-form-area">
         <view class="mf-item">
-          <text class="mf-label mf-required">支付金额</text>
+          <text class="mf-label mf-required">{{t.payAmountLabel}}</text>
           <view class="amount-input-wrap">
             <text class="amount-input-prefix">¥</text>
-            <input class="amount-input" type="digit" placeholder="请输入支付金额" value="{{payForm.amount}}" bindinput="onPayAmountInput" />
+            <input class="amount-input" type="digit" placeholder="{{t.payAmountPh}}" value="{{payForm.amount}}" bindinput="onPayAmountInput" />
           </view>
         </view>
         <view class="mf-item">
-          <text class="mf-label">支付方式</text>
+          <text class="mf-label">{{t.payMethodLabel}}</text>
           <view class="method-grid">
             <view class="method-btn {{payForm.paymentMethod === item.value ? 'method-active' : ''}}" wx:for="{{paymentMethods}}" wx:key="value" data-value="{{item.value}}" bindtap="onPayMethodSelect">
               <view class="method-check" wx:if="{{payForm.paymentMethod === item.value}}"></view>
@@ -124,55 +124,55 @@
           </view>
         </view>
         <view class="mf-item">
-          <text class="mf-label">收款账户</text>
+          <text class="mf-label">{{t.payAccountLabel}}</text>
           <block wx:if="{{payeeAccounts.length > 0}}">
             
               <view bindtap="openPicker" data-handler="onSelectAccount" data-names="payeeAccounts" data-range-key="accountName" class="picker-box">
-                <text class="picker-text {{selectedAccountId ? '' : 'placeholder'}}">{{selectedAccountId ? selectedAccountName : '选择收款账户'}}</text>
+                <text class="picker-text {{selectedAccountId ? '' : 'placeholder'}}">{{selectedAccountId ? selectedAccountName : t.pickPayAccount}}</text>
                 <view class="arrow icon-arrow-right-sm"></view>
               </view>
             
           </block>
           <view class="picker-box" wx:else bindtap="onAddAccount">
-            <text class="picker-text placeholder">选择收款账户</text>
+            <text class="picker-text placeholder">{{t.pickPayAccount}}</text>
             <view class="arrow icon-arrow-right-sm"></view>
           </view>
         </view>
         <view class="mf-item">
-          <text class="mf-label">备注</text>
-          <input class="mf-input" placeholder="选填" value="{{payForm.remark}}" bindinput="onPayRemarkInput" />
+          <text class="mf-label">{{t.remarkLabel}}</text>
+          <input class="mf-input" placeholder="{{t.optionalW}}" value="{{payForm.remark}}" bindinput="onPayRemarkInput" />
         </view>
       </view>
       <!-- Sub actions -->
       <view class="modal-sub-actions">
         <view class="sub-action-btn" bindtap="onSearchPayee">
           <view class="line-icon line-icon--sm icon-search"></view>
-          <text>搜索收款人</text>
+          <text>{{t.searchPayee}}</text>
         </view>
         <view class="sub-action-divider"></view>
         <view class="sub-action-btn" bindtap="onAddAccount">
           <view class="icon-plus-sm"></view>
-          <text>新增收款账户</text>
+          <text>{{t.newAccountBtn}}</text>
         </view>
       </view>
       <!-- Footer -->
       <view class="inline-form-actions">
-        <view class="modal-btn cancel" bindtap="onCancelPay">取消</view>
-        <view class="modal-btn confirm" bindtap="onSubmitPay">确认支付</view>
+        <view class="modal-btn cancel" bindtap="onCancelPay">{{t.cancel}}</view>
+        <view class="modal-btn confirm" bindtap="onSubmitPay">{{t.confirmTextW}}</view>
       </view>
     </block>
 
     <!-- ===== Search payee view ===== -->
     <block wx:if="{{modalView === 'search'}}">
       <view class="inline-form-title">
-        <text class="modal-title">搜索收款人</text>
+        <text class="modal-title">{{t.searchPayee}}</text>
         <view class="modal-close icon-close" bindtap="onBackToForm"></view>
       </view>
       <view class="search-panel">
         <view class="search-input-wrap">
           <view class="search-input-icon"></view>
-          <input class="search-input" placeholder="输入收款人名称" value="{{searchKeyword}}" bindinput="onPayeeSearchInput" confirm-type="search" bindconfirm="onPayeeSearch" />
-          <view class="search-btn" bindtap="onPayeeSearch">搜索</view>
+          <input class="search-input" placeholder="{{t.payeeNamePh}}" value="{{searchKeyword}}" bindinput="onPayeeSearchInput" confirm-type="search" bindconfirm="onPayeeSearch" />
+          <view class="search-btn" bindtap="onPayeeSearch">{{t.searchWord}}</view>
         </view>
         <view class="search-results">
           <view class="search-result-item" wx:for="{{searchResults}}" wx:key="index" data-index="{{index}}" bindtap="onSelectPayee">
@@ -180,10 +180,10 @@
             <text class="search-result-type">{{item.payeeType || item.type || ''}}</text>
           </view>
           <view class="search-empty" wx:if="{{!searching && searchResults.length === 0 && searchKeyword}}">
-            <text>未找到匹配的收款人</text>
+            <text>{{t.noPayeeMatch}}</text>
           </view>
           <view class="search-empty" wx:if="{{searching}}">
-            <text>搜索中...</text>
+            <text>{{t.searchingTxt}}</text>
           </view>
         </view>
       </view>
@@ -192,26 +192,26 @@
     <!-- ===== Add account view ===== -->
     <block wx:if="{{modalView === 'addAccount'}}">
       <view class="inline-form-title">
-        <text class="modal-title">新增收款账户</text>
+        <text class="modal-title">{{t.newAccountBtn}}</text>
         <view class="modal-close icon-close" bindtap="onBackToForm"></view>
       </view>
       <view class="modal-form-area">
         <view class="mf-item">
-          <text class="mf-label mf-required">账户名称</text>
-          <input class="mf-input" placeholder="如：绍兴面料厂尾款账户" value="{{newAccountForm.accountName}}" bindinput="onAccountInput" data-field="accountName" />
+          <text class="mf-label mf-required">{{t.accountNameLabel}}</text>
+          <input class="mf-input" placeholder="{{t.accountNamePh}}" value="{{newAccountForm.accountName}}" bindinput="onAccountInput" data-field="accountName" />
         </view>
         <view class="mf-item">
-          <text class="mf-label mf-required">账号</text>
-          <input class="mf-input" placeholder="请输入账号" value="{{newAccountForm.accountNumber}}" bindinput="onAccountInput" data-field="accountNumber" />
+          <text class="mf-label mf-required">{{t.accountNoLabel}}</text>
+          <input class="mf-input" placeholder="{{t.accountNoPh}}" value="{{newAccountForm.accountNumber}}" bindinput="onAccountInput" data-field="accountNumber" />
         </view>
         <view class="mf-item">
-          <text class="mf-label">开户行</text>
-          <input class="mf-input" placeholder="请输入开户行" value="{{newAccountForm.bankName}}" bindinput="onAccountInput" data-field="bankName" />
+          <text class="mf-label">{{t.bankBranchLabel}}</text>
+          <input class="mf-input" placeholder="{{t.bankBranchPh}}" value="{{newAccountForm.bankName}}" bindinput="onAccountInput" data-field="bankName" />
         </view>
       </view>
       <view class="inline-form-actions">
-        <view class="modal-btn cancel" bindtap="onBackToForm">取消</view>
-        <view class="modal-btn confirm" bindtap="onSaveAccount">保存</view>
+        <view class="modal-btn cancel" bindtap="onBackToForm">{{t.cancel}}</view>
+        <view class="modal-btn confirm" bindtap="onSaveAccount">{{t.saveWord}}</view>
       </view>
     </block>
 
