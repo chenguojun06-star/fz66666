@@ -1,3 +1,5 @@
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.bundleDetail.';
 const api = require('../../../utils/api');
 const production = require('../../../utils/api-modules/production');
 const { getUserInfo } = require('../../../utils/storage');
@@ -35,10 +37,10 @@ Page({
      *   终态（cancelled/scrapped/closed/archived/deleted/returned）被后端 excludeTerminal 排除
      */
     orderStatusTabs: [
-      { key: '', label: '全部', pillClass: '' },
-      { key: 'pending_cutting', label: '待裁剪', pillClass: '' },
-      { key: 'cutting', label: '裁剪中', pillClass: 'filter-pill--prod' },
-      { key: 'done_cutting', label: '已完成', pillClass: 'filter-pill--done' },
+      { key: '', label: '', pillClass: '' },
+      { key: 'pending_cutting', label: '', pillClass: '' },
+      { key: 'cutting', label: '', pillClass: 'filter-pill--prod' },
+      { key: 'done_cutting', label: '', pillClass: 'filter-pill--done' },
     ],
     activeOrderStatus: '',
 
@@ -109,7 +111,7 @@ Page({
     /* ── 转单 Panel 数据 ── */
     transferTab: 'factory',
     transferMode: 'whole',
-    transferModes: [{ id: 'whole', name: '整单转' }, { id: 'bundle', name: '菲号裁片转' }],
+    transferModes: [],  // applyLanguage 重建
     _tfBundles: [],
     // D-517：菲号搜索（渲染用过滤结果，选中状态仍写回 selectedBundles）
     _tfBundlesFiltered: [],
@@ -140,7 +142,124 @@ Page({
     submitting: false,
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}），筛选 tabs 重建 */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        claimBtn: i18n.t('mp.pattern.submitReceive', lang),
+        loadingOrders: i18n.t(NS + 'loadingOrders', lang),
+        noCuttingOrders: i18n.t(NS + 'noCuttingOrders', lang),
+        viewDetailArrow: i18n.t(NS + 'viewDetailArrow', lang),
+        allOrdersShown: i18n.t(NS + 'allOrdersShown', lang),
+        orderInfoTitle: i18n.t(NS + 'orderInfoTitle', lang),
+        styleNoLabel: i18n.t('mp.scanResult.styleNoLabel', lang),
+        claimedByYouHint: i18n.t(NS + 'claimedByYouHint', lang),
+        bundlingWord: i18n.t(NS + 'bundlingWord', lang),
+        perBundleLabel: i18n.t(NS + 'perBundleLabel', lang),
+        perBundleUnit: i18n.t(NS + 'perBundleUnit', lang),
+        lossAllowance: i18n.t(NS + 'lossAllowance', lang),
+        noSizeHintCheck: i18n.t(NS + 'noSizeHintCheck', lang),
+        orderQtyLabel: i18n.t('mp.orderDetail.orderQtyLabel', lang),
+        bundleCountLabel: i18n.t(NS + 'bundleCountLabel', lang),
+        lastBundle: i18n.t(NS + 'lastBundle', lang),
+        totalOrdered: i18n.t(NS + 'totalOrdered', lang),
+        totalCut: i18n.t(NS + 'totalCut', lang),
+        totalBundles: i18n.t(NS + 'totalBundles', lang),
+        qtyDetailTitle: i18n.t(NS + 'qtyDetailTitle', lang),
+        modeDetail: i18n.t(NS + 'modeDetail', lang),
+        modeSimple: i18n.t(NS + 'modeSimple', lang),
+        cutTotalLabel: i18n.t(NS + 'cutTotalLabel', lang),
+        bedLabel: i18n.t(NS + 'bedLabel', lang),
+        operatorLabel: i18n.t(NS + 'operatorLabel', lang),
+        bundleCreateTime: i18n.t(NS + 'bundleCreateTime', lang),
+        noCutRecords: i18n.t(NS + 'noCutRecords', lang),
+        totalPcsLabel: i18n.t(NS + 'totalPcsLabel', lang),
+        bundleWord: i18n.t('mp.scanResult.bundleWord', lang),
+        layersLabel: i18n.t('mp.orderDetail.layersLabel', lang),
+        transferInfoTitle: i18n.t(NS + 'transferInfoTitle', lang),
+        modeLabel: i18n.t(NS + 'modeLabel', lang),
+        transferWhole: i18n.t(NS + 'transferWhole', lang),
+        transferPieces: i18n.t(NS + 'transferPieces', lang),
+        pickBundleLabel: i18n.t(NS + 'pickBundleLabel', lang),
+        priceProcess: i18n.t('mp.orderDetail.priceProcess', lang),
+        partialScanned: i18n.t(NS + 'partialScanned', lang),
+        newPriceLabel: i18n.t(NS + 'newPriceLabel', lang),
+        yuanPerPiece: i18n.t(NS + 'yuanPerPiece', lang),
+        targetFactory: i18n.t(NS + 'targetFactory', lang),
+        targetPerson: i18n.t(NS + 'targetPerson', lang),
+        remarkLabel: i18n.t('common.remark', lang),
+        confirmTransfer: i18n.t(NS + 'confirmTransfer', lang),
+        printBundleBtn: i18n.t(NS + 'printBundleBtn', lang),
+        bundleLabelTitle: i18n.t(NS + 'bundleLabelTitle', lang),
+        printModePrefix: i18n.t(NS + 'printModePrefix', lang),
+        bluetoothW: i18n.t(NS + 'bluetoothW', lang),
+        wifiWord: i18n.t(NS + 'wifiWord', lang),
+        printerIpLabel: i18n.t(NS + 'printerIpLabel', lang),
+        portLabel: i18n.t(NS + 'portLabel', lang),
+        wifiSameHint: i18n.t(NS + 'wifiSameHint', lang),
+        labelSizeLabel: i18n.t(NS + 'labelSizeLabel', lang),
+        printDirLabel: i18n.t(NS + 'printDirLabel', lang),
+        landscapeW: i18n.t(NS + 'landscapeW', lang),
+        portraitW: i18n.t(NS + 'portraitW', lang),
+        printBtn: i18n.t(NS + 'printBtn', lang),
+        qrWord: i18n.t('mp.qualityDetail.qrWord', lang),
+        colorLabel: i18n.t('common.color', lang),
+        sizeLabel: i18n.t('common.size', lang),
+        qtyLabel: i18n.t('common.quantity', lang),
+        deliveryLabel: i18n.t('mp.scanResult.deliveryLabel', lang),
+        pieceUnit: i18n.t('common.piece', lang),
+        selectAll: i18n.t('common.selectAll', lang),
+        searchingTxt: i18n.t('mp.attendanceDetail.searchingTxt', lang),
+        loadMore: i18n.t('common.loadMore', lang),
+        pendingPriceW: i18n.t(NS + 'pendingPriceW', lang),
+        pendingTaskTitle: i18n.t(NS + 'pendingTaskTitle', lang),
+        searchOrderPh: i18n.t(NS + 'searchOrderPh', lang),
+        statusDoingW: i18n.t(NS + 'statusDoingW', lang),
+        orderCol: i18n.t(NS + 'orderCol', lang),
+        cutCol: i18n.t(NS + 'cutCol', lang),
+        transferTab: i18n.t(NS + 'transferTab', lang),
+        bundleCountFmtW: i18n.t(NS + 'bundleCountFmtW', lang),
+        bundleUnit2: i18n.t(NS + 'bundleUnit2', lang),
+        needGenHint: i18n.t(NS + 'needGenHint', lang),
+        searchBundlePh: i18n.t(NS + 'searchBundlePh', lang),
+        searchFactoryPh: i18n.t(NS + 'searchFactoryPh', lang),
+        searchUserPh: i18n.t(NS + 'searchUserPh', lang),
+        transferRemarkPh: i18n.t(NS + 'transferRemarkPh', lang),
+        generatingTxt: i18n.t(NS + 'generatingTxt', lang),
+        confirmGenBtn: i18n.t(NS + 'confirmGenBtn', lang),
+        orderPrefix: i18n.t(NS + 'orderPrefix', lang),
+        styleNoPrefixW: i18n.t(NS + 'styleNoPrefixW', lang),
+        colorPrefix: i18n.t(NS + 'colorPrefix', lang),
+        sizePrefix: i18n.t(NS + 'sizePrefix', lang),
+        layerPrefix: i18n.t(NS + 'layerPrefix', lang),
+        qtyPrefix: i18n.t(NS + 'qtyPrefix', lang),
+        bundleNoPrefix: i18n.t(NS + 'bundleNoPrefix', lang),
+        defaultQtyPh: i18n.t(NS + 'defaultQtyPh', lang),
+        orderUnitW: i18n.t(NS + 'orderUnitW', lang),
+        lossUnitW: i18n.t(NS + 'lossUnitW', lang),
+        printerIpExample: i18n.t(NS + 'printerIpExample', lang),
+        completedLabel: i18n.t('common.completed', lang),
+      },
+      transferModes: [
+        { id: 'whole', name: i18n.t(NS + 'transferWhole', lang) },
+        { id: 'bundle', name: i18n.t(NS + 'transferPieces', lang) },
+      ],
+      statusTabs: [
+        { key: '', label: i18n.t(NS + 'stAll', lang), pillClass: '' },
+        { key: 'pending_cutting', label: i18n.t(NS + 'stPendingCut', lang), pillClass: '' },
+        { key: 'cutting', label: i18n.t(NS + 'stCutting', lang), pillClass: 'filter-pill--prod' },
+        { key: 'done_cutting', label: i18n.t('common.completed', lang), pillClass: 'filter-pill--done' },
+      ],
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad(options) {
+    this.applyLanguage(i18n.getLanguage());
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
 
@@ -193,12 +312,12 @@ Page({
     if (!task) return;
     const userInfo = getUserInfo() || {};
     wx.showModal({
-      title: '领取裁剪任务',
-      content: `确认领取「${task.styleNo || task.orderNo}」？领取后可直接编菲`,
-      confirmText: '领取',
+      title: i18n.t(NS + 'claimTaskTitle', this._lang),
+      content: i18n.tf(NS + 'claimConfirmFmt', { name: task.styleNo || task.orderNo }, this._lang),
+      confirmText: i18n.t('mp.pattern.submitReceive', this._lang),
       success: async (res) => {
         if (!res.confirm) return;
-        wx.showLoading({ title: '领取中...' });
+        wx.showLoading({ title: i18n.t(NS + 'claimingTxt', this._lang) });
         try {
           await production.cuttingTaskReceive({
             taskId: task.id,
@@ -206,7 +325,7 @@ Page({
             receiverName: String(userInfo.name || userInfo.username || ''),
           });
           wx.hideLoading();
-          wx.showToast({ title: '领取成功', icon: 'success' });
+          wx.showToast({ title: i18n.t(NS + 'claimOk', this._lang), icon: 'success' });
           // 领取后直接进入该订单编菲
           this.setData({
             orderNo: task.orderNo,
@@ -217,7 +336,7 @@ Page({
           this.loadAll(task.orderNo);
         } catch (err) {
           wx.hideLoading();
-          wx.showToast({ title: (err && (err.message || err.errMsg)) || '领取失败', icon: 'none' });
+          wx.showToast({ title: (err && (err.message || err.errMsg)) || i18n.t(NS + 'claimFail', this._lang), icon: 'none' });
         }
       },
     });
@@ -258,7 +377,7 @@ Page({
           ...order,
           styleCoverUrl: getAuthedImageUrl(order.styleCover || order.styleImageUrl || order.coverImage || ''),
           // 订单状态文案统一走 displayHelper.displayStatusText（覆盖 cutting/sewing/procurement 等工序状态）
-          statusText: orderStatusText(order.status) || '生产中',
+          statusText: orderStatusText(order.status) || i18n.t('mp.pattern.psProducing', this._lang),
           // 交期兜底：PC 端下单用 plannedEndDate，统一归一到 deliveryDate 供模板显示
           deliveryDate: order.expectedShipDate || order.deliveryDate
             || (order.plannedEndDate ? order.plannedEndDate.slice(0, 10) : ''),
@@ -269,7 +388,7 @@ Page({
       })
       .catch(() => {
         this.setData({ orderListLoading: false });
-        toast.error('订单列表加载失败');
+        toast.error(i18n.t(NS + 'orderListFailed', this._lang));
       });
   },
 
@@ -366,7 +485,7 @@ Page({
       await this.loadCuttingBundles(orderNo);
     } catch (e) {
       console.error('[bundle-detail] loadAll error', e);
-      toast.error('数据加载失败，请下拉刷新重试');
+      toast.error(i18n.t(NS + 'loadFailedRefresh', this._lang));
     } finally {
       this.setData({ loading: false });
     }
@@ -392,7 +511,7 @@ Page({
         order.expectedShipDate = this._formatDeliveryDate(order.expectedShipDate);
       }
       // 订单状态文案统一走 displayHelper.displayStatusText（覆盖 cutting/sewing/procurement 等工序状态）
-      order.statusText = orderStatusText(order.status) || '生产中';
+      order.statusText = orderStatusText(order.status) || i18n.t('mp.pattern.psProducing', this._lang);
 
       const coverImage = getAuthedImageUrl(order.styleImageUrl || order.coverImage || order.imgUrl || '');
       const orderLines = parseProductionOrderLines(order);
@@ -506,9 +625,9 @@ Page({
 
   onPrintBundleLabels() {
     const { orderNo, _rawBundles } = this.data;
-    if (!orderNo) return toast.error('数据未加载完成');
+    if (!orderNo) return toast.error(i18n.t(NS + 'dataNotReady', this._lang));
     if (!_rawBundles.length) {
-      toast.info('暂无菲号数据，请先生成菲号');
+      toast.info(i18n.t(NS + 'noBundleGenFirst', this._lang));
       return;
     }
     this.setData({ showBundlePrintModal: true });
@@ -661,7 +780,7 @@ Page({
     let printFn;
     if (cfg.printMode === 'wifi') {
       if (!cfg.wifiHost) {
-        toast.info('请输入打印机IP地址');
+        toast.info(i18n.t(NS + 'printerIpPh', this._lang));
         return;
       }
       printOpts.wifiHost = cfg.wifiHost;
@@ -673,9 +792,9 @@ Page({
 
     printFn(bundles, d.orderNo, d.orderInfo, printOpts).catch(function (err) {
       wx.hideLoading();
-      const msg = err && err.message ? err.message : '打印失败';
+      const msg = err && err.message ? err.message : i18n.t(NS + 'printFail', this._lang);
       wx.showModal({
-        title: cfg.printMode === 'wifi' ? 'WiFi打印失败' : '蓝牙打印失败',
+        title: cfg.printMode === 'wifi' ? i18n.t(NS + 'wifiPrintFail', this._lang) : i18n.t(NS + 'btPrintFail', this._lang),
         content: msg,
         showCancel: false,
       });
@@ -733,7 +852,7 @@ Page({
     const sizeSet = new Set();
     const matrix = {};
     lines.forEach(({ color, size, quantity }) => {
-      const c = color || '未知';
+      const c = color || i18n.t('mp.stageDetail.unknownWord', this._lang);
       const s = size || '-';
       sizeSet.add(s);
       if (!matrix[c]) matrix[c] = {};
@@ -798,7 +917,7 @@ Page({
   onTransferModeChange(e) {
     const mode = e.currentTarget.dataset.mode;
     if (mode === 'bundle' && !this.data.hasBundles) {
-      toast.info('尚未生成菲号，请先在裁剪分扎中生成菲号后再进行裁片转单');
+      toast.info(i18n.t(NS + 'noBundleTransfer', this._lang));
       return;
     }
     this.setData({ transferMode: mode, selectedBundles: {}, allSelected: false, selectedBundleCount: 0 });
@@ -869,7 +988,7 @@ Page({
           quantity: b.quantity,
           _disabled: completed,
           _partialScanned: partialScanned,
-          _statusCn: completed ? '已完成' : (partialScanned ? '部分已扫' : ''),
+          _statusCn: completed ? i18n.t('common.completed', this._lang) : (partialScanned ? i18n.t(NS + 'partialScanned', this._lang) : ''),
         };
       });
       // D-517：同步过滤结果（新数据默认无关键字 → 全量）
@@ -978,7 +1097,7 @@ Page({
                 processCode: code,
                 processName: normalizeProcessName(n.name || n.processName || '-'),
                 unitPrice: price,
-                priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
+                priceText: price > 0 ? '¥' + price.toFixed(2) : i18n.t(NS + 'pendingPriceW', this._lang),
                 pricePlaceholder: price > 0 ? price.toFixed(2) : '0.00',
                 progressStage: stageKey,
                 _completed: !!(s && s.total > 0 && s.scanned === s.total),
@@ -998,7 +1117,7 @@ Page({
             processCode: code,
             processName: normalizeProcessName(n.name || '-'),
             unitPrice: price,
-            priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
+            priceText: price > 0 ? '¥' + price.toFixed(2) : i18n.t(NS + 'pendingPriceW', this._lang),
             pricePlaceholder: price > 0 ? price.toFixed(2) : '0.00',
             progressStage: n.progressStage || '-',
             _completed: !!(s && s.total > 0 && s.scanned === s.total),
@@ -1020,7 +1139,7 @@ Page({
             processCode: code,
             processName: normalizeProcessName(p.processName || p.name || '-'),
             unitPrice: price,
-            priceText: price > 0 ? '¥' + price.toFixed(2) : '待定价',
+            priceText: price > 0 ? '¥' + price.toFixed(2) : i18n.t(NS + 'pendingPriceW', this._lang),
             pricePlaceholder: price > 0 ? price.toFixed(2) : '0.00',
             progressStage: p.progressStage || p.stage || '-',
             _completed: !!(s && s.total > 0 && s.scanned === s.total),
@@ -1173,12 +1292,12 @@ Page({
     const d = this.data;
     if (d.submitting) return;
 
-    if (d.transferTab === 'factory' && !d.selectedFactory) return toast.info('请选择目标工厂');
-    if (d.transferTab === 'user' && !d.selectedUser) return toast.info('请选择目标人员');
+    if (d.transferTab === 'factory' && !d.selectedFactory) return toast.info(i18n.t(NS + 'pickTargetFactory', this._lang));
+    if (d.transferTab === 'user' && !d.selectedUser) return toast.info(i18n.t(NS + 'pickTargetPerson', this._lang));
 
     if (d.transferMode === 'bundle') {
       const cnt = Object.keys(d.selectedBundles).length;
-      if (!cnt) return toast.info('请至少选择一个菲号');
+      if (!cnt) return toast.info(i18n.t(NS + 'pickOneBundle', this._lang));
     }
 
     const payload = {
@@ -1207,7 +1326,7 @@ Page({
     });
 
     if (!payload.processes || payload.processes.length === 0) {
-      return toast.info('请至少选择一个工序');
+      return toast.info(i18n.t(NS + 'pickOneProcess', this._lang));
     }
 
     if (d.remark) payload.remark = d.remark;
@@ -1219,7 +1338,7 @@ Page({
       ? api.production.transferCreateToFactory
       : api.production.transferCreate;
     apiFn(payload).then(function () {
-      toast.success('转单成功');
+      toast.success(i18n.t(NS + 'transferOk', this._lang));
       that.setData({
         activeTab: 'detail', submitting: false,
         selectedBundles: {}, selectedBundleCount: 0, allSelected: false,
@@ -1228,7 +1347,7 @@ Page({
       });
     }).catch(function (err) {
       that.setData({ submitting: false });
-      toast.error(err.message || '转单失败');
+      toast.error(err.message || i18n.t(NS + 'transferFail', this._lang));
     });
   },
 
@@ -1303,7 +1422,7 @@ Page({
 
       let bundleDisplay = '-';
       if (bundles === 1) {
-        bundleDisplay = '1\u00D7' + lastQty + '件';
+        bundleDisplay = '1\u00D7' + lastQty + i18n.t('common.piece', this._lang);
       } else if (bundles > 1) {
         bundleDisplay = (bundles - 1) + '\u00D7' + bs + ' + 1\u00D7' + lastQty;
       }
@@ -1375,8 +1494,8 @@ Page({
     const orderId = d.orderId;
     const orderNo = d.orderNo;
 
-    if (!orderId) return toast.error('缺少订单信息');
-    if (!cuttingOrderLines.length) return toast.error('无可裁剪的尺码数据');
+    if (!orderId) return toast.error(i18n.t(NS + 'missingOrderInfo', this._lang));
+    if (!cuttingOrderLines.length) return toast.error(i18n.t(NS + 'noSizeToCut', this._lang));
 
     const items = [];
     cuttingOrderLines.forEach(function (line) {
@@ -1387,18 +1506,18 @@ Page({
       items.push({ color: String(line.color || ''), size: String(line.size || ''), quantity: line.lastBundleQty || bundleSize });
     });
 
-    if (!items.length) return toast.error('无有效裁剪数量');
+    if (!items.length) return toast.error(i18n.t(NS + 'noValidCutQty', this._lang));
 
     const that = this;
     this.setData({ cuttingSubmitting: true });
     api.production.generateCuttingBundles(orderId, items).then(function () {
-      toast.success('菲号生成成功');
+      toast.success(i18n.t(NS + 'bundleGenOk', this._lang));
       triggerDataRefresh('cutting');
       that.setData({ cuttingSubmitting: false, showCuttingForm: false });
       that.loadAll(orderNo);
     }).catch(function (err) {
       console.error('[bundle-detail] generateBundles error', err);
-      toast.error('生成失败：' + (err.message || '请稍后重试'));
+      toast.error(i18n.t(NS + 'genFailedPrefix', this._lang) + (err.message || i18n.t('common.retryLater', this._lang)));
       that.setData({ cuttingSubmitting: false });
     });
   },

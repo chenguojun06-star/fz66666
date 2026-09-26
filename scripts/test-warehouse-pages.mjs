@@ -2458,6 +2458,8 @@ const ORDER_DETAIL_JS = 'pages/dashboard/order-detail/index.js';
 const ORDER_DETAIL_WXML = 'pages/dashboard/order-detail/index.wxml';
 const TASK_DETAIL_JS = 'pages/procurement/task-detail/index.js';
 const TASK_DETAIL_WXML = 'pages/procurement/task-detail/index.wxml';
+const BUNDLE_DETAIL_JS = 'pages/cutting/bundle-detail/index.js';
+const BUNDLE_DETAIL_WXML = 'pages/cutting/bundle-detail/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3092,6 +3094,27 @@ function testI18nTaskDetail() {
   eq('采购任务页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '采购任务详情');
 }
 
+/** 裁剪菲号明细页（D-566）—— 筛选tabs/数量矩阵/转单双模式/打印面板 */
+function testI18nBundleDetail() {
+  testPageI18n(BUNDLE_DETAIL_JS, BUNDLE_DETAIL_WXML, '菲号明细页');
+
+  const { page: zhP, wx: zhWx } = loadPage(BUNDLE_DETAIL_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(BUNDLE_DETAIL_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  const zhTabs = zhP.data.statusTabs.map(t2 => t2.label).join('|');
+  const enTabs = enP.data.statusTabs.map(t2 => t2.label).join('|');
+  eq('zh 裁剪tabs', zhTabs, '全部|待裁剪|裁剪中|已完成');
+  eq('en 裁剪tabs', enTabs, 'All|To Cut|Cutting|Completed');
+  eq('zh 转单模式', zhP.data.transferModes.map(m => m.name).join('|'), '整单转|菲号裁片转');
+  ok('en 转单模式无中文', !CJK_RE.test(enP.data.transferModes.map(m => m.name).join('|')), enP.data.transferModes.map(m => m.name).join('|'));
+  ok('en WiFi 提示无中文', !CJK_RE.test(String(enP.data.t.wifiSameHint)), enP.data.t.wifiSameHint);
+
+  eq('菲号明细页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Bundle Details');
+  eq('菲号明细页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '菲号明细');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3145,6 +3168,7 @@ try {
   testI18nAttendance();
   testI18nOrderDetail();
   testI18nTaskDetail();
+  testI18nBundleDetail();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
