@@ -1112,8 +1112,10 @@ function testPageI18n(jsPath, wxmlPath, label) {
     ok(`${label} 装饰性占位字符数量正常`, decor.length <= 3, `stripped=${decor.length}`);
     // 豁免：wx:if 里的 === '中文' 是**后端历史数据值匹配**（如 urgencyLevel === '急'），
     // 不是显示文案；剥掉比较表达式后再扫显示文本
+    // data-val="中文" 是载荷绑定属性（提交后端的值），同属豁免
     const scanTarget = wxml.replace(/===\s*'[^']*'[\u4e00-\u9fff][^']*'|==='[^']*'/g, '')
-      .replace(/[=!]==?\s*'[^']*'/g, '');
+      .replace(/[=!]==?\s*'[^']*'/g, '')
+      .replace(/data-val="[^"]*[\u4e00-\u9fff][^"]*"/g, 'data-val=""');
     const leftovers = (scanTarget.match(/[\u4e00-\u9fff]+/g) || []);
     ok(`${label} wxml 无硬编码中文`, leftovers.length === 0, leftovers.join(' / '));
   }
@@ -1202,8 +1204,10 @@ function testComponentI18n(jsPath, wxmlPath, label) {
     ok(`${label} 装饰性占位字符数量正常`, decor.length <= 3, `stripped=${decor.length}`);
     // 豁免：wx:if 里的 === '中文' 是**后端历史数据值匹配**（如 urgencyLevel === '急'），
     // 不是显示文案；剥掉比较表达式后再扫显示文本
+    // data-val="中文" 是载荷绑定属性（提交后端的值），同属豁免
     const scanTarget = wxml.replace(/===\s*'[^']*'[\u4e00-\u9fff][^']*'|==='[^']*'/g, '')
-      .replace(/[=!]==?\s*'[^']*'/g, '');
+      .replace(/[=!]==?\s*'[^']*'/g, '')
+      .replace(/data-val="[^"]*[\u4e00-\u9fff][^"]*"/g, 'data-val=""');
     const leftovers = (scanTarget.match(/[\u4e00-\u9fff]+/g) || []);
     ok(`${label} wxml 无硬编码中文`, leftovers.length === 0, leftovers.join(' / '));
   }
@@ -2482,6 +2486,8 @@ const SHIPMENT_DETAIL_JS = 'pages/factory/shipment-detail/index.js';
 const SHIPMENT_DETAIL_WXML = 'pages/factory/shipment-detail/index.wxml';
 const RETURN_DETAIL_JS = 'pages/return/detail/index.js';
 const RETURN_DETAIL_WXML = 'pages/return/detail/index.wxml';
+const PROC_EDIT_JS = 'pages/dashboard/process-edit/index.js';
+const PROC_EDIT_WXML = 'pages/dashboard/process-edit/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3327,6 +3333,25 @@ function testI18nReturnDetail() {
   eq('退货详情 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '退货详情');
 }
 
+/** 工序编辑页（D-577）—— 阶段分组/工价表/增删改/重置 */
+function testI18nProcessEdit() {
+  testPageI18n(PROC_EDIT_JS, PROC_EDIT_WXML, '工序编辑页');
+
+  const { page: zhP, wx: zhWx } = loadPage(PROC_EDIT_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(PROC_EDIT_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  ok('en 工价提示无中文', !CJK_RE.test(String(enP.data.t.priceHint)), enP.data.t.priceHint);
+  ok('en 冻结提示无中文', !CJK_RE.test(String(enP.data.t.frozenHint)), enP.data.t.frozenHint);
+  ok('en 无工序提示无中文', !CJK_RE.test(String(enP.data.t.noProcessHint)), enP.data.t.noProcessHint);
+  eq('zh 保存全部', zhP.data.t.saveAllBtn, '保存全部');
+  eq('en 保存全部', enP.data.t.saveAllBtn, 'Save All');
+
+  eq('工序编辑导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Process Edit');
+  eq('工序编辑 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '工序编辑');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3390,6 +3415,7 @@ try {
   testI18nSmartOps();
   testI18nShipment();
   testI18nReturnDetail();
+  testI18nProcessEdit();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));

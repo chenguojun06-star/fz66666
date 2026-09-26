@@ -1,3 +1,5 @@
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.processEdit.';
 const api = require('../../../utils/api');
 const { decodeParam } = require('../../../utils/urlParams');
 
@@ -63,7 +65,49 @@ Page({
     processDict: [],
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}） */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        priceHint: i18n.t(NS + 'priceHint', lang),
+        loadingProcessW: i18n.t(NS + 'loadingProcessW', lang),
+        subtotalLabel: i18n.t(NS + 'subtotalLabel', lang),
+        editedTag: i18n.t(NS + 'editedTag', lang),
+        unpricedTag: i18n.t(NS + 'unpricedTag', lang),
+        processNameLabel: i18n.t(NS + 'processNameLabel', lang),
+        machineTypeLabel: i18n.t(NS + 'machineTypeLabel', lang),
+        priceYuanLabel: i18n.t(NS + 'priceYuanLabel', lang),
+        stdTimeLabel: i18n.t(NS + 'stdTimeLabel', lang),
+        difficultyLabel: i18n.t(NS + 'difficultyLabel', lang),
+        saveBtn: i18n.t(NS + 'saveBtn', lang),
+        noProcessHint: i18n.t(NS + 'noProcessHint', lang),
+        resetBtn: i18n.t(NS + 'resetBtn', lang),
+        saveAllBtn: i18n.t(NS + 'saveAllBtn', lang),
+        frozenHint: i18n.t(NS + 'frozenHint', lang),
+        addProcessBtn: i18n.t(NS + 'addProcessBtn', lang),
+        stageLabel: i18n.t(NS + 'stageLabel', lang),
+        stdTimeSecLabel: i18n.t(NS + 'stdTimeSecLabel', lang),
+        confirmAddBtn: i18n.t(NS + 'confirmAddBtn', lang),
+        cancelBtn: i18n.t(NS + 'cancelBtn', lang),
+        processCountUnit: i18n.t(NS + 'processCountUnit', lang),
+        processNamePh: i18n.t(NS + 'processNamePh', lang),
+        machinePh: i18n.t(NS + 'machinePh', lang),
+        totalWordW: i18n.t(NS + 'totalWordW', lang),
+        modifiedW: i18n.t(NS + 'modifiedW', lang),
+        pickOrInputProc: i18n.t(NS + 'pickOrInputProc', lang),
+        manualInputPh: i18n.t(NS + 'manualInputPh', lang),
+        machineFlatPh: i18n.t(NS + 'machineFlatPh', lang),
+      },
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function (options) {
+    this.applyLanguage(i18n.getLanguage());
     const orderId = decodeParam(options.orderId);
     const orderNo = decodeParam(options.orderNo);
     this.setData({ orderId: orderId, orderNo: orderNo });
@@ -74,7 +118,7 @@ Page({
       this._loadOrderByOrderNo(orderNo);
     } else {
       this.setData({ loading: false });
-      wx.showToast({ title: '缺少订单信息', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'orderMissingParams', this._lang), icon: 'none' });
     }
     this._loadDictData();
   },
@@ -96,7 +140,7 @@ Page({
       }
       if (!order || !order.id) {
         that.setData({ loading: false });
-        wx.showToast({ title: '未找到订单：' + orderNo, icon: 'none' });
+        wx.showToast({ title: i18n.tf(NS + 'orderNotFoundFmt', { no: orderNo }, this._lang), icon: 'none' });
         return;
       }
       that.setData({
@@ -108,7 +152,7 @@ Page({
     }).catch(function (err) {
       console.error('[process-edit] 按单号加载订单失败:', err);
       that.setData({ loading: false });
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'loadFailedW', this._lang), icon: 'none' });
     });
   },
 
@@ -137,7 +181,7 @@ Page({
       }
       if (!order) {
         that.setData({ loading: false });
-        wx.showToast({ title: '订单不存在', icon: 'none' });
+        wx.showToast({ title: i18n.t(NS + 'orderNotExist', this._lang), icon: 'none' });
         return;
       }
       const status = order.status || '';
@@ -161,7 +205,7 @@ Page({
     }).catch(function (err) {
       console.error('[process-edit] 加载订单失败:', err);
       that.setData({ loading: false });
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'loadFailedW', this._lang), icon: 'none' });
     });
   },
 
@@ -296,7 +340,7 @@ Page({
   onConfirmAdd: function () {
     const form = this.data.addForm;
     if (!form.processName.trim()) {
-      wx.showToast({ title: '请输入工序名称', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'processNameReq', this._lang), icon: 'none' });
       return;
     }
     const newProcess = {
@@ -377,7 +421,7 @@ Page({
   onSaveEdit: function () {
     const form = this.data.editForm;
     if (!form.processName || !form.processName.trim()) {
-      wx.showToast({ title: '请输入工序名称', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'processNameReq', this._lang), icon: 'none' });
       return;
     }
     const stages = this.data.stages;
@@ -410,8 +454,8 @@ Page({
     const stageId = e.currentTarget.dataset.stageId;
     const that = this;
     wx.showModal({
-      title: '确认删除',
-      content: '删除后保存生效，确定删除该工序？',
+      title: i18n.t(NS + 'delConfirmTitle', this._lang),
+      content: i18n.t(NS + 'delConfirmMsg', this._lang),
       success: function (res) {
         if (!res.confirm) return;
         const stages = that.data.stages;
@@ -501,8 +545,8 @@ Page({
   onResetChanges: function () {
     const that = this;
     wx.showModal({
-      title: '确认重置',
-      content: '将撤销所有修改，确定？',
+      title: i18n.t(NS + 'resetTitle', this._lang),
+      content: i18n.t(NS + 'resetMsg', this._lang),
       success: function (res) {
         if (!res.confirm) return;
         that._buildStages(that._originalProcesses || []);
@@ -558,7 +602,7 @@ Page({
       deletedIds: deletedIds,
     };
 
-    wx.showLoading({ title: '保存中...' });
+    wx.showLoading({ title: i18n.t(NS + 'savingTxt', this._lang) });
     api.production.quickEditOrder(payload).then(function () {
       wx.hideLoading();
       that._deletedIds = [];
@@ -585,11 +629,11 @@ Page({
           difficulty: n.difficulty, sortOrder: n.sortOrder,
         };
       })));
-      wx.showToast({ title: '保存成功', icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'saveOk', this._lang), icon: 'success' });
     }).catch(function (err) {
       wx.hideLoading();
       console.error('[process-edit] 保存失败:', err);
-      wx.showToast({ title: '保存失败', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'saveFail', this._lang), icon: 'none' });
     });
   },
 
@@ -638,7 +682,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t(NS + 'selectW', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

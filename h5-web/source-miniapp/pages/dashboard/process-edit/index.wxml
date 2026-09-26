@@ -9,13 +9,13 @@
   </view>
   <!-- D-192：单价口径说明——工序单价即该工序计件工资单价 -->
   <view class="page-hint" wx:if="{{!loading}}">
-    <text class="page-hint-text">工序单价＝计件工资单价，裁剪按菲号计件结算</text>
+    <text class="page-hint-text">{{t.priceHint}}</text>
   </view>
 
   <!-- 加载中 -->
   <view class="loading-box" wx:if="{{loading}}">
     <view class="loading-spinner"></view>
-    <text class="loading-text">加载工序数据...</text>
+    <text class="loading-text">{{t.loadingProcessW}}</text>
   </view>
 
   <!-- 工序列表 -->
@@ -25,10 +25,10 @@
       <view class="stage-header">
         <view class="stage-title-row">
           <text class="stage-name">{{item.name}}</text>
-          <text class="stage-count">{{item.processes.length}}道</text>
+          <text class="stage-count">{{item.processes.length}}{{t.processCountUnit}}</text>
         </view>
         <view class="stage-total" wx:if="{{item.processes.length > 0}}">
-          <text class="stage-total-label">小计</text>
+          <text class="stage-total-label">{{t.subtotalLabel}}</text>
           <text class="stage-total-price">¥{{item.totalPrice}}</text>
         </view>
         <view class="stage-add-icon" wx:if="{{editable}}" catchtap="onAddProcess" data-stage-id="{{item.id}}" data-stage-name="{{item.name}}">
@@ -47,7 +47,7 @@
               <view class="process-name-line">
                 <text class="process-name">{{child.processName}}</text>
                 <text class="process-code" wx:if="{{child.processCode}}">{{child.processCode}}</text>
-                <text class="process-modified-badge" wx:if="{{child.modified}}">已改</text>
+                <text class="process-modified-badge" wx:if="{{child.modified}}">{{t.editedTag}}</text>
               </view>
               <view class="process-meta-line" wx:if="{{child.machineType || child.difficulty || child.standardTime}}">
                 <text class="process-machine" wx:if="{{child.machineType}}">{{child.machineType}}</text>
@@ -56,7 +56,7 @@
               </view>
             </view>
             <text class="price-value">¥{{child.priceText}}</text>
-            <text class="price-value price-value--empty" wx:if="{{!child.price}}">未定价</text>
+            <text class="price-value price-value--empty" wx:if="{{!child.price}}">{{t.unpricedTag}}</text>
             <view class="process-actions" wx:if="{{editable}}">
               <view class="pact-btn pact-btn--edit" catchtap="onEditProcess" data-id="{{child.id}}" data-stage-id="{{item.id}}">
                 <view class="line-icon icon-edit"></view>
@@ -72,23 +72,23 @@
         <block wx:else>
           <view class="process-edit-form">
             <view class="pef-row">
-              <text class="pef-label">工序名称</text>
-              <input class="pef-input" value="{{editForm.processName}}" bindinput="onEditFormInput" data-field="processName" placeholder="请输入工序名称" />
+              <text class="pef-label">{{t.processNameLabel}}</text>
+              <input class="pef-input" value="{{editForm.processName}}" bindinput="onEditFormInput" data-field="processName" placeholder="{{t.processNamePh}}" />
             </view>
             <view class="pef-row">
-              <text class="pef-label">机器类型</text>
-              <input class="pef-input" value="{{editForm.machineType}}" bindinput="onEditFormInput" data-field="machineType" placeholder="如：平车、锁边车" />
+              <text class="pef-label">{{t.machineTypeLabel}}</text>
+              <input class="pef-input" value="{{editForm.machineType}}" bindinput="onEditFormInput" data-field="machineType" placeholder="{{t.machinePh}}" />
             </view>
             <view class="pef-row">
-              <text class="pef-label">工价(元)</text>
+              <text class="pef-label">{{t.priceYuanLabel}}</text>
               <input class="pef-input" type="digit" value="{{editForm.price}}" bindinput="onEditFormInput" data-field="price" placeholder="0.00" />
             </view>
             <view class="pef-row">
-              <text class="pef-label">标准工时(秒)</text>
+              <text class="pef-label">{{t.stdTimeLabel}}</text>
               <input class="pef-input" type="number" value="{{editForm.standardTime}}" bindinput="onEditFormInput" data-field="standardTime" placeholder="0" />
             </view>
             <view class="pef-row">
-              <text class="pef-label">难度</text>
+              <text class="pef-label">{{t.difficultyLabel}}</text>
               <view class="pef-difficulty">
                 <view class="diff-opt {{editForm.difficulty === '易' ? 'diff-opt--active' : ''}}" catchtap="onSetDifficulty" data-val="易">易</view>
                 <view class="diff-opt {{editForm.difficulty === '中' ? 'diff-opt--active' : ''}}" catchtap="onSetDifficulty" data-val="中">中</view>
@@ -96,8 +96,8 @@
               </view>
             </view>
             <view class="pef-actions">
-              <view class="pef-btn pef-btn--cancel" catchtap="onCancelEdit">取消</view>
-              <view class="pef-btn pef-btn--save" catchtap="onSaveEdit">保存</view>
+              <view class="pef-btn pef-btn--cancel" catchtap="onCancelEdit">{{t.cancelBtn}}</view>
+              <view class="pef-btn pef-btn--save" catchtap="onSaveEdit">{{t.saveBtn}}</view>
             </view>
           </view>
         </block>
@@ -105,7 +105,7 @@
 
       <!-- 空工序组 -->
       <view class="empty-stage" wx:if="{{item.processes.length === 0}}">
-        <text class="empty-stage-text">暂无工序，点右侧 ＋ 新增</text>
+        <text class="empty-stage-text">{{t.noProcessHint}}</text>
       </view>
     </view>
   </block>
@@ -113,55 +113,55 @@
   <!-- 底部操作栏（D-305：合计工价常驻可见；有改动才出现重置/保存） -->
   <view class="bottom-bar" wx:if="{{!loading && editable}}">
     <view class="bottom-bar-info">
-      <text class="bbi-text">共 {{totalCount}} 道 · 合计 ¥{{totalPrice}}</text>
-      <text class="bbi-modified" wx:if="{{modifiedCount > 0}}"> · 已修改 {{modifiedCount}}</text>
+      <text class="bbi-text">{{t.totalWordW}} {{totalCount}}{{t.processCountUnit}} · {{t.totalLabel}} ¥{{totalPrice}}</text>
+      <text class="bbi-modified" wx:if="{{modifiedCount > 0}}">{{t.modifiedW}} {{modifiedCount}}</text>
     </view>
     <view class="bottom-bar-actions" wx:if="{{hasChanges}}">
-      <view class="bba-btn bba-btn--reset" bindtap="onResetChanges">重置</view>
-      <view class="bba-btn bba-btn--save" bindtap="onSaveAll">保存全部</view>
+      <view class="bba-btn bba-btn--reset" bindtap="onResetChanges">{{t.resetBtn}}</view>
+      <view class="bba-btn bba-btn--save" bindtap="onSaveAll">{{t.saveAllBtn}}</view>
     </view>
   </view>
 
   <!-- 不可编辑提示 -->
   <view class="readonly-notice" wx:if="{{!loading && !editable}}">
-    <text class="readonly-notice-text">当前订单状态不可编辑工序</text>
+    <text class="readonly-notice-text">{{t.frozenHint}}</text>
   </view>
 
   <!-- 添加工序内联表单 -->
   <view wx:if="{{showAddModal}}" class="inline-form-card">
-    <view class="inline-form-title">添加工序</view>
+    <view class="inline-form-title">{{t.addProcessBtn}}</view>
     <view class="mf-body">
       <view class="mf-section">
         <view class="mf-field">
-          <text class="mf-field-label">所属阶段</text>
+          <text class="mf-field-label">{{t.stageLabel}}</text>
           <view class="mf-field-ctrl"><text class="mf-value">{{addForm.stageName}}</text></view>
         </view>
         <view class="mf-field">
-          <text class="mf-field-label">工序名称</text>
+          <text class="mf-field-label">{{t.processNameLabel}}</text>
           <view class="mf-field-ctrl">
             
-              <view bindtap="openPicker" data-handler="onDictPickProcess" data-names="processDict" data-range-key="dictLabel" class="mf-input mf-input--picker">{{addForm.processName || '选择/输入工序'}}</view>
+              <view bindtap="openPicker" data-handler="onDictPickProcess" data-names="processDict" data-range-key="dictLabel" class="mf-input mf-input--picker">{{addForm.processName || t.pickOrInputProc}}</view>
             
-            <input class="mf-input mf-input--manual" value="{{addForm.processName}}" bindinput="onAddFormInput" data-field="processName" placeholder="或手动输入" />
+            <input class="mf-input mf-input--manual" value="{{addForm.processName}}" bindinput="onAddFormInput" data-field="processName" placeholder="{{t.manualInputPh}}" />
           </view>
         </view>
         <view class="mf-field">
-          <text class="mf-field-label">机器类型</text>
-          <view class="mf-field-ctrl"><input class="mf-input" value="{{addForm.machineType}}" bindinput="onAddFormInput" data-field="machineType" placeholder="如：平车" /></view>
+          <text class="mf-field-label">{{t.machineTypeLabel}}</text>
+          <view class="mf-field-ctrl"><input class="mf-input" value="{{addForm.machineType}}" bindinput="onAddFormInput" data-field="machineType" placeholder="{{t.machineFlatPh}}" /></view>
         </view>
         <view class="mf-field">
-          <text class="mf-field-label">工价(元)</text>
+          <text class="mf-field-label">{{t.priceYuanLabel}}</text>
           <view class="mf-field-ctrl"><input class="mf-input" type="digit" value="{{addForm.price}}" bindinput="onAddFormInput" data-field="price" placeholder="0.00" /></view>
         </view>
         <view class="mf-field">
-          <text class="mf-field-label">工时(秒)</text>
+          <text class="mf-field-label">{{t.stdTimeSecLabel}}</text>
           <view class="mf-field-ctrl"><input class="mf-input" type="number" value="{{addForm.standardTime}}" bindinput="onAddFormInput" data-field="standardTime" placeholder="0" /></view>
         </view>
       </view>
     </view>
     <view class="mf-footer">
-      <view class="mf-btn mf-btn--cancel" bindtap="onCloseAddModal">取消</view>
-      <view class="mf-btn mf-btn--confirm" bindtap="onConfirmAdd">确认添加</view>
+      <view class="mf-btn mf-btn--cancel" bindtap="onCloseAddModal">{{t.cancelBtn}}</view>
+      <view class="mf-btn mf-btn--confirm" bindtap="onConfirmAdd">{{t.confirmAddBtn}}</view>
     </view>
   </view>
   <ai-assistant />
