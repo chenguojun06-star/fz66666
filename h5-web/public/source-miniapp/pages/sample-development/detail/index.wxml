@@ -3,7 +3,7 @@
   <!-- 加载状态 -->
   <view wx:if="{{loading}}" class="loading-wrap">
     <view class="loading-spinner"></view>
-    <text class="loading-text">加载中...</text>
+    <text class="loading-text">{{t.loading}}</text>
   </view>
 
   <block wx:elif="{{styleInfo}}">
@@ -27,14 +27,14 @@
             <view wx:if="{{patternSnapshot._receiver}}" class="tag-chip">{{patternSnapshot._receiver}}</view>
             <view wx:if="{{styleInfo._colorText}}" class="tag-chip">{{styleInfo._colorText}}</view>
             <view wx:if="{{styleInfo._sizeText}}" class="tag-chip">{{styleInfo._sizeText}}</view>
-            <view wx:if="{{styleInfo._quantityText}}" class="tag-chip">{{styleInfo._quantityText}}件</view>
+            <view wx:if="{{styleInfo._quantityText}}" class="tag-chip">{{styleInfo._quantityText}}{{t.pieceUnit}}</view>
           </view>
         </view>
       </view>
       <!-- 交板日期栏 -->
       <view wx:if="{{styleInfo._deliveryDate}}" class="info-card__delivery">
         <view class="delivery-left">
-          <text class="delivery-label">交板日期</text>
+          <text class="delivery-label">{{t.deliveryDateLabel}}</text>
           <text class="delivery-date">{{styleInfo._deliveryDate}}</text>
         </view>
         <view wx:if="{{styleInfo._daysLeftText}}" class="delivery-right {{styleInfo._overdue ? 'is-overdue' : ''}}">
@@ -49,43 +49,43 @@
       <!-- 领取按钮（未领取时显示）+ 工序扫码入口（D-157闭环：详情页直达按工序扫码） -->
       <view wx:if="{{patternSnapshot && !patternSnapshot._isScrapped}}" class="receive-row">
         <view wx:if="{{!patternSnapshot._isReceived && !patternSnapshot._isFullyCompleted}}" class="receive-btn" hover-class="receive-btn--pressed" hover-stay-time="60" bindtap="onReceivePattern">
-          <text class="receive-btn__text">领取样衣</text>
+          <text class="receive-btn__text">{{t.claimSample}}</text>
         </view>
         <view class="receive-btn receive-btn--secondary" hover-class="receive-btn--pressed" hover-stay-time="60" bindtap="onProcessScan">
-          <text class="receive-btn__text">工序扫码</text>
+          <text class="receive-btn__text">{{t.processScanTitle}}</text>
         </view>
         <!-- D-181 对齐PC：审核/入库是详情页动作，不是工序 -->
         <view wx:if="{{patternSnapshot._showReviewAction}}" class="receive-btn receive-btn--secondary" hover-class="receive-btn--pressed" hover-stay-time="60" bindtap="onSampleReview">
-          <text class="receive-btn__text">样衣审核</text>
+          <text class="receive-btn__text">{{t.sampleReview}}</text>
         </view>
         <view wx:if="{{patternSnapshot._showWarehouseInAction}}" class="receive-btn receive-btn--warehouse" hover-class="receive-btn--pressed" hover-stay-time="60" bindtap="onSampleWarehouseIn">
-          <text class="receive-btn__text">样衣入库</text>
+          <text class="receive-btn__text">{{t.sampleInbound}}</text>
         </view>
       </view>
       <!-- P2：样衣完成 / 推送到下单管理（与 PC 端对齐的操作入口） -->
       <view wx:if="{{styleInfo._canCompleteSample || styleInfo._canPushToOrder}}" class="sample-action-row">
         <view wx:if="{{styleInfo._canCompleteSample}}" class="sample-action-btn" bindtap="onCompleteSampleTap">
-          <text class="sample-action-btn__text">完成样衣</text>
+          <text class="sample-action-btn__text">{{t.completeSample}}</text>
         </view>
         <view wx:if="{{styleInfo._canPushToOrder}}" class="sample-action-btn sample-action-btn--primary" bindtap="onPushToOrderTap">
-          <text class="sample-action-btn__text sample-action-btn__text--primary">推送到下单管理</text>
+          <text class="sample-action-btn__text sample-action-btn__text--primary">{{t.pushToOrder}}</text>
         </view>
       </view>
       <!-- 三列统计 -->
       <view class="stats-row">
         <view class="stats-item">
           <text class="stats-value">{{progressPercent}}%</text>
-          <text class="stats-label">总进度</text>
+          <text class="stats-label">{{t.totalProgress}}</text>
         </view>
         <view class="stats-divider"></view>
         <view class="stats-item">
           <text class="stats-value">{{completedCount}}/{{totalCount}}</text>
-          <text class="stats-label">已完成节点</text>
+          <text class="stats-label">{{t.doneNodes}}</text>
         </view>
         <view class="stats-divider"></view>
         <view class="stats-item">
           <text class="stats-value stats-value--accent">{{styleInfo._daysLeftText || '--'}}</text>
-          <text class="stats-label">距交板</text>
+          <text class="stats-label">{{t.untilDelivery}}</text>
         </view>
       </view>
       <!-- 进度条 -->
@@ -115,7 +115,7 @@
       </scroll-view>
       <!-- D-182：未配置工序时明确提示，不再显示固定的4个父阶段假节点 -->
       <view wx:if="{{noProcessConfig}}" class="stage-empty-hint">
-        <text class="stage-empty-hint__text">该款未配置开发工序，请先在 PC 端款式资料中配置工序</text>
+        <text class="stage-empty-hint__text">{{t.noProcessConfig}}</text>
       </view>
     </view>
 
@@ -141,19 +141,19 @@
       <!-- BOM 物料 -->
       <view wx:if="{{activeTab === 'bom'}}" class="tab-card">
         <view class="tab-card__header">
-          <text class="tab-card__title">物料清单</text>
+          <text class="tab-card__title">{{t.tabBom}}</text>
           <view class="tab-card__header-right">
-            <text class="tab-card__count">{{bomList.length}}项</text>
+            <text class="tab-card__count">{{bomList.length}}{{t.countUnit}}</text>
             <view
               wx:if="{{patternId}}"
               class="tab-card__proc-btn"
               bindtap="onGoProcurement"
               hover-class="tab-card__proc-btn-hover"
               hover-stay-time="100"
-            >管理采购</view>
+            >{{t.managePurchase}}</view>
           </view>
         </view>
-        <view wx:if="{{bomLoading}}" class="empty-hint"><text class="empty-hint__text">加载中...</text></view>
+        <view wx:if="{{bomLoading}}" class="empty-hint"><text class="empty-hint__text">{{t.loading}}</text></view>
         <view wx:elif="{{bomList.length > 0}}" class="bom-list">
           <view wx:for="{{bomList}}" wx:key="id" class="bom-item">
             <view class="bom-item__main">
@@ -168,40 +168,40 @@
               </view>
               <view class="bom-item__detail">
                 <view class="bom-item__detail-item">
-                  <text class="bom-item__detail-label">单件用量</text>
+                  <text class="bom-item__detail-label">{{t.usagePerPiece}}</text>
                   <text class="bom-item__detail-val">{{item.usageAmount || '-'}}{{item.unit || ''}}</text>
                 </view>
                 <view wx:if="{{item.lossRate !== null && item.lossRate !== undefined}}" class="bom-item__detail-item">
-                  <text class="bom-item__detail-label">损耗率</text>
+                  <text class="bom-item__detail-label">{{t.lossRate}}</text>
                   <text class="bom-item__detail-val">{{item.lossRate}}%</text>
                 </view>
                 <view wx:if="{{item.unitPrice}}" class="bom-item__detail-item">
-                  <text class="bom-item__detail-label">单价</text>
+                  <text class="bom-item__detail-label">{{t.unitPrice}}</text>
                   <text class="bom-item__detail-val">¥{{item.unitPrice}}</text>
                 </view>
                 <view wx:if="{{item.totalPrice}}" class="bom-item__detail-item">
-                  <text class="bom-item__detail-label">合计</text>
+                  <text class="bom-item__detail-label">{{t.total}}</text>
                   <text class="bom-item__detail-val bom-item__detail-val--accent">¥{{item.totalPrice}}</text>
                 </view>
               </view>
               <view wx:if="{{item.stockStatus}}" class="bom-item__stock">
                 <view class="bom-item__stock-dot bom-item__stock-dot--{{item.stockStatus}}"></view>
                 <text class="bom-item__stock-text">{{item.stockStatusText}}</text>
-                <text wx:if="{{item.availableStock !== null && item.availableStock !== undefined}}" class="bom-item__stock-qty">可用{{item.availableStock}}{{item.unit || ''}}</text>
+                <text wx:if="{{item.availableStock !== null && item.availableStock !== undefined}}" class="bom-item__stock-qty">{{item.availableStock}}{{item.unit}}</text>
               </view>
             </view>
           </view>
         </view>
-        <view wx:else class="empty-hint"><text class="empty-hint__text">暂无物料清单，请在 PC 端配置</text></view>
+        <view wx:else class="empty-hint"><text class="empty-hint__text">{{t.noBomHint}}</text></view>
       </view>
 
       <!-- 纸样（附件中 bizType 为 pattern* 的子集，含流转后的终版，避免样衣完成后纸样消失） -->
       <view wx:if="{{activeTab === 'pattern'}}" class="tab-card">
         <view class="tab-card__header">
-          <text class="tab-card__title">纸样文件</text>
-          <text class="tab-card__count">{{patternFileList.length}}个</text>
+          <text class="tab-card__title">{{t.patternFiles}}</text>
+          <text class="tab-card__count">{{patternFileList.length}}{{t.countPiecesUnit}}</text>
         </view>
-        <view wx:if="{{attachmentLoading}}" class="empty-hint"><text class="empty-hint__text">加载中...</text></view>
+        <view wx:if="{{attachmentLoading}}" class="empty-hint"><text class="empty-hint__text">{{t.loading}}</text></view>
         <view wx:elif="{{patternFileList.length > 0}}" class="file-list">
           <view
             wx:for="{{patternFileList}}"
@@ -215,7 +215,7 @@
             <image wx:if="{{item._isImage}}" src="{{item._previewUrl}}" mode="aspectFill" class="file-item__thumb" />
             <view wx:else class="file-item__icon file-item__icon--pattern"></view>
             <view class="file-item__info">
-              <text class="file-item__name">{{item.fileName || '纸样文件'}}</text>
+              <text class="file-item__name">{{item.fileName || t.patternFiles}}</text>
               <text class="file-item__meta">v{{item.version || 1}} · {{item._bizTypeText}} · {{item._uploadTimeText}}</text>
             </view>
             <view class="file-item__action" data-idx="{{item._srcIndex}}" catchtap="onDownloadAttachment">
@@ -223,21 +223,21 @@
             </view>
           </view>
         </view>
-        <view wx:else class="empty-hint"><text class="empty-hint__text">暂无纸样文件，请在 PC 端上传</text></view>
+        <view wx:else class="empty-hint"><text class="empty-hint__text">{{t.noPatternHint}}</text></view>
       </view>
 
       <!-- 尺寸表（横向：部位为行，尺码为列） -->
       <view wx:if="{{activeTab === 'size'}}" class="tab-card">
         <view class="tab-card__header">
-          <text class="tab-card__title">尺寸表</text>
-          <text class="tab-card__count">{{sizeRows.length}}个部位</text>
+          <text class="tab-card__title">{{t.tabSize}}</text>
+          <text class="tab-card__count">{{sizeRows.length}}{{t.partsCount}}</text>
         </view>
-        <view wx:if="{{sizeLoading}}" class="empty-hint"><text class="empty-hint__text">加载中...</text></view>
+        <view wx:if="{{sizeLoading}}" class="empty-hint"><text class="empty-hint__text">{{t.loading}}</text></view>
         <scroll-view scroll-x wx:elif="{{sizeRows.length > 0}}" class="size-scroll" enhanced show-scrollbar="{{false}}">
           <view class="size-table">
             <!-- 表头：部位 | S | M | L | ... -->
             <view class="size-row size-row--head">
-              <text class="size-cell size-cell--part">部位</text>
+              <text class="size-cell size-cell--part">{{t.partHeader}}</text>
               <text wx:for="{{sizeColumns}}" wx:key="*this" class="size-cell size-cell--size">{{item}}</text>
             </view>
             <!-- 数据行：胸围 | 90 | 94 | 98 | ... -->
@@ -249,16 +249,16 @@
             </view>
           </view>
         </scroll-view>
-        <view wx:else class="empty-hint"><text class="empty-hint__text">暂无尺寸表，请在 PC 端配置</text></view>
+        <view wx:else class="empty-hint"><text class="empty-hint__text">{{t.noSizeHint}}</text></view>
       </view>
 
       <!-- 工序（可点击展开，显示实际扫码进度+记录） -->
       <view wx:if="{{activeTab === 'process'}}" class="tab-card">
         <view class="tab-card__header">
-          <text class="tab-card__title">工序进度</text>
-          <text class="tab-card__count">{{allProcesses.length}}项</text>
+          <text class="tab-card__title">{{t.processProgress}}</text>
+          <text class="tab-card__count">{{allProcesses.length}}{{t.countUnit}}</text>
         </view>
-        <view wx:if="{{processLoading}}" class="empty-hint"><text class="empty-hint__text">加载中...</text></view>
+        <view wx:if="{{processLoading}}" class="empty-hint"><text class="empty-hint__text">{{t.loading}}</text></view>
         <!-- D-170：工序时间线（布局对齐订单详情页「工序进度」） -->
         <view wx:elif="{{allProcesses.length > 0}}" class="proc-timeline">
           <view
@@ -295,15 +295,15 @@
                 <text wx:if="{{item._claimBy && item._lastTime}}" class="proc-tl-meta-sep"> · </text>
                 <text wx:if="{{item._lastTime}}" class="proc-tl-meta-text">{{item._lastTime}}</text>
                 <text wx:if="{{item._price}}" class="proc-tl-meta-sep"> · </text>
-                <text wx:if="{{item._price}}" class="proc-tl-meta-text">¥{{item._price}}/件</text>
+                <text wx:if="{{item._price}}" class="proc-tl-meta-text">¥{{item._price}}/{{t.pieceUnit}}</text>
               </view>
               <!-- 展开明细：扫码记录列表 -->
               <view wx:if="{{item._expanded && item._scanRecords.length > 0}}" class="proc-tl-expand">
                 <view class="scan-summary">
-                  <text class="scan-summary__label">扫码记录</text>
-                  <text class="scan-summary__count">{{item._scanCount}}条</text>
-                  <text wx:if="{{item._completedQty > 0}}" class="scan-summary__done">已完成 {{item._completedQty}}件</text>
-                  <text wx:if="{{item._receivedQty > 0}}" class="scan-summary__received">已领 {{item._receivedQty}}件</text>
+                  <text class="scan-summary__label">{{t.scanRecords}}</text>
+                  <text class="scan-summary__count">{{item._scanCount}}{{t.recordsUnit}}</text>
+                  <text wx:if="{{item._completedQty > 0}}" class="scan-summary__done">{{t.completedQty}}</text>
+                  <text wx:if="{{item._receivedQty > 0}}" class="scan-summary__received">{{t.receivedQty}}</text>
                 </view>
                 <view class="scan-record-list">
                   <view wx:for="{{item._scanRecords}}" wx:for-item="rec" wx:for-index="ri" wx:key="ri" class="scan-record-item">
@@ -315,7 +315,7 @@
                       <text class="scan-record-item__operator">{{rec.operatorName}}</text>
                       <text wx:if="{{rec.color}}" class="scan-record-item__color">· {{rec.color}}</text>
                       <text wx:if="{{rec.size}}" class="scan-record-item__size">· {{rec.size}}</text>
-                      <text wx:if="{{rec.quantity > 0}}" class="scan-record-item__qty">· {{rec.quantity}}件</text>
+                      <text wx:if="{{rec.quantity > 0}}" class="scan-record-item__qty">· {{rec.quantity}}{{t.pieceUnit}}</text>
                     </view>
                   </view>
                 </view>
@@ -323,16 +323,16 @@
             </view>
           </view>
         </view>
-        <view wx:else class="empty-hint"><text class="empty-hint__text">暂无工序配置，请在 PC 端配置</text></view>
+        <view wx:else class="empty-hint"><text class="empty-hint__text">{{t.noProcessHint}}</text></view>
       </view>
 
       <!-- 二次工艺 -->
       <view wx:if="{{activeTab === 'secondary'}}" class="tab-card">
         <view class="tab-card__header">
-          <text class="tab-card__title">二次工艺</text>
-          <text class="tab-card__count">{{secondaryList.length}}项</text>
+          <text class="tab-card__title">{{t.tabSecondary}}</text>
+          <text class="tab-card__count">{{secondaryList.length}}{{t.countUnit}}</text>
         </view>
-        <view wx:if="{{secondaryLoading}}" class="empty-hint"><text class="empty-hint__text">加载中...</text></view>
+        <view wx:if="{{secondaryLoading}}" class="empty-hint"><text class="empty-hint__text">{{t.loading}}</text></view>
         <view wx:elif="{{secondaryList.length > 0}}" class="bom-list">
           <view wx:for="{{secondaryList}}" wx:key="id" class="bom-item">
             <view class="bom-item__main">
@@ -349,22 +349,22 @@
             </view>
           </view>
         </view>
-        <view wx:else class="empty-hint"><text class="empty-hint__text">暂无二次工艺</text></view>
+        <view wx:else class="empty-hint"><text class="empty-hint__text">{{t.noSecondary}}</text></view>
       </view>
 
       <!-- 附件（与 PC 端资料中心「附件文件」同源：/api/style/attachment/list?styleId=；底部不再重复展示，上传入口收进此处） -->
       <view wx:if="{{activeTab === 'attachment'}}" class="tab-card">
         <view class="tab-card__header">
-          <text class="tab-card__title">附件</text>
+          <text class="tab-card__title">{{t.tabAttachment}}</text>
           <view class="tab-card__header-right">
-            <text class="tab-card__count">{{attachmentList.length}}个</text>
+            <text class="tab-card__count">{{attachmentList.length}}{{t.countPiecesUnit}}</text>
             <view class="outline-btn outline-btn--sm" bindtap="onUploadAttachment">
               <view class="icon-plus-sm" style="width:12px;height:12px;"></view>
-              <text class="outline-btn__text">上传</text>
+              <text class="outline-btn__text">{{t.tabAttachUpload}}</text>
             </view>
           </view>
         </view>
-        <view wx:if="{{attachmentLoading}}" class="empty-hint"><text class="empty-hint__text">加载中...</text></view>
+        <view wx:if="{{attachmentLoading}}" class="empty-hint"><text class="empty-hint__text">{{t.loading}}</text></view>
         <view wx:elif="{{attachmentList.length > 0}}" class="file-list">
           <view
             wx:for="{{attachmentList}}"
@@ -379,7 +379,7 @@
             <view wx:elif="{{item._isPattern}}" class="file-item__icon file-item__icon--pattern"></view>
             <view wx:else class="file-item__icon"></view>
             <view class="file-item__info">
-              <text class="file-item__name">{{item.fileName || '附件'}}</text>
+              <text class="file-item__name">{{item.fileName || t.tabAttachment}}</text>
               <text class="file-item__meta">{{item._bizTypeText}} · {{item.fileSizeText}} · {{item._uploadTimeText}}</text>
             </view>
             <view class="file-item__action" data-idx="{{index}}" catchtap="onDownloadAttachment">
@@ -387,7 +387,7 @@
             </view>
           </view>
         </view>
-        <view wx:else class="empty-hint"><text class="empty-hint__text">暂无附件，可点击下方「上传」添加</text></view>
+        <view wx:else class="empty-hint"><text class="empty-hint__text">{{t.noAttachmentHint}}</text></view>
       </view>
 
     </view>
@@ -397,9 +397,9 @@
     <!-- 3. 款式备注（附件与 tab 内合并为一份展示，上传入口在「附件」tab；此处只保留备注） -->
     <view class="remarks-section">
       <view class="remarks-title-row">
-        <text class="remarks-title">款式备注</text>
+        <text class="remarks-title">{{t.styleRemark}}</text>
         <text wx:if="{{styleInfo.styleNo}}" class="remarks-sub">{{styleInfo.styleNo}}</text>
-        <text class="remarks-count">{{remarkList.length || 0}} 条</text>
+        <text class="remarks-count">{{remarkList.length || 0}}{{t.remarkUnit}}</text>
       </view>
       <view class="remark-input-bar">
         <view class="remark-input-top">
@@ -411,12 +411,12 @@
             </view>
           
           <view class="outline-btn outline-btn--sm {{(submittingRemark || !remarkInput) ? 'is-disabled' : ''}}" bindtap="onSubmitRemark">
-            <text class="outline-btn__text">{{submittingRemark ? '提交中' : '提交'}}</text>
+            <text class="outline-btn__text">{{submittingRemark ? t.submittingWord : t.submitWord}}</text>
           </view>
         </view>
         <textarea
           class="remark-textarea"
-          placeholder="输入备注内容..."
+          placeholder="{{t.remarkInputPh}}"
           placeholder-class="remark-placeholder"
           value="{{remarkInput}}"
           bindinput="onRemarkInput"
@@ -440,7 +440,7 @@
         </view>
       </view>
       <view wx:elif="{{!remarkLoading}}" class="empty-hint">
-        <text class="empty-hint__text">暂无备注</text>
+        <text class="empty-hint__text">{{t.noRemark}}</text>
       </view>
     </view>
 
@@ -450,7 +450,7 @@
   <!-- 空状态 -->
   <view wx:else class="empty-state">
     <view class="icon-sample" style="width:48px;height:48px;opacity:0.3;"></view>
-    <text class="empty-state__text">未找到样衣信息</text>
+    <text class="empty-state__text">{{t.noStyleInfo}}</text>
   </view>
   <ai-assistant />
 </view>
@@ -459,7 +459,7 @@
 <view wx:if="{{progressEditor.visible}}" class="progress-editor-mask" bindtap="onProgressCancel">
   <view class="progress-editor" catchtap="">
     <view class="progress-editor__header">
-      <text class="progress-editor__title">编辑进度 - {{progressEditor.stageName}}</text>
+      <text class="progress-editor__title">{{t.progressEditor}} - {{progressEditor.stageName}}</text>
       <view class="progress-editor__close" bindtap="onProgressCancel">
         <text class="progress-editor__close-text">×</text>
       </view>
@@ -491,22 +491,22 @@
       />
       <view class="progress-editor__quick-row">
         <view class="progress-editor__quick-btn" data-delta="0" data-absolute="true" bindtap="onProgressStep">
-          <text class="progress-editor__quick-text">归零</text>
+          <text class="progress-editor__quick-text">{{t.resetWord}}</text>
         </view>
         <view class="progress-editor__quick-btn" data-delta="50" data-absolute="true" bindtap="onProgressStep">
-          <text class="progress-editor__quick-text">半成</text>
+          <text class="progress-editor__quick-text">{{t.halfWord}}</text>
         </view>
         <view class="progress-editor__quick-btn" data-delta="100" data-absolute="true" bindtap="onProgressStep">
-          <text class="progress-editor__quick-text">完成</text>
+          <text class="progress-editor__quick-text">{{t.completeWord}}</text>
         </view>
       </view>
     </view>
     <view class="progress-editor__footer">
       <view class="progress-editor__btn progress-editor__btn--cancel" bindtap="onProgressCancel">
-        <text class="progress-editor__btn-text">取消</text>
+        <text class="progress-editor__btn-text">{{t.cancel}}</text>
       </view>
       <view class="progress-editor__btn progress-editor__btn--save {{progressSaving ? 'is-disabled' : ''}}" bindtap="onProgressSave">
-        <text class="progress-editor__btn-text">{{progressSaving ? '保存中' : '保存'}}</text>
+        <text class="progress-editor__btn-text">{{progressSaving ? t.savingWord : t.saveWord}}</text>
       </view>
     </view>
   </view>

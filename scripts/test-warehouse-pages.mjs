@@ -120,6 +120,9 @@ function loadRealModule(relFromMP, wx) {
     exports: m.exports,
     console,
     wx: wx || makeWx(),
+    // 小程序 Behavior 构造器：真实语义是「登记定义并返回它」，这里原样返回即可
+    // （页面 behaviors 数组只用于框架合并，桩里不合并 —— 被测方法都在页面 cfg 上）
+    Behavior: (def) => def,
     require: (q) => {
       const hit = resolveModuleFile(q, dir);
       if (hit) return loadRealModule(hit, wx);
@@ -180,6 +183,8 @@ function loadPage(jsPath, apiStub) {
   const sandbox = {
     Page: (c) => { cfg = c; },
     wx,
+    // 同 loadRealModule：Mixin 文件（Behavior({...})）也在沙箱里跑
+    Behavior: (def) => def,
     // ⚠️ 必须带 globalData：真实 getApp() 返回 App 实例，`getApp().globalData.userInfo`
     //    是页面里常见的读法（如样衣借调取操作人）。给 {} 会在那里直接 TypeError。
     getApp: () => ({ globalData: {} }),
@@ -2433,6 +2438,18 @@ const PATTERN_JS = 'pages/scan/pattern/index.js';
 const PATTERN_WXML = 'pages/scan/pattern/index.wxml';
 const SAMPLE_DEV_JS = 'pages/sample-development/index/index.js';
 const SAMPLE_DEV_WXML = 'pages/sample-development/index/index.wxml';
+const SAMPLE_DETAIL_JS = 'pages/sample-development/detail/index.js';
+const SAMPLE_DETAIL_WXML = 'pages/sample-development/detail/index.wxml';
+const SCAN_HOME_JS = 'pages/scan/index.js';
+const SCAN_HOME_WXML = 'pages/scan/index.wxml';
+// 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
+const SCAN_HOME_SECTIONS = [
+  'pages/scan/sections/stats-entries.wxml',
+  'pages/scan/sections/quick-entries.wxml',
+  'pages/scan/sections/scan-area.wxml',
+  'pages/scan/sections/scan-result.wxml',
+  'pages/scan/sections/scan-history.wxml',
+];
 
 /** 把 menuRows / filteredApps 拍平成 [分组名, 应用名...] */
 function flattenMenuNames(rows) {
@@ -2764,6 +2781,79 @@ function testI18nScanQuality() {
   eq('en 超五张 toast', toast && toast.title, 'Up to 5 photos allowed');
 }
 
+/**
+ * 扫码主页（D-560）—— 主页 + 5 个 include 片段 + JS 层提示文案
+ *
+ * ⚠️ 本页文案**大半在 include 进来的 sections/*.wxml 里**（主页本体只有离线栏那两行），
+ *    而 testPageI18n 只扫主 wxml —— 所以片段必须单独扫，否则「改回中文」不会被发现。
+ */
+function testI18nScanHome() {
+  testPageI18n(SCAN_HOME_JS, SCAN_HOME_WXML, '扫码主页');
+
+  // ① include 的 5 个片段：结构守护（防回退）
+  for (const rel of SCAN_HOME_SECTIONS) {
+    const raw = stripComments(fs.readFileSync(path.join(MP, rel), 'utf8'));
+    const leftovers = raw.match(/[\u4e00-\u9fff]+/g) || [];
+    ok(`片段 ${rel.split('/').pop()} 无硬编码中文`, leftovers.length === 0, leftovers.join(' / '));
+  }
+
+  const { page: zhP, wx: zhWx } = loadPage(SCAN_HOME_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(SCAN_HOME_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  // ② t 表关键值（含 cross-check：en 下不得有中文）
+  eq('zh 今日统计', zhP.data.t.statsTitle, '今日统计');
+  eq('en 今日统计', enP.data.t.statsTitle, "Today's stats");
+  eq('en 点击扫码', enP.data.t.tapToScan, 'Tap to scan');
+  eq('en 自动匹配工序', enP.data.t.autoMatchStage, 'Auto-match process');
+  eq('en 撤回', enP.data.t.undoWord, 'Undo');
+  ok('en 扫码区说明无中文', !CJK_RE.test(String(enP.data.t.scanModeTip)), enP.data.t.scanModeTip);
+  ok('en 无今日记录无中文', !CJK_RE.test(String(enP.data.t.noRecordsToday)), enP.data.t.noRecordsToday);
+
+  // ③ 单位词是**后缀**（「5 次」vs「5 times」），英文必须带前导空格
+  ok('en 次单位带前导空格', /^\s/.test(String(enP.data.t.unitTimes)), JSON.stringify(enP.data.t.unitTimes));
+  ok('zh 次单位无前导空格', !/^\s/.test(String(zhP.data.t.unitTimes)), JSON.stringify(zhP.data.t.unitTimes));
+
+  // ④ 带 {count} 的文案由 wxs 的 utils.fmt 替换，模板里必须保留占位符
+  ok('库位标签保留 {count}', /\{count\}/.test(String(enP.data.t.targetLocationFmt)), enP.data.t.targetLocationFmt);
+  ok('待上传文案保留 {count}', /\{count\}/.test(String(enP.data.t.offlinePendingFmt)), enP.data.t.offlinePendingFmt);
+
+  // ⑤ JS 层提示文案（toast / showModal / showLoading）—— 页面 t 表查不到，必须单独断言
+  const enApi = loadPage(SCAN_HOME_JS, makeApi());
+  enApi.page.applyLanguage('en-US');
+  const zhApi = loadPage(SCAN_HOME_JS, makeApi());
+  zhApi.page.applyLanguage('zh-CN');
+
+  // onCheckNetwork 的三条分支
+  enApi.wx.getNetworkType = (o) => o.success({ networkType: 'none' });
+  enApi.page.onCheckNetwork();
+  eq('en 网络不可用 toast', lastCall(enApi.wx, 'showToast').title, 'No network, please check settings');
+  enApi.wx.getNetworkType = (o) => o.success({ networkType: 'wifi' });
+  enApi.page.onCheckNetwork();
+  eq('en 网络已恢复 toast', lastCall(enApi.wx, 'showToast').title, 'Network restored, scan again');
+  enApi.wx.getNetworkType = (o) => o.fail({});
+  enApi.page.onCheckNetwork();
+  eq('en 检测失败 toast', lastCall(enApi.wx, 'showToast').title, 'Check failed, please retry');
+
+  // showModal 确认撤回（微信 wx.showModal 的 confirmText 也要翻）
+  zhApi.wx.showModal = (o) => { zhApi.wx.calls.push(['showModal', o]); };
+  enApi.wx.showModal = (o) => { enApi.wx.calls.push(['showModal', o]); o.success({ confirm: false }); };
+  zhApi.page.onUndoHistoryRecord({ currentTarget: { dataset: { recordId: 'r1' } } });
+  const zhModal = lastCall(zhApi.wx, 'showModal') || {};
+  eq('zh 撤回弹窗标题', zhModal.title, '确认撤回');
+  eq('zh 撤回按钮', zhModal.confirmText, '撤回');
+  enApi.page.onUndoHistoryRecord({ currentTarget: { dataset: { recordId: 'r1' } } });
+  const enModal = lastCall(enApi.wx, 'showModal') || {};
+  eq('en 撤回弹窗标题', enModal.title, 'Confirm undo');
+  eq('en 撤回按钮', enModal.confirmText, 'Undo');
+  ok('en 撤回弹窗正文无中文', !CJK_RE.test(String(enModal.content)), enModal.content);
+
+  // ⑥ 导航标题
+  eq('扫码主页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan');
+  eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
+}
+
 /** 扫码结果页（D-556）—— 信息卡/尺寸表/工序选择/仓库库位/提交反馈 */
 function testI18nScanResult() {
   testPageI18n(SCAN_RESULT_JS, SCAN_RESULT_WXML, '扫码结果页');
@@ -2861,6 +2951,32 @@ function testI18nSampleDev() {
   eq('跟进页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '样衣开发跟进');
 }
 
+/** 款式详情页（D-560）—— 6个tab/备注角色/审批/上传下载反馈 */
+function testI18nSampleDetail() {
+  testPageI18n(SAMPLE_DETAIL_JS, SAMPLE_DETAIL_WXML, '款式详情页');
+
+  const { page: zhP, wx: zhWx } = loadPage(SAMPLE_DETAIL_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(SAMPLE_DETAIL_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  // 6 个 tab 按语言重建
+  const zhTabs = zhP.data.tabs.map(t2 => t2.name).join('|');
+  const enTabs = enP.data.tabs.map(t2 => t2.name).join('|');
+  eq('zh tabs', zhTabs, '物料清单|纸样|尺寸表|工序|二次工艺|附件');
+  ok('en tabs 无中文', !CJK_RE.test(enTabs), enTabs);
+  eq('en tabs 数一致', String(zhP.data.tabs.length), String(enP.data.tabs.length));
+
+  // 备注角色按语言重建
+  eq('zh 角色首位', zhP.data.remarkRoles[0].label, '选择角色');
+  eq('en 角色首位', enP.data.remarkRoles[0].label, 'Select Role');
+  ok('en 角色 designer', enP.data.remarkRoles[1].label === 'Designer', enP.data.remarkRoles[1].label);
+
+  // 导航标题
+  eq('详情页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Sample Detail');
+  eq('详情页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '样衣详情');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -2908,6 +3024,8 @@ try {
   testI18nScanConfirm();
   testI18nPattern();
   testI18nSampleDev();
+  testI18nSampleDetail();
+  testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

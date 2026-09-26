@@ -1,3 +1,5 @@
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.sampleDetail.';
 const { style } = require('../../../utils/api-modules/style-warehouse');
 const production = require('../../../utils/api-modules/production');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
@@ -41,16 +43,17 @@ const BIZ_TYPE_LABEL = {
   pattern_final: '纸样(终版)',
   pattern_grading_final: '放码纸样(终版)',
   pattern_supplement: '补充纸样',
-  image: '图片',
-  colorway: '配色',
-  size_table: '尺寸表',
-  process: '工艺',
-  quote: '报价',
+  image: 'bizImage',
+  colorway: 'bizColorway',
+  size_table: 'tabSize',
+  process: 'tabProcess',
+  quote: 'bizQuote',
 };
 
 function bizTypeLabel(v) {
-  if (!v) return '通用';
-  return BIZ_TYPE_LABEL[String(v).trim()] || String(v).trim();
+  if (!v) return i18n.t(NS + 'bizGeneral');
+  var key = BIZ_TYPE_LABEL[String(v).trim()];
+  return key ? i18n.t(NS + key) : String(v).trim();
 }
 
 // 属于"纸样"的 bizType（含流转后的终版，避免样衣完成后纸样 tab 变空）
@@ -75,13 +78,14 @@ function resolveDocType(fileName) {
   return OPEN_DOC_TYPES[raw.substring(dot + 1)] || '';
 }
 
-const REMARK_ROLES = [
-  { key: '', label: '选择角色' },
-  { key: 'designer', label: '设计师' },
-  { key: 'pattern_maker', label: '制版师' },
-  { key: 'merchandiser', label: '跟单员' },
-  { key: 'factory', label: '工厂' },
-  { key: 'qc', label: '质检' },
+// 备注角色：只存键后缀，applyLanguage 里按语言重建数组
+const REMARK_ROLE_KEYS = [
+  { key: '', nameKey: 'selectRole' },
+  { key: 'designer', nameKey: 'roleDesigner' },
+  { key: 'pattern_maker', nameKey: 'roleMaker' },
+  { key: 'merchandiser', nameKey: 'roleMerch' },
+  { key: 'factory', nameKey: 'roleFactory' },
+  { key: 'qc', nameKey: 'roleQc' },
 ];
 
 const AVATAR_COLORS = [
@@ -92,20 +96,21 @@ const AVATAR_COLORS = [
   'var(--color-purple)',
 ];
 
+// 季节/状态兜底：键后缀（season 键在 mp.sampleDev 命名空间）
 const SEASON_MAP = {
-  SPRING: '春季',
-  SUMMER: '夏季',
-  AUTUMN: '秋季',
-  WINTER: '冬季',
-  SPRING_SUMMER: '春夏',
-  AUTUMN_WINTER: '秋冬',
+  SPRING: 'mp.sampleDev.seasonSpring',
+  SUMMER: 'mp.sampleDev.seasonSummer',
+  AUTUMN: 'mp.sampleDev.seasonAutumn',
+  WINTER: 'mp.sampleDev.seasonWinter',
+  SPRING_SUMMER: 'mp.sampleDev.seasonSpringSummer',
+  AUTUMN_WINTER: 'mp.sampleDev.seasonFallWinter',
 };
 
 // 本地兜底：PATTERN_STATUS_MAP 未覆盖的样衣状态
 const LOCAL_PATTERN_STATUS_FALLBACK = {
-  REWORK: '返工中',
-  CANCELLED: '已取消',
-  CLOSED: '已关单',
+  REWORK: 'statusRework',
+  CANCELLED: 'common.cancelled',
+  CLOSED: 'common.closed',
 };
 
 function clampPercent(value) {
@@ -157,7 +162,7 @@ function isSampleSnapshotFullyCompleted(snapshot) {
 }
 
 function formatNodeTime(value) {
-  if (!value) return '待领取';
+  if (!value) return i18n.t(NS + 'pendingClaim');
   const s = String(value).trim();
   // 后端返回格式为 MM-dd HH:mm，避免 replace 成 MM/DD HH:mm 导致 iOS 无法解析
   const match = s.match(/^(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}))?/);
@@ -165,7 +170,7 @@ function formatNodeTime(value) {
     return match[1] + '-' + match[2];
   }
   const d = new Date(s.replace(/-/g, '/'));
-  if (isNaN(d.getTime())) return '待领取';
+  if (isNaN(d.getTime())) return i18n.t(NS + 'pendingClaim');
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return m + '-' + day;
@@ -230,12 +235,12 @@ Page({
     // 资料标签
     activeTab: 'bom',       // bom/pattern/size/process/secondary/attachment（备注只保留底部「款式备注」，tab 不再重复展示）
     tabs: [
-      { key: 'bom',        name: '物料清单' },
-      { key: 'pattern',    name: '纸样' },
-      { key: 'size',       name: '尺寸表' },
-      { key: 'process',    name: '工序' },
-      { key: 'secondary',  name: '二次工艺' },
-      { key: 'attachment', name: '附件' },
+      { key: 'bom',        name: '' },
+      { key: 'pattern',    name: '' },
+      { key: 'size',       name: '' },
+      { key: 'process',    name: '' },
+      { key: 'secondary',  name: '' },
+      { key: 'attachment', name: '' },
     ],
 
     // 附件
@@ -249,7 +254,7 @@ Page({
     remarkInput: '',
     remarkRole: '',
     remarkRoleIndex: 0,
-    remarkRoles: REMARK_ROLES,
+    remarkRoles: [],  // applyLanguage 按 REMARK_ROLE_KEYS 重建
     submittingRemark: false,
 
     // 进度编辑器（与 PC 端 progressEditorOpen 对齐）
@@ -262,11 +267,80 @@ Page({
     progressSaving: false,
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}） */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        deliveryDateLabel: i18n.t(NS + 'deliveryDateLabel', lang),
+        claimSample: i18n.t(NS + 'claimSample', lang),
+        processScanTitle: i18n.t(NS + 'processScanTitle', lang),
+        sampleReview: i18n.t(NS + 'sampleReview', lang),
+        sampleInbound: i18n.t(NS + 'sampleInbound', lang),
+        completeSample: i18n.t(NS + 'completeSample', lang),
+        pushToOrder: i18n.t(NS + 'pushToOrder', lang),
+        totalProgress: i18n.t(NS + 'totalProgress', lang),
+        doneNodes: i18n.t(NS + 'doneNodes', lang),
+        untilDelivery: i18n.t(NS + 'untilDelivery', lang),
+        noProcessConfig: i18n.t(NS + 'noProcessConfig', lang),
+        tabBom: i18n.t(NS + 'tabBom', lang),
+        tabPattern: i18n.t(NS + 'tabPattern', lang),
+        tabSize: i18n.t(NS + 'tabSize', lang),
+        tabProcess: i18n.t(NS + 'tabProcess', lang),
+        tabSecondary: i18n.t(NS + 'tabSecondary', lang),
+        tabAttachment: i18n.t(NS + 'tabAttachment', lang),
+        managePurchase: i18n.t(NS + 'managePurchase', lang),
+        usagePerPiece: i18n.t(NS + 'usagePerPiece', lang),
+        lossRate: i18n.t(NS + 'lossRate', lang),
+        unitPrice: i18n.t(NS + 'unitPrice', lang),
+        total: i18n.t('common.total', lang),
+        noBomHint: i18n.t(NS + 'noBomHint', lang),
+        patternFiles: i18n.t(NS + 'patternFiles', lang),
+        noPatternHint: i18n.t(NS + 'noPatternHint', lang),
+        partHeader: i18n.t(NS + 'partHeader', lang),
+        noSizeHint: i18n.t(NS + 'noSizeHint', lang),
+        processProgress: i18n.t(NS + 'processProgress', lang),
+        scanRecords: i18n.t(NS + 'scanRecords', lang),
+        noProcessHint: i18n.t(NS + 'noProcessHint', lang),
+        noSecondary: i18n.t(NS + 'noSecondary', lang),
+        tabAttachUpload: i18n.t('common.upLoad', lang),
+        noAttachmentHint: i18n.t(NS + 'noAttachmentHint', lang),
+        styleRemark: i18n.t(NS + 'styleRemark', lang),
+        submittingWord: i18n.t(NS + 'submittingWord', lang),
+        submitWord: i18n.t(NS + 'submitWord', lang),
+        remarkInputPh: i18n.t(NS + 'remarkInputPh', lang),
+        noRemark: i18n.t(NS + 'noRemark', lang),
+        noStyleInfo: i18n.t(NS + 'noStyleInfo', lang),
+        progressEditor: i18n.t(NS + 'progressEditor', lang),
+        resetWord: i18n.t(NS + 'resetWord', lang),
+        halfWord: i18n.t(NS + 'halfWord', lang),
+        completeWord: i18n.t(NS + 'stageDone', lang),
+        cancel: i18n.t('common.cancel', lang),
+        saveWord: i18n.t(NS + 'saveWord', lang),
+        savingWord: i18n.t(NS + 'savingWord', lang),
+        pieceUnit: i18n.t('common.piece', lang),
+      },
+      remarkRoles: REMARK_ROLE_KEYS.map(function (r) { return { key: r.key, label: i18n.t(NS + r.nameKey, lang) }; }),
+      tabs: [
+        { key: 'bom', name: i18n.t(NS + 'tabBom', lang) },
+        { key: 'pattern', name: i18n.t(NS + 'tabPattern', lang) },
+        { key: 'size', name: i18n.t(NS + 'tabSize', lang) },
+        { key: 'process', name: i18n.t(NS + 'tabProcess', lang) },
+        { key: 'secondary', name: i18n.t(NS + 'tabSecondary', lang) },
+        { key: 'attachment', name: i18n.t(NS + 'tabAttachment', lang) },
+      ],
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad(options) {
+    this.applyLanguage(i18n.getLanguage());
     const styleId = decodeParam(options.styleId);
     const patternId = options.id || options.patternId || '';
     if (!styleId && !patternId) {
-      wx.showToast({ title: '缺少参数', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'missingParams', this._lang), icon: 'none' });
       return;
     }
     this.setData({ styleId, patternId });
@@ -329,11 +403,11 @@ Page({
       } else {
         this.processStyleInfo(detail);
         this.setData({ loading: false });
-        wx.showToast({ title: '该样衣暂无关联款式', icon: 'none' });
+        wx.showToast({ title: i18n.t(NS + 'noStyleLinked', this._lang), icon: 'none' });
       }
     } catch (e) {
       this.setData({ loading: false });
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      wx.showToast({ title: i18n.t('common.loadFailed', this._lang), icon: 'none' });
     }
   },
 
@@ -384,7 +458,7 @@ Page({
       this._loadBomAndSizes();
     } catch (e) {
       this.setData({ loading: false });
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      wx.showToast({ title: i18n.t('common.loadFailed', this._lang), icon: 'none' });
     }
   },
 
@@ -591,8 +665,8 @@ Page({
     const styleId = this.data.styleId;
     if (!styleId) return;
     wx.showModal({
-      title: '完成样衣',
-      content: '确认该款样衣已制作完成？完成后可推送到下单管理。',
+      title: i18n.t(NS + 'completeSample', " + L + "),
+      content: i18n.t(NS + 'completeSampleConfirm', " + L + "),
       confirmColor: 'var(--color-primary)',
       success: (res) => {
         if (!res.confirm) return;
@@ -602,7 +676,7 @@ Page({
             this.loadStyleDetail();
           })
           .catch((err) => {
-            wx.showToast({ title: (err && err.errMsg) || '操作失败', icon: 'none' });
+            wx.showToast({ title: (err && err.errMsg) || i18n.t('common.operationFailed', this._lang), icon: 'none' });
           });
       },
     });
@@ -613,18 +687,18 @@ Page({
     const styleId = this.data.styleId;
     if (!styleId) return;
     wx.showModal({
-      title: '推送到下单管理',
+      title: i18n.t(NS + 'pushToOrder', this._lang),
       content: '将同步物料清单、纸样、尺寸表、工序单价到下单管理，确认推送？',
       confirmColor: 'var(--color-primary)',
       success: (res) => {
         if (!res.confirm) return;
-        style.pushToOrderManagement(styleId, null, '小程序端推送')
+        style.pushToOrderManagement(styleId, null, i18n.t(NS + 'pushFromMini', this._lang))
           .then(() => {
-            wx.showToast({ title: '推送成功', icon: 'success' });
+            wx.showToast({ title: i18n.t(NS + 'pushSuccess', this._lang), icon: 'success' });
             this.loadStyleDetail();
           })
           .catch((err) => {
-            wx.showToast({ title: (err && err.errMsg) || '推送失败', icon: 'none' });
+            wx.showToast({ title: (err && err.errMsg) || i18n.t(NS + 'pushFailed', this._lang), icon: 'none' });
           });
       },
     });
@@ -633,7 +707,8 @@ Page({
   getStatusLabel(status) {
     if (!status) return '';
     var upper = String(status).trim().toUpperCase();
-    return PATTERN_STATUS_MAP[upper] || LOCAL_PATTERN_STATUS_FALLBACK[upper] || '';
+    var fb = LOCAL_PATTERN_STATUS_FALLBACK[upper];
+    return PATTERN_STATUS_MAP[upper] || (fb ? i18n.t(fb, this._lang) : '');
   },
 
   getStatusColorVar(status) {
@@ -663,7 +738,7 @@ Page({
     let category = displayCategory(info.category);
     if (category) parts.push(category);
     let season = info.season;
-    if (season && SEASON_MAP[season]) season = SEASON_MAP[season];
+    if (season && SEASON_MAP[season]) season = i18n.t(SEASON_MAP[season], this._lang);
     if (season) parts.push(season);
     return parts.join(' · ');
   },
@@ -795,7 +870,7 @@ Page({
       },
       fail: function (err) {
         if (err && String(err.errMsg || '').indexOf('cancel') >= 0) return;
-        wx.showToast({ title: '选择文件失败', icon: 'none' });
+        wx.showToast({ title: i18n.t(NS + 'pickFileFailed', this._lang), icon: 'none' });
       },
     });
   },
@@ -816,7 +891,7 @@ Page({
       },
       fail: function (err) {
         if (err && String(err.errMsg || '').indexOf('cancel') >= 0) return;
-        wx.showToast({ title: '选择图片失败', icon: 'none' });
+        wx.showToast({ title: i18n.t(NS + 'pickImageFailed', this._lang), icon: 'none' });
       },
     });
   },
@@ -834,12 +909,12 @@ Page({
     const that = this;
     const styleId = this.data.styleId;
     if (!styleId) {
-      wx.showToast({ title: '缺少款式ID', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'missingStyleId', this._lang), icon: 'none' });
       return;
     }
     if (!filePath) return;
     const token = getToken() || '';
-    wx.showLoading({ title: '上传中...', mask: true });
+    wx.showLoading({ title: i18n.t('common.uploading', this._lang), mask: true });
     wx.uploadFile({
       url: getBaseUrl() + '/api/style/attachment/upload',
       filePath: filePath,
@@ -855,18 +930,18 @@ Page({
         let parsed = null;
         try { parsed = JSON.parse(r.data); } catch (_e) { parsed = null; }
         if (r.statusCode === 200 && parsed && parsed.code === 200) {
-          wx.showToast({ title: '上传成功', icon: 'success' });
+          wx.showToast({ title: i18n.t(NS + 'uploadOk', this._lang), icon: 'success' });
           that.loadAttachments();
           return;
         }
         wx.showToast({
-          title: (parsed && parsed.message) || ('上传失败(' + r.statusCode + ')'),
+          title: (parsed && parsed.message) || i18n.tf(NS + 'uploadFailedAt', { msg: r.statusCode }, this._lang),
           icon: 'none',
         });
       },
       fail: function () {
         wx.hideLoading();
-        wx.showToast({ title: '上传失败', icon: 'none' });
+        wx.showToast({ title: i18n.t(NS + 'uploadFailedAt'.replace('FailedAt','Failed'), this._lang), icon: 'none' });
       },
     });
   },
@@ -896,16 +971,16 @@ Page({
   /** 下载并用微信文档能力打开（URL 已带 token，TokenAuthFilter 从 query 读取鉴权） */
   _openAttachmentFile(url, fileName) {
     if (!url) {
-      wx.showToast({ title: '文件地址无效', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'invalidFileUrl', this._lang), icon: 'none' });
       return;
     }
-    wx.showLoading({ title: '打开中...', mask: true });
+    wx.showLoading({ title: i18n.t(NS + 'openingDoc', this._lang), mask: true });
     wx.downloadFile({
       url: url,
       success: function (res) {
         wx.hideLoading();
         if (res.statusCode !== 200) {
-          wx.showToast({ title: '下载失败(' + res.statusCode + ')', icon: 'none' });
+          wx.showToast({ title: i18n.tf(NS + 'downloadFailedAt', { msg: res.statusCode }, this._lang), icon: 'none' });
           return;
         }
         wx.openDocument({
@@ -913,13 +988,13 @@ Page({
           fileType: resolveDocType(fileName),
           showMenu: true,
           fail: function () {
-            wx.showToast({ title: '无法预览此文件类型', icon: 'none' });
+            wx.showToast({ title: i18n.t(NS + 'cannotPreviewType', this._lang), icon: 'none' });
           },
         });
       },
       fail: function () {
         wx.hideLoading();
-        wx.showToast({ title: '下载失败', icon: 'none' });
+        wx.showToast({ title: i18n.t(NS + 'downloadFailed', this._lang), icon: 'none' });
       },
     });
   },
@@ -929,16 +1004,16 @@ Page({
     if (!id) return;
     const that = this;
     wx.showModal({
-      title: '删除附件',
-      content: '确认删除该附件？',
+      title: i18n.t(NS + 'deleteAttachment', this._lang),
+      content: i18n.t(NS + 'deleteAttachConfirm', this._lang),
       success: async function (res) {
         if (!res.confirm) return;
         try {
           await style.deleteAttachment(id);
-          wx.showToast({ title: '已删除', icon: 'success' });
+          wx.showToast({ title: i18n.t(NS + 'deleted', this._lang), icon: 'success' });
           that.loadAttachments();
         } catch (_e) {
-          wx.showToast({ title: '删除失败', icon: 'none' });
+          wx.showToast({ title: i18n.t('common.deleteFailed', this._lang), icon: 'none' });
         }
       },
     });
@@ -959,7 +1034,7 @@ Page({
       // 后端返回 Result<List<OrderRemark>>，ok() 解包后 res 就是数组
       const list = toArray(res);
       const remarkList = list.map(function(item, idx) {
-        const authorName = item.authorName || item.createdByName || '匿名';
+        const authorName = item.authorName || item.createdByName || i18n.t(NS + 'anonymous', this._lang);
         return Object.assign({}, item, {
           _timeText: this.formatRemarkTime(item.createTime || item.createdAt),
           _roleLabel: this.getRoleLabel(item.authorRole),
@@ -976,7 +1051,7 @@ Page({
   },
 
   getRoleLabel(role) {
-    const found = REMARK_ROLES.find(r => r.key === role);
+    const found = (this.data.remarkRoles || []).find(r => r.key === role);
     return found && found.label || role || '';
   },
 
@@ -994,14 +1069,14 @@ Page({
 
   onRemarkRoleChange(e) {
     const idx = Number(e.detail.value);
-    const role = REMARK_ROLES[idx] || {};
+    const role = (this.data.remarkRoles || [])[idx] || {};
     this.setData({ remarkRoleIndex: idx, remarkRole: role.key });
   },
 
   async onSubmitRemark() {
     const content = (this.data.remarkInput || '').trim();
     if (!content) {
-      wx.showToast({ title: '请输入备注内容', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'remarkRequired', this._lang), icon: 'none' });
       return;
     }
     const styleInfo = this.data.styleInfo || {};
@@ -1011,10 +1086,10 @@ Page({
     try {
       await production.addOrderRemark('style', targetNo, content, this.data.remarkRole || undefined);
       this.setData({ remarkInput: '', remarkRole: '', remarkRoleIndex: 0 });
-      wx.showToast({ title: '备注已提交', icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'remarkSubmitted', this._lang), icon: 'success' });
       this.loadRemarks();
     } catch (e) {
-      wx.showToast({ title: '提交失败', icon: 'none' });
+      wx.showToast({ title: i18n.t('common.submitFailed', this._lang), icon: 'none' });
     }
     this.setData({ submittingRemark: false });
   },
@@ -1042,7 +1117,7 @@ Page({
         encodeURIComponent(patternId) +
         '&styleNo=' + encodeURIComponent(styleNo) +
         '&sourceType=sample',
-      fail: () => wx.showToast({ title: '跳转失败', icon: 'none' }),
+      fail: () => wx.showToast({ title: i18n.t(NS + 'navFailed', this._lang), icon: 'none' }),
     });
   },
 
@@ -1053,7 +1128,7 @@ Page({
     const cur = this.data.allProcesses[idx];
     if (!cur || cur._scanCount === 0) {
       // 无扫码记录：不展开，可加提示
-      wx.showToast({ title: '该工序暂无扫码记录', icon: 'none', duration: 1200 });
+      wx.showToast({ title: i18n.t(NS + 'noScanRecords', this._lang), icon: 'none', duration: 1200 });
       return;
     }
     this.setData({
@@ -1296,7 +1371,7 @@ Page({
     const snapshot = this.data.patternSnapshot;
     const patternId = snapshot && snapshot.id;
     if (!patternId) return;
-    wx.showLoading({ title: '加载工序...' });
+    wx.showLoading({ title: i18n.t(NS + 'loadingProcess', this._lang) });
     try {
       const handler = {
         api: { production },
@@ -1306,7 +1381,7 @@ Page({
       const result = await PatternScanProcessor.handlePatternScan(handler, { patternId: String(patternId) }, null);
       wx.hideLoading();
       if (!result || !result.success || !result.data) {
-        wx.showToast({ title: (result && result.message) || '无法打开工序扫码', icon: 'none' });
+        wx.showToast({ title: (result && result.message) || i18n.t(NS + 'cannotOpenScan', this._lang), icon: 'none' });
         return;
       }
       const app = getApp();
@@ -1314,7 +1389,7 @@ Page({
       wx.navigateTo({ url: '/pages/scan/pattern/index' });
     } catch (e) {
       wx.hideLoading();
-      wx.showToast({ title: (e && (e.message || e.errMsg)) || '打开失败', icon: 'none' });
+      wx.showToast({ title: (e && (e.message || e.errMsg)) || i18n.t(NS + 'openFailed', this._lang), icon: 'none' });
     }
   },
 
@@ -1322,7 +1397,7 @@ Page({
     const snapshot = this.data.patternSnapshot;
     if (!snapshot || !snapshot.id) return;
     if (snapshot._isReceived || snapshot._isFullyCompleted) {
-      wx.showToast({ title: '样衣已领取或已完成', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'sampleClaimedDone', this._lang), icon: 'none' });
       return;
     }
     this._doReceivePattern(snapshot.id);
@@ -1333,21 +1408,21 @@ Page({
     const snapshot = this.data.patternSnapshot;
     const patternId = snapshot && snapshot.id;
     if (!patternId) {
-      wx.showToast({ title: '缺少样衣生产单', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'missingProduction', this._lang), icon: 'none' });
       return;
     }
     wx.showActionSheet({
-      itemList: ['审核通过', '审核返修', '审核驳回'],
+      itemList: [i18n.t(NS + 'reviewPass', this._lang), i18n.t(NS + 'reviewRework', this._lang), i18n.t(NS + 'reviewReject', this._lang)],
       success: (res) => {
         const resultMap = ['APPROVED', 'REWORK', 'REJECTED'];
-        const doneMap = ['审核已通过', '已标记返修', '已驳回'];
+        const doneMap = [i18n.t(NS + 'reviewPassed', this._lang), i18n.t(NS + 'markedRework', this._lang), i18n.t(NS + 'rejected', this._lang)];
         this._doSampleReview(patternId, resultMap[res.tapIndex], doneMap[res.tapIndex]);
       },
     });
   },
 
   async _doSampleReview(patternId, result, doneMsg) {
-    wx.showLoading({ title: '提交中...' });
+    wx.showLoading({ title: i18n.t('common.submitting', this._lang) });
     try {
       await production.reviewPattern(patternId, result, '');
       wx.hideLoading();
@@ -1355,7 +1430,7 @@ Page({
       this.loadStyleDetail();
     } catch (e) {
       wx.hideLoading();
-      wx.showToast({ title: (e && (e.message || e.errMsg)) || '审核提交失败', icon: 'none' });
+      wx.showToast({ title: (e && (e.message || e.errMsg)) || i18n.t(NS + 'reviewSubmitFail', this._lang), icon: 'none' });
     }
   },
 
@@ -1373,12 +1448,12 @@ Page({
     }
     wx.navigateTo({
       url,
-      fail: () => wx.showToast({ title: '打开样衣仓库失败', icon: 'none' }),
+      fail: () => wx.showToast({ title: i18n.t(NS + 'openWhFailed', this._lang), icon: 'none' }),
     });
   },
 
   async _doReceivePattern(patternId) {
-    wx.showLoading({ title: '处理中...' });
+    wx.showLoading({ title: i18n.t(NS + 'processing', this._lang) });
     try {
       // D-112：后端 workflow-action 无 receive 分支（必然报"不支持的操作"），改走扫码领取规范接口，
       // 与扫码页 RECEIVE 同链路：写领取记录 + 置 IN_PROGRESS + 回填领取人
@@ -1391,16 +1466,16 @@ Page({
         progressStage: '采购',
       });
       wx.hideLoading();
-      wx.showToast({ title: '样衣已领取', icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'sampleClaimed', this._lang), icon: 'success' });
       this.loadStyleDetail();
     } catch (e) {
       wx.hideLoading();
-      wx.showToast({ title: (e && (e.message || e.errMsg)) || '领取失败', icon: 'none' });
+      wx.showToast({ title: (e && (e.message || e.errMsg)) || i18n.t(NS + 'claimFailed', this._lang), icon: 'none' });
     }
   },
 
   async _doUpdateStageProgress(snapshot, stageKey, targetPercent) {
-    wx.showLoading({ title: '更新中...' });
+    wx.showLoading({ title: i18n.t(NS + 'updating', this._lang) });
     try {
       const progress = {
         procurement: snapshot._procurementProgress,
@@ -1417,11 +1492,11 @@ Page({
       }
       await production.savePatternProgress(snapshot.id, progress);
       wx.hideLoading();
-      wx.showToast({ title: '进度已更新', icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'progressUpdated', this._lang), icon: 'success' });
       this.loadStyleDetail();
     } catch (e) {
       wx.hideLoading();
-      wx.showToast({ title: '更新失败', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'updateFailed', this._lang), icon: 'none' });
     }
   },
 
@@ -1469,11 +1544,11 @@ Page({
         progress[editor.stageKey] = editor.percent;
       }
       await production.savePatternProgress(snapshot.id, progress);
-      wx.showToast({ title: '进度已更新', icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'progressUpdated', this._lang), icon: 'success' });
       this.setData({ 'progressEditor.visible': false });
       this.loadStyleDetail();
     } catch (e) {
-      wx.showToast({ title: '更新失败', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'updateFailed', this._lang), icon: 'none' });
     }
     this.setData({ progressSaving: false });
   },
