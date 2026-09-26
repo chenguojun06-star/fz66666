@@ -2444,6 +2444,8 @@ const STAGE_DETAIL_JS = 'pages/sample-development/stage-detail/index.js';
 const STAGE_DETAIL_WXML = 'pages/sample-development/stage-detail/index.wxml';
 const QUALITY_DETAIL_JS = 'pages/quality-detail/index.js';
 const QUALITY_DETAIL_WXML = 'pages/quality-detail/index.wxml';
+const ATTENDANCE_JS = 'pages/attendance/detail/index.js';
+const ATTENDANCE_WXML = 'pages/attendance/detail/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3020,6 +3022,26 @@ function testI18nQualityDetail() {
   eq('质检明细页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '质检明细');
 }
 
+/** 考勤明细页（D-563）—— 日历周头/月度汇总/补卡调整作废/审批 */
+function testI18nAttendance() {
+  testPageI18n(ATTENDANCE_JS, ATTENDANCE_WXML, '考勤明细页');
+
+  const { page: zhP, wx: zhWx } = loadPage(ATTENDANCE_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(ATTENDANCE_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  // 日历周头按语言重建（zh 单字，en 三字母）
+  eq('zh 周头', zhP.data.weekHeader.join('|'), '一|二|三|四|五|六|日');
+  eq('en 周头', enP.data.weekHeader.join('|'), 'Mon|Tue|Wed|Thu|Fri|Sat|Sun');
+  eq('en 出勤状态', enP.data.t.statusNormal + '|' + enP.data.t.statusLate, 'Normal|Late');
+  ok('en 补卡规则提示无中文', !CJK_RE.test(String(enP.data.t.cardRuleHint)), enP.data.t.cardRuleHint);
+  ok('en 调整原因占位无中文', !CJK_RE.test(String(enP.data.t.adjustReasonPh)), enP.data.t.adjustReasonPh);
+
+  eq('考勤页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Attendance');
+  eq('考勤页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '考勤明细');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3070,6 +3092,7 @@ try {
   testI18nSampleDetail();
   testI18nStageDetail();
   testI18nQualityDetail();
+  testI18nAttendance();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));

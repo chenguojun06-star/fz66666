@@ -1,3 +1,5 @@
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.attendanceDetail.';
 const api = require('../../../utils/api');
 const permission = require('../../../utils/permission');
 
@@ -24,7 +26,7 @@ Page({
       absentDays: 0,
     },
     calendar: [],       // 整月日历
-    weekHeader: ['一', '二', '三', '四', '五', '六', '日'],
+    weekHeader: [],  // applyLanguage 重建
     records: [],        // 每日打卡明细（倒序：最新在前）
     todayDate: '',      // 今日日期 yyyy-MM-dd
     // 补卡弹窗（员工提交申请）
@@ -78,7 +80,101 @@ Page({
     },
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}） */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        exitManage: i18n.t(NS + 'exitManage', lang),
+        cardWord: i18n.t(NS + 'cardWord', lang),
+        manageWord: i18n.t(NS + 'manageWord', lang),
+        clockRecordsTab: i18n.t(NS + 'clockRecordsTab', lang),
+        cardApprovalTab: i18n.t(NS + 'cardApprovalTab', lang),
+        totalRecords: i18n.t(NS + 'totalRecords', lang),
+        attendanceDays: i18n.t(NS + 'attendanceDays', lang),
+        hoursUnit: i18n.t(NS + 'hoursUnit', lang),
+        voidedLabel: i18n.t(NS + 'voidedLabel', lang),
+        voidBtn: i18n.t(NS + 'voidBtn', lang),
+        pendingApprovals: i18n.t(NS + 'pendingApprovals', lang),
+        reasonPrefix: i18n.t(NS + 'reasonPrefix', lang),
+        rejectBtn: i18n.t(NS + 'rejectBtn', lang),
+        passBtn: i18n.t(NS + 'passBtn', lang),
+        monthlyHours: i18n.t(NS + 'monthlyHours', lang),
+        attendanceDaysN: i18n.t(NS + 'attendanceDaysN', lang),
+        avgHours: i18n.t(NS + 'avgHours', lang),
+        absentDays: i18n.t(NS + 'absentDays', lang),
+        monthlyOutput: i18n.t(NS + 'monthlyOutput', lang),
+        processAmount: i18n.t(NS + 'processAmount', lang),
+        statusNormal: i18n.t(NS + 'statusNormal', lang),
+        statusLate: i18n.t(NS + 'statusLate', lang),
+        statusEarly: i18n.t(NS + 'statusEarly', lang),
+        statusMissed: i18n.t(NS + 'statusMissed', lang),
+        statusLeave: i18n.t(NS + 'statusLeave', lang),
+        statusAbnormal: i18n.t(NS + 'statusAbnormal', lang),
+        statusAbsent: i18n.t(NS + 'statusAbsent', lang),
+        dailyDetail: i18n.t(NS + 'dailyDetail', lang),
+        voidedHint: i18n.t(NS + 'voidedHint', lang),
+        goClockBtn: i18n.t(NS + 'goClockBtn', lang),
+        applyCardBtn: i18n.t(NS + 'applyCardBtn', lang),
+        remarkOptional: i18n.t(NS + 'remarkOptional', lang),
+        remarkOptional2: i18n.t(NS + 'remarkOptional2', lang),
+        cardRuleHint: i18n.t(NS + 'cardRuleHint', lang),
+        adjustClockBtn: i18n.t(NS + 'adjustClockBtn', lang),
+        employeeLabel: i18n.t(NS + 'employeeLabel', lang),
+        dateLabel: i18n.t(NS + 'dateLabel', lang),
+        searchingTxt: i18n.t(NS + 'searchingTxt', lang),
+        adminCardTitle: i18n.t(NS + 'adminCardTitle', lang),
+        cardApplyDate: i18n.t(NS + 'cardApplyDate', lang),
+        clockInLabelW: i18n.t(NS + 'clockInLabelW', lang),
+        clockOutLabelW: i18n.t(NS + 'clockOutLabelW', lang),
+        selectEmployee: i18n.t(NS + 'selectEmployee', lang),
+        outputLabel: i18n.t(NS + 'outputLabel', lang),
+        amountLabel: i18n.t(NS + 'amountLabel', lang),
+        adjustLabel: i18n.t(NS + 'adjustLabel', lang),
+        clockInW: i18n.t(NS + 'clockInW', lang),
+        clockOutW: i18n.t(NS + 'clockOutW', lang),
+        cancel: i18n.t('common.cancel', lang),
+        submitWord: i18n.t(NS + 'submitWord', lang),
+        selectEmployeePh: i18n.t(NS + 'selectEmployeePh', lang),
+        recordsOfFmt: i18n.t(NS + 'recordsOfFmt', lang),
+        pieceUnitW: i18n.t('common.piece', lang),
+        noRecordForEmp: i18n.t(NS + 'noRecordForEmp', lang),
+        noRecordHintEmp: i18n.t(NS + 'noRecordHintEmp', lang),
+        noPendingW: i18n.t(NS + 'noPendingW', lang),
+        employeeIdLabel: i18n.t(NS + 'employeeIdLabel', lang),
+        expectedDaysW: i18n.t(NS + 'expectedDaysW', lang),
+        accumHoursW: i18n.t(NS + 'accumHoursW', lang),
+        hoursShortW: i18n.t(NS + 'hoursShortW', lang),
+        todaySuffix: i18n.t(NS + 'todaySuffix', lang),
+        weekendSuffix: i18n.t(NS + 'weekendSuffix', lang),
+        noRecordMonth: i18n.t(NS + 'noRecordMonth', lang),
+        goClockHint: i18n.t(NS + 'goClockHint', lang),
+        pickPastDate: i18n.t(NS + 'pickPastDate', lang),
+        emptyMeansOff: i18n.t(NS + 'emptyMeansOff', lang),
+        emptyMeansOff2: i18n.t(NS + 'emptyMeansOff2', lang),
+        emptyWord: i18n.t(NS + 'emptyWord', lang),
+        remarkPh1: i18n.t(NS + 'remarkPh1', lang),
+        remarkPh2: i18n.t(NS + 'remarkPh2', lang),
+        submitCardBtn: i18n.t(NS + 'submitCardBtn', lang),
+        pickEmployeeHint: i18n.t(NS + 'pickEmployeeHint', lang),
+        selectDateW: i18n.t(NS + 'selectDateW', lang),
+        adjustReasonPh: i18n.t(NS + 'adjustReasonPh', lang),
+        saveAdjustBtn: i18n.t(NS + 'saveAdjustBtn', lang),
+        searchAllPh: i18n.t(NS + 'searchAllPh', lang),
+        noMatchEmployee: i18n.t(NS + 'noMatchEmployee', lang),
+        searchEmpHint: i18n.t(NS + 'searchEmpHint', lang),
+      },
+      weekHeader: ['weekMon', 'weekTue', 'weekWed', 'weekThu', 'weekFri', 'weekSat', 'weekSun']
+        .map(function (k) { return i18n.t(NS + k, lang); }),
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function () {
+    this.applyLanguage(i18n.getLanguage());
     const now = new Date();
     const y = now.getFullYear();
     const m = now.getMonth() + 1;
@@ -173,7 +269,7 @@ Page({
         ? (this.data.selectedEmployee || this.data.employeeList[0])
         : this._getCurrentUserAsEmployee();
       if (!emp) {
-        wx.showToast({ title: '请先选择员工', icon: 'none' });
+        wx.showToast({ title: i18n.t(NS + 'selectEmployeeT', this._lang), icon: 'none' });
         return;
       }
       this.setData({
@@ -193,10 +289,10 @@ Page({
     // 普通员工：已有非作废记录的，提示走管理员修改
     if (cell.hasRecord && cell.status !== 'CANCELLED') {
       wx.showModal({
-        title: '该日已有记录',
-        content: '当天已有打卡记录，如需修改请联系管理员处理。',
+        title: i18n.t(NS + 'hasRecordThatDay', this._lang),
+        content: i18n.t(NS + 'hasRecordMsg', this._lang),
         showCancel: false,
-        confirmText: '知道了',
+        confirmText: i18n.t('common.gotIt', this._lang),
       });
       return;
     }
@@ -231,7 +327,7 @@ Page({
       if (!userInfo) return null;
       const userId = String(userInfo.id || userInfo.userId || userInfo.idStr || '');
       if (!userId) return null;
-      const userName = userInfo.realName || userInfo.username || userInfo.name || userInfo.nickname || '我';
+      const userName = userInfo.realName || userInfo.username || userInfo.name || userInfo.nickname || i18n.t(NS + 'meLabel', this._lang);
       return { userId: userId, userName: userName };
     } catch (e) {
       return null;
@@ -282,11 +378,11 @@ Page({
 
     const form = self.data.supplementForm;
     if (!form.workDate) {
-      wx.showToast({ title: '请选择补卡日期', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'selectCardDate', this._lang), icon: 'none' });
       return;
     }
     if (!form.clockInTime && !form.clockOutTime) {
-      wx.showToast({ title: '上下班时间至少填一项', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'atLeastOneTime', this._lang), icon: 'none' });
       return;
     }
 
@@ -295,7 +391,7 @@ Page({
     const clockOutTime = form.clockOutTime ? (form.workDate + ' ' + form.clockOutTime) : '';
 
     self.setData({ supplementSubmitting: true });
-    wx.showLoading({ title: '提交中', mask: true });
+    wx.showLoading({ title: i18n.t(NS + 'submitWord', this._lang), mask: true });
 
     api.attendance.submitApply({
       workDate: form.workDate,
@@ -304,19 +400,19 @@ Page({
       reason: form.remark,
     }).then(function () {
       wx.hideLoading();
-      wx.showToast({ title: '申请已提交，待审批', icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'applySubmitted', this._lang), icon: 'success' });
       self.setData({ supplementOpen: false, supplementSubmitting: false });
       self._needReload = false;
       self._loadData();
       self._loadMyApplies();
     }).catch(function (e) {
       wx.hideLoading();
-      const errMsg = (e && e.errMsg) || '提交失败';
+      const errMsg = (e && e.errMsg) || i18n.t('common.submitFailed', this._lang);
       wx.showModal({
-        title: '提交失败',
+        title: i18n.t('common.submitFailed', this._lang),
         content: errMsg,
         showCancel: false,
-        confirmText: '知道了',
+        confirmText: i18n.t('common.gotIt', this._lang),
       });
       self.setData({ supplementSubmitting: false });
     });
@@ -369,21 +465,21 @@ Page({
     const self = this;
     const applyId = e.currentTarget.dataset.id;
     wx.showModal({
-      title: '审批通过',
-      content: '确认通过此补卡申请？通过后将自动生成打卡记录。',
+      title: i18n.t(NS + 'approvePass', this._lang),
+      content: i18n.t(NS + 'approvePassConfirm', this._lang),
       success: function (res) {
         if (!res.confirm) return;
-        wx.showLoading({ title: '审批中', mask: true });
+        wx.showLoading({ title: i18n.t(NS + 'statusApproving', this._lang), mask: true });
         api.attendance.approveApply({ id: applyId }).then(function () {
           wx.hideLoading();
-          wx.showToast({ title: '已通过', icon: 'success' });
+          wx.showToast({ title: i18n.t(NS + 'statusApproved', this._lang), icon: 'success' });
           self._loadPendingApplies();
           self._loadAdminList();
         }).catch(function (err) {
           wx.hideLoading();
           wx.showModal({
-            title: '审批失败',
-            content: (err && err.errMsg) || '操作失败',
+            title: i18n.t(NS + 'approveFail', this._lang),
+            content: (err && err.errMsg) || i18n.t('common.operationFailed', this._lang),
             showCancel: false,
           });
         });
@@ -396,20 +492,20 @@ Page({
     const self = this;
     const applyId = e.currentTarget.dataset.id;
     wx.showModal({
-      title: '审批拒绝',
-      content: '确认拒绝此补卡申请？',
+      title: i18n.t(NS + 'approveReject', this._lang),
+      content: i18n.t(NS + 'approveRejectConfirm', this._lang),
       success: function (res) {
         if (!res.confirm) return;
-        wx.showLoading({ title: '处理中', mask: true });
+        wx.showLoading({ title: i18n.t('mp.sampleDetail.processing', this._lang), mask: true });
         api.attendance.rejectApply({ id: applyId }).then(function () {
           wx.hideLoading();
-          wx.showToast({ title: '已拒绝', icon: 'none' });
+          wx.showToast({ title: i18n.t(NS + 'statusRejected', this._lang), icon: 'none' });
           self._loadPendingApplies();
         }).catch(function (err) {
           wx.hideLoading();
           wx.showModal({
-            title: '操作失败',
-            content: (err && err.errMsg) || '操作失败',
+            title: i18n.t('common.operationFailed', this._lang),
+            content: (err && err.errMsg) || i18n.t('common.operationFailed', this._lang),
             showCancel: false,
           });
         });
@@ -438,7 +534,7 @@ Page({
       const employeeList = list.map(function (u) {
         return {
           userId: String(u.id || u.userId || u.idStr || ''),
-          userName: u.realName || u.username || u.name || u.nickname || '未知',
+          userName: u.realName || u.username || u.name || u.nickname || i18n.t('mp.stageDetail.unknownWord', this._lang),
         };
       }).filter(function (e) { return e.userId; });
       self.setData({
@@ -454,7 +550,7 @@ Page({
   // 打开员工搜索弹窗（顶部员工选择）
   onOpenEmployeePicker: function () {
     if (this.data.employeeList.length === 0) {
-      wx.showToast({ title: '暂无员工数据', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'noEmployeeData', this._lang), icon: 'none' });
       return;
     }
     this.setData({
@@ -468,7 +564,7 @@ Page({
   // 打开员工搜索弹窗（管理员补卡弹窗内员工选择）
   onOpenSupplementEmployeePicker: function () {
     if (this.data.employeeList.length === 0) {
-      wx.showToast({ title: '暂无员工数据', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'noEmployeeData', this._lang), icon: 'none' });
       return;
     }
     this.setData({
@@ -510,7 +606,7 @@ Page({
           filteredEmployeeList: list.map(function (u) {
             return {
               userId: String(u.id || u.userId || ''),
-              userName: u.realName || u.username || u.name || u.nickname || '未知',
+              userName: u.realName || u.username || u.name || u.nickname || i18n.t('mp.stageDetail.unknownWord', this._lang),
               deptName: u.deptName || u.departmentName || '',
             };
           }).filter(function (o) { return o.userId; }),
@@ -551,7 +647,7 @@ Page({
   _loadAdminList: function () {
     const self = this;
     if (!self.data.selectedEmployee) {
-      wx.showToast({ title: '请先选择员工', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'selectEmployeeT', this._lang), icon: 'none' });
       return;
     }
 
@@ -574,6 +670,9 @@ Page({
       const sorted = records.slice().sort(function (a, b) {
         return String(b.workDate || '').localeCompare(String(a.workDate || ''));
       });
+      sorted.forEach(function (r) {
+        r.operatedByText = r.operatorName ? i18n.tf(NS + 'operatedByFmt', { name: r.operatorName }, self._lang) : '';
+      });
       self.setData({
         records: sorted,
         adminStats: res && res.stats ? res.stats : null,
@@ -582,7 +681,7 @@ Page({
     }).catch(function (e) {
       self.setData({ loading: false });
       console.warn('[attendance.detail] _loadAdminList failed:', e && e.errMsg);
-      wx.showToast({ title: (e && e.errMsg) || '加载失败', icon: 'none' });
+      wx.showToast({ title: (e && e.errMsg) || i18n.t('common.loadFailed', this._lang), icon: 'none' });
     });
   },
 
@@ -590,7 +689,7 @@ Page({
   onOpenAdminSupplement: function () {
     const emp = this.data.selectedEmployee || this.data.employeeList[0];
     if (!emp) {
-      wx.showToast({ title: '请先选择员工', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'selectEmployeeT', this._lang), icon: 'none' });
       return;
     }
     this.setData({
@@ -631,15 +730,15 @@ Page({
 
     const form = self.data.adminSupplementForm;
     if (!form.targetUserId) {
-      wx.showToast({ title: '请选择员工', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'selectEmployeeT', this._lang), icon: 'none' });
       return;
     }
     if (!form.workDate) {
-      wx.showToast({ title: '请选择补卡日期', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'selectCardDate', this._lang), icon: 'none' });
       return;
     }
     if (!form.clockInTime && !form.clockOutTime) {
-      wx.showToast({ title: '上下班时间至少填一项', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'atLeastOneTime', this._lang), icon: 'none' });
       return;
     }
 
@@ -647,7 +746,7 @@ Page({
     const clockOutTime = form.clockOutTime ? (form.workDate + ' ' + form.clockOutTime) : '';
 
     self.setData({ adminSupplementSubmitting: true });
-    wx.showLoading({ title: '提交中', mask: true });
+    wx.showLoading({ title: i18n.t(NS + 'submitWord', this._lang), mask: true });
 
     api.attendance.adminSupplement({
       targetUserId: form.targetUserId,
@@ -658,17 +757,17 @@ Page({
       remark: form.remark,
     }).then(function () {
       wx.hideLoading();
-      wx.showToast({ title: '补卡成功', icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'cardSuccess', this._lang), icon: 'success' });
       self.setData({ adminSupplementOpen: false, adminSupplementSubmitting: false });
       self._loadAdminList();
     }).catch(function (e) {
       wx.hideLoading();
-      const errMsg = (e && e.errMsg) || '补卡失败';
+      const errMsg = (e && e.errMsg) || i18n.t(NS + 'cardFailed', this._lang);
       wx.showModal({
-        title: '补卡失败',
+        title: i18n.t(NS + 'cardFailed', this._lang),
         content: errMsg,
         showCancel: false,
-        confirmText: '知道了',
+        confirmText: i18n.t('common.gotIt', this._lang),
       });
       self.setData({ adminSupplementSubmitting: false });
     });
@@ -721,7 +820,7 @@ Page({
     const clockOutTime = form.clockOutTime ? (form.workDate + ' ' + form.clockOutTime) : '';
 
     self.setData({ adminAdjustSubmitting: true });
-    wx.showLoading({ title: '提交中', mask: true });
+    wx.showLoading({ title: i18n.t(NS + 'submitWord', this._lang), mask: true });
 
     api.attendance.adminAdjust({
       id: form.id,
@@ -730,17 +829,17 @@ Page({
       remark: form.remark,
     }).then(function () {
       wx.hideLoading();
-      wx.showToast({ title: '调整成功', icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'adjustSuccess', this._lang), icon: 'success' });
       self.setData({ adminAdjustOpen: false, adminAdjustSubmitting: false });
       self._loadAdminList();
     }).catch(function (e) {
       wx.hideLoading();
-      const errMsg = (e && e.errMsg) || '调整失败';
+      const errMsg = (e && e.errMsg) || i18n.t(NS + 'adjustFailed', this._lang);
       wx.showModal({
-        title: '调整失败',
+        title: i18n.t(NS + 'adjustFailed', this._lang),
         content: errMsg,
         showCancel: false,
-        confirmText: '知道了',
+        confirmText: i18n.t('common.gotIt', this._lang),
       });
       self.setData({ adminAdjustSubmitting: false });
     });
@@ -753,25 +852,25 @@ Page({
     if (!record || !record.id) return;
 
     wx.showModal({
-      title: '作废确认',
-      content: '确定作废 ' + (record.userName || '') + ' ' + (record.workDate || '') + ' 的打卡记录吗？作废后该记录不计入工时。',
-      confirmText: '确定作废',
+      title: i18n.t(NS + 'voidTitle', this._lang),
+      content: i18n.tf(NS + 'voidConfirmFmt', { name: (record.userName || '') + ' ' + (record.workDate || '') }, this._lang),
+      confirmText: i18n.t(NS + 'voidConfirmBtn', this._lang),
       confirmColor: '#e64340',
       success: function (res) {
         if (!res.confirm) return;
-        wx.showLoading({ title: '处理中', mask: true });
+        wx.showLoading({ title: i18n.t('mp.sampleDetail.processing', this._lang), mask: true });
         api.attendance.adminCancel({ id: record.id }).then(function () {
           wx.hideLoading();
-          wx.showToast({ title: '已作废', icon: 'success' });
+          wx.showToast({ title: i18n.t(NS + 'statusVoided', this._lang), icon: 'success' });
           self._loadAdminList();
         }).catch(function (err) {
           wx.hideLoading();
-          const errMsg = (err && err.errMsg) || '作废失败';
+          const errMsg = (err && err.errMsg) || i18n.t(NS + 'voidFailed', this._lang);
           wx.showModal({
-            title: '作废失败',
+            title: i18n.t(NS + 'voidFailed', this._lang),
             content: errMsg,
             showCancel: false,
-            confirmText: '知道了',
+            confirmText: i18n.t('common.gotIt', this._lang),
           });
         });
       },
@@ -787,7 +886,7 @@ Page({
       self._applyData(res || {});
     }).catch(function (e) {
       console.warn('[attendance.detail] _loadData failed:', e && e.errMsg);
-      wx.showToast({ title: (e && e.errMsg) || '加载失败', icon: 'none' });
+      wx.showToast({ title: (e && e.errMsg) || i18n.t('common.loadFailed', this._lang), icon: 'none' });
     }).then(function () {
       self.setData({ loading: false });
     });
@@ -801,7 +900,7 @@ Page({
 
     // 月显示文案
     const parts = String(month).split('-');
-    const monthLabel = parts.length >= 2 ? (parts[0] + '年' + parseInt(parts[1], 10) + '月') : month;
+    const monthLabel = parts.length >= 2 ? (parts[0] + i18n.t(NS + 'yearUnit', this._lang) + parseInt(parts[1], 10) + i18n.t(NS + 'monthUnit', this._lang) ) : month;
 
     // 控制按钮可用性（最早当月-11，最晚当月）
     const now = new Date();
@@ -832,7 +931,9 @@ Page({
         monthScanAmount: Number(summary.monthScanAmount || 0),
       },
       calendar: calendarGrid,
-      records: sortedRecords,
+      records: (sortedRecords.forEach(function (r) {
+        r.operatedByText = r.operatorName ? i18n.tf(NS + 'operatedByFmt', { name: r.operatorName }, this._lang || i18n.getLanguage()) : '';
+      }), sortedRecords),
     });
   },
 
