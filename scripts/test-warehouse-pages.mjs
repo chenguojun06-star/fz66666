@@ -2464,6 +2464,8 @@ const BUNDLE_SPLIT_JS = 'pages/work/bundle-split/index.js';
 const BUNDLE_SPLIT_WXML = 'pages/work/bundle-split/index.wxml';
 const PAYMENT_JS = 'pages/finance/payment/index.js';
 const PAYMENT_WXML = 'pages/finance/payment/index.wxml';
+const PAYROLL_JS = 'pages/finance/payroll-approval/index.js';
+const PAYROLL_WXML = 'pages/finance/payroll-approval/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3159,6 +3161,25 @@ function testI18nPayment() {
   eq('付款页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '付款');
 }
 
+/** 工资审批页（D-569）—— 筛选/状态映射/批量审核/异常标注 */
+function testI18nPayrollApproval() {
+  testPageI18n(PAYROLL_JS, PAYROLL_WXML, '工资审批页');
+
+  const { page: zhP, wx: zhWx } = loadPage(PAYROLL_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(PAYROLL_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  const zhOpts = zhP.data.factoryFilterOptions.map(o => o.label).join('|');
+  const enOpts = enP.data.factoryFilterOptions.map(o => o.label).join('|');
+  eq('zh 结算类型筛选', zhOpts, '全部类型|自己完成|内部指派|外发工厂');
+  ok('en 结算类型筛选无中文', !CJK_RE.test(enOpts), enOpts);
+  ok('en 异常条提示无中文', !CJK_RE.test(String(enP.data.t.abnormalBarFmt)), enP.data.t.abnormalBarFmt);
+
+  eq('工资审批页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Payroll Approval');
+  eq('工资审批页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '工资审批');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3215,6 +3236,7 @@ try {
   testI18nBundleDetail();
   testI18nBundleSplit();
   testI18nPayment();
+  testI18nPayrollApproval();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));

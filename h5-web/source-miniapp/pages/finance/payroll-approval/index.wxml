@@ -13,23 +13,23 @@
     <view class="stat-card">
       <view class="stat-item">
         <text class="stat-num stat-num--warn">{{pendingCount}}</text>
-        <text class="stat-label">待审核</text>
+        <text class="stat-label">{{t.statusAuditing}}</text>
       </view>
       <view class="stat-divider"></view>
       <view class="stat-item">
         <text class="stat-num stat-num--ok">{{auditedCount}}</text>
-        <text class="stat-label">已审核</text>
+        <text class="stat-label">{{t.statusAudited}}</text>
       </view>
       <view class="stat-divider"></view>
       <view class="stat-item">
         <text class="stat-num">¥{{totalAmountStr}}</text>
-        <text class="stat-label">合计</text>
+        <text class="stat-label">{{t.totalLabel}}</text>
       </view>
     </view>
 
     <!-- 搜索 + 月份筛选 -->
     <sticky-search-bar
-      placeholder="搜索操作人 / 工序 / 订单号"
+      placeholder="{{t.searchPhW}}"
       value="{{keyword}}"
       show-scan="{{false}}"
       show-filter="{{true}}"
@@ -59,17 +59,17 @@
 
     <!-- 批量审核入口（页面顶部，与卡片内单条审核职责区分，不重复） -->
     <view class="batch-bar" wx:if="{{canOperate && auditableIds.length > 0}}" hover-class="batch-bar--pressed" hover-stay-time="60" bindtap="onBatchAudit">
-      <text class="batch-bar__text">批量审核 {{auditableIds.length}} 条</text>
+      <text class="batch-bar__text">{{t.batchAuditBtn}} {{auditableIds.length}}{{t.wordRecords}}</text>
     </view>
 
     <!-- D-428：异常汇总提示（有数据异常时醒目告知，引导核实） -->
     <view class="abnormal-bar" wx:if="{{abnormalCount > 0}}">
-      <text class="abnormal-bar__text">有 {{abnormalCount}} 条结算数据异常，已标红，请点开详情核实</text>
+      <text class="abnormal-bar__text">{{abnormalText}}</text>
     </view>
 
     <!-- 卡片列表 -->
     <view class="card-list">
-      <empty-state wx:if="{{!loading && list.length === 0}}" text="本月暂无工资明细" />
+      <empty-state wx:if="{{!loading && list.length === 0}}" text="{{t.noMonthData}}" />
 
       <view
         class="order-card {{item._cardCls}}"
@@ -80,7 +80,7 @@
         <view class="order-main" data-item="{{item}}" data-index="{{index}}" catchtap="onTapItem">
           <view class="order-cover">
             <image wx:if="{{item._image}}" class="cover-pic" src="{{item._image}}" mode="aspectFill" lazy-load />
-            <view wx:else class="cover-placeholder"><view class="cover-ph-text">款</view></view>
+            <view wx:else class="cover-placeholder"><view class="cover-ph-text">{{t.wordStyles}}</view></view>
           </view>
 
           <view class="order-info">
@@ -118,29 +118,29 @@
             <view
               wx:if="{{item.audited}}"
               class="action-btn action-btn--ghost action-btn--disabled"
-            >已审核</view>
+            >{{t.statusAudited}}</view>
             <view
               wx:elif="{{!item.canAudit}}"
               class="action-btn action-btn--ghost action-btn--disabled"
-            >未关单</view>
+            >{{t.notClosedTag}}</view>
             <view
               wx:elif="{{canOperate && item.eligible}}"
               class="action-btn action-btn--primary"
               data-index="{{index}}"
               catchtap="onActionAuditInline"
-            >审核</view>
+            >{{t.auditBtn}}</view>
             <view
               class="action-btn action-btn--ghost"
               data-item="{{item}}"
               data-index="{{index}}"
               catchtap="onTapItem"
-            >详情</view>
+            >{{t.detailBtn}}</view>
           </view>
         </view>
       </view>
 
       <view class="load-more {{!hasMore ? 'disabled' : ''}}" wx:if="{{loading || !hasMore}}">
-        <text>{{loading ? '加载中...' : '没有更多了'}}</text>
+        <text>{{loading ? t.loading : t.noMoreW2}}</text>
       </view>
     </view>
   </block>

@@ -15,6 +15,8 @@
  *
  * 权限：后端限制「主管及以上」；工厂（外部）账号不可查看工资汇总。
  */
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.payrollApproval.';
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { hasFeaturePermission, isFactoryAccount } = require('../../../utils/permission');
@@ -26,19 +28,12 @@ var TERMINAL_ORDER_STATUSES = ['completed', 'closed', 'cancelled', 'scrapped', '
 
 // 订单状态中文（用于卡片展示）
 var ORDER_STATUS_TEXT = {
-  pending: '待生产',
-  confirmed: '已确认',
-  production: '生产中',
-  in_progress: '生产中',
-  completed: '已完成',
-  closed: '已关单',
-  cancelled: '已取消',
-  canceled: '已取消',
-  scrapped: '已报废',
-  archived: '已归档',
-  paused: '已暂停',
-  returned: '已退回',
-  delayed: '已逾期',
+  pending: 'stPendingProd', confirmed: 'stConfirmed',
+  production: 'mp.pattern.psProducing', in_progress: 'mp.pattern.psProducing',
+  completed: 'common.completed', closed: 'stClosed',
+  cancelled: 'common.cancelled', canceled: 'common.cancelled',
+  scrapped: 'stScrapped', archived: 'stArchived', paused: 'stPaused',
+  returned: 'stReturned', delayed: 'stOverdue',
 };
 
 // D-419：实底 status-badge 颜色（与样式表 --color-* 对齐）
@@ -50,11 +45,11 @@ var AUDIT_STATUS_COLOR_MAP = {
 // D-421：来源标注 —— 用户要求卡片上明确区分「样衣 / 大货」
 // scanType 取值来源：PayrollSettlementOrchestrator.PAYROLL_SCAN_TYPES = [production, cutting, pattern]
 var SCAN_TYPE_MAP = {
-  pattern: { kind: 'sample', text: '样衣' },
-  production: { kind: 'bulk', text: '大货' },
-  cutting: { kind: 'cutting', text: '裁床' },
+  pattern: { kind: 'sample', key: 'srcSample' },
+  production: { kind: 'bulk', key: 'srcBulk' },
+  cutting: { kind: 'cutting', key: 'srcCutting' },
 };
-var SCAN_TYPE_FALLBACK = { kind: 'bulk', text: '大货' };
+var SCAN_TYPE_FALLBACK = { kind: 'bulk', key: 'srcBulk' };
 
 // D-426：结算类型标注 —— 字段为 delegateTargetType（**不是 factoryType**！）
 // 取值与 PC 端 PayrollOperatorSummary/baseInfoColumns「结算类型」列完全一致：
@@ -66,18 +61,18 @@ var SCAN_TYPE_FALLBACK = { kind: 'bulk', text: '大货' };
 //    本处改用正确字段，并保留对旧值的兜底兼容。
 // D-427：结算类型筛选选项（客户端筛选，与卡片标签同源字段 delegateTargetType）
 var FACTORY_FILTER_OPTIONS = [
-  { value: '', label: '全部类型' },
-  { value: 'none', label: '自己完成' },
-  { value: 'internal', label: '内部指派' },
-  { value: 'external', label: '外发工厂' },
+  { value: '', key: 'filterAllType' },
+  { value: 'none', key: 'delegateSelf' },
+  { value: 'internal', key: 'delegateInternal' },
+  { value: 'external', key: 'delegateExternal' },
 ];
 var DELEGATE_TYPE_MAP = {
-  none: { kind: 'self', text: '自己完成' },
-  internal: { kind: 'internal', text: '内部指派' },
-  external: { kind: 'external', text: '外发工厂' },
+  none: { kind: 'self', key: 'delegateSelf' },
+  internal: { kind: 'internal', key: 'delegateInternal' },
+  external: { kind: 'external', key: 'delegateExternal' },
   // ⚠️ 后端 ProductionScanExecutor:613 / ScanRecordFactoryBackfillRunner 实际写入的是
   //    大写 'FACTORY'（不是 'external'），此处必须兼容，否则会 fallback 成"自己完成"。
-  factory: { kind: 'external', text: '外发工厂' },
+  factory: { kind: 'external', key: 'delegateExternal' },
 };
 // 判定"是否外发工厂"时同时接受两种写法
 function isExternalDelegateType(v) {
@@ -151,8 +146,8 @@ Page({
     monthValue: '',
     // D-427：结算类型筛选
     factoryFilter: '',
-    factoryFilterLabel: '全部类型',
-    FACTORY_FILTER_OPTIONS: FACTORY_FILTER_OPTIONS,
+    factoryFilterLabel: '',  // applyLanguage 重建
+    factoryFilterOptions: [],  // applyLanguage 重建
     // 操作面板
     showActionSheet: false,
     current: null,
@@ -164,7 +159,38 @@ Page({
     _month: 0,
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}），筛选选项重建 */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        statusAudited: i18n.t(NS + 'statusAudited', lang),
+        statusAuditing: i18n.t(NS + 'statusAuditing', lang),
+        notClosedTag: i18n.t(NS + 'notClosedTag', lang),
+        auditBtn: i18n.t(NS + 'auditBtn', lang),
+        detailBtn: i18n.t(NS + 'detailBtn', lang),
+        wordStyles: i18n.t(NS + 'wordStyles', lang),
+        totalLabel: i18n.t('common.total', lang),
+        batchAuditBtn: i18n.t(NS + 'batchAuditBtn', lang),
+        searchPhW: i18n.t(NS + 'searchPhW', lang),
+        wordRecords: i18n.t(NS + 'wordRecords', lang),
+        noMonthData: i18n.t(NS + 'noMonthData', lang),
+        noMoreW2: i18n.t(NS + 'noMoreW2', lang),
+        wordRecords: i18n.t(NS + 'wordRecords', lang),
+      },
+      factoryFilterOptions: FACTORY_FILTER_OPTIONS.map(function (o) {
+        return { value: o.value, label: i18n.t(NS + o.key, lang) };
+      }),
+      factoryFilterLabel: i18n.t(NS + 'filterAllType', lang),
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad: function (options) {
+    this.applyLanguage(i18n.getLanguage());
     var opts = options || {};
     // D-430：小云待办直达参数（见 bellTaskActions.handleBusinessTask）
     //   settlementId —— 待办 id "PAY_{settlementId}" 解析而来，用于精确筛出该结算单的明细
@@ -179,7 +205,7 @@ Page({
     if (isFactoryAccount()) {
       this.setData({
         blocked: true,
-        blockedMsg: '工厂账号不可查看工资结算（属租户财务管理数据）',
+        blockedMsg: i18n.t(NS + 'factoryPermHint', lang || i18n.getLanguage()),
         canOperate: false,
       });
       return;
@@ -189,7 +215,7 @@ Page({
       canOperate: hasFeaturePermission('approve_payroll'),
       _year: now.getFullYear(),
       _month: now.getMonth() + 1,
-      monthLabel: now.getFullYear() + '年' + (now.getMonth() + 1) + '月',
+      monthLabel: now.getFullYear() + i18n.t(NS + 'yearUnitW', lang || i18n.getLanguage()) + (now.getMonth() + 1) + i18n.t(NS + 'monthUnitW', lang || i18n.getLanguage()),
       monthValue: now.getFullYear() + '-' + pad2(now.getMonth() + 1),
     });
   },
@@ -273,10 +299,10 @@ Page({
         var eligible = that.data.canOperate && hasApproval && !audited && canAudit;
 
         var blockReason = '';
-        if (!hasApproval) blockReason = '缺少审批标识';
-        else if (audited) blockReason = '已审核';
+        if (!hasApproval) blockReason = i18n.t(NS + 'missingAuditId', lang);
+        else if (audited) blockReason = i18n.t(NS + 'statusAudited', lang);
         else if (!canAudit) {
-          blockReason = '外发工厂订单尚未关单，只有已关单的订单才能审核';
+          blockReason = i18n.t(NS + 'factoryNotClosed', lang);
         }
 
         // D-428：结算异常判定 —— 异常项前端标红，提示用户核实详情
@@ -288,13 +314,13 @@ Page({
         var abnormalText = '';
         var cardCls = '';
         if (!hasApproval) {
-          abnormalText = '缺少审批标识，数据可能未同步，请核实';
+          abnormalText = i18n.t(NS + 'missingAuditIdLong', lang);
           cardCls = 'order-card--danger';
         } else if (qtyNum > 0 && (amtNum <= 0 || priceNum <= 0)) {
-          abnormalText = '结算金额或工序单价为 0，请核实';
+          abnormalText = i18n.t(NS + 'zeroAmountWarn', lang);
           cardCls = 'order-card--danger';
         } else if (!audited && !canAudit) {
-          abnormalText = '外发工厂订单尚未关单，暂不可审核';
+          abnormalText = i18n.t(NS + 'factoryNotClosedShort', lang);
           cardCls = 'order-card--warn';
         }
 
@@ -309,13 +335,14 @@ Page({
         r.audited = audited;
         r.canAudit = canAudit;
         r.isExternalFactory = isExternalFactory;
-        r.auditText = audited ? '已审核' : '待审核';
+        r.auditText = audited ? i18n.t(NS + 'statusAudited', lang) : i18n.t(NS + 'statusAuditing', lang);
         r.auditCls = audited ? 'tag-green' : 'tag-orange';
         r.eligible = eligible;
         r.blockReason = blockReason;
         r._abnormalText = abnormalText;
         r._cardCls = cardCls;
-        r.orderStatusText = ORDER_STATUS_TEXT[String(r.orderStatus || '').toLowerCase()] || (r.orderStatus || '—');
+        var osKey = ORDER_STATUS_TEXT[String(r.orderStatus || '').toLowerCase()];
+        r.orderStatusText = osKey ? i18n.t(osKey, lang) : (r.orderStatus || '—');
         r.amountStr = r.totalAmount != null ? Number(r.totalAmount).toFixed(2) : '0.00';
         r.unitPriceStr = r.unitPrice != null ? Number(r.unitPrice).toFixed(2) : '—';
         r.quantityStr = r.quantity != null ? String(r.quantity) : '0';
@@ -330,21 +357,21 @@ Page({
         var endText = fmtDateTime(r.endTime);
         var startText = fmtDateTime(r.startTime);
         if (endText) {
-          r._timeText = '完成 ' + endText;
+          r._timeText = i18n.t(NS + 'completeFmt', lang) + endText;
         } else if (startText) {
-          r._timeText = '开始 ' + startText;
+          r._timeText = i18n.t(NS + 'startFmt', lang) + startText;
         } else {
           r._timeText = '';
         }
         // D-421：来源标注（样衣 / 大货 / 裁床）
         var scan = SCAN_TYPE_MAP[String(r.scanType || '').toLowerCase()] || SCAN_TYPE_FALLBACK;
         r._sourceKind = scan.kind;
-        r._sourceText = scan.text;
+        r._sourceText = i18n.t(NS + scan.key, lang);
         // D-426：结算类型标签（自己完成 / 内部指派 / 外发工厂）
         var dkey = String(r.delegateTargetType || '').toLowerCase();
         var dty = DELEGATE_TYPE_MAP[dkey] || DELEGATE_TYPE_MAP.none;
         r._factoryKind = dty.kind;
-        r._factoryText = dty.text;
+        r._factoryText = i18n.t(NS + dty.key, lang);
         return r;
       });
 
@@ -359,6 +386,7 @@ Page({
         notFrozenCount: notFrozenCount,
         noApprovalIdCount: noApprovalIdCount,
         abnormalCount: abnormalCount,
+        abnormalText: i18n.tf(NS + 'abnormalFmt', { n: abnormalCount }, lang),
         loading: false,
       });
 
@@ -376,7 +404,7 @@ Page({
       }
     }).catch(function (e) {
       that.setData({ loading: false });
-      toast('加载失败: ' + (e.errMsg || e.message || e));
+      toast(i18n.t('common.loadFailed', this._lang) + ': ' + (e.errMsg || e.message || e));
     });
   },
 
@@ -393,7 +421,8 @@ Page({
    */
   onFactoryFilterChange: function (e) {
     var idx = Number(e.detail.value);
-    var opt = FACTORY_FILTER_OPTIONS[idx] || FACTORY_FILTER_OPTIONS[0];
+    var opts = this.data.factoryFilterOptions;
+    var opt = opts[idx] || opts[0] || {};
     this.setData({
       factoryFilter: opt.value,
       factoryFilterLabel: opt.label,
@@ -407,7 +436,7 @@ Page({
     this.setData({
       _year: Number(parts[0]),
       _month: Number(parts[1]),
-      monthLabel: Number(parts[0]) + '年' + Number(parts[1]) + '月',
+      monthLabel: Number(parts[0]) + i18n.t(NS + 'yearUnitW', this._lang) + Number(parts[1]) + i18n.t(NS + 'monthUnitW', this._lang),
       monthValue: parts[0] + '-' + parts[1],
       list: [],
     });
@@ -422,7 +451,7 @@ Page({
     var item = this.data.list[idx];
     if (!item) return;
     var approvalId = item.approvalId ? String(item.approvalId) : '';
-    if (!approvalId) { toast('该明细缺少审批标识，无法查看详情'); return; }
+    if (!approvalId) { toast(i18n.t(NS + 'detailNoAuditId', this._lang)); return; }
     wx.navigateTo({
       url: '/pages/finance/payroll-approval/detail/index?approvalId=' + encodeURIComponent(approvalId)
         + '&year=' + this.data._year + '&month=' + this.data._month,
@@ -437,20 +466,20 @@ Page({
     var idx = e.currentTarget.dataset.index;
     var item = this.data.list[idx];
     if (!item) return;
-    if (!item.eligible) { toast(item.blockReason || '当前不可审核'); return; }
+    if (!item.eligible) { toast(item.blockReason || i18n.t(NS + 'cannotAuditNow', this._lang)); return; }
     wx.showModal({
-      title: '确认审核',
-      content: '审核 ' + (item.operatorName || '') + ' - ' + (item.processName || '') + ' ¥' + item.amountStr + '？',
+      title: i18n.t(NS + 'auditConfirmTitle', this._lang),
+      content: i18n.t(NS + 'auditFmt', this._lang) + (item.operatorName || '') + ' - ' + (item.processName || '') + ' ¥' + item.amountStr + '？',
       success: function (res) {
         if (!res.confirm) return;
-        wx.showLoading({ title: '处理中...', mask: true });
+        wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.payrollSettlement.approveDetail(item.approvalId).then(function () {
           wx.hideLoading();
-          toast('已审核');
+          toast(i18n.t(NS + 'statusAudited', this._lang));
           that._loadData();
         }).catch(function (err) {
           wx.hideLoading();
-          toast('审核失败: ' + (err.errMsg || err.message || err));
+          toast(i18n.t(NS + 'auditFailPrefix', this._lang) + (err.errMsg || err.message || err));
         });
       },
     });
@@ -462,22 +491,22 @@ Page({
   onActionAudit: function () {
     var item = this.data.current;
     if (!item) return;
-    if (!item.eligible) { toast(item.blockReason || '当前不可审核'); return; }
+    if (!item.eligible) { toast(item.blockReason || i18n.t(NS + 'cannotAuditNow', this._lang)); return; }
     var that = this;
     wx.showModal({
-      title: '确认审核',
-      content: '审核 ' + (item.operatorName || '') + ' - ' + (item.processName || '') + ' ¥' + item.amountStr + '？',
+      title: i18n.t(NS + 'auditConfirmTitle', this._lang),
+      content: i18n.t(NS + 'auditFmt', this._lang) + (item.operatorName || '') + ' - ' + (item.processName || '') + ' ¥' + item.amountStr + '？',
       success: function (res) {
         if (!res.confirm) return;
-        wx.showLoading({ title: '处理中...', mask: true });
+        wx.showLoading({ title: i18n.t(NS + 'handlingTxt', this._lang), mask: true });
         api.payrollSettlement.approveDetail(item.approvalId).then(function () {
           wx.hideLoading();
-          toast('已审核');
+          toast(i18n.t(NS + 'statusAudited', this._lang));
           that.setData({ showActionSheet: false, current: null });
           that._loadData();
         }).catch(function (e) {
           wx.hideLoading();
-          toast('审核失败: ' + (e.errMsg || e.message || e));
+          toast(i18n.t(NS + 'auditFailPrefix', this._lang) + (e.errMsg || e.message || e));
         });
       },
     });
@@ -492,23 +521,23 @@ Page({
     var ids = this.data.auditableIds || [];
     if (!ids.length) {
       if (this.data.notFrozenCount > 0) {
-        toast('外发工厂订单尚未关单，只有已关单的订单才能审核');
+        toast(i18n.t(NS + 'factoryNotClosed', this._lang));
       } else if (this.data.pendingCount === 0 && this.data.auditedCount > 0) {
-        toast('已全部审核过，无需重复审核');
+        toast(i18n.t(NS + 'allAudited', this._lang));
       } else if (this.data.noApprovalIdCount > 0) {
-        toast('存在缺少审批标识的明细，无法审核');
+        toast(i18n.t(NS + 'someMissingId', this._lang));
       } else {
-        toast('当前没有可审核的明细');
+        toast(i18n.t(NS + 'noAuditable', this._lang));
       }
       return;
     }
     var that = this;
     wx.showModal({
-      title: '批量审核',
-      content: '确认审核全部 ' + ids.length + ' 条可审核明细？',
+      title: i18n.t(NS + 'batchAuditBtn', this._lang),
+      content: i18n.tf(NS + 'batchAuditFmt', { count: ids.length }, this._lang),
       success: function (res) {
         if (!res.confirm) return;
-        wx.showLoading({ title: '审核中...', mask: true });
+        wx.showLoading({ title: i18n.t(NS + 'auditingTxt', this._lang), mask: true });
         // 顺序提交，避免并发写导致的状态竞争
         var chain = Promise.resolve();
         var okCount = 0;
@@ -524,7 +553,7 @@ Page({
         });
         chain.then(function () {
           wx.hideLoading();
-          toast('已审核 ' + okCount + ' 条' + (failCount ? '，失败 ' + failCount + ' 条' : ''));
+          toast(i18n.tf(NS + 'auditDoneFmt', { ok: okCount, fail: failCount }, this._lang));
           that._loadData();
         });
       },
@@ -580,7 +609,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,
