@@ -1,3 +1,5 @@
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.returnDetail.';
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
@@ -20,12 +22,52 @@ Page({
     returnRatio: '0%',
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}） */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        returnAmtLabel: i18n.t(NS + 'returnAmtLabel', lang),
+        returnRatio: i18n.t(NS + 'returnRatio', lang),
+        returnItemCount: i18n.t(NS + 'returnItemCount', lang),
+        basicInfoTitle: i18n.t(NS + 'basicInfoTitle', lang),
+        originalNoLabel: i18n.t(NS + 'originalNoLabel', lang),
+        returnTypeLabel: i18n.t(NS + 'returnTypeLabel', lang),
+        partyLabel: i18n.t(this.data.type === 'purchase' ? NS + 'supplierLabel' : NS + 'customerLabel', lang),
+        operatorLabel: i18n.t(NS + 'operatorLabel', lang),
+        createTimeLabel: i18n.t(NS + 'createTimeLabel', lang),
+        auditorLabel: i18n.t(NS + 'auditorLabel', lang),
+        auditTimeLabel: i18n.t(NS + 'auditTimeLabel', lang),
+        returnTimeLabel: i18n.t(NS + 'returnTimeLabel', lang),
+        refundTimeLabel: i18n.t(NS + 'refundTimeLabel', lang),
+        refundAmtLabel: i18n.t(NS + 'refundAmtLabel', lang),
+        returnReason: i18n.t(NS + 'returnReason', lang),
+        remarkLabel: i18n.t(NS + 'remarkLabel', lang),
+        returnDetailTitle: i18n.t(NS + 'returnDetailTitle', lang),
+        rejectBtn: i18n.t(NS + 'rejectBtn', lang),
+        auditPassBtn: i18n.t(NS + 'auditPassBtn', lang),
+        completeReturnBtn: i18n.t(NS + 'completeReturnBtn', lang),
+        markRefundedBtn: i18n.t(NS + 'markRefundedBtn', lang),
+        cancel: i18n.t('common.cancel', lang),
+        itemsUnitW: i18n.t(NS + 'itemsUnitW', lang),
+        fullReturnW: i18n.t(NS + 'stFull', lang),
+        qtyLabelW: i18n.t(NS + 'qtyLabelW', lang),
+        unitPriceW: i18n.t(NS + 'unitPriceW', lang),
+      },
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad(options) {
+    this.applyLanguage(i18n.getLanguage());
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     const id = Number(options.id);
     const type = options.type === 'sales' ? 'sales' : 'purchase';
-    this.setData({ id, type, partyLabel: type === 'purchase' ? '供应商' : '客户' });
+    this.setData({ id: id, type: type, partyLabel: i18n.t(type === 'purchase' ? NS + 'supplierLabel' : NS + 'customerLabel', this._lang) });
     this.loadDetail();
     bindPageEvents(this, () => this.loadDetail());
   },
@@ -62,7 +104,7 @@ Page({
     } catch (e) {
       console.error('[ReturnDetail] loadDetail error', e);
       this.setData({ loading: false });
-      toast.error('加载退货详情失败');
+      toast.error(i18n.t(NS + 'loadFailW', this._lang));
     }
   },
 
@@ -72,7 +114,7 @@ Page({
       returnNo: r.returnNo || '-',
       originalNo: type === 'purchase' ? (r.originalPurchaseNo || '-') : (r.originalOrderNo || '-'),
       partyName: type === 'purchase' ? (r.supplierName || '-') : (r.customerName || '-'),
-      returnType: r.returnType === 'FULL' ? '全部退货' : (r.returnType === 'PARTIAL' ? '部分退货' : (r.returnType || '-')),
+      returnType: r.returnType === 'FULL' ? i18n.t(NS + 'stFull', this._lang) : (r.returnType === 'PARTIAL' ? i18n.t(NS + 'stPartial', this._lang) : (r.returnType || '-')),
       returnReason: r.returnReason || '-',
       totalAmount: Number(r.totalAmount || 0).toFixed(2),
       refundAmount: r.refundAmount != null ? Number(r.refundAmount).toFixed(2) : '',
@@ -96,7 +138,7 @@ Page({
       color: it.color || '',
       size: it.size || '',
       quantity: it.quantity || 0,
-      unit: it.unit || (type === 'purchase' ? '' : '件'),
+      unit: it.unit || (type === 'purchase' ? '' : i18n.t(NS + 'pieceUnit', this._lang)),
       unitPrice: Number(it.unitPrice || 0).toFixed(2),
       amount: Number(it.amount || 0).toFixed(2),
       returnReason: it.returnReason || '',
@@ -136,10 +178,10 @@ Page({
   async onApprove() {
     const { id, type } = this.data;
     wx.showModal({
-      title: '确认审核',
-      content: '确定通过此退货单的审核？',
-      confirmText: '通过',
-      cancelText: '取消',
+      title: i18n.t(NS + 'auditTitle', this._lang),
+      content: i18n.t(NS + 'auditPassConfirm', this._lang),
+      confirmText: i18n.t(NS + 'passWord', this._lang),
+      cancelText: i18n.t('common.cancel', this._lang),
       success: async (res) => {
         if (!res.confirm) return;
         try {
@@ -148,10 +190,10 @@ Page({
           } else {
             await api.salesReturn.approve(id, {});
           }
-          toast.success('审核通过');
+          toast.success(i18n.t(NS + 'auditPassed', this._lang));
           this.loadDetail();
         } catch (e) {
-          toast.error(e && e.errMsg ? e.errMsg : '审核失败');
+          toast.error(e && e.errMsg ? e.errMsg : i18n.t(NS + 'auditFailW', this._lang));
         }
       },
     });
@@ -160,16 +202,16 @@ Page({
   async onReject() {
     const { id, type } = this.data;
     wx.showModal({
-      title: '拒绝退货',
+      title: i18n.t(NS + 'rejectTitle', this._lang),
       editable: true,
-      placeholderText: '请输入拒绝原因',
-      confirmText: '确认拒绝',
-      cancelText: '取消',
+      placeholderText: i18n.t(NS + 'rejectReasonReq', this._lang),
+      confirmText: i18n.t(NS + 'rejectConfirm', this._lang),
+      cancelText: i18n.t('common.cancel', this._lang),
       success: async (res) => {
         if (!res.confirm) return;
         const reason = (res.content || '').trim();
         if (!reason) {
-          toast.error('请输入拒绝原因');
+          toast.error(i18n.t(NS + 'rejectReasonReq', this._lang));
           return;
         }
         try {
@@ -178,10 +220,10 @@ Page({
           } else {
             await api.salesReturn.reject(id, reason);
           }
-          toast.success('已拒绝');
+          toast.success(i18n.t(NS + 'rejected', this._lang));
           this.loadDetail();
         } catch (e) {
-          toast.error(e && e.errMsg ? e.errMsg : '操作失败');
+          toast.error(e && e.errMsg ? e.errMsg : i18n.t(NS + 'opFailW', this._lang));
         }
       },
     });
@@ -190,18 +232,18 @@ Page({
   async onComplete() {
     const { id } = this.data;
     wx.showModal({
-      title: '确认完成退货',
-      content: '完成后将更新库存和应付账款，确定继续？',
-      confirmText: '确认完成',
-      cancelText: '取消',
+      title: i18n.t(NS + 'completeTitle', this._lang),
+      content: i18n.t(NS + 'completeHint', this._lang),
+      confirmText: i18n.t(NS + 'confirmComplete', this._lang),
+      cancelText: i18n.t('common.cancel', this._lang),
       success: async (res) => {
         if (!res.confirm) return;
         try {
           await api.purchaseReturn.complete(id);
-          toast.success('退货已完成');
+          toast.success(i18n.t(NS + 'returnDone', this._lang));
           this.loadDetail();
         } catch (e) {
-          toast.error(e && e.errMsg ? e.errMsg : '操作失败');
+          toast.error(e && e.errMsg ? e.errMsg : i18n.t(NS + 'opFailW', this._lang));
         }
       },
     });
@@ -210,18 +252,18 @@ Page({
   async onRefund() {
     const { id } = this.data;
     wx.showModal({
-      title: '确认退款完成',
-      content: '确认此销售退货单已退款给客户？',
-      confirmText: '确认退款',
-      cancelText: '取消',
+      title: i18n.t(NS + 'refundTitle', this._lang),
+      content: i18n.t(NS + 'refundConfirm', this._lang),
+      confirmText: i18n.t(NS + 'refundConfirmBtn', this._lang),
+      cancelText: i18n.t('common.cancel', this._lang),
       success: async (res) => {
         if (!res.confirm) return;
         try {
           await api.salesReturn.markRefunded(id);
-          toast.success('已标记退款完成');
+          toast.success(i18n.t(NS + 'refundMarked', this._lang));
           this.loadDetail();
         } catch (e) {
-          toast.error(e && e.errMsg ? e.errMsg : '操作失败');
+          toast.error(e && e.errMsg ? e.errMsg : i18n.t(NS + 'opFailW', this._lang));
         }
       },
     });

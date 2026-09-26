@@ -2480,6 +2480,8 @@ const SHIPMENT_JS = 'pages/factory/shipment/index.js';
 const SHIPMENT_WXML = 'pages/factory/shipment/index.wxml';
 const SHIPMENT_DETAIL_JS = 'pages/factory/shipment-detail/index.js';
 const SHIPMENT_DETAIL_WXML = 'pages/factory/shipment-detail/index.wxml';
+const RETURN_DETAIL_JS = 'pages/return/detail/index.js';
+const RETURN_DETAIL_WXML = 'pages/return/detail/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3307,6 +3309,24 @@ function testI18nShipment() {
   eq('外发列表 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '发货记录');
 }
 
+/** 退货详情页（D-576）—— 四步审核流（审核/拒绝/完成/退款） */
+function testI18nReturnDetail() {
+  testPageI18n(RETURN_DETAIL_JS, RETURN_DETAIL_WXML, '退货详情页');
+
+  const { page: zhP, wx: zhWx } = loadPage(RETURN_DETAIL_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(RETURN_DETAIL_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 退货金额', zhP.data.t.returnAmtLabel, '退货金额');
+  eq('en 四步按钮', enP.data.t.auditPassBtn + '|' + enP.data.t.rejectBtn + '|' + enP.data.t.completeReturnBtn + '|' + enP.data.t.markRefundedBtn,
+    'Approve|Reject|Complete Return|Mark Refunded');
+  ok('en 完成提示无中文', !CJK_RE.test(String(enP.data.t.completeHint)), enP.data.t.completeHint);
+
+  eq('退货详情导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Return Detail');
+  eq('退货详情 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '退货详情');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3369,6 +3389,7 @@ try {
   testI18nOrderForm();
   testI18nSmartOps();
   testI18nShipment();
+  testI18nReturnDetail();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
