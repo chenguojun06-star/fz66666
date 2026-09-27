@@ -2541,6 +2541,8 @@ const SCAN_HANDLERS = {
   stageProcessor: 'pages/scan/handlers/helpers/ScanStageProcessor.js',
   peripheral: 'pages/scan/handlers/helpers/ScanPeripheralHelper.js',
 };
+const ORDER_NO_DATA_JS = 'pages/order/no-data-create/index.js';
+const ORDER_NO_DATA_WXML = 'pages/order/no-data-create/index.wxml';
 const ORDER_REMARK_JS = 'pages/order/remark/index.js';
 const ORDER_REMARK_WXML = 'pages/order/remark/index.wxml';
 const ORDER_CREATE_JS = 'pages/order/create/index.js';
@@ -2987,6 +2989,38 @@ function testI18nScanHome() {
   // ⑦ 导航标题
   eq('扫码主页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan');
   eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
+}
+
+/** 无资料下单页（D-604）—— 该页 onLoad 即 redirect 到 create/form，但 wxml 仍须无中文 */
+function testI18nOrderNoDataCreate() {
+  testPageI18n(ORDER_NO_DATA_JS, ORDER_NO_DATA_WXML, '无资料下单页');
+
+  const { page: zhP, wx: zhWx } = loadPage(ORDER_NO_DATA_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP } = loadPage(ORDER_NO_DATA_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 款号标签', zhP.data.t.styleNoLabel, '款号');
+  eq('en 款号标签', enP.data.t.styleNoLabel, 'Style No.');
+  eq('en 创建订单按钮', enP.data.t.createOrderBtn, 'Create order');
+  eq('en 请选择复用 common.pleaseSelect', enP.data.t.pleaseSelect, 'Please select');
+  ok('en 外发工厂标签无中文', !CJK_RE.test(enP.data.t.externalFactoryLabel), enP.data.t.externalFactoryLabel);
+
+  // 该页是「过渡页」：onLoad 直接 redirectTo 到 create/form?noData=true
+  const jsSrc = fs.readFileSync(path.join(MP, ORDER_NO_DATA_JS), 'utf8');
+  ok('护栏：过渡页在 redirect 前先 applyLanguage',
+    jsSrc.indexOf('this.applyLanguage') < jsSrc.indexOf('wx.redirectTo'),
+    '否则渲染前 t 为空，会闪一帧空文案');
+}
+
+/** 订单表单页的豁免护栏（D-604）—— PROD_DEPT_KEYWORDS 是匹配关键词表 */
+function testI18nOrderFormGuard() {
+  console.log('\n【i18n：订单表单页豁免护栏】');
+  const src = fs.readFileSync(path.join(MP, ORDER_FORM_JS), 'utf8');
+  ok('护栏：生产部门关键词表仍是中文',
+    src.includes("const PROD_DEPT_KEYWORDS = ['生产', '车间'"),
+    '拿中文 includes() 匹配部门名，翻译后永远匹配不上');
+  ok('护栏：豁免说明未被删除', src.includes('i18n 豁免'), '文件头须保留说明');
 }
 
 /** 订单备注页（D-603）—— 备注输入 + 图片上传 + 备注记录 */
@@ -4036,6 +4070,8 @@ try {
   testI18nAdminMenuRoleConfig();
   testI18nOrderRemark();
   testI18nOrderCreate();
+  testI18nOrderNoDataCreate();
+  testI18nOrderFormGuard();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

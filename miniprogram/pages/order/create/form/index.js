@@ -18,6 +18,9 @@ const PLATE_MAP = ['', 'FIRST', 'REORDER'];
 const BIZ_TYPES = ['FOB', 'ODM', 'OEM', 'CMT'];
 const BIZ_TYPE_LABELS = ['fobLabel', 'odmLabel', 'oemLabel', 'cmtLabel'];  // i18n 键后缀，applyLanguage 重建
 const PRICING_MODES = ['PROCESS', 'SIZE', 'COST', 'QUOTE', 'MANUAL'];
+// 🚫 i18n 豁免：生产部门**关键词匹配表** —— 用来判断某个字符串是否含生产部门词
+//    （扫描工具会把它报成 18 处「待翻译」，实际可翻数为 0）
+//    翻译后 includes() 永远匹配不上 → 部门识别失效
 const PROD_DEPT_KEYWORDS = ['生产', '车间', '裁剪', '缝制', '后整', '工序', '车缝', '尾部', '整烫', '包装', '质检', '工艺', '班组', '产线', '绣花', '印花', '洗水', '组'];
 
 Page({
