@@ -1,3 +1,5 @@
+const i18n = require('../../utils/i18n/index');
+const NS = 'mp.register.';
 const api = require('../../utils/api');
 const { validateByRule } = require('../../utils/validationRules');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
@@ -27,7 +29,44 @@ Page({
     showFactoryDropdown: false,
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}） */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        subtitle: i18n.t(NS + 'subtitle', lang),
+        factoryCodeLabel: i18n.t(NS + 'factoryCodeLabel', lang),
+        factoryNotFound: i18n.t(NS + 'factoryNotFound', lang),
+        usernameLabel: i18n.t(NS + 'usernameLabel', lang),
+        nameLabel: i18n.t(NS + 'nameLabel', lang),
+        phoneLabel: i18n.t(NS + 'phoneLabel', lang),
+        passwordLabel: i18n.t(NS + 'passwordLabel', lang),
+        confirmPwdLabel: i18n.t(NS + 'confirmPwdLabel', lang),
+        agreePrefix: i18n.t(NS + 'agreePrefix', lang),
+        termsLink: i18n.t(NS + 'termsLink', lang),
+        andWord: i18n.t(NS + 'andWord', lang),
+        privacyLink: i18n.t(NS + 'privacyLink', lang),
+        hasAccount: i18n.t(NS + 'hasAccount', lang),
+        backLoginBtn: i18n.t(NS + 'backLoginBtn', lang),
+        submitBtn: i18n.t(NS + 'submitBtn', lang),
+        codeLabel2: i18n.t(NS + 'codeLabel2', lang),
+        codeOrNamePh: i18n.t(NS + 'codeOrNamePh', lang),
+        usernamePh: i18n.t(NS + 'usernamePh', lang),
+        namePh: i18n.t(NS + 'namePh', lang),
+        phonePh: i18n.t(NS + 'phonePh', lang),
+        pwdPh: i18n.t(NS + 'pwdPh', lang),
+        confirmPwdPh: i18n.t(NS + 'confirmPwdPh', lang),
+        submittingW: i18n.t(NS + 'submittingW', lang),
+        submitRegBtn: i18n.t(NS + 'submitRegBtn', lang),
+      },
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad(options) {
+    this.applyLanguage(i18n.getLanguage());
     if (options && options.tenantCode) {
       this.setData({
         tenantCode: decodeURIComponent(options.tenantCode),
@@ -167,7 +206,7 @@ Page({
             filteredTenants: [],
             showFactoryDropdown: false,
           });
-          toast.success('扫码成功：' + (parsed.factoryName || parsed.tenantName || parsed.tenantCode));
+          toast.success(i18n.t(NS + 'scanOkPrefix', this._lang) + (parsed.factoryName || parsed.tenantName || parsed.tenantCode));
         } else {
           this.setData({
             tenantCode: result.trim(),
@@ -176,7 +215,7 @@ Page({
             filteredTenants: [],
             showFactoryDropdown: false,
           });
-          toast.success('已获取编码');
+          toast.success(i18n.t(NS + 'codeObtained', this._lang));
         }
       },
       fail: () => {
@@ -241,12 +280,12 @@ Page({
     const { tenantCode, username, name, phone, password, confirmPassword, agreedPolicies } = this.data;
 
     if (!tenantCode.trim()) {
-      toast.error('请输入工厂编码');
+      toast.error(i18n.t(NS + 'factoryCodeReq', this._lang));
       return false;
     }
 
     const usernameErr = validateByRule(username, {
-      name: '用户名',
+      name: i18n.t(NS + 'usernameLabel', this._lang),
       required: true,
       minLength: 3,
       maxLength: 20,
@@ -258,14 +297,14 @@ Page({
     }
 
     if (!name.trim()) {
-      toast.error('请输入姓名');
+      toast.error(i18n.t(NS + 'nameReq', this._lang));
       return false;
     }
 
     const phoneValue = String(phone || '').trim();
     if (phoneValue) {
       const phoneErr = validateByRule(phoneValue, {
-        name: '手机号',
+        name: i18n.t(NS + 'phoneLabel', this._lang),
         required: false,
         pattern: /^1[3-9]\d{9}$/,
       });
@@ -276,7 +315,7 @@ Page({
     }
 
     const passwordErr = validateByRule(password, {
-      name: '密码',
+      name: i18n.t(NS + 'passwordLabel', this._lang),
       required: true,
       minLength: 6,
       maxLength: 20,
@@ -287,12 +326,12 @@ Page({
     }
 
     if (password !== confirmPassword) {
-      toast.error('两次输入的密码不一致');
+      toast.error(i18n.t(NS + 'pwdMismatch', this._lang));
       return false;
     }
 
     if (!agreedPolicies) {
-      toast.error('请先阅读并同意用户服务协议和隐私政策');
+      toast.error(i18n.t(NS + 'agreeRequired', this._lang));
       return false;
     }
 
@@ -321,19 +360,19 @@ Page({
       // resp 是 raw 返回（包含 code 字段）
       if (resp && resp.code === 200) {
         wx.showModal({
-          title: '注册成功',
-          content: '注册申请已提交，请耐心等待管理员审批通过后即可登录。',
+          title: i18n.t(NS + 'regOk', this._lang),
+          content: i18n.t(NS + 'regPendingMsg', this._lang),
           showCancel: false,
-          confirmText: '返回登录',
+          confirmText: i18n.t(NS + 'backLoginBtn', this._lang),
           success: () => {
             safeNavigate({ url: '/pages/login/index' }, 'redirectTo').catch(() => {});
           },
         });
       } else {
-        toast.error((resp && resp.message) || '注册失败，请稍后重试');
+        toast.error((resp && resp.message) || i18n.t(NS + 'regFailRetry', this._lang));
       }
     } catch (e) {
-      const msg = (e && e.errMsg) || (e && e.message) || '注册失败，请检查网络';
+      const msg = (e && e.errMsg) || (e && e.message) || i18n.t(NS + 'regFailNetwork', this._lang);
       toast.error(msg);
     } finally {
       this.setData({ loading: false });

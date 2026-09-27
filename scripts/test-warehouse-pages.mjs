@@ -2500,6 +2500,8 @@ const COLLAB_DETAIL_JS = 'pages/collab-task/detail/index.js';
 const COLLAB_DETAIL_WXML = 'pages/collab-task/detail/index.wxml';
 const COLLAB_LIST_JS = 'pages/collab-task/list/index.js';
 const COLLAB_LIST_WXML = 'pages/collab-task/list/index.wxml';
+const REGISTER_JS = 'pages/register/index.js';
+const REGISTER_WXML = 'pages/register/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3467,6 +3469,24 @@ function testI18nCollabTask() {
   eq('协作列表 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '协作任务');
 }
 
+/** 注册页（D-583）—— 表单/协议勾选/扫码带码 */
+function testI18nRegister() {
+  testPageI18n(REGISTER_JS, REGISTER_WXML, '注册页');
+
+  const { page: zhP, wx: zhWx } = loadPage(REGISTER_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(REGISTER_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 注册标题', zhP.data.t.navTitle, '员工注册');
+  eq('en 注册标题', enP.data.t.navTitle, 'Employee Registration');
+  ok('en 协议勾选无中文', !CJK_RE.test(String(enP.data.t.agreePrefix) + String(enP.data.t.termsLink)), enP.data.t.agreePrefix + enP.data.t.termsLink);
+  ok('en 密码占位无中文', !CJK_RE.test(String(enP.data.t.pwdPh)), enP.data.t.pwdPh);
+
+  eq('注册页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Employee Registration');
+  eq('注册页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '员工注册');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3536,6 +3556,7 @@ try {
   testI18nTaskList();
   testI18nDashboard();
   testI18nCollabTask();
+  testI18nRegister();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));

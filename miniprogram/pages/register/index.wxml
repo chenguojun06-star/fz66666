@@ -1,18 +1,18 @@
 <view class="container">
   <view class="card register-card">
-    <view class="title">员工注册</view>
-    <view class="subtitle">填写信息后请耐心等待管理员审批</view>
+    <view class="title">{{t.navTitle}}</view>
+    <view class="subtitle">{{t.subtitle}}</view>
 
     <!-- 工厂编码/名称 -->
     <view class="field factory-field">
-      <view class="label">工厂编码/名称 <text class="required">*</text></view>
+      <view class="label">{{t.codeLabel2}} <text class="required">*</text></view>
       <view class="input-row">
         <view class="input-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         </view>
         <input
           class="input"
-          placeholder="请输入工厂编码或名称"
+          placeholder="{{t.codeOrNamePh}}"
           value="{{selectedFactory ? selectedFactory.tenantCode : tenantCode}}"
           bindinput="onTenantCodeInput"
           disabled="{{!!scannedCode}}"
@@ -41,21 +41,21 @@
           <text class="factory-dropdown-code">{{item.tenantCode}}</text>
         </view>
         <view wx:if="{{filteredTenants.length === 0}}" class="factory-dropdown-empty">
-          未搜索到对应工厂，可直接输入编码
+          {{t.factoryNotFound}}
         </view>
       </view>
     </view>
 
     <!-- 用户名 -->
     <view class="field">
-      <view class="label">用户名 <text class="required">*</text></view>
+      <view class="label">{{t.usernameLabel}} <text class="required">*</text></view>
       <view class="input-row">
         <view class="input-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </view>
         <input
           class="input"
-          placeholder="3-20位字母、数字、下划线"
+          placeholder="{{t.usernamePh}}"
           value="{{username}}"
           bindinput="onUsernameInput"
           maxlength="20"
@@ -65,14 +65,14 @@
 
     <!-- 姓名 -->
     <view class="field">
-      <view class="label">姓名 <text class="required">*</text></view>
+      <view class="label">{{t.nameLabel}} <text class="required">*</text></view>
       <view class="input-row">
         <view class="input-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 21h8"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>
         </view>
         <input
           class="input"
-          placeholder="请输入姓名"
+          placeholder="{{t.namePh}}"
           value="{{name}}"
           bindinput="onNameInput"
         />
@@ -81,7 +81,7 @@
 
     <!-- 手机号 -->
     <view class="field">
-      <view class="label">手机号（选填）</view>
+      <view class="label">{{t.phoneLabel}}</view>
       <view class="input-row">
         <view class="input-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
@@ -89,7 +89,7 @@
         <input
           class="input"
           type="number"
-          placeholder="请输入手机号"
+          placeholder="{{t.phonePh}}"
           value="{{phone}}"
           bindinput="onPhoneInput"
           maxlength="11"
@@ -99,7 +99,7 @@
 
     <!-- 密码 -->
     <view class="field">
-      <view class="label">密码 <text class="required">*</text></view>
+      <view class="label">{{t.passwordLabel}} <text class="required">*</text></view>
       <view class="input-row">
         <view class="input-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -107,7 +107,7 @@
         <input
           class="input"
           password="true"
-          placeholder="至少6位密码"
+          placeholder="{{t.pwdPh}}"
           value="{{password}}"
           bindinput="onPasswordInput"
         />
@@ -116,7 +116,7 @@
 
     <!-- 确认密码 -->
     <view class="field">
-      <view class="label">确认密码 <text class="required">*</text></view>
+      <view class="label">{{t.confirmPwdLabel}} <text class="required">*</text></view>
       <view class="input-row">
         <view class="input-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -124,7 +124,7 @@
         <input
           class="input"
           password="true"
-          placeholder="请再次输入密码"
+          placeholder="{{t.confirmPwdPh}}"
           value="{{confirmPassword}}"
           bindinput="onConfirmPasswordInput"
         />
@@ -136,24 +136,24 @@
         <view class="ios-toggle-handle"></view>
       </view>
       <view class="agreement-text-wrap">
-        <text class="agreement-text">我已阅读并同意</text>
-        <text class="agreement-link" bindtap="onViewServiceAgreement">《用户服务协议》</text>
-        <text class="agreement-text">和</text>
-        <text class="agreement-link" bindtap="onViewPrivacyPolicy">《隐私政策》</text>
+        <text class="agreement-text">{{t.agreePrefix}}</text>
+        <text class="agreement-link" bindtap="onViewServiceAgreement">{{t.termsLink}}</text>
+        <text class="agreement-text">{{t.andWord}}</text>
+        <text class="agreement-link" bindtap="onViewPrivacyPolicy">{{t.privacyLink}}</text>
       </view>
     </view>
 
     <!-- 提交按钮 -->
     <view class="btn">
       <view class="btn-primary {{loading ? 'btn-disabled' : ''}}" hover-class="{{loading ? '' : 'btn-primary-hover'}}" hover-stay-time="100" bindtap="onSubmit">
-        {{loading ? '提交中...' : '提交注册申请'}}
+        {{loading ? t.submittingW : t.submitRegBtn}}
       </view>
     </view>
   </view>
 
   <!-- 返回登录 -->
   <view class="back-link" bindtap="onBackToLogin">
-    <text class="back-link-text">已有账号？</text><text class="back-link-action">返回登录</text>
+    <text class="back-link-text">{{t.hasAccount}}</text><text class="back-link-action">{{t.backLoginBtn}}</text>
   </view>
   <!-- 微信隐私授权弹窗（审核必须） -->
   <privacy-dialog id="privacyDialog" />
