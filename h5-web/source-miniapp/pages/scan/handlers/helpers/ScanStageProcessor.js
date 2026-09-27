@@ -12,6 +12,9 @@
  */
 
 const StageDetector = require('../../services/StageDetector');
+const i18n = require('../../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
 
 class ScanStageProcessor {
   constructor(api, scanModeResolver, scanTypeGetter) {
@@ -40,7 +43,7 @@ class ScanStageProcessor {
     if (scanMode === SCAN_MODE.BUNDLE) {
       if (!hasOrderNo) {
         console.warn('[ScanStageProcessor] BUNDLE模式但orderNo为空，无法检测工序');
-        throw new Error('订单号为空，请检查二维码格式');
+        throw new Error(i18n.t(NS + 'orderNoEmptyQrFormat'));
       }
       if (!hasBundleNo && (currentProcessName === '采购' || currentProcessName === '裁剪')) {
         console.warn(
@@ -76,7 +79,9 @@ class ScanStageProcessor {
       // 当前订单处于生产阶段（车缝/尾部/二次工艺等），必须使用菲号二维码扫码。
       // 历史 bug：此处曾错误调用 detectNextStage，导致 ORDER 码被识别为任意生产工序。
       throw new Error(
-        `当前订单处于【${currentProcessName || '生产阶段'}】，订单码只能用于采购/裁剪，请扫描菲号二维码`,
+        i18n.tf(NS + 'orderStageOnlyProcCutFmt', {
+          stage: currentProcessName || i18n.t(NS + 'productionStage'),
+        }),
       );
     }
   }
@@ -100,7 +105,7 @@ class ScanStageProcessor {
     }
 
     if (!stageResult) {
-      throw new Error('无法识别当前工序,请联系管理员');
+      throw new Error(i18n.t(NS + 'cannotDetectProcess'));
     }
 
     // 页面手选 scanType 仅用于 manual 覆盖，后续判定应优先使用检测出的工序 scanType
@@ -109,18 +114,18 @@ class ScanStageProcessor {
 
     // 质检类型特殊处理
     if (scanType === 'quality' && scanMode === 'ORDER') {
-      throw new Error('质检请扫描菲号二维码');
+      throw new Error(i18n.t(NS + 'qcScanBundleQr'));
     }
 
     // 所有工序已完成 → 抛出完成提示，阻止继续扫码（必须在入库判断之前）
     if (stageResult.isCompleted) {
-      const err = new Error(stageResult.hint || '进度节点已完成');
+      const err = new Error(stageResult.hint || i18n.t(NS + 'stageDoneDefault'));
       err.isCompleted = true;
       throw err;
     }
 
     if (stageResult.isDuplicate) {
-      throw new Error(stageResult.hint || '扫码过于频繁,请稍后再试');
+      throw new Error(stageResult.hint || i18n.t(NS + 'scanTooFrequent'));
     }
 
     return stageResult;

@@ -18,31 +18,34 @@
  */
 function _friendlyNetworkError(e) {
   const raw = e && (e.errMsg || e.message || '');
-  if (!raw) return '提交失败，请重试';
+  if (!raw) return i18n.t(NS + 'submitFailedRetry');
   // 网络连接重置（云端重启/网络中断）
   if (raw.includes('ERR_CONNECTION_RESET') || raw.includes('errcode:-101')) {
-    return '网络连接中断，请稍后重试（服务器可能正在更新）';
+    return i18n.t(NS + 'netInterrupted');
   }
   // 请求超时
   if (raw.includes('timeout')) {
-    return '网络超时，请检查网络后重试';
+    return i18n.t(NS + 'netTimeout');
   }
   // 连接失败（WiFi断开、飞行模式）
   if (raw.includes('ERR_CONNECTION_REFUSED') || raw.includes('errcode:-102')) {
-    return '无法连接服务器，请检查网络设置';
+    return i18n.t(NS + 'netCannotConnect');
   }
   // DNS解析失败
   if (raw.includes('ERR_NAME_NOT_RESOLVED') || raw.includes('errcode:-105')) {
-    return '网络异常，请检查网络连接';
+    return i18n.t(NS + 'netError');
   }
   // 业务错误（后端返回的 message）
   if (e && e.type === 'biz' && e.errMsg) {
     return e.errMsg;
   }
-  return e && e.errMsg || e && e.message || '提交失败，请重试';
+  return e && e.errMsg || e && e.message || i18n.t(NS + 'submitFailedRetry');
 }
 
 const ScanOfflineQueue = require('../../services/ScanOfflineQueue');
+const i18n = require('../../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
 
 class ScanSubmitter {
   constructor(api) {
@@ -94,7 +97,7 @@ class ScanSubmitter {
       } else {
         return {
           success: false,
-          message: res?.message || '提交失败',
+          message: res?.message || i18n.t(NS + 'submitFailed'),
         };
       }
     } catch (e) {
@@ -116,7 +119,7 @@ class ScanSubmitter {
             success: false,
             isOfflineQueued: true,
             offlineCount: ScanOfflineQueue.count(),
-            message: '网络异常，已离线缓存，联网后自动同步',
+            message: i18n.t(NS + 'offlineQueuedNetwork'),
           };
         }
       }
@@ -135,7 +138,7 @@ class ScanSubmitter {
   async submitAndBuildResult(scanMode, parsedData, stageResult, scanData) {
     const submitResult = await this.submitScan(scanData);
     if (!submitResult.success) {
-      const err = new Error(submitResult.message || '提交失败');
+      const err = new Error(submitResult.message || i18n.t(NS + 'submitFailed'));
       if (submitResult.isOfflineQueued) {
         err.isOfflineQueued = true;
         err.offlineCount = submitResult.offlineCount;
@@ -171,26 +174,34 @@ class ScanSubmitter {
     const processName = scanData.processName;
     const bundleNo = scanData.bundleNo;
     const skuItems = scanData.skuItems;
-    const hintSuffix = precheckHint ? `（预检提示：${precheckHint}）` : '';
-    const bundleNoSuffix = bundleNo ? ` · 菲号${bundleNo}` : '';
+    const hintSuffix = precheckHint ? i18n.tf(NS + 'precheckHintFmt', { hint: precheckHint }) : '';
+    const bundleNoSuffix = bundleNo ? i18n.tf(NS + 'bundleNoSuffixFmt', { bundleNo: bundleNo }) : '';
 
     if (scanMode === 'bundle' && bundleNo) {
       // 菲号模式：显示工序和数量
       const hint = stageResult.hint ? ` ${stageResult.hint}` : '';
-      return `${processName} ${quantity}件${hint}${bundleNoSuffix}${hintSuffix}`;
+      return i18n.tf(NS + 'bundleSuccessFmt', {
+        processName, quantity, hint, bundleNoSuffix, hintSuffix,
+      });
     } else if (scanMode === 'ucode') {
       // U编码入库模式
-      return `U编码入库成功 - ${scanData.color}/${scanData.size} ${quantity}件${bundleNoSuffix}${hintSuffix}`;
+      return i18n.tf(NS + 'ucodeSuccessFmt', {
+        color: scanData.color, size: scanData.size, quantity, bundleNoSuffix, hintSuffix,
+      });
     } else if (scanMode === 'sku') {
       // SKU模式：显示工序、SKU信息和数量
-      return `${processName} 成功 - ${scanData.color}/${scanData.size} ${quantity}件${bundleNoSuffix}${hintSuffix}`;
+      return i18n.tf(NS + 'skuSuccessFmt', {
+        processName, color: scanData.color, size: scanData.size, quantity, bundleNoSuffix, hintSuffix,
+      });
     } else {
       // 订单模式：显示工序
       if (skuItems && skuItems.length > 0) {
         // 如果有SKU明细，提示已处理明细
-        return `${processName} 成功 - 已处理 ${skuItems.length} 个规格${bundleNoSuffix}${hintSuffix}`;
+        return i18n.tf(NS + 'orderSkuSuccessFmt', {
+          processName, count: skuItems.length, bundleNoSuffix, hintSuffix,
+        });
       }
-      return `订单扫码成功 - ${processName}${bundleNoSuffix}${hintSuffix}`;
+      return i18n.tf(NS + 'orderSuccessFmt', { processName, bundleNoSuffix, hintSuffix });
     }
   }
 }

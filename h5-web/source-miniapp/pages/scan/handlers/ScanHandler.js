@@ -33,6 +33,9 @@ const ScanStageProcessor = require('./helpers/ScanStageProcessor');
 const ScanSubmitter = require('./helpers/ScanSubmitter');
 const ScanPeripheralHelper = require('./helpers/ScanPeripheralHelper');
 const { formatLocalDateTime } = ScanPeripheralHelper;
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
 
 /**
  * 扫码业务编排器
@@ -211,7 +214,7 @@ class ScanHandler {
     const parseResult = this.qrParser.parse(rawScanCode);
 
     if (!parseResult.success) {
-      return this._errorResult(parseResult.message || '无法识别的二维码格式');
+      return this._errorResult(parseResult.message || i18n.t(NS + 'unrecognizedQr'));
     }
 
     const parsedData = parseResult.data;
@@ -241,7 +244,7 @@ class ScanHandler {
 
     const orderDetail = await this.dataProcessor.getOrderDetail(parsedData.orderNo, parsedData.orderId);
     if (!orderDetail) {
-      return { earlyReturn: this._errorResult('订单不存在或已删除[' + (parsedData.orderNo || 'orderNo为空') + ']') };
+      return { earlyReturn: this._errorResult(i18n.tf(NS + 'orderNotFoundFmt', { extra: parsedData.orderNo || 'orderNo为空' })) };
     }
 
     // 保证 parsedData/orderDetail 的订单号字段一致且不为空
@@ -301,7 +304,7 @@ class ScanHandler {
     return {
       success: true,
       needConfirmProcess: true,
-      message: '已识别工序，请确认后领取',
+      message: i18n.t(NS + 'stageIdentifiedConfirm'),
       data: {
         scanMode,
         orderNo: parsedData.orderNo,
@@ -339,15 +342,15 @@ class ScanHandler {
     const raw = e && (e.errMsg || e.message || '');
     let errorMsg;
     if (raw.includes('ERR_CONNECTION_RESET') || raw.includes('errcode:-101')) {
-      errorMsg = '网络连接中断，请稍后重试（服务器可能正在更新）';
+      errorMsg = i18n.t(NS + 'netInterrupted');
     } else if (raw.includes('timeout')) {
-      errorMsg = '网络超时，请检查网络后重试';
+      errorMsg = i18n.t(NS + 'netTimeout');
     } else if (raw.includes('ERR_CONNECTION_REFUSED') || raw.includes('errcode:-102')) {
-      errorMsg = '无法连接服务器，请检查网络设置';
+      errorMsg = i18n.t(NS + 'netCannotConnect');
     } else if (raw.includes('ERR_NAME_NOT_RESOLVED') || raw.includes('errcode:-105')) {
-      errorMsg = '网络异常，请检查网络连接';
+      errorMsg = i18n.t(NS + 'netError');
     } else {
-      errorMsg = raw || '扫码失败，请重试';
+      errorMsg = raw || i18n.t(NS + 'scanFailedRetry');
     }
 
     if (this.options.onError) {
@@ -425,7 +428,7 @@ class ScanHandler {
     return {
       success: true,
       needConfirmProcess: true,
-      message: 'U编码入库，请确认数量和仓库',
+      message: i18n.t(NS + 'ucodeInboundConfirm'),
       data: {
         scanMode: 'ucode',
         orderNo: parsedData.orderNo || '',

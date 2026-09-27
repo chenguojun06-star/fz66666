@@ -2531,6 +2531,9 @@ const SCAN_HANDLERS = {
   undo: 'pages/scan/handlers/UndoHandler.js',
   inline: 'pages/scan/handlers/InlineScanDispatcher.js',
   scan: 'pages/scan/handlers/ScanHandler.js',
+  submitter: 'pages/scan/handlers/helpers/ScanSubmitter.js',
+  stageProcessor: 'pages/scan/handlers/helpers/ScanStageProcessor.js',
+  peripheral: 'pages/scan/handlers/helpers/ScanPeripheralHelper.js',
 };
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
@@ -3006,7 +3009,28 @@ function testI18nScanLogic() {
   //    （不是 storage），而 loadRealModule 每次都是新的 vm context，两个模块实例不共享状态。
   //    要测它得先跑通整条扫码链路（触网），不值当 —— 改由下面 ⑤ 的语言包层断言兜住。
 
-  // ④ 护栏：匹配用的中文常量**必须**保持中文（翻译了会永远匹配不上）
+  // ④ 提交成功文案（ScanSubmitter.buildSuccessMessage）—— 纯函数，四种模式各一条
+  const ScanSubmitter = load(SCAN_HANDLERS.submitter, 'en-US').mod;
+  const sub = new ScanSubmitter({});
+  const stage = { hint: '' };
+  eq('en 菲号模式成功文案',
+    sub.buildSuccessMessage('bundle', { processName: 'Sewing', quantity: 10, bundleNo: 'B-1' }, stage),
+    'Sewing 10 pcs · Bundle B-1');
+  eq('en U编码模式成功文案',
+    sub.buildSuccessMessage('ucode', { color: 'Red', size: 'M', quantity: 5 }, stage),
+    'U-code inbound done - Red/M 5 pcs');
+  eq('en 订单SKU模式成功文案',
+    sub.buildSuccessMessage('order', { processName: 'Cutting', skuItems: [{}, {}] }, stage),
+    'Cutting done - 2 SKU(s) processed');
+  eq('en 预检提示后缀',
+    sub.buildSuccessMessage('order', { processName: 'Cutting' }, stage, 'check BOM'),
+    'Order scan successful - Cutting (pre-check: check BOM)');
+  const zhSub = new (load(SCAN_HANDLERS.submitter, 'zh-CN').mod)({});
+  ok('zh 菲号模式成功文案含中文',
+    CJK_RE.test(zhSub.buildSuccessMessage('bundle', { processName: '车缝', quantity: 10, bundleNo: 'B-1' }, stage)),
+    zhSub.buildSuccessMessage('bundle', { processName: '车缝', quantity: 10, bundleNo: 'B-1' }, stage));
+
+  // ⑤ 护栏：匹配用的中文常量**必须**保持中文（翻译了会永远匹配不上）
   const inlineSrc = fs.readFileSync(path.join(MP, SCAN_HANDLERS.inline), 'utf8');
   ok('护栏：物料均已领取仍是中文匹配串',
     inlineSrc.includes("indexOf('物料均已领取')"), '该串用于匹配异常报文，不可键化');
@@ -3015,8 +3039,14 @@ function testI18nScanLogic() {
     scanSrc.includes("['采购', '原材料采购', '物料采购', '辅料采购']"), '用于比对后端工序名，不可键化');
   ok('护栏：裁剪白名单仍是中文常量',
     scanSrc.includes("['裁剪', '裁床', '分扎', '分包']"), '用于比对后端工序名，不可键化');
+  ok('护栏：入库仍是提交后端的 processName 值',
+    scanSrc.includes("processName: '入库'"), '这是写进后端/DB 的载荷值，键化会导致工序对不上');
+  const stageProcSrc = fs.readFileSync(path.join(MP, SCAN_HANDLERS.stageProcessor), 'utf8');
+  ok('护栏：工序比对仍用中文（采购/裁剪）',
+    stageProcSrc.includes("currentProcessName === '采购' || currentProcessName === '裁剪'"),
+    '拿中文比对后端 currentProcessName，不可键化');
 
-  // ⑤ 语言包层兜底：mp.scanLogic.* 四语言齐备、非中文无残留、占位符已设计好
+  // ⑥ 语言包层兜底：mp.scanLogic.* 四语言齐备、非中文无残留、占位符已设计好
   //    （覆盖上面按分支测不到的键，如 scanSuccessDefault / offlineQueued / scanTooFast）
   const flatten = (obj, prefix = '', out = []) => {
     Object.entries(obj || {}).forEach(([k, v]) => {

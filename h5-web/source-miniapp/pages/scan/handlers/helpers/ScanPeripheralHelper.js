@@ -5,6 +5,10 @@
  * 从 ScanHandler.js 拆分，保持主文件精简
  */
 
+const i18n = require('../../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
+
 /**
  * 格式化日期为 YYYY-MM-DD HH:MM:SS
  * @param {Date} date - 日期对象
@@ -65,11 +69,11 @@ function validateScanPermission(options) {
   const worker = options.getCurrentWorker ? options.getCurrentWorker() : null;
 
   if (!factory) {
-    return { valid: false, message: '请先选择工厂' };
+    return { valid: false, message: i18n.t(NS + 'pleaseSelectFactory') };
   }
 
   if (!worker) {
-    return { valid: false, message: '请先登录' };
+    return { valid: false, message: i18n.t(NS + 'pleaseLogin') };
   }
 
   return { valid: true };
