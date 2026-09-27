@@ -2917,7 +2917,15 @@ function testI18nScanHome() {
   ok('库位标签保留 {count}', /\{count\}/.test(String(enP.data.t.targetLocationFmt)), enP.data.t.targetLocationFmt);
   ok('待上传文案保留 {count}', /\{count\}/.test(String(enP.data.t.offlinePendingFmt)), enP.data.t.offlinePendingFmt);
 
-  // ⑤ JS 层提示文案（toast / showModal / showLoading）—— 页面 t 表查不到，必须单独断言
+  // ⑤ picker 选项数组必须按语言整体重建（只翻 data.t 不够）—— 与 scanQuality 页同手法
+  eq('zh 缺陷类别首位', zhP.data.defectCategories[0], '外观完整性问题');
+  eq('en 缺陷类别首位', enP.data.defectCategories[0], 'Appearance integrity issue');
+  ok('en 缺陷类别无中文残留', enP.data.defectCategories.every((x) => !CJK_RE.test(x)),
+    enP.data.defectCategories.join(' | '));
+  ok('缺陷类别数量与载荷常量一致', enP.data.defectCategories.length === 5,
+    String(enP.data.defectCategories.length));
+
+  // ⑥ JS 层提示文案（toast / showModal / showLoading）—— 页面 t 表查不到，必须单独断言
   const enApi = loadPage(SCAN_HOME_JS, makeApi());
   enApi.page.applyLanguage('en-US');
   const zhApi = loadPage(SCAN_HOME_JS, makeApi());
@@ -2950,7 +2958,7 @@ function testI18nScanHome() {
   eq('en 撤回按钮', enModal.confirmText, 'Undo');
   ok('en 撤回弹窗正文无中文', !CJK_RE.test(String(enModal.content)), enModal.content);
 
-  // ⑥ 导航标题
+  // ⑦ 导航标题
   eq('扫码主页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan');
   eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
 }
@@ -3046,7 +3054,7 @@ function testI18nScanLogic() {
     stageProcSrc.includes("currentProcessName === '采购' || currentProcessName === '裁剪'"),
     '拿中文比对后端 currentProcessName，不可键化');
 
-  // ⑦ 豁免文件护栏（D-595）：shared/stageDetection.js 全是契约值，扫描报 132 处但可翻数为 0。
+  // ⑧ 豁免文件护栏（D-595）：shared/stageDetection.js 全是契约值，扫描报 132 处但可翻数为 0。
   //    任何人把它 i18n 化 → 非中文下工序类型判定全失败 → 扫码路由错工序 + 门禁失效。
   const stageSrc = fs.readFileSync(path.join(MP, 'shared/stageDetection.js'), 'utf8');
   ok('护栏：豁免声明未被删除', stageSrc.includes('i18n 豁免文件'),
@@ -3069,7 +3077,17 @@ function testI18nScanLogic() {
   ok('护栏：app.js 导航进行中仍是匹配串',
     appSrc.includes("reason.includes('导航进行中')"), '用于忽略防抖导航的正常报错，不可键化');
 
-  // ⑥ 语言包层兜底：mp.scanLogic.* 四语言齐备、非中文无残留、占位符已设计好
+  // 本批（D-596）新增的匹配串与载荷值
+  const stateMgrSrc = fs.readFileSync(path.join(MP, 'pages/scan/mixins/scanStateManager.js'), 'utf8');
+  ok('护栏：errorAction 判定仍用中文关键词',
+    stateMgrSrc.includes("msg.indexOf('网络')") && stateMgrSrc.includes("msg.indexOf('太快')"),
+    '拿中文关键词决定「检查网络 / 不给重试」，不可键化');
+  const dataCfgSrc = fs.readFileSync(path.join(MP, 'pages/scan/mixins/scanDataConfig.js'), 'utf8');
+  ok('护栏：handleMethods 仍是提交载荷值',
+    dataCfgSrc.includes("handleMethods: ['返修', '报废']"),
+    '返修/报废是提交后端的载荷值，要按语言显示请另建展示数组');
+
+  // ⑦ 语言包层兜底：mp.scanLogic.* 四语言齐备、非中文无残留、占位符已设计好
   //    （覆盖上面按分支测不到的键，如 scanSuccessDefault / offlineQueued / scanTooFast）
   const flatten = (obj, prefix = '', out = []) => {
     Object.entries(obj || {}).forEach(([k, v]) => {
@@ -3081,7 +3099,7 @@ function testI18nScanLogic() {
   };
   const zhSrc = JSON.parse(fs.readFileSync(path.join(ROOT, 'shared-locales/source/zh-CN.json'), 'utf8'));
   const logicKeys = flatten(zhSrc.mp && zhSrc.mp.scanLogic, '', []);
-  ok('scanLogic 键数符合预期', logicKeys.length >= 60, `keys=${logicKeys.length}`);
+  ok('scanLogic 键数符合预期', logicKeys.length >= 100, `keys=${logicKeys.length}`);
 
   for (const lang of LANGS) {
     const file = JSON.parse(fs.readFileSync(path.join(ROOT, `shared-locales/source/${lang}.json`), 'utf8'));

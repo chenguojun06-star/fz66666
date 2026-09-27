@@ -14,6 +14,9 @@ const api = require('../../../utils/api');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const ScanOfflineQueue = require('../services/ScanOfflineQueue');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
 
 /**
  * 生命周期 Mixin
@@ -123,10 +126,12 @@ const scanLifecycleMixin = Behavior({
         // 构建 scan-result.wxml 所需的 lastResult 格式（同 handleScanSuccess）
         const formattedResult = {
           success: isSuccess,
-          statusText: isSuccess ? '扫码成功' : '扫码失败',
+          statusText: isSuccess ? i18n.t(NS + 'scanSuccessWord') : i18n.t(NS + 'scanFailedWord'),
           message: processName
-            ? (isSuccess ? processName + ' 已完成' : processName + ' 提交失败')
-            : (isSuccess ? '扫码成功' : '扫码失败'),
+            ? (isSuccess
+              ? i18n.tf(NS + 'processDoneFmt', { processName })
+              : i18n.tf(NS + 'processSubmitFailedFmt', { processName }))
+            : (isSuccess ? i18n.t(NS + 'scanSuccessWord') : i18n.t(NS + 'scanFailedWord')),
           processName: processName,
           orderNo: lastScanRes.orderNo || '',
           quantity: lastScanRes.quantity || 0,
@@ -299,11 +304,11 @@ const scanLifecycleMixin = Behavior({
         });
         this.setData({ offlineSyncing: false, offlinePendingCount: ScanOfflineQueue.count() });
         if (submitted > 0) {
-          wx.showToast({ title: '已同步 ' + submitted + ' 条扫码', icon: 'none', duration: 2200 });
+          wx.showToast({ title: i18n.tf(NS + 'syncedScanCountFmt', { count: submitted }), icon: 'none', duration: 2200 });
           setTimeout(() => { if (this && this.data) this.loadMyPanel(true); }, 500);
         }
         if (failed > 0 && ScanOfflineQueue.count() > 0) {
-          wx.showToast({ title: failed + ' 条暂时失败，稍后自动重试', icon: 'none', duration: 2500 });
+          wx.showToast({ title: i18n.tf(NS + 'partialFailedRetryFmt', { count: failed }), icon: 'none', duration: 2500 });
         }
       } catch (e) {
         console.warn('[lifecycle] _flushOfflineQueue 异常:', e);

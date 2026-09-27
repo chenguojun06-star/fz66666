@@ -132,8 +132,12 @@ const scanPageData = {
   },
   warehouseOptions: [],
   // 不合格原因大类（与PC端 DEFECT_CATEGORY_OPTIONS 完全一致）
+  // ⚠️ 这里的中文只是**首帧兜底**，页面 onShow → applyLanguage 会按语言整体重建
+  //    （见 pages/scan/index.js，与 scanQuality 页同手法）。要改文案改语言包 mp.scanLogic.defect*
   defectCategories: ['外观完整性问题', '尺寸精度问题', '工艺规范性问题', '功能有效性问题', '其他问题'],
   // 处理方式（与PC端 DEFECT_REMARK_OPTIONS 一致）
+  // ⚠️ handleMethods 是**提交后端的载荷值**（返修/报废），不是显示文案 —— 不可键化。
+  //    要按语言显示，请像 scanQuality 页那样另建 difficultyLabels 式的展示数组，别动这个。
   handleMethods: ['返修', '报废'],
 
   // [NEW] 样板生产确认弹窗数据

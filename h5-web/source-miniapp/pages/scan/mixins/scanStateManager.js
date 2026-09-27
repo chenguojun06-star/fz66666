@@ -7,6 +7,9 @@
 
 const api = require('../../../utils/api');
 const { DEBUG_MODE } = require('../../../config');
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
 
 /** 扫码结果通知停留时长：20 分钟 */
 const RESULT_DISMISS_MS = 20 * 60 * 1000;
@@ -40,7 +43,7 @@ module.exports = {
       }).catch(function(e) {
         console.error('[loadMyPanel] 加载统计数据失败:', e.message || e);
         self.setData({ 'my.stats': { scanCount: 0, orderCount: 0, totalQuantity: 0, totalAmount: 0 } });
-        if (DEBUG_MODE) wx.showToast({ title: '统计加载失败', icon: 'none' });
+        if (DEBUG_MODE) wx.showToast({ title: i18n.t(NS + 'statsLoadFailed'), icon: 'none' });
       }).finally(function() {
         self.setData({ 'my.loadingStats': false });
       });
@@ -54,7 +57,7 @@ module.exports = {
       const prevSessionQty = (this._sessionStats || {})[processName] || 0;
       const newSessionQty = prevSessionQty + scanQty;
       if (processName) { if (!this._sessionStats) this._sessionStats = {}; this._sessionStats[processName] = newSessionQty; }
-      const formattedResult = { displayTime: new Date().toLocaleTimeString(), statusText: '扫码成功', statusClass: 'success', sessionQty: newSessionQty };
+      const formattedResult = { displayTime: new Date().toLocaleTimeString(), statusText: i18n.t(NS + 'scanSuccessWord'), statusClass: 'success', sessionQty: newSessionQty };
       for (const k in result) { if (Object.prototype.hasOwnProperty.call(result, k)) formattedResult[k] = result[k]; }
       const localRecord = { orderNo: result.orderNo || '', processCode: result.processCode || '', processName: result.processName || '', quantity: result.quantity || 0, success: true, time: new Date().toLocaleTimeString() };
       this.setData({ lastResult: formattedResult, lastLocalScanRecord: localRecord, quantity: '' });
@@ -76,11 +79,13 @@ module.exports = {
 
     handleScanError: function(error) {
       wx.vibrateLong();
-      const msg = error.errMsg || error.message || '扫码失败';
+      const msg = error.errMsg || error.message || i18n.t(NS + 'scanFailedWord');
       let errorAction = 'retry';
+      // ⚠️ 下面两行里的中文（网络/超时/连接/重复/已扫/间隔/太快）是**匹配错误报文的关键词**，
+      //    用来决定 errorAction（显示"检查网络"还是不给重试按钮）—— 不是显示文案，必须保留中文
       if (msg.indexOf('网络') >= 0 || msg.indexOf('timeout') >= 0 || msg.indexOf('超时') >= 0 || msg.indexOf('连接') >= 0 || msg.indexOf('errcode:-101') >= 0 || msg.indexOf('errcode:-102') >= 0) errorAction = 'checkNetwork';
       else if (msg.indexOf('重复') >= 0 || msg.indexOf('已扫') >= 0 || msg.indexOf('间隔') >= 0 || msg.indexOf('太快') >= 0) errorAction = null;
-      const errorResult = { success: false, message: msg, displayTime: new Date().toLocaleTimeString(), statusText: '失败', statusClass: 'error', errorAction: errorAction };
+      const errorResult = { success: false, message: msg, displayTime: new Date().toLocaleTimeString(), statusText: i18n.t(NS + 'failedWord'), statusClass: 'error', errorAction: errorAction };
       const localRecord = { orderNo: error.orderNo || '', processCode: error.processCode || '', processName: error.processName || '', quantity: error.quantity || 0, success: false, time: new Date().toLocaleTimeString() };
       this.setData({ lastResult: errorResult, lastLocalScanRecord: localRecord });
       wx.pageScrollTo({ scrollTop: 0, duration: 300 });

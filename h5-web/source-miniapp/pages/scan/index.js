@@ -138,6 +138,16 @@ Page({
         loading: i18n.t('common.loading', lang),
         loadMore: i18n.t('common.loadMore', lang),
       },
+      // 不合格原因大类是 picker 选项数组，必须按语言整体重建（不能只翻 data.t）
+      // ⚠️ 这几个键在 mp.scanLogic.* 下（与 scanQuality 页共用同一套缺陷类别词条），
+      //    不能用本页的 t()（那是 mp.scanHome.* 前缀）
+      defectCategories: [
+        i18n.t('mp.scanLogic.defectAppearance', lang),
+        i18n.t('mp.scanLogic.defectSize', lang),
+        i18n.t('mp.scanLogic.defectProcess', lang),
+        i18n.t('mp.scanLogic.defectFunction', lang),
+        i18n.t('mp.scanLogic.defectOther', lang),
+      ],
     });
     // navigationBarTitleText 只能静态写死，标题必须运行时设置
     wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });

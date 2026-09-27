@@ -7,6 +7,10 @@
  * @module HistoryHandler
  */
 
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
+
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { DEBUG_MODE } = require('../../../config');
@@ -397,7 +401,7 @@ async function loadMyHistory(page, refresh = false) {
           const formatted = patternRecords.map(function(item) {
             return Object.assign({}, item, {
               scanType: item.scanType || 'pattern',
-              processName: item.processName || '样衣-' + (item.progressStage || item.operationType || ''),
+              processName: item.processName || i18n.t(NS + 'samplePrefix') + (item.progressStage || item.operationType || ''),
               progressStage: item.progressStage || 'pattern',
               scanResult: item.scanResult || 'success',
               operatorName: item.operatorName || item.operator_name || '',
@@ -454,7 +458,7 @@ async function loadMyHistory(page, refresh = false) {
   } catch (e) {
     console.error('[loadMyHistory] 加载失败:', e.message || e);
     // 始终提示用户加载失败，便于排查"重新打开后记录消失"问题
-    wx.showToast({ title: '加载记录失败，请下拉刷新', icon: 'none', duration: 2500 });
+    wx.showToast({ title: i18n.t(NS + 'loadRecordsFailedPull'), icon: 'none', duration: 2500 });
   } finally {
     page.setData({ 'my.loadingHistory': false });
 
@@ -522,7 +526,7 @@ function onHandleQuality(page, e) {
   const { groupedHistory } = page.data.my;
   const group = groupedHistory.find(g => g.id === groupId);
   if (!group || !group.items || !group.items[recordIdx]) {
-    toast.error('记录不存在');
+    toast.error(i18n.t(NS + 'recordNotExist'));
     return;
   }
 

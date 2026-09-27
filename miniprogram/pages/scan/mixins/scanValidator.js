@@ -5,6 +5,10 @@
  */
 'use strict';
 
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
+
 const recentScanExpires = new Map();
 const MAX_RECENT_SCANS = 80;
 const CLEANUP_BATCH_SIZE = 20;
@@ -43,8 +47,8 @@ module.exports = {
       const token = getToken();
       const user = getUserInfo();
       const factory = getStorageValue('currentFactory');
-      if (!token || !user) { toastAndRedirect('请先登录', '/pages/login/index'); return false; }
-      if (isTokenExpired()) { clearToken(); clearRefreshToken(); toastAndRedirect('登录已过期，请重新登录', '/pages/login/index'); return false; }
+      if (!token || !user) { toastAndRedirect(i18n.t(NS + 'pleaseLogin'), '/pages/login/index'); return false; }
+      if (isTokenExpired()) { clearToken(); clearRefreshToken(); toastAndRedirect(i18n.t(NS + 'loginExpired'), '/pages/login/index'); return false; }
       const updates = {};
       if (JSON.stringify(user) !== JSON.stringify(this.data.currentUser)) updates.currentUser = user;
       if (JSON.stringify(factory) !== JSON.stringify(this._currentFactory)) this._currentFactory = factory;
@@ -56,9 +60,9 @@ module.exports = {
       const value = e.detail.value;
       if (value === '' || value === null || value === undefined) { this._quantity = ''; return; }
       const num = parseInt(value, 10);
-      if (isNaN(num)) { wx.showToast({ title: '请输入有效数字', icon: 'none' }); return; }
-      if (num < 0) { wx.showToast({ title: '数量不能为负数', icon: 'none' }); return; }
-      if (num > 999999) { wx.showToast({ title: '数量不能超过999999', icon: 'none' }); return; }
+      if (isNaN(num)) { wx.showToast({ title: i18n.t(NS + 'inputValidNumber'), icon: 'none' }); return; }
+      if (num < 0) { wx.showToast({ title: i18n.t(NS + 'qtyNegative'), icon: 'none' }); return; }
+      if (num > 999999) { wx.showToast({ title: i18n.t(NS + 'qtyTooLarge'), icon: 'none' }); return; }
       this._quantity = num;
     },
 

@@ -10,6 +10,10 @@
  * @module SKUProcessor
  */
 
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
+
 const { sortSizeNames } = require('../../../utils/sizeUtils');
 
 /**
@@ -129,19 +133,23 @@ const SKUProcessor = {
    */
   validateSKUInput(skuInput) {
     if (!skuInput) {
-      return { valid: false, error: '缺少SKU数据' };
+      return { valid: false, error: i18n.t(NS + 'missingSkuData') };
     }
 
     const quantity = Number(skuInput.inputQuantity);
 
     if (!Number.isFinite(quantity) || quantity < 0) {
-      return { valid: false, error: `数量${skuInput.label}无效` };
+      return { valid: false, error: i18n.tf(NS + 'invalidQtyForFmt', { label: skuInput.label }) };
     }
 
     if (quantity > skuInput.totalQuantity) {
       return {
         valid: false,
-        error: `${skuInput.label}数量(${quantity})超过订单数量(${skuInput.totalQuantity})`,
+        error: i18n.tf(NS + 'qtyExceedOrderFmt', {
+          label: skuInput.label,
+          quantity: quantity,
+          total: skuInput.totalQuantity,
+        }),
       };
     }
 
@@ -160,7 +168,7 @@ const SKUProcessor = {
     if (!Array.isArray(skuInputList) || skuInputList.length === 0) {
       return {
         valid: false,
-        errors: ['请至少输入一个SKU数量'],
+        errors: [i18n.t(NS + 'atLeastOneSkuQty')],
         validList: [],
       };
     }
@@ -177,7 +185,7 @@ const SKUProcessor = {
     if (validList.length === 0) {
       return {
         valid: false,
-        errors: errors.length > 0 ? errors : ['没有有效的SKU输入'],
+        errors: errors.length > 0 ? errors : [i18n.t(NS + 'noValidSkuInput')],
         validList: [],
       };
     }

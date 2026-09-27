@@ -27,6 +27,10 @@
  * @date 2026-02-15
  */
 
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
+
 const ParserUtils = require('./parsers/ParserUtils');
 const BundleCodeParser = require('./parsers/BundleCodeParser');
 const OrderCodeParser = require('./parsers/OrderCodeParser');
@@ -50,7 +54,7 @@ class QRCodeParser {
   parse(rawScanCode) {
     const raw = (rawScanCode || '').toString().trim();
     if (!raw) {
-      return { success: false, message: '扫描内容为空', data: null };
+      return { success: false, message: i18n.t(NS + 'scanContentEmpty'), data: null };
     }
 
     // 预处理
@@ -66,7 +70,7 @@ class QRCodeParser {
     // 无法识别
     return {
       success: false,
-      message: '无法识别的二维码格式',
+      message: i18n.t(NS + 'unrecognizedQr'),
       data: {
         scanCode: raw,
         quantity: ParserUtils.parseQuantityFromText(parseTarget),
@@ -128,7 +132,7 @@ class QRCodeParser {
         if (skuNo) {
           jsonResult.skuNo = skuNo;
         }
-        return { success: true, message: '解析成功 (JSON)', data: jsonResult };
+        return { success: true, message: i18n.t(NS + 'parseOkJson'), data: jsonResult };
       }
     }
 
@@ -138,14 +142,14 @@ class QRCodeParser {
       if (skuNo) {
         urlResult.skuNo = skuNo;
       }
-      return { success: true, message: '解析成功 (URL)', data: urlResult };
+      return { success: true, message: i18n.t(NS + 'parseOkUrl'), data: urlResult };
     }
 
     // 2.5 面辅料料卷/箱二维码 MR + YYYYMMDD + 5位序号（共15字符）
     if (/^MR\d{13}$/.test(parseTarget)) {
       return {
         success: true,
-        message: '解析成功 (面辅料料卷)',
+        message: i18n.t(NS + 'parseOkMaterialRoll'),
         data: {
           scanCode: rawScanCode,
           type: 'material_roll',
@@ -168,7 +172,7 @@ class QRCodeParser {
     if (ucodeMatch) {
       return {
         success: true,
-        message: '解析成功 (U编码)',
+        message: i18n.t(NS + 'parseOkUcode'),
         data: {
           scanCode: rawScanCode,
           styleNo: ucodeMatch[1],
@@ -196,7 +200,7 @@ class QRCodeParser {
       if (skuNo) {
         orderResult.skuNo = skuNo;
       }
-      return { success: true, message: '解析成功 (订单号)', data: orderResult };
+      return { success: true, message: i18n.t(NS + 'parseOkOrderNo'), data: orderResult };
     }
 
     return null;
@@ -215,7 +219,7 @@ class QRCodeParser {
 
     return {
       success: true,
-      message: isSku ? '解析成功 (商品编码)' : '解析成功 (菲号)',
+      message: isSku ? i18n.t(NS + 'parseOkSku') : i18n.t(NS + 'parseOkBundle'),
       data: {
         scanCode: raw,
         quantity: bundleResult.quantity,

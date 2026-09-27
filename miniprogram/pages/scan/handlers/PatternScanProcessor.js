@@ -18,14 +18,14 @@
 async function handlePatternScan(handler, parsedData, manualScanType) {
   const patternId = parsedData.patternId || parsedData.scanCode;
   if (!patternId) {
-    return handler._errorResult('无效的样衣二维码');
+    return handler._errorResult(i18n.t(NS + 'invalidSampleQr'));
   }
 
   try {
     // 获取样衣详情
     const patternDetail = await getPatternDetail(handler, patternId);
     if (!patternDetail) {
-      return handler._errorResult('样衣记录不存在');
+      return handler._errorResult(i18n.t(NS + 'sampleRecordNotExist'));
     }
 
     // 获取样衣扫码记录，判断当前可执行的操作
@@ -48,11 +48,11 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
 
     // D-165：未配置工序一律拦截，不再走默认四步流程
     if (!hasProcessSystem) {
-      return handler._errorResult('该款【' + (patternDetail.styleNo || '') + '】未配置开发工序，请先在PC端款式资料中配置工序后再扫码');
+      return handler._errorResult(i18n.tf(NS + 'styleNoProcessNotConfiguredFmt', { styleNo: patternDetail.styleNo || '' }));
     }
 
     if (operationOptions.length === 0) {
-      return handler._errorResult('该样衣没有可执行操作，请检查样衣状态');
+      return handler._errorResult(i18n.t(NS + 'sampleNoAction'));
     }
 
     // 选择默认操作（如果指定了手动扫码类型，优先匹配）
@@ -76,11 +76,11 @@ async function handlePatternScan(handler, parsedData, manualScanType) {
         status: patternDetail.status,
         hasProcessSystem: hasProcessSystem, // 样衣使用工序系统
       },
-      message: '请确认样衣操作',
+      message: i18n.t(NS + 'confirmSampleAction'),
     };
   } catch (e) {
     console.error('[PatternScanProcessor] 样衣扫码失败:', e);
-    return handler._errorResult(e.errMsg || e.message || '样衣扫码失败');
+    return handler._errorResult(e.errMsg || e.message || i18n.t(NS + 'sampleScanFailed'));
   }
 }
 
@@ -135,6 +135,10 @@ async function getPatternProcessConfig(handler, patternId) {
  * 会出现"已入库仍显示待领取"）。审核与入库入口在样衣详情页：
  * 生产完成 → 详情页「样衣审核」；审核通过 → 详情页「样衣入库」跳样衣仓库，与 PC 一致。
  */
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
+
 function buildProcessOperationOptions(processConfig, scanRecords, patternDetail, _manualScanType) {
   if (!processConfig || processConfig.length === 0) {
     return [];
@@ -171,7 +175,7 @@ function buildProcessOperationOptions(processConfig, scanRecords, patternDetail,
       } else {
         option.icon = 'lock';
         option.locked = true;
-        option.lockReason = option.claimedBy ? (option.claimedBy + ' 生产中') : '已领取';
+        option.lockReason = option.claimedBy ? (i18n.tf(NS + 'lockReasonInProductionFmt', { name: option.claimedBy })) : i18n.t(NS + 'lockReasonClaimed');
       }
     }
     options.push(option);
