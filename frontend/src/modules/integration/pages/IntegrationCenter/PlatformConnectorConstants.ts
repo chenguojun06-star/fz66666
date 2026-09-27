@@ -106,7 +106,7 @@ export const PLATFORM_LIST: PlatformMeta[] = [
     desc: '拼多多批量订单处理与发货',
     icon: 'pdd',
     color: 'var(--color-red-600)',
-    syncMode: 'webhook',
+    syncMode: 'pull',
     features: ['订单导入', '批量发货', '库存同步'],
     docUrl: 'https://open.pinduoduo.com',
     monthlyPrice: 149,

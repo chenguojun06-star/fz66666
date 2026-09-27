@@ -7,6 +7,7 @@ import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcPlatformConfigOrchestrator;
 import com.fashion.supplychain.system.orchestration.AppStoreOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.service.EcPlatformOAuthService;
+import com.fashion.supplychain.integration.ecommerce.service.PddOrderSyncService;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
 import com.fashion.supplychain.integration.ecommerce.service.JushuitanSyncService;
 import com.fashion.supplychain.system.entity.EcPlatformConfig;
@@ -48,6 +49,9 @@ public class PlatformConnectorController {
 
     @Autowired
     private EcPlatformOAuthService ecPlatformOAuthService;
+
+    @Autowired
+    private PddOrderSyncService pddOrderSyncService;
 
     @Autowired
     private AppStoreOrchestrator appStoreOrchestrator;
@@ -301,7 +305,14 @@ public class PlatformConnectorController {
                 Map<String, Object> syncResult = jushuitanSyncService.syncOrders(config, tenantId, null);
                 return Result.success(syncResult);
             }
-            case "TAOBAO", "TMALL", "DOUYIN", "PINDUODUO", "JD",
+            case "PINDUODUO" -> {
+                // D-589 拼多多直连拉单样板：增量拉取近24小时订单并幂等入库
+                requireEcSubscription(tenantId, platformCode);
+                Map<String, Object> syncResult = pddOrderSyncService.pullOrders(config, null);
+                syncResult.put("platform", platformCode);
+                return Result.success(syncResult);
+            }
+            case "TAOBAO", "TMALL", "DOUYIN", "JD",
                  "XIAOHONGSHU", "WECHAT_SHOP", "SHOPIFY", "SHEIN" -> {
                 return Result.success(Map.of(
                         "platform", platformCode,
