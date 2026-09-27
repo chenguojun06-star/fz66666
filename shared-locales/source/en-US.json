@@ -200,6 +200,24 @@
       "tenant": "API Integration",
       "integrationCenter": "Integration Center"
     },
+    "short": {
+      "appStore": "Store",
+      "basic": "Sample",
+      "crm": "CRM",
+      "customer": "Client",
+      "dashboard": "Dash",
+      "ecommerce": "E-com",
+      "finance": "Finance",
+      "intelligenceCenter": "AI",
+      "procurement": "Supply",
+      "production": "Produce",
+      "selection": "Select",
+      "supplierManagement": "Partner",
+      "system": "System",
+      "tenant": "API",
+      "tools": "Tools",
+      "warehouse": "Product"
+    },
     "items": {
       "styleInfo": "Sample Development",
       "patternProduction": "Pattern Production",

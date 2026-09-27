@@ -207,6 +207,24 @@ export const LOCALES = {
         "tenant": "API对接管理",
         "integrationCenter": "集成对接中心"
       },
+      "short": {
+        "appStore": "商店",
+        "basic": "样衣",
+        "crm": "CRM",
+        "customer": "客户",
+        "dashboard": "仪表",
+        "ecommerce": "电商",
+        "finance": "财务",
+        "intelligenceCenter": "智能",
+        "procurement": "物料",
+        "production": "生产",
+        "selection": "选品",
+        "supplierManagement": "伙伴",
+        "system": "系统",
+        "tenant": "对接",
+        "tools": "工具",
+        "warehouse": "成品"
+      },
       "items": {
         "styleInfo": "样衣开发",
         "patternProduction": "样板生产",
@@ -3420,6 +3438,24 @@ export const LOCALES = {
         "customer": "Customer",
         "tenant": "API Integration",
         "integrationCenter": "Integration Center"
+      },
+      "short": {
+        "appStore": "Store",
+        "basic": "Sample",
+        "crm": "CRM",
+        "customer": "Client",
+        "dashboard": "Dash",
+        "ecommerce": "E-com",
+        "finance": "Finance",
+        "intelligenceCenter": "AI",
+        "procurement": "Supply",
+        "production": "Produce",
+        "selection": "Select",
+        "supplierManagement": "Partner",
+        "system": "System",
+        "tenant": "API",
+        "tools": "Tools",
+        "warehouse": "Product"
       },
       "items": {
         "styleInfo": "Sample Development",
@@ -6635,6 +6671,24 @@ export const LOCALES = {
         "tenant": "Tích hợp API",
         "integrationCenter": "Trung tâm tích hợp"
       },
+      "short": {
+        "appStore": "App",
+        "basic": "Mẫu",
+        "crm": "CRM",
+        "customer": "KH",
+        "dashboard": "Bảng",
+        "ecommerce": "TMĐT",
+        "finance": "TC",
+        "intelligenceCenter": "AI",
+        "procurement": "Vật tư",
+        "production": "SX",
+        "selection": "Chọn",
+        "supplierManagement": "Đối tác",
+        "system": "HT",
+        "tenant": "API",
+        "tools": "Công cụ",
+        "warehouse": "TP"
+      },
       "items": {
         "styleInfo": "Phát triển mẫu",
         "patternProduction": "Sản xuất rập",
@@ -9848,6 +9902,24 @@ export const LOCALES = {
         "customer": "គ្រប់គ្រងអតិថិជន",
         "tenant": "ភ្ជាប់ API",
         "integrationCenter": "មជ្ឈមណ្ឌលបញ្ចូល"
+      },
+      "short": {
+        "appStore": "ហាង",
+        "basic": "គំរូ",
+        "crm": "CRM",
+        "customer": "អតិថិជន",
+        "dashboard": "ផ្ទាំង",
+        "ecommerce": "អូនឡាញ",
+        "finance": "ហិរញ្ញ",
+        "intelligenceCenter": "ឆ្លាតវៃ",
+        "procurement": "វត្ថុធាតុ",
+        "production": "ផលិត",
+        "selection": "ជ្រើស",
+        "supplierManagement": "ដៃគូ",
+        "system": "ប្រព័ន្ធ",
+        "tenant": "API",
+        "tools": "ឧបករណ៍",
+        "warehouse": "កន្ត្រក"
       },
       "items": {
         "styleInfo": "អភិវឌ្ឍគំរូ",

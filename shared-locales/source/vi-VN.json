@@ -200,6 +200,24 @@
       "tenant": "Tích hợp API",
       "integrationCenter": "Trung tâm tích hợp"
     },
+    "short": {
+      "appStore": "App",
+      "basic": "Mẫu",
+      "crm": "CRM",
+      "customer": "KH",
+      "dashboard": "Bảng",
+      "ecommerce": "TMĐT",
+      "finance": "TC",
+      "intelligenceCenter": "AI",
+      "procurement": "Vật tư",
+      "production": "SX",
+      "selection": "Chọn",
+      "supplierManagement": "Đối tác",
+      "system": "HT",
+      "tenant": "API",
+      "tools": "Công cụ",
+      "warehouse": "TP"
+    },
     "items": {
       "styleInfo": "Phát triển mẫu",
       "patternProduction": "Sản xuất rập",

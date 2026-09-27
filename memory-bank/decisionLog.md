@@ -1,7 +1,26 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-24（新增 D-543 保活探针 900 秒异常排查 + 按场景超时封顶；D-542 定时任务记录接通）
+> 最后更新：2026-09-27（新增 D-585 折叠侧边栏图标下两字短标题；D-543 保活探针排查；D-542 定时任务记录接通）
+
+---
+
+## D-585：折叠侧边栏图标下方显示两字短标题（2026-09-27）
+
+**起因**：PC 端侧边栏折叠后只剩一列裸图标，不悬停就认不出哪个图标对应哪个业务分组。用户要求折叠态在图标下方显示两字标题，并"做的好一点"。
+
+**方案**（antd Menu inline-collapsed 之上做增量，不重造轮子）：
+1. `routeConfig.ts` 的 `MenuSection` 加 `shortTitle` 字段，16 个分组配中文两字短名（仪表/选品/样衣/物料/生产/伙伴/成品/电商/CRM/财务/系统/工具/商店/客户/对接/智能；CRM 与 客户管理 都在时用 "CRM" 避免两个"客户"重名）。
+2. 四语言 `shared-locales/source/*.json` 加 `menu.short.<key>`（越南语用 SX/TMĐT/KH 等当地通用缩写，高棉语用短词），`node scripts/sync-locales.js` 重新生成 frontend + miniprogram 两份 generated 文件。
+3. `SideMenu.tsx` 折叠态把 `icon` 换成 `sidebar-rail-item` 纵向组合（图标+短标题 span）；短标题解析顺序 = `t('menu.short.<key>')` → `section.shortTitle` → title 前 2 字。展开态原样返回图标，零影响。
+4. `Layout/styles.css` 折叠态 item 改 flex 纵排（高 50px、margin 2px 6px），antd 原生 label 与展开箭头 `display:none`（弹层是独立 portal 不受影响），短标题 `--font-size-sm`、超宽省略。
+
+**关键取舍**：
+- 不用自定义 rail 组件替换 antd Menu——保留既有悬停弹层、空 SubMenu 过滤、tooltip 等全部行为，只动 icon 节点。
+- 短标题挂在 icon 节点里而不是 label 里，是因为折叠态 antd 会隐藏/吞掉 label，icon 节点原样渲染。
+- 选中高亮沿用既有 `.ant-menu-submenu-selected` 规则，icon+文字一起变色，零新增 CSS。
+
+**验证**：本地 5188 登录实测——折叠态 16 项图标+两字标题、悬停弹层正常、展开态无残留 rail 节点、选中高亮生效；`tsc --noEmit` 通过。
 
 ---
 

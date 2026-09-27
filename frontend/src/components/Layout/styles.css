@@ -466,10 +466,48 @@
   text-decoration: none;
 }
 
+/* 折叠态：图标在上、两字短标题在下的纵向排布，不用悬停就能认出分组 */
 .sidebar-menu.ant-menu-inline-collapsed .ant-menu-item,
 .sidebar-menu.ant-menu-inline-collapsed .ant-menu-submenu-title {
-  padding: 0 calc(50% - 16px / 2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 50px;
+  line-height: 1;
+  padding: 0;
+  margin: 2px 6px;
   text-align: center;
+}
+
+/* 折叠态下 antd 原生 label / 展开箭头不参与纵排，一律不占位（弹层是独立 portal 不受影响） */
+.sidebar-menu.ant-menu-inline-collapsed .ant-menu-title-content,
+.sidebar-menu.ant-menu-inline-collapsed .ant-menu-submenu-arrow {
+  display: none !important;
+}
+
+.sidebar-menu .sidebar-rail-item {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  line-height: 1;
+}
+
+.sidebar-menu .sidebar-rail-item .anticon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.sidebar-menu .sidebar-rail-item-text {
+  max-width: 52px;
+  overflow: hidden;
+  font-size: var(--font-size-sm);
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .sidebar-menu.ant-menu .ant-menu-item-icon,

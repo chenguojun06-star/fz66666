@@ -200,6 +200,24 @@
       "tenant": "ភ្ជាប់ API",
       "integrationCenter": "មជ្ឈមណ្ឌលបញ្ចូល"
     },
+    "short": {
+      "appStore": "ហាង",
+      "basic": "គំរូ",
+      "crm": "CRM",
+      "customer": "អតិថិជន",
+      "dashboard": "ផ្ទាំង",
+      "ecommerce": "អូនឡាញ",
+      "finance": "ហិរញ្ញ",
+      "intelligenceCenter": "ឆ្លាតវៃ",
+      "procurement": "វត្ថុធាតុ",
+      "production": "ផលិត",
+      "selection": "ជ្រើស",
+      "supplierManagement": "ដៃគូ",
+      "system": "ប្រព័ន្ធ",
+      "tenant": "API",
+      "tools": "ឧបករណ៍",
+      "warehouse": "កន្ត្រក"
+    },
     "items": {
       "styleInfo": "អភិវឌ្ឍគំរូ",
       "patternProduction": "ផលិតគំរូ",

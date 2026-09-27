@@ -200,6 +200,24 @@
       "tenant": "API对接管理",
       "integrationCenter": "集成对接中心"
     },
+    "short": {
+      "appStore": "商店",
+      "basic": "样衣",
+      "crm": "CRM",
+      "customer": "客户",
+      "dashboard": "仪表",
+      "ecommerce": "电商",
+      "finance": "财务",
+      "intelligenceCenter": "智能",
+      "procurement": "物料",
+      "production": "生产",
+      "selection": "选品",
+      "supplierManagement": "伙伴",
+      "system": "系统",
+      "tenant": "对接",
+      "tools": "工具",
+      "warehouse": "成品"
+    },
     "items": {
       "styleInfo": "样衣开发",
       "patternProduction": "样板生产",

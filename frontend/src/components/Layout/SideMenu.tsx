@@ -93,6 +93,30 @@ const SideMenu: React.FC<SideMenuProps> = ({
     tenant: 'menu.sections.tenant',
   }), []);
 
+  /**
+   * 折叠态图标下方的两字短标题：优先四语言文案 menu.short.<key>，
+   * 未配置的语言回落 routeConfig 里的 shortTitle（中文两字）。
+   */
+  const getSectionShortLabel = useCallback((section: { key: string; shortTitle?: string; title: string }) => {
+    const localized = t(`menu.short.${section.key}`, language);
+    if (localized !== '' && !localized.includes('menu.short.')) return localized;
+    return section.shortTitle || section.title.slice(0, 2);
+  }, [language]);
+
+  /**
+   * 折叠态把图标换成「图标在上、两字短标题在下」的纵向组合，
+   * 让窄栏不用悬停就能认出每个分组；展开态原样返回图标，零影响。
+   */
+  const railIcon = useCallback((section: { key: string; shortTitle?: string; title: string; icon?: React.ReactNode }) => {
+    if (!sidebarIsCollapsed || !section.icon) return section.icon;
+    return (
+      <span className="sidebar-rail-item">
+        <span className="sidebar-rail-item-icon">{section.icon}</span>
+        <span className="sidebar-rail-item-text">{getSectionShortLabel(section)}</span>
+      </span>
+    );
+  }, [sidebarIsCollapsed, getSectionShortLabel]);
+
   const localizedMenuConfig = useMemo(() => {
     return menuConfig.map((section) => {
       const localizedTitle = t(menuI18nMapBySectionKey[section.key] || '', language);
@@ -186,7 +210,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
 
           return {
             key: section.key,
-            icon: section.icon,
+            icon: railIcon(section),
             label: section.title,
             children,
             popupClassName: 'layout-sidebar-submenu-popup',
@@ -199,7 +223,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
           if (sidebarIsCollapsed) {
             return {
               key: `${section.key}__collapsed_group`,
-              icon: section.icon,
+              icon: railIcon(section),
               label: section.title,
               children: [
                 {
@@ -213,7 +237,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
           }
           return {
             key: section.path!,
-            icon: section.icon,
+            icon: railIcon(section),
             label: <Link to={section.path!}>{section.title}</Link>,
             // 真·顶层 MenuItem 才吃 title：antd MenuItem 在折叠态用它作 tooltip 文案
             // （不传时回退为 children，即 label）。显式传字符串可避免 tooltip 里渲染 <Link> 节点
@@ -223,7 +247,7 @@ const SideMenu: React.FC<SideMenuProps> = ({
       })
       // 丢掉「子项全被过滤」的 section（map 里对空 children 返回了 null）
       .filter((node): node is NonNullable<typeof node> => node !== null);
-  }, [localizedMenuConfig, isSuperAdmin, isFactoryAccount, sidebarIsCollapsed, alwaysVisiblePaths, factoryVisiblePaths, factoryVisibleSections, hasPermissionForPath, isTenantModuleEnabled, tenantModules, badgeCounts, onMenuClick, isItemVisible]);
+  }, [localizedMenuConfig, isSuperAdmin, isFactoryAccount, sidebarIsCollapsed, alwaysVisiblePaths, factoryVisiblePaths, factoryVisibleSections, hasPermissionForPath, isTenantModuleEnabled, tenantModules, badgeCounts, onMenuClick, isItemVisible, railIcon]);
 
   const handleMenuOpenChange = (openKeys: string[]) => {
     if (sidebarIsCollapsed) return;

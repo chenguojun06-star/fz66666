@@ -510,6 +510,8 @@ export type MenuItem = {
 
 export type MenuSection = {
   title: string;
+  /** 折叠态图标下方的两字短标题（i18n 键：menu.short.<key>，缺省回落此值） */
+  shortTitle?: string;
   key: string;
   icon?: ReactNode;
   items?: MenuItem[];
@@ -520,18 +522,21 @@ export type MenuSection = {
 export const menuConfig: MenuSection[] = [
   {
     title: '仪表盘',
+    shortTitle: '仪表',
     key: 'dashboard',
     icon: React.createElement(DashboardOutlined),
     path: paths.dashboard,
   },
   {
     title: '选品中心',
+    shortTitle: '选品',
     key: 'selection',
     icon: React.createElement(FireOutlined),
     path: paths.selectionBatch,
   },
   {
     title: '样衣管理',
+    shortTitle: '样衣',
     key: 'basic',
     icon: React.createElement(AppstoreOutlined),
     items: [
@@ -543,6 +548,7 @@ export const menuConfig: MenuSection[] = [
   },
   {
     title: '物料管理',
+    shortTitle: '物料',
     key: 'procurement',
     icon: React.createElement(ShoppingCartOutlined),
     items: [
@@ -553,6 +559,7 @@ export const menuConfig: MenuSection[] = [
   },
   {
     title: '生产管理',
+    shortTitle: '生产',
     key: 'production',
     icon: React.createElement(BuildOutlined),
     items: [
@@ -565,6 +572,7 @@ export const menuConfig: MenuSection[] = [
   },
   {
     title: '合作伙伴',
+    shortTitle: '伙伴',
     key: 'supplierManagement',
     icon: React.createElement(TeamOutlined),
     items: [
@@ -574,6 +582,7 @@ export const menuConfig: MenuSection[] = [
   },
   {
     title: '成品管理',
+    shortTitle: '成品',
     key: 'warehouse',
     icon: React.createElement(InboxOutlined),
     items: [
@@ -587,6 +596,7 @@ export const menuConfig: MenuSection[] = [
   },
   {
     title: '电商运营',
+    shortTitle: '电商',
     key: 'ecommerce',
     icon: React.createElement(ShopOutlined),
     items: [
@@ -596,6 +606,7 @@ export const menuConfig: MenuSection[] = [
   },
   {
     title: 'CRM客户管理',
+    shortTitle: 'CRM',
     key: 'crm',
     icon: React.createElement(TeamOutlined),
     items: [
@@ -605,6 +616,7 @@ export const menuConfig: MenuSection[] = [
   },
   {
     title: '财务管理',
+    shortTitle: '财务',
     key: 'finance',
     icon: React.createElement(AccountBookOutlined),
     items: [
@@ -630,6 +642,7 @@ export const menuConfig: MenuSection[] = [
   },
   {
     title: '系统设置',
+    shortTitle: '系统',
     key: 'system',
     icon: React.createElement(SafetyCertificateOutlined),
     items: [
@@ -643,6 +656,7 @@ export const menuConfig: MenuSection[] = [
   },
   {
     title: '工具',
+    shortTitle: '工具',
     key: 'tools',
     icon: React.createElement(SettingOutlined),
     items: [
@@ -658,12 +672,14 @@ export const menuConfig: MenuSection[] = [
   },
   {
     title: '应用商店',
+    shortTitle: '商店',
     key: 'appStore',
     icon: React.createElement(ShoppingCartOutlined),
     path: paths.appStore,
   },
   {
     title: '客户管理',
+    shortTitle: '客户',
     key: 'customer',
     icon: React.createElement(CrownOutlined),
     path: paths.customerManagement,
@@ -671,12 +687,14 @@ export const menuConfig: MenuSection[] = [
   },
   {
     title: 'API对接管理',
+    shortTitle: '对接',
     key: 'tenant',
     icon: React.createElement(ApiOutlined),
     path: paths.tenantManagement,
   },
   {
     title: '智能运营中心',
+    shortTitle: '智能',
     key: 'intelligenceCenter',
     icon: React.createElement(ThunderboltOutlined),
     path: paths.intelligenceCenter,
