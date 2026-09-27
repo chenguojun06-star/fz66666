@@ -2917,7 +2917,12 @@ export const LOCALES = {
         "machineFlatPh": "如：平车",
         "diffEasy": "易",
         "diffMedium": "中",
-        "diffHard": "难"
+        "diffHard": "难",
+        "statusPending": "待生产",
+        "statusProduction": "生产中",
+        "statusCompleted": "已完成",
+        "statusCancelled": "已取消",
+        "statusPaused": "已暂停"
       },
       "userApproval": {
         "navTitle": "用户审批",
@@ -6516,7 +6521,12 @@ export const LOCALES = {
         "machineFlatPh": "e.g. flat machine",
         "diffEasy": "Easy",
         "diffMedium": "Medium",
-        "diffHard": "Hard"
+        "diffHard": "Hard",
+        "statusPending": "Pending",
+        "statusProduction": "In production",
+        "statusCompleted": "Completed",
+        "statusCancelled": "Cancelled",
+        "statusPaused": "Paused"
       },
       "userApproval": {
         "navTitle": "User Approval",
@@ -10115,7 +10125,12 @@ export const LOCALES = {
         "machineFlatPh": "VD: máy bàn",
         "diffEasy": "Dễ",
         "diffMedium": "Trung bình",
-        "diffHard": "Khó"
+        "diffHard": "Khó",
+        "statusPending": "Chờ sản xuất",
+        "statusProduction": "Đang sản xuất",
+        "statusCompleted": "Đã hoàn thành",
+        "statusCancelled": "Đã hủy",
+        "statusPaused": "Tạm dừng"
       },
       "userApproval": {
         "navTitle": "Duyệt người dùng",
@@ -13714,7 +13729,12 @@ export const LOCALES = {
         "machineFlatPh": "e.g. machine",
         "diffEasy": "Easy",
         "diffMedium": "Medium",
-        "diffHard": "Hard"
+        "diffHard": "Hard",
+        "statusPending": "Pending",
+        "statusProduction": "In production",
+        "statusCompleted": "Completed",
+        "statusCancelled": "Cancelled",
+        "statusPaused": "Paused"
       },
       "userApproval": {
         "navTitle": "User Approval",

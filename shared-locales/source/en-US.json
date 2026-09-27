@@ -2910,7 +2910,12 @@
       "machineFlatPh": "e.g. flat machine",
       "diffEasy": "Easy",
       "diffMedium": "Medium",
-      "diffHard": "Hard"
+      "diffHard": "Hard",
+      "statusPending": "Pending",
+      "statusProduction": "In production",
+      "statusCompleted": "Completed",
+      "statusCancelled": "Cancelled",
+      "statusPaused": "Paused"
     },
     "userApproval": {
       "navTitle": "User Approval",

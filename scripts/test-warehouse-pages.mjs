@@ -2991,6 +2991,38 @@ function testI18nScanHome() {
   eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
 }
 
+/** dashboard 状态映射 + 契约值豁免护栏（D-605） */
+function testI18nDashboardGuard() {
+  console.log('\n【i18n：dashboard 状态映射与豁免护栏】');
+
+  // ① process-edit：状态显示文案走键名映射（后端状态码保持英文）
+  const editSrc = fs.readFileSync(path.join(MP, 'pages/dashboard/process-edit/index.js'), 'utf8');
+  ok('护栏：状态映射用键名而非中文',
+    editSrc.includes('STATUS_KEY_MAP') && !editSrc.includes("pending: '待生产'"),
+    '状态显示文案必须经 i18n，状态码保持英文');
+  ok('护栏：statusCn 走 i18n',
+    editSrc.includes('i18n.t(NS + STATUS_KEY_MAP[status]'), '不能在常量里写死中文');
+  ok('护栏：工序名映射表仍是中文契约值',
+    editSrc.includes("{ id: 'cutting', name: '裁剪' }"), 'STAGE_MAP 是 工序名→id 映射，不可键化');
+
+  // ② progressNodes：整个文件是工序名契约值
+  const progSrc = fs.readFileSync(path.join(MP, 'pages/dashboard/utils/progressNodes.js'), 'utf8');
+  ok('护栏：工序节点名仍是中文契约值',
+    progSrc.includes("const NON_PRODUCTION_NODE_NAMES = ['出货'") && progSrc.includes("name: '裁剪'"),
+    '拿中文匹配 + 与后端工序名对齐，翻译即失效');
+  ok('护栏：progressNodes 豁免说明未删', progSrc.includes('i18n 豁免'), '文件头须保留说明');
+
+  // ③ process-template：难度是数据值
+  const tplSrc = fs.readFileSync(path.join(MP, 'pages/dashboard/process-template/index.js'), 'utf8');
+  ok('护栏：难度选项仍是中文数据值',
+    tplSrc.includes("const DIFFICULTY_OPTIONS = ['易', '中', '难']"),
+    'difficulty 提交后端 + wxml 用它做条件判断');
+
+  // ④ 难度默认值 '中' 在 process-edit 里也是数据值
+  ok('护栏：难度默认值仍是中文',
+    editSrc.includes("|| '中'"), 'difficulty 字段默认值，不是界面文案');
+}
+
 /** 无资料下单页（D-604）—— 该页 onLoad 即 redirect 到 create/form，但 wxml 仍须无中文 */
 function testI18nOrderNoDataCreate() {
   testPageI18n(ORDER_NO_DATA_JS, ORDER_NO_DATA_WXML, '无资料下单页');
@@ -4072,6 +4104,7 @@ try {
   testI18nOrderCreate();
   testI18nOrderNoDataCreate();
   testI18nOrderFormGuard();
+  testI18nDashboardGuard();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

@@ -13,6 +13,10 @@ function _normalizeText(v) {
  * @param {Array} list - 节点列表
  * @returns {Array} 过滤后的节点列表
  */
+// 🚫 i18n 豁免：本文件全部中文都是**工序名契约值**
+//    ① NON_PRODUCTION_NODE_NAMES / 节点定义 / match 表 —— 拿中文做 includes/=== 匹配
+//    ② 节点 name 同时会显示给用户，但**不能翻译**（一旦翻译，匹配与后端工序名就对不上）
+//    扫描工具会报成 29 处「待翻译」，实际可翻数为 0
 const NON_PRODUCTION_NODE_NAMES = ['出货', '发货', '发运', '采购', '入库'];
 
 function stripWarehousingNode(list) {

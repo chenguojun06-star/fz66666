@@ -2910,7 +2910,12 @@
       "machineFlatPh": "VD: máy bàn",
       "diffEasy": "Dễ",
       "diffMedium": "Trung bình",
-      "diffHard": "Khó"
+      "diffHard": "Khó",
+      "statusPending": "Chờ sản xuất",
+      "statusProduction": "Đang sản xuất",
+      "statusCompleted": "Đã hoàn thành",
+      "statusCancelled": "Đã hủy",
+      "statusPaused": "Tạm dừng"
     },
     "userApproval": {
       "navTitle": "Duyệt người dùng",

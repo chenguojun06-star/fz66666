@@ -22,9 +22,10 @@ const EDITABLE_STAGE_IDS = ['cutting', 'secondaryProcess', 'carSewing', 'tailPro
 const STAGE_NAME_TO_ID = {};
 STAGE_MAP.forEach(function (s) { STAGE_NAME_TO_ID[s.name] = s.id; });
 
-const STATUS_CN = {
-  pending: '待生产', production: '生产中', completed: '已完成',
-  cancelled: '已取消', paused: '已暂停',
+// 后端状态码 → 语言包键名（显示文案由 i18n 决定，状态码本身保持英文）
+const STATUS_KEY_MAP = {
+  pending: 'statusPending', production: 'statusProduction', completed: 'statusCompleted',
+  cancelled: 'statusCancelled', paused: 'statusPaused',
 };
 const STATUS_CLASS = {
   pending: 'order-status--other', production: 'order-status--production',
@@ -101,6 +102,9 @@ Page({
         pickOrInputProc: i18n.t(NS + 'pickOrInputProc', lang),
         manualInputPh: i18n.t(NS + 'manualInputPh', lang),
         machineFlatPh: i18n.t(NS + 'machineFlatPh', lang),
+        diffEasy: i18n.t(NS + 'diffEasy', lang),
+        diffMedium: i18n.t(NS + 'diffMedium', lang),
+        diffHard: i18n.t(NS + 'diffHard', lang),
       },
     });
     wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
@@ -191,7 +195,7 @@ Page({
         orderNo: order.orderNo || that.data.orderNo,
         styleNo: order.styleNo || order.styleNumber || '',
         status: status,
-        statusCn: STATUS_CN[status] || status,
+        statusCn: STATUS_KEY_MAP[status] ? i18n.t(NS + STATUS_KEY_MAP[status]) : status,
         statusClass: STATUS_CLASS[status] || 'order-status--other',
         editable: editable,
       });

@@ -2910,7 +2910,12 @@
       "machineFlatPh": "如：平车",
       "diffEasy": "易",
       "diffMedium": "中",
-      "diffHard": "难"
+      "diffHard": "难",
+      "statusPending": "待生产",
+      "statusProduction": "生产中",
+      "statusCompleted": "已完成",
+      "statusCancelled": "已取消",
+      "statusPaused": "已暂停"
     },
     "userApproval": {
       "navTitle": "用户审批",

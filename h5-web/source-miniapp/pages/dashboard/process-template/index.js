@@ -14,6 +14,8 @@ const STAGES = [
   { id: 'warehousing', i18nKey: 'stWh' },
 ];
 
+// 🚫 i18n 豁免：难度是**数据值**（提交后端 difficulty 字段 + wxml 里用 === '易' 做条件判断）
+//    翻译后：① 提交给后端的难度值变成外文 ② 页面上所有难度条件判断失效
 const DIFFICULTY_OPTIONS = ['易', '中', '难'];
 
 Page({
