@@ -149,16 +149,29 @@ export const useStyleIntelligenceProfileData = ({ style, onVisionAnalysis }: Use
     }
     const fabric = String((style as any)?.fabricComposition ?? '').trim();
     if (fabric) items.push({ key: 'fabric', label: '面料成分', value: fabric });
-    const desc = String(style?.description ?? '').trim();
-    if (desc) {
-      const needleMatch = desc.match(/([0-9一二三四五六七八九十]+\s*号?针)/);
-      if (needleMatch) items.push({ key: 'needle', label: '针号建议', value: needleMatch[1] });
+    // D-590：针号/针具/针距/注意点以 profile.workerHints（后端与工人扫码端同源）为准；
+    // 后端未返回时（部署窗口）才用本地宽松提取兜底，且只认"X号针"明确形态
+    const hints = profile?.workerHints;
+    if (hints?.needleHint) {
+      const needle = hints.needleTool ? `${hints.needleHint} · ${hints.needleTool}` : String(hints.needleHint);
+      items.push({ key: 'needle', label: '针号', value: needle });
+    } else {
+      const desc = String(style?.description ?? '').replace(/<[^>]+>/g, ' ');
+      const needleMatch = desc.match(/([0-9一二三四五六七八九十]{1,3}\s*号\s*机?针)|(?:针号|机针|用针)\s*[:：]?\s*([0-9]{1,2})\s*[号#]?/);
+      if (needleMatch) {
+        const raw = needleMatch[1] || `${needleMatch[2]}号针`;
+        items.push({ key: 'needle', label: '针号', value: raw.replace(/\s+/g, '') });
+      }
+    }
+    if (hints?.stitchHint) items.push({ key: 'stitch', label: '针距', value: String(hints.stitchHint) });
+    if (hints?.fabricTips?.length) {
+      items.push({ key: 'tips', label: '注意点', value: hints.fabricTips.slice(0, 2).join('；') });
     }
     if (activeDifficulty?.hasSecondaryProcess || (style as any)?.secondaryProcess) {
       items.push({ key: 'secondary', label: '二次工艺', value: '本款含二次工艺，需重点关注' });
     }
     return items;
-  }, [activeDifficulty, style]);
+  }, [activeDifficulty, style, profile?.workerHints]);
 
   const stageTags = useMemo(() => {
     if (profile?.stages?.length) {

@@ -66,6 +66,8 @@ Page({
         difficulty: i18n.t(NS + 'difficulty', lang),
         fabricWord: i18n.t(NS + 'fabricWord', lang),
         needleNo: i18n.t(NS + 'needleNo', lang),
+        stitch: i18n.t(NS + 'stitch', lang),
+        watchOut: i18n.t(NS + 'watchOut', lang),
         craftPoints: i18n.t(NS + 'craftPoints', lang),
         secondCraft: i18n.t(NS + 'secondCraft', lang),
         sizeTableTitle: i18n.t(NS + 'sizeTableTitle', lang),
@@ -324,13 +326,22 @@ Page({
       if (!styleInfo) return;
 
       const desc = this._stripSheetHtml(styleInfo.description || '');
+      // D-590：后端已按实际面料给出针号/针具/针距/注意点（扫码结果同源），优先用；本地解析只做兜底
+      const payloadHints = (raw && raw.orderInfo) || {};
+      const topHints = raw || {};
+      const pick = function (k) { return payloadHints[k] || topHints[k] || ''; };
+      const needleHint = pick('needleHint') || this._parseNeedleHint(desc);
+      const needleTool = pick('needleTool') || '';
+      const fabricTips = pick('fabricTips');
       const hints = {
         difficultyLabel: styleInfo.difficultyLabel || '',
         difficultyScore: styleInfo.difficultyScore || 0,
         difficultySeverity: this._difficultySeverity(styleInfo.difficultyScore),
         fabricComposition: styleInfo.fabricComposition || '',
-        needleHint: this._parseNeedleHint(desc),
-        craftNotes: desc,
+        needleHint: needleTool ? (needleHint + ' · ' + needleTool) : needleHint,
+        stitchHint: pick('stitchHint'),
+        fabricTipsText: Array.isArray(fabricTips) ? fabricTips.join('；') : String(fabricTips || ''),
+        craftNotes: this._condenseCraftNotes(desc),
         secondaryProcessText: '',
       };
 
@@ -407,10 +418,62 @@ Page({
 
   _parseNeedleHint(desc) {
     if (!desc) return '';
-    // 从工艺备注中解析针号提示，如 "11号针"、"9号针"
-    const match = String(desc).match(/(\d{1,2}号针)/);
-    if (match) return match[1];
+    const s = String(desc);
+    // D-590 收紧：只认"11号针/九号针/针号：9"这类明确形态——
+    // 贴进备注的工艺单行号（"5 针织面料"）和针距（"3cm14针"）不再误抓成针号
+    let m = s.match(/([0-9]{1,2}|[一二三四五六七八九十]{1,3})\s*号\s*机?针/);
+    if (m) return this._normalizeNeedleNumber(m[1]) + '号针';
+    m = s.match(/(?:针号|机针|用针|针型)\s*[:：是为]?\s*([0-9]{1,2})\s*[号#]?/);
+    if (m) return m[1] + '号针';
     return '';
+  },
+
+  _parseStitchHint(desc) {
+    const s = String(desc || '');
+    let m = s.match(/([0-9]{1,2}(?:\.[0-9])?)\s*(?:cm|CM|厘米)\s*[-—~～至到]?\s*([0-9]{1,2})\s*针/);
+    if (m) return '针距 ' + m[1] + 'cm·' + m[2] + '针';
+    m = s.match(/([0-9]{1,2})\s*针\s*[/每]\s*([0-9]{1,2}(?:\.[0-9])?)\s*(?:cm|CM|厘米|寸|英寸)/);
+    if (m) return '针距 ' + m[2] + 'cm·' + m[1] + '针';
+    m = s.match(/针距[^0-9]{0,4}([0-9]{1,2}(?:\s*[-~～]\s*[0-9]{1,2})?)\s*(?:cm|CM|厘米)?\s*针/);
+    if (m) return '针距 ' + m[1].replace(/\s+/g, '') + '针';
+    return '';
+  },
+
+  _normalizeNeedleNumber(num) {
+    if (/^[0-9]{1,2}$/.test(num)) return num;
+    const digits = '一二三四五六七八九';
+    if (num.length === 1) {
+      if (num === '十') return '10';
+      const idx = digits.indexOf(num);
+      return idx >= 0 ? String(idx + 1) : num;
+    }
+    let result = 0;
+    for (const ch of num) {
+      if (ch === '十') result = result === 0 ? 10 : result * 10;
+      else {
+        const idx = digits.indexOf(ch);
+        if (idx >= 0) result += idx + 1;
+      }
+    }
+    return String(result);
+  },
+
+  /**
+   * D-590 工艺说明瘦身：工人扫码看要点，不读整份工艺单——
+   * 只留前几行，超长截断并指引完整版
+   */
+  _condenseCraftNotes(desc) {
+    const s = String(desc || '').trim();
+    if (!s) return '';
+    const lines = s.split('\n').filter(Boolean);
+    const MAX_LINES = 5;
+    const MAX_LEN = 160;
+    let out = lines.slice(0, MAX_LINES).join('\n');
+    if (lines.length > MAX_LINES || out.length > MAX_LEN) {
+      out = out.slice(0, MAX_LEN);
+      return out + '\n……完整工艺说明见大货工艺单';
+    }
+    return out;
   },
 
   /**

@@ -105,6 +105,19 @@ export interface StyleIntelligenceProfileResponse {
   stages: StyleIntelligenceStageStatus[];
   insights: string[];
   difficulty?: DifficultyAssessment;
+  /** 工人提示（与工人扫码端同源：针号/针具/针距/面料注意点） */
+  workerHints?: WorkerHints;
+}
+
+export interface WorkerHints {
+  needleHint?: string | null;
+  needleTool?: string | null;
+  stitchHint?: string | null;
+  needleReason?: string | null;
+  fabricTips?: string[];
+  processHints?: string[];
+  secondaryProcessHint?: string | null;
+  secondaryProcesses?: Array<{ processName: string; description?: string }>;
 }
 
 export interface DifficultyAssessment {

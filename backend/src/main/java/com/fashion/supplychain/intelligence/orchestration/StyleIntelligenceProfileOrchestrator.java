@@ -17,11 +17,14 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.stock.entity.SampleStock;
 import com.fashion.supplychain.stock.service.SampleStockService;
+import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleQuotation;
+import com.fashion.supplychain.style.service.SecondaryProcessService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
 import com.fashion.supplychain.intelligence.service.IntelligenceReasonLibraryService;
+import com.fashion.supplychain.production.helper.WorkerHintComposer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -77,6 +80,9 @@ public class StyleIntelligenceProfileOrchestrator {
     @Autowired
     private StyleDifficultyOrchestrator styleDifficultyOrchestrator;
 
+    @Autowired
+    private SecondaryProcessService secondaryProcessService;
+
     public StyleIntelligenceProfileResponse profile(Long styleId, String styleNo) {
         StyleIntelligenceProfileResponse response = new StyleIntelligenceProfileResponse();
         StyleInfo style = findStyle(styleId, styleNo);
@@ -115,6 +121,21 @@ public class StyleIntelligenceProfileOrchestrator {
         } catch (Exception e) {
             log.warn("[style-profile] 难度评估失败(styleNo={}): {}", style.getStyleNo(), e.getMessage());
             response.setDifficulty(new StyleIntelligenceProfileResponse.DifficultyAssessment());
+        }
+
+        // D-590：工人提示（针号/针具/针距/面料注意点）与工人扫码端同源，PC"工人提示预览"直接展示
+        try {
+            List<SecondaryProcess> procs = secondaryProcessService.lambdaQuery()
+                    .eq(SecondaryProcess::getStyleId, style.getId())
+                    .eq(SecondaryProcess::getTenantId, UserContext.tenantId())
+                    .list();
+            Map<String, Object> workerHints = WorkerHintComposer.compose(style, procs);
+            // 预览不需要整篇工艺备注原文和封面
+            workerHints.remove("description");
+            workerHints.remove("cover");
+            response.setWorkerHints(workerHints);
+        } catch (Exception e) {
+            log.warn("[style-profile] 工人提示生成失败(styleNo={}): {}", style.getStyleNo(), e.getMessage());
         }
         return response;
     }

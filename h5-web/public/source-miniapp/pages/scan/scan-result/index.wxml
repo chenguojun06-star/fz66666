@@ -97,6 +97,14 @@
         <text class="group-field-label">{{t.needleNo}}</text>
         <text class="group-field-value">{{productionHints.needleHint}}</text>
       </view>
+      <view wx:if="{{productionHints.stitchHint}}" class="group-field-row">
+        <text class="group-field-label">{{t.stitch}}</text>
+        <text class="group-field-value">{{productionHints.stitchHint}}</text>
+      </view>
+      <view wx:if="{{productionHints.fabricTipsText}}" class="group-field-row group-field-row--block">
+        <text class="group-field-label">{{t.watchOut}}</text>
+        <text class="group-field-value group-field-value--block">{{productionHints.fabricTipsText}}</text>
+      </view>
       <view wx:if="{{productionHints.craftNotes}}" class="group-field-row group-field-row--block">
         <text class="group-field-label">{{t.craftPoints}}</text>
         <text class="group-field-value group-field-value--block">{{productionHints.craftNotes}}</text>

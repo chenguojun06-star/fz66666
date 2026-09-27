@@ -263,7 +263,7 @@ public class ScanExecutorSupport {
                 "difficultyLabel", "difficultyScore", "difficultyLevel", "difficultySeverity",
                 "fabricComposition", "imageInsight", "visionRaw",
                 "workerHint", "secondaryProcessHint", "secondaryProcesses",
-                "processHints", "needleHint", "needleReason",
+                "processHints", "needleHint", "needleTool", "stitchHint", "fabricTips", "needleReason",
                 "description", "cover", "fabricCompositionParts"
         };
         for (String k : keys) {
@@ -300,9 +300,9 @@ public class ScanExecutorSupport {
      * 根据扫码工序类型，过滤掉与当前工序无关的提示信息。
      * <p>不同工序关注点不同，只展示该工序真正需要的信息：
      * <ul>
-     *   <li>裁剪：关注难度、面料、款式备注（不看针号/工艺要点/二次工艺）</li>
-     *   <li>车缝：关注难度、面料、针号、工艺要点、二次工艺、款式备注（全展示）</li>
-     *   <li>质检：关注难度、二次工艺、款式备注、系统提示（不看针号/工艺要点）</li>
+     *   <li>裁剪：关注难度、面料、面料注意点、款式备注（不看针号/针具/针距/工艺要点/二次工艺）</li>
+     *   <li>车缝：关注难度、面料、针号、针具、针距、注意点、工艺要点、二次工艺、款式备注（全展示）</li>
+     *   <li>质检：关注难度、二次工艺、面料注意点（抽丝/跳针是质检重点）、款式备注（不看针号/针具/针距）</li>
      *   <li>入库：关注款式基本信息（难度/面料/备注），不看工艺类提示</li>
      * </ul>
      *
@@ -329,9 +329,11 @@ public class ScanExecutorSupport {
         // 判断是否是入库工序（入库只看基本信息）
         boolean isWarehouse = st.equals("warehouse") || ps.contains("入库") || ps.contains("仓库");
 
-        // 裁剪工序过滤：移除针号、工艺要点、二次工艺、系统提示
+        // 裁剪工序过滤：移除针号、针具、针距、工艺要点、二次工艺、系统提示（面料注意点保留，铺布裁剪同样要看）
         if (isCutting) {
             result.remove("needleHint");
+            result.remove("needleTool");
+            result.remove("stitchHint");
             result.remove("processHints");
             result.remove("secondaryProcessHint");
             result.remove("secondaryProcesses");
@@ -342,6 +344,9 @@ public class ScanExecutorSupport {
         // 采购工序过滤：同裁剪，只保留面料/难度/款式备注，移除针号/工艺/二次工艺/系统提示
         if (isPurchasing) {
             result.remove("needleHint");
+            result.remove("needleTool");
+            result.remove("stitchHint");
+            result.remove("fabricTips");
             result.remove("processHints");
             result.remove("secondaryProcessHint");
             result.remove("secondaryProcesses");
@@ -349,9 +354,12 @@ public class ScanExecutorSupport {
             result.remove("visionRaw");
         }
 
-        // 入库工序过滤：保留基本信息，但移除针号、工艺要点、二次工艺、系统提示
+        // 入库工序过滤：保留基本信息，但移除针号、针具、针距、注意点、工艺要点、二次工艺、系统提示
         if (isWarehouse && !isProduction) {
             result.remove("needleHint");
+            result.remove("needleTool");
+            result.remove("stitchHint");
+            result.remove("fabricTips");
             result.remove("processHints");
             result.remove("secondaryProcessHint");
             result.remove("secondaryProcesses");
@@ -359,9 +367,12 @@ public class ScanExecutorSupport {
             result.remove("visionRaw");
         }
 
-        // 质检工序过滤：移除针号、工艺要点（这些是车缝用的）；保留难度、二次工艺、系统提示
+        // 质检工序过滤：移除针号、针具、针距、工艺要点（这些是车缝用的）；
+        // 保留难度、二次工艺、面料注意点（抽丝/跳针/破洞正是质检要盯的问题点）
         if (isQuality) {
             result.remove("needleHint");
+            result.remove("needleTool");
+            result.remove("stitchHint");
             result.remove("processHints");
             // 质检特别保留 imageInsight 作为参考（但已在前端标注为仅供参考）
         }

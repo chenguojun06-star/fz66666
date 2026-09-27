@@ -29,6 +29,9 @@ public class StyleIntelligenceProfileResponse {
     /** 款式难度评估（结构化自动计算 + 可选 AI 图像增强分析） */
     private DifficultyAssessment difficulty;
 
+    /** 工人提示（针号/针具/针距/面料注意点，WorkerHintComposer 产出；PC"工人提示预览"与工人端同源） */
+    private java.util.Map<String, Object> workerHints;
+
     @Data
     public static class ProductionSummary {
         private Integer orderCount = 0;
