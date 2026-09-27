@@ -219,6 +219,22 @@ function loadPage(jsPath, apiStub) {
     // 而测试里写 `page.onToggleSku(...)` 调用时 this 自然是 page。
     page[k] = cfg[k];
   }
+
+  // 合并 behaviors 的方法（D-560）：真实小程序会把 behavior 的方法合到页面实例上，
+  // **页面自带的同名方法优先**（覆盖 behavior）。桩里不合并的话，
+  // 页面调 mixin 里的方法（如 scan 主页的 onScan 在 scanCoreMixin 里）直接 TypeError。
+  // ⚠️ 只合并方法、不动 data —— behavior 的 data 合并规则复杂（对象深合并），
+  //    而本仓库的 behaviors 只承载方法，data 都在页面 cfg 里。
+  if (Array.isArray(cfg.behaviors)) {
+    for (const b of cfg.behaviors) {
+      if (!b || typeof b !== 'object') continue;
+      for (const k of Object.keys(b)) {
+        if (typeof b[k] !== 'function') continue;
+        if (typeof page[k] === 'function') continue;   // 页面自己定的优先
+        page[k] = b[k];
+      }
+    }
+  }
   return { page, wx, cfg };
 }
 
@@ -1072,8 +1088,12 @@ const DECOR_PLACEHOLDER_RE =
  * @param {string} jsPath 页面 js 相对 miniprogram 的路径
  * @param {string} wxmlPath 页面 wxml 相对 miniprogram 的路径（可为空则跳过结构守护）
  * @param {string} label 报告用的页面名
+ * @param {object=} opts 可选：{ allowPlaceholders: ['键名'] }
+ *   —— 这些键的 {count} 由 **wxml 侧的 wxs fmt 在渲染时**替换（count 是动态的，
+ *      applyLanguage 时还不知道），所以 t 表里保留占位符是**正确**的，不该判失败。
+ *      只对明确列出的键放行，其余仍受本条约束。
  */
-function testPageI18n(jsPath, wxmlPath, label) {
+function testPageI18n(jsPath, wxmlPath, label, opts = {}) {
   console.log(`\n【i18n：${label}】`);
 
   for (const lang of LANGS) {
@@ -1098,8 +1118,9 @@ function testPageI18n(jsPath, wxmlPath, label) {
   // 占位符必须被替换（tf 传参正确）
   const { page: zhP } = loadPage(jsPath, makeApi());
   zhP.applyLanguage('zh-CN');
+  const allowPh = opts.allowPlaceholders || [];
   const unresolved = Object.entries(zhP.data.t || {})
-    .filter(([, v]) => /\{[a-zA-Z]+\}/.test(String(v)))
+    .filter(([k, v]) => /\{[a-zA-Z]+\}/.test(String(v)) && !allowPh.includes(k))
     .map(([k, v]) => `${k}=${v}`);
   ok('无未替换的 {占位符}', unresolved.length === 0, unresolved.join(', '));
 
@@ -2852,7 +2873,10 @@ function testI18nScanQuality() {
  *    而 testPageI18n 只扫主 wxml —— 所以片段必须单独扫，否则「改回中文」不会被发现。
  */
 function testI18nScanHome() {
-  testPageI18n(SCAN_HOME_JS, SCAN_HOME_WXML, '扫码主页');
+  // 这 4 个键的 {count} 是 wxml 里 utils.fmt(tpl, n) 在渲染时替换的（count 动态）
+  testPageI18n(SCAN_HOME_JS, SCAN_HOME_WXML, '扫码主页', {
+    allowPlaceholders: ['offlinePendingFmt', 'targetLocationFmt', 'sessionTotalFmt', 'totalQtyFmt'],
+  });
 
   // ① include 的 5 个片段：结构守护（防回退）
   for (const rel of SCAN_HOME_SECTIONS) {
@@ -2893,6 +2917,9 @@ function testI18nScanHome() {
   enApi.wx.getNetworkType = (o) => o.success({ networkType: 'none' });
   enApi.page.onCheckNetwork();
   eq('en 网络不可用 toast', lastCall(enApi.wx, 'showToast').title, 'No network, please check settings');
+  // 「网络已恢复」分支会顺手调 this.onScan()（在 scanCoreMixin 里，behaviors 合并后才拿得到）。
+  // 这里只断言 toast 文案，把扫码本身挡掉，免得真实扫码逻辑的副作用干扰断言。
+  enApi.page.onScan = () => {};
   enApi.wx.getNetworkType = (o) => o.success({ networkType: 'wifi' });
   enApi.page.onCheckNetwork();
   eq('en 网络已恢复 toast', lastCall(enApi.wx, 'showToast').title, 'Network restored, scan again');

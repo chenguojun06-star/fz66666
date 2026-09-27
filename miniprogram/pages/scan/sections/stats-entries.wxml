@@ -3,33 +3,33 @@
   <view class="today-stats-card">
     <!-- D-178：恢复头部行+刷新按钮（f25698e2c UI 重构时误删），点击刷新今日统计 -->
     <view class="tsc-head">
-      <text class="tsc-title">今日统计</text>
+      <text class="tsc-title">{{t.statsTitle}}</text>
       <view class="refresh-btn {{my.loadingStats ? 'refresh-btn-loading' : ''}}" bindtap="refreshMy" hover-class="refresh-btn-hover">
         <view class="line-icon line-icon--sm icon-refresh refresh-icon"></view>
-        <text class="refresh-text">刷新</text>
+        <text class="refresh-text">{{t.refresh}}</text>
       </view>
     </view>
     <view class="tsc-grid">
       <view class="tsc-item">
         <view class="tsc-num-row">
           <text class="tsc-num tsc-num--primary">{{my.stats.scanCount || 0}}</text>
-          <text class="tsc-unit">次</text>
+          <text class="tsc-unit">{{t.unitTimes}}</text>
         </view>
-        <text class="tsc-label">今日扫码</text>
+        <text class="tsc-label">{{t.todayScan}}</text>
       </view>
       <view class="tsc-item tsc-item--mid">
         <view class="tsc-num-row">
           <text class="tsc-num">{{my.stats.orderCount || 0}}</text>
-          <text class="tsc-unit">单</text>
+          <text class="tsc-unit">{{t.unitOrder}}</text>
         </view>
-        <text class="tsc-label">进行中</text>
+        <text class="tsc-label">{{t.inProgress}}</text>
       </view>
       <view class="tsc-item">
         <view class="tsc-num-row">
           <text class="tsc-num tsc-num--success">{{my.stats.totalQuantity || 0}}</text>
-          <text class="tsc-unit">单</text>
+          <text class="tsc-unit">{{t.unitOrder}}</text>
         </view>
-        <text class="tsc-label">已完成</text>
+        <text class="tsc-label">{{t.completed}}</text>
       </view>
     </view>
   </view>

@@ -6,14 +6,14 @@
           <image src="/assets/icons/scan-blue.svg" mode="aspectFit" style="width: 28px; height: 28px;" />
         </view>
         <view class="scan-btn-text-group">
-          <text class="scan-btn-main">{{loading ? '识别中...' : '点击扫码'}}</text>
-          <text class="scan-btn-sub">{{lastUsedProcessName ? '上次：' + lastUsedProcessName : '自动匹配工序'}}</text>
+          <text class="scan-btn-main">{{loading ? t.recognizing : t.tapToScan}}</text>
+          <text class="scan-btn-sub">{{lastUsedProcessName ? t.lastPrefix + lastUsedProcessName : t.autoMatchStage}}</text>
         </view>
       </view>
     </view>
     <!-- 入库模式：仓库选择 -->
     <view wx:if="{{scanType === 'warehouse'}}" class="warehouse-section">
-      <view class="warehouse-label">目标仓库（选填）：</view>
+      <view class="warehouse-label">{{t.targetWarehouse}}</view>
       <view class="warehouse-option-row">
         <view
           wx:for="{{warehouseOptions}}"
@@ -29,22 +29,22 @@
           bindtap="onWarehouseClear"
           hover-class="warehouse-chip-hover"
           hover-stay-time="100"
-        >清除</view>
+        >{{t.clear}}</view>
       </view>
       <input
         class="input-box"
-        placeholder="或手动输入仓库编号"
+        placeholder="{{t.warehouseCodePh}}"
         value="{{warehouse}}"
         bindinput="onWarehouseCodeInput"
       />
 
       <!-- 库位选择（仓库选择后出现） -->
       <!-- D-517：库位改可搜索选择（库位几十上百个，chip 平铺只能一路滚） -->
-      <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-label" style="margin-top: 12rpx;">目标库位（{{locationOptions.length}} 个，可搜索）：</view>
+      <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-label" style="margin-top: 12rpx;">{{utils.fmt(t.targetLocationFmt, locationOptions.length)}}</view>
       <view wx:if="{{warehouse && locationOptions.length > 0}}" class="warehouse-option-row">
         <view class="warehouse-picker-row" bindtap="openPicker" data-key="location">
           <text class="warehouse-picker-value {{warehouseLocationCode ? '' : 'is-placeholder'}}">
-            {{warehouseLocationCode || '选择库位'}}
+            {{warehouseLocationCode || t.selectLocation}}
           </text>
           <text class="warehouse-picker-arrow">›</text>
         </view>
@@ -53,23 +53,23 @@
           bindtap="onLocationClear"
           hover-class="warehouse-chip-hover"
           hover-stay-time="100"
-        >清除</view>
+        >{{t.clear}}</view>
       </view>
       <input
         wx:if="{{warehouse}}"
         class="input-box"
-        placeholder="或手动输入库位编号"
+        placeholder="{{t.locationCodePh}}"
         value="{{warehouseLocationCode}}"
         bindinput="onLocationCodeInput"
       />
     </view>
     <view wx:if="{{currentUser && currentUser.factoryId}}" class="warehouse-input-row">
       <view class="warehouse-hint-text">
-        当前归属：{{currentUser.factoryName || '-'}}{{currentUser.orgPath ? ' · ' + currentUser.orgPath : ''}}{{currentUser.factoryType === 'INTERNAL' ? ' · 内部' : (currentUser.factoryType === 'EXTERNAL' ? ' · 外部' : '')}}
+        {{t.currentOwner}}{{currentUser.factoryName || '-'}}{{currentUser.orgPath ? ' · ' + currentUser.orgPath : ''}}{{currentUser.factoryType === 'INTERNAL' ? t.suffixInternal : (currentUser.factoryType === 'EXTERNAL' ? t.suffixExternal : '')}}
       </view>
     </view>
     <view class="scan-mode-tip">
-      <text>说明：系统会按订单工序模板与历史扫码自动识别当前应执行工序，仅允许流转到未完成工序。</text>
+      <text>{{t.scanModeTip}}</text>
     </view>
   </view>
 

@@ -2,9 +2,9 @@
   <!-- money.wxs 已在宿主 pages/scan/index.wxml 中引入，include 模板内路径解析以宿主页为基准 -->
   <view class="section">
     <view class="sec-head">
-      <text class="section-title">今日记录</text>
+      <text class="section-title">{{t.todayRecords}}</text>
     </view>
-    <view wx:if="{{my.groupedHistory.length === 0 && !my.loadingHistory}}" class="empty">暂无今日记录</view>
+    <view wx:if="{{my.groupedHistory.length === 0 && !my.loadingHistory}}" class="empty">{{t.noRecordsToday}}</view>
 
     <view wx:for="{{my.groupedHistory}}" wx:key="id" class="hist-group">
       <view class="hist-group-header" hover-class="hist-group-header-hover" hover-stay-time="100" bindtap="toggleGroupExpand" data-group-id="{{item.id}}">
@@ -19,12 +19,12 @@
           </view>
         </view>
         <view class="hgh-bottom">
-          <text class="hgh-time">{{utils.formatRelativeTime(item.latestTime)}}</text>
-          <text class="hgh-total">共{{item.totalQuantity}}件</text>
+          <text class="hgh-time">{{utils.formatRelativeTime(item.latestTime, t.justNow, t.minutesAgo, t.hoursAgo, t.daysAgo)}}</text>
+          <text class="hgh-total">{{utils.fmt(t.totalQtyFmt, item.totalQuantity)}}</text>
           <text wx:if="{{item.deliveryDateStr}}" class="hgh-delivery-tag">{{item.deliveryDateStr}}</text>
           <text wx:if="{{item.remainDaysText}}" class="delivery-days-tag {{item.remainDaysClass}}">{{item.remainDaysText}}</text>
           <view class="hgh-expand-hint">
-            <text>{{item.expanded ? '收起' : '展开'}}</text>
+            <text>{{item.expanded ? t.collapse : t.expand}}</text>
             <view class="icon-arrow-right-sm"></view>
           </view>
         </view>
@@ -33,9 +33,9 @@
       <view wx:if="{{item.expanded}}" class="hist-group-details">
         <view wx:for="{{item.items}}" wx:for-item="record" wx:for-index="recordIdx" wx:key="id" class="hist-detail-item">
           <view class="hdi-row">
-            <text class="hdi-label">颜色:</text>
+            <text class="hdi-label">{{t.colorLabel}}</text>
             <text class="hdi-value">{{record.color || '-'}}</text>
-            <text class="hdi-label">单价:</text>
+            <text class="hdi-label">{{t.priceLabel}}</text>
             <text class="hdi-value" wx:if="{{!record.hidePrice}}">¥{{money.toFixed2(record.unitPrice || 0)}}</text>
             <text class="hdi-value" wx:else>-</text>
           </view>
@@ -48,26 +48,26 @@
             </view>
           </view>
           <view wx:else class="hdi-row">
-            <text class="hdi-label">码数:</text>
+            <text class="hdi-label">{{t.sizeLabel}}</text>
             <text class="hdi-value">{{record.size || '-'}}</text>
-            <text class="hdi-label">数量:</text>
-            <text class="hdi-value">{{record.quantity || 0}}件</text>
+            <text class="hdi-label">{{t.qtyLabel}}</text>
+            <text class="hdi-value">{{record.quantity || 0}}{{t.piece}}</text>
           </view>
           <view class="hdi-row">
             <text class="hdi-time">{{record.createdAt || record.scanTime || record.time}}</text>
             <text wx:if="{{record.displayOperator}}" class="hdi-operator">{{record.displayOperator}}</text>
-            <view wx:if="{{record.isProcurement && !record.procurementCompleted}}" class="hdi-action" hover-class="hdi-action-hover" hover-stay-time="100" bindtap="onHandleProcurement" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
-            <view wx:if="{{record.isQualityReceive}}" class="hdi-action" hover-class="hdi-action-hover" hover-stay-time="100" bindtap="onHandleQuality" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">处理</view>
-            <view wx:if="{{record.scanResult === 'success' && record.canUndo}}" class="hdi-action undo-btn" hover-class="undo-btn-hover" hover-stay-time="100" catchtap="onUndoHistoryRecord" data-record-id="{{record.id}}">撤回</view>
+            <view wx:if="{{record.isProcurement && !record.procurementCompleted}}" class="hdi-action" hover-class="hdi-action-hover" hover-stay-time="100" bindtap="onHandleProcurement" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">{{t.handle}}</view>
+            <view wx:if="{{record.isQualityReceive}}" class="hdi-action" hover-class="hdi-action-hover" hover-stay-time="100" bindtap="onHandleQuality" data-group-id="{{item.id}}" data-record-idx="{{recordIdx}}">{{t.handle}}</view>
+            <view wx:if="{{record.scanResult === 'success' && record.canUndo}}" class="hdi-action undo-btn" hover-class="undo-btn-hover" hover-stay-time="100" catchtap="onUndoHistoryRecord" data-record-id="{{record.id}}">{{t.undoWord}}</view>
           </view>
         </view>
       </view>
     </view>
 
     <view class="load-more" hover-class="load-more-hover" hover-stay-time="100" bindtap="loadMoreMyHistory">
-      <text wx:if="{{my.loadingHistory}}">加载中...</text>
-      <text wx:elif="{{my.history.hasMore}}">加载更多</text>
-      <text wx:else class="no-more">— 已到底部 —</text>
+      <text wx:if="{{my.loadingHistory}}">{{t.loading}}</text>
+      <text wx:elif="{{my.history.hasMore}}">{{t.loadMore}}</text>
+      <text wx:else class="no-more">{{t.noMoreBottom}}</text>
     </view>
   </view>
 

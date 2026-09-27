@@ -43,6 +43,9 @@
 
 // ==================== 导入模块 ====================
 const { safeNavigate, toast } = require('../../utils/uiHelper');
+const i18n = require('../../utils/i18n/index');
+
+const NS = 'mp.scanHome.';
 
 // 导入 Mixins (生命周期 + 核心业务 + 数据配置)
 const scanLifecycleMixin = require('./mixins/scanLifecycleMixin');
@@ -66,6 +69,83 @@ Page({
 
   // 数据对象 (从 scanDataConfig 导入)
   data: scanPageData,
+
+  // ==================== 多语言 ====================
+
+  /**
+   * 应用语言：一次性生成本页文案表。
+   * wxml 用 {{t.xxx}}；带 {count} 占位的文案由 wxs 的 utils.fmt 替换。
+   */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    // ⚠️ 必须记住当前语言：JS 层（toast / showModal / showLoading）拿不到 data.t，
+    //    只能靠 this._lang 取词，否则切到非中文后提示仍是中文（全项目统一手法）
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        offlinePendingFmt: t('offlinePendingFmt'),
+        offlineSyncing: t('offlineSyncing'),
+        justNow: t('justNow'),
+        minutesAgo: t('minutesAgo'),
+        hoursAgo: t('hoursAgo'),
+        daysAgo: t('daysAgo'),
+        statsTitle: t('statsTitle'),
+        unitTimes: t('unitTimes'),
+        todayScan: t('todayScan'),
+        unitOrder: t('unitOrder'),
+        inProgress: t('inProgress'),
+        historyEntry: t('historyEntry'),
+        myPayroll: t('myPayroll'),
+        recognizing: t('recognizing'),
+        tapToScan: t('tapToScan'),
+        lastPrefix: t('lastPrefix'),
+        autoMatchStage: t('autoMatchStage'),
+        targetWarehouse: t('targetWarehouse'),
+        clear: t('clear'),
+        warehouseCodePh: t('warehouseCodePh'),
+        targetLocationFmt: t('targetLocationFmt'),
+        selectLocation: t('selectLocation'),
+        locationCodePh: t('locationCodePh'),
+        currentOwner: t('currentOwner'),
+        suffixInternal: t('suffixInternal'),
+        suffixExternal: t('suffixExternal'),
+        scanModeTip: t('scanModeTip'),
+        revoke: t('revoke'),
+        internal: t('internal'),
+        external: t('external'),
+        sessionTotalFmt: t('sessionTotalFmt'),
+        checkNetwork: t('checkNetwork'),
+        todayRecords: t('todayRecords'),
+        noRecordsToday: t('noRecordsToday'),
+        totalQtyFmt: t('totalQtyFmt'),
+        collapse: t('collapse'),
+        expand: t('expand'),
+        colorLabel: t('colorLabel'),
+        priceLabel: t('priceLabel'),
+        sizeLabel: t('sizeLabel'),
+        qtyLabel: t('qtyLabel'),
+        handle: t('handle'),
+        undoWord: t('undoWord'),
+        noMoreBottom: t('noMoreBottom'),
+        // 跨页共用词条
+        refresh: i18n.t('common.refresh', lang),
+        completed: i18n.t('common.completed', lang),
+        success: i18n.t('common.success', lang),
+        failed: i18n.t('common.failed', lang),
+        rescan: i18n.t('common.rescan', lang),
+        piece: i18n.t('common.piece', lang),
+        loading: i18n.t('common.loading', lang),
+        loadMore: i18n.t('common.loadMore', lang),
+      },
+    });
+    // navigationBarTitleText 只能静态写死，标题必须运行时设置
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
+  onShow() {
+    this.applyLanguage(i18n.getLanguage());
+  },
 
   // 业务处理器实例
   scanHandler: null,
@@ -160,12 +240,13 @@ Page({
     const groupedHistory = (this.data.my && this.data.my.groupedHistory) || [];
     const group = groupedHistory.find((g) => g.id === groupId);
     if (!group) {
-      toast.error('记录不存在');
+      toast.error(i18n.t(NS + 'recordNotFound', this._lang));
       return;
     }
     const orderNo = group.orderNo || '';
     const styleNo = group.styleNo || '';
     // 支持大货(orderNo)和样衣(patternProductionId)两种路径
+    // ⚠️ '未知订单' 是 HistoryHandler 分组时的兜底**数据值**，不是文案，不能走语言包
     const hasOrderNo = orderNo && orderNo !== '未知订单';
     // 从分组内的扫码记录中查找 patternProductionId（样衣采购场景）
     let patternProductionId = group.patternProductionId || '';
@@ -179,7 +260,7 @@ Page({
       }
     }
     if (!hasOrderNo && !patternProductionId) {
-      toast.error('订单号缺失，无法跳转');
+      toast.error(i18n.t(NS + 'missingOrderNo', this._lang));
       return;
     }
     const params = [];
@@ -327,20 +408,20 @@ Page({
    * WXML: scan-result.wxml bindtap="onCheckNetwork"
    */
   onCheckNetwork() {
-    wx.showLoading({ title: '检测中...', mask: true });
+    wx.showLoading({ title: i18n.t(NS + 'detecting', this._lang), mask: true });
     wx.getNetworkType({
       success: (res) => {
         wx.hideLoading();
         if (res.networkType === 'none' || res.networkType === 'unknown') {
-          wx.showToast({ title: '网络不可用，请检查网络设置', icon: 'none', duration: 2500 });
+          wx.showToast({ title: i18n.t(NS + 'networkUnavailable', this._lang), icon: 'none', duration: 2500 });
         } else {
-          wx.showToast({ title: '网络已恢复，重新扫码', icon: 'success', duration: 1500 });
+          wx.showToast({ title: i18n.t(NS + 'networkRestored', this._lang), icon: 'success', duration: 1500 });
           this.onScan();
         }
       },
       fail: () => {
         wx.hideLoading();
-        wx.showToast({ title: '检测失败，请重试', icon: 'none' });
+        wx.showToast({ title: i18n.t(NS + 'detectFailed', this._lang), icon: 'none' });
       },
     });
   },
@@ -353,26 +434,28 @@ Page({
   async onUndoHistoryRecord(e) {
     const recordId = e.currentTarget.dataset.recordId;
     if (!recordId) {
-      require('./../../utils/uiHelper').toast.error('缺少记录ID');
+      require('./../../utils/uiHelper').toast.error(i18n.t(NS + 'missingRecordId', this._lang));
       return;
     }
     wx.showModal({
-      title: '确认撤回',
-      content: '确认撤回该扫码记录吗？撤回后无法恢复。',
-      confirmText: '撤回',
+      title: i18n.t(NS + 'undoTitle', this._lang),
+      content: i18n.t(NS + 'undoContent', this._lang),
+      confirmText: i18n.t(NS + 'undoWord', this._lang),
       confirmColor: '#ff3b30',
       success: async (res) => {
         if (!res.confirm) return;
-        wx.showLoading({ title: '正在撤回...', mask: true });
+        wx.showLoading({ title: i18n.t(NS + 'undoing', this._lang), mask: true });
         try {
           await require('./../../utils/api').production.undoScan({ recordId });
-          require('./../../utils/uiHelper').toast.success('已撤回');
+          require('./../../utils/uiHelper').toast.success(i18n.t(NS + 'undoSuccess', this._lang));
           // 刷新面板
           this.loadMyPanel(true);
           const { triggerDataRefresh } = require('./../../utils/eventBus');
           triggerDataRefresh('scan');
         } catch (err) {
-          require('./../../utils/uiHelper').toast.error('撤回失败: ' + (err.errMsg || err.message || '未知错误'));
+          require('./../../utils/uiHelper').toast.error(
+            i18n.tf(NS + 'undoFailedFmt', { msg: err.errMsg || err.message || i18n.t(NS + 'unknownError', this._lang) }, this._lang)
+          );
         } finally {
           wx.hideLoading();
         }
@@ -460,7 +543,7 @@ Page({
     if (key !== 'location') return;
     this.setData({
       pickerKey: key,
-      pickerTitle: '选择目标库位',
+      pickerTitle: i18n.t(NS + 'selectLocationTitle', this._lang),
       pickerValue: this.data.warehouseLocationCode || '',
       pickerOptions: (this.data.locationOptions || []).map(function (v) {
         return { label: String(v), value: String(v) };
@@ -528,7 +611,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

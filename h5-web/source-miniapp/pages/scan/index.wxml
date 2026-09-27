@@ -1,7 +1,7 @@
 <wxs src="../../utils/money.wxs" module="money" />
 <wxs module="utils">
-  // 格式化相对时间
-  function formatRelativeTime(timeStr) {
+  // 格式化相对时间（语言相关的后缀由页面 t.* 传入，wxs 内不能读语言包）
+  function formatRelativeTime(timeStr, justNow, minAgo, hourAgo, dayAgo) {
     if (!timeStr) return '-';
 
     var now = getDate().getTime();
@@ -13,13 +13,13 @@
     var day = 24 * hour;
 
     if (diff < minute) {
-      return '刚刚';
+      return justNow || '';
     } else if (diff < hour) {
-      return Math.floor(diff / minute) + '分钟前';
+      return Math.floor(diff / minute) + (minAgo || '');
     } else if (diff < day) {
-      return Math.floor(diff / hour) + '小时前';
+      return Math.floor(diff / hour) + (hourAgo || '');
     } else if (diff < 7 * day) {
-      return Math.floor(diff / day) + '天前';
+      return Math.floor(diff / day) + (dayAgo || '');
     } else {
       var date = getDate(timeStr);
       var month = '' + (date.getMonth() + 1);
@@ -36,15 +36,22 @@
     }
   }
 
+  // 用数字替换模板里的 {count} 占位（wxml 里没法调 i18n.tf）
+  function fmt(tpl, count) {
+    if (!tpl) return '';
+    return tpl.replace('{count}', '' + count);
+  }
+
   module.exports = {
-    formatRelativeTime: formatRelativeTime
+    formatRelativeTime: formatRelativeTime,
+    fmt: fmt
   };
 </wxs>
 
 <view class="page">
   <view wx:if="{{offlinePendingCount > 0}}" class="offline-badge-bar" bindtap="onManualSync">
     <text class="offline-badge-icon">{{offlineSyncing ? '...' : '↑'}}</text>
-    <text class="offline-badge-text">{{offlineSyncing ? '同步中...' : offlinePendingCount + ' 条待上传，点击立即同步'}}</text>
+    <text class="offline-badge-text">{{offlineSyncing ? t.offlineSyncing : utils.fmt(t.offlinePendingFmt, offlinePendingCount)}}</text>
   </view>
 
   <!-- ① 今日统计 -->
