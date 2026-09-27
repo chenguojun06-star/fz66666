@@ -3364,6 +3364,24 @@ export const LOCALES = {
         "defectOther": "其他问题",
         "lockReasonInProductionFmt": "{name} 生产中",
         "lockReasonClaimed": "已领取"
+      },
+      "scanRescan": {
+        "navTitle": "扫码退回",
+        "styleNoLabel": "款号",
+        "scanRecordWord": "扫码记录",
+        "orderNoLabel": "订单号",
+        "bundleNoLabel": "菲号",
+        "qtyLabel": "数量",
+        "scanTimeLabel": "扫码时间",
+        "processLabel": "工序",
+        "confirmTitle": "确认退回此扫码记录？",
+        "confirmDesc": "退回后该记录将被撤销，可重新扫码录入。退回操作有时间限制（1小时内）。",
+        "rescanning": "退回中...",
+        "confirmBtn": "确认退回",
+        "dataError": "数据异常",
+        "rescanSuccess": "退回成功，可重新扫码",
+        "rescanFailedRetry": "退回失败，请稍后重试",
+        "rescanFailed": "退回失败"
       }
     }
   },
@@ -6726,6 +6744,24 @@ export const LOCALES = {
         "defectOther": "Other issue",
         "lockReasonInProductionFmt": "{name} in production",
         "lockReasonClaimed": "Claimed"
+      },
+      "scanRescan": {
+        "navTitle": "Scan Return",
+        "styleNoLabel": "Style No.",
+        "scanRecordWord": "Scan record",
+        "orderNoLabel": "Order No.",
+        "bundleNoLabel": "Bundle No.",
+        "qtyLabel": "Qty",
+        "scanTimeLabel": "Scan time",
+        "processLabel": "Process",
+        "confirmTitle": "Return this scan record?",
+        "confirmDesc": "The record will be revoked so you can scan it again. Returns are time-limited (within 1 hour).",
+        "rescanning": "Returning...",
+        "confirmBtn": "Confirm return",
+        "dataError": "Invalid data",
+        "rescanSuccess": "Returned successfully, you can scan again",
+        "rescanFailedRetry": "Return failed, please try again later",
+        "rescanFailed": "Return failed"
       }
     }
   },
@@ -10088,6 +10124,24 @@ export const LOCALES = {
         "defectOther": "Vấn đề khác",
         "lockReasonInProductionFmt": "{name} đang sản xuất",
         "lockReasonClaimed": "Đã nhận"
+      },
+      "scanRescan": {
+        "navTitle": "Trả lại quét",
+        "styleNoLabel": "Mã hàng",
+        "scanRecordWord": "Bản ghi quét",
+        "orderNoLabel": "Số đơn hàng",
+        "bundleNoLabel": "Số bó",
+        "qtyLabel": "Số lượng",
+        "scanTimeLabel": "Thời gian quét",
+        "processLabel": "Công đoạn",
+        "confirmTitle": "Trả lại bản ghi quét này?",
+        "confirmDesc": "Bản ghi sẽ bị hủy để bạn có thể quét lại. Thao tác trả lại có giới hạn thời gian (trong 1 giờ).",
+        "rescanning": "Đang trả lại...",
+        "confirmBtn": "Xác nhận trả lại",
+        "dataError": "Dữ liệu bất thường",
+        "rescanSuccess": "Trả lại thành công, có thể quét lại",
+        "rescanFailedRetry": "Trả lại thất bại, vui lòng thử lại sau",
+        "rescanFailed": "Trả lại thất bại"
       }
     }
   },
@@ -13450,6 +13504,24 @@ export const LOCALES = {
         "defectOther": "Other issue",
         "lockReasonInProductionFmt": "{name} in production",
         "lockReasonClaimed": "Claimed"
+      },
+      "scanRescan": {
+        "navTitle": "Scan Return",
+        "styleNoLabel": "Style No.",
+        "scanRecordWord": "Scan record",
+        "orderNoLabel": "Order No.",
+        "bundleNoLabel": "Bundle No.",
+        "qtyLabel": "Qty",
+        "scanTimeLabel": "Scan time",
+        "processLabel": "Process",
+        "confirmTitle": "Return this scan record?",
+        "confirmDesc": "The record will be revoked so you can scan it again. Returns are time-limited (within 1 hour).",
+        "rescanning": "Returning...",
+        "confirmBtn": "Confirm return",
+        "dataError": "Invalid data",
+        "rescanSuccess": "Returned successfully, you can scan again",
+        "rescanFailedRetry": "Return failed, please try again later",
+        "rescanFailed": "Return failed"
       }
     }
   }

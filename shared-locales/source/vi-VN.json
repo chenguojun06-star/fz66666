@@ -3357,6 +3357,24 @@
       "defectOther": "Vấn đề khác",
       "lockReasonInProductionFmt": "{name} đang sản xuất",
       "lockReasonClaimed": "Đã nhận"
+    },
+    "scanRescan": {
+      "navTitle": "Trả lại quét",
+      "styleNoLabel": "Mã hàng",
+      "scanRecordWord": "Bản ghi quét",
+      "orderNoLabel": "Số đơn hàng",
+      "bundleNoLabel": "Số bó",
+      "qtyLabel": "Số lượng",
+      "scanTimeLabel": "Thời gian quét",
+      "processLabel": "Công đoạn",
+      "confirmTitle": "Trả lại bản ghi quét này?",
+      "confirmDesc": "Bản ghi sẽ bị hủy để bạn có thể quét lại. Thao tác trả lại có giới hạn thời gian (trong 1 giờ).",
+      "rescanning": "Đang trả lại...",
+      "confirmBtn": "Xác nhận trả lại",
+      "dataError": "Dữ liệu bất thường",
+      "rescanSuccess": "Trả lại thành công, có thể quét lại",
+      "rescanFailedRetry": "Trả lại thất bại, vui lòng thử lại sau",
+      "rescanFailed": "Trả lại thất bại"
     }
   }
 }

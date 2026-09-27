@@ -2535,6 +2535,8 @@ const SCAN_HANDLERS = {
   stageProcessor: 'pages/scan/handlers/helpers/ScanStageProcessor.js',
   peripheral: 'pages/scan/handlers/helpers/ScanPeripheralHelper.js',
 };
+const SCAN_RESCAN_JS = 'pages/scan/rescan/index.js';
+const SCAN_RESCAN_WXML = 'pages/scan/rescan/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -2961,6 +2963,24 @@ function testI18nScanHome() {
   // ⑦ 导航标题
   eq('扫码主页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan');
   eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
+}
+
+/** 扫码退回页（D-597）—— 信息卡字段 + 退回警告 + 成功/失败反馈 */
+function testI18nScanRescan() {
+  testPageI18n(SCAN_RESCAN_JS, SCAN_RESCAN_WXML, '扫码退回页');
+
+  const { page: zhP, wx: zhWx } = loadPage(SCAN_RESCAN_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(SCAN_RESCAN_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 确认退回按钮', zhP.data.t.confirmBtn, '确认退回');
+  eq('en 确认退回按钮', enP.data.t.confirmBtn, 'Confirm return');
+  eq('en 款号标签', enP.data.t.styleNoLabel, 'Style No.');
+  ok('en 退回说明无中文', !CJK_RE.test(String(enP.data.t.confirmDesc)), enP.data.t.confirmDesc);
+  ok('en 退回中提示无中文', !CJK_RE.test(String(enP.data.t.rescanning)), enP.data.t.rescanning);
+  eq('zh 退回页导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码退回');
+  eq('退回页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan Return');
 }
 
 /**
@@ -3778,6 +3798,7 @@ try {
   testI18nProcessTemplate();
   testI18nScanHome();
   testI18nScanLogic();
+  testI18nScanRescan();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

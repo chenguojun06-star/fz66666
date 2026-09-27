@@ -3357,6 +3357,24 @@
       "defectOther": "Other issue",
       "lockReasonInProductionFmt": "{name} in production",
       "lockReasonClaimed": "Claimed"
+    },
+    "scanRescan": {
+      "navTitle": "Scan Return",
+      "styleNoLabel": "Style No.",
+      "scanRecordWord": "Scan record",
+      "orderNoLabel": "Order No.",
+      "bundleNoLabel": "Bundle No.",
+      "qtyLabel": "Qty",
+      "scanTimeLabel": "Scan time",
+      "processLabel": "Process",
+      "confirmTitle": "Return this scan record?",
+      "confirmDesc": "The record will be revoked so you can scan it again. Returns are time-limited (within 1 hour).",
+      "rescanning": "Returning...",
+      "confirmBtn": "Confirm return",
+      "dataError": "Invalid data",
+      "rescanSuccess": "Returned successfully, you can scan again",
+      "rescanFailedRetry": "Return failed, please try again later",
+      "rescanFailed": "Return failed"
     }
   }
 }
