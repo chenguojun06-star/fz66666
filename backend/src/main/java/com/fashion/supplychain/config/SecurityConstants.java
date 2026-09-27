@@ -121,6 +121,7 @@ public final class SecurityConstants {
     };
 
     public static final String[] APP_STORE_AUTH_GET_ENDPOINTS = {
+            "/api/system/app-store/ec-access/**",
             "/api/system/app-store/trial-status/**",
             "/api/system/app-store/*",
     };

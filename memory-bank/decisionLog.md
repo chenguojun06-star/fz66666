@@ -1,7 +1,24 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-27（新增 D-587 电商全平台店铺授权基建；D-586 拉链幽灵采购单根治；D-585 折叠侧边栏短标题）
+> 最后更新：2026-09-27（新增 D-588 电商增值服务订阅闭环；D-587 店铺授权基建；D-586 拉链幽灵单根治）
+
+---
+
+## D-588：电商增值服务订阅闭环——总管授权/试用才能对接（2026-09-27）
+
+**背景**：用户商业模式=电商对接是增值服务（收服务器/服务费），平台总管授权租户才能用。核实发现订阅数据（t_tenant_subscription，TRIAL/ACTIVE+有效期）和自助试用（每租户每应用一次）早已存在，但电商对接接口**零订阅校验**——不订阅也能直接配置。
+
+**闭环实现**：
+- 后端 `AppStoreOrchestrator.requireEcSubscription/getEcAccessStatus/hasActiveEcSubscription`：appCode 约定 `EC_+platformCode`，校验 status∈(ACTIVE,TRIAL) 且 end_time>now。
+- 硬卡点三口：PlatformConnectorController 的 doSaveConfig / authorize-url / exchange 前置 requireEcSubscription，未开通报「为平台增值服务，请先开通（可免费试用7天）或联系平台方授权」。
+- 状态接口：`GET /api/system/app-store/ec-access/{platformCode}`（subscribed/subscriptionType/endTime/appId/trialAvailable）——**必须加进 SecurityConstants.APP_STORE_AUTH_GET_ENDPOINTS**（`/api/system/app-store/*` 单星不匹配两段路径，漏配会 403）。
+- 前端向导：平台卡片显示开通状态（已开通/试用中/未开通）；第二步未开通时顶部警示 + 「免费试用7天」（向导内一键开）/「去应用商店申请」双按钮；试用开通后直接继续配置。
+- 应用商店页：顶部增值服务说明横幅（费用含服务器与维护、正式开通由平台方授权）。
+
+**验证**：本地端到端四例——未订阅配置被拦✓→查appId→自助开通试用✓→ec-access 正确✓→再配置放行✓；浏览器实测向导内一键试用闭环✓（注意前端路径前缀是 /system/app-store 不是 /app-store）。
+
+**核实补充（平台控制三层）**：全局总闸 fashion.ecommerce.enabled；租户级菜单模块白名单（客户管理→菜单模块，enabledModules 空则不限制，仅显示层控制）；本卡点=订阅层。粒度到"租户×平台"。
 
 ---
 

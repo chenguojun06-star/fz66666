@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcPlatformConfigOrchestrator;
+import com.fashion.supplychain.system.orchestration.AppStoreOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.service.EcPlatformOAuthService;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
 import com.fashion.supplychain.integration.ecommerce.service.JushuitanSyncService;
@@ -49,6 +50,9 @@ public class PlatformConnectorController {
     private EcPlatformOAuthService ecPlatformOAuthService;
 
     @Autowired
+    private AppStoreOrchestrator appStoreOrchestrator;
+
+    @Autowired
     private EcommerceOrderService ecommerceOrderService;
 
     /**
@@ -65,9 +69,18 @@ public class PlatformConnectorController {
         return doSaveConfig(body);
     }
 
+    /**
+     * D-588 闭环卡点：平台对接为增值服务，租户须有 EC_{platform} 有效订阅
+     * （含自助 7 天试用 / 平台总管授予的正式订阅）才能保存配置或发起授权。
+     */
+    private void requireEcSubscription(Long tenantId, String platformCode) {
+        appStoreOrchestrator.requireEcSubscription(tenantId, platformCode);
+    }
+
     private Result<Map<String, Object>> doSaveConfig(Map<String, Object> body) {
         Long tenantId = TenantAssert.requireTenantId();
         String platformCode = (String) body.get("platformCode");
+        requireEcSubscription(tenantId, platformCode);
         String appKey = (String) body.get("appKey");
         String appSecret = (String) body.get("appSecret");
         String shopName = (String) body.get("shopName");
@@ -132,6 +145,7 @@ public class PlatformConnectorController {
     @GetMapping("/oauth/{platformCode}/authorize-url")
     public Result<Map<String, Object>> buildAuthorizeUrl(@PathVariable String platformCode) {
         Long tenantId = TenantAssert.requireTenantId();
+        requireEcSubscription(tenantId, platformCode);
         return Result.success(ecPlatformOAuthService.buildAuthorizeUrl(tenantId, platformCode));
     }
 
@@ -143,6 +157,7 @@ public class PlatformConnectorController {
             @PathVariable String platformCode,
             @RequestBody Map<String, Object> body) {
         Long tenantId = TenantAssert.requireTenantId();
+        requireEcSubscription(tenantId, platformCode);
         String code = body == null ? null : (String) body.get("code");
         if (code == null || code.isBlank()) {
             return Result.fail("请粘贴平台返回的授权码");

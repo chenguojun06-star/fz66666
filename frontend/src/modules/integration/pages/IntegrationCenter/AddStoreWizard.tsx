@@ -3,6 +3,7 @@ import { Alert, Button, Card, Collapse, Form, Input, Popconfirm, Result, Segment
 import {
   CheckCircleFilled, CopyOutlined, LinkOutlined, RightOutlined, SafetyCertificateOutlined, ShopOutlined,
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import SideDrawer from '@/components/common/SideDrawer';
 import { message } from '@/utils/antdStatic';
 import api from '@/utils/api';
@@ -42,9 +43,32 @@ const AddStoreWizard: React.FC<AddStoreWizardProps> = ({ open, onClose, onChange
   const [manualCode, setManualCode] = useState('');
   const [manualExchanging, setManualExchanging] = useState(false);
   const [testResult, setTestResult] = useState<string>('');
+  const [accessMap, setAccessMap] = useState<Record<string, { subscribed: boolean; subscriptionType?: string; endTime?: string; appId?: number; trialAvailable?: boolean }>>({});
+  const [startingTrial, setStartingTrial] = useState(false);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const navigate = useNavigate();
 
   const meta: PlatformAuthMeta | undefined = PLATFORM_AUTH_BY_CODE[platformCode];
+
+  /** D-588 闭环：加载各平台增值服务开通状态 */
+  const loadAccessMap = useCallback(async () => {
+    const map: Record<string, { subscribed: boolean; subscriptionType?: string; endTime?: string; appId?: number; trialAvailable?: boolean }> = {};
+    for (const p of PLATFORM_AUTH_LIST) {
+      try {
+        const res = await api.get(`/system/app-store/ec-access/${p.code}`);
+        if (res?.code === 200 && res.data) {
+          map[p.code] = {
+            subscribed: !!res.data.subscribed,
+            subscriptionType: res.data.subscriptionType,
+            endTime: res.data.endTime,
+            appId: res.data.appId,
+            trialAvailable: res.data.trialAvailable !== false,
+          };
+        }
+      } catch { map[p.code] = { subscribed: false }; }
+    }
+    setAccessMap(map);
+  }, []);
 
   const resetAll = useCallback(() => {
     setStep(0);
@@ -62,6 +86,7 @@ const AddStoreWizard: React.FC<AddStoreWizardProps> = ({ open, onClose, onChange
   useEffect(() => {
     if (open) {
       resetAll();
+      loadAccessMap();
       if (initialPlatformCode) setStep(1);
     }
     return () => {
@@ -283,8 +308,10 @@ const AddStoreWizard: React.FC<AddStoreWizardProps> = ({ open, onClose, onChange
                   >
                     <ShopOutlined style={{ fontSize: 22, color: 'var(--color-primary)' }} />
                     <div style={{ marginTop: 8, fontWeight: 600 }}>{p.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>
-                      {p.oauthSupported ? '跳转授权' : '凭证接入'}
+                    <div style={{ fontSize: 12, marginTop: 4, color: accessMap[p.code]?.subscribed ? 'var(--color-success)' : 'var(--color-text-secondary)' }}>
+                      {accessMap[p.code]?.subscribed
+                        ? (accessMap[p.code]?.subscriptionType === 'TRIAL' ? '试用中' : '已开通')
+                        : p.oauthSupported ? '未开通' : '未开通 · 凭证接入'}
                     </div>
                   </div>
                 ))}
@@ -306,6 +333,40 @@ const AddStoreWizard: React.FC<AddStoreWizardProps> = ({ open, onClose, onChange
           {/* ---- 第2步 接入配置 ---- */}
           {step === 1 && meta && (
             <div style={{ maxWidth: 520 }}>
+              {accessMap[meta.code] && !accessMap[meta.code].subscribed && (
+                <Alert
+                  type="warning"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                  title={`${meta.name}对接为平台增值服务（含服务器与维护费用），需开通后使用`}
+                  description={
+                    <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
+                      {accessMap[meta.code].trialAvailable && accessMap[meta.code].appId && (
+                        <Button
+                          type="primary"
+                          size="small"
+                          loading={startingTrial}
+                          onClick={async () => {
+                            setStartingTrial(true);
+                            try {
+                              await api.post('/system/app-store/start-trial', { appId: accessMap[meta.code].appId });
+                              message.success('7天免费试用已开通，继续完成配置即可');
+                              await loadAccessMap();
+                            } catch (e: any) {
+                              message.error(e?.message || '开通试用失败');
+                            } finally {
+                              setStartingTrial(false);
+                            }
+                          }}
+                        >
+                          免费试用 7 天
+                        </Button>
+                      )}
+                      <Button size="small" onClick={() => navigate('/system/app-store')}>去应用商店申请开通</Button>
+                    </div>
+                  }
+                />
+              )}
               <Card
                 size="small"
                 title={`${meta.name} · 在哪里拿密钥（跟着做即可）`}

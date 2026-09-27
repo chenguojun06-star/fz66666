@@ -193,6 +193,15 @@ public class AppStoreController {
     /**
      * 获取我的订阅
      */
+    /**
+     * D-588：电商对接增值服务——租户对某平台的开通状态（向导展示与卡点查询用）
+     */
+    @GetMapping("/ec-access/{platformCode}")
+    public Result<Map<String, Object>> getEcAccess(@PathVariable String platformCode) {
+        Long tenantId = UserContext.tenantId();
+        return Result.success(appStoreOrchestrator.getEcAccessStatus(tenantId, platformCode));
+    }
+
     @PostMapping("/my-subscriptions")
     public Result<List<TenantSubscription>> getMySubscriptions() {
         Long tenantId = UserContext.tenantId();

@@ -214,6 +214,76 @@ public class AppStoreOrchestrator {
      * 两步操作在同一事务中，任何一步失败都会回滚
      */
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * D-588：电商对接增值服务——租户对某平台是否有有效订阅（TRIAL/ACTIVE 且未到期）。
+     * appCode 约定 = "EC_" + platformCode（如 EC_PINDUODUO）。
+     */
+    public boolean hasActiveEcSubscription(Long tenantId, String platformCode) {
+        String appCode = "EC_" + platformCode;
+        Long count = tenantSubscriptionService.lambdaQuery()
+                .eq(TenantSubscription::getTenantId, tenantId)
+                .eq(TenantSubscription::getAppCode, appCode)
+                .in(TenantSubscription::getStatus, "ACTIVE", "TRIAL")
+                .gt(TenantSubscription::getEndTime, LocalDateTime.now())
+                .count();
+        return count != null && count > 0;
+    }
+
+    /**
+     * D-588：电商对接访问状态（向导展示用）：是否开通、订阅类型、到期时间、是否还能试用。
+     */
+    public Map<String, Object> getEcAccessStatus(Long tenantId, String platformCode) {
+        String appCode = "EC_" + platformCode;
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("platformCode", platformCode);
+        result.put("appCode", appCode);
+        boolean subscribed = hasActiveEcSubscription(tenantId, platformCode);
+        result.put("subscribed", subscribed);
+        if (subscribed) {
+            TenantSubscription sub = tenantSubscriptionService.lambdaQuery()
+                    .eq(TenantSubscription::getTenantId, tenantId)
+                    .eq(TenantSubscription::getAppCode, appCode)
+                    .in(TenantSubscription::getStatus, "ACTIVE", "TRIAL")
+                    .gt(TenantSubscription::getEndTime, LocalDateTime.now())
+                    .orderByDesc(TenantSubscription::getEndTime)
+                    .last("LIMIT 1")
+                    .one();
+            if (sub != null) {
+                result.put("subscriptionType", sub.getSubscriptionType());
+                result.put("endTime", sub.getEndTime());
+            }
+        }
+        AppStore app = appStoreService.lambdaQuery()
+                .eq(AppStore::getAppCode, appCode)
+                .last("LIMIT 1")
+                .one();
+        if (app != null) {
+            result.put("appId", app.getId());
+            result.put("appName", app.getAppName());
+            result.put("trialAvailable", app.getTrialDays() != null && app.getTrialDays() > 0
+                    && !hasTrialed(tenantId, app.getId()));
+        }
+        return result;
+    }
+
+    private boolean hasTrialed(Long tenantId, Long appId) {
+        Long count = tenantSubscriptionService.lambdaQuery()
+                .eq(TenantSubscription::getTenantId, tenantId)
+                .eq(TenantSubscription::getAppId, appId)
+                .eq(TenantSubscription::getSubscriptionType, "TRIAL")
+                .count();
+        return count != null && count > 0;
+    }
+
+    /**
+     * D-588：硬卡点——未开通增值服务的租户禁止配置/授权该平台。
+     */
+    public void requireEcSubscription(Long tenantId, String platformCode) {
+        if (!hasActiveEcSubscription(tenantId, platformCode)) {
+            throw new IllegalStateException("「" + platformCode + "」对接为平台增值服务，请先开通（可免费试用7天）或联系平台方授权");
+        }
+    }
+
     public Map<String, Object> startTrial(Long appId, Long tenantId, String callbackUrl, String externalApiUrl) {
         // 1. 查询应用信息
         AppStore app = appStoreService.getById(appId);

@@ -80,6 +80,13 @@ const AppStore: React.FC = () => {
 
   return (<>
     <div className="app-store-container">
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 16, borderRadius: 8 }}
+        title={<span className="u-fs-14"><strong>电商对接为平台增值服务</strong>：费用含服务器与维护服务费，可先免费试用 7 天；正式开通由平台方在后台为您授权</span>}
+        description="试用/开通后，到「电商中心 → 添加店铺」按向导完成平台授权即可同步订单"
+      />
       <div className="page-header">
         <div><h2>应用商店</h2><p>一键开通API对接，填写您的接口地址即可使用</p></div>
       </div>
