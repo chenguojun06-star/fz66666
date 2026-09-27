@@ -11,6 +11,10 @@
  * @date 2026-03-02
  */
 
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
+
 const QUEUE_KEY = 'scan_offline_queue';
 const MAX_QUEUE_SIZE = 50;
 const ITEM_TTL_MS = 24 * 60 * 60 * 1000;
@@ -119,7 +123,7 @@ const ScanOfflineQueue = {
     const queue = _load();
     if (queue.length >= MAX_QUEUE_SIZE) {
       wx.showToast({
-        title: '离线缓存已满(' + MAX_QUEUE_SIZE + '条)，请联网后同步',
+        title: i18n.tf(NS + 'offlineQueueFullFmt', { count: MAX_QUEUE_SIZE }),
         icon: 'none',
         duration: 3000,
       });
@@ -133,7 +137,7 @@ const ScanOfflineQueue = {
     queue.push(item);
     const saved = _save(queue);
     if (!saved) {
-      wx.showToast({ title: '离线数据保存失败，请检查存储空间', icon: 'none', duration: 3000 });
+      wx.showToast({ title: i18n.t(NS + 'offlineSaveFailed'), icon: 'none', duration: 3000 });
       return false;
     }
     if (DEBUG) console.log('[ScanOfflineQueue] 已入队，当前数量:', queue.length);

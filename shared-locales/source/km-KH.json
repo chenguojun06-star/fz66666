@@ -3356,7 +3356,9 @@
       "defectFunction": "Functionality issue",
       "defectOther": "Other issue",
       "lockReasonInProductionFmt": "{name} in production",
-      "lockReasonClaimed": "Claimed"
+      "lockReasonClaimed": "Claimed",
+      "offlineQueueFullFmt": "Offline cache is full ({count} records), please sync once online",
+      "offlineSaveFailed": "Failed to save offline data, please check storage space"
     },
     "scanRescan": {
       "navTitle": "Scan Return",
@@ -3396,6 +3398,32 @@
       "retryLater": "Please try again later",
       "patternCountPrefix": "Samples ",
       "pieceUnit": " pcs"
+    },
+    "about": {
+      "navTitle": "About Us",
+      "appNameFallback": "Apparel Supply Chain System",
+      "slogan": "Making apparel production more efficient",
+      "sysInfoTitle": "System info",
+      "appNameLabel": "App name",
+      "factoryLabel": "Factory",
+      "onlineCountLabel": "Online users",
+      "peopleUnit": "users",
+      "runStatusTitle": "Runtime status",
+      "javaVersionLabel": "Java version",
+      "osLabel": "OS",
+      "uptimeLabel": "Uptime",
+      "startTimeLabel": "Started at",
+      "memUsageLabel": "Memory used",
+      "memPercentLabel": "Memory usage",
+      "dbLabel": "Database",
+      "dbNormal": "Normal",
+      "dbError": "Error",
+      "copyVersionBtn": "Copy version info",
+      "copyrightSub": "AI-driven smart manufacturing platform",
+      "copied": "Copied",
+      "appPrefixFmt": "App: {name}",
+      "uptimePrefixFmt": "Uptime: {value}",
+      "startTimePrefixFmt": "Started at: {value}"
     }
   }
 }

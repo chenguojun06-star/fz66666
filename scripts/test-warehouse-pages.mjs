@@ -1137,7 +1137,10 @@ function testPageI18n(jsPath, wxmlPath, label, opts = {}) {
     const scanTarget = wxml.replace(/===\s*'[^']*'[\u4e00-\u9fff][^']*'|==='[^']*'/g, '')
       .replace(/[=!]==?\s*'[^']*'/g, '')
       .replace(/data-val="[^"]*[\u4e00-\u9fff][^"]*"/g, 'data-val=""');
-    const leftovers = (scanTarget.match(/[\u4e00-\u9fff]+/g) || []);
+    // 豁免：品牌标识等**故意不翻译**的固定文本（如 logo 单字「衣」），按页显式声明
+    const allowText = opts.allowWxmlText || [];
+    const leftovers = (scanTarget.match(/[\u4e00-\u9fff]+/g) || [])
+      .filter((x) => !allowText.includes(x));
     ok(`${label} wxml 无硬编码中文`, leftovers.length === 0, leftovers.join(' / '));
   }
 
@@ -1188,7 +1191,7 @@ function testNavTitleI18n(jsPath, label) {
  *
  * ⚠️ 组件**没有** json 导航栏标题（标题在宿主页的 json 里），故这里不查标题。
  */
-function testComponentI18n(jsPath, wxmlPath, label) {
+function testComponentI18n(jsPath, wxmlPath, label, opts = {}) {
   console.log(`\n【i18n：${label}（组件）】`);
 
   for (const lang of LANGS) {
@@ -1229,7 +1232,10 @@ function testComponentI18n(jsPath, wxmlPath, label) {
     const scanTarget = wxml.replace(/===\s*'[^']*'[\u4e00-\u9fff][^']*'|==='[^']*'/g, '')
       .replace(/[=!]==?\s*'[^']*'/g, '')
       .replace(/data-val="[^"]*[\u4e00-\u9fff][^"]*"/g, 'data-val=""');
-    const leftovers = (scanTarget.match(/[\u4e00-\u9fff]+/g) || []);
+    // 豁免：品牌标识等**故意不翻译**的固定文本（如 logo 单字「衣」），按页显式声明
+    const allowText = opts.allowWxmlText || [];
+    const leftovers = (scanTarget.match(/[\u4e00-\u9fff]+/g) || [])
+      .filter((x) => !allowText.includes(x));
     ok(`${label} wxml 无硬编码中文`, leftovers.length === 0, leftovers.join(' / '));
   }
 }
@@ -2535,6 +2541,8 @@ const SCAN_HANDLERS = {
   stageProcessor: 'pages/scan/handlers/helpers/ScanStageProcessor.js',
   peripheral: 'pages/scan/handlers/helpers/ScanPeripheralHelper.js',
 };
+const ADMIN_ABOUT_JS = 'pages/admin/misc/about/index.js';
+const ADMIN_ABOUT_WXML = 'pages/admin/misc/about/index.wxml';
 const SCAN_HISTORY_JS = 'pages/scan/history/index.js';
 const SCAN_HISTORY_WXML = 'pages/scan/history/index.wxml';
 const SCAN_RESCAN_JS = 'pages/scan/rescan/index.js';
@@ -2965,6 +2973,31 @@ function testI18nScanHome() {
   // ⑦ 导航标题
   eq('扫码主页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan');
   eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
+}
+
+/** 关于我们页（D-599）—— 系统信息 + 运行状态 + 版权 */
+function testI18nAdminAbout() {
+  // '衣' 是 App logo 里的品牌单字，故意不翻译（英文界面同样显示「衣」）
+  testPageI18n(ADMIN_ABOUT_JS, ADMIN_ABOUT_WXML, '关于我们页', { allowWxmlText: ['衣'] });
+
+  const { page: zhP, wx: zhWx } = loadPage(ADMIN_ABOUT_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(ADMIN_ABOUT_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('en 系统信息标题', enP.data.t.sysInfoTitle, 'System info');
+  eq('en 运行状态标题', enP.data.t.runStatusTitle, 'Runtime status');
+  eq('zh 数据库状态默认值', zhP.data.database, '正常');
+  eq('en 数据库状态默认值', enP.data.database, 'Normal');
+  ok('en 版权副标题无中文', !CJK_RE.test(enP.data.t.copyrightSub), enP.data.t.copyrightSub);
+  eq('关于页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'About Us');
+
+  // 🔴 护栏：数据库状态原先是 `{{database === '异常' ? ... }}` —— 拿文案当条件，
+  //    一旦文案被键化，条件永远不成立（红样式失效）。必须改成布尔驱动。
+  const wxmlSrc = fs.readFileSync(path.join(MP, ADMIN_ABOUT_WXML), 'utf8');
+  ok('护栏：数据库状态样式用布尔驱动',
+    wxmlSrc.includes("{{dbError ? 'text-error'") && !wxmlSrc.includes("database === '异常'"),
+    '不可拿可能被翻译的文案做条件判断');
 }
 
 /** 扫码历史页（D-598）—— 汇总卡 + 时间筛选 + 记录卡 + 空态 */
@@ -3824,6 +3857,7 @@ try {
   testI18nScanLogic();
   testI18nScanRescan();
   testI18nScanHistory();
+  testI18nAdminAbout();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

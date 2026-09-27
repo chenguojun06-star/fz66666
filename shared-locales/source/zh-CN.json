@@ -3356,7 +3356,9 @@
       "defectFunction": "功能有效性问题",
       "defectOther": "其他问题",
       "lockReasonInProductionFmt": "{name} 生产中",
-      "lockReasonClaimed": "已领取"
+      "lockReasonClaimed": "已领取",
+      "offlineQueueFullFmt": "离线缓存已满({count}条)，请联网后同步",
+      "offlineSaveFailed": "离线数据保存失败，请检查存储空间"
     },
     "scanRescan": {
       "navTitle": "扫码退回",
@@ -3396,6 +3398,32 @@
       "retryLater": "请稍后重试",
       "patternCountPrefix": "样衣",
       "pieceUnit": "件"
+    },
+    "about": {
+      "navTitle": "关于我们",
+      "appNameFallback": "服装供应链管理系统",
+      "slogan": "让服装生产更高效",
+      "sysInfoTitle": "系统信息",
+      "appNameLabel": "应用名称",
+      "factoryLabel": "所属工厂",
+      "onlineCountLabel": "在线人数",
+      "peopleUnit": "人",
+      "runStatusTitle": "运行状态",
+      "javaVersionLabel": "Java 版本",
+      "osLabel": "操作系统",
+      "uptimeLabel": "运行时长",
+      "startTimeLabel": "启动时间",
+      "memUsageLabel": "内存使用",
+      "memPercentLabel": "内存占比",
+      "dbLabel": "数据库",
+      "dbNormal": "正常",
+      "dbError": "异常",
+      "copyVersionBtn": "复制版本信息",
+      "copyrightSub": "由 AI 驱动的智能制造平台",
+      "copied": "已复制",
+      "appPrefixFmt": "应用：{name}",
+      "uptimePrefixFmt": "运行时长：{value}",
+      "startTimePrefixFmt": "启动时间：{value}"
     }
   }
 }

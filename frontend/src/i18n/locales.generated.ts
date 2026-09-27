@@ -3363,7 +3363,9 @@ export const LOCALES = {
         "defectFunction": "功能有效性问题",
         "defectOther": "其他问题",
         "lockReasonInProductionFmt": "{name} 生产中",
-        "lockReasonClaimed": "已领取"
+        "lockReasonClaimed": "已领取",
+        "offlineQueueFullFmt": "离线缓存已满({count}条)，请联网后同步",
+        "offlineSaveFailed": "离线数据保存失败，请检查存储空间"
       },
       "scanRescan": {
         "navTitle": "扫码退回",
@@ -3403,6 +3405,32 @@ export const LOCALES = {
         "retryLater": "请稍后重试",
         "patternCountPrefix": "样衣",
         "pieceUnit": "件"
+      },
+      "about": {
+        "navTitle": "关于我们",
+        "appNameFallback": "服装供应链管理系统",
+        "slogan": "让服装生产更高效",
+        "sysInfoTitle": "系统信息",
+        "appNameLabel": "应用名称",
+        "factoryLabel": "所属工厂",
+        "onlineCountLabel": "在线人数",
+        "peopleUnit": "人",
+        "runStatusTitle": "运行状态",
+        "javaVersionLabel": "Java 版本",
+        "osLabel": "操作系统",
+        "uptimeLabel": "运行时长",
+        "startTimeLabel": "启动时间",
+        "memUsageLabel": "内存使用",
+        "memPercentLabel": "内存占比",
+        "dbLabel": "数据库",
+        "dbNormal": "正常",
+        "dbError": "异常",
+        "copyVersionBtn": "复制版本信息",
+        "copyrightSub": "由 AI 驱动的智能制造平台",
+        "copied": "已复制",
+        "appPrefixFmt": "应用：{name}",
+        "uptimePrefixFmt": "运行时长：{value}",
+        "startTimePrefixFmt": "启动时间：{value}"
       }
     }
   },
@@ -6764,7 +6792,9 @@ export const LOCALES = {
         "defectFunction": "Functionality issue",
         "defectOther": "Other issue",
         "lockReasonInProductionFmt": "{name} in production",
-        "lockReasonClaimed": "Claimed"
+        "lockReasonClaimed": "Claimed",
+        "offlineQueueFullFmt": "Offline cache is full ({count} records), please sync once online",
+        "offlineSaveFailed": "Failed to save offline data, please check storage space"
       },
       "scanRescan": {
         "navTitle": "Scan Return",
@@ -6804,6 +6834,32 @@ export const LOCALES = {
         "retryLater": "Please try again later",
         "patternCountPrefix": "Samples ",
         "pieceUnit": " pcs"
+      },
+      "about": {
+        "navTitle": "About Us",
+        "appNameFallback": "Apparel Supply Chain System",
+        "slogan": "Making apparel production more efficient",
+        "sysInfoTitle": "System info",
+        "appNameLabel": "App name",
+        "factoryLabel": "Factory",
+        "onlineCountLabel": "Online users",
+        "peopleUnit": "users",
+        "runStatusTitle": "Runtime status",
+        "javaVersionLabel": "Java version",
+        "osLabel": "OS",
+        "uptimeLabel": "Uptime",
+        "startTimeLabel": "Started at",
+        "memUsageLabel": "Memory used",
+        "memPercentLabel": "Memory usage",
+        "dbLabel": "Database",
+        "dbNormal": "Normal",
+        "dbError": "Error",
+        "copyVersionBtn": "Copy version info",
+        "copyrightSub": "AI-driven smart manufacturing platform",
+        "copied": "Copied",
+        "appPrefixFmt": "App: {name}",
+        "uptimePrefixFmt": "Uptime: {value}",
+        "startTimePrefixFmt": "Started at: {value}"
       }
     }
   },
@@ -10165,7 +10221,9 @@ export const LOCALES = {
         "defectFunction": "Vấn đề chức năng",
         "defectOther": "Vấn đề khác",
         "lockReasonInProductionFmt": "{name} đang sản xuất",
-        "lockReasonClaimed": "Đã nhận"
+        "lockReasonClaimed": "Đã nhận",
+        "offlineQueueFullFmt": "Bộ nhớ ngoại tuyến đã đầy ({count} bản ghi), vui lòng đồng bộ khi có mạng",
+        "offlineSaveFailed": "Lưu dữ liệu ngoại tuyến thất bại, vui lòng kiểm tra dung lượng lưu trữ"
       },
       "scanRescan": {
         "navTitle": "Trả lại quét",
@@ -10205,6 +10263,32 @@ export const LOCALES = {
         "retryLater": "Vui lòng thử lại sau",
         "patternCountPrefix": "Mẫu ",
         "pieceUnit": " cái"
+      },
+      "about": {
+        "navTitle": "Về chúng tôi",
+        "appNameFallback": "Hệ thống chuỗi cung ứng may mặc",
+        "slogan": "Giúp sản xuất may mặc hiệu quả hơn",
+        "sysInfoTitle": "Thông tin hệ thống",
+        "appNameLabel": "Tên ứng dụng",
+        "factoryLabel": "Nhà máy",
+        "onlineCountLabel": "Người dùng trực tuyến",
+        "peopleUnit": "người",
+        "runStatusTitle": "Trạng thái vận hành",
+        "javaVersionLabel": "Phiên bản Java",
+        "osLabel": "Hệ điều hành",
+        "uptimeLabel": "Thời gian chạy",
+        "startTimeLabel": "Thời điểm khởi động",
+        "memUsageLabel": "Bộ nhớ đã dùng",
+        "memPercentLabel": "Tỷ lệ bộ nhớ",
+        "dbLabel": "Cơ sở dữ liệu",
+        "dbNormal": "Bình thường",
+        "dbError": "Bất thường",
+        "copyVersionBtn": "Sao chép thông tin phiên bản",
+        "copyrightSub": "Nền tảng sản xuất thông minh do AI dẫn dắt",
+        "copied": "Đã sao chép",
+        "appPrefixFmt": "Ứng dụng: {name}",
+        "uptimePrefixFmt": "Thời gian chạy: {value}",
+        "startTimePrefixFmt": "Thời điểm khởi động: {value}"
       }
     }
   },
@@ -13566,7 +13650,9 @@ export const LOCALES = {
         "defectFunction": "Functionality issue",
         "defectOther": "Other issue",
         "lockReasonInProductionFmt": "{name} in production",
-        "lockReasonClaimed": "Claimed"
+        "lockReasonClaimed": "Claimed",
+        "offlineQueueFullFmt": "Offline cache is full ({count} records), please sync once online",
+        "offlineSaveFailed": "Failed to save offline data, please check storage space"
       },
       "scanRescan": {
         "navTitle": "Scan Return",
@@ -13606,6 +13692,32 @@ export const LOCALES = {
         "retryLater": "Please try again later",
         "patternCountPrefix": "Samples ",
         "pieceUnit": " pcs"
+      },
+      "about": {
+        "navTitle": "About Us",
+        "appNameFallback": "Apparel Supply Chain System",
+        "slogan": "Making apparel production more efficient",
+        "sysInfoTitle": "System info",
+        "appNameLabel": "App name",
+        "factoryLabel": "Factory",
+        "onlineCountLabel": "Online users",
+        "peopleUnit": "users",
+        "runStatusTitle": "Runtime status",
+        "javaVersionLabel": "Java version",
+        "osLabel": "OS",
+        "uptimeLabel": "Uptime",
+        "startTimeLabel": "Started at",
+        "memUsageLabel": "Memory used",
+        "memPercentLabel": "Memory usage",
+        "dbLabel": "Database",
+        "dbNormal": "Normal",
+        "dbError": "Error",
+        "copyVersionBtn": "Copy version info",
+        "copyrightSub": "AI-driven smart manufacturing platform",
+        "copied": "Copied",
+        "appPrefixFmt": "App: {name}",
+        "uptimePrefixFmt": "Uptime: {value}",
+        "startTimePrefixFmt": "Started at: {value}"
       }
     }
   }

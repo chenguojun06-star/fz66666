@@ -3356,7 +3356,9 @@
       "defectFunction": "Vấn đề chức năng",
       "defectOther": "Vấn đề khác",
       "lockReasonInProductionFmt": "{name} đang sản xuất",
-      "lockReasonClaimed": "Đã nhận"
+      "lockReasonClaimed": "Đã nhận",
+      "offlineQueueFullFmt": "Bộ nhớ ngoại tuyến đã đầy ({count} bản ghi), vui lòng đồng bộ khi có mạng",
+      "offlineSaveFailed": "Lưu dữ liệu ngoại tuyến thất bại, vui lòng kiểm tra dung lượng lưu trữ"
     },
     "scanRescan": {
       "navTitle": "Trả lại quét",
@@ -3396,6 +3398,32 @@
       "retryLater": "Vui lòng thử lại sau",
       "patternCountPrefix": "Mẫu ",
       "pieceUnit": " cái"
+    },
+    "about": {
+      "navTitle": "Về chúng tôi",
+      "appNameFallback": "Hệ thống chuỗi cung ứng may mặc",
+      "slogan": "Giúp sản xuất may mặc hiệu quả hơn",
+      "sysInfoTitle": "Thông tin hệ thống",
+      "appNameLabel": "Tên ứng dụng",
+      "factoryLabel": "Nhà máy",
+      "onlineCountLabel": "Người dùng trực tuyến",
+      "peopleUnit": "người",
+      "runStatusTitle": "Trạng thái vận hành",
+      "javaVersionLabel": "Phiên bản Java",
+      "osLabel": "Hệ điều hành",
+      "uptimeLabel": "Thời gian chạy",
+      "startTimeLabel": "Thời điểm khởi động",
+      "memUsageLabel": "Bộ nhớ đã dùng",
+      "memPercentLabel": "Tỷ lệ bộ nhớ",
+      "dbLabel": "Cơ sở dữ liệu",
+      "dbNormal": "Bình thường",
+      "dbError": "Bất thường",
+      "copyVersionBtn": "Sao chép thông tin phiên bản",
+      "copyrightSub": "Nền tảng sản xuất thông minh do AI dẫn dắt",
+      "copied": "Đã sao chép",
+      "appPrefixFmt": "Ứng dụng: {name}",
+      "uptimePrefixFmt": "Thời gian chạy: {value}",
+      "startTimePrefixFmt": "Thời điểm khởi động: {value}"
     }
   }
 }
