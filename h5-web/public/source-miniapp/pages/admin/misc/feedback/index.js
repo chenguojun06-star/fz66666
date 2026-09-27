@@ -1,17 +1,23 @@
+const i18n = require('../../../../utils/i18n/index');
+
+const NS = 'mp.feedback.';
+
 const api = require('../../../../utils/api');
 
-const STATUS_MAP = {
-  PENDING: '待处理',
-  PROCESSING: '处理中',
-  RESOLVED: '已解决',
-  CLOSED: '已关闭',
+// 后端状态码 → 语言包键名（显示文案由 applyLanguage 决定，value 保持英文 code）
+const STATUS_KEY_MAP = {
+  PENDING: 'statusPending',
+  PROCESSING: 'statusProcessing',
+  RESOLVED: 'statusResolved',
+  CLOSED: 'statusClosed',
 };
 
+// value 是**提交后端的载荷**（英文 code），label 由 applyLanguage 按语言生成
 const CATEGORY_LIST = [
-  { value: 'BUG', label: '系统问题' },
-  { value: 'SUGGESTION', label: '功能建议' },
-  { value: 'QUESTION', label: '使用疑问' },
-  { value: 'OTHER', label: '其他' },
+  { value: 'BUG', key: 'catBug' },
+  { value: 'SUGGESTION', key: 'catSuggestion' },
+  { value: 'QUESTION', key: 'catQuestion' },
+  { value: 'OTHER', key: 'catOther' },
 ];
 
 Page({
@@ -27,7 +33,7 @@ Page({
 
     pickerValue: '',
     activeTab: 'submit',
-    categoryList: CATEGORY_LIST,
+    categoryList: [],
     categoryIndex: 0,
     form: { title: '', content: '', contact: '', category: 'BUG' },
     submitting: false,
@@ -56,10 +62,44 @@ Page({
   onContentInput(e) { this.setData({ 'form.content': e.detail.value }); },
   onContactInput(e) { this.setData({ 'form.contact': e.detail.value }); },
 
+  /** 应用语言 */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        tabSubmit: t('tabSubmit'),
+        tabMy: t('tabMy'),
+        categoryLabel: t('categoryLabel'),
+        titleLabel: t('titleLabel'),
+        titlePlaceholder: t('titlePlaceholder'),
+        descLabel: t('descLabel'),
+        descPlaceholder: t('descPlaceholder'),
+        submitting: t('submitting'),
+        submitBtn: t('submitBtn'),
+        emptyRecords: t('emptyRecords'),
+        replyPrefix: t('replyPrefix'),
+      },
+      // picker 选项数组必须整体重建（只翻 data.t 不够）
+      categoryList: CATEGORY_LIST.map((c) => ({ value: c.value, label: t(c.key) })),
+      // 列表里的状态文案也要跟着语言重算
+      myFeedbacks: (this.data.myFeedbacks || []).map((it) => ({
+        ...it,
+        statusText: STATUS_KEY_MAP[it.status] ? i18n.t(NS + STATUS_KEY_MAP[it.status], lang) : it.status,
+      })),
+    });
+    wx.setNavigationBarTitle({ title: t('navTitle') });
+  },
+
+  onShow() {
+    this.applyLanguage(i18n.getLanguage());
+  },
+
   async onSubmitFeedback() {
     const { title, content, category, contact } = this.data.form;
-    if (!title.trim()) return wx.showToast({ title: '请填写标题', icon: 'none' });
-    if (!content.trim()) return wx.showToast({ title: '请填写描述', icon: 'none' });
+    if (!title.trim()) return wx.showToast({ title: i18n.t(NS + 'titleRequired', this._lang), icon: 'none' });
+    if (!content.trim()) return wx.showToast({ title: i18n.t(NS + 'descRequired', this._lang), icon: 'none' });
 
     this.setData({ submitting: true });
     try {
@@ -70,14 +110,14 @@ Page({
         contact: contact.trim(),
         source: 'MINIPROGRAM',
       });
-      wx.showToast({ title: '提交成功', icon: 'success' });
+      wx.showToast({ title: i18n.t(NS + 'submitSuccess', this._lang), icon: 'success' });
       this.setData({
         form: { title: '', content: '', contact: '', category: 'BUG' },
         categoryIndex: 0,
       });
       this.loadMyFeedbacks();
     } catch (err) {
-      wx.showToast({ title: err.message || '提交失败', icon: 'none' });
+      wx.showToast({ title: err.message || i18n.t('common.submitFailed', this._lang), icon: 'none' });
     } finally {
       this.setData({ submitting: false });
     }
@@ -88,7 +128,7 @@ Page({
       const res = await api.system.myFeedbackList({ page: 1, pageSize: 20 });
       const list = (res.records || (Array.isArray(res) ? res : [])).map(item => ({
         ...item,
-        statusText: STATUS_MAP[item.status] || item.status,
+        statusText: STATUS_KEY_MAP[item.status] ? i18n.t(NS + STATUS_KEY_MAP[item.status], this._lang) : item.status,
       }));
       this.setData({ myFeedbacks: list });
     } catch (err) {
@@ -141,7 +181,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

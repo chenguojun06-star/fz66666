@@ -2541,6 +2541,10 @@ const SCAN_HANDLERS = {
   stageProcessor: 'pages/scan/handlers/helpers/ScanStageProcessor.js',
   peripheral: 'pages/scan/handlers/helpers/ScanPeripheralHelper.js',
 };
+const ADMIN_INVITE_JS = 'pages/admin/misc/invite/index.js';
+const ADMIN_INVITE_WXML = 'pages/admin/misc/invite/index.wxml';
+const ADMIN_FEEDBACK_JS = 'pages/admin/misc/feedback/index.js';
+const ADMIN_FEEDBACK_WXML = 'pages/admin/misc/feedback/index.wxml';
 const ADMIN_ABOUT_JS = 'pages/admin/misc/about/index.js';
 const ADMIN_ABOUT_WXML = 'pages/admin/misc/about/index.wxml';
 const SCAN_HISTORY_JS = 'pages/scan/history/index.js';
@@ -2973,6 +2977,61 @@ function testI18nScanHome() {
   // ⑦ 导航标题
   eq('扫码主页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan');
   eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
+}
+
+/** 意见反馈页（D-600）—— 双 tab + 分类 picker + 列表状态 */
+function testI18nAdminFeedback() {
+  testPageI18n(ADMIN_FEEDBACK_JS, ADMIN_FEEDBACK_WXML, '意见反馈页');
+
+  const { page: zhP, wx: zhWx } = loadPage(ADMIN_FEEDBACK_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(ADMIN_FEEDBACK_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('en 提交 tab', enP.data.t.tabSubmit, 'Submit');
+  eq('en 详细描述标签', enP.data.t.descLabel, 'Details');
+  eq('en 回复前缀带尾空格', enP.data.t.replyPrefix, 'Reply: ');
+  eq('反馈页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Feedback');
+
+  // picker 选项数组按语言重建，但 value 必须保持英文 code（提交后端的载荷）
+  eq('zh 分类首位 label', zhP.data.categoryList[0].label, '系统问题');
+  eq('en 分类首位 label', enP.data.categoryList[0].label, 'System issue');
+  ok('分类 value 始终是英文载荷', enP.data.categoryList.every((c) => /^[A-Z]+$/.test(c.value)),
+    JSON.stringify(enP.data.categoryList.map((c) => c.value)));
+  ok('en 分类无中文残留', enP.data.categoryList.every((c) => !CJK_RE.test(c.label)),
+    enP.data.categoryList.map((c) => c.label).join(' | '));
+
+  // 状态码 → 显示文案，必须走键名映射而不是直接写中文
+  const jsSrc = fs.readFileSync(path.join(MP, ADMIN_FEEDBACK_JS), 'utf8');
+  ok('护栏：状态映射用键名而非中文',
+    jsSrc.includes('STATUS_KEY_MAP') && !jsSrc.includes("PENDING: '待处理'"),
+    '状态显示文案必须经 i18n，value 保持英文 code');
+}
+
+/** 邀请同事页（D-600）—— 邀请码/二维码/注册链接/邀请步骤 */
+function testI18nAdminInvite() {
+  testPageI18n(ADMIN_INVITE_JS, ADMIN_INVITE_WXML, '邀请同事页');
+
+  const { page: zhP, wx: zhWx } = loadPage(ADMIN_INVITE_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(ADMIN_INVITE_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('en 邀请码标题', enP.data.t.inviteCodeTitle, 'Factory invite code');
+  eq('en 邀请步骤标题', enP.data.t.stepsTitle, 'Invite steps');
+  eq('en 复制按钮复用 common.copy', enP.data.t.copy, 'Copy');
+  eq('邀请页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Invite Colleagues');
+  ok('en 邀请步骤无中文',
+    [enP.data.t.step1, enP.data.t.step2, enP.data.t.step3].every((x) => !CJK_RE.test(x)),
+    [enP.data.t.step1, enP.data.t.step2, enP.data.t.step3].join(' | '));
+
+  // 🔴 护栏：'工厂' 在 onCopyInviteUrl 里会拼进 register 链接的 tenantName 查询参数
+  //    （提交给 PC 注册页）→ 必须保持中文；只有分享标题那一处可以键化
+  const jsSrc = fs.readFileSync(path.join(MP, ADMIN_INVITE_JS), 'utf8');
+  ok('护栏：URL 参数里的工厂名仍是中文',
+    jsSrc.includes("this._tenantName || '工厂'"), '它进了 register 链接的查询参数，不可键化');
+  ok('护栏：分享标题已键化',
+    jsSrc.includes("i18n.t(NS + 'inviteSuffix'"), '分享标题是显示文案，必须键化');
 }
 
 /** 关于我们页（D-599）—— 系统信息 + 运行状态 + 版权 */
@@ -3858,6 +3917,8 @@ try {
   testI18nScanRescan();
   testI18nScanHistory();
   testI18nAdminAbout();
+  testI18nAdminFeedback();
+  testI18nAdminInvite();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);
