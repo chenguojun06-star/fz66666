@@ -116,6 +116,16 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   const hasAwaitingConfirm = detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
   const hasReturnConfirmed = detailPurchases.some(p => Number(p?.returnConfirmed || 0) === 1);
 
+  // D-586：库存补货/手动来源的采购行没有订单与款号，详情按订单/款号聚合必然是空集，
+  // 之前误报「尚未创建面辅料信息（0项）」让用户以为单子坏了。改为直接展示该行自身。
+  const contextlessRow = !detailLoading
+    && detailPurchases.length === 0
+    && currentPurchase
+    && !String(currentPurchase.orderNo || '').trim()
+    && !String(currentPurchase.styleNo || '').trim()
+    ? [currentPurchase]
+    : null;
+
   const returnablePurchases = detailPurchases.filter((p) => {
     const status = normalizeStatus(p.status);
     return (status === MATERIAL_PURCHASE_STATUS.RECEIVED
@@ -237,6 +247,22 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
             onUpdateRow={data.updateRow}
             onRemoveRow={data.handleRemoveRowWithConfirm}
             onOpenMaterialModal={data.openMaterialModal}
+          />
+        ) : contextlessRow ? (
+          <PurchaseDetailCollapse
+            detailPurchases={contextlessRow}
+            isMobile={isMobile}
+            stockMap={data.stockMap}
+            isSupervisorOrAbove={isSupervisorOrAbove}
+            isOrderFrozenForRecord={isOrderFrozenForRecord}
+            onReceive={onReceive}
+            onConfirmReturn={onConfirmReturn}
+            onReturnReset={onReturnReset}
+            onQualityIssue={onQualityIssue}
+            onCancelReceive={onCancelReceive}
+            onWarehousePick={onWarehousePick}
+            onArrival={handleArrival}
+            onCancelTarget={data.setCancelTarget}
           />
         ) : detailPurchases.length === 0 && !detailLoading ? (
           <div className="u-ta-center" style={{ padding: '48px 16px' }}>

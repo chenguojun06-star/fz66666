@@ -186,6 +186,13 @@ public class MaterialPurchaseOrchestrator {
         if (materialPurchase == null) {
             throw new IllegalArgumentException("参数错误");
         }
+        // D-586：新建采购数量必须大于0——0 数量行是无法采购的垃圾单
+        //（2026-09-27 生产「拉链」幽灵单即 0 数量 + 幽灵 materialId 经此口入库存档）
+        BigDecimal createQty = materialPurchase.getPurchaseQuantity();
+        if (createQty == null || createQty.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("采购数量必须大于0");
+        }
+        sanitizeMaterialReference(materialPurchase);
         assertSamplePurchaseEditable(materialPurchase);
         boolean ok = saveAndSync(materialPurchase);
         if (!ok) {
@@ -193,6 +200,41 @@ public class MaterialPurchaseOrchestrator {
         }
         logAppendHelper.appendCreate(materialPurchase.getId());
         return true;
+    }
+
+    /**
+     * D-586：materialId 引用治理——采购表只允许落能解析到当前租户物料资料的 id。
+     * 传入 id 查不到时按物料编码回落解析；仍查不到则置空，绝不把幽灵 id 写进采购表
+     * （幽灵单症状：详情页 0 项、库存/领取无法关联、点进去什么都没有）。
+     */
+    private void sanitizeMaterialReference(MaterialPurchase purchase) {
+        if (purchase == null || !StringUtils.hasText(purchase.getMaterialId())) {
+            return;
+        }
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        String materialId = purchase.getMaterialId().trim();
+        MaterialDatabase dbMaterial = materialDatabaseService.lambdaQuery()
+                .eq(MaterialDatabase::getId, materialId)
+                .eq(MaterialDatabase::getTenantId, tenantId)
+                .one();
+        if (dbMaterial == null && StringUtils.hasText(purchase.getMaterialCode())) {
+            dbMaterial = materialDatabaseService.lambdaQuery()
+                    .eq(MaterialDatabase::getMaterialCode, purchase.getMaterialCode().trim())
+                    .eq(MaterialDatabase::getTenantId, tenantId)
+                    .last("LIMIT 1")
+                    .one();
+            if (dbMaterial != null) {
+                log.warn("[MaterialPurchase] materialId={} 无法解析，已按编码 {} 回落为真实物料 id={}",
+                        materialId, purchase.getMaterialCode(), dbMaterial.getId());
+            }
+        }
+        if (dbMaterial == null) {
+            log.warn("[MaterialPurchase] materialId={} 指向不存在的物料且编码 {} 无法解析，置空引用",
+                    materialId, purchase.getMaterialCode());
+            purchase.setMaterialId(null);
+        } else {
+            purchase.setMaterialId(dbMaterial.getId());
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -416,6 +458,10 @@ public class MaterialPurchaseOrchestrator {
                 if (!org.springframework.util.StringUtils.hasText(p.getFabricComposition()) && org.springframework.util.StringUtils.hasText(db.getFabricComposition())) p.setFabricComposition(db.getFabricComposition());
             }
         }
+        // D-586：逐行治理 materialId 引用，绝不落幽灵 id
+        for (MaterialPurchase p : purchases) {
+            sanitizeMaterialReference(p);
+        }
         boolean ok = batchAndSync(purchases);
         if (!ok) {
             throw new IllegalStateException("批量保存失败");
@@ -541,7 +587,12 @@ public class MaterialPurchaseOrchestrator {
             if (!StringUtils.hasText(supplierName)) supplierName = dbMaterial.getSupplierName();
             if (unitPrice == null) unitPrice = dbMaterial.getUnitPrice();
             if (conversionRate == null) conversionRate = dbMaterial.getConversionRate();
-            if (!StringUtils.hasText(materialId)) materialId = dbMaterial.getId();
+            // D-586 幽灵 id 治理：入参 id 查不到但编码能解析时，以库内真实 id 为准（原来入参有值就原样保留幽灵 id）
+            materialId = dbMaterial.getId();
+        } else if (StringUtils.hasText(materialId)) {
+            // id 与编码都解析不到：置空引用，绝不落指向不存在物料的 id
+            log.warn("[MaterialPurchase] 下发采购指令 materialId={} 无法解析为租户物料，已置空引用", materialId);
+            materialId = null;
         }
         if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("采购数量必须大于0");

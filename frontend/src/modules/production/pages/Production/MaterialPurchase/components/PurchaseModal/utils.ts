@@ -136,6 +136,14 @@ export const validatePurchaseRows = (
   if (validRows.length === 0) {
     return { valid: false, warning: '请至少添加一行面辅料信息' };
   }
+  // D-586：0 数量行是发不出去也采购不了的垃圾单，保存前拦截（后端 save 同口径校验）
+  const zeroQtyRow = validRows.find(
+    (r) => !Number(r.purchaseQuantity) || Number(r.purchaseQuantity) <= 0
+  );
+  if (zeroQtyRow) {
+    const label = zeroQtyRow.materialName || zeroQtyRow.materialCode || '未命名物料';
+    return { valid: false, warning: `「${label}」的采购数量必须大于0` };
+  }
   const incomplete = validRows.find((r) =>
     REQUIRED_FIELDS.some((f) => {
       const val = (r as any)[f];
