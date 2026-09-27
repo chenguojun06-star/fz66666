@@ -291,7 +291,7 @@ Page({
 
     wx.showModal({
       title: i18n.t(NS + 'rejectExternal', this._lang),
-      content: `确定拒绝"${user.name || user.username}"的注册申请吗？`,
+      content: i18n.tf('mp.userApproval.rejectConfirmFmt', { name: user.name || user.username }, this._lang),
       editable: true,
       placeholderText: i18n.t(NS + 'rejectReasonReq', this._lang),
       confirmText: i18n.t(NS + 'confirmRejectBtn', this._lang),

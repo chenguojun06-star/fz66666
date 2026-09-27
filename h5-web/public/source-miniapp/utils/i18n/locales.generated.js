@@ -2960,7 +2960,8 @@ module.exports = {
         "rejectUserTitle": "拒绝用户",
         "nameUnit": " 吗？",
         "rejectLoginHintW": "拒绝后该用户将无法登录系统",
-        "rejectBtn": "拒绝"
+        "rejectBtn": "拒绝",
+        "rejectConfirmFmt": "确定拒绝\"{name}\"的注册申请吗？"
       },
       "advance": {
         "navTitle": "申请借支",
@@ -3513,6 +3514,20 @@ module.exports = {
         "changeFailed": "修改失败",
         "submitting": "提交中...",
         "confirmBtn": "确认修改"
+      },
+      "menuRoleConfig": {
+        "permissionTitle": "应用权限配置",
+        "adminOnly": "仅租户管理员可操作",
+        "unitPriceShown": "单价已对全员显示",
+        "unitPriceHidden": "单价已对全员隐藏",
+        "changeFailedAdminOnly": "修改失败：仅租户管理员可操作",
+        "loadFailedRetry": "加载失败，请重试",
+        "saveFailedRetry": "保存失败，请重试",
+        "saving": "保存中...",
+        "roleHint": "关闭开关后，该角色用户将不再看到此应用",
+        "globalSwitch": "全局显示开关",
+        "unitPriceSwitch": "工序单价显示",
+        "unitPriceHint": "关闭后，生产管理 / 外发管理等页面对全员隐藏工序单价；时间显示不受此开关影响"
       }
     }
   },
@@ -6471,7 +6486,8 @@ module.exports = {
         "rejectUserTitle": "Reject User",
         "nameUnit": "?",
         "rejectLoginHintW": "After rejection the user cannot log in",
-        "rejectBtn": "Reject"
+        "rejectBtn": "Reject",
+        "rejectConfirmFmt": "Reject the registration request from \"{name}\"?"
       },
       "advance": {
         "navTitle": "Advance Request",
@@ -7024,6 +7040,20 @@ module.exports = {
         "changeFailed": "Change failed",
         "submitting": "Submitting...",
         "confirmBtn": "Confirm"
+      },
+      "menuRoleConfig": {
+        "permissionTitle": "App permission settings",
+        "adminOnly": "Only the tenant admin can do this",
+        "unitPriceShown": "Unit price is now visible to everyone",
+        "unitPriceHidden": "Unit price is now hidden from everyone",
+        "changeFailedAdminOnly": "Change failed: only the tenant admin can do this",
+        "loadFailedRetry": "Load failed, please retry",
+        "saveFailedRetry": "Save failed, please retry",
+        "saving": "Saving...",
+        "roleHint": "Once turned off, users with this role will no longer see this app",
+        "globalSwitch": "Global visibility",
+        "unitPriceSwitch": "Process unit price",
+        "unitPriceHint": "Once off, process unit prices are hidden from everyone in Production / Outsourcing pages; time display is unaffected"
       }
     }
   },
@@ -9982,7 +10012,8 @@ module.exports = {
         "rejectUserTitle": "Từ chối",
         "nameUnit": "?",
         "rejectLoginHintW": "Sau khi từ chối sẽ không đăng nhập được",
-        "rejectBtn": "Từ chối"
+        "rejectBtn": "Từ chối",
+        "rejectConfirmFmt": "Từ chối yêu cầu đăng ký của \"{name}\"?"
       },
       "advance": {
         "navTitle": "Xin tạm ứng",
@@ -10535,6 +10566,20 @@ module.exports = {
         "changeFailed": "Thay đổi thất bại",
         "submitting": "Đang gửi...",
         "confirmBtn": "Xác nhận thay đổi"
+      },
+      "menuRoleConfig": {
+        "permissionTitle": "Cấu hình quyền ứng dụng",
+        "adminOnly": "Chỉ quản trị viên tenant được thao tác",
+        "unitPriceShown": "Đơn giá đã hiển thị cho tất cả",
+        "unitPriceHidden": "Đơn giá đã ẩn với tất cả",
+        "changeFailedAdminOnly": "Thay đổi thất bại: chỉ quản trị viên tenant được thao tác",
+        "loadFailedRetry": "Tải thất bại, vui lòng thử lại",
+        "saveFailedRetry": "Lưu thất bại, vui lòng thử lại",
+        "saving": "Đang lưu...",
+        "roleHint": "Sau khi tắt, người dùng có vai trò này sẽ không còn thấy ứng dụng này",
+        "globalSwitch": "Hiển thị toàn cục",
+        "unitPriceSwitch": "Hiển thị đơn giá công đoạn",
+        "unitPriceHint": "Sau khi tắt, đơn giá công đoạn sẽ ẩn với tất cả trong trang Quản lý sản xuất / Gia công ngoài; hiển thị thời gian không bị ảnh hưởng"
       }
     }
   },
@@ -13493,7 +13538,8 @@ module.exports = {
         "rejectUserTitle": "Reject",
         "nameUnit": "?",
         "rejectLoginHintW": "Cannot log in after rejection",
-        "rejectBtn": "Reject"
+        "rejectBtn": "Reject",
+        "rejectConfirmFmt": "Reject the registration request from \"{name}\"?"
       },
       "advance": {
         "navTitle": "Advance Request",
@@ -14046,6 +14092,20 @@ module.exports = {
         "changeFailed": "Change failed",
         "submitting": "Submitting...",
         "confirmBtn": "Confirm"
+      },
+      "menuRoleConfig": {
+        "permissionTitle": "App permission settings",
+        "adminOnly": "Only the tenant admin can do this",
+        "unitPriceShown": "Unit price is now visible to everyone",
+        "unitPriceHidden": "Unit price is now hidden from everyone",
+        "changeFailedAdminOnly": "Change failed: only the tenant admin can do this",
+        "loadFailedRetry": "Load failed, please retry",
+        "saveFailedRetry": "Save failed, please retry",
+        "saving": "Saving...",
+        "roleHint": "Once turned off, users with this role will no longer see this app",
+        "globalSwitch": "Global visibility",
+        "unitPriceSwitch": "Process unit price",
+        "unitPriceHint": "Once off, process unit prices are hidden from everyone in Production / Outsourcing pages; time display is unaffected"
       }
     }
   }

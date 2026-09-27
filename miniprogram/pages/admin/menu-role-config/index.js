@@ -1,3 +1,7 @@
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.menuRoleConfig.';
+
 const api = require('../../../utils/api');
 const { isTenantOwner, isSuperAdmin } = require('../../../utils/storage');
 const { PRICE_FLAG_KEY, getTenantPriceVisible, cacheTenantPriceVisible } = require('../../../utils/procTimeline');
@@ -6,6 +10,7 @@ Page({
   data: {
     loading: true,
     saving: false,
+    t: {},
     roles: [],
     roleLabels: {},
     menus: [],
@@ -17,6 +22,30 @@ Page({
     /* D-285：租户级「工序单价显示」全局开关（唯一入口，对生产管理/外发管理等页面全员生效） */
     canManagePrice: false,
     priceVisible: true,
+  },
+
+  /** 应用语言 */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        permissionTitle: t('permissionTitle'),
+        loading: i18n.t('common.loading', lang),
+        save: i18n.t('common.save', lang),
+        saving: t('saving'),
+        roleHint: t('roleHint'),
+        globalSwitch: t('globalSwitch'),
+        unitPriceSwitch: t('unitPriceSwitch'),
+        unitPriceHint: t('unitPriceHint'),
+      },
+    });
+    wx.setNavigationBarTitle({ title: t('permissionTitle') });
+  },
+
+  onShow() {
+    this.applyLanguage(i18n.getLanguage());
   },
 
   onLoad: function () {
@@ -40,7 +69,7 @@ Page({
   onTogglePriceVisible: function () {
     const that = this;
     if (!that.data.canManagePrice) {
-      that._showToast('仅租户管理员可操作');
+      that._showToast(i18n.t(NS + 'adminOnly', that._lang));
       return;
     }
     const next = !that.data.priceVisible;
@@ -52,9 +81,9 @@ Page({
     }).then(function () {
       cacheTenantPriceVisible(next);
       that.setData({ priceVisible: next });
-      that._showToast(next ? '单价已对全员显示' : '单价已对全员隐藏');
+      that._showToast(i18n.t(NS + (next ? 'unitPriceShown' : 'unitPriceHidden'), that._lang));
     }).catch(function (e) {
-      that._showToast((e && e.message) || '修改失败：仅租户管理员可操作');
+      that._showToast((e && e.message) || i18n.t(NS + 'changeFailedAdminOnly', that._lang));
     });
   },
 
@@ -86,7 +115,7 @@ Page({
     }).catch(function (e) {
       console.error('[menu-role-config] load failed', e);
       that.setData({ loading: false });
-      that._showToast('加载失败，请重试');
+      that._showToast(i18n.t(NS + 'loadFailedRetry', that._lang));
     });
   },
 
@@ -119,11 +148,11 @@ Page({
     that.setData({ saving: true });
     api.system.saveMiniprogramMenuRoleConfig(that.data.roleMenus).then(function (res) {
       that.setData({ saving: false, roleMenus: res || that.data.roleMenus });
-      that._showToast('保存成功');
+      that._showToast(i18n.t('common.saveSuccess', that._lang));
     }).catch(function (e) {
       console.error('[menu-role-config] save failed', e);
       that.setData({ saving: false });
-      that._showToast('保存失败，请重试');
+      that._showToast(i18n.t(NS + 'saveFailedRetry', that._lang));
     });
   },
 

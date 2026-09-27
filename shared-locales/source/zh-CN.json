@@ -2953,7 +2953,8 @@
       "rejectUserTitle": "拒绝用户",
       "nameUnit": " 吗？",
       "rejectLoginHintW": "拒绝后该用户将无法登录系统",
-      "rejectBtn": "拒绝"
+      "rejectBtn": "拒绝",
+      "rejectConfirmFmt": "确定拒绝\"{name}\"的注册申请吗？"
     },
     "advance": {
       "navTitle": "申请借支",
@@ -3506,6 +3507,20 @@
       "changeFailed": "修改失败",
       "submitting": "提交中...",
       "confirmBtn": "确认修改"
+    },
+    "menuRoleConfig": {
+      "permissionTitle": "应用权限配置",
+      "adminOnly": "仅租户管理员可操作",
+      "unitPriceShown": "单价已对全员显示",
+      "unitPriceHidden": "单价已对全员隐藏",
+      "changeFailedAdminOnly": "修改失败：仅租户管理员可操作",
+      "loadFailedRetry": "加载失败，请重试",
+      "saveFailedRetry": "保存失败，请重试",
+      "saving": "保存中...",
+      "roleHint": "关闭开关后，该角色用户将不再看到此应用",
+      "globalSwitch": "全局显示开关",
+      "unitPriceSwitch": "工序单价显示",
+      "unitPriceHint": "关闭后，生产管理 / 外发管理等页面对全员隐藏工序单价；时间显示不受此开关影响"
     }
   }
 }

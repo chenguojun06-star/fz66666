@@ -148,6 +148,8 @@ Page({
   },
 
   onLanguageSwitchTap: function () {
+    // ⚠️ 语言名映射表**故意不翻译**：语言切换器里各语言用**自己的母语**显示自己
+    //    （中文 / English / Tiếng Việt / ភាសាខ្មែរ），翻了反而找不到自己的语言
     const languageNameMap = this._languageNameMap || { 'zh-CN': '中文', 'en-US': 'English', 'vi-VN': 'Tiếng Việt', 'km-KH': 'ភាសាខ្មែរ' };
     const langList = ['zh-CN', 'en-US', 'vi-VN', 'km-KH'];
     const itemList = langList.map(function (lang) { return languageNameMap[lang] || lang; });

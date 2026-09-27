@@ -2953,7 +2953,8 @@
       "rejectUserTitle": "Reject",
       "nameUnit": "?",
       "rejectLoginHintW": "Cannot log in after rejection",
-      "rejectBtn": "Reject"
+      "rejectBtn": "Reject",
+      "rejectConfirmFmt": "Reject the registration request from \"{name}\"?"
     },
     "advance": {
       "navTitle": "Advance Request",
@@ -3506,6 +3507,20 @@
       "changeFailed": "Change failed",
       "submitting": "Submitting...",
       "confirmBtn": "Confirm"
+    },
+    "menuRoleConfig": {
+      "permissionTitle": "App permission settings",
+      "adminOnly": "Only the tenant admin can do this",
+      "unitPriceShown": "Unit price is now visible to everyone",
+      "unitPriceHidden": "Unit price is now hidden from everyone",
+      "changeFailedAdminOnly": "Change failed: only the tenant admin can do this",
+      "loadFailedRetry": "Load failed, please retry",
+      "saveFailedRetry": "Save failed, please retry",
+      "saving": "Saving...",
+      "roleHint": "Once turned off, users with this role will no longer see this app",
+      "globalSwitch": "Global visibility",
+      "unitPriceSwitch": "Process unit price",
+      "unitPriceHint": "Once off, process unit prices are hidden from everyone in Production / Outsourcing pages; time display is unaffected"
     }
   }
 }

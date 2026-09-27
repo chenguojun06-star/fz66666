@@ -2953,7 +2953,8 @@
       "rejectUserTitle": "Từ chối",
       "nameUnit": "?",
       "rejectLoginHintW": "Sau khi từ chối sẽ không đăng nhập được",
-      "rejectBtn": "Từ chối"
+      "rejectBtn": "Từ chối",
+      "rejectConfirmFmt": "Từ chối yêu cầu đăng ký của \"{name}\"?"
     },
     "advance": {
       "navTitle": "Xin tạm ứng",
@@ -3506,6 +3507,20 @@
       "changeFailed": "Thay đổi thất bại",
       "submitting": "Đang gửi...",
       "confirmBtn": "Xác nhận thay đổi"
+    },
+    "menuRoleConfig": {
+      "permissionTitle": "Cấu hình quyền ứng dụng",
+      "adminOnly": "Chỉ quản trị viên tenant được thao tác",
+      "unitPriceShown": "Đơn giá đã hiển thị cho tất cả",
+      "unitPriceHidden": "Đơn giá đã ẩn với tất cả",
+      "changeFailedAdminOnly": "Thay đổi thất bại: chỉ quản trị viên tenant được thao tác",
+      "loadFailedRetry": "Tải thất bại, vui lòng thử lại",
+      "saveFailedRetry": "Lưu thất bại, vui lòng thử lại",
+      "saving": "Đang lưu...",
+      "roleHint": "Sau khi tắt, người dùng có vai trò này sẽ không còn thấy ứng dụng này",
+      "globalSwitch": "Hiển thị toàn cục",
+      "unitPriceSwitch": "Hiển thị đơn giá công đoạn",
+      "unitPriceHint": "Sau khi tắt, đơn giá công đoạn sẽ ẩn với tất cả trong trang Quản lý sản xuất / Gia công ngoài; hiển thị thời gian không bị ảnh hưởng"
     }
   }
 }

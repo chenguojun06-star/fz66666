@@ -4,16 +4,16 @@
     <view class="back-btn" bindtap="onBack">
       <view class="line-icon icon-arrow-left"></view>
     </view>
-    <text class="page-title">应用权限配置</text>
+    <text class="page-title">{{t.permissionTitle}}</text>
     <view class="save-btn {{saving ? 'save-btn--disabled' : ''}}" bindtap="onSave">
-      <text>{{saving ? '保存中...' : '保存'}}</text>
+      <text>{{saving ? t.saving : t.save}}</text>
     </view>
   </view>
 
   <!-- 加载中 -->
   <view class="loading-wrap" wx:if="{{loading}}">
     <view class="loading-spinner"></view>
-    <text class="loading-text">加载中...</text>
+    <text class="loading-text">{{t.loading}}</text>
   </view>
 
   <!-- 内容区 -->
@@ -29,7 +29,7 @@
 
     <!-- 提示文字 -->
     <view class="tip-bar">
-      <text class="tip-text">关闭开关后，该角色用户将不再看到此应用</text>
+      <text class="tip-text">{{t.roleHint}}</text>
     </view>
 
     <!-- 应用列表 -->
@@ -47,11 +47,11 @@
     <!-- D-285：租户级全局显示开关（唯一入口，对全员生效） -->
     <view class="feature-section" wx:if="{{canManagePrice}}">
       <view class="feature-header">
-        <text class="feature-title">全局显示开关</text>
+        <text class="feature-title">{{t.globalSwitch}}</text>
       </view>
       <view class="menu-list">
         <view class="menu-item" bindtap="onTogglePriceVisible">
-          <text class="menu-name">工序单价显示</text>
+          <text class="menu-name">{{t.unitPriceSwitch}}</text>
           <view class="switch-wrap">
             <view class="switch {{priceVisible ? 'switch--on' : 'switch--off'}}">
               <view class="switch-knob"></view>
@@ -60,7 +60,7 @@
         </view>
       </view>
       <view class="tip-bar">
-        <text class="tip-text">关闭后，生产管理 / 外发管理等页面对全员隐藏工序单价；时间显示不受此开关影响</text>
+        <text class="tip-text">{{t.unitPriceHint}}</text>
       </view>
     </view>
   </view>

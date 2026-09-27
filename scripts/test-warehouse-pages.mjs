@@ -2541,6 +2541,8 @@ const SCAN_HANDLERS = {
   stageProcessor: 'pages/scan/handlers/helpers/ScanStageProcessor.js',
   peripheral: 'pages/scan/handlers/helpers/ScanPeripheralHelper.js',
 };
+const ADMIN_MENU_ROLE_JS = 'pages/admin/menu-role-config/index.js';
+const ADMIN_MENU_ROLE_WXML = 'pages/admin/menu-role-config/index.wxml';
 const ADMIN_EDIT_PROFILE_JS = 'pages/admin/misc/edit-profile/index.js';
 const ADMIN_EDIT_PROFILE_WXML = 'pages/admin/misc/edit-profile/index.wxml';
 const ADMIN_CHANGE_PWD_JS = 'pages/admin/misc/change-password/index.js';
@@ -2981,6 +2983,29 @@ function testI18nScanHome() {
   // ⑦ 导航标题
   eq('扫码主页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan');
   eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
+}
+
+/** 应用权限配置页（D-602）—— 角色 × 应用矩阵 + 工序单价全局开关 */
+function testI18nAdminMenuRoleConfig() {
+  // 该页没有 index.json（标题由 applyLanguage 的 setNavigationBarTitle 控制）
+  testPageI18n(ADMIN_MENU_ROLE_JS, ADMIN_MENU_ROLE_WXML, '应用权限配置页');
+
+  const { page: zhP, wx: zhWx } = loadPage(ADMIN_MENU_ROLE_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(ADMIN_MENU_ROLE_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 权限页标题', zhP.data.t.permissionTitle, '应用权限配置');
+  eq('en 权限页标题', enP.data.t.permissionTitle, 'App permission settings');
+  eq('en 保存中', enP.data.t.saving, 'Saving...');
+  ok('en 单价说明无中文', !CJK_RE.test(enP.data.t.unitPriceHint), enP.data.t.unitPriceHint);
+  ok('en 角色开关说明无中文', !CJK_RE.test(enP.data.t.roleHint), enP.data.t.roleHint);
+  eq('权限页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'App permission settings');
+
+  // user-approval 页早已接入 i18n，只有「拒绝确认」那一处 content 没走 tf（D-602 补上）
+  const uaSrc = fs.readFileSync(path.join(MP, 'pages/admin/user-approval/index.js'), 'utf8');
+  ok('护栏：拒绝确认文案用 tf 传参',
+    uaSrc.includes("rejectConfirmFmt', { name:"), '带用户名插值，必须走 tf');
 }
 
 /** 编辑资料页（D-601）—— 头像上传 + 字段展示 + 保存 */
@@ -3965,6 +3990,7 @@ try {
   testI18nAdminInvite();
   testI18nAdminEditProfile();
   testI18nAdminChangePassword();
+  testI18nAdminMenuRoleConfig();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);
