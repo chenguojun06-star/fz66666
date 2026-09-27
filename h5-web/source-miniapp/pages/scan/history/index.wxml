@@ -3,20 +3,20 @@
   <view class="summary-card">
     <view class="summary-item">
       <text class="summary-num">{{summary.totalQuantity || 0}}</text>
-      <text class="summary-label">总数量</text>
+      <text class="summary-label">{{t.totalQtyLabel}}</text>
     </view>
     <view class="summary-item">
       <text class="summary-num">{{summary.orderCount || 0}}</text>
-      <text class="summary-label">订单数</text>
+      <text class="summary-label">{{t.orderCountLabel}}</text>
     </view>
     <view class="summary-item">
       <text class="summary-num">{{summary.recordCount || 0}}</text>
-      <text class="summary-label">记录数</text>
-      <text class="summary-sub-label">样衣{{summary.patternRecordCount || 0}}</text>
+      <text class="summary-label">{{t.recordCountLabel}}</text>
+      <text class="summary-sub-label">{{t.patternCountPrefix}}{{summary.patternRecordCount || 0}}</text>
     </view>
     <view class="summary-item summary-hl {{showOnlyPayable ? 'summary-payable-active' : ''}}" bindtap="onTogglePayableFilter" hover-class="summary-item-hl-hover" hover-stay-time="50">
       <text class="summary-num">¥{{summary.totalWage || '0.00'}}</text>
-      <text class="summary-label">工资</text>
+      <text class="summary-label">{{t.wageLabel}}</text>
     </view>
   </view>
 
@@ -24,7 +24,7 @@
   <view class="ssb-wrap">
     <sticky-search-bar
       sticky="{{false}}"
-      placeholder="订单号 / 菲号 / 工序"
+      placeholder="{{t.searchPlaceholder}}"
       value="{{searchKeyword}}"
       show-scan="{{false}}"
       show-filter="{{true}}"
@@ -35,8 +35,8 @@
       <view slot="filter" class="scan-history-filter">
         <!-- 时间模式切换 -->
         <view class="mode-tabs">
-          <view class="mode-tab {{dateMode === 'month' ? 'mode-tab-active' : ''}}" bindtap="onModeChange" data-mode="month">按月</view>
-          <view class="mode-tab {{dateMode === 'custom' ? 'mode-tab-active' : ''}}" bindtap="onModeChange" data-mode="custom">自定义</view>
+          <view class="mode-tab {{dateMode === 'month' ? 'mode-tab-active' : ''}}" bindtap="onModeChange" data-mode="month">{{t.modeMonth}}</view>
+          <view class="mode-tab {{dateMode === 'custom' ? 'mode-tab-active' : ''}}" bindtap="onModeChange" data-mode="custom">{{t.modeCustom}}</view>
         </view>
 
         <!-- 月份选择器（按月模式） -->
@@ -49,12 +49,12 @@
         <!-- 日期范围选择（自定义模式） -->
         <view class="date-row" wx:if="{{dateMode === 'custom'}}">
           <view class="date-col">
-            <text class="date-label">开始</text>
+            <text class="date-label">{{t.startLabel}}</text>
             <date-picker value="{{startDate}}" bindchange="onStartDateChange" />
           </view>
           <text class="date-separator">—</text>
           <view class="date-col">
-            <text class="date-label">结束</text>
+            <text class="date-label">{{t.endLabel}}</text>
             <date-picker value="{{endDate}}" bindchange="onEndDateChange" />
           </view>
         </view>
@@ -83,8 +83,8 @@
             <text class="record-bundle">{{item.displayBundleNo}}</text>
             <text class="record-dot">·</text>
             <text class="record-process">{{item.displayProcess}}</text>
-            <text wx:if="{{item.displayUnitPrice !== '-'}}" class="record-qty">{{item.displayQuantity}}件 × ¥{{item.displayUnitPrice}}</text>
-            <text wx:else class="record-qty">{{item.displayQuantity}}件</text>
+            <text wx:if="{{item.displayUnitPrice !== '-'}}" class="record-qty">{{item.displayQuantity}}{{t.pieceUnit}} × ¥{{item.displayUnitPrice}}</text>
+            <text wx:else class="record-qty">{{item.displayQuantity}}{{t.pieceUnit}}</text>
           </view>
         </view>
       </view>
@@ -96,7 +96,7 @@
 
   <!-- 加载状态 -->
   <view wx:if="{{loading}}" class="loading-row">
-    <text class="loading-text">加载中...</text>
+    <text class="loading-text">{{t.loading}}</text>
   </view>
   <load-more hasMore="{{hasMore}}" loading="{{loading}}" count="{{displayRecords.length}}" bind:loadmore="onLoadMore"></load-more>
   <ai-assistant />

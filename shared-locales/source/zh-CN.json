@@ -3375,6 +3375,27 @@
       "rescanSuccess": "退回成功，可重新扫码",
       "rescanFailedRetry": "退回失败，请稍后重试",
       "rescanFailed": "退回失败"
+    },
+    "scanHistory": {
+      "navTitle": "扫码历史",
+      "totalQtyLabel": "总数量",
+      "orderCountLabel": "订单数",
+      "recordCountLabel": "记录数",
+      "wageLabel": "工资",
+      "searchPlaceholder": "订单号 / 菲号 / 工序",
+      "modeMonth": "按月",
+      "modeCustom": "自定义",
+      "startLabel": "开始",
+      "endLabel": "结束",
+      "monthFmt": "{year}年{month}月",
+      "emptyNoWage": "暂无计薪记录",
+      "emptyNoRecord": "暂无记录",
+      "hintWage": "点击工资可切回全部记录",
+      "hintFilter": "调整时间范围或搜索条件试试",
+      "loadFailedFmt": "加载失败: {msg}",
+      "retryLater": "请稍后重试",
+      "patternCountPrefix": "样衣",
+      "pieceUnit": "件"
     }
   }
 }

@@ -3375,6 +3375,27 @@
       "rescanSuccess": "Returned successfully, you can scan again",
       "rescanFailedRetry": "Return failed, please try again later",
       "rescanFailed": "Return failed"
+    },
+    "scanHistory": {
+      "navTitle": "Scan History",
+      "totalQtyLabel": "Total qty",
+      "orderCountLabel": "Orders",
+      "recordCountLabel": "Records",
+      "wageLabel": "Wage",
+      "searchPlaceholder": "Order no. / Bundle no. / Process",
+      "modeMonth": "By month",
+      "modeCustom": "Custom",
+      "startLabel": "Start",
+      "endLabel": "End",
+      "monthFmt": "{month}/{year}",
+      "emptyNoWage": "No payable records",
+      "emptyNoRecord": "No records",
+      "hintWage": "Tap Wage to switch back to all records",
+      "hintFilter": "Try adjusting the date range or search filters",
+      "loadFailedFmt": "Load failed: {msg}",
+      "retryLater": "Please try again later",
+      "patternCountPrefix": "Samples ",
+      "pieceUnit": " pcs"
     }
   }
 }

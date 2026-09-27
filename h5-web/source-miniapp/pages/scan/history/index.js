@@ -5,6 +5,9 @@
 const api = require('../../../utils/api');
 const { eventBus, Events } = require('../../../utils/eventBus');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.scanHistory.';
 
 function _normalizeQualityName(processName) {
   if (!processName) return processName;
@@ -29,7 +32,9 @@ function getMonthRange(year, month) {
   return {
     start: `${year}-${m}-01`,
     end: `${year}-${m}-${String(lastDay).padStart(2, '0')}`,
-    display: `${year}年${month}月`,
+    // display 仅供内部调试/兼容，**不要拿去渲染** ——
+    // 界面上的月份文案由 _updateMonthDisplay() 用 mp.scanHistory.monthFmt 按语言生成
+    display: `${year}-${m}`,
   };
 }
 
@@ -44,7 +49,7 @@ function _formatPatternRecord(item) {
     ...item,
     _isPattern: true,
     displayTime: formatTime(item.scanTime),
-    displayProcess: '样衣-' + (item.progressStage || item.operationType || '-'),
+    displayProcess: i18n.t('mp.scanLogic.samplePrefix') + (item.progressStage || item.operationType || '-'),
     displayWorker: item.operatorName || '-',
     displayOrderNo: item.styleNo || '-',
     displayBundleNo: item.color || '-',
@@ -79,6 +84,7 @@ Page({
     year: _now.getFullYear(),
     month: _now.getMonth() + 1,
     displayMonth: '',
+    t: {},
     startDate: getDateBefore(30),
     endDate: getToday(),
     searchKeyword: '',
@@ -115,7 +121,33 @@ Page({
     this.loadData(true);
   },
 
+  /** 应用语言（每次回页重刷） */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        totalQtyLabel: t('totalQtyLabel'),
+        orderCountLabel: t('orderCountLabel'),
+        recordCountLabel: t('recordCountLabel'),
+        patternCountPrefix: t('patternCountPrefix'),
+        wageLabel: t('wageLabel'),
+        searchPlaceholder: t('searchPlaceholder'),
+        modeMonth: t('modeMonth'),
+        modeCustom: t('modeCustom'),
+        startLabel: t('startLabel'),
+        endLabel: t('endLabel'),
+        pieceUnit: t('pieceUnit'),
+        loading: i18n.t('common.loading', lang),
+      },
+    });
+    wx.setNavigationBarTitle({ title: t('navTitle') });
+    this._updateMonthDisplay();
+  },
+
   onShow() {
+    this.applyLanguage(i18n.getLanguage());
     if (!this._showedOnce) {
       this._showedOnce = true;
       return;
@@ -137,8 +169,13 @@ Page({
   },
 
   _updateMonthDisplay() {
-    const range = getMonthRange(this.data.year, this.data.month);
-    this.setData({ displayMonth: range.display });
+    // ⚠️ getMonthRange 返回的 display 是写死的中文「2026年9月」，必须按当前语言重算
+    this.setData({
+      displayMonth: i18n.tf(NS + 'monthFmt', {
+        year: this.data.year,
+        month: this.data.month,
+      }, this._lang),
+    });
   },
 
   onModeChange(e) {
@@ -359,8 +396,8 @@ Page({
           patternRecordCount: patternRecords.length,
           totalWage: totalWage.toFixed(2),
         },
-        emptyText: this.data.showOnlyPayable ? '暂无计薪记录' : '暂无记录',
-        emptyHint: this.data.showOnlyPayable ? '点击工资可切回全部记录' : '调整时间范围或搜索条件试试',
+        emptyText: i18n.t(NS + (this.data.showOnlyPayable ? 'emptyNoWage' : 'emptyNoRecord'), this._lang),
+        emptyHint: i18n.t(NS + (this.data.showOnlyPayable ? 'hintWage' : 'hintFilter'), this._lang),
       });
     } catch (e) {
       if (gen !== this._reqGeneration) return;
@@ -368,7 +405,12 @@ Page({
         this.setData({ loading: false });
         return;
       }
-      wx.showToast({ title: `加载失败: ${(e && e.message) || '请稍后重试'}`, icon: 'none' });
+      wx.showToast({
+        title: i18n.tf(NS + 'loadFailedFmt', {
+          msg: (e && e.message) || i18n.t(NS + 'retryLater', this._lang),
+        }, this._lang),
+        icon: 'none',
+      });
       this.setData({ loading: false });
     }
   },
@@ -390,8 +432,8 @@ Page({
     this.setData({
       showOnlyPayable,
       displayRecords,
-      emptyText: showOnlyPayable ? '暂无计薪记录' : '暂无记录',
-      emptyHint: showOnlyPayable ? '点击工资可切回全部记录' : '调整时间范围或搜索条件试试',
+      emptyText: i18n.t(NS + (showOnlyPayable ? 'emptyNoWage' : 'emptyNoRecord'), this._lang),
+      emptyHint: i18n.t(NS + (showOnlyPayable ? 'hintWage' : 'hintFilter'), this._lang),
     });
   },
 

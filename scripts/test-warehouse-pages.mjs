@@ -2535,6 +2535,8 @@ const SCAN_HANDLERS = {
   stageProcessor: 'pages/scan/handlers/helpers/ScanStageProcessor.js',
   peripheral: 'pages/scan/handlers/helpers/ScanPeripheralHelper.js',
 };
+const SCAN_HISTORY_JS = 'pages/scan/history/index.js';
+const SCAN_HISTORY_WXML = 'pages/scan/history/index.wxml';
 const SCAN_RESCAN_JS = 'pages/scan/rescan/index.js';
 const SCAN_RESCAN_WXML = 'pages/scan/rescan/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
@@ -2963,6 +2965,28 @@ function testI18nScanHome() {
   // ⑦ 导航标题
   eq('扫码主页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan');
   eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
+}
+
+/** 扫码历史页（D-598）—— 汇总卡 + 时间筛选 + 记录卡 + 空态 */
+function testI18nScanHistory() {
+  testPageI18n(SCAN_HISTORY_JS, SCAN_HISTORY_WXML, '扫码历史页');
+
+  const { page: zhP, wx: zhWx } = loadPage(SCAN_HISTORY_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(SCAN_HISTORY_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 汇总卡标签', zhP.data.t.totalQtyLabel, '总数量');
+  eq('en 汇总卡标签', enP.data.t.totalQtyLabel, 'Total qty');
+  eq('en 工资标签', enP.data.t.wageLabel, 'Wage');
+  eq('en 搜索占位', enP.data.t.searchPlaceholder, 'Order no. / Bundle no. / Process');
+  ok('en 件单位带前导空格（与数字拼时不粘连）', enP.data.t.pieceUnit === ' pcs', enP.data.t.pieceUnit);
+  eq('zh 件单位', zhP.data.t.pieceUnit, '件');
+  eq('zh 历史页导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码历史');
+  eq('历史页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan History');
+  // 月份文案必须按语言重算（getMonthRange 里那份写死中文不能直接渲染）
+  ok('en 月份文案不含中文', !CJK_RE.test(String(enP.data.displayMonth)), enP.data.displayMonth);
+  ok('zh 月份文案含年月', CJK_RE.test(String(zhP.data.displayMonth)), zhP.data.displayMonth);
 }
 
 /** 扫码退回页（D-597）—— 信息卡字段 + 退回警告 + 成功/失败反馈 */
@@ -3799,6 +3823,7 @@ try {
   testI18nScanHome();
   testI18nScanLogic();
   testI18nScanRescan();
+  testI18nScanHistory();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

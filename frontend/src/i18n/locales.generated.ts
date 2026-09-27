@@ -3382,6 +3382,27 @@ export const LOCALES = {
         "rescanSuccess": "退回成功，可重新扫码",
         "rescanFailedRetry": "退回失败，请稍后重试",
         "rescanFailed": "退回失败"
+      },
+      "scanHistory": {
+        "navTitle": "扫码历史",
+        "totalQtyLabel": "总数量",
+        "orderCountLabel": "订单数",
+        "recordCountLabel": "记录数",
+        "wageLabel": "工资",
+        "searchPlaceholder": "订单号 / 菲号 / 工序",
+        "modeMonth": "按月",
+        "modeCustom": "自定义",
+        "startLabel": "开始",
+        "endLabel": "结束",
+        "monthFmt": "{year}年{month}月",
+        "emptyNoWage": "暂无计薪记录",
+        "emptyNoRecord": "暂无记录",
+        "hintWage": "点击工资可切回全部记录",
+        "hintFilter": "调整时间范围或搜索条件试试",
+        "loadFailedFmt": "加载失败: {msg}",
+        "retryLater": "请稍后重试",
+        "patternCountPrefix": "样衣",
+        "pieceUnit": "件"
       }
     }
   },
@@ -6762,6 +6783,27 @@ export const LOCALES = {
         "rescanSuccess": "Returned successfully, you can scan again",
         "rescanFailedRetry": "Return failed, please try again later",
         "rescanFailed": "Return failed"
+      },
+      "scanHistory": {
+        "navTitle": "Scan History",
+        "totalQtyLabel": "Total qty",
+        "orderCountLabel": "Orders",
+        "recordCountLabel": "Records",
+        "wageLabel": "Wage",
+        "searchPlaceholder": "Order no. / Bundle no. / Process",
+        "modeMonth": "By month",
+        "modeCustom": "Custom",
+        "startLabel": "Start",
+        "endLabel": "End",
+        "monthFmt": "{month}/{year}",
+        "emptyNoWage": "No payable records",
+        "emptyNoRecord": "No records",
+        "hintWage": "Tap Wage to switch back to all records",
+        "hintFilter": "Try adjusting the date range or search filters",
+        "loadFailedFmt": "Load failed: {msg}",
+        "retryLater": "Please try again later",
+        "patternCountPrefix": "Samples ",
+        "pieceUnit": " pcs"
       }
     }
   },
@@ -10142,6 +10184,27 @@ export const LOCALES = {
         "rescanSuccess": "Trả lại thành công, có thể quét lại",
         "rescanFailedRetry": "Trả lại thất bại, vui lòng thử lại sau",
         "rescanFailed": "Trả lại thất bại"
+      },
+      "scanHistory": {
+        "navTitle": "Lịch sử quét",
+        "totalQtyLabel": "Tổng số lượng",
+        "orderCountLabel": "Số đơn hàng",
+        "recordCountLabel": "Số bản ghi",
+        "wageLabel": "Tiền công",
+        "searchPlaceholder": "Số đơn / Số bó / Công đoạn",
+        "modeMonth": "Theo tháng",
+        "modeCustom": "Tùy chỉnh",
+        "startLabel": "Bắt đầu",
+        "endLabel": "Kết thúc",
+        "monthFmt": "Tháng {month}/{year}",
+        "emptyNoWage": "Chưa có bản ghi tính công",
+        "emptyNoRecord": "Chưa có bản ghi",
+        "hintWage": "Nhấn Tiền công để quay lại tất cả bản ghi",
+        "hintFilter": "Thử điều chỉnh khoảng thời gian hoặc điều kiện tìm kiếm",
+        "loadFailedFmt": "Tải thất bại: {msg}",
+        "retryLater": "Vui lòng thử lại sau",
+        "patternCountPrefix": "Mẫu ",
+        "pieceUnit": " cái"
       }
     }
   },
@@ -13522,6 +13585,27 @@ export const LOCALES = {
         "rescanSuccess": "Returned successfully, you can scan again",
         "rescanFailedRetry": "Return failed, please try again later",
         "rescanFailed": "Return failed"
+      },
+      "scanHistory": {
+        "navTitle": "Scan History",
+        "totalQtyLabel": "Total qty",
+        "orderCountLabel": "Orders",
+        "recordCountLabel": "Records",
+        "wageLabel": "Wage",
+        "searchPlaceholder": "Order no. / Bundle no. / Process",
+        "modeMonth": "By month",
+        "modeCustom": "Custom",
+        "startLabel": "Start",
+        "endLabel": "End",
+        "monthFmt": "{month}/{year}",
+        "emptyNoWage": "No payable records",
+        "emptyNoRecord": "No records",
+        "hintWage": "Tap Wage to switch back to all records",
+        "hintFilter": "Try adjusting the date range or search filters",
+        "loadFailedFmt": "Load failed: {msg}",
+        "retryLater": "Please try again later",
+        "patternCountPrefix": "Samples ",
+        "pieceUnit": " pcs"
       }
     }
   }

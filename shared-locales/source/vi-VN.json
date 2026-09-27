@@ -3375,6 +3375,27 @@
       "rescanSuccess": "Trả lại thành công, có thể quét lại",
       "rescanFailedRetry": "Trả lại thất bại, vui lòng thử lại sau",
       "rescanFailed": "Trả lại thất bại"
+    },
+    "scanHistory": {
+      "navTitle": "Lịch sử quét",
+      "totalQtyLabel": "Tổng số lượng",
+      "orderCountLabel": "Số đơn hàng",
+      "recordCountLabel": "Số bản ghi",
+      "wageLabel": "Tiền công",
+      "searchPlaceholder": "Số đơn / Số bó / Công đoạn",
+      "modeMonth": "Theo tháng",
+      "modeCustom": "Tùy chỉnh",
+      "startLabel": "Bắt đầu",
+      "endLabel": "Kết thúc",
+      "monthFmt": "Tháng {month}/{year}",
+      "emptyNoWage": "Chưa có bản ghi tính công",
+      "emptyNoRecord": "Chưa có bản ghi",
+      "hintWage": "Nhấn Tiền công để quay lại tất cả bản ghi",
+      "hintFilter": "Thử điều chỉnh khoảng thời gian hoặc điều kiện tìm kiếm",
+      "loadFailedFmt": "Tải thất bại: {msg}",
+      "retryLater": "Vui lòng thử lại sau",
+      "patternCountPrefix": "Mẫu ",
+      "pieceUnit": " cái"
     }
   }
 }
