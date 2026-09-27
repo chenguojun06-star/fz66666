@@ -12,6 +12,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { usePlatformConnector, type ShopStats } from '../../../integration/pages/IntegrationCenter/usePlatformConnector';
 import { PLATFORM_LIST, type PlatformMeta } from '../../../integration/pages/IntegrationCenter/PlatformConnectorConstants';
+import AddStoreWizard from '../../../integration/pages/IntegrationCenter/AddStoreWizard';
 import PaymentRecordsTab from '../../../integration/pages/IntegrationCenter/PaymentRecordsTab';
 import LogisticsRecordsTab from '../../../integration/pages/IntegrationCenter/LogisticsRecordsTab';
 import CallbackLogsTab from '../../../integration/pages/IntegrationCenter/CallbackLogsTab';
@@ -39,6 +40,7 @@ const EcommerceCenter: React.FC = () => {
   const [activeTab, setActiveTab] = usePersistentState<string>('ecommerce-center-active-tab', 'overview');
   const { loading, syncing, getStatus, getShopStats, syncNow } = usePlatformConnector();
 
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [statusMap, setStatusMap] = useState<Record<string, { configured: boolean; status: string }>>({});
   const [shopStatsMap, setShopStatsMap] = useState<Record<string, ShopStats | null>>({});
 
@@ -216,6 +218,10 @@ const EcommerceCenter: React.FC = () => {
           </Card>
         )}
 
+        <div className="u-d-flex u-ai-center u-jc-between" style={{ marginBottom: 16 }}>
+          <Text strong style={{ fontSize: 17 }}>店铺授权</Text>
+          <Button type="primary" icon={<ShopOutlined />} onClick={() => setWizardOpen(true)}>添加店铺</Button>
+        </div>
         {connectedPlatforms.length > 0 && (
           <div className="u-mb-12">
             <div className="u-d-flex u-ai-center" style={{ marginBottom: 14 }}>
@@ -308,6 +314,11 @@ const EcommerceCenter: React.FC = () => {
         onChange={setActiveTab}
         items={tabs}
         style={{ background: 'var(--color-bg-base)', padding: '0 16px', borderRadius: 8 }}
+      />
+      <AddStoreWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onChanged={loadAllStatus}
       />
     </PageLayout>
   );

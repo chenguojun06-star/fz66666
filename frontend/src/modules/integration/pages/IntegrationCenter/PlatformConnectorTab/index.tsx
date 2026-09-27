@@ -1,7 +1,7 @@
 import React from 'react';
 import { Row, Col, Card, Statistic, Button, Spin, Alert, Empty } from 'antd';
 import {
-  ApiOutlined, ShoppingCartOutlined, DollarOutlined, CloudUploadOutlined, InboxOutlined,
+  ApiOutlined, ShoppingCartOutlined, DollarOutlined, CloudUploadOutlined, InboxOutlined, ShopOutlined,
 } from '@ant-design/icons';
 import { PLATFORM_LIST } from '../PlatformConnectorConstants';
 import { usePlatformConnectorTabData } from './usePlatformConnectorTabData';
@@ -10,6 +10,7 @@ import ConfigModal from './ConfigModal';
 import TestResultModal from './TestResultModal';
 import StatsModal from './StatsModal';
 import SyncResultModal from './SyncResultModal';
+import AddStoreWizard from '../AddStoreWizard';
 
 const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
   const {
@@ -22,8 +23,9 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
     setConfigModalOpen, setTestModalOpen, setStatsModalOpen,
     setActiveStats, setTestResult, setSyncResult,
     handleConfig, handleSave, handleTest, handleSync, handleViewStats,
-    triggerTest,
+    triggerTest, loadAllStatus,
   } = usePlatformConnectorTabData(active);
+  const [wizardOpen, setWizardOpen] = React.useState(false);
 
   return (
     <Spin spinning={loading}>
@@ -52,10 +54,15 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
           </Col>
         </Row>
 
-        <Alert type="success" showIcon style={{ marginBottom: 20, borderRadius: 8 }}
-          title={<span><InboxOutlined /> <strong>三步傻瓜式对接</strong>：选择平台 → 粘贴凭证 → 复制回调地址到平台</span>}
-          description="支持 10 大电商平台一键对接，订单自动同步，物流自动回传"
-        />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 20 }}>
+          <Alert type="success" showIcon style={{ flex: 1, borderRadius: 8, marginBottom: 0 }}
+            title={<span><InboxOutlined /> <strong>四步对接</strong>：选择平台 → 填密钥 → 点一下去平台授权 → 完成</span>}
+            description="支持 10 大电商平台，订单自动同步，物流自动回传；授权令牌到期自动续期"
+          />
+          <Button type="primary" size="large" icon={<ShopOutlined />} onClick={() => setWizardOpen(true)}>
+            添加店铺
+          </Button>
+        </div>
         <Row gutter={[16, 16]}>
           {PLATFORM_LIST.map(p => (
             <PlatformCard
@@ -117,6 +124,13 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
           onClose={() => setSyncResult(null)}
         />
       </div>
+
+      {/* ====== D-587 添加店铺四步向导 ====== */}
+      <AddStoreWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onChanged={loadAllStatus}
+      />
     </Spin>
   );
 };

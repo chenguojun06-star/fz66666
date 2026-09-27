@@ -35,6 +35,7 @@ public final class SecurityConstants {
             "/api/intelligence/im-ai/dingtalk/callback",
             "/api/webhook/**",
             "/api/ecommerce/webhook/**",
+            "/api/platform-connector/oauth/callback/**",
             "/api/public/**",
             "/api/crm-client/login",
             "/api/supplier-portal/login",

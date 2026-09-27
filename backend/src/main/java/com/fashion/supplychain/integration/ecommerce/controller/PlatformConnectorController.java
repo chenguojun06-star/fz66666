@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcPlatformConfigOrchestrator;
+import com.fashion.supplychain.integration.ecommerce.service.EcPlatformOAuthService;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
 import com.fashion.supplychain.integration.ecommerce.service.JushuitanSyncService;
 import com.fashion.supplychain.system.entity.EcPlatformConfig;
@@ -45,6 +46,9 @@ public class PlatformConnectorController {
     private JushuitanSyncService jushuitanSyncService;
 
     @Autowired
+    private EcPlatformOAuthService ecPlatformOAuthService;
+
+    @Autowired
     private EcommerceOrderService ecommerceOrderService;
 
     /**
@@ -68,6 +72,8 @@ public class PlatformConnectorController {
         String appSecret = (String) body.get("appSecret");
         String shopName = (String) body.get("shopName");
         String callbackUrl = (String) body.get("callbackUrl");
+        String authMode = (String) body.get("authMode");
+        String shopCode = (String) body.get("shopCode");
 
         if (!isSupported(platformCode)) {
             return Result.fail("不支持的平台: " + platformCode);
@@ -75,6 +81,15 @@ public class PlatformConnectorController {
 
         ecPlatformConfigOrchestrator.saveOrUpdateConfig(tenantId, platformCode,
                 appKey, appSecret, shopName, callbackUrl);
+        // D-587：向导带上接入模式与平台店铺ID
+        if (authMode != null || shopCode != null) {
+            EcPlatformConfig saved = ecPlatformConfigService.getByTenantAndPlatform(tenantId, platformCode);
+            if (saved != null) {
+                if (authMode != null) saved.setAuthMode(authMode);
+                if (shopCode != null) saved.setShopCode(shopCode);
+                ecPlatformConfigService.updateById(saved);
+            }
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("saved", true);
@@ -99,7 +114,53 @@ public class PlatformConnectorController {
             result.put("shopName", config.getShopName());
             result.put("appKey", maskKey(config.getAppKey()));
         }
+        // D-587：OAuth 授权状态（向导第三步轮询用）
+        result.put("oauthSupported", EcPlatformOAuthService.isOAuthPlatform(platformCode));
+        result.put("authorized", config != null && config.getAccessToken() != null && !config.getAccessToken().isBlank());
+        if (config != null) {
+            result.put("authMode", config.getAuthMode());
+            result.put("authorizedAt", config.getAuthorizedAt());
+            result.put("tokenExpiresAt", config.getTokenExpiresAt());
+        }
         return Result.success(result);
+    }
+
+    /**
+     * D-587：生成跳转平台授权页的 URL（商家在平台登录并确认后，平台回调我们的 callback）。
+     * 前提：该租户此平台已保存 AppKey/AppSecret（平台自用型应用的 client_id/client_secret）。
+     */
+    @GetMapping("/oauth/{platformCode}/authorize-url")
+    public Result<Map<String, Object>> buildAuthorizeUrl(@PathVariable String platformCode) {
+        Long tenantId = TenantAssert.requireTenantId();
+        return Result.success(ecPlatformOAuthService.buildAuthorizeUrl(tenantId, platformCode));
+    }
+
+    /**
+     * D-587：手动粘贴授权码换 token（回调地址不便配置的平台兜底）
+     */
+    @PostMapping("/oauth/{platformCode}/exchange")
+    public Result<Map<String, Object>> exchangeCode(
+            @PathVariable String platformCode,
+            @RequestBody Map<String, Object> body) {
+        Long tenantId = TenantAssert.requireTenantId();
+        String code = body == null ? null : (String) body.get("code");
+        if (code == null || code.isBlank()) {
+            return Result.fail("请粘贴平台返回的授权码");
+        }
+        Map<String, Object> result = ecPlatformOAuthService.exchangeManually(tenantId, platformCode, code.trim());
+        if (!Boolean.TRUE.equals(result.get("success"))) {
+            return Result.fail(String.valueOf(result.getOrDefault("message", "授权失败")));
+        }
+        return Result.success(result);
+    }
+
+    /**
+     * D-587：授权状态查询（前端轮询：商家在平台确认授权后回到系统，前端轮询此接口刷新状态）
+     */
+    @GetMapping("/oauth/{platformCode}/auth-status")
+    public Result<Map<String, Object>> authStatus(@PathVariable String platformCode) {
+        Long tenantId = TenantAssert.requireTenantId();
+        return Result.success(ecPlatformOAuthService.authStatus(tenantId, platformCode));
     }
 
     /**

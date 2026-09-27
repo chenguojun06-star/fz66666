@@ -82,6 +82,19 @@ public class EcPlatformConfigService extends ServiceImpl<EcPlatformConfigMapper,
                 .eq("status", "ACTIVE"));
     }
 
+    /**
+     * D-587：OAuth 回调是匿名的，靠发起授权时落库的 state 找回配置行（state 全局唯一）。
+     * 不按 status 过滤——授权中的行也要能找回来。
+     */
+    public EcPlatformConfig getByAuthState(String authState) {
+        if (authState == null || authState.isBlank()) {
+            return null;
+        }
+        return getOne(new QueryWrapper<EcPlatformConfig>()
+                .eq("auth_state", authState)
+                .last("LIMIT 1"));
+    }
+
     public List<EcPlatformConfig> listByPlatformCode(String platformCode) {
         return list(new QueryWrapper<EcPlatformConfig>()
                 .eq("platform_code", platformCode)

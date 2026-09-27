@@ -135,6 +135,6 @@ export function usePlatformConnectorTabData(active: boolean) {
     setActiveStats, setTestResult, setSyncResult,
     // handlers
     handleConfig, handleSave, handleTest, handleSync, handleViewStats,
-    triggerTest,
+    triggerTest, loadAllStatus,
   };
 }

@@ -355,7 +355,9 @@ public class PlatformNotifyService {
                 .platformCode(platformCode)
                 .appId(cfg.getAppKey())
                 .appSecret(cfg.getAppSecret())
-                .accessToken(cfg.getExtraField())
+                // D-587：OAuth 令牌从正式字段取；存量把 token 塞在 extraField 的配置兜底兼容
+                .accessToken(cfg.getAccessToken() != null && !cfg.getAccessToken().isBlank()
+                        ? cfg.getAccessToken() : cfg.getExtraField())
                 .callbackUrl(cfg.getCallbackUrl())
                 .build();
     }

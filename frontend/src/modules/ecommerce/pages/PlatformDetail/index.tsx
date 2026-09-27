@@ -19,11 +19,14 @@ import { paths } from '@/routeConfig';
 import { usePlatformDetailData } from './usePlatformDetailData';
 import { buildOrderColumns } from './orderColumns';
 import { renderIcon, CREDENTIAL_GUIDES, STATUS_MAP } from './helpers';
+import AddStoreWizard from '../../../integration/pages/IntegrationCenter/AddStoreWizard';
 
 const { Text } = Typography;
 
 const PlatformDetail: React.FC = () => {
   const { platformCode } = useParams<{ platformCode: string }>();
+  const [wizardOpen, setWizardOpen] = React.useState(false);
+  const [wizardChanged, setWizardChanged] = React.useState(false);
   const navigate = useNavigate();
   const platform = PLATFORM_LIST.find(p => p.code === platformCode);
 
@@ -174,6 +177,13 @@ const PlatformDetail: React.FC = () => {
               description="该平台后端 Adapter 尚未实现，配置凭证后无法同步订单。请优先选择已支持的平台：聚水潭 / 淘宝 / 京东 / 拼多多。"
             />
           )}
+          <div className="u-d-flex u-ai-center u-jc-between" style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 8, background: 'var(--status-processing-bg)' }}>
+            <div>
+              <Text strong>推荐：使用接入向导</Text>
+              <div className="u-fs-13" style={{ color: 'var(--color-text-secondary)' }}>四步完成对接，OAuth 平台支持点一下跳转平台授权，令牌到期自动续期</div>
+            </div>
+            <Button type="primary" icon={<ShopOutlined />} onClick={() => setWizardOpen(true)}>使用向导接入</Button>
+          </div>
           {!showGuide ? (
             <Alert type="warning" showIcon icon={<WarningOutlined />} style={{ marginBottom: 16, borderRadius: 8 }}
               title={<span>不知道怎么获取 {platform.name} 的凭证？<Button type="link" onClick={() => setShowGuide(true)} style={{ padding: '0 4px' }}>点击查看获取教程 →</Button></span>}
@@ -300,6 +310,13 @@ const PlatformDetail: React.FC = () => {
             style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
           />
         </div>
+
+        <AddStoreWizard
+          open={wizardOpen}
+          onClose={() => { setWizardOpen(false); if (wizardChanged) { window.location.reload(); } }}
+          onChanged={() => setWizardChanged(true)}
+          initialPlatformCode={platformCode}
+        />
       </div>
     </SkeletonLoader>
   );

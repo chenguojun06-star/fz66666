@@ -1,7 +1,29 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-27（新增 D-586 拉链幽灵采购单根治；D-585 折叠侧边栏两字短标题；D-543 保活探针排查）
+> 最后更新：2026-09-27（新增 D-587 电商全平台店铺授权基建；D-586 拉链幽灵采购单根治；D-585 折叠侧边栏短标题）
+
+---
+
+## D-587：电商全平台店铺授权基建——四步向导 + OAuth 跳转 + 令牌自动续期（2026-09-27）
+
+**背景**：对标聚水潭「添加店铺」四步体验。聚水潭的跳转授权 = ISV 授权型应用 + 商家按年订购（拼多多 1000 元/店/年）；我们走**商家自用型应用**（免费、无需上架审核）+ 我们托管 OAuth 回调，体验对齐、成本为零。用户拍板：全平台都要支持。
+
+**后端**：
+- `V202709270001__ec_platform_config_oauth_columns.sql`：t_ec_platform_config 加 shop_code/auth_mode/access_token/refresh_token/token_expires_at/refresh_expires_at/authorized_at/auth_state 八列（幂等存储过程）；实体同步。
+- `EcPlatformOAuthService`：平台 OAuth 规格注册表（PINDUODUO/DOUYIN/TAOBAO/TMALL/JD/KUAISHOU/XIAOHONGSHU，参数名与响应格式各异用 spec 收敛）；authorize URL 生成（state 落库防 CSRF，回调匿名靠 state 寻址）；code 换 token（JSON/form 双格式）；手动粘贴授权码兜底；refreshTokenIfDue 供刷新 Job。
+- 接口：`GET /api/platform-connector/oauth/{platform}/authorize-url`、`POST .../exchange`、`GET .../auth-status`；匿名回调 `GET /api/platform-connector/oauth/callback/{platform}`（独立 Controller——主控制器类级 @PreAuthorize 会拦匿名；SecurityConstants 放行）。回调 302 回 `{app.frontend-base-url}/ecommerce-platform/{platform}?auth=success|failed`。
+- `EcPlatformTokenRefreshJob`：每日 3:17 扫描，距过期 <7 天且可刷新的令牌静默续期。
+- PlatformNotifyService 的 accessToken 从 extraField 凑数改为正式字段（extraField 兜底兼容）。
+
+**前端**：
+- `PlatformAuthConstants.ts`：10 平台授权元数据（分组/是否 OAuth/开放平台控制台/分步引导/FAQ）。
+- `AddStoreWizard.tsx` 四步向导（SideDrawer）：选平台(分组 Segmented+网格) → 接入配置(表单+引导) → 平台授权(回调地址复制+去平台授权+轮询 auth-status+手动授权码兜底) → 完成(测试连接+拉取订单)；右侧帮助侧栏随平台切换（授权说明+FAQ）。
+- 入口：电商中心平台总览「添加店铺」按钮 + 平台详情配置页「使用向导接入」；onChanged 回调刷新状态。
+
+**验证**：Flyway 本地自动执行八列就位；本地端到端——配置保存→authorize-url 生成（state/redirect_uri 正确）→匿名回调错误 state 302 失败页→正确 state 真连拼多多 token 接口（伪凭证优雅失败，链路通）→auth-status 正确；浏览器全流程冒烟（选平台→填密钥→授权步骤渲染→总览状态实时刷新）。
+
+**遗留开放项**：各平台 token 接口参数/响应的线上实测（需要真实自用型应用凭证）；SHOPIFY/SHEIN/微信小店/聚水潭为 CREDENTIAL 模式（微信小店/SHEIN 走密钥、聚水潭走开放平台应用）；拉历史订单按钮复用 sync-now。
 
 ---
 

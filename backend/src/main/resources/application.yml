@@ -216,6 +216,8 @@ app:
   # 本地开发在 .run/backend.env 配 APP_PUBLIC_BASE_URL=http://127.0.0.1:8088
   # 云端生产配 APP_PUBLIC_BASE_URL=https://api.webyszl.cn
   public-base-url: ${APP_PUBLIC_BASE_URL:https://api.webyszl.cn}
+  # D-587 电商OAuth：授权完成后回跳的前端站点（回调 302 到 {此base}/ecommerce-platform/{platform}）
+  frontend-base-url: ${APP_FRONTEND_BASE_URL:https://www.webyszl.cn}
   auth:
     # 开发环境默认密钥，生产环境必须配置 APP_AUTH_JWT_SECRET 覆盖
     jwt-secret: ${APP_AUTH_JWT_SECRET:ThisIsA_LocalJwtSecret_OnlyForDev_0123456789}
