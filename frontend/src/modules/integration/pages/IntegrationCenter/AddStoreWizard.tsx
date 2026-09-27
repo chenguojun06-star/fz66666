@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Button, Collapse, Form, Input, Popconfirm, Result, Segmented, Steps, Typography } from 'antd';
+import { Alert, Button, Card, Collapse, Form, Input, Popconfirm, Result, Segmented, Steps, Typography } from 'antd';
 import {
   CheckCircleFilled, CopyOutlined, LinkOutlined, RightOutlined, SafetyCertificateOutlined, ShopOutlined,
 } from '@ant-design/icons';
@@ -204,14 +204,27 @@ const AddStoreWizard: React.FC<AddStoreWizardProps> = ({ open, onClose, onChange
     }
     return (
       <div style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
-        <Title level={5} style={{ marginTop: 0 }}>{meta.name} · 授权说明</Title>
-        <ol style={{ paddingLeft: 18, margin: '8px 0 16px', lineHeight: 2 }}>
-          {meta.guide.map((g, i) => <li key={i}>{g}</li>)}
+        <Title level={5} style={{ marginTop: 0 }}>{meta.name} · 手把手引导</Title>
+        <ol style={{ paddingLeft: 18, margin: '8px 0 12px', lineHeight: 2 }}>
+          {meta.guide.map((g, i) => (
+            <li key={i}>
+              {g.text}
+              {g.link && (
+                <div style={{ marginTop: 2 }}>
+                  <a href={g.link} target="_blank" rel="noopener noreferrer">
+                    <Button type="link" size="small" style={{ padding: 0 }} icon={<LinkOutlined />}>
+                      {g.linkLabel || '直达入口'}
+                    </Button>
+                  </a>
+                </div>
+              )}
+            </li>
+          ))}
         </ol>
-        <a href={meta.consoleUrl} target="_blank" rel="noopener noreferrer">
-          <Button size="small" icon={<LinkOutlined />}>打开{meta.name}开放平台</Button>
-        </a>
-        <Title level={5} style={{ marginTop: 20 }}>常见问题</Title>
+        <Card size="small" style={{ marginBottom: 12, background: 'var(--status-processing-bg, #f0f5ff)', border: '1px solid var(--status-processing-border, #d6e4ff)' }}>
+          <div style={{ fontSize: 13 }}><b>授权动作：</b>{meta.authorizeHint}</div>
+        </Card>
+        <Title level={5} style={{ marginTop: 16 }}>常见问题</Title>
         <Collapse
           ghost
           size="small"
@@ -293,12 +306,28 @@ const AddStoreWizard: React.FC<AddStoreWizardProps> = ({ open, onClose, onChange
           {/* ---- 第2步 接入配置 ---- */}
           {step === 1 && meta && (
             <div style={{ maxWidth: 520 }}>
-              <Alert
-                type="info"
-                showIcon
-                style={{ marginBottom: 16 }}
-                title={`按右侧引导在${meta.name}开放平台创建应用后，把密钥填到这里`}
-              />
+              <Card
+                size="small"
+                title={`${meta.name} · 在哪里拿密钥（跟着做即可）`}
+                style={{ marginBottom: 16, border: '1px solid var(--status-warning-border, #ffe58f)' }}
+              >
+                <Steps
+                  direction="vertical"
+                  size="small"
+                  current={-1}
+                  items={meta.guide.map((g) => ({
+                    title: <span style={{ fontSize: 13 }}>{g.text}</span>,
+                    description: g.link ? (
+                      <a href={g.link} target="_blank" rel="noopener noreferrer">
+                        <Button type="link" size="small" style={{ padding: 0 }} icon={<LinkOutlined />}>
+                          {g.linkLabel || '直达入口'}
+                        </Button>
+                      </a>
+                    ) : undefined,
+                    status: 'process' as const,
+                  }))}
+                />
+              </Card>
               <Form form={form} layout="vertical">
                 <Form.Item name="shopName" label="店铺名称（必填，方便识别）" rules={[{ required: true, message: '请输入店铺名称' }]}>
                   <Input placeholder="如：官方旗舰店" />
@@ -343,8 +372,8 @@ const AddStoreWizard: React.FC<AddStoreWizardProps> = ({ open, onClose, onChange
                     enterButton={<span><CopyOutlined /> 复制</span>}
                     onSearch={() => { navigator.clipboard?.writeText(callbackUrl || ''); message.success('回调地址已复制'); }}
                   />
-                  <div style={{ margin: '20px 0 12px', fontSize: 14 }}>
-                    第二步：点击下方按钮跳转到{meta.name}，用<b>店铺主账号</b>登录并确认授权：
+                  <div style={{ margin: '20px 0 12px', fontSize: 14, lineHeight: 1.9 }}>
+                    <b>授权动作：</b>{meta.authorizeHint}
                   </div>
                   <Button type="primary" size="large" icon={<LinkOutlined />} onClick={handleGoAuthorize}>
                     去平台授权{polling ? '（等待授权结果…）' : ''}
