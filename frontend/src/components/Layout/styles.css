@@ -490,24 +490,24 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
   line-height: 1;
 }
 
 .sidebar-menu .sidebar-rail-item .anticon {
-  font-size: 18px;
+  font-size: 17px;
   line-height: 1;
 }
 
+/* 短标题固定 11px 且不裁剪：13px 两字(26px)在窄栏里会被 overflow 削掉末字边缘，
+   视觉上就是"字被截断"；宁可不裁剪也不切字（各语言短词均 < 55px 栏宽） */
 .sidebar-menu .sidebar-rail-item-text {
-  max-width: 52px;
-  overflow: hidden;
-  font-size: var(--font-size-sm);
+  font-size: 11px;
   line-height: 1;
   letter-spacing: 0;
   white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow: visible;
 }
 
 .sidebar-menu.ant-menu .ant-menu-item-icon,
