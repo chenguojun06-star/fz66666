@@ -138,7 +138,8 @@
     "cancelled": "Cancelled",
     "closed": "Closed",
     "selectRole": "Select Role",
-    "upLoad": "Upload"
+    "upLoad": "Upload",
+    "networkError": "Network error"
   },
   "login": {
     "brand": "Yunshang SCM",

@@ -3,6 +3,7 @@ const reminderManager = require('./utils/reminderManager');
 const { DEBUG_MODE } = require('./config');
 const { eventBus, Events } = require('./utils/eventBus');
 const ScanOfflineQueue = require('./pages/scan/services/ScanOfflineQueue');
+const i18n = require('./utils/i18n/index');
 // smartGuide 为非核心模块，防御性加载（避免新文件缓存未更新时崩溃 app）
 let resolveSmartGuideByRoute = () => null;
 try {
@@ -224,7 +225,7 @@ App({
 
     // 处理各种类型的输入
     if (title === null) {
-      raw = '提示';
+      raw = i18n.t('common.tips');
     } else if (typeof title === 'string') {
       raw = title;
     } else if (typeof title === 'object') {
@@ -235,7 +236,7 @@ App({
     }
 
     const v = raw.length > 18 ? raw.slice(0, 18) : raw;
-    wx.showToast({ title: v || '提示', icon: 'none' });
+    wx.showToast({ title: v || i18n.t('common.tips'), icon: 'none' });
   },
 
   hasMoreByPage(page) {
@@ -317,7 +318,7 @@ App({
         return;
       }
       console.error('[loadPagedList] error:', e && e.message ? e.message : e, 'key:', key);
-      this.toastError(e, '网络异常');
+      this.toastError(e, i18n.t('common.networkError'));
     } finally {
       if (pageCtx && typeof pageCtx.setData === 'function') {
         pageCtx.setData({ [`${key}.loading`]: false });
@@ -358,7 +359,7 @@ App({
     } else if (fallback != null) {
       raw = String(fallback);
     } else {
-      raw = '网络异常';
+      raw = i18n.t('common.networkError');
     }
 
     this.toast(raw);
@@ -394,6 +395,7 @@ App({
   onUnhandledRejection(res) {
     const reason = res && res.reason ? String(res.reason) : 'unknown';
     // 过滤正常的防抖导航忽略 — 不属于真实错误，不需要上报
+    // ⚠️ '导航进行中' 是**匹配 wx 报错文案**用的特征串（防抖导航的正常忽略），不是显示文案，保留中文
     if (reason.includes('导航进行中')) return;
     console.error('[App] 未处理的Promise拒绝:', reason);
     this._reportError('unhandledRejection', reason);

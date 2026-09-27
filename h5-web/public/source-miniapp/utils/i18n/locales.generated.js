@@ -145,7 +145,8 @@ module.exports = {
       "cancelled": "已取消",
       "closed": "已关单",
       "selectRole": "选择角色",
-      "upLoad": "上传"
+      "upLoad": "上传",
+      "networkError": "网络异常"
     },
     "login": {
       "brand": "云裳智链",
@@ -3465,7 +3466,8 @@ module.exports = {
       "cancelled": "Cancelled",
       "closed": "Closed",
       "selectRole": "Select Role",
-      "upLoad": "Upload"
+      "upLoad": "Upload",
+      "networkError": "Network error"
     },
     "login": {
       "brand": "Yunshang SCM",
@@ -6785,7 +6787,8 @@ module.exports = {
       "cancelled": "Đã hủy",
       "closed": "Đã đóng",
       "selectRole": "Chọn vai trò",
-      "upLoad": "Tải lên"
+      "upLoad": "Tải lên",
+      "networkError": "Lỗi mạng"
     },
     "login": {
       "brand": "Chuỗi Cung Ứng Yunshang",
@@ -10105,7 +10108,8 @@ module.exports = {
       "cancelled": "Cancelled",
       "closed": "Closed",
       "selectRole": "Select Role",
-      "upLoad": "Upload"
+      "upLoad": "Upload",
+      "networkError": "Network error"
     },
     "login": {
       "brand": "Yunshang SCM",

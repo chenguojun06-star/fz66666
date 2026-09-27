@@ -3046,6 +3046,29 @@ function testI18nScanLogic() {
     stageProcSrc.includes("currentProcessName === '采购' || currentProcessName === '裁剪'"),
     '拿中文比对后端 currentProcessName，不可键化');
 
+  // ⑦ 豁免文件护栏（D-595）：shared/stageDetection.js 全是契约值，扫描报 132 处但可翻数为 0。
+  //    任何人把它 i18n 化 → 非中文下工序类型判定全失败 → 扫码路由错工序 + 门禁失效。
+  const stageSrc = fs.readFileSync(path.join(MP, 'shared/stageDetection.js'), 'utf8');
+  ok('护栏：豁免声明未被删除', stageSrc.includes('i18n 豁免文件'),
+    '该文件头部必须保留「禁止接入语言包」的说明');
+  ok('护栏：工序类型判定仍是中文 includes',
+    stageSrc.includes("n.includes('质检')") && stageSrc.includes("n.includes('裁剪')") && stageSrc.includes("n.includes('入库')"),
+    '拿中文判断工序归属，不可键化');
+  ok('护栏：工序名规范化映射表仍是中文键值',
+    stageSrc.includes("'物料采购': '采购'") && stageSrc.includes("'车板': '车缝'"),
+    '键和值都是工序名数据，不可键化');
+  ok('护栏：FIXED_PRODUCTION_NODES 与后端对齐保持中文',
+    stageSrc.includes("['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库']"),
+    '与后端 ProductionConstants 逐字对齐，不可键化');
+  ok('护栏：handleMethod 载荷值仍是中文',
+    stageSrc.includes("parts[i] === '报废'") && stageSrc.includes("handleMethod = '返修'"),
+    '既匹配 remark 又是载荷值，不可键化');
+
+  // app.js：'导航进行中' 是匹配 wx 报错文案的特征串
+  const appSrc = fs.readFileSync(path.join(MP, 'app.js'), 'utf8');
+  ok('护栏：app.js 导航进行中仍是匹配串',
+    appSrc.includes("reason.includes('导航进行中')"), '用于忽略防抖导航的正常报错，不可键化');
+
   // ⑥ 语言包层兜底：mp.scanLogic.* 四语言齐备、非中文无残留、占位符已设计好
   //    （覆盖上面按分支测不到的键，如 scanSuccessDefault / offlineQueued / scanTooFast）
   const flatten = (obj, prefix = '', out = []) => {

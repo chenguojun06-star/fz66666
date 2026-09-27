@@ -138,7 +138,8 @@
     "cancelled": "已取消",
     "closed": "已关单",
     "selectRole": "选择角色",
-    "upLoad": "上传"
+    "upLoad": "上传",
+    "networkError": "网络异常"
   },
   "login": {
     "brand": "云裳智链",
