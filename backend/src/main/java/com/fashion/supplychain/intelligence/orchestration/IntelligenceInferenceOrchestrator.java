@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -106,6 +107,12 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.gateway.litellm.api-key:}") private String litellmApiKey;
     @Value("${ai.gateway.litellm.timeout-seconds:30}") private int gatewayTimeoutSeconds;
     @Value("${ai.fallback.keyword-enabled:true}") private boolean keywordFallbackEnabled;
+    /**
+     * 后台任务（cron/system）触发的 AI 推理总闸。
+     * false = 一刀切禁止后台任务调 LLM，只放行真实用户主动发起的提问。
+     * 用于成本止血：D-513 复活 63 个定时任务后，cron 侧 AI 调用一度占全天绝大部分。
+     */
+    @Value("${ai.cron-inference.enabled:true}") private boolean cronInferenceEnabled;
     // 视觉模型请求参数（识别/质检类任务要稳，不要创意）
     // D-454：推理模型思考占 completion token，默认 2048 实测会被耗尽（content 空），提到 4096
     @Value("${ai.vision.max-tokens:4096}") private int visionMaxTokens;
@@ -158,6 +165,38 @@ public class IntelligenceInferenceOrchestrator {
         }
     }
 
+    /**
+     * 后台任务设置的 UserContext.userId 取值（与各 Job / Orchestrator 里 setUserId 的字面量一致）。
+     * 刻意<b>不包含</b> {@code openai-compat}、{@code webhook-system}——
+     * 那是外部业务触发（OpenAI 兼容接口、电商 webhook），必须放行，否则会影响正常业务。
+     */
+    private static final Set<String> CRON_USER_IDS = Set.of(
+            "system", "SYSTEM", "SYSTEM_JOB", "system_self_drill", "scheduled-task"
+    );
+
+    /**
+     * 当前调用是否来自后台任务（而非真实用户主动提问）。
+     * userId 为空同样视为后台：真实用户请求必然带 userId，无上下文只可能是系统线程。
+     */
+    private boolean isCronContext() {
+        String uid = UserContext.userId();
+        return uid == null || uid.isBlank() || CRON_USER_IDS.contains(uid);
+    }
+
+    /** 后台任务被总闸拦截时的占位结果（不发请求、不消耗任何 token）。 */
+    private IntelligenceInferenceResult buildCronDisabledResult(String traceId, long start, String scene) {
+        IntelligenceInferenceResult result = new IntelligenceInferenceResult();
+        result.setSuccess(false);
+        result.setErrorMessage("cron-inference-disabled");
+        result.setProvider("cron-inference-disabled");
+        result.setModel("none");
+        result.setTraceId(traceId);
+        result.setLatencyMs(System.currentTimeMillis() - start);
+        result.setContent("");
+        log.info("[IntelligenceInference] 后台任务AI调用被总闸拦截(ai.cron-inference.enabled=false) scene={}", scene);
+        return result;
+    }
+
     public IntelligenceInferenceResult chat(String scene, String systemPrompt, String userMessage) {
         List<AiMessage> msgs = new ArrayList<>();
         msgs.add(AiMessage.system(systemPrompt));
@@ -171,6 +210,9 @@ public class IntelligenceInferenceOrchestrator {
 
         if (!aiAgentTokenBudgetService.canInvoke()) {
             return buildQuotaExceededResult(traceId, start);
+        }
+        if (!cronInferenceEnabled && isCronContext()) {
+            return buildCronDisabledResult(traceId, start, scene);
         }
 
         IntelligenceInferenceResult result;
@@ -221,6 +263,9 @@ public class IntelligenceInferenceOrchestrator {
 
         if (!aiAgentTokenBudgetService.canInvoke()) {
             return buildQuotaExceededResult(traceId, start);
+        }
+        if (!cronInferenceEnabled && isCronContext()) {
+            return buildCronDisabledResult(traceId, start, scene);
         }
 
         StreamConfig cfg = resolveStreamConfig();

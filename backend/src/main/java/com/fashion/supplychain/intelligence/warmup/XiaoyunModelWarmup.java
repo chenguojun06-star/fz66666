@@ -15,14 +15,22 @@ import org.springframework.stereotype.Component;
  * 用户第一句永远最慢。本组件每隔约 90 秒发一次极简探针（1 token 级），
  * 让模型/网关保持温热，用户开口即可秒回首 token。
  *
- * <p>成本：约 960 次/天 × 1 token，deepseek-flash 定价下可忽略。
- * 可通过环境变量关闭：XIAOYUN_WARMUP_ENABLED=false。
+ * <p><b>⚠️ 已默认关闭（实测保活完全无效）</b>：查 t_intelligence_metrics 可见本组件
+ * 958 次/天、success=0 占 100%，错误固定为 {@code all-models-unavailable}。
+ * 根因是它是系统级任务、没有 UserContext，{@code TenantAiConfigService.resolveConfig(null)}
+ * 拿不到 API key；而外层只判 {@code isAnyModelEnabled()} 就发调用，必然失败。
+ * 失败又被 catch 里的 {@code log.debug} 静默吞掉，长期无人察觉。
+ *
+ * <p>即：保活效果为零、纯空转。故默认值由 true 改为 false。
+ * 原注释称"960 次/天 × 1 token 可忽略"与实测不符（实际每次 226 字符且全部失败）。
+ * <b>重新开启前必须先补上租户上下文</b>，否则开了也只是继续全量失败，
+ * 可用环境变量 {@code XIAOYUN_WARMUP_ENABLED=true} 临时开启。
  */
 @Slf4j
 @Component
 public class XiaoyunModelWarmup {
 
-    @Value("${xiaoyun.warmup.enabled:true}")
+    @Value("${xiaoyun.warmup.enabled:false}")
     private boolean enabled;
 
     @Autowired(required = false)
