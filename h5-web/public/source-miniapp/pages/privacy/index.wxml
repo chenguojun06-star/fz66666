@@ -1,81 +1,81 @@
 <scroll-view class="page" scroll-y="{{true}}" enhanced="{{true}}">
   <view class="doc-header">
-    <text class="doc-title">衣智链 隐私政策</text>
-    <text class="doc-date">更新日期：2026年4月22日</text>
+    <text class="doc-title">{{t.docTitle}}</text>
+    <text class="doc-date">{{t.docDate}}</text>
   </view>
 
   <view class="doc-section">
-    <text class="doc-heading">一、引言</text>
-    <text class="doc-body">衣智链深知个人信息对您的重要性，我们将按照本隐私政策收集、使用和保护您的个人信息。</text>
+    <text class="doc-heading">{{t.h1}}</text>
+    <text class="doc-body">{{t.p1}}</text>
   </view>
 
   <view class="doc-section">
-    <text class="doc-heading">二、我们收集的信息</text>
+    <text class="doc-heading">{{t.h2}}</text>
     <view class="doc-sub-section">
-      <text class="doc-sub-heading">2.1 账号信息</text>
-      <text class="doc-body">用户名、姓名、手机号、密码（加密存储）</text>
+      <text class="doc-sub-heading">{{t.h21}}</text>
+      <text class="doc-body">{{t.p21}}</text>
     </view>
     <view class="doc-sub-section">
-      <text class="doc-sub-heading">2.2 微信身份信息</text>
-      <text class="doc-body">微信唯一标识、昵称、头像（用于快捷登录）</text>
+      <text class="doc-sub-heading">{{t.h22}}</text>
+      <text class="doc-body">{{t.p22}}</text>
     </view>
     <view class="doc-sub-section">
-      <text class="doc-sub-heading">2.3 生产业务数据</text>
-      <text class="doc-body">订单信息、扫码记录、工资数据、工序进度等业务相关数据</text>
+      <text class="doc-sub-heading">{{t.h23}}</text>
+      <text class="doc-body">{{t.p23}}</text>
     </view>
     <view class="doc-sub-section">
-      <text class="doc-sub-heading">2.4 设备权限</text>
-      <text class="doc-body">相机权限（扫码拍照）、相册权限（图片上传）、剪贴板（复制单号）</text>
+      <text class="doc-sub-heading">{{t.h24}}</text>
+      <text class="doc-body">{{t.p24}}</text>
     </view>
   </view>
 
   <view class="doc-section">
-    <text class="doc-heading">三、信息的使用</text>
+    <text class="doc-heading">{{t.h3}}</text>
     <view class="doc-list">
       <view class="doc-list-item">
         <view class="doc-bullet"></view>
-        <text class="doc-body">生产流程管理</text>
+        <text class="doc-body">{{t.p31}}</text>
       </view>
       <view class="doc-list-item">
         <view class="doc-bullet"></view>
-        <text class="doc-body">扫码记录追溯</text>
+        <text class="doc-body">{{t.p32}}</text>
       </view>
       <view class="doc-list-item">
         <view class="doc-bullet"></view>
-        <text class="doc-body">工资计算与发放</text>
+        <text class="doc-body">{{t.p33}}</text>
       </view>
       <view class="doc-list-item">
         <view class="doc-bullet"></view>
-        <text class="doc-body">数据统计与展示</text>
+        <text class="doc-body">{{t.p34}}</text>
       </view>
     </view>
   </view>
 
   <view class="doc-section">
-    <text class="doc-heading">四、信息的存储与安全</text>
-    <text class="doc-body">数据存储于云端服务器，采用加密传输，密码采用不可逆加密存储，多租户数据隔离，不同工厂数据互不可见。</text>
+    <text class="doc-heading">{{t.h4}}</text>
+    <text class="doc-body">{{t.p4}}</text>
   </view>
 
   <view class="doc-section">
-    <text class="doc-heading">五、您的权利</text>
-    <text class="doc-body">您有权访问、更正、删除个人信息，如需操作请联系工厂管理员。</text>
+    <text class="doc-heading">{{t.h5}}</text>
+    <text class="doc-body">{{t.p5}}</text>
   </view>
 
   <view class="doc-section">
-    <text class="doc-heading">六、未成年人保护</text>
-    <text class="doc-body">本产品主要面向服装工厂管理人员，不适合未成年人使用。</text>
+    <text class="doc-heading">{{t.h6}}</text>
+    <text class="doc-body">{{t.p6}}</text>
   </view>
 
   <view class="doc-section">
-    <text class="doc-heading">七、联系我们</text>
+    <text class="doc-heading">{{t.h7}}</text>
     <view class="doc-contact">
-      <text class="doc-body">如有疑问，请联系：</text>
+      <text class="doc-body">{{t.p7}}</text>
       <text class="doc-email">support@yizhilian.com</text>
     </view>
   </view>
 
   <view class="doc-footer">
-    <text>© 2026 衣智链. 保留所有权利.</text>
+    <text>{{t.copyright}}</text>
   </view>
   <ai-assistant />
 </scroll-view>

@@ -1,49 +1,49 @@
 <scroll-view class="page" scroll-y="{{true}}" enhanced="{{true}}">
   <view class="doc-header">
-    <text class="doc-title">衣智链 用户服务协议</text>
-    <text class="doc-date">更新日期：2026年4月15日</text>
+    <text class="doc-title">{{t.docTitle}}</text>
+    <text class="doc-date">{{t.docDate}}</text>
   </view>
 
   <view class="doc-section">
-    <text class="doc-heading">一、服务说明</text>
-    <text class="doc-body">衣智链为服装供应链管理系统，提供订单管理、扫码追溯、工资计算、库存管理等功能。</text>
+    <text class="doc-heading">{{t.h1}}</text>
+    <text class="doc-body">{{t.p1}}</text>
   </view>
 
   <view class="doc-section">
-    <text class="doc-heading">二、账号与使用规范</text>
-    <text class="doc-body">用户应使用真实信息注册，不得转让账号，不得利用本系统进行违法活动。每个工厂的数据相互隔离，用户只能查看本工厂数据。</text>
+    <text class="doc-heading">{{t.h2}}</text>
+    <text class="doc-body">{{t.p2}}</text>
   </view>
 
   <view class="doc-section">
-    <text class="doc-heading">三、信息收集与使用</text>
-    <text class="doc-body">详见《隐私政策》。系统仅收集与业务相关的必要信息。</text>
+    <text class="doc-heading">{{t.h3}}</text>
+    <text class="doc-body">{{t.p3}}</text>
   </view>
 
   <view class="doc-section">
-    <text class="doc-heading">四、服务可用性</text>
-    <text class="doc-body">系统尽力保证7×24小时可用，但可能因维护、升级等原因中断服务。如有计划维护，将提前通知。</text>
+    <text class="doc-heading">{{t.h4}}</text>
+    <text class="doc-body">{{t.p4}}</text>
   </view>
 
   <view class="doc-section">
-    <text class="doc-heading">五、责任与限制</text>
-    <text class="doc-body">因不可抗力导致的服务中断，衣智链不承担责任。用户应妥善保管账号密码。</text>
+    <text class="doc-heading">{{t.h5}}</text>
+    <text class="doc-body">{{t.p5}}</text>
   </view>
 
   <view class="doc-section">
-    <text class="doc-heading">六、协议更新</text>
-    <text class="doc-body">本协议可能不时更新，更新后将在系统内通知用户。继续使用即视为同意更新后的协议。</text>
+    <text class="doc-heading">{{t.h6}}</text>
+    <text class="doc-body">{{t.p6}}</text>
   </view>
 
   <view class="doc-section">
-    <text class="doc-heading">七、联系我们</text>
+    <text class="doc-heading">{{t.h7}}</text>
     <view class="doc-contact">
-      <text class="doc-body">如有疑问，请联系：</text>
+      <text class="doc-body">{{t.p7}}</text>
       <text class="doc-email">support@yizhilian.com</text>
     </view>
   </view>
 
   <view class="doc-footer">
-    <text>© 2026 衣智链. 保留所有权利.</text>
+    <text>{{t.copyright}}</text>
   </view>
   <ai-assistant />
 </scroll-view>

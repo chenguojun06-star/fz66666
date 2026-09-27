@@ -2541,6 +2541,10 @@ const SCAN_HANDLERS = {
   stageProcessor: 'pages/scan/handlers/helpers/ScanStageProcessor.js',
   peripheral: 'pages/scan/handlers/helpers/ScanPeripheralHelper.js',
 };
+const PRIVACY_JS = 'pages/privacy/index.js';
+const PRIVACY_WXML = 'pages/privacy/index.wxml';
+const PRIVACY_SERVICE_JS = 'pages/privacy/service/index.js';
+const PRIVACY_SERVICE_WXML = 'pages/privacy/service/index.wxml';
 const SALES_OVERVIEW_JS = 'pages/sales/overview/index.js';
 const SALES_OVERVIEW_WXML = 'pages/sales/overview/index.wxml';
 const ORDER_NO_DATA_JS = 'pages/order/no-data-create/index.js';
@@ -2991,6 +2995,42 @@ function testI18nScanHome() {
   // ⑦ 导航标题
   eq('扫码主页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan');
   eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
+}
+
+/** 隐私政策页 + 用户服务协议页（D-607）—— 整篇法律文本 */
+function testI18nPrivacy() {
+  testPageI18n(PRIVACY_JS, PRIVACY_WXML, '隐私政策页');
+  testPageI18n(PRIVACY_SERVICE_JS, PRIVACY_SERVICE_WXML, '用户服务协议页');
+
+  const { page: zhP, wx: zhWx } = loadPage(PRIVACY_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(PRIVACY_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 隐私政策标题', zhP.data.t.docTitle, '衣智链 隐私政策');
+  eq('en 隐私政策标题', enP.data.t.docTitle, 'Yizhilian Privacy Policy');
+  ok('en 正文段落无中文', !CJK_RE.test(enP.data.t.p4), enP.data.t.p4);
+  ok('en 小节标题无中文', !CJK_RE.test(enP.data.t.h21), enP.data.t.h21);
+  eq('隐私政策导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Privacy Policy');
+
+  const { page: enS } = loadPage(PRIVACY_SERVICE_JS, makeApi());
+  enS.applyLanguage('en-US');
+  ok('en 服务协议正文无中文', !CJK_RE.test(enS.data.t.p2), enS.data.t.p2);
+  eq('en 服务协议日期已本地化', enS.data.t.docDate, 'Last updated: April 15, 2026');
+
+  // 🔴 护栏：service/ 比 privacy/ 多一层目录，require 相对路径必须多一级
+  const svcSrc = fs.readFileSync(path.join(MP, PRIVACY_SERVICE_JS), 'utf8');
+  ok('护栏：service 页 require 路径层级正确',
+    svcSrc.includes("require('../../../utils/i18n/index')"),
+    'pages/privacy/service/ 是三层目录 → 用三级相对路径');
+  const pvSrc = fs.readFileSync(path.join(MP, PRIVACY_JS), 'utf8');
+  ok('护栏：隐私政策页 require 路径层级正确',
+    pvSrc.includes("require('../../utils/i18n/index')"),
+    'pages/privacy/ 是两层目录 → 用两级相对路径');
+  // service 页只有 7 个小节，applyLanguage 不能照抄 index 页的键（会引用不存在的键 → 裸键名）
+  ok('护栏：service 页不引用 index 页独有的键',
+    !svcSrc.includes("t('h21')") && !svcSrc.includes("t('p34')"),
+    '两页小节结构不同，applyLanguage 必须各写各的');
 }
 
 /** 销售数据概览页（D-606）—— 时间范围 + 汇总卡 + 平台明细 */
@@ -4134,6 +4174,7 @@ try {
   testI18nOrderFormGuard();
   testI18nDashboardGuard();
   testI18nSalesOverview();
+  testI18nPrivacy();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);
