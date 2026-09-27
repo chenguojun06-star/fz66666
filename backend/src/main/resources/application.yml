@@ -364,15 +364,17 @@ sto-express:
 
 # AI 大模型配置（生产跟单助手）
 ai:
-  # 后台任务（cron/system）AI 推理总闸 —— 成本止血用
-  # false = 一刀切禁止后台定时任务调 LLM，只放行真实用户主动发起的提问。
-  # 背景：D-513 修复 @Lazy 后 63 个定时任务集体复活，cron 侧 AI 调用
-  #       一度占全天调用量绝大部分（实测单日 1800+ 次）。
-  # 恢复：改为 true，或设环境变量 AI_CRON_INFERENCE_ENABLED=true。
+  # 后台任务（cron/system）AI 推理总闸 —— 应急闸，**默认放行**
+  # true（默认）= 后台定时任务正常调 LLM，业务功能不受影响。
+  # 置 false   = 一刀切禁止后台任务调 LLM，只放行真实用户主动提问。
+  #
+  # 【为何默认 true】D-593 实测：真正的成本大头是 `xiaoyun.warmup`（占 97%，已关），
+  #   后台 cron 的 AI 调用合计只占 ~2.8%。用它去换掉每日洞察/多智能体辩论等功能不划算，
+  #   故默认放行；仅在再次出现成本异常时临时置 false 应急止血。
   # 判定口径见 IntelligenceInferenceOrchestrator#isCronContext：
   #   openai-compat / webhook-system 属外部业务触发，刻意不在拦截范围内。
   cron-inference:
-    enabled: ${AI_CRON_INFERENCE_ENABLED:false}
+    enabled: ${AI_CRON_INFERENCE_ENABLED:true}
   budget:
     enabled: ${AI_BUDGET_ENABLED:true}
     # D-469（2026-09-20）：设为 50 万/租户/日。

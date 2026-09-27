@@ -108,9 +108,12 @@ public class IntelligenceInferenceOrchestrator {
     @Value("${ai.gateway.litellm.timeout-seconds:30}") private int gatewayTimeoutSeconds;
     @Value("${ai.fallback.keyword-enabled:true}") private boolean keywordFallbackEnabled;
     /**
-     * 后台任务（cron/system）触发的 AI 推理总闸。
-     * false = 一刀切禁止后台任务调 LLM，只放行真实用户主动发起的提问。
-     * 用于成本止血：D-513 复活 63 个定时任务后，cron 侧 AI 调用一度占全天绝大部分。
+     * 后台任务（cron/system）触发的 AI 推理应急闸，<b>默认放行</b>。
+     * 置 false = 一刀切禁止后台任务调 LLM，只放行真实用户主动发起的提问。
+     *
+     * <p>D-593 实测：成本大头其实是 {@code xiaoyun.warmup}（占全站 97%，已关），
+     * cron 侧合计仅 ~2.8%，故默认 true 以免误伤每日洞察等业务功能；
+     * 仅在再次出现成本异常时临时置 false 应急止血。
      */
     @Value("${ai.cron-inference.enabled:true}") private boolean cronInferenceEnabled;
     // 视觉模型请求参数（识别/质检类任务要稳，不要创意）
