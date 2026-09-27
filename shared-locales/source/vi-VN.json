@@ -3599,6 +3599,28 @@
       "remarksPlaceholder": "Nhập ghi chú đơn hàng…",
       "createOrderBtn": "Tạo đơn hàng",
       "navTitle": "Đơn không hồ sơ"
+    },
+    "salesOverview": {
+      "navTitle": "Dữ liệu bán hàng",
+      "rangeToday": "Hôm nay",
+      "rangeThisWeek": "Tuần này",
+      "rangeThisMonth": "Tháng này",
+      "rangeThisQuarter": "Quý này",
+      "rangeThisYear": "Năm nay",
+      "noPermission": "Bạn không có quyền xem dữ liệu bán hàng",
+      "refreshFailed": "Làm mới thất bại, vui lòng thử lại sau",
+      "totalSales": "Tổng doanh thu",
+      "totalOrders": "Tổng đơn hàng",
+      "totalShipping": "Tổng phí vận chuyển",
+      "netRevenue": "Thu nhập ròng",
+      "platformBreakdown": "Chi tiết bán hàng theo sàn",
+      "viewOrders": "Xem đơn hàng",
+      "orderCountPrefix": "Đơn hàng ",
+      "salesAmount": "Doanh thu",
+      "emptyData": "Chưa có dữ liệu bán hàng",
+      "emptyDataHint": "Không có dữ liệu bán hàng trong khoảng thời gian đã chọn",
+      "loadFailed": "Tải thất bại",
+      "tapRetry": "Nhấn để thử lại"
     }
   }
 }

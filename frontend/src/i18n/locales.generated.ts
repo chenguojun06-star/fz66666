@@ -3606,6 +3606,28 @@ export const LOCALES = {
         "remarksPlaceholder": "输入订单备注...",
         "createOrderBtn": "创建订单",
         "navTitle": "无资料下单"
+      },
+      "salesOverview": {
+        "navTitle": "销售数据",
+        "rangeToday": "今日",
+        "rangeThisWeek": "本周",
+        "rangeThisMonth": "本月",
+        "rangeThisQuarter": "本季",
+        "rangeThisYear": "本年",
+        "noPermission": "您没有查看销售数据的权限",
+        "refreshFailed": "刷新失败，请稍后重试",
+        "totalSales": "总销售额",
+        "totalOrders": "总订单量",
+        "totalShipping": "总运费",
+        "netRevenue": "净收入",
+        "platformBreakdown": "平台销售明细",
+        "viewOrders": "查看订单",
+        "orderCountPrefix": "订单量 ",
+        "salesAmount": "销售额",
+        "emptyData": "暂无销售数据",
+        "emptyDataHint": "所选时间段内未统计到销售数据",
+        "loadFailed": "加载失败",
+        "tapRetry": "点击重试"
       }
     }
   },
@@ -7210,6 +7232,28 @@ export const LOCALES = {
         "remarksPlaceholder": "Enter order remarks…",
         "createOrderBtn": "Create order",
         "navTitle": "Blank Order"
+      },
+      "salesOverview": {
+        "navTitle": "Sales Data",
+        "rangeToday": "Today",
+        "rangeThisWeek": "This week",
+        "rangeThisMonth": "This month",
+        "rangeThisQuarter": "This quarter",
+        "rangeThisYear": "This year",
+        "noPermission": "You do not have permission to view sales data",
+        "refreshFailed": "Refresh failed, please try again later",
+        "totalSales": "Total sales",
+        "totalOrders": "Total orders",
+        "totalShipping": "Total shipping",
+        "netRevenue": "Net revenue",
+        "platformBreakdown": "Sales by platform",
+        "viewOrders": "View orders",
+        "orderCountPrefix": "Orders ",
+        "salesAmount": "Sales",
+        "emptyData": "No sales data yet",
+        "emptyDataHint": "No sales data was recorded for the selected period",
+        "loadFailed": "Load failed",
+        "tapRetry": "Tap to retry"
       }
     }
   },
@@ -10814,6 +10858,28 @@ export const LOCALES = {
         "remarksPlaceholder": "Nhập ghi chú đơn hàng…",
         "createOrderBtn": "Tạo đơn hàng",
         "navTitle": "Đơn không hồ sơ"
+      },
+      "salesOverview": {
+        "navTitle": "Dữ liệu bán hàng",
+        "rangeToday": "Hôm nay",
+        "rangeThisWeek": "Tuần này",
+        "rangeThisMonth": "Tháng này",
+        "rangeThisQuarter": "Quý này",
+        "rangeThisYear": "Năm nay",
+        "noPermission": "Bạn không có quyền xem dữ liệu bán hàng",
+        "refreshFailed": "Làm mới thất bại, vui lòng thử lại sau",
+        "totalSales": "Tổng doanh thu",
+        "totalOrders": "Tổng đơn hàng",
+        "totalShipping": "Tổng phí vận chuyển",
+        "netRevenue": "Thu nhập ròng",
+        "platformBreakdown": "Chi tiết bán hàng theo sàn",
+        "viewOrders": "Xem đơn hàng",
+        "orderCountPrefix": "Đơn hàng ",
+        "salesAmount": "Doanh thu",
+        "emptyData": "Chưa có dữ liệu bán hàng",
+        "emptyDataHint": "Không có dữ liệu bán hàng trong khoảng thời gian đã chọn",
+        "loadFailed": "Tải thất bại",
+        "tapRetry": "Nhấn để thử lại"
       }
     }
   },
@@ -14418,6 +14484,28 @@ export const LOCALES = {
         "remarksPlaceholder": "Enter order remarks…",
         "createOrderBtn": "Create order",
         "navTitle": "Blank Order"
+      },
+      "salesOverview": {
+        "navTitle": "Sales Data",
+        "rangeToday": "Today",
+        "rangeThisWeek": "This week",
+        "rangeThisMonth": "This month",
+        "rangeThisQuarter": "This quarter",
+        "rangeThisYear": "This year",
+        "noPermission": "You do not have permission to view sales data",
+        "refreshFailed": "Refresh failed, please try again later",
+        "totalSales": "Total sales",
+        "totalOrders": "Total orders",
+        "totalShipping": "Total shipping",
+        "netRevenue": "Net revenue",
+        "platformBreakdown": "Sales by platform",
+        "viewOrders": "View orders",
+        "orderCountPrefix": "Orders ",
+        "salesAmount": "Sales",
+        "emptyData": "No sales data yet",
+        "emptyDataHint": "No sales data was recorded for the selected period",
+        "loadFailed": "Load failed",
+        "tapRetry": "Tap to retry"
       }
     }
   }

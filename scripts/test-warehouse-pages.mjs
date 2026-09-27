@@ -2541,6 +2541,8 @@ const SCAN_HANDLERS = {
   stageProcessor: 'pages/scan/handlers/helpers/ScanStageProcessor.js',
   peripheral: 'pages/scan/handlers/helpers/ScanPeripheralHelper.js',
 };
+const SALES_OVERVIEW_JS = 'pages/sales/overview/index.js';
+const SALES_OVERVIEW_WXML = 'pages/sales/overview/index.wxml';
 const ORDER_NO_DATA_JS = 'pages/order/no-data-create/index.js';
 const ORDER_NO_DATA_WXML = 'pages/order/no-data-create/index.wxml';
 const ORDER_REMARK_JS = 'pages/order/remark/index.js';
@@ -2989,6 +2991,32 @@ function testI18nScanHome() {
   // ⑦ 导航标题
   eq('扫码主页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan');
   eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
+}
+
+/** 销售数据概览页（D-606）—— 时间范围 + 汇总卡 + 平台明细 */
+function testI18nSalesOverview() {
+  testPageI18n(SALES_OVERVIEW_JS, SALES_OVERVIEW_WXML, '销售数据概览页');
+
+  const { page: zhP, wx: zhWx } = loadPage(SALES_OVERVIEW_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(SALES_OVERVIEW_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 时间范围首位', zhP.data.ranges[0].label, '今日');
+  eq('en 时间范围首位', enP.data.ranges[0].label, 'Today');
+  eq('en 净收入标签', enP.data.t.netRevenue, 'Net revenue');
+  ok('en 空态提示无中文', !CJK_RE.test(enP.data.t.emptyDataHint), enP.data.t.emptyDataHint);
+  ok('en 订单量前缀带尾空格', enP.data.t.orderCountPrefix.endsWith(' '), JSON.stringify(enP.data.t.orderCountPrefix));
+  eq('销售数据页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Sales Data');
+
+  // 护栏：时间范围的 key 必须保持英文（用于计算日期区间，不是显示文案）
+  const jsSrc = fs.readFileSync(path.join(MP, SALES_OVERVIEW_JS), 'utf8');
+  ok('护栏：时间范围 key 仍是英文',
+    jsSrc.includes("key: 'thisMonth'") && jsSrc.includes('labelKey:'),
+    'key 用于日期计算，不能换成中文；显示文案走 labelKey');
+  // 护栏：PLATFORM_NAMES 是跨端契约，本批不动
+  ok('护栏：平台名映射仍来自 platformNames 模块',
+    jsSrc.includes('PLATFORM_NAMES[code]'), '与 PC 端 platform.ts 对齐，需与 PC 端一起处理');
 }
 
 /** dashboard 状态映射 + 契约值豁免护栏（D-605） */
@@ -4105,6 +4133,7 @@ try {
   testI18nOrderNoDataCreate();
   testI18nOrderFormGuard();
   testI18nDashboardGuard();
+  testI18nSalesOverview();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

@@ -3599,6 +3599,28 @@
       "remarksPlaceholder": "Enter order remarks…",
       "createOrderBtn": "Create order",
       "navTitle": "Blank Order"
+    },
+    "salesOverview": {
+      "navTitle": "Sales Data",
+      "rangeToday": "Today",
+      "rangeThisWeek": "This week",
+      "rangeThisMonth": "This month",
+      "rangeThisQuarter": "This quarter",
+      "rangeThisYear": "This year",
+      "noPermission": "You do not have permission to view sales data",
+      "refreshFailed": "Refresh failed, please try again later",
+      "totalSales": "Total sales",
+      "totalOrders": "Total orders",
+      "totalShipping": "Total shipping",
+      "netRevenue": "Net revenue",
+      "platformBreakdown": "Sales by platform",
+      "viewOrders": "View orders",
+      "orderCountPrefix": "Orders ",
+      "salesAmount": "Sales",
+      "emptyData": "No sales data yet",
+      "emptyDataHint": "No sales data was recorded for the selected period",
+      "loadFailed": "Load failed",
+      "tapRetry": "Tap to retry"
     }
   }
 }

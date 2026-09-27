@@ -13,28 +13,28 @@
   <!-- 汇总卡片 -->
   <view class="summary-grid">
     <view class="sum-card sum-card--blue">
-      <text class="sum-lbl">总销售额</text>
+      <text class="sum-lbl">{{t.totalSales}}</text>
       <text class="sum-val">¥{{summary.totalSalesText}}</text>
     </view>
     <view class="sum-card sum-card--green">
-      <text class="sum-lbl">总订单量</text>
+      <text class="sum-lbl">{{t.totalOrders}}</text>
       <text class="sum-val">{{summary.totalOrders}}</text>
     </view>
     <view class="sum-card sum-card--orange">
-      <text class="sum-lbl">总运费</text>
+      <text class="sum-lbl">{{t.totalShipping}}</text>
       <text class="sum-val">¥{{summary.totalShippingText}}</text>
     </view>
     <view class="sum-card sum-card--purple">
-      <text class="sum-lbl">净收入</text>
+      <text class="sum-lbl">{{t.netRevenue}}</text>
       <text class="sum-val">¥{{summary.netRevenueText}}</text>
     </view>
   </view>
 
   <!-- 平台分组列表 -->
   <view class="section-hd">
-    <text class="section-title">平台销售明细</text>
+    <text class="section-title">{{t.platformBreakdown}}</text>
     <view class="section-action" bindtap="onViewOrders">
-      <text>查看订单</text>
+      <text>{{t.viewOrders}}</text>
       <view class="icon-arrow-right-sm"></view>
     </view>
   </view>
@@ -45,16 +45,16 @@
           data-platform="{{item.platform}}" bindtap="onPlatformTap">
       <view class="pc-head">
         <text class="pc-name">{{item.platformName}}</text>
-        <text class="pc-count">订单量 {{item.orderCount}}</text>
+        <text class="pc-count">{{t.orderCountPrefix}}{{item.orderCount}}</text>
       </view>
       <view class="pc-divider"></view>
       <view class="pc-body">
         <view class="pc-col">
-          <text class="pc-lbl">销售额</text>
+          <text class="pc-lbl">{{t.salesAmount}}</text>
           <text class="pc-num">¥{{item.salesAmountText}}</text>
         </view>
         <view class="pc-col">
-          <text class="pc-lbl">净收入</text>
+          <text class="pc-lbl">{{t.netRevenue}}</text>
           <text class="pc-num pc-num--blue">¥{{item.netRevenueText}}</text>
         </view>
       </view>
@@ -64,18 +64,18 @@
   <!-- 空状态（区分加载失败） -->
   <view class="empty-state" wx:if="{{!loading && platforms.length === 0 && !loadError}}">
     <text class="empty-icon icon-chart"></text>
-    <text class="empty-text">暂无销售数据</text>
-    <text class="empty-hint">所选时间段内未统计到销售数据</text>
+    <text class="empty-text">{{t.emptyData}}</text>
+    <text class="empty-hint">{{t.emptyDataHint}}</text>
   </view>
   <view class="empty-state" wx:if="{{!loading && platforms.length === 0 && loadError}}">
     <view class="empty-icon icon-warning-orange"></view>
-    <text class="empty-text">加载失败</text>
-    <text class="empty-hint" bindtap="onRetry">点击重试</text>
+    <text class="empty-text">{{t.loadFailed}}</text>
+    <text class="empty-hint" bindtap="onRetry">{{t.tapRetry}}</text>
   </view>
 
   <!-- 加载中骨架 -->
   <view class="loading-state" wx:if="{{loading}}">
-    <text>加载中...</text>
+    <text>{{t.loading}}</text>
   </view>
   <ai-assistant />
 </view>

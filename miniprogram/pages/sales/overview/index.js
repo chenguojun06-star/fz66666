@@ -8,6 +8,10 @@
  *  数据来源：api.ecommerce.getSalesStats({ startDate, endDate })
  *  后端返回字段：orderCount, totalPayAmount, totalFreight, netRevenue, platformBreakdown
  */
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.salesOverview.';
+
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { PLATFORM_NAMES } = require('../../../utils/platformNames');
@@ -16,12 +20,13 @@ const { hasFeaturePermission } = require('../../../utils/permission');
 const { formatDate, pad2 } = require('../../../utils/displayHelper');
 
 /* 日期范围预设 */
+// key 保持英文（用于计算日期区间），label 由 applyLanguage 按语言重建
 const DATE_RANGES = [
-  { key: 'today',       label: '今日' },
-  { key: 'thisWeek',    label: '本周' },
-  { key: 'thisMonth',   label: '本月' },
-  { key: 'thisQuarter', label: '本季' },
-  { key: 'thisYear',    label: '本年' },
+  { key: 'today',       labelKey: 'rangeToday' },
+  { key: 'thisWeek',    labelKey: 'rangeThisWeek' },
+  { key: 'thisMonth',   labelKey: 'rangeThisMonth' },
+  { key: 'thisQuarter', labelKey: 'rangeThisQuarter' },
+  { key: 'thisYear',    labelKey: 'rangeThisYear' },
 ];
 
 function fmtDate(d) {
@@ -61,7 +66,8 @@ Page({
   data: {
     loading: true,
     loadError: false,
-    ranges: DATE_RANGES,
+    ranges: [],
+    t: {},
     activeRange: 'thisMonth',
     startDate: '',
     endDate: '',
@@ -70,11 +76,42 @@ Page({
     platformNames: PLATFORM_NAMES,
   },
 
+  /** 应用语言 */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        totalSales: t('totalSales'),
+        totalOrders: t('totalOrders'),
+        totalShipping: t('totalShipping'),
+        netRevenue: t('netRevenue'),
+        platformBreakdown: t('platformBreakdown'),
+        viewOrders: t('viewOrders'),
+        orderCountPrefix: t('orderCountPrefix'),
+        salesAmount: t('salesAmount'),
+        emptyData: t('emptyData'),
+        emptyDataHint: t('emptyDataHint'),
+        loadFailed: t('loadFailed'),
+        tapRetry: t('tapRetry'),
+        loading: i18n.t('common.loading', lang),
+      },
+      // 时间范围选项数组按语言重建（只翻 data.t 不够）
+      ranges: DATE_RANGES.map((r) => ({ key: r.key, label: t(r.labelKey) })),
+    });
+    wx.setNavigationBarTitle({ title: t('navTitle') });
+  },
+
+  onShow: function () {
+    this.applyLanguage(i18n.getLanguage());
+  },
+
   onLoad: function () {
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     if (!hasFeaturePermission('view_sales') && !hasFeaturePermission('view_finance')) {
-      toast('您没有查看销售数据的权限');
+      toast(i18n.t(NS + 'noPermission', this._lang));
       wx.navigateBack({ delta: 1, fail: () => wx.switchTab({ url: '/pages/dashboard/index' }) });
       return;
     }
@@ -140,7 +177,9 @@ Page({
         var code = p.platform || '';
         return {
           platform: code,
-          platformName: PLATFORM_NAMES[code] || code || '未知平台',
+          // ⚠️ PLATFORM_NAMES 与 PC 端 frontend/src/utils/platform.ts 是跨端契约（见 utils/platformNames.js），
+        //    本次不改；'未知平台' 作为同源兜底一并保留
+        platformName: PLATFORM_NAMES[code] || code || '未知平台',
           orderCount: Number(p.orderCount || 0),
           salesAmount: Number(p.totalPayAmount || 0),
           salesAmountText: fmtMoney(Number(p.totalPayAmount || 0)),
@@ -165,7 +204,7 @@ Page({
     }).catch(function (err) {
       console.warn('[sales-overview] 加载失败:', err && err.errMsg || err);
       that.setData({ loading: false, loadError: true });
-      toast.error('刷新失败，请稍后重试');
+      toast.error(i18n.t(NS + 'refreshFailed', this._lang));
     });
   },
 

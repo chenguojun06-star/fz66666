@@ -3599,6 +3599,28 @@
       "remarksPlaceholder": "输入订单备注...",
       "createOrderBtn": "创建订单",
       "navTitle": "无资料下单"
+    },
+    "salesOverview": {
+      "navTitle": "销售数据",
+      "rangeToday": "今日",
+      "rangeThisWeek": "本周",
+      "rangeThisMonth": "本月",
+      "rangeThisQuarter": "本季",
+      "rangeThisYear": "本年",
+      "noPermission": "您没有查看销售数据的权限",
+      "refreshFailed": "刷新失败，请稍后重试",
+      "totalSales": "总销售额",
+      "totalOrders": "总订单量",
+      "totalShipping": "总运费",
+      "netRevenue": "净收入",
+      "platformBreakdown": "平台销售明细",
+      "viewOrders": "查看订单",
+      "orderCountPrefix": "订单量 ",
+      "salesAmount": "销售额",
+      "emptyData": "暂无销售数据",
+      "emptyDataHint": "所选时间段内未统计到销售数据",
+      "loadFailed": "加载失败",
+      "tapRetry": "点击重试"
     }
   }
 }
