@@ -11,14 +11,14 @@
       </view>
     </view>
     <view class="status-card-meta">
-      <text class="meta-chip">共 {{totalProcessCount}} 道工序</text>
-      <text class="meta-chip meta-chip--price">合计 ¥{{totalPrice}}</text>
+      <text class="meta-chip">{{t.totalWordW}} {{totalProcessCount}}{{t.processCountUnit}}</text>
+      <text class="meta-chip meta-chip--price">{{t.totalWordW}} ¥{{totalPrice}}</text>
     </view>
   </view>
 
   <!-- 加载中 -->
   <view wx:if="{{loading}}" class="loading-wrap">
-    <text class="loading-text">加载中...</text>
+    <text class="loading-text">{{t.loading}}</text>
   </view>
 
   <!-- 阶段分组列表 -->
@@ -43,7 +43,7 @@
         <!-- 工序列表 -->
         <view wx:if="{{!stage.collapsed}}" class="cell-list">
           <view wx:if="{{stage.processes.length === 0}}" class="cell-empty">
-            <text class="cell-empty-text">暂无工序，点击 + 添加</text>
+            <text class="cell-empty-text">{{t.noProcessHint}}</text>
           </view>
           <view wx:for="{{stage.processes}}" wx:key="id" wx:for-item="proc" wx:for-index="pIdx" class="cell">
             <view class="cell-main">
@@ -75,8 +75,8 @@
 
   <!-- 底部操作栏 -->
   <view wx:if="{{!loading && styleId}}" class="action-bar">
-    <button class="action-btn action-btn--secondary" bindtap="onAddProcess" data-stage-id="carSewing">添加工序</button>
-    <button class="action-btn action-btn--primary" loading="{{saving}}" bindtap="onSaveAll">保存模板</button>
+    <button class="action-btn action-btn--secondary" bindtap="onAddProcess" data-stage-id="carSewing">{{t.addProcessBtn}}</button>
+    <button class="action-btn action-btn--primary" loading="{{saving}}" bindtap="onSaveAll">{{t.saveTemplateBtn}}</button>
   </view>
   <ai-assistant />
 </view>
@@ -84,20 +84,20 @@
 <!-- 添加/编辑工序内联表单 -->
 <view wx:if="{{modalVisible}}" class="inline-form-card">
   <view class="inline-form-title">
-    <text class="modal-title">{{modalMode === 'add' ? '添加工序' : '编辑工序'}}</text>
+    <text class="modal-title">{{modalMode === 'add' ? t.addProcessBtn : t.editProcessTitle}}</text>
     <view class="modal-close" bindtap="onModalCancel"><view class="icon-close"></view></view>
   </view>
   <view class="modal-body">
     <view class="form-item">
-      <text class="form-label">工序名称</text>
-      <input class="form-input" value="{{form.processName}}" data-field="processName" bindinput="onFormInput" placeholder="如：合缝、上领、钉扣" />
+      <text class="form-label">{{t.processNameLabel}}</text>
+      <input class="form-input" value="{{form.processName}}" data-field="processName" bindinput="onFormInput" placeholder="{{t.namePh2}}" />
     </view>
     <view class="form-item">
-      <text class="form-label">工序编码</text>
-      <input class="form-input" value="{{form.processCode}}" data-field="processCode" bindinput="onFormInput" placeholder="如：01、02（可选）" />
+      <text class="form-label">{{t.processCodeLabel}}</text>
+      <input class="form-input" value="{{form.processCode}}" data-field="processCode" bindinput="onFormInput" placeholder="{{t.codePh2}}" />
     </view>
     <view class="form-item">
-      <text class="form-label">所属阶段</text>
+      <text class="form-label">{{t.stageLabel}}</text>
       
         <view bindtap="openPicker" data-handler="onStageChange" data-names="stageOptions" data-range-key="name" class="form-picker">
           <text>{{stageOptions[formStageIndex].name}}</text>
@@ -106,11 +106,11 @@
       
     </view>
     <view class="form-item">
-      <text class="form-label">机器类型</text>
-      <input class="form-input" value="{{form.machineType}}" data-field="machineType" bindinput="onFormInput" placeholder="如：平车、包缝车（可选）" />
+      <text class="form-label">{{t.machineTypeLabel}}</text>
+      <input class="form-input" value="{{form.machineType}}" data-field="machineType" bindinput="onFormInput" placeholder="{{t.machinePh2}}" />
     </view>
     <view class="form-item">
-      <text class="form-label">难度</text>
+      <text class="form-label">{{t.difficultyLabel}}</text>
       
         <view bindtap="openPicker" data-handler="onDifficultyChange" data-names="difficultyOptions" class="form-picker">
           <text>{{difficultyOptions[formDifficultyIndex]}}</text>
@@ -119,21 +119,21 @@
       
     </view>
     <view class="form-item">
-      <text class="form-label">标准工时（秒）</text>
-      <input class="form-input" type="digit" value="{{form.standardTime}}" data-field="standardTime" bindinput="onFormInput" placeholder="如：60" />
+      <text class="form-label">{{t.stdTimeLabel}}</text>
+      <input class="form-input" type="digit" value="{{form.standardTime}}" data-field="standardTime" bindinput="onFormInput" placeholder="{{t.stdTimePh2}}" />
     </view>
     <view class="form-item">
-      <text class="form-label">单价（元）</text>
-      <input class="form-input" type="digit" value="{{form.price}}" data-field="price" bindinput="onFormInput" placeholder="如：0.50" />
+      <text class="form-label">{{t.priceLabel}}</text>
+      <input class="form-input" type="digit" value="{{form.price}}" data-field="price" bindinput="onFormInput" placeholder="{{t.pricePh2}}" />
     </view>
     <view class="form-item">
-      <text class="form-label">描述</text>
-      <textarea class="form-textarea" value="{{form.description}}" data-field="description" bindinput="onFormInput" placeholder="工序描述（可选）" />
+      <text class="form-label">{{t.descLabel}}</text>
+      <textarea class="form-textarea" value="{{form.description}}" data-field="description" bindinput="onFormInput" placeholder="{{t.descPh2}}" />
     </view>
   </view>
   <view class="inline-form-actions">
-    <button class="modal-btn modal-btn--cancel" bindtap="onModalCancel">取消</button>
-    <button class="modal-btn modal-btn--confirm" bindtap="onModalConfirm">确定</button>
+    <button class="modal-btn modal-btn--cancel" bindtap="onModalCancel">{{t.cancelBtn}}</button>
+    <button class="modal-btn modal-btn--confirm" bindtap="onModalConfirm">{{t.confirmBtn}}</button>
   </view>
 </view>
 

@@ -1,14 +1,17 @@
+const i18n = require('../../../utils/i18n/index');
+const NS = 'mp.processTemplate.';
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 
+// name 存键后缀（applyLanguage 重建 stageOptions）；stageName 载荷由调用点解析
 const STAGES = [
-  { id: 'procurement', name: '采购' },
-  { id: 'cutting', name: '裁剪' },
-  { id: 'secondaryProcess', name: '二次工艺' },
-  { id: 'carSewing', name: '车缝' },
-  { id: 'tailProcess', name: '尾部' },
-  { id: 'warehousing', name: '入库' },
+  { id: 'procurement', i18nKey: 'stProcure' },
+  { id: 'cutting', i18nKey: 'stCutting' },
+  { id: 'secondaryProcess', i18nKey: 'stSecondary' },
+  { id: 'carSewing', i18nKey: 'stSewing' },
+  { id: 'tailProcess', i18nKey: 'stTail' },
+  { id: 'warehousing', i18nKey: 'stWh' },
 ];
 
 const DIFFICULTY_OPTIONS = ['易', '中', '难'];
@@ -48,13 +51,57 @@ Page({
       price: '',
       description: '',
     },
-    difficultyOptions: DIFFICULTY_OPTIONS,
+    difficultyOptions: DIFFICULTY_OPTIONS,  // 值（载荷）；显示用 difficultyLabels
     stageOptions: STAGES,
     formStageIndex: 3,
     formDifficultyIndex: 1,
   },
 
+  /** 静态文案按语言写入（wxml 用 {{t.xxx}}），阶段/难度选项重建 */
+  applyLanguage: function (language) {
+    var lang = i18n.locales[language] ? language : i18n.DEFAULT_LANG;
+    this._lang = lang;
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        navTitle: i18n.t(NS + 'navTitle', lang),
+        noProcessHint: i18n.t(NS + 'noProcessHint', lang),
+        addProcessBtn: i18n.t(NS + 'addProcessBtn', lang),
+        saveTemplateBtn: i18n.t(NS + 'saveTemplateBtn', lang),
+        processNameLabel: i18n.t(NS + 'processNameLabel', lang),
+        processCodeLabel: i18n.t(NS + 'processCodeLabel', lang),
+        stageLabel: i18n.t(NS + 'stageLabel', lang),
+        machineTypeLabel: i18n.t(NS + 'machineTypeLabel', lang),
+        difficultyLabel: i18n.t(NS + 'difficultyLabel', lang),
+        stdTimeLabel: i18n.t(NS + 'stdTimeLabel', lang),
+        priceLabel: i18n.t(NS + 'priceLabel', lang),
+        descLabel: i18n.t(NS + 'descLabel', lang),
+        cancelBtn: i18n.t(NS + 'cancelBtn', lang),
+        confirmBtn: i18n.t(NS + 'confirmBtn', lang),
+        processCountUnit: i18n.t(NS + 'processCountUnit', lang),
+        editProcessTitle: i18n.t(NS + 'editProcessTitle', lang),
+        namePh: i18n.t(NS + 'namePh', lang),
+        codePh: i18n.t(NS + 'codePh', lang),
+        machinePh: i18n.t(NS + 'machinePh', lang),
+        stdTimePh: i18n.t(NS + 'stdTimePh', lang),
+        pricePh: i18n.t(NS + 'pricePh', lang),
+        descPh: i18n.t(NS + 'descPh', lang),
+        totalWordW: i18n.t(NS + 'totalWordW', lang),
+        namePh2: i18n.t(NS + 'namePh2', lang),
+        codePh2: i18n.t(NS + 'codePh2', lang),
+        machinePh2: i18n.t(NS + 'machinePh2', lang),
+        stdTimePh2: i18n.t(NS + 'stdTimePh2', lang),
+        pricePh2: i18n.t(NS + 'pricePh2', lang),
+        descPh2: i18n.t(NS + 'descPh2', lang),
+      },
+      stageOptions: STAGES.map(function (st) { return { id: st.id, name: i18n.t(NS + st.i18nKey, lang) }; }),
+      difficultyLabels: [i18n.t(NS + 'diffEasy', lang), i18n.t(NS + 'diffMedium', lang), i18n.t(NS + 'diffHard', lang)],
+    });
+    wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
+  },
+
   onLoad(options) {
+    this.applyLanguage(i18n.getLanguage());
     const styleId = options.styleId || '';
     const styleNo = options.styleNo || '';
     const styleName = options.styleName || '';
@@ -63,7 +110,7 @@ Page({
       this._loadProcesses(styleId);
     } else {
       this.setData({ loading: false });
-      toast.error('缺少款式ID');
+      toast.error(i18n.t(NS + 'missingStyleId', this._lang));
     }
     bindPageEvents(this, () => this._loadProcesses(this.data.styleId));
   },
@@ -86,7 +133,7 @@ Page({
       }
       if (!styleNo) {
         this.setData({ loading: false });
-        toast.error('缺少款号，无法加载工序模板');
+        toast.error(i18n.t(NS + 'missingStyleNo', this._lang));
         return;
       }
       // 调用与PC端统一的工序单价模板API（TemplateLibrary）
@@ -112,14 +159,15 @@ Page({
     } catch (err) {
       console.error('[process-template] load error', err);
       this.setData({ loading: false });
-      toast.error('加载工序模板失败');
+      toast.error(i18n.t(NS + 'loadFail', this._lang));
     }
   },
 
   _buildStages(processes) {
+    var lang = this._lang || i18n.getLanguage();
     const stageMap = {};
     STAGES.forEach((s) => {
-      stageMap[s.id] = { id: s.id, name: s.name, processes: [], collapsed: false };
+      stageMap[s.id] = { id: s.id, name: i18n.t(NS + s.i18nKey, lang), processes: [], collapsed: false };
     });
 
     processes.forEach((p) => {
@@ -208,8 +256,8 @@ Page({
   onDeleteProcess(e) {
     const { stageId, processId } = e.currentTarget.dataset;
     wx.showModal({
-      title: '确认删除',
-      content: '确定删除此工序吗？（保存后生效）',
+      title: i18n.t(NS + 'delTitle', this._lang),
+      content: i18n.t(NS + 'delMsg', this._lang),
       success: (res) => {
         if (!res.confirm) return;
         const stages = this.data.stages.map((s) => {
@@ -251,7 +299,7 @@ Page({
   onModalConfirm() {
     const { form, modalMode, editId } = this.data;
     if (!form.processName.trim()) {
-      toast.error('请输入工序名称');
+      toast.error(i18n.t(NS + 'processNameReq', this._lang));
       return;
     }
     const stageId = form.progressStage || this.data.modalStageId;
@@ -301,7 +349,7 @@ Page({
   async onSaveAll() {
     const { stages, styleNo } = this.data;
     if (!styleNo) {
-      toast.error('缺少款号，无法保存');
+      toast.error(i18n.t(NS + 'saveNoStyleNo', this._lang));
       return;
     }
 
@@ -322,7 +370,7 @@ Page({
     });
 
     if (steps.length === 0) {
-      toast.error('请至少添加一个工序');
+      toast.error(i18n.t(NS + 'needOneProcess', this._lang));
       return;
     }
 
@@ -333,11 +381,11 @@ Page({
         styleNo,
         templateContent: { steps },
       });
-      toast.success('工序模板已保存');
+      toast.success(i18n.t(NS + 'saved', this._lang));
       this._loadProcesses(this.data.styleId);
     } catch (err) {
       console.error('[process-template] save error', err);
-      toast.error('保存失败：' + (err.errMsg || err.message || '请重试'));
+      toast.error(i18n.t(NS + 'saveFailPrefix', this._lang) + (err.errMsg || err.message || i18n.t(NS + 'retryW', this._lang)));
     } finally {
       this.setData({ saving: false });
     }
@@ -388,7 +436,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t(NS + 'selectW', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

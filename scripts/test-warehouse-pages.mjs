@@ -2502,6 +2502,8 @@ const COLLAB_LIST_JS = 'pages/collab-task/list/index.js';
 const COLLAB_LIST_WXML = 'pages/collab-task/list/index.wxml';
 const REGISTER_JS = 'pages/register/index.js';
 const REGISTER_WXML = 'pages/register/index.wxml';
+const PROC_TPL_JS = 'pages/dashboard/process-template/index.js';
+const PROC_TPL_WXML = 'pages/dashboard/process-template/index.wxml';
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -3487,6 +3489,27 @@ function testI18nRegister() {
   eq('注册页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '员工注册');
 }
 
+/** 工序模板页（D-584）—— 阶段分组/难度选项双轨/模板保存 */
+function testI18nProcessTemplate() {
+  testPageI18n(PROC_TPL_JS, PROC_TPL_WXML, '工序模板页');
+
+  const { page: zhP, wx: zhWx } = loadPage(PROC_TPL_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(PROC_TPL_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  const zhStages = zhP.data.stageOptions.map(s2 => s2.name).join('|');
+  const enStages = enP.data.stageOptions.map(s2 => s2.name).join('|');
+  eq('zh 阶段选项', zhStages, '采购|裁剪|二次工艺|车缝|尾部|入库');
+  ok('en 阶段选项无中文', !CJK_RE.test(enStages), enStages);
+  eq('zh 难度显示数组', zhP.data.difficultyLabels.join('|'), '易|中|难');
+  ok('en 难度显示数组无中文', !CJK_RE.test(enP.data.difficultyLabels.join('|')), enP.data.difficultyLabels.join('|'));
+  ok('en 载荷值数组保持中文', enP.data.difficultyOptions.join('|') === '易|中|难', enP.data.difficultyOptions.join('|'));
+
+  eq('工序模板导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Process Template');
+  eq('工序模板 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '工序模板');
+}
+
 // ────────────────────────── 执行 ──────────────────────────
 console.log('仓库出入库页面逻辑测试');
 console.log('==================================================');
@@ -3557,6 +3580,7 @@ try {
   testI18nDashboard();
   testI18nCollabTask();
   testI18nRegister();
+  testI18nProcessTemplate();
   testI18nScanHome();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
