@@ -1,3 +1,7 @@
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.orderRemark.';
+
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
@@ -10,6 +14,7 @@ Page({
     targetType: 'order',
     targetNo: '',
     remarks: [],
+    t: {},
     loading: false,
     submitting: false,
     content: '',
@@ -20,13 +25,40 @@ Page({
     uploading: false,
   },
 
+  /** 应用语言 */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        contentLabel: t('contentLabel'),
+        contentPlaceholder: t('contentPlaceholder'),
+        selectedImagesPrefix: t('selectedImagesPrefix'),
+        selectedImagesSuffix: t('selectedImagesSuffix'),
+        takePhotoBtn: t('takePhotoBtn'),
+        submitting: t('submitting'),
+        submitBtn: t('submitBtn'),
+        recordsTitle: t('recordsTitle'),
+        anonymous: t('anonymous'),
+        emptyRecords: t('emptyRecords'),
+        loading: i18n.t('common.loading', lang),
+      },
+    });
+    wx.setNavigationBarTitle({ title: t('navTitle') });
+  },
+
+  onShow() {
+    this.applyLanguage(i18n.getLanguage());
+  },
+
   onLoad: function (options) {
     const app = getApp();
     if (app.requireAuth && !app.requireAuth()) return;
     const targetType = options.targetType || 'order';
     const targetNo = decodeParam(options.targetNo);
     if (!targetNo) {
-      toast('参数错误');
+      toast(i18n.t(NS + 'paramError', this._lang));
       wx.navigateBack();
       return;
     }
@@ -90,7 +122,7 @@ Page({
 
   onChooseImage: function () {
     const that = this;
-    if (this.data.images.length >= 5) { toast('最多上传5张图片'); return; }
+    if (this.data.images.length >= 5) { toast(i18n.t(NS + 'maxImages', this._lang)); return; }
     wx.chooseMedia({
       count: 5 - this.data.images.length,
       mediaType: ['image'],
@@ -102,10 +134,10 @@ Page({
       fail: function (err) {
         if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
           wx.showModal({
-            title: '相机/相册权限',
-            content: '需要相机或相册权限才能上传照片，请在设置中允许',
-            confirmText: '去设置',
-            cancelText: '取消',
+            title: i18n.t(NS + 'permTitle', this._lang),
+            content: i18n.t(NS + 'permContent', this._lang),
+            confirmText: i18n.t(NS + 'goSettings', this._lang),
+            cancelText: i18n.t('common.cancel', this._lang),
             success: function (modalRes) {
               if (modalRes.confirm) wx.openSetting({ success: function () {} });
             },
@@ -132,7 +164,7 @@ Page({
       });
     }).catch(function () {
       that.setData({ uploading: false });
-      toast('图片上传失败');
+      toast(i18n.t(NS + 'imageUploadFailed', this._lang));
     });
   },
 
@@ -159,22 +191,23 @@ Page({
   onSubmitRemark: function () {
     const content = this.data.content.trim();
     const images = this.data._rawImageUrls || [];
-    if (!content && images.length === 0) { toast('请输入备注内容或上传图片'); return; }
+    if (!content && images.length === 0) { toast(i18n.t(NS + 'emptyRemark', this._lang)); return; }
     const that = this;
     this.setData({ submitting: true });
     const imageUrlsStr = images.length > 0 ? JSON.stringify(images) : undefined;
     api.production.addOrderRemark(
       this.data.targetType,
       this.data.targetNo,
+      // ⚠️ 这是**提交后端的备注内容**（addOrderRemark 的 content 参数），不是界面文案，保持中文
       content || '(图片备注)',
       this.data.authorRole.trim() || undefined,
       imageUrlsStr,
     ).then(function () {
-      toast('备注已添加');
+      toast(i18n.t(NS + 'remarkAdded', this._lang));
       that.setData({ content: '', images: [], _rawImageUrls: [] });
       that._loadRemarks();
     }).catch(function () {
-      toast('添加备注失败');
+      toast(i18n.t(NS + 'remarkFailed', this._lang));
     }).finally(function () {
       that.setData({ submitting: false });
     });

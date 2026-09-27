@@ -1,3 +1,7 @@
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.orderCreate.';
+
 var api = require('../../../utils/api');
 var { safeNavigate } = require('../../../utils/uiHelper');
 var { isAdminOrSupervisor, isFactoryOwner } = require('../../../utils/permission');
@@ -18,9 +22,38 @@ Page({
     // 本页 noData tab 只保留"从已有款式下单"列表。
   },
 
+  /** 应用语言 */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        tabStyle: t('tabStyle'),
+        tabNoData: t('tabNoData'),
+        noDataTitle: t('noDataTitle'),
+        noDataDesc: t('noDataDesc'),
+        orFromStyle: t('orFromStyle'),
+        fromStyleDesc: t('fromStyleDesc'),
+        searchPlaceholder: t('searchPlaceholder'),
+        orderedPrefix: t('orderedPrefix'),
+        orderedSuffix: t('orderedSuffix'),
+        loading: i18n.t('common.loading', lang),
+        noMatch: t('noMatch'),
+        noStyle: t('noStyle'),
+        noCompletedSample: t('noCompletedSample'),
+      },
+    });
+    wx.setNavigationBarTitle({ title: t('navTitle') });
+  },
+
+  onShow() {
+    this.applyLanguage(i18n.getLanguage());
+  },
+
   onLoad: function () {
     if (!isAdminOrSupervisor() && !isFactoryOwner()) {
-      wx.showToast({ title: '无下单权限', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'noPermission', this._lang), icon: 'none' });
       return setTimeout(function () { wx.navigateBack(); }, 1500);
     }
     this.loadStyles();
@@ -107,7 +140,7 @@ Page({
       .catch(function (err) {
         console.error('[下单管理] 加载失败:', err);
         self.setData({ styleLoading: false });
-        wx.showToast({ title: '加载失败', icon: 'none' });
+        wx.showToast({ title: i18n.t('common.loadFailed', this._lang), icon: 'none' });
       });
   },
 

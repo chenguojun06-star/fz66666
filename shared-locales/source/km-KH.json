@@ -3521,6 +3521,44 @@
       "globalSwitch": "Global visibility",
       "unitPriceSwitch": "Process unit price",
       "unitPriceHint": "Once off, process unit prices are hidden from everyone in Production / Outsourcing pages; time display is unaffected"
+    },
+    "orderRemark": {
+      "navTitle": "Order Remarks",
+      "contentLabel": "Remark",
+      "contentPlaceholder": "Enter a remark…",
+      "selectedImagesPrefix": "Selected (",
+      "selectedImagesSuffix": "/5)",
+      "takePhotoBtn": " Photo",
+      "submitting": "Submitting…",
+      "submitBtn": "Submit remark",
+      "recordsTitle": "Remark history",
+      "anonymous": "Anonymous",
+      "emptyRecords": "No remarks yet",
+      "paramError": "Invalid parameters",
+      "maxImages": "Up to 5 images",
+      "permTitle": "Camera / album permission",
+      "permContent": "Camera or album permission is required to upload photos. Please allow it in Settings.",
+      "goSettings": "Settings",
+      "imageUploadFailed": "Image upload failed",
+      "emptyRemark": "Please enter a remark or upload an image",
+      "remarkAdded": "Remark added",
+      "remarkFailed": "Failed to add the remark"
+    },
+    "orderCreate": {
+      "navTitle": "Create Order",
+      "noPermission": "No permission to create orders",
+      "tabStyle": "From style",
+      "tabNoData": "Blank order",
+      "noDataTitle": "Create a blank order",
+      "noDataDesc": "Just fill in style no. / name / color / size; the style image is optional",
+      "orFromStyle": "Or create from an existing style",
+      "fromStyleDesc": "Reuse the style profile and fill in color and size yourself",
+      "searchPlaceholder": "Search style no. / name",
+      "orderedPrefix": "Ordered ",
+      "orderedSuffix": " times",
+      "noMatch": "No matches",
+      "noStyle": "No styles yet",
+      "noCompletedSample": "No samples have been inbound yet"
     }
   }
 }

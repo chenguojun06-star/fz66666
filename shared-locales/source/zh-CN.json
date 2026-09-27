@@ -3521,6 +3521,44 @@
       "globalSwitch": "全局显示开关",
       "unitPriceSwitch": "工序单价显示",
       "unitPriceHint": "关闭后，生产管理 / 外发管理等页面对全员隐藏工序单价；时间显示不受此开关影响"
+    },
+    "orderRemark": {
+      "navTitle": "订单备注",
+      "contentLabel": "备注内容",
+      "contentPlaceholder": "输入备注内容…",
+      "selectedImagesPrefix": "已选图片(",
+      "selectedImagesSuffix": "/5)",
+      "takePhotoBtn": " 拍照/选图",
+      "submitting": "提交中…",
+      "submitBtn": "提交备注",
+      "recordsTitle": "备注记录",
+      "anonymous": "匿名",
+      "emptyRecords": "暂无备注记录",
+      "paramError": "参数错误",
+      "maxImages": "最多上传5张图片",
+      "permTitle": "相机/相册权限",
+      "permContent": "需要相机或相册权限才能上传照片，请在设置中允许",
+      "goSettings": "去设置",
+      "imageUploadFailed": "图片上传失败",
+      "emptyRemark": "请输入备注内容或上传图片",
+      "remarkAdded": "备注已添加",
+      "remarkFailed": "添加备注失败"
+    },
+    "orderCreate": {
+      "navTitle": "订单创建",
+      "noPermission": "无下单权限",
+      "tabStyle": "款式下单",
+      "tabNoData": "无资料下单",
+      "noDataTitle": "空白无资料下单",
+      "noDataDesc": "手动填写款号/款名/颜色/码数即可，款式图选填",
+      "orFromStyle": "或者从已有款式下单",
+      "fromStyleDesc": "沿用款式资料，自行填写颜色与码数",
+      "searchPlaceholder": "搜索款号/款名",
+      "orderedPrefix": "已下单",
+      "orderedSuffix": "次",
+      "noMatch": "未找到匹配",
+      "noStyle": "暂无款式",
+      "noCompletedSample": "暂无已完成入库的样衣"
     }
   }
 }

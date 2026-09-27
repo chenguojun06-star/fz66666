@@ -1,7 +1,7 @@
 <view class="page">
   <view class="tab-bar">
-    <view class="tab-item {{activeTab === 'style' ? 'active' : ''}}" data-tab="style" bindtap="switchTab">款式下单</view>
-    <view class="tab-item {{activeTab === 'noData' ? 'active' : ''}}" data-tab="noData" bindtap="switchTab">无资料下单</view>
+    <view class="tab-item {{activeTab === 'style' ? 'active' : ''}}" data-tab="style" bindtap="switchTab">{{t.tabStyle}}</view>
+    <view class="tab-item {{activeTab === 'noData' ? 'active' : ''}}" data-tab="noData" bindtap="switchTab">{{t.tabNoData}}</view>
   </view>
 
   <!-- ══ 无资料下单：直达空白表单（无需款式、无需图片，款式图在表单内选填） ══ -->
@@ -9,14 +9,14 @@
     <view class="no-data-start" hover-class="no-data-start--pressed" hover-stay-time="60" bindtap="goNoDataOrderForm">
       <view class="no-data-start-icon line-icon icon-edit"></view>
       <view class="no-data-start-body">
-        <text class="no-data-start-t">空白无资料下单</text>
-        <text class="no-data-start-d">手动填写款号/款名/颜色/码数即可，款式图选填</text>
+        <text class="no-data-start-t">{{t.noDataTitle}}</text>
+        <text class="no-data-start-d">{{t.noDataDesc}}</text>
       </view>
       <view class="no-data-start-arrow">›</view>
     </view>
     <view class="upload-hint">
-      <text class="hint-h">或者从已有款式下单</text>
-      <text class="hint-desc">沿用款式资料，自行填写颜色与码数</text>
+      <text class="hint-h">{{t.orFromStyle}}</text>
+      <text class="hint-desc">{{t.fromStyleDesc}}</text>
     </view>
   </view>
 
@@ -26,15 +26,15 @@
     <view class="search-bar">
       <view class="search-box">
         <view class="search-emoji line-icon icon-search"></view>
-        <input class="search-input" placeholder="搜索款号/款名" value="{{styleKeyword}}" bindinput="onStyleSearchInput" confirm-type="search" />
+        <input class="search-input" placeholder="{{t.searchPlaceholder}}" value="{{styleKeyword}}" bindinput="onStyleSearchInput" confirm-type="search" />
         <view class="search-clear icon-close" wx:if="{{styleKeyword}}" catchtap="onStyleSearchClear"></view>
       </view>
     </view>
 
-    <view wx:if="{{styleLoading}}" class="state-wrap"><text>加载中...</text></view>
+    <view wx:if="{{styleLoading}}" class="state-wrap"><text>{{t.loading}}</text></view>
 
     <view wx:elif="{{styleFilteredStyles.length === 0}}" class="state-wrap">
-      <text>{{styleKeyword ? '未找到匹配' : (activeTab === 'noData' ? '暂无款式' : '暂无已完成入库的样衣')}}</text>
+      <text>{{styleKeyword ? t.noMatch : (activeTab === 'noData' ? t.noStyle : t.noCompletedSample)}}</text>
     </view>
 
     <scroll-view wx:else scroll-y class="grid-scroll">
@@ -49,7 +49,7 @@
             <text class="card-no">{{item.styleNo || '-'}}</text>
             <text class="card-name">{{item.styleName || '-'}}</text>
             <view class="card-meta" wx:if="{{item.orderCount > 0 || item.latestOrderDate}}">
-              <text wx:if="{{item.orderCount > 0}}" class="card-oc">已下单{{item.orderCount}}次</text>
+              <text wx:if="{{item.orderCount > 0}}" class="card-oc">{{t.orderedPrefix}}{{item.orderCount}}{{t.orderedSuffix}}</text>
               <text wx:if="{{item.latestOrderDate}}" class="card-ld">{{item.latestOrderDate}}</text>
             </view>
           </view>

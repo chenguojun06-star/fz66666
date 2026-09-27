@@ -3521,6 +3521,44 @@
       "globalSwitch": "Hiển thị toàn cục",
       "unitPriceSwitch": "Hiển thị đơn giá công đoạn",
       "unitPriceHint": "Sau khi tắt, đơn giá công đoạn sẽ ẩn với tất cả trong trang Quản lý sản xuất / Gia công ngoài; hiển thị thời gian không bị ảnh hưởng"
+    },
+    "orderRemark": {
+      "navTitle": "Ghi chú đơn hàng",
+      "contentLabel": "Nội dung ghi chú",
+      "contentPlaceholder": "Nhập nội dung ghi chú…",
+      "selectedImagesPrefix": "Đã chọn (",
+      "selectedImagesSuffix": "/5)",
+      "takePhotoBtn": " Ảnh",
+      "submitting": "Đang gửi…",
+      "submitBtn": "Gửi ghi chú",
+      "recordsTitle": "Lịch sử ghi chú",
+      "anonymous": "Ẩn danh",
+      "emptyRecords": "Chưa có ghi chú",
+      "paramError": "Tham số không hợp lệ",
+      "maxImages": "Tối đa 5 hình ảnh",
+      "permTitle": "Quyền camera / thư viện ảnh",
+      "permContent": "Cần quyền camera hoặc thư viện ảnh để tải ảnh lên. Vui lòng cho phép trong Cài đặt.",
+      "goSettings": "Cài đặt",
+      "imageUploadFailed": "Tải ảnh lên thất bại",
+      "emptyRemark": "Vui lòng nhập ghi chú hoặc tải ảnh lên",
+      "remarkAdded": "Đã thêm ghi chú",
+      "remarkFailed": "Thêm ghi chú thất bại"
+    },
+    "orderCreate": {
+      "navTitle": "Tạo đơn hàng",
+      "noPermission": "Không có quyền tạo đơn hàng",
+      "tabStyle": "Theo mã hàng",
+      "tabNoData": "Đơn trống",
+      "noDataTitle": "Tạo đơn trống không hồ sơ",
+      "noDataDesc": "Chỉ cần điền mã hàng / tên / màu / size; ảnh mã hàng không bắt buộc",
+      "orFromStyle": "Hoặc tạo từ mã hàng có sẵn",
+      "fromStyleDesc": "Dùng lại hồ sơ mã hàng và tự điền màu, size",
+      "searchPlaceholder": "Tìm mã hàng / tên",
+      "orderedPrefix": "Đã đặt ",
+      "orderedSuffix": " lần",
+      "noMatch": "Không tìm thấy",
+      "noStyle": "Chưa có mã hàng",
+      "noCompletedSample": "Chưa có mẫu nào đã nhập kho"
     }
   }
 }

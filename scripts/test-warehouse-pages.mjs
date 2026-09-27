@@ -2541,6 +2541,10 @@ const SCAN_HANDLERS = {
   stageProcessor: 'pages/scan/handlers/helpers/ScanStageProcessor.js',
   peripheral: 'pages/scan/handlers/helpers/ScanPeripheralHelper.js',
 };
+const ORDER_REMARK_JS = 'pages/order/remark/index.js';
+const ORDER_REMARK_WXML = 'pages/order/remark/index.wxml';
+const ORDER_CREATE_JS = 'pages/order/create/index.js';
+const ORDER_CREATE_WXML = 'pages/order/create/index.wxml';
 const ADMIN_MENU_ROLE_JS = 'pages/admin/menu-role-config/index.js';
 const ADMIN_MENU_ROLE_WXML = 'pages/admin/menu-role-config/index.wxml';
 const ADMIN_EDIT_PROFILE_JS = 'pages/admin/misc/edit-profile/index.js';
@@ -2983,6 +2987,45 @@ function testI18nScanHome() {
   // ⑦ 导航标题
   eq('扫码主页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan');
   eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
+}
+
+/** 订单备注页（D-603）—— 备注输入 + 图片上传 + 备注记录 */
+function testI18nOrderRemark() {
+  testPageI18n(ORDER_REMARK_JS, ORDER_REMARK_WXML, '订单备注页');
+
+  const { page: zhP, wx: zhWx } = loadPage(ORDER_REMARK_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(ORDER_REMARK_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('en 备注记录标题', enP.data.t.recordsTitle, 'Remark history');
+  eq('en 匿名兜底', enP.data.t.anonymous, 'Anonymous');
+  eq('zh 已选图片前缀', zhP.data.t.selectedImagesPrefix, '已选图片(');
+  ok('en 拍照按钮带前导空格', enP.data.t.takePhotoBtn.startsWith(' '), JSON.stringify(enP.data.t.takePhotoBtn));
+  eq('订单备注页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Order Remarks');
+
+  // 🔴 护栏：'(图片备注)' 是提交后端的备注内容，不是界面文案
+  const jsSrc = fs.readFileSync(path.join(MP, ORDER_REMARK_JS), 'utf8');
+  ok('护栏：图片备注兜底值仍是中文',
+    jsSrc.includes("content || '(图片备注)'"), '它作为 addOrderRemark 的 content 提交，不可键化');
+}
+
+/** 订单创建页（D-603）—— 两个 tab + 空态 + 已下单次数 */
+function testI18nOrderCreate() {
+  testPageI18n(ORDER_CREATE_JS, ORDER_CREATE_WXML, '订单创建页');
+
+  const { page: zhP, wx: zhWx } = loadPage(ORDER_CREATE_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(ORDER_CREATE_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 款式下单 tab', zhP.data.t.tabStyle, '款式下单');
+  eq('en 款式下单 tab', enP.data.t.tabStyle, 'From style');
+  eq('en 空态：无匹配', enP.data.t.noMatch, 'No matches');
+  eq('en 空态：无款式', enP.data.t.noStyle, 'No styles yet');
+  eq('订单创建页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Create Order');
+  ok('en 已下单后缀带前导空格', enP.data.t.orderedSuffix.startsWith(' '), JSON.stringify(enP.data.t.orderedSuffix));
+  ok('en 已下单前缀带尾空格', enP.data.t.orderedPrefix.endsWith(' '), JSON.stringify(enP.data.t.orderedPrefix));
 }
 
 /** 应用权限配置页（D-602）—— 角色 × 应用矩阵 + 工序单价全局开关 */
@@ -3991,6 +4034,8 @@ try {
   testI18nAdminEditProfile();
   testI18nAdminChangePassword();
   testI18nAdminMenuRoleConfig();
+  testI18nOrderRemark();
+  testI18nOrderCreate();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);
