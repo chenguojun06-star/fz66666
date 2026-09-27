@@ -2541,6 +2541,10 @@ const SCAN_HANDLERS = {
   stageProcessor: 'pages/scan/handlers/helpers/ScanStageProcessor.js',
   peripheral: 'pages/scan/handlers/helpers/ScanPeripheralHelper.js',
 };
+const ADMIN_EDIT_PROFILE_JS = 'pages/admin/misc/edit-profile/index.js';
+const ADMIN_EDIT_PROFILE_WXML = 'pages/admin/misc/edit-profile/index.wxml';
+const ADMIN_CHANGE_PWD_JS = 'pages/admin/misc/change-password/index.js';
+const ADMIN_CHANGE_PWD_WXML = 'pages/admin/misc/change-password/index.wxml';
 const ADMIN_INVITE_JS = 'pages/admin/misc/invite/index.js';
 const ADMIN_INVITE_WXML = 'pages/admin/misc/invite/index.wxml';
 const ADMIN_FEEDBACK_JS = 'pages/admin/misc/feedback/index.js';
@@ -2977,6 +2981,46 @@ function testI18nScanHome() {
   // ⑦ 导航标题
   eq('扫码主页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan');
   eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
+}
+
+/** 编辑资料页（D-601）—— 头像上传 + 字段展示 + 保存 */
+function testI18nAdminEditProfile() {
+  testPageI18n(ADMIN_EDIT_PROFILE_JS, ADMIN_EDIT_PROFILE_WXML, '编辑资料页');
+
+  const { page: zhP, wx: zhWx } = loadPage(ADMIN_EDIT_PROFILE_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(ADMIN_EDIT_PROFILE_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('en 更换头像提示', enP.data.t.tapChangeAvatar, 'Tap to change avatar');
+  eq('en 手机号标签', enP.data.t.phoneLabel, 'Phone');
+  eq('en 保存按钮复用 common.save', enP.data.t.save, 'Save');
+  eq('en 保存中', enP.data.t.saving, 'Saving...');
+  ok('en 管理员修改提示无中文', !CJK_RE.test(enP.data.t.nameRoleHint), enP.data.t.nameRoleHint);
+  eq('编辑资料页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Edit Profile');
+  eq('zh 编辑资料页导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '编辑资料');
+}
+
+/** 修改密码页（D-601）—— 三条强度校验 + 一致性校验 */
+function testI18nAdminChangePassword() {
+  testPageI18n(ADMIN_CHANGE_PWD_JS, ADMIN_CHANGE_PWD_WXML, '修改密码页');
+
+  const { page: zhP, wx: zhWx } = loadPage(ADMIN_CHANGE_PWD_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(ADMIN_CHANGE_PWD_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 原密码标签', zhP.data.t.oldPwdLabel, '原密码');
+  eq('en 原密码标签', enP.data.t.oldPwdLabel, 'Current password');
+  ok('en 密码安全提示无中文', !CJK_RE.test(enP.data.t.securityHint), enP.data.t.securityHint);
+  eq('en 新密码占位', enP.data.t.newPwdPlaceholder, 'New password (at least 6 characters)');
+  eq('修改密码页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Change Password');
+
+  // 三条强度校验必须各自独立成键（不能合并成一句，否则提示无法区分）
+  const jsSrc = fs.readFileSync(path.join(MP, ADMIN_CHANGE_PWD_JS), 'utf8');
+  ['pwdMinLength', 'pwdNeedLetter', 'pwdNeedDigit', 'pwdMismatch'].forEach((k) => {
+    ok(`护栏：密码校验键 ${k} 存在`, jsSrc.includes(`NS + '${k}'`), '三条强度校验必须独立');
+  });
 }
 
 /** 意见反馈页（D-600）—— 双 tab + 分类 picker + 列表状态 */
@@ -3919,6 +3963,8 @@ try {
   testI18nAdminAbout();
   testI18nAdminFeedback();
   testI18nAdminInvite();
+  testI18nAdminEditProfile();
+  testI18nAdminChangePassword();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

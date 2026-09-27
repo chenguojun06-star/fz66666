@@ -3472,6 +3472,40 @@
       "catSuggestion": "Feature suggestion",
       "catQuestion": "Usage question",
       "catOther": "Other"
+    },
+    "editProfile": {
+      "navTitle": "Edit Profile",
+      "uploading": "Uploading...",
+      "noChanges": "No changes",
+      "invalidPhone": "Please enter a valid phone number",
+      "tapChangeAvatar": "Tap to change avatar",
+      "nameLabel": "Name",
+      "usernameLabel": "Username",
+      "roleLabel": "Role",
+      "factoryLabel": "Factory",
+      "phoneLabel": "Phone",
+      "phonePlaceholder": "Enter phone number",
+      "nameRoleHint": "Contact an admin to change your name or role",
+      "saving": "Saving..."
+    },
+    "changePassword": {
+      "navTitle": "Change Password",
+      "securityHint": "For account security, change your password regularly and use a strong one containing letters and digits",
+      "oldPwdLabel": "Current password",
+      "oldPwdPlaceholder": "Enter current password",
+      "newPwdLabel": "New password",
+      "newPwdPlaceholder": "New password (at least 6 characters)",
+      "confirmPwdLabel": "Confirm new password",
+      "confirmPwdPlaceholder": "Enter the new password again",
+      "allFieldsRequired": "Please fill in all password fields",
+      "pwdMinLength": "New password must be at least 6 characters",
+      "pwdNeedLetter": "New password must contain letters",
+      "pwdNeedDigit": "New password must contain digits",
+      "pwdMismatch": "The two passwords do not match",
+      "pwdChanged": "Password changed successfully",
+      "changeFailed": "Change failed",
+      "submitting": "Submitting...",
+      "confirmBtn": "Confirm"
     }
   }
 }

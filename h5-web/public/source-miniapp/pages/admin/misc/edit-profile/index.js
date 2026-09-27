@@ -1,3 +1,7 @@
+const i18n = require('../../../../utils/i18n/index');
+
+const NS = 'mp.editProfile.';
+
 const api = require('../../../../utils/api');
 const { getAuthedImageUrl } = require('../../../../utils/fileUrl');
 
@@ -5,6 +9,7 @@ Page({
   data: {
     loading: true,
     saving: false,
+    t: {},
     name: '',
     username: '',
     phone: '',
@@ -15,6 +20,33 @@ Page({
     // 编辑字段
     editPhone: '',
     editAvatarUrl: '',
+  },
+
+  /** 应用语言 */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        tapChangeAvatar: t('tapChangeAvatar'),
+        nameLabel: t('nameLabel'),
+        usernameLabel: t('usernameLabel'),
+        roleLabel: t('roleLabel'),
+        factoryLabel: t('factoryLabel'),
+        phoneLabel: t('phoneLabel'),
+        phonePlaceholder: t('phonePlaceholder'),
+        nameRoleHint: t('nameRoleHint'),
+        save: i18n.t('common.save', lang),
+        saving: t('saving'),
+      },
+    });
+    wx.setNavigationBarTitle({ title: t('navTitle') });
+  },
+
+  onShow() {
+    this.applyLanguage(i18n.getLanguage());
   },
 
   onLoad: function () {
@@ -41,7 +73,7 @@ Page({
     }).catch(function (err) {
       console.warn('[edit-profile] loadProfile failed:', err);
       that.setData({ loading: false });
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      wx.showToast({ title: i18n.t('common.loadFailed', that._lang), icon: 'none' });
     });
   },
 
@@ -65,7 +97,7 @@ Page({
 
   _uploadAvatar: function (filePath) {
     const that = this;
-    wx.showLoading({ title: '上传中...' });
+    wx.showLoading({ title: i18n.t(NS + 'uploading', that._lang) });
 
     const auth_token = wx.getStorageSync('auth_token') || '';
     const baseUrl = require('../../../../config').getBaseUrl();
@@ -85,17 +117,17 @@ Page({
               editAvatarUrl: url,
               avatarDisplayUrl: getAuthedImageUrl(url),
             });
-            wx.showToast({ title: '上传成功', icon: 'success' });
+            wx.showToast({ title: i18n.t('common.uploadSuccess', that._lang), icon: 'success' });
           } else {
-            wx.showToast({ title: '上传失败', icon: 'none' });
+            wx.showToast({ title: i18n.t('common.uploadFailed', that._lang), icon: 'none' });
           }
         } catch (e) {
-          wx.showToast({ title: '上传失败', icon: 'none' });
+          wx.showToast({ title: i18n.t('common.uploadFailed', that._lang), icon: 'none' });
         }
       },
       fail: function () {
         wx.hideLoading();
-        wx.showToast({ title: '上传失败', icon: 'none' });
+        wx.showToast({ title: i18n.t('common.uploadFailed', that._lang), icon: 'none' });
       },
     });
   },
@@ -107,13 +139,13 @@ Page({
     const phoneChanged = editPhone !== phone;
     const avatarChanged = editAvatarUrl !== avatarUrl;
     if (!phoneChanged && !avatarChanged) {
-      wx.showToast({ title: '没有修改', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'noChanges', this._lang), icon: 'none' });
       return;
     }
 
     // 手机号格式校验
     if (editPhone && !/^1\d{10}$/.test(editPhone)) {
-      wx.showToast({ title: '请输入正确的手机号', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'invalidPhone', this._lang), icon: 'none' });
       return;
     }
 
@@ -135,7 +167,7 @@ Page({
         wx.setStorageSync('user_info', userInfo);
       } catch (e) { /* ignore */ }
 
-      wx.showToast({ title: '保存成功', icon: 'success' });
+      wx.showToast({ title: i18n.t('common.saveSuccess', this._lang), icon: 'success' });
 
       // 延迟返回上一页，让 toast 显示完
       setTimeout(function () {
@@ -144,7 +176,7 @@ Page({
     }).catch(function (err) {
       console.warn('[edit-profile] save failed:', err);
       that.setData({ saving: false });
-      wx.showToast({ title: '保存失败', icon: 'none' });
+      wx.showToast({ title: i18n.t('common.saveFailed', this._lang), icon: 'none' });
     });
   },
 });

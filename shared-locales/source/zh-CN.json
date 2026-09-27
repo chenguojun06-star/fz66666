@@ -3472,6 +3472,40 @@
       "catSuggestion": "功能建议",
       "catQuestion": "使用疑问",
       "catOther": "其他"
+    },
+    "editProfile": {
+      "navTitle": "编辑资料",
+      "uploading": "上传中...",
+      "noChanges": "没有修改",
+      "invalidPhone": "请输入正确的手机号",
+      "tapChangeAvatar": "点击更换头像",
+      "nameLabel": "姓名",
+      "usernameLabel": "用户名",
+      "roleLabel": "角色",
+      "factoryLabel": "所属工厂",
+      "phoneLabel": "手机号",
+      "phonePlaceholder": "请输入手机号",
+      "nameRoleHint": "姓名和角色需联系管理员修改",
+      "saving": "保存中..."
+    },
+    "changePassword": {
+      "navTitle": "修改密码",
+      "securityHint": "为了账户安全，请定期修改密码并使用包含字母与数字的高强度密码",
+      "oldPwdLabel": "原密码",
+      "oldPwdPlaceholder": "请输入原密码",
+      "newPwdLabel": "新密码",
+      "newPwdPlaceholder": "新密码（至少6位）",
+      "confirmPwdLabel": "确认新密码",
+      "confirmPwdPlaceholder": "请再次输入新密码",
+      "allFieldsRequired": "请填写所有密码字段",
+      "pwdMinLength": "新密码至少6位",
+      "pwdNeedLetter": "新密码需包含字母",
+      "pwdNeedDigit": "新密码需包含数字",
+      "pwdMismatch": "两次输入的密码不一致",
+      "pwdChanged": "密码修改成功",
+      "changeFailed": "修改失败",
+      "submitting": "提交中...",
+      "confirmBtn": "确认修改"
     }
   }
 }

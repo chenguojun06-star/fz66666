@@ -3479,6 +3479,40 @@ module.exports = {
         "catSuggestion": "功能建议",
         "catQuestion": "使用疑问",
         "catOther": "其他"
+      },
+      "editProfile": {
+        "navTitle": "编辑资料",
+        "uploading": "上传中...",
+        "noChanges": "没有修改",
+        "invalidPhone": "请输入正确的手机号",
+        "tapChangeAvatar": "点击更换头像",
+        "nameLabel": "姓名",
+        "usernameLabel": "用户名",
+        "roleLabel": "角色",
+        "factoryLabel": "所属工厂",
+        "phoneLabel": "手机号",
+        "phonePlaceholder": "请输入手机号",
+        "nameRoleHint": "姓名和角色需联系管理员修改",
+        "saving": "保存中..."
+      },
+      "changePassword": {
+        "navTitle": "修改密码",
+        "securityHint": "为了账户安全，请定期修改密码并使用包含字母与数字的高强度密码",
+        "oldPwdLabel": "原密码",
+        "oldPwdPlaceholder": "请输入原密码",
+        "newPwdLabel": "新密码",
+        "newPwdPlaceholder": "新密码（至少6位）",
+        "confirmPwdLabel": "确认新密码",
+        "confirmPwdPlaceholder": "请再次输入新密码",
+        "allFieldsRequired": "请填写所有密码字段",
+        "pwdMinLength": "新密码至少6位",
+        "pwdNeedLetter": "新密码需包含字母",
+        "pwdNeedDigit": "新密码需包含数字",
+        "pwdMismatch": "两次输入的密码不一致",
+        "pwdChanged": "密码修改成功",
+        "changeFailed": "修改失败",
+        "submitting": "提交中...",
+        "confirmBtn": "确认修改"
       }
     }
   },
@@ -6956,6 +6990,40 @@ module.exports = {
         "catSuggestion": "Feature suggestion",
         "catQuestion": "Usage question",
         "catOther": "Other"
+      },
+      "editProfile": {
+        "navTitle": "Edit Profile",
+        "uploading": "Uploading...",
+        "noChanges": "No changes",
+        "invalidPhone": "Please enter a valid phone number",
+        "tapChangeAvatar": "Tap to change avatar",
+        "nameLabel": "Name",
+        "usernameLabel": "Username",
+        "roleLabel": "Role",
+        "factoryLabel": "Factory",
+        "phoneLabel": "Phone",
+        "phonePlaceholder": "Enter phone number",
+        "nameRoleHint": "Contact an admin to change your name or role",
+        "saving": "Saving..."
+      },
+      "changePassword": {
+        "navTitle": "Change Password",
+        "securityHint": "For account security, change your password regularly and use a strong one containing letters and digits",
+        "oldPwdLabel": "Current password",
+        "oldPwdPlaceholder": "Enter current password",
+        "newPwdLabel": "New password",
+        "newPwdPlaceholder": "New password (at least 6 characters)",
+        "confirmPwdLabel": "Confirm new password",
+        "confirmPwdPlaceholder": "Enter the new password again",
+        "allFieldsRequired": "Please fill in all password fields",
+        "pwdMinLength": "New password must be at least 6 characters",
+        "pwdNeedLetter": "New password must contain letters",
+        "pwdNeedDigit": "New password must contain digits",
+        "pwdMismatch": "The two passwords do not match",
+        "pwdChanged": "Password changed successfully",
+        "changeFailed": "Change failed",
+        "submitting": "Submitting...",
+        "confirmBtn": "Confirm"
       }
     }
   },
@@ -10433,6 +10501,40 @@ module.exports = {
         "catSuggestion": "Đề xuất tính năng",
         "catQuestion": "Câu hỏi sử dụng",
         "catOther": "Khác"
+      },
+      "editProfile": {
+        "navTitle": "Sửa hồ sơ",
+        "uploading": "Đang tải lên...",
+        "noChanges": "Không có thay đổi",
+        "invalidPhone": "Vui lòng nhập số điện thoại hợp lệ",
+        "tapChangeAvatar": "Nhấn để đổi ảnh đại diện",
+        "nameLabel": "Họ tên",
+        "usernameLabel": "Tên đăng nhập",
+        "roleLabel": "Vai trò",
+        "factoryLabel": "Nhà máy",
+        "phoneLabel": "Số điện thoại",
+        "phonePlaceholder": "Nhập số điện thoại",
+        "nameRoleHint": "Liên hệ quản trị viên để đổi họ tên hoặc vai trò",
+        "saving": "Đang lưu..."
+      },
+      "changePassword": {
+        "navTitle": "Đổi mật khẩu",
+        "securityHint": "Vì an toàn tài khoản, hãy đổi mật khẩu định kỳ và dùng mật khẩu mạnh gồm chữ và số",
+        "oldPwdLabel": "Mật khẩu hiện tại",
+        "oldPwdPlaceholder": "Nhập mật khẩu hiện tại",
+        "newPwdLabel": "Mật khẩu mới",
+        "newPwdPlaceholder": "Mật khẩu mới (ít nhất 6 ký tự)",
+        "confirmPwdLabel": "Xác nhận mật khẩu mới",
+        "confirmPwdPlaceholder": "Nhập lại mật khẩu mới",
+        "allFieldsRequired": "Vui lòng điền tất cả các trường mật khẩu",
+        "pwdMinLength": "Mật khẩu mới phải có ít nhất 6 ký tự",
+        "pwdNeedLetter": "Mật khẩu mới phải chứa chữ cái",
+        "pwdNeedDigit": "Mật khẩu mới phải chứa chữ số",
+        "pwdMismatch": "Hai mật khẩu nhập không khớp",
+        "pwdChanged": "Đổi mật khẩu thành công",
+        "changeFailed": "Thay đổi thất bại",
+        "submitting": "Đang gửi...",
+        "confirmBtn": "Xác nhận thay đổi"
       }
     }
   },
@@ -13910,6 +14012,40 @@ module.exports = {
         "catSuggestion": "Feature suggestion",
         "catQuestion": "Usage question",
         "catOther": "Other"
+      },
+      "editProfile": {
+        "navTitle": "Edit Profile",
+        "uploading": "Uploading...",
+        "noChanges": "No changes",
+        "invalidPhone": "Please enter a valid phone number",
+        "tapChangeAvatar": "Tap to change avatar",
+        "nameLabel": "Name",
+        "usernameLabel": "Username",
+        "roleLabel": "Role",
+        "factoryLabel": "Factory",
+        "phoneLabel": "Phone",
+        "phonePlaceholder": "Enter phone number",
+        "nameRoleHint": "Contact an admin to change your name or role",
+        "saving": "Saving..."
+      },
+      "changePassword": {
+        "navTitle": "Change Password",
+        "securityHint": "For account security, change your password regularly and use a strong one containing letters and digits",
+        "oldPwdLabel": "Current password",
+        "oldPwdPlaceholder": "Enter current password",
+        "newPwdLabel": "New password",
+        "newPwdPlaceholder": "New password (at least 6 characters)",
+        "confirmPwdLabel": "Confirm new password",
+        "confirmPwdPlaceholder": "Enter the new password again",
+        "allFieldsRequired": "Please fill in all password fields",
+        "pwdMinLength": "New password must be at least 6 characters",
+        "pwdNeedLetter": "New password must contain letters",
+        "pwdNeedDigit": "New password must contain digits",
+        "pwdMismatch": "The two passwords do not match",
+        "pwdChanged": "Password changed successfully",
+        "changeFailed": "Change failed",
+        "submitting": "Submitting...",
+        "confirmBtn": "Confirm"
       }
     }
   }
