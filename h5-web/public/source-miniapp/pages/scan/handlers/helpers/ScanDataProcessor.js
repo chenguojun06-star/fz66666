@@ -1,5 +1,8 @@
 const { formatLocalDateTime } = require('./ScanPeripheralHelper');
 const { normalizeScanType } = require('./ScanModeResolver');
+const i18n = require('../../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
 
 /**
  * 扫码数据处理器
@@ -48,14 +51,14 @@ class ScanDataProcessor {
             if (Array.isArray(bomList) && bomList.length > 0) {
               materialPurchases = bomList.map((item, idx) => ({
                 id: item.id || `bom_${idx}`,
-                materialName: item.materialName || '未知物料',
+                materialName: item.materialName || i18n.t(NS + 'unknownMaterial'),
                 materialCode: item.materialCode || '',
                 materialType: item.materialType || '',
                 specifications: item.specification || '',
                 fabricComposition: item.fabricComposition || '',
                 fabricWeight: item.fabricWeight || '',
                 fabricWidth: item.fabricWidth || '',
-                unit: item.unit || '米',
+                unit: item.unit || i18n.t(NS + 'unitMeter'),
                 purchaseQuantity: item.usageAmount || 0,
                 arrivedQuantity: 0,
                 pendingQuantity: item.usageAmount || 0,
@@ -93,11 +96,15 @@ class ScanDataProcessor {
           progressStage: '采购',
           orderDetail: orderDetail,
         },
-        message: bomFallback ? '未找到采购单，已显示BOM物料信息' : '请确认面料采购明细',
+        message: bomFallback
+          ? i18n.t(NS + 'procurementNotFoundBom')
+          : i18n.t(NS + 'confirmFabricPurchase'),
       };
     } catch (e) {
       console.error('[ScanDataProcessor] 查询面料采购单失败:', e);
-      return this._errorResult('查询采购单失败: ' + (e.errMsg || e.message || '未知错误'));
+      return this._errorResult(i18n.tf(NS + 'procurementQueryFailedFmt', {
+        msg: e.errMsg || e.message || i18n.t(NS + 'unknownError'),
+      }));
     }
   }
 
@@ -119,7 +126,7 @@ class ScanDataProcessor {
 
       // 裁剪任务已完成 → 阻止进入确认页，走 _handleScanException 的 isCompleted 分支
       if (cuttingTask && ['completed', 'done'].includes(cuttingTask.status)) {
-        const err = new Error('裁剪任务已完成，无需重复操作');
+        const err = new Error(i18n.t(NS + 'cuttingDoneNoRepeat'));
         err.isCompleted = true;
         throw err;
       }
@@ -171,11 +178,15 @@ class ScanDataProcessor {
             allBundleProcesses: allBundleProcesses,
           },
         },
-        message: cuttingTask ? '请确认领取裁剪任务' : '暂无裁剪任务，请稍后再试',
+        message: cuttingTask
+          ? i18n.t(NS + 'confirmCuttingClaim')
+          : i18n.t(NS + 'noCuttingTaskRetry'),
       };
     } catch (e) {
       console.error('[ScanDataProcessor] 查询裁剪任务失败:', e);
-      return this._errorResult('查询裁剪任务失败: ' + (e.errMsg || e.message || '未知错误'));
+      return this._errorResult(i18n.tf(NS + 'cuttingQueryFailedFmt', {
+        msg: e.errMsg || e.message || i18n.t(NS + 'unknownError'),
+      }));
     }
   }
 
@@ -189,7 +200,7 @@ class ScanDataProcessor {
    */
   async handleOrderWithItems(parsedData, orderDetail, detectStageFn, scanMode) {
     // 预判工序
-    let nextStage = '未知';
+    let nextStage = i18n.t(NS + 'unknownWord');
     let stageCompleted = false;
     try {
       const stageRes = await detectStageFn(scanMode, parsedData, orderDetail);
@@ -208,7 +219,7 @@ class ScanDataProcessor {
 
     // 所有工序已完成 → 阻止弹窗
     if (stageCompleted) {
-      const err = new Error('进度节点已完成');
+      const err = new Error(i18n.t(NS + 'stageDoneDefault'));
       err.isCompleted = true;
       throw err;
     }
@@ -246,7 +257,7 @@ class ScanDataProcessor {
         materialPurchases: materialPurchases,
         orderDetail: orderDetail,
       },
-      message: '请确认扫码明细',
+      message: i18n.t(NS + 'confirmScanDetail'),
     };
   }
 
@@ -277,7 +288,9 @@ class ScanDataProcessor {
 
     // 如果还是没有数量，需要用户输入
     if (!parsedData.quantity) {
-      const err = new Error(`请输入 ${parsedData.color}/${parsedData.size} 的数量`);
+      const err = new Error(i18n.tf(NS + 'inputQtyForSkuFmt', {
+        sku: `${parsedData.color}/${parsedData.size}`,
+      }));
       err.needInput = true;
       throw err;
     }
@@ -302,7 +315,7 @@ class ScanDataProcessor {
     if (orderQuantity && orderQuantity > 0) {
       parsedData.quantity = Number(orderQuantity);
     } else {
-      const err = new Error('请输入数量');
+      const err = new Error(i18n.t(NS + 'inputQtyTitle'));
       err.needInput = true;
       throw err;
     }

@@ -3058,7 +3058,7 @@ function testI18nScanLogic() {
   };
   const zhSrc = JSON.parse(fs.readFileSync(path.join(ROOT, 'shared-locales/source/zh-CN.json'), 'utf8'));
   const logicKeys = flatten(zhSrc.mp && zhSrc.mp.scanLogic, '', []);
-  ok('scanLogic 键数符合预期', logicKeys.length >= 28, `keys=${logicKeys.length}`);
+  ok('scanLogic 键数符合预期', logicKeys.length >= 60, `keys=${logicKeys.length}`);
 
   for (const lang of LANGS) {
     const file = JSON.parse(fs.readFileSync(path.join(ROOT, `shared-locales/source/${lang}.json`), 'utf8'));

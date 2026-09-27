@@ -11,6 +11,9 @@ const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const scanValidator = require('./scanValidator');
 const isRecentDuplicate = scanValidator.isRecentDuplicate;
 const markRecent = scanValidator.markRecent;
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
 
 module.exports = {
   methods: {
@@ -31,14 +34,14 @@ module.exports = {
     onScan: function() {
       if (!this.data.scanEnabled || this.data.loading) return;
       const currentScanType = this.data.scanType || 'auto';
-      if (currentScanType === 'warehouse' && !this.data.warehouse) { toast.error('请先选择目标仓库'); return; }
+      if (currentScanType === 'warehouse' && !this.data.warehouse) { toast.error(i18n.t(NS + 'pleaseSelectWarehouse')); return; }
       const self = this;
       wx.scanCode({
         onlyFromCamera: true,
         scanType: ['qrCode', 'barCode'],
         success: function(res) { self.processScanCode(res.result, currentScanType); },
         fail: function(err) {
-          if (err.errMsg && err.errMsg.indexOf('cancel') === -1) toast.error('扫码失败');
+          if (err.errMsg && err.errMsg.indexOf('cancel') === -1) toast.error(i18n.t(NS + 'scanFailed'));
         },
       });
     },
@@ -47,7 +50,7 @@ module.exports = {
       console.log('[DEBUG] processScanCode 入口: codeStr=', codeStr, 'scanType=', scanType);
       if (!codeStr) return;
       const self = this;
-      if (isRecentDuplicate(codeStr)) { toast.info('扫码太快啦'); return; }
+      if (isRecentDuplicate(codeStr)) { toast.info(i18n.t(NS + 'scanTooFast')); return; }
       this.setData({ loading: true });
       if (/^MR\d{13}$/.test(codeStr)) {
         this.setData({ loading: false });
@@ -92,13 +95,15 @@ module.exports = {
         if (!this._needInputRetryCount) this._needInputRetryCount = 0;
         this._needInputRetryCount++;
         if (this._needInputRetryCount > 3) {
-          toast.error('多次输入无效，请检查订单数据后重试');
+          toast.error(i18n.t(NS + 'tooManyInput'));
           this.setData({ loading: false }); this._needInputRetryCount = 0; return;
         }
         const self = this;
         wx.showModal({
-          title: '请输入数量', content: '无法自动获取订单数量，请输入本次完成数量',
-          editable: true, placeholderText: '例如: 100',
+          title: i18n.t(NS + 'inputQtyTitle'),
+          content: i18n.t(NS + 'inputQtyContent'),
+          editable: true,
+          placeholderText: i18n.t(NS + 'inputQtyPh'),
           success: function(res) {
             if (res.confirm && res.content) { self._quantity = res.content; self.processScanCode(codeStr, scanType); }
           },
@@ -111,24 +116,25 @@ module.exports = {
         return;
       }
       if (result && result.success === false) {
-        const msg = result.message || result.errMsg || '扫码失败，请重试';
+        const msg = result.message || result.errMsg || i18n.t(NS + 'scanFailedRetry');
         toast.error(msg);
         this.handleScanError({ message: msg, orderNo: result.orderNo, processCode: result.processCode, processName: result.processName, quantity: result.quantity });
         return;
       }
-      toast.error('扫码结果异常，请重试');
-      this.handleScanError({ message: '扫码结果异常，请重试' });
+      toast.error(i18n.t(NS + 'scanResultAbnormal'));
+      this.handleScanError({ message: i18n.t(NS + 'scanResultAbnormal') });
     },
 
     _handleScanException: function(e) {
       if (e.needWarehousing && e.warehousingData) { this.showQualityModal(e.warehousingData); this.setData({ loading: false }); return; }
       if (e.isCompleted) {
-        const msg = e.message || '进度节点已完成';
-        if (msg.indexOf('物料均已领取') >= 0) toast.info('物料已全部领取，请扫描订单二维码进入裁剪工序');
+        const msg = e.message || i18n.t(NS + 'stageDoneDefault');
+        // ⚠️ '物料均已领取' 是**匹配异常报文**用的特征串，不是显示文案，保留中文
+        if (msg.indexOf('物料均已领取') >= 0) toast.info(i18n.t(NS + 'allMaterialClaimedToast'));
         else toast.success(msg);
         this.setData({
-          lastResult: { success: true, message: msg, displayTime: new Date().toLocaleTimeString(), statusText: '已完成', statusClass: 'success' },
-          lastLocalScanRecord: { orderNo: e.orderNo || '', processName: '全部工序已完成', processCode: '', quantity: 0, success: true, time: new Date().toLocaleTimeString() },
+          lastResult: { success: true, message: msg, displayTime: new Date().toLocaleTimeString(), statusText: i18n.t(NS + 'statusCompleted'), statusClass: 'success' },
+          lastLocalScanRecord: { orderNo: e.orderNo || '', processName: i18n.t(NS + 'allProcessesDone'), processCode: '', quantity: 0, success: true, time: new Date().toLocaleTimeString() },
           loading: false,
         });
         wx.pageScrollTo({ scrollTop: 0, duration: 300 });
@@ -136,16 +142,16 @@ module.exports = {
         return;
       }
       if (e.isOfflineQueued) {
-        wx.showToast({ title: '已离线缓存，联网后自动同步', icon: 'none', duration: 2500 });
+        wx.showToast({ title: i18n.t(NS + 'offlineQueued'), icon: 'none', duration: 2500 });
         this.setData({
-          lastResult: { success: false, queued: true, message: '无网络，已离线缓存，联网后自动上传', displayTime: new Date().toLocaleTimeString(), statusText: '已缓存', statusClass: 'queued', errorAction: null },
+          lastResult: { success: false, queued: true, message: i18n.t(NS + 'offlineQueuedNoNetwork'), displayTime: new Date().toLocaleTimeString(), statusText: i18n.t(NS + 'statusCached'), statusClass: 'queued', errorAction: null },
           offlinePendingCount: e.offlineCount || 0,
         });
         wx.pageScrollTo({ scrollTop: 0, duration: 300 });
         this._startResultDismissTimer();
         return;
       }
-      const errorMsg = e.errMsg || e.message || '系统异常';
+      const errorMsg = e.errMsg || e.message || i18n.t(NS + 'systemError');
       toast.error(errorMsg);
       this.handleScanError({ message: errorMsg });
       const errorHandler = require('../../../utils/errorHandler');

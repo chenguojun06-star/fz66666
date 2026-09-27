@@ -22,6 +22,9 @@
  */
 
 const shared = require('../../../shared/stageDetection');
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
 const inferScanType = shared.inferScanType;
 const extractQualityMeta = shared.extractQualityMeta;
 const SCAN_TYPE_RULES = shared.SCAN_TYPE_RULES;
@@ -61,7 +64,7 @@ class StageDetector {
    */
   async loadProcessConfig(orderNo) {
     if (!orderNo) {
-      throw new Error('订单号为空，无法加载工序配置');
+      throw new Error(i18n.t(NS + 'orderNoEmptyLoadConfig'));
     }
 
     // 检查缓存（带过期时间，确保PC端修改后小程序能及时同步）
@@ -72,7 +75,7 @@ class StageDetector {
 
     const config = await this.api.production.getProcessConfig(orderNo);
     if (!config || !Array.isArray(config) || config.length === 0) {
-      throw new Error(`订单[${orderNo}]未配置工序模板，请先在PC端设置工序单价`);
+      throw new Error(i18n.tf(NS + 'orderNoProcessTemplateFmt', { orderNo }));
     }
 
     // 按 sortOrder 排序，并为每个工序推断 scanType
@@ -142,7 +145,7 @@ class StageDetector {
         processName: lastProcess,
         progressStage: lastProcess,
         scanType: this._inferScanType(lastProcess),
-        hint: '进度节点已完成',
+        hint: i18n.t(NS + 'stageDoneDefault'),
         isCompleted: true,
       };
     }
@@ -173,7 +176,7 @@ class StageDetector {
         progressStage: first.progressStage || first.processName,
         scanType: first.scanType,
         unitPrice: Number(first.price || 0),
-        hint: `订单开始: ${first.processName}`,
+        hint: i18n.tf(NS + 'orderStartFmt', { processName: first.processName }),
         isCompleted: false,
       };
     }
@@ -185,7 +188,7 @@ class StageDetector {
         processName: last ? last.processName : currentProgress,
         progressStage: last ? (last.progressStage || last.processName) : currentProgress,
         scanType: last ? last.scanType : this._inferScanType(currentProgress),
-        hint: '进度节点已完成',
+        hint: i18n.t(NS + 'stageDoneDefault'),
         isCompleted: true,
       };
     }
@@ -197,7 +200,10 @@ class StageDetector {
 
     if (currentIndex < 0) {
       // 历史 bug：此处曾软兼容返回推断工序，导致当工序名与配置不匹配时误展示错误工序页面。
-      throw new Error(`当前工序「${currentProgress}」不在订单[${orderNo}]的工序配置中，请在PC端检查工序模板配置`);
+      throw new Error(i18n.tf(NS + 'processNotInTemplateFmt', {
+        process: currentProgress,
+        orderNo,
+      }));
     }
 
     // [OK] 修复：后端 currentProcessName 语义 = "第一个尚未完成的工序"
@@ -209,7 +215,7 @@ class StageDetector {
       scanType: current.scanType,
       unitPrice: Number(current.price || 0),
       hint: currentIndex >= config.length - 1
-        ? `${current.processName}（最后一道工序）`
+        ? i18n.tf(NS + 'lastProcessSuffixFmt', { processName: current.processName })
         : `${current.processName} (${currentIndex + 1}/${config.length})`,
       isCompleted: false,
     };
@@ -234,7 +240,7 @@ class StageDetector {
   async detectByBundle(orderNo, bundleNo, bundleQuantity, _orderDetail) {
     // 防护：订单号为空时不应调用菲号检测
     if (!orderNo) {
-      throw new Error('订单号为空，无法进行菲号工序检测');
+      throw new Error(i18n.t(NS + 'orderNoEmptyBundleDetect'));
     }
 
     // === 步骤1：获取菲号准确数量 ===
@@ -253,7 +259,7 @@ class StageDetector {
     );
 
     if (bundleProcesses.length === 0) {
-      throw new Error(`订单[${orderNo}]没有可扫码的工序配置`);
+      throw new Error(i18n.tf(NS + 'orderNoNoProcessFmt', { orderNo }));
     }
 
     // 区分入库工序和计数工序
@@ -319,7 +325,11 @@ class StageDetector {
               progressStage: nextNext.progressStage || nextNext.processName,
               scanType: nextNext.scanType,
               hint: countableProcesses.length > 1
-                ? `${nextNext.processName} (已完成${newDoneCount}/${countableProcesses.length}道工序)`
+                ? i18n.tf(NS + 'processDoneCountFmt', {
+                  processName: nextNext.processName,
+                  done: newDoneCount,
+                  total: countableProcesses.length,
+                })
                 : nextNext.processName,
               isDuplicate: false,
               quantity: accurateQuantity,
@@ -344,7 +354,10 @@ class StageDetector {
                   progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
                   scanType: 'warehouse',
                   hint: qualityMeta.isUnqualified
-                    ? `${_warehouseProcess.processName}（合格 ${qualifiedPending}件）`
+                    ? i18n.tf(NS + 'qualifiedPendingFmt', {
+                      processName: _warehouseProcess.processName,
+                      count: qualifiedPending,
+                    })
                     : _warehouseProcess.processName,
                   isDuplicate: false,
                   quantity: qualifiedPending,
@@ -361,7 +374,7 @@ class StageDetector {
                   processName: _warehouseProcess.processName,
                   progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
                   scanType: 'warehouse',
-                  hint: `次品入库 ${defects}件`,
+                  hint: i18n.tf(NS + 'defectInboundFmt', { count: defects }),
                   isDuplicate: false,
                   quantity: defects,
                   unitPrice: Number(_warehouseProcess.price || 0),
@@ -393,7 +406,7 @@ class StageDetector {
             processName: nextProcess.processName,
             progressStage: nextProcess.progressStage || nextProcess.processName,
             scanType: nextProcess.scanType,
-            hint: '进度节点已完成',
+            hint: i18n.t(NS + 'stageDoneDefault'),
             isDuplicate: false,
             quantity: accurateQuantity,
             isCompleted: true,
@@ -410,7 +423,11 @@ class StageDetector {
         scanType: nextProcess.scanType,
         hint:
           countableProcesses.length > 1
-            ? `${nextProcess.processName} (已完成${doneCount}/${countableProcesses.length}道工序)`
+            ? i18n.tf(NS + 'processDoneCountFmt', {
+              processName: nextProcess.processName,
+              done: doneCount,
+              total: countableProcesses.length,
+            })
             : nextProcess.processName,
         isDuplicate: false,
         quantity: accurateQuantity,
@@ -437,7 +454,10 @@ class StageDetector {
             progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
             scanType: 'warehouse',
             hint: qualityMeta.isUnqualified
-              ? `${_warehouseProcess.processName}（合格 ${qualifiedPending}件）`
+              ? i18n.tf(NS + 'qualifiedPendingFmt', {
+                processName: _warehouseProcess.processName,
+                count: qualifiedPending,
+              })
               : _warehouseProcess.processName,
             isDuplicate: false,
             quantity: qualifiedPending,
@@ -454,7 +474,7 @@ class StageDetector {
             processName: _warehouseProcess.processName,
             progressStage: _warehouseProcess.progressStage || _warehouseProcess.processName,
             scanType: 'warehouse',
-            hint: `次品入库 ${defects}件`,
+            hint: i18n.tf(NS + 'defectInboundFmt', { count: defects }),
             isDuplicate: false,
             quantity: defects,
             unitPrice: Number(_warehouseProcess.price || 0),
@@ -489,7 +509,7 @@ class StageDetector {
       processName: lastProcess.processName,
       progressStage: lastProcess.progressStage || lastProcess.processName,
       scanType: lastProcess.scanType,
-      hint: '进度节点已完成',
+      hint: i18n.t(NS + 'stageDoneDefault'),
       isDuplicate: false,
       quantity: accurateQuantity,
       isCompleted: true,
