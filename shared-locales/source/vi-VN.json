@@ -1087,7 +1087,9 @@
       "loginExpired": "Phiên hết hạn, vui lòng đăng nhập lại",
       "noPermission": "Không có quyền thao tác",
       "duplicateSubmit": "Đã gửi rồi, không gửi lại",
-      "styleNoLabel": "Mã kiểu"
+      "styleNoLabel": "Mã kiểu",
+      "stitch": "Mũi may",
+      "watchOut": "Lưu ý"
     },
     "scanConfirm": {
       "navTitle": "Xác nhận quét",
@@ -3227,6 +3229,36 @@
       "stdTimePh2": "VD: 60",
       "pricePh2": "VD: 0.50",
       "descPh2": "Mô tả (không BB)"
+    },
+    "scanLogic": {
+      "stockQueryTitle": "Tra cứu tồn kho",
+      "stockQueryContentFmt": "Mã hàng: {code}\r\nTồn kho hiện tại: {stock}",
+      "stockAdjust": "Điều chỉnh tồn kho",
+      "queryFailedFmt": "Tra cứu thất bại: {msg}",
+      "unknownError": "Lỗi không xác định",
+      "stockAdjustContent": "Nhập số lượng điều chỉnh (số dương tăng, số âm giảm)",
+      "stockAdjustPh": "VD: 10 hoặc -5",
+      "invalidQty": "Số lượng không hợp lệ",
+      "updating": "Đang cập nhật...",
+      "stockUpdateSuccess": "Cập nhật tồn kho thành công",
+      "updateFailedFmt": "Cập nhật thất bại: {msg}",
+      "undoNoRecord": "Hoàn tác thất bại: không tìm thấy bản ghi quét",
+      "undoWarehouseBlocked": "Bản ghi nhập kho không thể hoàn tác trực tiếp; vui lòng xuất kho trước rồi nhập lại",
+      "undoing": "Đang hoàn tác...",
+      "undoSuccess": "Đã hoàn tác",
+      "undoFailedFmt": "Hoàn tác thất bại: {msg}",
+      "scanSuccessDefault": "Quét thành công",
+      "scanFailedRetry": "Quét thất bại, vui lòng thử lại",
+      "tooManyInput": "Nhập không hợp lệ nhiều lần, vui lòng kiểm tra dữ liệu đơn hàng rồi thử lại",
+      "inputQtyTitle": "Nhập số lượng",
+      "inputQtyContent": "Không thể tự lấy số lượng đơn hàng, vui lòng nhập số lượng đã hoàn thành",
+      "inputQtyPh": "VD: 100",
+      "notRecognized": "Không nhận diện được nội dung",
+      "scanTooFast": "Quét quá nhanh",
+      "stageDoneDefault": "Nút tiến độ này đã hoàn thành",
+      "allMaterialClaimedToast": "Vật liệu đã được nhận hết, vui lòng quét mã QR đơn hàng để vào công đoạn cắt",
+      "offlineQueued": "Đã lưu ngoại tuyến, sẽ tự đồng bộ khi có mạng",
+      "systemErrorRetry": "Lỗi hệ thống, vui lòng thử lại"
     }
   }
 }

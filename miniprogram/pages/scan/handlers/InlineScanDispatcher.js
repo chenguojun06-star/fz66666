@@ -23,6 +23,9 @@ const QualityHandler = require('./QualityHandler');
 const { toast, safeNavigate } = require('../../../utils/uiHelper');
 const { getStorageValue, getUserInfo } = require('../../../utils/storage');
 const scanValidator = require('../mixins/scanValidator');
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
 
 const isRecentDuplicate = scanValidator.isRecentDuplicate;
 const markRecent = scanValidator.markRecent;
@@ -82,7 +85,7 @@ function _dispatchResult(result, code) {
 
   // 直接扫码成功（无需确认）
   if (result && result.success) {
-    const msg = result.message || '扫码成功';
+    const msg = result.message || i18n.t(NS + 'scanSuccessDefault');
     toast.success(msg);
     const { triggerDataRefresh } = require('../../../utils/eventBus');
     try { triggerDataRefresh('scan'); } catch (_) { /* 忽略 */ }
@@ -91,7 +94,7 @@ function _dispatchResult(result, code) {
 
   // 扫码失败
   if (result && result.success === false) {
-    toast.error(result.message || '扫码失败，请重试');
+    toast.error(result.message || i18n.t(NS + 'scanFailedRetry'));
     return true;
   }
 
@@ -107,15 +110,15 @@ function _dispatchResult(result, code) {
  */
 function _handleNeedInput(code, input, retryCount) {
   if (retryCount >= 3) {
-    toast.error('多次输入无效，请检查订单数据后重试');
+    toast.error(i18n.t(NS + 'tooManyInput'));
     return Promise.resolve(true);
   }
   return new Promise(function (resolve) {
     wx.showModal({
-      title: '请输入数量',
-      content: '无法自动获取订单数量，请输入本次完成数量',
+      title: i18n.t(NS + 'inputQtyTitle'),
+      content: i18n.t(NS + 'inputQtyContent'),
       editable: true,
-      placeholderText: '例如: 100',
+      placeholderText: i18n.t(NS + 'inputQtyPh'),
       success: function (res) {
         if (res.confirm && res.content) {
           const next = Object.assign({}, input, { quantity: Number(res.content) });
@@ -163,11 +166,11 @@ async function _runScan(code, input, retryCount) {
 function dispatchInlineScanCode(code, options) {
   const rawCode = String(code || '').trim();
   if (!rawCode) {
-    toast('未识别到内容');
+    toast(i18n.t(NS + 'notRecognized'));
     return Promise.resolve();
   }
   if (isRecentDuplicate(rawCode)) {
-    toast.info('扫码太快啦');
+    toast.info(i18n.t(NS + 'scanTooFast'));
     return Promise.resolve();
   }
   if (_dispatchBusy) {
@@ -185,19 +188,21 @@ function dispatchInlineScanCode(code, options) {
         return;
       }
       if (e && e.isCompleted) {
-        const msg = e.message || '进度节点已完成';
+        // ⚠️ '物料均已领取' 是**匹配用的异常报文特征**（后端/异常里带的就是这句中文），
+        //    不是显示文案 —— 翻译了这里就永远匹配不上，必须保留。
+        const msg = e.message || i18n.t(NS + 'stageDoneDefault');
         if (String(msg).indexOf('物料均已领取') >= 0) {
-          toast.info('物料已全部领取，请扫描订单二维码进入裁剪工序');
+          toast.info(i18n.t(NS + 'allMaterialClaimedToast'));
         } else {
           toast.success(msg);
         }
         return;
       }
       if (e && e.isOfflineQueued) {
-        toast('已离线缓存，联网后自动同步', 2500);
+        toast(i18n.t(NS + 'offlineQueued'), 2500);
         return;
       }
-      const msg = (e && (e.errMsg || e.message)) || '系统异常，请重试';
+      const msg = (e && (e.errMsg || e.message)) || i18n.t(NS + 'systemErrorRetry');
       toast.error(msg);
     })
     .finally(function () {

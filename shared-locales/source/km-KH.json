@@ -1087,7 +1087,9 @@
       "loginExpired": "Session expired, please log in again",
       "noPermission": "No permission for this operation",
       "duplicateSubmit": "Already submitted, no duplicate actions",
-      "styleNoLabel": "Style No."
+      "styleNoLabel": "Style No.",
+      "stitch": "Stitch",
+      "watchOut": "Precautions"
     },
     "scanConfirm": {
       "navTitle": "Scan Confirm",
@@ -3227,6 +3229,36 @@
       "stdTimePh2": "e.g. 60",
       "pricePh2": "e.g. 0.50",
       "descPh2": "Description"
+    },
+    "scanLogic": {
+      "stockQueryTitle": "Stock query",
+      "stockQueryContentFmt": "SKU code: {code}\r\nCurrent stock: {stock}",
+      "stockAdjust": "Adjust stock",
+      "queryFailedFmt": "Query failed: {msg}",
+      "unknownError": "Unknown error",
+      "stockAdjustContent": "Enter the adjustment quantity (positive to add, negative to reduce)",
+      "stockAdjustPh": "e.g. 10 or -5",
+      "invalidQty": "Invalid quantity",
+      "updating": "Updating...",
+      "stockUpdateSuccess": "Stock updated",
+      "updateFailedFmt": "Update failed: {msg}",
+      "undoNoRecord": "Undo failed: scan record not found",
+      "undoWarehouseBlocked": "Inbound records cannot be undone directly; please do an outbound first, then inbound again",
+      "undoing": "Undoing...",
+      "undoSuccess": "Undone",
+      "undoFailedFmt": "Undo failed: {msg}",
+      "scanSuccessDefault": "Scan successful",
+      "scanFailedRetry": "Scan failed, please retry",
+      "tooManyInput": "Too many invalid inputs, please check the order data and retry",
+      "inputQtyTitle": "Enter quantity",
+      "inputQtyContent": "Cannot get the order quantity automatically, please enter the completed quantity",
+      "inputQtyPh": "e.g. 100",
+      "notRecognized": "Nothing recognized",
+      "scanTooFast": "Scanning too fast",
+      "stageDoneDefault": "This progress node is already done",
+      "allMaterialClaimedToast": "All materials claimed, please scan the order QR code to enter the cutting process",
+      "offlineQueued": "Cached offline, will sync automatically once online",
+      "systemErrorRetry": "System error, please retry"
     }
   }
 }

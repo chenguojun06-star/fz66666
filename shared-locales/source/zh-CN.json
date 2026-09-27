@@ -1087,7 +1087,9 @@
       "loginExpired": "登录已过期，请重新登录",
       "noPermission": "没有操作权限",
       "duplicateSubmit": "该记录已提交，请勿重复操作",
-      "styleNoLabel": "款号"
+      "styleNoLabel": "款号",
+      "stitch": "针法",
+      "watchOut": "注意事项"
     },
     "scanConfirm": {
       "navTitle": "扫码确认",
@@ -3227,6 +3229,36 @@
       "stdTimePh2": "如：60",
       "pricePh2": "如：0.50",
       "descPh2": "工序描述（可选）"
+    },
+    "scanLogic": {
+      "stockQueryTitle": "库存查询",
+      "stockQueryContentFmt": "商品编码: {code}\r\n当前库存: {stock}",
+      "stockAdjust": "调整库存",
+      "queryFailedFmt": "查询失败: {msg}",
+      "unknownError": "未知错误",
+      "stockAdjustContent": "请输入调整数量 (正数增加，负数减少)",
+      "stockAdjustPh": "例如: 10 或 -5",
+      "invalidQty": "无效数量",
+      "updating": "更新中...",
+      "stockUpdateSuccess": "库存更新成功",
+      "updateFailedFmt": "更新失败: {msg}",
+      "undoNoRecord": "撤销失败：未找到扫码记录信息",
+      "undoWarehouseBlocked": "入库记录不支持直接撤回，请先走出库，再重新入库",
+      "undoing": "正在撤销...",
+      "undoSuccess": "已撤销",
+      "undoFailedFmt": "撤销失败: {msg}",
+      "scanSuccessDefault": "扫码成功",
+      "scanFailedRetry": "扫码失败，请重试",
+      "tooManyInput": "多次输入无效，请检查订单数据后重试",
+      "inputQtyTitle": "请输入数量",
+      "inputQtyContent": "无法自动获取订单数量，请输入本次完成数量",
+      "inputQtyPh": "例如: 100",
+      "notRecognized": "未识别到内容",
+      "scanTooFast": "扫码太快啦",
+      "stageDoneDefault": "进度节点已完成",
+      "allMaterialClaimedToast": "物料已全部领取，请扫描订单二维码进入裁剪工序",
+      "offlineQueued": "已离线缓存，联网后自动同步",
+      "systemErrorRetry": "系统异常，请重试"
     }
   }
 }

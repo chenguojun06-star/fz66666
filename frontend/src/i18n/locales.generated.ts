@@ -1094,7 +1094,9 @@ export const LOCALES = {
         "loginExpired": "登录已过期，请重新登录",
         "noPermission": "没有操作权限",
         "duplicateSubmit": "该记录已提交，请勿重复操作",
-        "styleNoLabel": "款号"
+        "styleNoLabel": "款号",
+        "stitch": "针法",
+        "watchOut": "注意事项"
       },
       "scanConfirm": {
         "navTitle": "扫码确认",
@@ -3234,6 +3236,36 @@ export const LOCALES = {
         "stdTimePh2": "如：60",
         "pricePh2": "如：0.50",
         "descPh2": "工序描述（可选）"
+      },
+      "scanLogic": {
+        "stockQueryTitle": "库存查询",
+        "stockQueryContentFmt": "商品编码: {code}\r\n当前库存: {stock}",
+        "stockAdjust": "调整库存",
+        "queryFailedFmt": "查询失败: {msg}",
+        "unknownError": "未知错误",
+        "stockAdjustContent": "请输入调整数量 (正数增加，负数减少)",
+        "stockAdjustPh": "例如: 10 或 -5",
+        "invalidQty": "无效数量",
+        "updating": "更新中...",
+        "stockUpdateSuccess": "库存更新成功",
+        "updateFailedFmt": "更新失败: {msg}",
+        "undoNoRecord": "撤销失败：未找到扫码记录信息",
+        "undoWarehouseBlocked": "入库记录不支持直接撤回，请先走出库，再重新入库",
+        "undoing": "正在撤销...",
+        "undoSuccess": "已撤销",
+        "undoFailedFmt": "撤销失败: {msg}",
+        "scanSuccessDefault": "扫码成功",
+        "scanFailedRetry": "扫码失败，请重试",
+        "tooManyInput": "多次输入无效，请检查订单数据后重试",
+        "inputQtyTitle": "请输入数量",
+        "inputQtyContent": "无法自动获取订单数量，请输入本次完成数量",
+        "inputQtyPh": "例如: 100",
+        "notRecognized": "未识别到内容",
+        "scanTooFast": "扫码太快啦",
+        "stageDoneDefault": "进度节点已完成",
+        "allMaterialClaimedToast": "物料已全部领取，请扫描订单二维码进入裁剪工序",
+        "offlineQueued": "已离线缓存，联网后自动同步",
+        "systemErrorRetry": "系统异常，请重试"
       }
     }
   },
@@ -4326,7 +4358,9 @@ export const LOCALES = {
         "loginExpired": "Session expired, please log in again",
         "noPermission": "No permission for this operation",
         "duplicateSubmit": "Already submitted, no duplicate actions",
-        "styleNoLabel": "Style No."
+        "styleNoLabel": "Style No.",
+        "stitch": "Stitch",
+        "watchOut": "Precautions"
       },
       "scanConfirm": {
         "navTitle": "Scan Confirm",
@@ -6466,6 +6500,36 @@ export const LOCALES = {
         "stdTimePh2": "e.g. 60",
         "pricePh2": "e.g. 0.50",
         "descPh2": "Description (optional)"
+      },
+      "scanLogic": {
+        "stockQueryTitle": "Stock query",
+        "stockQueryContentFmt": "SKU code: {code}\r\nCurrent stock: {stock}",
+        "stockAdjust": "Adjust stock",
+        "queryFailedFmt": "Query failed: {msg}",
+        "unknownError": "Unknown error",
+        "stockAdjustContent": "Enter the adjustment quantity (positive to add, negative to reduce)",
+        "stockAdjustPh": "e.g. 10 or -5",
+        "invalidQty": "Invalid quantity",
+        "updating": "Updating...",
+        "stockUpdateSuccess": "Stock updated",
+        "updateFailedFmt": "Update failed: {msg}",
+        "undoNoRecord": "Undo failed: scan record not found",
+        "undoWarehouseBlocked": "Inbound records cannot be undone directly; please do an outbound first, then inbound again",
+        "undoing": "Undoing...",
+        "undoSuccess": "Undone",
+        "undoFailedFmt": "Undo failed: {msg}",
+        "scanSuccessDefault": "Scan successful",
+        "scanFailedRetry": "Scan failed, please retry",
+        "tooManyInput": "Too many invalid inputs, please check the order data and retry",
+        "inputQtyTitle": "Enter quantity",
+        "inputQtyContent": "Cannot get the order quantity automatically, please enter the completed quantity",
+        "inputQtyPh": "e.g. 100",
+        "notRecognized": "Nothing recognized",
+        "scanTooFast": "Scanning too fast",
+        "stageDoneDefault": "This progress node is already done",
+        "allMaterialClaimedToast": "All materials claimed, please scan the order QR code to enter the cutting process",
+        "offlineQueued": "Cached offline, will sync automatically once online",
+        "systemErrorRetry": "System error, please retry"
       }
     }
   },
@@ -7558,7 +7622,9 @@ export const LOCALES = {
         "loginExpired": "Phiên hết hạn, vui lòng đăng nhập lại",
         "noPermission": "Không có quyền thao tác",
         "duplicateSubmit": "Đã gửi rồi, không gửi lại",
-        "styleNoLabel": "Mã kiểu"
+        "styleNoLabel": "Mã kiểu",
+        "stitch": "Mũi may",
+        "watchOut": "Lưu ý"
       },
       "scanConfirm": {
         "navTitle": "Xác nhận quét",
@@ -9698,6 +9764,36 @@ export const LOCALES = {
         "stdTimePh2": "VD: 60",
         "pricePh2": "VD: 0.50",
         "descPh2": "Mô tả (không BB)"
+      },
+      "scanLogic": {
+        "stockQueryTitle": "Tra cứu tồn kho",
+        "stockQueryContentFmt": "Mã hàng: {code}\r\nTồn kho hiện tại: {stock}",
+        "stockAdjust": "Điều chỉnh tồn kho",
+        "queryFailedFmt": "Tra cứu thất bại: {msg}",
+        "unknownError": "Lỗi không xác định",
+        "stockAdjustContent": "Nhập số lượng điều chỉnh (số dương tăng, số âm giảm)",
+        "stockAdjustPh": "VD: 10 hoặc -5",
+        "invalidQty": "Số lượng không hợp lệ",
+        "updating": "Đang cập nhật...",
+        "stockUpdateSuccess": "Cập nhật tồn kho thành công",
+        "updateFailedFmt": "Cập nhật thất bại: {msg}",
+        "undoNoRecord": "Hoàn tác thất bại: không tìm thấy bản ghi quét",
+        "undoWarehouseBlocked": "Bản ghi nhập kho không thể hoàn tác trực tiếp; vui lòng xuất kho trước rồi nhập lại",
+        "undoing": "Đang hoàn tác...",
+        "undoSuccess": "Đã hoàn tác",
+        "undoFailedFmt": "Hoàn tác thất bại: {msg}",
+        "scanSuccessDefault": "Quét thành công",
+        "scanFailedRetry": "Quét thất bại, vui lòng thử lại",
+        "tooManyInput": "Nhập không hợp lệ nhiều lần, vui lòng kiểm tra dữ liệu đơn hàng rồi thử lại",
+        "inputQtyTitle": "Nhập số lượng",
+        "inputQtyContent": "Không thể tự lấy số lượng đơn hàng, vui lòng nhập số lượng đã hoàn thành",
+        "inputQtyPh": "VD: 100",
+        "notRecognized": "Không nhận diện được nội dung",
+        "scanTooFast": "Quét quá nhanh",
+        "stageDoneDefault": "Nút tiến độ này đã hoàn thành",
+        "allMaterialClaimedToast": "Vật liệu đã được nhận hết, vui lòng quét mã QR đơn hàng để vào công đoạn cắt",
+        "offlineQueued": "Đã lưu ngoại tuyến, sẽ tự đồng bộ khi có mạng",
+        "systemErrorRetry": "Lỗi hệ thống, vui lòng thử lại"
       }
     }
   },
@@ -10790,7 +10886,9 @@ export const LOCALES = {
         "loginExpired": "Session expired, please log in again",
         "noPermission": "No permission for this operation",
         "duplicateSubmit": "Already submitted, no duplicate actions",
-        "styleNoLabel": "Style No."
+        "styleNoLabel": "Style No.",
+        "stitch": "Stitch",
+        "watchOut": "Precautions"
       },
       "scanConfirm": {
         "navTitle": "Scan Confirm",
@@ -12930,6 +13028,36 @@ export const LOCALES = {
         "stdTimePh2": "e.g. 60",
         "pricePh2": "e.g. 0.50",
         "descPh2": "Description"
+      },
+      "scanLogic": {
+        "stockQueryTitle": "Stock query",
+        "stockQueryContentFmt": "SKU code: {code}\r\nCurrent stock: {stock}",
+        "stockAdjust": "Adjust stock",
+        "queryFailedFmt": "Query failed: {msg}",
+        "unknownError": "Unknown error",
+        "stockAdjustContent": "Enter the adjustment quantity (positive to add, negative to reduce)",
+        "stockAdjustPh": "e.g. 10 or -5",
+        "invalidQty": "Invalid quantity",
+        "updating": "Updating...",
+        "stockUpdateSuccess": "Stock updated",
+        "updateFailedFmt": "Update failed: {msg}",
+        "undoNoRecord": "Undo failed: scan record not found",
+        "undoWarehouseBlocked": "Inbound records cannot be undone directly; please do an outbound first, then inbound again",
+        "undoing": "Undoing...",
+        "undoSuccess": "Undone",
+        "undoFailedFmt": "Undo failed: {msg}",
+        "scanSuccessDefault": "Scan successful",
+        "scanFailedRetry": "Scan failed, please retry",
+        "tooManyInput": "Too many invalid inputs, please check the order data and retry",
+        "inputQtyTitle": "Enter quantity",
+        "inputQtyContent": "Cannot get the order quantity automatically, please enter the completed quantity",
+        "inputQtyPh": "e.g. 100",
+        "notRecognized": "Nothing recognized",
+        "scanTooFast": "Scanning too fast",
+        "stageDoneDefault": "This progress node is already done",
+        "allMaterialClaimedToast": "All materials claimed, please scan the order QR code to enter the cutting process",
+        "offlineQueued": "Cached offline, will sync automatically once online",
+        "systemErrorRetry": "System error, please retry"
       }
     }
   }

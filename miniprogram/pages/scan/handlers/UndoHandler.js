@@ -8,6 +8,9 @@
 const { triggerDataRefresh } = require('../../../utils/eventBus');
 const { toast } = require('../../../utils/uiHelper');
 const api = require('../../../utils/api');
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
 
 // 模块级变量（原全局 undoTimer）
 let undoTimer = null;
@@ -74,38 +77,38 @@ async function handleUndo(page) {
   const scanType = String(record && record.scanType || '').trim().toLowerCase();
 
   if (!record || !recordId) {
-    toast.error('撤销失败：未找到扫码记录信息');
+    toast.error(i18n.t(NS + 'undoNoRecord'));
     stopUndoTimer(page);
     return;
   }
 
   if (scanType === 'warehouse') {
-    toast.error('入库记录不支持直接撤回，请先走出库，再重新入库');
+    toast.error(i18n.t(NS + 'undoWarehouseBlocked'));
     stopUndoTimer(page);
     return;
   }
 
   stopUndoTimer(page);
 
-  wx.showLoading({ title: '正在撤销...', mask: true });
+  wx.showLoading({ title: i18n.t(NS + 'undoing'), mask: true });
 
   try {
     await api.production.undoScan({
       recordId: recordId,
     });
 
-    toast.success('已撤销');
+    toast.success(i18n.t(NS + 'undoSuccess'));
 
     page.setData({
       lastResult: {
         ...page.data.lastResult,
-        statusText: '已撤销',
+        statusText: i18n.t(NS + 'undoSuccess'),
         statusClass: 'warning',
       },
       lastLocalScanRecord: page.data.lastLocalScanRecord ? {
         ...page.data.lastLocalScanRecord,
         success: false,
-        processName: '已撤销',
+        processName: i18n.t(NS + 'undoSuccess'),
       } : null,
       'undo.canUndo': false,
       'undo.loading': false,
@@ -118,7 +121,7 @@ async function handleUndo(page) {
     triggerDataRefresh('scan');
   } catch (e) {
     page.setData({ 'undo.loading': false });
-    toast.error('撤销失败: ' + (e.errMsg || e.message || '未知错误'));
+    toast.error(i18n.tf(NS + 'undoFailedFmt', { msg: e.errMsg || e.message || i18n.t(NS + 'unknownError') }));
   } finally {
     wx.hideLoading();
   }

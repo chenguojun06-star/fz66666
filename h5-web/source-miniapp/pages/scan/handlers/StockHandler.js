@@ -7,6 +7,9 @@
 
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.scanLogic.';
 
 /**
  * 处理库存查询
@@ -27,10 +30,10 @@ async function handleStockQuery(page, codeStr, qrParser) {
     const stock = await api.style.getInventory(skuCode);
 
     wx.showModal({
-      title: '库存查询',
-      content: `商品编码: ${skuCode}\r\n当前库存: ${stock}`,
-      confirmText: '调整库存',
-      cancelText: '关闭',
+      title: i18n.t(NS + 'stockQueryTitle'),
+      content: i18n.tf(NS + 'stockQueryContentFmt', { code: skuCode, stock: stock }),
+      confirmText: i18n.t(NS + 'stockAdjust'),
+      cancelText: i18n.t('common.close'),
       success: (res) => {
         if (res.confirm) {
           showStockUpdateDialog(skuCode);
@@ -39,7 +42,7 @@ async function handleStockQuery(page, codeStr, qrParser) {
     });
   } catch (e) {
     console.error('[handleStockQuery] error:', e);
-    toast.error('查询失败: ' + (e.errMsg || e.message || '未知错误'));
+    toast.error(i18n.tf(NS + 'queryFailedFmt', { msg: e.errMsg || e.message || i18n.t(NS + 'unknownError') }));
   } finally {
     page.setData({ loading: false });
   }
@@ -51,26 +54,26 @@ async function handleStockQuery(page, codeStr, qrParser) {
  */
 function showStockUpdateDialog(skuCode) {
   wx.showModal({
-    title: '调整库存',
-    content: '请输入调整数量 (正数增加，负数减少)',
+    title: i18n.t(NS + 'stockAdjust'),
+    content: i18n.t(NS + 'stockAdjustContent'),
     editable: true,
-    placeholderText: '例如: 10 或 -5',
+    placeholderText: i18n.t(NS + 'stockAdjustPh'),
     success: async (res) => {
       if (res.confirm && res.content) {
         const qty = parseInt(res.content, 10);
         if (isNaN(qty) || qty === 0) {
-          toast.error('无效数量');
+          toast.error(i18n.t(NS + 'invalidQty'));
           return;
         }
 
-        wx.showLoading({ title: '更新中...', mask: true });
+        wx.showLoading({ title: i18n.t(NS + 'updating'), mask: true });
         try {
           await api.style.updateInventory({ skuCode, quantity: qty });
           wx.hideLoading();
-          toast.success('库存更新成功');
+          toast.success(i18n.t(NS + 'stockUpdateSuccess'));
         } catch (e) {
           wx.hideLoading();
-          toast.error('更新失败: ' + (e.errMsg || e.message));
+          toast.error(i18n.tf(NS + 'updateFailedFmt', { msg: e.errMsg || e.message || '' }));
         }
       }
     },

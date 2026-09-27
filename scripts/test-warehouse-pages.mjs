@@ -2525,6 +2525,13 @@ const REGISTER_JS = 'pages/register/index.js';
 const REGISTER_WXML = 'pages/register/index.wxml';
 const PROC_TPL_JS = 'pages/dashboard/process-template/index.js';
 const PROC_TPL_WXML = 'pages/dashboard/process-template/index.wxml';
+// 扫码逻辑层（非页面模块，语言从 storage 读）
+const SCAN_HANDLERS = {
+  stock: 'pages/scan/handlers/StockHandler.js',
+  undo: 'pages/scan/handlers/UndoHandler.js',
+  inline: 'pages/scan/handlers/InlineScanDispatcher.js',
+  scan: 'pages/scan/handlers/ScanHandler.js',
+};
 const SCAN_HOME_JS = 'pages/scan/index.js';
 const SCAN_HOME_WXML = 'pages/scan/index.wxml';
 // 主页本体只有离线栏那两行，其余文案全在这 5 个 include 片段里
@@ -2943,6 +2950,96 @@ function testI18nScanHome() {
   // ⑥ 导航标题
   eq('扫码主页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan');
   eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
+}
+
+/**
+ * 扫码逻辑层提示文案（D-592）—— StockHandler / UndoHandler / InlineScanDispatcher
+ *
+ * ⚠️ 这些是**非页面模块**，没有 applyLanguage，语言只能从 storage 读（i18n.t(key) 默认行为）。
+ *    所以测试要靠 wx.setStorageSync('app.language', lang) 驱动，而不是 page.applyLanguage()。
+ *
+ * ⚠️ 更重要的是：逻辑层里「显示文案」和「匹配常量」混在一起 ——
+ *    ScanHandler 的工序白名单、InlineScanDispatcher 的 `indexOf('物料均已领取')`
+ *    都是拿中文去**比对**后端数据，翻译了就永远匹配不上。所以末尾专门加了护栏断言。
+ */
+function testI18nScanLogic() {
+  console.log('\n【i18n：扫码逻辑层提示文案】');
+
+  const load = (rel, lang) => {
+    const wx = makeWx();
+    wx.setStorageSync('app.language', lang);
+    return { mod: loadRealModule(rel, wx), wx };
+  };
+
+  // ① 库存调整弹窗（StockHandler）
+  const zhStock = load(SCAN_HANDLERS.stock, 'zh-CN');
+  zhStock.mod.showStockUpdateDialog('S-1');
+  const zhModal = lastCall(zhStock.wx, 'showModal') || {};
+  eq('zh 库存调整弹窗标题', zhModal.title, '调整库存');
+  eq('zh 库存调整占位', zhModal.placeholderText, '例如: 10 或 -5');
+  ok('zh 库存调整正文含中文', CJK_RE.test(String(zhModal.content)), zhModal.content);
+
+  const enStock = load(SCAN_HANDLERS.stock, 'en-US');
+  enStock.mod.showStockUpdateDialog('S-1');
+  const enModal = lastCall(enStock.wx, 'showModal') || {};
+  eq('en 库存调整弹窗标题', enModal.title, 'Adjust stock');
+  ok('en 库存调整弹窗无中文', !CJK_RE.test(String(enModal.title + enModal.content + enModal.placeholderText)),
+    `${enModal.title} / ${enModal.content} / ${enModal.placeholderText}`);
+
+  // ② 撤销的两个前置分支（都在 api 调用之前就 return，不会触网）
+  const enUndo = load(SCAN_HANDLERS.undo, 'en-US');
+  const fakePage = { data: {}, setData() {} };
+  enUndo.mod.handleUndo(fakePage);
+  eq('en 无记录撤销 toast', lastCall(enUndo.wx, 'showToast').title, 'Undo failed: scan record not found');
+
+  const enUndo2 = load(SCAN_HANDLERS.undo, 'en-US');
+  enUndo2.mod.handleUndo({ data: {}, setData() {}, _undoRecord: { recordId: 'r1', scanType: 'warehouse' } });
+  eq('en 入库不可撤回 toast', lastCall(enUndo2.wx, 'showToast').title.startsWith('Inbound records cannot'),
+    true, lastCall(enUndo2.wx, 'showToast').title);
+
+  // ③ 页内扫码分发的两条快速分支
+  const enInline = load(SCAN_HANDLERS.inline, 'en-US');
+  enInline.mod.dispatchInlineScanCode('');
+  eq('en 未识别到内容 toast', lastCall(enInline.wx, 'showToast').title, 'Nothing recognized');
+
+  // ⚠️ '扫码太快啦' 那条分支测不了：防重标记 scanValidator.markRecent 写在**模块级 Map**
+  //    （不是 storage），而 loadRealModule 每次都是新的 vm context，两个模块实例不共享状态。
+  //    要测它得先跑通整条扫码链路（触网），不值当 —— 改由下面 ⑤ 的语言包层断言兜住。
+
+  // ④ 护栏：匹配用的中文常量**必须**保持中文（翻译了会永远匹配不上）
+  const inlineSrc = fs.readFileSync(path.join(MP, SCAN_HANDLERS.inline), 'utf8');
+  ok('护栏：物料均已领取仍是中文匹配串',
+    inlineSrc.includes("indexOf('物料均已领取')"), '该串用于匹配异常报文，不可键化');
+  const scanSrc = fs.readFileSync(path.join(MP, SCAN_HANDLERS.scan), 'utf8');
+  ok('护栏：工序白名单仍是中文常量',
+    scanSrc.includes("['采购', '原材料采购', '物料采购', '辅料采购']"), '用于比对后端工序名，不可键化');
+  ok('护栏：裁剪白名单仍是中文常量',
+    scanSrc.includes("['裁剪', '裁床', '分扎', '分包']"), '用于比对后端工序名，不可键化');
+
+  // ⑤ 语言包层兜底：mp.scanLogic.* 四语言齐备、非中文无残留、占位符已设计好
+  //    （覆盖上面按分支测不到的键，如 scanSuccessDefault / offlineQueued / scanTooFast）
+  const flatten = (obj, prefix = '', out = []) => {
+    Object.entries(obj || {}).forEach(([k, v]) => {
+      const key = prefix ? `${prefix}.${k}` : k;
+      if (v && typeof v === 'object') flatten(v, key, out);
+      else out.push({ key, value: v });
+    });
+    return out;
+  };
+  const zhSrc = JSON.parse(fs.readFileSync(path.join(ROOT, 'shared-locales/source/zh-CN.json'), 'utf8'));
+  const logicKeys = flatten(zhSrc.mp && zhSrc.mp.scanLogic, '', []);
+  ok('scanLogic 键数符合预期', logicKeys.length >= 28, `keys=${logicKeys.length}`);
+
+  for (const lang of LANGS) {
+    const file = JSON.parse(fs.readFileSync(path.join(ROOT, `shared-locales/source/${lang}.json`), 'utf8'));
+    const node = file.mp && file.mp.scanLogic;
+    const items = flatten(node);
+    eq(`${lang} scanLogic 键数一致`, items.length, logicKeys.length);
+    if (lang !== 'zh-CN') {
+      const bad = items.filter((x) => CJK_RE.test(String(x.value))).map((x) => `${x.key}=${x.value}`);
+      ok(`${lang} scanLogic 无中文残留`, bad.length === 0, bad.join(', '));
+    }
+  }
 }
 
 /** 扫码结果页（D-556）—— 信息卡/尺寸表/工序选择/仓库库位/提交反馈 */
@@ -3609,6 +3706,7 @@ try {
   testI18nRegister();
   testI18nProcessTemplate();
   testI18nScanHome();
+  testI18nScanLogic();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);
