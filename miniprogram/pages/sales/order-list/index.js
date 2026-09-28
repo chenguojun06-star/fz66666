@@ -13,25 +13,27 @@
  */
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
-const { PLATFORM_NAMES } = require('../../../utils/platformNames');
+const { getPlatformName } = require('../../../utils/platformNames');
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.salesOrderList.';
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 const displayHelper = require('../../../utils/displayHelper');
 
+// key 是后端平台短码（保持英文）；label 由 applyLanguage 生成 ——
+// 平台名统一走 utils/platformNames.getPlatformName()，避免与列表项显示不一致
 const PLATFORM_TABS = [
-  { key: '',   label: '全部' },
-  { key: 'TB', label: '淘宝' },
-  { key: 'TM', label: '天猫' },
-  { key: 'DY', label: '抖音' },
-  { key: 'JD', label: '京东' },
-  { key: 'PDD', label: '拼多多' },
-  { key: 'XHS', label: '小红书' },
-  { key: 'SY', label: '希音' },
-  { key: 'WC', label: '微信小店' },
+  { key: '',    labelKey: 'allTab' },
+  { key: 'TB' }, { key: 'TM' }, { key: 'DY' }, { key: 'JD' },
+  { key: 'PDD' }, { key: 'XHS' }, { key: 'SY' }, { key: 'WC' },
 ];
 
 /* status 后端为 Integer，这里 key 用数字字符串
  * 顺序符合电商流程：待付款 → 待发货 → 已发货 → 已完成 → 已取消 → 退款中
  */
+// ⚠️ 暂未键化（D-608 有意保留）：状态文案来自 utils/displayHelper.SALES_ORDER_STATUS_LABEL，
+//    而 displayHelper 是全局工具（十几个状态表、被所有页面使用），需专门一批统一改造，
+//    否则 tab 会显示英文而列表项状态仍是中文，两边不一致。
 var STATUS_TABS = [
   { key: '',  label: '全部' },
   { key: '0', label: '待付款' },
@@ -78,9 +80,44 @@ Page({
     pageSize: 20,
     hasMore: true,
     loadingMore: false,
-    platformNames: PLATFORM_NAMES,
+    t: {},
     loadError: false,
     statusCounts: {},
+  },
+
+  /** 应用语言 */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        scheduled: t('scheduled'),
+        platformOrderNo: t('platformOrderNo'),
+        internalOrderNo: t('internalOrderNo'),
+        loadingMore: t('loadingMore'),
+        pullToLoadMore: t('pullToLoadMore'),
+        noMore: t('noMore'),
+        emptyOrders: t('emptyOrders'),
+        emptyHint: t('emptyHint'),
+        loadFailed: t('loadFailed'),
+        tapRetry: t('tapRetry'),
+        searchPlaceholder: t('searchPlaceholder'),
+      },
+      platformTabs: PLATFORM_TABS.map((it) => ({
+        key: it.key,
+        label: it.labelKey ? i18n.t(NS + it.labelKey, lang) : getPlatformName(it.key, lang),
+      })),
+      // 列表里已生成的平台名也要跟着语言重算
+      list: (this.data.list || []).map((it) => ({
+        ...it, platformName: getPlatformName(it.platform, lang),
+      })),
+    });
+    wx.setNavigationBarTitle({ title: t('navTitle') });
+  },
+
+  onShow: function () {
+    this.applyLanguage(i18n.getLanguage());
   },
 
   onLoad: function (options) {
@@ -146,7 +183,7 @@ Page({
   onCopyOrderNo: function (e) {
     var no = e.currentTarget.dataset.no;
     if (!no) return;
-    wx.setClipboardData({ data: no, success: function () { toast.success('已复制'); } });
+    wx.setClipboardData({ data: no, success: function () { toast.success(i18n.t(NS + 'copied', this._lang)); } });
   },
 
   _resetAndLoad: function () {
@@ -195,7 +232,7 @@ Page({
         // displayHelper.findStatus 用 `key || ''` 处理空值，数字 0 会被误判为空，故传 String(statusNum)
         var stText = (statusNum >= 0 && statusNum <= 5)
           ? displayHelper.displaySalesOrderStatusText(String(statusNum))
-          : '未知';
+          : i18n.t(NS + 'unknown', this._lang);
         var st = { text: stText, cls: STATUS_CLS_MAP[statusNum] || 'order-tag--default' };
         // 商品信息
         var productName = r.productName || r.itemName || '';
@@ -207,7 +244,7 @@ Page({
           platformOrderNo: r.platformOrderNo || '',
           orderNo: r.orderNo || '',
           platform: code,
-          platformName: PLATFORM_NAMES[code] || '未知',
+          platformName: getPlatformName(code, that._lang),
           buyerName: r.buyerNick || r.buyerName || r.receiverName || '-',
           amount: fmtMoney(r.payAmount || r.totalAmount || 0),
           status: st.text,
@@ -235,10 +272,10 @@ Page({
       if (isReset) {
         // 标记加载失败，UI 显示"点击重试"而非"暂无订单"
         that.setData({ loadError: true });
-        toast.error('刷新失败，请稍后重试');
+        toast.error(i18n.t(NS + 'refreshFailed', this._lang));
       } else {
         // 加载更多失败时也要给用户反馈，并保留 hasMore 让用户可重试
-        toast.info('加载更多失败，请重试');
+        toast.info(i18n.t(NS + 'loadMoreFailed', this._lang));
         that.setData({ hasMore: true });
       }
     });

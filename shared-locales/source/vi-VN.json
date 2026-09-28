@@ -139,7 +139,20 @@
     "closed": "Đã đóng",
     "selectRole": "Chọn vai trò",
     "upLoad": "Tải lên",
-    "networkError": "Lỗi mạng"
+    "networkError": "Lỗi mạng",
+    "platform": {
+      "tb": "Taobao",
+      "tm": "Tmall",
+      "jd": "JD",
+      "pdd": "Pinduoduo",
+      "dy": "Douyin",
+      "xhs": "Xiaohongshu",
+      "wc": "WeChat Store",
+      "sfy": "Shopify",
+      "sy": "SHEIN",
+      "jst": "Jushuitan",
+      "unknown": "Sàn không xác định"
+    }
   },
   "login": {
     "brand": "Chuỗi Cung Ứng Yunshang",
@@ -3671,6 +3684,25 @@
       "h7": "7. Liên hệ với chúng tôi",
       "p7": "Nếu có thắc mắc, vui lòng liên hệ:",
       "copyright": "© 2026 Yizhilian. Bảo lưu mọi quyền."
+    },
+    "salesOrderList": {
+      "navTitle": "Đơn hàng sàn",
+      "allTab": "Tất cả",
+      "copied": "Đã sao chép",
+      "unknown": "Không xác định",
+      "refreshFailed": "Làm mới thất bại, vui lòng thử lại sau",
+      "loadMoreFailed": "Tải thêm thất bại, vui lòng thử lại",
+      "scheduled": "Đã lên lịch SX",
+      "platformOrderNo": "Số đơn trên sàn",
+      "internalOrderNo": "Số đơn nội bộ",
+      "loadingMore": "Đang tải...",
+      "pullToLoadMore": "Kéo lên để tải thêm",
+      "noMore": "Đã hết",
+      "emptyOrders": "Chưa có đơn hàng",
+      "emptyHint": "Thử đổi sàn hoặc trạng thái",
+      "loadFailed": "Tải thất bại",
+      "tapRetry": "Nhấn để thử lại",
+      "searchPlaceholder": "Nhập số đơn / tên người mua rồi tìm"
     }
   }
 }

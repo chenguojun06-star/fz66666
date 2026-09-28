@@ -2,7 +2,7 @@
 <view class="page">
   <!-- 搜索框 + 平台筛选 + 状态筛选（sticky 吸顶，统一通用组件） -->
   <sticky-search-bar
-    placeholder="输入订单号/买家名后按搜索"
+    placeholder="{{t.searchPlaceholder}}"
     value="{{keyword}}"
     show-scan="{{false}}"
     show-filter="{{true}}"
@@ -40,19 +40,19 @@
       <view class="oc-head">
         <view class="oc-head-left">
           <text class="oc-platform">{{item.platformName}}</text>
-          <text class="oc-prod-no" wx:if="{{item.productionOrderNo}}">已排产</text>
+          <text class="oc-prod-no" wx:if="{{item.productionOrderNo}}">{{t.scheduled}}</text>
         </view>
         <text class="oc-time">{{item.orderTime || ''}}</text>
       </view>
       <!-- 平台单号 -->
       <view class="oc-no" wx:if="{{item.platformOrderNo}}" data-no="{{item.platformOrderNo}}" catchtap="onCopyOrderNo">
-        <text class="oc-no-label">平台单号</text>
+        <text class="oc-no-label">{{t.platformOrderNo}}</text>
         <text class="oc-no-val">{{item.platformOrderNo}}</text>
         <view class="oc-copy-icon icon-copy-sm"></view>
       </view>
       <!-- 内部单号 -->
       <view class="oc-no" wx:if="{{item.orderNo}}" data-no="{{item.orderNo}}" catchtap="onCopyOrderNo">
-        <text class="oc-no-label">内部单号</text>
+        <text class="oc-no-label">{{t.internalOrderNo}}</text>
         <text class="oc-no-val">{{item.orderNo}}</text>
         <view class="oc-copy-icon icon-copy-sm"></view>
       </view>
@@ -75,10 +75,10 @@
 
   <!-- 加载更多 / 没有更多 -->
   <view wx:if="{{list.length > 0 && hasMore}}" class="load-more">
-    <text>{{loadingMore ? '加载中...' : '上拉加载更多'}}</text>
+    <text>{{loadingMore ? t.loadingMore : t.pullToLoadMore}}</text>
   </view>
   <view wx:if="{{list.length > 0 && !hasMore}}" class="no-more">
-    <text>没有更多了</text>
+    <text>{{t.noMore}}</text>
   </view>
 
   <!-- 骨架屏（首次加载） -->
@@ -93,18 +93,18 @@
   <!-- 空状态（区分加载失败） -->
   <view class="empty-state" wx:if="{{!loading && list.length === 0 && !loadError}}">
     <text class="empty-icon icon-order"></text>
-    <text class="empty-text">暂无订单</text>
-    <text class="empty-hint">切换平台或状态试试</text>
+    <text class="empty-text">{{t.emptyOrders}}</text>
+    <text class="empty-hint">{{t.emptyHint}}</text>
   </view>
   <view class="empty-state" wx:if="{{!loading && list.length === 0 && loadError}}">
     <view class="empty-icon icon-warning-orange"></view>
-    <text class="empty-text">加载失败</text>
-    <text class="empty-hint" bindtap="onRetry">点击重试</text>
+    <text class="empty-text">{{t.loadFailed}}</text>
+    <text class="empty-hint" bindtap="onRetry">{{t.tapRetry}}</text>
   </view>
 
   <!-- 加载中 -->
   <view class="loading-state" wx:if="{{loading}}">
-    <text>加载中...</text>
+    <text>{{t.loadingMore}}</text>
   </view>
   <ai-assistant />
 </view>

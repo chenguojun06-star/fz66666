@@ -146,7 +146,20 @@ module.exports = {
       "closed": "已关单",
       "selectRole": "选择角色",
       "upLoad": "上传",
-      "networkError": "网络异常"
+      "networkError": "网络异常",
+      "platform": {
+        "tb": "淘宝",
+        "tm": "天猫",
+        "jd": "京东",
+        "pdd": "拼多多",
+        "dy": "抖音",
+        "xhs": "小红书",
+        "wc": "微信小店",
+        "sfy": "Shopify",
+        "sy": "希音",
+        "jst": "聚水潭",
+        "unknown": "未知平台"
+      }
     },
     "login": {
       "brand": "云裳智链",
@@ -3678,6 +3691,25 @@ module.exports = {
         "h7": "七、联系我们",
         "p7": "如有疑问，请联系：",
         "copyright": "© 2026 衣智链. 保留所有权利."
+      },
+      "salesOrderList": {
+        "navTitle": "平台订单",
+        "allTab": "全部",
+        "copied": "已复制",
+        "unknown": "未知",
+        "refreshFailed": "刷新失败，请稍后重试",
+        "loadMoreFailed": "加载更多失败，请重试",
+        "scheduled": "已排产",
+        "platformOrderNo": "平台单号",
+        "internalOrderNo": "内部单号",
+        "loadingMore": "加载中...",
+        "pullToLoadMore": "上拉加载更多",
+        "noMore": "没有更多了",
+        "emptyOrders": "暂无订单",
+        "emptyHint": "切换平台或状态试试",
+        "loadFailed": "加载失败",
+        "tapRetry": "点击重试",
+        "searchPlaceholder": "输入订单号/买家名后按搜索"
       }
     }
   },
@@ -3822,7 +3854,20 @@ module.exports = {
       "closed": "Closed",
       "selectRole": "Select Role",
       "upLoad": "Upload",
-      "networkError": "Network error"
+      "networkError": "Network error",
+      "platform": {
+        "tb": "Taobao",
+        "tm": "Tmall",
+        "jd": "JD",
+        "pdd": "Pinduoduo",
+        "dy": "Douyin",
+        "xhs": "Xiaohongshu",
+        "wc": "WeChat Store",
+        "sfy": "Shopify",
+        "sy": "SHEIN",
+        "jst": "Jushuitan",
+        "unknown": "Unknown platform"
+      }
     },
     "login": {
       "brand": "Yunshang SCM",
@@ -7354,6 +7399,25 @@ module.exports = {
         "h7": "7. Contact Us",
         "p7": "If you have any questions, please contact:",
         "copyright": "© 2026 Yizhilian. All rights reserved."
+      },
+      "salesOrderList": {
+        "navTitle": "Platform Orders",
+        "allTab": "All",
+        "copied": "Copied",
+        "unknown": "Unknown",
+        "refreshFailed": "Refresh failed, please try again later",
+        "loadMoreFailed": "Failed to load more, please retry",
+        "scheduled": "Scheduled",
+        "platformOrderNo": "Platform order no.",
+        "internalOrderNo": "Internal order no.",
+        "loadingMore": "Loading...",
+        "pullToLoadMore": "Pull up to load more",
+        "noMore": "No more records",
+        "emptyOrders": "No orders yet",
+        "emptyHint": "Try switching platform or status",
+        "loadFailed": "Load failed",
+        "tapRetry": "Tap to retry",
+        "searchPlaceholder": "Enter order no. / buyer name then search"
       }
     }
   },
@@ -7498,7 +7562,20 @@ module.exports = {
       "closed": "Đã đóng",
       "selectRole": "Chọn vai trò",
       "upLoad": "Tải lên",
-      "networkError": "Lỗi mạng"
+      "networkError": "Lỗi mạng",
+      "platform": {
+        "tb": "Taobao",
+        "tm": "Tmall",
+        "jd": "JD",
+        "pdd": "Pinduoduo",
+        "dy": "Douyin",
+        "xhs": "Xiaohongshu",
+        "wc": "WeChat Store",
+        "sfy": "Shopify",
+        "sy": "SHEIN",
+        "jst": "Jushuitan",
+        "unknown": "Sàn không xác định"
+      }
     },
     "login": {
       "brand": "Chuỗi Cung Ứng Yunshang",
@@ -11030,6 +11107,25 @@ module.exports = {
         "h7": "7. Liên hệ với chúng tôi",
         "p7": "Nếu có thắc mắc, vui lòng liên hệ:",
         "copyright": "© 2026 Yizhilian. Bảo lưu mọi quyền."
+      },
+      "salesOrderList": {
+        "navTitle": "Đơn hàng sàn",
+        "allTab": "Tất cả",
+        "copied": "Đã sao chép",
+        "unknown": "Không xác định",
+        "refreshFailed": "Làm mới thất bại, vui lòng thử lại sau",
+        "loadMoreFailed": "Tải thêm thất bại, vui lòng thử lại",
+        "scheduled": "Đã lên lịch SX",
+        "platformOrderNo": "Số đơn trên sàn",
+        "internalOrderNo": "Số đơn nội bộ",
+        "loadingMore": "Đang tải...",
+        "pullToLoadMore": "Kéo lên để tải thêm",
+        "noMore": "Đã hết",
+        "emptyOrders": "Chưa có đơn hàng",
+        "emptyHint": "Thử đổi sàn hoặc trạng thái",
+        "loadFailed": "Tải thất bại",
+        "tapRetry": "Nhấn để thử lại",
+        "searchPlaceholder": "Nhập số đơn / tên người mua rồi tìm"
       }
     }
   },
@@ -11174,7 +11270,20 @@ module.exports = {
       "closed": "Closed",
       "selectRole": "Select Role",
       "upLoad": "Upload",
-      "networkError": "Network error"
+      "networkError": "Network error",
+      "platform": {
+        "tb": "Taobao",
+        "tm": "Tmall",
+        "jd": "JD",
+        "pdd": "Pinduoduo",
+        "dy": "Douyin",
+        "xhs": "Xiaohongshu",
+        "wc": "WeChat Store",
+        "sfy": "Shopify",
+        "sy": "SHEIN",
+        "jst": "Jushuitan",
+        "unknown": "Unknown platform"
+      }
     },
     "login": {
       "brand": "Yunshang SCM",
@@ -14706,6 +14815,25 @@ module.exports = {
         "h7": "7. Contact Us",
         "p7": "If you have any questions, please contact:",
         "copyright": "© 2026 Yizhilian. All rights reserved."
+      },
+      "salesOrderList": {
+        "navTitle": "Platform Orders",
+        "allTab": "All",
+        "copied": "Copied",
+        "unknown": "Unknown",
+        "refreshFailed": "Refresh failed, please try again later",
+        "loadMoreFailed": "Failed to load more, please retry",
+        "scheduled": "Scheduled",
+        "platformOrderNo": "Platform order no.",
+        "internalOrderNo": "Internal order no.",
+        "loadingMore": "Loading...",
+        "pullToLoadMore": "Pull up to load more",
+        "noMore": "No more records",
+        "emptyOrders": "No orders yet",
+        "emptyHint": "Try switching platform or status",
+        "loadFailed": "Load failed",
+        "tapRetry": "Tap to retry",
+        "searchPlaceholder": "Enter order no. / buyer name then search"
       }
     }
   }

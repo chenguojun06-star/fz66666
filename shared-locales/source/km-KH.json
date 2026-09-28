@@ -139,7 +139,20 @@
     "closed": "Closed",
     "selectRole": "Select Role",
     "upLoad": "Upload",
-    "networkError": "Network error"
+    "networkError": "Network error",
+    "platform": {
+      "tb": "Taobao",
+      "tm": "Tmall",
+      "jd": "JD",
+      "pdd": "Pinduoduo",
+      "dy": "Douyin",
+      "xhs": "Xiaohongshu",
+      "wc": "WeChat Store",
+      "sfy": "Shopify",
+      "sy": "SHEIN",
+      "jst": "Jushuitan",
+      "unknown": "Unknown platform"
+    }
   },
   "login": {
     "brand": "Yunshang SCM",
@@ -3671,6 +3684,25 @@
       "h7": "7. Contact Us",
       "p7": "If you have any questions, please contact:",
       "copyright": "© 2026 Yizhilian. All rights reserved."
+    },
+    "salesOrderList": {
+      "navTitle": "Platform Orders",
+      "allTab": "All",
+      "copied": "Copied",
+      "unknown": "Unknown",
+      "refreshFailed": "Refresh failed, please try again later",
+      "loadMoreFailed": "Failed to load more, please retry",
+      "scheduled": "Scheduled",
+      "platformOrderNo": "Platform order no.",
+      "internalOrderNo": "Internal order no.",
+      "loadingMore": "Loading...",
+      "pullToLoadMore": "Pull up to load more",
+      "noMore": "No more records",
+      "emptyOrders": "No orders yet",
+      "emptyHint": "Try switching platform or status",
+      "loadFailed": "Load failed",
+      "tapRetry": "Tap to retry",
+      "searchPlaceholder": "Enter order no. / buyer name then search"
     }
   }
 }

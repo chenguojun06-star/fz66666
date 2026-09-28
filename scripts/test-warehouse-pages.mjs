@@ -2541,6 +2541,9 @@ const SCAN_HANDLERS = {
   stageProcessor: 'pages/scan/handlers/helpers/ScanStageProcessor.js',
   peripheral: 'pages/scan/handlers/helpers/ScanPeripheralHelper.js',
 };
+const SALES_ORDER_LIST_JS = 'pages/sales/order-list/index.js';
+const SALES_ORDER_LIST_WXML = 'pages/sales/order-list/index.wxml';
+const PLATFORM_NAMES_JS = 'utils/platformNames.js';
 const PRIVACY_JS = 'pages/privacy/index.js';
 const PRIVACY_WXML = 'pages/privacy/index.wxml';
 const PRIVACY_SERVICE_JS = 'pages/privacy/service/index.js';
@@ -2997,6 +3000,45 @@ function testI18nScanHome() {
   eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
 }
 
+/** 平台订单列表页 + 平台名共享模块（D-608） */
+function testI18nSalesOrderList() {
+  testPageI18n(SALES_ORDER_LIST_JS, SALES_ORDER_LIST_WXML, '平台订单列表页');
+
+  const { page: zhP, wx: zhWx } = loadPage(SALES_ORDER_LIST_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(SALES_ORDER_LIST_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  // 平台 Tab：key 保持后端短码，label 按语言
+  eq('zh 平台 Tab 首位', zhP.data.platformTabs[0].label, '全部');
+  eq('en 平台 Tab 首位', enP.data.platformTabs[0].label, 'All');
+  eq('en 淘宝 Tab', enP.data.platformTabs[1].label, 'Taobao');
+  eq('en 希音 Tab', enP.data.platformTabs[7].label, 'SHEIN');
+  ok('平台 Tab key 始终是英文短码',
+    enP.data.platformTabs.slice(1).every((x) => /^[A-Z]+$/.test(x.key)),
+    JSON.stringify(enP.data.platformTabs.map((x) => x.key)));
+  ok('en 平台 Tab 无中文残留',
+    enP.data.platformTabs.every((x) => !CJK_RE.test(x.label)),
+    enP.data.platformTabs.map((x) => x.label).join(' | '));
+
+  eq('en 空态文案', enP.data.t.emptyOrders, 'No orders yet');
+  eq('en 搜索占位', enP.data.t.searchPlaceholder, 'Enter order no. / buyer name then search');
+  eq('订单列表页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Platform Orders');
+
+  // 共享模块：getPlatformName 必须走 i18n（不是返回中文表）
+  const pnSrc = fs.readFileSync(path.join(MP, PLATFORM_NAMES_JS), 'utf8');
+  ok('护栏：getPlatformName 使用 i18n.t',
+    pnSrc.includes("i18n.t('common.platform.'"), '不能直接返回 PLATFORM_NAMES 里的中文');
+  ok('护栏：PLATFORM_NAMES 保留为对照表',
+    pnSrc.includes('仅作**中文对照'), '与 PC 端 platform.ts 对齐用，保留但不再直接显示');
+
+  // 状态 Tab 有意未键化（依赖 displayHelper，需专门一批），加护栏防止误改
+  const jsSrc = fs.readFileSync(path.join(MP, SALES_ORDER_LIST_JS), 'utf8');
+  ok('护栏：STATUS_TABS 未键化且有说明',
+    jsSrc.includes('暂未键化（D-608 有意保留）'),
+    '状态文案来自 displayHelper，需与它一起改造');
+}
+
 /** 隐私政策页 + 用户服务协议页（D-607）—— 整篇法律文本 */
 function testI18nPrivacy() {
   testPageI18n(PRIVACY_JS, PRIVACY_WXML, '隐私政策页');
@@ -3054,9 +3096,9 @@ function testI18nSalesOverview() {
   ok('护栏：时间范围 key 仍是英文',
     jsSrc.includes("key: 'thisMonth'") && jsSrc.includes('labelKey:'),
     'key 用于日期计算，不能换成中文；显示文案走 labelKey');
-  // 护栏：PLATFORM_NAMES 是跨端契约，本批不动
-  ok('护栏：平台名映射仍来自 platformNames 模块',
-    jsSrc.includes('PLATFORM_NAMES[code]'), '与 PC 端 platform.ts 对齐，需与 PC 端一起处理');
+  // 护栏：平台名统一走 getPlatformName（D-608 已键化；PLATFORM_NAMES 仅留作对照）
+  ok('护栏：平台名走 getPlatformName',
+    jsSrc.includes('getPlatformName(code'), '不能再直接用 PLATFORM_NAMES[code] 显示');
 }
 
 /** dashboard 状态映射 + 契约值豁免护栏（D-605） */
@@ -4175,6 +4217,7 @@ try {
   testI18nDashboardGuard();
   testI18nSalesOverview();
   testI18nPrivacy();
+  testI18nSalesOrderList();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

@@ -14,7 +14,7 @@ const NS = 'mp.salesOverview.';
 
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
-const { PLATFORM_NAMES } = require('../../../utils/platformNames');
+const { getPlatformName } = require('../../../utils/platformNames');
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
 const { hasFeaturePermission } = require('../../../utils/permission');
 const { formatDate, pad2 } = require('../../../utils/displayHelper');
@@ -73,7 +73,7 @@ Page({
     endDate: '',
     summary: { totalSales: 0, totalOrders: 0, totalShipping: 0, netRevenue: 0 },
     platforms: [],
-    platformNames: PLATFORM_NAMES,
+    platformNames: {},
   },
 
   /** 应用语言 */
@@ -177,9 +177,7 @@ Page({
         var code = p.platform || '';
         return {
           platform: code,
-          // ⚠️ PLATFORM_NAMES 与 PC 端 frontend/src/utils/platform.ts 是跨端契约（见 utils/platformNames.js），
-        //    本次不改；'未知平台' 作为同源兜底一并保留
-        platformName: PLATFORM_NAMES[code] || code || '未知平台',
+                  platformName: getPlatformName(code, that._lang),
           orderCount: Number(p.orderCount || 0),
           salesAmount: Number(p.totalPayAmount || 0),
           salesAmountText: fmtMoney(Number(p.totalPayAmount || 0)),
