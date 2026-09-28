@@ -144,6 +144,8 @@ function isDataOrBlobUrl(src: string): boolean {
 export interface SafePrintOptions {
   /** 外链图片等待上限（毫秒），默认 1500；等待按「全部图片加载完成或超时」先到者触发 */
   imageWaitMs?: number;
+  /** 打印窗口关闭（已打印或取消）后回调——逐单连打靠它串起下一单 */
+  onAfterPrint?: () => void;
 }
 
 export function safePrint(htmlContent: string, _title: string = '打印', options?: SafePrintOptions): boolean {
@@ -169,6 +171,12 @@ export function safePrint(htmlContent: string, _title: string = '打印', option
 
       const doPrint = () => {
         iframe.contentWindow?.focus();
+        // D-611 逐单连打：打印窗口关闭（打印或取消）后通知调用方，串起下一单
+        if (options?.onAfterPrint && iframe.contentWindow) {
+          try {
+            iframe.contentWindow.addEventListener('afterprint', () => { options.onAfterPrint?.(); }, { once: true });
+          } catch { /* 老引擎无 afterprint 时仅影响连打节奏，不影响单次打印 */ }
+        }
         iframe.contentWindow?.print();
         setTimeout(() => {
           try { document.body.removeChild(iframe); } catch { /* */ }

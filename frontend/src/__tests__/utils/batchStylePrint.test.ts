@@ -136,11 +136,15 @@ vi.mock('../../components/common/StylePrintModal/fetchStylePrintData', async (im
 });
 
 vi.mock('../../utils/safePrint', () => ({
-  safePrint: vi.fn(() => true),
+  safePrint: vi.fn((_html: string, _title: string, opts?: { onAfterPrint?: () => void }) => {
+    opts?.onAfterPrint?.();
+    return true;
+  }),
 }));
 
 import { fetchStylePrintData } from '../../components/common/StylePrintModal/fetchStylePrintData';
 import { DEFAULT_PRINT_OPTIONS } from '../../components/common/StylePrintModal/types';
+import { prepareBatchDocs, runBatchStylePrintSequential } from '../../components/common/StylePrintModal/batchStylePrintService';
 
 const mockedFetch = fetchStylePrintData as unknown as ReturnType<typeof vi.fn>;
 const mockedSafePrint = safePrint as unknown as ReturnType<typeof vi.fn>;
@@ -200,5 +204,77 @@ describe('runBatchStylePrint', () => {
     expect(result.okCount).toBe(0);
     expect(result.failed).toEqual(['A', 'B']);
     expect(mockedSafePrint).not.toHaveBeenCalled();
+  });
+});
+
+// ───── 逐单连打（D-611b）─────
+
+describe('runBatchStylePrintSequential', () => {
+  beforeEach(() => {
+    mockedFetch.mockReset();
+    mockedSafePrint.mockClear();
+  });
+
+  const stubBundle = () => ({
+    data: { sizes: [], bom: [], process: [], attachments: [], productionSheet: null },
+    resolvedCover: null,
+    orderCreatorName: '',
+    patternId: null,
+    patternRecords: [],
+    qrValue: '{}',
+  });
+
+  it('每单独立打印任务：各调用一次 safePrint，互不混排', async () => {
+    mockedFetch.mockResolvedValue(stubBundle());
+    const { docs } = await prepareBatchDocs({
+      items: [
+        { key: 1, mode: 'production', styleNo: 'HH001' },
+        { key: 2, mode: 'production', styleNo: 'HH002' },
+      ],
+      options: DEFAULT_PRINT_OPTIONS,
+      user: {},
+      printerInfo: '打印人: 测试',
+    });
+    expect(docs.length).toBe(2);
+
+    const started: string[] = [];
+    const { printedCount } = await runBatchStylePrintSequential({
+      docs, fontScale: 1, tenantName: '东方制衣厂',
+      onDocStart: (_i, _t, styleNo) => started.push(styleNo),
+    });
+
+    expect(printedCount).toBe(2);
+    expect(started).toEqual(['HH001', 'HH002']);
+    expect(mockedSafePrint).toHaveBeenCalledTimes(2);
+    const [html1] = mockedSafePrint.mock.calls[0];
+    const [html2] = mockedSafePrint.mock.calls[1];
+    expect(String(html1)).toContain('HH001');
+    expect(String(html1)).not.toContain('HH002');
+    expect(String(html2)).toContain('HH002');
+    expect(String(html2)).not.toContain('HH001');
+    // 逐单路径走单一打印模板（每单页脚=本单 第X页/共Y页 由 D-520 机制保证）
+    expect(String(html1)).toContain('打印人: 测试');
+  });
+
+  it('中断后不再送出后续单据', async () => {
+    mockedFetch.mockResolvedValue(stubBundle());
+    const { docs } = await prepareBatchDocs({
+      items: [
+        { key: 1, mode: 'sample', styleNo: 'A' },
+        { key: 2, mode: 'sample', styleNo: 'B' },
+        { key: 3, mode: 'sample', styleNo: 'C' },
+      ],
+      options: DEFAULT_PRINT_OPTIONS,
+      user: {},
+      printerInfo: '打印人: 测试',
+    });
+    let printed = 0;
+    const { printedCount } = await runBatchStylePrintSequential({
+      docs, fontScale: 1,
+      isAborted: () => printed >= 1,
+      onDocStart: () => { printed += 1; },
+    });
+    expect(printedCount).toBe(1);
+    expect(mockedSafePrint).toHaveBeenCalledTimes(1);
   });
 });

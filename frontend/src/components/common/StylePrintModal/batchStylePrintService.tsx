@@ -19,6 +19,7 @@ import { parseSizeColorMatrix } from './printDataTransform';
 import { fetchStylePrintData } from './fetchStylePrintData';
 import StylePrintDocBody from './StylePrintDocBody';
 import { buildBatchPrintHtml } from './batchPrintTemplate';
+import { buildPrintHtml } from './printTemplate';
 
 /** 批量单据条目：由列表行映射而来，字段与 StylePrintModal 单一打印入参同形 */
 export interface StyleBatchPrintItem {
@@ -108,9 +109,40 @@ export async function runBatchStylePrint(opts: {
   printerInfo: string;
   onProgress?: (done: number, total: number, currentStyleNo: string) => void;
 }): Promise<BatchPrintResult> {
-  const { items, options, fontScale, tenantName, user, printerInfo, onProgress } = opts;
+  const { items, options, fontScale, user, printerInfo } = opts;
+  const { docs, failed, total } = await prepareBatchDocs({
+    items, options, user, printerInfo, onProgress: opts.onProgress,
+  });
+
+  if (docs.length === 0) {
+    return { okCount: 0, failed, total };
+  }
+
+  const html = buildBatchPrintHtml({ docs, tenantName: opts.tenantName, fontScale });
+  safePrint(html, '批量打印', { imageWaitMs: BATCH_IMAGE_WAIT_MS });
+  return { okCount: docs.length, failed, total };
+}
+
+/** 共享的正文构造参数（合并/逐单两用；打印人与时间逐单携带） */
+export interface PreparedBatchDoc {
+  styleNo: string;
+  pageTitle: string;
+  bodyHtml: string;
+  printerInfo: string;
+  printDate: string;
+}
+
+/** 逐款装载数据并静态渲染为单据正文；单款失败跳过不整批失败（D-611b 从 runBatchStylePrint 抽出共用） */
+export async function prepareBatchDocs(opts: {
+  items: StyleBatchPrintItem[];
+  options: PrintOptions;
+  user: any;
+  printerInfo: string;
+  onProgress?: (done: number, total: number, currentStyleNo: string) => void;
+}): Promise<{ docs: PreparedBatchDoc[]; failed: string[]; total: number }> {
+  const { items, options, user, printerInfo, onProgress } = opts;
   const total = items.length;
-  const docs: Array<{ styleNo: string; pageTitle: string; bodyHtml: string; printerInfo: string; printDate: string }> = [];
+  const docs: PreparedBatchDoc[] = [];
   const failed: string[] = [];
   const printDate = new Date().toLocaleString('zh-CN');
   let done = 0;
@@ -172,11 +204,51 @@ export async function runBatchStylePrint(opts: {
     await Promise.all(items.slice(i, i + BATCH_CONCURRENCY).map(runOne));
   }
 
-  if (docs.length === 0) {
-    return { okCount: 0, failed, total };
+  return { docs, failed, total };
+}
+
+/**
+ * 逐单连打（D-611b）：每单作为独立打印任务依次送出（上一个打印窗口关闭后自动弹下一个）。
+ * 每单走与单一打印完全相同的 buildPrintHtml 模板——页脚页码是本单自己的 第X页/共Y页，
+ * 解决合并打印页码整批混编的问题（实测 Chromium 边距页码无法按单重置，独立任务唯一正路）。
+ */
+export async function runBatchStylePrintSequential(opts: {
+  docs: PreparedBatchDoc[];
+  fontScale: number;
+  tenantName?: string;
+  onDocStart?: (index: number, total: number, styleNo: string) => void;
+  /** 抽屉关闭/用户取消时中断后续单据（已弹出的打印窗口不受影响） */
+  isAborted?: () => boolean;
+}): Promise<{ printedCount: number }> {
+  const { docs, fontScale, tenantName, onDocStart, isAborted } = opts;
+  let printedCount = 0;
+
+  for (let i = 0; i < docs.length; i++) {
+    if (isAborted?.()) break;
+    const doc = docs[i];
+    onDocStart?.(i + 1, docs.length, doc.styleNo);
+    const html = buildPrintHtml({
+      headerInfo: '',
+      printerInfo: doc.printerInfo,
+      printDate: doc.printDate,
+      styleNo: doc.styleNo,
+      bodyHtml: doc.bodyHtml,
+      tenantName,
+      pageTitle: doc.pageTitle,
+      fontScale,
+    });
+    await new Promise<void>((resolve) => {
+      let settled = false;
+      const finish = () => { if (!settled) { settled = true; resolve(); } };
+      const ok = safePrint(html, `批量打印-${doc.styleNo}`, {
+        imageWaitMs: BATCH_IMAGE_WAIT_MS,
+        onAfterPrint: finish,
+      });
+      // safePrint 同步失败（iframe 创建异常等）不能卡死队列
+      if (!ok) finish();
+    });
+    printedCount += 1;
   }
 
-  const html = buildBatchPrintHtml({ docs, tenantName, fontScale });
-  safePrint(html, '批量打印', { imageWaitMs: BATCH_IMAGE_WAIT_MS });
-  return { okCount: docs.length, failed, total };
+  return { printedCount };
 }
