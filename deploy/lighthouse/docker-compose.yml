@@ -88,6 +88,15 @@ services:
       - --performance-schema=OFF
       - --innodb-buffer-pool-size=256M
       - --table-open-cache=400
+      # D-610：开启慢查询日志。此前一直关闭（slow_query_log=0），
+      # 导致排查性能问题只能靠猜——没有任何慢 SQL 数据可看。
+      # 阈值 1 秒（默认 10 秒太宽松，抓不到"几百毫秒但高频"的查询）。
+      # 日志落在数据卷内（/var/lib/mysql），随 mysql-data 卷持久化。
+      # 说明：容器磁盘剩余约 18G，慢查询日志增长可控；
+      # 若后续日志过大，可用 SET GLOBAL slow_query_log=OFF 临时关闭。
+      - --slow-query-log=ON
+      - --long-query-time=1
+      - --slow-query-log-file=/var/lib/mysql/slow.log
     mem_limit: 1024m
     volumes:
       - mysql-data:/var/lib/mysql
