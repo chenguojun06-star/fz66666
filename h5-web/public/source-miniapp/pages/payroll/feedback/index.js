@@ -1,9 +1,14 @@
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.payrollFeedback.';
+
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { hasFeaturePermission } = require('../../../utils/permission');
 
 Page({
   data: {
+    t: {},
     settlements: [],
     loading: false,
     submitting: false,
@@ -14,9 +19,43 @@ Page({
     feedbackContent: '',
   },
 
+  /** 应用语言 */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        loading: i18n.t('common.loading', lang),
+        emptySettlements: t('emptySettlements'),
+        statusNone: t('statusNone'),
+        statusPending: t('statusPending'),
+        statusResolved: t('statusResolved'),
+        statusRejected: t('statusRejected'),
+        tapFeedback: t('tapFeedback'),
+        submitTitle: t('submitTitle'),
+        settlementNo: t('settlementNo'),
+        feedbackType: t('feedbackType'),
+        typeConfirm: t('typeConfirm'),
+        typeDispute: t('typeDispute'),
+        disputeContent: t('disputeContent'),
+        disputePlaceholder: t('disputePlaceholder'),
+        cancel: i18n.t('common.cancel', lang),
+        submitting: t('submitting'),
+        submitBtn: t('submitBtn'),
+        pieceUnit: t('pieceUnit'),
+      },
+    });
+    wx.setNavigationBarTitle({ title: t('navTitle') });
+  },
+
+  onShow() {
+    this.applyLanguage(i18n.getLanguage());
+  },
+
   onLoad() {
     if (!hasFeaturePermission('view_payroll')) {
-      toast('您没有查看工资的权限');
+      toast(i18n.t(NS + 'noPermission', this._lang));
       wx.navigateBack({ delta: 1, fail: () => wx.switchTab({ url: '/pages/dashboard/index' }) });
       return;
     }
@@ -40,7 +79,7 @@ Page({
       });
       this.setData({ settlements: list });
     } catch (e) {
-      toast.info('加载失败');
+      toast.info(i18n.t(NS + 'loadFailed', this._lang));
     } finally {
       this.setData({ loading: false });
     }
@@ -77,17 +116,17 @@ Page({
   async submitFeedback() {
     const { currentSettlementId, feedbackType, feedbackContent } = this.data;
     if (feedbackType === 'OBJECTION' && (!feedbackContent || !feedbackContent.trim())) {
-      toast.info('提出异议时必须填写反馈内容');
+      toast.info(i18n.t(NS + 'disputeRequired', this._lang));
       return;
     }
     this.setData({ submitting: true });
     try {
       await api.wageSettlementFeedback.submit({ settlementId: currentSettlementId, feedbackType, feedbackContent });
-      toast.success('提交成功');
+      toast.success(i18n.t(NS + 'submitSuccess', this._lang));
       this.setData({ showForm: false, feedbackContent: '' });
       this.loadSettlements();
     } catch (e) {
-      toast.error(e?.message || '提交失败');
+      toast.error(e?.message || i18n.t(NS + 'submitFailed', this._lang));
     } finally {
       this.setData({ submitting: false });
     }

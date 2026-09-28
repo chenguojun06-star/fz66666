@@ -1,4 +1,8 @@
 // pages/payroll/payroll.js
+const i18n = require('../../utils/i18n/index');
+
+const NS = 'mp.payroll.';
+
 const api = require('../../utils/api');
 const { toast } = require('../../utils/uiHelper');
 const { hasFeaturePermission } = require('../../utils/permission');
@@ -44,6 +48,7 @@ function inferWageType(item) {
 
 Page({
   data: {
+    t: {},
     // 类型筛选
     wageTypeFilter: 'all',
 
@@ -70,6 +75,33 @@ Page({
     endDate: '',
   },
 
+  /** 应用语言 */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        pieceworkWage: t('pieceworkWage'),
+        bonus: t('bonus'),
+        startLabel: t('startLabel'),
+        endLabel: t('endLabel'),
+        allOption: t('allOption'),
+        pieceworkOption: t('pieceworkOption'),
+        hourlyOption: t('hourlyOption'),
+        emptyRecords: t('emptyRecords'),
+        monthlyTotal: t('monthlyTotal'),
+        searchPlaceholder: t('searchPlaceholder'),
+        pieceUnit: t('pieceUnit'),
+      },
+    });
+    wx.setNavigationBarTitle({ title: t('navTitle') });
+  },
+
+  onShow() {
+    this.applyLanguage(i18n.getLanguage());
+  },
+
   onLoad() {
     this.initDates();
   },
@@ -78,7 +110,7 @@ Page({
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     if (!hasFeaturePermission('view_payroll')) {
-      toast('您没有查看工资的权限');
+      toast(i18n.t(NS + 'noPermission', this._lang));
       wx.navigateBack({ delta: 1, fail: function () { wx.switchTab({ url: '/pages/index/index' }); } });
       return;
     }
@@ -99,7 +131,7 @@ Page({
     this.setData({
       startDate: `${year}-${month}-01`,
       endDate: `${year}-${month}-${day}`,
-      currentMonthLabel: `${year}年${parseInt(month)}月`,
+      currentMonthLabel: i18n.tf(NS + 'monthFmt', { year: year, month: parseInt(month) }, this._lang),
     });
   },
 
@@ -176,7 +208,7 @@ Page({
       const endParts = endDate.split('-');
       let label = '';
       if (startParts[0] === endParts[0] && startParts[1] === endParts[1]) {
-        label = `${startParts[0]}年${parseInt(startParts[1])}月`;
+        label = i18n.tf(NS + 'monthFmt', { year: startParts[0], month: parseInt(startParts[1]) }, this._lang);
       } else {
         label = `${startDate} ~ ${endDate}`;
       }
@@ -193,7 +225,7 @@ Page({
       });
     } catch (error) {
       console.error('加载工资数据失败:', error);
-      toast(error.errMsg || error.message || '加载失败');
+      toast(error.errMsg || error.message || i18n.t(NS + 'loadFailed', this._lang));
     } finally {
       this.setData({ loading: false });
     }

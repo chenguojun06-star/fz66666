@@ -3703,6 +3703,48 @@
       "loadFailed": "Tải thất bại",
       "tapRetry": "Nhấn để thử lại",
       "searchPlaceholder": "Nhập số đơn / tên người mua rồi tìm"
+    },
+    "payroll": {
+      "navTitle": "Tra cứu tiền công",
+      "pieceworkWage": "Lương khoán sản phẩm",
+      "bonus": "Thưởng",
+      "startLabel": "Bắt đầu",
+      "endLabel": "Kết thúc",
+      "allOption": "Tất cả",
+      "pieceworkOption": "Khoán",
+      "hourlyOption": "Theo giờ",
+      "emptyRecords": "Chưa có bản ghi tiền công",
+      "monthlyTotal": "Tổng tháng này",
+      "searchPlaceholder": "Mã hàng / số đơn / tên mã hàng / số bó",
+      "noPermission": "Bạn không có quyền xem tiền công",
+      "monthFmt": "Tháng {month}/{year}",
+      "loadFailed": "Tải thất bại",
+      "pieceUnit": " cái",
+      "compareLastMonth": "so với tháng trước"
+    },
+    "payrollFeedback": {
+      "navTitle": "Phản hồi quyết toán",
+      "emptySettlements": "Chưa có bảng quyết toán nào được phát hành",
+      "statusNone": "Chờ phản hồi",
+      "statusPending": "Đã gửi · đang xử lý",
+      "statusResolved": "Đã giải quyết",
+      "statusRejected": "Đã từ chối",
+      "tapFeedback": "Gửi phản hồi",
+      "submitTitle": "Gửi phản hồi quyết toán",
+      "settlementNo": "Số bảng quyết toán",
+      "feedbackType": "Loại phản hồi",
+      "typeConfirm": "Xác nhận đúng",
+      "typeDispute": "Khiếu nại",
+      "disputeContent": "Nội dung khiếu nại",
+      "disputePlaceholder": "Mô tả vấn đề, ví dụ: sai số lượng hoặc sai số tiền",
+      "submitting": "Đang gửi...",
+      "submitBtn": "Gửi",
+      "noPermission": "Bạn không có quyền xem tiền công",
+      "loadFailed": "Tải thất bại",
+      "disputeRequired": "Phải nhập nội dung phản hồi khi khiếu nại",
+      "submitSuccess": "Gửi thành công",
+      "submitFailed": "Gửi thất bại",
+      "pieceUnit": " cái"
     }
   }
 }

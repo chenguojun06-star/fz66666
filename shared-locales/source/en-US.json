@@ -3703,6 +3703,48 @@
       "loadFailed": "Load failed",
       "tapRetry": "Tap to retry",
       "searchPlaceholder": "Enter order no. / buyer name then search"
+    },
+    "payroll": {
+      "navTitle": "Wage Query",
+      "pieceworkWage": "Piece-rate wage",
+      "bonus": "Bonus",
+      "startLabel": "Start",
+      "endLabel": "End",
+      "allOption": "All",
+      "pieceworkOption": "Piece-rate",
+      "hourlyOption": "Hourly",
+      "emptyRecords": "No wage records yet",
+      "monthlyTotal": "Monthly total",
+      "searchPlaceholder": "Style no. / order no. / style name / bundle no.",
+      "noPermission": "You do not have permission to view wages",
+      "monthFmt": "{month}/{year}",
+      "loadFailed": "Load failed",
+      "pieceUnit": " pcs",
+      "compareLastMonth": "vs last month"
+    },
+    "payrollFeedback": {
+      "navTitle": "Settlement Feedback",
+      "emptySettlements": "No issued settlement statements yet",
+      "statusNone": "Pending feedback",
+      "statusPending": "Submitted · in progress",
+      "statusResolved": "Resolved",
+      "statusRejected": "Rejected",
+      "tapFeedback": "Give feedback",
+      "submitTitle": "Submit settlement feedback",
+      "settlementNo": "Statement no.",
+      "feedbackType": "Feedback type",
+      "typeConfirm": "Confirmed correct",
+      "typeDispute": "Raise a dispute",
+      "disputeContent": "Dispute details",
+      "disputePlaceholder": "Describe the issue, e.g. wrong quantity or incorrect amount",
+      "submitting": "Submitting...",
+      "submitBtn": "Submit",
+      "noPermission": "You do not have permission to view wages",
+      "loadFailed": "Load failed",
+      "disputeRequired": "Feedback details are required when raising a dispute",
+      "submitSuccess": "Submitted successfully",
+      "submitFailed": "Submit failed",
+      "pieceUnit": " pcs"
     }
   }
 }

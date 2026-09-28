@@ -2541,6 +2541,10 @@ const SCAN_HANDLERS = {
   stageProcessor: 'pages/scan/handlers/helpers/ScanStageProcessor.js',
   peripheral: 'pages/scan/handlers/helpers/ScanPeripheralHelper.js',
 };
+const WAGE_JS = 'pages/payroll/payroll.js';
+const WAGE_WXML = 'pages/payroll/payroll.wxml';
+const WAGE_FEEDBACK_JS = 'pages/payroll/feedback/index.js';
+const WAGE_FEEDBACK_WXML = 'pages/payroll/feedback/index.wxml';
 const SALES_ORDER_LIST_JS = 'pages/sales/order-list/index.js';
 const SALES_ORDER_LIST_WXML = 'pages/sales/order-list/index.wxml';
 const PLATFORM_NAMES_JS = 'utils/platformNames.js';
@@ -2998,6 +3002,69 @@ function testI18nScanHome() {
   // ⑦ 导航标题
   eq('扫码主页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Scan');
   eq('扫码主页 zh 导航标题', lastCall(zhWx, 'setNavigationBarTitle').title, '扫码');
+}
+
+/**
+ * 全局：i18n require 路径层级自检（D-609 加，防第三次踩坑）
+ *
+ * 规则：`require('<N 级 ../>utils/i18n/index')` 里的 N 必须等于
+ *       该文件所在目录相对 miniprogram/ 的深度。
+ *       pages/payroll/payroll.js          → 深度 2 → ../../
+ *       pages/payroll/feedback/index.js   → 深度 3 → ../../../
+ *       pages/scan/handlers/helpers/x.js  → 深度 4 → ../../../../
+ * 踩过两次（D-607 privacy、D-609 payroll），都是测试报「无法解析 require」才发现。
+ */
+function testI18nRequireDepth() {
+  console.log('\n【i18n：require 路径层级自检】');
+  const bad = [];
+  const walk = (dir) => {
+    fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+      if (e.name === 'node_modules') return;
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) return walk(full);
+      if (!e.name.endsWith('.js')) return;
+      const src = fs.readFileSync(full, 'utf8');
+      const m = src.match(/require\('((?:\.\.\/)+)utils\/i18n\/index'\)/);
+      if (!m) return;
+      const rel = path.relative(MP, dir);
+      const depth = rel === '' ? 0 : rel.split(path.sep).length;
+      if (m[1] !== '../'.repeat(depth)) {
+        bad.push(`${path.relative(MP, full)}: 用了 ${m[1]}，应为 ${'../'.repeat(depth)}`);
+      }
+    });
+  };
+  walk(MP);
+  ok('所有 i18n require 路径层级正确', bad.length === 0, bad.join(' | '));
+}
+
+/** 工资查询页 + 工资结算反馈页（D-609） */
+function testI18nPayroll() {
+  testPageI18n(WAGE_JS, WAGE_WXML, '工资查询页');
+  testPageI18n(WAGE_FEEDBACK_JS, WAGE_FEEDBACK_WXML, '工资结算反馈页');
+
+  const { page: zhP, wx: zhWx } = loadPage(WAGE_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(WAGE_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 计件工资标签', zhP.data.t.pieceworkWage, '计件工资');
+  eq('en 计件工资标签', enP.data.t.pieceworkWage, 'Piece-rate wage');
+  eq('en 本月合计', enP.data.t.monthlyTotal, 'Monthly total');
+  ok('en 件单位带前导空格', enP.data.t.pieceUnit.startsWith(' '), JSON.stringify(enP.data.t.pieceUnit));
+  eq('工资页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Wage Query');
+
+  const { page: enF } = loadPage(WAGE_FEEDBACK_JS, makeApi());
+  enF.applyLanguage('en-US');
+  eq('en 反馈状态：待反馈', enF.data.t.statusNone, 'Pending feedback');
+  eq('en 反馈状态：已驳回', enF.data.t.statusRejected, 'Rejected');
+  eq('en 异议占位', enF.data.t.disputePlaceholder,
+    'Describe the issue, e.g. wrong quantity or incorrect amount');
+
+  // 🔴 护栏：inferWageType 的 奖金/绩效/补贴/计时 是**匹配 processName 的关键词**，不可键化
+  const jsSrc = fs.readFileSync(path.join(MP, WAGE_JS), 'utf8');
+  ok('护栏：工资类型推断仍用中文关键词',
+    jsSrc.includes("name.indexOf('奖金') >= 0") && jsSrc.includes("name.indexOf('计时') >= 0"),
+    '拿中文匹配工序名，翻译后推断失效');
 }
 
 /** 平台订单列表页 + 平台名共享模块（D-608） */
@@ -4218,6 +4285,8 @@ try {
   testI18nSalesOverview();
   testI18nPrivacy();
   testI18nSalesOrderList();
+  testI18nPayroll();
+  testI18nRequireDepth();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
   console.log('\n❌ 执行异常:', e && e.stack || e);

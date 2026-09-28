@@ -7,17 +7,17 @@
       <text class="summary-amount">¥{{totalAmount}}</text>
       <view class="summary-mom" wx:if="{{momChange}}">
         <view class="mom-arrow {{momChange >= 0 ? 'mom-up' : 'mom-down'}}"></view>
-        <text class="mom-text {{momChange >= 0 ? 'mom-up' : 'mom-down'}}">较上月 {{momChange >= 0 ? '+' : ''}}{{momChange}}%</text>
+        <text class="mom-text {{momChange >= 0 ? 'mom-up' : 'mom-down'}}">{{t.compareLastMonth}} {{momChange >= 0 ? '+' : ''}}{{momChange}}%</text>
       </view>
     </view>
     <view class="summary-right">
       <view class="summary-stat-item">
-        <text class="summary-stat-label">计件工资</text>
+        <text class="summary-stat-label">{{t.pieceworkWage}}</text>
         <text class="summary-stat-value">¥{{pieceworkAmount}}</text>
       </view>
       <view class="summary-stat-divider"></view>
       <view class="summary-stat-item">
-        <text class="summary-stat-label">奖金</text>
+        <text class="summary-stat-label">{{t.bonus}}</text>
         <text class="summary-stat-value">¥{{bonusAmount}}</text>
       </view>
     </view>
@@ -27,7 +27,7 @@
   <view class="ssb-wrap">
     <sticky-search-bar
       sticky="{{false}}"
-      placeholder="款号 / 订单号 / 款式名字 / 菲号"
+      placeholder="{{t.searchPlaceholder}}"
       value="{{searchKeyword}}"
       show-scan="{{false}}"
       show-filter="{{false}}"
@@ -41,14 +41,14 @@
   <view class="date-bar">
     <picker mode="date" value="{{startDate}}" end="{{endDate}}" bindchange="onStartDateChange">
       <view class="date-picker">
-        <text class="date-label">开始</text>
+        <text class="date-label">{{t.startLabel}}</text>
         <text class="date-value">{{startDate}}</text>
       </view>
     </picker>
     <text class="date-sep">~</text>
     <picker mode="date" value="{{endDate}}" start="{{startDate}}" bindchange="onEndDateChange">
       <view class="date-picker">
-        <text class="date-label">结束</text>
+        <text class="date-label">{{t.endLabel}}</text>
         <text class="date-value">{{endDate}}</text>
       </view>
     </picker>
@@ -57,13 +57,13 @@
   <!-- 类型筛选 tabs (Apple 风格下划线) -->
   <view class="filter-tabs">
     <view class="filter-tab {{wageTypeFilter === 'all' ? 'active' : ''}}"
-      data-filter="all" bindtap="onWageTypeChange">全部</view>
+      data-filter="all" bindtap="onWageTypeChange">{{t.allOption}}</view>
     <view class="filter-tab {{wageTypeFilter === 'piecework' ? 'active' : ''}}"
-      data-filter="piecework" bindtap="onWageTypeChange">计件</view>
+      data-filter="piecework" bindtap="onWageTypeChange">{{t.pieceworkOption}}</view>
     <view class="filter-tab {{wageTypeFilter === 'hourly' ? 'active' : ''}}"
-      data-filter="hourly" bindtap="onWageTypeChange">计时</view>
+      data-filter="hourly" bindtap="onWageTypeChange">{{t.hourlyOption}}</view>
     <view class="filter-tab {{wageTypeFilter === 'bonus' ? 'active' : ''}}"
-      data-filter="bonus" bindtap="onWageTypeChange">奖金</view>
+      data-filter="bonus" bindtap="onWageTypeChange">{{t.bonus}}</view>
   </view>
 
   <!-- 明细记录列表 -->
@@ -83,7 +83,7 @@
             <text class="record-sub">{{item.styleNo !== '-' ? item.styleNo : (item.styleName || item.styleNo)}} · {{item.shortDate}}</text>
           </view>
           <view class="record-right">
-            <text class="record-calc">{{item.quantity}}{{item.wageType === 'bonus' ? '' : '件'}} × ¥{{item.unitPrice}}</text>
+            <text class="record-calc">{{item.quantity}}{{item.wageType === 'bonus' ? '' : t.pieceUnit}} × ¥{{item.unitPrice}}</text>
             <text class="record-amount">¥{{item.totalAmount}}</text>
           </view>
         </view>
@@ -93,7 +93,7 @@
     <!-- 空状态 -->
     <view class="empty-state" wx:if="{{filteredRecords.length === 0 && !loading}}">
       <view class="line-icon line-icon--lg icon-clipboard-gray"></view>
-      <text class="empty-text">暂无工资记录</text>
+      <text class="empty-text">{{t.emptyRecords}}</text>
     </view>
   </view>
 
@@ -103,7 +103,7 @@
   <!-- 底部固定合计栏 -->
   <view class="bottom-bar">
     <view class="bottom-bar-inner">
-      <text class="bottom-bar-label">本月合计</text>
+      <text class="bottom-bar-label">{{t.monthlyTotal}}</text>
       <text class="bottom-bar-amount">¥{{filteredTotalAmount}}</text>
     </view>
   </view>
