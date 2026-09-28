@@ -1331,7 +1331,11 @@
       "sizeColorHeader": "码数颜色",
       "subProcessProgress": "子工序进度",
       "noProcessConfigured": "该款号尚未配置工序，请先在款式工序配置中添加",
-      "noSubProcess": "暂无子工序"
+      "noSubProcess": "暂无子工序",
+      "filterAll": "全部",
+      "filterInProgress": "开发中",
+      "filterCompleted": "已完成",
+      "filterWarning": "临近交期"
     },
     "scanHome": {
       "navTitle": "扫码",
@@ -1516,7 +1520,22 @@
       "claimFailed": "领取失败",
       "openFailed": "打开失败",
       "loadingProcess": "加载工序...",
-      "selectRole": "选择角色"
+      "selectRole": "选择角色",
+      "bizTypeGeneral": "通用",
+      "bizTypePattern": "纸样",
+      "bizTypePatternGrading": "放码纸样",
+      "bizTypePatternFinal": "纸样(终版)",
+      "bizTypePatternGradingFinal": "放码纸样(终版)",
+      "bizTypePatternSupplement": "补充纸样",
+      "statusCompleted": "已完成",
+      "statusNotStarted": "待开始",
+      "sampleCompletedToast": "样衣已完成",
+      "pushConfirmContent": "将同步物料清单、纸样、尺寸表、工序单价到下单管理，确认推送？",
+      "merchandiserPrefix": "跟单: ",
+      "overdueFmt": "逾期{days}天",
+      "dueToday": "今天交板",
+      "daysLeftFmt": "{days}天",
+      "takePhoto": "拍照 / 从相册选图"
     },
     "stageDetail": {
       "navTitle": "阶段详情",
@@ -1662,7 +1681,12 @@
       "secondaryWordW": "二次工艺",
       "partsCountW": "个部位",
       "kindCountFmt": "种",
-      "scanRecordsFmtW": "扫码记录"
+      "scanRecordsFmtW": "扫码记录",
+      "reviewNotReviewed": "未审核",
+      "opPattern": "纸样操作",
+      "opMaintenance": "维护操作",
+      "systemAuthor": "系统",
+      "stageDetailFallback": "阶段详情"
     },
     "qualityDetail": {
       "navTitle": "质检明细",

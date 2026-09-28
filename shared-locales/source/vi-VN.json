@@ -1331,7 +1331,11 @@
       "sizeColorHeader": "Size & Màu",
       "subProcessProgress": "Tiến độ công đoạn con",
       "noProcessConfigured": "Chưa cấu hình công đoạn, thêm trong cấu hình kiểu",
-      "noSubProcess": "Chưa có công đoạn con"
+      "noSubProcess": "Chưa có công đoạn con",
+      "filterAll": "Tất cả",
+      "filterInProgress": "Đang phát triển",
+      "filterCompleted": "Đã hoàn thành",
+      "filterWarning": "Sắp đến hạn"
     },
     "scanHome": {
       "navTitle": "Quét mã",
@@ -1516,7 +1520,22 @@
       "claimFailed": "Nhận thất bại",
       "openFailed": "Mở thất bại",
       "loadingProcess": "Đang tải công đoạn...",
-      "selectRole": "Chọn vai trò"
+      "selectRole": "Chọn vai trò",
+      "bizTypeGeneral": "Chung",
+      "bizTypePattern": "Rập",
+      "bizTypePatternGrading": "Rập nhảy size",
+      "bizTypePatternFinal": "Rập (bản cuối)",
+      "bizTypePatternGradingFinal": "Rập nhảy size (bản cuối)",
+      "bizTypePatternSupplement": "Rập bổ sung",
+      "statusCompleted": "Đã hoàn thành",
+      "statusNotStarted": "Chưa bắt đầu",
+      "sampleCompletedToast": "Mẫu đã hoàn thành",
+      "pushConfirmContent": "Thao tác này sẽ đồng bộ BOM, rập, bảng size và đơn giá công đoạn sang Quản lý đơn hàng. Xác nhận?",
+      "merchandiserPrefix": "Theo dõi đơn: ",
+      "overdueFmt": "Trễ {days} ngày",
+      "dueToday": "Giao hôm nay",
+      "daysLeftFmt": "{days} ngày",
+      "takePhoto": "Chụp ảnh / chọn từ thư viện"
     },
     "stageDetail": {
       "navTitle": "Chi tiết giai đoạn",
@@ -1662,7 +1681,12 @@
       "secondaryWordW": "CN thứ cấp",
       "partsCountW": " bộ phận",
       "kindCountFmt": " loại",
-      "scanRecordsFmtW": "Bản ghi quét"
+      "scanRecordsFmtW": "Bản ghi quét",
+      "reviewNotReviewed": "Chưa duyệt",
+      "opPattern": "Thao tác rập",
+      "opMaintenance": "Thao tác bảo trì",
+      "systemAuthor": "Hệ thống",
+      "stageDetailFallback": "Chi tiết công đoạn"
     },
     "qualityDetail": {
       "navTitle": "Chi tiết QC",

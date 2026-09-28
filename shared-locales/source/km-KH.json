@@ -1331,7 +1331,11 @@
       "sizeColorHeader": "Size & Color",
       "subProcessProgress": "Sub-process Progress",
       "noProcessConfigured": "No processes configured; add them in style process config first",
-      "noSubProcess": "No sub-processes"
+      "noSubProcess": "No sub-processes",
+      "filterAll": "All",
+      "filterInProgress": "In development",
+      "filterCompleted": "Completed",
+      "filterWarning": "Due soon"
     },
     "scanHome": {
       "navTitle": "Scan",
@@ -1516,7 +1520,22 @@
       "claimFailed": "Claim failed",
       "openFailed": "Open failed",
       "loadingProcess": "Loading processes...",
-      "selectRole": "Select Role"
+      "selectRole": "Select Role",
+      "bizTypeGeneral": "General",
+      "bizTypePattern": "Pattern",
+      "bizTypePatternGrading": "Graded pattern",
+      "bizTypePatternFinal": "Pattern (final)",
+      "bizTypePatternGradingFinal": "Graded pattern (final)",
+      "bizTypePatternSupplement": "Supplementary pattern",
+      "statusCompleted": "Completed",
+      "statusNotStarted": "Not started",
+      "sampleCompletedToast": "Sample completed",
+      "pushConfirmContent": "This will sync the BOM, patterns, size chart and process unit prices to Order Management. Confirm?",
+      "merchandiserPrefix": "Merchandiser: ",
+      "overdueFmt": "{days} days overdue",
+      "dueToday": "Due today",
+      "daysLeftFmt": "{days} days",
+      "takePhoto": "Take photo / choose from album"
     },
     "stageDetail": {
       "navTitle": "Stage Detail",
@@ -1662,7 +1681,12 @@
       "secondaryWordW": "Secondary",
       "partsCountW": " parts",
       "kindCountFmt": " kinds",
-      "scanRecordsFmtW": "Scans"
+      "scanRecordsFmtW": "Scans",
+      "reviewNotReviewed": "Not reviewed",
+      "opPattern": "Pattern action",
+      "opMaintenance": "Maintenance action",
+      "systemAuthor": "System",
+      "stageDetailFallback": "Stage details"
     },
     "qualityDetail": {
       "navTitle": "QC Detail",

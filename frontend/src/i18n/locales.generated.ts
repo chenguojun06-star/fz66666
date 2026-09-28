@@ -1338,7 +1338,11 @@ export const LOCALES = {
         "sizeColorHeader": "码数颜色",
         "subProcessProgress": "子工序进度",
         "noProcessConfigured": "该款号尚未配置工序，请先在款式工序配置中添加",
-        "noSubProcess": "暂无子工序"
+        "noSubProcess": "暂无子工序",
+        "filterAll": "全部",
+        "filterInProgress": "开发中",
+        "filterCompleted": "已完成",
+        "filterWarning": "临近交期"
       },
       "scanHome": {
         "navTitle": "扫码",
@@ -1523,7 +1527,22 @@ export const LOCALES = {
         "claimFailed": "领取失败",
         "openFailed": "打开失败",
         "loadingProcess": "加载工序...",
-        "selectRole": "选择角色"
+        "selectRole": "选择角色",
+        "bizTypeGeneral": "通用",
+        "bizTypePattern": "纸样",
+        "bizTypePatternGrading": "放码纸样",
+        "bizTypePatternFinal": "纸样(终版)",
+        "bizTypePatternGradingFinal": "放码纸样(终版)",
+        "bizTypePatternSupplement": "补充纸样",
+        "statusCompleted": "已完成",
+        "statusNotStarted": "待开始",
+        "sampleCompletedToast": "样衣已完成",
+        "pushConfirmContent": "将同步物料清单、纸样、尺寸表、工序单价到下单管理，确认推送？",
+        "merchandiserPrefix": "跟单: ",
+        "overdueFmt": "逾期{days}天",
+        "dueToday": "今天交板",
+        "daysLeftFmt": "{days}天",
+        "takePhoto": "拍照 / 从相册选图"
       },
       "stageDetail": {
         "navTitle": "阶段详情",
@@ -1669,7 +1688,12 @@ export const LOCALES = {
         "secondaryWordW": "二次工艺",
         "partsCountW": "个部位",
         "kindCountFmt": "种",
-        "scanRecordsFmtW": "扫码记录"
+        "scanRecordsFmtW": "扫码记录",
+        "reviewNotReviewed": "未审核",
+        "opPattern": "纸样操作",
+        "opMaintenance": "维护操作",
+        "systemAuthor": "系统",
+        "stageDetailFallback": "阶段详情"
       },
       "qualityDetail": {
         "navTitle": "质检明细",
@@ -5152,7 +5176,11 @@ export const LOCALES = {
         "sizeColorHeader": "Size & Color",
         "subProcessProgress": "Sub-process Progress",
         "noProcessConfigured": "No processes configured; add them in style process config first",
-        "noSubProcess": "No sub-processes"
+        "noSubProcess": "No sub-processes",
+        "filterAll": "All",
+        "filterInProgress": "In development",
+        "filterCompleted": "Completed",
+        "filterWarning": "Due soon"
       },
       "scanHome": {
         "navTitle": "Scan",
@@ -5337,7 +5365,22 @@ export const LOCALES = {
         "claimFailed": "Claim failed",
         "openFailed": "Open failed",
         "loadingProcess": "Loading processes...",
-        "selectRole": "Select Role"
+        "selectRole": "Select Role",
+        "bizTypeGeneral": "General",
+        "bizTypePattern": "Pattern",
+        "bizTypePatternGrading": "Graded pattern",
+        "bizTypePatternFinal": "Pattern (final)",
+        "bizTypePatternGradingFinal": "Graded pattern (final)",
+        "bizTypePatternSupplement": "Supplementary pattern",
+        "statusCompleted": "Completed",
+        "statusNotStarted": "Not started",
+        "sampleCompletedToast": "Sample completed",
+        "pushConfirmContent": "This will sync the BOM, patterns, size chart and process unit prices to Order Management. Confirm?",
+        "merchandiserPrefix": "Merchandiser: ",
+        "overdueFmt": "{days} days overdue",
+        "dueToday": "Due today",
+        "daysLeftFmt": "{days} days",
+        "takePhoto": "Take photo / choose from album"
       },
       "stageDetail": {
         "navTitle": "Stage Detail",
@@ -5483,7 +5526,12 @@ export const LOCALES = {
         "secondaryWordW": "Secondary",
         "partsCountW": " parts",
         "kindCountFmt": " kinds",
-        "scanRecordsFmtW": "Scans"
+        "scanRecordsFmtW": "Scans",
+        "reviewNotReviewed": "Not reviewed",
+        "opPattern": "Pattern action",
+        "opMaintenance": "Maintenance action",
+        "systemAuthor": "System",
+        "stageDetailFallback": "Stage details"
       },
       "qualityDetail": {
         "navTitle": "QC Detail",
@@ -8966,7 +9014,11 @@ export const LOCALES = {
         "sizeColorHeader": "Size & Màu",
         "subProcessProgress": "Tiến độ công đoạn con",
         "noProcessConfigured": "Chưa cấu hình công đoạn, thêm trong cấu hình kiểu",
-        "noSubProcess": "Chưa có công đoạn con"
+        "noSubProcess": "Chưa có công đoạn con",
+        "filterAll": "Tất cả",
+        "filterInProgress": "Đang phát triển",
+        "filterCompleted": "Đã hoàn thành",
+        "filterWarning": "Sắp đến hạn"
       },
       "scanHome": {
         "navTitle": "Quét mã",
@@ -9151,7 +9203,22 @@ export const LOCALES = {
         "claimFailed": "Nhận thất bại",
         "openFailed": "Mở thất bại",
         "loadingProcess": "Đang tải công đoạn...",
-        "selectRole": "Chọn vai trò"
+        "selectRole": "Chọn vai trò",
+        "bizTypeGeneral": "Chung",
+        "bizTypePattern": "Rập",
+        "bizTypePatternGrading": "Rập nhảy size",
+        "bizTypePatternFinal": "Rập (bản cuối)",
+        "bizTypePatternGradingFinal": "Rập nhảy size (bản cuối)",
+        "bizTypePatternSupplement": "Rập bổ sung",
+        "statusCompleted": "Đã hoàn thành",
+        "statusNotStarted": "Chưa bắt đầu",
+        "sampleCompletedToast": "Mẫu đã hoàn thành",
+        "pushConfirmContent": "Thao tác này sẽ đồng bộ BOM, rập, bảng size và đơn giá công đoạn sang Quản lý đơn hàng. Xác nhận?",
+        "merchandiserPrefix": "Theo dõi đơn: ",
+        "overdueFmt": "Trễ {days} ngày",
+        "dueToday": "Giao hôm nay",
+        "daysLeftFmt": "{days} ngày",
+        "takePhoto": "Chụp ảnh / chọn từ thư viện"
       },
       "stageDetail": {
         "navTitle": "Chi tiết giai đoạn",
@@ -9297,7 +9364,12 @@ export const LOCALES = {
         "secondaryWordW": "CN thứ cấp",
         "partsCountW": " bộ phận",
         "kindCountFmt": " loại",
-        "scanRecordsFmtW": "Bản ghi quét"
+        "scanRecordsFmtW": "Bản ghi quét",
+        "reviewNotReviewed": "Chưa duyệt",
+        "opPattern": "Thao tác rập",
+        "opMaintenance": "Thao tác bảo trì",
+        "systemAuthor": "Hệ thống",
+        "stageDetailFallback": "Chi tiết công đoạn"
       },
       "qualityDetail": {
         "navTitle": "Chi tiết QC",
@@ -12780,7 +12852,11 @@ export const LOCALES = {
         "sizeColorHeader": "Size & Color",
         "subProcessProgress": "Sub-process Progress",
         "noProcessConfigured": "No processes configured; add them in style process config first",
-        "noSubProcess": "No sub-processes"
+        "noSubProcess": "No sub-processes",
+        "filterAll": "All",
+        "filterInProgress": "In development",
+        "filterCompleted": "Completed",
+        "filterWarning": "Due soon"
       },
       "scanHome": {
         "navTitle": "Scan",
@@ -12965,7 +13041,22 @@ export const LOCALES = {
         "claimFailed": "Claim failed",
         "openFailed": "Open failed",
         "loadingProcess": "Loading processes...",
-        "selectRole": "Select Role"
+        "selectRole": "Select Role",
+        "bizTypeGeneral": "General",
+        "bizTypePattern": "Pattern",
+        "bizTypePatternGrading": "Graded pattern",
+        "bizTypePatternFinal": "Pattern (final)",
+        "bizTypePatternGradingFinal": "Graded pattern (final)",
+        "bizTypePatternSupplement": "Supplementary pattern",
+        "statusCompleted": "Completed",
+        "statusNotStarted": "Not started",
+        "sampleCompletedToast": "Sample completed",
+        "pushConfirmContent": "This will sync the BOM, patterns, size chart and process unit prices to Order Management. Confirm?",
+        "merchandiserPrefix": "Merchandiser: ",
+        "overdueFmt": "{days} days overdue",
+        "dueToday": "Due today",
+        "daysLeftFmt": "{days} days",
+        "takePhoto": "Take photo / choose from album"
       },
       "stageDetail": {
         "navTitle": "Stage Detail",
@@ -13111,7 +13202,12 @@ export const LOCALES = {
         "secondaryWordW": "Secondary",
         "partsCountW": " parts",
         "kindCountFmt": " kinds",
-        "scanRecordsFmtW": "Scans"
+        "scanRecordsFmtW": "Scans",
+        "reviewNotReviewed": "Not reviewed",
+        "opPattern": "Pattern action",
+        "opMaintenance": "Maintenance action",
+        "systemAuthor": "System",
+        "stageDetailFallback": "Stage details"
       },
       "qualityDetail": {
         "navTitle": "QC Detail",

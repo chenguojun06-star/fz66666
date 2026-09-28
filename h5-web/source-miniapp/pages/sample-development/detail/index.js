@@ -35,14 +35,14 @@ function toArray(res) {
   return Array.isArray(list) ? list : (list.records || []);
 }
 
-// 附件业务类型 → 中文（与 PC 端资料中心口径一致）
+// 附件业务类型 → 语言包键名（code 与 PC 端资料中心口径一致；显示统一走 i18n.t(NS + 值)）
 const BIZ_TYPE_LABEL = {
-  general: '通用',
-  pattern: '纸样',
-  pattern_grading: '放码纸样',
-  pattern_final: '纸样(终版)',
-  pattern_grading_final: '放码纸样(终版)',
-  pattern_supplement: '补充纸样',
+  general: 'bizTypeGeneral',
+  pattern: 'bizTypePattern',
+  pattern_grading: 'bizTypePatternGrading',
+  pattern_final: 'bizTypePatternFinal',
+  pattern_grading_final: 'bizTypePatternGradingFinal',
+  pattern_supplement: 'bizTypePatternSupplement',
   image: 'bizImage',
   colorway: 'bizColorway',
   size_table: 'tabSize',
@@ -273,6 +273,7 @@ Page({
     this._lang = lang;
     this.setData({
       t: {
+        takePhoto: i18n.t(NS + 'takePhoto', lang),
         loading: i18n.t('common.loading', lang),
         deliveryDateLabel: i18n.t(NS + 'deliveryDateLabel', lang),
         claimSample: i18n.t(NS + 'claimSample', lang),
@@ -615,7 +616,8 @@ Page({
         index: idx + 1,
         percent: percent,
         status: status,
-        statusText: percent >= 100 ? '已完成' : (percent > 0 ? percent + '%' : '待开始'),
+        statusText: percent >= 100 ? i18n.t(NS + 'statusCompleted', this._lang)
+        : (percent > 0 ? percent + '%' : i18n.t(NS + 'statusNotStarted', this._lang)),
         _clickable: clickable,
         _showLine: idx > 0,
       };
@@ -672,7 +674,7 @@ Page({
         if (!res.confirm) return;
         style.stageAction(styleId, 'sample', 'complete')
           .then(() => {
-            wx.showToast({ title: '样衣已完成', icon: 'success' });
+            wx.showToast({ title: i18n.t(NS + 'sampleCompletedToast', this._lang), icon: 'success' });
             this.loadStyleDetail();
           })
           .catch((err) => {
@@ -688,7 +690,7 @@ Page({
     if (!styleId) return;
     wx.showModal({
       title: i18n.t(NS + 'pushToOrder', this._lang),
-      content: '将同步物料清单、纸样、尺寸表、工序单价到下单管理，确认推送？',
+      content: i18n.t(NS + 'pushConfirmContent', this._lang),
       confirmColor: 'var(--color-primary)',
       success: (res) => {
         if (!res.confirm) return;
@@ -733,7 +735,7 @@ Page({
     if (info.customer || info.customerName) parts.push(info.customer || info.customerName);
     // 跟单员：StyleInfo 用 orderType 字段存储跟单员
     if (info.merchandiser || info.merchandiserName || info.orderType) {
-      parts.push('跟单: ' + (info.merchandiser || info.merchandiserName || info.orderType));
+      parts.push(i18n.t(NS + 'merchandiserPrefix', this._lang) + (info.merchandiser || info.merchandiserName || info.orderType));
     }
     let category = displayCategory(info.category);
     if (category) parts.push(category);
@@ -764,9 +766,9 @@ Page({
       now.setHours(0, 0, 0, 0);
       due.setHours(0, 0, 0, 0);
       const diff = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
-      if (diff < 0) return '逾期' + Math.abs(diff) + '天';
-      if (diff === 0) return '今天交板';
-      return diff + '天';
+      if (diff < 0) return i18n.tf(NS + 'overdueFmt', { days: Math.abs(diff) }, this._lang);
+      if (diff === 0) return i18n.t(NS + 'dueToday', this._lang);
+      return i18n.tf(NS + 'daysLeftFmt', { days: diff }, this._lang);
     } catch (e) { return ''; }
   },
 
@@ -848,7 +850,7 @@ Page({
   onUploadAttachment() {
     const that = this;
     wx.showActionSheet({
-      itemList: ['从聊天选择文件', '拍照 / 从相册选图'],
+      itemList: [i18n.t(NS + 'chooseFromChat', this._lang), i18n.t(NS + 'takePhoto', this._lang)],
       success: function (r) {
         if (r.tapIndex === 0) that._pickMessageFile();
         else if (r.tapIndex === 1) that._pickMedia();
@@ -1602,7 +1604,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

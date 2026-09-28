@@ -184,7 +184,7 @@ Page({
     stage: null,
     styleInfo: null,
     stageName: '',
-    navTitle: '阶段详情',
+    navTitle: '',
     loading: true,
     // 各阶段数据
     bomList: [],
@@ -1012,6 +1012,7 @@ Page({
   _groupProcessesByStage(processStages) {
     if (!processStages || processStages.length === 0) return [];
     // 与 PC 端 STAGE_ORDER 一致（4个生产工序，不含采购/入库）
+    // 🚫 i18n 豁免：拿中文**比对后端返回的阶段名**（归一化用），不可翻译
     var STAGE_ORDER = ['裁剪', '二次工艺', '车缝', '尾部'];
     // progressStage → 中文阶段名映射（覆盖后端可能返回的英文/中文变体）
     var STAGE_MAP = {
@@ -1089,7 +1090,8 @@ Page({
   _filterGroupsByStageKey(groups, stageKey) {
     if (!groups || groups.length === 0) return [];
     if (stageKey === 'process' || !stageKey) return groups;
-    // stageKey → 中文阶段名
+    // 🚫 i18n 豁免：stageKey → 后端返回的中文阶段名（groups 数据里就是中文），
+    //    这里拿它做**比对**定位分组，不可翻译
     var STAGE_KEY_MAP = {
       procurement: '物料采购',
       cutting: '裁剪',
@@ -1292,7 +1294,7 @@ Page({
         REJECT: { text: i18n.t(NS + 'failWord', this._lang), tone: 'danger' },
       };
       var reviewStatus = style.sampleReviewStatus || '';
-      var reviewInfo = reviewStatusMap[reviewStatus] || { text: '未审核', tone: 'default' };
+      var reviewInfo = reviewStatusMap[reviewStatus] || { text: i18n.t(NS + 'reviewNotReviewed', this._lang), tone: 'default' };
       this.setData({
         productionData: {
           styleNo: style.styleNo || '',
@@ -1592,10 +1594,11 @@ Page({
       const res = await production.listOrderRemarks('style', styleNo);
       let list = _unwrapList(res);
       var BIZ_TYPE_LABELS = {
-        style: '款式操作', pattern: '纸样操作', sample: '样衣操作', maintenance: '维护操作',
+        style: i18n.t(NS + 'opStyle', this._lang), pattern: i18n.t(NS + 'opPattern', this._lang),
+        sample: i18n.t(NS + 'opSample', this._lang), maintenance: i18n.t(NS + 'opMaintenance', this._lang),
       };
       list = list.map(r => {
-        var author = r.authorName || r.author || r.operatorName || r.createBy || '系统';
+        var author = r.authorName || r.author || r.operatorName || r.createBy || i18n.t(NS + 'systemAuthor', this._lang);
         var images = [];
         if (r.imageUrls) {
           try { images = JSON.parse(r.imageUrls); } catch (e) { images = []; }
@@ -1756,7 +1759,7 @@ Page({
     if (!key || key === this.data.stageKey) return;
     // 找到对应的阶段名称更新导航栏
     var stage = (this.data.devStages || []).find(function(s) { return s.key === key; });
-    var newName = stage ? stage.name : '阶段详情';
+    var newName = stage ? stage.name : i18n.t(NS + 'stageDetailFallback', this._lang);
     this.setData({ stageKey: key, navTitle: newName });
     wx.setNavigationBarTitle({ title: newName });
     this.loadStageData();
@@ -1797,7 +1800,7 @@ Page({
     wx.showModal({
       title: i18n.t(NS + 'markComplete', this._lang),
       content: i18n.tf(NS + 'markConfirmFmt', { name: stageName }, this._lang),
-      confirmText: '确认完成',
+      confirmText: i18n.t(NS + 'confirmComplete', this._lang),
       confirmColor: '#1677ff',
       success: function (res) {
         if (res.confirm) {
@@ -1900,7 +1903,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect', this._lang),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,
