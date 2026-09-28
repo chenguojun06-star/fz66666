@@ -49,6 +49,16 @@ const TOOL_NAMES = {
 };
 
 function describeTool(name) {
+  // 🌐 工具名 i18n（D-624）：键 common.toolName.<驼峰>，缺键/中文回落 TOOL_NAMES 中文表
+  //    翻译分批补：common.toolName 下有键即用，没有就回落 —— 不影响运行
+  const language = i18n.getLanguage();
+  if (language !== 'zh-CN' && name) {
+    var code = String(name).trim().replace(/^tool_/, '');
+    code = code.replace(/_([a-zA-Z0-9])/g, function (m, c) { return c.toUpperCase(); });
+    const key = 'common.toolName.' + code.charAt(0).toLowerCase() + code.slice(1);
+    const v = i18n.t(key, language);
+    if (v !== key) return v;
+  }
   return TOOL_NAMES[name] || (name || '').replace(/^tool_/, '').replace(/_/g, '');
 }
 
