@@ -103,6 +103,11 @@ CREATE INDEX idx_orders_customer_date ON orders(customer_id, order_date);
 CREATE INDEX idx_orders_covering ON orders(customer_id, order_date, status, total_amount);
 
 -- Fulltext index for search
+-- ⚠️ 生产警告（本项目适用）：对大表执行 ADD INDEX / ADD FULLTEXT INDEX 有锁表风险。
+--    MySQL 8.0 的普通二级索引可走 ONLINE DDL，但 FULLTEXT 索引【不支持 INPLACE】，
+--    仍会阻塞写入。本项目 t_ai_job_run_log(约222万行/328MB)、
+--    t_intelligence_audit_log(约31万行/187MB) 等表严禁在业务高峰直接执行，
+--    需选低峰窗口并先评估锁表时长。
 ALTER TABLE products ADD FULLTEXT INDEX ft_name_desc (name, description);
 
 -- Search using fulltext
@@ -288,6 +293,12 @@ SHOW GRANTS FOR 'app_user'@'%';
 ANALYZE TABLE orders, customers, products;
 
 -- Optimize tables (reclaim space, defragment)
+-- ⚠️ 生产警告（本项目适用）：InnoDB 的 OPTIMIZE TABLE 本质是「重建表 + 拷贝数据」，
+--    会占用大量磁盘与 IO，并在过程中长时间持锁——在大表上等同于一次全表 DDL。
+--    本项目 328MB 的 t_ai_job_run_log 等表禁止在业务时段执行。
+--    空间回收优先靠「定期清理历史数据 + InnoDB 复用空闲页」，
+--    本项目已有 AuditLogCleanupJob 承担清理（见 .agents/skills/fashion-* 与 CLAUDE.md），
+--    不需要靠 OPTIMIZE 回收空间。
 OPTIMIZE TABLE orders;
 
 -- Check table integrity
