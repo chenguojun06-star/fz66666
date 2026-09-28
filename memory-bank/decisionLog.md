@@ -20,6 +20,8 @@
 
 **为什么不用逐单 N 次打印**：N 个打印对话框浏览器无法免确认连弹；合并分页一次打印同时解决页码连续与操作成本。
 
+**D-611b（用户验收反馈，2026-09-28 已推 f9096b9c4）**：①页码不能整批混编——Playwright page.pdf+pdfjs 取文实测：Chromium 页脚边距页码（D-520 的 @bottom-center counter(page)）**无法被文档内 counter-reset 重置**，每单独立页码唯一正路=**每单独立打印任务**。改为双按钮：主「逐单连打」（safePrint 加 onAfterPrint，上一打印窗口关闭自动送下一单，页脚=本单 第X页/共Y页；关抽屉中断未送出的单），次「合并为一份」（页码整批连续，保留给不在乎页码的场景）。②抽屉要显示第一单内容供操作者定信息显隐——新增 StyleBatchPrintPreview，与正式打印同源（StylePrintDocBody+fetchStylePrintData），勾选实时联动。
+
 ---
 
 ## D-590：工人提示根治——"5 针"误抓收紧 + 按实际面料推针号/针具/注意点（2026-09-27）
