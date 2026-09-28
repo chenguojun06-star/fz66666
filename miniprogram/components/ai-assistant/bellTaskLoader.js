@@ -2,6 +2,8 @@
  * 铃铛组件 - 任务加载模块
  * 从 floating-bell/index.js 提取，负责各类任务的数据加载
  */
+const i18n = require('../../utils/i18n/index');
+const NS = 'mp.aiAssistant.';
 const api = require('../../utils/api');
 const reminderManager = require('../../utils/reminderManager');
 const storage = require('../../utils/storage');
@@ -31,16 +33,16 @@ function formatTimeAgo(time) {
   const days = Math.floor(hours / 24);
 
   if (minutes < 1) {
-    return '刚刚';
+    return i18n.t(NS + 'timeJustNow', i18n.getLanguage());
   }
   if (minutes < 60) {
-    return `${minutes}分钟前`;
+    return i18n.tf(NS + 'timeMinAgoFmt', { n: minutes }, i18n.getLanguage());
   }
   if (hours < 24) {
-    return `${hours}小时前`;
+    return i18n.tf(NS + 'timeHourAgoFmt', { n: hours }, i18n.getLanguage());
   }
   if (days < 7) {
-    return `${days}天前`;
+    return i18n.tf(NS + 'timeDayAgoFmt', { n: days }, i18n.getLanguage());
   }
 
   const month = date.getMonth() + 1;
@@ -162,10 +164,10 @@ async function loadProcurementTasks() {
       id: item.id || item.purchaseId,
       orderNo: item.orderNo || item.productionOrderNo || '',
       styleNo: item.styleNo || '',
-      materialName: item.materialName || '未知物料',
+      materialName: item.materialName || i18n.t(NS + 'unknownMaterial', i18n.getLanguage()),
       purchaseQuantity: Number(item.purchaseQuantity) || 0,
       arrivedQuantity: Number(item.arrivedQuantity) || 0,
-      unit: item.unit || '米',
+      unit: item.unit || i18n.t(NS + 'defaultUnit', i18n.getLanguage()),
       patternProductionId: item.patternProductionId || '',
       sourceType: item.sourceType || '',
       coverImage: getAuthedImageUrl(item.coverImage || item.styleImage || item.styleCover || ''),
@@ -230,7 +232,7 @@ async function loadProcurementTasks() {
         coverImage: g.coverImage,
         // 无封面时占位显示款号首字，避免与下方款号行重复
         // 来源标记（样衣采购行显示"样衣"，大货不显示——分组名"待采购"已表达状态）
-        sourceLabel: g.sourceType === 'sample' ? '样衣' : '',
+        sourceLabel: g.sourceType === 'sample' ? i18n.t(NS + 'sourceSample', i18n.getLanguage()) : '',
         // 展示用字段
         materialCount,
         purchaseQuantity: totalQuantity,
@@ -238,8 +240,8 @@ async function loadProcurementTasks() {
         unit,
         // 用于 wxml 兼容：显示款号或物料数量
         materialName: materialCount > 1
-          ? materialCount + '项物料'
-          : (items[0].materialName || '待采购物料'),
+          ? i18n.tf(NS + 'materialCountFmt', { n: materialCount }, i18n.getLanguage())
+          : (items[0].materialName || i18n.t(NS + 'pendingMaterial', i18n.getLanguage())),
         receivedTimeText,
         quantityText: unit ? totalQuantity + unit : String(totalQuantity),
         arrivalText: totalArrived > 0 ? totalArrived + '/' + totalQuantity : '',
@@ -339,12 +341,12 @@ function loadTimeoutReminders() {
     return pendingReminders.map(r => {
       const baseTime = Number(r.lastRemindAt || r.createdAt || 0);
       const hours = baseTime > 0 ? Math.floor((now - baseTime) / (60 * 60 * 1000)) : 0;
-      const timeAgo = hours < 24 ? `${hours}小时` : `${Math.floor(hours / 24)}天`;
+      const timeAgo = hours < 24 ? i18n.tf(NS + 'timeHoursFmt', { n: hours }, i18n.getLanguage()) : i18n.tf(NS + 'timeDaysFmt', { n: Math.floor(hours / 24) }, i18n.getLanguage());
 
       return {
         id: r.id || `${r.orderNo}_${r.type}`,
         orderNo: r.orderNo || '',
-        type: r.type || '待处理',
+        type: r.type || i18n.t(NS + 'statusPending', i18n.getLanguage()),
         timeAgo,
       };
     });
@@ -365,7 +367,7 @@ async function loadPendingUsers() {
 
     return list.map(item => ({
       id: item.id,
-      name: item.name || item.username || '未知用户',
+      name: item.name || item.username || i18n.t(NS + 'unknownUser', i18n.getLanguage()),
       phone: item.phone || '',
       createdAt: item.createdAt || item.createTime,
       timeText: formatTimeAgo(item.createdAt || item.createTime),
@@ -387,7 +389,7 @@ async function loadTenantPendingRegistrations() {
 
     return list.map(item => ({
       id: item.id,
-      name: item.name || item.username || '未知员工',
+      name: item.name || item.username || i18n.t(NS + 'unknownWorker', i18n.getLanguage()),
       phone: item.phone || '',
       username: item.username || '',
       createdAt: item.createdAt || item.createTime,
@@ -417,7 +419,7 @@ const BUSINESS_ORDER = [
  */
 function normalizeBusinessTask(t) {
   const pri = String(t.priority || 'medium').toLowerCase();
-  const priText = pri === 'high' ? '高' : (pri === 'low' ? '低' : '中');
+  const priText = pri === 'high' ? i18n.t(NS + 'priHigh', i18n.getLanguage()) : (pri === 'low' ? i18n.t(NS + 'priLow', i18n.getLanguage()) : i18n.t(NS + 'priMid', i18n.getLanguage()));
   const priCls = pri === 'high' ? 'var(--color-danger)' : (pri === 'low' ? 'var(--color-text-disabled)' : 'var(--color-primary)');
   const id = t.id || [t.taskType, t.orderNo, t.styleNo].filter(Boolean).join('_') || ('task_' + Math.random().toString(36).slice(2, 8));
   const role = t.assigneeRole || '';
@@ -544,7 +546,7 @@ async function loadShipmentNotifications() {
         factoryName: item.factoryName || '',
         quantity: item.shipQuantity || item.receivedQuantity || '',
         receiveTimeText: formatTimeAgo(item.receiveTime),
-        title: '发货已确认收货',
+        title: i18n.t(NS + 'shipmentConfirmedTitle', i18n.getLanguage()),
         // 状态已由右侧标签"已收货"表达，desc 只放工厂名，避免重复描述
         desc: item.factoryName || '',
       }));
@@ -558,9 +560,9 @@ async function loadShipmentNotifications() {
       factoryName: item.factoryName || '',
       quantity: item.shipQuantity || '',
       shipTimeText: formatTimeAgo(item.shipTime),
-      title: '外发发货待收货确认',
+      title: i18n.t(NS + 'shipmentPendingTitle', i18n.getLanguage()),
       // 状态已由右侧标签"待收货确认"表达，desc 只放工厂名，避免重复描述
-      desc: item.factoryName || '外发工厂',
+      desc: item.factoryName || i18n.t(NS + 'defaultOutboundFactory', i18n.getLanguage()),
     }));
   } catch (err) {
     console.error('加载发货/收货通知失败:', err);

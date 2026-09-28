@@ -2,6 +2,8 @@
  * 铃铛组件 - 任务操作模块
  * 从 floating-bell/index.js 提取，负责各类任务的点击跳转和审批操作
  */
+const i18n = require('../../utils/i18n/index');
+const NS = 'mp.aiAssistant.';
 const api = require('../../utils/api');
 const { safeNavigate } = require('../../utils/uiHelper');
 
@@ -102,7 +104,9 @@ function handleQualityTask(task) {
 function handleRepairTask(task) {
   const orderNo = task.orderNo || '';
   const bundleNo = task.bundleNo ? String(task.bundleNo) : '';
-  const hint = bundleNo ? `订单${orderNo} 菲号${bundleNo}修好后请扫码申报` : `订单${orderNo} 次品修好后请扫码申报`;
+  const hint = bundleNo
+    ? i18n.tf(NS + 'repairScanHintFmt', { orderNo: orderNo, bundleNo: bundleNo }, i18n.getLanguage())
+    : i18n.tf(NS + 'repairScanHintNoBundleFmt', { orderNo: orderNo }, i18n.getLanguage());
   try {
     wx.setStorageSync('pending_repair_task', JSON.stringify(task));
     wx.setStorageSync('pending_order_hint', orderNo);
@@ -136,12 +140,12 @@ async function onApproveUser(ctx, e) {
   }
 
   const isApprove = action === 'approve';
-  const actionText = isApprove ? '通过' : '拒绝';
+  const actionText = isApprove ? i18n.t(NS + 'actionApprove', i18n.getLanguage()) : i18n.t(NS + 'actionReject', i18n.getLanguage());
 
   const confirmRes = await new Promise(resolve => {
     wx.showModal({
-      title: '确认操作',
-      content: `确定要${actionText}该用户的注册申请吗？`,
+      title: i18n.t(NS + 'confirmTitle', i18n.getLanguage()),
+      content: i18n.tf(NS + 'confirmUserRegFmt', { action: actionText }, i18n.getLanguage()),
       success: res => resolve(res.confirm),
       fail: () => resolve(false),
     });
@@ -151,7 +155,7 @@ async function onApproveUser(ctx, e) {
     return;
   }
 
-  wx.showLoading({ title: '处理中...', mask: true });
+  wx.showLoading({ title: i18n.t(NS + 'processing', i18n.getLanguage()), mask: true });
 
   try {
     if (isApprove) {
@@ -160,11 +164,11 @@ async function onApproveUser(ctx, e) {
       await api.system.rejectUser(userId);
     }
 
-    wx.showToast({ title: `${actionText}成功`, icon: 'success' });
+    wx.showToast({ title: i18n.tf(NS + 'actionSuccessFmt', { action: actionText }, i18n.getLanguage()), icon: 'success' });
     ctx.loadTasks();
   } catch (err) {
     console.error('审批失败:', err);
-    wx.showToast({ title: err.message || '操作失败', icon: 'none' });
+    wx.showToast({ title: err.message || i18n.t(NS + 'actionFailed', i18n.getLanguage()), icon: 'none' });
   } finally {
     wx.hideLoading();
   }
@@ -183,12 +187,12 @@ async function onApproveRegistration(ctx, e) {
   }
 
   const isApprove = action === 'approve';
-  const actionText = isApprove ? '通过' : '拒绝';
+  const actionText = isApprove ? i18n.t(NS + 'actionApprove', i18n.getLanguage()) : i18n.t(NS + 'actionReject', i18n.getLanguage());
 
   const confirmRes = await new Promise(resolve => {
     wx.showModal({
-      title: '确认操作',
-      content: `确定要${actionText}该员工的注册申请吗？`,
+      title: i18n.t(NS + 'confirmTitle', i18n.getLanguage()),
+      content: i18n.tf(NS + 'confirmWorkerRegFmt', { action: actionText }, i18n.getLanguage()),
       success: res => resolve(res.confirm),
       fail: () => resolve(false),
     });
@@ -198,7 +202,7 @@ async function onApproveRegistration(ctx, e) {
     return;
   }
 
-  wx.showLoading({ title: '处理中...', mask: true });
+  wx.showLoading({ title: i18n.t(NS + 'processing', i18n.getLanguage()), mask: true });
 
   try {
     if (isApprove) {
@@ -207,11 +211,11 @@ async function onApproveRegistration(ctx, e) {
       await api.tenant.rejectRegistration(userId);
     }
 
-    wx.showToast({ title: `${actionText}成功`, icon: 'success' });
+    wx.showToast({ title: i18n.tf(NS + 'actionSuccessFmt', { action: actionText }, i18n.getLanguage()), icon: 'success' });
     ctx.loadTasks();
   } catch (err) {
     console.error('审批员工注册失败:', err);
-    wx.showToast({ title: err.message || '操作失败', icon: 'none' });
+    wx.showToast({ title: err.message || i18n.t(NS + 'actionFailed', i18n.getLanguage()), icon: 'none' });
   } finally {
     wx.hideLoading();
   }

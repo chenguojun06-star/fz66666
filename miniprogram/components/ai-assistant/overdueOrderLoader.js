@@ -2,6 +2,8 @@
  * 延期订单加载器
  * 负责加载和归纳延期订单数据
  */
+const i18n = require('../../utils/i18n/index');
+const NS = 'mp.aiAssistant.';
 const api = require('../../utils/api');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
 
@@ -18,10 +20,10 @@ function formatTimeAgo(time) {
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
-  if (minutes < 1) return '刚刚';
-  if (minutes < 60) return `${minutes}分钟前`;
-  if (hours < 24) return `${hours}小时前`;
-  if (days < 30) return `${days}天前`;
+  if (minutes < 1) return i18n.t(NS + 'timeJustNow', i18n.getLanguage());
+  if (minutes < 60) return i18n.tf(NS + 'timeMinAgoFmt', { n: minutes }, i18n.getLanguage());
+  if (hours < 24) return i18n.tf(NS + 'timeHourAgoFmt', { n: hours }, i18n.getLanguage());
+  if (days < 30) return i18n.tf(NS + 'timeDayAgoFmt', { n: days }, i18n.getLanguage());
   return date.toLocaleDateString();
 }
 
@@ -58,18 +60,18 @@ function calculateOverdueDays(deadline) {
  */
 function formatOverdueInfo(overdueDays) {
   if (overdueDays <= 0) {
-    return { text: '未超期', level: 'normal' };
+    return { text: i18n.t(NS + 'notOverdue', i18n.getLanguage()), level: 'normal' };
   }
 
   if (overdueDays <= 3) {
-    return { text: `超期${overdueDays}天`, level: 'warning' };
+    return { text: i18n.tf(NS + 'overdueDaysFmt', { days: overdueDays }, i18n.getLanguage()), level: 'warning' };
   }
 
   if (overdueDays > 3 && overdueDays <= 7) {
-    return { text: `超期${overdueDays}天`, level: 'urgent' };
+    return { text: i18n.tf(NS + 'overdueDaysFmt', { days: overdueDays }, i18n.getLanguage()), level: 'urgent' };
   }
 
-  return { text: `超期${overdueDays}天`, level: 'critical' };
+  return { text: i18n.tf(NS + 'overdueDaysFmt', { days: overdueDays }, i18n.getLanguage()), level: 'critical' };
 }
 
 /**
@@ -114,7 +116,7 @@ async function loadOverdueOrders() {
           factoryName: item.factoryName || '',
           orderQuantity: item.orderQuantity || 0,
           completedQuantity: item.completedQuantity || 0,
-          currentProcessName: item.currentProcessName || '未知',
+          currentProcessName: item.currentProcessName || i18n.t(NS + 'unknown', i18n.getLanguage()),
           progress: item.progress || 0,
           deadline: item.plannedEndDate || item.deadline || item.deliveryDate,
           overdueDays,
