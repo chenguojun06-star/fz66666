@@ -1,9 +1,18 @@
 # 进度跟踪
 
 > 本文件由 AI 助手自动维护，记录项目开发进度
-> 最后更新：2026-09-27（D-590 工人提示根治——针号误抓收紧+面料驱动针号/针具/注意点；D-587~589 电商店铺授权/订阅/拼多多拉单）
+> 最后更新：2026-09-28（D-611 大货生产单/样衣工艺单批量打印——多单合并一次打印）
 
 ## 已完成
+
+### 2026-09-28 D-611 大货生产单/样衣工艺单批量打印
+
+- [x] 共享正文 StylePrintDocBody + CSS 常量双端复用（批量=单一逐字节一致）；数据装载抽 fetchStylePrintData 服务
+- [x] buildBatchPrintHtml 合并 N 单（每单自带大标题+页脚、单间分页、整批连续页码）；runBatchStylePrint 并发 3+失败跳过+图片等待 6s；单批上限 30
+- [x] 入口：大货订单列表（复用现成 rowSelection+批量条）+ 样衣开发列表表格视图（补 rowSelection+批量条）；统一勾选抽屉 StyleBatchPrintModal 复用 PrintOptionsSelector
+- [x] safePrint 加 imageWaitMs 参数（单打默认 1.5s 不变）
+- [x] 测试 batchStylePrint.test 11 例绿；全量 473/473 绿；tsc 0 错误（顺手修掉 ProductionTableView smartQueueFilter boolean/string 存量错配）；eslint 0 警告
+- [ ] 待用户线上验收：大货列表/样衣列表勾选多单 → 批量打印
 
 ### 2026-09-27 D-590 工人提示根治——"5 针"误抓 + 面料驱动针号/针具/注意点
 

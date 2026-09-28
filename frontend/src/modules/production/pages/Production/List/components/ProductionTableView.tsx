@@ -1,4 +1,6 @@
 import React from 'react';
+import { Button } from 'antd';
+import { PrinterOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { ProductionOrder } from '@/types/production';
 import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
@@ -18,6 +20,8 @@ interface ProductionTableViewProps {
   focusedOrderId: string | null;
   getOrderDomKey: (record: ProductionOrder) => string;
   navigate: (path: string) => void;
+  /** D-611 勾选行批量打印生产单（无此回调时隐藏批量条） */
+  onBatchPrint?: (rows: ProductionOrder[]) => void;
 }
 
 const ProductionTableView: React.FC<ProductionTableViewProps> = ({
@@ -35,12 +39,41 @@ const ProductionTableView: React.FC<ProductionTableViewProps> = ({
   focusedOrderId,
   getOrderDomKey,
   navigate,
+  onBatchPrint,
 }) => {
   const showFilteredTotal = smartQueueFilter !== 'all' || focusOrderIds.size > 0;
   const displayTotal = showFilteredTotal ? dataSource.length : total;
 
+  // D-611 批量条：勾选行 > 0 且提供回调时出现，映射当前页选中行交给页面打开批量打印
+  const selectedRows = onBatchPrint
+    ? dataSource.filter((r) => selectedRowKeys.includes((r as any).id))
+    : [];
+
   return (
-    <ResizableTable<any>
+    <>
+      {selectedRows.length > 0 && (
+        <div
+          style={{
+            marginBottom: 8, padding: '8px 16px',
+            background: 'var(--status-processing-bg)',
+            border: '1px solid var(--status-processing-border)',
+            borderRadius: 8,
+            display: 'flex', alignItems: 'center', gap: 16,
+          }}
+        >
+          <span style={{ fontWeight: 600 }}>已选 {selectedRows.length} 单</span>
+          <Button
+            type="primary"
+            size="small"
+            icon={<PrinterOutlined />}
+            onClick={() => onBatchPrint?.(selectedRows)}
+          >
+            批量打印生产单
+          </Button>
+          <Button size="small" onClick={() => onRowSelectionChange([], [])}>取消选择</Button>
+        </div>
+      )}
+      <ResizableTable<any>
       storageKey="production-order-table"
       columns={columns as any}
       dataSource={dataSource}
@@ -71,7 +104,8 @@ const ProductionTableView: React.FC<ProductionTableViewProps> = ({
       emptyDescription="暂无生产订单"
       emptyActionText="去创建订单"
       onEmptyAction={() => navigate('/order-management')}
-    />
+      />
+    </>
   );
 };
 

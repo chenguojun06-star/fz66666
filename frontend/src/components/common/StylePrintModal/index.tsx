@@ -13,19 +13,12 @@ import React from 'react';
 import { Button, Drawer, Space, Spin } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 
-import { canViewPrice } from '@/utils/sensitiveDataMask';
-
 import { StylePrintModalProps } from './types';
 import { useStylePrintData } from './useStylePrintData';
 import PrintOptionsSelector from './sections/PrintOptionsSelector';
-import BasicInfoSection from './sections/BasicInfoSection';
-import SizeColorMatrixSection from './sections/SizeColorMatrixSection';
-import SizeDetailsSection from './sections/SizeDetailsSection';
-import SampleReviewSection from './sections/SampleReviewSection';
-import ProductionSheetSection from './sections/ProductionSheetSection';
-import SizeTableSection from './sections/SizeTableSection';
-import BomTableSection from './sections/BomTableSection';
-import ProcessTableSection from './sections/ProcessTableSection';
+// D-611：正文抽为共享组件，与批量打印静态渲染同源，保证「批量 = 单一」逐字节一致
+import StylePrintDocBody from './StylePrintDocBody';
+import { STYLE_PRINT_CONTENT_CSS } from './stylePrintContentCss';
 
 const StylePrintModal: React.FC<StylePrintModalProps> = ({
   visible, onClose, styleId, orderId, orderNo,
@@ -63,7 +56,6 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     handleLabelPrint,
     user,
   } = hook;
-  const showPrice = canViewPrice(user);
 
   return (
     <Drawer
@@ -113,7 +105,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             labelItems={labelItems}
           />
 
-          {/* 打印内容预览区域 */}
+            {/* 打印内容预览区域（正文 = 共享组件，与批量打印同源；此 <style> 会被单一打印的
+                innerHTML 抓取一并带走，故必须保留在 #style-print-content 内部） */}
           <div
             className="style-print-content"
             id="style-print-content"
@@ -124,37 +117,13 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               borderRadius: 12,
             }}
           >
-            <style>{`
-              .print-section { margin-bottom: 16px; }
-              .print-section-title { font-size: 14px; font-weight: 700; background: #f0f0f0; padding: 6px 10px; border-radius: 2px; margin-bottom: 0; border: 1px solid #d9d9d9; border-bottom: none; }
-              /* D-514 打印分页：区块（标题+表格）放不下就整体挪到下一页，标题永不与表格分离 */
-              .print-sec { margin-bottom: 16px; break-inside: avoid; page-break-inside: avoid; }
-              .print-section-title { break-after: avoid; page-break-after: avoid; break-inside: avoid; page-break-inside: avoid; }
-              .pt tr { break-inside: avoid; page-break-inside: avoid; }
-              .pt thead { display: table-header-group; }
-              .ant-table-wrapper tr { break-inside: avoid; page-break-inside: avoid; }
-              .ant-table-wrapper thead { display: table-header-group; }
-              /* 统一打印表格样式 */
-              .pt { width: 100%; border-collapse: collapse; font-size: 13px; }
-              /* D-513：原 0.5px + 浅灰，预览和打印都看不清；改为 1px 纯黑，
-                 与 printTemplate.ts 的 th,td 保持一致（预览所见即打印所得） */
-              .pt th, .pt td { border: 1px solid #000; padding: 5px 8px; vertical-align: middle; }
-              .pt th { background: var(--color-bg-subtle); font-weight: 600; text-align: center; white-space: nowrap; }
-              .pt td { color: var(--color-gray-800); }
-              .pt .label-cell { background: var(--color-bg-subtle); font-weight: 500; color: var(--color-gray-800); width: 100px; white-space: nowrap; }
-              .pt .total-row td { background: var(--color-bg-subtle); font-weight: 700; }
-              .pt .highlight-cell { font-weight: 700; color: var(--color-primary-darker); }
-              /* D-514e：打印内所有图片一律完整显示——按原比例缩放，放不下就留白，禁止裁剪成方块 */
-              .style-print-content img, .print-sec img, .print-section img { object-fit: contain; max-width: 100%; }
-            `}</style>
+            <style>{STYLE_PRINT_CONTENT_CSS}</style>
 
-            {/* 基本信息 */}
-            <BasicInfoSection
+            <StylePrintDocBody
               options={options}
-              resolvedCover={resolvedCover}
-              qrPngDataUrl={qrPngDataUrl}
-              qrValue={qrValue}
               data={data}
+              sizeColorMatrix={sizeColorMatrix}
+              sizeDetails={sizeDetails}
               styleNo={styleNo}
               styleName={styleName}
               category={category}
@@ -163,63 +132,12 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               orderNo={orderNo}
               orderCreatorName={orderCreatorName}
               extraInfo={extraInfo}
+              resolvedCover={resolvedCover}
+              qrPngDataUrl={qrPngDataUrl}
+              qrValue={qrValue}
               user={user}
+              loading={loading}
             />
-
-            {/* 下单明细（颜色×尺码矩阵） */}
-            {options.basicInfo && (
-              <SizeColorMatrixSection sizeColorMatrix={sizeColorMatrix} />
-            )}
-
-            {/* 码数明细（基于 sizeDetails） */}
-            {options.basicInfo && (
-              <SizeDetailsSection sizeDetails={sizeDetails} />
-            )}
-
-            {/* 样衣审核 */}
-            {options.sampleReview && (
-              <SampleReviewSection productionSheet={data.productionSheet} />
-            )}
-
-            {/* 生产制单（生产要求）— D-514b 已去掉「工艺说明」左列标签，内容整宽保留 */}
-            {options.productionSheet && (
-              <div className="print-sec">
-                <div className="print-section-title">生产制单</div>
-                <ProductionSheetSection productionSheet={data.productionSheet} />
-              </div>
-            )}
-
-            {/* 尺寸表 */}
-            {options.sizeTable && (
-              <div className="print-sec">
-                <div className="print-section-title">尺寸表</div>
-                <SizeTableSection sizes={data.sizes} />
-              </div>
-            )}
-
-            {/* BOM表 */}
-            {options.bomTable && (
-              <div className="print-sec">
-                <div className="print-section-title">物料明细（BOM）</div>
-                <BomTableSection bom={data.bom} showPrice={showPrice} />
-              </div>
-            )}
-
-            {/* 工序表 */}
-            {options.processTable && (
-              <div className="print-sec">
-                <div className="print-section-title">工序表</div>
-                <ProcessTableSection process={data.process} showPrice={showPrice} />
-              </div>
-            )}
-
-            {/* 无数据提示 */}
-            {!loading && !options.basicInfo && data.sizes.length === 0 && data.bom.length === 0 &&
-              data.process.length === 0 && (
-              <div style={{ textAlign: 'center', padding: 48, color: 'var(--color-text-tertiary)' }}>
-                暂无打印数据，请选择要打印的内容
-              </div>
-            )}
           </div>
         </Spin>
       </div>

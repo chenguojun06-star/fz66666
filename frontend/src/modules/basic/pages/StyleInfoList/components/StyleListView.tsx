@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Tag } from 'antd';
+import { Button, Tag } from 'antd';
+import { PrinterOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -7,6 +8,8 @@ import RowActions, { type RowAction } from '@/components/common/RowActions';
 import StyleCoverThumb from '@/components/StyleAssets/StyleCoverThumb';
 import StyleCopyModal from './StyleCopyModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
+import StyleBatchPrintModal from '@/components/common/StylePrintModal/StyleBatchPrintModal';
+import { mapStyleRowsToBatchItems, StyleBatchPrintItem } from '@/components/common/StylePrintModal/batchStylePrintService';
 import { StyleInfo } from '@/types/style';
 import type { FieldConfigItem } from '@/hooks/useFieldConfig';
 import type { ColumnOption } from '@/components/common/ColumnSettings';
@@ -112,6 +115,10 @@ const StyleListView: React.FC<StyleListViewProps> = ({
   const [copyModalOpen, setCopyModalOpen] = useState(false);
   const [copySource, setCopySource] = useState<StyleInfo | null>(null);
   const [remarkTarget, setRemarkTarget] = useState<{ open: boolean; styleNo: string }>({ open: false, styleNo: '' });
+
+  // D-611 批量打印：表格视图勾选行 → 统一勾选配置抽屉（与单一打印同一套选项）
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [batchPrintItems, setBatchPrintItems] = useState<StyleBatchPrintItem[]>([]);
 
   const isStageDoneRow = (record: StyleInfo) => {
     const stockKey = `${String(record.styleNo || '').trim().toUpperCase()}|${getStyleCardColorText(record).trim().toUpperCase()}`;
@@ -240,6 +247,31 @@ const StyleListView: React.FC<StyleListViewProps> = ({
 
   return (
     <>
+      {selectedRowKeys.length > 0 && (
+        <div
+          style={{
+            marginBottom: 8, padding: '8px 16px',
+            background: 'var(--status-processing-bg)',
+            border: '1px solid var(--status-processing-border)',
+            borderRadius: 8,
+            display: 'flex', alignItems: 'center', gap: 16,
+          }}
+        >
+          <span style={{ fontWeight: 600 }}>已选 {selectedRowKeys.length} 款</span>
+          <Button
+            type="primary"
+            size="small"
+            icon={<PrinterOutlined />}
+            onClick={() => {
+              const selected = data.filter((r) => selectedRowKeys.includes(String(r.id || r.styleNo || '')));
+              setBatchPrintItems(mapStyleRowsToBatchItems(selected as unknown as Array<Record<string, any>>));
+            }}
+          >
+            批量打印工艺单
+          </Button>
+          <Button size="small" onClick={() => setSelectedRowKeys([])}>取消选择</Button>
+        </div>
+      )}
       <ResizableTable<any>
         storageKey="style-list-table"
         columns={columns}
@@ -247,6 +279,10 @@ const StyleListView: React.FC<StyleListViewProps> = ({
         rowKey={(record: StyleInfo) => String(record.id || record.styleNo || '')}
         loading={loading}
         scroll={{ x: 1500 }}
+        rowSelection={{
+          selectedRowKeys,
+          onChange: (keys: React.Key[]) => setSelectedRowKeys(keys),
+        }}
         showExport
         exportFilename="样衣开发.xlsx"
         emptyDescription="暂无样衣数据"
@@ -263,6 +299,12 @@ const StyleListView: React.FC<StyleListViewProps> = ({
           pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
           onChange: onPageChange,
         }}
+      />
+
+      <StyleBatchPrintModal
+        open={batchPrintItems.length > 0}
+        onClose={() => setBatchPrintItems([])}
+        items={batchPrintItems}
       />
 
       <StyleCopyModal

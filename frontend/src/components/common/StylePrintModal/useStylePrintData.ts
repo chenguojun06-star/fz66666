@@ -6,10 +6,10 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import QRCodeLib from 'qrcode';
 
-import api from '@/utils/api';
-import { getStyleInfoByRef } from '@/services/style/styleApi';
 import { message } from '@/utils/antdStatic';
 import { useUser } from '@/utils/AuthContext';
+
+import { fetchStylePrintData } from './fetchStylePrintData';
 
 import { buildPrintHtml } from './printTemplate';
 import { safePrint } from '@/utils/safePrint';
@@ -102,100 +102,31 @@ export function useStylePrintData(params: UseStylePrintDataParams) {
   useEffect(() => { setResolvedCover(cover || null); }, [cover]);
 
   // ───── 副作用：打开时加载所有数据 ─────
+  // D-611：数据装载抽到 fetchStylePrintData 服务，单一预览与批量打印共用同一数据源；
+  // 请求集合与容错口径在服务内保持与原实现逐项一致（含 pattern 按 styleId 精确查询的注释背景）。
   useEffect(() => {
     if (!visible || !styleId) return;
     setLabelPrintMode(!!initialLabelMode);
     setAutoPatternId(null);
-    // 样衣模式下自动查询样衣生产记录ID（用于二维码扫码识别）
-    // ★ 修复（与 useSampleStage.ts 同根因）：
-    //   旧实现用 /production/pattern/list + pageSize: 20 + keyword 模糊查，
-    //   当租户 pattern 记录 > 20 条时目标记录不在前 20 条最新里 → 匹配失败
-    //   → 退化为生成 type:'style' 二维码（仅含 styleNo）
-    //   → 手机端 SampleScanPage.parseSampleCode 不识别 type:'style'，报"无法识别"
-    //   → 用户看到"扫码提示没有样衣"。
-    // 新实现按 styleId 精确查单条 pattern 记录，命中率 100%。
-    if (mode === 'sample' && !propPatternId && styleId) {
-      const styleIdStr = String(styleId);
-      api.get(`/production/pattern/by-style/${encodeURIComponent(styleIdStr)}`)
-        .then(res => {
-          const data = res?.data;
-          // 后端返回该款式全部色码记录列表（多色多码：每色码一条独立生产任务）
-          const list = Array.isArray(data) ? data : (data && typeof data === 'object' ? [data] : []);
-          const records = list
-            .filter((item: any) => item?.id)
-            .map((item: any) => ({
-              id: String(item.id),
-              color: item.color ? String(item.color) : undefined,
-              size: item.size ? String(item.size) : undefined,
-            }));
-          setPatternRecords(records);
-          if (records.length > 0) {
-            setAutoPatternId(records[0].id);
-          }
-        })
-        .catch((err) => { console.warn('[StylePrint] 款式花型匹配失败:', err?.message || err); });
-    }
-    const loadData = async () => {
+    let cancelled = false;
+    (async () => {
       setLoading(true);
       try {
-        const newData: PrintData = { sizes: [], bom: [], process: [], attachments: [], productionSheet: null };
-        const promises: Promise<any>[] = [];
-        promises.push(getStyleInfoByRef(styleId, styleNo).then((styleInfo) => { if (styleInfo) newData.productionSheet = styleInfo; }).catch((err) => { console.warn('[StylePrint] 款式信息加载失败:', err?.message || err); }));
-        promises.push(api.get('/style/size/list', { params: { styleId } }).then(res => { if (res.code === 200) newData.sizes = res.data || []; }).catch((err) => { console.warn('[StylePrint] 尺码数据加载失败:', err?.message || err); }));
-        promises.push(api.get('/style/bom/list', { params: { styleId } }).then(res => { if (res.code === 200) newData.bom = res.data || []; }).catch((err) => { console.warn('[StylePrint] BOM数据加载失败:', err?.message || err); }));
-        promises.push(api.get('/style/process/list', { params: { styleId } }).then(res => { if (res.code === 200) newData.process = res.data || []; }).catch((err) => { console.warn('[StylePrint] 工序数据加载失败:', err?.message || err); }));
-        promises.push(api.get('/style/attachment/list', { params: { styleId } }).then(res => {
-          if (res.code === 200) {
-            newData.attachments = (res.data || []).filter((item: any) => {
-              const bizType = String(item.bizType || '');
-              return bizType.startsWith('pattern') || bizType === 'size_table' || bizType === 'production_sheet';
-            });
-          }
-        }).catch((err) => { console.warn('[StylePrint] 附件列表加载失败:', err?.message || err); }));
-        await Promise.all(promises);
-        setData(newData);
-
-        // 大货/下单模式：查询订单创建人
-        if (mode !== 'sample' && styleId) {
-          try {
-            // 优先用 orderId 查详情，否则用 styleId 查列表
-            if (orderId) {
-              const orderRes = await api.get(`/production/order/detail/${orderId}`);
-              if (orderRes.code === 200 && orderRes.data) {
-                setOrderCreatorName(orderRes.data.createdByName || '');
-              }
-            } else {
-              const orderRes = await api.get('/production/order/list', { params: { styleId, page: 1, pageSize: 1 } });
-              if (orderRes.code === 200 && orderRes.data?.records?.length > 0) {
-                setOrderCreatorName(orderRes.data.records[0].createdByName || '');
-              }
-            }
-          } catch { /* ignore */ }
-        } else {
-          setOrderCreatorName('');
-        }
-
-        // 获取租户Logo
+        const bundle = await fetchStylePrintData({
+          styleId, styleNo, styleName, mode, orderId, orderNo, cover, patternProductionId: propPatternId,
+        });
+        if (cancelled) return;
+        setData(bundle.data);
+        setPatternRecords(bundle.patternRecords);
+        if (bundle.patternId) setAutoPatternId(bundle.patternId);
+        setOrderCreatorName(bundle.orderCreatorName);
+        setResolvedCover(bundle.resolvedCover ?? cover ?? null);
         setTenantLogo((user as any)?.tenantLogo || (user as any)?.logo || '');
-
-        if (!cover) {
-          const styleData = newData.productionSheet as any;
-          if (styleData?.cover) { setResolvedCover(styleData.cover); }
-          else {
-            try {
-              const attachRes = await api.get<{ code: number; data: any[] }>('/style/attachment/list', { params: { styleId } });
-              if (attachRes.code === 200) {
-                const images = (attachRes.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
-                if (images.length > 0) { setResolvedCover((images[0] as any)?.fileUrl || null); }
-              }
-            } catch { /* ignore */ }
-          }
-        }
       } catch (error) { console.error('加载打印数据失败:', error); message.error('加载打印数据失败'); }
-      finally { setLoading(false); }
-    };
-    loadData();
-  }, [visible, styleId, mode, propPatternId, styleNo, cover, orderId, user, initialLabelMode]);
+      finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [visible, styleId, mode, propPatternId, styleNo, styleName, cover, orderId, orderNo, user, initialLabelMode]);
 
   // ───── 副作用：异步生成主二维码 PNG dataURL ─────
   useEffect(() => {

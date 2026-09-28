@@ -20,35 +20,14 @@ export interface PrintHtmlParams {
   fontScale?: number;
 }
 
-export function buildPrintHtml({
-  printerInfo, printDate, styleNo, bodyHtml, tenantName, pageTitle, fontScale
-}: PrintHtmlParams): string {
-  // D-513 字体缩放：所有字号按同一比例缩放，默认 1（保持原大小）
-  const fs = Number(fontScale) > 0 ? Number(fontScale) : 1;
+/**
+ * 打印文档基础 CSS（D-611 抽出）
+ * 单一打印（buildPrintHtml）与批量打印（batchPrintTemplate）共用同一份头部样式，
+ * 保证两种路径打印出来的版式完全一致。fs 为主打印字体缩放比例。
+ */
+export function buildPrintBaseCss(fs: number): string {
   const px = (n: number) => `${+(n * fs).toFixed(1)}px`;
-
-  // 内容区来自页面 DOM 的 innerHTML，大量元素带内联 font-size（如 BasicInfoSection 的 16/14/13px），
-  // 内联样式优先级高于模板 body，不处理的话缩放对内容区无效。
-  // 这里按同一比例改写内联 px 值；fs === 1 时不改动，保持原样。
-  const scaledBodyHtml = fs === 1
-    ? bodyHtml
-    : bodyHtml.replace(/font-size:\s*([\d.]+)px/gi, (_m, n) => `font-size:${+(parseFloat(n) * fs).toFixed(1)}px`);
-
-  const printHeader = (() => {
-    const factory = tenantName?.trim() || '';
-    const title = pageTitle?.trim() || '';
-    if (!factory && !title) return '';
-    const displayText = title ? (factory ? `${factory} - ${title}` : title) : factory;
-    return `<div style="text-align:center;font-size:${px(22)};font-weight:700;color:var(--color-black);margin-bottom:14px;letter-spacing:1px;">${displayText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
-  })();
-
   return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>打印预览 - ${escHtml(styleNo)}</title>
-        <style>
           /* 打印上下文 CSS 变量定义（iframe 是独立文档，不继承主页面变量，必须用具体值） */
           :root {
             --color-bg-base: #ffffff;
@@ -77,7 +56,7 @@ export function buildPrintHtml({
           /* 暗色主题修复：强制黑色文字 + 白色背景 */
           html, body {
             color: var(--color-black) !important;
-            
+
             background: var(--color-bg-base) !important;
           }
           /* 注意：不要加 * { color: inherit !important }，否则会覆盖业务内联颜色，
@@ -206,7 +185,38 @@ export function buildPrintHtml({
               display: none !important;
             }
           }
-        </style>
+        `;
+}
+
+export function buildPrintHtml({
+  printerInfo, printDate, styleNo, bodyHtml, tenantName, pageTitle, fontScale
+}: PrintHtmlParams): string {
+  // D-513 字体缩放：所有字号按同一比例缩放，默认 1（保持原大小）
+  const fs = Number(fontScale) > 0 ? Number(fontScale) : 1;
+  const px = (n: number) => `${+(n * fs).toFixed(1)}px`;
+
+  // 内容区来自页面 DOM 的 innerHTML，大量元素带内联 font-size（如 BasicInfoSection 的 16/14/13px），
+  // 内联样式优先级高于模板 body，不处理的话缩放对内容区无效。
+  // 这里按同一比例改写内联 px 值；fs === 1 时不改动，保持原样。
+  const scaledBodyHtml = fs === 1
+    ? bodyHtml
+    : bodyHtml.replace(/font-size:\s*([\d.]+)px/gi, (_m, n) => `font-size:${+(parseFloat(n) * fs).toFixed(1)}px`);
+
+  const printHeader = (() => {
+    const factory = tenantName?.trim() || '';
+    const title = pageTitle?.trim() || '';
+    if (!factory && !title) return '';
+    const displayText = title ? (factory ? `${factory} - ${title}` : title) : factory;
+    return `<div style="text-align:center;font-size:${px(22)};font-weight:700;color:var(--color-black);margin-bottom:14px;letter-spacing:1px;">${displayText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+  })();
+
+  return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>打印预览 - ${escHtml(styleNo)}</title>
+        <style>${buildPrintBaseCss(fs)}</style>
       </head>
       <body>
         <!-- 页面顶部大标题 -->

@@ -140,7 +140,14 @@ function isDataOrBlobUrl(src: string): boolean {
   return src.startsWith('data:') || src.startsWith('blob:');
 }
 
-export function safePrint(htmlContent: string, _title: string = '打印'): boolean {
+/** 打印选项（D-611）：批量合并文档含全部款式图片，调用方可放宽图片等待预算 */
+export interface SafePrintOptions {
+  /** 外链图片等待上限（毫秒），默认 1500；等待按「全部图片加载完成或超时」先到者触发 */
+  imageWaitMs?: number;
+}
+
+export function safePrint(htmlContent: string, _title: string = '打印', options?: SafePrintOptions): boolean {
+  const imageWaitMs = Number(options?.imageWaitMs) > 0 ? Number(options?.imageWaitMs) : 1500;
   try {
     const fixedHtml = injectFix(htmlContent);
 
@@ -200,7 +207,7 @@ export function safePrint(htmlContent: string, _title: string = '打印'): boole
       if (settled >= images.length) {
         doPrint();
       } else {
-        setTimeout(() => { if (settled < images.length) doPrint(); }, 1500);
+        setTimeout(() => { if (settled < images.length) doPrint(); }, imageWaitMs);
       }
     };
 

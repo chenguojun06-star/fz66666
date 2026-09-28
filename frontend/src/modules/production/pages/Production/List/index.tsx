@@ -41,6 +41,8 @@ import { usePatrolTitleTags } from './hooks/usePatrolTitleTags.tsx';
 import { useTableColumns } from './hooks/useTableColumns';
 import CooperationContractModal from '@/modules/basic/pages/OrderManagement/components/CooperationContractModal';
 import { ColumnSettingsDrawer } from '@/components/common/ColumnSettings';
+import StyleBatchPrintModal from '@/components/common/StylePrintModal/StyleBatchPrintModal';
+import { mapProductionOrdersToBatchItems, StyleBatchPrintItem } from '@/components/common/StylePrintModal/batchStylePrintService';
 
 const ProductionList: React.FC = () => {
   const { message } = App.useApp();
@@ -58,6 +60,8 @@ const ProductionList: React.FC = () => {
   const { stageHints: delayedHints } = useDelayedStageBreakdown({ forceTab: 'bulk' });
 
   const printModal = useModal<ProductionOrder>();
+  // D-611 勾选行批量打印生产单
+  const [batchPrintItems, setBatchPrintItems] = useState<StyleBatchPrintItem[]>([]);
   const [contractOrder, setContractOrder] = useState<ProductionOrder | null>(null);
   const workflowEditorModal = useModal<string>();
   const inspectDrawerModal = useModal<string>();
@@ -209,6 +213,7 @@ const ProductionList: React.FC = () => {
           focusedOrderId={orderFocus.focusedOrderId}
           getOrderDomKey={orderFocus.getOrderDomKey}
           navigate={navigate}
+          onBatchPrint={(rows) => setBatchPrintItems(mapProductionOrdersToBatchItems(rows as unknown as Array<Record<string, any>>))}
           columns={columns}
           cardColumns={cardColumns}
           calcCardProgress={listData.calcCardProgress}
@@ -337,6 +342,12 @@ const ProductionList: React.FC = () => {
         isSupervisorOrAbove={isSupervisorOrAbove}
         userId={user?.id as any}
         userName={user?.name || user?.username || ''}
+      />
+
+      <StyleBatchPrintModal
+        open={batchPrintItems.length > 0}
+        onClose={() => setBatchPrintItems([])}
+        items={batchPrintItems}
       />
           <CooperationContractModal
         open={!!contractOrder}

@@ -34,6 +34,8 @@ interface ProductionContentViewProps {
   handleScrapOrder: (record: ProductionOrder) => void;
   handleCopyOrder: (record: ProductionOrder) => void;
   handleShareOrder: (record: ProductionOrder) => void;
+  /** D-611 勾选行批量打印生产单 */
+  onBatchPrint?: (rows: ProductionOrder[]) => void;
   canManageOrderLifecycle: boolean;
   isSupervisorOrAbove: boolean;
   isFactoryAccount: boolean;
@@ -80,6 +82,7 @@ const ProductionContentView: React.FC<ProductionContentViewProps> = ({
   openNodeDetail,
   syncProcessFromTemplate,
   handleSmartOpenRemark,
+  onBatchPrint,
 }) => {
   if (viewMode === 'smart') {
     return (
@@ -129,6 +132,7 @@ const ProductionContentView: React.FC<ProductionContentViewProps> = ({
         focusedOrderId={focusedOrderId}
         getOrderDomKey={getOrderDomKey}
         navigate={navigate}
+        onBatchPrint={onBatchPrint}
       />
     );
   }
