@@ -152,6 +152,16 @@
       "sy": "SHEIN",
       "jst": "Jushuitan",
       "unknown": "Unknown platform"
+    },
+    "statusLabel": {
+      "salesOrder": {
+        "s0": "Pending payment",
+        "s1": "Awaiting shipment",
+        "s2": "Shipped",
+        "s3": "Completed",
+        "s4": "Cancelled",
+        "s5": "Refunded"
+      }
     }
   },
   "login": {

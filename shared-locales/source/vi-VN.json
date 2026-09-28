@@ -152,6 +152,16 @@
       "sy": "SHEIN",
       "jst": "Jushuitan",
       "unknown": "Sàn không xác định"
+    },
+    "statusLabel": {
+      "salesOrder": {
+        "s0": "Chờ thanh toán",
+        "s1": "Chờ giao hàng",
+        "s2": "Đã giao hàng",
+        "s3": "Đã hoàn thành",
+        "s4": "Đã hủy",
+        "s5": "Đã hoàn tiền"
+      }
     }
   },
   "login": {

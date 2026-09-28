@@ -2546,6 +2546,7 @@ const SCAN_HANDLERS = {
 };
 const UNIT_PRICE_JS = 'pages/basic/unit-price/index.js';
 const UNIT_PRICE_WXML = 'pages/basic/unit-price/index.wxml';
+const DISPLAY_HELPER_JS = 'utils/displayHelper.js';
 const LOGIN_JS = 'pages/login/index.js';
 const LOGIN_WXML = 'pages/login/index.wxml';
 const TODO_DETAIL_JS = 'pages/todo-detail/index.js';
@@ -3070,6 +3071,25 @@ function testI18nUnitPrice() {
     '阶段 code 保持英文，显示文案走 stageLabel()');
   ok('护栏：阶段显示走函数而非直查中文表', jsSrc.includes('function stageLabel('),
     '列表里的阶段标签需能按语言重算');
+}
+
+/** displayHelper 状态 i18n 试点（D-619）—— API 不变，内部 i18nStatusText + 中文表兜底 */
+function testI18nDisplayHelper() {
+  console.log('\n【i18n：displayHelper 状态 i18n 试点】');
+  const d = JSON.parse(fs.readFileSync(path.join(ROOT, 'shared-locales/source/en-US.json'), 'utf8'));
+  eq('salesOrder.s0 en', d.common.statusLabel.salesOrder.s0, 'Pending payment');
+  eq('salesOrder.s5 en', d.common.statusLabel.salesOrder.s5, 'Refunded');
+  const zh = JSON.parse(fs.readFileSync(path.join(ROOT, 'shared-locales/source/zh-CN.json'), 'utf8'));
+  eq('salesOrder.s0 zh 保留中文表值', zh.common.statusLabel.salesOrder.s0, '待付款');
+
+  const src = fs.readFileSync(path.join(MP, DISPLAY_HELPER_JS), 'utf8');
+  ok('护栏：i18nStatusText 机制存在', src.includes('function i18nStatusText'), '缺键回落中文表的关键');
+  ok('护栏：zh-CN 短路返回 null', src.includes("if (language === 'zh-CN') return null"),
+    '中文用户零影响（直接用现有中文表）');
+  ok('护栏：salesOrder 域已接入', src.includes("i18nStatusText('salesOrder', status)"),
+    '试点域，其余 9 个域分批补');
+  ok('护栏：中文表保留（回落兜底）', src.includes('SALES_ORDER_STATUS_LABEL'),
+    '原中文表是缺键时的兜底，不能删');
 }
 
 /** 登录页（D-618）—— 顶层 login.* 命名空间 + buildI18nTexts 机制 */
@@ -4395,6 +4415,7 @@ try {
   testI18nPayroll();
   testI18nSmartOpsException();
   testI18nUnitPrice();
+  testI18nDisplayHelper();
   testI18nLogin();
   testI18nTodoAndReturn();
   testI18nRequireDepth();

@@ -13,6 +13,8 @@
  *  • 状态颜色：success/processing/warning/error/default (CSS: var(--color-success) 等)
  */
 
+const i18n = require('./i18n/index');
+
 const EMPTY_TEXT = '-';
 
 /* ============== 颜色常量 ============== */
@@ -692,6 +694,20 @@ function isOverdue(obj, status) {
 
 /* ============== 状态文字/颜色 ============== */
 
+/**
+ * 🌐 状态文案 i18n（D-619 试点：salesOrder 域，其余域分批补）
+ * zh-CN 一律返回 null（直接用现有中文表）；其他语言查 common.status.<domain>.s<code>，
+ * 缺键返回 null → 调用方回落中文表。翻译可分域分批补，不影响运行。
+ */
+function i18nStatusText(domain, status, lang) {
+  const language = lang || i18n.getLanguage();
+  if (language === 'zh-CN') return null;
+  if (isEmpty(status)) return null;
+  const key = 'common.statusLabel.' + domain + '.s' + String(status).trim();
+  const v = i18n.t(key, language);
+  return v === key ? null : v;
+}
+
 function findStatus(key, mapLabel, mapColor) {
   const k = String(key || '').trim();
   if (!k) return null;
@@ -753,7 +769,9 @@ function displayAdvanceDeductStatus(status) {
 function displaySalesOrderStatus(status) {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
   const found = findStatus(status, SALES_ORDER_STATUS_LABEL, SALES_ORDER_STATUS_COLOR);
-  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+  const i18nText = i18nStatusText('salesOrder', status);
+  if (found) return { text: i18nText || found.text, color: found.color };
+  return { text: i18nText || String(status), color: STATUS_COLOR_DEFAULT };
 }
 
 function displayAttendanceStatus(status) {

@@ -159,6 +159,16 @@ export const LOCALES = {
         "sy": "希音",
         "jst": "聚水潭",
         "unknown": "未知平台"
+      },
+      "statusLabel": {
+        "salesOrder": {
+          "s0": "待付款",
+          "s1": "待发货",
+          "s2": "已发货",
+          "s3": "已完成",
+          "s4": "已取消",
+          "s5": "已退款"
+        }
       }
     },
     "login": {
@@ -4049,6 +4059,16 @@ export const LOCALES = {
         "sy": "SHEIN",
         "jst": "Jushuitan",
         "unknown": "Unknown platform"
+      },
+      "statusLabel": {
+        "salesOrder": {
+          "s0": "Pending payment",
+          "s1": "Awaiting shipment",
+          "s2": "Shipped",
+          "s3": "Completed",
+          "s4": "Cancelled",
+          "s5": "Refunded"
+        }
       }
     },
     "login": {
@@ -7939,6 +7959,16 @@ export const LOCALES = {
         "sy": "SHEIN",
         "jst": "Jushuitan",
         "unknown": "Sàn không xác định"
+      },
+      "statusLabel": {
+        "salesOrder": {
+          "s0": "Chờ thanh toán",
+          "s1": "Chờ giao hàng",
+          "s2": "Đã giao hàng",
+          "s3": "Đã hoàn thành",
+          "s4": "Đã hủy",
+          "s5": "Đã hoàn tiền"
+        }
       }
     },
     "login": {
@@ -11829,6 +11859,16 @@ export const LOCALES = {
         "sy": "SHEIN",
         "jst": "Jushuitan",
         "unknown": "Unknown platform"
+      },
+      "statusLabel": {
+        "salesOrder": {
+          "s0": "Pending payment",
+          "s1": "Awaiting shipment",
+          "s2": "Shipped",
+          "s3": "Completed",
+          "s4": "Cancelled",
+          "s5": "Refunded"
+        }
       }
     },
     "login": {
