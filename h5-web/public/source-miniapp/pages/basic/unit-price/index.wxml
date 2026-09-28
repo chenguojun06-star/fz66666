@@ -4,7 +4,7 @@
     <view class="style-picker" bindtap="onTapStyleSelect" hover-class="style-picker--hover" hover-stay-time="100">
       <view class="style-picker-main">
         <text wx:if="{{selectedStyleNo}}" class="style-picker-value">{{selectedStyleNo}}</text>
-        <text wx:else class="style-picker-placeholder">请选择款式</text>
+        <text wx:else class="style-picker-placeholder">{{t.selectStyle}}</text>
         <text wx:if="{{selectedStyleName}}" class="style-picker-name">{{selectedStyleName}}</text>
       </view>
       <text class="style-picker-arrow">▾</text>
@@ -19,38 +19,38 @@
   <view wx:if="{{steps.length > 0}}" class="summary-bar">
     <view class="summary-item">
       <text class="summary-value">{{steps.length}}</text>
-      <text class="summary-label">工序数</text>
+      <text class="summary-label">{{t.processCount}}</text>
     </view>
     <view class="summary-item">
       <text class="summary-value summary-value--price">¥{{totalPrice}}</text>
-      <text class="summary-label">合计工价</text>
+      <text class="summary-label">{{t.totalPrice}}</text>
     </view>
     <view class="summary-item">
       <text class="summary-value">{{sizes.length}}</text>
-      <text class="summary-label">尺码数</text>
+      <text class="summary-label">{{t.sizeCount}}</text>
     </view>
     <view class="summary-toggle" bindtap="toggleGroupByStage">
-      <text class="toggle-text">{{groupByStage ? '列表视图' : '阶段视图'}}</text>
+      <text class="toggle-text">{{groupByStage ? t.listView : t.stageView}}</text>
     </view>
   </view>
 
   <!-- 加载中 -->
   <view wx:if="{{loading}}" class="loading-wrap">
     <view class="loading-spinner"></view>
-    <text class="loading-text">加载中...</text>
+    <text class="loading-text">{{t.loading}}</text>
   </view>
 
   <!-- 空状态 -->
   <view wx:elif="{{!selectedStyleNo}}" class="empty-wrap">
     <text class="empty-icon">¥</text>
-    <text class="empty-text">请选择款式查看工序单价</text>
-    <text class="empty-sub">支持按款号/款名搜索</text>
+    <text class="empty-text">{{t.selectStyleHint}}</text>
+    <text class="empty-sub">{{t.searchHint}}</text>
   </view>
 
   <view wx:elif="{{steps.length === 0}}" class="empty-wrap">
     <view class="empty-icon line-icon line-icon--xl icon-clipboard"></view>
-    <text class="empty-text">暂无工序单价数据</text>
-    <text class="empty-sub">请先在PC端配置单价模板</text>
+    <text class="empty-text">{{t.emptyData}}</text>
+    <text class="empty-sub">{{t.emptyDataHint}}</text>
   </view>
 
   <!-- 列表视图 -->
@@ -62,12 +62,12 @@
       <view class="step-main">
         <view class="step-header">
           <text class="step-name">{{item.processName}}</text>
-          <text wx:if="{{item._hasSizePrices}}" class="step-badge">分码价</text>
+          <text wx:if="{{item._hasSizePrices}}" class="step-badge">{{t.sizePrice}}</text>
         </view>
         <view class="step-meta">
-          <text wx:if="{{item.machineType}}" class="meta-text">机台：{{item.machineType}}</text>
-          <text wx:if="{{item.standardTime != null}}" class="meta-text">工时：{{item.standardTime}}</text>
-          <text wx:if="{{item.difficulty}}" class="meta-text">难度：{{item.difficulty}}</text>
+          <text wx:if="{{item.machineType}}" class="meta-text">{{t.machinePrefix}}{{item.machineType}}</text>
+          <text wx:if="{{item.standardTime != null}}" class="meta-text">{{t.timePrefix}}{{item.standardTime}}</text>
+          <text wx:if="{{item.difficulty}}" class="meta-text">{{t.difficultyPrefix}}{{item.difficulty}}</text>
         </view>
         <view wx:if="{{item.progressStage}}" class="step-stage">
           <text class="stage-tag">{{item._stageLabel}}</text>
@@ -75,7 +75,7 @@
       </view>
       <view class="step-price">
         <text class="price-value">¥{{item._unitPriceText}}</text>
-        <text wx:if="{{item._hasSizePrices}}" class="price-tip">点击查看</text>
+        <text wx:if="{{item._hasSizePrices}}" class="price-tip">{{t.tapView}}</text>
       </view>
     </view>
   </view>
@@ -86,7 +86,7 @@
       <view class="stage-group">
         <view class="stage-header">
           <text class="stage-name">{{group.stageLabel}}</text>
-          <text class="stage-subtotal">小计：¥{{group.subtotal}}</text>
+          <text class="stage-subtotal">{{t.subtotalPrefix}}¥{{group.subtotal}}</text>
         </view>
         <view class="stage-steps">
           <view wx:for="{{group.steps}}" wx:for-item="step" wx:key="processCode" class="step-row" data-index="{{step._index - 1}}" bindtap="onStepTap" hover-class="step-row--hover" hover-stay-time="100">
@@ -102,17 +102,17 @@
   <view wx:if="{{stylePickerVisible}}" class="modal-mask" bindtap="onCloseStylePicker" catchtouchmove="preventTouchMove">
     <view class="modal-content modal-content--style" catchtap="preventTouchMove">
       <view class="modal-header">
-        <text class="modal-title">选择款式</text>
+        <text class="modal-title">{{t.chooseStyle}}</text>
         <view class="modal-close" bindtap="onCloseStylePicker">
           <text class="modal-close-text">✕</text>
         </view>
       </view>
       <view class="search-box-full">
-        <input class="search-input-full" type="text" placeholder="搜索款号或款名" value="{{styleSearchText}}" bindinput="onStyleSearchInput" focus="true" confirm-type="search" />
+        <input class="search-input-full" type="text" placeholder="{{t.searchPlaceholder}}" value="{{styleSearchText}}" bindinput="onStyleSearchInput" focus="true" confirm-type="search" />
       </view>
       <scroll-view class="style-list-scroll" scroll-y="true">
         <view wx:if="{{filteredStyleOptions.length === 0}}" class="style-empty">
-          <text class="style-empty-text">暂无匹配款式</text>
+          <text class="style-empty-text">{{t.noMatchStyle}}</text>
         </view>
         <view wx:for="{{filteredStyleOptions}}" wx:key="styleNo" class="style-option-item" data-styleno="{{item.styleNo}}" bindtap="onSelectStyle" hover-class="style-option-item--hover" hover-stay-time="100">
           <text class="style-option-no">{{item.styleNo}}</text>

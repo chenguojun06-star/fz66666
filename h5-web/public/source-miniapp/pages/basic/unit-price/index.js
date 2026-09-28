@@ -1,21 +1,32 @@
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.unitPrice.';
+
 const api = require('../../../utils/api');
 const { normalizeProcessName } = require('../../../utils/displayHelper');
 
-const STAGE_LABEL_MAP = {
-  sample: '样衣',
-  procurement: '采购',
-  cutting: '裁剪',
-  secondary: '二次工艺',
-  sewing: '车缝',
-  quality: '质检',
-  tail: '后整',
-  warehouse: '入库',
+// 阶段 code → 语言包键名（code 保持英文，显示文案由 stageLabel 按语言取）
+const STAGE_KEYS = {
+  sample: 'stageSample',
+  procurement: 'stageProcurement',
+  cutting: 'stageCutting',
+  secondary: 'stageSecondary',
+  sewing: 'stageSewing',
+  quality: 'stageQuality',
+  tail: 'stageTail',
+  warehouse: 'stageWarehouse',
 };
+
+function stageLabel(stage, lang) {
+  var k = STAGE_KEYS[stage];
+  return k ? i18n.t(NS + k, lang) : (stage || i18n.t(NS + 'ungrouped', lang));
+}
 
 const STAGE_ORDER = ['sample', 'procurement', 'cutting', 'secondary', 'sewing', 'quality', 'tail', 'warehouse'];
 
 Page({
   data: {
+    t: {},
     loading: true,
     styleOptions: [],
     selectedStyleNo: '',
@@ -33,6 +44,45 @@ Page({
 
     groupByStage: true,
     groupedSteps: [],
+  },
+
+  /** 应用语言 */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        selectStyle: t('selectStyle'),
+        processCount: t('processCount'),
+        totalPrice: t('totalPrice'),
+        sizeCount: t('sizeCount'),
+        listView: t('listView'),
+        stageView: t('stageView'),
+        loading: i18n.t('common.loading', lang),
+        selectStyleHint: t('selectStyleHint'),
+        searchHint: t('searchHint'),
+        emptyData: t('emptyData'),
+        emptyDataHint: t('emptyDataHint'),
+        sizePrice: t('sizePrice'),
+        machinePrefix: t('machinePrefix'),
+        timePrefix: t('timePrefix'),
+        difficultyPrefix: t('difficultyPrefix'),
+        tapView: t('tapView'),
+        subtotalPrefix: t('subtotalPrefix'),
+        chooseStyle: t('chooseStyle'),
+        noMatchStyle: t('noMatchStyle'),
+        searchPlaceholder: t('searchPlaceholder'),
+      },
+      // 列表里的阶段标签跟着语言重算
+      steps: (this.data.steps || []).map((it) => ({ ...it, _stageLabel: stageLabel(it.progressStage, lang) })),
+      groupedSteps: (this.data.groupedSteps || []).map((g) => ({ ...g, stageLabel: stageLabel(g.stage, lang) })),
+    });
+    wx.setNavigationBarTitle({ title: t('navTitle') });
+  },
+
+  onShow() {
+    this.applyLanguage(i18n.getLanguage());
   },
 
   onLoad: function (options) {
@@ -131,7 +181,7 @@ Page({
           ...step,
           processName: normalizeProcessName(step.processName || step.name || ''),
           _index: idx + 1,
-          _stageLabel: STAGE_LABEL_MAP[step.progressStage] || step.progressStage || '未分组',
+          _stageLabel: stageLabel(step.progressStage, that._lang),
           _hasSizePrices: step.sizePrices && Object.keys(step.sizePrices).length > 0,
           _unitPriceText: step.unitPrice != null ? step.unitPrice : '--',
         };
@@ -140,9 +190,9 @@ Page({
       const sizes = data.sizes || [];
       const matchedScope = data.matchedScope || '';
       let scopeText = '';
-      if (matchedScope === 'style') scopeText = '款式模板';
-      else if (matchedScope === 'order') scopeText = '订单流程（参考）';
-      else if (matchedScope === 'empty') scopeText = '默认模板';
+      if (matchedScope === 'style') scopeText = i18n.t(NS + 'scopeStyle', that._lang);
+      else if (matchedScope === 'order') scopeText = i18n.t(NS + 'scopeOrder', that._lang);
+      else if (matchedScope === 'empty') scopeText = i18n.t(NS + 'scopeEmpty', that._lang);
       else scopeText = matchedScope;
 
       // 按阶段分组
@@ -152,7 +202,7 @@ Page({
         if (!groupMap[stage]) {
           groupMap[stage] = {
             stage: stage,
-            stageLabel: STAGE_LABEL_MAP[stage] || '其他',
+            stageLabel: stageLabel(stage, that._lang) || i18n.t(NS + 'otherGroup', that._lang),
             steps: [],
             subtotal: 0,
           };
@@ -199,7 +249,7 @@ Page({
     }).catch(function (err) {
       console.warn('[unit-price] loadTemplate failed:', err);
       that.setData({ loading: false });
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'loadFailed', that._lang), icon: 'none' });
     });
   },
 
@@ -214,10 +264,10 @@ Page({
     });
 
     wx.showModal({
-      title: step.processName + ' - 分码价',
+      title: step.processName + ' - ' + i18n.t(NS + 'sizePrice', this._lang),
       content: sizeItems.map(function (it) { return it.size + '：¥' + it.price; }).join('\n'),
       showCancel: false,
-      confirmText: '知道了',
+      confirmText: i18n.t('common.gotIt', this._lang),
     });
   },
 

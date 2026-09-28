@@ -2541,6 +2541,8 @@ const SCAN_HANDLERS = {
   stageProcessor: 'pages/scan/handlers/helpers/ScanStageProcessor.js',
   peripheral: 'pages/scan/handlers/helpers/ScanPeripheralHelper.js',
 };
+const UNIT_PRICE_JS = 'pages/basic/unit-price/index.js';
+const UNIT_PRICE_WXML = 'pages/basic/unit-price/index.wxml';
 const SMART_OPS_EXC_JS = 'pages/smart-ops/exception-detail/index.js';
 const SMART_OPS_EXC_WXML = 'pages/smart-ops/exception-detail/index.wxml';
 const WAGE_JS = 'pages/payroll/payroll.js';
@@ -3037,6 +3039,28 @@ function testI18nRequireDepth() {
   };
   walk(MP);
   ok('所有 i18n require 路径层级正确', bad.length === 0, bad.join(' | '));
+}
+
+/** 资料单价页（D-614）—— 阶段映射 + 视图切换 + 分码价弹窗 */
+function testI18nUnitPrice() {
+  testPageI18n(UNIT_PRICE_JS, UNIT_PRICE_WXML, '资料单价页');
+
+  const { page: zhP, wx: zhWx } = loadPage(UNIT_PRICE_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(UNIT_PRICE_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('en 列表视图', enP.data.t.listView, 'List view');
+  eq('en 阶段视图', enP.data.t.stageView, 'Stage view');
+  eq('en 分码价', enP.data.t.sizePrice, 'Size price');
+  ok('en 机台前缀带尾空格', enP.data.t.machinePrefix.endsWith(' '), JSON.stringify(enP.data.t.machinePrefix));
+  eq('资料单价页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Process Unit Price');
+
+  const jsSrc = fs.readFileSync(path.join(MP, UNIT_PRICE_JS), 'utf8');
+  ok('护栏：阶段映射用键名', jsSrc.includes('STAGE_KEYS') && !jsSrc.includes("sample: '样衣'"),
+    '阶段 code 保持英文，显示文案走 stageLabel()');
+  ok('护栏：阶段显示走函数而非直查中文表', jsSrc.includes('function stageLabel('),
+    '列表里的阶段标签需能按语言重算');
 }
 
 /** 生产异常处理页（D-613）—— 状态/类型映射 + 处理动作 */
@@ -4318,6 +4342,7 @@ try {
   testI18nSalesOrderList();
   testI18nPayroll();
   testI18nSmartOpsException();
+  testI18nUnitPrice();
   testI18nRequireDepth();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
