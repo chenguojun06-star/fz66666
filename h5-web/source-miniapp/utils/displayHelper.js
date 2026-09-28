@@ -704,7 +704,11 @@ function i18nStatusText(domain, status, lang) {
   const language = lang || i18n.getLanguage();
   if (language === 'zh-CN') return null;
   if (isEmpty(status)) return null;
-  const key = 'common.statusLabel.' + domain + '.s' + String(status).trim();
+  var code = String(status).trim();
+  // 键名规则：数字开头加 s 前缀（语言包键段不能以数字开头）；下划线转驼峰
+  if (/^\d/.test(code)) code = 's' + code;
+  code = code.replace(/_([a-zA-Z])/g, function (m, c) { return c.toUpperCase(); });
+  const key = 'common.statusLabel.' + domain + '.' + code;
   const v = i18n.t(key, language);
   return v === key ? null : v;
 }
@@ -721,8 +725,10 @@ function findStatus(key, mapLabel, mapColor) {
 
 function displayStatus(status) {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
+  const i18nText = i18nStatusText('order', status);
   const found = findStatus(status, ORDER_STATUS_LABEL, ORDER_STATUS_COLOR);
-  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+  if (found) return { text: i18nText || found.text, color: found.color };
+  return { text: i18nText || String(status), color: STATUS_COLOR_DEFAULT };
 }
 
 function displayQualityStatus(status) {
@@ -735,12 +741,14 @@ function displayQualityStatus(status) {
 
 function displayPurchaseStatus(status) {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
+  const i18nText = i18nStatusText('purchase', status);
   const found = findStatus(status, PURCHASE_STATUS_LABEL, PURCHASE_STATUS_COLOR);
   return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
 }
 
 function displayFactoryShipmentStatus(status) {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
+  const i18nText = i18nStatusText('factoryShipment', status);
   const found = findStatus(status, FACTORY_SHIPMENT_STATUS_LABEL, FACTORY_SHIPMENT_STATUS_COLOR);
   return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
 }
@@ -785,6 +793,7 @@ function displaySalesOrderStatus(status) {
 
 function displayAttendanceStatus(status) {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
+  const i18nText = i18nStatusText('attendance', status);
   const found = findStatus(status, ATTENDANCE_STATUS_LABEL, ATTENDANCE_STATUS_COLOR);
   return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
 }
