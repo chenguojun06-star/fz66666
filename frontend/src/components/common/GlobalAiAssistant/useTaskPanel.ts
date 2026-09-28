@@ -8,6 +8,7 @@
  */
 import { useState, useCallback, useEffect } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
+import api from '@/utils/api';
 import { useTaskManager } from './useTaskManager';
 import type { PanelView, TaskItem } from './types';
 
@@ -17,12 +18,14 @@ interface UseTaskPanelParams {
   refreshPendingTasks: () => void;
   setIsOpen: Dispatch<SetStateAction<boolean>>;
   messageApi: MessageApi;
+  currentUser?: { id?: string | number; name?: string; username?: string };
 }
 
 export function useTaskPanel({
   refreshPendingTasks,
   setIsOpen,
   messageApi,
+  currentUser,
 }: UseTaskPanelParams) {
   const {
     tasks: myTasks,
@@ -100,6 +103,26 @@ export function useTaskPanel({
     await claimTask(taskId);
   }, [claimTask]);
 
+  // D-613：系统待办岗位池在面板内直接领取（当前仅裁剪任务有领取接口），领取即归到当前登录人名下
+  const handleSystemClaim = useCallback(async (task: TaskItem) => {
+    if (task.taskType !== 'CUTTING_TASK') return;
+    const cuttingTaskId = String(task.id || '').replace(/^CUT_/, '');
+    if (!cuttingTaskId) return;
+    try {
+      await api.post('/production/cutting-task/receive', {
+        taskId: cuttingTaskId,
+        receiverId: currentUser?.id != null ? String(currentUser.id) : undefined,
+        receiverName: currentUser?.name || currentUser?.username,
+      });
+      messageApi.success('领取成功，任务已归到你名下');
+      await fetchTasks();
+      refreshPendingTasks();
+    } catch (e) {
+      console.error('[GlobalAiAssistant] 面板领取裁剪任务失败:', e);
+      messageApi.error((e as Error)?.message || '领取失败');
+    }
+  }, [currentUser, fetchTasks, refreshPendingTasks, messageApi]);
+
   const handleTaskComplete = useCallback(async (taskId: string) => {
     await completeTask(taskId);
   }, [completeTask]);
@@ -132,6 +155,7 @@ export function useTaskPanel({
     handleTaskDelete,
     handleTaskClaim,
     handleTaskComplete,
+    handleSystemClaim,
     startPolling,
     stopPolling,
   };

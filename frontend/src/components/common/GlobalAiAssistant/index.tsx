@@ -132,7 +132,11 @@ const GlobalAiAssistant: React.FC = () => {
     switchToTasks, switchToChat,
     handleTaskCreate, handleTaskEdit, handleTaskSave,
     handleTaskDelete, handleTaskClaim, handleTaskComplete,
-  } = useTaskPanel({ refreshPendingTasks, setIsOpen, messageApi: message });
+    handleSystemClaim,
+  } = useTaskPanel({
+    refreshPendingTasks, setIsOpen, messageApi: message,
+    currentUser: { id: user?.id, name: user?.name, username: user?.username },
+  });
 
   // ── 导航 / 模态框 / 动作卡片回调 ──
   const {
@@ -304,6 +308,7 @@ const GlobalAiAssistant: React.FC = () => {
                   currentUserId={user?.id != null ? String(user.id) : undefined}
                   currentDisplayName={user?.name}
                   onClaim={handleTaskClaim} onComplete={handleTaskComplete}
+                  onClaimSystem={handleSystemClaim}
                   onEdit={handleTaskEdit} onCreate={handleTaskCreate}
                   onNavigate={onSafeNavigate}
                 />

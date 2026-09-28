@@ -70,6 +70,7 @@ interface Props {
   currentDisplayName?: string;
   onClaim: (id: string) => void;
   onComplete: (id: string) => void;
+  onClaimSystem?: (task: TaskItem) => void;
   onEdit: (task: TaskItem) => void;
   onCreate: () => void;
   onNavigate: (path: string) => void;
@@ -91,7 +92,7 @@ function statusBucket(s: TaskItem['status']): 'pending' | 'in_progress' | 'compl
   return s === 'accepted' ? 'in_progress' : (s as 'pending' | 'in_progress' | 'completed' | 'cancelled');
 }
 
-const TaskListView: React.FC<Props> = ({ tasks, loading, currentUsername, currentUserId, currentDisplayName, onClaim, onComplete, onEdit, onCreate, onNavigate }) => {
+const TaskListView: React.FC<Props> = ({ tasks, loading, currentUsername, currentUserId, currentDisplayName, onClaim, onComplete, onClaimSystem, onEdit, onCreate, onNavigate }) => {
   const [categoryTab, setCategoryTab] = useState('all'); // all | __high__ | taskType
   const [scopeTab, setScopeTab] = useState('all');
   const [statusTab, setStatusTab] = useState('all');
@@ -264,6 +265,7 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, currentUsername, curren
           filtered.map(task => (
             <TaskCard key={task.id} task={task} onClick={handleCardClick}
               onClaim={onClaim} onComplete={onComplete} onEdit={onEdit}
+              onClaimSystem={onClaimSystem}
               getOrderLinkStatusLabel={getOrderLinkStatusLabel} getOrderLinkStatusColor={getOrderLinkStatusColor} />
           ))
         ) : (
@@ -298,10 +300,13 @@ const TaskCard: React.FC<{
   onClaim: (id: string) => void;
   onComplete: (id: string) => void;
   onEdit: (task: TaskItem) => void;
+  onClaimSystem?: (task: TaskItem) => void;
   getOrderLinkStatusLabel: (status?: string) => string;
   getOrderLinkStatusColor: (status?: string) => string;
-}> = ({ task, onClick, onClaim, onComplete, onEdit, getOrderLinkStatusLabel, getOrderLinkStatusColor }) => {
+}> = ({ task, onClick, onClaim, onComplete, onEdit, onClaimSystem, getOrderLinkStatusLabel, getOrderLinkStatusColor }) => {
   const isSystem = task.source === 'system';
+  // D-613 岗位池可领取：裁剪类池任务（无归属人）可在面板直接领取，领取即归当前登录人
+  const claimablePool = isSystem && task.taskType === 'CUTTING_TASK' && !task.assigneeName && task.status === 'pending';
   const prio = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
   // 去重：title 已含订单号时 meta 不再重复显示（如系统任务 title="裁剪任务 ORD123"）
   const showOrderNo = !!task.orderNo && !task.title.includes(task.orderNo);
@@ -349,6 +354,9 @@ const TaskCard: React.FC<{
               <button className={`${styles.actionBtn} ${styles.completeBtn}`} onClick={() => onComplete(task.id)}>完成</button>
               <button className={`${styles.actionBtn} ${styles.editBtn}`} onClick={() => onEdit(task)}>编辑</button>
             </>
+          )}
+          {claimablePool && onClaimSystem && (
+            <button className={`${styles.actionBtn} ${styles.claimBtn}`} onClick={() => onClaimSystem(task)}>领取</button>
           )}
           {isSystem && task.deepLinkPath && (
             <button className={`${styles.actionBtn} ${styles.claimBtn}`}
