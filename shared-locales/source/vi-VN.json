@@ -161,6 +161,41 @@
         "s3": "Đã hoàn thành",
         "s4": "Đã hủy",
         "s5": "Đã hoàn tiền"
+      },
+      "payment": {
+        "pending": "Chờ thanh toán",
+        "processing": "Đang thanh toán",
+        "success": "Đã thanh toán",
+        "failed": "Thanh toán thất bại",
+        "cancelled": "Đã hủy",
+        "refunded": "Đã hoàn tiền"
+      },
+      "return": {
+        "pending": "Chờ duyệt",
+        "processing": "Đang xử lý",
+        "completed": "Đã hoàn thành",
+        "cancelled": "Đã hủy",
+        "rejected": "Đã từ chối"
+      },
+      "advance": {
+        "pending": "Chờ duyệt",
+        "approved": "Đã phê duyệt",
+        "rejected": "Đã từ chối"
+      },
+      "split": {
+        "PENDING": "Chờ xác nhận",
+        "APPROVED": "Đã phê duyệt",
+        "REJECTED": "Đã từ chối",
+        "CANCELLED": "Đã hủy",
+        "CANCELED": "Đã hủy",
+        "COMPLETED": "Đã hoàn thành"
+      },
+      "quality": {
+        "qualified": "Đạt",
+        "unqualified": "Không đạt",
+        "repaired": "Đã sửa xong",
+        "pending": "Chờ kiểm tra",
+        "checking": "Đang kiểm tra"
       }
     }
   },

@@ -168,6 +168,41 @@ export const LOCALES = {
           "s3": "已完成",
           "s4": "已取消",
           "s5": "已退款"
+        },
+        "payment": {
+          "pending": "待付款",
+          "processing": "付款中",
+          "success": "已付款",
+          "failed": "付款失败",
+          "cancelled": "已取消",
+          "refunded": "已退款"
+        },
+        "return": {
+          "pending": "待审核",
+          "processing": "处理中",
+          "completed": "已完成",
+          "cancelled": "已取消",
+          "rejected": "已拒绝"
+        },
+        "advance": {
+          "pending": "待审批",
+          "approved": "已批准",
+          "rejected": "已拒绝"
+        },
+        "split": {
+          "PENDING": "待确认",
+          "APPROVED": "已通过",
+          "REJECTED": "已拒绝",
+          "CANCELLED": "已取消",
+          "CANCELED": "已取消",
+          "COMPLETED": "已完成"
+        },
+        "quality": {
+          "qualified": "合格",
+          "unqualified": "不合格",
+          "repaired": "返修完成",
+          "pending": "待质检",
+          "checking": "质检中"
         }
       }
     },
@@ -4068,6 +4103,41 @@ export const LOCALES = {
           "s3": "Completed",
           "s4": "Cancelled",
           "s5": "Refunded"
+        },
+        "payment": {
+          "pending": "Pending payment",
+          "processing": "Processing payment",
+          "success": "Paid",
+          "failed": "Payment failed",
+          "cancelled": "Cancelled",
+          "refunded": "Refunded"
+        },
+        "return": {
+          "pending": "Pending review",
+          "processing": "Processing",
+          "completed": "Completed",
+          "cancelled": "Cancelled",
+          "rejected": "Rejected"
+        },
+        "advance": {
+          "pending": "Pending approval",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        },
+        "split": {
+          "PENDING": "Pending confirmation",
+          "APPROVED": "Approved",
+          "REJECTED": "Rejected",
+          "CANCELLED": "Cancelled",
+          "CANCELED": "Cancelled",
+          "COMPLETED": "Completed"
+        },
+        "quality": {
+          "qualified": "Qualified",
+          "unqualified": "Unqualified",
+          "repaired": "Repaired",
+          "pending": "Pending QC",
+          "checking": "QC in progress"
         }
       }
     },
@@ -7968,6 +8038,41 @@ export const LOCALES = {
           "s3": "Đã hoàn thành",
           "s4": "Đã hủy",
           "s5": "Đã hoàn tiền"
+        },
+        "payment": {
+          "pending": "Chờ thanh toán",
+          "processing": "Đang thanh toán",
+          "success": "Đã thanh toán",
+          "failed": "Thanh toán thất bại",
+          "cancelled": "Đã hủy",
+          "refunded": "Đã hoàn tiền"
+        },
+        "return": {
+          "pending": "Chờ duyệt",
+          "processing": "Đang xử lý",
+          "completed": "Đã hoàn thành",
+          "cancelled": "Đã hủy",
+          "rejected": "Đã từ chối"
+        },
+        "advance": {
+          "pending": "Chờ duyệt",
+          "approved": "Đã phê duyệt",
+          "rejected": "Đã từ chối"
+        },
+        "split": {
+          "PENDING": "Chờ xác nhận",
+          "APPROVED": "Đã phê duyệt",
+          "REJECTED": "Đã từ chối",
+          "CANCELLED": "Đã hủy",
+          "CANCELED": "Đã hủy",
+          "COMPLETED": "Đã hoàn thành"
+        },
+        "quality": {
+          "qualified": "Đạt",
+          "unqualified": "Không đạt",
+          "repaired": "Đã sửa xong",
+          "pending": "Chờ kiểm tra",
+          "checking": "Đang kiểm tra"
         }
       }
     },
@@ -11868,6 +11973,41 @@ export const LOCALES = {
           "s3": "Completed",
           "s4": "Cancelled",
           "s5": "Refunded"
+        },
+        "payment": {
+          "pending": "Pending payment",
+          "processing": "Processing payment",
+          "success": "Paid",
+          "failed": "Payment failed",
+          "cancelled": "Cancelled",
+          "refunded": "Refunded"
+        },
+        "return": {
+          "pending": "Pending review",
+          "processing": "Processing",
+          "completed": "Completed",
+          "cancelled": "Cancelled",
+          "rejected": "Rejected"
+        },
+        "advance": {
+          "pending": "Pending approval",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        },
+        "split": {
+          "PENDING": "Pending confirmation",
+          "APPROVED": "Approved",
+          "REJECTED": "Rejected",
+          "CANCELLED": "Cancelled",
+          "CANCELED": "Cancelled",
+          "COMPLETED": "Completed"
+        },
+        "quality": {
+          "qualified": "Qualified",
+          "unqualified": "Unqualified",
+          "repaired": "Repaired",
+          "pending": "Pending QC",
+          "checking": "QC in progress"
         }
       }
     },

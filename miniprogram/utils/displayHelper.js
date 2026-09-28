@@ -478,7 +478,8 @@ function displaySource(value) {
 
 function displaySplitStatus(status) {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
-  const text = _labelFromMap(status, SPLIT_STATUS_LABEL);
+  const i18nText = i18nStatusText('split', status);
+  const text = i18nText || _labelFromMap(status, SPLIT_STATUS_LABEL);
   const color = SPLIT_STATUS_COLOR[String(status).trim().toUpperCase()] || STATUS_COLOR_DEFAULT;
   return { text, color };
 }
@@ -727,7 +728,9 @@ function displayStatus(status) {
 function displayQualityStatus(status) {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
   const found = findStatus(status, QUALITY_STATUS_LABEL, QUALITY_STATUS_COLOR);
-  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+  const i18nText = i18nStatusText('quality', status);
+  if (found) return { text: i18nText || found.text, color: found.color };
+  return { text: i18nText || String(status), color: STATUS_COLOR_DEFAULT };
 }
 
 function displayPurchaseStatus(status) {
@@ -745,19 +748,25 @@ function displayFactoryShipmentStatus(status) {
 function displayReturnStatus(status) {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
   const found = findStatus(status, RETURN_STATUS_LABEL, RETURN_STATUS_COLOR);
-  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+  const i18nText = i18nStatusText('return', status);
+  if (found) return { text: i18nText || found.text, color: found.color };
+  return { text: i18nText || String(status), color: STATUS_COLOR_DEFAULT };
 }
 
 function displayPaymentStatus(status) {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
   const found = findStatus(status, PAYMENT_STATUS_LABEL, PAYMENT_STATUS_COLOR);
-  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+  const i18nText = i18nStatusText('payment', status);
+  if (found) return { text: i18nText || found.text, color: found.color };
+  return { text: i18nText || String(status), color: STATUS_COLOR_DEFAULT };
 }
 
 function displayAdvanceStatus(status) {
   if (isEmpty(status)) return { text: EMPTY_TEXT, color: STATUS_COLOR_DEFAULT };
   const found = findStatus(status, ADVANCE_STATUS_LABEL, ADVANCE_STATUS_COLOR);
-  return found || { text: String(status), color: STATUS_COLOR_DEFAULT };
+  const i18nText = i18nStatusText('advance', status);
+  if (found) return { text: i18nText || found.text, color: found.color };
+  return { text: i18nText || String(status), color: STATUS_COLOR_DEFAULT };
 }
 
 function displayAdvanceDeductStatus(status) {

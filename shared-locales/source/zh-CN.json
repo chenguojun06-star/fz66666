@@ -161,6 +161,41 @@
         "s3": "已完成",
         "s4": "已取消",
         "s5": "已退款"
+      },
+      "payment": {
+        "pending": "待付款",
+        "processing": "付款中",
+        "success": "已付款",
+        "failed": "付款失败",
+        "cancelled": "已取消",
+        "refunded": "已退款"
+      },
+      "return": {
+        "pending": "待审核",
+        "processing": "处理中",
+        "completed": "已完成",
+        "cancelled": "已取消",
+        "rejected": "已拒绝"
+      },
+      "advance": {
+        "pending": "待审批",
+        "approved": "已批准",
+        "rejected": "已拒绝"
+      },
+      "split": {
+        "PENDING": "待确认",
+        "APPROVED": "已通过",
+        "REJECTED": "已拒绝",
+        "CANCELLED": "已取消",
+        "CANCELED": "已取消",
+        "COMPLETED": "已完成"
+      },
+      "quality": {
+        "qualified": "合格",
+        "unqualified": "不合格",
+        "repaired": "返修完成",
+        "pending": "待质检",
+        "checking": "质检中"
       }
     }
   },

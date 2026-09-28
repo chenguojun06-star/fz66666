@@ -161,6 +161,41 @@
         "s3": "Completed",
         "s4": "Cancelled",
         "s5": "Refunded"
+      },
+      "payment": {
+        "pending": "Pending payment",
+        "processing": "Processing payment",
+        "success": "Paid",
+        "failed": "Payment failed",
+        "cancelled": "Cancelled",
+        "refunded": "Refunded"
+      },
+      "return": {
+        "pending": "Pending review",
+        "processing": "Processing",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "rejected": "Rejected"
+      },
+      "advance": {
+        "pending": "Pending approval",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "split": {
+        "PENDING": "Pending confirmation",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected",
+        "CANCELLED": "Cancelled",
+        "CANCELED": "Cancelled",
+        "COMPLETED": "Completed"
+      },
+      "quality": {
+        "qualified": "Qualified",
+        "unqualified": "Unqualified",
+        "repaired": "Repaired",
+        "pending": "Pending QC",
+        "checking": "QC in progress"
       }
     }
   },
