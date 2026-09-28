@@ -1,3 +1,7 @@
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.returnList.';
+
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { bindPageEvents, unbindPageEvents } = require('../../../utils/pageEventBinder');
@@ -7,9 +11,9 @@ const displayHelper = require('../../../utils/displayHelper');
 // 退货状态文案兜底：RETURNED/APPROVED/REFUNDED 是退货业务专属状态，
 // 不在 displayHelper.RETURN_STATUS_LABEL 中，本地保留兜底文案
 const RETURN_STATUS_FALLBACK = {
-  RETURNED: '已退货',
-  APPROVED: '已批准',
-  REFUNDED: '已退款',
+  RETURNED: 'statusReturned',
+  APPROVED: 'statusApproved',
+  REFUNDED: 'statusRefunded',
 };
 
 function returnStatusLabel(status) {
@@ -20,22 +24,23 @@ function returnStatusLabel(status) {
 
 Page({
   data: {
+    t: {},
     loading: false,
     activeType: 'purchase', // 'purchase' | 'sales'
     activeStatus: 'all',
     typeTabs: [
-      { key: 'purchase', label: '采购退货' },
-      { key: 'sales', label: '销售退货' },
+      { key: 'purchase', labelKey: 'typePurchase' },
+      { key: 'sales', labelKey: 'typeSales' },
     ],
     statusTabs: [
-      { key: 'all', label: '全部', cls: 'all' },
+      { key: 'all', labelKey: 'filterAll', cls: 'all' },
       { key: 'PENDING', label: returnStatusLabel('PENDING'), cls: 'pending' },
       { key: 'APPROVED', label: returnStatusLabel('APPROVED'), cls: 'approved' },
       { key: 'RETURNED', label: returnStatusLabel('RETURNED'), cls: 'returned' },
       { key: 'REJECTED', label: returnStatusLabel('REJECTED'), cls: 'rejected' },
     ],
     statusTabsSales: [
-      { key: 'all', label: '全部', cls: 'all' },
+      { key: 'all', labelKey: 'filterAll', cls: 'all' },
       { key: 'PENDING', label: returnStatusLabel('PENDING'), cls: 'pending' },
       { key: 'APPROVED', label: returnStatusLabel('APPROVED'), cls: 'approved' },
       { key: 'REFUNDED', label: returnStatusLabel('REFUNDED'), cls: 'refunded' },
@@ -56,11 +61,35 @@ Page({
     hasMore: false,
   },
 
+  /** 应用语言 */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        emptyList: t('emptyList'),
+        originalNoPrefix: t('originalNoPrefix'),
+        partySupplier: t('partySupplier'),
+        partyCustomer: t('partyCustomer'),
+        typeLabel: t('typeLabel'),
+        reasonLabel: t('reasonLabel'),
+        loadingMore: t('loadingMore'),
+        noMore: t('noMore'),
+      },
+    });
+    wx.setNavigationBarTitle({ title: t('navTitle') });
+  },
+
+  onShow() {
+    this.applyLanguage(i18n.getLanguage());
+  },
+
   onLoad() {
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     if (!hasFeaturePermission('view_purchase_return') && !hasFeaturePermission('view_sales_return')) {
-      toast('您没有查看退货的权限');
+      toast(i18n.t(NS + 'noPermission', this._lang));
       wx.navigateBack({ delta: 1, fail: () => wx.switchTab({ url: '/pages/dashboard/index' }) });
       return;
     }
@@ -112,7 +141,7 @@ Page({
     } catch (e) {
       console.error('[ReturnList] loadData error', e);
       this.setData({ loading: false });
-      toast.error('加载退货列表失败');
+      toast.error(i18n.t(NS + 'loadFailed', this._lang));
     }
   },
 

@@ -1,3 +1,7 @@
+const i18n = require('../../utils/i18n/index');
+
+const NS = 'mp.todoDetail.';
+
 const { safeNavigate } = require('../../utils/uiHelper');
 
 /**
@@ -26,20 +30,20 @@ const HANDLE_ROUTE = {
 
 // 处理按钮文案（就近页的入口语义）
 const HANDLE_LABEL = {
-  PAYROLL_SETTLEMENT: '去审核工资',
-  MATERIAL_RECON: '去处理对账',
-  EXPENSE_REIMBURSE: '去审批报销',
-  EXCEPTION_REPORT: '去处理异常',
-  SAMPLE_LOAN: '去样衣借还',
-  MATERIAL_PICKING: '去领料',
-  COLLAB_TASK: '去协作任务',
+  PAYROLL_SETTLEMENT: 'handlePayroll',
+  MATERIAL_RECON: 'handleRecon',
+  EXPENSE_REIMBURSE: 'handleReimburse',
+  EXCEPTION_REPORT: 'handleException',
+  SAMPLE_LOAN: 'handleSampleLoan',
+  MATERIAL_PICKING: 'handlePicking',
+  COLLAB_TASK: 'handleCollab',
 };
 
 function priorityText(p) {
   const v = String(p || 'medium').toLowerCase();
-  if (v === 'high') return '高优先级';
-  if (v === 'low') return '低优先级';
-  return '中优先级';
+  if (v === 'high') return i18n.t(NS + 'priorityHigh');
+  if (v === 'low') return i18n.t(NS + 'priorityLow');
+  return i18n.t(NS + 'priorityMedium');
 }
 
 function formatTime(v) {
@@ -56,11 +60,38 @@ function formatTime(v) {
 
 Page({
   data: {
+    t: {},
     hasTask: false,
     noRouteHint: false,
     task: null,
     priorityText: '',
     handleText: '',
+  },
+
+  /** 应用语言 */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        defaultCategory: t('defaultCategory'),
+        orderNoLabel: t('orderNoLabel'),
+        styleNoLabel: t('styleNoLabel'),
+        roleLabel: t('roleLabel'),
+        pcEntryLabel: t('pcEntryLabel'),
+        createdLabel: t('createdLabel'),
+        readonlyTip: t('readonlyTip'),
+        noRouteTip: t('noRouteTip'),
+        emptyInvalid: t('emptyInvalid'),
+        goBack: t('goBack'),
+      },
+    });
+    wx.setNavigationBarTitle({ title: t('navTitle') });
+  },
+
+  onShow() {
+    this.applyLanguage(i18n.getLanguage());
   },
 
   onLoad: function () {
@@ -88,7 +119,7 @@ Page({
       task: task,
       priorityText: priorityText(task.priority),
       noRouteHint: noRoute,
-      handleText: !noRoute ? (HANDLE_LABEL[type] || '去处理') : '',
+      handleText: !noRoute ? (HANDLE_LABEL[type] ? i18n.t(NS + HANDLE_LABEL[type]) : i18n.t(NS + 'handleDefault')) : '',
     });
   },
 
@@ -104,7 +135,7 @@ Page({
     if (!task) return;
     const route = HANDLE_ROUTE[task.taskType];
     if (!route) {
-      wx.showToast({ title: '请在 PC 端处理', icon: 'none' });
+      wx.showToast({ title: i18n.t(NS + 'pcOnly'), icon: 'none' });
       return;
     }
     safeNavigate({ url: route }, 'navigateTo').catch(() => {});

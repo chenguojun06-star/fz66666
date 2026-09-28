@@ -33,7 +33,7 @@
   <view class="list-wrap">
     <!-- 空状态 -->
     <view wx:if="{{list.length === 0 && !loading}}" class="empty-state">
-      <view class="empty-text">暂无退货单</view>
+      <view class="empty-text">{{t.emptyList}}</view>
     </view>
 
     <!-- 卡片三段式：header / detail-grid / footer -->
@@ -49,7 +49,7 @@
       <view class="card-header">
         <view class="header-left">
           <text class="return-no">{{item.returnNo}}</text>
-          <text class="card-sub-no">原单号: {{item.originalNo}}</text>
+          <text class="card-sub-no">{{t.originalNoPrefix}}{{item.originalNo}}</text>
         </view>
         <text class="status-badge tag-{{item.statusColor}}">{{item.statusLabel}}</text>
       </view>
@@ -57,15 +57,15 @@
       <!-- Detail grid：供应商/客户 · 类型 · 原因 -->
       <view class="card-grid">
         <view class="grid-item">
-          <text class="row-label">{{item._type === 'purchase' ? '供应商' : '客户'}}</text>
+          <text class="row-label">{{item._type === 'purchase' ? t.partySupplier : t.partyCustomer}}</text>
           <text class="row-value">{{item.partyName}}</text>
         </view>
         <view class="grid-item">
-          <text class="row-label">类型</text>
+          <text class="row-label">{{t.typeLabel}}</text>
           <text class="row-value">{{item.reasonType}}</text>
         </view>
         <view class="grid-item grid-item--full" wx:if="{{item.reasonDetail}}">
-          <text class="row-label">原因</text>
+          <text class="row-label">{{t.reasonLabel}}</text>
           <text class="row-value">{{item.reasonDetail}}</text>
         </view>
       </view>
@@ -78,8 +78,8 @@
     </view>
 
     <!-- 加载 / 分页结束 -->
-    <view wx:if="{{loading}}" class="loading-more">加载中...</view>
-    <view wx:elif="{{!hasMore && list.length > 0}}" class="loading-more">没有更多了</view>
+    <view wx:if="{{loading}}" class="loading-more">{{t.loadingMore}}</view>
+    <view wx:elif="{{!hasMore && list.length > 0}}" class="loading-more">{{t.noMore}}</view>
   </view>
   <ai-assistant />
 </view>

@@ -2543,6 +2543,10 @@ const SCAN_HANDLERS = {
 };
 const UNIT_PRICE_JS = 'pages/basic/unit-price/index.js';
 const UNIT_PRICE_WXML = 'pages/basic/unit-price/index.wxml';
+const TODO_DETAIL_JS = 'pages/todo-detail/index.js';
+const TODO_DETAIL_WXML = 'pages/todo-detail/index.wxml';
+const RETURN_LIST_JS = 'pages/return/list/index.js';
+const RETURN_LIST_WXML = 'pages/return/list/index.wxml';
 const SMART_OPS_EXC_JS = 'pages/smart-ops/exception-detail/index.js';
 const SMART_OPS_EXC_WXML = 'pages/smart-ops/exception-detail/index.wxml';
 const WAGE_JS = 'pages/payroll/payroll.js';
@@ -3061,6 +3065,30 @@ function testI18nUnitPrice() {
     '阶段 code 保持英文，显示文案走 stageLabel()');
   ok('护栏：阶段显示走函数而非直查中文表', jsSrc.includes('function stageLabel('),
     '列表里的阶段标签需能按语言重算');
+}
+
+/** 待办详情页 + 退货列表页（D-616） */
+function testI18nTodoAndReturn() {
+  testPageI18n(TODO_DETAIL_JS, TODO_DETAIL_WXML, '待办详情页');
+  testPageI18n(RETURN_LIST_JS, RETURN_LIST_WXML, '退货列表页');
+
+  const { page: enT, wx: enTw } = loadPage(TODO_DETAIL_JS, makeApi());
+  enT.applyLanguage('en-US');
+  eq('todo 页导航标题随语言', lastCall(enTw, 'setNavigationBarTitle').title, 'Todo Details');
+
+  const { page: enR, wx: enRw } = loadPage(RETURN_LIST_JS, makeApi());
+  enR.applyLanguage('en-US');
+  eq('return 页导航标题随语言', lastCall(enRw, 'setNavigationBarTitle').title, 'Returns');
+
+  const { page: zhR } = loadPage(RETURN_LIST_JS, makeApi());
+  zhR.applyLanguage('zh-CN');
+  eq('return: zh 空态', zhR.data.t.emptyList, '暂无退货单');
+  eq('return: en 空态', enR.data.t.emptyList, 'No returns yet');
+
+  // 护栏：HANDLE_LABEL 的值必须是键名后缀（不能再写死中文）
+  const jsSrc = fs.readFileSync(path.join(MP, TODO_DETAIL_JS), 'utf8');
+  ok('护栏：todo 处理按钮用键名', jsSrc.includes("PAYROLL_SETTLEMENT: 'handlePayroll'"),
+    '显示文案走 i18n.t(NS + HANDLE_LABEL[type])');
 }
 
 /** 生产异常处理页（D-613）—— 状态/类型映射 + 处理动作 */
@@ -4343,6 +4371,7 @@ try {
   testI18nPayroll();
   testI18nSmartOpsException();
   testI18nUnitPrice();
+  testI18nTodoAndReturn();
   testI18nRequireDepth();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));
