@@ -2541,6 +2541,8 @@ const SCAN_HANDLERS = {
   stageProcessor: 'pages/scan/handlers/helpers/ScanStageProcessor.js',
   peripheral: 'pages/scan/handlers/helpers/ScanPeripheralHelper.js',
 };
+const SMART_OPS_EXC_JS = 'pages/smart-ops/exception-detail/index.js';
+const SMART_OPS_EXC_WXML = 'pages/smart-ops/exception-detail/index.wxml';
 const WAGE_JS = 'pages/payroll/payroll.js';
 const WAGE_WXML = 'pages/payroll/payroll.wxml';
 const WAGE_FEEDBACK_JS = 'pages/payroll/feedback/index.js';
@@ -3035,6 +3037,35 @@ function testI18nRequireDepth() {
   };
   walk(MP);
   ok('所有 i18n require 路径层级正确', bad.length === 0, bad.join(' | '));
+}
+
+/** 生产异常处理页（D-613）—— 状态/类型映射 + 处理动作 */
+function testI18nSmartOpsException() {
+  // '异' 是无图时的占位单字（与 logo 同类），故意不翻译
+  testPageI18n(SMART_OPS_EXC_JS, SMART_OPS_EXC_WXML, '生产异常页', { allowWxmlText: ['异'] });
+
+  const { page: zhP, wx: zhWx } = loadPage(SMART_OPS_EXC_JS, makeApi());
+  zhP.applyLanguage('zh-CN');
+  const { page: enP, wx: enWx } = loadPage(SMART_OPS_EXC_JS, makeApi());
+  enP.applyLanguage('en-US');
+
+  eq('zh 状态映射', zhP.data.STATUS_MAP.PENDING.text, '待处理');
+  eq('en 状态映射', enP.data.STATUS_MAP.PENDING.text, 'Pending');
+  eq('en 已解决', enP.data.STATUS_MAP.RESOLVED.text, 'Resolved');
+  eq('zh 筛选首位', zhP.data.STATUS_OPTIONS[0].label, '全部状态');
+  eq('en 筛选首位', enP.data.STATUS_OPTIONS[0].label, 'All statuses');
+  ok('筛选选项 value 始终是后端状态码',
+    enP.data.STATUS_OPTIONS.every((x) => x.value === '' || /^[A-Z]+$/.test(x.value)),
+    JSON.stringify(enP.data.STATUS_OPTIONS.map((x) => x.value)));
+  eq('生产异常页导航标题随语言', lastCall(enWx, 'setNavigationBarTitle').title, 'Production Exceptions');
+
+  const jsSrc = fs.readFileSync(path.join(MP, SMART_OPS_EXC_JS), 'utf8');
+  ok('护栏：状态映射用键名', jsSrc.includes('STATUS_KEYS') && !jsSrc.includes("PENDING: '待处理'"),
+    '状态码保持英文，显示文案走 i18n');
+  ok('护栏：异常类型映射用键名', jsSrc.includes('TYPE_KEYS') && !jsSrc.includes("MACHINE_FAULT: '车床故障'"),
+    'code 与后端 mapExceptionType 对齐，不可键化 code 本身');
+  ok('护栏：状态选项已改走 data', !jsSrc.includes('_STATUS_OPTIONS'),
+    '原来挂在页面实例上，切语言无法重建');
 }
 
 /** 工资查询页 + 工资结算反馈页（D-609） */
@@ -4286,6 +4317,7 @@ try {
   testI18nPrivacy();
   testI18nSalesOrderList();
   testI18nPayroll();
+  testI18nSmartOpsException();
   testI18nRequireDepth();
 } catch (e) {
   failures.push('测试执行异常: ' + (e && e.stack || e));

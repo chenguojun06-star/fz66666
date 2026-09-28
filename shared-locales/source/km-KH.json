@@ -3745,6 +3745,34 @@
       "submitSuccess": "Submitted successfully",
       "submitFailed": "Submit failed",
       "pieceUnit": " pcs"
+    },
+    "smartOpsException": {
+      "navTitle": "Production Exceptions",
+      "statusPending": "Pending",
+      "statusResolved": "Resolved",
+      "typeMaterialShortage": "Material shortage",
+      "typeMachineFault": "Machine fault",
+      "typeNeedHelp": "Needs guidance",
+      "allStatus": "All statuses",
+      "unknownException": "Unknown exception",
+      "loadFailedFmt": "Load failed: {msg}",
+      "resolveBtn": "Mark as resolved",
+      "handleNoteRequired": "Please enter handling notes",
+      "handleNotePlaceholder": "Describe how it was resolved",
+      "resolvedToast": "Marked as resolved",
+      "reopenBtn": "Reopen",
+      "reopenConfirm": "Mark this exception as Pending again?",
+      "reopenedToast": "Reopened",
+      "handling": "Processing...",
+      "opFailedFmt": "Operation failed: {msg}",
+      "searchPlaceholder": "Search order no. / process / reporter",
+      "emptyReports": "No exception reports yet",
+      "tapHandle": "Tap to handle",
+      "loadingMore": "Loading...",
+      "noMore": "No more records",
+      "supervisorOnly": "Only supervisors and above can handle exceptions",
+      "handlePrefix": "Handled: ",
+      "reportPrefix": "Reported "
     }
   }
 }

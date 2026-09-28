@@ -10,27 +10,35 @@
  * 权限：仅主管及以上可处理（后端 UserContext.isSupervisorOrAbove 校验，前端同步只对该角色显示按钮）
  * 内外部：工厂账号由后端按「本工厂订单」过滤，只能看到自己厂的异常，不在此页拦截。
  */
+const i18n = require('../../../utils/i18n/index');
+
+const NS = 'mp.smartOpsException.';
+
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { hasFeaturePermission } = require('../../../utils/permission');
 
-var STATUS_TEXT = { PENDING: '待处理', RESOLVED: '已解决' };
+// code → 语言包键名（状态码保持英文，显示文案由 applyLanguage 生成）
+var STATUS_KEYS = { PENDING: 'statusPending', RESOLVED: 'statusResolved' };
 var STATUS_CLS = { PENDING: 'tag-orange', RESOLVED: 'tag-green' };
-var STATUS_MAP = {};
-Object.keys(STATUS_TEXT).forEach(function (k) {
-  STATUS_MAP[k] = { text: STATUS_TEXT[k], cls: STATUS_CLS[k] };
-});
+function buildStatusMap(lang) {
+  var m = {};
+  Object.keys(STATUS_KEYS).forEach(function (k) {
+    m[k] = { text: i18n.t(NS + STATUS_KEYS[k], lang), cls: STATUS_CLS[k] };
+  });
+  return m;
+}
 
 // 异常类型（与后端 mapExceptionType 对齐）
-var TYPE_TEXT = {
-  MATERIAL_SHORTAGE: '缺面料/辅料',
-  MACHINE_FAULT: '车床故障',
-  NEED_HELP: '需指导/协助',
+var TYPE_KEYS = {
+  MATERIAL_SHORTAGE: 'typeMaterialShortage',
+  MACHINE_FAULT: 'typeMachineFault',
+  NEED_HELP: 'typeNeedHelp',
 };
 
-function statusText(s) {
+function statusText(s, lang) {
   var k = String(s || '').toUpperCase();
-  return STATUS_TEXT[k] || s || '—';
+  return STATUS_KEYS[k] ? i18n.t(NS + STATUS_KEYS[k], lang) : (s || '—');
 }
 function statusCls(s) {
   var k = String(s || '').toUpperCase();
@@ -61,19 +69,54 @@ Page({
     current: null,
     currentCanResolve: false,
     currentCanReopen: false,
-    STATUS_MAP: STATUS_MAP,
-    STATUS_OPTIONS: [
-      { value: '', label: '全部状态' },
-      { value: 'PENDING', label: '待处理' },
-      { value: 'RESOLVED', label: '已解决' },
-    ],
+    STATUS_MAP: {},
+    t: {},
+    // value 是后端状态码（英文），label 由 applyLanguage 生成
+    STATUS_OPTIONS: [],
   },
 
-  _STATUS_OPTIONS: [
-    { value: '', label: '全部状态' },
-    { value: 'PENDING', label: '待处理' },
-    { value: 'RESOLVED', label: '已解决' },
-  ],
+  /** 应用语言 */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        searchPlaceholder: t('searchPlaceholder'),
+        emptyReports: t('emptyReports'),
+        tapHandle: t('tapHandle'),
+        loadingMore: t('loadingMore'),
+        noMore: t('noMore'),
+        resolveBtn: t('resolveBtn'),
+        reopenBtn: t('reopenBtn'),
+        supervisorOnly: t('supervisorOnly'),
+        handlePrefix: t('handlePrefix'),
+        reportPrefix: t('reportPrefix'),
+        cancel: i18n.t('common.cancel', lang),
+      },
+      // 状态映射与筛选选项必须整体重建
+      STATUS_MAP: buildStatusMap(lang),
+      STATUS_OPTIONS: [
+        { value: '', label: t('allStatus') },
+        { value: 'PENDING', label: t('statusPending') },
+        { value: 'RESOLVED', label: t('statusResolved') },
+      ],
+      // 列表里已生成的状态/类型文案跟着语言重算
+      list: (this.data.list || []).map((it) => {
+        const tk = TYPE_KEYS[String(it.exceptionType || '').toUpperCase()];
+        return {
+          ...it,
+          statusText: statusText(it.status, lang),
+          typeText: tk ? i18n.t(NS + tk, lang) : (it.exceptionType || t('unknownException')),
+        };
+      }),
+    });
+    wx.setNavigationBarTitle({ title: t('navTitle') });
+  },
+
+  onShow() {
+    this.applyLanguage(i18n.getLanguage());
+  },
 
   onLoad: function (options) {
     var opts = options || {};
@@ -118,7 +161,8 @@ Page({
         var st = String(r.status || 'PENDING').toUpperCase();
         r.statusText = statusText(st);
         r.statusCls = statusCls(st);
-        r.typeText = TYPE_TEXT[String(r.exceptionType || '').toUpperCase()] || (r.exceptionType || '未知异常');
+        var tk = TYPE_KEYS[String(r.exceptionType || '').toUpperCase()];
+        r.typeText = tk ? i18n.t(NS + tk, that._lang) : (r.exceptionType || i18n.t(NS + 'unknownException', that._lang));
         r.isPending = st === 'PENDING';
         r.createTimeText = r.createTime ? String(r.createTime).replace('T', ' ').slice(0, 16) : '';
         r.handleTimeText = r.handleTime ? String(r.handleTime).replace('T', ' ').slice(0, 16) : '';
@@ -132,7 +176,7 @@ Page({
       });
     }).catch(function (e) {
       that.setData({ loading: false });
-      toast('加载失败: ' + (e.errMsg || e.message || e));
+      toast(i18n.tf(NS + 'loadFailedFmt', { msg: e.errMsg || e.message || e }));
     });
   },
 
@@ -146,7 +190,8 @@ Page({
 
   onStatusFilterChange: function (e) {
     var idx = Number(e.detail.value);
-    this.setData({ statusFilter: this._STATUS_OPTIONS[idx].value });
+    // 状态选项已改由 applyLanguage 按语言重建（data.STATUS_OPTIONS），value 仍是后端状态码
+    this.setData({ statusFilter: this.data.STATUS_OPTIONS[idx].value });
     this._resetAndLoad();
   },
 
@@ -170,15 +215,15 @@ Page({
     if (!item) return;
     var that = this;
     wx.showModal({
-      title: '标记已解决',
+      title: i18n.t(NS + 'resolveBtn'),
       content: '',
       editable: true,
-      placeholderText: '请填写处理说明（如如何解决的）',
+      placeholderText: i18n.t(NS + 'handleNotePlaceholder'),
       success: function (res) {
         if (!res.confirm) return;
         var note = (res.content || '').trim();
-        if (!note) { toast('请填写处理说明'); return; }
-        that._submit(item.id, 'resolve', note, '已标记解决');
+        if (!note) { toast(i18n.t(NS + 'handleNoteRequired')); return; }
+        that._submit(item.id, 'resolve', note, i18n.t(NS + 'resolvedToast'));
       },
     });
   },
@@ -191,18 +236,18 @@ Page({
     if (!item) return;
     var that = this;
     wx.showModal({
-      title: '重新打开',
-      content: '确认将该异常重新标记为「待处理」？',
+      title: i18n.t(NS + 'reopenBtn'),
+      content: i18n.t(NS + 'reopenConfirm'),
       success: function (res) {
         if (!res.confirm) return;
-        that._submit(item.id, 'reopen', '', '已重新打开');
+        that._submit(item.id, 'reopen', '', i18n.t(NS + 'reopenedToast'));
       },
     });
   },
 
   _submit: function (id, action, note, okText) {
     var that = this;
-    wx.showLoading({ title: '处理中...', mask: true });
+    wx.showLoading({ title: i18n.t(NS + 'handling'), mask: true });
     api.production.handleException(id, action, note).then(function () {
       wx.hideLoading();
       toast(okText);
@@ -210,7 +255,7 @@ Page({
       that._resetAndLoad();
     }).catch(function (e) {
       wx.hideLoading();
-      toast('操作失败: ' + (e.errMsg || e.message || e));
+      toast(i18n.tf(NS + 'opFailedFmt', { msg: e.errMsg || e.message || e }));
     });
   },
 
@@ -263,7 +308,7 @@ Page({
     }
     this._pickerHandler = ds.handler || '';
     this.setData({
-      pickerTitle: ds.title || '请选择',
+      pickerTitle: ds.title || i18n.t('common.pleaseSelect'),
       pickerOptions: opts,
       pickerValue: '',
       pickerVisible: true,

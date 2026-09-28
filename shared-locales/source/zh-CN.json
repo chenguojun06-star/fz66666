@@ -3745,6 +3745,34 @@
       "submitSuccess": "提交成功",
       "submitFailed": "提交失败",
       "pieceUnit": "件"
+    },
+    "smartOpsException": {
+      "navTitle": "生产异常",
+      "statusPending": "待处理",
+      "statusResolved": "已解决",
+      "typeMaterialShortage": "缺面料/辅料",
+      "typeMachineFault": "车床故障",
+      "typeNeedHelp": "需指导/协助",
+      "allStatus": "全部状态",
+      "unknownException": "未知异常",
+      "loadFailedFmt": "加载失败: {msg}",
+      "resolveBtn": "标记已解决",
+      "handleNoteRequired": "请填写处理说明",
+      "handleNotePlaceholder": "请填写处理说明（如如何解决的）",
+      "resolvedToast": "已标记解决",
+      "reopenBtn": "重新打开",
+      "reopenConfirm": "确认将该异常重新标记为「待处理」？",
+      "reopenedToast": "已重新打开",
+      "handling": "处理中...",
+      "opFailedFmt": "操作失败: {msg}",
+      "searchPlaceholder": "搜索订单号 / 工序 / 上报人",
+      "emptyReports": "暂无异常报告",
+      "tapHandle": "点击处理",
+      "loadingMore": "加载中...",
+      "noMore": "没有更多了",
+      "supervisorOnly": "仅主管及以上可处理异常",
+      "handlePrefix": "处理：",
+      "reportPrefix": "上报 "
     }
   }
 }

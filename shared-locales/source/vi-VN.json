@@ -3745,6 +3745,34 @@
       "submitSuccess": "Gửi thành công",
       "submitFailed": "Gửi thất bại",
       "pieceUnit": " cái"
+    },
+    "smartOpsException": {
+      "navTitle": "Bất thường sản xuất",
+      "statusPending": "Chờ xử lý",
+      "statusResolved": "Đã giải quyết",
+      "typeMaterialShortage": "Thiếu vải/phụ liệu",
+      "typeMachineFault": "Lỗi máy",
+      "typeNeedHelp": "Cần hướng dẫn/hỗ trợ",
+      "allStatus": "Tất cả trạng thái",
+      "unknownException": "Bất thường không xác định",
+      "loadFailedFmt": "Tải thất bại: {msg}",
+      "resolveBtn": "Đánh dấu đã giải quyết",
+      "handleNoteRequired": "Vui lòng nhập ghi chú xử lý",
+      "handleNotePlaceholder": "Mô tả cách giải quyết",
+      "resolvedToast": "Đã đánh dấu giải quyết",
+      "reopenBtn": "Mở lại",
+      "reopenConfirm": "Đánh dấu bất thường này là Chờ xử lý lần nữa?",
+      "reopenedToast": "Đã mở lại",
+      "handling": "Đang xử lý...",
+      "opFailedFmt": "Thao tác thất bại: {msg}",
+      "searchPlaceholder": "Tìm số đơn / công đoạn / người báo",
+      "emptyReports": "Chưa có báo cáo bất thường",
+      "tapHandle": "Nhấn để xử lý",
+      "loadingMore": "Đang tải...",
+      "noMore": "Đã hết",
+      "supervisorOnly": "Chỉ giám sát trở lên mới xử lý được bất thường",
+      "handlePrefix": "Xử lý: ",
+      "reportPrefix": "Báo cáo "
     }
   }
 }
