@@ -118,9 +118,8 @@ public class PendingTaskOrchestrator {
         // 补全领取人ID：返修/逾期/异常/外发/样衣环节等只落库了名字（订单 merchandiser、样衣各环节 assignee 均为名字字段），
         // 按名字批量解析租户内用户ID 回填 assigneeId，让 filterByResponsiblePerson 优先走 ID 精确匹配，名字匹配只做兜底
         resolveAssigneeIdsByName(all);
-        // 无跟进人的任务按职位对接：工资结算/物料对账/费用报销等只有"财务人员"标签没有具体人的任务，
-        // 自动落到对应岗位的角色持有者头上（岗位无人再兜底租户老板），保证每条待办都有明确跟进人
-        fillAssigneeByRole(all);
+        // 无跟进人的任务按职位路由（D-612b）：岗位有人→岗位池所有持有者可见谁领取算谁的；岗位无人→兜底全能管理/老板
+        applyRolePoolRouting(all);
         // 按领取人过滤：租户老板看全部，其他人只看自己负责的
         all = filterByResponsiblePerson(all);
         // 全局去重：防止不同 collector 因条件交叉产生重复 id（保留首次出现的那条）
@@ -891,10 +890,11 @@ public class PendingTaskOrchestrator {
      * 由 filterByResponsiblePerson 的名字匹配/角色匹配兜底，保证不漏不错。
      */
     /**
-     * 任务类型 → 责任岗位（角色名关键词，按顺序优先匹配）。
-     * 数据源与 filterByResponsiblePerson 的按类型兜底可见性保持同一口径：
+     * 任务类型 → 责任岗位（角色名关键词，任一命中即可见）。
+     * 无跟进人的任务进入岗位池：该类型责任岗位的所有持有者都可见（谁领取算谁的，D-612b），
+     * 口径与 filterByResponsiblePerson 的按类型兜底可见性一致：
      * 财务三件套（工资/对账/报销）→ 财务；逾期/异常/外发/返修/样衣 → 跟单、生产主管；
-     * 裁剪无人领取 → 生产主管（安排生产）；质检 → 质检；采购/借还/领料 → 采购、仓库。
+     * 裁剪 → 裁剪员、生产主管；质检 → 质检；采购/借还/领料 → 采购、仓库。
      * 关键词同时匹配 t_user.role_name 与 position（职位），兼容自定义角色名。
      */
     private static final Map<String, List<String>> ROLE_FALLBACK_BY_TASK_TYPE = Map.ofEntries(
@@ -906,7 +906,7 @@ public class PendingTaskOrchestrator {
             Map.entry("SHIPMENT", List.of("跟单", "生产主管")),
             Map.entry("REPAIR", List.of("跟单", "生产主管")),
             Map.entry("STYLE_DEVELOPMENT", List.of("跟单", "生产主管")),
-            Map.entry("CUTTING_TASK", List.of("生产主管", "跟单")),
+            Map.entry("CUTTING_TASK", List.of("裁剪", "生产主管")),
             Map.entry("QUALITY_INSPECT", List.of("质检")),
             Map.entry("MATERIAL_PURCHASE", List.of("采购", "仓库")),
             Map.entry("SAMPLE_LOAN", List.of("仓库")),
@@ -914,12 +914,12 @@ public class PendingTaskOrchestrator {
     );
 
     /**
-     * 无跟进人（assigneeId 与 assigneeName 均为空）的任务按职位对接具体人：
-     * 责任岗位角色持有者（主管优先）→ 全能管理 → 租户老板，保证每条待办都有明确跟进人、
-     * 不再出现"只有岗位标签没有归属人"的悬空任务（如财务类待办）。
-     * 已有名字/ID 的任务不动——业务数据里落的真实领取人永远优先于岗位推断。
+     * 无跟进人（assigneeId 与 assigneeName 均为空）的任务按职位路由（D-612b 岗位池口径）：
+     * 责任岗位在租户里有人 → 任务保持无归属进入岗位池，所有岗位持有者都可见、谁领取算谁的；
+     * 责任岗位在租户里没人 → 兜底指派给全能管理/租户老板，保证任务不悬空不可见。
+     * 已有名字/ID 的任务一律不动——业务数据里落的真实领取人永远优先于岗位推断。
      */
-    private void fillAssigneeByRole(List<PendingTaskDTO> tasks) {
+    private void applyRolePoolRouting(List<PendingTaskDTO> tasks) {
         Long tenantId = UserContext.tenantId();
         if (tenantId == null || tasks == null || tasks.isEmpty()) return;
         List<PendingTaskDTO> orphans = new ArrayList<>();
@@ -934,16 +934,15 @@ public class PendingTaskOrchestrator {
         User owner = pool.stream().filter(u -> Boolean.TRUE.equals(u.getIsTenantOwner())).findFirst().orElse(null);
         User allCapable = pickUserByKeyword(pool, "全能管理");
         for (PendingTaskDTO t : orphans) {
-            User resolved = null;
             List<String> keywords = ROLE_FALLBACK_BY_TASK_TYPE.get(t.getTaskType());
-            if (keywords != null) {
-                for (String kw : keywords) {
-                    resolved = pickUserByKeyword(pool, kw);
-                    if (resolved != null) break;
-                }
+            boolean holderExists = keywords != null && pool.stream().anyMatch(u ->
+                    keywords.stream().anyMatch(kw -> hitRoleKeyword(u, kw)));
+            if (holderExists) {
+                // 岗位有人：不落到单个人，保持岗位池（所有持有者可见，领取后按业务数据归到领取人名下）
+                continue;
             }
-            if (resolved == null) resolved = allCapable;
-            if (resolved == null) resolved = owner;
+            // 岗位无人：兜底到具体人
+            User resolved = allCapable != null ? allCapable : owner;
             if (resolved == null) continue;
             t.setAssigneeId(String.valueOf(resolved.getId()));
             t.setAssigneeName(StringUtils.hasText(resolved.getName()) ? resolved.getName() : resolved.getUsername());
@@ -951,6 +950,14 @@ public class PendingTaskOrchestrator {
                 t.setAssigneeRole(resolved.getRoleName());
             }
         }
+    }
+
+    private boolean hitRoleKeyword(User u, String keyword) {
+        String kw = keyword == null ? "" : keyword.trim();
+        if (kw.isEmpty()) return false;
+        String role = u.getRoleName();
+        String position = u.getPosition();
+        return (role != null && role.contains(kw)) || (position != null && position.contains(kw));
     }
 
     /**
@@ -1040,6 +1047,22 @@ public class PendingTaskOrchestrator {
             if (StringUtils.hasText(task.getAssigneeName())) {
                 if (task.getAssigneeName().equals(currentUserDisplayName)
                         || task.getAssigneeName().equals(currentUsername)) {
+                    return true;
+                }
+            }
+            // D-612b 岗位池：无跟进人的任务，责任岗位的所有持有者都可见（谁领取算谁的）
+            List<String> poolKeywords = ROLE_FALLBACK_BY_TASK_TYPE.get(task.getTaskType());
+            if (poolKeywords != null) {
+                String myRole = UserContext.role();
+                if (myRole != null) {
+                    for (String kw : poolKeywords) {
+                        if (myRole.contains(kw)) return true;
+                    }
+                }
+                if (UserContext.isFactoryUser()
+                        && ("REPAIR".equals(task.getTaskType())
+                            || "STYLE_DEVELOPMENT".equals(task.getTaskType())
+                            || "SHIPMENT".equals(task.getTaskType()))) {
                     return true;
                 }
             }

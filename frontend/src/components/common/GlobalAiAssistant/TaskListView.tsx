@@ -330,6 +330,8 @@ const TaskCard: React.FC<{
           {task.styleNo && <span>款号 {task.styleNo}</span>}
           {task.quantity != null && <span>{task.quantity}件</span>}
           {task.assigneeName && <span>{task.assigneeName}{task.assigneeRole && !task.assigneeName.includes(task.assigneeRole) ? `（${task.assigneeRole}）` : ''}</span>}
+          {/* D-612b 岗位池：无跟进人但有岗位标签的待办，显示岗位归属（对应岗位的所有人可见，谁领取算谁的） */}
+          {!task.assigneeName && task.assigneeRole && <span>待领取 · {task.assigneeRole}</span>}
           {task.creatorName && <span>创建 {task.creatorName}</span>}
           {task.endTime && <span>截止 {task.endTime.slice(0, 10)}</span>}
           {!isSystem && task.lastOrderProgress != null && <span>进度 {task.lastOrderProgress}%</span>}
