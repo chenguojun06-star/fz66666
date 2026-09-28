@@ -181,7 +181,15 @@
     "getCodeFailed": "Không lấy được mã đăng nhập",
     "selectCompanyFirst": "Vui lòng chọn công ty trước",
     "inviteWithTenant": "Được \"{tenantName}\" mời tham gia, nhập tài khoản và mật khẩu để liên kết WeChat",
-    "inviteNoTenant": "Quét mã mời, nhập tài khoản và mật khẩu để liên kết WeChat"
+    "inviteNoTenant": "Quét mã mời, nhập tài khoản và mật khẩu để liên kết WeChat",
+    "subtitle": "Hệ thống quản lý chuỗi cung ứng may mặc",
+    "wechatBadge": "WeChat",
+    "eyeShow": "Hiện",
+    "eyeHide": "Ẩn",
+    "defaultTip": "Mẹo: tài khoản mặc định lilb / 123456",
+    "wechatBoundError": "WeChat này đã liên kết công ty khác. Vui lòng đăng nhập bằng tài khoản mật khẩu hoặc gỡ liên kết WeChat trước",
+    "serverTimeout": "Máy chủ phản hồi quá thời gian; kiểm tra mạng và thử lại",
+    "companyNo": "Mã công ty"
   },
   "layout": {
     "recentPages": "Trang đã mở gần đây",

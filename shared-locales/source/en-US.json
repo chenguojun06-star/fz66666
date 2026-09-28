@@ -181,7 +181,15 @@
     "getCodeFailed": "Failed to get login code",
     "selectCompanyFirst": "Please select a company first",
     "inviteWithTenant": "Invited by \"{tenantName}\", enter username and password to bind WeChat",
-    "inviteNoTenant": "Scanned invitation, enter username and password to bind WeChat"
+    "inviteNoTenant": "Scanned invitation, enter username and password to bind WeChat",
+    "subtitle": "Apparel Supply Chain Management System",
+    "wechatBadge": "WeChat",
+    "eyeShow": "Show",
+    "eyeHide": "Hide",
+    "defaultTip": "Tip: default account lilb / 123456",
+    "wechatBoundError": "This WeChat account is bound to another company. Please sign in with username and password, or unbind WeChat first",
+    "serverTimeout": "Server timed out. Check your network and try again",
+    "companyNo": "Company ID"
   },
   "layout": {
     "recentPages": "Recent Pages",

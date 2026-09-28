@@ -188,7 +188,15 @@ module.exports = {
       "getCodeFailed": "获取登录code失败",
       "selectCompanyFirst": "请先选择公司",
       "inviteWithTenant": "由「{tenantName}」邀请加入，输入账号密码即可绑定微信",
-      "inviteNoTenant": "扫码邀请，输入账号密码即可绑定微信"
+      "inviteNoTenant": "扫码邀请，输入账号密码即可绑定微信",
+      "subtitle": "服装供应链管理系统",
+      "wechatBadge": "微信",
+      "eyeShow": "显",
+      "eyeHide": "隐",
+      "defaultTip": "提示：默认账号 lilb / 123456",
+      "wechatBoundError": "当前微信已绑定其他公司账号，请改用账号密码登录或先解绑微信",
+      "serverTimeout": "服务器响应超时，请检查网络或稍后重试",
+      "companyNo": "企业编号"
     },
     "layout": {
       "recentPages": "最近打开的页面",
@@ -4070,7 +4078,15 @@ module.exports = {
       "getCodeFailed": "Failed to get login code",
       "selectCompanyFirst": "Please select a company first",
       "inviteWithTenant": "Invited by \"{tenantName}\", enter username and password to bind WeChat",
-      "inviteNoTenant": "Scanned invitation, enter username and password to bind WeChat"
+      "inviteNoTenant": "Scanned invitation, enter username and password to bind WeChat",
+      "subtitle": "Apparel Supply Chain Management System",
+      "wechatBadge": "WeChat",
+      "eyeShow": "Show",
+      "eyeHide": "Hide",
+      "defaultTip": "Tip: default account lilb / 123456",
+      "wechatBoundError": "This WeChat account is bound to another company. Please sign in with username and password, or unbind WeChat first",
+      "serverTimeout": "Server timed out. Check your network and try again",
+      "companyNo": "Company ID"
     },
     "layout": {
       "recentPages": "Recent Pages",
@@ -7952,7 +7968,15 @@ module.exports = {
       "getCodeFailed": "Không lấy được mã đăng nhập",
       "selectCompanyFirst": "Vui lòng chọn công ty trước",
       "inviteWithTenant": "Được \"{tenantName}\" mời tham gia, nhập tài khoản và mật khẩu để liên kết WeChat",
-      "inviteNoTenant": "Quét mã mời, nhập tài khoản và mật khẩu để liên kết WeChat"
+      "inviteNoTenant": "Quét mã mời, nhập tài khoản và mật khẩu để liên kết WeChat",
+      "subtitle": "Hệ thống quản lý chuỗi cung ứng may mặc",
+      "wechatBadge": "WeChat",
+      "eyeShow": "Hiện",
+      "eyeHide": "Ẩn",
+      "defaultTip": "Mẹo: tài khoản mặc định lilb / 123456",
+      "wechatBoundError": "WeChat này đã liên kết công ty khác. Vui lòng đăng nhập bằng tài khoản mật khẩu hoặc gỡ liên kết WeChat trước",
+      "serverTimeout": "Máy chủ phản hồi quá thời gian; kiểm tra mạng và thử lại",
+      "companyNo": "Mã công ty"
     },
     "layout": {
       "recentPages": "Trang đã mở gần đây",
@@ -11834,7 +11858,15 @@ module.exports = {
       "getCodeFailed": "មិនអាចទទួលបានកូដចូល",
       "selectCompanyFirst": "សូមជ្រើសរើសក្រុមហ៊ុនជាមុន",
       "inviteWithTenant": "បានអញ្ជើញដោយ \"{tenantName}\" សូមបញ្ចូលឈ្មោះអ្នកប្រើ និងពាក្យសម្ងាត់ដើម្បីភ្ជាប់ WeChat",
-      "inviteNoTenant": "ស្កេនការអញ្ជើញ សូមបញ្ចូលឈ្មោះអ្នកប្រើ និងពាក្យសម្ងាត់ដើម្បីភ្ជាប់ WeChat"
+      "inviteNoTenant": "ស្កេនការអញ្ជើញ សូមបញ្ចូលឈ្មោះអ្នកប្រើ និងពាក្យសម្ងាត់ដើម្បីភ្ជាប់ WeChat",
+      "subtitle": "Apparel Supply Chain Management System",
+      "wechatBadge": "WeChat",
+      "eyeShow": "Show",
+      "eyeHide": "Hide",
+      "defaultTip": "Tip: default account lilb / 123456",
+      "wechatBoundError": "This WeChat account is bound to another company. Please sign in with username and password, or unbind WeChat first",
+      "serverTimeout": "Server timed out. Check your network and try again",
+      "companyNo": "Company ID"
     },
     "layout": {
       "recentPages": "ទំព័រដែលបានបើកថ្មីៗ",

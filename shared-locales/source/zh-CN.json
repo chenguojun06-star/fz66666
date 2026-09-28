@@ -181,7 +181,15 @@
     "getCodeFailed": "获取登录code失败",
     "selectCompanyFirst": "请先选择公司",
     "inviteWithTenant": "由「{tenantName}」邀请加入，输入账号密码即可绑定微信",
-    "inviteNoTenant": "扫码邀请，输入账号密码即可绑定微信"
+    "inviteNoTenant": "扫码邀请，输入账号密码即可绑定微信",
+    "subtitle": "服装供应链管理系统",
+    "wechatBadge": "微信",
+    "eyeShow": "显",
+    "eyeHide": "隐",
+    "defaultTip": "提示：默认账号 lilb / 123456",
+    "wechatBoundError": "当前微信已绑定其他公司账号，请改用账号密码登录或先解绑微信",
+    "serverTimeout": "服务器响应超时，请检查网络或稍后重试",
+    "companyNo": "企业编号"
   },
   "layout": {
     "recentPages": "最近打开的页面",

@@ -181,7 +181,15 @@
     "getCodeFailed": "មិនអាចទទួលបានកូដចូល",
     "selectCompanyFirst": "សូមជ្រើសរើសក្រុមហ៊ុនជាមុន",
     "inviteWithTenant": "បានអញ្ជើញដោយ \"{tenantName}\" សូមបញ្ចូលឈ្មោះអ្នកប្រើ និងពាក្យសម្ងាត់ដើម្បីភ្ជាប់ WeChat",
-    "inviteNoTenant": "ស្កេនការអញ្ជើញ សូមបញ្ចូលឈ្មោះអ្នកប្រើ និងពាក្យសម្ងាត់ដើម្បីភ្ជាប់ WeChat"
+    "inviteNoTenant": "ស្កេនការអញ្ជើញ សូមបញ្ចូលឈ្មោះអ្នកប្រើ និងពាក្យសម្ងាត់ដើម្បីភ្ជាប់ WeChat",
+    "subtitle": "Apparel Supply Chain Management System",
+    "wechatBadge": "WeChat",
+    "eyeShow": "Show",
+    "eyeHide": "Hide",
+    "defaultTip": "Tip: default account lilb / 123456",
+    "wechatBoundError": "This WeChat account is bound to another company. Please sign in with username and password, or unbind WeChat first",
+    "serverTimeout": "Server timed out. Check your network and try again",
+    "companyNo": "Company ID"
   },
   "layout": {
     "recentPages": "ទំព័រដែលបានបើកថ្មីៗ",

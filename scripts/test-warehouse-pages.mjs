@@ -1096,10 +1096,13 @@ const DECOR_PLACEHOLDER_RE =
 function testPageI18n(jsPath, wxmlPath, label, opts = {}) {
   console.log(`\n【i18n：${label}】`);
 
+  // login 页等用自己的机制（data.i18nTexts），不强制 data.t
+  const tField = opts.textField || 't';
+
   for (const lang of LANGS) {
     const { page } = loadPage(jsPath, makeApi());
     page.applyLanguage(lang);
-    const vals = Object.entries(page.data.t || {});
+    const vals = Object.entries(page.data[tField] || {});
 
     ok(`${lang} 文案表非空`, vals.length > 0, `keys=${vals.length}`);
 
@@ -1119,7 +1122,7 @@ function testPageI18n(jsPath, wxmlPath, label, opts = {}) {
   const { page: zhP } = loadPage(jsPath, makeApi());
   zhP.applyLanguage('zh-CN');
   const allowPh = opts.allowPlaceholders || [];
-  const unresolved = Object.entries(zhP.data.t || {})
+  const unresolved = Object.entries(zhP.data[tField] || {})
     .filter(([k, v]) => /\{[a-zA-Z]+\}/.test(String(v)) && !allowPh.includes(k))
     .map(([k, v]) => `${k}=${v}`);
   ok('无未替换的 {占位符}', unresolved.length === 0, unresolved.join(', '));
@@ -1145,7 +1148,7 @@ function testPageI18n(jsPath, wxmlPath, label, opts = {}) {
   }
 
   // 导航栏标题 —— 通用检查最容易漏的一处
-  testNavTitleI18n(jsPath, label);
+  if (!opts.skipNavTitle) testNavTitleI18n(jsPath, label);
 }
 
 /**
@@ -2543,6 +2546,8 @@ const SCAN_HANDLERS = {
 };
 const UNIT_PRICE_JS = 'pages/basic/unit-price/index.js';
 const UNIT_PRICE_WXML = 'pages/basic/unit-price/index.wxml';
+const LOGIN_JS = 'pages/login/index.js';
+const LOGIN_WXML = 'pages/login/index.wxml';
 const TODO_DETAIL_JS = 'pages/todo-detail/index.js';
 const TODO_DETAIL_WXML = 'pages/todo-detail/index.wxml';
 const RETURN_LIST_JS = 'pages/return/list/index.js';
@@ -3065,6 +3070,25 @@ function testI18nUnitPrice() {
     '阶段 code 保持英文，显示文案走 stageLabel()');
   ok('护栏：阶段显示走函数而非直查中文表', jsSrc.includes('function stageLabel('),
     '列表里的阶段标签需能按语言重算');
+}
+
+/** 登录页（D-618）—— 顶层 login.* 命名空间 + buildI18nTexts 机制 */
+function testI18nLogin() {
+  // login 页用自己的 buildI18nTexts(language) 机制（不走 data.t）
+  testPageI18n(LOGIN_JS, LOGIN_WXML, '登录页', { textField: 'i18nTexts', skipNavTitle: true, allowPlaceholders: ['inviteWithTenant'] });
+
+  const d = JSON.parse(fs.readFileSync(path.join(ROOT, 'shared-locales/source/en-US.json'), 'utf8'));
+  eq('login.subtitle en', d.login.subtitle, 'Apparel Supply Chain Management System');
+  eq('login.companyNo en', d.login.companyNo, 'Company ID');
+  ok('login.eyeHide en', d.login.eyeHide === 'Hide', d.login.eyeHide);
+
+  // 🔴 护栏：语言名映射表是母语显示（中文/English/Tiếng Việt/ខ្មែរ），故意不翻译
+  const jsSrc = fs.readFileSync(path.join(MP, LOGIN_JS), 'utf8');
+  ok('护栏：语言名映射仍是母语',
+    jsSrc.includes("'zh-CN': '中文'") && jsSrc.includes("'en-US': 'English'"),
+    '语言切换器里各语言用母语显示自己');
+  ok('护栏：超时匹配关键词豁免', jsSrc.includes("errMsg.includes('超时')"),
+    '拿中文匹配后端报文');
 }
 
 /** 待办详情页 + 退货列表页（D-616） */
@@ -4371,6 +4395,7 @@ try {
   testI18nPayroll();
   testI18nSmartOpsException();
   testI18nUnitPrice();
+  testI18nLogin();
   testI18nTodoAndReturn();
   testI18nRequireDepth();
 } catch (e) {

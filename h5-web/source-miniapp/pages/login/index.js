@@ -91,7 +91,7 @@ function finishLogin(user, token, refreshToken) {
 function validateUsername(username) {
   return (
     validateByRule(username, {
-      name: '账号',
+      name: i18n.t('login.username', language),
       required: true,
       minLength: 3,
       maxLength: 20,
@@ -106,7 +106,7 @@ function validateUsername(username) {
  * @returns {string} 错误信息，空字符串表示验证通过
  */
 function validatePassword(password) {
-  return validateByRule(password, { name: '密码', required: true, minLength: 6, maxLength: 20 }) || '';
+  return validateByRule(password, { name: i18n.t('login.password', language), required: true, minLength: 6, maxLength: 20 }) || '';
 }
 
 /**
@@ -119,7 +119,7 @@ function validateApiBaseUrl(url) {
   if (!v) {
     return '';
   } // 可选字段
-  const error = validateByRule(v, { name: 'API 地址', required: false, pattern: /^https?:\/\// });
+  const error = validateByRule(v, { name: i18n.t('login.serverUrl', language), required: false, pattern: /^https?:\/\// });
   if (error) {
     return error;
   }
@@ -206,7 +206,7 @@ async function executeLogin(params, options = {}) {
       const loginUser = resp.data.user || null;
       const loginTenantId = loginUser && loginUser.tenantId != null ? String(loginUser.tenantId) : '';
       if (expectedTenantId && loginTenantId && expectedTenantId !== loginTenantId) {
-        toast.error('当前微信已绑定其他公司账号，请改用账号密码登录或先解绑微信');
+        toast.error(i18n.t('login.wechatBoundError'));
         return { success: false, tenantMismatch: true };
       }
       finishLogin(loginUser, resp.data.token, resp.data.refreshToken);
@@ -296,6 +296,12 @@ Page({
   buildI18nTexts(language) {
     return {
       brand: i18n.t('login.brand', language),
+    subtitle: i18n.t('login.subtitle', language),
+    wechatBadge: i18n.t('login.wechatBadge', language),
+    companyNo: i18n.t('login.companyNo', language),
+    eyeShow: i18n.t('login.eyeShow', language),
+    eyeHide: i18n.t('login.eyeHide', language),
+    defaultTip: i18n.t('login.defaultTip', language),
       wechatChecking: i18n.t('login.wechatChecking', language),
       company: i18n.t('login.company', language),
       loading: i18n.t('common.loading', language),
@@ -496,7 +502,7 @@ Page({
       console.error('[Login] 加载租户列表失败:', e);
       this.setData({ tenantsLoading: false });
       if (isTimeout) {
-        toast.error('服务器响应超时，请检查网络或稍后重试');
+        toast.error(i18n.t('login.serverTimeout'));
       }
     }
   },
