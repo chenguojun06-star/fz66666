@@ -346,7 +346,8 @@ public class TaskCenterOrchestrator {
         return result;
     }
 
-    public Map<String, Object> getMyTasks(String status, String priority, String module, String scope, int page, int size) {
+    public Map<String, Object> getMyTasks(String status, String priority, String module, String scope,
+                                          boolean includeCompleted, int page, int size) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         String username = StringUtils.hasText(UserContext.username()) ? UserContext.username() : null;
@@ -355,10 +356,10 @@ public class TaskCenterOrchestrator {
         // 避免"我创建的/我领取的"因名字对不上而显示 0。
         Set<String> myNames = resolveCurrentUserNames(tenantId, username);
 
-        // scope 模式（created/mine）为追踪视图：需包含已完成历史任务，故全量拉取（排除已取消）；
+        // scope 模式（created/mine）与 includeCompleted 均为追踪视图：需包含已完成历史任务，故全量拉取（排除已取消）；
         // 默认（无 scope）沿用 findActiveByTenant 只返回活跃任务（PENDING/ACCEPTED/IN_PROGRESS/ESCALATED）
         List<CollaborationTask> all;
-        if ("created".equalsIgnoreCase(scope) || "mine".equalsIgnoreCase(scope)) {
+        if (includeCompleted || "created".equalsIgnoreCase(scope) || "mine".equalsIgnoreCase(scope)) {
             all = collaborationTaskMapper.selectList(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<CollaborationTask>()
                     .eq(CollaborationTask::getTenantId, tenantId)
                     .ne(CollaborationTask::getTaskStatus, "CANCELLED")

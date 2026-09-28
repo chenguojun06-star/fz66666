@@ -66,6 +66,8 @@ interface Props {
   tasks: TaskItem[];
   loading: boolean;
   currentUsername?: string;
+  currentUserId?: string;
+  currentDisplayName?: string;
   onClaim: (id: string) => void;
   onComplete: (id: string) => void;
   onEdit: (task: TaskItem) => void;
@@ -73,20 +75,40 @@ interface Props {
   onNavigate: (path: string) => void;
 }
 
-const TaskListView: React.FC<Props> = ({ tasks, loading, currentUsername, onClaim, onComplete, onEdit, onCreate, onNavigate }) => {
+/**
+ * 归属匹配：ID 优先（系统待办带 assigneeId），名字双口径兜底（登录名 + 实名/显示名）。
+ * 与后端 resolveCurrentUserNames 同一口径——业务数据/任务里存的可能是任一种名字，
+ * 只拿登录名等值比对会导致"我创建的/我领取的"恒为 0。
+ */
+function matchesUser(name: string | undefined, id: string | undefined, userId?: string, names?: string[]): boolean {
+  if (userId && id != null && String(id) === String(userId)) return true;
+  if (!name || !names || names.length === 0) return false;
+  return names.includes(name);
+}
+
+/** 已领取未开始的 accepted 归入"进行中"桶，避免出现在全部里却哪个状态页签都不算 */
+function statusBucket(s: TaskItem['status']): 'pending' | 'in_progress' | 'completed' | 'cancelled' {
+  return s === 'accepted' ? 'in_progress' : (s as 'pending' | 'in_progress' | 'completed' | 'cancelled');
+}
+
+const TaskListView: React.FC<Props> = ({ tasks, loading, currentUsername, currentUserId, currentDisplayName, onClaim, onComplete, onEdit, onCreate, onNavigate }) => {
   const [categoryTab, setCategoryTab] = useState('all'); // all | __high__ | taskType
   const [scopeTab, setScopeTab] = useState('all');
   const [statusTab, setStatusTab] = useState('all');
   const [search, setSearch] = useState('');
 
-  // 归属筛选：全部 / 我创建的（creatorName 等于当前用户名）/ 我领取的（assigneeName 等于当前用户名）
+  const myNames = React.useMemo(
+    () => [currentUsername, currentDisplayName].filter((n): n is string => !!n),
+    [currentUsername, currentDisplayName]
+  );
+
+  // 归属筛选：全部 / 我创建的（creator 是我）/ 我领取的（assignee 是我）
   const scopedTasks = useMemo(() => {
-    if (scopeTab === 'all' || !currentUsername) return tasks;
-    const me = currentUsername;
-    if (scopeTab === 'created') return tasks.filter(t => t.creatorName === me);
-    if (scopeTab === 'mine') return tasks.filter(t => t.assigneeName === me);
+    if (scopeTab === 'all') return tasks;
+    if (scopeTab === 'created') return tasks.filter(t => matchesUser(t.creatorName, t.creatorId, currentUserId, myNames));
+    if (scopeTab === 'mine') return tasks.filter(t => matchesUser(t.assigneeName, t.assigneeId, currentUserId, myNames));
     return tasks;
-  }, [tasks, scopeTab, currentUsername]);
+  }, [tasks, scopeTab, currentUserId, myNames]);
 
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { all: scopedTasks.length, __high__: 0 };
@@ -105,7 +127,7 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, currentUsername, onClai
     } else if (categoryTab !== 'all') {
       result = result.filter(t => categoryOf(t).key === categoryTab);
     }
-    if (statusTab !== 'all') result = result.filter(t => t.status === statusTab);
+    if (statusTab !== 'all') result = result.filter(t => statusBucket(t.status) === statusTab);
     if (search.trim()) {
       const kw = search.trim().toLowerCase();
       result = result.filter(t =>
@@ -136,18 +158,18 @@ const TaskListView: React.FC<Props> = ({ tasks, loading, currentUsername, onClai
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = { all: scopedTasks.length };
-    for (const t of scopedTasks) counts[t.status] = (counts[t.status] || 0) + 1;
+    for (const t of scopedTasks) counts[statusBucket(t.status)] = (counts[statusBucket(t.status)] || 0) + 1;
     return counts;
   }, [scopedTasks]);
 
   const scopeCounts = useMemo(() => {
     const counts: Record<string, number> = { all: tasks.length, created: 0, mine: 0 };
     for (const t of tasks) {
-      if (currentUsername && t.creatorName === currentUsername) counts.created++;
-      if (currentUsername && t.assigneeName === currentUsername) counts.mine++;
+      if (matchesUser(t.creatorName, t.creatorId, currentUserId, myNames)) counts.created++;
+      if (matchesUser(t.assigneeName, t.assigneeId, currentUserId, myNames)) counts.mine++;
     }
     return counts;
-  }, [tasks, currentUsername]);
+  }, [tasks, currentUserId, myNames]);
 
   const handleCardClick = (task: TaskItem) => {
     // 协作任务深链（xiaoyun://）指向的就是本统一面板，任务已在列表中，无需再跳转
@@ -320,7 +342,7 @@ const TaskCard: React.FC<{
               <button className={`${styles.actionBtn} ${styles.editBtn}`} onClick={() => onEdit(task)}>编辑</button>
             </>
           )}
-          {!isSystem && task.status === 'in_progress' && (
+          {!isSystem && (task.status === 'in_progress' || task.status === 'accepted') && (
             <>
               <button className={`${styles.actionBtn} ${styles.completeBtn}`} onClick={() => onComplete(task.id)}>完成</button>
               <button className={`${styles.actionBtn} ${styles.editBtn}`} onClick={() => onEdit(task)}>编辑</button>

@@ -1,7 +1,22 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-28（新增 D-611 大货生产单/样衣工艺单批量打印——多单合并一次打印）
+> 最后更新：2026-09-28（新增 D-612 小云待办无跟进人按职位对接 + 归属筛选/已完成页签口径修复）
+
+---
+
+## D-612：小云待办——无跟进人按职位对接 + 归属筛选与已完成页签口径修复（2026-09-28）
+
+**背景**：用户指出统一待办面板「进行中/已完成/我创建的/我领取的」恒为 0。诊断结论三层叠加：① 面板 25 条全是系统待办（PendingTaskOrchestrator 从业务数据实时聚合），collector 全部硬编码 `setTaskStatus("pending")`，办结即消失，天生只有一个状态；② 财务三件套（工资结算/物料对账/费用报销）collector 只落 `assigneeRole="财务人员"` 标签、**不落具体人**，成为悬空任务，且 filterByResponsiblePerson 里裁剪/质检/采购没人跟时除老板外全员不可见；③ 前端归属筛选拿登录名与 creatorName/assigneeName 等值比对（业务数据存的是显示名），且 my-tasks 默认只返回活跃任务、前端从不传 scope，已完成历史拉不回来。
+
+**决策**：
+1. **无跟进人按职位对接**（PendingTaskOrchestrator 新增 `fillAssigneeByRole`，在 resolveAssigneeIdsByName 之后、filterByResponsiblePerson 之前跑）：assigneeId 与 assigneeName 均空的任务，按 `ROLE_FALLBACK_BY_TASK_TYPE`（任务类型→角色名关键词有序列表：财务三件套→财务；逾期/异常/外发/返修/样衣→跟单、生产主管；裁剪→生产主管、跟单；质检→质检；采购/借还/领料→采购、仓库）在租户活跃用户里挑主跟进人——role_name 或 position 包含关键词即命中，主管及以上优先（复用 UserContext.isSupervisorOrAboveRoleName）、再按 id 升序保证确定性；关键词全部落空→全能管理持有者→租户老板兜底。assigneeRole 覆写为命中者真实 roleName。已有名字/ID 的任务一律不动。
+2. **已完成历史**：my-tasks 接口加 `includeCompleted` 参数（trace 视图全量拉取只排除 CANCELLED），前端面板恒传 true；个人任务 ACCEPTED 状态归入"进行中"桶。
+3. **归属匹配口径统一**：前端 TaskListView 改为 ID（assigneeId，系统待办经 resolveAssigneeIdsByName 已回填）+ 登录名 + 显示名三重匹配（`matchesUser`），与后端 resolveCurrentUserNames 同口径；index.tsx 传 currentUserId/currentDisplayName。
+
+**验证**：后端 mvn compile 通过、前端 tsc + vite build 通过；本地起后端实测——租户2（lilb，无财务岗位用户）10 条工资结算 + 1 条费用报销从无跟进人落到李老板（全能管理兜底路径）；建任务→标完成→`includeCompleted=true` 返回 completed 行、默认视图不返回，E2E 通过。
+
+**边界（刻意不做）**：系统待办"办结留痕"（业务办结后仍出现在已完成页签）是一次跨 13 个 collector 的口径改造，本批不动——已完成页签当前语义=个人/协作任务的已完成历史；系统待办保持"办结即消失"。
 
 ---
 

@@ -301,6 +301,8 @@ const GlobalAiAssistant: React.FC = () => {
                 <TaskListView
                   tasks={myTasks} loading={tasksLoading}
                   currentUsername={user?.username || user?.name}
+                  currentUserId={user?.id != null ? String(user.id) : undefined}
+                  currentDisplayName={user?.name}
                   onClaim={handleTaskClaim} onComplete={handleTaskComplete}
                   onEdit={handleTaskEdit} onCreate={handleTaskCreate}
                   onNavigate={onSafeNavigate}

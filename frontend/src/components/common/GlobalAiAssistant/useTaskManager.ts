@@ -26,6 +26,7 @@ function mapPendingToTaskItem(p: PendingTaskDTO): TaskItem {
     styleNo: p.styleNo,
     deepLinkPath: p.deepLinkPath,
     source: 'system' as const,
+    assigneeId: p.assigneeId || undefined,
     assigneeName: p.assigneeName || undefined,
     assigneeRole: p.assigneeRole || undefined,
     quantity: p.quantity ?? undefined,
@@ -52,7 +53,8 @@ export function useTaskManager() {
     }
     setLoading(true);
     const results = await Promise.allSettled([
-      intelligenceApi.getMyTasks(filters?.status, filters?.priority, filters?.module, 1, 200) as any,
+      // includeCompleted: 面板带"已完成"状态页签，需拉取含已完成历史的追踪视图（后端按 isMine/isManual 过滤）
+      intelligenceApi.getMyTasks(filters?.status, filters?.priority, filters?.module, 1, 200, true) as any,
       intelligenceApi.getMyPendingTasks() as any,
     ]);
 

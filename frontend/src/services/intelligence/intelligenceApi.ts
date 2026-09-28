@@ -821,9 +821,9 @@ export const intelligenceApi = {
   claimTask: (taskId: string) =>
     api.post<{ code: number; data: Record<string, unknown> }>(`/intelligence/task-center/tasks/${taskId}/claim`),
 
-  getMyTasks: (status?: string, priority?: string, module?: string, page?: number, size?: number) =>
+  getMyTasks: (status?: string, priority?: string, module?: string, page?: number, size?: number, includeCompleted?: boolean) =>
     api.get<{ code: number; data: { rows: unknown[]; total: number } }>('/intelligence/task-center/my-tasks', {
-      params: { status, priority, module, page: page ?? 1, size: size ?? 50 }
+      params: { status, priority, module, includeCompleted, page: page ?? 1, size: size ?? 50 }
     }),
 
   updateTaskStatus: (taskId: string, status: string, note?: string) =>
