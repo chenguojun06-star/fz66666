@@ -28,10 +28,10 @@
     <view class="chat-header">
       <view class="header-tabs">
         <view class="tab-item {{currentTab === 'chat' ? 'active' : ''}}" catchtap="switchTab" data-tab="chat">
-          <view class="line-icon line-icon--sm icon-cloud"></view><text>小云帮助中心</text>
+          <view class="line-icon line-icon--sm icon-cloud"></view><text>{{t.headerHelp}}</text>
         </view>
         <view class="tab-item {{currentTab === 'tasks' ? 'active' : ''}}" catchtap="switchTab" data-tab="tasks">
-          <view class="line-icon line-icon--sm icon-clipboard"></view><text>待办任务</text>
+          <view class="line-icon line-icon--sm icon-clipboard"></view><text>{{t.headerTodo}}</text>
           <view class="tab-badge" wx:if="{{totalTasks > 0}}">{{totalTasks > 99 ? '99+' : totalTasks}}</view>
         </view>
       </view>
@@ -44,7 +44,7 @@
     <view class="chat-main" wx:if="{{currentTab === 'chat'}}">
     <!-- 页面上下文感知建议 -->
     <view class="page-context-chips" wx:if="{{pageSuggestions.length > 0 && messages.length <= 1 && !isLoading}}">
-      <view class="page-context-label"><view class="line-icon line-icon--sm icon-pin"></view><text>当前页面相关</text></view>
+      <view class="page-context-label"><view class="line-icon line-icon--sm icon-pin"></view><text>{{t.pageContext}}</text></view>
       <view class="page-context-list">
         <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="{{item.question}}" wx:for="{{pageSuggestions}}" wx:key="question">
           <view class="line-icon line-icon--sm {{item.icon}}"></view><text>{{item.label}}</text>
@@ -54,7 +54,7 @@
     <!-- P1-3: 小云主动洞察 + 实时提醒（合并为一块"提醒"，避免顶部两个相似区块堆叠） -->
     <view class="proactive-insights" wx:if="{{(proactiveInsights.length > 0 || dynamicSuggestions.length > 0) && messages.length <= 1 && !isLoading}}">
       <view class="proactive-insights-label">
-        <view class="line-icon line-icon--sm icon-bell"></view><text>提醒</text>
+        <view class="line-icon line-icon--sm icon-bell"></view><text>{{t.headerRemind}}</text>
         <view class="proactive-insights-badge">{{proactiveInsights.length + dynamicSuggestions.length}}</view>
       </view>
       <view class="proactive-insights-list" wx:if="{{proactiveInsights.length > 0}}">
@@ -64,7 +64,7 @@
             <text class="proactive-insight-content" wx:if="{{item.content}}">{{item.content}}</text>
           </view>
           <view class="proactive-insight-read-btn" hover-class="proactive-insight-read-btn-hover" hover-stay-time="100" catchtap="onMarkInsightRead" data-id="{{item.id}}">
-            <text>已读</text>
+            <text>{{t.markRead}}</text>
           </view>
         </view>
       </view>
@@ -76,14 +76,14 @@
     </view>
     <view class="quick-chips" wx:if="{{messages.length <= 1 && !isLoading}}">
       <block wx:if="{{isManager}}">
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我汇总今日日报"><view class="line-icon line-icon--sm icon-stats"></view><text>生成日报</text></view>
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="当前有哪些逾期或高风险订单？"><view class="line-icon line-icon--sm icon-alert"></view><text>风险订单</text></view>
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="今天工厂扫码情况如何？"><view class="line-icon line-icon--sm icon-search"></view><text>今日扫码</text></view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我汇总今日日报"><view class="line-icon line-icon--sm icon-stats"></view><text>{{t.chipDailyReport}}</text></view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="当前有哪些逾期或高风险订单？"><view class="line-icon line-icon--sm icon-alert"></view><text>{{t.chipRiskOrders}}</text></view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="今天工厂扫码情况如何？"><view class="line-icon line-icon--sm icon-search"></view><text>{{t.chipTodayScan}}</text></view>
       </block>
       <block wx:else>
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="我今天负责的生产任务是什么？"><view class="line-icon line-icon--sm icon-clipboard"></view><text>我的任务</text></view>
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我查一下我最近的扫码记录"><view class="line-icon line-icon--sm icon-search"></view><text>扫码记录</text></view>
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="我负责的订单当前进度怎么样？"><view class="line-icon line-icon--sm icon-package"></view><text>订单进度</text></view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="我今天负责的生产任务是什么？"><view class="line-icon line-icon--sm icon-clipboard"></view><text>{{t.chipMyTasks}}</text></view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我查一下我最近的扫码记录"><view class="line-icon line-icon--sm icon-search"></view><text>{{t.chipScanRecords}}</text></view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="我负责的订单当前进度怎么样？"><view class="line-icon line-icon--sm icon-package"></view><text>{{t.suggestOrderProgress}}</text></view>
       </block>
     </view>
     <view class="chat-history-wrapper">
@@ -105,7 +105,7 @@
             <view class="bubble {{item.error ? 'bubble-error-' + item.error.level : ''}}">
               <text class="message-text" user-select wx:if="{{item.content}}">{{item.content}}</text>
               <view class="retry-btn" wx:if="{{item.error && item.error.retryable}}" hover-class="retry-btn-hover" hover-stay-time="100" catchtap="onRetrySend" data-msg-id="{{item.id}}">
-                <view class="line-icon line-icon--sm icon-refresh"></view><text>重试</text>
+                <view class="line-icon line-icon--sm icon-refresh"></view><text>{{t.retry}}</text>
               </view>
               <view class="action-cards" wx:if="{{item.actions && item.actions.length > 0}}">
                 <view class="action-card" wx:for="{{item.actions}}" wx:for-item="act" wx:key="label">
@@ -122,7 +122,7 @@
                     </view>
                   </view>
                   <view class="action-card-btn" hover-class="action-card-btn-hover" hover-stay-time="100" catchtap="onActionTap" data-action="{{act}}" wx:if="{{act.type !== 'info'}}">
-                    <text>{{act.buttonText || '执行'}}</text>
+                    <text>{{act.buttonText || t.btnExecute}}</text>
                   </view>
                 </view>
               </view>
@@ -138,7 +138,7 @@
                 </view>
               </view>
               <view class="clarification-card" wx:if="{{item.clarificationHints && item.clarificationHints.length > 0}}">
-                <view class="clarification-label"><view class="line-icon line-icon--sm icon-thinking"></view><text>需要补充信息：</text></view>
+                <view class="clarification-label"><view class="line-icon line-icon--sm icon-thinking"></view><text>{{t.needMoreInfo}}</text></view>
                 <view class="clarification-btns">
                   <view wx:for="{{item.clarificationHints}}" wx:for-item="hint" wx:for-index="hi" wx:key="hi"
                     class="clarification-btn" hover-class="clarification-btn-hover"
@@ -182,13 +182,13 @@
                               </view>
                             </view>
                             <input class="wizard-input" wx:elif="{{field.inputType === 'text'}}"
-                              placeholder="{{field.placeholder || '请输入'}}"
+                              placeholder="{{field.placeholder || t.wizardInput}}"
                               value="{{wizardStates[item.id + '_' + field.key] || ''}}"
                               bindinput="onWizardInput"
                               data-msg-id="{{item.id}}" data-field-key="{{field.key}}" />
                             <input class="wizard-input" wx:elif="{{field.inputType === 'number'}}"
                               type="digit"
-                              placeholder="{{field.placeholder || '请输入数字'}}"
+                              placeholder="{{field.placeholder || t.wizardInputNum}}"
                               value="{{wizardStates[item.id + '_' + field.key] || ''}}"
                               bindinput="onWizardInput"
                               data-msg-id="{{item.id}}" data-field-key="{{field.key}}" />
@@ -205,7 +205,7 @@
                     <view class="wizard-submit" hover-class="wizard-submit-hover"
                       catchtap="onWizardSubmit"
                       data-msg-id="{{item.id}}" data-wizard-idx="{{wizIdx}}">
-                      {{wizard.submitLabel || '提交'}}
+                      {{wizard.submitLabel || t.wizardSubmit}}
                     </view>
                   </view>
                 </block>
@@ -219,24 +219,24 @@
                     </view>
                     <view class="ts-meta" wx:if="{{ts.orderNo || ts.currentStage}}">
                       <view class="ts-meta-item" wx:if="{{ts.orderNo}}">
-                        <text class="ts-meta-label">订单</text>
+                        <text class="ts-meta-label">{{t.tsOrder}}</text>
                         <text class="ts-meta-value ts-order-no">{{ts.orderNo}}</text>
                       </view>
                       <view class="ts-meta-item" wx:if="{{ts.currentStage}}">
-                        <text class="ts-meta-label">阶段</text>
+                        <text class="ts-meta-label">{{t.tsStage}}</text>
                         <text class="ts-meta-value ts-stage-tag">{{ts.currentStage}}</text>
                       </view>
                       <view class="ts-meta-item" wx:if="{{ts.nextStep}}">
-                        <text class="ts-meta-label">下一步</text>
+                        <text class="ts-meta-label">{{t.tsNext}}</text>
                         <text class="ts-meta-value">{{ts.nextStep}}</text>
                       </view>
                       <view class="ts-meta-item" wx:if="{{ts.dueHint}}">
-                        <text class="ts-meta-label">时效</text>
+                        <text class="ts-meta-label">{{t.tsTime}}</text>
                         <text class="ts-meta-value ts-due">{{ts.dueHint}}</text>
                       </view>
                     </view>
                     <view class="ts-recipients" wx:if="{{ts.recipients && ts.recipients.length > 0}}">
-                      <text class="ts-section-title">处理人</text>
+                      <text class="ts-section-title">{{t.tsHandler}}</text>
                       <view class="ts-recipient" wx:for="{{ts.recipients}}" wx:for-item="r" wx:key="name">
                         <view class="ts-recipient-info">
                           <text class="ts-recipient-name">{{r.name}}</text>
@@ -246,7 +246,7 @@
                       </view>
                     </view>
                     <view class="ts-history" wx:if="{{ts.history && ts.history.length > 0}}">
-                      <text class="ts-section-title">处理记录</text>
+                      <text class="ts-section-title">{{t.tsRecords}}</text>
                       <view class="ts-history-item" wx:for="{{ts.history}}" wx:for-item="h" wx:key="createdAt">
                         <text class="ts-history-dot"></text>
                         <view class="ts-history-content">
@@ -259,7 +259,7 @@
                 </block>
               </view>
               <view class="recommend-wrapper" wx:if="{{item.recommendPills && item.recommendPills.length > 0}}">
-                <view class="recommend-title">猜你想问</view>
+                <view class="recommend-title">{{t.guessAsk}}</view>
                 <view class="recommend-pills">
                   <view
                     class="recommend-pill"
@@ -277,12 +277,12 @@
           </view>
         </block>
         <view class="loading-indicator" wx:if="{{isLoading}}">
-          <text class="loading-hint-text">小云正在思考，你可以继续输入下一个问题…</text>
+          <text class="loading-hint-text">{{t.streamingHint}}</text>
         </view>
       </scroll-view>
     </view>
     <view class="chat-input-area">
-      <input class="chat-input" value="{{inputValue}}" placeholder="输入关键字查询内部资料" bindinput="onInput" confirm-type="send" bindconfirm="sendMessage" />
+      <input class="chat-input" value="{{inputValue}}" placeholder="{{t.inputPlaceholder}}" bindinput="onInput" confirm-type="send" bindconfirm="sendMessage" />
       <view class="send-btn-mini {{(!inputValue) ? 'btn-disabled' : ''}}" catchtap="sendMessage">
         <view class="line-icon line-icon--sm icon-send-arrow"></view>
       </view>
@@ -292,7 +292,7 @@
     <scroll-view class="tasks-main" scroll-y enhanced="{{true}}" wx:if="{{currentTab === 'tasks'}}">
       <view class="empty-state" wx:if="{{totalTasks === 0}}">
         <view class="line-icon line-icon--lg icon-checkmark" style="margin-bottom:12rpx"></view>
-        <view class="empty-text">太棒了！所有任务都处理完了</view>
+        <view class="empty-text">{{t.allDone}}</view>
       </view>
 
       <!-- 统一业务待办：按分类分组渲染（与 PC 统一面板同口径，全部类型可见；由统一接口 PendingTaskOrchestrator 返回） -->
@@ -319,7 +319,7 @@
             </view>
             <view class="task-action-col">
               <view class="task-dismiss-inline" catchtap="dismissTask" data-type="{{t.taskType}}" data-id="{{t.id}}">×</view>
-              <button class="task-action-btn default-btn" size="mini" catchtap="handleBusinessTask" data-item="{{t}}">查看</button>
+              <button class="task-action-btn default-btn" size="mini" catchtap="handleBusinessTask" data-item="{{t}}">{{t.btnView}}</button>
             </view>
           </view>
         </view>
@@ -330,7 +330,7 @@
         <view class="section-header pending-header">
           <view class="section-header-left">
             <view class="line-icon line-icon--sm icon-user"></view>
-            <text class="section-name">待审批用户</text>
+            <text class="section-name">{{t.sectionPendingUsers}}</text>
           </view>
           <view class="section-count-badge pending-badge">{{pendingUsers.length}}</view>
         </view>
@@ -347,8 +347,8 @@
               </view>
             </view>
             <view class="task-action-col task-approve-col">
-              <button class="task-action-btn approve-btn" size="mini" catchtap="onApproveUser" data-user-id="{{item.id}}" data-action="approve">通过</button>
-              <button class="task-action-btn reject-btn" size="mini" catchtap="onApproveUser" data-user-id="{{item.id}}" data-action="reject">拒绝</button>
+              <button class="task-action-btn approve-btn" size="mini" catchtap="onApproveUser" data-user-id="{{item.id}}" data-action="approve">{{approveText}}</button>
+              <button class="task-action-btn reject-btn" size="mini" catchtap="onApproveUser" data-user-id="{{item.id}}" data-action="reject">{{rejectText}}</button>
             </view>
           </view>
         </view>
@@ -358,7 +358,7 @@
         <view class="section-header pending-header">
           <view class="section-header-left">
             <view class="line-icon line-icon--sm icon-edit"></view>
-            <text class="section-name">待审批注册</text>
+            <text class="section-name">{{t.sectionPendingReg}}</text>
           </view>
           <view class="section-count-badge pending-badge">{{pendingRegistrations.length}}</view>
         </view>
@@ -375,8 +375,8 @@
               </view>
             </view>
             <view class="task-action-col task-approve-col">
-              <button class="task-action-btn approve-btn" size="mini" catchtap="onApproveRegistration" data-user-id="{{item.id}}" data-action="approve">通过</button>
-              <button class="task-action-btn reject-btn" size="mini" catchtap="onApproveRegistration" data-user-id="{{item.id}}" data-action="reject">拒绝</button>
+              <button class="task-action-btn approve-btn" size="mini" catchtap="onApproveRegistration" data-user-id="{{item.id}}" data-action="approve">{{approveText}}</button>
+              <button class="task-action-btn reject-btn" size="mini" catchtap="onApproveRegistration" data-user-id="{{item.id}}" data-action="reject">{{rejectText}}</button>
             </view>
           </view>
         </view>
@@ -387,7 +387,7 @@
         <view class="section-header timeout-header">
           <view class="section-header-left">
             <view class="line-icon line-icon--sm icon-clock"></view>
-            <text class="section-name">超时提醒</text>
+            <text class="section-name">{{t.sectionTimeout}}</text>
           </view>
           <view class="section-count-badge timeout-badge">{{timeoutReminders.length}}</view>
         </view>
@@ -397,13 +397,13 @@
             <view class="task-card-info">
               <view class="task-order-row">
                 <text class="task-order-no">{{item.orderNo || item.title}}</text>
-                <text class="task-style-tag timeout-tag">{{item.type || '超时'}}</text>
+                <text class="task-style-tag timeout-tag">{{item.type || t.timeoutTag}}</text>
               </view>
               <text class="task-name" wx:if="{{item.message || item.description}}">{{item.message || item.description}}</text>
             </view>
             <view class="task-action-col">
               <view class="task-dismiss-inline" catchtap="dismissTask" data-type="timeout" data-id="{{item.id}}">×</view>
-              <button class="task-action-btn default-btn" size="mini" catchtap="handleReminderTask" data-item="{{item}}">处理</button>
+              <button class="task-action-btn default-btn" size="mini" catchtap="handleReminderTask" data-item="{{item}}">{{t.btnHandle}}</button>
             </view>
           </view>
         </view>

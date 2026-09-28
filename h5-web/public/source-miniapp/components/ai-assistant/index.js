@@ -1,3 +1,6 @@
+const i18n = require('../../utils/i18n/index');
+const NS = 'mp.aiAssistant.';
+
 const api = require('../../utils/api.js');
 const bellTaskLoader = require('./bellTaskLoader.js');
 const bellTaskActions = require('./bellTaskActions.js');
@@ -141,10 +144,10 @@ function parseAiCards(text) {
 
 // P1-1: 预填参数中英文映射 — 让用户看到"款号: A001"而非"styleNo: A001"
 const PREFILLED_LABEL_MAP = {
-  styleNo: '款号', color: '颜色', quantity: '数量',
-  orderNo: '订单号', factoryName: '工厂', defectCount: '次品数',
-  targetFactory: '目标工厂', recipient: '接收人',
-  expectedShipDate: '新交期', remark: '备注', action: '处理方式',
+  styleNo: 'fieldStyleNo', color: 'fieldColor', quantity: 'fieldQuantity',
+  orderNo: 'fieldOrderNo', factoryName: 'fieldFactoryName', defectCount: 'fieldDefectCount',
+  targetFactory: 'fieldTargetFactory', recipient: 'fieldRecipient',
+  expectedShipDate: 'fieldExpectedShipDate', remark: 'fieldRemark', action: 'fieldAction',
 };
 const PREFILLED_HIDDEN_KEYS = { orderId: true };
 
@@ -169,25 +172,25 @@ function classifyError(err) {
   const lower = raw.toLowerCase();
   // 网络类
   if (lower.indexOf('timeout') >= 0 || lower.indexOf('超时') >= 0) {
-    return { message: '小云响应有点慢，请稍后重试', retryable: true, level: 'warning' };
+    return { message: i18n.t(NS + 'errSlow', i18n.getLanguage()), retryable: true, level: 'warning' };
   }
   if (lower.indexOf('network') >= 0 || lower.indexOf('网络') >= 0
       || lower.indexOf('fail') >= 0 || lower.indexOf('interrupted') >= 0
       || lower.indexOf('abort') >= 0) {
-    return { message: '网络不太稳定，请检查后重试', retryable: true, level: 'warning' };
+    return { message: i18n.t(NS + 'errNetwork', i18n.getLanguage()), retryable: true, level: 'warning' };
   }
   // 服务类
   if (lower.indexOf('500') >= 0 || lower.indexOf('502') >= 0
       || lower.indexOf('503') >= 0 || lower.indexOf('504') >= 0
       || lower.indexOf('internal') >= 0) {
-    return { message: '小云暂时打了个盹，请稍后重试', retryable: true, level: 'error' };
+    return { message: i18n.t(NS + 'errServer', i18n.getLanguage()), retryable: true, level: 'error' };
   }
   if (lower.indexOf('401') >= 0 || lower.indexOf('403') >= 0
       || lower.indexOf('unauthorized') >= 0 || lower.indexOf('forbidden') >= 0) {
-    return { message: '登录已过期，请重新登录后再试', retryable: false, level: 'error' };
+    return { message: i18n.t(NS + 'errAuth', i18n.getLanguage()), retryable: false, level: 'error' };
   }
   // 兜底
-  return { message: '小云暂时无法回答，请稍后再试', retryable: true, level: 'warning' };
+  return { message: i18n.t(NS + 'errUnknown', i18n.getLanguage()), retryable: true, level: 'warning' };
 }
 
 Component({
@@ -196,6 +199,9 @@ Component({
     noticeCount: { type: Number, value: 0 },
   },
   data: {
+    t: {},
+    approveText: '',
+    rejectText: '',
     isOpen: false,
     inputValue: '',
     messages: [],
@@ -224,6 +230,7 @@ Component({
   },
   lifetimes: {
     attached() {
+      this.applyLanguage(i18n.getLanguage());
       setTimeout(() => {
         if (!this.data) return;
         let userName = '';
@@ -240,8 +247,8 @@ Component({
         } catch (err) { console.error('get user info error', err); }
 
         const greeting = userName
-          ? 'Hi ' + userName + '，这里是小云帮助中心。'
-          : 'Hi，这里是小云帮助中心。';
+          ? i18n.tf(NS + 'greetWithFmt', { name: userName }, lang)
+          : i18n.t(NS + 'greetPlain', lang);
 
         const sysInfo = wx.getWindowInfo();
         const sw = sysInfo.windowWidth || 375;
@@ -286,6 +293,7 @@ Component({
   },
   pageLifetimes: {
     show() {
+      this.applyLanguage(i18n.getLanguage());
       const now = Date.now();
       // D-237：先用缓存渲染任务列表，避免每次打开页面都在刷新。
       // 只有缓存未命中时（首次进入 / 超过 5 分钟）才真正发请求。
@@ -325,6 +333,55 @@ Component({
   },
 
   methods: {
+  /** 应用语言（wxml 的 t 表 + 审批按钮文案；pageLifetimes.show 时刷新） */
+  applyLanguage(language) {
+    const lang = language || i18n.getLanguage();
+    this._lang = lang;
+    const t = (k) => i18n.t(NS + k, lang);
+    this.setData({
+      t: {
+        headerHelp: t('headerHelp'),
+        headerTodo: t('headerTodo'),
+        headerRemind: t('headerRemind'),
+        markRead: t('markRead'),
+        avatarMe: t('avatarMe'),
+        retry: t('retry'),
+        pageContext: t('pageContext'),
+        needMoreInfo: t('needMoreInfo'),
+        wizardInput: t('wizardInput'),
+        wizardInputNum: t('wizardInputNum'),
+        wizardSubmit: t('wizardSubmit'),
+        tsOrder: t('tsOrder'),
+        tsStage: t('tsStage'),
+        tsNext: t('tsNext'),
+        tsTime: t('tsTime'),
+        tsHandler: t('tsHandler'),
+        tsRecords: t('tsRecords'),
+        guessAsk: t('guessAsk'),
+        streamingHint: t('streamingHint'),
+        inputPlaceholder: t('inputPlaceholder'),
+        allDone: t('allDone'),
+        sectionPendingUsers: t('sectionPendingUsers'),
+        sectionPendingReg: t('sectionPendingReg'),
+        sectionTimeout: t('sectionTimeout'),
+        timeoutTag: t('timeoutTag'),
+        btnHandle: t('btnHandle'),
+        btnExecute: t('btnExecute'),
+        btnAsk: t('btnAsk'),
+        btnView: t('btnView'),
+        chipDailyReport: t('chipDailyReport'),
+        chipRiskOrders: t('chipRiskOrders'),
+        chipTodayScan: t('chipTodayScan'),
+        chipMyTasks: t('chipMyTasks'),
+        chipScanRecords: t('chipScanRecords'),
+        suggestOrderProgress: t('suggestOrderProgress'),
+      },
+      approveText: t('actionApprove'),
+      rejectText: t('actionReject'),
+    });
+  },
+
+
     _setMessages(msgs, extra) {
       const MAX_VISIBLE = 30;
       const visible = msgs.length > MAX_VISIBLE ? msgs.slice(msgs.length - MAX_VISIBLE) : msgs;
@@ -401,28 +458,28 @@ Component({
         let suggestions = [];
         if (route.includes('scan')) {
           suggestions = [
-            { icon: 'icon-search', label: '扫码问题', question: '扫码提示重复怎么处理？' },
-            { icon: 'icon-package', label: '菲号查询', question: '帮我查一下当前菲号的扫码记录' },
-            { icon: 'icon-stats', label: '工序进展', question: '当前工序完成了多少件？' },
+            { icon: 'icon-search', label: i18n.t(NS + 'suggestScanIssue', i18n.getLanguage()), question: '扫码提示重复怎么处理？' },
+            { icon: 'icon-package', label: i18n.t(NS + 'suggestBundleQuery', i18n.getLanguage()), question: '帮我查一下当前菲号的扫码记录' },
+            { icon: 'icon-stats', label: i18n.t(NS + 'suggestProcessProgress', i18n.getLanguage()), question: '当前工序完成了多少件？' },
           ];
         } else if (route.includes('payroll')) {
           suggestions = [
-            { icon: 'icon-stats', label: '工资明细', question: '帮我查一下我这个月的工资明细' },
-            { icon: 'icon-search', label: '计件汇总', question: '我最近一周的计件数据是多少？' },
+            { icon: 'icon-stats', label: i18n.t(NS + 'suggestPayrollDetail', i18n.getLanguage()), question: '帮我查一下我这个月的工资明细' },
+            { icon: 'icon-search', label: i18n.t(NS + 'suggestPieceSummary', i18n.getLanguage()), question: '我最近一周的计件数据是多少？' },
           ];
         } else if (route.includes('warehouse') || route.includes('finished')) {
           suggestions = [
-            { icon: 'icon-package', label: '库存查询', question: '当前库存有多少？有没有低库存预警？' },
-            { icon: 'icon-search', label: '入库记录', question: '帮我查一下最近的入库记录' },
+            { icon: 'icon-package', label: i18n.t(NS + 'suggestStockQuery', i18n.getLanguage()), question: '当前库存有多少？有没有低库存预警？' },
+            { icon: 'icon-search', label: i18n.t(NS + 'suggestInboundRecords', i18n.getLanguage()), question: '帮我查一下最近的入库记录' },
           ];
         } else if (route.includes('order')) {
           suggestions = [
-            { icon: 'icon-package', label: '订单进度', question: '帮我查一下订单的生产进度' },
-            { icon: 'icon-alert', label: '逾期订单', question: '有没有逾期的订单？' },
+            { icon: 'icon-package', label: i18n.t(NS + 'suggestOrderProgress', i18n.getLanguage()), question: '帮我查一下订单的生产进度' },
+            { icon: 'icon-alert', label: i18n.t(NS + 'suggestOverdueOrders', i18n.getLanguage()), question: '有没有逾期的订单？' },
           ];
         } else if (route.includes('bundle-split')) {
           suggestions = [
-            { icon: 'icon-search', label: '分菲查询', question: '当前分菲号的拆分明细是什么？' },
+            { icon: 'icon-search', label: i18n.t(NS + 'suggestSplitQuery', i18n.getLanguage()), question: '当前分菲号的拆分明细是什么？' },
           ];
         }
         this.setData({ pageSuggestions: suggestions });
@@ -472,17 +529,17 @@ Component({
           // 看板仅管理员/主管可进（isAdminOrSupervisor 口径），其余角色不带 path，
           // 点击走 autoAsk 让小云直接作答，不再落错误页面。
           var overduePath = isAdminOrSupervisor() ? '/pages/dashboard/index?filter=overdue' : '';
-          suggestions.push({ icon: 'icon-alert', label: data.overdueOrderCount + '个逾期', question: '当前有哪些逾期订单？帮我分析一下', path: overduePath });
+          suggestions.push({ icon: 'icon-alert', label: i18n.tf(NS + 'suggestOverdueFmt', { n: data.overdueOrderCount }, i18n.getLanguage()), question: '当前有哪些逾期订单？帮我分析一下', path: overduePath });
         }
         if (data.qualityTaskCount > 0) {
-          suggestions.push({ icon: 'icon-clipboard', label: data.qualityTaskCount + '个待质检', question: '有哪些待质检的任务？', path: '/pages/scan/index', tab: true });
+          suggestions.push({ icon: 'icon-clipboard', label: i18n.tf(NS + 'suggestQualityTaskFmt', { n: data.qualityTaskCount }, i18n.getLanguage()), question: '有哪些待质检的任务？', path: '/pages/scan/index', tab: true });
         }
         // D-237：质检异常（不合格/次品）同步给小云，让用户一眼看到并可直接追问
         if (data.qualityDefectCount > 0) {
-          suggestions.push({ icon: 'icon-alert', label: data.qualityDefectCount + '件不合格', question: '最近有哪些质检不合格的记录？帮我分析原因', path: '/pages/defect/index', tab: true });
+          suggestions.push({ icon: 'icon-alert', label: i18n.tf(NS + 'suggestDefectFmt', { n: data.qualityDefectCount }, i18n.getLanguage()), question: '最近有哪些质检不合格的记录？帮我分析原因', path: '/pages/defect/index', tab: true });
         }
         if (data.materialShortageCount > 0) {
-          suggestions.push({ icon: 'icon-alert', label: '面料缺口', question: '当前有哪些面料缺口预警？', path: '/pages/procurement/task-list/index' });
+          suggestions.push({ icon: 'icon-alert', label: i18n.t(NS + 'suggestMaterialGap', i18n.getLanguage()), question: '当前有哪些面料缺口预警？', path: '/pages/procurement/task-list/index' });
         }
         if (suggestions.length > 0) {
           self.setData({ dynamicSuggestions: suggestions });
@@ -714,10 +771,10 @@ Component({
           function (event) {
             streamStarted = true;
             if (event.type === 'thinking') {
-              self.setData({ streamingTool: '小云正在思考中...' });
+              self.setData({ streamingTool: i18n.t(NS + 'thinking', i18n.getLanguage()) });
             } else if (event.type === 'tool_call') {
-              const toolName = event.data.tool ? describeTool(event.data.tool) : '工具';
-              self.setData({ streamingTool: '正在使用「' + toolName + '」...' });
+              const toolName = event.data.tool ? describeTool(event.data.tool) : i18n.t(NS + 'btnExecute', i18n.getLanguage());
+              self.setData({ streamingTool: i18n.tf(NS + 'usingToolFmt', { tool: toolName }, i18n.getLanguage()) });
             } else if (event.type === 'tool_result') {
               self.setData({ streamingTool: '' });
             } else if (event.type === 'answer_chunk') {
@@ -749,8 +806,8 @@ Component({
           },
           function () {
             self._streamTask = null;
-            const parsed = parseAiCards(accumulatedText || '抱歉，我现在无法回答这个问题。');
-            if (!parsed.text) parsed.text = '抱歉，我暂时没查到结果，请换个问法或稍后再试。';
+            const parsed = parseAiCards(accumulatedText || i18n.t(NS + 'fallbackNoAnswer', i18n.getLanguage()));
+            if (!parsed.text) parsed.text = i18n.t(NS + 'fallbackNoResult', i18n.getLanguage());
             let recommendPills = [];
             if (parsed.text.includes('【推荐追问】：')) {
               const parts = parsed.text.split('【推荐追问】：');
@@ -769,7 +826,7 @@ Component({
                   description: a.dataSummary || '',
                   command: a.command || '',
                   urgency: a.icon === 'alert' ? 'high' : 'medium',
-                  buttonText: actType === 'execute' ? '执行' : '追问',
+                  buttonText: actType === 'execute' ? i18n.t(NS + 'btnExecute', i18n.getLanguage()) : i18n.t(NS + 'btnAsk', i18n.getLanguage());
                   prefilledTags: buildPrefilledTags(a.prefilledParams),
                 };
               }).filter(Boolean);
@@ -818,7 +875,7 @@ Component({
                       description: a.dataSummary || '',
                       command: a.command || '',
                       urgency: a.icon === 'alert' ? 'high' : 'medium',
-                      buttonText: a.actionType === 'EXECUTE' ? '执行' : a.actionType === 'ASK' ? '追问' : '查看',
+                      buttonText: a.actionType === 'EXECUTE' ? i18n.t(NS + 'btnExecute', i18n.getLanguage()) : a.actionType === 'ASK' ? i18n.t(NS + 'btnAsk', i18n.getLanguage()) : i18n.t(NS + 'btnView', i18n.getLanguage());
                       prefilledTags: buildPrefilledTags(a.prefilledParams),
                     };
                   });
@@ -829,10 +886,10 @@ Component({
               } else if (typeof chatRes === 'string') {
                 aiResponse = chatRes;
               }
-              if (!aiResponse) aiResponse = '抱歉，我现在无法回答这个问题。';
+              if (!aiResponse) aiResponse = i18n.t(NS + 'fallbackNoAnswer', i18n.getLanguage());
 
               const parsed = parseAiCards(aiResponse);
-              if (!parsed.text) parsed.text = '抱歉，我暂时没查到结果，请换个问法或稍后再试。';
+              if (!parsed.text) parsed.text = i18n.t(NS + 'fallbackNoResult', i18n.getLanguage());
               let recommendPills = syncSuggestions.length > 0 ? syncSuggestions : [];
               if (parsed.text.includes('【推荐追问】：')) {
                 const parts = parsed.text.split('【推荐追问】：');
@@ -913,27 +970,27 @@ Component({
       const command = action.command || action.label || '';
       if (!command) return;
       wx.showModal({
-        title: '确认执行',
+        title: i18n.t(NS + 'confirmExecuteTitle', i18n.getLanguage()),
         content: command,
-        confirmText: '执行',
+        confirmText: i18n.t(NS + 'btnExecute', i18n.getLanguage()),
         confirmColor: '#007aff',
         success: function (res) {
           if (!res.confirm) return;
-          wx.showLoading({ title: '执行中...' });
+          wx.showLoading({ title: i18n.t(NS + 'executing', i18n.getLanguage()) });
           api.intelligence.naturalLanguageExecute({ text: command }).then(function (res) {
             wx.hideLoading();
             const data = res;
             if (data && data.status === 'SUCCESS') {
-              wx.showToast({ title: '执行成功', icon: 'success' });
+              wx.showToast({ title: i18n.t(NS + 'executeSuccess', i18n.getLanguage()), icon: 'success' });
               self.sendMessage();
             } else if (data && data.status === 'REQUIRES_APPROVAL') {
-              wx.showModal({ title: '需要审批', content: data.reason || '高风险操作需审批后执行', showCancel: false });
+              wx.showModal({ title: i18n.t(NS + 'approvalTitle', i18n.getLanguage()), content: data.reason || i18n.t(NS + 'approvalDefaultReason', i18n.getLanguage()), showCancel: false });
             } else {
-              wx.showToast({ title: (data && data.message) || '执行失败', icon: 'none' });
+              wx.showToast({ title: (data && data.message) || i18n.t(NS + 'executeFailed', i18n.getLanguage()), icon: 'none' });
             }
           }).catch(function () {
             wx.hideLoading();
-            wx.showToast({ title: '执行失败', icon: 'none' });
+            wx.showToast({ title: i18n.t(NS + 'executeFailed', i18n.getLanguage()), icon: 'none' });
           });
         },
       });
@@ -971,9 +1028,9 @@ Component({
       const ds = e.currentTarget.dataset;
       const key = ds.msgId + '_' + ds.fieldKey;
       wx.showModal({
-        title: '输入日期',
+        title: i18n.t(NS + 'dateInputTitle', i18n.getLanguage()),
         editable: true,
-        placeholderText: '如 2026-05-10',
+        placeholderText: i18n.t(NS + 'dateInputPlaceholder', i18n.getLanguage()),
         content: this.data.wizardStates[key] || '',
         success: function (res) {
           if (res.confirm && res.content) {
@@ -1025,7 +1082,7 @@ Component({
         }
       }
       if (parts.length === 0) {
-        wx.showToast({ title: '请至少填写一项', icon: 'none' });
+        wx.showToast({ title: i18n.t(NS + 'atLeastOne', i18n.getLanguage()), icon: 'none' });
         return;
       }
       const command = (wizard.submitCommand || wizard.title) + '：' + parts.join('，');
@@ -1042,7 +1099,7 @@ Component({
       } catch (err) {
         /* ignore greeting name read failure */
       }
-      const greeting = userName ? 'Hi ' + userName + '，这里是小云帮助中心。' : 'Hi，这里是小云帮助中心。';
+      const greeting = userName ? i18n.tf(NS + 'greetWithFmt', { name: userName }, i18n.getLanguage()) : i18n.t(NS + 'greetPlain', i18n.getLanguage());
       const newConvId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
       this._setMessages([{ id: Date.now(), role: 'ai', content: greeting }], { inputValue: '', conversationId: newConvId });
       try { wx.removeStorageSync('ai_chat_history'); } catch (_e) { /* ignore storage cleanup failure */ }
