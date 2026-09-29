@@ -27,9 +27,4 @@ public class EcStockSyncEventListener {
             log.warn("[EcStockSyncEventListener] 库存同步失败", e);
         }
     }
-
-    @EventListener
-    public void onPriceChange(PriceChangeEvent event) {
-        log.info("[EcStockSyncEventListener] 价格变更，暂不处理自动同步");
-    }
 }

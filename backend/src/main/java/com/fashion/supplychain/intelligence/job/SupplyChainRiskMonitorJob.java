@@ -6,6 +6,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -31,6 +32,24 @@ public class SupplyChainRiskMonitorJob {
     private final ProductionOrderService productionOrderService;
 
     /**
+     * 开关（<b>默认关闭</b>）。
+     *
+     * <p>本任务依赖 {@link ExternalDataService}，而后者当前是<b>桩实现</b>——返回的是
+     * {@code Math.random()} 生成的模拟数据（面料价格指数/汇率/天气/风险评分），
+     * 真实数据源尚未接入。开启本任务的实际效果是：每天早上 7:00 产生十几条
+     * "⚠️ 价格波动超过10%"式的<b>假预警日志</b>。
+     *
+     * <p>更大的隐患在于 {@link #logRiskAdvice} —— 它目前只打日志，但方法内已列出
+     * 【待集成】的真实推送通道（SmartAdvice 表 / 企业微信机器人 / App 消息中心）。
+     * 一旦接线，这些<b>随机生成的预警会直接推送给用户</b>，属于误导性信息。
+     *
+     * <p>故默认关闭。待 {@code ExternalDataService} 接入真实数据源后，再置
+     * {@code fashion.risk-monitor.enabled=true} 启用。
+     */
+    @Value("${fashion.risk-monitor.enabled:false}")
+    private boolean riskMonitorEnabled;
+
+    /**
      * 每日供应链风险评估
      *
      * <p>执行内容：</p>
@@ -44,6 +63,10 @@ public class SupplyChainRiskMonitorJob {
      */
     @Scheduled(cron = "0 0 7 * * ?")  // 每天早上 7:00
     public void monitorSupplyChainRisk() {
+        if (!riskMonitorEnabled) {
+            log.debug("[SupplyChainRiskMonitor] 未启用（fashion.risk-monitor.enabled=false），跳过");
+            return;
+        }
         log.info("[SupplyChainRiskMonitor] 开始每日供应链风险评估...");
 
         try {

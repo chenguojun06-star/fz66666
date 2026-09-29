@@ -56,21 +56,4 @@ public class SyncEventListener {
             }
         }
     }
-
-    @Async
-    @EventListener
-    public void onPriceChange(PriceChangeEvent event) {
-        Long tenantId = event.getTenantId();
-        Long styleId = event.getStyleId();
-        List<EcSyncConfig> configs = syncConfigService.listEnabledByTenant(tenantId);
-        for (EcSyncConfig config : configs) {
-            List<?> mappings = mappingService.listByStyleAndPlatform(styleId, config.getPlatformCode(), tenantId);
-            if (mappings.isEmpty()) continue;
-            try {
-                syncOrchestrator.pushPriceToPlatform(styleId, config.getPlatformCode(), tenantId);
-            } catch (Exception e) {
-                log.warn("[同步事件] 价格同步失败 平台={} 款号={}", config.getPlatformCode(), styleId, e);
-            }
-        }
-    }
 }
