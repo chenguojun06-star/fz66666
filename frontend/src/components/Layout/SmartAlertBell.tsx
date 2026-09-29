@@ -264,55 +264,70 @@ const SmartAlertBell: React.FC = () => {
                 </div>
                 {brief.decisionCards && brief.decisionCards.length > 0 ? (
                   <div className="u-d-flex u-fd-column u-gap-8">
-                    {brief.decisionCards.slice(0, 3).map((card, i) => dismissedIds.has(`decisionCard_${i}`) ? null : (
-                      <div key={`${card.title}-${i}`} className="sap-dismissible u-pos-relative" >
+                    {brief.decisionCards.slice(0, 3).map((card, i) => {
+                      // D-626：关闭键按卡片内容（标题）而非序号——面板每10分钟重拉后卡片顺序可能变化，
+                      // 序号键会导致"点了 × 又复活"；标题（如"逾期 4单 / 90件"）当日稳定
+                      const cardKey = `decisionCard_${card.title || String(card.summary || '').slice(0, 48)}`;
+                      if (dismissedIds.has(cardKey)) return null;
+                      return (
+                        <div key={`${card.title}-${i}`} className="sap-dismissible u-pos-relative" >
+                          <button
+                            className="sap-event-dismiss-btn u-pos-absolute"
+                            style={{
+                              // 悬浮在卡片右上角外沿：卡片标题行右侧被「规则判断/高置信」标签占据，
+                              // 原先 × 压在标签底下用户找不到也点不到
+                              top: -7, right: -7, zIndex: 3,
+                              background: 'var(--color-bg-base)',
+                              boxShadow: '0 1px 4px rgba(0, 0, 0, 0.18)',
+                            }}
+                            onClick={(e) => dismissEvent(cardKey, e)}
+                            title="今日不再提醒（明天会重新检测）"
+                          >
+                            <CloseOutlined style={{ fontSize: 9 }} />
+                          </button>
+                          <XiaoyunInsightCard
+                            compact
+                            onNavigate={goTo}
+                            card={{
+                              ...card,
+                              source: card.source || '实时数据推演',
+                              confidence: card.confidence || ((brief.overdueOrderCount || 0) + (brief.highRiskOrderCount || 0) > 0 ? '建议优先处理' : '可执行建议'),
+                              summary: card.summary || choose((brief.overdueOrderCount || 0) * 11 + (brief.highRiskOrderCount || 0) * 7 + i, [
+                                '有风险点，先处理影响最大的。',
+                                '先做优先级收口，再展开细项。',
+                                '先压关键风险，后续更顺。',
+                              ]),
+                              labels: {
+                                summary: '现状',
+                                painPoint: '关注点',
+                                execute: '下一步',
+                                evidence: '数据',
+                                note: '补充',
+                                ...card.labels,
+                              },
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  brief.suggestions.slice(0, 3).map((s, i) => {
+                    const suggestionKey = `suggestion_${String(s).slice(0, 64)}`;
+                    if (dismissedIds.has(suggestionKey)) return null;
+                    return (
+                      <div key={i} className="sap-suggestion u-d-flex u-ai-center u-jc-between" >
+                        <span>· {s}</span>
                         <button
-                          className="sap-event-dismiss-btn u-pos-absolute"
-                          style={{ top: 6, right: 6, zIndex: 2 }}
-                          onClick={(e) => dismissEvent(`decisionCard_${i}`, e)}
+                          className="sap-event-dismiss-btn"
+                          onClick={(e) => dismissEvent(suggestionKey, e)}
                           title="今日不再提醒（明天会重新检测）"
                         >
                           <CloseOutlined style={{ fontSize: 9 }} />
                         </button>
-                        <XiaoyunInsightCard
-                          compact
-                          onNavigate={goTo}
-                          card={{
-                            ...card,
-                            source: card.source || '实时数据推演',
-                            confidence: card.confidence || ((brief.overdueOrderCount || 0) + (brief.highRiskOrderCount || 0) > 0 ? '建议优先处理' : '可执行建议'),
-                            summary: card.summary || choose((brief.overdueOrderCount || 0) * 11 + (brief.highRiskOrderCount || 0) * 7 + i, [
-                              '有风险点，先处理影响最大的。',
-                              '先做优先级收口，再展开细项。',
-                              '先压关键风险，后续更顺。',
-                            ]),
-                            labels: {
-                              summary: '现状',
-                              painPoint: '关注点',
-                              execute: '下一步',
-                              evidence: '数据',
-                              note: '补充',
-                              ...card.labels,
-                            },
-                          }}
-                        />
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  brief.suggestions.slice(0, 3).map((s, i) => dismissedIds.has(`suggestion_${i}`) ? null : (
-                    <div key={i} className="sap-suggestion u-d-flex u-ai-center u-jc-between" >
-                      <span>· {s}</span>
-                      <button
-                        className="sap-event-dismiss-btn"
-                        style={{ opacity: 1 }}
-                        onClick={(e) => dismissEvent(`suggestion_${i}`, e)}
-                        title="今日不再提醒（明天会重新检测）"
-                      >
-                        <CloseOutlined style={{ fontSize: 9 }} />
-                      </button>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             )}

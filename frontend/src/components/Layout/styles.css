@@ -1411,12 +1411,12 @@
   display: flex; align-items: center; justify-content: center;
   border: none; background: transparent; cursor: pointer;
   border-radius: 50%; color: var(--color-text-tertiary);
-  opacity: 0; transition: opacity 0.15s, background 0.15s;
+  /* D-626：恒显（原 opacity:0 悬停才显——大卡片上 × 压在标签底下用户根本找不到，
+     D-287 已有"行操作按钮常显"定论，悬停显现模式一律弃用） */
+  opacity: 1;
+  transition: background 0.15s, color 0.15s;
   padding: 0;
 }
-.sap-event-row:hover .sap-event-dismiss-btn { opacity: 1; }
-.sap-priority-card:hover .sap-event-dismiss-btn,
-.sap-dismissible:hover .sap-event-dismiss-btn { opacity: 1; }
 .sap-event-dismiss-btn:hover { background: var(--color-red-100); color: var(--color-danger); }
 
 /* 我的通知行 */
@@ -1446,10 +1446,12 @@
   display: flex; align-items: center; justify-content: center;
   border: none; background: transparent; cursor: pointer;
   border-radius: 50%; color: var(--color-text-tertiary);
-  opacity: 0; transition: opacity 0.15s, background 0.15s;
+  /* D-626：恒显（与 .sap-event-dismiss-btn 对齐）。原 opacity:0 + :hover 显现，
+     触摸屏无 hover 永远出不来，且用户不知道「我的通知」能单条关闭。 */
+  opacity: 1;
+  transition: background 0.15s, color 0.15s;
   padding: 0;
 }
-.sap-notice-row:hover .sap-notice-dismiss-btn { opacity: 1; }
 .sap-notice-dismiss-btn:hover { background: var(--color-red-100); color: var(--color-danger); }
 
 /* 智能建议 */
