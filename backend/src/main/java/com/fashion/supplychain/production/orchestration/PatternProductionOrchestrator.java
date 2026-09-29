@@ -2,19 +2,27 @@ package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.production.dto.PatternDevelopmentStatsDTO;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.PatternScanRecord;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.helper.CuttingWorkflowBuilderHelper;
 import com.fashion.supplychain.production.helper.PatternEnrichmentHelper;
 import com.fashion.supplychain.production.helper.PatternStatusHelper;
 import com.fashion.supplychain.production.helper.PatternStockHelper;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.PatternScanRecordService;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.intelligence.helper.StatusTranslator;
+import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +34,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -76,6 +85,18 @@ public class PatternProductionOrchestrator {
 
     @Autowired(required = false)
     private com.fashion.supplychain.system.service.OrderRemarkService orderRemarkService;
+
+    /** D-651：按 styleId 创建样衣生产订单（sourceBizType=SAMPLE） */
+    @Autowired
+    private ProductionOrderService productionOrderService;
+
+    /** D-651：样衣订单的自动工序流 JSON 生成 */
+    @Autowired
+    private CuttingWorkflowBuilderHelper cuttingWorkflowBuilderHelper;
+
+    /** D-651：扫码历史「无封面时二级兜底到附件图」 */
+    @Autowired
+    private StyleAttachmentService styleAttachmentService;
 
     /**
      * 分页查询并丰富样板生产记录（关联款式、工序、采购数据）
@@ -2181,6 +2202,354 @@ public class PatternProductionOrchestrator {
         record.setUpdateBy(UserContext.username());
         patternProductionService.updateById(record);
         log.info("样板基本信息已更新: id={} field={} value={}", id, field, value);
+    }
+
+    // ==================== D-651：PatternProductionController 下沉 ====================
+    // 原 Controller 直接注入 5 个 Service（PatternProductionService / PatternScanRecordService /
+    // ProductionOrderService / StyleInfoService / StyleAttachmentService），违反 ArchUnit 规则6。
+    // 本编排器**本已持有**其中 3 个（PatternProductionService / PatternScanRecordService /
+    // StyleInfoService），仅新增 ProductionOrderService + CuttingWorkflowBuilderHelper +
+    // StyleAttachmentService。下沉后 Controller 的计数 Service = 0。
+
+    /**
+     * 样衣开发费用统计（按 rangeType 聚合）。
+     */
+    public PatternDevelopmentStatsDTO getDevelopmentStats(String rangeType) {
+        return patternProductionService.getDevelopmentStats(rangeType);
+    }
+
+    /**
+     * 按款式 ID 查样板生产记录（多色多码：返回该款式全部色码记录）并富化。
+     * <p>兼容：只有 1 条记录时也返回数组，由前端适配。
+     * <p>租户上下文由本方法入口校验（{@link TenantAssert} 的 javadoc 写明其使用场景是
+     * 「Orchestrator 层方法入口」）；异常类型与文案与下沉前完全一致。
+     */
+    public List<Map<String, Object>> listByStyleId(String styleId) {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+
+        LambdaQueryWrapper<PatternProduction> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PatternProduction::getTenantId, tenantId)
+                .eq(PatternProduction::getStyleId, styleId)
+                .eq(PatternProduction::getDeleteFlag, 0)
+                .orderByAsc(PatternProduction::getCreateTime);
+        List<PatternProduction> records = patternProductionService.list(wrapper);
+        if (records == null || records.isEmpty()) {
+            return List.of();
+        }
+        return records.stream()
+                .map(enrichmentHelper::enrichRecord)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 取单条样板记录详情（含富化）。
+     * <p>返回 {@code null} 表示「记录不存在或已软删」—— 由 Controller 决定文案与响应码；
+     * 租户不匹配时抛 {@link TenantAssert} 的异常（与下沉前一致）。
+     */
+    public Map<String, Object> getRecordDetailOrNull(String id) {
+        PatternProduction record = patternProductionService.getById(id);
+        if (record == null || record.getDeleteFlag() == 1) {
+            return null;
+        }
+        TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "纸样");
+        return enrichmentHelper.enrichRecord(record);
+    }
+
+    /**
+     * 查某样板记录的全部扫码记录（时间升序，上限 5000），扁平化为前端所需字段。
+     * <p>返回 {@code null} 表示「样板记录不存在或已软删」。
+     */
+    public List<Map<String, Object>> listScanRecordsOrNull(String id) {
+        PatternProduction pattern = patternProductionService.getById(id);
+        if (pattern == null || pattern.getDeleteFlag() == 1) {
+            return null;
+        }
+        TenantAssert.assertBelongsToCurrentTenant(pattern.getTenantId(), "样衣");
+
+        LambdaQueryWrapper<PatternScanRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PatternScanRecord::getPatternProductionId, id)
+                .eq(PatternScanRecord::getDeleteFlag, 0)
+                .eq(PatternScanRecord::getTenantId, UserContext.tenantId())
+                .orderByAsc(PatternScanRecord::getScanTime)
+                .orderByAsc(PatternScanRecord::getCreateTime)
+                .last("LIMIT 5000");
+
+        List<PatternScanRecord> records = patternScanRecordService.list(wrapper);
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        return records.stream().map(r -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", r.getId());
+            item.put("patternProductionId", r.getPatternProductionId());
+            item.put("styleId", r.getStyleId());
+            item.put("styleNo", r.getStyleNo());
+            item.put("styleName", r.getStyleName());
+            item.put("color", r.getColor());
+            item.put("size", r.getSize());
+            item.put("quantity", r.getQuantity());
+            item.put("operationType", r.getOperationType());
+            item.put("processName", r.getProcessName());
+            item.put("progressStage", r.getProgressStage());
+            item.put("processCode", r.getProcessCode());
+            item.put("operatorId", r.getOperatorId());
+            item.put("operatorName", r.getOperatorName());
+            item.put("operatorRole", r.getOperatorRole());
+            item.put("warehouseCode", r.getWarehouseCode());
+            item.put("warehouseAreaId", r.getWarehouseAreaId());
+            item.put("warehouseLocationCode", r.getWarehouseLocationCode());
+            item.put("remark", r.getRemark());
+            item.put("scanTime", r.getScanTime() != null ? r.getScanTime().format(fmt) : null);
+            // P1 修复（PC端缺失1）：透出 unitPrice / scanCost，供前端显示单价和扫码工资
+            item.put("unitPrice", r.getUnitPrice());
+            item.put("scanCost", r.getScanCost());
+            return item;
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * 按款式 ID 创建样衣生产订单（统一到大货订单体系，sourceBizType=SAMPLE，
+     * 复用大货的工序跟进、预算天数、扫码、入库全流程）。
+     * <p>幂等：该款式已有 SAMPLE 订单时直接返回既有订单摘要，不重复建单。
+     * <p>本方法返回 {@link Result} 而非领域对象，是因为它有<b>两个不同的业务失败原因</b>
+     * （「样衣信息不存在」/「创建样衣生产订单失败」），两者在下沉前都是 {@code Result.fail(...)}
+     * 即 HTTP 200 + 业务失败码；若改成抛异常会被全局处理器转成 5xx，<b>改变前端行为</b>。
+     */
+    public Result<Map<String, Object>> createSampleOrderFromStyle(String styleId) {
+        StyleInfo style = styleInfoService.getDetailById(Long.parseLong(styleId));
+        if (style == null) {
+            return Result.fail("样衣信息不存在");
+        }
+
+        LambdaQueryWrapper<ProductionOrder> dupCheck = new LambdaQueryWrapper<>();
+        dupCheck.eq(ProductionOrder::getStyleId, styleId)
+                .eq(ProductionOrder::getSourceBizType, "SAMPLE")
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .last("LIMIT 1");
+        ProductionOrder existing = productionOrderService.getOne(dupCheck, false);
+        if (existing != null) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("id", existing.getId());
+            result.put("orderNo", existing.getOrderNo());
+            result.put("styleNo", existing.getStyleNo());
+            result.put("styleName", existing.getStyleName());
+            result.put("sourceBizType", existing.getSourceBizType());
+            return Result.success(result);
+        }
+
+        ProductionOrder order = new ProductionOrder();
+        order.setStyleId(styleId);
+        order.setStyleNo(style.getStyleNo());
+        order.setStyleName(style.getStyleName());
+        order.setSkc(style.getSkc());
+        order.setSourceBizType("SAMPLE");
+        order.setOrderQuantity(style.getSampleQuantity() != null ? style.getSampleQuantity() : 1);
+        order.setProductionProgress(0);
+        order.setMaterialArrivalRate(0);
+        order.setStatus(OrderStatusConstants.PENDING);
+        order.setActualStartDate(LocalDateTime.now());
+
+        if (style.getDeliveryDate() != null) {
+            order.setExpectedShipDate(style.getDeliveryDate());
+        }
+
+        String merchandiser = style.getOrderType();
+        if (StringUtils.hasText(merchandiser)) {
+            order.setMerchandiser(merchandiser.trim());
+        }
+        String patternMaker = style.getSampleSupplier();
+        if (StringUtils.hasText(patternMaker)) {
+            order.setPatternMaker(patternMaker.trim());
+        }
+
+        String currentUserId = UserContext.userId();
+        String currentUsername = UserContext.username();
+        if (StringUtils.hasText(currentUserId)) {
+            order.setCreatedById(currentUserId);
+        }
+        if (StringUtils.hasText(currentUsername)) {
+            order.setCreatedByName(currentUsername);
+        }
+
+        if (StringUtils.hasText(style.getStyleNo())) {
+            String autoWorkflow = cuttingWorkflowBuilderHelper.buildProgressWorkflowJson(style.getStyleNo().trim());
+            if (StringUtils.hasText(autoWorkflow)) {
+                order.setProgressWorkflowJson(autoWorkflow);
+            }
+        }
+
+        boolean saved = productionOrderService.save(order);
+        if (!saved || order.getId() == null) {
+            return Result.fail("创建样衣生产订单失败");
+        }
+
+        log.info("[样衣生产订单] 创建成功: styleId={}, styleNo={}, orderId={}, orderNo={}, sourceBizType=SAMPLE",
+                styleId, style.getStyleNo(), order.getId(), order.getOrderNo());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", order.getId());
+        result.put("orderNo", order.getOrderNo());
+        result.put("styleNo", order.getStyleNo());
+        result.put("styleName", order.getStyleName());
+        result.put("sourceBizType", order.getSourceBizType());
+        return Result.success(result);
+    }
+
+    /**
+     * 当前员工的样板扫码历史（含款式封面 / 交期 / 数量 / 扫码工资富化）。
+     * <p>{@code operatorId} 为空时返回空列表（Controller 侧直接透传 {@code UserContext.userId()}）。
+     */
+    public List<Map<String, Object>> getMyPatternScanHistory(String operatorId, String startTime, String endTime) {
+        if (!StringUtils.hasText(operatorId)) {
+            return List.of();
+        }
+
+        LambdaQueryWrapper<PatternScanRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PatternScanRecord::getOperatorId, operatorId)
+                .eq(PatternScanRecord::getDeleteFlag, 0)
+                .eq(PatternScanRecord::getTenantId, UserContext.tenantId());
+
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        if (StringUtils.hasText(startTime)) {
+            wrapper.ge(PatternScanRecord::getScanTime, LocalDateTime.parse(startTime, fmt));
+        }
+        if (StringUtils.hasText(endTime)) {
+            wrapper.le(PatternScanRecord::getScanTime, LocalDateTime.parse(endTime, fmt));
+        }
+        wrapper.orderByDesc(PatternScanRecord::getScanTime);
+        wrapper.last("LIMIT 5000");
+        List<PatternScanRecord> records = patternScanRecordService.list(wrapper);
+
+        java.util.Set<String> patternProductionIds = records.stream()
+                .map(PatternScanRecord::getPatternProductionId)
+                .filter(StringUtils::hasText)
+                .collect(java.util.stream.Collectors.toSet());
+
+        java.util.Map<String, PatternProduction> productionMap = new HashMap<>();
+        if (!patternProductionIds.isEmpty()) {
+            patternProductionService.listByIds(patternProductionIds).forEach(p ->
+                    productionMap.put(p.getId(), p));
+        }
+
+        // 批量查款式封面与交板日期，供扫码历史卡片补图片/时间（与 CuttingTaskOrchestrator.injectStyleCover 同模式）
+        // D-217：同时按 styleId 建索引——PC 改过款号后老记录的 styleNo 快照匹配不上，会彻底无图
+        java.util.Set<String> historyStyleIds = records.stream()
+                .map(PatternScanRecord::getStyleId)
+                .filter(StringUtils::hasText)
+                .collect(java.util.stream.Collectors.toSet());
+        java.util.Map<String, StyleInfo> styleInfoByIdMap = new HashMap<>();
+        if (!historyStyleIds.isEmpty()) {
+            styleInfoService.lambdaQuery()
+                    .select(StyleInfo::getId, StyleInfo::getStyleNo, StyleInfo::getCover, StyleInfo::getDeliveryDate)
+                    .in(StyleInfo::getId, historyStyleIds)
+                    .eq(StyleInfo::getTenantId, UserContext.tenantId())
+                    .list()
+                    .forEach(s -> styleInfoByIdMap.putIfAbsent(String.valueOf(s.getId()), s));
+        }
+        java.util.Set<String> historyStyleNos = records.stream()
+                .map(PatternScanRecord::getStyleNo)
+                .filter(StringUtils::hasText)
+                .collect(java.util.stream.Collectors.toSet());
+        java.util.Map<String, StyleInfo> styleInfoMap = new HashMap<>();
+        if (!historyStyleNos.isEmpty()) {
+            styleInfoService.lambdaQuery()
+                    .select(StyleInfo::getId, StyleInfo::getStyleNo, StyleInfo::getCover, StyleInfo::getDeliveryDate)
+                    .in(StyleInfo::getStyleNo, historyStyleNos)
+                    .eq(StyleInfo::getTenantId, UserContext.tenantId())
+                    .list()
+                    .forEach(s -> styleInfoMap.putIfAbsent(s.getStyleNo(), s));
+        }
+        // D-217：无封面的款式二级兜底到附件图片（款式只传了附件图、没设封面时也有图）
+        java.util.Map<String, String> attachmentCoverMap = new HashMap<>();
+        java.util.Set<String> missingCoverStyleIds = styleInfoByIdMap.values().stream()
+                .filter(s -> !StringUtils.hasText(s.getCover()) && historyStyleIds.contains(String.valueOf(s.getId())))
+                .map(s -> String.valueOf(s.getId()))
+                .collect(java.util.stream.Collectors.toSet());
+        if (!missingCoverStyleIds.isEmpty()) {
+            try {
+                List<StyleAttachment> attachments =
+                        styleAttachmentService.list(new LambdaQueryWrapper<StyleAttachment>()
+                                .in(StyleAttachment::getStyleId, missingCoverStyleIds)
+                                .like(StyleAttachment::getFileType, "image")
+                                .eq(StyleAttachment::getStatus, "active")
+                                .orderByAsc(StyleAttachment::getCreateTime));
+                for (StyleAttachment a : attachments) {
+                    if (StringUtils.hasText(a.getStyleId()) && StringUtils.hasText(a.getFileUrl())) {
+                        attachmentCoverMap.putIfAbsent(a.getStyleId(), a.getFileUrl());
+                    }
+                }
+            } catch (Exception ex) {
+                // 附件兜底失败不阻断历史返回
+            }
+        }
+
+        return records.stream().map(r -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", r.getId());
+            item.put("scanType", "pattern");
+            item.put("scanResult", "success");
+            item.put("operationType", r.getOperationType());
+
+            // 工序名优先用记录自身字段；processName / operationType 都为空时兜底为「样衣操作」。
+            // 原 Controller 的 _patternOperationLabel 在此调用点只会命中 default 分支
+            // （走到这里时 operationType 必为空串或 null），故内联为常量，行为等价。
+            // 注：不复用本类的 patternOperationLabel —— 它的 default 是 operationType.trim()
+            //（D-208 动态工序），对空串会返回 ""，与下沉前的「样衣操作」不一致。
+            String name = StringUtils.hasText(r.getProcessName()) ? r.getProcessName()
+                    : (StringUtils.hasText(r.getOperationType()) ? r.getOperationType() : "样衣操作");
+            item.put("processName", name);
+            item.put("progressStage", StringUtils.hasText(r.getProgressStage()) ? r.getProgressStage() : name);
+
+            item.put("operatorName", r.getOperatorName());
+            item.put("operatorId", r.getOperatorId());
+            item.put("styleId", r.getStyleId());
+            item.put("styleNo", r.getStyleNo());
+            item.put("styleName", r.getStyleName());
+            item.put("color", r.getColor());
+            item.put("size", r.getSize());
+            item.put("warehouseCode", r.getWarehouseCode());
+            item.put("remark", r.getRemark());
+            item.put("scanTime", r.getScanTime() != null
+                    ? r.getScanTime().format(fmt) : null);
+
+            PatternProduction pp = r.getPatternProductionId() != null
+                    ? productionMap.get(r.getPatternProductionId()) : null;
+            // 数量优先使用记录自身字段；如果记录没有设置则用样衣表的数量
+            int qty = (r.getQuantity() != null && r.getQuantity() > 0)
+                    ? r.getQuantity()
+                    : ((pp != null && pp.getQuantity() != null) ? pp.getQuantity() : 1);
+            item.put("quantity", qty);
+            // P1 修复（PC端缺失2）：不再显式置 null，透出实际单价 + 计算扫码工资
+            BigDecimal unitPrice = r.getUnitPrice();
+            item.put("unitPrice", unitPrice);
+            if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
+                item.put("scanCost", unitPrice.multiply(BigDecimal.valueOf(qty)));
+            } else {
+                item.put("scanCost", r.getScanCost());
+            }
+            item.put("patternProductionId", r.getPatternProductionId());
+            item.put("orderId", pp != null ? pp.getId() : null);
+            item.put("orderNo", r.getStyleNo());
+
+            // 款式封面图 + 交期（交期优先样衣生产任务交板时间，兜底款式档案交板日期）
+            // D-217：优先按 styleId 匹配（老款号快照也能命中），无封面再兜底附件图
+            StyleInfo si = StringUtils.hasText(r.getStyleId()) ? styleInfoByIdMap.get(r.getStyleId()) : null;
+            if (si == null && StringUtils.hasText(r.getStyleNo())) {
+                si = styleInfoMap.get(r.getStyleNo());
+            }
+            String coverUrl = si != null && StringUtils.hasText(si.getCover()) ? si.getCover()
+                    : (StringUtils.hasText(r.getStyleId()) ? attachmentCoverMap.get(r.getStyleId()) : null);
+            if (StringUtils.hasText(coverUrl)) {
+                item.put("coverImage", coverUrl);
+                item.put("styleImage", coverUrl);
+            }
+            LocalDateTime delivery = pp != null && pp.getDeliveryTime() != null
+                    ? pp.getDeliveryTime()
+                    : (si != null ? si.getDeliveryDate() : null);
+            if (delivery != null) {
+                item.put("deliveryDateStr", delivery.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            }
+            return item;
+        }).collect(Collectors.toList());
     }
 
     private PatternProduction getPatternWithTenant(String id) {
