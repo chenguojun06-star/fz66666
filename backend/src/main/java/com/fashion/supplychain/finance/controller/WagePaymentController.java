@@ -2,7 +2,6 @@ package com.fashion.supplychain.finance.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.PaymentAccount;
 import com.fashion.supplychain.finance.entity.WagePayment;
 import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator;
@@ -10,12 +9,8 @@ import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator.Wag
 import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator.WagePaymentQuery;
 import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator.WagePaymentRequest;
 import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator.PayableItemDTO;
-import com.fashion.supplychain.system.entity.Factory;
-import com.fashion.supplychain.system.entity.User;
-import com.fashion.supplychain.system.service.FactoryService;
-import com.fashion.supplychain.system.service.UserService;
+import com.fashion.supplychain.finance.orchestration.WagePaymentOrchestrator.PayeeSearchResult;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -32,25 +27,19 @@ import java.util.List;
  * - 工资支付操作：/api/finance/wage-payments/*
  *
  * 架构：Controller → WagePaymentOrchestrator → Service → Mapper
+ *
+ * <p>2026-09-29（D-643）：原类直接注入了 {@code FactoryService}、{@code UserService}
+ * 与 {@code DeductionItemMapper}（违反 ArchUnit 规则6、规则1）。收款方解析/搜索、
+ * 内部工厂防重复结算判定、扣款项标记均已下沉到 {@link WagePaymentOrchestrator}，
+ * 本类只保留「注解 → 参数解析 → 委托 → 组装响应」。
  */
 @RestController
 @RequestMapping("/api/finance")
 @PreAuthorize("isAuthenticated()")
-@Slf4j
 public class WagePaymentController {
 
     @Autowired
     private WagePaymentOrchestrator wagePaymentOrchestrator;
-
-    @Autowired
-    private FactoryService factoryService;
-
-    @Autowired
-    private UserService userService;
-
-    /** D-136：终审推送时把纳入抵扣的扣款项标记 settle_flag=1（未勾选的自然滚存到下期） */
-    @Autowired
-    private com.fashion.supplychain.finance.mapper.DeductionItemMapper deductionItemMapper;
 
     // ============================================================
     // 一、收款账户管理
@@ -142,7 +131,8 @@ public class WagePaymentController {
             return Result.fail("支付金额必须大于0");
         }
 
-        String validatedName = validatePayee(request.getPayeeType(), request.getPayeeId(), request.getPayeeName());
+        String validatedName = wagePaymentOrchestrator.resolvePayeeName(
+            request.getPayeeType(), request.getPayeeId(), request.getPayeeName());
         if (validatedName == null) {
             return Result.fail("收款方不存在，请从系统人员/工厂中选择");
         }
@@ -304,7 +294,8 @@ public class WagePaymentController {
             return Result.fail("支付金额必须大于0");
         }
 
-        String validatedName = validatePayee(request.getPayeeType(), request.getPayeeId(), request.getPayeeName());
+        String validatedName = wagePaymentOrchestrator.resolvePayeeName(
+            request.getPayeeType(), request.getPayeeId(), request.getPayeeName());
         if (validatedName == null) {
             return Result.fail("收款方不存在，请从系统人员/工厂中选择");
         }
@@ -362,25 +353,9 @@ public class WagePaymentController {
         }
 
         // 内部工厂防重复结算：INTERNAL工厂按人员工资结算，不允许在订单结算中重复创建付款
-        if ("ORDER_SETTLEMENT".equals(request.getBizType())) {
-            String bizId = request.getBizId();
-            if (org.springframework.util.StringUtils.hasText(bizId)) {
-                // 优先按ID查（UUID），查不到再按名字查（降级兜底：factoryId为空时bizId=factoryName）
-                Factory factory = factoryService.getById(bizId);
-                if (factory != null) {
-                    TenantAssert.assertBelongsToCurrentTenant(factory.getTenantId(), "工厂");
-                }
-                if (factory == null) {
-                    factory = factoryService.getOne(
-                        new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Factory>()
-                            .eq(Factory::getFactoryName, bizId)
-                            .eq(Factory::getDeleteFlag, 0)
-                            .last("limit 1"));
-                }
-                if (factory != null && "INTERNAL".equals(factory.getFactoryType())) {
-                    return Result.fail("本厂属于内部工厂，工人工资已通过工资结算模块按人员审核，请勿在订单结算中重复发起付款");
-                }
-            }
+        if ("ORDER_SETTLEMENT".equals(request.getBizType())
+                && wagePaymentOrchestrator.isInternalFactory(request.getBizId())) {
+            return Result.fail("本厂属于内部工厂，工人工资已通过工资结算模块按人员审核，请勿在订单结算中重复发起付款");
         }
 
         // 根据业务类型智能推断收款方类型（修复历史数据中工资结算被误标为 FACTORY 的问题）
@@ -410,18 +385,8 @@ public class WagePaymentController {
 
         // D-136：把本次纳入抵扣的扣款项标记为已抵扣（settle_flag=1），
         // 未勾选/超出的扣款保持未抵扣 → 下期工厂汇总自动滚存
-        if ("ORDER_SETTLEMENT".equals(bizType)
-                && request.getDeductionIds() != null && !request.getDeductionIds().isEmpty()) {
-            try {
-                com.fashion.supplychain.finance.entity.DeductionItem patch = new com.fashion.supplychain.finance.entity.DeductionItem();
-                patch.setSettleFlag(1);
-                deductionItemMapper.update(patch,
-                        new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.fashion.supplychain.finance.entity.DeductionItem>()
-                                .in(com.fashion.supplychain.finance.entity.DeductionItem::getId, request.getDeductionIds()));
-                log.info("[终审推送] 已标记{}条扣款项为已抵扣: factory={}", request.getDeductionIds().size(), request.getPayeeName());
-            } catch (Exception e) {
-                log.warn("[终审推送] 扣款抵扣标记失败(不影响推送): factory={}, err={}", request.getPayeeName(), e.getMessage());
-            }
+        if ("ORDER_SETTLEMENT".equals(bizType)) {
+            wagePaymentOrchestrator.markDeductionsSettled(request.getDeductionIds(), request.getPayeeName());
         }
 
         return Result.success(payment);
@@ -465,100 +430,13 @@ public class WagePaymentController {
         if (request.getKeyword() == null || request.getKeyword().trim().isEmpty()) {
             return Result.success(java.util.Collections.emptyList());
         }
-        Long tenantId = UserContext.tenantId();
-        String ctxFactoryId = UserContext.factoryId();
-        boolean isFactoryAccount = com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount();
-        java.util.List<PayeeSearchResult> results = new java.util.ArrayList<>();
-        String keyword = request.getKeyword().trim();
-
-        // 工厂账号只能搜索自己工厂的信息，不能搜索员工或其他工厂
-        if (isFactoryAccount) {
-            if (ctxFactoryId == null) {
-                return Result.success(java.util.Collections.emptyList());
-            }
-            // 工厂账号只能搜索自己工厂
-            if (request.getPayeeType() == null || "FACTORY".equals(request.getPayeeType())) {
-                Factory factory = factoryService.getById(ctxFactoryId);
-                if (factory != null) {
-                    TenantAssert.assertBelongsToCurrentTenant(factory.getTenantId(), "工厂");
-                }
-                if (factory != null && factory.getDeleteFlag() != null && factory.getDeleteFlag() == 0) {
-                    String fn = factory.getFactoryName();
-                    if (fn != null && fn.toLowerCase().contains(keyword.toLowerCase())) {
-                        results.add(new PayeeSearchResult(
-                            factory.getId(), "FACTORY",
-                            factory.getFactoryName(),
-                            factory.getContactPhone(), "工厂"
-                        ));
-                    }
-                }
-            }
-            return Result.success(results);
-        }
-
-        if (request.getPayeeType() == null || "WORKER".equals(request.getPayeeType())) {
-            com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<User> userQw =
-                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
-            if (tenantId != null) userQw.eq("tenant_id", tenantId);
-            userQw.eq("status", "active")
-                  .and(w -> w.like("name", keyword).or().like("username", keyword).or().like("phone", keyword))
-                  .last("LIMIT 20");
-            for (User u : userService.list(userQw)) {
-                results.add(new PayeeSearchResult(
-                    String.valueOf(u.getId()), "WORKER",
-                    u.getName() != null ? u.getName() : u.getUsername(),
-                    u.getPhone(), "员工"
-                ));
-            }
-        }
-
-        if (request.getPayeeType() == null || "FACTORY".equals(request.getPayeeType())) {
-            com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Factory> factoryQw =
-                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
-            if (tenantId != null) factoryQw.eq("tenant_id", tenantId);
-            factoryQw.eq("delete_flag", 0)
-                     .and(w -> w.like("factory_name", keyword).or().like("contact_person", keyword).or().like("factory_code", keyword))
-                     .last("LIMIT 20");
-            for (Factory f : factoryService.list(factoryQw)) {
-                results.add(new PayeeSearchResult(
-                    f.getId(), "FACTORY",
-                    f.getFactoryName(),
-                    f.getContactPhone(), "工厂"
-                ));
-            }
-        }
-
-        return Result.success(results);
-    }
-
-    private String validatePayee(String payeeType, String payeeId, String payeeName) {
-        if (payeeType == null || payeeId == null) {
-            return null;
-        }
-        if ("WORKER".equals(payeeType)) {
-            try {
-                Long uid = Long.valueOf(payeeId);
-                User user = userService.getById(uid);
-                if (user != null) {
-                    TenantAssert.assertBelongsToCurrentTenant(user.getTenantId(), "员工");
-                    return user.getName() != null ? user.getName() : user.getUsername();
-                }
-            } catch (NumberFormatException e) {
-                log.warn("[WagePayment] 解析收款方ID失败: {}", e.getMessage());
-            }
-            return null;
-        }
-        if ("FACTORY".equals(payeeType)) {
-            Factory factory = factoryService.getById(payeeId);
-            if (factory != null) {
-                TenantAssert.assertBelongsToCurrentTenant(factory.getTenantId(), "工厂");
-                if (factory.getDeleteFlag() != null && factory.getDeleteFlag() == 0) {
-                    return factory.getFactoryName();
-                }
-            }
-            return null;
-        }
-        return payeeName;
+        // 工厂账号的数据权限（只能搜自己工厂）在编排层落实，避免调用方漏判
+        return Result.success(wagePaymentOrchestrator.searchPayee(
+                request.getKeyword().trim(),
+                request.getPayeeType(),
+                UserContext.tenantId(),
+                UserContext.factoryId(),
+                com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()));
     }
 
     // ============================================================
@@ -657,16 +535,5 @@ public class WagePaymentController {
     public static class PayeeSearchRequest {
         private String keyword;
         private String payeeType;
-    }
-
-    @Data
-    @lombok.AllArgsConstructor
-    @lombok.NoArgsConstructor
-    public static class PayeeSearchResult {
-        private String id;
-        private String payeeType;
-        private String name;
-        private String phone;
-        private String label;
     }
 }

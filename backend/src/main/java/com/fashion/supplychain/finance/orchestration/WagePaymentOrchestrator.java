@@ -1,17 +1,24 @@
 package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.BillAggregation;
+import com.fashion.supplychain.finance.entity.DeductionItem;
 import com.fashion.supplychain.finance.entity.PaymentAccount;
 import com.fashion.supplychain.finance.entity.Payable;
 import com.fashion.supplychain.finance.entity.WagePayment;
+import com.fashion.supplychain.finance.mapper.DeductionItemMapper;
 import com.fashion.supplychain.finance.service.BillAggregationService;
 import com.fashion.supplychain.finance.service.PaymentAccountService;
 import com.fashion.supplychain.finance.service.PayableService;
 import com.fashion.supplychain.finance.service.WagePaymentService;
 import com.fashion.supplychain.finance.helper.WagePaymentLogAppendHelper;
+import com.fashion.supplychain.system.entity.Factory;
+import com.fashion.supplychain.system.entity.User;
+import com.fashion.supplychain.system.service.FactoryService;
+import com.fashion.supplychain.system.service.UserService;
 import org.springframework.util.StringUtils;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -40,6 +48,11 @@ public class WagePaymentOrchestrator {
     private final WagePaymentDashboardHelper dashboardHelper;
     private final PaymentNoGenerator paymentNoGenerator;
     private final WagePaymentLogAppendHelper logAppendHelper;
+
+    // D-643：收款方解析/搜索与扣款项标记从 WagePaymentController 下沉，收敛 ArchUnit 规则6
+    private final FactoryService factoryService;
+    private final UserService userService;
+    private final DeductionItemMapper deductionItemMapper;
 
     public List<PaymentAccount> listAccounts(String ownerType, String ownerId) {
         TenantAssert.assertTenantContext();
@@ -554,6 +567,160 @@ public class WagePaymentOrchestrator {
         return dashboardHelper.getDashboardStats(startDate, endDate);
     }
 
+    // ============================================================
+    //  收款方解析 / 搜索 / 扣款标记（D-643 从 WagePaymentController 下沉）
+    // ============================================================
+
+    /**
+     * 判定 {@code bizId} 指向的工厂是否为「内部工厂」。
+     *
+     * <p>内部工厂按人员工资结算，不允许在订单结算里重复发起付款。
+     * 先按 ID 查（UUID），查不到再按工厂名兜底（历史数据里 factoryId 为空时 bizId = factoryName）。
+     *
+     * @return true 表示是内部工厂，调用方应阻断
+     */
+    public boolean isInternalFactory(String bizId) {
+        if (!StringUtils.hasText(bizId)) {
+            return false;
+        }
+        Factory factory = factoryService.getById(bizId);
+        if (factory != null) {
+            TenantAssert.assertBelongsToCurrentTenant(factory.getTenantId(), "工厂");
+        }
+        if (factory == null) {
+            factory = factoryService.getOne(new LambdaQueryWrapper<Factory>()
+                    .eq(Factory::getFactoryName, bizId)
+                    .eq(Factory::getDeleteFlag, 0)
+                    .last("limit 1"));
+        }
+        return factory != null && "INTERNAL".equals(factory.getFactoryType());
+    }
+
+    /**
+     * 解析 / 校验收款方名称。
+     *
+     * <p>WORKER 按 userId 反查姓名，FACTORY 按工厂 ID 反查工厂名，
+     * 两者都会做跨租户校验（{@link TenantAssert}）。查不到返回 {@code null}，
+     * 由调用方决定是否阻断（原逻辑即如此，不在此处抛异常）。
+     *
+     * @return 解析出的名称；WORKER/FACTORY 查不到时返回 null；其他类型原样返回 payeeName
+     */
+    public String resolvePayeeName(String payeeType, String payeeId, String payeeName) {
+        if (payeeType == null || payeeId == null) {
+            return null;
+        }
+        if ("WORKER".equals(payeeType)) {
+            try {
+                Long uid = Long.valueOf(payeeId);
+                User user = userService.getById(uid);
+                if (user != null) {
+                    TenantAssert.assertBelongsToCurrentTenant(user.getTenantId(), "员工");
+                    return user.getName() != null ? user.getName() : user.getUsername();
+                }
+            } catch (NumberFormatException e) {
+                log.warn("[WagePayment] 解析收款方ID失败: {}", e.getMessage());
+            }
+            return null;
+        }
+        if ("FACTORY".equals(payeeType)) {
+            Factory factory = factoryService.getById(payeeId);
+            if (factory != null) {
+                TenantAssert.assertBelongsToCurrentTenant(factory.getTenantId(), "工厂");
+                if (factory.getDeleteFlag() != null && factory.getDeleteFlag() == 0) {
+                    return factory.getFactoryName();
+                }
+            }
+            return null;
+        }
+        return payeeName;
+    }
+
+    /**
+     * 收款方搜索（员工 / 工厂）。
+     *
+     * <p>工厂账号只能搜到自己工厂，不能搜员工或其他工厂 —— 该数据权限在编排层落实，
+     * 避免调用方漏判。
+     *
+     * @param keyword          关键词（调用方需先 trim；空关键词由调用方提前返回空列表）
+     * @param payeeType        可选 WORKER / FACTORY，null 表示两者都搜
+     * @param tenantId         当前租户 ID
+     * @param ctxFactoryId     当前工厂账号绑定的工厂 ID
+     * @param isFactoryAccount 是否工厂账号
+     */
+    public List<PayeeSearchResult> searchPayee(String keyword, String payeeType,
+                                               Long tenantId, String ctxFactoryId,
+                                               boolean isFactoryAccount) {
+        List<PayeeSearchResult> results = new ArrayList<>();
+
+        if (isFactoryAccount) {
+            if (ctxFactoryId == null) {
+                return results;
+            }
+            if (payeeType == null || "FACTORY".equals(payeeType)) {
+                Factory factory = factoryService.getById(ctxFactoryId);
+                if (factory != null) {
+                    TenantAssert.assertBelongsToCurrentTenant(factory.getTenantId(), "工厂");
+                }
+                if (factory != null && factory.getDeleteFlag() != null && factory.getDeleteFlag() == 0) {
+                    String fn = factory.getFactoryName();
+                    if (fn != null && fn.toLowerCase().contains(keyword.toLowerCase())) {
+                        results.add(new PayeeSearchResult(factory.getId(), "FACTORY",
+                                factory.getFactoryName(), factory.getContactPhone(), "工厂"));
+                    }
+                }
+            }
+            return results;
+        }
+
+        if (payeeType == null || "WORKER".equals(payeeType)) {
+            QueryWrapper<User> userQw = new QueryWrapper<>();
+            if (tenantId != null) userQw.eq("tenant_id", tenantId);
+            userQw.eq("status", "active")
+                  .and(w -> w.like("name", keyword).or().like("username", keyword).or().like("phone", keyword))
+                  .last("LIMIT 20");
+            for (User u : userService.list(userQw)) {
+                results.add(new PayeeSearchResult(String.valueOf(u.getId()), "WORKER",
+                        u.getName() != null ? u.getName() : u.getUsername(),
+                        u.getPhone(), "员工"));
+            }
+        }
+
+        if (payeeType == null || "FACTORY".equals(payeeType)) {
+            QueryWrapper<Factory> factoryQw = new QueryWrapper<>();
+            if (tenantId != null) factoryQw.eq("tenant_id", tenantId);
+            factoryQw.eq("delete_flag", 0)
+                     .and(w -> w.like("factory_name", keyword).or().like("contact_person", keyword).or().like("factory_code", keyword))
+                     .last("LIMIT 20");
+            for (Factory f : factoryService.list(factoryQw)) {
+                results.add(new PayeeSearchResult(f.getId(), "FACTORY",
+                        f.getFactoryName(), f.getContactPhone(), "工厂"));
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * D-136：把本次纳入抵扣的扣款项标记 {@code settle_flag=1}。
+     * 未勾选/超出的扣款保持未抵扣 → 下期工厂汇总自动滚存。
+     *
+     * <p>标记失败不影响主流程（仅告警），故此处吞异常。
+     */
+    public void markDeductionsSettled(List<String> deductionIds, String payeeName) {
+        if (deductionIds == null || deductionIds.isEmpty()) {
+            return;
+        }
+        try {
+            DeductionItem patch = new DeductionItem();
+            patch.setSettleFlag(1);
+            deductionItemMapper.update(patch, new LambdaQueryWrapper<DeductionItem>()
+                    .in(DeductionItem::getId, deductionIds));
+            log.info("[终审推送] 已标记{}条扣款项为已抵扣: factory={}", deductionIds.size(), payeeName);
+        } catch (Exception e) {
+            log.warn("[终审推送] 扣款抵扣标记失败(不影响推送): factory={}, err={}", payeeName, e.getMessage());
+        }
+    }
+
     private String generatePaymentNo() {
         return paymentNoGenerator.generate();
     }
@@ -597,6 +764,18 @@ public class WagePaymentOrchestrator {
     public static class WagePaymentDetailDTO {
         private WagePayment payment;
         private PaymentAccount account;
+    }
+
+    /** 收款方搜索结果（D-643 从 WagePaymentController 迁入，避免编排层反向依赖 Controller） */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PayeeSearchResult {
+        private String id;
+        private String payeeType;
+        private String name;
+        private String phone;
+        private String label;
     }
 
     @Data
