@@ -1,14 +1,10 @@
 package com.fashion.supplychain.production.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.production.entity.FactoryShipment;
 import com.fashion.supplychain.production.entity.FactoryShipmentDetail;
 import com.fashion.supplychain.production.orchestration.FactoryShipmentOrchestrator;
-import com.fashion.supplychain.production.service.FactoryShipmentService;
-import com.fashion.supplychain.production.service.FactoryShipmentDetailService;
-import com.fashion.supplychain.production.service.ProductionOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +22,12 @@ import java.util.Map;
  *   <li>质检/次品/返修/入库 — 由质检入库页面(/production/warehousing)负责</li>
  * </ul>
  * </p>
+ * <p>
+ * D-636：原先本类直接注入了 FactoryShipmentService / FactoryShipmentDetailService /
+ * ProductionOrderService 三个 Service（数据权限过滤、订单查询、明细查询都在 Controller 里做），
+ * 属「Controller 依赖多个 Service」。现已全部下沉到 {@link FactoryShipmentOrchestrator}，
+ * 本类只保留「端点声明 + 请求参数解析 + 响应组装」。
+ * </p>
  */
 @RestController
 @RequestMapping("/api/production/factory-shipment")
@@ -34,12 +36,6 @@ public class FactoryShipmentController {
 
     @Autowired
     private FactoryShipmentOrchestrator factoryShipmentOrchestrator;
-    @Autowired
-    private FactoryShipmentService factoryShipmentService;
-    @Autowired
-    private FactoryShipmentDetailService factoryShipmentDetailService;
-    @Autowired
-    private ProductionOrderService productionOrderService;
 
     /** 外发工厂发货 */
     @PostMapping("/ship")
@@ -82,49 +78,26 @@ public class FactoryShipmentController {
     }
 
     /** 发货单列表 */
-    @PostMapping("/list")    public Result<IPage<FactoryShipment>> list(@RequestBody Map<String, Object> params) {
-        List<String> factoryOrderIds = DataPermissionHelper.getFactoryOrderIds(productionOrderService);
-        if (factoryOrderIds != null && factoryOrderIds.isEmpty()) {
-            return Result.success(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>());
-        }
-        if (factoryOrderIds != null) {
-            params = params != null ? new java.util.HashMap<>(params) : new java.util.HashMap<>();
-            params.put("_factoryOrderIds", factoryOrderIds);
-        }
-        return Result.success(factoryShipmentService.queryPage(params));
+    @PostMapping("/list")
+    public Result<IPage<FactoryShipment>> list(@RequestBody Map<String, Object> params) {
+        return factoryShipmentOrchestrator.queryPage(params);
     }
 
     /** 按订单查发货单（无分页） */
     @PostMapping("/search")
-    public Result<?> listByOrderPost(@RequestBody Map<String, String> params) {
+    public Result<List<FactoryShipment>> listByOrderPost(@RequestBody Map<String, String> params) {
         String orderId = params != null ? params.get("orderId") : null;
         if (orderId == null || orderId.isBlank()) {
             return Result.fail("orderId不能为空");
         }
-        List<String> factoryOrderIds = DataPermissionHelper.getFactoryOrderIds(productionOrderService);
-        if (factoryOrderIds != null && !factoryOrderIds.contains(orderId)) {
-            return Result.success(List.of());
-        }
-        return Result.success(factoryShipmentService.lambdaQuery()
-                .eq(FactoryShipment::getOrderId, orderId)
-                .eq(FactoryShipment::getDeleteFlag, 0)
-                .orderByDesc(FactoryShipment::getCreateTime)
-                .list());
+        return factoryShipmentOrchestrator.listByOrder(orderId);
     }
 
-    /** @deprecated 使用 POST /list-by-order 替代 */
+    /** @deprecated 使用 POST /search 替代 */
     @Deprecated // 计划于 2026-08-10 移除，请使用新端点替代
     @GetMapping("/by-order/{orderId}")
-    public Result<?> listByOrder(@PathVariable("orderId") String orderId) {
-        List<String> factoryOrderIds = DataPermissionHelper.getFactoryOrderIds(productionOrderService);
-        if (factoryOrderIds != null && !factoryOrderIds.contains(orderId)) {
-            return Result.success(List.of());
-        }
-        return Result.success(factoryShipmentService.lambdaQuery()
-                .eq(FactoryShipment::getOrderId, orderId)
-                .eq(FactoryShipment::getDeleteFlag, 0)
-                .orderByDesc(FactoryShipment::getCreateTime)
-                .list());
+    public Result<List<FactoryShipment>> listByOrder(@PathVariable("orderId") String orderId) {
+        return factoryShipmentOrchestrator.listByOrder(orderId);
     }
 
     /** 可发货信息 */
@@ -142,7 +115,7 @@ public class FactoryShipmentController {
     /** 发货单明细 */
     @GetMapping("/{id}/details")
     public Result<List<FactoryShipmentDetail>> getDetails(@PathVariable("id") String id) {
-        return Result.success(factoryShipmentDetailService.listByShipmentId(id));
+        return Result.success(factoryShipmentOrchestrator.listDetails(id));
     }
 
     /** 订单发货汇总（颜色×尺码） */

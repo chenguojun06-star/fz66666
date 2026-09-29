@@ -1,5 +1,8 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
@@ -422,6 +425,50 @@ public class FactoryShipmentOrchestrator {
     }
 
     // ===== 查询 =====
+
+    /**
+     * 发货单列表（分页）。
+     *
+     * <p>D-636 从 {@code FactoryShipmentController#list} 下沉。工厂账号只能看到自己工厂的
+     * 发货单：{@link DataPermissionHelper#getFactoryOrderIds} 返回 null 表示非工厂账号
+     * （不限制），返回空列表表示工厂账号但名下无订单（直接返回空页，避免全表查询）。
+     */
+    public Result<IPage<FactoryShipment>> queryPage(Map<String, Object> params) {
+        List<String> factoryOrderIds = DataPermissionHelper.getFactoryOrderIds(productionOrderService);
+        if (factoryOrderIds != null && factoryOrderIds.isEmpty()) {
+            return Result.success(new Page<>());
+        }
+        Map<String, Object> query = params;
+        if (factoryOrderIds != null) {
+            query = query != null ? new HashMap<>(query) : new HashMap<>();
+            query.put("_factoryOrderIds", factoryOrderIds);
+        }
+        return Result.success(factoryShipmentService.queryPage(query));
+    }
+
+    /**
+     * 按订单查发货单（无分页）。
+     *
+     * <p>D-636 从 Controller 下沉，同时服务于 {@code POST /search} 与已废弃的
+     * {@code GET /by-order/{orderId}}。orderId 非空校验由 Controller 负责（参数校验属
+     * 最外层职责），此处只做数据权限过滤。
+     */
+    public Result<List<FactoryShipment>> listByOrder(String orderId) {
+        List<String> factoryOrderIds = DataPermissionHelper.getFactoryOrderIds(productionOrderService);
+        if (factoryOrderIds != null && !factoryOrderIds.contains(orderId)) {
+            return Result.success(List.of());
+        }
+        return Result.success(factoryShipmentService.lambdaQuery()
+                .eq(FactoryShipment::getOrderId, orderId)
+                .eq(FactoryShipment::getDeleteFlag, 0)
+                .orderByDesc(FactoryShipment::getCreateTime)
+                .list());
+    }
+
+    /** 发货单明细（D-636 从 Controller 下沉） */
+    public List<FactoryShipmentDetail> listDetails(String shipmentId) {
+        return factoryShipmentDetailService.listByShipmentId(shipmentId);
+    }
 
     public Map<String, Object> getShippableInfo(String orderId) {
         // P0 修复（铁律4 多租户隔离）：强制租户上下文校验
