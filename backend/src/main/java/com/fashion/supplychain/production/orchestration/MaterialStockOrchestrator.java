@@ -1,15 +1,25 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.lock.DistributedLockService;
+import com.fashion.supplychain.production.dto.MaterialBatchDetailDto;
 import com.fashion.supplychain.production.dto.MaterialStockAlertDto;
+import com.fashion.supplychain.production.dto.MaterialTransactionDto;
+import com.fashion.supplychain.production.entity.MaterialDatabase;
+import com.fashion.supplychain.production.entity.MaterialInbound;
 import com.fashion.supplychain.production.entity.MaterialOutboundLog;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
 import com.fashion.supplychain.production.entity.MaterialStock;
+import com.fashion.supplychain.production.mapper.MaterialInboundMapper;
 import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.mapper.MaterialPickingItemMapper;
+import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.style.entity.StyleBom;
@@ -18,6 +28,7 @@ import com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrato
 import com.fashion.supplychain.warehouse.entity.WarehouseArea;
 import com.fashion.supplychain.warehouse.service.WarehouseAreaService;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -26,6 +37,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -64,7 +77,260 @@ public class MaterialStockOrchestrator {
     @Autowired
     private DistributedLockService distributedLockService;
 
+    // D-644：面辅料库存列表/流水/图片富化从 MaterialStockController 下沉，收敛 ArchUnit 规则6、规则1
+    @Autowired
+    private MaterialDatabaseService materialDatabaseService;
+
+    @Autowired
+    private MaterialInboundMapper materialInboundMapper;
+
     private final AtomicInteger outboundSequence = new AtomicInteger(0);
+
+    // ============================================================
+    //  面辅料库存查询 / 流水（D-644 从 MaterialStockController 下沉）
+    // ============================================================
+
+    /**
+     * 面辅料库存分页列表。
+     *
+     * <p>除分页外还做三件事：
+     * ① 按物料编码批量富化图片（D-360z，入库后列表不再"无图"）；
+     * ② 富化最近一次出入库的经办人与时间；
+     * ③ 附加今日出入库笔数与本月的出入库金额。
+     *
+     * <p>工厂账号不可查看面辅料库存（属租户级仓库数据）→ 直接返回空分页结构，
+     * 不报错（避免探测）。
+     */
+    public Map<String, Object> getStockPage(Map<String, Object> params) {
+        if (DataPermissionHelper.isFactoryAccount()) {
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("records", List.of());
+            empty.put("total", 0L);
+            empty.put("size", 10L);
+            empty.put("current", 1L);
+            empty.put("pages", 0L);
+            empty.put("todayInCount", 0);
+            empty.put("todayOutCount", 0);
+            return empty;
+        }
+        IPage<MaterialStock> page = materialStockService.queryPage(params);
+
+        // D-360z：批量富化物料图片（按物料编码关联物料资料）
+        if (page.getRecords() != null && !page.getRecords().isEmpty()) {
+            try {
+                Set<String> codes = page.getRecords().stream()
+                        .map(MaterialStock::getMaterialCode)
+                        .filter(c -> c != null && !c.isBlank())
+                        .collect(Collectors.toSet());
+                if (!codes.isEmpty()) {
+                    Map<String, String> imageMap = materialDatabaseService.list(
+                            new LambdaQueryWrapper<MaterialDatabase>()
+                                    .in(MaterialDatabase::getMaterialCode, codes))
+                            .stream()
+                            .filter(md -> md.getImage() != null && !md.getImage().isBlank())
+                            .collect(Collectors.toMap(
+                                    MaterialDatabase::getMaterialCode,
+                                    MaterialDatabase::getImage,
+                                    (a, b) -> a));
+                    for (MaterialStock stock : page.getRecords()) {
+                        stock.setMaterialImage(imageMap.get(stock.getMaterialCode()));
+                    }
+                }
+            } catch (Exception e) {
+                // 图片富化失败不影响列表
+                log.debug("[MaterialStock] 列表图片富化失败（不影响列表）: {}", e.getMessage());
+            }
+        }
+        enrichLastOperationInfo(page.getRecords());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("records", page.getRecords());
+        result.put("total", page.getTotal());
+        result.put("size", page.getSize());
+        result.put("current", page.getCurrent());
+        result.put("pages", page.getPages());
+
+        Long tenantId = UserContext.tenantId();
+        LocalDate today = LocalDate.now();
+        Integer todayOutCount = materialOutboundLogMapper.selectTodayOutboundCount(today, tenantId);
+        result.put("todayOutCount", todayOutCount != null ? todayOutCount : 0);
+
+        long todayInCount = materialInboundMapper.selectCount(new LambdaQueryWrapper<MaterialInbound>()
+                .eq(MaterialInbound::getTenantId, tenantId)
+                .eq(MaterialInbound::getDeleteFlag, 0)
+                .ge(MaterialInbound::getInboundTime, today.atStartOfDay())
+                .lt(MaterialInbound::getInboundTime, today.plusDays(1).atStartOfDay()));
+        result.put("todayInCount", (int) todayInCount);
+
+        // D-474：本月入库/出库金额（统计在 Service 层做，编排层不直接依赖 Mapper 做聚合）
+        Map<String, BigDecimal> monthAmount = materialStockService.getMonthInOutAmount(tenantId, today);
+        result.put("monthInAmount", monthAmount.getOrDefault("monthInAmount", BigDecimal.ZERO));
+        result.put("monthOutAmount", monthAmount.getOrDefault("monthOutAmount", BigDecimal.ZERO));
+
+        return result;
+    }
+
+    /** 按物料 ID 批量取库存；工厂账号不可见（属租户级仓库数据）→ 空列表 */
+    public List<MaterialStock> getStocksByMaterialIds(List<String> materialIds) {
+        if (DataPermissionHelper.isFactoryAccount()) {
+            return List.of();
+        }
+        return materialStockService.getStocksByMaterialIds(materialIds);
+    }
+
+    /** 物料批次明细（出库时按批次 FIFO 用）；工厂账号不可见 → 空列表 */
+    public List<MaterialBatchDetailDto> getBatchDetails(String materialCode, String color, String size) {
+        if (DataPermissionHelper.isFactoryAccount()) {
+            return List.of();
+        }
+        return materialStockService.getBatchDetails(materialCode, color, size);
+    }
+
+    /** 更新安全库存 */
+    public Result<Boolean> updateSafetyStock(String stockId, Integer safetyStock) {
+        boolean ok = materialStockService.updateSafetyStock(stockId, safetyStock);
+        if (!ok) {
+            return Result.fail("更新安全库存失败");
+        }
+        return Result.success(true);
+    }
+
+    /**
+     * 面辅料出入库流水（合并入库 + 出库，按操作时间倒序）。
+     *
+     * <p>工厂账号不可见（属租户级仓库数据）→ 空列表。
+     */
+    public List<MaterialTransactionDto> getTransactions(String materialCode, String stockId) {
+        if (DataPermissionHelper.isFactoryAccount()) {
+            return List.of();
+        }
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        List<MaterialTransactionDto> result = new ArrayList<>();
+
+        // 1. 入库记录（来自 t_material_inbound）
+        LambdaQueryWrapper<MaterialInbound> inQuery = new LambdaQueryWrapper<MaterialInbound>()
+                .eq(MaterialInbound::getMaterialCode, materialCode)
+                .eq(MaterialInbound::getDeleteFlag, 0)
+                .orderByDesc(MaterialInbound::getInboundTime);
+        for (MaterialInbound ib : materialInboundMapper.selectList(inQuery)) {
+            MaterialTransactionDto dto = new MaterialTransactionDto();
+            dto.setType("IN");
+            dto.setTypeLabel("入库");
+            // D-414：流水数量统一支持小数（1.32 米不再显示成 1）
+            dto.setQuantity(ib.getInboundQuantity());
+            dto.setOperatorName(ib.getOperatorName());
+            dto.setWarehouseLocation(ib.getWarehouseLocation());
+            dto.setRemark(ib.getRemark());
+            if (ib.getInboundTime() != null) {
+                dto.setOperationTime(ib.getInboundTime().format(fmt));
+            }
+            result.add(dto);
+        }
+
+        // 2. 出库记录（来自 t_material_outbound_log）
+        QueryWrapper<MaterialOutboundLog> outQuery = new QueryWrapper<MaterialOutboundLog>()
+                .eq("material_code", materialCode)
+                .eq("delete_flag", 0);
+        if (StringUtils.hasText(stockId)) {
+            outQuery.eq("stock_id", stockId);
+        }
+        outQuery.orderByDesc("outbound_time");
+        for (MaterialOutboundLog ob : materialOutboundLogMapper.selectList(outQuery)) {
+            MaterialTransactionDto dto = new MaterialTransactionDto();
+            dto.setType("OUT");
+            dto.setTypeLabel("出库");
+            dto.setQuantity(ob.getQuantity());
+            dto.setOperatorName(ob.getOperatorName());
+            dto.setWarehouseLocation(ob.getWarehouseLocation());
+            dto.setRemark(ob.getRemark());
+            if (ob.getOutboundTime() != null) {
+                dto.setOperationTime(ob.getOutboundTime().format(fmt));
+            }
+            result.add(dto);
+        }
+
+        // 3. 按时间倒序排序
+        result.sort(Comparator.comparing(
+                dto -> dto.getOperationTime() == null ? "" : dto.getOperationTime(),
+                Comparator.reverseOrder()
+        ));
+
+        return result;
+    }
+
+    /**
+     * 富化最近一次入库/出库的经办人与时间。
+     *
+     * <p>各用 1 次 IN 查询批量取回后按 {@code 物料编码|颜色|尺码} / {@code stockId} 取最新一条，
+     * 避免 N+1。
+     */
+    private void enrichLastOperationInfo(List<MaterialStock> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+
+        Set<String> stockIds = records.stream()
+                .map(MaterialStock::getId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+        Set<String> materialCodes = records.stream()
+                .map(MaterialStock::getMaterialCode)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+
+        Map<String, MaterialInbound> latestInboundByKey = new HashMap<>();
+        if (!materialCodes.isEmpty()) {
+            List<MaterialInbound> inboundList = materialInboundMapper.selectList(new LambdaQueryWrapper<MaterialInbound>()
+                    .eq(MaterialInbound::getDeleteFlag, 0)
+                    .in(MaterialInbound::getMaterialCode, materialCodes)
+                    .orderByDesc(MaterialInbound::getInboundTime)
+                    .orderByDesc(MaterialInbound::getCreateTime));
+            for (MaterialInbound inbound : inboundList) {
+                latestInboundByKey.putIfAbsent(
+                        buildMaterialCodeKey(inbound.getMaterialCode(), inbound.getColor(), inbound.getSize()), inbound);
+            }
+        }
+
+        Map<String, MaterialOutboundLog> latestOutboundByStockId = new HashMap<>();
+        if (!stockIds.isEmpty()) {
+            List<MaterialOutboundLog> outboundList = materialOutboundLogMapper.selectList(new LambdaQueryWrapper<MaterialOutboundLog>()
+                    .eq(MaterialOutboundLog::getDeleteFlag, 0)
+                    .in(MaterialOutboundLog::getStockId, stockIds)
+                    .orderByDesc(MaterialOutboundLog::getOutboundTime)
+                    .orderByDesc(MaterialOutboundLog::getCreateTime));
+            for (MaterialOutboundLog outbound : outboundList) {
+                if (StringUtils.hasText(outbound.getStockId())) {
+                    latestOutboundByStockId.putIfAbsent(outbound.getStockId(), outbound);
+                }
+            }
+        }
+
+        for (MaterialStock record : records) {
+            MaterialInbound inbound = latestInboundByKey.get(
+                    buildMaterialCodeKey(record.getMaterialCode(), record.getColor(), record.getSize()));
+            if (inbound != null) {
+                record.setLastInboundBy(inbound.getOperatorName());
+                if (record.getLastInboundDate() == null) {
+                    record.setLastInboundDate(inbound.getInboundTime());
+                }
+            }
+
+            MaterialOutboundLog outbound = latestOutboundByStockId.get(record.getId());
+            if (outbound != null) {
+                record.setLastOutboundBy(outbound.getOperatorName());
+                if (record.getLastOutboundDate() == null) {
+                    record.setLastOutboundDate(outbound.getOutboundTime());
+                }
+            }
+        }
+    }
+
+    private String buildMaterialCodeKey(String materialCode, String color, String size) {
+        return String.join("|",
+                Objects.toString(materialCode, ""),
+                Objects.toString(color, ""),
+                Objects.toString(size, ""));
+    }
 
     public List<MaterialStockAlertDto> listAlerts(Map<String, Object> params) {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : params;
