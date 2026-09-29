@@ -29,9 +29,8 @@ export interface UseAlertDataReturn {
   alertCount: number;
   unreadNoticeCount: number;
   patrolSummary: ReturnType<typeof useAiPatrol>['patrolSummary'];
-  // refs
-  panelRef: React.RefObject<HTMLDivElement>;
-  btnRef: React.RefObject<HTMLButtonElement>;
+  /** AI巡检简报行（已过滤"今日不再提醒"，key 稳定可 dismiss） */
+  patrolRows: Array<NonNullable<ReturnType<typeof useAiPatrol>['patrolSummary']>['recentActions'][number] & { dismissKey: string }>;
   // 派生
   riskLevel: 'high' | 'mid' | 'ok';
   dotColor: string;
@@ -58,8 +57,6 @@ export function useAlertData(): UseAlertDataReturn {
   const [_myUnreadCount, setMyUnreadCount] = useState(0);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(loadDismissed);
   const [dismissedNoticeIds, setDismissedNoticeIds] = useState<Set<number>>(loadDismissedNotices);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
 
   const fetchedTodayRef = useRef(fetchedToday);
   fetchedTodayRef.current = fetchedToday;
@@ -72,6 +69,18 @@ export function useAlertData(): UseAlertDataReturn {
 
   const visibleEvents = useMemo(() => events.filter(ev => !dismissedIds.has(ev.id)), [events, dismissedIds]);
   const visibleNotices = useMemo(() => myNotices.filter(n => !dismissedNoticeIds.has(n.id)), [myNotices, dismissedNoticeIds]);
+
+  // AI巡检简报行：过滤"今日不再提醒"（key 优先用工单 id，老数据兜底 类型+文案）
+  const patrolRows = useMemo(
+    () => (patrolSummary?.recentActions ?? [])
+      .map((a, idx) => ({
+        ...a,
+        dismissKey: `patrol_${a.id ?? `${a.issueType}_${String(a.detectedIssue || '').slice(0, 48)}_${idx}`}`,
+      }))
+      .filter((a) => !dismissedIds.has(a.dismissKey))
+      .slice(0, 6),
+    [patrolSummary, dismissedIds],
+  );
 
   const alertCount = visibleEvents.length + (patrolSummary?.pendingCount ?? 0);
   const unreadNoticeCount = visibleNotices.filter(n => !n.isRead).length;
@@ -174,27 +183,8 @@ export function useAlertData(): UseAlertDataReturn {
     if (!fetchedToday) { fetchData(); fetchPatrolData(); }
   }, [fetchedToday, fetchData, fetchPatrolData]);
 
-  // 点击面板外关闭
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        panelRef.current && !panelRef.current.contains(e.target as Node) &&
-        btnRef.current  && !btnRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  // Escape 关闭
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, []);
+  // D-626：面板已改为 antd Drawer（遮罩点击/Esc 关闭由 Drawer 自带），原"点击面板外关闭"
+  // 与 Escape 全局监听随 panelRef 一起移除。
 
   // 消除单条我的通知（localStorage 每日持久化，隔天重新检测）
   const dismissNotice = useCallback((id: number, e: React.MouseEvent) => {
@@ -287,8 +277,7 @@ export function useAlertData(): UseAlertDataReturn {
     alertCount,
     unreadNoticeCount,
     patrolSummary,
-    panelRef,
-    btnRef,
+    patrolRows,
     riskLevel,
     dotColor,
     patrolSeverityColor,

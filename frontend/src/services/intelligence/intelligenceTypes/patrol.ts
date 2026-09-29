@@ -25,6 +25,8 @@ export interface PatrolAction {
   cancelledBy?: string;          // 撤销人ID
   cancelledAt?: string;          // 撤销时间
   remediationType?: 'AUTO' | 'SUGGESTION';  // 自愈类型
+  /** 目标可读标签（后端富化：订单→订单号、样衣→款号）；为空时前端回落显示原始 ID */
+  targetLabel?: string;
   // === 审批字段（原有） ===
   approverId?: string;
   approverName?: string;
@@ -41,11 +43,13 @@ export interface PatrolSummary {
   autoExecutedToday: number;
   highRiskPending: number;
   recentActions: Array<{
+    id?: number;
     issueType: string;
     detectedIssue: string;
     issueSeverity: string;
     status: string;
     targetType: string;
     targetId: string;
+    targetLabel?: string;
   }>;
 }

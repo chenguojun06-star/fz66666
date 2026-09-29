@@ -8,7 +8,7 @@ import {
   RobotOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
-import { Badge } from 'antd';
+import { Badge, Drawer } from 'antd';
 import { RISK_TYPE_LABELS } from '@/modules/production/pages/Production/List/hooks/useAiPatrol';
 import XiaoyunCloudAvatar from '../common/XiaoyunCloudAvatar';
 import XiaoyunInsightCard from '../common/XiaoyunInsightCard';
@@ -32,8 +32,7 @@ const SmartAlertBell: React.FC = () => {
     alertCount,
     unreadNoticeCount,
     patrolSummary,
-    panelRef,
-    btnRef,
+    patrolRows,
     dotColor,
     patrolSeverityColor,
     goTo,
@@ -53,7 +52,6 @@ const SmartAlertBell: React.FC = () => {
     <div className="smart-alert-wrap">
       {/* ── 按钮 ── */}
       <button
-        ref={btnRef}
         onClick={handleToggle}
         className={`smart-alert-btn${open ? ' open' : ''}`}
         title="今日跟踪预警"
@@ -75,22 +73,22 @@ const SmartAlertBell: React.FC = () => {
         )}
       </button>
 
-      {/* ── 下滑面板 ── */}
-      <div
-        ref={panelRef}
-        className={`smart-alert-panel${open ? ' visible' : ''}`}
-      >
-        {/* 面板头 */}
-        <div className="sap-header">
-          <div className="sap-title">
+      {/* ── 侧滑抽屉（D-626：原为悬浮下滑面板，收窄易误关、信息放不开，改为右侧侧滑） ── */}
+      <Drawer
+        open={open}
+        onClose={() => setOpen(false)}
+        placement="right"
+        width="min(460px, 94vw)"
+        rootClassName="smart-alert-drawer"
+        styles={{ body: { padding: '12px 16px', background: 'var(--color-bg-page, #f7f8fa)' } }}
+        title={
+          <div className="sap-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <ThunderboltOutlined style={{ color: 'var(--color-accent-purple)' }} />
             <span>今日跟踪预警</span>
             {brief?.date && <span className="sap-date">{brief.date}</span>}
           </div>
-          <button className="sap-close" onClick={() => setOpen(false)}>
-            <CloseOutlined style={{ fontSize: 13 }} />
-          </button>
-        </div>
+        }
+      >
 
         {loading && (
           <div className="sap-loading">
@@ -143,7 +141,7 @@ const SmartAlertBell: React.FC = () => {
             )}
 
             {/* ── AI 巡检简报 ── */}
-            {patrolSummary && (patrolSummary.autoExecutedToday > 0 || patrolSummary.recentActions.length > 0) && (
+            {patrolSummary && (patrolSummary.autoExecutedToday > 0 || (patrolRows?.length ?? 0) > 0) && (
               <div className="sap-section">
                 <div className="sap-section-title">
                   <RobotOutlined style={{ color: 'var(--color-accent-purple)' }} /> AI巡检简报
@@ -156,9 +154,10 @@ const SmartAlertBell: React.FC = () => {
                     <Badge count={patrolSummary.highRiskPending} size="small"
                       style={{ marginLeft: 8, background: 'var(--color-error)', boxShadow: 'none' }} />
                   )}
+                  <span className="u-ml-6 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>点 × 今日不再提醒</span>
                 </div>
-                {patrolSummary.recentActions.slice(0, 5).map((action, idx) => (
-                  <div key={idx} className="sap-event-row" style={{ cursor: 'default' }}>
+                {(patrolRows ?? []).map((action) => (
+                  <div key={action.dismissKey} className="sap-event-row" style={{ cursor: 'default' }}>
                     <span className="sap-event-dot"
                       style={{ background: patrolSeverityColor(action.issueSeverity) }} />
                     <span className="sap-event-title">
@@ -172,6 +171,13 @@ const SmartAlertBell: React.FC = () => {
                     }}>
                       {action.status === 'PENDING' ? '待处理' : '已执行'}
                     </span>
+                    <button
+                      className="sap-event-dismiss-btn"
+                      onClick={(e) => dismissEvent(action.dismissKey, e)}
+                      title="今日不再提醒（明天会重新检测）"
+                    >
+                      <CloseOutlined style={{ fontSize: 9 }} />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -414,7 +420,7 @@ const SmartAlertBell: React.FC = () => {
 
           </div>
         )}
-      </div>
+      </Drawer>
     </div>
   );
 };

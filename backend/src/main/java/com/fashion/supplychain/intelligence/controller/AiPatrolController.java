@@ -4,6 +4,7 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.entity.AiPatrolAction;
 import com.fashion.supplychain.intelligence.orchestration.PatrolClosedLoopOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.PatrolTargetLabelEnricher;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,20 +22,27 @@ public class AiPatrolController {
     @Autowired
     private PatrolClosedLoopOrchestrator patrolOrchestrator;
 
+    @Autowired
+    private PatrolTargetLabelEnricher targetLabelEnricher;
+
     @GetMapping("/actions/by-target")
     public Result<List<AiPatrolAction>> getActionsByTarget(
             @RequestParam String targetType,
             @RequestParam String targetId,
             @RequestParam(defaultValue = "10") int limit) {
         Long tenantId = UserContext.tenantId();
-        return Result.success(patrolOrchestrator.listByTarget(tenantId, targetType, targetId, limit));
+        List<AiPatrolAction> actions = patrolOrchestrator.listByTarget(tenantId, targetType, targetId, limit);
+        targetLabelEnricher.enrich(actions);
+        return Result.success(actions);
     }
 
     @GetMapping("/actions/recent")
     public Result<List<AiPatrolAction>> getRecentActions(
             @RequestParam(defaultValue = "20") int limit) {
         Long tenantId = UserContext.tenantId();
-        return Result.success(patrolOrchestrator.listRecentByTenant(tenantId, limit));
+        List<AiPatrolAction> actions = patrolOrchestrator.listRecentByTenant(tenantId, limit);
+        targetLabelEnricher.enrich(actions);
+        return Result.success(actions);
     }
 
     @GetMapping("/summary")
@@ -45,14 +53,17 @@ public class AiPatrolController {
         summary.put("autoExecutedToday", patrolOrchestrator.countAutoExecutedToday(tenantId));
         summary.put("highRiskPending", patrolOrchestrator.countHighRiskPending(tenantId));
         List<AiPatrolAction> recent = patrolOrchestrator.listRecentByTenant(tenantId, 5);
-        List<Map<String, String>> recentItems = recent.stream().map(a -> {
-            Map<String, String> m = new LinkedHashMap<>();
+        targetLabelEnricher.enrich(recent);
+        List<Map<String, Object>> recentItems = recent.stream().map(a -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", a.getId());
             m.put("issueType", a.getIssueType());
             m.put("detectedIssue", a.getDetectedIssue());
             m.put("issueSeverity", a.getIssueSeverity());
             m.put("status", a.getStatus());
             m.put("targetType", a.getTargetType());
             m.put("targetId", a.getTargetId());
+            m.put("targetLabel", a.getTargetLabel());
             return m;
         }).toList();
         summary.put("recentActions", recentItems);
@@ -80,7 +91,9 @@ public class AiPatrolController {
     @GetMapping("/actions/pending")
     public Result<List<AiPatrolAction>> getPendingActions() {
         Long tenantId = UserContext.tenantId();
-        return Result.success(patrolOrchestrator.listPendingApproval(tenantId));
+        List<AiPatrolAction> actions = patrolOrchestrator.listPendingApproval(tenantId);
+        targetLabelEnricher.enrich(actions);
+        return Result.success(actions);
     }
 
     @GetMapping("/actions/by-status")
@@ -88,7 +101,9 @@ public class AiPatrolController {
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "20") int limit) {
         Long tenantId = UserContext.tenantId();
-        return Result.success(patrolOrchestrator.listByStatus(tenantId, status, limit));
+        List<AiPatrolAction> actions = patrolOrchestrator.listByStatus(tenantId, status, limit);
+        targetLabelEnricher.enrich(actions);
+        return Result.success(actions);
     }
 
     @PostMapping("/actions/{id}/execute")

@@ -79,4 +79,8 @@ public class AiPatrolAction {
 
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
+    /** 目标可读标签（非DB列）：订单→订单号、样衣/款式→款号；列表接口返回前由 PatrolTargetLabelEnricher 富化 */
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String targetLabel;
 }

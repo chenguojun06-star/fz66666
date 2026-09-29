@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getPatrolActionsByTarget, getPatrolSummary, type PatrolAction, type PatrolSummary } from '@/services/intelligence/intelligenceApi';
+// D-626：类型中文标签统一到共享映射（原 4 键小表缺 DELAY/STAGNANT/SAMPLE_OVERDUE 等 →
+// 顶部预警面板显示原始英文码）。此处仅保留导出别名兼容既有引用。
+import { PATROL_ISSUE_TYPE_LABELS } from '@/services/intelligence/patrolLabels';
 
 interface PatrolRiskMap {
   [orderNo: string]: PatrolAction[];
@@ -15,12 +18,7 @@ interface UseAiPatrolReturn {
   getHighestSeverity: (orderNo: string) => 'HIGH' | 'MEDIUM' | 'LOW' | null;
 }
 
-const RISK_TYPE_LABELS: Record<string, string> = {
-  DEADLINE_RISK: '交期风险',
-  FACTORY_SILENCE: '工厂沉默',
-  QUALITY_SPIKE: '质量异常',
-  CORRELATED_RISK: '多重风险',
-};
+const RISK_TYPE_LABELS: Record<string, string> = PATROL_ISSUE_TYPE_LABELS;
 
 export function useAiPatrol(): UseAiPatrolReturn {
   const [patrolRiskMap, setPatrolRiskMap] = useState<PatrolRiskMap>({});

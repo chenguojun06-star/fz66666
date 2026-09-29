@@ -14,62 +14,11 @@ import ResizableTable from '@/components/common/ResizableTable';
 import type { ColumnsType } from 'antd/es/table';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { PatrolAction, PatrolSummary } from '@/services/intelligence/intelligenceApi';
+// D-626：类型/目标中文标签统一到共享映射（与顶部预警面板同源，不再各维护一份漂移表）
+import { PATROL_ISSUE_TYPE_LABELS as ISSUE_TYPE_LABELS, PATROL_TARGET_TYPE_LABELS as TARGET_TYPE_LABELS } from '@/services/intelligence/patrolLabels';
 import { purchaseCartApi } from '@/services/purchaseCartApi';
 import { usePersistentTab } from '@/hooks/usePersistentTab';
 import './index.css';
-
-const ISSUE_TYPE_LABELS: Record<string, string> = {
-  DEADLINE_RISK: '交期风险',
-  FACTORY_SILENCE: '工厂沉默',
-  QUALITY_SPIKE: '质量异常',
-  STAGNANT: '进度停滞',
-  CORRELATED_RISK: '多重风险',
-  MATERIAL_GAP: '物料缺口',
-  SOURCING_SPECIALIST_JOB: '采购专家',
-  PAYROLL_ANOMALY: '工资异常',
-  OUTSOURCE_TIMEOUT: '外发超时',
-  WAREHOUSE_DIFF: '入库差异',
-  // D-513 补全：以下类型数据库实际存在，但原先缺映射 → 列表直接显示英文原文，
-  // 用户反馈「异常类型是英文，看不懂」。按 t_ai_patrol_action 实际取值补齐。
-  COMBO_RISK: '套装风险',
-  CUTTING_BACKLOG: '裁剪积压',
-  STAGNANT_ORDER: '订单停滞',
-  QUALITY: '质量异常',
-  LOW_ADOPTION_RATE: '建议采纳率偏低',
-  FACTORY_BOTTLENECK: '工厂瓶颈',
-  DELAY: '交期延误',
-  INVENTORY_BACKLOG: '库存积压',
-  MORNING_BRIEF: '晨间简报',
-  MATERIAL: '物料异常',
-  PAYROLL: '工资异常',
-  // 以下为各巡检 Job 的 issueType，暂未落库但代码已使用，一并预置避免再显示英文
-  MATERIAL_SHORT: '物料短缺',
-  MATERIAL_DIFF: '物料差异',
-  NODE_STAGNANT: '工序停滞',
-  COLLAB_TASK_OVERDUE: '协作任务逾期',
-  COST_OVERRUN: '成本超支',
-  DELIVERY_EXCEPTION: '交付出库异常',
-  DELIVERY_UNLIKELY: '交期不乐观',
-  EXCHANGE_RATE: '汇率波动',
-  FABRIC_PRICE: '面料价格波动',
-  PRODUCTION_DELAY: '生产延误',
-  STOCK_AGING: '呆滞库存',
-  QUALITY_RETURN: '质量退货',
-};
-
-/** 目标类型中文名（原列表直接拼 targetType，用户看到的是 order / factory 等英文） */
-const TARGET_TYPE_LABELS: Record<string, string> = {
-  order: '订单',
-  factory: '工厂',
-  tenant: '租户',
-  scene: '场景',
-  style: '款号',
-  material: '物料',
-  worker: '工人',
-  customer: '客户',
-  supplier: '供应商',
-  warehouse: '仓库',
-};
 
 // 可触发智能采购生成的异常类型
 const SMART_SOURCING_ISSUE_TYPES = ['MATERIAL_GAP', 'SOURCING_SPECIALIST_JOB'];
@@ -252,11 +201,12 @@ const PatrolActionCenter: React.FC = () => {
       title: '目标',
       width: 180,
       // D-513：原直接拼 `${targetType}: ${targetId}`，用户看到「order: UNKNOWN」看不懂。
-      // 现：targetType 转中文；targetId 为空或 UNKNOWN 时显示「未关联」。
+      // 现：targetType 转中文；D-626 起后端富化 targetLabel（订单→订单号、样衣→款号），
+      //     富化失败回落原始 ID；targetId 为空或 UNKNOWN 时显示「未关联」。
       render: (_, r) => {
         const typeLabel = TARGET_TYPE_LABELS[r.targetType] || r.targetType || '-';
         const rawId = r.targetId == null ? '' : String(r.targetId).trim();
-        const idLabel = (!rawId || rawId.toUpperCase() === 'UNKNOWN') ? '未关联' : rawId;
+        const idLabel = (!rawId || rawId.toUpperCase() === 'UNKNOWN') ? '未关联' : (r.targetLabel || rawId);
         return `${typeLabel}: ${idLabel}`;
       },
     },
