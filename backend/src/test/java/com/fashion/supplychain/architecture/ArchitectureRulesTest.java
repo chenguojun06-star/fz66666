@@ -1,9 +1,14 @@
 package com.fashion.supplychain.architecture;
 
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
+import com.tngtech.archunit.lang.syntax.ArchRuleDefinition;
 import com.tngtech.archunit.library.Architectures;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,6 +17,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
@@ -181,6 +188,92 @@ class ArchitectureRulesTest {
             System.out.println(msg == null ? "" : msg.lines().limit(5)
                     .reduce("", (a, b) -> a + "    " + b + "\n"));
         }
+    }
+
+    /**
+     * 规则6：Controller 不得直接依赖多个 Service。
+     *
+     * <p>Controller 只应做「认证 / 参数校验 / 调 Orchestrator / 组装响应」。直接注入
+     * 多个 Service 意味着跨服务的业务编排泄漏到了最外层，事务边界与权限校验都会失控。
+     *
+     * <p>本条规则是 D-630 新增的。此前 CLAUDE.md 已写明
+     * 「Controllers must NOT call multiple services」，但 ArchUnit 里没有对应规则，
+     * 属于「有规范、无门禁」——存量违规会持续增长而无人察觉。典型存量：
+     * CrmClientController 与 SupplierPortalController 各注入 7 个 Service。
+     */
+    @Test
+    @DisplayName("Controller 不得直接依赖多个 Service")
+    void controllersShouldNotDependOnMultipleServices() {
+        JavaClasses c = classes();
+        ArchCondition<JavaClass> condition = new ArchCondition<>("not depend on more than one Service") {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                // 只看字段注入（@Autowired / @RequiredArgsConstructor 的 final 字段）。
+                // 不用 getDirectDependenciesFromSelf()：那会把方法参数、返回值、泛型里的
+                // Service 类型也算进来（属正常的方法签名用法，不是"依赖多个 Service"），
+                // 实测会把数字从 30 余个放大到 300 余个，语义不清。
+                Set<String> svc = item.getFields().stream()
+                        .map(f -> f.getRawType())
+                        .filter(t -> t.getSimpleName().endsWith("Service"))
+                        .map(JavaClass::getName)
+                        .collect(Collectors.toSet());
+                if (svc.size() > 1) {
+                    events.add(SimpleConditionEvent.violated(item,
+                            item.getName() + " 直接依赖 " + svc.size() + " 个 Service: " + svc));
+                }
+            }
+        };
+        ArchRule rule = ArchRuleDefinition.classes()
+                .that().haveSimpleNameEndingWith("Controller")
+                .should(condition)
+                .because("Controller 应把跨服务编排交给 Orchestrator");
+
+        int violations = countViolations(c, rule);
+        assertNotWorse("controller.depends.on.multiple.services", violations, "见 ArchUnit 输出");
+    }
+
+    /**
+     * 规则7：Service 不得依赖其他 Service（跨服务编排必须上移到 Orchestrator）。
+     *
+     * <p>CLAUDE.md 的 P0 铁律原文：「Services must NOT call each other — all cross-service
+     * orchestration goes through Orchestrator」。Service 互调会让事务边界碎裂
+     * （每个 Service 各自的事务无法合并），且使调用链难以追踪。
+     *
+     * <p>豁免：{@code .common.} 包下的基础设施 Service（如 DistributedLockService、
+     * RedisService）属于横切关注点，不参与业务编排，不计入违规。
+     *
+     * <p>本条规则是 D-630 新增的，与规则6 同属「有规范、无门禁」的补漏。
+     */
+    @Test
+    @DisplayName("Service 不得依赖其他 Service")
+    void servicesShouldNotDependOnServices() {
+        JavaClasses c = classes();
+        ArchCondition<JavaClass> condition = new ArchCondition<>("not depend on other Services") {
+            @Override
+            public void check(JavaClass item, ConditionEvents events) {
+                Set<String> svc = item.getFields().stream()
+                        .map(f -> f.getRawType())
+                        .filter(t -> t.getSimpleName().endsWith("Service"))
+                        // 排除自身接口：XxxServiceImpl 注入 XxxService 是标准写法
+                        .filter(t -> !item.getSimpleName().startsWith(t.getSimpleName()))
+                        // 豁免 .common. 下的基础设施 Service
+                        .filter(t -> !t.getPackageName().contains(".common."))
+                        .map(JavaClass::getName)
+                        .collect(Collectors.toSet());
+                if (!svc.isEmpty()) {
+                    events.add(SimpleConditionEvent.violated(item,
+                            item.getName() + " 依赖 " + svc.size() + " 个其他 Service: " + svc));
+                }
+            }
+        };
+        ArchRule rule = ArchRuleDefinition.classes()
+                .that().haveSimpleNameEndingWith("Service")
+                .or().haveSimpleNameEndingWith("ServiceImpl")
+                .should(condition)
+                .because("跨服务编排应上移到 Orchestrator 层");
+
+        int violations = countViolations(c, rule);
+        assertNotWorse("service.depends.on.service", violations, "见 ArchUnit 输出");
     }
 
     /**
