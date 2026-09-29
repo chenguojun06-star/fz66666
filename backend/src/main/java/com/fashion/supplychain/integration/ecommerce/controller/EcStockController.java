@@ -4,7 +4,6 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.integration.ecommerce.entity.*;
 import com.fashion.supplychain.integration.ecommerce.orchestration.*;
-import com.fashion.supplychain.integration.ecommerce.service.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -14,6 +13,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 电商智能库存 Controller（库存 / 预警 / 采购建议 / 分仓分配 / 订单拆分）。
+ *
+ * <p>D-640：原先本类直接注入了 EcUniversalStockService、EcStockAlertService、
+ * EcPurchaseSuggestionService、EcWarehouseAllocationService、EcOrderSplitService
+ * 共 5 个 Service，属「Controller 依赖多个 Service」。查询已全部下沉到
+ * {@link EcStockOrchestrator}，本类只保留端点声明与响应组装。
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/ec/stock")
@@ -21,11 +28,6 @@ import java.util.Map;
 @ConditionalOnProperty(name = "fashion.ecommerce.enabled", havingValue = "true", matchIfMissing = true)
 public class EcStockController {
 
-    @Autowired private EcUniversalStockService universalStockService;
-    @Autowired private EcStockAlertService stockAlertService;
-    @Autowired private EcPurchaseSuggestionService purchaseSuggestionService;
-    @Autowired private EcWarehouseAllocationService allocationService;
-    @Autowired private EcOrderSplitService orderSplitService;
     @Autowired private EcStockOrchestrator stockOrchestrator;
     @Autowired private EcPurchaseSuggestionOrchestrator purchaseSuggestionOrchestrator;
     @Autowired private EcReplenishmentOrchestrator replenishmentOrchestrator;
@@ -69,23 +71,17 @@ public class EcStockController {
 
     @GetMapping("/list")
     public Result<List<EcUniversalStock>> listStock() {
-        Long tenantId = UserContext.tenantId();
-        return Result.success(universalStockService.listByTenant(tenantId));
+        return Result.success(stockOrchestrator.listStock(UserContext.tenantId()));
     }
 
     @GetMapping("/low-stock")
     public Result<List<EcUniversalStock>> listLowStock() {
-        Long tenantId = UserContext.tenantId();
-        return Result.success(universalStockService.listLowStock(tenantId));
+        return Result.success(stockOrchestrator.listLowStock(UserContext.tenantId()));
     }
 
     @GetMapping("/alerts")
     public Result<List<EcStockAlert>> listAlerts(@RequestParam(defaultValue = "false") boolean unresolvedOnly) {
-        Long tenantId = UserContext.tenantId();
-        if (unresolvedOnly) {
-            return Result.success(stockAlertService.listUnresolved(tenantId));
-        }
-        return Result.success(stockAlertService.listByTenant(tenantId));
+        return Result.success(stockOrchestrator.listAlerts(UserContext.tenantId(), unresolvedOnly));
     }
 
     @PostMapping("/alerts/{alertId}/resolve")
@@ -97,11 +93,7 @@ public class EcStockController {
 
     @GetMapping("/suggestions")
     public Result<List<EcPurchaseSuggestion>> listSuggestions(@RequestParam(defaultValue = "false") boolean pendingOnly) {
-        Long tenantId = UserContext.tenantId();
-        if (pendingOnly) {
-            return Result.success(purchaseSuggestionService.listPending(tenantId));
-        }
-        return Result.success(purchaseSuggestionService.listByTenant(tenantId));
+        return Result.success(stockOrchestrator.listSuggestions(UserContext.tenantId(), pendingOnly));
     }
 
     @PostMapping("/suggestions/generate")
@@ -139,14 +131,12 @@ public class EcStockController {
 
     @GetMapping("/allocations")
     public Result<List<EcWarehouseAllocation>> listAllocations() {
-        Long tenantId = UserContext.tenantId();
-        return Result.success(allocationService.listByTenant(tenantId));
+        return Result.success(stockOrchestrator.listAllocations(UserContext.tenantId()));
     }
 
     @GetMapping("/splits")
     public Result<List<EcOrderSplit>> listSplits() {
-        Long tenantId = UserContext.tenantId();
-        return Result.success(orderSplitService.listByTenant(tenantId));
+        return Result.success(stockOrchestrator.listSplits(UserContext.tenantId()));
     }
 
     @PutMapping("/safe-stock")

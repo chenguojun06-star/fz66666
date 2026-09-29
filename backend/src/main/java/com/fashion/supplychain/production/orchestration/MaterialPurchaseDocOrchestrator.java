@@ -58,6 +58,35 @@ public class MaterialPurchaseDocOrchestrator {
     // ─────────────────────────────────────────────────────────────────
 
     /**
+     * 查询指定订单/款号的历史采购单据列表（按上传时间倒序），并实时刷新图片签名 URL。
+     *
+     * <p>D-640 从 {@code MaterialPurchaseController#listDocs} 下沉。原 Controller 直接注入了
+     * {@code PurchaseOrderDocService} 与 {@code MaterialPurchaseService} 两个 Service
+     * （后者还是死注入），属「Controller 依赖多个 Service」。
+     *
+     * <p>归属口径（D-360d，逐字保留）：<b>大货按订单号，样衣采购无订单号按款号归属查询</b>。
+     * 两者都为空的参数校验由 Controller 负责（属请求层校验）。
+     *
+     * <p>图片 URL 必须实时重签，否则历史单据图片会因签名过期而永久不可查看。
+     *
+     * @param tenantId 租户
+     * @param orderNo  订单号（优先）
+     * @param styleNo  款号（orderNo 为空时使用）
+     */
+    public List<PurchaseOrderDoc> listDocs(Long tenantId, String orderNo, String styleNo) {
+        List<PurchaseOrderDoc> docs;
+        if (orderNo != null && !orderNo.isBlank()) {
+            docs = purchaseOrderDocService.listByOrderNo(tenantId, orderNo);
+        } else {
+            docs = purchaseOrderDocService.listByStyleNo(tenantId, styleNo);
+        }
+        for (PurchaseOrderDoc doc : docs) {
+            doc.setImageUrl(resolveDocImageUrl(tenantId, doc.getImageUrl()));
+        }
+        return docs;
+    }
+
+    /**
      * 上传采购单文档并 AI 识别
      *
      * @param file    用户上传的图片或 PDF（支持 jpg/png/webp/pdf）

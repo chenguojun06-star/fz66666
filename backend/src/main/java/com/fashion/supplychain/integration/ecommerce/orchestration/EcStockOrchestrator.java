@@ -2,12 +2,16 @@ package com.fashion.supplychain.integration.ecommerce.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.integration.ecommerce.entity.EcOrderSplit;
 import com.fashion.supplychain.integration.ecommerce.entity.EcPurchaseSuggestion;
 import com.fashion.supplychain.integration.ecommerce.entity.EcStockAlert;
 import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
+import com.fashion.supplychain.integration.ecommerce.entity.EcWarehouseAllocation;
+import com.fashion.supplychain.integration.ecommerce.service.EcOrderSplitService;
 import com.fashion.supplychain.integration.ecommerce.service.EcPurchaseSuggestionService;
 import com.fashion.supplychain.integration.ecommerce.service.EcStockAlertService;
 import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
+import com.fashion.supplychain.integration.ecommerce.service.EcWarehouseAllocationService;
 import com.fashion.supplychain.integration.ecommerce.service.PlatformNotifyService;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.service.ProductSkuService;
@@ -29,6 +33,9 @@ public class EcStockOrchestrator {
     @Autowired private EcUniversalStockService universalStockService;
     @Autowired private EcStockAlertService stockAlertService;
     @Autowired private EcPurchaseSuggestionService purchaseSuggestionService;
+    /** D-640：分仓分配 / 订单拆分查询（原在 EcStockController 直接注入） */
+    @Autowired private EcWarehouseAllocationService allocationService;
+    @Autowired private EcOrderSplitService orderSplitService;
     @Autowired private ProductSkuService productSkuService;
     /** D-532：组合商品（套装）——组合可售库存随 SKU 一并推送平台 */
     @Autowired(required = false) private com.fashion.supplychain.warehouse.service.ComboProductService comboProductService;
@@ -269,5 +276,55 @@ public class EcStockOrchestrator {
         }
         log.info("[EcStockOrchestrator] 安全库存更新完成: tenantId={}, skuId={}, count={}",
                 tenantId, skuId, stocks.size());
+    }
+
+    // ===== D-640：以下查询方法从 EcStockController 下沉 =====
+    // 原 Controller 直接注入了 EcUniversalStockService / EcStockAlertService /
+    // EcPurchaseSuggestionService / EcWarehouseAllocationService / EcOrderSplitService
+    // 共 5 个 Service，属「Controller 依赖多个 Service」。
+    // 前 3 个本类早已持有，故只补后 2 个依赖。
+
+    /** 当前租户的全量电商库存 */
+    public List<EcUniversalStock> listStock(Long tenantId) {
+        return universalStockService.listByTenant(tenantId);
+    }
+
+    /** 当前租户的低库存记录 */
+    public List<EcUniversalStock> listLowStock(Long tenantId) {
+        return universalStockService.listLowStock(tenantId);
+    }
+
+    /**
+     * 库存预警列表。
+     *
+     * @param unresolvedOnly true 只看未处理；false 看全部
+     */
+    public List<EcStockAlert> listAlerts(Long tenantId, boolean unresolvedOnly) {
+        if (unresolvedOnly) {
+            return stockAlertService.listUnresolved(tenantId);
+        }
+        return stockAlertService.listByTenant(tenantId);
+    }
+
+    /**
+     * 采购建议列表。
+     *
+     * @param pendingOnly true 只看待处理；false 看全部
+     */
+    public List<EcPurchaseSuggestion> listSuggestions(Long tenantId, boolean pendingOnly) {
+        if (pendingOnly) {
+            return purchaseSuggestionService.listPending(tenantId);
+        }
+        return purchaseSuggestionService.listByTenant(tenantId);
+    }
+
+    /** 分仓分配记录 */
+    public List<EcWarehouseAllocation> listAllocations(Long tenantId) {
+        return allocationService.listByTenant(tenantId);
+    }
+
+    /** 订单拆分记录 */
+    public List<EcOrderSplit> listSplits(Long tenantId) {
+        return orderSplitService.listByTenant(tenantId);
     }
 }

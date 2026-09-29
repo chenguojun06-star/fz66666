@@ -6,8 +6,6 @@ import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.PurchaseOrderDoc;
 import com.fashion.supplychain.production.orchestration.MaterialPurchaseDocOrchestrator;
 import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestrator;
-import com.fashion.supplychain.production.service.MaterialPurchaseService;
-import com.fashion.supplychain.production.service.PurchaseOrderDocService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,34 +27,22 @@ public class MaterialPurchaseController {
     @Autowired
     private MaterialPurchaseDocOrchestrator purchaseDocOrchestrator;
 
-    @Autowired
-    private PurchaseOrderDocService purchaseOrderDocService;
-
-    @Autowired
-    private MaterialPurchaseService materialPurchaseService;
-
     /**
      * 查询指定订单的历史单据列表（按上传时间倒序）
      * 图片URL实时刷新签名，确保历史单据图片永久可查看
+     *
+     * <p>D-640：归属查询与图片重签已下沉到 {@code MaterialPurchaseDocOrchestrator#listDocs}；
+     * 顺带删除一个声明了但全类从未使用的死注入（MaterialPurchaseService）。
      */
     @GetMapping("/docs")
     public Result<java.util.List<PurchaseOrderDoc>> listDocs(
             @RequestParam(value = "orderNo", required = false) String orderNo,
             @RequestParam(value = "styleNo", required = false) String styleNo) {
         Long tenantId = UserContext.tenantId();
-        // D-360d：大货按订单号，样衣采购无订单号按款号归属查询
-        java.util.List<PurchaseOrderDoc> docs;
-        if (orderNo != null && !orderNo.isBlank()) {
-            docs = purchaseOrderDocService.listByOrderNo(tenantId, orderNo);
-        } else if (styleNo != null && !styleNo.isBlank()) {
-            docs = purchaseOrderDocService.listByStyleNo(tenantId, styleNo);
-        } else {
+        if ((orderNo == null || orderNo.isBlank()) && (styleNo == null || styleNo.isBlank())) {
             return Result.fail("orderNo 与 styleNo 至少传一个");
         }
-        for (PurchaseOrderDoc doc : docs) {
-            doc.setImageUrl(purchaseDocOrchestrator.resolveDocImageUrl(tenantId, doc.getImageUrl()));
-        }
-        return Result.success(docs);
+        return Result.success(purchaseDocOrchestrator.listDocs(tenantId, orderNo, styleNo));
     }
 
     /**
