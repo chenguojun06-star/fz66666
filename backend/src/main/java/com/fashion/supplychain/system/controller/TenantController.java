@@ -2,10 +2,6 @@ package com.fashion.supplychain.system.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
-import com.fashion.supplychain.intelligence.service.TenantAiConfigService;
-import com.fashion.supplychain.integration.im.service.DingtalkNotifyService;
-import com.fashion.supplychain.integration.im.service.FeishuNotifyService;
-import com.fashion.supplychain.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
 import com.fashion.supplychain.system.entity.Role;
 import com.fashion.supplychain.system.entity.Tenant;
@@ -41,18 +37,10 @@ public class TenantController {
     @Autowired
     private SysNoticeOrchestrator sysNoticeOrchestrator;
 
-    @Autowired(required = false)
-    private RedisService redisService;
-
-    @Autowired(required = false)
-    private FeishuNotifyService feishuNotifyService;
-
-    @Autowired(required = false)
-    private DingtalkNotifyService dingtalkNotifyService;
-
-    @Autowired(required = false)
-    private TenantAiConfigService tenantAiConfigService;
-
+    /**
+     * D-649：AI 配置能力入口。原直接注入的 {@code TenantAiConfigService} 已下沉到本编排器；
+     * 仍声明为可选，Bean 缺失时与重构前一样返回「AI配置服务未启用」。
+     */
     @Autowired(required = false)
     private com.fashion.supplychain.system.orchestration.TenantAiConfigOrchestrator tenantAiConfigOrchestrator;
 
@@ -553,19 +541,10 @@ public class TenantController {
     @PostMapping("/admin/clear-permission-cache")
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Map<String, Object>> clearPermissionCache() {
-        if (redisService == null) {
+        if (!tenantOrchestrator.isPermissionCacheClearable()) {
             return Result.fail("Redis服务不可用");
         }
-        long role = redisService.deleteByPattern("role:perms:*");
-        long user = redisService.deleteByPattern("user:perms:*");
-        long ceiling = redisService.deleteByPattern("tenant:ceiling:*");
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("rolePermKeys", role);
-        result.put("userPermKeys", user);
-        result.put("tenantCeilingKeys", ceiling);
-        result.put("total", role + user + ceiling);
-        log.info("[ClearPermCache] 超管触发权限缓存清理 — role={}, user={}, ceiling={}", role, user, ceiling);
-        return Result.success(result);
+        return Result.success(tenantOrchestrator.clearPermissionCache());
     }
 
     /**
@@ -666,36 +645,23 @@ public class TenantController {
     @GetMapping("/{id}/ai-config")
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Map<String, Object>> getTenantAiConfig(@PathVariable Long id) {
-        if (tenantAiConfigService == null) return Result.fail("AI配置服务未启用");
-        com.fashion.supplychain.intelligence.entity.TenantAiConfig config = tenantAiConfigService.getOrCreateConfig(id);
-        TenantAiConfigService.ResolvedConfig resolved = tenantAiConfigService.resolveConfig(id);
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("config", config);
-        result.put("resolvedProvider", resolved.getProvider());
-        result.put("resolvedSource", resolved.getConfigSource());
-        return Result.success(result);
+        if (!isAiConfigAvailable()) return Result.fail("AI配置服务未启用");
+        return Result.success(tenantAiConfigOrchestrator.getConfig(id));
     }
 
     @PostMapping("/{id}/ai-config")
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<Map<String, Object>> setTenantAiConfig(@PathVariable Long id,
                                                           @RequestBody Map<String, Object> params) {
-        if (tenantAiConfigService == null) return Result.fail("AI配置服务未启用");
+        if (!isAiConfigAvailable()) return Result.fail("AI配置服务未启用");
         String action = params.get("action") != null ? params.get("action").toString() : "provision";
         if ("provision".equals(action)) {
             String apiKey = params.get("apiKey") != null ? params.get("apiKey").toString() : null;
             String model = params.get("model") != null ? params.get("model").toString() : null;
             if (apiKey == null || apiKey.isBlank()) return Result.fail("API Key不能为空");
-            tenantAiConfigService.setPlatformProvisioned(id, apiKey, model);
+            tenantAiConfigOrchestrator.setPlatformProvisioned(id, apiKey, model);
         } else if ("reset".equals(action)) {
-            com.fashion.supplychain.intelligence.entity.TenantAiConfig config = tenantAiConfigService.getOrCreateConfig(id);
-            config.setConfigSource("platform");
-            config.setTextApiKey(null);
-            config.setTextProvider("mimo");
-            config.setTextModel(null);
-            config.setTextBaseUrl(null);
-            config.setAiEnabled(1);
-            if (tenantAiConfigOrchestrator != null) tenantAiConfigOrchestrator.updateById(config);
+            tenantAiConfigOrchestrator.resetToPlatform(id);
         } else {
             return Result.fail("未知操作: " + action);
         }
@@ -707,7 +673,7 @@ public class TenantController {
 
     @PutMapping("/my/ai-config")
     public Result<Map<String, Object>> updateMyAiConfig(@RequestBody Map<String, Object> params) {
-        if (tenantAiConfigService == null) return Result.fail("AI配置服务未启用");
+        if (!isAiConfigAvailable()) return Result.fail("AI配置服务未启用");
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         if (tenantId == null) return Result.fail("无法获取租户信息");
         if (!com.fashion.supplychain.common.UserContext.isTenantOwner() && !com.fashion.supplychain.common.UserContext.isTopAdmin()) {
@@ -719,7 +685,7 @@ public class TenantController {
         String textModel = params.get("textModel") != null ? params.get("textModel").toString() : null;
         Integer aiEnabled = params.get("aiEnabled") != null
                 ? Integer.valueOf(params.get("aiEnabled").toString()) : null;
-        tenantAiConfigService.updateConfig(tenantId, textProvider, textApiKey, textBaseUrl, textModel, aiEnabled);
+        tenantAiConfigOrchestrator.updateConfig(tenantId, textProvider, textApiKey, textBaseUrl, textModel, aiEnabled);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("ok", true);
         return Result.success(result);
@@ -727,18 +693,20 @@ public class TenantController {
 
     @GetMapping("/my/ai-config")
     public Result<Map<String, Object>> getMyAiConfig() {
-        if (tenantAiConfigService == null) return Result.fail("AI配置服务未启用");
+        if (!isAiConfigAvailable()) return Result.fail("AI配置服务未启用");
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         if (tenantId == null) return Result.fail("无法获取租户信息");
         if (!com.fashion.supplychain.common.UserContext.isTenantOwner() && !com.fashion.supplychain.common.UserContext.isTopAdmin()) {
             return Result.fail("只有工厂主账号或管理员才能查看AI配置");
         }
-        com.fashion.supplychain.intelligence.entity.TenantAiConfig config = tenantAiConfigService.getOrCreateConfig(tenantId);
-        TenantAiConfigService.ResolvedConfig resolved = tenantAiConfigService.resolveConfig(tenantId);
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("config", config);
-        result.put("resolvedProvider", resolved.getProvider());
-        result.put("resolvedSource", resolved.getConfigSource());
-        return Result.success(result);
+        return Result.success(tenantAiConfigOrchestrator.getConfig(tenantId));
+    }
+
+    /**
+     * AI 配置编排器与其内部 Service 任一缺失即视为「未启用」——
+     * 与重构前「Service 为 null 则返回同一文案」的对外行为一致。
+     */
+    private boolean isAiConfigAvailable() {
+        return tenantAiConfigOrchestrator != null && tenantAiConfigOrchestrator.isAvailable();
     }
 }

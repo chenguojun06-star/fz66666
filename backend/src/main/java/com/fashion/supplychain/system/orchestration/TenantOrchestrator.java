@@ -21,6 +21,7 @@ import com.fashion.supplychain.system.helper.TenantRoleInitHelper;
 import com.fashion.supplychain.system.helper.TenantApplicationHelper;
 import com.fashion.supplychain.system.helper.TenantSubAccountHelper;
 import com.fashion.supplychain.system.helper.TenantSubscriptionGrantHelper;
+import com.fashion.supplychain.service.RedisService;
 
 @Service
 @Slf4j
@@ -38,6 +39,12 @@ public class TenantOrchestrator {
     @Autowired private TenantApplicationHelper applicationHelper;
     @Autowired private TenantSubAccountHelper subAccountHelper;
     @Autowired private TenantSubscriptionGrantHelper subscriptionGrantHelper;
+
+    /**
+     * D-649：权限缓存清理用（原 TenantController 直接注入，规则6 违规）。
+     * 声明为可选 —— 与重构前一致，Bean 缺失时由 {@link #isPermissionCacheClearable()} 暴露给调用方降级。
+     */
+    @Autowired(required = false) private RedisService redisService;
 
     public static final Map<String, Map<String, Object>> PLAN_DEFINITIONS;
     static {
@@ -317,4 +324,33 @@ public class TenantOrchestrator {
 
     private void assertSuperAdmin() { if (!UserContext.isSuperAdmin()) throw new AccessDeniedException("仅超级管理员可执行此操作"); }
     private User sanitizeUser(User user) { if (user != null) { user.setPassword(null); } return user; }
+
+    // ==================== D-649：自 TenantController 下沉 ====================
+
+    /** 权限缓存清理能力是否可用（Redis Bean 未装配时为 false，由 Controller 决定降级响应体）。 */
+    public boolean isPermissionCacheClearable() {
+        return redisService != null;
+    }
+
+    /**
+     * 超级管理员：立即清理全部权限缓存
+     * 适用于云端无法直接执行 Redis CLI 时通过 API 触发
+     * 清理范围：role:perms:* / user:perms:* / tenant:ceiling:*
+     *
+     * <p>调用前须先确认 {@link #isPermissionCacheClearable()}。
+     *
+     * @return 各模式清理条数与总数
+     */
+    public Map<String, Object> clearPermissionCache() {
+        long role = redisService.deleteByPattern("role:perms:*");
+        long user = redisService.deleteByPattern("user:perms:*");
+        long ceiling = redisService.deleteByPattern("tenant:ceiling:*");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("rolePermKeys", role);
+        result.put("userPermKeys", user);
+        result.put("tenantCeilingKeys", ceiling);
+        result.put("total", role + user + ceiling);
+        log.info("[ClearPermCache] 超管触发权限缓存清理 — role={}, user={}, ceiling={}", role, user, ceiling);
+        return result;
+    }
 }
