@@ -1,51 +1,43 @@
 package com.fashion.supplychain.crm.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.fashion.supplychain.auth.AuthTokenService;
-import com.fashion.supplychain.auth.TokenSubject;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.crm.entity.Customer;
-import com.fashion.supplychain.crm.entity.CustomerClientUser;
-import com.fashion.supplychain.crm.entity.Receivable;
-import com.fashion.supplychain.crm.entity.ReceivableReceiptLog;
 import com.fashion.supplychain.crm.orchestration.CrmClientOrchestrator;
-import com.fashion.supplychain.crm.service.CustomerClientUserService;
-import com.fashion.supplychain.crm.service.CustomerService;
-import com.fashion.supplychain.crm.service.ReceivableReceiptLogService;
-import com.fashion.supplychain.crm.service.ReceivableService;
-import com.fashion.supplychain.production.entity.MaterialPurchase;
-import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.production.service.MaterialPurchaseService;
-import com.fashion.supplychain.production.service.ProductionOrderService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
-import java.time.Duration;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Map;
 
-@Slf4j
+/**
+ * 客户门户（crm-client）接口层。
+ *
+ * <p><b>职责边界（D-632 重构）：</b>本类只做四件事 ——
+ * <ol>
+ *   <li>解析当前调用者（{@link #resolveCustomerId()}，读 {@code UserContext}）</li>
+ *   <li>参数非空校验</li>
+ *   <li>调用 {@link CrmClientOrchestrator}</li>
+ *   <li>把结果包成 {@link Result}</li>
+ * </ol>
+ * 全部业务编排（订单/采购/账款查询、看板聚合、登录鉴权）已下沉到 Orchestrator。
+ *
+ * <p><b>为什么之前不是这样：</b>本类曾直接注入 7 个 Service 并在 Controller 里写 SQL 条件、
+ * 拼装业务对象，属 D-630 规则6「Controller 不得直接依赖多个 Service」的典型存量违规
+ * （同类还有 SupplierPortalController）。跨服务编排放在最外层会让事务边界与权限校验失控。
+ *
+ * <p><b>错误响应：</b>域内失败由 Orchestrator 抛 {@code IllegalArgumentException}，
+ * 经 {@code GlobalExceptionHandler} 统一转成 HTTP 400 + {@code Result.fail(400, msg)}；
+ * 本类只保留「未登录」这一 Web 层判定，返回 {@code Result.fail("请先登录")}（HTTP 200 + code 500）。
+ */
 @RestController
 @RequestMapping("/api/crm-client")
 public class CrmClientController {
 
     private static final String CRM_CLIENT_ROLE = "crm_client";
 
-    @Autowired private CustomerService customerService;
-    @Autowired private CustomerClientUserService customerClientUserService;
-    @Autowired private CrmClientOrchestrator crmClientOrchestrator;
-    @Autowired private ProductionOrderService productionOrderService;
-    @Autowired private MaterialPurchaseService materialPurchaseService;
-    @Autowired private ReceivableService receivableService;
-    @Autowired private ReceivableReceiptLogService receivableReceiptLogService;
-    @Autowired private AuthTokenService authTokenService;
-    @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired
+    private CrmClientOrchestrator crmClientOrchestrator;
 
     @PostMapping("/login")
     public Result<Map<String, Object>> login(@RequestBody Map<String, String> request) {
@@ -56,60 +48,7 @@ public class CrmClientController {
             return Result.fail("请输入用户名和密码");
         }
 
-        LambdaQueryWrapper<CustomerClientUser> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(CustomerClientUser::getUsername, username)
-                .eq(CustomerClientUser::getDeleteFlag, 0)
-                .eq(CustomerClientUser::getStatus, "ACTIVE");
-        CustomerClientUser user = customerClientUserService.getOne(wrapper);
-
-        if (user == null) {
-            return Result.fail("用户不存在或已禁用");
-        }
-
-        boolean passwordMatch;
-        try {
-            passwordMatch = passwordEncoder.matches(password, user.getPasswordHash());
-        } catch (Exception e) {
-            log.warn("[CRM客户端] 密码校验异常: {}", e.getMessage());
-            passwordMatch = false;
-        }
-
-        if (!passwordMatch) {
-            return Result.fail("密码错误");
-        }
-
-        Customer customer = customerService.lambdaQuery()
-                .eq(Customer::getId, user.getCustomerId())
-                .eq(Customer::getDeleteFlag, 0)
-                .one();
-        if (customer == null) {
-            return Result.fail("客户信息不存在");
-        }
-
-        crmClientOrchestrator.updateLastLoginTime(user);
-
-        TokenSubject subject = new TokenSubject();
-        subject.setUserId(user.getId());
-        subject.setUsername(user.getUsername());
-        subject.setRoleName(CRM_CLIENT_ROLE);
-        subject.setTenantId(user.getTenantId() != null ? user.getTenantId() : 0L);
-        subject.setTenantOwner(false);
-        subject.setSuperAdmin(false);
-        subject.setPermissionRange("own");
-        subject.setPwdVersion(0L);
-        subject.setFactoryId(user.getCustomerId());
-
-        String token = authTokenService.issueToken(subject, Duration.ofHours(24));
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("token", token);
-        result.put("customerId", user.getCustomerId());
-        result.put("tenantId", user.getTenantId());
-        result.put("customer", buildCustomerView(customer));
-        result.put("user", buildUserView(user));
-
-        log.info("[CRM客户端] 客户登录成功: {}, customerId={}, tenantId={}", username, user.getCustomerId(), user.getTenantId());
-        return Result.success(result);
+        return Result.success(crmClientOrchestrator.login(username, password));
     }
 
     @GetMapping("/dashboard")
@@ -120,54 +59,7 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-
-        Customer customer = customerService.lambdaQuery()
-                .eq(Customer::getId, customerId)
-                .eq(Customer::getDeleteFlag, 0)
-                .one();
-        if (customer == null || !tenantId.equals(customer.getTenantId())) {
-            return Result.fail("客户信息不存在");
-        }
-
-        List<ProductionOrder> orders = findCustomerOrders(customerId, tenantId);
-
-        LambdaQueryWrapper<Receivable> receivableWrapper = new LambdaQueryWrapper<>();
-        receivableWrapper.eq(Receivable::getCustomerId, customerId)
-                .eq(Receivable::getTenantId, tenantId)
-                .eq(Receivable::getDeleteFlag, 0);
-        List<Receivable> receivables = receivableService.list(receivableWrapper);
-
-        List<String> orderIds = orders.stream().map(ProductionOrder::getId).collect(Collectors.toList());
-        int totalPurchases = 0;
-        if (!orderIds.isEmpty()) {
-            LambdaQueryWrapper<MaterialPurchase> purchaseWrapper = new LambdaQueryWrapper<>();
-            purchaseWrapper.in(MaterialPurchase::getOrderId, orderIds)
-                    .eq(MaterialPurchase::getDeleteFlag, 0);
-            totalPurchases = (int) materialPurchaseService.count(purchaseWrapper);
-        }
-
-        BigDecimal totalReceivable = receivables.stream()
-                .map(Receivable::getAmount).filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalReceived = receivables.stream()
-                .map(Receivable::getReceivedAmount).filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        Map<String, Long> orderStats = orders.stream()
-                .collect(Collectors.groupingBy(ProductionOrder::getStatus, Collectors.counting()));
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("customer", buildCustomerView(customer));
-        result.put("totalOrders", orders.size());
-        result.put("recentOrders", orders.stream().limit(5).map(this::buildOrderView).collect(Collectors.toList()));
-        result.put("orderStats", orderStats);
-        result.put("totalReceivable", totalReceivable);
-        result.put("totalReceived", totalReceived);
-        result.put("outstandingAmount", totalReceivable.subtract(totalReceived));
-        result.put("receivablesCount", receivables.size());
-        result.put("totalPurchases", totalPurchases);
-
-        return Result.success(result);
+        return Result.success(crmClientOrchestrator.getDashboard(customerId, tenantId));
     }
 
     @GetMapping("/orders")
@@ -181,33 +73,7 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-
-        Customer customer = customerService.lambdaQuery()
-                .eq(Customer::getId, customerId)
-                .eq(Customer::getDeleteFlag, 0)
-                .one();
-        if (customer == null) {
-            return Result.fail("客户不存在");
-        }
-
-        List<ProductionOrder> orders = findCustomerOrders(customerId, tenantId);
-
-        if (StringUtils.hasText(status)) {
-            orders = orders.stream().filter(o -> status.equals(o.getStatus())).collect(Collectors.toList());
-        }
-
-        int total = orders.size();
-        int fromIndex = Math.min((page - 1) * pageSize, total);
-        int toIndex = Math.min(fromIndex + pageSize, total);
-        List<ProductionOrder> paged = orders.subList(fromIndex, toIndex);
-
-        Map<String, Object> pageResult = new HashMap<>();
-        pageResult.put("list", paged.stream().map(this::buildOrderView).collect(Collectors.toList()));
-        pageResult.put("total", total);
-        pageResult.put("page", page);
-        pageResult.put("pageSize", pageSize);
-
-        return Result.success(pageResult);
+        return Result.success(crmClientOrchestrator.getCustomerOrders(customerId, tenantId, status, page, pageSize));
     }
 
     @GetMapping("/orders/{orderId}")
@@ -218,33 +84,7 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-
-        ProductionOrder order = productionOrderService.getById(orderId);
-        if (order == null || !tenantId.equals(order.getTenantId()) || (order.getDeleteFlag() != null && order.getDeleteFlag() == 1)) {
-            return Result.fail("订单不存在");
-        }
-
-        if (!isOrderBelongsToCustomer(order, customerId)) {
-            return Result.fail("订单不存在");
-        }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("order", buildOrderView(order));
-
-        LambdaQueryWrapper<MaterialPurchase> purchaseWrapper = new LambdaQueryWrapper<>();
-        purchaseWrapper.eq(MaterialPurchase::getOrderId, orderId)
-                .eq(MaterialPurchase::getDeleteFlag, 0);
-        List<MaterialPurchase> purchases = materialPurchaseService.list(purchaseWrapper);
-        result.put("purchases", purchases.stream().map(this::buildPurchaseView).collect(Collectors.toList()));
-
-        LambdaQueryWrapper<Receivable> receivableWrapper = new LambdaQueryWrapper<>();
-        receivableWrapper.eq(Receivable::getCustomerId, customerId)
-                .eq(Receivable::getOrderId, orderId)
-                .eq(Receivable::getDeleteFlag, 0);
-        List<Receivable> receivables = receivableService.list(receivableWrapper);
-        result.put("receivables", receivables.stream().map(this::buildReceivableView).collect(Collectors.toList()));
-
-        return Result.success(result);
+        return Result.success(crmClientOrchestrator.getOrderDetail(customerId, tenantId, orderId));
     }
 
     @GetMapping("/purchases")
@@ -258,44 +98,7 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-
-        List<ProductionOrder> orders = findCustomerOrders(customerId, tenantId);
-        List<String> orderIds = orders.stream().map(ProductionOrder::getId).collect(Collectors.toList());
-
-        if (orderIds.isEmpty()) {
-            Map<String, Object> empty = new HashMap<>();
-            empty.put("list", Collections.emptyList());
-            empty.put("total", 0);
-            empty.put("page", page);
-            empty.put("pageSize", pageSize);
-            empty.put("totalPages", 0);
-            return Result.success(empty);
-        }
-
-        if (page < 1) page = 1;
-        if (pageSize < 1 || pageSize > 200) pageSize = 20;
-
-        LambdaQueryWrapper<MaterialPurchase> purchaseWrapper = new LambdaQueryWrapper<>();
-        purchaseWrapper.in(MaterialPurchase::getOrderId, orderIds)
-                .eq(MaterialPurchase::getDeleteFlag, 0);
-        if (StringUtils.hasText(status)) {
-            purchaseWrapper.eq(MaterialPurchase::getStatus, status);
-        }
-        purchaseWrapper.orderByDesc(MaterialPurchase::getCreateTime);
-
-        com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialPurchase> pageObj =
-                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, pageSize);
-        com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialPurchase> pageResult =
-                materialPurchaseService.page(pageObj, purchaseWrapper);
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("list", pageResult.getRecords().stream().map(this::buildPurchaseView).collect(Collectors.toList()));
-        result.put("total", (int) pageResult.getTotal());
-        result.put("page", page);
-        result.put("pageSize", pageSize);
-        result.put("totalPages", (int) Math.ceil(pageResult.getTotal() * 1.0 / pageSize));
-
-        return Result.success(result);
+        return Result.success(crmClientOrchestrator.getPurchases(customerId, tenantId, status, page, pageSize));
     }
 
     @GetMapping("/purchases/{purchaseId}")
@@ -306,23 +109,7 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-
-        MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
-        if (purchase == null || !tenantId.equals(purchase.getTenantId())) {
-            return Result.fail("采购单不存在");
-        }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("purchase", buildPurchaseView(purchase));
-
-        if (purchase.getOrderId() != null) {
-            ProductionOrder order = productionOrderService.getById(purchase.getOrderId());
-            if (order != null && isOrderBelongsToCustomer(order, customerId)) {
-                result.put("order", buildOrderView(order));
-            }
-        }
-
-        return Result.success(result);
+        return Result.success(crmClientOrchestrator.getPurchaseDetail(customerId, tenantId, purchaseId));
     }
 
     @GetMapping("/receivables")
@@ -336,32 +123,7 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-
-        if (page < 1) page = 1;
-        if (pageSize < 1 || pageSize > 200) pageSize = 20;
-
-        LambdaQueryWrapper<Receivable> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Receivable::getCustomerId, customerId)
-                .eq(Receivable::getTenantId, tenantId)
-                .eq(Receivable::getDeleteFlag, 0);
-        if (StringUtils.hasText(status)) {
-            wrapper.eq(Receivable::getStatus, status);
-        }
-        wrapper.orderByDesc(Receivable::getCreateTime);
-
-        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Receivable> pageObj =
-                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, pageSize);
-        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Receivable> pageResult =
-                receivableService.page(pageObj, wrapper);
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("list", pageResult.getRecords().stream().map(this::buildReceivableView).collect(Collectors.toList()));
-        result.put("total", (int) pageResult.getTotal());
-        result.put("page", page);
-        result.put("pageSize", pageSize);
-        result.put("totalPages", (int) Math.ceil(pageResult.getTotal() * 1.0 / pageSize));
-
-        return Result.success(result);
+        return Result.success(crmClientOrchestrator.getReceivables(customerId, tenantId, status, page, pageSize));
     }
 
     @GetMapping("/receivables/{receivableId}")
@@ -372,22 +134,7 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-
-        Receivable receivable = receivableService.getById(receivableId);
-        if (receivable == null || !customerId.equals(receivable.getCustomerId()) || !tenantId.equals(receivable.getTenantId())) {
-            return Result.fail("账款不存在");
-        }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("receivable", buildReceivableView(receivable));
-
-        LambdaQueryWrapper<ReceivableReceiptLog> logWrapper = new LambdaQueryWrapper<>();
-        logWrapper.eq(ReceivableReceiptLog::getReceivableId, receivableId)
-                .orderByDesc(ReceivableReceiptLog::getReceivedTime);
-        List<ReceivableReceiptLog> logs = receivableReceiptLogService.list(logWrapper);
-        result.put("receiptLogs", logs);
-
-        return Result.success(result);
+        return Result.success(crmClientOrchestrator.getReceivableDetail(customerId, tenantId, receivableId));
     }
 
     @GetMapping("/profile")
@@ -398,148 +145,20 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-
-        Customer customer = customerService.lambdaQuery()
-                .eq(Customer::getId, customerId)
-                .eq(Customer::getDeleteFlag, 0)
-                .one();
-        if (customer == null || !tenantId.equals(customer.getTenantId())) {
-            return Result.fail("客户不存在");
-        }
-        return Result.success(buildCustomerView(customer));
+        return Result.success(crmClientOrchestrator.getProfile(customerId, tenantId));
     }
 
+    /**
+     * 从请求上下文解析客户 id。
+     *
+     * <p>只有 {@code crm_client} 角色且 token 里带 factoryId 才返回；其余一律 null（→ 未登录）。
+     * 客户 id 只来自 token，不接受请求参数，避免越权读取其他客户数据。
+     */
     private String resolveCustomerId() {
         String factoryId = UserContext.factoryId();
         if (CRM_CLIENT_ROLE.equals(UserContext.role()) && factoryId != null) {
             return factoryId;
         }
         return null;
-    }
-
-    private List<ProductionOrder> findCustomerOrders(String customerId, Long tenantId) {
-        Customer customer = customerService.lambdaQuery()
-                .eq(Customer::getId, customerId)
-                .eq(Customer::getDeleteFlag, 0)
-                .one();
-        if (customer == null || !tenantId.equals(customer.getTenantId())) {
-            return Collections.emptyList();
-        }
-
-        LambdaQueryWrapper<ProductionOrder> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ProductionOrder::getDeleteFlag, 0)
-                .eq(ProductionOrder::getTenantId, tenantId);
-
-        // E-P0-1 修复：改用 customer_id 精确匹配，避免 company like 模糊匹配导致跨客户数据泄露
-        // 原 like 实现："甲公司" 会匹配到 "甲公司分公司" 的订单，违反 P0 铁律4 多租户/客户隔离
-        // ProductionOrder.customerId 外键已存在（t_production_order.customer_id 列），直接精确匹配
-        if (StringUtils.hasText(customer.getId())) {
-            wrapper.eq(ProductionOrder::getCustomerId, customer.getId());
-        } else {
-            return Collections.emptyList();
-        }
-
-        wrapper.orderByDesc(ProductionOrder::getCreateTime);
-        wrapper.last("LIMIT 200");
-        return productionOrderService.list(wrapper);
-    }
-
-    private boolean isOrderBelongsToCustomer(ProductionOrder order, String customerId) {
-        Customer customer = customerService.lambdaQuery()
-                .eq(Customer::getId, customerId)
-                .eq(Customer::getDeleteFlag, 0)
-                .one();
-        if (customer == null || !StringUtils.hasText(customer.getCompanyName())) {
-            return false;
-        }
-        String company = order.getCompany();
-        return company != null && company.contains(customer.getCompanyName());
-    }
-
-    private Map<String, Object> buildCustomerView(Customer c) {
-        Map<String, Object> m = new HashMap<>();
-        m.put("id", c.getId());
-        m.put("customerNo", c.getCustomerNo());
-        m.put("companyName", c.getCompanyName());
-        m.put("contactPerson", c.getContactPerson());
-        m.put("contactPhone", c.getContactPhone());
-        m.put("contactEmail", c.getContactEmail());
-        m.put("address", c.getAddress());
-        m.put("customerLevel", c.getCustomerLevel());
-        m.put("industry", c.getIndustry());
-        m.put("status", c.getStatus());
-        m.put("remark", c.getRemark());
-        return m;
-    }
-
-    private Map<String, Object> buildUserView(CustomerClientUser u) {
-        Map<String, Object> m = new HashMap<>();
-        m.put("id", u.getId());
-        m.put("username", u.getUsername());
-        m.put("contactPerson", u.getContactPerson());
-        m.put("contactPhone", u.getContactPhone());
-        m.put("contactEmail", u.getContactEmail());
-        m.put("status", u.getStatus());
-        m.put("lastLoginTime", u.getLastLoginTime());
-        return m;
-    }
-
-    private Map<String, Object> buildOrderView(ProductionOrder o) {
-        Map<String, Object> m = new HashMap<>();
-        m.put("id", o.getId());
-        m.put("orderNo", o.getOrderNo());
-        m.put("styleNo", o.getStyleNo());
-        m.put("styleName", o.getStyleName());
-        m.put("orderQuantity", o.getOrderQuantity());
-        m.put("completedQuantity", o.getCompletedQuantity());
-        m.put("productionProgress", o.getProductionProgress());
-        m.put("status", o.getStatus());
-        m.put("color", o.getColor());
-        m.put("size", o.getSize());
-        m.put("createTime", o.getCreateTime());
-        m.put("plannedEndDate", o.getPlannedEndDate());
-        m.put("expectedShipDate", o.getExpectedShipDate());
-        m.put("factoryName", o.getFactoryName());
-        m.put("urgencyLevel", o.getUrgencyLevel());
-        m.put("company", o.getCompany());
-        return m;
-    }
-
-    private Map<String, Object> buildPurchaseView(MaterialPurchase p) {
-        Map<String, Object> m = new HashMap<>();
-        m.put("id", p.getId());
-        m.put("purchaseNo", p.getPurchaseNo());
-        m.put("materialName", p.getMaterialName());
-        m.put("materialCode", p.getMaterialCode());
-        m.put("materialType", p.getMaterialType());
-        m.put("specifications", p.getSpecifications());
-        m.put("purchaseQuantity", p.getPurchaseQuantity());
-        m.put("arrivedQuantity", p.getArrivedQuantity());
-        m.put("unitPrice", p.getUnitPrice());
-        m.put("totalAmount", p.getTotalAmount());
-        m.put("supplierName", p.getSupplierName());
-        m.put("status", p.getStatus());
-        m.put("orderNo", p.getOrderNo());
-        m.put("styleNo", p.getStyleNo());
-        m.put("createTime", p.getCreateTime());
-        m.put("expectedArrivalDate", p.getExpectedArrivalDate());
-        m.put("actualArrivalDate", p.getActualArrivalDate());
-        return m;
-    }
-
-    private Map<String, Object> buildReceivableView(Receivable r) {
-        Map<String, Object> m = new HashMap<>();
-        m.put("id", r.getId());
-        m.put("receivableNo", r.getReceivableNo());
-        m.put("amount", r.getAmount());
-        m.put("receivedAmount", r.getReceivedAmount());
-        m.put("outstandingAmount", r.getAmount() != null && r.getReceivedAmount() != null
-                ? r.getAmount().subtract(r.getReceivedAmount()) : r.getAmount());
-        m.put("dueDate", r.getDueDate());
-        m.put("status", r.getStatus());
-        m.put("orderNo", r.getOrderNo());
-        m.put("description", r.getDescription());
-        m.put("createTime", r.getCreateTime());
-        return m;
     }
 }
