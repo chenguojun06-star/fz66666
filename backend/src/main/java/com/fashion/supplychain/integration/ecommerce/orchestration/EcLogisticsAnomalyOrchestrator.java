@@ -273,4 +273,21 @@ public class EcLogisticsAnomalyOrchestrator {
         private int scanned;
         private int newAnomalies;
     }
+
+    // ==================== 查询与处置（D-647 自 EcommerceOrderController 下沉） ====================
+
+    /** 查询物流异常列表；{@code unhandledOnly=true} 时只返回未处理的 */
+    public List<EcLogisticsAnomaly> listAnomalies(Long tenantId, boolean unhandledOnly) {
+        return unhandledOnly ? anomalyService.listUnhandled(tenantId) : anomalyService.listAll(tenantId);
+    }
+
+    /** 处理物流异常（标记已处理） */
+    public void markHandled(Long tenantId, Long id, String handledBy, String remark) {
+        anomalyService.markHandled(tenantId, id, handledBy, remark);
+    }
+
+    /** 忽略物流异常 */
+    public void markIgnored(Long tenantId, Long id, String handledBy, String remark) {
+        anomalyService.markIgnored(tenantId, id, handledBy, remark);
+    }
 }

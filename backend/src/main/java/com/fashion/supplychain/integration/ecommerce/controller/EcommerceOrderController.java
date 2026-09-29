@@ -13,8 +13,6 @@ import com.fashion.supplychain.integration.ecommerce.orchestration.EcLogisticsAn
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcBillReconciliationOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcProductionLinkOrchestrator;
 import com.fashion.supplychain.integration.ecommerce.service.EcGiftRuleService;
-import com.fashion.supplychain.integration.ecommerce.service.EcLogisticsAnomalyService;
-import com.fashion.supplychain.integration.ecommerce.service.EcPlatformBillService;
 import com.fashion.supplychain.system.service.EcPlatformConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +41,14 @@ public class EcommerceOrderController {
     @Autowired
     private EcommerceOrderOrchestrator orchestrator;
 
+    /**
+     * 刻意保留在 Controller（计数 Service 数 == 1，不违反规则6）：
+     * 它仅被 webhook 签名校验（{@link #resolveTenantFromConfig} /
+     * {@link #verifyWebhookSignature}）使用，而 webhook 的 200/401/500 是与电商平台之间的
+     * <b>重推契约</b>（平台只看状态码），属传输层关注点 —— 见 {@link #receiveWebhook} 的说明。
+     * 其余 3 个 Service（EcGiftRuleService / EcLogisticsAnomalyService / EcPlatformBillService）
+     * 已下沉到各自编排层（D-647）。
+     */
     @Autowired
     private EcPlatformConfigService ecPlatformConfigService;
 
@@ -50,19 +56,10 @@ public class EcommerceOrderController {
     private EcOrderMergeOrchestrator mergeOrchestrator;
 
     @Autowired
-    private EcGiftRuleService giftRuleService;
-
-    @Autowired
     private EcLogisticsAnomalyOrchestrator logisticsAnomalyOrchestrator;
 
     @Autowired
-    private EcLogisticsAnomalyService logisticsAnomalyService;
-
-    @Autowired
     private EcBillReconciliationOrchestrator billReconciliationOrchestrator;
-
-    @Autowired
-    private EcPlatformBillService platformBillService;
 
     @Autowired
     private EcProductionLinkOrchestrator linkOrchestrator;
@@ -226,26 +223,21 @@ public class EcommerceOrderController {
     @GetMapping("/gift-rules")
     public Result<List<EcGiftRule>> listGiftRules() {
         Long tenantId = UserContext.tenantId();
-        return Result.success(giftRuleService.listByTenant(tenantId));
+        return Result.success(orchestrator.listGiftRules(tenantId));
     }
 
     /** 保存赠品规则（新增/更新） */
     @PostMapping("/gift-rules")
     public Result<EcGiftRule> saveGiftRule(@RequestBody EcGiftRule rule) {
         Long tenantId = UserContext.tenantId();
-        rule.setTenantId(tenantId);
-        if (rule.getEnabled() == null) rule.setEnabled(1);
-        if (rule.getDeleteFlag() == null) rule.setDeleteFlag(0);
-        if (rule.getGiftQuantity() == null) rule.setGiftQuantity(1);
-        giftRuleService.saveOrUpdate(rule);
-        return Result.success(rule);
+        return Result.success(orchestrator.saveGiftRule(tenantId, rule));
     }
 
     /** 删除赠品规则（软删除） */
     @DeleteMapping("/gift-rules/{id}")
     public Result<Void> deleteGiftRule(@PathVariable Long id) {
         Long tenantId = UserContext.tenantId();
-        giftRuleService.softDelete(tenantId, id);
+        orchestrator.deleteGiftRule(tenantId, id);
         return Result.success(null);
     }
 
@@ -258,7 +250,7 @@ public class EcommerceOrderController {
         Integer qty = body.get("orderQuantity") != null
                 ? Integer.valueOf(body.get("orderQuantity").toString()) : null;
         String platform = (String) body.get("platformCode");
-        return Result.success(giftRuleService.matchGifts(tenantId, amount, qty, platform));
+        return Result.success(orchestrator.matchGifts(tenantId, amount, qty, platform));
     }
 
     // ==================== Phase 3: 物流异常预警 ====================
@@ -280,9 +272,7 @@ public class EcommerceOrderController {
     public Result<List<EcLogisticsAnomaly>> listAnomalies(
             @RequestParam(value = "unhandledOnly", defaultValue = "true") boolean unhandledOnly) {
         Long tenantId = UserContext.tenantId();
-        return Result.success(unhandledOnly
-                ? logisticsAnomalyService.listUnhandled(tenantId)
-                : logisticsAnomalyService.listAll(tenantId));
+        return Result.success(logisticsAnomalyOrchestrator.listAnomalies(tenantId, unhandledOnly));
     }
 
     /** 处理物流异常（标记已处理） */
@@ -292,7 +282,7 @@ public class EcommerceOrderController {
             Long tenantId = UserContext.tenantId();
             String handledBy = UserContext.username();
             String remark = (String) body.get("remark");
-            logisticsAnomalyService.markHandled(tenantId, id, handledBy, remark);
+            logisticsAnomalyOrchestrator.markHandled(tenantId, id, handledBy, remark);
             return Result.success(null);
         } catch (Exception e) {
             log.error("[处理物流异常失败] id={} err={}", id, e.getMessage());
@@ -307,7 +297,7 @@ public class EcommerceOrderController {
             Long tenantId = UserContext.tenantId();
             String handledBy = UserContext.username();
             String remark = (String) body.get("remark");
-            logisticsAnomalyService.markIgnored(tenantId, id, handledBy, remark);
+            logisticsAnomalyOrchestrator.markIgnored(tenantId, id, handledBy, remark);
             return Result.success(null);
         } catch (Exception e) {
             log.error("[忽略物流异常失败] id={} err={}", id, e.getMessage());
@@ -337,12 +327,7 @@ public class EcommerceOrderController {
             @RequestParam(value = "pendingOnly", defaultValue = "true") boolean pendingOnly,
             @RequestParam(value = "billPeriod", required = false) String billPeriod) {
         Long tenantId = UserContext.tenantId();
-        if (billPeriod != null && !billPeriod.isBlank()) {
-            return Result.success(platformBillService.listByPeriod(tenantId, billPeriod));
-        }
-        return Result.success(pendingOnly
-                ? platformBillService.listPending(tenantId)
-                : platformBillService.listAll(tenantId));
+        return Result.success(billReconciliationOrchestrator.listBills(tenantId, pendingOnly, billPeriod));
     }
 
     /** 处理账单差异（1已确认/2已申诉/3已忽略） */
@@ -357,7 +342,7 @@ public class EcommerceOrderController {
                 return Result.fail("处理状态不合法，仅支持 1=已确认 / 2=已申诉 / 3=已忽略");
             }
             String remark = (String) body.get("remark");
-            platformBillService.markHandled(tenantId, id, status, handledBy, remark);
+            billReconciliationOrchestrator.markHandled(tenantId, id, status, handledBy, remark);
             return Result.success(null);
         } catch (Exception e) {
             log.error("[处理账单差异失败] id={} err={}", id, e.getMessage());
@@ -470,7 +455,7 @@ public class EcommerceOrderController {
                 return Result.fail("处理状态不合法，仅支持 1=已确认 / 2=已申诉 / 3=已忽略");
             }
             String remark = (String) body.get("remark");
-            platformBillService.markHandled(tenantId, id, status, handledBy, remark);
+            billReconciliationOrchestrator.markHandled(tenantId, id, status, handledBy, remark);
             return Result.success(null);
         } catch (Exception e) {
             log.error("[处理分销账单失败] id={} err={}", id, e.getMessage());

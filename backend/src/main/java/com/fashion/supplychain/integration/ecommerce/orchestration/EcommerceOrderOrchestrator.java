@@ -6,7 +6,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.orchestration.EcSalesRevenueOrchestrator;
+import com.fashion.supplychain.integration.ecommerce.entity.EcGiftRule;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
+import com.fashion.supplychain.integration.ecommerce.service.EcGiftRuleService;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
 import com.fashion.supplychain.integration.ecommerce.service.PlatformNotifyService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -22,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -54,6 +57,10 @@ public class EcommerceOrderOrchestrator {
 
     @Autowired
     private EcOrderProcessOrchestrator orderProcessOrchestrator;
+
+    /** D-647：赠品规则（Phase 2 订单深加工），原 EcommerceOrderController 直接注入该 Service */
+    @Autowired
+    private EcGiftRuleService giftRuleService;
 
     /** D-532：组合商品（套装）——平台订单的商品编码=combo_code 时识别为套装订单 */
     @Autowired
@@ -612,5 +619,33 @@ public class EcommerceOrderOrchestrator {
     private int parseIntSafe(Object val, int defaultVal) {
         if (val == null) return defaultVal;
         try { return Integer.parseInt(val.toString()); } catch (Exception e) { return defaultVal; }
+    }
+
+    // ==================== 赠品规则（D-647 自 EcommerceOrderController 下沉） ====================
+
+    /** 查询全部赠品规则（含禁用） */
+    public List<EcGiftRule> listGiftRules(Long tenantId) {
+        return giftRuleService.listByTenant(tenantId);
+    }
+
+    /** 保存赠品规则（新增/更新），补齐租户与默认值 */
+    public EcGiftRule saveGiftRule(Long tenantId, EcGiftRule rule) {
+        rule.setTenantId(tenantId);
+        if (rule.getEnabled() == null) rule.setEnabled(1);
+        if (rule.getDeleteFlag() == null) rule.setDeleteFlag(0);
+        if (rule.getGiftQuantity() == null) rule.setGiftQuantity(1);
+        giftRuleService.saveOrUpdate(rule);
+        return rule;
+    }
+
+    /** 删除赠品规则（软删除） */
+    public void deleteGiftRule(Long tenantId, Long id) {
+        giftRuleService.softDelete(tenantId, id);
+    }
+
+    /** 匹配赠品：根据订单金额/数量/平台返回命中的赠品 */
+    public List<EcGiftRuleService.GiftMatch> matchGifts(Long tenantId, BigDecimal amount,
+                                                        Integer quantity, String platformCode) {
+        return giftRuleService.matchGifts(tenantId, amount, quantity, platformCode);
     }
 }

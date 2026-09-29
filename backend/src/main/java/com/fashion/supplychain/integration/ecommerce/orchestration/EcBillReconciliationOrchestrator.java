@@ -338,4 +338,24 @@ public class EcBillReconciliationOrchestrator {
         /** 不可用原因，供前端直接展示 */
         private String message;
     }
+
+    // ==================== 账单查询与处置（D-647 自 EcommerceOrderController 下沉） ====================
+
+    /**
+     * 查询账单列表。
+     *
+     * <p>{@code billPeriod} 非空时按账期过滤（忽略 {@code pendingOnly}）；
+     * 否则 {@code pendingOnly=true} 只返回待处理账单。
+     */
+    public List<EcPlatformBill> listBills(Long tenantId, boolean pendingOnly, String billPeriod) {
+        if (billPeriod != null && !billPeriod.isBlank()) {
+            return billService.listByPeriod(tenantId, billPeriod);
+        }
+        return pendingOnly ? billService.listPending(tenantId) : billService.listAll(tenantId);
+    }
+
+    /** 处理账单差异（1已确认 / 2已申诉 / 3已忽略） */
+    public void markHandled(Long tenantId, Long id, int status, String handledBy, String remark) {
+        billService.markHandled(tenantId, id, status, handledBy, remark);
+    }
 }
