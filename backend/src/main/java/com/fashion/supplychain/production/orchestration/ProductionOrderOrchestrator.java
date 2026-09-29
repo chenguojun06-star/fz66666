@@ -14,14 +14,23 @@ import com.fashion.supplychain.production.helper.OrderListCacheHelper;
 import com.fashion.supplychain.production.helper.ProductionOrderLogAppendHelper;
 import com.fashion.supplychain.production.helper.OrderLogHelper;
 import com.fashion.supplychain.common.lock.DistributedLockService;
+import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.style.entity.SecondaryProcess;
+import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.service.SecondaryProcessService;
+import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.system.entity.OperationLog;
 import com.fashion.supplychain.system.service.OperationLogService;
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,6 +97,16 @@ public class ProductionOrderOrchestrator {
 
     @Autowired
     private UrgeRecordService urgeRecordService;
+
+    /**
+     * D-648：订单详情的款式图 / 二次工艺富化。
+     * 原 {@code ProductionOrderController} 直接注入这两个 Service（规则6 违规）。
+     */
+    @Autowired
+    private StyleInfoService styleInfoService;
+
+    @Autowired
+    private SecondaryProcessService secondaryProcessService;
 
     @Autowired
     private SysNoticeOrchestrator sysNoticeOrchestrator;
@@ -1547,5 +1566,168 @@ public class ProductionOrderOrchestrator {
         }
 
         return new java.util.ArrayList<>(statsMap.values());
+    }
+
+    // ==================== D-648：自 ProductionOrderController 下沉的校验与富化 ====================
+
+    /**
+     * 按主键加载订单并做租户归属校验。
+     *
+     * <p>订单不存在时返回 {@code null}（不抛异常），由调用方决定响应文案；
+     * 存在但不属于当前租户时抛 {@code BusinessException}（与原先在 Controller 中调用完全一致）。
+     *
+     * @param entityDesc 用于异常文案的实体描述，如「生产订单」「订单」
+     */
+    public ProductionOrder loadOrderForCurrentTenant(String id, String entityDesc) {
+        ProductionOrder order = productionOrderService.getById(id);
+        if (order != null) {
+            TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), entityDesc);
+        }
+        return order;
+    }
+
+    /**
+     * 详情富化：款式有封面图时返回注入 {@code coverImage}/{@code styleImage} 的 Map，
+     * 否则返回订单实体本身。
+     *
+     * <p>⚠️ 两种返回形态是前端既有约定（有图走 Map、无图走实体），**不可统一**。
+     * 租户归属校验在本方法内完成。
+     */
+    public Object getDetailWithStyleImage(String id) {
+        ProductionOrder order = getDetailById(id);
+        if (order != null) {
+            TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
+        }
+        if (order != null && StringUtils.hasText(order.getStyleId())) {
+            StyleInfo si = styleInfoService.getById(order.getStyleId());
+            if (si != null && StringUtils.hasText(si.getCover())) {
+                Map<String, Object> enriched = objectMapper.convertValue(order,
+                        new TypeReference<Map<String, Object>>() {});
+                enriched.put("coverImage", si.getCover());
+                enriched.put("styleImage", si.getCover());
+                return enriched;
+            }
+        }
+        return order;
+    }
+
+    /**
+     * {@code GET /list} 的「orderNo 精确查询」分支：命中时返回前端兼容的伪分页结构
+     * （{@code records} 单元素），并注入 coverImage/styleImage/description 与
+     * secondaryProcesses —— 修复小程序扫码确认页款式图不显示。
+     *
+     * <p>订单号格式判断与异常处理留在 Controller（那里有对应的 debug/error 日志）。
+     *
+     * @return 未命中时返回 {@code null}
+     */
+    public Map<String, Object> queryPseudoPageByOrderNo(String orderNo) {
+        ProductionOrder detail = getDetailByOrderNo(orderNo);
+        if (detail == null) {
+            return null;
+        }
+        Map<String, Object> enriched = objectMapper.convertValue(detail,
+                new TypeReference<Map<String, Object>>() {});
+        // 优先用 styleId 查款式信息；若 styleId 为空则用 styleNo 兜底（老订单 styleId 可能为 null）
+        StyleInfo si = null;
+        if (StringUtils.hasText(detail.getStyleId())) {
+            si = styleInfoService.getById(detail.getStyleId());
+        } else if (StringUtils.hasText(detail.getStyleNo())) {
+            si = styleInfoService.lambdaQuery()
+                    .eq(StyleInfo::getStyleNo, detail.getStyleNo())
+                    .last("LIMIT 1")
+                    .one();
+        }
+        if (si != null) {
+            if (StringUtils.hasText(si.getCover())) {
+                enriched.put("coverImage", si.getCover());
+                enriched.put("styleImage", si.getCover());
+            }
+            if (StringUtils.hasText(si.getDescription())) {
+                enriched.put("description", si.getDescription());
+            }
+        }
+        if (StringUtils.hasText(detail.getStyleId())) {
+            try {
+                List<SecondaryProcess> processes =
+                        secondaryProcessService.listByStyleId(Long.valueOf(detail.getStyleId()));
+                if (processes != null && !processes.isEmpty()) {
+                    enriched.put("secondaryProcesses", processes);
+                }
+            } catch (Exception spEx) {
+                log.warn("查询二次工艺失败: styleId={}", detail.getStyleId(), spEx);
+            }
+        }
+        Map<String, Object> pageResult = new HashMap<>();
+        pageResult.put("records", Collections.singletonList(enriched));
+        pageResult.put("total", 1L);
+        pageResult.put("size", 1L);
+        pageResult.put("current", 1L);
+        pageResult.put("pages", 1L);
+        return pageResult;
+    }
+
+    /**
+     * 构造「复制订单」的新实体（同款不同色/不同码等场景），含租户归属校验。
+     *
+     * <p>不落库 —— 由 Controller 交给 {@code saveOrUpdateOrder} 走统一的保存/富化流程。
+     *
+     * @return 源订单不存在时返回 {@code null}
+     */
+    public ProductionOrder buildCopyForCurrentTenant(String id) {
+        TenantAssert.assertTenantContext();
+        ProductionOrder source = productionOrderService.getById(id);
+        if (source == null) {
+            return null;
+        }
+        TenantAssert.assertBelongsToCurrentTenant(source.getTenantId(), "生产订单");
+        ProductionOrder copy = new ProductionOrder();
+        copy.setStyleNo(source.getStyleNo());
+        copy.setStyleName(source.getStyleName());
+        copy.setFactoryId(source.getFactoryId());
+        copy.setFactoryName(source.getFactoryName());
+        copy.setOrderQuantity(source.getOrderQuantity());
+        copy.setProductCategory(source.getProductCategory());
+        copy.setMerchandiser(source.getMerchandiser());
+        copy.setCompany(source.getCompany());
+        copy.setPatternMaker(source.getPatternMaker());
+        copy.setUrgencyLevel(source.getUrgencyLevel());
+        copy.setOrderDetails(source.getOrderDetails());
+        copy.setProgressWorkflowJson(source.getProgressWorkflowJson());
+        copy.setNodeOperations(source.getNodeOperations());
+        copy.setRemarks("复制自订单: " + source.getOrderNo());
+        copy.setStatus(OrderStatusConstants.PENDING);
+        copy.setProductionProgress(0);
+        return copy;
+    }
+
+    /**
+     * 校验催单记录存在且属于当前租户（供 {@code /urge/reply} 使用）。
+     *
+     * @return 记录不存在返回 {@code false}；存在但跨租户则抛异常
+     */
+    public boolean checkUrgeRecordAccessible(String urgeRecordId) {
+        UrgeRecord record = urgeRecordService.getById(urgeRecordId);
+        if (record == null) {
+            return false;
+        }
+        TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "催单记录");
+        return true;
+    }
+
+    /** 查询给定订单中已被催单的订单 ID 集合（供 {@code /urge/check-urged} 使用）。 */
+    public Set<String> findUrgedOrderIds(Long tenantId, List<String> orderIds) {
+        return urgeRecordService.findUrgedOrderIds(tenantId, orderIds);
+    }
+
+    /** 过滤出属于指定租户且未删除的订单 ID（供 {@code /health-scores} 使用）。 */
+    public List<String> filterAccessibleOrderIds(List<String> ids, Long tenantId) {
+        return productionOrderService.lambdaQuery()
+                .in(ProductionOrder::getId, ids)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .list()
+                .stream()
+                .map(ProductionOrder::getId)
+                .toList();
     }
 }

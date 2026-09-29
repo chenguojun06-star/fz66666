@@ -3,7 +3,6 @@ package com.fashion.supplychain.production.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
@@ -15,9 +14,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import com.fashion.supplychain.production.orchestration.FactoryCapacityOrchestrator;
 import com.fashion.supplychain.production.orchestration.OrderHealthScoreOrchestrator;
-import com.fashion.supplychain.production.service.ProductionOrderService;
-import com.fashion.supplychain.style.entity.StyleInfo;
-import com.fashion.supplychain.style.service.StyleInfoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,6 +30,11 @@ import java.util.Map;
  * 生产订单Controller
  * 核心CRUD操作
  *
+ * <p>D-648：原注入的 ProductionOrderService / UrgeRecordService / StyleInfoService /
+ * SecondaryProcessService / ObjectMapper 已全部下沉到 {@link ProductionOrderOrchestrator}
+ * （该编排器本已持有前两者与 ObjectMapper，仅新增款式/二次工艺两个依赖）——
+ * 现计数 Service 数 == 0。本类只做「参数解析 → 委托 → 组装 Result」。
+ *
  * 其他操作已拆分到：
  * - ProductionOrderOperationController: 订单操作（报废、完成、关闭、工序委派）
  * - ProductionOrderProgressController: 进度相关（更新进度、物料到位率、工作流锁定/回退、采购确认）
@@ -47,14 +48,9 @@ import java.util.Map;
 @Tag(name = "生产订单", description = "生产订单的创建、查询、更新、删除、导出等操作")
 public class ProductionOrderController {
     private final ProductionOrderOrchestrator productionOrderOrchestrator;
-    private final ProductionOrderService productionOrderService;
     private final FactoryCapacityOrchestrator factoryCapacityOrchestrator;
     private final ProductionOrderExportOrchestrator exportOrchestrator;
     private final OrderHealthScoreOrchestrator orderHealthScoreOrchestrator;
-    private final com.fashion.supplychain.production.service.UrgeRecordService urgeRecordService;
-    private final StyleInfoService styleInfoService;
-    private final com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
-    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final com.fashion.supplychain.integration.ecommerce.orchestration.EcProductionLinkOrchestrator ecProductionLinkOrchestrator;
 
     /**
@@ -138,50 +134,12 @@ public class ProductionOrderController {
             // 如果看起来是完整订单号（如PO开头），尝试精确匹配
             if ((orderNo.startsWith("PO") || orderNo.startsWith("CUT")) && orderNo.length() >= 10) {
                 try {
-                    ProductionOrder detail = productionOrderOrchestrator.getDetailByOrderNo(orderNo);
-                    if (detail != null) {
-                        // 返回分页格式以保持前端兼容
-                        // 创建伪分页对象，包装单个订单为records数组
-                        // 注入 coverImage/styleImage，修复小程序扫码确认页款式图不显示问题
-                        java.util.Map<String, Object> enriched = objectMapper
-                                .convertValue(detail, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
-                        // 优先用 styleId 查款式信息；若 styleId 为空则用 styleNo 兜底（老订单 styleId 可能为 null）
-                        StyleInfo si = null;
-                        if (StringUtils.hasText(detail.getStyleId())) {
-                            si = styleInfoService.getById(detail.getStyleId());
-                        } else if (StringUtils.hasText(detail.getStyleNo())) {
-                            si = styleInfoService.lambdaQuery()
-                                    .eq(StyleInfo::getStyleNo, detail.getStyleNo())
-                                    .last("LIMIT 1")
-                                    .one();
-                        }
-                        if (si != null) {
-                            if (StringUtils.hasText(si.getCover())) {
-                                enriched.put("coverImage", si.getCover());
-                                enriched.put("styleImage", si.getCover());
-                            }
-                            if (StringUtils.hasText(si.getDescription())) {
-                                enriched.put("description", si.getDescription());
-                            }
-                        }
-                        if (StringUtils.hasText(detail.getStyleId())) {
-                            try {
-                                java.util.List<com.fashion.supplychain.style.entity.SecondaryProcess> processes =
-                                        secondaryProcessService.listByStyleId(Long.valueOf(detail.getStyleId()));
-                                if (processes != null && !processes.isEmpty()) {
-                                    enriched.put("secondaryProcesses", processes);
-                                }
-                            } catch (Exception spEx) {
-                                log.warn("查询二次工艺失败: styleId={}", detail.getStyleId(), spEx);
-                            }
-                        }
-                        java.util.Map<String, Object> pageResult = new java.util.HashMap<>();
-                        pageResult.put("records", java.util.Collections.singletonList(enriched));
-                        pageResult.put("total", 1L);
-                        pageResult.put("size", 1L);
-                        pageResult.put("current", 1L);
-                        pageResult.put("pages", 1L);
-                        maskOrderPricesForFactoryAccount(enriched);
+                    // 返回分页格式以保持前端兼容（伪分页对象，包装单个订单为 records 数组）
+                    // 款式图 / 二次工艺富化已下沉到编排层
+                    java.util.Map<String, Object> pageResult =
+                            productionOrderOrchestrator.queryPseudoPageByOrderNo(orderNo);
+                    if (pageResult != null) {
+                        maskOrderPricesForFactoryAccount(pageResult);
                         return Result.success(pageResult);
                     }
                 } catch (java.util.NoSuchElementException e) {
@@ -271,21 +229,8 @@ public class ProductionOrderController {
      */
     @GetMapping("/detail/{id}")
     public Result<?> detail(@PathVariable String id) {
-        ProductionOrder productionOrder = productionOrderOrchestrator.getDetailById(id);
-        if (productionOrder != null) {
-            TenantAssert.assertBelongsToCurrentTenant(productionOrder.getTenantId(), "生产订单");
-        }
-        if (productionOrder != null && StringUtils.hasText(productionOrder.getStyleId())) {
-            StyleInfo si = styleInfoService.getById(productionOrder.getStyleId());
-            if (si != null && StringUtils.hasText(si.getCover())) {
-                java.util.Map<String, Object> enriched = objectMapper
-                        .convertValue(productionOrder, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
-                enriched.put("coverImage", si.getCover());
-                enriched.put("styleImage", si.getCover());
-                return Result.success(enriched);
-            }
-        }
-        return Result.success(productionOrder);
+        // 租户归属校验与款式图富化均在编排层完成
+        return Result.success(productionOrderOrchestrator.getDetailWithStyleImage(id));
     }
 
     /**
@@ -293,10 +238,8 @@ public class ProductionOrderController {
      */
     @GetMapping("/flow/{id}")
     public Result<?> flow(@PathVariable String id) {
-        ProductionOrder order = productionOrderService.getById(id);
-        if (order != null) {
-            TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
-        }
+        // 仅为做租户归属校验而加载（订单不存在时不校验，与重构前一致）
+        productionOrderOrchestrator.loadOrderForCurrentTenant(id, "生产订单");
         return Result.success(productionOrderOrchestrator.getOrderFlow(id));
     }
 
@@ -318,29 +261,11 @@ public class ProductionOrderController {
     @PostMapping("/copy/{id}")
     @PreAuthorize("isAuthenticated()")
     public Result<?> copyOrder(@PathVariable String id) {
-        TenantAssert.assertTenantContext();
-        ProductionOrder source = productionOrderService.getById(id);
-        if (source == null) {
+        // 含 assertTenantContext + 源订单租户归属校验，均在编排层
+        ProductionOrder copy = productionOrderOrchestrator.buildCopyForCurrentTenant(id);
+        if (copy == null) {
             return Result.notFound("源订单不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(source.getTenantId(), "生产订单");
-        ProductionOrder copy = new ProductionOrder();
-        copy.setStyleNo(source.getStyleNo());
-        copy.setStyleName(source.getStyleName());
-        copy.setFactoryId(source.getFactoryId());
-        copy.setFactoryName(source.getFactoryName());
-        copy.setOrderQuantity(source.getOrderQuantity());
-        copy.setProductCategory(source.getProductCategory());
-        copy.setMerchandiser(source.getMerchandiser());
-        copy.setCompany(source.getCompany());
-        copy.setPatternMaker(source.getPatternMaker());
-        copy.setUrgencyLevel(source.getUrgencyLevel());
-        copy.setOrderDetails(source.getOrderDetails());
-        copy.setProgressWorkflowJson(source.getProgressWorkflowJson());
-        copy.setNodeOperations(source.getNodeOperations());
-        copy.setRemarks("复制自订单: " + source.getOrderNo());
-        copy.setStatus(OrderStatusConstants.PENDING);
-        copy.setProductionProgress(0);
         return upsert(copy);
     }
 
@@ -405,11 +330,10 @@ public class ProductionOrderController {
             return Result.badRequest("缺少id参数");
         }
 
-        ProductionOrder order = productionOrderService.getById(id);
+        ProductionOrder order = productionOrderOrchestrator.loadOrderForCurrentTenant(id, "订单");
         if (order == null) {
             return Result.notFound("订单不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "订单");
         if (isOutsideFactoryScope(order)) {
             return Result.fail("无权操作：订单不属于当前工厂");
         }
@@ -430,11 +354,10 @@ public class ProductionOrderController {
             return Result.badRequest("缺少id参数");
         }
 
-        ProductionOrder order = productionOrderService.getById(id);
+        ProductionOrder order = productionOrderOrchestrator.loadOrderForCurrentTenant(id, "订单");
         if (order == null) {
             return Result.notFound("订单不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "订单");
         if (isOutsideFactoryScope(order)) {
             return Result.fail("无权操作：订单不属于当前工厂");
         }
@@ -460,11 +383,10 @@ public class ProductionOrderController {
 
         try {
             com.fashion.supplychain.production.entity.UrgeRecord record = productionOrderOrchestrator.urge(orderId, remark);
-            com.fashion.supplychain.production.entity.ProductionOrder order = productionOrderService.getById(orderId);
+            ProductionOrder order = productionOrderOrchestrator.loadOrderForCurrentTenant(orderId, "生产订单");
             if (order == null) {
                 return Result.notFound("订单不存在");
             }
-            TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
             Integer urgeCount = order.getUrgeCount();
             return Result.success(Map.of(
                     "message", "催单通知已发送",
@@ -488,11 +410,9 @@ public class ProductionOrderController {
             return Result.badRequest("缺少urgeRecordId参数");
         }
 
-        com.fashion.supplychain.production.entity.UrgeRecord record = urgeRecordService.getById(urgeRecordId);
-        if (record == null) {
+        if (!productionOrderOrchestrator.checkUrgeRecordAccessible(urgeRecordId)) {
             return Result.notFound("催单记录不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "催单记录");
 
         try {
             productionOrderOrchestrator.urgeReply(payload);
@@ -514,7 +434,7 @@ public class ProductionOrderController {
             return Result.success(Map.of("urgedOrderIds", List.of()));
         }
         Long tenantId = UserContext.tenantId();
-        java.util.Set<String> urgedOrderIds = urgeRecordService.findUrgedOrderIds(tenantId, orderIds);
+        java.util.Set<String> urgedOrderIds = productionOrderOrchestrator.findUrgedOrderIds(tenantId, orderIds);
         return Result.success(Map.of("urgedOrderIds", urgedOrderIds));
     }
 
@@ -532,14 +452,7 @@ public class ProductionOrderController {
         }
         if (ids != null && !ids.isEmpty()) {
             Long tenantId = UserContext.tenantId();
-            ids = productionOrderService.lambdaQuery()
-                    .in(ProductionOrder::getId, ids)
-                    .eq(ProductionOrder::getTenantId, tenantId)
-                    .eq(ProductionOrder::getDeleteFlag, 0)
-                    .list()
-                    .stream()
-                    .map(ProductionOrder::getId)
-                    .toList();
+            ids = productionOrderOrchestrator.filterAccessibleOrderIds(ids, tenantId);
         }
         return Result.success(orderHealthScoreOrchestrator.batchCalculateHealth(ids));
     }
@@ -580,11 +493,10 @@ public class ProductionOrderController {
     @PreAuthorize("isAuthenticated()")
     public Result<?> timeline(@PathVariable String id) {
         TenantAssert.assertTenantContext();
-        ProductionOrder order = productionOrderService.getById(id);
+        ProductionOrder order = productionOrderOrchestrator.loadOrderForCurrentTenant(id, "生产订单");
         if (order == null) {
             return Result.notFound("订单不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
         String remarks = order.getRemarks();
         java.util.List<java.util.Map<String, String>> entries = new java.util.ArrayList<>();
         if (StringUtils.hasText(remarks)) {
