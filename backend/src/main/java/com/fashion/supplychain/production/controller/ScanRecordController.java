@@ -2,30 +2,25 @@ package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.SensitiveDataMaskHelper;
-import com.fashion.supplychain.common.constant.OrderStatusConstants;
-import com.fashion.supplychain.production.entity.CuttingBundle;
-import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.orchestration.ScanRecordOrchestrator;
-import com.fashion.supplychain.production.service.CuttingBundleService;
-import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SKUService;
-import com.fashion.supplychain.style.entity.StyleInfo;
-import com.fashion.supplychain.style.service.StyleInfoService;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * 扫码记录Controller
+ *
+ * <p>2026-09-29（D-645）：原类注入了 {@code CuttingBundleService}、{@code ProductionOrderService}、
+ * {@code StyleInfoService} 与 {@code ObjectMapper}（违反 ArchUnit 规则6）。
+ * 扫码诊断（{@code /diagnose}）与质检任务款式图富化（{@code /my-quality-tasks}）
+ * 已下沉到 {@link ScanRecordOrchestrator}。
+ * 保留 {@code SKUService}（其端点全部为纯透传）不违反规则6 —— 计数 Service 数 == 1。
  */
 @Slf4j
 @RestController
@@ -49,20 +44,11 @@ public class ScanRecordController {
     private ScanRecordOrchestrator scanRecordOrchestrator;
 
     // ✅ Phase 3新增: SKU服务注入
+    // D-645：其余 Service（CuttingBundleService / ProductionOrderService / StyleInfoService）
+    // 与 ObjectMapper 已随 /diagnose、/my-quality-tasks 的富化逻辑下沉到 ScanRecordOrchestrator。
+    // 本类保留 1 个 Service（SKUService，对应端点全部是纯透传）不违反规则6（size() == 1）。
     @Autowired
     private SKUService skuService;
-
-    @Autowired
-    private CuttingBundleService cuttingBundleService;
-
-    @Autowired
-    private ProductionOrderService productionOrderService;
-
-    @Autowired
-    private StyleInfoService styleInfoService;
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     /**
      * 执行扫码操作
@@ -81,102 +67,7 @@ public class ScanRecordController {
     @PostMapping("/diagnose")
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('TENANT_OWNER')")
     public Result<?> diagnose(@RequestBody Map<String, Object> params) {
-        Map<String, Object> report = new LinkedHashMap<>();
-        report.put("step0_params", params);
-
-        String scanCode = params.get("scanCode") != null ? params.get("scanCode").toString().trim() : "";
-        String orderNo  = params.get("orderNo")  != null ? params.get("orderNo").toString().trim()  : "";
-        String bundleNoRaw = params.get("bundleNo") != null ? params.get("bundleNo").toString().trim() : "";
-        String scanType = params.get("scanType") != null ? params.get("scanType").toString().trim() : "production";
-        String operatorId = params.get("operatorId") != null ? params.get("operatorId").toString().trim() : "";
-        String processName = params.get("processName") != null ? params.get("processName").toString().trim() : "";
-
-        report.put("step1_scanCode",  StringUtils.hasText(scanCode)  ? scanCode  : "【空】");
-        report.put("step1_orderNo",   StringUtils.hasText(orderNo)   ? orderNo   : "【空】");
-        report.put("step1_bundleNo",  StringUtils.hasText(bundleNoRaw) ? bundleNoRaw : "【空】");
-        report.put("step1_scanType",  scanType);
-        report.put("step1_operatorId", StringUtils.hasText(operatorId) ? operatorId : "【空-将导致参数错误】");
-        report.put("step1_processName", StringUtils.hasText(processName) ? processName : "【空-生产扫码必须有工序名】");
-
-        // Step2: getByQrCode
-        try {
-            CuttingBundle b1 = StringUtils.hasText(scanCode) ? cuttingBundleService.getByQrCode(scanCode) : null;
-            if (b1 != null && StringUtils.hasText(b1.getId())) {
-                report.put("step2_getByQrCode", "✅ 找到菲号 id=" + b1.getId() + " bundleNo=" + b1.getBundleNo() + " orderNo=" + b1.getProductionOrderNo());
-            } else {
-                report.put("step2_getByQrCode", "❌ 未找到（scanCode中文字段编码不一致，这是已知根因）");
-            }
-        } catch (Exception e) {
-            report.put("step2_getByQrCode", "❌ 异常: " + e.getMessage());
-        }
-
-        // Step3: getByBundleNo 第三回退
-        try {
-            int bundleNoInt = 0;
-            try { bundleNoInt = Integer.parseInt(bundleNoRaw); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
-            if (StringUtils.hasText(orderNo) && bundleNoInt > 0) {
-                CuttingBundle b2 = cuttingBundleService.getByBundleNo(orderNo, bundleNoInt);
-                if (b2 != null && StringUtils.hasText(b2.getId())) {
-                    report.put("step3_getByBundleNo", "✅ 找到菲号 id=" + b2.getId() + " bundleNo=" + b2.getBundleNo() + " color=" + b2.getColor() + " size=" + b2.getSize());
-                } else {
-                    report.put("step3_getByBundleNo", "❌ 未找到（orderNo=" + orderNo + " bundleNo=" + bundleNoInt + "）— 检查t_cutting_bundle表是否有此数据");
-                }
-            } else {
-                report.put("step3_getByBundleNo", "⚠️ 跳过（orderNo或bundleNo为空/0）orderNo='" + orderNo + "' bundleNoRaw='" + bundleNoRaw + "'");
-            }
-        } catch (Exception e) {
-            report.put("step3_getByBundleNo", "❌ 异常: " + e.getMessage());
-        }
-
-        // Step4: 订单解析
-        try {
-            ProductionOrder order = null;
-            if (StringUtils.hasText(orderNo)) {
-                order = productionOrderService.getByOrderNo(orderNo);
-            }
-            if (order != null) {
-                report.put("step4_order", "✅ 找到订单 id=" + order.getId() + " status=" + order.getStatus() + " styleNo=" + order.getStyleNo());
-                if (order.getStatus() != null && OrderStatusConstants.isTerminal(order.getStatus())) {
-                    report.put("step4_order_warn", "🚫 订单状态=" + order.getStatus() + "，扫码会被拦截！");
-                }
-            } else {
-                report.put("step4_order", "❌ 未找到订单（orderNo='" + orderNo + "'）");
-            }
-        } catch (Exception e) {
-            report.put("step4_order", "❌ 异常: " + e.getMessage());
-        }
-
-        // Step5: 最近扫码记录（有没有历史）
-        try {
-            int bundleNoInt2 = 0;
-            try { bundleNoInt2 = Integer.parseInt(bundleNoRaw); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
-            if (StringUtils.hasText(orderNo) && bundleNoInt2 > 0) {
-                java.util.Map<String, Object> listParams = new java.util.HashMap<>();
-                listParams.put("orderNo", orderNo);
-                listParams.put("bundleNo", bundleNoRaw);
-                listParams.put("page", 1);
-                listParams.put("pageSize", 10);
-                try {
-                    com.baomidou.mybatisplus.core.metadata.IPage<ScanRecord> page =
-                        scanRecordOrchestrator.list(listParams);
-                    report.put("step5_history_total", page.getTotal());
-                    report.put("step5_history_note", page.getTotal() == 0
-                        ? "❌ 无历史扫码记录 — _getScanHistory拿不到数据，每次都当第一次，会一直推整烫"
-                        : "✅ 有" + page.getTotal() + "条历史记录");
-                    if (!page.getRecords().isEmpty()) {
-                        ScanRecord r = page.getRecords().get(0);
-                        report.put("step5_latest", "processName=" + r.getProcessName() + " progressStage=" + r.getProgressStage() + " bundleNo=" + r.getCuttingBundleNo() + " result=" + r.getScanResult());
-                    }
-                } catch (Exception e2) {
-                    report.put("step5_history", "❌ 查询异常: " + e2.getMessage());
-                }
-            }
-        } catch (Exception e) {
-            report.put("step5_history", "❌ 异常: " + e.getMessage());
-        }
-
-        report.put("conclusion", "如果step2/step3都是❌，说明菲号查不到，历史记录会是0，整烫会无限循环。如果订单已completed，扫码会被拦截。");
-        return Result.success(report);
+        return Result.success(scanRecordOrchestrator.diagnose(params));
     }
 
     @PostMapping("/unit-price")
@@ -265,50 +156,7 @@ public class ScanRecordController {
      */
     @GetMapping("/my-quality-tasks")
     public Result<?> getMyQualityTasks() {
-        List<?> tasks = scanRecordOrchestrator.getMyQualityTasks();
-        ObjectMapper mapper = objectMapper;
-
-        // 批量收集所有 orderId，一次性查询订单和款式，避免 N+1
-        List<Map<String, Object>> taskMaps = tasks.stream()
-                .map(task -> mapper.convertValue(task, new TypeReference<Map<String, Object>>() {}))
-                .collect(java.util.stream.Collectors.toList());
-
-        java.util.Set<String> orderIds = taskMaps.stream()
-                .map(m -> m.get("orderId"))
-                .filter(id -> id != null && StringUtils.hasText(id.toString()))
-                .map(id -> id.toString())
-                .collect(java.util.stream.Collectors.toSet());
-
-        java.util.Map<String, ProductionOrder> orderCache = new java.util.HashMap<>();
-        if (!orderIds.isEmpty()) {
-            productionOrderService.listByIds(orderIds).forEach(po -> orderCache.put(po.getId(), po));
-        }
-
-        java.util.Set<String> styleIds = orderCache.values().stream()
-                .filter(po -> StringUtils.hasText(po.getStyleId()))
-                .map(ProductionOrder::getStyleId)
-                .collect(java.util.stream.Collectors.toSet());
-
-        java.util.Map<String, StyleInfo> styleCache = new java.util.HashMap<>();
-        if (!styleIds.isEmpty()) {
-            styleInfoService.listByIds(styleIds).forEach(si -> styleCache.put(String.valueOf(si.getId()), si));
-        }
-
-        List<Map<String, Object>> enriched = taskMaps.stream().map(m -> {
-            Object orderIdObj = m.get("orderId");
-            if (orderIdObj != null && StringUtils.hasText(orderIdObj.toString())) {
-                ProductionOrder po = orderCache.get(orderIdObj.toString());
-                if (po != null && StringUtils.hasText(po.getStyleId())) {
-                    StyleInfo si = styleCache.get(po.getStyleId());
-                    if (si != null && StringUtils.hasText(si.getCover())) {
-                        m.put("coverImage", si.getCover());
-                        m.put("styleImage", si.getCover());
-                    }
-                }
-            }
-            return m;
-        }).collect(java.util.stream.Collectors.toList());
-        return Result.success(enriched);
+        return Result.success(scanRecordOrchestrator.getMyQualityTasksWithImages());
     }
 
     /**
