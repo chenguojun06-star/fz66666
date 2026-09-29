@@ -1,8 +1,13 @@
 package com.fashion.supplychain.finance.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.finance.entity.WagePayment;
+import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusService;
+import com.fashion.supplychain.finance.service.WagePaymentService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.ScanRecordEnrichHelper;
@@ -30,13 +35,21 @@ public class PayrollAggregationOrchestrator {
     private final ScanRecordService scanRecordService;
     private final ProductionOrderService productionOrderService;
     private final ScanRecordEnrichHelper scanRecordEnrichHelper;
+    /** D-637：审批状态富化（原在 PayrollSettlementController 直接注入） */
+    private final FinishedSettlementApprovalStatusService approvalStatusService;
+    /** D-637：打款状态富化（原在 PayrollSettlementController 直接注入） */
+    private final WagePaymentService wagePaymentService;
 
     public PayrollAggregationOrchestrator(ScanRecordService scanRecordService,
                                           ProductionOrderService productionOrderService,
-                                          ScanRecordEnrichHelper scanRecordEnrichHelper) {
+                                          ScanRecordEnrichHelper scanRecordEnrichHelper,
+                                          FinishedSettlementApprovalStatusService approvalStatusService,
+                                          WagePaymentService wagePaymentService) {
         this.scanRecordService = scanRecordService;
         this.productionOrderService = productionOrderService;
         this.scanRecordEnrichHelper = scanRecordEnrichHelper;
+        this.approvalStatusService = approvalStatusService;
+        this.wagePaymentService = wagePaymentService;
     }
 
     /**
@@ -362,6 +375,75 @@ public class PayrollAggregationOrchestrator {
                     .warn("[PayrollAggregation] 解析订单 workflow 发生异常: orderNo={}, err={}",
                             order.getOrderNo(), e.getMessage());
         }
+        return result;
+    }
+
+    /**
+     * 人员工序汇总（含审批状态 / 打款状态富化）。
+     *
+     * <p>D-637 从 {@code PayrollSettlementController#getOperatorSummary} 下沉。
+     * 原实现把「聚合 + 逐行补审批状态 + 批量补打款状态」三件事都写在 Controller 里，
+     * 且直接注入了 {@code FinishedSettlementApprovalStatusService} 与
+     * {@code WagePaymentService}，属跨服务编排泄漏到最外层。
+     *
+     * <p>富化口径（与下沉前逐字一致）：
+     * <ol>
+     *   <li>审批状态：按 {@code approvalId} 逐行查</li>
+     *   <li>打款状态：按 settlementId 批量查 PAYROLL_SETTLEMENT 类型的 WagePayment，
+     *       只要存在一条 success 即为 success，否则为 pending（单次上限 5000 条）</li>
+     * </ol>
+     */
+    public List<PayrollOperatorProcessSummaryDTO> summarizeForOperatorProcess(
+            String orderNo,
+            String operatorName,
+            String processName,
+            String scanType,
+            LocalDateTime startTime,
+            LocalDateTime endTime,
+            boolean includeSettled) {
+
+        List<PayrollOperatorProcessSummaryDTO> result = aggregatePayrollByOperatorAndProcess(
+                orderNo, operatorName, processName, scanType, startTime, endTime, includeSettled);
+        if (result == null) {
+            return null;
+        }
+
+        Long tenantId = UserContext.tenantId();
+
+        result.forEach(row -> {
+            if (row != null && row.getApprovalId() != null) {
+                row.setApprovalStatus(approvalStatusService.getApprovalStatus(row.getApprovalId(), tenantId));
+            }
+        });
+
+        Set<String> settlementIds = result.stream()
+                .filter(r -> r != null && r.getSettlementId() != null)
+                .map(PayrollOperatorProcessSummaryDTO::getSettlementId)
+                .collect(Collectors.toSet());
+        if (!settlementIds.isEmpty()) {
+            LambdaQueryWrapper<WagePayment> wpWrapper = new LambdaQueryWrapper<>();
+            wpWrapper.eq(WagePayment::getBizType, "PAYROLL_SETTLEMENT")
+                     .eq(WagePayment::getTenantId, tenantId)
+                     .in(WagePayment::getBizId, settlementIds)
+                     .in(WagePayment::getStatus, Arrays.asList(MaterialConstants.STATUS_PENDING, "success"))
+                     .last("LIMIT 5000");
+            List<WagePayment> payments = wagePaymentService.list(wpWrapper);
+            Map<String, String> settlementPaymentStatus = new HashMap<>();
+            for (WagePayment wp : payments) {
+                String bid = wp.getBizId();
+                if ("success".equals(wp.getStatus())) {
+                    settlementPaymentStatus.put(bid, "success");
+                } else if (!"success".equals(settlementPaymentStatus.get(bid))) {
+                    settlementPaymentStatus.put(bid, MaterialConstants.STATUS_PENDING);
+                }
+            }
+            result.forEach(row -> {
+                if (row != null && row.getSettlementId() != null) {
+                    row.setPaymentStatus(settlementPaymentStatus.getOrDefault(row.getSettlementId(), null));
+                }
+            });
+        }
+
         return result;
     }
 

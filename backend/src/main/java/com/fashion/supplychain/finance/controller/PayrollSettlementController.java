@@ -3,14 +3,9 @@ package com.fashion.supplychain.finance.controller;
 import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestrator;
 import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestrator.PayrollOperatorProcessSummaryDTO;
 import com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrator;
-import com.fashion.supplychain.finance.entity.WagePayment;
 import com.fashion.supplychain.finance.entity.PayrollSettlement;
-import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusService;
-import com.fashion.supplychain.finance.service.WagePaymentService;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.common.constant.MaterialConstants;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.AllArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -19,11 +14,16 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 工资结算 Controller
  * 支持按人员和工序分组查询工资聚合数据，以及结算单取消/删除操作
+ *
+ * <p>D-637：原先本类直接注入了 FinishedSettlementApprovalStatusService 与
+ * WagePaymentService（审批状态富化、打款状态富化、明细审批落库都在 Controller 里做），
+ * 属「Controller 依赖多个 Service」。富化逻辑已下沉到
+ * {@link PayrollAggregationOrchestrator} 与 {@link PayrollSettlementOrchestrator}，
+ * 本类只保留「端点声明 + 参数解析/校验 + 响应组装」。
  */
 @RestController
 @RequestMapping("/api/finance/payroll-settlement")
@@ -33,8 +33,6 @@ public class PayrollSettlementController {
 
     private final PayrollAggregationOrchestrator payrollAggregationOrchestrator;
     private final PayrollSettlementOrchestrator payrollSettlementOrchestrator;
-    private final FinishedSettlementApprovalStatusService approvalStatusService;
-    private final WagePaymentService wagePaymentService;
 
     /**
      * 获取人员工序汇总数据
@@ -61,53 +59,19 @@ public class PayrollSettlementController {
             return Result.success(java.util.Collections.emptyList());
         }
 
-        Object orderNoObj = params.get("orderNo");
-        String orderNo = orderNoObj != null ? String.valueOf(orderNoObj).trim() : null;
-        Object operatorNameObj = params.get("operatorName");
-        String operatorName = operatorNameObj != null ? String.valueOf(operatorNameObj).trim() : null;
-        Object processNameObj = params.get("processName");
-        String processName = processNameObj != null ? String.valueOf(processNameObj).trim() : null;
-        Object startTimeObj = params.get("startTime");
-        String startTimeStr = startTimeObj != null ? String.valueOf(startTimeObj).trim() : null;
-        Object endTimeObj = params.get("endTime");
-        String endTimeStr = endTimeObj != null ? String.valueOf(endTimeObj).trim() : null;
-        Object scanTypeObj = params.get("scanType");
-        String scanType = scanTypeObj != null ? String.valueOf(scanTypeObj).trim() : null;
-        Object includeSettledObj = params.getOrDefault("includeSettled", true);
-        Boolean includeSettled;
-        if (includeSettledObj instanceof Boolean) {
-            includeSettled = (Boolean) includeSettledObj;
-        } else if (includeSettledObj != null) {
-            includeSettled = Boolean.parseBoolean(String.valueOf(includeSettledObj).trim());
-        } else {
-            includeSettled = true;
-        }
+        String orderNo = trimmed(params, "orderNo");
+        String operatorName = trimmed(params, "operatorName");
+        String processName = trimmed(params, "processName");
+        String scanType = trimmed(params, "scanType");
 
         // 解析时间，支持两种格式："yyyy-MM-dd HH:mm:ss" 和 ISO格式
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        LocalDateTime startTime = null;
-        LocalDateTime endTime = null;
+        LocalDateTime startTime = parseDateTime(trimmed(params, "startTime"));
+        LocalDateTime endTime = parseDateTime(trimmed(params, "endTime"));
 
-        if (startTimeStr != null && !startTimeStr.trim().isEmpty()) {
-            try {
-                startTime = LocalDateTime.parse(startTimeStr.trim(), formatter);
-            } catch (Exception e) {
-                // 尝试ISO格式
-                startTime = LocalDateTime.parse(startTimeStr.trim());
-            }
-        }
-
-        if (endTimeStr != null && !endTimeStr.trim().isEmpty()) {
-            try {
-                endTime = LocalDateTime.parse(endTimeStr.trim(), formatter);
-            } catch (Exception e) {
-                // 尝试ISO格式
-                endTime = LocalDateTime.parse(endTimeStr.trim());
-            }
-        }
+        Boolean includeSettled = toBoolean(params.getOrDefault("includeSettled", true));
 
         List<PayrollOperatorProcessSummaryDTO> result = payrollAggregationOrchestrator
-                .aggregatePayrollByOperatorAndProcess(
+                .summarizeForOperatorProcess(
                         orderNo,
                         operatorName,
                         processName,
@@ -117,44 +81,37 @@ public class PayrollSettlementController {
                         includeSettled != null && includeSettled
                 );
 
-        Long tenantId = UserContext.tenantId();
-        if (result != null) {
-            result.forEach(row -> {
-                if (row != null && row.getApprovalId() != null) {
-                    row.setApprovalStatus(approvalStatusService.getApprovalStatus(row.getApprovalId(), tenantId));
-                }
-            });
-
-            Set<String> settlementIds = result.stream()
-                    .filter(r -> r != null && r.getSettlementId() != null)
-                    .map(PayrollOperatorProcessSummaryDTO::getSettlementId)
-                    .collect(Collectors.toSet());
-            if (!settlementIds.isEmpty()) {
-                LambdaQueryWrapper<WagePayment> wpWrapper = new LambdaQueryWrapper<>();
-                wpWrapper.eq(WagePayment::getBizType, "PAYROLL_SETTLEMENT")
-                         .eq(WagePayment::getTenantId, tenantId)
-                         .in(WagePayment::getBizId, settlementIds)
-                         .in(WagePayment::getStatus, Arrays.asList(MaterialConstants.STATUS_PENDING, "success"))
-                         .last("LIMIT 5000");
-                List<WagePayment> payments = wagePaymentService.list(wpWrapper);
-                Map<String, String> settlementPaymentStatus = new HashMap<>();
-                for (WagePayment wp : payments) {
-                    String bid = wp.getBizId();
-                    if ("success".equals(wp.getStatus())) {
-                        settlementPaymentStatus.put(bid, "success");
-                    } else if (!"success".equals(settlementPaymentStatus.get(bid))) {
-                        settlementPaymentStatus.put(bid, MaterialConstants.STATUS_PENDING);
-                    }
-                }
-                result.forEach(row -> {
-                    if (row != null && row.getSettlementId() != null) {
-                        row.setPaymentStatus(settlementPaymentStatus.getOrDefault(row.getSettlementId(), null));
-                    }
-                });
-            }
-        }
-
         return Result.success(result);
+    }
+
+    /** 取参并 trim；null 安全 */
+    private static String trimmed(Map<String, Object> params, String key) {
+        Object v = params == null ? null : params.get(key);
+        return v != null ? String.valueOf(v).trim() : null;
+    }
+
+    /** 宽松布尔解析：兼容 Boolean 与字符串；无法判断时返回 null */
+    private static Boolean toBoolean(Object raw) {
+        if (raw instanceof Boolean) {
+            return (Boolean) raw;
+        }
+        if (raw != null) {
+            return Boolean.parseBoolean(String.valueOf(raw).trim());
+        }
+        return null;
+    }
+
+    /** 时间解析：先按 "yyyy-MM-dd HH:mm:ss"，失败再按 ISO；空值返回 null */
+    private static LocalDateTime parseDateTime(String raw) {
+        if (raw == null || raw.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(raw.trim(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        } catch (Exception e) {
+            // 尝试ISO格式
+            return LocalDateTime.parse(raw.trim());
+        }
     }
 
     /**
@@ -171,12 +128,7 @@ public class PayrollSettlementController {
             return Result.fail("审批ID不能为空");
         }
 
-        approvalStatusService.markApproved(
-                normalized,
-                UserContext.tenantId(),
-                UserContext.userId(),
-                UserContext.username()
-        );
+        payrollSettlementOrchestrator.approveDetail(normalized);
         return Result.success(null);
     }
 

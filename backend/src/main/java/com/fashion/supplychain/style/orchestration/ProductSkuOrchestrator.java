@@ -2,6 +2,8 @@ package com.fashion.supplychain.style.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
@@ -571,5 +573,94 @@ public class ProductSkuOrchestrator {
         log.info("[ProductSkuOrchestrator] SKU库存重新计算完成：共{}个SKU，修正{}个，未变{}个",
                 allSkus.size(), fixed, unchanged);
         return result;
+    }
+
+    // ===== D-637：以下方法从 ProductSkuController 下沉 =====
+
+    /**
+     * 查询 SKU 库存 + 最近一次入库的库位信息。
+     *
+     * <p>原先在 {@code ProductSkuController#getInventory} 里同时依赖
+     * {@code ProductSkuService} 与 {@code ProductWarehousingService}，属跨服务取数。
+     * 租户上下文由本方法内部读取。
+     */
+    public Result<Map<String, Object>> getInventory(String skuCode) {
+        Long tid = UserContext.tenantId();
+        ProductSku sku = productSkuService.getOne(new LambdaQueryWrapper<ProductSku>()
+                .eq(ProductSku::getSkuCode, skuCode)
+                .eq(ProductSku::getTenantId, tid));
+        if (sku == null) {
+            return Result.fail("SKU not found");
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("stock", sku.getStockQuantity());
+
+        ProductWarehousing latest = productWarehousingService.lambdaQuery()
+                .eq(ProductWarehousing::getSkuCode, skuCode)
+                .eq(ProductWarehousing::getTenantId, tid)
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .orderByDesc(ProductWarehousing::getWarehousingEndTime)
+                .last("LIMIT 1")
+                .one();
+        if (latest != null) {
+            result.put("warehouseLocation", latest.getWarehouse());
+            result.put("warehouseAreaId", latest.getWarehouseAreaId());
+            result.put("warehouseAreaName", latest.getWarehouseAreaName());
+        }
+        return Result.success(result);
+    }
+
+    /** SKU 分页列表（按款号精确匹配 / 按 SKU 编码模糊匹配） */
+    public Page<ProductSku> listSkus(int page, int pageSize, String styleNo, String skuCode) {
+        Page<ProductSku> pageParam = new Page<>(page, pageSize);
+        LambdaQueryWrapper<ProductSku> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ProductSku::getTenantId, UserContext.tenantId());
+
+        if (StringUtils.hasText(styleNo)) {
+            wrapper.eq(ProductSku::getStyleNo, styleNo.trim());
+        }
+        if (StringUtils.hasText(skuCode)) {
+            wrapper.like(ProductSku::getSkuCode, skuCode.trim());
+        }
+
+        wrapper.orderByDesc(ProductSku::getId);
+        return productSkuService.page(pageParam, wrapper);
+    }
+
+    /**
+     * 更新单个 SKU。
+     *
+     * <p>库存量/版本/编码/款号由后端以既有行为准，不接受前端覆盖
+     * （库存改动只能走 {@link #updateStock}，否则会绕过库存流水）。
+     */
+    public Result<Boolean> updateSku(Long id, ProductSku sku) {
+        Long tid = UserContext.tenantId();
+
+        ProductSku existing = productSkuService.getById(id);
+        if (existing == null) {
+            return Result.fail("SKU不存在");
+        }
+        if (!tid.equals(existing.getTenantId())) {
+            return Result.fail("无权操作其他租户数据");
+        }
+
+        sku.setId(id);
+        sku.setTenantId(existing.getTenantId());
+        sku.setStockQuantity(existing.getStockQuantity());
+        sku.setVersion(existing.getVersion());
+        sku.setSkuCode(existing.getSkuCode());
+        sku.setStyleNo(existing.getStyleNo());
+
+        return Result.success(productSkuService.updateById(sku));
+    }
+
+    /** 指定款号所有颜色的图片映射 */
+    public Map<String, String> getStyleColorImages(String styleNo) {
+        return productSkuService.getStyleColorImages(styleNo);
+    }
+
+    /** 按款号 + 颜色取单个 SKU 的颜色图片 */
+    public String getSkuColorImage(String styleNo, String color) {
+        return productSkuService.getSkuColorImage(styleNo, color);
     }
 }

@@ -1,27 +1,29 @@
 package com.fashion.supplychain.style.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.style.dto.SkuBatchUpdateDTO;
 import com.fashion.supplychain.style.dto.StockUpdateDTO;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.orchestration.ProductSkuOrchestrator;
-import com.fashion.supplychain.production.entity.ProductWarehousing;
-import com.fashion.supplychain.production.service.ProductWarehousingService;
-import com.fashion.supplychain.style.service.ProductSkuService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 款式 SKU Controller。
+ *
+ * <p>D-637：原先本类直接注入了 ProductSkuService 与 ProductWarehousingService
+ * （SKU 查询、分页、更新、颜色图都在 Controller 里直接调 Service），属「Controller 依赖多个
+ * Service」。取数与写库已下沉到 {@link ProductSkuOrchestrator}，本类只保留
+ * 「端点声明 + 参数校验 + 响应组装」。
+ */
 @RestController
 @RequestMapping("/api/style/sku")
 @Slf4j
@@ -29,40 +31,12 @@ import java.util.Map;
 public class ProductSkuController {
 
     @Autowired
-    private ProductSkuService productSkuService;
-
-    @Autowired
     private ProductSkuOrchestrator productSkuOrchestrator;
-
-    @Autowired
-    private ProductWarehousingService productWarehousingService;
 
     @GetMapping("/inventory/{skuCode}")
     public Result<Map<String, Object>> getInventory(@PathVariable String skuCode) {
         TenantAssert.assertTenantContext();
-        Long tid = UserContext.tenantId();
-        ProductSku sku = productSkuService.getOne(new LambdaQueryWrapper<ProductSku>()
-                .eq(ProductSku::getSkuCode, skuCode)
-                .eq(ProductSku::getTenantId, tid));
-        if (sku == null) {
-            return Result.fail("SKU not found");
-        }
-        Map<String, Object> result = new HashMap<>();
-        result.put("stock", sku.getStockQuantity());
-
-        ProductWarehousing latest = productWarehousingService.lambdaQuery()
-                .eq(ProductWarehousing::getSkuCode, skuCode)
-                .eq(ProductWarehousing::getTenantId, tid)
-                .eq(ProductWarehousing::getDeleteFlag, 0)
-                .orderByDesc(ProductWarehousing::getWarehousingEndTime)
-                .last("LIMIT 1")
-                .one();
-        if (latest != null) {
-            result.put("warehouseLocation", latest.getWarehouse());
-            result.put("warehouseAreaId", latest.getWarehouseAreaId());
-            result.put("warehouseAreaName", latest.getWarehouseAreaName());
-        }
-        return Result.success(result);
+        return productSkuOrchestrator.getInventory(skuCode);
     }
 
     @PostMapping("/inventory/update")
@@ -84,21 +58,8 @@ public class ProductSkuController {
             @RequestParam(defaultValue = "20") int pageSize,
             @RequestParam(required = false) String styleNo,
             @RequestParam(required = false) String skuCode) {
-        Page<ProductSku> pageParam = new Page<>(page, pageSize);
         TenantAssert.assertTenantContext();
-        Long tid = UserContext.tenantId();
-        LambdaQueryWrapper<ProductSku> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ProductSku::getTenantId, tid);
-
-        if (StringUtils.hasText(styleNo)) {
-            wrapper.eq(ProductSku::getStyleNo, styleNo.trim());
-        }
-        if (StringUtils.hasText(skuCode)) {
-            wrapper.like(ProductSku::getSkuCode, skuCode.trim());
-        }
-
-        wrapper.orderByDesc(ProductSku::getId);
-        return Result.success(productSkuService.page(pageParam, wrapper));
+        return Result.success(productSkuOrchestrator.listSkus(page, pageSize, styleNo, skuCode));
     }
 
     @PostMapping("/sync/{styleId}")
@@ -111,24 +72,7 @@ public class ProductSkuController {
     @PutMapping("/{id}")
     public Result<Boolean> update(@PathVariable Long id, @RequestBody ProductSku sku) {
         TenantAssert.assertTenantContext();
-        Long tid = UserContext.tenantId();
-
-        ProductSku existing = productSkuService.getById(id);
-        if (existing == null) {
-            return Result.fail("SKU不存在");
-        }
-        if (!tid.equals(existing.getTenantId())) {
-            return Result.fail("无权操作其他租户数据");
-        }
-
-        sku.setId(id);
-        sku.setTenantId(existing.getTenantId());
-        sku.setStockQuantity(existing.getStockQuantity());
-        sku.setVersion(existing.getVersion());
-        sku.setSkuCode(existing.getSkuCode());
-        sku.setStyleNo(existing.getStyleNo());
-
-        return Result.success(productSkuService.updateById(sku));
+        return productSkuOrchestrator.updateSku(id, sku);
     }
 
     @PostMapping("/search")
@@ -222,7 +166,7 @@ public class ProductSkuController {
     @GetMapping("/color-images/{styleNo}")
     public Result<Map<String, String>> getStyleColorImages(@PathVariable String styleNo) {
         TenantAssert.assertTenantContext();
-        return Result.success(productSkuService.getStyleColorImages(styleNo));
+        return Result.success(productSkuOrchestrator.getStyleColorImages(styleNo));
     }
 
     /**
@@ -233,7 +177,7 @@ public class ProductSkuController {
             @RequestParam String styleNo,
             @RequestParam String color) {
         TenantAssert.assertTenantContext();
-        return Result.success(productSkuService.getSkuColorImage(styleNo, color));
+        return Result.success(productSkuOrchestrator.getSkuColorImage(styleNo, color));
     }
 
     /**

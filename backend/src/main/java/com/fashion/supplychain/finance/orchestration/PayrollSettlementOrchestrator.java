@@ -10,6 +10,7 @@ import com.fashion.supplychain.finance.entity.PayrollSettlementItem;
 import com.fashion.supplychain.finance.entity.DeductionItem;
 import com.fashion.supplychain.finance.helper.PayrollSettlementLogAppendHelper;
 import com.fashion.supplychain.finance.mapper.DeductionItemMapper;
+import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusService;
 import com.fashion.supplychain.finance.service.PayrollSettlementItemService;
 import com.fashion.supplychain.finance.service.PayrollSettlementService;
 import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator.BillPushRequest;
@@ -57,6 +58,24 @@ public class PayrollSettlementOrchestrator {
 
     @Autowired(required = false)
     private com.fashion.supplychain.common.lock.DistributedLockService distributedLockService;
+
+    /** D-637：工资明细审批状态（原在 PayrollSettlementController 直接注入） */
+    @Autowired
+    private FinishedSettlementApprovalStatusService approvalStatusService;
+
+    /**
+     * 审核单条工资工序明细（持久化审批状态）。
+     *
+     * <p>D-637 从 {@code PayrollSettlementController#approveDetail} 下沉。
+     * 操作人/租户上下文由本方法内部读取，调用方只需给出 approvalId。
+     */
+    public void approveDetail(String approvalId) {
+        approvalStatusService.markApproved(
+                approvalId,
+                UserContext.tenantId(),
+                UserContext.userId(),
+                UserContext.username());
+    }
 
     @Autowired(required = false)
     private com.fashion.supplychain.finance.service.BillAggregationService billAggregationService;
