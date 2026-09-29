@@ -69,10 +69,10 @@ public class ProductionOrderOrchestrator {
     private ProductionOrderProgressOrchestrator progressOrchestrationService;
 
     @Autowired
-    private ProductionOrderFinanceOrchestrationService financeOrchestrationService;
+    private ProductionOrderFinanceOrchestrator financeOrchestrationService;
 
     @Autowired
-    private ProductionOrderFlowOrchestrationService flowOrchestrationService;
+    private ProductionOrderFlowOrchestrator flowOrchestrationService;
 
     @Autowired
     private ProductionOrderOrchestratorHelper helper;
@@ -681,7 +681,7 @@ public class ProductionOrderOrchestrator {
         return financeOrchestrationService.backfillFinanceRecords();
     }
 
-    public ProductionOrderFlowOrchestrationService.OrderFlowResponse getOrderFlow(String orderId) {
+    public ProductionOrderFlowOrchestrator.OrderFlowResponse getOrderFlow(String orderId) {
         return flowOrchestrationService.getOrderFlow(orderId);
     }
 

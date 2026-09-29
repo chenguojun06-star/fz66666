@@ -59,7 +59,7 @@ public class ProductionOrderLifecycleHelper {
     @Autowired
     private com.fashion.supplychain.finance.service.PayrollSettlementItemService payrollSettlementItemService;
     @Autowired
-    private ProductionOrderFinanceOrchestrationService financeOrchestrationService;
+    private ProductionOrderFinanceOrchestrator financeOrchestrationService;
     @Autowired(required = false)
     private OperationLogService operationLogService;
     @Autowired

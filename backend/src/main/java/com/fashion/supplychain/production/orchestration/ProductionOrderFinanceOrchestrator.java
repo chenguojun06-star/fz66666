@@ -31,7 +31,7 @@ import org.springframework.util.StringUtils;
 
 @Service
 @Slf4j
-public class ProductionOrderFinanceOrchestrationService {
+public class ProductionOrderFinanceOrchestrator {
 
     @Autowired
     private ProductionOrderService productionOrderService;

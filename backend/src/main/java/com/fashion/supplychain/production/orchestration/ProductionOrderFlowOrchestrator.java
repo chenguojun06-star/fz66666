@@ -41,7 +41,7 @@ import org.springframework.util.StringUtils;
 
 @Service
 @Slf4j
-public class ProductionOrderFlowOrchestrationService {
+public class ProductionOrderFlowOrchestrator {
 
     public static class OrderFlowResponse {
         private final ProductionOrder order;

@@ -239,10 +239,26 @@ class ArchitectureRulesTest {
      * orchestration goes through Orchestrator」。Service 互调会让事务边界碎裂
      * （每个 Service 各自的事务无法合并），且使调用链难以追踪。
      *
-     * <p>豁免：{@code .common.} 包下的基础设施 Service（如 DistributedLockService、
-     * RedisService）属于横切关注点，不参与业务编排，不计入违规。
+     * <p>豁免：基础设施 Service（横切关注点，不参与业务编排，不计入违规）：
+     * <ul>
+     *   <li>{@code .common.} 包下 —— 如 {@code DistributedLockService}、{@code CosService}</li>
+     *   <li>顶层 {@code com.fashion.supplychain.service} 包 —— 即 {@code RedisService}</li>
+     * </ul>
+     * 豁免对<b>宿主类</b>与<b>被依赖类</b>双向生效。
      *
      * <p>本条规则是 D-630 新增的，与规则6 同属「有规范、无门禁」的补漏。
+     *
+     * <p>D-653 修正三处判据（此前实现与上述 javadoc 不符）：
+     * <ol>
+     *   <li><b>排除非本项目的类</b>：{@code java.util.concurrent.ExecutorService} /
+     *       {@code ScheduledExecutorService} 的 simpleName 也以 {@code Service} 结尾，
+     *       原判据把它们当成业务 Service（4 个类的假阳性）。</li>
+     *   <li><b>RedisService 未被豁免</b>：它位于顶层 {@code com.fashion.supplychain.service}
+     *       而非 {@code .common.}，{@code contains(".common.")} 为 false
+     *       → 5 个类的违规全因它（javadoc 却点名要豁免）。</li>
+     *   <li><b>宿主类维度缺失</b>：原判据只过滤「被依赖类」，导致基础设施
+     *       {@code CosService} 因依赖 {@code TenantService} 而被判违规。</li>
+     * </ol>
      */
     @Test
     @DisplayName("Service 不得依赖其他 Service")
@@ -251,13 +267,19 @@ class ArchitectureRulesTest {
         ArchCondition<JavaClass> condition = new ArchCondition<>("not depend on other Services") {
             @Override
             public void check(JavaClass item, ConditionEvents events) {
+                // 基础设施 Service 自身不参与业务编排 → 整个类豁免
+                if (isInfrastructureService(item)) {
+                    return;
+                }
                 Set<String> svc = item.getFields().stream()
                         .map(f -> f.getRawType())
                         .filter(t -> t.getSimpleName().endsWith("Service"))
                         // 排除自身接口：XxxServiceImpl 注入 XxxService 是标准写法
                         .filter(t -> !item.getSimpleName().startsWith(t.getSimpleName()))
-                        // 豁免 .common. 下的基础设施 Service
-                        .filter(t -> !t.getPackageName().contains(".common."))
+                        // 只统计本项目的业务 Service（排除 JDK 的 ExecutorService 等假阳性）
+                        .filter(t -> t.getPackageName().startsWith("com.fashion.supplychain"))
+                        // 豁免基础设施 Service（.common. 与顶层 service 包）
+                        .filter(t -> !isInfrastructureService(t))
                         .map(JavaClass::getName)
                         .collect(Collectors.toSet());
                 if (!svc.isEmpty()) {
@@ -274,6 +296,27 @@ class ArchitectureRulesTest {
 
         int violations = countViolations(c, rule);
         assertNotWorse("service.depends.on.service", violations, "见 ArchUnit 输出");
+    }
+
+    /**
+     * 是否基础设施 Service（横切关注点：缓存 / 分布式锁 / 对象存储），不参与业务编排。
+     *
+     * <p>D-653：只认本项目包，避免把 JDK 的 {@code ExecutorService} /
+     * {@code ScheduledExecutorService}（simpleName 同样以 Service 结尾）误判为业务 Service。
+     *
+     * <p>D-653 修正：包名判断按<b>段</b>匹配 {@code common}，而不是 {@code contains(".common.")}。
+     * 原写法漏掉了 {@code com.fashion.supplychain.common} 本身（末尾无点）——
+     * {@code CosService} 就在该包下。
+     */
+    private static boolean isInfrastructureService(JavaClass c) {
+        String p = c.getPackageName();
+        if (!p.startsWith("com.fashion.supplychain")) {
+            return false;
+        }
+        if (p.equals("com.fashion.supplychain.service")) {
+            return true;
+        }
+        return Set.of(p.split("\\.")).contains("common");
     }
 
     /**

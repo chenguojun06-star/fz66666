@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
-import com.fashion.supplychain.production.orchestration.ProductionOrderFinanceOrchestrationService;
+import com.fashion.supplychain.production.orchestration.ProductionOrderFinanceOrchestrator;
 import com.fashion.supplychain.production.orchestration.ProductionOrderProgressOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderProgressRecomputeService;
 import com.fashion.supplychain.production.service.ProductionOrderQueryService;
@@ -74,7 +74,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     private ObjectProvider<ProductionOrderProgressOrchestrator> progressOrchestrationServiceProvider;
 
     @Autowired
-    private ObjectProvider<ProductionOrderFinanceOrchestrationService> financeOrchestrationServiceProvider;
+    private ObjectProvider<ProductionOrderFinanceOrchestrator> financeOrchestrationServiceProvider;
 
     @Override
     public IPage<ProductionOrder> queryPage(Map<String, Object> params) {
@@ -292,7 +292,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
 
     @Override
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
-        ProductionOrderFinanceOrchestrationService svc = financeOrchestrationServiceProvider.getIfAvailable();
+        ProductionOrderFinanceOrchestrator svc = financeOrchestrationServiceProvider.getIfAvailable();
         if (svc == null) {
             throw new IllegalStateException("财务结单服务不可用");
         }
@@ -301,7 +301,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
 
     @Override
     public ProductionOrder closeOrder(String id) {
-        ProductionOrderFinanceOrchestrationService svc = financeOrchestrationServiceProvider.getIfAvailable();
+        ProductionOrderFinanceOrchestrator svc = financeOrchestrationServiceProvider.getIfAvailable();
         if (svc == null) {
             throw new IllegalStateException("财务完成服务不可用");
         }
