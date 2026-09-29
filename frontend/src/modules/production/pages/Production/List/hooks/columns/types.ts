@@ -35,6 +35,9 @@ export interface UseProductionColumnsProps {
   getStageCompletionTime?: (record: ProductionOrder, stageKeyword: string, rate?: number) => string;
   onOpenInspectDrawer?: (orderId: string) => void;
   onOpenSmartReceive?: (orderNo: string) => void;
+  /** 置顶：已固定订单 id 集合 + 切换回调（用户个人视角，常驻列表最前） */
+  pinnedOrderIds?: Set<string>;
+  onTogglePinOrder?: (record: ProductionOrder) => void;
 }
 
 export type ColumnGroupBuilder = (props: UseProductionColumnsProps) => any[];

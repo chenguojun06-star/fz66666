@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Col, Row } from 'antd';
 import CoverImageUpload from './CoverImageUpload';
 import type { StyleBasicInfoFormProps } from './StyleBasicInfoForm/types';
@@ -86,6 +86,29 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
     isFieldLocked,
   };
 
+  // 打板尺码/数量 与「颜色码数」矩阵联动：矩阵码数列 → 打板尺码；矩阵总数量 → 数量。
+  // 矩阵有内容时自动写入表单值（保存随 t_style_info 落库）；矩阵为空不覆盖，尊重历史手工值。
+  const linkedPrintSize = useMemo(
+    () => (sizeOptions || []).map((s) => String(s || '').trim()).filter(Boolean).join(','),
+    [sizeOptions],
+  );
+  const linkedTotalQty = useMemo(() => {
+    const rows = sizeColorMatrixRows || [];
+    if (!rows.length) return '';
+    const total = rows.reduce((sum, row) => (
+      sum + (row?.quantities || []).reduce((s, q) => s + (Number(q) || 0), 0)
+    ), 0);
+    return total > 0 ? String(total) : '';
+  }, [sizeColorMatrixRows]);
+
+  useEffect(() => {
+    if (!linkedPrintSize && !linkedTotalQty) return;
+    _form.setFieldsValue({
+      ...(linkedPrintSize ? { printSize: linkedPrintSize } : {}),
+      ...(linkedTotalQty ? { attrQuantity: linkedTotalQty } : {}),
+    });
+  }, [linkedPrintSize, linkedTotalQty, _form]);
+
   // 图片资产：合并进基础信息区左栏（主图180px+缩略图+上传/识别/搜相似）
   const coverNode = (
     <CoverImageUpload
@@ -120,10 +143,12 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
         </Col>
       </Row>
 
-      {/* D-440：商品属性与规格（重量/单位/商品属性/长宽高/是否里布/打扮尺码/标签/数量）
-          与商品资料详情抽屉共用 ProductNatureFields 字段组，落 t_style_info 同名列 */}
-      <SectionBox title="商品属性">
-        <ProductNatureFields disabled={editLocked} />
+      {/* 商品规格（重量/单位/长宽高/是否里布/打板尺码/数量）
+          与商品资料详情抽屉共用 ProductNatureFields 字段组，落 t_style_info 同名列。
+          打板尺码/数量与下方「颜色码数」矩阵联动只读展示（原「商品属性」成品/半成品单选与
+          「标签」自由文本因语义重复且无消费方已移除，见 ProductNatureFields 注释） */}
+      <SectionBox title="商品规格">
+        <ProductNatureFields disabled={editLocked} linked />
       </SectionBox>
 
       {/* 区4：颜色 / 尺码 / 商品编码 配置 */}

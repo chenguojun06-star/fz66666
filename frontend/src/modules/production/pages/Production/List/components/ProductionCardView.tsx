@@ -41,6 +41,9 @@ interface ProductionCardViewProps {
   isSupervisorOrAbove: boolean;
   isFactoryAccount: boolean;
   setRemarkTarget: (target: { open: boolean; orderNo: string; merchandiser?: string; defaultRole?: string }) => void;
+  /** 置顶：已固定订单 id 集合 + 切换回调（用户个人视角，常驻列表最前） */
+  pinnedOrderIds?: Set<string>;
+  onTogglePinOrder?: (record: ProductionOrder) => void;
 }
 
 /**
@@ -76,6 +79,8 @@ const ProductionCardView: React.FC<ProductionCardViewProps> = ({
   isSupervisorOrAbove,
   isFactoryAccount,
   setRemarkTarget,
+  pinnedOrderIds,
+  onTogglePinOrder,
 }) => {
   return (
     <>
@@ -160,6 +165,7 @@ const ProductionCardView: React.FC<ProductionCardViewProps> = ({
           onQuickEdit: (r) => quickEditModal.open(r),
           handleCloseOrder, handleScrapOrder, handleCopyOrder, handleShareOrder,
           onOpenRemark: (r) => setRemarkTarget({ open: true, orderNo: r.orderNo || '', merchandiser: r.merchandiser }),
+          ...(onTogglePinOrder ? { pin: { pinned: pinnedOrderIds?.has(String(record.id)) ?? false, onToggle: onTogglePinOrder } } : {}),
         });
         return [
           { key: 'detail', label: '详情', title: '查看订单详情', onClick: () => navigate(withQuery('/production/order-flow', { orderId: record.id, orderNo: record.orderNo, styleNo: record.styleNo })) },

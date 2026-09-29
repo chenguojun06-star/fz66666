@@ -306,6 +306,8 @@
   },
   "layout": {
     "recentPages": "Trang đã mở gần đây",
+    "pinTab": "Ghim trang",
+    "unpinTab": "Bỏ ghim",
     "close": "Đóng",
     "urgentEvents": "Sự kiện khẩn cấp",
     "noUrgentEvents": "Không có sự kiện khẩn cấp",

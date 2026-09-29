@@ -15,13 +15,6 @@ interface ProductInfoFormProps {
   isMobile: boolean;
 }
 
-const PRODUCT_NATURE_OPTIONS = [
-  { value: 'finished', label: '成品' },
-  { value: 'semi_finished', label: '半成品' },
-  { value: 'raw_material', label: '原材料' },
-  { value: 'packaging', label: '包材' },
-];
-
 /** 封面图上传（基础信息弹窗置顶；分区编辑态放在「图片附件」区） */
 export const ProductCoverUpload: React.FC<{
   coverUrl: string | null;
@@ -59,7 +52,7 @@ export const ProductCoverUpload: React.FC<{
  * D-440：基础信息字段组（对齐参考竞品字段集）。
  * 款式编码/商品名称/商品品牌(theme,与样衣开发同字段同字典)/商品分类/虚拟分类/季节/
  * 供应商/供应商款号/U编码/基本售价/市场吊牌价/成本价/客户/生产周期/备注
- * （重量/单位/商品属性/长宽高/是否里布/打扮尺码/标签/数量 → ProductNatureFields）
+ * （重量/单位/长宽高/是否里布/打板尺码/数量 → ProductNatureFields）
  */
 export const ProductBaseFields: React.FC = () => {
   return (
@@ -168,10 +161,19 @@ export const ProductBaseFields: React.FC = () => {
 };
 
 /**
- * D-440：商品属性与规格字段组（重量/单位/商品属性/长宽高(含体积联动)/是否里布/打扮尺码/标签/数量）。
- * 商品资料抽屉「类目属性」区尾部 与 样衣开发表单「商品属性」分区共用。
+ * D-440：商品属性与规格字段组（重量/单位/长宽高(含体积联动)/是否里布/打板尺码/数量）。
+ * 商品资料抽屉「类目属性」区尾部 与 样衣开发表单「商品规格」分区共用。
+ *
+ * 2026-09 字段治理：
+ *  - 删除「商品属性」(productNature 成品/半成品/原材料/包材)——与样衣基础信息「商品类型」(productType) 语义重复，
+ *    全系统无任何业务逻辑消费该字段；历史数据列保留不再编辑。
+ *  - 删除「标签」(styleTags)——自由文本无任何消费方，易与「季节分类」混淆。
+ *  - 「打板尺码」原误写为「打扮尺码」，已更正。
+ *
+ * linked 模式（样衣详情页）：打板尺码/数量 与下方「颜色码数」矩阵联动只读展示——
+ * 打板尺码=码数列，数量=矩阵总数量，由父级表单直接写入这两个字段值。
  */
-export const ProductNatureFields: React.FC<{ disabled?: boolean }> = ({ disabled = false }) => {
+export const ProductNatureFields: React.FC<{ disabled?: boolean; linked?: boolean }> = ({ disabled = false, linked = false }) => {
   const lengthCm = Form.useWatch('lengthCm');
   const widthCm = Form.useWatch('widthCm');
   const heightCm = Form.useWatch('heightCm');
@@ -190,15 +192,6 @@ export const ProductNatureFields: React.FC<{ disabled?: boolean }> = ({ disabled
         <Col xs={24} sm={12} md={8}>
           <Form.Item name="unit" label="单位">
             <Input placeholder="如：件" maxLength={16} disabled={disabled} />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={12} md={8}>
-          <Form.Item name="productNature" label="商品属性">
-            <Radio.Group disabled={disabled}>
-              {PRODUCT_NATURE_OPTIONS.map(opt => (
-                <Radio key={opt.value} value={opt.value}>{opt.label}</Radio>
-              ))}
-            </Radio.Group>
           </Form.Item>
         </Col>
       </Row>
@@ -234,18 +227,21 @@ export const ProductNatureFields: React.FC<{ disabled?: boolean }> = ({ disabled
       </Row>
       <Row gutter={[12, 8]}>
         <Col xs={24} sm={12} md={8}>
-          <Form.Item name="printSize" label="打扮尺码">
-            <Input placeholder="请输入打扮尺码" maxLength={128} disabled={disabled} />
+          <Form.Item name="printSize" label="打板尺码" tooltip={linked ? '与下方颜色码数联动：展示矩阵勾选的码数' : undefined}>
+            <Input
+              placeholder={linked ? '随下方颜色码数自动带出' : '请输入打板尺码'}
+              maxLength={128}
+              disabled={disabled || linked}
+            />
           </Form.Item>
         </Col>
         <Col xs={24} sm={12} md={8}>
-          <Form.Item name="styleTags" label="标签">
-            <Input placeholder="请输入标签" maxLength={255} disabled={disabled} />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={12} md={8}>
-          <Form.Item name="attrQuantity" label="数量">
-            <Input placeholder="请输入数量" maxLength={64} disabled={disabled} />
+          <Form.Item name="attrQuantity" label="数量" tooltip={linked ? '与下方颜色码数联动：等于矩阵总数量' : undefined}>
+            <Input
+              placeholder={linked ? '随下方颜色码数自动合计' : '请输入数量'}
+              maxLength={64}
+              disabled={disabled || linked}
+            />
           </Form.Item>
         </Col>
       </Row>
@@ -253,7 +249,7 @@ export const ProductNatureFields: React.FC<{ disabled?: boolean }> = ({ disabled
   );
 };
 
-/** D-439/D-440：类目属性字段组（成分/是否里布/打扮尺码/标签/数量 + 质检字段 + 描述） */
+/** D-439/D-440：类目属性字段组（成分/质检字段 + 描述；是否里布/打板尺码/数量在 ProductNatureFields） */
 export const ProductAttrFields: React.FC = () => (
   <>
     <Row gutter={[12, 8]}>

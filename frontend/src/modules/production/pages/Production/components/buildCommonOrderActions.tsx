@@ -16,6 +16,8 @@ interface BuildCommonOrderActionsParams {
   handleCopyOrder?: (record: ProductionOrder) => void;
   handleShareOrder?: (record: ProductionOrder) => void;
   onOpenRemark?: OpenRemarkHandler;
+  /** 置顶（用户个人视角，常驻列表最前）：传入即展示「置顶/取消置顶」项 */
+  pin?: { pinned: boolean; onToggle: (record: ProductionOrder) => void };
 }
 
 export function buildCommonOrderActions({
@@ -30,8 +32,15 @@ export function buildCommonOrderActions({
   handleCopyOrder,
   handleShareOrder,
   onOpenRemark,
+  pin,
 }: BuildCommonOrderActionsParams): RowAction[] {
   return [
+    ...(pin ? [{
+      key: 'pinTop',
+      label: pin.pinned ? '取消置顶' : '置顶',
+      title: pin.pinned ? '取消置顶（恢复默认排序）' : '置顶：该订单常驻列表最前',
+      onClick: () => pin.onToggle(record),
+    }] : []),
     ...(onQuickEdit ? [{
       key: 'quickEdit',
       label: '编辑',

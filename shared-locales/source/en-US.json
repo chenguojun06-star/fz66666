@@ -306,6 +306,8 @@
   },
   "layout": {
     "recentPages": "Recent Pages",
+    "pinTab": "Pin tab",
+    "unpinTab": "Unpin tab",
     "close": "Close",
     "urgentEvents": "Urgent Events",
     "noUrgentEvents": "No urgent events",

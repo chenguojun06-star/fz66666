@@ -1,7 +1,7 @@
 import React, { ReactNode, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { App, Avatar, Button, Dropdown, Tag, Image } from 'antd';
-import { CloseOutlined, DownOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
+import { CloseOutlined, DownOutlined, LogoutOutlined, PushpinFilled, PushpinOutlined, SettingOutlined } from '@ant-design/icons';
 import { useUser, useAuthState } from '../../utils/AuthContext';
 import { paths } from '../../routeConfig';
 import { useViewport } from '../../utils/useViewport';
@@ -96,13 +96,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return menuConfig.map((section) => ({ ...section }));
   }, []);
 
-  const { recentPages, recentsContainerRef, activeTabRef, closeRecent } = useRecentPages(
+  const { recentPages, recentsContainerRef, activeTabRef, closeRecent, togglePin } = useRecentPages(
     effectivePathname,
     effectiveSearch,
     effectiveFullPath,
     getActivePath,
     language,
     localizedMenuConfig,
+    String((user as any)?.id || '').trim(),
   );
 
   const selectedKeys = useMemo(() => {
@@ -192,15 +193,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className="header-recents" role="tablist" aria-label={t('layout.recentPages', language)} ref={recentsContainerRef}>
                 {recentPages.map((p) => {
                   const isCurrent = p.basePath === (getActivePath || normalizePath(effectivePathname));
+                  const pinLabel = p.pinned ? t('layout.unpinTab', language) : t('layout.pinTab', language);
                   return (
                     <div
                       key={p.path}
-                      className={`recent-tab${isCurrent ? ' active' : ''}`}
+                      className={`recent-tab${isCurrent ? ' active' : ''}${p.pinned ? ' pinned' : ''}`}
                       ref={isCurrent ? activeTabRef : null}
                     >
                       <Button
                         type="text"
-                       
+
                         className="recent-tab-label"
                         title={p.path}
                         aria-current={isCurrent ? 'page' : undefined}
@@ -214,7 +216,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       </Button>
                       <Button
                         type="text"
-                       
+
+                        className={`recent-tab-pin${p.pinned ? ' pinned' : ''}`}
+                        icon={p.pinned ? <PushpinFilled /> : <PushpinOutlined />}
+                        title={pinLabel}
+                        aria-label={`${pinLabel} ${p.title}`}
+                        aria-pressed={p.pinned}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePin(p.basePath, p.title);
+                        }}
+                      />
+                      <Button
+                        type="text"
+
                         className="recent-tab-close"
                         icon={<CloseOutlined />}
                         aria-label={`${t('layout.close', language)} ${p.title}`}

@@ -42,6 +42,7 @@ STRICT = '--strict' in sys.argv
 ALLOWLIST = {
     # localStorage 的存储键，不是界面文案
     'layout.header.recentPages',   # frontend/src/components/Layout/router.tsx
+    'layout.header.pinnedPages',   # frontend/src/components/Layout/router.tsx（D-625 页签图钉固定，按用户后缀存）
     'layout.sidebar.collapsed',    # frontend/src/components/Layout/index.tsx
 }
 

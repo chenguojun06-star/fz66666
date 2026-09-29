@@ -1,9 +1,10 @@
-import { useMemo, useEffect, useRef, useState } from 'react';
+import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { menuConfig } from '../../routeConfig';
 import { type AppLanguage } from '../../i18n/languagePreference';
 import { t } from '../../i18n';
 import { normalizePath } from './useLayoutAuth';
+import { useUserPreference } from '@/hooks/useUserPreference';
 import { PLATFORM_LIST } from '../../modules/integration/pages/IntegrationCenter/PlatformConnectorConstants';
 
 type RecentPage = {
@@ -11,10 +12,46 @@ type RecentPage = {
   basePath: string;
   title: string;
   ts: number;
+  /** 页签被用户图钉固定（常驻页签栏最前，跨登录跟随账号） */
+  pinned?: boolean;
 };
 
+/** 图钉固定的页签（按 basePath 记，与最近打开分开持久化） */
+type PinnedTab = { basePath: string; title: string; ts: number };
+
 const recentPagesStorageKey = 'layout.header.recentPages';
+const pinnedTabsStorageBase = 'layout.header.pinnedPages';
 const maxRecentPages = 12;
+const maxPinnedTabs = 12;
+
+const pinnedTabsStorageKeyOf = (userKey: string) => `${pinnedTabsStorageBase}.${userKey || 'anon'}`;
+
+function readPinnedTabs(userKey: string): PinnedTab[] {
+  try {
+    const raw = localStorage.getItem(pinnedTabsStorageKeyOf(userKey));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((x) => x && typeof x.basePath === 'string')
+      .map((x) => ({
+        basePath: String(x.basePath),
+        title: typeof x.title === 'string' ? x.title : String(x.basePath),
+        ts: typeof x.ts === 'number' ? x.ts : Date.now(),
+      }))
+      .slice(0, maxPinnedTabs);
+  } catch {
+    return [];
+  }
+}
+
+function writePinnedTabs(userKey: string, pins: PinnedTab[]) {
+  try {
+    localStorage.setItem(pinnedTabsStorageKeyOf(userKey), JSON.stringify(pins));
+  } catch {
+    // intentionally empty
+  }
+}
 
 function readRecentPages(_language: string): RecentPage[] {
   try {
@@ -163,6 +200,8 @@ export interface RecentPagesResult {
   recentsContainerRef: React.RefObject<HTMLDivElement>;
   activeTabRef: React.RefObject<HTMLDivElement>;
   closeRecent: (path: string) => void;
+  /** 切换图钉固定状态（pinned=true 取消固定，false 固定到最前） */
+  togglePin: (basePath: string, title?: string) => void;
 }
 
 export function useRecentPages(
@@ -172,14 +211,56 @@ export function useRecentPages(
   getActivePath: string | undefined,
   language: AppLanguage,
   localizedMenuConfig: any[],
+  userKey: string,
 ): RecentPagesResult {
   const navigate = useNavigate();
+  const { listByPage, save: savePreference } = useUserPreference();
   const [recentPages, setRecentPages] = useState<RecentPage[]>(() => {
     if (typeof window === 'undefined') return [];
     return readRecentPages(language).slice(0, maxRecentPages);
   });
+  const [pinnedTabs, setPinnedTabs] = useState<PinnedTab[]>(() => readPinnedTabs(userKey));
   const recentsContainerRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef<HTMLDivElement>(null);
+
+  // 图钉固定持久化：本地即时读 + 偏好云覆盖（换浏览器/重装后登录仍跟人走）
+  useEffect(() => {
+    setPinnedTabs(readPinnedTabs(userKey));
+  }, [userKey]);
+
+  useEffect(() => {
+    if (!userKey) return;
+    let cancelled = false;
+    void (async () => {
+      const items = await listByPage('layout-tabs');
+      if (cancelled) return;
+      const pref = items.find((it) => it.preferenceType === 'pinnedPages');
+      if (pref?.preferenceValue) {
+        try {
+          const parsed = JSON.parse(pref.preferenceValue);
+          if (Array.isArray(parsed) && parsed.length) {
+            const cloud = parsed
+              .filter((x: any) => x && typeof x.basePath === 'string')
+              .map((x: any) => ({
+                basePath: String(x.basePath),
+                title: typeof x.title === 'string' ? x.title : String(x.basePath),
+                ts: typeof x.ts === 'number' ? x.ts : Date.now(),
+              }))
+              .slice(0, maxPinnedTabs);
+            setPinnedTabs(cloud);
+            writePinnedTabs(userKey, cloud);
+          }
+        } catch { /* 云端值损坏时保持本地 */ }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [userKey, listByPage]);
+
+  const persistPinnedTabs = useCallback((next: PinnedTab[]) => {
+    if (!userKey) return;
+    writePinnedTabs(userKey, next);
+    void savePreference({ pageKey: 'layout-tabs', preferenceType: 'pinnedPages', preferenceValue: next });
+  }, [userKey, savePreference]);
 
   useEffect(() => {
     if (!effectivePathname) return;
@@ -239,6 +320,15 @@ export function useRecentPages(
       const target = prev[idx];
       const next = prev.filter((p) => p.path !== path);
       writeRecentPages(next);
+      // 关闭的页签若被图钉固定，固定一并取消（用户显式关掉 = 不再常驻）。
+      // 云端置顶但本机从未打开过的页签不在 recents 里，此时 path 本身就是 basePath。
+      setPinnedTabs((pins) => {
+        const hitBase = target?.basePath || path;
+        const nextPins = pins.filter((p) => p.basePath !== hitBase);
+        if (nextPins.length === pins.length) return pins;
+        persistPinnedTabs(nextPins);
+        return nextPins;
+      });
       const currentBase = getActivePath || normalizePath(effectivePathname);
       if (target && target.basePath === currentBase) {
         const fallback = next[idx] || next[idx - 1] || { basePath: '/dashboard', path: '/dashboard' };
@@ -248,8 +338,42 @@ export function useRecentPages(
     });
   };
 
-  return { recentPages, recentsContainerRef, activeTabRef, closeRecent };
+  /** 图钉固定/取消固定：固定后该页签常驻页签栏最前（跨登录跟随账号） */
+  const togglePin = useCallback((basePath: string, title?: string) => {
+    const base = String(basePath || '').trim();
+    if (!base) return;
+    setPinnedTabs((pins) => {
+      const exists = pins.some((p) => p.basePath === base);
+      const next = exists
+        ? pins.filter((p) => p.basePath !== base)
+        : [{ basePath: base, title: title || resolveRecentTitle(base, normalizePath(effectivePathname), language, localizedMenuConfig) || base, ts: Date.now() }, ...pins].slice(0, maxPinnedTabs);
+      persistPinnedTabs(next);
+      return next;
+    });
+  }, [effectivePathname, language, localizedMenuConfig, persistPinnedTabs]);
+
+  // 展示合并：图钉固定的页签常驻最前（按固定顺序），其余按最近打开排序；
+  // 固定页签的标题优先取最近打开里的最新标题（如"款号详情"跟随最近一次访问的款）
+  const mergedRecentPages = useMemo<RecentPage[]>(() => {
+    const pinnedBaseSet = new Set(pinnedTabs.map((p) => p.basePath));
+    const rest = recentPages
+      .filter((p) => !pinnedBaseSet.has(p.basePath))
+      .map((p) => ({ ...p, pinned: false }));
+    const pinnedList = pinnedTabs.map((pt) => {
+      const match = recentPages.find((p) => p.basePath === pt.basePath);
+      return {
+        path: match?.path || pt.basePath,
+        basePath: pt.basePath,
+        title: match?.title || pt.title || pt.basePath,
+        ts: match?.ts || pt.ts,
+        pinned: true,
+      };
+    });
+    return [...pinnedList, ...rest];
+  }, [pinnedTabs, recentPages]);
+
+  return { recentPages: mergedRecentPages, recentsContainerRef, activeTabRef, closeRecent, togglePin };
 }
 
-export { readRecentPages, writeRecentPages, resolveRecentTitle, recentPagesStorageKey, maxRecentPages };
+export { readRecentPages, writeRecentPages, resolveRecentTitle, recentPagesStorageKey, maxRecentPages, readPinnedTabs, writePinnedTabs, pinnedTabsStorageBase };
 export type { RecentPage };

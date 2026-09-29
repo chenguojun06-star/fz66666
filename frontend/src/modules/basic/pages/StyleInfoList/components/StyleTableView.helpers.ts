@@ -154,6 +154,9 @@ export interface BuildActionButtonsCallbacks {
   setRemarkTarget: (target: { open: boolean; styleNo: string; defaultRole?: string }) => void;
   setCopySource: (record: StyleInfo | null) => void;
   setCopyModalOpen: (open: boolean) => void;
+  /** 置顶（用户个人视角，常驻列表最前）：传入即在「详情」后展示「置顶/取消置顶」 */
+  pinned?: boolean;
+  onTogglePin?: (record: StyleInfo) => void;
 }
 
 /**
@@ -165,9 +168,17 @@ export const buildActionButtons = (
   isSupervisorOrAbove: boolean,
   callbacks: BuildActionButtonsCallbacks,
 ): StageQuickAction[] => {
+  const pinAction: StageQuickAction[] = callbacks.onTogglePin
+    ? [{
+        key: 'pinTop',
+        label: callbacks.pinned ? '取消置顶' : '置顶',
+        onClick: () => callbacks.onTogglePin?.(record),
+      }]
+    : [];
   if (isScrappedRow(record)) {
     return [
       { key: 'detail', label: '详情', type: 'primary', onClick: () => callbacks.navigate(`/style-info/${record.id}`) },
+      ...pinAction,
       { key: 'unscrap', label: '取消报废', type: 'default', onClick: () => callbacks.onUnscrap(String(record.id!)) },
       { key: 'print', label: '打印', type: 'default', onClick: () => callbacks.onPrint(record) },
       { key: 'remark', label: '备注', type: 'default', onClick: () => callbacks.setRemarkTarget({ open: true, styleNo: (record as Record<string, unknown>).styleNo as string || '' }) },
@@ -177,6 +188,7 @@ export const buildActionButtons = (
   if (isStageDoneRow(record)) {
     const items: StageQuickAction[] = [
       { key: 'detail', label: '详情', type: 'primary', onClick: () => callbacks.navigate(`/style-info/${record.id}`) },
+      ...pinAction,
       hasPushedOrder(record)
         ? { key: 'order-view', label: '生产订单', type: 'default', onClick: () => callbacks.navigate(`/production?keyword=${encodeURIComponent(((record as Record<string, unknown>).orderNo as string) || (record as Record<string, unknown>).styleNo as string || '')}`) }
         : { key: 'order-push', label: '资料推送', type: 'default', onClick: () => callbacks.navigate(`/style-info/${record.id}`) },
@@ -194,6 +206,7 @@ export const buildActionButtons = (
 
   return [
     { key: 'detail', label: '详情', type: 'primary', onClick: () => callbacks.navigate(`/style-info/${record.id}`) },
+    ...pinAction,
     { key: 'print', label: '打印', type: 'default', onClick: () => callbacks.onPrint(record) },
     { key: 'scrap', label: '报废', type: 'default', danger: true, onClick: () => callbacks.onScrap(String(record.id!)) },
     { key: 'copy', label: '复制', type: 'default', onClick: () => { callbacks.setCopySource(record); callbacks.setCopyModalOpen(true); } },

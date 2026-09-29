@@ -1,9 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/common/PageLayout';
+import api from '@/utils/api';
 import { useDelayedStageBreakdown } from '@/modules/dashboard/components/DelayedStageBreakdown/useDelayedStageBreakdown';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { useFieldConfig } from '@/hooks/useFieldConfig';
+import { usePinnedRows } from '@/hooks/usePinnedRows';
+import { StyleInfo } from '@/types/style';
 
 import { useStyleList, useStyleStats } from '../StyleInfo/hooks';
 import { useStyleActions } from './hooks/useStyleActions';
@@ -55,7 +58,6 @@ const StyleInfoListPage: React.FC = () => {
     pendingScrapId,
     scrapLoading,
     handleUnscrap,
-    handleToggleTop: _handleToggleTop,
     handlePrint: _handlePrint,
   } = useStyleActions(fetchList);
 
@@ -131,6 +133,53 @@ const StyleInfoListPage: React.FC = () => {
     defaultVisible: STYLE_LIST_DEFAULT_VISIBLE,
   });
   const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
+
+  // 置顶（用户个人视角）：钉住的款式常驻列表最前，跨登录跟随账号（t_user_preference + 本地双写）。
+  // 不在当前页的钉住款式按 id 补拉详情插到最前，保证"钉了就一定看得到"。
+  const rowPins = usePinnedRows('style-info-list');
+  const [pinnedExtraStyles, setPinnedExtraStyles] = useState<StyleInfo[]>([]);
+  const currentPageStyleIds = useMemo(
+    () => new Set(data.map((s) => String(s.id))),
+    [data],
+  );
+  useEffect(() => {
+    const missing = rowPins.pins.filter((id) => !currentPageStyleIds.has(id));
+    if (!missing.length) {
+      setPinnedExtraStyles((prev) => (prev.length ? [] : prev));
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const fetched = await Promise.all(missing.slice(0, rowPins.maxPins).map(async (id) => {
+        try {
+          const res = await api.get<any>(`/style/info/${id}`);
+          return res?.code === 200 && res.data ? (res.data as StyleInfo) : null;
+        } catch { return null; }
+      }));
+      if (!cancelled) setPinnedExtraStyles(fetched.filter(Boolean) as StyleInfo[]);
+    })();
+    return () => { cancelled = true; };
+  }, [rowPins.pins, rowPins.maxPins, currentPageStyleIds]);
+
+  // 展示数据 = 置顶行（含补拉的场外钉住款）按钉住顺序排最前 + 其余按原排序；
+  // 延期环节跳转（focusStyleIds）聚焦态下不插入场外置顶行，保持聚焦口径
+  const pinDisplayData = useMemo(() => {
+    const extras = focusStyleIds.size > 0 ? [] : pinnedExtraStyles;
+    const all = [...extras, ...displayData];
+    const pinIdx = new Map(rowPins.pins.map((id, i) => [String(id), i]));
+    const pinned = all
+      .filter((s) => pinIdx.has(String(s.id)))
+      .sort((a, b) => (pinIdx.get(String(a.id)) ?? 0) - (pinIdx.get(String(b.id)) ?? 0));
+    const rest = all.filter((s) => !pinIdx.has(String(s.id)));
+    return [...pinned, ...rest];
+  }, [pinnedExtraStyles, displayData, focusStyleIds.size, rowPins.pins]);
+  const handleTogglePinStyle = useCallback((record: StyleInfo) => {
+    rowPins.toggle(record.id);
+  }, [rowPins]);
+  const stylePinProps = useMemo(() => ({
+    pinnedStyleIds: rowPins.pinSet,
+    onTogglePinStyle: handleTogglePinStyle,
+  }), [rowPins.pinSet, handleTogglePinStyle]);
 
   // D-323: 自定义字段统一纳入显隐管控（key = ext_<fieldKey>），过滤后再下发各视图
   const visibleCustomFields = useMemo(
@@ -216,7 +265,7 @@ const StyleInfoListPage: React.FC = () => {
       >
         {viewMode === 'list' ? (
           <StyleListView
-            data={displayData}
+            data={pinDisplayData}
             stockStateMap={stockStateMap}
             loading={loading}
             total={displayTotal}
@@ -230,10 +279,11 @@ const StyleInfoListPage: React.FC = () => {
             onRefresh={() => fetchList()}
             customFields={visibleCustomFields}
             orderedColumns={styleColumnSettings.orderedVisibleColumns}
+            {...stylePinProps}
           />
         ) : viewMode === 'smart' ? (
           <StyleTableView
-            data={displayData}
+            data={pinDisplayData}
             stockStateMap={stockStateMap}
             loading={loading}
             total={displayTotal}
@@ -249,10 +299,11 @@ const StyleInfoListPage: React.FC = () => {
             focusedStyleId={focusedStyleId}
             dateSortAsc={dateSortAsc}
             customFields={visibleCustomFields}
+            {...stylePinProps}
           />
         ) : (
           <StyleCardView
-            data={displayData}
+            data={pinDisplayData}
             stockStateMap={stockStateMap}
             loading={loading}
             total={displayTotal}
@@ -266,6 +317,7 @@ const StyleInfoListPage: React.FC = () => {
             onRefresh={() => fetchList()}
             focusedStyleId={focusedStyleId}
             customFields={visibleCustomFields}
+            {...stylePinProps}
           />
         )}
       </PageLayout>

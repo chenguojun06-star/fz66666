@@ -1450,3 +1450,8 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* 置顶行：淡蓝底标识（配合行操作「置顶/取消置顶」，置顶行常驻列表最前） */
+.style-row-pinned > td {
+  background: var(--recent-tab-active-bg, rgba(45, 127, 249, 0.08)) !important;
+}

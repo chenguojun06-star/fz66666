@@ -5,7 +5,7 @@ import { StyleInfo } from '@/types/style';
 
 /**
  * 款式列表操作 Hook
- * 提供报废、置顶、打印等行操作
+ * 提供报废、打印等行操作（置顶由 usePinnedRows 提供，见 StyleInfoList/index.tsx）
  */
 export const useStyleActions = (refreshCallback?: () => void) => {
   const { message, modal } = App.useApp();
@@ -68,31 +68,6 @@ export const useStyleActions = (refreshCallback?: () => void) => {
   };
 
   /**
-   * 切换置顶状态
-   */
-  const handleToggleTop = async (record: StyleInfo) => {
-    try {
-      const newTopStatus = record.isTop === 1 ? 0 : 1;
-      const res = await api.put('/style/info', {
-        ...record,
-        isTop: newTopStatus
-      });
-
-      if (res.code === 200) {
-        message.success(newTopStatus === 1 ? '置顶成功' : '取消置顶成功');
-        refreshCallback?.();
-        return true;
-      } else {
-        message.error(res.message || '操作失败');
-        return false;
-      }
-    } catch (error: unknown) {
-      message.error(error instanceof Error ? error.message : '操作失败');
-      return false;
-    }
-  };
-
-  /**
    * 打印款式信息
    * 返回款式记录，由外部控制打印弹窗
    */
@@ -107,7 +82,6 @@ export const useStyleActions = (refreshCallback?: () => void) => {
     pendingScrapId,
     scrapLoading,
     handleUnscrap,
-    handleToggleTop,
     handlePrint
   };
 };

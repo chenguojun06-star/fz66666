@@ -84,6 +84,9 @@ interface StyleListViewProps {
   customFields?: FieldConfigItem[];
   /** 有序可见系统列（来自父级列设置） */
   orderedColumns: ColumnOption[];
+  /** 置顶（用户个人视角）：已钉住款式 id 集合 + 切换回调 */
+  pinnedStyleIds?: Set<string>;
+  onTogglePinStyle?: (record: StyleInfo) => void;
 }
 
 const formatDate = (v: unknown): string => {
@@ -107,6 +110,8 @@ const StyleListView: React.FC<StyleListViewProps> = ({
   onRefresh,
   customFields = [],
   orderedColumns,
+  pinnedStyleIds,
+  onTogglePinStyle,
 }) => {
   const navigate = useNavigate();
   const { user } = useUser();
@@ -178,10 +183,19 @@ const StyleListView: React.FC<StyleListViewProps> = ({
     }
   };
 
+  /** 置顶操作项（插在「详情」之后，三个视图位置一致） */
+  const pinAction = (record: StyleInfo): RowAction => ({
+    key: 'pinTop',
+    label: pinnedStyleIds?.has(String(record.id)) ? '取消置顶' : '置顶',
+    title: pinnedStyleIds?.has(String(record.id)) ? '取消置顶（恢复默认排序）' : '置顶：该款式常驻列表最前',
+    onClick: () => onTogglePinStyle?.(record),
+  });
+
   const buildActions = (record: StyleInfo): RowAction[] => {
     if (isScrappedStyle(record)) {
       return [
         { key: 'detail', label: '详情', onClick: () => navigate(`/style-info/${record.id}`) },
+        ...(onTogglePinStyle ? [pinAction(record)] : []),
         { key: 'unscrap', label: '取消报废', onClick: () => onUnscrap(String(record.id!)) },
         { key: 'print', label: '打印', onClick: () => onPrint(record) },
         { key: 'remark', label: '备注', onClick: () => setRemarkTarget({ open: true, styleNo: record.styleNo || '' }) },
@@ -190,6 +204,7 @@ const StyleListView: React.FC<StyleListViewProps> = ({
     if (isStageDoneRow(record)) {
       const items: RowAction[] = [
         { key: 'detail', label: '详情', onClick: () => navigate(`/style-info/${record.id}`) },
+        ...(onTogglePinStyle ? [pinAction(record)] : []),
         {
           key: 'production',
           label: '生产订单',
@@ -206,6 +221,7 @@ const StyleListView: React.FC<StyleListViewProps> = ({
     }
     return [
       { key: 'detail', label: '详情', onClick: () => navigate(`/style-info/${record.id}`) },
+      ...(onTogglePinStyle ? [pinAction(record)] : []),
       { key: 'pattern', label: '纸样', onClick: () => navigate(`/style-info/${record.id}?tab=7&section=files`) },
       { key: 'sample', label: '生产制单', onClick: () => navigate(`/style-info/${record.id}?tab=8`) },
       { key: 'print', label: '打印', onClick: () => onPrint(record) },
@@ -277,6 +293,7 @@ const StyleListView: React.FC<StyleListViewProps> = ({
         columns={columns}
         dataSource={data}
         rowKey={(record: StyleInfo) => String(record.id || record.styleNo || '')}
+        rowClassName={(record: StyleInfo) => (pinnedStyleIds?.has(String(record.id)) ? 'style-row-pinned' : '')}
         loading={loading}
         scroll={{ x: 1500 }}
         rowSelection={{

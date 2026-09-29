@@ -113,7 +113,7 @@ export interface StyleInfo extends Record<string, unknown> {
   weightKg?: number | null;
   /** 单位（如：件） */
   unit?: string;
-  /** 商品属性：finished成品/semi_finished半成品/raw_material原材料/packaging包材 */
+  /** 商品属性（历史遗留列：成品/半成品/原材料/包材；与 productType 语义重复，2026-09 起不再提供编辑入口） */
   productNature?: string;
   lengthCm?: number | null;
   widthCm?: number | null;
@@ -122,11 +122,11 @@ export interface StyleInfo extends Record<string, unknown> {
   remark?: string;
   /** 是否里布 */
   hasLining?: boolean | null;
-  /** 打扮尺码 */
+  /** 打板尺码（样衣详情页与颜色码数矩阵联动：矩阵码数列自动带出） */
   printSize?: string;
-  /** 标签 */
+  /** 标签（历史遗留列：自由文本无消费方，2026-09 起不再提供编辑入口） */
   styleTags?: string;
-  /** 数量（类目属性） */
+  /** 数量（样衣详情页与颜色码数矩阵联动：等于矩阵总数量） */
   attrQuantity?: string;
 
   // 退回编辑锁定字段

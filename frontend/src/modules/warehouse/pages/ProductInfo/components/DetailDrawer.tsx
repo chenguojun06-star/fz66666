@@ -50,14 +50,6 @@ const SECTIONS = [
   { key: 'misc', label: '其它设置' },
 ] as const;
 
-/** D-440：商品属性中文映射 */
-const PRODUCT_NATURE_LABELS: Record<string, string> = {
-  finished: '成品',
-  semi_finished: '半成品',
-  raw_material: '原材料',
-  packaging: '包材',
-};
-
 const Section: React.FC<{ id: string; title: string; children: React.ReactNode }> = ({ id, title, children }) => (
   <div id={id} style={{ marginBottom: 28, scrollMarginTop: 12 }}>
     <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--color-border, #e5e5ea)' }}>
@@ -222,7 +214,6 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
                     <Descriptions.Item label="成本价">{d.costPrice != null ? formatMoney(d.costPrice) : '-'}</Descriptions.Item>
                     <Descriptions.Item label="重量(kg)">{d.weightKg != null ? `${d.weightKg}` : '-'}</Descriptions.Item>
                     <Descriptions.Item label="单位">{String(d.unit ?? '-')}</Descriptions.Item>
-                    <Descriptions.Item label="商品属性">{PRODUCT_NATURE_LABELS[String(d.productNature || 'finished')] || '-'}</Descriptions.Item>
                     <Descriptions.Item label="生产周期">{d.cycle ? `${d.cycle}天` : '-'}</Descriptions.Item>
                     <Descriptions.Item label="客户">{String(d.customer ?? '-')}</Descriptions.Item>
                   </Descriptions>
@@ -246,13 +237,12 @@ const DetailDrawer: React.FC<DetailDrawerProps> = ({
 
                 <Section id="pinfo-sec-attrs" title="类目属性">
                   <ProductAttrFields />
-                  <div className="u-fw-600 u-fs-13 u-mt-16 u-mb-8">商品属性与规格</div>
+                  <div className="u-fw-600 u-fs-13 u-mt-16 u-mb-8">商品规格</div>
                   <ProductNatureFields />
                   <Descriptions column={3} size="small" bordered style={{ marginTop: 12 }}>
                     <Descriptions.Item label="成分">{String(d.fabricComposition ?? '-')}</Descriptions.Item>
                     <Descriptions.Item label="是否里布">{d.hasLining == null ? '-' : (d.hasLining ? '是' : '否')}</Descriptions.Item>
-                    <Descriptions.Item label="打扮尺码">{String(d.printSize ?? '-')}</Descriptions.Item>
-                    <Descriptions.Item label="标签">{String(d.styleTags ?? '-')}</Descriptions.Item>
+                    <Descriptions.Item label="打板尺码">{String(d.printSize ?? '-')}</Descriptions.Item>
                     <Descriptions.Item label="数量">{String(d.attrQuantity ?? '-')}</Descriptions.Item>
                     <Descriptions.Item label="备注" span={3}>{String(d.remark ?? '-')}</Descriptions.Item>
                   </Descriptions>

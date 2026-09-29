@@ -28,6 +28,9 @@ interface StyleTableRowCallbacks {
   setDevelopmentDrawerRecord: (record: StyleInfo | null) => void;
   setDevelopmentDrawerSection: (section: WorkbenchSection) => void;
   setProcurementDrawerRecord: (record: StyleInfo | null) => void;
+  /** 置顶（用户个人视角，常驻列表最前） */
+  pinnedStyleIds?: Set<string>;
+  onTogglePinStyle?: (record: StyleInfo) => void;
 }
 
 interface StyleTableRowProps {
@@ -62,6 +65,9 @@ const StyleTableRow: React.FC<StyleTableRowProps> = ({
     setRemarkTarget: callbacks.setRemarkTarget,
     setCopySource: callbacks.setCopySource,
     setCopyModalOpen: callbacks.setCopyModalOpen,
+    ...(callbacks.onTogglePinStyle
+      ? { pinned: callbacks.pinnedStyleIds?.has(String(record.id)) ?? false, onTogglePin: callbacks.onTogglePinStyle }
+      : {}),
   });
 
   return (

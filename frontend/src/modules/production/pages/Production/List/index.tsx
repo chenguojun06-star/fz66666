@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { App, Button } from 'antd';
 import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
+import api from '@/utils/api';
 import { useSubProcessRemap } from './hooks/useSubProcessRemap';
 import { ProductionOrder } from '@/types/production';
 import { isSupervisorOrAboveUser, useUser } from '@/utils/AuthContext';
@@ -36,6 +37,7 @@ import ProductionContentView from './components/ProductionContentView';
 import SmartReceiveModal from '../MaterialPurchase/components/SmartReceiveModal';
 import { useDelayedStageBreakdown } from '@/modules/dashboard/components/DelayedStageBreakdown/useDelayedStageBreakdown';
 import { useFieldConfig } from '@/hooks/useFieldConfig';
+import { usePinnedRows } from '@/hooks/usePinnedRows';
 import { SettingOutlined } from '@ant-design/icons';
 import { usePatrolTitleTags } from './hooks/usePatrolTitleTags.tsx';
 import { useTableColumns } from './hooks/useTableColumns';
@@ -71,6 +73,50 @@ const ProductionList: React.FC = () => {
   const labelPrint = useLabelPrint();
   const listData = useProductionListData();
   const columnSettings = useColumnSettings();
+
+  // 置顶（用户个人视角）：钉住的订单常驻列表最前，跨登录跟随账号（t_user_preference + 本地双写）。
+  // 不在当前页的钉住订单按 id 补拉详情插到最前，保证"钉了就一定看得到"。
+  const rowPins = usePinnedRows('production-orders');
+  const [pinnedExtraRows, setPinnedExtraRows] = useState<ProductionOrder[]>([]);
+  const currentPageIds = useMemo(
+    () => new Set(listData.productionList.map((o) => String(o.id))),
+    [listData.productionList],
+  );
+  useEffect(() => {
+    const missing = rowPins.pins.filter((id) => !currentPageIds.has(id));
+    if (!missing.length) {
+      setPinnedExtraRows((prev) => (prev.length ? [] : prev));
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const fetched = await Promise.all(missing.slice(0, rowPins.maxPins).map(async (id) => {
+        try {
+          const res = await api.get<any>('/production/order/list', { params: { id } });
+          return res?.code === 200 && res.data && !Array.isArray(res.data) ? (res.data as ProductionOrder) : null;
+        } catch { return null; }
+      }));
+      if (!cancelled) setPinnedExtraRows(fetched.filter(Boolean) as ProductionOrder[]);
+    })();
+    return () => { cancelled = true; };
+  }, [rowPins.pins, rowPins.maxPins, currentPageIds]);
+
+  // 展示列表 = 置顶行（含补拉的场外钉住单）按钉住顺序排最前 + 其余按原排序；
+  // 延期环节跳转（focusOrderIds）聚焦态下不插入场外置顶行，保持聚焦口径
+  const pinDisplayList = useMemo(() => {
+    const extras = listData.focusOrderIds.size > 0 ? [] : pinnedExtraRows;
+    const all = [...extras, ...listData.sortedProductionList];
+    const pinIdx = new Map(rowPins.pins.map((id, i) => [String(id), i]));
+    const pinned = all
+      .filter((o) => pinIdx.has(String(o.id)))
+      .sort((a, b) => (pinIdx.get(String(a.id)) ?? 0) - (pinIdx.get(String(b.id)) ?? 0));
+    const rest = all.filter((o) => !pinIdx.has(String(o.id)));
+    return [...pinned, ...rest];
+  }, [pinnedExtraRows, listData.sortedProductionList, listData.focusOrderIds.size, rowPins.pins]);
+  const handleTogglePinOrder = useCallback((record: ProductionOrder) => {
+    rowPins.toggle(record.id);
+  }, [rowPins]);
+
   const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
   const { globalStats } = useProductionStats(listData.queryParams);
   const { fields: fieldConfigs } = useFieldConfig({ bizType: 'production', platform: 'pc' });
@@ -83,7 +129,7 @@ const ProductionList: React.FC = () => {
   const processDetail = useProcessDetail({ message, fetchProductionList: listData.fetchProductionList });
   const subProcessRemap = useSubProcessRemap({ message, fetchProductionList: listData.fetchProductionList });
   const progressTracking = useProgressTracking(listData.productionList);
-  const orderFocus = useOrderFocus(listData.viewMode, listData.sortedProductionList);
+  const orderFocus = useOrderFocus(listData.viewMode, pinDisplayList);
   listData.orderFocusRef.current = { triggerOrderFocus: orderFocus.triggerOrderFocus, clearSmartFocus: orderFocus.clearSmartFocus };
 
   const { fetchForOrders } = useAiPatrol();
@@ -121,6 +167,8 @@ const ProductionList: React.FC = () => {
     onOpenInspectDrawer: (orderId: string) => inspectDrawerModal.open(orderId),
     onOpenSmartReceive: (orderNo: string) => smartReceiveModal.open(orderNo),
     visibleColumns: columnSettings.visibleColumns,
+    pinnedOrderIds: rowPins.pinSet,
+    onTogglePinOrder: handleTogglePinOrder,
   });
 
   const { patrolTitleTags } = usePatrolTitleTags();
@@ -200,7 +248,7 @@ const ProductionList: React.FC = () => {
       >
         <ProductionContentView
           viewMode={listData.viewMode}
-          sortedProductionList={listData.sortedProductionList}
+          sortedProductionList={pinDisplayList}
           loading={listData.loading}
           total={listData.total}
           page={listData.queryParams.page}
@@ -236,6 +284,8 @@ const ProductionList: React.FC = () => {
           openNodeDetail={nodeDetailModal.openNodeDetail}
           syncProcessFromTemplate={processDetail.syncProcessFromTemplate}
           handleSmartOpenRemark={handleSmartOpenRemark}
+          pinnedOrderIds={rowPins.pinSet}
+          onTogglePinOrder={handleTogglePinOrder}
         />
       </PageLayout>
 

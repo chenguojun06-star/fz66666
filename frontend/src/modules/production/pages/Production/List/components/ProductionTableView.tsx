@@ -22,6 +22,8 @@ interface ProductionTableViewProps {
   navigate: (path: string) => void;
   /** D-611 勾选行批量打印生产单（无此回调时隐藏批量条） */
   onBatchPrint?: (rows: ProductionOrder[]) => void;
+  /** 置顶行 id 集合：命中行加置顶底色标识 */
+  pinnedOrderIds?: Set<string>;
 }
 
 const ProductionTableView: React.FC<ProductionTableViewProps> = ({
@@ -40,6 +42,7 @@ const ProductionTableView: React.FC<ProductionTableViewProps> = ({
   getOrderDomKey,
   navigate,
   onBatchPrint,
+  pinnedOrderIds,
 }) => {
   const showFilteredTotal = smartQueueFilter !== 'all' || focusOrderIds.size > 0;
   const displayTotal = showFilteredTotal ? dataSource.length : total;
@@ -82,9 +85,11 @@ const ProductionTableView: React.FC<ProductionTableViewProps> = ({
       // D-327：写死 3500px + tableLayout:fixed 会把 3500px 均摊到可见列，列全被拉宽一大圈；
       // max-content = 各列按定义宽度收紧，与其他列表页一致
       scroll={{ x: 'max-content' }}
-      rowClassName={(record: ProductionOrder) =>
-        getOrderDomKey(record) === focusedOrderId ? 'smart-order-focus-row' : ''
-      }
+      rowClassName={(record: ProductionOrder) => {
+        if (getOrderDomKey(record) === focusedOrderId) return 'smart-order-focus-row';
+        if (pinnedOrderIds?.has(String(record.id))) return 'prod-row-pinned';
+        return '';
+      }}
       rowSelection={{
         selectedRowKeys,
         onChange: onRowSelectionChange,

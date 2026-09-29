@@ -61,6 +61,12 @@ public final class SecurityConfigHelper {
         // D-527：用户反馈提交/我的反馈（控制器注释即"所有登录用户可用"，否则工人提交 403）
         authz.requestMatchers(SecurityConstants.USER_FEEDBACK_AUTH_ENDPOINTS).authenticated();
 
+        // 用户偏好（列显隐/页签图钉固定等个人显示偏好）：
+        // 必须放在 TENANT_OWNER_ENDPOINTS（/api/system/** 要求租户主账号）之前，
+        // 否则普通主管/工人保存任何个人偏好都 403。数据由 UserPreferenceOrchestrator 严格按
+        // tenantId + 当前 userId 隔离，放开到所有登录用户不产生越权面。
+        authz.requestMatchers("/api/system/user-preference", "/api/system/user-preference/**").authenticated();
+
         authz.requestMatchers(SecurityConstants.ADMIN_USER_MANAGEMENT_ENDPOINTS)
                 .hasAnyAuthority(SecurityConstants.ADMIN_ROLES.toArray(new String[0]));
 

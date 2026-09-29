@@ -43,6 +43,9 @@ interface ProductionContentViewProps {
   openNodeDetail: (order: ProductionOrder, type: string, name: string) => void;
   syncProcessFromTemplate: (order: ProductionOrder) => void;
   handleSmartOpenRemark: (record: ProductionOrder) => void;
+  /** 置顶：已固定订单 id 集合 + 切换回调（用户个人视角，常驻列表最前） */
+  pinnedOrderIds?: Set<string>;
+  onTogglePinOrder?: (record: ProductionOrder) => void;
 }
 
 const ProductionContentView: React.FC<ProductionContentViewProps> = ({
@@ -83,6 +86,8 @@ const ProductionContentView: React.FC<ProductionContentViewProps> = ({
   syncProcessFromTemplate,
   handleSmartOpenRemark,
   onBatchPrint,
+  pinnedOrderIds,
+  onTogglePinOrder,
 }) => {
   if (viewMode === 'smart') {
     return (
@@ -133,6 +138,7 @@ const ProductionContentView: React.FC<ProductionContentViewProps> = ({
         getOrderDomKey={getOrderDomKey}
         navigate={navigate}
         onBatchPrint={onBatchPrint}
+        pinnedOrderIds={pinnedOrderIds}
       />
     );
   }
@@ -166,6 +172,8 @@ const ProductionContentView: React.FC<ProductionContentViewProps> = ({
       isSupervisorOrAbove={isSupervisorOrAbove}
       isFactoryAccount={isFactoryAccount}
       setRemarkTarget={setRemarkTarget}
+      pinnedOrderIds={pinnedOrderIds}
+      onTogglePinOrder={onTogglePinOrder}
     />
   );
 };

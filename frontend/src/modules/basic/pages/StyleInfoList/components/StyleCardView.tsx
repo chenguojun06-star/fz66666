@@ -35,6 +35,9 @@ interface StyleCardViewProps {
   onRefresh: () => void;
   focusedStyleId?: string | null;
   customFields?: FieldConfigItem[];
+  /** 置顶（用户个人视角）：已钉住款式 id 集合 + 切换回调 */
+  pinnedStyleIds?: Set<string>;
+  onTogglePinStyle?: (record: StyleInfo) => void;
 }
 
 /**
@@ -58,6 +61,8 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
   onRefresh,
   focusedStyleId,
   customFields = [],
+  pinnedStyleIds,
+  onTogglePinStyle,
 }) => {
   const navigate = useNavigate();
   const { user } = useUser();
@@ -209,9 +214,15 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
       } : undefined}
       actions={(record) => {
         const r = record as StyleInfo;
+        const pinAction = onTogglePinStyle ? [{
+          key: 'pinTop',
+          label: pinnedStyleIds?.has(String(r.id)) ? '取消置顶' : '置顶',
+          onClick: () => onTogglePinStyle(r),
+        }] : [];
         if (isScrappedRow(r)) {
           return [
             { key: 'detail', label: '详情', onClick: () => navigate(`/style-info/${r.id}`) },
+            ...pinAction,
             { key: 'unscrap', label: '取消报废', onClick: () => onUnscrap(String(r.id!)) },
             { key: 'print', label: '打印', onClick: () => onPrint(r) },
             { key: 'remark', label: '备注', onClick: () => setRemarkTarget({ open: true, styleNo: (r as any).styleNo || '' }) },
@@ -220,6 +231,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
         if (isStageDoneRow(r)) {
           const items: { key: string; label: string; onClick: () => void; danger?: boolean }[] = [
             { key: 'detail', label: '详情', onClick: () => navigate(`/style-info/${r.id}`) },
+            ...pinAction,
             {
               key: 'production',
               label: '生产订单',
@@ -236,6 +248,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
         }
         return [
           { key: 'detail', label: '详情', onClick: () => navigate(`/style-info/${r.id}`) },
+          ...pinAction,
           {
             key: 'pattern',
             label: '纸样',

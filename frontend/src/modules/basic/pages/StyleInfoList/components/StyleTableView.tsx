@@ -29,6 +29,9 @@ interface StyleTableViewProps {
   focusedStyleId?: string | null;
   dateSortAsc?: boolean;
   customFields?: FieldConfigItem[];
+  /** 置顶（用户个人视角）：已钉住款式 id 集合 + 切换回调 */
+  pinnedStyleIds?: Set<string>;
+  onTogglePinStyle?: (record: StyleInfo) => void;
 }
 
 
@@ -65,6 +68,8 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   focusedStyleId,
   dateSortAsc = false,
   customFields = [],
+  pinnedStyleIds,
+  onTogglePinStyle,
 }) => {
   const ctx = useStyleTableViewData({
     data,
@@ -109,6 +114,8 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                 setDevelopmentDrawerRecord: ctx.setDevelopmentDrawerRecord,
                 setDevelopmentDrawerSection: ctx.setDevelopmentDrawerSection,
                 setProcurementDrawerRecord: ctx.setProcurementDrawerRecord,
+                pinnedStyleIds,
+                onTogglePinStyle,
               }}
             />
           ))

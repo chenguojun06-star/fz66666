@@ -232,6 +232,14 @@
   min-width: 0 !important;
   font-size: 15px !important;
   line-height: 32px !important;
+  /* 页签文字清晰度：副文本灰在浅灰底上发糊，改主文本色+中黑字重，笔画实、对比足 */
+  color: var(--color-text-primary) !important;
+  font-weight: 500;
+}
+
+.recent-tab.active .recent-tab-label.ant-btn {
+  color: var(--color-primary, #2d7ff9) !important;
+  font-weight: 600;
 }
 
 .recent-tab-label.ant-btn.ant-btn-text {
@@ -256,6 +264,48 @@
   font-size: 13px !important;
   min-width: 0 !important;
   margin-right: 4px !important;
+}
+
+/* 图钉固定按钮：未固定=描边图钉（悬停才显色），固定=实心蓝图钉常亮，一眼区分 */
+.recent-tab-pin.ant-btn {
+  width: 20px !important;
+  height: 20px !important;
+  padding: 0 !important;
+  border-radius: 4px !important;
+  font-size: 12px !important;
+  min-width: 0 !important;
+  margin-right: 2px !important;
+  color: var(--color-text-tertiary) !important;
+}
+
+.recent-tab-pin.ant-btn:hover {
+  color: var(--color-text-primary) !important;
+  background: var(--color-bg-subtle) !important;
+}
+
+.recent-tab-pin.ant-btn.pinned {
+  color: var(--color-primary, #2d7ff9) !important;
+}
+
+/* 深色主题：清晰度规则用 !important 覆盖了旧深色规则，这里成对补齐深色配色 */
+:root[data-theme="dark"] .recent-tab-label.ant-btn {
+  color: var(--neutral-text-light) !important;
+}
+
+:root[data-theme="dark"] .recent-tab.active .recent-tab-label.ant-btn {
+  color: var(--color-primary, #5b9bff) !important;
+}
+
+:root[data-theme="dark"] .recent-tab-pin.ant-btn {
+  color: var(--neutral-text-lighter) !important;
+}
+
+:root[data-theme="dark"] .recent-tab-pin.ant-btn:hover {
+  color: var(--neutral-text-light) !important;
+}
+
+:root[data-theme="dark"] .recent-tab-pin.ant-btn.pinned {
+  color: var(--color-primary, #5b9bff) !important;
 }
 
 .recent-tab-close.ant-btn.ant-btn-text {

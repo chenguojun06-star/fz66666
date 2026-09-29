@@ -306,6 +306,8 @@
   },
   "layout": {
     "recentPages": "最近打开的页面",
+    "pinTab": "固定页签",
+    "unpinTab": "取消固定",
     "close": "关闭",
     "urgentEvents": "紧急事件",
     "noUrgentEvents": "暂无紧急事件",

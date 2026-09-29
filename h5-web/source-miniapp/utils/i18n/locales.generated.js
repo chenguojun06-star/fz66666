@@ -313,6 +313,8 @@ module.exports = {
     },
     "layout": {
       "recentPages": "最近打开的页面",
+      "pinTab": "固定页签",
+      "unpinTab": "取消固定",
       "close": "关闭",
       "urgentEvents": "紧急事件",
       "noUrgentEvents": "暂无紧急事件",
@@ -4430,6 +4432,8 @@ module.exports = {
     },
     "layout": {
       "recentPages": "Recent Pages",
+      "pinTab": "Pin tab",
+      "unpinTab": "Unpin tab",
       "close": "Close",
       "urgentEvents": "Urgent Events",
       "noUrgentEvents": "No urgent events",
@@ -8547,6 +8551,8 @@ module.exports = {
     },
     "layout": {
       "recentPages": "Trang đã mở gần đây",
+      "pinTab": "Ghim trang",
+      "unpinTab": "Bỏ ghim",
       "close": "Đóng",
       "urgentEvents": "Sự kiện khẩn cấp",
       "noUrgentEvents": "Không có sự kiện khẩn cấp",
@@ -12664,6 +12670,8 @@ module.exports = {
     },
     "layout": {
       "recentPages": "ទំព័រដែលបានបើកថ្មីៗ",
+      "pinTab": "ភ្ជាប់ផ្ទាំង",
+      "unpinTab": "ផ្តាច់ភ្ជាប់",
       "close": "បិទ",
       "urgentEvents": "ព្រឹត្តិការណ៍បន្ទាន់",
       "noUrgentEvents": "មិនមានព្រឹត្តិការណ៍បន្ទាន់",

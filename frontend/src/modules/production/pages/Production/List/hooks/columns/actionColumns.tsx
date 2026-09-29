@@ -27,6 +27,8 @@ export function buildActionColumns({
   onOpenRemark,
   openWorkflowEditor,
   onOpenSmartReceive,
+  pinnedOrderIds,
+  onTogglePinOrder,
 }: UseProductionColumnsProps): any[] {
   return [
     {
@@ -104,6 +106,7 @@ export function buildActionColumns({
                 handleCopyOrder,
                 handleShareOrder,
                 onOpenRemark,
+                ...(onTogglePinOrder ? { pin: { pinned: pinnedOrderIds?.has(String(record.id)) ?? false, onToggle: onTogglePinOrder } } : {}),
               }),
             ]}
           />
