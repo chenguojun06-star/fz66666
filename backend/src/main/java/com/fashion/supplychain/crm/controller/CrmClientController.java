@@ -26,9 +26,10 @@ import java.util.Map;
  * 拼装业务对象，属 D-630 规则6「Controller 不得直接依赖多个 Service」的典型存量违规
  * （同类还有 SupplierPortalController）。跨服务编排放在最外层会让事务边界与权限校验失控。
  *
- * <p><b>错误响应：</b>域内失败由 Orchestrator 抛 {@code IllegalArgumentException}，
- * 经 {@code GlobalExceptionHandler} 统一转成 HTTP 400 + {@code Result.fail(400, msg)}；
- * 本类只保留「未登录」这一 Web 层判定，返回 {@code Result.fail("请先登录")}（HTTP 200 + code 500）。
+ * <p><b>错误响应：</b>域内失败由 Orchestrator 直接返回 {@code Result.fail(msg)}（HTTP 200 + code 500），
+ * 本类只保留「未登录」这一 Web 层判定，返回 {@code Result.fail("请先登录")}。
+ * 之所以不改成抛异常走全局处理器的 HTTP 400，是为了不改变前端可观测行为 ——
+ * PC 端拦截器在成功分支不校验 code，抛异常会让调用方从「resolve 后查 code」变成「promise reject」。
  */
 @RestController
 @RequestMapping("/api/crm-client")
@@ -48,7 +49,7 @@ public class CrmClientController {
             return Result.fail("请输入用户名和密码");
         }
 
-        return Result.success(crmClientOrchestrator.login(username, password));
+        return crmClientOrchestrator.login(username, password);
     }
 
     @GetMapping("/dashboard")
@@ -59,7 +60,7 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-        return Result.success(crmClientOrchestrator.getDashboard(customerId, tenantId));
+        return crmClientOrchestrator.getDashboard(customerId, tenantId);
     }
 
     @GetMapping("/orders")
@@ -73,7 +74,7 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-        return Result.success(crmClientOrchestrator.getCustomerOrders(customerId, tenantId, status, page, pageSize));
+        return crmClientOrchestrator.getCustomerOrders(customerId, tenantId, status, page, pageSize);
     }
 
     @GetMapping("/orders/{orderId}")
@@ -84,7 +85,7 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-        return Result.success(crmClientOrchestrator.getOrderDetail(customerId, tenantId, orderId));
+        return crmClientOrchestrator.getOrderDetail(customerId, tenantId, orderId);
     }
 
     @GetMapping("/purchases")
@@ -98,7 +99,7 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-        return Result.success(crmClientOrchestrator.getPurchases(customerId, tenantId, status, page, pageSize));
+        return crmClientOrchestrator.getPurchases(customerId, tenantId, status, page, pageSize);
     }
 
     @GetMapping("/purchases/{purchaseId}")
@@ -109,7 +110,7 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-        return Result.success(crmClientOrchestrator.getPurchaseDetail(customerId, tenantId, purchaseId));
+        return crmClientOrchestrator.getPurchaseDetail(customerId, tenantId, purchaseId);
     }
 
     @GetMapping("/receivables")
@@ -123,7 +124,7 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-        return Result.success(crmClientOrchestrator.getReceivables(customerId, tenantId, status, page, pageSize));
+        return crmClientOrchestrator.getReceivables(customerId, tenantId, status, page, pageSize);
     }
 
     @GetMapping("/receivables/{receivableId}")
@@ -134,7 +135,7 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-        return Result.success(crmClientOrchestrator.getReceivableDetail(customerId, tenantId, receivableId));
+        return crmClientOrchestrator.getReceivableDetail(customerId, tenantId, receivableId);
     }
 
     @GetMapping("/profile")
@@ -145,7 +146,7 @@ public class CrmClientController {
         if (customerId == null || tenantId == null) {
             return Result.fail("请先登录");
         }
-        return Result.success(crmClientOrchestrator.getProfile(customerId, tenantId));
+        return crmClientOrchestrator.getProfile(customerId, tenantId);
     }
 
     /**

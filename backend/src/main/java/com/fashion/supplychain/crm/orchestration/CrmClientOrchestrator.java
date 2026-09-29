@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.auth.AuthTokenService;
 import com.fashion.supplychain.auth.TokenSubject;
+import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.crm.entity.Customer;
 import com.fashion.supplychain.crm.entity.CustomerClientUser;
 import com.fashion.supplychain.crm.entity.Receivable;
@@ -37,13 +38,16 @@ import java.util.stream.Collectors;
  * CRM 客户端编排层
  *
  * <p>承载「客户门户」（crm-client）全部业务编排：登录鉴权、看板聚合、订单/采购/账款查询。
- * {@code CrmClientController} 只保留「解析当前调用者 → 参数校验 → 调本层 → 组装 Result」，
+ * {@code CrmClientController} 只保留「解析当前调用者 → 参数校验 → 调本层 → 组装响应」，
  * 不再直接注入多个 Service（D-630 规则6：Controller 不得直接依赖多个 Service）。
  *
- * <p><b>错误约定：</b>域内失败（客户不存在 / 订单不存在 / 密码错误等）统一抛
- * {@link IllegalArgumentException}，由 {@code GlobalExceptionHandler} 转成 HTTP 400 +
- * {@code Result.fail(400, msg)}。选 400 而非 404 是有意的：前端 {@code h5-web/src/services/http.js}
- * 对 404 会用固定文案「请求的资源不存在」覆盖后端 message，抛 400 才能原样透出中文提示。
+ * <p><b>为什么本层返回 {@link Result}：</b>本仓已有 11 个 Orchestrator 采用该写法
+ * （如 {@code FactoryShipmentOrchestrator}、{@code StockTransferOrchestrator}）。
+ * 更重要的是它<b>完全保留原有响应语义</b>——历史实现用 {@code Result.fail(msg)} 返回
+ * HTTP 200 + {@code code=500}，而 PC 端拦截器 {@code frontend/src/utils/api/core.ts}
+ * 在成功分支<b>不校验 code</b>（直接 resolve 给调用方自行判断），若改为抛异常走 HTTP 400
+ * 会让调用方从「resolve 后查 isApiSuccess」变成「promise reject」，属行为变更。
+ * 故此处沿用以 {@code Result} 表达成败。
  *
  * <p><b>租户隔离：</b>所有查询都以调用方传入的 {@code customerId} + {@code tenantId} 为过滤条件，
  * 不接受请求参数直接指定客户，避免越权读取其他客户数据（P0 铁律4）。
@@ -79,10 +83,9 @@ public class CrmClientOrchestrator {
      *
      * @param username 登录名（调用方已保证非空）
      * @param password 明文密码（调用方已保证非空）
-     * @return {@code token / customerId / tenantId / customer / user}
-     * @throws IllegalArgumentException 账号不存在、已禁用、密码错误或客户信息缺失
+     * @return {@code token / customerId / tenantId / customer / user}；失败时返回中文提示
      */
-    public Map<String, Object> login(String username, String password) {
+    public Result<Map<String, Object>> login(String username, String password) {
         LambdaQueryWrapper<CustomerClientUser> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(CustomerClientUser::getUsername, username)
                 .eq(CustomerClientUser::getDeleteFlag, 0)
@@ -90,7 +93,7 @@ public class CrmClientOrchestrator {
         CustomerClientUser user = customerClientUserService.getOne(wrapper);
 
         if (user == null) {
-            throw new IllegalArgumentException("用户不存在或已禁用");
+            return Result.fail("用户不存在或已禁用");
         }
 
         boolean passwordMatch;
@@ -102,7 +105,7 @@ public class CrmClientOrchestrator {
         }
 
         if (!passwordMatch) {
-            throw new IllegalArgumentException("密码错误");
+            return Result.fail("密码错误");
         }
 
         Customer customer = customerService.lambdaQuery()
@@ -110,7 +113,7 @@ public class CrmClientOrchestrator {
                 .eq(Customer::getDeleteFlag, 0)
                 .one();
         if (customer == null) {
-            throw new IllegalArgumentException("客户信息不存在");
+            return Result.fail("客户信息不存在");
         }
 
         updateLastLoginTime(user);
@@ -137,7 +140,7 @@ public class CrmClientOrchestrator {
 
         log.info("[CRM客户端] 客户登录成功: {}, customerId={}, tenantId={}",
                 username, user.getCustomerId(), user.getTenantId());
-        return result;
+        return Result.success(result);
     }
 
     /**
@@ -159,13 +162,15 @@ public class CrmClientOrchestrator {
     // 看板
     // ------------------------------------------------------------------
 
-    /**
-     * 客户看板：订单数/状态分布/近 5 单/应收应付汇总/采购单数。
-     *
-     * @throws IllegalArgumentException 客户不存在或不属于该租户
-     */
-    public Map<String, Object> getDashboard(String customerId, Long tenantId) {
-        Customer customer = requireCustomer(customerId, tenantId, "客户信息不存在");
+    /** 客户看板：订单数/状态分布/近 5 单/应收应付汇总/采购单数。 */
+    public Result<Map<String, Object>> getDashboard(String customerId, Long tenantId) {
+        Customer customer = customerService.lambdaQuery()
+                .eq(Customer::getId, customerId)
+                .eq(Customer::getDeleteFlag, 0)
+                .one();
+        if (customer == null || !tenantId.equals(customer.getTenantId())) {
+            return Result.fail("客户信息不存在");
+        }
 
         List<ProductionOrder> orders = findCustomerOrders(customerId, tenantId);
 
@@ -205,26 +210,22 @@ public class CrmClientOrchestrator {
         result.put("receivablesCount", receivables.size());
         result.put("totalPurchases", totalPurchases);
 
-        return result;
+        return Result.success(result);
     }
 
     // ------------------------------------------------------------------
     // 订单
     // ------------------------------------------------------------------
 
-    /**
-     * 客户订单分页列表（内存分页：单客户订单量有 {@value #ORDER_FETCH_LIMIT} 上限）。
-     *
-     * @throws IllegalArgumentException 客户不存在
-     */
-    public Map<String, Object> getCustomerOrders(String customerId, Long tenantId,
-                                                 String status, int page, int pageSize) {
+    /** 客户订单分页列表（内存分页：单客户订单量有 {@value #ORDER_FETCH_LIMIT} 上限）。 */
+    public Result<Map<String, Object>> getCustomerOrders(String customerId, Long tenantId,
+                                                         String status, int page, int pageSize) {
         Customer customer = customerService.lambdaQuery()
                 .eq(Customer::getId, customerId)
                 .eq(Customer::getDeleteFlag, 0)
                 .one();
         if (customer == null) {
-            throw new IllegalArgumentException("客户不存在");
+            return Result.fail("客户不存在");
         }
 
         List<ProductionOrder> orders = findCustomerOrders(customerId, tenantId);
@@ -244,23 +245,19 @@ public class CrmClientOrchestrator {
         pageResult.put("page", page);
         pageResult.put("pageSize", pageSize);
 
-        return pageResult;
+        return Result.success(pageResult);
     }
 
-    /**
-     * 订单详情：订单本体 + 该单采购明细 + 该单账款。
-     *
-     * @throws IllegalArgumentException 订单不存在或不属于当前客户
-     */
-    public Map<String, Object> getOrderDetail(String customerId, Long tenantId, String orderId) {
+    /** 订单详情：订单本体 + 该单采购明细 + 该单账款。 */
+    public Result<Map<String, Object>> getOrderDetail(String customerId, Long tenantId, String orderId) {
         ProductionOrder order = productionOrderService.getById(orderId);
         if (order == null || !tenantId.equals(order.getTenantId())
                 || (order.getDeleteFlag() != null && order.getDeleteFlag() == 1)) {
-            throw new IllegalArgumentException("订单不存在");
+            return Result.fail("订单不存在");
         }
 
         if (!isOrderBelongsToCustomer(order, customerId)) {
-            throw new IllegalArgumentException("订单不存在");
+            return Result.fail("订单不存在");
         }
 
         Map<String, Object> result = new HashMap<>();
@@ -279,23 +276,18 @@ public class CrmClientOrchestrator {
         List<Receivable> receivables = receivableService.list(receivableWrapper);
         result.put("receivables", receivables.stream().map(this::buildReceivableView).collect(Collectors.toList()));
 
-        return result;
+        return Result.success(result);
     }
 
     // ------------------------------------------------------------------
     // 采购
     // ------------------------------------------------------------------
 
-    /**
-     * 客户采购单分页列表（数据库分页）。
-     */
-    public Map<String, Object> getPurchases(String customerId, Long tenantId,
-                                            String status, int page, int pageSize) {
+    /** 客户采购单分页列表（数据库分页）。 */
+    public Result<Map<String, Object>> getPurchases(String customerId, Long tenantId,
+                                                    String status, int page, int pageSize) {
         List<ProductionOrder> orders = findCustomerOrders(customerId, tenantId);
         List<String> orderIds = orders.stream().map(ProductionOrder::getId).collect(Collectors.toList());
-
-        int safePage = page < 1 ? 1 : page;
-        int safePageSize = (pageSize < 1 || pageSize > 200) ? 20 : pageSize;
 
         if (orderIds.isEmpty()) {
             Map<String, Object> empty = new HashMap<>();
@@ -304,8 +296,11 @@ public class CrmClientOrchestrator {
             empty.put("page", page);
             empty.put("pageSize", pageSize);
             empty.put("totalPages", 0);
-            return empty;
+            return Result.success(empty);
         }
+
+        int safePage = page < 1 ? 1 : page;
+        int safePageSize = (pageSize < 1 || pageSize > 200) ? 20 : pageSize;
 
         LambdaQueryWrapper<MaterialPurchase> purchaseWrapper = new LambdaQueryWrapper<>();
         purchaseWrapper.in(MaterialPurchase::getOrderId, orderIds)
@@ -325,18 +320,14 @@ public class CrmClientOrchestrator {
         result.put("pageSize", safePageSize);
         result.put("totalPages", (int) Math.ceil(pageResult.getTotal() * 1.0 / safePageSize));
 
-        return result;
+        return Result.success(result);
     }
 
-    /**
-     * 采购单详情：采购单本体 + （若归属当前客户）关联订单。
-     *
-     * @throws IllegalArgumentException 采购单不存在或不属于该租户
-     */
-    public Map<String, Object> getPurchaseDetail(String customerId, Long tenantId, String purchaseId) {
+    /** 采购单详情：采购单本体 + （若归属当前客户）关联订单。 */
+    public Result<Map<String, Object>> getPurchaseDetail(String customerId, Long tenantId, String purchaseId) {
         MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
         if (purchase == null || !tenantId.equals(purchase.getTenantId())) {
-            throw new IllegalArgumentException("采购单不存在");
+            return Result.fail("采购单不存在");
         }
 
         Map<String, Object> result = new HashMap<>();
@@ -349,18 +340,16 @@ public class CrmClientOrchestrator {
             }
         }
 
-        return result;
+        return Result.success(result);
     }
 
     // ------------------------------------------------------------------
     // 账款
     // ------------------------------------------------------------------
 
-    /**
-     * 客户账款分页列表（数据库分页）。
-     */
-    public Map<String, Object> getReceivables(String customerId, Long tenantId,
-                                              String status, int page, int pageSize) {
+    /** 客户账款分页列表（数据库分页）。 */
+    public Result<Map<String, Object>> getReceivables(String customerId, Long tenantId,
+                                                      String status, int page, int pageSize) {
         int safePage = page < 1 ? 1 : page;
         int safePageSize = (pageSize < 1 || pageSize > 200) ? 20 : pageSize;
 
@@ -383,19 +372,15 @@ public class CrmClientOrchestrator {
         result.put("pageSize", safePageSize);
         result.put("totalPages", (int) Math.ceil(pageResult.getTotal() * 1.0 / safePageSize));
 
-        return result;
+        return Result.success(result);
     }
 
-    /**
-     * 账款详情：账款本体 + 回款流水。
-     *
-     * @throws IllegalArgumentException 账款不存在或不属于当前客户/租户
-     */
-    public Map<String, Object> getReceivableDetail(String customerId, Long tenantId, String receivableId) {
+    /** 账款详情：账款本体 + 回款流水。 */
+    public Result<Map<String, Object>> getReceivableDetail(String customerId, Long tenantId, String receivableId) {
         Receivable receivable = receivableService.getById(receivableId);
         if (receivable == null || !customerId.equals(receivable.getCustomerId())
                 || !tenantId.equals(receivable.getTenantId())) {
-            throw new IllegalArgumentException("账款不存在");
+            return Result.fail("账款不存在");
         }
 
         Map<String, Object> result = new HashMap<>();
@@ -407,42 +392,28 @@ public class CrmClientOrchestrator {
         List<ReceivableReceiptLog> logs = receivableReceiptLogService.list(logWrapper);
         result.put("receiptLogs", logs);
 
-        return result;
+        return Result.success(result);
     }
 
     // ------------------------------------------------------------------
     // 客户资料
     // ------------------------------------------------------------------
 
-    /**
-     * 当前客户资料。
-     *
-     * @throws IllegalArgumentException 客户不存在或不属于该租户
-     */
-    public Map<String, Object> getProfile(String customerId, Long tenantId) {
-        Customer customer = requireCustomer(customerId, tenantId, "客户不存在");
-        return buildCustomerView(customer);
-    }
-
-    // ------------------------------------------------------------------
-    // 内部方法
-    // ------------------------------------------------------------------
-
-    /**
-     * 按 id + 租户加载客户，失败即抛异常。
-     *
-     * <p>注意：这里必须校验 {@code tenantId} 一致，否则换个 customerId 就能读到别家客户资料。
-     */
-    private Customer requireCustomer(String customerId, Long tenantId, String errorMessage) {
+    /** 当前客户资料。 */
+    public Result<Map<String, Object>> getProfile(String customerId, Long tenantId) {
         Customer customer = customerService.lambdaQuery()
                 .eq(Customer::getId, customerId)
                 .eq(Customer::getDeleteFlag, 0)
                 .one();
         if (customer == null || !tenantId.equals(customer.getTenantId())) {
-            throw new IllegalArgumentException(errorMessage);
+            return Result.fail("客户不存在");
         }
-        return customer;
+        return Result.success(buildCustomerView(customer));
     }
+
+    // ------------------------------------------------------------------
+    // 内部方法
+    // ------------------------------------------------------------------
 
     /**
      * 查询该客户在指定租户下的订单（最多 {@value #ORDER_FETCH_LIMIT} 条，按创建时间倒序）。
@@ -456,10 +427,8 @@ public class CrmClientOrchestrator {
                 .eq(Customer::getId, customerId)
                 .eq(Customer::getDeleteFlag, 0)
                 .one();
-        if (customer == null || !tenantId.equals(customer.getTenantId())) {
-            return Collections.emptyList();
-        }
-        if (!StringUtils.hasText(customer.getId())) {
+        if (customer == null || !tenantId.equals(customer.getTenantId())
+                || !StringUtils.hasText(customer.getId())) {
             return Collections.emptyList();
         }
 

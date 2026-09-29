@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.auth.AuthTokenService;
 import com.fashion.supplychain.auth.TokenSubject;
+import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.Payable;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
@@ -40,11 +41,12 @@ import java.util.stream.Collectors;
  * {@code SupplierPortalController} 只保留「解析当前供应商 → 参数校验 → 调本层 → 组装 Result」，
  * 不再直接注入 7 个 Service（D-630 规则6：Controller 不得直接依赖多个 Service）。
  *
- * <p><b>错误约定：</b>域内失败统一抛 {@link IllegalArgumentException}，由
- * {@code GlobalExceptionHandler} 转成 HTTP 400 + {@code Result.fail(400, msg)}。
- * 唯一例外是「非供应商账号访问」的 403 判定 —— 它留在 Controller，因为前端
- * {@code h5-web/src/services/http.js} 对 HTTP 403 会返回固定文案「无权限执行此操作」，
- * 抛出会丢掉后端的中文提示。
+ * <p><b>为什么本层返回 {@link Result}：</b>本仓已有 11 个 Orchestrator 采用该写法
+ * （如 {@code FactoryShipmentOrchestrator}、{@code StockTransferOrchestrator}）。
+ * 更重要的是它<b>完全保留原有响应语义</b>——历史实现用 {@code Result.fail(msg)} 返回
+ * HTTP 200 + {@code code=500}，而 PC 端拦截器 {@code frontend/src/utils/api/core.ts}
+ * 在成功分支<b>不校验 code</b>（直接 resolve 给调用方自行判断），若改为抛异常走 HTTP 400
+ * 会让调用方从「resolve 后查 isApiSuccess」变成「promise reject」，属行为变更。
  *
  * <p><b>租户/供应商隔离：</b>所有查询都以调用方传入的 {@code supplierId} + {@code tenantId}
  * 为过滤条件，供应商 id 只来自 token，不接受请求参数，避免越权读取其他供应商数据（P0 铁律4）。
@@ -82,10 +84,9 @@ public class SupplierPortalOrchestrator {
      *
      * @param username 登录名（调用方已保证非空）
      * @param password 明文密码（调用方已保证非空）
-     * @return {@code token / supplierId / tenantId / supplier / user}
-     * @throws IllegalArgumentException 账号不存在、已禁用、密码错误、供应商资质不符或租户信息缺失
+     * @return {@code token / supplierId / tenantId / supplier / user}；失败时返回中文提示
      */
-    public Map<String, Object> login(String username, String password) {
+    public Result<Map<String, Object>> login(String username, String password) {
         LambdaQueryWrapper<SupplierUser> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SupplierUser::getUsername, username)
                 .eq(SupplierUser::getDeleteFlag, 0)
@@ -93,7 +94,7 @@ public class SupplierPortalOrchestrator {
         SupplierUser user = supplierUserService.getOne(wrapper);
 
         if (user == null) {
-            throw new IllegalArgumentException("用户不存在或已禁用");
+            return Result.fail("用户不存在或已禁用");
         }
 
         boolean passwordMatch;
@@ -105,17 +106,17 @@ public class SupplierPortalOrchestrator {
         }
 
         if (!passwordMatch) {
-            throw new IllegalArgumentException("密码错误");
+            return Result.fail("密码错误");
         }
 
         Factory supplier = factoryService.getById(user.getSupplierId());
         if (supplier == null || (supplier.getDeleteFlag() != null && supplier.getDeleteFlag() == 1)
                 || !isAllowedSupplierType(supplier.getSupplierType())) {
-            throw new IllegalArgumentException("供应商信息不存在");
+            return Result.fail("供应商信息不存在");
         }
 
         if (user.getTenantId() == null) {
-            throw new IllegalArgumentException("用户租户信息缺失，请联系管理员");
+            return Result.fail("用户租户信息缺失，请联系管理员");
         }
 
         supplierUserOrchestrator.updateLastLoginTime(user.getId());
@@ -142,20 +143,19 @@ public class SupplierPortalOrchestrator {
 
         log.info("[供应商门户] 登录成功: {}, supplierId={}, tenantId={}",
                 username, user.getSupplierId(), user.getTenantId());
-        return result;
+        return Result.success(result);
     }
 
     // ------------------------------------------------------------------
     // 看板
     // ------------------------------------------------------------------
 
-    /**
-     * 供应商看板：采购单状态分布 / 应付应付汇总 / 待对账数 / 最近 5 单。
-     *
-     * @throws IllegalArgumentException 供应商不存在
-     */
-    public Map<String, Object> getDashboard(String supplierId, Long tenantId) {
-        Factory supplier = requireSupplier(supplierId);
+    /** 供应商看板：采购单状态分布 / 应付汇总 / 待对账数 / 最近 5 单。 */
+    public Result<Map<String, Object>> getDashboard(String supplierId, Long tenantId) {
+        Factory supplier = factoryService.getById(supplierId);
+        if (supplier == null || (supplier.getDeleteFlag() != null && supplier.getDeleteFlag() == 1)) {
+            return Result.fail("供应商不存在");
+        }
 
         LambdaQueryWrapper<MaterialPurchase> purchaseWrapper = new LambdaQueryWrapper<>();
         purchaseWrapper.eq(MaterialPurchase::getSupplierId, supplierId)
@@ -205,18 +205,16 @@ public class SupplierPortalOrchestrator {
                 .map(this::buildPurchaseView)
                 .collect(Collectors.toList()));
 
-        return result;
+        return Result.success(result);
     }
 
     // ------------------------------------------------------------------
     // 采购单
     // ------------------------------------------------------------------
 
-    /**
-     * 采购单分页列表（数据库分页，支持状态 + 关键字）。
-     */
-    public Map<String, Object> getPurchases(String supplierId, Long tenantId,
-                                            String status, String keyword, int page, int pageSize) {
+    /** 采购单分页列表（数据库分页，支持状态 + 关键字）。 */
+    public Result<Map<String, Object>> getPurchases(String supplierId, Long tenantId,
+                                                    String status, String keyword, int page, int pageSize) {
         int safePage = page < 1 ? 1 : page;
         int safePageSize = (pageSize < 1 || pageSize > 200) ? 20 : pageSize;
 
@@ -244,48 +242,51 @@ public class SupplierPortalOrchestrator {
         result.put("page", safePage);
         result.put("pageSize", safePageSize);
         result.put("totalPages", (int) Math.ceil(pageResult.getTotal() * 1.0 / safePageSize));
-        return result;
+        return Result.success(result);
     }
 
     /**
      * 采购单详情（必须归属当前供应商 + 租户）。
      *
-     * @throws IllegalArgumentException 采购单不存在或不属于当前供应商
+     * @return 采购单不存在或不属于当前供应商时返回中文提示
      */
-    public Map<String, Object> getPurchaseDetail(String supplierId, Long tenantId, String purchaseId) {
+    public Result<Map<String, Object>> getPurchaseDetail(String supplierId, Long tenantId, String purchaseId) {
         MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
         if (purchase == null || !supplierId.equals(purchase.getSupplierId())
                 || !tenantId.equals(purchase.getTenantId())) {
-            throw new IllegalArgumentException("采购单不存在");
+            return Result.fail("采购单不存在");
         }
 
         Map<String, Object> result = new HashMap<>();
         result.put("purchase", buildPurchaseView(purchase));
-        return result;
+        return Result.success(result);
     }
 
     /**
      * 供应商回填发货信息（状态 / 发货数量 / 物流单号）。
      *
-     * @throws IllegalArgumentException 采购单不存在或状态不允许发货（由 MaterialPurchaseOrchestrator 判定）
+     * <p>保留原有的 {@code IllegalArgumentException → Result.fail} 转换，语义与重构前一致。
      */
-    public void updateShipment(String purchaseId, String supplierId, Long tenantId,
-                               String newStatus, Integer shipQuantity,
-                               String trackingNo, String expressCompany, String remark) {
-        materialPurchaseOrchestrator.updateShipmentBySupplier(
-                purchaseId, supplierId, tenantId, newStatus, shipQuantity,
-                trackingNo, expressCompany, remark);
+    public Result<Void> updateShipment(String purchaseId, String supplierId, Long tenantId,
+                                       String newStatus, Integer shipQuantity,
+                                       String trackingNo, String expressCompany, String remark) {
+        try {
+            materialPurchaseOrchestrator.updateShipmentBySupplier(
+                    purchaseId, supplierId, tenantId, newStatus, shipQuantity,
+                    trackingNo, expressCompany, remark);
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
+        }
+        return Result.success(null);
     }
 
     // ------------------------------------------------------------------
     // 库存
     // ------------------------------------------------------------------
 
-    /**
-     * 供应商库存分页列表（支持关键字与低库存告警筛选）。
-     */
-    public Map<String, Object> getInventory(String supplierId, Long tenantId,
-                                            String keyword, String alert, int page, int pageSize) {
+    /** 供应商库存分页列表（支持关键字与低库存告警筛选）。 */
+    public Result<Map<String, Object>> getInventory(String supplierId, Long tenantId,
+                                                    String keyword, String alert, int page, int pageSize) {
         int safePage = page < 1 ? 1 : page;
         int safePageSize = (pageSize < 1 || pageSize > 200) ? 20 : pageSize;
 
@@ -312,18 +313,16 @@ public class SupplierPortalOrchestrator {
         result.put("page", safePage);
         result.put("pageSize", safePageSize);
         result.put("totalPages", (int) Math.ceil(pageResult.getTotal() * 1.0 / safePageSize));
-        return result;
+        return Result.success(result);
     }
 
     // ------------------------------------------------------------------
     // 应付账款
     // ------------------------------------------------------------------
 
-    /**
-     * 供应商应付账款分页列表。
-     */
-    public Map<String, Object> getPayables(String supplierId, Long tenantId,
-                                           String status, int page, int pageSize) {
+    /** 供应商应付账款分页列表。 */
+    public Result<Map<String, Object>> getPayables(String supplierId, Long tenantId,
+                                                   String status, int page, int pageSize) {
         int safePage = page < 1 ? 1 : page;
         int safePageSize = (pageSize < 1 || pageSize > 200) ? 20 : pageSize;
 
@@ -346,18 +345,16 @@ public class SupplierPortalOrchestrator {
         result.put("page", safePage);
         result.put("pageSize", safePageSize);
         result.put("totalPages", (int) Math.ceil(pageResult.getTotal() * 1.0 / safePageSize));
-        return result;
+        return Result.success(result);
     }
 
     // ------------------------------------------------------------------
     // 对账单
     // ------------------------------------------------------------------
 
-    /**
-     * 供应商对账单分页列表。
-     */
-    public Map<String, Object> getReconciliations(String supplierId, Long tenantId,
-                                                  String status, int page, int pageSize) {
+    /** 供应商对账单分页列表。 */
+    public Result<Map<String, Object>> getReconciliations(String supplierId, Long tenantId,
+                                                          String status, int page, int pageSize) {
         int safePage = page < 1 ? 1 : page;
         int safePageSize = (pageSize < 1 || pageSize > 200) ? 20 : pageSize;
 
@@ -380,34 +377,25 @@ public class SupplierPortalOrchestrator {
         result.put("page", safePage);
         result.put("pageSize", safePageSize);
         result.put("totalPages", (int) Math.ceil(pageResult.getTotal() * 1.0 / safePageSize));
-        return result;
+        return Result.success(result);
     }
 
     // ------------------------------------------------------------------
     // 供应商资料
     // ------------------------------------------------------------------
 
-    /**
-     * 当前供应商资料。
-     *
-     * @throws IllegalArgumentException 供应商不存在或已删除
-     */
-    public Map<String, Object> getProfile(String supplierId) {
-        return buildSupplierView(requireSupplier(supplierId));
+    /** 当前供应商资料。 */
+    public Result<Map<String, Object>> getProfile(String supplierId) {
+        Factory supplier = factoryService.getById(supplierId);
+        if (supplier == null || (supplier.getDeleteFlag() != null && supplier.getDeleteFlag() == 1)) {
+            return Result.fail("供应商不存在");
+        }
+        return Result.success(buildSupplierView(supplier));
     }
 
     // ------------------------------------------------------------------
     // 内部方法
     // ------------------------------------------------------------------
-
-    /** 按 id 加载未删除的供应商，失败即抛异常。 */
-    private Factory requireSupplier(String supplierId) {
-        Factory supplier = factoryService.getById(supplierId);
-        if (supplier == null || (supplier.getDeleteFlag() != null && supplier.getDeleteFlag() == 1)) {
-            throw new IllegalArgumentException("供应商不存在");
-        }
-        return supplier;
-    }
 
     /**
      * S-P0-1 修复：放宽供应商门户登录的 supplierType 校验。

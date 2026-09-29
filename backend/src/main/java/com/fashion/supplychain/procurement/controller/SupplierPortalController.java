@@ -51,7 +51,7 @@ public class SupplierPortalController {
             return Result.fail("请输入用户名和密码");
         }
 
-        return Result.success(supplierPortalOrchestrator.login(username, password));
+        return supplierPortalOrchestrator.login(username, password);
     }
 
     @GetMapping("/dashboard")
@@ -62,7 +62,7 @@ public class SupplierPortalController {
         if (supplierId == null || tenantId == null) {
             return Result.fail(403, NOT_SUPPLIER_ACCOUNT);
         }
-        return Result.success(supplierPortalOrchestrator.getDashboard(supplierId, tenantId));
+        return supplierPortalOrchestrator.getDashboard(supplierId, tenantId);
     }
 
     @GetMapping("/purchases")
@@ -77,8 +77,7 @@ public class SupplierPortalController {
         if (supplierId == null || tenantId == null) {
             return Result.fail(403, NOT_SUPPLIER_ACCOUNT);
         }
-        return Result.success(supplierPortalOrchestrator.getPurchases(
-                supplierId, tenantId, status, keyword, page, pageSize));
+        return supplierPortalOrchestrator.getPurchases(supplierId, tenantId, status, keyword, page, pageSize);
     }
 
     @GetMapping("/purchases/{purchaseId}")
@@ -89,7 +88,7 @@ public class SupplierPortalController {
         if (supplierId == null || tenantId == null) {
             return Result.fail(403, NOT_SUPPLIER_ACCOUNT);
         }
-        return Result.success(supplierPortalOrchestrator.getPurchaseDetail(supplierId, tenantId, purchaseId));
+        return supplierPortalOrchestrator.getPurchaseDetail(supplierId, tenantId, purchaseId);
     }
 
     @PostMapping("/purchases/{purchaseId}/ship")
@@ -108,9 +107,8 @@ public class SupplierPortalController {
         String expressCompany = (String) request.get("expressCompany");
         String remark = (String) request.get("remark");
 
-        supplierPortalOrchestrator.updateShipment(
+        return supplierPortalOrchestrator.updateShipment(
                 purchaseId, supplierId, tenantId, newStatus, shipQuantity, trackingNo, expressCompany, remark);
-        return Result.success(null);
     }
 
     @GetMapping("/inventory")
@@ -125,8 +123,7 @@ public class SupplierPortalController {
         if (supplierId == null || tenantId == null) {
             return Result.fail(403, NOT_SUPPLIER_ACCOUNT);
         }
-        return Result.success(supplierPortalOrchestrator.getInventory(
-                supplierId, tenantId, keyword, alert, page, pageSize));
+        return supplierPortalOrchestrator.getInventory(supplierId, tenantId, keyword, alert, page, pageSize);
     }
 
     @GetMapping("/payables")
@@ -140,7 +137,7 @@ public class SupplierPortalController {
         if (supplierId == null || tenantId == null) {
             return Result.fail(403, NOT_SUPPLIER_ACCOUNT);
         }
-        return Result.success(supplierPortalOrchestrator.getPayables(supplierId, tenantId, status, page, pageSize));
+        return supplierPortalOrchestrator.getPayables(supplierId, tenantId, status, page, pageSize);
     }
 
     @GetMapping("/reconciliations")
@@ -154,8 +151,7 @@ public class SupplierPortalController {
         if (supplierId == null || tenantId == null) {
             return Result.fail(403, NOT_SUPPLIER_ACCOUNT);
         }
-        return Result.success(supplierPortalOrchestrator.getReconciliations(
-                supplierId, tenantId, status, page, pageSize));
+        return supplierPortalOrchestrator.getReconciliations(supplierId, tenantId, status, page, pageSize);
     }
 
     @GetMapping("/profile")
@@ -166,7 +162,7 @@ public class SupplierPortalController {
         if (supplierId == null || tenantId == null) {
             return Result.fail(403, NOT_SUPPLIER_ACCOUNT);
         }
-        return Result.success(supplierPortalOrchestrator.getProfile(supplierId));
+        return supplierPortalOrchestrator.getProfile(supplierId);
     }
 
     /**
