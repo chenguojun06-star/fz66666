@@ -45,6 +45,9 @@ public class SelectionCandidateOrchestrator {
     @Autowired
     private SelectionReviewService reviewService;
 
+    @Autowired
+    private SelectionNoGenerator noGenerator;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** 分页查询候选款列表 */
@@ -93,8 +96,18 @@ public class SelectionCandidateOrchestrator {
         }
         validateBatchEditable(req.getBatchId(), tenantId);
 
-        String candidateNo = "CAND-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHH"))
-                + "-" + String.format("%04d", (int) (Math.random() * 9000) + 1000);
+        // D-628：后缀改为按小时分段原子自增。市场热品是批量一键导入，原
+        // Math.random()*9000 在单批几十条时撞号概率已不可忽略。
+        String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHH"));
+        String noPrefix = "CAND-" + datePart + "-";
+        int seq = noGenerator.nextSeq("CAND", datePart, () -> {
+            SelectionCandidate last = candidateService.getOne(new LambdaQueryWrapper<SelectionCandidate>()
+                    .likeRight(SelectionCandidate::getCandidateNo, noPrefix)
+                    .orderByDesc(SelectionCandidate::getCandidateNo)
+                    .last("LIMIT 1"));
+            return last == null ? 1 : SelectionNoGenerator.parseSeq(last.getCandidateNo()) + 1;
+        });
+        String candidateNo = noPrefix + SelectionNoGenerator.format(seq);
 
         SelectionCandidate candidate = new SelectionCandidate();
         candidate.setBatchId(req.getBatchId());
@@ -334,8 +347,17 @@ public class SelectionCandidateOrchestrator {
 
         // 不存在则自动创建
         SelectionBatch batch = new SelectionBatch();
-        batch.setBatchNo("SEL-MKT-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
-                + "-" + String.format("%04d", (int) (Math.random() * 9000) + 1000));
+        // D-628：与 createBatch 同源，改为按天分段原子自增
+        String mktDatePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String mktNoPrefix = "SEL-MKT-" + mktDatePart + "-";
+        int mktSeq = noGenerator.nextSeq("MKT_BATCH", mktDatePart, () -> {
+            SelectionBatch last = batchService.getOne(new LambdaQueryWrapper<SelectionBatch>()
+                    .likeRight(SelectionBatch::getBatchNo, mktNoPrefix)
+                    .orderByDesc(SelectionBatch::getBatchNo)
+                    .last("LIMIT 1"));
+            return last == null ? 1 : SelectionNoGenerator.parseSeq(last.getBatchNo()) + 1;
+        });
+        batch.setBatchNo(mktNoPrefix + SelectionNoGenerator.format(mktSeq));
         batch.setBatchName(batchName);
         batch.setSeason(season);
         batch.setYear(year);

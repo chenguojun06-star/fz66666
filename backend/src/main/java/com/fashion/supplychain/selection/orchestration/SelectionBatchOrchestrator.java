@@ -33,6 +33,9 @@ public class SelectionBatchOrchestrator {
     @Autowired
     private SelectionCandidateService candidateService;
 
+    @Autowired
+    private SelectionNoGenerator noGenerator;
+
     /** 查询批次列表（分页） */
     public IPage<SelectionBatch> listBatch(int page, int size, Map<String, Object> filters) {
         Long tenantId = UserContext.tenantId();
@@ -60,8 +63,18 @@ public class SelectionBatchOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public SelectionBatch createBatch(SelectionBatchRequest req) {
         Long tenantId = UserContext.tenantId();
-        String batchNo = "SEL-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
-                + "-" + String.format("%04d", (int) (Math.random() * 9000) + 1000);
+        // D-628：后缀由 Math.random()*9000（仅 9000 取值，同日约 112 条即 50% 撞号）
+        // 改为按天分段原子自增，起点取当天最大编号水位，避免重启后与历史编号重复。
+        String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String noPrefix = "SEL-" + datePart + "-";
+        int seq = noGenerator.nextSeq("BATCH", datePart, () -> {
+            SelectionBatch last = batchService.getOne(new LambdaQueryWrapper<SelectionBatch>()
+                    .likeRight(SelectionBatch::getBatchNo, noPrefix)
+                    .orderByDesc(SelectionBatch::getBatchNo)
+                    .last("LIMIT 1"));
+            return last == null ? 1 : SelectionNoGenerator.parseSeq(last.getBatchNo()) + 1;
+        });
+        String batchNo = noPrefix + SelectionNoGenerator.format(seq);
 
         SelectionBatch batch = new SelectionBatch();
         batch.setBatchNo(batchNo);

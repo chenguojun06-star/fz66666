@@ -38,7 +38,12 @@ Controller → Orchestrator → Service → Mapper
   （例如仓库里的 `java-springboot` skill 就写了这条）。
   ArchUnit 架构守护会在 pre-push 每轮校验分层依赖，改成非分层结构会**直接卡住推送**。
   同理，本项目普遍使用字段注入（`@Autowired` 字段），改成构造器注入属大范围重构，需单独排期，不是随手可改项。
-- **Java unit test sources stay local only** — per P0 policy, Java test sources (*Test.java in src/test/) are gitignored and never committed. Shell integration tests (scripts/test/) and Playwright E2E tests (frontend/e2e/) ARE committed.
+- **All test sources ARE committed** — 测试代码入库策略的权威说明在 `.gitignore` 第 28-38 行。
+  Java 单元测试（`backend/src/test/`，2026-09-15 起入库）、前端单元测试（2026-09-19 起入库）、
+  Shell 集成测试（`scripts/test/`）、Playwright E2E（`frontend/e2e/`）**全部入库**；
+  仅小程序测试（`miniprogram/test/`、`miniprogram/**/*.test.js`）仍按原策略本地保留。
+  ⚠️ 历史上曾把 `backend/src/test/` 排除（56a5948c0），后果是 CI checkout 后测试目录为空、
+  ArchUnit 等架构门控**在 CI 上空转**。**不要再次把测试源码移出版本控制。**
 
 ## Backend Module Structure (14 modules)
 
@@ -94,15 +99,17 @@ cd frontend && npm run test:e2e                   # Playwright E2E测试
 
 | Type | Count | Location | Language |
 |------|-------|----------|----------|
-| Shell集成测试 | 24 scripts / 7.7k lines | `scripts/test/` | Bash |
-| 根目录测试 | 3 scripts / 453 lines | `test-*.sh` | Bash |
-| Playwright E2E | 3 specs / 393 lines | `frontend/e2e/` | TypeScript |
-| Python冒烟测试 | 1 script / 198 lines | `scripts/smoke_test.py` | Python |
+| Shell集成测试 | 26 scripts | `scripts/test/` | Bash |
+| 根目录测试 | 3 scripts | `test-*.sh` | Bash |
+| Playwright E2E | 4 specs | `frontend/e2e/` | TypeScript |
+| Python冒烟测试 | 1 script | `scripts/smoke_test.py` | Python |
 | Flutter测试 | 2 files | `flutter/test/`, `flutter_app/test/` | Dart |
-| Java单元测试源码 | ❌ Gitignored (P0策略) | `backend/src/test/` | Java |
-| Java编译测试遗存 | 13 .class | `backend/target_test-classes/` | (源码已git隔离) |
+| Java单元测试 | ✅ 已入库（33 文件，2026-09-15 起） | `backend/src/test/` | Java |
+| 前端单元测试 | ✅ 已入库（33 文件，2026-09-19 起） | `frontend/src/**/*.test.ts(x)` | TypeScript |
 
-Note: Java单元测试源码按项目P0铁律"测试代码隔离"从未提交到git仓库。Shell集成测试覆盖完整业务流程链路。
+Note: **所有测试源码均已入库**（仅小程序测试按原策略本地保留）。历史教训：曾将
+`backend/src/test/` 排除，导致 CI checkout 后测试目录为空、ArchUnit 门控空转
+（详见 `.gitignore` 第 28-38 行的策略说明）。
 
 ## Key Design Rules
 

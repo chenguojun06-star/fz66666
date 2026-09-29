@@ -44,6 +44,9 @@ public class SelectionApprovalOrchestrator {
     @Autowired
     private ProductionOrderService productionOrderService;
 
+    @Autowired
+    private SelectionNoGenerator noGenerator;
+
     /**
      * 选品通过后自动创建正式款式（t_style_info）
      * 同时把候选款与新款式关联
@@ -63,9 +66,21 @@ public class SelectionApprovalOrchestrator {
         }
 
         // 生成款号：SEL + 年月 + 序号
-        String styleNo = "SEL" + java.time.LocalDate.now().format(
-                java.time.format.DateTimeFormatter.ofPattern("yyMM"))
-                + String.format("%04d", (int) (Math.random() * 9000) + 1000);
+        // D-628：原 Math.random()*9000 在 9000 取值空间内按月复用，月产 100 个款即有约
+        // 55% 撞号概率；且 t_style_info.style_no 没有唯一索引（V20260131 的建索引语句被注释），
+        // 撞号会静默产生重复款号 —— 比批次号/候选号更危险，那两张表有唯一索引兜底。
+        // 改为按月分段原子自增，起点取当月最大款号水位。
+        String datePart = java.time.LocalDate.now().format(
+                java.time.format.DateTimeFormatter.ofPattern("yyMM"));
+        String noPrefix = "SEL" + datePart;
+        int seq = noGenerator.nextSeq("STYLE", datePart, () -> {
+            StyleInfo last = styleInfoService.getOne(new LambdaQueryWrapper<StyleInfo>()
+                    .likeRight(StyleInfo::getStyleNo, noPrefix)
+                    .orderByDesc(StyleInfo::getStyleNo)
+                    .last("LIMIT 1"));
+            return last == null ? 1 : SelectionNoGenerator.parseSeq(last.getStyleNo()) + 1;
+        });
+        String styleNo = noPrefix + SelectionNoGenerator.format(seq);
 
         StyleInfo style = new StyleInfo();
         style.setStyleNo(styleNo);
