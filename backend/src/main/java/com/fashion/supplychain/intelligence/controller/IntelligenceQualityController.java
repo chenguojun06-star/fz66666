@@ -1,7 +1,6 @@
 package com.fashion.supplychain.intelligence.controller;
 
-import com.fashion.supplychain.intelligence.service.GoldenEvalService;
-import com.fashion.supplychain.intelligence.service.GuardrailsConfigService;
+import com.fashion.supplychain.intelligence.orchestration.IntelligenceQualityOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -12,45 +11,47 @@ import java.util.Map;
 
 /**
  * P1/P2升级: AI质量评估 & 安全规则管理 API
+ *
+ * <p>本类只做「参数校验 + 调 Orchestrator + 组装响应」。业务编排在
+ * {@link IntelligenceQualityOrchestrator}，原先直接注入的两个 Service 已下沉
+ * （D-630 规则6：Controller 不得直接依赖多个 Service）。
  */
 @RestController
 @RequestMapping("/api/intelligence")
 @Slf4j
 public class IntelligenceQualityController {
 
-    @Autowired(required = false)
-    private GoldenEvalService goldenEvalService;
-    @Autowired(required = false)
-    private GuardrailsConfigService guardrailsConfigService;
+    @Autowired
+    private IntelligenceQualityOrchestrator intelligenceQualityOrchestrator;
 
     /** P1: 运行Golden Test Dataset回归测试 */
     @PostMapping("/golden-eval")
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public ResponseEntity<String> runGoldenEval() {
-        if (goldenEvalService == null) {
+        if (!intelligenceQualityOrchestrator.isGoldenEvalAvailable()) {
             return ResponseEntity.ok("{\"status\":\"unavailable\",\"reason\":\"GoldenEvalService未初始化\"}");
         }
-        return ResponseEntity.ok(goldenEvalService.runGoldenEval());
+        return ResponseEntity.ok(intelligenceQualityOrchestrator.runGoldenEval());
     }
 
     /** P2: 查看安全规则配置 */
     @GetMapping("/guardrails")
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public ResponseEntity<Map<String, Object>> getGuardrails() {
-        if (guardrailsConfigService == null) {
+        if (!intelligenceQualityOrchestrator.isGuardrailsAvailable()) {
             return ResponseEntity.ok(Map.of("status", "unavailable"));
         }
-        return ResponseEntity.ok(guardrailsConfigService.getRules());
+        return ResponseEntity.ok(intelligenceQualityOrchestrator.getGuardrails());
     }
 
     /** P2: 热更新安全规则 */
     @PostMapping("/guardrails/reload")
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public ResponseEntity<Map<String, String>> reloadGuardrails() {
-        if (guardrailsConfigService == null) {
+        if (!intelligenceQualityOrchestrator.isGuardrailsAvailable()) {
             return ResponseEntity.ok(Map.of("status", "unavailable"));
         }
-        guardrailsConfigService.reload();
+        intelligenceQualityOrchestrator.reloadGuardrails();
         return ResponseEntity.ok(Map.of("status", "ok", "message", "安全规则已重新加载"));
     }
 }
