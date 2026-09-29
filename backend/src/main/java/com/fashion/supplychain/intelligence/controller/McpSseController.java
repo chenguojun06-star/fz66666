@@ -2,11 +2,8 @@ package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
-import com.fashion.supplychain.intelligence.agent.resource.McpIdentityContext;
-import com.fashion.supplychain.intelligence.service.McpProtocolService;
+import com.fashion.supplychain.intelligence.orchestration.McpSseOrchestrator;
 import com.fashion.supplychain.intelligence.service.McpSseSessionService;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -17,8 +14,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.Executor;
 
 /**
@@ -61,6 +56,9 @@ import java.util.concurrent.Executor;
  *   }
  * }
  * }</pre>
+ *
+ * <p><b>分层说明（D-635）：</b>会话创建与 JSON-RPC 路由已下沉到 {@link McpSseOrchestrator}；
+ * 本类只保留 SSE 协议层细节（endpoint 帧、禁缓存响应头、202/404 状态码、异步线程池调度）。
  */
 @RestController
 @RequestMapping("/api/intelligence/mcp")
@@ -68,9 +66,7 @@ import java.util.concurrent.Executor;
 @Slf4j
 public class McpSseController {
 
-    private final McpSseSessionService sseSessionService;
-    private final McpProtocolService mcpProtocolService;
-    private final ObjectMapper objectMapper;
+    private final McpSseOrchestrator mcpSseOrchestrator;
 
     @org.springframework.beans.factory.annotation.Autowired
     @Qualifier("taskExecutor")
@@ -92,7 +88,7 @@ public class McpSseController {
         response.setHeader("Cache-Control", "no-cache");
         response.setHeader("X-Accel-Buffering", "no");  // 禁止 nginx 缓冲
 
-        McpSseSessionService.SessionEntry session = sseSessionService.createSession(tenantId);
+        McpSseSessionService.SessionEntry session = mcpSseOrchestrator.createSession(tenantId);
 
         // 第一条事件：告知客户端用哪个路径发 JSON-RPC 消息
         session.emitter().send(SseEmitter.event()
@@ -114,7 +110,7 @@ public class McpSseController {
             @RequestBody String body,
             HttpServletResponse response) throws IOException {
 
-        if (!sseSessionService.hasSession(sessionId)) {
+        if (!mcpSseOrchestrator.hasSession(sessionId)) {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             response.getWriter().write("{\"error\":\"session not found\"}");
             return;
@@ -123,64 +119,6 @@ public class McpSseController {
         response.setStatus(HttpServletResponse.SC_ACCEPTED);
 
         // 异步处理，避免阻塞 Tomcat 线程
-        taskExecutor.execute(() -> processJsonRpc(sessionId, body));
-    }
-
-    // ─────────────────────────────────────────────────────────────────────
-    // JSON-RPC 2.0 路由
-    // ─────────────────────────────────────────────────────────────────────
-
-    private void processJsonRpc(String sessionId, String body) {
-        try {
-            Map<String, Object> req = objectMapper.readValue(body, new TypeReference<>() {});
-            Object id = req.get("id");
-            String method = (String) req.get("method");
-            @SuppressWarnings("unchecked")
-            Map<String, Object> params = req.containsKey("params")
-                    ? (Map<String, Object>) req.get("params") : new HashMap<>();
-
-            Object result;
-            switch (method != null ? method : "") {
-                case "initialize" -> result = mcpProtocolService.initialize();
-                case "tools/list" -> result = mcpProtocolService.listTools();
-                case "tools/call" -> {
-                    McpProtocolService.McpToolCallRequest toolReq = new McpProtocolService.McpToolCallRequest();
-                    toolReq.setName((String) params.get("name"));
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> args = params.containsKey("arguments")
-                            ? (Map<String, Object>) params.get("arguments") : new HashMap<>();
-                    toolReq.setArguments(args);
-                    result = mcpProtocolService.callTool(toolReq);
-                }
-                case "resources/list" -> result = mcpProtocolService.listResources(McpIdentityContext.fromUserContext());
-                case "resources/read" -> {
-                    String uri = (String) params.get("uri");
-                    result = mcpProtocolService.readResource(uri, McpIdentityContext.fromUserContext());
-                }
-                default -> result = Map.of("error", Map.of("code", -32601, "message", "Method not found: " + method));
-            }
-
-            // 构造 JSON-RPC 2.0 响应
-            Map<String, Object> rpcResponse = new HashMap<>();
-            rpcResponse.put("jsonrpc", "2.0");
-            if (id != null) rpcResponse.put("id", id);
-            rpcResponse.put("result", result);
-
-            String json = objectMapper.writeValueAsString(rpcResponse);
-            boolean sent = sseSessionService.send(sessionId, json);
-            if (!sent) {
-                log.warn("[MCP/SSE] 响应发送失败，会话已断开 sessionId={} method={}", sessionId, method);
-            }
-        } catch (Exception e) {
-            log.error("[MCP/SSE] JSON-RPC 处理异常 sessionId={} err={}", sessionId, e.getMessage(), e);
-            try {
-                Map<String, Object> errResponse = new HashMap<>();
-                errResponse.put("jsonrpc", "2.0");
-                errResponse.put("error", Map.of("code", -32603, "message", "Internal error: " + e.getMessage()));
-                sseSessionService.send(sessionId, objectMapper.writeValueAsString(errResponse));
-            } catch (Exception ex) {
-                log.debug("[MCP SSE] 错误响应发送失败: {}", ex.getMessage());
-            }
-        }
+        taskExecutor.execute(() -> mcpSseOrchestrator.processJsonRpc(sessionId, body));
     }
 }

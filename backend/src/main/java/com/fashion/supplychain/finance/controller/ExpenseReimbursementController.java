@@ -2,14 +2,10 @@ package com.fashion.supplychain.finance.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
-import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursement;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursementDoc;
 import com.fashion.supplychain.finance.orchestration.ExpenseDocOrchestrator;
 import com.fashion.supplychain.finance.orchestration.ExpenseReimbursementOrchestrator;
-import com.fashion.supplychain.finance.service.ExpenseReimbursementDocService;
-import com.fashion.supplychain.finance.service.ExpenseReimbursementService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -24,6 +20,10 @@ import java.util.Map;
 /**
  * 费用报销 Controller
  * 提供报销单的CRUD和审批流程API
+ *
+ * <p>本类只做「参数解析 + 调 Orchestrator + 组装 Result」。查询类接口原先直接注入
+ * ExpenseReimbursementService / ExpenseReimbursementDocService（D-630 规则6 违规），
+ * 已下沉到 {@link ExpenseReimbursementOrchestrator}。
  */
 @Slf4j
 @RestController
@@ -35,13 +35,7 @@ public class ExpenseReimbursementController {
     private ExpenseReimbursementOrchestrator orchestrator;
 
     @Autowired
-    private ExpenseReimbursementService expenseReimbursementService;
-
-    @Autowired
     private ExpenseDocOrchestrator expenseDocOrchestrator;
-
-    @Autowired
-    private ExpenseReimbursementDocService expenseReimbursementDocService;
 
     /**
      * 分页查询报销单列表
@@ -50,8 +44,7 @@ public class ExpenseReimbursementController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/list")
     public Result<IPage<ExpenseReimbursement>> list(@RequestParam Map<String, Object> params) {
-        IPage<ExpenseReimbursement> page = expenseReimbursementService.queryPage(params);
-        return Result.success(page);
+        return orchestrator.queryPage(params);
     }
 
     /**
@@ -60,12 +53,7 @@ public class ExpenseReimbursementController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}")
     public Result<ExpenseReimbursement> getById(@PathVariable String id) {
-        ExpenseReimbursement entity = expenseReimbursementService.getById(id);
-        if (entity == null) {
-            return Result.fail("报销单不存在");
-        }
-        TenantAssert.assertBelongsToCurrentTenant(entity.getTenantId(), "报销单");
-        return Result.success(entity);
+        return orchestrator.getDetail(id);
     }
 
     /**
@@ -197,10 +185,7 @@ public class ExpenseReimbursementController {
     @GetMapping("/docs")
     public Result<List<ExpenseReimbursementDoc>> getDocs(
             @RequestParam String reimbursementId) {
-        Long tenantId = UserContext.tenantId();
-        List<ExpenseReimbursementDoc> docs =
-                expenseReimbursementDocService.listByReimbursementId(tenantId, reimbursementId);
-        return Result.success(docs);
+        return orchestrator.listDocs(reimbursementId);
     }
 
     /**
@@ -210,13 +195,7 @@ public class ExpenseReimbursementController {
     @PostMapping("/docs/link")
     public Result<Boolean> linkDocs(
             @RequestBody LinkDocsRequest req) {
-        try {
-            expenseReimbursementDocService.linkDocs(req.getDocIds(), req.getReimbursementId(), req.getReimbursementNo());
-            return Result.success(true);
-        } catch (Exception e) {
-            log.error("绑定凭证失败", e);
-            return Result.fail("绑定失败: " + e.getMessage());
-        }
+        return orchestrator.linkDocs(req.getDocIds(), req.getReimbursementId(), req.getReimbursementNo());
     }
 
     /** 凭证绑定请求体 */

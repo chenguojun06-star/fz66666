@@ -1,23 +1,28 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
-import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
-import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.orchestration.MaterialPickingOrchestrator;
 import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestrator;
-import com.fashion.supplychain.production.service.MaterialPickingService;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import lombok.extern.slf4j.Slf4j;
-import java.util.List;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import org.springframework.util.StringUtils;
-import lombok.Data;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+
+import java.util.List;
+
+/**
+ * 领料单控制器
+ *
+ * <p>本类只做「参数校验 + 调 Orchestrator + 组装 Result」。领料单的创建/领取/分页查询/
+ * 明细回填原先直接写在 Controller 里并注入 MaterialPickingService + ProductionOrderService
+ * + MaterialPickingItemMapper（D-630 规则6 与「Controller 不得直接依赖 Mapper」双重违规），
+ * 已全部下沉到 {@link MaterialPickingOrchestrator}。
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/production/picking")
@@ -25,20 +30,14 @@ import lombok.Data;
 public class MaterialPickingController {
 
     @Autowired
-    private MaterialPickingService materialPickingService;
+    private MaterialPickingOrchestrator materialPickingOrchestrator;
 
     @Autowired
     private MaterialPurchaseOrchestrator materialPurchaseOrchestrator;
 
-    @Autowired
-    private com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator sysNoticeOrchestrator;
-
-    @Autowired
-    private com.fashion.supplychain.production.orchestration.MaterialPickingOrchestrator materialPickingOrchestrator;
-
     @PostMapping
     public Result<String> create(@RequestBody PickingRequest request) {
-        return Result.success(materialPickingService.createPicking(request.getPicking(), request.getItems()));
+        return Result.success(materialPickingOrchestrator.createPicking(request.getPicking(), request.getItems()));
     }
 
     /**
@@ -52,64 +51,8 @@ public class MaterialPickingController {
         if (request == null || request.getPicking() == null) {
             throw new IllegalArgumentException("领料请求不能为空");
         }
-        MaterialPicking picking = request.getPicking();
-        // P0 修复（数据完整性）：禁止将空字符串作为 orderId/orderNo/styleNo 保存，
-        // 否则领料单无归属失联，仓库端无法定位归属订单/样衣任务。
-        // 统一把空字符串标准化为 null，避免后续查询条件 != '' 时遗漏。
-        if (!StringUtils.hasText(picking.getOrderId())) {
-            picking.setOrderId(null);
-        }
-        if (!StringUtils.hasText(picking.getOrderNo())) {
-            picking.setOrderNo(null);
-        }
-        if (!StringUtils.hasText(picking.getStyleNo())) {
-            picking.setStyleNo(null);
-        }
-        if (!StringUtils.hasText(picking.getPatternProductionId())) {
-            picking.setPatternProductionId(null);
-        }
-        // 校验：至少要有一个归属锚点（orderId / patternProductionId / styleNo）
-        // 防止完全无归属的"幽灵领料单"产生。仓库和财务侧查询都依赖这些关联字段。
-        boolean hasAnchor = StringUtils.hasText(picking.getOrderId())
-                || StringUtils.hasText(picking.getPatternProductionId())
-                || StringUtils.hasText(picking.getStyleNo());
-        if (!hasAnchor) {
-            throw new IllegalArgumentException("领料单缺少归属关联（订单号/样衣任务ID/款号），请返回重试");
-        }
-        // 强制设置 status=pending，前端可能未传此字段（INTERNAL 由 createPickingAndOutbound 同事务转 completed）
-        picking.setStatus(MaterialConstants.STATUS_PENDING);
-        // BOM领取默认为样衣用料（开发场景），前端未传时兜底
-        if (picking.getUsageType() == null || picking.getUsageType().isEmpty()) {
-            picking.setUsageType("SAMPLE");
-        }
-        if (picking.getPickupType() == null || picking.getPickupType().isEmpty()) {
-            picking.setPickupType("INTERNAL");
-        }
-        boolean external = "EXTERNAL".equalsIgnoreCase(picking.getPickupType());
-        if (!external) {
-            // D-099：内部领料领取即出库（同事务：建单+扣库存+出库日志+采购单联动），
-            // 库存不足会整体回滚并报错，杜绝"只建单不扣库存"
-            String pickingId = materialPurchaseOrchestrator.createPickingAndOutbound(
-                    picking, request.getItems());
-            return Result.success(pickingId);
-        }
-        String pickingId = materialPickingService.savePendingPicking(
-                picking, request.getItems());
-        // 通知仓库人员（失败不影响领料单创建）——仅 EXTERNAL 外发领用需要仓库确认
-        try {
-            Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
-            sysNoticeOrchestrator.sendPickupNotification(tenantId, request.getPicking(), request.getItems());
-        } catch (Exception e) {
-            log.warn("[Picking] 发送仓库领取通知失败 pickingNo={}: {}", request.getPicking().getPickingNo(), e.getMessage());
-        }
-        return Result.success(pickingId);
+        return materialPickingOrchestrator.createPending(request.getPicking(), request.getItems());
     }
-
-    @Autowired
-    private com.fashion.supplychain.production.service.ProductionOrderService productionOrderService;
-
-    @Autowired
-    private com.fashion.supplychain.production.mapper.MaterialPickingItemMapper materialPickingItemMapper;
 
     @GetMapping("/list")
     public Result<IPage<MaterialPicking>> page(
@@ -123,92 +66,13 @@ public class MaterialPickingController {
             @RequestParam(required = false) String usageType,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
-
-        java.util.List<String> factoryOrderIds = com.fashion.supplychain.common.DataPermissionHelper
-                .getFactoryOrderIds(productionOrderService);
-        if (factoryOrderIds != null && factoryOrderIds.isEmpty()) {
-            return Result.success(new Page<>());
-        }
-
-        LambdaQueryWrapper<MaterialPicking> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(MaterialPicking::getDeleteFlag, 0);
-        com.fashion.supplychain.common.tenant.TenantAssert.assertTenantContext();
-        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
-        wrapper.eq(MaterialPicking::getTenantId, tenantId);
-        if (factoryOrderIds != null) {
-            wrapper.in(MaterialPicking::getOrderId, factoryOrderIds);
-        }
-        if (StringUtils.hasText(orderNo)) {
-            wrapper.like(MaterialPicking::getOrderNo, orderNo);
-        }
-        if (StringUtils.hasText(styleNo)) {
-            wrapper.like(MaterialPicking::getStyleNo, styleNo);
-        }
-        if (StringUtils.hasText(status)) {
-            wrapper.eq(MaterialPicking::getStatus, status);
-        }
-        if (StringUtils.hasText(pickupType)) {
-            wrapper.eq(MaterialPicking::getPickupType, pickupType);
-        }
-        if (StringUtils.hasText(usageType)) {
-            wrapper.eq(MaterialPicking::getUsageType, usageType);
-        }
-        if (StringUtils.hasText(keyword)) {
-            wrapper.and(w -> w.like(MaterialPicking::getPickingNo, keyword)
-                    .or().like(MaterialPicking::getOrderNo, keyword)
-                    .or().like(MaterialPicking::getStyleNo, keyword)
-                    .or().like(MaterialPicking::getPickerName, keyword));
-        }
-        if (StringUtils.hasText(startDate)) {
-            wrapper.ge(MaterialPicking::getCreateTime, java.time.LocalDate.parse(startDate).atStartOfDay());
-        }
-        if (StringUtils.hasText(endDate)) {
-            wrapper.le(MaterialPicking::getCreateTime, java.time.LocalDate.parse(endDate).atTime(23, 59, 59));
-        }
-        wrapper.orderByDesc(MaterialPicking::getCreateTime);
-
-        IPage<MaterialPicking> result = materialPickingService.page(new Page<>(page, pageSize), wrapper);
-        java.util.List<MaterialPicking> records = result.getRecords();
-        java.util.Set<String> orderIds = records.stream()
-                .map(MaterialPicking::getOrderId)
-                .filter(StringUtils::hasText)
-                .collect(java.util.stream.Collectors.toSet());
-        if (!orderIds.isEmpty()) {
-            java.util.Map<String, ProductionOrder> orderMap = productionOrderService.listByIds(orderIds).stream()
-                    .filter(java.util.Objects::nonNull)
-                    .collect(java.util.stream.Collectors.toMap(ProductionOrder::getId, o -> o, (a, b) -> a));
-            for (MaterialPicking record : records) {
-                ProductionOrder order = orderMap.get(record.getOrderId());
-                if (order == null) {
-                    continue;
-                }
-                record.setFactoryId(order.getFactoryId());
-                record.setFactoryName(order.getFactoryName());
-                record.setFactoryType(order.getFactoryType());
-            }
-        }
-
-        java.util.Set<String> pickingIds = records.stream()
-                .map(MaterialPicking::getId)
-                .filter(StringUtils::hasText)
-                .collect(java.util.stream.Collectors.toSet());
-        if (!pickingIds.isEmpty()) {
-            List<MaterialPickingItem> allItems = materialPickingItemMapper.selectList(
-                    new LambdaQueryWrapper<MaterialPickingItem>()
-                            .in(MaterialPickingItem::getPickingId, pickingIds));
-            java.util.Map<String, List<MaterialPickingItem>> itemsByPickingId = allItems.stream()
-                    .collect(java.util.stream.Collectors.groupingBy(MaterialPickingItem::getPickingId));
-            for (MaterialPicking record : records) {
-                record.setItems(itemsByPickingId.getOrDefault(record.getId(), java.util.Collections.emptyList()));
-            }
-        }
-
-        return Result.success(result);
+        return materialPickingOrchestrator.pagePicking(page, pageSize, orderNo, styleNo, status,
+                keyword, pickupType, usageType, startDate, endDate);
     }
 
     @GetMapping("/{id}/items")
     public Result<List<MaterialPickingItem>> getItems(@PathVariable String id) {
-        return Result.success(materialPickingService.getItemsByPickingId(id));
+        return Result.success(materialPickingOrchestrator.getItems(id));
     }
 
     /**

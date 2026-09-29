@@ -1,8 +1,13 @@
 package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursement;
+import com.fashion.supplychain.finance.entity.ExpenseReimbursementDoc;
+import com.fashion.supplychain.finance.service.ExpenseReimbursementDocService;
 import com.fashion.supplychain.finance.service.ExpenseReimbursementService;
 import com.fashion.supplychain.finance.helper.ExpenseReimbursementLogAppendHelper;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 费用报销编排器
@@ -30,6 +36,50 @@ public class ExpenseReimbursementOrchestrator {
 
     @Autowired
     private BillAggregationOrchestrator billAggregationOrchestrator;
+
+    @Autowired
+    private ExpenseReimbursementDocService expenseReimbursementDocService;
+
+    /**
+     * 分页查询报销单列表
+     * 支持参数：page, size, applicantId, status, expenseType, reimbursementNo, keyword
+     */
+    public Result<IPage<ExpenseReimbursement>> queryPage(Map<String, Object> params) {
+        return Result.success(expenseReimbursementService.queryPage(params));
+    }
+
+    /**
+     * 查询报销单详情（校验租户归属）。
+     */
+    public Result<ExpenseReimbursement> getDetail(String id) {
+        ExpenseReimbursement entity = expenseReimbursementService.getById(id);
+        if (entity == null) {
+            return Result.fail("报销单不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(entity.getTenantId(), "报销单");
+        return Result.success(entity);
+    }
+
+    /**
+     * 查询报销单下的所有凭证。
+     */
+    public Result<List<ExpenseReimbursementDoc>> listDocs(String reimbursementId) {
+        Long tenantId = UserContext.tenantId();
+        return Result.success(expenseReimbursementDocService.listByReimbursementId(tenantId, reimbursementId));
+    }
+
+    /**
+     * 将上传的凭证绑定到已创建的报销单（提交报销单后调用）。
+     */
+    public Result<Boolean> linkDocs(List<String> docIds, String reimbursementId, String reimbursementNo) {
+        try {
+            expenseReimbursementDocService.linkDocs(docIds, reimbursementId, reimbursementNo);
+            return Result.success(true);
+        } catch (Exception e) {
+            log.error("绑定凭证失败", e);
+            return Result.fail("绑定失败: " + e.getMessage());
+        }
+    }
 
     /**
      * 创建报销单

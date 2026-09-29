@@ -1,9 +1,7 @@
 package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.Result;
-import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.intelligence.service.DeliveryPredictionService;
-import com.fashion.supplychain.intelligence.service.RestockSuggestionService;
+import com.fashion.supplychain.intelligence.orchestration.IntelligencePredictionOrchestrator;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -17,23 +15,29 @@ import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * 预测类智能能力入口（交期风险 / 补货建议 / 采购申请生成）。
+ *
+ * <p>前两个接口的查询逻辑在 {@link IntelligencePredictionOrchestrator}，
+ * 原先直接注入的两个 Service 已下沉（D-630 规则6）。
+ * {@code generatePurchaseRequest} 是纯请求体→响应体转换（不查库），留在本层。
+ */
 @RestController
 @RequestMapping("/api/intelligence/prediction")
 @PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 public class IntelligencePredictionController {
 
-    private final DeliveryPredictionService deliveryService;
-    private final RestockSuggestionService restockService;
+    private final IntelligencePredictionOrchestrator intelligencePredictionOrchestrator;
 
     @GetMapping("/delivery-risks")
     public Result<?> getDeliveryRisks(@RequestParam(defaultValue = "10") int topN) {
-        return Result.success(deliveryService.predictRisks(UserContext.tenantId(), topN));
+        return intelligencePredictionOrchestrator.getDeliveryRisks(topN);
     }
 
     @GetMapping("/restock-suggestions")
     public Result<?> getRestockSuggestions(@RequestParam(defaultValue = "10") int topN) {
-        return Result.success(restockService.getSuggestions(UserContext.tenantId(), topN));
+        return intelligencePredictionOrchestrator.getRestockSuggestions(topN);
     }
 
     @PostMapping("/purchase-request/generate")

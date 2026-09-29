@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
@@ -44,6 +45,178 @@ public class MaterialPickingOrchestrator {
 
     @Autowired
     private com.fashion.supplychain.warehouse.mapper.MaterialPickupRecordMapper materialPickupRecordMapper;
+
+    @Autowired
+    private MaterialPurchaseOrchestrator materialPurchaseOrchestrator;
+
+    @Autowired
+    private SysNoticeOrchestrator sysNoticeOrchestrator;
+
+    /** 直接创建领料单（不走归属校验，供内部调用）。 */
+    public String createPicking(MaterialPicking picking, List<MaterialPickingItem> items) {
+        return materialPickingService.createPicking(picking, items);
+    }
+
+    /**
+     * BOM 申请领取（D-099 重构）：
+     * <ul>
+     *   <li>INTERNAL 内部领料：领取即出库 —— 同事务创建+确认出库（扣库存+写出库日志+记录操作人），
+     *       不再产生待出库单和仓库通知（修复：无限领取/库存不扣减/通知挂着不消失）</li>
+     *   <li>EXTERNAL 外发厂领用：保持两步流（pending + 通知 + 仓库确认），audit 含外发厂账单/应收联动</li>
+     * </ul>
+     *
+     * <p>P0 修复（数据完整性）：禁止将空字符串作为 orderId/orderNo/styleNo 保存，否则领料单
+     * 无归属失联，仓库端无法定位归属订单/样衣任务。统一把空字符串标准化为 null。
+     * 并强制要求至少一个归属锚点（orderId / patternProductionId / styleNo），
+     * 防止完全无归属的"幽灵领料单"。
+     *
+     * @return 领料单 id
+     * @throws IllegalArgumentException 缺少归属关联
+     */
+    public Result<String> createPending(MaterialPicking picking, List<MaterialPickingItem> items) {
+        if (!StringUtils.hasText(picking.getOrderId())) {
+            picking.setOrderId(null);
+        }
+        if (!StringUtils.hasText(picking.getOrderNo())) {
+            picking.setOrderNo(null);
+        }
+        if (!StringUtils.hasText(picking.getStyleNo())) {
+            picking.setStyleNo(null);
+        }
+        if (!StringUtils.hasText(picking.getPatternProductionId())) {
+            picking.setPatternProductionId(null);
+        }
+        boolean hasAnchor = StringUtils.hasText(picking.getOrderId())
+                || StringUtils.hasText(picking.getPatternProductionId())
+                || StringUtils.hasText(picking.getStyleNo());
+        if (!hasAnchor) {
+            throw new IllegalArgumentException("领料单缺少归属关联（订单号/样衣任务ID/款号），请返回重试");
+        }
+        // 强制设置 status=pending，前端可能未传此字段（INTERNAL 由 createPickingAndOutbound 同事务转 completed）
+        picking.setStatus(com.fashion.supplychain.common.constant.MaterialConstants.STATUS_PENDING);
+        // BOM领取默认为样衣用料（开发场景），前端未传时兜底
+        if (picking.getUsageType() == null || picking.getUsageType().isEmpty()) {
+            picking.setUsageType("SAMPLE");
+        }
+        if (picking.getPickupType() == null || picking.getPickupType().isEmpty()) {
+            picking.setPickupType("INTERNAL");
+        }
+        boolean external = "EXTERNAL".equalsIgnoreCase(picking.getPickupType());
+        if (!external) {
+            // D-099：内部领料领取即出库（同事务：建单+扣库存+出库日志+采购单联动），
+            // 库存不足会整体回滚并报错，杜绝"只建单不扣库存"
+            return Result.success(materialPurchaseOrchestrator.createPickingAndOutbound(picking, items));
+        }
+        String pickingId = materialPickingService.savePendingPicking(picking, items);
+        // 通知仓库人员（失败不影响领料单创建）——仅 EXTERNAL 外发领用需要仓库确认
+        try {
+            Long tenantId = UserContext.tenantId();
+            sysNoticeOrchestrator.sendPickupNotification(tenantId, picking, items);
+        } catch (Exception e) {
+            log.warn("[Picking] 发送仓库领取通知失败 pickingNo={}: {}", picking.getPickingNo(), e.getMessage());
+        }
+        return Result.success(pickingId);
+    }
+
+    /** 领料单明细。 */
+    public List<MaterialPickingItem> getItems(String pickingId) {
+        return materialPickingService.getItemsByPickingId(pickingId);
+    }
+
+    /**
+     * 领料单分页查询（带数据权限、订单归属富化、明细批量回填）。
+     *
+     * <p>工厂账号只看自己订单的领料单（{@code DataPermissionHelper.getFactoryOrderIds}）。
+     */
+    public Result<com.baomidou.mybatisplus.core.metadata.IPage<MaterialPicking>> pagePicking(
+            int page, int pageSize, String orderNo, String styleNo, String status,
+            String keyword, String pickupType, String usageType, String startDate, String endDate) {
+
+        List<String> factoryOrderIds = com.fashion.supplychain.common.DataPermissionHelper
+                .getFactoryOrderIds(productionOrderService);
+        if (factoryOrderIds != null && factoryOrderIds.isEmpty()) {
+            return Result.success(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>());
+        }
+
+        LambdaQueryWrapper<MaterialPicking> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(MaterialPicking::getDeleteFlag, 0);
+        com.fashion.supplychain.common.tenant.TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        wrapper.eq(MaterialPicking::getTenantId, tenantId);
+        if (factoryOrderIds != null) {
+            wrapper.in(MaterialPicking::getOrderId, factoryOrderIds);
+        }
+        if (StringUtils.hasText(orderNo)) {
+            wrapper.like(MaterialPicking::getOrderNo, orderNo);
+        }
+        if (StringUtils.hasText(styleNo)) {
+            wrapper.like(MaterialPicking::getStyleNo, styleNo);
+        }
+        if (StringUtils.hasText(status)) {
+            wrapper.eq(MaterialPicking::getStatus, status);
+        }
+        if (StringUtils.hasText(pickupType)) {
+            wrapper.eq(MaterialPicking::getPickupType, pickupType);
+        }
+        if (StringUtils.hasText(usageType)) {
+            wrapper.eq(MaterialPicking::getUsageType, usageType);
+        }
+        if (StringUtils.hasText(keyword)) {
+            wrapper.and(w -> w.like(MaterialPicking::getPickingNo, keyword)
+                    .or().like(MaterialPicking::getOrderNo, keyword)
+                    .or().like(MaterialPicking::getStyleNo, keyword)
+                    .or().like(MaterialPicking::getPickerName, keyword));
+        }
+        if (StringUtils.hasText(startDate)) {
+            wrapper.ge(MaterialPicking::getCreateTime, java.time.LocalDate.parse(startDate).atStartOfDay());
+        }
+        if (StringUtils.hasText(endDate)) {
+            wrapper.le(MaterialPicking::getCreateTime, java.time.LocalDate.parse(endDate).atTime(23, 59, 59));
+        }
+        wrapper.orderByDesc(MaterialPicking::getCreateTime);
+
+        com.baomidou.mybatisplus.core.metadata.IPage<MaterialPicking> result = materialPickingService.page(
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, pageSize), wrapper);
+        List<MaterialPicking> records = result.getRecords();
+
+        // 富化订单归属（工厂/工厂类型），供列表展示与权限判断
+        java.util.Set<String> orderIds = records.stream()
+                .map(MaterialPicking::getOrderId)
+                .filter(StringUtils::hasText)
+                .collect(java.util.stream.Collectors.toSet());
+        if (!orderIds.isEmpty()) {
+            Map<String, ProductionOrder> orderMap = productionOrderService.listByIds(orderIds).stream()
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toMap(ProductionOrder::getId, o -> o, (a, b) -> a));
+            for (MaterialPicking record : records) {
+                ProductionOrder order = orderMap.get(record.getOrderId());
+                if (order == null) {
+                    continue;
+                }
+                record.setFactoryId(order.getFactoryId());
+                record.setFactoryName(order.getFactoryName());
+                record.setFactoryType(order.getFactoryType());
+            }
+        }
+
+        // 批量回填明细，避免前端逐条请求
+        java.util.Set<String> pickingIds = records.stream()
+                .map(MaterialPicking::getId)
+                .filter(StringUtils::hasText)
+                .collect(java.util.stream.Collectors.toSet());
+        if (!pickingIds.isEmpty()) {
+            List<MaterialPickingItem> allItems = materialPickingItemMapper.selectList(
+                    new LambdaQueryWrapper<MaterialPickingItem>()
+                            .in(MaterialPickingItem::getPickingId, pickingIds));
+            Map<String, List<MaterialPickingItem>> itemsByPickingId = allItems.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(MaterialPickingItem::getPickingId));
+            for (MaterialPicking record : records) {
+                record.setItems(itemsByPickingId.getOrDefault(record.getId(), java.util.Collections.emptyList()));
+            }
+        }
+
+        return Result.success(result);
+    }
 
     /**
      * 取消待出库领料单（仅 pending 状态可操作）。
