@@ -176,6 +176,14 @@ if [[ "$MODE" == "all" || "$MODE" == "frontend" ]]; then
       run_check "前端 ESLint（与CI同口径，0 error 才过）" bash -c \
         'cd frontend && npx eslint src --ext .ts,.tsx 2>&1 | grep -E "error" ; EXIT=${PIPESTATUS[0]}; if [ $EXIT -ne 0 ]; then echo "ESLint存在error，CI会挂"; exit 1; fi; echo "ESLint 0 errors"'
     fi
+    # 前端质量基线（ratchet）—— any / eslint-disable / console.log 三项冻结在
+    # frontend/code-quality-baseline.json，只许减少不许增加。与 backend/arch-baseline.properties
+    # 同一思路：存量不硬改，但阻止继续恶化。纯文本扫描约 1 秒，不跑 eslint/tsc。
+    if [[ -f scripts/check-frontend-quality.py ]]; then
+      run_check "前端质量基线（ratchet）" python3 scripts/check-frontend-quality.py
+    else
+      skip "前端质量基线（脚本不存在）"
+    fi
   else
     skip "前端类型检查（--quick 模式）"
   fi
