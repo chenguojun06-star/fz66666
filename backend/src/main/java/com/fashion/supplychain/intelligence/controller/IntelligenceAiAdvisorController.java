@@ -7,8 +7,6 @@ import com.fashion.supplychain.intelligence.agent.AgentMode;
 import com.fashion.supplychain.intelligence.annotation.DataTruth;
 import com.fashion.supplychain.intelligence.dto.*;
 import com.fashion.supplychain.intelligence.orchestration.*;
-import com.fashion.supplychain.intelligence.service.AiAgentMetricsService;
-import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.intelligence.service.ProactiveInsightService;
 import com.fashion.supplychain.intelligence.service.VisionAnalysisService;
 import lombok.RequiredArgsConstructor;
@@ -55,8 +53,7 @@ public class IntelligenceAiAdvisorController {
     private final StringRedisTemplate stringRedisTemplate;
     private final AiAgentOrchestrator aiAgentOrchestrator;
     private final AiAdvisorChatResponseOrchestrator aiAdvisorChatResponseOrchestrator;
-    private final AiAdvisorService aiAdvisorService;
-    private final AiAgentMetricsService aiAgentMetricsService;
+    private final AiAdvisorSupportOrchestrator aiAdvisorSupportOrchestrator;
     private final IntelligenceBrainOrchestrator intelligenceBrainOrchestrator;
     private final SafeAdvisorOrchestrator safeAdvisorOrchestrator;
     private final ForecastEngineOrchestrator forecastEngineOrchestrator;
@@ -73,13 +70,7 @@ public class IntelligenceAiAdvisorController {
     private com.fashion.supplychain.intelligence.orchestration.FileAnalysisOrchestrator fileAnalysisOrchestrator;
 
     @Autowired
-    private com.fashion.supplychain.intelligence.service.QdrantService qdrantService;
-
-    @Autowired
     private com.fashion.supplychain.intelligence.orchestration.IntelligenceMetricsOrchestrator intelligenceMetricsOrchestrator;
-
-    @Autowired
-    private ProactiveInsightService proactiveInsightService;
 
     @Autowired
     private org.springframework.context.ApplicationContext applicationContext;
@@ -88,20 +79,14 @@ public class IntelligenceAiAdvisorController {
     private java.util.List<com.fashion.supplychain.intelligence.agent.tool.AgentTool> allAgentTools;
 
     @Autowired
-    private com.fashion.supplychain.intelligence.service.AiAgentToolAccessService aiAgentToolAccessService;
-
-    @Autowired
     private com.fashion.supplychain.intelligence.routing.AiAgentDomainRouter aiAgentDomainRouter;
 
     @Autowired
     private com.fashion.supplychain.intelligence.routing.AiAgentToolAdvisor aiAgentToolAdvisor;
 
-    @Autowired(required = false)
-    private com.fashion.supplychain.intelligence.service.SkillCrystallizationService skillCrystallizationService;
-
     @GetMapping("/ai-advisor/status")
     public Result<?> aiAdvisorStatus() {
-        boolean enabled = aiAdvisorService.isEnabled();
+        boolean enabled = aiAdvisorSupportOrchestrator.isAdvisorEnabled();
         return Result.success(java.util.Map.of(
                 "enabled", enabled,
                 "message", enabled ? "AI 顾问已启用" : "AI 顾问未配置，请设置模型直连或模型网关配置",
@@ -112,7 +97,7 @@ public class IntelligenceAiAdvisorController {
 
     @GetMapping("/ai-agent/metrics")
     public Result<?> aiAgentMetrics() {
-        return Result.success(aiAgentMetricsService.getSnapshot());
+        return Result.success(aiAdvisorSupportOrchestrator.getAgentMetricsSnapshot());
     }
 
     /** AI 顾问问答 — 优先本地规则引擎，无法回答时调用 DeepSeek */
@@ -235,13 +220,8 @@ public class IntelligenceAiAdvisorController {
         } catch (Exception e) {
             log.warn("[AiFeedback] 获取租户上下文失败（技能回写将跳过）: {}", e.getMessage());
         }
-        if (skillCrystallizationService != null && tenantId != null) {
-            try {
-                skillCrystallizationService.recordFeedback(commandId, tenantId, score, comment);
-            } catch (Exception e) {
-                log.debug("[AiFeedback] 结晶化技能回写失败（不影响主流程）: {}", e.getMessage());
-            }
-        }
+        // 能力未启用或租户上下文缺失时静默跳过，异常也只记 debug —— 均由编排层内部处理
+        aiAdvisorSupportOrchestrator.recordSkillFeedbackQuietly(commandId, tenantId, score, comment);
         return Result.success(null);
     }
 
@@ -427,16 +407,8 @@ public class IntelligenceAiAdvisorController {
             diag.put("tenantId", UserContext.tenantId());
         } catch (Exception e) { diag.put("tenantId", "ERROR: " + e.getMessage()); }
 
-        // 读取 QdrantService 配置状态（通过反射或调用公开方法）
-        diag.put("qdrantServiceReady", qdrantService != null);
-        if (qdrantService != null) {
-            // 探测向量生成路径
-            try {
-                diag.put("vectorDim", qdrantService.getVectorDimInfo());
-            } catch (Exception e) {
-                diag.put("vectorDim", "ERROR: " + e.getMessage());
-            }
-        }
+        // 读取 QdrantService 配置状态（就绪状态 + 向量维度，探测失败写入 "ERROR: ..."）
+        diag.putAll(aiAdvisorSupportOrchestrator.qdrantDiagnostics());
 
         // 读取 InferenceOrchestrator 的视觉模型状态
         diag.put("visualAIOrchReady", visualAIOrchestrator != null);
@@ -521,7 +493,7 @@ public class IntelligenceAiAdvisorController {
         if (tenantId == null) {
             return Result.fail("租户信息缺失");
         }
-        return Result.success(proactiveInsightService.getUnreadInsights(tenantId));
+        return Result.success(aiAdvisorSupportOrchestrator.getUnreadInsights(tenantId));
     }
 
     /** 标记洞察已读 */
@@ -531,7 +503,7 @@ public class IntelligenceAiAdvisorController {
         if (tenantId == null) {
             return Result.fail("租户信息缺失");
         }
-        proactiveInsightService.markAsRead(tenantId, id);
+        aiAdvisorSupportOrchestrator.markInsightRead(tenantId, id);
         return Result.success(null);
     }
 
@@ -556,7 +528,7 @@ public class IntelligenceAiAdvisorController {
             toolDiag.put("registered_tool_count", allAgentTools.size());
 
             // 可见工具
-            var visibleTools = aiAgentToolAccessService.resolveVisibleTools(new java.util.ArrayList<>(allAgentTools));
+            var visibleTools = aiAdvisorSupportOrchestrator.resolveVisibleTools(new java.util.ArrayList<>(allAgentTools));
             toolDiag.put("visible_tool_count", visibleTools.size());
 
             // 多个查询的诊断
@@ -573,7 +545,7 @@ public class IntelligenceAiAdvisorController {
                 qt.put("query", q);
                 var domains = aiAgentDomainRouter.route(q);
                 qt.put("domains", domains.stream().map(Enum::name).toList());
-                var domainFiltered = aiAgentToolAccessService.filterByDomains(visibleTools, domains);
+                var domainFiltered = aiAdvisorSupportOrchestrator.filterToolsByDomains(visibleTools, domains);
                 qt.put("domain_filtered_count", domainFiltered.size());
                 var advised = aiAgentToolAdvisor.advise(domainFiltered, q);
                 qt.put("advised_count", advised.size());
