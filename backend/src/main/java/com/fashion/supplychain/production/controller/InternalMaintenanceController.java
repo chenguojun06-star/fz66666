@@ -1,22 +1,11 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
-import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
-import com.fashion.supplychain.production.service.ProductionOrderService;
-import com.fashion.supplychain.production.service.ProductWarehousingService;
-import com.fashion.supplychain.style.orchestration.ProductSkuOrchestrator;
-import com.fashion.supplychain.style.service.ProductSkuService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.fashion.supplychain.production.orchestration.InternalMaintenanceOrchestrator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -25,28 +14,19 @@ import java.util.Map;
  * 1. 此Controller仅供管理员使用
  * 2. 生产环境使用前请备份数据
  * 3. 完成数据修复后建议删除或禁用此Controller
+ *
+ * <p>D-636：原先本类直接注入了 ProductionOrderService 并在最外层做「订单解析 + 批量遍历 +
+ * 逐单 try/catch 计数 + 调用两个 Orchestrator」，属跨服务编排泄漏到最外层。业务逻辑已
+ * 下沉到 {@link InternalMaintenanceOrchestrator}；顺带删除两个声明了但全类从未使用的
+ * 死注入（ProductWarehousingService、ProductSkuService）。本类只保留端点声明与请求参数拆包。
  */
 @RestController
 @RequestMapping("/api/internal/maintenance")
 @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
 public class InternalMaintenanceController {
 
-    private static final Logger log = LoggerFactory.getLogger(InternalMaintenanceController.class);
-
     @Autowired
-    private ProductionOrderService productionOrderService;
-
-    @Autowired
-    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
-
-    @Autowired
-    private ProductWarehousingService productWarehousingService;
-
-    @Autowired
-    private ProductSkuService productSkuService;
-
-    @Autowired
-    private ProductSkuOrchestrator productSkuOrchestrator;
+    private InternalMaintenanceOrchestrator internalMaintenanceOrchestrator;
 
     /**
      * 批量同步所有订单的工序单价
@@ -64,83 +44,7 @@ public class InternalMaintenanceController {
     @PostMapping("/sync-all-unit-prices")
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")  // 仅超级管理员可执行
     public Result<?> syncAllUnitPrices() {
-        log.warn("开始批量同步工序单价（管理员维护操作）");
-
-        try {
-            // 查询所有有效订单
-            List<ProductionOrder> orders = productionOrderService.lambdaQuery()
-                    .eq(ProductionOrder::getDeleteFlag, 0)
-                    .isNotNull(ProductionOrder::getProgressWorkflowJson)
-                    .ne(ProductionOrder::getProgressWorkflowJson, "")
-                    .last("LIMIT 5000")
-                    .list();
-
-            if (orders.isEmpty()) {
-                return Result.fail("未找到需要同步的订单");
-            }
-
-            int totalOrders = orders.size();
-            int successCount = 0;
-            int skipCount = 0;
-            int errorCount = 0;
-            int totalSynced = 0;
-
-            List<Map<String, Object>> details = new ArrayList<>();
-
-            // 逐个订单同步
-            for (ProductionOrder order : orders) {
-                try {
-                    int synced = processTrackingOrchestrator.syncUnitPrices(order.getId());
-
-                    if (synced > 0) {
-                        successCount++;
-                        totalSynced += synced;
-
-                        Map<String, Object> detail = new HashMap<>();
-                        detail.put("orderNo", order.getOrderNo());
-                        detail.put("orderId", order.getId());
-                        detail.put("syncedRecords", synced);
-                        detail.put("status", "success");
-                        details.add(detail);
-
-                        log.info("订单 {} 同步成功，更新了 {} 条工序跟踪记录", order.getOrderNo(), synced);
-                    } else {
-                        skipCount++;
-                        log.debug("订单 {} 无需同步（单价已一致）", order.getOrderNo());
-                    }
-
-                } catch (Exception e) {
-                    errorCount++;
-
-                    Map<String, Object> detail = new HashMap<>();
-                    detail.put("orderNo", order.getOrderNo());
-                    detail.put("orderId", order.getId());
-                    detail.put("error", e.getMessage());
-                    detail.put("status", "error");
-                    details.add(detail);
-
-                    log.error("订单 {} 同步失败: {}", order.getOrderNo(), e.getMessage(), e);
-                }
-            }
-
-            // 汇总结果
-            Map<String, Object> summary = new HashMap<>();
-            summary.put("totalOrders", totalOrders);
-            summary.put("successCount", successCount);
-            summary.put("skipCount", skipCount);
-            summary.put("errorCount", errorCount);
-            summary.put("totalSyncedRecords", totalSynced);
-            summary.put("details", details);
-
-            log.warn("批量同步完成 - 总订单: {}, 成功: {}, 跳过: {}, 失败: {}, 同步记录: {}",
-                    totalOrders, successCount, skipCount, errorCount, totalSynced);
-
-            return Result.success(summary);
-
-        } catch (Exception e) {
-            log.error("批量同步工序单价失败", e);
-            return Result.fail("批量同步失败: " + e.getMessage());
-        }
+        return internalMaintenanceOrchestrator.syncAllUnitPrices();
     }
 
     /**
@@ -164,38 +68,7 @@ public class InternalMaintenanceController {
     public Result<?> syncUnitPrices(@RequestBody Map<String, Object> payload) {
         String orderId = (String) payload.get("orderId");
         String orderNo = (String) payload.get("orderNo");
-
-        // 根据 orderNo 查询 orderId
-        if (!StringUtils.hasText(orderId) && StringUtils.hasText(orderNo)) {
-            ProductionOrder order = productionOrderService.lambdaQuery()
-                    .eq(ProductionOrder::getOrderNo, orderNo.trim())
-                    .eq(ProductionOrder::getDeleteFlag, 0)
-                    .last("LIMIT 1")
-                    .one();
-
-            if (order != null) {
-                orderId = order.getId();
-            }
-        }
-
-        if (!StringUtils.hasText(orderId)) {
-            return Result.fail("参数错误：缺少 orderId 或 orderNo");
-        }
-
-        try {
-            int synced = processTrackingOrchestrator.syncUnitPrices(orderId);
-
-            if (synced > 0) {
-                log.info("订单 {} 同步成功，更新了 {} 条工序跟踪记录", orderNo != null ? orderNo : orderId, synced);
-                return Result.success("同步成功，更新了 " + synced + " 条工序跟踪记录");
-            } else {
-                return Result.success("无需同步，单价已一致");
-            }
-
-        } catch (Exception e) {
-            log.error("订单 {} 同步失败", orderNo != null ? orderNo : orderId, e);
-            return Result.fail("同步失败: " + e.getMessage());
-        }
+        return internalMaintenanceOrchestrator.syncUnitPrices(orderId, orderNo);
     }
 
     /**
@@ -207,14 +80,7 @@ public class InternalMaintenanceController {
     @PostMapping("/refresh-workflow-prices")
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<?> refreshWorkflowPrices() {
-        log.warn("开始批量刷新订单工序单价（管理员维护操作）");
-        try {
-            Map<String, Object> summary = processTrackingOrchestrator.refreshWorkflowPrices();
-            return Result.success(summary);
-        } catch (Exception e) {
-            log.error("批量刷新工序单价失败", e);
-            return Result.fail("批量刷新失败: " + e.getMessage());
-        }
+        return internalMaintenanceOrchestrator.refreshWorkflowPrices();
     }
 
     /**
@@ -228,7 +94,6 @@ public class InternalMaintenanceController {
     @GetMapping("/check-price-inconsistency")
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<?> checkPriceInconsistency() {
-        log.info("检查工序单价一致性（管理员维护操作）");
         return Result.success("检查功能开发中，请使用 ./check-price-flow.sh 脚本");
     }
 
@@ -244,14 +109,7 @@ public class InternalMaintenanceController {
     @PostMapping("/refresh-tracking-prices")
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<?> refreshTrackingPrices() {
-        log.warn("开始批量刷新工序跟踪表单价（管理员维护操作）");
-        try {
-            Map<String, Object> summary = processTrackingOrchestrator.syncAllOrderTrackingPrices();
-            return Result.success(summary);
-        } catch (Exception e) {
-            log.error("批量刷新工序跟踪单价失败", e);
-            return Result.fail("刷新失败: " + e.getMessage());
-        }
+        return internalMaintenanceOrchestrator.refreshTrackingPrices();
     }
 
     /**
@@ -279,74 +137,12 @@ public class InternalMaintenanceController {
     public Result<?> reinitProcessTracking(@RequestBody(required = false) Map<String, Object> payload) {
         String orderId = payload != null ? (String) payload.get("orderId") : null;
         String orderNo = payload != null ? (String) payload.get("orderNo") : null;
-
-        log.warn("开始重新初始化工序跟踪记录（管理员维护操作）orderId={}, orderNo={}", orderId, orderNo);
-
-        // 单订单模式
-        if (StringUtils.hasText(orderId) || StringUtils.hasText(orderNo)) {
-            if (!StringUtils.hasText(orderId) && StringUtils.hasText(orderNo)) {
-                ProductionOrder o = productionOrderService.lambdaQuery()
-                        .eq(ProductionOrder::getOrderNo, orderNo.trim())
-                        .eq(ProductionOrder::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
-                        .eq(ProductionOrder::getDeleteFlag, 0)
-                        .last("LIMIT 1").one();
-                if (o != null) orderId = o.getId();
-            }
-            if (!StringUtils.hasText(orderId)) {
-                return Result.fail("未找到订单：" + orderNo);
-            }
-            try {
-                int count = processTrackingOrchestrator.initializeProcessTracking(orderId);
-                return Result.success("重新初始化完成，生成 " + count + " 条跟踪记录");
-            } catch (Exception e) {
-                log.error("重新初始化失败: orderId={}", orderId, e);
-                return Result.fail("重新初始化失败：" + e.getMessage());
-            }
-        }
-
-        // 批量模式：处理所有有菲号的订单
-        try {
-            List<ProductionOrder> orders = productionOrderService.lambdaQuery()
-                    .eq(ProductionOrder::getDeleteFlag, 0)
-                    .last("LIMIT 5000")
-                    .list();
-
-            int successCount = 0, errorCount = 0, totalRecords = 0;
-            for (ProductionOrder order : orders) {
-                try {
-                    int count = processTrackingOrchestrator.initializeProcessTracking(order.getId());
-                    totalRecords += count;
-                    successCount++;
-                } catch (Exception e) {
-                    errorCount++;
-                    log.warn("订单 {} 重新初始化失败: {}", order.getOrderNo(), e.getMessage());
-                }
-            }
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("totalOrders", orders.size());
-            result.put("successCount", successCount);
-            result.put("errorCount", errorCount);
-            result.put("totalTrackingRecords", totalRecords);
-            log.warn("工序跟踪重新初始化完成：{} 个订单，生成 {} 条记录，失败 {} 个", successCount, totalRecords, errorCount);
-            return Result.success(result);
-        } catch (Exception e) {
-            log.error("批量重新初始化失败", e);
-            return Result.fail("批量初始化失败：" + e.getMessage());
-        }
+        return internalMaintenanceOrchestrator.reinitProcessTracking(orderId, orderNo);
     }
 
     @PostMapping("/recalculate-sku-stock")
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<?> recalculateSkuStock() {
-        log.warn("开始重新计算SKU库存（管理员维护操作 - 修复双重更新bug）");
-        try {
-            Map<String, Object> result = productSkuOrchestrator.recalculateSkuStock();
-            return Result.success(result);
-        } catch (Exception e) {
-            log.error("SKU库存重新计算失败", e);
-            return Result.fail("SKU库存重新计算失败：" + e.getMessage());
-        }
+        return internalMaintenanceOrchestrator.recalculateSkuStock();
     }
 }
-

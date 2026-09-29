@@ -1,19 +1,13 @@
 package com.fashion.supplychain.integration.sync.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.tenant.TenantAssert;
-import com.fashion.supplychain.integration.sync.adapter.EcPlatformAdapterRegistry;
 import com.fashion.supplychain.integration.sync.entity.EcProductMapping;
 import com.fashion.supplychain.integration.sync.entity.EcSyncConfig;
 import com.fashion.supplychain.integration.sync.entity.EcSyncLog;
 import com.fashion.supplychain.integration.sync.orchestration.EcSyncOrchestrator;
 import com.fashion.supplychain.integration.sync.orchestration.ProductSyncOrchestrator;
-import com.fashion.supplychain.integration.sync.service.EcProductMappingService;
-import com.fashion.supplychain.integration.sync.service.EcSyncConfigService;
-import com.fashion.supplychain.integration.sync.service.EcSyncLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,6 +15,14 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
+/**
+ * 电商同步 Controller。
+ *
+ * <p>D-636：原先本类直接注入了 EcSyncConfigService / EcProductMappingService /
+ * EcSyncLogService 三个 Service（映射、日志、健康度、配置列表都在 Controller 里直接查库），
+ * 属「Controller 依赖多个 Service」。取数逻辑已下沉到 {@link EcSyncOrchestrator}，
+ * 本类只保留「端点声明 + 请求参数解析 + 响应组装」。
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/ec-sync")
@@ -32,18 +34,6 @@ public class EcSyncController {
 
     @Autowired
     private EcSyncOrchestrator ecSyncOrchestrator;
-
-    @Autowired
-    private EcSyncConfigService syncConfigService;
-
-    @Autowired
-    private EcProductMappingService mappingService;
-
-    @Autowired
-    private EcSyncLogService syncLogService;
-
-    @Autowired
-    private EcPlatformAdapterRegistry adapterRegistry;
 
     @PostMapping("/stock/{styleId}")
     public Result<Map<String, Object>> pushStock(
@@ -93,26 +83,23 @@ public class EcSyncController {
 
     @GetMapping("/supported-platforms")
     public Result<List<String>> getSupportedPlatforms() {
-        return Result.success(adapterRegistry.getSupportedPlatforms());
+        return Result.success(ecSyncOrchestrator.getSupportedPlatforms());
     }
 
     @GetMapping("/mappings")
     public Result<List<EcProductMapping>> listMappings(@RequestParam Long styleId) {
-        Long tenantId = TenantAssert.requireTenantId();
-        return Result.success(mappingService.listByStyle(styleId, tenantId));
+        return Result.success(ecSyncOrchestrator.listMappings(styleId));
     }
 
     @PostMapping("/mappings")
     public Result<EcProductMapping> createMapping(@RequestBody Map<String, Object> body) {
-        Long tenantId = TenantAssert.requireTenantId();
         Long styleId = Long.valueOf(body.get("styleId").toString());
         Long skuId = body.get("skuId") != null ? Long.valueOf(body.get("skuId").toString()) : null;
         String platformCode = (String) body.get("platformCode");
         String platformItemId = (String) body.get("platformItemId");
         String platformSkuId = (String) body.get("platformSkuId");
-        EcProductMapping mapping = mappingService.upsertMapping(
-                tenantId, styleId, skuId, platformCode, platformItemId, platformSkuId);
-        return Result.success(mapping);
+        return Result.success(ecSyncOrchestrator.createMapping(
+                styleId, skuId, platformCode, platformItemId, platformSkuId));
     }
 
     @GetMapping("/logs")
@@ -121,31 +108,12 @@ public class EcSyncController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String platformCode,
             @RequestParam(required = false) String status) {
-        Long tenantId = TenantAssert.requireTenantId();
-        QueryWrapper<EcSyncLog> wrapper = new QueryWrapper<EcSyncLog>()
-                .eq("tenant_id", tenantId)
-                .orderByDesc("create_time");
-        if (platformCode != null) wrapper.eq("platform_code", platformCode);
-        if (status != null) wrapper.eq("status", status);
-        IPage<EcSyncLog> result = syncLogService.page(new Page<>(page, size), wrapper);
-        return Result.success(result);
+        return Result.success(ecSyncOrchestrator.listSyncLogs(page, size, platformCode, status));
     }
 
     @GetMapping("/health")
     public Result<Map<String, Object>> getHealth() {
-        Long tenantId = TenantAssert.requireTenantId();
-        Map<String, Object> health = new LinkedHashMap<>();
-        health.put("pendingCount", syncLogService.count(new QueryWrapper<EcSyncLog>()
-                .eq("tenant_id", tenantId).eq("status", "PENDING")));
-        health.put("failedCount", syncLogService.count(new QueryWrapper<EcSyncLog>()
-                .eq("tenant_id", tenantId).eq("status", "FAILED")));
-        health.put("deadLetterCount", syncLogService.count(new QueryWrapper<EcSyncLog>()
-                .eq("tenant_id", tenantId).eq("status", "DEAD_LETTER")));
-        health.put("syncedCount", syncLogService.count(new QueryWrapper<EcSyncLog>()
-                .eq("tenant_id", tenantId).eq("status", "SYNCED")));
-        health.put("enabledPlatforms", syncConfigService.listEnabledByTenant(tenantId).size());
-        health.put("supportedPlatforms", adapterRegistry.getSupportedPlatforms());
-        return Result.success(health);
+        return Result.success(ecSyncOrchestrator.getHealth());
     }
 
     @PostMapping("/config")
@@ -157,8 +125,7 @@ public class EcSyncController {
 
     @GetMapping("/config")
     public Result<List<EcSyncConfig>> listConfigs() {
-        Long tenantId = TenantAssert.requireTenantId();
-        return Result.success(syncConfigService.listEnabledByTenant(tenantId));
+        return Result.success(ecSyncOrchestrator.listConfigs());
     }
 
     @PostMapping("/dead-letter/retry/{logId}")
