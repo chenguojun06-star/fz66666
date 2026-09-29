@@ -1049,4 +1049,115 @@ public class AppStoreOrchestrator {
             return text;
         }
     }
+
+    // ===== D-641：以下查询方法从 AppStoreController 下沉 =====
+    // 原 Controller 直接注入了 AppStoreService / AppOrderService / TenantSubscriptionService
+    // 共 3 个 Service（本类早已全部持有），属「Controller 依赖多个 Service」。
+
+    /**
+     * 应用列表（默认只看已发布；支持 status / category 过滤，按 sort_order 升序）。
+     *
+     * <p>返回前必须逐条修正乱码并解析 JSON 字段——历史数据存在 ISO-8859-1/UTF-8 混存，
+     * 不修正前端会看到乱码。
+     */
+    public List<AppStore> listApps(Map<String, Object> params) {
+        QueryWrapper<AppStore> wrapper = new QueryWrapper<>();
+
+        // 状态过滤
+        if (params != null && params.containsKey("status")) {
+            wrapper.eq("status", params.get("status"));
+        } else {
+            wrapper.eq("status", "PUBLISHED");
+        }
+
+        // 分类过滤
+        if (params != null && params.containsKey("category")) {
+            wrapper.eq("category", params.get("category"));
+        }
+
+        wrapper.orderByAsc("sort_order");
+
+        List<AppStore> appList = appStoreService.list(wrapper);
+
+        // 解析JSON字段 + 修复乱码
+        for (AppStore app : appList) {
+            appStoreService.fixMojibakeFields(app);
+            appStoreService.parseJsonFields(app);
+        }
+
+        return appList;
+    }
+
+    /** 应用详情（含 JSON 字段解析）；不存在返回 {@code null}，由调用方决定响应 */
+    public AppStore getAppDetail(Long id) {
+        return appStoreService.getByIdWithJson(id);
+    }
+
+    /**
+     * 取应用并修正乱码字段（下单前校验用）。
+     *
+     * @return 不存在返回 {@code null}，由 Controller 决定 400/失败文案
+     */
+    public AppStore getAppForOrder(Long appId) {
+        AppStore app = appStoreService.getById(appId);
+        if (app != null) {
+            appStoreService.fixMojibakeFields(app);
+        }
+        return app;
+    }
+
+    /** 当前租户的全部订阅（时间倒序） */
+    public List<TenantSubscription> getMySubscriptions(Long tenantId) {
+        QueryWrapper<TenantSubscription> wrapper = new QueryWrapper<>();
+        wrapper.eq("tenant_id", tenantId);
+        wrapper.orderByDesc("create_time");
+        return tenantSubscriptionService.list(wrapper);
+    }
+
+    /**
+     * 检查租户对某应用的试用状态。
+     *
+     * <p>取该租户对该应用最新一条 TRIAL 订阅：
+     * 无记录 → {@code hasTried=false, canTrial=true}；
+     * 有记录 → 补 startTime/endTime/isExpired/status（EXPIRED 或 TRIAL）。
+     */
+    public Map<String, Object> getTrialStatus(Long appId, Long tenantId) {
+        QueryWrapper<TenantSubscription> wrapper = new QueryWrapper<>();
+        wrapper.eq("tenant_id", tenantId);
+        wrapper.eq("app_id", appId);
+        wrapper.eq("subscription_type", "TRIAL");
+        wrapper.orderByDesc("create_time");
+        wrapper.last("LIMIT 1");
+
+        TenantSubscription trial = tenantSubscriptionService.getOne(wrapper);
+
+        Map<String, Object> result = new java.util.HashMap<>();
+        if (trial == null) {
+            result.put("hasTried", false);
+            result.put("canTrial", true);
+        } else {
+            result.put("hasTried", true);
+            result.put("canTrial", false);
+            result.put("startTime", trial.getStartTime());
+            result.put("endTime", trial.getEndTime());
+            boolean isExpired = trial.getEndTime() != null && trial.getEndTime().isBefore(LocalDateTime.now());
+            result.put("isExpired", isExpired);
+            result.put("status", isExpired ? "EXPIRED" : "TRIAL");
+        }
+        return result;
+    }
+
+    /**
+     * 按订单号查订单详情。
+     *
+     * <p>超管可跨租户查看，非超管强制按 tenantId 过滤（原逻辑逐字保留）。
+     */
+    public AppOrder getOrderByNo(String orderNo, Long tenantId, boolean superAdmin) {
+        QueryWrapper<AppOrder> wrapper = new QueryWrapper<>();
+        wrapper.eq("order_no", orderNo);
+        if (!superAdmin) {
+            wrapper.eq("tenant_id", tenantId);
+        }
+        return appOrderService.getOne(wrapper);
+    }
 }

@@ -1,6 +1,5 @@
 package com.fashion.supplychain.system.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.system.entity.AppOrder;
 import com.fashion.supplychain.system.entity.AppStore;
@@ -10,37 +9,29 @@ import com.fashion.supplychain.integration.openapi.dto.TenantAppRequest;
 import com.fashion.supplychain.integration.openapi.dto.TenantAppResponse;
 import com.fashion.supplychain.integration.openapi.orchestration.TenantAppOrchestrator;
 import com.fashion.supplychain.system.orchestration.AppStoreOrchestrator;
-import com.fashion.supplychain.system.service.AppOrderService;
-import com.fashion.supplychain.system.service.AppStoreService;
-import com.fashion.supplychain.system.service.TenantSubscriptionService;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
 /**
  * 应用商店Controller
  * 路由端点层，复杂业务逻辑委托给 AppStoreOrchestrator 编排
+ *
+ * <p>D-641：原先本类直接注入了 AppStoreService / AppOrderService /
+ * TenantSubscriptionService 三个 Service（应用列表、详情、订阅、试用状态、订单查询
+ * 都在 Controller 里直接查库），属「Controller 依赖多个 Service」。
+ * 取数与 JSON/乱码处理已下沉到 {@link AppStoreOrchestrator}。
  */
 @Slf4j
 @RestController
 @RequestMapping("/api/system/app-store")
 @PreAuthorize("isAuthenticated()")
 public class AppStoreController {
-
-    @Autowired
-    private AppStoreService appStoreService;
-
-    @Autowired
-    private AppOrderService appOrderService;
-
-    @Autowired
-    private TenantSubscriptionService tenantSubscriptionService;
 
     @Autowired
     private TenantAppOrchestrator tenantAppOrchestrator;
@@ -53,31 +44,7 @@ public class AppStoreController {
      */
     @PostMapping("/list")
     public Result<List<AppStore>> list(@RequestBody(required = false) Map<String, Object> params) {
-        QueryWrapper<AppStore> wrapper = new QueryWrapper<>();
-
-        // 状态过滤
-        if (params != null && params.containsKey("status")) {
-            wrapper.eq("status", params.get("status"));
-        } else {
-            wrapper.eq("status", "PUBLISHED");
-        }
-
-        // 分类过滤
-        if (params != null && params.containsKey("category")) {
-            wrapper.eq("category", params.get("category"));
-        }
-
-        wrapper.orderByAsc("sort_order");
-
-        List<AppStore> appList = appStoreService.list(wrapper);
-
-        // 解析JSON字段 + 修复乱码
-        for (AppStore app : appList) {
-            appStoreService.fixMojibakeFields(app);
-            appStoreService.parseJsonFields(app);
-        }
-
-        return Result.success(appList);
+        return Result.success(appStoreOrchestrator.listApps(params));
     }
 
     /**
@@ -85,7 +52,7 @@ public class AppStoreController {
      */
     @GetMapping("/{id}")
     public Result<AppStore> getDetail(@PathVariable Long id) {
-        AppStore app = appStoreService.getByIdWithJson(id);
+        AppStore app = appStoreOrchestrator.getAppDetail(id);
         if (app == null) {
             return Result.fail("应用不存在");
         }
@@ -98,11 +65,10 @@ public class AppStoreController {
     @PostMapping("/create-order")
     public Result<AppOrder> createOrder(@RequestBody CreateOrderRequest request) {
         try {
-            AppStore app = appStoreService.getById(request.getAppId());
+            AppStore app = appStoreOrchestrator.getAppForOrder(request.getAppId());
             if (app == null) {
                 return Result.fail("应用不存在");
             }
-            appStoreService.fixMojibakeFields(app);
             Long tenantId = UserContext.tenantId();
             AppOrder order = appStoreOrchestrator.createOrder(app, tenantId,
                     request.getSubscriptionType(), request.getUserCount(),
@@ -206,11 +172,7 @@ public class AppStoreController {
     public Result<List<TenantSubscription>> getMySubscriptions() {
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) tenantId = 0L;
-        QueryWrapper<TenantSubscription> wrapper = new QueryWrapper<>();
-        wrapper.eq("tenant_id", tenantId);
-        wrapper.orderByDesc("create_time");
-        List<TenantSubscription> subscriptions = tenantSubscriptionService.list(wrapper);
-        return Result.success(subscriptions);
+        return Result.success(appStoreOrchestrator.getMySubscriptions(tenantId));
     }
 
     /**
@@ -220,32 +182,7 @@ public class AppStoreController {
     public Result<Map<String, Object>> getTrialStatus(@PathVariable Long appId) {
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) tenantId = 0L;
-
-        // 查询该租户对该应用的试用记录
-        QueryWrapper<TenantSubscription> wrapper = new QueryWrapper<>();
-        wrapper.eq("tenant_id", tenantId);
-        wrapper.eq("app_id", appId);
-        wrapper.eq("subscription_type", "TRIAL");
-        wrapper.orderByDesc("create_time");
-        wrapper.last("LIMIT 1");
-
-        TenantSubscription trial = tenantSubscriptionService.getOne(wrapper);
-
-        Map<String, Object> result = new java.util.HashMap<>();
-        if (trial == null) {
-            result.put("hasTried", false);
-            result.put("canTrial", true);
-        } else {
-            result.put("hasTried", true);
-            result.put("canTrial", false);
-            result.put("startTime", trial.getStartTime());
-            result.put("endTime", trial.getEndTime());
-            boolean isExpired = trial.getEndTime() != null && trial.getEndTime().isBefore(LocalDateTime.now());
-            result.put("isExpired", isExpired);
-            result.put("status", isExpired ? "EXPIRED" : "TRIAL");
-        }
-
-        return Result.success(result);
+        return Result.success(appStoreOrchestrator.getTrialStatus(appId, tenantId));
     }
 
     /**
@@ -394,13 +331,8 @@ public class AppStoreController {
      */
     @GetMapping("/order/{orderNo}")
     public Result<AppOrder> getOrder(@PathVariable String orderNo) {
-        Long tenantId = UserContext.tenantId();
-        QueryWrapper<AppOrder> wrapper = new QueryWrapper<>();
-        wrapper.eq("order_no", orderNo);
-        if (!UserContext.isSuperAdmin()) {
-            wrapper.eq("tenant_id", tenantId);
-        }
-        AppOrder order = appOrderService.getOne(wrapper);
+        AppOrder order = appStoreOrchestrator.getOrderByNo(
+                orderNo, UserContext.tenantId(), UserContext.isSuperAdmin());
         if (order == null) {
             return Result.fail("订单不存在");
         }
