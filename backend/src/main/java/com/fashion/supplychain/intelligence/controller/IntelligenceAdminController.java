@@ -5,7 +5,6 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.annotation.DataTruth;
 import com.fashion.supplychain.intelligence.dto.*;
 import com.fashion.supplychain.intelligence.orchestration.*;
-import com.fashion.supplychain.intelligence.service.AiJobRunLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +23,20 @@ import java.util.Map;
 
 /**
  * 智能运营管理端点 — 孤儿数据/扫码建议/报表/指标/Qdrant/知识图谱/优化/工作流/Agent状态/会议
+ *
+ * <p>2026-09-29（D-642）：原类直接注入了 6 个 Service（{@code AiJobRunLogService}、
+ * {@code QdrantService}、{@code StyleInfoService}、{@code AgentCheckpointService}、
+ * {@code AgentMemoryService}、{@code AgentCardService}），违反 ArchUnit 规则6。
+ * 已分别下沉到 {@link IntelligenceObservabilityOrchestrator}（任务日志）、
+ * {@link StyleDifficultyOrchestrator}（Qdrant tenant_id 补刷）与
+ * {@link AgentRuntimeOrchestrator}（会话/检查点/记忆/名片），本类只保留
+ * 「注解 → 参数解析 → 委托 → 组装响应」。
+ *
+ * <p>仍留在本类的依赖均<b>不是</b>以 Service 结尾的类型（{@code OrphanDataDetector}、
+ * {@code AiInferenceRouter}、{@code AiComponentHealthIndicator}、
+ * {@code SchemaVectorManager}、{@code SparseVectorBackfillRunner}），
+ * 以及 6 个编排器。其中 {@code SchemaVectorManager} / {@code SparseVectorBackfillRunner}
+ * 为可选 Bean（{@code required = false}），未启用时返回中文提示。
  */
 @Slf4j
 @RestController
@@ -36,19 +49,13 @@ public class IntelligenceAdminController {
     private final ScanTipsOrchestrator scanTipsOrchestrator;
     private final ProfessionalReportOrchestrator professionalReportOrchestrator;
     private final AgentMeetingOrchestrator agentMeetingOrchestrator;
-    private final AiJobRunLogService jobRunLogService;
+    private final AgentRuntimeOrchestrator agentRuntimeOrchestrator;
 
     @Autowired
     private com.fashion.supplychain.intelligence.orchestration.OrphanDataDetector orphanDataDetector;
 
     @Autowired
-    private com.fashion.supplychain.intelligence.service.QdrantService qdrantService;
-
-    @Autowired
     private com.fashion.supplychain.intelligence.orchestration.StyleDifficultyOrchestrator styleDifficultyOrchestrator;
-
-    @Autowired
-    private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
 
     @Autowired
     private KnowledgeGraphOrchestrator knowledgeGraphOrchestrator;
@@ -60,22 +67,10 @@ public class IntelligenceAdminController {
     private WorkflowExecutionOrchestrator workflowExecutionOrchestrator;
 
     @Autowired
-    private com.fashion.supplychain.intelligence.service.AgentStateStore agentStateStore;
-
-    @Autowired
     private com.fashion.supplychain.intelligence.gateway.AiInferenceRouter aiInferenceRouter;
 
     @Autowired
     private com.fashion.supplychain.intelligence.health.AiComponentHealthIndicator aiComponentHealthIndicator;
-
-    @Autowired
-    private AgentCheckpointService checkpointService;
-
-    @Autowired
-    private AgentMemoryService memoryService;
-
-    @Autowired
-    private AgentCardService agentCardService;
 
     // ── AI推理路由状态 ──
 
@@ -148,6 +143,12 @@ public class IntelligenceAdminController {
         return Result.success(professionalReportOrchestrator.generateReportSummary(type, baseDate));
     }
 
+    /**
+     * 报表下载。
+     *
+     * <p>HTTP 协议细节（{@code Content-Disposition} 的 RFC 5987 编码、二进制流、长度头）
+     * 是重推契约，按约定留在 Controller，不下沉到编排层。
+     */
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/professional-report/download")
     public ResponseEntity<byte[]> downloadProfessionalReport(
@@ -184,10 +185,6 @@ public class IntelligenceAdminController {
     /**
      * 最近 N 条 AI 定时任务执行记录。
      *
-     * <p>2026-09-24（D-542）修正：原来内部按 {@code UserContext.tenantId()} 过滤，
-     * 但定时任务是后台线程、无用户上下文 → 表里 tenant_id 全为 NULL → **永远返回空**。
-     * 本表是系统级作业日志（非租户业务数据），且本接口仅限超管，故改为查全量。
-     *
      * @param limit  条数上限（1~500，默认 100）
      * @param status 可选：SUCCESS / FAILED / SKIPPED，不传为全部
      */
@@ -195,7 +192,7 @@ public class IntelligenceAdminController {
     @GetMapping("/jobs/recent")
     public Result<?> recentJobRuns(@RequestParam(defaultValue = "100") int limit,
                                    @RequestParam(required = false) String status) {
-        return Result.success(jobRunLogService.queryRecent(limit, status));
+        return Result.success(observabilityOrchestrator.recentJobRuns(limit, status));
     }
 
     /**
@@ -206,12 +203,7 @@ public class IntelligenceAdminController {
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @GetMapping("/jobs/overview")
     public Result<Map<String, Object>> jobRunOverview(@RequestParam(defaultValue = "7") int days) {
-        Map<String, Object> overview = new java.util.LinkedHashMap<>();
-        overview.put("days", days);
-        overview.put("stats", jobRunLogService.queryStats(days));
-        overview.put("slowestJobs", jobRunLogService.querySlowestJobs(days, 10));
-        overview.put("failureTop", jobRunLogService.queryFailureTop(days, 10));
-        return Result.success(overview);
+        return Result.success(observabilityOrchestrator.jobRunOverview(days));
     }
 
     // ── Qdrant 向量库补刷 ──
@@ -219,22 +211,7 @@ public class IntelligenceAdminController {
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/qdrant/backfill-style-images-tenant-id")
     public Result<?> backfillStyleImagesTenantId() {
-        java.util.Map<Long, Long> styleIdToTenantId = new java.util.LinkedHashMap<>();
-        styleInfoService.lambdaQuery()
-                .select(com.fashion.supplychain.style.entity.StyleInfo::getId,
-                        com.fashion.supplychain.style.entity.StyleInfo::getTenantId)
-                .isNotNull(com.fashion.supplychain.style.entity.StyleInfo::getTenantId)
-                .last("LIMIT 5000")
-                .list()
-                .forEach(s -> styleIdToTenantId.put(s.getId(), s.getTenantId()));
-        if (styleIdToTenantId.isEmpty()) {
-            return Result.success(Map.of("message", "无需补刷，未找到款式数据", "updated", 0));
-        }
-        int updated = qdrantService.backfillStyleImageTenantIds(styleIdToTenantId);
-        return Result.success(Map.of(
-                "message", "style_images tenant_id补刷完成",
-                "totalStyles", styleIdToTenantId.size(),
-                "updated", updated));
+        return Result.success(styleDifficultyOrchestrator.backfillStyleImageTenantIds());
     }
 
     /**
@@ -247,8 +224,7 @@ public class IntelligenceAdminController {
     public Result<?> backfillStyleImageVectors(
             @RequestParam(defaultValue = "50") int limit,
             @RequestParam(defaultValue = "0") int offset) {
-        var result = styleDifficultyOrchestrator.backfillStyleImageVectors(limit, offset);
-        return Result.success(result);
+        return Result.success(styleDifficultyOrchestrator.backfillStyleImageVectors(limit, offset));
     }
 
     @Autowired(required = false)
@@ -386,16 +362,7 @@ public class IntelligenceAdminController {
 
     @GetMapping("/agent-state/session/{sessionId}")
     public Result<Map<String, Object>> getAgentSession(@PathVariable String sessionId) {
-        com.fashion.supplychain.intelligence.entity.AgentSession session = agentStateStore.getSession(sessionId);
-        if (session == null) {
-            return Result.fail("会话不存在");
-        }
-        java.util.List<com.fashion.supplychain.intelligence.entity.AgentCheckpoint> checkpoints =
-                agentStateStore.getCheckpoints(sessionId);
-        Map<String, Object> result = new java.util.LinkedHashMap<>();
-        result.put("session", session);
-        result.put("checkpoints", checkpoints);
-        return Result.success(result);
+        return agentRuntimeOrchestrator.getSessionDetail(sessionId);
     }
 
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
@@ -403,7 +370,7 @@ public class IntelligenceAdminController {
     public Result<Void> rollbackAgentSession(@PathVariable String sessionId,
                                               @RequestBody Map<String, Object> body) {
         int targetIteration = ((Number) body.get("targetIteration")).intValue();
-        agentStateStore.rollbackToCheckpoint(sessionId, targetIteration);
+        agentRuntimeOrchestrator.rollbackToCheckpoint(sessionId, targetIteration);
         return Result.success(null);
     }
 
@@ -435,17 +402,13 @@ public class IntelligenceAdminController {
     @GetMapping("/checkpoint/history")
     public Result<List<com.fashion.supplychain.intelligence.entity.AgentCheckpoint>> getCheckpointHistory(
             @RequestParam String threadId) {
-        return Result.success(checkpointService.getCheckpointHistory(UserContext.tenantId(), threadId));
+        return Result.success(agentRuntimeOrchestrator.listCheckpointHistory(UserContext.tenantId(), threadId));
     }
 
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/checkpoint/restore")
     public Result<AgentState> restoreFromCheckpoint(@RequestParam String threadId) {
-        AgentState state = checkpointService.restoreFromCheckpoint(UserContext.tenantId(), threadId);
-        if (state == null) {
-            return Result.fail("未找到可恢复的检查点");
-        }
-        return Result.success(state);
+        return agentRuntimeOrchestrator.restoreFromCheckpoint(UserContext.tenantId(), threadId);
     }
 
     // ── Agent Memory 管理 ──
@@ -453,13 +416,13 @@ public class IntelligenceAdminController {
     @GetMapping("/memory/core")
     public Result<List<com.fashion.supplychain.intelligence.entity.AgentMemoryCore>> getCoreMemory(
             @RequestParam String agentId) {
-        return Result.success(memoryService.getAllCoreMemory(UserContext.tenantId(), agentId));
+        return Result.success(agentRuntimeOrchestrator.listCoreMemory(UserContext.tenantId(), agentId));
     }
 
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/memory/core")
     public Result<Void> setCoreMemory(@RequestBody Map<String, String> body) {
-        memoryService.setCoreMemory(UserContext.tenantId(),
+        agentRuntimeOrchestrator.setCoreMemory(UserContext.tenantId(),
                 body.get("agentId"), body.get("key"), body.get("value"));
         return Result.success(null);
     }
@@ -469,13 +432,14 @@ public class IntelligenceAdminController {
             @RequestParam String agentId,
             @RequestParam(required = false) String contentType,
             @RequestParam(defaultValue = "20") int limit) {
-        return Result.success(memoryService.recallArchival(UserContext.tenantId(), agentId, contentType, limit));
+        return Result.success(agentRuntimeOrchestrator.recallArchival(
+                UserContext.tenantId(), agentId, contentType, limit));
     }
 
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @PostMapping("/memory/decay")
     public Result<Integer> applyDecayCurve() {
-        return Result.success(memoryService.applyDecayCurve(UserContext.tenantId()));
+        return Result.success(agentRuntimeOrchestrator.applyDecayCurve(UserContext.tenantId()));
     }
 
     @GetMapping("/memory/context")
@@ -483,7 +447,8 @@ public class IntelligenceAdminController {
             @RequestParam String agentId,
             @RequestParam(defaultValue = "10") int coreLimit,
             @RequestParam(defaultValue = "5") int archivalLimit) {
-        return Result.success(memoryService.compileContext(UserContext.tenantId(), agentId, coreLimit, archivalLimit));
+        return Result.success(agentRuntimeOrchestrator.compileContext(
+                UserContext.tenantId(), agentId, coreLimit, archivalLimit));
     }
 
     // ── Agent Card 管理 ──
@@ -491,12 +456,12 @@ public class IntelligenceAdminController {
     @GetMapping("/agent-card/discover")
     public Result<List<com.fashion.supplychain.intelligence.entity.AgentCard>> discoverAgents(
             @RequestParam(required = false) String skill) {
-        return Result.success(agentCardService.discoverAgents(UserContext.tenantId(), skill));
+        return Result.success(agentRuntimeOrchestrator.discoverAgents(UserContext.tenantId(), skill));
     }
 
     @GetMapping("/agent-card/{agentId}")
     public Result<com.fashion.supplychain.intelligence.entity.AgentCard> getAgentCard(
             @PathVariable String agentId) {
-        return Result.success(agentCardService.getAgent(UserContext.tenantId(), agentId));
+        return Result.success(agentRuntimeOrchestrator.getAgentCard(UserContext.tenantId(), agentId));
     }
 }

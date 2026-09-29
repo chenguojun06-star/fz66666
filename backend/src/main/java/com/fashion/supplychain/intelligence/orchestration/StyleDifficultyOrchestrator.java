@@ -404,6 +404,36 @@ public class StyleDifficultyOrchestrator {
         return java.util.Map.of("total", styles.size(), "ok", ok, "failed", failed, "skipped", skipped);
     }
 
+    /**
+     * 存量 style_images 向量的 tenant_id 补刷（D-642 从 IntelligenceAdminController 下沉）。
+     *
+     * <p>早期写入的向量 payload 里没有 tenant_id，导致多租户检索会串数据。
+     * 本方法读取 {@code style_info} 的 id→tenantId 映射（LIMIT 5000），
+     * 交给 {@link com.fashion.supplychain.intelligence.service.QdrantService#backfillStyleImageTenantIds}
+     * 回填到 Qdrant payload。底层是覆盖写，重复执行无脏数据。
+     *
+     * @return message / totalStyles / updated
+     */
+    public java.util.Map<String, Object> backfillStyleImageTenantIds() {
+        java.util.Map<Long, Long> styleIdToTenantId = new java.util.LinkedHashMap<>();
+        styleInfoService.lambdaQuery()
+                .select(StyleInfo::getId, StyleInfo::getTenantId)
+                .isNotNull(StyleInfo::getTenantId)
+                .last("LIMIT 5000")
+                .list()
+                .forEach(s -> styleIdToTenantId.put(s.getId(), s.getTenantId()));
+        if (styleIdToTenantId.isEmpty()) {
+            return java.util.Map.of("message", "无需补刷，未找到款式数据", "updated", 0);
+        }
+        int updated = qdrantService.backfillStyleImageTenantIds(styleIdToTenantId);
+        log.info("[StyleDifficulty] style_images tenant_id 补刷完成 totalStyles={} updated={}",
+                styleIdToTenantId.size(), updated);
+        return java.util.Map.of(
+                "message", "style_images tenant_id补刷完成",
+                "totalStyles", styleIdToTenantId.size(),
+                "updated", updated);
+    }
+
     /** 有封面的款式总数（补齐任务的目标量） */
     public long countStylesWithCover() {
         return styleInfoService.lambdaQuery()

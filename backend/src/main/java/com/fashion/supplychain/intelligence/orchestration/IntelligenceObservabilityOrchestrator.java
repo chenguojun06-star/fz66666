@@ -2,8 +2,10 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.intelligence.dto.IntelligenceBrainSnapshotResponse;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
+import com.fashion.supplychain.intelligence.entity.AiJobRunLog;
 import com.fashion.supplychain.intelligence.entity.IntelligenceMetrics;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceMetricsMapper;
+import com.fashion.supplychain.intelligence.service.AiJobRunLogService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +44,13 @@ public class IntelligenceObservabilityOrchestrator {
 
     @Autowired
     private IntelligenceMetricsMapper metricsMapper;
+
+    /**
+     * AI 定时任务执行日志（D-642 从 IntelligenceAdminController 下沉）。
+     * 本表是系统级作业日志，写入方为 {@code JobRunObservabilityAspect}，查询仅限超管。
+     */
+    @Autowired
+    private AiJobRunLogService jobRunLogService;
 
     public void recordInvocation(String scene,
                                  IntelligenceInferenceResult result,
@@ -128,6 +137,34 @@ public class IntelligenceObservabilityOrchestrator {
             log.warn("[AI_OBSERVABILITY] 最近调用查询失败（表可能尚未就绪）: {}", e.getMessage());
             return java.util.Collections.emptyList();
         }
+    }
+
+    /**
+     * 最近 N 条 AI 定时任务执行记录。
+     *
+     * <p>2026-09-24（D-542）修正：原先内部按 {@code UserContext.tenantId()} 过滤，
+     * 但定时任务是后台线程、无用户上下文 → 表里 tenant_id 全为 NULL → <b>永远返回空</b>。
+     * 本表是系统级作业日志（非租户业务数据），且调用方仅限超管，故查全量。
+     *
+     * @param limit  条数上限（1~500，默认 100）
+     * @param status 可选：SUCCESS / FAILED / SKIPPED，不传为全部
+     */
+    public List<AiJobRunLog> recentJobRuns(int limit, String status) {
+        return jobRunLogService.queryRecent(limit, status);
+    }
+
+    /**
+     * AI 定时任务运行概览 + 最慢任务 + 失败 TOP，供页面顶部卡片与两个榜单使用。
+     *
+     * @param days 统计天数（1~365，默认 7）
+     */
+    public Map<String, Object> jobRunOverview(int days) {
+        Map<String, Object> overview = new java.util.LinkedHashMap<>();
+        overview.put("days", days);
+        overview.put("stats", jobRunLogService.queryStats(days));
+        overview.put("slowestJobs", jobRunLogService.querySlowestJobs(days, 10));
+        overview.put("failureTop", jobRunLogService.queryFailureTop(days, 10));
+        return overview;
     }
 
     public IntelligenceBrainSnapshotResponse.ObservabilitySummary getObservabilitySummary() {
