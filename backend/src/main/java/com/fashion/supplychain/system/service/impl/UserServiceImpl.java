@@ -263,7 +263,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             return userMapper.selectOne(new QueryWrapper<User>()
                     .select("id", "username", "password", "name", "role_id", "role_name", "tenant_id",
                             "is_tenant_owner", "is_factory_owner", "is_super_admin", "status", "approval_status",
-                            "factory_id", "permission_range", "phone", "email", "avatar_url", "org_unit_id")
+                            "factory_id", "permission_range", "phone", "email", "avatar_url", "org_unit_id",
+                            "position")
                     .eq("id", id)
                     .last("LIMIT 1"));
         } catch (Exception e) {
@@ -279,7 +280,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             return userMapper.selectOne(new QueryWrapper<User>()
                     .select("id", "username", "password", "name", "role_id", "role_name", "tenant_id",
                             "is_tenant_owner", "is_factory_owner", "is_super_admin", "status", "approval_status",
-                            "factory_id", "permission_range", "phone", "email", "avatar_url", "org_unit_id")
+                            "factory_id", "permission_range", "phone", "email", "avatar_url", "org_unit_id",
+                            "position")
                     .eq("username", username.trim())
                     .in("status", "active", "ENABLED")
                     .last("LIMIT 1"));
