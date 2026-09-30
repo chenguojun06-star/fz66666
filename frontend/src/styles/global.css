@@ -193,10 +193,19 @@ input.ant-input,
 }
 
 /* textarea-affix-wrapper：保持 block 布局 + relative 定位，
-   让 showCount 计数器 absolute 在框内右下角，与 textarea 同框 */
+   让 showCount 计数器 absolute 在框内右下角，与 textarea 同框。
+   ★ 必须同时干掉 antd 的基线占位伪元素 ::before（content:"\a0"; display:inline-block）：
+     它在 antd 默认的 inline-flex 下只是 0 宽弹性项，但包装层一旦改成 block，
+     它就变成一个约 22px 的行盒顶在最上方，把 textarea 整体下压 22px（边框仍贴顶）
+     → 表现为「备注框顶部约 22px 点不到，必须往下点才聚焦」。
+     D-666 实测：修复前备注可点区间从框顶 +22 才开始，修复后为 +2。 */
 .ant-input-textarea-affix-wrapper {
   display: block !important;
   position: relative !important;
+}
+
+.ant-input-textarea-affix-wrapper::before {
+  display: none !important;
 }
 
 .ant-input-textarea-affix-wrapper > textarea.ant-input {
@@ -211,6 +220,17 @@ input.ant-input,
   bottom: 2px !important;
   opacity: 0.6;
   pointer-events: none;
+}
+
+/* ★ 清空 × 会盖住自定义 suffix（内嵌维护齿轮）——D-666
+   antd v6 把清空按钮渲染成 .ant-select-clear：position:absolute; z-index:1;
+   opacity:0; pointer-events:auto —— 默认隐形却照吃点击，且坐标与自定义
+   suffix（.ant-select-suffix，齿轮）完全重合（实测 13×13 同 x 同 y）。
+   后果：鼠标一进输入框，× 变 opacity:1 顶掉齿轮并接管点击 →
+   点齿轮 = 把字段清空、维护弹窗永远打不开（有值 + allowClear 的字段全中招）。
+   这里给 suffix 让出 × 的位置，两者不再抢同一坐标。 */
+.ant-select-allow-clear .ant-select-suffix {
+  margin-inline-end: 18px;
 }
 
 .ant-space-compact input.ant-input,
