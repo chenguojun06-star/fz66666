@@ -1313,7 +1313,8 @@
       "estPriceLabel": "Est. Price",
       "claimHint": "After claiming, open the task in Xiaoyun Help Center to bundle and generate bundle codes",
       "unitMeter": "Meter",
-      "allColors": "All colors"
+      "allColors": "All colors",
+      "submitFailRetry": "Submit failed, please retry"
     },
     "pattern": {
       "navTitle": "Sample Scan",
@@ -1421,7 +1422,8 @@
       "remarkPh": "Enter remark...",
       "claimSummaryFmt": "{c} colors · {q} pcs",
       "maxWord": "max",
-      "seasonWord": "Season"
+      "seasonWord": "Season",
+      "claimFailed": "Claim failed"
     },
     "sampleDev": {
       "navTitle": "Sample Development",
@@ -2022,12 +2024,7 @@
       "noMatchEmployee": "No matching employee",
       "searchEmpHint": "Type a name to search",
       "expectedDaysW": "Expected",
-      "accumHoursW": {
-        "zh-CN": "本月累计",
-        "en-US": "This month",
-        "vi-VN": "Tháng này",
-        "km-KH": "This month"
-      },
+      "accumHoursW": "This month",
       "hoursShortW": "h",
       "operatedByFmt": "by {name}"
     },
@@ -2426,7 +2423,8 @@
       "newPricePh": "New price",
       "adjustReasonPh": "e.g. thicker fabric makes process harder",
       "confirmAdjustBtn": "Confirm Adjust",
-      "reasonPrefix": "Reason: "
+      "reasonPrefix": "Reason: ",
+      "recordInvalidW": "Invalid record"
     },
     "payment": {
       "navTitle": "Payments",
@@ -2586,7 +2584,9 @@
       "scanTypeLabel2": "Scan Type",
       "settlementSheet": "Settlement Sheet",
       "auditPassBtn": "Approve Audit",
-      "auditedNoRepeat": "Already audited; no action needed"
+      "auditedNoRepeat": "Already audited; no action needed",
+      "completeTimeLabel": "Completion Time",
+      "loadFailColon": "Load failed: "
     },
     "reimbursement": {
       "navTitle": "Reimbursement",

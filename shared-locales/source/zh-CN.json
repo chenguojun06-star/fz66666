@@ -1313,7 +1313,8 @@
       "estPriceLabel": "预估工价",
       "claimHint": "领取后请到「小云帮助中心」任务列表中点击任务进行分扎，生成菲号",
       "unitMeter": "米",
-      "allColors": "全部颜色"
+      "allColors": "全部颜色",
+      "submitFailRetry": "提交失败，请重试"
     },
     "pattern": {
       "navTitle": "样衣扫码",
@@ -1421,7 +1422,8 @@
       "remarkPh": "请输入备注信息...",
       "claimSummaryFmt": "已选 {c} 个颜色 · 共 {q} 件",
       "maxWord": "最多",
-      "seasonWord": "季节"
+      "seasonWord": "季节",
+      "claimFailed": "领取失败"
     },
     "sampleDev": {
       "navTitle": "样衣开发跟进",
@@ -2022,12 +2024,7 @@
       "noMatchEmployee": "未找到匹配员工",
       "searchEmpHint": "输入姓名搜索员工",
       "expectedDaysW": "应出勤",
-      "accumHoursW": {
-        "zh-CN": "本月累计",
-        "en-US": "This month",
-        "vi-VN": "Tháng này",
-        "km-KH": "This month"
-      },
+      "accumHoursW": "本月累计",
       "hoursShortW": "小时",
       "operatedByFmt": "由 {name} 操作"
     },
@@ -2426,7 +2423,8 @@
       "newPricePh": "输入新单价",
       "adjustReasonPh": "请输入调整原因，如：面料加厚工艺变复杂",
       "confirmAdjustBtn": "确认调整",
-      "reasonPrefix": "原因："
+      "reasonPrefix": "原因：",
+      "recordInvalidW": "记录无效"
     },
     "payment": {
       "navTitle": "付款",
@@ -2586,7 +2584,9 @@
       "scanTypeLabel2": "扫码类型",
       "settlementSheet": "结算单",
       "auditPassBtn": "审核通过",
-      "auditedNoRepeat": "该明细已审核，无需重复操作"
+      "auditedNoRepeat": "该明细已审核，无需重复操作",
+      "completeTimeLabel": "完成时间",
+      "loadFailColon": "加载失败："
     },
     "reimbursement": {
       "navTitle": "费用报销",

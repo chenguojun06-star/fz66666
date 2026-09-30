@@ -1313,7 +1313,8 @@
       "estPriceLabel": "Giá dự kiến",
       "claimHint": "Sau khi nhận, mở nhiệm vụ trong Trung tâm trợ giúp để phân bó, tạo mã phiếu",
       "unitMeter": "Mét",
-      "allColors": "Mọi màu"
+      "allColors": "Mọi màu",
+      "submitFailRetry": "Gửi thất bại, vui lòng thử lại"
     },
     "pattern": {
       "navTitle": "Quét mẫu",
@@ -1421,7 +1422,8 @@
       "remarkPh": "Nhập ghi chú...",
       "claimSummaryFmt": "Đã chọn {c} màu · {q} cái",
       "maxWord": "tối đa",
-      "seasonWord": "Mùa"
+      "seasonWord": "Mùa",
+      "claimFailed": "Nhận thất bại"
     },
     "sampleDev": {
       "navTitle": "Theo dõi phát triển mẫu",
@@ -2022,12 +2024,7 @@
       "noMatchEmployee": "Không thấy NV",
       "searchEmpHint": "Nhập tên để tìm",
       "expectedDaysW": "Công chuẩn",
-      "accumHoursW": {
-        "zh-CN": "本月累计",
-        "en-US": "This month",
-        "vi-VN": "Tháng này",
-        "km-KH": "This month"
-      },
+      "accumHoursW": "Tháng này",
       "hoursShortW": "giờ",
       "operatedByFmt": "bởi {name}"
     },
@@ -2426,7 +2423,8 @@
       "newPricePh": "Giá mới",
       "adjustReasonPh": "VD: vải dày hơn nên khó hơn",
       "confirmAdjustBtn": "Xác nhận điều chỉnh",
-      "reasonPrefix": "Lý do: "
+      "reasonPrefix": "Lý do: ",
+      "recordInvalidW": "Bản ghi không hợp lệ"
     },
     "payment": {
       "navTitle": "Thanh toán",
@@ -2586,7 +2584,9 @@
       "scanTypeLabel2": "Kiểu quét",
       "settlementSheet": "Phiếu quyết toán",
       "auditPassBtn": "Duyệt đạt",
-      "auditedNoRepeat": "Đã duyệt rồi"
+      "auditedNoRepeat": "Đã duyệt rồi",
+      "completeTimeLabel": "Thời gian hoàn thành",
+      "loadFailColon": "Tải thất bại: "
     },
     "reimbursement": {
       "navTitle": "Hoàn phí",

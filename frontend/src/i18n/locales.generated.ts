@@ -1320,7 +1320,8 @@ export const LOCALES = {
         "estPriceLabel": "预估工价",
         "claimHint": "领取后请到「小云帮助中心」任务列表中点击任务进行分扎，生成菲号",
         "unitMeter": "米",
-        "allColors": "全部颜色"
+        "allColors": "全部颜色",
+        "submitFailRetry": "提交失败，请重试"
       },
       "pattern": {
         "navTitle": "样衣扫码",
@@ -1428,7 +1429,8 @@ export const LOCALES = {
         "remarkPh": "请输入备注信息...",
         "claimSummaryFmt": "已选 {c} 个颜色 · 共 {q} 件",
         "maxWord": "最多",
-        "seasonWord": "季节"
+        "seasonWord": "季节",
+        "claimFailed": "领取失败"
       },
       "sampleDev": {
         "navTitle": "样衣开发跟进",
@@ -2029,12 +2031,7 @@ export const LOCALES = {
         "noMatchEmployee": "未找到匹配员工",
         "searchEmpHint": "输入姓名搜索员工",
         "expectedDaysW": "应出勤",
-        "accumHoursW": {
-          "zh-CN": "本月累计",
-          "en-US": "This month",
-          "vi-VN": "Tháng này",
-          "km-KH": "This month"
-        },
+        "accumHoursW": "本月累计",
         "hoursShortW": "小时",
         "operatedByFmt": "由 {name} 操作"
       },
@@ -2433,7 +2430,8 @@ export const LOCALES = {
         "newPricePh": "输入新单价",
         "adjustReasonPh": "请输入调整原因，如：面料加厚工艺变复杂",
         "confirmAdjustBtn": "确认调整",
-        "reasonPrefix": "原因："
+        "reasonPrefix": "原因：",
+        "recordInvalidW": "记录无效"
       },
       "payment": {
         "navTitle": "付款",
@@ -2593,7 +2591,9 @@ export const LOCALES = {
         "scanTypeLabel2": "扫码类型",
         "settlementSheet": "结算单",
         "auditPassBtn": "审核通过",
-        "auditedNoRepeat": "该明细已审核，无需重复操作"
+        "auditedNoRepeat": "该明细已审核，无需重复操作",
+        "completeTimeLabel": "完成时间",
+        "loadFailColon": "加载失败："
       },
       "reimbursement": {
         "navTitle": "费用报销",
@@ -5469,7 +5469,8 @@ export const LOCALES = {
         "estPriceLabel": "Est. Price",
         "claimHint": "After claiming, open the task in Xiaoyun Help Center to bundle and generate bundle codes",
         "unitMeter": "Meter",
-        "allColors": "All colors"
+        "allColors": "All colors",
+        "submitFailRetry": "Submit failed, please retry"
       },
       "pattern": {
         "navTitle": "Sample Scan",
@@ -5577,7 +5578,8 @@ export const LOCALES = {
         "remarkPh": "Enter remark...",
         "claimSummaryFmt": "{c} colors · {q} pcs",
         "maxWord": "max",
-        "seasonWord": "Season"
+        "seasonWord": "Season",
+        "claimFailed": "Claim failed"
       },
       "sampleDev": {
         "navTitle": "Sample Development",
@@ -6178,12 +6180,7 @@ export const LOCALES = {
         "noMatchEmployee": "No matching employee",
         "searchEmpHint": "Type a name to search",
         "expectedDaysW": "Expected",
-        "accumHoursW": {
-          "zh-CN": "本月累计",
-          "en-US": "This month",
-          "vi-VN": "Tháng này",
-          "km-KH": "This month"
-        },
+        "accumHoursW": "This month",
         "hoursShortW": "h",
         "operatedByFmt": "by {name}"
       },
@@ -6582,7 +6579,8 @@ export const LOCALES = {
         "newPricePh": "New price",
         "adjustReasonPh": "e.g. thicker fabric makes process harder",
         "confirmAdjustBtn": "Confirm Adjust",
-        "reasonPrefix": "Reason: "
+        "reasonPrefix": "Reason: ",
+        "recordInvalidW": "Invalid record"
       },
       "payment": {
         "navTitle": "Payments",
@@ -6742,7 +6740,9 @@ export const LOCALES = {
         "scanTypeLabel2": "Scan Type",
         "settlementSheet": "Settlement Sheet",
         "auditPassBtn": "Approve Audit",
-        "auditedNoRepeat": "Already audited; no action needed"
+        "auditedNoRepeat": "Already audited; no action needed",
+        "completeTimeLabel": "Completion Time",
+        "loadFailColon": "Load failed: "
       },
       "reimbursement": {
         "navTitle": "Reimbursement",
@@ -9618,7 +9618,8 @@ export const LOCALES = {
         "estPriceLabel": "Giá dự kiến",
         "claimHint": "Sau khi nhận, mở nhiệm vụ trong Trung tâm trợ giúp để phân bó, tạo mã phiếu",
         "unitMeter": "Mét",
-        "allColors": "Mọi màu"
+        "allColors": "Mọi màu",
+        "submitFailRetry": "Gửi thất bại, vui lòng thử lại"
       },
       "pattern": {
         "navTitle": "Quét mẫu",
@@ -9726,7 +9727,8 @@ export const LOCALES = {
         "remarkPh": "Nhập ghi chú...",
         "claimSummaryFmt": "Đã chọn {c} màu · {q} cái",
         "maxWord": "tối đa",
-        "seasonWord": "Mùa"
+        "seasonWord": "Mùa",
+        "claimFailed": "Nhận thất bại"
       },
       "sampleDev": {
         "navTitle": "Theo dõi phát triển mẫu",
@@ -10327,12 +10329,7 @@ export const LOCALES = {
         "noMatchEmployee": "Không thấy NV",
         "searchEmpHint": "Nhập tên để tìm",
         "expectedDaysW": "Công chuẩn",
-        "accumHoursW": {
-          "zh-CN": "本月累计",
-          "en-US": "This month",
-          "vi-VN": "Tháng này",
-          "km-KH": "This month"
-        },
+        "accumHoursW": "Tháng này",
         "hoursShortW": "giờ",
         "operatedByFmt": "bởi {name}"
       },
@@ -10731,7 +10728,8 @@ export const LOCALES = {
         "newPricePh": "Giá mới",
         "adjustReasonPh": "VD: vải dày hơn nên khó hơn",
         "confirmAdjustBtn": "Xác nhận điều chỉnh",
-        "reasonPrefix": "Lý do: "
+        "reasonPrefix": "Lý do: ",
+        "recordInvalidW": "Bản ghi không hợp lệ"
       },
       "payment": {
         "navTitle": "Thanh toán",
@@ -10891,7 +10889,9 @@ export const LOCALES = {
         "scanTypeLabel2": "Kiểu quét",
         "settlementSheet": "Phiếu quyết toán",
         "auditPassBtn": "Duyệt đạt",
-        "auditedNoRepeat": "Đã duyệt rồi"
+        "auditedNoRepeat": "Đã duyệt rồi",
+        "completeTimeLabel": "Thời gian hoàn thành",
+        "loadFailColon": "Tải thất bại: "
       },
       "reimbursement": {
         "navTitle": "Hoàn phí",
@@ -13767,7 +13767,8 @@ export const LOCALES = {
         "estPriceLabel": "Est. Price",
         "claimHint": "After claiming, open the task in Help Center to bundle",
         "unitMeter": "Meter",
-        "allColors": "All colors"
+        "allColors": "All colors",
+        "submitFailRetry": "Submit failed, please retry"
       },
       "pattern": {
         "navTitle": "Sample Scan",
@@ -13875,7 +13876,8 @@ export const LOCALES = {
         "remarkPh": "Enter remark...",
         "claimSummaryFmt": "{c} colors · {q} pcs",
         "maxWord": "max",
-        "seasonWord": "Season"
+        "seasonWord": "Season",
+        "claimFailed": "Claim failed"
       },
       "sampleDev": {
         "navTitle": "Sample Development",
@@ -14476,12 +14478,7 @@ export const LOCALES = {
         "noMatchEmployee": "No match",
         "searchEmpHint": "Type a name",
         "expectedDaysW": "Expected",
-        "accumHoursW": {
-          "zh-CN": "本月累计",
-          "en-US": "This month",
-          "vi-VN": "Tháng này",
-          "km-KH": "This month"
-        },
+        "accumHoursW": "This month",
         "hoursShortW": "h",
         "operatedByFmt": "by {name}"
       },
@@ -14880,7 +14877,8 @@ export const LOCALES = {
         "newPricePh": "New price",
         "adjustReasonPh": "e.g. reason",
         "confirmAdjustBtn": "Confirm",
-        "reasonPrefix": "Reason: "
+        "reasonPrefix": "Reason: ",
+        "recordInvalidW": "Invalid record"
       },
       "payment": {
         "navTitle": "Payments",
@@ -15040,7 +15038,9 @@ export const LOCALES = {
         "scanTypeLabel2": "Scan Type",
         "settlementSheet": "Settlement",
         "auditPassBtn": "Approve",
-        "auditedNoRepeat": "Already audited"
+        "auditedNoRepeat": "Already audited",
+        "completeTimeLabel": "Completion Time",
+        "loadFailColon": "Load failed: "
       },
       "reimbursement": {
         "navTitle": "Reimbursement",

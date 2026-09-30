@@ -8,15 +8,24 @@ i18n 键守卫（D-546）
 `t()` 找不到键时会**回落成键名本身**，于是线上状态标签直接显示
 `status.order.accepted` 这种裸键名。全程不报错、构建通过、类型检查通过。
 
-本脚本把这类问题在推送前拦住，检查 4 件事：
+本脚本把这类问题在推送前拦住，检查 7 件事（1~6 阻塞，7 仅提示）：
   1. 代码引用的 i18n 键在语言包里是否都存在（逐个语言校验）
   2. 语言包内是否存在「同名命名空间自我嵌套」（如 status.status）——本次事故根因
   3. 语言包的值是否本身就是 i18n 键（二次包装，会导致渲染出键名）
   4. 四个语言包的键集合是否完全一致（缺键会静默回落到中文）
+  5. 【D-666】「NS + 'x'」形态的引用是否都存在 —— 原守卫盲区：
+     正则要求字面量含点，而小程序 83 个文件用的是 `NS + 'reviewPass'` 这种无点写法，
+     一个都没被校验过。补上后实测曾漏出 6 处线上裸键名。
+  6. 【D-666】语言包里「值是一整块翻译表片段」的损坏（子键是语言码）——
+     检查2 只找同名嵌套、检查3 只对 str 生效，两处都漏掉这一类。
+     后果：`t()` 走 `String(value)` → 界面显示 `[object Object]`。实测曾漏出 1 处。
+  7. 【D-666】死键报告（非阻塞）：叶子名在源码里从未出现过的键必然无人引用。
+     与基线文件比对，只提示「新增」的死键，不阻塞推送。
 
 用法：
-    python3 scripts/check-i18n-keys.py            # 检查
-    python3 scripts/check-i18n-keys.py --strict   # 警告也算失败
+    python3 scripts/check-i18n-keys.py                     # 检查
+    python3 scripts/check-i18n-keys.py --strict            # 警告也算失败
+    python3 scripts/check-i18n-keys.py --update-dead-baseline   # 收敛死键基线
 
 退出码：0 = 通过，1 = 发现问题
 """
@@ -36,6 +45,7 @@ SCAN_EXT = ('.ts', '.tsx', '.js', '.jsx')
 SKIP_PARTS = ('node_modules', '/dist', '/build', '/.git')
 
 STRICT = '--strict' in sys.argv
+UPDATE_DEAD_BASELINE = '--update-dead-baseline' in sys.argv
 
 # 已知的「长得像 i18n 键、其实不是」的字面量。
 # 加白名单前必须确认它不是真的漏翻，否则等于把 bug 藏起来。
@@ -95,6 +105,107 @@ def collect_refs(namespaces):
                     if key.split('.')[0] in namespaces and key not in ALLOWLIST:
                         refs[key].add(os.path.relpath(full, ROOT))
     return refs
+
+
+# ==========================================================================
+# D-666 新增：补上原守卫的两个盲区 + 死键报告
+#
+# 盲区 1：「NS + 'x'」形态的引用完全不在 collect_refs 视野内 —— 上面那个正则
+#   要求字面量含点（`a.b.c`），而小程序主流写法是 `NS + 'reviewPass'`（字面量无点）。
+#   实测：官方守卫只看到 776 处全路径引用，按 NS 解析后是 3046 处。
+#   ⚠️ 只扫 miniprogram：前端 43k 文件里只有 1 处 `ext = '.'` 的伪常量，
+#      不存在这种写法（已实测确认）。
+#
+# 盲区 2：语言包里「值是一整块翻译表片段」的损坏（子键是语言码）。
+#   检查[2] 只找同名嵌套（key in value）、检查[3] 只对 str 生效 → 两处都漏。
+#   后果：utils/i18n/index.js 的 t() 走 String(value) → 界面显示 [object Object]。
+# ==========================================================================
+MINIAPP_DIR = 'miniprogram'
+DEAD_BASELINE = os.path.join(ROOT, 'scripts', 'i18n-dead-keys-baseline.json')
+
+# 「以点结尾的字符串常量」，如 const NS = 'mp.sampleDetail.'
+NS_DECL_RE = re.compile(r"(?:const|var|let)\s+([A-Za-z_$][\w$]*)\s*=\s*['\"]([A-Za-z0-9_.]*\.)['\"]")
+# NS + 'key'
+NS_REF_RE = re.compile(r"\b([A-Za-z_$][\w$]*)\s*\+\s*['\"]([A-Za-z0-9_]+)['\"]")
+# 本地 helper：const t = (k) => i18n.t(NS + k, lang)
+NS_HELPER_RE = re.compile(
+    r"(?:const|var|let)\s+([A-Za-z_$][\w$]*)\s*=\s*\(?\s*([A-Za-z_$][\w$]*)\s*\)?\s*=>\s*"
+    r"i18n\.(?:t|tf)\(\s*([A-Za-z_$][\w$]*)\s*\+"
+)
+
+
+def iter_miniapp_sources():
+    """产出 (相对路径, 文本)，供检查 5/7 复用（避免多次遍历外接卷）"""
+    base = os.path.join(ROOT, MINIAPP_DIR)
+    for dirpath, _dirnames, filenames in os.walk(base):
+        if any(part in dirpath for part in SKIP_PARTS):
+            continue
+        for name in filenames:
+            if name == 'locales.generated.js':
+                continue
+            if name.endswith(('.js', '.wxml')):
+                full = os.path.join(dirpath, name)
+                try:
+                    with open(full, encoding='utf-8', errors='ignore') as fh:
+                        yield os.path.relpath(full, ROOT), fh.read()
+                except OSError:
+                    continue
+
+
+def collect_ns_refs():
+    """解析「NS + 'x'」引用。
+    返回 (refs, dyn)：refs = {完整键: {文件}}；
+    dyn = {前缀: {文件}}，对应 `NS + 'a' + k.charAt(0)...` 这类动态拼键（只校验前缀）。"""
+    refs = collections.defaultdict(set)
+    dyn = collections.defaultdict(set)
+    for rel, text in iter_miniapp_sources():
+        nsmap = {m.group(1): m.group(2) for m in NS_DECL_RE.finditer(text)}
+        if not nsmap:
+            continue
+        for m in NS_REF_RE.finditer(text):
+            name, leaf = m.group(1), m.group(2)
+            if name not in nsmap:
+                continue
+            # 字面量后面还跟 + → 动态拼键，不能当完整键校验
+            if re.match(r'\s*\+', text[m.end():m.end() + 3]):
+                dyn[nsmap[name] + leaf].add(rel)
+            else:
+                refs[nsmap[name] + leaf].add(rel)
+        for m in NS_HELPER_RE.finditer(text):
+            helper, nsname = m.group(1), m.group(3)
+            if nsname not in nsmap:
+                continue
+            for c in re.finditer(r'\b' + re.escape(helper) + r"\(\s*['\"]([A-Za-z0-9_]+)['\"]", text):
+                refs[nsmap[nsname] + c.group(1)].add(rel)
+    return refs, dyn
+
+
+def find_fragment_nodes(tree):
+    """值是 dict 且子键含语言码 → 翻译表片段被误合并。
+    `language.names` 是合法的语言名表（本就按语言码做键），排除。"""
+    hits = []
+
+    def walk(node, path=''):
+        if isinstance(node, dict):
+            if set(node.keys()) & set(LANGS) and path != 'language.names':
+                hits.append(path)
+            for k, v in node.items():
+                walk(v, f'{path}.{k}' if path else k)
+
+    walk(tree)
+    return hits
+
+
+def find_dead_keys(zh_flat, blob):
+    """死键（保守口径，零假阳性）：键的叶子名在源码里一次都没出现过。
+    任何引用（含 NS + 'x'、动态拼键）都必须包含叶子名字面量，所以「没出现过」= 必然无人引用。
+    宁可少报也不误报 —— 误删一个活键会让界面显示裸键名（D-547 事故形态）。"""
+    dead = []
+    for key in zh_flat:
+        leaf = key.rsplit('.', 1)[-1]
+        if not re.search(r'(?<![A-Za-z0-9_])' + re.escape(leaf) + r'(?![A-Za-z0-9_])', blob):
+            dead.append(key)
+    return sorted(dead)
 
 
 def find_self_nesting(node, path=''):
@@ -197,6 +308,80 @@ def main():
         print(f'    共 {inconsistent} 处不一致（缺键会静默回落到中文）')
     else:
         print(f'    ✅ 四语言各 {len(zh_flat)} 键，完全一致')
+
+    # --- 检查 5：NS + 'x' 形态（原守卫盲区 1）---
+    print("[5] NS + 'x' 形态的引用（原守卫看不到这类写法）")
+    ns_refs, ns_dyn = collect_ns_refs()
+    ns_missing = []
+    for key in sorted(ns_refs):
+        for lang in LANGS:
+            if key not in flatten(packs[lang]):
+                ns_missing.append((key, lang, sorted(ns_refs[key])[0]))
+    dyn_bad = []
+    for prefix in sorted(ns_dyn):
+        if not any(k.startswith(prefix) for k in zh_flat):
+            dyn_bad.append((prefix, sorted(ns_dyn[prefix])[0]))
+    if ns_missing or dyn_bad:
+        problems += len(ns_missing) + len(dyn_bad)
+        print(f'    ❌ {len(ns_missing)} 处引用不存在 + {len(dyn_bad)} 处动态前缀无匹配：')
+        for key, lang, where in ns_missing[:30]:
+            print(f'       {key}  [缺 {lang}]  ← {where}')
+        if len(ns_missing) > 30:
+            print(f'       ... 另有 {len(ns_missing) - 30} 处')
+        for prefix, where in dyn_bad[:10]:
+            print(f'       动态前缀 {prefix}* 无任何匹配键  ← {where}')
+    else:
+        print(f'    ✅ {len(ns_refs)} 个不同的键 + {len(ns_dyn)} 处动态前缀全部命中')
+
+    # --- 检查 6：语言包值-是翻译表片段（原守卫盲区 2）---
+    print('[6] 语言包值-是翻译表片段（会渲染出 [object Object]）')
+    frags = []
+    for lang in LANGS:
+        for path in find_fragment_nodes(packs[lang]):
+            frags.append((lang, path))
+    if frags:
+        problems += len(frags)
+        print(f'    ❌ {len(frags)} 处：')
+        for lang, path in frags[:20]:
+            print(f'       {lang}: {path}')
+    else:
+        print('    ✅ 无翻译表片段')
+
+    # --- 检查 7：死键报告（非阻塞）---
+    print('[7] 死键报告（非阻塞；叶子名在源码里从未出现 = 必然无人引用）')
+    blob = '\n'.join(text for _rel, text in iter_miniapp_sources())
+    dead = [k for k in find_dead_keys(zh_flat, blob) if k.startswith('mp.')]
+    baseline = set()
+    if os.path.exists(DEAD_BASELINE):
+        try:
+            with open(DEAD_BASELINE, encoding='utf-8') as fh:
+                baseline = set(json.load(fh).get('keys', []))
+        except (OSError, ValueError):
+            baseline = set()
+    if UPDATE_DEAD_BASELINE:
+        with open(DEAD_BASELINE, 'w', encoding='utf-8') as fh:
+            json.dump({
+                'note': '死键基线（判据：叶子名在 miniprogram 源码里一次都没出现过）。'
+                        '清理完存量后重跑 --update-dead-baseline 收敛。',
+                'count': len(dead),
+                'keys': dead,
+            }, fh, ensure_ascii=False, indent=2)
+            fh.write('\n')
+        print(f'    ✅ 已更新基线 {DEAD_BASELINE}（{len(dead)} 个）')
+    else:
+        new_dead = sorted(set(dead) - baseline)
+        gone = sorted(baseline - set(dead))
+        print(f'    存量基线 {len(baseline)} 个 / 当前实测 {len(dead)} 个')
+        if new_dead:
+            print(f'    ⚠️ 新增 {len(new_dead)} 个死键（不阻塞推送，建议清理或补回引用）：')
+            for k in new_dead[:30]:
+                print(f'       {k}  = {zh_flat[k]!r}')
+            if len(new_dead) > 30:
+                print(f'       ... 另有 {len(new_dead) - 30} 个')
+        else:
+            print('    ✅ 无新增死键')
+        if gone:
+            print(f'    ℹ️ 基线里 {len(gone)} 个已不再是死键 → 可跑 --update-dead-baseline 收敛')
 
     print()
     if problems:
