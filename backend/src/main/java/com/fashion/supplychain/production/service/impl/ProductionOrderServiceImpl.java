@@ -6,7 +6,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.orchestration.ProductionOrderFinanceOrchestrator;
 import com.fashion.supplychain.production.orchestration.ProductionOrderProgressOrchestrator;
-import com.fashion.supplychain.production.service.ProductionOrderProgressRecomputeService;
+import com.fashion.supplychain.production.helper.ProductionOrderProgressRecomputeHelper;
 import com.fashion.supplychain.production.orchestration.ProductionOrderQueryOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -53,7 +53,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     private CuttingTaskService cuttingTaskService;
 
     @Autowired
-    private ProductionOrderProgressRecomputeService progressRecomputeService;
+    private ProductionOrderProgressRecomputeHelper progressRecomputeHelper;
 
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
@@ -324,12 +324,12 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
 
     @Override
     public ProductionOrder recomputeProgressFromRecords(String orderId) {
-        return progressRecomputeService.recomputeProgressFromRecords(orderId);
+        return progressRecomputeHelper.recomputeProgressFromRecords(orderId);
     }
 
     @Override
     public void recomputeProgressAsync(String orderId) {
-        progressRecomputeService.recomputeProgressAsync(orderId);
+        progressRecomputeHelper.recomputeProgressAsync(orderId);
     }
 
     @Override
