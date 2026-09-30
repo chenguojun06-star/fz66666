@@ -222,8 +222,18 @@ const FactoryFormModal: React.FC<FactoryFormModalProps> = ({
           </Form.Item>
         </div>
         <div className="u-d-grid u-gap-12" style={{ gridTemplateColumns: '1fr 1fr' }}>
-          <Form.Item name="factoryCode" label="供应商编码" rules={[{ required: true, message: '请输入供应商编码' }]}>
-            <Input placeholder="请输入供应商编码" autoComplete="off" />
+          <Form.Item
+            name="factoryCode"
+            label="供应商编码"
+            /* D-657：编码全量系统自动生成，新建不再要求用户手填；编辑态保留可改（存量手输乱码可修正） */
+            extra={mode === 'create' ? '无需填写，保存后由系统自动生成' : undefined}
+            rules={mode === 'create' ? [] : [{ required: true, message: '请输入供应商编码' }]}
+          >
+            <Input
+              placeholder={mode === 'create' ? '保存后自动生成' : '请输入供应商编码'}
+              autoComplete="off"
+              disabled={mode === 'create'}
+            />
           </Form.Item>
           <Form.Item name="factoryName" label="供应商名称" rules={[{ required: true, message: '请输入供应商名称' }]}>
             <Input placeholder="请输入供应商名称" />

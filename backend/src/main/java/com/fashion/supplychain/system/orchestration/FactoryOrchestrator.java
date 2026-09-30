@@ -127,7 +127,8 @@ public class FactoryOrchestrator {
             throw new IllegalArgumentException("供应商名称不能为空");
         }
         if (!StringUtils.hasText(factory.getFactoryCode())) {
-            factory.setFactoryCode("F" + System.currentTimeMillis());
+            // D-657：编码全量自动生成——前端新建表单已不再要求用户手填（历史手输过 Table/0006/名字等乱码）
+            factory.setFactoryCode(generateFactoryCode());
         }
         LocalDateTime now = LocalDateTime.now();
         factory.setCreateTime(now);
@@ -501,5 +502,28 @@ public class FactoryOrchestrator {
             sb.append(chars.charAt(rnd.nextInt(chars.length())));
         }
         return sb.toString();
+    }
+
+    /**
+     * D-657：供应商编码自动生成（风格沿用存量 F+时间戳）。
+     * t_factory.factory_code 有全局唯一索引，同毫秒并发创建会撞码——先查重再落库，最多重试 5 次。
+     */
+    private String generateFactoryCode() {
+        for (int i = 0; i < 5; i++) {
+            String code = "F" + System.currentTimeMillis() + (i == 0 ? "" : String.valueOf(i));
+            long exists = factoryService.count(new LambdaQueryWrapper<Factory>()
+                    .eq(Factory::getFactoryCode, code));
+            if (exists == 0) {
+                return code;
+            }
+            try {
+                Thread.sleep(2);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        return "F" + System.currentTimeMillis() + java.util.UUID.randomUUID().toString()
+                .substring(0, 4).toUpperCase();
     }
 }
