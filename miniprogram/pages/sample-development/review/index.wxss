@@ -1,0 +1,188 @@
+@import '/styles/page-utils.wxss';
+
+.page {
+  padding: 0 var(--page-padding-x);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+  background: var(--color-bg-page);
+  min-height: 100vh;
+}
+
+.section-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 14px;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── 款号信息 ── */
+.info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-16);
+  padding: 4px 0;
+}
+.info-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  min-width: 56px;
+}
+.info-value {
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  word-break: break-all;
+}
+
+/* ── 表单 ── */
+.form-row-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding: 4px 0;
+}
+.form-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  flex-shrink: 0;
+  font-weight: var(--font-weight-medium);
+}
+.form-req {
+  color: var(--color-danger);
+  margin-left: 2px;
+}
+.form-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* ── 审核结论三选一 ── */
+.option-list {
+  display: flex;
+  gap: var(--space-16);
+}
+.option-item {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-sizing: border-box;
+}
+.option-item--active {
+  font-weight: var(--font-weight-semibold);
+}
+.option-item--pass {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  border-color: var(--color-success);
+}
+.option-item--rework {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning);
+}
+.option-item--reject {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger);
+}
+
+/* ── 评语 ── */
+.remark-area {
+  width: 100%;
+  min-height: 100px;
+  padding: var(--space-24);
+  font-size: var(--font-size-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-sizing: border-box;
+  line-height: 1.6;
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+}
+
+/* ── 照片 ── */
+.photo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-24);
+}
+.photo-item {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.photo-img {
+  width: 100%;
+  height: 100%;
+}
+.photo-del {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background-color: rgba(0, 0, 0, 0.55);
+  color: var(--color-text-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  line-height: 1;
+}
+.photo-add {
+  width: 80px;
+  height: 80px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-page);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.photo-add--busy {
+  opacity: 0.6;
+}
+.photo-add__text {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-tertiary);
+}
+
+/* ── 提交 ── */
+.action-bar {
+  display: flex;
+  gap: var(--space-24);
+  margin-top: var(--space-24);
+}
+.act-btn {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.act-btn--submit {
+  background: var(--color-primary);
+  color: var(--color-text-white);
+}
+.act-btn--disabled {
+  opacity: 0.6;
+}

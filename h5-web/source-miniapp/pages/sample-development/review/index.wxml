@@ -1,0 +1,68 @@
+<view class="page">
+  <!-- 款号信息 -->
+  <view class="section-card">
+    <view class="info-row">
+      <text class="info-label">{{t.styleLabel}}</text>
+      <text class="info-value">{{styleNo || '-'}}</text>
+    </view>
+    <view class="info-row" wx:if="{{styleName}}">
+      <text class="info-label">{{t.nameLabel}}</text>
+      <text class="info-value">{{styleName}}</text>
+    </view>
+  </view>
+
+  <!-- 审核结论 / 审核评语 / 现场照片 -->
+  <view class="section-card">
+    <view class="form-row-col">
+      <text class="form-label">{{t.conclusionLabel}}<text class="form-req">*</text></text>
+      <view class="option-list">
+        <view
+          wx:for="{{statusOptions}}"
+          wx:key="value"
+          class="option-item {{reviewStatus === item.value ? 'option-item--active option-item--' + item.tone : ''}}"
+          data-value="{{item.value}}"
+          bindtap="onPickStatus"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
+    <view class="form-row-col">
+      <text class="form-label">{{t.commentLabel}}<text class="form-req" wx:if="{{needComment}}">*</text></text>
+      <textarea
+        class="remark-area"
+        placeholder="{{t.commentPh}}"
+        value="{{comment}}"
+        bindinput="onCommentInput"
+        maxlength="500"
+        auto-height
+      />
+    </view>
+
+    <view class="form-row-col">
+      <text class="form-label">{{t.photoLabel}}</text>
+      <text class="form-hint">{{t.photoHint}}</text>
+      <view class="photo-grid">
+        <view wx:for="{{images}}" wx:key="*this" class="photo-item">
+          <image-preview class="photo-img" src="{{item}}" mode="aspectFit" data-url="{{item}}" bindtap="onPreviewImage" />
+          <view class="photo-del" data-index="{{index}}" catchtap="onDeleteImage">
+            <view class="icon-multiply-sm"></view>
+          </view>
+        </view>
+        <view wx:if="{{images.length < maxImages}}" class="photo-add {{uploading ? 'photo-add--busy' : ''}}" bindtap="onChooseImage">
+          <view class="line-icon icon-camera"></view>
+          <text class="photo-add__text">{{t.addPhoto}}</text>
+        </view>
+      </view>
+      <text wx:if="{{images.length > 0}}" class="form-hint">{{t.selectedPrefix}}{{images.length}}{{t.selectedSuffix}}</text>
+    </view>
+
+    <view class="action-bar">
+      <view class="act-btn act-btn--submit {{submitting ? 'act-btn--disabled' : ''}}" bindtap="onSubmit">
+        <text>{{submitting ? t.submitting : t.submitBtn}}</text>
+      </view>
+    </view>
+  </view>
+
+  <privacy-dialog id="privacyDialog" />
+  <ai-assistant />
+</view>

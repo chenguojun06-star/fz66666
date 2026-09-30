@@ -4114,6 +4114,36 @@
       "chipScanRecords": "扫码记录",
       "pageContext": "当前页面相关",
       "needMoreInfo": "需要补充信息："
+    },
+    "sampleReview": {
+      "navTitle": "样衣审核",
+      "styleLabel": "款号",
+      "nameLabel": "款名称",
+      "conclusionLabel": "审核结论",
+      "conclusionRequired": "请选择审核结论",
+      "optPass": "审核通过",
+      "optRework": "审核返修",
+      "optReject": "审核驳回",
+      "commentLabel": "审核评语",
+      "commentPh": "填写审核意见、改进建议等",
+      "commentRequired": "返修或驳回时请填写审核评语",
+      "photoLabel": "现场照片",
+      "photoHint": "最多 5 张，可拍照或从相册选择",
+      "selectedPrefix": "已选照片(",
+      "selectedSuffix": "/5)",
+      "addPhoto": "拍照/选图",
+      "maxImages": "最多上传5张图片",
+      "permTitle": "相机/相册权限",
+      "permContent": "需要相机或相册权限才能上传照片，请在设置中允许",
+      "goSettings": "去设置",
+      "submitBtn": "提交审核",
+      "submitOk": "审核已提交",
+      "submitFail": "审核提交失败，请重试",
+      "imageUploadFailed": "图片上传失败",
+      "missingStyleInfo": "缺少款式信息，无法提交审核",
+      "confirmTitle": "确认提交审核",
+      "confirmConclPrefix": "审核结论：",
+      "confirmCommentPrefix": "\n审核评语："
     }
   }
 }

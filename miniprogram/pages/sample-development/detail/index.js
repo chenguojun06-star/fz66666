@@ -1406,34 +1406,28 @@ Page({
   },
 
   // ── D-181 对齐PC：样衣审核是详情页动作（生产完成未审核时显示）──
+  // D-666：改为跳「样衣审核」独立页（可写审核评语 + 传现场照片）。
+  // 原 wx.showActionSheet 三选一直提的路径有两个硬伤：
+  //   ① 评语被写死成空串（_doSampleReview 传 reviewPattern(id, result, '')），
+  //      用户「有什么问题都记录不了」；
+  //   ② 走的是 /production/pattern/{id}/workflow-action 端点，不接收 images，
+  //      也没有「审核通过 → 生成 SKU + 推送开发费用账单」的副作用。
+  // 新页走 PC 同一条端点 POST /api/style/info/{styleId}/sample-review。
   onSampleReview() {
-    const snapshot = this.data.patternSnapshot;
-    const patternId = snapshot && snapshot.id;
-    if (!patternId) {
-      wx.showToast({ title: i18n.t(NS + 'missingProduction', this._lang), icon: 'none' });
+    const styleId = this.data.styleId;
+    if (!styleId) {
+      wx.showToast({ title: i18n.t(NS + 'missingStyleId', this._lang), icon: 'none' });
       return;
     }
-    wx.showActionSheet({
-      itemList: [i18n.t(NS + 'reviewPass', this._lang), i18n.t(NS + 'reviewRework', this._lang), i18n.t(NS + 'reviewReject', this._lang)],
-      success: (res) => {
-        const resultMap = ['APPROVED', 'REWORK', 'REJECTED'];
-        const doneMap = [i18n.t(NS + 'reviewPassed', this._lang), i18n.t(NS + 'markedRework', this._lang), i18n.t(NS + 'rejected', this._lang)];
-        this._doSampleReview(patternId, resultMap[res.tapIndex], doneMap[res.tapIndex]);
-      },
+    const styleInfo = this.data.styleInfo || {};
+    const styleNo = styleInfo.styleNo || styleInfo.styleCode || '';
+    const styleName = styleInfo.styleName || styleInfo.name || '';
+    wx.navigateTo({
+      url: '/pages/sample-development/review/index'
+        + '?styleId=' + encodeURIComponent(styleId)
+        + '&styleNo=' + encodeURIComponent(styleNo)
+        + '&styleName=' + encodeURIComponent(styleName),
     });
-  },
-
-  async _doSampleReview(patternId, result, doneMsg) {
-    wx.showLoading({ title: i18n.t('common.submitting', this._lang) });
-    try {
-      await production.reviewPattern(patternId, result, '');
-      wx.hideLoading();
-      wx.showToast({ title: doneMsg, icon: 'success' });
-      this.loadStyleDetail();
-    } catch (e) {
-      wx.hideLoading();
-      wx.showToast({ title: (e && (e.message || e.errMsg)) || i18n.t(NS + 'reviewSubmitFail', this._lang), icon: 'none' });
-    }
   },
 
   // ── D-181 对齐PC：入库在样衣仓库完成（带参直达样品，与 PC 跳 /warehouse/sample 同构）──

@@ -214,7 +214,8 @@
       "pages": [
         "index/index",
         "detail/index",
-        "stage-detail/index"
+        "stage-detail/index",
+        "review/index"
       ]
     },
     {

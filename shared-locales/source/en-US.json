@@ -4114,6 +4114,36 @@
       "chipScanRecords": "Scan records",
       "pageContext": "Related to this page",
       "needMoreInfo": "More info needed: "
+    },
+    "sampleReview": {
+      "navTitle": "Sample Review",
+      "styleLabel": "Style No.",
+      "nameLabel": "Style Name",
+      "conclusionLabel": "Review Conclusion",
+      "conclusionRequired": "Please select a conclusion",
+      "optPass": "Approved",
+      "optRework": "Rework",
+      "optReject": "Rejected",
+      "commentLabel": "Review Comment",
+      "commentPh": "Describe the issues found and suggestions",
+      "commentRequired": "A comment is required for rework or rejection",
+      "photoLabel": "Site Photos",
+      "photoHint": "Up to 5, from camera or album",
+      "selectedPrefix": "Selected photos (",
+      "selectedSuffix": "/5)",
+      "addPhoto": "Photo",
+      "maxImages": "Up to 5 images",
+      "permTitle": "Camera / album permission",
+      "permContent": "Camera or album permission is required to upload photos. Please allow it in settings.",
+      "goSettings": "Settings",
+      "submitBtn": "Submit Review",
+      "submitOk": "Review submitted",
+      "submitFail": "Submit failed, please retry",
+      "imageUploadFailed": "Image upload failed",
+      "missingStyleInfo": "Missing style info, cannot submit review",
+      "confirmTitle": "Confirm Review Submit",
+      "confirmConclPrefix": "Conclusion: ",
+      "confirmCommentPrefix": "\nComment: "
     }
   }
 }

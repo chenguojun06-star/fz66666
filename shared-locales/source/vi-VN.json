@@ -4114,6 +4114,36 @@
       "chipScanRecords": "Bản ghi quét",
       "pageContext": "Liên quan trang này",
       "needMoreInfo": "Cần thêm thông tin: "
+    },
+    "sampleReview": {
+      "navTitle": "Duyệt mẫu",
+      "styleLabel": "Mã hàng",
+      "nameLabel": "Tên mẫu",
+      "conclusionLabel": "Kết luận duyệt",
+      "conclusionRequired": "Vui lòng chọn kết luận",
+      "optPass": "Duyệt đạt",
+      "optRework": "Duyệt sửa",
+      "optReject": "Duyệt từ chối",
+      "commentLabel": "Nhận xét duyệt",
+      "commentPh": "Nhập ý kiến duyệt, gợi ý cải tiến...",
+      "commentRequired": "Cần nhận xét khi duyệt sửa hoặc từ chối",
+      "photoLabel": "Ảnh hiện trường",
+      "photoHint": "Tối đa 5 ảnh, chụp hoặc chọn từ thư viện",
+      "selectedPrefix": "Ảnh đã chọn (",
+      "selectedSuffix": "/5)",
+      "addPhoto": "Ảnh",
+      "maxImages": "Tối đa 5 hình ảnh",
+      "permTitle": "Quyền camera / thư viện ảnh",
+      "permContent": "Cần quyền camera hoặc thư viện ảnh để tải ảnh lên, vui lòng cho phép trong cài đặt.",
+      "goSettings": "Cài đặt",
+      "submitBtn": "Gửi duyệt",
+      "submitOk": "Đã gửi duyệt",
+      "submitFail": "Gửi duyệt thất bại, vui lòng thử lại",
+      "imageUploadFailed": "Tải ảnh thất bại",
+      "missingStyleInfo": "Thiếu thông tin mẫu, không thể gửi duyệt",
+      "confirmTitle": "Xác nhận gửi duyệt",
+      "confirmConclPrefix": "Kết luận: ",
+      "confirmCommentPrefix": "\nNhận xét: "
     }
   }
 }
