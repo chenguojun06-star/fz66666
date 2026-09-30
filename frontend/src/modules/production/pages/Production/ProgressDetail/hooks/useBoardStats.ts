@@ -53,7 +53,7 @@ const loadAllOrderScans = async (orderId: string): Promise<ScanRecord[]> => {
 
   while (page <= maxPages) {
     const res = await productionScanApi.listByOrderId(orderId, { page, pageSize });
-    const result = res as any;
+    const result = res as ApiResult<{ records?: ScanRecord[] }>;
     const records: ScanRecord[] = result?.code === 200 && Array.isArray(result?.data?.records)
       ? result.data.records
       : [];
@@ -100,7 +100,7 @@ export const ensureBoardStatsForOrder = async ({
   const isExpired = Date.now() - fetchTs >= BOARD_STATS_TTL_MS;
   if (existing === null && !isExpired) return;
   if (existing && !isExpired && nodes.every((n) => {
-    const name = String((n as any)?.name || '').trim();
+    const name = String(n?.name || '').trim();
     return !name || Object.prototype.hasOwnProperty.call(existing, name);
   })) {
     return;
@@ -119,15 +119,15 @@ export const ensureBoardStatsForOrder = async ({
   try {
     const records: ScanRecord[] = await loadAllOrderScans(oid);
     const valid = records
-      .filter((r) => String((r as any)?.scanResult || '').trim() === 'success')
-      .filter((r) => (Number((r as any)?.quantity) || 0) > 0)
-      .filter((r) => String((r as any)?.scanType || '').trim() !== 'orchestration');
+      .filter((r) => String(r?.scanResult || '').trim() === 'success')
+      .filter((r) => (Number(r?.quantity) || 0) > 0)
+      .filter((r) => String(r?.scanType || '').trim() !== 'orchestration');
     // 匹配扫码记录到节点：同时检查 progressStage（父节点）和 processName（子工序名）
     const recordMatchesNode = (node: ProgressNode, r: Record<string, unknown>) => {
-      const nName = String((node as any)?.name || '').trim();
+      const nName = String(node?.name || '').trim();
       const rStageName = getRecordStageName(r);
-      const rProcessName = String((r as any)?.processName || '').trim();
-      const nodeParent = String((node as any)?.progressStage || '').trim();
+      const rProcessName = String(r?.processName || '').trim();
+      const nodeParent = String(node?.progressStage || '').trim();
 
       if (nodeParent && nodeParent !== nName && rProcessName) {
         return rProcessName === nName;
@@ -149,8 +149,8 @@ export const ensureBoardStatsForOrder = async ({
     const hasScanByNode: Record<string, boolean> = {};
     const parentChildMap = new Map<string, string[]>();
     for (const n of nodes || []) {
-      const parent = String((n as any)?.progressStage || '').trim();
-      const childName = String((n as any)?.name || '').trim();
+      const parent = String(n?.progressStage || '').trim();
+      const childName = String(n?.name || '').trim();
       if (parent && childName && parent !== childName) {
         if (!parentChildMap.has(parent)) parentChildMap.set(parent, []);
         parentChildMap.get(parent)!.push(childName);
@@ -158,14 +158,14 @@ export const ensureBoardStatsForOrder = async ({
     }
     const childDoneByProcess = new Map<string, Map<string, number>>();
     for (const n of nodes || []) {
-      const nodeName = String((n as any)?.name || '').trim();
+      const nodeName = String(n?.name || '').trim();
       if (!nodeName) continue;
-      const nodeParent = String((n as any)?.progressStage || '').trim();
+      const nodeParent = String(n?.progressStage || '').trim();
       const isSubProcess = nodeParent && nodeParent !== nodeName;
       const matchingRecords = valid.filter((r) => recordMatchesNode(n as ProgressNode, r));
       const byProcess = new Map<string, typeof matchingRecords>();
       for (const r of matchingRecords) {
-        const procName = String((r as any)?.processName || '').trim() || '__self__';
+        const procName = String(r?.processName || '').trim() || '__self__';
         if (!byProcess.has(procName)) byProcess.set(procName, []);
         byProcess.get(procName)!.push(r);
       }
@@ -174,8 +174,8 @@ export const ensureBoardStatsForOrder = async ({
         const maxByBundle = new Map<string, number>();
         let procNonBundleSum = 0;
         for (const r of procRecords) {
-          const bundleId = String((r as any)?.cuttingBundleId || '').trim();
-          const qty = Number((r as any)?.quantity) || 0;
+          const bundleId = String(r?.cuttingBundleId || '').trim();
+          const qty = Number(r?.quantity) || 0;
           if (bundleId) {
             const prev = maxByBundle.get(bundleId) ?? 0;
             if (qty > prev) maxByBundle.set(bundleId, qty);
@@ -230,7 +230,7 @@ export const ensureBoardStatsForOrder = async ({
     const isProcureNodeName = (name: string) =>
       PROCUREMENT_NODE_NAMES.has(name)
       || /采购|物料|备料|辅料|面料/.test(name);
-    const hasProcureNode = (nodes || []).some((n) => isProcureNodeName(String((n as any)?.name || '').trim()));
+    const hasProcureNode = (nodes || []).some((n) => isProcureNodeName(String(n?.name || '').trim()));
     let procureArrived = 0;
     let procureArrivalTime = '';
     const orderNo = String((order as any)?.orderNo || '').trim();
@@ -252,7 +252,7 @@ export const ensureBoardStatsForOrder = async ({
     }
     // 将采购到货数写入 stats（扫码记录有数据优先，宽松匹配节点名）
     for (const n of nodes || []) {
-      const nodeName = String((n as any)?.name || '').trim();
+      const nodeName = String(n?.name || '').trim();
       if (!isProcureNodeName(nodeName)) continue;
       if (!hasScanByNode[nodeName] && procureArrived > 0) {
         stats[nodeName] = procureArrived;
@@ -270,14 +270,14 @@ export const ensureBoardStatsForOrder = async ({
     if (mergeBoardTimesForOrder) {
       const timeStats: Record<string, string> = {};
       for (const n of nodes || []) {
-        const nodeName = String((n as any)?.name || '').trim();
+        const nodeName = String(n?.name || '').trim();
         if (!nodeName) continue;
         const matchingRecords = valid.filter((r) => recordMatchesNode(n as ProgressNode, r));
         // 找到最大的 scanTime（即最后一次扫码时间 = 完成时间）
         //  Bug5修复：scanTime 可能为 null（旧数据），兜底读 createTime
         let maxTime = '';
         for (const r of matchingRecords) {
-          const t = String((r as any)?.scanTime || (r as any)?.createTime || '');
+          const t = String(r?.scanTime || r?.createTime || '');
           if (t && (!maxTime || t > maxTime)) maxTime = t;
         }
         // 采购节点时间：无扫码时用 actualArrivalDate（宽松匹配节点名）
@@ -302,23 +302,23 @@ export const ensureBoardStatsForOrder = async ({
       const pWorkerSets: Record<string, Set<string>> = {};
       const pWorkerNameSets: Record<string, Set<string>> = {};
       for (const r of valid) {
-        const pName = String((r as any)?.processName || '').trim();
+        const pName = String(r?.processName || '').trim();
         if (!pName) continue;
-        const pStage = String((r as any)?.progressStage || getRecordStageName(r)).trim();
-        pStats[pName] = (pStats[pName] || 0) + (Number((r as any)?.quantity) || 0);
+        const pStage = String(r?.progressStage || getRecordStageName(r)).trim();
+        pStats[pName] = (pStats[pName] || 0) + (Number(r?.quantity) || 0);
         if (pStage) {
           if (!pGroups[pStage]) pGroups[pStage] = [];
           if (!pGroups[pStage].includes(pName)) pGroups[pStage].push(pName);
         }
-        const t = String((r as any)?.scanTime || (r as any)?.createTime || '').trim();
+        const t = String(r?.scanTime || r?.createTime || '').trim();
         if (t && (!pTimes[pName] || t > pTimes[pName])) pTimes[pName] = t;
         // 统计操作人（distinct operatorId，为空时用 operatorName 兜底）
-        const opId = String((r as any)?.operatorId || (r as any)?.operatorName || '').trim();
+        const opId = String(r?.operatorId || r?.operatorName || '').trim();
         if (opId) {
           if (!pWorkerSets[pName]) pWorkerSets[pName] = new Set();
           pWorkerSets[pName].add(opId);
         }
-        const opName = String((r as any)?.operatorName || '').trim();
+        const opName = String(r?.operatorName || '').trim();
         if (opName) {
           if (!pWorkerNameSets[pName]) pWorkerNameSets[pName] = new Set();
           pWorkerNameSets[pName].add(opName);
