@@ -23,7 +23,7 @@ import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
-import com.fashion.supplychain.intelligence.service.IntelligenceReasonLibraryService;
+import com.fashion.supplychain.intelligence.helper.IntelligenceReasonLibraryHelper;
 import com.fashion.supplychain.production.helper.WorkerHintComposer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -75,7 +75,7 @@ public class StyleIntelligenceProfileOrchestrator {
     private TenantIntelligenceProfileViewOrchestrator tenantIntelligenceProfileViewOrchestrator;
 
     @Autowired
-    private IntelligenceReasonLibraryService intelligenceReasonLibraryService;
+    private IntelligenceReasonLibraryHelper intelligenceReasonLibraryService;
 
     @Autowired
     private StyleDifficultyOrchestrator styleDifficultyOrchestrator;

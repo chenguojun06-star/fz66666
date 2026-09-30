@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.service;
 
 import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse.TenantPreferenceProfile;
+import com.fashion.supplychain.intelligence.helper.IntelligenceReasonLibraryHelper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import java.math.BigDecimal;
@@ -18,7 +19,7 @@ import org.springframework.context.annotation.Lazy;
 public class TenantIntelligencePreferenceService {
 
     @Autowired
-    private IntelligenceReasonLibraryService intelligenceReasonLibraryService;
+    private IntelligenceReasonLibraryHelper intelligenceReasonLibraryService;
 
     public TenantPreferenceProfile learnProfile(List<ProductionOrder> orders, List<ScanRecord> scanRecords) {
         TenantPreferenceProfile profile = defaultProfile();

@@ -1,4 +1,4 @@
-package com.fashion.supplychain.intelligence.service;
+package com.fashion.supplychain.intelligence.helper;
 
 import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse.TenantPreferenceProfile;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -11,9 +11,21 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
 
+/**
+ * 智能分析「理由文案库」。
+ *
+ * <p>D-658：原 {@code IntelligenceReasonLibraryService}（位于 {@code intelligence.service} 包）。
+ * 它的 4 个方法（buildOrderRiskReason / buildFactoryRiskReason / buildScanAnomalyReason /
+ * buildProfitPressureReason）全部是<b>无状态纯函数</b>（输入参数 → 输出中文文案，无实例状态、
+ * 无依赖注入），本质是文案库而非业务 Service。原名导致
+ * {@code TenantIntelligencePreferenceService} 因注入它而被判「Service 依赖 Service」违规。
+ *
+ * <p>现更名为 {@code *Helper} 并移入 {@code intelligence.helper} 包（与 D-653 的命名修正一致）。
+ * <b>逻辑零改动</b>。后续可进一步静态化为纯工具类（参照 {@code PromptToolLabelMapper}）。
+ */
 @Service
 @Lazy
-public class IntelligenceReasonLibraryService {
+public class IntelligenceReasonLibraryHelper {
 
     public String buildOrderRiskReason(ProductionOrder order, TenantPreferenceProfile tenantProfile) {
         List<String> reasons = new ArrayList<>();
