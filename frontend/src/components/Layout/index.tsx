@@ -203,7 +203,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               {brandName}
               <span className="header-brand-welcome">欢迎您</span>
             </h1>
-            {tenantName && <span className="header-tenant-name">{tenantName}</span>}
+            {/* D-663c：工厂名已在右上角用户显示（工厂-岗位 姓名）里带出，这里不再重复展示 */}
             {recentPages.length ? (
               <div className="header-recents" role="tablist" aria-label={t('layout.recentPages', language)} ref={recentsContainerRef}>
                 {recentPages.map((p) => {
