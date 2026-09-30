@@ -6,7 +6,7 @@ import com.fashion.supplychain.intelligence.entity.AiConversationMemory;
 import com.fashion.supplychain.intelligence.entity.AiLongMemory;
 import com.fashion.supplychain.intelligence.mapper.AiConversationMemoryMapper;
 import com.fashion.supplychain.intelligence.mapper.AiLongMemoryMapper;
-import com.fashion.supplychain.intelligence.service.QdrantService;
+import com.fashion.supplychain.common.QdrantService;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import java.time.LocalDateTime;
 import java.util.List;

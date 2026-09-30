@@ -1,6 +1,6 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
-import com.fashion.supplychain.intelligence.service.QdrantService;
+import com.fashion.supplychain.common.QdrantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

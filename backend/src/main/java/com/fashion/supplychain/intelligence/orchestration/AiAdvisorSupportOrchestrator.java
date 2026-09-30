@@ -6,7 +6,7 @@ import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.intelligence.service.AiAgentMetricsService;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.intelligence.service.ProactiveInsightService;
-import com.fashion.supplychain.intelligence.service.QdrantService;
+import com.fashion.supplychain.common.QdrantService;
 import com.fashion.supplychain.intelligence.service.SkillCrystallizationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

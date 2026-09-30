@@ -8,7 +8,7 @@ import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
 import com.fashion.supplychain.intelligence.service.KnowledgeBaseService;
 import com.fashion.supplychain.intelligence.service.CohereRerankService;
-import com.fashion.supplychain.intelligence.service.QdrantService;
+import com.fashion.supplychain.common.QdrantService;
 import com.fashion.supplychain.intelligence.orchestration.KnowledgeGraphOrchestrator;
 import com.fashion.supplychain.intelligence.util.RrfFusion;
 import lombok.extern.slf4j.Slf4j;

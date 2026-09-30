@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse;
 import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceMemoryOrchestrator;
-import com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint;
+import com.fashion.supplychain.common.QdrantService.ScoredPoint;
 import com.fashion.supplychain.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +18,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import com.fashion.supplychain.common.QdrantService;
 
 /**
  * Agentic RAG — 自适应检索决策引擎

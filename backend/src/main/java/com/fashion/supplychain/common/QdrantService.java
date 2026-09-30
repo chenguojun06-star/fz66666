@@ -1,4 +1,4 @@
-package com.fashion.supplychain.intelligence.service;
+package com.fashion.supplychain.common;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

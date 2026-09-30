@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Lazy;
 import jakarta.annotation.PostConstruct;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import com.fashion.supplychain.common.QdrantService;
 
 @Component
 @Slf4j

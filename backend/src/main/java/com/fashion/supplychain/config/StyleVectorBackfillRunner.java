@@ -1,7 +1,7 @@
 package com.fashion.supplychain.config;
 
 import com.fashion.supplychain.intelligence.orchestration.StyleDifficultyOrchestrator;
-import com.fashion.supplychain.intelligence.service.QdrantService;
+import com.fashion.supplychain.common.QdrantService;
 import com.fashion.supplychain.service.RedisService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

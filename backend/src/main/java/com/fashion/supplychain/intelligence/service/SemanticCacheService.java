@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import com.fashion.supplychain.common.QdrantService;
 
 /**
  * LLM 语义缓存服务

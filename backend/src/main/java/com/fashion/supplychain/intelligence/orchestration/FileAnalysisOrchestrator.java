@@ -2,7 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.common.CosService;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.intelligence.service.QdrantService;
+import com.fashion.supplychain.common.QdrantService;
 import com.fashion.supplychain.intelligence.service.VisionAnalysisService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;

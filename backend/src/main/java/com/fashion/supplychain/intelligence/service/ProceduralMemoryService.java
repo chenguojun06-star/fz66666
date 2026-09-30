@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.List;
+import com.fashion.supplychain.common.QdrantService;
 
 /**
  * L4程序性记忆服务

@@ -3,7 +3,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.dto.AgentState;
 import com.fashion.supplychain.intelligence.orchestration.specialist.SpecialistAgent;
-import com.fashion.supplychain.intelligence.service.QdrantService;
+import com.fashion.supplychain.common.QdrantService;
 import com.fashion.supplychain.production.dto.response.OrderHealthScoreDTO;
 import com.fashion.supplychain.production.orchestration.OrderHealthScoreOrchestrator;
 import lombok.extern.slf4j.Slf4j;

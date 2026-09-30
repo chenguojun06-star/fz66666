@@ -64,7 +64,7 @@ public class PromptContextProvider {
     private IntelligenceFeedbackRecordMapper feedbackRecordMapper;
 
     @Autowired(required = false)
-    private com.fashion.supplychain.intelligence.service.QdrantService qdrantService;
+    private com.fashion.supplychain.common.QdrantService qdrantService;
 
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.service.EntityMemoryContextService entityMemoryContextService;
@@ -463,11 +463,11 @@ public class PromptContextProvider {
     private String retrieveSemanticBlock(Long tenantId, String userMessage) {
         if (userMessage == null || userMessage.isBlank() || qdrantService == null) return "";
 
-        List<com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint> semanticResults =
+        List<com.fashion.supplychain.common.QdrantService.ScoredPoint> semanticResults =
                 qdrantService.search(tenantId, userMessage, ragRecallTopK);
         if (semanticResults == null || semanticResults.isEmpty()) return "";
 
-        List<com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint> filtered =
+        List<com.fashion.supplychain.common.QdrantService.ScoredPoint> filtered =
                 semanticResults.stream().filter(sp -> sp.getScore() >= ragSimilarityThreshold)
                         .limit(3).toList();
         if (filtered.isEmpty()) return "";

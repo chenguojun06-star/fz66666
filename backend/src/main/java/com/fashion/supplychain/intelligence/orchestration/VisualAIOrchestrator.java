@@ -5,7 +5,7 @@ import com.fashion.supplychain.intelligence.dto.VisualAIRequest;
 import com.fashion.supplychain.intelligence.dto.VisualAIResponse;
 import com.fashion.supplychain.intelligence.entity.VisualAiLog;
 import com.fashion.supplychain.intelligence.mapper.VisualAiLogMapper;
-import com.fashion.supplychain.intelligence.service.QdrantService;
+import com.fashion.supplychain.common.QdrantService;
 import com.fashion.supplychain.intelligence.service.VisionAnalysisService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;

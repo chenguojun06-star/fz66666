@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.fashion.supplychain.common.QdrantService;
 
 /**
  * soul.py 多锚点身份重建服务（五层记忆模型第七章）
@@ -409,7 +410,7 @@ public class SoulAnchorRebuildService {
         }
         try {
             // 用通用关键词召回 L5 归档
-            List<com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint> archivals =
+            List<com.fashion.supplychain.common.QdrantService.ScoredPoint> archivals =
                     qdrantService.search(tenantId, "工厂历史会话反思总结", LLM_SAMPLE_LIMIT);
 
             if (archivals == null || archivals.isEmpty()) {
@@ -419,7 +420,7 @@ public class SoulAnchorRebuildService {
 
             // 拼装 prompt
             StringBuilder archiveBlock = new StringBuilder();
-            for (com.fashion.supplychain.intelligence.service.QdrantService.ScoredPoint sp : archivals) {
+            for (com.fashion.supplychain.common.QdrantService.ScoredPoint sp : archivals) {
                 String summary = sp.getPayload() != null ? sp.getPayload().get("summary") : null;
                 if (summary != null && !summary.isBlank()) {
                     archiveBlock.append("- ").append(summary).append("\n");

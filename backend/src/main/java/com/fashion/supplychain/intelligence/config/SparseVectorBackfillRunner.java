@@ -1,7 +1,7 @@
 package com.fashion.supplychain.intelligence.config;
 
 import com.fashion.supplychain.intelligence.service.ProceduralMemoryService;
-import com.fashion.supplychain.intelligence.service.QdrantService;
+import com.fashion.supplychain.common.QdrantService;
 import com.fashion.supplychain.intelligence.service.SchemaVectorManager;
 import com.fashion.supplychain.service.RedisService;
 import lombok.extern.slf4j.Slf4j;

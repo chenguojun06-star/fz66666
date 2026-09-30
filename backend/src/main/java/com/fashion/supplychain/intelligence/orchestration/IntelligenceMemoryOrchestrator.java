@@ -7,7 +7,7 @@ import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse;
 import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse.MemoryItem;
 import com.fashion.supplychain.intelligence.entity.IntelligenceMemory;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceMemoryMapper;
-import com.fashion.supplychain.intelligence.service.QdrantService;
+import com.fashion.supplychain.common.QdrantService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;

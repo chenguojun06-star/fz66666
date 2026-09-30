@@ -17,6 +17,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.fashion.supplychain.common.QdrantService;
 
 @Slf4j
 @Service

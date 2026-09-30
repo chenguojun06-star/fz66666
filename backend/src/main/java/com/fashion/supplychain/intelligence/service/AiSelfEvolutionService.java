@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.context.annotation.Lazy;
 
 import java.util.*;
+import com.fashion.supplychain.common.QdrantService;
 
 @Slf4j
 @Service

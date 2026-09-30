@@ -4,7 +4,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse.DifficultyAssessment;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
-import com.fashion.supplychain.intelligence.service.QdrantService;
+import com.fashion.supplychain.common.QdrantService;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -409,7 +409,7 @@ public class StyleDifficultyOrchestrator {
      *
      * <p>早期写入的向量 payload 里没有 tenant_id，导致多租户检索会串数据。
      * 本方法读取 {@code style_info} 的 id→tenantId 映射（LIMIT 5000），
-     * 交给 {@link com.fashion.supplychain.intelligence.service.QdrantService#backfillStyleImageTenantIds}
+     * 交给 {@link com.fashion.supplychain.common.QdrantService#backfillStyleImageTenantIds}
      * 回填到 Qdrant payload。底层是覆盖写，重复执行无脏数据。
      *
      * @return message / totalStyles / updated

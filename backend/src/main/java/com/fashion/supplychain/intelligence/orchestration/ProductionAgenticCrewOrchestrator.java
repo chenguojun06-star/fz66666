@@ -6,7 +6,7 @@ import com.fashion.supplychain.intelligence.dto.ExecutionResult;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.entity.ProductionCrewMemory;
 import com.fashion.supplychain.intelligence.mapper.ProductionCrewMemoryMapper;
-import com.fashion.supplychain.intelligence.service.QdrantService;
+import com.fashion.supplychain.common.QdrantService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.OrderHealthScoreOrchestrator;
 import com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator;

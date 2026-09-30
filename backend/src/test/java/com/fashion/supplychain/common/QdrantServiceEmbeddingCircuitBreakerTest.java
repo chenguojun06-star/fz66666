@@ -1,6 +1,6 @@
-package com.fashion.supplychain.intelligence.service;
+package com.fashion.supplychain.common;
 
-import com.fashion.supplychain.intelligence.service.QdrantService.EmbeddingFailureKind;
+import com.fashion.supplychain.common.QdrantService.EmbeddingFailureKind;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;

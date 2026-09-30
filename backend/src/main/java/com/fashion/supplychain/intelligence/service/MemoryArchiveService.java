@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import com.fashion.supplychain.common.QdrantService;
 
 /**
  * L5 归档记忆服务（五层记忆模型第五章）。
