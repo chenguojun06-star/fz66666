@@ -54,6 +54,17 @@ public class AutoRemediationExecutor {
     public AiPatrolAction handleRiskItem(Long tenantId, RiskItem risk) {
         if (risk == null || tenantId == null) return null;
 
+        // D-654 防刷量：同租户+同订单+同类型 24 小时内已自动执行过 → 不再重复建单。
+        // 原链路下自动执行不解决根本问题，下一轮巡检又建新单再执行，同一订单一天被
+        // 重复催单/告警数十次（生产实测最高 40 次/天）。
+        String cooldownTargetId = risk.getOrderId() != null ? risk.getOrderId() : "UNKNOWN";
+        if (patrolOrchestrator.existsAutoExecutedSince(tenantId, risk.getType().name(),
+                cooldownTargetId, LocalDateTime.now().minusHours(24))) {
+            log.info("[AutoRemediation] 24h冷却命中，跳过建单: tenant={}, type={}, order={}",
+                    tenantId, risk.getType(), cooldownTargetId);
+            return null;
+        }
+
         AutoRemediationPolicy.RemediationMode mode = policy.getMode(risk.getType().name());
         String suggestedAction = policy.getSuggestedAction(risk.getType().name(), risk);
 

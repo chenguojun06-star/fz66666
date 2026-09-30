@@ -804,6 +804,31 @@ public class AiPatrolJob {
                             actionTenantId, action.getId());
                     continue;
                 }
+                // D-654 防刷量：同租户+同目标+同问题类型 24 小时内已自动执行过 → 撤销本条重复工单。
+                // 只挡重复执行不改建单，保证"发现问题"的留痕仍在（撤销态可追溯）。
+                if (patrolOrchestrator.existsAutoExecutedSince(actionTenantId, action.getIssueType(),
+                        action.getTargetId(), java.time.LocalDateTime.now().minusHours(24))) {
+                    try {
+                        UserContext dupCtx = UserContext.get();
+                        if (dupCtx == null || !actionTenantId.equals(dupCtx.getTenantId())) {
+                            UserContext ctx = new UserContext();
+                            ctx.setTenantId(actionTenantId);
+                            ctx.setUsername("system");
+                            ctx.setUserId("system");
+                            UserContext.set(ctx);
+                        }
+                        patrolOrchestrator.cancel(action.getId(),
+                                "D-654冷却：24小时内已自动执行过同类整治，跳过重复工单", "system");
+                        log.info("[AiPatrolJob-AutoExec] 24h冷却命中，撤销重复工单 actionId={} type={} target={}",
+                                action.getId(), action.getIssueType(), action.getTargetId());
+                    } catch (Exception cancelEx) {
+                        log.warn("[AiPatrolJob-AutoExec] 撤销重复工单失败 actionId={}: {}",
+                                action.getId(), cancelEx.getMessage());
+                    } finally {
+                        UserContext.clear();
+                    }
+                    continue;
+                }
                 // P0 修复：执行每个动作前先设置该租户的上下文（markAutoRunning/markFailed/writePlatformMemory/baseRecord 均依赖）
                 // 防止 UserContext.userId() NPE 和 sourceUserId=null 孤儿数据
                 UserContext previous = UserContext.get();

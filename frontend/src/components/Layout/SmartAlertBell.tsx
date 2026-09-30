@@ -140,8 +140,8 @@ const SmartAlertBell: React.FC = () => {
               </div>
             )}
 
-            {/* ── AI 巡检简报 ── */}
-            {patrolSummary && (patrolSummary.autoExecutedToday > 0 || (patrolRows?.length ?? 0) > 0) && (
+            {/* ── AI 巡检简报（D-654：整卡可关，"今日不再提醒"持久到当天；原缺陷=×只在行级，行清空后标题卡永远关不掉） ── */}
+            {patrolSummary && (patrolSummary.autoExecutedToday > 0 || (patrolRows?.length ?? 0) > 0) && !dismissedIds.has('patrolBriefing') && (
               <div className="sap-section">
                 <div className="sap-section-title">
                   <RobotOutlined style={{ color: 'var(--color-accent-purple)' }} /> AI巡检简报
@@ -154,7 +154,16 @@ const SmartAlertBell: React.FC = () => {
                     <Badge count={patrolSummary.highRiskPending} size="small"
                       style={{ marginLeft: 8, background: 'var(--color-error)', boxShadow: 'none' }} />
                   )}
-                  <span className="u-ml-6 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>点 × 今日不再提醒</span>
+                  {(patrolRows?.length ?? 0) > 0 && (
+                    <span className="u-ml-6 u-fs-14" style={{ color: 'var(--color-text-tertiary)' }}>点 × 今日不再提醒</span>
+                  )}
+                  <button
+                    className="sap-event-dismiss-btn u-ml-6"
+                    onClick={(e) => dismissEvent('patrolBriefing', e)}
+                    title="今日不再显示AI巡检简报（明天自动恢复）"
+                  >
+                    <CloseOutlined style={{ fontSize: 9 }} />
+                  </button>
                 </div>
                 {(patrolRows ?? []).map((action) => (
                   <div key={action.dismissKey} className="sap-event-row" style={{ cursor: 'default' }}>

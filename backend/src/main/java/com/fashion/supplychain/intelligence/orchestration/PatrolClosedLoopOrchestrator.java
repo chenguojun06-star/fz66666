@@ -116,21 +116,37 @@ public class PatrolClosedLoopOrchestrator {
         Long tenantId = UserContext.tenantId();
         String effectiveRiskLevel = riskLevel == null ? "NEED_APPROVAL" : riskLevel;
 
-        // P0-2 修复：去重 — 24小时内同 tenantId + targetId + issueType 且状态为 PENDING/APPROVED/AUTO_RUNNING 的工单不重复创建
+        // P0-2 修复：去重 — 同 tenantId + targetId + issueType：
+        // ① 存在 PENDING 工单（不限时长）→ 不重复创建。D-654 修复：原条件把 24h 窗口与 PENDING
+        //    状态 AND 在一起，PENDING 工单超过 24h 后不再拦截，同一未解决问题每天被重复建单
+        //    （生产实测 1181 条待审批去重后仅 71 个真问题）。
+        // ② APPROVED/AUTO_RUNNING 属于在途 → 保留 24 小时窗口，过期放行重新检测。
         if (tenantId != null && targetId != null && !targetId.isBlank()
                 && issueType != null && !issueType.isBlank()) {
-            LambdaQueryWrapper<AiPatrolAction> dedup = new LambdaQueryWrapper<>();
-            dedup.eq(AiPatrolAction::getTenantId, tenantId)
+            LambdaQueryWrapper<AiPatrolAction> pendingDedup = new LambdaQueryWrapper<>();
+            pendingDedup.eq(AiPatrolAction::getTenantId, tenantId)
                  .eq(AiPatrolAction::getTargetId, targetId)
                  .eq(AiPatrolAction::getIssueType, issueType)
-                 .in(AiPatrolAction::getStatus, "PENDING", "APPROVED", "AUTO_RUNNING")
+                 .eq(AiPatrolAction::getStatus, "PENDING")
+                 .last("LIMIT 1");
+            AiPatrolAction pendingExisting = actionMapper.selectOne(pendingDedup);
+            if (pendingExisting != null) {
+                log.info("[PatrolClosedLoop] 工单去重命中(存在待处理工单)，跳过创建: tenant={}, issueType={}, targetId={}, existingId={}",
+                        tenantId, issueType, targetId, pendingExisting.getId());
+                return pendingExisting;
+            }
+            LambdaQueryWrapper<AiPatrolAction> inflightDedup = new LambdaQueryWrapper<>();
+            inflightDedup.eq(AiPatrolAction::getTenantId, tenantId)
+                 .eq(AiPatrolAction::getTargetId, targetId)
+                 .eq(AiPatrolAction::getIssueType, issueType)
+                 .in(AiPatrolAction::getStatus, "APPROVED", "AUTO_RUNNING")
                  .ge(AiPatrolAction::getCreateTime, LocalDateTime.now().minusHours(24))
                  .last("LIMIT 1");
-            AiPatrolAction existing = actionMapper.selectOne(dedup);
-            if (existing != null) {
-                log.info("[PatrolClosedLoop] 工单去重命中，跳过创建: tenant={}, issueType={}, targetId={}, existingId={}",
-                        tenantId, issueType, targetId, existing.getId());
-                return existing;
+            AiPatrolAction inflightExisting = actionMapper.selectOne(inflightDedup);
+            if (inflightExisting != null) {
+                log.info("[PatrolClosedLoop] 工单去重命中(在途工单24h内)，跳过创建: tenant={}, issueType={}, targetId={}, existingId={}",
+                        tenantId, issueType, targetId, inflightExisting.getId());
+                return inflightExisting;
             }
         }
 
@@ -566,5 +582,25 @@ public class PatrolClosedLoopOrchestrator {
         w.eq(AiPatrolAction::getStatus, "PENDING")
          .eq(AiPatrolAction::getRiskLevel, "NEED_APPROVAL");
         return Math.toIntExact(actionMapper.selectCount(w));
+    }
+
+    /**
+     * D-654 防刷量冷却：同租户 + 同问题类型 + 同目标 在 since 之后是否已有自动执行过的工单。
+     * 原链路下同一停滞订单每 30 分钟被重新建单+重新执行一次（生产实测同一订单一天被自动执行 40 次，
+     * 每次都给工厂重复发催单通知），建单侧与自动执行侧都以本方法做 24 小时冷却。
+     */
+    public boolean existsAutoExecutedSince(Long tenantId, String issueType, String targetId, LocalDateTime since) {
+        if (tenantId == null || issueType == null || issueType.isBlank()
+                || targetId == null || targetId.isBlank()) {
+            return false;
+        }
+        LambdaQueryWrapper<AiPatrolAction> w = new LambdaQueryWrapper<>();
+        w.eq(AiPatrolAction::getTenantId, tenantId)
+         .eq(AiPatrolAction::getIssueType, issueType)
+         .eq(AiPatrolAction::getTargetId, targetId)
+         .eq(AiPatrolAction::getStatus, "AUTO_EXECUTED")
+         .ge(AiPatrolAction::getExecutionTime, since)
+         .last("LIMIT 1");
+        return actionMapper.selectCount(w) > 0;
     }
 }
