@@ -60,12 +60,9 @@ const TemplateCenter: React.FC = () => {
   const [applyOpen, setApplyOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [syncPriceOpen, setSyncPriceOpen] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [activeRow, setActiveRow] = useState<TemplateLibrary | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [viewContent, setViewContent] = useState<string>('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [viewObj, setViewObj] = useState<unknown>(null);
+  const [activeRow] = useState<TemplateLibrary | null>(null);
+  const [viewContent] = useState<string>('');
+  const [viewObj] = useState<unknown>(null);
   const [cardTab, setCardTab] = usePersistentState<'list' | 'knowledge'>('template-center-card-tab', 'list');
 
   const [knowledgeKeyword, setKnowledgeKeyword] = useState('');

@@ -33,8 +33,7 @@ const MaterialDatabasePage: React.FC = () => {
   const { user } = useUser();
   const [dataList, setDataList] = useState<MaterialDatabase[]>([]);
   const [loading, setLoading] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const [smartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = isSmartFeatureEnabled('smart.production.precheck.enabled' as any);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [statusValue, setStatusValue] = useState('');

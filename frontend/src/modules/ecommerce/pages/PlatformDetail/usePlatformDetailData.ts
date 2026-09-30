@@ -76,10 +76,8 @@ export function usePlatformDetailData(platformCode: string | undefined): UsePlat
     setOrderPage(1);
   }
   const [_detail, setDetail] = useState<EcOrder | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [linkTarget, setLinkTarget] = useState<EcOrder | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [outboundTarget, setOutboundTarget] = useState<EcOrder | null>(null);
+  const [, setLinkTarget] = useState<EcOrder | null>(null);
+  const [, setOutboundTarget] = useState<EcOrder | null>(null);
   const [expressOrderTarget, setExpressOrderTarget] = useState<EcOrder | null>(null);
   const [expressModalOpen, setExpressModalOpen] = useState(false);
 

@@ -3,8 +3,6 @@ import { App } from 'antd';
 import api from '@/utils/api';
 import { useTablePagination } from '@/hooks';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import type { FinishedInventory } from '../finishedInventoryColumns';

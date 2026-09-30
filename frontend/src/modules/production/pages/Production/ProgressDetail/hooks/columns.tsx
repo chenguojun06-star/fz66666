@@ -42,17 +42,12 @@ interface UseProgressColumnsParams {
   openKanban: (order: ProductionOrder) => void;
 }
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
 export const useProgressColumns = ({
-  orderSortField,
-  orderSortOrder,
-  handleOrderSort,
   boardStatsByOrder,
   boardTimesByOrder,
   processWorkerNamesByOrder,
   progressNodesByStyleNo,
   openNodeDetail,
-  isSupervisorOrAbove,
   handleCloseOrder,
   setPrintingRecord,
   handlePrintLabel,
@@ -68,7 +63,6 @@ export const useProgressColumns = ({
   onFactoryShip,
   openKanban,
 }: UseProgressColumnsParams) => {
-  /* eslint-enable @typescript-eslint/no-unused-vars */
   const { getPredictHint, triggerPredict } = usePredictFinishHint(formatCompletionTime);
 
   const columns = useMemo<any[]>(() => [

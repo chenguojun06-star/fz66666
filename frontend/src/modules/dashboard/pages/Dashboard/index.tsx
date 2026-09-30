@@ -24,8 +24,6 @@ const DATA_COLLAPSE_KEY = 'dashboard_data_collapsed';
 
 const Dashboard: React.FC = () => {
   const {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    stats,
     recentActivities,
     hasError,
     errorMessage,
