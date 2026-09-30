@@ -15,11 +15,12 @@ interface Props {
 }
 
 /** D-354 竖排字段包装：文字在上、输入框在下，与正常下单（OrderCreateModal）同一套观感
- *  D-442：标签色从 rgba(0,0,0,0.65) 提到 primary 文字色 + 加粗——用户反馈"颜色不清晰、看着不舒服" */
-const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div className="u-d-flex u-fd-column u-gap-4" style={{ minWidth: 0 }}>
-    <span className="u-fs-13" style={{ color: 'var(--color-text-primary)', fontWeight: 500, lineHeight: '20px' }}>{label}</span>
-    {children}
+ *  D-442：标签色从 rgba(0,0,0,0.65) 提到 primary 文字色 + 加粗——用户反馈"颜色不清晰、看着不舒服"
+ *  D-659：字号 13→14、字重 500，与正常下单 InlineField 完全同款（用户要求两表单排版一致） */
+const Field: React.FC<{ label: React.ReactNode; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="u-d-flex u-fd-column" style={{ gap: 4, minWidth: 0 }}>
+    <div style={{ fontSize: 14, lineHeight: '20px', color: 'var(--color-text-primary)', fontWeight: 500 }}>{label}</div>
+    <div style={{ width: '100%' }}>{children}</div>
   </div>
 );
 
@@ -60,7 +61,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
       <Card style={{ marginBottom: 12 }}>
         <div className="u-d-flex u-gap-16 u-ai-start">
           <div className="u-fshrink-0">
-            <div className="u-mb-6 u-fs-14" style={{ color: 'rgba(0,0,0,0.65)' }}>款式图</div>
+            <div style={{ fontSize: 14, lineHeight: '20px', color: 'var(--color-text-primary)', fontWeight: 500 }} className="u-mb-6">款式图</div>
             <ImageUploadBox
               value={createTask.createStyleImageUrl}
               onChange={(url) => createTask.setCreateStyleImageUrl(url)}
@@ -105,7 +106,8 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                   />
                 </Field>
               </Col>
-              <Col xs={24} sm={6}>
+              {/* D-659 网格节奏对齐有资料下单（OrderCreateModal）：12+12 起手 → 8×3（日期/交期/急单）→ 8×3（生产方/客户/品类）→ 8×2（下单员/跟单员）→ 备注24 */}
+              <Col xs={24} sm={8}>
                 <Field label="下单日期">
                   <UnifiedDatePicker
                     value={createTask.createOrderDate ? dayjs(createTask.createOrderDate, 'YYYY-MM-DD') : null}
@@ -115,7 +117,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                   />
                 </Field>
               </Col>
-              <Col xs={24} sm={6}>
+              <Col xs={24} sm={8}>
                 <Field label="订单交期">
                   <UnifiedDatePicker
                     value={createTask.createDeliveryDate ? dayjs(createTask.createDeliveryDate, 'YYYY-MM-DD') : null}
@@ -125,15 +127,30 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                   />
                 </Field>
               </Col>
-              <Col xs={24} sm={12}>
+              <Col xs={24} sm={8}>
+                <Field label="急单">
+                  <Select
+                    value={createTask.createUrgencyLevel}
+                    onChange={(v) => createTask.setCreateUrgencyLevel(v)}
+                    style={{ width: '100%' }}
+                    options={[
+                      { label: '普通', value: 'normal' },
+                      { label: '急单', value: 'urgent' },
+                    ]}
+                  />
+                </Field>
+              </Col>
+              <Col xs={24} sm={8}>
+                {/* 与有资料下单 OrderFactorySelector 同构：生产方 Segmented + 联动选择框同栏堆叠 */}
                 <Field label="生产方">
                   <Segmented
+                    block
                     value={createTask.createFactoryMode}
                     options={[
                       { label: '内部工厂', value: 'INTERNAL' },
                       { label: '外发加工', value: 'EXTERNAL' },
                     ]}
-                    style={{ width: '100%' }}
+                    style={{ marginBottom: 6 }}
                     onChange={(value) => {
                       const nextMode = value as 'INTERNAL' | 'EXTERNAL';
                       createTask.setCreateFactoryMode(nextMode);
@@ -146,10 +163,6 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                       }
                     }}
                   />
-                </Field>
-              </Col>
-              <Col xs={24} sm={12}>
-                <Field label={createTask.createFactoryMode === 'INTERNAL' ? '生产组/车间' : '外发工厂'}>
                   <Select
                     value={createTask.createFactoryMode === 'INTERNAL'
                       ? (createTask.createOrgUnitId || undefined)
@@ -185,7 +198,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                   />
                 </Field>
               </Col>
-              <Col xs={24} sm={12}>
+              <Col xs={24} sm={8}>
                 <Field label="客户">
                   <CustomerSelect
                     value={createTask.createCustomerName}
@@ -195,7 +208,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                   />
                 </Field>
               </Col>
-              <Col xs={24} sm={12}>
+              <Col xs={24} sm={8}>
                 <Field label="品类">
                   <Select
                     value={createTask.createCategory || undefined}
@@ -209,20 +222,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                   />
                 </Field>
               </Col>
-              <Col xs={24} sm={6}>
-                <Field label="急单">
-                  <Select
-                    value={createTask.createUrgencyLevel}
-                    onChange={(v) => createTask.setCreateUrgencyLevel(v)}
-                    style={{ width: '100%' }}
-                    options={[
-                      { label: '普通', value: 'normal' },
-                      { label: '急单', value: 'urgent' },
-                    ]}
-                  />
-                </Field>
-              </Col>
-              <Col xs={24} sm={6}>
+              <Col xs={24} sm={8}>
                 <Field label="下单员">
                   <Select
                     value={createTask.createOrderPlacer || undefined}
@@ -236,7 +236,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
                   />
                 </Field>
               </Col>
-              <Col xs={24} sm={6}>
+              <Col xs={24} sm={8}>
                 <Field label="跟单员">
                   <Select
                     value={createTask.createMerchandiser || undefined}
