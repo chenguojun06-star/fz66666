@@ -8,7 +8,7 @@ import { formatMoney } from '@/utils/format';
 import type { CuttingBundle, ProductionOrder } from '@/types/production';
 import type { OrderLine } from '@/types/production';
 import OrderStatusTag from '@/components/common/OrderStatusTag';
-import type { FlowStage, OrderFlowResponse } from './useOrderFlowData';
+import type { FlowStage, OrderFlowResponse } from './orderFlowTypes';
 
 export const orderStatusTag = (status: any) => <OrderStatusTag status={status} />;
 

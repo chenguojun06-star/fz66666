@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '@/utils/api';
 import { useUser } from '@/utils/AuthContext';
-import type { CuttingBundle, CuttingTask, ProductionOrder, ProductWarehousing } from '@/types/production';
+import type { CuttingBundle, CuttingTask, ProductWarehousing } from '@/types/production';
 import { fetchProductionOrderDetail } from '@/utils/api/production.order';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -19,30 +19,10 @@ import {
   computeWarehousingUnqualified,
   computeCuttingSizeItems,
 } from './utils';
+import type { OrderFlowResponse } from './orderFlowTypes';
 
-export type FlowStage = {
-  processName: string;
-  status: 'not_started' | 'in_progress' | 'completed';
-  totalQuantity?: number;
-  startTime?: string;
-  startOperatorId?: string;
-  startOperatorName?: string;
-  completeTime?: string;
-  completeOperatorId?: string;
-  completeOperatorName?: string;
-  lastTime?: string;
-  lastOperatorId?: string;
-  lastOperatorName?: string;
-};
-
-export type OrderFlowResponse = {
-  order: ProductionOrder;
-  stages: FlowStage[];
-  warehousings?: ProductWarehousing[];
-  cuttingBundles?: CuttingBundle[];
-  cuttingTasks?: CuttingTask[];
-  materialPurchases?: any[];
-};
+/** 兼容旧引用路径：类型已移至 ./orderFlowTypes（避免 utils 循环依赖） */
+export type { FlowStage, OrderFlowResponse } from './orderFlowTypes';
 
 export { orderStatusTag };
 

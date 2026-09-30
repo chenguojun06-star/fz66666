@@ -6,7 +6,7 @@ import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { ProductWarehousing as WarehousingType } from '@/types/production';
 import { getUrgencyTag, getPlateTypeTag } from './helpers';
 import { analyzeQuality, renderQualityTooltip } from '../../utils/qualityIntelligence';
-import type { BuildColumnsParams } from './columns';
+import type { BuildColumnsParams } from './warehousingColumnsTypes';
 
 export function buildBaseColumns({ goToDetail, dataSource }: BuildColumnsParams) {
   return [

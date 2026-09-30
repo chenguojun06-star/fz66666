@@ -12,7 +12,7 @@ import { formatMaterialQuantityWithUnit } from '../utils';
 import { ORDER_BIZ_TYPE_MAP } from '@/constants/statusMaps';
 import { t } from '@/i18n';
 import { BIZ_TYPE_COLOR_MAP } from './MaterialTable.helpers';
-import type { UseMaterialColumnsParams } from './useMaterialColumns';
+import type { UseMaterialColumnsParams } from './materialColumnsTypes';
 
 /**
  * 基础列：图片/款号/订单号/生产方/下单数量/采购单号/物料类型/物料名称/物料编码/颜色/规格/克重/成分/供应商

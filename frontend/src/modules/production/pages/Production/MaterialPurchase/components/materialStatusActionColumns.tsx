@@ -11,7 +11,7 @@ import {
   resolveCompletedTime,
   resolveOperatorName,
 } from './MaterialTable.helpers';
-import type { UseMaterialColumnsParams } from './useMaterialColumns';
+import type { UseMaterialColumnsParams } from './materialColumnsTypes';
 
 // 库存状态配置（与 BOM 列表保持一致）
 const STOCK_STATUS_CONFIG: Record<string, { color: string; text: string }> = {

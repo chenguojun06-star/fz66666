@@ -5,7 +5,7 @@ import { ProductWarehousing as WarehousingType } from '@/types/production';
 import { message } from '@/utils/antdStatic';
 import api from '@/utils/api';
 import { printWarehousingQr } from './helpers';
-import type { BuildColumnsParams } from './columns';
+import type { BuildColumnsParams } from './warehousingColumnsTypes';
 
 export function buildActionColumns({ goToDetail, goToDetailPage, isOrderFrozen }: BuildColumnsParams) {
   return [

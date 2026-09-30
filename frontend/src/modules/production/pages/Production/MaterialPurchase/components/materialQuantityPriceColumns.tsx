@@ -4,7 +4,7 @@ import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 import { formatMoney } from '@/utils/format';
 import { formatMaterialQuantityWithUnit, formatReferenceKilograms, subtractMaterialQuantity } from '../utils';
 import { RECONCILIATION_STATUS_MAP } from './MaterialTable.helpers';
-import type { UseMaterialColumnsParams } from './useMaterialColumns';
+import type { UseMaterialColumnsParams } from './materialColumnsTypes';
 
 /**
  * 数量与价格列：采购数量/参考公斤数/到货数量/待到数量/单价/对账状态/结算金额

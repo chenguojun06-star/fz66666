@@ -3,7 +3,7 @@ import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import { StyleBom } from '@/types/style';
 import api from '@/utils/api';
 import { sortBomRows as sortBomRowsHelper } from '../styleBom/helpers';
-import type { BomRecognizedItem } from './useStyleBomTabData';
+import type { BomRecognizedItem } from './bomTypes';
 
 export interface UseBomCompletionHandlersOptions {
   form: FormInstance;

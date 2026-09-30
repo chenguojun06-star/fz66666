@@ -4,7 +4,7 @@ import CuttingSheetPrintModal from '@/components/common/CuttingSheetPrintModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import ProcessDetailModal from '@/components/production/ProcessDetailModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
-import { CuttingCreateTaskModal } from './index';
+import CuttingCreateTaskModal from './CuttingCreateTaskModal';
 import type { CuttingTask } from '@/types/production';
 
 interface CuttingModalsProps {

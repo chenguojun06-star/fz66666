@@ -1,36 +1,12 @@
 import type { ColumnsType } from 'antd/es/table';
-import type { FormInstance } from 'antd';
-import type { NavigateFunction } from 'react-router-dom';
-import type { Dispatch, SetStateAction } from 'react';
 import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 import { buildBasicColumns } from './materialBasicColumns';
+import type { UseMaterialColumnsParams } from './materialColumnsTypes';
 import { buildQuantityPriceColumns } from './materialQuantityPriceColumns';
 import { buildStatusActionColumns } from './materialStatusActionColumns';
 
-export interface UseMaterialColumnsParams {
-  dataSource: MaterialPurchaseType[];
-  navigate: NavigateFunction;
-  onOpenDetail?: (styleNo: string, orderNo?: string) => void;
-  sortField: string;
-  sortOrder: 'asc' | 'desc';
-  onSort: (field: string, order: 'asc' | 'desc') => void;
-  purchaseSortField: string;
-  purchaseSortOrder: 'asc' | 'desc';
-  onPurchaseSort: (field: string, order: 'asc' | 'desc') => void;
-  isOrderFrozenForRecord: (record?: Record<string, unknown> | null) => boolean;
-  onView: (record: MaterialPurchaseType) => void;
-  onEdit: (record: MaterialPurchaseType) => void;
-  onRemark: (record: MaterialPurchaseType) => void;
-  onDelete?: (record: MaterialPurchaseType) => void;
-  onConfirmReturn?: (record: MaterialPurchaseType) => void;
-  onReturnReset?: (record: MaterialPurchaseType) => void;
-  onQualityIssue?: (record: MaterialPurchaseType) => void;
-  isSupervisorOrAbove?: boolean;
-  arrivalForm: FormInstance;
-  setArrivalTarget: Dispatch<SetStateAction<MaterialPurchaseType | null>>;
-  setCancelTarget: Dispatch<SetStateAction<MaterialPurchaseType | null>>;
-  onApplyPickup?: (record: MaterialPurchaseType) => void;
-}
+/** 兼容旧引用路径：类型已移至 ./materialColumnsTypes（避免子文件反向依赖本文件） */
+export type { UseMaterialColumnsParams } from './materialColumnsTypes';
 
 /**
  * 采购物料表格列定义 Hook。

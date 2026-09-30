@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import type { FormInstance } from 'antd';
 import { toMoney } from '@/utils/format';
-import type { FactorySummaryRow, FactorySummaryStats, FactorySummaryTotals } from './useFactorySummaryData';
+import type { FactorySummaryRow, FactorySummaryStats, FactorySummaryTotals } from './factorySummaryTypes';
 
 export function computeStats(
   data: FactorySummaryRow[],

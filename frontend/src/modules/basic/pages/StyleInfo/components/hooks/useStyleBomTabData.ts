@@ -12,6 +12,7 @@ import useStyleBomMaterials, { type StyleBomMaterialTab } from './useStyleBomMat
 import useStyleBomMutations from './useStyleBomMutations';
 import useBomMaterialFill from './useBomMaterialFill';
 import useBomCompletionHandlers from './useBomCompletionHandlers';
+import type { BomRecognizedItem } from './bomTypes';
 import {
   buildSizeSpecMap as buildSizeSpecMapHelper,
   buildSizeUsageMap as buildSizeUsageMapHelper,
@@ -36,15 +37,8 @@ export interface UseStyleBomTabDataOptions {
   };
 }
 
-export interface BomRecognizedItem {
-  id: string;
-  materialName: string;
-  materialCode?: string;
-  specification?: string;
-  usageAmount?: number;
-  partName?: string;
-  subPartName?: string;
-}
+/** 兼容旧引用路径：类型已移至 ./bomTypes（避免 hooks 循环依赖） */
+export type { BomRecognizedItem } from './bomTypes';
 
 export interface UseStyleBomTabDataResult {
   // 派生

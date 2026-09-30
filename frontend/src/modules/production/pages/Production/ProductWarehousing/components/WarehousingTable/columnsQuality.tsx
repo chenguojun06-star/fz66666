@@ -1,7 +1,7 @@
 import { Tag } from 'antd';
 import { formatDateTime } from '@/utils/datetime';
 import { getQualityStatusConfig } from '../../utils';
-import type { BuildColumnsParams } from './columns';
+import type { BuildColumnsParams } from './warehousingColumnsTypes';
 
 export function buildQualityColumns(_params: BuildColumnsParams) {
   return [
