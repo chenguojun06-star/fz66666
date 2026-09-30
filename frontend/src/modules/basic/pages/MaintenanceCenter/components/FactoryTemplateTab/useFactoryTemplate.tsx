@@ -102,8 +102,7 @@ export function useFactoryTemplate() {
     setViewOpen(true);
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleDelete = (row: TemplateLibrary) => {
+  const handleDelete = useCallback((row: TemplateLibrary) => {
     modal.confirm({
       title: '确认删除',
       content: `确定要删除模板「${row.templateName || row.templateKey}」吗？`,
@@ -119,10 +118,9 @@ export function useFactoryTemplate() {
         }
       },
     });
-  };
+  }, [modal, fetchList]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleLock = async (row: TemplateLibrary) => {
+  const handleLock = useCallback(async (row: TemplateLibrary) => {
     try {
       await api.post(`/template-library/${row.id}/lock`);
       message.success('锁定成功');
@@ -130,10 +128,9 @@ export function useFactoryTemplate() {
     } catch {
       message.error('锁定失败');
     }
-  };
+  }, [fetchList]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleRollback = async (row: TemplateLibrary) => {
+  const handleRollback = useCallback(async (row: TemplateLibrary) => {
     try {
       await api.post(`/template-library/${row.id}/rollback`, { reason: '工厂模板退回编辑' });
       message.success('退回成功');
@@ -141,7 +138,7 @@ export function useFactoryTemplate() {
     } catch {
       message.error('退回失败');
     }
-  };
+  }, [fetchList]);
 
   const columns = useMemo(() => [
     {

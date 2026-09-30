@@ -28,7 +28,10 @@ export function useRoleListData() {
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
   const showSystemGuard = useMemo(() => isSmartFeatureEnabled('smart.system.guard.enabled'), []);
 
-  const reportSmartError = (title: string, reason?: string, code?: string) => { if (!showSmartErrorNotice) return; setSmartError({ title, reason, code }); };
+  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
+    if (!showSmartErrorNotice) return;
+    setSmartError({ title, reason, code });
+  }, [showSmartErrorNotice]);
 
   const [permTree, setPermTree] = useState<PermissionNode[]>([]);
   const [checkedPermIds, setCheckedPermIds] = useState<Set<number>>(new Set());
@@ -74,8 +77,7 @@ export function useRoleListData() {
       reportSmartError('角色列表加载失败', getErrorMessage(error, '网络异常'), 'SYSTEM_ROLE_LIST_EXCEPTION');
       appMessage.error(getErrorMessage(error, '获取角色列表失败'));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appMessage, showSmartErrorNotice]);
+  }, [appMessage, showSmartErrorNotice, reportSmartError]);
 
   useEffect(() => { fetchRoles(); }, [fetchRoles]);
 
@@ -121,8 +123,7 @@ export function useRoleListData() {
       fetchRoleMemberCounts();
       fetchRolePermCounts(roleList);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roleList]);
+  }, [roleList, fetchRoleMemberCounts, fetchRolePermCounts]);
 
   /** 拉取当前岗位关联人员预览（前 5 条） */
   const fetchRoleMembersPreview = useCallback(async (roleId: string) => {
@@ -189,13 +190,11 @@ export function useRoleListData() {
       setDebouncedRoleId(null);
       setPermTree([]); setCheckedPermIds(new Set());
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchRoleMembersPreview]);
 
   useEffect(() => {
     if (debouncedRoleId) loadPermTreeAndChecked(debouncedRoleId);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedRoleId]);
+  }, [debouncedRoleId, loadPermTreeAndChecked]);
 
   const permCodeMap = useMemo(() => buildPermCodeMap(permTree), [permTree]);
 
@@ -322,7 +321,7 @@ export function useRoleListData() {
     });
   };
 
-  const handleOpenEmployeeList = async () => {
+  const handleOpenEmployeeList = useCallback(async () => {
     if (!selectedRole?.id) return;
     setEmployeeModalOpen(true);
     setEmployeeLoading(true);
@@ -333,7 +332,7 @@ export function useRoleListData() {
       else setEmployeeList([]);
     } catch { setEmployeeList([]); }
     finally { setEmployeeLoading(false); }
-  };
+  }, [selectedRole]);
 
   const handleRemoveEmployeeFromRole = useCallback(async (userId: string, userName: string) => {
     modal.confirm({
@@ -350,8 +349,7 @@ export function useRoleListData() {
         } catch { appMessage.error('移除失败'); }
       },
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRole, modal, appMessage]);
+  }, [selectedRole, modal, appMessage, handleOpenEmployeeList]);
 
   return {
     form,
