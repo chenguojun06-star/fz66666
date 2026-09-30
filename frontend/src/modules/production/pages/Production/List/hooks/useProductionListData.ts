@@ -104,13 +104,12 @@ export function useProductionListData() {
     clearFocus: () => orderFocusRef.current?.clearSmartFocus(),
   });
 
-  const reportSmartError = (title: string, reason?: string, code?: string) => {
+  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
     setSmartError({ title, reason, code, actionText: '刷新重试' });
-  };
+  }, [showSmartErrorNotice]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const fetchProductionList = async () => {
+  const fetchProductionList = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get<PaginatedResponse<ProductionOrder>>('/production/order/list', { params: queryParams });
@@ -133,7 +132,7 @@ export function useProductionListData() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [queryParams, showSmartErrorNotice, reportSmartError, clearAllBoardCache, message]);
 
   useEffect(() => {
     if (!getDynamicParentMapping()) {
@@ -144,15 +143,13 @@ export function useProductionListData() {
     }
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { setSelectedRowKeys([]); setSelectedRows([]); fetchProductionList(); }, [queryParams]);
+  useEffect(() => { setSelectedRowKeys([]); setSelectedRows([]); fetchProductionList(); }, [queryParams, fetchProductionList]);
 
   useEffect(() => {
     const onVisibility = () => { if (document.visibilityState === 'visible') fetchProductionList(); };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchProductionList]);
 
   useEffect(() => {
     if (!productionList.length) return;
