@@ -106,6 +106,7 @@ const CustomerSelect: React.FC<CustomerSelectProps> = ({
     enableQuickManage && !disabled && !externalSuffix ? (
       <Tooltip title="维护客户（新增 / 编辑 / 联系人 / 地址等）">
         <SettingOutlined
+          onMouseDownCapture={(e) => { e.stopPropagation(); }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();

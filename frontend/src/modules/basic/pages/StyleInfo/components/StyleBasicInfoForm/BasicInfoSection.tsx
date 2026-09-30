@@ -30,6 +30,7 @@ const MaintainGear: React.FC<{ dictType: string; fieldName: string; disabled?: b
     <>
       <Tooltip title={`维护${fieldName}选项（新增 / 删除 / 改名）`}>
         <SettingOutlined
+          onMouseDownCapture={(e) => { e.stopPropagation(); }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();

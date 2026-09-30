@@ -6,7 +6,6 @@ import api from '@/utils/api';
 import factoryApi from '@/services/system/factoryApi';
 import { customerApi } from '@/services/crm/customerApi';
 import { notifyDataUpdated, subscribeDataUpdated } from '@/utils/dataEvents';
-import CircleIconButton from '@/components/common/CircleIconButton';
 import StandardModal from './StandardModal';
 
 export type QuickManageMode = 'dict' | 'customer' | 'supplier';
@@ -388,7 +387,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
             <Tooltip title="刷新列表">
               <Button size="small" icon={<SyncOutlined />} onClick={loadList} loading={loading} />
             </Tooltip>
-            <CircleIconButton size={24} type="add" title={`新增${meta.defaultTitle}`} onClick={startCreate} />
+            <Button size="small" type="primary" onClick={startCreate}>新增</Button>
           </div>
           <div className="u-mb-8 u-fs-12" style={{ color: 'var(--color-text-tertiary)' }}>
             共 <Tag color="blue" style={{ marginInlineEnd: 0 }}>{rows.length}</Tag> {meta.unit}，点击左侧条目在右侧编辑
@@ -501,7 +500,7 @@ const QuickManageModal: React.FC<QuickManageModalProps> = ({ open, mode, onClose
                   cancelText="取消"
                   onConfirm={handleDelete}
                 >
-                  <CircleIconButton size={24} type="remove" title="删除此项" />
+                  <Button size="small" danger>删除</Button>
                 </Popconfirm>
               </div>
               <div style={FIELD_ROW_STYLE}>
