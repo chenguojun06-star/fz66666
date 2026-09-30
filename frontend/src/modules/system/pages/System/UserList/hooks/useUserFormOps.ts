@@ -1,3 +1,7 @@
+/** antd 表单校验失败对象守卫（替代 error as any） */
+const isValidateError = (e: unknown): e is { errorFields: Array<{ errors: string[] }> } =>
+  typeof e === 'object' && e !== null && Array.isArray((e as { errorFields?: unknown }).errorFields);
+
 import { useEffect, useRef, useState } from 'react';
 import { Form } from 'antd';
 import dayjs from 'dayjs';
@@ -6,6 +10,7 @@ import api from '@/utils/api';
 import tenantService from '@/services/tenantService';
 import organizationApi from '@/services/system/organizationApi';
 import type { useModal } from '@/hooks';
+import type { MessageInstance } from 'antd/es/message/interface';
 
 interface UseUserFormOpsParams {
   user: any;
@@ -13,7 +18,7 @@ interface UseUserFormOpsParams {
   form: ReturnType<typeof Form.useForm>[0];
   userModal: ReturnType<typeof useModal<UserType>>;
   modal: any;
-  message: any;
+  message: MessageInstance;
   roleOptions: Role[];
   roleOptionsLoading: boolean;
   fetchRoleOptions: () => Promise<void>;
@@ -199,8 +204,8 @@ export function useUserFormOps({
 
       await doSubmit(values);
     } catch (error) {
-      if ((error as any).errorFields) {
-        const firstError = (error as any).errorFields[0];
+      if (isValidateError(error)) {
+        const firstError = error.errorFields[0];
         message.error(firstError.errors[0] || '表单验证失败');
       } else { message.error((error as Error).message || '保存失败'); }
     }
