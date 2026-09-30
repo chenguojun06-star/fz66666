@@ -177,7 +177,6 @@ function _downloadWithAuth(url, onSuccess, onFail) {
 Page({
   data: {
 
-    reviewStatusOptions: [i18n.t('common.pass', this._lang), i18n.t(NS + 'needModify', this._lang), i18n.t(NS + 'failWord', this._lang)],
     stageKey: '',
     styleId: '',
     patternId: '',
@@ -1672,72 +1671,22 @@ Page({
   },
 
   /* ============ 设计稿交互 ============ */
-  /** 提交审核 —— 展开页面内审核表单 */
+  /** 提交审核 —— 跳统一「样衣审核」页（结论 + 评语 + 现场照片）
+   *  D-666：原来在页面内展开内联表单，且把 reviewImages 写死成空数组 → 照片传不了；
+   *  现改为跳 pages/sample-development/review，与样衣详情页同一入口、同一条端点
+   *  （POST /style/info/{styleId}/sample-review）。 */
   onSubmitReview() {
-    this.setData({
-      showReviewForm: true,
-      reviewFormStatus: 'PASS',
-      reviewFormComment: '',
-    });
-  },
-
-  /** 取消审核表单 */
-  onCancelReviewForm() {
-    this.setData({ showReviewForm: false });
-  },
-
-  /** 审核结论选择变更 */
-  onReviewStatusChange(e) {
-    var val = e.detail.value;
-    var options = ['PASS', 'REWORK', 'REJECT'];
-    this.setData({ reviewFormStatus: options[val] || 'PASS' });
-  },
-
-  /** 审核评语输入 */
-  onReviewCommentInput(e) {
-    this.setData({ reviewFormComment: e.detail.value });
-  },
-
-  /** 确认提交审核 —— 调用后端 sample-review API */
-  onConfirmSubmitReview() {
-    var that = this;
     var styleId = this.data.styleId;
-    var status = this.data.reviewFormStatus;
-    var comment = (this.data.reviewFormComment || '').trim();
-
     if (!styleId) {
       wx.showToast({ title: i18n.t(NS + 'missingStyleInfo', this._lang), icon: 'none' });
       return;
     }
-
-    var statusLabels = { PASS: i18n.t('common.pass', this._lang), REWORK: i18n.t(NS + 'needModify', this._lang), REJECT: i18n.t(NS + 'failWord', this._lang) };
-    wx.showModal({
-      title: i18n.t(NS + 'reviewSubmitTitle', this._lang),
-      content: i18n.t(NS + 'reviewConclPrefix', this._lang) + statusLabels[status] + (comment ? i18n.t(NS + 'reviewCommentIn', this._lang) + comment : ''),
-      confirmText: i18n.t(NS + 'confirmComplete', this._lang),
-      confirmColor: status === 'PASS' ? '#1677ff' : (status === 'REWORK' ? '#faad14' : '#ff4d4f'),
-      success: function (res) {
-        if (res.confirm) {
-          wx.showLoading({ title: i18n.t('common.submitting', this._lang), mask: true });
-          styleApi.saveSampleReview(styleId, {
-            reviewStatus: status,
-            reviewComment: comment,
-            reviewImages: [],
-          })
-            .then(function () {
-              wx.hideLoading();
-              wx.showToast({ title: i18n.t(NS + 'reviewSubmitOk', this._lang), icon: 'success' });
-              that.setData({ showReviewForm: false });
-              // 刷新生产制单数据
-              that.loadProduction();
-            })
-            .catch(function (err) {
-              wx.hideLoading();
-              var msg = (err && err.message) || i18n.t(NS + 'reviewSubmitFail', this._lang);
-              wx.showToast({ title: msg, icon: 'none' });
-            });
-        }
-      },
+    var info = this.data.styleInfo || {};
+    wx.navigateTo({
+      url: '/pages/sample-development/review/index'
+        + '?styleId=' + encodeURIComponent(styleId)
+        + '&styleNo=' + encodeURIComponent(info.styleNo || info.styleCode || '')
+        + '&styleName=' + encodeURIComponent(info.styleName || info.name || ''),
     });
   },
 

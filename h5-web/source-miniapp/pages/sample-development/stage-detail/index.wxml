@@ -532,51 +532,11 @@
 
   </block>
 
-  <!-- ══ ④ 审核表单（页面内展开，非弹窗） ══ -->
-  <view wx:if="{{showReviewForm}}" class="review-form-card">
-    <view class="rf-header">
-      <text class="rf-title">{{t.sampleReviewTitle}}</text>
-      <view class="rf-close" bindtap="onCancelReviewForm">
-        <view class="line-icon line-icon--sm icon-multiply-sm"></view>
-      </view>
-    </view>
-    <view class="rf-body">
-      <view class="rf-row">
-        <text class="rf-label">{{t.reviewConclusionWord}}</text>
-        <view class="rf-picker" bindtap="openPicker" data-handler="onReviewStatusChange" data-names="reviewStatusOptions">
-          <text class="rf-picker-text {{reviewFormStatus === 'PASS' ? 'rf-pass' : reviewFormStatus === 'REWORK' ? 'rf-rework' : 'rf-reject'}}">
-            {{reviewFormStatus === 'PASS' ? t.completedLabel : reviewFormStatus === 'REWORK' ? t.needModifyW : t.failWord}}
-          </text>
-          <view class="line-icon line-icon--sm icon-arrow-right-sm"></view>
-        </view>
-      </view>
-      <view class="rf-row">
-        <text class="rf-label">{{t.reviewComment}}</text>
-        <textarea
-          class="rf-textarea"
-          placeholder="{{t.reviewCommentPh}}"
-          value="{{reviewFormComment}}"
-          bindinput="onReviewCommentInput"
-          maxlength="500"
-          auto-height
-        />
-      </view>
-    </view>
-    <view class="rf-actions">
-      <view class="rf-btn rf-btn-secondary" bindtap="onCancelReviewForm">
-        <text>{{t.cancel}}</text>
-      </view>
-      <view class="rf-btn rf-btn-primary" bindtap="onConfirmSubmitReview">
-        <text>{{t.confirmSubmit}}</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- ══ ⑤ 底部固定操作栏 ══ -->
-  <view wx:if="{{!loading && !showReviewForm}}" class="bottom-bar">
+  <!-- ══ ④ 底部固定操作栏 ══ -->
+  <view wx:if="{{!loading}}" class="bottom-bar">
     <view class="bottom-bar-inner">
       <view class="bb-btn bb-btn-primary" bindtap="onSubmitReview">
-        <text class="bb-btn-text">{{t.markComplete}}</text>
+        <text class="bb-btn-text">{{t.sampleReviewTitle}}</text>
       </view>
     </view>
   </view>
