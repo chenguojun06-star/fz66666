@@ -6,6 +6,7 @@ export interface ProductionOrder extends Record<string, unknown> {
   styleId: string;
   skc?: string;
   styleNo: string;
+  skuAutoGenerate?: boolean;
   styleName: string;
   /** 关联电商单号（出库后由后端批量填充，未关联时为空） */
   ecOrderNo?: string;

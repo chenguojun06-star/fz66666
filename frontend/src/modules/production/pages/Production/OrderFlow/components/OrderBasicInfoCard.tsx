@@ -10,14 +10,15 @@ import { getPlatformTag } from '@/utils/platform';
 import { orderStatusTag } from '../useOrderFlowData';
 import InlineEditableField, { type EditableField } from './InlineEditableField';
 import ColorSizeMatrixEditor from './ColorSizeMatrixEditor';
+import type { OrderLine, ProductionOrder } from '@/types/production';
 
 interface Props {
   loading: boolean;
-  order: any;
+  order: ProductionOrder | null | undefined;
   orderNoForImage: string;
   coverUrl: string | null;
   editing: boolean;
-  orderLines: any[];
+  orderLines: OrderLine[];
   colorSizeMatrixModel: OrderColorSizeMatrixModel;
   skuEditMap: Record<string, string>;
   setSkuEditMap: React.Dispatch<React.SetStateAction<Record<string, string>>>;
@@ -68,7 +69,7 @@ const OrderBasicInfoCard: React.FC<Props> = ({
         <div className="order-flow-detail-head">
           <div className="order-flow-detail-head__media">
             <OrderImageManager orderNo={orderNoForImage} editable={editing} coverUrl={coverUrl}
-              styleId={(order as any)?.styleId} styleNo={(order as any)?.styleNo} imageHeight={150} />
+              styleId={order?.styleId} styleNo={order?.styleNo} imageHeight={150} />
           </div>
 
           <div className="order-flow-detail-head__info">
@@ -81,34 +82,34 @@ const OrderBasicInfoCard: React.FC<Props> = ({
             >
               <Descriptions.Item label="订单号">
                 <span className="u-fw-600">
-                  {(order as any)?.orderNo || '-'}
-                  {(order as any)?.ecPlatform && (() => {
-                    const t = getPlatformTag((order as any).ecPlatform);
+                  {order?.orderNo || '-'}
+                  {order?.ecPlatform && (() => {
+                    const t = getPlatformTag(order.ecPlatform);
                     return <Tag color={t.color} style={{ marginLeft: 8 }}>{t.label}</Tag>;
                   })()}
                 </span>
               </Descriptions.Item>
               <Descriptions.Item label="款号">
                 <InlineEditableField
-                  label="款号" value={(order as any)?.styleNo || ''} editable={editing}
+                  label="款号" value={order?.styleNo || ''} editable={editing}
                   fieldKey="styleNo" onSave={handleFieldSave} saving={savingField === 'styleNo'}
                 />
               </Descriptions.Item>
               <Descriptions.Item label="SKC">
                 <InlineEditableField
-                  label="SKC" value={(order as any)?.skc || ''} editable={editing}
+                  label="SKC" value={order?.skc || ''} editable={editing}
                   fieldKey="skc" onSave={handleFieldSave} saving={savingField === 'skc'}
                 />
               </Descriptions.Item>
               <Descriptions.Item label="款名">
                 <InlineEditableField
-                  label="款名" value={(order as any)?.styleName || ''} editable={editing}
+                  label="款名" value={order?.styleName || ''} editable={editing}
                   fieldKey="styleName" onSave={handleFieldSave} saving={savingField === 'styleName'}
                 />
               </Descriptions.Item>
-              <Descriptions.Item label="加工厂">{String((order as any)?.factoryName || '-').trim()}</Descriptions.Item>
-              <Descriptions.Item label="状态">{orderStatusTag((order as any)?.status)}</Descriptions.Item>
-              <Descriptions.Item label="当前环节">{String((order as any)?.currentProcessName || '-').trim()}</Descriptions.Item>
+              <Descriptions.Item label="加工厂">{String(order?.factoryName || '-').trim()}</Descriptions.Item>
+              <Descriptions.Item label="状态">{orderStatusTag(order?.status)}</Descriptions.Item>
+              <Descriptions.Item label="当前环节">{String(order?.currentProcessName || '-').trim()}</Descriptions.Item>
             </Descriptions>
           </div>
         </div>
@@ -122,7 +123,7 @@ const OrderBasicInfoCard: React.FC<Props> = ({
             <Tooltip title="开启后，裁剪/样衣创建时系统自动生成 商品编码- 前缀；关闭后只走颜色尺码，由你掌控 商品编码">
               <Switch
                 size="small"
-                checked={Boolean((order as any)?.skuAutoGenerate)}
+                checked={Boolean(order?.skuAutoGenerate)}
                 onChange={handleSkuAutoToggle}
                 checkedChildren="自动"
                 unCheckedChildren="手动"
@@ -143,7 +144,7 @@ const OrderBasicInfoCard: React.FC<Props> = ({
             />
           ) : (
             <OrderColorSizeMatrix
-              items={orderLines.map(l => ({ color: l.color, size: l.size, quantity: l.quantity, skuNo: (l as any).skuNo }))}
+              items={orderLines.map(l => ({ color: l.color, size: l.size, quantity: l.quantity, skuNo: l.skuNo }))}
               totalLabel="总"
               totalSuffix="件"
               fontSize={14}
@@ -163,13 +164,13 @@ const OrderBasicInfoCard: React.FC<Props> = ({
             labelStyle={descLabelStyle} contentStyle={descContentStyle}
           >
             <Descriptions.Item label="下单数">
-              <span className="u-fw-600">{toNumberSafe((order as any)?.orderQuantity)}</span>
+              <span className="u-fw-600">{toNumberSafe(order?.orderQuantity)}</span>
             </Descriptions.Item>
-            <Descriptions.Item label="已完成">{toNumberSafe((order as any)?.completedQuantity)}</Descriptions.Item>
+            <Descriptions.Item label="已完成">{toNumberSafe(order?.completedQuantity)}</Descriptions.Item>
             <Descriptions.Item label="生产进度">
               <span className="u-fw-600" style={{ color: 'var(--color-primary)' }}>{`${calcOrderProgress(order ?? undefined)}%`}</span>
             </Descriptions.Item>
-            <Descriptions.Item label="扎数">{toNumberSafe((order as any)?.cuttingBundleCount)}</Descriptions.Item>
+            <Descriptions.Item label="扎数">{toNumberSafe(order?.cuttingBundleCount)}</Descriptions.Item>
             <Descriptions.Item label="入库数">
               <span className="u-fw-600">{warehousingTotal}</span>
             </Descriptions.Item>
@@ -182,11 +183,11 @@ const OrderBasicInfoCard: React.FC<Props> = ({
           <Descriptions column={2} size="small" bordered
             labelStyle={descLabelStyle} contentStyle={descContentStyle}
           >
-            <Descriptions.Item label="计划开始">{(order as any)?.plannedStartDate ? formatDateTime((order as any)?.plannedStartDate) : '-'}</Descriptions.Item>
-            <Descriptions.Item label="计划交期">{(order as any)?.plannedEndDate ? formatDateTime((order as any)?.plannedEndDate) : '-'}</Descriptions.Item>
-            <Descriptions.Item label="下单时间">{(order as any)?.createTime ? formatDateTime((order as any)?.createTime) : '-'}</Descriptions.Item>
-            <Descriptions.Item label="实际完成">{(order as any)?.actualEndDate ? formatDateTime((order as any)?.actualEndDate) : '-'}</Descriptions.Item>
-            <Descriptions.Item label="更新时间">{(order as any)?.updateTime ? formatDateTime((order as any)?.updateTime) : '-'}</Descriptions.Item>
+            <Descriptions.Item label="计划开始">{order?.plannedStartDate ? formatDateTime(order?.plannedStartDate) : '-'}</Descriptions.Item>
+            <Descriptions.Item label="计划交期">{order?.plannedEndDate ? formatDateTime(order?.plannedEndDate) : '-'}</Descriptions.Item>
+            <Descriptions.Item label="下单时间">{order?.createTime ? formatDateTime(order?.createTime) : '-'}</Descriptions.Item>
+            <Descriptions.Item label="实际完成">{order?.actualEndDate ? formatDateTime(order?.actualEndDate) : '-'}</Descriptions.Item>
+            <Descriptions.Item label="更新时间">{order?.updateTime ? formatDateTime(order?.updateTime) : '-'}</Descriptions.Item>
           </Descriptions>
         </div>
       </div>
