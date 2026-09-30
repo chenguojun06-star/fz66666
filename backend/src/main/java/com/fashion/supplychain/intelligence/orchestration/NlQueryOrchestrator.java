@@ -33,7 +33,7 @@ public class NlQueryOrchestrator {
     @Autowired private NlQueryDataHandlers dataHandlers;
     @Autowired private AiAgentTraceOrchestrator traceOrchestrator;
     @Autowired private com.fashion.supplychain.intelligence.service.AiAgentTokenBudgetService tokenBudgetService;
-    @Autowired(required = false) private com.fashion.supplychain.intelligence.service.TextToSqlService textToSqlService;
+    @Autowired(required = false) private com.fashion.supplychain.intelligence.helper.TextToSqlHelper textToSqlHelper;
 
     private static final int SESSION_CONTEXT_WINDOW = 3;
     private static final int SESSION_CACHE_MAX_SIZE = 200;
@@ -128,9 +128,9 @@ public class NlQueryOrchestrator {
         if ((resp = matchDirectActionAndHelp(question, tenantId, factoryId)) != null) return resp;
 
         // ── 智能底：Text-to-SQL 自然语言转SQL查询所有业务数据 ──
-        if (textToSqlService != null && isDataQueryQuestion(question)) {
+        if (textToSqlHelper != null && isDataQueryQuestion(question)) {
             try {
-                NlQueryResponse sqlResp = textToSqlService.query(question, tenantId);
+                NlQueryResponse sqlResp = textToSqlHelper.query(question, tenantId);
                 if (sqlResp != null && sqlResp.getConfidence() > 50) {
                     log.info("[NlQuery] Text-to-SQL命中: question={}", question);
                     return sqlResp;

@@ -5,7 +5,6 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.service.EcPlatformOAuthService;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
-import com.fashion.supplychain.integration.ecommerce.service.JushuitanSyncService;
 import com.fashion.supplychain.integration.ecommerce.service.PddOrderSyncService;
 import com.fashion.supplychain.system.entity.EcPlatformConfig;
 import com.fashion.supplychain.system.orchestration.AppStoreOrchestrator;
@@ -31,7 +30,7 @@ import java.util.Set;
  * 外部平台对接编排层（连接测试 / 授权 / 手动同步 / 店铺统计）
  *
  * <p>原 {@code PlatformConnectorController} 直接注入了 5 个 Service
- * （{@code EcPlatformConfigService}、{@code JushuitanSyncService}、
+ * （{@code EcPlatformConfigService}、{@code JushuitanSyncOrchestrator}（原 JushuitanSyncService，D-663 上移编排）、
  * {@code EcPlatformOAuthService}、{@code PddOrderSyncService}、{@code EcommerceOrderService}），
  * 违反 ArchUnit 规则6（Controller 不得直接依赖多个 Service）。本类承接其全部业务逻辑。
  *
@@ -52,7 +51,7 @@ public class PlatformConnectorOrchestrator {
     private EcPlatformConfigOrchestrator ecPlatformConfigOrchestrator;
 
     @Autowired
-    private JushuitanSyncService jushuitanSyncService;
+    private JushuitanSyncOrchestrator jushuitanSyncOrchestrator;
 
     @Autowired
     private EcPlatformOAuthService ecPlatformOAuthService;
@@ -181,7 +180,7 @@ public class PlatformConnectorOrchestrator {
 
         switch (platformCode) {
             case "JST" -> {
-                Map<String, Object> verifyResult = jushuitanSyncService.verifyConnection(config);
+                Map<String, Object> verifyResult = jushuitanSyncOrchestrator.verifyConnection(config);
                 result.putAll(verifyResult);
                 result.put("supportedActions", List.of("拉取订单", "店铺发现", "物流回传"));
             }
@@ -281,7 +280,7 @@ public class PlatformConnectorOrchestrator {
 
         switch (platformCode) {
             case "JST" -> {
-                Map<String, Object> syncResult = jushuitanSyncService.syncOrders(config, tenantId, null);
+                Map<String, Object> syncResult = jushuitanSyncOrchestrator.syncOrders(config, tenantId, null);
                 return Result.success(syncResult);
             }
             case "PINDUODUO" -> {

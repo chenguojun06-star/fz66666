@@ -20,7 +20,7 @@ import java.util.*;
  * 聚水潭（JST）平台适配器
  *
  * 实现商品/库存/价格/上下架状态的推送与拉取，复用聚水潭 OpenAPI。
- * 订单同步走 JushuitanSyncService（独立流程，因为订单是 pull 模式）。
+ * 订单同步走 JushuitanSyncOrchestrator（独立流程，因为订单是 pull 模式）。
  *
  * 聚水潭 OpenAPI 主要接口：
  *   - 商品上传：/open/products/upload

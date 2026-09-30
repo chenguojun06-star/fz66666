@@ -1,6 +1,6 @@
 package com.fashion.supplychain.integration.sync.job;
 
-import com.fashion.supplychain.integration.ecommerce.service.JushuitanSyncService;
+import com.fashion.supplychain.integration.ecommerce.orchestration.JushuitanSyncOrchestrator;
 import com.fashion.supplychain.integration.sync.orchestration.ProductSyncOrchestrator;
 import com.fashion.supplychain.integration.sync.service.EcProductMappingService;
 import com.fashion.supplychain.integration.sync.service.EcSyncConfigService;
@@ -54,7 +54,7 @@ public class EcSyncJob {
     private com.fashion.supplychain.integration.ecommerce.orchestration.EcLogisticsAnomalyOrchestrator logisticsAnomalyOrchestrator;
 
     @Autowired
-    private JushuitanSyncService jushuitanSyncService;
+    private JushuitanSyncOrchestrator jushuitanSyncOrchestrator;
 
     /** 后端动作类开关服务：库存自动同步到平台受 AUTO_EC_STOCK_SYNC 开关控制（用户诉求：怕出问题，不要自动） */
     @Autowired
@@ -131,7 +131,7 @@ public class EcSyncJob {
     public void jstOrderSyncJob() {
         List<EcPlatformConfig> configs;
         try {
-            configs = jushuitanSyncService.listJstConfigs();
+            configs = jushuitanSyncOrchestrator.listJstConfigs();
         } catch (Exception e) {
             log.warn("[JST同步] 拉取配置列表失败: {}", e.getMessage());
             return;
@@ -148,7 +148,7 @@ public class EcSyncJob {
                 if (since == null || since.isBefore(LocalDateTime.now().minusHours(6))) {
                     since = LocalDateTime.now().minusHours(24);
                 }
-                Map<String, Object> result = jushuitanSyncService.syncOrders(config, tenantId, since);
+                Map<String, Object> result = jushuitanSyncOrchestrator.syncOrders(config, tenantId, since);
                 jstLastSyncTime.put(tenantId, LocalDateTime.now());
                 log.info("[JST同步] 租户={} 同步完成 synced={} skipped={}",
                         tenantId,

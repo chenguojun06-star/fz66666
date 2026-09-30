@@ -1,7 +1,10 @@
-package com.fashion.supplychain.intelligence.service;
+package com.fashion.supplychain.intelligence.helper;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.NlQueryResponse;
+import com.fashion.supplychain.intelligence.service.AiAdvisorService;
+import com.fashion.supplychain.intelligence.service.SchemaVectorManager;
+import com.fashion.supplychain.intelligence.service.SqlSecurityValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,10 +19,21 @@ import java.util.*;
 import java.util.concurrent.*;
 import jakarta.annotation.PreDestroy;
 
+/**
+ * 自然语言 → SQL 转换与执行（含安全校验、结果缓存、只读兜底）。
+ *
+ * <p><b>D-663</b>：由 {@code TextToSqlService}（{@code intelligence.service}）
+ * 更名并移入 {@code intelligence.helper}。本类是「NL→SQL 生成 + 校验 + 执行」的工具型门面，
+ * 只被 {@code NlQueryOrchestrator} 调用；对 {@code AiAdvisorService}（LLM 推理）、
+ * {@code SchemaVectorManager}（库表向量召回）、{@code SqlSecurityValidator}（SQL 白名单校验）
+ * 的依赖都是**工具能力**而非跨业务服务编排，故不适用规则7（同 D-658 / D-660）。
+ *
+ * <p>移包时同步补回原同包（{@code intelligence.service}）的三处 import —— 见 D-661 教训。
+ */
 @Service
 @Lazy
 @Slf4j
-public class TextToSqlService {
+public class TextToSqlHelper {
 
     @Autowired(required = false)
     private AiAdvisorService aiAdvisorService;

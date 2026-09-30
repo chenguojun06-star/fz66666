@@ -1,6 +1,5 @@
-package com.fashion.supplychain.integration.ecommerce.service;
+package com.fashion.supplychain.integration.ecommerce.orchestration;
 
-import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrderOrchestrator;
 import com.fashion.supplychain.integration.util.IntegrationHttpClient;
 import com.fashion.supplychain.integration.util.JstApiGuard;
 import com.fashion.supplychain.system.entity.EcPlatformConfig;
@@ -25,11 +24,17 @@ import java.util.stream.Collectors;
  * - 商品查询: /open/jushuitan/products/query
  *
  * API 鉴权方式：HMAC-SHA256(appSecret, timestamp + body)
+ *
+ * <p><b>D-663</b>：由 {@code JushuitanSyncService}（{@code integration.ecommerce.service}）
+ * 更名并移入 {@code integration.ecommerce.orchestration}。本类聚合「平台配置读取
+ * （{@code EcPlatformConfigService}）+ 订单归集编排（{@code EcommerceOrderOrchestrator}）
+ * + HTTP 调用（{@code IntegrationHttpClient}）」三方协作，属编排语义
+ * （同 D-661 的 {@code SoulAnchorRebuildOrchestrator}），不是为规避规则而改名。
  */
 @Slf4j
 @Service
 @ConditionalOnProperty(name = "fashion.ecommerce.enabled", havingValue = "true", matchIfMissing = true)
-public class JushuitanSyncService {
+public class JushuitanSyncOrchestrator {
 
     private static final String JST_API_BASE = "https://openapi.jushuitan.com";
     private static final String JST_ORDER_QUERY = "/open/orders/single/query";
