@@ -37,7 +37,7 @@ import java.util.List;
  *
  * <p><b>D-660</b>：由 {@code RerankService}（{@code intelligence.service}）更名并移入
  * {@code intelligence.helper}。该类是「rerank provider 路由 + 降级兜底」的工具型门面，
- * 只被 {@code AgenticRagService} 直接调用；它依赖 {@code SiliconFlowRerankService} /
+ * 只被 {@code AgenticRagHelper}（D-667 原 AgenticRagService）直接调用；它依赖 {@code SiliconFlowRerankService} /
  * {@code CohereRerankService} 属 provider 适配（同 D-658 的 Helper 语义），
  * 不构成跨业务服务编排，故不适用规则7。
  */

@@ -7,7 +7,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.helper.ProductOutstockLogAppendHelper;
-import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
+import com.fashion.supplychain.integration.openapi.helper.WebhookPushHelper;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -43,7 +43,7 @@ public class ProductOutstockOrchestrator {
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
 
     @Autowired(required = false)
-    private WebhookPushService webhookPushService;
+    private WebhookPushHelper webhookPushHelper;
 
     @Autowired
     private ProductSkuService productSkuService;
@@ -147,13 +147,13 @@ public class ProductOutstockOrchestrator {
         logAppendHelper.appendCreate(outstock.getId());
 
         // 异步推送物流信息给已对接客户
-        if (webhookPushService != null) {
+        if (webhookPushHelper != null) {
             try {
                 Map<String, Object> details = Map.of(
                     "styleNo", outstock.getStyleNo() != null ? outstock.getStyleNo() : "",
                     "outstockType", outstock.getOutstockType() != null ? outstock.getOutstockType() : ""
                 );
-                webhookPushService.pushLogisticsUpdate(
+                webhookPushHelper.pushLogisticsUpdate(
                     outstock.getOrderNo(),
                     outstock.getOutstockNo(),
                     outstock.getOutstockQuantity() != null ? outstock.getOutstockQuantity() : 0,

@@ -78,9 +78,9 @@ public class PromptContextProvider {
     @Autowired(required = false)
     private com.fashion.supplychain.intelligence.service.FactoryProfileLearningService factoryProfileLearningService;
 
-    /** P2升级: Agentic RAG 自适应检索引擎 */
+    /** P2升级: Agentic RAG 自适应检索引擎（D-667 原 AgenticRagService，与本地同包故用简单名） */
     @Autowired(required = false)
-    private com.fashion.supplychain.intelligence.service.AgenticRagService agenticRagService;
+    private AgenticRagHelper agenticRagHelper;
 
     private static final java.util.Set<String> SYSTEM_GUIDE_KEYWORDS = java.util.Set.of(
         "怎么下单", "如何建单", "下单方式", "如何创建订单", "怎么创建订单",
@@ -315,16 +315,16 @@ public class PromptContextProvider {
     }
 
     /**
-     * P2升级: 使用 AgenticRagService 进行自适应检索。
+     * P2升级: 使用 AgenticRagHelper 进行自适应检索。
      * 根据问题类型动态决定检索策略，闲聊类跳过节省token。
-     * AgenticRagService 不可用时降级到旧的三路检索逻辑。
+     * AgenticRagHelper 不可用时降级到旧的三路检索逻辑。
      */
     public String buildRagContext(Long tenantId, String userMessage) {
         // ── P2升级：Agentic RAG 自适应检索 ──
-        if (agenticRagService != null && userMessage != null && !userMessage.isBlank()) {
+        if (agenticRagHelper != null && userMessage != null && !userMessage.isBlank()) {
             try {
-                com.fashion.supplychain.intelligence.service.AgenticRagService.RagResult agenticResult =
-                        agenticRagService.retrieve(tenantId, userMessage);
+                AgenticRagHelper.RagResult agenticResult =
+                        agenticRagHelper.retrieve(tenantId, userMessage);
                 if (agenticResult != null && !agenticResult.isEmpty()) {
                     log.debug("[AiAgent-RAG] AgenticRAG命中: type={} strategy={} sources={}",
                             agenticResult.questionType(), agenticResult.strategy(), agenticResult.sourceCount());
@@ -338,7 +338,7 @@ public class PromptContextProvider {
             }
         }
 
-        // ── 降级：传统三路检索（AgenticRagService 不可用时） ──
+        // ── 降级：传统三路检索（AgenticRagHelper 不可用时） ──
         return buildRagContextLegacy(tenantId, userMessage);
     }
 

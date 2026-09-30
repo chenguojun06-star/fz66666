@@ -7,7 +7,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.common.tenant.TenantAssert;
-import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
+import com.fashion.supplychain.integration.openapi.helper.WebhookPushHelper;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.intelligence.mapper.IntelligencePredictionLogMapper;
@@ -49,7 +49,7 @@ public class ProductionOrderFinanceOrchestrator {
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
 
     @Autowired(required = false)
-    private WebhookPushService webhookPushService;
+    private WebhookPushHelper webhookPushHelper;
 
     @Autowired(required = false)
     private IntelligencePredictionLogMapper intelligencePredictionLogMapper;
@@ -182,13 +182,13 @@ public class ProductionOrderFinanceOrchestrator {
     }
 
     private void pushCompletionWebhook(ProductionOrder order, long qualifiedSum, int orderQty) {
-        if (webhookPushService == null) return;
+        if (webhookPushHelper == null) return;
         try {
             Map<String, Object> details = new LinkedHashMap<>();
             details.put("styleNo", order.getStyleNo());
             details.put("orderQty", orderQty);
             details.put("qualifiedQty", qualifiedSum);
-            webhookPushService.pushOrderStatusChange(order.getOrderNo(), "producing", "completed", details);
+            webhookPushHelper.pushOrderStatusChange(order.getOrderNo(), "producing", "completed", details);
         } catch (Exception e) {
             log.warn("[FinanceOrch] 推送完成Webhook失败: orderId={}", order.getId(), e);
         }

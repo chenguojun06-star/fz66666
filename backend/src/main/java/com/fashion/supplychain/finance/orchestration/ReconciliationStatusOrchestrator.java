@@ -12,7 +12,7 @@ import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.finance.service.BillAggregationService;
 import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator.BillPushRequest;
-import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
+import com.fashion.supplychain.integration.openapi.helper.WebhookPushHelper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -48,7 +48,7 @@ import lombok.extern.slf4j.Slf4j;
  * 依赖服务：
  * - MaterialReconciliationService: 物料对账单服务
  * - ShipmentReconciliationService: 成品对账单服务
- * - WebhookPushService: Webhook 事件推送服务
+ * - WebhookPushHelper: Webhook 事件推送服务
  *
  * 使用示例：
  * <pre>
@@ -84,7 +84,7 @@ public class ReconciliationStatusOrchestrator {
     private ShipmentReconciliationService shipmentReconciliationService;
 
     @Autowired(required = false)
-    private WebhookPushService webhookPushService;
+    private WebhookPushHelper webhookPushHelper;
 
     @Autowired(required = false)
     private BillAggregationOrchestrator billAggregationOrchestrator;
@@ -336,11 +336,11 @@ public class ReconciliationStatusOrchestrator {
     }
 
     private void pushWebhookOnShipmentApproved(String to, String rid, ShipmentReconciliation sr, String from) {
-        if (!"approved".equals(to) || webhookPushService == null) return;
+        if (!"approved".equals(to) || webhookPushHelper == null) return;
         try {
             BigDecimal amount = sr.getFinalAmount() != null ? sr.getFinalAmount() : BigDecimal.ZERO;
             String orderNo = sr.getOrderNo() != null ? sr.getOrderNo() : "";
-            webhookPushService.pushReconciliationCreated(
+            webhookPushHelper.pushReconciliationCreated(
                     orderNo, rid, amount, Map.of("status", "approved", "previousStatus", from));
         } catch (Exception e) {
             log.warn("Webhook推送对账审批通过失败: reconciliationId={}", rid, e);

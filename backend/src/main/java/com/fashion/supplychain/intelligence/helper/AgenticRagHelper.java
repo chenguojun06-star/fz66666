@@ -1,0 +1,879 @@
+package com.fashion.supplychain.intelligence.helper;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse;
+import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
+import com.fashion.supplychain.intelligence.orchestration.IntelligenceMemoryOrchestrator;
+import com.fashion.supplychain.intelligence.service.AiAdvisorService;
+import com.fashion.supplychain.intelligence.service.EntityMemoryContextService;
+import com.fashion.supplychain.intelligence.service.GraphRagService;
+import com.fashion.supplychain.intelligence.service.KnowledgeBaseService;
+import com.fashion.supplychain.common.QdrantService.ScoredPoint;
+import com.fashion.supplychain.service.RedisService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import com.fashion.supplychain.common.QdrantService;
+
+/**
+ * Agentic RAG — 自适应检索决策引擎
+ *
+ * <p>核心升级：不再无条件检索所有数据源，而是根据问题类型动态决定：
+ * <ol>
+ *   <li>是否需要检索（闲聊类跳过，节省token）</li>
+ *   <li>检索哪些数据源（KB/记忆/图谱/实体，按需组合）</li>
+ *   <li>查询改写（短查询扩展，专业术语标准化）</li>
+ *   <li>质量自检（结果不足时自动换策略重试一次）</li>
+ *   <li>语义缓存（高频查询缓存10分钟，减少token消耗）</li>
+ * </ol>
+ *
+ * <p>设计原则：薄服务层，策略外置，不依赖LLM做分类决策。
+ *
+ * <p><b>D-667</b>：由 {@code AgenticRagService}（{@code intelligence.service}）
+ * 更名并移入 {@code intelligence.helper}。本类是「按问题类型动态选择检索源」的**检索工具**，
+ * 只被 {@code PromptContextProvider} 调用；对 {@code KnowledgeBaseService}（知识库）、
+ * {@code EntityMemoryContextService}（实体记忆）、{@code GraphRagService}（图谱检索）、
+ * {@code AiAdvisorService}（LLM 判定）的依赖都是**检索能力组合**而非跨业务服务编排，
+ * 故不适用规则7（同 D-658 / D-660）。
+ */
+@Service
+@Lazy
+@Slf4j
+public class AgenticRagHelper {
+
+    @Autowired private KnowledgeBaseService knowledgeBaseService;
+    @Autowired private IntelligenceMemoryOrchestrator memoryOrchestrator;
+    @Autowired(required = false) private QdrantService qdrantService;
+    @Autowired(required = false) private GraphRagService graphRagService;
+    @Autowired(required = false) private EntityMemoryContextService entityMemoryContextService;
+    @Autowired(required = false) private RedisService redisService;
+    @Autowired(required = false) private AiAdvisorService aiAdvisorService;
+    @Autowired(required = false) private RerankHelper rerankHelper;
+
+    private static final float MIN_SCORE = 0.35f;
+    private static final int MAX_CONTEXT_CHARS = 2000;
+    /** P0-3：语义补充单路召回上限（向量检索放大过多会拖慢首字，单独设限） */
+    private static final int SEMANTIC_SUPPLEMENT = 5;
+    /** P0-3：max-context-items 配置缺失/非法时的兜底值 */
+    private static final int MAX_CONTEXT_ITEMS_FALLBACK = 8;
+
+    /** RAG缓存前缀 */
+    private static final String RAG_CACHE_PREFIX = "rag:cache:";
+    /** RAG缓存有效期：10分钟 */
+    private static final int RAG_CACHE_TTL_MINUTES = 10;
+
+    /** P1-1：Agentic RAG 自我修正循环最大轮数（含首轮） */
+    @Value("${xiaoyun.rag.max-rounds:3}")
+    private int maxRounds;
+    /** P1-1：是否启用 LLM 查询改写（关闭时仅用规则改写，节省 token） */
+    @Value("${xiaoyun.rag.llm-rewrite-enabled:true}")
+    private boolean llmRewriteEnabled;
+    /** P1-1：检索质量达标阈值（0-1，低于此值触发下一轮改写重试） */
+    @Value("${xiaoyun.rag.relevance-threshold:0.30}")
+    private double relevanceThreshold;
+    /** P0-3：召回量（与 xiaoyun.agent.rag.recall-top-k 对齐，默认 20）—— 召回放大后由 rerank 收窄 */
+    @Value("${xiaoyun.agent.rag.recall-top-k:20}")
+    private int recallTopK;
+    /** P0-3：上下文条数硬上限，兜底防 rerank 跳过/降级时打爆 prompt */
+    @Value("${xiaoyun.agent.rag.max-context-items:8}")
+    private int maxContextItems;
+
+    /** P1-1：LLM 查询改写提示词 */
+    private static final String LLM_REWRITE_PROMPT =
+            "你是服装供应链领域的查询改写助手。请将用户的问题改写为更适合知识库检索的查询：\n" +
+            "1. 展开缩写和行业术语（如\"菲号\"→\"FOB报价 离岸价\"）\n" +
+            "2. 补充同义词和相关词（如\"次品\"→\"次品 不合格品 返工\"）\n" +
+            "3. 保留原始问题的核心意图和实体（订单号、款号、日期等不可改）\n" +
+            "4. 输出只包含改写后的查询文本，不要解释\n" +
+            "改写后的查询应比原文更丰富、更易匹配知识库内容。";
+    
+    /** 服装供应链专业术语映射表 */
+    private static final Map<String, String> FASHION_TERMS = Map.ofEntries(
+            // 订单术语
+            Map.entry("菲号", "FOB报价 离岸价"),
+            Map.entry("关单", "订单关闭 关单操作"),
+            Map.entry("跟单", "生产跟单 订单跟踪"),
+            Map.entry("大货", "大货生产 批量生产"),
+            Map.entry("首单", "首批订单 首单生产"),
+            Map.entry("补单", "追加订单 补货"),
+            Map.entry("翻单", "翻单 重复下单"),
+            
+            // 物料术语
+            Map.entry("面辅料", "面料 辅料 原材料"),
+            Map.entry("胚布", "坯布 胚布面料"),
+            Map.entry("色布", "染色布 面料颜色"),
+            Map.entry("主料", "主要面料 主材料"),
+            Map.entry("配料", "辅料 配料"),
+            Map.entry("备料", "物料准备 采购备料"),
+            Map.entry("来料", "来料加工 物料到货"),
+            Map.entry("订购", "采购订购 物料订购"),
+            
+            // 生产术语
+            Map.entry("裁床", "裁剪 裁床工序"),
+            Map.entry("车缝", "缝纫 车缝工序"),
+            Map.entry("后道", "后整理 后道工序"),
+            Map.entry("整烫", "整烫 熨烫定型"),
+            Map.entry("包装", "包装工序 成品包装"),
+            Map.entry("验货", "质量检验 QC验货"),
+            Map.entry("查货", "质量检查 查货"),
+            Map.entry("查片", "裁片检验 查片"),
+            Map.entry("尾部", "尾部工序 后整理"),
+            Map.entry("线头", "线头处理 修剪线头"),
+            
+            // 工序术语
+            Map.entry("工序", "生产工序 工艺工序"),
+            Map.entry("工价", "工序单价 加工费"),
+            Map.entry("工时", "工时定额 生产工时"),
+            Map.entry("计件", "计件工资 计件工价"),
+            Map.entry("计时", "计时工资 按时计费"),
+            Map.entry("外发", "外发加工 工序外发"),
+            Map.entry("发外", "发外加工 外发工序"),
+            Map.entry("收回", "收回加工 外发收回"),
+            
+            // 质量术语
+            Map.entry("次品", "次品 不合格品"),
+            Map.entry("返工", "返工处理 返修"),
+            Map.entry("报废", "报废处理 报废"),
+            Map.entry("色差", "颜色差异 色差问题"),
+            Map.entry("缩水", "缩水率 面料缩水"),
+            Map.entry("跳线", "跳线缺陷 缝纫问题"),
+            Map.entry("漏针", "漏针缺陷 车缝问题"),
+            Map.entry("起毛", "起毛问题 面料起毛"),
+            
+            // 财务术语
+            Map.entry("结款", "结算付款 结款"),
+            Map.entry("对账", "财务对账 账目核对"),
+            Map.entry("开票", "开增值税票 开发票"),
+            Map.entry("收票", "收取发票 收票"),
+            Map.entry("预付", "预付款 预支"),
+            Map.entry("月结", "月结付款 每月结算"),
+            Map.entry("货款", "货款 销售货款"),
+            Map.entry("工钱", "工资 劳务费"),
+            Map.entry("工费", "加工费 人工费"),
+            
+            // 供应商术语
+            Map.entry("布行", "布料供应商 布行"),
+            Map.entry("染厂", "染色工厂 印染厂"),
+            Map.entry("加工厂", "服装加工厂 外协工厂"),
+            Map.entry("合作商", "合作伙伴 供应商"),
+            
+            // 款式术语
+            Map.entry("款号", "款式编号 款号"),
+            Map.entry("款色", "款式颜色 款色"),
+            Map.entry("唛架", "唛架图 排版图"),
+            Map.entry("纸样", "纸样 版型"),
+            Map.entry("尺寸", "尺码 尺寸规格"),
+            Map.entry("放量", "放码 量尺"),
+            
+            // 物流术语
+            Map.entry("出柜", "集装箱出货 出柜"),
+            Map.entry("入仓", "入库 入仓"),
+            Map.entry("送货", "送货上门 物流配送"),
+            Map.entry("提货", "提货 领取货物"),
+            Map.entry("快递", "快递发货 物流"),
+            
+            // 特殊工艺
+            Map.entry("绣花", "刺绣 绣花工艺"),
+            Map.entry("印花", "印花工艺 印刷"),
+            Map.entry("水洗", "水洗工艺 洗水"),
+            Map.entry("压褶", "压褶工艺 褶皱"),
+            Map.entry("复合", "面料复合 贴合"),
+            Map.entry("涂层", "涂层处理 面料涂层")
+    );
+
+    // ── 问题类型枚举 ──
+    public enum QuestionType {
+        /** 事实类：什么是X、X的定义、X和Y的区别 */
+        FACTUAL,
+        /** 操作类：如何X、怎么X、X流程 */
+        OPERATIONAL,
+        /** 分析类：分析X、X的原因、为什么X */
+        ANALYTICAL,
+        /** 实体查询：具体订单号/工厂名/款号 */
+        ENTITY_LOOKUP,
+        /** 闲聊/问候：你好、谢谢、在吗 */
+        CASUAL
+    }
+
+    /** 检索结果 */
+    public record RagResult(String context, QuestionType questionType, int sourceCount, String strategy, boolean fromCache) {
+        public boolean isEmpty() { return context == null || context.isBlank(); }
+        
+        /** 向后兼容：旧代码不带fromCache字段时默认为false */
+        public RagResult(String context, QuestionType questionType, int sourceCount, String strategy) {
+            this(context, questionType, sourceCount, strategy, false);
+        }
+    }
+
+    /**
+     * 自适应检索入口（P1-1：Agentic RAG 三阶段闭环）。
+     *
+     * <p>Self-RAG/CRAG 模式：
+     * <ol>
+     *   <li>检索 → 评估相关性</li>
+     *   <li>相关性不足 → 改写查询重试（最多 {@link #maxRounds} 轮）</li>
+     *   <li>返回最佳结果（即使低于阈值也返回，保证有上下文）</li>
+     * </ol>
+     *
+     * @param tenantId 租户ID
+     * @param userMessage 用户原始消息
+     * @return 检索到的上下文，可能为空（闲聊类或检索失败）
+     */
+    public RagResult retrieve(Long tenantId, String userMessage) {
+        if (userMessage == null || userMessage.isBlank()) {
+            return new RagResult("", QuestionType.CASUAL, 0, "skip");
+        }
+
+        // 检查缓存
+        String cacheKey = buildCacheKey(tenantId, userMessage);
+        if (redisService != null) {
+            RagResult cached = redisService.get(cacheKey);
+            if (cached != null && !cached.isEmpty()) {
+                log.info("[AgenticRAG] Cache hit! tenant={} query={} strategy={}",
+                        tenantId, truncate(userMessage, 40), cached.strategy());
+                return new RagResult(cached.context(), cached.questionType(),
+                        cached.sourceCount(), cached.strategy(), true);
+            }
+        }
+
+        QuestionType qType = classify(userMessage);
+        log.debug("[AgenticRAG] 问题分类: {} → {}", qType, truncate(userMessage, 60));
+
+        // 闲聊类直接跳过，节省token
+        if (qType == QuestionType.CASUAL) {
+            return new RagResult("", qType, 0, "skip_casual");
+        }
+
+        // P1-1：3 轮自我修正循环
+        RagResult bestResult = null;
+        double bestScore = -1;
+        String currentQuery = userMessage;
+
+        for (int round = 1; round <= maxRounds; round++) {
+            // 第 1 轮用规则改写；第 2+ 轮用 LLM 改写（若启用）
+            String rewrittenQuery = (round == 1)
+                    ? rewriteQuery(currentQuery, qType)
+                    : rewriteQueryWithLlm(currentQuery, qType, round);
+
+            RagResult result = retrieveByStrategy(tenantId, rewrittenQuery, qType);
+            // 空结果降级重试
+            if (result.isEmpty() || result.sourceCount == 0) {
+                result = fallbackRetrieve(tenantId, rewrittenQuery, qType);
+            }
+
+            double score = gradeRetrieval(result, userMessage);
+            log.debug("[AgenticRAG] 第{}轮 score={} sourceCount={} strategy={} query={}",
+                    round, String.format("%.2f", score), result.sourceCount(), result.strategy(),
+                    truncate(rewrittenQuery, 50));
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestResult = result;
+            }
+
+            // 达标即提前返回
+            if (score >= relevanceThreshold && result.sourceCount > 0) {
+                log.info("[AgenticRAG] 第{}轮达标 score={} >= {}", round,
+                        String.format("%.2f", score), relevanceThreshold);
+                break;
+            }
+
+            // 未达标：下一轮用 LLM 改写（若启用），否则停止
+            if (round < maxRounds && llmRewriteEnabled && aiAdvisorService != null && aiAdvisorService.isEnabled()) {
+                currentQuery = userMessage; // LLM 改写基于原始查询
+            } else if (!llmRewriteEnabled || aiAdvisorService == null) {
+                // LLM 不可用，不再重试
+                log.debug("[AgenticRAG] LLM改写不可用，停止在第{}轮", round);
+                break;
+            }
+        }
+
+        // 标记最终策略（含轮次信息）
+        if (bestResult != null) {
+            bestResult = new RagResult(bestResult.context(), bestResult.questionType(),
+                    bestResult.sourceCount(), bestResult.strategy() + "_r" + maxRounds,
+                    bestResult.fromCache());
+        } else {
+            bestResult = new RagResult("", qType, 0, "all_rounds_empty");
+        }
+
+        // 缓存非空结果
+        if (!bestResult.isEmpty() && bestResult.sourceCount > 0 && redisService != null) {
+            try {
+                redisService.set(cacheKey, bestResult, RAG_CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+                log.debug("[AgenticRAG] 缓存已保存: {}", truncate(userMessage, 40));
+            } catch (Exception e) {
+                log.warn("[AgenticRAG] 缓存保存失败: {}", e.getMessage());
+            }
+        }
+
+        return bestResult;
+    }
+
+    /**
+     * 清除指定租户的RAG缓存
+     */
+    public void clearCache(Long tenantId) {
+        if (redisService != null) {
+            try {
+                String pattern = RAG_CACHE_PREFIX + tenantId + ":*";
+                log.info("[AgenticRAG] 缓存清除请求: tenant={}", tenantId);
+            } catch (Exception e) {
+                log.warn("[AgenticRAG] 缓存清除失败: {}", e.getMessage());
+            }
+        }
+    }
+
+    // ── 缓存 key 生成 ──
+
+    private String buildCacheKey(Long tenantId, String query) {
+        String key = tenantId + "|" + query.toLowerCase().trim();
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(key.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return RAG_CACHE_PREFIX + tenantId + ":" + sb.toString().substring(0, 32);
+        } catch (NoSuchAlgorithmException e) {
+            return RAG_CACHE_PREFIX + tenantId + ":" + Math.abs(key.hashCode());
+        }
+    }
+
+    // ── 问题分类（纯规则，不调LLM） ──
+
+    private QuestionType classify(String msg) {
+        if (msg.length() <= 5) {
+            if (msg.matches(".*[你好在吗谢谢再见嗯哦啊].*")) return QuestionType.CASUAL;
+        }
+
+        // 实体查询：包含订单号/工厂名/款号模式
+        if (msg.matches(".*[A-Z]{2,4}\\d{6,}.*")     // PO20240101
+                || msg.matches(".*\\b[Oo][Rr][Dd][Ee][Rr][-_]?\\d+.*")  // ORDER-123
+                || msg.matches(".*[款号型号编号]\\s*[:：]?\\s*[A-Za-z0-9\\-]+.*")
+                || msg.matches(".*(查一下|查询|看一下|看看|帮我查).*")) {
+            return QuestionType.ENTITY_LOOKUP;
+        }
+
+        // 操作类
+        if (msg.matches(".*(如何|怎么|怎样|怎么操作|流程|步骤|教程|指南).*")) {
+            return QuestionType.OPERATIONAL;
+        }
+
+        // 分析类
+        if (msg.matches(".*(分析|为什么|原因|怎么回事|怎么办|对比|评估|风险).*")) {
+            return QuestionType.ANALYTICAL;
+        }
+
+        // 事实类（默认）
+        return QuestionType.FACTUAL;
+    }
+
+    // ── 查询改写 ──
+
+    private String rewriteQuery(String original, QuestionType qType) {
+        String result = original;
+
+        // 短查询扩展：添加领域关键词提升召回
+        if (result.length() <= 8 && qType == QuestionType.FACTUAL) {
+            result = result + " 服装供应链 服装生产";
+        }
+
+        // 专业术语标准化：扩展服装供应链术语
+        for (Map.Entry<String, String> entry : FASHION_TERMS.entrySet()) {
+            if (result.contains(entry.getKey())) {
+                result = result.replace(entry.getKey(), entry.getValue());
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * P1-1：LLM 驱动的查询改写（Self-RAG 的 query rewriting 模式）。
+     *
+     * <p>规则改写作为基础，LLM 在此之上做更深层的语义扩展。
+     * LLM 不可用时降级到规则改写。
+     *
+     * @param original 原始查询
+     * @param qType 问题类型
+     * @param round 当前轮次（用于日志）
+     * @return 改写后的查询
+     */
+    private String rewriteQueryWithLlm(String original, QuestionType qType, int round) {
+        // 先做规则改写作为基础
+        String ruleBased = rewriteQuery(original, qType);
+
+        if (!llmRewriteEnabled || aiAdvisorService == null || !aiAdvisorService.isEnabled()) {
+            return ruleBased;
+        }
+
+        try {
+            String reply = java.util.concurrent.CompletableFuture
+                    .supplyAsync(() -> aiAdvisorService.chat(LLM_REWRITE_PROMPT, original))
+                    .orTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
+                    .exceptionally(ex -> null)
+                    .join();
+
+            if (reply == null || reply.isBlank()) {
+                log.debug("[AgenticRAG] 第{}轮 LLM改写超时/空，降级规则改写", round);
+                return ruleBased;
+            }
+            // LLM 改写结果 + 规则扩展合并（取并集，提升召回）
+            String merged = reply.trim() + " " + ruleBased;
+            log.debug("[AgenticRAG] 第{}轮 LLM改写: {} → {}", round, truncate(original, 30), truncate(reply.trim(), 50));
+            return merged.length() > 200 ? merged.substring(0, 200) : merged;
+        } catch (Exception e) {
+            log.debug("[AgenticRAG] LLM改写异常，降级规则: {}", e.getMessage());
+            return ruleBased;
+        }
+    }
+
+    /**
+     * P1-1：检索质量评分（Retrieval Grader）。
+     *
+     * <p>评估检索结果与用户问题的相关性，决定是否需要改写重试。
+     * 采用轻量级启发式评分（不调 LLM，避免延迟）：
+     * <ul>
+     *   <li>关键词重叠率（query 关键词在 context 中出现的比例）</li>
+     *   <li>来源数量（sourceCount 越多，覆盖越广）</li>
+     *   <li>上下文长度（过短可能信息不足）</li>
+     * </ul>
+     *
+     * @param result 检索结果
+     * @param userMessage 原始用户问题
+     * @return 0-1 相关性得分
+     */
+    private double gradeRetrieval(RagResult result, String userMessage) {
+        if (result == null || result.isEmpty() || result.sourceCount == 0) {
+            return 0.0;
+        }
+
+        String context = result.context();
+        // 提取用户问题中的关键词（去除停用词和短词）
+        String[] queryTerms = extractKeywords(userMessage);
+        if (queryTerms.length == 0) {
+            // 无法提取关键词，按来源数量给基础分
+            return Math.min(1.0, result.sourceCount() * 0.2);
+        }
+
+        // 计算关键词命中率
+        int hits = 0;
+        String lowerCtx = context.toLowerCase();
+        for (String term : queryTerms) {
+            if (lowerCtx.contains(term.toLowerCase())) hits++;
+        }
+        double keywordScore = (double) hits / queryTerms.length;
+
+        // 来源数量得分（5个来源满分）
+        double sourceScore = Math.min(1.0, result.sourceCount() / 5.0);
+
+        // 上下文长度得分（500字符满分）
+        double lengthScore = Math.min(1.0, context.length() / 500.0);
+
+        // 加权综合：关键词命中 60% + 来源数量 25% + 长度 15%
+        return keywordScore * 0.60 + sourceScore * 0.25 + lengthScore * 0.15;
+    }
+
+    /** 从用户问题中提取关键词（去停用词、去短词、去标点） */
+    private String[] extractKeywords(String text) {
+        // 去标点、转小写、按空格/标点分词
+        String cleaned = text.replaceAll("[\\p{Punct}\\p{IsPunctuation}]", " ").toLowerCase().trim();
+        if (cleaned.isBlank()) return new String[0];
+        String[] tokens = cleaned.split("\\s+");
+        java.util.List<String> keywords = new java.util.ArrayList<>();
+        for (String token : tokens) {
+            if (token.length() < 2) continue; // 跳过单字符
+            // 跳过常见停用词
+            if (token.matches("^(的|了|是|在|有|和|与|我|你|他|她|它|这|那|怎么|如何|什么|为什么|请问|一下|帮我|可以|吗|呢|啊|吧)$")) {
+                continue;
+            }
+            keywords.add(token);
+        }
+        // 中文无法按空格分词，保留原文作为整体匹配
+        if (keywords.isEmpty() && cleaned.length() >= 2) {
+            // 对中文查询，按 2-3 字片段匹配
+            for (int i = 0; i < cleaned.length() - 1; i += 2) {
+                keywords.add(cleaned.substring(i, Math.min(i + 2, cleaned.length())));
+            }
+        }
+        return keywords.toArray(new String[0]);
+    }
+
+    // ── 策略路由 ──
+
+    private RagResult retrieveByStrategy(Long tenantId, String query, QuestionType qType) {
+        return switch (qType) {
+            case FACTUAL -> factualRetrieve(tenantId, query);
+            case OPERATIONAL -> operationalRetrieve(tenantId, query);
+            case ANALYTICAL -> analyticalRetrieve(tenantId, query);
+            case ENTITY_LOOKUP -> entityRetrieve(tenantId, query);
+            default -> factualRetrieve(tenantId, query);
+        };
+    }
+
+    // ── 策略1：事实类 — KB优先 + 语义补充（优先混合检索） ──
+
+    private RagResult factualRetrieve(Long tenantId, String query) {
+        StringBuilder ctx = new StringBuilder();
+        int sourceCount = 0;
+
+        // KB关键词检索（P0-3：召回量跟随 recall-top-k）
+        List<KnowledgeBase> kbResults = searchKB(tenantId, query, null, recallTopK);
+        Set<String> kbIds = kbResults.stream().map(KnowledgeBase::getId).collect(Collectors.toSet());
+
+        // 语义向量补充（优先混合检索，不可用时回退纯稠密检索）
+        List<KnowledgeBase> newResults = List.of();
+        if (qdrantService != null) {
+            List<KnowledgeBase> semanticResults = searchSemanticKBWithHybrid(tenantId, query, SEMANTIC_SUPPLEMENT);
+            newResults = semanticResults.stream()
+                    .filter(kb -> !kbIds.contains(kb.getId()))
+                    .limit(SEMANTIC_SUPPLEMENT)
+                    .toList();
+        }
+
+        // 合并候选池后统一精排：单路 top-k 较小时条数不足 top-n，合并后精排才有意义
+        List<KnowledgeBase> pool = new ArrayList<>(kbResults);
+        pool.addAll(newResults);
+        List<KnowledgeBase> ranked = rerankKb(query, pool);
+
+        // 按来源分流，保持原有上下文结构
+        List<KnowledgeBase> rankedKb = new ArrayList<>();
+        List<KnowledgeBase> rankedSemantic = new ArrayList<>();
+        for (KnowledgeBase kb : ranked) {
+            if (kbIds.contains(kb.getId())) {
+                rankedKb.add(kb);
+            } else {
+                rankedSemantic.add(kb);
+            }
+        }
+
+        if (!rankedKb.isEmpty()) {
+            ctx.append("【知识库匹配】\n");
+            for (KnowledgeBase kb : rankedKb) {
+                ctx.append(formatKB(kb));
+            }
+            sourceCount += rankedKb.size();
+        }
+
+        if (!rankedSemantic.isEmpty()) {
+            ctx.append("【语义关联】\n");
+            for (KnowledgeBase kb : rankedSemantic) {
+                ctx.append(formatKB(kb));
+            }
+            sourceCount += rankedSemantic.size();
+        }
+
+        return new RagResult(trim(ctx.toString()), QuestionType.FACTUAL, sourceCount, "factual");
+    }
+
+    // ── 策略2：操作类 — system_guide/sop精准匹配 ──
+
+    private RagResult operationalRetrieve(Long tenantId, String query) {
+        StringBuilder ctx = new StringBuilder();
+        int sourceCount = 0;
+
+        // 精准匹配系统操作指南
+        List<KnowledgeBase> guides = rerankKb(query, searchKB(tenantId, query,
+                List.of("system_guide", "sop"), recallTopK));
+        if (!guides.isEmpty()) {
+            ctx.append("【操作指南】\n");
+            for (KnowledgeBase kb : guides) {
+                ctx.append(formatKB(kb));
+            }
+            sourceCount += guides.size();
+        }
+
+        // 补充FAQ
+        if (guides.size() < 2) {
+            List<KnowledgeBase> faqs = rerankKb(query, searchKB(tenantId, query, List.of("faq"), 2));
+            if (!faqs.isEmpty()) {
+                ctx.append("【常见问题】\n");
+                for (KnowledgeBase kb : faqs) {
+                    ctx.append(formatKB(kb));
+                }
+                sourceCount += faqs.size();
+            }
+        }
+
+        return new RagResult(trim(ctx.toString()), QuestionType.OPERATIONAL, sourceCount, "operational");
+    }
+
+    // ── 策略3：分析类 — KB + 记忆 + 图谱（优先混合检索） ──
+
+    private RagResult analyticalRetrieve(Long tenantId, String query) {
+        StringBuilder ctx = new StringBuilder();
+        int sourceCount = 0;
+
+        // KB检索（P0-3：召回量跟随 recall-top-k）
+        List<KnowledgeBase> kbResults = searchKB(tenantId, query, null, recallTopK);
+        Set<String> kbIds = kbResults.stream().map(KnowledgeBase::getId).collect(Collectors.toSet());
+
+        // 语义向量补充（优先混合检索，不可用时回退纯稠密检索）
+        List<KnowledgeBase> newResults = List.of();
+        if (qdrantService != null && qdrantService.isHybridSearchAvailable()) {
+            List<KnowledgeBase> hybridResults = searchSemanticKBWithHybrid(tenantId, query, SEMANTIC_SUPPLEMENT);
+            newResults = hybridResults.stream()
+                    .filter(kb -> !kbIds.contains(kb.getId()))
+                    .limit(SEMANTIC_SUPPLEMENT)
+                    .toList();
+        }
+
+        // 合并候选池后统一精排
+        List<KnowledgeBase> pool = new ArrayList<>(kbResults);
+        pool.addAll(newResults);
+        List<KnowledgeBase> ranked = rerankKb(query, pool);
+
+        List<KnowledgeBase> rankedKb = new ArrayList<>();
+        List<KnowledgeBase> rankedSemantic = new ArrayList<>();
+        for (KnowledgeBase kb : ranked) {
+            if (kbIds.contains(kb.getId())) {
+                rankedKb.add(kb);
+            } else {
+                rankedSemantic.add(kb);
+            }
+        }
+
+        if (!rankedKb.isEmpty()) {
+            ctx.append("【相关知识】\n");
+            for (KnowledgeBase kb : rankedKb) {
+                ctx.append(formatKB(kb));
+            }
+            sourceCount += rankedKb.size();
+        }
+
+        if (!rankedSemantic.isEmpty()) {
+            ctx.append("【语义关联】\n");
+            for (KnowledgeBase kb : rankedSemantic) {
+                ctx.append(formatKB(kb));
+            }
+            sourceCount += rankedSemantic.size();
+        }
+
+        // 历史记忆
+        try {
+            IntelligenceMemoryResponse memResult = memoryOrchestrator.recallSimilar(tenantId, query, 3);
+            if (memResult.getRecalled() != null && !memResult.getRecalled().isEmpty()) {
+                List<IntelligenceMemoryResponse.MemoryItem> relevant = memResult.getRecalled().stream()
+                        .filter(item -> item.getSimilarityScore() >= MIN_SCORE)
+                        .limit(2).toList();
+                if (!relevant.isEmpty()) {
+                    ctx.append("【历史经验】\n");
+                    for (IntelligenceMemoryResponse.MemoryItem item : relevant) {
+                        String c = item.getContent();
+                        if (c != null && c.length() > 300) c = c.substring(0, 300) + "…";
+                        ctx.append(String.format("  - [%s] %s（采纳%d次）\n",
+                                item.getTitle() != null ? item.getTitle() : "经验",
+                                c != null ? c : "",
+                                item.getAdoptedCount()));
+                    }
+                    sourceCount += relevant.size();
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[AgenticRAG] 记忆检索跳过: {}", e.getMessage());
+        }
+
+        // 知识图谱（GraphRAG 分层检索）
+        if (graphRagService != null) {
+            try {
+                String graphCtx = graphRagService.buildGraphRagContext(tenantId, query);
+                if (graphCtx != null && !graphCtx.isBlank()) {
+                    ctx.append(graphCtx);
+                    sourceCount++;
+                }
+            } catch (Exception e) {
+                log.debug("[AgenticRAG] 图谱检索跳过: {}", e.getMessage());
+            }
+        }
+
+        return new RagResult(trim(ctx.toString()), QuestionType.ANALYTICAL, sourceCount, "analytical");
+    }
+
+    // ── 策略4：实体查询 — 实体记忆 + 图谱 ──
+
+    private RagResult entityRetrieve(Long tenantId, String query) {
+        StringBuilder ctx = new StringBuilder();
+        int sourceCount = 0;
+
+        if (entityMemoryContextService != null) {
+            try {
+                String entityCtx = entityMemoryContextService.buildEntityMemoryContext(tenantId, query);
+                if (entityCtx != null && !entityCtx.isBlank()) {
+                    ctx.append(entityCtx);
+                    sourceCount++;
+                }
+            } catch (Exception e) {
+                log.debug("[AgenticRAG] 实体记忆跳过: {}", e.getMessage());
+            }
+        }
+
+        if (graphRagService != null) {
+            try {
+                String graphCtx = graphRagService.buildGraphContext(tenantId, query);
+                if (graphCtx != null && !graphCtx.isBlank()) {
+                    ctx.append(graphCtx);
+                    sourceCount++;
+                }
+            } catch (Exception e) {
+                log.debug("[AgenticRAG] 图谱检索跳过: {}", e.getMessage());
+            }
+        }
+
+        return new RagResult(trim(ctx.toString()), QuestionType.ENTITY_LOOKUP,
+                sourceCount, sourceCount > 0 ? "entity" : "entity_empty");
+    }
+
+    // ── 降级策略：检索失败时用最宽泛策略重试 ──
+
+    private RagResult fallbackRetrieve(Long tenantId, String query, QuestionType qType) {
+        // 降级到全文模糊检索
+        String shortQuery = query.length() > 30 ? query.substring(0, 30) : query;
+        List<KnowledgeBase> fallback = rerankKb(shortQuery, searchKB(tenantId, shortQuery, null, recallTopK));
+        if (!fallback.isEmpty()) {
+            StringBuilder ctx = new StringBuilder("【模糊匹配】\n");
+            for (KnowledgeBase kb : fallback) {
+                ctx.append(formatKB(kb));
+            }
+            return new RagResult(trim(ctx.toString()), qType, fallback.size(), "fallback");
+        }
+        return new RagResult("", qType, 0, "fallback_empty");
+    }
+
+    // ── 工具方法 ──
+
+    private List<KnowledgeBase> searchKB(Long tenantId, String query, List<String> categories, int limit) {
+        try {
+            QueryWrapper<KnowledgeBase> qw = new QueryWrapper<KnowledgeBase>()
+                    .eq("delete_flag", 0)
+                    .and(w -> w.isNull("tenant_id").or().eq("tenant_id", tenantId))
+                    .and(w -> w.like("title", query)
+                            .or().like("keywords", query)
+                            .or().like("content", query));
+            if (categories != null && !categories.isEmpty()) {
+                qw.in("category", categories);
+            }
+            qw.orderByDesc("view_count").last("LIMIT " + limit);
+            return knowledgeBaseService.list(qw);
+        } catch (Exception e) {
+            log.debug("[AgenticRAG] KB检索异常: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private List<KnowledgeBase> searchSemanticKB(Long tenantId, String query, int limit) {
+        if (qdrantService == null) return List.of();
+        try {
+            List<ScoredPoint> hits = qdrantService.search(tenantId, query, limit * 2);
+            List<String> kbIds = hits.stream()
+                    .filter(h -> h.getPointId() != null && h.getPointId().startsWith("kb_"))
+                    .map(h -> h.getPointId().substring(3))
+                    .distinct().limit(limit)
+                    .toList();
+            if (kbIds.isEmpty()) return List.of();
+            return knowledgeBaseService.list(new QueryWrapper<KnowledgeBase>()
+                    .in("id", kbIds)
+                    .eq("delete_flag", 0));
+        } catch (Exception e) {
+            log.debug("[AgenticRAG] 语义检索异常: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * 语义检索（优先混合检索，不可用时回退纯稠密检索）。
+     * 混合检索结合稀疏关键词匹配和稠密语义相似度，提升召回率。
+     */
+    private List<KnowledgeBase> searchSemanticKBWithHybrid(Long tenantId, String query, int limit) {
+        if (qdrantService == null) return List.of();
+        try {
+            // 优先使用混合检索
+            List<ScoredPoint> hits;
+            if (qdrantService.isHybridSearchAvailable()) {
+                hits = qdrantService.hybridSearch(tenantId, query, limit * 2);
+            } else {
+                hits = qdrantService.search(tenantId, query, limit * 2);
+            }
+            List<String> kbIds = hits.stream()
+                    .filter(h -> h.getPointId() != null && h.getPointId().startsWith("kb_"))
+                    .map(h -> h.getPointId().substring(3))
+                    .distinct().limit(limit)
+                    .toList();
+            if (kbIds.isEmpty()) return List.of();
+            return knowledgeBaseService.list(new QueryWrapper<KnowledgeBase>()
+                    .in("id", kbIds)
+                    .eq("delete_flag", 0));
+        } catch (Exception e) {
+            log.debug("[AgenticRAG] 混合语义检索异常，回退纯稠密检索: {}", e.getMessage());
+            return searchSemanticKB(tenantId, query, limit);
+        }
+    }
+
+    /**
+     * 对候选知识库结果做 Rerank 精排。
+     *
+     * <p>未启用 / 候选不足（<= top-n）/ 调用失败或超时时，一律返回原排序，
+     * 保证 rerank 永远不会成为主链路的单点故障。
+     *
+     * <p>P0-3：所有返回路径再经过 {@link #capToContextLimit(List)} 兜底，
+     * 召回量上调后即使精排被跳过或降级，也不会把整池候选灌进 LLM 上下文。
+     */
+    private List<KnowledgeBase> rerankKb(String query, List<KnowledgeBase> candidates) {
+        if (rerankHelper == null || candidates == null || candidates.size() <= 1) {
+            return candidates;
+        }
+        try {
+            List<KnowledgeBase> reranked = rerankHelper.rerank(query, candidates);
+            if (reranked == null || reranked.isEmpty()) {
+                return capToContextLimit(candidates);
+            }
+            return capToContextLimit(reranked);
+        } catch (Exception e) {
+            log.warn("[AgenticRAG] rerank 异常，降级原排序: {}", e.getMessage());
+            return capToContextLimit(candidates);
+        }
+    }
+
+    /**
+     * P0-3 上下文条数兜底：候选项数超过 {@code xiaoyun.agent.rag.max-context-items} 时截断。
+     */
+    private List<KnowledgeBase> capToContextLimit(List<KnowledgeBase> list) {
+        if (list == null || list.isEmpty()) return list;
+        int limit = maxContextItems > 0 ? maxContextItems : MAX_CONTEXT_ITEMS_FALLBACK;
+        if (list.size() <= limit) return list;
+        log.debug("[AgenticRAG] 候选 {} 条超过上下文条数上限 {}，截断", list.size(), limit);
+        return new ArrayList<>(list.subList(0, limit));
+    }
+
+    private String formatKB(KnowledgeBase kb) {
+        String content = kb.getContent();
+        if (content != null && content.length() > 500) {
+            content = content.substring(0, 500) + "…";
+        }
+        return String.format("  - [%s] %s：%s\n",
+                kb.getCategory() != null ? kb.getCategory() : "通用",
+                kb.getTitle() != null ? kb.getTitle() : "",
+                content != null ? content : "");
+    }
+
+    private String trim(String ctx) {
+        if (ctx.length() > MAX_CONTEXT_CHARS) {
+            return ctx.substring(0, MAX_CONTEXT_CHARS) + "\n…（检索结果已截断，如需详细内容请调用工具）\n";
+        }
+        return ctx;
+    }
+
+    private String truncate(String s, int maxLen) {
+        return s.length() <= maxLen ? s : s.substring(0, maxLen) + "…";
+    }
+}

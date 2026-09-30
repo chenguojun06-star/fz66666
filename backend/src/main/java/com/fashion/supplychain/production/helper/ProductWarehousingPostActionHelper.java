@@ -32,7 +32,7 @@ public class ProductWarehousingPostActionHelper {
     private OrderRemarkService orderRemarkService;
 
     @Autowired
-    private com.fashion.supplychain.integration.openapi.service.WebhookPushService webhookPushService;
+    private com.fashion.supplychain.integration.openapi.helper.WebhookPushHelper webhookPushHelper;
 
     @Autowired
     private ProductWarehousingService productWarehousingService;
@@ -179,10 +179,10 @@ public class ProductWarehousingPostActionHelper {
     private void pushWebhookQualityResult(ProductWarehousing w) {
         if (w == null || !StringUtils.hasText(w.getOrderNo())) return;
         try {
-            if (webhookPushService != null) {
+            if (webhookPushHelper != null) {
                 int qualified = w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0;
                 int unqualified = w.getUnqualifiedQuantity() != null ? w.getUnqualifiedQuantity() : 0;
-                webhookPushService.pushQualityResult(
+                webhookPushHelper.pushQualityResult(
                         w.getOrderNo(),
                         "质检入库",
                         qualified,
