@@ -20,6 +20,8 @@ export function useOutboundContext() {
 
   const loadFactories = useCallback(async () => {
     try {
+      // D-658（用户拍板）：出库领料去向刻意不过滤供应商类型——发二次工艺厂/外发厂/退回布行（改染返修）
+      // 都是真实场景，收窄到某一类型会漏掉"回布行"等去向。勿加 supplierType/factoryType 过滤。
       const res = await factoryApi.list({ page: 1, pageSize: 200 });
       const records = (res as any)?.data?.records || (res as any)?.records || [];
       const opts: OutboundFactoryOption[] = (records as any[]).map((item) => ({
