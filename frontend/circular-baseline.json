@@ -1,0 +1,5 @@
+{
+  "_comment": "前端循环依赖冻结基线（ratchet）。指标只许减少不许增加。由 scripts/check-frontend-circular.py 维护。madge 全量跑一次约 60s，故独立于 check-frontend-quality.py（纯文本 1-2s），仅由 pre-push 在前端 .ts/.tsx 变更时触发。2026-10-01 D-673 已清零（1941 文件 / 0 环）。",
+  "_updated": "D-676",
+  "max-circular": 0
+}

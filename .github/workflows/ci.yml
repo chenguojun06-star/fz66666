@@ -264,13 +264,11 @@ jobs:
         npx ts-prune 2>&1 | head -100 || true
         echo "ℹ️  死代码检测报告已生成（未使用的导出不会阻断 CI，请定期清理）"
 
-    - name: 循环依赖检测（madge，不阻断，仅生成报告）
-      continue-on-error: true
+    # D-676：循环依赖已清零（D-673），从「仅报告」升级为门禁，防止架构回退。
+    # 与本地 pre-push 用同一个脚本，保证口径一致。
+    - name: 循环依赖检测（madge，门禁）
       working-directory: ./frontend
-      run: |
-        echo "🔄 开始循环依赖检测..."
-        npx madge --circular --extensions ts,tsx src/ 2>&1 | head -50 || true
-        echo "ℹ️  循环依赖检测报告已生成"
+      run: python3 ../scripts/check-frontend-circular.py
 
   frontend-build:
     name: 前端构建

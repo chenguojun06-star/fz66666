@@ -173,6 +173,37 @@ if [[ "$HAS_I18N" -gt 0 ]]; then
   fi
 fi
 
+# ---- 前端循环依赖门禁（D-676）----
+# 背景：2026-10-01 D-673 已把全仓循环依赖清零（madge 实测 1941 文件 / 0 环）。
+#   若不加防线，环会随日常开发悄悄回流 —— 一个反向 `import type` 就够。
+# 独立成脚本的原因：madge 要构建全量依赖图（约 60s），不能并入
+#   check-frontend-quality.py（纯文本 1-2s、无条件全跑），否则 pre-push 凭空多 1 分钟。
+# 触发范围：仅 frontend/src 下 .ts/.tsx 变更时（与 safe-push --frontend 口径一致）。
+# 注：服务器 autodeploy 是独立 cron（每 2 分钟拉 main 重建），不看 CI 结果，
+#   所以 CI 的 madge 门禁只能事后报警 —— 真正能拦住回退的只有这里。
+HAS_FE_TS=$(echo "$PUSHED_FILES" | grep -cE '^frontend/src/.*\.(ts|tsx)$' || true)
+if [[ "$HAS_FE_TS" -gt 0 ]]; then
+  CIRC_CHECK="$ROOT_DIR/scripts/check-frontend-circular.py"
+  if [[ -f "$CIRC_CHECK" ]]; then
+    echo "[pre-push] 🔄 检测到前端 TS 变更 ${HAS_FE_TS} 个文件 → 循环依赖门禁（约 60s）"
+    python3 "$CIRC_CHECK"
+    CIRC_CODE=$?
+    if [[ $CIRC_CODE -ne 0 ]]; then
+      echo ""
+      echo "❌ 前端循环依赖超过基线，推送已阻止"
+      echo "   循环依赖会让模块初始化顺序不可预测，且 D-673 已清零 —— 请消掉新环："
+      echo "     形态A 类型被子文件反向 import type → 抽 <业务名>Types.ts（保留 re-export 兼容）"
+      echo "     形态B barrel index.ts + 兄弟组件互引 → 兄弟组件改直连具体文件"
+      echo "   详见 .workbuddy-ai/memory/FRONTEND-QUALITY-NOTES.md §3"
+      echo "   紧急情况: git push --no-verify"
+      exit 1
+    fi
+    echo "[pre-push] ✅ 循环依赖检查通过"
+  else
+    echo "[pre-push] ⚠️ 未找到 $CIRC_CHECK，跳过循环依赖检查"
+  fi
+fi
+
 "$SAFE_PUSH" $ARGS
 EXIT_CODE=$?
 
