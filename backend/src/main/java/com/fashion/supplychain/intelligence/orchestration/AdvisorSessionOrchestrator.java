@@ -60,6 +60,16 @@ public class AdvisorSessionOrchestrator {
         }
     }
 
+    /** 查询指定会话的消息列表（按时间正序，多租户隔离，供前端展示历史）。 */
+    public List<HyperAdvisorSession> listSessionMessages(Long tenantId, String sessionId) {
+        return sessionMapper.selectList(
+                new LambdaQueryWrapper<HyperAdvisorSession>()
+                        .eq(HyperAdvisorSession::getTenantId, tenantId)
+                        .eq(HyperAdvisorSession::getSessionId, sessionId)
+                        .eq(HyperAdvisorSession::getDeleteFlag, 0)
+                        .orderByAsc(HyperAdvisorSession::getCreateTime));
+    }
+
     /** 保存一条消息到会话 */
     public void saveMessage(Long tenantId, String userId, String sessionId,
                             String role, String content, String metadataJson) {

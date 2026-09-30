@@ -1,13 +1,12 @@
 package com.fashion.supplychain.intelligence.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.dto.HyperAdvisorResponse;
 import com.fashion.supplychain.intelligence.entity.HyperAdvisorSession;
-import com.fashion.supplychain.intelligence.mapper.HyperAdvisorSessionMapper;
 import com.fashion.supplychain.intelligence.orchestration.AdvisorKnowledgeHarvestOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.AdvisorSessionOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.HyperAdvisorOrchestrator;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +29,7 @@ public class HyperAdvisorController {
     private AdvisorKnowledgeHarvestOrchestrator knowledgeHarvestOrchestrator;
 
     @Autowired
-    private HyperAdvisorSessionMapper sessionMapper;
+    private AdvisorSessionOrchestrator advisorSessionOrchestrator;
 
     /**
      * POST /api/hyper-advisor/ask
@@ -76,12 +75,6 @@ public class HyperAdvisorController {
     public Result<List<HyperAdvisorSession>> history(@PathVariable String sessionId) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
-        List<HyperAdvisorSession> messages = sessionMapper.selectList(
-                new LambdaQueryWrapper<HyperAdvisorSession>()
-                        .eq(HyperAdvisorSession::getTenantId, tenantId)
-                        .eq(HyperAdvisorSession::getSessionId, sessionId)
-                        .eq(HyperAdvisorSession::getDeleteFlag, 0)
-                        .orderByAsc(HyperAdvisorSession::getCreateTime));
-        return Result.success(messages);
+        return Result.success(advisorSessionOrchestrator.listSessionMessages(tenantId, sessionId));
     }
 }

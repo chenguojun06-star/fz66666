@@ -132,6 +132,20 @@ public class SkillEvolutionOrchestrator {
         return skillTemplateMapper.selectList(qw);
     }
 
+    /**
+     * 按 skillId + tenantId 加载单个技能模板（多租户隔离，禁止跨租户读取）。
+     *
+     * <p>供三层渐进式披露接口（metadata / skill-md / references）复用。
+     */
+    public SkillTemplate loadSkillForTenant(String skillId, Long tenantId) {
+        return skillTemplateMapper.selectOne(
+                new QueryWrapper<SkillTemplate>()
+                        .eq("id", skillId)
+                        .eq("tenant_id", tenantId)
+                        .eq("delete_flag", 0)
+                        .last("LIMIT 1"));
+    }
+
     private String buildSkillExtractionPrompt(ConversationReflection reflection) {
         return String.format("""
                 你是一个AI技能提取器。分析以下对话复盘记录，提取可复用的操作流程作为技能模板。

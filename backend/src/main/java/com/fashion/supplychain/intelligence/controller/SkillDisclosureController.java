@@ -1,12 +1,11 @@
 package com.fashion.supplychain.intelligence.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.skill.SkillDisclosureLoader;
 import com.fashion.supplychain.intelligence.entity.SkillTemplate;
-import com.fashion.supplychain.intelligence.mapper.SkillTemplateMapper;
+import com.fashion.supplychain.intelligence.orchestration.SkillEvolutionOrchestrator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -38,7 +37,7 @@ import java.util.Map;
 @PreAuthorize("isAuthenticated()")
 public class SkillDisclosureController {
 
-    private final SkillTemplateMapper skillTemplateMapper;
+    private final SkillEvolutionOrchestrator skillEvolutionOrchestrator;
     private final SkillDisclosureLoader skillDisclosureLoader;
 
     /** 仅返回 metadata 层（~50 tokens），用于常驻上下文。 */
@@ -46,7 +45,7 @@ public class SkillDisclosureController {
     public Result<String> getMetadata(@PathVariable("skillId") String skillId) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
-        SkillTemplate skill = loadSkill(skillId, tenantId);
+        SkillTemplate skill = skillEvolutionOrchestrator.loadSkillForTenant(skillId, tenantId);
         if (skill == null) {
             return Result.fail("技能不存在或无权访问");
         }
@@ -58,7 +57,7 @@ public class SkillDisclosureController {
     public Result<String> getSkillMd(@PathVariable("skillId") String skillId) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
-        SkillTemplate skill = loadSkill(skillId, tenantId);
+        SkillTemplate skill = skillEvolutionOrchestrator.loadSkillForTenant(skillId, tenantId);
         if (skill == null) {
             return Result.fail("技能不存在或无权访问");
         }
@@ -76,22 +75,12 @@ public class SkillDisclosureController {
                                         @RequestBody(required = false) Map<String, Object> body) {
         TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
-        SkillTemplate skill = loadSkill(skillId, tenantId);
+        SkillTemplate skill = skillEvolutionOrchestrator.loadSkillForTenant(skillId, tenantId);
         if (skill == null) {
             return Result.fail("技能不存在或无权访问");
         }
         String query = extractQuery(body);
         return Result.success(skillDisclosureLoader.loadReferences(skill, query));
-    }
-
-    /** 按 skillId + tenantId 加载技能（多租户隔离，禁止跨租户读取）。 */
-    private SkillTemplate loadSkill(String skillId, Long tenantId) {
-        return skillTemplateMapper.selectOne(
-                new QueryWrapper<SkillTemplate>()
-                        .eq("id", skillId)
-                        .eq("tenant_id", tenantId)
-                        .eq("delete_flag", 0)
-                        .last("LIMIT 1"));
     }
 
     private String extractQuery(Map<String, Object> body) {

@@ -457,6 +457,17 @@ public class SampleStockOrchestrator {
         }
     }
 
+    /** 查询某样衣库存的借出记录（按创建时间倒序，多租户隔离）。 */
+    public List<SampleLoan> listLoans(String sampleStockId) {
+        Long tenantId = UserContext.tenantId();
+        LambdaQueryWrapper<SampleLoan> wrapper = new LambdaQueryWrapper<SampleLoan>()
+                .eq(SampleLoan::getSampleStockId, sampleStockId)
+                .eq(SampleLoan::getTenantId, tenantId)
+                .eq(SampleLoan::getDeleteFlag, 0)
+                .orderByDesc(SampleLoan::getCreateTime);
+        return sampleLoanMapper.selectList(wrapper);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public String transferToOutstock(String stockId, Integer quantity, String customerName,
                                       String customerPhone, String shippingAddress,

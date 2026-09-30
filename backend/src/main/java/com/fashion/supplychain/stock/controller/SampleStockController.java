@@ -1,12 +1,10 @@
 package com.fashion.supplychain.stock.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.stock.dto.SampleStockInboundBatchRequest;
 import com.fashion.supplychain.stock.entity.SampleLoan;
 import com.fashion.supplychain.stock.entity.SampleStock;
-import com.fashion.supplychain.stock.mapper.SampleLoanMapper;
 import com.fashion.supplychain.stock.orchestration.SampleStockOrchestrator;
 import com.fashion.supplychain.stock.service.SampleStockService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,9 +25,6 @@ public class SampleStockController {
 
     @Autowired
     private SampleStockService sampleStockService;
-
-    @Autowired
-    private SampleLoanMapper sampleLoanMapper;
 
     @Autowired
     private SampleStockOrchestrator sampleStockOrchestrator;
@@ -104,13 +99,7 @@ public class SampleStockController {
     @GetMapping("/loan/list")
     @Operation(summary = "查询借出记录", description = "查询样衣的借出记录列表")
     public Result<List<SampleLoan>> listLoans(@Parameter(description = "样衣库存ID") @RequestParam String sampleStockId) {
-        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
-        LambdaQueryWrapper<SampleLoan> wrapper = new LambdaQueryWrapper<SampleLoan>()
-                .eq(SampleLoan::getSampleStockId, sampleStockId)
-                .eq(SampleLoan::getTenantId, tenantId)
-                .eq(SampleLoan::getDeleteFlag, 0)
-                .orderByDesc(SampleLoan::getCreateTime);
-        return Result.success(sampleLoanMapper.selectList(wrapper));
+        return Result.success(sampleStockOrchestrator.listLoans(sampleStockId));
     }
 
     @PostMapping("/scan-query")

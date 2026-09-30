@@ -89,6 +89,17 @@ class ArchitectureRulesTest {
     /**
      * 规则1：Controller 不得直接依赖 Mapper。
      * Controller 只应依赖 Orchestrator / Service，绕过业务层直接查库会让事务与权限校验失效。
+     *
+     * <p>D-654：判据由 {@code haveSimpleNameEndingWith("Mapper")} 收紧为
+     * {@code resideInAPackage("..mapper..")}。前者会把 Jackson 的 {@code ObjectMapper}
+     * 也算成 Mapper（simpleName 同样以 Mapper 结尾）—— 实测 6 个命中里有 3 个是这类
+     * 假阳性（{@code EcommerceOrderController} / {@code ImAiWebhookController} /
+     * {@code IntelligenceExecutionController} 的 {@code ObjectMapper OBJECT_MAPPER}）。
+     *
+     * <p>收紧后不会漏掉真违规：全仓 251 个 {@code *Mapper.java} 中只有 2 个不在
+     * {@code mapper} 包下（{@code intelligence.helper.PromptToolLabelMapper} 是纯静态工具类、
+     * {@code intelligence.engine.featureflag.FeatureFlagTenantMapper} 只被同包 Service 使用），
+     * 二者均无任何 Controller 依赖。
      */
     @Test
     @DisplayName("Controller 不得直接依赖 Mapper")
@@ -96,7 +107,7 @@ class ArchitectureRulesTest {
         JavaClasses c = classes();
         ArchRule rule = noClasses()
                 .that().haveSimpleNameEndingWith("Controller")
-                .should().dependOnClassesThat().haveSimpleNameEndingWith("Mapper")
+                .should().dependOnClassesThat().resideInAPackage("..mapper..")
                 .because("Controller 应通过 Orchestrator/Service 访问数据，直接依赖 Mapper 会绕过事务与业务校验");
 
         int violations = countViolations(c, rule);
