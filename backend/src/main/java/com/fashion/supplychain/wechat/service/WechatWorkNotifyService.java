@@ -1,9 +1,6 @@
 package com.fashion.supplychain.wechat.service;
 
-import com.fashion.supplychain.system.entity.Tenant;
-import com.fashion.supplychain.system.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -50,10 +47,6 @@ public class WechatWorkNotifyService {
     private boolean enabled;
 
     private final RestTemplate restTemplate;
-
-    /** 租户 Service，用于查询租户独立 Webhook 配置（Spring 延迟注入，避免循环依赖） */
-    @Autowired(required = false)
-    private TenantService tenantService;
 
     public WechatWorkNotifyService() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -127,19 +120,21 @@ public class WechatWorkNotifyService {
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // 租户级接口（优先使用租户独立 Webhook，无则回退全局配置）
+    // 指定 URL 推送（租户 Webhook 的解析由调用方 Orchestrator 负责）
     // ──────────────────────────────────────────────────────────────────────
 
     /**
-     * 向指定租户的企业微信群发送订单预警（使用该租户自己配置的 Webhook）
+     * 向指定 Webhook URL 推送订单预警（URL 为空时静默跳过）。
      *
-     * <p>若租户未配置独立 Webhook，则回退到全局 {@code wechat.work.webhook-url} 配置。
-     * 若全局也未配置，静默跳过，不影响主业务。
+     * <p>D-657：原 {@code sendOrderAlertForTenant(tenantId, ...)}。因该方法需要注入
+     * {@code TenantService} 查询租户独立 Webhook 配置，违反「Service 不得依赖其他 Service」。
+     * 现将「解析租户 Webhook」上移到
+     * {@code SysNoticeOrchestrator.resolveWechatWebhookUrl(tenantId)}（该编排器本就持有
+     * TenantService，零新增装配），本方法只负责「按 URL 推送」，行为完全等价。
      */
-    public void sendOrderAlertForTenant(Long tenantId, String orderNo, String styleNo,
-                                         String alertType, String detail) {
-        String url = resolveWebhookUrl(tenantId);
-        if (url == null || url.isBlank()) return;
+    public void sendOrderAlertTo(String webhookUrl, String orderNo, String styleNo,
+                                 String alertType, String detail) {
+        if (webhookUrl == null || webhookUrl.isBlank()) return;
 
         String emoji = alertEmojiFor(alertType);
         String label = alertLabelFor(alertType);
@@ -147,39 +142,27 @@ public class WechatWorkNotifyService {
         String content = String.format("%s **%s — 订单 %s%s**\n>%s",
                 emoji, label, orderNo, styleInfo, detail);
 
-        doPostToUrl(url, buildMarkdownBody(content), "markdown");
+        doPostToUrl(webhookUrl, buildMarkdownBody(content), "markdown");
     }
 
     /**
-     * 向指定租户的企业微信群发送 Markdown 消息
+     * 向指定 Webhook URL 推送 Markdown 消息（URL 为空时静默跳过）。
      *
-     * <p>若租户未配置独立 Webhook，则回退到全局配置；均为空时静默跳过。
+     * <p>D-657：原 {@code sendMarkdownForTenant(tenantId, content)}，同 {@link #sendOrderAlertTo}。
      */
-    public void sendMarkdownForTenant(Long tenantId, String content) {
-        String url = resolveWebhookUrl(tenantId);
-        if (url == null || url.isBlank()) return;
-        doPostToUrl(url, buildMarkdownBody(content), "markdown");
+    public void sendMarkdownTo(String webhookUrl, String content) {
+        if (webhookUrl == null || webhookUrl.isBlank()) return;
+        doPostToUrl(webhookUrl, buildMarkdownBody(content), "markdown");
     }
 
-    /**
-     * 解析租户 Webhook URL：优先取租户独立配置，无则回退全局配置
-     */
-    private String resolveWebhookUrl(Long tenantId) {
-        if (!enabled) return null;
-        if (tenantId != null && tenantService != null) {
-            try {
-                Tenant tenant = tenantService.getById(tenantId);
-                if (tenant != null && tenant.getWechatWorkWebhookUrl() != null
-                        && !tenant.getWechatWorkWebhookUrl().isBlank()) {
-                    return tenant.getWechatWorkWebhookUrl();
-                }
-            } catch (Exception e) {
-                log.warn("[WechatWork] 查询租户 Webhook 失败，降级使用全局配置 tenantId={} error={}",
-                        tenantId, e.getMessage());
-            }
-        }
-        // 回退到全局配置
-        return (webhookUrl != null && !webhookUrl.isBlank()) ? webhookUrl : null;
+    /** 企业微信推送是否已启用（{@code wechat.work.enabled=true}）。 */
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    /** 全局兜底 Webhook URL：未启用或未配置时返回 null。 */
+    public String globalWebhookUrl() {
+        return (enabled && webhookUrl != null && !webhookUrl.isBlank()) ? webhookUrl : null;
     }
 
     private Map<String, Object> buildMarkdownBody(String content) {

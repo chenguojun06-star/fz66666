@@ -159,8 +159,8 @@ public class SysNoticeOrchestrator {
 
         // 推送：企业微信
         try {
-            wechatWorkNotifyService.sendOrderAlertForTenant(
-                    tenantId,
+            wechatWorkNotifyService.sendOrderAlertTo(
+                    resolveWechatWebhookUrl(tenantId),
                     order.getOrderNo(),
                     order.getStyleNo(),
                     noticeType,
@@ -235,8 +235,8 @@ public class SysNoticeOrchestrator {
                 order.getOrderNo(), merchandiser, noticeType);
 
         // 同步推送到企业微信群（优先使用租户自己的 Webhook，无则回退全局配置）
-        wechatWorkNotifyService.sendOrderAlertForTenant(
-                tenantId,
+        wechatWorkNotifyService.sendOrderAlertTo(
+                resolveWechatWebhookUrl(tenantId),
                 order.getOrderNo(),
                 order.getStyleNo(),
                 noticeType,
@@ -456,7 +456,7 @@ public class SysNoticeOrchestrator {
 
         // 同步推送到企业微信群（优先使用租户自己的 Webhook，无则回退全局配置）
         String wechatContent = String.format("**%s — %s**\n>%s", title, orderNo != null ? orderNo : "", content);
-        wechatWorkNotifyService.sendMarkdownForTenant(tenantId, wechatContent);
+        wechatWorkNotifyService.sendMarkdownTo(resolveWechatWebhookUrl(tenantId), wechatContent);
 
         if (feishuNotifyService != null) {
             try {
@@ -571,6 +571,34 @@ public class SysNoticeOrchestrator {
     /**
      * 返回 [displayName, username]，用于收件箱查询时双字段 OR 匹配
      */
+    /**
+     * 解析企业微信 Webhook URL：优先租户独立配置，无则回退全局配置。
+     *
+     * <p>D-657：从 {@code WechatWorkNotifyService.resolveWebhookUrl} 上移而来。
+     * 该 Service 原先直接注入 {@code TenantService} 查租户 Webhook，违反
+     * 「Service 不得依赖其他 Service」；本编排器本就持有 TenantService（零新增装配）。
+     *
+     * <p>行为与原实现完全一致：未启用 → null；租户配置非空 → 用它；查询异常或未配置
+     * → 回退全局 webhook-url（全局也为空则 null，调用方静默跳过）。
+     */
+    private String resolveWechatWebhookUrl(Long tenantId) {
+        if (!wechatWorkNotifyService.isEnabled()) {
+            return null;
+        }
+        if (tenantId != null) {
+            try {
+                Tenant tenant = tenantService.getById(tenantId);
+                if (tenant != null && org.springframework.util.StringUtils.hasText(tenant.getWechatWorkWebhookUrl())) {
+                    return tenant.getWechatWorkWebhookUrl();
+                }
+            } catch (Exception e) {
+                log.warn("[SysNotice] 查询租户企业微信 Webhook 失败，降级使用全局配置 tenantId={} error={}",
+                        tenantId, e.getMessage());
+            }
+        }
+        return wechatWorkNotifyService.globalWebhookUrl();
+    }
+
     private String[] resolveMyNames(Long tenantId) {
         String loginUsername = UserContext.username();
         User me = userService.lambdaQuery()
