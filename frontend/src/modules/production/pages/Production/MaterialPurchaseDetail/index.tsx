@@ -18,6 +18,7 @@ import { buildEditColumns, buildViewColumns } from './columns';
 import MaterialSelectModal from './components/MaterialSelectModal';
 import BatchPurchaseModal, { type BatchPurchaseItem } from './components/BatchPurchaseModal';
 import SizeUsageSummaryPanel from './components/SizeUsageSummaryPanel';
+import OrderDemandSummaryPanel from './components/OrderDemandSummaryPanel';
 import PurchasePrintModal from './components/PurchasePrintModal';
 import ConfirmCompleteModal from '../MaterialPurchase/components/ConfirmCompleteModal';
 import type { ConfirmCompleteOptions } from '../MaterialPurchase/hooks/usePurchaseConfirmCompleteActions';
@@ -330,7 +331,11 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
       )}
 
       {!sampleMode && order?.id ? (
-        <SizeUsageSummaryPanel orderId={order.id} purchaseList={purchaseList} />
+        <>
+          <SizeUsageSummaryPanel orderId={order.id} purchaseList={purchaseList} />
+          {/* D-660：物料需求一览（需求/库存/在途/缺口）——补码数用量汇总没有的库存与在途维度 */}
+          <OrderDemandSummaryPanel orderId={order.id} orderNo={orderNo} />
+        </>
       ) : null}
 
       <Card

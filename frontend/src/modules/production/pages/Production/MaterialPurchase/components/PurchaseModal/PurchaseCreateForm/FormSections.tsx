@@ -3,6 +3,8 @@ import { Form, Input, InputNumber, Row, Col, Select } from 'antd';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import MultiImageUploadBox from '@/components/common/MultiImageUploadBox';
+import MaterialDemandSummary from '@/components/common/MaterialDemandSummary';
+import type { MaterialDemandItem } from '@/components/common/MaterialDemandSummary';
 import StockInfoDisplay from './StockInfoDisplay';
 import type { StockInfo } from './useStockCheck';
 import { formatReferenceKilograms } from '../../../utils';
@@ -121,6 +123,8 @@ interface MaterialDetailSectionProps {
   materialCode: string | undefined;
   stockInfo: StockInfo | null;
   unit: string | undefined;
+  /** D-660：本订单该物料的需求（BOM口径），填了订单号+物料编码后显示"需求/库存/缺口"速览 */
+  demandItem?: MaterialDemandItem | null;
 }
 
 export const MaterialDetailSection: React.FC<MaterialDetailSectionProps> = ({
@@ -129,8 +133,10 @@ export const MaterialDetailSection: React.FC<MaterialDetailSectionProps> = ({
   materialCode,
   stockInfo,
   unit,
+  demandItem,
 }) => (
-  <Row gutter={[16, 0]}>
+  <>
+    <Row gutter={[16, 0]}>
     <Col xs={24} md={6}>
       <Form.Item
         name="color"
@@ -172,7 +178,15 @@ export const MaterialDetailSection: React.FC<MaterialDetailSectionProps> = ({
     <Col xs={24} md={6}>
       <StockInfoDisplay materialCode={materialCode} stockInfo={stockInfo} unit={unit} />
     </Col>
-  </Row>
+    </Row>
+    {demandItem && (
+      <Row gutter={[16, 0]} style={{ marginTop: 4 }}>
+        <Col xs={24}>
+          <MaterialDemandSummary compact items={[demandItem]} />
+        </Col>
+      </Row>
+    )}
+  </>
 );
 
 interface SupplierSectionProps {

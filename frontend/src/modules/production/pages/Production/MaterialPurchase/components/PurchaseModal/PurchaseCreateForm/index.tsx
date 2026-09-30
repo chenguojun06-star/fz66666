@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo } from 'react';
 import { Form } from 'antd';
 import { useMaterialDbSearch, fillFormFromMaterialDb } from './useMaterialDbSearch';
 import { useStockCheck } from './useStockCheck';
+import { useOrderDemandPreview } from './useOrderDemandPreview';
+import type { MaterialDemandItem } from '@/components/common/MaterialDemandSummary';
 import {
   StyleInfoSection,
   MaterialInfoSection,
@@ -32,9 +34,34 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form, orderColo
   const watchedMaterialCode = Form.useWatch('materialCode', form);
   const watchedColor = Form.useWatch('color', form);
   const watchedSize = Form.useWatch('size', form);
+  const watchedOrderNo = Form.useWatch('orderNo', form);
 
   const { materialDbOptions, materialDbLoading, searchMaterialDb } = useMaterialDbSearch();
   const stockInfo = useStockCheck(watchedMaterialCode, watchedColor, watchedSize);
+  // D-660：本订单物料需求（BOM口径）——填了订单号+物料编码后在物料区显示"需求/库存/缺口"速览
+  const { rows: demandRows } = useOrderDemandPreview(watchedOrderNo);
+
+  const demandItem: MaterialDemandItem | null = useMemo(() => {
+    const code = (watchedMaterialCode || '').trim();
+    if (!code || demandRows.length === 0) return null;
+    let rows = demandRows.filter(r => String(r.materialCode || '').trim() === code);
+    if (rows.length === 0) return null;
+    const colorKey = (watchedColor || '').trim();
+    if (colorKey) {
+      const colorMatched = rows.filter(r => String(r.color || '').trim() === colorKey);
+      if (colorMatched.length > 0) rows = colorMatched;
+    }
+    const requiredQty = rows.reduce((s, r) => s + (Number(r.purchaseQuantity) || 0), 0);
+    if (requiredQty <= 0) return null;
+    return {
+      key: code,
+      categoryLabel: '本订单',
+      label: String(rows[0]?.materialName || code),
+      requiredQty,
+      unit: String(rows[0]?.unit || ''),
+      stockQty: stockInfo ? Number(stockInfo.quantity) : undefined,
+    };
+  }, [demandRows, watchedMaterialCode, watchedColor, stockInfo]);
 
   const handleMaterialDbSelect = useCallback((_value: string, option: any) => {
     fillFormFromMaterialDb(form, option?.record);
@@ -70,6 +97,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form, orderColo
           materialCode={watchedMaterialCode}
           stockInfo={stockInfo}
           unit={watchedUnit}
+          demandItem={demandItem}
         />
         <SupplierSection form={form} />
         <QuantitySection

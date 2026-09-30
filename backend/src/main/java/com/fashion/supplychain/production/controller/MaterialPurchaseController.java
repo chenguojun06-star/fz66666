@@ -122,8 +122,10 @@ public class MaterialPurchaseController {
     }
 
     @GetMapping("/demand/preview")
-    public Result<?> previewDemand(@RequestParam String orderId) {
-        return Result.success(materialPurchaseOrchestrator.previewDemand(orderId));
+    public Result<?> previewDemand(@RequestParam(required = false) String orderId,
+                                   @RequestParam(required = false) String orderNo) {
+        // D-660：支持按订单号查询（手工发起采购表单只有 orderNo），orderId 优先保持旧调用兼容
+        return Result.success(materialPurchaseOrchestrator.previewDemand(orderId, orderNo));
     }
 
     /**

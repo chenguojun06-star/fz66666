@@ -632,10 +632,28 @@ public class MaterialPurchaseOrchestrator {
     }
 
     public Object previewDemand(String orderId) {
-        if (!StringUtils.hasText(orderId)) {
+        return previewDemand(orderId, null);
+    }
+
+    /**
+     * D-660：支持按订单号查询——手工发起采购表单只持有 orderNo（PO…），先解析成订单再走原预览链路。
+     * 同单号多行（理论不该有）取最新一条；查不到返回空列表不报错（表单场景是辅助提示，不阻断）。
+     */
+    public Object previewDemand(String orderId, String orderNo) {
+        String seedOrderId = orderId != null ? orderId.trim() : "";
+        if (!StringUtils.hasText(seedOrderId) && StringUtils.hasText(orderNo)) {
+            ProductionOrder byNo = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getOrderNo, orderNo.trim())
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .eq(ProductionOrder::getTenantId, com.fashion.supplychain.common.UserContext.tenantId())
+                    .orderByDesc(ProductionOrder::getCreateTime)
+                    .last("LIMIT 1")
+                    .one();
+            seedOrderId = byNo != null && StringUtils.hasText(byNo.getId()) ? byNo.getId() : "";
+        }
+        if (!StringUtils.hasText(seedOrderId)) {
             return List.of();
         }
-        String seedOrderId = orderId.trim();
         ProductionOrder seed = productionOrderService.getDetailById(seedOrderId);
         if (seed == null) {
             return List.of();
@@ -647,7 +665,7 @@ public class MaterialPurchaseOrchestrator {
             }
             return helper.buildBatchPreview(orderIds);
         } catch (Exception e) {
-            log.warn("采购需求预览失败: orderId={}, error={}", orderId, e.getMessage());
+            log.warn("采购需求预览失败: orderId={}, orderNo={}, error={}", orderId, orderNo, e.getMessage());
             return List.of();
         }
     }
