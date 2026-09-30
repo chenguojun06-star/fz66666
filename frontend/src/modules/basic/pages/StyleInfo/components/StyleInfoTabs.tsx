@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tabs } from 'antd';
 import type { SizeColorConfigInput } from './stylePattern/helpers';
+import type { StyleInfo } from '@/types/style';
 
 import StyleBomTab from './StyleBomTab';
 import StyleQuotationTab from './StyleQuotationTab';
@@ -14,7 +15,7 @@ import StyleWashLabelTab from './StyleWashLabelTab';
 interface StyleInfoTabsProps {
   activeKey: string;
   onChange: (key: string) => void;
-  currentStyle: any;
+  currentStyle: StyleInfo | null;
   styleIdParam?: string;
   sizeColorConfig?: SizeColorConfigInput;
   matrixSizes: string[];
@@ -86,14 +87,14 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
 
   // 读取各阶段完成状态
   const isStageCompleted = (stage: string): boolean => {
-    const completedTime = (currentStyle as any)?.[`${stage}CompletedTime`];
-    const status = (currentStyle as any)?.[`${stage}Status`];
+    const completedTime = currentStyle?.[`${stage}CompletedTime`];
+    const status = currentStyle?.[`${stage}Status`];
     return Boolean(completedTime) || String(status || '').toUpperCase() === 'COMPLETED';
   };
   const isStageInProgress = (stage: string): boolean => {
     if (isStageCompleted(stage)) return false;
-    const startTime = (currentStyle as any)?.[`${stage}StartTime`];
-    const status = (currentStyle as any)?.[`${stage}Status`];
+    const startTime = currentStyle?.[`${stage}StartTime`];
+    const status = currentStyle?.[`${stage}Status`];
     return Boolean(startTime) || Boolean(status);
   };
 
@@ -135,10 +136,10 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
                 styleId={styleId}
                 styleNo={styleNo}
                 sizeColorConfig={sizeColorConfig}
-                readOnly={Boolean((currentStyle as any)?.bomCompletedTime)}
-                bomAssignee={(currentStyle as any)?.bomAssignee}
-                bomStartTime={(currentStyle as any)?.bomStartTime}
-                bomCompletedTime={(currentStyle as any)?.bomCompletedTime}
+                readOnly={Boolean(currentStyle?.bomCompletedTime)}
+                bomAssignee={currentStyle?.bomAssignee}
+                bomStartTime={currentStyle?.bomStartTime}
+                bomCompletedTime={currentStyle?.bomCompletedTime}
                 onRefresh={onRefresh}
                 onCartAdded={onCartAdded}
               />
@@ -150,14 +151,14 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
                 styleId={styleId}
                 styleNo={styleNo}
                 sizeColorConfig={sizeColorConfig}
-                readOnly={Boolean((currentStyle as any)?.patternCompletedTime)}
-                patternAssignee={(currentStyle as any)?.patternAssignee}
-                patternStartTime={(currentStyle as any)?.patternStartTime}
-                patternCompletedTime={(currentStyle as any)?.patternCompletedTime}
+                readOnly={Boolean(currentStyle?.patternCompletedTime)}
+                patternAssignee={currentStyle?.patternAssignee}
+                patternStartTime={currentStyle?.patternStartTime}
+                patternCompletedTime={currentStyle?.patternCompletedTime}
                 patternStatus={currentStyle?.patternStatus}
-                sizeAssignee={(currentStyle as any)?.sizeAssignee}
-                sizeStartTime={(currentStyle as any)?.sizeStartTime}
-                sizeCompletedTime={(currentStyle as any)?.sizeCompletedTime}
+                sizeAssignee={currentStyle?.sizeAssignee}
+                sizeStartTime={currentStyle?.sizeStartTime}
+                sizeCompletedTime={currentStyle?.sizeCompletedTime}
                 linkedSizes={matrixSizes}
                 onRefresh={onRefresh}
               />
@@ -170,7 +171,7 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
                 styleNo={styleNo}
                 productionReqRows={production.productionReqRows}
                 productionReqRowCount={production.productionReqRowCount}
-                productionReqLocked={Boolean((currentStyle as any)?.productionCompletedTime)}
+                productionReqLocked={Boolean(currentStyle?.productionCompletedTime)}
                 productionReqEditable={production.productionReqEditable}
                 productionReqSaving={production.productionSaving}
                 productionReqRollbackSaving={production.productionRollbackSaving}
@@ -179,20 +180,20 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
                 onProductionReqReset={production.resetProductionReqFromCurrent}
                 onProductionReqRollback={production.handleRollbackProductionReq}
                 productionReqCanRollback
-                productionAssignee={(currentStyle as any)?.productionAssignee}
-                productionStartTime={(currentStyle as any)?.productionStartTime}
-                productionCompletedTime={(currentStyle as any)?.productionCompletedTime}
+                productionAssignee={currentStyle?.productionAssignee}
+                productionStartTime={currentStyle?.productionStartTime}
+                productionCompletedTime={currentStyle?.productionCompletedTime}
                 onRefresh={onRefresh}
-                sampleCompleted={(currentStyle as any)?.sampleStatus === 'COMPLETED'}
-                sampleReviewStatus={(currentStyle as any)?.sampleReviewStatus}
-                sampleReviewComment={(currentStyle as any)?.sampleReviewComment}
-                sampleReviewer={(currentStyle as any)?.sampleReviewer}
-                sampleReviewTime={(currentStyle as any)?.sampleReviewTime}
-                completedTime={(currentStyle as any)?.completedTime}
-                styleName={(currentStyle as any)?.styleName}
-                color={(currentStyle as any)?.color}
-                size={(currentStyle as any)?.size}
-                sampleQuantity={(currentStyle as any)?.sampleQuantity}
+                sampleCompleted={currentStyle?.sampleStatus === 'COMPLETED'}
+                sampleReviewStatus={currentStyle?.sampleReviewStatus}
+                sampleReviewComment={currentStyle?.sampleReviewComment}
+                sampleReviewer={currentStyle?.sampleReviewer}
+                sampleReviewTime={currentStyle?.sampleReviewTime}
+                completedTime={currentStyle?.completedTime}
+                styleName={currentStyle?.styleName}
+                color={currentStyle?.color}
+                size={currentStyle?.size}
+                sampleQuantity={currentStyle?.sampleQuantity}
               />
             </div>
           )},
@@ -201,11 +202,11 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
               <StyleSecondaryProcessTab
                 styleId={styleId}
                 styleNo={styleNo}
-                readOnly={Boolean((currentStyle as any)?.secondaryCompletedTime)}
-                secondaryAssignee={(currentStyle as any)?.secondaryAssignee}
-                secondaryStartTime={(currentStyle as any)?.secondaryStartTime}
-                secondaryCompletedTime={(currentStyle as any)?.secondaryCompletedTime}
-                sampleQuantity={(currentStyle as any)?.sampleQuantity}
+                readOnly={Boolean(currentStyle?.secondaryCompletedTime)}
+                secondaryAssignee={currentStyle?.secondaryAssignee}
+                secondaryStartTime={currentStyle?.secondaryStartTime}
+                secondaryCompletedTime={currentStyle?.secondaryCompletedTime}
+                sampleQuantity={currentStyle?.sampleQuantity}
                 onRefresh={onRefresh}
               />
             </div>
@@ -216,10 +217,10 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
                 styleId={styleId}
                 styleNo={styleNo}
                 sizeColorConfig={sizeColorConfig}
-                readOnly={Boolean((currentStyle as any)?.processCompletedTime)}
-                processAssignee={(currentStyle as any)?.processAssignee}
-                processStartTime={(currentStyle as any)?.processStartTime}
-                processCompletedTime={(currentStyle as any)?.processCompletedTime}
+                readOnly={Boolean(currentStyle?.processCompletedTime)}
+                processAssignee={currentStyle?.processAssignee}
+                processStartTime={currentStyle?.processStartTime}
+                processCompletedTime={currentStyle?.processCompletedTime}
                 onRefresh={onRefresh}
               />
             </div>
@@ -239,17 +240,17 @@ const StyleInfoTabs: React.FC<StyleInfoTabsProps> = ({
               <StyleWashLabelTab
                 styleId={String(styleId ?? '')}
                 styleNo={styleNo}
-                styleName={(currentStyle as any)?.styleName}
-                fabricCompositionParts={(currentStyle as any)?.fabricCompositionParts}
-                fabricComposition={(currentStyle as any)?.fabricComposition}
-                washInstructions={(currentStyle as any)?.washInstructions}
-                uCode={(currentStyle as any)?.uCode}
-                washTempCode={(currentStyle as any)?.washTempCode}
-                bleachCode={(currentStyle as any)?.bleachCode}
-                tumbleDryCode={(currentStyle as any)?.tumbleDryCode}
-                ironCode={(currentStyle as any)?.ironCode}
-                dryCleanCode={(currentStyle as any)?.dryCleanCode}
-                careIconCodes={(currentStyle as any)?.careIconCodes}
+                styleName={currentStyle?.styleName}
+                fabricCompositionParts={currentStyle?.fabricCompositionParts}
+                fabricComposition={currentStyle?.fabricComposition}
+                washInstructions={currentStyle?.washInstructions}
+                uCode={currentStyle?.uCode}
+                washTempCode={currentStyle?.washTempCode}
+                bleachCode={currentStyle?.bleachCode}
+                tumbleDryCode={currentStyle?.tumbleDryCode}
+                ironCode={currentStyle?.ironCode}
+                dryCleanCode={currentStyle?.dryCleanCode}
+                careIconCodes={currentStyle?.careIconCodes}
                 onRefresh={onRefresh}
               />
             </div>

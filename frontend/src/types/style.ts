@@ -39,6 +39,29 @@ export interface StyleInfo extends Record<string, unknown> {
   sampleProgress?: number;
   sampleStartTime?: string;
   sampleCompletedTime?: string;
+
+  // ===== 各开发阶段负责人 / 起止时间（D-677 补齐：StyleInfoTabs 等可去掉 as any）=====
+  bomStatus?: string;
+  bomAssignee?: string;
+  bomStartTime?: string;
+  bomCompletedTime?: string;
+  patternAssignee?: string;
+  sizeAssignee?: string;
+  sizeStartTime?: string;
+  sizeCompletedTime?: string;
+  productionAssignee?: string;
+  productionStartTime?: string;
+  productionCompletedTime?: string;
+  secondaryAssignee?: string;
+  secondaryStartTime?: string;
+  secondaryCompletedTime?: string;
+  processAssignee?: string;
+  processStartTime?: string;
+  processCompletedTime?: string;
+  sampleReviewStatus?: string;
+  sampleReviewComment?: string;
+  sampleReviewer?: string;
+  sampleReviewTime?: string;
   developmentSourceType?: 'SELF_DEVELOPED' | 'SELECTION_CENTER' | string;
   developmentSourceDetail?: string;
 
