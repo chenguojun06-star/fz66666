@@ -33,7 +33,8 @@ export const PATROL_ISSUE_TYPE_LABELS: Record<string, string> = {
   PAYROLL_READY: '工资可结算',
   OUTSOURCE_TIMEOUT: '外发超时',
   COMBO_RISK: '套装风险',
-  CUTTING_BACKLOG: '裁剪积压',
+  // D-656：原「裁剪积压」与描述"裁剪完成已超48h但车缝未开始"自相矛盾——积压发生在裁剪之后（裁片待车缝）
+  CUTTING_BACKLOG: '裁剪后积压',
   LOW_ADOPTION_RATE: '建议采纳率偏低',
   FACTORY_BOTTLENECK: '工厂瓶颈',
   DELAY: '交期延误',

@@ -615,7 +615,7 @@ public class AiPatrolJob {
             log.warn("[AiPatrolJob-Ext] 租户 {} 质量异常检测失败: {}", tenantId, e.getMessage());
         }
 
-        // ── 2. 裁剪段积压（裁剪完成48h但车缝未开始）──
+        // ── 2. 裁剪后积压（裁剪完成48h但车缝未开始，D-656 正名：原「裁剪积压」易误读为裁剪环节赶不上）──
         try {
             LocalDateTime since = LocalDateTime.now().minusHours(48);
             LambdaQueryWrapper<ProductionOrder> cuttingDone = new LambdaQueryWrapper<>();
@@ -648,7 +648,7 @@ public class AiPatrolJob {
                     String issue = String.format(
                         "订单[%s] 裁剪完成已超48h但车缝未开始，工厂：%s",
                         order.getOrderNo(), Objects.toString(order.getFactoryName(), "未指定"));
-                    log.warn("[AiPatrolJob-Ext] 裁剪积压: tenant={}, {}", tenantId, issue);
+                    log.warn("[AiPatrolJob-Ext] 裁剪后积压: tenant={}, {}", tenantId, issue);
                     found++;
                     if (actionEnabled) {
                         patrolOrchestrator.createAction(
@@ -998,7 +998,7 @@ public class AiPatrolJob {
             case "DEADLINE_RISK" -> "交期风险跟进: " + (targetId != null ? targetId : "");
             case "FACTORY_SILENCE" -> "工厂沉默跟进: " + (targetId != null ? targetId : "");
             case "QUALITY_SPIKE" -> "质量异常跟进: " + (targetId != null ? targetId : "");
-            case "CUTTING_BACKLOG" -> "裁剪积压跟进: " + (targetId != null ? targetId : "");
+            case "CUTTING_BACKLOG" -> "裁剪后积压跟进: " + (targetId != null ? targetId : "");
             case "CORRELATED_RISK" -> "关联风险跟进: " + (targetId != null ? targetId : "");
             default -> "巡检告警跟进: " + (targetId != null ? targetId : "");
         };
@@ -1020,7 +1020,7 @@ public class AiPatrolJob {
                 "工厂[%s]沉默告警，已自动标记为需跟进",
                 targetId != null ? targetId : "未知");
             case "CUTTING_BACKLOG" -> String.format(
-                "订单[%s]裁剪积压，已自动标记为需跟进",
+                "订单[%s]裁剪后积压（裁片待车缝），已自动标记为需跟进",
                 targetId != null ? targetId : "未知");
             default -> String.format("[%s]类型动作已自动执行", issueType);
         };

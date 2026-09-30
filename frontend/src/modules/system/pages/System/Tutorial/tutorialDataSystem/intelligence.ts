@@ -64,7 +64,7 @@ export const tutorialsIntelligence: Tutorial[] = [
       },
       {
         question: '异常类型里的英文缩写看不懂怎么办？',
-        answer: '列表已做中文映射（如 COMBO_RISK → 套装风险、CUTTING_BACKLOG → 裁剪积压）。若仍出现英文，说明该类型较新尚未配置中文名，可反馈给管理员补充。',
+        answer: '列表已做中文映射（如 COMBO_RISK → 套装风险、CUTTING_BACKLOG → 裁剪后积压，指裁剪完成后车缝迟迟未开始的裁片积压）。若仍出现英文，说明该类型较新尚未配置中文名，可反馈给管理员补充。',
       },
     ],
   },
