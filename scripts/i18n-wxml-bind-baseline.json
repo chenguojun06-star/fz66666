@@ -1,24 +1,9 @@
 {
   "note": "wxml↔js 绑定缺口基线（判据：wxml 用了 {{t.x}} 但同目录 js 的 applyLanguage 从不赋值 → 文案静默丢失）。修完一批后重跑 --update-wxml-bind-baseline 收敛。",
-  "total": 33,
+  "total": 10,
   "pages": {
-    "miniprogram/pages/attendance/detail/index.wxml": [
-      "dayUnit"
-    ],
-    "miniprogram/pages/order/create/form/index.wxml": [
-      "submittingW"
-    ],
-    "miniprogram/pages/collab-task/list/index.wxml": [
-      "claimBtn"
-    ],
     "miniprogram/pages/smart-ops/index.wxml": [
       "scanSubText"
-    ],
-    "miniprogram/pages/smart-ops/exception-detail/index.wxml": [
-      "allStatus"
-    ],
-    "miniprogram/pages/admin/user-approval/index.wxml": [
-      "rejectReasonReq"
     ],
     "miniprogram/pages/dashboard/process-edit/index.wxml": [
       "totalLabel"
@@ -27,10 +12,6 @@
       "sizeTableTitle"
     ],
     "miniprogram/pages/quality-detail/index.wxml": [
-      "backToListHint",
-      "batchPassTitle",
-      "cannotLoadBrief",
-      "navTitle",
       "partsCountW",
       "photosUnit",
       "selectedWord"
@@ -41,35 +22,7 @@
     ],
     "miniprogram/pages/sample-development/stage-detail/index.wxml": [
       "countFmt",
-      "kindFmt",
-      "noMaterialData",
-      "stageDetailSuffix"
-    ],
-    "miniprogram/pages/finance/reconciliation/index.wxml": [
-      "sourceLabelW"
-    ],
-    "miniprogram/pages/finance/payroll-approval/detail/index.wxml": [
-      "extAuditHint"
-    ],
-    "miniprogram/pages/finance/reimbursement/index.wxml": [
-      "cancel"
-    ],
-    "miniprogram/pages/payroll/payroll.wxml": [
-      "compareLastMonth"
-    ],
-    "miniprogram/pages/factory/shipment-detail/index.wxml": [
-      "noDetails",
-      "noShipRecords",
-      "optionalPhW",
-      "shipQtyLabel"
-    ],
-    "miniprogram/pages/factory/shipment/index.wxml": [
-      "bundleDetailBtn",
-      "noBundleDetail",
-      "noShipRecords"
-    ],
-    "miniprogram/pages/cutting/bundle-detail/index.wxml": [
-      "cancel"
+      "kindFmt"
     ]
   }
 }
