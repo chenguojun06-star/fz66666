@@ -93,6 +93,14 @@
   /* 理由：background-position 对纯色背景无视觉效果，但强制 GPU 每帧合成 backdrop-filter，是全页抖动噪声源 */
 }
 
+/* D-663b：平台名后的欢迎语——小一号、浅色、留点间隔，主名仍在 */
+.header-brand-welcome {
+  margin-left: 6px;
+  font-size: calc(var(--font-size-sm) - 1px);
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
 .header-tenant-name {
   /* D-661：顶栏调小排里它原本就小（13px），只降1号到12px——再小会看不清 */
   font-size: calc(var(--font-size-sm) - 1px);

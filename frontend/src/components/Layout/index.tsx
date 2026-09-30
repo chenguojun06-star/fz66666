@@ -198,7 +198,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <header className="layout-header">
         <div className="header-content">
           <div className="header-left">
-            <h1 className="header-title header-brand" title={brandName}>{brandName}</h1>
+            {/* D-663b：平台名后跟欢迎语——「云裳智链 欢迎您」，小一号浅色不抢主名 */}
+            <h1 className="header-title header-brand" title={brandName}>
+              {brandName}
+              <span className="header-brand-welcome">欢迎您</span>
+            </h1>
             {tenantName && <span className="header-tenant-name">{tenantName}</span>}
             {recentPages.length ? (
               <div className="header-recents" role="tablist" aria-label={t('layout.recentPages', language)} ref={recentsContainerRef}>
