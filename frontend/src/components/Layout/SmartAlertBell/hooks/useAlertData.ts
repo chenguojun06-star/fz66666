@@ -82,7 +82,10 @@ export function useAlertData(): UseAlertDataReturn {
     [patrolSummary, dismissedIds],
   );
 
-  const alertCount = visibleEvents.length + (patrolSummary?.pendingCount ?? 0);
+  // D-654：简报卡点×"今日不再显示"后，巡检工单不再计入铃铛红点（当天有效，明日自动恢复）；
+  // 紧急事件仍是×一条少一条。红点数字=数据库真实待处理工单数，此处只管展示层面的静音。
+  const alertCount = visibleEvents.length
+    + (dismissedIds.has('patrolBriefing') ? 0 : (patrolSummary?.pendingCount ?? 0));
   const unreadNoticeCount = visibleNotices.filter(n => !n.isRead).length;
 
   const fetchMyNotices = useCallback(async () => {
