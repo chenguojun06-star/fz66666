@@ -10,7 +10,7 @@ import com.fashion.supplychain.integration.ecommerce.entity.EcGiftRule;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.service.EcGiftRuleService;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
-import com.fashion.supplychain.integration.ecommerce.service.PlatformNotifyService;
+import com.fashion.supplychain.integration.ecommerce.helper.PlatformNotifyHelper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.ProductSku;
@@ -44,7 +44,7 @@ public class EcommerceOrderOrchestrator {
     private EcSalesRevenueOrchestrator ecSalesRevenueOrchestrator;
 
     @Autowired
-    private PlatformNotifyService platformNotifyService;
+    private PlatformNotifyHelper platformNotifyHelper;
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -503,7 +503,7 @@ public class EcommerceOrderOrchestrator {
             log.warn("[EC现货出库] 收入流水记录失败，不阻断出库: {}", e.getMessage());
         }
         try {
-            platformNotifyService.notifyShipped(order);
+            platformNotifyHelper.notifyShipped(order);
         } catch (Exception e) {
             log.warn("[EC现货出库] 物流回传失败: {}", e.getMessage());
         }
@@ -532,7 +532,7 @@ public class EcommerceOrderOrchestrator {
             log.warn("[EC出库回写] 收入流水记录失败，不阻断出库: {}", e.getMessage());
         }
         try {
-            platformNotifyService.notifyShipped(order);
+            platformNotifyHelper.notifyShipped(order);
         } catch (Exception e) {
             log.warn("[EC出库回写] 物流回传失败: {}", e.getMessage());
         }

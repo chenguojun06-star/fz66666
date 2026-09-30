@@ -1,4 +1,4 @@
-package com.fashion.supplychain.integration.ecommerce.service;
+package com.fashion.supplychain.integration.ecommerce.helper;
 
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.integration.util.IntegrationHttpClient;
@@ -26,10 +26,17 @@ import java.util.UUID;
  * <p>各平台 token 接口都是 OAuth2 授权码模式的变体，差异在参数名（client_id vs client_key）
  * 与响应格式（JSON vs form），用 {@link PlatformOAuthSpec} 注册表收敛。
  * 不支持 OAuth 的平台（微信小店/SHEIN/聚水潭）走 CREDENTIAL 手工凭证模式。
+ *
+ * <p><b>D-664</b>：由 {@code EcPlatformOAuthService}
+ * （{@code integration.ecommerce.service}）更名并移入
+ * {@code integration.ecommerce.helper}。本类是 OAuth2 授权码流程的工具实现
+ * （拼授权 URL → 换 token → 落库）；对 {@code EcPlatformConfigService} 的依赖是
+ * **围绕配置表的读写**（读 appKey/appSecret、写回 access/refresh token），
+ * 属工具协作而非跨业务服务编排，故不适用规则7（同 D-658 / D-660）。
  */
 @Slf4j
 @Service
-public class EcPlatformOAuthService {
+public class EcPlatformOAuthHelper {
 
     /** 平台 OAuth 端点规格 */
     record PlatformOAuthSpec(

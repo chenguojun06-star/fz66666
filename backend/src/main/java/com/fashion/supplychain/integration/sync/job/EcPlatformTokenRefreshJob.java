@@ -1,6 +1,6 @@
 package com.fashion.supplychain.integration.sync.job;
 
-import com.fashion.supplychain.integration.ecommerce.service.EcPlatformOAuthService;
+import com.fashion.supplychain.integration.ecommerce.helper.EcPlatformOAuthHelper;
 import com.fashion.supplychain.system.entity.EcPlatformConfig;
 import com.fashion.supplychain.system.service.EcPlatformConfigService;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +26,7 @@ public class EcPlatformTokenRefreshJob {
     private EcPlatformConfigService ecPlatformConfigService;
 
     @Autowired
-    private EcPlatformOAuthService ecPlatformOAuthService;
+    private EcPlatformOAuthHelper ecPlatformOAuthHelper;
 
     /** 每天凌晨 3:17 扫描一次（错开整点的对账/备份任务） */
     @Scheduled(cron = "0 17 3 * * ?")
@@ -52,7 +52,7 @@ public class EcPlatformTokenRefreshJob {
                             config.getPlatformCode(), config.getTenantId());
                     continue;
                 }
-                if (ecPlatformOAuthService.refreshTokenIfDue(config)) {
+                if (ecPlatformOAuthHelper.refreshTokenIfDue(config)) {
                     refreshed++;
                 }
             } catch (Exception e) {

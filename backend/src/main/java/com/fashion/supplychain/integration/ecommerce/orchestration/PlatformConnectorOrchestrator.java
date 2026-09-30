@@ -3,7 +3,7 @@ package com.fashion.supplychain.integration.ecommerce.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
-import com.fashion.supplychain.integration.ecommerce.service.EcPlatformOAuthService;
+import com.fashion.supplychain.integration.ecommerce.helper.EcPlatformOAuthHelper;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
 import com.fashion.supplychain.integration.ecommerce.service.PddOrderSyncService;
 import com.fashion.supplychain.system.entity.EcPlatformConfig;
@@ -31,7 +31,7 @@ import java.util.Set;
  *
  * <p>原 {@code PlatformConnectorController} 直接注入了 5 个 Service
  * （{@code EcPlatformConfigService}、{@code JushuitanSyncOrchestrator}（原 JushuitanSyncService，D-663 上移编排）、
- * {@code EcPlatformOAuthService}、{@code PddOrderSyncService}、{@code EcommerceOrderService}），
+ * {@code EcPlatformOAuthService}（D-664 已更名 EcPlatformOAuthHelper）、{@code PddOrderSyncService}、{@code EcommerceOrderService}），
  * 违反 ArchUnit 规则6（Controller 不得直接依赖多个 Service）。本类承接其全部业务逻辑。
  *
  * <p>⚠️ 所有数据库写操作仍统一经由 {@link EcPlatformConfigOrchestrator} 执行，
@@ -54,7 +54,7 @@ public class PlatformConnectorOrchestrator {
     private JushuitanSyncOrchestrator jushuitanSyncOrchestrator;
 
     @Autowired
-    private EcPlatformOAuthService ecPlatformOAuthService;
+    private EcPlatformOAuthHelper ecPlatformOAuthHelper;
 
     @Autowired
     private PddOrderSyncService pddOrderSyncService;
@@ -123,7 +123,7 @@ public class PlatformConnectorOrchestrator {
             result.put("appKey", maskKey(config.getAppKey()));
         }
         // D-587：OAuth 授权状态（向导第三步轮询用）
-        result.put("oauthSupported", EcPlatformOAuthService.isOAuthPlatform(platformCode));
+        result.put("oauthSupported", EcPlatformOAuthHelper.isOAuthPlatform(platformCode));
         result.put("authorized", config != null && config.getAccessToken() != null && !config.getAccessToken().isBlank());
         if (config != null) {
             result.put("authMode", config.getAuthMode());
@@ -138,7 +138,7 @@ public class PlatformConnectorOrchestrator {
      */
     public Map<String, Object> buildAuthorizeUrl(Long tenantId, String platformCode) {
         requireEcSubscription(tenantId, platformCode);
-        return ecPlatformOAuthService.buildAuthorizeUrl(tenantId, platformCode);
+        return ecPlatformOAuthHelper.buildAuthorizeUrl(tenantId, platformCode);
     }
 
     /**
@@ -150,7 +150,7 @@ public class PlatformConnectorOrchestrator {
         if (code == null || code.isBlank()) {
             return Result.fail("请粘贴平台返回的授权码");
         }
-        Map<String, Object> result = ecPlatformOAuthService.exchangeManually(tenantId, platformCode, code.trim());
+        Map<String, Object> result = ecPlatformOAuthHelper.exchangeManually(tenantId, platformCode, code.trim());
         if (!Boolean.TRUE.equals(result.get("success"))) {
             return Result.fail(String.valueOf(result.getOrDefault("message", "授权失败")));
         }
@@ -161,7 +161,7 @@ public class PlatformConnectorOrchestrator {
      * D-587：授权状态查询（前端轮询：商家在平台确认授权后回到系统，前端轮询此接口刷新状态）。
      */
     public Map<String, Object> authStatus(Long tenantId, String platformCode) {
-        return ecPlatformOAuthService.authStatus(tenantId, platformCode);
+        return ecPlatformOAuthHelper.authStatus(tenantId, platformCode);
     }
 
     /**

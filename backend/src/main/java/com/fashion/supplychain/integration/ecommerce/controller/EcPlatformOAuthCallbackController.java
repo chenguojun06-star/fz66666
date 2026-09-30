@@ -1,6 +1,6 @@
 package com.fashion.supplychain.integration.ecommerce.controller;
 
-import com.fashion.supplychain.integration.ecommerce.service.EcPlatformOAuthService;
+import com.fashion.supplychain.integration.ecommerce.helper.EcPlatformOAuthHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -30,7 +30,7 @@ import java.util.Map;
 public class EcPlatformOAuthCallbackController {
 
     @Autowired
-    private EcPlatformOAuthService ecPlatformOAuthService;
+    private EcPlatformOAuthHelper ecPlatformOAuthHelper;
 
     @GetMapping("/api/platform-connector/oauth/callback/{platformCode}")
     public ResponseEntity<String> callback(
@@ -45,12 +45,12 @@ public class EcPlatformOAuthCallbackController {
         if (platformError != null && !platformError.isBlank()) {
             result = Map.of("success", false, "message", "平台拒绝授权: " + platformError);
         } else {
-            result = ecPlatformOAuthService.handleCallback(platformCode, code, state);
+            result = ecPlatformOAuthHelper.handleCallback(platformCode, code, state);
         }
 
         boolean success = Boolean.TRUE.equals(result.get("success"));
         String message = String.valueOf(result.getOrDefault("message", success ? "授权成功" : "授权失败"));
-        String target = ecPlatformOAuthService.frontendRedirect(platformCode, success, message);
+        String target = ecPlatformOAuthHelper.frontendRedirect(platformCode, success, message);
 
         String html = "<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">"
                 + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"

@@ -12,7 +12,7 @@ import com.fashion.supplychain.integration.ecommerce.service.EcPurchaseSuggestio
 import com.fashion.supplychain.integration.ecommerce.service.EcStockAlertService;
 import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
 import com.fashion.supplychain.integration.ecommerce.service.EcWarehouseAllocationService;
-import com.fashion.supplychain.integration.ecommerce.service.PlatformNotifyService;
+import com.fashion.supplychain.integration.ecommerce.helper.PlatformNotifyHelper;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.system.service.BackendActionFlagService;
@@ -42,7 +42,7 @@ public class EcStockOrchestrator {
     @Autowired(required = false) private com.fashion.supplychain.warehouse.service.ComboProductItemService comboProductItemService;
 
     /** 平台库存推送（真实推送到电商平台的唯一出口），集成模块未启用时可缺省 */
-    @Autowired(required = false) private PlatformNotifyService platformNotifyService;
+    @Autowired(required = false) private PlatformNotifyHelper platformNotifyHelper;
     /** 后端动作开关：控制是否自动推送库存到平台 */
     @Autowired(required = false) private BackendActionFlagService backendActionFlagService;
 
@@ -80,7 +80,7 @@ public class EcStockOrchestrator {
      */
     public int pushStockToPlatform(Long tenantId) {
         TenantAssert.requireTenantId();
-        if (platformNotifyService == null) {
+        if (platformNotifyHelper == null) {
             log.warn("[EcStockOrchestrator] 平台通知服务未装配，无法推送库存 tenantId={}", tenantId);
             return 0;
         }
@@ -94,7 +94,7 @@ public class EcStockOrchestrator {
         int pushed = 0, failed = 0;
         for (EcUniversalStock stock : stocks) {
             if (stock.getSkuCode() == null) continue;
-            boolean ok = platformNotifyService.updatePlatformStock(
+            boolean ok = platformNotifyHelper.updatePlatformStock(
                     tenantId, stock.getSkuCode(), stock.getAvailableStock());
             if (ok) {
                 pushed++;
@@ -105,7 +105,7 @@ public class EcStockOrchestrator {
 
         // D-532：组合商品（套装）可售库存一并推送——组合在平台侧是独立商品（编码=comboCode），
         // 可售(套)=min(子SKU可用库存/单套数量)，任一子SKU缺货即套数为0
-        pushed += pushComboStockToPlatform(tenantId, platformNotifyService);
+        pushed += pushComboStockToPlatform(tenantId, platformNotifyHelper);
 
         log.info("[EcStockOrchestrator] 库存推送平台完成: tenantId={}, 成功={}, 失败={}",
                 tenantId, pushed, failed);
@@ -115,7 +115,7 @@ public class EcStockOrchestrator {
     /**
      * D-532：推送组合商品（套装）可售库存到平台。失败不阻断 SKU 推送主流程。
      */
-    private int pushComboStockToPlatform(Long tenantId, PlatformNotifyService notifyService) {
+    private int pushComboStockToPlatform(Long tenantId, PlatformNotifyHelper notifyService) {
         if (comboProductService == null || comboProductItemService == null) {
             return 0;
         }

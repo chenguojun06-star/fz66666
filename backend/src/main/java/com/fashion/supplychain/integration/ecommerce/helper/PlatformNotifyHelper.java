@@ -1,4 +1,4 @@
-package com.fashion.supplychain.integration.ecommerce.service;
+package com.fashion.supplychain.integration.ecommerce.helper;
 
 import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.sync.adapter.EcPlatformAdapter;
@@ -20,9 +20,18 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * 平台回传 / 拉取工具（物流回传、退款回传、库存拉取与推送）。
+ *
+ * <p><b>D-664</b>：由 {@code PlatformNotifyService}
+ * （{@code integration.ecommerce.service}）更名并移入
+ * {@code integration.ecommerce.helper}。本类是「按平台配置调外部平台 API」的工具门面，
+ * 被 4 个编排器调用；对 {@code EcPlatformConfigService} 的依赖是**读配置**，
+ * 属工具协作而非跨业务服务编排，故不适用规则7（同 D-658 / D-660）。
+ */
 @Slf4j
 @Service
-public class PlatformNotifyService {
+public class PlatformNotifyHelper {
 
     @Autowired
     private EcPlatformConfigService ecPlatformConfigService;

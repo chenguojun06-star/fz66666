@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
 import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
-import com.fashion.supplychain.integration.ecommerce.service.PlatformNotifyService;
+import com.fashion.supplychain.integration.ecommerce.helper.PlatformNotifyHelper;
 import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +29,7 @@ public class EcStockDiscrepancyOrchestrator {
     private ProductSkuService productSkuService;
 
     @Autowired(required = false)
-    private PlatformNotifyService platformNotifyService;
+    private PlatformNotifyHelper platformNotifyHelper;
 
     private static final int DISCREPANCY_THRESHOLD_QTY = 5;
     private static final double DISCREPANCY_THRESHOLD_RATIO = 0.10;
@@ -244,16 +244,16 @@ public class EcStockDiscrepancyOrchestrator {
     /**
      * 拉取平台真实库存。
      *
-     * <p>实现下沉到 {@link PlatformNotifyService#fetchPlatformStock}，此处仅做透传，
+     * <p>实现下沉到 {@link PlatformNotifyHelper#fetchPlatformStock}，此处仅做透传，
      * 避免在两处各写一套"遍历适配器"的逻辑（此前正是这种重复导致一边修了另一边还是桩）。
      *
      * @return 平台库存；-1 表示平台库存不可用，差异检测会跳过该 SKU，不产生假差异
      */
     private int fetchPlatformStock(Long tenantId, String skuCode) {
-        if (platformNotifyService == null) {
+        if (platformNotifyHelper == null) {
             return -1;
         }
-        return platformNotifyService.fetchPlatformStock(tenantId, skuCode);
+        return platformNotifyHelper.fetchPlatformStock(tenantId, skuCode);
     }
 
     /**
@@ -263,12 +263,12 @@ public class EcStockDiscrepancyOrchestrator {
      * "同步完成"，属于假成功。现在依据真实返回值记录成功/失败。
      */
     private void syncLocalToPlatform(Long tenantId, EcUniversalStock stock) {
-        if (platformNotifyService == null) {
+        if (platformNotifyHelper == null) {
             log.warn("[EcStockDiscrepancy] 平台通知服务未装配，库存未同步 skuCode={}", stock.getSkuCode());
             return;
         }
         try {
-            boolean ok = platformNotifyService.updatePlatformStock(
+            boolean ok = platformNotifyHelper.updatePlatformStock(
                     tenantId, stock.getSkuCode(), stock.getAvailableStock());
             if (ok) {
                 log.info("[EcStockDiscrepancy] 本地库存已同步到平台 skuCode={} stock={}",

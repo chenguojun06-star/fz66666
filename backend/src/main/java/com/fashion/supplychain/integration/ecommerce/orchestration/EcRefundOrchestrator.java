@@ -9,7 +9,7 @@ import com.fashion.supplychain.integration.ecommerce.entity.EcommerceOrder;
 import com.fashion.supplychain.integration.ecommerce.entity.EcUniversalStock;
 import com.fashion.supplychain.integration.ecommerce.service.EcommerceOrderService;
 import com.fashion.supplychain.integration.ecommerce.service.EcUniversalStockService;
-import com.fashion.supplychain.integration.ecommerce.service.PlatformNotifyService;
+import com.fashion.supplychain.integration.ecommerce.helper.PlatformNotifyHelper;
 import com.fashion.supplychain.system.service.BackendActionFlagService;
 import com.fashion.supplychain.system.service.BackendActionFlagService.BackendActionKey;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +34,7 @@ public class EcRefundOrchestrator {
     @Autowired
     private EcUniversalStockService ecUniversalStockService;
     @Autowired(required = false)
-    private PlatformNotifyService platformNotifyService;
+    private PlatformNotifyHelper platformNotifyHelper;
     @Autowired
     private BackendActionFlagService backendActionFlagService;
     /** 处理退款请求：将状态置为退款中（5），记录原因后尝试自动审批 */
@@ -102,9 +102,9 @@ public class EcRefundOrchestrator {
             }
         }
         // 通知平台退款已执行（语义正确：退款回调而非发货回调，失败不阻断退款主流程）
-        if (platformNotifyService != null) {
+        if (platformNotifyHelper != null) {
             try {
-                platformNotifyService.notifyRefund(order);
+                platformNotifyHelper.notifyRefund(order);
             } catch (Exception e) {
                 log.warn("[EC退款] 平台退款通知失败，不阻断退款: orderNo={} {}", orderNo, e.getMessage());
             }
