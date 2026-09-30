@@ -44,7 +44,7 @@ public class AiAgentComponentRegistry {
     @Autowired(required = false)
     private CostExplosionGuard costExplosionGuard;
     @Autowired(required = false)
-    private SelfCriticService selfCriticService;
+    private SelfCriticHelper selfCriticHelper;
     @Autowired(required = false)
     private RealTimeLearningLoop realTimeLearningLoop;
     @Autowired(required = false)
@@ -134,8 +134,8 @@ public class AiAgentComponentRegistry {
         return costExplosionGuard;
     }
 
-    public SelfCriticService getSelfCriticService() {
-        return selfCriticService;
+    public SelfCriticHelper getSelfCriticHelper() {
+        return selfCriticHelper;
     }
 
     public RealTimeLearningLoop getRealTimeLearningLoop() {

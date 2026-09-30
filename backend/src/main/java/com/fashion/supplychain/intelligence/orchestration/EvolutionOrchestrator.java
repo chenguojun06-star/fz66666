@@ -3,7 +3,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 import com.fashion.supplychain.intelligence.helper.SkillAutoCreationHelper;
 import com.fashion.supplychain.intelligence.service.EvolutionPipeline;
 import com.fashion.supplychain.intelligence.service.MemoryBankDbService;
-import com.fashion.supplychain.intelligence.service.SelfCriticService;
+import com.fashion.supplychain.intelligence.helper.SelfCriticHelper;
 import com.fashion.supplychain.intelligence.service.DataTruthGuard;
 import com.fashion.supplychain.intelligence.service.SystemDataMiner;
 import com.fashion.supplychain.intelligence.service.SkillCrystallizationService;
@@ -40,7 +40,7 @@ import java.util.Map;
 public class EvolutionOrchestrator {
 
     @Autowired private ObjectProvider<EvolutionPipeline> evolutionPipelineProvider;
-    @Autowired private ObjectProvider<SelfCriticService> selfCriticServiceProvider;
+    @Autowired private ObjectProvider<SelfCriticHelper> selfCriticHelperProvider;
     @Autowired private ObjectProvider<DataTruthGuard> dataTruthGuardProvider;
     @Autowired private ObjectProvider<QuickPathQualityGate> quickPathQualityGateProvider;
     @Autowired private ObjectProvider<RealTimeLearningLoop> realTimeLearningLoopProvider;
@@ -91,7 +91,7 @@ public class EvolutionOrchestrator {
     private Map<String, Object> aggregateSelfCriticStats(Long tenantId) {
         try {
             Map<String, Object> stats = new LinkedHashMap<>();
-            stats.put("available", selfCriticServiceProvider.getIfAvailable() != null);
+            stats.put("available", selfCriticHelperProvider.getIfAvailable() != null);
             try {
                 List<Map<String, Object>> rows = jdbc.queryForList(
                         "SELECT AVG(100 - COALESCE(deviation_minutes, 0)) AS avg_score, "

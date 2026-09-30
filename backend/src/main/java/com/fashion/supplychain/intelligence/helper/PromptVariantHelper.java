@@ -24,7 +24,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * 更名并移入 {@code intelligence.helper}。本类状态全在进程内
  * （{@code ConcurrentHashMap}），对外提供的是「注册 / 选择 / 评分回填」工具能力，
  * 只被 {@code ExecutionEngineImpl} 调用；对 {@code PromptVariantPersistenceService}
- * （持久化）与 {@code SelfCriticService}（自评打分）的依赖属工具协作而非业务编排，
+ * （持久化）与 {@code SelfCriticHelper}（自评打分）的依赖属工具协作而非业务编排，
  * 故归 helper（同 D-658 / D-660）。
  */
 @Slf4j
@@ -182,7 +182,7 @@ public class PromptVariantHelper {
     }
 
     @Autowired(required = false)
-    private com.fashion.supplychain.intelligence.service.SelfCriticService selfCriticService;
+    private SelfCriticHelper selfCriticHelper;
 
     @Autowired(required = false)
     private PromptVariantPersistenceService variantPersistence;
@@ -191,9 +191,9 @@ public class PromptVariantHelper {
                                           String aiResponse, java.util.List<com.fashion.supplychain.intelligence.agent.tool.AgentTool> toolCalls,
                                           java.util.List<String> toolResults, boolean usedQuickPath) {
         double score = 75.0;
-        if (selfCriticService != null) {
+        if (selfCriticHelper != null) {
             try {
-                score = selfCriticService.calculateCritiqueScore(
+                score = selfCriticHelper.calculateCritiqueScore(
                         null, userMessage, aiResponse, toolCalls, toolResults, null, usedQuickPath);
             } catch (Exception e) {
                 log.debug("[PromptVariant] selfCritic evaluation failed: {}", e.getMessage());

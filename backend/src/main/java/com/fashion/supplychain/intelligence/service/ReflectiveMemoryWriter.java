@@ -18,7 +18,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * <p>借鉴 Mem0 / Letta 的反思记忆闭环设计：
  * <ol>
- *   <li>SelfCriticService 7 维度评分后，结果只写入 t_intelligence_feedback_record</li>
+ *   <li>SelfCriticHelper 7 维度评分后，结果只写入 t_intelligence_feedback_record</li>
  *   <li>低分回答（score &lt; 75）编码为 REFLECTIVE 长期记忆</li>
  *   <li>下次类似问题时通过 PromptContextProvider.buildReflectiveMemoryContext 召回</li>
  *   <li>注入 prompt 防止重蹈覆辙</li>

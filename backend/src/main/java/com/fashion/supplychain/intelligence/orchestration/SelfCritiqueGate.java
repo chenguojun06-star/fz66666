@@ -5,7 +5,7 @@ import com.fashion.supplychain.intelligence.dto.AgentExecutionMetrics;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
 import com.fashion.supplychain.intelligence.helper.XiaoyunPatterns;
 import com.fashion.supplychain.intelligence.service.DataTruthGuard;
-import com.fashion.supplychain.intelligence.service.SelfCriticService;
+import com.fashion.supplychain.intelligence.helper.SelfCriticHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>借鉴 CL4R1T4S 设计哲学 + Ruflo Truth Scoring + Claude Agent SDK Judge-and-iterate：
  * <ul>
- *   <li>简单场景：单视角评分（SelfCriticService + DataTruthGuard）</li>
+ *   <li>简单场景：单视角评分（SelfCriticHelper + DataTruthGuard）</li>
  *   <li>高风险场景：4 视角并行批判 + Adversarial Judge Round 2 验证 + 收敛停止</li>
  * </ul>
  *
@@ -59,7 +59,7 @@ public class SelfCritiqueGate {
     /** 收敛记录最大存活时间（毫秒），超过则被清理 */
     private static final long CONVERGENCE_RECORD_TTL_MS = 10 * 60 * 1000L; // 10 分钟
 
-    @Autowired private SelfCriticService selfCriticService;
+    @Autowired private SelfCriticHelper selfCriticHelper;
     @Autowired private DataTruthGuard dataTruthGuard;
     @Autowired private MultiPerspectiveCritic multiPerspectiveCritic;
     @Autowired private AdversarialJudgePipeline adversarialJudgePipeline;
@@ -147,7 +147,7 @@ public class SelfCritiqueGate {
         }
         AgentExecutionMetrics metrics = AgentExecutionMetrics.empty();
         metrics.setToolCallCount(ctx.getAllExecRecords().size());
-        return selfCriticService.calculateCritiqueScore(
+        return selfCriticHelper.calculateCritiqueScore(
                 ctx.getCommandId(), ctx.getUserMessage(), content,
                 null, toolResults, metrics, false);
     }

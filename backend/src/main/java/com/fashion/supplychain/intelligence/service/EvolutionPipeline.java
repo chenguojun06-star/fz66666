@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.service;
 
+import com.fashion.supplychain.intelligence.helper.SelfCriticHelper;
 import com.fashion.supplychain.intelligence.service.SystemDataMiner.DataSnapshot;
 import com.fashion.supplychain.intelligence.service.SystemDataMiner.ScenarioGenerationResult;
 import com.fashion.supplychain.intelligence.service.SelfEvolutionEngine.EvolutionProposal;
@@ -32,7 +33,7 @@ public class EvolutionPipeline {
     private SystemDataMiner systemDataMiner;
 
     @Autowired
-    private SelfCriticService selfCriticService;
+    private SelfCriticHelper selfCriticHelper;
 
     @Autowired
     private PromptEvolutionService promptEvolutionService;

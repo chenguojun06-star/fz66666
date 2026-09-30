@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
  *   <li>适应度评估用历史数据 + 轻量模拟，不调 LLM（避免 100 次推理）</li>
  *   <li>经 ConstraintGates 三重门控验证后才存储最优个体</li>
  *   <li>优化结果存入 t_prompt_optimization 表</li>
- *   <li>AI Hard Limit ≤1 轮：GEPA 不触发 SelfCriticService 的异步批评循环</li>
+ *   <li>AI Hard Limit ≤1 轮：GEPA 不触发 SelfCriticHelper 的异步批评循环</li>
  * </ul>
  */
 @Slf4j

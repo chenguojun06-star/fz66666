@@ -18,7 +18,7 @@ import com.fashion.supplychain.intelligence.helper.AiAgentMemoryHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
 import com.fashion.supplychain.intelligence.helper.LangfuseSpanContext;
 import com.fashion.supplychain.intelligence.helper.XiaoyunPatterns;
-import com.fashion.supplychain.intelligence.service.SelfCriticService;
+import com.fashion.supplychain.intelligence.helper.SelfCriticHelper;
 import com.fashion.supplychain.intelligence.service.ReflectiveMemoryWriter;
 import com.fashion.supplychain.intelligence.dto.AgentExecutionMetrics;
 import com.fashion.supplychain.intelligence.dto.SelfCritiqueResult;
@@ -918,7 +918,7 @@ public class AiAgentOrchestrator {
         // 原实现：calculateCritiqueScore 同步调 LLM 评分（3-10秒），阻塞主流程
         // 现实现：先用默认分 80 让主流程立即返回，异步计算真实分数后写入记忆和提交评分
         final double selfScore = 80.0;
-        final SelfCriticService selfCriticService = componentRegistry.getSelfCriticService();
+        final SelfCriticHelper selfCriticHelper = componentRegistry.getSelfCriticHelper();
         final java.util.List<String> finalToolResultsList = toolResultsList;
 
         // P0-4: Langfuse — 先用占位分数提交（评分仅用于监控，不影响用户）
@@ -948,17 +948,17 @@ public class AiAgentOrchestrator {
         RealTimeLearningLoop realTimeLearningLoop = componentRegistry.getRealTimeLearningLoop();
 
         // P0 优化：自我批评评分 + 反思记忆 + 实时学习 异步执行（原同步阻塞 3-10 秒）
-        if (selfCriticService != null) {
+        if (selfCriticHelper != null) {
             postTurnTasks.add(() -> {
                 try {
                     AgentExecutionMetrics metrics = AgentExecutionMetrics.empty();
                     metrics.setToolCallCount(toolRecords != null ? toolRecords.size() : 0);
                     // 异步计算真实评分（内部调 LLM，3-10秒）
-                    double realScore = selfCriticService.calculateCritiqueScore(
+                    double realScore = selfCriticHelper.calculateCritiqueScore(
                             sessionId, userMessage, assistantResponse,
                             null, finalToolResultsList, metrics, usedQuickPath);
                     // 异步触发完整自我批评（保存反馈/快照/路由）
-                    selfCriticService.critique(
+                    selfCriticHelper.critique(
                             sessionId, userMessage, assistantResponse,
                             null, finalToolResultsList, metrics, usedQuickPath);
 

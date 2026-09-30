@@ -6,8 +6,8 @@ import java.util.Map;
 /**
  * 自我批评评分结果 DTO（P0-2 反思记忆闭环）。
  *
- * <p>封装 SelfCriticService 的评分结果，供 ReflectiveMemoryWriter 消费。
- * <br>dimensions/suggestions 可为空（SelfCriticService 当前仅返回综合分），
+ * <p>封装 SelfCriticHelper 的评分结果，供 ReflectiveMemoryWriter 消费。
+ * <br>dimensions/suggestions 可为空（SelfCriticHelper 当前仅返回综合分），
  * ReflectiveMemoryWriter 会优雅处理空值。</p>
  */
 public class SelfCritiqueResult {
