@@ -230,6 +230,7 @@ Page({
         pieceW3: i18n.t(NS + 'pieceW3', lang),
         confirmOrderW: i18n.t(NS + 'confirmOrderBtn', lang),
         totalLabelW: i18n.t(NS + 'totalLabelW', lang),
+        submittingW: i18n.t('mp.orderForm.submittingW', lang),
       },
       bizTypeLabels: BIZ_TYPE_LABELS.map(function (k) { return i18n.t(NS + k, lang); }),
       pricingModeLabels: [

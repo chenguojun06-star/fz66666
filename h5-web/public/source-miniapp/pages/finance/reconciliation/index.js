@@ -130,6 +130,7 @@ Page({
         buyerLabelW: i18n.t(NS + 'buyerLabelW', lang),
         reconDateW: i18n.t(NS + 'reconDateW', lang),
         noMoreW: i18n.t(NS + 'noMoreW', lang),
+        sourceLabelW: i18n.t('mp.reconciliation.sourceLabelW', lang),
       },
       STATUS_OPTIONS: this._STATUS_OPTIONS.map(function (o) {
         return { value: o.value, label: i18n.t(NS + o.key, lang) };

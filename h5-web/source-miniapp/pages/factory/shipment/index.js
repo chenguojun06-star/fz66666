@@ -128,6 +128,9 @@ Page({
         shipPrefixW: i18n.t(NS + 'shipPrefixW', lang),
         pieceUnitW2: i18n.t(NS + 'pieceUnit2', lang),
         noStyleNameW: i18n.t(NS + 'noStyleNameW', lang),
+        bundleDetailBtn: i18n.t('mp.shipment.bundleDetailBtn', lang),
+        noBundleDetail: i18n.t('mp.shipment.noBundleDetail', lang),
+        noShipRecords: i18n.t('mp.shipment.noShipRecords', lang),
       },
     });
     wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });

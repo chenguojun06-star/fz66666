@@ -93,6 +93,7 @@ Page({
         monthlyTotal: t('monthlyTotal'),
         searchPlaceholder: t('searchPlaceholder'),
         pieceUnit: t('pieceUnit'),
+        compareLastMonth: i18n.t('mp.payroll.compareLastMonth', lang),
       },
     });
     wx.setNavigationBarTitle({ title: t('navTitle') });

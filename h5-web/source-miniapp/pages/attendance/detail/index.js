@@ -166,6 +166,7 @@ Page({
         searchAllPh: i18n.t(NS + 'searchAllPh', lang),
         noMatchEmployee: i18n.t(NS + 'noMatchEmployee', lang),
         searchEmpHint: i18n.t(NS + 'searchEmpHint', lang),
+        dayUnit: i18n.t('mp.attendanceDetail.dayUnit', lang),
       },
       weekHeader: ['weekMon', 'weekTue', 'weekWed', 'weekThu', 'weekFri', 'weekSat', 'weekSun']
         .map(function (k) { return i18n.t(NS + k, lang); }),

@@ -93,6 +93,7 @@ Page({
         handlePrefix: t('handlePrefix'),
         reportPrefix: t('reportPrefix'),
         cancel: i18n.t('common.cancel', lang),
+        allStatus: i18n.t('mp.smartOpsException.allStatus', lang),
       },
       // 状态映射与筛选选项必须整体重建
       STATUS_MAP: buildStatusMap(lang),

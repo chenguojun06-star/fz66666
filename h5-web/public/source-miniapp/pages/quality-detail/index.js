@@ -259,6 +259,10 @@ Page({
         pickLocationW: i18n.t(NS + 'pickLocation', lang),
         expandTextC: i18n.t('mp.sampleDev.expandText', lang),
         pieceUnit: i18n.t('common.piece', lang),
+        backToListHint: i18n.t('mp.qualityDetail.backToListHint', lang),
+        batchPassTitle: i18n.t('mp.qualityDetail.batchPassTitle', lang),
+        cannotLoadBrief: i18n.t('mp.qualityDetail.cannotLoadBrief', lang),
+        navTitle: i18n.t('mp.qualityDetail.navTitle', lang),
       },
       defectCategoryOptions: DEFECT_CATEGORY_KEYS.map(function (c) {
         return { value: c.value, label: i18n.t(c.nameKey.indexOf('.') >= 0 ? c.nameKey : NS + c.nameKey, lang) };

@@ -104,6 +104,7 @@ Page({
         linkedPrefix: i18n.t(NS + 'linkedPrefix', lang),
         noMoreW: i18n.t(NS + 'noMoreW', lang),
         opTitle: i18n.t(NS + 'opTitle', lang),
+        cancel: i18n.t('common.cancel', lang),
       },
       STATUS_OPTIONS: this._STATUS_OPTIONS.map(function (o) {
         return { value: o.value, label: i18n.t(NS + o.key, lang) };

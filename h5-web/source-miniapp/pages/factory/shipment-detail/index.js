@@ -114,6 +114,10 @@ Page({
         continueReceive: i18n.t(NS + 'continueReceive', lang),
         submittingW2: i18n.t(NS + 'submittingW2', lang),
         confirmShipW: i18n.t(NS + 'confirmShipBtn', lang),
+        noDetails: i18n.t('mp.shipment.noDetails', lang),
+        noShipRecords: i18n.t('mp.shipment.noShipRecords', lang),
+        optionalPhW: i18n.t('mp.shipment.optionalPhW', lang),
+        shipQtyLabel: i18n.t('mp.shipment.shipQtyLabel', lang),
       },
     });
     wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });

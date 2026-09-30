@@ -322,6 +322,8 @@ Page({
         materialCountW: i18n.t(NS + 'materialCountW', lang),
         confirmSubmit: i18n.t('mp.scanResult.confirmSubmit', lang),
         submitReviewBtn: i18n.t('mp.sampleDetail.tabProcess', lang),
+        noMaterialData: i18n.t('mp.stageDetail.noMaterialData', lang),
+        stageDetailSuffix: i18n.t('mp.stageDetail.stageDetailSuffix', lang),
       },
     });
     wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });

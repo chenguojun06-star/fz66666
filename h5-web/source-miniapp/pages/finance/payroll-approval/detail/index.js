@@ -142,6 +142,7 @@ Page({
         styleNoLabel: i18n.t('mp.scanResult.styleNoLabel', lang),
         colorLabel: i18n.t('common.color', lang),
         sizeLabel: i18n.t('common.size', lang),
+        extAuditHint: i18n.t('mp.payrollApproval.extAuditHint', lang),
       },
     });
     wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });

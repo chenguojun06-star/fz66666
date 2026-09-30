@@ -109,6 +109,7 @@ Page({
         noMoreW: i18n.t(NS + 'noMoreW', lang),
         claimChar: i18n.t(NS + 'claimChar', lang),
         overdueW: i18n.t(NS + 'overdueW', lang),
+        claimBtn: i18n.t('mp.collabTask.claimBtn', lang),
       },
       STATUS_MAP: buildStatusMap(lang),
       STATUS_OPTIONS: this._STATUS_OPTIONS.map(function (o) {

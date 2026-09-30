@@ -243,6 +243,7 @@ Page({
         lossUnitW: i18n.t(NS + 'lossUnitW', lang),
         printerIpExample: i18n.t(NS + 'printerIpExample', lang),
         completedLabel: i18n.t('common.completed', lang),
+        cancel: i18n.t('common.cancel', lang),
       },
       transferModes: [
         { id: 'whole', name: i18n.t(NS + 'transferWhole', lang) },

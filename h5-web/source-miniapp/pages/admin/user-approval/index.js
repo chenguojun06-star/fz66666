@@ -66,6 +66,7 @@ Page({
         rejectUserFmt: i18n.t(NS + 'rejectUserFmt', lang),
         nameUnit: i18n.t(NS + 'nameUnit', lang),
         rejectLoginHintW: i18n.t(NS + 'rejectLoginHintW', lang),
+        rejectReasonReq: i18n.t('mp.userApproval.rejectReasonReq', lang),
       },
     });
     wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });
