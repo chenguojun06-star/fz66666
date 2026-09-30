@@ -183,6 +183,7 @@ export const ProductNatureFields: React.FC<{ disabled?: boolean; linked?: boolea
 
   return (
     <>
+      {/* D-662：统一 3×3 对齐网格——原 2+空/5满宽/2+空 三行宽窄不一，右边两块留白 */}
       <Row gutter={[12, 8]}>
         <Col xs={24} sm={12} md={8}>
           <Form.Item name="weightKg" label="重量(kg)">
@@ -194,29 +195,7 @@ export const ProductNatureFields: React.FC<{ disabled?: boolean; linked?: boolea
             <Input placeholder="如：件" maxLength={16} disabled={disabled} />
           </Form.Item>
         </Col>
-      </Row>
-      <Row gutter={[12, 8]}>
-        <Col xs={8} sm={6} md={4}>
-          <Form.Item name="lengthCm" label="长(cm)">
-            <InputNumber style={{ width: '100%' }} min={0} precision={1} placeholder="长" disabled={disabled} />
-          </Form.Item>
-        </Col>
-        <Col xs={8} sm={6} md={4}>
-          <Form.Item name="widthCm" label="宽(cm)">
-            <InputNumber style={{ width: '100%' }} min={0} precision={1} placeholder="宽" disabled={disabled} />
-          </Form.Item>
-        </Col>
-        <Col xs={8} sm={6} md={4}>
-          <Form.Item name="heightCm" label="高(cm)">
-            <InputNumber style={{ width: '100%' }} min={0} precision={1} placeholder="高" disabled={disabled} />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={6} md={4}>
-          <Form.Item label="体积">
-            <Input value={volume ? `${volume} cm³` : ''} placeholder="自动计算" disabled />
-          </Form.Item>
-        </Col>
-        <Col xs={24} sm={6} md={8}>
+        <Col xs={24} sm={12} md={8}>
           <Form.Item name="hasLining" label="是否里布">
             <Select placeholder="请选择" allowClear disabled={disabled}>
               <Select.Option value={true}>是</Select.Option>
@@ -226,8 +205,30 @@ export const ProductNatureFields: React.FC<{ disabled?: boolean; linked?: boolea
         </Col>
       </Row>
       <Row gutter={[12, 8]}>
-        <Col xs={24} sm={12} md={8}>
-          <Form.Item name="printSize" label="打板尺码" tooltip={linked ? '与下方颜色码数联动：展示矩阵勾选的码数' : undefined}>
+        <Col xs={8} sm={8} md={8}>
+          <Form.Item name="lengthCm" label="长(cm)">
+            <InputNumber style={{ width: '100%' }} min={0} precision={1} placeholder="长" disabled={disabled} />
+          </Form.Item>
+        </Col>
+        <Col xs={8} sm={8} md={8}>
+          <Form.Item name="widthCm" label="宽(cm)">
+            <InputNumber style={{ width: '100%' }} min={0} precision={1} placeholder="宽" disabled={disabled} />
+          </Form.Item>
+        </Col>
+        <Col xs={8} sm={8} md={8}>
+          <Form.Item name="heightCm" label="高(cm)">
+            <InputNumber style={{ width: '100%' }} min={0} precision={1} placeholder="高" disabled={disabled} />
+          </Form.Item>
+        </Col>
+      </Row>
+      <Row gutter={[12, 8]}>
+        <Col xs={24} sm={8} md={8}>
+          <Form.Item label="体积">
+            <Input value={volume ? `${volume} cm³` : ''} placeholder="自动计算" disabled />
+          </Form.Item>
+        </Col>
+        <Col xs={24} sm={8} md={8}>
+          <Form.Item name="printSize" label="打板尺码" tooltip={linked ? '与下方颜色码数联动：填了数量的码即为打板基础码' : undefined}>
             <Input
               placeholder={linked ? '随下方颜色码数自动带出' : '请输入打板尺码'}
               maxLength={128}
@@ -235,7 +236,7 @@ export const ProductNatureFields: React.FC<{ disabled?: boolean; linked?: boolea
             />
           </Form.Item>
         </Col>
-        <Col xs={24} sm={12} md={8}>
+        <Col xs={24} sm={8} md={8}>
           <Form.Item name="attrQuantity" label="数量" tooltip={linked ? '与下方颜色码数联动：等于矩阵总数量' : undefined}>
             <Input
               placeholder={linked ? '随下方颜色码数自动合计' : '请输入数量'}

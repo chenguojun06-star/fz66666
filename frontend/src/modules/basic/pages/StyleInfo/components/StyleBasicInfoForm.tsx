@@ -86,12 +86,20 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
     isFieldLocked,
   };
 
-  // 打板尺码/数量 与「颜色码数」矩阵联动：矩阵码数列 → 打板尺码；矩阵总数量 → 数量。
-  // 矩阵有内容时自动写入表单值（保存随 t_style_info 落库）；矩阵为空不覆盖，尊重历史手工值。
-  const linkedPrintSize = useMemo(
-    () => (sizeOptions || []).map((s) => String(s || '').trim()).filter(Boolean).join(','),
-    [sizeOptions],
-  );
+  // 打板尺码/数量 与「颜色码数」矩阵联动：矩阵里实际填了数量的码 → 打板基础码；矩阵总数量 → 数量。
+  // D-662：原逻辑把全部码数列都带进打板尺码（XS,S,M,L,XL,XXL），与"基础码"语义不符——
+  // 用户口径：码数格里填的是什么码，打板基础码就是什么码；一码都没填时不覆盖，尊重历史手工值。
+  const linkedPrintSize = useMemo(() => {
+    const rows = sizeColorMatrixRows || [];
+    const sizes = (sizeOptions || []).map((s) => String(s || '').trim());
+    const filled = new Set<string>();
+    rows.forEach((row) => {
+      (row?.quantities || []).forEach((q, idx) => {
+        if ((Number(q) || 0) > 0 && sizes[idx]) filled.add(sizes[idx]);
+      });
+    });
+    return [...filled].join(',');
+  }, [sizeColorMatrixRows, sizeOptions]);
   const linkedTotalQty = useMemo(() => {
     const rows = sizeColorMatrixRows || [];
     if (!rows.length) return '';
