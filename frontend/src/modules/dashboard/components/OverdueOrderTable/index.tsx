@@ -112,7 +112,7 @@ const OverdueOrderTable: React.FC = () => {
   const handleUrge = useCallback(async (record: OverdueOrder) => {
     try {
       setUrgingId(record.id);
-      const result = await urgeApi.urge(record.id, '仪表盘延期订单催单');
+      const result = await urgeApi.urge(record.id, '首页延期订单催单');
       if (!isApiSuccess(result)) {
         throw new Error(getApiMessage(result, '催单失败'));
       }

@@ -332,7 +332,7 @@ export const LOCALES = {
     },
     "menu": {
       "sections": {
-        "dashboard": "仪表盘",
+        "dashboard": "首页",
         "basic": "样衣管理",
         "procurement": "物料管理",
         "production": "生产管理",

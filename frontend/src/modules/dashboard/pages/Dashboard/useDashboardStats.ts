@@ -94,7 +94,7 @@ export const useDashboardStats = () => {
       } else if (oldData === null) {
         setLoading(false);
         setHasError(true);
-        setErrorMessage('获取仪表盘数据失败');
+        setErrorMessage('获取首页数据失败');
       }
     },
     {
@@ -121,7 +121,7 @@ export const useDashboardStats = () => {
       if (response.code === 200) {
         applyDashboardData(response.data || {}, true);
       } else {
-        const errMsg = response.message || '获取仪表盘数据失败';
+        const errMsg = response.message || '获取首页数据失败';
         setHasError(true);
         setErrorMessage(errMsg);
       }

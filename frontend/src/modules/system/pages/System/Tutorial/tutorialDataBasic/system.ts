@@ -3,7 +3,7 @@ import type { Tutorial } from '../types';
 export const tutorialsBasicSystem: Tutorial[] = [
     {
       id: 'dashboard',
-      title: '仪表盘数据分析',
+      title: '首页数据分析',
       category: 'system',
       difficulty: 'beginner',
       duration: '4分钟',

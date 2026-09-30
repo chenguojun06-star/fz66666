@@ -60,7 +60,7 @@ const Dashboard: React.FC = () => {
   return (
     <>
       <div className="dashboard-container">
-        <PageLayout title="仪表盘">
+        <PageLayout title="首页">
 
         {hasError && (
           <div className="dashboard-error-alert">

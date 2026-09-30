@@ -190,7 +190,7 @@ const AppRoutes: React.FC = () => {
         <Route path={paths.register} element={<Register />} />
 
         <Route element={<PrivateRoute />}>
-          <Route path={paths.dashboard} element={<RouteErrorBoundary pageName="仪表盘"><Suspense fallback={routeFallback}><Dashboard /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.dashboard} element={<RouteErrorBoundary pageName="首页"><Suspense fallback={routeFallback}><Dashboard /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.styleInfoList} element={<RouteErrorBoundary pageName="款号列表"><Suspense fallback={routeFallback}><StyleInfoList /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.styleInfoNew} element={<RouteErrorBoundary pageName="新建款号"><Suspense fallback={routeFallback}><StyleInfo /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.styleInfoDetail} element={<RouteErrorBoundary pageName="款号详情"><Suspense fallback={routeFallback}><StyleInfo /></Suspense></RouteErrorBoundary>} />

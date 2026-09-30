@@ -372,8 +372,8 @@ const pageMetaMap: Record<string, PageMeta> = {
   '/cockpit/trace': { label: '执行轨迹' },
 
   // ── 数据驾驶舱 ──
-  [paths.dashboard]: { label: '数据驾驶舱' },
-  '/dashboard/main': { label: '主仪表盘' },
+  [paths.dashboard]: { label: '首页' },
+  '/dashboard/main': { label: '经营概览' },
   '/dashboard/sample': { label: '样衣进度' },
 
   // ── 选品中心 ──
@@ -521,8 +521,8 @@ export type MenuSection = {
 
 export const menuConfig: MenuSection[] = [
   {
-    title: '仪表盘',
-    shortTitle: '仪表',
+    title: '首页',
+    shortTitle: '首页',
     key: 'dashboard',
     icon: React.createElement(DashboardOutlined),
     path: paths.dashboard,
