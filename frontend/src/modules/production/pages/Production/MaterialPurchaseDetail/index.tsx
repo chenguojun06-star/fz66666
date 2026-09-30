@@ -356,19 +356,20 @@ const MaterialPurchaseDetail: React.FC<MaterialPurchaseDetailProps> = ({ styleNo
                 receive={{
                   disabled: batchPurchaseDisabled || batchPurchaseLoading,
                   loading: batchPurchaseLoading,
-                  title: batchPurchaseDisabled ? '无可领取项' : '打开可编辑确认弹窗，逐行核对数量后领取',
+                  // D-664：原因直接显示在禁用菜单项里（antd 禁用项悬停 tooltip 不生效）
+                  title: batchPurchaseDisabled ? '没有待领取的物料' : '打开可编辑确认弹窗，逐行核对数量后领取',
                   onClick: onBatchPurchase,
                 }}
                 batchReturn={{
                   disabled: batchReturnLoading || !hasReturnable,
                   loading: batchReturnLoading,
-                  title: hasReturnable ? undefined : '无可确认项',
+                  title: hasReturnable ? undefined : '需先登记到货（到货数量＞0）',
                   onClick: onBatchReturnConfirm,
                 }}
                 confirmComplete={{
                   disabled: confirmCompleteSubmitting || !hasAwaitingConfirm,
                   loading: confirmCompleteSubmitting,
-                  title: hasAwaitingConfirm ? undefined : '无待完成项',
+                  title: hasAwaitingConfirm ? undefined : '需先登记到货（到货数量＞0）',
                   onClick: () => setConfirmCompleteModalOpen(true),
                 }}
                 edit={{

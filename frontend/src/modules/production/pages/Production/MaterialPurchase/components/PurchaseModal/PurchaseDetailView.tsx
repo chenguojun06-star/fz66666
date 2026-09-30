@@ -191,12 +191,14 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
               }}
               batchReturn={{
                 disabled: !hasReceiveStatusForBatch,
+                // D-664：禁用原因显示在菜单项里
+                title: hasReceiveStatusForBatch ? undefined : '仅已领取/部分到货的物料可回料确认',
                 onClick: onBatchReturn,
               }}
               confirmComplete={{
                 disabled: confirmCompleteSubmitting || !hasAwaitingConfirm,
                 loading: confirmCompleteSubmitting,
-                title: hasAwaitingConfirm ? undefined : '无待完成项',
+                title: hasAwaitingConfirm ? undefined : '没有待确认完成的物料',
                 onClick: () => onConfirmComplete?.(),
               }}
               edit={{

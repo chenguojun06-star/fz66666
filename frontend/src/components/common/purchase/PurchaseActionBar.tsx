@@ -92,6 +92,22 @@ interface PurchaseActionBarProps {
 }
 
 /**
+ * D-664：禁用菜单项的悬停 tooltip（title）antd 不渲染，用户只看到灰项不知道为什么。
+ * 把调用方给的不可用原因（title）直接渲染进菜单项标签里，打开菜单即见。
+ */
+const withDisabledReason = (label: string, state?: PurchaseActionButtonState): React.ReactNode => {
+  if (state?.disabled && !state.loading && state.title) {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8 }}>
+        <span>{label}</span>
+        <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>{state.title}</span>
+      </span>
+    );
+  }
+  return label;
+};
+
+/**
  * 阅读态标准操作条：[批量领取▾(悬停出菜单:批量领取/批量回料确认/确认完成)] [编辑物料] [更多▾] [跳转→]
  * 主按钮直接点击=批量领取；鼠标悬停出现全部批量动作菜单，点菜单项执行对应动作。
  */
@@ -108,9 +124,9 @@ export const PurchaseActionBar: React.FC<PurchaseActionBarProps> = ({
   size = 'small',
 }) => {
   const batchMenuItems: MenuProps['items'] = [
-    ...(receive ? [{ key: 'receive', label: PURCHASE_ACTION_LABELS.batchReceive, disabled: receive.disabled || receive.loading, onClick: receive.onClick }] : []),
-    ...(batchReturn ? [{ key: 'batch-return', label: PURCHASE_ACTION_LABELS.batchReturn, disabled: batchReturn.disabled || batchReturn.loading, onClick: batchReturn.onClick }] : []),
-    ...(confirmComplete ? [{ key: 'confirm-complete', label: PURCHASE_ACTION_LABELS.confirmComplete, disabled: confirmComplete.disabled || confirmComplete.loading, onClick: confirmComplete.onClick }] : []),
+    ...(receive ? [{ key: 'receive', label: withDisabledReason(PURCHASE_ACTION_LABELS.batchReceive, receive), disabled: receive.disabled || receive.loading, onClick: receive.onClick }] : []),
+    ...(batchReturn ? [{ key: 'batch-return', label: withDisabledReason(PURCHASE_ACTION_LABELS.batchReturn, batchReturn), disabled: batchReturn.disabled || batchReturn.loading, onClick: batchReturn.onClick }] : []),
+    ...(confirmComplete ? [{ key: 'confirm-complete', label: withDisabledReason(PURCHASE_ACTION_LABELS.confirmComplete, confirmComplete), disabled: confirmComplete.disabled || confirmComplete.loading, onClick: confirmComplete.onClick }] : []),
   ];
 
   return (

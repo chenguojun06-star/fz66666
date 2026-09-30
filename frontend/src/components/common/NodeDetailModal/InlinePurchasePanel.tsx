@@ -214,6 +214,8 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
                 receive={{
                   disabled: actionLoading || !purchases.some(p => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING && isPurchaseRowComplete(p)),
                   loading: actionLoading,
+                  // D-664：禁用原因显示在菜单项里（antd 禁用项悬停 tooltip 不生效）
+                  title: '没有待领取的物料',
                   onClick: handleReceiveAll,
                 }}
                 batchReturn={{
@@ -223,11 +225,13 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
                     && Number(p?.returnConfirmed || 0) !== 1
                     && Number((p as any)?.arrivedQuantity || 0) > 0),
                   loading: actionLoading,
+                  title: '需先登记到货（到货数量＞0）',
                   onClick: handleBatchReturn,
                 }}
                 confirmComplete={{
                   disabled: !purchases.some(p => isConfirmCompleteAvailable(p)),
                   loading: confirmCompleteLoading,
+                  title: '无可确认完成的物料（需先登记到货）',
                   onClick: handleConfirmComplete,
                 }}
                 edit={{ onClick: handleStartEdit }}
