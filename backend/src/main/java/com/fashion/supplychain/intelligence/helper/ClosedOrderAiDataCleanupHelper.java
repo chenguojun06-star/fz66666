@@ -1,4 +1,4 @@
-package com.fashion.supplychain.intelligence.service;
+package com.fashion.supplychain.intelligence.helper;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
@@ -16,10 +16,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * 已关闭 / 终态订单的 AI 关联数据清理（异步，失败静默）。
+ *
+ * <p><b>D-662</b>：由 {@code ClosedOrderAiDataCleanupService}（{@code intelligence.service}）
+ * 更名并移入 {@code intelligence.helper}。本类用 {@code JdbcTemplate} 直接执行清理 SQL，
+ * 是「数据清理工具」，不参与业务编排；对 {@code ProductionOrderService} 的依赖仅用于
+ * {@code assertTenantOwnership} 的租户归属校验，属工具协作而非跨服务编排，故不适用规则7。
+ */
 @Slf4j
 @Service
 @Lazy
-public class ClosedOrderAiDataCleanupService {
+public class ClosedOrderAiDataCleanupHelper {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

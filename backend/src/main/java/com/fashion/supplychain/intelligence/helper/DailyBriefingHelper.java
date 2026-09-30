@@ -1,4 +1,4 @@
-package com.fashion.supplychain.intelligence.service;
+package com.fashion.supplychain.intelligence.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -14,9 +14,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+/**
+ * 每日简报生成（读订单做统计 → 组装摘要 → upsert 到 {@code t_daily_briefing}）。
+ *
+ * <p><b>D-662</b>：由 {@code DailyBriefingService}（{@code intelligence.service}）
+ * 更名并移入 {@code intelligence.helper}。对 {@code ProductionOrderService} 的依赖是
+ * 「读取订单做统计」的**工具型数据加工**，不是跨服务编排；若把它上移到调用方，
+ * Controller 将同时依赖 2 个 Service（直接违反规则6），故按 helper 归类
+ * （同 D-658 / D-660）。
+ */
 @Slf4j
 @Service
-public class DailyBriefingService {
+public class DailyBriefingHelper {
 
     @Autowired
     private DailyBriefingMapper mapper;

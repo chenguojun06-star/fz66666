@@ -67,7 +67,7 @@ public class ProductionOrderFinanceOrchestrator {
     private com.fashion.supplychain.intelligence.orchestration.OrderLearningOutcomeOrchestrator orderLearningOutcomeOrchestrator;
 
     @Autowired(required = false)
-    private com.fashion.supplychain.intelligence.service.ClosedOrderAiDataCleanupService closedOrderAiDataCleanupService;
+    private com.fashion.supplychain.intelligence.helper.ClosedOrderAiDataCleanupHelper closedOrderAiDataCleanupHelper;
 
     /**
      * 电商补货编排器（可选依赖）：生产单关单入库后，解除由「电商缺货补货」生成的缺货预警。
@@ -98,8 +98,8 @@ public class ProductionOrderFinanceOrchestrator {
         triggerPayrollSettlementGeneration(oid);
 
         try {
-            if (closedOrderAiDataCleanupService != null) {
-                closedOrderAiDataCleanupService.cleanupAsync(oid, order.getOrderNo());
+            if (closedOrderAiDataCleanupHelper != null) {
+                closedOrderAiDataCleanupHelper.cleanupAsync(oid, order.getOrderNo());
             }
         } catch (Exception e) { log.warn("完成订单AI数据异步清理失败: orderId={}", oid, e); }
 

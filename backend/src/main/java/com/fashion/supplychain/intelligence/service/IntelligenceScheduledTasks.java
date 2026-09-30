@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.service;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.intelligence.helper.DailyBriefingHelper;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class IntelligenceScheduledTasks {
 
-    @Autowired private DailyBriefingService dailyBriefingService;
+    @Autowired private DailyBriefingHelper dailyBriefingHelper;
     @Autowired private DeliveryPredictionService deliveryPredictionService;
     @Autowired private RestockSuggestionService restockSuggestionService;
     @Autowired private ProcessStatsEngine processStatsEngine;
@@ -34,9 +35,9 @@ public class IntelligenceScheduledTasks {
                 UserContext.set(ctx);
 
                 try {
-                    dailyBriefingService.generate(tenantId);
+                    dailyBriefingHelper.generate(tenantId);
                 } catch (Exception e) {
-                    log.error("【定时任务】dailyBriefingService.generate 执行异常 tenantId={}: {}", tenantId, e.getMessage(), e);
+                    log.error("【定时任务】dailyBriefingHelper.generate 执行异常 tenantId={}: {}", tenantId, e.getMessage(), e);
                 }
 
                 try {

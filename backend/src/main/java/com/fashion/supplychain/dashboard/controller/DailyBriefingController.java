@@ -3,7 +3,7 @@ package com.fashion.supplychain.dashboard.controller;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.entity.DailyBriefing;
-import com.fashion.supplychain.intelligence.service.DailyBriefingService;
+import com.fashion.supplychain.intelligence.helper.DailyBriefingHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,14 +17,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class DailyBriefingController {
 
     @Autowired
-    private DailyBriefingService service;
+    private DailyBriefingHelper briefingHelper;
 
     @GetMapping("/today")
     public Result<DailyBriefing> getToday() {
         Long tenantId = UserContext.tenantId();
-        DailyBriefing briefing = service.getToday(tenantId);
+        DailyBriefing briefing = briefingHelper.getToday(tenantId);
         if (briefing == null) {
-            briefing = service.generate(tenantId);
+            briefing = briefingHelper.generate(tenantId);
         }
         return Result.success(briefing);
     }
@@ -32,6 +32,6 @@ public class DailyBriefingController {
     @PostMapping("/refresh")
     public Result<DailyBriefing> refresh() {
         Long tenantId = UserContext.tenantId();
-        return Result.success(service.generate(tenantId));
+        return Result.success(briefingHelper.generate(tenantId));
     }
 }
