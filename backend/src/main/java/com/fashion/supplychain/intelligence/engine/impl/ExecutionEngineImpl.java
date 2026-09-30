@@ -13,7 +13,7 @@ import com.fashion.supplychain.intelligence.engine.kg.KgRelation;
 import com.fashion.supplychain.intelligence.engine.kg.RelationExtractorRegistry;
 import com.fashion.supplychain.intelligence.engine.kg.RelationType;
 import com.fashion.supplychain.intelligence.helper.PromptContextProvider;
-import com.fashion.supplychain.intelligence.prompt.PromptVariantService;
+import com.fashion.supplychain.intelligence.helper.PromptVariantHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,7 +38,7 @@ public class ExecutionEngineImpl implements ExecutionEngine {
     private RelationExtractorRegistry relationExtractorRegistry;
 
     @Autowired(required = false)
-    private PromptVariantService promptVariantService;
+    private PromptVariantHelper promptVariantHelper;
 
     @Autowired(required = false)
     private PromptContextProvider promptContextProvider;
@@ -62,9 +62,9 @@ public class ExecutionEngineImpl implements ExecutionEngine {
 
     @Override
     public String selectBestPrompt(String intent) {
-        if (promptVariantService == null) return "";
+        if (promptVariantHelper == null) return "";
         try {
-            var variant = promptVariantService.selectVariant(intent);
+            var variant = promptVariantHelper.selectVariant(intent);
             if (variant == null) return "";
             return variant.getContent();
         } catch (Exception e) {

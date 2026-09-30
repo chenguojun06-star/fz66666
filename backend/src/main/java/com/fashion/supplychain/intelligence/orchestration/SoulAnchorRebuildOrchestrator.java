@@ -1,4 +1,4 @@
-package com.fashion.supplychain.intelligence.service;
+package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
@@ -8,7 +8,7 @@ import com.fashion.supplychain.intelligence.entity.MemoryBankEntry;
 import com.fashion.supplychain.intelligence.mapper.AiConversationMemoryMapper;
 import com.fashion.supplychain.intelligence.mapper.AiLongMemoryMapper;
 import com.fashion.supplychain.intelligence.mapper.MemoryBankEntryMapper;
-import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
+import com.fashion.supplychain.intelligence.service.MemoryBankDbService;
 import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.mapper.FactoryMapper;
 import lombok.Data;
@@ -53,11 +53,18 @@ import com.fashion.supplychain.common.QdrantService;
  * @author xiaoyun
  * @since 2026-07-26
  * @version P2-1 2026-07-28 4 锚点 LLM 重建
+ *
+ * <p><b>D-661</b>：由 {@code SoulAnchorRebuildService}（{@code intelligence.service}）
+ * 更名并移入 {@code intelligence.orchestration}。本类职责是「遍历 4 个锚点 → 读多源
+ * （4 个 Mapper / 记忆库 / 向量库）→（可选）LLM 生成 → 写回记忆库」的多源聚合编排，
+ * 属典型编排语义；对 {@code MemoryBankDbService} 的依赖是跨服务写入编排，
+ * 故归入 Orchestrator 层（与 D-653 处理 {@code *OrchestrationService} 的做法一致），
+ * 不是为规避规则而改名。
  */
 @Slf4j
 @Service
 @Lazy
-public class SoulAnchorRebuildService {
+public class SoulAnchorRebuildOrchestrator {
 
     private static final String CATEGORY_DECISION_LOG = "decision_log";
     private static final String CATEGORY_FACTORY_PROFILE = "factory_profile";

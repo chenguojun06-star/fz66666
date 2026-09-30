@@ -2,7 +2,7 @@ package com.fashion.supplychain.intelligence.job;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.lock.DistributedLockService;
-import com.fashion.supplychain.intelligence.service.SoulAnchorRebuildService;
+import com.fashion.supplychain.intelligence.orchestration.SoulAnchorRebuildOrchestrator;
 import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class SoulAnchorConsistencyJob {
 
-    @Autowired private SoulAnchorRebuildService soulAnchorRebuildService;
+    @Autowired private SoulAnchorRebuildOrchestrator soulAnchorRebuildOrchestrator;
     @Autowired private TenantService tenantService;
     @Autowired private DistributedLockService distributedLockService;
 
@@ -102,8 +102,8 @@ public class SoulAnchorConsistencyJob {
                 try {
                     UserContext.set(buildContext(tenant));
                     totalChecked++;
-                    SoulAnchorRebuildService.SoulAnchorStatus status =
-                            soulAnchorRebuildService.detectAnchors(tenantId);
+                    SoulAnchorRebuildOrchestrator.SoulAnchorStatus status =
+                            soulAnchorRebuildOrchestrator.detectAnchors(tenantId);
                     if (!status.isAllExists()) {
                         totalInconsistent++;
                         inconsistentTenants.add(String.format("tenant=%d(factory=%s/user=%s/decision=%s/reflective=%s)",
@@ -115,8 +115,8 @@ public class SoulAnchorConsistencyJob {
                         log.warn("[SoulAnchor] 租户{}锚点不完整: {}", tenantId, status.toMap());
 
                         // 自动重建缺失锚点
-                        SoulAnchorRebuildService.RebuildResult result =
-                                soulAnchorRebuildService.rebuildMissingAnchors(tenantId);
+                        SoulAnchorRebuildOrchestrator.RebuildResult result =
+                                soulAnchorRebuildOrchestrator.rebuildMissingAnchors(tenantId);
                         if (result.isDecisionLogRebuilt()) {
                             totalRebuilt++;
                         }

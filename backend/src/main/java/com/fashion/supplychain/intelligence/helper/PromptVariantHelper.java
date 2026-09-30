@@ -1,5 +1,7 @@
-package com.fashion.supplychain.intelligence.prompt;
+package com.fashion.supplychain.intelligence.helper;
 
+import com.fashion.supplychain.intelligence.prompt.PromptVariant;
+import com.fashion.supplychain.intelligence.prompt.PromptVariantPersistenceService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,10 +17,20 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
+/**
+ * 提示词 A/B 变体管理（内存态注册 / 加权选择 / 晋升判定）。
+ *
+ * <p><b>D-661</b>：由 {@code PromptVariantService}（{@code intelligence.prompt}）
+ * 更名并移入 {@code intelligence.helper}。本类状态全在进程内
+ * （{@code ConcurrentHashMap}），对外提供的是「注册 / 选择 / 评分回填」工具能力，
+ * 只被 {@code ExecutionEngineImpl} 调用；对 {@code PromptVariantPersistenceService}
+ * （持久化）与 {@code SelfCriticService}（自评打分）的依赖属工具协作而非业务编排，
+ * 故归 helper（同 D-658 / D-660）。
+ */
 @Slf4j
 @Service
 @Lazy
-public class PromptVariantService {
+public class PromptVariantHelper {
 
     private static final int MIN_SAMPLES_FOR_PROMOTION = 10;
     private static final double MIN_AVG_SCORE_DIFF = 3.0;
