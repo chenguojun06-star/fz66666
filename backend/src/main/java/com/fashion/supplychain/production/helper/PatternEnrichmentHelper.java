@@ -286,7 +286,7 @@ public class PatternEnrichmentHelper {
 
     /**
      * 二级兜底：从 StyleAttachment 查图片附件作为封面图
-     * 参考 ProductionOrderQueryService.fillCoverFromAttachments 实现
+     * 参考 ProductionOrderQueryOrchestrator.fillCoverFromAttachments 实现
      */
     private String fillCoverFromAttachments(String styleIdStr) {
         if (!StringUtils.hasText(styleIdStr)) {
@@ -315,7 +315,7 @@ public class PatternEnrichmentHelper {
 
     /**
      * 三级兜底：从 TemplateLibrary 查模板图作为封面图
-     * 参考 ProductionOrderQueryService.fillCoverFromTemplates 实现
+     * 参考 ProductionOrderQueryOrchestrator.fillCoverFromTemplates 实现
      */
     private String fillCoverFromTemplates(String styleNo) {
         if (!StringUtils.hasText(styleNo)) {
@@ -348,7 +348,7 @@ public class PatternEnrichmentHelper {
 
     /**
      * 从模板内容中提取第一张图片URL
-     * 复用 ProductionOrderQueryService 的同名方法逻辑
+     * 复用 ProductionOrderQueryOrchestrator 的同名方法逻辑
      */
     private String extractFirstTemplateImage(String templateContent) {
         if (!StringUtils.hasText(templateContent)) {

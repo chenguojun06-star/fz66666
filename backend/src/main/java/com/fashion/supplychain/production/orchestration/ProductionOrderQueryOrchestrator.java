@@ -1,4 +1,4 @@
-package com.fashion.supplychain.production.service;
+package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -11,7 +11,10 @@ import com.fashion.supplychain.production.entity.OrderImage;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.helper.CuttingWorkflowBuilderHelper;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
+import com.fashion.supplychain.production.service.OrderCuttingFillService;
 import com.fashion.supplychain.production.service.OrderImageService;
+import com.fashion.supplychain.production.service.OrderQualityFillService;
+import com.fashion.supplychain.production.service.OrderStockFillService;
 import com.fashion.supplychain.production.helper.OrderFlowStageFillHelper;
 import com.fashion.supplychain.production.helper.OrderPriceFillHelper;
 import com.fashion.supplychain.production.helper.OrderProgressFillHelper;
@@ -43,9 +46,25 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+/**
+ * 订单查询编排器。
+ *
+ * <p>D-655：原 {@code ProductionOrderQueryService}（位于 {@code production.service} 包）。
+ * 它注入 8 个 Service（OrderStockFill / OrderCuttingFill / OrderQualityFill / OrderImage /
+ * StyleInfo / SecondaryProcess / StyleAttachment / TemplateLibrary）来装配查询结果，
+ * 本质是跨服务编排 —— 违反「Service 不得依赖其他 Service」。
+ * 现更名为 {@code *Orchestrator} 并移入 {@code production.orchestration} 包
+ * （与 D-653 处理 ProductionOrderFlow/FinanceOrchestrationService 的做法一致）。
+ * <b>逻辑零改动</b>，仅包名与类名变更。
+ *
+ * <p>⚠️ 遗留：{@code ProductionOrderServiceImpl} 的 queryPage / getDetailById 是纯透传，
+ * 改名后它变成「Service 依赖 Orchestrator」。该项目 ServiceImpl 已注入
+ * ProductionOrderProgressOrchestrator / ProductionOrderFinanceOrchestrator（同类模式），
+ * 故本次不扩大改动面，留待后续清理。
+ */
 @Service
 @Slf4j
-public class ProductionOrderQueryService {
+public class ProductionOrderQueryOrchestrator {
 
     @Autowired
     private ProductionOrderMapper productionOrderMapper;

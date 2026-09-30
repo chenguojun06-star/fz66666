@@ -127,7 +127,7 @@ public class PerformanceMonitor {
         if ("RedisService.deleteByPattern(..)".equals(methodName)) {
             return redisDeletePatternWarnThresholdMs;
         }
-        if ("ProductionOrderQueryService.queryPage(..)".equals(methodName)) {
+        if ("ProductionOrderQueryOrchestrator.queryPage(..)".equals(methodName)) {
             return productionOrderQueryWarnThresholdMs;
         }
         return defaultWarnThresholdMs;

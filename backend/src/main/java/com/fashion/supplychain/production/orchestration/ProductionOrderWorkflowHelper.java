@@ -7,7 +7,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.helper.OrderRemarkHelper;
 import com.fashion.supplychain.production.helper.ProductionOrderLogAppendHelper;
 import com.fashion.supplychain.production.service.CuttingBundleService;
-import com.fashion.supplychain.production.service.ProductionOrderQueryService;
+import com.fashion.supplychain.production.orchestration.ProductionOrderQueryOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -35,7 +35,7 @@ public class ProductionOrderWorkflowHelper {
     @Autowired
     private ProductionOrderService productionOrderService;
     @Autowired
-    private ProductionOrderQueryService productionOrderQueryService;
+    private ProductionOrderQueryOrchestrator productionOrderQueryService;
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
     @Autowired

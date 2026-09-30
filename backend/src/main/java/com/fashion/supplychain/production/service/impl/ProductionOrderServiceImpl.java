@@ -7,7 +7,7 @@ import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.orchestration.ProductionOrderFinanceOrchestrator;
 import com.fashion.supplychain.production.orchestration.ProductionOrderProgressOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderProgressRecomputeService;
-import com.fashion.supplychain.production.service.ProductionOrderQueryService;
+import com.fashion.supplychain.production.orchestration.ProductionOrderQueryOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -59,7 +59,7 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
 
     @Autowired
-    private ProductionOrderQueryService productionOrderQueryService;
+    private ProductionOrderQueryOrchestrator productionOrderQueryService;
 
     @Autowired
     private ObjectProvider<MaterialPurchaseService> materialPurchaseServiceProvider;

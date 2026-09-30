@@ -6,7 +6,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.UrgeRecord;
 import com.fashion.supplychain.intelligence.orchestration.OrderDecisionCaptureOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.OrderLearningOutcomeOrchestrator;
-import com.fashion.supplychain.production.service.ProductionOrderQueryService;
+import com.fashion.supplychain.production.orchestration.ProductionOrderQueryOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.UrgeRecordService;
 import com.fashion.supplychain.common.UserContext;
@@ -63,7 +63,7 @@ public class ProductionOrderOrchestrator {
     // ---------- 服务依赖 ----------
 
     @Autowired
-    private ProductionOrderQueryService productionOrderQueryService;
+    private ProductionOrderQueryOrchestrator productionOrderQueryService;
 
     @Autowired
     private ProductionOrderProgressOrchestrator progressOrchestrationService;

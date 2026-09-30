@@ -8,7 +8,7 @@ import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.CuttingBundleMapper;
-import com.fashion.supplychain.production.service.ProductionOrderQueryService;
+import com.fashion.supplychain.production.orchestration.ProductionOrderQueryOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -32,7 +32,7 @@ public class CuttingTaskQueryHelper {
 
     @Autowired private CuttingBundleMapper cuttingBundleMapper;
     @Autowired private ProductionOrderService productionOrderService;
-    @Autowired private ProductionOrderQueryService productionOrderQueryService;
+    @Autowired private ProductionOrderQueryOrchestrator productionOrderQueryService;
     @Autowired private StyleInfoService styleInfoService;
 
     public IPage<CuttingTask> queryPage(Map<String, Object> params,

@@ -6,7 +6,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.constant.OrderStatusConstants;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
-import com.fashion.supplychain.production.service.ProductionOrderQueryService;
+import com.fashion.supplychain.production.orchestration.ProductionOrderQueryOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import java.time.LocalDateTime;
@@ -30,7 +30,7 @@ public class OrderWorkflowHelper {
     private ProductionOrderService productionOrderService;
 
     @Autowired
-    private ProductionOrderQueryService productionOrderQueryService;
+    private ProductionOrderQueryOrchestrator productionOrderQueryService;
 
     @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;

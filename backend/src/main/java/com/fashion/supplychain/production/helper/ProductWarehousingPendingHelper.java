@@ -11,7 +11,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
-import com.fashion.supplychain.production.service.ProductionOrderQueryService;
+import com.fashion.supplychain.production.orchestration.ProductionOrderQueryOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.style.entity.StyleBom;
@@ -43,7 +43,7 @@ public class ProductWarehousingPendingHelper {
     private ProductionOrderService productionOrderService;
 
     @Autowired
-    private ProductionOrderQueryService productionOrderQueryService;
+    private ProductionOrderQueryOrchestrator productionOrderQueryService;
 
     @Autowired
     private CuttingBundleService cuttingBundleService;

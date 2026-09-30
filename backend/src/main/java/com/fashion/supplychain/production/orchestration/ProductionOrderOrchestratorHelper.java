@@ -1,7 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.production.service.ProductionOrderQueryService;
+import com.fashion.supplychain.production.orchestration.ProductionOrderQueryOrchestrator;
 import com.fashion.supplychain.style.orchestration.StyleAttachmentOrchestrator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,7 +36,7 @@ public class ProductionOrderOrchestratorHelper {
     private StyleAttachmentOrchestrator styleAttachmentOrchestrator;
 
     @Autowired
-    private ProductionOrderQueryService productionOrderQueryService;
+    private ProductionOrderQueryOrchestrator productionOrderQueryService;
 
     // ---------- 验证方法 ----------
 

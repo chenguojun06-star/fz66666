@@ -11,7 +11,7 @@ import org.apache.ibatis.annotations.Mapper;
  * 【租户隔离机制】视图 v_finished_product_settlement 本身不含租户过滤。
  * 类级别 @InterceptorIgnore(tenantLine="true") 绕过 MyBatis-Plus 租户拦截器，
  * 租户隔离完全由 Controller 层的 IN(orderIds) 条件保证：
- *   - 普通租户：orderIds 已通过 WHERE tenant_id=X 预过滤（见 ProductionOrderQueryService）；
+ *   - 普通租户：orderIds 已通过 WHERE tenant_id=X 预过滤（见 ProductionOrderQueryOrchestrator）；
  *   - 超管：应查看所有租户数据，不能加 tenant_id 过滤。
  * 因此绕过拦截器是安全且正确的。
  *

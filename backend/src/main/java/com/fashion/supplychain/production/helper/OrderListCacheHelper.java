@@ -42,7 +42,7 @@ public class OrderListCacheHelper {
         Long tenantId = UserContext.tenantId();
         String tenant = tenantId != null ? "t" + tenantId : "anon";
         // D-235 安全修复：详情缓存 key 必须带工厂维度。
-        // 原实现只有 tenant + orderId，而 ProductionOrderQueryService.getDetailById
+        // 原实现只有 tenant + orderId，而 ProductionOrderQueryOrchestrator.getDetailById
         // 是「先查缓存、命中即返回」，SQL 里的 factory_id 过滤在缓存命中时被完全绕过。
         // 后果：同租户下 A 工厂查过的订单，B 工厂再查会直接拿到 A 留在缓存里的数据
         // ——跨工厂数据泄露。此处补上工厂维度，与 buildListCacheKey 口径一致。
