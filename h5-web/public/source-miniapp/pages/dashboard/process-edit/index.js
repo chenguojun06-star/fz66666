@@ -105,6 +105,7 @@ Page({
         diffEasy: i18n.t(NS + 'diffEasy', lang),
         diffMedium: i18n.t(NS + 'diffMedium', lang),
         diffHard: i18n.t(NS + 'diffHard', lang),
+        totalLabel: i18n.t('mp.processEdit.totalLabel', lang),
       },
     });
     wx.setNavigationBarTitle({ title: i18n.t(NS + 'navTitle', lang) });

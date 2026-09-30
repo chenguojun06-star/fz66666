@@ -310,6 +310,7 @@ Page({
         noSizeDataHint: i18n.t(NS + 'noSizeDataHint', lang),
         sizeLoadFailed: i18n.t(NS + 'sizeLoadFailed', lang),
         noSizeLinked: i18n.t(NS + 'noSizeLinked', lang),
+        sizeTableTitle: i18n.t('mp.orderDetail.sizeTableTitle', lang),
       },
     });
     // 兜底标题（_loadFlow 拿到订单号后会覆盖为「订单详情 + 单号」）

@@ -1620,8 +1620,8 @@
       "processProgress": "Tiến độ công đoạn",
       "scanRecords": "Bản ghi quét",
       "recordsUnit": "bản ghi",
-      "completedQty": "Hoàn thành {n}",
-      "receivedQty": "Đã nhận {n}",
+      "completedQty": "Hoàn thành",
+      "receivedQty": "Đã nhận",
       "noProcessHint": "Chưa có công đoạn, cấu hình trên PC",
       "noSecondary": "Chưa có CN thứ cấp",
       "noAttachmentHint": "Chưa có đính kèm, bấm \"Tải lên\"",
@@ -1788,8 +1788,8 @@
       "wageFmt": "Lương ¥{cost}",
       "groupDoneFmt": "{total} mục · {done} xong",
       "scanRecordsFmt": "Bản ghi quét ({count})",
-      "countFmt": "{count} lần",
-      "kindFmt": "{count} loại",
+      "countFmt": " lần",
+      "kindFmt": " loại",
       "otherWord": "Khác",
       "daysWord": "ngày",
       "matPurchaseW": "Mua vật liệu",
@@ -1903,7 +1903,10 @@
       "noSampleMatchX": "Không khớp phiếu",
       "searchBundlePhW": "Tìm phiếu / QR / màu / cỡ",
       "checkedWord": "Đã kiểm",
-      "checkedTimesW": "lần"
+      "checkedTimesW": "lần",
+      "partsCountW": " bộ phận",
+      "photosUnit": " ảnh",
+      "selectedWord": "Đã chọn"
     },
     "attendanceDetail": {
       "navTitle": "Chấm công",
@@ -2131,7 +2134,8 @@
       "cutByPrefix": "Người cắt: ",
       "buyByPrefix": "Người mua: ",
       "viewAllFmt": "Xem tất cả {n} bó →",
-      "viewAllW": "Xem tất cả"
+      "viewAllW": "Xem tất cả",
+      "sizeTableTitle": "Bảng size"
     },
     "taskDetail": {
       "navTitle": "Chi tiết mua hàng",
@@ -3071,7 +3075,8 @@
       "statusProduction": "Đang sản xuất",
       "statusCompleted": "Đã hoàn thành",
       "statusCancelled": "Đã hủy",
-      "statusPaused": "Tạm dừng"
+      "statusPaused": "Tạm dừng",
+      "totalLabel": "Tổng cộng"
     },
     "userApproval": {
       "navTitle": "Duyệt người dùng",

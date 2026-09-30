@@ -298,6 +298,25 @@ def find_wxml_bind_gaps(sources):
     return gaps
 
 
+def classify_bind_gaps(sources, gaps):
+    """把缺口分两类（修法完全不同）：
+      missing —— js 里完全没有该字段的赋值 → 补绑定
+      path    —— js 在顶层赋了值、wxml 却读 t.x → 改 wxml 路径
+    ⚠️ 实测实例：pages/smart-ops 的 scanSubText 设在 setData 顶层（data.scanSubText），
+       wxml 读 {{t.scanSubText}} → 副标题恒为空。这类**不是**「漏绑定」。
+    """
+    out = {}
+    for page, fields in gaps.items():
+        js = sources.get(page[:-5] + '.js', '')
+        cls = {}
+        for f in fields:
+            assigned = (re.search(r'(?<![\w$.])' + re.escape(f) + r'\s*:', js)
+                        or re.search(r"['\"]t\." + re.escape(f) + r"['\"]", js))
+            cls[f] = 'path' if assigned else 'missing'
+        out[page] = cls
+    return out
+
+
 def find_self_nesting(node, path=''):
     """找出「同名命名空间自我嵌套」，如 status.status / menu.menu"""
     hits = []
@@ -505,10 +524,28 @@ def main():
                 new_gaps[page] = fresh
         print(f'    存量基线 {len(bind_baseline)} 个页面 / '
               f'当前实测 {len(gaps)} 个页面、{sum(len(v) for v in gaps.values())} 处')
+        if gaps:
+            cls = classify_bind_gaps(sources, gaps)
+            miss_n = sum(1 for p, fs in cls.items() for f, c in fs.items() if c == 'missing')
+            path_n = sum(1 for p, fs in cls.items() for f, c in fs.items() if c == 'path')
+            print(f'    当前缺口分类：缺绑定 {miss_n} 处 / wxml 路径错 {path_n} 处')
+            for page, fs in cls.items():
+                miss = [f for f, c in fs.items() if c == 'missing']
+                path = [f for f, c in fs.items() if c == 'path']
+                if miss:
+                    print(f'       [缺绑定] {page}  →  {miss}')
+                if path:
+                    print(f'       [wxml 路径错] {page}  →  {path}')
         if new_gaps:
             print(f'    ⚠️ 新增 {sum(len(v) for v in new_gaps.values())} 处（不阻塞推送）：')
+            cls = classify_bind_gaps(sources, new_gaps)
             for page, fields in list(new_gaps.items())[:12]:
-                print(f'       {page}  →  {fields}')
+                miss = [f for f in fields if cls.get(page, {}).get(f) == 'missing']
+                path = [f for f in fields if cls.get(page, {}).get(f) == 'path']
+                if miss:
+                    print(f'       {page}  [缺绑定] {miss}')
+                if path:
+                    print(f'       {page}  [wxml 路径错：js 赋在顶层] {path}')
         else:
             print('    ✅ 无新增缺口')
 

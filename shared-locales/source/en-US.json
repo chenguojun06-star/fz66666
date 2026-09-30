@@ -1620,8 +1620,8 @@
       "processProgress": "Process Progress",
       "scanRecords": "Scan Records",
       "recordsUnit": "records",
-      "completedQty": "{n} done",
-      "receivedQty": "{n} claimed",
+      "completedQty": "Done",
+      "receivedQty": "Claimed",
       "noProcessHint": "No processes; configure on PC",
       "noSecondary": "No secondary processes",
       "noAttachmentHint": "No attachments; tap \"Upload\" below",
@@ -1788,8 +1788,8 @@
       "wageFmt": "Wage ¥{cost}",
       "groupDoneFmt": "{total} items · {done} done",
       "scanRecordsFmt": "Scans ({count})",
-      "countFmt": "{count} times",
-      "kindFmt": "{count} kinds",
+      "countFmt": " times",
+      "kindFmt": " kinds",
       "otherWord": "Other",
       "daysWord": "d",
       "matPurchaseW": "Material Purchase",
@@ -1903,7 +1903,10 @@
       "noSampleMatchX": "No matching bundle",
       "searchBundlePhW": "Search bundle / QR / color / size",
       "checkedWord": "Checked",
-      "checkedTimesW": "×"
+      "checkedTimesW": "×",
+      "partsCountW": " parts",
+      "photosUnit": " photos",
+      "selectedWord": "Selected"
     },
     "attendanceDetail": {
       "navTitle": "Attendance",
@@ -2131,7 +2134,8 @@
       "cutByPrefix": "Cutter: ",
       "buyByPrefix": "Buyer: ",
       "viewAllFmt": "View all {n} bundles →",
-      "viewAllW": "View all"
+      "viewAllW": "View all",
+      "sizeTableTitle": "Size Chart"
     },
     "taskDetail": {
       "navTitle": "Purchase Task",
@@ -3071,7 +3075,8 @@
       "statusProduction": "In production",
       "statusCompleted": "Completed",
       "statusCancelled": "Cancelled",
-      "statusPaused": "Paused"
+      "statusPaused": "Paused",
+      "totalLabel": "Total"
     },
     "userApproval": {
       "navTitle": "User Approval",

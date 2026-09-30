@@ -1627,8 +1627,8 @@ export const LOCALES = {
         "processProgress": "工序进度",
         "scanRecords": "扫码记录",
         "recordsUnit": "条",
-        "completedQty": "已完成 {n}件",
-        "receivedQty": "已领 {n}件",
+        "completedQty": "已完成",
+        "receivedQty": "已领",
         "noProcessHint": "暂无工序配置，请在 PC 端配置",
         "noSecondary": "暂无二次工艺",
         "noAttachmentHint": "暂无附件，可点击下方「上传」添加",
@@ -1795,8 +1795,8 @@ export const LOCALES = {
         "wageFmt": "工资¥{cost}",
         "groupDoneFmt": "{total}项 · 已完成{done}项",
         "scanRecordsFmt": "扫码记录（{count}条）",
-        "countFmt": "{count}次",
-        "kindFmt": "{count}种",
+        "countFmt": "次",
+        "kindFmt": "种",
         "otherWord": "其他",
         "daysWord": "天",
         "matPurchaseW": "物料采购",
@@ -1910,7 +1910,10 @@ export const LOCALES = {
         "noSampleMatchX": "未匹配到菲号",
         "searchBundlePhW": "搜索菲号 / 二维码 / 颜色 / 码数",
         "checkedWord": "已检",
-        "checkedTimesW": "次"
+        "checkedTimesW": "次",
+        "partsCountW": "个部位",
+        "photosUnit": "张",
+        "selectedWord": "已选"
       },
       "attendanceDetail": {
         "navTitle": "考勤明细",
@@ -2138,7 +2141,8 @@ export const LOCALES = {
         "cutByPrefix": "裁剪人：",
         "buyByPrefix": "采购人：",
         "viewAllFmt": "查看全部 {n} 扎 →",
-        "viewAllW": "查看全部"
+        "viewAllW": "查看全部",
+        "sizeTableTitle": "尺寸表"
       },
       "taskDetail": {
         "navTitle": "采购任务详情",
@@ -3078,7 +3082,8 @@ export const LOCALES = {
         "statusProduction": "生产中",
         "statusCompleted": "已完成",
         "statusCancelled": "已取消",
-        "statusPaused": "已暂停"
+        "statusPaused": "已暂停",
+        "totalLabel": "合计"
       },
       "userApproval": {
         "navTitle": "用户审批",
@@ -5772,8 +5777,8 @@ export const LOCALES = {
         "processProgress": "Process Progress",
         "scanRecords": "Scan Records",
         "recordsUnit": "records",
-        "completedQty": "{n} done",
-        "receivedQty": "{n} claimed",
+        "completedQty": "Done",
+        "receivedQty": "Claimed",
         "noProcessHint": "No processes; configure on PC",
         "noSecondary": "No secondary processes",
         "noAttachmentHint": "No attachments; tap \"Upload\" below",
@@ -5940,8 +5945,8 @@ export const LOCALES = {
         "wageFmt": "Wage ¥{cost}",
         "groupDoneFmt": "{total} items · {done} done",
         "scanRecordsFmt": "Scans ({count})",
-        "countFmt": "{count} times",
-        "kindFmt": "{count} kinds",
+        "countFmt": " times",
+        "kindFmt": " kinds",
         "otherWord": "Other",
         "daysWord": "d",
         "matPurchaseW": "Material Purchase",
@@ -6055,7 +6060,10 @@ export const LOCALES = {
         "noSampleMatchX": "No matching bundle",
         "searchBundlePhW": "Search bundle / QR / color / size",
         "checkedWord": "Checked",
-        "checkedTimesW": "×"
+        "checkedTimesW": "×",
+        "partsCountW": " parts",
+        "photosUnit": " photos",
+        "selectedWord": "Selected"
       },
       "attendanceDetail": {
         "navTitle": "Attendance",
@@ -6283,7 +6291,8 @@ export const LOCALES = {
         "cutByPrefix": "Cutter: ",
         "buyByPrefix": "Buyer: ",
         "viewAllFmt": "View all {n} bundles →",
-        "viewAllW": "View all"
+        "viewAllW": "View all",
+        "sizeTableTitle": "Size Chart"
       },
       "taskDetail": {
         "navTitle": "Purchase Task",
@@ -7223,7 +7232,8 @@ export const LOCALES = {
         "statusProduction": "In production",
         "statusCompleted": "Completed",
         "statusCancelled": "Cancelled",
-        "statusPaused": "Paused"
+        "statusPaused": "Paused",
+        "totalLabel": "Total"
       },
       "userApproval": {
         "navTitle": "User Approval",
@@ -9917,8 +9927,8 @@ export const LOCALES = {
         "processProgress": "Tiến độ công đoạn",
         "scanRecords": "Bản ghi quét",
         "recordsUnit": "bản ghi",
-        "completedQty": "Hoàn thành {n}",
-        "receivedQty": "Đã nhận {n}",
+        "completedQty": "Hoàn thành",
+        "receivedQty": "Đã nhận",
         "noProcessHint": "Chưa có công đoạn, cấu hình trên PC",
         "noSecondary": "Chưa có CN thứ cấp",
         "noAttachmentHint": "Chưa có đính kèm, bấm \"Tải lên\"",
@@ -10085,8 +10095,8 @@ export const LOCALES = {
         "wageFmt": "Lương ¥{cost}",
         "groupDoneFmt": "{total} mục · {done} xong",
         "scanRecordsFmt": "Bản ghi quét ({count})",
-        "countFmt": "{count} lần",
-        "kindFmt": "{count} loại",
+        "countFmt": " lần",
+        "kindFmt": " loại",
         "otherWord": "Khác",
         "daysWord": "ngày",
         "matPurchaseW": "Mua vật liệu",
@@ -10200,7 +10210,10 @@ export const LOCALES = {
         "noSampleMatchX": "Không khớp phiếu",
         "searchBundlePhW": "Tìm phiếu / QR / màu / cỡ",
         "checkedWord": "Đã kiểm",
-        "checkedTimesW": "lần"
+        "checkedTimesW": "lần",
+        "partsCountW": " bộ phận",
+        "photosUnit": " ảnh",
+        "selectedWord": "Đã chọn"
       },
       "attendanceDetail": {
         "navTitle": "Chấm công",
@@ -10428,7 +10441,8 @@ export const LOCALES = {
         "cutByPrefix": "Người cắt: ",
         "buyByPrefix": "Người mua: ",
         "viewAllFmt": "Xem tất cả {n} bó →",
-        "viewAllW": "Xem tất cả"
+        "viewAllW": "Xem tất cả",
+        "sizeTableTitle": "Bảng size"
       },
       "taskDetail": {
         "navTitle": "Chi tiết mua hàng",
@@ -11368,7 +11382,8 @@ export const LOCALES = {
         "statusProduction": "Đang sản xuất",
         "statusCompleted": "Đã hoàn thành",
         "statusCancelled": "Đã hủy",
-        "statusPaused": "Tạm dừng"
+        "statusPaused": "Tạm dừng",
+        "totalLabel": "Tổng cộng"
       },
       "userApproval": {
         "navTitle": "Duyệt người dùng",
@@ -14062,8 +14077,8 @@ export const LOCALES = {
         "processProgress": "Process Progress",
         "scanRecords": "Scan Records",
         "recordsUnit": "records",
-        "completedQty": "{n} done",
-        "receivedQty": "{n} claimed",
+        "completedQty": "Done",
+        "receivedQty": "Claimed",
         "noProcessHint": "No processes; configure on PC",
         "noSecondary": "No secondary processes",
         "noAttachmentHint": "No attachments; tap \"Upload\" below",
@@ -14230,8 +14245,8 @@ export const LOCALES = {
         "wageFmt": "Wage ¥{cost}",
         "groupDoneFmt": "{total} items · {done} done",
         "scanRecordsFmt": "Scans ({count})",
-        "countFmt": "{count} times",
-        "kindFmt": "{count} kinds",
+        "countFmt": " times",
+        "kindFmt": " kinds",
         "otherWord": "Other",
         "daysWord": "d",
         "matPurchaseW": "Material Purchase",
@@ -14345,7 +14360,10 @@ export const LOCALES = {
         "noSampleMatchX": "No matching bundle",
         "searchBundlePhW": "Search bundle / QR",
         "checkedWord": "Checked",
-        "checkedTimesW": "×"
+        "checkedTimesW": "×",
+        "partsCountW": " parts",
+        "photosUnit": " photos",
+        "selectedWord": "Selected"
       },
       "attendanceDetail": {
         "navTitle": "Attendance",
@@ -14573,7 +14591,8 @@ export const LOCALES = {
         "cutByPrefix": "Cutter: ",
         "buyByPrefix": "Buyer: ",
         "viewAllFmt": "View all {n} →",
-        "viewAllW": "View all"
+        "viewAllW": "View all",
+        "sizeTableTitle": "Size Chart"
       },
       "taskDetail": {
         "navTitle": "Purchase Task",
@@ -15513,7 +15532,8 @@ export const LOCALES = {
         "statusProduction": "In production",
         "statusCompleted": "Completed",
         "statusCancelled": "Cancelled",
-        "statusPaused": "Paused"
+        "statusPaused": "Paused",
+        "totalLabel": "Total"
       },
       "userApproval": {
         "navTitle": "User Approval",

@@ -16,7 +16,7 @@
         <text class="hero-num">{{heroScanQty}}</text>
         <text class="hero-unit">{{t.pieceUnit}}</text>
       </view>
-      <text class="hero-sub">{{t.scanSubText}}</text>
+      <text class="hero-sub">{{scanSubText}}</text>
     </view>
     <view class="hero-divider"></view>
     <view class="hero-stats">

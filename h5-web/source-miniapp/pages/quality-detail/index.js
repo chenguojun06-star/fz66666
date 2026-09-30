@@ -263,6 +263,9 @@ Page({
         batchPassTitle: i18n.t('mp.qualityDetail.batchPassTitle', lang),
         cannotLoadBrief: i18n.t('mp.qualityDetail.cannotLoadBrief', lang),
         navTitle: i18n.t('mp.qualityDetail.navTitle', lang),
+        partsCountW: i18n.t('mp.qualityDetail.partsCountW', lang),
+        photosUnit: i18n.t('mp.qualityDetail.photosUnit', lang),
+        selectedWord: i18n.t('mp.qualityDetail.selectedWord', lang),
       },
       defectCategoryOptions: DEFECT_CATEGORY_KEYS.map(function (c) {
         return { value: c.value, label: i18n.t(c.nameKey.indexOf('.') >= 0 ? c.nameKey : NS + c.nameKey, lang) };

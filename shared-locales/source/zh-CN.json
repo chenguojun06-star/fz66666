@@ -1620,8 +1620,8 @@
       "processProgress": "工序进度",
       "scanRecords": "扫码记录",
       "recordsUnit": "条",
-      "completedQty": "已完成 {n}件",
-      "receivedQty": "已领 {n}件",
+      "completedQty": "已完成",
+      "receivedQty": "已领",
       "noProcessHint": "暂无工序配置，请在 PC 端配置",
       "noSecondary": "暂无二次工艺",
       "noAttachmentHint": "暂无附件，可点击下方「上传」添加",
@@ -1788,8 +1788,8 @@
       "wageFmt": "工资¥{cost}",
       "groupDoneFmt": "{total}项 · 已完成{done}项",
       "scanRecordsFmt": "扫码记录（{count}条）",
-      "countFmt": "{count}次",
-      "kindFmt": "{count}种",
+      "countFmt": "次",
+      "kindFmt": "种",
       "otherWord": "其他",
       "daysWord": "天",
       "matPurchaseW": "物料采购",
@@ -1903,7 +1903,10 @@
       "noSampleMatchX": "未匹配到菲号",
       "searchBundlePhW": "搜索菲号 / 二维码 / 颜色 / 码数",
       "checkedWord": "已检",
-      "checkedTimesW": "次"
+      "checkedTimesW": "次",
+      "partsCountW": "个部位",
+      "photosUnit": "张",
+      "selectedWord": "已选"
     },
     "attendanceDetail": {
       "navTitle": "考勤明细",
@@ -2131,7 +2134,8 @@
       "cutByPrefix": "裁剪人：",
       "buyByPrefix": "采购人：",
       "viewAllFmt": "查看全部 {n} 扎 →",
-      "viewAllW": "查看全部"
+      "viewAllW": "查看全部",
+      "sizeTableTitle": "尺寸表"
     },
     "taskDetail": {
       "navTitle": "采购任务详情",
@@ -3071,7 +3075,8 @@
       "statusProduction": "生产中",
       "statusCompleted": "已完成",
       "statusCancelled": "已取消",
-      "statusPaused": "已暂停"
+      "statusPaused": "已暂停",
+      "totalLabel": "合计"
     },
     "userApproval": {
       "navTitle": "用户审批",

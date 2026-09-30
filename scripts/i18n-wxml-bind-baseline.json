@@ -1,28 +1,5 @@
 {
   "note": "wxml↔js 绑定缺口基线（判据：wxml 用了 {{t.x}} 但同目录 js 的 applyLanguage 从不赋值 → 文案静默丢失）。修完一批后重跑 --update-wxml-bind-baseline 收敛。",
-  "total": 10,
-  "pages": {
-    "miniprogram/pages/smart-ops/index.wxml": [
-      "scanSubText"
-    ],
-    "miniprogram/pages/dashboard/process-edit/index.wxml": [
-      "totalLabel"
-    ],
-    "miniprogram/pages/dashboard/order-detail/index.wxml": [
-      "sizeTableTitle"
-    ],
-    "miniprogram/pages/quality-detail/index.wxml": [
-      "partsCountW",
-      "photosUnit",
-      "selectedWord"
-    ],
-    "miniprogram/pages/sample-development/detail/index.wxml": [
-      "completedQty",
-      "receivedQty"
-    ],
-    "miniprogram/pages/sample-development/stage-detail/index.wxml": [
-      "countFmt",
-      "kindFmt"
-    ]
-  }
+  "total": 0,
+  "pages": {}
 }

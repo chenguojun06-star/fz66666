@@ -330,6 +330,8 @@ Page({
         recordsUnit: i18n.t(NS + 'recordsUnit', lang),
         remarkUnit: i18n.t(NS + 'remarkUnit', lang),
         partsCount: i18n.t(NS + 'partsCount', lang),
+        completedQty: i18n.t('mp.sampleDetail.completedQty', lang),
+        receivedQty: i18n.t('mp.sampleDetail.receivedQty', lang),
       },
       remarkRoles: REMARK_ROLE_KEYS.map(function (r) { return { key: r.key, label: i18n.t(NS + r.nameKey, lang) }; }),
       tabs: [
