@@ -78,7 +78,8 @@
 }
 
 .header-title.header-brand {
-  font-size: calc(var(--font-size-lg) + 1px);
+  /* D-661：顶栏整排字调小2号（原 lg+1=17px 比正文大太多），降到 lg-1=15px */
+  font-size: calc(var(--font-size-lg) - 1px);
   padding: 8px 16px;
   border-radius: 6px;
   background: var(--color-bg-subtle); /* @design-system: 纯色，禁止渐变 */
@@ -93,7 +94,8 @@
 }
 
 .header-tenant-name {
-  font-size: var(--font-size-sm);
+  /* D-661：顶栏调小排里它原本就小（13px），只降1号到12px——再小会看不清 */
+  font-size: calc(var(--font-size-sm) - 1px);
   color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -230,7 +232,8 @@
   padding: 0 12px !important;
   border-radius: 6px !important;
   min-width: 0 !important;
-  font-size: 15px !important;
+  /* D-661：顶栏整排字调小2号（15px→13px），与正文比例协调 */
+  font-size: 13px !important;
   line-height: 32px !important;
   /* 页签文字清晰度：副文本灰在浅灰底上发糊，改主文本色+中黑字重，笔画实、对比足 */
   color: var(--color-text-primary) !important;
@@ -324,7 +327,8 @@
 }
 
 .user-name {
-  font-size: var(--font-size-base);
+  /* D-661：顶栏整排字调小2号（base 15px→sm 13px） */
+  font-size: var(--font-size-sm);
   color: var(--neutral-text);
   margin: 0;
   font-weight: 500;
@@ -1087,7 +1091,8 @@
   border-radius: 8px;
   background: rgba(45, 127, 249, 0.04);
   color: var(--color-blue-700);
-  font-size: 15px;
+  /* D-661：顶栏整排字调小2号（15px→13px） */
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
@@ -1123,14 +1128,16 @@
   line-height: 1.1;
 }
 .smart-alert-btn-sub {
-  font-size: 13px;
+  /* D-661：随顶栏调小（13px→12px） */
+  font-size: 12px;
   color: var(--color-primary-light);
   font-weight: 500;
   letter-spacing: 0.03em;
   opacity: 0.85;
 }
 .smart-alert-btn-main {
-  font-size: 15px;
+  /* D-661：顶栏整排字调小2号（15px→13px） */
+  font-size: 13px;
   color: var(--color-black);
   font-weight: 600;
   letter-spacing: 0.02em;
