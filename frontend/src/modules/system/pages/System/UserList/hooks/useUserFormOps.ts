@@ -11,6 +11,8 @@ import tenantService from '@/services/tenantService';
 import organizationApi from '@/services/system/organizationApi';
 import type { useModal } from '@/hooks';
 import type { MessageInstance } from 'antd/es/message/interface';
+/** 后端统一响应包装（code=200 成功） */
+type ApiResponse = { code?: number; data?: unknown; message?: string };
 
 interface UseUserFormOpsParams {
   user: any;
@@ -102,7 +104,7 @@ export function useUserFormOps({
         const tenantId = user?.tenantId ? Number(user.tenantId) : null;
         if (!isSuperAdmin && tenantId) {
           const response = await tenantService.updateSubAccount(Number(id), { status: newStatus, operationRemark: remark });
-          const result = response as any;
+          const result = response as ApiResponse;
           if (result.code === 200) {
             message.success('状态更新成功');
             setUserList(prev => prev.map(u => u.id === id ? { ...u, status: newStatus } : u));
@@ -110,7 +112,7 @@ export function useUserFormOps({
           return;
         }
         const response = await api.put('/system/user/status', null, { params: { id, status: newStatus, remark } });
-        const result = response as any;
+        const result = response as ApiResponse;
         if (result.code === 200) {
           message.success('状态更新成功');
           setUserList(prev => prev.map(u => u.id === id ? { ...u, status: newStatus } : u));
@@ -134,12 +136,12 @@ export function useUserFormOps({
       const tenantId = targetUser?.tenantId ? Number(targetUser.tenantId) : null;
       if (!isSuperAdmin && tenantId) {
         const response = await tenantService.updateSubAccount(Number(uid), payload as any);
-        const result = response as any;
+        const result = response as ApiResponse;
         if (result.code === 200) { message.success('授权成功'); getUserList(); return; }
         message.error(result.message || '授权失败'); throw new Error('grant failed');
       }
       const response = await api.put('/system/user', payload);
-      const result = response as any;
+      const result = response as ApiResponse;
       if (result.code === 200) { message.success('授权成功'); getUserList(); return; }
       message.error(result.message || '授权失败'); throw new Error('grant failed');
     });
@@ -161,7 +163,7 @@ export function useUserFormOps({
         } else if (userModal.data?.id) {
           response = await api.put('/system/user', { ...values, id: userModal.data.id, operationRemark: remark || null });
         } else { response = await api.post('/system/user', values); }
-        const result = response as any;
+        const result = response as ApiResponse;
         if (result.code === 200) {
           message.success(userModal.data?.id ? '编辑人员成功' : '新增人员成功');
           closeDialog(); getUserList();
@@ -243,7 +245,7 @@ export function useUserFormOps({
         };
         if (!isSuperAdmin && tenantId) {
           const response = await tenantService.updateSubAccount(Number(record.id), payload);
-          const result = response as any;
+          const result = response as ApiResponse;
           if (result.code === 200) {
             message.success(`${statusLabel[nextStatus]}成功`);
             setUserList(prev => prev.map(u => u.id === record.id ? { ...u, employmentStatus: nextStatus } : u));
@@ -251,7 +253,7 @@ export function useUserFormOps({
           return;
         }
         const response = await api.put('/system/user', payload);
-        const result = response as any;
+        const result = response as ApiResponse;
         if (result.code === 200) {
           message.success(`${statusLabel[nextStatus]}成功`);
           setUserList(prev => prev.map(u => u.id === record.id ? { ...u, employmentStatus: nextStatus } : u));
