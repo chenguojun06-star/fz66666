@@ -1,7 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
-import com.fashion.supplychain.auth.AuthTokenService;
-import com.fashion.supplychain.auth.TokenSubject;
+import com.fashion.supplychain.common.AuthTokenService;
+import com.fashion.supplychain.common.TokenSubject;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.intelligence.service.A2aProtocolService;
 import com.fashion.supplychain.intelligence.service.A2aProtocolService.A2aRequest;

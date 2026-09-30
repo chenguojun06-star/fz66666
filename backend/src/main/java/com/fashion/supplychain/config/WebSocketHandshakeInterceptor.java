@@ -1,7 +1,7 @@
 package com.fashion.supplychain.config;
 
-import com.fashion.supplychain.auth.AuthTokenService;
-import com.fashion.supplychain.auth.TokenSubject;
+import com.fashion.supplychain.common.AuthTokenService;
+import com.fashion.supplychain.common.TokenSubject;
 import com.fashion.supplychain.common.SpringContextHolder;
 import jakarta.websocket.HandshakeResponse;
 import jakarta.websocket.server.HandshakeRequest;

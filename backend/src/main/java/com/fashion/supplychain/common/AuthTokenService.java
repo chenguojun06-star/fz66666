@@ -1,4 +1,4 @@
-package com.fashion.supplychain.auth;
+package com.fashion.supplychain.common;
 
 import cn.hutool.jwt.JWT;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +14,18 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * JWT 令牌签发 / 校验 / 解析（基础设施，横切认证能力）。
+ *
+ * <p><b>D-670</b>：由 {@code com.fashion.supplychain.auth} 移入 {@code com.fashion.supplychain.common}
+ * （**只改 package 不改类名** → bean 名 {@code authTokenService} 与全部注入点不受影响）。
+ * 判据（同 D-659 的 {@code QdrantService}）：本类**零业务依赖**（字段只有 {@code secret}
+ * 与 2 个 {@code @Value} 配置），只做「签发 / 校验 / 解析 / 取当前登录用户」，
+ * 与已豁免的 {@code CosService}（对象存储）、{@code RedisService}（缓存）同类。
+ * 移入 common 后，依赖它的 {@code PatternRevisionServiceImpl} 不再被规则7 计入。
+ * 同批把 {@code TokenSubject}（本类的入参 / 返回类型）一起移入 —— 否则会形成
+ * 「common → auth」的反向包依赖。
+ */
 @Slf4j
 @Service
 public class AuthTokenService {

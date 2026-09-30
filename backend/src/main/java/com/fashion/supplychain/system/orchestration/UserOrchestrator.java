@@ -46,12 +46,12 @@ public class UserOrchestrator {
     @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
-    private com.fashion.supplychain.auth.AuthTokenService authTokenService;
+    private com.fashion.supplychain.common.AuthTokenService authTokenService;
 
     public java.util.Map<String, Object> refreshAccessToken(String refreshToken) {
         String userId = com.fashion.supplychain.common.UserContext.userId();
         if (userId == null || userId.isBlank()) {
-            com.fashion.supplychain.auth.TokenSubject parsed = authTokenService.verifyAndParse(refreshToken);
+            com.fashion.supplychain.common.TokenSubject parsed = authTokenService.verifyAndParse(refreshToken);
             if (parsed != null && parsed.getUserId() != null && !parsed.getUserId().isBlank()) {
                 userId = parsed.getUserId();
             }
@@ -63,7 +63,7 @@ public class UserOrchestrator {
         if (user == null) {
             throw new IllegalStateException("用户不存在");
         }
-        com.fashion.supplychain.auth.TokenSubject currentSubject = new com.fashion.supplychain.auth.TokenSubject();
+        com.fashion.supplychain.common.TokenSubject currentSubject = new com.fashion.supplychain.common.TokenSubject();
         currentSubject.setUserId(String.valueOf(user.getId()));
         currentSubject.setUsername(user.getName() != null ? user.getName() : user.getUsername());
         currentSubject.setRoleId(user.getRoleId() == null ? null : String.valueOf(user.getRoleId()));

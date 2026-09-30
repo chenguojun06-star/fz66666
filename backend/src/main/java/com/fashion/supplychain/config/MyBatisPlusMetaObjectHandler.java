@@ -1,7 +1,7 @@
 package com.fashion.supplychain.config;
 
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
-import com.fashion.supplychain.auth.AuthTokenService;
+import com.fashion.supplychain.common.AuthTokenService;
 import com.fashion.supplychain.common.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

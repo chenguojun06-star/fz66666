@@ -1,8 +1,8 @@
 package com.fashion.supplychain.config;
 
-import com.fashion.supplychain.auth.AuthTokenService;
+import com.fashion.supplychain.common.AuthTokenService;
 import com.fashion.supplychain.auth.TokenAuthFilter;
-import com.fashion.supplychain.auth.TokenSubject;
+import com.fashion.supplychain.common.TokenSubject;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.orchestration.PermissionCalculationEngine;
 import lombok.extern.slf4j.Slf4j;

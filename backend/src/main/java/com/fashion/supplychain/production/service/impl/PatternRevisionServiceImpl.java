@@ -1,7 +1,7 @@
 package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fashion.supplychain.auth.AuthTokenService;
+import com.fashion.supplychain.common.AuthTokenService;
 import com.fashion.supplychain.production.entity.PatternRevision;
 import com.fashion.supplychain.production.mapper.PatternRevisionMapper;
 import com.fashion.supplychain.production.service.PatternRevisionService;

@@ -1,7 +1,7 @@
 package com.fashion.supplychain.intelligence.controller;
 
-import com.fashion.supplychain.auth.AuthTokenService;
-import com.fashion.supplychain.auth.TokenSubject;
+import com.fashion.supplychain.common.AuthTokenService;
+import com.fashion.supplychain.common.TokenSubject;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.integration.openapi.entity.TenantApp;
 import com.fashion.supplychain.integration.openapi.orchestration.TenantAppOrchestrator;

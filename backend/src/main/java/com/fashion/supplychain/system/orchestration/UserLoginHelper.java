@@ -1,7 +1,7 @@
 package com.fashion.supplychain.system.orchestration;
 
-import com.fashion.supplychain.auth.AuthTokenService;
-import com.fashion.supplychain.auth.TokenSubject;
+import com.fashion.supplychain.common.AuthTokenService;
+import com.fashion.supplychain.common.TokenSubject;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.entity.LoginLog;
 import com.fashion.supplychain.system.entity.Tenant;

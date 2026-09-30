@@ -15,7 +15,7 @@ import static org.mockito.Mockito.when;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.system.entity.Role;
 import com.fashion.supplychain.system.entity.User;
-import com.fashion.supplychain.auth.AuthTokenService;
+import com.fashion.supplychain.common.AuthTokenService;
 import com.fashion.supplychain.system.service.LoginLogService;
 import com.fashion.supplychain.system.service.RoleService;
 import com.fashion.supplychain.system.service.UserService;

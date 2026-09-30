@@ -1,8 +1,11 @@
-package com.fashion.supplychain.auth;
+package com.fashion.supplychain.common;
 
 /**
  * JWT令牌主体信息
  * 包含用户身份和权限范围信息
+ *
+ * <p><b>D-670</b>：由 {@code com.fashion.supplychain.auth} 移入 {@code com.fashion.supplychain.common}，
+ * 与 {@code AuthTokenService} 同批（它是后者的入参 / 返回类型）。纯 POJO，零依赖。
  */
 public class TokenSubject {
     private String userId;

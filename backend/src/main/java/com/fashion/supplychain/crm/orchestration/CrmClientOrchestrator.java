@@ -2,8 +2,8 @@ package com.fashion.supplychain.crm.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.fashion.supplychain.auth.AuthTokenService;
-import com.fashion.supplychain.auth.TokenSubject;
+import com.fashion.supplychain.common.AuthTokenService;
+import com.fashion.supplychain.common.TokenSubject;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.crm.entity.Customer;
 import com.fashion.supplychain.crm.entity.CustomerClientUser;
