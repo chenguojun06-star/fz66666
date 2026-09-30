@@ -259,8 +259,8 @@ const StyleInfoDetailPage: React.FC = () => {
       editLocked={editLocked}
       isNewPage={isNewPage}
       sampleCompleted={currentStyle?.sampleStatus === 'COMPLETED'}
-      hasProcessData={Boolean((currentStyle as any)?.processCompletedTime)}
-      pushedToOrder={Boolean((currentStyle as any)?.pushedToOrder)}
+      hasProcessData={Boolean(currentStyle?.processCompletedTime)}
+      pushedToOrder={Boolean(currentStyle?.pushedToOrder)}
       onSave={handleSave}
       onCompleteSample={handleCompleteSample}
       onPushToOrder={pushOrder.handlePushToOrder}
@@ -357,9 +357,9 @@ const StyleInfoDetailPage: React.FC = () => {
               setCommonColors={colorSize.setCommonColors}
               styleId={String(currentStyle?.id ?? '')}
               styleNo={currentStyle?.styleNo ?? ''}
-              skc={(currentStyle as any)?.skc}
-              skuMode={(currentStyle as any)?.skuMode}
-              useSkuPrefix={(currentStyle as any)?.useSkuPrefix}
+              skc={currentStyle?.skc}
+              skuMode={currentStyle?.skuMode}
+              useSkuPrefix={currentStyle?.useSkuPrefix}
               onRefresh={handleRefresh}
               renderBelowForm={(basicInfoTabContent?: React.ReactNode) => (
                 <StyleInfoTabs

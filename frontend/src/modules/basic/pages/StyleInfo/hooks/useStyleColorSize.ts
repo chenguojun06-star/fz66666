@@ -11,10 +11,11 @@ import {
   normalizeStringList,
 } from './utils';
 import type { SizeColorMatrixRow, PendingColorImage } from './utils';
+import type { StyleInfo } from '@/types/style';
 
 interface UseStyleColorSizeOptions {
-  currentStyle: any;
-  setCurrentStyle: React.Dispatch<React.SetStateAction<any>>;
+  currentStyle: StyleInfo | null;
+  setCurrentStyle: React.Dispatch<React.SetStateAction<StyleInfo | null>>;
   isNewPage: boolean;
   form: any;
 }
@@ -73,9 +74,9 @@ export function useStyleColorSize({
       return;
     }
 
-    if ((currentStyle as any).sizeColorConfig) {
+    if (currentStyle.sizeColorConfig) {
       try {
-        const config = parseSizeColorConfig((currentStyle as any).sizeColorConfig);
+        const config = parseSizeColorConfig(currentStyle.sizeColorConfig);
         if (config.sizes.length) {
           setMatrixSizes(config.sizes);
           setSize1(config.sizes[0] || '');
@@ -120,7 +121,7 @@ export function useStyleColorSize({
       }
     }
 
-    const legacy = currentStyle as any;
+    const legacy = currentStyle;
     const legacySizes = normalizeStringList([
       legacy.size1,
       legacy.size2,

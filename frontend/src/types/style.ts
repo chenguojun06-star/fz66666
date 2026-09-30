@@ -62,6 +62,27 @@ export interface StyleInfo extends Record<string, unknown> {
   sampleReviewComment?: string;
   sampleReviewer?: string;
   sampleReviewTime?: string;
+  /** 生产制单文本（生产 tab 初始化用） */
+  productionRequirements?: string;
+  /** SKU 前缀开关（SKU tab 用） */
+  useSkuPrefix?: boolean;
+
+  // ===== 旧版单值码数/颜色/数量字段（sizeColorConfig 之前的 legacy 结构，读取兼容用）=====
+  size1?: string;
+  size2?: string;
+  size3?: string;
+  size4?: string;
+  size5?: string;
+  color1?: string;
+  color2?: string;
+  color3?: string;
+  color4?: string;
+  color5?: string;
+  qty1?: number;
+  qty2?: number;
+  qty3?: number;
+  qty4?: number;
+  qty5?: number;
   developmentSourceType?: 'SELF_DEVELOPED' | 'SELECTION_CENTER' | string;
   developmentSourceDetail?: string;
 

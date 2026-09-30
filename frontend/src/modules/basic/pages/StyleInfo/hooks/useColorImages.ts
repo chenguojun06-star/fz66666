@@ -7,10 +7,11 @@ import {
   isSameFile,
 } from './utils';
 import type { PendingColorImage } from './utils';
+import type { StyleInfo } from '@/types/style';
 
 interface UseColorImagesOptions {
-  currentStyle: any;
-  setCurrentStyle: React.Dispatch<React.SetStateAction<any>>;
+  currentStyle: StyleInfo | null;
+  setCurrentStyle: React.Dispatch<React.SetStateAction<StyleInfo | null>>;
 }
 
 export function useColorImages({ currentStyle, setCurrentStyle }: UseColorImagesOptions) {
@@ -73,7 +74,7 @@ export function useColorImages({ currentStyle, setCurrentStyle }: UseColorImages
   const handleCoverChange = (url: string | null) => {
     skipColorSizeResetRef.current = true;
     setCurrentStyle((prev) =>
-      prev ? ({ ...prev, cover: url || undefined } as any) : prev
+      prev ? { ...prev, cover: url || undefined } : prev
     );
     if (currentStyle?.id || currentStyle?.styleNo) {
       setStyleCoverOverride(currentStyle?.id, currentStyle?.styleNo, url);

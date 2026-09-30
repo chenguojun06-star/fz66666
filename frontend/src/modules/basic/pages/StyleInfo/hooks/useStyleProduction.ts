@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { App } from 'antd';
 import api from '@/utils/api';
+import type { StyleInfo } from '@/types/style';
 
 interface UseStyleProductionOptions {
-  currentStyle: any;
+  currentStyle: StyleInfo | null;
   fetchDetail: (id: string) => Promise<unknown>;
   styleIdParam?: string;
   reportSmartError: (title: string, reason?: string, code?: string) => void;
@@ -66,7 +67,7 @@ export function useStyleProduction({ currentStyle, fetchDetail, styleIdParam: _s
   };
 
   const resetProductionReqFromCurrent = () => {
-    const src = (currentStyle as any)?.productionRequirements || (currentStyle as any)?.description;
+    const src = currentStyle?.productionRequirements || currentStyle?.description;
     if (src) {
       setProductionReqRows(parseProductionReqRows(src));
     }
@@ -74,7 +75,7 @@ export function useStyleProduction({ currentStyle, fetchDetail, styleIdParam: _s
 
   useEffect(() => {
     if (!currentStyle) return;
-    const src = (currentStyle as any)?.productionRequirements || (currentStyle as any)?.description;
+    const src = currentStyle?.productionRequirements || currentStyle?.description;
     if (src) {
       setProductionReqRows(parseProductionReqRows(src));
     } else {
