@@ -64,28 +64,28 @@ const StyleStatusCard: React.FC<StyleStatusCardProps> = ({ style, compact = fals
 
   // 当前操作人 = 最近启动环节的负责人（动态：随工序启动时间自动更新）
   const assigneeStages = [
-    { assignee: (style as any).bomAssignee, startTime: (style as any).bomStartTime },
-    { assignee: (style as any).patternAssignee, startTime: (style as any).patternStartTime },
-    { assignee: (style as any).productionAssignee, startTime: (style as any).productionStartTime },
-    { assignee: (style as any).secondaryAssignee, startTime: (style as any).secondaryStartTime },
-    { assignee: (style as any).processAssignee, startTime: (style as any).processStartTime },
+    { assignee: style.bomAssignee, startTime: style.bomStartTime },
+    { assignee: style.patternAssignee, startTime: style.patternStartTime },
+    { assignee: style.productionAssignee, startTime: style.productionStartTime },
+    { assignee: style.secondaryAssignee, startTime: style.secondaryStartTime },
+    { assignee: style.processAssignee, startTime: style.processStartTime },
   ];
   const timedStages = assigneeStages
     .filter((s) => s.assignee && s.startTime)
     .sort((a, b) => String(b.startTime).localeCompare(String(a.startTime)));
   const currentOperator = timedStages.length
     ? timedStages[0].assignee
-    : ((style as any).patternAssignee ||
-       (style as any).productionAssignee ||
-       (style as any).bomAssignee ||
-       (style as any).secondaryAssignee ||
-       (style as any).processAssignee ||
+    : (style.patternAssignee ||
+       style.productionAssignee ||
+       style.bomAssignee ||
+       style.secondaryAssignee ||
+       style.processAssignee ||
        '');
-  const deliveryDateRaw = (style as any).deliveryDate || (style as any).deliveryTime;
+  const deliveryDateRaw = style.deliveryDate || style.deliveryTime;
   const deliveryDate = deliveryDateRaw ? String(deliveryDateRaw).slice(0, 10) : null;
-  const sampleReviewStatus = String((style as any).sampleReviewStatus ?? '').trim().toUpperCase();
-  const sampleReviewer = (style as any).sampleReviewer || '';
-  const sampleReviewTime = fmtTime((style as any).sampleReviewTime);
+  const sampleReviewStatus = String(style.sampleReviewStatus ?? '').trim().toUpperCase();
+  const sampleReviewer = style.sampleReviewer || '';
+  const sampleReviewTime = fmtTime(style.sampleReviewTime);
 
   const reviewTagConfig: Record<string, { color: string; text: string }> = {
     PASS: { color: 'success', text: '审核通过' },

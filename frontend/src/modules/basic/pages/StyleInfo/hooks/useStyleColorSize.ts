@@ -12,12 +12,13 @@ import {
 } from './utils';
 import type { SizeColorMatrixRow, PendingColorImage } from './utils';
 import type { StyleInfo } from '@/types/style';
+import type { FormInstance } from 'antd';
 
 interface UseStyleColorSizeOptions {
   currentStyle: StyleInfo | null;
   setCurrentStyle: React.Dispatch<React.SetStateAction<StyleInfo | null>>;
   isNewPage: boolean;
-  form: any;
+  form: FormInstance;
 }
 
 export function useStyleColorSize({

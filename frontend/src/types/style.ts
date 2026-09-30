@@ -19,6 +19,8 @@ export interface StyleInfo extends Record<string, unknown> {
   size?: string;
   sampleQuantity?: number;
   deliveryDate?: string;
+  /** 交付时间（旧字段名，与 deliveryDate 二选一使用） */
+  deliveryTime?: string;
   cover?: string;
   status?: 'ENABLED' | 'DISABLED' | 'SCRAPPED' | string;
   createTime?: string;
