@@ -8,7 +8,7 @@ i18n 键守卫（D-546）
 `t()` 找不到键时会**回落成键名本身**，于是线上状态标签直接显示
 `status.order.accepted` 这种裸键名。全程不报错、构建通过、类型检查通过。
 
-本脚本把这类问题在推送前拦住，检查 7 件事（1~6 阻塞，7 仅提示）：
+本脚本把这类问题在推送前拦住，检查 8 件事（1~6 阻塞，7~8 仅提示）：
   1. 代码引用的 i18n 键在语言包里是否都存在（逐个语言校验）
   2. 语言包内是否存在「同名命名空间自我嵌套」（如 status.status）——本次事故根因
   3. 语言包的值是否本身就是 i18n 键（二次包装，会导致渲染出键名）
@@ -21,11 +21,15 @@ i18n 键守卫（D-546）
      后果：`t()` 走 `String(value)` → 界面显示 `[object Object]`。实测曾漏出 1 处。
   7. 【D-666】死键报告（非阻塞）：叶子名在源码里从未出现过的键必然无人引用。
      与基线文件比对，只提示「新增」的死键，不阻塞推送。
+  8. 【D-666】wxml↔js 绑定缺口（非阻塞）：wxml 用了 {{t.x}} 但同目录 js 的
+     applyLanguage 从不赋值 → t.x 恒为 undefined → 文案静默丢失（不报错、构建也过）。
+     实测全项目 18 个页面 / 34 处。与基线比对，只提示新增。
 
 用法：
     python3 scripts/check-i18n-keys.py                     # 检查
     python3 scripts/check-i18n-keys.py --strict            # 警告也算失败
-    python3 scripts/check-i18n-keys.py --update-dead-baseline   # 收敛死键基线
+    python3 scripts/check-i18n-keys.py --update-dead-baseline        # 收敛死键基线
+    python3 scripts/check-i18n-keys.py --update-wxml-bind-baseline   # 收敛绑定缺口基线
 
 退出码：0 = 通过，1 = 发现问题
 """
@@ -46,6 +50,7 @@ SKIP_PARTS = ('node_modules', '/dist', '/build', '/.git')
 
 STRICT = '--strict' in sys.argv
 UPDATE_DEAD_BASELINE = '--update-dead-baseline' in sys.argv
+UPDATE_BIND_BASELINE = '--update-wxml-bind-baseline' in sys.argv
 
 # 已知的「长得像 i18n 键、其实不是」的字面量。
 # 加白名单前必须确认它不是真的漏翻，否则等于把 bug 藏起来。
@@ -122,6 +127,7 @@ def collect_refs(namespaces):
 # ==========================================================================
 MINIAPP_DIR = 'miniprogram'
 DEAD_BASELINE = os.path.join(ROOT, 'scripts', 'i18n-dead-keys-baseline.json')
+BIND_BASELINE = os.path.join(ROOT, 'scripts', 'i18n-wxml-bind-baseline.json')
 
 # 「以点结尾的字符串常量」，如 const NS = 'mp.sampleDetail.'
 NS_DECL_RE = re.compile(r"(?:const|var|let)\s+([A-Za-z_$][\w$]*)\s*=\s*['\"]([A-Za-z0-9_.]*\.)['\"]")
@@ -206,6 +212,90 @@ def find_dead_keys(zh_flat, blob):
         if not re.search(r'(?<![A-Za-z0-9_])' + re.escape(leaf) + r'(?![A-Za-z0-9_])', blob):
             dead.append(key)
     return sorted(dead)
+
+
+# ---------- D-666 检查 8：wxml ↔ js 绑定缺口 ----------
+# 第 4 类 i18n 盲区：wxml 用了 {{t.x}}，但同目录 js 的 applyLanguage 从不给 t.x 赋值
+# → t.x 恒为 undefined → wxml 渲染为空 → 文案静默丢失（不报错、构建也过）。
+# 实测全项目 18 个页面 / 34 处。
+# ⚠️ 三个必须避开的陷阱，否则假阳性会从 34 涨到 1914：
+#   ① `t: { ... }` 里的字段是**裸键名**（`cancel: i18n.t(...)`），不是 `t.cancel: ...`
+#      → 必须按大括号配平提取顶层键，不能靠 `t.` 前缀匹配；
+#   ② **必须先剥注释** —— 注释里的 `{{ }}` 会让配平提前归零、截断代码块
+#      （第一版就踩了：某字段明明补上了仍报缺失）；
+#   ③ `t` 可能是 `wx:for-item` 的循环别名（如 components/ai-assistant），
+#      此时 {{t.title}} 与 i18n 无关 → 整个文件跳过。
+def strip_js_comments(js):
+    js = re.sub(r'/\*[\s\S]*?\*/', '', js)
+    js = re.sub(r'(?m)^\s*//.*$', '', js)
+    js = re.sub(r'(?<![:"\'])//[^\n\'"]*$', '', js, flags=re.M)
+    return js
+
+
+def extract_t_block_keys(js):
+    """提取所有 `t: { ... }` 块的顶层键。返回 (键集合, 是否含无法枚举的展开运算符)。"""
+    js = strip_js_comments(js)
+    keys, has_spread = set(), False
+    for m in re.finditer(r'\bt\s*:\s*\{', js):
+        start = m.end() - 1
+        depth, i = 0, start
+        while i < len(js):
+            if js[i] == '{':
+                depth += 1
+            elif js[i] == '}':
+                depth -= 1
+                if depth == 0:
+                    break
+            i += 1
+        block = js[start + 1:i]
+        parts, cur, d = [], '', 0
+        for ch in block:
+            if ch in '{[(':
+                d += 1
+            elif ch in '}])':
+                d -= 1
+            if ch == ',' and d == 0:
+                parts.append(cur)
+                cur = ''
+            else:
+                cur += ch
+        parts.append(cur)
+        for p in parts:
+            if p.strip().startswith('...'):
+                has_spread = True
+                continue
+            mm = re.match(r"\s*['\"]?([A-Za-z_$][\w$]*)['\"]?\s*:", p)
+            if mm:
+                keys.add(mm.group(1))
+    return keys, has_spread
+
+
+WXML_T_RE = re.compile(r'\{\{[^}]*?(?<![\w$.])t\.([A-Za-z0-9_]+)')
+WXML_LOOP_T_RE = re.compile(r'wx:for-item\s*=\s*["\']t["\']')
+
+
+def find_wxml_bind_gaps(sources):
+    """返回 {wxml相对路径: [缺失字段]}。含展开运算符或看不到 t 赋值块的页面跳过（无法枚举）。"""
+    gaps = {}
+    for rel, text in sources.items():
+        if not rel.endswith('.wxml'):
+            continue
+        js = sources.get(rel[:-5] + '.js')
+        if js is None:
+            continue
+        if WXML_LOOP_T_RE.search(text):
+            continue
+        used = set(WXML_T_RE.findall(text))
+        if not used:
+            continue
+        keys, spread = extract_t_block_keys(js)
+        keys |= set(re.findall(r"['\"]t\.([A-Za-z0-9_]+)['\"]", js))  # setData({'t.x': ...})
+        if spread or not keys:
+            continue
+        miss = sorted(used - keys)
+        if miss:
+            gaps[rel] = miss
+    return gaps
 
 
 def find_self_nesting(node, path=''):
@@ -382,6 +472,45 @@ def main():
             print('    ✅ 无新增死键')
         if gone:
             print(f'    ℹ️ 基线里 {len(gone)} 个已不再是死键 → 可跑 --update-dead-baseline 收敛')
+
+    # --- 检查 8：wxml ↔ js 绑定缺口（非阻塞）---
+    print('[8] wxml↔js 绑定缺口（非阻塞；wxml 用了 t.x 但 applyLanguage 从不赋值）')
+    sources = {rel: text for rel, text in iter_miniapp_sources()}
+    gaps = find_wxml_bind_gaps(sources)
+    bind_baseline = {}
+    if os.path.exists(BIND_BASELINE):
+        try:
+            with open(BIND_BASELINE, encoding='utf-8') as fh:
+                bind_baseline = json.load(fh).get('pages', {})
+        except (OSError, ValueError):
+            bind_baseline = {}
+    if UPDATE_BIND_BASELINE:
+        with open(BIND_BASELINE, 'w', encoding='utf-8') as fh:
+            json.dump({
+                'note': 'wxml↔js 绑定缺口基线（判据：wxml 用了 {{t.x}} 但同目录 js 的 '
+                        'applyLanguage 从不赋值 → 文案静默丢失）。'
+                        '修完一批后重跑 --update-wxml-bind-baseline 收敛。',
+                'total': sum(len(v) for v in gaps.values()),
+                'pages': gaps,
+            }, fh, ensure_ascii=False, indent=2)
+            fh.write('\n')
+        print(f'    ✅ 已更新基线 {BIND_BASELINE}'
+              f'（{len(gaps)} 个页面 / {sum(len(v) for v in gaps.values())} 处）')
+    else:
+        new_gaps = {}
+        for page, fields in gaps.items():
+            old = set(bind_baseline.get(page, []))
+            fresh = [f for f in fields if f not in old]
+            if fresh:
+                new_gaps[page] = fresh
+        print(f'    存量基线 {len(bind_baseline)} 个页面 / '
+              f'当前实测 {len(gaps)} 个页面、{sum(len(v) for v in gaps.values())} 处')
+        if new_gaps:
+            print(f'    ⚠️ 新增 {sum(len(v) for v in new_gaps.values())} 处（不阻塞推送）：')
+            for page, fields in list(new_gaps.items())[:12]:
+                print(f'       {page}  →  {fields}')
+        else:
+            print('    ✅ 无新增缺口')
 
     print()
     if problems:
