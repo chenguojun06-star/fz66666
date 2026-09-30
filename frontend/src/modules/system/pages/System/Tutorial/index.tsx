@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  App,
   Card,
   Collapse,
   Steps,
@@ -14,6 +15,8 @@ import {
   Alert,
   Timeline,
   Badge,
+  Form,
+  Tooltip,
 } from 'antd';
 import PersistentTabs from '@/components/common/PersistentTabs';
 import {
@@ -30,6 +33,10 @@ import './style.css';
 import type { Dayjs } from 'dayjs';
 import type { Tutorial } from './types';
 import { tutorials } from './tutorialData';
+import { printUserManual } from './userManual';
+import ProfileFeedbackModal from '@/modules/system/pages/System/Profile/components/ProfileFeedbackModal';
+import feedbackService, { type UserFeedback } from '@/services/feedbackService';
+import { useUser } from '@/utils/AuthContext';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -111,6 +118,54 @@ const SystemTutorial: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [filteredTutorials, setFilteredTutorials] = useState<Tutorial[]>([]);
+
+  // D-655：底部帮助区两个按钮此前是无 onClick 的死按钮——手册由教程数据一键生成（userManual.ts），
+  // 反馈走系统现成 UserFeedback 链路（与个人中心 ProfileFeedbackModal 同一组件）
+  const { message } = App.useApp();
+  const { user } = useUser();
+  const [feedbackForm] = Form.useForm();
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+
+  const handleDownloadManual = () => {
+    const ok = printUserManual();
+    if (ok) {
+      message.success('已打开打印窗口，选择「另存为 PDF」即可保存手册');
+    } else {
+      message.error('手册生成失败，请稍后再试');
+    }
+  };
+
+  const handleFeedbackSubmit = async () => {
+    try {
+      const values = (await feedbackForm.validateFields()) as {
+        title: string;
+        content: string;
+        category: UserFeedback['category'];
+        contact?: string;
+      };
+      setFeedbackSubmitting(true);
+      const res = await feedbackService.submit({
+        title: values.title,
+        content: values.content,
+        category: values.category,
+        contact: values.contact?.trim() || '',
+        userName: user?.name || user?.username || '',
+      }) as { code?: number; message?: string };
+      if (res?.code === 200) {
+        message.success('反馈已提交，感谢！可在「个人中心」查看进展');
+        feedbackForm.resetFields();
+        setFeedbackOpen(false);
+      } else {
+        message.error(res?.message || '提交失败，请稍后再试');
+      }
+    } catch (e: unknown) {
+      if ((e as { errorFields?: unknown })?.errorFields) return; // antd 表单校验错误，表单内已提示
+      message.error(e instanceof Error ? e.message : '提交失败，请稍后再试');
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  };
 
   // 分类定义
   const categories = [
@@ -351,20 +406,29 @@ const SystemTutorial: React.FC = () => {
           <Paragraph>
             • <strong>在线客服：</strong>点击右下角客服图标，实时咨询技术支持
             <br />
-            • <strong>用户手册：</strong>下载完整PDF用户手册，离线查阅
+            • <strong>用户手册：</strong>由教程中心数据一键生成，打印窗口选「另存为 PDF」即可离线查阅
             <br />
             • <strong>培训预约：</strong>联系管理员预约一对一系统培训
             <br />• <strong>反馈建议：</strong>
             发现问题或有改进建议？点击「意见反馈」告诉我们
           </Paragraph>
           <Space>
-            <Button type="primary">
-              下载用户手册
-            </Button>
-            <Button>意见反馈</Button>
+            <Tooltip title="手册由教程中心数据自动生成（封面含系统版本号）；打印窗口中选「另存为 PDF」即可保存">
+              <Button type="primary" onClick={handleDownloadManual}>
+                下载用户手册
+              </Button>
+            </Tooltip>
+            <Button onClick={() => setFeedbackOpen(true)}>意见反馈</Button>
           </Space>
         </Space>
       </Card>
+      <ProfileFeedbackModal
+        open={feedbackOpen}
+        feedbackForm={feedbackForm}
+        submitting={feedbackSubmitting}
+        onCancel={() => setFeedbackOpen(false)}
+        onSubmit={handleFeedbackSubmit}
+      />
       </div>
     </>
   );
