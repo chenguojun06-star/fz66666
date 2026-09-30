@@ -85,12 +85,46 @@ export interface StylePrintModalProps {
 }
 
 // 打印数据类型
+/** 生产制单（打印用）款式快照信息，字段与 StyleInfo 子集对齐 */
+export interface ProductionSheetInfo {
+  category?: string;
+  completedTime?: string;
+  createTime?: string;
+  deliveryDate?: string;
+  description?: string;
+  designer?: string;
+  /** 扩展 JSON（可能含中文键的自定义字段） */
+  extJson?: string | Record<string, unknown> | null;
+  factoryName?: string;
+  plateType?: string;
+  productType?: string;
+  remark?: string;
+  sampleNo?: string;
+  season?: string;
+  skc?: string;
+  theme?: string;
+  uCode?: string;
+  customer?: string;
+  customerName?: string;
+  fabricComposition?: string;
+  fabricCompositionParts?: string;
+  orderType?: string;
+  plateWorker?: string;
+  price?: number;
+  salesChannel?: string;
+  salesPrice?: number;
+  sampleSupplier?: string;
+  supplier?: string;
+  tagPrice?: number;
+  [key: string]: unknown;
+}
+
 export interface PrintData {
   sizes: any[];
   bom: any[];
   process: any[];
   attachments: any[];
-  productionSheet: any;
+  productionSheet: ProductionSheetInfo | null;
 }
 
 /** 标签尺寸：4×7cm 或 5×10cm */

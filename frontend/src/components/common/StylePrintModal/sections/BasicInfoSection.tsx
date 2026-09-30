@@ -84,7 +84,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             const empty = '';
             // 面料成分：优先读 fabricComposition（单字符串），
             // 为空时从 fabricCompositionParts（JSON）解析拼接，兼容旧数据
-            const prodSheet = data.productionSheet as any;
+            const prodSheet = data.productionSheet;
             let fabricVal = prodSheet?.fabricComposition;
             if (!fabricVal && prodSheet?.fabricCompositionParts) {
               const parts = parseWashLabelParts(prodSheet.fabricCompositionParts);
@@ -105,17 +105,17 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             // （客户/供应商移至"客户信息"区块，勾选名称与内容对齐 D-098）
             if (options.styleInfoBlock) {
               allFields.push({ label: '款号', value: styleNo || empty });
-              allFields.push({ label: 'SKC', value: (data.productionSheet as any)?.skc || empty });
+              allFields.push({ label: 'SKC', value: data.productionSheet?.skc || empty });
               allFields.push({ label: '款名', value: styleName || empty });
-              allFields.push({ label: '商品分类', value: toCategoryCn(category || (data.productionSheet as any)?.category) || empty });
+              allFields.push({ label: '商品分类', value: toCategoryCn(category || data.productionSheet?.category) || empty });
               if (mode === 'sample') {
-                allFields.push({ label: '季节分类', value: toSeasonCn(season || (data.productionSheet as any)?.season) || empty });
-                allFields.push({ label: '商品类型', value: translateProductType((data.productionSheet as any)?.productType) });
+                allFields.push({ label: '季节分类', value: toSeasonCn(season || data.productionSheet?.season) || empty });
+                allFields.push({ label: '商品类型', value: translateProductType(data.productionSheet?.productType) });
                 // 设计师：D-058 起为独立字段 designer，旧数据兜底读 sampleNo
-                allFields.push({ label: '设计师', value: (data.productionSheet as any)?.designer || (data.productionSheet as any)?.sampleNo || empty });
-                allFields.push({ label: '商品品牌', value: (data.productionSheet as any)?.theme || empty });
-                if ((data.productionSheet as any)?.uCode) {
-                  allFields.push({ label: 'U码', value: (data.productionSheet as any).uCode });
+                allFields.push({ label: '设计师', value: data.productionSheet?.designer || data.productionSheet?.sampleNo || empty });
+                allFields.push({ label: '商品品牌', value: data.productionSheet?.theme || empty });
+                if (data.productionSheet?.uCode) {
+                  allFields.push({ label: 'U码', value: data.productionSheet.uCode });
                 }
               }
             }
@@ -123,7 +123,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             // 客户信息：客户/供应商/跟单员/销售渠道（名称与内容一致 D-098；
             //   板类/价格移至"版次信息"区块）
             if (options.customerInfoBlock && mode === 'sample') {
-              const prodSheet = data.productionSheet as any;
+              const prodSheet = data.productionSheet;
               allFields.push({ label: '客户', value: prodSheet?.customerName || prodSheet?.customer || empty });
               allFields.push({ label: '供应商', value: prodSheet?.supplier || empty });
               allFields.push({ label: '跟单员', value: prodSheet?.orderType || empty });
@@ -132,7 +132,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 
             // 下单信息（大货模式）
             if (options.customerInfoBlock && mode !== 'sample') {
-              const prodSheet = data.productionSheet as any;
+              const prodSheet = data.productionSheet;
               allFields.push({ label: '订单号', value: orderNo || empty });
               allFields.push({ label: '销售渠道', value: prodSheet?.salesChannel || empty });
               allFields.push({ label: '下单人员', value: orderCreatorName || (extraInfo as any)?.下单人员 || empty });
@@ -143,7 +143,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             //   非样衣模式设计师改读 designer 字段（D-058），旧数据兜底 sampleNo）
             if (options.patternInfoBlock) {
               if (mode === 'sample') {
-                const prodSheet = data.productionSheet as any;
+                const prodSheet = data.productionSheet;
                 allFields.push({ label: '板类', value: translatePlateType(prodSheet?.plateType) });
                 allFields.push({ label: '纸样师', value: prodSheet?.sampleSupplier || empty });
                 allFields.push({ label: '车板师', value: prodSheet?.plateWorker || empty });
@@ -151,23 +151,23 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                 allFields.push({ label: '吊牌价', value: formatPrice(prodSheet?.tagPrice) });
                 allFields.push({ label: '销售价', value: formatPrice(prodSheet?.salesPrice) });
               } else {
-                const factoryName = (data.productionSheet as any)?.factoryName || (extraInfo as any)?.加工厂 || empty;
+                const factoryName = data.productionSheet?.factoryName || (extraInfo as any)?.加工厂 || empty;
                 allFields.push({ label: '加工厂', value: factoryName });
-                allFields.push({ label: '设计师', value: (data.productionSheet as any)?.designer || (data.productionSheet as any)?.sampleNo || empty });
-                allFields.push({ label: '板类', value: translatePlateType((data.productionSheet as any)?.plateType) });
+                allFields.push({ label: '设计师', value: data.productionSheet?.designer || data.productionSheet?.sampleNo || empty });
+                allFields.push({ label: '板类', value: translatePlateType(data.productionSheet?.plateType) });
               }
             }
 
             // 时间信息
             if (options.timeInfoBlock) {
               if (mode === 'sample') {
-                allFields.push({ label: '创建时间', value: (data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any).createTime) : empty });
-                allFields.push({ label: '交板日期', value: (data.productionSheet as any)?.deliveryDate ? formatDateTime((data.productionSheet as any).deliveryDate) : empty });
-                allFields.push({ label: '完成时间', value: (data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any).completedTime) : empty });
+                allFields.push({ label: '创建时间', value: data.productionSheet?.createTime ? formatDateTime(data.productionSheet.createTime) : empty });
+                allFields.push({ label: '交板日期', value: data.productionSheet?.deliveryDate ? formatDateTime(data.productionSheet.deliveryDate) : empty });
+                allFields.push({ label: '完成时间', value: data.productionSheet?.completedTime ? formatDateTime(data.productionSheet.completedTime) : empty });
               } else {
                 allFields.push({ label: '交期', value: (extraInfo as any)?.交期 ? formatDateTime((extraInfo as any).交期) : empty });
-                allFields.push({ label: '创建时间', value: (data.productionSheet as any)?.createTime ? formatDateTime((data.productionSheet as any).createTime) : empty });
-                allFields.push({ label: '完成时间', value: (data.productionSheet as any)?.completedTime ? formatDateTime((data.productionSheet as any).completedTime) : empty });
+                allFields.push({ label: '创建时间', value: data.productionSheet?.createTime ? formatDateTime(data.productionSheet.createTime) : empty });
+                allFields.push({ label: '完成时间', value: data.productionSheet?.completedTime ? formatDateTime(data.productionSheet.completedTime) : empty });
               }
             }
 
@@ -179,7 +179,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               // 仅在样衣模式下显示，避免大货模式信息过载
               if (mode === 'sample') {
                 // 款式特征已合并为单一整段文本（D-261）：整段打印，不再拆成 6 行
-                const featureText = resolveStyleFeature((data.productionSheet as any)?.extJson);
+                const featureText = resolveStyleFeature(data.productionSheet?.extJson);
                 if (featureText) allFields.push({ label: '款式特征', value: featureText });
               }
               // 是否套里：从 BOM 物料中检测 lining 类型（自动联动 BOM，无需新字段）
@@ -189,7 +189,7 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               allFields.push({ label: '是否套里', value: hasLining ? '是' : '否' });
               // 备注链路说明：D-058 起 remark 已在 BasicInfoSection 维护并随表单提交持久化
               // （utils.ts 已移除 delete remark 旧逻辑）。description 兜底兼容迁移前的历史数据。
-              allFields.push({ label: '备注', value: (data.productionSheet as any)?.remark || (data.productionSheet as any)?.description || empty });
+              allFields.push({ label: '备注', value: data.productionSheet?.remark || data.productionSheet?.description || empty });
             }
 
             // 所有字段合并成一张连续表格
