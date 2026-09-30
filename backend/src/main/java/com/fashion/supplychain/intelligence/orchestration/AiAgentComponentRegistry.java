@@ -60,7 +60,7 @@ public class AiAgentComponentRegistry {
     @Autowired(required = false)
     private MemoryBankService memoryBankService;
     @Autowired(required = false)
-    private SkillAutoCreationService skillAutoCreationService;
+    private SkillAutoCreationHelper skillAutoCreationHelper;
     @Autowired(required = false)
     private EntityMemoryContextService entityMemoryContextService;
     @Autowired(required = false)
@@ -166,8 +166,8 @@ public class AiAgentComponentRegistry {
         return memoryBankService;
     }
 
-    public SkillAutoCreationService getSkillAutoCreationService() {
-        return skillAutoCreationService;
+    public SkillAutoCreationHelper getSkillAutoCreationHelper() {
+        return skillAutoCreationHelper;
     }
 
     public EntityMemoryContextService getEntityMemoryContextService() {

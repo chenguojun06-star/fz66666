@@ -1,8 +1,9 @@
-package com.fashion.supplychain.intelligence.service;
+package com.fashion.supplychain.intelligence.helper;
 
 import com.fashion.supplychain.intelligence.entity.SkillTemplate;
 import com.fashion.supplychain.intelligence.gateway.AiInferenceRouter;
 import com.fashion.supplychain.intelligence.mapper.SkillTemplateMapper;
+import com.fashion.supplychain.intelligence.service.MemoryBankService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -14,11 +15,19 @@ import java.time.LocalDateTime;
 import java.util.*;
 import org.apache.commons.lang3.StringUtils;
 
+/**
+ * Agent 任务成功后自动抽取可复用技能模板（异步后台逻辑）。
+ *
+ * <p><b>D-660</b>：由 {@code SkillAutoCreationService}（{@code intelligence.service}）
+ * 更名并移入 {@code intelligence.helper}。它是 {@code AiAgentOrchestrator} 的后台辅助组件
+ * （{@code @Async} 触发、失败静默），对 {@code MemoryBankService} 的依赖仅为创建成功后的
+ * 「模式发现」通知，不构成跨业务服务编排，故不适用规则7。
+ */
 @Slf4j
 @Service
 @Lazy
 @RequiredArgsConstructor
-public class SkillAutoCreationService {
+public class SkillAutoCreationHelper {
 
     private final SkillTemplateMapper skillTemplateMapper;
     private final AiInferenceRouter inferenceRouter;

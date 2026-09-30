@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse;
 import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
+import com.fashion.supplychain.intelligence.helper.RerankHelper;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceMemoryOrchestrator;
 import com.fashion.supplychain.common.QdrantService.ScoredPoint;
 import com.fashion.supplychain.service.RedisService;
@@ -46,7 +47,7 @@ public class AgenticRagService {
     @Autowired(required = false) private EntityMemoryContextService entityMemoryContextService;
     @Autowired(required = false) private RedisService redisService;
     @Autowired(required = false) private AiAdvisorService aiAdvisorService;
-    @Autowired(required = false) private RerankService rerankService;
+    @Autowired(required = false) private RerankHelper rerankHelper;
 
     private static final float MIN_SCORE = 0.35f;
     private static final int MAX_CONTEXT_CHARS = 2000;
@@ -818,11 +819,11 @@ public class AgenticRagService {
      * 召回量上调后即使精排被跳过或降级，也不会把整池候选灌进 LLM 上下文。
      */
     private List<KnowledgeBase> rerankKb(String query, List<KnowledgeBase> candidates) {
-        if (rerankService == null || candidates == null || candidates.size() <= 1) {
+        if (rerankHelper == null || candidates == null || candidates.size() <= 1) {
             return candidates;
         }
         try {
-            List<KnowledgeBase> reranked = rerankService.rerank(query, candidates);
+            List<KnowledgeBase> reranked = rerankHelper.rerank(query, candidates);
             if (reranked == null || reranked.isEmpty()) {
                 return capToContextLimit(candidates);
             }

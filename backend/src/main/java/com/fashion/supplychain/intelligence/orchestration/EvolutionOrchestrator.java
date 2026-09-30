@@ -1,11 +1,11 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
+import com.fashion.supplychain.intelligence.helper.SkillAutoCreationHelper;
 import com.fashion.supplychain.intelligence.service.EvolutionPipeline;
 import com.fashion.supplychain.intelligence.service.MemoryBankDbService;
 import com.fashion.supplychain.intelligence.service.SelfCriticService;
 import com.fashion.supplychain.intelligence.service.DataTruthGuard;
 import com.fashion.supplychain.intelligence.service.SystemDataMiner;
-import com.fashion.supplychain.intelligence.service.SkillAutoCreationService;
 import com.fashion.supplychain.intelligence.service.SkillCrystallizationService;
 import com.fashion.supplychain.intelligence.service.GepaPromptOptimizer;
 import com.fashion.supplychain.intelligence.service.EvolutionEventLogger;
@@ -48,7 +48,7 @@ public class EvolutionOrchestrator {
     @Autowired private ObjectProvider<UserProfileEvolutionOrchestrator> userProfileEvolutionProvider;
     @Autowired private ObjectProvider<MemoryNudgeOrchestrator> memoryNudgeProvider;
     @Autowired private ObjectProvider<SkillEvolutionOrchestrator> skillEvolutionProvider;
-    @Autowired private ObjectProvider<SkillAutoCreationService> skillAutoCreationProvider;
+    @Autowired private ObjectProvider<SkillAutoCreationHelper> skillAutoCreationProvider;
     @Autowired private ObjectProvider<ConversationReflectionOrchestrator> conversationReflectionProvider;
     @Autowired private ObjectProvider<SkillCrystallizationService> skillCrystallizationProvider;
     @Autowired private ObjectProvider<GepaPromptOptimizer> gepaPromptOptimizerProvider;

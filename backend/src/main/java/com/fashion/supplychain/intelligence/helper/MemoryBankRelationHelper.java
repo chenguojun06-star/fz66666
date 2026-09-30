@@ -1,8 +1,9 @@
-package com.fashion.supplychain.intelligence.service;
+package com.fashion.supplychain.intelligence.helper;
 
 import com.fashion.supplychain.intelligence.entity.MemoryBankEntry;
 import com.fashion.supplychain.intelligence.entity.MemoryBankRelation;
 import com.fashion.supplychain.intelligence.mapper.MemoryBankRelationMapper;
+import com.fashion.supplychain.intelligence.service.MemoryBankDbService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -25,12 +26,17 @@ import java.util.List;
  * </ul>
  *
  * <p>多租户隔离：所有查询带 tenant_id（P0 铁律）。
+ *
+ * <p><b>D-660</b>：由 {@code MemoryBankRelationService}（{@code intelligence.service}）
+ * 更名并移入 {@code intelligence.helper}。该类只做「关系查询 + key→entryId 解析」，
+ * 唯一被依赖的 {@code MemoryBankDbService} 仅用于 {@code resolveEntry} 的 key 解析，
+ * 属工具型辅助逻辑（同 D-658 的 Helper 语义），故不适用规则7。
  */
 @Slf4j
 @Service
 @Lazy
 @RequiredArgsConstructor
-public class MemoryBankRelationService {
+public class MemoryBankRelationHelper {
 
     private final MemoryBankRelationMapper relationMapper;
     private final MemoryBankDbService memoryBankDbService;

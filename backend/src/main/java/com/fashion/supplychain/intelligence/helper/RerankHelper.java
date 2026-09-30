@@ -1,6 +1,8 @@
-package com.fashion.supplychain.intelligence.service;
+package com.fashion.supplychain.intelligence.helper;
 
 import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
+import com.fashion.supplychain.intelligence.service.CohereRerankService;
+import com.fashion.supplychain.intelligence.service.SiliconFlowRerankService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,11 +34,17 @@ import java.util.List;
  *     provider: siliconflow   # siliconflow / cohere
  *     top-n: 5
  * </pre>
+ *
+ * <p><b>D-660</b>：由 {@code RerankService}（{@code intelligence.service}）更名并移入
+ * {@code intelligence.helper}。该类是「rerank provider 路由 + 降级兜底」的工具型门面，
+ * 只被 {@code AgenticRagService} 直接调用；它依赖 {@code SiliconFlowRerankService} /
+ * {@code CohereRerankService} 属 provider 适配（同 D-658 的 Helper 语义），
+ * 不构成跨业务服务编排，故不适用规则7。
  */
 @Slf4j
 @Service
 @Lazy
-public class RerankService {
+public class RerankHelper {
 
     @Autowired(required = false) private SiliconFlowRerankService siliconFlowRerankService;
     @Autowired(required = false) private CohereRerankService cohereRerankService;

@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.intelligence.entity.AgentMemoryCore;
 import com.fashion.supplychain.intelligence.entity.MemoryBankEntry;
+import com.fashion.supplychain.intelligence.helper.MemoryBankRelationHelper;
 import com.fashion.supplychain.intelligence.mapper.AgentMemoryCoreMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +27,7 @@ public class MemoryBankService {
     private final AgentMemoryCoreMapper memoryCoreMapper;
     /** 用 ObjectProvider 注入避免循环依赖（DbService 也可能反向引用本类） */
     private final ObjectProvider<MemoryBankDbService> memoryBankDbServiceProvider;
-    private final ObjectProvider<MemoryBankRelationService> memoryBankRelationServiceProvider;
+    private final ObjectProvider<MemoryBankRelationHelper> memoryBankRelationHelperProvider;
 
     private static final String AGENT_ID = "xiaoyun";
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -265,7 +266,7 @@ public class MemoryBankService {
     }
 
     /**
-     * 知识图谱遍历（委托 MemoryBankRelationService）。
+     * 知识图谱遍历（委托 MemoryBankRelationHelper）。
      *
      * <p>从 entryKey 出发，CTE 递归遍历关联条目（depth ≤2 防爆炸）。
      *
@@ -275,8 +276,8 @@ public class MemoryBankService {
      * @return 关联条目列表（不含起点本身）
      */
     public List<MemoryBankEntry> getRelatedEntries(Long tenantId, String entryKey, int depth) {
-        MemoryBankRelationService relService = memoryBankRelationServiceProvider.getIfAvailable();
-        if (relService == null) return List.of();
-        return relService.traverseGraph(tenantId, entryKey, depth);
+        MemoryBankRelationHelper relHelper = memoryBankRelationHelperProvider.getIfAvailable();
+        if (relHelper == null) return List.of();
+        return relHelper.traverseGraph(tenantId, entryKey, depth);
     }
 }
