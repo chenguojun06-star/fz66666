@@ -6,6 +6,8 @@ export interface UserInfo extends Record<string, unknown> {
   name: string;
   role: string;
   roleId?: string;
+  /** 岗位（人员管理里设置，如 总裁CEO/跟单员）——顶栏展示「工厂-岗位 姓名」用 */
+  position?: string;
   permissions: string[];
   permissionRange?: 'all' | 'team' | 'own';
   phone?: string;

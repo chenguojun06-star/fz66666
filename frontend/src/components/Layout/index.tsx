@@ -83,8 +83,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [menuOpenKeys, setMenuOpenKeys] = useState<string[]>(() => (activeSectionKey ? [activeSectionKey] : []));
   const [factoryModalOpen, setFactoryModalOpen] = useState(false);
 
-  const userDisplayName = String(user?.name || user?.username || '').trim() || t('layout.userDefault', language);
-  const userInitial = userDisplayName.slice(0, 1).toUpperCase();
+  // D-663：顶栏显示「工厂-岗位 姓名」——人员管理里设了什么岗位就显示什么，一眼看到职位；
+  // 没设岗位则「工厂-姓名」；工厂账号已有橙色工厂标签，不重复带工厂前缀。
+  const userBaseName = String(user?.name || user?.username || '').trim() || t('layout.userDefault', language);
+  const userPosition = String(user?.position || '').trim();
+  const userTenantLabel = String(user?.tenantName || '').trim();
+  const userFullLabel = (() => {
+    if (auth.isFactoryAccount || !userTenantLabel) {
+      return userPosition ? `${userPosition} ${userBaseName}` : userBaseName;
+    }
+    return userPosition ? `${userTenantLabel}-${userPosition} ${userBaseName}` : `${userTenantLabel}-${userBaseName}`;
+  })();
+  const userDisplayName = userFullLabel;
+  const userInitial = userBaseName.slice(0, 1).toUpperCase();
 
   const showGlobalSmartGuide = useMemo(() => isSmartFeatureEnabled('smart.guide.enabled'), []);
   const globalGuide = useMemo(() => resolveSmartGlobalGuide(effectivePathname), [effectivePathname]);
@@ -253,6 +264,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               trigger={['click']}
               menu={{
                 items: [
+                  // D-663：欢迎语——岗位/工厂来自人员管理设置，一眼知道是谁在用什么身份
+                  {
+                    key: 'welcome',
+                    label: (
+                      <div style={{ fontSize: 13, lineHeight: '20px', color: 'var(--color-text-secondary)', cursor: 'default', whiteSpace: 'normal' }}>
+                        欢迎您，{userFullLabel}
+                      </div>
+                    ),
+                    disabled: true,
+                  },
+                  { type: 'divider' },
                   { key: 'profile', label: t('layout.profile', language), icon: <SettingOutlined /> },
                   { type: 'divider' },
                   { key: 'logout', label: t('layout.logout', language), icon: <LogoutOutlined /> },

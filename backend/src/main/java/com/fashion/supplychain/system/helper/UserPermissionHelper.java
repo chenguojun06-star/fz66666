@@ -61,6 +61,8 @@ public class UserPermissionHelper {
         result.put("permissionRange", user.getPermissionRange());
         result.put("phone", user.getPhone());
         result.put("email", user.getEmail());
+        // D-663：顶栏展示「工厂-岗位 姓名」需要岗位字段
+        result.put("position", user.getPosition());
         result.put("avatarUrl", user.getAvatarUrl());
         result.put("tenantId", user.getTenantId());
         result.put("isTenantOwner", Boolean.TRUE.equals(user.getIsTenantOwner()));

@@ -332,6 +332,11 @@
   color: var(--neutral-text);
   margin: 0;
   font-weight: 500;
+  /* D-663：工厂-岗位-姓名 会比较长，超长省略防止挤爆顶栏 */
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .user-trigger.ant-btn {

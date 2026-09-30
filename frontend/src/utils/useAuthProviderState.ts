@@ -60,6 +60,7 @@ export const useAuthProviderState = () => {
         name: String(u.name || ''),
         role: String(u.roleName || u.role || ''),
         roleId: u.roleId != null ? String(u.roleId) : undefined,
+        position: u.position != null ? String(u.position) : undefined,
         // 默认空权限，接口获取真实权限后再更新；避免接口失败时保留 ['all'] 导致权限绕过
         permissions: [],
         permissionRange: toPermissionRange(u.permissionRange),
@@ -264,6 +265,7 @@ export const useAuthProviderState = () => {
               name: String(u.name || ''),
               role: String(u.roleName || u.role || ''),
               roleId: u.roleId != null ? String(u.roleId) : undefined,
+              position: u.position != null ? String(u.position) : undefined,
               // 从接口获取权限，接口失败时默认为空
               permissions: Array.isArray(u.permissions) ? (u.permissions as string[]) : [],
               permissionRange: toPermissionRange(u.permissionRange),
