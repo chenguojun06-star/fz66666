@@ -322,6 +322,14 @@ Page({
         saveWord: i18n.t(NS + 'saveWord', lang),
         savingWord: i18n.t(NS + 'savingWord', lang),
         pieceUnit: i18n.t('common.piece', lang),
+        // D-666：计数单位。wxml 有 6 处用到 t.countUnit / t.countPiecesUnit /
+        // t.recordsUnit / t.remarkUnit，但 applyLanguage 从未给这四个字段赋值，
+        // 恒为 undefined，界面只显示数字（「3」而不是「3 项」），且静默无报错。
+        countUnit: i18n.t(NS + 'countUnit', lang),
+        countPiecesUnit: i18n.t(NS + 'countPiecesUnit', lang),
+        recordsUnit: i18n.t(NS + 'recordsUnit', lang),
+        remarkUnit: i18n.t(NS + 'remarkUnit', lang),
+        partsCount: i18n.t(NS + 'partsCount', lang),
       },
       remarkRoles: REMARK_ROLE_KEYS.map(function (r) { return { key: r.key, label: i18n.t(NS + r.nameKey, lang) }; }),
       tabs: [
