@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Col, Form, Input, Row, Select, Tooltip } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
@@ -21,16 +21,19 @@ interface BasicInfoSectionProps extends SectionFormContextProps {
 
 /** 字段维护齿轮（统一入口，与 DictAutoComplete/SupplierSelect/CustomerSelect 内嵌齿轮同一形态）：
  *  用于 Select 类字段的输入框 suffix，点击弹通用维护弹窗，变更即时同步当前下拉 */
-const MaintainGear: React.FC<{ dictType: string; fieldName: string; disabled?: boolean }> = ({
-  dictType, fieldName, disabled,
+const MaintainGear: React.FC<{ dictType: string; fieldName: string; disabled?: boolean; onOpenChange?: (open: boolean) => void }> = ({
+  dictType, fieldName, disabled, onOpenChange,
 }) => {
   const [open, setOpen] = useState(false);
+  // D-668：维护弹窗开着时强制压住所在 Select 的下拉——点弹窗内任意位置会令底层 Select
+  // 下拉诡异地弹出（rc-select 焦点链路怪癖），盖住维护弹窗
+  useEffect(() => { onOpenChange?.(open); }, [open, onOpenChange]);
   if (disabled) return null;
   return (
     <>
       <Tooltip title={`维护${fieldName}选项（新增 / 删除 / 改名）`}>
         <SettingOutlined
-          onMouseDownCapture={(e) => { e.stopPropagation(); }}
+          onMouseDownCapture={(e) => { e.stopPropagation(); e.preventDefault(); }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -83,6 +86,9 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
   // 款式编码查重（D-264）：输入后失焦自动查重，也可点"查重"手动触发。
   // 原先是"重新同步"（清空编码让后端重新生成），用户完全看不出这是什么意思。
   const [styleNoCheck, setStyleNoCheck] = useState<'idle' | 'checking' | 'taken' | 'free'>('idle');
+  // D-668：维护弹窗开启期间压住对应 Select 下拉
+  const [categoryGearOpen, setCategoryGearOpen] = useState(false);
+  const [seasonGearOpen, setSeasonGearOpen] = useState(false);
   const checkStyleNoDup = async () => {
     const value = String(_form.getFieldValue('styleNo') || '').trim();
     if (!value) {
@@ -192,7 +198,8 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               showSearch
               optionFilterProp="label"
               options={categoryOptions}
-              suffix={<MaintainGear dictType="category" fieldName="商品分类" disabled={editLocked} />}
+              open={categoryGearOpen ? false : undefined}
+              suffix={<MaintainGear dictType="category" fieldName="商品分类" disabled={editLocked} onOpenChange={setCategoryGearOpen} />}
             />
           </Form.Item>
         </Col>
@@ -212,7 +219,8 @@ const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
               showSearch
               optionFilterProp="label"
               options={seasonOptions}
-              suffix={<MaintainGear dictType="season" fieldName="季节分类" disabled={editLocked} />}
+              open={seasonGearOpen ? false : undefined}
+              suffix={<MaintainGear dictType="season" fieldName="季节分类" disabled={editLocked} onOpenChange={setSeasonGearOpen} />}
             />
           </Form.Item>
         </Col>

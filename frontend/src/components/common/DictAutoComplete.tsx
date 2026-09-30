@@ -154,7 +154,7 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
     enableQuickManage && !disabled && !externalSuffix ? (
       <Tooltip title={`维护${manageTitle}选项（新增 / 删除 / 改名）`}>
         <SettingOutlined
-          onMouseDownCapture={(e) => { e.stopPropagation(); }}
+          onMouseDownCapture={(e) => { e.stopPropagation(); e.preventDefault(); }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -172,7 +172,7 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
         id={id}
         className={className}
         value={value}
-        open={open}
+        open={manageOpen ? false : open}
         onOpenChange={setOpen}
         options={open ? options : []}
         onChange={onChange}

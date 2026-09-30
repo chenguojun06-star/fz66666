@@ -192,7 +192,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
     enableQuickManage && !disabled && !externalSuffix ? (
       <Tooltip title="维护供应商（新增 / 编辑 / 地址等信息）">
         <SettingOutlined
-          onMouseDownCapture={(e) => { e.stopPropagation(); }}
+          onMouseDownCapture={(e) => { e.stopPropagation(); e.preventDefault(); }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -206,6 +206,7 @@ const SupplierSelect: React.FC<SupplierSelectProps> = ({
   return (
     <>
       <AutoComplete
+        open={manageOpen ? false : undefined}
         id={id}
         className={className}
         value={value}
