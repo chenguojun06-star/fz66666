@@ -92,6 +92,45 @@ docker compose exec backend printenv SPRING_AI_ADAPTER_ENABLED   # 期望 false
 **核对开销的正确姿势**：`docker exec` 进生产 MySQL 查 `t_ai_cost_tracking`，
 **不要只看 DeepSeek 控制台**（账单含重试/失败请求，系统侧未必有对应行）。
 
+## 向量检索（Embedding）配置纪律（D-701）
+
+**换 embedding 提供方前必读**，本项目已在这一步栽过一次。
+
+### 为什么必须写下来
+
+智谱 embedding-3 欠费被删后，`application-prod.yml` 里**硬编码的智谱配置继续生效**，
+日志连续 62 次 `Embedding 降级为伪向量 … 429 余额不足`，
+向量检索静默退化成关键词哈希 —— **以图搜款/相似款推荐质量下降，但系统零告警、查不出原因**。
+
+### 两个坑
+
+| 坑 | 说明 |
+|---|---|
+| **`dimensions` 不通用** | 硅基流动 `BAAI/bge-m3` **不支持**该参数，带上返回 `400 {"code":20015}`。正确值 `0` = 不裁剪，用模型原生维度（bge-m3 原生 1024，与 Qdrant 集合一致） |
+| **base-url / path / model 必须成套** | 混搭（如硅基 base-url + 智谱 `/v4/embeddings`）会 404，且报错看不出哪里配错，极易误判为 key 或网络问题 |
+
+### 纪律
+
+1. **只改 `application-prod.yml` 是错的** —— 它的默认值会**覆盖**代码里
+   `QdrantService` 的 `@Value` 默认值。换 provider 时**必须同时核对这两处**，
+   否则会出现「代码写着 A、yml 写着 B、线上跑的是 B」的静默错配。
+2. **仓库内不留任何密钥**。`api-key` 一律 `${AI_EMBEDDING_API_KEY:}` 留空，
+   凭证只走环境变量（服务器 `.env.backend`，不入库）。
+3. **换完后必须实测**，不要只看「启动日志打印了 provider 名」：
+
+```bash
+# 1) 容器内直连验证 key + 模型 + 维度（重建容器前做，避免配完才发现不可用）
+# 2) 重建容器使 env 生效（env_file 不热更新）
+cd /opt/fz66666/deploy/lighthouse && docker compose up -d --force-recreate backend
+# 3) 验收：这三个数必须同时为 0
+docker logs lighthouse-backend-1 2>&1 | grep -c "降级为伪向量"      # 0
+docker logs lighthouse-backend-1 2>&1 | grep -c "400 Bad Request"     # 0
+# 4) 确认向量真的入库（不是空库在空转）
+wget -qO- http://qdrant:6333/collections/style_images
+```
+
+> 当前生产：硅基流动 `BAAI/bge-m3`，1024 维，`style_images` 已入库 61 个真实向量。
+
 ## Architecture Constraints (P0 Rules)
 
 ```

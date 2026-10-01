@@ -150,16 +150,37 @@ ai:
     api-key-map: ${AI_OPENAI_COMPAT_API_KEY_MAP:}
     tenant-id: ${AI_OPENAI_COMPAT_TENANT_ID:}
     model-name: ${AI_OPENAI_COMPAT_MODEL_NAME:xiaoyun-agent}
-  # 独立 Embedding 提供方。硅基流动账户余额耗尽(402 balance insufficient, 2026-09-16 实证 bge-m3 已不免费)→
-  # 切回智谱 embedding-3（免费模型、账号已实名、Key 已验证 1024 维）。
-  # 之前"智谱拦机房IP"结论系误判（真凶=鉴权头写死 deepseekApiKey 的 bug，28a13c043 已修）。
-  # ⚠️ 控制台同名环境变量 AI_EMBEDDING_* 优先级高于本文件会覆盖此值，保持控制台为空！
+  # 独立 Embedding 提供方（OpenAI 兼容 /v1/embeddings）
+  #
+  # 【D-701 清理】本块原先整体指向智谱 embedding-3，且 api-key 把真实密钥硬编码进了仓库：
+  #   api-key: ${AI_EMBEDDING_API_KEY:33deac...}   ← 已删除的密钥，且随提交进入 Git 历史
+  #   base-url: https://open.bigmodel.cn/api/paas   ← 智谱地址
+  #   model: embedding-3                            ← 智谱模型
+  #   path: /v4/embeddings                          ← 智谱专用路径
+  #   dimensions: 1024                              ← ★ 本项目最大的坑，见下
+  # 该智谱账号后来欠费并被删除，日志表现为连续 62 次
+  # 「Embedding 降级为伪向量 … 429 余额不足」，向量检索静默退化成关键词哈希，
+  # 而系统侧无任何告警 —— 以图搜款/相似款推荐质量下降却查不出原因。
+  #
+  # 【换 provider 必读，两个坑】
+  # ① dimensions：硅基流动 BAAI/bge-m3 **不支持** dimensions 参数，带上会返回
+  #    400 {"code":20015,"message":"The parameter is invalid"}。本项目此前写死的
+  #    `dimensions: 1024` 是为智谱准备的，切回硅基后必然踩中。
+  #    正确做法：0 = 不裁剪，用模型原生维度（bge-m3 原生即 1024，与 Qdrant 集合一致）。
+  # ② base-url/path/model：三者必须**成套**切换。混搭（如硅基 base-url + 智谱 path）
+  #    会 404，而错误信息里看不出是哪里配错，极易误判为 key 或网络问题。
+  #
+  # 【现在为什么留空】
+  # 下面的默认值与 QdrantService 里的 @Value 默认值一致（即硅基流动），
+  # 保留它们只是为了让本文件能一眼看出「生产在用什么」，**不再指向任何第三方智谱地址**。
+  # 真实凭证一律通过 AI_EMBEDDING_* 环境变量注入，仓库内不留任何密钥。
   embedding:
-    api-key: ${AI_EMBEDDING_API_KEY:33deac219c5944c3b8158fce0ac026b8.b7nJcvBM2pXtE6e9}
-    base-url: ${AI_EMBEDDING_BASE_URL:https://open.bigmodel.cn/api/paas}
-    model: ${AI_EMBEDDING_MODEL:embedding-3}
-    path: ${AI_EMBEDDING_PATH:/v4/embeddings}
-    dimensions: ${AI_EMBEDDING_DIMENSIONS:1024}
+    api-key: ${AI_EMBEDDING_API_KEY:}
+    base-url: ${AI_EMBEDDING_BASE_URL:https://api.siliconflow.cn}
+    model: ${AI_EMBEDDING_MODEL:BAAI/bge-m3}
+    path: ${AI_EMBEDDING_PATH:/v1/embeddings}
+    dimensions: ${AI_EMBEDDING_DIMENSIONS:0}
+    # 留空 = 不传该参数（部分提供方不认）。代码同时兼容 float 数组与 base64 两种返回。
     encoding-format: ${AI_EMBEDDING_ENCODING_FORMAT:}
 
 # 小云 AI Agent 运行参数（运维可调，无需改代码）
