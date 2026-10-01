@@ -30,7 +30,7 @@ export function useUserActions(
     const loadRoles = async () => {
       setRoleOptionsLoading(true);
       try {
-        const tenantId = (user as any)?.tenantId ? Number((user as any).tenantId) : null;
+        const tenantId = user?.tenantId ? Number(user.tenantId) : null;
         if (tenantId) {
           const res: any = await api.get('/system/role/list', { params: { page: 1, pageSize: 500 } });
           if (res?.code === 200) {
@@ -52,14 +52,14 @@ export function useUserActions(
         username: u.username,
         name: u.name,
         phone: u.phone,
-        email: (u as any).email,
-        gender: (u as any).gender,
+        email: u.email,
+        gender: u.gender,
         status: u.status,
-        roleId: String((u as any).roleId || ''),
-        employmentStatus: (u as any).employmentStatus,
+        roleId: String(u.roleId || ''),
+        employmentStatus: u.employmentStatus,
         // 后端返回字符串日期，antd DatePicker 必须接收 dayjs 实例（否则 t.isValid is not a function 整页崩溃）
-        hireDate: (u as any).hireDate ? dayjs((u as any).hireDate) : undefined,
-        permissionRange: (u as any).permissionRange,
+        hireDate: u.hireDate ? dayjs(u.hireDate) : undefined,
+        permissionRange: u.permissionRange,
       });
     } else {
       userForm.resetFields();
