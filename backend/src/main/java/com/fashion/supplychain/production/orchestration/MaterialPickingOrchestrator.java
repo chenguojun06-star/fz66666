@@ -52,7 +52,27 @@ public class MaterialPickingOrchestrator {
     @Autowired
     private SysNoticeOrchestrator sysNoticeOrchestrator;
 
-    /** 直接创建领料单（不走归属校验，供内部调用）。 */
+    /**
+     * 直接创建领料单（不走归属校验，供内部调用）。
+     *
+     * <p><b>D-693 事务修复</b>：本方法下游 {@code MaterialPickingServiceImpl.createPicking}
+     * 连续做 <b>4 个写操作</b>（{@code save(领料单)} → {@code insert(明细)} →
+     * {@code decreaseStock(扣库存)} → {@code recordOutboundLog(出库日志)}），
+     * 而 {@code decreaseStock} 在库存不足时<b>抛 IllegalStateException</b>
+     * （见 {@code MaterialStockServiceImpl} 中 {@code decreaseStockWithCheckDecimal} 返回 0 的分支）。
+     *
+     * <p>此前本方法与三个 Service 实现<b>均无 {@code @Transactional}</b>，导致多明细领料单
+     * 在第 N 条库存不足时：前 N-1 条的写操作已提交、后续中断 →
+     * <b>「领料单 status=completed 但明细缺失、库存已扣、出库日志缺失」</b>且无回滚。
+     *
+     * <p>主流程 INTERNAL 领料走 {@link MaterialPurchaseOrchestrator#createPickingAndOutbound}
+     * （已有事务）不受影响；本方法是剩余旁路，按项目约定（{@code @Transactional} 只在
+     * Orchestrator 层）在此补齐。
+     *
+     * <p>⚠️ 仅加事务，<b>不改任何业务逻辑与异常文案</b>：库存不足时的报错行为由下游决定，
+     * 此处只保证「失败即整体回滚」。跨 Bean 调用（非同类自调用）→ Spring AOP 代理生效。
+     */
+    @Transactional(rollbackFor = Exception.class)
     public String createPicking(MaterialPicking picking, List<MaterialPickingItem> items) {
         return materialPickingService.createPicking(picking, items);
     }

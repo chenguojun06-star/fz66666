@@ -8,6 +8,7 @@ import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
 import com.fashion.supplychain.production.mapper.MaterialPickingItemMapper;
+import com.fashion.supplychain.production.orchestration.MaterialPickingOrchestrator;
 import com.fashion.supplychain.production.service.MaterialPickingService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,25 @@ public class MaterialPickingTool extends AbstractAgentTool {
 
     @Autowired
     private MaterialPickingService materialPickingService;
+
+    /**
+     * D-693：{@code create} 动作改走 {@link MaterialPickingOrchestrator}。
+     *
+     * <p>原直接注入 {@code MaterialPickingService} 并调用 {@code createPicking}，
+     * 该方法做 4 个写操作（含扣库存）却<b>不经编排层</b> —— 同时违反两条铁律：
+     * <ol>
+     *   <li>跨服务编排必须上移到 Orchestrator（P0）</li>
+     *   <li>{@code @Transactional} 只在 Orchestrator 层 → 此路径<b>无事务保护</b>，
+     *       多明细领料中途库存不足会留下「领料单 completed + 明细缺失 + 库存已扣」脏数据</li>
+     * </ol>
+     *
+     * <p>改为调用编排层的 {@code createPicking}（已补 {@code @Transactional}）后，
+     * 本类不再直接触发写链路。查询类动作（list / get_items）仍用
+     * {@code MaterialPickingService} 与 {@code MaterialPickingItemMapper} —— 纯读，
+     * 不需事务，且本类已有 {@code @Lazy}，不会引入循环依赖。
+     */
+    @Autowired
+    private MaterialPickingOrchestrator materialPickingOrchestrator;
 
     @Autowired
     private MaterialPickingItemMapper materialPickingItemMapper;
@@ -130,7 +150,7 @@ public class MaterialPickingTool extends AbstractAgentTool {
                     items.add(item);
                 }
 
-                String pickingNo = materialPickingService.createPicking(picking, items);
+                String pickingNo = materialPickingOrchestrator.createPicking(picking, items);
                 yield successJson("领料单创建成功", Map.of(
                         "pickingNo", pickingNo,
                         "materialName", materialName,
