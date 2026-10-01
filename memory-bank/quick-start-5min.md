@@ -40,12 +40,22 @@
 │   └── pages/                   # 扫码/首页/工资/缺陷 等页面
 │
 ├── memory-bank/                 # AI 记忆系统（每次对话开头读取）
+├── .workbuddy-ai/memory/        # WorkBuddy AI 记忆（本机私有，未入库；见下方 ⚠️）
 ├── .github/                     # GitHub 配置（CI/Agent/Prompts/Codeowners）
 ├── .trae/                       # AI Agent 规则和 Skills
 │   ├── rules/                   # P0铁律/工作流/优化日志
 │   └── skills/                  # 30+ 个 AI 技能（服装领域专用）
 └── docs/                        # 开发文档和使用指南
 ```
+
+> ⚠️ **本项目有两套并存记忆体系，缺一不可**（2026-10-01 核实）：
+> - **`memory-bank/`**（本目录）— 项目级跨工具记忆，**已入库**，被 `.trae/rules/*` 与
+>   `memory-bank-mcp` 消费。决策/反模式/进度/优化日志都在这里。
+> - **`.workbuddy-ai/memory/`** — **WorkBuddy AI** 的本机会话记忆，**`.gitignore` 排除（未入库）**，
+>   由 WorkBuddy 平台每会话自动注入 `MEMORY.md`。含前端质量基线 ratchet、提交纪律（多会话并发）、
+>   打印红线、循环依赖门禁等硬规则；另有 `MEMORY-BANK-DIGEST.md` 摘录本目录的关键结论。
+> - **两者内容互不相通**：Boot 4.1 陷阱、AI 成本归因只在 memory-bank；前端质量/提交纪律只在
+>   .workbuddy-ai。**开工前两处都要看。**
 
 ---
 

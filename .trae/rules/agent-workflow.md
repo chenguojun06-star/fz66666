@@ -47,6 +47,7 @@
 7. 读取 `memory-bank/anti-patterns.md` — 常见反模式速查（改代码前必读，防止重复踩坑）
 8. 读取 `memory-bank/change-impact-matrix.md` — 变更影响矩阵（P0/P1/P2变更识别，改代码前必读）
 9. 读取 `memory-bank/context-rot-mgmt.md` — 上下文腐烂治理（长会话>15轮/Token>70%时触发压缩）
+10. 读取 `.workbuddy-ai/memory/MEMORY.md` — **WorkBuddy AI 会话硬规则**（另一套记忆体系，本机私有、未入库；含前端质量基线 ratchet / 提交纪律 / 打印红线 / 循环依赖门禁）。开工前先读它目录下的 `MEMORY-BANK-DIGEST.md`（memory-bank 关键结论摘要，约 5KB），需要细节再回本目录查原始文件。**两套记忆体系并存且互不相通，缺一不可。**
 
 **目的**：不丢失上下文，不重复踩坑。
 
