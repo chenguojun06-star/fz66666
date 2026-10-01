@@ -58,7 +58,7 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
     setLoading(true);
     try {
       const res: any = await orderImageApi.list(orderNo);
-      if (res && typeof res === 'object' && (res as any).code !== undefined && (res as any).code !== 200) {
+      if (res && typeof res === 'object' && res.code !== undefined && res.code !== 200) {
         setImages([]);
         setLoading(false);
         return;
@@ -67,10 +67,10 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
       if (Array.isArray(res)) {
         list = res;
       } else if (res && typeof res === 'object') {
-        if (Array.isArray((res as any).data)) {
-          list = (res as any).data;
-        } else if (Array.isArray((res as any).list)) {
-          list = (res as any).list;
+        if (Array.isArray(res.data)) {
+          list = res.data;
+        } else if (Array.isArray(res.list)) {
+          list = res.list;
         }
       }
       setImages(list);
@@ -110,8 +110,8 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
   const handleUpload = async (url: string) => {
     try {
       const result: any = await orderImageApi.add(orderNo, url);
-      if (result && typeof result === 'object' && (result as any).code !== undefined && (result as any).code !== 200) {
-        message.error((result as any).message || '添加图片失败');
+      if (result && typeof result === 'object' && typeof (result as { code?: unknown }).code !== 'undefined' && (result as { code?: unknown }).code !== 200) {
+        message.error((result as { message?: string }).message || '添加图片失败');
         return;
       }
       message.success('图片已添加');
@@ -135,7 +135,7 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
     setHistoryOpen(true);
     try {
       const res: any = await orderImageApi.snapshots(orderNo);
-      if (res && typeof res === 'object' && (res as any).code !== undefined && (res as any).code !== 200) {
+      if (res && typeof res === 'object' && res.code !== undefined && res.code !== 200) {
         setSnapshots([]);
         return;
       }
@@ -143,10 +143,10 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
       if (Array.isArray(res)) {
         list = res;
       } else if (res && typeof res === 'object') {
-        if (Array.isArray((res as any).data)) {
-          list = (res as any).data;
-        } else if (Array.isArray((res as any).list)) {
-          list = (res as any).list;
+        if (Array.isArray(res.data)) {
+          list = res.data;
+        } else if (Array.isArray(res.list)) {
+          list = res.list;
         }
       }
       setSnapshots(list);
