@@ -73,6 +73,12 @@ export interface RecognizeDocResult {
   recognizedDate?: string;
   recognizedTitle?: string;
   recognizedType?: string;
+  /** D-694：AI 识别补充字段（供应商/发票号/税率/税额/明细项） */
+  recognizedSupplierName?: string;
+  recognizedInvoiceNo?: string;
+  recognizedTaxRate?: string;
+  recognizedTaxAmount?: number;
+  recognizedItems?: string[];
 }
 
 export const expenseReimbursementApi = {
