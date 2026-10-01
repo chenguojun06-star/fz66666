@@ -297,6 +297,7 @@ public class IntelligenceInferenceOrchestrator {
             }
 
             parseStreamLines(response.body(), acc, chunkConsumer);
+            flushDsmlTail(acc, chunkConsumer);
             assembleStreamToolCalls(acc, result);
             finalizeStreamResult(result, acc, start, messages, scene);
         } catch (Exception e) {
@@ -723,6 +724,8 @@ public class IntelligenceInferenceOrchestrator {
         final Map<Integer, String> toolCallNames = new HashMap<>();
         final Map<Integer, String> toolCallIds = new HashMap<>();
         StringBuilder reasoningContent;
+        /** D-699：DSML 跨 delta 缓冲，只攒「已含完整换行」的确定行，半行留在缓冲区等下一片 */
+        final StringBuilder dsmlPending = new StringBuilder();
     }
 
     private void parseStreamLines(java.util.stream.Stream<String> lines,
@@ -741,13 +744,19 @@ public class IntelligenceInferenceOrchestrator {
                 String content = delta.path("content").asText(null);
                 if (content != null && !content.isEmpty()) {
                     acc.fullContent.append(content);
-                    // D-361c：deepseek-flash 会把 DSML 工具协议混在正文流式输出——
-                    // 含协议标记的片段实时剔除，不再把协议原文推给前端
-                    if (content.contains("DSML")) {
-                        content = content.replaceAll("[｜|]{1,4}\\s*DSML[｜|]{1,4}[^\\n]*", "");
-                        if (content.isEmpty()) return;
+                    // D-699：deepseek-flash 会把 DSML 工具协议混在正文流式输出。
+                    // 旧实现（D-361c）逐 delta 做正则，但模型把 <｜｜DSML｜｜ 标记与其后的
+                    // invoke/parameter 续行拆到不同 delta —— 续行不含 "DSML" 字样，
+                    // 逃过正则后被原样推给前端，气泡里出现 "<calls> / <invoke name="">" 等协议残渣。
+                    // 改为跨 delta 攒够完整换行再整体清洗，保证「含标记的行」永远不会被拆开判断。
+                    acc.dsmlPending.append(content);
+                    int lastEol = acc.dsmlPending.lastIndexOf("\n");
+                    if (lastEol >= 0) {
+                        String completeLines = acc.dsmlPending.substring(0, lastEol + 1);
+                        acc.dsmlPending.delete(0, lastEol + 1);
+                        String safe = DsmlToolCallParser.stripLines(completeLines);
+                        if (!safe.isEmpty() && chunkConsumer != null) chunkConsumer.accept(safe, false);
                     }
-                    if (chunkConsumer != null) chunkConsumer.accept(content, false);
                 }
 
                 String reasoningChunk = delta.path("reasoning_content").asText(null);
@@ -779,6 +788,19 @@ public class IntelligenceInferenceOrchestrator {
                 log.debug("[StreamInference] 解析chunk失败: {}", e.getMessage());
             }
         });
+    }
+
+    /**
+     * D-699：把缓冲区里剩下的「没有结尾换行的半行」交出去。
+     * 模型回答的最后一句通常不带 '\n'，若不一并 flush 就会整句丢失。
+     * 这里仍走 stripLines：万一模型把 DSML 标记压在这一行里（无换行），同样要拦掉。
+     */
+    private void flushDsmlTail(StreamAccumulator acc, StreamChunkConsumer chunkConsumer) {
+        if (acc.dsmlPending.length() == 0) return;
+        String tail = acc.dsmlPending.toString();
+        acc.dsmlPending.setLength(0);
+        String safe = DsmlToolCallParser.stripLines(tail);
+        if (!safe.isEmpty() && chunkConsumer != null) chunkConsumer.accept(safe, false);
     }
 
     private void assembleStreamToolCalls(StreamAccumulator acc, IntelligenceInferenceResult result) {

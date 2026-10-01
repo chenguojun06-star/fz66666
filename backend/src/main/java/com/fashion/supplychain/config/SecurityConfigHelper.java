@@ -1,5 +1,6 @@
 package com.fashion.supplychain.config;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
@@ -10,6 +11,25 @@ public final class SecurityConfigHelper {
 
     public static void configure(
             AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry authz) {
+
+        // 【D-699 / Boot 4.1 回归修复】必须放在所有 requestMatchers 之前（dispatcherTypeMatchers 优先匹配）。
+        //
+        // 现象：AI 顾问 SSE 流式接口 /api/intelligence/ai-advisor/chat/stream 报
+        //      net::ERR_INCOMPLETE_CHUNKED_ENCODING（HTTP 200 但 chunked 流被截断，浏览器拿不到结束块）。
+        //
+        // 根因：Spring Security 7.1.1 的 AuthorizationFilter 对「每个 dispatch」都做授权
+        //      （官方文档 "All Dispatches Are Authorized"，AuthorizationFilter.setFilterAsyncDispatch
+        //      默认 true），而 Boot 3.4（Spring Security 6.4）不会在 ASYNC 分发上重复授权。
+        //      SseEmitter 会启动异步处理：REQUEST 分发鉴权通过后，容器在响应结束前做一次 ASYNC 分发。
+        //      本项目 sessionManagement 为 STATELESS（无 HttpSession），ASYNC 分发时 SecurityContext
+        //      无处恢复 → 视为匿名 → 命中下面 `/api/**`.authenticated() → 抛 AuthorizationDeniedException。
+    //      此时响应已提交（SSE 事件已写出），ErrorMvcAutoConfiguration 再渲染错误页只会打
+        //      "response has already been committed"，连接被硬关闭 → 前端 ERR_INCOMPLETE_CHUNKED_ENCODING。
+        //
+        // 安全性：放行 ASYNC/ERROR 分发**不放宽真实鉴权**。真正调用 controller、真正校验 token 的是
+        //      REQUEST 分发，仍走 TokenAuthFilter + 下面全部规则；ASYNC 分发只负责把已授权的响应收尾。
+        //      官方文档对 ERROR 分发同样建议 permitAll。
+        authz.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll();
 
         authz.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
 
