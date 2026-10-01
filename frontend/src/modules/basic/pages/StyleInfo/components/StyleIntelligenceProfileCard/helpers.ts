@@ -5,13 +5,13 @@ import { formatMoney } from '@/utils/format';
 import type { StyleQuoteSuggestionResponse } from '@/services/intelligence/intelligenceApi';
 
 export const STAGE_MAP = [
-  { key: 'bom', label: '物料', done: (style: StyleInfo) => Boolean((style as any)?.bomCompletedTime) },
+  { key: 'bom', label: '物料', done: (style: StyleInfo) => Boolean(style?.bomCompletedTime) },
   { key: 'pattern', label: '纸样', done: (style: StyleInfo) => String(style.patternStatus || '').trim().toUpperCase() === 'COMPLETED' },
-  { key: 'size', label: '尺寸', done: (style: StyleInfo) => Boolean((style as any)?.sizeCompletedTime) },
-  { key: 'production', label: '制单', done: (style: StyleInfo) => Boolean((style as any)?.productionCompletedTime) },
-  { key: 'secondary', label: '二次工艺', done: (style: StyleInfo) => Boolean((style as any)?.secondaryCompletedTime) },
-  { key: 'process', label: '工序单价', done: (style: StyleInfo) => Boolean((style as any)?.processCompletedTime) },
-  { key: 'sample', label: '样衣生产', done: (style: StyleInfo) => Boolean((style as any)?.sampleCompletedTime) || String((style as any)?.sampleStatus || '').trim().toUpperCase() === 'COMPLETED' },
+  { key: 'size', label: '尺寸', done: (style: StyleInfo) => Boolean(style?.sizeCompletedTime) },
+  { key: 'production', label: '制单', done: (style: StyleInfo) => Boolean(style?.productionCompletedTime) },
+  { key: 'secondary', label: '二次工艺', done: (style: StyleInfo) => Boolean(style?.secondaryCompletedTime) },
+  { key: 'process', label: '工序单价', done: (style: StyleInfo) => Boolean(style?.processCompletedTime) },
+  { key: 'sample', label: '样衣生产', done: (style: StyleInfo) => Boolean(style?.sampleCompletedTime) || String(style?.sampleStatus || '').trim().toUpperCase() === 'COMPLETED' },
 ] as const;
 
 export const fmtMoney = (value?: number | null) => {
@@ -105,7 +105,7 @@ export const buildFallbackInsights = (style: StyleInfo, quote: StyleQuoteSuggest
   }
 
   // 3. 工序单价洞察
-  if (!(style as any)?.processCompletedTime) {
+  if (!style?.processCompletedTime) {
     insights.push({ category: 'process', text: '工序单价尚未锁定，影响后续大货结算与报价准确性。' });
   }
 
