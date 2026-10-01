@@ -86,11 +86,11 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
   };
 
   const isStageDoneRow = (record: StyleInfo) => {
-    const stockKey = `${String((record as any).styleNo || '').trim().toUpperCase()}|${resolveDisplayColor(record).trim().toUpperCase()}`;
+    const stockKey = `${String(record.styleNo || '').trim().toUpperCase()}|${resolveDisplayColor(record).trim().toUpperCase()}`;
     if (stockStateMap[stockKey]) {
       return true;
     }
-    return String((record as any).latestPatternStatus || '').trim().toUpperCase() === 'COMPLETED';
+    return String(record.latestPatternStatus || '').trim().toUpperCase() === 'COMPLETED';
   };
 
   const renderSourceText = (record: StyleInfo) => {
@@ -99,7 +99,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
 
   const isScrappedRow = (record: StyleInfo) => {
     return String(record.status || '').trim().toUpperCase() === 'SCRAPPED'
-      || String((record as any).progressNode || '').trim() === '开发样报废';
+      || String(record.progressNode || '').trim() === '开发样报废';
   };
 
   const getStyleDomKey = (record: Partial<StyleInfo> | null | undefined) => {
@@ -127,9 +127,9 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
           getFallbackQuantity: (record) => {
             const directQuantity = resolveDisplayQuantity(record);
             if (directQuantity && !directQuantity.includes('/')) {
-              return Number(directQuantity) || Number(record.sampleQuantity) || Number((record as any).quantity) || 0;
+              return Number(directQuantity) || Number(record.sampleQuantity) || Number(record.quantity) || 0;
             }
-            return Number(record.sampleQuantity) || Number((record as any).quantity) || 0;
+            return Number(record.sampleQuantity) || Number(record.quantity) || 0;
           },
         }),
         [{ label: '来源', key: 'developmentSourceType', render: (_val, record) => renderSourceText(record as StyleInfo) }, { label: '商品分类', key: 'category', render: (val) => toCategoryCn(val) }],
@@ -153,12 +153,12 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
           let completedSteps = 0;
           const totalSteps = 6; // BOM、纸样、尺寸、工序、生产制单、二次工艺
 
-          if ((record as any).bomCompletedTime) completedSteps++; // 1. BOM配置完成
-          if ((record as any).patternCompletedTime) completedSteps++; // 2. 纸样开发完成
-          if ((record as any).sizeCompletedTime) completedSteps++; // 3. 尺寸表完成
-          if ((record as any).processCompletedTime) completedSteps++; // 4. 工序配置完成
-          if ((record as any).productionCompletedTime) completedSteps++; // 5. 生产制单完成
-          if ((record as any).secondaryCompletedTime) completedSteps++; // 6. 二次工艺完成
+          if (record.bomCompletedTime) completedSteps++; // 1. BOM配置完成
+          if (record.patternCompletedTime) completedSteps++; // 2. 纸样开发完成
+          if (record.sizeCompletedTime) completedSteps++; // 3. 尺寸表完成
+          if (record.processCompletedTime) completedSteps++; // 4. 工序配置完成
+          if (record.productionCompletedTime) completedSteps++; // 5. 生产制单完成
+          if (record.secondaryCompletedTime) completedSteps++; // 6. 二次工艺完成
 
           return Math.round((completedSteps / totalSteps) * 100);
         },
@@ -225,7 +225,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
             ...pinAction,
             { key: 'unscrap', label: '取消报废', onClick: () => onUnscrap(String(r.id!)) },
             { key: 'print', label: '打印', onClick: () => onPrint(r) },
-            { key: 'remark', label: '备注', onClick: () => setRemarkTarget({ open: true, styleNo: (r as any).styleNo || '' }) },
+            { key: 'remark', label: '备注', onClick: () => setRemarkTarget({ open: true, styleNo: r?.styleNo || '' }) },
           ];
         }
         if (isStageDoneRow(r)) {
@@ -235,7 +235,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
             {
               key: 'production',
               label: '生产订单',
-              onClick: () => navigate(`/production?keyword=${encodeURIComponent((r as any).orderNo || (r as any).styleNo || '')}`),
+              onClick: () => navigate(`/production?keyword=${encodeURIComponent(String(r?.orderNo || r?.styleNo || ''))}`),
             },
             { key: 'print', label: '打印', onClick: () => onPrint(r) },
           ];
@@ -243,7 +243,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
             items.push({ key: 'maintenance', label: '维护', onClick: () => onMaintenance(r) });
           }
           items.push({ key: 'copy', label: '复制', onClick: () => { setCopySource(r); setCopyModalOpen(true); } });
-          items.push({ key: 'remark', label: '备注', onClick: () => setRemarkTarget({ open: true, styleNo: (r as any).styleNo || '' }) });
+          items.push({ key: 'remark', label: '备注', onClick: () => setRemarkTarget({ open: true, styleNo: r?.styleNo || '' }) });
           return items;
         }
         return [
@@ -262,7 +262,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
           { key: 'print', label: '打印', onClick: () => onPrint(r) },
           { key: 'scrap', label: '报废', danger: true, onClick: () => onScrap(String(r.id!)) },
           { key: 'copy', label: '复制', onClick: () => { setCopySource(r); setCopyModalOpen(true); } },
-          { key: 'remark', label: '备注', onClick: () => setRemarkTarget({ open: true, styleNo: (r as any).styleNo || '' }) },
+          { key: 'remark', label: '备注', onClick: () => setRemarkTarget({ open: true, styleNo: r?.styleNo || '' }) },
         ];
       }}
       pagination={{
