@@ -6,6 +6,9 @@ import { getMaterialReconStatusConfig } from '../../constants/finance';
 import api from '../../utils/api';
 import { Factory } from '../../types/system';
 
+/** 供应商 AutoComplete 选项（DefaultOptionType + id） */
+type SupplierOption = { id?: string; value?: string; label?: string };
+
 interface MaterialReconModalContentProps {
   currentRecon: MaterialReconType | null;
   onSubmit: (values: any) => Promise<void>;
@@ -96,20 +99,20 @@ const MaterialReconModalContent: React.FC<MaterialReconModalContentProps> = ({
           <div className="modal-detail-cover" />
           <div className="modal-detail-grid">
             <div className="modal-detail-item"><span className="modal-detail-label">对账单号：</span><span className="modal-detail-value">{String(currentRecon.reconciliationNo || '').trim() || '-'}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">供应商：</span><span className="modal-detail-value">{String((currentRecon as any).supplierName || '').trim() || '-'}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">订单号：</span><span className="modal-detail-value">{String((currentRecon as any).orderNo || '').trim() || '-'}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">款号：</span><span className="modal-detail-value">{String((currentRecon as any).styleNo || '').trim() || '-'}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">采购单号：</span><span className="modal-detail-value">{String((currentRecon as any).purchaseNo || '').trim() || '-'}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">物料编码：</span><span className="modal-detail-value">{String((currentRecon as any).materialCode || '').trim() || '-'}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">物料名称：</span><span className="modal-detail-value">{String((currentRecon as any).materialName || '').trim() || '-'}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">数量：</span><span className="modal-detail-value">{String((currentRecon as any).quantity ?? '-')}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">生产完成数：</span><span className="modal-detail-value">{String((currentRecon as any).productionCompletedQuantity ?? '-')}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">单价：</span><span className="modal-detail-value">{Number((currentRecon as any).unitPrice || 0).toFixed(2)} 元</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">总金额：</span><span className="modal-detail-value">{Number((currentRecon as any).totalAmount || 0).toFixed(2)} 元</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">扣款项：</span><span className="modal-detail-value">{Number((currentRecon as any).deductionAmount || 0).toFixed(2)} 元</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">最终金额：</span><span className="modal-detail-value">{Number((currentRecon as any).finalAmount || 0).toFixed(2)} 元</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">对账日期：</span><span className="modal-detail-value">{formatDateTime((currentRecon as any).reconciliationDate)}</span></div>
-            <div className="modal-detail-item"><span className="modal-detail-label">状态：</span><span className="modal-detail-value">{getMaterialReconStatusConfig((currentRecon as any).status).text}</span></div>
+            <div className="modal-detail-item"><span className="modal-detail-label">供应商：</span><span className="modal-detail-value">{String(currentRecon.supplierName || '').trim() || '-'}</span></div>
+            <div className="modal-detail-item"><span className="modal-detail-label">订单号：</span><span className="modal-detail-value">{String(currentRecon.orderNo || '').trim() || '-'}</span></div>
+            <div className="modal-detail-item"><span className="modal-detail-label">款号：</span><span className="modal-detail-value">{String(currentRecon.styleNo || '').trim() || '-'}</span></div>
+            <div className="modal-detail-item"><span className="modal-detail-label">采购单号：</span><span className="modal-detail-value">{String(currentRecon.purchaseNo || '').trim() || '-'}</span></div>
+            <div className="modal-detail-item"><span className="modal-detail-label">物料编码：</span><span className="modal-detail-value">{String(currentRecon.materialCode || '').trim() || '-'}</span></div>
+            <div className="modal-detail-item"><span className="modal-detail-label">物料名称：</span><span className="modal-detail-value">{String(currentRecon.materialName || '').trim() || '-'}</span></div>
+            <div className="modal-detail-item"><span className="modal-detail-label">数量：</span><span className="modal-detail-value">{String(currentRecon.quantity ?? '-')}</span></div>
+            <div className="modal-detail-item"><span className="modal-detail-label">生产完成数：</span><span className="modal-detail-value">{String(currentRecon.productionCompletedQuantity ?? '-')}</span></div>
+            <div className="modal-detail-item"><span className="modal-detail-label">单价：</span><span className="modal-detail-value">{Number(currentRecon.unitPrice || 0).toFixed(2)} 元</span></div>
+            <div className="modal-detail-item"><span className="modal-detail-label">总金额：</span><span className="modal-detail-value">{Number(currentRecon.totalAmount || 0).toFixed(2)} 元</span></div>
+            <div className="modal-detail-item"><span className="modal-detail-label">扣款项：</span><span className="modal-detail-value">{Number(currentRecon.deductionAmount || 0).toFixed(2)} 元</span></div>
+            <div className="modal-detail-item"><span className="modal-detail-label">最终金额：</span><span className="modal-detail-value">{Number(currentRecon.finalAmount || 0).toFixed(2)} 元</span></div>
+            <div className="modal-detail-item"><span className="modal-detail-label">对账日期：</span><span className="modal-detail-value">{formatDateTime(currentRecon.reconciliationDate)}</span></div>
+            <div className="modal-detail-item"><span className="modal-detail-label">状态：</span><span className="modal-detail-value">{getMaterialReconStatusConfig(currentRecon.status).text}</span></div>
           </div>
         </div>
       ) : (
@@ -131,16 +134,16 @@ const MaterialReconModalContent: React.FC<MaterialReconModalContentProps> = ({
                 notFoundContent={supplierLoading ? '加载中...' : undefined}
                 onSelect={(_, option) => {
                   form.setFieldsValue({
-                    supplierId: (option as any)?.id,
-                    supplierName: String((option as any)?.value || '').trim(),
+                    supplierId: (option as SupplierOption)?.id,
+                    supplierName: String((option as SupplierOption)?.value || '').trim(),
                   });
                 }}
                 onChange={(value) => {
                   form.setFieldsValue({ supplierId: undefined, supplierName: String(value || '').trim() });
                 }}
                 filterOption={(inputValue, option) =>
-                  String((option as any)?.value || '').toLowerCase().includes(String(inputValue || '').toLowerCase())
-                  || String((option as any)?.label || '').toLowerCase().includes(String(inputValue || '').toLowerCase())
+                  String((option as SupplierOption)?.value || '').toLowerCase().includes(String(inputValue || '').toLowerCase())
+                  || String((option as SupplierOption)?.label || '').toLowerCase().includes(String(inputValue || '').toLowerCase())
                 }
               />
             </Form.Item>
