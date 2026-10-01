@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
-import type { TaskItem } from './types';
+import type { TaskItem, TaskStatus } from './types';
 import styles from './TaskListView.module.css';
 
 const STATUS_TABS = [
@@ -87,9 +87,31 @@ function matchesUser(name: string | undefined, id: string | undefined, userId?: 
   return names.includes(name);
 }
 
-/** 已领取未开始的 accepted 归入"进行中"桶，避免出现在全部里却哪个状态页签都不算 */
-function statusBucket(s: TaskItem['status']): 'pending' | 'in_progress' | 'completed' | 'cancelled' {
-  return s === 'accepted' ? 'in_progress' : (s as 'pending' | 'in_progress' | 'completed' | 'cancelled');
+/**
+ * 状态 → 页签归桶。
+ *
+ * <p>`accepted`（已领取未开始）与 `escalated`（已升级）都归入「进行中」，
+ * 与后端 `TaskCenterOrchestrator.countByTenantAndStatus` 把 ESCALATED 计入进行中的口径一致。
+ * 两者若不归桶，会出现「出现在全部列表、但哪个状态页签都不算」的幽灵项。
+ *
+ * <p>D-694：用 `Record<TaskStatus, StatusTab>` **穷举映射**替代原 `as` 断言。
+ * 原写法 `s === 'accepted' ? ... : (s as ...)` 对未知值静默透传，
+ * 新增状态时不会报错 → 正是 `escalated` 漏归桶却无人察觉的原因。
+ * 改为穷举后，后端新增枚举值若未同步此处，**TypeScript 会直接编译报错**。
+ */
+type StatusTab = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+
+export const STATUS_BUCKET: Record<TaskStatus, StatusTab> = {
+  pending: 'pending',
+  accepted: 'in_progress',
+  in_progress: 'in_progress',
+  escalated: 'in_progress',
+  completed: 'completed',
+  cancelled: 'cancelled',
+};
+
+export function statusBucket(s: TaskStatus): StatusTab {
+  return STATUS_BUCKET[s] ?? 'pending';
 }
 
 const TaskListView: React.FC<Props> = ({ tasks, loading, currentUsername, currentUserId, currentDisplayName, onClaim, onComplete, onClaimSystem, onEdit, onCreate, onNavigate }) => {
@@ -349,7 +371,7 @@ const TaskCard: React.FC<{
               <button className={`${styles.actionBtn} ${styles.editBtn}`} onClick={() => onEdit(task)}>编辑</button>
             </>
           )}
-          {!isSystem && (task.status === 'in_progress' || task.status === 'accepted') && (
+          {!isSystem && (task.status === 'in_progress' || task.status === 'accepted' || task.status === 'escalated') && (
             <>
               <button className={`${styles.actionBtn} ${styles.completeBtn}`} onClick={() => onComplete(task.id)}>完成</button>
               <button className={`${styles.actionBtn} ${styles.editBtn}`} onClick={() => onEdit(task)}>编辑</button>

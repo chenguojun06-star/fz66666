@@ -175,7 +175,27 @@ export interface ReportPreviewOrder {
 
 export type PanelView = 'chat' | 'tasks';
 
-export type TaskStatus = 'pending' | 'in_progress' | 'accepted' | 'completed' | 'cancelled';
+/**
+ * 任务状态。
+ *
+ * <p>与后端 `CollaborationTask.TaskStatus` 枚举**一一对应**（6 个值，不多不少）：
+ * 后端出参经 `TaskCenterOrchestrator.toPersonalTaskViewList` 第 501 行 `.toLowerCase()`
+ * 后即为小写，故此处用小写字面量。
+ *
+ * <p>⚠️ `escalated` 曾一度缺失：后端 `TaskCenterOrchestrator.countByTenantAndStatus`
+ * 把 `ESCALATED` 计入「进行中」，`findActiveByTenant` 也会返回它，
+ * 但本类型未声明 → 该状态漏出类型定义，且 `statusBucket` 未给它归桶，
+ * 造成「出现在全部列表、但哪个状态页签都不算」的幽灵项。D-694 补齐。
+ *
+ * <p>新增状态时**必须**同步检查 `TaskListView.statusBucket` 的归桶映射。
+ */
+export type TaskStatus =
+  | 'pending'
+  | 'in_progress'
+  | 'accepted'
+  | 'escalated'
+  | 'completed'
+  | 'cancelled';
 export type TaskPriority = 'high' | 'medium' | 'low';
 export type TaskModule = 'production' | 'style' | 'warehouse' | 'procurement' | 'quality' | 'finance' | 'system';
 
