@@ -18,19 +18,27 @@ export const splitCandidateValues = (value: unknown) => uniqueValues(
   splitStyleOptions(typeof value === 'string' ? value : normalizeText(value))
 );
 
+/** sizeColorConfig 的 JSON 解析结果（后端可能返回字符串或已解析对象，字段形态不确定） */
+interface ParsedSizeColorConfig {
+  sizes?: unknown[];
+  colors?: unknown[];
+  quantities?: unknown[];
+  matrixRows?: unknown[];
+}
+
 export const parseSizeColorConfig = (raw: unknown) => {
   try {
-    const parsed = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {});
-    const sizes = Array.isArray((parsed as any)?.sizes)
-      ? (parsed as any).sizes.map((item: unknown) => normalizeText(item)).filter(Boolean)
+    const parsed: ParsedSizeColorConfig = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {});
+    const sizes = Array.isArray(parsed?.sizes)
+      ? parsed.sizes.map((item: unknown) => normalizeText(item)).filter(Boolean)
       : [];
-    const colors = Array.isArray((parsed as any)?.colors)
-      ? (parsed as any).colors.map((item: unknown) => normalizeText(item)).filter(Boolean)
+    const colors = Array.isArray(parsed?.colors)
+      ? parsed.colors.map((item: unknown) => normalizeText(item)).filter(Boolean)
       : [];
-    const quantities = Array.isArray((parsed as any)?.quantities)
-      ? (parsed as any).quantities.map((item: unknown) => Number(item || 0))
+    const quantities = Array.isArray(parsed?.quantities)
+      ? parsed.quantities.map((item: unknown) => Number(item || 0))
       : [];
-    const matrixRows = Array.isArray((parsed as any)?.matrixRows) ? (parsed as any).matrixRows : [];
+    const matrixRows = Array.isArray(parsed?.matrixRows) ? parsed.matrixRows : [];
     return { sizes, colors, quantities, matrixRows };
   } catch {
     return { sizes: [] as string[], colors: [] as string[], quantities: [] as number[], matrixRows: [] as SizeColorMatrixRow[] };
