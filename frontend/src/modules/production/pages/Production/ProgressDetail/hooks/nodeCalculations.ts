@@ -49,7 +49,7 @@ export function calcNodeData(
   const isWarehousingNode = nodeType === 'warehousing'
     || /入库|仓库|成品仓/.test(nodeName);
   const completedQty = isWarehousingNode
-    ? (Number((record as any)?.warehousingQualifiedQuantity) || 0)
+    ? (Number(record?.warehousingQualifiedQuantity) || 0)
     : (nodeDoneMap?.[nodeName] || 0);
   const isProcureNode = /采购|物料|备料|辅料|面料/.test(nodeName);
   const rawPercent = isProcureNode
@@ -60,8 +60,8 @@ export function calcNodeData(
   const percent = isCompletedOrClosed ? 100 : rawPercent;
   const remaining = totalQty - completedQty;
   const completionTime = isProcureNode
-    ? ((record as any).procurementConfirmedAt
-       || (record as any).procurementEndTime
+    ? (record.procurementConfirmedAt
+       || record.procurementEndTime
        || nodeTimeMap?.[nodeName]
        || '')
      : (nodeTimeMap?.[nodeName]
@@ -71,22 +71,22 @@ export function calcNodeData(
             const stageKey = String(node.progressStage || '').trim().toLowerCase();
             const nameKey = nodeName.toLowerCase();
             if (stageKey === 'tailprocess' || stageKey === 'tail' || nameKey.includes('尾部') || nameKey.includes('尾工')) {
-              return (record as any).packagingEndTime || (record as any).ironingEndTime || '';
+              return record.packagingEndTime || record.ironingEndTime || '';
             }
             return '';
           })())
       );
   const startTime = isProcureNode
-    ? ((record as any).procurementStartTime || '')
+    ? (record.procurementStartTime || '')
     : (() => {
         const stageKey = String(node.progressStage || '').trim().toLowerCase();
         const nameKey = nodeName.toLowerCase();
-        if (stageKey === 'cutting' || nameKey.includes('裁剪')) return (record as any).cuttingStartTime || '';
-        if (stageKey === 'sewing' || stageKey === 'carsewing' || nameKey.includes('车缝')) return (record as any).sewingStartTime || (record as any).carSewingStartTime || '';
-        if (stageKey === 'secondaryprocess' || stageKey === 'secondary' || nameKey.includes('二次工艺')) return (record as any).secondaryProcessStartTime || '';
-        if (stageKey === 'warehousing' || nameKey.includes('入库')) return (record as any).warehousingStartTime || '';
-        if (stageKey === 'quality' || nameKey.includes('质检')) return (record as any).qualityStartTime || '';
-        if (stageKey === 'tailprocess' || stageKey === 'tail' || nameKey.includes('尾部') || nameKey.includes('尾工')) return (record as any).packagingStartTime || (record as any).ironingStartTime || '';
+        if (stageKey === 'cutting' || nameKey.includes('裁剪')) return record.cuttingStartTime || '';
+        if (stageKey === 'sewing' || stageKey === 'carsewing' || nameKey.includes('车缝')) return record.sewingStartTime || record.carSewingStartTime || '';
+        if (stageKey === 'secondaryprocess' || stageKey === 'secondary' || nameKey.includes('二次工艺')) return record.secondaryProcessStartTime || '';
+        if (stageKey === 'warehousing' || nameKey.includes('入库')) return record.warehousingStartTime || '';
+        if (stageKey === 'quality' || nameKey.includes('质检')) return record.qualityStartTime || '';
+        if (stageKey === 'tailprocess' || stageKey === 'tail' || nameKey.includes('尾部') || nameKey.includes('尾工')) return record.packagingStartTime || record.ironingStartTime || '';
         return '';
       })();
   const workerNames = nodeWorkerNamesMap?.[nodeName] || [];
@@ -154,7 +154,7 @@ export function buildProcessListForNode(
   const nodeType = (node.progressStage && node.progressStage.trim())
     || NODE_TYPE_MAP[nodeName]
     || nodeName.toLowerCase();
-  const sn = String((record as any)?.styleNo || '').trim();
+  const sn = String(record?.styleNo || '').trim();
   const templateNodes = sn && progressNodesByStyleNo[sn] ? progressNodesByStyleNo[sn] : undefined;
   const byParent = getProcessesByNodeFromOrder(record, templateNodes);
   const nodeProgressStage = String(node.progressStage || '').trim();
@@ -189,7 +189,7 @@ export function buildProcessListForNode(
       }));
     } else {
       const stageChildren = ns.filter(n => {
-        const ps = String((n as any).progressStage || '').trim();
+        const ps = String(n.progressStage || '').trim();
         return ps === nodeName || (nodeProgressStage && ps === nodeProgressStage);
       });
       processList = stageChildren.map(n => ({
