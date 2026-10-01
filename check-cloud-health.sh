@@ -34,7 +34,7 @@ if [ ! -f "$SSH_KEY" ]; then
   exit 1
 fi
 
-echo "正在连接 $CLOUD_USER@$CLOUD_IP （密钥 $SSH_KEY）..."
+echo "正在连接 $CLOUD_USER@$CLOUD_IP （密钥 ${SSH_KEY}）..."
 echo ""
 
 ssh -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new \
@@ -82,7 +82,17 @@ echo "════════ 4. Qdrant 集合 ════════"
 QDRANT_C=$(sudo docker ps --format '{{.Names}}' 2>/dev/null | grep -i qdrant | head -1)
 if [ -n "$QDRANT_C" ]; then
   echo "容器: $QDRANT_C"
-  sudo docker exec "$QDRANT_C" sh -c 'curl -s localhost:6333/collections' 2>/dev/null | head -c 600
+  # ⚠️ qdrant 镜像内无 curl/wget，且该容器不映射端口 → 直接 exec 探测恒为空输出
+  #    （2026-10-02 实测踩坑：空输出会被误读成「集合丢了」）。借同网络内有 HTTP
+  #    客户端的容器探测：backend 含 curl、caddy 含 curl/wget。
+  PROBE_C=$(sudo docker ps --format '{{.Names}}' 2>/dev/null | grep -iE 'backend|caddy' | head -1)
+  if [ -n "$PROBE_C" ]; then
+    sudo docker exec "$PROBE_C" curl -s -m 8 "http://${QDRANT_C}:6333/collections" 2>/dev/null | head -c 600
+    echo ""
+    echo "  （探测容器: $PROBE_C；期望看到 fashion_memory / style_images 两个集合）"
+  else
+    echo "  ⚠️ 找不到含 curl/wget 的探测容器，无法读取集合列表"
+  fi
   echo ""
 else
   echo "  ⚠️ 没找到 Qdrant 容器"
