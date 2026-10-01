@@ -21,7 +21,7 @@ export function buildBasicColumns({
       dataIndex: 'styleCover',
       key: 'styleCover',
       width: 60,
-      render: (_: any, record: any) => (
+      render: (_: unknown, record: ProductionOrder) => (
         <StyleCoverThumb
           styleId={record.styleId}
           styleNo={record.styleNo}
@@ -39,8 +39,8 @@ export function buildBasicColumns({
       width: 100,
       render: (v: any, record: ProductionOrder) => {
         const orderNo = safeString(v, '');
-        const styleNo = safeString((record as any)?.styleNo, '');
-        const orderId = safeString((record as any)?.id, '');
+        const styleNo = safeString(record?.styleNo, '');
+        const orderId = safeString(record?.id, '');
         return (
           <div className="u-d-flex u-ai-center u-gap-4 u-fwrap-wrap">
             <Popover
@@ -61,17 +61,17 @@ export function buildBasicColumns({
               {orderNo || '-'}
             </a>
             </Popover>
-            {(record as any).urgencyLevel === 'urgent' && (
+            {record.urgencyLevel === 'urgent' && (
               <Tag color="error" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px' }}>急</Tag>
             )}
-            {String((record as any).plateType || '').toUpperCase() === 'FIRST' && (
+            {String(record.plateType || '').toUpperCase() === 'FIRST' && (
               <Tag color="processing" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px' }}>首</Tag>
             )}
-            {String((record as any).plateType || '').toUpperCase() === 'REORDER' && (
+            {String(record.plateType || '').toUpperCase() === 'REORDER' && (
               <Tag color="warning" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px' }}>翻</Tag>
             )}
-            {(record as any).orderBizType && (() => {
-              const bizType = String((record as any).orderBizType);
+            {record.orderBizType && (() => {
+              const bizType = String(record.orderBizType);
               const colorMap: Record<string, string> = { FOB: 'processing', ODM: 'info', OEM: 'processing', CMT: 'warning' };
               const bizLabel = t(ORDER_BIZ_TYPE_MAP[bizType]?.text ?? 'common.unknown');
               return <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px' }}>{bizLabel}</Tag>;
@@ -117,13 +117,13 @@ export function buildBasicColumns({
       key: 'companyName',
       width: 80,
       ellipsis: true,
-      render: (_: any, record: any) => record.customerName || record.company || '-',
+      render: (_: unknown, record: ProductionOrder) => record.customerName || record.company || '-',
     },
     {
       title: '纸样',
       key: 'attachments',
       width: 50,
-      render: (_: any, record: any) => (
+      render: (_: unknown, record: ProductionOrder) => (
         <StyleAttachmentsButton
           styleId={record.styleId}
           styleNo={record.styleNo}

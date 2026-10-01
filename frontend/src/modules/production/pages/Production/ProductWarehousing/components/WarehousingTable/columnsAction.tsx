@@ -15,16 +15,16 @@ export function buildActionColumns({ goToDetail, goToDetailPage, isOrderFrozen }
       width: 150,
       fixed: 'right' as const,
       render: (_: any, record: WarehousingType) => {
-        const orderId = String((record as any)?.orderId || '').trim();
+        const orderId = String(record?.orderId || '').trim();
         const frozen = isOrderFrozen(orderId);
 
         const hasWarehouse = Boolean(record.warehouse?.trim());
         const hasWarehousingEndTime = Boolean(record.warehousingEndTime?.trim());
         const isWarehoused = hasWarehouse || hasWarehousingEndTime;
 
-        const qualityStatus = String((record as any)?.qualityStatus || '').trim().toLowerCase();
-        const repairStatus = String((record as any)?.repairStatus || '').trim().toLowerCase();
-        const bundleStatus = String((record as any)?.bundleStatus || '').trim().toLowerCase();
+        const qualityStatus = String(record?.qualityStatus || '').trim().toLowerCase();
+        const repairStatus = String(record?.repairStatus || '').trim().toLowerCase();
+        const bundleStatus = String(record?.bundleStatus || '').trim().toLowerCase();
         const isUnqualified = qualityStatus === 'unqualified';
         const isRepairedWaitingQc = repairStatus === 'repair_done' || bundleStatus === 'repaired_waiting_qc';
 
@@ -32,7 +32,7 @@ export function buildActionColumns({ goToDetail, goToDetailPage, isOrderFrozen }
 
         if (isUnqualified && !isRepairedWaitingQc) {
           const isRepairing = repairStatus === 'repairing';
-          const bundleId = String((record as any)?.cuttingBundleId || '').trim();
+          const bundleId = String(record?.cuttingBundleId || '').trim();
 
           if (isRepairing) {
             actions.push({
@@ -84,7 +84,7 @@ export function buildActionColumns({ goToDetail, goToDetailPage, isOrderFrozen }
                   content: '确认开始返修该菲号？',
                   onOk: async () => {
                     try {
-                      const operatorName = String((record as any)?.qualityOperatorName || '').trim();
+                      const operatorName = String(record?.qualityOperatorName || '').trim();
                       const res = await api.post<{ code: number; message?: string }>(
                         '/production/warehousing/mark-bundle-repairing',
                         { bundleId, operatorName }
@@ -178,7 +178,7 @@ export function buildActionColumns({ goToDetail, goToDetailPage, isOrderFrozen }
             label: '打印二维码',
             onClick: () => printWarehousingQr(
               String(record.warehousingNo || '').trim(),
-              String((record as any).orderNo || '').trim()
+              String(record.orderNo || '').trim()
             ),
           });
         }

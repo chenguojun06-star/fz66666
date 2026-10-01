@@ -14,7 +14,7 @@ export function buildBaseColumns({ goToDetail, dataSource }: BuildColumnsParams)
       title: '图片',
       key: 'cover',
       width: 56,
-      render: (_: any, record: any) => (
+      render: (_: unknown, record: WarehousingType) => (
         <StyleCoverThumb
           styleId={record.styleId}
           styleNo={record.styleNo}
@@ -47,13 +47,13 @@ export function buildBaseColumns({ goToDetail, dataSource }: BuildColumnsParams)
       render: (v: unknown, record: WarehousingType) => {
         const text = String(v || '').trim();
         if (!text) return '-';
-        const urgencyTag = getUrgencyTag((record as any).urgencyLevel);
-        const plateTag = getPlateTypeTag((record as any).plateType);
+        const urgencyTag = getUrgencyTag(record.urgencyLevel);
+        const plateTag = getPlateTypeTag(record.plateType);
 
         const orderRecs = (dataSource as WarehousingType[]).filter(r => r.orderNo === text);
         let tooltipContent: React.ReactNode = null;
         if (orderRecs.length > 0) {
-          const isUrgent = String((record as any).urgencyLevel || '').toLowerCase() === 'urgent';
+          const isUrgent = String(record.urgencyLevel || '').toLowerCase() === 'urgent';
           const insight = analyzeQuality(orderRecs, isUrgent);
           tooltipContent = renderQualityTooltip(insight, text);
         }
@@ -65,9 +65,9 @@ export function buildBaseColumns({ goToDetail, dataSource }: BuildColumnsParams)
               {plateTag && <Tag color={plateTag.color} style={{ marginInlineEnd: 0, fontSize: 'var(--table-cell-font-size)' }}>{plateTag.text}</Tag>}
               {urgencyTag && <Tag color={urgencyTag.color} style={{ marginInlineEnd: 0, fontSize: 'var(--table-cell-font-size)' }}>{urgencyTag.text}</Tag>}
             </div>
-            {(record as any).orgPath || (record as any).parentOrgUnitName ? (
+            {record.orgPath || record.parentOrgUnitName ? (
               <div className="u-fs-var--font-size-xs u-mt-2" style={{ color: 'var(--neutral-text-secondary)' }}>
-                {(record as any).orgPath || (record as any).parentOrgUnitName}
+                {record.orgPath || record.parentOrgUnitName}
               </div>
             ) : null}
           </div>
