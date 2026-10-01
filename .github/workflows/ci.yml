@@ -46,6 +46,19 @@ jobs:
         python3 scripts/audit-tenant-id.py
         echo "✅ 多租户隔离审计通过"
 
+    - name: 依赖版本 EOL 检查（ratchet：存量告警，新增阻断）
+      run: |
+        echo "🔍 检查关键依赖是否已 EOL..."
+        python3 scripts/check-dependency-eol.py
+        echo "ℹ️  存量 EOL 见 dependency-eol-baseline.properties（修复一项请调低基线）"
+
+    - name: 依赖版本生命周期报告（不阻断）
+      continue-on-error: true
+      run: |
+        echo "📋 生成依赖版本报告..."
+        python3 scripts/check-dependency-eol.py --report > dependency-eol-report.md || true
+        cat dependency-eol-report.md
+
     - name: 前端硬编码颜色审计（不阻断，仅生成报告）
       continue-on-error: true
       run: |

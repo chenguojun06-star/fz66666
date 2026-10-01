@@ -93,6 +93,26 @@ if [ -n "$BACKEND_CHANGED" ] || [ "$FORCE_BACKEND" -eq 1 ]; then
 	JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home /opt/homebrew/bin/mvn clean compile -q
 	cd "$ROOT_DIR"
 	echo "后端编译通过。"
+
+	# D-698：编译通过 ≠ 注入成功。本仓库此前零个 Spring 上下文测试，
+	# 依赖注入类错误（@Resource 按 bean 名解析、缺 Bean、循环依赖）
+	# 编译期无感知、只在启动期炸 → 在推送前补一道装配校验。
+	# ArchUnit 约 27s、上下文冒烟约 20s，换取「启动期才暴露的问题」提前到推送前。
+	echo
+	echo "      架构守护（ArchUnit 分层门控）"
+	cd "$ROOT_DIR/backend"
+	JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home \
+		/opt/homebrew/bin/mvn test -Dtest=ArchitectureRulesTest -DfailIfNoTests=false -q
+	cd "$ROOT_DIR"
+	echo "      架构守护通过。"
+
+	echo
+	echo "      Spring 上下文装配冒烟（注入类错误）"
+	cd "$ROOT_DIR/backend"
+	JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home \
+		/opt/homebrew/bin/mvn test -Dtest=SpringContextSmokeTest -DfailIfNoTests=false -q
+	cd "$ROOT_DIR"
+	echo "      上下文装配通过。"
 fi
 
 if [ -n "$FRONTEND_CHANGED" ] || [ "$FORCE_FRONTEND" -eq 1 ]; then
