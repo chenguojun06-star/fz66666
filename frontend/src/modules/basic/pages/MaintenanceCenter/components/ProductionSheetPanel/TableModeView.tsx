@@ -87,7 +87,7 @@ const TableModeView: React.FC<TableModeViewProps> = ({
         />
       </Card>
 
-      <ResizableTable rowKey={(r) => String((r as any).id ?? r.styleNo)} columns={columns as any} dataSource={styles} loading={loading} emptyDescription="暂无生产订单"
+      <ResizableTable rowKey={(r) => String(r.id ?? r.styleNo)} columns={columns} dataSource={styles} loading={loading} emptyDescription="暂无生产订单"
         pagination={{ current: queryParams.page, pageSize: queryParams.pageSize, total, showTotal: (t) => `共 ${t} 条`, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'],
           onChange: (page, pageSize) => setQueryParams(prev => ({ ...prev, page, pageSize })) }} />
 
@@ -106,7 +106,7 @@ const TableModeView: React.FC<TableModeViewProps> = ({
         footer={<Space><Button onClick={() => { setReturnDescVisible(false); returnDescForm.resetFields(); }}>取消</Button><Button danger loading={returnDescSaving} onClick={handleReturnDescSave}>确认退回</Button></Space>}>
         {returnDescRecord?.descriptionReturnComment && (
           <div className="u-mb-12 u-p-8px12px u-br-4 u-fs-14" style={{ background: 'var(--status-warning-bg)', border: '1px solid var(--status-warning-border)' }}>
-            上次退回：{returnDescRecord.descriptionReturnComment}（{(returnDescRecord as any).descriptionReturnBy}）
+            上次退回：{returnDescRecord.descriptionReturnComment}（{returnDescRecord.descriptionReturnBy}）
           </div>
         )}
         <Form form={returnDescForm} layout="vertical">
@@ -122,8 +122,8 @@ const TableModeView: React.FC<TableModeViewProps> = ({
           <div>
             <Row gutter={24}>
               <Col span={8}>
-                {(detailRecord as any).cover ? (
-                  <Image src={getFullAuthedFileUrl((detailRecord as any).cover)} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 8 }} />
+                {detailRecord.cover ? (
+                  <Image src={getFullAuthedFileUrl(detailRecord.cover)} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 8 }} />
                 ) : (
                   <div className="u-w-full u-d-flex u-ai-center u-jc-center u-br-8" style={{ aspectRatio: '1', background: 'var(--color-bg-subtle)' }}>暂无封面</div>
                 )}
@@ -132,15 +132,15 @@ const TableModeView: React.FC<TableModeViewProps> = ({
                 <div className="u-d-grid u-fs-14" style={{ gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
                   <div><strong>款号：</strong>{detailRecord.styleNo}</div>
                   <div><strong>款名：</strong>{detailRecord.styleName}</div>
-                  <div><strong>品类：</strong>{toCategoryCn((detailRecord as any).category)}</div>
-                  <div><strong>推送人：</strong>{(detailRecord as any).productionAssignee || '-'}</div>
-                  <div><strong>推送时间：</strong>{(detailRecord as any).productionCompletedTime ? formatDateTime((detailRecord as any).productionCompletedTime) : '-'}</div>
-                  <div><strong>维护人：</strong>{(detailRecord as any).updateBy || '-'}</div>
+                  <div><strong>品类：</strong>{toCategoryCn(detailRecord.category)}</div>
+                  <div><strong>推送人：</strong>{detailRecord.productionAssignee || '-'}</div>
+                  <div><strong>推送时间：</strong>{detailRecord.productionCompletedTime ? formatDateTime(detailRecord.productionCompletedTime) : '-'}</div>
+                  <div><strong>维护人：</strong>{detailRecord.updateBy || '-'}</div>
                 </div>
                 <div className="u-mt-16">
                   <strong>工艺说明：</strong>
                   <div className="u-ws-pre-wrap u-mt-8 u-p-8px12px u-br-4" style={{ background: 'var(--color-bg-container)', maxHeight: 200, overflowY: 'auto' }}>
-                    {(detailRecord as any).description || '暂无'}
+                    {detailRecord.description || '暂无'}
                   </div>
                 </div>
               </Col>

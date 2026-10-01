@@ -25,6 +25,7 @@ export interface StyleInfo extends Record<string, unknown> {
   status?: 'ENABLED' | 'DISABLED' | 'SCRAPPED' | string;
   createTime?: string;
   updateTime?: string;
+  updateBy?: string;
   deleteFlag?: number;
 
   // ===== D-686：款式开发工作台用（预算工时/生产制单行/二次工序数）=====
