@@ -80,13 +80,17 @@ export function useDataCenterActions() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const response = await api.get<{ code: number; message: string; data: unknown }>('/data-center/stats');
+      const response = await api.get<{
+        code: number;
+        message: string;
+        data: { styleCount?: number; materialCount?: number; productionCount?: number };
+      }>('/data-center/stats');
       if (response.code === 200) {
         const d = response.data || {};
         setStats({
-          styleCount: (d as any).styleCount ?? 0,
-          materialCount: (d as any).materialCount ?? 0,
-          productionCount: (d as any).productionCount ?? 0,
+          styleCount: d.styleCount ?? 0,
+          materialCount: d.materialCount ?? 0,
+          productionCount: d.productionCount ?? 0,
         });
       }
     } catch { /* API may not exist yet */ }
@@ -132,7 +136,7 @@ export function useDataCenterActions() {
       downloadFile(`生产制单-${style.styleNo}.html`, html, 'text/html;charset=utf-8');
       message.success('已下载生产制单');
     } catch (e: unknown) {
-      message.error((e as any)?.message || '下载失败');
+      message.error((e as { message?: string })?.message || '下载失败');
     }
   }, [message, downloadFile, user?.tenantName]);
 
@@ -158,7 +162,7 @@ export function useDataCenterActions() {
         message.error(res.message || '保存后状态未锁定，请刷新后重试');
       }
     } catch (e: unknown) {
-      message.error((e as any)?.message || '保存失败');
+      message.error((e as { message?: string })?.message || '保存失败');
     } finally {
       setEditSaving(false);
     }
@@ -182,7 +186,7 @@ export function useDataCenterActions() {
         message.error(res.message || '退回失败');
       }
     } catch (e: unknown) {
-      message.error((e as any)?.message || '退回失败');
+      message.error((e as { message?: string })?.message || '退回失败');
     } finally {
       setReturnDescSaving(false);
     }
@@ -206,7 +210,7 @@ export function useDataCenterActions() {
         message.error(res.message || '退回失败');
       }
     } catch (e: unknown) {
-      message.error((e as any)?.message || '退回失败');
+      message.error((e as { message?: string })?.message || '退回失败');
     } finally {
       setReturnPatternSaving(false);
     }
@@ -271,7 +275,7 @@ export function useDataCenterActions() {
         message.error(res.message || '保存失败');
       }
     } catch (e: unknown) {
-      message.error((e as any)?.message || '保存失败');
+      message.error((e as { message?: string })?.message || '保存失败');
     } finally {
       setPatternRevisionSaving(false);
     }
