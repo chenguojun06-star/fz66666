@@ -52,7 +52,7 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
       <div style={directCardStyle}>
         <ProductionSummary record={directRow} />
         <div style={directFieldLabelStyle}>工艺说明 / 制单描述</div>
-        <Input.TextArea value={String((directRow as any).description || '')} rows={10} readOnly />
+        <Input.TextArea value={String(directRow.description || '')} rows={10} readOnly />
         <div style={{ ...directMetaStyle, marginTop: 10 }}>当前账号仅可查看制单内容，不能直接编辑或退回。</div>
       </div>
     );
@@ -66,8 +66,8 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
             <span style={directMetaStyle}>制单维护</span>
           </div>
           <div style={{ ...directMetaStyle, marginBottom: 8 }}>退回原因填在这里，下面保留当前制单内容预览。</div>
-          {(directRow as any).descriptionReturnComment ? (
-            <div style={{ ...directMetaStyle, marginBottom: 8 }}>上次退回 {(directRow as any).descriptionReturnComment}（{(directRow as any).descriptionReturnBy || '系统'}）</div>
+          {directRow.descriptionReturnComment ? (
+            <div style={{ ...directMetaStyle, marginBottom: 8 }}>上次退回 {directRow.descriptionReturnComment}（{directRow.descriptionReturnBy || '系统'}）</div>
           ) : null}
           <Form form={returnDescForm} layout="vertical">
             <div style={directFieldLabelStyle}>退回原因</div>
@@ -82,7 +82,7 @@ const DirectModeView: React.FC<DirectModeViewProps> = ({
         <div style={directCardStyle}>
           <ProductionSummary record={directRow} />
           <div style={directFieldLabelStyle}>工艺说明 / 制单描述</div>
-          <Input.TextArea value={String((directRow as any).description || '')} rows={10} readOnly />
+          <Input.TextArea value={String(directRow.description || '')} rows={10} readOnly />
         </div>
       </div>
     );
