@@ -12,19 +12,31 @@ import {
   getColumnId,
   computeAdaptiveWidth,
 } from './utils';
+import type { ColumnType, TablePaginationConfig } from 'antd/es/table';
+
+/** 可拖拽列的内部记录：antd 列类型 + 本组件的 colId 元数据（D-685） */
+type ResizableColumn = ColumnType<Record<string, unknown>> & {
+  colId?: string;
+  /** 表头分组子列 */
+  children?: ResizableColumn[];
+  /** 本项目 react-resizable 扩展字段 */
+  resizable?: unknown;
+};
+
+
 
 /**
  * 合并分页配置：处理 pageSize 持久化、onChange 拦截、showSizeChanger 注入。
  * 从 useResizableTableData 提取的纯函数，行为严格不变。
  */
 export const buildMergedPagination = (
-  paginationProp: any,
-  pageSizeStorageKey: string | undefined,
-): any => {
+  paginationProp?: TablePaginationConfig | boolean | null | undefined,
+  pageSizeStorageKey?: string | undefined,
+): TablePaginationConfig | boolean | null | undefined => {
   if (paginationProp === false) return false;
   if (paginationProp === undefined || paginationProp === null) return paginationProp;
-  const base = typeof paginationProp === 'object' ? paginationProp : ({} as any);
-  const { position, placement, showSizeChanger: showSizeChangerProp, ...baseRest } = base as any;
+  const base = typeof paginationProp === 'object' ? paginationProp : ({} as TablePaginationConfig);
+  const { position, placement, showSizeChanger: showSizeChangerProp, ...baseRest } = base;
   const explicitDefaultPageSize = typeof base?.defaultPageSize === 'number'
     ? normalizePageSize(base.defaultPageSize, DEFAULT_PAGE_SIZE)
     : undefined;
@@ -68,8 +80,8 @@ export const buildMergedPagination = (
     onChange: interceptedOnChange,
     simple: base?.simple ?? false,
     showSizeChanger: resolvedShowSizeChanger,
-    placement: placement ?? position ?? ['bottomRight'],
-  } as any;
+    placement: (placement ?? position ?? ['bottomRight']) as TablePaginationConfig['placement'],
+  }
 };
 
 /**
@@ -77,16 +89,16 @@ export const buildMergedPagination = (
  * 从 useResizableTableData 提取的纯函数，行为严格不变。
  */
 export const prepareColumns = (
-  columns: any,
+  columns: ReadonlyArray<unknown> | undefined,
   allowFixedColumns: boolean,
   showIndex: boolean,
-): any => {
-  if (!columns) return columns;
-  const rawCols = (Array.isArray(columns) ? columns : []) as any[];
+): ResizableColumn[] => {
+  if (!columns) return [];
+  const rawCols = (Array.isArray(columns) ? columns : []) as ResizableColumn[];
 
-  const mapColumns = (cols: any[]): any[] => {
+  const mapColumns = (cols: ResizableColumn[]): ResizableColumn[] => {
     return cols.map((col) => {
-      const colRecord = col as any;
+      const colRecord = col as ResizableColumn;
       const isLeaf = isLeafColumn(col);
 
       if (!isLeaf) {
@@ -122,7 +134,7 @@ export const prepareColumns = (
   const mapped = mapColumns(rawCols);
 
   if (showIndex && mapped.length > 0) {
-    const indexColumn = {
+    const indexColumn: ResizableColumn = {
       title: '序号',
       key: '__index__',
       dataIndex: '__index__',
@@ -130,7 +142,7 @@ export const prepareColumns = (
       align: 'center',
       fixed: 'left',
       colId: '__index__',
-      render: (_: any, __: any, idx: number) => idx + 1,
+      render: (_: unknown, __: unknown, idx: number) => idx + 1,
     };
     return [indexColumn, ...mapped];
   }
@@ -143,17 +155,17 @@ export const prepareColumns = (
  * 从 useResizableTableData 提取的纯函数，行为严格不变。
  */
 export const reorderColumnsByOrder = (
-  preparedColumns: any,
+  preparedColumns: ResizableColumn[],
   columnOrder: string[],
   showIndex: boolean,
-): any => {
+): ResizableColumn[] => {
   if (!preparedColumns || columnOrder.length === 0) return preparedColumns;
-  const rawCols = preparedColumns as any[];
+  const rawCols = preparedColumns as ResizableColumn[];
   const topLevelLeaf = rawCols.every((c) => isLeafColumn(c));
   if (!topLevelLeaf) return preparedColumns;
 
-  const indexCol = showIndex ? rawCols.find((c: any) => c.colId === '__index__') : null;
-  const restCols = showIndex ? rawCols.filter((c: any) => c.colId !== '__index__') : rawCols;
+  const indexCol = showIndex ? rawCols.find((c: ResizableColumn) => c.colId === '__index__') : null;
+  const restCols = showIndex ? rawCols.filter((c: ResizableColumn) => c.colId !== '__index__') : rawCols;
 
   const topLevelIds = restCols.map((col, idx) => getColumnId(col, [idx]));
   const map = new Map<string, any>();
@@ -161,7 +173,7 @@ export const reorderColumnsByOrder = (
     map.set(topLevelIds[i], restCols[i]);
   }
 
-  const ordered: any[] = [];
+  const ordered: ResizableColumn[] = [];
   for (const id of columnOrder) {
     const hit = map.get(id);
     if (!hit) continue;
@@ -176,9 +188,9 @@ export const reorderColumnsByOrder = (
     map.delete(id);
   }
 
-  const fixedLeft = ordered.filter((c: any) => c.fixed === 'left');
-  const fixedRight = ordered.filter((c: any) => c.fixed === 'right');
-  const nonFixed = ordered.filter((c: any) => c.fixed !== 'left' && c.fixed !== 'right');
+  const fixedLeft = ordered.filter((c: ResizableColumn) => c.fixed === 'left');
+  const fixedRight = ordered.filter((c: ResizableColumn) => c.fixed === 'right');
+  const nonFixed = ordered.filter((c: ResizableColumn) => c.fixed !== 'left' && c.fixed !== 'right');
   const result = [...fixedLeft, ...nonFixed, ...fixedRight];
 
   if (indexCol) {
@@ -192,23 +204,25 @@ export const reorderColumnsByOrder = (
  * 从 useResizableTableData 提取的纯函数，行为严格不变。
  */
 export const applyColumnIdTransforms = (
-  orderedColumns: any,
-  mergedPagination: any,
-): any => {
+  orderedColumns: ResizableColumn[],
+  mergedPagination: TablePaginationConfig | boolean | null | undefined,
+): ResizableColumn[] => {
   if (!orderedColumns) return orderedColumns;
-  const currentPage = typeof (mergedPagination as any)?.current === 'number' ? (mergedPagination as any).current : 1;
-  const currentPageSize = typeof (mergedPagination as any)?.pageSize === 'number' ? (mergedPagination as any).pageSize : 0;
+  // mergedPagination 实际可能收到 false（pagination={false}），守卫后取分页字段
+  const pag = mergedPagination && typeof mergedPagination === 'object' ? mergedPagination : null;
+  const currentPage = typeof pag?.current === 'number' ? pag.current : 1;
+  const currentPageSize = typeof pag?.pageSize === 'number' ? pag.pageSize : 0;
   const indexOffset = currentPage > 1 && currentPageSize > 0 ? (currentPage - 1) * currentPageSize : 0;
 
-  return (orderedColumns as any[]).map((col: any) => {
+  return (orderedColumns as ResizableColumn[]).map((col: any) => {
     const { colId, ...cleanCol } = col;
     const originalOnHeaderCell = cleanCol.onHeaderCell;
 
     if (colId === '__index__') {
       return {
         ...cleanCol,
-        render: (_: any, __: any, idx: number) => indexOffset + idx + 1,
-        onHeaderCell: (column: any) => {
+        render: (_: unknown, __: unknown, idx: number) => indexOffset + idx + 1,
+        onHeaderCell: (column: ResizableColumn) => {
           const originalProps = typeof originalOnHeaderCell === 'function'
             ? originalOnHeaderCell(column)
             : {};
@@ -219,7 +233,7 @@ export const applyColumnIdTransforms = (
 
     return {
       ...cleanCol,
-      onHeaderCell: (column: any) => {
+      onHeaderCell: (column: ResizableColumn) => {
         const originalProps = typeof originalOnHeaderCell === 'function'
           ? originalOnHeaderCell(column)
           : {};
