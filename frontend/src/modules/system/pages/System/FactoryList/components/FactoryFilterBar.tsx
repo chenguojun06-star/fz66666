@@ -25,21 +25,21 @@ const FactoryFilterBar: React.FC<FactoryFilterBarProps> = ({
             placeholder="供应商编码"
             style={{ width: 180 }}
             allowClear
-            value={String((queryParams as any)?.factoryCode || '')}
+            value={String(queryParams?.factoryCode || '')}
             onChange={(e) => setFactoryCodeInput(e.target.value)}
           />
           <Input
             placeholder="供应商名称"
             style={{ width: 220 }}
             allowClear
-            value={String((queryParams as any)?.factoryName || '')}
+            value={String(queryParams?.factoryName || '')}
             onChange={(e) => setFactoryNameInput(e.target.value)}
           />
           <Select
             placeholder="状态"
             style={{ width: 140 }}
             allowClear
-            value={String((queryParams as any)?.status || '') || undefined}
+            value={String(queryParams?.status || '') || undefined}
             options={[
               { value: 'active', label: '启用' },
               { value: 'inactive', label: '停用' },
@@ -50,7 +50,7 @@ const FactoryFilterBar: React.FC<FactoryFilterBarProps> = ({
             placeholder="内外标签"
             style={{ width: 140 }}
             allowClear
-            value={String((queryParams as any)?.factoryType || '') || undefined}
+            value={String(queryParams?.factoryType || '') || undefined}
             options={[
               { value: 'INTERNAL', label: '内部' },
               { value: 'EXTERNAL', label: '外部' },
@@ -61,7 +61,7 @@ const FactoryFilterBar: React.FC<FactoryFilterBarProps> = ({
             placeholder="归属部门"
             style={{ width: 220 }}
             allowClear
-            value={String((queryParams as any)?.parentOrgUnitId || '') || undefined}
+            value={String(queryParams?.parentOrgUnitId || '') || undefined}
             options={departmentOptions.map((item) => ({
               value: String(item.id || ''),
               label: getDepartmentLabel(item),
