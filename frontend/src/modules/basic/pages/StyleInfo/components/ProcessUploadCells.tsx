@@ -24,7 +24,7 @@ export const ProcessImageCell: React.FC<{ record: any; readOnly?: boolean }> = (
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const res = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }) as any;
+      const res = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (res.code === 200 && res.data) {
         const newImgs = [...imgs, res.data];
         await api.put(`/style/secondary-process/${record.id}`, { images: JSON.stringify(newImgs) });
@@ -91,7 +91,7 @@ export const ProcessAttachmentCell: React.FC<{ record: any; readOnly?: boolean }
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const res = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }) as any;
+      const res = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (res.code === 200 && res.data) {
         const newFiles = [...files, { name: file.name, url: res.data }];
         await api.put(`/style/secondary-process/${record.id}`, { attachments: JSON.stringify(newFiles) });
@@ -159,7 +159,7 @@ export const NewRowImageUpload: React.FC<{
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const res = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }) as any;
+      const res = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (res.code === 200 && res.data) {
         onChange([...value, res.data]);
         msg.success('图片上传成功');
@@ -217,7 +217,7 @@ export const NewRowAttachmentUpload: React.FC<{
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const res = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }) as any;
+      const res = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (res.code === 200 && res.data) {
         onChange([...value, { name: file.name, url: res.data }]);
         msg.success('附件上传成功');

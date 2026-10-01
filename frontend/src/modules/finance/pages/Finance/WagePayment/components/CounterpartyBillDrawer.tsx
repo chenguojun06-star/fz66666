@@ -411,7 +411,7 @@ export default function CounterpartyBillDrawer({
     }
     setActionSubmitting(true);
     try {
-      const count: number = ((await billAggregationApi.batchConfirm(rows.map((b) => b.id))) as any)?.data ?? rows.length;
+      const count: number = (await billAggregationApi.batchConfirm(rows.map((b) => b.id)))?.data ?? rows.length;
       message.success(`已确认 ${count} 笔`);
       afterChange();
     } catch (e: unknown) {

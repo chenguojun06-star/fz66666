@@ -92,7 +92,7 @@ export function useMaterialDatabaseActions(deps: {
 
   const { run: handleSubmit, loading: submitLoading } = useRequest(
     async () => {
-      const values = (await form.validateFields()) as any;
+      const values = await form.validateFields();
       const status = String(values?.status || 'pending').trim();
       const { createTime: _createTime, completedTime: _completedTime, ...rest } = values as any;
       const payload: Record<string, unknown> = { ...rest, materialType: getBaseMaterialType(values?.materialType || 'accessory'), status: status === 'completed' ? 'completed' : 'pending', image: String(values?.image || '').trim() || undefined };
