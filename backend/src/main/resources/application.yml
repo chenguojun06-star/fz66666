@@ -89,7 +89,14 @@ spring:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
     default-property-inclusion: non_null
-    serialization:
+    # D-698 Boot 4.1：Boot 4 的 Jackson 自动配置改用 Jackson 3（tools.jackson），
+    # 其 WRITE_DATES_AS_TIMESTAMPS 由 SerializationFeature 移到 DateTimeFeature，
+    # 原键位 spring.jackson.serialization.* 在 Boot 4 下会绑定失败 →
+    # "No enum constant tools.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS"
+    # → 上下文启动失败（全站 500）。已按 Jackson3 的 cfg.DateTimeFeature 改到 datetime 段。
+    # ⚠️ 另：JacksonConfig.objectMapper() 里已有 objectMapper.disable(WRITE_DATES_AS_TIMESTAMPS)，
+    #    此处配置作用于 Boot 自动配置的 JsonMapper，二者并存不冲突。
+    datetime:
       WRITE_DATES_AS_TIMESTAMPS: false
     generator:
       # 禁用非ASCII字符的Unicode转义，直接输出UTF-8中文
@@ -648,10 +655,23 @@ serpapi:
   api-key: ${SERPAPI_KEY:}
   enabled: ${SERPAPI_ENABLED:false}
 
-# Spring AI 适配器配置（默认启用，API key从DEEPSEEK_API_KEY环境变量读取）
+# Spring AI 适配器配置
+#
+# ⚠️ D-698 / Spring Boot 4.1.1 迁移：Spring AI 1.0.0 与 Spring Framework 7
+# **二进制不兼容**，启用会导致启动失败（实测）：
+#   NoSuchMethodError: HttpHeaders.addAll(MultiValueMap)
+#   —— Spring 7 的 HttpHeaders 只有 addAll(String,List) 与 addAll(HttpHeaders)，
+#      无 addAll(MultiValueMap)；而 Spring AI 1.0.0 的 OpenAiApi 内部调用后者。
+#   已在 Spring AI 2.0.0 实测：OpenAiApi 类被完全移除、OpenAiChatOptions.tools()
+#   亦被移除（工具改由 ToolCallingAdvisor 在 Advisor 链注入），属范式重写。
+#
+# 故 Boot 4.1 下**必须关闭**（默认值改为 false）。AI 能力由
+# LegacyInferenceAdapter → IntelligenceInferenceOrchestrator（1117 行，
+# 零 Spring AI 依赖，自实现 tool_calls）承担，AiInferenceRouter 负责路由。
+# 生产环境变量若为 true 会覆盖此默认值 —— 上线前请确认 SPRING_AI_ADAPTER_ENABLED 未被设为 true。
 spring-ai:
   adapter:
-    enabled: ${SPRING_AI_ADAPTER_ENABLED:true}
+    enabled: ${SPRING_AI_ADAPTER_ENABLED:false}
     base-url: ${SPRING_AI_ADAPTER_BASE_URL:https://api.deepseek.com}
     api-key: ${DEEPSEEK_API_KEY:${SPRING_AI_ADAPTER_API_KEY:}}
     model: ${SPRING_AI_ADAPTER_MODEL:deepseek-flash}

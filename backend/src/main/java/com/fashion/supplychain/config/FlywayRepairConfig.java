@@ -55,7 +55,7 @@ public class FlywayRepairConfig {
      * </p>
      */
     @Bean
-    public org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy flywayMigrationStrategy() {
+    public org.springframework.boot.flyway.autoconfigure.FlywayMigrationStrategy flywayMigrationStrategy() {
         return flyway -> {
             DataSource dataSource = flyway.getConfiguration().getDataSource();
 

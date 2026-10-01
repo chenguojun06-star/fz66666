@@ -64,7 +64,11 @@ public class RedisConfig implements CachingConfigurer {
         int shutdownMs = Integer.parseInt(env.getProperty("spring.data.redis.lettuce.shutdown-timeout", "200").replaceAll("[^0-9]", ""));
         int cmdTimeoutMs = Integer.parseInt(env.getProperty("spring.data.redis.timeout", "5000").replaceAll("[^0-9]", ""));
 
-        GenericObjectPoolConfig<Object> poolConfig = new GenericObjectPoolConfig<>();
+        // D-698 Boot 4.1：Lettuce 7.x 的 poolConfig 泛型由 <Object> 收紧为
+        // <StatefulConnection<?, ?>>，否则 .poolConfig(poolConfig) 编译报不兼容类型。
+        // 仅泛型参数变化，池参数设置方法（setMaxTotal 等）行为不变。
+        GenericObjectPoolConfig<io.lettuce.core.api.StatefulConnection<?, ?>> poolConfig =
+                new GenericObjectPoolConfig<>();
         poolConfig.setMaxTotal(maxActive);
         poolConfig.setMaxIdle(maxIdle);
         poolConfig.setMinIdle(minIdle);

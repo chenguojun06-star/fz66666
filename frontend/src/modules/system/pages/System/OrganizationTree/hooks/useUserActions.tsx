@@ -42,7 +42,6 @@ export function useUserActions(
       }
     };
     void loadRoles();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.tenantId]);
 
   const openUserDialog = useCallback((u?: User) => {

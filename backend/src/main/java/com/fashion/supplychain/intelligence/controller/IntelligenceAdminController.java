@@ -86,7 +86,7 @@ public class IntelligenceAdminController {
      */
     @GetMapping("/ai-health")
     public Result<Map<String, Object>> getAiHealth() {
-        org.springframework.boot.actuate.health.Health health = aiComponentHealthIndicator.health();
+        org.springframework.boot.health.contributor.Health health = aiComponentHealthIndicator.health();
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("status", health.getStatus().getCode());
         result.put("components", health.getDetails());
