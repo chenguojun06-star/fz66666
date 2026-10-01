@@ -60,5 +60,5 @@ export const normalizeStatus = (status?: MaterialPurchase['status'] | string) =>
 export const isConfirmCompleteAvailable = (p: MaterialPurchase | null | undefined): boolean => {
   const s = normalizeStatus(p?.status);
   if (s === 'completed' || s === 'cancelled') return false;
-  return Number((p as any)?.arrivedQuantity || 0) > 0;
+  return Number(p?.arrivedQuantity || 0) > 0;
 };

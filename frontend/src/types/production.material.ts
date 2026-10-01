@@ -32,6 +32,9 @@ export interface MaterialPurchase extends Record<string, unknown> {
   arrivedQuantity: number;
   supplierId: string;
   supplierName: string;
+  /** 供应商联系人/电话（供应商资料冗余字段，用于列展示） */
+  supplierContactPerson?: string;
+  supplierContactPhone?: string;
   unitPrice?: number;
   totalAmount?: number;
   receiverId?: string;

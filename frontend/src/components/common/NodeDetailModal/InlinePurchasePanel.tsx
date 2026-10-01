@@ -223,7 +223,7 @@ const InlinePurchasePanel: React.FC<InlinePurchasePanelProps> = (props) => {
                   // 否则 awaiting_confirm 等状态会被漏掉导致按钮永久灰
                   disabled: !purchases.some(p => normalizeStatus(p.status) !== MATERIAL_PURCHASE_STATUS.CANCELLED
                     && Number(p?.returnConfirmed || 0) !== 1
-                    && Number((p as any)?.arrivedQuantity || 0) > 0),
+                    && Number(p?.arrivedQuantity || 0) > 0),
                   loading: actionLoading,
                   title: '需先登记到货（到货数量＞0）',
                   onClick: handleBatchReturn,

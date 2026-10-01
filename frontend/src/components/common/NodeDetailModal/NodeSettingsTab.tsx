@@ -3,7 +3,7 @@ import { Alert, Button, Input, InputNumber, Select } from 'antd';
 import dayjs from 'dayjs';
 import { formatProcessDisplayName } from '@/utils/productionStage';
 import BundleDelegatePanel from './BundleDelegatePanel';
-import type { BundleDelegatePayload, BundleRecord, NodeOperationData } from './types';
+import type { BundleDelegatePayload, BundleRecord, NodeOperationData, ProcessPriceItem } from './types';
 
 const formatDelegationTime = (value?: string) => (value ? dayjs(value).format('MM/DD') : '-');
 
@@ -13,7 +13,7 @@ interface NodeSettingsTabProps {
   delegateProcessCode: string;
   processList: Array<{ id?: string; name: string; processCode?: string; code?: string; unitPrice?: number }>;
   currentNodeData: NodeOperationData;
-  matchedProcess: any;
+  matchedProcess: ProcessPriceItem | null;
   disableEdit: boolean;
   saving: boolean;
   factories: Array<{ id?: string; factoryName: string }>;
@@ -40,11 +40,11 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
   updateNodeData, handleFactoryChange, handleSave,
 }) => {
   const fixedProcessName = String(
-    currentNodeData.delegateProcessName || (matchedProcess as any)?.name || (matchedProcess as any)?.processName || nodeName || ''
+    currentNodeData.delegateProcessName || matchedProcess?.name || matchedProcess?.processName || nodeName || ''
   ).trim();
   const fixedUnitPrice = (() => {
     if (typeof currentNodeData.delegatePrice === 'number') return currentNodeData.delegatePrice;
-    const picked = Number((matchedProcess as any)?.unitPrice);
+    const picked = Number(matchedProcess?.unitPrice);
     if (Number.isFinite(picked)) return picked;
     return Number(unitPrice) || 0;
   })();
@@ -147,8 +147,8 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
               value={fixedProcessName || undefined}
               placeholder="选择工序"
               options={processList.map((p) => {
-                const name = String((p as any)?.name || '').trim();
-                const code = String((p as any)?.processCode || (p as any)?.code || (p as any)?.id || '').trim();
+                const name = String(p?.name || '').trim();
+                const code = String(p?.processCode || p?.code || p?.id || '').trim();
                 return { value: name, label: formatProcessDisplayName(code, name) };
               }).filter((o) => o.value)}
               disabled
@@ -202,7 +202,7 @@ const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
               value={currentNodeData.assigneeId}
               onChange={(v, option) => {
                 updateNodeData('assigneeId', v);
-                updateNodeData('assignee', (option as any)?.label || v);
+                updateNodeData('assignee', (option as { label?: string })?.label || v);
               }}
               filterOption={(input, option) =>
                 (option?.label ?? '').toLowerCase().includes(input.toLowerCase())

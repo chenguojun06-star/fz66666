@@ -54,7 +54,7 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
       ellipsis: true,
       render: (_: unknown, r: MaterialPurchase) => {
         const spec = String(r.specifications || '').trim();
-        const w = String((r as any).fabricWidth || '').trim();
+        const w = String(r.fabricWidth || '').trim();
         if (spec && w) return `${spec} / ${w}`;
         return spec || w || '-';
       },
@@ -73,7 +73,7 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
       key: 'referenceKilograms',
       width: 110,
       align: 'right' as const,
-      render: (_: unknown, r: MaterialPurchase) => formatReferenceKilograms(r.purchaseQuantity, (r as any).conversionRate, r.unit),
+      render: (_: unknown, r: MaterialPurchase) => formatReferenceKilograms(r.purchaseQuantity, r.conversionRate, r.unit),
     },
     {
       title: '到货数量',
@@ -179,8 +179,8 @@ export const buildDisplayColumns = (handlers: DisplayColumnHandlers): ColumnsTyp
       render: (_: unknown, record: MaterialPurchase) => (
         <SupplierNameTooltip
           name={record.supplierName}
-          contactPerson={(record as any).supplierContactPerson}
-          contactPhone={(record as any).supplierContactPhone}
+          contactPerson={record.supplierContactPerson}
+          contactPhone={record.supplierContactPhone}
         />
       ),
     },

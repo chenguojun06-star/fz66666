@@ -49,7 +49,7 @@ export function useOrderSummary(params: UseOrderSummaryParams) {
           const data = res.data as { records?: unknown[] };
           const records = data?.records || [];
           if (records.length > 0) {
-            const orderData = records[0] as any;
+            const orderData = records[0] as Record<string, unknown>;
             const parsedLines = parseProductionOrderLines(orderData);
             let lines: OrderLineItem[] = parsedLines;
             let detail: Record<string, unknown> = orderData;

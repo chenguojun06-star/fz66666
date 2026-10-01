@@ -141,25 +141,26 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   };
 
   const matchedProcess = useMemo(() => {
-    const byName = (p: any, target: string) => {
+    // 调用方可能传 Select option 形态（label/title），用结构类型承接多形态字段
+    const byName = (p: { name?: string; processName?: string; label?: string; title?: string }, target: string) => {
       const candidates = [p?.name, p?.processName, p?.label, p?.title].map((v) => String(v || '').trim());
       return candidates.some((v) => v && v === target);
     };
     const pickedName = String(currentNodeData.delegateProcessName || '').trim();
     const nodeLabel = String(nodeName || '').trim();
     if (pickedName) {
-      const byPicked = processList.find((p) => byName(p as any, pickedName));
-      if (byPicked) return byPicked as any;
+      const byPicked = processList.find((p) => byName(p, pickedName));
+      if (byPicked) return byPicked;
     }
     if (nodeLabel) {
-      const byNode = processList.find((p) => byName(p as any, nodeLabel));
-      if (byNode) return byNode as any;
+      const byNode = processList.find((p) => byName(p, nodeLabel));
+      if (byNode) return byNode;
     }
-    return (processList[0] as any) || null;
+    return processList[0] || null;
   }, [currentNodeData.delegateProcessName, nodeName, processList]);
 
   const delegateProcessCode = useMemo(() => {
-    return String((matchedProcess as any)?.id || (matchedProcess as any)?.processCode || (matchedProcess as any)?.code || '').trim();
+    return String(matchedProcess?.id || matchedProcess?.processCode || matchedProcess?.code || '').trim();
   }, [matchedProcess]);
 
   const updateNodeData = (field: keyof NodeOperationData, value: string | number | undefined) => {
@@ -251,11 +252,11 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           })();
 
           const fixedProcessName = String(
-            currentData.delegateProcessName || (matchedProcess as any)?.name || (matchedProcess as any)?.processName || nodeName || ''
+            currentData.delegateProcessName || matchedProcess?.name || matchedProcess?.processName || nodeName || ''
           ).trim();
           const fixedUnitPrice = (() => {
             if (typeof currentData.delegatePrice === 'number') return currentData.delegatePrice;
-            const picked = Number((matchedProcess as any)?.unitPrice);
+            const picked = Number(matchedProcess?.unitPrice);
             if (Number.isFinite(picked)) return picked;
             return Number(unitPrice) || 0;
           })();

@@ -166,7 +166,7 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
     setTrackingLoading(true);
     try {
       const response = await getProductionProcessTracking(orderId);
-      const data = (response as any)?.data || [];
+      const data = response?.data || [];
       const records = Array.isArray(data) ? data : [];
       setProcessTrackingRecords(records);
     } catch (error) {

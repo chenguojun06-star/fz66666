@@ -102,8 +102,8 @@ export const usePurchaseEditActions = (params: UsePurchaseEditActionsParams) => 
   const handleSaveAll = useCallback(async () => {
     const validRows = editableData.filter(r => r.materialCode || r.materialName);
     if (validRows.length === 0) { message.warning('请至少添加一行物料'); return; }
-    const REQUIRED = ['materialType', 'materialCode', 'materialName', 'unit', 'supplierName'];
-    const incomplete = validRows.find(r => REQUIRED.some(f => { const v = (r as any)[f]; return v === undefined || v === null || String(v).trim() === ''; }));
+    const REQUIRED = ['materialType', 'materialCode', 'materialName', 'unit', 'supplierName'] as (keyof MaterialPurchase)[];
+    const incomplete = validRows.find(r => REQUIRED.some(f => { const v = r[f]; return v === undefined || v === null || String(v).trim() === ''; }));
     if (incomplete) { message.warning('请完善所有物料的必填信息'); return; }
     setSaving(true);
     try {

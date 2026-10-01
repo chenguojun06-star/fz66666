@@ -33,9 +33,9 @@ export function formatScanDetail(record: ScanRecord): string {
   return parts.filter(Boolean).join(' · ') || '-';
 }
 
-export function extractChildProcessNames(processList: any[]): string[] {
+export function extractChildProcessNames(processList: Array<{ name?: string; processName?: string }>): string[] {
   if (!processList || processList.length === 0) return [];
-  const names = processList.map(p => ((p as any).processName || p.name || '').trim()).filter(Boolean);
+  const names = processList.map(p => (p.processName || p.name || '').trim()).filter(Boolean);
   return names;
 }
 
@@ -49,19 +49,19 @@ export function filterScanRecordsByNode(
   const nKey = String(nodeTypeKey || '').trim();
   if (childProcessNames.length > 0) {
     const matched = scanRecords.filter((r) => {
-      if (String((r as any)?.scanResult || '').trim() !== 'success') return false;
-      if ((Number((r as any)?.quantity) || 0) <= 0) return false;
-      const process = String((r as any)?.processName || '').trim();
+      if (String(r?.scanResult || '').trim() !== 'success') return false;
+      if ((Number(r?.quantity) || 0) <= 0) return false;
+      const process = String(r?.processName || '').trim();
       if (process && childProcessNames.some(cp => process === cp)) return true;
-      const stage = String((r as any)?.progressStage || '').trim();
+      const stage = String(r?.progressStage || '').trim();
       if (stage && childProcessNames.length === 1 && stage === childProcessNames[0]) return true;
       return false;
     });
     return matched;
   }
   const matched = scanRecords.filter((r) => {
-    if (String((r as any)?.scanResult || '').trim() !== 'success') return false;
-    if ((Number((r as any)?.quantity) || 0) <= 0) return false;
+    if (String(r?.scanResult || '').trim() !== 'success') return false;
+    if ((Number(r?.quantity) || 0) <= 0) return false;
     if (matchRecordToStage(r.progressStage, r.processName, nKey, nName)) return true;
     const stage = (r.progressStage || '').trim();
     const _process = (r.processName || '').trim();
@@ -323,7 +323,7 @@ export function deriveOrderLinesFromPurchases(purchases: MaterialPurchase[]): Or
   const colors = new Set<string>();
   const sizes = new Set<string>();
   let totalQty = 0;
-  purchases.forEach((p: any) => {
+  purchases.forEach((p) => {
     const c = String(p?.color || '').trim();
     const s = String(p?.size || '').trim();
     if (c && c !== '-') colors.add(c);

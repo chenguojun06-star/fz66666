@@ -65,7 +65,7 @@ export function usePredictionFeedback(params: UsePredictionFeedbackParams): {
     feedbackSentKeyRef.current = key;
 
     const maxScanTime = filteredScanRecords.reduce((latest, r) => {
-      const t = String((r as any).scanTime || '');
+      const t = String(r.scanTime || '');
       return t > latest ? t : latest;
     }, '');
 
