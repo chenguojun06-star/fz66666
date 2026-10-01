@@ -53,36 +53,36 @@ export const toPermissionRange = (value: unknown): UserInfo['permissionRange'] =
 export const isAdminUser = (user?: Partial<UserInfo> | null) => {
   if (!user) return false;
   // 明确标识
-  if ((user as any)?.isTenantOwner === true) return true;
-  if ((user as any)?.isSuperAdmin === true) return true;
+  if (user?.isTenantOwner === true) return true;
+  if (user?.isSuperAdmin === true) return true;
   // 精确匹配 roleId
-  if ((user as any)?.roleId === '1') return true;
+  if (user?.roleId === '1') return true;
   // 精确匹配 role
-  const role = String((user as any)?.role ?? (user as any)?.roleName ?? '').trim().toLowerCase();
+  const role = String(user?.role ?? user?.roleName ?? '').trim().toLowerCase();
   if (role === 'admin' || role === '管理员' || role === '老板') return true;
   return false;
 };
 
 export const isSupervisorOrAboveUser = (user?: Partial<UserInfo> | null) => {
   if (isAdminUser(user)) return true;
-  if ((user as any)?.isSuperAdmin === true) return true;
-  const role = String((user as any)?.role ?? (user as any)?.roleName ?? '').trim().toLowerCase();
+  if (user?.isSuperAdmin === true) return true;
+  const role = String(user?.role ?? user?.roleName ?? '').trim().toLowerCase();
   if (role === '主管' || role === 'manager' || role === 'supervisor' || role === '组长') return true;
   // 检查 permissions 是否包含 'all'
-  const perms = Array.isArray((user as any)?.permissions)
-    ? ((user as any).permissions as string[])
+  const perms = Array.isArray(user?.permissions)
+    ? (user?.permissions as string[])
     : [];
   return perms.includes('all');
 };
 
 export const getWorkspaceRole = (user?: Partial<UserInfo> | null): WorkspaceRole => {
   if (!user) return 'merchandiser';
-  const role = String((user as any)?.role ?? (user as any)?.roleName ?? '').trim().toLowerCase();
+  const role = String(user?.role ?? user?.roleName ?? '').trim().toLowerCase();
   // 精确匹配老板级别
-  if ((user as any)?.isTenantOwner === true || role === '老板' || role === '总经理') {
+  if (user?.isTenantOwner === true || role === '老板' || role === '总经理') {
     return 'boss';
   }
-  if ((user as any)?.isSuperAdmin === true) {
+  if (user?.isSuperAdmin === true) {
     return 'boss';
   }
   // 精确匹配管理层
