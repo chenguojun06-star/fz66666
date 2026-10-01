@@ -19,11 +19,11 @@ export const resolveStageMeta = (done: boolean, started: boolean) => {
 
 export const resolvePreferredSection = (detail: StyleInfo | null | undefined): WorkbenchSection => {
   if (!detail) return 'bom';
-  if (!(detail as any).bomCompletedTime) return 'bom';
-  if (!(detail as any).patternCompletedTime) return 'pattern';
-  if (!(detail as any).processCompletedTime) return 'process';
-  if (!(detail as any).secondaryCompletedTime) return 'secondary';
-  if (!(detail as any).productionCompletedTime) return 'production';
-  if (!(detail as any).price) return 'quotation';
+  if (!detail.bomCompletedTime) return 'bom';
+  if (!detail.patternCompletedTime) return 'pattern';
+  if (!detail.processCompletedTime) return 'process';
+  if (!detail.secondaryCompletedTime) return 'secondary';
+  if (!detail.productionCompletedTime) return 'production';
+  if (!detail.price) return 'quotation';
   return 'files';
 };

@@ -1,7 +1,7 @@
 {
   "_comment": "前端代码质量冻结基线（ratchet）。指标只许减少不许增加。由 scripts/check-frontend-quality.py 维护，每清理一处即调低对应值。口径为「行数」：含 : any 或 as any 的行数 / eslint-disable 指令数 / console.log 调用数。",
   "_updated": "D-631",
-  "any-lines": 2756,
+  "any-lines": 2747,
   "eslint-disable": 115,
   "console-log": 6
 }
