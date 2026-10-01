@@ -21,6 +21,8 @@ export interface UserInfo extends Record<string, unknown> {
   isFactoryOwner?: boolean;
   isSuperAdmin?: boolean;
   factoryId?: string;
+  /** 所属工厂名称（工厂账号登录后返回） */
+  factoryName?: string;
   tenantType?: 'SELF_FACTORY' | 'HYBRID' | 'BRAND';
   tenantModules?: string[];
 }

@@ -27,7 +27,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
   const [changePasswordForm] = Form.useForm();
   const [pwdLoading, setPwdLoading] = useState(false);
 
-  const factoryId = (user as any)?.factoryId;
+  const factoryId = user?.factoryId;
 
   const loadMembers = useCallback(async () => {
     if (!factoryId) return;
@@ -35,7 +35,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
     try {
       const res = await api.get('/system/user/list', {
         params: { factoryId, page: 1, pageSize: 100 },
-      }) as any;
+      });
       if (res.code === 200) {
         setMembers(res.data?.records || []);
       } else {
@@ -57,7 +57,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
     try {
       const res = await api.put('/system/user/status', null, {
         params: { id: String(record.id), status: newStatus },
-      }) as any;
+      });
       if (res.code === 200) {
         message.success('状态更新成功');
         setMembers(prev => prev.map(m => m.id === record.id ? { ...m, status: newStatus } : m));
@@ -71,7 +71,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
 
   const handleDelete = async (record: any) => {
     try {
-      const res = await tenantService.deleteSubAccount(Number(record.id)) as any;
+      const res = await tenantService.deleteSubAccount(Number(record.id));
       if (res.code === 200) {
         message.success('删除成功');
         setMembers(prev => prev.filter(m => m.id !== record.id));
@@ -87,7 +87,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
     try {
       const values = await addForm.validateFields();
       setAddLoading(true);
-      const res = await tenantService.addSubAccount({ ...values, factoryId, status: 'active' }) as any;
+      const res = await tenantService.addSubAccount({ ...values, factoryId, status: 'active' });
       if (res.code === 200) {
         message.success('新增成功');
         addForm.resetFields();
@@ -115,7 +115,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
       const res = await api.post('/system/user/me/change-password', {
         oldPassword: values.oldPassword,
         newPassword: values.newPassword,
-      }) as any;
+      });
       if (res.code === 200) {
         message.success('密码修改成功');
         changePasswordForm.resetFields();
@@ -227,19 +227,19 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
                     <div>
                       <div className="u-fs-16 u-fw-600">{userDisplayName}</div>
                       <div className="u-mt-4" style={{ color: 'var(--color-text-muted)' }}>
-                        {(user as any)?.factoryName || '外发工厂'}
+                        {user?.factoryName || '外发工厂'}
                       </div>
                     </div>
                   </div>
                   <div className="u-d-grid" style={{ gridTemplateColumns: '80px 1fr', rowGap: 12 }}>
                     <span style={{ color: 'var(--color-text-muted)' }}>账号</span>
-                    <span>{(user as any)?.username || '-'}</span>
+                    <span>{user?.username || '-'}</span>
                     <span style={{ color: 'var(--color-text-muted)' }}>手机号</span>
-                    <span>{(user as any)?.phone || '-'}</span>
+                    <span>{user?.phone || '-'}</span>
                     <span style={{ color: 'var(--color-text-muted)' }}>角色</span>
-                    <span>{(user as any)?.roleName || '-'}</span>
+                    <span>{user?.roleName || '-'}</span>
                     <span style={{ color: 'var(--color-text-muted)' }}>所属工厂</span>
-                    <span>{(user as any)?.factoryName || '-'}</span>
+                    <span>{user?.factoryName || '-'}</span>
                   </div>
                 </div>
               ),
