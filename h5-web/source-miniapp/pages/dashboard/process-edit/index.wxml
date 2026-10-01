@@ -90,9 +90,9 @@
             <view class="pef-row">
               <text class="pef-label">{{t.difficultyLabel}}</text>
               <view class="pef-difficulty">
-                <view class="diff-opt {{editForm.difficulty === '易' ? 'diff-opt--active' : ''}}" catchtap="onSetDifficulty" data-val="易">易</view>
-                <view class="diff-opt {{editForm.difficulty === '中' ? 'diff-opt--active' : ''}}" catchtap="onSetDifficulty" data-val="中">中</view>
-                <view class="diff-opt {{editForm.difficulty === '难' ? 'diff-opt--active' : ''}}" catchtap="onSetDifficulty" data-val="难">难</view>
+                <view class="diff-opt {{editForm.difficulty === '易' ? 'diff-opt--active' : ''}}" catchtap="onSetDifficulty" data-val="易">{{t.diffEasy}}</view>
+                <view class="diff-opt {{editForm.difficulty === '中' ? 'diff-opt--active' : ''}}" catchtap="onSetDifficulty" data-val="中">{{t.diffMedium}}</view>
+                <view class="diff-opt {{editForm.difficulty === '难' ? 'diff-opt--active' : ''}}" catchtap="onSetDifficulty" data-val="难">{{t.diffHard}}</view>
               </view>
             </view>
             <view class="pef-actions">

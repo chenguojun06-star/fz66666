@@ -339,9 +339,13 @@ const TaskCard: React.FC<{
       style={{ borderLeftColor: prio.color }}
       onClick={() => onClick(task)}>
       <div className={styles.taskCardTop}>
-        <span className={styles.priorityTag} style={{ color: prio.color, background: prio.bg }}>
-          {prio.label}
-        </span>
+        {task.status === 'completed' ? (
+          <span className={styles.priorityTag} style={{ color: 'var(--color-success)', background: 'var(--status-success-bg)' }}>已完成</span>
+        ) : (
+          <span className={styles.priorityTag} style={{ color: prio.color, background: prio.bg }}>
+            {prio.label}
+          </span>
+        )}
         {task.orderLinkStatus && (
           <span className={styles.moduleTag} style={{ color: getOrderLinkStatusColor(task.orderLinkStatus), borderColor: getOrderLinkStatusColor(task.orderLinkStatus) }}>
             {getOrderLinkStatusLabel(task.orderLinkStatus)}
@@ -360,7 +364,9 @@ const TaskCard: React.FC<{
           {/* D-612b 岗位池：无跟进人但有岗位标签的待办，显示岗位归属（对应岗位的所有人可见，谁领取算谁的） */}
           {!task.assigneeName && task.assigneeRole && <span>待领取 · {task.assigneeRole}</span>}
           {task.creatorName && <span>创建 {task.creatorName}</span>}
-          {task.endTime && <span>截止 {task.endTime.slice(0, 10)}</span>}
+          {task.status === 'completed'
+            ? (task.endTime && <span>办结 {task.endTime.slice(0, 10)}</span>)
+            : (task.endTime && <span>截止 {task.endTime.slice(0, 10)}</span>)}
           {!isSystem && task.lastOrderProgress != null && <span>进度 {task.lastOrderProgress}%</span>}
           {task.reminderCount != null && task.reminderCount > 0 && <span>提醒 {task.reminderCount}次</span>}
         </div>

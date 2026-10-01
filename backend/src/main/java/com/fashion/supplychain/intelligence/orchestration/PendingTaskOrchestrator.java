@@ -9,25 +9,35 @@ import com.fashion.supplychain.finance.entity.ExpenseReimbursement;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.PayrollSettlement;
 import com.fashion.supplychain.finance.service.ExpenseReimbursementService;
+import com.fashion.supplychain.finance.service.MaterialReconciliationService;
+import com.fashion.supplychain.finance.service.PayrollSettlementService;
 import com.fashion.supplychain.finance.orchestration.MaterialReconciliationOrchestrator;
 import com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrator;
 import com.fashion.supplychain.intelligence.dto.PendingTaskDTO;
 import com.fashion.supplychain.intelligence.dto.PendingTaskSummaryDTO;
 import com.fashion.supplychain.intelligence.entity.CollaborationTask;
+import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.FactoryShipment;
 import com.fashion.supplychain.production.entity.MaterialPicking;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionExceptionReport;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
+import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.MaterialPurchaseQueryHelper;
 import com.fashion.supplychain.production.helper.ScanRecordQueryHelper;
 import com.fashion.supplychain.production.orchestration.CuttingTaskOrchestrator;
 import com.fashion.supplychain.production.orchestration.ProductWarehousingOrchestrator;
+import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.FactoryShipmentService;
 import com.fashion.supplychain.production.service.MaterialPickingService;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionExceptionReportService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
+import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.stock.entity.SampleLoan;
 import com.fashion.supplychain.stock.mapper.SampleLoanMapper;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -97,6 +107,13 @@ public class PendingTaskOrchestrator {
     @Autowired private FactoryShipmentService factoryShipmentService;
     @Autowired private MaterialPickingService materialPickingService;
     @Autowired private SampleLoanMapper sampleLoanMapper;
+    // 办结留痕（D-618）：近7天已办结系统待办的补充查询
+    @Autowired private CuttingTaskService cuttingTaskService;
+    @Autowired private ScanRecordService scanRecordService;
+    @Autowired private ProductWarehousingService productWarehousingService;
+    @Autowired private MaterialPurchaseService materialPurchaseService;
+    @Autowired private PayrollSettlementService payrollSettlementService;
+    @Autowired private MaterialReconciliationService materialReconciliationService;
     @Autowired private com.fashion.supplychain.intelligence.mapper.CollaborationTaskMapper collaborationTaskMapper;
 
     public List<PendingTaskDTO> getMyPendingTasks() {
@@ -114,6 +131,20 @@ public class PendingTaskOrchestrator {
         collectSafely("shipment", this::collectShipmentTasks, all);
         collectSafely("sampleLoan", this::collectSampleLoanTasks, all);
         collectSafely("materialPicking", this::collectMaterialPickingTasks, all);
+        // 办结留痕（D-618）：近7天已办结的业务事项，带经办人与办结时间进已完成页签
+        collectSafely("cuttingDone", this::collectCuttingCompletedTasks, all);
+        collectSafely("qualityDone", this::collectQualityCompletedTasks, all);
+        collectSafely("repairDone", this::collectRepairCompletedTasks, all);
+        collectSafely("materialDone", this::collectMaterialCompletedTasks, all);
+        collectSafely("overdueDone", this::collectOverdueCompletedOrders, all);
+        collectSafely("exceptionDone", this::collectExceptionCompletedTasks, all);
+        collectSafely("styleDevDone", this::collectStyleDevelopmentCompletedTasks, all);
+        collectSafely("payrollDone", this::collectPayrollCompletedTasks, all);
+        collectSafely("materialReconDone", this::collectMaterialReconciliationCompletedTasks, all);
+        collectSafely("expenseDone", this::collectExpenseCompletedTasks, all);
+        collectSafely("shipmentDone", this::collectShipmentCompletedTasks, all);
+        collectSafely("sampleLoanDone", this::collectSampleLoanCompletedTasks, all);
+        collectSafely("pickingDone", this::collectMaterialPickingCompletedTasks, all);
         collectSafely("collabTask", this::collectCollaborationTasks, all);
         // 补全领取人ID：返修/逾期/异常/外发/样衣环节等只落库了名字（订单 merchandiser、样衣各环节 assignee 均为名字字段），
         // 按名字批量解析租户内用户ID 回填 assigneeId，让 filterByResponsiblePerson 优先走 ID 精确匹配，名字匹配只做兜底
@@ -136,15 +167,19 @@ public class PendingTaskOrchestrator {
 
     public PendingTaskSummaryDTO getMyPendingTaskSummary() {
         List<PendingTaskDTO> all = getMyPendingTasks();
+        // 办结留痕（D-618）：角标/汇总只统计未办结的，已完成的不进计数
+        List<PendingTaskDTO> active = all.stream()
+                .filter(t -> !"completed".equals(t.getTaskStatus()))
+                .collect(Collectors.toList());
         PendingTaskSummaryDTO summary = new PendingTaskSummaryDTO();
-        summary.setTotalCount(all.size());
-        summary.setHighPriorityCount((int) all.stream().filter(t -> "high".equals(t.getPriority())).count());
+        summary.setTotalCount(active.size());
+        summary.setHighPriorityCount((int) active.stream().filter(t -> "high".equals(t.getPriority())).count());
 
         Map<String, CategoryCountAccumulator> accumulators = new LinkedHashMap<>();
         for (Map.Entry<String, String[]> entry : CATEGORY_META.entrySet()) {
             accumulators.put(entry.getKey(), new CategoryCountAccumulator(entry.getValue()[0], entry.getValue()[1]));
         }
-        for (PendingTaskDTO t : all) {
+        for (PendingTaskDTO t : active) {
             CategoryCountAccumulator acc = accumulators.get(t.getTaskType());
             if (acc != null) {
                 acc.count++;
@@ -170,7 +205,7 @@ public class PendingTaskOrchestrator {
         // D-237：质检不合格件数——用户要求「质检有问题的记录要让小云也知道」
         summary.setQualityDefectCount(countQualityDefects());
 
-        PendingTaskDTO topUrgent = all.stream()
+        PendingTaskDTO topUrgent = active.stream()
                 .filter(t -> "high".equals(t.getPriority()))
                 .findFirst().orElse(null);
         if (topUrgent != null) {
@@ -992,6 +1027,388 @@ public class PendingTaskOrchestrator {
             log.warn("[PendingTask] 按职位加载租户用户失败: {}", e.getMessage());
             return List.of();
         }
+    }
+
+    // ───────────────────────── 办结留痕（D-618）─────────────────────────
+    // 近 7 天内办结的业务事项以 taskStatus=completed 并入聚合，前端已完成页签可见；
+    // 经办人/办结时间取自各业务自己的落库字段（逐类核实过），角标与汇总计数不含已完成。
+
+    /** 办结留痕保留窗口 */
+    private static final int COMPLETED_TRACE_DAYS = 7;
+
+    private LocalDateTime completedSince() {
+        return LocalDateTime.now().minusDays(COMPLETED_TRACE_DAYS);
+    }
+
+    /**
+     * 已办结 DTO 统一构建：priority 固定 low（不进紧急/角标），createdAt=办结时间（近况排序），
+     * endTime 冗余放办结时间供前端显示「办结 YYYY-MM-DD」。
+     */
+    private PendingTaskDTO completedDto(String id, String taskType, String module, String title, String desc,
+                                        String orderNo, String styleNo, String deepLinkPath,
+                                        LocalDateTime doneTime, String assigneeId, String assigneeName, String assigneeRole) {
+        PendingTaskDTO dto = new PendingTaskDTO();
+        dto.setId(id);
+        dto.setTaskType(taskType);
+        dto.setModule(module);
+        dto.setTitle(title);
+        dto.setDescription(desc == null ? "" : desc);
+        dto.setOrderNo(safe(orderNo));
+        dto.setStyleNo(safe(styleNo));
+        dto.setDeepLinkPath(deepLinkPath);
+        dto.setPriority("low");
+        dto.setCreatedAt(doneTime);
+        dto.setTaskStatus("completed");
+        if (StringUtils.hasText(assigneeId)) dto.setAssigneeId(assigneeId);
+        if (StringUtils.hasText(assigneeName)) dto.setAssigneeName(assigneeName);
+        if (StringUtils.hasText(assigneeRole)) dto.setAssigneeRole(assigneeRole);
+        if (doneTime != null) dto.setEndTime(doneTime.toString());
+        fillCategoryMeta(dto);
+        return dto;
+    }
+
+    /** 裁剪任务已完成：status=bundled（裁剪完成态）且 bundledTime 在窗口内，经办人=领取人 */
+    private List<PendingTaskDTO> collectCuttingCompletedTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<CuttingTask> done = cuttingTaskService.lambdaQuery()
+                .eq(CuttingTask::getTenantId, tenantId)
+                .eq(CuttingTask::getStatus, "bundled")
+                .ge(CuttingTask::getBundledTime, completedSince())
+                .orderByDesc(CuttingTask::getBundledTime)
+                .last("LIMIT " + MAX_PER_CATEGORY)
+                .list();
+        if (done == null || done.isEmpty()) return List.of();
+        return done.stream().map(t -> completedDto(
+                "CUT_" + t.getId(), "CUTTING_TASK", "production",
+                "裁剪已完成 " + safe(t.getProductionOrderNo()),
+                safe(t.getStyleNo()) + " " + (t.getOrderQuantity() != null ? t.getOrderQuantity() : 0) + "件",
+                t.getProductionOrderNo(), t.getStyleNo(),
+                StringUtils.hasText(t.getProductionOrderNo())
+                        ? "/production/cutting/task/" + pathSegment(t.getProductionOrderNo()) : "/production/cutting",
+                t.getBundledTime(), t.getReceiverId(), t.getReceiverName(), "裁剪员"
+        )).collect(Collectors.toList());
+    }
+
+    /** 质检已完成：quality_receive 扫码记录 confirmTime 在窗口内（确认完成=办结），经办人=扫码操作人 */
+    private List<PendingTaskDTO> collectQualityCompletedTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<ScanRecord> done = scanRecordService.lambdaQuery()
+                .eq(ScanRecord::getTenantId, tenantId)
+                .eq(ScanRecord::getScanType, "quality")
+                .eq(ScanRecord::getProcessCode, "quality_receive")
+                .isNotNull(ScanRecord::getConfirmTime)
+                .ge(ScanRecord::getConfirmTime, completedSince())
+                .orderByDesc(ScanRecord::getConfirmTime)
+                .last("LIMIT " + MAX_PER_CATEGORY)
+                .list();
+        if (done == null || done.isEmpty()) return List.of();
+        return done.stream().map(r -> completedDto(
+                "QC_" + r.getId(), "QUALITY_INSPECT", "production",
+                "质检已确认 " + safe(r.getOrderNo()),
+                safe(r.getProcessName()) + " " + (r.getQuantity() != null ? r.getQuantity() : 0) + "件",
+                r.getOrderNo(), r.getStyleNo(),
+                StringUtils.hasText(r.getOrderId())
+                        ? "/production/warehousing/inspect/" + pathSegment(r.getOrderId()) : "/production/order-flow",
+                r.getConfirmTime(), r.getOperatorId(), r.getOperatorName(), "质检员"
+        )).collect(Collectors.toList());
+    }
+
+    /** 返修已完成：入库次品记录 repair_status=repair_done 且近期更新，关联人=质检操作人 */
+    private List<PendingTaskDTO> collectRepairCompletedTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<ProductWarehousing> done = productWarehousingService.lambdaQuery()
+                .eq(ProductWarehousing::getTenantId, tenantId)
+                .eq(ProductWarehousing::getDeleteFlag, 0)
+                .eq(ProductWarehousing::getRepairStatus, "repair_done")
+                .gt(ProductWarehousing::getUnqualifiedQuantity, 0)
+                .ge(ProductWarehousing::getUpdateTime, completedSince())
+                .orderByDesc(ProductWarehousing::getUpdateTime)
+                .last("LIMIT " + MAX_PER_CATEGORY)
+                .list();
+        if (done == null || done.isEmpty()) return List.of();
+        return done.stream().map(w -> completedDto(
+                "RPR_" + w.getId(), "REPAIR", "production",
+                "返修已完成 " + safe(w.getOrderNo()),
+                safe(w.getStyleName()) + " " + (w.getUnqualifiedQuantity() != null ? w.getUnqualifiedQuantity() : 0) + "件次品已返修",
+                w.getOrderNo(), "",
+                "/production/warehousing",
+                w.getUpdateTime(), null, w.getQualityOperatorName(), "跟单员"
+        )).collect(Collectors.toList());
+    }
+
+    /** 采购已办结：status=completed 且近期更新，经办人=回料确认人（无则采购领取人） */
+    private List<PendingTaskDTO> collectMaterialCompletedTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<MaterialPurchase> done = materialPurchaseService.lambdaQuery()
+                .eq(MaterialPurchase::getTenantId, tenantId)
+                .eq(MaterialPurchase::getStatus, "completed")
+                .ge(MaterialPurchase::getUpdateTime, completedSince())
+                .orderByDesc(MaterialPurchase::getUpdateTime)
+                .last("LIMIT " + MAX_PER_CATEGORY)
+                .list();
+        if (done == null || done.isEmpty()) return List.of();
+        return done.stream().map(p -> {
+            LocalDateTime doneTime = p.getReturnConfirmTime() != null ? p.getReturnConfirmTime() : p.getUpdateTime();
+            String person = StringUtils.hasText(p.getReturnConfirmerName()) ? p.getReturnConfirmerName() : p.getReceiverName();
+            return completedDto(
+                    "MAT_" + p.getId(), "MATERIAL_PURCHASE", "production",
+                    "采购已办结 " + safe(p.getOrderNo()),
+                    safe(p.getStyleNo()),
+                    p.getOrderNo(), p.getStyleNo(),
+                    StringUtils.hasText(p.getStyleNo())
+                            ? "/production/material/" + pathSegment(p.getStyleNo()) : "/production/material",
+                    doneTime, p.getReturnConfirmerId(), person, "采购员"
+            );
+        }).collect(Collectors.toList());
+    }
+
+    /** 逾期订单已办结：近期完工但晚于计划完工（确曾逾期），或近期关结/报废且计划完工日已过 */
+    private List<PendingTaskDTO> collectOverdueCompletedOrders() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<ProductionOrder> done = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .eq(ProductionOrder::getDeleteFlag, 0)
+                .isNotNull(ProductionOrder::getPlannedEndDate)
+                .lt(ProductionOrder::getPlannedEndDate, LocalDateTime.now())
+                // 办结时间口径：completed 看实际完工时间；closed/scrapped 无完工时间才退近期更新时间，
+                // 避免老订单仅因近期被碰过 update_time 就混进留痕
+                .and(w -> w
+                        .and(q -> q.eq(ProductionOrder::getStatus, "completed")
+                                .ge(ProductionOrder::getActualEndDate, completedSince()))
+                        .or()
+                        .and(q -> q.in(ProductionOrder::getStatus, "closed", "scrapped")
+                                .ge(ProductionOrder::getUpdateTime, completedSince())))
+                .orderByDesc(ProductionOrder::getUpdateTime)
+                .last("LIMIT " + MAX_PER_CATEGORY)
+                .list();
+        if (done == null || done.isEmpty()) return List.of();
+        return done.stream().map(o -> {
+            LocalDateTime doneTime = o.getActualEndDate() != null ? o.getActualEndDate() : o.getUpdateTime();
+            return completedDto(
+                    "OVD_" + o.getId(), "OVERDUE_ORDER", "production",
+                    "逾期订单已办结 " + safe(o.getOrderNo()),
+                    safe(o.getFactoryName()),
+                    o.getOrderNo(), o.getStyleNo(),
+                    StringUtils.hasText(o.getOrderNo())
+                            ? "/production/order-flow?orderNo=" + pathSegment(o.getOrderNo()) : "/production/order-flow",
+                    doneTime, null, o.getMerchandiser(), "跟单员"
+            );
+        }).collect(Collectors.toList());
+    }
+
+    /** 异常已处理：status=RESOLVED 且 handleTime 在窗口内，经办人=处理人 */
+    private List<PendingTaskDTO> collectExceptionCompletedTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<ProductionExceptionReport> done = exceptionReportService.lambdaQuery()
+                .eq(ProductionExceptionReport::getTenantId, tenantId)
+                .eq(ProductionExceptionReport::getStatus, "RESOLVED")
+                .ge(ProductionExceptionReport::getHandleTime, completedSince())
+                .orderByDesc(ProductionExceptionReport::getHandleTime)
+                .last("LIMIT " + MAX_PER_CATEGORY)
+                .list();
+        if (done == null || done.isEmpty()) return List.of();
+        return done.stream().map(r -> completedDto(
+                "EXC_" + r.getId(), "EXCEPTION_REPORT", "production",
+                "异常已处理 " + safe(r.getOrderNo()),
+                safe(r.getExceptionType()),
+                r.getOrderNo(), "",
+                StringUtils.hasText(r.getOrderNo())
+                        ? "/production/exception-report?keyword=" + pathSegment(r.getOrderNo()) : "/production/exception-report",
+                r.getHandleTime(), r.getHandlerId(), r.getHandlerName(), "跟单员"
+        )).collect(Collectors.toList());
+    }
+
+    /** 样衣环节已办结：7 个环节各自的 completedTime 在窗口内的逐环节留痕，经办人=环节领取人 */
+    private List<PendingTaskDTO> collectStyleDevelopmentCompletedTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        LocalDateTime since = completedSince();
+        List<StyleInfo> styles = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getTenantId, tenantId)
+                .and(w -> w
+                        .ge(StyleInfo::getPatternCompletedTime, since).or()
+                        .ge(StyleInfo::getBomCompletedTime, since).or()
+                        .ge(StyleInfo::getSizeCompletedTime, since).or()
+                        .ge(StyleInfo::getProcessCompletedTime, since).or()
+                        .ge(StyleInfo::getProductionCompletedTime, since).or()
+                        .ge(StyleInfo::getSecondaryCompletedTime, since).or()
+                        .ge(StyleInfo::getSizePriceCompletedTime, since))
+                .last("LIMIT " + MAX_PER_CATEGORY)
+                .list();
+        if (styles == null || styles.isEmpty()) return List.of();
+        List<PendingTaskDTO> result = new ArrayList<>();
+        for (StyleInfo s : styles) {
+            if ("开发样报废".equals(s.getProgressNode())) continue;
+            addStyleStageCompleted(result, s, "pattern",    "纸样开发", s.getPatternAssignee(),    s.getPatternCompletedTime(),    "pattern");
+            addStyleStageCompleted(result, s, "bom",        "物料清单", s.getBomAssignee(),        s.getBomCompletedTime(),        "bom");
+            addStyleStageCompleted(result, s, "size",       "尺寸表",   s.getSizeAssignee(),       s.getSizeCompletedTime(),       "pattern");
+            addStyleStageCompleted(result, s, "process",    "工序单价", s.getProcessAssignee(),    s.getProcessCompletedTime(),    "process");
+            addStyleStageCompleted(result, s, "production", "工艺说明", s.getProductionAssignee(), s.getProductionCompletedTime(), "production");
+            addStyleStageCompleted(result, s, "secondary",  "二次工艺", s.getSecondaryAssignee(),  s.getSecondaryCompletedTime(),  "secondary");
+            addStyleStageCompleted(result, s, "sizePrice",  "码数单价", s.getSizePriceAssignee(),  s.getSizePriceCompletedTime(),  "process");
+        }
+        return result;
+    }
+
+    private void addStyleStageCompleted(List<PendingTaskDTO> result, StyleInfo s, String stageKey, String stageLabel,
+                                        String assignee, LocalDateTime completedTime, String tabKey) {
+        if (completedTime == null || completedTime.isBefore(completedSince())) return;
+        result.add(completedDto(
+                "STY_" + s.getId() + "_" + stageKey, "STYLE_DEVELOPMENT", "style",
+                stageLabel + "已办结 " + safe(s.getStyleNo()),
+                safe(s.getStyleName()),
+                "", s.getStyleNo(),
+                "/style-info/" + s.getId() + "?tab=" + tabKey,
+                completedTime, null, assignee, stageLabel
+        ));
+    }
+
+    /** 工资结算已办结：status=approved 且 confirmTime 在窗口内，经办人=审批确认人 */
+    private List<PendingTaskDTO> collectPayrollCompletedTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<PayrollSettlement> done = payrollSettlementService.lambdaQuery()
+                .eq(PayrollSettlement::getTenantId, tenantId)
+                .eq(PayrollSettlement::getStatus, "approved")
+                .ge(PayrollSettlement::getConfirmTime, completedSince())
+                .orderByDesc(PayrollSettlement::getConfirmTime)
+                .last("LIMIT " + MAX_PER_CATEGORY)
+                .list();
+        if (done == null || done.isEmpty()) return List.of();
+        return done.stream().map(ps -> completedDto(
+                "PAY_" + ps.getId(), "PAYROLL_SETTLEMENT", "finance",
+                "工资结算已审批 " + safe(ps.getSettlementNo()),
+                safe(ps.getOrderNo()) + (ps.getTotalAmount() != null ? " 金额" + ps.getTotalAmount().toPlainString() : ""),
+                ps.getOrderNo(), ps.getStyleNo(),
+                "/finance/payroll-operator-summary",
+                ps.getConfirmTime(), ps.getConfirmerId(), ps.getConfirmerName(), "财务人员"
+        )).collect(Collectors.toList());
+    }
+
+    /** 物料对账已办结：离开 pending（verified/approved/paid/rejected）且近期有状态更新，经办人=审核人 */
+    private List<PendingTaskDTO> collectMaterialReconciliationCompletedTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<MaterialReconciliation> done = materialReconciliationService.lambdaQuery()
+                .eq(MaterialReconciliation::getTenantId, tenantId)
+                .in(MaterialReconciliation::getStatus, "verified", "approved", "paid", "rejected")
+                .ge(MaterialReconciliation::getUpdateTime, completedSince())
+                .orderByDesc(MaterialReconciliation::getUpdateTime)
+                .last("LIMIT " + MAX_PER_CATEGORY)
+                .list();
+        if (done == null || done.isEmpty()) return List.of();
+        return done.stream().map(mr -> {
+            LocalDateTime doneTime = mr.getVerifiedAt() != null ? mr.getVerifiedAt()
+                    : (mr.getApprovedAt() != null ? mr.getApprovedAt()
+                    : (mr.getPaidAt() != null ? mr.getPaidAt() : mr.getUpdateTime()));
+            return completedDto(
+                    "MRC_" + mr.getId(), "MATERIAL_RECON", "finance",
+                    "物料对账已办结 " + safe(mr.getReconciliationNo()),
+                    safe(mr.getMaterialName()) + " " + safe(mr.getSupplierName())
+                            + (mr.getFinalAmount() != null ? " " + mr.getFinalAmount().toPlainString() + "元" : ""),
+                    mr.getOrderNo(), mr.getStyleNo(),
+                    "/finance/material-reconciliation",
+                    doneTime, mr.getAuditOperatorId(), mr.getAuditOperatorName(), "财务人员"
+            );
+        }).collect(Collectors.toList());
+    }
+
+    /** 费用报销已办结：approved/rejected/paid 且审批时间在窗口内，经办人=审批人 */
+    private List<PendingTaskDTO> collectExpenseCompletedTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<ExpenseReimbursement> done = expenseReimbursementService.lambdaQuery()
+                .eq(ExpenseReimbursement::getTenantId, tenantId)
+                .eq(ExpenseReimbursement::getDeleteFlag, 0)
+                .in(ExpenseReimbursement::getStatus, "approved", "rejected", "paid")
+                .ge(ExpenseReimbursement::getApprovalTime, completedSince())
+                .orderByDesc(ExpenseReimbursement::getApprovalTime)
+                .last("LIMIT " + MAX_PER_CATEGORY)
+                .list();
+        if (done == null || done.isEmpty()) return List.of();
+        return done.stream().map(er -> completedDto(
+                "EXP_" + er.getId(), "EXPENSE_REIMBURSE", "finance",
+                "费用报销已办结 " + safe(er.getReimbursementNo()),
+                safe(er.getApplicantName()) + " " + safe(er.getTitle())
+                        + (er.getAmount() != null ? " " + er.getAmount().toPlainString() + "元" : ""),
+                "", "",
+                "/finance/expense-reimbursement",
+                er.getApprovalTime(), er.getApproverId() != null ? String.valueOf(er.getApproverId()) : null,
+                er.getApproverName(), "财务人员"
+        )).collect(Collectors.toList());
+    }
+
+    /** 外发已收货：receiveStatus=received 且收货时间在窗口内，经办人=收货人 */
+    private List<PendingTaskDTO> collectShipmentCompletedTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<FactoryShipment> done = factoryShipmentService.lambdaQuery()
+                .eq(FactoryShipment::getTenantId, tenantId)
+                .eq(FactoryShipment::getReceiveStatus, "received")
+                .ge(FactoryShipment::getReceiveTime, completedSince())
+                .orderByDesc(FactoryShipment::getReceiveTime)
+                .last("LIMIT " + MAX_PER_CATEGORY)
+                .list();
+        if (done == null || done.isEmpty()) return List.of();
+        return done.stream().map(fs -> completedDto(
+                "SHP_" + fs.getId(), "SHIPMENT", "production",
+                "外发已收货 " + safe(fs.getOrderNo()),
+                safe(fs.getStyleNo()) + " 已收" + (fs.getReceivedQuantity() != null ? fs.getReceivedQuantity() : 0) + "件",
+                fs.getOrderNo(), fs.getStyleNo(),
+                "/production/external-factory",
+                fs.getReceiveTime(), fs.getReceivedBy(), fs.getReceivedByName(), "跟单员"
+        )).collect(Collectors.toList());
+    }
+
+    /** 样衣已归还：status=returned 且归还时间在窗口内，关联人=借用人 */
+    private List<PendingTaskDTO> collectSampleLoanCompletedTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<SampleLoan> done = sampleLoanMapper.selectList(new LambdaQueryWrapper<SampleLoan>()
+                .eq(SampleLoan::getTenantId, tenantId)
+                .eq(SampleLoan::getDeleteFlag, 0)
+                .eq(SampleLoan::getStatus, "returned")
+                .ge(SampleLoan::getReturnDate, completedSince())
+                .orderByDesc(SampleLoan::getReturnDate)
+                .last("LIMIT " + MAX_PER_CATEGORY));
+        if (done == null || done.isEmpty()) return List.of();
+        return done.stream().map(l -> completedDto(
+                "LOAN_" + l.getId(), "SAMPLE_LOAN", "warehouse",
+                "样衣已归还 " + safe(l.getBorrower()),
+                "借" + (l.getQuantity() != null ? l.getQuantity() : 0) + "件",
+                "", "",
+                "/warehouse/sample",
+                l.getReturnDate(), l.getBorrowerId(), l.getBorrower(), "借用人"
+        )).collect(Collectors.toList());
+    }
+
+    /** 领料已出库：status=completed 且近期更新，经办人=领料人 */
+    private List<PendingTaskDTO> collectMaterialPickingCompletedTasks() {
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        List<MaterialPicking> done = materialPickingService.lambdaQuery()
+                .eq(MaterialPicking::getTenantId, tenantId)
+                .eq(MaterialPicking::getDeleteFlag, 0)
+                .eq(MaterialPicking::getStatus, "completed")
+                .ge(MaterialPicking::getUpdateTime, completedSince())
+                .orderByDesc(MaterialPicking::getUpdateTime)
+                .last("LIMIT " + MAX_PER_CATEGORY)
+                .list();
+        if (done == null || done.isEmpty()) return List.of();
+        return done.stream().map(p -> completedDto(
+                "PK_" + p.getId(), "MATERIAL_PICKING", "production",
+                "领料已出库 " + safe(p.getPickingNo()),
+                safe(p.getOrderNo()) + " " + safe(p.getStyleNo()),
+                p.getOrderNo(), p.getStyleNo(),
+                "/production/picking",
+                p.getUpdateTime(), p.getPickerId(), p.getPickerName(), "领料员"
+        )).collect(Collectors.toList());
     }
 
     private void resolveAssigneeIdsByName(List<PendingTaskDTO> tasks) {

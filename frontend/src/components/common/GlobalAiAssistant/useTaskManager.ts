@@ -21,7 +21,7 @@ function mapPendingToTaskItem(p: PendingTaskDTO): TaskItem {
     module: TASK_TYPE_MODULE[p.taskType] || 'production',
     taskType: p.taskType,
     priority: p.priority || 'medium',
-    status: (p.taskStatus || 'pending') as TaskStatus,
+    status: ((p.taskStatus || 'pending').toLowerCase()) as TaskStatus,
     orderNo: p.orderNo,
     styleNo: p.styleNo,
     deepLinkPath: p.deepLinkPath,
@@ -68,9 +68,8 @@ export function useTaskManager() {
 
     const pendingData = pendingRes?.code === 200 ? pendingRes.data : (pendingRes?.data || pendingRes);
     const pendingItems: PendingTaskDTO[] = Array.isArray(pendingData) ? pendingData : [];
-    const pendingTasks: TaskItem[] = pendingItems
-      .filter((p: PendingTaskDTO) => p.taskStatus !== 'completed')
-      .map(mapPendingToTaskItem);
+    // D-618 办结留痕：已办结的系统待办（带经办人/办结时间）保留进列表，供「已完成」页签展示
+    const pendingTasks: TaskItem[] = pendingItems.map(mapPendingToTaskItem);
 
     const existingSysIds = new Set(pendingTasks.map(t => t.id));
     const merged = [...pendingTasks, ...personalTasks.filter(t => !existingSysIds.has(t.id))];
