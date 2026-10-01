@@ -41,7 +41,24 @@ public class ProactivePatrolAgent {
     @Autowired
     private ObjectProvider<ProactiveInsightService> proactiveInsightServiceProvider;
 
-    @Scheduled(cron = "0 5 * * * ?")
+    /**
+     * D-700：由「每小时」降为「每 6 小时」。
+     *
+     * <p>为什么降：这是一次供应链<b>全局主动巡检</b>，每次执行对<b>每个活跃租户</b>都要
+     * 拉起 4 个部门 agent（pmc / finance / qc / ceo，见 MultiAgentDebateOrchestrator），
+     * 即单次执行 = 4 × 租户数次 LLM 往返。原 cron {@code 0 5 * * * ?} 是<b>每小时</b>，
+     * 意味着 24 × 4 = 96 次部门级调用/天/租户，而这些结论只有被消费时才产生价值。
+     * 实测当天 t_intelligence_metrics 里 ceo/finance/qc/pmc-agent 各 51 次、跨 17 小时，
+     * 全部命中关键词兜底（avg response 仅 15 字符、avg latency 约 130ms）——
+     * 即<b>绝大多数是空转</b>：既没拿到有效结论，又把调用量打上去了。
+     *
+     * <p>改动的取舍：降频会减少「异常发现」的时效性（原来最迟 1 小时发现，现在 6 小时）。
+     * 这是刻意的产品决策 —— 目前该巡检的产出本就没被消费，先把频率对齐到消费能力。
+     *
+     * <p>可调：环境变量 {@code AI_PROACTIVE_PATROL_CRON}（Spring cron 表达式）。
+     * 如需临时恢复每小时，设 {@code AI_PROACTIVE_PATROL_CRON=0 5 * * * ?} 即可，无需改代码。
+     */
+    @Scheduled(cron = "${ai.proactive-patrol.cron:0 5 0/6 * * ?}")
     public void runPatrolTask() {
         if (distributedLockService != null) {
             String lockValue = distributedLockService.tryLock("job:proactive-patrol", 50, TimeUnit.MINUTES);

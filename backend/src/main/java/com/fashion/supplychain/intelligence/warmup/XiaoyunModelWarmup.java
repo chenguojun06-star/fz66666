@@ -5,6 +5,7 @@ import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceO
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -25,9 +26,17 @@ import org.springframework.stereotype.Component;
  * 原注释称"960 次/天 × 1 token 可忽略"与实测不符（实际每次 226 字符且全部失败）。
  * <b>重新开启前必须先补上租户上下文</b>，否则开了也只是继续全量失败，
  * 可用环境变量 {@code XIAOYUN_WARMUP_ENABLED=true} 临时开启。
+ * <p><b>D-700 补：关闭时不再空转</b>。此前只有方法内 {@code if (!enabled) return;}，
+ * 于是「已关闭」的 warmup 依旧每 90 秒被调度一次 → 实测每天空跑 <b>662 次</b>，
+ * 每次留下一条 {@code t_ai_job_run_log} 记录（该表已 73.9 万行）。
+ * 保活为零，却持续消耗调度线程与日志/DB 写入。
+ * 现补 {@code @ConditionalOnProperty}：关闭时 <b>bean 根本不注册</b>，
+ * 调度器不会持有它，空转彻底消失；需要临时保活时用
+ * {@code XIAOYUN_WARMUP_ENABLED=true} 打开即可。
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "xiaoyun.warmup.enabled", havingValue = "true")
 public class XiaoyunModelWarmup {
 
     @Value("${xiaoyun.warmup.enabled:false}")

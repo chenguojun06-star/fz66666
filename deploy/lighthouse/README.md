@@ -62,6 +62,39 @@ SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/fashion_supplychain?useUnicode=tru
 SPRING_REDIS_PASSWORD=
 ```
 
+### 🔴 必须改的第 3 行：SPRING_AI_ADAPTER_ENABLED=false
+
+```
+# 改这行（或直接删掉整行）：Spring Boot 4.1 下 Spring AI 必须关闭
+SPRING_AI_ADAPTER_ENABLED=false
+```
+
+**为什么这一步不能漏**（D-698 / D-700，已真实发生过一次）：
+
+- 本项目自 Spring Boot **4.1.1** 起，`application.yml` 里 `spring-ai.adapter.enabled` 的默认值已改为 `false`。
+- 但 `docker-compose.yml` 用的是 `env_file: .env.backend`，
+  **环境变量优先级高于 yml** —— 只要 `.env.backend` 里存在
+  `SPRING_AI_ADAPTER_ENABLED=true`，yml 的 `false` 就会被无声覆盖。
+- Spring AI 1.0.0 与 Spring Framework 7 **二进制不兼容**：
+  `OpenAiApi` 内部调用 `HttpHeaders.addAll(MultiValueMap)`，而 Spring 7 只剩
+  `addAll(String,List)` 与 `addAll(HttpHeaders)` → `NoSuchMethodError`
+  → `BeanCreationException` → **容器起不来 → 全站 502**。
+- AI 能力由 `LegacyInferenceAdapter → IntelligenceInferenceOrchestrator` 承担，
+  关闭 Spring AI **不影响** AI 功能，只是不走 Spring AI 那条实现。
+
+**为什么特别容易踩**：`.env.backend` 被 `.gitignore` 排除、不入库，
+所以「代码里默认值是安全的」这个结论在服务器上**不成立**。
+每次从云托管控制台「整份复制」重新覆盖 `.env.backend`（上面第 1 步），
+都会把控制台里的旧值一起带回来。
+
+**改完如何确认生效**（`env_file` 只在容器创建时读取，改文件不会热更新）：
+
+```bash
+cd /opt/fz66666/deploy/lighthouse
+docker compose up -d --force-recreate backend     # 重建容器才会读到新值
+docker compose exec backend printenv SPRING_AI_ADAPTER_ENABLED   # 期望输出 false
+```
+
 > 不用改的：SPRING_REDIS_HOST 和 QDRANT_URL 会被 docker-compose 自动覆盖成容器地址，改了也白改。
 
 4. `echo "MYSQL_ROOT_PASSWORD=自己定一个强密码" > /opt/fz66666/deploy/lighthouse/.env`

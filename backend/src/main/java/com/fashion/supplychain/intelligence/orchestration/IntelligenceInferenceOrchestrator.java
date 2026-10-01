@@ -123,6 +123,8 @@ public class IntelligenceInferenceOrchestrator {
 
     @Autowired private IntelligenceModelGatewayOrchestrator intelligenceModelGatewayOrchestrator;
     @Autowired private IntelligenceObservabilityOrchestrator intelligenceObservabilityOrchestrator;
+    /** D-700：成本归因。该 bean 自身是 @Lazy，此处注入不会引入启动期循环依赖。 */
+    @Autowired private AiCostTrackingOrchestrator aiCostTrackingOrchestrator;
     @Autowired private com.fashion.supplychain.intelligence.service.AiAgentTokenBudgetService aiAgentTokenBudgetService;
     @Autowired(required = false) private TenantAiConfigService tenantAiConfigService;
     @Autowired(required = false) private StyleImageUrlResolver styleImageUrlResolver;
@@ -845,6 +847,19 @@ public class IntelligenceInferenceOrchestrator {
         result.setCompletionTokens(estimatedCompletion);
         aiAgentTokenBudgetService.recordUsage(estimatedPrompt, estimatedCompletion);
         intelligenceObservabilityOrchestrator.recordInvocation(scene, result, UserContext.tenantId(), UserContext.userId());
+        // D-700：流式路径同样要记账。注意这里记的是**估算值**（promptChars/4、responseChars/2），
+        // 流式响应的 usage 在 SSE 增量里拿不到准数，故成本表里的流式行天然是估算口径，
+        // 与非流式的真实 usage 口径不同 —— 分析时需按 engine 区分，不要直接相加当作精确账单。
+        if (aiCostTrackingOrchestrator != null) {
+            aiCostTrackingOrchestrator.recordAsync(
+                    result.getModel() != null ? result.getModel() : result.getProvider(),
+                    scene,
+                    estimatedPrompt,
+                    estimatedCompletion,
+                    (int) result.getLatencyMs(),
+                    result.isSuccess(),
+                    result.getErrorMessage());
+        }
     }
 
     private IntelligenceInferenceResult invokeLitellm(String scene, List<AiMessage> messages,
@@ -1014,6 +1029,20 @@ public class IntelligenceInferenceOrchestrator {
         result.setResponseChars(length(result.getContent()));
         intelligenceObservabilityOrchestrator.recordInvocation(scene, result, UserContext.tenantId(), UserContext.userId());
         aiAgentTokenBudgetService.recordUsage(result.getPromptTokens(), result.getCompletionTokens());
+        // D-700：成本记账原先只挂在 AiInferenceRouter 上，但后台 agent / 定时任务大量走
+        // 本类的 chat()/chatStream() 直连路径、**绕过 Router** → t_ai_cost_tracking 恒为 0 行，
+        // 系统对「钱花在哪」完全失明。本类是所有推理结果唯一的收口点，在这里补记一次，
+        // 才能做到 100% 归因（Router 侧保留，重复行由 scene+traceId 区分，不影响汇总）。
+        if (aiCostTrackingOrchestrator != null) {
+            aiCostTrackingOrchestrator.recordAsync(
+                    result.getModel() != null ? result.getModel() : result.getProvider(),
+                    scene,
+                    result.getPromptTokens(),
+                    result.getCompletionTokens(),
+                    (int) result.getLatencyMs(),
+                    result.isSuccess(),
+                    result.getErrorMessage());
+        }
     }
 
 

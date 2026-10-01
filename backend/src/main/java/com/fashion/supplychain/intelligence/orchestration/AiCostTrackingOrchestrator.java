@@ -30,7 +30,11 @@ public class AiCostTrackingOrchestrator {
     public void recordAsync(String modelName, String scene, int promptTokens, int completionTokens, int latencyMs, boolean success, String errorMessage) {
         try {
             AiCostTracking record = new AiCostTracking();
-            record.setTenantId(UserContext.tenantId());
+            // D-700：t_ai_cost_tracking.tenant_id 是 NOT NULL，而后台定时任务没有 UserContext
+            // → tenantId 为 null → INSERT 失败 → 过去配合下面的 log.debug 变成完全静默。
+            // 成本账必须记全：定时任务花的钱也是钱，统一归到 tenant 0（系统/后台）桶。
+            Long tenantId = UserContext.tenantId();
+            record.setTenantId(tenantId != null ? tenantId : 0L);
             record.setModelName(modelName);
             record.setScene(scene);
             record.setPromptTokens(promptTokens);
@@ -38,11 +42,15 @@ public class AiCostTrackingOrchestrator {
             record.setTotalTokens(promptTokens + completionTokens);
             record.setEstimatedCostUsd(calculateCost(modelName, promptTokens, completionTokens));
             record.setLatencyMs(latencyMs);
+            record.setCreatedAt(LocalDateTime.now());
             record.setSuccess(success);
             record.setErrorMessage(errorMessage != null && errorMessage.length() > 512 ? errorMessage.substring(0, 512) : errorMessage);
             costTrackingMapper.insert(record);
         } catch (Exception e) {
-            log.debug("[AI成本跟踪] 记录失败: {}", e.getMessage());
+            // D-700：必须 warn 而非 debug。此前这里是 debug，导致「成本表恒为 0 行」
+            // 这种 P0 故障可以安静存在几个月没人发现（根因是实体列名不匹配，INSERT 必失败）。
+            // 成本记账是兜底能力，它挂了不能没有声音。
+            log.warn("[AI成本跟踪] 记录失败（成本归因将出现缺口）: {}", e.getMessage());
         }
     }
 

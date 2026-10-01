@@ -421,21 +421,11 @@ ai:
     strategy: ${VISION_MODEL_STRATEGY:failover}   # failover（故障转移）/ round-robin（轮询）/ concurrent（并发取最快）
     # 支持配置任意多个视觉模型（通过环境变量 VISION_MODEL_1_API_KEY, VISION_MODEL_2_API_KEY 等）
     # 格式: VISION_MODEL_{N}_API_KEY, VISION_MODEL_{N}_API_URL, VISION_MODEL_{N}_MODEL, VISION_MODEL_{N}_TIMEOUT_SECONDS
-  spring-ai:
-    enabled: ${AI_SPRING_AI_ENABLED:true}
-    adapter:
-      enabled: ${SPRING_AI_ADAPTER_ENABLED:true}
-      base-url: ${SPRING_AI_ADAPTER_BASE_URL:https://api.deepseek.com}
-      api-key: ${SPRING_AI_ADAPTER_API_KEY:${DEEPSEEK_API_KEY:${ai.deepseek.api-key:}}}
-      model: ${SPRING_AI_ADAPTER_MODEL:deepseek-flash}
-    chat:
-      default-provider: ${AI_SPRING_AI_CHAT_DEFAULT_PROVIDER:deepseek}
-      options:
-        temperature: ${AI_SPRING_AI_CHAT_TEMPERATURE:0.7}
-        max-tokens: ${AI_SPRING_AI_CHAT_MAX_TOKENS:1024}
-    embedding:
-      enabled: ${AI_SPRING_AI_EMBEDDING_ENABLED:false}
-      default-provider: ${AI_SPRING_AI_EMBEDDING_DEFAULT_PROVIDER:deepseek}
+  # D-700：此处原有 ai.spring-ai.* 配置块（enabled 默认 true），已删除。
+  # 原因：它是**死配置** —— 全仓无任何代码读取 ai.spring-ai.* 路径（已 grep 确认），
+  # 且其 enabled 默认 true 与真实生效值相反，极易误导后人以为 Spring AI 处于开启状态。
+  # 真正生效的是文件末尾的**顶层** spring-ai: 块（SpringAiAdapterConfig 的
+  # @ConditionalOnProperty(name="spring-ai.adapter.enabled") 读的就是它，当前默认 false）。
   gateway:
     routing-strategy: ${AI_GATEWAY_ROUTING_STRATEGY:failover}   # legacy / spring-ai / failover / weighted
     fallback-enabled: ${AI_GATEWAY_FALLBACK_ENABLED:true}

@@ -20,6 +20,13 @@ import java.util.List;
 public class AiAgentTokenBudgetService {
 
     private static final String KEY_PREFIX = "ai:budget:";
+    /**
+     * D-700：系统桶 tenantId —— 承载「没有 UserContext 租户上下文」的调用
+     * （后台定时任务、系统级 agent、跨租户巡检）。
+     * 取 0 是因为它同时是 t_ai_cost_tracking.tenant_id 的 NOT NULL 兜底值，
+     * 两张表用同一个口径，排查时可直接对齐。
+     */
+    private static final long SYSTEM_TENANT_ID = 0L;
     private static final Duration TTL = Duration.ofHours(36);
 
     private static final String ATOMIC_CHECK_AND_DEDUCT_LUA =
@@ -72,19 +79,32 @@ public class AiAgentTokenBudgetService {
     public boolean canInvoke() {
         if (!enabled || redis == null) return true;
         Long tenantId = UserContext.tenantId();
-        if (tenantId == null) return true;
+        // D-700：原实现 tenantId == null 就 return true（直接放行）。
+        // 但后台定时任务 / 系统级 agent 恰恰**没有** UserContext —— 也就是说
+        // 「花得最多的那一批调用」原本完全绕过了预算护栏，50 万/租户/日的上限
+        // 对它们形同虚设（实测 tenant 2 已用 45.6 万仍未被拦）。
+        //
+        // 改为：把无租户上下文的调用归到「系统桶」tenant 0 统一计量与限流。
+        // 不直接拒绝 —— 拒绝会让所有后台巡检/日报/多智能体任务整体停摆；
+        // 而是让它们至少**可被观测、可被总量限制**，并由运维用
+        // AI_BUDGET_TENANT_DAILY_TOKEN_LIMIT / AI_CRON_INFERENCE_ENABLED 统一收口。
+        long effectiveTenantId = tenantId != null ? tenantId : SYSTEM_TENANT_ID;
         try {
-            String key = buildKey(tenantId);
+            String key = buildKey(effectiveTenantId);
             Long result = redis.execute(atomicPeekScript,
                     Collections.singletonList(key),
                     String.valueOf(dailyTokenLimit));
             if (result != null && result == -1L) {
-                log.warn("[AiBudget] 租户 {} 今日 token 已超限, limit={}", tenantId, dailyTokenLimit);
+                log.warn("[AiBudget] {} 今日 token 已超限, limit={}",
+                        tenantId != null ? ("租户 " + tenantId) : "系统桶(无租户上下文)", dailyTokenLimit);
                 return false;
             }
             return true;
         } catch (Exception e) {
-            log.warn("[AiBudget] 预检失败，降级放行: {}", e.getMessage());
+            // D-700：预检失败不再「静默放行」。改为 warn + 放行（保可用性），
+            // 但 warn 级别保证 Redis 故障时预算失效会被看见，而不是像过去一样
+            // 只在正常路径上无声通过。
+            log.warn("[AiBudget] 预检失败，降级放行（预算护栏暂时失效，请检查 Redis）: {}", e.getMessage());
             return true;
         }
     }
@@ -92,18 +112,20 @@ public class AiAgentTokenBudgetService {
     public boolean tryDeduct(int promptTokens, int completionTokens) {
         if (!enabled || redis == null) return true;
         Long tenantId = UserContext.tenantId();
-        if (tenantId == null) return true;
+        // D-700：与 canInvoke 一致，无租户上下文归系统桶，不再「直接放行不计量」。
+        long effectiveTenantId = tenantId != null ? tenantId : SYSTEM_TENANT_ID;
         long total = Math.max(0, promptTokens) + Math.max(0, completionTokens);
         if (total == 0) return true;
         try {
-            String key = buildKey(tenantId);
+            String key = buildKey(effectiveTenantId);
             Long result = redis.execute(atomicCheckAndDeductScript,
                     Collections.singletonList(key),
                     String.valueOf(dailyTokenLimit),
                     String.valueOf(total),
                     String.valueOf(TTL.getSeconds()));
             if (result != null && result == -1L) {
-                log.warn("[AiBudget] 租户 {} token 预算不足, 请求扣除={}, limit={}", tenantId, total, dailyTokenLimit);
+                log.warn("[AiBudget] {} token 预算不足, 请求扣除={}, limit={}",
+                        tenantId != null ? ("租户 " + tenantId) : "系统桶(无租户上下文)", total, dailyTokenLimit);
                 return false;
             }
             return true;
@@ -116,17 +138,19 @@ public class AiAgentTokenBudgetService {
     public void recordUsage(int promptTokens, int completionTokens) {
         if (!enabled || redis == null) return;
         Long tenantId = UserContext.tenantId();
-        if (tenantId == null) return;
+        // D-700：原实现 tenantId == null 直接 return —— 后台任务消耗的 token
+        // 一个都没进桶，导致「系统桶用量」永远查不到，后台开销无法归因。
+        long effectiveTenantId = tenantId != null ? tenantId : SYSTEM_TENANT_ID;
         long total = Math.max(0, promptTokens) + Math.max(0, completionTokens);
         if (total == 0) return;
         try {
-            String key = buildKey(tenantId);
+            String key = buildKey(effectiveTenantId);
             Long after = redis.opsForValue().increment(key, total);
             if (after != null && after.equals(total)) {
                 redis.expire(key, TTL);
             }
         } catch (Exception e) {
-            log.debug("[AiBudget] 累加失败: {}", e.getMessage());
+            log.warn("[AiBudget] 累加失败: {}", e.getMessage());
         }
     }
 
