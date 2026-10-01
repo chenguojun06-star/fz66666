@@ -74,11 +74,11 @@ const ProductionOrderHeader: React.FC<{
   matrixGap = 4,
   matrixFontSize = 12,
 }) => {
-    const resolvedOrderNo = String(orderNo ?? (order as any)?.orderNo ?? (order as any)?.productionOrderNo ?? '').trim();
-    const resolvedStyleNo = String(styleNo ?? (order as any)?.styleNo ?? '').trim();
-    const resolvedStyleName = String(styleName ?? (order as any)?.styleName ?? '').trim();
-    const resolvedStyleId = (styleId ?? (order as any)?.styleId) as IdLike | undefined;
-    const resolvedCover = (styleCover ?? (order as any)?.styleCover ?? null) as string | null;
+    const resolvedOrderNo = String(orderNo ?? order?.orderNo ?? order?.productionOrderNo ?? '').trim();
+    const resolvedStyleNo = String(styleNo ?? order?.styleNo ?? '').trim();
+    const resolvedStyleName = String(styleName ?? order?.styleName ?? '').trim();
+    const resolvedStyleId = (styleId ?? order?.styleId) as IdLike | undefined;
+    const resolvedCover = (styleCover ?? order?.styleCover ?? null) as string | null;
     const normalizedOrderLines = React.useMemo(
       () => (orderLines ?? parseProductionOrderLines(order)).filter((line) => {
         const size = String(line?.size || '').trim();
@@ -97,7 +97,7 @@ const ProductionOrderHeader: React.FC<{
         return `${lineColors.length}色：${lineColors.join(' / ')}`;
       }
       if (lineColors.length === 1) return lineColors[0];
-      return String(color ?? (order as any)?.color ?? '').trim();
+      return String(color ?? order?.color ?? '').trim();
     }, [color, normalizedOrderLines, order]);
 
     const computedSizeItems = React.useMemo(() => {
@@ -117,7 +117,7 @@ const ProductionOrderHeader: React.FC<{
       if (computedSizeItems.length) {
         return computedSizeItems.reduce((sum, item) => sum + toNumberSafe(item.quantity), 0);
       }
-      return toNumberSafe((order as any)?.orderQuantity);
+      return toNumberSafe(order?.orderQuantity);
     }, [totalQuantity, computedSizeItems, order]);
 
     const matrixItems = React.useMemo<CardSizeQuantityItem[]>(() => {

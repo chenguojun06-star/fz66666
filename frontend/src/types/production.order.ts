@@ -1,6 +1,9 @@
 // 我的订单模块类型定义 —— 订单域
 
-export interface ProductionOrder extends Record<string, unknown> {
+export interface ProductionOrder extends Record<string, unknown> {  /** D-695：过程能力指数（SmartOrderHoverCard 质量告警用） */
+  cpk?: number;
+  ppk?: number;
+
   id?: string;
   orderNo: string;
   styleId: string;

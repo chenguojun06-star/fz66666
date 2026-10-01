@@ -148,24 +148,24 @@ export function useProductionActions({
 
   /** 关单操作 */
   const handleCloseOrder = (order: ProductionOrder) => {
-    const orderId = safeString((order as any)?.id, '');
+    const orderId = safeString(order?.id, '');
     if (!orderId) {
       message.error('订单ID为空，无法关单');
       return;
     }
 
-    const cuttingQty = Number((order as any)?.cuttingQuantity ?? 0) || 0;
+    const cuttingQty = Number(order?.cuttingQuantity ?? 0) || 0;
     const minRequired = getCloseMinRequired(cuttingQty);
-    const orderQty = Number((order as any)?.orderQuantity ?? 0) || 0;
-    const warehousingQualified = Number((order as any)?.warehousingQualifiedQuantity ?? 0) || 0;
+    const orderQty = Number(order?.orderQuantity ?? 0) || 0;
+    const warehousingQualified = Number(order?.warehousingQualifiedQuantity ?? 0) || 0;
 
-    const normalizedStatus = String((order as any)?.status || '').trim().toLowerCase();
+    const normalizedStatus = String(order?.status || '').trim().toLowerCase();
     if (normalizedStatus === 'scrapped') {
       message.info('该订单已报废，无需关单');
       return;
     }
 
-    if ((order as any)?.status === 'completed') {
+    if (order?.status === 'completed') {
       message.info('该订单已完成，无需关单');
       return;
     }
@@ -190,13 +190,13 @@ export function useProductionActions({
       message.error('无权限报废');
       return;
     }
-    const orderId = safeString((order as any)?.id, '');
+    const orderId = safeString(order?.id, '');
     if (!orderId) {
       message.error('订单ID为空，无法报废');
       return;
     }
     if (isOrderFrozenByStatus(order)) {
-      const normalizedStatus = String((order as any)?.status || '').trim().toLowerCase();
+      const normalizedStatus = String(order?.status || '').trim().toLowerCase();
       if (normalizedStatus === 'scrapped') {
         message.error('订单已报废，无需重复报废');
       } else {
@@ -266,7 +266,7 @@ export function useProductionActions({
 
   /** 复制订单 */
   const handleCopyOrder = async (order: ProductionOrder) => {
-    const orderId = safeString((order as any)?.id, '');
+    const orderId = safeString(order?.id, '');
     if (!orderId) {
       message.error('订单ID为空，无法复制');
       return;

@@ -74,7 +74,7 @@ const AlertsSection: React.FC<Props> = ({
     )}
 
     {/* 交付SLA + SPC质检统计 */}
-    {(order.deliverySlaStatus || (order as any).cpk) && (
+    {(order.deliverySlaStatus || order.cpk) && (
       <div style={{
         padding: '4px 10px', background: 'var(--color-bg-highlight)', borderRadius: 6,
         marginBottom: 8, fontSize: 12, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center',
@@ -95,13 +95,13 @@ const AlertsSection: React.FC<Props> = ({
             {order.actualDeliveryDays != null && ` ${order.actualDeliveryDays}天`}
           </span>
         )}
-        {(order as any).cpk != null && (
+        {order.cpk != null && (
           <span style={{
             padding: '1px 6px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-            background: (order as any).cpk >= 1.33 ? 'var(--status-success-bg)' : (order as any).cpk >= 1.0 ? 'var(--status-warning-bg)' : 'var(--status-success-bg)',
-            color: (order as any).cpk >= 1.33 ? 'var(--color-success)' : (order as any).cpk >= 1.0 ? 'var(--color-warning)' : 'var(--color-danger)',
+            background: order.cpk >= 1.33 ? 'var(--status-success-bg)' : order.cpk >= 1.0 ? 'var(--status-warning-bg)' : 'var(--status-success-bg)',
+            color: order.cpk >= 1.33 ? 'var(--color-success)' : order.cpk >= 1.0 ? 'var(--color-warning)' : 'var(--color-danger)',
           }}>
-            Cpk {(order as any).cpk}{(order as any).ppk != null && ` / Ppk ${(order as any).ppk}`}
+            Cpk {order.cpk}{order.ppk != null && ` / Ppk ${order.ppk}`}
           </span>
         )}
       </div>
