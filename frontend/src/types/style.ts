@@ -27,6 +27,17 @@ export interface StyleInfo extends Record<string, unknown> {
   updateTime?: string;
   deleteFlag?: number;
 
+  // ===== D-686：款式开发工作台用（预算工时/生产制单行/二次工序数）=====
+  bomBudgetHours?: number;
+  patternBudgetHours?: number;
+  processBudgetHours?: number;
+  productionBudgetHours?: number;
+  secondaryBudgetHours?: number;
+  /** 生产制单行（工作台编辑用） */
+  productionReqRows?: string[];
+  /** 二次工序数量 */
+  secondaryProcessCount?: number;
+  quantity?: number;
   progressNode?: string;
   completedTime?: string;
   latestOrderNo?: string;

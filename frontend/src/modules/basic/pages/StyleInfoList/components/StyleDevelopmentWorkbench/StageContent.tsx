@@ -48,10 +48,10 @@ const StageContent: React.FC<StageContentProps> = ({
           styleId={record.id!}
           styleNo={detail.styleNo}
           sizeColorConfig={sizeColorConfig}
-          readOnly={Boolean((detail as any).bomCompletedTime)}
-          bomAssignee={(detail as any).bomAssignee}
-          bomStartTime={(detail as any).bomStartTime}
-          bomCompletedTime={(detail as any).bomCompletedTime}
+          readOnly={Boolean(detail.bomCompletedTime)}
+          bomAssignee={detail.bomAssignee}
+          bomStartTime={detail.bomStartTime}
+          bomCompletedTime={detail.bomCompletedTime}
           onRefresh={onSectionRefresh}
         />
       </div>
@@ -66,11 +66,11 @@ const StageContent: React.FC<StageContentProps> = ({
           styleNo={detail.styleNo}
           sizeColorConfig={sizeColorConfig as any}
           linkedSizes={sizeColorConfig.sizes}
-          patternStatus={(detail as any).patternStatus}
-          patternStartTime={(detail as any).patternStartTime}
-          patternCompletedTime={(detail as any).patternCompletedTime}
-          patternAssignee={(detail as any).patternAssignee}
-          readOnly={Boolean((detail as any).patternCompletedTime)}
+          patternStatus={detail.patternStatus}
+          patternStartTime={detail.patternStartTime}
+          patternCompletedTime={detail.patternCompletedTime}
+          patternAssignee={detail.patternAssignee}
+          readOnly={Boolean(detail.patternCompletedTime)}
           onRefresh={onSectionRefresh}
         />
       </div>
@@ -84,11 +84,11 @@ const StageContent: React.FC<StageContentProps> = ({
           styleId={record.id!}
           styleNo={detail.styleNo}
           sizeColorConfig={sizeColorConfig}
-          readOnly={Boolean((detail as any).processCompletedTime)}
-          progressNode={String((detail as any).progressNode || '')}
-          processAssignee={(detail as any).processAssignee}
-          processStartTime={(detail as any).processStartTime}
-          processCompletedTime={(detail as any).processCompletedTime}
+          readOnly={Boolean(detail.processCompletedTime)}
+          progressNode={String(detail.progressNode || '')}
+          processAssignee={detail.processAssignee}
+          processStartTime={detail.processStartTime}
+          processCompletedTime={detail.processCompletedTime}
           onRefresh={onSectionRefresh}
         />
       </div>
@@ -101,11 +101,11 @@ const StageContent: React.FC<StageContentProps> = ({
         <StyleSecondaryProcessTab
           styleId={record.id!}
           styleNo={detail.styleNo}
-          readOnly={Boolean((detail as any).secondaryCompletedTime)}
-          secondaryAssignee={(detail as any).secondaryAssignee}
-          secondaryStartTime={(detail as any).secondaryStartTime}
-          secondaryCompletedTime={(detail as any).secondaryCompletedTime}
-          sampleQuantity={(detail as any).sampleQuantity}
+          readOnly={Boolean(detail.secondaryCompletedTime)}
+          secondaryAssignee={detail.secondaryAssignee}
+          secondaryStartTime={detail.secondaryStartTime}
+          secondaryCompletedTime={detail.secondaryCompletedTime}
+          sampleQuantity={detail.sampleQuantity}
           onRefresh={onSectionRefresh}
         />
       </div>
@@ -120,7 +120,7 @@ const StageContent: React.FC<StageContentProps> = ({
           styleNo={detail.styleNo}
           productionReqRows={productionReqRows}
           productionReqRowCount={15}
-          productionReqLocked={Boolean((detail as any).productionCompletedTime)}
+          productionReqLocked={Boolean(detail.productionCompletedTime)}
           productionReqEditable
           productionReqSaving={productionSaving}
           productionReqRollbackSaving={false}
@@ -135,15 +135,15 @@ const StageContent: React.FC<StageContentProps> = ({
           onProductionReqReset={() => {}}
           onProductionReqRollback={() => {}}
           productionReqCanRollback={false}
-          productionAssignee={(detail as any).productionAssignee}
-          productionStartTime={(detail as any).productionStartTime}
-          productionCompletedTime={(detail as any).productionCompletedTime}
+          productionAssignee={detail.productionAssignee}
+          productionStartTime={detail.productionStartTime}
+          productionCompletedTime={detail.productionCompletedTime}
           onRefresh={onSectionRefresh}
-          sampleCompleted={(detail as any).sampleStatus === 'COMPLETED'}
-          sampleReviewStatus={(detail as any).sampleReviewStatus}
-          sampleReviewComment={(detail as any).sampleReviewComment}
-          sampleReviewer={(detail as any).sampleReviewer}
-          sampleReviewTime={(detail as any).sampleReviewTime}
+          sampleCompleted={detail.sampleStatus === 'COMPLETED'}
+          sampleReviewStatus={detail.sampleReviewStatus}
+          sampleReviewComment={detail.sampleReviewComment}
+          sampleReviewer={detail.sampleReviewer}
+          sampleReviewTime={detail.sampleReviewTime}
         />
       </div>
     );
@@ -155,7 +155,7 @@ const StageContent: React.FC<StageContentProps> = ({
         <StyleQuotationTab
           styleId={record.id!}
           styleNo={detail.styleNo}
-          totalQty={Number((detail as any).quantity || 0)}
+          totalQty={Number(detail.quantity || 0)}
           onSaved={onSectionRefresh}
         />
       </div>
