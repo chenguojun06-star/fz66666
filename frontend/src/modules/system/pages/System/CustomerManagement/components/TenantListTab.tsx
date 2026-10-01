@@ -98,7 +98,7 @@ const TenantListTab: React.FC = () => {
   const handleResetOwnerPassword = async () => {
     const record = resetPwdModal.data; if (!record) return;
     try { const values = await resetPwdForm.validateFields(); if (values.newPassword !== values.confirmPassword) { message.error('两次输入密码不一致'); return; } setResettingPwd(true); const res: any = await tenantService.resetTenantOwnerPassword(record.id, values.newPassword); if (res?.code === 200 || res?.data) { message.success('密码重置成功'); resetPwdModal.close(); resetPwdForm.resetFields(); } else { message.error(res?.message || '重置失败'); } }
-    catch (e: unknown) { if (e && typeof e === 'object' && 'errorFields' in e && Array.isArray((e as any).errorFields) && (e as any).errorFields.length) return; message.error(e instanceof Error ? e.message : '重置失败'); }
+    catch (e: unknown) { if (e && typeof e === 'object' && 'errorFields' in e && Array.isArray((e as { errorFields?: unknown[] }).errorFields) && (e as { errorFields?: unknown[] }).errorFields?.length) return; message.error(e instanceof Error ? e.message : '重置失败'); }
     finally { setResettingPwd(false); }
   };
 
@@ -106,7 +106,7 @@ const TenantListTab: React.FC = () => {
   const handleConfirmApprove = async () => {
     const record = approveModal.data; if (!record) return;
     try { const values = await approveForm.validateFields(); setProcessingId(record.id); const enabledModules = approveEnabledModules !== null && approveEnabledModules.length > 0 ? JSON.stringify(approveEnabledModules) : undefined; await tenantService.approveApplication(record.id, { planType: values.planType, trialDays: values.planType === 'TRIAL' ? values.trialDays : undefined, enabledModules }); message.success('审批通过，工厂账户已激活'); approveModal.close(); approveForm.resetFields(); fetchData(); }
-    catch (e: unknown) { if (e && typeof e === 'object' && 'errorFields' in e && Array.isArray((e as any).errorFields) && (e as any).errorFields.length) return; message.error(e instanceof Error ? e.message : '审批失败'); }
+    catch (e: unknown) { if (e && typeof e === 'object' && 'errorFields' in e && Array.isArray((e as { errorFields?: unknown[] }).errorFields) && (e as { errorFields?: unknown[] }).errorFields?.length) return; message.error(e instanceof Error ? e.message : '审批失败'); }
     finally { setProcessingId(null); }
   };
 
@@ -118,7 +118,7 @@ const TenantListTab: React.FC = () => {
   const handleRejectApplication = async () => {
     const record = rejectModal.data; if (!record) return;
     try { const values = await rejectReasonForm.validateFields(); setProcessingId(record.id); await tenantService.rejectApplication(record.id, values.reason); message.success('已拒绝申请'); rejectModal.close(); rejectReasonForm.resetFields(); fetchData(); }
-    catch (e: unknown) { if (e && typeof e === 'object' && 'errorFields' in e && Array.isArray((e as any).errorFields) && (e as any).errorFields.length) return; message.error(e instanceof Error ? e.message : '操作失败'); }
+    catch (e: unknown) { if (e && typeof e === 'object' && 'errorFields' in e && Array.isArray((e as { errorFields?: unknown[] }).errorFields) && (e as { errorFields?: unknown[] }).errorFields?.length) return; message.error(e instanceof Error ? e.message : '操作失败'); }
     finally { setProcessingId(null); }
   };
 
