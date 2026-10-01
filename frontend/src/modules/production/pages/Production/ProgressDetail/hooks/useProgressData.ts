@@ -229,10 +229,10 @@ export function useProgressData({
   }, [fetchOrders]);
 
   // 当查询参数改变时获取数据
-  const factoryType = (queryParams as any).factoryType;
-  const factoryName = (queryParams as any).factoryName;
-  const delayedOnly = (queryParams as any).delayedOnly;
-  const todayOnly = (queryParams as any).todayOnly;
+  const factoryType = queryParams.factoryType;
+  const factoryName = queryParams.factoryName;
+  const delayedOnly = queryParams.delayedOnly;
+  const todayOnly = queryParams.todayOnly;
   const dateRangeStart = dateRange?.[0]?.valueOf() ?? 'null-start';
   const dateRangeEnd = dateRange?.[1]?.valueOf() ?? 'null-end';
 
