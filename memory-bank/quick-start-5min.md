@@ -70,7 +70,11 @@
 
 ---
 
-## 🔴 7 条 P0 铁律（记住这 7 条，90% 的坑能避免）
+## 🔴 P0 铁律（**共 29 条**，先记住这 7 条能避开 90% 的坑）
+
+> 唯一真相源：`../.trae/rules/project_rules.md`（2026-10-01 核对：**29 条**，含 6 月以来多条 INC 事故条款）。
+> 下表只是最高频的 7 条摘录，**不要以为只有 7 条**；#8~#29 覆盖部署白屏、Hook 返回值、
+> AI 工具验证、MCP 强制调用、CSS 变量、启动副作用等，违反同样出事故。
 
 | # | 铁律 | 后果（违反的话） |
 |---|------|----------------|
@@ -104,7 +108,7 @@
 
 | AI 应该做的事 | 检查点 |
 |-------------|--------|
-| 每次对话开头读取 8 个核心文件 | memory-bank 下文件的内容会被引用 |
+| 每次对话开头读取核心记忆文件 | 清单见 `../.trae/rules/agent-workflow.md` 第 1 步（activeContext / progress / decisionLog / project_rules / 最近2个 optimization-log / quick-start / anti-patterns / change-impact-matrix / context-rot） |
 | 告诉你改动涉及的 P0 铁律 | 会明确说"这涉及铁律 #3: 全链路扫码验证" |
 | 修改前先做影响评估 | 会列出要改的文件清单 |
 | 改完后做编译验证 | 会告诉你 `mvn compile ✅` 和 `npx tsc --noEmit ✅` |

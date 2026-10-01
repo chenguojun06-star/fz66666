@@ -113,6 +113,18 @@ public Result audit() { ... }
 
 ---
 
+### AP-BE-06: AI 工具/旁路直接写库，绕过 Orchestrator 导致整条写链无事务（D-693）
+**识别信号**：`@AgentToolDef` 工具类（或 Controller）直接注入多个 Service 做多表写入；某条写链路的方法与该路径上的 Service 实现**均无 `@Transactional`**（可用 `grep -c "@Transactional"` 数个 0）
+**错误做法**：`MaterialPickingTool` 的 create 动作直接注入 `MaterialPickingService`，完成「save 领料单 → insert 明细 → decreaseStock 扣库存 → recordOutboundLog 出库日志」四步写操作。这同时违反两条铁律：**跨服务编排必须上移 Orchestrator** + **事务只在 Orchestrator 层**（该路径因此 0 事务）。多明细领料单在第 N 条库存不足（`decreaseStockWithCheckDecimal` 返回 0 抛 `IllegalStateException`）时，前 N-1 条写操作已提交且不回滚 → 「领料单 status=completed + 明细缺失 + 库存已扣 + 出库日志缺失」的脏数据。
+**正确做法**：
+- 写操作一律经 `MaterialPickingOrchestrator`（`createPicking` 补 `@Transactional(rollbackFor = Exception.class)`；Tool 的 create 动作改为调编排层入口）。跨 Bean 调用非同类自调用 → AOP 代理生效。
+- 只读动作（list/get_items）仍可用 Service 与 Mapper；Tool 注入 Orchestrator 时用 `@Lazy` 断开循环依赖，并确认 Orchestrator **不反向依赖**任何 Tool/Agent。
+- 新增 `MaterialPickingTransactionTest`（反射读注解守护），含主流程 `createPickingAndOutbound` 的事务断言，防 D-099 修复被回退。实测：临时移除事务注解 → 测试立即 FAIL。
+**触发P0铁律**：#1 Orchestrator 事务边界 + 跨服务编排必须上移 Orchestrator
+**历史教训**：2026-10-01 D-693 真实库佐证 `t_material_picking` 共 22 条，其中 MPK 前缀 7 条走本旁路（最后使用于 2026-05-29），主流程 PICK- 前缀 13 条走 `createPickingAndOutbound`（已有事务）—— 旁路仍在产生真实数据，非死代码。
+
+---
+
 ## 🖥️ 前端相关
 
 ### AP-FE-00: @ServerEndpoint 用 @Autowired 注入 Spring Bean
@@ -480,6 +492,33 @@ postTurnTasks.add(() -> {
 
 ---
 
+### AP-AI-05: 实体列名不匹配 + log.debug 静默吞异常 → 记账/统计表恒为 0 行（D-700）
+**识别信号**：新建的统计/记账表行数长期为 0（或远小于外部账单），而业务正常；Entity 里**没有任何 `@TableField`** 却依赖驼峰→下划线默认推导；catch 块里是 `log.debug(...)`
+**错误做法**：`AiCostTracking` 实体没有任何 `@TableField`，靠默认推导生成 `model_name` / `estimated_cost_usd`，而表 `t_ai_cost_tracking` 实际列是 `model` / `estimated_cost` → INSERT 因未知列**必然失败**；失败又被 catch 里的 `log.debug` 静默吞掉（debug 不进生产日志）。结果是编译通过、单测通过、启动正常，只有真正 INSERT 才炸 —— 典型的「只有数据层才能发现」的问题。
+同一提交的第二层根因：成本记录只挂在 `AiInferenceRouter` 上，而后台 agent / 定时任务大量走 `IntelligenceInferenceOrchestrator` 的 `chat()` / `chatStream()` **直连路径绕过 Router** → 这些调用全部不记账。
+**正确做法**：
+- 实体字段与真实列名不一致时必须 `@TableField` 显式映射（`model` / `estimated_cost`）。
+- 表里不存在的审计字段标 `@TableField(exist = false)`（`success` / `errorMessage`），不新增迁移、不重复落库。
+- 兜底/记账路径的失败日志从 `debug` 提到 `warn` —— 兜底能力挂了不能没有声音。
+- 记账点收敛到**所有推理结果的唯一收口点** `finalizeResult` / `finalizeStreamResult`（含流式估算值，注释标明口径差异，分析时勿与真实 usage 直接相加）。
+- 用 `AiCostTrackingEntityMappingTest` 把「实体↔表列名一致」变成可断言事实。
+**触发P0铁律**：#2 数据库同步（Entity ↔ 表）+ 可观测性（兜底不能静默）
+**历史教训**：2026-10-01 D-700 DeepSeek 账单累计 ¥317 / 单日 ¥7.27 / 1243 次 / 199 万 tokens，而 `t_ai_cost_tracking` 自建表起 0 行；数据库口径 9.1 万 vs 账单口径 199 万 tokens，**22 倍盲区**，系统完全无法回答「钱花在哪」。
+
+---
+
+### AP-AI-06: 预算/护栏类逻辑对无 tenantId 的后台任务失效（判空即放行）（D-700）
+**识别信号**：限额/护栏方法里出现 `if (tenantId == null) return true;` 或 `return;`；后台定时任务、系统级 agent 与真人请求共用同一套护栏
+**错误做法**：`AiAgentTokenBudgetService` 的 `canInvoke` / `tryDeduct` / `recordUsage` 都有 `if (tenantId == null) return true;`，而后台定时任务与系统级 agent **恰恰没有 `UserContext` 租户上下文** → 「花得最多的那一批调用」完整绕过 50 万/租户/日上限：`canInvoke` 直接放行（限额形同虚设）、`recordUsage` 直接返回（一个 token 都没进桶）。
+**正确做法**：
+- 无租户上下文时归入**「系统桶」tenant 0** 统一计量与限流（口径与 `t_ai_cost_tracking.tenant_id` 的 NOT NULL 兜底值一致，两表可对齐排查）。
+- **不直接拒绝** —— 拒绝会让所有后台巡检/日报整体停摆；改为可观测 + 可总量限制。`recordUsage` 的 `log.debug` 提到 `warn`。
+- 用 `AiAgentTokenBudgetServiceTest` 断言无租户上下文时不再直接放行、用量落入 `ai:budget:0:*`；并**反向断言**应急开关 `ai.budget.enabled=false` 仍全量放行。
+**触发P0铁律**：护栏/限额不得因上下文缺失而静默放行
+**历史教训**：2026-10-01 D-700 实测 tenant 2 当日已用 45.6 万逼近限额仍未被拦，系统桶用量根本查不到 —— 「护栏只对真人有效，对耗钱最多的后台任务形同不存在」。
+
+---
+
 ## 🔄 工作流反思相关（2026-08-05 新增）
 
 ### AP-WF-05: Flyway 加列前未验证列是否存在
@@ -553,6 +592,36 @@ if (!UserContext.isSupervisorOrAbove()) {
 
 ---
 
+## 🚀 框架升级与运行时相关（2026-10-01 新增，Boot 4.1.1 升级实测 D-698/D-699）
+
+### AP-FW-01: Spring Security 7 对 ASYNC 二次分发再鉴权 → SSE 流被截断（HTTP 却 200）
+**识别信号**：前端报 `net::ERR_INCOMPLETE_CHUNKED_ENCODING`，但 HTTP 状态码是 **200**；SSE/异步响应已写出却被硬关闭、浏览器拿不到 chunked 结束块；日志里有 `AuthorizationDeniedException` 且伴随 `ASYNC` 分发。**升级 Boot 大版本后流式接口才出现，回退即消失。**
+**错误做法**：升级到 Spring Security **7.1.1**（Boot 4.1）后，`AuthorizationFilter` 对**每一个 dispatch** 都做授权（官方文档 "All Dispatches Are Authorized"；`setFilterAsyncDispatch` 默认 `true`），而 Boot 3.4 用的 Spring Security 6.4 **不会**。`SseEmitter` 启动异步处理后，容器在响应结束前会再做一次 `ASYNC` 分发；本项目 `sessionManagement = STATELESS`（无 HttpSession），`ASYNC` 分发时 SecurityContext 无处恢复 → 视为匿名 → 命中 `/api/**`.authenticated()` → 抛 `AuthorizationDeniedException`；**此时响应已提交，错误页也渲染不出来** → 连接被硬关闭。
+**正确做法**：`SecurityConfigHelper.configure()` 首行加
+`authz.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll();`
+**必须放在所有 `requestMatchers` 之前**（`dispatcherTypeMatchers` 优先匹配）。
+**为什么不放宽鉴权**：真正调用 controller、真正校验 token 的是 `REQUEST` 分发，仍走 `TokenAuthFilter` + 全部原有规则；`ASYNC`/`ERROR` 只负责把**已授权的**响应收尾。`SseAsyncDispatchAuthorizationTest` 同时**反向断言**匿名 `REQUEST` 仍被拒，防止有人图省事改成 `anyRequest().permitAll()` 而测试照样绿。
+**触发P0铁律**：#3 全链路验证（框架大版本升级后，必须真实验证流式/异步接口，不能只看编译与单测）
+**历史教训**：2026-10-01 D-699 线上 AI 顾问面板 SSE 截断，HTTP 200 掩盖了真实鉴权异常。
+
+---
+
+### AP-FW-02: 环境变量被不入库的 .env 文件无声覆盖（env_file 优先级高于 yml）
+**识别信号**：yml 里默认值安全，但服务器行为相反；改完配置 `restart` 后不生效；容器起不来导致**全站 502**。典型场景：`docker-compose.yml` 用了 `env_file: .env.backend`，而该文件被 `.gitignore` 排除、**不入库**。
+**错误做法**：`application.yml` 里 `spring-ai.adapter.enabled` 默认已是 `false`，但 `deploy/lighthouse/docker-compose.yml` 用 `env_file: .env.backend`，**环境变量优先级高于 yml** —— 所以「代码里默认值是安全的」这个结论在服务器上**不成立**。一旦该文件含 `SPRING_AI_ADAPTER_ENABLED=true`，Spring AI 1.0.0 就被启用 → 与 Spring Framework 7 二进制不兼容（`NoSuchMethodError: HttpHeaders.addAll(MultiValueMap)`）→ 容器起不来 → **全站 502**。且每次从云托管控制台「整份复制」重新覆盖 `.env.backend` 都会把旧值带回来。
+**正确做法**：
+- 改服务器配置前先读 `deploy/lighthouse/README.md` 对应章节。
+- **验证必须用 `--force-recreate`**（`env_file` 只在创建时读取、**不热更新**，`restart` 无效）：
+```bash
+cd /opt/fz66666/deploy/lighthouse
+docker compose up -d --force-recreate backend
+docker compose exec backend printenv SPRING_AI_ADAPTER_ENABLED   # 期望 false
+```
+**触发P0铁律**：#17 部署探针/环境一致性（部署类）
+**历史教训**：2026-10-01 D-698/D-700 升级后，`.env.backend` 里残留旧值即可无声覆盖代码默认值 → 全站 502。
+
+---
+
 ## 📊 反模式自查清单
 
 每次提交代码前，快速过一遍：
@@ -575,3 +644,8 @@ if (!UserContext.isSupervisorOrAbove()) {
 - [ ] **LLM 调用异步化**（2026-08-05 新增）：主流程没有同步 LLM 评分/审查/记忆写入吧？
 - [ ] **外部 API 限流熔断**（2026-09-24 新增）：429/quota 也熔断了吗？有冷却 + 半开探测吗？冷却时长有下限吗？
 - [ ] **反思三问**（2026-08-05 新增）：写之前评估影响范围 / 写之时识别 LLM 调用 / 写之后端到端验证？
+- [ ] **框架升级流式接口**（2026-10-01 新增）：升级 Boot/Security 后真实验证过 SSE/异步接口吗？`ASYNC`/`ERROR` 分发放行了吗（且放在 `requestMatchers` 之前）？
+- [ ] **环境变量覆盖**（2026-10-01 新增）：改的配置会被服务器 `.env.*`（不入库、优先级高于 yml）无声覆盖吗？验证用的是 `--force-recreate` 而非 `restart` 吗？
+- [ ] **实体列名映射**（2026-10-01 新增）：新统计/记账表的 Entity 字段都用 `@TableField` 显式映射到真实列名吗？兜底失败的日志是 `warn` 而不是 `debug` 吗？
+- [ ] **护栏判空**（2026-10-01 新增）：限额/护栏逻辑对 `tenantId == null` 是「直接放行」还是「归系统桶 tenant 0 计量」？耗钱最多的后台任务是否已纳入限额？
+- [ ] **AI 工具写库走编排层**（2026-10-01 新增）：AI 工具的多表写操作复用的是 Orchestrator 入口（带 `@Transactional`）而不是直接注入 Service 吗？

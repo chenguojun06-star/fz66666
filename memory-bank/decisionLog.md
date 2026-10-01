@@ -1,7 +1,296 @@
 # 决策日志
 
 > 记录重要的架构和实现决策，包括上下文、决策、理由
-> 最后更新：2026-09-28（新增 D-617 岗位池任务面板内直接领取——原编号 D-613 与 i18n 批次撞号，勘误为 D-617，commit 15ed4b015 的 message 保持误号不重写）
+> 最后更新：2026-10-01（补齐 09-29 ~ 10-01 共 88 个决策编号：D-698 Boot 3.4.5→4.1.1 升级 / D-699 SSE 截断 / D-700 AI 成本归因 / D-618 待办已完成维度 / D-632~D-653 架构违规收敛 33→0 / D-677~D-711 any-lines 3204→2661；含多处撞号标注，检索请用「编号+日期+主题」三元组）
+> 上一版：2026-09-28（新增 D-617 岗位池任务面板内直接领取——原编号 D-613 与 i18n 批次撞号，勘误为 D-617，commit 15ed4b015 的 message 保持误号不重写）
+
+---
+
+## D-698：Spring Boot 3.4.5 → 4.1.1 升级上线（2026-10-01，PR #27）
+
+> ⚠️ **撞号提示**：本编号同时被 10-01 的「order 家族第四批去 as any」复用（commit 8cf730dca），两者无关。
+
+**背景**：Boot 3.4.5 已进入 EOL，依赖 EOL ratchet 门禁开始报警。
+
+**决策与实现**：
+- parent 3.4.5 → 4.1.1；`starter-aop` → `starter-aspectj`（Boot 4 BOM 已移除前者）；新增 `spring-boot-flyway`（Boot 4 把 Flyway 自动配置拆出去了）+ `spring-boot-starter-json`。
+- MyBatis-Plus 3.5.12 → **3.5.16，刻意不选 3.5.17** —— 3.5.17 把 IService/ServiceImpl 迁包到 `spring.*`，会改 278 个文件的 import，代价不可接受。
+- 9 个源文件适配新包名（Health→`health.contributor` / ErrorController→`webmvc.error` / MeterRegistryCustomizer / Lettuce 7 泛型 / JacksonConfig 显式 `new`），包名均由 jar 反查 + `javap` 确认，非推测。
+- `application.yml` 的 `WRITE_DATES_AS_TIMESTAMPS` → `spring.jackson.datetime.*`：Jackson 3 把常量移到 `cfg.DateTimeFeature`，旧键位在 Boot 4 下**绑定失败 → 上下文启动失败**（已实测复现）。
+
+**阻断点（关键）**：Spring AI 1.0.0 与 Spring Framework 7 **二进制不兼容** —— `NoSuchMethodError: HttpHeaders.addAll(MultiValueMap)`（javap 验证 Spring 7.0.9 的 HttpHeaders 只有 `addAll(String,List)` 与 `addAll(HttpHeaders)`）。**327 项单测全绿是假绿**：Mockito 把该 bean mock 掉了，不代表真实可用。
+
+**处置**：`SpringAiAdapterConfig` 默认值 true → false，AI 由 `LegacyInferenceAdapter`（`IntelligenceInferenceOrchestrator`，1117 行，零 Spring AI 依赖，自实现 tool_calls）承担，`AiInferenceRouter(@Primary)` 负责路由与熔断。
+
+**验证**：基线 vs 升级对照 —— 启动 21.577s / 21.272s、工具注册数均 103、运行期工具执行痕迹均为 0（说明工具调用未触发是既有实现特性，非本次回归）；Flyway 12.4.0 只读校验 Pending=0 / checksum 不匹配=0 / Failed=0，未重跑 624 条迁移；**回滚路径干净**——一条迁移都没执行，`flyway_schema_history` 原样，回退 3.4.5 无副作用。AI 模块测试安全网 327 → 340（新增 SpringContextSmokeTest 等；注意 `getBean(name)` 必须逐个触发，否则 lazy-init 下测试假绿）。
+
+**关键结论**：AI 真实迁移面只有 3 个文件（`grep 'ChatClient|Advisor'` 命中的 57 个里 54 个是自研类）——**已自研的 AiInferenceGateway 抽象层是迁移代价可控的关键**。
+
+**未做**：Spring AI 2.0.0 迁移（实测是范式重写：OpenAiApi 类完全移除、工具改由 ToolCallingAdvisor 在 Advisor 链注入，需重写 2 个文件）；resilience4j spring-boot4 变体（当前仍 spring-boot3 2.2.0）。
+
+**版本号同步**：CLAUDE.md（3.4.5→4.1.1）、copilot-instructions.md（**原写 2.7.18，落后两个大版本**）、.trae/rules/project_rules.md 三处全部修正。
+
+---
+
+## D-699：SSE 流被截断 + DSML 协议残渣泄漏（2026-10-01，P0）
+
+> ⚠️ **撞号提示**：本编号同时被 10-01 的「StyleIntelligenceProfileCard 去 as any」复用（commit 2a4c999aa）。
+
+**现象**：AI 顾问面板 `net::ERR_INCOMPLETE_CHUNKED_ENCODING`（**HTTP 状态却是 200**）；气泡出现 `<calls>` / `<invoke name="">` 内部协议残渣。
+
+**根因 1（Boot 4.1 回归）**：Spring Security 7.1.1 的 AuthorizationFilter 对「**每个 dispatch**」都授权（官方 "All Dispatches Are Authorized"），Boot 3.4 的 Security 6.4 不会。SseEmitter 启动异步处理后容器会再做一次 **ASYNC 分发**，本项目 `sessionManagement=STATELESS` 无 HttpSession → SecurityContext 无处恢复 → 视为匿名 → 命中 `/api/**.authenticated()`。此时响应已提交，错误页也渲染不出 → 连接被硬关闭。
+
+**修法 1**：`SecurityConfigHelper` 首行加 `dispatcherTypeMatchers(ASYNC, ERROR).permitAll()` —— **只放行 ASYNC/ERROR 二次分发**，真正调 controller、校验 token 的 REQUEST 分发仍走原全部规则（鉴权强度不变）。刻意不改成 `anyRequest().permitAll()`。
+
+**根因 2**：旧实现逐 delta 判断 `content.contains("DSML")`，而模型会把一段协议拆到多个 SSE delta → 开标记恰好在上一片里，续行逃过清洗。
+
+**修法 2**：`DsmlToolCallParser.stripLines()` 跨 delta 缓冲、攒够一个完整换行才成行、成行后整行判断；`strip()` 复用同一逻辑保证「流式看到的」与「落库重读的」同貌；新增 `flushDsmlTail()`（模型最后一句通常不带换行，不 flush 会整句丢失）。
+
+**验证**：349 全绿（新增 9）——`DsmlStreamingLeakTest(6)` 逐字复刻线上拆行场景；`SseAsyncDispatchAuthorizationTest(3)` 含「**匿名 REQUEST 仍被拒**」反向断言，防后人图省事放宽鉴权。
+
+---
+
+## D-700：AI 成本无法归因 + 预算护栏对后台任务失效（2026-10-01，P0）
+
+> ⚠️ **撞号提示**：本编号同时被 10-01 的「TableModeView 去 as any」复用（commit 54a7f7dac）。
+
+**现象**：DeepSeek 账单累计 ¥317、单日 ¥7.27 / 1243 次 / 199 万 tokens，而 `t_ai_cost_tracking` 自建表起 **0 行** → 数据库口径 9.1 万 vs 账单口径 199 万，**22 倍盲区**，系统完全无法回答「钱花在哪」。
+
+**根因 1**：`AiCostTracking` 实体无任何 `@TableField`，依赖驼峰→下划线默认推导出 `model_name` / `estimated_cost_usd`，而**实际列是 `model` / `estimated_cost`**；INSERT 因未知列必然失败，失败又被 catch 里的 `log.debug` 静默吞掉（debug 不进生产日志）→ 编译过、单测过、启动正常，**只有真 INSERT 才炸**。
+
+**根因 2**：成本只挂在 `AiInferenceRouter`，而后台 agent / 定时任务大量走 `IntelligenceInferenceOrchestrator.chat()/chatStream()` 直连，**绕过 Router** → 这批调用全部不记账。
+
+**根因 3（P0 级）**：`canInvoke` / `tryDeduct` / `recordUsage` 都有 `if (tenantId == null) return true;`，而后台定时任务与系统级 agent 恰恰没有租户上下文 → **花得最多的那一批调用完整绕过 50 万/租户/日上限**。
+
+**修法**：补 `@TableField` 映射真实列名；在 `finalizeResult` / `finalizeStreamResult`（所有推理结果的唯一收口点）补记账；无租户上下文归入「**系统桶 tenant 0**」统一计量与限流（**不直接拒绝**——拒绝会让所有后台巡检/日报整体停摆，改为可观测 + 可总量限制）；失败日志 debug → warn。
+
+**降本**：`ProactivePatrolAgent` 每小时 → 每 6 小时（`AI_PROACTIVE_PATROL_CRON` 可覆盖）。实测该任务对每个活跃租户拉起 4 个部门 agent（pmc/finance/qc/ceo）= 24×4 = 96 次/天/租户，且 avg response 仅 15 字符、avg latency 约 130ms → 全部命中关键词兜底，**绝大多数是空转**。取舍：异常发现时效从最迟 1 小时变 6 小时，属刻意决策。
+
+**止损**：`XiaoyunModelWarmup` 补 `@ConditionalOnProperty`（原只有方法内 `if (!enabled) return`，「已关闭」仍每 90 秒被调度一次，实测每天空跑 662 次，每次留一条 `t_ai_job_run_log`，该表已 73.9 万行）。
+
+**实测归因结论**：**81% 成本来自定时任务而非真人提问**。核对开销的正确姿势：必须查**生产库**——db-query-mcp 连的是本地开发库，口径不同。
+
+**部署陷阱入档**：`.env.backend` 被 .gitignore 排除不入库，且 env_file 优先级高于 yml —— 只要它含 `SPRING_AI_ADAPTER_ENABLED=true` 就会无声覆盖 yml 的 false → NoSuchMethodError → 容器起不来 → **全站 502**，且每次从控制台「整份复制」都会把旧值带回来。已写进 `deploy/lighthouse/README.md`。
+
+**验证**：356 全绿（新增 7）——`AiCostTrackingEntityMappingTest(4)` 把「实体↔表列名一致」变成可断言事实；`AiAgentTokenBudgetServiceTest(3)` 反向断言应急开关仍全量放行。
+
+---
+
+## D-618：待办中心支持「已完成」任务维度（2026-10-01）
+
+> ⚠️ **撞号提示**：D-618 在 09-28 已被「登录页 i18n 收尾」占用（commit 496b5d028），本条目为 10-01 的待办中心能力。
+
+**决策**：统一待办中心新增「已完成」维度，补上 D-612 遗留的「已完成页签恒为 0」问题在**系统待办侧**的表达能力。
+
+**验证**：mvn compile + tsc 通过；本地起服务实测建任务→标完成→已完成维度可查。
+
+---
+
+## D-694：任务状态契约补齐 escalated —— 修复升级任务变幽灵项/无按钮（2026-10-01）
+
+> ⚠️ **撞号提示**：本编号同时被 10-01 的「useExpenseForm 去 11 处 as any」复用（commit b7eb8a000）。
+
+**背景**：任务升级到 escalated 后，前端状态契约里没有这个取值 → 任务变成「幽灵项」——列表里在，但按钮全不渲染，无法操作。
+
+**决策**：前端任务状态枚举/映射表补齐 `escalated`，与后端 PendingTask 状态口径对齐。
+
+---
+
+## D-693：领料出库旁路缺事务 + AI 工具绕过编排层（2026-10-01，架构治理）
+
+> ⚠️ **撞号提示**：本编号同时被 10-01 的「StyleCardView 去 as any」复用（commit 172a61bad）。
+
+**背景**：架构治理排查中发现领料出库存在**旁路写链**——某条路径绕过编排层直接写库，导致多表写入没有 `@Transactional` 保护，失败时数据不一致。
+
+**关键澄清（勘误）**：治理方案初稿称 Material 存在「三项事务写链」，**实查 `@Transactional` 均为 0**，该说法不成立。C 类排除理由修正为「调用方规模 + 库存核心写路径」，并补充领料事务缺口核实报告。
+
+**决策**：
+1. 修复领料出库旁路缺事务（写链收敛回编排层入口）；
+2. **AI 工具禁止绕过编排层直接写库** —— AI 工具必须复用编排层入口，否则事务、权限、审计全部失守（已沉淀为反模式 AP-BE-06）。
+
+**同批次**：架构违规 service→service 21 → 19。
+
+---
+
+## D-673 / D-676：前端循环依赖清零并上锁（2026-10-01）
+
+**D-673**：破除 10 处前端循环依赖（madge 10 → 0）。
+**D-676**：把成果**上锁** —— pre-push 门禁 + CI 升级为**阻断**级，防止后续改动把循环依赖带回来。这类「清零后不设门禁 = 迟早复发」是本项目的固定结论。
+
+---
+
+## D-666：小程序 i18n 治理 —— wxml↔js 绑定缺口（2026-09-30 ~ 10-01）
+
+**问题**：小程序 wxml 里用了 `t.x` 但 js 从不赋值 → **文案静默丢失**（页面显示空白，不报错）。
+
+**处置**：
+- 守卫新增检查项 `[8]`（wxml↔js 绑定缺口，非阻塞 + 基线），首次跑出 **33 处**；
+- 补齐 23 处绑定后基线 33 → 10，最终**清零（10 → 0）**，另修 4 处语言包错误值；含样衣详情页 5 个从未赋值的 `t.*`（计数单位静默丢失）、P0 修 5 处线上裸键名 + 1 处语言包损坏；
+- 手机端样衣审核**独立页**（可写评语 + 传现场照片），P2b 阶段详情审核改跳统一审核页（删掉重复表单）。
+
+**同批次 UI 修复**：右缘控件两处缺陷——清空 × 压住齿轮 + TextArea 顶部 22px 死区。
+
+---
+
+## D-667 / D-668：维护弹窗与 Select 下拉冲突（2026-10-01）
+
+> ⚠️ **撞号提示**：D-667/D-668 在 09-30 已被「工具型类移入 helper 包」「进度重算引擎移包」占用。
+
+**现象**：维护弹窗开着时，底层 Select 下拉诡异地弹出并盖住弹窗（用户报告）。
+**修法**：维护齿轮开启期间**强制压制下拉**；维护弹窗的加减图标改为文字按钮。
+
+---
+
+## D-674 / D-675：前端质量基线治理（2026-10-01）
+
+- **D-674**：消除 8 处 `exhaustive-deps` 禁用（质量基线 126 → 118）。
+- **D-675**：修复生产订单列表的重复重绑与 stale closure（质量基线 118 → 115）。
+- **D-672**（09-30 起）：消除 9 处 `no-unused-vars` 禁用（135 → 126）。
+
+---
+
+## D-677 ~ D-711：前端 `as any` 治理大批次（2026-10-01，**any-lines 3204 → 2661**）
+
+**背景**：D-631 建立「质量基线门禁——any/disable/console 只许减少不许增加」后，需要持续把存量往下压。全天按文件逐个清零。
+
+**手法**：
+- 先用 `scripts/find-any-clusters.py`（D-695 固化）**按簇定位**热点，再按家族分批（order 家族、res 家族、StyleInfo 模块等）作业，避免零散改动；
+- 典型修法：补真实接口类型、用泛型参数替代断言、`await` 后尾随断言直接删除（D-704 冗余断言专项）、表单/响应类型显式声明；
+- 每个文件「清零」后即上锁（CI 门禁阻断增加）。
+
+**批次成果（any-lines 逐段下降）**：
+
+| 编号区间 | 代表文件/范围 | any-lines 变化 |
+|---|---|---|
+| D-677~D-686 | StyleInfoTabs 49 处、StyleInfo 模块、StyleStatusCard、OrderBasicInfoCard、打印生产制单、useBoardStats、resizableTableHelpers、款式开发工作台 89 处 | 3204 → 2979 |
+| D-687~D-697 | Production/List/utils、nodeCalculations、AuthContext.helpers、MaterialReconModalContent、BudgetDaysEditor、OrderImageManager、StyleCardView、useExpenseForm、find-any-clusters 固化 + order 家族首批 | 2979 → 2790 |
+| D-698~D-711 | order/res 家族第二~四批、StyleIntelligenceProfileCard、TableModeView、useUserActions、FactoryPersonalCenterModal、ProductionSummary+Workbench、await 冗余断言、InboundModal、useDataCenterActions、FactoryFilterBar、useProgressData、NodeDetailModal 34 行、useSubmitScan 16 处、三文件去 15 处 | 2790 → **2661** |
+
+**意义**：`as any` 是类型系统失效的入口，也是运行时 `undefined` 类 bug 的温床。批次化治理 + 门禁上锁，把「只减不增」变成 CI 可强制的事实。
+
+---
+
+## 架构治理方案勘误（2026-10-01，无编号）
+
+- `e6aa3bfe6`：**Material 三项「事务写链」说法不成立** —— 实查 `@Transactional` 均为 0；C 类排除理由修正为「调用方规模 + 库存核心写路径」，合并 A4 段勘误与事务核实报告引用。
+- `e6477492b`：治理方案修正 3 处**内部矛盾**。
+- `05f28a366`：领料事务缺口核实报告。
+
+**教训**：治理方案本身也要过一遍事实核查——初稿凭印象写「有事务」，实查数字是 0。**方案里的每个断言都必须是可验证事实，否则后续所有排期都建在沙子上。**
+
+---
+
+## CI/运维：依赖 EOL ratchet 门禁 + 云端健康诊断脚本（2026-10-01，无编号）
+
+- 新增**依赖 EOL ratchet 门禁**：`scripts/check-dependency-eol.py`，依赖进入 EOL 即阻断（支持 `--no-baseline` 做治理验收）。触发本次 Boot 4.1.1 升级的直接动因。
+- 新增云端健康诊断脚本 `check-cloud-health.sh`，与既有 `audit-tenant-id.py` 一并补进 Common Commands。
+
+---
+
+## D-627 ~ D-629：AI 巡检可读化与死链路清理（2026-09-29）
+
+- **D-626**：AI 巡检可读化——预警面板改**侧滑**、简报可关闭、类型/目标全翻译（原先展示英文枚举）。
+- **D-627**：预警面板关闭键**恒显**补齐——决策卡的 × 从标签区移出 + 「我的通知」行漏改。
+- **D-628**：选款编号去除随机后缀——批次/候选/款号改**分段原子自增**（原随机后缀不可读、无法排序）。
+- **D-629**：移除价格变更**死链路** + 供应链风险监控加**默认关闭**开关。
+
+---
+
+## D-630 / D-631：架构与质量门禁双基线（2026-09-29）
+
+- **D-630**：ArchUnit 新增 2 条规则（Controller/Service 分层门禁）并**冻结基线**，使「Controller 禁止直调多 Service」从口头规则变成可断言事实。
+- **D-631**：前端质量基线门禁——any / disable / console **只许减少不许增加**。这是后续 D-674~D-711 大批次治理得以持续的制度前提。
+
+---
+
+## D-632 ~ D-653：架构违规收敛 —— Controller→多 Service 33 → 0（2026-09-29 ~ 09-30）
+
+**背景**：P0 #2 要求「Controller 禁止调用多个 Service，复杂业务必须走 Orchestrator + @Transactional」，但存量违规达 33 处。
+
+**手法**：
+- 按 Controller 逐个下沉：把多 Service 调用抽成 Orchestrator，Controller 只留参数校验 + 调用编排层 + 返回 Result；
+- **规则 7（service.depends.on.service）同步收敛**：56 → 48（D-653），并修正规则 7 的四处判据缺陷；
+- 工具型类统一更名移入 helper 包（D-658~D-670 等），基础设施类移入 common（AuthTokenService + TokenSubject 移入 common，规则 7 22 → 21）；
+- 删除死代码 Service（D-656 删 2 个、D-657 删死代码 + WechatWorkNotifyService 去 TenantService 依赖）。
+
+**批次成果**：`Controller→多Service 33 → 0`（D-634~D-652 逐批：33→29→23→20→17→15→13→11→10→9→8→7→6→5→4→3→2→1→0）；Mapper 直连 47 → 40。
+
+**回归修复**：**D-638** —— D-634 引入的测试回归（`PlatformWebhookControllerTest` 全红），说明批量下沉必须逐个跑测试，不能只看编译。
+
+**零行为变更承诺**：D-633 门户编排层改用 Result 表达成败，不改业务语义。
+
+---
+
+## D-654 / D-654b：巡检工单刷量根治（2026-09-30）
+
+**现象**：巡检工单重复刷量，简报铃铛红点清不掉。
+
+**决策**：
+- 去重**不再受 24h 窗口限制**（原实现窗口一过就重复生成）；
+- 自动执行加 **24h 冷却**；
+- 简报卡**整卡可关**；
+- **D-654b**：铃铛红点**跟随简报卡关闭**——点 × 后该巡检工单当日不再计入红点。
+
+---
+
+## D-655 / D-656 / D-657：词不达意与自动化补全（2026-09-30）
+
+- **D-655**：教程中心**死按钮接真**——用户手册由教程数据一键生成 + 意见反馈接入 UserFeedback 体系。
+- **D-656**：`CUTTING_BACKLOG` 正名「裁剪积压」→「**裁剪后积压**」——原词与描述自相矛盾。
+- **D-657**：供应商编码**全量自动生成**，新建表单免填。
+
+---
+
+## D-660：物料需求一览铺进采购链路（2026-09-30）
+
+把下单页的「面料需求可视化语言」抽成**共享模块**，复用到全采购链路，避免各处口径不一。
+
+---
+
+## D-663 ~ D-665：顶栏与菜单一致性治理（2026-09-30）
+
+- **D-663**：顶栏用户名升级为「**工厂-岗位 姓名**」+ 下拉欢迎语。
+- **D-663b**：平台名后加欢迎语「云裳智链 欢迎您」（用户澄清位置在平台名后）。
+- **D-663c**：移除顶栏左侧工厂名标签（信息已在右上角带出，不重复）。
+- **D-663d（真凶）**：顶栏岗位不显示 —— 根因是 `getCoreById` / `getByUsername` 的**显式列白名单漏了 `position` 字段**。这类「显式列清单漏字段」是隐蔽的静默缺数据，改查询方式时必须核对。
+- **D-665**：仪表盘更名「**首页**」——菜单/页签/页面标题/报错文案/催单备注/教程**全量同步**。
+- **D-664**：批量菜单灰项**加原因反馈**（用户报告订单详情批量采购三项全灰不可点，却不告知原因）。
+
+---
+
+## D-651 ~ D-672：其余 09-30 条目索引
+
+| 编号 | 内容 |
+|---|---|
+| D-651 / D-652 | PatternProductionController / FinishedProductSettlementController 下沉编排层；修正基线注释累计 Controller 数 34→35 |
+| D-653 | 修正规则 7 四处判据缺陷 + 两个编排层类改名（service.depends.on.service 56 → 48） |
+| D-658 | 注释钉板——物料出库领料去向**刻意不过滤**供应商类型（发二次工艺厂/外发厂/退回布行均为真实场景，用户拍板保持全量） |
+| D-659 | 无资料下单顶部信息区排版对齐有资料下单（网格节奏 + 标签样式 + 生产方同构） |
+| D-661 | 顶栏整排字调小 2 号（页签/今日预警/用户名 15→13，品牌 17→15，厂名 13→12） |
+| D-662 | 打板基础码按实填码数联动 + 商品规格 3×3 对齐网格 |
+| D-670 / D-671 | 基础设施 AuthTokenService + TokenSubject 移入 common（规则 7 22 → 21）；补 D-667~D-669 遗漏的 4 个旧文件删除 |
+
+---
+
+## D-624 / D-625：i18n 机制收官与样衣字段治理（2026-09-29）
+
+- **D-624**：ai-assistant **工具名 i18n 机制**（TOOL_NAMES 80 项，零建键上线）—— 前一晚 D-618~D-623 已完成 ai-assistant 主体 75 键、三个 loader 文件 33 键、displayHelper 状态 i18n 10/10 域全覆盖。
+- **D-625**：样衣字段治理 + 列表/页签**双置顶**。
+
+---
+
+## 勘误记录：记忆文件同步滞后（2026-10-01）
+
+**问题**：`memory-bank/` 三个核心文件（activeContext / progress / decisionLog）内容停在 09-28，而 09-29 ~ 10-01 三天产生 **88 个决策编号**（D-618、D-624~D-650、D-651~D-672、D-674~D-711）。10-01 22:03 的 `docs(memory)` 提交只同步了 CLAUDE.md / copilot-instructions.md / project_rules.md 三份**规则文档**，**一个 memory-bank 文件都没碰**——把「记忆文件」误理解为规则文档。
+
+**连带发现**：
+1. `memory-bank/archive/` 目录**根本不存在** —— context-rot-mgmt.md 里「> 500 行就归档」的规则从未执行过，实际 activeContext 已 6279 行、decisionLog 7485 行；
+2. quick-start-5min.md 仍写「7 条 P0 铁律」，agent-workflow.md 写「23 条」，**实际 29 条**；
+3. 09-30 与 10-01 存在**编号撞号**（D-654~D-664、D-667~D-669、D-693~D-700、D-698~D-711 等被不同主题复用），检索时须以「编号 + 日期 + 主题」三元组定位，不能只按编号。
+
+**处置**：补齐三个核心文件；修正 quick-start-5min.md（7→29 条并指向唯一真相源）、context-rot-mgmt.md（归档策略改为月度滚动归档 + 三条触发红线）、agent-workflow.md（23→29 条）；新增 optimization-log-2026-10-01-boot411-ai-cost.md；anti-patterns.md 追加 5 条（AP-BE-06 / AP-AI-05 / AP-AI-06 / AP-FW-01 / AP-FW-02）。
+
+**教训**：「更新记忆」必须**逐个文件核对是否真的写入**，不能只看会话里说了要更新。撞号问题建议今后在创建决策编号时先 grep 一次编号是否已被占用。
 
 ---
 

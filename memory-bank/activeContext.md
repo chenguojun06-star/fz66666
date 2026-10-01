@@ -1,8 +1,225 @@
 # 活跃上下文 — 当前开发状态
 
 > 本文件由 AI 助手在每次会话开始/结束时更新
-> 最后更新：2026-09-28（✅D-611b 批量打印返修——页码按单独立（逐单连打）+ 第一单实时预览，已推）
-> 上一版：2026-09-28（✅D-611 大货生产单/样衣工艺单批量打印——多单合并一次打印，已推待部署）
+> 最后更新：2026-10-01（✅D-698 Spring Boot 3.4.5 → 4.1.1 升级上线 + 🔴D-699 SSE 流截断/DSML 泄漏 + 🔴D-700 AI 成本归因 + D-674~D-711 前端 as any 治理）
+> 上一版：2026-09-30（✅D-654 巡检工单刷量根治 + D-655 教程中心死按钮接真 + D-632~D-671 架构违规收敛 Controller→多Service 33 → 0）
+
+## ✅ D-698：Spring Boot 3.4.5 → 4.1.1 升级上线（2026-10-01，已推 PR #27 已上线）
+
+**状态**：编译✅ 单测✅ 真实库启动✅ 已合并上线；回滚路径干净——本次一条 Flyway 迁移都没执行，flyway_schema_history 未被改写，回退 3.4.5 时 Flyway 10.20.1 看到的仍是原样。
+**改动**：parent 4.1.1；starter-aop → starter-aspectj（Boot4 BOM 已移除）；MyBatis-Plus 3.5.12 → 3.5.16（**刻意不选 3.5.17**：其迁包 IService/ServiceImpl 到 spring.*，会改 278 个文件 import）；新增 spring-boot-flyway（Boot4 把 Flyway 自动配置拆出）+ spring-boot-starter-json；9 个源文件适配新包名（Health→health.contributor / ErrorController→webmvc.error / MeterRegistryCustomizer / Lettuce 7 泛型 / JacksonConfig 显式 new）；application.yml 的 WRITE_DATES_AS_TIMESTAMPS → spring.jackson.datetime.*（Jackson3 把常量移到 cfg.DateTimeFeature，旧键位在 Boot4 下绑定失败 → 上下文启动失败，已实测复现）。
+**阻断点**：Spring AI 1.0.0 与 Spring Framework 7 **二进制不兼容** —— `NoSuchMethodError: HttpHeaders.addAll(MultiValueMap)`（javap 验证 Spring 7.0.9 的 HttpHeaders 只有 addAll(String,List) 与 addAll(HttpHeaders)）。327 项单测全绿是因为 Mockito 把该 bean mock 掉了，非真实可用。
+**处置**：SpringAiAdapterConfig 默认值 true → false，AI 由 LegacyInferenceAdapter（IntelligenceInferenceOrchestrator 1117 行，零 Spring AI 依赖，自实现 tool_calls）承担，AiInferenceRouter(@Primary) 路由与熔断。基线 vs 升级对照：启动 21.577s / 21.272s、工具注册数均 103、**运行期工具执行痕迹均为 0** → 工具调用未触发是既有实现特性，非本次回归。
+**关键发现**：AI 真实迁移面只有 3 个文件（`grep 'ChatClient|Advisor'` 命中的 57 个里 54 个是自研类）——**已自研的 AiInferenceGateway 抽象层是迁移代价可控的关键**。已补 AI 模块测试安全网（327 → 340）：SpringContextSmokeTest 必须用 `BeanFactory.getBean(name)` 逐个触发，否则 lazy-init 下测试假绿。
+**顺带**：修 D-701 遗留的多余 eslint-disable —— 只在 CI 的 `--report-unused-disable-directives` 下暴露，本地跑不带该 flag 复现不出。
+**未做**：Spring AI 2.0.0 迁移（实测是范式重写：OpenAiApi 类完全移除、工具改由 ToolCallingAdvisor 在 Advisor 链注入，需重写 2 个文件）；resilience4j spring-boot4 变体。
+
+---
+
+## 🔴 D-699：SSE 流被截断 + DSML 协议残渣泄漏（2026-10-01，P0 已修）
+
+**现象**：AI 顾问面板 `net::ERR_INCOMPLETE_CHUNKED_ENCODING`（HTTP 却是 200）；气泡出现 `<calls>` / `<invoke name="">` 内部协议。
+**根因1（Boot 4.1 回归）**：Spring Security 7.1.1 的 AuthorizationFilter 对「每个 dispatch」都授权（官方 "All Dispatches Are Authorized"），Boot 3.4 的 Security 6.4 不会。SseEmitter 启动异步处理后容器会再做一次 ASYNC 分发，本项目 `sessionManagement=STATELESS` 无 HttpSession → SecurityContext 无处恢复 → 视为匿名 → 命中 `/api/**.authenticated()`。此时响应已提交，错误页也渲染不出 → 连接被硬关闭。
+**修法1**：SecurityConfigHelper 首行 `dispatcherTypeMatchers(ASYNC, ERROR).permitAll()` —— 只放行 ASYNC/ERROR 二次分发，真正调 controller、校验 token 的 REQUEST 分发仍走原全部规则（鉴权强度不变）。
+**根因2**：旧实现逐 delta 判断 `content.contains("DSML")`，而模型会把一段协议拆到多个 SSE delta → 判断所需的开标记恰好在上一片里，续行逃过清洗。
+**修法2**：DsmlToolCallParser.stripLines() 跨 delta 缓冲、攒够一个完整换行才成行、成行后整行判断；strip() 复用同一逻辑保证「流式看到的」与「落库重读的」同貌；新增 flushDsmlTail()（模型最后一句通常不带换行，不 flush 会整句丢失）。
+**测试**：349 全绿（新增 9）——DsmlStreamingLeakTest(6) 逐字复刻线上拆行场景；SseAsyncDispatchAuthorizationTest(3) 含「匿名 REQUEST 仍被拒」反向断言，防有人图省事改成 `anyRequest().permitAll()`。
+
+---
+
+## 🔴 D-700：AI 成本无法归因 + 预算护栏对后台任务失效（2026-10-01，P0 已修）
+
+**现象**：DeepSeek 账单累计 ¥317、单日 ¥7.27 / 1243 次 / 199 万 tokens，而 `t_ai_cost_tracking` 自建表起 **0 行** → 数据库口径 9.1 万 vs 账单口径 199 万，**22 倍盲区**，系统完全无法回答「钱花在哪」。
+**根因1**：AiCostTracking 实体无任何 @TableField，依赖驼峰→下划线默认推导出 model_name / estimated_cost_usd，实际列是 model / estimated_cost；INSERT 因未知列必然失败，而失败被 catch 里的 `log.debug` 静默吞掉（debug 不进生产日志）→ 编译过、单测过、启动正常，只有真 INSERT 才炸。
+**根因2**：成本只挂在 AiInferenceRouter，而后台 agent/定时任务大量走 IntelligenceInferenceOrchestrator.chat()/chatStream() 直连，**绕过 Router** → 这批调用全部不记账。
+**根因3（P0）**：canInvoke / tryDeduct / recordUsage 都有 `if (tenantId == null) return true;`，而后台定时任务与系统级 agent 恰恰没有租户上下文 → **花得最多的那一批调用完整绕过 50 万/租户/日上限**。
+**修法**：补 @TableField 映射真实列名；在 finalizeResult / finalizeStreamResult（所有推理结果的唯一收口点）补记账；无租户上下文归入「系统桶」tenant 0 统一计量与限流（**不直接拒绝**——拒绝会让所有后台巡检/日报整体停摆，改为可观测 + 可总量限制）；失败日志 debug → warn。
+**降本**：ProactivePatrolAgent 每小时 → 每 6 小时（`AI_PROACTIVE_PATROL_CRON` 可覆盖）。实测该任务对每个活跃租户拉起 4 个部门 agent（pmc/finance/qc/ceo）= 24×4=96 次/天/租户，且 avg response 仅 15 字符、avg latency 约 130ms → 全部命中关键词兜底，**绝大多数是空转**。取舍：异常发现时效从最迟 1 小时变 6 小时，属刻意决策。
+**止损**：XiaoyunModelWarmup 补 @ConditionalOnProperty（原只有方法内 `if (!enabled) return`，「已关闭」仍每 90 秒被调度一次，实测每天空跑 662 次，每次留一条 t_ai_job_run_log，该表已 73.9 万行）。
+**部署陷阱入档**：`.env.backend` 被 .gitignore 排除不入库，且 env_file 优先级高于 yml —— 只要它含 `SPRING_AI_ADAPTER_ENABLED=true` 就会无声覆盖 yml 的 false → NoSuchMethodError → 容器起不来 → **全站 502**，且每次从控制台「整份复制」都会把旧值带回来。已写进 deploy/lighthouse/README.md。
+**测试**：356 全绿（新增 7）：AiCostTrackingEntityMappingTest(4) 把「实体↔表列名一致」变成可断言事实；AiAgentTokenBudgetServiceTest(3) 反向断言应急开关仍全量放行。
+**实测结论**：81% 成本来自定时任务而非真人提问；核对开销必须查生产库（MCP 连的是本地开发库，flyway 624 条 vs 生产 1941 条）。
+
+---
+
+## ✅ D-618 / D-694：待办中心「已完成」维度 + 任务状态契约补齐 escalated（2026-10-01）
+
+**D-618**：PendingTaskOrchestrator 新增 15 个已完成任务收集器（裁剪/质检/返修/物料/逾期订单/异常/款式开发/工资/物料对账/报销/发货/样品借还/领料），与「待处理」维度并列；新增 26 处查询全部带 tenantId（audit-tenant-id.py 0 违规）；同步 TaskListView / useTaskManager + 小程序与 h5-web 共 6 个 wxml。
+**D-694 根因**：前端 TaskStatus 只声明 5 个值，后端 CollaborationTask.TaskStatus 有 6 个（多 ESCALATED），而后端把 ESCALATED 当活跃任务（计入 inProgressRaw、findActiveByTenant 会返回）→ 升级中的任务「待处理/进行中/已完成」哪个页签都不计入（幽灵项），且操作区只判 in_progress/accepted → 领取不了也完成不了（死路）。
+**D-694 改法**：types.ts 补 'escalated'；statusBucket 由 `as` 断言改为**穷举 Record<TaskStatus, StatusTab>**（原 `as` 对未知值静默透传，正是 escalated 漏归桶无人察觉的根因；改穷举后后端新增枚举未同步时 TS 直接报错 TS2741，已实测）；操作按钮条件补 escalated。测试 480 → 485。
+**勘误**：此前「后端 taskStatus 大小写不统一、DTO 未定死契约」结论有误——系统待办与个人任务出参均为小写、契约一致，真实问题是枚举不全。
+
+---
+
+## 🔴 D-693：领料出库旁路缺事务 + AI 工具绕过编排层（2026-10-01，P0 已修）
+
+**缺陷**：MaterialPickingOrchestrator.createPicking 下游连做 4 个写操作（save 领料单 → insert 明细 → decreaseStock 扣库存 → recordOutboundLog），而 decreaseStockWithCheckDecimal 返回 0 时抛 IllegalStateException。该链路此前**全程 0 个 @Transactional** → 多明细第 N 条库存不足时，前 N-1 条已提交且无回滚 → 「领料单 status=completed + 明细缺失 + 库存已扣 + 出库日志缺失」的脏数据。
+**真实库佐证**：t_material_picking 共 22 条，MPK 前缀 7 条（走本旁路）最后使用 2026-05-29，PICK- 主流程 13 条最后使用 2026-09-12 —— 旁路仍在产生真实数据，非死代码。
+**修法**：createPicking 补 `@Transactional(rollbackFor=Exception)`（跨 Bean 调用非同类自调用，AOP 代理生效）；MaterialPickingTool 的 create 动作改走 Orchestrator（原直接注入 MaterialPickingService 做多表写入，同时违反「跨服务编排必须上移 Orchestrator」+「事务只在 Orchestrator 层」两条）。
+**守护**：MaterialPickingTransactionTest(3) 用反射读注解；实测临时移除事务注解立即 FAIL（非假守护）。
+**同批架构收敛**（service→service 21 → 19）：LoginLogServiceImpl 改注入 OperationLogMapper；DataCenterQueryServiceImpl 上移编排层——🔴 其 7 个方法全带 @Cacheable，**不能并入调用方**，否则同类自调用 → Spring AOP 代理失效 → 缓存静默失效（不报错，只每次查库）。新增 D693InjectionVerificationTest(5)；mvn test 315 → 323。
+**文档勘误**：架构违规治理方案 3 处内部矛盾修正 + 领料事务核实报告；A4「三项均是 @Transactional 内业务写链」经核实不成立（三个文件 @Transactional 出现次数均为 0）。
+
+---
+
+## ✅ 依赖 EOL ratchet 门禁 + 云端健康诊断脚本（2026-10-01）
+
+`scripts/check-dependency-eol.py` + `dependency-eol-baseline.properties`，CI「质量门禁」新增阻断步骤 + pre-push-checklist.sh 接入。**为什么用基线而非直接阻断**：Boot 3.4.5 与 Spring AI 1.0.0 建基线时已 EOL，直接阻断会让 CI 从第一天就常红 → 必然出现「加 --strict 绕过」或「临时关 job」，结果比假绿灯更糟（同 arch-baseline.properties 记录过的教训）。基线 2 → 1（D-698 上线后 3.x 不再是当前版本），剩余唯一 EOL 项 Spring AI 1.0.0（运行时已显式关闭）。门禁有效性已实测：基线临时调到 0 → 退出码 1。
+`check-cloud-health.sh`（只读诊断）：一次看清容器状态 / MySQL 连接数 / 向量回灌进度 / Qdrant 集合 / 后端日志。修正原稿连接参数错误（IP 106.53.5.62 + root → 实际生产机 106.55.12.216 + ubuntu；root 登录不可用会卡在交互提示，诊断脚本反成故障第一道障碍）；已实测 Threads_connected=11 / max_connections=151。
+
+---
+
+## ✅ D-674~D-711：前端 as any 治理大批次（2026-10-01，any-lines 3204 → 2661）
+
+**规模**：38 个批次，any-lines 3204 → 2661（净减 543 行）。代表：D-677 StyleInfoTabs 49 处；D-686 款式开发工作台 89 处 detail as any；D-684 useBoardStats 28 处；D-685 resizableTableHelpers 29 处；D-709 NodeDetailModal 簇整批 34 行。D-695 固化 `scripts/find-any-clusters.py`，order 家族四批（D-695/696/697/698）共清 92 处。
+**方法/发现**：连续 9+ 个「字段全齐」案例——断言纯属历史遗留，机械删除即可；tsc 在首轮常拦下真实类型缺口后收口。
+**⚠️ D-701 遗留**：清理该文件去 any 后，useEffect 的依赖数组已完整，原本压制告警的 eslint-disable 反成多余 → CI（带 `--report-unused-disable-directives`）当场报 Unused eslint-disable directive。**本地直接跑 `npx eslint <file>` 不带该 flag 复现不出**，已在 PR 中修掉。
+**遗留**：基线 2661 仍未清零。
+
+---
+
+## ✅ D-672~D-676：前端质量基线与循环依赖治理（2026-10-01）
+
+**D-673 循环依赖清零（madge 10 → 0）**：形态 A 9 处把类型定义抽到同目录独立 `<业务名>Types.ts` + 主文件 `export type ... from` 兼容旧引用路径；形态 B 1 处 Cutting barrel 再导出成环，改直连。
+**D-676 上锁**：新增 `scripts/check-frontend-circular.py`（ratchet，madge 加 300s 超时保护）+ 接 pre-push + CI madge 从 continue-on-error 升为阻断。**为什么必须挂 pre-push**：服务器 autodeploy 是独立 cron（每 2 分钟拉 main 重建），不看 CI 结果，CI 门禁只能事后报警。
+**D-674**：消除 8 处 exhaustive-deps 禁用（126 → 118）。先做全量探测（把 126 处逐行「失效化」后 eslint --stdin 复检）→ 确认没有一处是历史遗留的多余注释，126 处全部真需要；剩余 109 处「缺依赖」多是有意省略（补入会改变 effect 时序）。
+**D-672**：消除 9 处 no-unused-vars 禁用（135 → 126）。
+**D-675**：生产订单列表修复重复重绑与 stale closure（118 → 115）——fetchProductionList 原为**普通 async 函数**（每次渲染新建）却被 3 个 useEffect 直接列进依赖 → 每次渲染都重新 removeEventListener + addEventListener（含 WS 退订重订）；顺带修 visibilitychange 的 stale closure（依赖 [] 只绑定一次，onVisibility 永久捕获首次渲染的函数 → 切走再切回会用过期的查询条件拉数据）。
+
+---
+
+## ✅ D-667 / D-668：维护弹窗与 Select 下拉冲突（2026-10-01）
+
+**D-667 根因**：antd Select/AutoComplete 用**原生 mousedown** 切换下拉，React 委托层的 onMouseDown 阻断为时已晚（原生事件已冒泡过选择器）→ 齿轮改 `onMouseDownCapture` 在事件到达选择器前拦死；修复 BasicInfoSection MaintainGear + DictAutoComplete + SupplierSelect + CustomerSelect 四处。QuickManageModal 的 ➕/➖ 圆形图标按钮改文字按钮「新增」「删除」。
+**D-668 续报**：点新增后选项列表又弹出盖住弹窗——rc-select 焦点链路在弹窗焦点流转时**自行置 open=true**（无选择器 mousedown，纯内部状态怪癖，onMouseDownCapture + preventDefault 均拦不住）→ MaintainGear 加 onOpenChange，各 Select 加 `open={gearModalOpen ? false : undefined}` 强制压制。浏览器实测：齿轮→弹窗→新增全程无下拉遮挡，正常点击选择框本体下拉照常弹出。
+
+---
+
+## ✅ 记忆文件同步：Boot 4.1.1 现状 + 今日全部踩坑（2026-10-01）
+
+**修正一条与现行政策完全相反的 P0 铁律**：copilot-instructions.md 原写「Java 单元测试永不提交仓库」并要求 `git ls-files backend/src/test/ | wc -l` 必须为 0；实际政策自 2026-09-15 起是**全部入库**——历史上正是该策略导致 **CI checkout 后测试目录为空、ArchUnit 架构门控空转（假绿灯）**。留着这条会让后续 AI 按它办事，持续破坏 CI 门禁。
+版本号同步（CLAUDE.md 3.4.5 → 4.1.1；copilot-instructions.md 从 **2.7.18** 落后两个大版本 → 4.1.1）。新增「Boot 4.1 + Spring Security 7 陷阱」「AI 成本归因与止损」两节。补测试文件数 Java 33 → 44、前端 33 → 34；填「当前进度快照」；明确记下 MCP 连的是本地开发库（flyway 624）不是生产库（1941）。
+
+---
+
+## ✅ D-654 / D-654b：巡检工单刷量根治（2026-09-30）
+
+**现象**：1181 条待审批实为 71 个真问题；同一停滞订单一天被自动执行 40 次重复催单。
+**根因**：createAction 去重条件「PENDING 超 24h 即失效」→ 老工单不断被重复建。
+**改法**：去重拆两条（PENDING 不限时长即拦截；APPROVED/AUTO_RUNNING 在途保留 24h 窗口）；新增 existsAutoExecutedSince（同租户 + 同问题类型 + 同目标 24h 内已自动执行则冷却），建单侧（AutoRemediationExecutor）与执行侧（AiPatrolJob）双冷却，执行侧命中则撤销重复工单（不执行不通知，留痕可追溯）。
+**面板**：SmartAlertBell AI 巡检简报**整卡加 ×**（今日持久）；误导提示只在有行时显示（原行级 × 全关后标题卡永远关不掉）。**D-654b**：点 × 后巡检工单当日不再计入铃铛红点。
+
+---
+
+## ✅ D-655：教程中心死按钮接真（2026-09-30）
+
+**「下载用户手册」**原为无 onClick 死按钮且全仓无手册文件 → 新增 userManual.ts 实时把教程数据编译为打印 HTML（封面=生成日期 + `__BUILD_COMMIT__` 版本戳 + 收录篇数，目录按分类分组，含步骤/温馨提示/FAQ/截图），safePrint 打开打印窗口另存为 PDF → **教程更新手册自动跟新**。**「意见反馈」**也是死按钮 → 复用个人中心 ProfileFeedbackModal + feedbackService（与 D-527 同源）。
+**同步纪律**：Tutorial/README.md 定规矩——界面改动的 D 号须同批更新教程 + 清理旧描述 + 截图随改版换。**遗留**：教程内容停在 D-513，D-514 后大改版未回补，待专项。
+
+---
+
+## ✅ D-657 / D-660：供应商编码自动生成 + 物料需求一览铺进采购链路（2026-09-30）
+
+**D-657**：后端空编码自动生成沿用存量 F+时间戳风格，factory_code 全局唯一索引下先查重重试 5 次防同毫秒撞码；前端新建模式编码框禁用 + 占位「保存后自动生成」+ 去必填，编辑态保留可改（存量手输乱码如 Table/0006 可修正）；SupplierSelect 失焦建供应商 / QuickManage 快捷建卡均不传编码，统一落此生成器。
+**D-660**：共享组件 MaterialDemandSummary（components/common）——每物料卡 = 需求(含损耗)/可用库存/在途/缺口（净需求=需求-库存-在途），compact 速览条与整卡组两形态。后端 `/demand/preview` 加 orderNo 入参（手工采购表单只持有订单号，内部解析成订单后走原预览链路，orderId 优先保持兼容）。接入点①采购单创建表单实时速览条（useOrderDemandPreview 防抖 + 按物料+颜色聚合）；②采购单详情页整单物料需求一览（样衣模式不显示）。
+
+---
+
+## ✅ D-663 / 663b / 663c / 663d：顶栏用户名升级「工厂-岗位 姓名」（2026-09-30）
+
+后端 /system/user/me 补 position；前端登录/启动两处映射。显示规则：设了岗位=「东方制衣厂-总裁CEO 李老板」；没设=「东方制衣厂-李老板」；工厂账号保留原橙色工厂标签不重复前缀。663b 平台名后加欢迎语「云裳智链 欢迎您」（小一号浅色后缀）；663c 移除顶栏左侧工厂名标签（工厂名已在右上角带出）。
+**663d 真凶**：me() 返回的 position **永远为 null** —— resolveCurrentUser 走的 getCoreById/getCoreByUsername 是「防迁移报错的显式列名查询」，**白名单漏了 position 列**。两处白名单补上（t_user.position 生产库已存在已核实）。
+
+---
+
+## ✅ D-665 / D-666：首页更名 + 小程序 i18n 绑定缺口清零（2026-09-30 ~ 10-01）
+
+**D-665**：menuConfig title/shortTitle + i18n menu.sections.dashboard 同步；routeConfig 深链标签 `/dashboard`=首页、`/dashboard/main` 主仪表盘→经营概览（独立深链保留区分）；页面标题、路由错误边界页名、数据加载失败提示、延期催单备注、教程中心三处文案全量同步。
+**D-666（第 4 类 i18n 盲区）**：wxml 用了 `{{t.x}}` 但同目录 js 的 applyLanguage 从不给 t.x 赋值 → t.x 恒 undefined → 文案静默丢失（不报错、构建也过）。全项目 18 个页面 / 33 处 → **收敛到 0**。
+**守卫扩容**：check-i18n-keys.py 4 项 → 8 项，新增 [5] `NS + 'x'` 无点引用校验（小程序 83 个文件用这种写法，原正则要求含点才匹配 → 按 NS 解析后实为 2634 个键）、[6]「值是翻译表片段」检测、[7] 死键报告（非阻塞 + 基线 68）、[8] 绑定缺口（非阻塞 + 基线 33）。
+**P0 修复**：5 处线上裸键名 + 1 处语言包结构损坏（mp.attendanceDetail.accumHoursW 被写成整块翻译表片段，`String(对象)` 渲染成 `[object Object]`）；四语言键数 3915 → 3917 → 3918。
+**修 23 处绑定的两个坑**：①一个页面可能有多个 `t: {` 块，模块级初始 data 里那个是空的、作用域无 lang，第一版插进去直接 ReferenceError（被 test-warehouse-pages.mjs 当场抓到）→ 改为选 applyLanguage 里那个块并加作用域校验；②插入格式 `rstrip('\n')` 会留下只含空格的空行。
+**顺带**：修 4 处语言包值写错（wxml 把数字放在键外但键值含占位符 → 渲染出字面 `{count}`）、新增 5 键、修 1 处**不是漏绑定而是 wxml 路径错**（smart-ops 的 scanSubText js 设在 setData 顶层而 wxml 读 `{{t.scanSubText}}`）——守卫 [8] 因此增加「缺绑定 / 路径错」分类输出。
+**其余 D-666 子项**：手机端样衣审核独立页（可写评语 + 传现场照片）；阶段详情审核改跳统一审核页；样衣详情补 5 个从未赋值的 t.* 绑定；右缘控件两处缺陷（清空 × 压住齿轮 + TextArea 顶部 22px 死区）。
+**验证**：test-warehouse-pages.mjs 2423 项 0 失败（真实 eval 各页面模块，能抓 ReferenceError）；三副本内容完全一致。
+
+---
+
+## ✅ D-664：批量菜单灰项加原因反馈（2026-09-30）
+
+**核实结论**：五处采购入口的禁用条件本身符合业务规则（到货数量=0 时回料确认/确认完成确实不可用），真正缺陷是 **antd 禁用菜单项悬停 tooltip 不渲染**，调用方传的原因用户永远看不到。改法：PurchaseActionBar 禁用项标签内联渲染原因（title → 灰字小字后缀，打开菜单即见为什么）；订单详情采购 Tab 原因改为「需先登记到货（到货数量＞0）」；InlinePurchasePanel / PurchaseDetailView 补传原因。
+
+---
+
+## ✅ D-632~D-671：架构违规收敛（2026-09-29 ~ 09-30）
+
+**Controller → 多 Service 33 → 0**：D-632 CrmClientController（7 个 Service 下沉 CrmClientOrchestrator，545 → 158 行）+ 新增 SupplierPortalOrchestrator（534 → 183 行）；D-634 ~ D-652 逐批下沉（33→29→23→20→17→15→13→11→10→9→8→7→6→5→4→3→2→1→0）。
+**Controller → Mapper 47 → 0**（D-654）：先把判据从 `haveSimpleNameEndingWith("Mapper")` 收紧为 `resideInAPackage("..mapper..")`，消除 Jackson ObjectMapper 造成的 3 个假阳性（18 → 7），再三处下沉到 0。
+**service → service 56 → 48 → … → 21**：D-653 先修规则7 四处判据缺陷（`ExecutorService`/`ScheduledExecutorService` 的 simpleName 也以 Service 结尾被误当业务 Service；顶层 `com.fashion.supplychain.service` 包未按 javadoc 豁免；`.common.` 按段匹配漏掉包本身 `com.fashion.supplychain.common`；宿主类未双向豁免）→ 56 → 48；D-655~D-669 按「更名移包」模式逐批（ProductionOrderQueryService → ProductionOrderQueryOrchestrator 等，含 QdrantService 移入 common 一次归零 5 个依赖），D-670/D-671 基础设施 AuthTokenService + TokenSubject 移入 common。
+**错误语义保持**：域内失败统一抛 IllegalArgumentException → 全局处理器 400 + 原样中文 message。**刻意不用 404** —— 前端 http.js 对 HTTP 404 会用固定文案「请求的资源不存在」覆盖后端 message。两个 Web 层守卫（「请先登录」/供应商门户 403）刻意留在 Controller，下沉会丢失专属文案。
+**教训**：规则7 按「类」计数，ProductionOrderQueryService 依赖 8 个 Service 也只产生 1 条违规——「依赖数」衡量的是重构成本而非收益，选起点应优先「依赖数少 + 调用方少」的类。
+**遗留**：剩余 21 项按治理方案批次推进（A 类 3 + B 类 3 + C 类 15，「降到 15 即停」）；C 类排除理由是调用方规模 + 库存核心写路径敏感度。
+
+---
+
+## ✅ D-656 / D-658 / D-659 / D-661 / D-662：文案与排版细节（2026-09-30）
+
+D-661 顶栏整排字调小 2 号（用户反馈顶栏文字比正文大太多，D-516 全站字体加大把顶栏一起抬高）：页签/今日预警/用户名 15→13px、品牌 17→15、厂名 13→12，只动字号不动高度布局。D-662 打板基础码按实填码数联动（原把矩阵全部码数列带进打板尺码，与「基础码」语义不符；一码未填不覆盖手工值）+ 商品规格区统一 3×3 网格。D-659 无资料下单顶部信息区排版对齐有资料下单。D-656 CUTTING_BACKLOG 正名「裁剪积压」→「裁剪后积压」（原词与描述自相矛盾）。D-658 注释钉板：物料出库领料去向**刻意不过滤供应商类型**（发二次工艺厂/外发厂/退回布行均为真实场景，用户拍板保持全量）。
+
+---
+
+## ✅ D-626 / D-627：AI 巡检可读化（2026-09-29）
+
+**用户反馈**：AI 巡检通知关不掉、面板要侧滑、巡检页满屏代码/编码看不懂。
+**改法**：SmartAlertBell 下滑悬浮面板 → antd Drawer 右侧侧滑（宽 min(460px,94vw)，遮罩/Esc 由 Drawer 自带，移除手写的点外关闭 + Escape 监听）；简报行补 × 关闭（当日不再提醒，dismissedIds 按日 localStorage 持久化，key=patrol_<工单id>，老数据用类型+文案稳定键兜底）；类型原始英文码 DELAY/STAGNANT/SAMPLE_OVERDUE → 交期延误/进度停滞/样衣逾期。
+**权威映射**：新建 `services/intelligence/patrolLabels.ts`（合并 useAiPatrol 4 键小表与 PatrolActionCenter D-513 大表，补 SAMPLE_OVERDUE/SAMPLE_STAGNANT/DELIVERY_RISK/MATERIAL_LOW/PURCHASE_OVERDUE/OVERDUE 等落库值），两处同源不再漂移。
+**后端目标富化**：PatrolTargetLabelEnricher —— t_ai_patrol_action.target_id 对订单存 32 位 UUID、对样衣存 pattern 雪花 ID，列表接口批量翻译为订单号/款号；by-status/by-target/recent/pending/summary 全接线，失败静默降级为原始 ID。
+**D-627 关闭键恒显**：决策卡 × 原位置被「规则判断/高置信」标签压住（找不到也点不到）→ 移到卡片右上角外沿 -7px + 白底阴影；dismissKey 改用卡片标题（面板每 10 分钟重拉后卡片顺序会变，序号键会导致「点了 × 又复活」）；`.sap-event-dismiss-btn` / `.sap-notice-dismiss-btn` opacity 0 → 1 恒显（触摸屏无 hover 时该键永远不出现），依据 D-287「行操作按钮常显」定论。
+**验证**：本机 vite dev + Playwright 真机命中测试 + 真实点击；点 × 3 次 dismissed 计数恰好 +1，且不误触发跳转。
+
+---
+
+## ✅ D-628：选款编号去除随机后缀（2026-09-29）
+
+**根因**：`Math.random()*9000+1000` 只有 9000 个取值，生日悖论下同一日期段约 112 条记录即有 50% 撞号概率（按月分段月产 100 款约 55%），且不可重放、不利于排查。
+**风险分级**：批次号/候选号有 `uk_*_no_tenant` 唯一索引兜底（撞号=插入失败，可恢复）；**款号 t_style_info.style_no 无唯一索引**（V20260131 建索引语句被注释掉）→ 撞号静默产生重复款号。
+**修法**：新增 SelectionNoGenerator，按「日期段 + 类型」分段进程内原子自增，分段起点由数据库水位（该日期段最大编号 +1）推导，避免服务重启后序号归零与历史编号重复；与 B2BOrderOrchestrator.generateOrderNo / PaymentNoGenerator 既有思路一致。**刻意不用分布式锁**——锁只防并发写，防不住不同时刻的随机碰撞，此处要解决的是编号唯一性不是并发问题。
+**顺带**：修正 CLAUDE.md 两处与事实相反的过时描述（Java/前端单测自 2026-09-15、09-19 起已入库）。
+
+---
+
+## ✅ D-629：移除价格变更死链路 + 供应链风险监控默认关闭（2026-09-29）
+
+**死链路**：PriceChangeEvent 有 2 个监听器但主代码**无任何发布方**（仅测试构造），功能已被 EcSyncJob（定时 PRICE_SYNC）与 EcSyncController → ProductSyncOrchestrator.pushPriceToPlatform 覆盖 → 整体删除（含 4 个测试用例）。
+**顺带消除隐患**：SyncEventListener.onPriceChange 缺 onStockChange 那样的 BackendActionKey 开关守卫——若将来有人补上发布方接线，价格会被静默推送到电商平台，绕过「智能化不自动执行」原则。
+**风险监控**：SupplyChainRiskMonitorJob 依赖 ExternalDataService 桩实现（Math.random 模拟面料价格指数/汇率/天气/风险评分），开启后每天 7:00 产生十几条「⚠️ 价格波动超过10%」假预警；更大隐患是 logRiskAdvice 已列出【待集成】真实推送通道（SmartAdvice / 企业微信机器人 / App 消息中心）→ 加 `fashion.risk-monitor.enabled` 默认 false；ExternalDataService 类头加使用约束警告：禁止把返回值用作对用户展示的决策依据。
+
+---
+
+## ✅ D-630 / D-631：质量门禁补位（2026-09-29）
+
+**D-630**：CLAUDE.md 的 P0 铁律已写明「Controllers must NOT call multiple services」与「Services must NOT call each other」，但 ArchUnit **没有对应规则** —— 属「有规范、无门禁」。新增规则6/规则7 并纳入 ratchet 冻结基线（违规数只许减少不许增加）。**口径关键**：两条规则都只统计**字段注入**（@Autowired / @RequiredArgsConstructor 的 final 字段），不用 `getDirectDependenciesFromSelf()` —— 后者会把方法参数/返回值/泛型里的 Service 也算进来，实测会把违规数从 56 放大到 370。首次实测基线（字节码口径，非 grep 估算）：controller.depends.on.multiple.services=35、service.depends.on.service=56。
+**D-631**：`frontend/.eslintrc.json` 里 no-explicit-any 与 no-console 均为 off（实测 3204 行含 any、135 处 eslint-disable、6 处 console.log）→ 新增 `scripts/check-frontend-quality.py` + `frontend/code-quality-baseline.json`，三项指标冻结进基线、超基线退出码 1、低于基线提示可 --update 下调（保证单调收敛），接入 safe-push.sh 前端段。**口径一律用「行数」而非出现次数**（同一份代码两种口径相差近一倍，混用会让基线失去可比性）。
+
+---
+
+## ✅ D-625：样衣字段治理 + 列表/页签双置顶（2026-09-29）
+
+样衣详情删「商品属性」(productNature，与基础信息「商品类型」语义重复，全系统零消费方) + 删「标签」(styleTags，自由文本零消费方)；「打扮尺码」错别字更正为「打板尺码」（商品资料表单/详情抽屉同源修正）；打板尺码/数量与颜色码数矩阵联动；分区更名「商品规格」。
+列表置顶：共享 usePinnedRows —— localStorage(按用户隔离) + t_user_preference 双写，跨登录跟随账号；生产订单 + 样衣开发三种视图（表格/智能/卡片）接入；场外钉住单按 id 补拉详情插队最前。顶部页签栏每页签加图钉（PushpinFilled/Outlined），关闭页签自动解钉。
+后端：`/api/system/user-preference` 从租户主账号门槛放开到所有登录用户（数据严格按 tenantId+userId 隔离，普通主管此前存任何偏好都 403）。i18n layout.pinTab/unpinTab 四语言。
+
+---
+
+## ✅ D-624：ai-assistant 工具名 i18n 机制（2026-09-29）
+
+`describeTool`（「正在使用「xxx」...」streaming 提示里工具名的来源）背后的 TOOL_NAMES 有 **80 项中文工具名**，接入 i18n：键 `common.toolName.<驼峰>`，缺键回落中文表（与 D-619 状态表同款「缺键回落，翻译分批补」）。键名自动转换规则：去 `tool_` 前缀 + 下划线转驼峰（`tool_query_production_progress` → `queryProductionProgress`）。**本批零建键**（机制先上线，补之前其他语言回落中文，不报错不空白）。勘误：D-623 提交信息写的「TOOL_LABELS 70 项」实为 TOOL_NAMES 80 项。
+
+---
+
+## ✅ D-615~D-623：i18n 收官批次 + 岗位池任务面板内领取（2026-09-28 晚）
+
+displayHelper 状态 i18n 机制：D-619 salesOrder 域试点 → D-620 扩至 payment/return/advance/split/quality 6 个域 → D-621 补完剩余 4 域，**10/10 域全部接入**。ai-assistant 模块：D-622 三个 loader 文件接入四语言（33 键）→ D-623 主体接入（75 键，Component 生命周期适配）。D-615 样衣开发簇残留修补（25 键）+ cutting 簇定性豁免；D-616 待办详情页 + 退货列表页接入四语言；D-618 登录页收尾 + warehouse/work 簇定性豁免。D-613/617 岗位池任务面板内直接领取（卡片领取按钮直达业务接口；编号与 i18n 批次撞号，commit message 不重写、以 D-617 为准）。
 
 ---
 

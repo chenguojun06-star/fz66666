@@ -148,14 +148,32 @@
 
 ## 💾 归档策略
 
-### 旧会话归档
+> ⚠️ **2026-10-01 核查：本节规则此前从未执行过**——`memory-bank/archive/` 目录根本不存在。
+> 实际行数已远超旧阈值：`activeContext.md` **6279 行**、`decisionLog.md` **7485 行**、
+> `progress.md` **3384 行**（旧规则写的是「> 500 行就归档」）。
+> 后果：每次会话冷读这三个文件的开销极高，且开头几屏就吃掉大量上下文预算。
+> 下面改为**月度滚动归档**，可执行、不依赖临时判断。
 
-活跃上下文文件过长时（> 500 行），执行归档：
+### 月度滚动归档（每月 1 号执行）
 
-1. 将 activeContext.md 中超过2周的内容移至 `memory-bank/archive/activeContext-YYYYMMDD.md`
-2. 在 activeContext.md 顶部保留最近3次会话摘要
-3. 在 decisionLog.md 中记录"已归档 XXXX年XX月XX日内容"
+1. **建目录**：`memory-bank/archive/`（首次执行时创建，已在 .gitignore 之外，归档文件随仓库提交）
+2. **按文件滚动**：把 `activeContext.md` / `progress.md` / `decisionLog.md` 中
+   **超过 30 天**的条目剪切到 `memory-bank/archive/{文件名}-YYYYMM.md`
+   （如 `activeContext-202609.md`），归档文件**只追加不重写**
+3. **正文留索引**：三个正文文件只保留最近 30 天条目，末尾加一行
+   `> 更早内容见 memory-bank/archive/{文件名}-YYYYMM.md`
+4. **可追溯**：在 decisionLog.md 顶部记一条「已归档 YYYY-MM-DD 之前的内容到 archive/xxx.md」
+5. **红线**：归档是**剪切**不是删除；归档文件必须随仓库提交，禁止只留本地
+
+### 触发条件（满足任一即执行，不必等到 1 号）
+
+| 条件 | 动作 |
+|------|------|
+| 任一正文文件 > 3000 行 | 立即滚动归档 30 天前内容 |
+| 单次会话冷读这三个文件耗时明显（> 10 秒） | 立即滚动归档 |
+| 某天新增条目 > 50 条（如大版本升级 / 批量重构日） | 当天结束前归档一次 |
 
 ### optimization-log 归档
 
 规则已定义在 `optimization-log-20260620.md` 顶部（`每月1号` 归档旧日志到 `.trae/archive/`）。
+已归档的旧日志在 `.trae/rules/optimization-log-*.md` 中只留一行指针（该机制此前运转正常，可继续沿用）。

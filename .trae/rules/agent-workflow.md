@@ -41,7 +41,7 @@
 1. 读取 `memory-bank/activeContext.md` — 当前状态 + 最近变更
 2. 读取 `memory-bank/progress.md` — 进度跟踪 + 已完成任务
 3. 读取 `memory-bank/decisionLog.md` — 历史决策 + 踩坑记录
-4. 读取 `.trae/rules/project_rules.md` — P0铁律（安全底线，23条致命错误）
+4. 读取 `.trae/rules/project_rules.md` — P0铁律（安全底线，**当前 29 条**；2026-10-01 核对，此前文档写的 23 条已过时）
 5. 读取 `.trae/rules/optimization-log-*.md` — 最近优化记录（最近 2 个即可）
 6. 读取 `memory-bank/quick-start-5min.md` — 5分钟快速上手（每次必读，新人/新话题/长会话重置时必读）
 7. 读取 `memory-bank/anti-patterns.md` — 常见反模式速查（改代码前必读，防止重复踩坑）
