@@ -45,7 +45,7 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
 
   const hint = computeStageBudgetHint({
     nodeName,
-    styleId: (record as any).styleId as string | null | undefined,
+    styleId: record.styleId as string | null | undefined,
     orderCreateTime: record.createTime as string | null,
     expectedShipDate: effectiveShipDate,
     stageStartTime: stageStartTime || undefined,
@@ -65,12 +65,12 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
   const gapInfo = useMemo(() => {
     const timelineItems: StageTimelineItem[] = [
       { name: '下单', startTime: record.createTime, endTime: record.createTime, isCompleted: true },
-      { name: '采购', startTime: (record as any).procurementStartTime, endTime: (record as any).procurementEndTime, isProcureNode: true },
-      { name: '裁剪', startTime: (record as any).cuttingStartTime, endTime: (record as any).cuttingEndTime },
-      { name: '二次工艺', startTime: (record as any).secondaryProcessStartTime, endTime: (record as any).secondaryProcessEndTime },
-      { name: '车缝', startTime: (record as any).carSewingStartTime, endTime: (record as any).carSewingEndTime },
-      { name: '尾部', startTime: (record as any).ironingStartTime, endTime: (record as any).ironingEndTime },
-      { name: '入库', startTime: (record as any).warehousingStartTime, endTime: (record as any).warehousingEndTime },
+      { name: '采购', startTime: record.procurementStartTime, endTime: record.procurementEndTime, isProcureNode: true },
+      { name: '裁剪', startTime: record.cuttingStartTime, endTime: record.cuttingEndTime },
+      { name: '二次工艺', startTime: record.secondaryProcessStartTime, endTime: record.secondaryProcessEndTime },
+      { name: '车缝', startTime: record.carSewingStartTime, endTime: record.carSewingEndTime },
+      { name: '尾部', startTime: record.ironingStartTime, endTime: record.ironingEndTime },
+      { name: '入库', startTime: record.warehousingStartTime, endTime: record.warehousingEndTime },
     ];
     const computed = computeStageTimeline(
       timelineItems,
@@ -196,7 +196,7 @@ const BudgetDaysEditor: React.FC<BudgetDaysEditorProps> = ({
             message.error(res.message || '保存失败，请重试');
           }
         } catch (err: unknown) {
-          const axiosErr = typeof err === 'object' && err !== null && 'response' in err ? (err as any).response?.data?.message : null;
+          const axiosErr = typeof err === 'object' && err !== null && 'response' in err ? (err as { response?: { data?: { message?: string } } }).response?.data?.message : null;
           message.error(axiosErr || '保存失败，请检查网络后重试');
         }
       },
