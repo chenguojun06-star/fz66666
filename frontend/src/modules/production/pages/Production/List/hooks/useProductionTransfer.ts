@@ -144,8 +144,8 @@ export function useProductionTransfer({ message }: UseProductionTransferOptions)
     setTransferBundlesLoading(true);
     api.get('/production/cutting/list', {
       params: {
-        orderNo: (order as any).orderNo,
-        orderId: (order as any).id,
+        orderNo: order.orderNo,
+        orderId: order.id,
         page: 1,
         pageSize: 999
       }
@@ -161,7 +161,7 @@ export function useProductionTransfer({ message }: UseProductionTransferOptions)
       .finally(() => setTransferBundlesLoading(false));
 
     // 加载工序列表
-    const orderProcesses = (order as any).progressNodeUnitPrices || [];
+    const orderProcesses = order.progressNodeUnitPrices || [];
     if (Array.isArray(orderProcesses) && orderProcesses.length > 0) {
       const processes = orderProcesses.map((p: any) => ({
         processCode: p.processCode || p.code || p.id,
@@ -171,9 +171,9 @@ export function useProductionTransfer({ message }: UseProductionTransferOptions)
       }));
       setTransferProcesses(processes);
     } else {
-      if ((order as any).styleId) {
+      if (order.styleId) {
         setTransferProcessesLoading(true);
-        api.get('/style/process/list', { params: { styleId: (order as any).styleId } })
+        api.get('/style/process/list', { params: { styleId: order.styleId } })
           .then((res: any) => {
             const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
             const processes = list.map((p: any) => ({

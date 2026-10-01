@@ -22,9 +22,9 @@ export function useSkuMatrixEdit({ order, orderLines, editing, fetchFlow }: UseS
     const items = orderLines.map(l => ({ color: l.color, size: l.size, quantity: l.quantity }));
     return buildOrderColorSizeMatrixModel({
       items: items as any,
-      fallbackColor: (order as any)?.color,
-      fallbackSize: (order as any)?.size,
-      fallbackQuantity: toNumberSafe((order as any)?.orderQuantity),
+      fallbackColor: order?.color,
+      fallbackSize: order?.size,
+      fallbackQuantity: toNumberSafe(order?.orderQuantity),
     });
   }, [orderLines, order]);
 
@@ -42,7 +42,7 @@ export function useSkuMatrixEdit({ order, orderLines, editing, fetchFlow }: UseS
 
   // 保存颜色尺码矩阵（更新 orderDetails JSON）
   const handleMatrixSave = useCallback(async () => {
-    const orderId = (order as any)?.id;
+    const orderId = order?.id;
     if (!orderId) { message.error('订单ID不存在'); return; }
 
     // 唯一性校验：同一订单内 商品编码 不能重复
@@ -88,7 +88,7 @@ export function useSkuMatrixEdit({ order, orderLines, editing, fetchFlow }: UseS
 
   // 用户主动按统一规则生成 商品编码（款号 + 颜色 + 尺码 + 顺序号；不加 商品编码- 前缀）
   const handleMatrixAutoGen = useCallback(() => {
-    const styleNo = String((order as any)?.styleNo || '').trim() || 'STYLE';
+    const styleNo = String(order?.styleNo || '').trim() || 'STYLE';
     const map: Record<string, string> = {};
     orderLines.forEach((l, idx) => {
       const key = `${l.color || ''}|${l.size || ''}`;
@@ -104,7 +104,7 @@ export function useSkuMatrixEdit({ order, orderLines, editing, fetchFlow }: UseS
 
   // 切换"自动生成 商品编码"全局开关（保存到订单）
   const handleSkuAutoToggle = useCallback(async (checked: boolean) => {
-    const orderId = (order as any)?.id;
+    const orderId = order?.id;
     if (!orderId) return;
     try {
       const res: any = await api.put('/production/order/update-basic-info', {

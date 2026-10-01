@@ -31,7 +31,7 @@ const OrphanDataPage: React.FC = () => {
     setSelectedRowKeys([]);
     try {
       const res = await intelligenceApi.scanOrphanData();
-      const data = (res as any)?.code === 200 ? (res as any).data : (res as any)?.data ?? res;
+      const data = res?.code === 200 ? res.data : res?.data ?? res;
       setScanResult(data as OrphanDataScanResultDTO);
       msgApi.success(`扫描完成，发现 ${(data as OrphanDataScanResultDTO).totalOrphanCount} 条孤立数据`);
     } catch (e: any) {
@@ -53,7 +53,7 @@ const OrphanDataPage: React.FC = () => {
     setSelectedRowKeys([]);
     try {
       const res = await intelligenceApi.listOrphanData(tableName, 1, 100);
-      const data = (res as any)?.code === 200 ? (res as any).data : (res as any)?.data ?? res;
+      const data = res?.code === 200 ? res.data : res?.data ?? res;
       setItems(data as OrphanDataItemDTO[]);
     } catch (e: any) {
       msgApi.error('加载失败: ' + (e?.message || '未知错误'));
@@ -75,7 +75,7 @@ const OrphanDataPage: React.FC = () => {
         setDeleting(true);
         try {
           const res = await intelligenceApi.deleteOrphanData(selectedTable, selectedRowKeys as string[]);
-          const deleted = (res as any)?.data ?? (res as any);
+          const deleted = res?.data ?? (res as any);
           msgApi.success(`成功删除 ${deleted} 条数据`);
           setSelectedRowKeys([]);
           handleSelectCategory(selectedTable);
