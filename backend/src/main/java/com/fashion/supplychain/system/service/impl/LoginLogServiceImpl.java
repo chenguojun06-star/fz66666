@@ -9,7 +9,7 @@ import com.fashion.supplychain.system.entity.LoginLog;
 import com.fashion.supplychain.system.mapper.LoginLogMapper;
 import com.fashion.supplychain.system.service.LoginLogService;
 import com.fashion.supplychain.system.entity.OperationLog;
-import com.fashion.supplychain.system.service.OperationLogService;
+import com.fashion.supplychain.system.mapper.OperationLogMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -27,8 +27,29 @@ public class LoginLogServiceImpl extends ServiceImpl<LoginLogMapper, LoginLog> i
 
     private static final Logger LOG = LoggerFactory.getLogger(LoginLogServiceImpl.class);
 
-    @jakarta.annotation.Resource
-    private final OperationLogService operationLogService;
+    /**
+     * D-693：原注入 {@code OperationLogService} 触发 ArchUnit 规则7（Service 不得依赖其他 Service）。
+     *
+     * <p>改为直接注入 {@link OperationLogMapper}，行为完全等价 ——
+     * {@code OperationLogServiceImpl} 是普通 {@code ServiceImpl}，其 {@code save()} 即
+     * {@code baseMapper.insert()}，本身无额外逻辑（其唯一依赖
+     * {@code OperationLogTargetNameResolver} 是 helper 而非 Service）。
+     *
+     * <p>Service → Mapper 依赖是规则5 明确允许的方向（{@code Mapper} 可被
+     * {@code Service} / {@code Orchestrator} 访问），且本项目已有 10 处同类写法
+     * （如 {@code MaterialPickingServiceImpl} 注入 {@code MaterialPickingItemMapper}）。
+     *
+     * <p>⚠️ 不采用「移入 common 包」方案：本类含租户隔离（{@code UserContext.isSuperAdmin}）
+     * 与分页查询，属业务 Service，不是横切基础设施。
+     *
+     * <p><b>注入方式</b>：沿用类上已有的 {@code @RequiredArgsConstructor} 做构造器注入
+     * （{@code final} 字段自动进构造器）。<b>刻意不加 {@code @Resource}</b> ——
+     * {@code @Resource} 默认按<b>bean 名</b>优先解析，而 Mapper 的 bean 名由 MyBatis
+     * 注册时决定、与字段名的对应关系无强保证；本仓库其余 10 处 Service 注入 Mapper
+     * 一律用 {@code @Autowired} 或构造器注入，此处保持一致，避免启动期
+     * {@code NoSuchBeanDefinitionException} / 误注入同类型其他 Bean。
+     */
+    private final OperationLogMapper operationLogMapper;
 
     @Override
     public Page<LoginLog> getLoginLogPage(Long page, Long pageSize, String username, String loginStatus, String startDate, String endDate) {
@@ -100,7 +121,7 @@ public class LoginLogServiceImpl extends ServiceImpl<LoginLogMapper, LoginLog> i
             if (tid != null) {
                 opl.setTenantId(tid);
             }
-            operationLogService.save(opl);
+            operationLogMapper.insert(opl);
         } catch (Exception e) { LOG.debug("Non-critical error: {}", e.getMessage()); }
     }
 
