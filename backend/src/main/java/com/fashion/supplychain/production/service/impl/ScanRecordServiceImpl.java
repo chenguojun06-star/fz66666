@@ -363,4 +363,9 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
         public Map<String, Object> getBundlePendingStats() {
                 return baseMapper.selectBundlePendingStats(com.fashion.supplychain.common.UserContext.tenantId());
         }
+
+        @Override
+        public List<Map<String, Object>> listFactoryLastScanTimes(Long tenantId, LocalDateTime threshold) {
+                return baseMapper.selectFactoryLastScanTimes(tenantId, threshold);
+        }
 }

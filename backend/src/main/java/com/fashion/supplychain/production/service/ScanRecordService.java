@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -76,4 +77,12 @@ public interface ScanRecordService extends IService<ScanRecord> {
      * SQL聚合：按菲号统计待质检/待入库/待包装的菲号数和数量
      */
     Map<String, Object> getBundlePendingStats();
+
+    /**
+     * 查询各工厂最近一次成功扫码时间（AI 巡检「工厂沉默」检测用）
+     *
+     * @param tenantId  租户ID
+     * @param threshold 扫码时间下限（早于此时间视为沉默）
+     */
+    List<Map<String, Object>> listFactoryLastScanTimes(Long tenantId, LocalDateTime threshold);
 }

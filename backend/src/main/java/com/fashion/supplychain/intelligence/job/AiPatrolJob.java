@@ -273,19 +273,11 @@ public class AiPatrolJob {
                 ));
 
             if (!activeFactories.isEmpty()) {
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> latestScans = (List<Map<String, Object>>)
-                    (Object) scanRecordService.listMaps(
-                        new QueryWrapper<ScanRecord>()
-                            .select("po.factory_name, MAX(sr.scan_time) as last_scan")
-                            .apply("LEFT JOIN t_production_order po ON sr.factory_id = po.factory_id AND sr.tenant_id = po.tenant_id AND po.delete_flag = 0")
-                            .eq("sr.tenant_id", tenantId)
-                            .eq("sr.scan_result", "success")
-                            .ne("sr.scan_type", "orchestration")
-                            .ge("sr.scan_time", silenceThreshold)
-                            .isNotNull("sr.factory_id")
-                            .groupBy("po.factory_name")
-                    );
+                // D-715：原实现用 QueryWrapper.apply() 拼 LEFT JOIN → 片段落进 WHERE 括号内
+                // （`WHERE (LEFT JOIN ...)`）→ SQL 语法错误 → 被下方 catch 吞成 WARN，
+                // 该检测长期静默失效。改走 ScanRecordMapper 的显式 SQL（含 @InterceptorIgnore）。
+                List<Map<String, Object>> latestScans =
+                    scanRecordService.listFactoryLastScanTimes(tenantId, silenceThreshold);
 
                 Set<String> recentScanFactories = latestScans.stream()
                     .filter(r -> r.get("factory_name") != null)
@@ -317,7 +309,7 @@ public class AiPatrolJob {
                 }
             }
         } catch (Exception e) {
-            log.warn("[AiPatrolJob-Biz] 租户 {} 工厂沉默检测异常: {}", tenantId, e.getMessage());
+            log.warn("[AiPatrolJob-Biz] 租户 {} 工厂沉默检测异常", tenantId, e);
         }
 
         // ── 3. 样衣开发巡检（4 类异常，全部查 t_pattern_production 现有字段）──

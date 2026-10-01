@@ -292,6 +292,37 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
         List<Map<String, Object>> selectLastScanTimeByOrderIds(@Param("orderIds") List<String> orderIds, @Param("tenantId") Long tenantId);
 
         /**
+         * 查询各工厂最近一次成功扫码时间（AI 巡检「工厂沉默」检测用）。
+         *
+         * <p>tenantLine="true"：跳过 TenantInterceptor 自动拼接——SQL 含 sr LEFT JOIN po
+         * 两张租户表，拦截器的裸 "AND tenant_id = X" 会因两表同名列报 ambiguous
+         * （同 selectOperatorPayrollScans 的先例）。本 SQL 已显式做租户隔离：
+         * WHERE sr.tenant_id = #{tenantId} + JOIN ON sr.tenant_id = po.tenant_id。
+         *
+         * <p>为何不用 QueryWrapper：本查询需 JOIN 取工厂名，而 QueryWrapper 无法表达
+         * 带别名的 JOIN —— 历史实现误用 apply() 拼 JOIN，片段落进 WHERE 括号内
+         * （`WHERE (LEFT JOIN ...)`）→ SQL 语法错误 → 被 catch 成 WARN → 功能静默失效
+         * （2026-10-02 线上实测发现）。
+         */
+        @InterceptorIgnore(tenantLine = "true")
+        @Select({
+                "<script>",
+                "SELECT po.factory_name AS factory_name, MAX(sr.scan_time) AS last_scan",
+                "FROM t_scan_record sr",
+                "LEFT JOIN t_production_order po",
+                "  ON sr.factory_id = po.factory_id AND sr.tenant_id = po.tenant_id AND po.delete_flag = 0",
+                "WHERE sr.tenant_id = #{tenantId,jdbcType=BIGINT}",
+                "  AND sr.scan_result = 'success'",
+                "  AND sr.scan_type != 'orchestration'",
+                "  AND sr.scan_time &gt;= #{threshold}",
+                "  AND sr.factory_id IS NOT NULL",
+                "GROUP BY po.factory_name",
+                "</script>"
+        })
+        List<Map<String, Object>> selectFactoryLastScanTimes(@Param("tenantId") Long tenantId,
+                        @Param("threshold") LocalDateTime threshold);
+
+        /**
          * 按时间段统计各工人扫码产量与金额（用于工资异常检测）
          */
         @Select("SELECT sr.operator_id AS operatorId, sr.operator_name AS operatorName, " +
