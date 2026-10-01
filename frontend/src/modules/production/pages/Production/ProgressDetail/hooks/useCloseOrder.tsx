@@ -43,24 +43,24 @@ export const useCloseOrder = ({
       return;
     }
 
-    const orderId = String((order as any)?.id || '').trim();
+    const orderId = String(order?.id || '').trim();
     if (!orderId) {
       message.error('订单ID为空，无法关单');
       return;
     }
 
-    const cuttingQty = Number((order as any)?.cuttingQuantity ?? 0) || 0;
+    const cuttingQty = Number(order?.cuttingQuantity ?? 0) || 0;
     const minRequired = getCloseMinRequired(cuttingQty);
-    const orderQty = Number((order as any)?.orderQuantity ?? 0) || 0;
-    const warehousingQualified = Number((order as any)?.warehousingQualifiedQuantity ?? 0) || 0;
+    const orderQty = Number(order?.orderQuantity ?? 0) || 0;
+    const warehousingQualified = Number(order?.warehousingQualifiedQuantity ?? 0) || 0;
 
-    const normalizedStatus = String((order as any)?.status || '').trim().toLowerCase();
+    const normalizedStatus = String(order?.status || '').trim().toLowerCase();
     if (normalizedStatus === 'scrapped') {
       message.info('该订单已报废，无需关单');
       return;
     }
 
-    if ((order as any)?.status === 'completed') {
+    if (order?.status === 'completed') {
       message.info('该订单已完成，无需关单');
       return;
     }
@@ -70,7 +70,7 @@ export const useCloseOrder = ({
       return;
     }
 
-    const orderNo = String((order as any)?.orderNo || '').trim();
+    const orderNo = String(order?.orderNo || '').trim();
 
     if (minRequired <= 0 || warehousingQualified < minRequired) {
       // 未满足关单条件 → 特需关单路径，必须填写原因

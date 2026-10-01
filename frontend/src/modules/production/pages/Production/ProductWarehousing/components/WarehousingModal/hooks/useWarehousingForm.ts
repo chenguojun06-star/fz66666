@@ -127,8 +127,8 @@ export const useWarehousingForm = (
     const order = (option as any)?.data || orderOptions.find((o) => o.id === value);
     if (!order) return;
     form.setFieldsValue({
-      orderNo: (order as any).orderNo, styleId: (order as any).styleId,
-      styleNo: (order as any).styleNo, styleName: (order as any).styleName,
+      orderNo: order.orderNo, styleId: order.styleId,
+      styleNo: order.styleNo, styleName: order.styleName,
       cuttingBundleId: undefined, cuttingBundleNo: undefined, cuttingBundleQrCode: undefined,
       warehousingQuantity: undefined, qualifiedQuantity: undefined, unqualifiedQuantity: 0, qualityStatus: 'qualified',
       unqualifiedImageUrls: JSON.stringify(unqualifiedImageUrls.slice(0, MAX_UNQUALIFIED_IMAGES)),
@@ -139,9 +139,9 @@ export const useWarehousingForm = (
     batchSelection.setBatchSelectedBundleQrs([]);
     batchSelection.setBatchQtyByQr({});
     await Promise.all([
-      apiHook.fetchBundlesByOrderNo((order as any).orderNo!),
-      apiHook.fetchQualifiedWarehousedBundleQrsByOrderId((order as any).id!),
-      apiHook.fetchBundleReadiness((order as any).id!),
+      apiHook.fetchBundlesByOrderNo(order.orderNo!),
+      apiHook.fetchQualifiedWarehousedBundleQrsByOrderId(order.id!),
+      apiHook.fetchBundleReadiness(order.id!),
     ]);
   };
 

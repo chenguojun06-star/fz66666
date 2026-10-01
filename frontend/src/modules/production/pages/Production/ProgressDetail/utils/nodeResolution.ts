@@ -91,7 +91,7 @@ export const parseProgressNodes = (raw: string): ProgressNode[] => {
 };
 
 export const parseWorkflowNodesFromOrder = (order: ProductionOrder | null): ProgressNode[] => {
-  const raw = String((order as any)?.progressWorkflowJson ?? '').trim();
+  const raw = String(order?.progressWorkflowJson ?? '').trim();
   if (!raw) return [];
   return parseProgressNodes(raw);
 };
@@ -103,7 +103,7 @@ export const resolveNodesForOrder = (
 ): ProgressNode[] => {
   const orderNodes = parseWorkflowNodesFromOrder(order);
   if (orderNodes.length) {
-    const styleNo = String((order as any)?.styleNo || '').trim();
+    const styleNo = String(order?.styleNo || '').trim();
     const styleNodes = styleNo && progressNodesByStyleNo[styleNo] ? progressNodesByStyleNo[styleNo] : [];
     if (styleNodes.length > 0) {
       const priceMap = new Map<string, number>();
@@ -132,7 +132,7 @@ export const resolveNodesForOrder = (
     }
     return sortNodesByProcessCode(applySubProcessRemapToNodes(orderNodes, order));
   }
-  const sn = String((order as any)?.styleNo || '').trim();
+  const sn = String(order?.styleNo || '').trim();
   if (sn && progressNodesByStyleNo[sn]?.length) {
     return sortNodesByProcessCode(applySubProcessRemapToNodes(
       progressNodesByStyleNo[sn],
@@ -187,7 +187,7 @@ export const resolveNodesForListOrder = (
 ): ProgressNode[] => {
   const orderNodes = parseWorkflowNodesFromOrder(order);
   if (orderNodes.length) {
-    const sn = String((order as any)?.styleNo || '').trim();
+    const sn = String(order?.styleNo || '').trim();
     const styleNodes = sn && progressNodesByStyleNo[sn] ? progressNodesByStyleNo[sn] : [];
     if (styleNodes.length > 0) {
       const priceMap = new Map<string, number>();
@@ -216,7 +216,7 @@ export const resolveNodesForListOrder = (
     }
     return collapseSecondaryProcessNodes(sortNodesByProcessCode(applySubProcessRemapToNodes(orderNodes, order)));
   }
-  const sn = String((order as any)?.styleNo || '').trim();
+  const sn = String(order?.styleNo || '').trim();
   if (sn && progressNodesByStyleNo[sn]?.length) {
     return collapseSecondaryProcessNodes(sortNodesByProcessCode(applySubProcessRemapToNodes(progressNodesByStyleNo[sn], order)));
   }
@@ -237,7 +237,7 @@ export const getProcessesByNodeFromOrder = (
     });
   }
 
-  const raw = String((order as any)?.progressWorkflowJson ?? '').trim();
+  const raw = String(order?.progressWorkflowJson ?? '').trim();
   if (raw) {
     try {
       const obj = JSON.parse(raw);
@@ -276,7 +276,7 @@ export const getProcessesByNodeFromOrder = (
     }
   }
 
-  const unitPrices = (order as any)?.progressNodeUnitPrices;
+  const unitPrices = order?.progressNodeUnitPrices;
   if (Array.isArray(unitPrices) && unitPrices.length > 0) {
     const byNode: Record<string, { name: string; unitPrice?: number; processCode?: string }[]> = {};
     for (let idx = 0; idx < unitPrices.length; idx++) {
