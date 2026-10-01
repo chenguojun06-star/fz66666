@@ -11,30 +11,46 @@
 
 > **说明**：每次开始新对话前，请将本区块更新为当前状态，帮助 AI 立即接上上下文，无需重复解释背景。
 
-- **最近在做**：<!-- 填写当前正在开发的功能或模块，例如：财务对账单审核流程 -->
-- **本次目标**：<!-- 填写本次对话要完成什么，例如：修复云端 500 错误 -->
+- **最近在做**：Spring Boot 3.4.5 → 4.1.1 升级收尾（D-698），已合并上线并修完两个升级引入的 P0
+- **本次目标**：降 AI 成本 + 恢复成本可归因性（D-700）
 - **待办清单**：
-  - [ ] <!-- 未完成任务1 -->
-  - [ ] <!-- 未完成任务2 -->
-- **已知坑 / 注意事项**：<!-- 当前遇到的特殊问题，例如：t_xxx 缺列、某接口未对齐 -->
-- **上次关键决策**：<!-- 上次重要技术决定，例如：决定用 Flyway 修复而不是手动 SQL -->
-- **当前分支状态**：<!-- 例如：main，本地有 3 个未 push 的 commit -->
-- **环境状态**：<!-- 例如：本地后端已启动 8088，前端 5173，DB 3308 OK -->
+  - [ ] **明早验收降本**：对比 DeepSeek 账单 vs 生产 `t_ai_cost_tracking`，确认巡检 6 小时后 token 降约 73%（208 万 → 约 55 万/天）
+  - [ ] **轮换 DeepSeek key**（曾贴在对话里，仍在线上使用）
+  - [ ] 评估是否也降频 `ai-advisor`（今日 414 次 / 33.3 万 tokens，成本占比第二的 17%）
+  - [ ] Spring AI 2.0 迁移（`OpenAiApi` 类被移除、`tools()` 改由 `ToolCallingAdvisor` 注入，属范式重写）
+- **已知坑 / 注意事项**：
+  - **SSE 截断**：Spring Security 7.1.1 对每个 dispatch 都授权，ASYNC 分发无 SecurityContext → `ERR_INCOMPLETE_CHUNKED_ENCODING`（HTTP 却是 200）。已用 `dispatcherTypeMatchers(ASYNC, ERROR).permitAll()` 修复，**必须放在所有 requestMatchers 之前**
+  - **Spring AI 会被环境变量无声覆盖**：`application.yml` 默认 `false`，但 `.env.backend`（不入库）里若为 `true` 则启动即 502。改完必须 `--force-recreate` 才生效
+  - **DSML 协议泄漏**：deepseek-flash 会把工具协议拆到多个 SSE delta，逐 delta 清洗必然漏；已改为跨 delta 攒够换行再整行判断
+  - **成本表恒为 0 行**：实体列名与表不匹配（`model` vs `model_name`）+ `log.debug` 静默吞异常。改实体映射时务必核对真实列名
+  - **预算护栏曾对后台任务失效**：`tenantId == null` 直接放行，而后台任务恰恰没有租户上下文。现归系统桶 tenant 0
+  - **MCP 连的是本地开发库**（flyway 624 条），**不是生产库**（1941 条）。查生产数据必须 SSH 进服务器
+- **上次关键决策**：
+  - 巡检频率由每小时降为每 6 小时（用户已确认不影响业务），用 `AI_PROACTIVE_PATROL_CRON` 可随时恢复
+  - 不用 Spring AI（与 Spring 7 不兼容），AI 全部走自研 `LegacyInferenceAdapter`
+  - 测试源码**必须入库**（历史曾排除导致 CI 架构门控空转）
+- **当前分支状态**：main，已推送至 `f730649`；CI 全绿；生产已部署
+- **环境状态**：生产 106.55.12.216，backend healthy（Boot 4.1.1），Flyway 1375 迁移校验通过
 
 ***
 
 ## 🚨 铁血规律速查（12大致命错误 - 优先避免）
 
-### 测试代码隔离铁律（P0，Java单元测试永不提交仓库）
+### 测试代码入库铁律（P0，2026-09-15 起全部入库）
 
-> **P0 铁律：Java单元测试代码仅在本地开发机保留，严禁提交到 Git 仓库。**
+> **P0 铁律：Java 单元测试与前端单元测试必须提交到 Git 仓库。**
 >
-> - ✅ 本地保留：`backend/src/test/`（107个测试文件）
-> - ✅ 允许提交：`scripts/test/*.sh`（Shell集成测试）、`frontend/e2e/*.spec.ts`（Playwright E2E）、`scripts/smoke_test.py`
-> - ❌ 禁止提交：`backend/src/test/` 下所有 `*Test.java` 文件
-> - 验证：`git ls-files backend/src/test/ | wc -l` 结果必须为 0（仓库中无Java测试代码）
-> - 云端部署物必须零Java测试代码（节省容器镜像大小 \~50MB，加速启动，避免云端干扰）
-> - 例外：Shell/Python/E2E测试脚本可提交仓库，作为CI集成测试使用
+> - ✅ 提交：`backend/src/test/`（44 个 Java 测试文件）、`frontend/src/**/*.test.ts(x)`（34 个）
+> - ✅ 提交：`scripts/test/*.sh`、`frontend/e2e/*.spec.ts`、`scripts/smoke_test.py`
+> - ❌ 不提交：`miniprogram/test/` 与 `miniprogram/**/*.test.js`（小程序测试仍按原策略本地保留）
+> - 验证：`git ls-files backend/src/test/ | wc -l` **必须大于 0**
+>
+> **为何改成这样**：本条规则历史上曾写成「Java 单元测试永不提交仓库」，
+> 并因此在 commit `56a5948c0`（2026-04-11）真的把 `backend/src/test/` 排除进 `.gitignore`，
+> 后果是 **CI checkout 后测试目录为空、ArchUnit 架构门控在 CI 上空转** ——
+> 编译通过、单测全绿，但架构守护根本没跑。属于典型的「假绿灯」，比缺测试更危险。
+>
+> **写新测试时不要因为这条规则而跳过提交**；`.gitignore` 第 28-38 行记录了完整决策过程。
 
 ### 业务流程完整性校验铁律（P0，扫码/工序/质检/入库/多端）
 
@@ -267,7 +283,9 @@ Controller → Orchestrator → Service → Mapper
 
 ### 后端
 
-- **Java 21** + **Spring Boot 2.7.18** + **MyBatis-Plus 3.5.7**
+- **Java 21** + **Spring Boot 4.1.1** + **MyBatis-Plus 3.5.16**（2026-10-01 由 3.4.5 升级）
+  - ⚠️ Spring AI 已默认关闭（与 Spring 7 二进制不兼容），AI 走自研 `LegacyInferenceAdapter`
+  - ⚠️ SSE 流式接口必须放行 ASYNC 分发，否则 `ERR_INCOMPLETE_CHUNKED_ENCODING`（详见 CLAUDE.md「Boot 4.1 陷阱」）
 - **MySQL 8.0**（Docker，端口 **3308** 非标准）
 - 认证：Spring Security + JWT
 - 依赖注入：`@Autowired`（标准模式，不使用构造器注入）

@@ -8,10 +8,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Tech Stack
 
-- **Backend**: Spring Boot 3.4.5 + Java 21 + MyBatis-Plus 3.5.12 + Flyway + Redis + MySQL 8.0
+- **Backend**: Spring Boot **4.1.1** + Java 21 + MyBatis-Plus **3.5.16**（boot4 starter） + Flyway 12 + Redis + MySQL 8.0
 - **Frontend**: React 18 + TypeScript + Vite 7 + Ant Design 6 + Zustand
 - **Mini Program**: 微信原生小程序
-- **AI**: 小云AI智能体（Azure OpenAI + MCP Tools + DAG编排）
+- **AI**: 小云AI智能体（自研 `LegacyInferenceAdapter` + MCP Tools + DAG编排）；DeepSeek `deepseek-flash`
+  - ⚠️ **Spring AI 已默认关闭**（`spring-ai.adapter.enabled` 默认 `false`）。Spring AI 1.0.0 与
+    Spring Framework 7 二进制不兼容（`OpenAiApi` 调 `HttpHeaders.addAll(MultiValueMap)`，
+    Spring 7 只剩 `addAll(String,List)`/`addAll(HttpHeaders)`）→ `NoSuchMethodError` → 启动失败 502。
+    AI 能力由 `LegacyInferenceAdapter → IntelligenceInferenceOrchestrator` 承担。
+    详见下方「Boot 4.1 + Spring Security 7 陷阱」。
 
 ## Distributed Lock
 
@@ -22,6 +27,70 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Already used in 10+ AI jobs and production consistency jobs. Lock key prefix: `fashion:lock:`.
 **Do NOT add Redisson** — existing implementation covers all needs.
+
+## Boot 4.1 + Spring Security 7 陷阱（2026-10-01 升级实测，D-698/D-699）
+
+升级 Spring Boot 3.4.5 → 4.1.1 时踩到两个**框架行为变化**导致的故障。两者都不改业务代码就复发，
+且症状与业务无关，极难定位，故在此长期留档。
+
+### 陷阱 1：SSE 流式接口被截断（前端 `ERR_INCOMPLETE_CHUNKED_ENCODING`）
+
+**现象**：浏览器报 `net::ERR_INCOMPLETE_CHUNKED_ENCODING`，但 HTTP 状态码是 **200**；
+SSE 事件已写出、连接被硬关闭，浏览器拿不到 chunked 结束块。
+
+**根因**：Spring Security **7.1.1** 的 `AuthorizationFilter` 对**每一个 dispatch** 都做授权
+（官方文档 "All Dispatches Are Authorized"；`setFilterAsyncDispatch` 默认 `true`）；
+Boot 3.4 用的 Spring Security 6.4 **不会**。`SseEmitter` 启动异步处理后，
+容器在响应结束前会再做一次 `ASYNC` 分发。本项目 `sessionManagement = STATELESS`（无 HttpSession），
+`ASYNC` 分发时 SecurityContext 无处恢复 → 视为匿名 → 命中 `/api/**`.authenticated()` →
+抛 `AuthorizationDeniedException`；此时响应已提交，错误页也渲染不出来 → 连接被截断。
+
+**修复**：`SecurityConfigHelper.configure()` 首行
+`authz.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll();`
+**必须放在所有 `requestMatchers` 之前**（dispatcherTypeMatchers 优先匹配）。
+
+**为什么这不放宽鉴权**：真正调用 controller、真正校验 token 的是 `REQUEST` 分发，
+仍走 `TokenAuthFilter` + 全部原有规则。`ASYNC`/`ERROR` 分发只负责把**已授权的**响应收尾。
+`SseAsyncDispatchAuthorizationTest` 同时**反向断言**匿名 `REQUEST` 仍被拒，
+防止有人图省事改成 `anyRequest().permitAll()` 而测试照样绿。
+
+### 陷阱 2：`spring-ai.adapter.enabled` 会被环境变量无声覆盖
+
+`application.yml` 里默认值已是 `false`，但 `deploy/lighthouse/docker-compose.yml` 用
+`env_file: .env.backend`，**环境变量优先级高于 yml**。而 `.env.backend` 被 `.gitignore` 排除、
+**不入库** —— 所以「代码里默认值是安全的」这个结论在服务器上**不成立**。
+一旦该文件里存在 `SPRING_AI_ADAPTER_ENABLED=true`，Spring AI 1.0.0 就会被启用 →
+`NoSuchMethodError` → 容器起不来 → **全站 502**。
+且每次从云托管控制台「整份复制」重新覆盖 `.env.backend` 都会把旧值带回来。
+
+**改完必须重建容器才生效**（`env_file` 只在创建时读取，不热更新）：
+```bash
+cd /opt/fz66666/deploy/lighthouse
+docker compose up -d --force-recreate backend
+docker compose exec backend printenv SPRING_AI_ADAPTER_ENABLED   # 期望 false
+```
+已写入 `deploy/lighthouse/README.md`。**改服务器配置前先读那一节。**
+
+## AI 成本归因与止损（D-700）
+
+**先看这里再动 AI 相关配置** —— 本项目曾出现「账单累计 ¥317、单日 ¥7.27，
+但系统对钱花在哪完全失明」。
+
+| 表/服务 | 作用 | 坑 |
+|---|---|---|
+| `t_ai_cost_tracking` | **唯一**的成本账（scene/model/token/金额/租户） | 实体列名必须用 `@TableField` 映射到 `model`/`estimated_cost`，否则 INSERT 必失败 |
+| `t_intelligence_metrics` | 调用观测 | 后台/降级路径 token 常为 0，**不可单独用于归因** |
+| `AiAgentTokenBudgetService` | 50 万/租户/日限额 | 无 `UserContext` 的调用归**系统桶 tenant 0**，不再跳过 |
+| `AI_BUDGET_TENANT_DAILY_TOKEN_LIMIT` | 调限额 | env 覆盖 |
+| `AI_CRON_INFERENCE_ENABLED=false` | **一键切断所有后台 AI**（真人提问不受影响） | 应急止血用 |
+
+**成本最高的调用是定时任务，不是真人提问**（2026-10-01 实测：208 万 tokens 中 81% 来自
+`ProactivePatrolAgent` 的 4 个部门 agent）。`ai.proactive-patrol.cron` 默认 `0 5 0/6 * * ?`
+（每 6 小时，原为每小时）—— 改频率前先想清楚「异常发现时效性」这个产品取舍。
+`XiaoyunModelWarmup` 已用 `@ConditionalOnProperty` 关闭（曾每天空跑 857 次）。
+
+**核对开销的正确姿势**：`docker exec` 进生产 MySQL 查 `t_ai_cost_tracking`，
+**不要只看 DeepSeek 控制台**（账单含重试/失败请求，系统侧未必有对应行）。
 
 ## Architecture Constraints (P0 Rules)
 
@@ -93,6 +162,12 @@ cd frontend && npm run test:e2e                   # Playwright E2E测试
 
 # Full stack
 ./dev-public.sh                                   # 一键启动（MySQL + 后端 + 前端）
+
+# 生产诊断（只读，不改任何数据）
+./check-cloud-health.sh                           # 容器/MySQL连接数/向量回灌/Qdrant/后端日志
+python3 scripts/audit-tenant-id.py                # 多租户隔离审计（CI 同款，本地可跑）
+python3 scripts/check-dependency-eol.py           # 依赖 EOL 检查（存量告警/新增阻断）
+python3 scripts/check-dependency-eol.py --no-baseline   # 治理验收：看全部 EOL，不看基线
 ```
 
 ## Testing Landscape
@@ -104,8 +179,8 @@ cd frontend && npm run test:e2e                   # Playwright E2E测试
 | Playwright E2E | 4 specs | `frontend/e2e/` | TypeScript |
 | Python冒烟测试 | 1 script | `scripts/smoke_test.py` | Python |
 | Flutter测试 | 2 files | `flutter/test/`, `flutter_app/test/` | Dart |
-| Java单元测试 | ✅ 已入库（33 文件，2026-09-15 起） | `backend/src/test/` | Java |
-| 前端单元测试 | ✅ 已入库（33 文件，2026-09-19 起） | `frontend/src/**/*.test.ts(x)` | TypeScript |
+| Java单元测试 | ✅ 已入库（44 文件，2026-09-15 起） | `backend/src/test/` | Java |
+| 前端单元测试 | ✅ 已入库（34 文件，2026-09-19 起） | `frontend/src/**/*.test.ts(x)` | TypeScript |
 
 Note: **所有测试源码均已入库**（仅小程序测试按原策略本地保留）。历史教训：曾将
 `backend/src/test/` 排除，导致 CI checkout 后测试目录为空、ArchUnit 门控空转

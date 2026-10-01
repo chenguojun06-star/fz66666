@@ -31,7 +31,7 @@
 
 | 层 | 技术 |
 |----|------|
-| 后端 | Spring Boot 3.4.5 + MyBatis-Plus + MySQL 8.0 |
+| 后端 | Spring Boot 4.1.1 + MyBatis-Plus 3.5.16 + MySQL 8.0（2026-10-01 由 3.4.5 升级） |
 | 前端 | React 18 + TypeScript + Ant Design 5.22 |
 | 小程序 | 微信原生 + 共享 `miniprogram/shared/` 模块 |
 | 缓存 | Redis (Lettuce) |
