@@ -30,8 +30,28 @@ import java.util.List;
 @Configuration
 public class JacksonConfig {
 
+    /**
+     * D-698 Boot 4.1 迁移：不再注入 {@code Jackson2ObjectMapperBuilder}。
+     *
+     * <p><b>原因</b>：Boot 4 的 {@code JacksonAutoConfiguration} 改为提供
+     * <b>Jackson 3</b> 的 {@code tools.jackson.databind.json.JsonMapper}，
+     * 不再注册 {@code Jackson2ObjectMapperBuilder} bean
+     * （实测：{@code No qualifying bean of type 'Jackson2ObjectMapperBuilder'}）。
+     * Spring Framework 7 的 {@code spring-web} 里该类仍在，只是没有 bean 了。
+     *
+     * <p><b>⚠️ 为什么不能直接 new ObjectMapper()：</b>
+     * Spring 的 builder 会自动注册 classpath 上的 well-known modules
+     * （含 {@code JavaTimeModule}）。直接 new 会丢掉它 →
+     * LocalDateTime 序列化行为改变 → 全站时间字段格式出错。
+     * 故显式 new builder（其无参构造即 {@code registerWellKnownModulesIfAvailable=true}），
+     * 保持与 Boot 3 时期完全一致的模块注册行为。
+     *
+     * <p>本项目无 {@code spring.jackson.*} 配置项（已核实），故无需额外应用属性，
+     * 行为与 Boot 3 下等价。
+     */
     @Bean
-    public ObjectMapper objectMapper(Jackson2ObjectMapperBuilder builder) {
+    public ObjectMapper objectMapper() {
+        Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
         ObjectMapper objectMapper = builder.createXmlMapper(false).build();
         // 禁用非ASCII字符的Unicode转义，直接输出UTF-8中文
         objectMapper.getFactory().disable(JsonWriteFeature.ESCAPE_NON_ASCII.mappedFeature());

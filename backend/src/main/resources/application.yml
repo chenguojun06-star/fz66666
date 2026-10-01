@@ -89,7 +89,14 @@ spring:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
     default-property-inclusion: non_null
-    serialization:
+    # D-698 Boot 4.1：Boot 4 的 Jackson 自动配置改用 Jackson 3（tools.jackson），
+    # 其 WRITE_DATES_AS_TIMESTAMPS 由 SerializationFeature 移到 DateTimeFeature，
+    # 原键位 spring.jackson.serialization.* 在 Boot 4 下会绑定失败 →
+    # "No enum constant tools.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS"
+    # → 上下文启动失败（全站 500）。已按 Jackson3 的 cfg.DateTimeFeature 改到 datetime 段。
+    # ⚠️ 另：JacksonConfig.objectMapper() 里已有 objectMapper.disable(WRITE_DATES_AS_TIMESTAMPS)，
+    #    此处配置作用于 Boot 自动配置的 JsonMapper，二者并存不冲突。
+    datetime:
       WRITE_DATES_AS_TIMESTAMPS: false
     generator:
       # 禁用非ASCII字符的Unicode转义，直接输出UTF-8中文
