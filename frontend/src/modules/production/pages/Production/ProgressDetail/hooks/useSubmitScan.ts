@@ -91,15 +91,15 @@ export const useSubmitScan = ({
         if (looksLikeBundleQr) {
           try {
             const res = await productionCuttingApi.getByCode(scanCode);
-            const result = res as any;
+            const result = res as { code?: number; message?: string; data?: unknown };
             if (result.code !== 200) {
               message.error(String(result.message || '未找到对应的裁剪扎号'));
               return;
             }
             if (result.data) {
               const fetched = result.data as CuttingBundle;
-              const fetchedOrderNo = String((fetched as any)?.productionOrderNo || '').trim();
-              const fetchedOrderId = String((fetched as any)?.productionOrderId || '').trim();
+              const fetchedOrderNo = String(fetched?.productionOrderNo || '').trim();
+              const fetchedOrderId = String(fetched?.productionOrderId || '').trim();
               const currentOrderNo = String(activeOrder.orderNo || '').trim();
               const currentOrderId = String(activeOrder.id || '').trim();
               const belongsToOrder =
@@ -112,21 +112,21 @@ export const useSubmitScan = ({
               selectedBundle = fetched;
               setCuttingBundles((prev) => {
                 const next = Array.isArray(prev) ? [...prev] : [];
-                const exists = next.some((b) => String((b as any)?.qrCode || '').trim() === String((fetched as any)?.qrCode || '').trim());
+                const exists = next.some((b) => String(b?.qrCode || '').trim() === String(fetched?.qrCode || '').trim());
                 if (!exists) {
                   next.push(fetched);
-                  next.sort((a, b) => (Number((a as any)?.bundleNo) || 0) - (Number((b as any)?.bundleNo) || 0));
+                  next.sort((a, b) => (Number(a.bundleNo) || 0) - (Number(b?.bundleNo) || 0));
                 }
                 return next;
               });
-              const fetchedQty = Number((fetched as any)?.quantity);
+              const fetchedQty = Number(fetched?.quantity);
               const formQty = Number(values.quantity);
               const nextQty = Number.isFinite(fetchedQty) && fetchedQty > 0
                 ? fetchedQty
                 : (Number.isFinite(formQty) && formQty > 0 ? formQty : undefined);
               scanForm.setFieldsValue({
-                color: (fetched as any)?.color || values.color || '',
-                size: (fetched as any)?.size || values.size || '',
+                color: fetched?.color || values.color || '',
+                size: fetched?.size || values.size || '',
                 quantity: nextQty,
               });
             }
@@ -141,7 +141,7 @@ export const useSubmitScan = ({
         return;
       }
 
-      const bundleQty = Number((selectedBundle as any)?.quantity);
+      const bundleQty = Number(selectedBundle?.quantity);
       const formQty = Number(values.quantity);
       const resolvedQty = Number.isFinite(bundleQty) && bundleQty > 0
         ? bundleQty
@@ -160,7 +160,7 @@ export const useSubmitScan = ({
         quantity: resolvedQty,
       };
 
-      const payloadBase: unknown = {
+      const payloadBase: Record<string, unknown> = {
         scanType: values.scanType || 'production',
         scanCode: scanCode || undefined,
         orderId: activeOrder.id,
@@ -194,7 +194,7 @@ export const useSubmitScan = ({
           operatorName: String(user.name || '').trim() || undefined,
         });
 
-        const precheckResult = precheckResp as any;
+        const precheckResult = precheckResp;
         if (Number(precheckResult?.code) === 200) {
           const precheckData = precheckResult?.data || {};
           // 分级风险弹窗：LOW 静默通过，MEDIUM 可确认，HIGH 阻断需强制
@@ -208,7 +208,7 @@ export const useSubmitScan = ({
         // 预检失败不阻断扫码主流程
       }
 
-      const payload = { ...(payloadBase as any), requestId };
+      const payload = { ...payloadBase, requestId };
 
       const detail = {
         scanCode,
@@ -226,8 +226,8 @@ export const useSubmitScan = ({
       openScanConfirm(payload, detail, { attemptKey, attemptRequestId, values });
       return;
     } catch (error) {
-      if ((error as any)?.errorFields) {
-        const firstError = (error as any).errorFields?.[0];
+      if ((error as { errorFields?: Array<{ errors?: string[] }> })?.errorFields) {
+        const firstError = (error as { errorFields?: Array<{ errors?: string[] }> }).errorFields?.[0];
         message.error(String(firstError?.errors?.[0] || '表单验证失败'));
       } else {
         message.error('系统繁忙');
