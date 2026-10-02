@@ -6,6 +6,15 @@
 
 ## 已完成
 
+### 2026-10-03 D-719/D-720/D-472 数据治理：用户四项拍板执行（已推，CI 绿）
+
+- [x] D-719 巡检审批通知空租户：RiskSentinel/DataAnalyst 两 Job 包 withTenantContext + 通知入口空租户兜底（根因=裸调 createAction 定时线程无租户）
+- [x] D-720 402 余额熔断（用户拍板「直接提示账户余额不足」）：三处识别 402 → 熔断 30 分钟停止外呼 + 显式提示文案（绕过关键词兜底）+ 冷却期满半开自愈
+- [x] D-472 数据治理（生产库，备份 bak_d719_*）：「EXPENSE 未配」实为陈旧遗留（生产 9 类早已全齐），软删 602 行 44 倍重复；往来 ID 回填 22 行（最美服装工厂 21 行/测试工厂 1 行与占位 UNKNOWN_SUPPLIER 解绑，各自挂真实 t_factory id）
+- [x] 用户确认可见性口径：未领取同岗位可见、领取后仅领取人可见，只影响小云个人任务计数
+- [ ] 最美布行/001 无供应商主档（名字分组正常），建主档待用户决定；租户2「方大丝绸」主档重复两条待处理
+- [ ] D-333 取证脚本已重写交用户执行，等回传
+
 ### 2026-10-02 D-718 resilience4j 死依赖删除
 
 - [x] 实查：pom 4 个 artifact + yml 一段实例配置，全仓 main/test 零 import；真实断路器是 IntelligenceModelGatewayOrchestrator 自实现的 GatewayCircuitBreaker
