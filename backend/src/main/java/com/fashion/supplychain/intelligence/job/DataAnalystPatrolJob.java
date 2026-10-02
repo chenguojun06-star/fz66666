@@ -81,10 +81,11 @@ public class DataAnalystPatrolJob extends AbstractPatrolJob {
                             .collect(Collectors.joining("、"));
                     String issue = String.format("数据分析师发现%d个高危订单(5天内到期+进度<40%%): %s",
                             criticalOrders.size(), orderList);
-                    patrolOrchestrator.createAction("DATA_ANALYST_JOB", issue, "DEADLINE_RISK",
+                    // D-719：必须包租户上下文——同 RiskSentinelPatrolJob，裸调会挂空租户
+                    withTenantContext(tenantId, () -> patrolOrchestrator.createAction("DATA_ANALYST_JOB", issue, "DEADLINE_RISK",
                             "HIGH", "order", orderList,
                             "{\"action\":\"data_analysis_alert\"}",
-                            BigDecimal.valueOf(0.85), "NEED_APPROVAL");
+                            BigDecimal.valueOf(0.85), "NEED_APPROVAL"));
                     findings++;
                 } else if (!criticalOrders.isEmpty()) {
                     log.debug("[DataAnalyst] 租户 {} 巡检自动执行开关未开启，跳过创建工单", tenantId);

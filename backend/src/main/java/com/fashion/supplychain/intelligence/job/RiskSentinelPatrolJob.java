@@ -65,10 +65,12 @@ public class RiskSentinelPatrolJob extends AbstractPatrolJob {
                                     o.getPlannedEndDate().isBefore(LocalDateTime.now()) ? "是" : "否",
                                     o.getProductionProgress() != null ? o.getProductionProgress() : 0,
                                     o.getMaterialArrivalRate() != null ? o.getMaterialArrivalRate() : 0);
-                            patrolOrchestrator.createAction("RISK_SENTINEL_JOB", issue, "COMBO_RISK",
+                            // D-719：必须包租户上下文——createAction 内部从 UserContext 取 tenantId，
+                            // 裸调在定时线程里拿到 null → 工单挂空租户 + 审批通知 insert 报 tenant_id 无默认值
+                            withTenantContext(tenantId, () -> patrolOrchestrator.createAction("RISK_SENTINEL_JOB", issue, "COMBO_RISK",
                                     "HIGH", "order", o.getOrderNo(),
                                     "{\"action\":\"combo_risk_alert\"}",
-                                    BigDecimal.valueOf(0.9), "NEED_APPROVAL");
+                                    BigDecimal.valueOf(0.9), "NEED_APPROVAL"));
                         }
                     }
                 }

@@ -185,6 +185,13 @@ public class PatrolClosedLoopOrchestrator {
                 log.warn("[PatrolClosedLoop] SysNoticeService 未注入，跳过审批通知: actionId={}", action.getId());
                 return;
             }
+            // D-719 防线：t_sys_notice.tenant_id NOT NULL 无默认值，空租户插入必然失败；
+            // 正常路径租户由 Job 层 withTenantContext 保证（D-719 修复），此处兜底防御
+            if (tenantId == null) {
+                log.warn("[PatrolClosedLoop] 工单缺少租户上下文，跳过审批通知: actionId={}, issueType={}",
+                        action.getId(), action.getIssueType());
+                return;
+            }
             SysNotice notice = new SysNotice();
             notice.setTenantId(tenantId);
             notice.setToName("跟单员");
