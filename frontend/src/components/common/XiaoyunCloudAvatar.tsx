@@ -14,18 +14,23 @@ interface XiaoyunCloudAvatarProps {
 const XiaoyunCloudAvatar: React.FC<XiaoyunCloudAvatarProps> = ({
   size = 52,
   active = false,
+  mood = 'normal',
   loading = false,
   interacting = false,
 }) => {
+  // D-702：此前 mood 属性「声明了 5 种情绪却从未被接收」，属静默失效 ——
+  // SmartBubble（highPriorityCount>0 传 urgent）与 ChatMessageList（传 liveStatus.mood）
+  // 两处一直在传，界面上却永远显示同一个表情，紧急态形同虚设。现真正接线。
   const className = [
     styles.stage,
     active ? styles.active : '',
     interacting ? styles.interacting : '',
     loading ? styles.loading : '',
+    styles[mood] ?? '',
   ].filter(Boolean).join(' ');
 
   return (
-    <div className={className} style={{ width: size, height: size }}>
+    <div className={className} style={{ width: size, height: size }} data-mood={mood}>
       <span className={styles.halo} />
       <span className={styles.ring} />
       <span className={styles.ringSoft} />

@@ -62,8 +62,8 @@
 .part,
 .base {
   position: absolute;
-  background: linear-gradient(180deg, var(--color-bg-base) 0%, #dce9ff 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 6px 14px rgba(31, 117, 234, 0.14);
+  background: linear-gradient(180deg, var(--color-bg-base) 0%, var(--color-cloud-shade) 100%);
+  box-shadow: inset 0 1px 0 var(--color-cloud-sheen), 0 6px 14px var(--color-cloud-shadow);
 }
 
 .part {
@@ -130,7 +130,7 @@
   width: 44%;
   height: 36%;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--color-cloud-sheen);
   top: 12%;
   left: 14%;
   animation: eyeSpark 4.2s ease-in-out infinite;
@@ -195,4 +195,91 @@
 @keyframes mouthTalk {
   0%, 100% { transform: translateX(-50%) scaleX(1); }
   50% { transform: translateX(-50%) scaleX(1.12); }
+}
+
+/* ════════════════════════════════════════════════════════════
+   品牌色 token（唯一颜色来源，禁止再出现字面色值）
+   光晕/圆环的半透明叠层必须保留 —— 去掉就没有空气感了，
+   故用带透明度的 token 承载，而不是删掉效果。
+   ════════════════════════════════════════════════════════════ */
+.stage {
+  /* 云体渐变的下沿色 */
+  --color-cloud-shade: var(--color-blue-100);
+  /* 云体/眼珠高光 */
+  --color-cloud-sheen: rgba(255, 255, 255, 0.96);
+  /* 云体投影 */
+  --color-cloud-shadow: rgba(31, 117, 234, 0.14);
+  /* 光晕与圆环的半透明叠层 */
+  --color-cloud-halo: rgba(104, 164, 255, 0.32);
+  --color-cloud-halo-fade: rgba(104, 164, 255, 0.08);
+  --color-cloud-ring: rgba(113, 170, 255, 0.28);
+  --color-cloud-ring-soft: rgba(155, 195, 255, 0.34);
+  --color-cloud-drop: rgba(31, 117, 234, 0.18);
+}
+
+/* ─── 情绪态（D-702：mood 此前声明但从未实现，紧急态形同虚设）─── */
+
+/* 好奇：歪头感的环 + 提亮 */
+.curious .ring {
+  border-color: var(--color-primary-border);
+}
+.curious .mouth {
+  width: 20%;
+}
+
+/* 紧急：环与嘴转警示色，节奏加快 —— 用于高优先级告警 */
+.urgent .ring {
+  border-color: var(--color-danger-border);
+  animation-duration: 1.4s;
+}
+.urgent .ringSoft {
+  border-color: var(--color-danger);
+  animation-duration: 1.9s;
+}
+.urgent .mouth {
+  border-bottom-color: var(--color-danger);
+  animation: mouthTalk 1.2s ease-in-out infinite;
+}
+.urgent .cloud {
+  animation-duration: 1.5s;
+}
+
+/* 错误：环转错误色，停止眨眼（不眨眼 = 故障感） */
+.error .ring {
+  border-color: var(--color-danger);
+  animation-duration: 5.4s;
+}
+.error .eye {
+  animation: none;
+  transform: scaleY(0.62);
+}
+.error .mouth {
+  border-bottom-color: var(--color-danger);
+  width: 18%;
+  height: 8%;
+}
+
+/* 成功：环转成功色 */
+.success .ring {
+  border-color: var(--color-success-border);
+}
+.success .ringSoft {
+  border-color: var(--color-success);
+}
+.success .mouth {
+  border-bottom-color: var(--color-success);
+  animation: mouthTalk 2.2s ease-in-out infinite;
+}
+
+/* ─── 无障碍：尊重系统「减少动态效果」─── */
+@media (prefers-reduced-motion: reduce) {
+  .halo,
+  .ring,
+  .ringSoft,
+  .cloud,
+  .eye,
+  .highlight,
+  .mouth {
+    animation: none !important;
+  }
 }

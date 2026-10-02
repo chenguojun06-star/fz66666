@@ -1,0 +1,104 @@
+/* ════════════════════════════════════════════════════════════
+   品牌极简云标（D-702）—— 小尺寸（<32px）专用
+   几何全部用百分比，天然随 size 缩放，无需为每档单独写样式。
+   ════════════════════════════════════════════════════════════ */
+
+.mark {
+  --brand-mark-shade: var(--color-blue-100);
+  --brand-mark-sheen: rgba(255, 255, 255, 0.96);
+  --brand-mark-shadow: rgba(31, 117, 234, 0.2);
+  --brand-mark-bar: var(--color-blue-400);
+
+  position: relative;
+  display: inline-block;
+  flex: none;
+  vertical-align: -0.15em;
+}
+
+/* 云的三团 + 底座：与吉祥物同一套 DNA */
+.mark > span {
+  position: absolute;
+  background: linear-gradient(180deg, var(--color-bg-base) 0%, var(--brand-mark-shade) 100%);
+  box-shadow: inset 0 1px 0 var(--brand-mark-sheen), 0 2px 5px var(--brand-mark-shadow);
+}
+
+.puffLeft,
+.puffCenter,
+.puffRight {
+  border-radius: 50%;
+}
+
+.puffLeft {
+  width: 38%;
+  height: 38%;
+  left: 2%;
+  top: 32%;
+}
+
+.puffCenter {
+  width: 46%;
+  height: 52%;
+  left: 26%;
+  top: 6%;
+}
+
+.puffRight {
+  width: 34%;
+  height: 36%;
+  right: 0;
+  top: 38%;
+}
+
+.base {
+  left: 12%;
+  right: 12%;
+  bottom: 2%;
+  height: 36%;
+  border-radius: 999px;
+}
+
+/* 呼吸横线：代替五官表达「在动」 */
+.pulse {
+  position: absolute;
+  left: 50%;
+  bottom: 7%;
+  transform: translateX(-50%);
+  height: 9%;
+  min-height: 1.5px;
+  border-radius: 999px;
+  background: var(--brand-mark-bar);
+  animation: brandMarkPulse 1.2s ease-in-out infinite;
+}
+
+/* 品牌色 / 深色底：反白 */
+.mark.onColor {
+  --brand-mark-shade: rgba(255, 255, 255, 0.94);
+  --brand-mark-sheen: rgba(255, 255, 255, 1);
+  --brand-mark-shadow: rgba(31, 117, 234, 0.28);
+  --brand-mark-bar: #ffffff;
+}
+
+@keyframes brandMarkPulse {
+  0%,
+  100% {
+    width: 16%;
+    opacity: 0.45;
+  }
+  50% {
+    width: 30%;
+    opacity: 1;
+  }
+}
+
+/* 超小尺寸（16px）光晕会糊，减弱投影 */
+.mark[style*='16px'] > span {
+  box-shadow: inset 0 1px 0 var(--brand-mark-sheen);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    animation: none;
+    width: 24%;
+    opacity: 0.8;
+  }
+}

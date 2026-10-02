@@ -1,0 +1,31 @@
+/* ════════════════════════════════════════════════════════════
+   统一加载容器（D-702）
+   只负责排版（居中 / 文案间距），颜色与动效全部由内部指示器负责。
+   ════════════════════════════════════════════════════════════ */
+
+.wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm, 8px);
+  line-height: 1;
+}
+
+/* 撑满父容器并居中：内容区 / 全屏用 */
+.block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-md, 12px);
+  width: 100%;
+  min-height: 120px;
+  padding: var(--spacing-lg, 20px);
+  box-sizing: border-box;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--color-text-secondary, #6b7280);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
