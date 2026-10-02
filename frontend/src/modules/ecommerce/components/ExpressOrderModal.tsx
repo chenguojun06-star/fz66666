@@ -5,7 +5,7 @@ import {
 import { BrandLoading } from '@/components/common/loading';
 import {
   SendOutlined, PrinterOutlined, CalculatorOutlined,
-  LoadingOutlined, EnvironmentOutlined,
+  EnvironmentOutlined,
 } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import api from '@/utils/api';
@@ -266,7 +266,7 @@ const ExpressOrderModal: React.FC<ExpressOrderModalProps> = ({ open, order, onCl
 
           <Space>
             <Button
-              icon={estimating ? <LoadingOutlined /> : <CalculatorOutlined />}
+              icon={<CalculatorOutlined />}
               onClick={handleEstimateFee}
               loading={estimating}
             >

@@ -137,7 +137,14 @@ vi.mock('../../components/common/StylePrintModal/fetchStylePrintData', async (im
 
 vi.mock('../../utils/safePrint', () => ({
   safePrint: vi.fn((_html: string, _title: string, opts?: { onAfterPrint?: () => void }) => {
-    opts?.onAfterPrint?.();
+    // 必须**异步**触发 onAfterPrint。
+    // 真实实现（batchStylePrintService.tsx:240）就是靠这个回调 await 队列推进的，
+    // 而浏览器里它是打印完成后的异步事件。此前 mock 用同步调用，等于把
+    // 「同步回调」这一 mock 特有的时序固化进了断言 —— 于是
+    // 「每单独立打印任务：各调用一次 safePrint，互不混排」这个用例
+    // 会偶发拿到 [HH002, HH001]（实测约 1/8 概率），表现为随机失败。
+    // 这里改为 setTimeout(0)，与真实时序一致，断言才稳定。
+    setTimeout(() => opts?.onAfterPrint?.(), 0);
     return true;
   }),
 }));
