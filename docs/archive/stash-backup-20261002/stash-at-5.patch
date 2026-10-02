@@ -1,0 +1,2995 @@
+diff --git a/backend/src/main/java/com/fashion/supplychain/common/GlobalExceptionHandler.java b/backend/src/main/java/com/fashion/supplychain/common/GlobalExceptionHandler.java
+index 8420ed419..19b192c05 100644
+--- a/backend/src/main/java/com/fashion/supplychain/common/GlobalExceptionHandler.java
++++ b/backend/src/main/java/com/fashion/supplychain/common/GlobalExceptionHandler.java
+@@ -24,6 +24,7 @@ import org.springframework.web.servlet.NoHandlerFoundException;
+ import org.springframework.web.servlet.resource.NoResourceFoundException;
+ 
+ import jakarta.servlet.http.HttpServletRequest;
++import jakarta.servlet.http.HttpServletResponse;
+ import java.io.IOException;
+ import java.util.LinkedHashMap;
+ import java.util.NoSuchElementException;
+@@ -222,9 +223,13 @@ public class GlobalExceptionHandler {
+          * 处理权限不足。
+          */
+         @ExceptionHandler(AccessDeniedException.class)
+-        public ResponseEntity<Result<?>> handleAccessDenied(AccessDeniedException e, HttpServletRequest request) {
++        public ResponseEntity<Result<?>> handleAccessDenied(AccessDeniedException e, HttpServletRequest request,
++                        HttpServletResponse response) {
+                 logger.warn("权限不足: {} {} - {}", request == null ? "" : request.getMethod(),
+                                 request == null ? "" : request.getRequestURI(), e.getMessage());
++                if (response != null && response.isCommitted()) {
++                        return null;
++                }
+                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Result.fail(403, sanitizeClientMessage(e.getMessage())));
+         }
+ 
+diff --git a/backend/src/main/java/com/fashion/supplychain/config/SecurityConfig.java b/backend/src/main/java/com/fashion/supplychain/config/SecurityConfig.java
+index 7b1240612..02202792c 100644
+--- a/backend/src/main/java/com/fashion/supplychain/config/SecurityConfig.java
++++ b/backend/src/main/java/com/fashion/supplychain/config/SecurityConfig.java
+@@ -95,13 +95,23 @@ public class SecurityConfig implements WebMvcConfigurer {
+                 )
+                 .authorizeHttpRequests(authz -> SecurityConfigHelper.configure(authz));
+ 
+-        // 未认证请求（token 缺失 / 过期）统一返回 401 JSON，前端拦截器据此跳转登录页
+-        // 有 token 但权限不足（403 Forbidden / AccessDeniedException）不在此处处理，保持默认 403
+-        http.exceptionHandling(ex -> ex.authenticationEntryPoint((req, res, e) -> {
+-            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+-            res.setContentType("application/json;charset=UTF-8");
+-            res.getWriter().write("{\"code\":401,\"message\":\"token已过期，请重新登录\"}");
+-        }));
++        http.exceptionHandling(ex -> ex
++                .authenticationEntryPoint((req, res, e) -> {
++                    if (res.isCommitted()) {
++                        return;
++                    }
++                    res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
++                    res.setContentType("application/json;charset=UTF-8");
++                    res.getWriter().write("{\"code\":401,\"message\":\"token已过期，请重新登录\"}");
++                })
++                .accessDeniedHandler((req, res, e) -> {
++                    if (res.isCommitted()) {
++                        return;
++                    }
++                    res.setStatus(HttpServletResponse.SC_FORBIDDEN);
++                    res.setContentType("application/json;charset=UTF-8");
++                    res.getWriter().write("{\"code\":403,\"message\":\"权限不足，无法访问该资源\"}");
++                }));
+ 
+         http.addFilterBefore(new TokenAuthFilter(authTokenService, permissionEngine, stringRedisTemplate), UsernamePasswordAuthenticationFilter.class);
+         http.addFilterBefore(new RequestIdFilter(), TokenAuthFilter.class);
+@@ -241,7 +251,7 @@ public class SecurityConfig implements WebMvcConfigurer {
+             if (host != null && host.contains("tcloudbase.com")) {
+                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                 response.setContentType("application/json;charset=UTF-8");
+-                response.getWriter().write("{\"code\": 403, \"msg\": \"Forbidden: Please use official domain\"}");
++                response.getWriter().write("{\"code\": 403, \"message\": \"Forbidden: Please use official domain\"}");
+                 return false;
+             }
+             return true;
+diff --git a/backend/src/main/java/com/fashion/supplychain/integration/openapi/helper/OpenApiDataImportHelper.java b/backend/src/main/java/com/fashion/supplychain/integration/openapi/helper/OpenApiDataImportHelper.java
+index 901e29507..035e9a646 100644
+--- a/backend/src/main/java/com/fashion/supplychain/integration/openapi/helper/OpenApiDataImportHelper.java
++++ b/backend/src/main/java/com/fashion/supplychain/integration/openapi/helper/OpenApiDataImportHelper.java
+@@ -266,13 +266,18 @@ public class OpenApiDataImportHelper {
+ 
+                     Factory factory = new Factory();
+                     factory.setFactoryName(factoryName);
+-                    factory.setFactoryCode(OpenApiParseUtils.valueAsString(item.get("factoryCode"), null));
++                    String factoryCode = OpenApiParseUtils.valueAsString(item.get("factoryCode"), null);
++                    factory.setFactoryCode(StringUtils.hasText(factoryCode) ? factoryCode : "F" + System.currentTimeMillis());
+                     factory.setContactPerson(OpenApiParseUtils.valueAsString(item.get("contactPerson"), null));
+                     factory.setContactPhone(OpenApiParseUtils.valueAsString(item.get("contactPhone"), null));
+                     factory.setAddress(OpenApiParseUtils.valueAsString(item.get("address"), null));
+                     factory.setBusinessLicense(OpenApiParseUtils.valueAsString(item.get("businessLicense"), null));
+                     factory.setStatus("active");
++                    factory.setFactoryType("EXTERNAL");
+                     factory.setDeleteFlag(0);
++                    factory.setTotalOrders(0);
++                    factory.setCompletedOrders(0);
++                    factory.setOverdueOrders(0);
+                     factory.setCreateTime(LocalDateTime.now());
+                     factory.setUpdateTime(LocalDateTime.now());
+ 
+diff --git a/backend/src/main/java/com/fashion/supplychain/production/executor/WarehouseScanExecutor.java b/backend/src/main/java/com/fashion/supplychain/production/executor/WarehouseScanExecutor.java
+index a08897a89..536684ee2 100644
+--- a/backend/src/main/java/com/fashion/supplychain/production/executor/WarehouseScanExecutor.java
++++ b/backend/src/main/java/com/fashion/supplychain/production/executor/WarehouseScanExecutor.java
+@@ -81,6 +81,9 @@ public class WarehouseScanExecutor {
+     @Autowired
+     private com.fashion.supplychain.warehouse.service.WarehouseAreaService warehouseAreaService;
+ 
++    @Autowired
++    private com.fashion.supplychain.warehouse.orchestration.WarehouseLocationOrchestrator warehouseLocationOrchestrator;
++
+     @Autowired
+     private UCodeWarehouseScanExecutor uCodeWarehouseScanExecutor;
+ 
+@@ -157,6 +160,7 @@ public class WarehouseScanExecutor {
+ 
+         // 创建入库记录（正常入库路径）
+         ProductWarehousing w = saveWarehousingRecord(order, bundle, qty, warehouse, warehouseAreaId, warehouseAreaName, operatorId, operatorName);
++        warehouseLocationOrchestrator.incrementUsedCapacity(warehouse, "FINISHED", 1);
+         ScanRecord sr = saveWarehouseScanRecord(params, requestId, operatorId, operatorName,
+                 order, bundle, qty, warehouse, colorResolver, sizeResolver);
+         updateProcessTrackingForWarehouse(bundle, order, operatorId, operatorName, sr);
+diff --git a/backend/src/main/java/com/fashion/supplychain/production/helper/MaterialPurchaseStatusHelper.java b/backend/src/main/java/com/fashion/supplychain/production/helper/MaterialPurchaseStatusHelper.java
+index f5ac92ecf..a1d2a21c0 100644
+--- a/backend/src/main/java/com/fashion/supplychain/production/helper/MaterialPurchaseStatusHelper.java
++++ b/backend/src/main/java/com/fashion/supplychain/production/helper/MaterialPurchaseStatusHelper.java
+@@ -152,8 +152,16 @@ public class MaterialPurchaseStatusHelper {
+             String orderNo = updated.getOrderNo() != null ? updated.getOrderNo() : "";
+             String materialName = updated.getMaterialName() != null ? updated.getMaterialName() : "物料";
+             String receiver = rname != null && !rname.isEmpty() ? rname : rid;
++            String toName = receiver;
++            if (StringUtils.hasText(updated.getOrderId())) {
++                com.fashion.supplychain.production.entity.ProductionOrder order = productionOrderService.getById(updated.getOrderId());
++                if (order != null && StringUtils.hasText(order.getMerchandiser())) {
++                    toName = order.getMerchandiser();
++                }
++            }
+             com.fashion.supplychain.production.entity.SysNotice notice = new com.fashion.supplychain.production.entity.SysNotice();
+             notice.setTenantId(tenantId);
++            notice.setToName(toName);
+             notice.setFromName(receiver);
+             notice.setOrderNo(orderNo);
+             notice.setTitle("📦 采购已领取 — " + materialName);
+diff --git a/backend/src/main/java/com/fashion/supplychain/production/helper/lookup/OrderBundleNoLookupStrategy.java b/backend/src/main/java/com/fashion/supplychain/production/helper/lookup/OrderBundleNoLookupStrategy.java
+index 0542b0fde..2fa6cde79 100644
+--- a/backend/src/main/java/com/fashion/supplychain/production/helper/lookup/OrderBundleNoLookupStrategy.java
++++ b/backend/src/main/java/com/fashion/supplychain/production/helper/lookup/OrderBundleNoLookupStrategy.java
+@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
+ import org.springframework.util.StringUtils;
+ 
+ @Component
+-@Order(3)
++@Order(2)
+ @Slf4j
+ public class OrderBundleNoLookupStrategy implements BundleLookupStrategy {
+ 
+diff --git a/backend/src/main/java/com/fashion/supplychain/production/helper/lookup/OrderColorSizeLookupStrategy.java b/backend/src/main/java/com/fashion/supplychain/production/helper/lookup/OrderColorSizeLookupStrategy.java
+index d820c4230..0e8bc3944 100644
+--- a/backend/src/main/java/com/fashion/supplychain/production/helper/lookup/OrderColorSizeLookupStrategy.java
++++ b/backend/src/main/java/com/fashion/supplychain/production/helper/lookup/OrderColorSizeLookupStrategy.java
+@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
+ import org.springframework.util.StringUtils;
+ 
+ @Component
+-@Order(2)
++@Order(3)
+ @Slf4j
+ public class OrderColorSizeLookupStrategy implements BundleLookupStrategy {
+ 
+@@ -30,6 +30,12 @@ public class OrderColorSizeLookupStrategy implements BundleLookupStrategy {
+             return null;
+         }
+ 
++        if (context.getBundleNo() != null && context.getBundleNo() > 0) {
++            log.debug("[BundleLookup] {}跳过: bundleNo已提供({}), 应由精确策略处理",
++                    getStrategyName(), context.getBundleNo());
++            return null;
++        }
++
+         ProductionOrder order = context.getOrder();
+         if (order == null) {
+             order = productionOrderService.getOne(new LambdaQueryWrapper<ProductionOrder>()
+diff --git a/backend/src/main/java/com/fashion/supplychain/production/orchestration/CuttingTaskOrchestrator.java b/backend/src/main/java/com/fashion/supplychain/production/orchestration/CuttingTaskOrchestrator.java
+index dbfa3d31f..f8016a845 100644
+--- a/backend/src/main/java/com/fashion/supplychain/production/orchestration/CuttingTaskOrchestrator.java
++++ b/backend/src/main/java/com/fashion/supplychain/production/orchestration/CuttingTaskOrchestrator.java
+@@ -321,8 +321,16 @@ public class CuttingTaskOrchestrator {
+             Long tenantId = updated.getTenantId();
+             String orderNo = updated.getProductionOrderNo() != null ? updated.getProductionOrderNo() : "";
+             String receiver = updated.getReceiverName() != null ? updated.getReceiverName() : "未知";
++            String toName = receiver;
++            if (StringUtils.hasText(updated.getProductionOrderId())) {
++                ProductionOrder order = productionOrderService.getById(updated.getProductionOrderId().trim());
++                if (order != null && StringUtils.hasText(order.getMerchandiser())) {
++                    toName = order.getMerchandiser();
++                }
++            }
+             com.fashion.supplychain.production.entity.SysNotice notice = new com.fashion.supplychain.production.entity.SysNotice();
+             notice.setTenantId(tenantId);
++            notice.setToName(toName);
+             notice.setFromName(receiver);
+             notice.setOrderNo(orderNo);
+             notice.setTitle("✂️ 裁剪任务已领取 — " + orderNo);
+diff --git a/backend/src/main/java/com/fashion/supplychain/production/orchestration/MaterialPurchaseOrchestratorHelper.java b/backend/src/main/java/com/fashion/supplychain/production/orchestration/MaterialPurchaseOrchestratorHelper.java
+index 0918ad884..d43901707 100644
+--- a/backend/src/main/java/com/fashion/supplychain/production/orchestration/MaterialPurchaseOrchestratorHelper.java
++++ b/backend/src/main/java/com/fashion/supplychain/production/orchestration/MaterialPurchaseOrchestratorHelper.java
+@@ -455,22 +455,26 @@ public class MaterialPurchaseOrchestratorHelper {
+         String materialType = safe(seed.getMaterialType());
+         String specifications = safe(seed.getSpecifications());
+         String sourceType = safe(seed.getSourceType());
++        String seedColor = safe(seed.getColor());
+ 
+-        // 查找同天创建的、状态为pending的采购任务
+         LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<MaterialPurchase>()
+                 .eq(MaterialPurchase::getDeleteFlag, 0)
+                 .eq(MaterialPurchase::getStatus, MaterialConstants.STATUS_PENDING)
+                 .ge(MaterialPurchase::getCreateTime, dayStart)
+                 .lt(MaterialPurchase::getCreateTime, nextDayStart);
+ 
+-        // 强制同来源链路合并：样衣(sample)与大货(order/batch/manual/stock)不互相混入
+         if (StringUtils.hasText(sourceType)) {
+             wrapper.eq(MaterialPurchase::getSourceType, sourceType);
+         } else {
+             wrapper.and(w -> w.isNull(MaterialPurchase::getSourceType).or().eq(MaterialPurchase::getSourceType, ""));
+         }
+ 
+-        // 按物料编码或（物料名称+规格+类型）匹配
++        if (StringUtils.hasText(seedColor)) {
++            wrapper.eq(MaterialPurchase::getColor, seedColor);
++        } else {
++            wrapper.and(w -> w.isNull(MaterialPurchase::getColor).or().eq(MaterialPurchase::getColor, ""));
++        }
++
+         if (StringUtils.hasText(materialCode)) {
+             wrapper.eq(MaterialPurchase::getMaterialCode, materialCode);
+         } else if (StringUtils.hasText(materialName)) {
+diff --git a/backend/src/main/java/com/fashion/supplychain/production/service/impl/MaterialPurchaseServiceHelper.java b/backend/src/main/java/com/fashion/supplychain/production/service/impl/MaterialPurchaseServiceHelper.java
+index b1504c42b..f315c71bf 100644
+--- a/backend/src/main/java/com/fashion/supplychain/production/service/impl/MaterialPurchaseServiceHelper.java
++++ b/backend/src/main/java/com/fashion/supplychain/production/service/impl/MaterialPurchaseServiceHelper.java
+@@ -296,30 +296,50 @@ public class MaterialPurchaseServiceHelper {
+ 
+     private Map<String, MaterialPurchase> aggregateBomToPurchases(List<StyleBom> bomList, List<OrderLine> lines,
+             Set<String> orderColorSet, Set<String> orderSizeSet, ProductionOrder order) {
+-        Map<String, MaterialPurchase> grouped = new HashMap<>();
++        Map<String, MaterialPurchase> grouped = new LinkedHashMap<>();
++        boolean orderHasMultipleColors = orderColorSet.size() > 1;
++
+         for (StyleBom bom : bomList) {
+             if (bom == null) continue;
+-            String bomColor = bom.getColor() == null ? "" : bom.getColor().trim();
+-            String bomSize = bom.getSize() == null ? "" : bom.getSize().trim();
+-            List<String> bomColorOpts = MaterialPurchaseHelper.splitOptions(bomColor);
++            String bomColorRaw = bom.getColor() == null ? "" : bom.getColor().trim();
++            String bomSizeRaw = bom.getSize() == null ? "" : bom.getSize().trim();
++            List<String> bomColorOpts = MaterialPurchaseHelper.splitOptions(bomColorRaw);
+             Set<String> bomColorSet = bomColorOpts.isEmpty() ? null : new HashSet<>(bomColorOpts);
+-            List<String> bomSizeOpts = MaterialPurchaseHelper.splitOptions(bomSize);
++            List<String> bomSizeOpts = MaterialPurchaseHelper.splitOptions(bomSizeRaw);
+             Set<String> bomSizeSet = bomSizeOpts.isEmpty() ? null : new HashSet<>(bomSizeOpts);
+-            bomColorSet = MaterialPurchaseHelper.intersectOrNull(bomColorSet, orderColorSet);
+-            bomSizeSet = MaterialPurchaseHelper.intersectOrNull(bomSizeSet, orderSizeSet);
++            Set<String> matchColorSet = MaterialPurchaseHelper.intersectOrNull(bomColorSet, orderColorSet);
++            Set<String> effectiveSizeSet = MaterialPurchaseHelper.intersectOrNull(bomSizeSet, orderSizeSet);
+ 
+             Map<String, BigDecimal> sizeUsageMapParsed = parseSizeUsageMap(bom.getSizeUsageMap());
+-            BigDecimal totalRequired = computeBomRequiredQuantity(bom, lines, bomColorSet, bomSizeSet, sizeUsageMapParsed);
+-            if (totalRequired.compareTo(BigDecimal.ZERO) <= 0) continue;
+ 
+-            String key = buildGroupingKey(bom, bomColor, bomSize);
+-            MaterialPurchase agg = grouped.get(key);
+-            if (agg == null) {
+-                grouped.put(key, createPurchaseFromBom(bom, bomColor, bomSize, totalRequired, order));
++            if (!orderHasMultipleColors) {
++                BigDecimal totalRequired = computeBomRequiredQuantity(bom, lines, matchColorSet, effectiveSizeSet, sizeUsageMapParsed);
++                if (totalRequired.compareTo(BigDecimal.ZERO) <= 0) continue;
++                String displayColor = bomColorRaw.isEmpty() ? (matchColorSet == null ? "" : String.join(",", matchColorSet)) : bomColorRaw;
++                String key = buildGroupingKey(bom, displayColor, bomSizeRaw);
++                MaterialPurchase agg = grouped.get(key);
++                if (agg == null) {
++                    grouped.put(key, createPurchaseFromBom(bom, displayColor, bomSizeRaw, totalRequired, order));
++                } else {
++                    agg.setPurchaseQuantity((agg.getPurchaseQuantity() == null ? BigDecimal.ZERO : agg.getPurchaseQuantity()).add(totalRequired));
++                    agg.setTotalAmount(BigDecimal.ZERO);
++                }
+             } else {
+-                BigDecimal nextQty = (agg.getPurchaseQuantity() == null ? BigDecimal.ZERO : agg.getPurchaseQuantity()).add(totalRequired);
+-                agg.setPurchaseQuantity(nextQty);
+-                agg.setTotalAmount(BigDecimal.ZERO);
++                Set<String> targetColors = matchColorSet != null ? matchColorSet : orderColorSet;
++                for (String orderColor : targetColors) {
++                    Set<String> singleColorSet = new HashSet<>();
++                    singleColorSet.add(orderColor);
++                    BigDecimal colorRequired = computeBomRequiredQuantity(bom, lines, singleColorSet, effectiveSizeSet, sizeUsageMapParsed);
++                    if (colorRequired.compareTo(BigDecimal.ZERO) <= 0) continue;
++                    String key = buildGroupingKey(bom, orderColor, bomSizeRaw);
++                    MaterialPurchase agg = grouped.get(key);
++                    if (agg == null) {
++                        grouped.put(key, createPurchaseFromBom(bom, orderColor, bomSizeRaw, colorRequired, order));
++                    } else {
++                        agg.setPurchaseQuantity((agg.getPurchaseQuantity() == null ? BigDecimal.ZERO : agg.getPurchaseQuantity()).add(colorRequired));
++                        agg.setTotalAmount(BigDecimal.ZERO);
++                    }
++                }
+             }
+         }
+         return grouped;
+diff --git a/backend/src/main/java/com/fashion/supplychain/style/helper/StyleBomPurchaseHelper.java b/backend/src/main/java/com/fashion/supplychain/style/helper/StyleBomPurchaseHelper.java
+index 3914ecfe3..5188e1eb2 100644
+--- a/backend/src/main/java/com/fashion/supplychain/style/helper/StyleBomPurchaseHelper.java
++++ b/backend/src/main/java/com/fashion/supplychain/style/helper/StyleBomPurchaseHelper.java
+@@ -10,12 +10,17 @@ import com.fashion.supplychain.style.service.StyleBomService;
+ import com.fashion.supplychain.style.service.StyleInfoService;
+ import com.fasterxml.jackson.databind.JsonNode;
+ import com.fasterxml.jackson.databind.ObjectMapper;
++import com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper;
+ import java.math.BigDecimal;
+ import java.math.RoundingMode;
+ import java.time.LocalDateTime;
+ import java.util.ArrayList;
++import java.util.HashSet;
++import java.util.LinkedHashMap;
+ import java.util.List;
++import java.util.Map;
+ import java.util.NoSuchElementException;
++import java.util.Set;
+ import lombok.extern.slf4j.Slf4j;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.stereotype.Component;
+@@ -63,13 +68,37 @@ public class StyleBomPurchaseHelper {
+         log.info("样衣采购参数: styleId={}, 颜色={}, 尺码={}, 款式总件数={}",
+                 styleId, parseResult.colorStr, parseResult.sizeStr, parseResult.styleTotalQty);
+ 
++        List<String> orderColors = parseResult.colorList;
++        boolean orderHasMultipleColors = orderColors.size() > 1;
++
+         int createdCount = 0;
+         for (StyleBom bom : bomList) {
+             try {
+-                MaterialPurchase purchase = buildPurchaseFromBom(bom, styleInfo, parseResult);
+-                if (purchase == null) continue;
+-                materialPurchaseService.save(purchase);
+-                createdCount++;
++                String bomColorRaw = bom.getColor() == null ? "" : bom.getColor().trim();
++                List<String> bomColorOpts = MaterialPurchaseHelper.splitOptions(bomColorRaw);
++                Set<String> bomColorSet = bomColorOpts.isEmpty() ? null : new HashSet<>(bomColorOpts);
++
++                if (!orderHasMultipleColors) {
++                    String displayColor = bomColorRaw.isEmpty() ? parseResult.colorStr : bomColorRaw;
++                    MaterialPurchase purchase = buildPurchaseFromBom(bom, styleInfo, parseResult,
++                            displayColor, parseResult.sizeStr);
++                    if (purchase == null) continue;
++                    materialPurchaseService.save(purchase);
++                    createdCount++;
++                } else {
++                    Set<String> targetColors = bomColorSet != null ? bomColorSet : new HashSet<>(orderColors);
++                    for (String orderColor : orderColors) {
++                        String normalizedOrderColor = MaterialPurchaseHelper.normalizeMatchKey(orderColor);
++                        boolean matches = targetColors.stream()
++                                .anyMatch(bc -> MaterialPurchaseHelper.normalizeMatchKey(bc).equals(normalizedOrderColor));
++                        if (!matches) continue;
++                        MaterialPurchase purchase = buildPurchaseFromBom(bom, styleInfo, parseResult,
++                                orderColor, parseResult.sizeStr);
++                        if (purchase == null) continue;
++                        materialPurchaseService.save(purchase);
++                        createdCount++;
++                    }
++                }
+             } catch (Exception e) {
+                 log.error("Failed to create material purchase for bom: bomId={}", bom.getId(), e);
+             }
+@@ -106,7 +135,7 @@ public class StyleBomPurchaseHelper {
+         }
+     }
+ 
+-    private record SizeColorParseResult(String colorStr, String sizeStr, int styleTotalQty) {}
++    private record SizeColorParseResult(String colorStr, List<String> colorList, String sizeStr, int styleTotalQty) {}
+ 
+     private SizeColorParseResult parseSizeColorConfig(StyleInfo styleInfo) {
+         String colorStr = null;
+@@ -168,11 +197,19 @@ public class StyleBomPurchaseHelper {
+             log.warn("款式颜色尺码数量配置未设置，采购数量将按BOM单件用量计算: styleId={}", styleInfo.getId());
+         }
+ 
+-        return new SizeColorParseResult(colorStr, sizeStr, styleTotalQty);
++        List<String> colorList = new ArrayList<>();
++        if (colorStr != null && !colorStr.isEmpty()) {
++            for (String c : colorStr.split("[,/，、]+")) {
++                String trimmed = c.trim();
++                if (!trimmed.isEmpty()) colorList.add(trimmed);
++            }
++        }
++
++        return new SizeColorParseResult(colorStr, colorList, sizeStr, styleTotalQty);
+     }
+ 
+     private MaterialPurchase buildPurchaseFromBom(StyleBom bom, StyleInfo styleInfo,
+-            SizeColorParseResult parseResult) {
++            SizeColorParseResult parseResult, String purchaseColor, String purchaseSize) {
+         BigDecimal usageAmount = bom.getDevUsageAmount() != null ? bom.getDevUsageAmount()
+                 : (bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO);
+         BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
+@@ -212,11 +249,11 @@ public class StyleBomPurchaseHelper {
+         purchase.setStyleName(styleInfo.getStyleName());
+         purchase.setStyleCover(styleInfo.getCover());
+ 
+-        if (parseResult.colorStr != null && !parseResult.colorStr.isEmpty()) {
+-            purchase.setColor(parseResult.colorStr);
++        if (purchaseColor != null && !purchaseColor.isEmpty()) {
++            purchase.setColor(purchaseColor);
+         }
+-        if (parseResult.sizeStr != null && !parseResult.sizeStr.isEmpty()) {
+-            purchase.setSize(parseResult.sizeStr);
++        if (purchaseSize != null && !purchaseSize.isEmpty()) {
++            purchase.setSize(purchaseSize);
+         }
+ 
+         purchase.setSourceType("sample");
+diff --git a/backend/src/main/java/com/fashion/supplychain/system/importer/FactoryExcelImporter.java b/backend/src/main/java/com/fashion/supplychain/system/importer/FactoryExcelImporter.java
+index 9feb8bd30..78b10d192 100644
+--- a/backend/src/main/java/com/fashion/supplychain/system/importer/FactoryExcelImporter.java
++++ b/backend/src/main/java/com/fashion/supplychain/system/importer/FactoryExcelImporter.java
+@@ -78,12 +78,17 @@ public class FactoryExcelImporter {
+ 
+                 Factory factory = new Factory();
+                 factory.setFactoryName(factoryName);
+-                factory.setFactoryCode(importHelper.safe(item.get("供应商编码")));
++                String factoryCode = importHelper.safe(item.get("供应商编码"));
++                factory.setFactoryCode(StringUtils.hasText(factoryCode) ? factoryCode : "F" + System.currentTimeMillis());
+                 factory.setContactPerson(importHelper.safe(item.get("联系人")));
+                 factory.setContactPhone(importHelper.safe(item.get("联系电话")));
+                 factory.setAddress(importHelper.safe(item.get("地址")));
+                 factory.setStatus("active");
++                factory.setFactoryType("EXTERNAL");
+                 factory.setDeleteFlag(0);
++                factory.setTotalOrders(0);
++                factory.setCompletedOrders(0);
++                factory.setOverdueOrders(0);
+                 factory.setCreateTime(LocalDateTime.now());
+                 factory.setUpdateTime(LocalDateTime.now());
+ 
+diff --git a/backend/src/main/java/com/fashion/supplychain/system/orchestration/FactoryOrchestrator.java b/backend/src/main/java/com/fashion/supplychain/system/orchestration/FactoryOrchestrator.java
+index 1a6683af8..5956d2a3e 100644
+--- a/backend/src/main/java/com/fashion/supplychain/system/orchestration/FactoryOrchestrator.java
++++ b/backend/src/main/java/com/fashion/supplychain/system/orchestration/FactoryOrchestrator.java
+@@ -102,8 +102,11 @@ public class FactoryOrchestrator {
+         if (!UserContext.isTopAdmin()) {
+             throw new AccessDeniedException("无权限操作");
+         }
+-        if (factory == null) {
+-            throw new IllegalArgumentException("参数不能为空");
++        if (!StringUtils.hasText(factory.getFactoryName())) {
++            throw new IllegalArgumentException("供应商名称不能为空");
++        }
++        if (!StringUtils.hasText(factory.getFactoryCode())) {
++            factory.setFactoryCode("F" + System.currentTimeMillis());
+         }
+         LocalDateTime now = LocalDateTime.now();
+         factory.setCreateTime(now);
+diff --git a/backend/src/main/java/com/fashion/supplychain/warehouse/orchestration/FinishedWarehouseOperationOrchestrator.java b/backend/src/main/java/com/fashion/supplychain/warehouse/orchestration/FinishedWarehouseOperationOrchestrator.java
+index d95415667..b2fd084a4 100644
+--- a/backend/src/main/java/com/fashion/supplychain/warehouse/orchestration/FinishedWarehouseOperationOrchestrator.java
++++ b/backend/src/main/java/com/fashion/supplychain/warehouse/orchestration/FinishedWarehouseOperationOrchestrator.java
+@@ -39,6 +39,7 @@ public class FinishedWarehouseOperationOrchestrator {
+     private final StyleInfoService styleInfoService;
+     private final WarehouseAreaService warehouseAreaService;
+     private final StockChangeLogService stockChangeLogService;
++    private final WarehouseLocationOrchestrator warehouseLocationOrchestrator;
+     private final ObjectMapper objectMapper;
+ 
+     private static final Set<String> VALID_SOURCE_TYPES = Set.of(
+@@ -160,6 +161,8 @@ public class FinishedWarehouseOperationOrchestrator {
+         logStockChange("INBOUND", sku, beforeQty, quantity, afterQty, w.getWarehousingNo(),
+                 sourceType, effectivePrice, totalAmount, traceId, userId, username, tenantId);
+ 
++        warehouseLocationOrchestrator.incrementUsedCapacity(warehouseLocation, "FINISHED", 1);
++
+         log.info("[成品入库] skuCode={} +{} 来源={} 金额={} traceId={}", skuCode, quantity, sourceType, totalAmount, traceId);
+         return w;
+     }
+@@ -588,6 +591,8 @@ public class FinishedWarehouseOperationOrchestrator {
+                 outstockType, sku.getSalesPrice(), o.getTotalAmount(), traceId,
+                 UserContext.userId(), UserContext.username(), tenantId);
+ 
++        warehouseLocationOrchestrator.incrementUsedCapacity(warehouseLocation, "FINISHED", -1);
++
+         log.info("[成品出库] skuCode={} -{} 类型={} traceId={}", skuCode, quantity, outstockType, traceId);
+         return o;
+     }
+diff --git a/backend/src/main/java/com/fashion/supplychain/warehouse/orchestration/WarehouseLocationOrchestrator.java b/backend/src/main/java/com/fashion/supplychain/warehouse/orchestration/WarehouseLocationOrchestrator.java
+index 99cd2baa7..7de0c8201 100644
+--- a/backend/src/main/java/com/fashion/supplychain/warehouse/orchestration/WarehouseLocationOrchestrator.java
++++ b/backend/src/main/java/com/fashion/supplychain/warehouse/orchestration/WarehouseLocationOrchestrator.java
+@@ -93,6 +93,19 @@ public class WarehouseLocationOrchestrator {
+                 .eq(StringUtils.isNotBlank(areaId), WarehouseLocation::getAreaId, areaId)
+                 .orderByAsc(WarehouseLocation::getLocationCode)
+                 .last("LIMIT 5000"));
++
++        for (WarehouseLocation loc : list) {
++            long actualCount = productWarehousingMapper.selectCount(new LambdaQueryWrapper<ProductWarehousing>()
++                    .eq(ProductWarehousing::getTenantId, tenantId)
++                    .eq(ProductWarehousing::getDeleteFlag, 0)
++                    .and(w -> w.eq(ProductWarehousing::getWarehouse, loc.getLocationCode())
++                            .or().eq(ProductWarehousing::getWarehouse, loc.getLocationName())));
++            int actual = (int) actualCount;
++            if (loc.getUsedCapacity() == null || loc.getUsedCapacity() != actual) {
++                loc.setUsedCapacity(actual);
++            }
++        }
++
+         return Result.success(list);
+     }
+ 
+@@ -304,30 +317,69 @@ public class WarehouseLocationOrchestrator {
+         result.put("capacity", location.getCapacity());
+         result.put("usedCapacity", location.getUsedCapacity());
+ 
++        long actualCount = productWarehousingMapper.selectCount(new LambdaQueryWrapper<ProductWarehousing>()
++                .eq(ProductWarehousing::getTenantId, tenantId)
++                .eq(ProductWarehousing::getDeleteFlag, 0)
++                .and(w -> w.eq(ProductWarehousing::getWarehouse, locationCode)
++                        .or().eq(ProductWarehousing::getWarehouse, location.getLocationName())));
++        result.put("actualUsedCapacity", actualCount);
++
+         List<Map<String, Object>> items = new ArrayList<>();
+ 
+         if ("FINISHED".equals(location.getWarehouseType())) {
+-            List<ProductSku> skus = productSkuService.list(new LambdaQueryWrapper<ProductSku>()
+-                    .eq(ProductSku::getTenantId, tenantId)
+-                    .eq(ProductSku::getStatus, "ENABLED")
+-                    .gt(ProductSku::getStockQuantity, 0));
+-            for (ProductSku sku : skus) {
+-                long warehousedInLocation = productWarehousingMapper.selectCount(
+-                        new LambdaQueryWrapper<ProductWarehousing>()
+-                                .eq(ProductWarehousing::getTenantId, tenantId)
+-                                .eq(ProductWarehousing::getWarehouse, locationCode)
+-                                .eq(ProductWarehousing::getSkuCode, sku.getSkuCode())
+-                                .eq(ProductWarehousing::getDeleteFlag, 0));
+-                if (warehousedInLocation > 0) {
+-                    Map<String, Object> item = new LinkedHashMap<>();
+-                    item.put("skuCode", sku.getSkuCode());
+-                    item.put("styleNo", sku.getStyleNo());
+-                    item.put("color", sku.getColor());
+-                    item.put("size", sku.getSize());
+-                    item.put("stockQuantity", sku.getStockQuantity());
+-                    item.put("salesPrice", sku.getSalesPrice());
+-                    items.add(item);
++            List<ProductWarehousing> records = productWarehousingMapper.selectList(
++                    new LambdaQueryWrapper<ProductWarehousing>()
++                            .eq(ProductWarehousing::getTenantId, tenantId)
++                            .eq(ProductWarehousing::getDeleteFlag, 0)
++                            .and(w -> w.eq(ProductWarehousing::getWarehouse, locationCode)
++                                    .or().eq(ProductWarehousing::getWarehouse, location.getLocationName())));
++
++            Map<String, List<ProductWarehousing>> byKey = new LinkedHashMap<>();
++            for (ProductWarehousing r : records) {
++                String key = StringUtils.isNotBlank(r.getSkuCode()) ? r.getSkuCode() : r.getStyleNo();
++                if (StringUtils.isBlank(key)) continue;
++                byKey.computeIfAbsent(key, k -> new ArrayList<>()).add(r);
++            }
++
++            for (Map.Entry<String, List<ProductWarehousing>> entry : byKey.entrySet()) {
++                String key = entry.getKey();
++                List<ProductWarehousing> recs = entry.getValue();
++                int totalQty = recs.stream().mapToInt(r -> r.getWarehousingQuantity() != null ? r.getWarehousingQuantity() : 0).sum();
++
++                ProductSku matchedSku = null;
++                if (StringUtils.isNotBlank(recs.get(0).getSkuCode())) {
++                    matchedSku = productSkuService.getOne(new LambdaQueryWrapper<ProductSku>()
++                            .eq(ProductSku::getTenantId, tenantId)
++                            .eq(ProductSku::getSkuCode, key)
++                            .last("LIMIT 1"));
+                 }
++                if (matchedSku == null && StringUtils.isNotBlank(recs.get(0).getStyleNo())) {
++                    matchedSku = productSkuService.getOne(new LambdaQueryWrapper<ProductSku>()
++                            .eq(ProductSku::getTenantId, tenantId)
++                            .eq(ProductSku::getStyleNo, key)
++                            .eq(ProductSku::getStatus, "ENABLED")
++                            .last("LIMIT 1"));
++                }
++
++                Map<String, Object> item = new LinkedHashMap<>();
++                if (matchedSku != null) {
++                    item.put("skuCode", matchedSku.getSkuCode());
++                    item.put("styleNo", matchedSku.getStyleNo());
++                    item.put("color", matchedSku.getColor());
++                    item.put("size", matchedSku.getSize());
++                    item.put("stockQuantity", matchedSku.getStockQuantity());
++                    item.put("salesPrice", matchedSku.getSalesPrice());
++                } else {
++                    item.put("skuCode", recs.get(0).getSkuCode());
++                    item.put("styleNo", recs.get(0).getStyleNo());
++                    item.put("color", null);
++                    item.put("size", null);
++                    item.put("stockQuantity", totalQty);
++                    item.put("salesPrice", null);
++                }
++                item.put("warehousedCount", recs.size());
++                item.put("warehousedQty", totalQty);
++                items.add(item);
+             }
+         }
+ 
+@@ -356,18 +408,25 @@ public class WarehouseLocationOrchestrator {
+                     .eq(WarehouseLocation::getStatus, "ACTIVE")
+                     .eq(WarehouseLocation::getDeleteFlag, 0));
+ 
+-            long usedLocations = locationService.count(new LambdaQueryWrapper<WarehouseLocation>()
++            List<WarehouseLocation> allLocs = locationService.list(new LambdaQueryWrapper<WarehouseLocation>()
+                     .eq(WarehouseLocation::getTenantId, tenantId)
+                     .eq(WarehouseLocation::getWarehouseType, type)
+-                    .gt(WarehouseLocation::getUsedCapacity, 0)
+-                    .eq(WarehouseLocation::getDeleteFlag, 0));
++                    .eq(WarehouseLocation::getDeleteFlag, 0)
++                    .select(WarehouseLocation::getId, WarehouseLocation::getLocationCode,
++                            WarehouseLocation::getLocationName, WarehouseLocation::getZoneName,
++                            WarehouseLocation::getUsedCapacity));
++
++            long usedLocations = 0;
++            for (WarehouseLocation loc : allLocs) {
++                long actualCount = productWarehousingMapper.selectCount(new LambdaQueryWrapper<ProductWarehousing>()
++                        .eq(ProductWarehousing::getTenantId, tenantId)
++                        .eq(ProductWarehousing::getDeleteFlag, 0)
++                        .and(w -> w.eq(ProductWarehousing::getWarehouse, loc.getLocationCode())
++                                .or().eq(ProductWarehousing::getWarehouse, loc.getLocationName())));
++                if (actualCount > 0) usedLocations++;
++            }
+ 
+-            List<String> zones = locationService.list(new LambdaQueryWrapper<WarehouseLocation>()
+-                            .eq(WarehouseLocation::getTenantId, tenantId)
+-                            .eq(WarehouseLocation::getWarehouseType, type)
+-                            .eq(WarehouseLocation::getDeleteFlag, 0)
+-                            .select(WarehouseLocation::getZoneName))
+-                    .stream()
++            List<String> zones = allLocs.stream()
+                     .map(WarehouseLocation::getZoneName)
+                     .filter(StringUtils::isNotBlank)
+                     .distinct()
+@@ -386,6 +445,48 @@ public class WarehouseLocationOrchestrator {
+         return Result.success(overview);
+     }
+ 
++    public void incrementUsedCapacity(String locationCode, String warehouseType, int delta) {
++        Long tenantId = UserContext.tenantId();
++        if (tenantId == null || StringUtils.isBlank(locationCode) || delta == 0) return;
++
++        WarehouseLocation loc = locationService.getOne(new LambdaQueryWrapper<WarehouseLocation>()
++                .eq(WarehouseLocation::getTenantId, tenantId)
++                .eq(WarehouseLocation::getLocationCode, locationCode)
++                .eq(WarehouseLocation::getDeleteFlag, 0)
++                .eq(StringUtils.isNotBlank(warehouseType), WarehouseLocation::getWarehouseType, warehouseType)
++                .last("LIMIT 1"));
++        if (loc == null) return;
++
++        int current = loc.getUsedCapacity() != null ? loc.getUsedCapacity() : 0;
++        int updated = Math.max(0, current + delta);
++        loc.setUsedCapacity(updated);
++        loc.setUpdateTime(LocalDateTime.now());
++        locationService.updateById(loc);
++    }
++
++    public int recalculateUsedCapacity(String locationCode, String warehouseType) {
++        Long tenantId = UserContext.tenantId();
++        if (tenantId == null || StringUtils.isBlank(locationCode)) return 0;
++
++        long count = productWarehousingMapper.selectCount(new LambdaQueryWrapper<ProductWarehousing>()
++                .eq(ProductWarehousing::getTenantId, tenantId)
++                .eq(ProductWarehousing::getWarehouse, locationCode)
++                .eq(ProductWarehousing::getDeleteFlag, 0));
++
++        WarehouseLocation loc = locationService.getOne(new LambdaQueryWrapper<WarehouseLocation>()
++                .eq(WarehouseLocation::getTenantId, tenantId)
++                .eq(WarehouseLocation::getLocationCode, locationCode)
++                .eq(WarehouseLocation::getDeleteFlag, 0)
++                .eq(StringUtils.isNotBlank(warehouseType), WarehouseLocation::getWarehouseType, warehouseType)
++                .last("LIMIT 1"));
++        if (loc != null) {
++            loc.setUsedCapacity((int) count);
++            loc.setUpdateTime(LocalDateTime.now());
++            locationService.updateById(loc);
++        }
++        return (int) count;
++    }
++
+     private Long parseLongSafe(String s) {
+         if (s == null || s.isBlank()) return null;
+         try { return Long.parseLong(s); } catch (NumberFormatException e) { return null; }
+diff --git a/frontend/src/components/Layout/router.tsx b/frontend/src/components/Layout/router.tsx
+index 1c5521bd9..993a10f15 100644
+--- a/frontend/src/components/Layout/router.tsx
++++ b/frontend/src/components/Layout/router.tsx
+@@ -216,7 +216,9 @@ export function useRecentPages(
+         targetScrollLeft = tabRight - containerWidth + 10;
+       }
+       if (targetScrollLeft !== currentScrollLeft) {
+-        container.scrollLeft = targetScrollLeft;
++        requestAnimationFrame(() => {
++          container.scrollLeft = targetScrollLeft;
++        });
+       }
+     });
+   }, [effectiveFullPath]);
+diff --git a/frontend/src/components/common/NodeDetailModal/index.tsx b/frontend/src/components/common/NodeDetailModal/index.tsx
+index a61edbd3d..fbe55a675 100644
+--- a/frontend/src/components/common/NodeDetailModal/index.tsx
++++ b/frontend/src/components/common/NodeDetailModal/index.tsx
+@@ -295,7 +295,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
+           </div>
+         </div>
+       }
+-      width={nodeTypeKey === 'procurement' ? '40vw' : '60vw'}
++      width="60vw"
+       initialHeight={Math.round(window.innerHeight * 0.82)}
+     >
+       <Spin spinning={loading}>
+@@ -325,7 +325,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
+               style={(nodeStats?.percent || 0) >= 100 ? { color: '#999', borderColor: '#d9d9d9' } : {}}
+               onClick={() => navigate(
+                 nodeTypeKey === 'cutting'
+-                  ? `/production/cutting?orderNo=${encodeURIComponent(orderSummary.orderNo || orderNo || '')}`
++                  ? `/production/cutting/task/${encodeURIComponent(orderSummary.orderNo || orderNo || '')}`
+                   : `/production/material?orderNo=${encodeURIComponent(orderSummary.orderNo || orderNo || '')}`
+               )}
+             >
+diff --git a/frontend/src/components/common/OrderImageManager/index.tsx b/frontend/src/components/common/OrderImageManager/index.tsx
+index a1b46a11d..18f13da4c 100644
+--- a/frontend/src/components/common/OrderImageManager/index.tsx
++++ b/frontend/src/components/common/OrderImageManager/index.tsx
+@@ -152,7 +152,7 @@ const OrderImageManager: React.FC<OrderImageManagerProps> = ({ orderNo, editable
+         open={historyOpen}
+         onCancel={() => setHistoryOpen(false)}
+         footer={null}
+-        width={600}
++        width="40vw"
+       >
+         {snapshots.length === 0 ? (
+           <Empty description="暂无更新记录" />
+diff --git a/frontend/src/components/common/PageStatCards/index.tsx b/frontend/src/components/common/PageStatCards/index.tsx
+index 36a17f18e..929160383 100644
+--- a/frontend/src/components/common/PageStatCards/index.tsx
++++ b/frontend/src/components/common/PageStatCards/index.tsx
+@@ -71,11 +71,11 @@ const toneColorMap: Record<HintTone, string> = {
+ };
+ 
+ // ===== 样式常量（改这里，所有页面同步生效） =====
+-const TAG_PADDING = '3px 10px';
+-const TAG_BORDER_RADIUS = '4px';
+-const TAG_GAP = '8px';
+-const CONTAINER_MB = '8px';
+-const TAG_FONT_SIZE = '12px';
++const TAG_PADDING = '7px 16px';
++const TAG_BORDER_RADIUS = '6px';
++const TAG_GAP = '10px';
++const CONTAINER_MB = '10px';
++const TAG_FONT_SIZE = '14px';
+ const VALUE_FONT_WEIGHT = 700;
+ const LABEL_COLOR = 'var(--text-secondary)';
+ const BORDER_COLOR = 'var(--border-color)';
+diff --git a/frontend/src/components/common/StandardSearchBar.css b/frontend/src/components/common/StandardSearchBar.css
+index 58dbddcb0..59ec00fac 100644
+--- a/frontend/src/components/common/StandardSearchBar.css
++++ b/frontend/src/components/common/StandardSearchBar.css
+@@ -11,6 +11,7 @@
+ .standard-search-input-v2 {
+   width: 200px;
+   min-width: 160px;
++  height: var(--search-height, 36px) !important;
+ }
+ 
+ .standard-search-date-v2 {
+diff --git a/frontend/src/components/common/UniversalCardView/index.tsx b/frontend/src/components/common/UniversalCardView/index.tsx
+index d93653ed9..4c48009ed 100644
+--- a/frontend/src/components/common/UniversalCardView/index.tsx
++++ b/frontend/src/components/common/UniversalCardView/index.tsx
+@@ -221,7 +221,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
+                       <LiquidProgressBar
+                         percent={progressConfig.calculate(record)}
+                         width="100%"
+-                        height={14}
++                        height={10}
+                       status={progressConfig.getStatus?.(record)}
+                       isCompleted={progressConfig.isCompleted?.(record)}
+                       minVisiblePercent={progressConfig.minVisiblePercent?.(record) ?? 0}
+diff --git a/frontend/src/components/common/UniversalCardView/style.css b/frontend/src/components/common/UniversalCardView/style.css
+index b6f4a67cb..809eb136d 100644
+--- a/frontend/src/components/common/UniversalCardView/style.css
++++ b/frontend/src/components/common/UniversalCardView/style.css
+@@ -1,4 +1,3 @@
+-/* ===== 通用卡片视图样式 - 全站统一 ===== */
+ .universal-card {
+   border-radius: 8px;
+   transition: all 0.25s ease;
+@@ -10,25 +9,23 @@
+   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+ }
+ .universal-card .ant-card-body {
+-  padding: 12px;
++  padding: 10px 12px;
+ }
+ 
+-/* 横向布局容器 */
+ .universal-card-layout {
+   display: flex;
+-  gap: 12px;
+-  min-height: 180px;
++  gap: 10px;
++  min-height: 160px;
+ }
+ 
+-/* 左侧封面图片 */
+ .universal-card-cover {
+-  width: 140px;
++  width: 120px;
+   flex-shrink: 0;
+   position: relative;
+-  background: #f5f5f5;
++  background: var(--color-bg-container, #f5f5f5);
+   border-radius: 6px;
+   overflow: hidden;
+-  min-height: 140px;
++  min-height: 120px;
+   align-self: stretch;
+ }
+ .universal-card-cover > * {
+@@ -44,20 +41,18 @@
+   display: flex;
+   align-items: center;
+   justify-content: center;
+-  color: #bfbfbf;
+-  font-size: 13px;
++  color: var(--color-text-quaternary, #bfbfbf);
++  font-size: 12px;
+ }
+ 
+-/* 右侧内容区 */
+ .universal-card-body {
+   flex: 1;
+   display: flex;
+   flex-direction: column;
+   min-width: 0;
+-  gap: 4px;
++  gap: 3px;
+ }
+ 
+-/* 头部：订单号 + 款号 */
+ .universal-card-header {
+   flex-shrink: 0;
+ }
+@@ -68,9 +63,9 @@
+ }
+ .universal-card-title {
+   margin: 0;
+-  font-size: 14px;
++  font-size: 13px;
+   font-weight: 600;
+-  color: #1f1f1f;
++  color: var(--color-text-primary, #1f1f1f);
+   line-height: 1.3;
+   overflow: hidden;
+   text-overflow: ellipsis;
+@@ -79,8 +74,8 @@
+   min-width: 0;
+ }
+ .universal-card-subtitle {
+-  font-size: 12px;
+-  color: #999;
++  font-size: 11px;
++  color: var(--color-text-tertiary, #999);
+   line-height: 1.3;
+   overflow: hidden;
+   text-overflow: ellipsis;
+@@ -91,24 +86,23 @@
+   display: flex;
+   gap: 3px;
+   flex-wrap: wrap;
+-  margin-top: 3px;
++  margin-top: 2px;
+ }
+ 
+-/* 可滚动字段区 - 鼠标悬停时支持上下滚动 */
+ .universal-card-fields {
+   flex: 1;
+   overflow-y: auto;
+   min-height: 0;
+   display: flex;
+   flex-direction: column;
+-  gap: 2px;
++  gap: 1px;
+   padding-right: 2px;
+ }
+ .universal-card-fields::-webkit-scrollbar {
+-  width: 4px;
++  width: 3px;
+ }
+ .universal-card-fields::-webkit-scrollbar-thumb {
+-  background: #d9d9d9;
++  background: var(--color-border-antd, #d9d9d9);
+   border-radius: 2px;
+ }
+ .universal-card-fields::-webkit-scrollbar-track {
+@@ -119,13 +113,13 @@
+   display: flex;
+   justify-content: flex-start;
+   gap: 4px;
+-  line-height: 1.4;
++  line-height: 1.35;
+ }
+ .universal-card-field {
+   display: flex;
+   gap: 2px;
+-  font-size: 12px;
+-  line-height: 1.4;
++  font-size: 11px;
++  line-height: 1.35;
+   min-width: 0;
+   flex: 1;
+   align-items: baseline;
+@@ -134,39 +128,37 @@
+   color: var(--color-text-tertiary, #999);
+   white-space: nowrap;
+   flex-shrink: 0;
+-  font-size: 12px;
++  font-size: 11px;
+   overflow: hidden;
+   text-overflow: ellipsis;
+-  max-width: 80px;
++  max-width: 60px;
+ }
+ .universal-card-field .field-value {
+   color: var(--color-text-primary, #333);
+   font-weight: 500;
+   flex: 1;
+   min-width: 0;
+-  font-size: 12px;
++  font-size: 11px;
+ }
+ 
+-/* 进度条区域 - 固定在字段区下方 */
+ .universal-card-progress-section {
+   flex-shrink: 0;
+-  margin-top: 4px;
++  margin-top: 3px;
+   animation: progressFadeIn 0.5s ease-out;
+ }
+ 
+-/* 胶囊进度条 */
+ .universal-card-progress-line {
+-  height: 14px;
++  height: 8px;
+   min-width: 50px;
+   max-width: 100%;
+-  margin: 4px 0;
++  margin: 2px 0;
+   border-radius: 999px;
+   transition: all 0.4s ease;
+   position: relative;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+-  padding: 0 10px;
++  padding: 0 8px;
+   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+ }
+ .universal-card-progress-text {
+@@ -195,32 +187,38 @@
+   color: rgba(0, 0, 0, 0.55);
+ }
+ 
+-/* 操作按钮 */
+ .universal-card-actions {
+   flex-shrink: 0;
+   display: flex;
+   justify-content: center;
+-  margin-top: 4px;
+-  padding-top: 4px;
+-  border-top: 1px solid #f0f0f0;
++  margin-top: 3px;
++  padding-top: 3px;
++  border-top: 1px solid var(--color-border-light, #f0f0f0);
+ }
+ .universal-card-actions .ant-space {
+   width: 100%;
+   justify-content: center;
++  flex-wrap: wrap;
++  gap: 0 2px !important;
+ }
+-.universal-card-actions .ant-btn-link {
+-  font-size: 12px;
+-  padding: 0 6px;
+-  height: auto;
++.universal-card-actions .ant-space-item {
++  line-height: 1;
++}
++.universal-card-actions .ant-btn-link,
++.universal-card-actions .card-action-btn {
++  font-size: 13px !important;
++  padding: 0 6px !important;
++  height: auto !important;
++  line-height: 20px !important;
++  min-height: 20px !important;
++  max-height: 20px !important;
+ }
+ 
+-/* 进度条动画 */
+ @keyframes progressFadeIn {
+   from { opacity: 0; transform: scaleX(0.9); }
+   to { opacity: 1; transform: scaleX(1); }
+ }
+ 
+-/* 响应式：小屏幕恢复上下布局 */
+ @media (max-width: 768px) {
+   .universal-card-layout {
+     flex-direction: column;
+@@ -229,13 +227,13 @@
+   .universal-card-cover {
+     width: 100%;
+     min-height: auto;
+-    height: 160px;
++    height: 140px;
+     align-self: auto;
+   }
+   .universal-card-fields {
+-    max-height: 200px;
++    max-height: 180px;
+   }
+   .universal-card-title { font-size: 12px; }
+-  .universal-card-field { font-size: 12px; }
++  .universal-card-field { font-size: 11px; }
+   .universal-card .ant-card-body { padding: 8px 10px; }
+-}
+\ No newline at end of file
++}
+diff --git a/frontend/src/components/production/ProcessDetailModal/index.tsx b/frontend/src/components/production/ProcessDetailModal/index.tsx
+index b8d3fed5a..3988172b9 100644
+--- a/frontend/src/components/production/ProcessDetailModal/index.tsx
++++ b/frontend/src/components/production/ProcessDetailModal/index.tsx
+@@ -1,4 +1,6 @@
+ import React from 'react';
++import { Button, Space } from 'antd';
++import { InboxOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+ import { useNavigate } from 'react-router-dom';
+ import ResizableModal from '@/components/common/ResizableModal';
+ import type { ProcessDetailModalProps } from './types';
+@@ -44,12 +46,34 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
+     }
+   };
+ 
++  const showNavFooter = processType === 'procurement' || processType === 'cutting';
++
+   return (
+     <ResizableModal
+       title={title}
+       open={visible}
+       onCancel={onClose}
+-      footer={null}
++      footer={showNavFooter ? (
++        <Space>
++          {processType === 'procurement' && (
++            <Button
++              icon={<ShoppingCartOutlined />}
++              onClick={() => navigate(`/production/material?orderNo=${encodeURIComponent(record?.orderNo || '')}`)}
++            >
++               前往物料采购
++            </Button>
++          )}
++          {processType === 'cutting' && (
++            <Button
++              icon={<InboxOutlined />}
++              onClick={() => navigate(`/production/cutting/task/${encodeURIComponent(record?.orderNo || '')}`)}
++            >
++               前往裁剪管理
++            </Button>
++          )}
++          <Button onClick={onClose}>关闭</Button>
++        </Space>
++      ) : null}
+       className="process-detail-modal"
+       width="85vw"
+       initialHeight={Math.round(window.innerHeight * 0.82)}
+diff --git a/frontend/src/main.tsx b/frontend/src/main.tsx
+index 9d965e7ef..81f51d4f7 100644
+--- a/frontend/src/main.tsx
++++ b/frontend/src/main.tsx
+@@ -91,11 +91,12 @@ import { useAppLanguage } from './i18n/useAppLanguage';
+ import XiaoyunSpinIndicator from './components/common/XiaoyunSpinIndicator';
+ import 'antd/dist/reset.css'; // 引入组件库样式
+ import './styles/global.css';
+-import './styles/design-system.css'; // 设计系统
+-import './styles/dark-theme-global.css'; // 深色主题全局覆盖
+-import './styles/button-override.css'; // 按钮统一样式
+-import './styles/animations.css'; // 全局动效：Chrome 146 scroll-driven + View Transitions
+-import './components/common/GlobalAiAssistant/xiaoyun-tokens.css'; // AI小云设计令牌
++import './styles/design-system.css';
++import './styles/erp-visual-enhancements.css';
++import './styles/dark-theme-global.css';
++import './styles/button-override.css';
++import './styles/animations.css';
++import './components/common/GlobalAiAssistant/xiaoyun-tokens.css';
+ 
+ const themeStorageKey = 'app.theme';
+ const fallbackTheme = 'white';
+diff --git a/frontend/src/modules/basic/pages/StyleInfo/components/StyleBasicInfoForm.tsx b/frontend/src/modules/basic/pages/StyleInfo/components/StyleBasicInfoForm.tsx
+index 0118de072..d36448f4e 100644
+--- a/frontend/src/modules/basic/pages/StyleInfo/components/StyleBasicInfoForm.tsx
++++ b/frontend/src/modules/basic/pages/StyleInfo/components/StyleBasicInfoForm.tsx
+@@ -97,7 +97,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
+     fontWeight: 600,
+     color: '#374151',
+     marginBottom: 12,
+-    marginLeft: 72,
++    marginLeft: 42,
+     paddingLeft: 8,
+     lineHeight: '20px',
+   };
+@@ -105,7 +105,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
+   return (
+     <Row gutter={16} className="square-inputs">
+         {/* 左侧：封面图上传 */}
+-        <Col xs={24} lg={6}>
++        <Col xs={24} lg={4}>
+           <CoverImageUpload
+             styleId={currentStyle?.id}
+             enabled={Boolean(currentStyle?.id) && !editLocked}
+@@ -118,8 +118,8 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
+           />
+         </Col>
+ 
+-        {/* 右侧：表单字段（图片与页面边缘之间） */}
+-        <Col xs={24} lg={18} style={{ paddingLeft: '24px' }}>
++        {/* 右侧：表单字段 */}
++        <Col xs={24} lg={20} style={{ paddingLeft: '24px' }}>
+           {/* 款号信息区域 */}
+           <div style={{ marginBottom: 16 }}>
+             <div style={{ ...sectionTitleBaseStyle, borderLeft: '3px solid #2D7FF9' }}>
+@@ -145,38 +145,40 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
+                   )}
+                 </Form.Item>
+               </Col>
+-              <Col xs={24} md={6}>
++              <Col xs={24} md={8}>
+                 <Form.Item name="styleName" label="款名" rules={[{ required: true, message: '请输入款名' }]}>
+                   <DictAutoComplete dictType="style_name" placeholder="请输入或选择" disabled={editLocked} style={{ width: '100%' }} id="styleName" />
+                 </Form.Item>
+               </Col>
+-              <Col xs={24} md={6}>
+-                <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+-                  <Form.Item name="category" label="品类" style={{ flex: 1, minWidth: 0, marginBottom: 0 }}>
+-                    <Select
+-                      id="category"
+-                      placeholder="选择"
+-                      disabled={isFieldLocked(currentStyle?.category)}
+-                      style={{ width: '100%' }}
+-                      allowClear
+-                      showSearch
+-                      optionFilterProp="label"
+-                      options={categoryOptions}
+-                    />
+-                  </Form.Item>
+-                  <Form.Item name="season" label="季节" style={{ flex: 1, minWidth: 0, marginBottom: 0 }}>
+-                    <Select
+-                      id="season"
+-                      placeholder="选择"
+-                      disabled={isFieldLocked(currentStyle?.season)}
+-                      style={{ width: '100%' }}
+-                      allowClear
+-                      showSearch
+-                      optionFilterProp="label"
+-                      options={seasonOptions}
+-                    />
+-                  </Form.Item>
+-                </div>
++              <Col xs={24} md={4}>
++                <Form.Item name="category" label="品类">
++                  <Select
++                    id="category"
++                    placeholder="选择"
++                    disabled={isFieldLocked(currentStyle?.category)}
++                    style={{ width: '100%' }}
++                    allowClear
++                    showSearch
++                    optionFilterProp="label"
++                    options={categoryOptions}
++                  />
++                </Form.Item>
++              </Col>
++            </Row>
++            <Row gutter={[16, 0]}>
++              <Col xs={24} md={4}>
++                <Form.Item name="season" label="季节">
++                  <Select
++                    id="season"
++                    placeholder="选择"
++                    disabled={isFieldLocked(currentStyle?.season)}
++                    style={{ width: '100%' }}
++                    allowClear
++                    showSearch
++                    optionFilterProp="label"
++                    options={seasonOptions}
++                  />
++                </Form.Item>
+               </Col>
+             </Row>
+           </div>
+@@ -292,7 +294,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
+               </Col>
+               <Col xs={24} md={6}>
+                 <Form.Item name="remark" label="备注">
+-                  <Input.TextArea id="remark" rows={1} placeholder="请输入备注" disabled={isFieldLocked((currentStyle as any)?.remark)} />
++                  <Input.TextArea id="remark" rows={2} placeholder="请输入备注" disabled={isFieldLocked((currentStyle as any)?.remark)} />
+                 </Form.Item>
+               </Col>
+             </Row>
+diff --git a/frontend/src/modules/basic/pages/StyleInfo/components/StyleProductionTab.tsx b/frontend/src/modules/basic/pages/StyleInfo/components/StyleProductionTab.tsx
+index 279772bb9..ab6ad410f 100644
+--- a/frontend/src/modules/basic/pages/StyleInfo/components/StyleProductionTab.tsx
++++ b/frontend/src/modules/basic/pages/StyleInfo/components/StyleProductionTab.tsx
+@@ -361,12 +361,14 @@ const StyleProductionTab: React.FC<Props> = ({
+         onChange={handleTextChange}
+         disabled={productionReqLocked}
+         placeholder="请输入生产要求，每行填写一条内容"
+-        autoSize={{ minRows: 3 }}
++        autoSize={{ minRows: 12, maxRows: 60 }}
+         style={{
+           marginTop: 8,
+           fontFamily: 'monospace',
+           fontSize: "var(--font-size-base)",
+-          lineHeight: '1.8'
++          lineHeight: '1.8',
++          width: '100%',
++          minHeight: '360px',
+         }}
+       />
+ 
+@@ -408,7 +410,7 @@ const StyleProductionTab: React.FC<Props> = ({
+         open={ocrModalOpen}
+         onCancel={() => setOcrModalOpen(false)}
+         footer={null}
+-        width={480}
++        width="30vw"
+       >
+         <input
+           ref={ocrFileInputRef}
+diff --git a/frontend/src/modules/basic/pages/StyleInfo/components/styleSize/StyleSizeGradingConfigModal.tsx b/frontend/src/modules/basic/pages/StyleInfo/components/styleSize/StyleSizeGradingConfigModal.tsx
+index a47782855..6138734d9 100644
+--- a/frontend/src/modules/basic/pages/StyleInfo/components/styleSize/StyleSizeGradingConfigModal.tsx
++++ b/frontend/src/modules/basic/pages/StyleInfo/components/styleSize/StyleSizeGradingConfigModal.tsx
+@@ -94,7 +94,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
+       title={gradingTargetRowKey === 'batch' ? `批量配置跳码区 (${selectedRowCount}个部位)` : '配置跳码区'}
+       onCancel={onCancel}
+       footer={null}
+-      width="80vw"
++      width="60vw"
+       minWidth={800}
+       initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.65 : 520}
+       minHeight={420}
+diff --git a/frontend/src/modules/basic/pages/StyleInfo/index.tsx b/frontend/src/modules/basic/pages/StyleInfo/index.tsx
+index 1e10bb9ef..291810dbb 100644
+--- a/frontend/src/modules/basic/pages/StyleInfo/index.tsx
++++ b/frontend/src/modules/basic/pages/StyleInfo/index.tsx
+@@ -135,7 +135,7 @@ const StyleInfoDetailPage: React.FC = () => {
+             />
+           }
+         >
+-          <Form layout="horizontal" form={form} labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
++          <Form layout="horizontal" form={form} labelCol={{ span: 5 }} wrapperCol={{ span: 19 }}>
+             <StyleBasicInfoForm
+               _form={form}
+               currentStyle={currentStyle}
+diff --git a/frontend/src/modules/basic/pages/StyleInfo/styles.css b/frontend/src/modules/basic/pages/StyleInfo/styles.css
+index d42c78de8..1c69cbead 100644
+--- a/frontend/src/modules/basic/pages/StyleInfo/styles.css
++++ b/frontend/src/modules/basic/pages/StyleInfo/styles.css
+@@ -86,7 +86,7 @@
+ 
+ .style-smart-row {
+   display: grid;
+-  grid-template-columns: 120px minmax(0, 1fr);
++  grid-template-columns: 90px minmax(0, 1fr);
+   gap: 8px;
+   padding: 8px;
+   border-radius: 6px;
+@@ -95,7 +95,8 @@
+   box-shadow: var(--shadow-sm);
+   align-items: stretch;
+   position: relative;
+-  overflow: visible;
++  overflow: hidden;
++  max-height: 150px;
+ }
+ 
+ .style-smart-row--normal {
+@@ -124,8 +125,29 @@
+ }
+ 
+ .style-smart-row__cover {
+-  min-height: 64px;
++  min-height: 50px;
++  max-height: 150px;
+   align-self: stretch;
++  position: relative;
++  overflow: hidden;
++}
++
++/* ── Cover: 占位无图图标 ── */
++.style-smart-row__cover-placeholder {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  height: 100%;
++  color: var(--color-text-tertiary);
++  background: var(--color-bg-stripe, #f5f5f5);
++  border-radius: 4px;
++  min-height: 50px;
++}
++
++.style-smart-row__cover-fallback {
++  width: 32px;
++  height: 32px;
++  opacity: 0.55;
+ }
+ 
+ .style-smart-row__thumb {
+@@ -147,13 +169,15 @@
+   min-width: 0;
+   display: flex;
+   flex-direction: column;
+-  gap: 6px;
++  gap: 4px;
+   position: relative;
++  overflow-y: auto;
++  padding-right: 4px;
+ }
+ 
+ .style-smart-row__layout {
+   display: grid;
+-  grid-template-columns: minmax(120px, 148px) minmax(0, 1fr);
++  grid-template-columns: minmax(120px, 150px) minmax(0, 1fr);
+   gap: 6px;
+   align-items: center;
+ }
+@@ -166,25 +190,28 @@
+   min-width: 0;
+   display: flex;
+   flex-direction: column;
+-  gap: 8px;
++  gap: 4px;
+ }
+ 
+ .style-smart-row__tags {
+   display: flex;
+   flex-wrap: wrap;
+-  gap: 6px;
++  gap: 4px;
+ }
+ 
+ .style-smart-row__tags .ant-tag {
+   margin-inline-end: 0;
+   border-radius: 999px;
++  font-size: 12px;
++  line-height: 18px;
++  padding: 0 6px;
+ }
+ 
+ .style-smart-row__title-wrap {
+   display: flex;
+   flex-direction: column;
+   align-items: flex-start;
+-  gap: 6px;
++  gap: 2px;
+   min-width: 0;
+ }
+ 
+@@ -196,15 +223,15 @@
+   background: transparent;
+   cursor: pointer;
+   color: var(--color-text-primary);
+-  font-size: 18px;
++  font-size: 14px;
+   font-weight: 700;
+-  line-height: 1.1;
++  line-height: 1.2;
+   text-align: left;
+ }
+ 
+ .style-smart-row__title-name {
+   min-width: 0;
+-  font-size: 13px;
++  font-size: 12px;
+   font-weight: 500;
+   color: var(--color-text-secondary);
+   line-height: 1.25;
+@@ -213,10 +240,10 @@
+ .style-smart-row__delivery {
+   display: inline-flex;
+   align-items: center;
+-  height: 24px;
+-  padding: 0 10px;
++  height: 20px;
++  padding: 0 8px;
+   border-radius: 999px;
+-  font-size: 13px;
++  font-size: 12px;
+   font-weight: 600;
+ }
+ 
+@@ -283,53 +310,46 @@
+   font-weight: 600;
+ }
+ 
+-/* 样衣开发智能列表：信息区单列排列，与外发工厂一致 */
++/* 样衣开发智能列表：meta信息紧凑内联，body溢出上下滑动 */
+ .style-smart-list--style-info .style-smart-row__meta--stacked {
+   display: flex;
+-  flex-direction: column;
+-  gap: 2px;
++  flex-wrap: wrap;
++  gap: 6px 10px;
+ }
+ 
+ .style-smart-list--style-info .style-smart-row__meta--stacked .style-smart-row__meta-item {
+-  display: flex;
++  display: inline-flex;
+   align-items: baseline;
+-  gap: 0;
++  gap: 3px;
+   padding: 0;
+   border-radius: 0;
+   background: transparent;
+-  line-height: 1.35;
+-  min-width: 0;
+-  overflow: hidden;
++  line-height: 1.4;
++  white-space: nowrap;
+ }
+ 
+ .style-smart-list--style-info .style-smart-row__meta-label {
+   flex-shrink: 0;
+-  white-space: nowrap;
+-  line-height: 1.35;
+-  letter-spacing: 0;
+-  min-width: 28px;
+-  text-align-last: justify;
++  font-size: 11px;
++  color: var(--color-text-tertiary);
++  line-height: 1.4;
+ }
+ 
+ .style-smart-list--style-info .style-smart-row__meta-label::after {
+   content: '：';
+-  color: var(--color-text-tertiary);
+ }
+ 
+ .style-smart-list--style-info .style-smart-row__meta-value {
+-  flex: 1;
+-  min-width: 0;
+-  line-height: 1.35;
+-  overflow: hidden;
+-  text-overflow: ellipsis;
+-  white-space: nowrap;
+   font-weight: 600;
++  font-size: 12px;
++  line-height: 1.4;
++  color: var(--color-text-primary);
+ }
+ 
+ .style-smart-row__progress-wrap {
+   position: absolute;
+-  bottom: 4px;
+-  right: 12px;
++  bottom: 2px;
++  right: 10px;
+   display: flex;
+   align-items: center;
+   gap: 4px;
+@@ -338,7 +358,7 @@
+ 
+ .style-smart-row__progress-pct {
+   color: #6b7280;
+-  font-size: 12px;
++  font-size: 11px;
+   font-weight: 600;
+   line-height: 1;
+   white-space: nowrap;
+@@ -360,7 +380,8 @@
+ .style-smart-row__timeline-shell {
+   position: relative;
+   min-width: 0;
+-  overflow: visible;
++  overflow-x: auto;
++  overflow-y: visible;
+   padding: 0;
+   align-self: center;
+   width: 100%;
+@@ -369,7 +390,7 @@
+ .style-smart-row__timeline-track,
+ .style-smart-row__timeline-progress {
+   position: absolute;
+-  top: 24px;
++  top: 20px;
+   height: 1px;
+   border-radius: 999px;
+   z-index: 0;
+@@ -402,9 +423,9 @@
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+-  gap: 8px;
++  gap: 6px;
+   text-align: center;
+-  padding: 0 8px;
++  padding: 0 6px;
+   border: 0;
+   background: transparent;
+   cursor: pointer;
+@@ -413,25 +434,25 @@
+ }
+ 
+ .style-smart-stage__time {
+-  min-height: 18px;
++  min-height: 16px;
+   color: #10b981;
+-  font-size: 12px;
+-  line-height: 1.45;
++  font-size: 11px;
++  line-height: 1.35;
+   font-weight: 600;
+ }
+ 
+ .style-smart-stage__time-start {
+-  min-height: 18px;
++  min-height: 16px;
+   color: #6b7280;
+-  font-size: 12px;
+-  line-height: 1.45;
++  font-size: 11px;
++  line-height: 1.35;
+   font-weight: 400;
+ }
+ 
+ .style-smart-stage__time-combined {
+-  min-height: 18px;
+-  font-size: 12px;
+-  line-height: 1.45;
++  min-height: 16px;
++  font-size: 11px;
++  line-height: 1.35;
+   max-width: 100%;
+   overflow: hidden;
+   text-overflow: ellipsis;
+@@ -446,25 +467,25 @@
+ .style-smart-stage__time-start-inline {
+   color: #6b7280;
+   font-weight: 400;
+-  font-size: 12px;
++  font-size: 11px;
+ }
+ 
+ .style-smart-stage__time-sep {
+   color: #9ca3af;
+   margin: 0 1px;
+-  font-size: 12px;
++  font-size: 11px;
+ }
+ 
+ .style-smart-stage__time-end-inline {
+   color: #10b981;
+   font-weight: 600;
+-  font-size: 12px;
++  font-size: 11px;
+ }
+ 
+ .style-smart-stage__node {
+   position: relative;
+-  width: 36px;
+-  height: 36px;
++  width: 28px;
++  height: 28px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+@@ -515,14 +536,14 @@
+ 
+ .style-smart-stage__label {
+   color: var(--color-text-primary);
+-  font-size: 14px;
++  font-size: 12px;
+   font-weight: 700;
+ }
+ 
+ .style-smart-stage__helper {
+   color: var(--color-text-secondary);
+-  font-size: 13px;
+-  line-height: 1.4;
++  font-size: 11px;
++  line-height: 1.3;
+ }
+ 
+ .style-smart-stage:hover .style-smart-stage__label {
+diff --git a/frontend/src/modules/basic/pages/StyleInfoList/components/StyleCardView.tsx b/frontend/src/modules/basic/pages/StyleInfoList/components/StyleCardView.tsx
+index ef7724797..c588da3e4 100644
+--- a/frontend/src/modules/basic/pages/StyleInfoList/components/StyleCardView.tsx
++++ b/frontend/src/modules/basic/pages/StyleInfoList/components/StyleCardView.tsx
+@@ -186,7 +186,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
+               : 'processing';
+         return <Tag color={color}>{node}</Tag>;
+       }}
+-      onCardClick={(record) => navigate(`/style-info/${record.id}`)}
++      onCardClick={undefined}
+       getCardId={(record) => `style-card-${getStyleDomKey(record as StyleInfo)}`}
+       getCardStyle={(record) => getStyleDomKey(record as StyleInfo) === focusedStyleId ? {
+         boxShadow: '0 0 0 2px rgba(250, 173, 20, 0.35), 0 10px 24px rgba(250, 173, 20, 0.18)',
+diff --git a/frontend/src/modules/basic/pages/StyleInfoList/components/StyleFilterPanel.tsx b/frontend/src/modules/basic/pages/StyleInfoList/components/StyleFilterPanel.tsx
+index b1f0d1a49..6a4cfb81c 100644
+--- a/frontend/src/modules/basic/pages/StyleInfoList/components/StyleFilterPanel.tsx
++++ b/frontend/src/modules/basic/pages/StyleInfoList/components/StyleFilterPanel.tsx
+@@ -25,6 +25,11 @@ const StyleFilterPanel: React.FC<StyleFilterPanelProps> = ({
+ }) => {
+   const [localStyleNo, setLocalStyleNo] = useState(queryParams.styleNo || '');
+   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
++  const latestParamsRef = useRef(queryParams);
++
++  useEffect(() => {
++    latestParamsRef.current = queryParams;
++  }, [queryParams]);
+ 
+   useEffect(() => {
+     const ext = queryParams.styleNo || '';
+@@ -33,7 +38,7 @@ const StyleFilterPanel: React.FC<StyleFilterPanelProps> = ({
+ 
+   const flushStyleNo = (value: string) => {
+     if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
+-    onQueryChange({ ...queryParams, styleNo: value || undefined });
++    onQueryChange({ ...latestParamsRef.current, styleNo: value || undefined });
+   };
+ 
+   useEffect(() => {
+@@ -66,7 +71,7 @@ const StyleFilterPanel: React.FC<StyleFilterPanelProps> = ({
+               }
+               if (debounceRef.current) clearTimeout(debounceRef.current);
+               debounceRef.current = setTimeout(() => {
+-                onQueryChange({ ...queryParams, styleNo: value || undefined });
++                onQueryChange({ ...latestParamsRef.current, styleNo: value || undefined });
+                 onSearch();
+               }, DEBOUNCE_MS);
+             }}
+diff --git a/frontend/src/modules/basic/pages/StyleInfoList/components/StyleStatsCard.tsx b/frontend/src/modules/basic/pages/StyleInfoList/components/StyleStatsCard.tsx
+index 9e9c1f4e4..41cd58ea4 100644
+--- a/frontend/src/modules/basic/pages/StyleInfoList/components/StyleStatsCard.tsx
++++ b/frontend/src/modules/basic/pages/StyleInfoList/components/StyleStatsCard.tsx
+@@ -32,7 +32,7 @@ const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
+   const cardBase = {
+     size: 'small' as const,
+     className: 'development-stats-card mb-sm',
+-    styles: { body: { padding: '6px 12px' } },
++    styles: { body: { padding: '8px 14px' } },
+     style: { background: '#f8f9fa', border: '1px solid #e9ecef' },
+   };
+ 
+@@ -41,16 +41,16 @@ const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
+     return (
+       <Card {...cardBase}>
+         <span
+-          onClick={onToggle}
+-          style={{
+-            fontSize: 12, fontWeight: 600, color: 'var(--neutral-text)',
+-            whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none',
+-            display: 'inline-flex', alignItems: 'center', gap: 4,
+-          }}
+-        >
+-          <RightOutlined style={{ fontSize: 12 }} />
+-          开发费用统计
+-        </span>
++            onClick={onToggle}
++            style={{
++              fontSize: 13, fontWeight: 600, color: 'var(--neutral-text)',
++              whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none',
++              display: 'inline-flex', alignItems: 'center', gap: 4,
++            }}
++          >
++            <RightOutlined style={{ fontSize: 13 }} />
++            开发费用统计
++          </span>
+       </Card>
+     );
+   }
+@@ -64,37 +64,37 @@ const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
+           <span
+             onClick={onToggle}
+             style={{
+-              fontSize: 12, fontWeight: 600, color: 'var(--neutral-text)',
++              fontSize: 13, fontWeight: 600, color: 'var(--neutral-text)',
+               whiteSpace: 'nowrap', marginRight: 16,
+               cursor: onToggle ? 'pointer' : 'default',
+               userSelect: 'none', display: 'inline-flex', alignItems: 'center', gap: 4,
+             }}
+           >
+-            <DownOutlined style={{ fontSize: 12 }} />
++            <DownOutlined style={{ fontSize: 13 }} />
+             开发费用统计
+           </span>
+ 
+           {/* 数据条目 */}
+           <div style={{ display: 'flex', flex: 1, gap: 8, alignItems: 'center', justifyContent: 'space-evenly' }}>
+             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+-              <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 面辅料</span>
+-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.materialCost ?? 0)}</span>
++              <span style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 面辅料</span>
++              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.materialCost ?? 0)}</span>
+             </div>
+             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+-              <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 工序单价</span>
+-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.processCost ?? 0)}</span>
++              <span style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 工序单价</span>
++              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.processCost ?? 0)}</span>
+             </div>
+             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+-              <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 二次工艺</span>
+-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.secondaryProcessCost ?? 0)}</span>
++              <span style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 二次工艺</span>
++              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>¥{fmt(stats?.secondaryProcessCost ?? 0)}</span>
+             </div>
+             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+-              <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 总开发费</span>
+-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary-color)', lineHeight: 1.4 }}>¥{fmt(stats?.totalCost ?? 0)}</span>
++              <span style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 总开发费</span>
++              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--primary-color)', lineHeight: 1.4 }}>¥{fmt(stats?.totalCost ?? 0)}</span>
+             </div>
+             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+-              <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 样衣数量</span>
+-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>{stats?.patternCount ?? 0} 件</span>
++              <span style={{ fontSize: 13, color: 'var(--neutral-text-secondary)', lineHeight: 1.2 }}> 样衣数量</span>
++              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-text)', lineHeight: 1.4 }}>{stats?.patternCount ?? 0} 件</span>
+             </div>
+           </div>
+ 
+diff --git a/frontend/src/modules/basic/pages/TemplateCenter/components/SyncProcessPriceModal.tsx b/frontend/src/modules/basic/pages/TemplateCenter/components/SyncProcessPriceModal.tsx
+index 8f3a66ab0..d5f44ec4e 100644
+--- a/frontend/src/modules/basic/pages/TemplateCenter/components/SyncProcessPriceModal.tsx
++++ b/frontend/src/modules/basic/pages/TemplateCenter/components/SyncProcessPriceModal.tsx
+@@ -213,7 +213,7 @@ const SyncProcessPriceModal = memo(function SyncProcessPriceModal({
+       title="工序单价配置"
+       open={open}
+       onCancel={handleCancel}
+-      width="90vw"
++      width="60vw"
+       style={{ top: 20 }}
+       footer={null}
+       destroyOnHidden
+diff --git a/frontend/src/modules/finance/pages/Finance/PayrollOperatorSummary/WageSlipPrintModal.tsx b/frontend/src/modules/finance/pages/Finance/PayrollOperatorSummary/WageSlipPrintModal.tsx
+index 4cde96883..46fbf0aed 100644
+--- a/frontend/src/modules/finance/pages/Finance/PayrollOperatorSummary/WageSlipPrintModal.tsx
++++ b/frontend/src/modules/finance/pages/Finance/PayrollOperatorSummary/WageSlipPrintModal.tsx
+@@ -147,7 +147,7 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
+             title="打印工资条"
+             open={visible}
+             onCancel={onClose}
+-            width={800}
++            width="60vw"
+             footer={[
+                 <Button key="cancel" onClick={onClose}>取消</Button>,
+                 <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={handlePrint} disabled={selectedWorkerNames.length === 0}>
+diff --git a/frontend/src/modules/finance/pages/Finance/WagePayment/index.tsx b/frontend/src/modules/finance/pages/Finance/WagePayment/index.tsx
+index 966120e02..7322583be 100644
+--- a/frontend/src/modules/finance/pages/Finance/WagePayment/index.tsx
++++ b/frontend/src/modules/finance/pages/Finance/WagePayment/index.tsx
+@@ -726,7 +726,7 @@ const PaymentCenterPage: React.FC = () => {
+         open={amountDetailOpen}
+         onCancel={() => { setAmountDetailOpen(false); setAmountDetailTarget(null); }}
+         footer={null}
+-        width={600}
++        width="40vw"
+       >
+         {amountDetailTarget && (
+           <Descriptions column={2} bordered>
+diff --git a/frontend/src/modules/finance/pages/FinanceCenter/FactoryOrderDrilldown.tsx b/frontend/src/modules/finance/pages/FinanceCenter/FactoryOrderDrilldown.tsx
+index aed53b3f9..cbdb3c81b 100644
+--- a/frontend/src/modules/finance/pages/FinanceCenter/FactoryOrderDrilldown.tsx
++++ b/frontend/src/modules/finance/pages/FinanceCenter/FactoryOrderDrilldown.tsx
+@@ -112,7 +112,7 @@ const FactoryOrderDrilldown: React.FC<FactoryOrderDrilldownProps> = ({
+       title={`${factoryName} — 订单明细`}
+       open={open}
+       onCancel={onClose}
+-      width="90vw"
++      width="60vw"
+       footer={null}
+       destroyOnHidden
+     >
+diff --git a/frontend/src/modules/finance/pages/FinanceCenter/FactoryStatementPrintModal.tsx b/frontend/src/modules/finance/pages/FinanceCenter/FactoryStatementPrintModal.tsx
+index f4af2a232..52b6ec5b5 100644
+--- a/frontend/src/modules/finance/pages/FinanceCenter/FactoryStatementPrintModal.tsx
++++ b/frontend/src/modules/finance/pages/FinanceCenter/FactoryStatementPrintModal.tsx
+@@ -218,7 +218,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
+             title="打印工厂加工费对账单"
+             open={visible}
+             onCancel={onClose}
+-            width={900}
++            width="60vw"
+             footer={[
+                 <Button key="cancel" onClick={onClose}>取消</Button>,
+                 <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={handlePrint} loading={loading} disabled={loading || selectedFactoryIds.length === 0}>
+diff --git a/frontend/src/modules/integration/pages/IntegrationCenter/PlatformConnectorTab.tsx b/frontend/src/modules/integration/pages/IntegrationCenter/PlatformConnectorTab.tsx
+index 3122122af..6cce1481c 100644
+--- a/frontend/src/modules/integration/pages/IntegrationCenter/PlatformConnectorTab.tsx
++++ b/frontend/src/modules/integration/pages/IntegrationCenter/PlatformConnectorTab.tsx
+@@ -400,7 +400,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
+           open={configModalOpen}
+           title={<Space><span style={{ fontSize: 20 }}>{activePlatform ? renderIcon(activePlatform.icon) : <ApiOutlined />}</span><span>配置 {activePlatform?.name} 连接</span></Space>}
+           onCancel={() => { setConfigModalOpen(false); setTestResult(null); setShowGuide(false); }}
+-          footer={null} width={600} destroyOnHidden
++          footer={null} width="40vw" destroyOnHidden
+         >
+           {/* 凭证获取教程 */}
+           {!showGuide ? (
+@@ -464,7 +464,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
+ 
+         {/* ====== 测试结果弹窗 ====== */}
+         <Modal open={testModalOpen} title="连接测试结果" onCancel={() => { setTestModalOpen(false); setTestResult(null); }}
+-          footer={<Button onClick={() => setTestModalOpen(false)}>关闭</Button>} width={540} destroyOnHidden>
++          footer={<Button onClick={() => setTestModalOpen(false)}>关闭</Button>} width="40vw" destroyOnHidden>
+           {testResult ? (
+             <div>
+               <Alert type={testResult.success ? 'success' : 'error'} showIcon
+@@ -511,7 +511,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
+         {/* ====== 店铺数据看板弹窗 ====== */}
+         <Modal open={statsModalOpen} title={<Space><ShopOutlined />{activePlatform?.name} 店铺数据看板</Space>}
+           onCancel={() => { setStatsModalOpen(false); setActiveStats(null); }}
+-          footer={<Button onClick={() => setStatsModalOpen(false)}>关闭</Button>} width={680} destroyOnHidden>
++          footer={<Button onClick={() => setStatsModalOpen(false)}>关闭</Button>} width="40vw" destroyOnHidden>
+           {activeStats ? (
+             <div>
+               {/* 总览 */}
+@@ -621,7 +621,7 @@ const PlatformConnectorTab: React.FC<{ active: boolean }> = ({ active }) => {
+         {/* ====== 同步结果 ====== */}
+         {syncResult && activePlatform && (
+           <Modal open={!!syncResult} title={`${activePlatform.name} 同步结果`}
+-            onCancel={() => setSyncResult(null)} footer={<Button onClick={() => setSyncResult(null)}>确定</Button>} width={400}>
++            onCancel={() => setSyncResult(null)} footer={<Button onClick={() => setSyncResult(null)}>确定</Button>} width="30vw">
+             <Descriptions bordered column={2}>
+               <Descriptions.Item label="新增订单"><Text style={{ color: '#52c41a', fontWeight: 'bold', fontSize: 18 }}>{syncResult.synced ?? '-'}</Text></Descriptions.Item>
+               <Descriptions.Item label="已跳过"><Text style={{ color: '#fa8c16' }}>{syncResult.skipped ?? '-'}</Text></Descriptions.Item>
+diff --git a/frontend/src/modules/production/pages/Production/Cutting/components/CuttingCreateTaskModal.tsx b/frontend/src/modules/production/pages/Production/Cutting/components/CuttingCreateTaskModal.tsx
+index cbab249e2..ae854e139 100644
+--- a/frontend/src/modules/production/pages/Production/Cutting/components/CuttingCreateTaskModal.tsx
++++ b/frontend/src/modules/production/pages/Production/Cutting/components/CuttingCreateTaskModal.tsx
+@@ -125,7 +125,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
+     <ResizableModal
+       open={createTask.createTaskOpen}
+       title="无资料下单"
+-      width="70vw"
++      width="60vw"
+       initialHeight={Math.round(window.innerHeight * 0.82)}
+       centered
+       onCancel={() => createTask.setCreateTaskOpen(false)}
+diff --git a/frontend/src/modules/production/pages/Production/ExternalFactory/ExternalFactorySmartView.tsx b/frontend/src/modules/production/pages/Production/ExternalFactory/ExternalFactorySmartView.tsx
+index 6ef8e5511..3755f88a8 100644
+--- a/frontend/src/modules/production/pages/Production/ExternalFactory/ExternalFactorySmartView.tsx
++++ b/frontend/src/modules/production/pages/Production/ExternalFactory/ExternalFactorySmartView.tsx
+@@ -80,7 +80,6 @@ interface Props {
+   onPageChange: (page: number, pageSize: number) => void;
+   handleCloseOrder?: (record: ProductionOrder) => void;
+   handleScrapOrder?: (record: ProductionOrder) => void;
+-  handleTransferOrder?: (record: ProductionOrder) => void;
+   openProcessDetail?: (record: ProductionOrder, type: string) => void;
+   syncProcessFromTemplate?: (record: ProductionOrder) => void;
+   setPrintModalVisible?: (v: boolean) => void;
+@@ -105,7 +104,7 @@ interface Props {
+ 
+ const ExternalFactorySmartView: React.FC<Props> = ({
+   data, loading, total, pageSize, currentPage, onPageChange,
+-  handleCloseOrder, handleScrapOrder, handleTransferOrder,
++  handleCloseOrder, handleScrapOrder,
+   openProcessDetail, syncProcessFromTemplate,
+   setPrintModalVisible, setPrintingRecord,
+   quickEditModal, handleShareOrder, onOpenRemark, handlePrintLabel,
+@@ -146,7 +145,6 @@ const ExternalFactorySmartView: React.FC<Props> = ({
+         fmtTime={fmtTime}
+         handleCloseOrder={handleCloseOrder}
+         handleScrapOrder={handleScrapOrder}
+-        handleTransferOrder={handleTransferOrder}
+         openProcessDetail={openProcessDetail}
+         syncProcessFromTemplate={syncProcessFromTemplate}
+         setPrintModalVisible={setPrintModalVisible}
+@@ -162,7 +160,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
+         openNodeDetail={openNodeDetail}
+       />
+     );
+-  }, [rows, handleCloseOrder, handleScrapOrder, handleTransferOrder,
++  }, [rows, handleCloseOrder, handleScrapOrder,
+     openProcessDetail, syncProcessFromTemplate, setPrintModalVisible,
+     setPrintingRecord, quickEditModal, handleShareOrder, onOpenRemark,
+     handlePrintLabel, canManageOrderLifecycle, isSupervisorOrAbove,
+diff --git a/frontend/src/modules/production/pages/Production/ExternalFactory/SmartOrderRow.tsx b/frontend/src/modules/production/pages/Production/ExternalFactory/SmartOrderRow.tsx
+index b3d5fe595..d26bbed58 100644
+--- a/frontend/src/modules/production/pages/Production/ExternalFactory/SmartOrderRow.tsx
++++ b/frontend/src/modules/production/pages/Production/ExternalFactory/SmartOrderRow.tsx
+@@ -1,4 +1,4 @@
+-import React from 'react';
++import React, { useMemo } from 'react';
+ import { Popover, Progress, Tag } from 'antd';
+ import dayjs from 'dayjs';
+ import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
+@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
+ import StageNode from './StageNode';
+ import type { SmartStage, DeliveryTone } from './types';
+ import type { OrderColorSizeMatrixModel } from '@/components/common/OrderColorSizeMatrix';
+-import { StyleCoverThumb } from '@/components/StyleAssets';
++import CardCoverSwitcher from '@/components/common/CardCoverSwitcher';
+ import { ColorSizeMatrixPopoverContent } from '@/components/common/OrderColorSizeMatrix';
+ import FactoryTypeTag from '@/components/common/FactoryTypeTag';
+ 
+@@ -27,7 +27,6 @@ interface SmartOrderRowProps {
+   fmtTime: (t?: string) => string;
+   handleCloseOrder?: (record: ProductionOrder) => void;
+   handleScrapOrder?: (record: ProductionOrder) => void;
+-  handleTransferOrder?: (record: ProductionOrder) => void;
+   openProcessDetail?: (record: ProductionOrder, type: string) => void;
+   syncProcessFromTemplate?: (record: ProductionOrder) => void;
+   setPrintModalVisible?: (v: boolean) => void;
+@@ -53,7 +52,7 @@ interface SmartOrderRowProps {
+ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
+   record, deliveryMeta, stages, overallProgress, statusInfo, sizeMatrix, totalQty,
+   STAGE_MIN_SLOT_WIDTH, fmtTime,
+-  handleCloseOrder, handleScrapOrder, handleTransferOrder,
++  handleCloseOrder, handleScrapOrder,
+   openProcessDetail, syncProcessFromTemplate,
+   setPrintModalVisible, setPrintingRecord,
+   quickEditModal, handleShareOrder, onOpenRemark, handlePrintLabel,
+@@ -68,15 +67,72 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
+   const shipDate = (record as any).expectedShipDate || record.plannedEndDate;
+   const factoryTag = <FactoryTypeTag factoryType={record.factoryType} style={{ marginLeft: 4 }} />;
+ 
++  const formatGap = (ms: number): string => {
++    if (ms <= 0) return '';
++    const totalMinutes = Math.floor(ms / 60000);
++    const days = Math.floor(totalMinutes / 1440);
++    const hours = Math.floor((totalMinutes % 1440) / 60);
++    const mins = totalMinutes % 60;
++    if (days > 0) return `${days}天${hours}时`;
++    if (hours > 0) return `${hours}时${mins}分`;
++    if (mins > 0) return `${mins}分`;
++    return '';
++  };
++
++  const getStageGap = (stageKey: string): string => {
++    let prevEnd: string | undefined;
++    let currStart: string | undefined;
++    switch (stageKey) {
++      case 'procurement':
++        prevEnd = record.createTime;
++        currStart = record.procurementStartTime;
++        break;
++      case 'cutting':
++        prevEnd = record.procurementEndTime;
++        currStart = record.cuttingStartTime;
++        break;
++      case 'secondary':
++        prevEnd = record.cuttingEndTime;
++        currStart = record.secondaryProcessStartTime;
++        break;
++      case 'sewing':
++      case 'carSewing':
++        prevEnd = record.secondaryProcessEndTime || record.cuttingEndTime;
++        currStart = record.carSewingStartTime;
++        break;
++      case 'tail':
++        prevEnd = record.carSewingEndTime;
++        currStart = record.ironingStartTime;
++        break;
++      case 'warehousing':
++        prevEnd = record.ironingEndTime;
++        currStart = record.warehousingStartTime;
++        break;
++    }
++    if (!prevEnd || !currStart) return '';
++    const ms = dayjs(currStart).diff(dayjs(prevEnd));
++    return formatGap(ms);
++  };
++
++  const stagesWithGaps = useMemo(() => {
++    return stages.map(stage => {
++      const gapLabel = getStageGap(stage.key);
++      if (!gapLabel) return stage;
++      const prefix = `\u23F1 ${gapLabel}`;
++      return {
++        ...stage,
++        helper: prefix + (stage.helper ? ' · ' + stage.helper : ''),
++      };
++    });
++  }, [stages, record]);
++
+   return (
+     <div className={`style-smart-row style-smart-row--${deliveryMeta.tone}`}>
+       <div className="style-smart-row__cover">
+-        <StyleCoverThumb
++        <CardCoverSwitcher
+           styleId={record.styleId}
+           styleNo={record.styleNo}
+           src={record.styleCover || null}
+-          size="fill"
+-          borderRadius={8}
+         />
+         <div className="ef-cover-below">
+           <div className="ef-date-stack" />
+@@ -113,21 +169,21 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
+                 <span className="ef-field-label">客户</span>
+                 <span className="ef-field-value">{record.company || '-'}</span>
+               </div>
++              <div className="ef-field-row">
++                <span className="ef-field-label">总数</span>
++                <span className="ef-field-value" style={{ fontWeight: 700 }}>{totalQty}件</span>
++              </div>
++              <div className="ef-field-row">
++                <span className="ef-field-label">交期</span>
++                <span className="ef-field-value">{shipDate ? dayjs(shipDate).format('YYYY-MM-DD') : '-'}</span>
++              </div>
+             </div>
+-            <div className="ef-field-row" style={{ marginTop: 4 }}>
+-              <span className="ef-field-label">总数</span>
+-              <span className="ef-field-value" style={{ fontWeight: 700 }}>{totalQty}件</span>
+-            </div>
+-            <div className="ef-field-row">
+-              <span className="ef-field-label">交期</span>
+-              <span className="ef-field-value">{shipDate ? dayjs(shipDate).format('YYYY-MM-DD') : '-'}</span>
+-            </div>
+-            <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 2, alignItems: 'center' }}>
+-              <Tag color={statusInfo.color} style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>{statusInfo.text}</Tag>
+-              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>急单</Tag>}
+-              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>首单</Tag>}
+-              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 13, padding: '0 4px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
+-              <span className={`ef-delivery-badge ef-delivery-badge--${deliveryMeta.tone}`} style={{ fontSize: 13, fontWeight: 600 }}>
++            <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
++              <Tag color={statusInfo.color} style={{ margin: 0, fontSize: 12, padding: '0 5px', lineHeight: '18px', height: 18 }}>{statusInfo.text}</Tag>
++              {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 12, padding: '0 5px', lineHeight: '18px', height: 18 }}>急单</Tag>}
++              {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 12, padding: '0 5px', lineHeight: '18px', height: 18 }}>首单</Tag>}
++              {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 12, padding: '0 5px', lineHeight: '18px', height: 18 }}>翻单</Tag>}
++              <span className={`ef-delivery-badge ef-delivery-badge--${deliveryMeta.tone}`} style={{ fontSize: 12, fontWeight: 600 }}>
+                 {deliveryMeta.label}
+               </span>
+             </div>
+@@ -165,7 +221,7 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
+                   </div>
+                 </div>
+               </Popover>
+-              {stages.map(stage => (
++              {stagesWithGaps.map(stage => (
+                 <StageNode key={stage.key} stage={stage} record={record} totalQty={totalQty} openNodeDetail={openNodeDetail} />
+               ))}
+             </div>
+@@ -217,7 +273,7 @@ const SmartOrderRow: React.FC<SmartOrderRowProps> = ({
+               canManageOrderLifecycle: !!canManageOrderLifecycle,
+               isSupervisorOrAbove: !!isSupervisorOrAbove,
+               onQuickEdit: quickEditModal ? (r) => quickEditModal.open(r) : undefined,
+-              handleCloseOrder, handleScrapOrder, handleTransferOrder, handleShareOrder, onOpenRemark,
++              handleCloseOrder, handleScrapOrder, handleShareOrder, onOpenRemark,
+             }),
+             ...(isFactoryAccount ? [{
+               key: 'orderFlow',
+diff --git a/frontend/src/modules/production/pages/Production/ExternalFactory/components/FactoryShipmentTab.tsx b/frontend/src/modules/production/pages/Production/ExternalFactory/components/FactoryShipmentTab.tsx
+index a6a51eddd..95bd2decf 100644
+--- a/frontend/src/modules/production/pages/Production/ExternalFactory/components/FactoryShipmentTab.tsx
++++ b/frontend/src/modules/production/pages/Production/ExternalFactory/components/FactoryShipmentTab.tsx
+@@ -486,7 +486,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
+         onCancel={() => setReceiveModalOpen(false)}
+         onOk={handleReceiveConfirm}
+         confirmLoading={receiveLoading}
+-        width={420}
++        width="30vw"
+       >
+         {receiveRecord && (
+           <div style={{ padding: '8px 0' }}>
+diff --git a/frontend/src/modules/production/pages/Production/ExternalFactory/externalFactory.css b/frontend/src/modules/production/pages/Production/ExternalFactory/externalFactory.css
+index b02e812ba..15bf56d57 100644
+--- a/frontend/src/modules/production/pages/Production/ExternalFactory/externalFactory.css
++++ b/frontend/src/modules/production/pages/Production/ExternalFactory/externalFactory.css
+@@ -7,29 +7,37 @@
+   height: 100%;
+ }
+ 
+-/* ── 行高压低 ── */
++/* ── 行高锁定 + body 上下滑动 ── */
+ .ef-compact .style-smart-row {
+-  padding: 10px 14px;
+-  gap: 14px;
+-  grid-template-columns: 130px minmax(0, 1fr) auto;
++  padding: 8px;
++  gap: 10px;
++  grid-template-columns: 100px minmax(0, 1fr) auto;
+   border-radius: 6px;
+-  overflow: visible;
++  overflow: hidden;
++  max-height: 160px;
++}
++
++.ef-compact .style-smart-row__body {
++  overflow-y: auto;
++  padding-right: 4px;
+ }
+ 
+ .ef-compact .style-smart-row__cover {
+   min-height: unset;
++  max-height: 160px;
+   height: auto;
+   position: relative;
+   display: flex;
+   flex-direction: column;
+   gap: 0;
++  overflow: hidden;
+ }
+ 
+ .ef-compact .style-smart-row__thumb {
+-  width: 130px;
++  width: 100px;
+   height: auto;
+-  min-height: 70px;
+-  max-height: 120px;
++  min-height: 50px;
++  max-height: 80px;
+   border-radius: 4px;
+   display: flex;
+   align-items: center;
+@@ -40,7 +48,7 @@
+ .ef-compact .style-smart-row__thumb img {
+   width: 100%;
+   height: auto;
+-  max-height: 120px;
++  max-height: 80px;
+   object-fit: contain;
+   border-radius: 4px;
+ }
+@@ -88,37 +96,48 @@
+   align-items: center;
+ }
+ 
+-/* ── 身份信息区 ── */
++/* ── 身份信息区：紧凑内联 ── */
++.ef-compact .style-smart-row__identity {
++  gap: 3px;
++}
++
+ .ef-info-fields {
+   display: flex;
+-  flex-direction: column;
+-  gap: 2px;
++  flex-wrap: wrap;
++  gap: 6px 12px;
+ }
+ 
+ .ef-field-row {
+-  display: flex;
++  display: inline-flex;
+   align-items: baseline;
+-  gap: 5px;
+-  line-height: 1.08;
++  gap: 3px;
++  line-height: 1.4;
++  white-space: nowrap;
+ }
+ 
+ .ef-field-label {
+   color: var(--color-text-tertiary);
+   flex-shrink: 0;
+-  min-width: 28px;
+-  text-align-last: justify;
+-  font-size: 12px;
+-  line-height: 1.08;
++  font-size: 11px;
++  line-height: 1.4;
+ }
+ 
+ .ef-field-value {
+   color: var(--color-text-primary);
+-  font-size: 13px;
++  font-size: 12px;
+   font-weight: 600;
+-  line-height: 1.08;
++  line-height: 1.4;
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
++  max-width: 140px;
++}
++
++.ef-field-row .ant-tag {
++  margin-inline-end: 0;
++  font-size: 11px;
++  line-height: 16px;
++  padding: 0 4px;
+ }
+ 
+ .ef-order-no {
+@@ -164,38 +183,39 @@
+ 
+ /* ── 时间轴：线条只在节点球之间 ── */
+ .ef-compact .style-smart-row__timeline-shell {
+-  padding: 0 0 40px;
+-  overflow: visible;
++  padding: 0 0 30px;
++  overflow-x: auto;
++  overflow-y: visible;
+ }
+ 
+ .ef-compact .style-smart-stage {
+-  padding-top: 60px;
++  padding-top: 45px;
+ }
+ 
+ .ef-compact .style-smart-row__timeline-track,
+ .ef-compact .style-smart-row__timeline-progress {
+-  top: 82px;
++  top: 60px;
+   left: calc(100% / var(--ef-stage-count) / 2);
+   right: calc(100% / var(--ef-stage-count) / 2);
+   width: auto;
+ }
+ 
+ .ef-compact .style-smart-stage__time {
+-  font-size: 12px;
+-  min-height: 16px;
++  font-size: 11px;
++  min-height: 14px;
+   color: #10b981;
+   font-weight: 600;
+ }
+ 
+ .ef-compact .style-smart-stage__time-start {
+-  font-size: 12px;
+-  min-height: 16px;
++  font-size: 11px;
++  min-height: 14px;
+   color: #6b7280;
+ }
+ 
+ .ef-compact .style-smart-stage__time-combined {
+-  font-size: 12px;
+-  min-height: 18px;
++  font-size: 11px;
++  min-height: 14px;
+   max-width: 100%;
+   overflow: hidden;
+   text-overflow: ellipsis;
+@@ -203,12 +223,12 @@
+ }
+ 
+ .ef-compact .style-smart-stage__node {
+-  width: 44px;
+-  height: 44px;
++  width: 32px;
++  height: 32px;
+ }
+ 
+ .ef-compact .style-smart-stage__label {
+-  font-size: 13px;
++  font-size: 12px;
+ }
+ 
+ /* ─── 操作按钮区：悬停卡片时才显示 ─── */
+@@ -231,20 +251,21 @@
+   align-items: flex-end;
+   justify-content: space-between;
+   align-self: stretch;
+-  min-width: 80px;
++  min-width: 70px;
++  gap: 4px;
+ }
+ 
+ /* 进度 — 右下角，百分比+进度条一行 */
+ .ef-compact .style-smart-row__overview {
+   display: flex;
+   align-items: center;
+-  gap: 6px;
++  gap: 4px;
+   width: 100%;
+   justify-content: flex-end;
+ }
+ 
+ .ef-compact .style-smart-row__overview-value {
+-  font-size: 12px;
++  font-size: 11px;
+   font-weight: 600;
+   color: #555;
+   white-space: nowrap;
+@@ -252,8 +273,8 @@
+ }
+ 
+ .ef-compact .style-smart-row__overview .ant-progress {
+-  flex: 0 0 60px;
+-  width: 60px;
++  flex: 0 0 50px;
++  width: 50px;
+ }
+ 
+ /* ── 外发工厂 Tabs flex 布局：让 Virtuoso 自适应填充可用高度 ── */
+diff --git a/frontend/src/modules/production/pages/Production/List/hooks/productionColumns.tsx b/frontend/src/modules/production/pages/Production/List/hooks/productionColumns.tsx
+index e4648ba2b..70677fecb 100644
+--- a/frontend/src/modules/production/pages/Production/List/hooks/productionColumns.tsx
++++ b/frontend/src/modules/production/pages/Production/List/hooks/productionColumns.tsx
+@@ -35,7 +35,6 @@ export interface UseProductionColumnsProps {
+   handleSort: (field: string, order: 'asc' | 'desc') => void;
+   handleCloseOrder: (record: ProductionOrder) => void;
+   handleScrapOrder: (record: ProductionOrder) => void;
+-  handleTransferOrder: (record: ProductionOrder) => void;
+   handleCopyOrder?: (record: ProductionOrder) => void;
+   navigate: NavigateFunction;
+   openProcessDetail: (record: ProductionOrder, type: string) => void;
+@@ -61,7 +60,7 @@ export interface UseProductionColumnsProps {
+ 
+ export function useProductionColumns({
+   sortField, sortOrder, handleSort,
+-  handleCloseOrder, handleScrapOrder, handleTransferOrder, handleCopyOrder,
++  handleCloseOrder, handleScrapOrder, handleCopyOrder,
+   navigate, openProcessDetail, openNodeDetail, syncProcessFromTemplate,
+   setPrintModalVisible, setPrintingRecord,
+   quickEditModal, isSupervisorOrAbove, renderCompletionTimeTag, deliveryRiskMap,
+@@ -544,7 +543,6 @@ export function useProductionColumns({
+                 onQuickEdit: (r) => quickEditModal.open(r),
+                 handleCloseOrder,
+                 handleScrapOrder,
+-                handleTransferOrder,
+                 handleCopyOrder,
+                 handleShareOrder,
+                 onOpenRemark,
+diff --git a/frontend/src/modules/production/pages/Production/List/index.tsx b/frontend/src/modules/production/pages/Production/List/index.tsx
+index 38af55cee..c72da5a70 100644
+--- a/frontend/src/modules/production/pages/Production/List/index.tsx
++++ b/frontend/src/modules/production/pages/Production/List/index.tsx
+@@ -158,7 +158,7 @@ const ProductionList: React.FC = () => {
+   // 表格列渲染辅助
+   const allColumns = useProductionColumns({
+     sortField, sortOrder, handleSort,
+-    handleCloseOrder, handleScrapOrder, handleTransferOrder, handleCopyOrder,
++    handleCloseOrder, handleScrapOrder, handleCopyOrder,
+     navigate, openProcessDetail, openNodeDetail, syncProcessFromTemplate,
+     setPrintModalVisible, setPrintingRecord,
+     setRemarkPopoverId, setRemarkText,
+@@ -276,7 +276,6 @@ const ProductionList: React.FC = () => {
+               }}
+               handleCloseOrder={handleCloseOrder}
+               handleScrapOrder={handleScrapOrder}
+-              handleTransferOrder={handleTransferOrder}
+               openProcessDetail={openProcessDetail}
+               openNodeDetail={openNodeDetail}
+               syncProcessFromTemplate={syncProcessFromTemplate}
+@@ -392,10 +391,11 @@ const ProductionList: React.FC = () => {
+                   canManageOrderLifecycle: !!canManageOrderLifecycle,
+                   isSupervisorOrAbove: !!isSupervisorOrAbove,
+                   onQuickEdit: (r) => quickEditModal.open(r),
+-                  handleCloseOrder, handleScrapOrder, handleTransferOrder, handleCopyOrder, handleShareOrder,
++                  handleCloseOrder, handleScrapOrder, handleCopyOrder, handleShareOrder,
+                   onOpenRemark: (r) => setRemarkTarget({ open: true, orderNo: r.orderNo || '', merchandiser: r.merchandiser }),
+                 });
+                 return [
++                  { key: 'detail', label: '详情', title: '查看订单详情', onClick: () => navigate(withQuery('/production/order-flow', { orderId: record.id, orderNo: record.orderNo, styleNo: record.styleNo })) },
+                   { key: 'print', label: '打印', disabled: frozen, title: frozen ? frozenTitle : '打印', onClick: () => { setPrintingRecord(record); setPrintModalVisible(true); } },
+                   { key: 'printLabel', label: '打印标签', disabled: frozen, title: frozen ? frozenTitle : '打印标签', onClick: () => void handlePrintLabel(record) },
+                   ...(!isFactoryAccount ? [{ key: 'process', label: '工序', disabled: frozen, title: frozen ? frozenTitle : '工序', onClick: () => openProcessDetail(record, 'all') }] : []),
+diff --git a/frontend/src/modules/production/pages/Production/MaterialPurchase/index.tsx b/frontend/src/modules/production/pages/Production/MaterialPurchase/index.tsx
+index 3790b29c6..da293bd40 100644
+--- a/frontend/src/modules/production/pages/Production/MaterialPurchase/index.tsx
++++ b/frontend/src/modules/production/pages/Production/MaterialPurchase/index.tsx
+@@ -534,7 +534,7 @@ const MaterialPurchase: React.FC = () => {
+           okText="确认退回"
+           cancelText="取消"
+           okButtonProps={{ danger: true, type: 'default', loading: returnResetSubmitting }}
+-          width={isMobile ? '96vw' : 520}
++          width={isMobile ? '96vw' : '30vw'}
+           onCancel={() => {
+             returnResetModal.close();
+             returnResetForm.resetFields();
+diff --git a/frontend/src/modules/production/pages/Production/ProductWarehousing/components/IndependentDetailModal.tsx b/frontend/src/modules/production/pages/Production/ProductWarehousing/components/IndependentDetailModal.tsx
+index 0fdc45a72..313f6491a 100644
+--- a/frontend/src/modules/production/pages/Production/ProductWarehousing/components/IndependentDetailModal.tsx
++++ b/frontend/src/modules/production/pages/Production/ProductWarehousing/components/IndependentDetailModal.tsx
+@@ -47,7 +47,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
+   });
+ 
+   // Viewport logic replacement
+-  const detailPopupWidth = typeof window !== 'undefined' ? window.innerWidth * 0.9 : 1000;
++  const detailPopupWidth = "60vw";
+   const detailPopupInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
+ 
+   // Derive styleId/styleNo for production sheet and size chart tabs
+diff --git a/frontend/src/modules/production/pages/Production/ProgressDetail/hooks/useShareOrderDialog.tsx b/frontend/src/modules/production/pages/Production/ProgressDetail/hooks/useShareOrderDialog.tsx
+index fc7484549..da391ef21 100644
+--- a/frontend/src/modules/production/pages/Production/ProgressDetail/hooks/useShareOrderDialog.tsx
++++ b/frontend/src/modules/production/pages/Production/ProgressDetail/hooks/useShareOrderDialog.tsx
+@@ -105,7 +105,7 @@ export const useShareOrderDialog = ({ message }: UseShareOrderDialogOptions) =>
+             </Button>,
+           ]
+       }
+-      width={540}
++      width="40vw"
+       destroyOnHidden
+     >
+       {shareModal.loading ? (
+diff --git a/frontend/src/modules/production/pages/Production/components/buildCommonOrderActions.tsx b/frontend/src/modules/production/pages/Production/components/buildCommonOrderActions.tsx
+index eaf2b7203..9ee36bacf 100644
+--- a/frontend/src/modules/production/pages/Production/components/buildCommonOrderActions.tsx
++++ b/frontend/src/modules/production/pages/Production/components/buildCommonOrderActions.tsx
+@@ -13,7 +13,6 @@ interface BuildCommonOrderActionsParams {
+   onQuickEdit?: (record: ProductionOrder) => void;
+   handleCloseOrder?: (record: ProductionOrder) => void;
+   handleScrapOrder?: (record: ProductionOrder) => void;
+-  handleTransferOrder?: (record: ProductionOrder) => void;
+   handleCopyOrder?: (record: ProductionOrder) => void;
+   handleShareOrder?: (record: ProductionOrder) => void;
+   onOpenRemark?: OpenRemarkHandler;
+@@ -28,7 +27,6 @@ export function buildCommonOrderActions({
+   onQuickEdit,
+   handleCloseOrder,
+   handleScrapOrder,
+-  handleTransferOrder,
+   handleCopyOrder,
+   handleShareOrder,
+   onOpenRemark,
+@@ -55,13 +53,6 @@ export function buildCommonOrderActions({
+         disabled: completed,
+         onClick: () => handleScrapOrder(record),
+       }] : []),
+-      ...(handleTransferOrder ? [{
+-        key: 'transfer',
+-        label: '转单',
+-        title: frozen ? '转单（订单已关单）' : '转给其他人员处理',
+-        disabled: frozen,
+-        onClick: () => handleTransferOrder(record),
+-      }] : []),
+       ...(handleCopyOrder ? [{
+         key: 'copy',
+         label: '复制订单',
+diff --git a/frontend/src/modules/system/pages/System/FactoryList/SupplierUserManager.tsx b/frontend/src/modules/system/pages/System/FactoryList/SupplierUserManager.tsx
+index 012af17e5..da06584d6 100644
+--- a/frontend/src/modules/system/pages/System/FactoryList/SupplierUserManager.tsx
++++ b/frontend/src/modules/system/pages/System/FactoryList/SupplierUserManager.tsx
+@@ -170,7 +170,7 @@ const SupplierUserManager: React.FC<Props> = ({ open, supplierId, supplierName,
+         title={`供应商账号管理 - ${supplierName}`}
+         onCancel={onClose}
+         footer={null}
+-        width={900}
++        width="60vw"
+         destroyOnHidden
+       >
+         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+diff --git a/frontend/src/modules/system/pages/System/OrganizationTree/components/ProfileModal.tsx b/frontend/src/modules/system/pages/System/OrganizationTree/components/ProfileModal.tsx
+index 838f417b4..92f6439e0 100644
+--- a/frontend/src/modules/system/pages/System/OrganizationTree/components/ProfileModal.tsx
++++ b/frontend/src/modules/system/pages/System/OrganizationTree/components/ProfileModal.tsx
+@@ -48,7 +48,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, user, unitNameMap, on
+       open={open}
+       onCancel={handleClose}
+       footer={null}
+-      width={360}
++      width="30vw"
+       title="成员资料"
+       centered
+     >
+diff --git a/frontend/src/modules/warehouse/pages/FinishedInventory/ShareLinkModal.tsx b/frontend/src/modules/warehouse/pages/FinishedInventory/ShareLinkModal.tsx
+index 038f53d46..56048efdf 100644
+--- a/frontend/src/modules/warehouse/pages/FinishedInventory/ShareLinkModal.tsx
++++ b/frontend/src/modules/warehouse/pages/FinishedInventory/ShareLinkModal.tsx
+@@ -14,7 +14,7 @@ const ShareLinkModal: React.FC<ShareLinkModalProps> = ({ open, onClose, shareUrl
+     title="客户出货追踪链接"
+     open={open}
+     onCancel={onClose}
+-    width={480}
++    width="30vw"
+     footer={[
+       <Button key="copy" type="primary" disabled={!shareUrl} onClick={onCopy}>复制链接</Button>,
+       <Button key="close" onClick={onClose}>关闭</Button>,
+diff --git a/frontend/src/modules/warehouse/pages/InventoryCheck/index.tsx b/frontend/src/modules/warehouse/pages/InventoryCheck/index.tsx
+index f57108705..bec5d71a4 100644
+--- a/frontend/src/modules/warehouse/pages/InventoryCheck/index.tsx
++++ b/frontend/src/modules/warehouse/pages/InventoryCheck/index.tsx
+@@ -318,7 +318,7 @@ const InventoryCheck: React.FC = () => {
+         />
+       </Card>
+ 
+-      <Modal title="新建盘点单" open={createModalVisible} onOk={handleCreate} onCancel={() => { setCreateModalVisible(false); createForm.resetFields(); }} width={480} maskClosable={false}>
++      <Modal title="新建盘点单" open={createModalVisible} onOk={handleCreate} onCancel={() => { setCreateModalVisible(false); createForm.resetFields(); }} width="30vw" maskClosable={false}>
+         <Form form={createForm} layout="vertical">
+           <Form.Item name="checkType" label="盘点类型" rules={[{ required: true, message: '请选择盘点类型' }]}>
+             <Select placeholder="选择盘点类型">
+@@ -367,7 +367,7 @@ const InventoryCheck: React.FC = () => {
+         open={guideVisible}
+         onCancel={() => setGuideVisible(false)}
+         footer={<Button onClick={() => setGuideVisible(false)}>知道了</Button>}
+-        width={640}
++        width="40vw"
+       >
+         <Steps orientation="vertical" current={-1} items={[
+           {
+diff --git a/frontend/src/modules/warehouse/pages/ProductInfo/index.tsx b/frontend/src/modules/warehouse/pages/ProductInfo/index.tsx
+index 5fdcefe19..7038c64d5 100644
+--- a/frontend/src/modules/warehouse/pages/ProductInfo/index.tsx
++++ b/frontend/src/modules/warehouse/pages/ProductInfo/index.tsx
+@@ -353,7 +353,7 @@ const ProductInfoPage: React.FC = () => {
+         title={d ? `${d.styleNo} — ${d.styleName}` : '成品详情'}
+         open={drawerOpen}
+         onClose={() => { setDrawerOpen(false); setDrawerRecord(null); setSkuList([]); }}
+-        width={860}
++        width="60vw"
+         loading={drawerLoading}
+         extra={
+           d ? (
+diff --git a/frontend/src/modules/warehouse/pages/WarehouseLocationMap/index.tsx b/frontend/src/modules/warehouse/pages/WarehouseLocationMap/index.tsx
+index 3425b83a7..45b98a628 100644
+--- a/frontend/src/modules/warehouse/pages/WarehouseLocationMap/index.tsx
++++ b/frontend/src/modules/warehouse/pages/WarehouseLocationMap/index.tsx
+@@ -595,7 +595,7 @@ const WarehouseLocationMap: React.FC = () => {
+         open={createAreaModalOpen}
+         onCancel={() => { setCreateAreaModalOpen(false); createAreaForm.resetFields(); }}
+         title="新建仓库"
+-        width={450}
++        width="30vw"
+         onOk={handleCreateArea}
+         okText="创建"
+       >
+@@ -616,7 +616,7 @@ const WarehouseLocationMap: React.FC = () => {
+         open={createLocationModalOpen}
+         onCancel={() => { setCreateLocationModalOpen(false); createLocationForm.resetFields(); }}
+         title={`新增库位 - ${selectedArea?.areaName || ''}`}
+-        width={450}
++        width="30vw"
+         onOk={handleCreateLocation}
+         okText="创建"
+       >
+@@ -646,7 +646,7 @@ const WarehouseLocationMap: React.FC = () => {
+         open={batchInitModalOpen}
+         onCancel={() => { setBatchInitModalOpen(false); batchInitForm.resetFields(); }}
+         title={`批量初始化库位 - ${selectedArea?.areaName || ''}`}
+-        width={500}
++        width="30vw"
+         onOk={handleBatchInit}
+         okText="开始初始化"
+       >
+@@ -684,7 +684,7 @@ const WarehouseLocationMap: React.FC = () => {
+         open={detailModalOpen}
+         onCancel={() => setDetailModalOpen(false)}
+         title={selectedLocation ? `库位 ${selectedLocation.locationCode} - 库存详情` : '库存详情'}
+-        width={700}
++        width="40vw"
+         footer={null}
+       >
+         {selectedLocation && (
+diff --git a/frontend/src/styles/design-system.css b/frontend/src/styles/design-system.css
+index 1e9520b7e..6e9c66727 100644
+--- a/frontend/src/styles/design-system.css
++++ b/frontend/src/styles/design-system.css
+@@ -101,8 +101,8 @@
+   --font-size-xxl: clamp(18px, 1.04vw, 20px);
+   --font-size-display: clamp(20px, 1.25vw, 24px);
+   /* 表格专用响应式字体 */
+-  --table-header-font-size: clamp(13px, 0.78vw, 15px);
+-  --table-cell-font-size: clamp(12px, 0.68vw, 13px);
++  --table-header-font-size: clamp(14px, 0.78vw, 16px);
++  --table-cell-font-size: clamp(12px, 0.65vw, 13px);
+   --table-cell-padding-x: clamp(6px, 0.42vw, 8px);
+   --table-cell-padding-y: clamp(8px, 0.52vw, 10px);
+   --table-header-padding-x: clamp(6px, 0.52vw, 12px);
+@@ -531,6 +531,8 @@ html.dark-mode {
+ /* ── 第1档：小屏 (≤1366px) 小笔记本/平板 ── */
+ @media (max-width: 1366px) {
+   :root {
++    --control-height: 28px;
++    --search-height: 32px;
+     --font-size-title: 16px;
+     --font-size-subtitle: 14px;
+     --font-size-lg: 14px;
+@@ -564,6 +566,8 @@ html.dark-mode {
+ /* ── 第2档：标准 (1367-1600px) 普通笔记本 ── */
+ @media (min-width: 1367px) and (max-width: 1600px) {
+   :root {
++    --control-height: 32px;
++    --search-height: 36px;
+     --font-size-title: 17px;
+     --font-size-subtitle: 15px;
+     --font-size-lg: 15px;
+@@ -595,6 +599,8 @@ html.dark-mode {
+ /* ── 第3档：大屏 (1601-1920px) 台式机1080p ── */
+ @media (min-width: 1601px) and (max-width: 1920px) {
+   :root {
++    --control-height: 32px;
++    --search-height: 36px;
+     --font-size-title: 18px;
+     --font-size-subtitle: 16px;
+     --font-size-lg: 16px;
+@@ -626,6 +632,8 @@ html.dark-mode {
+ /* ── 第4档：宽屏 (1921-2560px) 2K显示器 ── */
+ @media (min-width: 1921px) and (max-width: 2560px) {
+   :root {
++    --control-height: 32px;
++    --search-height: 36px;
+     --font-size-title: 19px;
+     --font-size-subtitle: 17px;
+     --font-size-lg: 17px;
+@@ -657,6 +665,8 @@ html.dark-mode {
+ /* ── 第5档：超宽屏 (≥2561px) 4K+显示器 ── */
+ @media (min-width: 2561px) {
+   :root {
++    --control-height: 32px;
++    --search-height: 36px;
+     --font-size-title: 21px;
+     --font-size-subtitle: 18px;
+     --font-size-lg: 18px;
+@@ -693,7 +703,7 @@ html.dark-mode {
+ /* ── 平板 (≤1024px) ── */
+ @media (max-width: 1024px) {
+   :root {
+-    --table-header-font-size: 12px;
++    --table-header-font-size: 13px;
+     --table-cell-font-size: 12px;
+     --table-cell-padding-x: 5px;
+     --table-cell-padding-y: 7px;
+@@ -713,7 +723,7 @@ html.dark-mode {
+     --spacing-base: 12px;
+     --spacing-md: 16px;
+     --table-header-font-size: 13px;
+-    --table-cell-font-size: 13px;
++    --table-cell-font-size: 12px;
+     --table-cell-padding-x: 4px;
+     --table-cell-padding-y: 6px;
+     --table-header-padding-x: 4px;
+diff --git a/frontend/src/styles/global.css b/frontend/src/styles/global.css
+index 681204946..b915c19b9 100644
+--- a/frontend/src/styles/global.css
++++ b/frontend/src/styles/global.css
+@@ -89,10 +89,16 @@ body {
+ }
+ 
+ /* ============================================
+-   全局输入框 - 统一风格
+-   控件高度由 antd ConfigProvider componentSize='middle' 统一管控
+-   覆盖到 30px（比默认 32px 略小，比 small 24px 大）
++   全局控件高度 — 行业标准 ERP 规范
++   对标 SAP Fashion / BlueCherry / FastReact
++   --control-height: 标准控件（输入框/选择器/按钮）
++   --search-height: 搜索框（比标准高4px，增加视觉权重）
++   由媒体查询驱动：
++     ≤1366px → 28/32px（小屏）
++     1367-1920px → 32/36px（标准屏）
++     ≥1921px → 32/36px（大屏）
+    ============================================ */
++
+ .ant-input-affix-wrapper,
+ .ant-input-number,
+ .ant-select-selector,
+@@ -102,32 +108,28 @@ body {
+ .ant-cascader .ant-select-selector,
+ .ant-auto-complete .ant-select-selector,
+ .ant-auto-complete .ant-input {
+-  height: 30px !important;
++  height: var(--control-height, 32px) !important;
+   border-radius: var(--radius-sm, 4px) !important;
+   transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
+ }
+ 
+-/* Select 内部文字垂直居中 */
+ .ant-select-selection-item,
+ .ant-select-selection-placeholder {
+-  line-height: 28px !important;
++  line-height: calc(var(--control-height, 32px) - 2px) !important;
+ }
+ 
+-/* AutoComplete / Search 内部输入框居中 */
+ .ant-auto-complete .ant-input,
+ .ant-input-search .ant-input {
+-  height: 30px !important;
++  height: var(--search-height, 36px) !important;
+   padding-top: 3px !important;
+   padding-bottom: 3px !important;
+-  line-height: 22px !important;
++  line-height: calc(var(--search-height, 36px) - 8px) !important;
+ }
+ 
+-/* Input.Search 包裹层也是 30px */
+ .ant-input-search {
+-  height: 30px !important;
++  height: var(--search-height, 36px) !important;
+ }
+ 
+-/* 带前缀/后缀的输入框（包括 Input.Search）包裹层内部对齐 */
+ .ant-input-affix-wrapper {
+   display: inline-flex !important;
+   align-items: center !important;
+@@ -140,22 +142,19 @@ body {
+   line-height: 1.5715 !important;
+ }
+ 
+-/* Space.Compact 内所有子元素等高 */
+ .ant-space-compact .ant-input,
+ .ant-space-compact .ant-select-selector,
+ .ant-space-compact .ant-picker,
+ .ant-space-compact .ant-auto-complete .ant-input,
+ .ant-space-compact .ant-btn {
+-  height: 30px !important;
++  height: var(--control-height, 32px) !important;
+ }
+ 
+-/* 按钮默认高度与输入框对齐 */
+ .ant-btn:not(.ant-btn-icon-only) {
+-  height: 30px !important;
++  height: var(--control-height, 32px) !important;
+   font-size: 13px !important;
+ }
+ 
+-/* 恢复 small/large 尺寸的正确高度（覆盖上面 middle 固定值） */
+ .ant-input-affix-wrapper-sm,
+ .ant-input-number-sm {
+   height: 24px !important;
+@@ -165,16 +164,6 @@ body {
+   height: 40px !important;
+ }
+ 
+-/* 不要覆盖 ant-input 的默认样式，让 Ant Design 自己处理 */
+-
+-/* ============================================
+-   按钮 - 统一胶囊形
+-   ============================================ */
+-/* 按钮样式已迁移到 button-override.css，这里不再重复定义 */
+-
+-/* ============================================
+-   首页例外 - 40px 圆角矩形
+-   ============================================ */
+ .dashboard-page .ant-input,
+ .dashboard-page .ant-input-affix-wrapper,
+ .dashboard-page .ant-input-number,
+@@ -184,15 +173,12 @@ body {
+   border-radius: 6px !important;
+ }
+ 
+-/* ============================================
+-   登录页例外 - 38px 中等圆角
+-   ============================================ */
+ .login-page .ant-input,
+ .login-page .ant-input-affix-wrapper,
+ .login-page .ant-input-number,
+ .login-page .ant-select-selector,
+ .login-page .ant-picker {
+-  height: 38px !important;
++  height: 40px !important;
+   border-radius: 8px !important;
+ }
+ 
+@@ -305,6 +291,22 @@ body {
+   --font-weight-semibold: 600;
+   --font-weight-bold: 700;
+ 
++  --kpi-value-size: 24px;
++  --kpi-value-weight: 700;
++  --kpi-label-size: 12px;
++  --kpi-change-size: 12px;
++
++  --card-header-bg: #fafafa;
++  --card-header-padding: 12px 16px;
++  --card-title-indicator: 3px solid #2D7FF9;
++
++  --progress-bar-height: 8px;
++  --progress-bar-height-sm: 4px;
++  --progress-circle-size-sm: 32px;
++  --progress-circle-size-md: 48px;
++  --progress-circle-size-lg: 72px;
++  --progress-circle-stroke: 5px;
++
+   /* 表格专用颜色 */
+   --table-border-color: rgba(0, 0, 0, 0.06);
+   --table-border-light: rgba(0, 0, 0, 0.04);
+@@ -2145,6 +2147,8 @@ body {
+ /* ── 第1档：小屏 (≤1366px) 小笔记本/平板 ── */
+ @media (max-width: 1366px) {
+   :root {
++    --control-height: 28px;
++    --search-height: 32px;
+     --table-header-font-size: 13px;
+     --table-cell-font-size: 12px;
+     --table-cell-padding-x: 5px;
+@@ -2175,6 +2179,8 @@ body {
+ /* ── 第2档：标准 (1367-1600px) 普通笔记本 ── */
+ @media (min-width: 1367px) and (max-width: 1600px) {
+   :root {
++    --control-height: 32px;
++    --search-height: 36px;
+     --table-header-font-size: 13px;
+     --table-cell-font-size: 12px;
+     --table-cell-padding-x: 7px;
+@@ -2197,6 +2203,8 @@ body {
+ /* ── 第3档：大屏 (1601-1920px) 台式机1080p ── */
+ @media (min-width: 1601px) and (max-width: 1920px) {
+   :root {
++    --control-height: 32px;
++    --search-height: 36px;
+     --table-header-font-size: 14px;
+     --table-cell-font-size: 13px;
+     --table-cell-padding-x: 10px;
+@@ -2222,6 +2230,8 @@ body {
+ /* ── 第4档：宽屏 (1921-2560px) 2K显示器 ── */
+ @media (min-width: 1921px) and (max-width: 2560px) {
+   :root {
++    --control-height: 32px;
++    --search-height: 36px;
+     --table-header-font-size: 15px;
+     --table-cell-font-size: 14px;
+     --table-cell-padding-x: 12px;
+@@ -2253,6 +2263,8 @@ body {
+ /* ── 第5档：超宽屏 (≥2561px) 4K+显示器 ── */
+ @media (min-width: 2561px) {
+   :root {
++    --control-height: 32px;
++    --search-height: 36px;
+     --table-header-font-size: 17px;
+     --table-cell-font-size: 15px;
+     --table-cell-padding-x: 16px;
+diff --git a/frontend/src/types/production.ts b/frontend/src/types/production.ts
+index d5b366488..47b2ed61a 100644
+--- a/frontend/src/types/production.ts
++++ b/frontend/src/types/production.ts
+@@ -82,7 +82,18 @@ export interface ProductionOrder extends Record<string, unknown> {
+   sewingEndTime?: string;
+   sewingOperatorName?: string;
+   sewingCompletionRate?: number;
++  carSewingStartTime?: string;
++  carSewingEndTime?: string;
++  carSewingOperatorName?: string;
+   carSewingCompletionRate?: number;
++  ironingStartTime?: string;
++  ironingEndTime?: string;
++  ironingOperatorName?: string;
++  ironingCompletionRate?: number;
++  packagingStartTime?: string;
++  packagingEndTime?: string;
++  packagingOperatorName?: string;
++  packagingCompletionRate?: number;
+ 
+   secondaryProcessStartTime?: string;
+   secondaryProcessEndTime?: string;
+diff --git a/frontend/src/utils/logger.ts b/frontend/src/utils/logger.ts
+index cce7cf348..0b7028db2 100644
+--- a/frontend/src/utils/logger.ts
++++ b/frontend/src/utils/logger.ts
+@@ -6,35 +6,34 @@
+ const metaEnv = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
+ const isDev = Boolean(metaEnv?.DEV);
+ 
++let traceEnabled = false;
++try {
++  traceEnabled = localStorage.getItem('__log_trace__') === '1';
++} catch { /* */ }
++
+ export const logger = {
+-  /**
+-   * 调试日志（仅开发环境）
+-   */
++  trace: (message: string, ...args: unknown[]) => {
++    if (isDev && traceEnabled) {
++      console.log(`%c[TRACE] ${message}`, 'color: #aaa', ...args);
++    }
++  },
++
+   debug: (message: string, ...args: unknown[]) => {
+     if (isDev) {
+       console.log(`%c[DEBUG] ${message}`, 'color: #888', ...args);
+     }
+   },
+ 
+-  /**
+-   * 信息日志（仅开发环境）
+-   */
+   info: (message: string, ...args: unknown[]) => {
+     if (isDev) {
+       console.log(`%c[INFO] ${message}`, 'color: #0066cc', ...args);
+     }
+   },
+ 
+-  /**
+-   * 警告日志（所有环境）
+-   */
+   warn: (message: string, ...args: unknown[]) => {
+     console.warn(`[WARN] ${message}`, ...args);
+   },
+ 
+-  /**
+-   * 错误日志（所有环境）
+-   */
+   error: (message: string, ...args: unknown[]) => {
+     console.error(`[ERROR] ${message}`, ...args);
+   },
+diff --git a/frontend/src/utils/syncManager.ts b/frontend/src/utils/syncManager.ts
+index e0981f460..40e8e4b1d 100644
+--- a/frontend/src/utils/syncManager.ts
++++ b/frontend/src/utils/syncManager.ts
+@@ -44,7 +44,7 @@ class SyncManager {
+     const { taskId, fetchFn, interval = 30000, maxErrors = 3 } = config;
+ 
+     if (!taskId || !fetchFn) {
+-      console.error('[同步管理器] taskId 和 fetchFn 是必需的');
++      logger.error('[同步管理器] taskId 和 fetchFn 是必需的');
+       return false;
+     }
+ 
+@@ -80,7 +80,7 @@ class SyncManager {
+       }
+     }, normalizedInterval);
+ 
+-    logger.debug(`[同步管理器] 任务 ${taskId} 已启动，间隔 ${normalizedInterval}ms`);
++    logger.trace(`[同步管理器] 任务 ${taskId} 已启动，间隔 ${normalizedInterval}ms`);
+ 
+     return true;
+   }
+@@ -97,7 +97,7 @@ class SyncManager {
+     }
+ 
+     this.tasks.delete(taskId);
+-    logger.debug(`[同步管理器] 任务 ${taskId} 已停止`);
++    logger.trace(`[同步管理器] 任务 ${taskId} 已停止`);
+ 
+     return true;
+   }
+@@ -107,7 +107,7 @@ class SyncManager {
+     if (!task) return false;
+ 
+     task.isPaused = true;
+-    logger.debug(`[同步管理器] 任务 ${taskId} 已暂停`);
++    logger.trace(`[同步管理器] 任务 ${taskId} 已暂停`);
+     return true;
+   }
+ 
+@@ -116,7 +116,7 @@ class SyncManager {
+     if (!task) return false;
+ 
+     task.isPaused = false;
+-    logger.debug(`[同步管理器] 任务 ${taskId} 已恢复`);
++    logger.trace(`[同步管理器] 任务 ${taskId} 已恢复`);
+ 
+     if (!task.isExecuting) {
+       this.executeSync(task);
+@@ -157,14 +157,14 @@ class SyncManager {
+ 
+       if (task.lastData !== null && compareData) {
+         if (newHash === task.lastDataHash) {
+-          logger.debug(`[实时同步] 任务 ${taskId} 数据无变化(hash)`);
++          logger.trace(`[实时同步] 任务 ${taskId} 数据无变化(hash)`);
+         } else {
+           const hasChanges = compareData(task.lastData, newData);
+           if (hasChanges) {
+             logger.debug(`[实时同步] 任务 ${taskId} 检测到数据变化`);
+             onDataChange?.(newData, task.lastData);
+           } else {
+-            logger.debug(`[实时同步] 任务 ${taskId} 数据无变化`);
++            logger.trace(`[实时同步] 任务 ${taskId} 数据无变化`);
+           }
+         }
+       } else {
+@@ -189,11 +189,11 @@ class SyncManager {
+         return;
+       }
+ 
+-      console.error(`[实时同步] 任务 ${taskId} 失败 (${task.errorCount}/${maxErrors})`, err);
++      logger.error(`[实时同步] 任务 ${taskId} 失败 (${task.errorCount}/${maxErrors})`, err);
+       onError?.(errorObj);
+ 
+       if (task.errorCount >= maxErrors) {
+-        console.error(`[实时同步] 任务 ${taskId} 失败次数过多，自动停止`);
++        logger.error(`[实时同步] 任务 ${taskId} 失败次数过多，自动停止`);
+         this.stopSync(taskId);
+       }
+     } finally {
+@@ -218,10 +218,10 @@ class SyncManager {
+       this.tasks.forEach((task, taskId) => {
+         if (task.config.pauseOnHidden !== false) {
+           if (isHidden) {
+-            logger.debug(`[同步管理器] 页面隐藏，暂停任务 ${taskId}`);
++            logger.trace(`[同步管理器] 页面隐藏，暂停任务 ${taskId}`);
+             this.pauseSync(taskId);
+           } else {
+-            logger.debug(`[同步管理器] 页面可见，恢复任务 ${taskId}`);
++            logger.trace(`[同步管理器] 页面可见，恢复任务 ${taskId}`);
+             this.resumeSync(taskId);
+           }
+         }
+@@ -234,7 +234,7 @@ class SyncManager {
+   private setupUserLogoutListener(): void {
+     if (typeof window === 'undefined') return;
+     window.addEventListener('user-logout', () => {
+-      logger.debug('[同步管理器] 检测到用户登出，停止所有同步任务');
++      logger.trace('[同步管理器] 检测到用户登出，停止所有同步任务');
+       this.stopAll();
+     });
+   }
+diff --git a/frontend/vite.config.ts b/frontend/vite.config.ts
+index 9a30e70a8..e6ea0f016 100644
+--- a/frontend/vite.config.ts
++++ b/frontend/vite.config.ts
+@@ -81,9 +81,7 @@ export default defineConfig({
+     // 注意：不要设置 host 字段，否则 Vite 会把 WebSocket 地址硬编码为固定 IP，
+     // 导致内网 IP 访问时动态模块 import() 收到 text/html 而非 JS 文件
+     hmr: {
+-      protocol: 'ws',
+       port: 5173,
+-      clientPort: 5173
+     },
+ 
+     proxy: {

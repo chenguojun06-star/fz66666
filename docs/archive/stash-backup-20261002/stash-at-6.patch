@@ -1,0 +1,1207 @@
+diff --git a/backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java b/backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java
+index 8ee3bb64f..37c6e2aa8 100644
+--- a/backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java
++++ b/backend/src/main/java/com/fashion/supplychain/production/controller/ScanRecordController.java
+@@ -67,7 +67,7 @@ public class ScanRecordController {
+      * 用法：与 /execute 发同样的请求体，返回每步的诊断结果
+      */
+     @PostMapping("/diagnose")
+-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('TENANT_OWNER')")
++    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('tenant_owner')")
+     public Result<?> diagnose(@RequestBody Map<String, Object> params) {
+         Map<String, Object> report = new LinkedHashMap<>();
+         report.put("step0_params", params);
+diff --git a/backend/src/main/java/com/fashion/supplychain/production/service/impl/ProductWarehousingServiceImpl.java b/backend/src/main/java/com/fashion/supplychain/production/service/impl/ProductWarehousingServiceImpl.java
+index fd292be55..f8bd0bc8b 100644
+--- a/backend/src/main/java/com/fashion/supplychain/production/service/impl/ProductWarehousingServiceImpl.java
++++ b/backend/src/main/java/com/fashion/supplychain/production/service/impl/ProductWarehousingServiceImpl.java
+@@ -209,6 +209,8 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
+     @Override
+     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+     public boolean saveWarehousingAndUpdateOrder(ProductWarehousing productWarehousing) {
++        /* ⚠️ REQUIRES_NEW 风险：当调用方 Orchestrator 回滚时，入库记录已独立提交，数据不一致。
++         * 当从 non-Orchestrator 调用方（如 Executor）调用时，这是唯一的边界。 */
+         return saveWarehousingAndUpdateOrderInternal(productWarehousing, false);
+     }
+ 
+diff --git a/backend/src/main/java/com/fashion/supplychain/style/controller/StyleSizePriceController.java b/backend/src/main/java/com/fashion/supplychain/style/controller/StyleSizePriceController.java
+index b575fed9c..659f0e321 100644
+--- a/backend/src/main/java/com/fashion/supplychain/style/controller/StyleSizePriceController.java
++++ b/backend/src/main/java/com/fashion/supplychain/style/controller/StyleSizePriceController.java
+@@ -45,9 +45,8 @@ public class StyleSizePriceController {
+         return Result.success(list);
+     }
+ 
+-    /**
+-     * 批量保存多码单价
+-     */
++    /** @deprecated 使用 POST /style/size-price 替代 */
++    @Deprecated
+     @PostMapping("/batch-save")
+     public Result<Boolean> batchSave(@RequestBody List<StyleSizePrice> list) {
+         if (list == null || list.isEmpty()) {
+diff --git a/backend/src/main/java/com/fashion/supplychain/style/service/impl/ProductSkuServiceImpl.java b/backend/src/main/java/com/fashion/supplychain/style/service/impl/ProductSkuServiceImpl.java
+index 75cf5f2a0..0445ed78c 100644
+--- a/backend/src/main/java/com/fashion/supplychain/style/service/impl/ProductSkuServiceImpl.java
++++ b/backend/src/main/java/com/fashion/supplychain/style/service/impl/ProductSkuServiceImpl.java
+@@ -138,6 +138,9 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
+     @Override
+     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+     public void updateStock(String skuCode, int quantity) {
++        /* ⚠️ REQUIRES_NEW 风险：当调用方 Orchestrator 回滚时，SKU 库存已独立提交，数据不一致。
++         * 参考 known issue: activeContext.md P2 数据一致性 #4。
++         * 修复方向：使用原子 SQL (SET stock = stock + #{delta}) 替代 REQUIRES_NEW。 */
+         if (!StringUtils.hasText(skuCode)) {
+             return;
+         }
+diff --git a/frontend/src/components/common/UniversalCardView/style.css b/frontend/src/components/common/UniversalCardView/style.css
+index 9b8c39e63..edae611b8 100644
+--- a/frontend/src/components/common/UniversalCardView/style.css
++++ b/frontend/src/components/common/UniversalCardView/style.css
+@@ -12,14 +12,14 @@
+ }
+ 
+ .universal-card .ant-card-body {
+-  padding: 8px 10px;
++  padding: 10px 12px;
+ }
+ 
+ /* 卡片封面图片 */
+ .universal-card-cover {
+   position: relative;
+   width: 100%;
+-  padding-top: 100%;
++  padding-top: 90%;
+   background: #f5f5f5;
+   overflow: hidden;
+ }
+@@ -43,19 +43,19 @@
+   font-size: 13px;
+ }
+ 
+-/* 卡片主体 - 紧凑布局 */
++/* 卡片主体 - 适度间距布局 */
+ .universal-card-body {
+   display: flex;
+   flex-direction: column;
+-  gap: 2px;
++  gap: 6px;
+ }
+ 
+ .universal-card-title {
+   margin: 0;
+   font-size: 14px;
+   font-weight: 600;
+-  color: #1f1f1f;
+-  line-height: 1.3;
++  color: var(--color-text-primary, #1f1f1f);
++  line-height: 1.35;
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+@@ -63,38 +63,40 @@
+ 
+ .universal-card-subtitle {
+   font-size: 12px;
+-  color: #999;
+-  line-height: 1.3;
++  color: var(--color-text-tertiary, #999);
++  line-height: 1.35;
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
++  max-width: 120px;
+ }
+ 
+ .universal-card-row {
+   display: flex;
+   justify-content: flex-start;
+-  gap: 4px;
+-  line-height: 1.4;
++  gap: 8px;
++  line-height: 1.45;
++  min-height: 20px;
+ }
+ 
+ .universal-card-field {
+   display: flex;
+-  gap: 2px;
++  gap: 4px;
+   font-size: 12px;
+-  line-height: 1.4;
++  line-height: 1.45;
+   min-width: 0;
+   flex: 1;
+   align-items: baseline;
+ }
+ 
+ .universal-card-field .field-label {
+-  color: var(--color-text-tertiary, #999);
++  color: var(--color-text-quaternary, #8c8c8c);
+   white-space: nowrap;
+   flex-shrink: 0;
+-  font-size: 12px;
++  font-size: 11px;
+   overflow: hidden;
+   text-overflow: ellipsis;
+-  max-width: 80px;
++  max-width: 72px;
+ }
+ 
+ .universal-card-field .field-value {
+@@ -152,9 +154,9 @@
+ .universal-card-actions {
+   display: flex;
+   justify-content: center;
+-  margin-top: 4px;
+-  padding-top: 4px;
+-  border-top: 1px solid #f0f0f0;
++  margin-top: 6px;
++  padding-top: 6px;
++  border-top: 1px solid var(--color-border-light, #f0f0f0);
+ }
+ 
+ .universal-card-actions .ant-space {
+diff --git a/frontend/src/modules/basic/pages/StyleInfo/index.tsx b/frontend/src/modules/basic/pages/StyleInfo/index.tsx
+index 1e10bb9ef..fcbdfc501 100644
+--- a/frontend/src/modules/basic/pages/StyleInfo/index.tsx
++++ b/frontend/src/modules/basic/pages/StyleInfo/index.tsx
+@@ -193,117 +193,107 @@ const StyleInfoDetailPage: React.FC = () => {
+           </Form>
+         </Card>
+ 
+-        <Card style={{ marginTop: 24 }}>
++        {currentStyle?.id ? (
++          <Card title="BOM清单" style={{ marginTop: 24 }}>
++            <StyleBomTab
++              styleId={currentStyle.id ?? ''}
++              sizeColorConfig={colorSize.sizeColorConfig}
++              readOnly={Boolean((currentStyle as any)?.bomCompletedTime)}
++              bomAssignee={(currentStyle as any)?.bomAssignee}
++              bomStartTime={(currentStyle as any)?.bomStartTime}
++              bomCompletedTime={(currentStyle as any)?.bomCompletedTime}
++              onRefresh={() => { void fetchDetail(styleIdParam!); }}
++            />
++          </Card>
++        ) : null}
++
++        {currentStyle?.id ? (
++          <Card title="纸样开发" style={{ marginTop: 16 }}>
++            <StylePatternTab
++              styleId={currentStyle.id ?? ''}
++              sizeColorConfig={colorSize.sizeColorConfig}
++              readOnly={Boolean((currentStyle as any)?.patternCompletedTime)}
++              patternAssignee={(currentStyle as any)?.patternAssignee}
++              patternStartTime={(currentStyle as any)?.patternStartTime}
++              patternCompletedTime={(currentStyle as any)?.patternCompletedTime}
++              patternStatus={currentStyle?.patternStatus}
++              sizeAssignee={(currentStyle as any)?.sizeAssignee}
++              sizeStartTime={(currentStyle as any)?.sizeStartTime}
++              sizeCompletedTime={(currentStyle as any)?.sizeCompletedTime}
++              linkedSizes={colorSize.matrixSizes}
++              onRefresh={() => { void fetchDetail(styleIdParam!); }}
++            />
++          </Card>
++        ) : null}
++
++        {currentStyle?.id ? (
++          <Card title="生产制单" style={{ marginTop: 16 }}>
++            <StyleProductionTab
++              styleId={currentStyle.id ?? ''}
++              styleNo={currentStyle?.styleNo ?? ''}
++              productionReqRows={production.productionReqRows}
++              productionReqRowCount={production.productionReqRowCount}
++              productionReqLocked={Boolean((currentStyle as any)?.productionCompletedTime)}
++              productionReqEditable={production.productionReqEditable}
++              productionReqSaving={production.productionSaving}
++              productionReqRollbackSaving={production.productionRollbackSaving}
++              onProductionReqChange={production.updateProductionReqRow}
++              onProductionReqSave={production.handleSaveProduction}
++              onProductionReqReset={production.resetProductionReqFromCurrent}
++              onProductionReqRollback={production.handleRollbackProductionReq}
++              productionReqCanRollback
++              productionAssignee={(currentStyle as any)?.productionAssignee}
++              productionStartTime={(currentStyle as any)?.productionStartTime}
++              productionCompletedTime={(currentStyle as any)?.productionCompletedTime}
++              onRefresh={() => { void fetchDetail(styleIdParam!); }}
++              sampleCompleted={(currentStyle as any)?.sampleStatus === 'COMPLETED'}
++              sampleReviewStatus={(currentStyle as any)?.sampleReviewStatus}
++              sampleReviewComment={(currentStyle as any)?.sampleReviewComment}
++              sampleReviewer={(currentStyle as any)?.sampleReviewer}
++              sampleReviewTime={(currentStyle as any)?.sampleReviewTime}
++              completedTime={(currentStyle as any)?.completedTime}
++              styleName={(currentStyle as any)?.styleName}
++              color={(currentStyle as any)?.color}
++              size={(currentStyle as any)?.size}
++              sampleQuantity={(currentStyle as any)?.sampleQuantity}
++            />
++          </Card>
++        ) : null}
++
++        {currentStyle?.id ? (
++          <Card title="二次工艺" style={{ marginTop: 16 }}>
++            <StyleSecondaryProcessTab
++              styleId={currentStyle.id ?? ''}
++              styleNo={currentStyle?.styleNo ?? ''}
++              readOnly={Boolean((currentStyle as any)?.secondaryCompletedTime)}
++              secondaryAssignee={(currentStyle as any)?.secondaryAssignee}
++              secondaryStartTime={(currentStyle as any)?.secondaryStartTime}
++              secondaryCompletedTime={(currentStyle as any)?.secondaryCompletedTime}
++              sampleQuantity={(currentStyle as any)?.sampleQuantity}
++              onRefresh={() => { void fetchDetail(styleIdParam!); }}
++            />
++          </Card>
++        ) : null}
++
++        {currentStyle?.id ? (
++          <Card title="工序单价" style={{ marginTop: 16 }}>
++            <StyleProcessTab
++              styleId={currentStyle.id ?? ''}
++              styleNo={currentStyle?.styleNo ?? ''}
++              readOnly={Boolean((currentStyle as any)?.processCompletedTime)}
++              processAssignee={(currentStyle as any)?.processAssignee}
++              processStartTime={(currentStyle as any)?.processStartTime}
++              processCompletedTime={(currentStyle as any)?.processCompletedTime}
++              onRefresh={() => { void fetchDetail(styleIdParam!); }}
++            />
++          </Card>
++        ) : null}
++
++        <Card style={{ marginTop: 16 }}>
+           <Tabs
+             activeKey={activeTabKey}
+             onChange={setActiveTabKey}
+             items={[
+-              {
+-                key: '2',
+-                label: 'BOM清单',
+-                disabled: !currentStyle?.id,
+-                children: (
+-                  <StyleBomTab
+-                    styleId={currentStyle?.id ?? ''}
+-                    sizeColorConfig={colorSize.sizeColorConfig}
+-                    readOnly={Boolean((currentStyle as any)?.bomCompletedTime)}
+-                    bomAssignee={(currentStyle as any)?.bomAssignee}
+-                    bomStartTime={(currentStyle as any)?.bomStartTime}
+-                    bomCompletedTime={(currentStyle as any)?.bomCompletedTime}
+-                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
+-                  />
+-                )
+-              },
+-              {
+-                key: '5',
+-                label: '纸样开发',
+-                disabled: !currentStyle?.id,
+-                children: (
+-                  <StylePatternTab
+-                    styleId={currentStyle?.id ?? ''}
+-                    sizeColorConfig={colorSize.sizeColorConfig}
+-                    readOnly={Boolean((currentStyle as any)?.patternCompletedTime)}
+-                    patternAssignee={(currentStyle as any)?.patternAssignee}
+-                    patternStartTime={(currentStyle as any)?.patternStartTime}
+-                    patternCompletedTime={(currentStyle as any)?.patternCompletedTime}
+-                    patternStatus={currentStyle?.patternStatus}
+-                    sizeAssignee={(currentStyle as any)?.sizeAssignee}
+-                    sizeStartTime={(currentStyle as any)?.sizeStartTime}
+-                    sizeCompletedTime={(currentStyle as any)?.sizeCompletedTime}
+-                    linkedSizes={colorSize.matrixSizes}
+-                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
+-                  />
+-                )
+-              },
+-              {
+-                key: '8',
+-                label: '生产制单',
+-                disabled: !currentStyle?.id,
+-                children: (
+-                  <StyleProductionTab
+-                    styleId={currentStyle?.id ?? ''}
+-                    styleNo={currentStyle?.styleNo ?? ''}
+-                    productionReqRows={production.productionReqRows}
+-                    productionReqRowCount={production.productionReqRowCount}
+-                    productionReqLocked={Boolean((currentStyle as any)?.productionCompletedTime)}
+-                    productionReqEditable={production.productionReqEditable}
+-                    productionReqSaving={production.productionSaving}
+-                    productionReqRollbackSaving={production.productionRollbackSaving}
+-                    onProductionReqChange={production.updateProductionReqRow}
+-                    onProductionReqSave={production.handleSaveProduction}
+-                    onProductionReqReset={production.resetProductionReqFromCurrent}
+-                    onProductionReqRollback={production.handleRollbackProductionReq}
+-                    productionReqCanRollback
+-                    productionAssignee={(currentStyle as any)?.productionAssignee}
+-                    productionStartTime={(currentStyle as any)?.productionStartTime}
+-                    productionCompletedTime={(currentStyle as any)?.productionCompletedTime}
+-                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
+-                    sampleCompleted={(currentStyle as any)?.sampleStatus === 'COMPLETED'}
+-                    sampleReviewStatus={(currentStyle as any)?.sampleReviewStatus}
+-                    sampleReviewComment={(currentStyle as any)?.sampleReviewComment}
+-                    sampleReviewer={(currentStyle as any)?.sampleReviewer}
+-                    sampleReviewTime={(currentStyle as any)?.sampleReviewTime}
+-                    completedTime={(currentStyle as any)?.completedTime}
+-                    styleName={(currentStyle as any)?.styleName}
+-                    color={(currentStyle as any)?.color}
+-                    size={(currentStyle as any)?.size}
+-                    sampleQuantity={(currentStyle as any)?.sampleQuantity}
+-                  />
+-                )
+-              },
+-              {
+-                key: '9',
+-                label: '二次工艺',
+-                disabled: !currentStyle?.id,
+-                children: (
+-                  <StyleSecondaryProcessTab
+-                    styleId={currentStyle?.id ?? ''}
+-                    styleNo={currentStyle?.styleNo ?? ''}
+-                    readOnly={Boolean((currentStyle as any)?.secondaryCompletedTime)}
+-                    secondaryAssignee={(currentStyle as any)?.secondaryAssignee}
+-                    secondaryStartTime={(currentStyle as any)?.secondaryStartTime}
+-                    secondaryCompletedTime={(currentStyle as any)?.secondaryCompletedTime}
+-                    sampleQuantity={(currentStyle as any)?.sampleQuantity}
+-                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
+-                  />
+-                )
+-              },
+-              {
+-                key: '7',
+-                label: '工序单价',
+-                disabled: !currentStyle?.id,
+-                children: (
+-                  <StyleProcessTab
+-                    styleId={currentStyle?.id ?? ''}
+-                    styleNo={currentStyle?.styleNo ?? ''}
+-                    readOnly={Boolean((currentStyle as any)?.processCompletedTime)}
+-                    processAssignee={(currentStyle as any)?.processAssignee}
+-                    processStartTime={(currentStyle as any)?.processStartTime}
+-                    processCompletedTime={(currentStyle as any)?.processCompletedTime}
+-                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
+-                  />
+-                )
+-              },
+               {
+                 key: '3',
+                 label: '报价单',
+diff --git a/frontend/src/modules/basic/pages/StyleInfo/styles.css b/frontend/src/modules/basic/pages/StyleInfo/styles.css
+index d42c78de8..ca7d03f95 100644
+--- a/frontend/src/modules/basic/pages/StyleInfo/styles.css
++++ b/frontend/src/modules/basic/pages/StyleInfo/styles.css
+@@ -87,9 +87,9 @@
+ .style-smart-row {
+   display: grid;
+   grid-template-columns: 120px minmax(0, 1fr);
+-  gap: 8px;
+-  padding: 8px;
+-  border-radius: 6px;
++  gap: 10px;
++  padding: 10px;
++  border-radius: 8px;
+   border: 1px solid var(--color-border);
+   background: var(--color-bg-card);
+   box-shadow: var(--shadow-sm);
+@@ -147,14 +147,14 @@
+   min-width: 0;
+   display: flex;
+   flex-direction: column;
+-  gap: 6px;
++  gap: 8px;
+   position: relative;
+ }
+ 
+ .style-smart-row__layout {
+   display: grid;
+   grid-template-columns: minmax(120px, 148px) minmax(0, 1fr);
+-  gap: 6px;
++  gap: 8px;
+   align-items: center;
+ }
+ 
+@@ -166,25 +166,29 @@
+   min-width: 0;
+   display: flex;
+   flex-direction: column;
+-  gap: 8px;
++  gap: 10px;
+ }
+ 
+ .style-smart-row__tags {
+   display: flex;
+   flex-wrap: wrap;
+   gap: 6px;
++  align-items: center;
+ }
+ 
+ .style-smart-row__tags .ant-tag {
+   margin-inline-end: 0;
+   border-radius: 999px;
++  font-size: 12px;
++  line-height: 18px;
++  padding: 0 8px;
+ }
+ 
+ .style-smart-row__title-wrap {
+   display: flex;
+   flex-direction: column;
+   align-items: flex-start;
+-  gap: 6px;
++  gap: 4px;
+   min-width: 0;
+ }
+ 
+@@ -287,7 +291,7 @@
+ .style-smart-list--style-info .style-smart-row__meta--stacked {
+   display: flex;
+   flex-direction: column;
+-  gap: 2px;
++  gap: 4px;
+ }
+ 
+ .style-smart-list--style-info .style-smart-row__meta--stacked .style-smart-row__meta-item {
+@@ -297,33 +301,37 @@
+   padding: 0;
+   border-radius: 0;
+   background: transparent;
+-  line-height: 1.35;
++  line-height: 1.45;
+   min-width: 0;
+   overflow: hidden;
++  min-height: 18px;
+ }
+ 
+ .style-smart-list--style-info .style-smart-row__meta-label {
+   flex-shrink: 0;
+   white-space: nowrap;
+-  line-height: 1.35;
++  line-height: 1.45;
+   letter-spacing: 0;
+   min-width: 28px;
+   text-align-last: justify;
++  font-size: 11px;
++  color: var(--color-text-quaternary, #8c8c8c);
+ }
+ 
+ .style-smart-list--style-info .style-smart-row__meta-label::after {
+   content: '：';
+-  color: var(--color-text-tertiary);
++  color: var(--color-text-quaternary, #8c8c8c);
+ }
+ 
+ .style-smart-list--style-info .style-smart-row__meta-value {
+   flex: 1;
+   min-width: 0;
+-  line-height: 1.35;
++  line-height: 1.45;
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+   font-weight: 600;
++  font-size: 12px;
+ }
+ 
+ .style-smart-row__progress-wrap {
+diff --git a/frontend/src/modules/production/pages/Production/ExternalFactory/externalFactory.css b/frontend/src/modules/production/pages/Production/ExternalFactory/externalFactory.css
+index b02e812ba..f46d64219 100644
+--- a/frontend/src/modules/production/pages/Production/ExternalFactory/externalFactory.css
++++ b/frontend/src/modules/production/pages/Production/ExternalFactory/externalFactory.css
+@@ -9,10 +9,10 @@
+ 
+ /* ── 行高压低 ── */
+ .ef-compact .style-smart-row {
+-  padding: 10px 14px;
+-  gap: 14px;
++  padding: 12px 16px;
++  gap: 16px;
+   grid-template-columns: 130px minmax(0, 1fr) auto;
+-  border-radius: 6px;
++  border-radius: 8px;
+   overflow: visible;
+ }
+ 
+@@ -70,10 +70,10 @@
+ .ef-delivery-badge {
+   display: inline-block;
+   font-size: 13px;
+-  line-height: 1;
+-  padding: 2px 5px;
++  line-height: 1.25;
++  padding: 2px 6px;
+   border-radius: 4px;
+-  font-weight: 500;
++  font-weight: 600;
+   white-space: nowrap;
+ }
+ .ef-delivery-badge--normal  { background: #e6f4ff; color: #1677ff; }
+@@ -84,7 +84,7 @@
+ 
+ /* ── 三栏布局微调 ── */
+ .ef-compact .style-smart-row__layout {
+-  gap: 8px;
++  gap: 10px;
+   align-items: center;
+ }
+ 
+@@ -92,30 +92,30 @@
+ .ef-info-fields {
+   display: flex;
+   flex-direction: column;
+-  gap: 2px;
++  gap: 4px;
+ }
+ 
+ .ef-field-row {
+   display: flex;
+   align-items: baseline;
+-  gap: 5px;
+-  line-height: 1.08;
++  gap: 6px;
++  line-height: 1.25;
++  min-height: 18px;
+ }
+ 
+ .ef-field-label {
+-  color: var(--color-text-tertiary);
++  color: var(--color-text-quaternary, #8c8c8c);
+   flex-shrink: 0;
+-  min-width: 28px;
+-  text-align-last: justify;
+-  font-size: 12px;
+-  line-height: 1.08;
++  width: 42px;
++  font-size: 11px;
++  line-height: 1.25;
+ }
+ 
+ .ef-field-value {
+   color: var(--color-text-primary);
+   font-size: 13px;
+   font-weight: 600;
+-  line-height: 1.08;
++  line-height: 1.25;
+   overflow: hidden;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+diff --git a/frontend/src/modules/warehouse/pages/FinishedInventory/FinishedScanOperationModal.tsx b/frontend/src/modules/warehouse/pages/FinishedInventory/FinishedScanOperationModal.tsx
+index 01de19af0..4ab88b92e 100644
+--- a/frontend/src/modules/warehouse/pages/FinishedInventory/FinishedScanOperationModal.tsx
++++ b/frontend/src/modules/warehouse/pages/FinishedInventory/FinishedScanOperationModal.tsx
+@@ -69,7 +69,7 @@ const FinishedScanOperationModal: React.FC<FinishedScanOperationModalProps> = ({
+     setLoading(true);
+     try {
+       if (operationType === 'inbound') {
+-        await finishedWarehouseApi.scanInbound({ scanCode: scanCode.trim(), quantity, warehouseLocation: warehouseLocation || '默认仓', warehouseAreaId: warehouseAreaId || undefined, sourceType, remark });
++        await finishedWarehouseApi.scanInbound({ scanCode: scanCode.trim(), quantity, warehouseLocation: warehouseLocation || '默认仓', warehouseAreaId: warehouseAreaId || undefined, sourceType, remark, styleNo, color, size });
+         message.success('成品扫码入库成功');
+       } else {
+         await finishedWarehouseApi.scanOutbound({ scanCode: scanCode.trim(), quantity, outstockType, warehouseLocation: warehouseLocation || '默认仓', warehouseAreaId: warehouseAreaId || undefined, remark });
+diff --git a/frontend/src/styles/global.css b/frontend/src/styles/global.css
+index 10c081f0f..52e20919e 100644
+--- a/frontend/src/styles/global.css
++++ b/frontend/src/styles/global.css
+@@ -2160,12 +2160,12 @@ body {
+   .ant-select-selection-placeholder {
+     line-height: 26px !important;
+   }
+-  /* 28px 高 → padding=(28-2-22)/2=2px */
+   .ant-input,
+   .ant-input-number .ant-input-number-input,
+   .ant-picker input,
+   .ant-input-affix-wrapper .ant-input,
+-  .ant-auto-complete .ant-input {
++  .ant-auto-complete .ant-input,
++  .ant-input-search .ant-input {
+     padding-top: 2px !important;
+     padding-bottom: 2px !important;
+   }
+@@ -2222,12 +2222,12 @@ body {
+   .ant-select-selection-placeholder {
+     line-height: 28px !important;
+   }
+-  /* 30px 高 → padding=(30-2-22)/2=3px */
+   .ant-input,
+   .ant-input-number .ant-input-number-input,
+   .ant-picker input,
+   .ant-input-affix-wrapper .ant-input,
+-  .ant-auto-complete .ant-input {
++  .ant-auto-complete .ant-input,
++  .ant-input-search .ant-input {
+     padding-top: 3px !important;
+     padding-bottom: 3px !important;
+   }
+@@ -2256,7 +2256,7 @@ body {
+     --table-header-height: 46px;
+   }
+   html {
+-    font-size: 15px;
++    font-size: 14px;
+   }
+   .layout-header {
+     height: 64px;
+@@ -2283,7 +2283,8 @@ body {
+   .ant-input-number .ant-input-number-input,
+   .ant-picker input,
+   .ant-input-affix-wrapper .ant-input,
+-  .ant-auto-complete .ant-input {
++  .ant-auto-complete .ant-input,
++  .ant-input-search .ant-input {
+     padding-top: 4px !important;
+     padding-bottom: 4px !important;
+   }
+@@ -2315,7 +2316,7 @@ body {
+     --table-header-height: 50px;
+   }
+   html {
+-    font-size: 16px;
++    font-size: 14px;
+   }
+   .layout-header {
+     height: 72px;
+@@ -2331,31 +2332,31 @@ body {
+   .ant-select,
+   .ant-auto-complete .ant-select-selector,
+   .ant-auto-complete .ant-input {
+-    height: 34px !important;
++    height: 32px !important;
+   }
+   .ant-select-selection-item,
+   .ant-select-selection-placeholder {
+-    line-height: 32px !important;
++    line-height: 30px !important;
+   }
+-  /* 34px 高 → padding=(34-2-22)/2=5px */
+   .ant-input,
+   .ant-input-number .ant-input-number-input,
+   .ant-picker input,
+   .ant-input-affix-wrapper .ant-input,
+-  .ant-auto-complete .ant-input {
+-    padding-top: 5px !important;
+-    padding-bottom: 5px !important;
++  .ant-auto-complete .ant-input,
++  .ant-input-search .ant-input {
++    padding-top: 4px !important;
++    padding-bottom: 4px !important;
+   }
+   .ant-space-compact .ant-input,
+   .ant-space-compact .ant-select-selector,
+   .ant-space-compact .ant-picker,
+   .ant-space-compact .ant-auto-complete .ant-input,
+   .ant-space-compact .ant-btn {
+-    height: 34px !important;
++    height: 32px !important;
+   }
+   .ant-btn:not(.ant-btn-icon-only) {
+-    height: 34px !important;
+-    font-size: 15px !important;
++    height: 32px !important;
++    font-size: 14px !important;
+   }
+   .ant-modal {
+     min-width: min(960px, 90vw) !important;
+@@ -2380,7 +2381,7 @@ body {
+     --table-header-height: 56px;
+   }
+   html {
+-    font-size: 18px;
++    font-size: 15px;
+   }
+   .layout-header {
+     height: 80px;
+@@ -2396,31 +2397,31 @@ body {
+   .ant-select,
+   .ant-auto-complete .ant-select-selector,
+   .ant-auto-complete .ant-input {
+-    height: 38px !important;
++    height: 34px !important;
+   }
+   .ant-select-selection-item,
+   .ant-select-selection-placeholder {
+-    line-height: 36px !important;
++    line-height: 32px !important;
+   }
+-  /* 38px 高 → padding=(38-2-22)/2=7px */
+   .ant-input,
+   .ant-input-number .ant-input-number-input,
+   .ant-picker input,
+   .ant-input-affix-wrapper .ant-input,
+-  .ant-auto-complete .ant-input {
+-    padding-top: 7px !important;
+-    padding-bottom: 7px !important;
++  .ant-auto-complete .ant-input,
++  .ant-input-search .ant-input {
++    padding-top: 5px !important;
++    padding-bottom: 5px !important;
+   }
+   .ant-space-compact .ant-input,
+   .ant-space-compact .ant-select-selector,
+   .ant-space-compact .ant-picker,
+   .ant-space-compact .ant-auto-complete .ant-input,
+   .ant-space-compact .ant-btn {
+-    height: 38px !important;
++    height: 34px !important;
+   }
+   .ant-btn:not(.ant-btn-icon-only) {
+-    height: 38px !important;
+-    font-size: 16px !important;
++    height: 34px !important;
++    font-size: 14px !important;
+   }
+   .ant-modal {
+     min-width: min(1100px, 90vw) !important;
+diff --git a/memory-bank/activeContext.md b/memory-bank/activeContext.md
+index 4c7ba42fa..c05d63952 100644
+--- a/memory-bank/activeContext.md
++++ b/memory-bank/activeContext.md
+@@ -1,16 +1,20 @@
+ # 活跃上下文 — 当前开发状态
+ 
+ > 本文件由 AI 助手在每次会话开始/结束时更新
+-> 最后更新：2026-05-17
++> 最后更新：2026-05-21
+ 
+ ---
+ 
+ ## 当前目标
+ 
+-- ✅ 已推送到生产环境（commit 5871be99）
++- 全系统质量审计 + P1 Bug 修复
+ 
+ ## 最近变更
+ 
++- 2026-05-21：全系统质量审计 — 后端编译✅ 前端tsc✅
++- 2026-05-21：P1修复 — @PreAuthorize 2处大小写bug（super_admin→SUPER_ADMIN / TENANT_OWNER→tenant_owner）
++- 2026-05-21：P1标记 — REQUIRES_NEW 2处风险注释（ProductSkuServiceImpl / ProductWarehousingServiceImpl）
++- 2026-05-21：P2修复 — StyleSizePriceController /batch-save 添加 @Deprecated
+ - 2026-05-17：前端性能优化 — 消除浏览器Violation警告（6项修复）
+ - 2026-05-17：电商平台/小程序/后端功能增强（前次会话积累变更）
+ - 2026-05-16：全面更新前质量保障（7大任务全部完成）
+diff --git a/security_audit_report.md b/security_audit_report.md
+index eb2288107..74e7cf900 100644
+--- a/security_audit_report.md
++++ b/security_audit_report.md
+@@ -1,237 +1,258 @@
+ # 安全审计报告
+ 
+-**审计时间**: 2026-05-17
+-**审计范围**: 服装供应链系统后端 + 前端 + 小程序
+-**审计方法**: 代码路径分析 + 攻击面枚举
++**项目**: 服装供应链管理系统
++**审计日期**: 2026-05-21
++**审计范围**: 后端 Spring Boot API + 前端 React + 小程序
+ 
+ ---
+ 
+ ## 执行摘要
+ 
+-本次审计系统性检查了认证与访问控制、注入向量、外部交互、敏感数据处理四大高风险领域。共发现 **2 个已确认的中等及以上严重度漏洞**，均具有完整的端到端利用路径。
++本次审计对代码库进行了系统性安全审查，覆盖认证与访问控制、注入向量、外部交互、敏感数据处理四大攻击面。
+ 
+-| 严重度 | 数量 | 漏洞ID |
+-|--------|------|--------|
+-| 高 (HIGH) | 1 | S-001 |
+-| 中 (MEDIUM) | 1 | S-002 |
++**审计结论**: 发现 **1 个中等级别** 已确认漏洞，以及 **3 个低等级** 问题。整体安全状况良好，代码遵循了多项安全最佳实践。
+ 
+ ---
+ 
+-## 已确认漏洞
++## 一、已确认漏洞
+ 
+-### S-001: OpenAPI 签名验证缺少时间戳检查 — 高风险
++### [中] #1: 微信Webhook回调缺少时间戳重放保护
+ 
+-**漏洞ID**: S-001
+-**严重度**: HIGH
+-**CWE**: CWE-347 (密码学签名验证缺失)
++| 项目 | 详情 |
++|------|------|
++| **严重度** | 中等 (Medium) |
++| **CWE** | CWE-347: 不安全的密码学签名验证 |
++| **位置** | `WeChatAiWebhookController.java` (第 44-71 行) |
++| **攻击者画像** | 外部攻击者 |
++| **输入向量** | 微信服务器回调请求中的 `signature`、`timestamp`、`nonce` 参数 |
++| **代码路径** | 攻击者获取有效签名后，可在任意时间重放已截获的合法请求 |
+ 
+-#### 攻击者画像
++**问题描述**:
+ 
+-外部API客户（持有有效 AppKey + AppSecret 的已注册应用）
++微信回调验证方法 `verifyWeChat()` 接收 `timestamp` 参数但未验证其时效性：
+ 
+-#### 输入向量
++```java
++// WeChatAiWebhookController.java:44-71
++@GetMapping("/callback")
++public String verifyWeChat(
++        @RequestParam(value = "signature", required = false) String signature,
++        @RequestParam(value = "timestamp", required = false) String timestamp,
++        @RequestParam(value = "nonce", required = false) String nonce,
++        @RequestParam(value = "echostr", required = false) String echostr) {
++    // ❌ timestamp 接收后未使用，也未验证是否过期
++    String[] arr = {verifyToken, timestamp, nonce};
++    Arrays.sort(arr);
++    // ... HMAC-SHA1 验证
++}
++```
+ 
+-HTTP Header `X-Timestamp`（攻击者可控），该值在 [TenantAppOrchestrator.authenticateByAppKey()](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/integration/openapi/orchestration/TenantAppOrchestrator.java#L315-L341) 中被读取但从未验证：
++POST 回调处理方法 `handleWeChatMessage()` 同样缺少时间戳验证：
+ 
+ ```java
+-// 第 315-341 行
+-public TenantApp authenticateByAppKey(String appKey, String signature, String timestamp, String body) {
+-    // ... 查询应用、检查状态、检查过期 ...
+-
+-    String decryptedSecret = aesEncryptor.decrypt(app.getAppSecret());
+-    String expectedSignature = hmacSha256(decryptedSecret, timestamp + (body != null ? body : ""));
+-    if (!expectedSignature.equals(signature)) {
+-        throw new SecurityException("签名验证失败");
+-    }
+-
+-    checkAndIncrementQuota(app);
+-    return app;
+-    // ⚠️ 没有对 timestamp 进行任何范围校验
++// WeChatAiWebhookController.java:73-104
++@PostMapping(value = "/callback", ...)
++public String handleWeChatMessage(..., @RequestParam(value = "timestamp", ...) String timestamp, ...) {
++    // ❌ 同样未验证 timestamp 时效性
++    if (signature == null || timestamp == null || nonce == null) { ... }
++    // ... HMAC-SHA1 验证
+ }
+ ```
+ 
+-#### 完整攻击路径
++**利用场景**:
+ 
+-1. 攻击者获取到合法 API 应用的 AppKey 和 AppSecret（通过逆向客户端应用、配置泄露等途径）
+-2. 使用任意时间戳计算签名：`HMAC-SHA256(appSecret, timestamp + requestBody)`
+-3. 多次重放同一合法请求，无需新鲜时间戳
+-4. 在配额耗尽前可无限期使用窃取的凭证
++1. 攻击者通过中间人攻击获取合法的微信回调请求（含有效签名）
++2. 攻击者在任何时间重放该请求
++3. 由于缺少时间戳验证，系统会接受已过期的合法回调
+ 
+-#### 影响
++**影响**:
+ 
+-- **数据泄露**: 攻击者可冒充任意已注册应用，访问/修改该租户的生产订单、质检记录、付款数据、物流信息
+-- **数据篡改**: 通过 `/openapi/v1/order/create` 创建伪造订单，通过 `/openapi/v1/payment/confirm` 伪造付款确认
+-- **权限升级**: `DATA_IMPORT` 类型应用可批量创建款式、员工、工序数据
+-- **影响范围**: 每个已注册 OpenAPI 应用均受影响
++- 可能导致未授权操作被重复执行（如重复创建订单、重复发送消息）
++- 结合业务逻辑缺陷可能造成数据重复或状态不一致
+ 
+-#### 建议修复
+-
+-在 `authenticateByAppKey()` 方法中添加时间戳有效性校验（允许 ±5 分钟窗口）：
++**修复建议**:
+ 
+ ```java
+-// 在 authenticateByAppKey() 方法开头添加
+-private static final long TIMESTAMP_TOLERANCE_SECONDS = 300L; // 5分钟
++@Value("${wechat.callback.max-age-seconds:300}")  // 5分钟有效期
++private int callbackMaxAgeSeconds;
+ 
+-public TenantApp authenticateByAppKey(String appKey, String signature, String timestamp, String body) {
+-    // 新增：时间戳有效性校验
+-    if (timestamp == null || timestamp.isBlank()) {
+-        throw new SecurityException("缺少时间戳");
+-    }
++private boolean isTimestampValid(String timestamp) {
++    if (timestamp == null) return false;
+     try {
+-        long requestTs = Long.parseLong(timestamp);
+-        long nowSec = System.currentTimeMillis() / 1000;
+-        if (Math.abs(nowSec - requestTs) > TIMESTAMP_TOLERANCE_SECONDS) {
+-            throw new SecurityException("请求已过期或时间戳无效");
+-        }
++        long ts = Long.parseLong(timestamp);
++        long now = System.currentTimeMillis() / 1000;
++        return Math.abs(now - ts) <= callbackMaxAgeSeconds;
+     } catch (NumberFormatException e) {
+-        throw new SecurityException("时间戳格式无效");
++        return false;
+     }
+-    // ... 其余现有代码 ...
++}
++
++// 在 verifyWeChat() 和 handleWeChatMessage() 中调用
++if (!isTimestampValid(timestamp)) {
++    log.warn("[WeChat-AI] timestamp expired or invalid: {}", timestamp);
++    return ""; // 或返回 401
+ }
+ ```
+ 
+ ---
+ 
+-### S-002: IP 地址欺骗风险 — 中等风险
++## 二、低等级问题（建议修复但不阻断）
+ 
+-**漏洞ID**: S-002
+-**严重度**: MEDIUM
+-**CWE**: CWE-200 (信息泄露) / IP Spoofing
++### [低] #2: 前端 Token 存储于 localStorage
+ 
+-#### 攻击者画像
++| 项目 | 详情 |
++|------|------|
++| **严重度** | 低 (Low) |
++| **位置** | `frontend/src/utils/api/core.ts` 等多处 |
++| **攻击者画像** | XSS 攻击者或本地攻击者 |
++| **输入向量** | 恶意脚本通过 XSS 读取 localStorage |
+ 
+-任何网络请求者（无需认证）
++**问题描述**:
+ 
+-#### 输入向量
++JWT Token 存储于浏览器 localStorage，易受 XSS 攻击窃取：
+ 
+-HTTP Header `X-Forwarded-For`（攻击者完全可控）
+-
+-#### 完整代码路径
+-
+-多处代码直接信任 `X-Forwarded-For` 头部获取客户端 IP，用于限流、日志记录等安全相关功能：
+-
+-**位置 1**: [GlobalRateLimitFilter.java:142](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/common/filter/GlobalRateLimitFilter.java#L142)
+-```java
+-String xRealIp = request.getHeader("X-Real-IP");
+-// ...
+-return request.getRemoteAddr();
++```typescript
++// core.ts:206
++const token = String(localStorage.getItem('authToken') || '').trim();
++headers: { Authorization: `Bearer ${token}` }
+ ```
+ 
+-**位置 2**: [UserController.java:278](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java/com/fashion/supplychain/system/controller/UserController.java#L278)
+-```java
+-String[] headerNames = new String[] { "X-Forwarded-For", "X-Real-IP", "Proxy-Client-IP", ... };
+-for (String header : headerNames) {
+-    ip = request.getHeader(header);
+-    if (isValidIp(ip)) { break; }
+-}
+-// 直接信任第一个有效的 X-Forwarded-For 值
+-```
++**缓解因素**:
+ 
+-**位置 3**: [OpenApiController.java:711-716](file:///Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src66666/backend/src/main/java/com/fashion/supplychain/integration/openapi/controller/OpenApiController.java#L711-L716)
+-```java
+-String ip = request.getHeader("X-Forwarded-For");
+-if (ip == null || ip.isEmpty()) {
+-    ip = request.getHeader("X-Real-IP");
+-}
+-if (ip == null || ip.isEmpty()) {
+-    ip = request.getRemoteAddr();
+-}
+-// ip 值被记录到日志，但直接信任
+-```
++- 代码已使用 DOMPurify 进行 HTML 消毒（`markdownUtils.ts`）
++- 飞书/钉钉回调已正确实现 HMAC 签名验证
++- API 使用 HTTPS 传输
+ 
+-#### 攻击场景
++**建议改进**:
+ 
+-1. 攻击者在请求中注入 `X-Forwarded-For: 1.2.3.4`
+-2. 系统将 `1.2.3.4` 记录为客户端 IP（在日志、配额记录中）
+-3. 绕过基于 IP 的限流：每次请求使用不同伪造 IP 绕过 IP 黑名单/限流阈值
+-4. 混淆审计日志：真实攻击源 IP 被替换为伪造值，增加溯源难度
+-5. 配合 S-001 使用：伪造 IP 多次重放被盗凭证的请求，规避基于 IP 的异常检测
++考虑使用 HttpOnly Cookie 存储 Token，或确保前端 XSS 防护到位。
+ 
+-#### 影响
++---
+ 
+-- 绕过 IP 限流（DoS 风险增加）
+-- 审计日志失真（安全事件溯源困难）
+-- 降低 IP 黑名单有效性
+-- 不直接影响认证（但降低整体安全监控能力）
++### [低] #3: H5 认证端点 IP 来源验证依赖 X-Forwarded-For
+ 
+-#### 建议修复
++| 项目 | 详情 |
++|------|------|
++| **严重度** | 低 (Low) |
++| **位置** | `WeChatH5AuthOrchestrator.java` |
++| **攻击者画像** | 能够伪造 HTTP 头的攻击者 |
+ 
+-仅在确认为可信代理（如 nginx）后才信任 `X-Forwarded-For`，否则回退到 `RemoteAddr`：
++**问题描述**:
+ 
+-```java
+-private String getClientIp(HttpServletRequest request) {
+-    // 仅在已知可信代理头存在时才信任 X-Forwarded-For
+-    // 需配合 nginx 配置：proxy_set_header X-Forwarded-For $remote_addr;
+-    // 且仅第一个 IP（真实客户端）为可信
+-    String forwarded = request.getHeader("X-Forwarded-For");
+-    if (forwarded != null && !forwarded.isEmpty()) {
+-        // X-Forwarded-For 可能包含多个 IP，取第一个（最接近代理的客户端）
+-        String firstIp = forwarded.split(",")[0].trim();
+-        if (isValidPublicIp(firstIp)) {
+-            return firstIp; // 仅接受有效公网IP
+-        }
+-    }
+-    String realIp = request.getHeader("X-Real-IP");
+-    if (realIp != null && !realIp.isEmpty() && isValidPublicIp(realIp)) {
+-        return realIp;
+-    }
+-    return request.getRemoteAddr();
+-}
++IP 地址验证使用 `X-Forwarded-For` 头，该头可被攻击者伪造：
+ 
+-private boolean isValidPublicIp(String ip) {
+-    if (ip == null || ip.isEmpty()) return false;
+-    try {
+-        InetAddress addr = InetAddress.getByName(ip);
+-        return !addr.isLoopbackAddress()
+-            && !addr.isLinkLocalAddress()
+-            && !addr.isSiteLocalAddress()
+-            && !addr.isAnyLocalAddress();
+-    } catch (Exception e) {
+-        return false;
++```java
++private static String resolveClientIp(HttpServletRequest request) {
++    String forwarded = request.getHeader("X-Forwarded-For");  // 可伪造
++    if (forwarded != null && !forwarded.isBlank()) {
++        String first = forwarded.split(",")[0];  // 取第一个 IP
++        // ...
+     }
+ }
+ ```
+ 
++**缓解因素**:
++
++- IP 白名单仅用于非关键功能
++- 主要认证仍依赖微信签名验证
++
+ ---
+ 
+-## 审计范围外（已观察但未发现中等以上漏洞）
+-
+-以下方面经过检查，**未发现**中等及以上漏洞：
+-
+-| 检查项 | 结果 | 说明 |
+-|--------|------|------|
+-| SQL 注入 | ✅ 无 | 全部使用 MyBatis-Plus QueryWrapper/LambdaQueryWrapper 参数化查询 |
+-| Shell 命令注入 | ✅ 无 | 未发现 `Runtime.exec()` 或 `ProcessBuilder` 的用户可控输入拼接 |
+-| 路径遍历 | ✅ 无 | `TenantFileController` 和 `OrderShareController` 均使用 `normalize()` + `startsWith()` 校验 |
+-| 文件上传 | ✅ 规范 | 文件存储使用 COS 或租户隔离目录，无直接文件写入 |
+-| 密码存储 | ✅ 规范 | 使用 BCrypt 哈希（`UserLoginHelper`） |
+-| JWT 实现 | ✅ 规范 | 使用 hutool JWT，带过期时间和签名验证 |
+-| Webhook 签名 | ✅ 规范 | 微信/飞书/钉钉回调均有 HMAC-SHA256 或等效签名校验 |
+-| SSRF 防护 | ✅ 规范 | `TenantAppOrchestrator.validateExternalUrl()` 阻止内网地址和白名单检查 |
+-| OpenAPI URL 验证 | ✅ 规范 | 同上 |
+-| 认证端点 | ✅ 规范 | 登录限流、密码错误锁定、BCrypt 校验 |
+-| CSRF | ✅ 适用 | REST API + Bearer Token 认证，天然免疫 |
+-| XSS | ⚠️ 前端负责 | 后端不渲染 HTML，无服务器端 XSS 风险 |
+-| 多租户隔离 | ✅ 规范 | 所有查询强制加 tenantId 条件，UserContext 从 TokenSubject 提取 |
+-| 权限模型 | ✅ 规范 | @PreAuthorize + PermissionCalculationEngine 三级权限计算 |
++### [低] #4: 注册接口限流阈值较高
++
++| 项目 | 详情 |
++|------|------|
++| **严重度** | 低 (Low) |
++| **位置** | `AuthController.java` (第 28 行) |
++
++**问题描述**:
++
++注册接口限流为每小时 5 次，对于攻击者进行用户名枚举暴力破解来说阈值较高。
+ 
+ ---
+ 
+-## 附录：快速验证命令
++## 三、安全最佳实践（已正确实现）
++
++以下安全措施已正确实施，审计中未发现问题：
++
++### 认证与授权
++
++| 项目 | 状态 | 说明 |
++|------|------|------|
++| JWT 签名验证 | ✅ | 使用 HMAC-SHA256，包含密码版本号校验 |
++| 密码加密存储 | ✅ | 使用 BCryptPasswordEncoder |
++| 会话管理 | ✅ | 无状态 JWT，STATELESS 模式 |
++| 权限校验 | ✅ | @PreAuthorize 注解 + 租户数据隔离 |
++| 注册限流 | ✅ | Redis 限流 5次/小时/IP |
++| 密码版本号 | ✅ | 改密后旧 Token 立即失效 |
++| JWT Secret 校验 | ✅ | 启动时检查长度≥32位、非占位值 |
++| PII 加密密钥校验 | ✅ | 生产环境未配置时告警 |
++
++### SQL 注入防护
++
++| 项目 | 状态 | 说明 |
++|------|------|------|
++| MyBatis 参数化查询 | ✅ | 使用 QueryWrapper/Mapper XML |
++| 无字符串拼接 SQL | ✅ | 审查中未发现动态拼接 |
++| 文件名白名单 | ✅ | 上传验证扩展名 |
++| 路径遍历防护 | ✅ | UUID 生成文件名 + Path.normalize |
++
++### Webhook 安全
++
++| 项目 | 状态 | 说明 |
++|------|------|------|
++| 飞书回调签名 | ✅ | HMAC-SHA256 验证 |
++| 钉钉回调签名 | ✅ | HMAC-SHA256 验证 |
++| 微信回调签名 | ✅ | HMAC-SHA1 验证 |
++| OpenAPI 签名 | ✅ | HMAC-SHA256 (timestamp + body) |
++| 电商平台签名 | ✅ | HMAC-SHA256 验证 |
++
++### 敏感数据处理
++
++| 项目 | 状态 | 说明 |
++|------|------|------|
++| 错误日志脱敏 | ✅ | sanitizeClientMessage() 过滤敏感字段 |
++| 数据库连接脱敏 | ✅ | 替换 password=*** |
++| API 密钥不记录 | ✅ | 日志中替换为 *** |
++| COS 凭证安全 | ✅ | 通过环境变量配置 |
++| HSTS 安全头 | ✅ | 1年强制 HTTPS |
++| X-Frame-Options | ✅ | deny 防止点击劫持 |
++| X-Content-Type-Options | ✅ | nosniff |
++| X-XSS-Protection | ✅ | 1; mode=block |
++
++### 前端安全
++
++| 项目 | 状态 | 说明 |
++|------|------|------|
++| XSS 防护 | ✅ | DOMPurify 白名单消毒 |
++| 无 eval() | ✅ | 审查未发现动态代码执行 |
++| 无命令注入 | ✅ | 审查未发现 Runtime.exec |
++
++---
+ 
+-```bash
+-# 验证 S-001（时间戳校验缺失）
+-# 使用任意旧时间戳调用 OpenAPI，观察是否被接受
++## 四、修复优先级建议
+ 
+-# 验证 S-002（IP 欺骗）
+-curl -X POST https://your-domain.com/openapi/v1/order/list \
+-  -H "X-App-Key: YOUR_APP_KEY" \
+-  -H "X-Timestamp: 1700000000" \
+-  -H "X-Signature: COMPUTED_SIGNATURE" \
+-  -H "X-Forwarded-For: 1.2.3.4, 5.6.7.8" \
+-  -d '{}'
+-```
++| 优先级 | 编号 | 问题 | 建议修复时间 |
++|--------|------|------|--------------|
++| P1 | #1 | 微信Webhook时间戳验证 | 1周内 |
++| P2 | #2 | Token 存储方式评估 | 计划内 |
++| P3 | #3 | IP 来源验证加强 | 计划内 |
++| P3 | #4 | 注册限流阈值优化 | 计划内 |
+ 
+ ---
+ 
+-*报告生成工具: 自动安全审计工具*
++## 五、审查方法
++
++本次审计采用以下方法：
++
++1. **代码审查**: 逐个审查关键安全配置文件、认证控制器、Webhook 处理器
++2. **模式匹配**: 使用 Grep 搜索危险模式（SQL 拼接、命令执行、不安全加密）
++3. **数据流追踪**: 从输入点到漏洞点追踪完整代码路径
++4. **上下文验证**: 确认每个漏洞的可利用性和实际影响
++
++审计覆盖的文件：
++- `SecurityConfig.java`, `AuthTokenService.java`, `TokenAuthFilter.java`
++- `ImAiWebhookController.java`, `WeChatAiWebhookController.java`
++- `PlatformWebhookController.java`, `OpenApiController.java`
++- `CommonController.java`, `CosService.java`
++- `GlobalExceptionHandler.java`
++- `MessageBubble.tsx`, `markdownUtils.ts`

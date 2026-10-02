@@ -1,0 +1,173 @@
+diff --git a/frontend/src/components/common/UniversalCardView/style.css b/frontend/src/components/common/UniversalCardView/style.css
+index 7449f07a7..744367d2a 100644
+--- a/frontend/src/components/common/UniversalCardView/style.css
++++ b/frontend/src/components/common/UniversalCardView/style.css
+@@ -42,7 +42,7 @@
+   align-items: center;
+   justify-content: center;
+   color: var(--color-text-quaternary, #bfbfbf);
+-  font-size: 14px;
++  font-size: var(--font-size-base, 13px);
+ }
+ 
+ .universal-card-body {
+@@ -63,7 +63,7 @@
+ }
+ .universal-card-title {
+   margin: 0;
+-  font-size: 14px;
++  font-size: var(--font-size-subtitle, 14px);
+   font-weight: 600;
+   color: var(--color-text-primary, #1f1f1f);
+   line-height: 1.3;
+@@ -74,7 +74,7 @@
+   min-width: 0;
+ }
+ .universal-card-subtitle {
+-  font-size: 14px;
++  font-size: var(--font-size-base, 13px);
+   color: var(--color-text-tertiary, #999);
+   line-height: 1.3;
+   overflow: hidden;
+@@ -118,7 +118,7 @@
+ .universal-card-field {
+   display: flex;
+   gap: 2px;
+-  font-size: 14px;
++  font-size: var(--font-size-base, 13px);
+   line-height: 1.35;
+   min-width: 0;
+   flex: 1;
+@@ -128,7 +128,7 @@
+   color: var(--color-text-tertiary, #999);
+   white-space: nowrap;
+   flex-shrink: 0;
+-  font-size: 14px;
++  font-size: var(--font-size-sm, 12px);
+   overflow: hidden;
+   text-overflow: ellipsis;
+   max-width: 60px;
+@@ -138,7 +138,7 @@
+   font-weight: 500;
+   flex: 1;
+   min-width: 0;
+-  font-size: 14px;
++  font-size: var(--font-size-base, 13px);
+ }
+ 
+ .universal-card-progress-section {
+@@ -206,7 +206,7 @@
+ }
+ .universal-card-actions .ant-btn-link,
+ .universal-card-actions .card-action-btn {
+-  font-size: 14px !important;
++  font-size: var(--font-size-sm, 12px) !important;
+   padding: 0 6px !important;
+   height: auto !important;
+   line-height: 20px !important;
+@@ -233,7 +233,7 @@
+   .universal-card-fields {
+     max-height: 180px;
+   }
+-  .universal-card-title { font-size: 14px; }
+-  .universal-card-field { font-size: 14px; }
++  .universal-card-title { font-size: var(--font-size-subtitle, 14px); }
++  .universal-card-field { font-size: var(--font-size-base, 13px); }
+   .universal-card .ant-card-body { padding: 8px 10px; }
+ }
+diff --git a/frontend/src/main.tsx b/frontend/src/main.tsx
+index 2d7915fef..4d455018d 100644
+--- a/frontend/src/main.tsx
++++ b/frontend/src/main.tsx
+@@ -351,6 +351,7 @@ const AppWrapper: React.FC = () => {
+           colorText: '#f0f2f5',
+           colorTextHeading: '#f0f2f5',
+           colorTextSecondary: '#b8bdc6',
++          fontSize: 13,
+         },
+         Modal: {
+           headerBg: '#0f1115',
+@@ -413,6 +414,7 @@ const AppWrapper: React.FC = () => {
+         },
+         Card: {
+           headerBg: 'rgba(224, 242, 254, 0.3)',
++          fontSize: 13,
+         },
+         Modal: {
+           headerBg: 'rgba(224, 242, 254, 0.2)',
+@@ -441,6 +443,7 @@ const AppWrapper: React.FC = () => {
+         },
+         Card: {
+           colorBgContainer: '#ffffff',
++          fontSize: 13,
+         },
+         Modal: {
+           headerBg: '#f9fafb',
+diff --git a/frontend/src/modules/production/pages/Production/ProductWarehousing/components/WarehousingTable.tsx b/frontend/src/modules/production/pages/Production/ProductWarehousing/components/WarehousingTable.tsx
+index d700a2caf..a13e284ae 100644
+--- a/frontend/src/modules/production/pages/Production/ProductWarehousing/components/WarehousingTable.tsx
++++ b/frontend/src/modules/production/pages/Production/ProductWarehousing/components/WarehousingTable.tsx
+@@ -307,8 +307,9 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
+       render: (_: any, record: WarehousingType) => {
+         const orderId = String((record as any)?.orderId || '').trim();
+         const frozen = isOrderFrozen(orderId);
++        const qualityStatus = String(record.qualityStatus || '').trim().toLowerCase();
++        const isQualified = qualityStatus === 'qualified';
+ 
+-        // 判断是否已入库：有仓库信息或有入库结束时间
+         const hasWarehouse = Boolean(record.warehouse?.trim());
+         const hasWarehousingEndTime = Boolean(record.warehousingEndTime?.trim());
+         const isWarehoused = hasWarehouse || hasWarehousingEndTime;
+@@ -318,11 +319,11 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
+             actions={[
+               {
+                 key: 'inspect',
+-                label: '质检',
+-                title: frozen ? '质检（订单已关单）' : '质检查看',
++                label: isQualified ? '查看' : '质检',
++                title: frozen ? '质检（订单已关单）' : isQualified ? '查看质检详情' : '质检查看',
+                 disabled: frozen,
+                 onClick: () => goToDetail(record, 'inspect'),
+-                primary: true,
++                primary: !isQualified,
+               },
+               {
+                 key: 'complete',
+diff --git a/frontend/src/modules/production/pages/Production/ProductWarehousing/pages/InspectionDetail/index.tsx b/frontend/src/modules/production/pages/Production/ProductWarehousing/pages/InspectionDetail/index.tsx
+index 7d95678f6..92679440e 100644
+--- a/frontend/src/modules/production/pages/Production/ProductWarehousing/pages/InspectionDetail/index.tsx
++++ b/frontend/src/modules/production/pages/Production/ProductWarehousing/pages/InspectionDetail/index.tsx
+@@ -80,13 +80,19 @@ const InspectionDetail: React.FC = () => {
+   const [batchUnqualifiedModalOpen, setBatchUnqualifiedModalOpen] = useState(false);
+   const [_batchUnqualifiedForm] = Form.useForm();
+ 
++  const handleQcCancelRef = useRef<() => void>(() => {});
++
+   const formHook = useWarehousingForm(
+     true, null,
+-    () => navigate('/production/warehousing'),
++    () => handleQcCancelRef.current(),
+     () => { message.success('质检完成'); fetchBriefing(); fetchQcRecords(); },
+     briefing?.order?.orderNo,
+   );
+ 
++  handleQcCancelRef.current = () => {
++    formHook.handleBatchSelectClear();
++  };
++
+   const {
+     submitLoading, batchSelectedSummary, unqualifiedFileList,
+     setUnqualifiedFileList, handleBatchUnqualifiedSubmit, uploadOneUnqualifiedImage,
+diff --git a/frontend/src/styles/global.css b/frontend/src/styles/global.css
+index 05bd377a0..5ec115e3b 100644
+--- a/frontend/src/styles/global.css
++++ b/frontend/src/styles/global.css
+@@ -1522,7 +1522,7 @@ body {
+    ======================================== */
+ 
+ .ant-card .ant-card-head-title {
+-  font-size: var(--font-size-lg);
++  font-size: var(--font-size-md);
+   font-weight: var(--font-weight-bold);
+   letter-spacing: -0.01em;
+ }
